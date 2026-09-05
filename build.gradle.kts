@@ -188,6 +188,123 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
     }
 }
 
+// G2 守卫：commonMain 共享层禁止出现 platform / JVM-only import。
+// 规则、白名单与基线策略见 docs/dev/kmp-cmp-migration-plan.md P0-1。
+// 当前 commonMain 全仓零违规，故从 day 1 起 blocking（基线 = 0）。
+@DisableCachingByDefault(because = "共享层纯度验证任务没有输出文件")
+abstract class CheckSharedPurityTask : DefaultTask() {
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sharedSourceFiles: ConfigurableFileCollection
+
+    // 仅用于违规消息的相对路径展示，不参与 up-to-date 判定（@Internal）。
+    // 用 @Internal 注入避免在 @TaskAction 里访问 Task.project（configuration cache 禁止）。
+    @get:Internal
+    abstract val rootDir: DirectoryProperty
+
+    @TaskAction
+    fun check() {
+        // android.* 一律禁止进入 commonMain。
+        // androidx.* 禁止，除非是经过审计的 KMP 兼容库（有 commonMain 元数据）：
+        //   - androidx.compose.runtime.Stable（CMP 下同名注解）
+        //   - androidx.room.*（Room 2.8.4 KMP，entity/DAO/Database 注解在 commonMain 可用）
+        //   - androidx.sqlite.*（Room KMP 的 driver API，BundledSQLiteDriver 等）
+        // 新增白名单条目前必须验证该库有官方 KMP 支持，且在 commonMain 编译通过。
+        val forbiddenImports = listOf(
+            Regex("""^import android\.""", RegexOption.MULTILINE),
+            Regex("""^import androidx\.(?!compose\.runtime\.Stable\b|room\.|sqlite\.)""", RegexOption.MULTILINE),
+            // java.io 的 File/InputStream/OutputStream 是 JVM-only；共享层走 ByteArray / 抽象 source-sink
+            Regex("""^import java\.io\.(File|InputStream|OutputStream)\b""", RegexOption.MULTILINE),
+            // kotlin.jvm.* 注解（@JvmStatic/@JvmField 等）绑定 JVM 目标
+            Regex("""^import kotlin\.jvm\.""", RegexOption.MULTILINE),
+        )
+        val violations = mutableListOf<String>()
+        val root = rootDir.get().asFile
+        sharedSourceFiles.files.forEach { file ->
+            if (!file.isFile) return@forEach
+            val text = file.readText()
+            forbiddenImports.forEach { regex ->
+                regex.findAll(text).forEach { match ->
+                    val rel = file.relativeTo(root).invariantSeparatorsPath
+                    violations += "$rel: 共享层禁止的 import: ${match.value.trim()}"
+                }
+            }
+        }
+        check(violations.isEmpty()) {
+            violations.joinToString(
+                prefix = "共享层纯度护栏失败（commonMain 禁止 platform / JVM-only import）:\n",
+                separator = "\n",
+            ) + "\n参考: docs/dev/kmp-cmp-migration-plan.md P0-1；" +
+                "AGENTS.md \"commonMain 只容纳经过依赖审计的代码\""
+        }
+    }
+}
+
+// G1 守卫：禁止非法的 Gradle 模块依赖方向。
+// 规则见 .agents/skills/legado-kmp-migration/references/slice-checklist.md "Module graph"。
+// 当前全仓 0 违规，day 1 起 blocking。
+@DisableCachingByDefault(because = "模块依赖方向验证任务没有输出文件")
+abstract class CheckModuleDependenciesTask : DefaultTask() {
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val moduleBuildFiles: ConfigurableFileCollection
+
+    @get:Internal
+    abstract val rootDir: DirectoryProperty
+
+    @TaskAction
+    fun check() {
+        val root = rootDir.get().asFile
+        val projectDep = Regex("""project\("(:[^"]+)"\)""")
+        val violations = mutableListOf<String>()
+
+        fun isCore(path: String) = path == ":core" || path.startsWith(":core:")
+        fun isFeature(path: String) = path == ":feature" || path.startsWith(":feature:")
+
+        fun reason(declarer: String, dep: String): String? {
+            if (declarer == dep) return null
+            // core 不得依赖 feature 或宿主：core 是最底层共享层。
+            if (isCore(declarer)) {
+                if (isFeature(dep)) return "core 不得依赖 feature（方向必须 feature → core）"
+                if (dep == ":app") return "core 不得依赖宿主 :app"
+            }
+            // feature API 不得依赖任何 feature（api 只被 impl/宿主消费，不横向依赖）。
+            if (declarer.startsWith(":feature:") && declarer.endsWith(":api") && isFeature(dep)) {
+                return "feature API 不得依赖其他 feature"
+            }
+            // feature impl 不得依赖另一个 feature impl（只能依赖 feature API）。
+            if (declarer.startsWith(":feature:") && declarer.endsWith(":impl") &&
+                dep.startsWith(":feature:") && dep.endsWith(":impl")
+            ) {
+                return "feature impl 不得依赖另一个 feature impl（只能依赖 feature API）"
+            }
+            return null
+        }
+
+        moduleBuildFiles.files.forEach { file ->
+            if (!file.isFile || file.name != "build.gradle.kts") return@forEach
+            val text = file.readText()
+            // 声明模块路径由文件相对根的目录推导：app → :app，feature/reader/core → :feature:reader:core。
+            val declarer = ":" + file.parentFile.relativeTo(root).invariantSeparatorsPath.replace('/', ':')
+            projectDep.findAll(text).forEach { match ->
+                val dep = match.groupValues[1]
+                reason(declarer, dep)?.let { msg ->
+                    violations += "$declarer -> $dep（$msg）@ ${file.relativeTo(root).invariantSeparatorsPath}"
+                }
+            }
+        }
+        check(violations.isEmpty()) {
+            violations.joinToString(
+                prefix = "模块依赖方向护栏失败（G1 模块边界）:\n",
+                separator = "\n",
+            ) + "\n参考: .agents/skills/legado-kmp-migration/references/slice-checklist.md 'Module graph'；" +
+                "AGENTS.md 目标依赖方向图"
+        }
+    }
+}
+
 buildscript {
     extra.apply {
         set("compile_sdk_version", 36)
@@ -263,8 +380,8 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/association/ImportReplaceRuleDialog.kt" to 1,
             "io/legado/app/ui/association/ImportRssSourceDialog.kt" to 1,
             "io/legado/app/ui/book/read/ReadBookController.kt" to 3,
-            // 护栏缺席期间 main 新增（整书页码估算），随合并冻结
-            "io/legado/app/ui/book/read/pageestimate/ExactChapterPageCountStore.kt" to 3,
+            // F2 step4：ExactChapterPageCountStore 的 Room 实现已移至 data/reader/pageestimate/，
+            // DAO 访问随之离开 ui 层，基线条目删除。
             "io/legado/app/ui/book/search/SearchScope.kt" to 4,
             "io/legado/app/ui/config/bookshelfConfig/BookshelfManageScreenConfig.kt" to 1,
             "io/legado/app/ui/main/MainNavGraph.kt" to 2,
@@ -274,6 +391,50 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
         )
     )
 }
+
+val checkSharedPurity = tasks.register<CheckSharedPurityTask>(
+    "checkSharedPurity"
+) {
+    group = "verification"
+    description = "禁止 commonMain 共享层引入 platform / JVM-only import（G2 纯度守卫）"
+    rootDir.set(layout.projectDirectory)
+    // 自动发现全仓 KMP 模块的 commonMain 源码：新增 KMP 模块无需改此配置即可被覆盖。
+    // 排除 build/ 等生成物与无关重目录，避免把产物或 web 前端算入共享层。
+    sharedSourceFiles.setFrom(
+        layout.projectDirectory.asFileTree.matching {
+            include("**/src/commonMain/**/*.kt")
+            exclude(
+                "**/build/**",
+                "**/.gradle/**",
+                "**/.workbuddy/**",
+                "**/.idea/**",
+                "**/.git/**",
+                "**/node_modules/**",
+                "**/modules/web/**",
+            )
+        }
+    )
+}
+
+val checkModuleDependencies = tasks.register<CheckModuleDependenciesTask>(
+    "checkModuleDependencies"
+) {
+    group = "verification"
+    description = "禁止非法 Gradle 模块依赖方向：core→feature/host、feature-api→feature、feature-impl→feature-impl（G1 边界守卫）"
+    rootDir.set(layout.projectDirectory)
+    // 扫描全仓各模块的 build.gradle.kts；build-logic 是独立 included build，排除以免误判其内部 project()。
+    moduleBuildFiles.setFrom(
+        layout.projectDirectory.asFileTree.matching {
+            include("**/build.gradle.kts")
+            exclude(
+                "**/build/**",
+                "**/.gradle/**",
+                "build-logic/**",
+            )
+        }
+    )
+}
+
 
 subprojects {
     tasks.configureEach {

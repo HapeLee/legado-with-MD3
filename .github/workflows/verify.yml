@@ -41,14 +41,47 @@ jobs:
         run: |
           sed -i '/maven.aliyun.com/d' settings.gradle
 
-      - name: Run tests, lint, architecture check, and debug build
+      - name: Run Android baseline and KMP reader-core checks
         run: |
           chmod +x gradlew
           ./gradlew \
             testAppDebugUnitTest \
             lintAppDebug \
             verifyConfigArchitecture \
+            checkSharedPurity \
+            checkModuleDependencies \
             assembleAppDebug \
+            :smoke:kmp-probe:compileCommonMainKotlinMetadata \
+            :smoke:kmp-probe:compileAndroidMain \
+            :smoke:kmp-probe:compileKotlinDesktop \
+            :smoke:kmp-probe:desktopTest \
+            :smoke:kmp-probe:testAndroidHostTest \
+            :smoke:network-kmp-probe:compileCommonMainKotlinMetadata \
+            :smoke:network-kmp-probe:compileKotlinDesktop \
+            :smoke:network-kmp-probe:desktopTest \
+            :smoke:network-kmp-probe:testAndroidHostTest \
+            :smoke:rhino-capability-probe:compileCommonMainKotlinMetadata \
+            :smoke:rhino-capability-probe:compileKotlinDesktop \
+            :smoke:rhino-capability-probe:desktopTest \
+            :smoke:rhino-capability-probe:testAndroidHostTest \
+            :smoke:room-kmp-probe:compileCommonMainKotlinMetadata \
+            :smoke:room-kmp-probe:compileKotlinDesktop \
+            :smoke:room-kmp-probe:desktopTest \
+            :feature:reader:core:compileCommonMainKotlinMetadata \
+            :feature:reader:core:compileAndroidMain \
+            :feature:reader:core:compileKotlinDesktop \
+            :feature:reader:core:desktopTest \
+            :feature:reader:core:testAndroidHostTest \
+            :core:platform:compileCommonMainKotlinMetadata \
+            :core:platform:compileAndroidMain \
+            :core:platform:compileKotlinDesktop \
+            :core:platform:desktopTest \
+            :core:platform:testAndroidHostTest \
+            :core:model:compileCommonMainKotlinMetadata \
+            :core:model:compileAndroidMain \
+            :core:model:compileKotlinDesktop \
+            :core:model:desktopTest \
+            :core:model:testAndroidHostTest \
             --continue \
             --no-daemon \
             --no-configuration-cache
@@ -62,6 +95,20 @@ jobs:
           path: |
             app/build/test-results/testAppDebugUnitTest/**
             app/build/reports/tests/testAppDebugUnitTest/**
+            smoke/kmp-probe/build/test-results/**
+            smoke/kmp-probe/build/reports/tests/**
+            smoke/network-kmp-probe/build/test-results/**
+            smoke/network-kmp-probe/build/reports/tests/**
+            smoke/rhino-capability-probe/build/test-results/**
+            smoke/rhino-capability-probe/build/reports/tests/**
+            smoke/room-kmp-probe/build/test-results/**
+            smoke/room-kmp-probe/build/reports/tests/**
+            feature/reader/core/build/test-results/**
+            feature/reader/core/build/reports/tests/**
+            core/platform/build/test-results/**
+            core/platform/build/reports/tests/**
+            core/model/build/test-results/**
+            core/model/build/reports/tests/**
 
       - name: Upload lint reports
         if: ${{ always() }}
