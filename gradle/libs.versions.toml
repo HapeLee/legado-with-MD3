@@ -31,7 +31,6 @@ fragment = "1.8.9"
 
 libarchive = "1.1.6"
 lifecycle = "2.11.0"
-glide = "5.0.7"
 gson = "2.14.0"
 jsonPath = "3.0.0"
 ktor = "3.5.1"
@@ -66,6 +65,7 @@ quickChineseTransfer = "0.2.17"
 # 应用代码不直接依赖它；加密走 JCA / help/crypto/CryptoUtils.kt。版本固定，勿升级（参考上游基线）。
 hutool = "5.8.22"
 room = "2.8.4"
+sqlite = "2.6.2"
 robolectric = "4.16.1"
 splitties = "3.0.0"
 rhino = "1.8.1"
@@ -176,7 +176,6 @@ media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp"
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 
 markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }
-markwon-image-glide = { module = "io.noties.markwon:image-glide", version.ref = "markwon" }
 markwon-ext-tables = { module = "io.noties.markwon:ext-tables", version.ref = "markwon" }
 markwon-html = { module = "io.noties.markwon:html", version.ref = "markwon" }
 
@@ -186,6 +185,9 @@ ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negoti
 ktor-serialization-gson = { module = "io.ktor:ktor-serialization-gson", version.ref = "ktor" }
 ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 
 preference-ktx = { module = "androidx.preference:preference-ktx", version.ref = "preference" }
 
@@ -198,13 +200,9 @@ room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
-glide-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
-glide-okhttp= { module = "com.github.bumptech.glide:okhttp3-integration", version.ref ="glide" }
-glide-recyclerview={module="com.github.bumptech.glide:recyclerview-integration",version.ref="glide"}
-glide-ksp = { module = "com.github.bumptech.glide:ksp", version.ref = "glide" }
-glide-svg = { module = "com.github.qoqa:glide-svg", version = "4.0.2" }
 androidsvg = { module = "com.caverock:androidsvg-aar", version = "1.4" }
 
 splitties-appctx = { module = "com.louiscad.splitties:splitties-appctx", version.ref = "splitties" }

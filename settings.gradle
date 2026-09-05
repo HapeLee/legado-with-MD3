@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -43,4 +44,11 @@ include ':app'
 include ':modules:book'
 include ':modules:rhino'
 include ':baselineprofile'
+include ':smoke:kmp-probe'
+include ':smoke:network-kmp-probe'
+include ':smoke:rhino-capability-probe'
+include ':smoke:room-kmp-probe'
+include ':feature:reader:core'
+include ':core:platform'
+include ':core:model'
 project(':baselineprofile').projectDir = file('baselineProfile')
