@@ -25,6 +25,7 @@ import io.legado.app.ui.widget.dialog.CodeDialog
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import kotlinx.coroutines.runBlocking
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import splitties.views.onClick
 
@@ -133,7 +134,7 @@ class ImportReplaceRuleDialog() : BaseDialogFragment(R.layout.dialog_recycler_vi
     private fun alertCustomGroup(item: MenuItem) {
         alert(R.string.diy_edit_source_group) {
             val alertBinding = DialogCustomGroupBinding.inflate(layoutInflater).apply {
-                val groups = appDb.replaceRuleDao.allGroups()
+                val groups = runBlocking { appDb.replaceRuleDao.allGroups() }
                 textInputLayout.setHint(R.string.group_name)
                 editView.setFilterValues(groups.toList())
                 editView.dropDownHeight = 180.dpToPx()

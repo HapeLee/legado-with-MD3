@@ -19,38 +19,38 @@ interface TxtTocRuleDao {
     fun flowSearch(key: String): Flow<List<TxtTocRule>>
 
     @Query("select * from txtTocRules where id in (:ids)")
-    fun getByIds(ids: Set<Long>): List<TxtTocRule>
+    suspend fun getByIds(ids: Set<Long>): List<TxtTocRule>
 
-    @get:Query("select * from txtTocRules order by serialNumber")
-    val all: List<TxtTocRule>
+    @Query("select * from txtTocRules order by serialNumber")
+    suspend fun all(): List<TxtTocRule>
 
-    @get:Query("select * from txtTocRules where enable = 1 order by serialNumber")
-    val enabled: List<TxtTocRule>
+    @Query("select * from txtTocRules where enable = 1 order by serialNumber")
+    suspend fun enabled(): List<TxtTocRule>
 
-    @get:Query("select * from txtTocRules where enable != 1 order by serialNumber")
-    val disabled: List<TxtTocRule>
+    @Query("select * from txtTocRules where enable != 1 order by serialNumber")
+    suspend fun disabled(): List<TxtTocRule>
 
-    @get:Query("select count(*) from txtTocRules")
-    val count: Int
+    @Query("select count(*) from txtTocRules")
+    suspend fun count(): Int
 
     @Query("select * from txtTocRules where id = :id")
-    fun get(id: Long): TxtTocRule?
+    suspend fun get(id: Long): TxtTocRule?
 
-    @get:Query("select ifNull(min(serialNumber), 0) from txtTocRules")
-    val minOrder: Int
+    @Query("select ifNull(min(serialNumber), 0) from txtTocRules")
+    suspend fun minOrder(): Int
 
-    @get:Query("select ifNull(max(serialNumber), 0) from txtTocRules")
-    val maxOrder: Int
+    @Query("select ifNull(max(serialNumber), 0) from txtTocRules")
+    suspend fun maxOrder(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg rule: TxtTocRule)
+    suspend fun insert(vararg rule: TxtTocRule)
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
-    fun update(vararg rule: TxtTocRule)
+    suspend fun update(vararg rule: TxtTocRule)
 
     @Delete
-    fun delete(vararg rule: TxtTocRule)
+    suspend fun delete(vararg rule: TxtTocRule)
 
     @Query("delete from txtTocRules where id < 0")
-    fun deleteDefault()
+    suspend fun deleteDefault()
 }

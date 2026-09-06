@@ -3,6 +3,7 @@ package io.legado.app.data.repository
 import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.entities.BookGroup
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.runBlocking
 
 class BookGroupRepository(private val bookGroupDao: BookGroupDao) {
 
@@ -35,7 +36,7 @@ class BookGroupRepository(private val bookGroupDao: BookGroupDao) {
     }
 
     fun getMaxOrder(): Int {
-        return bookGroupDao.maxOrder
+        return runBlocking { bookGroupDao.maxOrder() }
     }
 
     suspend fun getByID(id: Long): BookGroup? {
@@ -43,7 +44,7 @@ class BookGroupRepository(private val bookGroupDao: BookGroupDao) {
     }
 
     suspend fun getIdsSum(): Long {
-        return bookGroupDao.idsSum
+        return bookGroupDao.idsSum()
     }
 
     suspend fun getGroupNames(id: Long): List<String> {

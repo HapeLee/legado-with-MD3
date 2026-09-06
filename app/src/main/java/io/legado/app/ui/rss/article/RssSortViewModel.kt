@@ -120,11 +120,11 @@ class RssSortViewModel(
         rssSource?.setVariable(variable)
     }
 
-    fun getRecords(): List<RssReadRecord> {
+    suspend fun getRecords(): List<RssReadRecord> {
         return readRecordRepository.getAll()
     }
 
-    fun countRecords(): Int {
+    suspend fun countRecords(): Int {
         return readRecordRepository.count()
     }
 

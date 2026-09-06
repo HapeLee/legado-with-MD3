@@ -5,8 +5,10 @@ import android.graphics.Color
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.core.layout.ReaderHtmlParagraph
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -147,4 +149,41 @@ class AndroidReaderHtmlSourceResolverTest {
         assertTrue(bullets.size >= 2)
         assertTrue(bullets.zipWithNext().all { (outer, nested) -> nested.leadingOffsetPx > outer.leadingOffsetPx })
     }
+
+    /**
+     * `BulletSpan#getColor` 是 API 28 才加的读取方法。修复前 minSdk 26 上无条件调用它，
+     * 在 Android 8.0/8.1（API 26/27）会抛 NoSuchMethodError；紧邻的 stripeWidth/bulletRadius
+     * 当时都有守卫，只有 color 漏了。这两条用例分别钉住守卫两侧的行为。
+     */
+    @Test
+    @Config(sdk = [35])
+    fun bulletDecorationReadsColorFromThePlatformOnApi28AndAbove() {
+        val bullet = bulletDecoration()
+
+        assertEquals(ReaderParagraphDecorationKind.BULLET, bullet.kind)
+        // 默认 Html 渲染的 bullet 未显式设色，读到 0 时按"未指定"归一成 null
+        assertNull(bullet.colorArgb)
+        assertTrue(bullet.sizePx > 0f)
+    }
+
+    @Test
+    @Config(sdk = [26])
+    fun bulletDecorationFallsBackWithoutReadingColorBelowApi28() {
+        val bullet = bulletDecoration()
+
+        assertEquals(ReaderParagraphDecorationKind.BULLET, bullet.kind)
+        // API 26/27 读不到颜色：必须走守卫分支而不是调用不存在的方法
+        assertNull(bullet.colorArgb)
+        assertEquals(4f, bullet.sizePx, 0.001f)
+    }
+
+    private fun bulletDecoration() =
+        AndroidReaderHtmlSourceResolver(20f, 2f)
+            .resolve("<ul><li>列表项</li></ul>", 0)
+            .first { paragraph: ReaderHtmlParagraph ->
+                paragraph.items.filterIsInstance<ReaderChapterInlineSource.Text>()
+                    .any { it.value.contains("列表") }
+            }
+            .decorations
+            .single { it.kind == ReaderParagraphDecorationKind.BULLET }
 }

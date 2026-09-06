@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import androidx.room.withTransaction
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
@@ -27,7 +28,7 @@ class BookImportRepository(
             }
 
             val reboundBook = book.copy(bookUrl = filePath)
-            appDb.runInTransaction {
+            appDb.withTransaction {
                 appDb.bookDao.replace(book, reboundBook)
                 BookHelp.updateCacheFolder(book, reboundBook)
             }

@@ -13,11 +13,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface DictRuleDao {
 
-    @get:Query("select * from dictRules order by sortNumber")
-    val all: List<DictRule>
+    @Query("select * from dictRules order by sortNumber")
+    suspend fun all(): List<DictRule>
 
-    @get:Query("select * from dictRules where enabled = 1 order by sortNumber")
-    val enabled: List<DictRule>
+    @Query("select * from dictRules where enabled = 1 order by sortNumber")
+    suspend fun enabled(): List<DictRule>
 
     @Query("select * from dictRules order by sortNumber")
     fun flowAll(): Flow<List<DictRule>>
@@ -26,19 +26,19 @@ interface DictRuleDao {
     fun flowSearch(key: String): Flow<List<DictRule>>
 
     @Query("select * from dictRules where name = :name")
-    fun getByName(name: String): DictRule?
+    suspend fun getByName(name: String): DictRule?
 
     @Query("SELECT * FROM dictRules WHERE name IN (:names)")
-    fun getByNames(names: Set<String>): List<DictRule>
+    suspend fun getByNames(names: Set<String>): List<DictRule>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg dictRule: DictRule)
+    suspend fun insert(vararg dictRule: DictRule)
 
     @Update
-    fun update(vararg dictRule: DictRule)
+    suspend fun update(vararg dictRule: DictRule)
 
     @Delete
-    fun delete(vararg dictRule: DictRule)
+    suspend fun delete(vararg dictRule: DictRule)
 
     @Query("UPDATE dictRules SET enabled = :enabled WHERE name IN (:names)")
     suspend fun updateEnabled(names: Set<String>, enabled: Boolean)
@@ -47,10 +47,10 @@ interface DictRuleDao {
     suspend fun deleteByIds(names: Set<String>)
 
     @Query("DELETE FROM dictRules WHERE name = :name")
-    fun deleteByName(name: String)
+    suspend fun deleteByName(name: String)
 
     @Transaction
-    fun replacePrimaryKey(oldName: String, rule: DictRule) {
+    suspend fun replacePrimaryKey(oldName: String, rule: DictRule) {
         deleteByName(oldName)
         insert(rule)
     }

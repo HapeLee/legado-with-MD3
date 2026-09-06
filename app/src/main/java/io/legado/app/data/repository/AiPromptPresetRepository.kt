@@ -10,21 +10,10 @@ class AiPromptPresetRepository(
     private val dao: AiPromptPresetDao,
 ) : AiPromptPresetGateway {
 
-    override fun getEnabledByTaskType(taskType: String): List<AiPromptPreset> {
-        return dao.getEnabledByTaskType(taskType)
-    }
-
-    override fun countByTaskTypeSync(taskType: String): Int {
-        return dao.countByTaskTypeSync(taskType)
-    }
-
-    override fun savePresetsSync(presets: List<AiPromptPreset>) {
-        dao.upsertAllSync(presets)
-    }
-
-    override fun deletePresetSync(id: String) {
-        dao.deleteSync(id)
-    }
+    override suspend fun getEnabledByTaskType(taskType: String): List<AiPromptPreset> =
+        withContext(Dispatchers.IO) {
+            dao.getEnabledByTaskType(taskType)
+        }
 
     override suspend fun countByTaskType(taskType: String): Int = withContext(Dispatchers.IO) {
         dao.countByTaskType(taskType)

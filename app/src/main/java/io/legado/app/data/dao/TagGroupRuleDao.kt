@@ -16,7 +16,7 @@ interface TagGroupRuleDao {
     fun flowAll(): Flow<List<TagGroupRule>>
 
     @Query("SELECT * FROM tag_group_rules ORDER BY `order` ASC")
-    fun getAll(): List<TagGroupRule>
+    suspend fun getAll(): List<TagGroupRule>
 
     @Query("SELECT * FROM tag_group_rules WHERE id = :id")
     suspend fun getById(id: Long): TagGroupRule?
@@ -36,8 +36,8 @@ interface TagGroupRuleDao {
     @Query("SELECT * FROM tag_group_rules WHERE groupName = :groupName LIMIT 1")
     suspend fun getByGroupName(groupName: String): TagGroupRule?
 
-    @get:Query("SELECT COALESCE(MAX(`order`), -1) FROM tag_group_rules")
-    val maxOrder: Int
+    @Query("SELECT COALESCE(MAX(`order`), -1) FROM tag_group_rules")
+    suspend fun maxOrder(): Int
 
     @Query("DELETE FROM tag_group_rules")
     suspend fun deleteAll()

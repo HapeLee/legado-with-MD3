@@ -9,12 +9,13 @@ import io.legado.app.help.source.SourceHelp
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
+import kotlinx.coroutines.runBlocking
 
 object RssSourceController {
 
     val sources: ReturnData
         get() {
-            val source = appDb.rssSourceDao.all
+            val source = runBlocking { appDb.rssSourceDao.all() }
             val returnData = ReturnData()
             return if (source.isEmpty()) {
                 returnData.setErrorMsg("源列表为空")
@@ -30,7 +31,7 @@ object RssSourceController {
             if (TextUtils.isEmpty(source.sourceName) || TextUtils.isEmpty(source.sourceUrl)) {
                 returnData.setErrorMsg("源名称和URL不能为空")
             } else {
-                appDb.rssSourceDao.insert(source)
+                runBlocking { appDb.rssSourceDao.insert(source) }
                 returnData.setData("")
             }
         }
@@ -48,7 +49,7 @@ object RssSourceController {
             if (rssSource.sourceName.isBlank() || rssSource.sourceUrl.isBlank()) {
                 continue
             }
-            appDb.rssSourceDao.insert(rssSource)
+            runBlocking { appDb.rssSourceDao.insert(rssSource) }
             okSources.add(rssSource)
         }
         return ReturnData().setData(okSources)
@@ -60,7 +61,7 @@ object RssSourceController {
         if (url.isNullOrEmpty()) {
             return returnData.setErrorMsg("参数url不能为空，请指定书源地址")
         }
-        val source = appDb.rssSourceDao.getByKey(url)
+        val source = runBlocking { appDb.rssSourceDao.getByKey(url) }
             ?: return returnData.setErrorMsg("未找到源，请检查源地址")
         return returnData.setData(source)
     }

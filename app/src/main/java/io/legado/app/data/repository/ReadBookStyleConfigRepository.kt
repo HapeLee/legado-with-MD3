@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.InputStream
+
 import java.util.concurrent.atomic.AtomicLong
 
 class ReadBookStyleConfigRepository(
@@ -142,8 +142,8 @@ class ReadBookStyleConfigRepository(
         return readStyleRepository.export(config)
     }
 
-    override fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String =
-        readStyleRepository.saveBackgroundImage(inputStream, displayName)
+    override fun saveBackgroundImage(bytes: ByteArray, displayName: String?): String =
+        readStyleRepository.saveBackgroundImage(bytes, displayName)
 
     override fun setCurrentBackgroundImage(path: String) {
         mutateCurrentStyle { it.withCurBg(2, path) }

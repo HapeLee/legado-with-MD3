@@ -12,10 +12,10 @@ import io.legado.app.data.entities.SearchBook
 interface SearchBookDao {
 
     @Query("select * from searchBooks where bookUrl = :bookUrl")
-    fun getSearchBook(bookUrl: String): SearchBook?
+    suspend fun getSearchBook(bookUrl: String): SearchBook?
 
     @Query("select * from searchBooks where name = :name and author = :author and origin in (select bookSourceUrl from book_sources) order by originOrder limit 1")
-    fun getFirstByNameAuthor(name: String, author: String): SearchBook?
+    suspend fun getFirstByNameAuthor(name: String, author: String): SearchBook?
 
     @Query(
         """select t1.name, t1.author, t1.origin, t1.originName, t1.coverUrl, t1.bookUrl, 
@@ -28,7 +28,7 @@ interface SearchBookDao {
         and (:sourceGroup = "" or t2.bookSourceGroup like '%'||:sourceGroup||'%')
         order by t2.customOrder"""
     )
-    fun changeSourceByGroup(name: String, author: String, sourceGroup: String): List<SearchBook>
+    suspend fun changeSourceByGroup(name: String, author: String, sourceGroup: String): List<SearchBook>
 
     @Query(
         """select t1.name, t1.author, t1.origin, t1.originName, t1.coverUrl, t1.bookUrl, 
@@ -42,7 +42,7 @@ interface SearchBookDao {
         and t2.enabled = 1 
         order by t2.customOrder"""
     )
-    fun changeSourceSearch(
+    suspend fun changeSourceSearch(
         name: String,
         author: String,
         key: String,
@@ -60,23 +60,23 @@ interface SearchBookDao {
         order by t2.customOrder
         """
     )
-    fun getEnableHasCover(name: String, author: String): List<SearchBook>
+    suspend fun getEnableHasCover(name: String, author: String): List<SearchBook>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg searchBook: SearchBook): List<Long>
+    suspend fun insert(vararg searchBook: SearchBook): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(searchBooks: List<SearchBook>): List<Long>
+    suspend fun insert(searchBooks: List<SearchBook>): List<Long>
 
     @Query("delete from searchBooks where name = :name and author = :author")
-    fun clear(name: String, author: String)
+    suspend fun clear(name: String, author: String)
 
     @Query("delete from searchBooks where time < :time")
-    fun clearExpired(time: Long)
+    suspend fun clearExpired(time: Long)
 
     @Update
-    fun update(vararg searchBook: SearchBook)
+    suspend fun update(vararg searchBook: SearchBook)
 
     @Delete
-    fun delete(vararg searchBook: SearchBook)
+    suspend fun delete(vararg searchBook: SearchBook)
 }

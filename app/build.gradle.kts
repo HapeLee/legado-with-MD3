@@ -233,6 +233,7 @@ dependencies {
     implementation(project(":feature:reader:core"))
     implementation(project(":core:platform"))
     implementation(project(":core:model"))
+    implementation(project(":core:data"))
     implementation(libs.okhttp)
     implementation(fileTree(mapOf("dir" to "cronetlib", "include" to listOf("*.jar", "*.aar"))))
     implementation(libs.protobuf.javalite)

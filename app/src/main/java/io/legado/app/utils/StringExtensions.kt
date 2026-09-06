@@ -85,15 +85,6 @@ fun String.isHex(): Boolean {
     }
 }
 
-fun String.splitNotBlank(vararg delimiter: String, limit: Int = 0): Array<String> = run {
-    this.split(*delimiter, limit = limit).map { it.trim() }.filterNot { it.isBlank() }
-        .toTypedArray()
-}
-
-fun String.splitNotBlank(regex: Regex, limit: Int = 0): Array<String> = run {
-    this.split(regex, limit).map { it.trim() }.filterNot { it.isBlank() }.toTypedArray()
-}
-
 @SuppressLint("ObsoleteSdkInt")
 fun String.cnCompare(other: String): Int {
     return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {

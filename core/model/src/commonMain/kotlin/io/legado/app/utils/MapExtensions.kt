@@ -2,22 +2,19 @@ package io.legado.app.utils
 
 fun HashMap<String, *>.has(key: String, ignoreCase: Boolean = false): Boolean {
     for (item in this) {
-        if (key.equals(item.key, ignoreCase)) {
-            return true
-        }
+        if (key.equals(item.key, ignoreCase)) return true
     }
     return false
 }
 
 fun <T> HashMap<String, T>.get(key: String, ignoreCase: Boolean = false): T? {
     for (item in this) {
-        if (key.equals(item.key, ignoreCase)) {
-            return item.value
-        }
+        if (key.equals(item.key, ignoreCase)) return item.value
     }
     return null
 }
 
+/** Returns a computed value without growing this map once [maxSize] is reached. */
 inline fun <K, V> MutableMap<K, V>.getOrPutLimit(key: K, maxSize: Int, defaultValue: () -> V): V {
     var value = get(key)
     if (containsKey(key)) {

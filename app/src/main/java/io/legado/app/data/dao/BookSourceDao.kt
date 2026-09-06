@@ -42,7 +42,7 @@ interface BookSourceDao {
         or bookSourceComment like '%' || :searchKey || '%' 
         order by customOrder asc"""
     )
-    fun search(searchKey: String): List<BookSource>
+    suspend fun search(searchKey: String): List<BookSource>
 
     @Query(
         """select bp.*
@@ -74,7 +74,7 @@ interface BookSourceDao {
         or bookSourceGroup like  '%,' || :searchKey || ',%' 
         order by customOrder asc"""
     )
-    fun groupSearch(searchKey: String): List<BookSource>
+    suspend fun groupSearch(searchKey: String): List<BookSource>
 
     @Query("select * from book_sources_part where enabled = 1 order by customOrder asc")
     fun flowEnabled(): Flow<List<BookSourcePart>>
@@ -169,7 +169,7 @@ interface BookSourceDao {
         """select * from book_sources 
         where bookSourceGroup like '%' || :group || '%' order by customOrder asc"""
     )
-    fun getByGroup(group: String): List<BookSource>
+    suspend fun getByGroup(group: String): List<BookSource>
 
     @Query(
         """select * from book_sources 
@@ -180,7 +180,7 @@ interface BookSourceDao {
             or bookSourceGroup like  '%,' || :group || ',%')
         order by customOrder asc"""
     )
-    fun getEnabledByGroup(group: String): List<BookSource>
+    suspend fun getEnabledByGroup(group: String): List<BookSource>
 
     @Query(
         """select * from book_sources_part 
@@ -191,7 +191,7 @@ interface BookSourceDao {
             or bookSourceGroup like  '%,' || :group || ',%')
         order by customOrder asc"""
     )
-    fun getEnabledPartByGroup(group: String): List<BookSourcePart>
+    suspend fun getEnabledPartByGroup(group: String): List<BookSourcePart>
 
     @Query(
         """select * from book_sources_part 
@@ -201,18 +201,18 @@ interface BookSourceDao {
         or bookSourceGroup like  '%,' || :group || ',%'
         order by customOrder asc"""
     )
-    fun getPartByGroup(group: String): List<BookSourcePart>
+    suspend fun getPartByGroup(group: String): List<BookSourcePart>
 
     @Query(
         """select * from book_sources 
         where bookUrlPattern != 'NONE' and bookSourceType = :type order by customOrder asc"""
     )
-    fun getEnabledByType(type: Int): List<BookSource>
+    suspend fun getEnabledByType(type: Int): List<BookSource>
 
     @Query("select * from book_sources where enabled = 1 and bookSourceUrl = :baseUrl")
-    fun getBookSourceAddBook(baseUrl: String): BookSource?
+    suspend fun getBookSourceAddBook(baseUrl: String): BookSource?
 
-    @get:Query(
+    @Query(
         """select bp.* 
         from book_sources b join book_sources_part bp on b.bookSourceUrl = bp.bookSourceUrl
         where b.enabled = 1 
@@ -220,134 +220,134 @@ interface BookSourceDao {
         and trim(b.bookUrlPattern) <> 'NONE' 
         order by b.customOrder"""
     )
-    val hasBookUrlPattern: List<BookSourcePart>
+    suspend fun hasBookUrlPattern(): List<BookSourcePart>
 
-    @get:Query("select * from book_sources where bookSourceGroup is null or bookSourceGroup = ''")
-    val noGroup: List<BookSource>
+    @Query("select * from book_sources where bookSourceGroup is null or bookSourceGroup = ''")
+    suspend fun noGroup(): List<BookSource>
 
-    @get:Query("select * from book_sources order by customOrder asc")
-    val all: List<BookSource>
+    @Query("select * from book_sources order by customOrder asc")
+    suspend fun all(): List<BookSource>
 
-    @get:Query("select * from book_sources_part order by customOrder asc")
-    val allPart: List<BookSourcePart>
+    @Query("select * from book_sources_part order by customOrder asc")
+    suspend fun allPart(): List<BookSourcePart>
 
-    @get:Query("select * from book_sources where enabled = 1 order by customOrder")
-    val allEnabled: List<BookSource>
+    @Query("select * from book_sources where enabled = 1 order by customOrder")
+    suspend fun allEnabled(): List<BookSource>
 
-    @get:Query("select * from book_sources_part where enabled = 1 order by customOrder asc")
-    val allEnabledPart: List<BookSourcePart>
+    @Query("select * from book_sources_part where enabled = 1 order by customOrder asc")
+    suspend fun allEnabledPart(): List<BookSourcePart>
 
-    @get:Query("select * from book_sources where enabled = 0 order by customOrder")
-    val allDisabled: List<BookSource>
+    @Query("select * from book_sources where enabled = 0 order by customOrder")
+    suspend fun allDisabled(): List<BookSource>
 
-    @get:Query(
+    @Query(
         """select * from book_sources 
         where bookSourceGroup is null or bookSourceGroup = '' or bookSourceGroup like '%未分组%'"""
     )
-    val allNoGroup: List<BookSource>
+    suspend fun allNoGroup(): List<BookSource>
 
-    @get:Query("select * from book_sources where enabledExplore = 1 order by customOrder")
-    val allEnabledExplore: List<BookSource>
+    @Query("select * from book_sources where enabledExplore = 1 order by customOrder")
+    suspend fun allEnabledExplore(): List<BookSource>
 
-    @get:Query("select * from book_sources where enabledExplore = 0 order by customOrder")
-    val allDisabledExplore: List<BookSource>
+    @Query("select * from book_sources where enabledExplore = 0 order by customOrder")
+    suspend fun allDisabledExplore(): List<BookSource>
 
-    @get:Query("select * from book_sources where loginUrl is not null and loginUrl != ''")
-    val allLogin: List<BookSource>
+    @Query("select * from book_sources where loginUrl is not null and loginUrl != ''")
+    suspend fun allLogin(): List<BookSource>
 
-    @get:Query(
+    @Query(
         """select bp.*
         from book_sources b join book_sources_part bp on b.bookSourceUrl = bp.bookSourceUrl 
         where b.enabled = 1 and b.bookSourceType = 0 order by b.customOrder"""
     )
-    val allTextEnabledPart: List<BookSourcePart>
+    suspend fun allTextEnabledPart(): List<BookSourcePart>
 
-    @get:Query(
+    @Query(
         """select distinct bookSourceGroup from book_sources 
         where trim(bookSourceGroup) <> ''"""
     )
-    val allGroupsUnProcessed: List<String>
+    suspend fun allGroupsUnProcessed(): List<String>
 
-    @get:Query(
+    @Query(
         """select distinct bookSourceGroup from book_sources 
         where enabled = 1 and trim(bookSourceGroup) <> ''"""
     )
-    val allEnabledGroupsUnProcessed: List<String>
+    suspend fun allEnabledGroupsUnProcessed(): List<String>
 
     @Query("select * from book_sources where bookSourceUrl = :key")
-    fun getBookSource(key: String): BookSource?
+    suspend fun getBookSource(key: String): BookSource?
 
     @Query("select * from book_sources_part where bookSourceUrl = :key")
-    fun getBookSourcePart(key: String): BookSourcePart?
+    suspend fun getBookSourcePart(key: String): BookSourcePart?
 
     @Query("select count(*) from book_sources")
-    fun allCount(): Int
+    suspend fun allCount(): Int
 
     @Query("SELECT EXISTS(select 1 from book_sources where bookSourceUrl = :key)")
-    fun has(key: String): Boolean
+    suspend fun has(key: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg bookSource: BookSource)
+    suspend fun insert(vararg bookSource: BookSource)
 
     @Update
-    fun update(vararg bookSource: BookSource)
+    suspend fun update(vararg bookSource: BookSource)
 
     @Delete
-    fun delete(vararg bookSource: BookSource)
+    suspend fun delete(vararg bookSource: BookSource)
 
     @Query("delete from book_sources where bookSourceUrl = :key")
-    fun delete(key: String)
+    suspend fun delete(key: String)
 
     @Transaction
-    fun delete(bookSources: List<BookSourcePart>) {
+    suspend fun delete(bookSources: List<BookSourcePart>) {
         for (bs in bookSources) {
             delete(bs.bookSourceUrl)
         }
     }
 
-    @get:Query("select min(customOrder) from book_sources")
-    val minOrder: Int
+    @Query("select min(customOrder) from book_sources")
+    suspend fun minOrder(): Int
 
-    @get:Query("select max(customOrder) from book_sources")
-    val maxOrder: Int
+    @Query("select max(customOrder) from book_sources")
+    suspend fun maxOrder(): Int
 
     @Transaction
-    fun moveToTop(sourceUrl: String): Int? {
+    suspend fun moveToTop(sourceUrl: String): Int? {
         val source = getBookSource(sourceUrl) ?: return null
-        source.customOrder = minOrder - 1
+        source.customOrder = minOrder() - 1
         update(source)
         return source.customOrder
     }
 
     @Transaction
-    fun moveToBottom(sourceUrl: String): Int? {
+    suspend fun moveToBottom(sourceUrl: String): Int? {
         val source = getBookSource(sourceUrl) ?: return null
-        source.customOrder = maxOrder + 1
+        source.customOrder = maxOrder() + 1
         update(source)
         return source.customOrder
     }
 
-    @get:Query(
+    @Query(
         """select exists (select 1 
         from book_sources group by customOrder having count(customOrder) > 1)"""
     )
-    val hasDuplicateOrder: Boolean
+    suspend fun hasDuplicateOrder(): Boolean
 
     @Query("update book_sources set enabled = :enable where bookSourceUrl = :bookSourceUrl")
-    fun enable(bookSourceUrl: String, enable: Boolean)
+    suspend fun enable(bookSourceUrl: String, enable: Boolean)
 
     @Transaction
-    fun enable(enable: Boolean, bookSources: List<BookSourcePart>) {
+    suspend fun enable(enable: Boolean, bookSources: List<BookSourcePart>) {
         for (bs in bookSources) {
             enable(bs.bookSourceUrl, enable)
         }
     }
 
     @Query("update book_sources set enabledExplore = :enable where bookSourceUrl = :bookSourceUrl")
-    fun enableExplore(bookSourceUrl: String, enable: Boolean)
+    suspend fun enableExplore(bookSourceUrl: String, enable: Boolean)
 
     @Transaction
-    fun enableExplore(enable: Boolean, bookSources: List<BookSourcePart>) {
+    suspend fun enableExplore(enable: Boolean, bookSources: List<BookSourcePart>) {
         for (bs in bookSources) {
             enableExplore(bs.bookSourceUrl, enable)
         }
@@ -357,16 +357,16 @@ interface BookSourceDao {
         """update book_sources 
         set customOrder = :customOrder where bookSourceUrl = :bookSourceUrl"""
     )
-    fun upOrder(bookSourceUrl: String, customOrder: Int)
+    suspend fun upOrder(bookSourceUrl: String, customOrder: Int)
 
     @Transaction
-    fun upOrder(bookSources: List<BookSourcePart>) {
+    suspend fun upOrder(bookSources: List<BookSourcePart>) {
         for (bs in bookSources) {
             upOrder(bs.bookSourceUrl, bs.customOrder)
         }
     }
 
-    fun upOrder(bookSource: BookSourcePart) {
+    suspend fun upOrder(bookSource: BookSourcePart) {
         upOrder(bookSource.bookSourceUrl, bookSource.customOrder)
     }
 
@@ -374,10 +374,10 @@ interface BookSourceDao {
         """update book_sources 
         set bookSourceGroup = :bookSourceGroup where bookSourceUrl = :bookSourceUrl"""
     )
-    fun upGroup(bookSourceUrl: String, bookSourceGroup: String)
+    suspend fun upGroup(bookSourceUrl: String, bookSourceGroup: String)
 
     @Transaction
-    fun upGroup(bookSources: List<BookSourcePart>) {
+    suspend fun upGroup(bookSources: List<BookSourcePart>) {
         for (bs in bookSources) {
             bs.bookSourceGroup?.let { upGroup(bs.bookSourceUrl, it) }
         }
@@ -395,9 +395,9 @@ interface BookSourceDao {
         }
     }
 
-    fun allGroups(): List<String> = dealGroups(allGroupsUnProcessed)
+    suspend fun allGroups(): List<String> = dealGroups(allGroupsUnProcessed())
 
-    fun allEnabledGroups(): List<String> = dealGroups(allEnabledGroupsUnProcessed)
+    suspend fun allEnabledGroups(): List<String> = dealGroups(allEnabledGroupsUnProcessed())
 
     fun flowGroups(): Flow<List<String>> {
         return flowGroupsUnProcessed().map { list ->

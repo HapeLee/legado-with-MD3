@@ -15,14 +15,14 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ReadRecordDao {
 
-    @get:Query("select * from readRecord")
-    val all: List<ReadRecord>
+    @Query("select * from readRecord")
+    suspend fun all(): List<ReadRecord>
 
-    @get:Query("select * from readRecordDetail")
-    val allDetail: List<ReadRecordDetail>
+    @Query("select * from readRecordDetail")
+    suspend fun allDetail(): List<ReadRecordDetail>
 
-    @get:Query("select * from readRecordSession")
-    val allSession: List<ReadRecordSession>
+    @Query("select * from readRecordSession")
+    suspend fun allSession(): List<ReadRecordSession>
 
     @Query("SELECT sum(readTime) FROM readRecord")
     fun getTotalReadTime(): Flow<Long?>
@@ -78,10 +78,10 @@ interface ReadRecordDao {
     fun observeRecentHomeBooks(limit: Int): Flow<List<HomeRecentBookRow>>
 
     @Query("select sum(readTime) from readRecord where bookName = :bookName")
-    fun getReadTime(bookName: String): Long?
+    suspend fun getReadTime(bookName: String): Long?
 
     @Query("select readTime from readRecord where deviceId = :deviceId and bookName = :bookName and bookAuthor = :bookAuthor")
-    fun getReadTime(deviceId: String, bookName: String, bookAuthor: String): Long?
+    suspend fun getReadTime(deviceId: String, bookName: String, bookAuthor: String): Long?
 
     @Query("SELECT * FROM readRecord WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor")
     suspend fun getReadRecord(deviceId: String, bookName: String, bookAuthor: String): ReadRecord?
@@ -93,13 +93,13 @@ interface ReadRecordDao {
     suspend fun update(vararg record: ReadRecord)
 
     @Delete
-    fun delete(vararg record: ReadRecord)
+    suspend fun delete(vararg record: ReadRecord)
 
     @Query("delete from readRecord")
-    fun clear()
+    suspend fun clear()
 
     @Query("delete from readRecord where bookName = :bookName and bookAuthor = :bookAuthor")
-    fun deleteByName(bookName: String, bookAuthor: String)
+    suspend fun deleteByName(bookName: String, bookAuthor: String)
 
     /**
      * 插入或更新每日聚合统计记录。
@@ -118,7 +118,7 @@ interface ReadRecordDao {
      * 查询所有发生过阅读的日期（用于日历标记）
      */
     @Query("SELECT DISTINCT date FROM readRecordDetail WHERE deviceId = :deviceId ORDER BY date DESC")
-    fun getAllReadDates(deviceId: String): List<String>
+    suspend fun getAllReadDates(deviceId: String): List<String>
 
     /**
      * 获取某一天所有书籍的详细统计 (用于日历页面总览)
@@ -128,7 +128,7 @@ interface ReadRecordDao {
 
     // 清除每天的统计记录
     @Query("DELETE FROM readRecordDetail WHERE bookName = :bookName AND bookAuthor = :bookAuthor")
-    fun deleteDetailByName(bookName: String, bookAuthor: String)
+    suspend fun deleteDetailByName(bookName: String, bookAuthor: String)
 
     /** 删除指定书籍指定日期的统计详情。 */
     @Query("DELETE FROM readRecordDetail WHERE bookName = :bookName AND bookAuthor = :bookAuthor AND date = :date")
@@ -151,7 +151,7 @@ interface ReadRecordDao {
      * 插入阅读时段记录。
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertSession(session: ReadRecordSession)
+    suspend fun insertSession(session: ReadRecordSession)
 
     /** 获取所有 ReadRecord，按最后阅读时间倒序排列 */
     @Query("SELECT * FROM readRecord ORDER BY lastRead DESC")
@@ -231,7 +231,7 @@ interface ReadRecordDao {
 
     // 清除阅读时段记录
     @Query("DELETE FROM readRecordSession WHERE bookName = :bookName AND bookAuthor = :bookAuthor")
-    fun deleteSessionByName(bookName: String, bookAuthor: String)
+    suspend fun deleteSessionByName(bookName: String, bookAuthor: String)
 
     /** 按阅读时段内容删除记录，用于跨设备删除同一阅读时段的同步副本。 */
     @Query("DELETE FROM readRecordSession WHERE bookName = :bookName AND bookAuthor = :bookAuthor AND startTime = :startTime AND endTime = :endTime AND words = :words")

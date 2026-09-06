@@ -1,5 +1,7 @@
 package io.legado.app.model.translation
 
+import io.legado.app.core.platform.FileSystem
+import io.legado.app.core.platform.JvmFileSystem
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.TranslationCacheGateway
@@ -21,6 +23,7 @@ object TranslationManager : KoinComponent {
     private val translationCacheGateway: TranslationCacheGateway by inject()
     private val translateChapterUseCase: TranslateChapterUseCase by inject()
     private val translationSettingsGateway: TranslationSettingsGateway by inject()
+    private val fileSystem: FileSystem = JvmFileSystem
 
     /** Per-chapter task state flows: bookUrl+chapterIndex -> StateFlow (only for in-progress tasks) */
     private val _taskStateFlows =
@@ -43,18 +46,18 @@ object TranslationManager : KoinComponent {
      * Check if translated cache file exists for a chapter.
      */
     fun hasTranslatedCache(book: Book, chapter: BookChapter): Boolean {
-        val cacheFile =
-            translationCacheGateway.getCacheFile(book, chapter, currentTargetLanguage())
-        return cacheFile.exists()
+        val cachePath =
+            translationCacheGateway.getCachePath(book, chapter, currentTargetLanguage())
+        return fileSystem.exists(cachePath)
     }
 
     /**
      * Get finished cached translation for a chapter.
      */
     fun getCachedTranslation(book: Book, chapter: BookChapter): String? {
-        val cacheFile =
-            translationCacheGateway.getCacheFile(book, chapter, currentTargetLanguage())
-        return if (cacheFile.exists()) cacheFile.readText() else null
+        val cachePath =
+            translationCacheGateway.getCachePath(book, chapter, currentTargetLanguage())
+        return fileSystem.readBytes(cachePath)?.let { String(it) }
     }
 
     /**

@@ -15,6 +15,7 @@ import io.legado.app.data.entities.rule.*
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.ReplaceAnalyzer
 import io.legado.app.utils.*
+import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 import java.io.File
 
@@ -99,20 +100,20 @@ object ImportOldData {
 
     private fun importOldBookshelf(json: String): Int {
         val books = fromOldBooks(json)
-        appDb.bookDao.insert(*books.toTypedArray())
+        runBlocking { appDb.bookDao.insert(*books.toTypedArray()) }
         return books.size
     }
 
     fun importOldSource(json: String): Int {
         val sources = fromOldBookSources(json)
-        appDb.bookSourceDao.insert(*sources.toTypedArray())
+        runBlocking { appDb.bookSourceDao.insert(*sources.toTypedArray()) }
         return sources.size
     }
 
     private fun importOldReplaceRule(json: String): Int {
         val rules = ReplaceAnalyzer.jsonToReplaceRules(json).getOrNull()
         rules?.let {
-            appDb.replaceRuleDao.insert(*rules.toTypedArray())
+            runBlocking { appDb.replaceRuleDao.insert(*rules.toTypedArray()) }
             return rules.size
         }
         return 0
@@ -121,7 +122,7 @@ object ImportOldData {
     private fun fromOldBooks(json: String): List<Book> {
         val books = mutableListOf<Book>()
         val items: List<Map<String, Any>> = jsonPath.parse(json).read("$")
-        val existingBooks = appDb.bookDao.allBookUrls.toSet()
+        val existingBooks = runBlocking { appDb.bookDao.allBookUrls() }.toSet()
         for (item in items) {
             val jsonItem = jsonPath.parse(item)
             val book = Book()

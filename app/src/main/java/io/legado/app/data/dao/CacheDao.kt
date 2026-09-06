@@ -10,16 +10,16 @@ import io.legado.app.data.entities.Cache
 interface CacheDao {
 
     @Query("select * from caches where `key` = :key")
-    fun get(key: String): Cache?
+    suspend fun get(key: String): Cache?
 
     @Query("select value from caches where `key` = :key and (deadline = 0 or deadline > :now)")
-    fun get(key: String, now: Long): String?
+    suspend fun get(key: String, now: Long): String?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg cache: Cache)
+    suspend fun insert(vararg cache: Cache)
 
     @Query("delete from caches where `key` = :key")
-    fun delete(key: String)
+    suspend fun delete(key: String)
 
     @Query(
         """delete from caches where `key` like 'v_' || :key || '_%'
@@ -27,9 +27,9 @@ interface CacheDao {
         or `key` = 'loginHeader_' || :key
         or `key` = 'sourceVariable_' || :key"""
     )
-    fun deleteSourceVariables(key: String)
+    suspend fun deleteSourceVariables(key: String)
 
     @Query("delete from caches where deadline > 0 and deadline < :now")
-    fun clearDeadline(now: Long)
+    suspend fun clearDeadline(now: Long)
 
 }

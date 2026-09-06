@@ -17,7 +17,7 @@ class BookmarkRepository(
         dao.flowByBook(bookName, bookAuthor).flowOn(Dispatchers.IO)
 
     suspend fun getAll(): List<Bookmark> = withContext(Dispatchers.IO) {
-        dao.all
+        dao.all()
     }
 
     suspend fun getByBook(bookName: String, bookAuthor: String): List<Bookmark> =

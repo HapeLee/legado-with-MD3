@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapMerge
@@ -366,14 +367,18 @@ class ChangeSourceSearchUseCase(
     }
 
     fun disableSource(searchBook: SearchBook) {
-        io.legado.app.data.appDb.bookSourceDao.getBookSource(searchBook.origin)?.let { source ->
-            source.enabled = false
-            io.legado.app.data.appDb.bookSourceDao.update(source)
+        runBlocking {
+            io.legado.app.data.appDb.bookSourceDao.getBookSource(searchBook.origin)?.let { source ->
+                source.enabled = false
+                io.legado.app.data.appDb.bookSourceDao.update(source)
+            }
         }
     }
 
     fun deleteSource(searchBook: SearchBook) {
         SourceHelp.deleteBookSource(searchBook.origin)
-        io.legado.app.data.appDb.searchBookDao.delete(searchBook)
+        runBlocking {
+            io.legado.app.data.appDb.searchBookDao.delete(searchBook)
+        }
     }
 }

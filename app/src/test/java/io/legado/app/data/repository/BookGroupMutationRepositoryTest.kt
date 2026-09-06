@@ -75,7 +75,7 @@ class BookGroupMutationRepositoryTest {
         }
 
         assertTrue(result.isFailure)
-        assertTrue(database.bookGroupDao.all.isEmpty())
+        assertTrue(database.bookGroupDao.all().isEmpty())
         assertTrue(database.tagGroupRuleDao.getAll().isEmpty())
         assertEquals(0L, database.bookDao.getBook(book.bookUrl)?.group)
     }
@@ -118,7 +118,7 @@ class BookGroupMutationRepositoryTest {
 
         repository.deleteGroup(group.groupId)
 
-        assertTrue(database.bookGroupDao.all.isEmpty())
+        assertTrue(database.bookGroupDao.all().isEmpty())
         assertTrue(database.tagGroupRuleDao.getAll().isEmpty())
         assertEquals(0L, database.bookDao.getBook(book.bookUrl)?.group)
     }
@@ -170,7 +170,7 @@ class BookGroupMutationRepositoryTest {
             )
         )
 
-        val group = database.bookGroupDao.all.single()
+        val group = database.bookGroupDao.all().single()
         assertEquals(group.groupId, database.bookDao.getBook(book.bookUrl)?.group)
         assertEquals(group.groupName, database.tagGroupRuleDao.getAll().single().groupName)
     }
@@ -191,7 +191,7 @@ class BookGroupMutationRepositoryTest {
         }
 
         assertTrue(result.isFailure)
-        assertTrue(database.bookGroupDao.all.isEmpty())
+        assertTrue(database.bookGroupDao.all().isEmpty())
         assertTrue(database.tagGroupRuleDao.getAll().isEmpty())
     }
 }

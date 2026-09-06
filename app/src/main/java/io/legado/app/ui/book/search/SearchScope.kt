@@ -7,6 +7,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.BookSearchScope.ScopeSourceItem
+import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 
 /**
@@ -108,18 +109,18 @@ data class SearchScope(private var scope: String) {
     fun getBookSourceParts(): List<BookSourcePart> {
         val list = hashSetOf<BookSourcePart>()
         if (scope.isEmpty()) {
-            list.addAll(appDb.bookSourceDao.allEnabledPart)
+            list.addAll(runBlocking { appDb.bookSourceDao.allEnabledPart() })
         } else {
             if (isSource()) {
                 sourceItems().forEach { sourceItem ->
-                    appDb.bookSourceDao.getBookSourcePart(sourceItem.url)?.let { source ->
+                    runBlocking { appDb.bookSourceDao.getBookSourcePart(sourceItem.url) }?.let { source ->
                         list.add(source)
                     }
                 }
             } else {
                 val oldScope = parsedScope().groupNames
                 val newScope = oldScope.filter {
-                    val bookSources = appDb.bookSourceDao.getEnabledPartByGroup(it)
+                    val bookSources = runBlocking { appDb.bookSourceDao.getEnabledPartByGroup(it) }
                     list.addAll(bookSources)
                     bookSources.isNotEmpty()
                 }
@@ -130,7 +131,7 @@ data class SearchScope(private var scope: String) {
             }
             if (list.isEmpty()) {
                 scope = ""
-                appDb.bookSourceDao.allEnabledPart.let {
+                runBlocking { appDb.bookSourceDao.allEnabledPart() }.let {
                     if (it.isNotEmpty()) {
                         stateLiveData.postValue(scope)
                         list.addAll(it)

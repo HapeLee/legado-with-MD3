@@ -8,12 +8,12 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface BookmarkDao {
 
-    @get:Query(
+    @Query(
         """
         select * from bookmarks order by bookName collate localized, bookAuthor collate localized, chapterIndex, chapterPos
     """
     )
-    val all: List<Bookmark>
+    suspend fun all(): List<Bookmark>
 
     @Query("select * from bookmarks order by bookName collate localized, bookAuthor collate localized, chapterIndex, chapterPos")
     fun flowAll(): Flow<List<Bookmark>>
@@ -38,7 +38,7 @@ interface BookmarkDao {
         where bookName = :bookName and bookAuthor = :bookAuthor 
         order by chapterIndex"""
     )
-    fun getByBook(bookName: String, bookAuthor: String): List<Bookmark>
+    suspend fun getByBook(bookName: String, bookAuthor: String): List<Bookmark>
 
     @Query(
         """SELECT * FROM bookmarks 
@@ -46,7 +46,7 @@ interface BookmarkDao {
         and chapterName like '%'||:key||'%' or content like '%'||:key||'%'
         order by chapterIndex"""
     )
-    fun search(bookName: String, bookAuthor: String, key: String): List<Bookmark>
+    suspend fun search(bookName: String, bookAuthor: String, key: String): List<Bookmark>
 
     // 模糊搜索
     @Query("""
@@ -66,7 +66,7 @@ interface BookmarkDao {
         and chapterIndex = :chapterIndex
         and chapterPos >= :startPos and chapterPos < :endPos"""
     )
-    fun getByChapterRange(
+    suspend fun getByChapterRange(
         bookName: String,
         bookAuthor: String,
         chapterIndex: Int,
@@ -75,12 +75,12 @@ interface BookmarkDao {
     ): List<Bookmark>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg bookmark: Bookmark)
+    suspend fun insert(vararg bookmark: Bookmark)
 
     @Update
-    fun update(bookmark: Bookmark)
+    suspend fun update(bookmark: Bookmark)
 
     @Delete
-    fun delete(vararg bookmark: Bookmark)
+    suspend fun delete(vararg bookmark: Bookmark)
 
 }

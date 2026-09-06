@@ -10,13 +10,16 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
 import kotlin.coroutines.CoroutineContext
 
 class CacheDownloadRepository {
 
     fun getChapter(bookUrl: String, index: Int): BookChapter? {
-        return appDb.bookChapterDao.getChapter(bookUrl, index)
+        return runBlocking {
+            appDb.bookChapterDao.getChapter(bookUrl, index)
+        }
     }
 
     fun hasImageContent(book: Book, chapter: BookChapter): Boolean {

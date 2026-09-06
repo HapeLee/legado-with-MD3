@@ -107,7 +107,7 @@ class BookshelfAutoGroupRepositoryTest {
         assertEquals(2, result.updatedBookCount)
         assertEquals(1, result.ignoredBookCount)
         assertEquals(1L, database.bookDao.getBook("book-1")?.group)
-        val newGroup = database.bookGroupDao.all.single { it.groupName == "New" }
+        val newGroup = database.bookGroupDao.all().single { it.groupName == "New" }
         assertEquals(newGroup.groupId, database.bookDao.getBook("book-2")?.group)
     }
 
@@ -121,7 +121,7 @@ class BookshelfAutoGroupRepositoryTest {
 
         assertEquals(0, result.createdGroupCount)
         assertEquals(1, result.ignoredBookCount)
-        assertTrue(database.bookGroupDao.all.isEmpty())
+        assertTrue(database.bookGroupDao.all().isEmpty())
     }
 
     @Test
@@ -162,7 +162,7 @@ class BookshelfAutoGroupRepositoryTest {
         val result = runCatching { repository.applyPlan(plan, fullOptions) }
 
         assertTrue(result.isFailure)
-        assertTrue(database.bookGroupDao.all.isEmpty())
+        assertTrue(database.bookGroupDao.all().isEmpty())
         assertEquals(0L, database.bookDao.getBook("book-1")?.group)
     }
 
@@ -188,7 +188,7 @@ class BookshelfAutoGroupRepositoryTest {
             BookshelfAutoGroupErrorReason.GroupCapacityExceeded,
             (error as BookshelfAutoGroupException).reason,
         )
-        assertEquals(Long.SIZE_BITS, database.bookGroupDao.all.size)
+        assertEquals(Long.SIZE_BITS, database.bookGroupDao.all().size)
         assertEquals(1L, database.bookDao.getBook("book-1")?.group)
     }
 
@@ -208,7 +208,7 @@ class BookshelfAutoGroupRepositoryTest {
         assertEquals(0, result.updatedBookCount)
         assertEquals(1, result.ignoredBookCount)
         assertEquals(1L, database.bookDao.getBook("book-1")?.group)
-        assertTrue(database.bookGroupDao.all.none { it.groupName == "New" })
+        assertTrue(database.bookGroupDao.all().none { it.groupName == "New" })
     }
 
     private fun book(url: String) = Book(bookUrl = url, name = url, author = "Author")

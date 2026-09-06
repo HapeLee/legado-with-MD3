@@ -2,6 +2,7 @@ package io.legado.app.ui.config.bookshelfConfig
 
 import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
+import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 
 class BookshelfManageScreenConfig(
@@ -12,7 +13,7 @@ class BookshelfManageScreenConfig(
 
     fun getBookSortByGroupId(groupId: Long): Int {
         val defaultSort = bookshelfSettingsGateway.currentSettings.bookshelfSort
-        return bookGroupDao.getByID(groupId)?.getRealBookSort(defaultSort) ?: defaultSort
+        return runBlocking { bookGroupDao.getByID(groupId) }?.getRealBookSort(defaultSort) ?: defaultSort
     }
 
     val bookshelfSortOrder: Int

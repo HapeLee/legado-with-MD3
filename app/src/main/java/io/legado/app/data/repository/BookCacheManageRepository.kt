@@ -23,7 +23,7 @@ class BookCacheManageRepository(
         bookGroupDao.flowSelect().flowOn(Dispatchers.IO)
 
     suspend fun getAllBooks(): List<Book> = withContext(Dispatchers.IO) {
-        bookDao.all
+        bookDao.all()
     }
 
     suspend fun getBook(bookUrl: String): Book? = withContext(Dispatchers.IO) {

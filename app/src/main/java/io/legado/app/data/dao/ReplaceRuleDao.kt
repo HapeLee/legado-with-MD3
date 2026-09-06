@@ -84,26 +84,26 @@ interface ReplaceRuleDao {
     @Query("select * from replace_rules where `group` is null or trim(`group`) = '' or trim(`group`) like '%未分组%'")
     fun flowNoGroup(): Flow<List<ReplaceRule>>
 
-    @get:Query("SELECT MIN(sortOrder) FROM replace_rules")
-    val minOrder: Int
+    @Query("SELECT MIN(sortOrder) FROM replace_rules")
+    suspend fun minOrder(): Int
 
-    @get:Query("SELECT MAX(sortOrder) FROM replace_rules")
-    val maxOrder: Int
+    @Query("SELECT MAX(sortOrder) FROM replace_rules")
+    suspend fun maxOrder(): Int
 
-    @get:Query("SELECT * FROM replace_rules ORDER BY sortOrder ASC")
-    val all: List<ReplaceRule>
+    @Query("SELECT * FROM replace_rules ORDER BY sortOrder ASC")
+    suspend fun all(): List<ReplaceRule>
 
-    @get:Query("select distinct `group` from replace_rules where trim(`group`) <> ''")
-    val allGroupsUnProcessed: List<String>
+    @Query("select distinct `group` from replace_rules where trim(`group`) <> ''")
+    suspend fun allGroupsUnProcessed(): List<String>
 
-    @get:Query("SELECT * FROM replace_rules WHERE isEnabled = 1 ORDER BY sortOrder ASC")
-    val allEnabled: List<ReplaceRule>
+    @Query("SELECT * FROM replace_rules WHERE isEnabled = 1 ORDER BY sortOrder ASC")
+    suspend fun allEnabled(): List<ReplaceRule>
 
     @Query("SELECT * FROM replace_rules WHERE id = :id")
-    fun findById(id: Long): ReplaceRule?
+    suspend fun findById(id: Long): ReplaceRule?
 
     @Query("SELECT * FROM replace_rules WHERE id in (:ids)")
-    fun findByIds(vararg ids: Long): List<ReplaceRule>
+    suspend fun findByIds(vararg ids: Long): List<ReplaceRule>
 
     @Query(
         """SELECT * FROM replace_rules WHERE isEnabled = 1 and scopeContent = 1
@@ -111,7 +111,7 @@ interface ReplaceRuleDao {
         and (excludeScope is null or (excludeScope not LIKE '%' || :name || '%' and excludeScope not LIKE '%' || :origin || '%'))
         order by sortOrder"""
     )
-    fun findEnabledByContentScope(name: String, origin: String): List<ReplaceRule>
+    suspend fun findEnabledByContentScope(name: String, origin: String): List<ReplaceRule>
 
     @Query(
         """SELECT * FROM replace_rules WHERE isEnabled = 1 and scopeTitle = 1
@@ -119,7 +119,7 @@ interface ReplaceRuleDao {
         and (excludeScope is null or (excludeScope not LIKE '%' || :name || '%' and excludeScope not LIKE '%' || :origin || '%'))
         order by sortOrder"""
     )
-    fun findEnabledByTitleScope(name: String, origin: String): List<ReplaceRule>
+    suspend fun findEnabledByTitleScope(name: String, origin: String): List<ReplaceRule>
 
     @Query("UPDATE replace_rules SET isEnabled = :enabled WHERE id = :id")
     suspend fun updateEnabled(id: Long, enabled: Boolean)
@@ -134,31 +134,31 @@ interface ReplaceRuleDao {
     suspend fun updateOrder(id: Long, order: Int)
 
     @Query("SELECT * FROM replace_rules WHERE id IN (:ids)")
-    fun getByIds(ids: Set<Long>): List<ReplaceRule>
+    suspend fun getByIds(ids: Set<Long>): List<ReplaceRule>
 
     @Query("UPDATE replace_rules SET `group` = NULL WHERE `group` IN (:groups)")
     suspend fun clearGroups(groups: List<String>)
 
     @Query("select * from replace_rules where `group` like '%' || :group || '%'")
-    fun getByGroup(group: String): List<ReplaceRule>
+    suspend fun getByGroup(group: String): List<ReplaceRule>
 
-    @get:Query("select * from replace_rules where `group` is null or `group` = ''")
-    val noGroup: List<ReplaceRule>
+    @Query("select * from replace_rules where `group` is null or `group` = ''")
+    suspend fun noGroup(): List<ReplaceRule>
 
-    @get:Query("SELECT COUNT(*) - SUM(isEnabled) FROM replace_rules")
-    val summary: Int
+    @Query("SELECT COUNT(*) - SUM(isEnabled) FROM replace_rules")
+    suspend fun summary(): Int
 
     @Query("UPDATE replace_rules SET isEnabled = :enable")
-    fun enableAll(enable: Boolean)
+    suspend fun enableAll(enable: Boolean)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg replaceRule: ReplaceRule): List<Long>
+    suspend fun insert(vararg replaceRule: ReplaceRule): List<Long>
 
     @Update
-    fun update(vararg replaceRules: ReplaceRule)
+    suspend fun update(vararg replaceRules: ReplaceRule)
 
     @Delete
-    fun delete(vararg replaceRules: ReplaceRule)
+    suspend fun delete(vararg replaceRules: ReplaceRule)
 
     @Transaction
     suspend fun updateAllOrders(rules: List<ReplaceRule>) {
@@ -179,7 +179,7 @@ interface ReplaceRuleDao {
         }
     }
 
-    fun allGroups(): List<String> = dealGroups(allGroupsUnProcessed)
+    suspend fun allGroups(): List<String> = dealGroups(allGroupsUnProcessed())
 
     fun flowGroups(): Flow<List<String>> {
         return flowGroupsUnProcessed().map { list ->

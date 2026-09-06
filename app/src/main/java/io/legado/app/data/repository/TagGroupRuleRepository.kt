@@ -62,6 +62,8 @@ class TagGroupRuleRepository {
         dao.update(*updatedRules.toTypedArray())
     }
 
-    fun getMaxOrder(): Int = dao.maxOrder
+    suspend fun getMaxOrder(): Int = withContext(Dispatchers.IO) {
+        dao.maxOrder()
+    }
 
 }

@@ -9,6 +9,6 @@ class RuleSubscriptionRepository(private val dao: RuleSubDao) {
     suspend fun findByUrl(url: String): RuleSub? = dao.findByUrl(url)
     suspend fun insert(rule: RuleSub) = dao.insert(rule)
     suspend fun delete(rule: RuleSub) = dao.delete(rule)
-    suspend fun all(): List<RuleSub> = dao.all
+    suspend fun all(): List<RuleSub> = dao.all()
     suspend fun update(vararg rules: RuleSub) = dao.update(*rules)
 }

@@ -29,6 +29,7 @@ import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import splitties.views.onClick
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -180,7 +181,7 @@ class ImportRssSourceDialog() : BaseDialogFragment(R.layout.dialog_recycler_view
     private fun alertCustomGroup(item: MenuItem) {
         alert(R.string.diy_edit_source_group) {
             val alertBinding = DialogCustomGroupBinding.inflate(layoutInflater).apply {
-                val groups = appDb.rssSourceDao.allGroups()
+                val groups = runBlocking { appDb.rssSourceDao.allGroups() }
                 textInputLayout.setHint(R.string.group_name)
                 editView.setFilterValues(groups.toList())
                 editView.dropDownHeight = 180.dpToPx()

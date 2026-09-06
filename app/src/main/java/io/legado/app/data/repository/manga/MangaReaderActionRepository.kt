@@ -93,7 +93,7 @@ class MangaReaderActionRepository(
 
     private suspend fun persistOnShelf(book: Book, toc: List<BookChapter>) {
         book.removeType(BookType.notShelf)
-        if (book.order == 0) book.order = database.bookDao.minOrder - 1
+        if (book.order == 0) book.order = database.bookDao.minOrder() - 1
         database.bookDao.insert(book)
         database.bookChapterDao.insert(*toc.toTypedArray())
     }

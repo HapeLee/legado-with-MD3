@@ -917,7 +917,7 @@ class ReadBookViewModel(
             is ReadBookIntent.SetAiTextRewriteReasoningLevel ->
                 aiDelegate.setAiTextRewriteReasoningLevel(intent.level)
             is ReadBookIntent.ConfirmAiTextRewrite -> aiDelegate.confirmAiTextRewrite()
-            is ReadBookIntent.OpenAiRewritePresetConfig -> aiDelegate.openAiRewritePresetConfig()
+            is ReadBookIntent.OpenAiRewritePresetConfig -> viewModelScope.launch { aiDelegate.openAiRewritePresetConfig() }
             is ReadBookIntent.CloseAiRewritePresetConfig -> aiDelegate.closeAiRewritePresetConfig()
             is ReadBookIntent.AddAiRewritePreset -> aiDelegate.startAddAiRewritePreset()
             is ReadBookIntent.EditAiRewritePreset -> aiDelegate.startEditAiRewritePreset(intent.preset)
@@ -925,11 +925,11 @@ class ReadBookViewModel(
                 aiDelegate.setAiRewritePresetName(intent.name)
             is ReadBookIntent.SetAiRewritePresetInstruction ->
                 aiDelegate.setAiRewritePresetInstruction(intent.instruction)
-            is ReadBookIntent.SaveAiRewritePreset -> aiDelegate.saveAiRewritePreset()
+            is ReadBookIntent.SaveAiRewritePreset -> viewModelScope.launch { aiDelegate.saveAiRewritePreset() }
             is ReadBookIntent.CancelAiRewritePresetEdit -> aiDelegate.clearAiRewritePresetDraft()
             is ReadBookIntent.RequestDeleteAiRewritePreset ->
                 aiDelegate.requestDeleteAiRewritePreset(intent.preset)
-            is ReadBookIntent.ConfirmDeleteAiRewritePreset -> aiDelegate.deleteAiRewritePreset()
+            is ReadBookIntent.ConfirmDeleteAiRewritePreset -> viewModelScope.launch { aiDelegate.deleteAiRewritePreset() }
             is ReadBookIntent.DismissDeleteAiRewritePreset ->
                 aiDelegate.dismissDeleteAiRewritePreset()
             is ReadBookIntent.ChangeSourceBook -> changeTo(intent.book)
@@ -998,7 +998,7 @@ class ReadBookViewModel(
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                     contentProcessDelegate.load()
                 } else if (intent.sheet is ReadBookSheet.AiRewritePresetConfig) {
-                    aiDelegate.openAiRewritePresetConfig()
+                    viewModelScope.launch { aiDelegate.openAiRewritePresetConfig() }
                 } else {
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                 }

@@ -1,6 +1,5 @@
 package io.legado.app.domain.model
 
-import io.legado.app.utils.splitNotBlank
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
@@ -133,7 +132,7 @@ data class BookSearchScope(val raw: String) {
             if (rawItems.isNotEmpty() && sourceItems.size == rawItems.size) {
                 return ParsedSearchScope(sources = sourceItems)
             }
-            return ParsedSearchScope(groups = raw.splitNotBlank(",").toList())
+            return ParsedSearchScope(groups = raw.splitNotBlank(","))
         }
 
         private fun parseLegacySourceItems(items: List<String>): List<ScopeSourceItem> {
@@ -149,6 +148,9 @@ data class BookSearchScope(val raw: String) {
                 }
             }
         }
+
+        private fun String.splitNotBlank(delimiter: String): List<String> =
+            split(delimiter).map { it.trim() }.filterNot { it.isBlank() }
 
         private fun JsonElement.safeJsonArray() = runCatching {
             jsonArray
@@ -177,5 +179,4 @@ data class BookSearchScope(val raw: String) {
         private const val TYPE_SOURCE = "source"
         private val scopeJson = Json
     }
-
 }

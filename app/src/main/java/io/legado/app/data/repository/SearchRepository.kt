@@ -97,7 +97,7 @@ class SearchRepositoryImpl(
         withContext(Dispatchers.IO) {
             val selectedSources = linkedSetOf<BookSourcePart>()
             when {
-                scope.isAll -> selectedSources.addAll(appDb.bookSourceDao.allEnabledPart)
+                scope.isAll -> selectedSources.addAll(appDb.bookSourceDao.allEnabledPart())
                 scope.isSource -> scope.sourceUrls.forEach { sourceUrl ->
                     appDb.bookSourceDao.getBookSourcePart(sourceUrl)?.let { selectedSources.add(it) }
                 }
@@ -108,7 +108,7 @@ class SearchRepositoryImpl(
             }
 
             if (selectedSources.isEmpty()) {
-                appDb.bookSourceDao.allEnabledPart
+                appDb.bookSourceDao.allEnabledPart()
             } else {
                 selectedSources.toList().sortedBy { it.customOrder }
             }

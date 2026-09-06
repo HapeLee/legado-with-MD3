@@ -22,7 +22,7 @@ class BookshelfAutoGroupRepository(
 
     override suspend fun loadSource(): BookshelfAutoGroupSource = withContext(Dispatchers.IO) {
         val groupDao = database.bookGroupDao
-        val allGroups = groupDao.all
+        val allGroups = groupDao.all()
         val publicGroups = allGroups.filter { it.isUserGroup() && !it.isPrivate }
         val privateGroupMask = allGroups
             .asSequence()
@@ -57,7 +57,7 @@ class BookshelfAutoGroupRepository(
         database.withTransaction {
             val groupDao = database.bookGroupDao
             val bookDao = database.bookDao
-            val allGroups = groupDao.all
+            val allGroups = groupDao.all()
             val privateGroupMask = allGroups
                 .asSequence()
                 .filter { it.isUserGroup() && it.isPrivate }
@@ -122,7 +122,7 @@ class BookshelfAutoGroupRepository(
                     val newGroup = BookGroup(
                         groupId = newGroupId,
                         groupName = group.name,
-                        order = groupDao.maxOrder.plus(1),
+                        order = groupDao.maxOrder().plus(1),
                         enableRefresh = true,
                         show = true,
                         bookSort = -1,

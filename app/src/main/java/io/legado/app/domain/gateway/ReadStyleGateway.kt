@@ -2,7 +2,6 @@ package io.legado.app.domain.gateway
 
 import io.legado.app.domain.model.settings.ReadStyleState
 import kotlinx.coroutines.flow.StateFlow
-import java.io.InputStream
 
 interface ReadStyleGateway {
     val currentState: ReadStyleState
@@ -30,7 +29,7 @@ interface ReadStyleGateway {
     fun importCurrentStyle(bytes: ByteArray)
     fun importOrReplaceStyle(bytes: ByteArray): String
     fun exportCurrentStyle(): ByteArray
-    fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String
+    fun saveBackgroundImage(bytes: ByteArray, displayName: String?): String
     fun setCurrentBackgroundImage(path: String)
     fun setCurrentBackgroundImageForMode(path: String, isNight: Boolean)
     fun exportConfigsJson(): String

@@ -33,7 +33,10 @@ fun CharSequence.replace(
     val replacement1 = if (isJs) replacement.substring(4) else replacement
     val book = if (isJs) {
         book ?: chapter?.bookUrl?.let {
-            appDb.searchBookDao.getSearchBook(it) ?: appDb.bookDao.getBook(it)?.toSearchBook()
+            runBlocking {
+                appDb.searchBookDao.getSearchBook(it)
+                    ?: appDb.bookDao.getBook(it)?.toSearchBook()
+            }
         }
     } else {
         null

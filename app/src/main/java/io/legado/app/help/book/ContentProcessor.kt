@@ -25,6 +25,7 @@ import io.legado.app.utils.replace
 import io.legado.app.utils.stackTraceStr
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.lang.ref.WeakReference
@@ -74,16 +75,16 @@ class ContentProcessor private constructor(
     fun upReplaceRules() {
         titleReplaceRules.run {
             clear()
-            addAll(appDb.replaceRuleDao.findEnabledByTitleScope(bookName, bookOrigin))
+            addAll(runBlocking { appDb.replaceRuleDao.findEnabledByTitleScope(bookName, bookOrigin) })
         }
         contentReplaceRules.run {
             clear()
-            addAll(appDb.replaceRuleDao.findEnabledByContentScope(bookName, bookOrigin))
+            addAll(runBlocking { appDb.replaceRuleDao.findEnabledByContentScope(bookName, bookOrigin) })
         }
     }
 
     private fun upRemoveSameTitle() {
-        val book = appDb.bookDao.getBookByOrigin(bookName, bookOrigin) ?: return
+        val book = runBlocking { appDb.bookDao.getBookByOrigin(bookName, bookOrigin) } ?: return
         removeSameTitleCache.clear()
         val files = BookHelp.getChapterFiles(book).filter {
             it.endsWith("nr")
@@ -192,7 +193,7 @@ class ContentProcessor private constructor(
                         }
                     } catch (e: RegexTimeoutException) {
                         item.isEnabled = false
-                        appDb.replaceRuleDao.update(item)
+                        runBlocking { appDb.replaceRuleDao.update(item) }
                         mContent = item.name + e.stackTraceStr
                     } catch (_: CancellationException) {
                     } catch (e: Exception) {
@@ -204,16 +205,20 @@ class ContentProcessor private constructor(
             useHtmlMap.forEach { (placeholder, originalContent) ->
                 mContent = mContent.replace(placeholder, originalContent)
             }
-            val contentProcesses = appDb.bookContentProcessDao.getForChapterSync(
-                bookUrl = book.bookUrl,
-                chapterIndex = chapter.index,
-            )
+            val contentProcesses = runBlocking {
+                appDb.bookContentProcessDao.getForChapter(
+                    bookUrl = book.bookUrl,
+                    chapterIndex = chapter.index,
+                )
+            }
             // 用户划线/高亮笔记独立存于 book_marks，渲染时转成合成 BookContentProcess
             // 混进现有管线（锚点/样式不变，引擎对标记类不改文本）。
-            val markings = appDb.bookMarkingDao.getForChapterSync(
-                bookUrl = book.bookUrl,
-                chapterIndex = chapter.index,
-            ).map { it.toRenderProcess() }
+            val markings = runBlocking {
+                appDb.bookMarkingDao.getForChapterSync(
+                    bookUrl = book.bookUrl,
+                    chapterIndex = chapter.index,
+                )
+            }.map { it.toRenderProcess() }
             if (contentProcesses.isNotEmpty() || markings.isNotEmpty()) {
                 val applyResult =
                     BookContentProcessEngine.apply(mContent, contentProcesses + markings)

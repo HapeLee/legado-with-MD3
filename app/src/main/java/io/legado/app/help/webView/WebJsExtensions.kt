@@ -24,6 +24,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import java.lang.ref.WeakReference
 import kotlin.uuid.Uuid
@@ -66,10 +67,12 @@ class WebJsExtensions(
         when (bookType) {
             BookType.text -> {
                 book = ReadBook.book?.also {
-                    chapter = appDb.bookChapterDao.getChapter(
-                        it.bookUrl,
-                        ReadBook.durChapterIndex
-                    )
+                    chapter = runBlocking {
+                        appDb.bookChapterDao.getChapter(
+                            it.bookUrl,
+                            ReadBook.durChapterIndex
+                        )
+                    }
                 }
             }
 
@@ -230,7 +233,7 @@ class WebJsExtensions(
                 }
                 val originKey = origin?.takeIf { it.isNotBlank() }
                 val targetSourceUrl = if (originKey != null) {
-                    appDb.rssSourceDao.getByKey(originKey)?.sourceUrl
+                    runBlocking { appDb.rssSourceDao.getByKey(originKey) }?.sourceUrl
                 } else {
                     (getSource() as? RssSource)?.sourceUrl
                 }

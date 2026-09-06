@@ -6,6 +6,7 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.help.source.SourceHelp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
@@ -47,11 +48,11 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
     }
 
     fun getBookSourceSync(sourceUrl: String): BookSource? {
-        return bookSourceDao.getBookSource(sourceUrl)
+        return runBlocking { bookSourceDao.getBookSource(sourceUrl) }
     }
 
     fun has(bookSourceUrl: String): Boolean {
-        return bookSourceDao.has(bookSourceUrl)
+        return runBlocking { bookSourceDao.has(bookSourceUrl) }
     }
 
     suspend fun getBookSourceAddBook(baseUrl: String): BookSource? {
@@ -62,19 +63,19 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
 
     suspend fun getHasBookUrlPattern(): List<BookSourcePart> {
         return withContext(Dispatchers.IO) {
-            bookSourceDao.hasBookUrlPattern
+            bookSourceDao.hasBookUrlPattern()
         }
     }
 
     suspend fun getAllEnabledPart(): List<BookSourcePart> {
         return withContext(Dispatchers.IO) {
-            bookSourceDao.allEnabledPart
+            bookSourceDao.allEnabledPart()
         }
     }
 
     suspend fun getAllPart(): List<BookSourcePart> {
         return withContext(Dispatchers.IO) {
-            bookSourceDao.allPart
+            bookSourceDao.allPart()
         }
     }
 
@@ -82,9 +83,9 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
         withContext(Dispatchers.IO) {
             val selected = sources.sortedBy { it.customOrder }
             val start = if (toTop) {
-                bookSourceDao.minOrder - selected.size
+                bookSourceDao.minOrder() - selected.size
             } else {
-                bookSourceDao.maxOrder + 1
+                bookSourceDao.maxOrder() + 1
             }
             bookSourceDao.upOrder(
                 selected.mapIndexed { index, part -> part.copy(customOrder = start + index) }
@@ -93,12 +94,12 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
 
     suspend fun getAllTextEnabledPart(): List<BookSourcePart> {
         return withContext(Dispatchers.IO) {
-            bookSourceDao.allTextEnabledPart
+            bookSourceDao.allTextEnabledPart()
         }
     }
 
     suspend fun topSources(sources: List<BookSourcePart>) = withContext(Dispatchers.IO) {
-        val minOrder = bookSourceDao.minOrder - 1
+        val minOrder = bookSourceDao.minOrder() - 1
         val reorderedSources = sources.sortedBy { it.customOrder }.mapIndexed { index, source ->
             source.copy(customOrder = minOrder - index)
         }
@@ -106,7 +107,7 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
     }
 
     suspend fun bottomSources(sources: List<BookSourcePart>) = withContext(Dispatchers.IO) {
-        val maxOrder = bookSourceDao.maxOrder + 1
+        val maxOrder = bookSourceDao.maxOrder() + 1
         val reorderedSources = sources.sortedBy { it.customOrder }.mapIndexed { index, source ->
             source.copy(customOrder = maxOrder + index)
         }
@@ -163,31 +164,31 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
     }
 
     suspend fun getAll(): List<BookSource> = withContext(Dispatchers.IO) {
-        bookSourceDao.all
+        bookSourceDao.all()
     }
 
     suspend fun getAllEnabled(): List<BookSource> = withContext(Dispatchers.IO) {
-        bookSourceDao.allEnabled
+        bookSourceDao.allEnabled()
     }
 
     suspend fun getAllDisabled(): List<BookSource> = withContext(Dispatchers.IO) {
-        bookSourceDao.allDisabled
+        bookSourceDao.allDisabled()
     }
 
     suspend fun getAllLogin(): List<BookSource> = withContext(Dispatchers.IO) {
-        bookSourceDao.allLogin
+        bookSourceDao.allLogin()
     }
 
     suspend fun getAllNoGroup(): List<BookSource> = withContext(Dispatchers.IO) {
-        bookSourceDao.allNoGroup
+        bookSourceDao.allNoGroup()
     }
 
     suspend fun getAllExploreEnabled(): List<BookSource> = withContext(Dispatchers.IO) {
-        bookSourceDao.allEnabledExplore
+        bookSourceDao.allEnabledExplore()
     }
 
     suspend fun getAllExploreDisabled(): List<BookSource> = withContext(Dispatchers.IO) {
-        bookSourceDao.allDisabledExplore
+        bookSourceDao.allDisabledExplore()
     }
 
     suspend fun getByGroup(group: String): List<BookSource> = withContext(Dispatchers.IO) {
@@ -203,7 +204,7 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
     }
 
     suspend fun getNoGroup(): List<BookSource> = withContext(Dispatchers.IO) {
-        bookSourceDao.noGroup
+        bookSourceDao.noGroup()
     }
 
     suspend fun delete(source: BookSource) = withContext(Dispatchers.IO) {

@@ -59,7 +59,7 @@ object ReadAloud {
             return TTSReadAloudService::class.java
         }
         if (StringUtils.isNumeric(ttsEngine)) {
-            httpTTS = appDb.httpTTSDao.get(ttsEngine.toLong())
+            httpTTS = runBlocking { appDb.httpTTSDao.get(ttsEngine.toLong()) }
             if (httpTTS != null) {
                 coordinatorDefaultEngineType = ReadAloudVoice.ENGINE_HTTP
                 coordinatorDefaultEngineId = ttsEngine
@@ -99,8 +99,8 @@ object ReadAloud {
             }
             if (boundVoices.isEmpty()) return@runCatching null
             boundVoices.firstOrNull { it.engineType == ReadAloudVoice.ENGINE_HTTP }
-                ?.engineId?.toLongOrNull()?.let(appDb.httpTTSDao::get)
-                ?: appDb.httpTTSDao.all.firstOrNull()
+                ?.engineId?.toLongOrNull()?.let { runBlocking { appDb.httpTTSDao.get(it) } }
+                ?: runBlocking { appDb.httpTTSDao.all() }.firstOrNull()
                 ?: HttpTTS(id = Long.MIN_VALUE, name = "TTS coordinator")
         }.getOrNull()
     }

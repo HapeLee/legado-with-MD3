@@ -3,6 +3,7 @@ package io.legado.app.data.repository
 import io.legado.app.data.dao.HttpTTSDao
 import io.legado.app.data.entities.HttpTTS
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 class HttpTtsRepository(
@@ -14,12 +15,12 @@ class HttpTtsRepository(
     }
 
     suspend fun getAll(): List<HttpTTS> = withContext(Dispatchers.IO) {
-        dao.all
+        dao.all()
     }
 
-    fun getAllSync(): List<HttpTTS> = dao.all
+    fun getAllSync(): List<HttpTTS> = runBlocking { dao.all() }
 
-    fun getNameSync(id: Long): String? = dao.getName(id)
+    fun getNameSync(id: Long): String? = runBlocking { dao.getName(id) }
 
     suspend fun insert(vararg sources: HttpTTS) = withContext(Dispatchers.IO) {
         dao.insert(*sources)

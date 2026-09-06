@@ -1,20 +1,16 @@
 package io.legado.app.domain.model
 
-import androidx.annotation.Keep
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-@Keep
 @Serializable
 sealed interface AiMessagePart {
 
-    @Keep
     @Serializable
     @SerialName("text")
     data class Text(val text: String) : AiMessagePart
 
-    @Keep
     @Serializable
     @SerialName("reasoning")
     data class Reasoning(val text: String) : AiMessagePart
@@ -24,7 +20,6 @@ sealed interface AiMessagePart {
      * When the model requests a tool, [input] is filled and [output] is empty.
      * After execution, [output] is filled and [approvalState] reflects the outcome.
      */
-    @Keep
     @Serializable
     @SerialName("tool")
     data class Tool(
@@ -37,7 +32,6 @@ sealed interface AiMessagePart {
         val metadata: String? = null
     ) : AiMessagePart
 
-    @Keep
     @Serializable
     @SerialName("book_result")
     data class BookResult(
@@ -54,7 +48,6 @@ sealed interface AiMessagePart {
     // ---- Legacy parts (deprecated, kept for backward-compatible deserialization) ----
 
     @Deprecated("Use Tool instead — tool call and result are now a single part")
-    @Keep
     @Serializable
     @SerialName("tool_call")
     data class ToolCall(
@@ -66,7 +59,6 @@ sealed interface AiMessagePart {
     ) : AiMessagePart
 
     @Deprecated("Use Tool instead — tool call and result are now a single part")
-    @Keep
     @Serializable
     @SerialName("tool_result")
     data class ToolResult(
@@ -76,7 +68,6 @@ sealed interface AiMessagePart {
     ) : AiMessagePart
 }
 
-@Keep
 @Serializable
 enum class AiToolApprovalState {
     @SerialName("auto")

@@ -145,50 +145,50 @@ object Backup {
         val aes = BackupAES()
         FileUtils.delete(backupPath)
         writeListToJson(
-            appDb.bookDao.all.filterNot { BackupConfig.backupIgnoreLocalBook && it.isLocal },
+            appDb.bookDao.all().filterNot { BackupConfig.backupIgnoreLocalBook && it.isLocal },
             "bookshelf.json",
             backupPath,
         )
         if (BackupConfig.dbIsNotIgnored("bookmark", true)) {
-            writeListToJson(appDb.bookmarkDao.all, "bookmark.json", backupPath)
+            writeListToJson(appDb.bookmarkDao.all(), "bookmark.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("bookGroup", true)) {
-            writeListToJson(appDb.bookGroupDao.all, "bookGroup.json", backupPath)
+            writeListToJson(appDb.bookGroupDao.all(), "bookGroup.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("bookSource", true)) {
-            writeListToJson(appDb.bookSourceDao.all, "bookSource.json", backupPath)
+            writeListToJson(appDb.bookSourceDao.all(), "bookSource.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("rssSource", true)) {
-            writeListToJson(appDb.rssSourceDao.all, "rssSources.json", backupPath)
+            writeListToJson(appDb.rssSourceDao.all(), "rssSources.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("rssStar", true)) {
-            writeListToJson(appDb.rssStarDao.all, "rssStar.json", backupPath)
+            writeListToJson(appDb.rssStarDao.all(), "rssStar.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("replaceRule", true)) {
-            writeListToJson(appDb.replaceRuleDao.all, "replaceRule.json", backupPath)
+            writeListToJson(appDb.replaceRuleDao.all(), "replaceRule.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("readRecord", true)) {
-            writeListToJson(appDb.readRecordDao.all, "readRecord.json", backupPath)
-            writeListToJson(appDb.readRecordDao.allDetail, "readRecordDetail.json", backupPath)
-            writeListToJson(appDb.readRecordDao.allSession, "readRecordSession.json", backupPath)
+            writeListToJson(appDb.readRecordDao.all(), "readRecord.json", backupPath)
+            writeListToJson(appDb.readRecordDao.allDetail(), "readRecordDetail.json", backupPath)
+            writeListToJson(appDb.readRecordDao.allSession(), "readRecordSession.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("searchHistory", true)) {
-            writeListToJson(appDb.searchKeywordDao.all, "searchHistory.json", backupPath)
+            writeListToJson(appDb.searchKeywordDao.all(), "searchHistory.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("sourceSub", true)) {
-            writeListToJson(appDb.ruleSubDao.all, "sourceSub.json", backupPath)
+            writeListToJson(appDb.ruleSubDao.all(), "sourceSub.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("txtTocRule", true)) {
-            writeListToJson(appDb.txtTocRuleDao.all, "txtTocRule.json", backupPath)
+            writeListToJson(appDb.txtTocRuleDao.all(), "txtTocRule.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("httpTTS", true)) {
-            writeListToJson(appDb.httpTTSDao.all, "httpTTS.json", backupPath)
+            writeListToJson(appDb.httpTTSDao.all(), "httpTTS.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("keyboardAssists", true)) {
-            writeListToJson(appDb.keyboardAssistsDao.all, "keyboardAssists.json", backupPath)
+            writeListToJson(appDb.keyboardAssistsDao.all(), "keyboardAssists.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("dictRule", true)) {
-            writeListToJson(appDb.dictRuleDao.all, "dictRule.json", backupPath)
+            writeListToJson(appDb.dictRuleDao.all(), "dictRule.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("homepageModules", true)) {
             writeListToJson(appDb.homepageModuleDao.getAll(), "homepageModules.json", backupPath)
@@ -210,7 +210,7 @@ object Backup {
             writeListToJson(appDb.tagGroupRuleDao.getAll(), "tagGroupRule.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("server", true)) {
-            GSON.toJson(appDb.serverDao.all).let { json ->
+            GSON.toJson(appDb.serverDao.all()).let { json ->
                 aes.runCatching {
                     encryptBase64(json)
                 }.getOrDefault(json).let {

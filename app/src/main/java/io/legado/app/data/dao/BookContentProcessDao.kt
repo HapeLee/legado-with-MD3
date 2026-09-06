@@ -30,17 +30,6 @@ interface BookContentProcessDao {
         order by sortOrder, createdAt
         """
     )
-    fun getForChapterSync(bookUrl: String, chapterIndex: Int?): List<BookContentProcess>
-
-    @Query(
-        """
-        select * from book_content_processes
-        where bookUrl = :bookUrl
-          and (:chapterIndex is null or chapterIndex is null or chapterIndex = :chapterIndex)
-          and status != ${BookContentProcess.STATUS_DELETED}
-        order by sortOrder, createdAt
-        """
-    )
     fun flowForChapter(bookUrl: String, chapterIndex: Int?): Flow<List<BookContentProcess>>
 
     @Query("select coalesce(max(sortOrder), 0) from book_content_processes where bookUrl = :bookUrl")

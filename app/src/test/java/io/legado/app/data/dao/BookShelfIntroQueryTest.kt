@@ -58,30 +58,30 @@ class BookShelfIntroQueryTest {
 
     @Test
     fun shelfPrefersListIntroOverDetailIntro() {
-        db.bookDao.insert(newBook())
+        runBlocking { db.bookDao.insert(newBook()) }
 
         assertEquals(listIntro, shelfIntro())
     }
 
     @Test
     fun shelfFallsBackToDetailIntroWhenListIntroMissing() {
-        db.bookDao.insert(newBook().apply { listIntro = null })
+        runBlocking { db.bookDao.insert(newBook().apply { listIntro = null }) }
 
         assertEquals(detailIntro, shelfIntro())
     }
 
     @Test
     fun customIntroStillWins() {
-        db.bookDao.insert(newBook().apply { customIntro = "我自己写的简介" })
+        runBlocking { db.bookDao.insert(newBook().apply { customIntro = "我自己写的简介" }) }
 
         assertEquals("我自己写的简介", shelfIntro())
     }
 
     @Test
     fun listIntroSurvivesRoundTrip() {
-        db.bookDao.insert(newBook())
+        runBlocking { db.bookDao.insert(newBook()) }
 
-        val saved: Book = db.bookDao.getBook("http://example.com/book/1")!!
+        val saved: Book = runBlocking { db.bookDao.getBook("http://example.com/book/1") }!!
         assertEquals(listIntro, saved.listIntro)
         assertEquals(detailIntro, saved.intro)
     }

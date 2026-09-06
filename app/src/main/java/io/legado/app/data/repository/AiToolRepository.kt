@@ -25,6 +25,7 @@ import io.legado.app.help.book.ContentProcessor
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlin.uuid.Uuid
 
@@ -81,7 +82,7 @@ class AiToolRepository(
     private fun searchBooks(args: JsonObject): String {
         val query = args.string("query").orEmpty().trim()
         val limit = args.int("limit", 8).coerceIn(1, 20)
-        val books = bookDao.all
+        val books = runBlocking { bookDao.all() }
             .asSequence()
             .filter { book ->
                 query.isBlank() ||
@@ -117,9 +118,13 @@ class AiToolRepository(
         val start = args.int("start", 0).coerceAtLeast(0)
         val limit = args.int("limit", 20).coerceIn(1, 80)
         val chapters = if (query.isBlank()) {
-            bookChapterDao.getChapterList(book.bookUrl, start, start + limit - 1)
+            runBlocking {
+                bookChapterDao.getChapterList(book.bookUrl, start, start + limit - 1)
+            }
         } else {
-            bookChapterDao.search(book.bookUrl, query).drop(start).take(limit)
+            runBlocking {
+                bookChapterDao.search(book.bookUrl, query)
+            }.drop(start).take(limit)
         }
         return GSON.toJson(
             mapOf(
@@ -141,8 +146,9 @@ class AiToolRepository(
         val book = resolveBook(args) ?: return """{"error":"Book not found"}"""
         val chapterIndex = args.int("chapterIndex", book.durChapterIndex).coerceAtLeast(0)
         val maxChars = args.int("maxChars", 6000).coerceIn(500, 12000)
-        val chapter = bookChapterDao.getChapter(book.bookUrl, chapterIndex)
-            ?: return """{"error":"Chapter not found"}"""
+        val chapter = runBlocking {
+            bookChapterDao.getChapter(book.bookUrl, chapterIndex)
+        } ?: return """{"error":"Chapter not found"}"""
         val rawContent = BookHelp.getContent(book, chapter)
             ?: return """{"error":"Chapter content is not cached locally"}"""
         val content = ContentProcessor.get(book.name, book.origin)
@@ -167,8 +173,9 @@ class AiToolRepository(
         val maxCharsPerChapter = args.int("maxCharsPerChapter", 2500).coerceIn(300, 6000)
         val start = (centerChapterIndex - before).coerceAtLeast(0)
         val end = centerChapterIndex + after
-        val chapters = bookChapterDao.getChapterList(book.bookUrl, start, end)
-            .map { chapter ->
+        val chapters = runBlocking {
+            bookChapterDao.getChapterList(book.bookUrl, start, end)
+        }.map { chapter ->
                 val rawContent = BookHelp.getContent(book, chapter)
                 val processedContent = rawContent?.let {
                     ContentProcessor.get(book.name, book.origin)
@@ -200,8 +207,9 @@ class AiToolRepository(
         val aroundChapterIndex = args.int("aroundChapterIndex", book.durChapterIndex)
         val limit = args.int("limit", 6).coerceIn(1, 20)
         val maxChars = args.int("maxChars", 800).coerceIn(200, 2000)
-        val chapters = bookChapterDao.getChapterList(book.bookUrl)
-            .sortedWith(
+        val chapters = runBlocking {
+            bookChapterDao.getChapterList(book.bookUrl)
+        }.sortedWith(
                 compareBy<io.legado.app.data.entities.BookChapter> {
                     kotlin.math.abs(it.index - aroundChapterIndex)
                 }.thenBy { it.index }
@@ -244,7 +252,7 @@ class AiToolRepository(
         val limit = args.int("limit", 10).coerceIn(1, 30)
         val bookName = args.string("bookName")?.trim().orEmpty()
         val bookAuthor = args.string("bookAuthor")?.trim().orEmpty()
-        val bookmarks = bookmarkDao.all
+        val bookmarks = runBlocking { bookmarkDao.all() }
             .asSequence()
             .filter { bookmark ->
                 (bookName.isBlank() || bookmark.bookName.equals(bookName, ignoreCase = true)) &&
@@ -274,11 +282,11 @@ class AiToolRepository(
         return GSON.toJson(mapOf("bookmarks" to bookmarks))
     }
 
-    private fun getReadingStats(args: JsonObject): String {
+    private suspend fun getReadingStats(args: JsonObject): String {
         val query = args.string("query").orEmpty().trim()
         val date = args.string("date")?.trim().orEmpty()
         val limit = args.int("limit", 10).coerceIn(1, 30)
-        val records = readRecordDao.all
+        val records = readRecordDao.all()
             .asSequence()
             .filter {
                 query.isBlank() ||
@@ -296,7 +304,7 @@ class AiToolRepository(
                 )
             }
             .toList()
-        val dailyDetails = readRecordDao.allDetail
+        val dailyDetails = readRecordDao.allDetail()
             .asSequence()
             .filter {
                 (date.isBlank() || it.date == date) &&
@@ -321,7 +329,7 @@ class AiToolRepository(
             .toList()
         return GSON.toJson(
             mapOf(
-                "totalReadTimeMillis" to readRecordDao.all.sumOf { it.readTime },
+                "totalReadTimeMillis" to readRecordDao.all().sumOf { it.readTime },
                 "recentRecords" to records,
                 "dailyDetails" to dailyDetails
             )
@@ -711,17 +719,17 @@ class AiToolRepository(
 
     private fun resolveBook(args: JsonObject): Book? {
         args.string("bookUrl")?.takeIf { it.isNotBlank() }?.let { url ->
-            bookDao.getBook(url)?.let { return it }
+            runBlocking { bookDao.getBook(url) }?.let { return it }
         }
         val name = args.string("bookName")?.trim().orEmpty()
         val author = args.string("bookAuthor")?.trim().orEmpty()
         if (name.isNotBlank() && author.isNotBlank()) {
-            bookDao.getBook(name, author)?.let { return it }
+            runBlocking { bookDao.getBook(name, author) }?.let { return it }
         }
         if (name.isNotBlank()) {
-            return bookDao.findByName(name).firstOrNull()
+            return runBlocking { bookDao.findByName(name).firstOrNull() }
         }
-        return bookDao.lastReadBook
+        return runBlocking { bookDao.lastReadBook() }
     }
 
     private fun Book.toIdentityMap(): Map<String, Any?> {

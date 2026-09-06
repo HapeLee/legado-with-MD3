@@ -271,7 +271,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     val cueRoleType = cue?.roleType ?: SpeechRoleType.Unknown
                     val sourceKey = sourceKeyForCue(routedVoice, cue, httpTts)
                     val itemHttpTts = routedVoice.engineId.toLongOrNull()
-                        ?.let(appDb.httpTTSDao::get) ?: httpTts
+                        ?.let { runBlocking { appDb.httpTTSDao.get(it) } } ?: httpTts
                     val fileName =
                         md5SpeakFileName(text, httpTts = itemHttpTts, sourceKey = sourceKey)
                     val speakText = text.replace(AppPattern.notReadAloudRegex, "")
@@ -545,7 +545,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
                 ReadAloudVoice.ENGINE_HTTP -> {
                     val itemHttpTts = routedVoice.engineId.toLongOrNull()
-                        ?.let(appDb.httpTTSDao::get) ?: httpTts
+                        ?.let { runBlocking { appDb.httpTTSDao.get(it) } } ?: httpTts
                     val inputStream = getSpeakStream(itemHttpTts, speakText)
                     if (inputStream != null) {
                         createSpeakFile(fileName, inputStream)
@@ -945,7 +945,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
             else -> {
                 val itemHttpTts = routedVoice.engineId.toLongOrNull()
-                    ?.let(appDb.httpTTSDao::get) ?: httpTts
+                    ?.let { runBlocking { appDb.httpTTSDao.get(it) } } ?: httpTts
                 itemHttpTts.url
             }
         }
@@ -998,7 +998,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             ),
         ).voice ?: return default
         val id = routed.engineId.toLongOrNull() ?: return default
-        return appDb.httpTTSDao.get(id) ?: default
+        return runBlocking { appDb.httpTTSDao.get(id) } ?: default
     }
 
     private fun createSilentSound(fileName: String) {

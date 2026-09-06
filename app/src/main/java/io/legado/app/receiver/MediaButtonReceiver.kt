@@ -18,6 +18,7 @@ import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.postEvent
+import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 
 
@@ -105,7 +106,7 @@ class MediaButtonReceiver : BroadcastReceiver() {
                     if (ReadBook.book != null) {
                         ReadBook.readAloud()
                     } else {
-                        appDb.bookDao.lastReadBook?.let {
+                        runBlocking { appDb.bookDao.lastReadBook() }?.let {
                             ReadBook.resetData(it)
                             ReadBook.clearTextChapter()
                             ReadBook.loadContent(false) {

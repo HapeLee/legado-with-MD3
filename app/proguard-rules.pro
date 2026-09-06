@@ -63,12 +63,14 @@
 -keep class **.data.entities.**{*;}
 # Gson反序列化用的数据传输类
 -keep class io.legado.app.model.translation.**{*;}
--keep class io.legado.app.domain.model.DictPair{*;}
--keep class io.legado.app.domain.model.BookDictionary{*;}
--keep class io.legado.app.domain.model.TextChunk{*;}
--keep class io.legado.app.domain.model.ModuleDef{*;}
--keep class io.legado.app.domain.model.ModuleItem{*;}
--keep class io.legado.app.domain.model.CustomSetItem{*;}
+# io.legado.app.domain.model 整包保留：
+# 该包的数据类原先逐个用 androidx.annotation.Keep 标注（共 33 处，含嵌套类），
+# 下沉到 :core:model 的 commonMain 后拿不到 androidx.annotation，改由本规则统一兜底。
+# 用整包规则而非逐类枚举，是为了避免漏掉任何一个曾经被 @Keep 保护的嵌套类——
+# 漏保会导致 release 包 Gson 反序列化静默失败，而 debug 与单测都测不出来。
+# 代价只是略微放弃该包的裁剪收益，与上面 data.entities 的做法一致。
+# 注意：这些类虽已移入 :core:model，包名未变，按 FQCN 匹配的规则仍然生效。
+-keep class io.legado.app.domain.model.**{*;}
 -keep class io.legado.app.data.repository.GoogleTranslateResponse{*;}
 -keep class io.legado.app.data.repository.GoogleSentence{*;}
 -keep class io.legado.app.data.repository.GoogleSpell{*;}

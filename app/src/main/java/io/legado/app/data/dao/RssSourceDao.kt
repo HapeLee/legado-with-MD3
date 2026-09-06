@@ -19,16 +19,16 @@ import kotlinx.coroutines.flow.map
 interface RssSourceDao {
 
     @Query("select * from rssSources where sourceUrl = :key")
-    fun getByKey(key: String): RssSource?
+    suspend fun getByKey(key: String): RssSource?
 
     @Query("select * from rssSources where sourceUrl in (:sourceUrls)")
-    fun getRssSources(vararg sourceUrls: String): List<RssSource>
+    suspend fun getRssSources(vararg sourceUrls: String): List<RssSource>
 
-    @get:Query("SELECT * FROM rssSources order by customOrder")
-    val all: List<RssSource>
+    @Query("SELECT * FROM rssSources order by customOrder")
+    suspend fun all(): List<RssSource>
 
-    @get:Query("select count(sourceUrl) from rssSources")
-    val size: Int
+    @Query("select count(sourceUrl) from rssSources")
+    suspend fun size(): Int
 
     @Query("SELECT * FROM rssSources order by customOrder")
     fun flowAll(): Flow<List<RssSource>>
@@ -92,41 +92,41 @@ interface RssSourceDao {
     @Query("select distinct sourceGroup from rssSources where trim(sourceGroup) <> '' and enabled = 1")
     fun flowEnabledGroupsUnProcessed(): Flow<List<String>>
 
-    @get:Query("select distinct sourceGroup from rssSources where trim(sourceGroup) <> ''")
-    val allGroupsUnProcessed: List<String>
+    @Query("select distinct sourceGroup from rssSources where trim(sourceGroup) <> ''")
+    suspend fun allGroupsUnProcessed(): List<String>
 
-    @get:Query("select min(customOrder) from rssSources")
-    val minOrder: Int
+    @Query("select min(customOrder) from rssSources")
+    suspend fun minOrder(): Int
 
-    @get:Query("select max(customOrder) from rssSources")
-    val maxOrder: Int
+    @Query("select max(customOrder) from rssSources")
+    suspend fun maxOrder(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg rssSource: RssSource)
+    suspend fun insert(vararg rssSource: RssSource)
 
     @Update
-    fun update(vararg rssSource: RssSource)
+    suspend fun update(vararg rssSource: RssSource)
 
     @Delete
-    fun delete(vararg rssSource: RssSource)
+    suspend fun delete(vararg rssSource: RssSource)
 
     @Query("delete from rssSources where sourceUrl = :sourceUrl")
-    fun delete(sourceUrl: String)
+    suspend fun delete(sourceUrl: String)
 
     @Query("delete from rssSources where sourceGroup like 'legado'")
-    fun deleteDefault()
+    suspend fun deleteDefault()
 
-    @get:Query("select * from rssSources where sourceGroup is null or sourceGroup = ''")
-    val noGroup: List<RssSource>
+    @Query("select * from rssSources where sourceGroup is null or sourceGroup = ''")
+    suspend fun noGroup(): List<RssSource>
 
     @Query("select * from rssSources where sourceGroup like '%' || :group || '%'")
-    fun getByGroup(group: String): List<RssSource>
+    suspend fun getByGroup(group: String): List<RssSource>
 
     @Query("select exists(select 1 from rssSources where sourceUrl = :key)")
-    fun has(key: String): Boolean
+    suspend fun has(key: String): Boolean
 
     @Query("update rssSources set enabled = :enable where sourceUrl = :sourceUrl")
-    fun enable(sourceUrl: String, enable: Boolean)
+    suspend fun enable(sourceUrl: String, enable: Boolean)
 
     @Query("UPDATE rssSources SET redirectPolicy = :redirectPolicy WHERE sourceUrl = :sourceUrl")
     suspend fun updateRedirectPolicy(sourceUrl: String, redirectPolicy: String)
@@ -143,7 +143,7 @@ interface RssSourceDao {
         }
     }
 
-    fun allGroups(): List<String> = dealGroups(allGroupsUnProcessed)
+    suspend fun allGroups(): List<String> = dealGroups(allGroupsUnProcessed())
 
     fun flowGroups(): Flow<List<String>> {
         return flowGroupsUnProcessed().map { list ->

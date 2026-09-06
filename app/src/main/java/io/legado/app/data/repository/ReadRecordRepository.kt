@@ -275,7 +275,7 @@ class ReadRecordRepository(
     suspend fun deleteDetail(detail: ReadRecordDetail) {
         database.withTransaction {
             // 聚合详情代表所有设备同一天的阅读，删除时必须同步删除底层阅读时段记录。
-            val affectedDevices = dao.allSession.asSequence()
+            val affectedDevices = dao.allSession().asSequence()
                 .filter {
                     it.bookName == detail.bookName &&
                         it.bookAuthor == detail.bookAuthor &&
@@ -306,7 +306,7 @@ class ReadRecordRepository(
 
     suspend fun deleteSession(session: ReadRecordSession) {
         database.withTransaction {
-            val affectedDevices = dao.allSession.asSequence()
+            val affectedDevices = dao.allSession().asSequence()
                 .filter {
                     it.bookName == session.bookName &&
                         it.bookAuthor == session.bookAuthor &&
@@ -553,9 +553,9 @@ class ReadRecordRepository(
     /** 清理字段完全相同的阅读时段记录，并根据剩余记录重建汇总记录。 */
     suspend fun repairDuplicateSessions(): Int {
         return database.withTransaction {
-            val sessionsBefore = dao.allSession
-            val recordsBefore = dao.all.associateBy { Triple(it.deviceId, it.bookName, it.bookAuthor) }
-            val detailsBefore = dao.allDetail.groupBy { Triple(it.deviceId, it.bookName, it.bookAuthor) }
+            val sessionsBefore = dao.allSession()
+            val recordsBefore = dao.all().associateBy { Triple(it.deviceId, it.bookName, it.bookAuthor) }
+            val detailsBefore = dao.allDetail().groupBy { Triple(it.deviceId, it.bookName, it.bookAuthor) }
             val affectedKeys = sessionsBefore
                 .map { Triple(it.deviceId, it.bookName, it.bookAuthor) }
                 .toSet()
@@ -576,7 +576,7 @@ class ReadRecordRepository(
                     detailsBefore[Triple(deviceId, bookName, bookAuthor)].orEmpty(),
                 )
             }
-            return@withTransaction sessionsBefore.size - dao.allSession.size
+            return@withTransaction sessionsBefore.size - dao.allSession().size
         }
     }
 
@@ -631,7 +631,7 @@ class ReadRecordRepository(
             var merged = 0
             var normalized = 0
             var exceptions = 0
-            dao.all.forEach { record ->
+            dao.all().forEach { record ->
                 val name = ReadRecordIdentity.bookName(record.bookName)
                 val author = ReadRecordIdentity.author(record.bookAuthor)
                 if (name != record.bookName || author != record.bookAuthor) {
@@ -642,7 +642,7 @@ class ReadRecordRepository(
                     }.onFailure { exceptions++ }
                 }
             }
-            dao.allDetail.forEach { detail ->
+            dao.allDetail().forEach { detail ->
                 val normalized = detail.copy(
                     bookName = ReadRecordIdentity.bookName(detail.bookName),
                     bookAuthor = ReadRecordIdentity.author(detail.bookAuthor),
@@ -659,7 +659,7 @@ class ReadRecordRepository(
                     dao.deleteDetail(detail)
                 }
             }
-            dao.allSession.forEach { session ->
+            dao.allSession().forEach { session ->
                 val normalized = session.copy(
                     bookName = ReadRecordIdentity.bookName(session.bookName),
                     bookAuthor = ReadRecordIdentity.author(session.bookAuthor),
@@ -687,9 +687,9 @@ class ReadRecordRepository(
 
     /** 只读扫描阅读记录问题，不修改数据库；结果用于展示可修复项数量。 */
     suspend fun scanReadRecordIssues(): ReadRecordRepairReport {
-        val records = dao.all
-        val details = dao.allDetail
-        val sessions = dao.allSession
+        val records = dao.all()
+        val details = dao.allDetail()
+        val sessions = dao.allSession()
         val duplicateSessions = sessions.size - sessions.distinctBy {
             listOf(it.deviceId, it.bookName, it.bookAuthor, it.startTime, it.endTime, it.words)
         }.size
@@ -719,7 +719,7 @@ class ReadRecordRepository(
     /** 备份恢复后按取大值原则重算汇总，保证重复恢复幂等。 */
     suspend fun reconcileRestoredReadRecordTotals() {
         database.withTransaction {
-            dao.all.forEach { record ->
+            dao.all().forEach { record ->
                 val sessions = dao.getSessionsByBook(record.deviceId, record.bookName, record.bookAuthor)
                 if (sessions.isEmpty()) return@forEach
                 dao.update(record.copy(
@@ -727,7 +727,7 @@ class ReadRecordRepository(
                     lastRead = maxOf(record.lastRead, sessions.maxOf { it.endTime }),
                 ))
             }
-            dao.allDetail.forEach { detail ->
+            dao.allDetail().forEach { detail ->
                 val sessions = dao.getSessionsByBook(detail.deviceId, detail.bookName, detail.bookAuthor)
                     .filter {
                         it.startTime.toDateString() == detail.date

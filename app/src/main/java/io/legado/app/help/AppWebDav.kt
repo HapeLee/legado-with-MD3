@@ -373,7 +373,7 @@ object AppWebDav {
         bookProgressFiles.forEach {
             map[it.displayName] = it
         }
-        appDb.bookDao.all.forEach { book ->
+        appDb.bookDao.all().forEach { book ->
             val progressFileName = getProgressFileName(book.name, book.author)
             val webDavFile = map[progressFileName]
             webDavFile ?: return@forEach

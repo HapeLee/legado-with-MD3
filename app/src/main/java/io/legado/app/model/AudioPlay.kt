@@ -29,6 +29,7 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
@@ -84,7 +85,9 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     fun upData(book: Book) {
         AudioPlay.book = book
-        chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
+        chapterSize = runBlocking {
+            appDb.bookChapterDao.getChapterCount(book.bookUrl)
+        }
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()
         } else {
@@ -103,7 +106,9 @@ object AudioPlay : CoroutineScope by MainScope() {
     fun resetData(book: Book) {
         stop()
         AudioPlay.book = book
-        chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
+        chapterSize = runBlocking {
+            appDb.bookChapterDao.getChapterCount(book.bookUrl)
+        }
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()
         } else {
@@ -242,7 +247,9 @@ object AudioPlay : CoroutineScope by MainScope() {
      */
     fun upDurChapter() {
         val book = book ?: return
-        durChapter = appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)
+        durChapter = runBlocking {
+            appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)
+        }
         durAudioSize = durChapter?.end?.toInt() ?: 0
         val title = durChapter?.title ?: appCtx.getString(R.string.data_loading)
         postEvent(EventBus.AUDIO_SUB_TITLE, title)

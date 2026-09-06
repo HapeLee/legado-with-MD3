@@ -16,26 +16,14 @@ interface AiPromptPresetDao {
         order by sortNumber, createdAt
         """
     )
-    fun getEnabledByTaskType(taskType: String): List<AiPromptPreset>
+    suspend fun getEnabledByTaskType(taskType: String): List<AiPromptPreset>
 
     @Query("select count(*) from ai_prompt_presets where taskType = :taskType")
     suspend fun countByTaskType(taskType: String): Int
-
-    @Query("select count(*) from ai_prompt_presets where taskType = :taskType")
-    fun countByTaskTypeSync(taskType: String): Int
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(preset: AiPromptPreset)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(presets: List<AiPromptPreset>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsertAllSync(presets: List<AiPromptPreset>)
-
     @Query("delete from ai_prompt_presets where id = :id")
-    suspend fun delete(id: String)
-
-    @Query("delete from ai_prompt_presets where id = :id")
-    fun deleteSync(id: String)
-}
+    suspend fun delete(id: String)}

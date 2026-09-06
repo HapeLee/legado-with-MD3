@@ -150,7 +150,7 @@
 | # | 议题 | 我们的现状 | 样本的做法 | 待验证结论 |
 |---|---|---|---|---|
 | D1 | **Room KMP** | `androidx.room` **2.8.4** | `androidx.room3` **3.0.1** | ✅ **Go（2026-09-05 PoC）**：`:smoke:room-kmp-probe` 证明 Room 2.8.4 KMP 在 commonMain 的 entity/DAO/`@Database(@ConstructedBy)` + `expect object` 编译、KSP2 为 Android+Desktop 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstructor` actual、`BundledSQLiteDriver` 在 desktop JVM 跑真实 SQLite 查询（3 项测试：insert+query/Flow/delete）。**结论：留在 2.8.4，不升 room3**。发现：Android target 的 `Room.databaseBuilder` 要求 Context，host test 无法构造 DB（需 Robolectric/instrumentation），但 KSP 生成已验证可用。P3 迁移前需把 389 个 blocking DAO 函数转 suspend + 2 个 SupportSQLite 文件改 driver API |
-| D2 | **HTML 解析** | jsoup **1.16.2**（AGENTS.md 锁定，不得升级）+ `JsoupXpath` | ksoup 0.2.6 + 9 文件 `org.jsoup` 兼容层 | 我们不能升级 jsoup，也不能指望 ksoup 完全等价。**方案：双轨——抽 `HtmlDocument`/`HtmlElement` 窄接口**，JVM/Android actual 委托 jsoup 1.16.2（保证现有 `AnalyzeByJSoup` 与 JsoupXpath 行为零变化），common 侧面向接口。ksoup 只在出现 native target 需求时再引入 |
+| D2 | **HTML 解析** | jsoup **1.16.2**（AGENTS.md 锁定，不得升级）+ `JsoupXpath` | ksoup 0.2.6 + 9 文件 `org.jsoup` 兼容层 | ✅ **Go（2026-09-06）**：双轨成立。`HtmlParser`/`HtmlDocument`/`HtmlElement` 三接口进 `:core:platform` commonMain，`JsoupHtmlParser` 在 androidMain/desktopMain 委托 jsoup 1.16.2；8 项契约测试双 target 通过；首个真实消费方 `HtmlFormatter` 迁移后既有 11 项测试行为零变化。**接缝不是全量替换**：书源 JS 边界的 `org.jsoup.Connection.Response` 属平台岛不迁移（见下方 D2 落地记录）。ksoup 只在出现 native target 需求时再引入 |
 | D3 | **网络** | okhttp 5.4.0 + Cronet（24 文件） | `KmpHttpClient` 面：okhttp typealias / Ktor / napi | ✅ **Go（2026-09-05 PoC）**：`:smoke:network-kmp-probe` 证明 Ktor 3.5.1 client-core 在 commonMain 双 target 编译、MockEngine 测试过、OkHttp 引擎在双 target 可实例化。结论：HttpClient 契约用 **Ktor client-core**（commonMain）+ okhttp 引擎（androidMain/desktopMain actual），Cronet 留 Android actual |
 | D4 | **JS 引擎** | Rhino（27 文件）+ `modules/rhino` | QuickJS + KSP 分派表 | ✅ **Go（2026-09-05 PoC）**：`:smoke:rhino-capability-probe` 证明 Rhino 1.8.1（纯 JVM）在 commonMain `RuleEngine` 契约 + android/desktop actual 下工作，双 target 各 3 测试过（算术/绑定/字符串）。结论：RuleEngine capability 用 Rhino（不换 QuickJS，含书源兼容测试单独立项不进关键路径） |
 | D5 | **图片** | coil3 3.5.0（39 文件）+ Glide（21 文件） | coil3 + `BookImageLoaders` 注册器 | coil3 已 KMP 就绪。先清理 Glide 残留（21 文件），再抽 `BookImageLoader` |
@@ -274,8 +274,8 @@ desktop/                           # 首个非 Android 证明宿主
   `import java.nio.charset.StandardCharsets`（后者换 `Charsets.UTF_8`，kotlin common）。
   `SyncReadAloudVoicesUseCaseTest`（3 项）间接覆盖 SpeechIdentity，作安全网——全过。
 - ✅ `:core:platform` 双 target 18 测试 + `:app` 编译 + `SyncReadAloudVoicesUseCaseTest` 3 项 + 双守卫全过。
-- **价值**：SpeechIdentity 的唯一 JVM 依赖已契约化，P2 下沉 `:core:model` 时该 object 可直接搬入 commonMain
-  （只依赖 `Digest` 契约，不依赖 JCA）。AES/HMAC 等待真实消费方出现再加。
+- **价值**：SpeechIdentity 的唯一 JVM 依赖已契约化。后续 P2 将其纯算法迁入 `:core:model` 的
+  `SpeechIdentityCalculator`，并把绑定 `JcaDigest` 的兼容入口保留在 :app；AES/HMAC 等待真实消费方出现再加。
 
 **P1-Http 落地记录（2026-09-05）**：`HttpClient` 契约 + `KtorHttpClient` 实现 + MockEngine 契约测试。
 
@@ -302,6 +302,39 @@ desktop/                           # 首个非 Android 证明宿主
   不换 QuickJS（AGENTS.md：Rhino 书源规则高行为风险，换引擎含兼容测试单独立项不进关键路径）。
 - **未做**：正式 `RuleEngine` 契约入 `:core:platform` + 真实消费方（27 文件的 Rhino 书源规则）迁移归后续切片。
 
+**D2 落地记录（2026-09-06）**：`HtmlParser` 契约 + `JsoupHtmlParser` actual + 双 target 契约测试 + `HtmlFormatter` 真实消费方。
+
+- **结论：D2 = Go，接缝按「解析侧抽象 / 网络响应侧平台岛」切分**（不是全量替换 jsoup）。
+- **契约**（`:core:platform` commonMain）：`HtmlParser.parseBodyFragment`、`HtmlDocument.body()` /
+  `setPrettyPrint`、`HtmlElement.select` / `remove` / `html`。只覆盖当时唯一真实消费方 `HtmlFormatter`
+  用到的 5 个 jsoup 调用，**不为 `AnalyzeByJSoup` / `JsoupExtensions.textArray` 的宽遍历面提前扩接口**
+  （AGENTS.md「无调用方抽象」）。`setPrettyPrint` 是行为开关而非样式偏好：`prettyPrint(true)` 会给
+  `html()` 插入换行缩进，直接改变清洗后的段落切分，故必须进契约。
+- **实现**（androidMain + desktopMain，均 JVM，同 `JsoupHtmlParser`）：委托 jsoup **1.16.2**
+  （AGENTS.md 锁定版本）。`checkSharedPurity` 已把 `org.jsoup.*`、`org.seimicrawler.*`（JsoupXpath）、
+  `com.jayway.*`（JsonPath）、`org.mozilla.javascript.*`（Rhino）、`okhttp3.*` 列为 commonMain 禁止
+  import——**这是本次补的缺口**：此前这些纯 JVM 库可以悄悄进 commonMain 而不被任何门禁发现
+  （实测当时 0 违规，故 day 1 起 blocking）。
+- **契约测试**：`HtmlParserContractTest` 8 场景（空输入仍有 body、`html()` 不含自身标签、
+  script/style/noscript **连同内容**移除、prettyPrint 开关的行为差异、select 空结果、逗号并集选择器、
+  只摘除被选中的元素），desktopTest + androidHostTest 各 8 项通过。
+- **真实消费方**：`HtmlFormatter.formatDisplayText` 的 3 处 jsoup 直调改为走 `HtmlParser`
+  （`private val parser: HtmlParser = JsoupHtmlParser`，同 `FileUtils.fileSystem` / `SpeechIdentity.digest`
+  的 object 注入形态）。安全网是既有 `HtmlFormatterTest` 11 项，全过、行为零变化。
+- **三条发现（影响后续所有 HTML 相关工作）**：
+  1. `help/JsExtensions.get/head/post` 把 `org.jsoup.Connection.Response` **原样返回给书源 JS**，JS 桥靠
+     反射调 `body()/code()/header()`。**jsoup 类型在 JS 边界必须保留原样——这一侧是平台岛，不抽象、
+     不替换。** 参照样本被迫写 9 个 `org.jsoup.*` 兼容文件正是同一约束，我们只是把岛的边界画清楚了。
+  2. jsoup 全仓使用点 **13 文件**，不止 `model/analyzeRule`：`help/JsExtensions`、`help/http/CookieManager`、
+     `lib/webdav/WebDav`、`model/localBook/{EpubFile,MobiFile}`、`ui/rss/read/RssReadRouteScreen`、
+     `ui/widget/components/text/HtmlContent`、`utils/{EncodingDetect,HtmlFormatter,JsoupExtensions}`。
+  3. `utils/JsoupExtensions.kt` 的 `textArray` 用到 `org.jsoup.internal.StringUtil`（**internal API**）+
+     `NodeTraversor` / `NodeVisitor` / `CDataNode` / `tag().preserveWhitespace()`。这是本契约**未覆盖**的
+     宽遍历面；下一刀要扩接口时，代价主要集中在这里。
+- **未做**：`AnalyzeByJSoup`(524) / `AnalyzeByXPath`(155) / `AnalyzeByJSonPath`(172) / `AnalyzeRule`(985) /
+  `AnalyzeUrl`(999) 均未迁移；JsoupXpath 2.5.5、JsonPath、Rhino、okhttp 均未立契约（契约已禁止其进入
+  commonMain，但实现侧尚无对应窄接口）。
+
 **D1 PoC = Go（2026-09-05）**：`:smoke:room-kmp-probe` 证明 Room 2.8.4 KMP 可用。留在 2.8.4 不升 room3。
 KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstructor` actual，
 `BundledSQLiteDriver` 在 desktop JVM 跑真实 SQLite 查询（3 项测试）。
@@ -313,25 +346,81 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 
 ### P2 —— 纯逻辑下沉（4–6 周，可与 P1 后半并行）
 
-> **进度（2026-09-06）**：`:core:model` 已建立并完成三个子切片。第一批迁 `constant/` 的 8 个
+> **进度（2026-09-06）**：`:core:model` 已建立并完成十一个子切片。第一批迁 `constant/` 的 8 个
 > 零平台依赖对象（AppPattern/EventBus/IntentAction/NotificationId/PreferKey/ReadTipType/Status/Theme，
 > 新增 `AppPatternTest` 14 条 characterization test，并清理 PreferKey 重复键 textSelectAble）；
 > 第二批迁 `domain/model/readaloud/` 的 10 个纯值对象 + 4 个测试；第三批迁 `domain/model/` 零依赖
-> 纯值对象 30 个（含 `settings/` 14 个、`manga/` 1 个）。`SpeechIdentity` 因依赖 `:core:platform` 的
-> `Digest` 契约、`CloudTtsVoiceConfigTest` 因依赖 `utils.GSON`、`AiModelRegistry`/`ContentChunker`/
+> 纯值对象 30 个（含 `settings/` 14 个、`manga/` 1 个）；第四批迁 `BookSearchScope`，以
+> `kotlinx-serialization-json` common 依赖替代对 `app.utils.splitNotBlank` 的反向依赖，并在 commonTest
+> 固化 JSON/旧逗号格式与异常输入共 5 条行为测试；第五批迁 `SpeechIdentityCalculator`，依赖
+> `:core:platform` 的 `Digest` 契约，在 :app 保留绑定 `JcaDigest` 的 `SpeechIdentity` 兼容入口，commonTest
+> 固化 ID 输入分隔符与角色排序语义；第六批迁 `Utf8BomUtils`，以 common 的 UTF-8 编解码与 `copyOfRange`
+> 替代 JVM 字节 API，并固化 BOM 检测、文本/字节剥离和 marker-only 兼容语义各 3 条测试；第七批迁
+> `AlphanumComparator`，固化文件名数字段、前导零和空名称排序语义；第八批迁 `ByteArray.indexOf`，
+> 固化匹配、重叠模式及 `start`/`stop` 边界语义；第九批迁 `formatReadDuration`，固化零/负时长、
+> 分钟秒与完整天时分秒显示语义；第十批迁 `MapExtensions`，固化大小写键查询及有界缓存不扩容语义。
+> 第十一批迁 `String.splitNotBlank` 两个 overload，固化 vararg、Regex、trim/blank 过滤与 limit 语义；
+> 第十二批建立 `:core:data` 并迁 `model/analyzeRule` 的 `AnalyzeByRegex`、`RuleAnalyzer` 和
+> `RuleDataInterface`，用 commonTest 固化正则 capture/递归、选择器内分隔符及 10,000 字符变量外置语义。
+> `CloudTtsVoiceConfigTest` 因依赖 `utils.GSON`、`AiModelRegistry`/`ContentChunker`/
 > `PartialTranslationAssembler` 因同包隐式依赖 `AiCapability`/`TextChunk`（与 `@Keep` 序列化数据类同文件）
 > 暂留 :app。双 target 编译 + 测试 + `checkSharedPurity` + `checkModuleDependencies` +
 > `:app:compileAppDebugKotlin` + `testAppDebugUnitTest` 全绿。CI 已加 `:core:model` 五任务。
+>
+> **第十三层（2026-09-06）** 迁 `constant/` 的 `BookType`/`BookSourceType`/`SourceType`/`PageAnim`：
+> 四者的外部依赖**只有** `androidx.annotation.IntDef`。处理方式是**只摘掉 `@IntDef(...)`，保留内部的
+> `annotation class Type/Anim`**——那 9 个调用点（`@BookType.Type` 等）引用的是后者，因此调用点**一行未改**。
+> 代价与依据：`@IntDef` 是 `@Retention(SOURCE)` 的编译期辅助注解，运行时与 R8 零影响；且 `BookType` 的
+> `@IntDef` 本身就漏了 `video`，取值校验并不完整。新增 `BookTypeTest`（4 条：位掩码唯一性、
+> 组合掩码并集、set/add/remove 位运算、tag 字面量）与 `TypeConstantsTest`（4 条：三对象取值逐一锁死 +
+> 4 个标记注解类仍存在）。迁移前用归一化 diff 验证除 `@IntDef` 外与原文零差异。
+> `constant/` 现只剩 `AppConst`/`AppLog`（`BuildConfig`/Context/Log，属平台能力，不下沉）。
+>
+> **第十四层（2026-09-06）** 迁 `domain/model/` 的 `@Keep` 组：`AiMessageParts`/`AiModels`/
+> `BookContentProcessModels`/`TranslationModels`（共 33 处 `@Keep`），以及零依赖的 `AiModelRegistry`/
+> `ContentChunker`/`PartialTranslationAssembler`。**`@Keep` 的处理是本次关键设计**：该注解的作用是让 R8
+> 不裁剪 Gson 反射用的数据类，不能无脑删。项目的 `proguard-rules.pro` 里已有同类的显式
+> `-keep class ...{*;}` 约定（`data.entities`、`model.translation` 以及 `DictPair`/`TextChunk`/`ModuleDef`
+> 等），因此把逐类枚举**收敛为整包规则 `-keep class io.legado.app.domain.model.**{*;}`**。
+> 之所以用整包而非逐类：漏保任何一个曾被 `@Keep` 保护的嵌套类，都会导致 release 包 Gson 反序列化静默失败，
+> 而 debug 与单测都测不出来——整包规则在物理上不可能漏保。这些类虽移入 `:core:model`，**包名未变**，
+> 按 FQCN 匹配的规则照旧生效。`BookContentProcessEngine`（依赖 Room 实体 `BookContentProcess` + `GSON`）
+> 仍留 :app。
+>
+> **R8 语义验证（非「构建通过」而已）**：`assembleAppRelease`（7m14s）后取
+> `app/build/outputs/mapping/appRelease/mapping.txt`，用脚本把 HEAD 中那 33 处 `@Keep` 各自保护的声明
+> 逐个取出并匹配，结果 **33/33 均以原名保留**（`X -> X:` 表示未混淆、未移除），`domain.model` 包共 228 条
+> 条目。即本次下沉**没有削弱任何一处的 R8 保护**。
+> 复查方法可复用：mapping 行 `原名 -> 原名:` 即「保留且未重命名」，删改 `@Keep` 或 proguard 规则后可直接重跑。
 
 按「泄漏度从低到高」而不是「目录从浅到深」排序：
 
-1. `constant/`（14 文件，仅 6 个沾 Android）→ `:core:model`　✅ 前 8 个已迁；剩 6 个沾 Android 的
-   （AppConst/AppLog 含 `BuildConfig`/Context/Settings/Log；BookType/BookSourceType/SourceType/PageAnim 含 `@IntDef`）
-2. `domain/model/`（58 文件，`domain/` 整体仅 11/170 沾 Android）→ `:core:model`　✅ readaloud 10 + 零依赖 30 已迁；
-   其余待逐文件去 `androidx.annotation.Keep`/`@Immutable`/`java.io.InputStream`/`utils.GSON` 等阻塞依赖
+1. `constant/`（14 文件，仅 6 个沾 Android）→ `:core:model`　✅ 已迁 12 个（前 8 个零依赖 + 第十三层 4 个
+   `@IntDef`）；**仅剩 `AppConst`/`AppLog`**（`BuildConfig`/Context/Log/Settings，属平台能力，不下沉）
+2. `domain/model/`（58 文件，`domain/` 整体仅 11/170 沾 Android）→ `:core:model`　✅ readaloud 10 + 零依赖 30
+   + 第十四层 7 个已迁。**实测（2026-09-06 第十四层后）根目录只剩 4 个**：
+   `BookContentProcessEngine`（依赖 Room 实体 + `GSON`）、`CoverAlbum`（`java.io.InputStream`）、
+   `TranslationDictionaryPolicy`（`java.util.Locale`）、`HomepageModels`（另带
+   `androidx.compose.runtime.Immutable`，而 `:core:model` 无 compose 依赖——`@Immutable` 是
+   Compose 稳定性提示，移除只影响重组次数不影响正确性，但需单独决策）。子目录已全部清空
 3. `utils/` 中的纯函数（字符串/编码/集合/URL，从 107 文件中挑）→ `:core:model`
+  　**实测（2026-09-06）剩余候选均不值得迁**：`Throttle`→`Debounce` 用 `android.os.SystemClock`；
+  　`toTimeAgo` 只有 1 个 Compose UI 调用方；`BookChapterExtensions` 依赖 Room 实体。
 4. `model/analyzeRule/`（规则解析，样本 `commonTest` 里占比最高的测试域）→ `:core:data`
+  　`RuleData`/`CustomUrl` 卡 `utils.GSON`（137 文件在用，已加入 `checkSharedPurity` 黑名单）；
+  　其余 5 文件全撞 JVM-only 库（jsoup/JsoupXpath/JsonPath/Rhino）。
 5. `help/config`、`help/storage`（13+8 文件）
+6. **`java.io.File` 全量迁移（R3）—— 实测修正**：85 文件 import `java.io.File`，但严格筛选（阻塞依赖
+   **只有** `java.io.File` 且正文无 `appCtx`/`appDb`/`GSON`/`Context`/`Uri`）后**只有 1 个**真正能
+   转化为 commonMain 下沉（`TranslationCacheGateway`，已改）。其余 84 个全部另有 Android 绑定（`Context`/
+   `Uri`/Room/`GSON`/`appCtx`/`splitties`），改 `File`→`FileSystem` 只是 Android 侧内部改写，不产生
+   commonMain 边界变化。**结论：R3 的「97 文件 File 迁移」应从 P2 下沉目标中拆出——大部分归 Android
+   侧内部重构，不是 KMP 迁移。** P2 的 `File` 相关工作收缩为：清理 domain 层网关契约中的 `File`/`Uri`
+   泄漏（已做 `TranslationCacheGateway`，1 处）。
+7. **`TranslationCacheGateway` 契约去 `File`（2026-09-06）**：领域网关 `getCacheFile(...): File` 改为
+   `getCachePath(...): String`，`File` 只留在平台实现 `TranslationCacheRepositoryImpl` 内部。3 个外部
+   调用方（`TranslationManager`/`ExportBookService`/impl 内部）改走 `FileSystem` 契约的
+   `exists`/`readBytes`。这是 AGENTS.md「共享领域契约不得暴露 File/Uri/Context」的第一处执行。
 
 **纪律**：每移动一组，先在原位置留适配层，迁移调用方后再删旧入口；一个 PR 只完成一个可说明的边界变化。
 
@@ -406,7 +495,7 @@ napi 之外的桥。在没有产品需求之前，**不启动**。
 
 | # | 风险 | 等级 | 影响 | 对策 |
 |---|---|---|---|---|
-| R1 | **jsoup 1.16.2 被锁定**，而 common 侧需要 HTML 解析 | 高 | 若强行换 ksoup，存量书源与 JsoupXpath 行为可能漂移 | 双轨：JVM/Android actual 继续用 jsoup 1.16.2；common 侧只依赖 `HtmlDocument` 窄接口。见 D2 |
+| R1 | **jsoup 1.16.2 被锁定**，而 common 侧需要 HTML 解析 | 中（已降级） | 若强行换 ksoup，存量书源与 JsoupXpath 行为可能漂移 | ✅ **双轨已验证可行（D2 Go，2026-09-06）**：JVM/Android actual 继续用 jsoup 1.16.2；common 侧只依赖 `HtmlParser` 窄接口。**残留风险集中在 JS 边界**：`help/JsExtensions` 把 `org.jsoup.Connection.Response` 原样返回给书源 JS，该处 jsoup 类型必须保留（平台岛）。任何人不得因"统一走窄接口"而改动它，否则存量书源静默全挂 |
 | ~~R2~~ | ~~**Room 2.8.4 的 KMP 产物完整性未验证**~~ | ~~高~~ | ✅ **已解除（D1 Go）**：PoC 证明 2.8.4 KMP 可用，不升 room3。P3 剩余风险是 389 blocking DAO + 2 SupportSQLite 文件的工作量，不是产物可用性问题 |
 | R3 | **122 个文件用 `java.io.File`** | 高 | 最大的 JVM 泄漏面，且分散在 `help`/`utils`/`data` | P1 先立 `FileSystem` 契约，P2 分批改调用方；不搞一次性大替换 |
 | R4 | **Rhino 无 K/N 实现** | 中 | 决定 iOS/native 目标能否承载书源规则 | 先做 `RuleEngine` capability；换 QuickJS 单独立项（样本有完整可抄的实现路径，需要时可取） |
@@ -426,6 +515,14 @@ napi 之外的桥。在没有产品需求之前，**不启动**。
 4. ~~**D1-PoC** 建 `:smoke:room-kmp-probe`~~ ✅ **2026-09-05 完成 = Go**：Room 2.8.4 KMP 在 commonMain entity/DAO/`@Database(@ConstructedBy)` + `expect object` 编译、KSP2 双 target 生成 actual、`BundledSQLiteDriver` 在 desktop JVM 跑真实查询（3 项测试）。留在 2.8.4 不升 room3。**附：`checkSharedPurity` 白名单加 `androidx.room`/`androidx.sqlite`**（KMP 兼容库，有 commonMain 元数据）。
 5. ~~**P1-1** 建 `:core:platform`，先落 `Clock` + `DispatcherSet`~~ ✅ **2026-09-05 完成**：Clock 用 expect/actual、DispatcherSet 用接口+DI，4 项契约测试双 target 通过；`WholeBookPageCoordinator` 接为真实消费方（消除 4 处 JVM 泄漏）。
 6. **P1-2** 建 `:core:model`，从 `constant/`（14）与 `domain/model/`（58）中挑选零 Android 依赖的值对象下沉。
+7. ~~**D2** 立 HTML 解析双轨~~ ✅ **2026-09-06 完成 = Go**：`HtmlParser`/`HtmlDocument`/`HtmlElement` 进
+   `:core:platform` commonMain，`JsoupHtmlParser` 双 target 委托 jsoup 1.16.2，8 项契约测试双 target 通过，
+   首个真实消费方 `HtmlFormatter` 迁移后既有 11 项测试行为零变化。`checkSharedPurity` 补齐
+   `org.jsoup.*`/`org.seimicrawler.*`/`com.jayway.*`/`org.mozilla.javascript.*`/`okhttp3.*` 黑名单。
+   **书源 JS 边界的 `org.jsoup.Connection.Response` 判定为平台岛，不迁移。**
+8. **D2 第二刀**：扩 `HtmlElement` 到能承载 `JsoupExtensions.textArray` 的宽遍历面
+   （`NodeTraversor`/`NodeVisitor`/`org.jsoup.internal.StringUtil`/`CDataNode`/`tag().preserveWhitespace()`），
+   或判定 `textArray` 属平台岛。做之前先补 `textArray` 的 characterization test。
 
 **统一验证命令**（注意 D6 的 Gradle 参数）：
 

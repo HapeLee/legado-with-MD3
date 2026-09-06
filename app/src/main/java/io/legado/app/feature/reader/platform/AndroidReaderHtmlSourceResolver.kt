@@ -77,7 +77,9 @@ class AndroidReaderHtmlSourceResolver(
                         ))
                         is BulletSpan -> add(ReaderParagraphDecoration(
                             ReaderParagraphDecorationKind.BULLET,
-                            span.color.takeUnless { it == 0 },
+                            // BulletSpan#getColor 是 API 28 才加的读取方法，低版本调用会
+                            // NoSuchMethodError；读不到颜色就按"未指定"处理（等价 color == 0）。
+                            if (Build.VERSION.SDK_INT >= 28) span.color.takeUnless { it == 0 } else null,
                             if (Build.VERSION.SDK_INT >= 28) span.bulletRadius.toFloat() else 4f,
                             leadingOffset,
                         ))

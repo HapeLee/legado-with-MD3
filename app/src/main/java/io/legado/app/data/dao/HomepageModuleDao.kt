@@ -52,10 +52,10 @@ interface HomepageModuleDao {
     fun flowAll(): Flow<List<HomepageModule>>
 
     @Query("SELECT * FROM homepage_modules ORDER BY sortOrder ASC")
-    fun getAll(): List<HomepageModule>
+    suspend fun getAll(): List<HomepageModule>
 
     @Query("DELETE FROM homepage_modules")
-    fun deleteAll()
+    suspend fun deleteAll()
 
     @androidx.room.Transaction
     suspend fun replaceAll(modules: List<HomepageModule>) {

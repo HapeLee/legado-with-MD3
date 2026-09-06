@@ -689,16 +689,16 @@ interface BookDao {
     fun flowBookShelfText(): Flow<List<BookShelfItem>>
 
     @Query("SELECT * FROM books WHERE (`group` & :group) > 0")
-    fun getBooksByGroup(group: Long): List<Book>
+    suspend fun getBooksByGroup(group: Long): List<Book>
 
     @Query("SELECT * FROM books WHERE `name` in (:names)")
-    fun findByName(vararg names: String): List<Book>
+    suspend fun findByName(vararg names: String): List<Book>
 
     @Query("select * from books where originName = :fileName")
-    fun getBookByFileName(fileName: String): Book?
+    suspend fun getBookByFileName(fileName: String): Book?
 
     @Query("SELECT * FROM books WHERE bookUrl = :bookUrl")
-    fun getBook(bookUrl: String): Book?
+    suspend fun getBook(bookUrl: String): Book?
 
     @Query(
         """
@@ -712,13 +712,13 @@ interface BookDao {
         WHERE bookUrl IN (:bookUrls)
         """
     )
-    fun getCacheableBooks(bookUrls: Set<String>): List<CacheableBook>
+    suspend fun getCacheableBooks(bookUrls: Set<String>): List<CacheableBook>
 
     @Query("SELECT * FROM books WHERE bookUrl = :bookUrl")
     fun flowGetBook(bookUrl: String): Flow<Book?>
 
     @Query("SELECT * FROM books WHERE name = :name and author = :author")
-    fun getBook(name: String, author: String): Book?
+    suspend fun getBook(name: String, author: String): Book?
 
     @Query(
         """
@@ -729,78 +729,78 @@ interface BookDao {
         LIMIT 1
         """
     )
-    fun getShelfBookConflict(name: String, author: String): Book?
+    suspend fun getShelfBookConflict(name: String, author: String): Book?
 
     @Query("""select distinct bs.* from books, book_sources bs 
         where origin == bookSourceUrl and origin not like '${BookType.localTag}%' 
         and origin not like '${BookType.webDavTag}%'""")
-    fun getAllUseBookSource(): List<BookSource>
+    suspend fun getAllUseBookSource(): List<BookSource>
 
     @Query("SELECT * FROM books WHERE name = :name and origin = :origin")
-    fun getBookByOrigin(name: String, origin: String): Book?
+    suspend fun getBookByOrigin(name: String, origin: String): Book?
 
-    @get:Query("select count(bookUrl) from books where (SELECT sum(groupId) FROM book_groups)")
-    val noGroupSize: Int
+    @Query("select count(bookUrl) from books where (SELECT sum(groupId) FROM book_groups)")
+    suspend fun noGroupSize(): Int
 
-    @get:Query("SELECT * FROM books where type & ${BookType.local} = 0")
-    val webBooks: List<Book>
+    @Query("SELECT * FROM books where type & ${BookType.local} = 0")
+    suspend fun webBooks(): List<Book>
 
-    @get:Query("SELECT * FROM books where type & ${BookType.local} = 0 and canUpdate = 1")
-    val hasUpdateBooks: List<Book>
+    @Query("SELECT * FROM books where type & ${BookType.local} = 0 and canUpdate = 1")
+    suspend fun hasUpdateBooks(): List<Book>
 
-    @get:Query("SELECT * FROM books")
-    val all: List<Book>
+    @Query("SELECT * FROM books")
+    suspend fun all(): List<Book>
 
     @Query("SELECT * FROM books where type & :type > 0 and type & ${BookType.local} = 0")
-    fun getByTypeOnLine(type: Int): List<Book>
+    suspend fun getByTypeOnLine(type: Int): List<Book>
 
-    @get:Query("SELECT * FROM books where type & ${BookType.text} > 0 ORDER BY durChapterTime DESC limit 1")
-    val lastReadBook: Book?
+    @Query("SELECT * FROM books where type & ${BookType.text} > 0 ORDER BY durChapterTime DESC limit 1")
+    suspend fun lastReadBook(): Book?
 
-    @get:Query("SELECT bookUrl FROM books")
-    val allBookUrls: List<String>
+    @Query("SELECT bookUrl FROM books")
+    suspend fun allBookUrls(): List<String>
 
-    @get:Query("SELECT COUNT(*) FROM books")
-    val allBookCount: Int
+    @Query("SELECT COUNT(*) FROM books")
+    suspend fun allBookCount(): Int
 
-    @get:Query("select min(`order`) from books")
-    val minOrder: Int
+    @Query("select min(`order`) from books")
+    suspend fun minOrder(): Int
 
-    @get:Query("select max(`order`) from books")
-    val maxOrder: Int
+    @Query("select max(`order`) from books")
+    suspend fun maxOrder(): Int
 
     @Query("select exists(select 1 from books where bookUrl = :bookUrl)")
-    fun has(bookUrl: String): Boolean
+    suspend fun has(bookUrl: String): Boolean
 
     @Query("select exists(select 1 from books where name = :name and author = :author)")
-    fun has(name: String, author: String): Boolean
+    suspend fun has(name: String, author: String): Boolean
 
     @Query(
         """select exists(select 1 from books where type & ${BookType.local} > 0 
         and (originName = :fileName or (origin != '${BookType.localTag}' and origin like '%' || :fileName)))"""
     )
-    fun hasFile(fileName: String): Boolean
+    suspend fun hasFile(fileName: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg book: Book)
+    suspend fun insert(vararg book: Book)
 
     @Update
-    fun update(vararg book: Book)
+    suspend fun update(vararg book: Book)
 
     @Delete
-    fun delete(vararg book: Book)
+    suspend fun delete(vararg book: Book)
 
     @Query("DELETE FROM books")
-    fun deleteAll()
+    suspend fun deleteAll()
 
     @Transaction
-    fun replace(oldBook: Book, newBook: Book) {
+    suspend fun replace(oldBook: Book, newBook: Book) {
         delete(oldBook)
         insert(newBook)
     }
 
     @Transaction
-    fun replaceAll(books: List<Book>) {
+    suspend fun replaceAll(books: List<Book>) {
         deleteAll()
         if (books.isNotEmpty()) {
             insert(*books.toTypedArray())
@@ -808,21 +808,21 @@ interface BookDao {
     }
 
     @Query("update books set durChapterPos = :pos where bookUrl = :bookUrl")
-    fun upProgress(bookUrl: String, pos: Int)
+    suspend fun upProgress(bookUrl: String, pos: Int)
 
     @Query(
         """update books set lastCheckCount = 0, durChapterIndex = :durChapterIndex, durChapterPos = :durChapterPos, durChapterTime = :durChapterTime where bookUrl = :bookUrl"""
     )
-    fun upReadProgress(bookUrl: String, durChapterIndex: Int, durChapterPos: Int, durChapterTime: Long)
+    suspend fun upReadProgress(bookUrl: String, durChapterIndex: Int, durChapterPos: Int, durChapterTime: Long)
 
     @Query("update books set `group` = :newGroupId where `group` = :oldGroupId")
-    fun upGroup(oldGroupId: Long, newGroupId: Long)
+    suspend fun upGroup(oldGroupId: Long, newGroupId: Long)
 
     @Query("update books set `group` = `group` - :group where `group` & :group > 0")
-    fun removeGroup(group: Long)
+    suspend fun removeGroup(group: Long)
 
     @Query("delete from books where type & ${BookType.notShelf} > 0")
-    fun deleteNotShelfBook()
+    suspend fun deleteNotShelfBook()
 
     // ── Group preview / count queries (DB-level, replaces in-memory buildGroupPreviewState) ──
 

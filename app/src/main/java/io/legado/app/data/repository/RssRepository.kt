@@ -5,6 +5,7 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.help.source.SourceHelp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 class RssRepository(
@@ -50,7 +51,7 @@ class RssRepository(
         }
 
     suspend fun topSources(vararg sources: RssSource) = withContext(Dispatchers.IO) {
-        val minOrder = dao.minOrder - 1
+        val minOrder = dao.minOrder() - 1
         val sortedSources = sources.sortedBy { it.customOrder }
         val updates = Array(sortedSources.size) { index ->
             sortedSources[index].copy(customOrder = minOrder - index)
@@ -59,7 +60,7 @@ class RssRepository(
     }
 
     suspend fun bottomSources(vararg sources: RssSource) = withContext(Dispatchers.IO) {
-        val maxOrder = dao.maxOrder + 1
+        val maxOrder = dao.maxOrder() + 1
         val sortedSources = sources.sortedBy { it.customOrder }
         val updates = Array(sortedSources.size) { index ->
             sortedSources[index].copy(customOrder = maxOrder + index)
@@ -90,7 +91,7 @@ class RssRepository(
     }
 
     suspend fun normalizeOrder() = withContext(Dispatchers.IO) {
-        val updated = dao.all.mapIndexed { index, source ->
+        val updated = dao.all().mapIndexed { index, source ->
             source.copy(customOrder = index + 1)
         }
         dao.update(*updated.toTypedArray())
@@ -137,7 +138,7 @@ class RssRepository(
         dao.update(*sources.toTypedArray())
     }
 
-    fun getMinOrder(): Int = dao.minOrder
+    fun getMinOrder(): Int = runBlocking { dao.minOrder() }
 
-    fun getMaxOrder(): Int = dao.maxOrder
+    fun getMaxOrder(): Int = runBlocking { dao.maxOrder() }
 }

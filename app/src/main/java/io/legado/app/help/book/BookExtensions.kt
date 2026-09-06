@@ -4,6 +4,7 @@ package io.legado.app.help.book
 
 import android.net.Uri
 import androidx.core.net.toUri
+import androidx.room.withTransaction
 import com.script.buildScriptBindings
 import com.script.rhino.RhinoScriptEngine
 import io.legado.app.constant.AppLog
@@ -45,6 +46,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.todayIn
+import kotlinx.coroutines.runBlocking
 import kotlin.math.max
 import kotlin.math.min
 import org.koin.core.context.GlobalContext
@@ -154,7 +156,7 @@ fun Book.getDisplayTagList(): List<String> =
  */
 fun Book.canSafelyRebindTo(newBookUrl: String): Boolean {
     if (newBookUrl == bookUrl) return true
-    val targetBook = appDb.bookDao.getBook(newBookUrl) ?: return true
+    val targetBook = runBlocking { appDb.bookDao.getBook(newBookUrl) } ?: return true
 
     val sameOriginName = originName.isNotBlank() && originName == targetBook.originName
     val sameNameAuthor = name.isNotBlank() && author.isNotBlank()
@@ -220,7 +222,7 @@ fun Book.getLocalUri(): Uri {
                         save()
                     } else {
                         val newBook = oldBook.copy(bookUrl = newBookUrl)
-                        appDb.bookDao.replace(oldBook, newBook)
+                        runBlocking { appDb.bookDao.replace(oldBook, newBook) }
                         BookHelp.updateCacheFolder(oldBook, newBook)
                         this.bookUrl = newBookUrl
                     }
@@ -252,7 +254,7 @@ fun Book.getLocalUri(): Uri {
                     save()
                 } else {
                     val newBook = oldBook.copy(bookUrl = newBookUrl)
-                    appDb.bookDao.replace(oldBook, newBook)
+                    runBlocking { appDb.bookDao.replace(oldBook, newBook) }
                     BookHelp.updateCacheFolder(oldBook, newBook)
                     this.bookUrl = newBookUrl
                 }
@@ -424,17 +426,19 @@ fun applyTagGroupRules(
     books: List<Book>,
     rules: List<TagGroupRule>,
 ) {
-    appDb.runInTransaction {
-        applyTagGroupRules(
-            books = books,
-            rules = rules,
-            groupDao = appDb.bookGroupDao,
-            bookDao = appDb.bookDao,
-        )
+    runBlocking {
+        appDb.withTransaction {
+            applyTagGroupRules(
+                books = books,
+                rules = rules,
+                groupDao = appDb.bookGroupDao,
+                bookDao = appDb.bookDao,
+            )
+        }
     }
 }
 
-fun applyTagGroupRules(
+suspend fun applyTagGroupRules(
     books: List<Book>,
     rules: List<TagGroupRule>,
     groupDao: BookGroupDao,
@@ -498,7 +502,7 @@ fun applyTagGroupRules(
  * Lightweight: only processes the given book, not all books.
  */
 fun applyTagGroupRulesForBook(book: Book) {
-    val rules = appDb.tagGroupRuleDao.getAll()
+    val rules = runBlocking { appDb.tagGroupRuleDao.getAll() }
     if (rules.isEmpty()) return
 
     val compiledRules = rules.mapNotNull { rule ->
@@ -509,20 +513,22 @@ fun applyTagGroupRulesForBook(book: Book) {
 
     val groupDao = appDb.bookGroupDao
     val groupCache = mutableMapOf<String, Long>()
-    for ((rule, _) in compiledRules) {
-        if (rule.groupName !in groupCache) {
-            val existing = groupDao.getByName(rule.groupName)
-            val groupId = existing?.groupId ?: run {
-                val newId = groupDao.getUnusedId()
-                groupDao.insert(
-                    io.legado.app.data.entities.BookGroup(
-                        groupId = newId,
-                        groupName = rule.groupName,
+    runBlocking {
+        for ((rule, _) in compiledRules) {
+            if (rule.groupName !in groupCache) {
+                val existing = groupDao.getByName(rule.groupName)
+                val groupId = existing?.groupId ?: run {
+                    val newId = groupDao.getUnusedId()
+                    groupDao.insert(
+                        io.legado.app.data.entities.BookGroup(
+                            groupId = newId,
+                            groupName = rule.groupName,
+                        )
                     )
-                )
-                newId
+                    newId
+                }
+                groupCache[rule.groupName] = groupId
             }
-            groupCache[rule.groupName] = groupId
         }
     }
 
@@ -540,13 +546,15 @@ fun applyTagGroupRulesForBook(book: Book) {
 }
 
 fun Book.sync(oldBook: Book) {
-    val curBook = appDb.bookDao.getBook(oldBook.bookUrl)!!
+    val curBook = runBlocking { appDb.bookDao.getBook(oldBook.bookUrl) }!!
     durChapterTime = curBook.durChapterTime
     durChapterPos = curBook.durChapterPos
     if (durChapterIndex != curBook.durChapterIndex) {
         durChapterIndex = curBook.durChapterIndex
         val replaceRules = ContentProcessor.get(this).getTitleReplaceRules()
-        appDb.bookChapterDao.getChapter(bookUrl, durChapterIndex)?.let {
+        runBlocking {
+            appDb.bookChapterDao.getChapter(bookUrl, durChapterIndex)
+        }?.let {
             durChapterTitle = it.getDisplayTitle(
                 replaceRules,
                 getUseReplaceRule(otherGateway.currentSettings.replaceEnableDefault),
@@ -559,7 +567,7 @@ fun Book.sync(oldBook: Book) {
 }
 
 fun Book.update() {
-    appDb.bookDao.update(this)
+    runBlocking { appDb.bookDao.update(this@update) }
 }
 
 fun Book.primaryStr(): String {
@@ -605,7 +613,7 @@ fun Book.getFolderNameNoCache(): String {
 }
 
 fun Book.getBookSource(): BookSource? {
-    return appDb.bookSourceDao.getBookSource(origin)
+    return runBlocking { appDb.bookSourceDao.getBookSource(origin) }
 }
 
 fun Book.isLocalModified(): Boolean {

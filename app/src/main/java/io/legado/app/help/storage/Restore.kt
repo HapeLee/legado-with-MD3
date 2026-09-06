@@ -129,14 +129,14 @@ object Restore : KoinComponent {
             }
             val restorePlan = planBookRestore(
                 restoredBooks = it,
-                existingBooks = appDb.bookDao.all,
+                existingBooks = appDb.bookDao.all(),
                 ignoreLocalBook = BackupConfig.ignoreLocalBook,
                 locationStatus = ::localBookLocationStatus,
             )
             restorePlan.booksToUpsert
                 .filter { book -> book.isLocal }
                 .forEach { book -> book.coverUrl = LocalBook.getCoverPath(book) }
-            appDb.runInTransaction {
+            appDb.withTransaction {
                 if (restorePlan.booksToDelete.isNotEmpty()) {
                     appDb.bookDao.delete(*restorePlan.booksToDelete.toTypedArray())
                 }
@@ -480,7 +480,7 @@ object Restore : KoinComponent {
     /** 导入完成后，将能唯一匹配书架作者的旧空作者记录迁移到规范作者。 */
     private suspend fun reconcileReadRecordAliases() {
         val repository = get<ReadRecordRepository>()
-        appDb.readRecordDao.all
+        appDb.readRecordDao.all()
             .filter { it.bookAuthor.isBlank() }
             .forEach { source ->
                 val authors = appDb.bookDao.findByName(source.bookName)

@@ -23,6 +23,7 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
+import kotlinx.coroutines.runBlocking
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import java.nio.charset.Charset
@@ -436,10 +437,12 @@ data class Book(
 
     fun save() {
         applyTagGroupRulesForBook(this)
-        if (appDb.bookDao.has(bookUrl)) {
-            appDb.bookDao.update(this)
-        } else {
-            appDb.bookDao.insert(this)
+        runBlocking {
+            if (appDb.bookDao.has(bookUrl)) {
+                appDb.bookDao.update(this@Book)
+            } else {
+                appDb.bookDao.insert(this@Book)
+            }
         }
     }
 
@@ -447,8 +450,10 @@ data class Book(
         if (ReadBook.isCurrentBook(bookUrl)) {
             ReadBook.clearCurrentBook()
         }
-        appDb.bookChapterDao.delByBook(bookUrl)
-        appDb.bookDao.delete(this)
+        runBlocking {
+            appDb.bookChapterDao.delByBook(bookUrl)
+            appDb.bookDao.delete(this@Book)
+        }
     }
 
     @Suppress("ConstPropertyName")

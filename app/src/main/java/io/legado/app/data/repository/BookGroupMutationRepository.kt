@@ -27,7 +27,7 @@ class BookGroupMutationRepository(
                 bookSort = group.bookSort,
                 enableRefresh = group.enableRefresh,
                 isPrivate = group.isPrivate,
-                order = groupDao.maxOrder.plus(1),
+                order = groupDao.maxOrder().plus(1),
             )
 
             if (groupDao.getByID(groupId) == null) {
@@ -41,7 +41,7 @@ class BookGroupMutationRepository(
                     TagGroupRule(
                         groupName = group.groupName,
                         pattern = pattern,
-                        order = database.tagGroupRuleDao.maxOrder,
+                        order = database.tagGroupRuleDao.maxOrder(),
                     )
                 )
                 tagGroupRuleApplier.applyInCurrentTransaction()

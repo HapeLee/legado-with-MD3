@@ -16,6 +16,7 @@ import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
+import kotlinx.coroutines.runBlocking
 
 object SourceHelp {
 
@@ -37,15 +38,15 @@ object SourceHelp {
         } else if (AudioPlay.bookSource?.bookSourceUrl == key) {
             return AudioPlay.bookSource
         }
-        return appDb.bookSourceDao.getBookSource(key)
-            ?: appDb.rssSourceDao.getByKey(key)
+        return runBlocking { appDb.bookSourceDao.getBookSource(key) }
+            ?: runBlocking { appDb.rssSourceDao.getByKey(key) }
     }
 
     fun getSource(key: String?, @SourceType.Type type: Int): BaseSource? {
         key ?: return null
         return when (type) {
-            SourceType.book -> appDb.bookSourceDao.getBookSource(key)
-            SourceType.rss -> appDb.rssSourceDao.getByKey(key)
+            SourceType.book -> runBlocking { appDb.bookSourceDao.getBookSource(key) }
+            SourceType.rss -> runBlocking { appDb.rssSourceDao.getByKey(key) }
             else -> null
         }
     }
@@ -76,8 +77,8 @@ object SourceHelp {
     }
 
     private fun deleteBookSourceInternal(key: String) {
-        appDb.bookSourceDao.delete(key)
-        appDb.cacheDao.deleteSourceVariables(key)
+        runBlocking { appDb.bookSourceDao.delete(key) }
+        runBlocking { appDb.cacheDao.deleteSourceVariables(key) }
         SourceConfig.removeSource(key)
     }
 
@@ -96,9 +97,9 @@ object SourceHelp {
     }
 
     private fun deleteRssSourceInternal(key: String) {
-        appDb.rssSourceDao.delete(key)
-        appDb.rssArticleDao.delete(key)
-        appDb.cacheDao.deleteSourceVariables(key)
+        runBlocking { appDb.rssSourceDao.delete(key) }
+        runBlocking { appDb.rssArticleDao.delete(key) }
+        runBlocking { appDb.cacheDao.deleteSourceVariables(key) }
     }
 
     fun deleteRssSource(key: String) {
@@ -108,8 +109,8 @@ object SourceHelp {
 
     fun enableSource(key: String, @SourceType.Type type: Int, enable: Boolean) {
         when (type) {
-            SourceType.book -> appDb.bookSourceDao.enable(key, enable)
-            SourceType.rss -> appDb.rssSourceDao.enable(key, enable)
+            SourceType.book -> runBlocking { appDb.bookSourceDao.enable(key, enable) }
+            SourceType.rss -> runBlocking { appDb.rssSourceDao.enable(key, enable) }
         }
     }
 
@@ -121,7 +122,7 @@ object SourceHelp {
             appCtx.toastOnUi("${it.sourceName}是18+网址,禁止导入.")
         }
         rssSourcesGroup[false]?.let {
-            appDb.rssSourceDao.insert(*it.toTypedArray())
+            runBlocking { appDb.rssSourceDao.insert(*it.toTypedArray()) }
         }
     }
 
@@ -133,7 +134,7 @@ object SourceHelp {
             appCtx.toastOnUi("${it.bookSourceName}是18+网址,禁止导入.")
         }
         bookSourcesGroup[false]?.let {
-            appDb.bookSourceDao.insert(*it.toTypedArray())
+            runBlocking { appDb.bookSourceDao.insert(*it.toTypedArray()) }
         }
         Coroutine.async {
             adjustSortNumber()
@@ -159,16 +160,18 @@ object SourceHelp {
      * 调整排序序号
      */
     fun adjustSortNumber() {
-        if (
-            appDb.bookSourceDao.maxOrder > 99999
-            || appDb.bookSourceDao.minOrder < -99999
-            || appDb.bookSourceDao.hasDuplicateOrder
-        ) {
-            val sources = appDb.bookSourceDao.allPart
-            sources.forEachIndexed { index, bookSource ->
-                bookSource.customOrder = index
+        runBlocking {
+            if (
+                appDb.bookSourceDao.maxOrder() > 99999
+                || appDb.bookSourceDao.minOrder() < -99999
+                || appDb.bookSourceDao.hasDuplicateOrder()
+            ) {
+                val sources = appDb.bookSourceDao.allPart()
+                sources.forEachIndexed { index, bookSource ->
+                    bookSource.customOrder = index
+                }
+                appDb.bookSourceDao.upOrder(sources)
             }
-            appDb.bookSourceDao.upOrder(sources)
         }
     }
 

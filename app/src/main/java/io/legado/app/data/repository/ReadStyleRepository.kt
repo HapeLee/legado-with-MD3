@@ -98,7 +98,7 @@ class ReadStyleRepository(
         FileUtils.delete(FileUtils.getPath(appCtx.externalCache, "readConfig.zip"))
     }
 
-    fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String {
+    fun saveBackgroundImage(bytes: ByteArray, displayName: String?): String {
         val bgDir = appCtx.externalFiles.getFile("bg")
         bgDir.mkdirs()
         val safeName = displayName
@@ -108,7 +108,7 @@ class ReadStyleRepository(
         val baseName = File(safeName).nameWithoutExtension.ifBlank { "read_bg" }
         val extension = File(safeName).extension.ifBlank { "jpg" }
         val bgFile = File(bgDir, "${baseName}_${System.currentTimeMillis()}.$extension")
-        if (!FileUtils.writeInputStream(bgFile, inputStream)) {
+        if (!FileUtils.writeBytes(bgFile.absolutePath, bytes)) {
             error("save read background image failed")
         }
         return bgFile.absolutePath

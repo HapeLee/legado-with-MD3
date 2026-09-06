@@ -10,6 +10,8 @@ import coil3.request.SuccessResult
 import coil3.toBitmap
 import io.legado.app.R
 import io.legado.app.base.BaseService
+import io.legado.app.core.platform.FileSystem
+import io.legado.app.core.platform.JvmFileSystem
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
@@ -117,6 +119,7 @@ class ExportBookService : BaseService(), KoinComponent {
         Translation
     }
 
+    private val fileSystem: FileSystem = JvmFileSystem
     private val translationCacheRepository: TranslationCacheGateway by inject()
     private val bookExportSettingsGateway: BookExportSettingsGateway by inject()
     private val translationSettingsGateway: TranslationSettingsGateway by inject()
@@ -283,9 +286,11 @@ class ExportBookService : BaseService(), KoinComponent {
         kotlin.runCatching {
             LocalBook.getChapterList(book)
         }.onSuccess {
-            appDb.bookChapterDao.delByBook(book.bookUrl)
-            appDb.bookChapterDao.insert(*it.toTypedArray())
-            appDb.bookDao.update(book)
+            runBlocking {
+                appDb.bookChapterDao.delByBook(book.bookUrl)
+                appDb.bookChapterDao.insert(*it.toTypedArray())
+            }
+            runBlocking { appDb.bookDao.update(book) }
             ReadBook.onChapterListUpdated(book)
         }
     }
@@ -362,7 +367,9 @@ class ExportBookService : BaseService(), KoinComponent {
     private suspend fun hasAnyTranslatedChapter(book: Book, targetLanguage: String): Boolean {
         val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
         return chapters.any { chapter ->
-            translationCacheRepository.getCacheFile(book, chapter, targetLanguage).exists()
+            fileSystem.exists(
+                translationCacheRepository.getCachePath(book, chapter, targetLanguage)
+            )
         }
     }
 

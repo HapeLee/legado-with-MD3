@@ -1,11 +1,19 @@
 package io.legado.app.utils
 
+import io.legado.app.core.platform.HtmlParser
+import io.legado.app.core.platform.JsoupHtmlParser
 import io.legado.app.model.analyzeRule.AnalyzeUrl
-import org.jsoup.Jsoup
 import java.net.URL
 
 @Suppress("RegExpRedundantEscape")
 object HtmlFormatter {
+
+    /**
+     * HTML 解析走 `:core:platform` 的 [HtmlParser] 契约：jsoup 是纯 JVM 库且被 AGENTS.md 锁定
+     * 1.16.2，不能进共享层，故由 Android actual [JsoupHtmlParser] 委托本机 jsoup。
+     * 同 `FileUtils.fileSystem` / `SpeechIdentity.digest` 的注入形态，行为与直调 jsoup 完全等价。
+     */
+    private val parser: HtmlParser = JsoupHtmlParser
     private val nbspRegex = "(&nbsp;)+".toRegex()
     private val espRegex = "(&ensp;|&emsp;)".toRegex()
     private val noPrintRegex = "(&thinsp;|&zwnj;|&zwj;|\u2009|\u200C|\u200D)".toRegex()
@@ -70,10 +78,10 @@ object HtmlFormatter {
      */
     fun formatDisplayText(html: String?): String {
         if (html.isNullOrBlank()) return ""
-        val document = Jsoup.parseBodyFragment(html)
-        document.outputSettings().prettyPrint(false)
+        val document = parser.parseBodyFragment(html)
+        document.setPrettyPrint(false)
         val body = document.body()
-        body.select("script, style, noscript").remove()
+        body.select("script, style, noscript").forEach { it.remove() }
         return format(body.html(), otherHtmlRegex, "")
             .lineSequence()
             .map { it.trim(*blankChars) }

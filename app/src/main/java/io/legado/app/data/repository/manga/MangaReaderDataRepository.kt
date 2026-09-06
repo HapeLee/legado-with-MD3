@@ -63,8 +63,8 @@ class MangaReaderDataRepository(
         inBookshelf: Boolean,
         chapterChanged: Boolean,
     ): OpenedMangaBook {
-        val book = bookUrl?.takeIf(String::isNotEmpty)?.let(database.bookDao::getBook)
-            ?: database.bookDao.lastReadBook
+        val book = bookUrl?.takeIf(String::isNotEmpty)?.let { database.bookDao.getBook(it) }
+            ?: database.bookDao.lastReadBook()
             ?: throw NoStackTraceException(application.getString(R.string.no_book))
         if (book.isLocal && !localBookExists(book)) {
             throw NoStackTraceException(application.getString(R.string.no_book))

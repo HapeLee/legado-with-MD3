@@ -83,6 +83,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
@@ -292,8 +293,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         ReadBook.book = book
         readRecord.bookName = book.name
         readRecord.bookAuthor = book.author
-        readRecord.readTime = appDb.readRecordDao.getReadTime("", book.name, book.author) ?: 0
-        chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
+        readRecord.readTime = runBlocking { appDb.readRecordDao.getReadTime("", book.name, book.author) } ?: 0
+        chapterSize = runBlocking {
+            appDb.bookChapterDao.getChapterCount(book.bookUrl)
+        }
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()
         } else {
@@ -323,7 +326,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun upData(book: Book) {
         ReadBook.book = book
-        chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
+        chapterSize = runBlocking {
+            appDb.bookChapterDao.getChapterCount(book.bookUrl)
+        }
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()
         } else {
@@ -650,7 +655,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 book.setImageStyle(Book.imgStyleFull)
             }
         } else {
-            appDb.bookSourceDao.getBookSource(book.origin)?.let {
+            runBlocking { appDb.bookSourceDao.getBookSource(book.origin) }?.let {
                 bookSource = it
                 if (book.getImageStyle().isNullOrBlank()) {
                     var imageStyle = it.getContentRule().imageStyle
@@ -1139,8 +1144,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         prepareManualNavigation()
         // 实时读取章节数而不是依赖缓存 chapterSize：更新目录后 chapterSize 若未同步，
         // 新增章节的 index 会超出旧值而被下方守卫静默吞掉，表现为「点击新章节无法跳转」。
-        val chapterCount = book?.bookUrl?.let { appDb.bookChapterDao.getChapterCount(it) }
-            ?: chapterSize
+        val chapterCount = book?.bookUrl?.let {
+            runBlocking { appDb.bookChapterDao.getChapterCount(it) }
+        } ?: chapterSize
         if (index < chapterCount) {
             clearTextChapter()
             if (upContent) renderCallBack?.upContent()
@@ -1734,12 +1740,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             val book = book ?: return@execute
             // 期间已发生全量保存(切章等)或进度再次变化，交由后续 saveRead 落库
             if (book.durChapterIndex != durChapterIndex) return@execute
-            appDb.bookDao.upReadProgress(
-                bookUrl = book.bookUrl,
-                durChapterIndex = book.durChapterIndex,
-                durChapterPos = book.durChapterPos,
-                durChapterTime = book.durChapterTime,
-            )
+            runBlocking {
+                appDb.bookDao.upReadProgress(
+                    bookUrl = book.bookUrl,
+                    durChapterIndex = book.durChapterIndex,
+                    durChapterPos = book.durChapterPos,
+                    durChapterTime = book.durChapterTime,
+                )
+            }
             lastProgressSaveAt = book.durChapterTime
         }
     }
@@ -1756,7 +1764,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 if (!pageChanged || chapterChanged) {
                     pendingProgressSave = false
                     progressSaveHandler.removeCallbacks(pendingProgressSaveRunnable)
-                    appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)?.let {
+                    runBlocking {
+                        appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)
+                    }?.let {
                         book.durChapterTitle = it.getDisplayTitle(
                             ContentProcessor.get(book.name, book.origin).getTitleReplaceRules(),
                             book.getUseReplaceRule(otherSettingsGateway.currentSettings.replaceEnableDefault),
@@ -1775,12 +1785,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         )
                     }
                 } else {
-                    appDb.bookDao.upReadProgress(
-                        bookUrl = book.bookUrl,
-                        durChapterIndex = book.durChapterIndex,
-                        durChapterPos = book.durChapterPos,
-                        durChapterTime = book.durChapterTime,
-                    )
+                    runBlocking {
+                        appDb.bookDao.upReadProgress(
+                            bookUrl = book.bookUrl,
+                            durChapterIndex = book.durChapterIndex,
+                            durChapterPos = book.durChapterPos,
+                            durChapterTime = book.durChapterTime,
+                        )
+                    }
                     lastProgressSaveAt = book.durChapterTime
                 }
             }.onFailure {
@@ -1839,7 +1851,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             chapterSize = newBook.totalChapterNum
             simulatedChapterSize = newBook.simulatedTotalChapterNum()
             if (newBook.isLocalTxt && currentChapterStart != null) {
-                val chapters = appDb.bookChapterDao.getChapterList(newBook.bookUrl)
+                val chapters = runBlocking {
+                    appDb.bookChapterDao.getChapterList(newBook.bookUrl)
+                }
                 val matchedIndex = chapters.indexOfFirst { chapter ->
                     val start = chapter.start
                     val end = chapter.end
@@ -1879,7 +1893,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private fun isCurrentLocalChapter(chapter: BookChapter): Boolean {
         if (book?.isLocalTxt != true) return true
         val current =
-            appDb.bookChapterDao.getChapter(chapter.bookUrl, chapter.index) ?: return false
+            runBlocking {
+                appDb.bookChapterDao.getChapter(chapter.bookUrl, chapter.index)
+            } ?: return false
         return current.url == chapter.url &&
                 current.title == chapter.title &&
                 current.start == chapter.start &&

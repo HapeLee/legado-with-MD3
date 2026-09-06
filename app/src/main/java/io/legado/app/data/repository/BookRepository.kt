@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import androidx.room.withTransaction
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
@@ -120,7 +121,7 @@ class BookRepository(
 
     suspend fun getMinOrder(): Int {
         return withContext(Dispatchers.IO) {
-            bookDao.minOrder
+            bookDao.minOrder()
         }
     }
 
@@ -138,7 +139,7 @@ class BookRepository(
 
     suspend fun getHasUpdateBooks(): List<Book> {
         return withContext(Dispatchers.IO) {
-            bookDao.hasUpdateBooks
+            bookDao.hasUpdateBooks()
         }
     }
 
@@ -150,7 +151,7 @@ class BookRepository(
 
     suspend fun getLastReadBook(): Book? {
         return withContext(Dispatchers.IO) {
-            bookDao.lastReadBook
+            bookDao.lastReadBook()
         }
     }
 
@@ -174,7 +175,7 @@ class BookRepository(
 
     suspend fun replaceChaptersAndUpdateBook(book: Book, chapters: List<BookChapter>) {
         withContext(Dispatchers.IO) {
-            appDb.runInTransaction {
+            appDb.withTransaction {
                 bookChapterDao.delByBook(book.bookUrl)
                 bookChapterDao.insert(*chapters.toTypedArray())
                 bookDao.update(book)

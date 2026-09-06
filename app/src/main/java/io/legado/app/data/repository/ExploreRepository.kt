@@ -97,7 +97,7 @@ class ExploreRepositoryImpl(
     }
 
     override suspend fun topSource(bookSource: BookSourcePart) {
-        val minOrder = appDb.bookSourceDao.minOrder
+        val minOrder = appDb.bookSourceDao.minOrder()
         appDb.bookSourceDao.upOrder(bookSource.copy(customOrder = minOrder - 1))
     }
 

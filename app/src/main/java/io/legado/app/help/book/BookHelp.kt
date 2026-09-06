@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
@@ -111,7 +112,7 @@ object BookHelp {
         withContext(IO) {
             val bookFolderNames = hashSetOf<String>()
             val originNames = hashSetOf<String>()
-            appDb.bookDao.all.forEach {
+            appDb.bookDao.all().forEach {
                 clearComicCache(it)
                 bookFolderNames.add(it.getFolderName())
                 if (it.isEpub) originNames.add(it.originName)
@@ -146,7 +147,9 @@ object BookHelp {
         //向前保留设定数量，向后保留预下载数量
         val startIndex = book.durChapterIndex - cacheGateway.currentSettings.imageRetainNum
         val endIndex = book.durChapterIndex + readGateway.currentSettings.preDownloadNum
-        val chapterList = appDb.bookChapterDao.getChapterList(book.bookUrl, startIndex, endIndex)
+        val chapterList = runBlocking {
+            appDb.bookChapterDao.getChapterList(book.bookUrl, startIndex, endIndex)
+        }
         val imgNames = hashSetOf<String>()
         //获取需要保留章节的图片信息
         chapterList.forEach {
@@ -211,7 +214,9 @@ object BookHelp {
         if (book.isOnLineTxt && readGateway.currentSettings.tocCountWords) {
             val wordCount = StringUtils.wordCountFormat(content.length)
             bookChapter.wordCount = wordCount
-            appDb.bookChapterDao.update(bookChapter)
+            runBlocking {
+                appDb.bookChapterDao.update(bookChapter)
+            }
         }
     }
 
@@ -270,10 +275,14 @@ object BookHelp {
 
                 // 更新数据库中的偏移量
                 if (diff != 0L) {
-                    appDb.bookChapterDao.updateOffsets(book.bookUrl, bookChapter.index, diff)
+                    runBlocking {
+                        appDb.bookChapterDao.updateOffsets(book.bookUrl, bookChapter.index, diff)
+                    }
                 }
                 bookChapter.end = start + newBytes.size
-                appDb.bookChapterDao.update(bookChapter)
+                runBlocking {
+                    appDb.bookChapterDao.update(bookChapter)
+                }
             } catch (e: Exception) {
                 throw e
             }
@@ -523,7 +532,9 @@ object BookHelp {
      * 检测该章节是否下载
      */
     fun countCachedChapters(book: Book): Int {
-        return appDb.bookChapterDao.getChapterList(book.bookUrl).count { chapter ->
+        return runBlocking {
+            appDb.bookChapterDao.getChapterList(book.bookUrl)
+        }.count { chapter ->
             chapter.isVolume || isChapterCacheComplete(book, chapter)
         }
     }

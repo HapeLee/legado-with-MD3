@@ -1,7 +1,5 @@
 package io.legado.app.constant
 
-import androidx.annotation.IntDef
-
 /**
  * 以二进制位来区分,可能一本书籍包含多个类型,每一位代表一个类型,数值为2的n次方
  * 以二进制位来区分,数据库查询更高效, 数值>=8和老版本类型区分开
@@ -54,9 +52,14 @@ object BookType {
      */
     const val notShelf = 0b100_0000_0000
 
+    /**
+     * 书籍类型取值标记。移除 `androidx.annotation.IntDef` 的原因见 [PageAnim.Anim]。
+     *
+     * 注：原 `@IntDef(text, updateError, audio, image, webFile, local, archive, notShelf)`
+     * 未包含 `video`，本注解的取值校验本就不完整。
+     */
     @Target(AnnotationTarget.VALUE_PARAMETER)
     @Retention(AnnotationRetention.SOURCE)
-    @IntDef(text, updateError, audio, image, webFile, local, archive, notShelf)
     annotation class Type
 
     /**

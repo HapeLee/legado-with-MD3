@@ -7,20 +7,20 @@ import io.legado.app.data.entities.Cookie
 interface CookieDao {
 
     @Query("SELECT * FROM cookies Where url = :url")
-    fun get(url: String): Cookie?
+    suspend fun get(url: String): Cookie?
 
     @Query("select * from cookies where url like '%|%'")
-    fun getOkHttpCookies(): List<Cookie>
+    suspend fun getOkHttpCookies(): List<Cookie>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg cookie: Cookie)
+    suspend fun insert(vararg cookie: Cookie)
 
     @Update
-    fun update(vararg cookie: Cookie)
+    suspend fun update(vararg cookie: Cookie)
 
     @Query("delete from cookies where url = :url")
-    fun delete(url: String)
+    suspend fun delete(url: String)
 
     @Query("delete from cookies where url like '%|%'")
-    fun deleteOkHttp()
+    suspend fun deleteOkHttp()
 }

@@ -16,7 +16,10 @@ class TranslationCacheRepositoryImpl : TranslationCacheGateway {
     private val cacheDir: File = File(BookHelp.cachePath)
     private val gson = Gson()
 
-    override fun getCacheFile(book: Book, bookChapter: BookChapter, targetLanguage: String): File {
+    override fun getCachePath(book: Book, bookChapter: BookChapter, targetLanguage: String): String =
+        getCacheFile(book, bookChapter, targetLanguage).absolutePath
+
+    private fun getCacheFile(book: Book, bookChapter: BookChapter, targetLanguage: String): File {
         val bookFolder = File(cacheDir, book.getFolderName())
         // getFileName() returns "{index}-{titleMD5}.nb", remove .nb to avoid double extension
         val chapterFileName = bookChapter.getFileName().removeSuffix(".nb")

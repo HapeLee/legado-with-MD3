@@ -218,6 +218,22 @@ abstract class CheckSharedPurityTask : DefaultTask() {
             Regex("""^import java\.io\.(File|InputStream|OutputStream)\b""", RegexOption.MULTILINE),
             // kotlin.jvm.* 注解（@JvmStatic/@JvmField 等）绑定 JVM 目标
             Regex("""^import kotlin\.jvm\.""", RegexOption.MULTILINE),
+            // JVM-only 三方库：这些库没有 KMP 产物，一旦进 commonMain，将来加 native target 时
+            // 会在最晚的阶段炸掉。它们必须走「commonMain 窄接口 + 各 target actual 委托」的双轨，
+            // 见 docs/dev/kmp-cmp-migration-plan.md D2。
+            //   - org.jsoup.*      jsoup 1.16.2（AGENTS.md 锁定版本）→ HtmlParser 契约
+            //   - org.seimicrawler.*  JsoupXpath 2.5.5 → 同属 HTML 解析，待契约
+            //   - com.jayway.jsonpath.* JsonPath → 待契约
+            //   - org.mozilla.javascript.* Rhino 1.8.1 → RuleEngine 契约（D4）
+            //   - okhttp3.*        okhttp 5.4.0 → HttpClient 契约走 Ktor client-core（D3）
+            //   - com.google.gson.*  Gson 2.x，:app 侧 137 个文件在用，是渗透面最大的 JVM-only 库。
+            //     共享层的 JSON 走 kotlinx-serialization-json；确需 Gson 行为时另立 Json 契约（D7 待定）
+            Regex("""^import org\.jsoup\.""", RegexOption.MULTILINE),
+            Regex("""^import org\.seimicrawler\.""", RegexOption.MULTILINE),
+            Regex("""^import com\.jayway\.""", RegexOption.MULTILINE),
+            Regex("""^import org\.mozilla\.javascript\.""", RegexOption.MULTILINE),
+            Regex("""^import okhttp3\.""", RegexOption.MULTILINE),
+            Regex("""^import com\.google\.gson\.""", RegexOption.MULTILINE),
         )
         val violations = mutableListOf<String>()
         val root = rootDir.get().asFile

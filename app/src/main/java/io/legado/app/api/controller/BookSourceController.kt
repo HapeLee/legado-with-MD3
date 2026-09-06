@@ -9,12 +9,13 @@ import io.legado.app.help.source.SourceHelp
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
+import kotlinx.coroutines.runBlocking
 
 object BookSourceController {
 
     val sources: ReturnData
         get() {
-            val bookSources = appDb.bookSourceDao.all
+            val bookSources = runBlocking { appDb.bookSourceDao.all() }
             val returnData = ReturnData()
             return if (bookSources.isEmpty()) {
                 returnData.setErrorMsg("设备源列表为空")
@@ -29,7 +30,7 @@ object BookSourceController {
             if (TextUtils.isEmpty(bookSource.bookSourceName) || TextUtils.isEmpty(bookSource.bookSourceUrl)) {
                 returnData.setErrorMsg("源名称和URL不能为空")
             } else {
-                appDb.bookSourceDao.insert(bookSource)
+                runBlocking { appDb.bookSourceDao.insert(bookSource) }
                 returnData.setData("")
             }
         } else {
@@ -49,7 +50,7 @@ object BookSourceController {
             if (bookSource.bookSourceName.isNotBlank()
                 && bookSource.bookSourceUrl.isNotBlank()
             ) {
-                appDb.bookSourceDao.insert(bookSource)
+                runBlocking { appDb.bookSourceDao.insert(bookSource) }
                 okSources.add(bookSource)
             }
         }
@@ -62,7 +63,7 @@ object BookSourceController {
         if (url.isNullOrEmpty()) {
             return returnData.setErrorMsg("参数url不能为空，请指定源地址")
         }
-        val bookSource = appDb.bookSourceDao.getBookSource(url)
+        val bookSource = runBlocking { appDb.bookSourceDao.getBookSource(url) }
             ?: return returnData.setErrorMsg("未找到源，请检查书源地址")
         return returnData.setData(bookSource)
     }

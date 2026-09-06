@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -772,7 +773,7 @@ class CloudTtsViewModel(
     private fun setBookContext(value: String?) = viewModelScope.launch {
         bookUrl = value
         bookEngineValue = withContext(Dispatchers.IO) {
-            value?.let(appDb.bookDao::getBook)?.getTtsEngine()
+            value?.let { appDb.bookDao.getBook(it) }?.getTtsEngine()
         }
         refreshEngineSelection()
     }
@@ -814,7 +815,7 @@ class CloudTtsViewModel(
 
     private fun editHttpTts(engineId: String?) = viewModelScope.launch {
         val value = withContext(Dispatchers.IO) {
-            engineId?.toLongOrNull()?.let(appDb.httpTTSDao::get) ?: HttpTTS()
+            engineId?.toLongOrNull()?.let { runBlocking { appDb.httpTTSDao.get(it) } } ?: HttpTTS()
         }
         _uiState.update { it.copy(httpTtsEditor = value) }
     }
@@ -827,7 +828,7 @@ class CloudTtsViewModel(
 
     private fun deleteHttpTts(engineId: String) = viewModelScope.launch {
         val id = engineId.toLongOrNull() ?: return@launch
-        withContext(Dispatchers.IO) { appDb.httpTTSDao.get(id)?.let(appDb.httpTTSDao::delete) }
+        withContext(Dispatchers.IO) { appDb.httpTTSDao.get(id)?.let { appDb.httpTTSDao.delete(it) } }
         if (isDefaultEngine(ReadAloudVoice.ENGINE_HTTP, engineId)) {
             readAloudSettingsGateway.update { it.copy(ttsEngine = null) }
             ReadAloud.upReadAloudClass()
@@ -947,7 +948,7 @@ class CloudTtsViewModel(
 
     private fun exportHttpTtsFile(uri: Uri) = viewModelScope.launch {
         withContext(Dispatchers.IO) {
-            val json = GSON.toJson(appDb.httpTTSDao.all)
+            val json = GSON.toJson(appDb.httpTTSDao.all())
             application.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
         }
         toast(application.getString(R.string.export_success))
@@ -957,7 +958,7 @@ class CloudTtsViewModel(
         val url = withContext(Dispatchers.IO) {
             uploadRepository.upload(
                 "httpTTS.json",
-                GSON.toJson(appDb.httpTTSDao.all),
+                GSON.toJson(appDb.httpTTSDao.all()),
                 "application/json"
             )
         }

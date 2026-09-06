@@ -1,7 +1,5 @@
 package io.legado.app.domain.model
 
-import androidx.annotation.Keep
-
 object AiCapability {
     const val TOOLS = "tools"
     const val REASONING = "reasoning"
@@ -116,7 +114,6 @@ object AiProviderPresets {
     )
 }
 
-@Keep
 data class AiProviderPreset(
     val id: String,
     val name: String,
@@ -127,7 +124,6 @@ data class AiProviderPreset(
     val modelId: String
 )
 
-@Keep
 data class AiProviderConfig(
     val id: String,
     val name: String,
@@ -143,7 +139,6 @@ data class AiProviderConfig(
     val customHeaders: Map<String, String> = emptyMap()
 )
 
-@Keep
 data class AiModelConfig(
     val id: String,
     val provider: AiProviderConfig,
@@ -155,7 +150,6 @@ data class AiModelConfig(
     val defaultParams: AiGenerationParams = AiGenerationParams()
 )
 
-@Keep
 data class AiTaskPresetConfig(
     val id: String,
     val taskType: String,
@@ -166,7 +160,6 @@ data class AiTaskPresetConfig(
     val runtimeOptions: AiTaskRuntimeOptions = AiTaskRuntimeOptions()
 )
 
-@Keep
 data class AiProfileDraft(
     val providerId: String? = null,
     val modelProfileId: String? = null,
@@ -185,7 +178,6 @@ data class AiProfileDraft(
     val retryCount: Int = AiTaskRuntimeOptions.DEFAULT_RETRY_COUNT
 )
 
-@Keep
 data class AiProviderDraft(
     val providerId: String? = null,
     val providerName: String,
@@ -195,7 +187,6 @@ data class AiProviderDraft(
     val apiKey: String
 )
 
-@Keep
 data class AiModelDraft(
     val modelProfileId: String? = null,
     val providerId: String,
@@ -214,7 +205,6 @@ data class AiModelDraft(
  * - OpenAI Responses: reasoning.effort
  * - Anthropic: thinking.type + output_config.effort
  */
-@Keep
 enum class AiReasoningLevel(val effort: String, val budgetTokens: Int) {
     OFF("none", 0),
     AUTO("auto", -1),
@@ -263,7 +253,6 @@ enum class AiReasoningLevel(val effort: String, val budgetTokens: Int) {
     }
 }
 
-@Keep
 data class AiGenerationParams(
     val temperature: Float? = null,
     val maxOutputTokens: Int? = null,
@@ -317,7 +306,6 @@ data class AiGenerationParams(
     }
 }
 
-@Keep
 data class AiTaskRuntimeOptions(
     val targetLanguage: String = DEFAULT_TARGET_LANGUAGE,
     val maxInputChars: Int = DEFAULT_MAX_INPUT_CHARS,
@@ -332,7 +320,6 @@ data class AiTaskRuntimeOptions(
     }
 }
 
-@Keep
 data class AiMessage(
     val role: String,
     val content: String,
@@ -341,7 +328,6 @@ data class AiMessage(
     val name: String? = null
 )
 
-@Keep
 data class AiGenerateRequest(
     val model: AiModelConfig,
     val messages: List<AiMessage>,
@@ -350,7 +336,6 @@ data class AiGenerateRequest(
     val toolContext: AiToolContext? = null,
 )
 
-@Keep
 data class AiToolContext(
     val bookUrl: String? = null,
     val bookName: String? = null,
@@ -358,13 +343,11 @@ data class AiToolContext(
     val chapterTitle: String? = null,
 )
 
-@Keep
 data class AiGenerateResponse(
     val text: String,
     val rawBody: String? = null
 )
 
-@Keep
 data class AiAvailableModel(
     val id: String,
     val name: String = id,
@@ -372,21 +355,18 @@ data class AiAvailableModel(
     val maxOutputTokens: Int = 0
 )
 
-@Keep
 data class AiToolDefinition(
     val name: String,
     val description: String,
     val inputSchema: Map<String, Any?>
 )
 
-@Keep
 data class AiToolCall(
     val id: String,
     val name: String,
     val arguments: String
 )
 
-@Keep
 data class AiToolResult(
     val callId: String,
     val name: String,

@@ -9,6 +9,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.putPrefBoolean
+import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 import java.io.File
 
@@ -30,13 +31,13 @@ class HighlightRuleRepository(
 
     fun load(configName: String): List<HighlightRule> {
         return clearUnreadableReferences(
-            dao.getAll().filter { it.matchesConfig(configName) }
+            runBlocking { dao.getAll() }.filter { it.matchesConfig(configName) }
         )
     }
 
     fun loadEnabled(configName: String): List<HighlightRule> {
         return clearUnreadableReferences(
-            dao.getEnabled().filter { it.matchesConfig(configName) }
+            runBlocking { dao.getEnabled() }.filter { it.matchesConfig(configName) }
         )
     }
 
@@ -54,10 +55,10 @@ class HighlightRuleRepository(
         }
         if (configName.isNullOrBlank()) {
             // 全局规则：只替换 configName 为 null 的规则
-            dao.replaceGlobal(sanitized)
+            runBlocking { dao.replaceGlobal(sanitized) }
         } else {
             // 按排版保存：只处理绑定到当前排版的规则，不动全局规则
-            val allRules = dao.getAll()
+            val allRules = runBlocking { dao.getAll() }
             // 旧的绑定到当前排版的规则（不含全局规则）
             val oldBound = allRules.filter {
                 !it.configName.isNullOrBlank() && it.matchesConfig(configName)
@@ -70,31 +71,31 @@ class HighlightRuleRepository(
                     val remaining =
                         old.configName.orEmpty().configNames().filter { it != configName }
                     if (remaining.isEmpty()) {
-                        dao.delete(old)
+                        runBlocking { dao.delete(old) }
                     } else {
-                        dao.update(old.copy(configName = remaining.toJsonArray()))
+                        runBlocking { dao.update(old.copy(configName = remaining.toJsonArray())) }
                     }
                 }
             }
             // 插入所有规则（全局规则也一起，否则会被 replaceGlobal 删掉）
-            dao.insertAll(sanitized)
+            runBlocking { dao.insertAll(sanitized) }
         }
         cleanupUnusedBgImages()
     }
 
     fun delete(rule: HighlightRule) {
-        dao.delete(rule)
+        runBlocking { dao.delete(rule) }
         cleanupUnusedBgImages()
     }
 
     fun removeConfigBinding(configName: String) {
         if (configName.isBlank()) return
-        dao.getAll().forEach { rule ->
+        runBlocking { dao.getAll() }.forEach { rule ->
             val names = rule.configName.orEmpty().configNames()
             if (configName in names) {
                 val remaining = names.filter { it != configName }
                 val updatedConfigName = remaining.takeIf { it.isNotEmpty() }?.toJsonArray()
-                dao.update(rule.copy(configName = updatedConfigName))
+                runBlocking { dao.update(rule.copy(configName = updatedConfigName)) }
             }
         }
     }
@@ -109,7 +110,7 @@ class HighlightRuleRepository(
             }
         }
         if (configName.isBlank()) {
-            dao.replaceGlobal(rules)
+            runBlocking { dao.replaceGlobal(rules) }
         } else {
             saveForConfig(rules, configName)
         }
@@ -132,7 +133,7 @@ class HighlightRuleRepository(
             safeRule.copy(bgImage = restoredBgImage)
         }
         // 备份恢复是全量替换
-        dao.replaceAll(rules)
+        runBlocking { dao.replaceAll(rules) }
         cleanupUnusedBgImages()
         context.putPrefBoolean(PreferKey.highlightRuleDialog, backupData.dialogEnabled)
         context.putPrefBoolean(PreferKey.highlightRuleBookTitle, backupData.bookTitleEnabled)
@@ -191,7 +192,7 @@ class HighlightRuleRepository(
             isReadableFontReference = context::isReadableHighlightFont,
         )
         rules.zip(cleaned).forEach { (original, updated) ->
-            if (original != updated) dao.update(updated)
+            if (original != updated) runBlocking { dao.update(updated) }
         }
         return cleaned
     }
@@ -337,7 +338,7 @@ class HighlightRuleRepository(
     }
 
     private fun cleanupUnusedBgImages() {
-        val allRules = dao.getAll()
+        val allRules = runBlocking { dao.getAll() }
         val usedPaths = allRules.mapNotNull { it.bgImage }
             .filter { it.isNotBlank() && !it.startsWith("assets://") }
             .toSet()

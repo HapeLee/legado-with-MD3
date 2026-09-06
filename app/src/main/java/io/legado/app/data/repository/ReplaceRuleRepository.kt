@@ -38,7 +38,7 @@ class ReplaceRuleRepository(
     }
 
     suspend fun getNextOrder(): Int = withContext(Dispatchers.IO) {
-        dao.maxOrder + 1
+        dao.maxOrder() + 1
     }
 
     suspend fun update(vararg rule: ReplaceRule) {
@@ -68,9 +68,9 @@ class ReplaceRuleRepository(
     suspend fun toTop(rule: ReplaceRule, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
             if (isDesc) {
-                rule.order = dao.maxOrder + 1
+                rule.order = dao.maxOrder() + 1
             } else {
-                rule.order = dao.minOrder - 1
+                rule.order = dao.minOrder() - 1
             }
             dao.update(rule)
         }
@@ -79,9 +79,9 @@ class ReplaceRuleRepository(
     suspend fun toBottom(rule: ReplaceRule, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
             if (isDesc) {
-                rule.order = dao.minOrder - 1
+                rule.order = dao.minOrder() - 1
             } else {
-                rule.order = dao.maxOrder + 1
+                rule.order = dao.maxOrder() + 1
             }
             dao.update(rule)
         }
@@ -89,7 +89,7 @@ class ReplaceRuleRepository(
 
     suspend fun upOrder() {
         withContext(Dispatchers.IO) {
-            val rules = dao.all
+            val rules = dao.all()
             var normalOrder = 1
             rules.forEach { rule ->
                 if (rule.order >= 0) {
@@ -102,7 +102,7 @@ class ReplaceRuleRepository(
 
     suspend fun addGroup(group: String) {
         withContext(Dispatchers.IO) {
-            val sources = dao.noGroup
+            val sources = dao.noGroup()
             sources.forEach { source ->
                 source.group = group
             }
@@ -167,14 +167,14 @@ class ReplaceRuleRepository(
             if (ids.isEmpty()) return@withContext
             val rules = dao.getByIds(ids)
             if (isDesc) {
-                var maxOrder = dao.maxOrder
+                var maxOrder = dao.maxOrder()
                 val updated = rules.map {
                     maxOrder++
                     it.copy(order = maxOrder)
                 }
                 dao.update(*updated.toTypedArray())
             } else {
-                var minOrder = dao.minOrder
+                var minOrder = dao.minOrder()
                 val updated = rules.map {
                     minOrder--
                     it.copy(order = minOrder)
@@ -189,14 +189,14 @@ class ReplaceRuleRepository(
 
             val rules = dao.getByIds(ids)
             if (isDesc) {
-                var minOrder = dao.minOrder
+                var minOrder = dao.minOrder()
                 val updated = rules.map {
                     minOrder--
                     it.copy(order = minOrder)
                 }
                 dao.update(*updated.toTypedArray())
             } else {
-                var maxOrder = dao.maxOrder
+                var maxOrder = dao.maxOrder()
                 val updated = rules.map {
                     maxOrder++
                     it.copy(order = maxOrder)
@@ -211,7 +211,7 @@ class ReplaceRuleRepository(
      */
     suspend fun moveReplaceRule(draggedId: Long, anchorId: Long, afterAnchor: Boolean) {
         withContext(Dispatchers.IO) {
-            val rules = dao.all
+            val rules = dao.all()
             val draggedIndex = rules.indexOfFirst { it.id == draggedId }
             if (draggedIndex < 0) return@withContext
             val dragged = rules[draggedIndex]

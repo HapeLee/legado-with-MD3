@@ -13,9 +13,13 @@ class RssReadRecordRepository(
         dao.insertRecord(record)
     }
 
-    fun getAll(): List<RssReadRecord> = dao.getRecords()
+    suspend fun getAll(): List<RssReadRecord> = withContext(Dispatchers.IO) {
+        dao.getRecords()
+    }
 
-    fun count(): Int = dao.countRecords
+    suspend fun count(): Int = withContext(Dispatchers.IO) {
+        dao.countRecords()
+    }
 
     suspend fun deleteAll() = withContext(Dispatchers.IO) {
         dao.deleteAllRecord()

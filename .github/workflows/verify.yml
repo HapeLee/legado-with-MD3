@@ -82,6 +82,11 @@ jobs:
             :core:model:compileKotlinDesktop \
             :core:model:desktopTest \
             :core:model:testAndroidHostTest \
+            :core:data:compileCommonMainKotlinMetadata \
+            :core:data:compileAndroidMain \
+            :core:data:compileKotlinDesktop \
+            :core:data:desktopTest \
+            :core:data:testAndroidHostTest \
             --continue \
             --no-daemon \
             --no-configuration-cache

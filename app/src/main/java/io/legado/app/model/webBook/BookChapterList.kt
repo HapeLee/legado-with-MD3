@@ -24,6 +24,7 @@ import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapAsync
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.flow
 import org.koin.core.context.GlobalContext
 import org.mozilla.javascript.Context
@@ -285,7 +286,9 @@ object BookChapterList {
     }
 
     private fun preserveChapterMetadata(list: ArrayList<BookChapter>, book: Book) {
-        val chapterList = appDb.bookChapterDao.getChapterList(book.bookUrl)
+        val chapterList = runBlocking {
+            appDb.bookChapterDao.getChapterList(book.bookUrl)
+        }
         if (chapterList.isNotEmpty()) {
             val map = chapterList.associateBy(
                 keySelector = { it.getFileName() },

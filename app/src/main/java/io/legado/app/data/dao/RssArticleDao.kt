@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.Flow
 interface RssArticleDao {
 
     @Query("select * from rssArticles where origin = :origin and link = :link and sort = :sort")
-    fun get(origin: String, link: String, sort: String): RssArticle?
+    suspend fun get(origin: String, link: String, sort: String): RssArticle?
 
     @Query("select * from rssArticles where origin = :origin and link = :link")
-    fun getByLink(origin: String, link: String): RssArticle?
+    suspend fun getByLink(origin: String, link: String): RssArticle?
 
     @Query(
         """select t1.link, t1.sort, t1.origin, t1.`order`, t1.title, t1.content, 
@@ -27,21 +27,21 @@ interface RssArticleDao {
     fun flowByOriginSort(origin: String, sort: String): Flow<List<RssArticle>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg rssArticle: RssArticle)
+    suspend fun insert(vararg rssArticle: RssArticle)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun append(vararg rssArticle: RssArticle)
+    suspend fun append(vararg rssArticle: RssArticle)
 
     @Query("delete from rssArticles where origin = :origin and sort = :sort and `order` < :order")
-    fun clearOld(origin: String, sort: String, order: Long)
+    suspend fun clearOld(origin: String, sort: String, order: Long)
 
     @Update
-    fun update(vararg rssArticle: RssArticle)
+    suspend fun update(vararg rssArticle: RssArticle)
 
     @Query("update rssArticles set origin = :origin where origin = :oldOrigin")
-    fun updateOrigin(origin: String, oldOrigin: String)
+    suspend fun updateOrigin(origin: String, oldOrigin: String)
 
     @Query("delete from rssArticles where origin = :origin")
-    fun delete(origin: String)
+    suspend fun delete(origin: String)
 
 }

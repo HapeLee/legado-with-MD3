@@ -1,8 +1,5 @@
 package io.legado.app.domain.model
 
-import androidx.annotation.Keep
-
-@Keep
 data class TextProcessAnchor(
     val chapterIndex: Int,
     val chapterPosition: Int? = null,
@@ -12,7 +9,6 @@ data class TextProcessAnchor(
     val normalizedTextHash: String,
 )
 
-@Keep
 data class TextProcessAction(
     val type: String,
     val replacement: String? = null,
@@ -37,7 +33,6 @@ data class TextProcessAction(
     }
 }
 
-@Keep
 data class TextProcessStyle(
     val textColor: Int? = null,
     val bgColor: Int? = null,
@@ -54,7 +49,6 @@ data class TextProcessStyle(
  * 样式即类型：book_marks 不再存 kind 列，效果由 [TextProcessStyle] 推导/生成，
  * 渲染引擎按 styleJson 画线，效果本身与「划线 vs 高亮」的老二元 kind 等价。
  */
-@Keep
 enum class MarkingEffect {
     SOLID, WAVE, DASHED, BG, TEXT;
 

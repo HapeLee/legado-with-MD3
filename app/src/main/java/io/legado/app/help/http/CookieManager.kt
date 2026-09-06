@@ -13,6 +13,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.Connection
+import kotlinx.coroutines.runBlocking
 
 @Suppress("ConstPropertyName")
 object CookieManager {
@@ -135,7 +136,7 @@ object CookieManager {
         return if (cacheCookie != null) {
             cacheCookie
         } else {
-            val cookieBean = appDb.cookieDao.get(domain)
+            val cookieBean = runBlocking { appDb.cookieDao.get(domain) }
             cookieBean?.cookie ?: ""
         }
     }

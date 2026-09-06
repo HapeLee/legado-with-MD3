@@ -4,6 +4,7 @@ import io.legado.app.data.dao.TxtTocRuleDao
 import io.legado.app.data.entities.TxtTocRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 class TxtTocRuleRepository(
@@ -48,9 +49,9 @@ class TxtTocRuleRepository(
         dao.update(*rules.toTypedArray())
     }
 
-    fun all(): List<TxtTocRule> = dao.all
+    fun all(): List<TxtTocRule> = runBlocking { dao.all() }
 
-    fun enabled(): List<TxtTocRule> = dao.enabled
+    fun enabled(): List<TxtTocRule> = runBlocking { dao.enabled() }
 
-    fun count(): Int = dao.count
+    fun count(): Int = runBlocking { dao.count() }
 }

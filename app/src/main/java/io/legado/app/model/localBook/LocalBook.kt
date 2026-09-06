@@ -255,7 +255,7 @@ object LocalBook {
 
             bookUrl = toString()
         }
-        var book = appDb.bookDao.getBook(bookUrl)
+        var book = runBlocking { appDb.bookDao.getBook(bookUrl) }
         if (book == null) {
             val nameAuthor = analyzeNameAuthor(fileName)
             book = Book(
@@ -265,11 +265,11 @@ object LocalBook {
                 author = nameAuthor.second,
                 originName = fileName,
                 latestChapterTime = updateTime,
-                order = appDb.bookDao.minOrder - 1
+                order = runBlocking { appDb.bookDao.minOrder() } - 1
             )
             upBookInfo(book)
             book.upKind()
-            appDb.bookDao.insert(book)
+            runBlocking { appDb.bookDao.insert(book) }
         } else {
             deleteBook(book, false)
             upBookInfo(book)
@@ -277,8 +277,10 @@ object LocalBook {
             // 触发 isLocalModified
             book.latestChapterTime = 0
             //已有书籍说明是更新,删除原有目录
-            appDb.bookChapterDao.delByBook(bookUrl)
-            appDb.bookDao.update(book)
+            runBlocking {
+                appDb.bookChapterDao.delByBook(bookUrl)
+            }
+            runBlocking { appDb.bookDao.update(book) }
         }
         return book
     }
@@ -286,7 +288,7 @@ object LocalBook {
     fun importMangaDirectory(directory: FileDoc): Book {
         require(directory.isDir) { "Expected a directory" }
         val bookUrl = directory.toString()
-        val existing = appDb.bookDao.getBook(bookUrl)
+        val existing = runBlocking { appDb.bookDao.getBook(bookUrl) }
         val book = existing ?: Book(
             type = BookType.local or BookType.image,
             bookUrl = bookUrl,
@@ -295,16 +297,18 @@ object LocalBook {
             originName = directory.name,
             origin = BookType.localTag,
             latestChapterTime = directory.lastModified,
-            order = appDb.bookDao.minOrder - 1,
+            order = runBlocking { appDb.bookDao.minOrder() } - 1,
         )
         book.type = BookType.local or BookType.image
         book.origin = BookType.localTag
         book.originName = directory.name
         book.latestChapterTime = directory.lastModified
         book.upKind()
-        if (existing == null) appDb.bookDao.insert(book) else {
-            appDb.bookChapterDao.delByBook(bookUrl)
-            appDb.bookDao.update(book)
+        if (existing == null) runBlocking { appDb.bookDao.insert(book) } else {
+            runBlocking {
+                appDb.bookChapterDao.delByBook(bookUrl)
+            }
+            runBlocking { appDb.bookDao.update(book) }
         }
         return book
     }
@@ -512,7 +516,7 @@ object LocalBook {
     fun isOnBookShelf(
         fileName: String
     ): Boolean {
-        return appDb.bookDao.hasFile(fileName)
+        return runBlocking { appDb.bookDao.hasFile(fileName) }
     }
 
     //文件类书源 合并在线书籍信息 在线 > 本地
@@ -574,7 +578,7 @@ object LocalBook {
                                 bookUrl = newBookUrl,
                                 origin = BookType.webDavTag + CustomUrl(webDavUrl).toString()
                             )
-                            appDb.bookDao.replace(oldBook, newBook)
+                            runBlocking { appDb.bookDao.replace(oldBook, newBook) }
                             BookHelp.updateCacheFolder(oldBook, newBook)
                             localBook.bookUrl = newBookUrl
                             localBook.origin = newBook.origin

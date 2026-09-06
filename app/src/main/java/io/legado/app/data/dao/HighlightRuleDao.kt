@@ -13,37 +13,37 @@ import io.legado.app.data.entities.HighlightRule
 interface HighlightRuleDao {
 
     @Query("SELECT * FROM highlightRules ORDER BY position ASC")
-    fun getAll(): List<HighlightRule>
+    suspend fun getAll(): List<HighlightRule>
 
     @Query("SELECT * FROM highlightRules WHERE enabled = 1 AND pattern != '' ORDER BY position ASC")
-    fun getEnabled(): List<HighlightRule>
+    suspend fun getEnabled(): List<HighlightRule>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertAll(rules: List<HighlightRule>)
+    suspend fun insertAll(rules: List<HighlightRule>)
 
     @Update
-    fun update(rule: HighlightRule)
+    suspend fun update(rule: HighlightRule)
 
     @Delete
-    fun delete(rule: HighlightRule)
+    suspend fun delete(rule: HighlightRule)
 
     @Query("DELETE FROM highlightRules")
-    fun deleteAll()
+    suspend fun deleteAll()
 
     @Query("DELETE FROM highlightRules WHERE configName IS NULL")
-    fun deleteGlobal()
+    suspend fun deleteGlobal()
 
     @Query("SELECT COUNT(*) FROM highlightRules")
-    fun count(): Int
+    suspend fun count(): Int
 
     @Transaction
-    fun replaceAll(rules: List<HighlightRule>) {
+    suspend fun replaceAll(rules: List<HighlightRule>) {
         deleteAll()
         insertAll(rules)
     }
 
     @Transaction
-    fun replaceGlobal(rules: List<HighlightRule>) {
+    suspend fun replaceGlobal(rules: List<HighlightRule>) {
         deleteGlobal()
         insertAll(rules)
     }

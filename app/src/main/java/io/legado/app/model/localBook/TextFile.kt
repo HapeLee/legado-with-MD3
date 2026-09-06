@@ -18,6 +18,7 @@ import java.io.FileNotFoundException
 import java.nio.charset.Charset
 import java.util.regex.PatternSyntaxException
 import kotlin.math.min
+import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 
 class TextFile(private var book: Book) {
@@ -508,7 +509,7 @@ class TextFile(private var book: Book) {
      */
     private fun getVolumePattern(chapterPattern: String): Regex? {
         if (chapterPattern.isBlank()) return null
-        val rule = appDb.txtTocRuleDao.all.find { it.chapterRule == chapterPattern }
+        val rule = runBlocking { appDb.txtTocRuleDao.all() }.find { it.chapterRule == chapterPattern }
         val volumeRule = rule?.volumeRule
         if (volumeRule.isNullOrBlank()) return null
         return try {
@@ -523,13 +524,11 @@ class TextFile(private var book: Book) {
      * 获取启用的目录规则
      */
     private fun getTocRules(): List<TxtTocRule> {
-        var rules = appDb.txtTocRuleDao.enabled
-        if (appDb.txtTocRuleDao.count == 0) {
-            rules = DefaultData.txtTocRules.apply {
-                appDb.txtTocRuleDao.insert(*this.toTypedArray())
-            }.filter {
-                it.enable
-            }
+        var rules = runBlocking { appDb.txtTocRuleDao.enabled() }
+        if (runBlocking { appDb.txtTocRuleDao.count() } == 0) {
+            val defaults = DefaultData.txtTocRules
+            runBlocking { appDb.txtTocRuleDao.insert(*defaults.toTypedArray()) }
+            rules = defaults.filter { it.enable }
         }
         return rules
     }

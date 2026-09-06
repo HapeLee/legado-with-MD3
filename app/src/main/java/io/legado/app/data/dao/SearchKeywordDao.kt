@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface SearchKeywordDao {
 
-    @get:Query("SELECT * FROM search_keywords")
-    val all: List<SearchKeyword>
+    @Query("SELECT * FROM search_keywords")
+    suspend fun all(): List<SearchKeyword>
 
     @Query("SELECT * FROM search_keywords ORDER BY usage DESC")
     fun flowByUsage(): Flow<List<SearchKeyword>>
@@ -21,18 +21,18 @@ interface SearchKeywordDao {
     fun flowSearch(key: String): Flow<List<SearchKeyword>>
 
     @Query("select * from search_keywords where word = :key")
-    fun get(key: String): SearchKeyword?
+    suspend fun get(key: String): SearchKeyword?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg keywords: SearchKeyword)
+    suspend fun insert(vararg keywords: SearchKeyword)
 
     @Update
-    fun update(vararg keywords: SearchKeyword)
+    suspend fun update(vararg keywords: SearchKeyword)
 
     @Delete
-    fun delete(vararg keywords: SearchKeyword)
+    suspend fun delete(vararg keywords: SearchKeyword)
 
     @Query("DELETE FROM search_keywords")
-    fun deleteAll()
+    suspend fun deleteAll()
 
 }

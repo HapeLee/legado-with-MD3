@@ -922,7 +922,7 @@ class ReadAiDelegate(
 
     // --- 重写预设配置 ---
 
-    fun openAiRewritePresetConfig() {
+    suspend fun openAiRewritePresetConfig() {
         val presets = loadAiRewritePresets()
         _uiState.update {
             it.copy(
@@ -996,7 +996,7 @@ class ReadAiDelegate(
         }
     }
 
-    fun saveAiRewritePreset() {
+    suspend fun saveAiRewritePreset() {
         val config = _uiState.value.aiRewritePresetConfig
         val name = config.editingName.trim()
         val instruction = config.editingInstruction.trim()
@@ -1061,11 +1061,11 @@ class ReadAiDelegate(
         }
     }
 
-    fun deleteAiRewritePreset() {
+    suspend fun deleteAiRewritePreset() {
         val deletePreset = _uiState.value.aiRewritePresetConfig.deletePreset ?: return
         val savedPresets = _uiState.value.aiRewritePresetConfig.presets
             .filterNot { it.id == deletePreset.id }
-        aiPromptPresetGateway.deletePresetSync(deletePreset.id)
+        aiPromptPresetGateway.deletePreset(deletePreset.id)
         syncAiRewritePresets(savedPresets)
         _uiState.update {
             it.copy(
@@ -1096,9 +1096,9 @@ class ReadAiDelegate(
         }
     }
 
-    private fun loadAiRewritePresets(): List<AiRewritePresetUi> {
-        if (aiPromptPresetGateway.countByTaskTypeSync(AiTaskType.REWRITE_TEXT) == 0) {
-            aiPromptPresetGateway.savePresetsSync(
+    private suspend fun loadAiRewritePresets(): List<AiRewritePresetUi> {
+        if (aiPromptPresetGateway.countByTaskType(AiTaskType.REWRITE_TEXT) == 0) {
+            aiPromptPresetGateway.savePresets(
                 defaultAiRewritePresets().mapIndexed { index, preset ->
                     preset.toAiPromptPreset(index)
                 }
@@ -1108,8 +1108,8 @@ class ReadAiDelegate(
             .map { it.toAiRewritePresetUi() }
     }
 
-    private fun saveAiRewritePresets(presets: List<AiRewritePresetUi>) {
-        aiPromptPresetGateway.savePresetsSync(
+    private suspend fun saveAiRewritePresets(presets: List<AiRewritePresetUi>) {
+        aiPromptPresetGateway.savePresets(
             presets.mapIndexed { index, preset ->
                 preset.toAiPromptPreset(index)
             }

@@ -4,6 +4,7 @@ import io.legado.app.data.dao.DictRuleDao
 import io.legado.app.data.entities.DictRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 class DictRuleRepository(
@@ -19,11 +20,11 @@ class DictRuleRepository(
     }
 
     fun getAll(): List<DictRule> {
-        return dao.all
+        return runBlocking { dao.all() }
     }
 
     fun getEnabled(): List<DictRule> {
-        return dao.enabled
+        return runBlocking { dao.enabled() }
     }
 
     suspend fun insert(vararg rule: DictRule) {

@@ -188,7 +188,7 @@ class ReadStyleDelegate(
     private fun saveBackgroundImage(uri: Uri): String {
         val name = queryDisplayName(uri)
         return context.contentResolver.openInputStream(uri)?.use {
-            readStyleGateway.saveBackgroundImage(it, name)
+            readStyleGateway.saveBackgroundImage(it.readBytes(), name)
         } ?: throw FileNotFoundException(uri.toString())
     }
 

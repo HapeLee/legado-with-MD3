@@ -22,7 +22,7 @@ interface BookMarkingDao {
         order by createdAt
         """
     )
-    fun getForChapterSync(bookUrl: String, chapterIndex: Int?): List<BookMarking>
+    suspend fun getForChapterSync(bookUrl: String, chapterIndex: Int?): List<BookMarking>
 
     /** 按「书名+作者」查（含跨源全部标记），供保存去重/定位；chapterIndex 可空。 */
     @Query(

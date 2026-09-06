@@ -27,6 +27,7 @@ import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
 import io.legado.app.utils.runOnUI
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Runnable
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
 import okhttp3.Protocol
@@ -108,7 +109,7 @@ class BackstageWebView(
                     if (isRule) {
                         webView.addJavascriptInterface(WebCacheManager, nameCache)
                         tag?.let { key ->
-                            appDb.bookSourceDao.getBookSource(key)?.let { source ->
+                            runBlocking { appDb.bookSourceDao.getBookSource(key) }?.let { source ->
                                 webView.addJavascriptInterface(source as BaseSource, nameSource)
                                 webView.addJavascriptInterface(
                                     WebJsExtensions(source, null, webView),
