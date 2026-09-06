@@ -1,20 +1,19 @@
 package io.legado.app.data.entities
 
-import android.os.Parcelable
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import kotlinx.parcelize.Parcelize
 
-@Parcelize
 @Entity(
     tableName = "bookmarks",
     indices = [(Index(value = ["bookName", "bookAuthor"], unique = false))]
 )
 data class Bookmark(
     @PrimaryKey
-    val time: Long = System.currentTimeMillis(),
+    val time: Long = systemTimeMillis(),
     val bookName: String = "",
     @ColumnInfo(defaultValue = "")
     val bookAuthor: String = "",
@@ -26,4 +25,4 @@ data class Bookmark(
     var chapterName: String = "",
     var bookText: String = "",
     var content: String = ""
-) : Parcelable
+)
