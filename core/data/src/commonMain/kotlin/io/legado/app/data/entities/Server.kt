@@ -1,26 +1,22 @@
 package io.legado.app.data.entities
 
-import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
-import kotlinx.parcelize.Parcelize
-import org.json.JSONObject
+import io.legado.app.core.platform.JsonCodec
+import io.legado.app.core.platform.systemTimeMillis
 
 /**
  * 服务器
  */
-@Parcelize
 @Entity(tableName = "servers")
 data class Server(
     @PrimaryKey
-    var id: Long = System.currentTimeMillis(),
+    var id: Long = systemTimeMillis(),
     var name: String = "",
     var type: TYPE = TYPE.WEBDAV,
     var config: String? = null,
     var sortNumber: Int = 0
-) : Parcelable {
+) {
 
     enum class TYPE {
         WEBDAV
@@ -37,21 +33,18 @@ data class Server(
         return false
     }
 
-    fun getConfigJsonObject(): JSONObject? {
-        val json = config
-        json ?: return null
-        return JSONObject(json)
-    }
-
     fun getWebDavConfig(): WebDavConfig? {
-        return if (type == TYPE.WEBDAV) GSON.fromJsonObject<WebDavConfig>(config).getOrNull() else null
+        return if (type == TYPE.WEBDAV) {
+            JsonCodec.fromJsonObject(config, WebDavConfig::class)
+        } else {
+            null
+        }
     }
 
-    @Parcelize
     data class WebDavConfig(
         var url: String,
         var username: String,
         var password: String
-    ) : Parcelable
+    )
 
 }

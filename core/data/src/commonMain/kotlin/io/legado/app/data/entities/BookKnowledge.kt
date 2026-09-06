@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -31,8 +33,8 @@ data class BookCharacterProfile(
     val source: String = SOURCE_USER,
     val confidence: Float = 1f,
     val schemaVersion: Int = 1,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 ) {
     companion object {
         const val STATUS_DRAFT = 0
@@ -91,8 +93,8 @@ data class BookCharacterEvent(
     val source: String = BookCharacterProfile.SOURCE_USER,
     val confidence: Float = 1f,
     val schemaVersion: Int = 1,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 )
 
 @Entity(
@@ -118,8 +120,8 @@ data class BookCharacterRelation(
     val source: String = BookCharacterProfile.SOURCE_USER,
     val confidence: Float = 1f,
     val schemaVersion: Int = 1,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 )
 
 @Entity(
@@ -144,8 +146,8 @@ data class BookKnowledgeEntry(
     val confidence: Float = 1f,
     val evidenceJson: String = "[]",
     val schemaVersion: Int = 1,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 ) {
     companion object {
         const val TYPE_WORLD_RULE = "world_rule"
@@ -180,8 +182,8 @@ data class BookOutlineNode(
     val source: String = BookCharacterProfile.SOURCE_USER,
     val confidence: Float = 1f,
     val schemaVersion: Int = 1,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 ) {
     companion object {
         const val TYPE_BOOK = "book"
