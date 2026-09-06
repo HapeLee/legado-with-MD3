@@ -6,6 +6,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.data.entities.toBookProgress
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.help.config.LocalConfig
@@ -294,7 +295,7 @@ object AppWebDav {
         if (!backupGateway.currentSettings.syncBookProgress) return
         if (!NetworkUtils.isAvailable()) return
         try {
-            val bookProgress = BookProgress(book)
+            val bookProgress = book.toBookProgress()
             val json = GSON.toJson(bookProgress)
             val url = getProgressUrl(book.name, book.author)
             WebDav(url, authorization).upload(json.toByteArray(), "application/json")

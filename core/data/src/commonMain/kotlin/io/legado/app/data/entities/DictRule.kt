@@ -3,13 +3,12 @@ package io.legado.app.data.entities
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import io.legado.app.model.analyzeRule.AnalyzeRule
-import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
-import io.legado.app.model.analyzeRule.AnalyzeUrl
-import kotlin.coroutines.coroutineContext
 
 /**
  * 字典规则
+ *
+ * 注意：[search] 是运行时行为（`AnalyzeUrl` 依赖 Rhino/okhttp/ExoPlayer 等平台栈），
+ * 已抽到 Android 侧扩展 `DictRuleAndroid.kt`，本实体只保留数据字段与相等性语义。
  */
 @Entity(tableName = "dictRules")
 data class DictRule(
@@ -32,19 +31,6 @@ data class DictRule(
             return name == other.name
         }
         return false
-    }
-
-    /**
-     * 搜索字典
-     */
-    suspend fun search(word: String): String {
-        val analyzeUrl = AnalyzeUrl(urlRule, key = word, coroutineContext = coroutineContext)
-        val body = analyzeUrl.getStrResponseAwait().body
-        if (showRule.isBlank()) {
-            return body!!
-        }
-        val analyzeRule = AnalyzeRule().setCoroutineContext(coroutineContext)
-        return analyzeRule.getString(showRule, mContent = body)
     }
 
 }

@@ -23,6 +23,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.data.entities.toBookProgress
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.feature.reader.core.gesture.ReaderTapAction
 import io.legado.app.feature.reader.core.model.ReaderElement
@@ -1684,7 +1685,7 @@ class ReadBookController(
 
             is ReadBookEffect.SyncBookProgress -> {
                 viewModel.onIntent(ReadBookIntent.ShowDialog(
-                    ReadBookDialog.SureSyncProgress(BookProgress(effect.book))
+                    ReadBookDialog.SureSyncProgress(effect.book.toBookProgress())
                 ))
             }
 

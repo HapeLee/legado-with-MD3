@@ -7,6 +7,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.data.entities.toBookProgress
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordSession
@@ -710,7 +711,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     //暂时保存跳转前进度
     fun saveCurrentBookProgress() {
         if (lastBookProgress != null) return //避免进度条连续跳转不能覆盖最初的进度记录
-        lastBookProgress = book?.let { BookProgress(it) }
+        lastBookProgress = book?.let { it.toBookProgress() }
     }
 
     fun saveReadingAnchorBeforeChapterJump(targetChapterIndex: Int, targetChapterPos: Int = 0) {
