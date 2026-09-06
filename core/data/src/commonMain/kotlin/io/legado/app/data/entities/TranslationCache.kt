@@ -1,12 +1,12 @@
 package io.legado.app.data.entities
 
-import androidx.annotation.Keep
-
 /**
  * Chunk-level translation cache record stored in .chunks.jsonl files.
  * File path already contains bookUrl/chapterIndex/targetLanguage — chunkIndex is the key.
+ *
+ * 原 `@Keep`（androidx.annotation）已移除：`app/proguard-rules.pro` 的整包规则
+ * `-keep class **.data.entities.**{*;}` 覆盖本包，R8 防裁剪语义不变。
  */
-@Keep
 data class TranslationCache(
     val chunkIndex: Int,
     val originalChunkContent: String,

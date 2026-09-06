@@ -2,6 +2,7 @@ package io.legado.app.data.entities.readRecord
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import io.legado.app.core.platform.systemTimeMillis
 
 @Entity(tableName = "readRecord", primaryKeys = ["deviceId", "bookName", "bookAuthor"])
 data class ReadRecord(
@@ -12,5 +13,5 @@ data class ReadRecord(
     @ColumnInfo(defaultValue = "0")
     var readTime: Long = 0L,
     @ColumnInfo(defaultValue = "0")
-    var lastRead: Long = System.currentTimeMillis()
+    var lastRead: Long = systemTimeMillis()
 )

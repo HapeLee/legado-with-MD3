@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
+import io.legado.app.data.entities.getManageName
 import io.legado.app.ui.book.group.GroupDeleteAction
 import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupResetCoverAction
