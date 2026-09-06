@@ -433,12 +433,26 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 `BundledSQLiteDriver` 在 desktop JVM 跑真实 SQLite 查询。`checkSharedPurity` 白名单已加 `androidx.room`/`androidx.sqlite`。
 
 **P3 迁移前置工作**（在正式下沉前必须完成）：
-- **389 个 blocking DAO 函数 → suspend**：Room 2.8.4 KMP 在非 Android target 上不支持 blocking 函数。
-  已有 180 suspend + 169 Flow（兼容），需转 389 blocking。这是工作量最大的一步。
-- **2 个 SupportSQLite 文件 → driver API**：`AppDatabase.kt` + `DatabaseMigrations.kt`（60 条 migration）。
-  用 `room-sqlite-wrapper`（2.8.0+ 兼容制品）渐进迁移，或直接改 `SQLiteConnection`。
-- **`@Database` 加 `@ConstructedBy` + `expect object`**：当前用 `Room.databaseBuilder(context, ...)`，
-  需改为 KMP 构造模式。
+- ✅ **blocking DAO 函数 → suspend**（2026-09-07 完成）：Room 2.8.4 KMP 在非 Android target 上不支持
+  blocking 函数。**实测精确计数 218 个真正 blocking**（非本文件早期写的 389——那个含非注解函数），
+  已分 6 批转完，剩 0。38 个 DAO 文件全 suspend/Flow，仅 `BookGroupDao.isInRules` 保留非 suspend（纯函数无 DAO 查询）。
+- ✅ **2 个 SupportSQLite 文件 → driver API**（2026-09-07 完成）：`AppDatabase.kt` + `DatabaseMigrations.kt`
+  的 `SupportSQLiteDatabase` 全改 `SQLiteConnection`。
+- ⬜ **`@Database` 加 `@ConstructedBy` + `expect object`**：当前用 `Room.databaseBuilder(context, ...)`，
+  需改为 KMP 构造模式。属 P3 主体工作（`@Database` 迫使 entities + DAO + AppDatabase 一起下沉），非独立前置。
+
+> **下沉进度（2026-09-07）**：已下沉 **31 entity 文件 + 27 DAO + 5 analyzeRule** 到 `:core:data`；
+> app 剩 **17 entity + 12 DAO**。跨模块 entity 引用已验证可行（app 的 `AppDatabase` 可引用 core 类型）。
+> `CoreDataDatabase`（@ConstructedBy + expect object）原型 + desktop 真实建表测试已跑通。
+>
+> 深水区第 1 刀已落：**`BigDataStore` 契约**（`core/data/.../bigdata/`，接口 + `BigDataStoreProvider`
+> composition root 注入，非 expect/actual——实现依赖 `:app` 的 `MD5Utils`/`FileUtils`，core 不能反向依赖 app）。
+> 它解锁了 RSS 集群下沉：`BaseRssArticle` + `RssArticle` + `RssStar` + `RssReadRecord` + 3 个 DAO。
+>
+> **剩余 17 entity 的真实障碍**（不是表面 import，而是深水依赖）：`BaseSource` 的 JS 桥（Rhino +
+> `JsExtensions`）→ `BookSource`/`RssSource`/`BookSourcePart`；`Book` 的 `BookHelp`/`ContentProcessor`/
+> `ReadBookConfig`；`Context`/`R.string`（`getManageName(context)`）→ `BookGroup`/`BookChapter`/`ReplaceRule`；
+> `TxtTocRule` 的 `@SerializedName(alternate=["rule"])` 是 Gson 数据兼容注解，不能机械删。
 
 - Room entities（66）/ DAO（39）下沉到 `:core:data` 的 `commonMain`。
 - 高频实体（如 `BookChapter`、`Cache`、`Cookie`）切到独立源集 `roomEntitiesMain`，**照抄样本的 KSP 重编面优化**。

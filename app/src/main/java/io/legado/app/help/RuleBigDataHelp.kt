@@ -1,6 +1,7 @@
 package io.legado.app.help
 
 import io.legado.app.data.appDb
+import io.legado.app.data.bigdata.BigDataStore
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.externalFiles
@@ -10,7 +11,13 @@ import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
 
-object RuleBigDataHelp {
+/**
+ * [BigDataStore] 的 Android 实现：大变量落到 `Context.externalFiles/ruleData` 下，
+ * 路径由 bookUrl/chapterUrl/link + key 的 MD5 拼出。
+ *
+ * [clearInvalid] 依赖 `appDb`，不属于契约（清理是平台侧定时任务，App 启动时直接调用）。
+ */
+object RuleBigDataHelp : BigDataStore {
 
     private val ruleDataDir = FileUtils.createFolderIfNotExist(appCtx.externalFiles, "ruleData")
     private val bookData = FileUtils.createFolderIfNotExist(ruleDataDir, "book")
@@ -51,7 +58,7 @@ object RuleBigDataHelp {
         }
     }
 
-    fun putBookVariable(bookUrl: String, key: String, value: String?) {
+    override fun putBookVariable(bookUrl: String, key: String, value: String?) {
         val md5BookUrl = MD5Utils.md5Encode(bookUrl)
         val md5Key = MD5Utils.md5Encode(key)
         if (value == null) {
@@ -66,7 +73,7 @@ object RuleBigDataHelp {
         }
     }
 
-    fun getBookVariable(bookUrl: String, key: String?): String? {
+    override fun getBookVariable(bookUrl: String, key: String?): String? {
         val md5BookUrl = MD5Utils.md5Encode(bookUrl)
         val md5Key = MD5Utils.md5Encode(key)
         val file = File(FileUtils.getPath(bookData, md5BookUrl, "$md5Key.txt"))
@@ -76,14 +83,14 @@ object RuleBigDataHelp {
         return null
     }
 
-    fun hasBookVariable(bookUrl: String, key: String): Boolean {
+    override fun hasBookVariable(bookUrl: String, key: String): Boolean {
         val md5BookUrl = MD5Utils.md5Encode(bookUrl)
         val md5Key = MD5Utils.md5Encode(key)
         val file = File(FileUtils.getPath(bookData, md5BookUrl, "$md5Key.txt"))
         return file.exists()
     }
 
-    fun putChapterVariable(bookUrl: String, chapterUrl: String, key: String, value: String?) {
+    override fun putChapterVariable(bookUrl: String, chapterUrl: String, key: String, value: String?) {
         val md5BookUrl = MD5Utils.md5Encode(bookUrl)
         val md5ChapterUrl = MD5Utils.md5Encode(chapterUrl)
         val md5Key = MD5Utils.md5Encode(key)
@@ -100,7 +107,7 @@ object RuleBigDataHelp {
         }
     }
 
-    fun getChapterVariable(bookUrl: String, chapterUrl: String, key: String): String? {
+    override fun getChapterVariable(bookUrl: String, chapterUrl: String, key: String): String? {
         val md5BookUrl = MD5Utils.md5Encode(bookUrl)
         val md5ChapterUrl = MD5Utils.md5Encode(chapterUrl)
         val md5Key = MD5Utils.md5Encode(key)
@@ -111,7 +118,7 @@ object RuleBigDataHelp {
         return null
     }
 
-    fun putRssVariable(origin: String, link: String, key: String, value: String?) {
+    override fun putRssVariable(origin: String, link: String, key: String, value: String?) {
         val md5Origin = MD5Utils.md5Encode(origin)
         val md5Link = MD5Utils.md5Encode(link)
         val md5Key = MD5Utils.md5Encode(key)
@@ -132,7 +139,7 @@ object RuleBigDataHelp {
         }
     }
 
-    fun getRssVariable(origin: String, link: String, key: String): String? {
+    override fun getRssVariable(origin: String, link: String, key: String): String? {
         val md5Origin = MD5Utils.md5Encode(origin)
         val md5Link = MD5Utils.md5Encode(link)
         val md5Key = MD5Utils.md5Encode(key)

@@ -25,6 +25,7 @@ import io.legado.app.constant.AppConst.channelIdReadAloud
 import io.legado.app.constant.AppConst.channelIdWeb
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
+import io.legado.app.data.bigdata.BigDataStoreProvider
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -170,6 +171,10 @@ class App : Application(), SingletonImageLoader.Factory {
             }
         }
         super.onCreate()
+        // 大变量存储必须在任何书源规则求值之前注入：entity 的实例方法
+        // （BaseRssArticle/BaseBook/BookChapter 的 putBigVariable/getBigVariable）
+        // 会同步读取它，未注入时契约显式抛异常。
+        BigDataStoreProvider.install(RuleBigDataHelp)
         FirebaseManager.init(this)
         CrashHandler(this)
         if (isDebuggable) {

@@ -3,19 +3,19 @@ package io.legado.app.data.entities
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
-import kotlinx.parcelize.IgnoredOnParcel
+import io.legado.app.core.platform.JsonCodec
+import io.legado.app.core.platform.systemTimeMillis
+
 
 @Entity(
-    tableName = "rssArticles",
-    primaryKeys = ["origin", "link", "sort"]
+    tableName = "rssStars",
+    primaryKeys = ["origin", "link"]
 )
-data class RssArticle(
+data class RssStar(
     override var origin: String = "",
     var sort: String = "",
     var title: String = "",
-    var order: Long = 0,
+    var starTime: Long = 0,
     override var link: String = "",
     var pubDate: String? = null,
     var description: String? = null,
@@ -23,7 +23,6 @@ data class RssArticle(
     var image: String? = null,
     @ColumnInfo(defaultValue = "默认分组")
     var group: String = "默认分组",
-    var read: Boolean = false,
     override var variable: String? = null,
     /**类型 0网页，1图片，2视频**/
     @ColumnInfo(defaultValue = "0")
@@ -33,25 +32,16 @@ data class RssArticle(
     var durPos: Int = 0
 ) : BaseRssArticle {
 
-    override fun hashCode() = link.hashCode()
-
-    override fun equals(other: Any?): Boolean {
-        other ?: return false
-        return if (other is RssArticle) origin == other.origin && link == other.link && sort == other.sort else false
-    }
-
     @delegate:Transient
     @delegate:Ignore
-    @IgnoredOnParcel
     override val variableMap: HashMap<String, String> by lazy {
-        GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+        JsonCodec.decodeStringMap(variable)?.let { HashMap(it) } ?: hashMapOf()
     }
 
-    fun toStar() = RssStar(
+    fun toRssArticle() = RssArticle(
         origin = origin,
         sort = sort,
         title = title,
-        starTime = System.currentTimeMillis(),
         link = link,
         pubDate = pubDate,
         description = description,
@@ -67,7 +57,7 @@ data class RssArticle(
         origin = origin,
         sort = sort,
         title = title,
-        readTime = System.currentTimeMillis(),
+        readTime = systemTimeMillis(),
         record = link,
         image = image,
         type = type,
