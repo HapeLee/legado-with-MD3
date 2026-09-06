@@ -2,12 +2,12 @@ package io.legado.app.data.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import io.legado.app.ui.widget.components.list.SelectableItem
+import io.legado.app.core.platform.systemTimeMillis
 
 @Entity(tableName = "tag_group_rules")
 data class TagGroupRule(
     @PrimaryKey
-    var id: Long = System.currentTimeMillis(),
+    var id: Long = systemTimeMillis(),
     var pattern: String = "",
     var groupName: String = "",
     var order: Int = 0,
