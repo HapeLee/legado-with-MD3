@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -21,8 +23,8 @@ data class AiProviderProfile(
     val modelsPath: String? = null,
     val customHeadersJson: String? = null,
     val enabled: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis()
 ) {
     companion object {
         const val AUTH_TYPE_NONE = "none"

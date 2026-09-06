@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -20,6 +22,6 @@ data class AiTaskPreset(
     val enabled: Boolean = true,
     val isDefault: Boolean = false,
     val sortNumber: Int = 0,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis()
 )

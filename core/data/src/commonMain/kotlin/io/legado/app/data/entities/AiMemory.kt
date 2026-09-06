@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.Entity
 import androidx.room.Index
 
@@ -17,5 +19,5 @@ data class AiMemory(
     val conversationId: String,  // "" for global memories
     val key: String,
     val value: String,
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = systemTimeMillis()
 )

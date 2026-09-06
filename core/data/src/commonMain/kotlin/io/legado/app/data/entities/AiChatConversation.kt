@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -10,6 +12,6 @@ data class AiChatConversation(
     val title: String,
     val reasoningLevel: String = "auto",
     val modelProfileId: String? = null,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis()
 )

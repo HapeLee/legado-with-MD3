@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -24,8 +26,8 @@ data class AiArtifact(
     val output: String? = null,
     val errorMessage: String? = null,
     val schemaVersion: Int = 1,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis()
 ) {
     companion object {
         const val STATUS_PENDING = 0
