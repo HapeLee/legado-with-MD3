@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -17,5 +19,5 @@ data class SearchContentHistory(
     @ColumnInfo(defaultValue = "")
     var bookAuthor: String? = null,
     var query: String = "",
-    var time: Long = System.currentTimeMillis()
+    var time: Long = systemTimeMillis()
 )

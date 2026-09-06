@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -16,11 +18,11 @@ object RuleSubType {
 @Entity(tableName = "ruleSubs")
 data class RuleSub(
     @PrimaryKey
-    val id: Long = System.currentTimeMillis(),
+    val id: Long = systemTimeMillis(),
     var name: String = "",
     var url: String = "",
     var type: Int = RuleSubType.BOOK_SOURCE,
     var customOrder: Int = 0,
     var autoUpdate: Boolean = false,
-    var update: Long = System.currentTimeMillis()
+    var update: Long = systemTimeMillis()
 )

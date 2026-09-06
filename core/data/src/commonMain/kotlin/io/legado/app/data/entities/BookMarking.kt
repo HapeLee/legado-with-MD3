@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -41,6 +43,6 @@ data class BookMarking(
     /** 章节标题，目录 Sheet 笔记页展示用（book_marks 无 toc 外键，故冗余存储）。 */
     val chapterName: String = "",
     val enabled: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 )

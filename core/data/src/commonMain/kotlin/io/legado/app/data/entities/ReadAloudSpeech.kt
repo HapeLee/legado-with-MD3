@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -32,8 +34,8 @@ data class ReadAloudVoiceEntity(
     val available: Boolean = true,
     @ColumnInfo(defaultValue = "0")
     val revision: Long = 0L,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 )
 
 @Entity(
@@ -55,8 +57,8 @@ data class BookVoiceBindingEntity(
     val source: String = "user",
     @ColumnInfo(defaultValue = "1")
     val confidence: Float = 1f,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 )
 
 @Entity(
@@ -82,8 +84,8 @@ data class ChapterSpeechAnalysisEntity(
     val status: String = "pending",
     @ColumnInfo(defaultValue = "")
     val error: String = "",
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 )
 
 @Entity(
@@ -116,6 +118,6 @@ data class ChapterSpeechSegmentEntity(
     val source: String,
     @ColumnInfo(defaultValue = "0")
     val userLocked: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 )

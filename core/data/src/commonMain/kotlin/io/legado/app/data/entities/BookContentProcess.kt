@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -30,8 +32,8 @@ data class BookContentProcess(
     val sortOrder: Int = 0,
     val status: Int = STATUS_ACTIVE,
     val schemaVersion: Int = 1,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 ) {
     companion object {
         const val KIND_AI_CLEAN = "ai_clean"

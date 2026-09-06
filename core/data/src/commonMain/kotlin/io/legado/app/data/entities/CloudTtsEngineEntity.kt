@@ -1,5 +1,7 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -21,6 +23,6 @@ data class CloudTtsEngineEntity(
     @ColumnInfo(defaultValue = "") val model: String = "",
     @ColumnInfo(defaultValue = "{}") val optionsJson: String = "{}",
     @ColumnInfo(defaultValue = "1") val enabled: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = systemTimeMillis(),
+    val updatedAt: Long = systemTimeMillis(),
 )

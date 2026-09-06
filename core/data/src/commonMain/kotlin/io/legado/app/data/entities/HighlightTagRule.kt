@@ -1,13 +1,14 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.systemTimeMillis
+
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import io.legado.app.ui.widget.components.list.SelectableItem
 
 @Entity(tableName = "highlight_tag_rules")
 data class HighlightTagRule(
     @PrimaryKey
-    var id: Long = System.currentTimeMillis(),
+    var id: Long = systemTimeMillis(),
     var title: String = "",
     var pattern: String = "",
     var enabled: Boolean = true,
