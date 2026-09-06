@@ -21,9 +21,11 @@ kotlin {
         // commonTest 的契约测试则由各 target 子类注入这里的 JsoupHtmlParser。
         androidMain.dependencies {
             implementation(libs.jsoup)
+            implementation(libs.gson)
         }
         desktopMain.dependencies {
             implementation(libs.jsoup)
+            implementation(libs.gson)
         }
     }
 }

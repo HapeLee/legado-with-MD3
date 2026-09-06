@@ -73,4 +73,7 @@ object AppPattern {
     val regexCharRegex = "[{}()\\[\\].+*?^$\\\\|]".toRegex()
 
     val LFRegex = "\n".toRegex()
+
+    /** 匹配 URL 参数分隔符「逗号+空格+后跟 {」，用于切分 URL 的 JSON 参数段（CustomUrl/AnalyzeUrl 共用）。 */
+    val urlParamPattern: Regex = Regex("\\s*,\\s*(?=\\{)")
 }

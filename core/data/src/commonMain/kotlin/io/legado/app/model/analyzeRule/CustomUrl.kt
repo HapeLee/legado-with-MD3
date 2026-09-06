@@ -1,7 +1,7 @@
 package io.legado.app.model.analyzeRule
 
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
+import io.legado.app.constant.AppPattern
+import io.legado.app.core.platform.JsonCodec
 
 @Suppress("unused")
 class CustomUrl(url: String) {
@@ -10,10 +10,10 @@ class CustomUrl(url: String) {
     private val attribute = hashMapOf<String, Any>()
 
     init {
-        val urlMatch = AnalyzeUrl.paramPattern.find(url)
+        val urlMatch = AppPattern.urlParamPattern.find(url)
         mUrl = if (urlMatch != null) {
             val attr = url.substring(urlMatch.range.last + 1)
-            GSON.fromJsonObject<Map<String, Any>>(attr).getOrNull()?.let {
+            JsonCodec.decodeAnyMap(attr)?.let {
                 attribute.putAll(it)
             }
             url.substring(0, urlMatch.range.first)
@@ -43,7 +43,7 @@ class CustomUrl(url: String) {
         if (attribute.isEmpty()) {
             return mUrl
         }
-        return mUrl + "," + GSON.toJson(attribute)
+        return mUrl + "," + JsonCodec.toJson(attribute)
     }
 
 }

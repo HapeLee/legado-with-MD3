@@ -1,6 +1,6 @@
 package io.legado.app.model.analyzeRule
 
-import io.legado.app.utils.GSON
+import io.legado.app.core.platform.JsonCodec
 
 class RuleData : RuleDataInterface {
 
@@ -24,7 +24,7 @@ class RuleData : RuleDataInterface {
         if (variableMap.isEmpty()) {
             return null
         }
-        return GSON.toJson(variableMap)
+        return JsonCodec.toJson(variableMap)
     }
 
 }
