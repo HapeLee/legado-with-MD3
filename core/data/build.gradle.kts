@@ -23,6 +23,7 @@ kotlin {
         desktopTest.dependencies {
             implementation(kotlin("test"))
             implementation(kotlin("reflect"))
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }

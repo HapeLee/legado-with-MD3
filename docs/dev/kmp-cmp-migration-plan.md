@@ -463,9 +463,18 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 
 - ✅ Room entities（56）/ DAO（39）/ AppDatabase 下沉到 `:core:data` 的 `commonMain`（2026-09-07 完成）。
 - ⬜ 高频实体（如 `BookChapter`、`Cache`、`Cookie`）切到独立源集 `roomEntitiesMain`，**照抄样本的 KSP 重编面优化**。
-- ⬜ Android 端注入 `AndroidSQLiteDriver`，Desktop 注入 `BundledSQLiteDriver`（app 侧 `appDb` 已用 AndroidSQLiteDriver，
-  桌面端到端驱动注入待验证）。
-- ⬜ schema 迁移兼容测试、导入导出往返测试、并发/事务语义测试。
+- ✅ **两端 driver 端到端注入验证**（2026-09-08）：新增 `core/data/src/desktopTest/…/AppDatabaseDesktopTest.kt`，
+  用 `BundledSQLiteDriver` 在 **desktop 上真实建起 104 版 `AppDatabase`（103 entity）**——证明 KSP 生成的
+  desktop actual 可用、全表可建，且 `room_master_table` identityHash 与下沉前导出 schema 一致
+  （`a6f43940451deb4c04a525583e1bea59`，即下沉未改动 schema）。Android 侧 `appDb` 仍注入 `AndroidSQLiteDriver`。
+- ✅ **schema 迁移兼容 / 并发·事务语义测试**（2026-09-08，同一测试类，6 项）：
+  - `migratesFromExportedVersion103Schema`：按 `core/data/schemas/…/103.json` 手工建库 + 钉 `user_version`，
+    再由 Room 跑 autoMigration 103→104（`httpTTS.speed`），校验 `user_version=104`、老数据保留、新列建出。
+    证明 `schemas/` 仍是迁移链路的真实依据，且迁移在 **desktop 可执行**。
+  - `deepWaterEntitiesRoundTrip` / `searchBookCascadesWithBookSource`：深水区实体（Book / BookSource 含
+    rule 簇 TypeConverter / HttpTTS / RssSource / SearchBook 外键级联）往返读写。
+  - `transactionRollsBackOnFailure` / `concurrentInsertsAreAllPersisted`：事务回滚与并发写语义。
+  - ⬜ 仍未做：**导入导出（备份恢复）往返测试**。
 
 **退出条件**：两端 driver 的 contract test 通过；现有 Android 数据库迁移与备份恢复测试无回归。
 
