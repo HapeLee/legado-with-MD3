@@ -1,8 +1,12 @@
 package io.legado.app.data.entities.rule
 
-import android.view.View
-import com.google.android.flexbox.FlexboxLayout
-
+/**
+ * 子项弹性布局样式。
+ *
+ * 数据字段下沉 commonMain；`alignSelf()` 是纯 Int 常量映射（无 Android 依赖），一并下沉。
+ * 依赖 `android.view.View` + FlexboxLayout 的 `apply(view)` 留在 app 侧扩展
+ * （见 `FlexChildStyleAndroid.kt`）。
+ */
 data class FlexChildStyle(
     val layout_flexGrow: Float = 0F,
     val layout_flexShrink: Float = 1F,
@@ -23,15 +27,6 @@ data class FlexChildStyle(
             "stretch" -> 4
             else -> -1
         }
-    }
-
-    fun apply(view: View) {
-        val lp = view.layoutParams as FlexboxLayout.LayoutParams
-        lp.flexGrow = layout_flexGrow
-        lp.flexShrink = layout_flexShrink
-        lp.alignSelf = alignSelf()
-        lp.flexBasisPercent = layout_flexBasisPercent
-        lp.isWrapBefore = layout_wrapBefore
     }
 
     companion object {

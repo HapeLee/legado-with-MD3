@@ -1,14 +1,8 @@
 package io.legado.app.data.entities.rule
 
-import android.os.Parcelable
-import com.google.gson.JsonDeserializer
-import io.legado.app.utils.INITIAL_GSON
-import kotlinx.parcelize.Parcelize
-
 /**
  * 正文处理规则
  */
-@Parcelize
 data class ContentRule(
     var content: String? = null,
     var subContent: String? = null, //副文规则，拼接在正文后面或者获取歌词等
@@ -22,23 +16,4 @@ data class ContentRule(
     var payAction: String? = null,    //购买操作,js或者包含{{js}}的url
     /**  监听到事件后执行的回调js代码  **/
     var callBackJs: String? = null
-) : Parcelable {
-
-
-    companion object {
-
-        val jsonDeserializer = JsonDeserializer<ContentRule?> { json, _, _ ->
-            when {
-                json.isJsonObject -> INITIAL_GSON.fromJson(json, ContentRule::class.java)
-                json.isJsonPrimitive -> INITIAL_GSON.fromJson(
-                    json.asString,
-                    ContentRule::class.java
-                )
-                else -> null
-            }
-        }
-
-    }
-
-
-}
+)

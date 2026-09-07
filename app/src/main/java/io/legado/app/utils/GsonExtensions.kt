@@ -19,6 +19,12 @@ import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.ReviewRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.data.entities.rule.TocRule
+import io.legado.app.data.entities.rule.bookInfoRuleJsonDeserializer
+import io.legado.app.data.entities.rule.contentRuleJsonDeserializer
+import io.legado.app.data.entities.rule.exploreRuleJsonDeserializer
+import io.legado.app.data.entities.rule.reviewRuleJsonDeserializer
+import io.legado.app.data.entities.rule.searchRuleJsonDeserializer
+import io.legado.app.data.entities.rule.tocRuleJsonDeserializer
 import io.legado.app.data.entities.txtTocRuleJsonDeserializer
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -43,12 +49,12 @@ val INITIAL_GSON: Gson by lazy {
 
 val GSON: Gson by lazy {
     INITIAL_GSON.newBuilder()
-        .registerTypeAdapter(ExploreRule::class.java, ExploreRule.jsonDeserializer)
-        .registerTypeAdapter(SearchRule::class.java, SearchRule.jsonDeserializer)
-        .registerTypeAdapter(BookInfoRule::class.java, BookInfoRule.jsonDeserializer)
-        .registerTypeAdapter(TocRule::class.java, TocRule.jsonDeserializer)
-        .registerTypeAdapter(ContentRule::class.java, ContentRule.jsonDeserializer)
-        .registerTypeAdapter(ReviewRule::class.java, ReviewRule.jsonDeserializer)
+        .registerTypeAdapter(ExploreRule::class.java, exploreRuleJsonDeserializer)
+        .registerTypeAdapter(SearchRule::class.java, searchRuleJsonDeserializer)
+        .registerTypeAdapter(BookInfoRule::class.java, bookInfoRuleJsonDeserializer)
+        .registerTypeAdapter(TocRule::class.java, tocRuleJsonDeserializer)
+        .registerTypeAdapter(ContentRule::class.java, contentRuleJsonDeserializer)
+        .registerTypeAdapter(ReviewRule::class.java, reviewRuleJsonDeserializer)
         .registerTypeAdapter(TxtTocRule::class.java, txtTocRuleJsonDeserializer)
         .create()
 }

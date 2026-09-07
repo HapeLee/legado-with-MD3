@@ -22,6 +22,7 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.splitNotBlank
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 @Suppress("unused")
 @Parcelize
@@ -84,19 +85,19 @@ data class BookSource(
     // 发现筛选规则
     var exploreScreen: String? = null,
     // 发现规则
-    var ruleExplore: ExploreRule? = null,
+    var ruleExplore: @RawValue ExploreRule? = null,
     // 搜索url
     var searchUrl: String? = null,
     // 搜索规则
-    var ruleSearch: SearchRule? = null,
+    var ruleSearch: @RawValue SearchRule? = null,
     // 书籍信息页规则
-    var ruleBookInfo: BookInfoRule? = null,
+    var ruleBookInfo: @RawValue BookInfoRule? = null,
     // 目录页规则
-    var ruleToc: TocRule? = null,
+    var ruleToc: @RawValue TocRule? = null,
     // 正文页规则
-    var ruleContent: ContentRule? = null,
+    var ruleContent: @RawValue ContentRule? = null,
     // 段评规则
-    var ruleReview: ReviewRule? = null,
+    var ruleReview: @RawValue ReviewRule? = null,
     @ColumnInfo(defaultValue = "0")
     var eventListener: Boolean = false, // 是否监听事件来执行回调规则
     @ColumnInfo(defaultValue = "0")
