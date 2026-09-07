@@ -60,7 +60,7 @@ class TagGroupRuleViewModel(
             }
             is TagGroupRuleIntent.ExportSelection -> {
                 val state = uiState.value
-                exportToUri(intent.uri, state.items, state.selectedIds)
+                exportToUri(android.net.Uri.parse(intent.uri), state.items, state.selectedIds)
             }
             is TagGroupRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
             TagGroupRuleIntent.SaveSortOrder -> saveSortOrder()
