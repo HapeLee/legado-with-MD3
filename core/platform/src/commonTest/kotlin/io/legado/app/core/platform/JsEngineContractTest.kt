@@ -1,8 +1,10 @@
 package io.legado.app.core.platform
 
+import kotlinx.coroutines.Job
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.coroutines.CoroutineContext
 
 /**
  * [JsEngine] 契约测试：android（委托 com.script 封装层）与 desktop（裸 Rhino）
@@ -98,5 +100,26 @@ class JsEngineContractTest {
     /** 模拟注入给 JS 的宿主对象（书源脚本会调 source.xxx()）。 */
     class HostStub {
         fun greet(name: String): String = "hi-$name"
+    }
+
+    @Test
+    fun `eval with coroutine context runs when active`() {
+        val scope = JsEngine.getRuntimeScope(JsBindings(), null)
+
+        // 未取消的 Job：正常执行
+        assertEquals("3", JsEngine.eval("'' + (1 + 2)", scope, Job()))
+    }
+
+    @Test
+    fun `preventExtensions blocks new globals`() {
+        val scope = JsEngine.getRuntimeScope(JsBindings(), null)
+        JsEngine.preventExtensions(scope)
+
+        // 冻结后漏写 var 的隐式全局赋值不再生效：Rhino 非 strict 模式下是
+        // **静默失败**（不抛异常，但也不在全局对象上建属性），这正是原
+        // SharedJsScope 注释说的「隐性创建失败，提示变量未定义」的效果。
+        // 断言「变量未创建」，而非「抛异常」——两端行为一致。
+        JsEngine.eval("leaked = 'x'", scope)
+        assertEquals("undefined", JsEngine.eval("typeof leaked", scope))
     }
 }

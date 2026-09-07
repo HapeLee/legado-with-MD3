@@ -1,8 +1,11 @@
 package io.legado.app.core.platform
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.Scriptable
 import org.mozilla.javascript.ScriptableObject
+import kotlin.coroutines.CoroutineContext
 
 /**
  * [JsEngine] 的 desktop actual：委托裸 `org.mozilla.javascript`。
@@ -35,6 +38,26 @@ actual object JsEngine {
         } finally {
             Context.exit()
         }
+    }
+
+    actual fun eval(
+        js: String,
+        scope: JsScope,
+        coroutineContext: CoroutineContext?
+    ): Any? {
+        // 裸 Rhino 未接 com.script 的 RhinoContext.observeInstructionCount，
+        // 无法打断执行中的脚本。这里只在入口做一次取消检查，尽力而为——
+        // 契约已声明调用方不可依赖取消一定生效。
+        coroutineContext?.let { ctx ->
+            if (ctx[Job]?.isActive == false) {
+                throw CancellationException("js eval cancelled before execution")
+            }
+        }
+        return eval(js, scope)
+    }
+
+    actual fun preventExtensions(scope: JsScope) {
+        (scope.native as? ScriptableObject)?.preventExtensions()
     }
 
     actual fun getRuntimeScope(bindings: JsBindings, parent: JsScope?): JsScope {

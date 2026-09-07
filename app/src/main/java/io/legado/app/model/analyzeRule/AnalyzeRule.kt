@@ -848,7 +848,8 @@ class AnalyzeRule(
             bindings["rssArticle"] = rssArticle
             bindings["fromBookInfo"] = isFromBookInfo
         }
-        val topScope = source?.getShareScope(coroutineContext) ?: topScopeRef?.get()
+        val topScope = source?.getShareScope(coroutineContext)?.native as? Scriptable
+            ?: topScopeRef?.get()
         val scope = if (topScope == null) {
             RhinoScriptEngine.getRuntimeScope(bindings).apply {
                 if (evalJSCallCount++ > 16) {

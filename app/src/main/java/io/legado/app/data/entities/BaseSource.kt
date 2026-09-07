@@ -1,11 +1,10 @@
 package io.legado.app.data.entities
 
 import android.webkit.JavascriptInterface
-import com.script.ScriptBindings
-import com.script.buildScriptBindings
-import com.script.rhino.RhinoScriptEngine
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
+import io.legado.app.core.platform.JsBindings
+import io.legado.app.core.platform.JsEngine
 import io.legado.app.data.entities.rule.RowUi
 import io.legado.app.help.CacheManager
 import io.legado.app.help.ConcurrentRateLimiter.Companion.updateConcurrentRate
@@ -176,7 +175,7 @@ interface BaseSource : JsExtensions {
         }
     }
 
-    private fun configureScriptBindings(): ScriptBindings.() -> Unit = {
+    private fun configureScriptBindings(): JsBindings.() -> Unit = {
         put("result", mutableMapOf<String, String>())
         put("book", null)
         put("chapter", null)
@@ -330,23 +329,16 @@ interface BaseSource : JsExtensions {
      * 执行JS
      */
     @Throws(Exception::class)
-    fun evalJS(jsStr: String, bindingsConfig: ScriptBindings.() -> Unit = {}): Any? {
-        val bindings = buildScriptBindings { bindings ->
-            bindings["java"] = this
-            bindings["source"] = this
-            bindings["baseUrl"] = getKey()
-            bindings["cookie"] = CookieStore
-            bindings["cache"] = CacheManager
-            bindings.apply(bindingsConfig)
-        }
+    fun evalJS(jsStr: String, bindingsConfig: JsBindings.() -> Unit = {}): Any? {
+        val bindings = JsBindings()
+        bindings["java"] = this
+        bindings["source"] = this
+        bindings["baseUrl"] = getKey()
+        bindings["cookie"] = CookieStore
+        bindings["cache"] = CacheManager
+        bindings.apply(bindingsConfig)
         val sharedScope = getShareScope()
-        val scope = if (sharedScope == null) {
-            RhinoScriptEngine.getRuntimeScope(bindings)
-        } else {
-            bindings.apply {
-                prototype = sharedScope
-            }
-        }
-        return RhinoScriptEngine.eval(jsStr, scope)
+        val scope = JsEngine.getRuntimeScope(bindings, sharedScope)
+        return JsEngine.eval(jsStr, scope)
     }
 }

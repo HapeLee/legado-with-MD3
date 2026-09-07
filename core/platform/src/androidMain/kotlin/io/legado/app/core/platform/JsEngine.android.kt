@@ -3,6 +3,8 @@ package io.legado.app.core.platform
 import com.script.ScriptBindings
 import com.script.rhino.RhinoScriptEngine
 import org.mozilla.javascript.Scriptable
+import org.mozilla.javascript.ScriptableObject
+import kotlin.coroutines.CoroutineContext
 
 /**
  * [JsEngine] 的 android actual：委托 `com.script.rhino.RhinoScriptEngine`。
@@ -23,6 +25,22 @@ actual object JsEngine {
 
     actual fun eval(js: String, scope: JsScope): Any? {
         return RhinoScriptEngine.eval(js, scope.native as Scriptable)
+    }
+
+    actual fun eval(
+        js: String,
+        scope: JsScope,
+        coroutineContext: CoroutineContext?
+    ): Any? {
+        // com.script 内部只在 coroutineContext[Job] != null 时才装载到 RhinoContext，
+        // 取消由 observeInstructionCount 回调触发（可打断执行中的脚本）
+        return RhinoScriptEngine.eval(js, scope.native as Scriptable, coroutineContext)
+    }
+
+    actual fun preventExtensions(scope: JsScope) {
+        // 原 SharedJsScope 是 `if (scope is ScriptableObject)` 守卫而非强转，
+        // 非 ScriptableObject 时静默跳过——保持一致，避免引入新的失败面
+        (scope.native as? ScriptableObject)?.preventExtensions()
     }
 
     actual fun getRuntimeScope(bindings: JsBindings, parent: JsScope?): JsScope {

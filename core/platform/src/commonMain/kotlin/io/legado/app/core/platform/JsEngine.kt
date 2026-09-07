@@ -1,5 +1,7 @@
 package io.legado.app.core.platform
 
+import kotlin.coroutines.CoroutineContext
+
 /**
  * JS 变量绑定容器（纯 Map）。
  *
@@ -53,10 +55,32 @@ expect object JsEngine {
     fun eval(js: String, scope: JsScope): Any?
 
     /**
+     * 在指定 scope 上 eval，支持通过 [coroutineContext] 取消。
+     *
+     * 书源脚本可能写成死循环，取消是**宿主可用性的硬需求**（否则协程取消后线程仍在烧 CPU）。
+     * 但这是「平台尽力而为」的能力：
+     * - android（`com.script` 的 RhinoContext）通过 `observeInstructionCount` 在
+     *   指令计数回调里检查 Job 状态，可**打断执行中**的脚本；
+     * - desktop 裸 Rhino 未接指令观察（见 desktop actual 注释），只在入口检查。
+     *
+     * 因此调用方**不可依赖**取消一定生效，只能把它当作加速退出的手段。
+     */
+    fun eval(js: String, scope: JsScope, coroutineContext: CoroutineContext?): Any?
+
+    /**
      * 创建运行时 scope，注入 [bindings] 变量。
      *
      * @param parent 非空时作为 prototype 父域——对应 jsLib 共享 scope 的继承：
      *   app 侧原写法是 `bindings.prototype = sharedScope`，让书源脚本命中 jsLib 里的自由函数。
      */
     fun getRuntimeScope(bindings: JsBindings, parent: JsScope?): JsScope
+
+    /**
+     * 禁止向 [scope] 新增属性（对应 JS 的 `Object.preventExtensions`）。
+     *
+     * jsLib 共享 scope 用它**阻止隐式全局变量创建**：脚本里漏写 `var` 的赋值
+     * 原本会在全局对象上静默建属性并污染后续所有书源的执行环境，
+     * 冻结后该赋值会直接抛「变量未定义」，把错误暴露给书源作者。
+     */
+    fun preventExtensions(scope: JsScope)
 }

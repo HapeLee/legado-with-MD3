@@ -44,6 +44,7 @@ import io.legado.app.utils.get
 import io.legado.app.utils.isJson
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
+import org.mozilla.javascript.Scriptable
 import io.legado.app.utils.isXml
 import io.legado.app.utils.parseIpsFromString
 import io.legado.app.utils.stackTraceStr
@@ -373,7 +374,7 @@ class AnalyzeUrl(
             bindings["result"] = result
             bindings["infoMap"] = infoMap
         }
-        val sharedScope = source?.getShareScope(coroutineContext)
+        val sharedScope = source?.getShareScope(coroutineContext)?.native as? Scriptable
         val scope = if (sharedScope == null) {
             RhinoScriptEngine.getRuntimeScope(bindings)
         } else {
