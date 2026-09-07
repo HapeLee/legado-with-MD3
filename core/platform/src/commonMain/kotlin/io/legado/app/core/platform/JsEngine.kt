@@ -32,6 +32,38 @@ interface JsScope {
 internal class NativeJsScope(override val native: Any?) : JsScope
 
 /**
+ * 将平台原生 scope 包装为 [JsScope]（[JsScope.native] 的反向操作）。
+ *
+ * 供平台侧代码复用共享 scope 时使用：`AnalyzeRule` 把 standard object 的
+ * prototype（`Scriptable`）缓存起来，下次作为 `getRuntimeScope(bindings, parent)`
+ * 的 parent 传入时，需要用本函数包回契约类型。与 [JsScope.native] 的透传对称。
+ */
+fun jsScopeOf(native: Any?): JsScope = NativeJsScope(native)
+
+/**
+ * 编译后的 JS 脚本，可跨多次 eval 复用（省去重复解析）。
+ *
+ * 书源规则里 JS 段会被反复执行（分页、正文抽取等同一段 js 跑很多次），
+ * 编译一次缓存后直接 [eval] 可跳过 Rhino 的 `compileReader` 解析开销。
+ * 这与 [JsScope.native] 同思路：[native] 以 `Any?` 透传引擎的编译产物
+ * （Rhino 侧为 `org.mozilla.javascript.Script`），commonMain 不碰引擎类型。
+ */
+interface JsCompiledScript {
+    /** 平台原生编译产物，仅供平台侧代码取用。 */
+    val native: Any?
+
+    /** 在指定 scope 上执行编译脚本，支持通过 [coroutineContext] 取消。 */
+    fun eval(scope: JsScope, coroutineContext: CoroutineContext?): Any?
+}
+
+/** [JsCompiledScript] 的通用实现：仅持平台原生编译产物引用，两个 actual 共用。 */
+internal class NativeJsCompiledScript(override val native: Any?) : JsCompiledScript {
+    override fun eval(scope: JsScope, coroutineContext: CoroutineContext?): Any? {
+        return JsEngine.evalCompiled(this, scope, coroutineContext)
+    }
+}
+
+/**
  * JS 引擎门面（P4-a 最小面）。
  *
  * 选型为 `expect object` 而非「接口 + provider 注入」：
@@ -83,4 +115,19 @@ expect object JsEngine {
      * 冻结后该赋值会直接抛「变量未定义」，把错误暴露给书源作者。
      */
     fun preventExtensions(scope: JsScope)
+
+    /**
+     * 编译 JS 脚本，返回可复用的 [JsCompiledScript]。
+     *
+     * 解析是纯 CPU 开销（无宿主副作用），commonMain 可安全调用；
+     * 执行时机的取消仍由 [JsCompiledScript.eval] 的 coroutineContext 承载。
+     */
+    fun compile(js: String): JsCompiledScript
+
+    /** [JsCompiledScript.eval] 的引擎入口，两个 actual 各自实现。 */
+    fun evalCompiled(
+        script: JsCompiledScript,
+        scope: JsScope,
+        coroutineContext: CoroutineContext?
+    ): Any?
 }

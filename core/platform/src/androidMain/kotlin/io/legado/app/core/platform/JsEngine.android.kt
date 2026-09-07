@@ -43,6 +43,19 @@ actual object JsEngine {
         (scope.native as? ScriptableObject)?.preventExtensions()
     }
 
+    actual fun compile(js: String): JsCompiledScript {
+        return NativeJsCompiledScript(RhinoScriptEngine.compile(js))
+    }
+
+    actual fun evalCompiled(
+        script: JsCompiledScript,
+        scope: JsScope,
+        coroutineContext: CoroutineContext?
+    ): Any? {
+        val compiled = script.native as com.script.CompiledScript
+        return compiled.eval(scope.native as Scriptable, coroutineContext)
+    }
+
     actual fun getRuntimeScope(bindings: JsBindings, parent: JsScope?): JsScope {
         val sb = toScriptBindings(bindings)
         // 与 app 侧 BaseSource.evalJS 原逻辑一致：

@@ -3,6 +3,7 @@ package io.legado.app.core.platform
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import org.mozilla.javascript.Context
+import org.mozilla.javascript.Script
 import org.mozilla.javascript.Scriptable
 import org.mozilla.javascript.ScriptableObject
 import kotlin.coroutines.CoroutineContext
@@ -58,6 +59,35 @@ actual object JsEngine {
 
     actual fun preventExtensions(scope: JsScope) {
         (scope.native as? ScriptableObject)?.preventExtensions()
+    }
+
+    actual fun compile(js: String): JsCompiledScript {
+        val cx = Context.enter()
+        return try {
+            NativeJsCompiledScript(cx.compileString(js, "js", 1, null))
+        } finally {
+            Context.exit()
+        }
+    }
+
+    actual fun evalCompiled(
+        script: JsCompiledScript,
+        scope: JsScope,
+        coroutineContext: CoroutineContext?
+    ): Any? {
+        // 与 eval 相同的「尽力而为」取消语义：入口检查一次
+        coroutineContext?.let { ctx ->
+            if (ctx[Job]?.isActive == false) {
+                throw CancellationException("js eval cancelled before execution")
+            }
+        }
+        val cx = Context.enter()
+        return try {
+            val compiled = script.native as Script
+            compiled.exec(cx, scope.native as Scriptable)
+        } finally {
+            Context.exit()
+        }
     }
 
     actual fun getRuntimeScope(bindings: JsBindings, parent: JsScope?): JsScope {

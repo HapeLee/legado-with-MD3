@@ -122,4 +122,27 @@ class JsEngineContractTest {
         JsEngine.eval("leaked = 'x'", scope)
         assertEquals("undefined", JsEngine.eval("typeof leaked", scope))
     }
+
+    @Test
+    fun `compiled script evaluates across scopes`() {
+        // 脚本末尾是「定义 + 调用」，eval 返回调用结果而非函数对象
+        val compiled = JsEngine.compile("function g(x) { return 'got-' + x; } g('a')")
+
+        // 编译一次，跨不同 scope 复用（书源里同一段 js 会被反复执行）
+        val s1 = JsEngine.getRuntimeScope(JsBindings(), null)
+        val s2 = JsEngine.getRuntimeScope(JsBindings(), null)
+
+        assertEquals("got-a", compiled.eval(s1, null))
+        assertEquals("got-a", compiled.eval(s2, null))
+    }
+
+    @Test
+    fun `compiled script sees bindings`() {
+        val compiled = JsEngine.compile("who")
+        val bindings = JsBindings()
+        bindings["who"] = "legado"
+        val scope = JsEngine.getRuntimeScope(bindings, null)
+
+        assertEquals("legado", compiled.eval(scope, null))
+    }
 }

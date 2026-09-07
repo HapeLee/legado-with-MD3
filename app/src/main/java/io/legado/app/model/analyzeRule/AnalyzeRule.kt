@@ -3,9 +3,11 @@ package io.legado.app.model.analyzeRule
 import android.text.TextUtils
 import androidx.annotation.Keep
 import com.google.gson.internal.LinkedTreeMap
-import com.script.CompiledScript
-import com.script.buildScriptBindings
-import com.script.rhino.RhinoScriptEngine
+import io.legado.app.core.platform.JsBindings
+import io.legado.app.core.platform.JsCompiledScript
+import io.legado.app.core.platform.JsEngine
+import io.legado.app.core.platform.JsScope
+import io.legado.app.core.platform.jsScopeOf
 import io.legado.app.constant.AppPattern.JS_PATTERN
 import io.legado.app.constant.AppPattern.WebJS_PATTERN
 import io.legado.app.data.entities.BaseBook
@@ -80,8 +82,8 @@ class AnalyzeRule(
     private val stringRuleCache = hashMapOf<String, List<SourceRule>>()
     private val regexCache = hashMapOf<String, Regex?>()
     private val cacheSettingsGateway get() = GlobalContext.get().get<DownloadCacheSettingsGateway>()
-    private val scriptCache = hashMapOf<String, CompiledScript>()
-    private var topScopeRef: WeakReference<Scriptable>? = null
+    private val scriptCache = hashMapOf<String, JsCompiledScript>()
+    private var topScopeRef: WeakReference<JsScope>? = null
     private var evalJSCallCount = 0
 
     private var coroutineContext: CoroutineContext = EmptyCoroutineContext
@@ -833,42 +835,42 @@ class AnalyzeRule(
      * 执行JS
      */
     fun evalJS(jsStr: String, result: Any? = null): Any? {
-        val bindings = buildScriptBindings { bindings ->
-            bindings["java"] = this
-            bindings["cookie"] = CookieStore
-            bindings["cache"] = CacheManager
-            bindings["source"] = source
-            bindings["book"] = book
-            bindings["result"] = result
-            bindings["baseUrl"] = baseUrl
-            bindings["chapter"] = chapter
-            bindings["title"] = chapter?.title
-            bindings["src"] = content
-            bindings["nextChapterUrl"] = nextChapterUrl
-            bindings["rssArticle"] = rssArticle
-            bindings["fromBookInfo"] = isFromBookInfo
-        }
-        val topScope = source?.getShareScope(coroutineContext)?.native as? Scriptable
+        val bindings = JsBindings()
+        bindings["java"] = this
+        bindings["cookie"] = CookieStore
+        bindings["cache"] = CacheManager
+        bindings["source"] = source
+        bindings["book"] = book
+        bindings["result"] = result
+        bindings["baseUrl"] = baseUrl
+        bindings["chapter"] = chapter
+        bindings["title"] = chapter?.title
+        bindings["src"] = content
+        bindings["nextChapterUrl"] = nextChapterUrl
+        bindings["rssArticle"] = rssArticle
+        bindings["fromBookInfo"] = isFromBookInfo
+        val topScope = source?.getShareScope(coroutineContext)
             ?: topScopeRef?.get()
         val scope = if (topScope == null) {
-            RhinoScriptEngine.getRuntimeScope(bindings).apply {
+            JsEngine.getRuntimeScope(bindings, null).also { jsScope ->
                 if (evalJSCallCount++ > 16) {
-                    topScopeRef = WeakReference(prototype)
+                    // 缓存 standard object 的 prototype 供下次复用（原逻辑：
+                    // WeakReference(prototype)），经 native escape 取回再包回契约类型
+                    topScopeRef = WeakReference(
+                        jsScopeOf((jsScope.native as Scriptable).prototype)
+                    )
                 }
             }
         } else {
-            bindings.apply {
-                prototype = topScope
-            }
+            JsEngine.getRuntimeScope(bindings, topScope)
         }
         val script = compileScriptCache(jsStr)
-        val result = script.eval(scope, coroutineContext)
-        return result
+        return script.eval(scope, coroutineContext)
     }
 
-    private fun compileScriptCache(jsStr: String): CompiledScript {
+    private fun compileScriptCache(jsStr: String): JsCompiledScript {
         return scriptCache.getOrPutLimit(jsStr, 16) {
-            RhinoScriptEngine.compile(jsStr)
+            JsEngine.compile(jsStr)
         }
     }
 
