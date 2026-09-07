@@ -24,17 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import io.legado.app.data.entities.getUseReplaceRule
 import io.legado.app.data.entities.getDisplayTitle
 
-data class ChangeSourceMigrationOptions(
-    val migrateChapters: Boolean = true,
-    val migrateReadingProgress: Boolean = true,
-    val migrateGroup: Boolean = true,
-    val migrateCover: Boolean = true,
-    val migrateCategory: Boolean = true,
-    val migrateRemark: Boolean = true,
-    val migrateReadConfig: Boolean = true,
-    val deleteDownloadedChapters: Boolean = false,
-)
-
 data class ChangeBookSourceResult(
     val oldBookUrl: String,
     val book: Book,

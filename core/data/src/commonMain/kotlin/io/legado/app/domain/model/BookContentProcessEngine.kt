@@ -1,8 +1,7 @@
 package io.legado.app.domain.model
 
+import io.legado.app.core.platform.JsonCodec
 import io.legado.app.data.entities.BookContentProcess
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
 import kotlin.math.abs
 
 object BookContentProcessEngine {
@@ -33,19 +32,16 @@ object BookContentProcessEngine {
                 ) {
                     // 用户划线/高亮标记：不改文本。锚点能在正文里解析到说明标记仍有效，
                     // 计入 effectiveProcesses 供渲染层把样式应用到区间。
-                    val anchor = GSON.fromJsonObject<TextProcessAnchor>(process.anchorJson)
-                        .getOrNull()
+                    val anchor = JsonCodec.fromJsonObject(process.anchorJson, TextProcessAnchor::class)
                         ?: return@forEach
                     if (findTargetRange(output, anchor) != null) {
                         effectiveProcesses.add(process)
                     }
                     return@forEach
                 }
-                val anchor = GSON.fromJsonObject<TextProcessAnchor>(process.anchorJson)
-                    .getOrNull()
+                val anchor = JsonCodec.fromJsonObject(process.anchorJson, TextProcessAnchor::class)
                     ?: return@forEach
-                val action = GSON.fromJsonObject<TextProcessAction>(process.actionJson)
-                    .getOrNull()
+                val action = JsonCodec.fromJsonObject(process.actionJson, TextProcessAction::class)
                     ?: return@forEach
                 val range = findTargetRange(output, anchor) ?: return@forEach
                 val next = when (action.type) {

@@ -1,7 +1,5 @@
 package io.legado.app.domain.model
 
-import java.io.InputStream
-
 data class CoverAlbum(
     val id: String,
     val name: String,
@@ -17,9 +15,4 @@ data class CoverAlbumImage(
 
 data class CoverAlbumSelection(
     val albumId: String? = null,
-)
-
-data class CoverAlbumImageInput(
-    val displayName: String,
-    val openStream: () -> InputStream,
 )

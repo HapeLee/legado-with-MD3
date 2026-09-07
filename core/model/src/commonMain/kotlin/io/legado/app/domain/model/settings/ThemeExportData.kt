@@ -1,8 +1,5 @@
 package io.legado.app.domain.model.settings
 
-import androidx.annotation.Keep
-
-@Keep
 data class ThemeExportData(
     val appTheme: String = "0",
     val themeMode: String = "0",
