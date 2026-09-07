@@ -99,7 +99,15 @@ internal object ShowBrightnessViewMigration : DataMigration<Preferences> {
  * 设置仓储
  * 以 DataStore 为唯一持久化源，通过 [AppConfigStore] 的有效快照统一读写。
  */
-class SettingsRepository {
+class SettingsRepository : PreferenceStore {
+
+    override fun observeInt(key: String, defaultValue: Int): Flow<Int> = getInt(key, defaultValue)
+
+    override suspend fun setInt(key: String, value: Int) = putInt(key, value)
+
+    override fun observeString(key: String, defaultValue: String): Flow<String> = getString(key, defaultValue)
+
+    override suspend fun setString(key: String, value: String) = putString(key, value)
 
     fun <T : Any> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> =
         AppConfigStore.preferencesFlow.map { it.compatDsValue(key, defaultValue) }

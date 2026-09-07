@@ -334,7 +334,7 @@ val appModule = module {
     single { get<AppDatabase>().ruleSubDao }
 
     singleOf(::ReadRecordRepository)
-    single<HomeDashboardGateway> { HomeDashboardRepository(get(), get()) }
+    single<HomeDashboardGateway> { HomeDashboardRepository(get(), get<SettingsRepository>()) }
     singleOf(::BookRepository)
     singleOf(::BookImportRepository)
     singleOf(::BookGroupRepository)
