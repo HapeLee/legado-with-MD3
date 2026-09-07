@@ -1,391 +1,173 @@
 package io.legado.app.data
 
 import android.annotation.SuppressLint
-import androidx.room.AutoMigration
-import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.SupportSQLiteConnection
 import androidx.sqlite.execSQL
-import io.legado.app.data.dao.AiArtifactDao
-import io.legado.app.data.dao.AiChatDao
-import io.legado.app.data.dao.AiMemoryDao
-import io.legado.app.data.dao.AiProfileDao
-import io.legado.app.data.dao.AiPromptPresetDao
-import io.legado.app.data.dao.BookChapterDao
-import io.legado.app.data.dao.BookContentProcessDao
-import io.legado.app.data.dao.BookDao
-import io.legado.app.data.dao.BookGroupDao
-import io.legado.app.data.dao.BookKnowledgeDao
-import io.legado.app.data.dao.BookMarkingDao
-import io.legado.app.data.dao.BookSourceDao
-import io.legado.app.data.dao.BookmarkDao
-import io.legado.app.data.dao.CacheDao
-import io.legado.app.data.dao.ChapterSpeechDao
-import io.legado.app.data.dao.CloudTtsEngineDao
-import io.legado.app.data.dao.CookieDao
-import io.legado.app.data.dao.DictRuleDao
-import io.legado.app.data.dao.ExactChapterPageCountDao
-import io.legado.app.data.dao.HighlightRuleDao
-import io.legado.app.data.dao.HighlightTagRuleDao
-import io.legado.app.data.dao.HomepageCustomSetDao
-import io.legado.app.data.dao.HomepageModuleDao
-import io.legado.app.data.dao.HttpTTSDao
-import io.legado.app.data.dao.KeyboardAssistsDao
-import io.legado.app.data.dao.ReadAloudVoiceDao
-import io.legado.app.data.dao.ReadRecordDao
-import io.legado.app.data.dao.ReplaceRuleDao
-import io.legado.app.data.dao.RssArticleDao
-import io.legado.app.data.dao.RssReadRecordDao
-import io.legado.app.data.dao.RssSourceDao
-import io.legado.app.data.dao.RssStarDao
-import io.legado.app.data.dao.RuleSubDao
-import io.legado.app.data.dao.SearchBookDao
-import io.legado.app.data.dao.SearchContentHistoryDao
-import io.legado.app.data.dao.SearchKeywordDao
-import io.legado.app.data.dao.ServerDao
-import io.legado.app.data.dao.TagGroupRuleDao
-import io.legado.app.data.dao.TxtTocRuleDao
-import io.legado.app.data.entities.AiArtifact
-import io.legado.app.data.entities.AiChatConversation
-import io.legado.app.data.entities.AiChatMessage
-import io.legado.app.data.entities.AiMemory
-import io.legado.app.data.entities.AiModelProfile
-import io.legado.app.data.entities.AiPromptPreset
-import io.legado.app.data.entities.AiProviderProfile
-import io.legado.app.data.entities.AiTaskPreset
-import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.entities.BookCharacterEvent
-import io.legado.app.data.entities.BookCharacterProfile
-import io.legado.app.data.entities.BookCharacterRelation
-import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.data.entities.BookKnowledgeEntry
-import io.legado.app.data.entities.BookMarking
-import io.legado.app.data.entities.BookOutlineNode
-import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.BookSourceConverters
-import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.data.entities.BookVoiceBindingEntity
-import io.legado.app.data.entities.Bookmark
-import io.legado.app.data.entities.Cache
-import io.legado.app.data.entities.ChapterSpeechAnalysisEntity
-import io.legado.app.data.entities.ChapterSpeechSegmentEntity
-import io.legado.app.data.entities.CloudTtsEngineEntity
-import io.legado.app.data.entities.Cookie
-import io.legado.app.data.entities.DictRule
-import io.legado.app.data.entities.ExactChapterPageCountEntity
-import io.legado.app.data.entities.HighlightRule
-import io.legado.app.data.entities.HighlightTagRule
-import io.legado.app.data.entities.HomepageCustomSet
-import io.legado.app.data.entities.HomepageModule
-import io.legado.app.data.entities.HttpTTS
-import io.legado.app.data.entities.KeyboardAssist
-import io.legado.app.data.entities.ReadAloudVoiceEntity
-import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.data.entities.RssArticle
-import io.legado.app.data.entities.RssReadRecord
-import io.legado.app.data.entities.RssSource
-import io.legado.app.data.entities.RssStar
-import io.legado.app.data.entities.RuleSub
-import io.legado.app.data.entities.SearchBook
-import io.legado.app.data.entities.SearchContentHistory
-import io.legado.app.data.entities.SearchKeyword
-import io.legado.app.data.entities.Server
-import io.legado.app.data.entities.TagGroupRule
-import io.legado.app.data.entities.TxtTocRule
-import io.legado.app.data.entities.readRecord.ReadRecord
-import io.legado.app.data.entities.readRecord.ReadRecordDetail
-import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.help.DefaultData
 import org.intellij.lang.annotations.Language
 import splitties.init.appCtx
 import java.util.Locale
 
+/**
+ * [AppDatabase]（已下沉 :core:data commonMain）的 Android 侧单例构造与回调。
+ *
+ * 原 app 侧 `AppDatabase.kt` 的 `@Database` 注解 + abstract DAO + companion 常量
+ * 已下沉 commonMain；这里只保留依赖平台栈的部分：
+ * - `appDb` 单例（`Room.databaseBuilder` 需 appCtx + AndroidSQLiteDriver）
+ * - `dbCallback`（`setLocale(Locale.CHINESE)` 依赖 AndroidSQLiteConnection；
+ *   预置分组/键盘助手 SQL 依赖 `DefaultData`）
+ */
 val appDb by lazy {
     Room.databaseBuilder(appCtx, AppDatabase::class.java, AppDatabase.DATABASE_NAME)
         .fallbackToDestructiveMigrationFrom(false, 1, 2, 3, 4, 5, 6, 7, 8, 9)
         .addMigrations(*DatabaseMigrations.migrations)
         .allowMainThreadQueries()
-        .addCallback(AppDatabase.dbCallback)
+        .addCallback(dbCallback)
         .build()
 }
 
-@TypeConverters(BookSourceConverters::class)
-@Database(
-    version = 104,
-    exportSchema = true,
-    entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
-        ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
-        RssSource::class, Bookmark::class, RssArticle::class,
-        RssReadRecord::class, ReadRecordDetail::class, ReadRecordSession::class,
-        RssStar::class, TxtTocRule::class, ReadRecord::class, HttpTTS::class, Cache::class,
-        RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
-        SearchContentHistory::class, HomepageModule::class, HomepageCustomSet::class,
-        HighlightRule::class, AiProviderProfile::class, AiModelProfile::class,
-        AiTaskPreset::class, AiArtifact::class, AiChatConversation::class,
-        AiChatMessage::class, AiMemory::class, HighlightTagRule::class, TagGroupRule::class,
-        BookContentProcess::class, AiPromptPreset::class, BookCharacterProfile::class,
-        BookCharacterEvent::class, BookCharacterRelation::class, BookKnowledgeEntry::class,
-        BookOutlineNode::class, ReadAloudVoiceEntity::class, BookVoiceBindingEntity::class,
-        ChapterSpeechAnalysisEntity::class, ChapterSpeechSegmentEntity::class,
-        CloudTtsEngineEntity::class, ExactChapterPageCountEntity::class,
-        BookMarking::class],
-    views = [BookSourcePart::class],
-    autoMigrations = [
-        AutoMigration(from = 43, to = 44),
-        AutoMigration(from = 44, to = 45),
-        AutoMigration(from = 45, to = 46),
-        AutoMigration(from = 46, to = 47),
-        AutoMigration(from = 47, to = 48),
-        AutoMigration(from = 48, to = 49),
-        AutoMigration(from = 49, to = 50),
-        AutoMigration(from = 50, to = 51),
-        AutoMigration(from = 51, to = 52),
-        AutoMigration(from = 52, to = 53),
-        AutoMigration(from = 53, to = 54),
-        AutoMigration(from = 54, to = 55, spec = DatabaseMigrations.Migration_54_55::class),
-        AutoMigration(from = 55, to = 56),
-        AutoMigration(from = 56, to = 57),
-        AutoMigration(from = 57, to = 58),
-        AutoMigration(from = 58, to = 59),
-        AutoMigration(from = 59, to = 60),
-        AutoMigration(from = 60, to = 61),
-        AutoMigration(from = 61, to = 62),
-        AutoMigration(from = 62, to = 63),
-        AutoMigration(from = 63, to = 64),
-        AutoMigration(from = 64, to = 65, spec = DatabaseMigrations.Migration_64_65::class),
-        AutoMigration(from = 65, to = 66),
-        AutoMigration(from = 66, to = 67),
-        AutoMigration(from = 67, to = 68),
-        AutoMigration(from = 68, to = 69),
-        AutoMigration(from = 69, to = 70),
-        AutoMigration(from = 70, to = 71),
-        AutoMigration(from = 71, to = 72),
-        AutoMigration(from = 72, to = 73),
-        AutoMigration(from = 73, to = 74),
-        AutoMigration(from = 74, to = 75),
-        AutoMigration(from = 75, to = 76),
-        AutoMigration(from = 76, to = 77),
-        AutoMigration(from = 77, to = 78),
-        AutoMigration(from = 78, to = 79),
-        AutoMigration(from = 79, to = 80),
-        AutoMigration(from = 80, to = 81),
-        AutoMigration(from = 81, to = 82),
-        AutoMigration(from = 82, to = 83),
-        AutoMigration(from = 83, to = 84),
-        AutoMigration(from = 84, to = 85),
-        AutoMigration(from = 85, to = 86),
-        AutoMigration(from = 86, to = 87),
-        AutoMigration(from = 87, to = 88),
-        AutoMigration(from = 88, to = 89),
-        AutoMigration(from = 89, to = 90),
-        AutoMigration(from = 90, to = 91),
-        AutoMigration(from = 91, to = 92),
-        AutoMigration(from = 92, to = 93),
-        AutoMigration(from = 93, to = 94),
-        AutoMigration(from = 94, to = 95),
-        AutoMigration(from = 95, to = 96),
-        AutoMigration(from = 96, to = 97),
-        AutoMigration(from = 97, to = 98),
-        AutoMigration(from = 100, to = 101, spec = DatabaseMigrations.Migration_100_101::class),
-        // book_marks 新表：Room AutoMigration 支持新增表，自动 CREATE TABLE
-        AutoMigration(from = 101, to = 102),
-        // httpTTS 新增可空列 speed（源级语速）
-        AutoMigration(from = 103, to = 104)
-    ]
-)
-abstract class AppDatabase : RoomDatabase() {
+/**
+ * 建库/开库回调。挂载点 `RoomDatabase.Callback` 依赖 AndroidSQLiteConnection
+ * （`setLocale` 无 commonMain 对应物），故留 app 侧。
+ */
+val dbCallback = object : RoomDatabase.Callback() {
 
-    abstract val bookDao: BookDao
-    abstract val bookGroupDao: BookGroupDao
-    abstract val bookSourceDao: BookSourceDao
-    abstract val bookChapterDao: BookChapterDao
-    abstract val bookContentProcessDao: BookContentProcessDao
-    abstract val bookKnowledgeDao: BookKnowledgeDao
-    abstract val readAloudVoiceDao: ReadAloudVoiceDao
-    abstract val chapterSpeechDao: ChapterSpeechDao
-    abstract val cloudTtsEngineDao: CloudTtsEngineDao
-    abstract val replaceRuleDao: ReplaceRuleDao
-    abstract val searchBookDao: SearchBookDao
-    abstract val searchKeywordDao: SearchKeywordDao
-    abstract val rssSourceDao: RssSourceDao
-    abstract val bookmarkDao: BookmarkDao
-    abstract val bookMarkingDao: BookMarkingDao
-    abstract val rssArticleDao: RssArticleDao
-    abstract val rssStarDao: RssStarDao
-    abstract val rssReadRecordDao: RssReadRecordDao
-    abstract val cookieDao: CookieDao
-    abstract val txtTocRuleDao: TxtTocRuleDao
-    abstract val readRecordDao: ReadRecordDao
-    abstract val httpTTSDao: HttpTTSDao
-    abstract val cacheDao: CacheDao
-    abstract val ruleSubDao: RuleSubDao
-    abstract val dictRuleDao: DictRuleDao
-    abstract val exactChapterPageCountDao: ExactChapterPageCountDao
-    abstract val keyboardAssistsDao: KeyboardAssistsDao
-    abstract val serverDao: ServerDao
-    abstract val searchContentHistoryDao: SearchContentHistoryDao
-    abstract val homepageModuleDao: HomepageModuleDao
-    abstract val homepageCustomSetDao: HomepageCustomSetDao
-    abstract val highlightRuleDao: HighlightRuleDao
-    abstract val highlightTagRuleDao: HighlightTagRuleDao
-    abstract val tagGroupRuleDao: TagGroupRuleDao
-    abstract val aiProfileDao: AiProfileDao
-    abstract val aiArtifactDao: AiArtifactDao
-    abstract val aiChatDao: AiChatDao
-    abstract val aiMemoryDao: AiMemoryDao
-    abstract val aiPromptPresetDao: AiPromptPresetDao
+        @SuppressLint("RestrictedApi")
+        override fun onCreate(connection: SQLiteConnection) {
+            // SQLiteConnection 无 setLocale；经 SupportSQLiteConnection 保留原语义
+            // （BookmarkDao 的 collate localized 依赖它）。
+            (connection as? SupportSQLiteConnection)?.db?.setLocale(Locale.CHINESE)
+        }
 
-    companion object {
-
-        const val DATABASE_NAME = "legado.db"
-
-        const val BOOK_TABLE_NAME = "books"
-        const val BOOK_SOURCE_TABLE_NAME = "book_sources"
-        const val RSS_SOURCE_TABLE_NAME = "rssSources"
-
-        val dbCallback = object : Callback() {
-
-            @SuppressLint("RestrictedApi")
-            override fun onCreate(connection: SQLiteConnection) {
-                // SQLiteConnection 无 setLocale；经 SupportSQLiteConnection 保留原语义
-                // （BookmarkDao 的 collate localized 依赖它）。
-                (connection as? SupportSQLiteConnection)?.db?.setLocale(Locale.CHINESE)
-            }
-
-            @SuppressLint("RestrictedApi")
-            override fun onOpen(connection: SQLiteConnection) {
-                @Language("sql")
-                val insertBookGroupAllSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdAll}, '全部', -10, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdAll})
-                """.trimIndent()
-                connection.execSQL(insertBookGroupAllSql)
-                @Language("sql")
-                val insertBookGroupLocalSql = """
-                    insert into book_groups(groupId, groupName, 'order', enableRefresh, show) 
-                    select ${BookGroup.IdLocal}, '本地', -9, 0, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdLocal})
-                """.trimIndent()
-                connection.execSQL(insertBookGroupLocalSql)
-                @Language("sql")
-                val insertBookGroupTextSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdText}, '小说', -26, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdText})
-                """.trimIndent()
-                connection.execSQL(insertBookGroupTextSql)
-                @Language("sql")
-                val insertBookGroupMangaSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdManga}, '漫画', -25, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdManga})
-                """.trimIndent()
-                connection.execSQL(insertBookGroupMangaSql)
-                @Language("sql")
-                val insertBookGroupMusicSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdAudio}, '音频', -8, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdAudio})
-                """.trimIndent()
-                connection.execSQL(insertBookGroupMusicSql)
-                Language("sql")
-                val insertGroupReading = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdReading}, '在读', -30, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdReading})
-                """.trimIndent()
-                connection.execSQL(insertGroupReading)
-                @Language("sql")
-                val insertGroupUnread = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdUnread}, '未读', -29, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdUnread})
-                """.trimIndent()
-                connection.execSQL(insertGroupUnread)
-                @Language("sql")
-                val insertGroupReadFinished = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdReadFinished}, '已读', -28, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdReadFinished})
-                """.trimIndent()
-                connection.execSQL(insertGroupReadFinished)
-                @Language("sql")
-                val insertGroupReadFinishedUpdate = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdReadFinishedUpdate}, '连载已读', -27, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdReadFinishedUpdate})
-                """.trimIndent()
-                connection.execSQL(insertGroupReadFinishedUpdate)
-                @Language("sql")
-                val insertGroupReadFinishedComplete = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdReadFinishedComplete}, '完本已读', -26, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdReadFinishedComplete})
-                """.trimIndent()
-                connection.execSQL(insertGroupReadFinishedComplete)
-                @Language("sql")
-                val insertBookGroupNetNoneGroupSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdNetNone}, '网络未分组', -7, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdNetNone})
-                """.trimIndent()
-                connection.execSQL(insertBookGroupNetNoneGroupSql)
-                @Language("sql")
-                val insertBookGroupLocalNoneGroupSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdLocalNone}, '本地未分组', -6, 0
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdLocalNone})
-                """.trimIndent()
-                connection.execSQL(insertBookGroupLocalNoneGroupSql)
-                @Language("sql")
-                val insertBookGroupErrorSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdError}, '更新失败', -1, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdError})
-                """.trimIndent()
-                connection.execSQL(insertBookGroupErrorSql)
-                @Language("sql")
-                val upBookSourceLoginUiSql =
-                    "update book_sources set loginUi = null where loginUi = 'null'"
-                connection.execSQL(upBookSourceLoginUiSql)
-                @Language("sql")
-                val upRssSourceLoginUiSql =
-                    "update rssSources set loginUi = null where loginUi = 'null'"
-                connection.execSQL(upRssSourceLoginUiSql)
-                @Language("sql")
-                val upHttpTtsLoginUiSql =
-                    "update httpTTS set loginUi = null where loginUi = 'null'"
-                connection.execSQL(upHttpTtsLoginUiSql)
-                @Language("sql")
-                val upHttpTtsConcurrentRateSql =
-                    "update httpTTS set concurrentRate = '0' where concurrentRate is null"
-                connection.execSQL(upHttpTtsConcurrentRateSql)
-                val isEmpty = connection.prepare(
-                    "select * from keyboardAssists order by serialNo"
-                ).use { stmt -> !stmt.step() }
-                if (isEmpty) {
-                    connection.prepare(
-                        "INSERT OR REPLACE INTO keyboardAssists(type, key, value, serialNo) " +
-                            "VALUES(?, ?, ?, ?)"
-                    ).use { insert ->
-                        DefaultData.keyboardAssists.forEach { keyboardAssist ->
-                            insert.bindLong(1, keyboardAssist.type.toLong())
-                            insert.bindText(2, keyboardAssist.key)
-                            insert.bindText(3, keyboardAssist.value)
-                            insert.bindLong(4, keyboardAssist.serialNo.toLong())
-                            insert.step()
-                        }
+        @SuppressLint("RestrictedApi")
+        override fun onOpen(connection: SQLiteConnection) {
+            @Language("sql")
+            val insertBookGroupAllSql = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdAll}, '全部', -10, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdAll})
+            """.trimIndent()
+            connection.execSQL(insertBookGroupAllSql)
+            @Language("sql")
+            val insertBookGroupLocalSql = """
+                insert into book_groups(groupId, groupName, 'order', enableRefresh, show)
+                select ${BookGroup.IdLocal}, '本地', -9, 0, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdLocal})
+            """.trimIndent()
+            connection.execSQL(insertBookGroupLocalSql)
+            @Language("sql")
+            val insertBookGroupTextSql = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdText}, '小说', -26, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdText})
+            """.trimIndent()
+            connection.execSQL(insertBookGroupTextSql)
+            @Language("sql")
+            val insertBookGroupMangaSql = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdManga}, '漫画', -25, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdManga})
+            """.trimIndent()
+            connection.execSQL(insertBookGroupMangaSql)
+            @Language("sql")
+            val insertBookGroupMusicSql = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdAudio}, '音频', -8, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdAudio})
+            """.trimIndent()
+            connection.execSQL(insertBookGroupMusicSql)
+            @Language("sql")
+            val insertGroupReading = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdReading}, '在读', -30, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdReading})
+            """.trimIndent()
+            connection.execSQL(insertGroupReading)
+            @Language("sql")
+            val insertGroupUnread = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdUnread}, '未读', -29, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdUnread})
+            """.trimIndent()
+            connection.execSQL(insertGroupUnread)
+            @Language("sql")
+            val insertGroupReadFinished = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdReadFinished}, '已读', -28, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdReadFinished})
+            """.trimIndent()
+            connection.execSQL(insertGroupReadFinished)
+            @Language("sql")
+            val insertGroupReadFinishedUpdate = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdReadFinishedUpdate}, '连载已读', -27, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdReadFinishedUpdate})
+            """.trimIndent()
+            connection.execSQL(insertGroupReadFinishedUpdate)
+            @Language("sql")
+            val insertGroupReadFinishedComplete = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdReadFinishedComplete}, '完本已读', -26, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdReadFinishedComplete})
+            """.trimIndent()
+            connection.execSQL(insertGroupReadFinishedComplete)
+            @Language("sql")
+            val insertBookGroupNetNoneGroupSql = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdNetNone}, '网络未分组', -7, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdNetNone})
+            """.trimIndent()
+            connection.execSQL(insertBookGroupNetNoneGroupSql)
+            @Language("sql")
+            val insertBookGroupLocalNoneGroupSql = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdLocalNone}, '本地未分组', -6, 0
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdLocalNone})
+            """.trimIndent()
+            connection.execSQL(insertBookGroupLocalNoneGroupSql)
+            @Language("sql")
+            val insertBookGroupErrorSql = """
+                insert into book_groups(groupId, groupName, 'order', show)
+                select ${BookGroup.IdError}, '更新失败', -1, 1
+                where not exists (select * from book_groups where groupId = ${BookGroup.IdError})
+            """.trimIndent()
+            connection.execSQL(insertBookGroupErrorSql)
+            @Language("sql")
+            val upBookSourceLoginUiSql =
+                "update book_sources set loginUi = null where loginUi = 'null'"
+            connection.execSQL(upBookSourceLoginUiSql)
+            @Language("sql")
+            val upRssSourceLoginUiSql =
+                "update rssSources set loginUi = null where loginUi = 'null'"
+            connection.execSQL(upRssSourceLoginUiSql)
+            @Language("sql")
+            val upHttpTtsLoginUiSql =
+                "update httpTTS set loginUi = null where loginUi = 'null'"
+            connection.execSQL(upHttpTtsLoginUiSql)
+            @Language("sql")
+            val upHttpTtsConcurrentRateSql =
+                "update httpTTS set concurrentRate = '0' where concurrentRate is null"
+            connection.execSQL(upHttpTtsConcurrentRateSql)
+            val isEmpty = connection.prepare(
+                "select * from keyboardAssists order by serialNo"
+            ).use { stmt -> !stmt.step() }
+            if (isEmpty) {
+                connection.prepare(
+                    "INSERT OR REPLACE INTO keyboardAssists(type, key, value, serialNo) " +
+                        "VALUES(?, ?, ?, ?)"
+                ).use { insert ->
+                    DefaultData.keyboardAssists.forEach { keyboardAssist ->
+                        insert.bindLong(1, keyboardAssist.type.toLong())
+                        insert.bindText(2, keyboardAssist.key)
+                        insert.bindText(3, keyboardAssist.value)
+                        insert.bindLong(4, keyboardAssist.serialNo.toLong())
+                        insert.step()
                     }
                 }
             }
         }
-
     }
-
-}

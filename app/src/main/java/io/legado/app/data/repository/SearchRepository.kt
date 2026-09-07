@@ -8,7 +8,7 @@ import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.usecase.BookShelfKey
-import io.legado.app.ui.main.bookshelf.BookShelfItem
+import io.legado.app.data.entities.BookShelfItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf

@@ -7,7 +7,7 @@ import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.GroupBookCount
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.ui.main.bookshelf.BookShelfItem
+import io.legado.app.data.entities.BookShelfItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext

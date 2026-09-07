@@ -46,7 +46,7 @@ import io.legado.app.help.config.SettingsWriter
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.ui.main.MainActivity
-import io.legado.app.ui.main.bookshelf.BookShelfItem
+import io.legado.app.data.entities.BookShelfItem
 import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 import splitties.systemservices.clipboardManager

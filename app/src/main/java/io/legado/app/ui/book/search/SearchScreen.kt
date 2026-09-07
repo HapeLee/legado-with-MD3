@@ -62,7 +62,7 @@ import io.legado.app.domain.model.BookShelfState
 import io.legado.app.domain.model.ContentQualityStage
 import io.legado.app.domain.model.MatchMode
 import io.legado.app.ui.main.bookCoverSharedElementKey
-import io.legado.app.ui.main.bookshelf.BookShelfItem
+import io.legado.app.data.entities.BookShelfItem
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding

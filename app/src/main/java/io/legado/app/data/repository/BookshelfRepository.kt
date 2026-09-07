@@ -1,7 +1,7 @@
 package io.legado.app.data.repository
 
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.ui.main.bookshelf.BookShelfItem
+import io.legado.app.data.entities.BookShelfItem
 import io.legado.app.utils.cnCompare
 import kotlin.math.max
 
