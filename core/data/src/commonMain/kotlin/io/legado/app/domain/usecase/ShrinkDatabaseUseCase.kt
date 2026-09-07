@@ -5,7 +5,7 @@ import io.legado.app.domain.gateway.DatabaseMaintenanceGateway
 class ShrinkDatabaseUseCase(
     private val databaseMaintenanceGateway: DatabaseMaintenanceGateway
 ) {
-    fun execute() {
+    suspend fun execute() {
         databaseMaintenanceGateway.shrink()
     }
 }

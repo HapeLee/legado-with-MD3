@@ -1,6 +1,7 @@
 package io.legado.app.data.repository
 
-import androidx.room.withTransaction
+import androidx.room.immediateTransaction
+import androidx.room.useWriterConnection
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
@@ -175,10 +176,12 @@ class BookRepository(
 
     suspend fun replaceChaptersAndUpdateBook(book: Book, chapters: List<BookChapter>) {
         withContext(Dispatchers.IO) {
-            appDb.withTransaction {
-                bookChapterDao.delByBook(book.bookUrl)
-                bookChapterDao.insert(*chapters.toTypedArray())
-                bookDao.update(book)
+            appDb.useWriterConnection { connection ->
+                connection.immediateTransaction {
+                    bookChapterDao.delByBook(book.bookUrl)
+                    bookChapterDao.insert(*chapters.toTypedArray())
+                    bookDao.update(book)
+                }
             }
         }
     }
