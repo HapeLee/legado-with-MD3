@@ -1,32 +1,22 @@
 package io.legado.app.data.entities
 
-import io.legado.app.constant.AppConst
-import io.legado.app.constant.AppLog
+import io.legado.app.core.platform.CookieStoreProvider
 import io.legado.app.core.platform.JsBindings
 import io.legado.app.core.platform.JsEngine
+import io.legado.app.core.platform.JsonCodec
+import io.legado.app.core.platform.KeyValueStoreProvider
+import io.legado.app.core.platform.LoggerProvider
+import io.legado.app.core.platform.SourceRuntimeProvider
+import io.legado.app.core.platform.SymmetricCryptoProvider
 import io.legado.app.data.entities.rule.RowUi
-import io.legado.app.help.CacheManager
-import io.legado.app.help.ConcurrentRateLimiter.Companion.updateConcurrentRate
-import io.legado.app.help.JsExtensions
-import io.legado.app.help.crypto.SymmetricCryptoAndroid
-import io.legado.app.help.http.CookieStore
-import io.legado.app.help.source.clearExploreKindsCache
-import io.legado.app.help.source.getShareScope
-import io.legado.app.model.SharedJsScope.remove
-import io.legado.app.utils.GSON
-import io.legado.app.utils.GSONStrict
-import io.legado.app.utils.fromJsonArray
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.has
-import io.legado.app.utils.isMainThread
 import kotlinx.coroutines.runBlocking
-import org.intellij.lang.annotations.Language
 
 /**
  * 可在js里调用,source.xxx()
  */
 @Suppress("unused")
-interface BaseSource : JsExtensions {
+interface BaseSource {
     /**
      * 并发率
      */
@@ -57,11 +47,11 @@ interface BaseSource : JsExtensions {
      */
     var jsLib: String?
 
-    override fun getTag(): String
+    fun getTag(): String
 
     fun getKey(): String
 
-    override fun getSource(): BaseSource? {
+    fun getSource(): BaseSource? {
         return this
     }
 
@@ -81,7 +71,6 @@ interface BaseSource : JsExtensions {
     fun login() {
         val loginJs = getLoginJs()
         if (!loginJs.isNullOrBlank()) {
-            @Language("js")
             val js = """$loginJs
                 if(typeof login=='function'){
                     login.apply(this);
@@ -107,18 +96,18 @@ interface BaseSource : JsExtensions {
 
                     else -> it
                 }
-                GSONStrict.fromJsonObject<Map<String, String>>(json).getOrNull()?.let { map ->
+                JsonCodec.decodeStringMapStrict(json)?.let { map ->
                     putAll(map)
-                } ?: GSON.fromJsonObject<Map<String, String>>(json).getOrNull()?.let { map ->
-                    log("请求头规则 JSON 格式不规范，请改为规范格式")
+                } ?: JsonCodec.decodeStringMap(json)?.let { map ->
+                    LoggerProvider.current.debug("请求头规则 JSON 格式不规范，请改为规范格式")
                     putAll(map)
                 }
             } catch (e: Exception) {
-                AppLog.put("执行请求头规则出错\n$e", e)
+                LoggerProvider.current.error("执行请求头规则出错\n$e", e)
             }
         }
-        if (!has(AppConst.UA_NAME, true)) {
-            put(AppConst.UA_NAME, userAgent)
+        if (!has("User-Agent", true)) {
+            put("User-Agent", userAgent)
         }
         if (hasLoginHeader) {
             getLoginHeaderMap()?.let {
@@ -131,29 +120,29 @@ interface BaseSource : JsExtensions {
      * 获取用于登录的头部信息
      */
     fun getLoginHeader(): String? {
-        return CacheManager.get("loginHeader_${getKey()}")
+        return KeyValueStoreProvider.current.get("loginHeader_${getKey()}")
     }
 
     fun getLoginHeaderMap(): Map<String, String>? {
         val cache = getLoginHeader() ?: return null
-        return GSON.fromJsonObject<Map<String, String>>(cache).getOrNull()
+        return JsonCodec.decodeStringMap(cache)
     }
 
     /**
      * 保存登录头部信息,map格式,访问时自动添加
      */
     fun putLoginHeader(header: String) {
-        val headerMap = GSON.fromJsonObject<Map<String, String>>(header).getOrNull()
+        val headerMap = JsonCodec.decodeStringMap(header)
         val cookie = headerMap?.get("Cookie") ?: headerMap?.get("cookie")
         cookie?.let {
-            CookieStore.replaceCookie(getKey(), it)
+            CookieStoreProvider.current.replaceCookie(getKey(), it)
         }
-        CacheManager.put("loginHeader_${getKey()}", header)
+        KeyValueStoreProvider.current.put("loginHeader_${getKey()}", header)
     }
 
     fun removeLoginHeader() {
-        CacheManager.delete("loginHeader_${getKey()}")
-        CookieStore.removeCookie(getKey())
+        KeyValueStoreProvider.current.delete("loginHeader_${getKey()}")
+        CookieStoreProvider.current.removeCookie(getKey())
     }
 
     /**
@@ -162,11 +151,11 @@ interface BaseSource : JsExtensions {
      */
     fun getLoginInfo(): String? {
         try {
-            val key = AppConst.androidId.encodeToByteArray(0, 16)
-            val cache = CacheManager.get("userInfo_${getKey()}") ?: return null
-            return SymmetricCryptoAndroid("AES", key).decryptStr(cache)
+            val key = SourceRuntimeProvider.current.androidId().encodeToByteArray(0, 16)
+            val cache = KeyValueStoreProvider.current.get("userInfo_${getKey()}") ?: return null
+            return SymmetricCryptoProvider.current.decryptStr("AES", key, cache)
         } catch (e: Exception) {
-            AppLog.put("获取登陆信息出错", e)
+            LoggerProvider.current.error("获取登陆信息出错", e)
             return null
         }
     }
@@ -196,15 +185,16 @@ interface BaseSource : JsExtensions {
                     else -> it
                 }
             }
-            val longinInfo = GSON.fromJsonArray<RowUi>(loginUiJson).getOrNull()
+            val longinInfo = JsonCodec.decodeList(loginUiJson, RowUi::class)
                 ?.filter { it.type != "button" }
                 ?.associate { it.name to (it.default ?: "") }
                 ?.takeIf { it.isNotEmpty() }?.also {
-                    putLoginInfo(GSON.toJson(it))
+                    putLoginInfo(JsonCodec.toJson(it))
                 }
             return longinInfo?.toMutableMap() ?: mutableMapOf()
         }
-        return GSON.fromJsonObject<MutableMap<String, String>>(json).getOrNull() ?: mutableMapOf()
+        return JsonCodec.decodeAnyMap(json)?.filterValues { it is String }
+            ?.mapValues { it.value as String }?.toMutableMap() ?: mutableMapOf()
     }
 
     /**
@@ -212,18 +202,18 @@ interface BaseSource : JsExtensions {
      */
     fun putLoginInfo(info: String): Boolean {
         return try {
-            val key = (AppConst.androidId).encodeToByteArray(0, 16)
-            val encodeStr = SymmetricCryptoAndroid("AES", key).encryptBase64(info)
-            CacheManager.put("userInfo_${getKey()}", encodeStr)
+            val key = SourceRuntimeProvider.current.androidId().encodeToByteArray(0, 16)
+            val encodeStr = SymmetricCryptoProvider.current.encryptBase64("AES", key, info)
+            KeyValueStoreProvider.current.put("userInfo_${getKey()}", encodeStr)
             true
         } catch (e: Exception) {
-            AppLog.put("保存登陆信息出错", e)
+            LoggerProvider.current.error("保存登陆信息出错", e)
             false
         }
     }
 
     fun removeLoginInfo() {
-        CacheManager.delete("userInfo_${getKey()}")
+        KeyValueStoreProvider.current.delete("userInfo_${getKey()}")
     }
 
     /**
@@ -232,9 +222,9 @@ interface BaseSource : JsExtensions {
      */
     fun setVariable(variable: String?) {
         if (variable != null) {
-            CacheManager.put("sourceVariable_${getKey()}", variable)
+            KeyValueStoreProvider.current.put("sourceVariable_${getKey()}", variable)
         } else {
-            CacheManager.delete("sourceVariable_${getKey()}")
+            KeyValueStoreProvider.current.delete("sourceVariable_${getKey()}")
         }
     }
 
@@ -244,9 +234,9 @@ interface BaseSource : JsExtensions {
      */
     fun putVariable(variable: String?) {
         if (variable != null) {
-            CacheManager.put("sourceVariable_${getKey()}", variable)
+            KeyValueStoreProvider.current.put("sourceVariable_${getKey()}", variable)
         } else {
-            CacheManager.delete("sourceVariable_${getKey()}")
+            KeyValueStoreProvider.current.delete("sourceVariable_${getKey()}")
         }
     }
 
@@ -257,7 +247,7 @@ interface BaseSource : JsExtensions {
         getTemporaryVariable()?.let {
             return it
         }
-        return CacheManager.get("sourceVariable_${getKey()}") ?: ""
+        return KeyValueStoreProvider.current.get("sourceVariable_${getKey()}") ?: ""
     }
 
     fun setTemporaryVariable(variable: String?) {
@@ -271,7 +261,7 @@ interface BaseSource : JsExtensions {
      * 保存数据
      */
     fun put(key: String, value: String): String {
-        CacheManager.put("v_${getKey()}_${key}", value)
+        KeyValueStoreProvider.current.put("v_${getKey()}_${key}", value)
         return value
     }
 
@@ -279,20 +269,18 @@ interface BaseSource : JsExtensions {
      * 获取保存的数据
      */
     fun get(key: String): String {
-        return CacheManager.get("v_${getKey()}_${key}") ?: ""
+        return KeyValueStoreProvider.current.get("v_${getKey()}_${key}") ?: ""
     }
 
     /**
      * 刷新发现
      */
     fun refreshExplore() {
-        if (isMainThread) {
+        if (SourceRuntimeProvider.current.isMainThread()) {
             error("refreshExplore must be called on a background thread")
         }
         runBlocking {
-            if (this@BaseSource is BookSource) {
-                this@BaseSource.clearExploreKindsCache()
-            }
+            SourceRuntimeProvider.current.clearExploreKindsCache(this@BaseSource)
         }
     }
 
@@ -300,11 +288,11 @@ interface BaseSource : JsExtensions {
      * 刷新JSLib
      */
     fun refreshJSLib() {
-        if (isMainThread) {
+        if (SourceRuntimeProvider.current.isMainThread()) {
             error("refreshJSLib must be called on a background thread")
         }
         runBlocking {
-            remove(jsLib)
+            SourceRuntimeProvider.current.removeJsLib(jsLib)
         }
     }
 
@@ -312,7 +300,7 @@ interface BaseSource : JsExtensions {
      * 设置并发率
      */
     fun putConcurrent(value: String) {
-        updateConcurrentRate(getKey(), value)
+        SourceRuntimeProvider.current.updateConcurrentRate(getKey(), value)
     }
 
     /**
@@ -324,10 +312,10 @@ interface BaseSource : JsExtensions {
         bindings["java"] = this
         bindings["source"] = this
         bindings["baseUrl"] = getKey()
-        bindings["cookie"] = CookieStore
-        bindings["cache"] = CacheManager
+        bindings["cookie"] = CookieStoreProvider.current
+        bindings["cache"] = KeyValueStoreProvider.current
         bindings.apply(bindingsConfig)
-        val sharedScope = getShareScope()
+        val sharedScope = SourceRuntimeProvider.current.getShareScope(jsLib)
         val scope = JsEngine.getRuntimeScope(bindings, sharedScope)
         return JsEngine.eval(jsStr, scope)
     }

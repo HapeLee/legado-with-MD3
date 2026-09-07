@@ -34,6 +34,13 @@ private val jsonCodecGson: Gson by lazy {
         .create()
 }
 
+/** 严格模式实例（对齐 app 侧 `GSONStrict`）。 */
+private val strictGson: Gson by lazy {
+    jsonCodecGson.newBuilder()
+        .setStrictness(com.google.gson.Strictness.STRICT)
+        .create()
+}
+
 actual object JsonCodec {
 
     actual fun toJson(obj: Any?): String = jsonCodecGson.toJson(obj)
@@ -57,11 +64,32 @@ actual object JsonCodec {
         }
     }
 
+    actual fun decodeStringMapStrict(json: String?): Map<String, String>? {
+        if (json == null) return null
+        return try {
+            val type = object : TypeToken<HashMap<String, String>>() {}.type
+            strictGson.fromJson(json, type)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     actual fun decodeAnyMap(json: String?): Map<String, Any>? {
         if (json == null) return null
         return try {
             val type = object : TypeToken<Map<String, Any>>() {}.type
             jsonCodecGson.fromJson(json, type)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    actual fun <T : Any> decodeList(json: String?, clazz: KClass<T>): List<T>? {
+        if (json == null) return null
+        return try {
+            val type = TypeToken.getParameterized(List::class.java, clazz.java).type
+            @Suppress("UNCHECKED_CAST")
+            (jsonCodecGson.fromJson(json, type) as List<T?>).filterNotNull()
         } catch (e: Exception) {
             null
         }

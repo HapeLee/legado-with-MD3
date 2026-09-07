@@ -32,9 +32,24 @@ expect object JsonCodec {
     fun decodeStringMap(json: String?): Map<String, String>?
 
     /**
+     * 反序列化 `Map<String, String>`，但使用严格模式（对齐 `GSONStrict`）。
+     *
+     * 严格模式对不合规 JSON（未转义控制字符等）抛异常而非静默容错，
+     * 用于 `BaseSource.getHeaderMap` 的「先严格、失败再宽松并提示」容错逻辑。
+     */
+    fun decodeStringMapStrict(json: String?): Map<String, String>?
+
+    /**
      * 反序列化 `Map<String, Any>`（对齐 `GSON.fromJsonObject<Map<String, Any>>`）。
      *
      * 保留 Gson `MapDeserializerDoubleAsIntFix` 语义：整数解析为 Long、非整数为 Double。
      */
     fun decodeAnyMap(json: String?): Map<String, Any>?
+
+    /**
+     * 反序列化 `List<T>`（对齐 `GSON.fromJsonArray<T>(json)`，含 `filterNotNull`）。
+     *
+     * 泛型擦除后 `KClass` 无法表达 `List<T>` 的完整类型，故单独提供此方法。
+     */
+    fun <T : Any> decodeList(json: String?, clazz: KClass<T>): List<T>?
 }

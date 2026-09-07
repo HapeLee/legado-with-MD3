@@ -53,6 +53,7 @@ import io.legado.app.help.DispatchersMonitor
 import io.legado.app.help.JsExtProvider
 import io.legado.app.help.JsExtFactory
 import io.legado.app.help.LifecycleHelp
+import io.legado.app.help.PlatformServices
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfigStore
@@ -178,6 +179,9 @@ class App : Application(), SingletonImageLoader.Factory {
         // （BaseRssArticle/BaseBook/BookChapter 的 putBigVariable/getBigVariable）
         // 会同步读取它，未注入时契约显式抛异常。
         BigDataStoreProvider.install(RuleBigDataHelp)
+        // BaseSource 已下沉 core:data，其方法体经 KeyValueStore/CookieStore/SymmetricCrypto/
+        // Logger/SourceRuntime 五契约访问平台能力，这里注入 app 侧实现。
+        PlatformServices.install()
         // WebView 注入的 BaseSource 包装器工厂：@JavascriptInterface 注解已从实体剥离，
         // 页面 JS 的 source.xxx() 通过包装器转发回实体（见 JsExtProvider 注释）。
         JsExtProvider.install(JsExtFactory { source -> BookSourceJsExt(source) })
