@@ -11,6 +11,7 @@ import io.legado.app.feature.reader.core.layout.ReaderFontBounds
 import io.legado.app.feature.reader.core.layout.ReaderFontLineMetrics
 import io.legado.app.feature.reader.core.layout.clusterGlyphs
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import io.legado.app.utils.validFontLeading
 import java.io.File
 import splitties.init.appCtx
 
@@ -36,8 +37,8 @@ object ReaderAndroidPaintFactory {
 
     fun createTextPaint(style: ReaderTextStyle): TextPaint = TextPaint(create(style))
 
-    /** The reader's line box uses descent - ascent + leading; baseline = line bottom - descent. */
-    fun baselineOffset(paint: Paint): Float = paint.fontMetrics.let { it.leading - it.ascent }
+    /** 行盒基线偏移：行高已排除异常 leading（见 PaintExtensions.validFontLeading）。 */
+    fun baselineOffset(paint: Paint): Float = paint.fontMetrics.let { paint.validFontLeading - it.ascent }
 
     fun loadTypeface(path: String, weight: Int, italic: Boolean, family: String = "sans-serif"): Typeface {
         val key = "$path|$weight|$italic|$family"
@@ -74,7 +75,9 @@ class AndroidReaderTextShaper(paint: TextPaint) : ReaderTextShaper {
     private val paint = TextPaint(paint).apply { letterSpacing = 0f }
     override val fontBounds = this.paint.fontMetrics.let { ReaderFontBounds(it.top, it.bottom, it.descent) }
     override val fontLineMetrics = this.paint.fontMetrics.let {
-        val height = it.descent - it.ascent + it.leading
+        // 行盒高度与 utils/PaintExtensions.textHeight 同规则：异常 leading 不计入
+        //（如方正新楷体声明 leading≈1em，原样计入会让行高翻倍、空隙全在字形上方）
+        val height = it.descent - it.ascent + this.paint.validFontLeading
         ReaderFontLineMetrics(
             heightPx = height,
             baselineOffsetPx = height - it.descent,
