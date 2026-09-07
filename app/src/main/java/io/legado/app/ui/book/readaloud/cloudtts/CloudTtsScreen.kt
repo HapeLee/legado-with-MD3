@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.entities.fromHttpTTSJson
 import io.legado.app.domain.model.readaloud.CloudTtsProviderType
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.profile
@@ -524,7 +525,7 @@ private fun HttpTtsEditorSheet(
                                 val text = clipboard.getClipEntry()?.clipData
                                     ?.getItemAt(0)?.coerceToText(context)?.toString()
                                     ?: return@launch
-                                HttpTTS.fromJson(text).getOrNull()?.let { imported ->
+                                fromHttpTTSJson(text).getOrNull()?.let { imported ->
                                     name = imported.name; url = imported.url
                                     contentType = imported.contentType.orEmpty()
                                     concurrentRate = imported.concurrentRate ?: "0"

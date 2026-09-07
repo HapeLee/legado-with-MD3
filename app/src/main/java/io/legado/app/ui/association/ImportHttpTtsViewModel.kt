@@ -10,6 +10,8 @@ import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.entities.fromHttpTTSJson
+import io.legado.app.data.entities.fromHttpTTSJsonArray
 import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.decompressed
@@ -85,11 +87,11 @@ class ImportHttpTtsViewModel(
     private suspend fun importSourceAwait(text: String) {
         when {
             text.isJsonObject() -> {
-                HttpTTS.fromJson(text).getOrThrow().let {
+                fromHttpTTSJson(text).getOrThrow().let {
                     allSources.add(it)
                 }
             }
-            text.isJsonArray() -> HttpTTS.fromJsonArray(text).getOrThrow().let { items ->
+            text.isJsonArray() -> fromHttpTTSJsonArray(text).getOrThrow().let { items ->
                 allSources.addAll(items)
             }
             text.isDataUrl() -> {

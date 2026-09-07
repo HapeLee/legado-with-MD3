@@ -10,6 +10,8 @@ import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.entities.fromHttpTTSJson
+import io.legado.app.data.entities.fromHttpTTSJsonArray
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.CloudTtsEngineGateway
 import io.legado.app.domain.gateway.HttpTtsEngineGateway
@@ -883,8 +885,8 @@ class CloudTtsViewModel(
             ?.let { parseHttpTtsSource(it) }
             ?: throw NoStackTraceException(application.getString(R.string.wrong_format))
 
-        text.isJsonObject() -> listOf(HttpTTS.fromJson(text).getOrThrow())
-        text.isJsonArray() -> HttpTTS.fromJsonArray(text).getOrThrow()
+        text.isJsonObject() -> listOf(fromHttpTTSJson(text).getOrThrow())
+        text.isJsonArray() -> fromHttpTTSJsonArray(text).getOrThrow()
         text.isDataUrl() -> {
             val data = AppPattern.dataUriRegex.find(text)?.groupValues?.getOrNull(1)
                 ?: throw NoStackTraceException(application.getString(R.string.wrong_format))

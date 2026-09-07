@@ -4,6 +4,7 @@ import io.legado.app.constant.AppConst
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.entities.fromHttpTTSJsonArray
 import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.TxtTocRule
@@ -49,7 +50,7 @@ object DefaultData {
                 appCtx.assets.open("defaultData${File.separator}httpTTS.json")
                     .readBytes()
             )
-        HttpTTS.fromJsonArray(json).getOrElse {
+        fromHttpTTSJsonArray(json).getOrElse {
             emptyList()
         }
     }

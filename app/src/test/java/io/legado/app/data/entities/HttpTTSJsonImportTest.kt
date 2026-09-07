@@ -18,7 +18,7 @@ class HttpTTSJsonImportTest {
             }
         """.trimIndent()
 
-        val result = HttpTTS.fromJson(source).getOrThrow()
+        val result = fromHttpTTSJson(source).getOrThrow()
 
         assertEquals("function styleM() { return 'ok' }", result.jsLib)
         assertEquals(true, result.enabledCookieJar)
