@@ -7,8 +7,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import io.legado.app.constant.AppPattern
+import io.legado.app.core.platform.cnCompare
 import io.legado.app.data.entities.RssSource
-import io.legado.app.utils.cnCompare
 import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.Flow
@@ -139,7 +139,7 @@ interface RssSourceDao {
             }
         }
         return groups.sortedWith { o1, o2 ->
-            o1.cnCompare(o2)
+            cnCompare(o1, o2)
         }
     }
 
