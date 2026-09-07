@@ -46,9 +46,12 @@ import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
+import io.legado.app.help.BookSourceJsExt
 import io.legado.app.help.CrashHandler
 import io.legado.app.help.DefaultData
 import io.legado.app.help.DispatchersMonitor
+import io.legado.app.help.JsExtProvider
+import io.legado.app.help.JsExtFactory
 import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
@@ -175,6 +178,9 @@ class App : Application(), SingletonImageLoader.Factory {
         // （BaseRssArticle/BaseBook/BookChapter 的 putBigVariable/getBigVariable）
         // 会同步读取它，未注入时契约显式抛异常。
         BigDataStoreProvider.install(RuleBigDataHelp)
+        // WebView 注入的 BaseSource 包装器工厂：@JavascriptInterface 注解已从实体剥离，
+        // 页面 JS 的 source.xxx() 通过包装器转发回实体（见 JsExtProvider 注释）。
+        JsExtProvider.install(JsExtFactory { source -> BookSourceJsExt(source) })
         FirebaseManager.init(this)
         CrashHandler(this)
         if (isDebuggable) {

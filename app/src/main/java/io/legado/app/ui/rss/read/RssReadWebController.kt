@@ -31,6 +31,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.JsExtProvider
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
@@ -536,7 +537,7 @@ internal fun injectRssReadJsInterfaces(
         onShowPhoto = callbacks.onShowPhoto,
     )
     webView.addJavascriptInterface(webJsExtensions, WebJsExtensions.nameJava)
-    webView.addJavascriptInterface(source, WebJsExtensions.nameSource)
+    webView.addJavascriptInterface(JsExtProvider.wrap(source), WebJsExtensions.nameSource)
     webView.addJavascriptInterface(WebCacheManager, WebJsExtensions.nameCache)
     onInjected(source.sourceUrl)
 }

@@ -47,6 +47,7 @@ import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.JsExtProvider
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.newCallResponse
@@ -520,7 +521,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
                 )
                 currentWebView.addJavascriptInterface(webJsExtensions, nameJava)
             }
-            currentWebView.addJavascriptInterface(source, nameSource)
+            currentWebView.addJavascriptInterface(JsExtProvider.wrap(source), nameSource)
             currentWebView.addJavascriptInterface(WebCacheManager, nameCache)
         }
         currentWebView.loadDataWithBaseURL(url, html, "text/html", "utf-8", url)

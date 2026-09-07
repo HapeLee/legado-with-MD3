@@ -94,10 +94,10 @@ import coil3.compose.AsyncImage
 import coil3.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
-import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.help.JsExtProvider
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.coil.CoverExtras
 import io.legado.app.help.webView.WebJsExtensions
@@ -1494,7 +1494,7 @@ private fun BookInfoWebIntro(
             }
             addJavascriptInterface(WebCacheManager, WebJsExtensions.nameCache)
             bookSource?.let { source ->
-                addJavascriptInterface(source as BaseSource, WebJsExtensions.nameSource)
+                addJavascriptInterface(JsExtProvider.wrap(source), WebJsExtensions.nameSource)
                 addJavascriptInterface(
                     WebJsExtensions(source, null, this),
                     WebJsExtensions.nameJava

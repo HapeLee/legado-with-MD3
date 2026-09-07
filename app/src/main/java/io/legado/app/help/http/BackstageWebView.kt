@@ -14,9 +14,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import io.legado.app.constant.AppConst
 import io.legado.app.data.appDb
-import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
+import io.legado.app.help.JsExtProvider
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.webView.WebJsExtensions
@@ -110,7 +110,7 @@ class BackstageWebView(
                         webView.addJavascriptInterface(WebCacheManager, nameCache)
                         tag?.let { key ->
                             runBlocking { appDb.bookSourceDao.getBookSource(key) }?.let { source ->
-                                webView.addJavascriptInterface(source as BaseSource, nameSource)
+                                webView.addJavascriptInterface(JsExtProvider.wrap(source), nameSource)
                                 webView.addJavascriptInterface(
                                     WebJsExtensions(source, null, webView),
                                     nameJava,
