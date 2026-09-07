@@ -234,6 +234,7 @@ dependencies {
     implementation(project(":core:platform"))
     implementation(project(":core:model"))
     implementation(project(":core:data"))
+    implementation(project(":core:designsystem"))
     implementation(libs.okhttp)
     implementation(fileTree(mapOf("dir" to "cronetlib", "include" to listOf("*.jar", "*.aar"))))
     implementation(libs.protobuf.javalite)

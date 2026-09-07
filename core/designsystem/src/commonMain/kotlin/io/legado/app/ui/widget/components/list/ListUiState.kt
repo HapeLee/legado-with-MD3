@@ -1,0 +1,19 @@
+package io.legado.app.ui.widget.components.list
+
+interface ListUiState<T> {
+    val items: List<T>
+    val selectedIds: Set<Any>
+    val searchKey: String
+    val isSearch: Boolean
+    val isLoading: Boolean
+}
+
+data class InteractionState(
+    val isSearchMode: Boolean = false,
+    val isUploading: Boolean = false,
+    val isLoading: Boolean = false
+)
+
+interface SelectableItem<T> {
+    val id: T
+}

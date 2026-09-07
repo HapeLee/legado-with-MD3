@@ -67,7 +67,7 @@ class HighlightTagRuleViewModel(
             }
             is HighlightTagRuleIntent.ExportSelection -> {
                 val state = uiState.value
-                exportToUri(intent.uri, state.items, state.selectedIds)
+                exportToUri(android.net.Uri.parse(intent.uri), state.items, state.selectedIds)
             }
             is HighlightTagRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
             HighlightTagRuleIntent.SaveSortOrder -> saveSortOrder()

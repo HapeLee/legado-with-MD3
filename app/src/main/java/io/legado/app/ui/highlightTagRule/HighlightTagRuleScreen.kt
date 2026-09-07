@@ -157,7 +157,7 @@ fun HighlightTagRuleScreen(
     val exportDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let { onIntent(HighlightTagRuleIntent.ExportSelection(it)) }
+            uri?.let { onIntent(HighlightTagRuleIntent.ExportSelection(it.toString())) }
         }
     )
 
