@@ -246,11 +246,12 @@ class ToolTraceBuilder {
 
     fun append(event: AiStreamEvent.ToolCallDelta): String {
         val eventId = event.id?.takeIf { it.isNotBlank() }
-        if (eventId != null && event.index != null) {
-            indexKeys[event.index] = eventId
+        val eventIndex = event.index
+        if (eventId != null && eventIndex != null) {
+            indexKeys[eventIndex] = eventId
         }
         val baseId = eventId
-            ?: event.index?.let { indexKeys[it] ?: "tool_index_$it" }
+            ?: eventIndex?.let { indexKeys[it] ?: "tool_index_$it" }
             ?: "tool_${calls.size + 1}"
         val id = if (eventId == null && calls[baseId]?.result != null) {
             "${baseId}_${calls.size + 1}"
