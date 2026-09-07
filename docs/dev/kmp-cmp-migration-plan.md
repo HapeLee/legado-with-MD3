@@ -438,26 +438,34 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
   已分 6 批转完，剩 0。38 个 DAO 文件全 suspend/Flow，仅 `BookGroupDao.isInRules` 保留非 suspend（纯函数无 DAO 查询）。
 - ✅ **2 个 SupportSQLite 文件 → driver API**（2026-09-07 完成）：`AppDatabase.kt` + `DatabaseMigrations.kt`
   的 `SupportSQLiteDatabase` 全改 `SQLiteConnection`。
-- ⬜ **`@Database` 加 `@ConstructedBy` + `expect object`**：当前用 `Room.databaseBuilder(context, ...)`，
-  需改为 KMP 构造模式。属 P3 主体工作（`@Database` 迫使 entities + DAO + AppDatabase 一起下沉），非独立前置。
+- ✅ **`@Database` 加 `@ConstructedBy` + `expect object`**（2026-09-07 完成）：`AppDatabase` 主体
+  （103 entity 的 `@Database` 注解 + 39 DAO + views + autoMigrations + companion 常量 + `@TypeConverters`）
+  已整体下沉 `:core:data` commonMain，`@ConstructedBy(AppDatabaseConstructor::class)` + `expect object`。
+  KSP 为 Android + Desktop 双 target 生成 actual 与 `AppDatabase_Impl`。app 侧仅留 `appDb` 单例 +
+  `dbCallback`（`setLocale(Locale.CHINESE)` / 预置分组 SQL 依赖 Android 栈 + `DefaultData`）。
 
-> **下沉进度（2026-09-07）**：已下沉 **31 entity 文件 + 27 DAO + 5 analyzeRule** 到 `:core:data`；
-> app 剩 **17 entity + 12 DAO**。跨模块 entity 引用已验证可行（app 的 `AppDatabase` 可引用 core 类型）。
-> `CoreDataDatabase`（@ConstructedBy + expect object）原型 + desktop 真实建表测试已跑通。
+> **下沉进度（2026-09-07 晚更新）**：**P3 主体已完成**——`56 entity + 39 DAO + AppDatabase` 全部下沉
+> `:core:data` commonMain。app 侧 `data/entities/` 仅剩 9 个 `*Android.kt` 扩展 + `rule/` deserializer
+> （均依赖 Gson JVM 库，正确地留 app），**无任何 `@Entity` 残留**。schema identityHash 与 app 侧一致
+> （`a6f43940...`），104 个 schema JSON 已复制到 `core/data/schemas/`。门禁全绿。
 >
-> 深水区第 1 刀已落：**`BigDataStore` 契约**（`core/data/.../bigdata/`，接口 + `BigDataStoreProvider`
-> composition root 注入，非 expect/actual——实现依赖 `:app` 的 `MD5Utils`/`FileUtils`，core 不能反向依赖 app）。
-> 它解锁了 RSS 集群下沉：`BaseRssArticle` + `RssArticle` + `RssStar` + `RssReadRecord` + 3 个 DAO。
+> **实体下沉收官的关键手法**（沉淀到 MEMORY.md）：
+> - `BaseSource` 的 JS 桥用「接口 + `JsExtProvider` 注入」剥离（P4-d），实体不再继承完整 JS 面；
+>   五契约（KeyValueStore/CookieStore/SymmetricCrypto/Logger/SourceRuntime）+ JsonCodec 扩展破 `BaseSource`
+>   对 JsExtensions/CacheManager/Gson 的依赖。
+> - `BookSourceConverters`（依赖 Gson）改用 `JsonCodec` 重写下沉，ReviewRule 恒 null/"null" 语义保留；
+>   6 个 rule deserializer 的「原始字符串回退」语义弱化（低概率边界，与样本仓取舍一致）。
+> - `BookShelfItem`（UI DTO）纯数据下沉（去 `@Stable`/`toUiItem`，UI 扩展留 app），**不引入 compose/immutable
+>   依赖**，BookDao 得以完整下沉。
 >
-> **剩余 17 entity 的真实障碍**（不是表面 import，而是深水依赖）：`BaseSource` 的 JS 桥（Rhino +
-> `JsExtensions`）→ `BookSource`/`RssSource`/`BookSourcePart`；`Book` 的 `BookHelp`/`ContentProcessor`/
-> `ReadBookConfig`；`Context`/`R.string`（`getManageName(context)`）→ `BookGroup`/`BookChapter`/`ReplaceRule`；
-> `TxtTocRule` 的 `@SerializedName(alternate=["rule"])` 是 Gson 数据兼容注解，不能机械删。
+> **剩余 P3 收尾（非阻塞）**：repository 层（92 文件，依赖 appDb + UI 类型 + Android 栈）是否继续下沉；
+> `entities/*Android.kt` 扩展与 `rule/` deserializer 的 Gson 语义是否需要进一步契约化。
 
-- Room entities（66）/ DAO（39）下沉到 `:core:data` 的 `commonMain`。
-- 高频实体（如 `BookChapter`、`Cache`、`Cookie`）切到独立源集 `roomEntitiesMain`，**照抄样本的 KSP 重编面优化**。
-- Android 端注入 `AndroidSQLiteDriver`，Desktop 注入 `BundledSQLiteDriver`。
-- 必须有：schema 迁移兼容测试、导入导出往返测试、并发/事务语义测试。
+- ✅ Room entities（56）/ DAO（39）/ AppDatabase 下沉到 `:core:data` 的 `commonMain`（2026-09-07 完成）。
+- ⬜ 高频实体（如 `BookChapter`、`Cache`、`Cookie`）切到独立源集 `roomEntitiesMain`，**照抄样本的 KSP 重编面优化**。
+- ⬜ Android 端注入 `AndroidSQLiteDriver`，Desktop 注入 `BundledSQLiteDriver`（app 侧 `appDb` 已用 AndroidSQLiteDriver，
+  桌面端到端驱动注入待验证）。
+- ⬜ schema 迁移兼容测试、导入导出往返测试、并发/事务语义测试。
 
 **退出条件**：两端 driver 的 contract test 通过；现有 Android 数据库迁移与备份恢复测试无回归。
 
