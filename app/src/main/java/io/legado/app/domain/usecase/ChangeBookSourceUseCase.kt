@@ -21,6 +21,7 @@ import io.legado.app.utils.mapAsync
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import java.util.concurrent.atomic.AtomicInteger
+import io.legado.app.data.entities.getUseReplaceRule
 
 data class ChangeSourceMigrationOptions(
     val migrateChapters: Boolean = true,

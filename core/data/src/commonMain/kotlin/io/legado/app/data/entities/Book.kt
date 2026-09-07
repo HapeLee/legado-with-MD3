@@ -1,6 +1,5 @@
 package io.legado.app.data.entities
 
-import android.os.Parcelable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
@@ -10,27 +9,17 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookType
-import io.legado.app.constant.PageAnim
-import io.legado.app.data.appDb
-import io.legado.app.help.book.BookHelp
-import io.legado.app.help.book.ContentProcessor
-import io.legado.app.help.book.applyTagGroupRulesForBook
-import io.legado.app.help.book.getFolderNameNoCache
-import io.legado.app.help.book.isEpub
-import io.legado.app.help.book.isImage
-import io.legado.app.help.book.simulatedTotalChapterNum
-import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.model.ReadBook
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
-import kotlinx.coroutines.runBlocking
-import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
-import java.nio.charset.Charset
-import java.time.LocalDate
-import kotlin.math.max
+import io.legado.app.core.platform.JsonCodec
+import io.legado.app.core.platform.systemTimeMillis
 
-@Parcelize
+/**
+ * 书架书籍实体。
+ *
+ * 依赖 Android/JVM 平台栈的方法已抽到 `:app` 侧的 `BookAndroid.kt` 同名扩展
+ * （`fileCharset` / `getFolderName` / `getUnreadChapterNum` / `toSearchBook` /
+ * `migrateTo` / `save` / `delete` / `getPageAnim` / `getUseReplaceRule` /
+ * `getStartDate` / `setStartDate`），模式同 `BookGroupAndroid.kt`、`DictRuleAndroid.kt`。
+ */
 @TypeConverters(Book.Converters::class)
 @Entity(
     tableName = "books",
@@ -84,10 +73,10 @@ data class Book(
     var latestChapterTitle: String? = null,
     // 最新章节标题更新时间
     @ColumnInfo(defaultValue = "0")
-    var latestChapterTime: Long = System.currentTimeMillis(),
+    var latestChapterTime: Long = systemTimeMillis(),
     // 最近一次更新书籍信息的时间
     @ColumnInfo(defaultValue = "0")
-    var lastCheckTime: Long = System.currentTimeMillis(),
+    var lastCheckTime: Long = systemTimeMillis(),
     // 最近一次发现新章节的数量
     @ColumnInfo(defaultValue = "0")
     var lastCheckCount: Int = 0,
@@ -104,7 +93,7 @@ data class Book(
     var durChapterPos: Int = 0,
     // 最近一次阅读书籍的时间(打开正文的时间)
     @ColumnInfo(defaultValue = "0")
-    var durChapterTime: Long = System.currentTimeMillis(),
+    var durChapterTime: Long = systemTimeMillis(),
     //字数
     override var wordCount: String? = null,
     // 刷新书架时更新书籍信息
@@ -126,7 +115,7 @@ data class Book(
     // 简介内容(书源列表/发现规则获取), 与详情规则拿到的 intro 是书源作者写的两条规则,
     // 聚合类书源常把服务状态排版进详情简介, 书架等列表场景优先用这一份
     var listIntro: String? = null
-) : Parcelable, BaseBook {
+) : BaseBook {
 
     init {
         kind = kind?.take(1000)
@@ -141,34 +130,27 @@ data class Book(
 
     @delegate:Transient
     @delegate:Ignore
-    @IgnoredOnParcel
     override val variableMap: HashMap<String, String> by lazy {
-        GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+        JsonCodec.decodeStringMap(variable)?.let { HashMap(it) } ?: hashMapOf()
     }
 
     @Ignore
-    @IgnoredOnParcel
     override var infoHtml: String? = null
 
     @Ignore
-    @IgnoredOnParcel
     override var tocHtml: String? = null
 
     @Ignore
-    @IgnoredOnParcel
     var downloadUrls: List<String>? = null
 
+    /** `getFolderName()` 的派生缓存；不落库、不参与 equals/copy，由 Android 侧扩展写入。 */
     @Ignore
-    @IgnoredOnParcel
-    private var folderName: String? = null
+    var folderName: String? = null
 
     @get:Ignore
-    @IgnoredOnParcel
     val lastChapterIndex get() = totalChapterNum - 1
 
     fun getRealAuthor() = author.replace(AppPattern.authorRegex, "")
-
-    fun getUnreadChapterNum() = max(simulatedTotalChapterNum() - durChapterIndex - 1, 0)
 
     fun getDisplayCover() = if (customCoverUrl.isNullOrEmpty()) coverUrl else customCoverUrl
 
@@ -180,11 +162,7 @@ data class Book(
         customIntro = intro
     }
 
-    fun fileCharset(): Charset {
-        return charset(charset ?: "UTF-8")
-    }
-
-    @IgnoredOnParcel
+    @get:Ignore
     val config: ReadConfig
         get() {
             if (readConfig == null) {
@@ -220,7 +198,7 @@ data class Book(
         return config.playMode
     }
 
-    // 音频增益（mB） 的 setter 和 getter
+    // 音频增益（mB）的 setter 和 getter
     fun setAudioGain(audioGain: Int) {
         config.audioGain = audioGain
     }
@@ -241,18 +219,6 @@ data class Book(
         config.useReplaceRule = useReplaceRule
     }
 
-    fun getUseReplaceRule(defaultReplaceEnabled: Boolean): Boolean {
-        val useReplaceRule = config.useReplaceRule
-        if (useReplaceRule != null) {
-            return useReplaceRule
-        }
-        //图片类书源 epub本地 默认关闭净化
-        if (isImage || isEpub) {
-            return false
-        }
-        return defaultReplaceEnabled
-    }
-
     fun setReSegment(reSegment: Boolean) {
         config.reSegment = reSegment
     }
@@ -263,15 +229,6 @@ data class Book(
 
     fun setPageAnim(pageAnim: Int?) {
         config.pageAnim = pageAnim
-    }
-
-    fun getPageAnim(): Int {
-        var pageAnim = config.pageAnim
-            ?: if (type and BookType.image > 0) PageAnim.scrollPageAnim else ReadBookConfig.pageAnim
-        if (pageAnim < 0) {
-            pageAnim = ReadBookConfig.pageAnim
-        }
-        return pageAnim
     }
 
     fun setImageStyle(imageStyle: String?) {
@@ -305,23 +262,6 @@ data class Book(
 
     fun getReadSimulating(): Boolean {
         return config.readSimulating
-    }
-
-    // startDate 的 setter 和 getter
-    fun setStartDate(startDate: LocalDate?) {
-        config.startDate = startDate?.toString()
-    }
-
-    fun getStartDate(): LocalDate? {
-        if (!config.readSimulating || config.startDate == null) {
-            return LocalDate.now()
-        }
-        return try {
-            LocalDate.parse(config.startDate)
-        } catch (e: Exception) {
-            println("解析日期失败: ${config.startDate}, 错误: ${e.message}")
-            LocalDate.now()
-        }
     }
 
     // startChapter 的 setter 和 getter
@@ -363,69 +303,6 @@ data class Book(
         config.delTag = config.delTag and tag.inv()
     }
 
-    fun getFolderName(): String {
-        folderName?.let {
-            return it
-        }
-        //防止书名过长,只取9位
-        folderName = getFolderNameNoCache()
-        return folderName!!
-    }
-
-    fun toSearchBook() = SearchBook(
-        name = name,
-        author = author,
-        kind = kind,
-        bookUrl = bookUrl,
-        origin = origin,
-        originName = originName,
-        type = type,
-        wordCount = wordCount,
-        latestChapterTitle = latestChapterTitle,
-        coverUrl = coverUrl,
-        intro = intro,
-        tocUrl = tocUrl,
-        originOrder = originOrder,
-        variable = variable
-    ).apply {
-        this.infoHtml = this@Book.infoHtml
-        this.tocHtml = this@Book.tocHtml
-    }
-
-    /**
-     * 迁移旧的书籍的一些信息到新的书籍中
-     */
-    fun migrateTo(
-        newBook: Book,
-        toc: List<BookChapter>,
-        defaultReplaceEnabled: Boolean,
-        chineseConverterType: Int,
-    ): Book {
-        newBook.durChapterIndex = BookHelp
-            .getDurChapter(durChapterIndex, durChapterTitle, toc, totalChapterNum)
-        newBook.durChapterTitle = toc[newBook.durChapterIndex].getDisplayTitle(
-            ContentProcessor.get(newBook.name, newBook.origin).getTitleReplaceRules(),
-            getUseReplaceRule(defaultReplaceEnabled),
-            chineseConverterType = chineseConverterType,
-        )
-        newBook.durChapterPos = durChapterPos
-        newBook.durChapterTime = durChapterTime
-        newBook.group = group
-        newBook.order = order
-        newBook.customCoverUrl = customCoverUrl
-        newBook.customIntro = customIntro
-        newBook.customTag = customTag
-        newBook.canUpdate = canUpdate
-        if (config.fixedType) {
-            newBook.type = type
-        }
-        newBook.readConfig = readConfig
-        if (newBook.wordCount.isNullOrBlank()) {
-            newBook.wordCount = wordCount
-        }
-        return newBook
-    }
-
     fun createBookMark(): Bookmark {
         return Bookmark(
             bookName = name,
@@ -433,27 +310,6 @@ data class Book(
             // 源指纹：创建时的书源，跳转校验用（换源后位置可能偏移）
             bookUrl = bookUrl,
         )
-    }
-
-    fun save() {
-        applyTagGroupRulesForBook(this)
-        runBlocking {
-            if (appDb.bookDao.has(bookUrl)) {
-                appDb.bookDao.update(this@Book)
-            } else {
-                appDb.bookDao.insert(this@Book)
-            }
-        }
-    }
-
-    fun delete() {
-        if (ReadBook.isCurrentBook(bookUrl)) {
-            ReadBook.clearCurrentBook()
-        }
-        runBlocking {
-            appDb.bookChapterDao.delByBook(bookUrl)
-            appDb.bookDao.delete(this@Book)
-        }
     }
 
     @Suppress("ConstPropertyName")
@@ -466,7 +322,6 @@ data class Book(
         const val imgStyleSingle = "SINGLE"
     }
 
-    @Parcelize
     data class ReadConfig(
         var reverseToc: Boolean = false,
         var pageAnim: Int? = null,
@@ -495,14 +350,14 @@ data class Book(
         var playMode: Int = 0,       // 音频播放模式
         var audioGain: Int = 0       // 音频增益（mB，-6000..6000）
 
-    ) : Parcelable
+    )
 
     class Converters {
 
         @TypeConverter
-        fun readConfigToString(config: ReadConfig?): String = GSON.toJson(config)
+        fun readConfigToString(config: ReadConfig?): String = JsonCodec.toJson(config)
 
         @TypeConverter
-        fun stringToReadConfig(json: String?) = GSON.fromJsonObject<ReadConfig>(json).getOrNull()
+        fun stringToReadConfig(json: String?) = JsonCodec.fromJsonObject(json, ReadConfig::class)
     }
 }

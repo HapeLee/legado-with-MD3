@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import io.legado.app.data.entities.getUseReplaceRule
 
 class ReplaceRuleViewModel(
     application: Application,

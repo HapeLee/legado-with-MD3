@@ -9,6 +9,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
+import io.legado.app.data.entities.getPageAnim
 
 @Composable
 fun PageAnimConfigSheet(

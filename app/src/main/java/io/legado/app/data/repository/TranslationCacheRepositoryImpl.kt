@@ -10,6 +10,7 @@ import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import io.legado.app.data.entities.getFolderName
 
 class TranslationCacheRepositoryImpl : TranslationCacheGateway {
 

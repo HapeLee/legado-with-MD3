@@ -32,6 +32,8 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
+import io.legado.app.data.entities.getUseReplaceRule
+import io.legado.app.data.entities.save
 
 @SuppressLint("StaticFieldLeak")
 @Suppress("unused")

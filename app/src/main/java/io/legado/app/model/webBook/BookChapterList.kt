@@ -30,6 +30,7 @@ import org.koin.core.context.GlobalContext
 import org.mozilla.javascript.Context
 import splitties.init.appCtx
 import kotlin.coroutines.coroutineContext
+import io.legado.app.data.entities.getUseReplaceRule
 
 /**
  * 获取目录

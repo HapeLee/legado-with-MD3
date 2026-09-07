@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.regex.PatternSyntaxException
 import kotlin.coroutines.coroutineContext
+import io.legado.app.data.entities.fileCharset
 
 class TxtTocRulePreviewViewModel(
     private val app: Application,

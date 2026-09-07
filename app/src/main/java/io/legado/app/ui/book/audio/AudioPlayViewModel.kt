@@ -40,6 +40,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import io.legado.app.data.entities.delete
+import io.legado.app.data.entities.migrateTo
 
 class AudioPlayViewModel(
     private val application: Application,

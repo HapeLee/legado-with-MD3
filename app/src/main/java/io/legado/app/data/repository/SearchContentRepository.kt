@@ -18,6 +18,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import io.legado.app.data.entities.getUseReplaceRule
 
 class SearchContentRepository(
     private val titleModeProvider: () -> Int = { 0 },

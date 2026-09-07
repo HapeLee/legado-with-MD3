@@ -2,6 +2,7 @@ package io.legado.app.domain.usecase
 
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.toSearchBook
 import org.junit.Assert.assertSame
 import org.junit.Test
 

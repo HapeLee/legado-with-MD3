@@ -25,6 +25,7 @@ import io.legado.app.utils.fromJsonArray
 import kotlinx.coroutines.ensureActive
 import splitties.init.appCtx
 import kotlin.coroutines.coroutineContext
+import io.legado.app.data.entities.toSearchBook
 
 /**
  * 获取书籍列表

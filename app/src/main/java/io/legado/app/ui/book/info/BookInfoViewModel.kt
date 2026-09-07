@@ -94,6 +94,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import io.legado.app.data.entities.delete
+import io.legado.app.data.entities.save
 
 class BookInfoViewModel(
     application: Application,

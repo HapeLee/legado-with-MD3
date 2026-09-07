@@ -68,6 +68,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.reader.ReaderMenuActionSquare
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.data.entities.getPageAnim
 
 private data class MoreActionSpec(
     val id: String,

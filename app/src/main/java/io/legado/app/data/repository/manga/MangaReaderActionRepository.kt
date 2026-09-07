@@ -34,6 +34,8 @@ import kotlinx.coroutines.currentCoroutineContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import io.legado.app.data.entities.delete
+import io.legado.app.data.entities.migrateTo
 
 sealed interface MangaReaderActionPaymentResult {
     data class OpenUrl(

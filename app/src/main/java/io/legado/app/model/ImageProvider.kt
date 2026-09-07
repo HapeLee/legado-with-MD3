@@ -29,6 +29,7 @@ import splitties.init.appCtx
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.min
+import io.legado.app.data.entities.getUseReplaceRule
 
 object ImageProvider {
 

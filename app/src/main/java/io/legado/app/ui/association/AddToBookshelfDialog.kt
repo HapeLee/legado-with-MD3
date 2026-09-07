@@ -27,6 +27,7 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import io.legado.app.data.entities.toSearchBook
 
 /**
  * 添加书籍链接到书架，需要对应网站书源

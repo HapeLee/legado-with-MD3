@@ -12,6 +12,7 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
+import io.legado.app.data.entities.getFolderName
 
 class DictionaryRepositoryImpl : DictionaryGateway {
 

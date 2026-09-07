@@ -15,6 +15,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import splitties.init.appCtx
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import io.legado.app.data.entities.toSearchBook
 
 private val handler by lazy { buildMainHandler() }
 

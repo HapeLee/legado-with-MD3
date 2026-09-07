@@ -19,6 +19,7 @@ import io.legado.app.model.remote.RemoteBook
 import io.legado.app.model.remote.RemoteBookWebDav
 import io.legado.app.utils.isContentScheme
 import kotlinx.coroutines.flow.Flow
+import io.legado.app.data.entities.save
 
 class RemoteBookRepository(
     private val appDb: AppDatabase

@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withTimeout
+import io.legado.app.data.entities.toSearchBook
 
 sealed interface ChangeSourceSearchEvent {
     data class Started(val totalSources: Int) : ChangeSourceSearchEvent

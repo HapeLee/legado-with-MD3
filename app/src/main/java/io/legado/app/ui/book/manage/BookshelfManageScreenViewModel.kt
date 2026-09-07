@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
+import io.legado.app.data.entities.toSearchBook
 
 private val bookshelfSettingsGateway get() = GlobalContext.get().get<BookshelfSettingsGateway>()
 

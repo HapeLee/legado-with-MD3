@@ -87,6 +87,7 @@ import java.nio.charset.Charset
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
 import kotlin.math.min
+import io.legado.app.data.entities.getUseReplaceRule
 
 /**
  * 导出书籍服务

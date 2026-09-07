@@ -37,6 +37,8 @@ import org.koin.core.context.GlobalContext
 import java.io.File
 import java.util.WeakHashMap
 import kotlin.time.Duration.Companion.seconds
+import io.legado.app.data.entities.delete
+import io.legado.app.data.entities.save
 
 object BookController {
 

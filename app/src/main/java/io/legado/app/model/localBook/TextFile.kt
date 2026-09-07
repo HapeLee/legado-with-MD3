@@ -20,6 +20,7 @@ import java.util.regex.PatternSyntaxException
 import kotlin.math.min
 import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
+import io.legado.app.data.entities.fileCharset
 
 class TextFile(private var book: Book) {
 

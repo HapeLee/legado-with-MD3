@@ -30,6 +30,8 @@ import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
+import io.legado.app.data.entities.getUseReplaceRule
+import io.legado.app.data.entities.toSearchBook
 
 class ContentProcessor private constructor(
     private val bookName: String,

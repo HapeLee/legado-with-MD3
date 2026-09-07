@@ -103,6 +103,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import io.legado.app.data.entities.delete
+import io.legado.app.data.entities.getUseReplaceRule
+import io.legado.app.data.entities.save
 
 private const val READER_SYNC_MIN_INTERVAL_MS = 250L
 
