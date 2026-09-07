@@ -12,12 +12,14 @@ import com.google.gson.ToNumberPolicy
 import com.google.gson.internal.LinkedTreeMap
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonWriter
+import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.rule.BookInfoRule
 import io.legado.app.data.entities.rule.ContentRule
 import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.ReviewRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.data.entities.rule.TocRule
+import io.legado.app.data.entities.txtTocRuleJsonDeserializer
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
@@ -47,6 +49,7 @@ val GSON: Gson by lazy {
         .registerTypeAdapter(TocRule::class.java, TocRule.jsonDeserializer)
         .registerTypeAdapter(ContentRule::class.java, ContentRule.jsonDeserializer)
         .registerTypeAdapter(ReviewRule::class.java, ReviewRule.jsonDeserializer)
+        .registerTypeAdapter(TxtTocRule::class.java, txtTocRuleJsonDeserializer)
         .create()
 }
 
