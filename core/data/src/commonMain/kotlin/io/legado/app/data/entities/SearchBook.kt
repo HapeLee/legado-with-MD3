@@ -1,21 +1,15 @@
 package io.legado.app.data.entities
 
-import android.content.Context
-import android.os.Parcelable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import io.legado.app.R
 import io.legado.app.constant.BookType
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
-import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
+import io.legado.app.core.platform.JsonCodec
+import io.legado.app.core.platform.systemTimeMillis
 
-@Parcelize
 @Entity(
     tableName = "searchBooks",
     indices = [(Index(value = ["bookUrl"], unique = true)),
@@ -44,7 +38,7 @@ data class SearchBook(
     var latestChapterTitle: String? = null,
     /** 目录页Url (toc=table of Contents) */
     var tocUrl: String = "",
-    var time: Long = System.currentTimeMillis(),
+    var time: Long = systemTimeMillis(),
     override var variable: String? = null,
     var originOrder: Int = 0,
     var chapterWordCountText: String? = null,
@@ -52,7 +46,7 @@ data class SearchBook(
     var chapterWordCount: Int = -1,
     @ColumnInfo(defaultValue = "-1")
     var respondTime: Int = -1
-) : Parcelable, BaseBook, Comparable<SearchBook> {
+) : BaseBook, Comparable<SearchBook> {
 
     init {
         kind = kind?.take(1000)
@@ -61,11 +55,9 @@ data class SearchBook(
     }
 
     @Ignore
-    @IgnoredOnParcel
     override var infoHtml: String? = null
 
     @Ignore
-    @IgnoredOnParcel
     override var tocHtml: String? = null
 
     override fun equals(other: Any?) = other is SearchBook && other.bookUrl == bookUrl
@@ -78,14 +70,12 @@ data class SearchBook(
 
     @delegate:Transient
     @delegate:Ignore
-    @IgnoredOnParcel
     override val variableMap: HashMap<String, String> by lazy {
-        GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: HashMap()
+        JsonCodec.decodeStringMap(variable)?.let { HashMap(it) } ?: hashMapOf()
     }
 
     @delegate:Transient
     @delegate:Ignore
-    @IgnoredOnParcel
     val origins: LinkedHashSet<String> by lazy { linkedSetOf(origin) }
 
     fun addOrigin(origin: String) {
@@ -99,15 +89,6 @@ data class SearchBook(
             }
         }
         return "无最新章节"
-    }
-
-    fun trimIntro(context: Context): String {
-        val trimIntro = intro?.trim()
-        return if (trimIntro.isNullOrEmpty()) {
-            context.getString(R.string.intro_show_null)
-        } else {
-            context.getString(R.string.intro_show, trimIntro)
-        }
     }
 
     fun releaseHtmlData() {

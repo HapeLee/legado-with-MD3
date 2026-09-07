@@ -1,11 +1,8 @@
 package io.legado.app.data.entities
 
-import android.text.TextUtils
 import androidx.room.DatabaseView
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.appDb
 import io.legado.app.utils.splitNotBlank
-import kotlinx.coroutines.runBlocking
 
 
 @DatabaseView(
@@ -52,18 +49,14 @@ data class BookSourcePart(
         return if (bookSourceGroup.isNullOrBlank()) {
             bookSourceName
         } else {
-            String.format("%s (%s)", bookSourceName, bookSourceGroup)
+            "$bookSourceName ($bookSourceGroup)"
         }
-    }
-
-    fun getBookSource(): BookSource? {
-        return runBlocking { appDb.bookSourceDao.getBookSource(bookSourceUrl) }
     }
 
     fun addGroup(groups: String) {
         bookSourceGroup?.splitNotBlank(AppPattern.splitGroupRegex)?.toHashSet()?.let {
             it.addAll(groups.splitNotBlank(AppPattern.splitGroupRegex))
-            bookSourceGroup = TextUtils.join(",", it)
+            bookSourceGroup = it.joinToString(",")
         }
         if (bookSourceGroup.isNullOrBlank()) bookSourceGroup = groups
     }
@@ -71,12 +64,8 @@ data class BookSourcePart(
     fun removeGroup(groups: String) {
         bookSourceGroup?.splitNotBlank(AppPattern.splitGroupRegex)?.toHashSet()?.let {
             it.removeAll(groups.splitNotBlank(AppPattern.splitGroupRegex).toSet())
-            bookSourceGroup = TextUtils.join(",", it)
+            bookSourceGroup = it.joinToString(",")
         }
     }
 
-}
-
-fun List<BookSourcePart>.toBookSource(): List<BookSource> {
-    return mapNotNull { it.getBookSource() }
 }

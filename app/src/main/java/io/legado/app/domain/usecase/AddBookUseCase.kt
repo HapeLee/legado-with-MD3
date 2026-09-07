@@ -9,6 +9,7 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import io.legado.app.data.entities.getBookSource
 import io.legado.app.data.entities.migrateTo
 
 class AddBookUseCase(
