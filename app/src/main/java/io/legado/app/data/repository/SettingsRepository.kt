@@ -130,17 +130,33 @@ class SettingsRepository : PreferenceStore {
     override suspend fun setString(key: String, value: String) = putString(key, value)
 
     override suspend fun setAllAndAwait(values: Map<String, PreferenceValue>) {
-        AppConfigStore.putAllAndAwait(
-            values.mapValues { (_, value) ->
-                when (value) {
-                    is PreferenceValue.LongValue -> value.value
-                    is PreferenceValue.BooleanValue -> value.value
-                    is PreferenceValue.IntValue -> value.value
-                    is PreferenceValue.StringValue -> value.value
-                }
-            },
+        AppConfigStore.putAllAndAwait(values.mapValues { (_, value) -> value.raw })
+    }
+
+    override fun currentSnapshot(): Map<String, PreferenceValue> =
+        AppConfigStore.preferences.toSnapshot()
+
+    override fun observeSnapshot(): Flow<Map<String, PreferenceValue>> =
+        AppConfigStore.preferencesFlow.map { it.toSnapshot() }
+
+    override suspend fun atomicUpdate(
+        transform: (Map<String, PreferenceValue>) -> Map<String, PreferenceValue?>,
+    ) {
+        AppConfigStore.atomicUpdateAndAwait(
+            read = { it.toSnapshot() as Map<String, PreferenceValue?> },
+            toPrefMap = { it.mapValues { (_, v) -> v?.raw } },
+            transform = transform as (Map<String, PreferenceValue?>) -> Map<String, PreferenceValue?>,
         )
     }
+
+    private val PreferenceValue.raw: Any?
+        get() = when (this) {
+            is PreferenceValue.LongValue -> value
+            is PreferenceValue.BooleanValue -> value
+            is PreferenceValue.IntValue -> value
+            is PreferenceValue.FloatValue -> value
+            is PreferenceValue.StringValue -> value
+        }
 
     fun <T : Any> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> =
         AppConfigStore.preferencesFlow.map { it.compatDsValue(key, defaultValue) }
@@ -223,8 +239,31 @@ private fun Preferences.toPreferenceValues(
         is PreferenceValue.IntValue -> PreferenceValue.IntValue(
             compatDsValue(intPreferencesKey(key), defaultValue.value),
         )
+        is PreferenceValue.FloatValue -> PreferenceValue.FloatValue(
+            compatDsValue(floatPreferencesKey(key), defaultValue.value),
+        )
         is PreferenceValue.StringValue -> PreferenceValue.StringValue(
             compatDsValue(stringPreferencesKey(key), defaultValue.value),
         )
     }
 }
+
+/**
+ * 把整块 Preferences 快照转成 core:data 的 [PreferenceValue] 映射。
+ * 保留原始存储类型（不做历史漂移转换），漂移兼容交由 core:data 的
+ * [io.legado.app.data.repository.compatValue] 在消费侧完成。
+ */
+private fun Preferences.toSnapshot(): Map<String, PreferenceValue> = buildMap {
+    asMap().forEach { (key, value) ->
+        val wrapped = when (value) {
+            is String -> PreferenceValue.StringValue(value)
+            is Int -> PreferenceValue.IntValue(value)
+            is Boolean -> PreferenceValue.BooleanValue(value)
+            is Long -> PreferenceValue.LongValue(value)
+            is Float -> PreferenceValue.FloatValue(value)
+            else -> return@forEach
+        }
+        put(key.name, wrapped)
+    }
+}
+

@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.mutablePreferencesOf
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.domain.model.settings.ReadSettings
+import io.legado.app.help.config.setPrefValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -338,3 +339,35 @@ private fun ReadSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.titleBarCompact to titleBarCompact,
     PreferKey.moreActionsConfig to moreActionsConfig,
 )
+
+private fun Map<String, Any?>.toTestPreferences(): androidx.datastore.preferences.core.Preferences {
+    val preferences = mutablePreferencesOf()
+    forEach { (key, value) -> preferences.setPrefValue(key, value) }
+    return preferences
+}
+
+private fun <T> captureAtomicUpdateValues(
+    current: T,
+    read: (androidx.datastore.preferences.core.Preferences) -> T,
+    toPrefMap: (T) -> Map<String, Any?>,
+    transform: (T) -> T,
+): Map<String, Any?> {
+    val initial = toPrefMap(current).toTestPreferences()
+    val writeQueue = ArrayDeque<suspend () -> Unit>()
+    var persistedValues: Map<String, Any?>? = null
+    val core = io.legado.app.help.config.PendingOverlayCore(
+        initial = initial,
+        launchWrite = { writeQueue += it },
+        persist = { _, _ -> error("不会执行单键落盘") },
+        persistAll = { values ->
+            persistedValues = values
+            initial
+        },
+    )
+
+    core.atomicUpdate(read, toPrefMap, transform)
+    if (writeQueue.isEmpty()) return emptyMap()
+    check(writeQueue.size == 1)
+    kotlinx.coroutines.runBlocking { writeQueue.removeFirst().invoke() }
+    return checkNotNull(persistedValues)
+}

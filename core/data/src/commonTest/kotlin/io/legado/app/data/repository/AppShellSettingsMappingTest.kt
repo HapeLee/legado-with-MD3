@@ -13,7 +13,7 @@ class AppShellSettingsMappingTest {
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
             assertEquals(
                 expected,
-                expected.expectedPrefMap().toTestPreferences().toAppShellSettings(),
+                expected.expectedPrefMap().toTestSnapshot().toAppShellSettings(),
             )
         }
     }
@@ -34,8 +34,8 @@ class AppShellSettingsMappingTest {
 
         assertEquals(
             mapOf(
-                PreferKey.showHome to false,
-                PreferKey.defaultHomePage to "bookshelf",
+                PreferKey.showHome to PreferenceValue.BooleanValue(false),
+                PreferKey.defaultHomePage to PreferenceValue.StringValue("bookshelf"),
             ),
             values,
         )

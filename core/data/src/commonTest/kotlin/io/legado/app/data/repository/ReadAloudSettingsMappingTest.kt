@@ -17,7 +17,7 @@ class ReadAloudSettingsMappingTest {
     @Test
     fun `朗读设置 27 键读映射逐字段对应`() {
         readAloudMappingSamples().forEach { expected ->
-            assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toReadAloudSettings())
+            assertEquals(expected, expected.expectedPrefMap().toTestSnapshot().toReadAloudSettings())
         }
     }
 
@@ -39,8 +39,8 @@ class ReadAloudSettingsMappingTest {
         assertEquals(
             mapOf(
                 PreferKey.ttsEngine to null,
-                CAPSULE_OFFSET_X to 12.5f,
-                CAPSULE_OFFSET_Y to -8.25f,
+                CAPSULE_OFFSET_X to PreferenceValue.FloatValue(12.5f),
+                CAPSULE_OFFSET_Y to PreferenceValue.FloatValue(-8.25f),
             ),
             values,
         )
@@ -48,14 +48,14 @@ class ReadAloudSettingsMappingTest {
 
     @Test
     fun `安卓媒体控制默认关闭`() {
-        val settings = emptyMap<String, Any?>().toTestPreferences().toReadAloudSettings()
+        val settings = emptyMap<String, Any?>().toTestSnapshot().toReadAloudSettings()
 
         assertEquals(false, settings.androidMediaControlEnabled)
     }
 
     @Test
     fun `定时到点后读完本章默认关闭`() {
-        val settings = emptyMap<String, Any?>().toTestPreferences().toReadAloudSettings()
+        val settings = emptyMap<String, Any?>().toTestSnapshot().toReadAloudSettings()
 
         assertEquals(false, settings.finishCurrentChapterAfterTimer)
     }

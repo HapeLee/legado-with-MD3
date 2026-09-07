@@ -1,10 +1,5 @@
 package io.legado.app.data.repository
 
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.mutablePreferencesOf
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.Preferences
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.AppLocaleGateway
 import kotlinx.coroutines.CoroutineScope
@@ -14,15 +9,16 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AppUiConfigurationRepositoryTest {
 
     @Test
-    fun `一次 Preferences 更新只产生一份完整根配置`() {
+    fun `一次 Preferences 更新只产生一份完整根配置`() = runTest {
         val locale = FakeAppLocaleGateway()
-        val preferences = MutableStateFlow<Preferences>(mutablePreferencesOf())
+        val preferences = FakePreferenceStore()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         val repository = AppUiConfigurationRepository(locale, preferences, scope)
         val observed = mutableListOf(repository.currentConfiguration)
@@ -33,10 +29,12 @@ class AppUiConfigurationRepositoryTest {
         }
 
         try {
-            preferences.value = mutablePreferencesOf(
-                stringPreferencesKey(PreferKey.themeMode) to "2",
-                intPreferencesKey(PreferKey.cPrimary) to 0x123456,
-                booleanPreferencesKey(PreferKey.coverShowShadow) to true,
+            preferences.setAllAndAwait(
+                mapOf(
+                    PreferKey.themeMode to PreferenceValue.StringValue("2"),
+                    PreferKey.cPrimary to PreferenceValue.IntValue(0x123456),
+                    PreferKey.coverShowShadow to PreferenceValue.BooleanValue(true),
+                ),
             )
 
             assertEquals(2, observed.size)
@@ -52,13 +50,13 @@ class AppUiConfigurationRepositoryTest {
     }
 
     @Test
-    fun `系统主题变化进入同一份根配置`() {
+    fun `系统主题变化进入同一份根配置`() = runTest {
         val locale = FakeAppLocaleGateway()
-        val preferences = MutableStateFlow<Preferences>(mutablePreferencesOf())
+        val preferences = FakePreferenceStore()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         val repository = AppUiConfigurationRepository(
             appLocaleGateway = locale,
-            preferencesFlow = preferences,
+            preferences = preferences,
             processScope = scope,
             initialSystemDarkTheme = false,
         )

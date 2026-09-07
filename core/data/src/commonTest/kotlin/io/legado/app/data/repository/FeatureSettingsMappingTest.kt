@@ -1,9 +1,5 @@
 package io.legado.app.data.repository
 
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.mutablePreferencesOf
-import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.ThemeSettings
@@ -14,7 +10,7 @@ class FeatureSettingsMappingTest {
 
     @Test
     fun `空快照使用稳定默认值`() {
-        val preferences = mutablePreferencesOf()
+        val preferences = emptyMap<String, PreferenceValue>()
 
         assertEquals(AppShellSettings(), preferences.toAppShellSettings())
         assertEquals(ThemeSettings(), preferences.toThemeSettings())
@@ -22,12 +18,12 @@ class FeatureSettingsMappingTest {
 
     @Test
     fun `应用壳设置沿用现有 key 并兼容历史字符串类型`() {
-        val preferences = mutablePreferencesOf(
-            stringPreferencesKey(PreferKey.themeMode) to "2",
-            stringPreferencesKey(PreferKey.fontScale) to "13",
-            stringPreferencesKey(PreferKey.showStatusBar) to "false",
-            stringPreferencesKey(PreferKey.useFloatingBottomBar) to "true",
-            stringPreferencesKey(PreferKey.tabletInterface) to "landscape",
+        val preferences = mapOf(
+            PreferKey.themeMode to PreferenceValue.StringValue("2"),
+            PreferKey.fontScale to PreferenceValue.StringValue("13"),
+            PreferKey.showStatusBar to PreferenceValue.StringValue("false"),
+            PreferKey.useFloatingBottomBar to PreferenceValue.StringValue("true"),
+            PreferKey.tabletInterface to PreferenceValue.StringValue("landscape"),
         )
 
         val settings = preferences.toAppShellSettings()
@@ -41,12 +37,12 @@ class FeatureSettingsMappingTest {
 
     @Test
     fun `主题设置沿用现有 key 并映射公共渲染配置`() {
-        val preferences = mutablePreferencesOf(
-            booleanPreferencesKey(PreferKey.enableBlur) to true,
-            intPreferencesKey(PreferKey.topBarBlurRadius) to 18,
-            intPreferencesKey(PreferKey.topBarOpacity) to 72,
-            stringPreferencesKey(PreferKey.bgImage) to "content://theme/light",
-            intPreferencesKey(PreferKey.bookInfoInputColor) to 0x102030,
+        val preferences = mapOf(
+            PreferKey.enableBlur to PreferenceValue.BooleanValue(true),
+            PreferKey.topBarBlurRadius to PreferenceValue.IntValue(18),
+            PreferKey.topBarOpacity to PreferenceValue.IntValue(72),
+            PreferKey.bgImage to PreferenceValue.StringValue("content://theme/light"),
+            PreferKey.bookInfoInputColor to PreferenceValue.IntValue(0x102030),
         )
 
         val settings = preferences.toThemeSettings()

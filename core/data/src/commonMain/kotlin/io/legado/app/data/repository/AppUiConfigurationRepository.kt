@@ -1,10 +1,8 @@
 package io.legado.app.data.repository
 
-import androidx.datastore.preferences.core.Preferences
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.model.settings.AppUiConfiguration
-import io.legado.app.help.config.AppConfigStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,16 +12,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
-class AppUiConfigurationRepository internal constructor(
+class AppUiConfigurationRepository(
     private val appLocaleGateway: AppLocaleGateway,
-    preferencesFlow: StateFlow<Preferences> = AppConfigStore.preferencesFlow,
+    private val preferences: PreferenceStore,
     processScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     initialSystemDarkTheme: Boolean = false,
 ) : AppUiConfigurationGateway {
 
     private val systemDarkTheme = MutableStateFlow(initialSystemDarkTheme)
 
-    private val initialConfiguration = preferencesFlow.value.toAppUiConfiguration(
+    private val initialConfiguration = preferences.currentSnapshot().toAppUiConfiguration(
         language = appLocaleGateway.currentLanguage,
         isSystemDarkTheme = initialSystemDarkTheme,
     )
@@ -33,7 +31,7 @@ class AppUiConfigurationRepository internal constructor(
 
     override val configuration: StateFlow<AppUiConfiguration> = combine(
         appLocaleGateway.language,
-        preferencesFlow,
+        preferences.observeSnapshot(),
         systemDarkTheme,
     ) { language, preferences, isSystemDarkTheme ->
         preferences.toAppUiConfiguration(language, isSystemDarkTheme)
@@ -48,7 +46,7 @@ class AppUiConfigurationRepository internal constructor(
     }
 }
 
-internal fun Preferences.toAppUiConfiguration(
+internal fun Map<String, PreferenceValue>.toAppUiConfiguration(
     language: String,
     isSystemDarkTheme: Boolean,
 ): AppUiConfiguration =

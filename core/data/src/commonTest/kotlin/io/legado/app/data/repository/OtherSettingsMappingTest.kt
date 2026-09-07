@@ -11,7 +11,7 @@ class OtherSettingsMappingTest {
     fun `其他设置 25 键写读映射逐字段对应`() {
         otherMappingSamples().forEach { expected ->
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
-            assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toOtherSettings())
+            assertEquals(expected, expected.expectedPrefMap().toTestSnapshot().toOtherSettings())
         }
     }
 

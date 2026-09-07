@@ -6,6 +6,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
+import io.legado.app.BuildConfig
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.repository.AiArtifactRepository
 import io.legado.app.data.repository.AiChatRepository
@@ -359,16 +360,17 @@ val appModule = module {
     singleOf(::RemoteBookRepository)
     singleOf(::SettingsRepository)
     single<AppLocaleGateway> { AppLocaleRepository() }
-    single<AppShellSettingsGateway> { AppShellSettingsRepository() }
-    single<ThemeSettingsGateway> { ThemeSettingsRepository() }
+    single<AppShellSettingsGateway> { AppShellSettingsRepository(get<SettingsRepository>()) }
+    single<ThemeSettingsGateway> { ThemeSettingsRepository(get<SettingsRepository>()) }
     single<ThemePackageSettingsGateway> { ThemePackageSettingsRepository() }
     single<AppUiConfigurationGateway> {
         AppUiConfigurationRepository(
             appLocaleGateway = get(),
+            preferences = get<SettingsRepository>(),
             initialSystemDarkTheme = sysConfiguration.isNightMode,
         )
     }
-    single<OtherSettingsGateway> { OtherSettingsRepository() }
+    single<OtherSettingsGateway> { OtherSettingsRepository(get<SettingsRepository>()) }
     single<CheckSourceSettingsGateway> { CheckSourceSettingsRepository(get<SettingsRepository>()) }
     single { BookSourceCheckRepository(get(), get(), get()) }
     single<BookSourceCheckGateway> { get<BookSourceCheckRepository>() }
@@ -376,18 +378,25 @@ val appModule = module {
     single<DirectLinkSettingsGateway> { DirectLinkSettingsRepository() }
     single<LocalPasswordGateway> { LocalPasswordRepository() }
     single<OtherConfigSystemGateway> { OtherConfigSystemRepository(get()) }
-    single<DownloadCacheSettingsGateway> { DownloadCacheSettingsRepository() }
-    single<CoverSettingsGateway> { CoverSettingsRepository() }
-    single<BackupSettingsGateway> { BackupSettingsRepository() }
-    single<LabSettingsGateway> { LabSettingsRepository() }
-    single<MangaSettingsGateway> { MangaSettingsRepository() }
-    single<ChangeSourceSettingsGateway> { ChangeSourceSettingsRepository() }
-    single<ImportBookSettingsGateway> { ImportBookSettingsRepository() }
-    single<TranslationSettingsGateway> { TranslationSettingsRepository() }
-    single<BookshelfSettingsGateway> { BookshelfSettingsRepository() }
+    single<DownloadCacheSettingsGateway> {
+        DownloadCacheSettingsRepository(
+            preferences = get<SettingsRepository>(),
+            defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/${BuildConfig.Cronet_Main_Version} Safari/537.36",
+        )
+    }
+    single<CoverSettingsGateway> { CoverSettingsRepository(get<SettingsRepository>()) }
+    single<BackupSettingsGateway> { BackupSettingsRepository(get<SettingsRepository>()) }
+    single<LabSettingsGateway> { LabSettingsRepository(get<SettingsRepository>()) }
+    single<MangaSettingsGateway> { MangaSettingsRepository(get<SettingsRepository>()) }
+    single<ChangeSourceSettingsGateway> { ChangeSourceSettingsRepository(get<SettingsRepository>()) }
+    single<ImportBookSettingsGateway> { ImportBookSettingsRepository(get<SettingsRepository>()) }
+    single<TranslationSettingsGateway> { TranslationSettingsRepository(get<SettingsRepository>()) }
+    single<BookshelfSettingsGateway> { BookshelfSettingsRepository(get<SettingsRepository>()) }
     single { ReadSettingsRepository(settingsRepository = get()) }
     single<ReadSettingsGateway> { get<ReadSettingsRepository>() }
-    singleOf(::ReadAloudSettingsRepository)
+    single<ReadAloudSettingsRepository> { ReadAloudSettingsRepository(get<SettingsRepository>()) }
     singleOf(::ReadAloudSessionStore)
     // R2.3：会话每个所有者一份。ReadBook.callBack 的身份是「阅读页已挂载」信号
     // （prefetchForOpen / upData 判 callBack != null），register 还会给上一个持有者
@@ -462,8 +471,8 @@ val appModule = module {
     single<BackupRestoreGateway> { BackupRestoreRepository() }
     single<BookCacheDownloadGateway> { CacheBookDownloadRepository(get()) }
     single<BookCacheCleanupGateway> { BookCacheCleanupRepository(get()) }
-    single<BookExportSettingsGateway> { BookExportSettingsRepository() }
-    single<HomepageSettingsGateway> { HomepageSettingsRepository() }
+    single<BookExportSettingsGateway> { BookExportSettingsRepository(get<SettingsRepository>()) }
+    single<HomepageSettingsGateway> { HomepageSettingsRepository(get<SettingsRepository>()) }
     single<CoverAlbumGateway> { CoverAlbumRepository(get(), get()) }
     single<BookSourceCallbackGateway> { BookSourceCallbackRepository(get(), get()) }
     single<LocalBookGateway> { LocalBookRepository(get()) }

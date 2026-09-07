@@ -1,10 +1,6 @@
 package io.legado.app.data.repository
 
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.mutablePreferencesOf
-import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
-import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import org.junit.Assert.assertEquals
@@ -43,16 +39,16 @@ class ThemeSettingsMappingTest {
             assertEquals(expected.expectedGatewayPrefMap(), expected.toGatewayPrefMap())
             assertEquals(
                 expected,
-                expected.expectedGatewayPrefMap().toTestPreferences().toThemeSettings(),
+                expected.expectedGatewayPrefMap().toTestSnapshot().toThemeSettings(),
             )
         }
     }
 
     @Test
     fun `gateway 排除字段仍由 Theme 读模型读取`() {
-        val preferences = mutablePreferencesOf(
-            stringPreferencesKey(PreferKey.customMode) to "accent",
-            intPreferencesKey(PreferKey.bookInfoInputColor) to 0x102030,
+        val preferences = mapOf(
+            PreferKey.customMode to PreferenceValue.StringValue("accent"),
+            PreferKey.bookInfoInputColor to PreferenceValue.IntValue(0x102030),
         )
 
         val settings = preferences.toThemeSettings()
@@ -74,8 +70,8 @@ class ThemeSettingsMappingTest {
 
         assertEquals(
             mapOf(
-                PreferKey.enableBlur to false,
-                PreferKey.enableProgressiveBlur to false,
+                PreferKey.enableBlur to PreferenceValue.BooleanValue(false),
+                PreferKey.enableProgressiveBlur to PreferenceValue.BooleanValue(false),
             ),
             values,
         )
@@ -101,13 +97,13 @@ class ThemeSettingsMappingTest {
 
         assertEquals(
             mapOf(
-                PreferKey.appTheme to "0",
-                PreferKey.useMiuixMonet to true,
+                PreferKey.appTheme to PreferenceValue.StringValue("0"),
+                PreferKey.useMiuixMonet to PreferenceValue.BooleanValue(true),
             ),
             enableMiuixMonet(ThemeSettings(appTheme = "7")),
         )
         assertEquals(
-            mapOf(PreferKey.useMiuixMonet to true),
+            mapOf(PreferKey.useMiuixMonet to PreferenceValue.BooleanValue(true)),
             enableMiuixMonet(ThemeSettings(appTheme = "12")),
         )
     }
@@ -123,8 +119,8 @@ class ThemeSettingsMappingTest {
 
         assertEquals(
             mapOf(
-                PreferKey.appTheme to "13",
-                PreferKey.containerOpacity to 0,
+                PreferKey.appTheme to PreferenceValue.StringValue("13"),
+                PreferKey.containerOpacity to PreferenceValue.IntValue(0),
             ),
             values,
         )
@@ -305,7 +301,7 @@ private fun ThemeSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.eyeProtectionSchedule to eyeProtectionSchedule,
     PreferKey.eyeProtectionStartTime to eyeProtectionStartTime,
     PreferKey.eyeProtectionEndTime to eyeProtectionEndTime,
-    LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP.name to showRefactorTip,
+    "show_theme_refactor_tip" to showRefactorTip,
     PreferKey.enableCustomTagColors to enableCustomTagColors,
     PreferKey.customTagColors to customTagColorsJson,
 )

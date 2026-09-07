@@ -1,6 +1,5 @@
 package io.legado.app.data.repository
 
-import androidx.datastore.preferences.core.Preferences
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.settings.BackupSettings
 import org.junit.Assert.assertEquals
@@ -28,7 +27,7 @@ class BackupSettingsMappingTest {
         )
 
         samples.forEach { expected ->
-            assertEquals(expected, expected.toPrefMap().toTestPreferences().toBackupSettings())
+            assertEquals(expected, expected.toPrefMap().toTestSnapshot().toBackupSettings())
         }
     }
 
@@ -44,7 +43,7 @@ class BackupSettingsMappingTest {
 
         val diff = captureAtomicUpdateValues(
             current = current,
-            read = Preferences::toBackupSettings,
+            read = { it.toBackupSettings() },
             toPrefMap = BackupSettings::toPrefMap,
             transform = {
                 it.copy(
@@ -59,10 +58,10 @@ class BackupSettingsMappingTest {
 
         assertEquals(
             mapOf(
-                PreferKey.webDavAccount to "new-account",
-                PreferKey.webDavPassword to "new-password",
-                PreferKey.syncBookProgress to false,
-                PreferKey.syncBookProgressPlus to false,
+                PreferKey.webDavAccount to PreferenceValue.StringValue("new-account"),
+                PreferKey.webDavPassword to PreferenceValue.StringValue("new-password"),
+                PreferKey.syncBookProgress to PreferenceValue.BooleanValue(false),
+                PreferKey.syncBookProgressPlus to PreferenceValue.BooleanValue(false),
                 PreferKey.backupPath to null,
             ),
             diff,

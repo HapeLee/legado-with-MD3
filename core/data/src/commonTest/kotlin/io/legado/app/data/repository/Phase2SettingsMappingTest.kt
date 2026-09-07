@@ -1,6 +1,5 @@
 package io.legado.app.data.repository
 
-import androidx.datastore.preferences.core.Preferences
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.domain.model.settings.BookExportSettings
@@ -27,7 +26,7 @@ class Phase2SettingsMappingTest {
                 )
             ),
             toPrefMap = TranslationSettings::toPrefMap,
-            fromPreferences = Preferences::toTranslationSettings,
+            fromPreferences = { it.toTranslationSettings() },
         )
     }
 
@@ -51,7 +50,7 @@ class Phase2SettingsMappingTest {
                 base.copy(deleteDownloadedChapters = true),
             ),
             toPrefMap = ChangeSourceSettings::toPrefMap,
-            fromPreferences = Preferences::toChangeSourceSettings,
+            fromPreferences = { it.toChangeSourceSettings() },
         )
     }
 
@@ -66,14 +65,14 @@ class Phase2SettingsMappingTest {
         assertRoundTrips(
             samples = listOf(settings),
             toPrefMap = ImportBookSettings::toPrefMap,
-            fromPreferences = Preferences::toImportBookSettings,
+            fromPreferences = { it.toImportBookSettings() },
         )
 
         assertEquals(
             mapOf(PreferKey.importBookPath to null),
             captureAtomicUpdateValues(
                 current = settings,
-                read = Preferences::toImportBookSettings,
+                read = { it.toImportBookSettings() },
                 toPrefMap = ImportBookSettings::toPrefMap,
                 transform = { it.copy(importBookPath = null) },
             ),
@@ -95,7 +94,7 @@ class Phase2SettingsMappingTest {
                 )
             ),
             toPrefMap = DownloadCacheSettings::toPrefMap,
-            fromPreferences = Preferences::toDownloadCacheSettings,
+            fromPreferences = { it.toDownloadCacheSettings("test-user-agent") },
         )
     }
 
@@ -118,7 +117,7 @@ class Phase2SettingsMappingTest {
                 base.copy(parallelExportBook = true),
             ),
             toPrefMap = BookExportSettings::toPrefMap,
-            fromPreferences = Preferences::toBookExportSettings,
+            fromPreferences = { it.toBookExportSettings() },
         )
     }
 
@@ -148,7 +147,7 @@ class Phase2SettingsMappingTest {
                 base.copy(showAuthorDark = false),
             ),
             toPrefMap = CoverSettings::toPrefMap,
-            fromPreferences = Preferences::toCoverSettings,
+            fromPreferences = { it.toCoverSettings() },
         )
     }
 }
@@ -156,10 +155,10 @@ class Phase2SettingsMappingTest {
 private fun <T> assertRoundTrips(
     samples: List<T>,
     toPrefMap: (T) -> Map<String, Any?>,
-    fromPreferences: (Preferences) -> T,
+    fromPreferences: (Map<String, PreferenceValue>) -> T,
 ) {
     samples.forEach { expected ->
-        val preferences = toPrefMap(expected).toTestPreferences()
+        val preferences = toPrefMap(expected).toTestSnapshot()
         assertEquals(expected, fromPreferences(preferences))
     }
 }

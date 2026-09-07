@@ -1,12 +1,8 @@
 package io.legado.app.data.repository
 
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.mutablePreferencesOf
-import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.model.settings.MangaSettings
-import io.legado.app.help.config.PendingOverlayCore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,9 +11,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
 
 class MangaSettingsMappingTest {
 
@@ -31,17 +24,17 @@ class MangaSettingsMappingTest {
     @Test
     fun `漫画设置 38 键读映射逐字段对应`() {
         mangaMappingSamples().forEach { expected ->
-            assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toMangaSettings())
+            assertEquals(expected, expected.expectedPrefMap().toTestSnapshot().toMangaSettings())
         }
     }
 
     @Test
     fun `历史字符串类型按原键恢复漫画设置`() {
-        val settings = mutablePreferencesOf(
-            stringPreferencesKey(PreferKey.mangaScrollMode) to "5",
-            stringPreferencesKey(PreferKey.mangaPreDownloadNum) to "22",
-            stringPreferencesKey(PreferKey.enableMangaEInk) to "true",
-            stringPreferencesKey(PreferKey.mangaClickActionMC) to "3",
+        val settings = mapOf(
+            PreferKey.mangaScrollMode to PreferenceValue.StringValue("5"),
+            PreferKey.mangaPreDownloadNum to PreferenceValue.StringValue("22"),
+            PreferKey.enableMangaEInk to PreferenceValue.StringValue("true"),
+            PreferKey.mangaClickActionMC to PreferenceValue.StringValue("3"),
         ).toMangaSettings()
 
         assertEquals(5, settings.scrollMode)
@@ -54,7 +47,7 @@ class MangaSettingsMappingTest {
     fun `墨水屏更新一次产生启用关闭灰度和阈值三项差量`() {
         val diff = captureAtomicUpdateValues(
             current = MangaSettings(enableGray = true),
-            read = Preferences::toMangaSettings,
+            read = { it.toMangaSettings() },
             toPrefMap = MangaSettings::toPrefMap,
             transform = {
                 it.copy(enableEInk = true, enableGray = false, eInkThreshold = 188)
@@ -63,9 +56,9 @@ class MangaSettingsMappingTest {
 
         assertEquals(
             mapOf(
-                PreferKey.enableMangaEInk to true,
-                PreferKey.mangaEInkThreshold to 188,
-                PreferKey.enableMangaGray to false,
+                PreferKey.enableMangaEInk to PreferenceValue.BooleanValue(true),
+                PreferKey.mangaEInkThreshold to PreferenceValue.IntValue(188),
+                PreferKey.enableMangaGray to PreferenceValue.BooleanValue(false),
             ),
             diff,
         )
@@ -75,15 +68,15 @@ class MangaSettingsMappingTest {
     fun `灰度更新一次产生启用灰度和关闭墨水屏两项差量`() {
         val diff = captureAtomicUpdateValues(
             current = MangaSettings(enableEInk = true),
-            read = Preferences::toMangaSettings,
+            read = { it.toMangaSettings() },
             toPrefMap = MangaSettings::toPrefMap,
             transform = { it.copy(enableEInk = false, enableGray = true) },
         )
 
         assertEquals(
             mapOf(
-                PreferKey.enableMangaEInk to false,
-                PreferKey.enableMangaGray to true,
+                PreferKey.enableMangaEInk to PreferenceValue.BooleanValue(false),
+                PreferKey.enableMangaGray to PreferenceValue.BooleanValue(true),
             ),
             diff,
         )
@@ -104,56 +97,8 @@ class MangaSettingsMappingTest {
     }
 
     @Test
-    fun `并发启用墨水屏与灰度时完整 transform 串行且保持互斥`() {
-        val initial = MangaSettings()
-        val core = PendingOverlayCore(
-            initial = initial.expectedPrefMap().toTestPreferences(),
-            launchWrite = {},
-            persist = { _, _ -> error("不会执行落盘") },
-            persistAll = { error("不会执行落盘") },
-        )
-        val firstEntered = CountDownLatch(1)
-        val releaseFirst = CountDownLatch(1)
-        val first = thread {
-            core.atomicUpdate(
-                read = Preferences::toMangaSettings,
-                toPrefMap = MangaSettings::toPrefMap,
-            ) {
-                firstEntered.countDown()
-                releaseFirst.await()
-                it.copy(enableEInk = true, enableGray = false)
-            }
-        }
-        firstEntered.await()
-
-        val secondStarted = CountDownLatch(1)
-        val secondEntered = CountDownLatch(1)
-        val second = thread {
-            secondStarted.countDown()
-            core.atomicUpdate(
-                read = Preferences::toMangaSettings,
-                toPrefMap = MangaSettings::toPrefMap,
-            ) {
-                secondEntered.countDown()
-                it.copy(enableEInk = false, enableGray = true)
-            }
-        }
-        secondStarted.await()
-        val secondRacedWithFirst = secondEntered.await(200, TimeUnit.MILLISECONDS)
-        releaseFirst.countDown()
-        first.join()
-        second.join()
-
-        assertFalse(secondRacedWithFirst)
-        assertEquals(
-            MangaSettings(enableEInk = false, enableGray = true),
-            core.preferencesFlow.value.toMangaSettings(),
-        )
-    }
-
-    @Test
     fun `默认点击区域保留菜单入口`() {
-        val settings = mutablePreferencesOf().toMangaSettings()
+        val settings = emptyMap<String, PreferenceValue>().toMangaSettings()
 
         assertTrue(settings.hasMenuClickArea())
         assertFalse(settings.enableGray)

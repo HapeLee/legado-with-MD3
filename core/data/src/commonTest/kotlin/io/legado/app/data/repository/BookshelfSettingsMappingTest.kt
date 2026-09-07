@@ -14,7 +14,7 @@ class BookshelfSettingsMappingTest {
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
             assertEquals(
                 expected,
-                expected.expectedPrefMap().toTestPreferences().toBookshelfSettings(),
+                expected.expectedPrefMap().toTestSnapshot().toBookshelfSettings(),
             )
         }
     }
@@ -28,7 +28,7 @@ class BookshelfSettingsMappingTest {
             transform = { it.copy(hideEmptyGroups = true) },
         )
 
-        assertEquals(mapOf(PreferKey.hideEmptyGroups to true), values)
+        assertEquals(mapOf(PreferKey.hideEmptyGroups to PreferenceValue.BooleanValue(true)), values)
     }
 }
 
