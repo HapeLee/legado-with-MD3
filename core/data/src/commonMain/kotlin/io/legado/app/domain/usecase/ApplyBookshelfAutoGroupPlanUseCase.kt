@@ -19,7 +19,7 @@ class ApplyBookshelfAutoGroupPlanUseCase(
         return gateway.applyPlan(normalizedPlan, options)
     }
 
-    internal fun normalize(
+    fun normalize(
         plan: BookshelfAutoGroupPlan,
         existingGroupNames: Set<String> = emptySet(),
     ): BookshelfAutoGroupPlan {

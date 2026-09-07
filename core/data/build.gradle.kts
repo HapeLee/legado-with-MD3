@@ -12,6 +12,7 @@ kotlin {
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
