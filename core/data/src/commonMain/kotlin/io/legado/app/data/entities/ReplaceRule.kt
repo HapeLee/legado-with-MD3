@@ -1,28 +1,19 @@
 package io.legado.app.data.entities
 
-import android.os.Parcelable
-import android.text.TextUtils
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import io.legado.app.R
-import io.legado.app.constant.AppLog
-import io.legado.app.exception.NoStackTraceException
-import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
-import splitties.init.appCtx
-import java.util.regex.PatternSyntaxException
+import io.legado.app.core.platform.systemTimeMillis
 
-@Parcelize
 @Entity(
     tableName = "replace_rules",
     indices = [(Index(value = ["id"]))]
 )
 data class ReplaceRule(
     @PrimaryKey(autoGenerate = true)
-    var id: Long = System.currentTimeMillis(),
+    var id: Long = systemTimeMillis(),
     //名称
     @ColumnInfo(defaultValue = "")
     var name: String = "",
@@ -56,7 +47,7 @@ data class ReplaceRule(
     //排序
     @ColumnInfo(name = "sortOrder", defaultValue = "0")
     var order: Int = Int.MIN_VALUE
-) : Parcelable {
+) {
 
     override fun equals(other: Any?): Boolean {
         if (other is ReplaceRule) {
@@ -71,7 +62,6 @@ data class ReplaceRule(
 
     @delegate:Transient
     @delegate:Ignore
-    @IgnoredOnParcel
     val regex: Regex by lazy {
         pattern.toRegex()
     }
@@ -85,15 +75,14 @@ data class ReplaceRule(
     }
 
     fun isValid(): Boolean {
-        if (TextUtils.isEmpty(pattern)) {
+        if (pattern.isEmpty()) {
             return false
         }
         //判断正则表达式是否正确
         if (isRegex) {
             try {
                 Regex(pattern)
-            } catch (ex: PatternSyntaxException) {
-                AppLog.put("正则语法错误或不支持：${ex.localizedMessage}", ex)
+            } catch (ex: Exception) {
                 return false
             }
             // Pattern.compile测试通过，但是部分情况下会替换超时，报错，一般发生在修改表达式时漏删了
@@ -102,13 +91,6 @@ data class ReplaceRule(
             }
         }
         return true
-    }
-
-    @Throws(NoStackTraceException::class)
-    fun checkValid() {
-        if (!isValid()) {
-            throw NoStackTraceException(appCtx.getString(R.string.replace_rule_invalid))
-        }
     }
 
     fun getValidTimeoutMillisecond(): Long {
