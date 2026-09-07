@@ -3,6 +3,7 @@ package io.legado.app.ui.book.group
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
+import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.repository.BookGroupRepository
@@ -21,7 +22,7 @@ class GroupViewModel(
     private val bookGroupMutationGateway: BookGroupMutationGateway,
 ) : BaseViewModel(application) {
 
-    private val tagGroupRuleRepository = TagGroupRuleRepository()
+    private val tagGroupRuleRepository = TagGroupRuleRepository(appDb)
 
     fun upGroup(vararg bookGroup: BookGroup, finally: (() -> Unit)? = null) {
         execute {

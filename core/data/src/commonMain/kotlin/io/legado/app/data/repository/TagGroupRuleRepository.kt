@@ -1,14 +1,16 @@
 package io.legado.app.data.repository
 
-import io.legado.app.data.appDb
+import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.TagGroupRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
-class TagGroupRuleRepository {
+class TagGroupRuleRepository(
+    appDatabase: AppDatabase,
+) {
 
-    private val dao = appDb.tagGroupRuleDao
+    private val dao = appDatabase.tagGroupRuleDao
 
     fun flowAll(): Flow<List<TagGroupRule>> {
         return dao.flowAll()

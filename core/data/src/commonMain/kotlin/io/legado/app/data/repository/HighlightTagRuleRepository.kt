@@ -1,14 +1,16 @@
 package io.legado.app.data.repository
 
-import io.legado.app.data.appDb
+import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.HighlightTagRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
-class HighlightTagRuleRepository {
+class HighlightTagRuleRepository(
+    appDatabase: AppDatabase,
+) {
 
-    private val dao = appDb.highlightTagRuleDao
+    private val dao = appDatabase.highlightTagRuleDao
 
     fun flowAll(): Flow<List<HighlightTagRule>> {
         return dao.flowAll()
