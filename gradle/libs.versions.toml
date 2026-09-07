@@ -60,7 +60,7 @@ navigationCompose = "2.10.0"
 okhttp = "5.5.0"
 palette = "1.0.0"
 preference = "1.2.1"
-protobufJavalite = "4.26.1"
+protobufJavalite = "4.36.1"
 quickChineseTransfer = "0.2.17"
 # 书源 JS 通过 Packages.cn.hutool.* 直接调用，Hutool 作为书源运行时加密库保留在 classpath。
 # 应用代码不直接依赖它；加密走 JCA / help/crypto/CryptoUtils.kt。版本固定，勿升级（参考上游基线）。
