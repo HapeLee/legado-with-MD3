@@ -486,6 +486,25 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 - 只共享 `UiState` / `Intent` / `Screen` / `Content`；**导航 runtime 与 Effect 留在宿主**。
 - 桌面宿主 `desktop/` 起最小可运行壳。
 
+> **P4 进展（2026-09-08）**：`:core:designsystem` 模块已建立，并**首次接入 Compose Multiplatform 工具链**
+> （全仓此前零 CMP：现有 KMP 模块 `feature/reader/core`、`:core:platform`、`:core:data` 全是纯 Kotlin）。
+>
+> **关键架构决策**（呼应 §5 不变量 2「commonMain 不依赖 androidx.compose.*」与样本纪律 1「commonMain 零
+> Compose」）：
+> - `commonMain` **零 Compose**，只放纯值 token（间距/圆角用 `Float`、色值用 ARGB `Long`）——
+>   `checkSharedPurity` 白名单无需为此放宽。
+> - Compose 映射层（`Color`/`Dp`）放在**专用 `composeMain` 源集**（android + desktop 共享），
+>   该源集不是 `commonMain`，故 `checkSharedPurity` 不扫描它。命名对照样本仓 `sharedUiMain`，
+>   但按「窄 UI 源集」而非整仓大 `shared` 落地。
+> - CMP 插件 `org.jetbrains.compose` 1.12.0（对齐 Kotlin 2.4.10），**在模块内显式 apply**，
+>   暂不抬进 `legado.kmp.library` 共享 convention（等第二个 CMP 模块形态稳定后再收口，遵守 AGENTS.md 代码生成纪律）。
+>
+> **验证**：`compileCommonMainKotlinMetadata` / `compileAndroidMain` / `compileKotlinDesktop` 三目标通过；
+> `desktopTest` 3 项 token 契约测试全绿；`checkSharedPurity`/`checkModuleDependencies`/`verifyConfigArchitecture`
+> /`:app:compileAppDebugKotlin` 全绿。**首个 Feature 选择留待下一片**（候选 `about`/`highlightTagRule` 均已做
+> 依赖审计：`about` 的 Screen/Contract 深度耦合 `AppScaffold`/`SettingItem`/`FileDoc`/`AppUpdate`，
+> `highlightTagRule` Contract 已泄漏 `android.net.Uri`，均需在迁移前先解耦 Contract 层）。
+
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 
 ### P5 —— 阅读器（接续 Track F，独立节奏）

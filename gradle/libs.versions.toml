@@ -8,6 +8,7 @@ animation = "1.12.0"
 biometric = "1.4.0-alpha07"
 coilCompose = "3.5.0"
 composeBom = "2026.08.00"
+composeMultiplatform = "1.12.0"
 constraintlayoutCompose = "1.1.2"
 coreSplashscreen = "1.2.0"
 datastorePreferences = "1.2.1"
@@ -263,6 +264,7 @@ androidTest = ["androidx-espresso-core", "androidx-junit", "androidx-runner"]
 
 [plugins]
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 android-test = { id = "com.android.test", version.ref = "agp" }

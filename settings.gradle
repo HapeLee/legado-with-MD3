@@ -52,4 +52,5 @@ include ':feature:reader:core'
 include ':core:platform'
 include ':core:model'
 include ':core:data'
+include ':core:designsystem'
 project(':baselineprofile').projectDir = file('baselineProfile')
