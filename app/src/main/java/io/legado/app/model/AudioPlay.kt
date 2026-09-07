@@ -34,6 +34,7 @@ import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import io.legado.app.data.entities.getUseReplaceRule
 import io.legado.app.data.entities.save
+import io.legado.app.data.entities.getDisplayTitle
 
 @SuppressLint("StaticFieldLeak")
 @Suppress("unused")

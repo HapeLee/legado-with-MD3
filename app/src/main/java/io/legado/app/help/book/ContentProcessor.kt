@@ -32,6 +32,8 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
 import io.legado.app.data.entities.getUseReplaceRule
 import io.legado.app.data.entities.toSearchBook
+import io.legado.app.data.entities.getDisplayTitle
+import io.legado.app.data.entities.getFileName
 
 class ContentProcessor private constructor(
     private val bookName: String,

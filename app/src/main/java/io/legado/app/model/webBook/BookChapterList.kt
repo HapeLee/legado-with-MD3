@@ -31,6 +31,8 @@ import org.mozilla.javascript.Context
 import splitties.init.appCtx
 import kotlin.coroutines.coroutineContext
 import io.legado.app.data.entities.getUseReplaceRule
+import io.legado.app.data.entities.getDisplayTitle
+import io.legado.app.data.entities.getFileName
 
 /**
  * 获取目录

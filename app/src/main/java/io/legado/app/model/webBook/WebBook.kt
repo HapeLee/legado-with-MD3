@@ -26,6 +26,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
+import io.legado.app.data.entities.getAbsoluteURL
 
 @Suppress("MemberVisibilityCanBePrivate")
 object WebBook {

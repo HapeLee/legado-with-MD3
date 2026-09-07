@@ -72,6 +72,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import io.legado.app.data.entities.getUseReplaceRule
+import io.legado.app.data.entities.getDisplayTitle
+import io.legado.app.data.entities.getFileName
 
 @Immutable
 data class TocItemUi(

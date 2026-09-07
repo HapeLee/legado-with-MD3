@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.getFileName
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.model.BookChapterCacheInfo
 import io.legado.app.data.repository.BookCacheManageRepository
@@ -882,7 +883,8 @@ class BookCacheManageViewModel(
     )
 }
 
-private fun BookChapterCacheInfo.getFileName(): String {
+// 原名 getFileName，与下沉后的 BookChapter.getFileName 扩展重名，改名避免接收者冲突
+private fun BookChapterCacheInfo.getCacheFileName(): String {
     return BookChapter(
         url = url,
         title = title,

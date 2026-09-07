@@ -94,6 +94,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
 import io.legado.app.data.entities.getPageAnim
 import io.legado.app.data.entities.getUseReplaceRule
+import io.legado.app.data.entities.getDisplayTitle
 
 
 /**

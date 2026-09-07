@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import io.legado.app.data.entities.getDisplayTitle
 
 /**
  * 阅读页正文编辑域：打开编辑弹层、载入当前章正文、保存、还原。

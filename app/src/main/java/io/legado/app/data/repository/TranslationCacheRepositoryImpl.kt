@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import io.legado.app.data.entities.getFolderName
+import io.legado.app.data.entities.getFileName
 
 class TranslationCacheRepositoryImpl : TranslationCacheGateway {
 

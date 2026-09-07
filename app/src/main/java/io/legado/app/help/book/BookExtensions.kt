@@ -52,6 +52,7 @@ import kotlin.math.min
 import org.koin.core.context.GlobalContext
 import io.legado.app.data.entities.getUseReplaceRule
 import io.legado.app.data.entities.save
+import io.legado.app.data.entities.getDisplayTitle
 
 private val otherGateway by lazy { GlobalContext.get().get<OtherSettingsGateway>() }
 private val importBookGateway by lazy { GlobalContext.get().get<ImportBookSettingsGateway>() }

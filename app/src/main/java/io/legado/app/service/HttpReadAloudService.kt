@@ -95,6 +95,7 @@ import java.io.InputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import io.legado.app.data.entities.getUseReplaceRule
+import io.legado.app.data.entities.getDisplayTitle
 
 /**
  * 在线朗读

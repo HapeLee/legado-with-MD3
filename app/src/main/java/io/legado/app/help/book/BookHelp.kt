@@ -62,6 +62,7 @@ import kotlin.math.max
 import kotlin.math.min
 import io.legado.app.data.entities.fileCharset
 import io.legado.app.data.entities.getFolderName
+import io.legado.app.data.entities.getFileName
 
 @Suppress("unused", "ConstPropertyName")
 object BookHelp {
