@@ -1,7 +1,7 @@
 package io.legado.app.data.repository.ai
 
 /**
- * Registry that maps protocol identifiers to their [AiProtocolHandler] implementations.
+ * Maps protocol identifiers to their platform-provided [AiProtocolHandler].
  */
 class AiProviderRegistry(handlers: List<AiProtocolHandler>) {
 

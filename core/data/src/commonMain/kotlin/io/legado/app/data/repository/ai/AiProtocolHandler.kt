@@ -7,23 +7,21 @@ import io.legado.app.domain.model.AiGenerateResponse
 import io.legado.app.domain.model.AiProviderConfig
 
 /**
- * Protocol-specific handler for AI text generation.
- * Each implementation handles one or more protocol types (e.g. OpenAI Chat, Anthropic Messages).
+ * Platform-neutral protocol contract for AI text providers.
+ *
+ * HTTP and SSE implementations remain platform-side; this contract only models
+ * their request, response, streaming, and model-discovery behavior.
  */
 interface AiProtocolHandler {
-
-    /** Protocol identifiers this handler supports (e.g. "openai_chat_completions"). */
+    /** Protocol identifiers this implementation accepts. */
     val protocols: Set<String>
 
-    /** Single-shot text generation. */
     suspend fun generate(request: AiGenerateRequest): Result<AiGenerateResponse>
 
-    /** Streaming text generation via SSE. */
     suspend fun stream(
         request: AiGenerateRequest,
-        emitEvent: suspend (AiStreamEvent) -> Unit
+        emitEvent: suspend (AiStreamEvent) -> Unit,
     )
 
-    /** Fetch available models from the provider. */
     suspend fun fetchModels(provider: AiProviderConfig): Result<List<AiAvailableModel>>
 }

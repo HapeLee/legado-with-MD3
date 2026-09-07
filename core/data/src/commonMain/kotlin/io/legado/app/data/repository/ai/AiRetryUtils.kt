@@ -4,11 +4,8 @@ import kotlinx.coroutines.delay
 import kotlin.math.min
 import kotlin.random.Random
 
-/**
- * Round-robin key rotator for providers with multiple API keys.
- * Keys are comma-separated in the provider's apiKey field.
- */
-internal class KeyRotator(rawKey: String) {
+/** Round-robin key rotator for providers with comma-separated API keys. */
+class KeyRotator(rawKey: String) {
 
     private val keys: List<String> = rawKey
         .split(",")
@@ -23,7 +20,6 @@ internal class KeyRotator(rawKey: String) {
     val hasMultipleKeys: Boolean
         get() = keys.size > 1
 
-    /** Advance to the next key. Returns the new current key. */
     fun rotate(): String {
         if (keys.size > 1) {
             index = (index + 1) % keys.size
@@ -33,23 +29,17 @@ internal class KeyRotator(rawKey: String) {
 }
 
 /**
- * Retry a block with exponential backoff + jitter.
- * Retries on [retryableStatusCodes] (default: 429, 502, 503).
- * If [keyRotator] is provided and has multiple keys, rotates key on each retry.
- *
- * @param maxAttempts Total attempts (1 = no retry, 2 = one retry, etc.)
- * @param baseDelayMs Base delay in milliseconds
- * @param maxDelayMs Maximum delay cap
- * @param onRetry Called before each retry with (attempt, delayMs, exception)
+ * Retries retryable HTTP failures with exponential backoff and optional key
+ * rotation. The actual HTTP/SSE clients remain platform-side.
  */
-internal suspend fun <T> retryWithBackoff(
+suspend fun <T> retryWithBackoff(
     maxAttempts: Int = 3,
     baseDelayMs: Long = 1_000,
     maxDelayMs: Long = 30_000,
     retryableStatusCodes: Set<Int> = setOf(429, 502, 503),
     keyRotator: KeyRotator? = null,
     onRetry: (suspend (attempt: Int, delayMs: Long, error: Exception) -> Unit)? = null,
-    block: suspend () -> T
+    block: suspend () -> T,
 ): T {
     var lastException: Exception? = null
     for (attempt in 1..maxAttempts) {
@@ -60,12 +50,10 @@ internal suspend fun <T> retryWithBackoff(
             if (attempt >= maxAttempts) break
             if (!isRetryable(e, retryableStatusCodes)) break
 
-            // Rotate key if available
             if (keyRotator != null && keyRotator.hasMultipleKeys) {
                 keyRotator.rotate()
             }
 
-            // Exponential backoff with jitter
             val exponentialDelay = baseDelayMs * (1L shl (attempt - 1))
             val cappedDelay = min(exponentialDelay, maxDelayMs)
             val jitter = Random.nextLong(0, cappedDelay / 4 + 1)
