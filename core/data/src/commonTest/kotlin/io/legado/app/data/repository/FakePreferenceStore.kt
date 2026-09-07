@@ -53,6 +53,18 @@ class FakePreferenceStore(
         setAllAndAwait(mapOf(key to PreferenceValue.IntValue(value)))
     }
 
+    override suspend fun setBoolean(key: String, value: Boolean) {
+        setAllAndAwait(mapOf(key to PreferenceValue.BooleanValue(value)))
+    }
+
+    override suspend fun setFloat(key: String, value: Float) {
+        setAllAndAwait(mapOf(key to PreferenceValue.FloatValue(value)))
+    }
+
+    override suspend fun setStrings(values: Map<String, String>) {
+        setAllAndAwait(values.mapValues { (_, value) -> PreferenceValue.StringValue(value) })
+    }
+
     override fun observeString(key: String, defaultValue: String): Flow<String> = state.map { values ->
         (values[key] as? PreferenceValue.StringValue)?.value ?: defaultValue
     }

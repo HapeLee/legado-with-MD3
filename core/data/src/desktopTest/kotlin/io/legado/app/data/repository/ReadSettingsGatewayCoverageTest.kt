@@ -1,9 +1,9 @@
 package io.legado.app.data.repository
 
 import io.legado.app.domain.model.settings.ReadSettings
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 
@@ -28,35 +28,35 @@ class ReadSettingsGatewayCoverageTest {
 
         val newlyBroken = (actual - UNPERSISTED_BASELINE).sorted()
         assertTrue(
+            newlyBroken.isEmpty(),
             "以下 ReadSettings 字段无法通过 ReadSettingsGateway.update {} 落盘——" +
                 "在 update {} 里 copy 它们会被静默丢弃：\n" +
                 newlyBroken.joinToString("\n") { "  - $it" } +
                 "\n\n请把它加进 ReadSettingsRepository.toGatewayPrefMap()；" +
                 "若确实只走遗留 setter 写入，则加进本测试的 UNPERSISTED_BASELINE。",
-            newlyBroken.isEmpty(),
         )
 
         val fixed = (UNPERSISTED_BASELINE - actual).sorted()
         assertTrue(
+            fixed.isEmpty(),
             "以下字段已经能通过 update {} 落盘，请从 UNPERSISTED_BASELINE 移除（基线只能下调）：\n" +
                 fixed.joinToString("\n") { "  - $it" },
-            fixed.isEmpty(),
         )
     }
 
     @Test
     fun `反射确实枚举到了 ReadSettings 的字段`() {
         val count = ReadSettings::class.primaryConstructor?.parameters?.size ?: 0
-        assertTrue("ReadSettings 只枚举到 $count 个字段，反射可能失效", count > 90)
+        assertTrue(count > 90, "ReadSettings 只枚举到 $count 个字段，反射可能失效")
     }
 
     @Test
     fun `toGatewayPrefMap 的键没有重复`() {
         val constructor = requireNotNull(ReadSettings::class.primaryConstructor)
         assertEquals(
-            "toGatewayPrefMap 出现重复的 PreferKey，会让某个字段被另一个覆盖",
             ReadSettings().toGatewayPrefMap().size,
             ReadSettings().toGatewayPrefMap().keys.size,
+            "toGatewayPrefMap 出现重复的 PreferKey，会让某个字段被另一个覆盖",
         )
         // 顺带确保 map 不是空的（避免下面的行为判定整体假阳）
         assertTrue(constructor.parameters.isNotEmpty())

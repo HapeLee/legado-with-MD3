@@ -1,16 +1,12 @@
 package io.legado.app.data.repository
 
-import androidx.datastore.preferences.core.mutablePreferencesOf
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.domain.model.settings.ReadSettings
-import io.legado.app.help.config.setPrefValue
-import kotlinx.coroutines.flow.MutableStateFlow
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
-import kotlin.reflect.full.primaryConstructor
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ReadSettingsMappingTest {
 
@@ -24,34 +20,19 @@ class ReadSettingsMappingTest {
     }
 
     /**
-     * 上面那条比对的是两张手写表，防串键；这条防的是「新增字段忘了加进映射」——
-     * 漏掉的字段走通用 `update {}` 会被静默丢写。字段数由反射得出，不写死。
+     * 注：原先「新增字段必须进映射」的反射守卫（比对 `ReadSettings` 构造参数个数与
+     * 映射键数）已移到 `desktopTest` 的 `ReadSettingsGatewayCoverageTest`——
+     * kotlin-reflect 是 JVM-only，进不了 commonTest。
      */
-    @Test
-    fun `新增 ReadSettings 字段必须同时加进 gateway 映射`() {
-        val fieldCount = ReadSettings::class.primaryConstructor!!.parameters.size
-        val mappedCount = ReadSettings().toGatewayPrefMap().size
-
-        assertEquals(
-            "ReadSettings 有 $fieldCount 个字段，toGatewayPrefMap 只映射了 $mappedCount 个。" +
-                "未映射的字段经 update {} 写入会被静默丢弃——请补齐映射与本文件的 " +
-                "expectedGatewayPrefMap。",
-            fieldCount,
-            mappedCount,
-        )
-    }
 
     @Test
     fun `阅读设置 gateway 全部键写读映射逐字段对应`() {
-        val repository = ReadSettingsRepository(
-            settingsRepository = SettingsRepository(),
-            preferencesFlow = MutableStateFlow(mutablePreferencesOf()),
-        )
+        val repository = ReadSettingsRepository(FakePreferenceStore())
 
         readSettingsMappingSamples().forEach { expected ->
             assertEquals(expected.expectedGatewayPrefMap(), expected.toGatewayPrefMap())
             val actual = with(repository) {
-                expected.expectedGatewayPrefMap().toTestPreferences().toReadSettings()
+                expected.expectedGatewayPrefMap().toTestSnapshot().toReadSettings()
             }
             assertEquals(expected, actual)
         }
@@ -59,10 +40,7 @@ class ReadSettingsMappingTest {
 
     @Test
     fun `PageKeys previous next 通过真实原子路径对称单批写入`() {
-        val repository = ReadSettingsRepository(
-            settingsRepository = SettingsRepository(),
-            preferencesFlow = MutableStateFlow(mutablePreferencesOf()),
-        )
+        val repository = ReadSettingsRepository(FakePreferenceStore())
         val values = captureAtomicUpdateValues(
             current = ReadSettings(prevKeys = "old-prev", nextKeys = "old-next"),
             read = { with(repository) { it.toReadSettings() } },
@@ -72,8 +50,8 @@ class ReadSettingsMappingTest {
 
         assertEquals(
             mapOf(
-                PreferKey.prevKeys to "new-prev",
-                PreferKey.nextKeys to "new-next",
+                PreferKey.prevKeys to PreferenceValue.StringValue("new-prev"),
+                PreferKey.nextKeys to PreferenceValue.StringValue("new-next"),
             ),
             values,
         )
@@ -81,14 +59,10 @@ class ReadSettingsMappingTest {
 
     @Test
     fun `空快照使用精简阅读菜单默认值`() {
-        val preferences = mutablePreferencesOf()
-        val repository = ReadSettingsRepository(
-            settingsRepository = SettingsRepository(),
-            preferencesFlow = MutableStateFlow(preferences),
-        )
+        val repository = ReadSettingsRepository(FakePreferenceStore())
 
         val settings = with(repository) {
-            preferences.toReadSettings()
+            emptyMap<String, PreferenceValue>().toReadSettings()
         }
 
         assertEquals("0", settings.showBrightnessView)
@@ -339,35 +313,3 @@ private fun ReadSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.titleBarCompact to titleBarCompact,
     PreferKey.moreActionsConfig to moreActionsConfig,
 )
-
-private fun Map<String, Any?>.toTestPreferences(): androidx.datastore.preferences.core.Preferences {
-    val preferences = mutablePreferencesOf()
-    forEach { (key, value) -> preferences.setPrefValue(key, value) }
-    return preferences
-}
-
-private fun <T> captureAtomicUpdateValues(
-    current: T,
-    read: (androidx.datastore.preferences.core.Preferences) -> T,
-    toPrefMap: (T) -> Map<String, Any?>,
-    transform: (T) -> T,
-): Map<String, Any?> {
-    val initial = toPrefMap(current).toTestPreferences()
-    val writeQueue = ArrayDeque<suspend () -> Unit>()
-    var persistedValues: Map<String, Any?>? = null
-    val core = io.legado.app.help.config.PendingOverlayCore(
-        initial = initial,
-        launchWrite = { writeQueue += it },
-        persist = { _, _ -> error("不会执行单键落盘") },
-        persistAll = { values ->
-            persistedValues = values
-            initial
-        },
-    )
-
-    core.atomicUpdate(read, toPrefMap, transform)
-    if (writeQueue.isEmpty()) return emptyMap()
-    check(writeQueue.size == 1)
-    kotlinx.coroutines.runBlocking { writeQueue.removeFirst().invoke() }
-    return checkNotNull(persistedValues)
-}

@@ -3,18 +3,31 @@ package io.legado.app.data.repository
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.ThemePackageSettingsGateway
 import io.legado.app.domain.model.settings.ThemeExportData
-import io.legado.app.help.config.AppConfigStore
 
-class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
+/**
+ * 主题包导入导出。原实现直连 `AppConfigStore`（DataStore 平台栈），下沉后改消费
+ * `PreferenceStore` 契约：读走 `currentSnapshot()` + `compat*`（语义等同原
+ * `AppConfigStore.getString` = `compatDsString`），写走 `atomicUpdate`
+ * （`toPreferenceValues` 里的 null = 删除键，由平台实现落盘）。
+ */
+class ThemePackageSettingsRepository(
+    private val preferences: PreferenceStore,
+) : ThemePackageSettingsGateway {
 
-    override fun exportCurrent(): ThemeExportData = ThemeExportData(
-        appTheme = string(PreferKey.appTheme, "0"),
+    override fun exportCurrent(): ThemeExportData {
+        val s = preferences.currentSnapshot()
+        fun string(key: String, default: String) = s.compatString(key) ?: default
+        fun int(key: String, default: Int) = s.compatInt(key) ?: default
+        fun boolean(key: String, default: Boolean) = s.compatBoolean(key) ?: default
+        fun float(key: String, default: Float) = s.compatFloat(key) ?: default
+        return ThemeExportData(
+            appTheme = string(PreferKey.appTheme, "0"),
         themeMode = string(PreferKey.themeMode, "0"),
         isPureBlack = boolean(PreferKey.pureBlack, false),
         composeEngine = string(PreferKey.composeEngine, "material"),
         paletteStyle = string(PreferKey.paletteStyle, "tonalSpot"),
         materialVersion = string(PreferKey.materialVersion, "material3"),
-        customMode = AppConfigStore.getString(PreferKey.customMode) ?: "tonalSpot",
+        customMode = s.compatString(PreferKey.customMode) ?: "tonalSpot",
         customContrast = string(PreferKey.customContrast, "Default"),
         launcherIcon = string(PreferKey.launcherIcon, "ic_launcher"),
         isPredictiveBackEnabled = boolean(PreferKey.isPredictiveBackEnabled, true),
@@ -37,10 +50,10 @@ class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
         bookInfoInputColor = int(PreferKey.bookInfoInputColor, 0),
         bookInfoFollowCoverColor = boolean(PreferKey.bookInfoFollowCoverColor, true),
         bookInfoBackgroundBlur = string(PreferKey.bookInfoBackgroundBlur, "on"),
-        bookInfoNetworkCoverBackground = AppConfigStore.getString(
+        bookInfoNetworkCoverBackground = s.compatString(
             PreferKey.bookInfoNetworkCoverBackground
         ),
-        bookInfoDefaultCoverBackground = AppConfigStore.getString(
+        bookInfoDefaultCoverBackground = s.compatString(
             PreferKey.bookInfoDefaultCoverBackground
         ),
         containerOpacity = int(PreferKey.containerOpacity, 100),
@@ -68,7 +81,7 @@ class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
         topBarOpacity = int(PreferKey.topBarOpacity, 100),
         bottomBarOpacity = int(PreferKey.bottomBarOpacity, 100),
         enableCustomTagColors = boolean(PreferKey.enableCustomTagColors, false),
-        customTagColorsJson = AppConfigStore.getString(PreferKey.customTagColors),
+        customTagColorsJson = s.compatString(PreferKey.customTagColors),
         bookshelfCardColor = int(PreferKey.bookshelfCardColor, 0),
         bookshelfCardColorDark = int(PreferKey.bookshelfCardColorDark, 0),
         showHome = boolean(PreferKey.showHome, true),
@@ -103,25 +116,25 @@ class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
         useFlexibleTopAppBar = boolean(PreferKey.useFlexibleTopAppBar, true),
         topBarButtonStyle = string(PreferKey.topBarButtonStyle, "tonal"),
         mergeTopBarActions = boolean(PreferKey.mergeTopBarActions, false),
-        bgImageLight = AppConfigStore.getString(PreferKey.bgImage),
-        bgImageDark = AppConfigStore.getString(PreferKey.bgImageN),
+        bgImageLight = s.compatString(PreferKey.bgImage),
+        bgImageDark = s.compatString(PreferKey.bgImageN),
         bgImageBlurring = int(PreferKey.bgImageBlurring, 0),
         bgImageNBlurring = int(PreferKey.bgImageNBlurring, 0),
-        largeContainerBackgroundImageLight = AppConfigStore.getString(
+        largeContainerBackgroundImageLight = s.compatString(
             PreferKey.largeContainerBackgroundImageLight
         ),
-        largeContainerBackgroundImageDark = AppConfigStore.getString(
+        largeContainerBackgroundImageDark = s.compatString(
             PreferKey.largeContainerBackgroundImageDark
         ),
-        itemBackgroundImageLight = AppConfigStore.getString(PreferKey.itemBackgroundImageLight),
-        itemBackgroundImageDark = AppConfigStore.getString(PreferKey.itemBackgroundImageDark),
+        itemBackgroundImageLight = s.compatString(PreferKey.itemBackgroundImageLight),
+        itemBackgroundImageDark = s.compatString(PreferKey.itemBackgroundImageDark),
         enableContainerBackgroundImage = boolean(
             PreferKey.enableContainerBackgroundImage,
             false,
         ),
         appColumnBackgroundOpacity = int(PreferKey.appColumnBackgroundOpacity, 100),
         glassCardBackgroundOpacity = int(PreferKey.glassCardBackgroundOpacity, 100),
-        appFontPath = AppConfigStore.getString(PreferKey.appFontPath),
+        appFontPath = s.compatString(PreferKey.appFontPath),
         coverLoadOnlyWifi = boolean(PreferKey.loadCoverOnlyWifi, false),
         coverUseDefault = boolean(PreferKey.useDefaultCover, false),
         coverShowShadow = boolean(PreferKey.coverShowShadow, false),
@@ -137,17 +150,15 @@ class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
         coverShadowColorN = int(PreferKey.coverShadowColorN, -1),
         coverShowNameN = boolean(PreferKey.coverShowNameN, true),
         coverShowAuthorN = boolean(PreferKey.coverShowAuthorN, true),
-        coverInfoOrientation = string(PreferKey.coverInfoOrientation, "0"),
-    )
-
-    override suspend fun applyAndAwait(data: ThemeExportData) {
-        AppConfigStore.putAllAndAwait(data.toPreferenceValues())
+            coverInfoOrientation = string(PreferKey.coverInfoOrientation, "0"),
+        )
     }
 
-    private fun string(key: String, default: String) = AppConfigStore.getString(key) ?: default
-    private fun int(key: String, default: Int) = AppConfigStore.getInt(key) ?: default
-    private fun boolean(key: String, default: Boolean) = AppConfigStore.getBoolean(key) ?: default
-    private fun float(key: String, default: Float) = AppConfigStore.getFloat(key) ?: default
+    override suspend fun applyAndAwait(data: ThemeExportData) {
+        preferences.atomicUpdate { snapshot ->
+            snapshot + data.toPreferenceValues().mapValues { (_, value) -> preferenceValueOf(value) }
+        }
+    }
 }
 
 internal fun ThemeExportData.toPreferenceValues(): Map<String, Any?> {

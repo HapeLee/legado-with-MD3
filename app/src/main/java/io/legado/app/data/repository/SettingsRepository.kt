@@ -125,6 +125,12 @@ class SettingsRepository : PreferenceStore {
 
     override suspend fun setInt(key: String, value: Int) = putInt(key, value)
 
+    override suspend fun setBoolean(key: String, value: Boolean) = putBoolean(key, value)
+
+    override suspend fun setFloat(key: String, value: Float) = putFloat(key, value)
+
+    override suspend fun setStrings(values: Map<String, String>) = putStrings(values)
+
     override fun observeString(key: String, defaultValue: String): Flow<String> = getString(key, defaultValue)
 
     override suspend fun setString(key: String, value: String) = putString(key, value)

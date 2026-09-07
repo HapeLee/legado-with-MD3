@@ -32,6 +32,13 @@ interface PreferenceStore {
 
     suspend fun setInt(key: String, value: Int)
 
+    suspend fun setBoolean(key: String, value: Boolean)
+
+    suspend fun setFloat(key: String, value: Float)
+
+    /** Applies several string values as one durable update. */
+    suspend fun setStrings(values: Map<String, String>)
+
     fun observeString(key: String, defaultValue: String = ""): Flow<String>
 
     suspend fun setString(key: String, value: String)

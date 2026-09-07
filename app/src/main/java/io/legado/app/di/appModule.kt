@@ -362,7 +362,7 @@ val appModule = module {
     single<AppLocaleGateway> { AppLocaleRepository() }
     single<AppShellSettingsGateway> { AppShellSettingsRepository(get<SettingsRepository>()) }
     single<ThemeSettingsGateway> { ThemeSettingsRepository(get<SettingsRepository>()) }
-    single<ThemePackageSettingsGateway> { ThemePackageSettingsRepository() }
+    single<ThemePackageSettingsGateway> { ThemePackageSettingsRepository(get<SettingsRepository>()) }
     single<AppUiConfigurationGateway> {
         AppUiConfigurationRepository(
             appLocaleGateway = get(),
@@ -394,7 +394,7 @@ val appModule = module {
     single<ImportBookSettingsGateway> { ImportBookSettingsRepository(get<SettingsRepository>()) }
     single<TranslationSettingsGateway> { TranslationSettingsRepository(get<SettingsRepository>()) }
     single<BookshelfSettingsGateway> { BookshelfSettingsRepository(get<SettingsRepository>()) }
-    single { ReadSettingsRepository(settingsRepository = get()) }
+    single { ReadSettingsRepository(settingsRepository = get<SettingsRepository>()) }
     single<ReadSettingsGateway> { get<ReadSettingsRepository>() }
     single<ReadAloudSettingsRepository> { ReadAloudSettingsRepository(get<SettingsRepository>()) }
     singleOf(::ReadAloudSessionStore)
