@@ -5,6 +5,7 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.SupportSQLiteConnection
 import androidx.sqlite.execSQL
@@ -66,6 +67,7 @@ import io.legado.app.data.entities.BookKnowledgeEntry
 import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.BookOutlineNode
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourceConverters
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.BookVoiceBindingEntity
 import io.legado.app.data.entities.Bookmark
@@ -112,6 +114,7 @@ val appDb by lazy {
         .build()
 }
 
+@TypeConverters(BookSourceConverters::class)
 @Database(
     version = 104,
     exportSchema = true,

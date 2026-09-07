@@ -1,14 +1,10 @@
 package io.legado.app.data.entities
 
-import android.os.Parcelable
-import android.text.TextUtils
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverter
-import androidx.room.TypeConverters
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookSourceType
 import io.legado.app.data.entities.rule.BookInfoRule
@@ -17,16 +13,9 @@ import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.ReviewRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.data.entities.rule.TocRule
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.splitNotBlank
-import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.RawValue
 
 @Suppress("unused")
-@Parcelize
-@TypeConverters(BookSource.Converters::class)
 @Entity(
     tableName = "book_sources",
     indices = [(Index(value = ["bookSourceUrl"], unique = false))]
@@ -85,29 +74,28 @@ data class BookSource(
     // 发现筛选规则
     var exploreScreen: String? = null,
     // 发现规则
-    var ruleExplore: @RawValue ExploreRule? = null,
+    var ruleExplore: ExploreRule? = null,
     // 搜索url
     var searchUrl: String? = null,
     // 搜索规则
-    var ruleSearch: @RawValue SearchRule? = null,
+    var ruleSearch: SearchRule? = null,
     // 书籍信息页规则
-    var ruleBookInfo: @RawValue BookInfoRule? = null,
+    var ruleBookInfo: BookInfoRule? = null,
     // 目录页规则
-    var ruleToc: @RawValue TocRule? = null,
+    var ruleToc: TocRule? = null,
     // 正文页规则
-    var ruleContent: @RawValue ContentRule? = null,
+    var ruleContent: ContentRule? = null,
     // 段评规则
-    var ruleReview: @RawValue ReviewRule? = null,
+    var ruleReview: ReviewRule? = null,
     @ColumnInfo(defaultValue = "0")
     var eventListener: Boolean = false, // 是否监听事件来执行回调规则
     @ColumnInfo(defaultValue = "0")
     var customButton: Boolean = false, //由书源控制的自定义按钮
     // 首页模块定义，JSON数组。每个元素: key, type(banner/ranking/grid/card/filter), title, args?, url?
     var homepageModules: String? = null
-) : Parcelable, BaseSource {
+) : BaseSource {
 
     @Ignore
-    @IgnoredOnParcel
     private var temporaryVariable: String? = null
 
     override fun getTag(): String {
@@ -180,14 +168,14 @@ data class BookSource(
         return if (bookSourceGroup.isNullOrBlank()) {
             bookSourceName
         } else {
-            String.format("%s (%s)", bookSourceName, bookSourceGroup)
+            "$bookSourceName ($bookSourceGroup)"
         }
     }
 
     fun addGroup(groups: String): BookSource {
         bookSourceGroup?.splitNotBlank(AppPattern.splitGroupRegex)?.toHashSet()?.let {
             it.addAll(groups.splitNotBlank(AppPattern.splitGroupRegex))
-            bookSourceGroup = TextUtils.join(",", it)
+            bookSourceGroup = it.joinToString(",")
         }
         if (bookSourceGroup.isNullOrBlank()) bookSourceGroup = groups
         return this
@@ -196,7 +184,7 @@ data class BookSource(
     fun removeGroup(groups: String): BookSource {
         bookSourceGroup?.splitNotBlank(AppPattern.splitGroupRegex)?.toHashSet()?.let {
             it.removeAll(groups.splitNotBlank(AppPattern.splitGroupRegex).toSet())
-            bookSourceGroup = TextUtils.join(",", it)
+            bookSourceGroup = it.joinToString(",")
         }
         return this
     }
@@ -283,53 +271,4 @@ data class BookSource(
 
     private fun equal(a: String?, b: String?) = a == b || (a.isNullOrEmpty() && b.isNullOrEmpty())
 
-    class Converters {
-
-        @TypeConverter
-        fun exploreRuleToString(exploreRule: ExploreRule?): String =
-            GSON.toJson(exploreRule)
-
-        @TypeConverter
-        fun stringToExploreRule(json: String?) =
-            GSON.fromJsonObject<ExploreRule>(json).getOrNull()
-
-        @TypeConverter
-        fun searchRuleToString(searchRule: SearchRule?): String =
-            GSON.toJson(searchRule)
-
-        @TypeConverter
-        fun stringToSearchRule(json: String?) =
-            GSON.fromJsonObject<SearchRule>(json).getOrNull()
-
-        @TypeConverter
-        fun bookInfoRuleToString(bookInfoRule: BookInfoRule?): String =
-            GSON.toJson(bookInfoRule)
-
-        @TypeConverter
-        fun stringToBookInfoRule(json: String?) =
-            GSON.fromJsonObject<BookInfoRule>(json).getOrNull()
-
-        @TypeConverter
-        fun tocRuleToString(tocRule: TocRule?): String =
-            GSON.toJson(tocRule)
-
-        @TypeConverter
-        fun stringToTocRule(json: String?) =
-            GSON.fromJsonObject<TocRule>(json).getOrNull()
-
-        @TypeConverter
-        fun contentRuleToString(contentRule: ContentRule?): String =
-            GSON.toJson(contentRule)
-
-        @TypeConverter
-        fun stringToContentRule(json: String?) =
-            GSON.fromJsonObject<ContentRule>(json).getOrNull()
-
-        @TypeConverter
-        fun stringToReviewRule(json: String?): ReviewRule? = null
-
-        @TypeConverter
-        fun reviewRuleToString(reviewRule: ReviewRule?): String = "null"
-
-    }
 }
