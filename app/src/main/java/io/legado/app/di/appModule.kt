@@ -369,7 +369,7 @@ val appModule = module {
         )
     }
     single<OtherSettingsGateway> { OtherSettingsRepository() }
-    single<CheckSourceSettingsGateway> { CheckSourceSettingsRepository() }
+    single<CheckSourceSettingsGateway> { CheckSourceSettingsRepository(get<SettingsRepository>()) }
     single { BookSourceCheckRepository(get(), get(), get()) }
     single<BookSourceCheckGateway> { get<BookSourceCheckRepository>() }
     singleOf(::StartBookSourceCheckUseCase)

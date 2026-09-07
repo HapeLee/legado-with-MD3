@@ -100,6 +100,26 @@ internal object ShowBrightnessViewMigration : DataMigration<Preferences> {
  * 以 DataStore 为唯一持久化源，通过 [AppConfigStore] 的有效快照统一读写。
  */
 class SettingsRepository : PreferenceStore {
+    override fun currentValues(defaults: Map<String, PreferenceValue>): Map<String, PreferenceValue> =
+        AppConfigStore.preferences.toPreferenceValues(defaults)
+
+    override fun observeValues(
+        defaults: Map<String, PreferenceValue>,
+    ): Flow<Map<String, PreferenceValue>> = AppConfigStore.preferencesFlow.map { preferences ->
+        preferences.toPreferenceValues(defaults)
+    }
+
+    override fun currentLong(key: String, defaultValue: Long): Long =
+        AppConfigStore.getLong(key) ?: defaultValue
+
+    override fun currentBoolean(key: String, defaultValue: Boolean): Boolean =
+        AppConfigStore.getBoolean(key) ?: defaultValue
+
+    override fun observeLong(key: String, defaultValue: Long): Flow<Long> =
+        getLong(key, defaultValue)
+
+    override fun observeBoolean(key: String, defaultValue: Boolean): Flow<Boolean> =
+        getBoolean(key, defaultValue)
 
     override fun observeInt(key: String, defaultValue: Int): Flow<Int> = getInt(key, defaultValue)
 
@@ -108,6 +128,19 @@ class SettingsRepository : PreferenceStore {
     override fun observeString(key: String, defaultValue: String): Flow<String> = getString(key, defaultValue)
 
     override suspend fun setString(key: String, value: String) = putString(key, value)
+
+    override suspend fun setAllAndAwait(values: Map<String, PreferenceValue>) {
+        AppConfigStore.putAllAndAwait(
+            values.mapValues { (_, value) ->
+                when (value) {
+                    is PreferenceValue.LongValue -> value.value
+                    is PreferenceValue.BooleanValue -> value.value
+                    is PreferenceValue.IntValue -> value.value
+                    is PreferenceValue.StringValue -> value.value
+                }
+            },
+        )
+    }
 
     fun <T : Any> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> =
         AppConfigStore.preferencesFlow.map { it.compatDsValue(key, defaultValue) }
@@ -174,5 +207,24 @@ class SettingsRepository : PreferenceStore {
     // 移除配置
     suspend fun remove(key: String) {
         AppConfigStore.remove(key)
+    }
+}
+
+private fun Preferences.toPreferenceValues(
+    defaults: Map<String, PreferenceValue>,
+): Map<String, PreferenceValue> = defaults.mapValues { (key, defaultValue) ->
+    when (defaultValue) {
+        is PreferenceValue.LongValue -> PreferenceValue.LongValue(
+            compatDsValue(longPreferencesKey(key), defaultValue.value),
+        )
+        is PreferenceValue.BooleanValue -> PreferenceValue.BooleanValue(
+            compatDsValue(booleanPreferencesKey(key), defaultValue.value),
+        )
+        is PreferenceValue.IntValue -> PreferenceValue.IntValue(
+            compatDsValue(intPreferencesKey(key), defaultValue.value),
+        )
+        is PreferenceValue.StringValue -> PreferenceValue.StringValue(
+            compatDsValue(stringPreferencesKey(key), defaultValue.value),
+        )
     }
 }
