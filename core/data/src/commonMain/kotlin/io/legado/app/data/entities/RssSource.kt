@@ -1,16 +1,12 @@
 package io.legado.app.data.entities
 
-import android.os.Parcelable
-import android.text.TextUtils
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import io.legado.app.constant.AppPattern
 import io.legado.app.utils.splitNotBlank
-import kotlinx.parcelize.Parcelize
 
-@Parcelize
 @Entity(tableName = "rssSources", indices = [(Index(value = ["sourceUrl"], unique = false))])
 data class RssSource(
     @PrimaryKey
@@ -115,7 +111,7 @@ data class RssSource(
     //用户控制的重定向
     @ColumnInfo(defaultValue = "ASK_CROSS_ORIGIN")
     var redirectPolicy: String = "ASK_CROSS_ORIGIN"
-) : Parcelable, BaseSource {
+) : BaseSource {
 
     override fun getTag(): String {
         return sourceName
@@ -182,14 +178,14 @@ data class RssSource(
         return if (sourceGroup.isNullOrBlank()) {
             sourceName
         } else {
-            String.format("%s (%s)", sourceName, sourceGroup)
+            "$sourceName ($sourceGroup)"
         }
     }
 
     fun addGroup(groups: String): RssSource {
         sourceGroup?.splitNotBlank(AppPattern.splitGroupRegex)?.toHashSet()?.let {
             it.addAll(groups.splitNotBlank(AppPattern.splitGroupRegex))
-            sourceGroup = TextUtils.join(",", it)
+            sourceGroup = it.joinToString(",")
         }
         if (sourceGroup.isNullOrBlank()) sourceGroup = groups
         return this
@@ -198,7 +194,7 @@ data class RssSource(
     fun removeGroup(groups: String): RssSource {
         sourceGroup?.splitNotBlank(AppPattern.splitGroupRegex)?.toHashSet()?.let {
             it.removeAll(groups.splitNotBlank(AppPattern.splitGroupRegex).toSet())
-            sourceGroup = TextUtils.join(",", it)
+            sourceGroup = it.joinToString(",")
         }
         return this
     }
