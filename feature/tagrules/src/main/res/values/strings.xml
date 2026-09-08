@@ -1,16 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- :feature:tagrules 自带的字符串默认值；app 侧同名资源按 Android 资源合并优先级覆盖本文件。 -->
 <resources>
+    <string name="a11y_delete_named">Delete %1$s</string>
+    <string name="a11y_edit_named">Edit %1$s</string>
+    <string name="a11y_long_press_reorder">Long press and drag to reorder</string>
+    <string name="a11y_rule_enabled_switch">%1$s enabled state</string>
     <string name="action_save">Save</string>
+    <string name="cancel">Cancel</string>
     <string name="close">Close</string>
     <string name="copy_rule">Copy Rule</string>
+    <string name="delete">Delete</string>
+    <string name="disable_selection">Disable selected</string>
+    <string name="disabled">Disabled</string>
+    <string name="enable">Enable</string>
     <string name="enabled">Enabled</string>
+    <string name="export">Export</string>
     <string name="highlight_tag_add_rule">Add Rule</string>
+    <string name="highlight_tag_config">Tag Rules</string>
     <string name="highlight_tag_edit_rule">Edit Rule</string>
     <string name="highlight_tag_pattern">Pattern</string>
     <string name="highlight_tag_title">Title</string>
+    <string name="import_highlight_tag_rule">Import Tag Rules</string>
+    <string name="import_on_line">Import online</string>
+    <string name="import_str">Import</string>
     <string name="more_menu">More menu</string>
+    <string name="ok">OK</string>
     <string name="paste_rule">Paste Rule</string>
+    <string name="search_highlight_tag_rule">Search tag rules</string>
     <string name="tag_group_add_rule">New Tag Group</string>
     <string name="tag_group_edit_rule">Edit Group Rule</string>
     <string name="tag_group_name">Group Name</string>

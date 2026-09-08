@@ -1,16 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- :feature:tagrules 自带的字符串默认值；app 侧同名资源按 Android 资源合并优先级覆盖本文件。 -->
 <resources>
+    <string name="a11y_delete_named">刪除 %1$s</string>
+    <string name="a11y_edit_named">編輯 %1$s</string>
+    <string name="a11y_long_press_reorder">長按並拖曳可排序</string>
+    <string name="a11y_rule_enabled_switch">%1$s 的啟用狀態</string>
     <string name="action_save">儲存</string>
+    <string name="cancel">取消</string>
     <string name="close">關閉</string>
     <string name="copy_rule">複製規則</string>
+    <string name="delete">刪除</string>
+    <string name="disable_selection">禁用所選</string>
+    <string name="disabled">已禁用</string>
+    <string name="enable">啟用</string>
     <string name="enabled">已啟用</string>
+    <string name="export">匯出</string>
     <string name="highlight_tag_add_rule">新增規則</string>
+    <string name="highlight_tag_config">標籤規則</string>
     <string name="highlight_tag_edit_rule">編輯規則</string>
     <string name="highlight_tag_pattern">模式</string>
     <string name="highlight_tag_title">標題</string>
+    <string name="import_highlight_tag_rule">匯入標籤規則</string>
+    <string name="import_on_line">網路匯入</string>
+    <string name="import_str">匯入</string>
     <string name="more_menu">更多選單</string>
+    <string name="ok">確認</string>
     <string name="paste_rule">貼上規則</string>
+    <string name="search_highlight_tag_rule">搜尋標籤規則</string>
     <string name="tag_group_add_rule">新建標籤分組</string>
     <string name="tag_group_edit_rule">編輯分組規則</string>
     <string name="tag_group_name">分組名稱</string>

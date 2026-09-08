@@ -30,7 +30,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
+import io.legado.app.feature.tagrules.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.HighlightTagRule
 import io.legado.app.ui.theme.adaptiveContentPadding

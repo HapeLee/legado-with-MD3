@@ -34,12 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.google.gson.JsonElement
-import com.google.gson.JsonNull
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import com.google.gson.JsonPrimitive
-import io.legado.app.R
+import io.legado.app.core.platform.ImportFieldValue
+import io.legado.app.core.platform.ImportJsonEditorProvider
+import io.legado.app.core.platform.ImportJsonField
+import io.legado.app.core.ui.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -51,7 +49,6 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.GSON
 
 @Composable
 fun SourceInputDialog(
@@ -271,9 +268,10 @@ private fun <T> BatchImportJsonEditContent(
     version: Int,
     onDataChange: (T) -> Unit
 ) {
-    val jsonObject = remember(version) { data.toImportJsonObject() }
+    val editor = ImportJsonEditorProvider.current
+    val fields = remember(version) { editor.fieldsOf(data) }
 
-    if (jsonObject == null) {
+    if (fields == null) {
         AppText(stringResource(R.string.edit_not_supported))
         return
     }
@@ -286,16 +284,16 @@ private fun <T> BatchImportJsonEditContent(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(
-            items = jsonObject.entrySet().toList(),
-            key = { it.key }
-        ) { entry ->
+            items = fields,
+            key = { it.name }
+        ) { field ->
             BatchImportJsonField(
-                name = entry.key,
-                value = entry.value,
-                onValueChange = { value ->
-                    val updatedJsonObject = data.toImportJsonObject() ?: return@BatchImportJsonField
-                    updatedJsonObject.add(entry.key, value)
-                    updatedJsonObject.toImportDataLike(data)?.let(onDataChange)
+                field = field,
+                onBooleanChange = { value ->
+                    editor.withBoolean(data, field.name, value)?.let(onDataChange)
+                },
+                onTextChange = { text ->
+                    editor.withEditedText(data, field.name, text)?.let(onDataChange)
                 }
             )
         }
@@ -304,36 +302,41 @@ private fun <T> BatchImportJsonEditContent(
 
 @Composable
 private fun BatchImportJsonField(
-    name: String,
-    value: JsonElement,
-    onValueChange: (JsonElement) -> Unit
+    field: ImportJsonField,
+    onBooleanChange: (Boolean) -> Unit,
+    onTextChange: (String) -> Unit
 ) {
-    val primitive = value.takeIf { it.isJsonPrimitive }?.asJsonPrimitive
-    if (primitive?.isBoolean == true) {
+    val value = field.value
+    if (value is ImportFieldValue.Bool) {
         GlassCard(
             containerColor = LegadoTheme.colorScheme.onSheetContent
         ) {
             SwitchSettingItem(
-                title = name,
-                checked = primitive.asBoolean,
-                onCheckedChange = { onValueChange(JsonPrimitive(it)) }
+                title = field.name,
+                checked = value.value,
+                onCheckedChange = onBooleanChange
             )
         }
 
         return
     }
 
-    val isJsonText = value.isJsonObject || value.isJsonArray
-    val initialText = value.toImportEditText()
-    var text by remember(name, initialText) { mutableStateOf(initialText) }
+    val isJsonText = value is ImportFieldValue.Json
+    val initialText = when (value) {
+        is ImportFieldValue.Json -> value.text
+        is ImportFieldValue.Text -> value.text
+        ImportFieldValue.Null -> ""
+        is ImportFieldValue.Bool -> ""
+    }
+    var text by remember(field.name, initialText) { mutableStateOf(initialText) }
 
     AppTextField(
         value = text,
         onValueChange = { newText ->
             text = newText
-            newText.toImportJsonElement(value)?.let(onValueChange)
+            onTextChange(newText)
         },
-        label = name,
+        label = field.name,
         modifier = Modifier.fillMaxWidth(),
         singleLine = !isJsonText,
         maxLines = if (isJsonText) 8 else 1
@@ -381,51 +384,4 @@ fun ImportItemRow(
             )
         }
     )
-}
-
-private fun Any?.toImportJsonObject(): JsonObject? {
-    return GSON.toJsonTree(this).takeIf { it.isJsonObject }?.asJsonObject
-}
-
-@Suppress("UNCHECKED_CAST")
-private fun <T> JsonObject.toImportDataLike(data: T): T? {
-    val clazz = data?.let { it::class.java } ?: return null
-    return runCatching { GSON.fromJson(this, clazz) as T }.getOrNull()
-}
-
-private fun JsonElement.toImportEditText(): String {
-    return when {
-        this is JsonNull || isJsonNull -> ""
-        isJsonObject || isJsonArray -> GSON.toJson(this)
-        isJsonPrimitive -> asJsonPrimitive.asString
-        else -> toString()
-    }
-}
-
-private fun String.toImportJsonElement(oldValue: JsonElement): JsonElement? {
-    val text = trim()
-    if (oldValue.isJsonNull) {
-        return if (text.isEmpty()) JsonNull.INSTANCE else JsonPrimitive(this)
-    }
-
-    if (oldValue.isJsonObject || oldValue.isJsonArray) {
-        if (text.isEmpty()) return JsonNull.INSTANCE
-        return runCatching { JsonParser.parseString(this) }.getOrNull()
-    }
-
-    if (!oldValue.isJsonPrimitive) return JsonPrimitive(this)
-
-    val primitive = oldValue.asJsonPrimitive
-    return when {
-        primitive.isNumber -> {
-            if (text.isEmpty()) {
-                JsonNull.INSTANCE
-            } else {
-                text.toLongOrNull()?.let { JsonPrimitive(it) }
-                    ?: text.toDoubleOrNull()?.let { JsonPrimitive(it) }
-            }
-        }
-
-        else -> JsonPrimitive(this)
-    }
 }

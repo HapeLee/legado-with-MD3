@@ -9,6 +9,7 @@ import io.legado.app.core.platform.Logger
 import io.legado.app.core.platform.SourceRuntime
 import io.legado.app.core.platform.SymmetricCrypto
 import io.legado.app.core.platform.Toaster
+import io.legado.app.data.json.GsonImportJsonEditor
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.ConcurrentRateLimiter.Companion.updateConcurrentRate
@@ -122,6 +123,9 @@ object PlatformServices {
         }
     }
 
+    /** 导入对象的按字段编辑：委托 `:core:data` 的 Gson 实现（与 `GSON` 同模块）。 */
+    private val importJsonEditor = GsonImportJsonEditor()
+
     /** 注入全部平台能力契约；App.onCreate 在 `super.onCreate()` 后调用。 */
     fun install() {
         io.legado.app.core.platform.KeyValueStoreProvider.install(keyValueStore)
@@ -131,5 +135,6 @@ object PlatformServices {
         io.legado.app.core.platform.SourceRuntimeProvider.install(sourceRuntime)
         io.legado.app.core.platform.ClipboardProvider.install(clipboard)
         io.legado.app.core.platform.ToasterProvider.install(toaster)
+        io.legado.app.core.platform.ImportJsonEditorProvider.install(importJsonEditor)
     }
 }

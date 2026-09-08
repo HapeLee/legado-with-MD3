@@ -778,6 +778,32 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 > - **Stage B 剩余**：只剩 #3（`ImportComponents` 的 JSON 树），之后 `HighlightTagRuleScreen.kt`
 >   即可随最后一个切片迁入，tagrules 提升完成。
 > - **注意**：`:feature:tagrules` 目前**没有测试**（tagrules 原本也没有），CI 只编译它。
+>
+> **P4 Stage B 完成：tagrules 7/7 迁入 + JSON 字段编辑抽契约（第十一片，2026-09-08）**：
+> `highlight/HighlightTagRuleScreen.kt`（376 行）迁入 `:feature:tagrules`；
+> `importComponents/ImportComponents.kt`（431 行）迁入 `:core:ui`。`app/.../feature/tagrules/` 目录已空并删除。
+>
+> - **为不让 `:core:ui` 依赖 Gson 或数据层，抽了窄契约**：`ImportJsonEditor`
+>   （`fieldsOf` / `withEditedText` / `withBoolean` + `ImportFieldValue` 值模型）落在 `:core:platform`；
+>   Gson 实现 `GsonImportJsonEditor` 落在 `:core:data/androidMain`（与第九片下沉的 `GSON` 同模块），
+>   由 `PlatformServices.install()` 注册。`:core:ui` 只新增一条 `:core:platform` 依赖，**不含 Gson**。
+>   备选方案「给 `:core:ui` 加 Gson / 加 `:core:data` 依赖」被否：前者让 UI 组件库绑死 JSON 库，
+>   后者让通用 UI 组件库反向依赖 Room 数据层。
+> - **值模型只表达「怎么渲染」**：`Bool`→开关、`Json`→多行、`Text`/`Null`→单行。
+>   JSON 树（`JsonObject.entrySet()` / `JsonPrimitive` / `JsonParser`）留在实现侧。
+> - **行为等价靠 13 项基线测试**（`core/data/src/androidHostTest/.../GsonImportJsonEditorTest.kt`）：
+>   字段种类映射、`prettyPrinting`+`disableHtmlEscaping`、非对象→null、字符串保留**未 trim** 原文、
+>   数字空串→null / 非法→拒绝、JSON 空串→null / 非法→拒绝、未知字段→拒绝、布尔写入。
+>   断言逐条对应迁移前的私有辅助函数；那四个函数**原样搬进实现**，未改写分支。
+> - **两处依赖补齐**：`:core:ui → :core:platform`；`:feature:tagrules` 补
+>   `activity-compose` / `lifecycle-runtime-compose` / `koin-compose` / `reorderable`。
+> - **验证（干净重建：删 `app` / `core:{ui,data,platform}` / `feature:tagrules` 的 build）**：
+>   `:feature:tagrules:compileDebugKotlin`、`testAppDebugUnitTest` 631 项、
+>   `:core:data:testAndroidHostTest` **85 项**（含新增 13 项）+ `desktopTest` 81 项、
+>   `:core:model` 59 项、`:core:ui` 9 项、`:core:viewmodel` 8 项、
+>   `:core:platform` 73/76 项，全绿；`assembleAppDebug`；三门禁；`git diff --check`。
+> - **Stage B 结论**：tagrules 已是完整 Gradle 模块，`:app` 仅剩 DI 注册（`appModule`）、
+>   导航入口（`MainNavGraph`）与调用点（`GroupManageSheet`）——这正是宿主应有的职责。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

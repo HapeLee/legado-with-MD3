@@ -67,6 +67,10 @@ dependencies {
     implementation(libs.compose.materialIcons)
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.activity.compose)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.koin.compose)
+    implementation(libs.reorderable)
 }

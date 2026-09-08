@@ -59,6 +59,10 @@ android {
 
 dependencies {
     implementation(project(":core:model"))
+    // `importComponents/ImportComponents.kt` 的 JSON 字段编辑走 `:core:platform` 的
+    // `ImportJsonEditor` 契约（实现 `GsonImportJsonEditor` 在 `:core:data`），
+    // 因此 UI 模块本身不依赖 Gson，也不依赖数据层。
+    implementation(project(":core:platform"))
     // `DynamicTopAppBar` 读取 `ui.widget.components.list.ListUiState`（纯状态契约，commonMain）。
     implementation(project(":core:designsystem"))
 
