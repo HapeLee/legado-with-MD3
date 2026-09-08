@@ -704,7 +704,7 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 >
 > | # | 剩余阻碍 | 涉及 | 备注 |
 > |---|---|---|---|
-> | 1 | `utils.GSON` / `fromJsonArray` / `fromJsonObject` / `isJsonArray` / `isJsonObject` | 6 个规则 VM + `importComponents/*`、`Json*Editor`、`text/HtmlContent` | `JsonCodec` 的 `decodeList` 返回 null 而 `fromJsonArray` 返回 `Result`（异常文案进 UI），需先定语义 |
+> | ~~1~~ | ~~`utils.GSON` / `fromJsonArray` / `fromJsonObject` / `isJsonArray` / `isJsonObject`~~ | 6 个规则 VM + `importComponents/*`、`Json*Editor`、`text/HtmlContent` | ✅ 第九片已解决（门面下沉 `:core:data/androidMain`） |
 > | ~~2~~ | ~~`help.book.applyTagGroupRules(books, rules)`~~ | TagGroupRuleViewModel | ✅ 第八片已解决 |
 > | 3 | `importComponents/ImportComponents.kt`（Gson JSON 树） | tagrules Screen | `JsonCodec` 无 JSON 树 API；或给 `:core:ui` 加 Gson，或抽 JSON 树契约 |
 > | 4 | `io.legado.app.R` 字符串 | tagrules 全部 Screen/EditSheet/VM | 沿用「库侧默认值 + app 覆盖」策略，为 `:feature:tagrules` 建自己的 `strings.xml` |
@@ -730,6 +730,29 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 >   `assembleAppDebug`、三门禁、`git diff --check`。
 > - **Stage B 剩余**：只剩 #1（`utils.GSON` 语义）、#3（`ImportComponents` 的 JSON 树）、
 >   #4（`R` 字符串策略）三项。
+>
+> **P4 GSON 门面下沉（第九片，2026-09-08）**：把 `io.legado.app.utils.GSON` / `INITIAL_GSON`
+> 及其 `*Android.kt` 反序列化兼容层（`data/entities/TxtTocRuleAndroid.kt`、
+> `data/entities/rule/RuleAndroid.kt`，共 **333 行**）移入 **`:core:data/src/androidMain`**；
+> `String.isJsonObject()` / `isJsonArray()` 移入 `:core:model` commonMain（原在 `:app` 的
+> `utils/StringExtensions.kt`）。包名全部保留，`:app` 侧零 import 改动。
+>
+> - **为什么是 androidMain 而不是 commonMain**：`com.google.gson` 是 JVM 三方库；
+>   `:core:data` 的 commonMain 受 `checkSharedPurity` 约束，且已用跨平台契约 `JsonCodec`。
+>   Gson 门面只服务尚未迁移的 Android 代码，故落 androidMain；用 `api(libs.gson)` 暴露给消费方
+>   （`:app`、`:core:viewmodel`、未来的 `:feature:tagrules`），免得每个模块各自声明 Gson。
+> - **兼容层必须一起搬**：`GSON` 注册的 7 个 `JsonDeserializer` 就在这两个 `*Android.kt` 里
+>   （实体下沉时把 `@SerializedName(alternate = ["rule"])` 等语义搬到了这里）。只搬 `GSON`
+>   会形成 `:core:data → :app` 环——**先查清被搬文件的依赖闭包，再决定搬什么**。
+> - **行为由既有测试守住**：`TxtTocRuleDeserializerTest`（6 项：旧备份 `rule` 键名提升、
+>   `chapterRule` 优先、序列化只写 `chapterRule`、旧格式数组往返）留在 `:app`，直接覆盖搬走的 `GSON`。
+> - **验证**：`testAppDebugUnitTest` 631 项（含上述 6 项）、`:core:data:testAndroidHostTest` 72 项 +
+>   `:core:data:desktopTest` 81 项、`:core:model:testAndroidHostTest` 59 项、`:core:ui` 9 项、
+>   `:core:viewmodel` 8 项、`:core:platform` 73 项，全绿；`assembleAppDebug`、三门禁、
+>   `git diff --check`。
+> - **效果**：`HighlightTagRuleViewModel`、`DictRuleViewModel` 的 app 层 import **归零**；
+>   `TagGroupRuleViewModel` 只剩 `io.legado.app.R`；`TxtTocRuleViewModel` 剩 `R` + `help.DefaultData`。
+> - **Stage B 剩余**：只剩 #3（`ImportComponents` 的 JSON 树）与 #4（`R` 字符串策略）。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

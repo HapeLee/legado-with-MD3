@@ -54,18 +54,6 @@ fun String?.isJson(): Boolean =
         }
     } ?: false
 
-fun String?.isJsonObject(): Boolean =
-    this?.run {
-        val str = this.trim()
-        str.startsWith("{") && str.endsWith("}")
-    } ?: false
-
-fun String?.isJsonArray(): Boolean =
-    this?.run {
-        val str = this.trim()
-        str.startsWith("[") && str.endsWith("]")
-    } ?: false
-
 fun String?.isXml(): Boolean =
     this?.run {
         val str = this.trim()
