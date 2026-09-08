@@ -1674,7 +1674,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="78"
             column="5"/>
     </issue>
@@ -1685,7 +1685,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="201"
             column="5"/>
     </issue>
@@ -1696,7 +1696,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="262"
             column="5"/>
     </issue>
@@ -1707,7 +1707,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="329"
             column="5"/>
     </issue>
@@ -1718,7 +1718,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="361"
             column="5"/>
     </issue>
@@ -1729,7 +1729,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="392"
             column="5"/>
     </issue>
@@ -1740,7 +1740,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="431"
             column="5"/>
     </issue>
@@ -1751,7 +1751,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="562"
             column="5"/>
     </issue>
@@ -1762,7 +1762,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt"
             line="654"
             column="5"/>
     </issue>

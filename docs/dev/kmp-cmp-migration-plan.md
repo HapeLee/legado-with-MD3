@@ -590,6 +590,35 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 >   `utils.GSON`（`importComponents/*`、`Json*Editor`、`text/HtmlContent`）、以及非组件的
 >   feature 自身 `:app` 依赖（`base.BaseRuleViewModel`、`data.repository.UploadRepository`、
 >   `utils.*` 扩展）。`RuleListScaffold` 的 topbar 阻塞已随本片解除。
+>
+> **P4 组件侧下沉（第四片，2026-09-08）**：下沉 **10 文件 / 2295 行** 进 `:core:ui`
+> ——`rules/{RuleEditSheet,RuleListScaffold}.kt`、`list/ListScaffold.kt`、
+> `settingItem/{CompactSettingItems,TinySettingItems}.kt`、`ReorderableConfigList.kt`、
+> `AppPullToRefresh.kt`、`reader/ReaderMenuGlass.kt`、`FloatingBottomBar.kt`、
+> `ui/animation/DampedDragAnimation.kt`。`:app` 侧组件文件由 39 降到 **30**，
+> 剩余文件全部卡在具体的 app 单例/实体依赖上，不再有「只差资源」的文件。
+>
+> - **判定规则收紧为「无 app 单例依赖」**：本片文件只差 `io.legado.app.R` 字符串
+>   （18 条 × 4 语言，沿用「库侧默认值 + app 覆盖」规则）或根本无 app 依赖；无一引用
+>   `utils.*` / `data.*` / `base.*`。`RuleListScaffold` + `RuleEditSheet` 是 tagrules 的
+>   最后两个组件阻塞，随本片解除。
+> - **新增第三方依赖 `io.github.kyant0:capsule`**：`FloatingBottomBar` 用
+>   `com.kyant.capsule.ContinuousCapsule` 做连续胶囊裁剪。app 侧本来就有这个依赖，只是
+>   `:core:ui` 未声明——**「文件无 app 单例依赖」不等于「库依赖已齐」**，仍要靠编译兜底。
+> - **`DampedDragAnimation` 一并下沉**是解开 `FloatingBottomBar` 的前置：它只依赖
+>   `inspectDragGestures`（上一片已进 `:core:ui`）。`image/cover/{BookshelfCover,CoverBlurBackdrop}.kt`
+>   因引用留守的 `CoilBookCover.kt` 而**主动留下**（core 不能反向依赖 app）。
+> - **lint 基线**：9 条 `settingItem/TinySettingItems.kt` 条目重定位为
+>   `../core/ui/src/main/kotlin/...`。
+> - **验证**：`:core:ui:compileDebugKotlin` + `:core:ui:testDebugUnitTest`（8 项）、
+>   `:app:compileAppDebugKotlin`、`testAppDebugUnitTest`（**630 项全绿**）、`assembleAppDebug`、
+>   `checkSharedPurity` / `checkModuleDependencies` / `verifyConfigArchitecture` 全绿、
+>   `git diff --check` 干净；`:app:lintAppDebug` 5 error（与前三片逐条相同，全部 app 自有）/
+>   87 warning。
+> - **Stage B 的组件侧只剩 `importComponents/ImportComponents.kt`（`utils.GSON`）**；
+>   真正的闸门已转到 ViewModel 侧：`base.BaseRuleViewModel`（`Application`/`BaseViewModel`/
+>   okhttp 上传）、`data.repository.UploadRepository`、`utils.{GSON,getClipText,sendToClip,toastOnUi}`、
+>   `help.book.applyTagGroupRules`。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

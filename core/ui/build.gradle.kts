@@ -82,6 +82,8 @@ dependencies {
     implementation(libs.miuix.icons.android)
     implementation(libs.miuix.preference.android)
     implementation(libs.backdrop)
+    // `FloatingBottomBar` 用 `com.kyant.capsule.ContinuousCapsule` 做连续胶囊裁剪。
+    implementation(libs.capsule)
     implementation(libs.coil.compose)
 
     implementation(platform(libs.koin.bom))
