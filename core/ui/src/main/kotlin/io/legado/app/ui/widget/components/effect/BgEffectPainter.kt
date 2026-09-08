@@ -8,8 +8,9 @@ import top.yukonga.miuix.kmp.blur.asBrush
 import kotlin.math.cos
 import kotlin.math.sin
 
+/** 跨模块复用：`:app` 的 BgEffectBackground 仍消费本类型，故保持 public。 */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-internal class BgEffectPainter(
+class BgEffectPainter(
     private val isOs3: Boolean = true,
 ) {
 

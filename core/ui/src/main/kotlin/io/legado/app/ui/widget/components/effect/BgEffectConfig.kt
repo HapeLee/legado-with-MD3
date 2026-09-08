@@ -173,7 +173,8 @@ object BgEffectConfig {
         colorInterpPeriod = 8.0f, lightOffset = 0.0f, saturateOffset = 0.17f, pointOffset = 0.4f
     )
 
-    internal fun get(
+    /** 跨模块复用：`:app` 的 BgEffectBackground 仍消费本方法，故保持 public。 */
+    fun get(
         deviceType: DeviceType,
         isDark: Boolean,
         isOs3: Boolean = true, // 默认且仅使用 OS3 逻辑

@@ -504,6 +504,39 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 > /`:app:compileAppDebugKotlin` 全绿。**首个 Feature 选择留待下一片**（候选 `about`/`highlightTagRule` 均已做
 > 依赖审计：`about` 的 Screen/Contract 深度耦合 `AppScaffold`/`SettingItem`/`FileDoc`/`AppUpdate`，
 > `highlightTagRule` Contract 已泄漏 `android.net.Uri`，均需在迁移前先解耦 Contract 层）。
+>
+> **P4 组件侧下沉（2026-09-08）**：`ui/theme` 已落 `:core:ui` 之后的第一刀组件迁移——把
+> `ui/widget/components` 中 **零 `io.legado.app.R`、零 app 单例** 的最大闭包子集
+> **80 文件 / 8412 行** 下沉进 `:core:ui`（保留原包名 → `:app` 的 import 零改动），
+> `:app` 侧同类文件由 146 降到 66。
+>
+> - **切片规则（可机械复核）**：文件不含 `io.legado.app.R`、不 import app 层包（`ui.theme`/
+>   `ui.widget.components`/`domain.model` 除外）、无 `ui.main.*`，且其组件内依赖闭包同样满足。
+>   **这纠正了先前判断**——43 处 `R.*` 只落在 43 个文件上，并不挡住整包约 60% 的组件。
+> - **未下沉的 66 个文件只有三类阻碍**：① 43 处 `R.*`（几乎全是 `stringResource`/`painterResource`；
+>   Android library 的 R 类只含本模块资源，`io.legado.app.R` 必然失效）；② `utils.GSON`
+>   （`importComponents/ImportComponents.kt`）；③ `ui.main.MainDestination`（`icon/AppIcons.kt`）。
+> - **9 个 `internal` 符号因跨模块不可见改 public**：`AnimatedActionButtonCore`、`SeriesButton` +
+>   `SeriesIconButtonStyle` + 4 个尺寸常量、`bgEffectDraw`、`BgEffectPainter`、`BgEffectConfig.get`、
+>   `sliderAccessibility`——纯可见性变化，行为零改动。**object 成员形态的 indented `internal`
+>   用正则扫不到，只有编译器能兜住。**
+> - **同包隐式依赖（无 import）是本次唯一的真实阻碍**：据此排除 `AppSearchBar.kt`（→`SearchBar`）、
+>   `image/cover/*`（→`CoilBookCover`）、`topbar/Glass*TopAppBar.kt`（→`TopBarButton.kt` 的 internal helper）
+>   ——core 不得反向依赖 app，这类文件只能留或整包一起后移。
+> - **`:core:ui` 依赖补齐**：`androidx.compose.material`、`compose.materialIcons`、
+>   `miuix-{blur,icons,preference}-android`。
+> - **验证**：`:core:ui:compileDebugKotlin` + `:core:ui:testDebugUnitTest`（8 项，含随生产代码迁走的
+>   `ReaderMenuVisualStateTest` 6 项）、`:app:compileAppDebugKotlin`、`:app:testAppDebugUnitTest`
+>   （**630 项全绿** = 原 636 − 迁走的 6 项）、`assembleAppDebug`、`checkSharedPurity` /
+>   `checkModuleDependencies` / `verifyConfigArchitecture` 全绿、`git diff --check` 干净。
+> - **`lintAppDebug` 仍红，但与本切片无关**：5 个 app 自有 error（`BookInfoScreen.kt` 2×
+>   `LocalContextGetResourceValueCall` + 1× `JavascriptInterface`，`BackstageWebView.kt` /
+>   `BottomWebViewDialog.kt` 各 1× `JavascriptInterface`），HEAD 基线里本就没有条目。迁移的 20 条
+>   基线条目已重定位为 `../core/ui/src/main/kotlin/...`（app lint 带 `checkDependencies=true`，
+>   会连带扫依赖源码），error 数由 12 回到 5，即**未新增任何 lint 问题**。
+> - **Stage B 仍未破冰**：三个 feature 自身深度依赖 `:app`（`BaseRuleViewModel`、`data.repository.*`、
+>   `data.entities.*`、`utils.GSON`、`io.legado.app.R`）。组件下沉只是必要条件之一；下一片应先解
+>   feature 自身的 `:app` 依赖，或先做那 43 处 `R.*` 的资源归属决策。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

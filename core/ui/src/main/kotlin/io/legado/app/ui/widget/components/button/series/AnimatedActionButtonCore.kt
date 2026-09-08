@@ -22,8 +22,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.delay
 
+/** 跨模块复用：`:app` 的顶栏按钮仍消费本函数，故保持 public。 */
 @Composable
-internal fun AnimatedActionButtonCore(
+fun AnimatedActionButtonCore(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     iconChecked: ImageVector,

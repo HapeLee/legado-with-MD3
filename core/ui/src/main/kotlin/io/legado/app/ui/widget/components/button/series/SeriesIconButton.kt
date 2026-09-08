@@ -48,21 +48,24 @@ import io.legado.app.ui.widget.components.text.AppText
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 internal val SeriesIconSize: Dp
     get() = IconButtonDefaults.mediumIconSize
-internal val MediumSeriesIconButtonSize = DpSize(40.dp, 40.dp)
-internal val MediumSeriesIconSize = SeriesIconSize
-internal val TopBarSeriesIconButtonSize = DpSize(36.dp, 36.dp)
-internal val TopBarSeriesIconSize = 20.dp
+// 以下尺寸常量被 `:app` 的顶栏按钮复用，故为 public。
+val MediumSeriesIconButtonSize = DpSize(40.dp, 40.dp)
+val MediumSeriesIconSize = SeriesIconSize
+val TopBarSeriesIconButtonSize = DpSize(36.dp, 36.dp)
+val TopBarSeriesIconSize = 20.dp
 internal val SmallButtonShape = RoundedCornerShape(50)
 
-internal enum class SeriesIconButtonStyle {
+/** `SeriesButton` 的样式选项；因 `SeriesButton` 跨模块可见，本枚举同为 public。 */
+enum class SeriesIconButtonStyle {
     Plain,
     Tonal,
     Outlined
 }
 
+/** 跨模块复用：`:app` 的顶栏按钮仍消费本函数，故保持 public。 */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun SeriesButton(
+fun SeriesButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,

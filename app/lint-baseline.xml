@@ -431,7 +431,7 @@
         errorLine1="                painter.updateResolution(size.width, size.height)"
         errorLine2="                        ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
             line="157"
             column="25"/>
     </issue>
@@ -442,7 +442,7 @@
         errorLine1="                painter.updateBoundIfNeeded(drawHeight, size.height, size.width)"
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
             line="158"
             column="25"/>
     </issue>
@@ -453,7 +453,7 @@
         errorLine1="                painter.updatePresetIfNeeded(preset)"
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
             line="159"
             column="25"/>
     </issue>
@@ -464,7 +464,7 @@
         errorLine1="                painter.updateColors(preset, colorStage())"
         errorLine2="                        ~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
             line="160"
             column="25"/>
     </issue>
@@ -475,7 +475,7 @@
         errorLine1="                painter.updateAnimTime(animTime)"
         errorLine2="                        ~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
             line="161"
             column="25"/>
     </issue>
@@ -486,7 +486,7 @@
         errorLine1="                painter.updatePointsAnim(animTime, preset)"
         errorLine2="                        ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
             line="162"
             column="25"/>
     </issue>
@@ -497,7 +497,7 @@
         errorLine1="                drawRect(painter.brush, alpha = alphaValue)"
         errorLine2="                                 ~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
             line="164"
             column="34"/>
     </issue>
@@ -1091,7 +1091,7 @@
         errorLine1="    val requestWidth = with(density) { configuration.screenWidthDp.dp.roundToPx() }"
         errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/AppContainerBackground.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/AppContainerBackground.kt"
             line="70"
             column="40"/>
     </issue>
@@ -1102,7 +1102,7 @@
         errorLine1="    val requestHeight = with(density) { configuration.screenHeightDp.dp.roundToPx() }"
         errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/AppContainerBackground.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/AppContainerBackground.kt"
             line="71"
             column="41"/>
     </issue>
@@ -1267,7 +1267,7 @@
         errorLine1="private fun swipeActionsSemantics("
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/swipe/SwipeActionContainer.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/swipe/SwipeActionContainer.kt"
             line="122"
             column="13"/>
     </issue>
@@ -1289,7 +1289,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/alert/AppAlertDialog.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/alert/AppAlertDialog.kt"
             line="158"
             column="5"/>
     </issue>
@@ -1586,7 +1586,7 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/menuItem/RoundDropdownMenuItem.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/menuItem/RoundDropdownMenuItem.kt"
             line="48"
             column="5"/>
     </issue>
@@ -2852,7 +2852,7 @@
         errorLine1="            val layoutInfo = listState.layoutInfo"
         errorLine2="                                       ~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
             line="84"
             column="40"/>
     </issue>
@@ -2863,7 +2863,7 @@
         errorLine1="                    listState.layoutInfo.afterContentPadding"
         errorLine2="                              ~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
             line="109"
             column="31"/>
     </issue>
@@ -2874,7 +2874,7 @@
         errorLine1="                    listState.layoutInfo.beforeContentPadding -"
         errorLine2="                              ~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
             line="113"
             column="31"/>
     </issue>
@@ -2885,7 +2885,7 @@
         errorLine1="                    listState.layoutInfo.afterContentPadding -"
         errorLine2="                              ~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
             line="114"
             column="31"/>
     </issue>
@@ -2896,7 +2896,7 @@
         errorLine1="            val layoutInfo = state.layoutInfo"
         errorLine2="                                   ~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
             line="301"
             column="36"/>
     </issue>
@@ -2907,7 +2907,7 @@
         errorLine1="                    state.layoutInfo.afterContentPadding"
         errorLine2="                          ~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
             line="322"
             column="27"/>
     </issue>
@@ -2918,7 +2918,7 @@
         errorLine1="            LaunchedEffect(state.firstVisibleItemScrollOffset) {"
         errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/lazylist/VerticalFastScroller.kt"
             line="349"
             column="34"/>
     </issue>
@@ -4443,7 +4443,7 @@
         errorLine1="private data class BgEffectElement("
         errorLine2="                   ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectModifier.kt"
             line="36"
             column="20"/>
     </issue>

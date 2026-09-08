@@ -11,7 +11,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-internal fun Modifier.bgEffectDraw(
+/** 跨模块复用：`:app` 的 BgEffectBackground 仍消费本 Modifier，故保持 public。 */
+fun Modifier.bgEffectDraw(
     painter: BgEffectPainter,
     preset: BgEffectConfig.Config,
     surface: Color,

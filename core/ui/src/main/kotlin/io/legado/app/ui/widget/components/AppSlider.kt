@@ -49,7 +49,8 @@ fun AppSlider(
     }
 }
 
-internal fun Modifier.sliderAccessibility(
+/** 跨模块复用：`:app` 的 SliderSettingItem / CompactSettingItems 仍消费本 Modifier，故保持 public。 */
+fun Modifier.sliderAccessibility(
     label: String?,
     value: String?,
 ): Modifier {
