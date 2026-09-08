@@ -7,8 +7,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import io.legado.app.R
-
+import io.legado.app.core.ui.R
 @Composable
 fun Modifier.reorderAccessibility(
     index: Int,

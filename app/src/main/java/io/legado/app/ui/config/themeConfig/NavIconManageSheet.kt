@@ -27,6 +27,7 @@ import coil3.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.ui.main.MainDestination
+import io.legado.app.ui.main.mainDestinationIcon
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -109,7 +110,7 @@ fun NavIconManageSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         AppIcon(
-                            imageVector = AppIcons.mainDestination(
+                            imageVector = mainDestinationIcon(
                                 destination.mainDestination,
                                 selected = false,
                             ),

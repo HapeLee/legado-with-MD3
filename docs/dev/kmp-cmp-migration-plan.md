@@ -537,6 +537,31 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 > - **Stage B 仍未破冰**：三个 feature 自身深度依赖 `:app`（`BaseRuleViewModel`、`data.repository.*`、
 >   `data.entities.*`、`utils.GSON`、`io.legado.app.R`）。组件下沉只是必要条件之一；下一片应先解
 >   feature 自身的 `:app` 依赖，或先做那 43 处 `R.*` 的资源归属决策。
+>
+> **P4 组件侧下沉（第二片，2026-09-08）**：再下沉 **20 文件 / 3111 行** 进 `:core:ui`，并**建立
+> `:core:ui` 的字符串资源归属**。`:app` 侧组件文件由 66 降到 46，`:core:ui` 组件面达 100 文件。
+>
+> - **关键杠杆是 `AppIcons`**：它是 9 个组件依赖的枢纽，唯一的 app 依赖是导航枚举
+>   `ui.main.MainDestination`。把 `mainDestination()` 映射搬到宿主侧新文件
+>   `app/ui/main/MainDestinationIcons.kt`（改 4 处调用点），`AppIcons` 即与导航语义解耦、可下沉。
+> - **资源归属规则**：`:core:ui` 自带 `res/values{,-zh-rCN,-zh-rHK,-zh-rTW}/strings.xml`（本片 55 条）
+>   作为**默认值**；app 侧同名资源按 Android 资源合并优先级覆盖，**app 的代码与资源零改动**。
+>   迁移文件只把 `import io.legado.app.R` 换成 `import io.legado.app.core.ui.R`（本片 17 处）。
+> - **新增两个纯 UI 依赖**：`kotlinx-collections-immutable`、`reorderable`（都是 app 已在用的 Compose 库）。
+> - **主动退回 4 个文件**：`bookmark/{BookmarkItem,BookmarkEditSheet}.kt`、
+>   `explore/{ExploreKindItem,ExploreKindLayout}.kt` 需要 `:core:data` 的 Room 实体
+>   （`Bookmark`/`ExploreKind`）——**不让 UI 模块依赖数据层**，故留在 `:app`。这条边界应写进
+>   `:core:ui` 的依赖纪律：只依赖 `:core:model` + UI 库，不依赖 `:core:data`。
+> - **验证**：`:core:ui:compileDebugKotlin` + `testDebugUnitTest`（8 项）、`:app:compileAppDebugKotlin`、
+>   `testAppDebugUnitTest`（**630 项全绿**）、`assembleAppDebug`（三份 APK）、
+>   `checkSharedPurity` / `checkModuleDependencies` / `verifyConfigArchitecture` 全绿、
+>   `git diff --check` 干净；`:app:lintAppDebug` 与上一片同（5 个既有 app 自有 error，本片未新增，
+>   core/ui 相关 error 为 0）。
+> - **tagrules 的组件依赖已基本解除**：`AppIcons`、`SelectionBottomBar`/`ActionItem`、
+>   `AppFloatingActionButton`、`SearchBar`、`ReorderableSelectionItem`、`FilePickerSheet` 均已进
+>   `:core:ui`；只剩 `importComponents/ImportComponents.kt`（GSON + 16 字符串）与
+>   `rules/RuleListScaffold.kt`（依赖 topbar 链 `TopBarButton` → `TopBarLiquidGlass` →
+>   `ui.animation.InteractiveHighlight`）。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

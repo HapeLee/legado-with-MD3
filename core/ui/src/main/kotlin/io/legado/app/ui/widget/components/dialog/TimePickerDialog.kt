@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import io.legado.app.R
+import io.legado.app.core.ui.R
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import java.util.Locale
 

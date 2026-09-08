@@ -62,6 +62,8 @@ dependencies {
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.material)
     implementation(libs.compose.materialIcons)
+    implementation(libs.kotlinx.collections.immutable)
+    implementation(libs.reorderable)
 
     implementation(libs.core.ktx)
     implementation(libs.material.kolor)

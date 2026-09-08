@@ -91,7 +91,6 @@ import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
 import io.legado.app.ui.theme.GlassDefaults
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.navigation.AppNavigationBar
@@ -313,7 +312,7 @@ fun MainScreen(
                                     ),
                                 selected = selected,
                                 onClick = { handleMainDestinationClick(index, destination) },
-                                icon = AppIcons.mainDestination(destination, selected),
+                                icon = mainDestinationIcon(destination, selected),
                                 label = destinationLabel,
                             )
                             if (destination == MainDestination.Bookshelf && showGroupMenu) {
@@ -450,7 +449,7 @@ fun MainScreen(
                                     handleMainDestinationClick(index, destination)
                                 },
                                 labelString = stringResource(destination.labelId),
-                                iconVector = AppIcons.mainDestination(destination, selected),
+                                iconVector = mainDestinationIcon(destination, selected),
                                 m3Icon = {
                                     NavigationIcon(
                                         destination = destination,
@@ -801,7 +800,7 @@ private fun NavigationIcon(
             modifier = modifier.size(40.dp)
         )
     } else {
-        val icon = AppIcons.mainDestination(destination, selected)
+        val icon = mainDestinationIcon(destination, selected)
         AppIcon(icon, contentDescription = null, modifier = modifier)
     }
 }

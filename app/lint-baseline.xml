@@ -1432,7 +1432,7 @@
         errorLine1="    modifier: Modifier = Modifier"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/heatmap/HeatmapCalendarComponents.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/heatmap/HeatmapCalendarComponents.kt"
             line="137"
             column="5"/>
     </issue>
