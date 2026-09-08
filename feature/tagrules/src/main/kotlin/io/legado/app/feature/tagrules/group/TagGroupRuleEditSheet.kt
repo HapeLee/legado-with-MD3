@@ -1,12 +1,9 @@
-package io.legado.app.feature.tagrules.highlight
+package io.legado.app.feature.tagrules.group
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,55 +25,50 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.legado.app.R
-import io.legado.app.data.entities.HighlightTagRule
+import io.legado.app.feature.tagrules.R
+import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.AdaptiveSwitch
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HighlightTagRuleEditSheet(
+fun TagGroupRuleEditSheet(
     show: Boolean,
-    rule: HighlightTagRule?,
+    rule: TagGroupRule?,
     onDismissRequest: () -> Unit,
-    onSave: (HighlightTagRule) -> Unit,
-    onCopy: (HighlightTagRule) -> Unit,
-    onPaste: () -> HighlightTagRule?,
+    onSave: (TagGroupRule) -> Unit,
+    onCopy: (TagGroupRule) -> Unit,
+    onPaste: () -> TagGroupRule?,
 ) {
     val scope = rememberCoroutineScope()
 
     val isNew = rule == null || rule.id == 0L
     val initial = remember(show, rule) {
-        rule ?: HighlightTagRule()
+        rule ?: TagGroupRule()
     }
 
-    var title by remember(show, rule) { mutableStateOf(initial.title) }
     var pattern by remember(show, rule) { mutableStateOf(initial.pattern) }
-    var enabled by remember(show, rule) { mutableStateOf(initial.enabled) }
-
+    var groupName by remember(show, rule) { mutableStateOf(initial.groupName) }
     var showMenu by remember(show, rule) { mutableStateOf(false) }
 
-    fun getCurrentRule(): HighlightTagRule {
+    fun getCurrentRule(): TagGroupRule {
         return initial.copy(
-            title = title,
             pattern = pattern,
-            enabled = enabled
+            groupName = groupName
         )
     }
 
     AppModalBottomSheet(
         title = if (isNew) {
-            stringResource(R.string.highlight_tag_add_rule)
+            stringResource(R.string.tag_group_add_rule)
         } else {
-            stringResource(R.string.highlight_tag_edit_rule)
+            stringResource(R.string.tag_group_edit_rule)
         },
         startAction = {
             MediumTonalButton(
@@ -107,9 +99,8 @@ fun HighlightTagRuleEditSheet(
                         onClick = {
                             scope.launch {
                                 onPaste()?.let { pasted ->
-                                    title = pasted.title
                                     pattern = pasted.pattern
-                                    enabled = pasted.enabled
+                                    groupName = pasted.groupName
                                 }
                             }
                             showMenu = false
@@ -131,10 +122,10 @@ fun HighlightTagRuleEditSheet(
             ) {
                 AppTextField(
                     modifier = Modifier.fillMaxWidth(),
-                    value = title,
-                    onValueChange = { title = it },
+                    value = groupName,
+                    onValueChange = { groupName = it },
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = stringResource(R.string.highlight_tag_title),
+                    label = stringResource(R.string.tag_group_name),
                     singleLine = true
                 )
                 AppTextField(
@@ -142,26 +133,10 @@ fun HighlightTagRuleEditSheet(
                     value = pattern,
                     onValueChange = { pattern = it },
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = stringResource(R.string.highlight_tag_pattern),
+                    label = stringResource(R.string.tag_group_pattern),
                     minLines = 3
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AppText(
-                        text = stringResource(R.string.enabled),
-                        style = LegadoTheme.typography.bodyMedium
-                    )
-                    AdaptiveSwitch(
-                        checked = enabled,
-                        onCheckedChange = { enabled = it }
-                    )
-                }
             }
 
             AppFloatingActionButton(
@@ -169,7 +144,6 @@ fun HighlightTagRuleEditSheet(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
-                tooltipText = stringResource(R.string.action_save),
                 icon = Icons.Default.Save
             )
         }

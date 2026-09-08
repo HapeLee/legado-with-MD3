@@ -230,6 +230,7 @@ dependencies {
     implementation(project(":modules:book"))
     implementation(project(":modules:rhino"))
     implementation(project(":feature:reader:core"))
+    implementation(project(":feature:tagrules"))
     implementation(project(":core:platform"))
     implementation(project(":core:model"))
     implementation(project(":core:data"))

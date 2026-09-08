@@ -2,7 +2,7 @@ package io.legado.app.feature.tagrules.group
 
 import android.app.Application
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
+import io.legado.app.feature.tagrules.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.core.platform.ClipboardProvider

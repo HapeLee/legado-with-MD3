@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- :feature:tagrules 自带的字符串默认值；app 侧同名资源按 Android 资源合并优先级覆盖本文件。 -->
+<resources>
+    <string name="action_save">保存</string>
+    <string name="close">关闭</string>
+    <string name="copy_rule">拷贝规则</string>
+    <string name="enabled">已启用</string>
+    <string name="highlight_tag_add_rule">添加规则</string>
+    <string name="highlight_tag_edit_rule">编辑规则</string>
+    <string name="highlight_tag_pattern">匹配规则</string>
+    <string name="highlight_tag_title">标题</string>
+    <string name="more_menu">更多菜单</string>
+    <string name="paste_rule">粘贴规则</string>
+    <string name="tag_group_add_rule">新建标签分组</string>
+    <string name="tag_group_edit_rule">编辑分组规则</string>
+    <string name="tag_group_name">分组名称</string>
+    <string name="tag_group_pattern">匹配规则（匹配书籍标签）</string>
+    <string name="tag_group_sync_complete">分组同步完成</string>
+</resources>

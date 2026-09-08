@@ -753,6 +753,31 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 > - **效果**：`HighlightTagRuleViewModel`、`DictRuleViewModel` 的 app 层 import **归零**；
 >   `TagGroupRuleViewModel` 只剩 `io.legado.app.R`；`TxtTocRuleViewModel` 剩 `R` + `help.DefaultData`。
 > - **Stage B 剩余**：只剩 #3（`ImportComponents` 的 JSON 树）与 #4（`R` 字符串策略）。
+>
+> **P4 Stage B 首例：`:feature:tagrules` 模块成立（第十片，2026-09-08）**：新建
+> `:feature:tagrules`（Android library + Compose），迁入 **6 文件 / 918 行**——
+> `group/{TagGroupRuleContract,TagGroupRuleEditSheet,TagGroupRuleViewModel}.kt` 与
+> `highlight/{HighlightTagRuleContract,HighlightTagRuleEditSheet,HighlightTagRuleViewModel}.kt`。
+> 包名保持 `io.legado.app.feature.tagrules.*`，**`:app` 侧 import 零改动**。
+>
+> - **资源策略落地（本片即 #4）**：模块自带 `res/values{,-zh-rCN,-zh-rHK,-zh-rTW}/strings.xml`
+>   （15 条，从 app 原样抄录）作默认值；3 处 `import io.legado.app.R` 改为
+>   `import io.legado.app.feature.tagrules.R`。app 侧同名资源按资源合并优先级覆盖 → 文案不变。
+> - **`:app` 只加一条 project 依赖**；`ui/main/bookshelf/GroupManageSheet.kt` 与 `di/appModule.kt`
+>   的引用（`TagGroupRuleEditSheet` / `TagGroupRuleViewModel` / `TagGroupRuleIntent`）因包名保留而零改动。
+> - **仍未迁入**：`highlight/HighlightTagRuleScreen.kt`（376 行）——它依赖 app 侧的
+>   `ui.widget.components.importComponents.{BatchImportDialog, SourceInputDialog}`（Gson JSON 树，
+>   即剩余清单 #3）。这条待办写在该模块 `build.gradle.kts` 的头注释里。
+> - **新依赖补齐的教训**：首次编译报 `Unresolved reference 'isJsonArray'`——第九片把两个谓词放进
+>   `:core:model`，而 `:core:data` 对 `:core:model` 是 `implementation`，**不传递**。新建模块时按
+>   「实际用到的符号」逐条列依赖，别假设能透传。
+> - **验证（干净重建：删 `app/build` 与 `feature/tagrules/build`）**：`:feature:tagrules:compileDebugKotlin`、
+>   `testAppDebugUnitTest` 631 项、`:core:data` 72/81 项、`:core:model` 59 项、`:core:ui` 9 项、
+>   `:core:viewmodel` 8 项、`:core:platform` 73 项，全绿；`assembleAppDebug`；三门禁；
+>   `git diff --check`；`:feature:tagrules:compileDebugKotlin` 已加入 `verify.yml`。
+> - **Stage B 剩余**：只剩 #3（`ImportComponents` 的 JSON 树），之后 `HighlightTagRuleScreen.kt`
+>   即可随最后一个切片迁入，tagrules 提升完成。
+> - **注意**：`:feature:tagrules` 目前**没有测试**（tagrules 原本也没有），CI 只编译它。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 
