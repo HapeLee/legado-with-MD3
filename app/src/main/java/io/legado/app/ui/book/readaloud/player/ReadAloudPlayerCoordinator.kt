@@ -1,8 +1,8 @@
 package io.legado.app.ui.book.readaloud.player
+import kotlinx.coroutines.flow.onStart
+import io.legado.app.utils.eventBus.AppEventBus
 
 import android.app.Application
-import androidx.lifecycle.Observer
-import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.constant.EventBus
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
@@ -18,10 +18,8 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -37,14 +35,9 @@ class ReadAloudPlayerCoordinator(
     private val bookRepository: BookRepository,
 ) {
     private val refreshRequests = MutableSharedFlow<Unit>(replay = 1)
-    private val bookChanges = callbackFlow {
-        val observer = Observer<Any> { trySend(Unit) }
-        EVENT_KEYS.forEach { LiveEventBus.get<Any>(it).observeForever(observer) }
-        trySend(Unit)
-        awaitClose {
-            EVENT_KEYS.forEach { LiveEventBus.get<Any>(it).removeObserver(observer) }
-        }
-    }
+    private val bookChanges: Flow<Unit> = AppEventBus.observeAll<Any>(EVENT_KEYS)
+        .map { Unit }
+        .onStart { emit(Unit) }
     private val configChanges = ReadConfigUpdateBus.events.map { }
     private val bookState =
         merge(bookChanges, refreshRequests, configChanges).map { snapshotBook() }

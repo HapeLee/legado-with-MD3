@@ -1,10 +1,9 @@
 package io.legado.app.ui.book.audio
+import io.legado.app.utils.eventBus.AppEventBus
 
 import android.app.Application
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
@@ -30,12 +29,10 @@ import io.legado.app.utils.postEvent
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -105,13 +102,7 @@ class AudioPlayViewModel(
         }
     }
 
-    private inline fun <reified T> eventFlow(tag: String) = callbackFlow {
-        val obs = Observer<T> { trySend(it) }
-        LiveEventBus.get<T>(tag).observeForever(obs)
-        awaitClose {
-            LiveEventBus.get<T>(tag).removeObserver(obs)
-        }
-    }
+    private inline fun <reified T> eventFlow(tag: String) = AppEventBus.observe<T>(tag)
 
     fun onLoadingChanged(loading: Boolean) {
         coordinator.setLoading(loading)

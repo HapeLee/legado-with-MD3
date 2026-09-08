@@ -1,4 +1,5 @@
 package io.legado.app.ui.book.read
+import io.legado.app.utils.eventBus.AppEventBus
 
 import android.app.Application
 import android.net.Uri
@@ -90,14 +91,12 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.takeWhile
@@ -1729,21 +1728,9 @@ class ReadBookViewModel(
 
     // --- EventBus Bridge ---
 
-    private inline fun <reified T> eventFlow(tag: String) = callbackFlow {
-        val obs = androidx.lifecycle.Observer<T> { trySend(it) }
-        com.jeremyliao.liveeventbus.LiveEventBus.get<T>(tag).observeForever(obs)
-        awaitClose {
-            com.jeremyliao.liveeventbus.LiveEventBus.get<T>(tag).removeObserver(obs)
-        }
-    }
+    private inline fun <reified T> eventFlow(tag: String) = AppEventBus.observe<T>(tag)
 
-    private inline fun <reified T> eventFlowSticky(tag: String) = callbackFlow {
-        val obs = androidx.lifecycle.Observer<T> { trySend(it) }
-        com.jeremyliao.liveeventbus.LiveEventBus.get<T>(tag).observeStickyForever(obs)
-        awaitClose {
-            com.jeremyliao.liveeventbus.LiveEventBus.get<T>(tag).removeObserver(obs)
-        }
-    }
+    private inline fun <reified T> eventFlowSticky(tag: String) = AppEventBus.observeSticky<T>(tag)
 
     private fun collectEventBus() {
         viewModelScope.launch {

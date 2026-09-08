@@ -14,8 +14,6 @@ import coil3.SingletonImageLoader
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
-import com.jeremyliao.liveeventbus.LiveEventBus
-import com.jeremyliao.liveeventbus.logger.DefaultLogger
 import com.script.rhino.ReadOnlyJavaObject
 import com.script.rhino.RhinoScriptEngine
 import com.script.rhino.RhinoWrapFactory
@@ -91,7 +89,6 @@ import splitties.systemservices.notificationManager
 import java.io.File
 import java.net.URL
 import java.util.concurrent.TimeUnit
-import java.util.logging.Level
 
 class App : Application(), SingletonImageLoader.Factory {
 
@@ -217,11 +214,6 @@ class App : Application(), SingletonImageLoader.Factory {
             //预下载Cronet so
             Cronet.preDownload()
             createNotificationChannels()
-            LiveEventBus.config()
-                .lifecycleObserverAlwaysActive(true)
-                .autoClear(false)
-                .enableLogger(BuildConfig.DEBUG || otherGateway.currentSettings.recordLog)
-                .setLogger(EventLogger())
             DefaultData.upVersion()
             AppFreezeMonitor.init(this@App)
             DispatchersMonitor.init()
@@ -364,23 +356,6 @@ class App : Application(), SingletonImageLoader.Factory {
         RhinoWrapFactory.register(ContentRule::class.java, ReadOnlyJavaObject.factory)
         RhinoWrapFactory.register(BookChapter::class.java, ReadOnlyJavaObject.factory)
         RhinoWrapFactory.register(Book.ReadConfig::class.java, ReadOnlyJavaObject.factory)
-    }
-
-    class EventLogger : DefaultLogger() {
-
-        override fun log(level: Level, msg: String) {
-            super.log(level, msg)
-            LogUtils.d(TAG, msg)
-        }
-
-        override fun log(level: Level, msg: String, th: Throwable?) {
-            super.log(level, msg, th)
-            LogUtils.d(TAG, "$msg\n${th?.stackTraceToString()}")
-        }
-
-        companion object {
-            private const val TAG = "[LiveEventBus]"
-        }
     }
 
     companion object {

@@ -1,4 +1,5 @@
 package io.legado.app.ui.book.info
+import io.legado.app.utils.eventBus.AppEventBus
 
 import android.app.Activity.RESULT_OK
 import android.app.Application
@@ -76,7 +77,6 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -85,7 +85,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -162,13 +161,7 @@ class BookInfoViewModel(
         }
     }
 
-    private inline fun <reified T> eventFlow(tag: String): Flow<T> = callbackFlow {
-        val obs = androidx.lifecycle.Observer<T> { trySend(it) }
-        com.jeremyliao.liveeventbus.LiveEventBus.get<T>(tag).observeForever(obs)
-        awaitClose {
-            com.jeremyliao.liveeventbus.LiveEventBus.get<T>(tag).removeObserver(obs)
-        }
-    }
+    private inline fun <reified T> eventFlow(tag: String): Flow<T> = AppEventBus.observe(tag)
 
     private var currentBook: Book? = null
         set(value) {

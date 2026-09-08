@@ -1,8 +1,9 @@
 package io.legado.app.ui.book.audio
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import io.legado.app.utils.eventBus.AppEventBus
 
 import android.app.Application
-import androidx.lifecycle.Observer
-import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.Status
 import io.legado.app.data.repository.BookRepository
@@ -17,11 +18,9 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -32,7 +31,7 @@ import io.legado.app.data.entities.save
 
 /**
  * 有声书播放器与旧版 [AudioPlay] 模型 / [AudioPlayService] 之间的兼容边界：
- * 监听 LiveEventBus 播放事件驱动重新快照，对外暴露稳定的状态流与播放动作。
+ * 监听应用事件总线（AppEventBus）播放事件驱动重新快照，对外暴露稳定的状态流与播放动作。
  */
 class AudioPlayCoordinator(
     private val application: Application,
@@ -43,18 +42,13 @@ class AudioPlayCoordinator(
     private val refreshRequests = MutableSharedFlow<Unit>(replay = 1)
     private val loading = MutableStateFlow(false)
 
-    private val liveEvents = callbackFlow {
-        val observer = Observer<Any> { value ->
+    private val liveEvents: Flow<Unit> = AppEventBus.observeAll<Any>(EVENT_KEYS)
+        .onEach { value ->
             // AUDIO_SPEED 事件回写最新倍速（服务不持久化倍速，由模型进程内记忆）
             if (value is Float) AudioPlay.speed = value
-            trySend(Unit)
         }
-        EVENT_KEYS.forEach { LiveEventBus.get<Any>(it).observeForever(observer) }
-        trySend(Unit)
-        awaitClose {
-            EVENT_KEYS.forEach { LiveEventBus.get<Any>(it).removeObserver(observer) }
-        }
-    }
+        .map { Unit }
+        .onStart { emit(Unit) }
     private val bookState = merge(liveEvents, refreshRequests).map { snapshotBook() }
 
     /**

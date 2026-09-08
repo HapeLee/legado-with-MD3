@@ -43,7 +43,6 @@ jsoupxpath = "2.5.5"
 coroutines = "1.11.0"
 kotlinxDatetime = "0.6.2"
 lifecycleViewmodelCompose = "2.11.0"
-liveeventbus = "1.8.14"
 navigation3 = "1.1.7"
 # 1.2.0-alpha02 修复了预测式返回手势中 NavigationEventInput.dispatchOnBackProgressed
 # 对已分离输入抛 IllegalStateException 的崩溃（1.1.2 仍会 checkNotNull 抛异常）。
@@ -233,7 +232,6 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 
-liveeventbus = { module = "com.github.michaellee123:LiveEventBus", version.ref = "liveeventbus" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 
 mozilla-rhino = { module = "org.mozilla:rhino", version.ref = "rhino" }
