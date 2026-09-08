@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.domain.model.TextProcessAction
-import io.legado.app.ui.book.read.ContentProcessConfigUiState
-import io.legado.app.ui.book.read.ContentProcessItemUi
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiState
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -71,7 +71,9 @@ fun ContentProcessesSheet(
 
             state.errorMessage != null -> {
                 AppText(
-                    text = state.errorMessage,
+                    // `?: ""` 不是防御：`when` 分支已判非空。只是 errorMessage 现属
+                    // :core:ui 的 public 属性，跨模块无法 smart cast，需显式取值。
+                    text = state.errorMessage ?: "",
                     color = LegadoTheme.colorScheme.error,
                     modifier = Modifier
                         .fillMaxWidth()

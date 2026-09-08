@@ -7,6 +7,8 @@ import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.model.ReadBook
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiState
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.collections.immutable.toImmutableList

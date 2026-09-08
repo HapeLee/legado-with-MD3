@@ -22,6 +22,7 @@ import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
@@ -319,26 +320,6 @@ data class EyeProtectionUiState(
     val configured: Boolean
         get() = enabled || autoNight
 }
-
-@Stable
-data class ContentProcessConfigUiState(
-    val isLoading: Boolean = false,
-    val items: ImmutableList<ContentProcessItemUi> = persistentListOf(),
-    val deleteItem: ContentProcessItemUi? = null,
-    val errorMessage: String? = null,
-)
-
-@Stable
-data class ContentProcessItemUi(
-    val id: String,
-    val kind: String,
-    val actionType: String,
-    val enabled: Boolean,
-    val chapterIndex: Int,
-    val selectedText: String,
-    val replacementText: String,
-    val createdAt: Long,
-)
 
 @Stable
 data class ReplaceRuleItemUi(

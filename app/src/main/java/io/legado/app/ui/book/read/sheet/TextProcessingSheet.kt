@@ -51,8 +51,8 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.domain.model.TextProcessAction
-import io.legado.app.ui.book.read.ContentProcessConfigUiState
-import io.legado.app.ui.book.read.ContentProcessItemUi
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiState
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReplaceRuleItemUi
 import io.legado.app.ui.theme.LegadoTheme
@@ -412,7 +412,8 @@ private fun ContentProcessesPage(
             }
 
             state.errorMessage != null -> AppText(
-                text = state.errorMessage,
+                // 同上：when 已判非空，跨模块无法 smart cast 才显式取值。
+                text = state.errorMessage ?: "",
                 color = LegadoTheme.colorScheme.error,
             )
 

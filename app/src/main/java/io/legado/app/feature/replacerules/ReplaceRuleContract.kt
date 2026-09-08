@@ -4,8 +4,8 @@ import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.ui.book.read.ContentProcessConfigUiState
-import io.legado.app.ui.book.read.ContentProcessItemUi
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiState
+import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
