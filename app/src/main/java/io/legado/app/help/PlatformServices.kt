@@ -2,19 +2,26 @@ package io.legado.app.help
 
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
+import io.legado.app.core.platform.Clipboard
 import io.legado.app.core.platform.CookieStore
 import io.legado.app.core.platform.KeyValueStore
 import io.legado.app.core.platform.Logger
 import io.legado.app.core.platform.SourceRuntime
 import io.legado.app.core.platform.SymmetricCrypto
+import io.legado.app.core.platform.Toaster
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.ConcurrentRateLimiter.Companion.updateConcurrentRate
 import io.legado.app.help.crypto.SymmetricCryptoAndroid
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.model.SharedJsScope
+import io.legado.app.utils.getClipText
 import io.legado.app.utils.isMainThread
+import io.legado.app.utils.longToastOnUi
+import io.legado.app.utils.sendToClip
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.runBlocking
+import splitties.init.appCtx
 
 /**
  * 下沉后 BaseSource 依赖的 5 个平台能力契约的 app 侧适配实现 + 注册。
@@ -92,6 +99,29 @@ object PlatformServices {
         override fun androidId(): String = AppConst.androidId
     }
 
+    /**
+     * 剪贴板：委托 app 侧 `Context.getClipText()` / `Context.sendToClip()`。
+     * 用 `appCtx`（splitties 全局 Context）——与两个扩展原本的使用方式一致。
+     */
+    private val clipboard = object : Clipboard {
+        override fun getText(): String? = appCtx.getClipText()
+
+        override fun setText(text: String) {
+            appCtx.sendToClip(text)
+        }
+    }
+
+    /** 轻提示：委托 app 侧 `Context.toastOnUi()` / `Context.longToastOnUi()`。 */
+    private val toaster = object : Toaster {
+        override fun toast(message: String) {
+            appCtx.toastOnUi(message)
+        }
+
+        override fun longToast(message: String) {
+            appCtx.longToastOnUi(message)
+        }
+    }
+
     /** 注入全部平台能力契约；App.onCreate 在 `super.onCreate()` 后调用。 */
     fun install() {
         io.legado.app.core.platform.KeyValueStoreProvider.install(keyValueStore)
@@ -99,5 +129,7 @@ object PlatformServices {
         io.legado.app.core.platform.SymmetricCryptoProvider.install(symmetricCrypto)
         io.legado.app.core.platform.LoggerProvider.install(logger)
         io.legado.app.core.platform.SourceRuntimeProvider.install(sourceRuntime)
+        io.legado.app.core.platform.ClipboardProvider.install(clipboard)
+        io.legado.app.core.platform.ToasterProvider.install(toaster)
     }
 }

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.platform.ClipboardProvider
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.data.repository.UploadRepository
@@ -12,10 +13,8 @@ import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getClipText
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
-import io.legado.app.utils.sendToClip
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
@@ -203,11 +202,11 @@ class DictRuleViewModel(
     fun delete(vararg dictRule: DictRule) = viewModelScope.launch { repository.delete(*dictRule) }
 
     fun copyRule(dictRule: DictRule) {
-        context.sendToClip(GSON.toJson(dictRule))
+        ClipboardProvider.current.setText(GSON.toJson(dictRule))
     }
 
     fun pasteRule(): DictRule? {
-        val text = context.getClipText()
+        val text = ClipboardProvider.current.getText()
         if (text.isNullOrBlank()) {
             _effects.tryEmit(DictRuleEffect.ShowMessage("剪贴板没有内容"))
             return null

@@ -678,6 +678,36 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 > - **仍未解除**（下一片）：子类仍用 `context.{getClipText,sendToClip,toastOnUi}`、
 >   `utils.GSON`、`help.book.applyTagGroupRules`、`io.legado.app.R`。`BaseRuleViewModel` 本身已可离开
 >   `:app`。
+>
+> **P4 规则 VM 去平台交互直连（第七片，2026-09-08）**：`:core:platform` 新增两个契约
+> `Clipboard`（`getText` / `setText`）与 `Toaster`（`toast` / `longToast`），各带
+> `XxxProvider`（`install` / `uninstall` / `current`，未安装抛 `IllegalStateException`）；
+> `:app` 的 `PlatformServices` 用既有 `Context.getClipText()` / `sendToClip()` /
+> `toastOnUi()` 适配并注册。4 个规则 VM（tagrules ×2、txttoc、dict）改用契约，
+> 不再直接调 `context` 扩展。
+>
+> - **保留既有副作用**：`Clipboard.setText` 委托 `sendToClip`，因此**仍会弹一次「复制完成」提示**。
+>   这是迁移前行为，按「行为等价优先」原样保留，并在契约注释里写明；要「只复制不提示」须另立能力。
+> - **两个接口而非一个**：`Toaster.toast` / `longToast` 对应 app 侧既有的 `toastOnUi` /
+>   `longToastOnUi` 一对扩展，不合并成带 `duration` 的方法——否则会把 Android `Toast.LENGTH_*`
+>   常量语义带进共享契约。
+> - **为什么走 provider 而不是 Koin 构造注入**：`:core:platform` 既有 5 个能力契约
+>   （`KeyValueStore` / `CookieStore` / `SymmetricCrypto` / `Logger` / `SourceRuntime`）统一是
+>   「`XxxProvider` + `PlatformServices.install()`」模式，剪贴板/轻提示属同一类平台能力；
+>   沿用同一模式可让 VM 不必再改构造函数（与第六片 Koin 注入的 `RuleTransferPlatform` 分工：
+>   后者是「规则导入导出的业务能力」，前者是「平台交互能力」）。
+> - **验证**：`:core:platform:testAndroidHostTest`（新增 5 项 provider 契约测试）+
+>   `:core:platform:desktopTest`（双目标）、`testAppDebugUnitTest`、`:core:ui` / `:core:viewmodel`
+>   测试、`assembleAppDebug`、三门禁、`git diff --check`。
+>
+> **Stage B（tagrules 提升为 Gradle 模块）剩余清单**（逐项都可独立成片）：
+>
+> | # | 剩余阻碍 | 涉及 | 备注 |
+> |---|---|---|---|
+> | 1 | `utils.GSON` / `fromJsonArray` / `fromJsonObject` / `isJsonArray` / `isJsonObject` | 6 个规则 VM + `importComponents/*`、`Json*Editor`、`text/HtmlContent` | `JsonCodec` 的 `decodeList` 返回 null 而 `fromJsonArray` 返回 `Result`（异常文案进 UI），需先定语义 |
+> | 2 | `help.book.applyTagGroupRules(books, rules)` | TagGroupRuleViewModel | 4 参重载已是纯 DAO 函数，可下沉 `:core:data`；VM 调的是 2 参重载（用 `appDb`） |
+> | 3 | `importComponents/ImportComponents.kt`（Gson JSON 树） | tagrules Screen | `JsonCodec` 无 JSON 树 API；或给 `:core:ui` 加 Gson，或抽 JSON 树契约 |
+> | 4 | `io.legado.app.R` 字符串 | tagrules 全部 Screen/EditSheet/VM | 沿用「库侧默认值 + app 覆盖」策略，为 `:feature:tagrules` 建自己的 `strings.xml` |
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

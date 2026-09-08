@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.platform.ClipboardProvider
+import io.legado.app.core.platform.ToasterProvider
 import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.TagGroupRuleRepository
@@ -15,11 +17,8 @@ import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getClipText
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
-import io.legado.app.utils.sendToClip
-import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
@@ -210,19 +209,19 @@ class TagGroupRuleViewModel(
     }
 
     fun copyRule(rule: TagGroupRule) {
-        context.sendToClip(GSON.toJson(rule))
+        ClipboardProvider.current.setText(GSON.toJson(rule))
     }
 
     fun pasteRule(): TagGroupRule? {
-        val text = context.getClipText()
+        val text = ClipboardProvider.current.getText()
         if (text.isNullOrBlank()) {
-            context.toastOnUi("剪贴板没有内容")
+            ToasterProvider.current.toast("剪贴板没有内容")
             return null
         }
         return try {
             GSON.fromJsonObject<TagGroupRule>(text).getOrThrow()
         } catch (e: Exception) {
-            context.toastOnUi("格式不对")
+            ToasterProvider.current.toast("格式不对")
             null
         }
     }
@@ -233,7 +232,7 @@ class TagGroupRuleViewModel(
             val rules = repository.getAll()
             applyTagGroupRules(books, rules)
             withContext(Dispatchers.Main) {
-                context.toastOnUi(R.string.tag_group_sync_complete)
+                ToasterProvider.current.toast(context.getString(R.string.tag_group_sync_complete))
             }
         }
     }

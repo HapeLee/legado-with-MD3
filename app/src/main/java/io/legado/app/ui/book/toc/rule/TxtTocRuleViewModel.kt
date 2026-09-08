@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.platform.ClipboardProvider
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
@@ -14,10 +15,8 @@ import io.legado.app.help.DefaultData
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getClipText
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
-import io.legado.app.utils.sendToClip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -186,7 +185,7 @@ class TxtTocRuleViewModel(
     }
 
     private fun copyRule(rule: TxtTocRule) {
-        context.sendToClip(GSON.toJson(rule))
+        ClipboardProvider.current.setText(GSON.toJson(rule))
     }
 
     private fun importBuiltInRules() {
@@ -199,7 +198,7 @@ class TxtTocRuleViewModel(
     }
 
     fun pasteRule(): TxtTocRule? {
-        val text = context.getClipText()
+        val text = ClipboardProvider.current.getText()
         if (text.isNullOrBlank()) {
             _effects.tryEmit(
                 TxtTocRuleEffect.ShowMessage(context.getString(R.string.clipboard_empty))
