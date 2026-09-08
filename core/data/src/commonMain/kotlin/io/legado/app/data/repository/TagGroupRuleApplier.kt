@@ -9,10 +9,13 @@ import io.legado.app.utils.splitNotBlank
 /**
  * Applies tag-group rules to every shelf book, resolving rule patterns into group masks.
  *
- * Mirrors `io.legado.app.help.book.applyTagGroupRules(books, rules, groupDao, bookDao)` in the
- * app module, but self-contained so it can live in commonMain. The app-side suspend overload
- * remains the source of truth for `Book.save()` flows; keep the two in sync when the matching
- * semantics change.
+ * **本类是这条规则匹配语义的唯一实现。** 原先 app 侧另有一份镜像
+ * `io.legado.app.help.book.applyTagGroupRules(books, rules, groupDao, bookDao)`（已删除）；
+ * 现在全量重算的入口是 `BookGroupMutationRepository.applyTagGroupRulesToAllBooks()`
+ * （`BookGroupMutationGateway`），由规则列表页在规则增删改后触发。
+ *
+ * 单本书路径仍留在 app 侧 `applyTagGroupRulesForBook`（`Book.save()` 调用，只处理一本书，
+ * 避免整表重算）；改动匹配语义时两处需同步。
  */
 class TagGroupRuleApplier(
     private val database: AppDatabase,

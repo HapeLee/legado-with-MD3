@@ -105,6 +105,14 @@ class BookGroupMutationRepository(
         }
     }
 
+    override suspend fun applyTagGroupRulesToAllBooks() {
+        database.useWriterConnection { connection ->
+            connection.immediateTransaction {
+                tagGroupRuleApplier.applyInCurrentTransaction()
+            }
+        }
+    }
+
     private suspend fun upsertTagGroupRule(rule: TagGroupRuleUpdate) {
         val ruleDao = database.tagGroupRuleDao
         val existing = ruleDao.getByGroupName(rule.groupName)

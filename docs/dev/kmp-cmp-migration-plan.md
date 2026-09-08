@@ -705,9 +705,31 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 > | # | 剩余阻碍 | 涉及 | 备注 |
 > |---|---|---|---|
 > | 1 | `utils.GSON` / `fromJsonArray` / `fromJsonObject` / `isJsonArray` / `isJsonObject` | 6 个规则 VM + `importComponents/*`、`Json*Editor`、`text/HtmlContent` | `JsonCodec` 的 `decodeList` 返回 null 而 `fromJsonArray` 返回 `Result`（异常文案进 UI），需先定语义 |
-> | 2 | `help.book.applyTagGroupRules(books, rules)` | TagGroupRuleViewModel | 4 参重载已是纯 DAO 函数，可下沉 `:core:data`；VM 调的是 2 参重载（用 `appDb`） |
+> | ~~2~~ | ~~`help.book.applyTagGroupRules(books, rules)`~~ | TagGroupRuleViewModel | ✅ 第八片已解决 |
 > | 3 | `importComponents/ImportComponents.kt`（Gson JSON 树） | tagrules Screen | `JsonCodec` 无 JSON 树 API；或给 `:core:ui` 加 Gson，或抽 JSON 树契约 |
 > | 4 | `io.legado.app.R` 字符串 | tagrules 全部 Screen/EditSheet/VM | 沿用「库侧默认值 + app 覆盖」策略，为 `:feature:tagrules` 建自己的 `strings.xml` |
+>
+> **P4 消除 `applyTagGroupRules` 重复实现（第八片，2026-09-08）**：`:core:data` 的
+> `TagGroupRuleApplier` 本来就是 app 侧 `help.book.applyTagGroupRules(books, rules, groupDao, bookDao)`
+> 的镜像（原注释明写「keep the two in sync」）。本片把「全量重算」的唯一入口收敛到
+> `BookGroupMutationGateway.applyTagGroupRulesToAllBooks()`（实现在 `BookGroupMutationRepository`，
+> 事务内调 `TagGroupRuleApplier`），`TagGroupRuleViewModel` 改走该 gateway，并删除 app 侧已成
+> 死代码的两个 `applyTagGroupRules` 重载（74 行）与随之无用的 import。
+>
+> - **语义等价逐项核对**：`Book.getDisplayTagList()` = `(getCustomTagList() + getSourceTagList()).distinct()`，
+>   与 `TagGroupRuleApplier.displayTagList()` 一致（两者都是 `customTag`/`kind` 经
+>   `splitNotBlank(",", "\n")` 后 `distinct`）；`rules.isEmpty()` 早退、非法正则 `mapNotNull` 跳过、
+>   `book.group or newGroupMask` 只加不清、只写有变化的书——全部一致。
+> - **一处刻意差异（已写进 KDoc）**：原 VM 先取 `books`/`rules` 再进事务，新路径在事务内直接读全量。
+>   少一次事务外读，且避免读到陈旧快照；`BookGroupMutationRepositoryTest` 的既有用例覆盖同一语义。
+> - **顺带清掉**：`TagGroupRuleViewModel` 的 `BookRepository` 构造参数（只服务于那次冗余读取）
+>   与 `BookGroupMutationGateway` 早已在 Koin 中绑定，无需新增注册。
+> - **验证**：`BookGroupMutationRepositoryTest` **8 项**（新增 2 项直测 gateway：只添加匹配分组、
+>   缺失分组先建再套用）、`testAppDebugUnitTest` 631 项、`:core:data:testAndroidHostTest` 72 项 +
+>   `:core:data:desktopTest` 81 项、`:core:ui` / `:core:viewmodel` / `:core:platform` 全绿、
+>   `assembleAppDebug`、三门禁、`git diff --check`。
+> - **Stage B 剩余**：只剩 #1（`utils.GSON` 语义）、#3（`ImportComponents` 的 JSON 树）、
+>   #4（`R` 字符串策略）三项。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

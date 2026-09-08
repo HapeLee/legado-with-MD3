@@ -194,4 +194,50 @@ class BookGroupMutationRepositoryTest {
         assertTrue(database.bookGroupDao.all().isEmpty())
         assertTrue(database.tagGroupRuleDao.getAll().isEmpty())
     }
+
+    @Test
+    fun `gateway 全量重算只添加匹配分组并保留手工分组`() = runBlocking {
+        val fantasy = BookGroup(groupId = 1L, groupName = "Fantasy")
+        val adventure = BookGroup(groupId = 2L, groupName = "Adventure")
+        val book = Book(
+            bookUrl = "book-1",
+            name = "Book",
+            author = "Author",
+            kind = "adventure",
+            group = fantasy.groupId,
+        )
+        database.bookGroupDao.insert(fantasy, adventure)
+        database.tagGroupRuleDao.insert(
+            TagGroupRule(id = 1L, groupName = fantasy.groupName, pattern = "fantasy"),
+            TagGroupRule(id = 2L, groupName = adventure.groupName, pattern = "adventure"),
+        )
+        database.bookDao.insert(book)
+
+        repository.applyTagGroupRulesToAllBooks()
+
+        assertEquals(
+            fantasy.groupId or adventure.groupId,
+            database.bookDao.getBook(book.bookUrl)?.group,
+        )
+    }
+
+    @Test
+    fun `gateway 全量重算会为缺失的分组建好再套用`() = runBlocking {
+        val book = Book(
+            bookUrl = "book-1",
+            name = "Book",
+            author = "Author",
+            kind = "fantasy",
+        )
+        database.bookDao.insert(book)
+        database.tagGroupRuleDao.insert(
+            TagGroupRule(id = 1L, groupName = "Fantasy", pattern = "fantasy"),
+        )
+
+        repository.applyTagGroupRulesToAllBooks()
+
+        val group = database.bookGroupDao.all().single()
+        assertEquals("Fantasy", group.groupName)
+        assertEquals(group.groupId, database.bookDao.getBook(book.bookUrl)?.group)
+    }
 }

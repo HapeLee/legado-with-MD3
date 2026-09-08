@@ -8,10 +8,9 @@ import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.core.platform.ClipboardProvider
 import io.legado.app.core.platform.ToasterProvider
 import io.legado.app.data.entities.TagGroupRule
-import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.TagGroupRuleRepository
 import io.legado.app.data.repository.UploadRepository
-import io.legado.app.help.book.applyTagGroupRules
+import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.utils.GSON
@@ -31,7 +30,7 @@ class TagGroupRuleViewModel(
     application: Application,
     uploadRepository: UploadRepository,
     transferPlatform: RuleTransferPlatform,
-    private val bookRepository: BookRepository,
+    private val bookGroupMutationGateway: BookGroupMutationGateway,
     private val repository: TagGroupRuleRepository,
 ) : BaseRuleViewModel<TagGroupRuleItemUi, TagGroupRule, Long, TagGroupRuleUiState>(
     application,
@@ -202,9 +201,7 @@ class TagGroupRuleViewModel(
 
     private suspend fun autoApplyRules() {
         withContext(Dispatchers.IO) {
-            val books = bookRepository.getAll()
-            val rules = repository.getAll()
-            applyTagGroupRules(books, rules)
+            bookGroupMutationGateway.applyTagGroupRulesToAllBooks()
         }
     }
 
@@ -228,9 +225,7 @@ class TagGroupRuleViewModel(
 
     private fun syncGroups() {
         viewModelScope.launch(Dispatchers.IO) {
-            val books = bookRepository.getAll()
-            val rules = repository.getAll()
-            applyTagGroupRules(books, rules)
+            bookGroupMutationGateway.applyTagGroupRulesToAllBooks()
             withContext(Dispatchers.Main) {
                 ToasterProvider.current.toast(context.getString(R.string.tag_group_sync_complete))
             }
