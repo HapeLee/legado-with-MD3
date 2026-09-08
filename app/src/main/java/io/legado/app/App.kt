@@ -18,6 +18,7 @@ import com.script.rhino.ReadOnlyJavaObject
 import com.script.rhino.RhinoScriptEngine
 import com.script.rhino.RhinoWrapFactory
 import io.legado.app.constant.AppConst.channelIdBookSourceCheck
+import io.legado.app.core.viewmodel.DebugFlags
 import io.legado.app.constant.AppConst.channelIdDownload
 import io.legado.app.constant.AppConst.channelIdReadAloud
 import io.legado.app.constant.AppConst.channelIdWeb
@@ -103,6 +104,9 @@ class App : Application(), SingletonImageLoader.Factory {
     }
 
     override fun onCreate() {
+        // 首行注册共享层调试开关：`:core:viewmodel` 的 Coroutine 用它替代 app 侧
+        // BuildConfig.DEBUG（原 `Throwable.printOnDebug()`），须先于任何协程任务。
+        DebugFlags.enabled = BuildConfig.DEBUG
         // 首行初始化设置快照层：同步预加载 DataStore（触发 SP 迁移），
         // 之后所有 getPref* 门面读取均为纯内存查找，须先于一切主题/配置读取
         AppConfigStore.init(this)

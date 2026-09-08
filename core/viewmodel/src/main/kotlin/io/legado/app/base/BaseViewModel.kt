@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.App
 import io.legado.app.help.coroutine.Coroutine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -16,7 +15,11 @@ import kotlin.coroutines.CoroutineContext
 @Suppress("unused")
 open class BaseViewModel(application: Application) : AndroidViewModel(application) {
 
-    val context: Context by lazy { this.getApplication<App>() }
+    /**
+     * 原为 `getApplication<App>()`（`App` 在 `:app`，本模块不能引用）。
+     * 对外声明类型仍是 [Context]，且全仓无 `context as App` 用法，行为等价。
+     */
+    val context: Context by lazy { this.getApplication<Application>() }
 
     fun <T> execute(
         scope: CoroutineScope = viewModelScope,

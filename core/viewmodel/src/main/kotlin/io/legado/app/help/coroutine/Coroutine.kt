@@ -1,6 +1,6 @@
 package io.legado.app.help.coroutine
 
-import io.legado.app.utils.printOnDebug
+import io.legado.app.core.viewmodel.DebugFlags
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -180,7 +180,8 @@ class Coroutine<T>(
                 ensureActive()
                 success?.let { dispatchCallback(this, value, it) }
             } catch (e: Throwable) {
-                e.printOnDebug()
+                // 等价原 `e.printOnDebug()`（读 app 的 BuildConfig.DEBUG）；开关由宿主注册。
+                if (DebugFlags.enabled) e.printStackTrace()
                 val consume: Boolean = errorReturn?.value?.let { value ->
                     success?.let { dispatchCallback(this, value, it) }
                     true

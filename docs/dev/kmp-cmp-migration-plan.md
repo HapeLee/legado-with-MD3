@@ -647,6 +647,37 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 > - **下一步（第六片）**：基类已无 okhttp/ContentResolver 直连，剩下 `BaseViewModel(application)`
 >   （只需 `AndroidViewModel`）+ `UploadRepository` 接口位置 + 子类的 `context.{getClipText,sendToClip,
 >   toastOnUi}`；处理完即可把 `BaseRuleViewModel`/`BaseRuleEvent` 移入 Android library 模块。
+>
+> **P4 共享 ViewModel 基类层下沉（第六片，2026-09-08）**：新建 `:core:viewmodel`（Android library），
+> 下沉 **8 文件 / 1026 行**——`io.legado.app.base.{BaseViewModel,BaseRuleViewModel}` +
+> `io.legado.app.base.rules.RuleTransferPlatform` + `io.legado.app.help.coroutine.{Coroutine,
+> ActivelyCancelException,CompositeCoroutine,CoroutineContainer}`，随 `BaseRuleViewModel` 的 8 项
+> 基线测试一并迁入。`UploadRepository` **接口**另下沉 `:core:data`（实现 `DirectLinkUploadRepository`
+> 留 `:app`）。
+>
+> - **本片最重要的发现是「洋葱有三层」**：`BaseRuleViewModel` 对 `:app` 的依赖并不止 `BaseViewModel`——
+>   `BaseRuleViewModel` → `BaseViewModel`（`context = getApplication<App>()`）→
+>   `help.coroutine.Coroutine` → `Throwable.printOnDebug()`（读 `io.legado.app.BuildConfig`，全仓 130 处）。
+>   只搬规则基类必然编译失败（第五片末尾的估计偏乐观）。故本片一次下沉整个「VM 基类层」。
+> - **两处解耦（行为等价）**：① `BaseViewModel.context` 改 `getApplication<Application>()`
+>   （对外仍是 `Context`，全仓无 `context as App`）；② `Coroutine` 的 `printOnDebug()` 改读本模块
+>   `io.legado.app.core.viewmodel.DebugFlags.enabled`，由 `:app` 在 `App.onCreate` **首行**按
+>   `BuildConfig.DEBUG` 注册（未注册 = release 行为，不打印栈）。
+> - **零 import 改动**：所有包名原样保留，`:app` 只加一条 `implementation(project(":core:viewmodel"))`；
+>   `BaseViewModel`（35 文件）与 `help.coroutine`（46 文件）的调用点一行未动。
+> - **验证**：`:core:viewmodel:compileDebugKotlin` + `:core:viewmodel:testDebugUnitTest`（8 项）、
+>   `testAppDebugUnitTest`、`:core:ui:testDebugUnitTest`、`assembleAppDebug`、三门禁、
+>   `git diff --check`；`:core:viewmodel:compileDebugKotlin` / `:core:viewmodel:testDebugUnitTest`
+>   已加入 `verify.yml`。
+> - **顺带修掉一个潜伏缺陷**：`app/src/test/.../dialog/TimePickerDialogTest.kt` 测的是
+>   `TimePickerDialog.kt` 的 `internal` 函数，而该文件第二片已移入 `:core:ui`——跨模块后测试本应编不过。
+>   它之所以连续四片「绿」，是因为 Kotlin **增量编译**只重编改动的源文件，未改动的测试类沿用了移动前
+>   的旧 class（`internal` 只在编译期检查，运行期照跑）。本片给 `:app` 新增 project 依赖使测试编译任务
+>   失效，才暴露出来。修法：测试随生产代码移到 `:core:ui/src/test`。
+>   **教训**：跨模块可见性变更必须靠**干净重建**验证，增量 `testAppDebugUnitTest` 不能证明没有这类残留。
+> - **仍未解除**（下一片）：子类仍用 `context.{getClipText,sendToClip,toastOnUi}`、
+>   `utils.GSON`、`help.book.applyTagGroupRules`、`io.legado.app.R`。`BaseRuleViewModel` 本身已可离开
+>   `:app`。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 
@@ -756,3 +787,38 @@ git diff --check
 - `docs/dev/track-f-reader-kmp-migration-plan.md`（P5 深化）
 - `docs/dev/feature-first-structure.md`、`feature-catalog.md`（Feature 晋级路径）
 - `.github/workflows/verify.yml`（当前 CI 门禁）
+
+---
+
+## 11. 参考项目（`D:\Project\shutiao\legado`）怎么做这些事
+
+本仓库前六片反复遇到的「怎么把 app 耦合的类搬进共享层」，参考项目给出的答案与我们有系统性差异。
+下表是实测对照（源码位置随行给出），**结论不是「谁对」**，而是「两种策略各自的代价」。
+
+| 我们遇到的阻碍 | 参考项目的做法 | 出处 |
+|---|---|---|
+| `utils.GSON` / `fromJsonArray` / `fromJsonObject` | **把 `GSON` 搬进 commonMain，底层换成 kotlinx.serialization**（`val GSON: Json get() = KS_JSON`），名字与扩展函数签名保持原样 → 调用方零改动 | `shared/src/commonMain/.../utils/GsonExtensions.kt:29` |
+| `okHttpClient` / `AppConst` | `interface OkHttpClientProvider` + `object OkHttpClientProviders`（`register` / `get()`，未注册直接 `error(...)`）；okhttp 在 shared 里是 **api** 依赖 | `shared/src/commonMain/.../help/http/OkHttpClientProvider.kt`；`shared/build.gradle.kts` |
+| Room DAO（`appDb.xxxDao`） | `interface AppDbAccessor` + `object AppDbProviders`，commonMain 里写 `AppDbProviders.get().txtTocRuleDao` | `shared/src/commonMain/.../data/AppDbAccessor.kt:104` |
+| `BaseViewModel(application)` | **明确不继承**：「不采用 `expect abstract class` 让 app 端子类继承：BaseViewModel 是 AndroidViewModel，commonMain 不可用，Kotlin 单继承会冲突」→ 改**组合委托**：app 端 VM 持有 `XxxViewModelShared(scope = viewModelScope, ...)` | `shared/src/commonMain/.../book/source/manage/BookSourceViewModelShared.kt:41-60` |
+| `BaseRuleViewModel` 那种「列表状态 + 导入导出」基类 | **根本不存在**。每个列表页有自己的 `XxxScreenModel`（`sharedUiMain`）持有 `XxxUiState` + `dispatch(event)`；DAO 写入用一个小 `XxxViewModelShared` | `shared/src/sharedUiMain/.../toc/rule/TxtTocRuleScreenModel.kt`（169 行）+ `.../TxtTocRuleViewModelShared.kt`（115 行） |
+| 剪贴板 | `PlatformCapabilities.copyToClipboard(text)` / `getClipboardText()`（一个 100+ 成员的宽接口，**每个成员都有默认实现** `unsupported(...)` / `null`），或按屏传 lambda `clipTextProvider = { getClipText() }` | `shared/src/commonMain/.../ui/root/PlatformCapabilities.kt:113-115`；`app/.../HttpTtsEditViewModel.kt:20-27` |
+| Toast | `interface Toaster` + `object Toasters` 注册表，各端 `Toaster.android.kt` / `Toaster.ios.kt` | `shared/src/commonMain/.../help/toast/Toaster.kt:39` |
+| `Uri` / `ContentResolver` / `Bundle` | 留在 app 端；commonMain 先判 `isUri` 再把文本转发过去（lambda） | `ImportTxtTocRuleViewModelShared.kt:35-37` |
+| 直链上传 | `DirectLinkUploadShared` 进 commonMain + `DirectLinkUploadStoreProvider` / `DefaultsProvider` 接口，app 的 `object DirectLinkUpload` 实现，`App.onCreate` 里 `registerAndroidDirectLinkUploadProviders()` | `app/src/main/java/io/legado/app/help/DirectLinkUpload.kt:33-45` |
+| 协程调度 | 共享层用顶层常量 `IoDispatcher`，不是注入 | `shared/src/commonMain/.../help/coroutine/` |
+| `R.string` | commonMain 一律不用，改抛领域异常 / 固定文案（`NoStackTraceException("格式不对")`） | `ImportTxtTocRuleViewModelShared.kt:36-37` |
+| 调试开关（`BuildConfig.DEBUG`） | 未见于共享层（他们的共享层不含这类 app 常量） | — |
+
+**两种策略的取舍**：
+
+- 参考项目**把实现搬进共享层**（kotlinx-serialization 换 Gson、okhttp 以 `api` 暴露、注册表拿 DAO），
+  换来的是「shared 里可以直接写业务」，代价是共享层 API 形状被 okhttp/Gson 语义绑住，
+  且 `PlatformCapabilities` 长成 100+ 成员的宽接口。
+- 本仓库**保留实现留在平台侧，只抽窄契约**（`JsonCodec` expect/actual、`HttpClient`/`FileSystem`
+  契约、Koin 显式绑定），代价是每搬一个类都要先剥一层依赖（本片就是为此而做），
+  好处是共享层不泄漏 `okhttp3.*` / `Gson` 类型，`checkSharedPurity` 可机械守住。
+
+**本仓库已采纳参考项目的一点**：`UploadRepository` 这类「接口下沉、实现留 app、宿主启动注册/绑定」
+正是参考项目 `*Providers` 模式在 Koin 下的等价写法；`RuleTransferPlatform` 的默认/未实现语义
+也按参考项目「显式建模不支持，而不是静默空实现」的纪律写。

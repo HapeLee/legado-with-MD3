@@ -89,6 +89,8 @@ jobs:
             :core:data:testAndroidHostTest \
             :core:ui:compileDebugKotlin \
             :core:ui:testDebugUnitTest \
+            :core:viewmodel:compileDebugKotlin \
+            :core:viewmodel:testDebugUnitTest \
             --continue \
             --no-daemon \
             --no-configuration-cache
