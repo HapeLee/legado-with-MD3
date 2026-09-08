@@ -122,7 +122,11 @@ import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
 import io.legado.app.ui.config.themeManage.ThemeManageRouteScreen
 import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
-import io.legado.app.ui.highlightTagRule.HighlightTagRuleRouteScreen
+import io.legado.app.feature.replacerules.ReplaceEditRoute
+import io.legado.app.feature.replacerules.ReplaceRuleRouteScreen
+import io.legado.app.feature.replacerules.edit.ReplaceEditRouteScreen
+import io.legado.app.feature.replacerules.edit.ReplaceEditViewModel
+import io.legado.app.feature.tagrules.highlight.HighlightTagRuleRouteScreen
 import io.legado.app.ui.login.SourceLoginIntent
 import io.legado.app.ui.login.SourceLoginRoute
 import io.legado.app.ui.login.SourceLoginType
@@ -422,6 +426,9 @@ fun MainActivity.mainEntryProvider(
             onNavigateToHighlightTagRule = {
                 onNavigateToRoute(MainRouteHighlightTagRule)
             },
+            onNavigateToReplaceRule = {
+                onNavigateToRoute(MainRouteReplaceRule())
+            },
             onNavigateToAbout = {
                 onNavigateToRoute(MainRouteAbout)
             },
@@ -683,6 +690,13 @@ fun MainActivity.mainEntryProvider(
             },
             onOpenTtsCache = {
                 onNavigateToRoute(MainRouteTtsCache)
+            },
+            onOpenReplace = { edit ->
+                if (edit == null) {
+                    onNavigateToRoute(MainRouteReplaceRule(route.bookUrl))
+                } else {
+                    onNavigateToRoute(edit)
+                }
             },
         )
 
@@ -1417,6 +1431,50 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteHighlightTagRule> {
         HighlightTagRuleRouteScreen(
             onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteReplaceRule> { route ->
+        ReplaceRuleRouteScreen(
+            bookUrl = route.bookUrl,
+            onBackClick = { onNavigateBack() },
+            onNavigateToEdit = { edit ->
+                onNavigateToRoute(
+                    MainRouteReplaceEdit(
+                        id = edit.id,
+                        pattern = edit.pattern,
+                        isRegex = edit.isRegex,
+                        scope = edit.scope,
+                        isScopeTitle = edit.isScopeTitle,
+                        isScopeContent = edit.isScopeContent,
+                        sessionId = edit.sessionId,
+                    )
+                )
+            },
+        )
+    }
+
+    entry<MainRouteReplaceEdit> { route ->
+        // sessionId 保证每条编辑路由拿到独立的 ViewModel，避免复用上一条规则的草稿
+        val viewModel: ReplaceEditViewModel = koinViewModel(
+            key = "replace_edit_${route.sessionId}"
+        ) {
+            parametersOf(
+                ReplaceEditRoute(
+                    id = route.id,
+                    pattern = route.pattern,
+                    isRegex = route.isRegex,
+                    scope = route.scope,
+                    isScopeTitle = route.isScopeTitle,
+                    isScopeContent = route.isScopeContent,
+                    sessionId = route.sessionId,
+                )
+            )
+        }
+        ReplaceEditRouteScreen(
+            viewModel = viewModel,
+            onBack = { onNavigateBack() },
+            onSaveSuccess = { onNavigateBack() },
         )
     }
 

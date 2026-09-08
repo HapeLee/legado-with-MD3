@@ -1,4 +1,4 @@
-package io.legado.app.ui.highlightTagRule
+package io.legado.app.feature.tagrules.highlight
 
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.HighlightTagRule

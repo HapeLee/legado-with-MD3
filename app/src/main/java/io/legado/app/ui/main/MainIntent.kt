@@ -45,6 +45,13 @@ object MainIntent {
     const val EXTRA_RSS_READ_LINK = "extra_rss_read_link"
     const val EXTRA_RSS_READ_OPEN_URL = "extra_rss_read_open_url"
 
+    const val EXTRA_REPLACE_ID = "extra_replace_id"
+    const val EXTRA_REPLACE_PATTERN = "extra_replace_pattern"
+    const val EXTRA_REPLACE_IS_REGEX = "extra_replace_is_regex"
+    const val EXTRA_REPLACE_SCOPE = "extra_replace_scope"
+    const val EXTRA_REPLACE_SCOPE_TITLE = "extra_replace_scope_title"
+    const val EXTRA_REPLACE_SCOPE_CONTENT = "extra_replace_scope_content"
+
     fun createLauncherIntent(context: Context): Intent {
         val launcherComponent =
             context.packageManager.getLaunchIntentForPackage(context.packageName)?.component
@@ -59,6 +66,31 @@ object MainIntent {
         return createLauncherIntent(context).apply {
             putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_MAIN)
         }
+    }
+
+    /**
+     * 直达替换规则编辑页。
+     *
+     * 给不在主界面返回栈里的独立界面（如目录页 TocActivity）使用——它们无法走
+     * `onNavigateToRoute`，若为此 import 替换规则 Feature 的实现类，就会把跨 Feature
+     * 依赖固化下来。走 Intent 直达后，这些界面只依赖导航契约。
+     */
+    fun createReplaceEditIntent(
+        context: Context,
+        id: Long = -1,
+        pattern: String? = null,
+        isRegex: Boolean = false,
+        scope: String? = null,
+        isScopeTitle: Boolean = false,
+        isScopeContent: Boolean = false,
+    ): Intent = createLauncherIntent(context).apply {
+        putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_REPLACE_EDIT)
+        putExtra(EXTRA_REPLACE_ID, id)
+        pattern?.let { putExtra(EXTRA_REPLACE_PATTERN, it) }
+        putExtra(EXTRA_REPLACE_IS_REGEX, isRegex)
+        scope?.let { putExtra(EXTRA_REPLACE_SCOPE, it) }
+        putExtra(EXTRA_REPLACE_SCOPE_TITLE, isScopeTitle)
+        putExtra(EXTRA_REPLACE_SCOPE_CONTENT, isScopeContent)
     }
 
     fun createSourceLoginIntent(

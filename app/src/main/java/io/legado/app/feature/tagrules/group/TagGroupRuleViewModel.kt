@@ -1,10 +1,9 @@
-package io.legado.app.ui.tagGroupRule
+package io.legado.app.feature.tagrules.group
 
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.TagGroupRuleRepository
@@ -32,13 +31,12 @@ class TagGroupRuleViewModel(
     application: Application,
     uploadRepository: UploadRepository,
     private val bookRepository: BookRepository,
+    private val repository: TagGroupRuleRepository,
 ) : BaseRuleViewModel<TagGroupRuleItemUi, TagGroupRule, Long, TagGroupRuleUiState>(
     application,
     TagGroupRuleUiState(interaction = InteractionState(isLoading = true)),
     uploadRepository
 ) {
-    private val repository = TagGroupRuleRepository(appDb)
-
     override val rawDataFlow: Flow<List<TagGroupRule>> = repository.flowAll()
 
     fun onIntent(intent: TagGroupRuleIntent) {

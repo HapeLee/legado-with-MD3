@@ -36,6 +36,11 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
         val appDbDaoAccess = Regex(
             """(?:\bappDb|io\.legado\.app\.data\.appDb)\.[A-Za-z0-9_]*Dao\b"""
         )
+        // `appDb.xxxDao` 不是唯一形态：`XxxRepository(appDb)` 是 UI 层自己 new 出数据层，
+        // 一样绕开注入。2026-09-08 收 tag-rules 时全仓只剩 1 处（GroupViewModel），现已清零。
+        val appDbRepositoryConstruction = Regex(
+            """[A-Za-z0-9_]*Repository\s*\(\s*(?:\bappDb|io\.legado\.app\.data\.appDb)\s*\)"""
+        )
         val readBookConfigWrite = Regex(
             """\bReadBookConfig\.[a-z_][A-Za-z0-9_]*(?:\.[a-z_][A-Za-z0-9_]*)?\s*="""
         )
@@ -145,11 +150,15 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
                 violations += "$displayPath: 新增了 ${preferenceCalls - allowedCalls} 个旧偏好调用"
             }
 
-            if (relativePath.startsWith("io/legado/app/ui/") &&
-                file.name.contains("ViewModel")
-            ) {
+            // feature-first 迁移后 ViewModel 会搬出 `ui/` 进入 `feature/`，
+            // UI 层判定必须同时覆盖两个根，否则一搬家就脱离棘轮。
+            val isUiLayer = relativePath.startsWith("io/legado/app/ui/") ||
+                relativePath.startsWith("io/legado/app/feature/")
+
+            if (isUiLayer && file.name.contains("ViewModel")) {
                 val daoDependencies = daoImport.findAll(text).count() +
-                    appDbDaoAccess.findAll(text).count()
+                    appDbDaoAccess.findAll(text).count() +
+                    appDbRepositoryConstruction.findAll(text).count()
                 val allowedDaoDependencies = daoInjectionBaseline[relativePath] ?: 0
                 if (daoDependencies > allowedDaoDependencies) {
                     violations += "$displayPath: ViewModel 新增了 ${daoDependencies - allowedDaoDependencies} 个 DAO 直连"
@@ -158,11 +167,10 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
                 }
             }
 
-            if (relativePath.startsWith("io/legado/app/ui/") &&
-                !file.name.contains("ViewModel")
-            ) {
+            if (isUiLayer && !file.name.contains("ViewModel")) {
                 val daoDependencies = daoImport.findAll(text).count() +
-                    appDbDaoAccess.findAll(text).count()
+                    appDbDaoAccess.findAll(text).count() +
+                    appDbRepositoryConstruction.findAll(text).count()
                 val allowedDaoDependencies = uiDaoAccessBaseline[relativePath] ?: 0
                 if (daoDependencies > allowedDaoDependencies) {
                     violations += "$displayPath: UI 层新增了 ${daoDependencies - allowedDaoDependencies} 个 DAO 直连"
@@ -358,6 +366,8 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/App.kt" to 3,
             "io/legado/app/base/BaseActivity.kt" to 2,
             "io/legado/app/base/BaseService.kt" to 1,
+            // Stage A 包迁移：`ui/replace` → `feature/replacerules`（2026-09-08），基线键随路径更新
+            "io/legado/app/feature/replacerules/ReplaceRuleViewModel.kt" to 2,
             "io/legado/app/data/repository/CoverAlbumRepository.kt" to 4,
             "io/legado/app/data/repository/HighlightRuleRepository.kt" to 9,
             "io/legado/app/data/repository/HomeDashboardRepository.kt" to 3,
@@ -375,7 +385,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/ui/book/search/SearchViewModel.kt" to 3,
             "io/legado/app/ui/config/CheckSourceConfig.kt" to 1,
             "io/legado/app/ui/config/otherConfig/OtherConfigViewModel.kt" to 1,
-            "io/legado/app/ui/replace/ReplaceRuleViewModel.kt" to 2,
             "io/legado/app/utils/ContextExtensions.kt" to 12,
             "io/legado/app/web/socket/BookSearchWebSocket.kt" to 2,
         )

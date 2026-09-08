@@ -1,38 +1,32 @@
 plugins {
     id("legado.kmp.library")
-    // Compose Multiplatform：让本模块在 desktop 也能编译 Compose UI 代码。
-    // 这是全仓首个接入 CMP 的模块，故在本模块显式 apply，而非抬进共享 convention
-    // （共享 convention 只在有第二个 CMP 模块且形态稳定后再收口，见 AGENTS.md 代码生成纪律）。
-    alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.jetbrains.compose)
 }
+
+// 本模块当前只承载「共享 UI 状态契约叶子」（`ui.widget.components.list` /
+// `ui.widget.components.importComponents`），零依赖纯 Kotlin，android + desktop 都编译。
+//
+// 此前这里显式 apply 了 Compose Multiplatform（`org.jetbrains.compose` +
+// `compose.compiler`）并挂了一个 android/desktop 共享的 `composeMain` 源集，用来放设计
+// token 的 `Color`/`Dp` 映射。那套 token 一直没有真实消费方（AGENTS.md 禁止无调用方抽象），
+// 已随 token 一并删除，CMP 也因此撤掉——等真有跨平台的共享 Compose UI 时再装回来。
+//
+// 恢复配方（已验证可用）：Kotlin 2.4.10 ↔ CMP 插件 `org.jetbrains.compose` **1.12.0**
+// （= Compose 1.12 模块，要求 AGP 9.1.1+ / compileSdk 37）。装回后新增
+// `val composeMain = create("composeMain") { dependsOn(commonMain.get()) }`，
+// 再让 androidMain / desktopMain `dependsOn(composeMain)`；Compose 依赖只放该源集，
+// commonMain 保持零 Compose（`checkSharedPurity` 只白名单
+// `androidx.compose.runtime.Stable` / room / sqlite）。
+//
+// 另注：本仓库 app 侧的间距是**引擎条件式**的（Miuix 12dp / Material3 16dp，见
+// `ui/theme/AdaptivePadding.kt`），不是一套常量刻度。将来若再建 token 层，必须能承载这种
+// 条件语义，否则就是把真实语义抹平的假抽象。
 
 kotlin {
     sourceSets {
-        commonMain {
-            dependencies {
-                // commonMain 零 Compose：只放纯值 token（数值 / ARGB 色值 / 字号），
-                // 不依赖 androidx.compose.*（G2 纯度守卫硬约束）。
-            }
-        }
         commonTest {
             dependencies {
                 implementation(kotlin("test"))
             }
         }
-        // 专用 UI 源集：android + desktop 共享的 Compose 代码（Color/Dp/TextStyle 映射）。
-        // 命名对照样本仓 sharedUiMain，但本仓库按「窄 UI 源集」而非整仓大 shared 命名。
-        // 该源集不叫 commonMain，因此 checkSharedPurity 不扫描它——Compose 依赖被关在这里。
-        val composeMain = create("composeMain") {
-            dependsOn(commonMain.get())
-            dependencies {
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.ui)
-                implementation(compose.material3)
-            }
-        }
-        androidMain.get().dependsOn(composeMain)
-        getByName("desktopMain").dependsOn(composeMain)
     }
 }

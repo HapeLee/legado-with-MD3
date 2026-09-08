@@ -1,10 +1,11 @@
-package io.legado.app.ui.replace
+package io.legado.app.feature.replacerules
 
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.constant.AppPattern
+import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
@@ -27,6 +28,7 @@ import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.putPrefString
+import io.legado.app.utils.postEvent
 import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -176,6 +178,7 @@ class ReplaceRuleViewModel(
             ReplaceRuleIntent.DismissContentProcesses -> _bookState.update { it.copy(showContentProcesses = false) }
             is ReplaceRuleIntent.DisableEffectiveRule -> viewModelScope.launch {
                 repository.insert(intent.rule.copy(isEnabled = false))
+                notifyRuleChanged()
             }
             ReplaceRuleIntent.DisableChineseConverter -> {
                 viewModelScope.launch { readSettingsRepository.setChineseConverterType(0) }
@@ -366,21 +369,41 @@ class ReplaceRuleViewModel(
         viewModelScope.launch {
             repository.moveOrder(currentLocal.map { it.toEntity() }, _sortMode.value == "desc")
             _localItems.value = null
+            notifyRuleChanged()
         }
     }
 
 
     private fun setEnabled(id: Long, enabled: Boolean) =
-        viewModelScope.launch { repository.setEnabled(id, enabled) }
+        viewModelScope.launch {
+            repository.setEnabled(id, enabled)
+            notifyRuleChanged()
+        }
 
-    private fun delete(rule: ReplaceRule) = viewModelScope.launch { repository.delete(rule) }
-    fun enableSelectionByIds(ids: Set<Long>) = viewModelScope.launch { repository.enableByIds(ids) }
+    private fun delete(rule: ReplaceRule) = viewModelScope.launch {
+        repository.delete(rule)
+        notifyRuleChanged()
+    }
+
+    fun enableSelectionByIds(ids: Set<Long>) = viewModelScope.launch {
+        repository.enableByIds(ids)
+        notifyRuleChanged()
+    }
+
     fun disableSelectionByIds(ids: Set<Long>) =
-        viewModelScope.launch { repository.disableByIds(ids) }
+        viewModelScope.launch {
+            repository.disableByIds(ids)
+            notifyRuleChanged()
+        }
 
     fun delSelectionByIds(ids: Set<Long>) = viewModelScope.launch {
         repository.deleteByIds(ids)
         _selectedIds.update { it - ids }
+        notifyRuleChanged()
+    }
+
+    private fun notifyRuleChanged() {
+        postEvent(EventBus.REPLACE_RULE_CHANGED, Unit)
     }
 
     private fun selectAll() {
@@ -393,7 +416,10 @@ class ReplaceRuleViewModel(
     }
 
     private fun addGroup(group: String) = viewModelScope.launch { repository.addGroup(group) }
-    private fun delGroup(group: String) = viewModelScope.launch { repository.delGroup(group) }
+    private fun delGroup(group: String) = viewModelScope.launch {
+        repository.delGroup(group)
+        notifyRuleChanged()
+    }
 
     private fun toTop(rule: ReplaceRule) =
         viewModelScope.launch { repository.toTop(rule, _sortMode.value == "desc") }

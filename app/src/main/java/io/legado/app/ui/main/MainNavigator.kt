@@ -284,6 +284,20 @@ object MainNavigator {
                 }
             }
 
+            is MainRouteReplaceRule -> {
+                if (currentRoute == MainRouteHome || currentRoute is MainRouteReplaceEdit) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
+            }
+
+            // 编辑页常常是从阅读页/目录页直接压上来的，底下的返回栈必须原样留着，
+            // 否则保存后 pop 回不去阅读页，正文也就收不到刷新
+            is MainRouteReplaceEdit -> backStack.add(route)
+
             MainRouteAbout -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)
@@ -542,6 +556,23 @@ object MainNavigator {
                 } ?: MainRouteHome
 
             MainRouteConst.ROUTE_ABOUT -> MainRouteAbout
+
+            MainRouteConst.ROUTE_REPLACE_RULE -> MainRouteReplaceRule(
+                bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
+            )
+
+            MainRouteConst.ROUTE_REPLACE_EDIT -> MainRouteReplaceEdit(
+                id = intent?.getLongExtra(MainIntent.EXTRA_REPLACE_ID, -1L) ?: -1L,
+                pattern = intent?.getStringExtra(MainIntent.EXTRA_REPLACE_PATTERN),
+                isRegex = intent?.getBooleanExtra(MainIntent.EXTRA_REPLACE_IS_REGEX, false) == true,
+                scope = intent?.getStringExtra(MainIntent.EXTRA_REPLACE_SCOPE),
+                isScopeTitle = intent?.getBooleanExtra(
+                    MainIntent.EXTRA_REPLACE_SCOPE_TITLE, false
+                ) == true,
+                isScopeContent = intent?.getBooleanExtra(
+                    MainIntent.EXTRA_REPLACE_SCOPE_CONTENT, false
+                ) == true,
+            )
 
             else -> MainRouteHome
         }

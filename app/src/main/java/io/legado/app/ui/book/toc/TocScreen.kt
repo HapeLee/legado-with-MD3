@@ -91,7 +91,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
-import io.legado.app.ui.replace.ReplaceEditRoute
+import io.legado.app.ui.main.MainRouteReplaceEdit
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
@@ -136,7 +136,7 @@ fun TocRouteScreen(
     initialPage: Int = 0,
     onBackClick: () -> Unit,
     onChapterClick: (Int) -> Unit,
-    onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
+    onOpenReplaceRule: (MainRouteReplaceEdit?) -> Unit,
     onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
 ) {
     val state by viewModel.screenState.collectAsStateWithLifecycle()
@@ -194,7 +194,7 @@ fun TocScreen(
     onIntent: (TocIntent) -> Unit,
     onBackClick: () -> Unit,
     onChapterClick: (Int) -> Unit,
-    onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
+    onOpenReplaceRule: (MainRouteReplaceEdit?) -> Unit,
     onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
     onEditLocalTocRule: (String?) -> Unit,
     onExportBookmarks: (isMarkdown: Boolean, fileName: String) -> Unit,
@@ -466,7 +466,7 @@ fun TocScreen(
                                     book?.name?.let { scopes.add(it) }
                                     book?.origin?.let { scopes.add(it) }
 
-                                    val editRoute = ReplaceEditRoute(
+                                    val editRoute = MainRouteReplaceEdit(
                                         id = -1,
                                         pattern = "",
                                         scope = scopes.joinToString(";"),

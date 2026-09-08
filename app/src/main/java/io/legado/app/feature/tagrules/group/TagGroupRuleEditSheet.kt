@@ -1,4 +1,4 @@
-package io.legado.app.ui.tagGroupRule
+package io.legado.app.feature.tagrules.group
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

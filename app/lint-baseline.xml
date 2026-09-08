@@ -1201,7 +1201,7 @@
         errorLine1="                        snackbarHostState.showSnackbar(context.getString(R.string.drag_disabled_in_sort_mode))"
         errorLine2="                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/replace/ReplaceRuleScreen.kt"
+            file="src/main/java/io/legado/app/feature/replacerules/ReplaceRuleScreen.kt"
             line="410"
             column="56"/>
     </issue>
@@ -1212,7 +1212,7 @@
         errorLine1="                        snackbarHostState.showSnackbar(context.getString(R.string.drag_disabled_in_sort_mode))"
         errorLine2="                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/replace/ReplaceRuleScreen.kt"
+            file="src/main/java/io/legado/app/feature/replacerules/ReplaceRuleScreen.kt"
             line="420"
             column="56"/>
     </issue>

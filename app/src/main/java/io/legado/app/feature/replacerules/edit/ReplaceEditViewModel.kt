@@ -1,15 +1,17 @@
-package io.legado.app.ui.replace.edit
+package io.legado.app.feature.replacerules.edit
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReplaceRuleRepository
+import io.legado.app.constant.EventBus
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.ui.replace.ReplaceEditRoute
+import io.legado.app.feature.replacerules.ReplaceEditRoute
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getClipText
+import io.legado.app.utils.postEvent
 import io.legado.app.utils.sendToClip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -227,6 +229,10 @@ class ReplaceEditViewModel(
             }
 
             replaceRuleRepository.insert(rule)
+
+            // 替换规则保存后通知阅读页重新套用规则并重排正文（替代原先 ReplaceRuleActivity
+            // 通过 ActivityResult RESULT_OK 回传的机制）
+            postEvent(EventBus.REPLACE_RULE_CHANGED, Unit)
 
             _effects.tryEmit(ReplaceEditEffect.NavigateBack)
         }

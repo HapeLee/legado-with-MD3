@@ -1,4 +1,4 @@
-package io.legado.app.ui.replace
+package io.legado.app.feature.replacerules
 
 import android.net.Uri
 import androidx.compose.runtime.Immutable

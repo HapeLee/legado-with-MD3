@@ -254,13 +254,6 @@
             android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
-        <!-- 替换规则界面 -->
-        <activity
-            android:name=".ui.replace.ReplaceRuleActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:windowSoftInputMode="adjustResize"
-            android:launchMode="singleTop" />
         <!-- 目录 -->
         <activity
             android:name=".ui.book.toc.TocActivity"

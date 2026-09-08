@@ -89,6 +89,7 @@ import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.TagGroupRuleApplier
+import io.legado.app.data.repository.TagGroupRuleRepository
 import io.legado.app.data.repository.ThemePackageSettingsRepository
 import io.legado.app.data.repository.ThemeSettingsRepository
 import io.legado.app.data.repository.TranslationCacheRepositoryImpl
@@ -289,7 +290,7 @@ import io.legado.app.ui.config.themeManage.ThemeManageViewModel
 import io.legado.app.ui.config.translation.TranslationConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
-import io.legado.app.ui.highlightTagRule.HighlightTagRuleViewModel
+import io.legado.app.feature.tagrules.highlight.HighlightTagRuleViewModel
 import io.legado.app.feature.onboarding.OnboardingViewModel
 import io.legado.app.ui.login.SourceLoginViewModel
 import io.legado.app.ui.main.MainRouteSearchContent
@@ -301,9 +302,9 @@ import io.legado.app.ui.main.home.HomeViewModel
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.main.rss.RssViewModel
-import io.legado.app.ui.replace.ReplaceEditRoute
-import io.legado.app.ui.replace.ReplaceRuleViewModel
-import io.legado.app.ui.replace.edit.ReplaceEditViewModel
+import io.legado.app.feature.replacerules.ReplaceEditRoute
+import io.legado.app.feature.replacerules.ReplaceRuleViewModel
+import io.legado.app.feature.replacerules.edit.ReplaceEditViewModel
 import io.legado.app.ui.rss.article.RssArticlesViewModel
 import io.legado.app.ui.rss.article.RssSortViewModel
 import io.legado.app.ui.rss.favorites.RssFavoritesViewModel
@@ -312,7 +313,7 @@ import io.legado.app.ui.rss.source.debug.RssSourceDebugViewModel
 import io.legado.app.ui.rss.source.edit.RssSourceEditViewModel
 import io.legado.app.ui.rss.source.manage.RssSourceViewModel
 import io.legado.app.ui.rss.subscription.RuleSubViewModel
-import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
+import io.legado.app.feature.tagrules.group.TagGroupRuleViewModel
 import io.legado.app.utils.isNightMode
 import io.legado.app.utils.sysConfiguration
 import kotlinx.coroutines.Dispatchers
@@ -342,6 +343,7 @@ val appModule = module {
     singleOf(::BookmarkRepository)
     singleOf(::BookCacheManageRepository)
     singleOf(::TagGroupRuleApplier)
+    singleOf(::TagGroupRuleRepository)
     single<BookGroupMutationGateway> { BookGroupMutationRepository(get(), get()) }
     single<BookshelfAutoGroupGateway> { BookshelfAutoGroupRepository(get()) }
     single<BookshelfAutoGroupPromptGateway> { BookshelfAutoGroupPromptRepository(get()) }

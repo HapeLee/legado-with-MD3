@@ -86,8 +86,7 @@ import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.AndroidPlatformCapabilities
 import io.legado.app.ui.main.MainActivity
-import io.legado.app.ui.replace.ReplaceEditRoute
-import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.main.MainRouteReplaceEdit
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.image.cover.sharedCoverSourceRadius
@@ -153,6 +152,8 @@ fun ReadBookRouteScreen(
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
+    // null = 打开替换规则列表页；非 null = 直达某条规则的编辑页
+    onOpenReplace: (edit: MainRouteReplaceEdit?) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
@@ -231,14 +232,6 @@ fun ReadBookRouteScreen(
     val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
         result?.let { (index, chapterPos, _) ->
             viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
-        }
-    }
-
-    val replaceLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            viewModel.onIntent(ReadBookIntent.ReplaceRuleResult)
         }
     }
 
@@ -417,28 +410,25 @@ fun ReadBookRouteScreen(
                             ReadBookEffect.OpenTtsEnginesAndVoices -> onOpenTtsEnginesAndVoices()
                             ReadBookEffect.OpenTtsCache -> onOpenTtsCache()
                             is ReadBookEffect.MenuSettingReplace -> {
-                                replaceLauncher.launch(
-                                    ReplaceRuleActivity.startIntent(
-                                        context = context,
-                                        bookUrl = ReadBook.book?.bookUrl
-                                    )
-                                )
+                                onOpenReplace(null)
                             }
                             is ReadBookEffect.TextActionReplace -> {
                                 val scopes = arrayListOf<String>()
                                 effect.bookName?.let { scopes.add(it) }
                                 effect.bookSourceUrl?.let { scopes.add(it) }
                                 val text = effect.text.lineSequence().map { it.trim() }.joinToString("\n")
-                                val editRoute = ReplaceEditRoute(
-                                    id = -1, pattern = text,
-                                    scope = scopes.joinToString(";"),
-                                    isScopeTitle = false, isScopeContent = true,
+                                onOpenReplace(
+                                    MainRouteReplaceEdit(
+                                        id = -1, pattern = text,
+                                        scope = scopes.joinToString(";"),
+                                        isScopeTitle = false, isScopeContent = true,
+                                    )
                                 )
-                                replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
                             }
                             is ReadBookEffect.OpenReplaceEditor -> {
-                                val editRoute = ReplaceEditRoute(id = effect.id, pattern = effect.pattern)
-                                replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
+                                onOpenReplace(
+                                    MainRouteReplaceEdit(id = effect.id, pattern = effect.pattern)
+                                )
                             }
                             is ReadBookEffect.MenuTocRegex -> {
                                 val intent = Intent(

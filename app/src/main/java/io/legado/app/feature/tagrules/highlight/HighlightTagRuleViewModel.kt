@@ -1,9 +1,8 @@
-package io.legado.app.ui.highlightTagRule
+package io.legado.app.feature.tagrules.highlight
 
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleViewModel
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.HighlightTagRule
 import io.legado.app.data.repository.HighlightTagRuleRepository
 import io.legado.app.data.repository.UploadRepository
@@ -28,13 +27,13 @@ import kotlinx.coroutines.withContext
 
 class HighlightTagRuleViewModel(
     application: Application,
-    uploadRepository: UploadRepository
+    uploadRepository: UploadRepository,
+    private val repository: HighlightTagRuleRepository,
 ) : BaseRuleViewModel<HighlightTagRuleItemUi, HighlightTagRule, Long, HighlightTagRuleUiState>(
     application,
     HighlightTagRuleUiState(interaction = InteractionState(isLoading = true)),
     uploadRepository
 ) {
-    private val repository = HighlightTagRuleRepository(appDb)
     private val _effects = MutableSharedFlow<HighlightTagRuleEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 

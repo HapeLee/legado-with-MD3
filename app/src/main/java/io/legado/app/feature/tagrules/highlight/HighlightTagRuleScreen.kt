@@ -1,4 +1,4 @@
-package io.legado.app.ui.highlightTagRule
+package io.legado.app.feature.tagrules.highlight
 
 import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult

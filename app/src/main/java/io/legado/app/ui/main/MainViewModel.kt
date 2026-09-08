@@ -86,6 +86,8 @@ class MainViewModel(
             PrefClickEvent.OpenReadRecord -> _effects.tryEmit(MainEffect.NavigateToReadRecord)
             PrefClickEvent.OpenHighlightTagRule ->
                 _effects.tryEmit(MainEffect.NavigateToHighlightTagRule)
+            PrefClickEvent.OpenReplaceRule ->
+                _effects.tryEmit(MainEffect.NavigateToReplaceRule)
             PrefClickEvent.OpenAbout -> _effects.tryEmit(MainEffect.NavigateToAbout)
             else -> Unit
         }

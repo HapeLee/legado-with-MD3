@@ -1,4 +1,4 @@
-package io.legado.app.ui.highlightTagRule
+package io.legado.app.feature.tagrules.highlight
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

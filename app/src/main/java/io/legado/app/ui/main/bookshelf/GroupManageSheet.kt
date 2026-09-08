@@ -38,9 +38,9 @@ import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupResetCoverAction
 import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.main.bookshelf.autoGroup.AiAutoGroupSheet
-import io.legado.app.ui.tagGroupRule.TagGroupRuleEditSheet
-import io.legado.app.ui.tagGroupRule.TagGroupRuleIntent
-import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
+import io.legado.app.feature.tagrules.group.TagGroupRuleEditSheet
+import io.legado.app.feature.tagrules.group.TagGroupRuleIntent
+import io.legado.app.feature.tagrules.group.TagGroupRuleViewModel
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem

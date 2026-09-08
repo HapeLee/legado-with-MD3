@@ -1,4 +1,4 @@
-package io.legado.app.ui.replace.edit
+package io.legado.app.feature.replacerules.edit
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn

@@ -1,4 +1,4 @@
-package io.legado.app.ui.replace
+package io.legado.app.feature.replacerules
 
 import org.junit.Assert.assertNotEquals
 import org.junit.Test

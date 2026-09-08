@@ -2,6 +2,7 @@ package io.legado.app.ui.main
 
 import androidx.navigation3.runtime.NavKey
 import io.legado.app.ui.login.SourceLoginType
+import kotlin.uuid.Uuid
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -237,6 +238,28 @@ data class MainRouteSearchContent(
 @Serializable
 data object MainRouteHighlightTagRule : MainRoute
 
+/**
+ * 替换规则列表页。替换规则原先挂在独立的 ReplaceRuleActivity 上，导致阅读页/目录页/我的页
+ * 都必须 import 该 Activity 才能跳转；收口成导航契约后，跨 Feature 只依赖这里的 key。
+ */
+@Serializable
+data class MainRouteReplaceRule(val bookUrl: String? = null) : MainRoute
+
+/**
+ * 替换规则编辑页。字段与 [io.legado.app.feature.replacerules.ReplaceEditRoute] 一一对应，
+ * 由 host 层（MainNavGraph）负责映射，Feature 侧不反向依赖导航契约。
+ */
+@Serializable
+data class MainRouteReplaceEdit(
+    val id: Long = -1,
+    val pattern: String? = null,
+    val isRegex: Boolean = false,
+    val scope: String? = null,
+    val isScopeTitle: Boolean = false,
+    val isScopeContent: Boolean = false,
+    val sessionId: String = Uuid.random().toString(),
+) : MainRoute
+
 @Serializable
 data object MainRouteAbout : MainRoute
 
@@ -291,4 +314,6 @@ object MainRouteConst {
     const val ROUTE_READ_RECORD_OVERVIEW = "read_record_overview"
     const val ROUTE_ABOUT = "about"
     const val ROUTE_TTS_CACHE = "tts_cache"
+    const val ROUTE_REPLACE_RULE = "replace/rule"
+    const val ROUTE_REPLACE_EDIT = "replace/edit"
 }

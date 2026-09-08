@@ -6,7 +6,8 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import io.legado.app.base.BaseComposeActivity
-import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.main.MainIntent
+import io.legado.app.ui.main.MainRouteConst
 
 /**
  * 目录
@@ -29,7 +30,24 @@ class TocActivity : BaseComposeActivity() {
                 finish()
             },
             onOpenReplaceRule = { editRoute ->
-                val intent = ReplaceRuleActivity.startIntent(context, editRoute)
+                val intent = if (editRoute == null) {
+                    MainIntent.createLauncherIntent(context).apply {
+                        putExtra(
+                            MainIntent.EXTRA_START_ROUTE,
+                            MainRouteConst.ROUTE_REPLACE_RULE
+                        )
+                    }
+                } else {
+                    MainIntent.createReplaceEditIntent(
+                        context,
+                        id = editRoute.id,
+                        pattern = editRoute.pattern,
+                        isRegex = editRoute.isRegex,
+                        scope = editRoute.scope,
+                        isScopeTitle = editRoute.isScopeTitle,
+                        isScopeContent = editRoute.isScopeContent,
+                    )
+                }
                 context.startActivity(intent)
             },
             onBookmarkClick = { index, pos ->

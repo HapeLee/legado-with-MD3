@@ -1759,6 +1759,11 @@ class ReadBookViewModel(
             }
         }
         viewModelScope.launch {
+            eventFlow<Unit>(EventBus.REPLACE_RULE_CHANGED).collect {
+                onIntent(ReadBookIntent.ReplaceRuleResult)
+            }
+        }
+        viewModelScope.launch {
             ReadConfigUpdateBus.events.collect { actions ->
                 _uiState.update {
                     it.copy(

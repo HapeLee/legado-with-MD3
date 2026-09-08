@@ -36,6 +36,8 @@ object EventBus {
     const val REFRESH_BOOK_TOC = "refreshBookToc"
     const val REFRESH_BOOK_CONTENT = "refreshBookContent"
     const val UP_TOC = "upToc"
+    // 替换规则被新增/修改/删除，阅读页需要重新套用规则并重排正文
+    const val REPLACE_RULE_CHANGED = "replaceRuleChanged"
 
     const val UP_ALL_BOOK_TOC = "upAllBookToc"
 }
