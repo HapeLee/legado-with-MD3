@@ -10,7 +10,7 @@ import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.ui.main.my.PrefClickEvent
-import io.legado.app.utils.eventBus.FlowEventBus
+import io.legado.app.utils.eventBus.AppEventBus
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,7 +56,7 @@ class MainViewModel(
     }
 
     fun upAllBookToc() {
-        FlowEventBus.post(EventBus.UP_ALL_BOOK_TOC, Unit)
+        AppEventBus.post(EventBus.UP_ALL_BOOK_TOC, Unit)
     }
 
     fun restoreWebDav(name: String) {

@@ -33,7 +33,7 @@ import io.legado.app.model.CacheBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.service.CacheBookService
 import io.legado.app.ui.config.themeConfig.TagColorPair
-import io.legado.app.utils.eventBus.FlowEventBus
+import io.legado.app.utils.eventBus.AppEventBus
 import io.legado.app.utils.move
 import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
@@ -637,7 +637,9 @@ class BookshelfViewModel(
             isInitialLoadingFlow.value = false
         }
         viewModelScope.launch {
-            FlowEventBus.with<Unit>(EventBus.UP_ALL_BOOK_TOC).collect {
+            // 非粘性：原 FlowEventBus 的 replay=1 会让每次重建本 VM 都立即收到上一次的
+            // 陈旧 Unit 并触发一轮全量刷新。改为非粘性，只在真正请求时刷新。
+            AppEventBus.observe<Unit>(EventBus.UP_ALL_BOOK_TOC).collect {
                 upAllBookToc()
             }
         }

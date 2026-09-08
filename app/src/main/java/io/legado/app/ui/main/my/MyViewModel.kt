@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
 import io.legado.app.service.WebService
-import io.legado.app.utils.eventBus.FlowEventBus
+import io.legado.app.utils.eventBus.AppEventBus
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,7 +57,8 @@ class MyViewModel(
 
     init {
         viewModelScope.launch {
-            FlowEventBus.with<String>(EventBus.WEB_SERVICE)
+            // 粘性：服务可能在进入本页之前就已启动，需要拿到当前地址而不是等下一次变更
+            AppEventBus.observeSticky<String>(EventBus.WEB_SERVICE)
                 .collect { address ->
                     _uiState.update { state ->
                         state.copy(
