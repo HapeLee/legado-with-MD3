@@ -420,7 +420,7 @@
         errorLine1="        val painter = remember(isOs3Effect) { BgEffectPainter(isOs3Effect) }"
         errorLine2="                                              ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/legado/app/ui/widget/components/effect/BgEffectBackground.kt"
+            file="../core/ui/src/main/kotlin/io/legado/app/ui/widget/components/effect/BgEffectBackground.kt"
             line="44"
             column="47"/>
     </issue>

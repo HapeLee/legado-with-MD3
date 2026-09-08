@@ -804,6 +804,27 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 >   `:core:platform` 73/76 项，全绿；`assembleAppDebug`；三门禁；`git diff --check`。
 > - **Stage B 结论**：tagrules 已是完整 Gradle 模块，`:app` 仅剩 DI 注册（`appModule`）、
 >   导航入口（`MainNavGraph`）与调用点（`GroupManageSheet`）——这正是宿主应有的职责。
+>
+> **P4 组件尾巴（第十二片，2026-09-08）**：再下沉 3 文件 / 594 行进 `:core:ui`——
+> `LoadMoreFooter.kt`、`dialog/ColorPickerSheet.kt`、`effect/BgEffectBackground.kt`；
+> 另下沉两个小工具：`String.isHex()` → `:core:model`、`shouldShowSplitPane()` → `:core:ui`。
+> `:app` 侧组件文件由 29 降到 **26**。
+>
+> - **`LoadMoreFooter` 的复制改走 `ClipboardProvider`**：`context.sendToClip(error)` →
+>   `ClipboardProvider.current.setText(error)`（第七片的契约），`LocalContext` 随之不再需要。
+> - **`shouldShowSplitPane()` 从 app 的 `ui/util/MiuixUtils.kt` 搬到
+>   `:core:ui` 的 `ui/util/WindowSizeExtensions.kt`**（只依赖 Compose 窗口信息），包名保留 →
+>   `MiuixAboutScreen` 零改动；顺带清掉 `MiuixUtils.kt` 里随之无用的 `LocalDensity`/`LocalWindowInfo` import。
+> - **`String.isHex()` 搬到 `:core:model`**（纯字符判定，不校验长度/`#`）：app 的
+>   `SymmetricCryptoAndroid` 与 `:core:ui` 的 `ColorPickerSheet` 共用同一实现。
+> - 资源：补 9 条 × 4 语言（`:core:ui` 达 99 条）。
+> - **验证（干净重建）**：`testAppDebugUnitTest` 631 项、`:core:data:testAndroidHostTest` 85 项、
+>   `:core:model` 59 项、`:core:ui` 9 项、`:core:viewmodel` 8 项、`:core:platform` 73 项，
+>   全绿；`assembleAppDebug`；三门禁；`git diff --check`。
+> - **剩余 26 个组件的归属结论**：它们**不再适合继续往 `:core:ui` 堆**——`bookmark/*`、
+>   `explore/*` 要 `:core:data` 实体，`image/cover/*` 要 `model.BookCover`，`changeSource/*` 直接持有
+>   ViewModel。按 feature-first 纪律，这些应随各自 Feature 模块迁出（`:feature:bookmark`、
+>   `:feature:explore`…），而不是让通用 UI 组件库反向依赖数据层/运行时单例。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

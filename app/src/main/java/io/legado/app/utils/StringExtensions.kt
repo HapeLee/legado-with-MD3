@@ -67,12 +67,6 @@ fun String?.isTrue(nullIsTrue: Boolean = false): Boolean {
     return !this.trim().matches("(?i)^(?:false|no|not|0|0.0)$".toRegex())
 }
 
-fun String.isHex(): Boolean {
-    return all {c ->
-        c in '0'..'9' || c in 'A'..'F' || c in 'a'..'f'
-    }
-}
-
 @SuppressLint("ObsoleteSdkInt")
 fun String.cnCompare(other: String): Int {
     return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {

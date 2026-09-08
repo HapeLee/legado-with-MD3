@@ -25,11 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.legado.app.R
+import io.legado.app.core.ui.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -37,7 +36,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.sendToClip
+import io.legado.app.core.platform.ClipboardProvider
 
 @Composable
 fun LoadMoreFooter(
@@ -48,7 +47,6 @@ fun LoadMoreFooter(
     onLoadMore: (() -> Unit)? = null,
     autoLoad: Boolean = true,
 ) {
-    val context = LocalContext.current
     var showFullError by remember { mutableStateOf<String?>(null) }
 
     if (autoLoad) {
@@ -69,7 +67,7 @@ fun LoadMoreFooter(
         title = stringResource(R.string.error_details),
         confirmText = stringResource(R.string.copy_text),
         onConfirm = { error ->
-            context.sendToClip(error)
+            ClipboardProvider.current.setText(error)
             showFullError = null
         },
         dismissText = stringResource(R.string.close),
