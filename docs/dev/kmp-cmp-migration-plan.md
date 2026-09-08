@@ -624,6 +624,29 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 >   真正的闸门已转到 ViewModel 侧：`base.BaseRuleViewModel`（`Application`/`BaseViewModel`/
 >   okhttp 上传）、`data.repository.UploadRepository`、`utils.{GSON,getClipText,sendToClip,toastOnUi}`、
 >   `help.book.applyTagGroupRules`。
+>
+> **P4 规则基类去平台直连（第五片，2026-09-08）**：`BaseRuleViewModel` 原先直接依赖
+> `okHttpClient` / `AppConst` / `ContentResolver` / `Uri` / `utils.{isAbsUrl,isUri,readText}`。
+> 本片把「取导入文本」与「写导出文本」收敛为契约 `RuleTransferPlatform`
+> （`io.legado.app.base.rules`），Android 实现 `AndroidRuleTransferPlatform` 留在 `:app`，
+> 由 Koin 注入。**这是把规则基类搬进独立模块的前置**，本身不改任何用户可见行为。
+>
+> - **实现体逐行照搬**：`readImportSource` 与迁移前 `resolveSource` 归一化后**零差异**；
+>   导出仅把 `openOutputStream(uri)` 换成 `openOutputStream(targetUri.toUri())`——调用方传
+>   `uri.toString()`，SAF `content://` 的字符串往返无损。
+> - **先立 8 项行为基线**（`app/src/test/.../base/BaseRuleViewModelTransferTest.kt`，Robolectric +
+>   假契约）：导入分类 New/Update/Existing 与默认勾选、trim 后交给平台、解析失败进 `Error`、
+>   空选择不写文件、写入内容与目标、写失败上报原因、空选择不上传、上传成功事件的
+>   url/actionLabel/fileName。断言用**状态/事件等待**（`first { }` + `withTimeout`）而非虚拟时钟：
+>   基类内部硬编码 `Dispatchers.IO`/`Main`，推进调度器不可靠。**局限**：该测试锁的是编排契约，
+>   平台实现体的等价性靠「逐行照搬 + 人工比对」证明，不是差分测试。
+> - **7 个子类构造函数各加一个 `transferPlatform` 参数**（`TocViewModel` 用命名参数传），
+>   Koin 新增一条 `single<RuleTransferPlatform>`；无任何直接 `new` 调用点（全部走 `viewModelOf`）。
+> - **验证**：`testAppDebugUnitTest` **638 项全绿**（新增 8 项）、`:core:ui:testDebugUnitTest` 8 项、
+>   `assembleAppDebug`、三门禁全绿、`git diff --check` 干净。
+> - **下一步（第六片）**：基类已无 okhttp/ContentResolver 直连，剩下 `BaseViewModel(application)`
+>   （只需 `AndroidViewModel`）+ `UploadRepository` 接口位置 + 子类的 `context.{getClipText,sendToClip,
+>   toastOnUi}`；处理完即可把 `BaseRuleViewModel`/`BaseRuleEvent` 移入 Android library 模块。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

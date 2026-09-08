@@ -96,6 +96,9 @@ import io.legado.app.data.repository.TranslationCacheRepositoryImpl
 import io.legado.app.data.repository.TranslationSettingsRepository
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.base.rules.AndroidRuleTransferPlatform
+import io.legado.app.base.rules.RuleTransferPlatform
+import org.koin.android.ext.koin.androidContext
 import io.legado.app.data.repository.WebDavBackupRepository
 import io.legado.app.data.repository.WebDavReadingProgressRepository
 import io.legado.app.data.repository.manga.DefaultMangaReaderSession
@@ -461,6 +464,8 @@ val appModule = module {
     singleOf(::ThemePackageManager)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
+    // 规则导入/导出的平台实现留在 :app；契约与 BaseRuleViewModel 一起下沉时只搬接口。
+    single<RuleTransferPlatform> { AndroidRuleTransferPlatform(androidContext()) }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     single<AiProfileGateway> { AiProfileRepository(get()) }
     single<AiArtifactGateway> { AiArtifactRepository(get()) }

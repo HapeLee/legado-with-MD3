@@ -2,22 +2,14 @@ package io.legado.app.base
 
 import android.app.Application
 import android.net.Uri
-import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
-import io.legado.app.constant.AppConst
+import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.data.repository.UploadRepository
-import io.legado.app.help.http.decompressed
-import io.legado.app.help.http.newCallResponseBody
-import io.legado.app.help.http.okHttpClient
-import io.legado.app.help.http.text
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
-import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isUri
-import io.legado.app.utils.readText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
@@ -45,7 +37,8 @@ sealed interface BaseRuleEvent {
 abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiState<T>>(
     application: Application,
     protected val initialState: S,
-    private val uploadRepository: UploadRepository? = null // 设为可空，提高灵活性
+    private val uploadRepository: UploadRepository? = null, // 设为可空，提高灵活性
+    private val transferPlatform: RuleTransferPlatform
 ) : BaseViewModel(application) {
 
     protected val _searchKey = MutableStateFlow("")
@@ -175,12 +168,7 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
 
                 val json = generateJson(rulesToExport)
 
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.bufferedWriter().use { writer ->
-                        writer.write(json)
-                        writer.flush()
-                    }
-                }
+                transferPlatform.writeExport(uri.toString(), json)
                 _eventChannel.send(BaseRuleEvent.ShowSnackbar("导出成功"))
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -235,7 +223,7 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
 
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                val jsonText = resolveSource(text.trim())
+                val jsonText = transferPlatform.readImportSource(text.trim())
                 val rules = parseImportRules(jsonText)
                 val wrappers = rules.map { newRule ->
                     val oldRule = findOldRule(newRule)
@@ -262,24 +250,6 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
                 it.printStackTrace()
                 _importState.value = BaseImportUiState.Error(it.localizedMessage ?: "Unknown Error")
             }
-        }
-    }
-
-    protected suspend fun resolveSource(text: String): String {
-        return when {
-            text.isAbsUrl() -> {
-                okHttpClient.newCallResponseBody {
-                    if (text.endsWith("#requestWithoutUA")) {
-                        url(text.substringBeforeLast("#requestWithoutUA"))
-                        header(AppConst.UA_NAME, "null")
-                    } else {
-                        url(text)
-                    }
-                }.decompressed().text("utf-8")
-            }
-
-            text.isUri() -> text.toUri().readText(context)
-            else -> text
         }
     }
 

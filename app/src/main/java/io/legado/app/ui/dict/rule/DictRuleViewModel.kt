@@ -3,6 +3,7 @@ package io.legado.app.ui.dict.rule
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleViewModel
+import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.data.repository.UploadRepository
@@ -28,11 +29,13 @@ import kotlinx.coroutines.withContext
 class DictRuleViewModel(
     application: Application,
     uploadRepository: UploadRepository,
+    transferPlatform: RuleTransferPlatform,
     private val repository: DictRuleRepository,
 ) : BaseRuleViewModel<DictRuleItemUi, DictRule, String, DictRuleUiState>(
     application,
     DictRuleUiState(interaction = InteractionState(isLoading = true)),
-    uploadRepository
+    uploadRepository,
+    transferPlatform
 ) {
     private val _effects = MutableSharedFlow<DictRuleEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()

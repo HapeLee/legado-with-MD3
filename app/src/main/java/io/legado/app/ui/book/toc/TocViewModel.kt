@@ -8,6 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
+import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -241,6 +242,7 @@ private data class TitleReplaceState(
 class TocViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
+    transferPlatform: RuleTransferPlatform,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
     private val bookRepository: BookRepository,
     private val bookSourceRepository: BookSourceRepository,
@@ -250,7 +252,8 @@ class TocViewModel(
     private val otherSettingsGateway: OtherSettingsGateway,
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
     application,
-    initialState = TocActionState()
+    initialState = TocActionState(),
+    transferPlatform = transferPlatform
 ) {
 
     private val bookUrlFlow = MutableStateFlow(savedStateHandle.get<String>("bookUrl"))

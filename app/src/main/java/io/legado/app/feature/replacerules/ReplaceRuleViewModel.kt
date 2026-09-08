@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseRuleViewModel
+import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
@@ -55,6 +56,7 @@ import io.legado.app.data.entities.getUseReplaceRule
 class ReplaceRuleViewModel(
     application: Application,
     uploadRepository: UploadRepository,
+    transferPlatform: RuleTransferPlatform,
     private val bookContentProcessGateway: BookContentProcessGateway,
     private val readSettingsRepository: ReadSettingsRepository,
     private val repository: ReplaceRuleRepository,
@@ -62,7 +64,8 @@ class ReplaceRuleViewModel(
 ) : BaseRuleViewModel<ReplaceRuleItemUi, ReplaceRule, Long, ReplaceRuleUiState>(
     application,
     ReplaceRuleUiState(interaction = InteractionState(isLoading = true)),
-    uploadRepository
+    uploadRepository,
+    transferPlatform
 ) {
     private val _sortMode = MutableStateFlow(context.getPrefString(PreferKey.replaceSortMode, "desc") ?: "desc")
     val sortMode = _sortMode.asStateFlow()

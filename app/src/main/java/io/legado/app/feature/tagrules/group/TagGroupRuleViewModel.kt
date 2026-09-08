@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
+import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.TagGroupRuleRepository
@@ -30,12 +31,14 @@ import kotlinx.coroutines.withContext
 class TagGroupRuleViewModel(
     application: Application,
     uploadRepository: UploadRepository,
+    transferPlatform: RuleTransferPlatform,
     private val bookRepository: BookRepository,
     private val repository: TagGroupRuleRepository,
 ) : BaseRuleViewModel<TagGroupRuleItemUi, TagGroupRule, Long, TagGroupRuleUiState>(
     application,
     TagGroupRuleUiState(interaction = InteractionState(isLoading = true)),
-    uploadRepository
+    uploadRepository,
+    transferPlatform
 ) {
     override val rawDataFlow: Flow<List<TagGroupRule>> = repository.flowAll()
 

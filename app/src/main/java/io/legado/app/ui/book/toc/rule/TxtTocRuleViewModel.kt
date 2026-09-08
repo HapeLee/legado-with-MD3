@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
+import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
@@ -26,11 +27,13 @@ import kotlinx.coroutines.launch
 class TxtTocRuleViewModel(
     application: Application,
     uploadRepository: UploadRepository,
+    transferPlatform: RuleTransferPlatform,
     private val repository: TxtTocRuleRepository,
 ) : BaseRuleViewModel<TxtTocRuleItemUi, TxtTocRule, Long, TxtTocRuleUiState>(
     application,
     TxtTocRuleUiState(interaction = InteractionState(isLoading = true)),
-    uploadRepository
+    uploadRepository,
+    transferPlatform
 ) {
     private val _effects = MutableSharedFlow<TxtTocRuleEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()

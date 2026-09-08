@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.BaseRuleEvent
+import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.UploadRepository
@@ -107,11 +108,13 @@ sealed interface RssSourceEffect {
 class RssSourceViewModel(
     application: Application,
     uploadRepository: UploadRepository,
+    transferPlatform: RuleTransferPlatform,
     private val repository: RssRepository,
 ) : BaseRuleViewModel<RssSourceItemUi, RssSource, String, RssSourceUiState>(
     application,
     RssSourceUiState(interaction = InteractionState(isLoading = true)),
-    uploadRepository
+    uploadRepository,
+    transferPlatform
 ) {
     companion object {
         const val FILTER_ENABLED = "@enabled"
