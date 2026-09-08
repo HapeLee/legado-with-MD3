@@ -613,8 +613,13 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 > - **验证**：`:core:ui:compileDebugKotlin` + `:core:ui:testDebugUnitTest`（8 项）、
 >   `:app:compileAppDebugKotlin`、`testAppDebugUnitTest`（**630 项全绿**）、`assembleAppDebug`、
 >   `checkSharedPurity` / `checkModuleDependencies` / `verifyConfigArchitecture` 全绿、
->   `git diff --check` 干净；`:app:lintAppDebug` 5 error（与前三片逐条相同，全部 app 自有）/
->   87 warning。
+>   `git diff --check` 干净。
+> - **lint 用独立 worktree 做了同环境对照**（同一 commit 前后各跑一次全量 `:app:lintAppDebug`）：
+>   error **5 → 5（逐条相同，全部 app 自有）**；warning **89 → 90**。逐条 diff 后，唯一的净新增是
+>   `reader/ReaderMenuGlass.kt:25 AnnotateVersionCheck`——该文件代码逐字节未变，是**移入 library
+>   模块后 lint 才给出「建议加 `@ChecksSdkIntAtLeast`」**；另 2 条 `ReorderableConfigList` 警告只是
+>   路径从 `app/...` 变成 `core/ui/...`（净 0）。顺带发现：同一 commit 的增量 lint 报 86 条、
+>   全量报 89 条，**warning 计数在本仓不可当作回归信号**（error 可以）。
 > - **Stage B 的组件侧只剩 `importComponents/ImportComponents.kt`（`utils.GSON`）**；
 >   真正的闸门已转到 ViewModel 侧：`base.BaseRuleViewModel`（`Application`/`BaseViewModel`/
 >   okhttp 上传）、`data.repository.UploadRepository`、`utils.{GSON,getClipText,sendToClip,toastOnUi}`、
