@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.readaloud.cloudtts
 
-import android.content.ClipData
 import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -50,6 +48,7 @@ import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.profile
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.util.plainTextClipEntry
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -104,7 +103,7 @@ fun CloudTtsScreen(
             when (effect) {
                 is CloudTtsEffect.ShowToast -> context.toastOnUi(effect.message)
                 is CloudTtsEffect.CopyText -> {
-                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(errorTitle, effect.text)))
+                    clipboard.setClipEntry(plainTextClipEntry(errorTitle, effect.text))
                     context.toastOnUi(effect.message)
                 }
                 is CloudTtsEffect.PlayPreview -> runCatching {
@@ -507,12 +506,7 @@ private fun HttpTtsEditorSheet(
                             expanded = false
                             scope.launch {
                                 clipboard.setClipEntry(
-                                    ClipEntry(
-                                        ClipData.newPlainText(
-                                            "httpTTS",
-                                            GSON.toJson(current())
-                                        )
-                                    )
+                                    plainTextClipEntry("httpTTS", GSON.toJson(current()))
                                 )
                             }
                         },

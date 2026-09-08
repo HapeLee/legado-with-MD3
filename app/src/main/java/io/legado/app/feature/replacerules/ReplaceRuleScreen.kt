@@ -1,6 +1,5 @@
 package io.legado.app.feature.replacerules
 
-import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -29,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -43,6 +41,7 @@ import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.util.plainTextClipEntry
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
@@ -250,10 +249,9 @@ fun ReplaceRuleScreen(
                         actionLabel = event.actionLabel,
                         withDismissAction = true
                     )
-                    if (result == SnackbarResult.ActionPerformed && event.url != null) {
-                        clipboardManager.setClipEntry(
-                            ClipEntry(ClipData.newPlainText("url", event.url))
-                        )
+                    val url = event.url
+                    if (result == SnackbarResult.ActionPerformed && url != null) {
+                        clipboardManager.setClipEntry(plainTextClipEntry("url", url))
                     }
                 }
             }

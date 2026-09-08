@@ -69,8 +69,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.onSizeChanged
-import android.content.ClipData
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -83,6 +81,7 @@ import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.ui.ai.AiReasoningModeButton
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.util.plainTextClipEntry
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -332,7 +331,7 @@ fun AiChatScreen(
                             onCopy = {
                                 scope.launch {
                                     clipboard.setClipEntry(
-                                        ClipEntry(ClipData.newPlainText("content", message.content))
+                                        plainTextClipEntry("content", message.content)
                                     )
                                 }
                             },

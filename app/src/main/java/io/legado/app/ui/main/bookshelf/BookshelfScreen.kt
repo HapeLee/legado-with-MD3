@@ -1,6 +1,5 @@
 package io.legado.app.ui.main.bookshelf
 
-import android.content.ClipData
 import android.content.res.Configuration
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -87,7 +86,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -111,6 +109,7 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
+import io.legado.app.ui.util.plainTextClipEntry
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -227,12 +226,7 @@ fun BookshelfScreen(
                     )
                     if (result == SnackbarResult.ActionPerformed && effect.url != null) {
                         clipboardManager.setClipEntry(
-                            ClipEntry(
-                                ClipData.newPlainText(
-                                    "url",
-                                    effect.url
-                                )
-                            )
+                            plainTextClipEntry("url", effect.url)
                         )
                     }
                 }
@@ -249,7 +243,7 @@ fun BookshelfScreen(
         )
         if (result == SnackbarResult.ActionPerformed) {
             clipboardManager.setClipEntry(
-                ClipEntry(ClipData.newPlainText("url", url))
+                plainTextClipEntry("url", url)
             )
         }
         onIntent(BookshelfIntent.UploadResultConsumed)

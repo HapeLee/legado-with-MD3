@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.source.manage
 
-import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -35,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -52,6 +50,7 @@ import io.legado.app.service.BookSourceCheckService
 import io.legado.app.ui.qrcode.QrCodeResult
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.util.plainTextClipEntry
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
@@ -123,7 +122,7 @@ fun BookSourceRouteScreen(
                     )
                     if (result == SnackbarResult.ActionPerformed && effect.url != null) {
                         clipboardManager.setClipEntry(
-                            ClipEntry(ClipData.newPlainText("url", effect.url))
+                            plainTextClipEntry("url", effect.url)
                         )
                     }
                 }
