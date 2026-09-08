@@ -562,6 +562,34 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 >   `:core:ui`；只剩 `importComponents/ImportComponents.kt`（GSON + 16 字符串）与
 >   `rules/RuleListScaffold.kt`（依赖 topbar 链 `TopBarButton` → `TopBarLiquidGlass` →
 >   `ui.animation.InteractiveHighlight`）。
+>
+> **P4 组件侧下沉（第三片，2026-09-08）**：下沉 **topbar 链 9 文件 / 1316 行** 进 `:core:ui`
+> ——`ui/widget/components/topbar` 全部 7 文件 + `ui/animation/InteractiveHighlight.kt` +
+> `ui/util/DragGestureInspector.kt`。`:app` 侧组件文件由 46 降到 39。顶栏是 50+ 屏的公共依赖，
+> 本片是目前单点收益最高的一刀。
+>
+> - **链条拆法**：`TopBarButton` → `TopBarLiquidGlass` → `ui.animation.InteractiveHighlight` →
+>   `ui.util.inspectDragGestures`。后两个是纯 Compose 手势/着色器工具（`android.graphics.RuntimeShader`
+>   已有 `@SuppressLint("NewApi")`），一并下沉即整条链解开；`:app` 侧剩下的消费方
+>   （`FloatingBottomBar`、`ReaderMenuGlass`、`DampedDragAnimation`）因包名保留而**零改动**。
+> - **新增模块依赖 `:core:ui → :core:designsystem`**：`DynamicTopAppBar` 读
+>   `ui.widget.components.list.ListUiState`（KMP commonMain 的纯状态契约）。方向合法
+>   （Android UI → 纯契约），`checkModuleDependencies` 无新增违规。
+> - **资源**：补 `back` / `search` / `cancel_select` / `list_loading_title` /
+>   `list_selected_count` 共 5 条 × 4 语言（沿用第二片的「库侧默认值 + app 覆盖」规则），
+>   迁移文件只换 R 导入（2 处）。
+> - **可见性**：`BookInfoScreen` 从 `:app` 调用 `TopBarActionsRow` / `miuixTopBarSlotPadding` /
+>   `miuixTopBarActionsEndPadding` 三个原 `internal` 符号，随跨模块改为公开；其余
+>   （`LocalTopBarMergeState` / `topBarLiquidGlass` / `topBarLiquidGlassEnabled` /
+>   `topBarActionSpacing`）经全仓扫描确认只在 `:core:ui` 内使用，保持 `internal`。
+> - **验证**：`:core:ui:compileDebugKotlin` + `:core:ui:testDebugUnitTest`（8 项）、
+>   `:app:compileAppDebugKotlin`、`testAppDebugUnitTest`（**630 项全绿**）、`assembleAppDebug`、
+>   `checkSharedPurity` / `checkModuleDependencies` / `verifyConfigArchitecture` 全绿、
+>   `git diff --check` 干净。
+> - **下一片的组件面只剩三类硬依赖**：`:core:data` 的 Room 实体（`bookmark/*`、`explore/*`）、
+>   `utils.GSON`（`importComponents/*`、`Json*Editor`、`text/HtmlContent`）、以及非组件的
+>   feature 自身 `:app` 依赖（`base.BaseRuleViewModel`、`data.repository.UploadRepository`、
+>   `utils.*` 扩展）。`RuleListScaffold` 的 topbar 阻塞已随本片解除。
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 

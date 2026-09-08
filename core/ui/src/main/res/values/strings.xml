@@ -8,12 +8,14 @@
     <string name="a11y_move_down">Move down</string>
     <string name="a11y_move_up">Move up</string>
     <string name="action_save">Save</string>
+    <string name="back">Back</string>
     <string name="bookmark_note">Summary / note</string>
     <string name="bookmark_note_description">Summary or note: %1$s</string>
     <string name="bookmark_original_text">Original text</string>
     <string name="bookmark_original_text_description">Original text: %1$s</string>
     <string name="by_duration">By Duration</string>
     <string name="cancel">Cancel</string>
+    <string name="cancel_select">Cancel Selection</string>
     <string name="chapter_list_empty">Chapters is empty</string>
     <string name="clear">Clear</string>
     <string name="collapse">Collapse</string>
@@ -29,6 +31,8 @@
     <string name="input_value_range">Enter value (%1$d-%2$d)</string>
     <string name="invert_selection">Invert Selection</string>
     <string name="less_count">Less(</string>
+    <string name="list_loading_title">Please wait…</string>
+    <string name="list_selected_count">Selected %1$d/%2$d</string>
     <string name="manual_input">Manual Input</string>
     <string name="menu">Menu</string>
     <string name="month_format">%1$d</string>
@@ -38,6 +42,7 @@
     <string name="multi_select_items">Multi-select Items</string>
     <string name="no_earlier_data">No earlier data</string>
     <string name="ok">OK</string>
+    <string name="search">Search</string>
     <string name="search_placeholder">Search…</string>
     <string name="select_all">Select all</string>
     <string name="select_operation">Select an operation</string>

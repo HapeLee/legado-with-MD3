@@ -8,12 +8,14 @@
     <string name="a11y_move_down">下移</string>
     <string name="a11y_move_up">上移</string>
     <string name="action_save">保存</string>
+    <string name="back">返回</string>
     <string name="bookmark_note">摘要/筆記</string>
     <string name="bookmark_note_description">摘要或筆記：%1$s</string>
     <string name="bookmark_original_text">原文</string>
     <string name="bookmark_original_text_description">原文：%1$s</string>
     <string name="by_duration">按時長</string>
     <string name="cancel">取消</string>
+    <string name="cancel_select">取消選擇</string>
     <string name="chapter_list_empty">目錄列表為空</string>
     <string name="clear">清除</string>
     <string name="collapse">收起</string>
@@ -29,6 +31,8 @@
     <string name="input_value_range">輸入數值（%1$d-%2$d）</string>
     <string name="invert_selection">反選</string>
     <string name="less_count">較少（</string>
+    <string name="list_loading_title">請稍候…</string>
+    <string name="list_selected_count">已選擇 %1$d/%2$d</string>
     <string name="manual_input">手動輸入</string>
     <string name="menu">菜單</string>
     <string name="month_format">%1$d</string>
@@ -38,6 +42,7 @@
     <string name="multi_select_items">多選項目</string>
     <string name="no_earlier_data">無更早的資料</string>
     <string name="ok">確認</string>
+    <string name="search">搜尋</string>
     <string name="search_placeholder">搜尋…</string>
     <string name="select_all">全選</string>
     <string name="select_operation">選擇操作</string>

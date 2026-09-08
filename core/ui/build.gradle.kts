@@ -5,9 +5,11 @@ plugins {
 
 // `:core:ui` 是 **Android 专用** 的 Compose UI 模块，承载：
 //   1. `io.legado.app.ui.theme`——主题引擎、配色方案、自适应间距/密度；
-//   2. `io.legado.app.ui.widget.components` 中 **不依赖 app 资源(`io.legado.app.R`) 与
-//      app 单例** 的闭包子集（通用 UI 组件：Scaffold/Text/TextField/Button/Card/
-//      SettingItem/CheckBox/Divider/Swipe/Pager/TabRow/ProgressIndicator 等）。
+//   2. `io.legado.app.ui.widget.components` 中 **不依赖 app 单例** 的闭包子集（通用 UI 组件：
+//      Scaffold/Text/TextField/Button/Card/SettingItem/CheckBox/Divider/Swipe/Pager/TabRow/
+//      ProgressIndicator/TopBar 等）；
+//   3. `io.legado.app.ui.animation` 与 `io.legado.app.ui.util` 中同样无 app 单例依赖的
+//      纯 Compose 交互/手势工具（`InteractiveHighlight`、`inspectDragGestures`）。
 //
 // 为什么不放 `:core:designsystem`：那是一个 KMP 模块，commonMain 受 `checkSharedPurity`
 // 约束（零 Compose、零 `android.*`）。而这套主题与组件大量使用 `Context` / `Bitmap` / `Uri` /
@@ -16,10 +18,13 @@ plugins {
 // 存在的意义：此前 `ui/theme` 与 `ui/widget/components` 都留在 `:app`，任何 Feature 提升为
 // Gradle 模块都会形成 `:app → :feature:x → :app` 的循环依赖。本模块是拆开这个环的通道。
 //
-// 组件面的切片规则（可机械复核）：文件中不得出现 `io.legado.app.R`、不得 import
-// `io.legado.app` 的 app 层包（`ui.theme` / `ui.widget.components` / `domain.model` 除外），
-// 且其组件内依赖闭包同样满足该规则。带字符串/图标资源的组件、依赖 `utils.GSON` 或
-// `ui.main.MainDestination` 的组件仍留在 `:app`，待各自解耦后再迁入。
+// 组件面的切片规则（可机械复核）：文件中不得出现 `io.legado.app` 的 app 单例、`utils.GSON`、
+// `ui.main.MainDestination`；不得 import app 层包（`ui.theme` / `ui.widget.components` /
+// `ui.animation` / `ui.util` / `domain.model` 除外），且其组件内依赖闭包同样满足该规则。
+//
+// 资源策略：库侧 `res/values*/strings.xml` 只放**默认值**，app 侧同名资源按 Android 资源
+// 合并优先级覆盖；因此迁移文件只把 `io.legado.app.R` 换成 `io.legado.app.core.ui.R`，
+// app 侧代码与资源均不改动。仍有 `utils.GSON` 等 app 单例依赖的组件留在 `:app`。
 //
 // 依赖只列实际用到的；新增文件需同步补依赖，不要顺手塞通用 UI 库。
 
@@ -54,6 +59,8 @@ android {
 
 dependencies {
     implementation(project(":core:model"))
+    // `DynamicTopAppBar` 读取 `ui.widget.components.list.ListUiState`（纯状态契约，commonMain）。
+    implementation(project(":core:designsystem"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
