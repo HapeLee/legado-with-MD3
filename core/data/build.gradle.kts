@@ -25,6 +25,10 @@ kotlin {
         // 无需各自再声明 Gson——与参考项目 `shared` 对 okhttp 的处理一致。
         androidMain.dependencies {
             api(libs.gson)
+            // `io.legado.app.utils.jsonPath` 及 `ReadContext.read*` 扩展（`JsonExtensions.kt`）
+            // 随 `ReplaceAnalyzer` 一并下沉：com.jayway.jsonpath 是 JVM 三方库，只能落平台源集。
+            // 包名保持 `io.legado.app.utils`，`:app` 侧 9 个使用方 import 零改动。
+            implementation(libs.json.path)
         }
         // 反射是不可变式守卫（如 ReadSettings 全字段落盘覆盖面）的唯一手段，而
         // kotlin-reflect 是 JVM-only：这类测试只能放在 JVM 目标下，不能进 commonTest。
