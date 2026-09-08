@@ -1,6 +1,5 @@
 package io.legado.app.data.repository
 
-import android.text.TextUtils
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.utils.splitNotBlank
@@ -118,7 +117,7 @@ class ReplaceRuleRepository(
                     it.remove(oldGroup)
                     if (!newGroup.isNullOrEmpty())
                         it.add(newGroup)
-                    source.group = TextUtils.join(",", it)
+                    source.group = it.joinToString(",")
                 }
             }
             dao.update(*sources.toTypedArray())
@@ -131,7 +130,7 @@ class ReplaceRuleRepository(
             sources.forEach { source ->
                 source.group?.splitNotBlank(",")?.toHashSet()?.let {
                     it.remove(group)
-                    source.group = TextUtils.join(",", it)
+                    source.group = it.joinToString(",")
                 }
             }
             dao.update(*sources.toTypedArray())

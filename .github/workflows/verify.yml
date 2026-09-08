@@ -92,6 +92,7 @@ jobs:
             :core:viewmodel:compileDebugKotlin \
             :core:viewmodel:testDebugUnitTest \
             :feature:tagrules:compileDebugKotlin \
+            :feature:replacerules:compileDebugKotlin \
             --continue \
             --no-daemon \
             --no-configuration-cache
