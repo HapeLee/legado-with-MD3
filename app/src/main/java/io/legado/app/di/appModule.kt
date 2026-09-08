@@ -150,6 +150,7 @@ import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.LocalPasswordGateway
+import io.legado.app.domain.gateway.AndroidReadBookReplaceSessionGateway
 import io.legado.app.domain.gateway.MangaReaderDataGateway
 import io.legado.app.domain.gateway.MangaReaderSessionFactory
 import io.legado.app.domain.gateway.MangaSettingsGateway
@@ -157,6 +158,7 @@ import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudVoiceGateway
+import io.legado.app.domain.gateway.ReadBookReplaceSessionGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
@@ -466,6 +468,8 @@ val appModule = module {
     single<UploadRepository> { DirectLinkUploadRepository() }
     // 规则导入/导出的平台实现留在 :app；契约与 BaseRuleViewModel 一起下沉时只搬接口。
     single<RuleTransferPlatform> { AndroidRuleTransferPlatform(androidContext()) }
+    // 阅读会话（ReadBook 单例）留在 :app；替换相关能力以契约暴露，供 :feature:replacerules 使用。
+    single<ReadBookReplaceSessionGateway> { AndroidReadBookReplaceSessionGateway(get()) }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     single<AiProfileGateway> { AiProfileRepository(get()) }
     single<AiArtifactGateway> { AiArtifactRepository(get()) }

@@ -14,11 +14,10 @@ import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookContentProcessGateway
-import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadBookReplaceSessionGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.help.ReplaceAnalyzer
-import io.legado.app.model.ReadBook
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiState
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -51,7 +50,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import io.legado.app.data.entities.getUseReplaceRule
 
 class ReplaceRuleViewModel(
     application: Application,
@@ -60,7 +58,7 @@ class ReplaceRuleViewModel(
     private val bookContentProcessGateway: BookContentProcessGateway,
     private val readSettingsRepository: ReadSettingsRepository,
     private val repository: ReplaceRuleRepository,
-    private val otherSettingsGateway: OtherSettingsGateway,
+    private val readBookSession: ReadBookReplaceSessionGateway,
 ) : BaseRuleViewModel<ReplaceRuleItemUi, ReplaceRule, Long, ReplaceRuleUiState>(
     application,
     ReplaceRuleUiState(interaction = InteractionState(isLoading = true)),
@@ -188,8 +186,8 @@ class ReplaceRuleViewModel(
                 _bookState.update { it.copy(chineseConvertActive = false) }
             }
             ReplaceRuleIntent.DisableReSegment -> {
-                ReadBook.book?.setReSegment(false)
-                ReadBook.loadContent(false)
+                readBookSession.setReSegment(false)
+                readBookSession.loadContent(false)
                 _bookState.update { it.copy(reSegmentActive = false) }
             }
             is ReplaceRuleIntent.ToggleContentProcess -> viewModelScope.launch {
@@ -446,46 +444,38 @@ class ReplaceRuleViewModel(
     }
 
     private fun initBookData(bookUrl: String) {
-        val book = ReadBook.book
-        val chapterInput = ReadBook.readerChapterInputWindow.current
-        if (book != null && book.bookUrl == bookUrl) {
-            val effectiveRules = chapterInput?.content?.effectiveReplaceRules.orEmpty().toImmutableList()
-            val replaceEnabled =
-                book.getUseReplaceRule(otherSettingsGateway.currentSettings.replaceEnableDefault)
+        val snapshot = readBookSession.snapshot()
+        if (snapshot != null && snapshot.bookUrl == bookUrl) {
             val chineseConvertActive = readSettingsRepository.currentSettings.chineseConverterType > 0
-            val reSegmentActive = book.getReSegment()
             _bookState.update {
                 it.copy(
                     bookUrl = bookUrl,
-                    replaceEnabled = replaceEnabled,
-                    effectiveRules = effectiveRules,
+                    replaceEnabled = snapshot.useReplaceRule,
+                    effectiveRules = snapshot.effectiveReplaceRules.toImmutableList(),
                     chineseConvertActive = chineseConvertActive,
-                    reSegmentActive = reSegmentActive,
+                    reSegmentActive = snapshot.reSegment,
                 )
             }
         }
     }
 
     private fun toggleReplaceEnable() {
-        ReadBook.book?.let { book ->
-            val enabled = !book.getUseReplaceRule(
-                otherSettingsGateway.currentSettings.replaceEnableDefault
-            )
-            book.setUseReplaceRule(enabled)
-            ReadBook.saveRead()
-            _bookState.update { it.copy(replaceEnabled = enabled) }
-        }
+        val snapshot = readBookSession.snapshot() ?: return
+        val enabled = !snapshot.useReplaceRule
+        readBookSession.setUseReplaceRule(enabled)
+        readBookSession.saveRead()
+        _bookState.update { it.copy(replaceEnabled = enabled) }
     }
 
     private fun loadContentProcesses() {
-        val book = ReadBook.book ?: return
-        val chapterIndex = ReadBook.durChapterIndex
+        val snapshot = readBookSession.snapshot() ?: return
+        val chapterIndex = snapshot.chapterIndex
         _bookState.update {
             it.copy(contentProcessState = it.contentProcessState.copy(isLoading = true, errorMessage = null))
         }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                bookContentProcessGateway.getForChapter(book.bookUrl, chapterIndex)
+                bookContentProcessGateway.getForChapter(snapshot.bookUrl, chapterIndex)
                     .mapNotNull { it.toContentProcessItemUi() }
                     .toImmutableList()
             }.onSuccess { items ->
