@@ -143,7 +143,7 @@ class ReplaceRuleViewModel(
             }
             is ReplaceRuleIntent.ExportSelection -> {
                 val state = uiState.value
-                exportToUri(intent.uri, state.items, state.selectedIds)
+                exportToUri(android.net.Uri.parse(intent.uri), state.items, state.selectedIds)
             }
             is ReplaceRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
             ReplaceRuleIntent.SaveSortOrder -> saveSortOrder()

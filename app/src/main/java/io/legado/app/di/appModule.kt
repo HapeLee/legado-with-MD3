@@ -808,8 +808,8 @@ val appModule = module {
 
     viewModel { (route: ReplaceEditRoute) ->
         ReplaceEditViewModel(
-            app = get(),
             replaceRuleRepository = get(),
+            changeNotifier = get(),
             route = route
         )
     }

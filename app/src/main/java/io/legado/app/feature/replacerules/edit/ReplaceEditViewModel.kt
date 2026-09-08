@@ -1,18 +1,15 @@
 package io.legado.app.feature.replacerules.edit
 
-import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.core.platform.ClipboardProvider
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReplaceRuleRepository
-import io.legado.app.constant.EventBus
+import io.legado.app.domain.gateway.ReplaceRuleChangeNotifier
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.replacerules.ReplaceEditRoute
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getClipText
-import io.legado.app.utils.postEvent
-import io.legado.app.utils.sendToClip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,8 +20,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ReplaceEditViewModel(
-    private val app: Application,
     private val replaceRuleRepository: ReplaceRuleRepository,
+    private val changeNotifier: ReplaceRuleChangeNotifier,
     private val route: ReplaceEditRoute
 ) : ViewModel() {
 
@@ -133,7 +130,7 @@ class ReplaceEditViewModel(
         viewModelScope.launch(Dispatchers.Main) {
             val ruleToCopy = getReplaceRuleFromState()
             val json = GSON.toJson(ruleToCopy)
-            app.sendToClip(json)
+            ClipboardProvider.current.setText(json)
             _effects.tryEmit(ReplaceEditEffect.ShowMessage("规则已复制到剪贴板"))
         }
     }
@@ -141,7 +138,7 @@ class ReplaceEditViewModel(
     private fun pasteRule() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val text = app.getClipText()
+                val text = ClipboardProvider.current.getText()
                 if (text.isNullOrBlank()) {
                     throw NoStackTraceException("剪贴板为空")
                 }
@@ -232,7 +229,7 @@ class ReplaceEditViewModel(
 
             // 替换规则保存后通知阅读页重新套用规则并重排正文（替代原先 ReplaceRuleActivity
             // 通过 ActivityResult RESULT_OK 回传的机制）
-            postEvent(EventBus.REPLACE_RULE_CHANGED, Unit)
+            changeNotifier.notifyChanged()
 
             _effects.tryEmit(ReplaceEditEffect.NavigateBack)
         }

@@ -1,6 +1,5 @@
 package io.legado.app.feature.replacerules
 
-import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.ReplaceRule
@@ -81,7 +80,9 @@ sealed interface ReplaceRuleIntent {
     data object DisableSelection : ReplaceRuleIntent
     data object DeleteSelection : ReplaceRuleIntent
     data object UploadSelection : ReplaceRuleIntent
-    data class ExportSelection(val uri: Uri) : ReplaceRuleIntent
+    // uri 以 String 传递：Contract 属于可共享的契约层，不引入 android.net.Uri。
+    // 平台 Uri 只在 ViewModel 内部由 Uri.parse 还原（与 tagrules 两个 VM 的做法一致）。
+    data class ExportSelection(val uri: String) : ReplaceRuleIntent
     data class MoveItem(val from: Int, val to: Int) : ReplaceRuleIntent
     data object SaveSortOrder : ReplaceRuleIntent
     data class DeleteRule(val rule: ReplaceRule) : ReplaceRuleIntent

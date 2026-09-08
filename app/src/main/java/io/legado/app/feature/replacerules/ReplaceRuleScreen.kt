@@ -3,7 +3,6 @@ package io.legado.app.feature.replacerules
 import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -160,7 +159,7 @@ fun ReplaceRuleScreen(
     val exportDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let { onIntent(ReplaceRuleIntent.ExportSelection(it)) }
+            uri?.let { onIntent(ReplaceRuleIntent.ExportSelection(it.toString())) }
         }
     )
 
@@ -253,12 +252,7 @@ fun ReplaceRuleScreen(
                     )
                     if (result == SnackbarResult.ActionPerformed && event.url != null) {
                         clipboardManager.setClipEntry(
-                            ClipEntry(
-                                ClipData.newPlainText(
-                                    "url",
-                                    event.url
-                                )
-                            )
+                            ClipEntry(ClipData.newPlainText("url", event.url))
                         )
                     }
                 }
