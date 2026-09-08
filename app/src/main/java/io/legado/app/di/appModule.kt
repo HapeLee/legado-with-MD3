@@ -112,6 +112,9 @@ import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.AiToolGateway
+import io.legado.app.domain.gateway.AndroidReadBookReplaceSessionGateway
+import io.legado.app.domain.gateway.AndroidReplaceRuleChangeNotifier
+import io.legado.app.domain.gateway.AndroidReplaceRuleSettingsGateway
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppStartupGateway
@@ -150,7 +153,6 @@ import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.LocalPasswordGateway
-import io.legado.app.domain.gateway.AndroidReadBookReplaceSessionGateway
 import io.legado.app.domain.gateway.MangaReaderDataGateway
 import io.legado.app.domain.gateway.MangaReaderSessionFactory
 import io.legado.app.domain.gateway.MangaSettingsGateway
@@ -162,6 +164,8 @@ import io.legado.app.domain.gateway.ReadBookReplaceSessionGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
+import io.legado.app.domain.gateway.ReplaceRuleChangeNotifier
+import io.legado.app.domain.gateway.ReplaceRuleSettingsGateway
 import io.legado.app.domain.gateway.ThemePackageSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
@@ -470,6 +474,9 @@ val appModule = module {
     single<RuleTransferPlatform> { AndroidRuleTransferPlatform(androidContext()) }
     // 阅读会话（ReadBook 单例）留在 :app；替换相关能力以契约暴露，供 :feature:replacerules 使用。
     single<ReadBookReplaceSessionGateway> { AndroidReadBookReplaceSessionGateway(get()) }
+    // 替换规则页的显示偏好与变更广播：实现留在 :app（偏好存储与事件总线均为 Android 侧能力）。
+    single<ReplaceRuleSettingsGateway> { AndroidReplaceRuleSettingsGateway(get()) }
+    single<ReplaceRuleChangeNotifier> { AndroidReplaceRuleChangeNotifier() }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     single<AiProfileGateway> { AiProfileRepository(get()) }
     single<AiArtifactGateway> { AiArtifactRepository(get()) }

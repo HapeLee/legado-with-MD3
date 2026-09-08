@@ -366,13 +366,17 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             "io/legado/app/App.kt" to 3,
             "io/legado/app/base/BaseActivity.kt" to 2,
             "io/legado/app/base/BaseService.kt" to 1,
-            // Stage A 包迁移：`ui/replace` → `feature/replacerules`（2026-09-08），基线键随路径更新
-            "io/legado/app/feature/replacerules/ReplaceRuleViewModel.kt" to 2,
             "io/legado/app/data/repository/CoverAlbumRepository.kt" to 4,
             "io/legado/app/data/repository/HighlightRuleRepository.kt" to 9,
             "io/legado/app/data/repository/HomeDashboardRepository.kt" to 3,
             "io/legado/app/data/repository/ReadRecordRepository.kt" to 1,
             "io/legado/app/data/repository/SettingsRepository.kt" to 7,
+            // 平台实现层的偏好读写是正当落点，与 data/repository、help/config 同类，
+            // 不属 UI 层债务：替换规则的排序偏好由 :app 侧 impl 持有，契约侧只见 String。
+            "io/legado/app/domain/gateway/AndroidReplaceRuleSettingsGateway.kt" to 2,
+            // 已清零：排序模式改走 ReplaceRuleSettingsGateway。
+            // 保留 0 值条目让棘轮继续盯着——VM 里再出现偏好直连会立即报红。
+            "io/legado/app/feature/replacerules/ReplaceRuleViewModel.kt" to 0,
             "io/legado/app/help/config/LocalConfig.kt" to 3,
             "io/legado/app/help/config/ThemeConfigStore.kt" to 8,
             "io/legado/app/help/storage/Restore.kt" to 2,

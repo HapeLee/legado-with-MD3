@@ -6,8 +6,6 @@ import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.constant.AppPattern
-import io.legado.app.constant.EventBus
-import io.legado.app.constant.PreferKey
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReadSettingsRepository
@@ -15,6 +13,8 @@ import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.ReadBookReplaceSessionGateway
+import io.legado.app.domain.gateway.ReplaceRuleChangeNotifier
+import io.legado.app.domain.gateway.ReplaceRuleSettingsGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.help.ReplaceAnalyzer
@@ -24,11 +24,8 @@ import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
-import io.legado.app.utils.putPrefString
-import io.legado.app.utils.postEvent
 import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -59,13 +56,15 @@ class ReplaceRuleViewModel(
     private val readSettingsRepository: ReadSettingsRepository,
     private val repository: ReplaceRuleRepository,
     private val readBookSession: ReadBookReplaceSessionGateway,
+    private val replaceRuleSettings: ReplaceRuleSettingsGateway,
+    private val changeNotifier: ReplaceRuleChangeNotifier,
 ) : BaseRuleViewModel<ReplaceRuleItemUi, ReplaceRule, Long, ReplaceRuleUiState>(
     application,
     ReplaceRuleUiState(interaction = InteractionState(isLoading = true)),
     uploadRepository,
     transferPlatform
 ) {
-    private val _sortMode = MutableStateFlow(context.getPrefString(PreferKey.replaceSortMode, "desc") ?: "desc")
+    private val _sortMode = MutableStateFlow(replaceRuleSettings.getSortMode())
     val sortMode = _sortMode.asStateFlow()
     private val _group = MutableStateFlow<String?>(null)
     val group = _group.asStateFlow()
@@ -362,7 +361,7 @@ class ReplaceRuleViewModel(
 
     private fun setSortMode(mode: String) {
         _sortMode.value = mode
-        context.putPrefString(PreferKey.replaceSortMode, mode)
+        viewModelScope.launch { replaceRuleSettings.setSortMode(mode) }
     }
 
     private fun saveSortOrder() {
@@ -404,7 +403,7 @@ class ReplaceRuleViewModel(
     }
 
     private fun notifyRuleChanged() {
-        postEvent(EventBus.REPLACE_RULE_CHANGED, Unit)
+        changeNotifier.notifyChanged()
     }
 
     private fun selectAll() {
