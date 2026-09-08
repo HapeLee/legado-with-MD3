@@ -10,7 +10,6 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.GlassDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**

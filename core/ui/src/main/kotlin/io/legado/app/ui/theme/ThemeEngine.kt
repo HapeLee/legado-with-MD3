@@ -6,7 +6,6 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.Color
-import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.ThemeResolver.resolvePaletteStyle
 import io.legado.app.ui.theme.colorScheme.AugustColorScheme
 import io.legado.app.ui.theme.colorScheme.CarlottaColorScheme
@@ -90,7 +89,7 @@ object ThemeEngine {
         }
         if (mode == AppThemeMode.Custom) {
             return resolveCustomColorScheme(
-                seedColor = customSeedColor ?: context.primaryColor,
+                seedColor = customSeedColor ?: ThemeSeedColors.primaryColor(context),
                 darkTheme = darkTheme,
                 paletteStyle = paletteStyle,
                 materialVersion = materialVersion,

@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -82,7 +83,10 @@ private fun AppThemeActual(
     val customNightPrimary = themeSettings.customNightPrimary
     val appFontPath = themeSettings.appFontPath
     val currentDensity = LocalDensity.current
-    val fontScale = resolveAppFontScale(appShellSettings.fontScale)
+    val fontScale = resolveAppFontScale(
+        fontScaleSetting = appShellSettings.fontScale,
+        systemFontScale = LocalConfiguration.current.fontScale,
+    )
     val appDensity = remember(currentDensity.density, fontScale) {
         Density(currentDensity.density, fontScale)
     }

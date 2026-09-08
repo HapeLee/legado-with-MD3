@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.Configuration
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.ui.theme.resolveAppFontScale
+import io.legado.app.utils.sysConfiguration
 import org.koin.core.context.GlobalContext
 
 
@@ -25,6 +26,10 @@ object AppContextWrapper {
     }
 
     fun getFontScale(context: Context): Float =
-        resolveAppFontScale(shellGateway.currentSettings.fontScale)
+        resolveAppFontScale(
+            fontScaleSetting = shellGateway.currentSettings.fontScale,
+            // 系统缩放由 app 侧提供：:core:ui 拿不到 appCtx。
+            systemFontScale = sysConfiguration.fontScale,
+        )
 
 }

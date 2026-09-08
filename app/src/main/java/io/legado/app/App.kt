@@ -68,6 +68,7 @@ import io.legado.app.help.rhino.NativeBaseSource
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.theme.ThemeSeedColors
 import io.legado.app.model.BookCover
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.FirebaseManager
@@ -182,6 +183,9 @@ class App : Application(), SingletonImageLoader.Factory {
         // WebView 注入的 BaseSource 包装器工厂：@JavascriptInterface 注解已从实体剥离，
         // 页面 JS 的 source.xxx() 通过包装器转发回实体（见 JsExtProvider 注释）。
         JsExtProvider.install(JsExtFactory { source -> BookSourceJsExt(source) })
+        // 主题已下沉 :core:ui，其中「自定义配色未指定 seed 时的回退主色」来自 app 的
+        // 主题偏好存储（ThemeStore），属于应用层状态，这里以 provider 形式注入。
+        ThemeSeedColors.install { context -> context.primaryColor }
         FirebaseManager.init(this)
         CrashHandler(this)
         if (isDebuggable) {

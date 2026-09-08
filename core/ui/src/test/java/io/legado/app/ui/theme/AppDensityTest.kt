@@ -1,6 +1,6 @@
 package io.legado.app.ui.theme
 
-import org.junit.Assert.assertEquals
+import kotlin.test.assertEquals
 import org.junit.Test
 
 class AppDensityTest {

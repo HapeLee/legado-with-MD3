@@ -3,29 +3,35 @@ package io.legado.app.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import io.legado.app.utils.sysConfiguration
 
 /**
  * 应用设置里的字体缩放（10 = 1.0 倍），超出 0.8~1.6 时回落到 [systemFontScale]。
+ *
+ * [systemFontScale] 由调用方传入而非本模块自行读取：`:core:ui` 拿不到 app 的
+ * `appCtx`，系统缩放属于平台侧输入。
  */
 fun resolveAppFontScale(fontScaleSetting: Int, systemFontScale: Float): Float =
     (fontScaleSetting / 10f).takeIf { it in 0.8f..1.6f } ?: systemFontScale
 
 /**
- * 同上，回落到当前系统字体缩放。
- */
-fun resolveAppFontScale(fontScaleSetting: Int): Float =
-    resolveAppFontScale(fontScaleSetting, sysConfiguration.fontScale)
-
-/**
  * 以平台像素密度 + 应用字体缩放构造 [Density]。
+ *
+ * 系统缩放取 [LocalConfiguration] 而非 app 的 `appCtx.resources`：所有 Activity 基类
+ * （`BaseActivity` / `BaseComposeActivity`）都会通过 `AppContextWrapper.applyFont` 把
+ * `resolveAppFontScale(setting)` 写进 Activity 的 resources 配置，因此这里的
+ * `LocalConfiguration.current.fontScale` 与该表达式等值——设置值在 0.8~1.6 区间内时为
+ * `setting / 10`，越界时同样是回落后的系统缩放。
  */
 @Composable
 fun rememberAppDensity(): Density {
     val platformDensity = LocalDensity.current
-    val fontScale = resolveAppFontScale(LocalAppUiConfiguration.current.appShell.fontScale)
+    val fontScale = resolveAppFontScale(
+        fontScaleSetting = LocalAppUiConfiguration.current.appShell.fontScale,
+        systemFontScale = LocalConfiguration.current.fontScale,
+    )
     return remember(platformDensity.density, fontScale) {
         Density(platformDensity.density, fontScale)
     }

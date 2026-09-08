@@ -1,10 +1,8 @@
-package io.legado.app.ui.widget.components
+package io.legado.app.ui.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import io.legado.app.domain.model.settings.customColors
-import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.LocalAppUiConfiguration
 
 object GlassDefaults {
 

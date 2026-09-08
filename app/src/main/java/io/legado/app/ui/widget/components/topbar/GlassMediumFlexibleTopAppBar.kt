@@ -29,7 +29,7 @@ import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
-import io.legado.app.ui.widget.components.GlassDefaults
+import io.legado.app.ui.theme.GlassDefaults
 import io.legado.app.ui.widget.components.text.AdaptiveAnimatedText
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior

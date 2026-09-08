@@ -87,6 +87,8 @@ jobs:
             :core:data:compileKotlinDesktop \
             :core:data:desktopTest \
             :core:data:testAndroidHostTest \
+            :core:ui:compileDebugKotlin \
+            :core:ui:testDebugUnitTest \
             --continue \
             --no-daemon \
             --no-configuration-cache
@@ -114,6 +116,8 @@ jobs:
             core/platform/build/reports/tests/**
             core/model/build/test-results/**
             core/model/build/reports/tests/**
+            core/ui/build/test-results/**
+            core/ui/build/reports/tests/**
 
       - name: Upload lint reports
         if: ${{ always() }}

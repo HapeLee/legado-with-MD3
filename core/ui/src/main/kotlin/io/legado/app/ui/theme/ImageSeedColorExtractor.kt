@@ -80,7 +80,7 @@ fun rememberImageSeedColor(
     return seedColor
 }
 
-internal fun Bitmap.extractSeedColor(
+fun Bitmap.extractSeedColor(
     maxColors: Int = IMAGE_MAX_QUANTIZE_COLORS,
     fallbackColorArgb: Int = IMAGE_FALLBACK_SEED_COLOR,
 ): Int {
@@ -121,7 +121,7 @@ internal fun Bitmap.extractSeedColor(
     }
 }
 
-internal fun Drawable.toSafeBitmap(maxSizePx: Int): Bitmap {
+fun Drawable.toSafeBitmap(maxSizePx: Int): Bitmap {
     if (this is BitmapDrawable && bitmap != null) {
         val rawBitmap = bitmap
         if (rawBitmap.width <= maxSizePx && rawBitmap.height <= maxSizePx) {
