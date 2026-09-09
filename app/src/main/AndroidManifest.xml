@@ -236,12 +236,6 @@
             android:enableOnBackInvokedCallback="true"
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
-        <!-- 书签 -->
-        <activity
-            android:name=".ui.book.bookmark.AllBookmarkActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- 字典查询 -->
         <activity
             android:name=".ui.dict.DictActivity"

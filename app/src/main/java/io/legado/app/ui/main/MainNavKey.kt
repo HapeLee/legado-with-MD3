@@ -253,6 +253,16 @@ data object MainRouteHighlightTagRule : MainRoute
 data object MainRouteDictRule : MainRoute
 
 /**
+ * 所有书签管理页（[io.legado.app.ui.book.bookmark.AllBookmarkScreen] 的
+ * `AllBookmarkRouteScreen`）。原先挂在独立的 `AllBookmarkActivity`（依赖 `BaseComposeActivity`
+ * 的薄宿主）上，我的页必须 import 该 Activity 才能跳转；收口成导航契约后，入口只依赖这里的
+ * key。本页是纯管理页（书签 CRUD + 折叠/搜索 + 导出，ViewModel 只走 BookmarkRepository，
+ * 无跨页跳转依赖），无 picker 回传语义，故用无参 `data object`。
+ */
+@Serializable
+data object MainRouteAllBookmark : MainRoute
+
+/**
  * 替换规则列表页。替换规则原先挂在独立的 ReplaceRuleActivity 上，导致阅读页/目录页/我的页
  * 都必须 import 该 Activity 才能跳转；收口成导航契约后，跨 Feature 只依赖这里的 key。
  */

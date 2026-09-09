@@ -148,6 +148,7 @@ fun MainScreen(
     onNavigateToRuleSub: () -> Unit,
     onNavigateToReadRecord: () -> Unit,
     onNavigateToReadRecordOverview: () -> Unit,
+    onNavigateToAllBookmark: () -> Unit,
     onNavigateToHighlightTagRule: () -> Unit,
     onNavigateToDictRule: () -> Unit,
     onNavigateToReplaceRule: () -> Unit,
@@ -177,6 +178,7 @@ fun MainScreen(
 
                 MainEffect.ExitApp -> (context as? ComponentActivity)?.finish()
                 MainEffect.NavigateToReadRecord -> onNavigateToReadRecord()
+                MainEffect.NavigateToAllBookmark -> onNavigateToAllBookmark()
                 MainEffect.NavigateToHighlightTagRule -> onNavigateToHighlightTagRule()
                 MainEffect.NavigateToDictRule -> onNavigateToDictRule()
                 MainEffect.NavigateToReplaceRule -> onNavigateToReplaceRule()

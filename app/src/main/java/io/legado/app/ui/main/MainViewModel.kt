@@ -84,6 +84,8 @@ class MainViewModel(
             )
             PrefClickEvent.ExitApp -> _effects.tryEmit(MainEffect.ExitApp)
             PrefClickEvent.OpenReadRecord -> _effects.tryEmit(MainEffect.NavigateToReadRecord)
+            PrefClickEvent.OpenAllBookmark ->
+                _effects.tryEmit(MainEffect.NavigateToAllBookmark)
             PrefClickEvent.OpenHighlightTagRule ->
                 _effects.tryEmit(MainEffect.NavigateToHighlightTagRule)
             PrefClickEvent.OpenDictRule ->

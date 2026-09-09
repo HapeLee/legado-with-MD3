@@ -49,6 +49,7 @@ import io.legado.app.ui.book.audio.AudioPlayEffect
 import io.legado.app.ui.book.audio.AudioPlayIntent
 import io.legado.app.ui.book.audio.AudioPlayScreenContent
 import io.legado.app.ui.book.audio.AudioPlayViewModel
+import io.legado.app.ui.book.bookmark.AllBookmarkRouteScreen
 import io.legado.app.ui.book.cache.manage.BookCacheManageRouteScreen
 import io.legado.app.ui.book.explore.ExploreShowIntent
 import io.legado.app.ui.book.explore.ExploreShowRouteScreen
@@ -431,6 +432,9 @@ fun MainActivity.mainEntryProvider(
             },
             onNavigateToReadRecordOverview = {
                 onNavigateToRoute(MainRouteReadRecordOverview)
+            },
+            onNavigateToAllBookmark = {
+                onNavigateToRoute(MainRouteAllBookmark)
             },
             onNavigateToHighlightTagRule = {
                 onNavigateToRoute(MainRouteHighlightTagRule)
@@ -1543,6 +1547,12 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteDictRule> {
         DictRuleRouteScreen(
             onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAllBookmark> {
+        AllBookmarkRouteScreen(
+            onBack = { onNavigateBack() }
         )
     }
 

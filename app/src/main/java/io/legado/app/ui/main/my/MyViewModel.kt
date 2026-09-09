@@ -26,6 +26,7 @@ sealed class PrefClickEvent {
     data class CopyUrl(val url: String) : PrefClickEvent()
     data class StartActivity(val destination: Class<*>, val configTag: String? = null) : PrefClickEvent()
     object OpenReadRecord : PrefClickEvent()
+    object OpenAllBookmark : PrefClickEvent()
     object OpenBookCacheManage : PrefClickEvent()
     object OpenBookSourceManage : PrefClickEvent()
     object OpenHighlightTagRule : PrefClickEvent()

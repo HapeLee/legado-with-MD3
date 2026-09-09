@@ -55,6 +55,7 @@ sealed interface MainEffect {
     data class StartActivity(val destination: Class<*>, val configTag: String? = null) : MainEffect
     data object ExitApp : MainEffect
     data object NavigateToReadRecord : MainEffect
+    data object NavigateToAllBookmark : MainEffect
     data object NavigateToHighlightTagRule : MainEffect
     data object NavigateToDictRule : MainEffect
     data object NavigateToReplaceRule : MainEffect
