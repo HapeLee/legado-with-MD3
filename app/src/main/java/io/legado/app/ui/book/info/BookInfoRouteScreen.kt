@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.info
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,11 +31,9 @@ import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.model.SourceCallBack
-import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.utils.RealPathUtil
-import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.openFileUri
@@ -75,6 +72,8 @@ fun BookInfoRouteScreen(
     onOpenEventList: (bookUrl: String) -> Unit = {},
     /** 打开目录页（picker）：回传选中章节/取消的活由 host 层挂结果通道承担。 */
     onOpenToc: (bookUrl: String) -> Unit = {},
+    /** 打开书籍信息编辑页：保存成功后要刷新本书，`onInfoEdited` 由 host 层的结果通道触发。 */
+    onOpenBookInfoEdit: (bookUrl: String) -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -98,14 +97,6 @@ fun BookInfoRouteScreen(
             }
             viewModel.onIntent(BookInfoIntent.SetDefaultBookTreeUri(uri.toString()))
         }
-    val infoEditResult = rememberLauncherForActivityResult(
-        StartActivityContract(BookInfoEditActivity::class.java)
-    ) {
-        if (it.resultCode == Activity.RESULT_OK) {
-            viewModel.onInfoEdited()
-        }
-    }
-
     LaunchedEffect(bookUrl, name, author, origin, coverPath, viewModel) {
         viewModel.initData(
             bookUrl = bookUrl,
@@ -138,9 +129,7 @@ fun BookInfoRouteScreen(
                 }
 
                 is BookInfoEffect.OpenBookInfoEdit -> {
-                    infoEditResult.launch {
-                        putExtra("bookUrl", effect.bookUrl)
-                    }
+                    onOpenBookInfoEdit(effect.bookUrl)
                 }
 
                 is BookInfoEffect.OpenReader -> {

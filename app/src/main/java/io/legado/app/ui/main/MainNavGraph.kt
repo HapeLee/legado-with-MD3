@@ -58,6 +58,7 @@ import io.legado.app.ui.book.import.local.ImportBookRouteScreen
 import io.legado.app.ui.book.import.remote.RemoteBookRouteScreen
 import io.legado.app.ui.book.info.BookInfoRouteScreen
 import io.legado.app.ui.book.info.BookInfoViewModel
+import io.legado.app.ui.book.info.edit.BookInfoEditRouteScreen
 import io.legado.app.ui.book.knowledge.BookCharacterDetailScreen
 import io.legado.app.ui.book.knowledge.BookCharacterDetailViewModel
 import io.legado.app.ui.book.knowledge.BookCharacterListScreen
@@ -1227,6 +1228,11 @@ fun MainActivity.mainEntryProvider(
                 }
             )
         }
+        val bookInfoEditResultKey = remember(route) { newNavResultKey() }
+        // 编辑页保存成功 → 详情重拉书籍信息（原 BookInfoEditActivity 的 setResult(RESULT_OK) 语义）。
+        ResultEffect<BookInfoEdited>(bookInfoEditResultKey) {
+            bookInfoViewModel.onInfoEdited()
+        }
         BookInfoRouteScreen(
             bookUrl = route.bookUrl,
             name = route.name,
@@ -1303,9 +1309,23 @@ fun MainActivity.mainEntryProvider(
             onOpenToc = { bookUrl ->
                 onNavigateToRoute(MainRouteToc(bookUrl = bookUrl, resultKey = tocResultKey))
             },
+            onOpenBookInfoEdit = { bookUrl ->
+                onNavigateToRoute(
+                    MainRouteBookInfoEdit(bookUrl = bookUrl, resultKey = bookInfoEditResultKey)
+                )
+            },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
             sharedCoverKey = route.sharedCoverKey ?: bookCoverSharedElementKey(route.bookUrl),
+        )
+    }
+
+    entry<MainRouteBookInfoEdit> { route ->
+        BookInfoEditRouteScreen(
+            bookUrl = route.bookUrl,
+            resultKey = route.resultKey,
+            onBack = { onNavigateBack() },
+            onNavigateToRoute = onNavigateToRoute,
         )
     }
 

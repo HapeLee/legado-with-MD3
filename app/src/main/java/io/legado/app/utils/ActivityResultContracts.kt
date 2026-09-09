@@ -4,7 +4,6 @@ import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContract
@@ -52,24 +51,5 @@ class SelectImageContract : ActivityResultContract<Int?, SelectImageContract.Res
         val requestCode: Int?,
         val uri: Uri? = null
     )
-
-}
-
-class StartActivityContract(private val cls: Class<*>) :
-    ActivityResultContract<(Intent.() -> Unit)?, ActivityResult>() {
-
-    override fun createIntent(context: Context, input: (Intent.() -> Unit)?): Intent {
-        val intent = Intent(context, cls)
-        input?.let {
-            intent.apply(input)
-        }
-        return intent
-    }
-
-    override fun parseResult(
-        resultCode: Int, intent: Intent?
-    ): ActivityResult {
-        return ActivityResult(resultCode, intent)
-    }
 
 }

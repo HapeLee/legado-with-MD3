@@ -55,6 +55,15 @@ data class TxtTocRulePickResult(val rule: String)
 data object BookInfoDeleted
 
 /**
+ * 书籍信息编辑页点了保存、且保存成功的信号。
+ *
+ * 原由 `BookInfoEditActivity` 的 `setResult(RESULT_OK)` 承担：书籍详情据此
+ * `BookInfoViewModel.onInfoEdited()` 重新拉取书籍信息。
+ * 编辑页在返回栈内，故改走同栈结果通道；直接返回（未保存）不发。
+ */
+data object BookInfoEdited
+
+/**
  * 生成一次性结果 key。命名成方法而不是让调用方各写一遍，是为了保证「一次性」这个约定只有一处实现。
  */
 fun newNavResultKey(): String = java.util.UUID.randomUUID().toString()

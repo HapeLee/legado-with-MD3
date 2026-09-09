@@ -171,6 +171,18 @@ data class MainRouteBookInfo(
 ) : MainRoute
 
 @Serializable
+data class MainRouteBookInfoEdit(
+    val bookUrl: String,
+    /**
+     * 非空时表示打开者需要知道「保存成功」（原 `BookInfoEditActivity` 的
+     * `setResult(RESULT_OK)` 语义），结果投到这个 key。
+     *
+     * 只有点了保存且保存成功才发；直接返回/取消不发（那时详情页本来也不需要刷新）。
+     */
+    val resultKey: String? = null,
+) : MainRoute
+
+@Serializable
 data class MainRouteBookCharacterDetail(
     val bookUrl: String,
     val characterId: String? = null,

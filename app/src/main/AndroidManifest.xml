@@ -211,13 +211,6 @@
                 android:name="com.samsung.android.support.REMOTE_ACTION"
                 android:resource="@xml/spen_remote_actions" />
         </activity>
-        <!-- 书籍信息编辑 -->
-        <activity
-            android:name=".ui.book.info.edit.BookInfoEditActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- 音频播放界面（nav3 路由，见 MainRouteAudioPlay） -->
         <!-- 授权界面 -->
         <activity
