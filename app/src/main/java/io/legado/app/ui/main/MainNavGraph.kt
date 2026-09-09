@@ -107,6 +107,7 @@ import io.legado.app.ui.book.source.manage.BookSourceRouteScreen
 import io.legado.app.ui.book.toc.TocIntent
 import io.legado.app.ui.book.toc.TocRouteScreen
 import io.legado.app.ui.book.toc.TocViewModel
+import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewRouteScreen
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
@@ -738,6 +739,15 @@ fun MainActivity.mainEntryProvider(
             onOpenFullToc = { bookUrl, initialPage ->
                 onNavigateToRoute(
                     MainRouteToc(bookUrl = bookUrl, initialPage = initialPage, resultKey = tocResultKey)
+                )
+            },
+            onOpenTocRulePreview = { bookUrl, tocRegex, resultKey ->
+                onNavigateToRoute(
+                    MainRouteTxtTocRulePreview(
+                        bookUrl = bookUrl,
+                        currentTocRegex = tocRegex,
+                        resultKey = resultKey,
+                    )
                 )
             },
         )
@@ -1600,6 +1610,25 @@ fun MainActivity.mainEntryProvider(
                 }
             },
             onBackClick = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteTxtTocRulePreview> { route ->
+        val resultBus = LocalResultEventBus.current
+        TxtTocRulePreviewRouteScreen(
+            bookUrl = route.bookUrl,
+            currentTocRegex = route.currentTocRegex,
+            // picker 语义（resultKey 非空）：点「应用」把选中规则投到该 key 再出栈。
+            onApplyRule = route.resultKey?.let { key ->
+                { rule ->
+                    resultBus.sendResult(key, TxtTocRulePickResult(rule))
+                    onNavigateBack()
+                }
+            } ?: {},
+            onBack = { onNavigateBack() },
+            onOpenManagePage = {
+                onNavigateToRoute(MainRouteTxtTocRule())
+            },
         )
     }
 

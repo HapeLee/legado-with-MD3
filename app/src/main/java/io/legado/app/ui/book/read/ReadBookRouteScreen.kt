@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.read
 
 import android.content.Context
-import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -59,6 +58,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation3.runtime.result.ResultEffect
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
@@ -85,6 +85,8 @@ import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.AndroidPlatformCapabilities
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.MainRouteReplaceEdit
+import io.legado.app.ui.main.TxtTocRulePickResult
+import io.legado.app.ui.main.newNavResultKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.image.cover.sharedCoverSourceRadius
@@ -160,6 +162,11 @@ fun ReadBookRouteScreen(
     onOpenChapterList: (bookUrl: String) -> Unit = {},
     /** 目录/书签抽屉点「全屏」：回传选中章节的活由 host 层承担。 */
     onOpenFullToc: (bookUrl: String, initialPage: Int) -> Unit = { _, _ -> },
+    /**
+     * 打开 TXT 规则预览页（picker）。本 Screen 层在菜单流与抽屉 Toc 流各持一个结果 key，
+     * host 负责把页面压栈；选中/应用后结果经同栈通道回传，由各自对应的 ViewModel 消费。
+     */
+    onOpenTocRulePreview: (bookUrl: String, tocRegex: String?, resultKey: String) -> Unit = { _, _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
@@ -181,6 +188,12 @@ fun ReadBookRouteScreen(
     )
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    // 阅读菜单「目录规则」打开的 TXT 规则预览页是 picker：选中的规则回传后写回当前阅读状态。
+    // 本 entry 存活期间固定一个结果 key，压栈预览页时把 key 带过去，点「应用」投回来。
+    val tocRulePreviewResultKey = remember(lifecycleOwner) { newNavResultKey() }
+    ResultEffect<TxtTocRulePickResult>(tocRulePreviewResultKey) { picked ->
+        viewModel.onIntent(ReadBookIntent.TocRegexResult(picked.rule))
+    }
     val appUiConfiguration = LocalAppUiConfiguration.current
     val isDarkTheme = appUiConfiguration.isDarkTheme
     val isEInkMode = appUiConfiguration.theme.appTheme == "4"
@@ -309,16 +322,6 @@ fun ReadBookRouteScreen(
         uri?.let { viewModel.onIntent(ReadBookIntent.BookmarkBadgeImageSelected(it)) }
     }
 
-    val txtTocRuleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            result.data?.getStringExtra("tocRegex")?.let { rule ->
-                viewModel.onIntent(ReadBookIntent.TocRegexResult(rule))
-            }
-        }
-    }
-
     val importHighlightRulePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -425,13 +428,11 @@ fun ReadBookRouteScreen(
                                 )
                             }
                             is ReadBookEffect.MenuTocRegex -> {
-                                val intent = Intent(
-                                    context,
-                                    io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity::class.java
+                                onOpenTocRulePreview(
+                                    effect.bookUrl,
+                                    effect.tocRegex,
+                                    tocRulePreviewResultKey,
                                 )
-                                intent.putExtra("bookUrl", effect.bookUrl)
-                                intent.putExtra("tocRegex", effect.tocRegex)
-                                txtTocRuleLauncher.launch(intent)
                             }
                             is ReadBookEffect.OpenFontFolderPicker -> {
                                 fontFolderPicker.launch(null)
@@ -854,6 +855,7 @@ fun ReadBookRouteScreen(
                     }
                 },
                 onOpenFullToc = onOpenFullToc,
+                onOpenTocRulePreview = onOpenTocRulePreview,
                 bookSource = state.bookSource,
                 onOpenChapterUrl = { viewModel.onIntent(ReadBookIntent.OpenChapterUrl) },
                 onToggleReadUrlInBrowser = {

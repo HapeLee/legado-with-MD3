@@ -281,6 +281,24 @@ data class MainRouteTxtTocRule(
 ) : MainRoute
 
 /**
+ * TXT 目录规则**预览/选择**页。区别于 [MainRouteTxtTocRule]（纯列表管理页）：本页带书、对每条
+ * 内置/自定义规则做实时章节解析预览（显示命中章节数），是阅读本地 txt 时「选一条能正确切章的
+ * 规则」的主力 UX。
+ *
+ * 原先挂在独立的 `TxtTocRulePreviewActivity` 上（阅读菜单 `MenuTocRegex`、抽屉 Toc 页的
+ * 「TXT目录规则」两个调用方，用 `setResult` 回传选中规则）；收口后该 Activity 已删，本路由即
+ * 唯一宿主。**必须带 [bookUrl]**：预览要读书算章节数。
+ *
+ * [resultKey] 非空时该页是 picker：点「应用」把选中的规则投到该 key 再出栈。
+ */
+@Serializable
+data class MainRouteTxtTocRulePreview(
+    val bookUrl: String,
+    val currentTocRegex: String? = null,
+    val resultKey: String? = null,
+) : MainRoute
+
+/**
  * 目录页。原先挂在独立的 TocActivity 上，阅读页与书籍详情都必须靠 ActivityResult 才能拿到
  * 「选中的章节」；收口进主界面返回栈后，这两个入口改为压栈 + 同栈结果通道回传（官方
  * `ResultEffect`/`sendResult`，见 [io.legado.app.ui.main.NavResults]）。
@@ -352,5 +370,6 @@ object MainRouteConst {
     const val ROUTE_REPLACE_RULE = "replace/rule"
     const val ROUTE_REPLACE_EDIT = "replace/edit"
     const val ROUTE_TXT_TOC_RULE = "txt/toc_rule"
+    const val ROUTE_TXT_TOC_RULE_PREVIEW = "txt/toc_rule_preview"
     const val ROUTE_TOC = "book/toc"
 }

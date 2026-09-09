@@ -1,7 +1,5 @@
 package io.legado.app.ui.book.read.sheet
 
-import android.app.Activity
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -77,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.result.ResultEffect
 import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
@@ -91,7 +90,8 @@ import io.legado.app.ui.book.toc.TocItemUi
 import io.legado.app.ui.book.toc.TocMarkingItemUi
 import io.legado.app.ui.book.toc.TocUiState
 import io.legado.app.ui.book.toc.TocViewModel
-import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity
+import io.legado.app.ui.main.TxtTocRulePickResult
+import io.legado.app.ui.main.newNavResultKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -133,6 +133,15 @@ fun ReaderBookSheetRoute(
     onOpenFullBookInfo: () -> Unit,
     /** 「目录/书签」抽屉的全屏入口：压进主界面返回栈，选中的章节由同栈结果通道回传。 */
     onOpenFullToc: (bookUrl: String, initialPage: Int) -> Unit,
+    /**
+     * 抽屉 Toc 页的「TXT目录规则」：把 TXT 规则预览页压进主界面返回栈。
+     *
+     * @param bookUrl 要预览的本地书
+     * @param tocRegex 当前规则（预选中）
+     * @param resultKey 预览页点「应用」后把规则投到该 key；本方法会在自己层挂
+     *   [ResultEffect] 收结果并写回本抽屉的 TocViewModel
+     */
+    onOpenTocRulePreview: (bookUrl: String, tocRegex: String?, resultKey: String) -> Unit = { _, _, _ -> },
     /** 书签页跳转：携带完整书签供跳转前校验。 */
     onBookmarkNavigate: (Bookmark) -> Unit = { _ -> },
     /** 笔记页跳转：携带完整展示项供跳转前校验。 */
@@ -154,14 +163,11 @@ fun ReaderBookSheetRoute(
     ) { uri: Uri? ->
         uri?.let { viewModel.onIntent(TocIntent.ExportBookmarks(it, pendingExportMarkdown)) }
     }
-    val tocRegexLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.onIntent(
-                TocIntent.SaveTocRegex(result.data?.getStringExtra("tocRegex").orEmpty())
-            )
-        }
+
+    // TXT目录规则预览页以 picker 身份被打开后选中的规则 → 写回本抽屉的 TocViewModel。
+    val tocRulePreviewResultKey = remember(bookUrl) { newNavResultKey() }
+    ResultEffect<TxtTocRulePickResult>(tocRulePreviewResultKey) { picked ->
+        viewModel.onIntent(TocIntent.SaveTocRegex(picked.rule))
     }
 
     LaunchedEffect(bookUrl) {
@@ -205,11 +211,7 @@ fun ReaderBookSheetRoute(
             }
         },
         onEditLocalTocRule = { regex ->
-            tocRegexLauncher.launch(
-                Intent(context, TxtTocRulePreviewActivity::class.java)
-                    .putExtra("bookUrl", bookUrl)
-                    .putExtra("tocRegex", regex)
-            )
+            onOpenTocRulePreview(bookUrl, regex, tocRulePreviewResultKey)
         },
         onExportBookmarks = { isMarkdown, fileName ->
             pendingExportMarkdown = isMarkdown
