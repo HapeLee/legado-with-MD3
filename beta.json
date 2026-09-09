@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.31",
-  "name": "Pre-release 3.26.16-beta.31",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 阅读器相关问题",
+  "tag_name": "3.26.16-beta.32",
+  "name": "Pre-release 3.26.16-beta.32",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 书源兼容性\n* feat: 阅读器相关问题",
   "prerelease": true,
-  "created_at": "2026-09-08T18:52:52Z",
+  "created_at": "2026-09-09T19:48:28Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.31/legado-3.26.16-beta.31-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.32/legado-3.26.16-beta.32-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-09-08T19:07:37Z",
+      "created_at": "2026-09-09T20:03:45Z",
       "download_count": 0,
-      "id": 551123962,
-      "name": "legado-3.26.16-beta.31-arm64-v8a.apk",
+      "id": 553478560,
+      "name": "legado-3.26.16-beta.32-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/551123962"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/553478560"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.31/legado-3.26.16-beta.31-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.32/legado-3.26.16-beta.32-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-09-08T19:07:37Z",
+      "created_at": "2026-09-09T20:03:45Z",
       "download_count": 0,
-      "id": 551123959,
-      "name": "legado-3.26.16-beta.31-armeabi-v7a.apk",
+      "id": 553478562,
+      "name": "legado-3.26.16-beta.32-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/551123959"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/553478562"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.31/legado-3.26.16-beta.31.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.32/legado-3.26.16-beta.32.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-09-08T19:07:37Z",
+      "created_at": "2026-09-09T20:03:45Z",
       "download_count": 0,
-      "id": 551123958,
-      "name": "legado-3.26.16-beta.31.apk",
+      "id": 553478561,
+      "name": "legado-3.26.16-beta.32.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/551123958"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/553478561"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.31/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.32/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-09-08T19:07:37Z",
+      "created_at": "2026-09-09T20:03:44Z",
       "download_count": 0,
-      "id": 551123960,
+      "id": 553478559,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/551123960"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/553478559"
     }
   ]
 }
