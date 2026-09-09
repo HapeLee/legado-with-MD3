@@ -163,6 +163,11 @@ data class MainRouteBookInfo(
     val origin: String? = null,
     val coverPath: String? = null,
     val sharedCoverKey: String? = null,
+    /**
+     * 非空时表示本页是从阅读页/漫画页打开的：在详情页里把书删了要通知来源页退出
+     * （原 `BookInfoActivity` 的 `setResult(RESULT_OK)` 语义），结果投到这个 key。
+     */
+    val resultKey: String? = null,
 ) : MainRoute
 
 @Serializable

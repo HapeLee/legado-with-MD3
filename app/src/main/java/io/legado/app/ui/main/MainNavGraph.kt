@@ -657,6 +657,11 @@ fun MainActivity.mainEntryProvider(
                 )
             }
         }
+        val bookInfoResultKey = remember(route) { newNavResultKey() }
+        // 详情页里把书删了 → 阅读页退出（原 BookInfoActivity 的 setResult(RESULT_OK) 语义）。
+        ResultEffect<BookInfoDeleted>(bookInfoResultKey) {
+            readBookViewModel.onIntent(ReadBookIntent.BookInfoResult(bookDeleted = true))
+        }
         val lifecycleOwner = LocalLifecycleOwner.current
         val initRequest = remember(route) {
             ReadBookInitRequest(
@@ -716,6 +721,16 @@ fun MainActivity.mainEntryProvider(
                 } else {
                     onNavigateToRoute(edit)
                 }
+            },
+            onOpenBookInfo = { name, author, bookUrl ->
+                onNavigateToRoute(
+                    MainRouteBookInfo(
+                        name = name,
+                        author = author,
+                        bookUrl = bookUrl,
+                        resultKey = bookInfoResultKey,
+                    )
+                )
             },
             onOpenChapterList = { bookUrl ->
                 onNavigateToRoute(MainRouteToc(bookUrl = bookUrl, resultKey = tocResultKey))
@@ -792,6 +807,12 @@ fun MainActivity.mainEntryProvider(
                 )
             }
         }
+        val bookInfoResultKey = remember(route) { newNavResultKey() }
+        // 详情页里把书删了 → 漫画页也退出（原 ReadMangaActivity 的 setResult(READER_RESULT_DELETED)
+        // + finish 语义；nav3 下没有跨 Activity 的 result，直接出栈等价）。
+        ResultEffect<BookInfoDeleted>(bookInfoResultKey) {
+            onNavigateBack()
+        }
         MangaReaderRouteScreen(
             bookUrl = route.bookUrl,
             inBookshelf = route.inBookshelf,
@@ -800,7 +821,14 @@ fun MainActivity.mainEntryProvider(
             restoreSystemBarsVisible = configuration.appShell.showStatusBar,
             onFinish = { onNavigateBack() },
             onOpenBookInfo = { name, author, bookUrl ->
-                onNavigateToRoute(MainRouteBookInfo(name, author, bookUrl))
+                onNavigateToRoute(
+                    MainRouteBookInfo(
+                        name = name,
+                        author = author,
+                        bookUrl = bookUrl,
+                        resultKey = bookInfoResultKey,
+                    )
+                )
             },
             onOpenSourceLogin = { sourceUrl ->
                 onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, sourceUrl))
@@ -1171,6 +1199,7 @@ fun MainActivity.mainEntryProvider(
         }
     ) { route ->
         val bookInfoViewModel = koinViewModel<BookInfoViewModel>(key = "BookInfo:${route.bookUrl}")
+        val bookInfoResultBus = LocalResultEventBus.current
         val tocResultKey = remember(route) { newNavResultKey() }
         ResultEffect<TocPickResult>(tocResultKey) { result ->
             // Picked 之外一律视为「没选就返回」，对齐原 TocActivityResult 的 RESULT_CANCELED 分支。
@@ -1188,7 +1217,14 @@ fun MainActivity.mainEntryProvider(
             coverPath = route.coverPath,
             viewModel = bookInfoViewModel,
             onBack = { onNavigateBack() },
-            onFinish = { _, _ -> onNavigateBack() },
+            onFinish = { resultCode, _ ->
+                // resultCode 非空只可能是删除成功（见 BookInfoViewModel.deleteBook）；
+                // 书籍加载失败等 Finish(resultCode = null) 只是自己出栈。
+                if (resultCode != null) {
+                    route.resultKey?.let { bookInfoResultBus.sendResult(it, BookInfoDeleted) }
+                }
+                onNavigateBack()
+            },
             onOpenSearch = { keyword ->
                 onNavigateToRoute(MainRouteSearch(key = keyword))
             },

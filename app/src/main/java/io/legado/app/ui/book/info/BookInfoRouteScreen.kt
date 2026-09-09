@@ -33,7 +33,6 @@ import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.edit.BookInfoEditActivity
-import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.utils.RealPathUtil
@@ -74,11 +73,8 @@ fun BookInfoRouteScreen(
     onOpenCharacterList: (bookUrl: String) -> Unit = {},
     onOpenKnowledgeList: (bookUrl: String) -> Unit = {},
     onOpenEventList: (bookUrl: String) -> Unit = {},
-    /**
-     * 非 null 时目录页走主界面返回栈（同栈回传选中章节/取消）；
-     * null 时回退到独立的 TocActivity（独立 Activity 宿主拿不到 nav3 返回栈）。
-     */
-    onOpenToc: ((bookUrl: String) -> Unit)? = null,
+    /** 打开目录页（picker）：回传选中章节/取消的活由 host 层挂结果通道承担。 */
+    onOpenToc: (bookUrl: String) -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -90,9 +86,7 @@ fun BookInfoRouteScreen(
     val showMangaUi by rememberUpdatedState(uiState.showMangaUi)
     var showSelectBooksDirSheet by remember { mutableStateOf(false) }
 
-    val tocActivityResult = rememberLauncherForActivityResult(TocActivityResult()) {
-        viewModel.onTocResult(it)
-    }
+
     val localBookTreeSelect =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
@@ -173,12 +167,9 @@ fun BookInfoRouteScreen(
                     }
                 }
 
-                is BookInfoEffect.OpenToc -> if (onOpenToc != null) {
-                    // 主界面返回栈内：目录页压栈，选中/取消都由同栈结果通道回传。
+                is BookInfoEffect.OpenToc -> {
+                    // 目录页在返回栈内：压栈后由同栈结果通道回传选中/取消。
                     onOpenToc(effect.bookUrl)
-                } else {
-                    // 独立 Activity 宿主（BookInfoActivity）拿不到返回栈，仍走 ActivityResult。
-                    tocActivityResult.launch(effect.bookUrl)
                 }
                 is BookInfoEffect.OpenBookSourceEdit -> {
                     onOpenBookSourceEdit(effect.sourceUrl)

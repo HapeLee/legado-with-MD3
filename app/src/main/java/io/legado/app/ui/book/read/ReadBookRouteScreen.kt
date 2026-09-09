@@ -76,7 +76,6 @@ import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.translation.TranslationChapterStatus
-import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.ReaderBookSourceActions
@@ -90,7 +89,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.image.cover.sharedCoverSourceRadius
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CancellationException
@@ -153,6 +151,11 @@ fun ReadBookRouteScreen(
     onOpenTtsCache: () -> Unit = {},
     // null = 打开替换规则列表页；非 null = 直达某条规则的编辑页
     onOpenReplace: (edit: MainRouteReplaceEdit?) -> Unit = {},
+    /**
+     * 打开书籍详情页。详情页里把书删了要能通知回来（原 `BookInfoActivity` 的
+     * `setResult(RESULT_OK)` 语义），所以回传由 host 层挂结果通道承担。
+     */
+    onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit = { _, _, _ -> },
     /** 打开全屏目录页（picker）：回传选中章节的活由 host 层承担。 */
     onOpenChapterList: (bookUrl: String) -> Unit = {},
     /** 目录/书签抽屉点「全屏」：回传选中章节的活由 host 层承担。 */
@@ -328,11 +331,6 @@ fun ReadBookRouteScreen(
         uri?.let { viewModel.onIntent(ReadBookIntent.ExportHighlightRulesToFile(it)) }
     }
 
-    val bookInfoLauncher = rememberLauncherForActivityResult(
-        StartActivityContract(BookInfoActivity::class.java)
-    ) { result ->
-        viewModel.onIntent(ReadBookIntent.BookInfoResult(result.resultCode == android.app.Activity.RESULT_OK))
-    }
 
     AutoSuggestDayNightObserver(
         viewModel = viewModel,
@@ -367,11 +365,7 @@ fun ReadBookRouteScreen(
                                 onOpenChapterList(effect.bookUrl)
                             }
                             is ReadBookEffect.OpenBookInfo -> {
-                                bookInfoLauncher.launch {
-                                    putExtra("name", effect.name)
-                                    putExtra("author", effect.author)
-                                    putExtra("bookUrl", effect.bookUrl)
-                                }
+                                onOpenBookInfo(effect.name, effect.author, effect.bookUrl)
                             }
                             is ReadBookEffect.ShowLogin -> {
                                 context.startActivity(
@@ -856,11 +850,7 @@ fun ReadBookRouteScreen(
                 onOpenFullBookInfo = {
                     state.book?.let { book ->
                         viewModel.onIntent(ReadBookIntent.DismissSheet)
-                        bookInfoLauncher.launch {
-                            putExtra("name", book.name)
-                            putExtra("author", book.author)
-                            putExtra("bookUrl", book.bookUrl)
-                        }
+                        onOpenBookInfo(book.name, book.author, book.bookUrl)
                     }
                 },
                 onOpenFullToc = onOpenFullToc,

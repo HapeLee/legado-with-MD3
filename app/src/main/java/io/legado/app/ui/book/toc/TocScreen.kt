@@ -90,7 +90,6 @@ import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
-import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.main.MainRouteReplaceEdit
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
@@ -139,11 +138,10 @@ fun TocRouteScreen(
     onOpenReplaceRule: (MainRouteReplaceEdit?) -> Unit,
     onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
     /**
-     * 非 null 时「编辑本地目录规则」走主界面返回栈（同栈回传选中的规则）；
-     * null 时回退到独立的 TxtTocRuleActivity——只要还有独立 Activity 宿主（如被外部
-     * intent 拉起的 ReadMangaActivity → TocActivity）拿不到 nav3 返回栈，这条路就得留着。
+     * 「编辑本地目录规则」：规则页压栈后由同栈结果通道回传选中的规则。全部目录页入口都在
+     * nav3 返回栈内，不再有回退 Activity 的分支。
      */
-    onEditLocalTocRule: ((regex: String?) -> Unit)? = null,
+    onEditLocalTocRule: (regex: String?) -> Unit = {},
 ) {
     val state by viewModel.screenState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -152,15 +150,6 @@ fun TocRouteScreen(
         contract = ActivityResultContracts.CreateDocument("*/*")
     ) { uri: Uri? ->
         uri?.let { viewModel.onIntent(TocIntent.ExportBookmarks(it, pendingExportMarkdown)) }
-    }
-    val tocRegexLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            viewModel.onIntent(
-                TocIntent.SaveTocRegex(result.data?.getStringExtra("tocRegex").orEmpty())
-            )
-        }
     }
     LaunchedEffect(bookUrl) {
         bookUrl?.let { viewModel.onIntent(TocIntent.LoadBook(it)) }
@@ -180,15 +169,7 @@ fun TocRouteScreen(
         onChapterClick = onChapterClick,
         onOpenReplaceRule = onOpenReplaceRule,
         onBookmarkClick = onBookmarkClick,
-        onEditLocalTocRule = { regex ->
-            if (onEditLocalTocRule != null) {
-                onEditLocalTocRule(regex)
-            } else {
-                tocRegexLauncher.launch(
-                    Intent(context, TxtTocRuleActivity::class.java).putExtra("tocRegex", regex)
-                )
-            }
-        },
+        onEditLocalTocRule = onEditLocalTocRule,
         onExportBookmarks = { isMarkdown, fileName ->
             pendingExportMarkdown = isMarkdown
             exportLauncher.launch(fileName)

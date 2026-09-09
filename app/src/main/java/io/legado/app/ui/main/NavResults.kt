@@ -44,6 +44,17 @@ sealed interface TocPickResult {
 data class TxtTocRulePickResult(val rule: String)
 
 /**
+ * 书籍详情页的「书被删了」信号。
+ *
+ * 原来由 `BookInfoActivity.onFinish` 的 `setResult(RESULT_OK)` 承担：阅读页据此
+ * `ReadBookIntent.BookInfoResult(bookDeleted = true)` 退出，漫画页据此向上转发
+ * `READER_RESULT_DELETED`。nav3 下没有 Activity result，改走同栈结果通道。
+ *
+ * 只有删除成功才发；书籍加载失败之类的 `Finish(resultCode = null)` 不发（那是详情页自己出栈）。
+ */
+data object BookInfoDeleted
+
+/**
  * 生成一次性结果 key。命名成方法而不是让调用方各写一遍，是为了保证「一次性」这个约定只有一处实现。
  */
 fun newNavResultKey(): String = java.util.UUID.randomUUID().toString()

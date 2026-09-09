@@ -211,12 +211,6 @@
                 android:name="com.samsung.android.support.REMOTE_ACTION"
                 android:resource="@xml/spen_remote_actions" />
         </activity>
-        <!-- 书籍详情页 -->
-        <activity
-            android:name=".ui.book.info.BookInfoActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- 书籍信息编辑 -->
         <activity
             android:name=".ui.book.info.edit.BookInfoEditActivity"
@@ -242,21 +236,9 @@
             android:enableOnBackInvokedCallback="true"
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
-        <!-- txt目录规则管理 -->
-        <activity
-            android:name=".ui.book.toc.rule.TxtTocRuleActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- txt目录规则预览(阅读界面) -->
         <activity
             android:name=".ui.book.toc.rule.preview.TxtTocRulePreviewActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
-        <!-- 目录 -->
-        <activity
-            android:name=".ui.book.toc.TocActivity"
             android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
