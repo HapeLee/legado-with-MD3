@@ -138,6 +138,12 @@ fun TocRouteScreen(
     onChapterClick: (Int) -> Unit,
     onOpenReplaceRule: (MainRouteReplaceEdit?) -> Unit,
     onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
+    /**
+     * 非 null 时「编辑本地目录规则」走主界面返回栈（同栈回传选中的规则）；
+     * null 时回退到独立的 TxtTocRuleActivity——只要还有独立 Activity 宿主（如被外部
+     * intent 拉起的 ReadMangaActivity → TocActivity）拿不到 nav3 返回栈，这条路就得留着。
+     */
+    onEditLocalTocRule: ((regex: String?) -> Unit)? = null,
 ) {
     val state by viewModel.screenState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -175,9 +181,13 @@ fun TocRouteScreen(
         onOpenReplaceRule = onOpenReplaceRule,
         onBookmarkClick = onBookmarkClick,
         onEditLocalTocRule = { regex ->
-            tocRegexLauncher.launch(
-                Intent(context, TxtTocRuleActivity::class.java).putExtra("tocRegex", regex)
-            )
+            if (onEditLocalTocRule != null) {
+                onEditLocalTocRule(regex)
+            } else {
+                tocRegexLauncher.launch(
+                    Intent(context, TxtTocRuleActivity::class.java).putExtra("tocRegex", regex)
+                )
+            }
         },
         onExportBookmarks = { isMarkdown, fileName ->
             pendingExportMarkdown = isMarkdown

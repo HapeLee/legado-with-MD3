@@ -76,6 +76,7 @@ import io.legado.app.ui.book.knowledge.CharacterDetailIntent
 import io.legado.app.ui.book.knowledge.deleteCharacterAvatar
 import io.legado.app.ui.book.knowledge.saveCharacterAvatar
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
+import io.legado.app.ui.book.manga.MangaReaderIntent
 import io.legado.app.ui.book.manga.MangaReaderRouteScreen
 import io.legado.app.ui.book.manga.MangaReaderViewModel
 import io.legado.app.ui.book.read.ReadBookController
@@ -103,6 +104,9 @@ import io.legado.app.ui.book.source.debug.BookSourceDebugViewModel
 import io.legado.app.ui.book.source.edit.BookSourceEditRoute
 import io.legado.app.ui.book.source.edit.BookSourceEditViewModel
 import io.legado.app.ui.book.source.manage.BookSourceRouteScreen
+import io.legado.app.ui.book.toc.TocIntent
+import io.legado.app.ui.book.toc.TocRouteScreen
+import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
@@ -152,6 +156,8 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
+import androidx.navigation3.runtime.result.LocalResultEventBus
+import androidx.navigation3.runtime.result.ResultEffect
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.collectLatest
@@ -642,6 +648,15 @@ fun MainActivity.mainEntryProvider(
         @Suppress("RememberReturnType")
         remember(readBookViewModel, route) {
         }
+        // 本 entry 存活期间固定一个结果 key；目录页是 picker，选中后由同栈结果通道回传。
+        val tocResultKey = remember(route) { newNavResultKey() }
+        ResultEffect<TocPickResult>(tocResultKey) { result ->
+            if (result is TocPickResult.Picked) {
+                readBookViewModel.onIntent(
+                    ReadBookIntent.OpenChapterResult(result.chapterIndex, result.chapterPos)
+                )
+            }
+        }
         val lifecycleOwner = LocalLifecycleOwner.current
         val initRequest = remember(route) {
             ReadBookInitRequest(
@@ -702,6 +717,14 @@ fun MainActivity.mainEntryProvider(
                     onNavigateToRoute(edit)
                 }
             },
+            onOpenChapterList = { bookUrl ->
+                onNavigateToRoute(MainRouteToc(bookUrl = bookUrl, resultKey = tocResultKey))
+            },
+            onOpenFullToc = { bookUrl, initialPage ->
+                onNavigateToRoute(
+                    MainRouteToc(bookUrl = bookUrl, initialPage = initialPage, resultKey = tocResultKey)
+                )
+            },
         )
 
         DisposableEffect(controller, lifecycleOwner, route.readAloud) {
@@ -761,6 +784,14 @@ fun MainActivity.mainEntryProvider(
         val mangaViewModel = koinViewModel<MangaReaderViewModel>(
             key = "ReadManga:${route.bookUrl ?: "last-read"}",
         )
+        val tocResultKey = remember(route) { newNavResultKey() }
+        ResultEffect<TocPickResult>(tocResultKey) { result ->
+            if (result is TocPickResult.Picked) {
+                mangaViewModel.onIntent(
+                    MangaReaderIntent.OpenChapter(result.chapterIndex, result.chapterPos)
+                )
+            }
+        }
         MangaReaderRouteScreen(
             bookUrl = route.bookUrl,
             inBookshelf = route.inBookshelf,
@@ -776,6 +807,15 @@ fun MainActivity.mainEntryProvider(
             },
             onOpenSourceEdit = { sourceUrl ->
                 onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
+            },
+            onOpenFullToc = { bookUrl, initialPage ->
+                onNavigateToRoute(
+                    MainRouteToc(
+                        bookUrl = bookUrl,
+                        initialPage = initialPage,
+                        resultKey = tocResultKey,
+                    )
+                )
             },
             onOpenWebView = { title, url, sourceOrigin, sourceName, sourceType ->
                 onNavigateToRoute(
@@ -1131,6 +1171,15 @@ fun MainActivity.mainEntryProvider(
         }
     ) { route ->
         val bookInfoViewModel = koinViewModel<BookInfoViewModel>(key = "BookInfo:${route.bookUrl}")
+        val tocResultKey = remember(route) { newNavResultKey() }
+        ResultEffect<TocPickResult>(tocResultKey) { result ->
+            // Picked 之外一律视为「没选就返回」，对齐原 TocActivityResult 的 RESULT_CANCELED 分支。
+            bookInfoViewModel.onTocResult(
+                (result as? TocPickResult.Picked)?.let {
+                    Triple(it.chapterIndex, it.chapterPos, it.chapterChanged)
+                }
+            )
+        }
         BookInfoRouteScreen(
             bookUrl = route.bookUrl,
             name = route.name,
@@ -1196,6 +1245,9 @@ fun MainActivity.mainEntryProvider(
             },
             onOpenEventList = { bookUrl ->
                 onNavigateToRoute(MainRouteBookEventList(bookUrl))
+            },
+            onOpenToc = { bookUrl ->
+                onNavigateToRoute(MainRouteToc(bookUrl = bookUrl, resultKey = tocResultKey))
             },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
@@ -1458,13 +1510,59 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
+    entry<MainRouteToc> { route ->
+        val resultBus = LocalResultEventBus.current
+        val tocViewModel: TocViewModel = koinViewModel(key = "toc_${route.bookUrl}")
+        // 本页也可能是发起方：编辑本地目录规则时把 TXT 规则页当 picker 打开。
+        val txtRuleResultKey = remember(route) { newNavResultKey() }
+        ResultEffect<TxtTocRulePickResult>(txtRuleResultKey) { picked ->
+            tocViewModel.onIntent(TocIntent.SaveTocRegex(picked.rule))
+        }
+        TocRouteScreen(
+            viewModel = tocViewModel,
+            bookUrl = route.bookUrl,
+            initialPage = route.initialPage,
+            onBackClick = {
+                // picker 模式下「没选就返回」也要回传：书籍详情据此回滚未入架的书。
+                route.resultKey?.let { resultBus.sendResult(it, TocPickResult.Cancelled) }
+                onNavigateBack()
+            },
+            onChapterClick = { index ->
+                route.resultKey?.let {
+                    resultBus.sendResult(it, TocPickResult.Picked(index, 0, true))
+                }
+                onNavigateBack()
+            },
+            onBookmarkClick = { index, pos ->
+                route.resultKey?.let {
+                    resultBus.sendResult(it, TocPickResult.Picked(index, pos, true))
+                }
+                onNavigateBack()
+            },
+            onOpenReplaceRule = { editRoute ->
+                // null = 打开替换规则列表页；非 null = 直达某条规则的编辑页。
+                // 原先这两条路分别走 ROUTE_REPLACE_RULE 与 createReplaceEditIntent。
+                onNavigateToRoute(editRoute ?: MainRouteReplaceRule())
+            },
+            onEditLocalTocRule = { regex ->
+                onNavigateToRoute(
+                    MainRouteTxtTocRule(initialRule = regex, resultKey = txtRuleResultKey)
+                )
+            },
+        )
+    }
+
     entry<MainRouteTxtTocRule> { route ->
+        val resultBus = LocalResultEventBus.current
         TxtRuleRouteScreen(
             initialRule = route.initialRule,
-            // picker 语义（initialRule 非空时点选规则要回传 tocRegex）目前仍由 TxtTocRuleActivity
-            // 承担：目录页 TocActivity 还没收进 nav3 栈，跨栈拿不到 ActivityResult。
-            // 待 Toc 进栈后改走同栈结果通道，那时这个 Activity 就可以删掉。
-            onPickRule = null,
+            // picker 语义（initialRule 非空时点选规则回传 tocRegex）走同栈结果通道。
+            onPickRule = route.resultKey?.let { key ->
+                { rule ->
+                    resultBus.sendResult(key, TxtTocRulePickResult(rule))
+                    onNavigateBack()
+                }
+            },
             onBackClick = { onNavigateBack() },
         )
     }

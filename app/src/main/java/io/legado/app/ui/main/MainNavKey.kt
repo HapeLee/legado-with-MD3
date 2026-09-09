@@ -264,11 +264,31 @@ data class MainRouteReplaceEdit(
  * TXT 目录规则管理页。原先挂在独立的 TxtTocRuleActivity 上，我的页与规则预览页都要 import
  * 该 Activity 才能跳转；收口成导航契约后，这两个非 picker 入口只依赖这里的 key。
  *
- * [initialRule] 非空时该页是 picker（选中规则后回传），目前 picker 仍走 TxtTocRuleActivity，
- * 待目录页 TocActivity 也收进 nav3 栈后，回传改由同栈结果通道承担，届时 Activity 可删。
+ * [initialRule] 非空时该页是 picker（选中规则后回传）。目录页已收进 nav3 栈，回传走官方同栈
+ * 结果通道（`androidx.navigation3.runtime.result`，见 [io.legado.app.ui.main.NavResults]）。
+ *
+ * [resultKey] 非空时该页是 picker：选中后把规则投到该 key 再出栈。
  */
 @Serializable
-data class MainRouteTxtTocRule(val initialRule: String? = null) : MainRoute
+data class MainRouteTxtTocRule(
+    val initialRule: String? = null,
+    val resultKey: String? = null,
+) : MainRoute
+
+/**
+ * 目录页。原先挂在独立的 TocActivity 上，阅读页与书籍详情都必须靠 ActivityResult 才能拿到
+ * 「选中的章节」；收口进主界面返回栈后，这两个入口改为压栈 + 同栈结果通道回传（官方
+ * `ResultEffect`/`sendResult`，见 [io.legado.app.ui.main.NavResults]）。
+ *
+ * [resultKey] 非空时该页是 picker：选中后把结果投到该 key 再出栈；没选就返回会投
+ * [io.legado.app.ui.main.TocPickResult.Cancelled]。为空表示只浏览。
+ */
+@Serializable
+data class MainRouteToc(
+    val bookUrl: String,
+    val initialPage: Int = 0,
+    val resultKey: String? = null,
+) : MainRoute
 
 @Serializable
 data object MainRouteAbout : MainRoute
@@ -327,4 +347,5 @@ object MainRouteConst {
     const val ROUTE_REPLACE_RULE = "replace/rule"
     const val ROUTE_REPLACE_EDIT = "replace/edit"
     const val ROUTE_TXT_TOC_RULE = "txt/toc_rule"
+    const val ROUTE_TOC = "book/toc"
 }

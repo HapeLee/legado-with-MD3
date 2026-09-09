@@ -32,6 +32,7 @@ import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDe
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.runtime.result.rememberResultEventBusNavEntryDecorator
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import io.legado.app.BuildConfig
@@ -420,6 +421,8 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                 entryDecorators = listOf(
                     rememberSaveableStateHolderNavEntryDecorator(),
                     rememberViewModelStoreNavEntryDecorator(),
+                    // 提供 LocalResultEventBus：目录页等 picker 靠它把结果回传给栈下方的发起方。
+                    rememberResultEventBusNavEntryDecorator<NavKey>(),
                 ),
                 sceneStrategies = listOf(
                     ModalOverlaySceneStrategy(),

@@ -74,6 +74,11 @@ fun BookInfoRouteScreen(
     onOpenCharacterList: (bookUrl: String) -> Unit = {},
     onOpenKnowledgeList: (bookUrl: String) -> Unit = {},
     onOpenEventList: (bookUrl: String) -> Unit = {},
+    /**
+     * 非 null 时目录页走主界面返回栈（同栈回传选中章节/取消）；
+     * null 时回退到独立的 TocActivity（独立 Activity 宿主拿不到 nav3 返回栈）。
+     */
+    onOpenToc: ((bookUrl: String) -> Unit)? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -168,7 +173,13 @@ fun BookInfoRouteScreen(
                     }
                 }
 
-                is BookInfoEffect.OpenToc -> tocActivityResult.launch(effect.bookUrl)
+                is BookInfoEffect.OpenToc -> if (onOpenToc != null) {
+                    // 主界面返回栈内：目录页压栈，选中/取消都由同栈结果通道回传。
+                    onOpenToc(effect.bookUrl)
+                } else {
+                    // 独立 Activity 宿主（BookInfoActivity）拿不到返回栈，仍走 ActivityResult。
+                    tocActivityResult.launch(effect.bookUrl)
+                }
                 is BookInfoEffect.OpenBookSourceEdit -> {
                     onOpenBookSourceEdit(effect.sourceUrl)
                 }

@@ -41,6 +41,8 @@ fun MangaReaderRouteScreen(
         sourceName: String?,
         sourceType: Int?,
     ) -> Unit,
+    /** 目录抽屉点「全屏」：目录页压栈后由同栈结果通道回传选中章节。 */
+    onOpenFullToc: (bookUrl: String, initialPage: Int) -> Unit = { _, _ -> },
 ) {
     val activity = LocalActivity.current as MainActivity
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -201,6 +203,10 @@ fun MangaReaderRouteScreen(
             onOpenFullBookInfo = {
                 viewModel.onIntent(MangaReaderIntent.DismissSheet)
                 onOpenBookInfo(state.bookName, state.bookAuthor, state.bookUrl)
+            },
+            onOpenFullToc = { bookUrl, initialPage ->
+                viewModel.onIntent(MangaReaderIntent.DismissSheet)
+                onOpenFullToc(bookUrl, initialPage)
             },
         )
     }

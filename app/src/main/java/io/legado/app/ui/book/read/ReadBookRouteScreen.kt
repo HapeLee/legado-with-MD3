@@ -82,7 +82,6 @@ import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.ReaderBookSourceActions
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
-import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.AndroidPlatformCapabilities
 import io.legado.app.ui.main.MainActivity
@@ -154,6 +153,10 @@ fun ReadBookRouteScreen(
     onOpenTtsCache: () -> Unit = {},
     // null = 打开替换规则列表页；非 null = 直达某条规则的编辑页
     onOpenReplace: (edit: MainRouteReplaceEdit?) -> Unit = {},
+    /** 打开全屏目录页（picker）：回传选中章节的活由 host 层承担。 */
+    onOpenChapterList: (bookUrl: String) -> Unit = {},
+    /** 目录/书签抽屉点「全屏」：回传选中章节的活由 host 层承担。 */
+    onOpenFullToc: (bookUrl: String, initialPage: Int) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
@@ -227,11 +230,6 @@ fun ReadBookRouteScreen(
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             viewModel.onIntent(ReadBookIntent.SourceEditResult)
-        }
-    }
-    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
-        result?.let { (index, chapterPos, _) ->
-            viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
         }
     }
 
@@ -364,7 +362,9 @@ fun ReadBookRouteScreen(
                                 )
                             }
                             is ReadBookEffect.OpenChapterList -> {
-                                tocLauncher.launch(effect.bookUrl)
+                                // 目录页已收进主界面返回栈：压栈后由同栈结果通道回传选中章节，
+                                // 不再跨 Activity 走 ActivityResult。
+                                onOpenChapterList(effect.bookUrl)
                             }
                             is ReadBookEffect.OpenBookInfo -> {
                                 bookInfoLauncher.launch {
@@ -863,6 +863,7 @@ fun ReadBookRouteScreen(
                         }
                     }
                 },
+                onOpenFullToc = onOpenFullToc,
                 bookSource = state.bookSource,
                 onOpenChapterUrl = { viewModel.onIntent(ReadBookIntent.OpenChapterUrl) },
                 onToggleReadUrlInBrowser = {

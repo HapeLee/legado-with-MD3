@@ -132,6 +132,11 @@ fun ReaderBookSheetRoute(
     onChapterClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
     currentChapterIndex: Int? = null,
     onOpenFullBookInfo: () -> Unit,
+    /**
+     * 非 null 时「目录/书签」抽屉的全屏入口走主界面返回栈（同栈回传选中章节）；
+     * null 时回退到独立的 TocActivity（独立 Activity 宿主拿不到 nav3 返回栈）。
+     */
+    onOpenFullToc: ((bookUrl: String, initialPage: Int) -> Unit)? = null,
     /** 书签页跳转：携带完整书签供跳转前校验。 */
     onBookmarkNavigate: (Bookmark) -> Unit = { _ -> },
     /** 笔记页跳转：携带完整展示项供跳转前校验。 */
@@ -205,17 +210,19 @@ fun ReaderBookSheetRoute(
                 ReaderBookSheetTab.Information -> onOpenFullBookInfo()
                 ReaderBookSheetTab.Toc,
                 ReaderBookSheetTab.Bookmarks -> {
-                    fullTocLauncher.launch(
-                        Intent(context, TocActivity::class.java)
-                            .putExtra("bookUrl", bookUrl)
-                            .putExtra(
-                                "initialPage",
-                                if (tab == ReaderBookSheetTab.Bookmarks) 1 else 0,
-                            )
-                    )
+                    val initialPage = if (tab == ReaderBookSheetTab.Bookmarks) 1 else 0
+                    if (onOpenFullToc != null) {
+                        onOpenFullToc(bookUrl, initialPage)
+                    } else {
+                        fullTocLauncher.launch(
+                            Intent(context, TocActivity::class.java)
+                                .putExtra("bookUrl", bookUrl)
+                                .putExtra("initialPage", initialPage)
+                        )
+                    }
                 }
 
-                // 笔记页无全屏落地（TocActivity 暂无对应页）
+                // 笔记页无全屏落地（目录页暂无对应页）
                 ReaderBookSheetTab.Marks -> Unit
             }
         },
