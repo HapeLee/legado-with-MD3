@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_delete_named">Delete %1$s</string>
+    <string name="a11y_edit_named">Edit %1$s</string>
+    <string name="a11y_long_press_reorder">Long press and drag to reorder</string>
+    <string name="a11y_rule_enabled_switch">%1$s enabled state</string>
+    <string name="cancel">Cancel</string>
+    <string name="cannot_empty">The input content cannot be empty</string>
+    <string name="chapter_rule">Chapter Regex</string>
+    <string name="clipboard_empty">Clipboard is empty</string>
+    <string name="delete">Delete</string>
+    <string name="disable_selection">Disable selected</string>
+    <string name="disabled">Disabled</string>
+    <string name="enable">Enable</string>
+    <string name="enabled">Enabled</string>
+    <string name="example">Example</string>
+    <string name="export">Export</string>
+    <string name="import_built_in_rules">Import Built-in Rules</string>
+    <string name="import_on_line">Import online</string>
+    <string name="import_str">Import</string>
+    <string name="import_txt_toc_rule">Import txt directory rules</string>
+    <string name="invalid_format">Invalid format</string>
+    <string name="ok">OK</string>
+    <string name="search_txt_toc_rule">Search TXT directory rules</string>
+    <string name="select_toc_rule">Select Chapter Rule</string>
+    <string name="sure_del">Are you sure to delete it?</string>
+    <string name="txt_toc_rule">Text Catalog Rules</string>
+    <string name="volume_rule">Volume Regex</string>
+</resources>

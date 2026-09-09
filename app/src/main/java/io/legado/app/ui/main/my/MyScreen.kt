@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.bookmark.AllBookmarkActivity
-import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -146,11 +145,7 @@ fun MyScreen(
                 ClickableSettingItem(
                     title = stringResource(R.string.txt_toc_rule),
                     imageVector = Icons.AutoMirrored.Filled.Rule,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(TxtTocRuleActivity::class.java)
-                        )
-                    }
+                    onClick = { onNavigate(PrefClickEvent.OpenTxtTocRule) }
                 )
                 ClickableSettingItem(
                     title = stringResource(R.string.dict_rule),

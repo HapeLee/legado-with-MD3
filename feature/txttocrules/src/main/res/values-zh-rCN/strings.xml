@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_delete_named">删除 %1$s</string>
+    <string name="a11y_edit_named">编辑 %1$s</string>
+    <string name="a11y_long_press_reorder">长按并拖动可排序</string>
+    <string name="a11y_rule_enabled_switch">%1$s 的启用状态</string>
+    <string name="cancel">取消</string>
+    <string name="cannot_empty">输入不能为空</string>
+    <string name="chapter_rule">章节正则</string>
+    <string name="clipboard_empty">剪贴板没有内容</string>
+    <string name="delete">删除</string>
+    <string name="disable_selection">禁用所选</string>
+    <string name="disabled">已禁用</string>
+    <string name="enable">启用</string>
+    <string name="enabled">已启用</string>
+    <string name="example">示例</string>
+    <string name="export">导出</string>
+    <string name="import_built_in_rules">导入内置规则</string>
+    <string name="import_on_line">网络导入</string>
+    <string name="import_str">导入</string>
+    <string name="import_txt_toc_rule">导入 TXT 目录规则</string>
+    <string name="invalid_format">格式不正确</string>
+    <string name="ok">确认</string>
+    <string name="search_txt_toc_rule">搜索 TXT 目录规则</string>
+    <string name="select_toc_rule">选择目录规则</string>
+    <string name="sure_del">是否确认删除?</string>
+    <string name="txt_toc_rule">TXT 目录规则</string>
+    <string name="volume_rule">分卷正则</string>
+</resources>

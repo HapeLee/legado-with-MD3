@@ -127,6 +127,7 @@ import io.legado.app.feature.replacerules.ReplaceRuleRouteScreen
 import io.legado.app.feature.replacerules.edit.ReplaceEditRouteScreen
 import io.legado.app.feature.replacerules.edit.ReplaceEditViewModel
 import io.legado.app.feature.tagrules.highlight.HighlightTagRuleRouteScreen
+import io.legado.app.feature.txttocrules.TxtRuleRouteScreen
 import io.legado.app.ui.login.SourceLoginIntent
 import io.legado.app.ui.login.SourceLoginRoute
 import io.legado.app.ui.login.SourceLoginType
@@ -428,6 +429,9 @@ fun MainActivity.mainEntryProvider(
             },
             onNavigateToReplaceRule = {
                 onNavigateToRoute(MainRouteReplaceRule())
+            },
+            onNavigateToTxtTocRule = {
+                onNavigateToRoute(MainRouteTxtTocRule())
             },
             onNavigateToAbout = {
                 onNavigateToRoute(MainRouteAbout)
@@ -1451,6 +1455,17 @@ fun MainActivity.mainEntryProvider(
                     )
                 )
             },
+        )
+    }
+
+    entry<MainRouteTxtTocRule> { route ->
+        TxtRuleRouteScreen(
+            initialRule = route.initialRule,
+            // picker 语义（initialRule 非空时点选规则要回传 tocRegex）目前仍由 TxtTocRuleActivity
+            // 承担：目录页 TocActivity 还没收进 nav3 栈，跨栈拿不到 ActivityResult。
+            // 待 Toc 进栈后改走同栈结果通道，那时这个 Activity 就可以删掉。
+            onPickRule = null,
+            onBackClick = { onNavigateBack() },
         )
     }
 

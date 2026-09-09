@@ -3,7 +3,8 @@ package io.legado.app.ui.book.toc.rule.preview
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import io.legado.app.base.BaseComposeActivity
-import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
+import io.legado.app.ui.main.MainIntent
+import io.legado.app.ui.main.MainRouteConst
 
 class TxtTocRulePreviewActivity : BaseComposeActivity() {
 
@@ -24,7 +25,11 @@ class TxtTocRulePreviewActivity : BaseComposeActivity() {
                 finish()
             },
             onOpenManagePage = {
-                startActivity(Intent(this, TxtTocRuleActivity::class.java))
+                startActivity(
+                    MainIntent.createLauncherIntent(this).apply {
+                        putExtra(MainIntent.EXTRA_START_ROUTE, MainRouteConst.ROUTE_TXT_TOC_RULE)
+                    }
+                )
             },
         )
     }

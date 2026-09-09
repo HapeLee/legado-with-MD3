@@ -150,6 +150,7 @@ fun MainScreen(
     onNavigateToReadRecordOverview: () -> Unit,
     onNavigateToHighlightTagRule: () -> Unit,
     onNavigateToReplaceRule: () -> Unit,
+    onNavigateToTxtTocRule: () -> Unit,
     onNavigateToAbout: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -177,6 +178,7 @@ fun MainScreen(
                 MainEffect.NavigateToReadRecord -> onNavigateToReadRecord()
                 MainEffect.NavigateToHighlightTagRule -> onNavigateToHighlightTagRule()
                 MainEffect.NavigateToReplaceRule -> onNavigateToReplaceRule()
+                MainEffect.NavigateToTxtTocRule -> onNavigateToTxtTocRule()
                 MainEffect.NavigateToAbout -> onNavigateToAbout()
             }
         }

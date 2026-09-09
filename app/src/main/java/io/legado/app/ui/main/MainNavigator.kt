@@ -561,6 +561,8 @@ object MainNavigator {
                 bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL)
             )
 
+            MainRouteConst.ROUTE_TXT_TOC_RULE -> MainRouteTxtTocRule()
+
             MainRouteConst.ROUTE_REPLACE_EDIT -> MainRouteReplaceEdit(
                 id = intent?.getLongExtra(MainIntent.EXTRA_REPLACE_ID, -1L) ?: -1L,
                 pattern = intent?.getStringExtra(MainIntent.EXTRA_REPLACE_PATTERN),

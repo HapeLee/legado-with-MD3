@@ -30,6 +30,7 @@ sealed class PrefClickEvent {
     object OpenBookSourceManage : PrefClickEvent()
     object OpenHighlightTagRule : PrefClickEvent()
     object OpenReplaceRule : PrefClickEvent()
+    object OpenTxtTocRule : PrefClickEvent()
     object OpenAbout : PrefClickEvent()
     object ToggleWebService : PrefClickEvent()
     object ExitApp : PrefClickEvent()

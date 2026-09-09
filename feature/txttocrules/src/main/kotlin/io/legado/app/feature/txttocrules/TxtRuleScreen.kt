@@ -1,4 +1,4 @@
-package io.legado.app.ui.book.toc.rule
+package io.legado.app.feature.txttocrules
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,7 +28,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
+import io.legado.app.feature.txttocrules.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -49,7 +49,7 @@ import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.rules.TestLineResult
-import io.legado.app.utils.toastOnUi
+import io.legado.app.core.platform.ToasterProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -95,6 +95,9 @@ fun TxtRuleScreen(
 ) {
 
     val context = LocalContext.current
+    val toaster = ToasterProvider.current
+    val cannotEmptyText = stringResource(R.string.cannot_empty)
+    val invalidFormatText = stringResource(R.string.invalid_format)
 
     val rules = state.items
     val selectedIds = state.selectedIds
@@ -161,7 +164,7 @@ fun TxtRuleScreen(
     val exportDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let { onIntent(TxtTocRuleIntent.ExportSelection(it)) }
+            uri?.let { onIntent(TxtTocRuleIntent.ExportSelection(it.toString())) }
         }
     )
 
@@ -254,17 +257,17 @@ fun TxtRuleScreen(
         onSave = { updatedRule ->
             when {
                 updatedRule.name.isBlank() -> {
-                    context.toastOnUi(R.string.cannot_empty)
+                    toaster.toast(cannotEmptyText)
                     return@RuleEditSheet
                 }
 
                 updatedRule.chapterRule.isBlank() -> {
-                    context.toastOnUi(R.string.cannot_empty)
+                    toaster.toast(cannotEmptyText)
                     return@RuleEditSheet
                 }
 
                 runCatching { Regex(updatedRule.chapterRule) }.isFailure -> {
-                    context.toastOnUi(R.string.invalid_format)
+                    toaster.toast(invalidFormatText)
                     return@RuleEditSheet
                 }
             }

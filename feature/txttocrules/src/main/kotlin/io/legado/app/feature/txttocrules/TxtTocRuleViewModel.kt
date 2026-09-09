@@ -1,9 +1,11 @@
-package io.legado.app.ui.book.toc.rule
+package io.legado.app.feature.txttocrules
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
+import io.legado.app.feature.txttocrules.R
 import io.legado.app.base.BaseRuleViewModel
+import io.legado.app.base.rules.BuiltInRulesImporter
 import io.legado.app.base.rules.RuleTransferPlatform
 import io.legado.app.core.platform.ClipboardProvider
 import io.legado.app.data.entities.TxtTocRule
@@ -11,7 +13,6 @@ import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
-import io.legado.app.help.DefaultData
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
@@ -28,6 +29,7 @@ class TxtTocRuleViewModel(
     uploadRepository: UploadRepository,
     transferPlatform: RuleTransferPlatform,
     private val repository: TxtTocRuleRepository,
+    private val builtInRulesImporter: BuiltInRulesImporter,
 ) : BaseRuleViewModel<TxtTocRuleItemUi, TxtTocRule, Long, TxtTocRuleUiState>(
     application,
     TxtTocRuleUiState(interaction = InteractionState(isLoading = true)),
@@ -66,7 +68,7 @@ class TxtTocRuleViewModel(
             }
             is TxtTocRuleIntent.ExportSelection -> {
                 val state = uiState.value
-                exportToUri(intent.uri, state.items, state.selectedIds)
+                exportToUri(Uri.parse(intent.uri), state.items, state.selectedIds)
             }
             is TxtTocRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
             TxtTocRuleIntent.SaveSortOrder -> saveSortOrder()
@@ -190,7 +192,7 @@ class TxtTocRuleViewModel(
 
     private fun importBuiltInRules() {
         viewModelScope.launch(Dispatchers.IO) {
-            DefaultData.importDefaultTocRules()
+            builtInRulesImporter.importTxtTocRules()
             _effects.emit(
                 TxtTocRuleEffect.ShowMessage(context.getString(R.string.import_built_in_rules))
             )

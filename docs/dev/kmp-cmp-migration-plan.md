@@ -906,6 +906,41 @@ VM 契约改动惯例不加单测）。
 **剩余**：`ImportDictRuleViewModel`（`ui/association`，导入词典规则）随其依赖评估是否入模块或留 host；
 dict 查询面板的 `search` 平台契约化独立立项（见上）。
 
+### P4 第四个 Feature：`:feature:txttocrules`（TXT 目录规则，2026-09-09）
+
+`ui/book/toc` 同样是复合 Feature，审计后**拆三域**：
+
+- **① `rule` 子域（TXT 目录规则管理）→ 已建 `:feature:txttocrules`**：`TxtRuleScreen`（含
+  `TxtRuleRouteScreen`）/ `TxtTocRuleContract` / `TxtTocRuleViewModel` 迁入
+  `io.legado.app.feature.txttocrules`，26 R.string×4 语言。`TxtTocRuleActivity` 因依赖 app 的
+  `BaseComposeActivity` 留 `:app` 作薄宿主（只 import 模块 `TxtRuleRouteScreen`），
+  `MyScreen` 入口与 Manifest 均不变。
+- **② `rule/preview` 子域**（TxtTocRulePreview*）依赖 app 的 `model.localBook.LocalBook` 与
+  `utils.Utf8BomUtils`（本地书解析）→ **platform island，不迁**。
+- **③ `toc` 主域**（TocActivity/Screen/ViewModel，书籍目录页 2280 行）属阅读主链 → **留 `:app`**。
+
+**第 1 片——契约去 `android.net.Uri`**（同 replacerules/dict）：`TxtTocRuleContract.
+ExportSelection(uri: Uri)` → `String`；`TxtRuleScreen` launcher 传 `it.toString()`；
+`TxtTocRuleViewModel` 内 `exportToUri(Uri.parse(intent.uri), ...)` 还原。
+顺带把 Screen 的三处 `context.toastOnUi(R.string.*)` 换成 `ToasterProvider.current.toast(...)`
+（`Toaster` 只收 `String`，故用 `stringResource` 预取；`context` 因 `contentResolver` 仍在用而保留）。
+
+**第 2 片——抽 `BuiltInRulesImporter` 契约**：VM 的「导入内置规则」原直连
+`help.DefaultData.importDefaultTocRules()`，而 `DefaultData` 是 133 行大杂烩（`appDb`、
+`splitties appCtx`、`LocalConfig`/`ThemeConfigStore`/`ReadBookConfig`、`model.BookCover`、
+`java.io.File`、`runBlocking`），**不可下沉**。照 `RuleTransferPlatform` 的形态新增契约
+`BuiltInRulesImporter.importTxtTocRules()`（`:core:viewmodel` 的 `base.rules`），
+impl `AndroidBuiltInRulesImporter` 留 `:app` 并由 Koin 注入。语义保持「先删默认项再插入」，
+不得改为追加/去重。
+
+**第 3 片——建模块**：三处声明 + build.gradle.kts + git mv 3 文件 + res 收口（26 条×4；
+`chapter_rule`/`volume_rule`/`import_built_in_rules` 在 app 繁体 res 里本就没有，回退行为不变）。
+Screen/VM 的 `import io.legado.app.R` → `io.legado.app.feature.txttocrules.R`。
+VM 里的 `context.getString(R.string.*)` **不是阻塞**——已模块化的 `TagGroupRuleViewModel`
+ 就是同一形态（Application 来自 `BaseRuleViewModel`，资源走模块 R）。
+
+**验证**：`:feature:txttocrules:compileDebugKotlin` + `:app:compileAppDebugKotlin` 通过。
+
 ### P5 —— 阅读器（接续 Track F，独立节奏）
 
 沿用 `track-f-reader-kmp-migration-plan.md`：共享业务状态/排版模型/配置，渲染器本体留 Android。

@@ -88,6 +88,8 @@ class MainViewModel(
                 _effects.tryEmit(MainEffect.NavigateToHighlightTagRule)
             PrefClickEvent.OpenReplaceRule ->
                 _effects.tryEmit(MainEffect.NavigateToReplaceRule)
+            PrefClickEvent.OpenTxtTocRule ->
+                _effects.tryEmit(MainEffect.NavigateToTxtTocRule)
             PrefClickEvent.OpenAbout -> _effects.tryEmit(MainEffect.NavigateToAbout)
             else -> Unit
         }

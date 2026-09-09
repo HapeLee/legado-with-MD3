@@ -1,9 +1,9 @@
 package io.legado.app.ui.book.toc.rule
 
-//import io.legado.app.lib.theme.primaryColor
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.feature.txttocrules.TxtRuleRouteScreen
 
 class TxtTocRuleActivity : BaseComposeActivity() {
 

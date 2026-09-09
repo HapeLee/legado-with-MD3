@@ -96,7 +96,9 @@ import io.legado.app.data.repository.TranslationCacheRepositoryImpl
 import io.legado.app.data.repository.TranslationSettingsRepository
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.base.rules.AndroidBuiltInRulesImporter
 import io.legado.app.base.rules.AndroidRuleTransferPlatform
+import io.legado.app.base.rules.BuiltInRulesImporter
 import io.legado.app.base.rules.RuleTransferPlatform
 import org.koin.android.ext.koin.androidContext
 import io.legado.app.data.repository.WebDavBackupRepository
@@ -276,7 +278,7 @@ import io.legado.app.ui.book.source.debug.BookSourceDebugViewModel
 import io.legado.app.ui.book.source.edit.BookSourceEditViewModel
 import io.legado.app.ui.book.source.manage.BookSourceViewModel
 import io.legado.app.ui.book.toc.TocViewModel
-import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
+import io.legado.app.feature.txttocrules.TxtTocRuleViewModel
 import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewViewModel
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.config.ai.AiConfigViewModel
@@ -472,6 +474,9 @@ val appModule = module {
     single<UploadRepository> { DirectLinkUploadRepository() }
     // 规则导入/导出的平台实现留在 :app；契约与 BaseRuleViewModel 一起下沉时只搬接口。
     single<RuleTransferPlatform> { AndroidRuleTransferPlatform(androidContext()) }
+    // 「导入内置规则」的平台实现留在 :app（DefaultData 依赖 appDb/assets）；契约在
+    // :core:viewmodel 的 base.rules，供规则类 ViewModel 注入。
+    single<BuiltInRulesImporter> { AndroidBuiltInRulesImporter() }
     // 阅读会话（ReadBook 单例）留在 :app；替换相关能力以契约暴露，供 :feature:replacerules 使用。
     single<ReadBookReplaceSessionGateway> { AndroidReadBookReplaceSessionGateway(get()) }
     // 替换规则页的显示偏好与变更广播：实现留在 :app（偏好存储与事件总线均为 Android 侧能力）。

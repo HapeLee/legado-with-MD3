@@ -260,6 +260,16 @@ data class MainRouteReplaceEdit(
     val sessionId: String = Uuid.random().toString(),
 ) : MainRoute
 
+/**
+ * TXT 目录规则管理页。原先挂在独立的 TxtTocRuleActivity 上，我的页与规则预览页都要 import
+ * 该 Activity 才能跳转；收口成导航契约后，这两个非 picker 入口只依赖这里的 key。
+ *
+ * [initialRule] 非空时该页是 picker（选中规则后回传），目前 picker 仍走 TxtTocRuleActivity，
+ * 待目录页 TocActivity 也收进 nav3 栈后，回传改由同栈结果通道承担，届时 Activity 可删。
+ */
+@Serializable
+data class MainRouteTxtTocRule(val initialRule: String? = null) : MainRoute
+
 @Serializable
 data object MainRouteAbout : MainRoute
 
@@ -316,4 +326,5 @@ object MainRouteConst {
     const val ROUTE_TTS_CACHE = "tts_cache"
     const val ROUTE_REPLACE_RULE = "replace/rule"
     const val ROUTE_REPLACE_EDIT = "replace/edit"
+    const val ROUTE_TXT_TOC_RULE = "txt/toc_rule"
 }

@@ -1,6 +1,5 @@
-package io.legado.app.ui.book.toc.rule
+package io.legado.app.feature.txttocrules
 
-import android.net.Uri
 import androidx.compose.runtime.Immutable
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -39,7 +38,7 @@ sealed interface TxtTocRuleIntent {
     data object DisableSelection : TxtTocRuleIntent
     data object DeleteSelection : TxtTocRuleIntent
     data object UploadSelection : TxtTocRuleIntent
-    data class ExportSelection(val uri: Uri) : TxtTocRuleIntent
+    data class ExportSelection(val uri: String) : TxtTocRuleIntent
     data class MoveItem(val from: Int, val to: Int) : TxtTocRuleIntent
     data object SaveSortOrder : TxtTocRuleIntent
     data class SaveRule(val rule: TxtTocRule, val isNew: Boolean) : TxtTocRuleIntent

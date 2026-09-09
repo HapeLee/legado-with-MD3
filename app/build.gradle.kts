@@ -233,6 +233,7 @@ dependencies {
     implementation(project(":feature:tagrules"))
     implementation(project(":feature:replacerules"))
     implementation(project(":feature:dict"))
+    implementation(project(":feature:txttocrules"))
     implementation(project(":core:platform"))
     implementation(project(":core:model"))
     implementation(project(":core:data"))
