@@ -1,6 +1,7 @@
-package io.legado.app.ui.dict.rule
+package io.legado.app.feature.dict.rule
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.rules.RuleTransferPlatform
@@ -68,7 +69,7 @@ class DictRuleViewModel(
             }
             is DictRuleIntent.ExportSelection -> {
                 val state = uiState.value
-                exportToUri(intent.uri, state.items, state.selectedIds)
+                exportToUri(Uri.parse(intent.uri), state.items, state.selectedIds)
             }
             is DictRuleIntent.MoveItem -> moveItemInList(intent.from, intent.to)
             DictRuleIntent.SaveSortOrder -> saveSortOrder()

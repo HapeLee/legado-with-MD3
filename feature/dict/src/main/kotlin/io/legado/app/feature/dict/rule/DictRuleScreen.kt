@@ -1,4 +1,4 @@
-package io.legado.app.ui.dict.rule
+package io.legado.app.feature.dict.rule
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,7 +28,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
+import io.legado.app.feature.dict.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.DictRule
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -151,7 +151,7 @@ fun DictRuleScreen(
     val exportDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let { onIntent(DictRuleIntent.ExportSelection(it)) }
+            uri?.let { onIntent(DictRuleIntent.ExportSelection(it.toString())) }
         }
     )
 

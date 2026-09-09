@@ -828,6 +828,84 @@ KSP2 双 target 生成 `ProbeDatabase_Impl`/`ProbeDao_Impl`/`ProbeDatabaseConstr
 
 **退出条件**：Android 视觉与行为基线通过；Desktop 能编译并完成该 Feature 主路径；`checkSharedPurity` 无新增违规。
 
+> **P4 第二个 Feature 模块化：`:feature:replacerules`（第十三~十九片，2026-09-09）**
+>
+> replacerules 走完整「清 app 直连 → 契约去平台化 → 下沉仓储 → 建模块」链路，成为继 tagrules
+> 之后第二个 Feature 模块（形态完全对齐 tagrules：Android library + Compose）。
+>
+> - **第十三片**：`jsonToReplaceRules` 依赖收敛（替换规则导入的「全有或全无」语义确认），清 3 Rename。
+> - **第十四片**：抽 `ContentProcess{ConfigUiState,ItemUi}` 进 `:core:ui`，去 `ui/widget/` 反依赖。
+> - **第十五片**：抽 ReadBook 替换契约（去 app 直连、`ReadBook`/Toc 跨 Feature 引用收口）。
+> - **第十六片**：`ReplaceRuleViewModel` 清 `sortMode`/`postEvent`——VM 平台依赖归零（用
+>   `ReplaceRuleChangeNotifier` + `ClipboardProvider` 等 `:core:platform` 契约）。
+> - **第十七片（a34f2497b）**：契约去 `android.net.Uri`（`ExportSelection.uri: String`，VM 内还原）；
+>   `ReplaceEditViewModel` 复用 `changeNotifier`、去 `Application` 参数，整类零 android.*；新增
+>   `AndroidReplaceRuleChangeNotifierTest` 钉住「必须走 AppEventBus」。
+> - **第十八片（0cf5df54f）**：UI 层剪贴板抽 `plainTextClipEntry(label, text)` 平台工厂
+>   （`core/ui/.../PlainTextClipEntry.kt`，因 `:core:ui` 单 target 放不了 expect/actual），
+>   10 处 `ClipEntry(ClipData.newPlainText(...))` 收口，不再 import `android.content.ClipData`。
+>   **教训**：Python 正则折叠含嵌套 `))` 的多行参数会吃括号；跨模块公开 `val` smart cast 脆弱，
+>   守卫前先捕获局部 `val url = event.url`。
+> - **第十九片（fa51f59b9）**：`ReplaceRuleRepository` 下沉 `core:data/commonMain`（`TextUtils.join`
+>   → `it.joinToString(",")` 去 android 依赖）；建 `:feature:replacerules`（三处声明 +
+>   `build.gradle.kts`，git mv 7 文件，52 R.string×4 语言 res 收口）。撞坑：`context.toastOnUi`
+>   app 独有 → `ToasterProvider.current.toast`；Glass 透出 `HazeState` → 模块自声明
+>   `implementation(libs.haze.core/materials)`。**Feature 模块不跑 lint**（对齐 tagrules）。
+>
+> - **验证（每片干净重建）**：单测累计至 **635** 项 0 失败；三门禁
+>   （`checkSharedPurity`/`checkModuleDependencies`/`verifyConfigArchitecture`）全绿；
+>   `:feature:replacerules:compileDebugKotlin`（已入 `verify.yml`）+ app/tagrules 编译过；
+>   app lint 5→3 error（随 WebView 组件出 `:core:ui` 消除 2 个 JavascriptInterface），零新增。
+> - **`:core:ui` 剩余 26 组件归属（重申）**：不再往 `:core:ui` 堆，按 feature-first 随各自
+>   Feature 模块迁出（`:feature:bookmark`、`:feature:explore`…）。
+> - **replacerules 遗留（非阻塞）**：`ReplaceRuleScreen` 371/381 两处 `context.getString(
+>   R.string.drag_disabled_in_sort_mode)` LocalContext 读资源反模式（改 `stringResource` 预取）；
+>   模块 lint 基线若日后要跑需仿 app 配相对路径键。
+
+### P4 第三个 Feature：`:feature:dict`（规划 + 第 1 片，2026-09-09）
+
+dict 是**拆两域**的复合 Feature，先审计再迁移（避免把 AnalyzeRule 查询引擎误搬进共享模块）：
+
+- **① `rule` 子域 = 词典规则管理**（`ui/dict/rule/{DictRuleActivity,DictRuleScreen,DictRuleContract,
+  DictRuleViewModel}`）：**逐文件同构 tagrules 的 HighlightTagRule 规则管理页**（VM 同样继承
+  `BaseRuleViewModel`，注入 `Application`/`UploadRepository`/`RuleTransferPlatform`/`DictRuleRepository`，
+  `DictRule` 实体 + `DictRuleRepository` 已在 `core:data/commonMain`），不调用搜索执行引擎 →
+  **干净可迁子域**，是建 `:feature:dict` 的主体。
+- **② `dict` 主包 = 词典查询弹窗面板**（`ui/dict/{DictActivity,DictSheet,DictViewModel}`）：
+  `DictViewModel` 调 `DictRule.search(word)`，该扩展在 app 独有 `DictRuleAndroid.kt`（23 行），依赖
+  `model.analyzeRule.AnalyzeRule`/`AnalyzeUrl`（书源分析引擎）→ **platform island**，本轮**不迁**，
+  待把 `search` 抽成平台注入契约（类比 `RuleTransferPlatform`）后再迁。`DictContract`/`DictUiState`
+  本身零平台类型。
+
+**第 1 片（本片，未提交）——dict rule 契约去 `android.net.Uri`**（同 replacerules 第十七片）：
+`DictRuleContract.ExportSelection(uri: Uri)` → `String`（删 `import android.net.Uri`）；
+`DictRuleScreen` launcher `onResult` 传 `it.toString()`；`DictRuleViewModel` 内 `exportToUri(
+Uri.parse(intent.uri), ...)` 还原（加 `import android.net.Uri`）。`exportToUri` 本体仍在
+`BaseRuleViewModel`（core:viewmodel）。验证：`:app:compileAppDebugKotlin` 通过；无测试覆盖（规则
+VM 契约改动惯例不加单测）。
+
+**第 2 片（本片，未提交）——建 `:feature:dict`**（照 tagrules/replacerules 配方，Stage A 迁包与建模块
+合并一次完成，因为模块包名即最终包名）：
+
+- **三处声明**：`settings.gradle`（`include ':feature:dict'`）、`app/build.gradle.kts`
+  （`implementation(project(":feature:dict"))`）、`.github/workflows/verify.yml`
+  （`:feature:dict:compileDebugKotlin`；**Feature 模块不跑 lint**，与 tagrules/replacerules 一致）。
+- **git mv 3 文件** `ui/dict/rule/{DictRuleContract,DictRuleScreen,DictRuleViewModel}` →
+  `feature/dict/src/main/kotlin/io/legado/app/feature/dict/rule/`，包名改
+  `io.legado.app.feature.dict.rule`（`DictRuleScreen` 内含 `DictRuleRouteScreen`）。
+- **`DictRuleActivity` 留 `:app`**：它继承 app 的 `BaseComposeActivity`，不该为迁一个薄宿主而下沉基类；
+  改为 `import io.legado.app.feature.dict.rule.DictRuleRouteScreen`。`MyScreen` 入口
+  （`StartActivity(DictRuleActivity)`）与 Manifest（`.ui.dict.rule.DictRuleActivity`）**均不变**。
+- **res 收口**：模块自带 `res/values{,-zh-rCN,-zh-rHK,-zh-rTW}/strings.xml`，**19 条 × 4 语言**
+  （脚本从 app res 抽取原值）；`DictRuleScreen` 的 `import io.legado.app.R` →
+  `io.legado.app.feature.dict.R`（子包需显式 import 模块 R，同 replacerules 的 `edit` 子包）。
+- **appModule**：`DictRuleViewModel` 的 import 改新包（`DictViewModel` 属查询面板，留在 `ui.dict`）。
+
+**验证**：`:feature:dict:compileDebugKotlin` 通过；`:app:compileAppDebugKotlin` 通过。
+
+**剩余**：`ImportDictRuleViewModel`（`ui/association`，导入词典规则）随其依赖评估是否入模块或留 host；
+dict 查询面板的 `search` 平台契约化独立立项（见上）。
+
 ### P5 —— 阅读器（接续 Track F，独立节奏）
 
 沿用 `track-f-reader-kmp-migration-plan.md`：共享业务状态/排版模型/配置，渲染器本体留 Android。

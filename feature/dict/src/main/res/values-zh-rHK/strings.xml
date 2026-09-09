@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_delete_named">刪除 %1$s</string>
+    <string name="a11y_edit_named">編輯 %1$s</string>
+    <string name="a11y_long_press_reorder">長按並拖曳可排序</string>
+    <string name="a11y_rule_enabled_switch">%1$s 的啟用狀態</string>
+    <string name="cancel">取消</string>
+    <string name="delete">刪除</string>
+    <string name="dict_rule">字典规则</string>
+    <string name="disable_selection">禁用所選</string>
+    <string name="disabled">已禁用</string>
+    <string name="enable">啟用</string>
+    <string name="enabled">已啓用</string>
+    <string name="export">導出</string>
+    <string name="import_dict_rule">导入字典规则</string>
+    <string name="import_on_line">網絡導入</string>
+    <string name="import_str">導入</string>
+    <string name="ok">確認</string>
+    <string name="search_dict_rule">搜尋字典規則</string>
+    <string name="show_rule">显示规则(showRule)</string>
+    <string name="url_rule">url规则(urlRule)</string>
+</resources>

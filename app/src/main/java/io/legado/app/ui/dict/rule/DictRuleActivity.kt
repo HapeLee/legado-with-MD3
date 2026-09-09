@@ -1,8 +1,8 @@
 package io.legado.app.ui.dict.rule
 
-//import io.legado.app.lib.theme.primaryColor
 import androidx.compose.runtime.Composable
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.feature.dict.rule.DictRuleRouteScreen
 
 class DictRuleActivity : BaseComposeActivity() {
 

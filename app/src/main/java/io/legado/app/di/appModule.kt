@@ -298,7 +298,7 @@ import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel
 import io.legado.app.ui.config.themeManage.ThemeManageViewModel
 import io.legado.app.ui.config.translation.TranslationConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
-import io.legado.app.ui.dict.rule.DictRuleViewModel
+import io.legado.app.feature.dict.rule.DictRuleViewModel
 import io.legado.app.feature.tagrules.highlight.HighlightTagRuleViewModel
 import io.legado.app.feature.onboarding.OnboardingViewModel
 import io.legado.app.ui.login.SourceLoginViewModel

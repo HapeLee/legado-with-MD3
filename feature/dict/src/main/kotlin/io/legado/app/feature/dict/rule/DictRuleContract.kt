@@ -1,6 +1,5 @@
-package io.legado.app.ui.dict.rule
+package io.legado.app.feature.dict.rule
 
-import android.net.Uri
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.DictRule
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -44,7 +43,7 @@ sealed interface DictRuleIntent {
     data object DisableSelection : DictRuleIntent
     data object DeleteSelection : DictRuleIntent
     data object UploadSelection : DictRuleIntent
-    data class ExportSelection(val uri: Uri) : DictRuleIntent
+    data class ExportSelection(val uri: String) : DictRuleIntent
     data class MoveItem(val from: Int, val to: Int) : DictRuleIntent
     data object SaveSortOrder : DictRuleIntent
     data class SaveRule(

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_delete_named">Delete %1$s</string>
+    <string name="a11y_edit_named">Edit %1$s</string>
+    <string name="a11y_long_press_reorder">Long press and drag to reorder</string>
+    <string name="a11y_rule_enabled_switch">%1$s enabled state</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="dict_rule">Dictionary Rules</string>
+    <string name="disable_selection">Disable selected</string>
+    <string name="disabled">Disabled</string>
+    <string name="enable">Enable</string>
+    <string name="enabled">Enabled</string>
+    <string name="export">Export</string>
+    <string name="import_dict_rule">Import dict rule</string>
+    <string name="import_on_line">Import online</string>
+    <string name="import_str">Import</string>
+    <string name="ok">OK</string>
+    <string name="search_dict_rule">Search dictionary rules</string>
+    <string name="show_rule">Display Rule (showRule)</string>
+    <string name="url_rule">URL Rule (urlRule)</string>
+</resources>
