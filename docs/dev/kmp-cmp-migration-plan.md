@@ -139,7 +139,7 @@
 | 零 DI，64 个手写 `XxxProviders` 注册器 | **保留 Koin 4.2.2** | 我们有 170 个文件在用 Koin；`koin-core` 本身支持 KMP。推翻 DI 的成本远大于收益，且样本的注册顺序 bug 正是 Service Locator 的代价 |
 | 鸿蒙目标 + CPF fork 工具链（Kotlin/CMP/Room 全换 fork 版本，配套 `deriveOhosRoom*` 三个派生任务） | 不引入 | fork 版本回退、schema 键剥离、suspend 签名差异等成本集中在鸿蒙一端，与我们产品目标无关 |
 | QuickJS 替换 Rhino（含 cinterop、Android JNI、KSP `@JsApi` 静态分派表） | 不作为前置；先做 `RuleEngine` capability，Rhino 留 JVM/Android actual | 换引擎是**独立的高风险立项**，需要书源脚本兼容测试授权，不能夹在架构迁移里 |
-| 自研导航（`AppRoute`/`AppNavigator`/`RouteBackStack`/`ScreenModel`） | 保留 Navigation 3 在宿主；先只共享 route 语义与参数 | 我们已有 Navigation 3 1.1.7 与 474 个 Compose 文件依赖它；换导航是第二个主要风险维度，不能与 KMP 同批 |
+| 自研导航（`AppRoute`/`AppNavigator`/`RouteBackStack`/`ScreenModel`） | 保留 Navigation 3 在宿主；先只共享 route 语义与参数 | 我们已有 Navigation 3（现 1.2.0-beta01，原 1.1.7）与 474 个 Compose 文件依赖它；换导航是第二个主要风险维度，不能与 KMP 同批 |
 
 ---
 
@@ -940,6 +940,17 @@ VM 里的 `context.getString(R.string.*)` **不是阻塞**——已模块化的 
  就是同一形态（Application 来自 `BaseRuleViewModel`，资源走模块 R）。
 
 **验证**：`:feature:txttocrules:compileDebugKotlin` + `:app:compileAppDebugKotlin` 通过。
+
+### P4 收口：阅读宿主 nav3 化（2026-09-09~10）
+
+把独立阅读宿主 Activity 收进 MainActivity 的 Navigation 3 栈，为最终只留一个宿主打底。属 txttocrules ②③域、书籍详情、dict 规则管理等"可路由直达入口"的横切基建，不改变各域"Screen/VM 留 `:app` 作 island / 已模块化"的迁移结论。
+
+- **nav3 抬 1.1.7 → 1.2.0-beta01**：1.1.7 无官方 result API，升版才有 `androidx.navigation3.runtime.result`。UI 层 `NavDisplay` 签名零破坏。`navigationevent = 1.2.0-alpha04` 手动覆盖**保留**（1.2.0-beta01 只传递 navigationevent 1.1.1，缺预测式返回崩溃修复）。
+- **结果通道换官方 API**：废除早期自建 `NavResultBus`（`appModule` 的 `single { NavResultBus() }` 移除），改用 `ResultEffect<T>(key)` + `LocalResultEventBus.current.sendResult(key, value)`。`NavResults.kt` 保留载荷类型（`TocPickResult` / `TxtTocRulePickResult` / `BookInfoDeleted`）与 `newNavResultKey()`——**必须用自定义随机 key 而非官方 reified 类型 key**：官方底层是 Channel 竞争消费，多消费者同类型会串台。
+- **五个独立阅读宿主清空**：`BookInfoActivity` / `TocActivity` / `TxtTocRuleActivity` / `TxtTocRulePreviewActivity` 删除，改走同栈 `MainRouteBookInfo` / `MainRouteToc` / `MainRouteTxtTocRule` / `MainRouteTxtTocRulePreview`；`ReadMangaActivity` 降级为纯 intent 转发壳（Samsung SPen 外部入口保留，Manifest/intent-filter 不动）。删书回传语义走 `BookInfoDeleted` 同栈通道，`onFinish` 的 `resultCode` 丢失 bug 顺带修复。
+- **dict 规则管理宿主收口（2026-09-10）**：`DictRuleActivity` 删除，改走 `MainRouteDictRule`（data object，纯管理页无 picker）。dict 域剩余 `DictActivity`（查询面板）因依赖 app 独有 `DictRuleAndroid`/`AnalyzeRule` 仍是 island。
+- **宿主薄壳原则**：仅当真有跨 Feature 反依赖/外部 intent-filter 才留 Activity（如 ReadManga 转发壳）；nav3 栈内可直达的入口一律路由化。独立宿主当初为避跨 Feature 反依赖而设，非产品需要独立任务栈。
+- **验证**：635 单测 / 0 失败，三门禁（`checkSharedPurity`/`checkModuleDependencies`/`verifyConfigArchitecture`）绿，`:app:compileAppDebugKotlin` 绿，`git diff --check` 干净。未覆盖真机链路（删书→阅读页退出、目录规则预览→应用→重切章、词典规则从我的页点入）。
 
 ### P5 —— 阅读器（接续 Track F，独立节奏）
 

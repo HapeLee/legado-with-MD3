@@ -242,12 +242,7 @@
             android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
-        <!-- 字典管理 -->
-        <activity
-            android:name=".ui.dict.rule.DictRuleActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="locale|layoutDirection|uiMode|orientation|screenSize|screenLayout"
-            android:hardwareAccelerated="true" />
+        <!-- 字典查询 -->
         <activity
             android:name=".ui.dict.DictActivity"
             android:enableOnBackInvokedCallback="true"

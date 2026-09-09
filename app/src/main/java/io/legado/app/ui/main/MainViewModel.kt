@@ -86,6 +86,8 @@ class MainViewModel(
             PrefClickEvent.OpenReadRecord -> _effects.tryEmit(MainEffect.NavigateToReadRecord)
             PrefClickEvent.OpenHighlightTagRule ->
                 _effects.tryEmit(MainEffect.NavigateToHighlightTagRule)
+            PrefClickEvent.OpenDictRule ->
+                _effects.tryEmit(MainEffect.NavigateToDictRule)
             PrefClickEvent.OpenReplaceRule ->
                 _effects.tryEmit(MainEffect.NavigateToReplaceRule)
             PrefClickEvent.OpenTxtTocRule ->

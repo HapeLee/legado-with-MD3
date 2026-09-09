@@ -130,6 +130,7 @@ import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
 import io.legado.app.feature.replacerules.ReplaceEditRoute
 import io.legado.app.feature.replacerules.ReplaceRuleRouteScreen
 import io.legado.app.feature.replacerules.edit.ReplaceEditRouteScreen
+import io.legado.app.feature.dict.rule.DictRuleRouteScreen
 import io.legado.app.feature.replacerules.edit.ReplaceEditViewModel
 import io.legado.app.feature.tagrules.highlight.HighlightTagRuleRouteScreen
 import io.legado.app.feature.txttocrules.TxtRuleRouteScreen
@@ -433,6 +434,9 @@ fun MainActivity.mainEntryProvider(
             },
             onNavigateToHighlightTagRule = {
                 onNavigateToRoute(MainRouteHighlightTagRule)
+            },
+            onNavigateToDictRule = {
+                onNavigateToRoute(MainRouteDictRule)
             },
             onNavigateToReplaceRule = {
                 onNavigateToRoute(MainRouteReplaceRule())
@@ -1532,6 +1536,12 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteHighlightTagRule> {
         HighlightTagRuleRouteScreen(
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteDictRule> {
+        DictRuleRouteScreen(
             onBackClick = { onNavigateBack() }
         )
     }
