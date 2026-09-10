@@ -148,7 +148,7 @@ fun AudioPlayScreenContent(
     AppScaffold(
         modifier = Modifier.fillMaxSize(),
         alwaysDrawBehindBars = true,
-        disableHazeSource = true,
+        disableContentSampling = true,
         contentWindowInsets = WindowInsets(0),
         topBar = {
             val hazeModifier = if (hazeEnabled) {

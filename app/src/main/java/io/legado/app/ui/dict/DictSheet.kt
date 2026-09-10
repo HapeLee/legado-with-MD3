@@ -156,7 +156,6 @@ private fun DictWebSheet(
                 modifier = Modifier.fillMaxSize(),
                 onCreated = { webView ->
                     webView.apply {
-                        setBackgroundColor(android.graphics.Color.WHITE)
                         settings.apply {
                             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                             domStorageEnabled = true

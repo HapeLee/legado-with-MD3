@@ -6,8 +6,10 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -157,6 +159,53 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 
+/**
+ * WebView 类页面（内置浏览器、订阅阅读）只做位移转场。
+ *
+ * WebView 是 AndroidView interop view：所在子树一旦被加上 graphicsLayer（fade 的 alpha、
+ * scaleOut 的缩放），Compose 会把网页一并画进离屏 RenderNode
+ * （`AndroidViewHolder.draw` → `AndroidComposeView.drawAndroidView`），Chromium 在这条绘制路径上
+ * 不稳定，部分设备会表现为网页闪烁。`slideIntoContainer` / `slideOutOfContainer` 只改 layout
+ * offset、不产生图层，所以这里保留默认的位移与时长，去掉 fade 与 scale。
+ */
+private fun webViewEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
+    put(NavDisplay.TransitionKey) {
+        slideIntoContainer(
+            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+            animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
+            initialOffset = { fullWidth -> fullWidth }
+        ) togetherWith slideOutOfContainer(
+            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+            animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
+            targetOffset = { fullWidth -> fullWidth / 4 }
+        )
+    }
+    put(NavDisplay.PopTransitionKey) {
+        slideIntoContainer(
+            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+            animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
+            initialOffset = { fullWidth -> -fullWidth / 4 }
+        ) togetherWith slideOutOfContainer(
+            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+            animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
+            targetOffset = { fullWidth -> fullWidth }
+        )
+    }
+    if (predictiveBackEnabled) {
+        put(NavDisplay.PredictivePopTransitionKey) { _ ->
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(easing = FastOutSlowInEasing),
+                initialOffset = { fullWidth -> -fullWidth / 4 }
+            ) togetherWith slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(easing = FastOutSlowInEasing),
+                targetOffset = { fullWidth -> fullWidth }
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun MainActivity.mainEntryProvider(
     backStack: MutableList<NavKey>,
@@ -167,7 +216,9 @@ fun MainActivity.mainEntryProvider(
     onNavigateToRoute: (NavKey) -> Unit,
     onNavigateBack: () -> Unit,
 ) = entryProvider {
-    entry<MainRouteWebView> { route ->
+    entry<MainRouteWebView>(
+        metadata = webViewEntryMetadata(configuration.appShell.predictiveBackEnabled)
+    ) { route ->
         val viewModel = koinViewModel<WebViewModel>(
             key = "WebView:${route.url}:${route.sourceOrigin}:${route.sourceVerificationEnable}",
         )
@@ -994,7 +1045,9 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteRssRead> { route ->
+    entry<MainRouteRssRead>(
+        metadata = webViewEntryMetadata(configuration.appShell.predictiveBackEnabled)
+    ) { route ->
         RssReadRouteScreen(
             title = route.title,
             origin = route.origin,

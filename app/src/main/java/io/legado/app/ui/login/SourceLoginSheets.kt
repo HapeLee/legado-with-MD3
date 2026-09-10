@@ -326,9 +326,6 @@ private fun SourceLoginWebView(
                         displayZoomControls = false
                         state.headers[AppConst.UA_NAME]?.let { userAgentString = it }
                     }
-                    // 不透明 WebView：透明层在 Chromium 反复合成时会导致网页内 fixed 悬浮表单
-                    // （如登录弹层）显示异常，参考 WebViewRouteScreen 的处理
-                    setBackgroundColor(android.graphics.Color.WHITE)
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             url?.let { currentIntent(SourceLoginIntent.WebPageStarted(it)) }

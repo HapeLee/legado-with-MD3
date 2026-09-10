@@ -106,8 +106,9 @@ fun WebViewRouteScreen(
     }
 
     AppScaffold(
-        // WebView 内容不能作为 haze 模糊采样源，否则会被反复重采样导致闪烁（与 RSS 页一致）
-        disableHazeSource = true,
+        // WebView 是 interop view：内容不能作为 haze / 液态玻璃的采样源，否则网页会被反复录进
+        // 离屏 GraphicsLayer 而闪烁（与 RSS 阅读页一致）
+        disableContentSampling = true,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             GlassSmallTopAppBar(
@@ -159,10 +160,6 @@ fun WebViewRouteScreen(
                     modifier = Modifier.fillMaxSize(),
                     onCreated = { createdWebView ->
                         createdWebView.apply {
-                            // Keep the verification page in an opaque WebView layer. A transparent WebView is
-                            // appropriate for RSS text, but Chromium repeatedly composites it during challenge
-                            // animations and causes the unstable flashing reported for manga sources.
-                            setBackgroundColor(android.graphics.Color.WHITE)
                             settings.apply {
                                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                                 domStorageEnabled = true
