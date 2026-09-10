@@ -160,6 +160,34 @@ class MangaReaderInteractionTest {
     }
 
     @Test
+    fun `webtoon keeps current chapter page while next chapter page is also visible`() {
+        val items = listOf(
+            page(7, chapter = 20),
+            page(8, chapter = 20),
+            MangaReaderItemUi.ChapterTransition(
+                key = "transition",
+                direction = MangaChapterTransitionDirection.NEXT,
+                targetChapterIndex = 21,
+                currentChapterName = "20",
+                targetChapterName = "21",
+                targetStatus = MangaChapterTransitionStatus.READY,
+            ),
+            page(0, chapter = 21),
+        )
+
+        // 当前章最后一页和下一章第一页同时可见时，焦点必须留在当前章，
+        // 否则 UI 会先把相邻章页写成当前页，图片高度变化后再触发来回切章。
+        assertEquals(
+            1,
+            mangaWebtoonFocusedPageIndex(
+                items = items,
+                visibleItemIndices = listOf(1, 2, 3),
+                currentChapterIndex = 20,
+            ),
+        )
+    }
+
+    @Test
     fun `webtoon enters earlier chapter at its last visible page`() {
         val items = listOf(
             page(7, chapter = 20),

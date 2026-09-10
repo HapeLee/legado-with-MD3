@@ -473,47 +473,60 @@ private fun WebtoonMangaList(
             }
         }
 
-    LaunchedEffect(listState, state.navigationId) {
-        snapshotFlow {
-            val currentState = latestReaderState
-            val visibleItems = listState.layoutInfo.visibleItemsInfo
-            val visibleItemIndices = visibleItems.map { it.index }
-            val currentChapterVisible = visibleItems.any { visibleItem ->
-                (currentState.pages.getOrNull(visibleItem.index) as? MangaReaderItemUi.Page)
-                    ?.chapterIndex == currentState.chapterIndex
-            }
-            val firstItemIndex = visibleItems.firstOrNull()?.index
-            val focusedItemIndex = mangaWebtoonFocusedPageIndex(
-                items = currentState.pages,
-                visibleItemIndices = visibleItemIndices,
-                currentChapterIndex = currentState.chapterIndex,
-            )
-            if (firstItemIndex == null || focusedItemIndex == null) null
-            else Triple(focusedItemIndex, firstItemIndex, currentChapterVisible)
+    fun reportWebtoonVisibleItem(forcedItemIndex: Int? = null) {
+        val currentState = latestReaderState
+        val visibleItems = listState.layoutInfo.visibleItemsInfo
+        val focusedItemIndex = forcedItemIndex ?: mangaWebtoonFocusedPageIndex(
+            items = currentState.pages,
+            visibleItemIndices = visibleItems.map { it.index },
+            currentChapterIndex = currentState.chapterIndex,
+        ) ?: return
+        if (currentState.pages.getOrNull(focusedItemIndex) !is MangaReaderItemUi.Page) return
+        val forcedItemVisible = forcedItemIndex == null ||
+                visibleItems.any { it.index == forcedItemIndex }
+        val currentChapterVisible = visibleItems.any { visibleItem ->
+            (currentState.pages.getOrNull(visibleItem.index) as? MangaReaderItemUi.Page)
+                ?.chapterIndex == currentState.chapterIndex
         }
+        onIntent(
+            MangaReaderIntent.VisibleItemChanged(
+                itemIndex = focusedItemIndex,
+                firstItemIndex = if (forcedItemVisible) {
+                    visibleItems.firstOrNull()?.index ?: focusedItemIndex
+                } else {
+                    focusedItemIndex
+                },
+                lastItemIndex = focusedItemIndex,
+                currentChapterVisible = currentChapterVisible,
+                navigationId = currentState.navigationId,
+            )
+        )
+    }
+
+    // 只在真实滚动结束后上报可见页。图片加载/失败会改变条目的 fallback 高度，如果
+    // 依赖 layoutInfo 持续上报，布局收缩或撑开本身就会伪装成“翻过了章节边界”，
+    // 从而把已跳转的章节又切回去。程序化跳转另由 scrollRequest 完成后直接上报目标页。
+    LaunchedEffect(listState) {
+        var wasScrolling = false
+        snapshotFlow { listState.isScrollInProgress }
             .distinctUntilChanged()
-            .collect { entry ->
-                entry?.let { (focusedIndex, firstIndex, currentChapterVisible) ->
-                    val currentState = latestReaderState
-                    when (val item = currentState.pages.getOrNull(focusedIndex)) {
-                        is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
-                            itemIndex = focusedIndex,
-                            firstItemIndex = firstIndex,
-                            lastItemIndex = focusedIndex,
-                            currentChapterVisible = currentChapterVisible,
-                            navigationId = currentState.navigationId,
-                        ))
-                        is MangaReaderItemUi.ChapterTransition -> Unit
-                        is MangaReaderItemUi.ChapterEdge, null -> Unit
-                    }
+            .collect { scrolling ->
+                if (scrolling) {
+                    wasScrolling = true
+                    onIntent(MangaReaderIntent.PagerScrollChanged(true))
+                } else if (wasScrolling) {
+                    wasScrolling = false
+                    onIntent(MangaReaderIntent.PagerScrollChanged(false))
+                    reportWebtoonVisibleItem()
                 }
             }
     }
+
     LaunchedEffect(state.scrollRequest?.id) {
-        state.scrollRequest?.let {
-            if (it.animated) listState.animateScrollToItem(it.itemIndex)
-            else listState.scrollToItem(it.itemIndex)
-        }
+        val request = state.scrollRequest ?: return@LaunchedEffect
+        if (request.animated) listState.animateScrollToItem(request.itemIndex)
+        else listState.scrollToItem(request.itemIndex)
+        reportWebtoonVisibleItem(request.itemIndex)
     }
     LaunchedEffect(
         state.autoReadEnabled,
@@ -535,6 +548,8 @@ private fun WebtoonMangaList(
             if (consumed < 1f) {
                 onIntent(MangaReaderIntent.NextChapter)
                 delay(500L)
+            } else {
+                reportWebtoonVisibleItem()
             }
         }
     }
@@ -565,6 +580,8 @@ private fun WebtoonMangaList(
                             if (direction > 0) MangaReaderIntent.NextChapter
                             else MangaReaderIntent.PreviousChapter
                         )
+                    } else {
+                        reportWebtoonVisibleItem()
                     }
                 }
             }

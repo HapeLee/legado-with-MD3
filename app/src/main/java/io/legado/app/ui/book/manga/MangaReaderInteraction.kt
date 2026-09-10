@@ -80,9 +80,10 @@ internal fun mangaWebtoonFocusedPageIndex(
         (items.getOrNull(index) as? MangaReaderItemUi.Page)?.let { index to it }
     }
     if (visiblePages.isEmpty()) return null
-    if (visiblePages.any { (_, page) -> page.chapterIndex == currentChapterIndex }) {
-        return visiblePages.last().first
-    }
+    // 当前章仍可见时只更新当前章内的底部页。若直接取整个视口的最后一页，章节边界上
+    // 会把相邻章第一页当成当前页写回 UI；随后图片尺寸变化又可能报告另一章，产生来回切章。
+    visiblePages.lastOrNull { (_, page) -> page.chapterIndex == currentChapterIndex }
+        ?.let { return it.first }
     val focusedPage = when {
         visiblePages.first().second.chapterIndex > currentChapterIndex -> visiblePages.first().first
         visiblePages.last().second.chapterIndex < currentChapterIndex -> visiblePages.last().first
