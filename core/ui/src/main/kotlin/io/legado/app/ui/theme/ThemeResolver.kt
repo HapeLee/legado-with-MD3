@@ -9,7 +9,6 @@ import top.yukonga.miuix.kmp.theme.ThemePaletteStyle as MiuixPaletteStyle
 
 object ThemeResolver {
 
-    private const val COMPOSE_ENGINE_MIUIX = "miuix"
     private const val MATERIAL_VERSION_EXPRESSIVE = "material3Expressive"
 
     private val appThemeModes = mapOf(
@@ -95,8 +94,10 @@ object ThemeResolver {
         }
     }
 
+    // 委托给 `:core:designsystem` 的 `parseComposeEngine`：引擎语义现在归共享层，
+    // Android 侧不再自己持有 "miuix" 字面量（M1-2）。
     fun isMiuixEngine(composeEngine: String): Boolean {
-        return composeEngine.equals(COMPOSE_ENGINE_MIUIX, ignoreCase = true)
+        return parseComposeEngine(composeEngine) == ComposeEngine.Miuix
     }
 
     fun resolveColorSpecVersion(colorSpec: ThemeColorSpec): ColorSpec.SpecVersion {

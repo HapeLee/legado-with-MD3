@@ -1,5 +1,9 @@
 # Track F —— 阅读界面 KMP/CMP 迁移计划
 
+> **归档说明（2026-09-10）**：本文保留 F0–F2 的历史基线、证据和 reader 专项细节；“渲染器长期只留
+> Android”与“无 KMP 工程前置”等阶段性判断不再代表最终目标。完整三端 reader 的后续工作统一由
+> [`kmp-cmp-migration-plan.md`](kmp-cmp-migration-plan.md) M6 管理；事实冲突时以当前源码和新计划为准。
+>
 > **状态：F0/F1 完成；F2 的共享核心已落地验证，app 仅保留明确的 UI/平台适配边界。**
 > **F0**（2026-09-05）产出见 `track-f0-reader-kmp-baseline.md`。
 > **F1**（2026-09-05）`build-logic` + `smoke:kmp-probe` 已落地，KMP 双 target 编译与 commonTest 验证通过。
@@ -8,8 +12,8 @@
 > app 侧仅保留 `ReaderSelection`（Compose UI state）和三个 Android/domain 适配器；它们不是待复制进 commonMain 的遗留副本。
 > 写作时点：2026-09-05。文中"当前事实"均经核实；与旧文档冲突处已在 §2.3 显式指出。
 >
-> **范围一句话**：把阅读界面的**业务状态、排版模型与配置**推进 `commonMain`，把**文本测量**契约化；
-> **渲染器本体继续留在 Android**，直到真机 parity 证据授权再动。
+> **当时的范围一句话**：把阅读界面的**业务状态、排版模型与配置**推进 `commonMain`，把**文本测量**契约化；
+> 渲染器本体先留在 Android，等待 parity 证据。该边界是 F0–F2 的回滚策略，不是完整 CMP 的永久终点。
 
 ---
 
@@ -84,7 +88,7 @@ LruCache/Log/TextPaint/Build/SensorManager/SensorEventListener 各 1
 | `mad-modernization-plan.md` §方向修订 | "保留成熟的 `ReadView` 作为渲染核心，MAD ≠ Compose" | `ReadView` 已不存在，渲染已是 Compose Canvas | **以代码为准**。该节结论对当前代码失效，但不反向修改本文档之外的历史记录 |
 | `mad-modernization-plan.md` §Track C | "C0–C5 冻结为 lab flag 下的可选渲染器" | flag 与产物均已删除（2026-07-25） | 同上；Track C 现为纯历史记录 |
 | `track-c3-reader-parity-baseline.md` | C3 真机数据显示 Compose 帧耗时/jank 劣于旧 View | 旧 View 已不存在，该对比的**基线侧已消失** | 结论**不可直接用于**否决 F5；F5 若启动需**重新采集**当前栈的 parity 与性能基线 |
-| `kmp-cmp-modernization.md` §4 | 阅读器渲染 = "Android 专业岛 / 不承诺跨平台" | 一致，但**未反映**渲染已 Compose 化 | 本文档推进时同步更新能力矩阵 |
+| `kmp-cmp-modernization.md`（2026-09-10 前版本） | 阅读器渲染 = "Android 专业岛 / 不承诺跨平台" | 一致，但**未反映**渲染已 Compose 化 | 新目标架构已改为三端正式能力；后续见主计划 M6 |
 
 > 文档与源码不一致时先指出差异，不为了让实现符合过期文档而静默改代码（AGENTS.md）。
 > 上表不修改任何历史文档；能力矩阵随 F2 落地时一并更新。
@@ -115,12 +119,10 @@ LruCache/Log/TextPaint/Build/SensorManager/SensorEventListener 各 1
 `app/.../data/reader/pageestimate/`，`ui/book/read/pageestimate/` 目录随之清空，
 对应基线条目已删除。`ReadBookController.kt` 的 3 仍冻结盯守。
 
-### 2.6 工程前置现状
+### 2.6 工程前置的历史快照
 
-- **无 `build-logic`、无 convention plugin、无任何 KMP 模块** —— `kmp-cmp-modernization.md`
-  的 Phase 1 尚未开始。
-- 因此 **F1 是 F2 的硬前置**：在没有 KMP 模块和编译门禁之前，把 `core` 搬进 `commonMain`
-  只是换个目录名，不产生任何可验证的边界（skill：*"移动目录不等于完成跨平台迁移"*）。
+本节原始结论描述 F1 之前的状态；当前 `build-logic`、多个 KMP 模块和编译门禁均已存在，不再是当前缺口。
+仍然有效的原则是：没有真实 target 编译与测试时，把代码移动到名为 `commonMain` 的目录不算完成跨平台迁移。
 
 ---
 

@@ -197,8 +197,9 @@ abstract class VerifyConfigArchitectureTask : DefaultTask() {
 }
 
 // G2 守卫：commonMain 共享层禁止出现 platform / JVM-only import。
-// 规则、白名单与基线策略见 docs/dev/kmp-cmp-migration-plan.md P0-1。
-// 当前 commonMain 全仓零违规，故从 day 1 起 blocking（基线 = 0）。
+// M0-1：把「全 commonMain 一刀切禁 platform / JVM-only import」改成按模块类型（pure/data/cmp）分策。
+// 模块类型由注册处传入的 `kmpModuleTypes`（模块相对目录 → pure|data|cmp）决定；未登记的 KMP 模块
+// 一律按最严的 pure 处理，迫使其显式登记。政策模型见 docs/dev/kmp-cmp-modernization.md §3.2。
 @DisableCachingByDefault(because = "共享层纯度验证任务没有输出文件")
 abstract class CheckSharedPurityTask : DefaultTask() {
 
@@ -211,56 +212,92 @@ abstract class CheckSharedPurityTask : DefaultTask() {
     @get:Internal
     abstract val rootDir: DirectoryProperty
 
+    // 模块相对目录（如 "core/data"）→ 模块类型（pure|data|cmp）。作为任务输入参与 up-to-date 判定。
+    @get:Input
+    abstract val kmpModuleTypes: MapProperty<String, String>
+
     @TaskAction
     fun check() {
-        // android.* 一律禁止进入 commonMain。
-        // androidx.* 禁止，除非是经过审计的 KMP 兼容库（有 commonMain 元数据）：
-        //   - androidx.compose.runtime.Stable（CMP 下同名注解）
-        //   - androidx.room.*（Room 2.8.4 KMP，entity/DAO/Database 注解在 commonMain 可用）
-        //   - androidx.sqlite.*（Room KMP 的 driver API，BundledSQLiteDriver 等）
-        // 新增白名单条目前必须验证该库有官方 KMP 支持，且在 commonMain 编译通过。
-        val forbiddenImports = listOf(
-            Regex("""^import android\.""", RegexOption.MULTILINE),
-            Regex("""^import androidx\.(?!compose\.runtime\.Stable\b|room\.|sqlite\.)""", RegexOption.MULTILINE),
-            // java.io 的 File/InputStream/OutputStream 是 JVM-only；共享层走 ByteArray / 抽象 source-sink
-            Regex("""^import java\.io\.(File|InputStream|OutputStream)\b""", RegexOption.MULTILINE),
-            // kotlin.jvm.* 注解（@JvmStatic/@JvmField 等）绑定 JVM 目标
-            Regex("""^import kotlin\.jvm\.""", RegexOption.MULTILINE),
-            // JVM-only 三方库：这些库没有 KMP 产物，一旦进 commonMain，将来加 native target 时
-            // 会在最晚的阶段炸掉。它们必须走「commonMain 窄接口 + 各 target actual 委托」的双轨，
-            // 见 docs/dev/kmp-cmp-migration-plan.md D2。
-            //   - org.jsoup.*      jsoup 1.16.2（AGENTS.md 锁定版本）→ HtmlParser 契约
-            //   - org.seimicrawler.*  JsoupXpath 2.5.5 → 同属 HTML 解析，待契约
-            //   - com.jayway.jsonpath.* JsonPath → 待契约
-            //   - org.mozilla.javascript.* Rhino 1.8.1 → RuleEngine 契约（D4）
-            //   - okhttp3.*        okhttp 5.4.0 → HttpClient 契约走 Ktor client-core（D3）
-            //   - com.google.gson.*  Gson 2.x，:app 侧 137 个文件在用，是渗透面最大的 JVM-only 库。
-            //     共享层的 JSON 走 kotlinx-serialization-json；确需 Gson 行为时另立 Json 契约（D7 待定）
-            Regex("""^import org\.jsoup\.""", RegexOption.MULTILINE),
-            Regex("""^import org\.seimicrawler\.""", RegexOption.MULTILINE),
-            Regex("""^import com\.jayway\.""", RegexOption.MULTILINE),
-            Regex("""^import org\.mozilla\.javascript\.""", RegexOption.MULTILINE),
-            Regex("""^import okhttp3\.""", RegexOption.MULTILINE),
-            Regex("""^import com\.google\.gson\.""", RegexOption.MULTILINE),
-        )
-        val violations = mutableListOf<String>()
         val root = rootDir.get().asFile
+        val typeMap = kmpModuleTypes.get()
+
+        // 所有类型一律禁止的 import：绑定平台 / JVM-only / 书源运行时实现库。
+        // 这些库没有 KMP 产物，进 commonMain 会在加 native target 时最晚阶段炸掉；
+        // 必须走「commonMain 窄接口 + 各 target actual 委托」的双轨（见 modernization §5.3）。
+        //   - org.jsoup.*      jsoup 1.16.2（AGENTS.md 锁定版本）→ HtmlParser 契约
+        //   - org.seimicrawler.*  JsoupXpath 2.5.5 → 同属 HTML 解析，待契约
+        //   - com.jayway.jsonpath.* JsonPath → 待契约
+        //   - org.mozilla.javascript.* Rhino 1.8.1 → RuleEngine 契约（M4）
+        //   - okhttp3.*        okhttp 5.4.0 → HttpClient 契约走 Ktor client-core
+        //   - com.google.gson.*  Gson 2.x → 共享 JSON 走 kotlinx-serialization；Gson 只在平台源集
+        val alwaysForbidden = listOf(
+            Regex("""^import android\."""),                       // 平台 SDK（android.*）commonMain 一律禁
+            Regex("""^import java\.io\.(File|InputStream|OutputStream)\b"""), // JVM 文件句柄，共享层走 ByteArray/source-sink
+            Regex("""^import kotlin\.jvm\."""),                  // 绑定 JVM target 的注解
+            Regex("""^import org\.jsoup\."""),
+            Regex("""^import org\.seimicrawler\."""),
+            Regex("""^import com\.jayway\."""),
+            Regex("""^import org\.mozilla\.javascript\."""),
+            Regex("""^import okhttp3\."""),
+            Regex("""^import com\.google\.gson\."""),
+        )
+
+        // androidx 允许前缀按类型：CMP 模块允许 Compose/Lifecycle/ViewModel/Nav3 的公共 API，
+        // data 模块允许 Room 数据实现；pure 全禁（不出现 androidx）。
+        // 新增前缀前必须验证该库有官方 KMP 支持（有 commonMain 元数据）且在 commonMain 编译通过。
+        val androidxAllow = mapOf(
+            "pure" to emptyList<String>(),
+            "data" to listOf("androidx.room.", "androidx.sqlite."),
+            "cmp" to listOf(
+                "androidx.compose.",   // CMP 提供的 runtime/foundation/ui/material/animation 等
+                "androidx.lifecycle.", // KMP lifecycle (lifecycle-viewmodel 等)
+                "androidx.navigation3.", // Nav3 多平台
+            ),
+        )
+
+        val violations = mutableListOf<String>()
+        fun moduleTypeOf(relPath: String): String {
+            val idx = relPath.indexOf("/src/commonMain")
+            val moduleDir = if (idx > 0) relPath.substring(0, idx) else relPath
+            return typeMap[moduleDir] ?: "pure"
+        }
+
         sharedSourceFiles.files.forEach { file ->
             if (!file.isFile) return@forEach
-            val text = file.readText()
-            forbiddenImports.forEach { regex ->
-                regex.findAll(text).forEach { match ->
-                    val rel = file.relativeTo(root).invariantSeparatorsPath
-                    violations += "$rel: 共享层禁止的 import: ${match.value.trim()}"
+            val rel = file.relativeTo(root).invariantSeparatorsPath
+            val type = moduleTypeOf(rel)
+            val allowedAndroidx = androidxAllow[type] ?: emptyList()
+
+            file.readText().lineSequence().forEach { line ->
+                val trimmed = line.trim()
+                if (!trimmed.startsWith("import ")) return@forEach
+                val imported = trimmed.removePrefix("import ").trim()
+                // 去掉 as 别名 / 通配星号尾巴，只留首个标识符段用于前缀判断
+                val fq = imported.substringBefore(' ').substringBefore('*')
+                alwaysForbidden.forEach { re ->
+                    if (re.containsMatchIn(trimmed)) {
+                        violations += "$rel [$type] 禁止的 import: $trimmed"
+                    }
+                }
+                if (fq.startsWith("androidx.")) {
+                    val ok = allowedAndroidx.any { fq.startsWith(it) }
+                    if (!ok) {
+                        violations += "$rel [$type] androidx 越界: $trimmed（$type 允许的 androidx 前缀: " +
+                            "${allowedAndroidx.joinToString(" | ") { it }})"
+                    }
+                } else if (fq.startsWith("org.jetbrains.compose.")) {
+                    // CMP resources（org.jetbrains.compose.resources.Res 等）只有 CMP 模块能进 commonMain
+                    if (type != "cmp") {
+                        violations += "$rel [$type] CMP resources 越界: $trimmed（仅 cmp 模块可用）"
+                    }
                 }
             }
         }
         check(violations.isEmpty()) {
             violations.joinToString(
-                prefix = "共享层纯度护栏失败（commonMain 禁止 platform / JVM-only import）:\n",
+                prefix = "共享层纯度护栏失败（commonMain 纯度按模块类型校验）:\n",
                 separator = "\n",
-            ) + "\n参考: docs/dev/kmp-cmp-migration-plan.md P0-1；" +
-                "AGENTS.md \"commonMain 只容纳经过依赖审计的代码\""
+            ) + "\n参考: docs/dev/kmp-cmp-modernization.md §3.2；docs/dev/kmp-cmp-migration-plan.md M0-1"
         }
     }
 }
@@ -325,6 +362,152 @@ abstract class CheckModuleDependenciesTask : DefaultTask() {
                 separator = "\n",
             ) + "\n参考: .agents/skills/legado-kmp-migration/references/slice-checklist.md 'Module graph'；" +
                 "AGENTS.md 目标依赖方向图"
+        }
+    }
+}
+
+// M0-2 守卫：legacy 架构债棘轮。
+// 把 2026-09-10 的真实计数冻结进 gradle/architecture/legacy-baseline.txt（目录级聚合），
+// 之后「目录内新增 = 失败」「减少 = 要求下调基线」「未登记区域出现 = 失败」，
+// 从而让新代码 day-one 就被拦住，而不是等 M2/M5 再清算。
+// 全局门面一律以 import 锚定，避免把 `private val appDb: AppDatabase` 这类构造参数误判为全局单例。
+// 规则、热点和分级结论见 docs/dev/legacy-architecture-report.md。
+@DisableCachingByDefault(because = "legacy 架构基线验证任务没有输出文件")
+abstract class CheckLegacyArchitectureTask : DefaultTask() {
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sourceFiles: ConfigurableFileCollection
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val baselineFile: RegularFileProperty
+
+    @get:Internal
+    abstract val rootDir: DirectoryProperty
+
+    @TaskAction
+    fun check() {
+        val root = rootDir.get().asFile
+        // <模块>/src/<源集>/kotlin|java/<包内相对路径>
+        val sourceSetPattern = Regex("""^(.+)/src/([^/]+)/(?:kotlin|java)/(.+)$""")
+        val descriptions = mapOf(
+            "appCtx" to "全局 Context 直连（splitties appCtx）",
+            "appDb" to "全局数据库门面（io.legado.app.data.appDb）",
+            "gson" to "全局 GSON 门面（io.legado.app.utils.GSON）",
+            "legacyHelp" to "help 静态门面（import io.legado.app.help.**）",
+            "legacyBase" to "base 静态门面（import io.legado.app.base.**）",
+            "legacyNaming" to "*Help/*Utils 顶层门面",
+            "coreProvider" to "core Provider 静态委托",
+        )
+        val importRules = mapOf(
+            "appCtx" to Regex("""^import splitties\.init\.appCtx$""", RegexOption.MULTILINE),
+            "appDb" to Regex("""^import io\.legado\.app\.data\.appDb$""", RegexOption.MULTILINE),
+            "gson" to Regex("""^import io\.legado\.app\.utils\.GSON$""", RegexOption.MULTILINE),
+            "legacyHelp" to Regex("""^import io\.legado\.app\.help\.[A-Za-z0-9_.]+$""", RegexOption.MULTILINE),
+            "legacyBase" to Regex("""^import io\.legado\.app\.base\.[A-Za-z0-9_.]+$""", RegexOption.MULTILINE),
+            // 只认以 Help/Utils 结尾的类型名；`io.legado.app.utils.GSON` 这类包内成员不算命名门面，
+            // 它由 gson 规则单独盯。
+            "legacyNaming" to Regex(
+                """^import io\.legado\.app\.[A-Za-z0-9_.]*\.[A-Za-z0-9_]*(?:Help|Utils)$""",
+                RegexOption.MULTILINE,
+            ),
+        )
+        val providerUse = Regex(
+            """\b(Clipboard|CookieStore|ImportJsonEditor|KeyValueStore|Logger|SourceRuntime""" +
+                """|SymmetricCrypto|Toaster|BigDataStore)Provider\b"""
+        )
+        val providerDeclaration = Regex("""\bobject\s+([A-Za-z0-9_]*Provider)\b""")
+        // legacy 大本营：这些目录本身就是待下沉/待删除的债主体，其内部浮动只警告不失败，
+        // 否则「在债堆里做清理」会不断撞墙，反而掩盖真正的新增方向债。
+        val reportOnlyAreas = listOf(
+            "app/main/io/legado/app/help",
+            "app/main/io/legado/app/base",
+            "app/main/io/legado/app/model",
+            "app/main/io/legado/app/service",
+            "app/main/io/legado/app/api",
+            "app/main/io/legado/app/utils",
+            "app/main/io/legado/app/lib",
+            "app/main/io/legado/app/receiver",
+        )
+
+        val actual = sortedMapOf<String, Int>()
+        sourceFiles.files.forEach { file ->
+            if (!file.isFile || !file.name.endsWith(".kt")) return@forEach
+            val relativePath = file.relativeTo(root).invariantSeparatorsPath
+            val match = sourceSetPattern.find(relativePath) ?: return@forEach
+            val module = match.groupValues[1]
+            val sourceSet = match.groupValues[2]
+            // 测试源集不冻结：契约测试引用 Provider 是正当用法。
+            if (sourceSet.contains("test", ignoreCase = true)) return@forEach
+            val packageDir = match.groupValues[3].substringBeforeLast('/')
+            val area = if (packageDir.isEmpty()) "$module/$sourceSet" else "$module/$sourceSet/$packageDir"
+            val text = file.readText()
+            importRules.forEach { (category, regex) ->
+                val count = regex.findAll(text).count()
+                if (count > 0) actual["$category|$area"] = (actual["$category|$area"] ?: 0) + count
+            }
+            // Provider 委托在定义文件内部（同包）无需 import，改用类型名匹配：
+            // 逐行统计并跳过注释行（KDoc 里的 [ClipboardProvider.install] 不是调用），
+            // 再排除该文件的 object 声明自身。
+            val declared = providerDeclaration.findAll(text).map { it.groupValues[1] }.toSet()
+            var providerCount = 0
+            text.lineSequence().forEach { line ->
+                val stripped = line.trimStart()
+                if (stripped.startsWith("//") || stripped.startsWith("*") ||
+                    stripped.startsWith("/*")
+                ) {
+                    return@forEach
+                }
+                providerCount += providerUse.findAll(line)
+                    .count { it.groupValues[1] + "Provider" !in declared }
+            }
+            if (providerCount > 0) {
+                actual["coreProvider|$area"] = (actual["coreProvider|$area"] ?: 0) + providerCount
+            }
+        }
+
+        val baseline = linkedMapOf<String, Int>()
+        baselineFile.get().asFile.readLines().forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) return@forEach
+            val parts = trimmed.split("|")
+            check(parts.size == 3 && parts[2].toIntOrNull() != null) {
+                "legacy 基线条目格式应为 <category>|<area>|<count>：$trimmed"
+            }
+            baseline["${parts[0]}|${parts[1]}"] = parts[2].toInt()
+        }
+
+        val errors = mutableListOf<String>()
+        val warnings = mutableListOf<String>()
+        baseline.forEach { (key, allowed) ->
+            val category = key.substringBefore('|')
+            val area = key.substringAfter('|')
+            val description = descriptions[category] ?: category
+            val found = actual[key] ?: 0
+            if (found > allowed) {
+                val message = "$area：${description}新增 ${found - allowed} 处（基线 $allowed → 当前 $found）"
+                if (reportOnlyAreas.any { area == it || area.startsWith("$it/") }) {
+                    warnings += message
+                } else {
+                    errors += message
+                }
+            } else if (found < allowed) {
+                errors += "$area：${description}已减少到 $found，请将基线从 $allowed 下调（棘轮只降不升）"
+            }
+        }
+        (actual.keys - baseline.keys).forEach { key ->
+            val category = key.substringBefore('|')
+            val area = key.substringAfter('|')
+            val description = descriptions[category] ?: category
+            errors += "$area：${description}首次出现 ${actual[key]} 处；新区域必须为零，" +
+                "或经评审后在基线中显式登记"
+        }
+
+        warnings.forEach { logger.warn("[legacy 债] $it") }
+        check(errors.isEmpty()) {
+            errors.joinToString(prefix = "legacy 架构基线护栏失败:\n", separator = "\n") +
+                "\n参考: docs/dev/legacy-architecture-report.md；基线: gradle/architecture/legacy-baseline.txt"
         }
     }
 }
@@ -426,8 +609,28 @@ val checkSharedPurity = tasks.register<CheckSharedPurityTask>(
     "checkSharedPurity"
 ) {
     group = "verification"
-    description = "禁止 commonMain 共享层引入 platform / JVM-only import（G2 纯度守卫）"
+    description = "按模块类型(pure/data/cmp)校验 commonMain 纯度：禁 platform / JVM-only / 越界 androidx（G2 纯度守卫）"
     rootDir.set(layout.projectDirectory)
+    // M0-1：模块相对目录 → 模块类型。未登记模块按最严 pure 处理（见 task 内 policy）。
+    //   pure = 零 Compose/Android/实现库（core:model 等领域模块）
+    //   data = 允许 Room/sqlite 数据实现（core:data 及依赖 Room/ktor 的模块）
+    //   cmp  = 允许 Compose/Lifecycle/Nav3 的 KMP 公共 API（尚无真实模块，M1 起由 CMP Feature 登记）
+    // 类型语义与长期目标见 docs/dev/kmp-cmp-modernization.md §3.2。
+    kmpModuleTypes.set(
+        mapOf(
+            "core/platform" to "data",        // commonMain 直接 import io.ktor
+            "core/data" to "data",            // commonMain import androidx.room/sqlite
+            "smoke/room-kmp-probe" to "data", // commonMain import androidx.room
+            "smoke/network-kmp-probe" to "data", // commonMain 用 io.ktor
+            "core/model" to "pure",
+            // M1-2：转真 CMP（convention `legado.kmp.compose`），Compose 进 commonMain。
+            // 应用该 convention 的模块必须在这里登记 "cmp"，两者成对出现，否则 G2 拦。
+            "core/designsystem" to "cmp",
+            "feature/reader/core" to "pure",
+            "smoke/kmp-probe" to "pure",
+            "smoke/rhino-capability-probe" to "pure",
+        )
+    )
     // 自动发现全仓 KMP 模块的 commonMain 源码：新增 KMP 模块无需改此配置即可被覆盖。
     // 排除 build/ 等生成物与无关重目录，避免把产物或 web 前端算入共享层。
     sharedSourceFiles.setFrom(
@@ -466,10 +669,41 @@ val checkModuleDependencies = tasks.register<CheckModuleDependenciesTask>(
 }
 
 
+val checkLegacyArchitecture = tasks.register<CheckLegacyArchitectureTask>(
+    "checkLegacyArchitecture"
+) {
+    group = "verification"
+    description = "legacy 架构债棘轮：全局门面(appCtx/appDb/GSON)、help/base 门面、core Provider 委托（M0-2 冻结，新代码 blocking）"
+    rootDir.set(layout.projectDirectory)
+    baselineFile.set(
+        layout.projectDirectory.file("gradle/architecture/legacy-baseline.txt")
+    )
+    // 只扫生产源码：app 主源集 + 各模块 src/<非 test 源集>/kotlin|java。
+    sourceFiles.setFrom(
+        layout.projectDirectory.asFileTree.matching {
+            include("app/src/main/java/**/*.kt")
+            include("*/src/*/kotlin/**/*.kt")
+            include("*/*/src/*/kotlin/**/*.kt")
+            include("*/*/*/src/*/kotlin/**/*.kt")
+            exclude(
+                "**/build/**",
+                "**/.gradle/**",
+                "**/.workbuddy/**",
+                "**/.idea/**",
+                "**/.git/**",
+                "**/node_modules/**",
+                "**/modules/web/**",
+                "build-logic/**",
+            )
+        }
+    )
+}
+
 subprojects {
     tasks.configureEach {
         if (name.startsWith("assemble") || name.startsWith("compile")) {
             dependsOn(verifyConfigArchitecture)
+            dependsOn(checkLegacyArchitecture)
         }
     }
 }

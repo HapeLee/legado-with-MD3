@@ -1,11 +1,14 @@
 # Feature-first 工程结构与文件归属规范
 
-> 状态：Android 单体整理与 KMP/CMP 模块化之间的过渡规范。本文定义新文件放置位置和旧目录迁移方式，不授权一次性移动现有源码。
+> 状态：Android 单体整理与 KMP/CMP 模块化之间的过渡规范（2026-09-10 更新）。本文定义新文件放置位置和
+> 旧目录迁移方式，不授权一次性移动现有源码。最终 KMP/CMP 形态以
+> [`kmp-cmp-modernization.md`](kmp-cmp-modernization.md) 为准。
 
 ## 1. 为什么需要过渡层
 
-当前 `app/src/main/java/io/legado/app/ui` 约有 803 个 Kotlin 文件，其中 `book`、`widget`、`config`
-体量很大；目录同时按页面、业务域、控件类型和历史技术分组。Compose Contract/Screen/ViewModel
+当前 `app/src/main/java/io/legado/app/ui` 仍有 500+ 个 Kotlin 文件，其中 `book`、`widget`、`config`
+体量很大；目录同时按页面、业务域、控件类型和历史技术分组。精确数量由 inventory 生成，不在规范中冻结。
+Compose Contract/Screen/ViewModel
 已有基本形态，但没有统一的 Feature 所有权，因此仅靠 Compose 编码规范不能解决：
 
 - 同一 Feature 的 route、状态、UI、dialog、兼容 Activity 分散；
@@ -51,7 +54,7 @@ app/src/main/java/io/legado/app/feature/<feature>/
 ├── dialog/                   # 复杂且独立的 Feature dialog
 ├── sheet/                    # 复杂且独立的 Feature sheet
 ├── model/                    # 仅 presentation 使用的稳定 UI model
-└── legacy/                   # 临时兼容桥；必须记录删除条件
+└── legacy/                   # 仅 Stage A 临时桥；必须记录删除里程碑，不能随 Feature 进入 KMP
 ```
 
 目录按需创建。四个核心文件也不是强制空模板：简单 Feature 可以合并小型 Contract 或组件，但不能把业务状态塞回
@@ -65,8 +68,8 @@ Composable。
 | Navigation key/参数的稳定公开契约                  | Feature 根或未来 `api`                                     | 公共 widget、data        |
 | 全局 nav graph 聚合、Koin 聚合                   | app host                                               | Feature Screen        |
 | 两个以上 Feature 使用的纯 UI 组件                   | `core/ui` 或 `core/designsystem` 候选                     | 为“以后可能复用”提前移动         |
-| 领域模型、Gateway、UseCase                      | 当前 `domain/<business>`，未来 `core:model` / `core:domain` | Compose package       |
-| Repository 实现、DAO mapping                 | 当前 `data/<business>`，未来 `core:data` / platform data    | ViewModel、Composable  |
+| 领域模型、Repository port、UseCase              | 当前 `domain/<business>`，未来 `domain:<business>`          | Compose package       |
+| Repository 实现、DAO mapping                 | 当前 `data/<business>`，未来 `data:<business>` / `data:database` | ViewModel、Composable  |
 | Activity Result、Context、Service、通知、文件 URI | Android host/platform adapter                          | `commonMain`、纯 Screen |
 | 阅读渲染、Rhino、Android service                | platform island                                        | 普通共享 Feature          |
 
@@ -111,16 +114,19 @@ route/navigation contract 协作。只有契约确实被多个模块或宿主消
 
 ```text
 feature/<feature>/src/
-├── commonMain/kotlin/...     # Contract、纯 reducer/presenter、可共享 Screen
+├── commonMain/kotlin/...     # Contract、KMP ViewModel、reducer、CMP Screen
+├── commonMain/composeResources/... # Feature 自有的多平台字符串、图片、字体
 ├── commonTest/kotlin/...     # 状态归约和业务契约测试
-├── androidMain/kotlin/...    # Android ViewModel/route/effect adapter
+├── androidMain/kotlin/...    # Android route/effect/interop adapter
 ├── desktopMain/kotlin/...    # 目标确实需要时创建
 └── iosMain/kotlin/...        # 目标确实需要时创建
 ```
 
-- `Contract` 和纯状态归约通常最先成为 common 候选。
-- `Screen` 只有不依赖 Android resource/API、navigation runtime 和平台 launcher 时才进入 `commonMain`。
-- ViewModel/状态宿主是否共享必须通过实际依赖与 lifecycle API 验证，不因文件名机械移动。
+- `Contract`、状态归约、AndroidX KMP ViewModel 和 Screen 默认是 common 候选；平台能力通过构造注入或 Effect 隔离。
+- `commonMain` 可以使用 Compose、CMP resources、Lifecycle/ViewModel 和 Navigation 3 的多平台 API；不得使用
+  Android `R`、`Context`、Activity Result 或只发布 Android artifact 的 UI 库。
+- ViewModel 使用构造注入，不继承项目自建 `BaseViewModel/BaseRuleViewModel`，不通过全局 Provider 获取依赖。
+- Feature 资源迁入 `commonMain/composeResources` 并使用生成的 `Res`；不依赖 app 资源覆盖顺序。
 - source set 不为未来假设预建；新增 target 同时新增真实 compile/test gate。
 
 ## 6. Core、platform 与 app host
@@ -128,26 +134,31 @@ feature/<feature>/src/
 长期物理结构统一为：
 
 ```text
-app/android/                    # Android Application、导航图、Koin 聚合、兼容入口
-app/desktop/                    # 需要时创建
-core/model/                     # 领域值与序列化模型
-core/domain/                    # Gateway、UseCase、纯业务规则
-core/data/                      # Repository 契约与可共享组合
+androidApp/                     # Android Application、导航图、Koin 聚合、兼容入口
+desktopApp/                     # Compose Desktop 宿主
+iosApp/                         # iOS/Xcode 宿主
+app-shared/                     # 共享根 UI/Nav3；不放业务实现
+core/model/                     # 少量跨域值与序列化协议
+domain/<business>/              # Repository port、UseCase、纯业务规则
+data/<business>/                # Repository 实现与 data source
+data/database/                  # Room 实现细节
 core/designsystem/              # token、theme、基础视觉组件
 core/ui/                        # 跨 Feature 组合组件
 feature/<name>/                 # 用户能力
-platform/android/<capability>/  # DB、网络、服务、reader、rule engine 等实现
-platform/jvm/<capability>/
+runtime/source-{api,jvm,native}/ # 书源解析/JS 引擎与兼容语义
+platform/{android,desktop,ios}/  # 系统能力实现
 ```
 
-`app` 只负责组装，不承载可复用业务实现。`core` 不依赖 Feature；Feature 不依赖其他 Feature 的实现；platform
-实现依赖 core contract，反向依赖禁止。
+宿主只负责组装，不承载可复用业务实现。`core/domain` 不依赖 Feature；Feature 不依赖其他 Feature 的实现；
+data/platform/runtime 实现依赖其领域契约，反向依赖禁止。`core:data`、`core:platform` 等过渡聚合模块不是最终 owner，
+应随业务边界建立而拆解。
 
 ## 7. 资源和测试
 
 - Stage A 资源仍在 `app/src/main/res`，新资源统一使用 `feature_<feature>_` 前缀，便于模块提升时精确移动。
 - Feature 私有 drawable/font/raw 记录 owner；没有第二调用方不移入公共资源。
-- Stage B 后资源随 Feature module 存放；公共主题/token 才进入 designsystem。
+- Stage B 后 Android 资源随 Feature module 存放；Stage C 改为 CMP `composeResources`。公共主题/token 才进入
+  designsystem，不能继续依赖 app 侧同名资源覆盖。
 - 测试路径镜像生产包：`app/src/test/.../feature/<name>` 或模块的 `src/commonTest`、
   `src/androidUnitTest`。
 - Preview fixture、fake 和 test data 放在 Feature 的 preview/test source set；不放入生产 `utils`。
@@ -162,6 +173,8 @@ platform/jvm/<capability>/
 6. 旧 Activity/Fragment/XML 未迁移时可以留在 `ui/...`；通过明确 route/adapter 调用新
    Feature，不为目录整齐强搬遗留实现。
 7. Feature 完成迁移后，禁止继续向其旧 `ui/...` 包新增文件，并删除空目录和无调用方兼容桥。
+8. `help/utils/base` 只是迁移源，不是目标 owner；内部旧 API 不因“减少 import 改动”进入 shared/commonMain。
+9. 全局 `XxxProvider.current`、`appCtx/appDb/GSON` 不能随 Feature 晋级；先改构造注入或宿主 Effect。
 
 每次迁移必须报告：移动文件、包名/API 变化、依赖边变化、旧路径剩余调用方、资源 owner、测试和回滚方式。
 

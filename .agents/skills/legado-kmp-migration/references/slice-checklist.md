@@ -43,6 +43,43 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   implementation.
 - Shared Compose code emits callbacks/effects; host navigation and platform launchers stay outside.
 
+## CMP module setup (repository-specific)
+
+- Convention `legado.kmp.compose` (in `build-logic`) = `legado.kmp.library` + `org.jetbrains.compose`
+  (1.12.0) + Compose compiler, with Compose runtime/foundation added to **`commonMain`** directly.
+  Do NOT reintroduce the `composeMain` intermediate source set — that was the
+  "commonMain-must-be-Compose-free" era, which now only applies to `pure`/`data` modules.
+- Applying that convention REQUIRES registering the module as `"cmp"` in the root
+  `build.gradle.kts` `CheckSharedPurityTask.kmpModuleTypes`. The pair is mandatory; G2
+  (`checkSharedPurity`) rejects Compose imports in `commonMain` without it.
+- When moving a component `:core:ui` → `:core:designsystem`, **keep the package name**
+  (`io.legado.app.ui.*` is a shared namespace), so consumer imports change by zero lines — the
+  consumer just has to depend on `:core:designsystem`.
+- Only libraries with a desktop/JVM variant may enter `commonMain`; decide from the artifact's
+  `.module` metadata, never from "the group name says androidx". Check **Google Maven as well as
+  Maven Central** (`dl.google.com/dl/android/maven2`) — androidx multiplatform variants are not on
+  Central. Known answers:
+  - **material3** → `org.jetbrains.compose.material3:material3` (real KMP; its **android variant
+    delegates to** `androidx.compose.material3:material3`, so on Android you end up on Google's
+    build). The raw `androidx.compose.material3:material3` coordinate ships only android + empty
+    `jvmStubs`/`nativeStubs` variants — do not put it in `commonMain`.
+  - **The version is NOT the plugin version**: the plugin pins material3 via
+    `ComposeBuildConfig.composeMaterial3Version` (currently `1.9.0` = latest *stable*; 1.10+ exist
+    only as alphas). The convention derives its compose versions from `ComposeBuildConfig` and
+    asserts the version catalog matches — never hand-write these numbers.
+  - **How to declare**: `implementation(compose.material3)` does resolve but is
+    `@Deprecated("Specify dependency directly")`; `compose.dependencies.material3` does **not**
+    resolve from a module that only applies the convention (no type-safe accessor is generated for
+    transitively applied plugins). Use direct coordinates.
+  - **icons**: use the repo's `androidx.compose.material:material-icons-extended:1.7.8` (it has a
+    jvm variant; Google's publication stops there). CMP's own `material-icons-*` is frozen at 1.7.3
+    and deprecated — neither path grows, so new icons mean migrating to Material Symbols.
+  - **Miuix**: reference **without** the `-android` suffix, and `basic.Switch` lives in `miuix-ui`,
+    not `miuix-core`.
+- CMP `*-metadata` artifacts need network on first resolution (`--offline` fails with
+  "No cached version available for offline mode"); offline works after one successful resolve.
+- Full recipe, dependency table and measurements: `docs/dev/cmp-module-convention.md`.
+
 ## Gates
 
 - G0 Android test/lint/architecture/debug gates pass.

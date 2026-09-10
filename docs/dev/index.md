@@ -59,3 +59,16 @@
 
 - [Legado GitHub](https://github.com/HapeLee/legado-with-MD3) — 项目源码和 Issue 跟踪
 - [legado-with-MD3 Wiki](https://github.com/HapeLee/legado-with-MD3/wiki) — 社区维护的文档
+
+## 工程现代化
+
+| 文档 | 说明 |
+|:---|:---|
+| [KMP/CMP 目标架构](./kmp-cmp-modernization) | 完整多平台工程的模块、依赖、DI、数据、运行时、CMP UI 与完成条件 |
+| [KMP/CMP 迁移计划](./kmp-cmp-migration-plan) | 当前实测基线、与参考仓库的取舍、里程碑、Backlog、验证和风险门 |
+| [Feature-first 结构](./feature-first-structure) | Android 单体到独立 Feature、再到 CMP Feature 的过渡规范 |
+| [Feature catalog](./feature-catalog) | 当前页面 owner、入口与模块晋级状态 |
+| [config 域切片审计](./feature-slicing-audit-config) | `ui/config` 各子域的依赖归属与可迁移性分级 |
+| [tagrules 依赖审计](./feature-slicing-audit-tagrules) | M1-1：Feature 转 CMP 前的调用闭包、平台能力与行为基线测试 |
+| [legacy 架构债报告](./legacy-architecture-report) | M0-2：全局门面 / help·base / core Provider 的实测分布、冻结基线与门禁 |
+| [CMP 模块 convention](./cmp-module-convention) | M1-2：`legado.kmp.compose` 用法、能进 commonMain 的依赖实测、designsystem 首块切片 |

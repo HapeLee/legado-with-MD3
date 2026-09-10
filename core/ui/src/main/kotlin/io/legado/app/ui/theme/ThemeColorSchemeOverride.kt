@@ -148,6 +148,7 @@ fun ProvideColorSchemeOverride(
 
     CompositionLocalProvider(
         LocalLegadoThemeColors provides overrideThemeMode,
+        LocalComposeEngine provides parseComposeEngine(overrideThemeMode.composeEngine),
         LocalLegadoColorScheme provides legadoColorScheme
     ) {
         if (miuixController != null) {

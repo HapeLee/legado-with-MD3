@@ -1,5 +1,9 @@
 # P4 Rhino capability 边界调研
 
+> **归档说明（2026-09-10）**：本文记录 `BaseSource` 下沉时的 Android/Desktop 局部决策，不再定义完整
+> KMP/CMP 的最终 runtime。最终目标需要 iOS native runtime、真实书源 corpus、构造注入和旧 `help/Provider`
+> 清退，统一见 [`kmp-cmp-migration-plan.md`](kmp-cmp-migration-plan.md) M4。
+
 调研对象：`D:\Project\shutiao\legado`（下称「样本仓」）的 QuickJS + Rhino 双桥接方案，
 以及本仓库 `BaseSource` 下沉所缺的能力边界。
 

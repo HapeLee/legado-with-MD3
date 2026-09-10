@@ -8,7 +8,14 @@ animation = "1.12.0"
 biometric = "1.4.0-alpha07"
 coilCompose = "3.5.0"
 composeBom = "2026.08.00"
+# CMP 版本（声明处之一）。另一处是 build-logic 里 compose-gradle-plugin 的版本；
+# convention `legado.kmp.compose` 在配置期断言两处相等，漂了就失败。
 composeMultiplatform = "1.12.0"
+# CMP material3 的版本**不是**插件版本号，而是插件自带常量
+# `ComposeBuildConfig.composeMaterial3Version`，语义是「material3 的最新 stable」：
+# 目前只有 1.9.0 是 stable，1.10/1.11/1.12/1.13 全是 alpha——别凭"插件是 1.12.0"
+# 就往上挑 alpha。该值同样被 convention 断言。
+composeMultiplatformMaterial3 = "1.9.0"
 constraintlayoutCompose = "1.1.2"
 coreSplashscreen = "1.2.0"
 datastorePreferences = "1.2.1"
@@ -122,6 +129,11 @@ androidx-navigationevent = { module = "androidx.navigationevent:navigationevent"
 androidx-navigationevent-compose = { module = "androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 compose-materialIcons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material3IconsExtended" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+# CMP（commonMain）用的 material3：**真 KMP 模块**，android/desktop/ios/js/wasm 都有产物；
+# 其 android 变体自己再委托给 `androidx.compose.material3:material3`（Google 那份），
+# 于是「在 android 上最终就是 AndroidX Material3」——平台解析由 CMP 负责，不用手工分支。
+# android-only 的模块继续用上面那条 androidx 坐标（version.ref = material3）。
+compose-multiplatform-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMultiplatformMaterial3" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
@@ -245,7 +257,11 @@ reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reo
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
 # miuix
+# 不带 -android 后缀的这几个是 **KMP 模块**（android/desktop/js/wasmJs/ios/macos 全有产物），
+# 因而是唯一能进 commonMain 的形态；带 -android 后缀的是同源的 android 专用别名，只给
+# `:core:ui`、`:app` 这类 Android 模块用。
 miuix-core = { module = "top.yukonga.miuix.kmp:miuix-core", version.ref = "miuix" }
+miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }
 miuix-blur-android = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
 miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
 miuix-preference-android = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }

@@ -17,9 +17,9 @@ plugins {
 // app 侧同名资源按 Android 资源合并优先级覆盖；因此 `io.legado.app.R` 换成
 // `io.legado.app.feature.tagrules.R` 后，用户可见文案不变。
 //
-// 尚未迁入：`highlight/HighlightTagRuleScreen.kt`——它依赖 app 侧的
-// `ui.widget.components.importComponents.{BatchImportDialog, SourceInputDialog}`
-// （Gson JSON 树），待那条依赖解除后随下一个切片移入。
+// `highlight/HighlightTagRuleScreen.kt` 已随 Stage B 迁入（此前注释说"尚未迁入"是过期的）。
+// 它用的 `BatchImportDialog` / `SourceInputDialog` 在 `:core:ui`，那两个对话框通过
+// `:core:platform` 的 `ImportJsonEditor` 契约取 JSON 树，所以 `:core:ui` 本身不依赖 Gson。
 //
 // 依赖只列实际用到的；新增文件需同步补依赖。
 
@@ -73,4 +73,13 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.koin.compose)
     implementation(libs.reorderable)
+
+    // M1-1：import/export/reducer 的 characterization 测试。
+    // 走真实 GSON + 内存 Room（与 app 侧 DAO 测试同法），因为导入分类、排序和落库语义
+    // 都在 SQL/Gson 行为之上；room-runtime 只为 `Room.inMemoryDatabaseBuilder`，:core:data
+    // 以 implementation 引入故不传递。
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.room.runtime)
 }

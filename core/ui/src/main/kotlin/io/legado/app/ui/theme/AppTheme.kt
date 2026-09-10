@@ -51,6 +51,7 @@ private fun AppThemePreview(
     )
     CompositionLocalProvider(
         LocalLegadoThemeColors provides themeColors,
+        LocalComposeEngine provides parseComposeEngine(themeColors.composeEngine),
     ) {
         MaterialThemeWrapper(
             themeColors = themeColors,
@@ -169,6 +170,7 @@ private fun AppThemeActual(
     // 7. 提供主题数据并根据引擎渲染
     CompositionLocalProvider(
         LocalLegadoThemeColors provides themeColors,
+        LocalComposeEngine provides parseComposeEngine(themeColors.composeEngine),
         LocalDensity provides appDensity,
     ) {
         if (ThemeResolver.isMiuixEngine(themeColors.composeEngine)) {
