@@ -6,10 +6,13 @@ plugins {
 //   1. `io.legado.app.base.BaseViewModel`——`AndroidViewModel` + `context` + `execute/executeLazy/submit`
 //      （app 侧 35 个 VM 的基类）；
 //   2. `io.legado.app.help.coroutine.*`——`Coroutine` 及其组合/容器/取消异常（app 侧 46 个文件在用）；
-//   3. `io.legado.app.base.BaseRuleViewModel` + `BaseRuleEvent`——7 个规则列表 VM 的搜索/选择/排序/
-//      导入/导出/上传编排；
-//   4. `io.legado.app.base.rules.RuleTransferPlatform`——导入取文本 / 导出写文本的平台契约
-//      （Android 实现 `AndroidRuleTransferPlatform` 留在 `:app`，Koin 注入）。
+//   3. `io.legado.app.base.BaseRuleViewModel` + `BaseRuleEvent`——其余规则列表 VM 的搜索/选择/排序/
+//      导入/导出/上传编排（`tagrules` 已于 M1-3b 迁出）；
+//   4. `io.legado.app.core.rules.*`——规则导入/导出的共享层：无 UI 编排 `RuleTransferUseCase`、
+//      实体语义 `RuleEntitySpec`、平台契约 `RuleTransferPlatform` / `BuiltInRulesImporter`、
+//      流程事件 `RuleTransferEvent`（Android 实现留在 `:app`，Koin 注入）。M1-3b 从
+//      `io.legado.app.base.rules` 整体搬出：Feature 引用它会新增 `import io.legado.app.base.**`
+//      的 legacy 棘轮计数，而那条基线只降不升、新区域必须为零。
 //
 // 为什么单独成模块：`BaseRuleViewModel` 原先继承 `:app` 的 `BaseViewModel`，后者又依赖
 // `help.coroutine.Coroutine`。只要这三层还在 `:app`，`feature/tagrules`、`feature/replacerules`

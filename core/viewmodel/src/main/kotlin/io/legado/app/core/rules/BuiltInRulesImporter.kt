@@ -1,4 +1,4 @@
-package io.legado.app.base.rules
+package io.legado.app.core.rules
 
 /**
  * 「导入内置（出厂）规则」的平台能力契约。
@@ -15,6 +15,9 @@ package io.legado.app.base.rules
  *
  * 语义必须与迁移前保持一致：`DefaultData.importDefaultTocRules()` 是
  * 「先删默认规则，再插入内置规则」，实现不得改成「追加」或「按名字去重」。
+ *
+ * 包位置（M1-3b）：原在 `io.legado.app.base.rules`，与 [RuleTransferPlatform] 一起搬到
+ * `io.legado.app.core.rules`，理由见后者 KDoc。
  */
 interface BuiltInRulesImporter {
 

@@ -341,10 +341,13 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
    - 扫描 `help/utils/base`、`XxxHelp/Utils`、Provider delegate、`appCtx/appDb/GSON`、Feature→DAO。
    - 先生成报告并冻结当前 baseline；新代码 blocking。
    - 已完成（2026-09-10）：报告 [legacy-architecture-report.md](./legacy-architecture-report.md)；
-     基线 `gradle/architecture/legacy-baseline.txt`（330 条，目录级）；
+     基线 `gradle/architecture/legacy-baseline.txt`（目录级，M1-3b 后 323 条）；
      门禁 `checkLegacyArchitecture`（挂 `assemble`/`compile`）；重新冻结脚本
      `tools/generate-legacy-baseline.py`。Feature→DAO 一类沿用 `verifyConfigArchitecture` 的
      DAO 基线，未重复造轮子。
+   - 实测补充：`app/main/io/legado/app/di` 的 `legacyHelp` 基线（5）意味着 **`di` 不能再 import
+     `io.legado.app.help.**`**。新增平台能力适配要放到 legacy 区之外的包（见 M1-3a 的
+     `io.legado.app.platform`），否则会被这条棘轮拦下。
 3. **M1-1：`tagrules` 依赖审计**
    - 精确列出 7 个 Feature 文件、`BaseRuleViewModel`、Repository、资源、clipboard/toast/file picker 的调用闭包。
    - 先补 reducer/import/export characterization tests，不改生产行为。
@@ -373,7 +376,29 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      Miuix 的 **android 专用别名模块**（`miuix-blur-android` / `miuix-preference-android`）。
      顺序应是先抽契约、再搬 UI（见上文档 §6）。
 5. **M1-3：消除 tagrules Provider/base 依赖并转 CMP**
-   - 迁完删除旧 API；Android route 保持可回滚。
+   - 按「一次只改一个风险维度」拆成 a/b 两片。
+   - **M1-3a 已完成（2026-09-10）**：去静态平台入口。两个规则 VM 改为构造注入
+     `Clipboard` / `Toaster`，`GSON` 门面换 `JsonCodec` 契约；`Clipboard`/`Toaster` 的
+     Android 适配搬到 `io.legado.app.platform.AndroidPlatformCapabilities`（避开 `di` 的
+     help import 棘轮），`appModule` 增加对应的 `single<>` 绑定。tagrules `main` 源集的
+     `gson` 与 `coreProvider` 计数归零，基线同步删 4 条。
+     验证：四门禁 + 14 用例（含变异验证）+ `:core:platform:desktopTest` +
+     `:app:compileAppDebugKotlin` 全绿。细节见
+     [feature-slicing-audit-tagrules.md](./feature-slicing-audit-tagrules.md) §9。
+   - **M1-3b 已完成（2026-09-10）**：`Application` / `R` / `BaseRuleViewModel` 退出两个 VM。
+     共享编排抽成无 UI 的 `RuleTransferUseCase` + `RuleEntitySpec`（M1 明确「不再抽基类」；
+     `BaseRuleViewModel` 留给其余 5 个子类），两个 VM 变普通 `androidx.lifecycle.ViewModel`。
+     为了不撞 `legacyBase` 棘轮（只降不升、新区域必须为零），规则导入导出的共享层
+     （`RuleTransferPlatform` / `BuiltInRulesImporter` / `RuleTransferUseCase` / `RuleTransferEvent`）
+     整体搬到 `io.legado.app.core.rules`——`tagrules` 的 `legacyBase` 因此从 2/3 归零。
+     app 侧的两个 Android 实现仍留在 `app/.../base/rules/`（report-only 区，动目录会把
+     `help.*` 带进新区域），只加一行指向新包的 import。
+     验证：四门禁 + 45 用例（core:viewmodel 19 / tagrules 14 / designsystem 12）+ 变异验证 +
+     `:app:compileAppDebugKotlin` 全绿；基线 326 → **323** 条。细节见
+     [feature-slicing-audit-tagrules.md](./feature-slicing-audit-tagrules.md) §10。
+   - **M1-3c 待办**：② 文件选择能力契约化（`FilePickerSheet` + `ActivityResultContracts`），
+     Screen 只收回调；之后 ③ Screen/VM/Contract 整体进 `commonMain`，模块登记为 `cmp`。
+     Android route 是回滚点。
 6. **M1-4：最小 Desktop/iOS host 主路径**
    - 展示同一 Feature，验证 Koin graph、ViewModel lifecycle、resources、Nav3 和一条数据路径。
 

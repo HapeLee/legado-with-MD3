@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseRuleViewModel
-import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule

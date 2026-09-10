@@ -7,7 +7,7 @@ report」的产物：把当前 legacy 耦合的**真实分布**扫出来、冻�
 
 | 产物 | 作用 |
 | --- | --- |
-| `gradle/architecture/legacy-baseline.txt` | 机器可读基线（330 条，目录级聚合） |
+| `gradle/architecture/legacy-baseline.txt` | 机器可读基线（目录级聚合；M0-2 冻结时 330 条，M1-3a 后 326 条，M1-3b 后 323 条） |
 | 根 `build.gradle.kts` 的 `CheckLegacyArchitectureTask` / `checkLegacyArchitecture` | 门禁任务（挂 `assemble`/`compile`，与 `verifyConfigArchitecture` 同级） |
 | `tools/generate-legacy-baseline.py` | 重新冻结脚本（**会抹平棘轮**，需评审后使用） |
 

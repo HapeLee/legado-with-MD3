@@ -3,8 +3,11 @@ package io.legado.app.feature.tagrules
 import android.app.Application
 import android.net.Uri
 import androidx.room.Room
-import io.legado.app.base.BaseRuleEvent
-import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.rules.RuleTransferEvent
+import io.legado.app.core.rules.RuleTransferPlatform
+import io.legado.app.core.platform.Clipboard
+import io.legado.app.core.platform.JsonCodec
+import io.legado.app.core.platform.Toaster
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.HighlightTagRule
 import io.legado.app.data.entities.TagGroupRule
@@ -23,6 +26,7 @@ import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
+import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -55,7 +59,11 @@ import org.robolectric.annotation.Config
  * 因为「规则文本怎么取到」（URL / URI / 纯文本）是平台能力，不是本 Feature 的语义。
  *
  * 断言一律用状态/事件等待（`first {}` + `withTimeout`），不推进虚拟时钟：
- * `BaseRuleViewModel` 内部硬编码 `Dispatchers.IO` / `Dispatchers.Main`。
+ * `RuleTransferUseCase` 内部硬编码 `Dispatchers.IO` / `Dispatchers.Main`。
+ *
+ * M1-3b：两个 VM 已不再继承 `BaseRuleViewModel`，构造参数去掉 `Application`——
+ * 本文件因此也是「VM 层已无 Context 依赖」的回归证据：夹具里的 Repository / Gateway /
+ * Platform / Clipboard 全部是纯 JVM 对象，没有一个需要 Android 上下文去构造。
  *
  * 注意：`uiState` 是 `stateIn(WhileSubscribed(5000))`，没有订阅者时 `uiState.value` 停留在初始值；
  * 而 `ExportSelection` / `UploadSelection` 恰恰读的是 `uiState.value`。所以凡是要用到列表与选择的
@@ -176,7 +184,7 @@ class TagRulesImportExportCharacterizationTest {
 
         assertEquals(
             "没有选中的规则可导出",
-            (withTimeout(5_000) { event.await() } as BaseRuleEvent.ShowSnackbar).message,
+            (withTimeout(5_000) { event.await() } as RuleTransferEvent.ShowSnackbar).message,
         )
         assertTrue(transfer.writes.isEmpty())
     }
@@ -201,7 +209,7 @@ class TagRulesImportExportCharacterizationTest {
 
             assertEquals(
                 "导出成功",
-                (withTimeout(5_000) { event.await() } as BaseRuleEvent.ShowSnackbar).message,
+                (withTimeout(5_000) { event.await() } as RuleTransferEvent.ShowSnackbar).message,
             )
             val written = awaitWrite(transfer)
             // 只导出选中项，且能被同一套 Gson 解析回等价实体
@@ -231,7 +239,7 @@ class TagRulesImportExportCharacterizationTest {
 
             assertEquals(
                 "导出失败: 磁盘满",
-                (withTimeout(5_000) { event.await() } as BaseRuleEvent.ShowSnackbar).message,
+                (withTimeout(5_000) { event.await() } as RuleTransferEvent.ShowSnackbar).message,
             )
         } finally {
             collector.cancel()
@@ -313,9 +321,9 @@ class TagRulesImportExportCharacterizationTest {
         val repository = HighlightTagRuleRepository(db)
         repository.insert(HighlightTagRule(id = 1, title = "标题", pattern = "p", enabled = true))
         val viewModel = HighlightTagRuleViewModel(
-            RuntimeEnvironment.getApplication(),
             FakeUploadRepository(),
             FakeTransferPlatform(),
+            FakeClipboard(),
             repository,
         )
 
@@ -341,16 +349,71 @@ class TagRulesImportExportCharacterizationTest {
         assertEquals(ImportStatus.New, byId.getValue(2L).status)
     }
 
+    // ---------- M1-3：平台能力改构造注入 ----------
+
+    /**
+     * 本用例在**没有安装任何全局 Provider** 的 JVM 里跑：只要实现里还有
+     * `ClipboardProvider.current` / `ToasterProvider.current`，这里就会因
+     * `IllegalStateException` 直接失败。剪贴板内容与提示文案由夹具观察。
+     */
+    @Test
+    fun `复制与粘贴走注入的剪贴板与提示器 不依赖全局 Provider`() {
+        val clipboard = FakeClipboard()
+        val toaster = FakeToaster()
+        val viewModel = newGroupViewModel(
+            TagGroupRuleRepository(db), clipboard = clipboard, toaster = toaster,
+        )
+        val rule = TagGroupRule(id = 3, pattern = "p3", groupName = "G3")
+
+        viewModel.copyRule(rule)
+        // 写进剪贴板的 JSON 能被同一套 Gson 解析回等价实体（复制的是单个对象，不是数组）
+        assertEquals(
+            rule,
+            GSON.fromJsonObject<TagGroupRule>(clipboard.content).getOrThrow(),
+        )
+
+        // 剪贴板有内容 → 粘贴成功
+        assertEquals(rule, viewModel.pasteRule())
+
+        clipboard.content = "   "
+        assertEquals(null, viewModel.pasteRule())
+        clipboard.content = "not json"
+        assertEquals(null, viewModel.pasteRule())
+        assertEquals(listOf("剪贴板没有内容", "格式不对"), toaster.messages)
+    }
+
+    /**
+     * 导出文件是用户可见产物，格式漂移会让老文件读不回来。`JsonCodec` 的实现在
+     * android/desktop 上都委托与 `INITIAL_GSON` 同配置的 Gson 实例，这里对两个
+     * 规则实体锁字节级等值。
+     */
+    @Test
+    fun `JsonCodec 与 GSON 对规则实体的序列化输出一致`() {
+        val groupRules = listOf(
+            TagGroupRule(id = 1, pattern = "p", groupName = "G", order = 2),
+            TagGroupRule(id = 2, pattern = "q", groupName = ""),
+        )
+        assertEquals(GSON.toJson(groupRules), JsonCodec.toJson(groupRules))
+
+        val highlightRules = listOf(
+            HighlightTagRule(id = 5, title = "标题", pattern = "p", enabled = true),
+        )
+        assertEquals(GSON.toJson(highlightRules), JsonCodec.toJson(highlightRules))
+    }
+
     // ---------- 夹具 ----------
 
     private fun newGroupViewModel(
         repository: TagGroupRuleRepository,
         transfer: RuleTransferPlatform = FakeTransferPlatform(),
         gateway: BookGroupMutationGateway = FakeBookGroupMutationGateway(),
+        clipboard: Clipboard = FakeClipboard(),
+        toaster: Toaster = FakeToaster(),
     ) = TagGroupRuleViewModel(
-        RuntimeEnvironment.getApplication(),
         FakeUploadRepository(),
         transfer,
+        clipboard,
+        toaster,
         gateway,
         repository,
     )
@@ -394,6 +457,26 @@ class TagRulesImportExportCharacterizationTest {
     private class FakeUploadRepository : UploadRepository {
         override suspend fun upload(fileName: String, file: Any, contentType: String): String =
             "https://example.com/$fileName"
+    }
+
+    private class FakeClipboard(var content: String? = null) : Clipboard {
+        override fun getText(): String? = content
+
+        override fun setText(text: String) {
+            content = text
+        }
+    }
+
+    private class FakeToaster : Toaster {
+        val messages = mutableListOf<String>()
+
+        override fun toast(message: String) {
+            messages += message
+        }
+
+        override fun longToast(message: String) {
+            messages += message
+        }
     }
 
     /** 只记录 `applyTagGroupRulesToAllBooks`——其余方法是分组管理页的契约，本 Feature 不用。 */

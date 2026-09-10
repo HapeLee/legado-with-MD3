@@ -1,4 +1,4 @@
-package io.legado.app.base.rules
+package io.legado.app.core.rules
 
 /**
  * 规则导入/导出的平台能力契约。
@@ -7,10 +7,14 @@ package io.legado.app.base.rules
  * `ContentResolver` / `Uri` / `utils.{isAbsUrl,isUri,readText}`，这些依赖既让基类无法在
  * 单测里替换，也让它没法随规则基类一起下沉到独立模块。这里把「怎么取到导入文本」与
  * 「怎么写出导出文本」收敛成两个方法，Android 实现留在 `:app`
- * （[AndroidRuleTransferPlatform]），由 Koin 注入。
+ * （`AndroidRuleTransferPlatform`），由 Koin 注入。
  *
  * 契约不暴露 `Context` / `File` / `Uri`（见 AGENTS.md「新的共享领域契约不得暴露
  * Context/File/Uri」）：目标位置用 [String] 表达。
+ *
+ * 包位置（M1-3b）：原在 `io.legado.app.base.rules`。搬到 `io.legado.app.core.rules` 是因为
+ * Feature 层引用它会新增 `import io.legado.app.base.**` 计数，而那条棘轮只降不升、新区域必须为零；
+ * 规则导入导出既然要成为 Feature 可复用的共享能力，就不该挂在待退役的 `base` 包下。
  *
  * 注意：**不是**用来替换 okhttp 的通用 HTTP 契约。`readImportSource` 的语义必须与
  * 迁移前逐字一致（`decompressed().text("utf-8")`、`#requestWithoutUA` 特例），

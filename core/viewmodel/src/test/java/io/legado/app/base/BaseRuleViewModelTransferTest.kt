@@ -2,7 +2,7 @@ package io.legado.app.base
 
 import android.app.Application
 import android.net.Uri
-import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportStatus

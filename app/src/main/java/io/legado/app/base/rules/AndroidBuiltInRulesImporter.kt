@@ -1,5 +1,6 @@
 package io.legado.app.base.rules
 
+import io.legado.app.core.rules.BuiltInRulesImporter
 import io.legado.app.help.DefaultData
 
 /**

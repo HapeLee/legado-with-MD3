@@ -8,7 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
-import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter

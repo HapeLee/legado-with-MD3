@@ -7,6 +7,8 @@ import coil3.gif.GifDecoder
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import io.legado.app.BuildConfig
+import io.legado.app.core.platform.Clipboard
+import io.legado.app.core.platform.Toaster
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.repository.AiArtifactRepository
 import io.legado.app.data.repository.AiChatRepository
@@ -98,8 +100,8 @@ import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.base.rules.AndroidBuiltInRulesImporter
 import io.legado.app.base.rules.AndroidRuleTransferPlatform
-import io.legado.app.base.rules.BuiltInRulesImporter
-import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.rules.BuiltInRulesImporter
+import io.legado.app.core.rules.RuleTransferPlatform
 import org.koin.android.ext.koin.androidContext
 import io.legado.app.data.repository.WebDavBackupRepository
 import io.legado.app.data.repository.WebDavReadingProgressRepository
@@ -232,6 +234,7 @@ import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.model.LegacyReaderSession
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReaderSession
+import io.legado.app.platform.AndroidPlatformCapabilities
 import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.ai.chat.AiChatViewModel
 import io.legado.app.ui.association.ImportDictRuleViewModel
@@ -474,6 +477,12 @@ val appModule = module {
     single<UploadRepository> { DirectLinkUploadRepository() }
     // 规则导入/导出的平台实现留在 :app；契约与 BaseRuleViewModel 一起下沉时只搬接口。
     single<RuleTransferPlatform> { AndroidRuleTransferPlatform(androidContext()) }
+    // 剪贴板/轻提示同时以「契约注入」提供：新代码（如 :feature:tagrules 的规则 VM）通过构造
+    // 参数拿到实现，不再走 ClipboardProvider/ToasterProvider 这类 service locator。
+    // 与 Provider 路径共用 AndroidPlatformCapabilities 里同一组工厂，语义不会分叉；
+    // 实现刻意放在 io.legado.app.platform 而非 help，避免让 di 新增 legacy help import。
+    single<Clipboard> { AndroidPlatformCapabilities.clipboard(androidContext()) }
+    single<Toaster> { AndroidPlatformCapabilities.toaster(androidContext()) }
     // 「导入内置规则」的平台实现留在 :app（DefaultData 依赖 appDb/assets）；契约在
     // :core:viewmodel 的 base.rules，供规则类 ViewModel 注入。
     single<BuiltInRulesImporter> { AndroidBuiltInRulesImporter() }

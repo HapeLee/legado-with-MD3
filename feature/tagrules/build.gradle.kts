@@ -7,7 +7,7 @@ plugins {
 //
 // 它承载「标签分组规则」与「高亮标签规则」两个屏幕的 Contract / EditSheet / ViewModel：
 //   - 数据与仓储来自 `:core:data`；
-//   - 列表/导入/上传编排来自 `:core:viewmodel` 的 `BaseRuleViewModel`；
+//   - 导入/上传编排来自 `:core:viewmodel` 的 `RuleTransferUseCase`（`io.legado.app.core.rules`）；
 //   - UI 组件与主题来自 `:core:ui`，纯状态契约来自 `:core:designsystem`；
 //   - 剪贴板/轻提示走 `:core:platform` 的 provider。
 //

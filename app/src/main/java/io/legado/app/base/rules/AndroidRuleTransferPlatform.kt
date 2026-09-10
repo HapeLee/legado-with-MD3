@@ -3,6 +3,7 @@ package io.legado.app.base.rules
 import android.content.Context
 import androidx.core.net.toUri
 import io.legado.app.constant.AppConst
+import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient

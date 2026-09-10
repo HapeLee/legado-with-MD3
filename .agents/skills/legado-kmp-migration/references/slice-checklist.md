@@ -92,6 +92,39 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
 - Reduced historical violations lower their baseline in the same change.
 - `git diff --check` passes.
 
+## Legacy ratchet (repository-specific)
+
+- `checkLegacyArchitecture` freezes per-directory counts over `gradle/architecture/legacy-baseline.txt`;
+  **decreases must be lowered in the same change**, and any directory that first shows up in the
+  report must have zero counts.
+- The same ratchet covers `import io.legado.app.base.**` (`legacyBase`), and it is **bidirectional**:
+  additions fail, *undeclared decreases* also fail, and a first-time directory must be zero. So when a
+  shared flow has to leave a `base`-package superclass (`BaseRuleViewModel` → `RuleTransferUseCase`),
+  do **not** park the new class next to the one it replaces: the new directory immediately shows
+  `import io.legado.app.base.**` and is blocked. Move the whole shared layer to a neutral package
+  (`io.legado.app.core.rules`) instead — the Feature's base count then drops to zero and the baseline
+  is lowered, the only direction the ratchet allows.
+- Conversely, an Android implementation that depends on `help.*` (e.g. `AndroidRuleTransferPlatform`,
+  which needs `help.http.okHttpClient`) **cannot** be relocated into a fresh directory: the new area
+  would show `legacyHelp` counts and fail. Leave it in its existing report-only area and only add an
+  import for the relocated interface. "Contract moved down, implementation still in `:app`" is an
+  accepted transition state, not a defect to force-fix in the same slice.
+- When extracting a use case out of a ViewModel, re-check every `withContext(Dispatchers.IO)` wrapper
+  you pass through. `viewModelScope` runs on Main, so dropping a wrapper silently moves batch DB
+  writes / re-indexing onto the UI thread while all tests still pass.
+- `app/main/io/legado/app/di` already carries a `legacyHelp` baseline, so **the composition root may
+  not add `import io.legado.app.help.**`**. A new Android platform adapter that DI must reference
+  goes outside the legacy areas (e.g. `io.legado.app.platform`) — moving it into `help` to reuse
+  an existing object is not an option.
+- Keep one adapter definition and let both paths use it (e.g.
+  `AndroidPlatformCapabilities.clipboard(context)` consumed by `PlatformServices.install(...)` for
+  the legacy Provider and by the Koin module for constructor injection). Two copies of the same
+  behaviour drift.
+- `:core:platform`'s `JsonCodec` swallows malformed JSON and returns `null`, while the app-side
+  `GSON.fromJsonObject(...).getOrThrow()` throws. When swapping in `JsonCodec`, restore the previous
+  failure semantics explicitly (`?: throw Exception(...)`) instead of silently changing the error
+  path.
+
 ## Scaffolding
 
 - At least two accepted manual examples prove the convention.

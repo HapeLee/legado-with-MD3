@@ -56,7 +56,15 @@ sealed interface TagGroupRuleIntent {
     data object SyncGroups : TagGroupRuleIntent
 }
 
-sealed interface TagGroupRuleEffect
+sealed interface TagGroupRuleEffect {
+    /**
+     * 「同步分组」已把标签分组规则重新应用到所有书。
+     *
+     * 只发语义、不带文案：提示语由 UI 层用 `R.string.tag_group_sync_complete` 解析，
+     * 这样 ViewModel 不必持有 `Context`/`R`（M1-3b），港台/英文文案也不会退化。
+     */
+    data object SyncGroupsCompleted : TagGroupRuleEffect
+}
 
 data class TagGroupRuleRenderState(
     val uiState: TagGroupRuleUiState,

@@ -137,8 +137,6 @@ gson|core/data/androidMain/io/legado/app/data/json|1
 gson|feature/dict/main/io/legado/app/feature/dict/rule|1
 gson|feature/replacerules/main/io/legado/app/feature/replacerules|1
 gson|feature/replacerules/main/io/legado/app/feature/replacerules/edit|1
-gson|feature/tagrules/main/io/legado/app/feature/tagrules/group|1
-gson|feature/tagrules/main/io/legado/app/feature/tagrules/highlight|1
 gson|feature/txttocrules/main/io/legado/app/feature/txttocrules|1
 legacyHelp|app/main/io/legado/app|25
 legacyHelp|app/main/io/legado/app/api/controller|7
@@ -225,7 +223,7 @@ legacyHelp|app/main/io/legado/app/ui/widget/dialog|15
 legacyHelp|app/main/io/legado/app/utils|16
 legacyHelp|core/viewmodel/main/io/legado/app/base|1
 legacyHelp|feature/replacerules/main/io/legado/app/feature/replacerules|1
-legacyBase|app/main/io/legado/app/di|4
+legacyBase|app/main/io/legado/app/di|2
 legacyBase|app/main/io/legado/app/help|1
 legacyBase|app/main/io/legado/app/lib/prefs|3
 legacyBase|app/main/io/legado/app/service|7
@@ -240,7 +238,7 @@ legacyBase|app/main/io/legado/app/ui/book/info|1
 legacyBase|app/main/io/legado/app/ui/book/info/edit|1
 legacyBase|app/main/io/legado/app/ui/book/manage|1
 legacyBase|app/main/io/legado/app/ui/book/read|1
-legacyBase|app/main/io/legado/app/ui/book/toc|2
+legacyBase|app/main/io/legado/app/ui/book/toc|1
 legacyBase|app/main/io/legado/app/ui/browser|1
 legacyBase|app/main/io/legado/app/ui/dict|1
 legacyBase|app/main/io/legado/app/ui/file|4
@@ -253,16 +251,13 @@ legacyBase|app/main/io/legado/app/ui/main/rss|1
 legacyBase|app/main/io/legado/app/ui/qrcode|1
 legacyBase|app/main/io/legado/app/ui/rss/article|2
 legacyBase|app/main/io/legado/app/ui/rss/read|1
-legacyBase|app/main/io/legado/app/ui/rss/source/manage|3
+legacyBase|app/main/io/legado/app/ui/rss/source/manage|2
 legacyBase|app/main/io/legado/app/ui/welcome|1
 legacyBase|app/main/io/legado/app/ui/widget|2
 legacyBase|app/main/io/legado/app/ui/widget/dialog|1
-legacyBase|core/viewmodel/main/io/legado/app/base|1
-legacyBase|feature/dict/main/io/legado/app/feature/dict/rule|3
-legacyBase|feature/replacerules/main/io/legado/app/feature/replacerules|4
-legacyBase|feature/tagrules/main/io/legado/app/feature/tagrules/group|2
-legacyBase|feature/tagrules/main/io/legado/app/feature/tagrules/highlight|3
-legacyBase|feature/txttocrules/main/io/legado/app/feature/txttocrules|4
+legacyBase|feature/dict/main/io/legado/app/feature/dict/rule|2
+legacyBase|feature/replacerules/main/io/legado/app/feature/replacerules|3
+legacyBase|feature/txttocrules/main/io/legado/app/feature/txttocrules|2
 legacyNaming|app/main/io/legado/app|6
 legacyNaming|app/main/io/legado/app/api/controller|3
 legacyNaming|app/main/io/legado/app/base|4
@@ -330,6 +325,4 @@ coreProvider|core/ui/main/io/legado/app/ui/widget/components|2
 coreProvider|core/ui/main/io/legado/app/ui/widget/components/importComponents|2
 coreProvider|feature/dict/main/io/legado/app/feature/dict/rule|3
 coreProvider|feature/replacerules/main/io/legado/app/feature/replacerules/edit|5
-coreProvider|feature/tagrules/main/io/legado/app/feature/tagrules/group|7
-coreProvider|feature/tagrules/main/io/legado/app/feature/tagrules/highlight|3
 coreProvider|feature/txttocrules/main/io/legado/app/feature/txttocrules|5

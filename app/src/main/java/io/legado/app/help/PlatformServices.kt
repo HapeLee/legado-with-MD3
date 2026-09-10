@@ -2,13 +2,11 @@ package io.legado.app.help
 
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.core.platform.Clipboard
 import io.legado.app.core.platform.CookieStore
 import io.legado.app.core.platform.KeyValueStore
 import io.legado.app.core.platform.Logger
 import io.legado.app.core.platform.SourceRuntime
 import io.legado.app.core.platform.SymmetricCrypto
-import io.legado.app.core.platform.Toaster
 import io.legado.app.data.json.GsonImportJsonEditor
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
@@ -16,11 +14,8 @@ import io.legado.app.help.ConcurrentRateLimiter.Companion.updateConcurrentRate
 import io.legado.app.help.crypto.SymmetricCryptoAndroid
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.model.SharedJsScope
-import io.legado.app.utils.getClipText
+import io.legado.app.platform.AndroidPlatformCapabilities
 import io.legado.app.utils.isMainThread
-import io.legado.app.utils.longToastOnUi
-import io.legado.app.utils.sendToClip
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 
@@ -100,29 +95,6 @@ object PlatformServices {
         override fun androidId(): String = AppConst.androidId
     }
 
-    /**
-     * 剪贴板：委托 app 侧 `Context.getClipText()` / `Context.sendToClip()`。
-     * 用 `appCtx`（splitties 全局 Context）——与两个扩展原本的使用方式一致。
-     */
-    private val clipboard = object : Clipboard {
-        override fun getText(): String? = appCtx.getClipText()
-
-        override fun setText(text: String) {
-            appCtx.sendToClip(text)
-        }
-    }
-
-    /** 轻提示：委托 app 侧 `Context.toastOnUi()` / `Context.longToastOnUi()`。 */
-    private val toaster = object : Toaster {
-        override fun toast(message: String) {
-            appCtx.toastOnUi(message)
-        }
-
-        override fun longToast(message: String) {
-            appCtx.longToastOnUi(message)
-        }
-    }
-
     /** 导入对象的按字段编辑：委托 `:core:data` 的 Gson 实现（与 `GSON` 同模块）。 */
     private val importJsonEditor = GsonImportJsonEditor()
 
@@ -133,8 +105,15 @@ object PlatformServices {
         io.legado.app.core.platform.SymmetricCryptoProvider.install(symmetricCrypto)
         io.legado.app.core.platform.LoggerProvider.install(logger)
         io.legado.app.core.platform.SourceRuntimeProvider.install(sourceRuntime)
-        io.legado.app.core.platform.ClipboardProvider.install(clipboard)
-        io.legado.app.core.platform.ToasterProvider.install(toaster)
+        // 剪贴板/轻提示的实现已移到 `io.legado.app.platform.AndroidPlatformCapabilities`：
+        // Provider 路径与 di 里的构造注入路径共用同一组工厂。这里沿用 appCtx（全局
+        // Application Context），与两个 Context 扩展原本的使用方式一致。
+        io.legado.app.core.platform.ClipboardProvider.install(
+            AndroidPlatformCapabilities.clipboard(appCtx)
+        )
+        io.legado.app.core.platform.ToasterProvider.install(
+            AndroidPlatformCapabilities.toaster(appCtx)
+        )
         io.legado.app.core.platform.ImportJsonEditorProvider.install(importJsonEditor)
     }
 }

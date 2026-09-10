@@ -39,6 +39,7 @@ import io.legado.app.ui.book.group.GroupResetCoverAction
 import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.main.bookshelf.autoGroup.AiAutoGroupSheet
 import io.legado.app.feature.tagrules.group.TagGroupRuleEditSheet
+import io.legado.app.feature.tagrules.group.TagGroupRuleEffect
 import io.legado.app.feature.tagrules.group.TagGroupRuleIntent
 import io.legado.app.feature.tagrules.group.TagGroupRuleViewModel
 import io.legado.app.ui.theme.LegadoTheme
@@ -48,6 +49,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.move
+import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -62,6 +64,18 @@ fun GroupManageSheet(
 ) {
     val context = LocalContext.current
     val groups by bookshelfViewModel.allGroupsFlow.collectAsState()
+
+    // 「同步标签分组规则」的结果提示。文案在 UI 层解析（VM 不再持有 Context/R），
+    // 四种语言的 values-*/strings.xml 继续生效。tagGroupRuleViewModel 由 koinViewModel
+    // 提供、与 Sheet 同生命周期，不会重复收集。
+    val syncGroupsCompletedText = stringResource(R.string.tag_group_sync_complete)
+    LaunchedEffect(tagGroupRuleViewModel) {
+        tagGroupRuleViewModel.effects.collect { effect ->
+            when (effect) {
+                TagGroupRuleEffect.SyncGroupsCompleted -> context.toastOnUi(syncGroupsCompletedText)
+            }
+        }
+    }
 
     var editingGroup by remember { mutableStateOf<BookGroup?>(null) }
     var isEditing by remember { mutableStateOf(false) }

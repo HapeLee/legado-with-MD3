@@ -29,7 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.feature.tagrules.R
-import io.legado.app.base.BaseRuleEvent
+import io.legado.app.core.rules.RuleTransferEvent
 import io.legado.app.data.entities.HighlightTagRule
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.util.plainTextClipEntry
@@ -75,7 +75,7 @@ fun HighlightTagRuleRouteScreen(
 fun HighlightTagRuleScreen(
     state: HighlightTagRuleUiState,
     importState: BaseImportUiState<HighlightTagRule>,
-    events: Flow<BaseRuleEvent>,
+    events: Flow<RuleTransferEvent>,
     effects: Flow<HighlightTagRuleEffect>,
     onIntent: (HighlightTagRuleIntent) -> Unit,
     onPasteRule: () -> HighlightTagRule?,
@@ -111,7 +111,7 @@ fun HighlightTagRuleScreen(
     LaunchedEffect(Unit) {
         events.collect { event ->
             when (event) {
-                is BaseRuleEvent.ShowSnackbar -> {
+                is RuleTransferEvent.ShowSnackbar -> {
                     val result = snackbarHostState.showSnackbar(
                         message = event.message,
                         actionLabel = event.actionLabel,

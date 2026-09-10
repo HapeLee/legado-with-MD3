@@ -8,7 +8,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.BaseRuleEvent
-import io.legado.app.base.rules.RuleTransferPlatform
+import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.UploadRepository
