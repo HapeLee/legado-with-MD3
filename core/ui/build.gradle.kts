@@ -75,6 +75,10 @@ dependencies {
     implementation(libs.compose.materialIcons)
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.reorderable)
+    // M1-3c：`ui.platform.AndroidDocumentPicker` 要用 SAF 注册 Activity Result launcher
+    // （`rememberLauncherForActivityResult` + `ActivityResultContracts`），供规则类 Screen 的
+    // Route 取用，让 Screen 不再直接依赖 `androidx.activity` / `Context.contentResolver`。
+    implementation(libs.activity.compose)
 
     implementation(libs.core.ktx)
     implementation(libs.material.kolor)

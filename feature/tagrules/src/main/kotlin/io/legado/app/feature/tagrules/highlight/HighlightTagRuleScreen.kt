@@ -1,7 +1,5 @@
 package io.legado.app.feature.tagrules.highlight
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -23,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -31,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.feature.tagrules.R
 import io.legado.app.core.rules.RuleTransferEvent
 import io.legado.app.data.entities.HighlightTagRule
+import io.legado.app.ui.platform.rememberDocumentPicker
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.util.plainTextClipEntry
 import io.legado.app.ui.widget.components.ActionItem
@@ -59,6 +57,12 @@ fun HighlightTagRuleRouteScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val importState by viewModel.importState.collectAsStateWithLifecycle()
 
+    // 文件选择（SAF）只能在 Composition 里注册 launcher，所以它是**本 Route 的职责**，
+    // 而 Screen 只收回调（M1-3c）。选中的是「不透明引用」（Android 即 `Uri.toString()`），
+    // 读文本交给 VM 侧的 `RuleTransferPlatform.readImportSource`——那里本来就要处理
+    // URL / URI / 纯文本三种形态，与迁移前 Screen 直接 `openInputStream` 读等价。
+    val documentPicker = rememberDocumentPicker()
+
     HighlightTagRuleScreen(
         state = uiState,
         importState = importState,
@@ -66,6 +70,20 @@ fun HighlightTagRuleRouteScreen(
         effects = viewModel.effects,
         onIntent = viewModel::onIntent,
         onPasteRule = viewModel::pasteRule,
+        onPickImportSource = { mimeTypes ->
+            documentPicker.openDocument(mimeTypes) { ref ->
+                if (ref != null) {
+                    viewModel.onIntent(HighlightTagRuleIntent.ImportSource(ref))
+                }
+            }
+        },
+        onPickExportTarget = { fileName ->
+            documentPicker.createDocument(fileName) { ref ->
+                if (ref != null) {
+                    viewModel.onIntent(HighlightTagRuleIntent.ExportSelection(ref))
+                }
+            }
+        },
         onBackClick = onBackClick,
     )
 }
@@ -79,10 +97,10 @@ fun HighlightTagRuleScreen(
     effects: Flow<HighlightTagRuleEffect>,
     onIntent: (HighlightTagRuleIntent) -> Unit,
     onPasteRule: () -> HighlightTagRule?,
+    onPickImportSource: (mimeTypes: Array<String>) -> Unit,
+    onPickExportTarget: (fileName: String) -> Unit,
     onBackClick: () -> Unit,
 ) {
-
-    val context = LocalContext.current
 
     val rules = state.items
     val selectedIds = state.selectedIds
@@ -135,25 +153,6 @@ fun HighlightTagRuleScreen(
         }
     }
 
-    val importDoc = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-        onResult = { uri ->
-            uri?.let {
-                context.contentResolver.openInputStream(it)?.use { stream ->
-                    val text = stream.reader().readText()
-                    onIntent(HighlightTagRuleIntent.ImportSource(text))
-                }
-            }
-        }
-    )
-
-    val exportDoc = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json"),
-        onResult = { uri ->
-            uri?.let { onIntent(HighlightTagRuleIntent.ExportSelection(it.toString())) }
-        }
-    )
-
     SourceInputDialog(
         show = showUrlInput,
         title = stringResource(R.string.import_on_line),
@@ -170,7 +169,7 @@ fun HighlightTagRuleScreen(
         title = stringResource(R.string.export),
         onSelectSysDir = {
             showExportSheet = false
-            exportDoc.launch("exportHighlightTagRule.json")
+            onPickExportTarget("exportHighlightTagRule.json")
         },
         onUpload = {
             showExportSheet = false
@@ -185,7 +184,7 @@ fun HighlightTagRuleScreen(
         onDismissRequest = { showImportSheet = false },
         title = stringResource(R.string.import_highlight_tag_rule),
         onSelectSysFile = { types ->
-            importDoc.launch(types)
+            onPickImportSource(types)
             showImportSheet = false
         },
         onManualInput = {

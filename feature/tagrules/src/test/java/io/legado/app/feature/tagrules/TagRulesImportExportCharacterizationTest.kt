@@ -317,6 +317,39 @@ class TagRulesImportExportCharacterizationTest {
     // ---------- highlight 侧差异 ----------
 
     @Test
+    fun `导入源是 SAF 选中的 URI 时由平台解析出规则文本`() = runBlocking {
+        // M1-3c：Screen 选完文件后不再自己 `contentResolver.openInputStream`，而是把
+        // 「不透明引用」（Android 即 `Uri.toString()`）交给 VM，由
+        // `RuleTransferPlatform.readImportSource` 取文本——那里本来就要处理 URL / URI / 纯文本
+        // 三种形态。这条用例锁住该链路：若 VM 跳过平台直接把 URI 当 JSON 解析，URI 并非
+        // 合法 JSON，结果会变成 Error 而断言失败（也是变异验证的入口）。
+        val pickedUri = "content://com.android.providers.downloads.documents/document/42"
+        val json = GSON.toJson(
+            listOf(HighlightTagRule(id = 7, title = "来自URI", pattern = "u1"))
+        )
+        val transfer = FakeTransferPlatform(readResolver = { source ->
+            if (source == pickedUri) json else source
+        })
+        val viewModel = HighlightTagRuleViewModel(
+            FakeUploadRepository(),
+            transfer,
+            FakeClipboard(),
+            HighlightTagRuleRepository(db),
+        )
+
+        viewModel.onIntent(HighlightIntent.ImportSource(pickedUri))
+
+        val state = withTimeout(5_000) {
+            viewModel.importState.first {
+                it is BaseImportUiState.Success || it is BaseImportUiState.Error
+            }
+        } as BaseImportUiState.Success
+        assertEquals(listOf(pickedUri), transfer.readCalls)
+        assertEquals(ImportStatus.New, state.items.single().status)
+        assertEquals("来自URI", state.items.single().data.title)
+    }
+
+    @Test
     fun `高亮规则的 hasChanged 包含 enabled 字段`() = runBlocking {
         val repository = HighlightTagRuleRepository(db)
         repository.insert(HighlightTagRule(id = 1, title = "标题", pattern = "p", enabled = true))
@@ -439,13 +472,14 @@ class TagRulesImportExportCharacterizationTest {
 
     private class FakeTransferPlatform(
         private val writeError: Throwable? = null,
+        private val readResolver: (String) -> String = { it },
     ) : RuleTransferPlatform {
         val readCalls = mutableListOf<String>()
         val writes = mutableListOf<Pair<String, String>>()
 
         override suspend fun readImportSource(text: String): String {
             readCalls += text
-            return text
+            return readResolver(text)
         }
 
         override suspend fun writeExport(targetUri: String, content: String) {
