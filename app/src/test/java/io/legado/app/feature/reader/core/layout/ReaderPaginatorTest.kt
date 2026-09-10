@@ -433,7 +433,7 @@ class ReaderPaginatorTest {
     }
 
     @Test
-    fun nineSliceSidePiecesDoNotChangeTextWrappingOrPlacement() {
+    fun nineSliceSidePiecesReserveSpaceAndReflowEachVisualLine() {
         val frame = ReaderTextBackgroundImage(
             source = "frame.png",
             fit = 3,
@@ -457,12 +457,73 @@ class ReaderPaginatorTest {
         ).single()
 
         val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
-        assertEquals(listOf(0f, 10f, 0f, 10f), glyphs.map { it.bounds.left })
-        assertEquals(listOf(0f, 0f, 20f, 20f), glyphs.map { it.bounds.top })
-        assertEquals(
-            listOf(-3f to 24f, -3f to 24f),
-            page.textBackgroundRuns().map { it.bounds.left to it.bounds.right },
+        assertEquals(listOf(3f, 3f, 3f, 3f), glyphs.map { it.bounds.left })
+        assertEquals(listOf(0f, 20f, 40f, 60f), glyphs.map { it.bounds.top })
+        assertTrue(page.textBackgroundRuns().all { it.bounds.left == 0f && it.bounds.right == 17f })
+    }
+
+    @Test
+    fun nineSliceSidePiecesDoNotOverlapAdjacentPlainText() {
+        val frame = ReaderTextBackgroundImage(
+            source = "frame.png",
+            fit = 3,
+            scale = 1f,
+            contentInsetLeftPx = 3f,
+            contentInsetRightPx = 4f,
         )
+        val framedStyle = style.copy(backgroundImage = frame)
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = listOf(
+                        ReaderMeasuredInlineItem.Text("前", 10f, style, 0),
+                        ReaderMeasuredInlineItem.Text("中", 10f, framedStyle, 1),
+                        ReaderMeasuredInlineItem.Text("后", 10f, style, 2),
+                    ),
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                )
+            ),
+            config.copy(viewportWidthPx = 60, viewportHeightPx = 100),
+        ).single()
+
+        val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
+        val frameBounds = page.textBackgroundRuns().single().bounds
+        assertEquals(glyphs[0].bounds.right, frameBounds.left, 0f)
+        assertEquals(frameBounds.right, glyphs[2].bounds.left, 0f)
+    }
+
+    @Test
+    fun nineSliceReflowDoesNotStrandTheRemainderOfAnOriginalLine() {
+        val frame = ReaderTextBackgroundImage(
+            source = "frame.png",
+            fit = 3,
+            scale = 1f,
+            contentInsetLeftPx = 3f,
+            contentInsetRightPx = 4f,
+        )
+        val framedStyle = style.copy(backgroundImage = frame)
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = (0 until 4).map { index ->
+                        ReaderMeasuredInlineItem.Text("字", 10f, framedStyle, index)
+                    },
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                )
+            ),
+            config.copy(viewportWidthPx = 35, viewportHeightPx = 100),
+        ).single()
+
+        val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
+        assertEquals(listOf(0f, 0f, 20f, 20f), glyphs.map { it.bounds.top })
     }
 
     @Test
