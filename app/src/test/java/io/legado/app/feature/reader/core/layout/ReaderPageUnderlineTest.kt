@@ -50,6 +50,39 @@ class ReaderPageUnderlineTest {
         assertTrue(underline.overlayStyledUnderline)
     }
 
+    @Test
+    fun nonExtendedUnderlineSkipsRetainedIndentGlyphs() {
+        val items = listOf(
+            ReaderMeasuredInlineItem.Text("　", 10f, style, 0),
+            ReaderMeasuredInlineItem.Text("　", 10f, style, 1),
+            ReaderMeasuredInlineItem.Text("甲", 10f, style, 2),
+            ReaderMeasuredInlineItem.Text("乙", 10f, style, 3),
+        )
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = items,
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 10f,
+                    baselineOffsetPx = 8f,
+                    baseTextSizePx = 10f,
+                    leadingIndentItems = 2,
+                ),
+            ),
+            ReaderPaginationConfig(
+                0, "", 40, 40, 0f, 0f, 0f, 0f, 10f, 8f,
+                pageUnderline = ReaderPageUnderline(
+                    0xff123456.toInt(), 1f, 0f, false, false,
+                ),
+            ),
+        ).single()
+
+        val underline = page.elements.filterIsInstance<ReaderElement.Rule>().single()
+        assertEquals(20f, underline.bounds.left)
+        assertEquals(40f, underline.bounds.right)
+    }
+
     @Test fun contentRuleKeepsNormalContentLayer() {
         val page = ReaderPaginator.paginateBlocks(
             listOf(

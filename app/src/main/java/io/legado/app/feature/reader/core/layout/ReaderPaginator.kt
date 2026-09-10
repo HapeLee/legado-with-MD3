@@ -192,10 +192,10 @@ object ReaderPaginator {
         fun columnLeft() = config.paddingLeftPx + columnIndex * config.columnStridePx
         fun columnHasContent() = elements.size > columnElementStart
 
-        fun addPageUnderline(rowElementStart: Int, lineBottom: Float) {
+        fun addPageUnderline(underlineElementStart: Int, lineBottom: Float) {
             val underline = config.pageUnderline ?: return
-            if (elements.size <= rowElementStart) return
-            val rowElements = elements.subList(rowElementStart, elements.size)
+            if (elements.size <= underlineElementStart) return
+            val rowElements = elements.subList(underlineElementStart, elements.size)
             val start = if (underline.extendToColumn) columnLeft()
                 else rowElements.minOf { it.bounds.left }
             val end = if (underline.extendToColumn) columnLeft() + config.contentWidthPx
@@ -528,6 +528,9 @@ object ReaderPaginator {
                         }
                     }
                 }
+                // Processed body text can retain its indentation as real leading glyphs.
+                // The View reader started a non-extended underline after those glyphs.
+                val underlineElementStart = elements.size + indentItems
                 lineItems.forEachIndexed { itemIndex, item ->
                     val itemBackground = (item as? ReaderMeasuredInlineItem.Text)
                         ?.style?.backgroundImage
@@ -581,7 +584,7 @@ object ReaderPaginator {
                         if (item is ReaderMeasuredInlineItem.Text && item.value == " ") wordSpaceExtra else 0f
                     x += if (itemIndex >= indentItems) justifyGap else 0f
                 }
-                addPageUnderline(rowElementStart, y + actualLineHeight)
+                addPageUnderline(underlineElementStart, y + actualLineHeight)
                 columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + actualLineHeight)
                 y += actualLineHeight * paragraph.lineSpacingMultiplier
             }
