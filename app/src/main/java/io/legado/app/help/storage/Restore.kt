@@ -16,6 +16,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HighlightTagRule
@@ -148,10 +149,17 @@ object Restore : KoinComponent {
                 }
             }
         }
+        // 书签与划线/想法笔记（book_marks）视为一体，统一受既有 bookmark 忽略项控制
         if (BackupConfig.dbIsNotIgnored("bookmark")) {
             fileToListT<Bookmark>(path, "bookmark.json")?.let {
                 try {
                     appDb.bookmarkDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
+            }
+            fileToListT<BookMarking>(path, "bookMarking.json")?.let {
+                try {
+                    appDb.bookMarkingDao.insert(*it.toTypedArray())
                 } catch (_: SQLiteConstraintException) {
                 }
             }
