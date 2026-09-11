@@ -140,6 +140,8 @@ data class MainRouteReadManga(
     val bookUrl: String? = null,
     val inBookshelf: Boolean = true,
     val chapterChanged: Boolean = false,
+    /** Distinguishes repeated open requests for the same book after an external TOC selection. */
+    val openRequestId: Long = 0L,
 ) : MainRoute
 
 @Serializable

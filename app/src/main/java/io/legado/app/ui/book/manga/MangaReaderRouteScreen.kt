@@ -28,6 +28,7 @@ fun MangaReaderRouteScreen(
     bookUrl: String?,
     inBookshelf: Boolean,
     chapterChanged: Boolean,
+    openRequestId: Long,
     viewModel: MangaReaderViewModel,
     restoreSystemBarsVisible: Boolean,
     onFinish: (bookshelfChanged: Boolean) -> Unit,
@@ -47,7 +48,7 @@ fun MangaReaderRouteScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val networkChangedListener = remember(activity) { NetworkChangedListener(activity) }
 
-    LaunchedEffect(viewModel, bookUrl, inBookshelf, chapterChanged) {
+    LaunchedEffect(viewModel, bookUrl, inBookshelf, chapterChanged, openRequestId) {
         viewModel.onIntent(
             MangaReaderIntent.Initialize(bookUrl, inBookshelf, chapterChanged)
         )

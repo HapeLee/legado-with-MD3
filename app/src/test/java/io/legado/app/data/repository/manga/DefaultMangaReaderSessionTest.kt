@@ -23,6 +23,28 @@ import org.junit.Test
 class DefaultMangaReaderSessionTest {
 
     @Test
+    fun `external toc reopen does not overwrite selected progress with retained session`() =
+        runTest {
+            val gateway = FakeGateway()
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
+
+            session.execute(MangaSessionCommand.Open("book-a", true, false))
+            advanceUntilIdle()
+            gateway.complete("book-a", 0)
+            advanceUntilIdle()
+            session.execute(MangaSessionCommand.VisiblePageChanged(0, 7))
+            advanceUntilIdle()
+            gateway.persisted.clear()
+
+            session.execute(MangaSessionCommand.Open("book-a", true, true))
+            advanceUntilIdle()
+
+            assertTrue(gateway.persisted.isEmpty())
+            session.close()
+        }
+
+    @Test
     fun `opening a new book cancels and rejects old chapter results`() = runTest {
         val gateway = FakeGateway()
         val dispatcher = StandardTestDispatcher(testScheduler)

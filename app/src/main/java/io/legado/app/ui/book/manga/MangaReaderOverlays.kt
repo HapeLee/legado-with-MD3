@@ -549,7 +549,7 @@ private fun MangaMenuBottomBar(
                         .fillMaxWidth()
                         .padding(vertical = 16.dp)
                     ) {
-                        if (state.pageCount > 1) {
+                        if (state.chapterCount > 0) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -567,9 +567,14 @@ private fun MangaMenuBottomBar(
                                 }
                                 ReadMenuSlider(
                                     value = state.currentPage.toFloat()
-                                        .coerceIn(0f, (state.pageCount - 1).toFloat()),
+                                        .coerceIn(
+                                            0f,
+                                            (state.pageCount - 1).coerceAtLeast(1).toFloat()
+                                        ),
                                     onValueChange = { onIntent(MangaReaderIntent.SeekToPage(it.toInt())) },
-                                    valueRange = 0f..(state.pageCount - 1).toFloat(),
+                                    enabled = state.pageCount > 1,
+                                    valueRange = 0f..(state.pageCount - 1).coerceAtLeast(1)
+                                        .toFloat(),
                                     steps = (state.pageCount - 2).coerceAtLeast(0),
                                     accessibilityLabel = readingPageDescription,
                                     modifier = Modifier.weight(1f),

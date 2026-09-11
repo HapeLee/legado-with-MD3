@@ -66,7 +66,6 @@ import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -176,7 +175,7 @@ data class TocDomainItem(
 
 private data class DownloadContext(
     val downloadState: CacheBookDownloadState?,
-    val cachedFiles: Set<String>
+    val cachedChapterIndices: Set<Int>
 )
 
 private data class TocUiConfig(
@@ -273,20 +272,32 @@ class TocViewModel(
                 ""
             )
 
-    private val _cacheFileNames: StateFlow<Set<String>> = bookState.filterNotNull()
-        .map { it.bookUrl }
-        .distinctUntilChanged()
-        .flatMapLatest { url ->
-            val initialFiles = withContext(Dispatchers.IO) {
-                BookHelp.getChapterFiles(bookState.value!!)
-            }.toSet()
-
-            CacheBook.cacheSuccessFlow
-                .filter { it.bookUrl == url }
-                .map { it.getFileName() }
-                .scan(initialFiles) { accumulator, newFileName ->
-                    accumulator + newFileName
-                }
+    private val _cachedChapterIndices: StateFlow<Set<Int>> = bookState.filterNotNull()
+        .flatMapLatest { book ->
+            flow {
+                var cached: Set<Int> = bookRepository.getChapters(book.bookUrl)
+                    .filter { chapter ->
+                        chapter.isVolume || withContext(Dispatchers.IO) {
+                            BookHelp.isChapterCacheComplete(book, chapter)
+                        }
+                    }
+                    .mapTo(mutableSetOf()) { it.index }
+                emit(cached)
+                CacheBook.cacheSuccessFlow
+                    .filter { it.bookUrl == book.bookUrl }
+                    .collect { chapter ->
+                        cached = if (chapter.isVolume ||
+                            withContext(Dispatchers.IO) {
+                                BookHelp.isChapterCacheComplete(book, chapter)
+                            }
+                        ) {
+                            cached + chapter.index
+                        } else {
+                            cached - chapter.index
+                        }
+                        emit(cached)
+                    }
+            }
         }
         .flowOn(Dispatchers.IO)
         .stateIn(
@@ -421,7 +432,7 @@ class TocViewModel(
     private val downloadContextFlow = combine(
         bookState.filterNotNull().map { it.bookUrl }.distinctUntilChanged(),
         CacheBook.downloadStateFlow,
-        _cacheFileNames
+        _cachedChapterIndices
     ) { bookUrl, state, cached ->
         DownloadContext(state.books[bookUrl], cached)
     }
@@ -493,13 +504,13 @@ class TocViewModel(
 
         val runningIndices = downloadCtx.downloadState?.runningIndices.orEmpty()
         val errorIndices = downloadCtx.downloadState?.failedIndices.orEmpty()
-        val cachedFiles = downloadCtx.cachedFiles
+        val cachedChapterIndices = downloadCtx.cachedChapterIndices
 
         processedChapters.map { chapter ->
             val downloadState = when {
                 chapter.index in runningIndices -> DownloadState.DOWNLOADING
                 chapter.index in errorIndices -> DownloadState.ERROR
-                chapter.getFileName() in cachedFiles -> DownloadState.SUCCESS
+                chapter.index in cachedChapterIndices -> DownloadState.SUCCESS
                 else -> DownloadState.NONE
             }
 

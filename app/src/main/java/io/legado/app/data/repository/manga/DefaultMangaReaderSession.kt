@@ -138,7 +138,12 @@ class DefaultMangaReaderSession(
         cancelScheduledProgressPersist()
         val old = _state.value
         if (old.book != null) {
-            persistProgress()
+            // An external TOC selection has already persisted the requested chapter. Saving this
+            // retained session now would overwrite that authoritative target with the last page
+            // that happened to be visible before navigation returned to the reader.
+            val externallySelectedSameBook = command.chapterChanged &&
+                    command.bookUrl == old.book.bookUrl
+            if (!externallySelectedSameBook) persistProgress()
             if (old.resumed) withContext(ioDispatcher) {
                 dataGateway.pause(old.book.bookUrl, old.book.inBookshelf)
             }

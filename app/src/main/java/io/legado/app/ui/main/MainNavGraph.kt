@@ -801,6 +801,7 @@ fun MainActivity.mainEntryProvider(
             bookUrl = route.bookUrl,
             inBookshelf = route.inBookshelf,
             chapterChanged = route.chapterChanged,
+            openRequestId = route.openRequestId,
             viewModel = mangaViewModel,
             restoreSystemBarsVisible = configuration.appShell.showStatusBar,
             onFinish = { onNavigateBack() },
@@ -1181,6 +1182,7 @@ fun MainActivity.mainEntryProvider(
                         bookUrl = bookUrl,
                         inBookshelf = inBookshelf,
                         chapterChanged = chapterChanged,
+                        openRequestId = System.nanoTime(),
                     )
                 )
             },

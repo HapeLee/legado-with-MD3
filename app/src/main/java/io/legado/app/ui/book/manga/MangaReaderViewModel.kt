@@ -375,6 +375,14 @@ class MangaReaderViewModel(
     fun refreshContent() = refreshContent(readerSession.state.value)
 
     private fun refreshContent(session: MangaSessionState) {
+        // openChapter() updates the target placeholder before its ordered session command runs.
+        // Ignore any old-chapter emissions in that hand-off window; rendering them would make the
+        // reader flash and jump back, and their viewport callback could persist the wrong page.
+        if (!acceptsMangaSessionForExplicitNavigation(
+                pendingExplicitChapterIndex = pendingExplicitChapterIndex,
+                sessionChapterIndex = session.chapterIndex,
+            )
+        ) return
         val book = session.book
         if (book == null) {
             session.openError?.let {
@@ -565,7 +573,8 @@ class MangaReaderViewModel(
             val keyPreserved =
                 oldCurrentItem?.let { old -> items.any { it.key == old.key } } == true
             val targetIndex = anchoredIndex ?: safePosition
-            val positionChanged = shouldPosition || anchoredIndex == null || !keyPreserved
+            val positionChanged = shouldPosition || anchoredIndex == null || !keyPreserved ||
+                    oldState.currentItemIndex != targetIndex
             _uiState.update { old ->
                 old.copy(
                     bookName = book.name,
@@ -580,6 +589,9 @@ class MangaReaderViewModel(
                     sourceType = book.sourceType,
                     inBookshelf = book.inBookshelf,
                     pages = items,
+                    navigationId = if (old.pages.map { it.key } != items.map { it.key }) {
+                        System.nanoTime()
+                    } else old.navigationId,
                     currentItemIndex = targetIndex,
                     currentPage = if (positionChanged) session.pageIndex else old.currentPage,
                     pageCount = if (positionChanged) current.chapter.pages.size else old.pageCount,
@@ -924,6 +936,12 @@ class MangaReaderViewModel(
             pendingExplicitChapterIndex == chapterIndex
         ) return
         pendingExplicitChapterIndex = chapterIndex
+        // A gesture/animation belonging to the old window no longer owns presentation. Its
+        // completion callback may be disposed when the placeholder replaces the page list, so do
+        // not let a stale `true` defer the target chapter indefinitely.
+        pagerScrollInProgress = false
+        deferredReadySession = null
+        refreshContentJob?.cancel()
         showExplicitChapterPlaceholder(chapterIndex, pageIndex, errorMessage = null)
         executeSession(MangaSessionCommand.OpenChapter(chapterIndex, pageIndex))
     }

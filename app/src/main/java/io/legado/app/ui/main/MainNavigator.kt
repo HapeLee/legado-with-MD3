@@ -458,6 +458,7 @@ object MainNavigator {
                     MainIntent.EXTRA_CHAPTER_CHANGED,
                     false,
                 ) == true,
+                openRequestId = System.nanoTime(),
             )
             MainRouteConst.ROUTE_AUDIO_PLAY -> MainRouteAudioPlay(
                 bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL),

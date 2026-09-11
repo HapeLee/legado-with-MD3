@@ -33,4 +33,23 @@ class MainNavigatorMangaTest {
 
         assertEquals(listOf(MainRouteHome, replacement), backStack)
     }
+
+    @Test
+    fun `repeated external toc selection replaces the same book reader request`() {
+        val oldRequest = MainRouteReadManga(
+            bookUrl = "book-a",
+            chapterChanged = true,
+            openRequestId = 1L,
+        )
+        val newRequest = oldRequest.copy(openRequestId = 2L)
+        val backStack = mutableListOf<NavKey>(
+            MainRouteHome,
+            oldRequest,
+            MainRouteBookInfo("Book A", "Author", "book-a"),
+        )
+
+        MainNavigator.navigateToRoute(backStack, newRequest)
+
+        assertEquals(listOf(MainRouteHome, newRequest), backStack)
+    }
 }

@@ -108,6 +108,18 @@ internal fun acceptsMangaVisibleItem(
 internal fun shouldExposeMangaPages(currentChapterFinished: Boolean): Boolean =
     currentChapterFinished
 
+/**
+ * While an explicit catalog/menu navigation is being handed to the session, emissions from the
+ * previous chapter must not reclaim the UI. The session command is ordered asynchronously, so a
+ * presentation or page-state update for the old chapter can otherwise replace the target loading
+ * placeholder before [MangaSessionCommand.OpenChapter] is reduced.
+ */
+internal fun acceptsMangaSessionForExplicitNavigation(
+    pendingExplicitChapterIndex: Int?,
+    sessionChapterIndex: Int,
+): Boolean = pendingExplicitChapterIndex == null ||
+        pendingExplicitChapterIndex == sessionChapterIndex
+
 enum class MangaChapterSwitch { NONE, NEXT, PREVIOUS }
 
 /**

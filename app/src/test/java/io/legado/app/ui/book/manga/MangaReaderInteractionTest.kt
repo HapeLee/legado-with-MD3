@@ -308,6 +308,28 @@ class MangaReaderInteractionTest {
     }
 
     @Test
+    fun `old session emission cannot reclaim an explicit chapter navigation`() {
+        assertFalse(
+            acceptsMangaSessionForExplicitNavigation(
+                pendingExplicitChapterIndex = 12,
+                sessionChapterIndex = 3,
+            )
+        )
+        assertTrue(
+            acceptsMangaSessionForExplicitNavigation(
+                pendingExplicitChapterIndex = 12,
+                sessionChapterIndex = 12,
+            )
+        )
+        assertTrue(
+            acceptsMangaSessionForExplicitNavigation(
+                pendingExplicitChapterIndex = null,
+                sessionChapterIndex = 3,
+            )
+        )
+    }
+
+    @Test
     fun `zoom pan clamps within zoomed content bounds`() {
         val viewport = IntSize(500, 800)
         // zoom 2、item 宽 500：maxX = (500*2-500)/2 = 250；内容高 2000：maxY = 2000*2-800 = 3200

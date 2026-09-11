@@ -101,6 +101,7 @@ import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.DoubleClickToZoomListener
 import me.saket.telephoto.zoomable.EnabledZoomGestures
@@ -475,7 +476,12 @@ private fun WebtoonMangaList(
 
     fun reportWebtoonVisibleItem(forcedItemIndex: Int? = null) {
         val currentState = latestReaderState
-        val visibleItems = listState.layoutInfo.visibleItemsInfo
+        // Programmatic scrolling also emits a scroll-idle event. That event must not clear the
+        // request before the target's actual layout has been confirmed below.
+        if (forcedItemIndex == null && currentState.scrollRequest != null) return
+        val visibleItems = listState.layoutInfo.visibleItemsInfo.filter { visible ->
+            currentState.pages.getOrNull(visible.index)?.key == visible.key
+        }
         val focusedItemIndex = forcedItemIndex ?: mangaWebtoonFocusedPageIndex(
             items = currentState.pages,
             visibleItemIndices = visibleItems.map { it.index },
@@ -484,6 +490,7 @@ private fun WebtoonMangaList(
         if (currentState.pages.getOrNull(focusedItemIndex) !is MangaReaderItemUi.Page) return
         val forcedItemVisible = forcedItemIndex == null ||
                 visibleItems.any { it.index == forcedItemIndex }
+        if (!forcedItemVisible) return
         val currentChapterVisible = visibleItems.any { visibleItem ->
             (currentState.pages.getOrNull(visibleItem.index) as? MangaReaderItemUi.Page)
                 ?.chapterIndex == currentState.chapterIndex
@@ -524,8 +531,17 @@ private fun WebtoonMangaList(
 
     LaunchedEffect(state.scrollRequest?.id) {
         val request = state.scrollRequest ?: return@LaunchedEffect
+        val targetKey = state.pages.getOrNull(request.itemIndex)?.key ?: return@LaunchedEffect
+        // A placeholder may still be the measured list when the new chapter is composed.
+        snapshotFlow { listState.layoutInfo.totalItemsCount }
+            .first { it == state.pages.size }
         if (request.animated) listState.animateScrollToItem(request.itemIndex)
         else listState.scrollToItem(request.itemIndex)
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.any {
+                it.index == request.itemIndex && it.key == targetKey
+            }
+        }.first { it }
         reportWebtoonVisibleItem(request.itemIndex)
     }
     LaunchedEffect(
@@ -1630,4 +1646,3 @@ private fun performMangaClickAction(
 internal fun isDoublePageActive(mode: Int, viewport: IntSize): Boolean =
     mode == MangaDoublePageMode.ALWAYS ||
         mode == MangaDoublePageMode.LANDSCAPE && viewport.width > viewport.height
-
