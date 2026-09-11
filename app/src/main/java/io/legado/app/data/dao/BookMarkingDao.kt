@@ -10,6 +10,18 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface BookMarkingDao {
 
+    @get:Query(
+        """
+        select * from book_marks
+        order by bookName collate localized, bookAuthor collate localized, chapterIndex, createdAt
+    """
+    )
+    val all: List<BookMarking>
+
+    /** 恢复备份用：按主键整批写入（同 id 覆盖，重复导入幂等）。 */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(vararg bookMarkings: BookMarking)
+
     /**
      * 按创建时的源（bookUrl）查：渲染只画当前源能对上正文的标记。
      * 与 bookmarks 不同，book_marks 认「书名+作者」跨源关联，列表见 [flowByBook]。

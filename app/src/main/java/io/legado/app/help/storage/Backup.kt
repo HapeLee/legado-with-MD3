@@ -67,6 +67,7 @@ object Backup {
         arrayOf(
             "bookshelf.json",
             "bookmark.json",
+            "bookMarking.json",
             "bookGroup.json",
             "bookSource.json",
             "rssSources.json",
@@ -149,8 +150,10 @@ object Backup {
             "bookshelf.json",
             backupPath,
         )
+        // 书签与划线/想法笔记（book_marks）视为一体，统一受既有 bookmark 忽略项控制
         if (BackupConfig.dbIsNotIgnored("bookmark", true)) {
             writeListToJson(appDb.bookmarkDao.all, "bookmark.json", backupPath)
+            writeListToJson(appDb.bookMarkingDao.all, "bookMarking.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("bookGroup", true)) {
             writeListToJson(appDb.bookGroupDao.all, "bookGroup.json", backupPath)
