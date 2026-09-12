@@ -869,6 +869,12 @@
     <string name="nine_patch_split_right">右切分线</string>
     <string name="nine_patch_split_top">上切分线</string>
     <string name="nine_patch_split_bottom">下切分线</string>
+    <string name="manual_nine_slice">手动九切片</string>
+    <string name="edit_nine_slice">编辑拉伸区域</string>
+    <string name="nine_slice_drag_hint">拖拽绿色选区选择允许拉伸的原图区域</string>
+    <string name="nine_slice_mode_all">全部</string>
+    <string name="nine_slice_mode_horizontal">水平</string>
+    <string name="nine_slice_mode_vertical">垂直</string>
     <string name="preview_effect">预览效果</string>
     <string name="sample_text">示例文本</string>
     <string name="sure_delete">确定要删除吗？</string>

@@ -10,6 +10,12 @@ import java.io.InputStream
 
 /** Android resource boundary shared by background measurement and Canvas drawing. */
 object ReaderTextBackgroundLoader {
+    data class NineSliceFractions(
+        val left: Float,
+        val right: Float,
+        val top: Float,
+        val bottom: Float,
+    )
     private val bitmaps = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
     }
@@ -51,6 +57,34 @@ object ReaderTextBackgroundLoader {
         ?.let(::cacheKey)
         ?.let(bitmaps::get)
         ?.takeUnless(Bitmap::isRecycled)
+
+    /** Reads the first stretch run from a raw .9.png guide border. */
+    fun nineSliceFractions(source: String): NineSliceFractions? {
+        if (!isRawNinePatch(source)) return null
+        val bitmap = load(source) ?: return null
+        if (bitmap.width < 3 || bitmap.height < 3) return null
+        fun marked(color: Int): Boolean = android.graphics.Color.alpha(color) > 0 &&
+                android.graphics.Color.red(color) < 32 &&
+                android.graphics.Color.green(color) < 32 &&
+                android.graphics.Color.blue(color) < 32
+
+        fun run(length: Int, colorAt: (Int) -> Int): IntRange? {
+            val start = (1 until length - 1).firstOrNull { marked(colorAt(it)) } ?: return null
+            val end = (start until length - 1).takeWhile { marked(colorAt(it)) }.last()
+            return start..end
+        }
+
+        val horizontal = run(bitmap.width) { bitmap.getPixel(it, 0) } ?: return null
+        val vertical = run(bitmap.height) { bitmap.getPixel(0, it) } ?: return null
+        val width = (bitmap.width - 2).toFloat()
+        val height = (bitmap.height - 2).toFloat()
+        return NineSliceFractions(
+            left = (horizontal.first - 1) / width,
+            right = (bitmap.width - 2 - horizontal.last) / width,
+            top = (vertical.first - 1) / height,
+            bottom = (bitmap.height - 2 - vertical.last) / height,
+        )
+    }
 
     internal fun assetCandidates(source: String): List<String> = when {
         source.startsWith("assets://") -> listOf(source.removePrefix("assets://"))

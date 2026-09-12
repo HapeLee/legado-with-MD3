@@ -6,14 +6,14 @@ import android.os.Build
 import android.text.TextPaint
 import androidx.core.net.toUri
 import io.legado.app.feature.reader.core.layout.GlyphClusters
-import io.legado.app.feature.reader.core.layout.ReaderTextShaper
 import io.legado.app.feature.reader.core.layout.ReaderFontBounds
 import io.legado.app.feature.reader.core.layout.ReaderFontLineMetrics
+import io.legado.app.feature.reader.core.layout.ReaderTextShaper
 import io.legado.app.feature.reader.core.layout.clusterGlyphs
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.utils.validFontLeading
-import java.io.File
 import splitties.init.appCtx
+import java.io.File
 
 object ReaderAndroidPaintFactory {
     /** 进程级字体缓存：同一 path/weight/italic/family 只做一次磁盘读取与解析。 */
@@ -30,7 +30,12 @@ object ReaderAndroidPaintFactory {
             isStrikeThruText = style.strikeThrough
             isUnderlineText = style.nativeUnderline
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                setFontVariationSettings("'wght' ${style.fontWeight}")
+                // 对照旧 View `ChapterProvider`：只有显式字重（100..900，映射后落在
+                // bold/light 档位）才写 `wght`；`400` 在本仓库语义是"未设置/常规"
+                // （见 LegacyReaderStyleRangeMapper 的 400 约定），旧版此时完全不动
+                // Paint，强写 `wght 400` 会把字体自带的默认实例（如 500）改细。
+                style.fontWeight.takeIf { it != 400 }
+                    ?.let { setFontVariationSettings("'wght' $it") }
             }
             style.shadow?.let { setShadowLayer(it.radiusPx, it.dxPx, it.dyPx, it.colorArgb) }
         }

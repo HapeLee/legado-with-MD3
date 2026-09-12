@@ -980,12 +980,15 @@ class ReadBookController(
             // upContent 语义是"按 durChapterPos 重新定位"（对照旧 View upContent 重绘）：
             // 朗读跨页走 moveToNextPage → upContent，只有重定位页面才会前进；缓存下标
             // 会让这类发布变成空操作，页面跟随朗读随之失效。
-            val index = ReaderPageNavigator.locate(
-                directReaderPages,
-                chapter.chapter.index,
-                ReadBook.durChapterPos,
-            ).also { directReaderPageIndex = it }
-            publishDirectReaderWindow(index)
+            // locate 在"当前章还没有页"时会折叠成 0（全书首页的合法下标），直接发布会把
+            // 阅读位置跳回书首；此时不发布窗口，交给相邻章预排与后续批次补页
+            // （排版失败时 updateReaderPaginationError 会给出重试入口）。
+            ReaderPageNavigator
+                .locateOrNull(directReaderPages, chapter.chapter.index, ReadBook.durChapterPos)
+                ?.let { index ->
+                    directReaderPageIndex = index
+                    publishDirectReaderWindow(index)
+                }
             scheduleAdjacentReaderPagination(
                 key, chapter, chapters, width, height, contentPadding, resolvedPaginationStyle
             )
@@ -1177,12 +1180,16 @@ class ReadBookController(
         // 重排可能改变元素位置与页 endPosition，页上下文缓存全部失效。
         directReaderPageContexts.clear()
         directReaderChapterPageCounts = directReaderPages.groupingBy { it.id.chapterIndex }.eachCount()
-        directReaderPageIndex = directReaderPages.takeIf { it.isNotEmpty() }?.let {
-            ReaderPageNavigator.locate(
-                it,
-                currentChapter.chapter.index,
-                ReadBook.durChapterPos,
-            )
+            directReaderPageIndex = directReaderPages.takeIf { it.isNotEmpty() }?.let { pages ->
+                // 当前章在批次结果中缺失时 locate 会折叠成 0（全书首页）：保留原下标，
+                // 由下面的 publishDirectReaderWindow 重新收敛到合法范围，避免跳回书首。
+                ReaderPageNavigator.locateOrNull(
+                    pages,
+                    currentChapter.chapter.index,
+                    ReadBook.durChapterPos
+                )
+                    ?: directReaderPageIndex?.coerceIn(pages.indices)
+                    ?: 0
         }
         ReadBook.publishReaderPagination(
             directReaderPages.groupBy { it.id.chapterIndex }.mapNotNull { (chapterIndex, pages) ->
@@ -2236,7 +2243,11 @@ class ReadBookController(
         }
         val oldChapterIndex = directReaderPages[currentIndex].id.chapterIndex
         val newChapterIndex = navigation.window.current?.id?.chapterIndex ?: oldChapterIndex
+        // 页表已经跨进邻章时按页表切章；若书已停在目标章（上次翻页切了章而页表尚未
+        // 同步），不再推进一次，否则会整体跳过一章。
+        val alreadyAtNewChapter = ReadBook.durChapterIndex == newChapterIndex
         val chapterChanged = when {
+            alreadyAtNewChapter -> true
             newChapterIndex > oldChapterIndex -> ReadBook.moveToNextChapter(
                 upContent = false,
                 upContentInPlace = false,
@@ -2260,6 +2271,18 @@ class ReadBookController(
         return window
     }
 
+    /**
+     * 翻页放行业务条件，对照旧 View `ReadView.hasNextChapter()` / `hasPrevChapter()`：
+     * 只看书里业务上还有没有邻章，与邻章是否已完成 Canvas 排版无关。邻章未排版时
+     * [completeComposePageTurn] 会走 [crossComposeChapterBoundary] 预置加载占位页
+     * 或直接启动该章排版；早期实现用 window.next != null 放行，导致这一窗口期
+     * 只能弹出"没有下一页"并且不会触发装载（表现为读完本章无法进入下一章）。
+     */
+    fun hasNextComposeChapter(): Boolean =
+        ReadBook.durChapterIndex < ReadBook.simulatedChapterSize - 1
+
+    fun hasPreviousComposeChapter(): Boolean = ReadBook.durChapterIndex > 0
+
     /** Restores the legacy reader's feedback when a page turn reaches a book boundary. */
     fun showComposePageBoundary(direction: ReaderTurnDirection) {
         activity.toastOnUi(
@@ -2279,8 +2302,13 @@ class ReadBookController(
     private fun crossComposeChapterBoundary(currentIndex: Int, delta: Int): ReaderPageWindow? {
         val fromChapterIndex = directReaderPages[currentIndex].id.chapterIndex
         val targetChapterIndex = fromChapterIndex + delta
-        // 已处于该章占位/装载状态：不重复切章。
-        if (ReadBook.durChapterIndex == targetChapterIndex) return null
+        // 已处于该章占用状态（书已推进到目标章，页表却还停在上一章）：这不代表翻页应当
+        // 被丢弃，而是目标章的排版还没落地。旧 View 里这一类边界由 moveToNextChapter 的
+        // 装载/重绘承接；这里补一次发布请求让该章排版推进，翻页结果由分页批次发布。
+        if (ReadBook.durChapterIndex == targetChapterIndex) {
+            publishReaderPageWindow()
+            return null
+        }
         // 占位页是死端：邻章装载完成前不允许从占位页继续向更远处串章
         // （正常路径下占位页已由 ensureBoundaryPlaceholderPages 预置，不会走到这里）。
         if (directReaderPages[currentIndex].isPlaceholder) return null

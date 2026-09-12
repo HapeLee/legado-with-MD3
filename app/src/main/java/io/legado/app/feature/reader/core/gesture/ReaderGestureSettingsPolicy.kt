@@ -6,6 +6,11 @@ object ReaderGestureSettingsPolicy {
         configuredTouchSlopPx.takeIf { it > 0 }?.toFloat()
             ?: platformTouchSlopPx.coerceAtLeast(0f)
 
-    /** Only discrete scroll-page commands honor this setting; direct dragging still flings. */
-    fun scrollPageAnimationSteps(noAnimation: Boolean): Int = if (noAnimation) 1 else 18
+    /**
+     * 滚动点击翻页是否播放动画。
+     *
+     * 关闭时一步到位（旧 `noAnim` 分支直接 `curPage.scroll(offset)`）；开启时按时长
+     * 插值（旧 `PageDelegate.startScroll`），不再是固定帧数。
+     */
+    fun animatesScrollPage(noAnimation: Boolean): Boolean = !noAnimation
 }

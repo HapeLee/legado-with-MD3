@@ -9,9 +9,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -59,8 +63,8 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SectionTitle
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -69,12 +73,13 @@ import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
-import io.legado.app.utils.toastOnUi
 import java.io.File
+import kotlin.math.roundToInt
 
 @Composable
 fun HighlightRuleEditSheet(
@@ -140,6 +145,7 @@ fun HighlightRuleEditSheet(
     var npTop by remember(show, rule) { mutableFloatStateOf(initial.npTop) }
     var npBottom by remember(show, rule) { mutableFloatStateOf(initial.npBottom) }
     var showNinePatchEditor by remember(show, rule) { mutableStateOf(false) }
+    var manualNineSlice by remember(show, rule) { mutableStateOf(initial.manualNineSlice) }
 
     // Config binding state — empty set = global (applies to all configs)
     var configNames by remember(show, rule) {
@@ -252,6 +258,7 @@ fun HighlightRuleEditSheet(
                             npRight = npRight,
                             npTop = npTop,
                             npBottom = npBottom,
+                            manualNineSlice = manualNineSlice,
                         )
                     )
                 },
@@ -488,9 +495,29 @@ fun HighlightRuleEditSheet(
                         title = stringResource(R.string.highlight_bg_image_scale),
                         value = bgImageScale,
                         valueRange = 0.1f..5f,
+                        steps = 48,
+                        stepSize = 0.1f,
+                        showDecimal = true,
+                        valueFormat = { String.format("%.1f", it) },
                         description = String.format("%.1fx", bgImageScale),
-                        onValueChange = { bgImageScale = (it * 10).toInt() / 10f },
+                        onValueChange = { bgImageScale = (it * 10).roundToInt() / 10f },
                     )
+                    if (bgImageFit == 3) {
+                        TinySwitchSettingItem(
+                            title = stringResource(R.string.manual_nine_slice),
+                            checked = manualNineSlice,
+                            onCheckedChange = {
+                                manualNineSlice = it
+                                if (it) showNinePatchEditor = true
+                            },
+                        )
+                        if (manualNineSlice) {
+                            TinyClickableSettingItem(
+                                title = stringResource(R.string.edit_nine_slice),
+                                onClick = { showNinePatchEditor = true },
+                            )
+                        }
+                    }
                 }
             }
 
@@ -793,6 +820,8 @@ private fun NinePatchEditorDialog(
     var right by remember(show, imagePath) { mutableFloatStateOf(initialRight) }
     var top by remember(show, imagePath) { mutableFloatStateOf(initialTop) }
     var bottom by remember(show, imagePath) { mutableFloatStateOf(initialBottom) }
+    var stretchMode by remember(show) { mutableIntStateOf(0) }
+    var dragHandle by remember { mutableStateOf<NineSliceHandle?>(null) }
 
     val bitmap = remember(imagePath) {
         runCatching {
@@ -821,6 +850,28 @@ private fun NinePatchEditorDialog(
                 .padding(bottom = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
+            AppText(
+                stringResource(R.string.nine_slice_drag_hint),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(
+                    R.string.nine_slice_mode_all,
+                    R.string.nine_slice_mode_horizontal,
+                    R.string.nine_slice_mode_vertical,
+                ).forEachIndexed { index, label ->
+                    FilterChip(
+                        selected = stretchMode == index,
+                        onClick = { stretchMode = index },
+                        label = { AppText(stringResource(label)) },
+                    )
+                }
+            }
             // Image preview with split lines — use single Canvas to avoid coordinate mismatch
             Box(
                 modifier = Modifier
@@ -830,22 +881,63 @@ private fun NinePatchEditorDialog(
                     .background(MaterialTheme.colorScheme.surfaceContainerLow),
             ) {
                 if (bitmap != null) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(bitmap, stretchMode) {
+                                detectDragGestures(
+                                    onDragStart = { point ->
+                                        val rect = nineSlicePreviewRect(
+                                            size.width.toFloat(), size.height.toFloat(),
+                                            bitmap.width.toFloat(), bitmap.height.toFloat(),
+                                        )
+                                        val candidates = buildList {
+                                            if (stretchMode != 2) {
+                                                add(NineSliceHandle.LEFT to kotlin.math.abs(point.x - (rect.left + rect.width * left)))
+                                                add(NineSliceHandle.RIGHT to kotlin.math.abs(point.x - (rect.right - rect.width * right)))
+                                            }
+                                            if (stretchMode != 1) {
+                                                add(NineSliceHandle.TOP to kotlin.math.abs(point.y - (rect.top + rect.height * top)))
+                                                add(NineSliceHandle.BOTTOM to kotlin.math.abs(point.y - (rect.bottom - rect.height * bottom)))
+                                            }
+                                        }
+                                        dragHandle = candidates.minByOrNull { it.second }
+                                            ?.takeIf { it.second <= 32.dp.toPx() }?.first
+                                    },
+                                    onDragEnd = { dragHandle = null },
+                                    onDragCancel = { dragHandle = null },
+                                ) { change, amount ->
+                                    val rect = nineSlicePreviewRect(
+                                        size.width.toFloat(), size.height.toFloat(),
+                                        bitmap.width.toFloat(), bitmap.height.toFloat(),
+                                    )
+                                    when (dragHandle) {
+                                        NineSliceHandle.LEFT -> left =
+                                            (left + amount.x / rect.width).coerceIn(0f, 0.5f)
+
+                                        NineSliceHandle.RIGHT -> right =
+                                            (right - amount.x / rect.width).coerceIn(0f, 0.5f)
+
+                                        NineSliceHandle.TOP -> top =
+                                            (top + amount.y / rect.height).coerceIn(0f, 0.5f)
+
+                                        NineSliceHandle.BOTTOM -> bottom =
+                                            (bottom - amount.y / rect.height).coerceIn(0f, 0.5f)
+
+                                        null -> Unit
+                                    }
+                                    if (dragHandle != null) change.consume()
+                                }
+                            }) {
                         val canvasWidth = size.width
                         val canvasHeight = size.height
                         val bw = bitmap.width.toFloat()
                         val bh = bitmap.height.toFloat()
-                        val imageAspect = bw / bh
-                        val canvasAspect = canvasWidth / canvasHeight
-                        val (imageW, imageH, offsetX, offsetY) = if (imageAspect > canvasAspect) {
-                            val w = canvasWidth
-                            val h = canvasWidth / imageAspect
-                            listOf(w, h, 0f, (canvasHeight - h) / 2f)
-                        } else {
-                            val h = canvasHeight
-                            val w = canvasHeight * imageAspect
-                            listOf(w, h, (canvasWidth - w) / 2f, 0f)
-                        }
+                        val preview = nineSlicePreviewRect(canvasWidth, canvasHeight, bw, bh)
+                        val imageW = preview.width
+                        val imageH = preview.height
+                        val offsetX = preview.left
+                        val offsetY = preview.top
 
                         // Draw bitmap
                         drawImage(
@@ -854,7 +946,7 @@ private fun NinePatchEditorDialog(
                             dstSize = androidx.compose.ui.unit.IntSize(imageW.toInt(), imageH.toInt()),
                         )
 
-                        val lineColor = Color.Red
+                        val lineColor = Color(0xFF16C96A)
                         val lineWidth = 2.dp.toPx()
 
                         // Left line
@@ -869,39 +961,86 @@ private fun NinePatchEditorDialog(
                         // Bottom line
                         val by = offsetY + imageH * (1f - bottom)
                         drawLine(lineColor, Offset(offsetX, by), Offset(offsetX + imageW, by), lineWidth)
+                        drawRect(
+                            lineColor.copy(alpha = 0.18f),
+                            topLeft = Offset(lx, ty),
+                            size = androidx.compose.ui.geometry.Size(rx - lx, by - ty),
+                        )
+                        val radius = 5.dp.toPx()
+                        listOf(
+                            Offset(lx, (ty + by) / 2f), Offset(rx, (ty + by) / 2f),
+                            Offset((lx + rx) / 2f, ty), Offset((lx + rx) / 2f, by),
+                        ).forEach { drawCircle(lineColor, radius, it) }
                     }
                 }
             }
-
-            // Sliders
-            TinySliderSettingItem(
+            NineSliceSlider(
                 title = stringResource(R.string.nine_patch_split_left),
                 value = left,
-                valueRange = 0f..0.5f,
-                description = String.format("%.0f%%", left * 100),
-                onValueChange = { left = (it * 100).toInt() / 100f },
+                onValueChange = { left = it },
             )
-            TinySliderSettingItem(
+            NineSliceSlider(
                 title = stringResource(R.string.nine_patch_split_right),
                 value = right,
-                valueRange = 0f..0.5f,
-                description = String.format("%.0f%%", right * 100),
-                onValueChange = { right = (it * 100).toInt() / 100f },
+                onValueChange = { right = it },
             )
-            TinySliderSettingItem(
+            NineSliceSlider(
                 title = stringResource(R.string.nine_patch_split_top),
                 value = top,
-                valueRange = 0f..0.5f,
-                description = String.format("%.0f%%", top * 100),
-                onValueChange = { top = (it * 100).toInt() / 100f },
+                onValueChange = { top = it },
             )
-            TinySliderSettingItem(
+            NineSliceSlider(
                 title = stringResource(R.string.nine_patch_split_bottom),
                 value = bottom,
-                valueRange = 0f..0.5f,
-                description = String.format("%.0f%%", bottom * 100),
-                onValueChange = { bottom = (it * 100).toInt() / 100f },
+                onValueChange = { bottom = it },
             )
         }
+    }
+}
+
+@Composable
+private fun NineSliceSlider(
+    title: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+) {
+    TinySliderSettingItem(
+        title = title,
+        value = value,
+        valueRange = 0f..0.5f,
+        steps = 49,
+        stepSize = 0.01f,
+        showDecimal = true,
+        valueFormat = { String.format("%.2f", it) },
+        description = String.format("%.0f%%", value * 100f),
+        onValueChange = { onValueChange((it * 100).roundToInt() / 100f) },
+    )
+}
+
+private enum class NineSliceHandle { LEFT, RIGHT, TOP, BOTTOM }
+
+private data class NineSlicePreviewRect(
+    val left: Float,
+    val top: Float,
+    val width: Float,
+    val height: Float,
+) {
+    val right get() = left + width
+    val bottom get() = top + height
+}
+
+private fun nineSlicePreviewRect(
+    canvasWidth: Float,
+    canvasHeight: Float,
+    bitmapWidth: Float,
+    bitmapHeight: Float,
+): NineSlicePreviewRect {
+    val imageAspect = bitmapWidth / bitmapHeight
+    return if (imageAspect > canvasWidth / canvasHeight) {
+        val height = canvasWidth / imageAspect
+        NineSlicePreviewRect(0f, (canvasHeight - height) / 2f, canvasWidth, height)
+    } else {
+        val width = canvasHeight * imageAspect
+        NineSlicePreviewRect((canvasWidth - width) / 2f, 0f, width, canvasHeight)
     }
 }

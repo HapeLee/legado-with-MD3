@@ -92,6 +92,22 @@ class ReaderTextBackgroundRunTest {
         assertEquals(8f, resolved.contentInsetBottomPx, 0f)
     }
 
+    @Test
+    fun `raw nine patch border is excluded when resolving fixed margins`() {
+        val resolved = image.copy(
+            source = "background.9.png",
+            ninePatchLeft = 0.2f,
+            ninePatchRight = 0.3f,
+            ninePatchTop = 0.1f,
+            ninePatchBottom = 0.2f,
+        ).withBitmapSize(52, 42)
+
+        assertEquals(10f, resolved.contentInsetLeftPx, 0f)
+        assertEquals(15f, resolved.contentInsetRightPx, 0.001f)
+        assertEquals(4f, resolved.contentInsetTopPx, 0f)
+        assertEquals(8f, resolved.contentInsetBottomPx, 0f)
+    }
+
     private fun text(
         left: Float,
         top: Float,

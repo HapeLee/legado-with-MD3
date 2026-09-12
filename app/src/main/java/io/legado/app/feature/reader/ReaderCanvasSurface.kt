@@ -109,7 +109,10 @@ import io.legado.app.feature.reader.core.model.ReaderTipAlignment
 import io.legado.app.feature.reader.core.model.ReaderTipRow
 import io.legado.app.feature.reader.core.model.ReaderTipRowLayout
 import io.legado.app.feature.reader.core.model.ReaderTipVisual
+import io.legado.app.feature.reader.core.model.contentClipPadPx
+import io.legado.app.feature.reader.core.model.emphasisUnderlineRunsFor
 import io.legado.app.feature.reader.core.model.textBackgroundRuns
+import io.legado.app.feature.reader.core.navigation.ReaderPageNavigator
 import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPosition
 import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPositionPolicy
 import io.legado.app.feature.reader.core.selection.ReaderPageChangeOrigin
@@ -185,6 +188,13 @@ fun ReaderCanvasSurface(
     onPreviousPage: () -> ReaderPageWindow?,
     onNextPage: () -> ReaderPageWindow?,
     onPageBoundaryReached: (ReaderTurnDirection) -> Unit,
+    /**
+     * 书中业务上是否存在邻章（对照旧 View `ReadView.hasNextChapter()` / `hasPrevChapter()`）。
+     * 邻章排版可能滞后于阅读进度，此时窗口里还没有邻页，但翻页必须照常放行，
+     * 由宿主决定"预置加载占位页"还是"直接启动该章排版"。
+     */
+    hasNextChapter: () -> Boolean,
+    hasPreviousChapter: () -> Boolean,
     onToggleMenu: () -> Unit,
     onToggleBookmark: () -> Unit,
     swipeToBookmarkEnabled: Boolean,
@@ -247,6 +257,23 @@ fun ReaderCanvasSurface(
     val latestPreviousPage by rememberUpdatedState(onPreviousPage)
     val latestNextPage by rememberUpdatedState(onNextPage)
     val latestPageBoundaryReached by rememberUpdatedState(onPageBoundaryReached)
+    val latestHasNextChapter by rememberUpdatedState(hasNextChapter)
+    val latestHasPreviousChapter by rememberUpdatedState(hasPreviousChapter)
+
+    /**
+     * 翻页放行：窗口里有邻页，或书中业务上存在邻章。手势协程长驻，必须现读最新值，
+     * 否则读到的是协程启动时的窗口（对照旧 View 每次事件现读 pageSource 的语义）。
+     */
+    fun canTurn(direction: ReaderTurnDirection, window: ReaderPageWindow = latestPages): Boolean =
+        when (direction) {
+            ReaderTurnDirection.NEXT -> ReaderPageNavigator.canTurnNext(
+                window,
+                latestHasNextChapter()
+            )
+
+            ReaderTurnDirection.PREVIOUS ->
+                ReaderPageNavigator.canTurnPrevious(window, latestHasPreviousChapter())
+        }
     val latestAutoPageStop by rememberUpdatedState(onAutoPageStop)
     val latestAutoPagePaused by rememberUpdatedState(autoPagePaused)
     val latestAutoPageActive by rememberUpdatedState(autoPageActive)
@@ -313,6 +340,10 @@ fun ReaderCanvasSurface(
     var autoPageRemainingMillis by remember(current.id, autoReadSpeedSeconds) {
         mutableLongStateOf(ReaderAutoPagePolicy.pageDurationMillis(autoReadSpeedSeconds))
     }
+    // 连续滚动动画运行标志（fling / 点击滚动步距）。旧 View 的
+    // `ScrollPageDelegate.onAnimStart/Stop` 会 `autoPager.pause()/resume()`：两者同时写
+    // scrollOffset 会叠加成双倍速度，动画期间必须把自动滚屏挂起。
+    var scrollMotionActive by remember { mutableStateOf(false) }
     var textSelection by remember { mutableStateOf<ReaderSelection?>(null) }
     // API 28+ 的平台放大镜直接采样当前 Compose View；未指定 sourceCenter 时会立即隐藏。
     // 采样点始终是正在移动的文字端点，而不是被把手遮挡的手指位置。
@@ -490,7 +521,10 @@ fun ReaderCanvasSurface(
     }
     fun tapPageTurn(direction: ReaderTurnDirection) {
         val window = latestPages
-        if ((if (direction == ReaderTurnDirection.PREVIOUS) window.previous else window.next) == null) {
+        // 放行以"书中是否还有邻章"为准（对照旧 View TextPageFactory.hasNext/hasPrev）：
+        // 邻章排版滞后于阅读进度时窗口里还没有邻页，但仍必须把翻页交给宿主，
+        // 由宿主预置加载占位页或启动该章排版；否则停在末页只弹"没有下一页"。
+        if (!canTurn(direction, window)) {
             latestPageBoundaryReached(direction)
             return
         }
@@ -522,24 +556,47 @@ fun ReaderCanvasSurface(
         }
     }
     fun applyScrollResult(result: ReaderScrollResult, window: ReaderPageWindow) {
-        scrollOffset = result.offsetPx
+        val crossing = result.crossing
+        if (crossing == null) {
+            scrollOffset = result.offsetPx
+            return
+        }
         // 跨页换窗同步完成：宿主回调当帧返回新窗口，写入 pending 供本帧之后的
         // 绘制与手势直接使用（宿主 StateFlow 回声随后到达，仅确认不等待）。
         // 对照旧 View 版 ContentTextView.scroll 的同步折算语义。
-        when (result.crossing) {
-            ReaderScrollCrossing.PREVIOUS -> latestPreviousPage()?.let { newWindow ->
-                scrollOwnCrossing = true
-                scrollPendingBase = window
-                scrollPendingWindow = newWindow
-            }
-            ReaderScrollCrossing.NEXT -> latestNextPage()?.let { newWindow ->
-                scrollOwnCrossing = true
-                scrollPendingBase = window
-                scrollPendingWindow = newWindow
-            }
-            null -> Unit
+        val newWindow = when (crossing) {
+            ReaderScrollCrossing.PREVIOUS -> latestPreviousPage()
+            ReaderScrollCrossing.NEXT -> latestNextPage()
         }
+        if (newWindow == null) {
+            // 邻章业务上存在但排版未就绪（旧 View 的"章节未加载"态）：这次越界偏移是
+            // 相对邻页坐标系的，直接写入会把当前页画到页外。停在当前页边界（等同于
+            // ReaderScrollPolicy 的 bottom 语义），装载完成后 current.id 变化会归零偏移。
+            val current = window.current
+            scrollOffset = if (crossing == ReaderScrollCrossing.NEXT && current != null) {
+                minOf(0f, current.scrollViewportExtentPx() - current.scrollExtentPx)
+            } else {
+                0f
+            }
+            return
+        }
+        scrollOffset = result.offsetPx
+        scrollOwnCrossing = true
+        scrollPendingBase = window
+        scrollPendingWindow = newWindow
     }
+
+    /**
+     * 滚动路径触边界一律静默。
+     *
+     * 旧 View 的 `ScrollPageDelegate` 触边界时只把偏移钳回边界并重绘，没有任何提示；
+     * "没有下一页"的 Toast 属于分页模式（[tapPageTurn] / `PageDelegate`）的行为。滚动
+     * 模式保留它会变成连续滑动时的反复弹窗，因此这里显式吞掉，只留出可读的落点。
+     */
+    fun reportScrollBoundary(@Suppress("UNUSED_PARAMETER") direction: ReaderTurnDirection) {
+        if (transitionMode != ReaderTransitionMode.SCROLL) latestPageBoundaryReached(direction)
+    }
+
     fun tapScrollPage(direction: ReaderTurnDirection) {
         val window = currentPageWindow()
         val page = window.current ?: return
@@ -553,8 +610,7 @@ fun ReaderCanvasSurface(
             nextPlus = window.nextPlus,
         )
         pageMotionJob?.cancel()
-        val steps = ReaderGestureSettingsPolicy.scrollPageAnimationSteps(latestNoAnimationScrollPage)
-        if (steps == 1) {
+        if (!ReaderGestureSettingsPolicy.animatesScrollPage(latestNoAnimationScrollPage)) {
             val window = currentPageWindow()
             val currentPage = window.current ?: return
             val result = ReaderScrollPolicy.apply(
@@ -563,33 +619,49 @@ fun ReaderCanvasSurface(
                 window.previous?.scrollExtentPx ?: 0f,
                 currentPage.scrollExtentPx,
                 currentPage.scrollViewportExtentPx(),
-                window.previous != null,
-                window.next != null,
+                ReaderPageNavigator.canTurnPrevious(window, latestHasPreviousChapter()),
+                ReaderPageNavigator.canTurnNext(window, latestHasNextChapter()),
             )
             applyScrollResult(result, window)
-            if (result.hitBoundary) latestPageBoundaryReached(direction)
+            if (result.hitBoundary) reportScrollBoundary(direction)
             return
         }
         pageMotionJob = animationScope.launch {
-            repeat(steps) {
-                val window = currentPageWindow()
-                val currentPage = window.current ?: return@launch
-                val result = ReaderScrollPolicy.apply(
-                    scrollOffset,
-                    distance / steps,
-                    window.previous?.scrollExtentPx ?: 0f,
-                    currentPage.scrollExtentPx,
-                    currentPage.scrollViewportExtentPx(),
-                    window.previous != null,
-                    window.next != null,
+            scrollMotionActive = true
+            try {
+                // 时长随步距缩放（旧 PageDelegate.startScroll：animationSpeed * |dy| / viewHeight），
+                // 不再固定 18 帧——固定帧数会让"保留一行"的短步距走成整屏的时长。
+                val durationMillis = ReaderScrollPolicy.stepDurationMillis(
+                    distance,
+                    page.scrollViewportExtentPx(),
                 )
-                applyScrollResult(result, window)
-                if (result.hitBoundary) {
-                    latestPageBoundaryReached(direction)
-                    return@launch
+                var lastValue = 0f
+                Animatable(0f).animateTo(
+                    distance,
+                    tween(durationMillis = durationMillis, easing = LinearEasing),
+                ) {
+                    val delta = value - lastValue
+                    lastValue = value
+                    val window = currentPageWindow()
+                    val currentPage = window.current ?: return@animateTo
+                    val result = ReaderScrollPolicy.apply(
+                        scrollOffset,
+                        delta,
+                        window.previous?.scrollExtentPx ?: 0f,
+                        currentPage.scrollExtentPx,
+                        currentPage.scrollViewportExtentPx(),
+                        ReaderPageNavigator.canTurnPrevious(window, latestHasPreviousChapter()),
+                        ReaderPageNavigator.canTurnNext(window, latestHasNextChapter()),
+                    )
+                    applyScrollResult(result, window)
+                    // 触边界即停：与 fling 同一条中断路径（animateTo 的块里不能调用
+                    // 挂起的 stop()，用异常跳出后在外层收尾）。
+                    if (result.hitBoundary) throw ReaderScrollBoundaryReached()
                 }
-                // 按帧驱动步进：跟随合成器节拍，掉帧时步长自动摊平，不与显示帧脱节。
-                withFrameNanos { }
+            } catch (_: ReaderScrollBoundaryReached) {
+                reportScrollBoundary(direction)
+            } finally {
+                scrollMotionActive = false
             }
         }
     }
@@ -692,6 +764,7 @@ fun ReaderCanvasSurface(
         autoReadSpeedSeconds,
         transitionMode,
         isEInkMode,
+        scrollMotionActive,
         current.id,
         textSelection,
     ) {
@@ -704,6 +777,9 @@ fun ReaderCanvasSurface(
             return@LaunchedEffect
         }
         if (autoPagePaused) return@LaunchedEffect
+        // 滚动动画期间挂起：对照旧 View 的 ReadView.onScrollAnimStart/Stop →
+        // autoPager.pause()/resume()，避免 fling / 点击步距与自动滚屏叠加。
+        if (scrollMotionActive) return@LaunchedEffect
         if (ReaderAutoPagePolicy.visualMode(isEInkMode) == ReaderAutoPageVisualMode.DISCRETE) {
             autoRevealPx = 0f
             val plannedMillis = autoPageRemainingMillis
@@ -711,7 +787,7 @@ fun ReaderCanvasSurface(
             try {
                 delay(plannedMillis)
                 autoPageRemainingMillis = ReaderAutoPagePolicy.pageDurationMillis(autoReadSpeedSeconds)
-                if (latestPages.next == null) latestAutoPageStop() else latestNextPage()
+                if (!canTurn(ReaderTurnDirection.NEXT)) latestAutoPageStop() else latestNextPage()
             } finally {
                 if (ReaderAutoPagePolicy.shouldPreserveRemainingTime(
                         menuPaused = latestAutoPagePaused,
@@ -737,16 +813,27 @@ fun ReaderCanvasSurface(
                 val viewport = page.scrollViewportExtentPx()
                 val delta = viewport /
                     ReaderAutoPagePolicy.pageDurationMillis(autoReadSpeedSeconds).toFloat() * elapsedMs
-                val result = ReaderScrollPolicy.apply(scrollOffset, -delta, window.previous?.scrollExtentPx ?: 0f, page.scrollExtentPx, page.scrollViewportExtentPx(), window.previous != null, window.next != null)
+                val result = ReaderScrollPolicy.apply(
+                    scrollOffset,
+                    -delta,
+                    window.previous?.scrollExtentPx ?: 0f,
+                    page.scrollExtentPx,
+                    page.scrollViewportExtentPx(),
+                    ReaderPageNavigator.canTurnPrevious(window, latestHasPreviousChapter()),
+                    ReaderPageNavigator.canTurnNext(window, latestHasNextChapter())
+                )
                 applyScrollResult(result, window)
-                if (result.hitBoundary) { latestAutoPageStop(); break }
+                // 滚动模式到书末不自动关闭自动翻页：旧 View 的 AutoPager.computeOffset 在
+                // isScroll 分支只把累计偏移交给 curPage.scroll() 钳制，"失败即 stop"这条
+                // 路径只存在于分页模式的 progress >= height 分支。这里同样保持开关开启态，
+                // 由用户停止，避免翻到书末自动阅读被悄悄关掉。
             } else {
                 val viewport = current.heightPx.toFloat().coerceAtLeast(1f)
                 val delta = viewport /
                     ReaderAutoPagePolicy.pageDurationMillis(autoReadSpeedSeconds).toFloat() * elapsedMs
                 autoRevealPx += delta
                 if (autoRevealPx >= viewport) {
-                    if (latestPages.next == null) {
+                    if (!canTurn(ReaderTurnDirection.NEXT)) {
                         latestAutoPageStop()
                         break
                     }
@@ -1012,19 +1099,27 @@ fun ReaderCanvasSurface(
                                         } else {
                                             null
                                         }
-                                if (hit != null && hit.chapterIndex == selection.chapterIndex) {
+                                // 滚动模式堆叠的下邻页属于下一章，允许选区跨过去（旧 View 的
+                                // 选区分词同样覆盖 relativePage 0..2）；分页模式保持单章。
+                                val canCrossChapter =
+                                    transitionMode == ReaderTransitionMode.SCROLL
+                                if (hit != null && (canCrossChapter ||
+                                            hit.chapterIndex == selection.chapterIndex)
+                                ) {
                                     val updatedSelection = when {
                                         grabbedEndpoint != null -> selection.moveEndpoint(
                                             grabbedEndpoint,
                                             hit.anchor,
                                             hit.anchorIsTitle,
+                                            chapter = hit.chapterIndex,
                                         )
 
                                         else -> ReaderSelectionPolicy.extend(
                                             selection,
                                             page,
                                             cursorViewportX,
-                                            pageY
+                                            pageY,
+                                            allowChapterCrossing = canCrossChapter,
                                         )
                                     }
                                     if (updatedSelection != selection) {
@@ -1108,7 +1203,14 @@ fun ReaderCanvasSurface(
                         if (horizontalTurn && transitionMode != ReaderTransitionMode.SCROLL) {
                             transition = horizontalDrag?.transition(
                                 total.x, size.width.toFloat(),
-                                latestPages.previous != null, latestPages.next != null,
+                                ReaderPageNavigator.canTurnPrevious(
+                                    latestPages,
+                                    latestHasPreviousChapter(),
+                                ),
+                                ReaderPageNavigator.canTurnNext(
+                                    latestPages,
+                                    latestHasNextChapter(),
+                                ),
                             ) ?: ReaderPageTransition(pageExtentPx = size.width.toFloat())
                             transition.direction?.takeIf { transitionMode == ReaderTransitionMode.SIMULATION }
                                 ?.let {
@@ -1139,8 +1241,11 @@ fun ReaderCanvasSurface(
                                     window.previous?.scrollExtentPx ?: 0f,
                                     page.scrollExtentPx,
                                     page.scrollViewportExtentPx(),
-                                    window.previous != null,
-                                    window.next != null
+                                    ReaderPageNavigator.canTurnPrevious(
+                                        window,
+                                        latestHasPreviousChapter(),
+                                    ),
+                                    ReaderPageNavigator.canTurnNext(window, latestHasNextChapter())
                                 )
                                 applyScrollResult(result, window)
                                 if (result.hitBoundary) {
@@ -1208,14 +1313,14 @@ fun ReaderCanvasSurface(
                         ) { bookmarkOffset = value }
                     }
                 } else if (scrollDrag) {
-                    val boundary = scrollHitBoundary
-                    if (boundary != null) {
-                        latestPageBoundaryReached(boundary)
-                    } else {
+                    if (scrollHitBoundary == null) {
+                        // 触边界已在拖拽期间把偏移钳住，松手不再启动 fling（也不提示，
+                        // 见 [reportScrollBoundary]）。
                         val velocity = if (released) velocityTracker.calculateVelocity().y else 0f
                         pageMotionJob = animationScope.launch {
-                            var lastValue = 0f
+                            scrollMotionActive = true
                             try {
+                                var lastValue = 0f
                                 Animatable(0f).animateDecay(velocity, scrollDecay) {
                                     val delta = value - lastValue
                                     lastValue = value
@@ -1227,20 +1332,23 @@ fun ReaderCanvasSurface(
                                         window.previous?.scrollExtentPx ?: 0f,
                                         page.scrollExtentPx,
                                         page.scrollViewportExtentPx(),
-                                        window.previous != null,
-                                        window.next != null,
+                                        ReaderPageNavigator.canTurnPrevious(
+                                            window,
+                                            latestHasPreviousChapter(),
+                                        ),
+                                        ReaderPageNavigator.canTurnNext(
+                                            window,
+                                            latestHasNextChapter(),
+                                        ),
                                     )
                                     applyScrollResult(result, window)
                                     if (result.hitBoundary) throw ReaderScrollBoundaryReached()
                                 }
                             } catch (_: ReaderScrollBoundaryReached) {
                                 // Reaching the first/last content boundary ends the fling immediately.
-                                val direction = if (velocity > 0f) {
-                                    ReaderTurnDirection.PREVIOUS
-                                } else {
-                                    ReaderTurnDirection.NEXT
-                                }
-                                latestPageBoundaryReached(direction)
+                                // 旧 View 的 ScrollPageDelegate 同样只是停住，不弹提示。
+                            } finally {
+                                scrollMotionActive = false
                             }
                         }
                     }
@@ -1284,10 +1392,15 @@ fun ReaderCanvasSurface(
             )
         }
         if (transitionMode == ReaderTransitionMode.SCROLL) {
+            val contentClipPad = current.contentClipPadPx
             Box(Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    clipRect(top = current.contentTopPx, bottom = current.contentBottomPx) {
+                    // 外扩阴影/斜体溢出，对照旧 View 的 ChapterProvider.visibleRect。
+                    clipRect(
+                        top = current.contentTopPx - contentClipPad,
+                        bottom = current.contentBottomPx + contentClipPad,
+                    ) {
                         this@drawWithContent.drawContent()
                     }
                 }) {
@@ -1607,7 +1720,10 @@ private fun ScrollPageStack(
             val data = cache.ensure(page)
             val selectedBounds = if (activeSelection != null || page.searchStart != null) {
                 data.textElements
-                    .filter { page.isSearchResult(it) || activeSelection?.contains(it) == true }
+                    .filter {
+                        page.isSearchResult(it) ||
+                                activeSelection?.contains(it, page.id.chapterIndex) == true
+                    }
                     .map(ReaderElement.Text::bounds)
                     .mergeSelectionBounds()
             } else emptyList()
@@ -1986,7 +2102,10 @@ private fun ReaderPageCanvas(
         page.searchEndInclusive,
     ) {
         textElements
-            .filter { page.isSearchResult(it) || activeSelection?.contains(it) == true }
+            .filter {
+                page.isSearchResult(it) ||
+                        activeSelection?.contains(it, page.id.chapterIndex) == true
+            }
             .map(ReaderElement.Text::bounds)
             .mergeSelectionBounds()
     }
@@ -2131,18 +2250,8 @@ private fun ReaderPage.resolvedColorArgb(text: ReaderElement.Text, accentColorAr
 
 private fun ReaderPage.dynamicEmphasisUnderlineRuns(): List<ReaderEmphasisUnderlineRun> {
     val style = emphasisUnderlineStyle ?: return emptyList()
-    val lines = LinkedHashMap<Pair<Float, Float>, MutableList<ReaderElement.Text>>()
-    elements.filterIsInstance<ReaderElement.Text>()
-        .filter { isSearchResult(it) || isReadAloud(it) }
-        .forEach { text -> lines.getOrPut(text.bounds.top to text.bounds.bottom) { mutableListOf() } += text }
-    return lines.values.map { line ->
-        ReaderEmphasisUnderlineRun(
-            startPx = line.minOf { it.bounds.left },
-            endPx = line.maxOf { it.bounds.right },
-            yPx = line.maxOf { it.bounds.bottom } - style.bottomOffsetPx,
-            style = style,
-        )
-    }
+    // 命中位置只决定哪一行划线，线仍是整行（对照旧 View TextLine.drawTextLine）。
+    return emphasisUnderlineRunsFor(style) { isSearchResult(it) || isReadAloud(it) }
 }
 
 @Composable

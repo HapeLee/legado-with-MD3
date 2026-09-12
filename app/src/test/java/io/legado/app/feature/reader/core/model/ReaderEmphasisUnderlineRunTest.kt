@@ -33,6 +33,46 @@ class ReaderEmphasisUnderlineRunTest {
         assertEquals(listOf(19f, 39f), page.emphasisUnderlineRuns().map { it.yPx })
     }
 
+    @Test
+    fun `hit underlines the whole line even when only one glyph matches`() {
+        val page = page(
+            text(10f, 20f),
+            text(20f, 30f),
+            text(30f, 45f),
+        )
+
+        assertEquals(
+            listOf(ReaderEmphasisUnderlineRun(10f, 45f, 39f, emphasis)),
+            page.emphasisUnderlineRunsFor(emphasis) { it.chapterPosition == 20 },
+        )
+    }
+
+    @Test
+    fun `lines without a hit produce no rule`() {
+        val page = page(
+            text(0f, 10f, top = 0f, bottom = 20f),
+            text(5f, 15f, top = 20f, bottom = 40f),
+        )
+
+        assertEquals(
+            emptyList<ReaderEmphasisUnderlineRun>(),
+            page.emphasisUnderlineRunsFor(emphasis) { false },
+        )
+    }
+
+    @Test
+    fun `hit on the title line does not underline body lines`() {
+        val page = page(
+            text(0f, 30f, top = 0f, bottom = 20f),
+            text(0f, 40f, top = 20f, bottom = 40f),
+        )
+
+        assertEquals(
+            listOf(ReaderEmphasisUnderlineRun(0f, 30f, 19f, emphasis)),
+            page.emphasisUnderlineRunsFor(emphasis) { it.bounds.top == 0f },
+        )
+    }
+
     private fun text(
         left: Float,
         right: Float,

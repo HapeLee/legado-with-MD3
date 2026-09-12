@@ -37,21 +37,44 @@ class ChineseLineBreaker(
             var carriedWidth = 0f
             var carriedCharacters = 0
             var carriedClusters = 0
+            var hungLine = false
             val currentWidthLimit = if (widths.isEmpty()) firstWidthLimit else widthLimit
             if (lineWidth > currentWidthLimit) {
+                // 旧 ZhLayout 把行尾标点的处置分成两类：可压缩的窄标点回退到更早的合法边界
+                // （BREAK_MORE_CHAR），全角标点则直接悬挂在本行右边界之外（CPS_1/2/3：
+                // `offset = 0f`，行宽允许超过 width）。下面三个判定与旧版逐条对应。
+                fun compressibleAt(at: Int): Boolean =
+                    at in widthsPx.indices && widthsPx[at] < ideographWidthPx
+
+                val previousClosing = index > 0 && clusters[index - 1] in closing
+                val previousOpening = index > 0 && clusters[index - 1] in opening
+                val secondPreviousOpening = index > 1 && clusters[index - 2] in opening
+                val nextClosing = index < clusters.lastIndex && clusters[index + 1] in closing
+                val compressibleAround = when {
+                    previousOpening && secondPreviousOpening ->
+                        compressibleAt(index - 1) || compressibleAt(index - 2)
+
+                    cluster in closing && previousClosing ->
+                        compressibleAt(index) || compressibleAt(index - 1)
+
+                    cluster in closing && secondPreviousOpening ->
+                        compressibleAt(index) || compressibleAt(index - 2)
+
+                    else -> false
+                }
+                // 悬挂条件同时排除了「下一字仍是行尾标点」——旧版此时会 reCheck 成回退。
+                val hangs = index > 0 && !compressibleAround && !nextClosing &&
+                        ((previousOpening && secondPreviousOpening) ||
+                                (cluster in closing && (previousClosing || secondPreviousOpening)))
                 var mode = when {
-                    index > 0 && clusters[index - 1] in opening -> Mode.PULL_PREVIOUS
-                    cluster in closing -> Mode.PULL_PREVIOUS
+                    hangs -> Mode.HANG
+                    index > 0 && (previousOpening || cluster in closing) -> Mode.PULL_PREVIOUS
                     else -> Mode.NORMAL
                 }
                 var rewindClusters = 0
                 var rewindCharacters = 0
-                // 本引擎不做行尾标点压缩（旧 ZhLayout 的 CPS_*），凡 PULL_PREVIOUS 会把
-                // 收尾标点留到下一行行首的，都必须回退到更早的非标点边界
-                val needsRecheck = mode == Mode.PULL_PREVIOUS && (
-                    (index > 0 && clusters[index - 1] in closing) ||
-                        (index < clusters.lastIndex && clusters[index + 1] in closing)
-                    )
+                // 可压缩标点会把收尾标点留到下一行行首，必须回退到更早的非标点边界
+                val needsRecheck = mode == Mode.PULL_PREVIOUS && (previousClosing || nextClosing)
                 if (needsRecheck && index > 2) {
                     val lineStart = if (widths.isEmpty()) indentCharacters else clusterStarts.last()
                     mode = Mode.NORMAL
@@ -82,6 +105,15 @@ class ChineseLineBreaker(
                         carriedCharacters = clusters[index - 1].length + cluster.length
                         carriedClusters = 2
                     }
+                    Mode.HANG -> {
+                        // 标点留在本行（行宽超出右边界，旧版正是靠这个避免标点落到下一行行首），
+                        // 下一行从它之后重新开始，本行不向下一行携带任何宽度。
+                        carriedWidth = 0f
+                        addStart(textLength + cluster.length, index + 1)
+                        carriedCharacters = 0
+                        carriedClusters = 0
+                        hungLine = true
+                    }
                     Mode.REWIND -> {
                         carriedWidth = currentWidth + previousWidth
                         addStart(textLength - rewindCharacters, index - rewindClusters)
@@ -94,9 +126,13 @@ class ChineseLineBreaker(
             }
             if (index == clusters.lastIndex) {
                 if (starts.size == widths.size + 1) {
-                    starts += textLength + cluster.length
-                    clusterStarts += index + 1
-                    widths += lineWidth
+                    // 悬挂已把标点留在本行、并让下一行从它之后开始，旧 ZhLayout 在
+                    // breakCharCnt == 0 时同样不再补一行。未发生断行的普通收尾仍要补行。
+                    if (!hungLine) {
+                        starts += textLength + cluster.length
+                        clusterStarts += index + 1
+                        widths += lineWidth
+                    }
                 } else if (carriedClusters > 0) {
                     starts += starts.last() + carriedCharacters
                     clusterStarts += clusterStarts.last() + carriedClusters
@@ -113,7 +149,7 @@ class ChineseLineBreaker(
         clusterStarts += cluster
     }
 
-    private enum class Mode { NORMAL, PULL_PREVIOUS, REWIND }
+    private enum class Mode { NORMAL, PULL_PREVIOUS, REWIND, HANG }
 
     companion object {
         internal fun isForbiddenBreak(previous: String, next: String): Boolean =

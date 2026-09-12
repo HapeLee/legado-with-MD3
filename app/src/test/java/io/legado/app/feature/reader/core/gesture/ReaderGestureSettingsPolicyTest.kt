@@ -17,8 +17,8 @@ class ReaderGestureSettingsPolicyTest {
     }
 
     @Test
-    fun `no animation only collapses a commanded scroll page turn to one step`() {
-        assertEquals(1, ReaderGestureSettingsPolicy.scrollPageAnimationSteps(true))
-        assertEquals(18, ReaderGestureSettingsPolicy.scrollPageAnimationSteps(false))
+    fun `no animation collapses a commanded scroll page turn to a single jump`() {
+        assertEquals(false, ReaderGestureSettingsPolicy.animatesScrollPage(true))
+        assertEquals(true, ReaderGestureSettingsPolicy.animatesScrollPage(false))
     }
 }

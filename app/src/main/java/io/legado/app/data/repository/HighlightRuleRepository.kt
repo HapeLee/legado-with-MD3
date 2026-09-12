@@ -181,6 +181,7 @@ class HighlightRuleRepository(
             npRight = runCatching { rule.npRight }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
             npTop = runCatching { rule.npTop }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
             npBottom = runCatching { rule.npBottom }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
+            manualNineSlice = runCatching { rule.manualNineSlice }.getOrDefault(true),
         )
     }
 

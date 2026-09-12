@@ -1703,6 +1703,12 @@
     <string name="nine_patch_split_right">右切分線</string>
     <string name="nine_patch_split_top">上切分線</string>
     <string name="nine_patch_split_bottom">下切分線</string>
+    <string name="manual_nine_slice">手動九宮格切圖</string>
+    <string name="edit_nine_slice">編輯拉伸區域</string>
+    <string name="nine_slice_drag_hint">拖曳綠色選區，選擇允許拉伸的原圖區域</string>
+    <string name="nine_slice_mode_all">全部</string>
+    <string name="nine_slice_mode_horizontal">水平</string>
+    <string name="nine_slice_mode_vertical">垂直</string>
     <string name="bg_fit_stretch">拉伸</string>
     <string name="bg_fit_tile">平鋪</string>
     <string name="bg_image_fit">背景適配</string>

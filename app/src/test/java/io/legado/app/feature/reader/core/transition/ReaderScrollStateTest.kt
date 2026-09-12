@@ -171,6 +171,17 @@ class ReaderScrollStateTest {
         inlineImagesPreserveScrollLine = inlineImages,
     )
 
+    @Test
+    fun stepDurationScalesWithDistanceLikeTheLegacyScroller() {
+        // 旧 PageDelegate.startScroll：animationSpeed(300) * |dy| / viewHeight。
+        assertEquals(300, ReaderScrollPolicy.stepDurationMillis(-800f, 800f))
+        assertEquals(150, ReaderScrollPolicy.stepDurationMillis(-400f, 800f))
+        assertEquals(300, ReaderScrollPolicy.stepDurationMillis(800f, 800f))
+        // 零步距与零视口都不能退化成 0 时长（tween 需要正值）。
+        assertEquals(1, ReaderScrollPolicy.stepDurationMillis(0f, 800f))
+        assertEquals(300, ReaderScrollPolicy.stepDurationMillis(-800f, 0f))
+    }
+
     private fun text(top: Float, bottom: Float, position: Int) = ReaderElement.Text(
         bounds = ReaderRect(0f, top + 10f, 10f, bottom + 10f),
         baselinePx = bottom + 5f,

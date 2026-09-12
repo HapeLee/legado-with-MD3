@@ -1,5 +1,6 @@
 package io.legado.app.data.entities
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlin.uuid.Uuid
@@ -33,6 +34,8 @@ data class HighlightRule(
     var npRight: Float = 0.1f,
     var npTop: Float = 0.1f,
     var npBottom: Float = 0.1f,
+    @ColumnInfo(defaultValue = "1")
+    var manualNineSlice: Boolean = true,
 ) {
 
     fun styleSummary(): String {

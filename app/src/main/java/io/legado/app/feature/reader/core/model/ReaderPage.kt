@@ -38,7 +38,11 @@ data class ReaderTextBackgroundImage(
     val contentInsetRightPx: Float = 0f,
     val contentInsetTopPx: Float = 0f,
     val contentInsetBottomPx: Float = 0f,
-)
+) {
+    val hasNinePatchBorder: Boolean
+        get() = source.substringBefore('?').substringBefore('#')
+            .endsWith(".9.png", ignoreCase = true)
+}
 
 fun ReaderTextBackgroundImage.withBitmapWidth(widthPx: Int): ReaderTextBackgroundImage {
     return withBitmapSize(widthPx, 0)
@@ -46,11 +50,15 @@ fun ReaderTextBackgroundImage.withBitmapWidth(widthPx: Int): ReaderTextBackgroun
 
 fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): ReaderTextBackgroundImage {
     if (fit != 3 || widthPx <= 0) return this
+    val borderPx = if (hasNinePatchBorder) 1 else 0
+    val contentWidthPx = (widthPx - borderPx * 2).coerceAtLeast(0)
+    val contentHeightPx = (heightPx - borderPx * 2).coerceAtLeast(0)
+    val fixedScale = scale.coerceIn(0.1f, 5f)
     return copy(
-        contentInsetLeftPx = (widthPx * ninePatchLeft.coerceIn(0f, 1f)).toInt().toFloat(),
-        contentInsetRightPx = (widthPx * ninePatchRight.coerceIn(0f, 1f)).toInt().toFloat(),
-        contentInsetTopPx = (heightPx.coerceAtLeast(0) * ninePatchTop.coerceIn(0f, 1f)).toInt().toFloat(),
-        contentInsetBottomPx = (heightPx.coerceAtLeast(0) * ninePatchBottom.coerceIn(0f, 1f)).toInt().toFloat(),
+        contentInsetLeftPx = contentWidthPx * ninePatchLeft.coerceIn(0f, 1f) * fixedScale,
+        contentInsetRightPx = contentWidthPx * ninePatchRight.coerceIn(0f, 1f) * fixedScale,
+        contentInsetTopPx = contentHeightPx * ninePatchTop.coerceIn(0f, 1f) * fixedScale,
+        contentInsetBottomPx = contentHeightPx * ninePatchBottom.coerceIn(0f, 1f) * fixedScale,
     )
 }
 

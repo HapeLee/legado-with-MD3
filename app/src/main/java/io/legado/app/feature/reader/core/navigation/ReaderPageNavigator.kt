@@ -3,6 +3,7 @@ package io.legado.app.feature.reader.core.navigation
 import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageWindow
+import io.legado.app.feature.reader.core.navigation.ReaderPageNavigator.locate
 
 data class ReaderNavigationResult(
     val pageIndex: Int,
@@ -70,12 +71,39 @@ object ReaderPageNavigator {
         return ReaderNavigationResult(target, window(pages, target), target != pageIndex + delta)
     }
 
-    fun locate(pages: List<ReaderPage>, chapterIndex: Int, chapterPosition: Int): Int {
+    /**
+     * 翻页放行条件（对照旧 View `TextPageFactory.hasNext()` / `hasPrev()`）：
+     * 旧实现是 `hasNextChapter() || 本章还有下一页`、`hasPrevChapter() || pageIndex > 0`，
+     * 只看"书里还有没有邻章/本章还有没有下一页"，与邻章是否已完成排版无关。
+     *
+     * Canvas 早期版本只看 [ReaderPageWindow.next] 是否为 null（排版就绪），邻章排版滞后
+     * 时会把可翻的边界误判成书末，点按/拖拽只弹"没有下一页"且不再触发装载，形成死端。
+     * 排版未就绪的邻章在旧 View 里由 `moveToNextChapter` → 标题占位页承接；Canvas 的等价
+     * 承接是 `ReadBookController.crossComposeChapterBoundary`（预置"加载中"占位页或直接启动
+     * 该章排版）。因此放行必须回到业务语义，把翻页交给宿主处理。
+     */
+    fun canTurnNext(window: ReaderPageWindow, hasNextChapter: Boolean): Boolean =
+        window.next != null || hasNextChapter
+
+    /** 上一页放行条件，对照旧 View `TextPageFactory.hasPrev()`。 */
+    fun canTurnPrevious(window: ReaderPageWindow, hasPreviousChapter: Boolean): Boolean =
+        window.previous != null || hasPreviousChapter
+
+    /**
+     * 按章内位置定位页下标；该章不在 [pages] 中时返回 null。
+     *
+     * 注意与 [locate] 的区别：本函数不把"未定位"折叠成 0。0 是全书首页的合法下标，
+     * 调用方拿它发布窗口会把阅读位置跳到书首（见 `publishDirectReaderPageWindow`）。
+     */
+    fun locateOrNull(pages: List<ReaderPage>, chapterIndex: Int, chapterPosition: Int): Int? {
         val chapterPages = pages.withIndex().filter { it.value.id.chapterIndex == chapterIndex }
-        if (chapterPages.isEmpty()) return 0
+        if (chapterPages.isEmpty()) return null
         return chapterPages.lastOrNull { pageStart(it.value) <= chapterPosition }?.index
             ?: chapterPages.first().index
     }
+
+    fun locate(pages: List<ReaderPage>, chapterIndex: Int, chapterPosition: Int): Int =
+        locateOrNull(pages, chapterIndex, chapterPosition) ?: 0
 
     fun chapterPosition(pages: List<ReaderPage>, pageIndex: Int): ReaderChapterPagePosition? {
         val page = pages.getOrNull(pageIndex) ?: return null

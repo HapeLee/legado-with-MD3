@@ -3,6 +3,7 @@ package io.legado.app.feature.reader.core.navigation
 import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageId
+import io.legado.app.feature.reader.core.model.ReaderPageWindow
 import io.legado.app.feature.reader.core.model.ReaderRect
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import org.junit.Assert.assertEquals
@@ -183,6 +184,42 @@ class ReaderPageNavigatorTest {
             ReaderPageNavigator.missingAdjacentChapters(
                 listOf(placeholder), pageIndex = 0, chapterCount = 8,
             ),
+        )
+    }
+
+    @Test
+    fun turnIsAllowedWhenOnlyTheBusinessNeighborChapterExists() {
+        // 对照旧 View TextPageFactory.hasNext()/hasPrev()：放行看"书里还有没有邻章"，
+        // 与邻章是否已排版无关。邻章排版滞后时窗口里没有邻页，也必须放行，否则跨章
+        // 翻页只会弹"没有下一页"且不再触发该章装载（读完本章无法进入下一章）。
+        val pages = listOf(page(0, 0), page(1, 20))
+        val lastPage = ReaderPageNavigator.window(pages, pageIndex = 1)
+        assertNull(lastPage.next)
+        assertTrue(ReaderPageNavigator.canTurnNext(lastPage, hasNextChapter = true))
+        assertTrue(!ReaderPageNavigator.canTurnNext(lastPage, hasNextChapter = false))
+
+        val firstPage = ReaderPageNavigator.window(pages, pageIndex = 0)
+        assertNull(firstPage.previous)
+        assertTrue(ReaderPageNavigator.canTurnPrevious(firstPage, hasPreviousChapter = true))
+        assertTrue(!ReaderPageNavigator.canTurnPrevious(firstPage, hasPreviousChapter = false))
+
+        // 邻页已就绪时与旧实现一致：不需要业务邻章也放行；窗口为空则不放行。
+        assertTrue(ReaderPageNavigator.canTurnNext(ReaderPageNavigator.window(pages, 0), false))
+        assertTrue(ReaderPageNavigator.canTurnPrevious(ReaderPageNavigator.window(pages, 1), false))
+        assertTrue(!ReaderPageNavigator.canTurnNext(ReaderPageWindow(), false))
+        assertTrue(!ReaderPageNavigator.canTurnPrevious(ReaderPageWindow(), false))
+    }
+
+    @Test
+    fun locateReportsMissingChapterInsteadOfCollapsingToBookStart() {
+        // 章不在页表中时 locate 折叠成 0（全书首页是合法下标），发布该下标会把阅读
+        // 位置跳回书首；调用方用 locateOrNull 区分"未定位"与"第一章"。
+        val pages = listOf(page(0, 0), page(1, 20))
+        assertEquals(0, ReaderPageNavigator.locate(pages, chapterIndex = 9, chapterPosition = 0))
+        assertNull(ReaderPageNavigator.locateOrNull(pages, chapterIndex = 9, chapterPosition = 0))
+        assertEquals(
+            1,
+            ReaderPageNavigator.locateOrNull(pages, chapterIndex = 4, chapterPosition = 25)
         )
     }
 }

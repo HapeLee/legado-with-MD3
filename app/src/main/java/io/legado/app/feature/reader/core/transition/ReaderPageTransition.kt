@@ -85,12 +85,22 @@ data class ReaderHorizontalDrag(
 }
 
 object ReaderPageTransitionPolicy {
+    /**
+     * 翻页收尾动画的基准时长。
+     *
+     * 点击与外部按键（音量键 / 媒体键 / 空格 / D-pad）在画布层已合并到同一条收尾路径
+     * （`externalPageTurns -> dispatchTapAction -> tapPageTurn`），因此两者共用这一个基准；
+     * 旧 View 中按键固定 100ms 的独立档位随之消失。360 是产品确认保留的取值，不要"回退"
+     * 成旧 View 的 300——那会让点击与按键重新分叉。
+     */
+    private const val BASE_DURATION_MILLIS = 360
+
     fun settleDurationMillis(
         mode: ReaderTransitionMode,
         currentOffsetPx: Float,
         targetOffsetPx: Float,
         pageExtentPx: Float,
-        baseDurationMillis: Int = 360,
+        baseDurationMillis: Int = BASE_DURATION_MILLIS,
     ): Int {
         if (pageExtentPx <= 0f || baseDurationMillis <= 0 || currentOffsetPx == targetOffsetPx) return 0
         // FadePageDelegate animates its normalized alpha for the full configured duration.
@@ -106,7 +116,7 @@ object ReaderPageTransitionPolicy {
         currentOffsetPx: Float,
         targetOffsetPx: Float,
         pageExtentPx: Float,
-        baseDurationMillis: Int = 300,
+        baseDurationMillis: Int = BASE_DURATION_MILLIS,
     ): Int {
         if (pageExtentPx <= 0f || baseDurationMillis <= 0) return 0
         return (baseDurationMillis * abs(targetOffsetPx - currentOffsetPx) / pageExtentPx)

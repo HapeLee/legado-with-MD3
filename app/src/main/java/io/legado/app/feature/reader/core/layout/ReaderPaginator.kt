@@ -6,8 +6,26 @@ import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageDecoration
 import io.legado.app.feature.reader.core.model.ReaderPageId
 import io.legado.app.feature.reader.core.model.ReaderRect
+import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import kotlin.math.max
+
+private fun ReaderTextBackgroundImage.fitIntoLineGap(
+    lineHeightPx: Float,
+    lineSpacingMultiplier: Float,
+): ReaderTextBackgroundImage {
+    val largestFixedRow = maxOf(contentInsetTopPx, contentInsetBottomPx)
+    if (largestFixedRow <= 0f) return this
+    val halfGap = ((lineSpacingMultiplier - 1f).coerceAtLeast(0f) * lineHeightPx) / 2f
+    val frameScale = (halfGap / largestFixedRow).coerceIn(0f, 1f)
+    if (frameScale >= 1f) return this
+    return copy(
+        contentInsetLeftPx = contentInsetLeftPx * frameScale,
+        contentInsetRightPx = contentInsetRightPx * frameScale,
+        contentInsetTopPx = contentInsetTopPx * frameScale,
+        contentInsetBottomPx = contentInsetBottomPx * frameScale,
+    )
+}
 
 enum class ReaderTextAlignment { START, CENTER, END, JUSTIFY }
 enum class ReaderImageScaleMode { CONTAIN_NO_UPSCALE, FIT_WIDTH, FIT_PAGE }
@@ -46,6 +64,12 @@ data class ReaderPaginationConfig(
     val columnCount: Int = 1,
     val lineSpacingMultiplier: Float = 1f,
     val continuousScroll: Boolean = false,
+    /**
+     * 章末页在堆叠高度上额外留出的空档。旧 `TextChapterLayout.setTypeText` 收尾时统一
+     * `height = max(height, durY + 20.dpToPx())`，让下一章正文与本章末尾之间不会贴在一起。
+     * 只在连续滚动模式生效——分页模式每页高度恒为一屏，这个量不参与布局。
+     */
+    val chapterEndPaddingPx: Float = 0f,
     val textBottomJustify: Boolean = false,
     val pageUnderline: ReaderPageUnderline? = null,
     val inlineImagesPreserveScrollLine: Boolean = true,
@@ -426,6 +450,10 @@ object ReaderPaginator {
             fun backgroundImage(index: Int) =
                 (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)
                     ?.style?.backgroundImage?.takeIf { it.fit == 3 }
+                    ?.fitIntoLineGap(
+                        lineHeightPx = paragraph.lineHeightPx,
+                        lineSpacingMultiplier = paragraph.lineSpacingMultiplier,
+                    )
 
             fun backgroundInsetBefore(index: Int, lineStart: Int): Float {
                 val image = backgroundImage(index) ?: return 0f
@@ -584,18 +612,20 @@ object ReaderPaginator {
                 val underlineElementStart = elements.size + indentItems
                 lineItems.forEachIndexed { itemIndex, item ->
                     x += backgroundInsetBefore(itemIndex)
-                    val itemBackground = (item as? ReaderMeasuredInlineItem.Text)
-                        ?.style?.backgroundImage
+                    val itemBackground = backgroundImage(from + itemIndex)
                     when (item) {
                         is ReaderMeasuredInlineItem.Text -> {
                             val expandedWordSpace = if (item.value == " ") wordSpaceExtra else 0f
+                            val itemStyle = if (itemBackground == null) item.style else {
+                                item.style.copy(backgroundImage = itemBackground)
+                            }
                             elements += ReaderElement.Text(
                                 bounds = ReaderRect(
                                     x, y, x + item.widthPx + expandedWordSpace, y + actualLineHeight,
                                 ),
                                 baselinePx = y + lineBaselineOffset + item.baselineShiftPx,
                                 value = item.value,
-                                style = item.style,
+                                style = itemStyle,
                                 selected = false,
                                 emphasized = paragraph.emphasized,
                                 link = item.link,
@@ -605,20 +635,10 @@ object ReaderPaginator {
                                 // 富文本逐项样式：与前一项同背景图才视作同一 run 的延续
                                 continuesBackgroundRun = itemBackground != null &&
                                         itemIndex > 0 &&
-                                        (lineItems[itemIndex - 1] as? ReaderMeasuredInlineItem.Text)
-                                            ?.style?.backgroundImage == itemBackground,
-                                backgroundFrameTopPx = item.style.backgroundImage?.takeIf { it.fit == 3 }?.let { image ->
-                                    val halfGap = ((paragraph.lineSpacingMultiplier - 1f).coerceAtLeast(0f) * actualLineHeight) / 2f
-                                    val scale = (halfGap / maxOf(image.contentInsetTopPx, image.contentInsetBottomPx)
-                                        .coerceAtLeast(0.1f)).coerceIn(0f, 1f)
-                                    image.contentInsetTopPx * scale
-                                } ?: 0f,
-                                backgroundFrameBottomPx = item.style.backgroundImage?.takeIf { it.fit == 3 }?.let { image ->
-                                    val halfGap = ((paragraph.lineSpacingMultiplier - 1f).coerceAtLeast(0f) * actualLineHeight) / 2f
-                                    val scale = (halfGap / maxOf(image.contentInsetTopPx, image.contentInsetBottomPx)
-                                        .coerceAtLeast(0.1f)).coerceIn(0f, 1f)
-                                    image.contentInsetBottomPx * scale
-                                } ?: 0f,
+                                        backgroundImage(from + itemIndex - 1) == itemBackground,
+                                backgroundFrameTopPx = itemBackground?.contentInsetTopPx ?: 0f,
+                                backgroundFrameBottomPx = itemBackground?.contentInsetBottomPx
+                                    ?: 0f,
                             )
                         }
                         is ReaderMeasuredInlineItem.Image -> {
@@ -706,6 +726,7 @@ object ReaderPaginator {
             }
         }
         finishPage()
+        var centeredPageShiftPx = 0f
         if (config.titlePageCenterVertical && pages.size == 1) {
             // 卷页只有标题块：按字形实际占位整体下移到内容区垂直中点。布局期平移
             // 保证命中测试、选区与进度映射共用同一几何。
@@ -719,10 +740,22 @@ object ReaderPaginator {
                     for (elementIndex in pageElements.indices) {
                         pageElements[elementIndex] = shiftElement(pageElements[elementIndex], delta)
                     }
+                    centeredPageShiftPx = delta
                 }
             }
         }
         return pages.mapIndexed { pageIndex, pageElements ->
+            // 连续滚动模式按 scrollExtentPx 堆叠相邻页。中间页沿用排版游标（对照旧 View 逐页
+            // 堆叠 durY，ReaderLineSpacingTest 明确要求「不是一整屏」）；章末页取「内容覆盖
+            // 高度」与「内容区高度下限」的较大者——旧 View 的章末/提示页同样按可见高度收口
+            // （`TextPage.kt` 的 `height = ChapterProvider.visibleHeight`），否则残页与卷名页
+            // 会让下一章正文压在本页内容上，滚动也会立刻跨页。
+            // 章末页再留出 [chapterEndPaddingPx]，对照旧 View 的 `height = durY + 20dp`。
+            val contentCoveredExtentPx = pageExtents[pageIndex] + centeredPageShiftPx
+            val stackedExtentPx = if (config.continuousScroll && pageIndex == pages.lastIndex) {
+                maxOf(contentCoveredExtentPx, config.contentBottomPx - config.paddingTopPx) +
+                        config.chapterEndPaddingPx
+            } else pageExtents[pageIndex]
             ReaderPage(
                 id = ReaderPageId(config.chapterIndex, pageIndex),
                 chapterTitle = config.chapterTitle,
@@ -735,7 +768,7 @@ object ReaderPaginator {
                 } else pageExtents[pageIndex] - config.paddingBottomPx,
                 elements = pageElements,
                 revision = config.revision,
-                scrollExtentPx = pageExtents[pageIndex],
+                scrollExtentPx = stackedExtentPx,
                 decoration = config.decoration,
                 inlineImagesPreserveScrollLine = config.inlineImagesPreserveScrollLine,
                 emphasisUnderlineStyle = config.emphasisUnderlineStyle,

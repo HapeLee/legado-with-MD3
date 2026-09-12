@@ -15,28 +15,41 @@ class ReaderPageTransitionTest {
 
     @Test
     fun `settle duration scales with the remaining legacy scroll distance`() {
-        assertEquals(300, ReaderPageTransitionPolicy.settleDurationMillis(0f, -800f, 800f))
-        assertEquals(75, ReaderPageTransitionPolicy.settleDurationMillis(-600f, -800f, 800f))
-        assertEquals(225, ReaderPageTransitionPolicy.settleDurationMillis(-600f, 0f, 800f))
+        // 基准 360：点击与按键共用同一收尾基准（产品确认保留，不回退旧 View 的 300）。
+        assertEquals(360, ReaderPageTransitionPolicy.settleDurationMillis(0f, -800f, 800f))
+        assertEquals(90, ReaderPageTransitionPolicy.settleDurationMillis(-600f, -800f, 800f))
+        assertEquals(270, ReaderPageTransitionPolicy.settleDurationMillis(-600f, 0f, 800f))
         assertEquals(0, ReaderPageTransitionPolicy.settleDurationMillis(-800f, -800f, 800f))
     }
 
     @Test
-    fun `fade settle keeps the full legacy alpha animation duration`() {
+    fun `both settle overloads share the same base duration`() {
+        // 两个重载的默认基准必须一致：分叉过一次（360 / 300），测试便无法同时代表生产路径。
         assertEquals(
-            300,
+            ReaderPageTransitionPolicy.settleDurationMillis(0f, -800f, 800f),
+            ReaderPageTransitionPolicy.settleDurationMillis(
+                ReaderTransitionMode.FADE, 0f, -800f, 800f,
+            ),
+        )
+    }
+
+    @Test
+    fun `fade settle uses the full base duration instead of scaling it`() {
+        assertEquals(
+            360,
             ReaderPageTransitionPolicy.settleDurationMillis(
                 ReaderTransitionMode.FADE, -720f, -800f, 800f,
             ),
         )
         assertEquals(
-            300,
+            360,
             ReaderPageTransitionPolicy.settleDurationMillis(
                 ReaderTransitionMode.FADE, -720f, 0f, 800f,
             ),
         )
+        // 非 FADE 模式按剩余位移折算：360 * 80 / 800。
         assertEquals(
-            30,
+            36,
             ReaderPageTransitionPolicy.settleDurationMillis(
                 ReaderTransitionMode.SLIDE, -720f, -800f, 800f,
             ),

@@ -719,6 +719,10 @@ fun ReadBookRouteScreen(
                 onPreviousPage = { controller.completeComposePageTurn(PageDirection.PREV) },
                 onNextPage = { controller.completeComposePageTurn(PageDirection.NEXT) },
                     onPageBoundaryReached = controller::showComposePageBoundary,
+                    // 放行条件读取"书中是否还有邻章"（旧 View hasNextChapter/hasPrevChapter），
+                    // 而不是邻章当前是否已排版完成：两章交接期间排版批次可能还没落地。
+                    hasNextChapter = controller::hasNextComposeChapter,
+                    hasPreviousChapter = controller::hasPreviousComposeChapter,
                 onToggleMenu = controller::showComposeActionMenu,
                 onToggleBookmark = { viewModel.onIntent(ReadBookIntent.ToggleBookmark) },
                 swipeToBookmarkEnabled = readPreferences.swipeToAddBookmark,

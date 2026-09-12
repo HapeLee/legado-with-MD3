@@ -2,9 +2,12 @@ package io.legado.app.feature.reader.core.layout
 
 import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import io.legado.app.feature.reader.core.source.ReaderChapterSource
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderSingleImageTest {
@@ -90,6 +93,43 @@ class ReaderSingleImageTest {
         assertEquals(1, pages.size)
         assertEquals(listOf(10f, 130f), pages.single().elements.map { it.bounds.left })
         assertEquals(listOf(95f, 95f), pages.single().elements.map { it.bounds.top })
+    }
+
+    /**
+     * 对照旧 View `TextChapterLayout`：`imgStyleSingle` 下标题段排版完会无条件结束当前页
+     * （`prepareNextPageIfNeed()`），标题因此独占一页且水平居中。
+     */
+    @Test
+    fun singleImageHeadingGetsItsOwnCenteredPage() = runBlocking {
+        val source = ReaderChapterSource(
+            1, "章标题", listOf(
+                ReaderChapterSourceBlock.Text("章标题", 0, true),
+                ReaderChapterSourceBlock.Text("正文正文", 3),
+            ), 7
+        )
+        val measurer = ReaderChapterBlockMeasurer(shaper, shaper, { null })
+
+        val plain = measurer.measure(source, style) as ReaderChapterMeasureResult.Success
+        assertEquals(2, plain.blocks.size)
+
+        val measured = measurer.measure(
+            source,
+            style.copy(
+                titlePageBreakAfter = true,
+                titleAlignment = ReaderTextAlignment.CENTER,
+            ),
+        ) as ReaderChapterMeasureResult.Success
+        assertTrue(measured.blocks[1] is ReaderMeasuredBlock.PageBreak)
+
+        val pages = ReaderPaginator.paginateBlocks(measured.blocks, config)
+        assertEquals(2, pages.size)
+        val heading = pages[0].elements.filterIsInstance<ReaderElement.Text>()
+        assertEquals("章标题", heading.joinToString("") { it.value })
+        assertEquals(45f, heading.first().bounds.left, 0f)
+        assertEquals(
+            "正文正文",
+            pages[1].elements.filterIsInstance<ReaderElement.Text>().joinToString("") { it.value },
+        )
     }
 
     @Test fun inlineIconKeepsItsIndentPrefix() = runBlocking {

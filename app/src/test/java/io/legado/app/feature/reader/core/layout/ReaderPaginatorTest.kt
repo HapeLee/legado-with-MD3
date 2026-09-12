@@ -550,7 +550,7 @@ class ReaderPaginatorTest {
     }
 
     @Test
-    fun nineSliceVerticalFrameScalesIntoHalfTheAvailableLineGap() {
+    fun nineSliceFrameUniformlyScalesIntoAvailableLineGap() {
         val framedStyle = style.copy(backgroundImage = ReaderTextBackgroundImage(
             "frame.png", 3, 1f,
             contentInsetLeftPx = 3f,
@@ -574,11 +574,39 @@ class ReaderPaginatorTest {
         val glyph = page.elements.single() as ReaderElement.Text
         assertEquals(10f / 3f, glyph.backgroundFrameTopPx, 0.001f)
         assertEquals(5f, glyph.backgroundFrameBottomPx, 0.001f)
+        val fittedImage = glyph.style.backgroundImage!!
+        assertEquals(2.5f, fittedImage.contentInsetLeftPx, 0.001f)
+        assertEquals(10f / 3f, fittedImage.contentInsetRightPx, 0.001f)
         val run = page.textBackgroundRuns().single()
         assertEquals(glyph.bounds.top, run.contentBounds.top, 0f)
         assertEquals(glyph.bounds.bottom, run.contentBounds.bottom, 0f)
         assertEquals(glyph.bounds.top - 10f / 3f, run.bounds.top, 0.001f)
         assertEquals(glyph.bounds.bottom + 5f, run.bounds.bottom, 0.001f)
+    }
+
+    /**
+     * 章末页的堆叠高度额外加 [ReaderPaginationConfig.chapterEndPaddingPx]：旧
+     * `TextChapterLayout.setTypeText` 收尾时 `height = max(height, durY + 20dp)`，让下一章
+     * 正文与本章末尾之间留一段空档。中间页不受影响。
+     */
+    @Test
+    fun scrollModeAddsTheLegacyChapterEndPaddingOnlyToTheLastPage() {
+        val scrollConfig = config.copy(continuousScroll = true, chapterEndPaddingPx = 20f)
+        val lines = (0..2).map { index ->
+            ReaderMeasuredParagraph(
+                index.toString(),
+                listOf(index.toString()),
+                listOf(20f),
+                style,
+                index
+            )
+        }
+        val pages = ReaderPaginator.paginate(lines, scrollConfig)
+        assertEquals(2, pages.size)
+        // 内容区高度 40f（45 − 5）：中间页就是排版游标，章末页取「覆盖高度 / 内容区」的
+        // 较大者后再加 20f 留白（对照旧 TextChapterLayout 的 `height = durY + 20dp`）。
+        assertEquals(40f, pages[0].scrollExtentPx, 0.01f)
+        assertEquals(60f, pages[1].scrollExtentPx, 0.01f)
     }
 
     @Test

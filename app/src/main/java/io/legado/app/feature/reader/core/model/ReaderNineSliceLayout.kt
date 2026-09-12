@@ -1,5 +1,7 @@
 package io.legado.app.feature.reader.core.model
 
+import kotlin.math.roundToInt
+
 data class ReaderIntRect(val left: Int, val top: Int, val right: Int, val bottom: Int)
 
 data class ReaderNineSliceCell(
@@ -16,17 +18,24 @@ object ReaderNineSliceLayout {
         image: ReaderTextBackgroundImage,
     ): List<ReaderNineSliceCell> {
         if (bitmapWidth <= 0 || bitmapHeight <= 0) return emptyList()
+        val borderPx = if (image.hasNinePatchBorder) 1 else 0
+        val sourceLeft = borderPx
+        val sourceTop = borderPx
+        val sourceRight = (bitmapWidth - borderPx).coerceAtLeast(sourceLeft)
+        val sourceBottom = (bitmapHeight - borderPx).coerceAtLeast(sourceTop)
+        val sourceWidth = sourceRight - sourceLeft
+        val sourceHeight = sourceBottom - sourceTop
         val sx = intArrayOf(
-            0,
-            (bitmapWidth * image.ninePatchLeft.coerceIn(0f, 1f)).toInt(),
-            (bitmapWidth * (1f - image.ninePatchRight.coerceIn(0f, 1f))).toInt(),
-            bitmapWidth,
+            sourceLeft,
+            sourceLeft + (sourceWidth * image.ninePatchLeft.coerceIn(0f, 1f)).roundToInt(),
+            sourceRight - (sourceWidth * image.ninePatchRight.coerceIn(0f, 1f)).roundToInt(),
+            sourceRight,
         )
         val sy = intArrayOf(
-            0,
-            (bitmapHeight * image.ninePatchTop.coerceIn(0f, 1f)).toInt(),
-            (bitmapHeight * (1f - image.ninePatchBottom.coerceIn(0f, 1f))).toInt(),
-            bitmapHeight,
+            sourceTop,
+            sourceTop + (sourceHeight * image.ninePatchTop.coerceIn(0f, 1f)).roundToInt(),
+            sourceBottom - (sourceHeight * image.ninePatchBottom.coerceIn(0f, 1f)).roundToInt(),
+            sourceBottom,
         )
         if (sx[1] > sx[2] || sy[1] > sy[2]) return emptyList()
         val dx = floatArrayOf(frame.left, content.left, content.right, frame.right)
