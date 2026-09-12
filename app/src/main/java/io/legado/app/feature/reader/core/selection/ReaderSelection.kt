@@ -3,6 +3,7 @@ package io.legado.app.feature.reader.core.selection
 import androidx.compose.runtime.Stable
 import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
+import io.legado.app.feature.reader.core.model.ReaderPageWindow
 import io.legado.app.feature.reader.core.model.ReaderRect
 import java.text.BreakIterator
 import java.util.Locale
@@ -11,6 +12,9 @@ enum class ReaderSelectionEndpoint {
     ANCHOR,
     FOCUS,
 }
+
+fun ReaderPageWindow.selectionPages(): List<ReaderPage> =
+    listOfNotNull(previous, current, next, nextPlus)
 
 @Stable
 data class ReaderSelection(

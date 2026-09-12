@@ -61,6 +61,20 @@ class ReaderSelectionViewportLayoutTest {
         assertEquals(10f, placement.localY(190f))
     }
 
+    @Test
+    fun scrollWindowSelectionTextIncludesVisibleNextPlusPage() {
+        val current = page(0, 0, 0)
+        val next = page(0, 1, 1)
+        val nextPlus = page(0, 2, 2)
+        val window = ReaderPageWindow(current = current, next = next, nextPlus = nextPlus)
+        val selection = ReaderSelection(chapterIndex = 0, anchor = 2, focus = 2)
+
+        assertEquals(
+            "2",
+            selection.selectedText(window.selectionPages()),
+        )
+    }
+
     @Test fun adjacentPageElementHitUsesItsLocalCoordinates() {
         val current = page(0, 0, 0)
         val next = page(0, 1, 1)

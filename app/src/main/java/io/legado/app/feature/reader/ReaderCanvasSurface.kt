@@ -119,6 +119,7 @@ import io.legado.app.feature.reader.core.selection.ReaderSelectionLifecyclePolic
 import io.legado.app.feature.reader.core.selection.ReaderSelectionMenuAnchor
 import io.legado.app.feature.reader.core.selection.ReaderSelectionPolicy
 import io.legado.app.feature.reader.core.selection.mergeSelectionBounds
+import io.legado.app.feature.reader.core.selection.selectionPages
 import io.legado.app.feature.reader.core.style.mergeBackgroundBounds
 import io.legado.app.feature.reader.core.transition.CurlPoint
 import io.legado.app.feature.reader.core.transition.PageCurlFrame
@@ -386,7 +387,7 @@ fun ReaderCanvasSurface(
     }
     fun showSelectionMenu(selection: ReaderSelection, window: ReaderPageWindow): Boolean {
         val bounds = pageViewportLayout(window).selectionBounds(selection).map { it.bounds }
-        val text = selection.selectedText(listOfNotNull(window.previous, window.current, window.next))
+        val text = selection.selectedText(window.selectionPages())
         val anchor = ReaderSelectionMenuAnchor.from(bounds) ?: return false
         if (text.isEmpty()) return false
         selectionMenuVisible = true
