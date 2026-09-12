@@ -1,22 +1,18 @@
 package io.legado.app.ui.book.read.sheet
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmark
@@ -24,7 +20,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CleanHands
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
@@ -32,23 +28,16 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
@@ -59,15 +48,12 @@ import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookUiState
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ConfigListEntry
 import io.legado.app.ui.widget.components.ReorderableConfigList
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.reader.ReaderMenuActionSquare
-import io.legado.app.ui.widget.components.text.AppText
 
 private data class MoreActionSpec(
     val id: String,
@@ -198,7 +184,8 @@ private fun ActionSquareHost(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember(action.id) { mutableStateOf(false) }
-    val hasMore = action.id == "change_source" || action.id == "refresh"
+    val hasMore = action.id == "change_source" || action.id == "refresh" ||
+            action.id == "source_custom_button"
     Box(modifier = modifier) {
         ReaderMenuActionSquare(
             icon = action.icon,
@@ -213,6 +200,19 @@ private fun ActionSquareHost(
             onMoreClick = { expanded = true },
         )
         when (action.id) {
+            "source_custom_button" -> RoundDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) { dismiss ->
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.source_custom_button_long_action),
+                    onClick = {
+                        dismiss()
+                        dispatch(ReadBookIntent.SourceCustomButton(true))
+                    },
+                )
+            }
+
             "change_source" -> RoundDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
@@ -290,6 +290,11 @@ private fun moreActionSpecs(
     onIntent: (ReadBookIntent) -> Unit,
     dispatch: (ReadBookIntent) -> Unit,
 ): List<MoreActionSpec> = listOf(
+    MoreActionSpec(
+        "source_custom_button", stringResource(R.string.custom_button), Icons.Default.Extension,
+        applicable = state.bookSource?.customButton == true,
+        onClick = { dispatch(ReadBookIntent.SourceCustomButton(false)) },
+    ),
     MoreActionSpec(
         "change_source", stringResource(R.string.change_origin), Icons.Default.SwapHoriz,
         applicable = !state.isLocalBook, onClick = { dispatch(ReadBookIntent.MenuChangeSource) }),

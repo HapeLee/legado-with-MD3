@@ -92,4 +92,4 @@ private fun String.lineParagraphs(): List<ReaderReadAloudParagraph> = buildList 
     if (start < length) add(ReaderReadAloudParagraph(substring(start), start, true))
 }
 
-private fun String.sanitizeForSpeech(): String = replace(Regex("[袮祢꧁]"), " ")
+private fun String.sanitizeForSpeech(): String = replace(Regex("[袮祢꧁\uFFFC]"), " ")

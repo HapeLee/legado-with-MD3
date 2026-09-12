@@ -20,6 +20,7 @@ import io.legado.app.domain.model.manga.MangaSessionState
 import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.coil.CoverFetcher
+import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.manga.config.MangaColorFilterConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -165,6 +166,25 @@ class MangaReaderViewModel(
                     _effects.tryEmit(MangaReaderEffect.OpenSourceEdit(it))
                 }
             }
+            is MangaReaderIntent.SourceCustomButton -> launchAction {
+                val state = _uiState.value
+                val payload = actionRepository.getSourceCustomButtonPayload(
+                    state.bookUrl,
+                    state.chapterIndex,
+                ) ?: return@launchAction
+                _effects.tryEmit(
+                    MangaReaderEffect.RunSourceCustomButton(
+                        event = if (intent.longClick) {
+                            SourceCallBack.LONG_CLICK_CUSTOM_BUTTON
+                        } else {
+                            SourceCallBack.CLICK_CUSTOM_BUTTON
+                        },
+                        source = payload.source,
+                        book = payload.book,
+                        chapter = payload.chapter,
+                    )
+                )
+            }
             MangaReaderIntent.BackPressed -> {
                 when {
                     _uiState.value.activeDialog != null -> {
@@ -267,6 +287,10 @@ class MangaReaderViewModel(
                 intent.firstItemIndex,
                 intent.lastItemIndex,
                 intent.currentChapterVisible,
+                intent.navigationId,
+            )
+            is MangaReaderIntent.FooterItemChanged -> updateFooterItem(
+                intent.itemIndex,
                 intent.navigationId,
             )
             is MangaReaderIntent.PagerScrollChanged -> {
@@ -541,6 +565,9 @@ class MangaReaderViewModel(
 
         refreshContentJob?.cancel()
         refreshContentJob = viewModelScope.launch {
+            val sourceCustomButtonAvailable = actionRepository
+                .refreshSource(book.sourceOrigin)
+                ?.customButton == true
             val previousItems = makePreviousItems(session.previousChapter)
             val nextItems = makeNextItems(session.nextChapter)
             val items = (previousItems + chapterItems(current.chapter) + nextItems).toImmutableList()
@@ -587,12 +614,14 @@ class MangaReaderViewModel(
                     sourceName = book.sourceName,
                     sourceUrl = book.sourceOrigin,
                     sourceType = book.sourceType,
+                    sourceCustomButtonAvailable = sourceCustomButtonAvailable,
                     inBookshelf = book.inBookshelf,
                     pages = items,
                     navigationId = if (old.pages.map { it.key } != items.map { it.key }) {
                         System.nanoTime()
                     } else old.navigationId,
                     currentItemIndex = targetIndex,
+                    footerItemIndex = null,
                     currentPage = if (positionChanged) session.pageIndex else old.currentPage,
                     pageCount = if (positionChanged) current.chapter.pages.size else old.pageCount,
                     chapterIndex = session.chapterIndex,
@@ -1165,6 +1194,7 @@ class MangaReaderViewModel(
         _uiState.update {
             it.copy(
                 currentItemIndex = itemIndex,
+                footerItemIndex = null,
                 currentPage = item.pageIndex,
                 pageCount = item.pageCount,
                 scrollRequest = it.scrollRequest?.takeUnless { request ->
@@ -1175,6 +1205,18 @@ class MangaReaderViewModel(
         }
         if (completedExplicitNavigation) {
             pendingExplicitChapterIndex = null
+        }
+    }
+
+    private fun updateFooterItem(itemIndex: Int, navigationId: Long) {
+        _uiState.update { state ->
+            if (navigationId != state.navigationId ||
+                state.pages.getOrNull(itemIndex) !is MangaReaderItemUi.Page
+            ) {
+                state
+            } else {
+                state.copy(footerItemIndex = itemIndex)
+            }
         }
     }
 

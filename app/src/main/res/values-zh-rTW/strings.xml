@@ -1984,6 +1984,7 @@
     <string name="text_typeface">字體樣式</string>
     <string name="shadow_typeface">陰影樣式</string>
     <string name="long_click_to_custom">長按自訂</string>
+    <string name="source_custom_button_long_action">長按操作</string>
     <string name="disable_manga_scroll_animation">停用翻頁動畫</string>
     <string name="manga_cross_fade">停用載入淡入動畫</string>
     <string name="text_shadow_set">陰影設定</string>

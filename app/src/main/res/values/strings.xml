@@ -1891,6 +1891,7 @@
     <string name="text_typeface">Font Style</string>
     <string name="shadow_typeface">Shadow Style</string>
     <string name="long_click_to_custom">Long Tap to Customize</string>
+    <string name="source_custom_button_long_action">Long-press action</string>
     <string name="disable_manga_scroll_animation">Disable Page Turn Animation</string>
     <string name="manga_cross_fade">Disable Loading Fade-In Animation</string>
     <string name="text_shadow_set">Shadow Settings</string>

@@ -415,7 +415,7 @@ abstract class BaseReadAloudService : BaseService(),
             val startsAtChapterBeginning = preparedReadAloudNumber == 0
             val preparedParagraphs = preparedChapter.paragraphs(preparedReadAloudByPage)
             var preparedContentList = preparedParagraphs
-                .map { it.text.replace(Regex("[袮祢꧁]"), " ") }
+                .map { it.text.replace(Regex("[袮祢꧁\uFFFC]"), " ") }
             var preparedContentChapterPositions: List<Int?> =
                 preparedParagraphs.map { it.chapterPosition }
             val preparedSpeechPlan = buildSpeechPlan(

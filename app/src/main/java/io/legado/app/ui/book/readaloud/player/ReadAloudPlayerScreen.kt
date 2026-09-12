@@ -2,7 +2,6 @@ package io.legado.app.ui.book.readaloud.player
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -10,9 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -34,14 +31,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -93,7 +87,6 @@ import io.legado.app.ui.widget.components.button.series.SmallAnimatedButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.player.AnimatedPlayPauseButton
 import io.legado.app.ui.widget.components.player.PlayerAdjustmentSlider
 import io.legado.app.ui.widget.components.player.PlayerBackground
@@ -122,13 +115,7 @@ fun ReadAloudPlayerScreenContent(
     onIntent: (ReadAloudPlayerIntent) -> Unit,
     onBack: () -> Unit,
 ) {
-    val horizontalPagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
-    val verticalPagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
-    val verticalPagerNestedScrollConnection = rememberPagerFlingPassThroughConnection(
-        state = verticalPagerState,
-        orientation = Orientation.Vertical,
-    )
-    val coroutineScope = rememberCoroutineScope()
+    val horizontalPagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
     var isTextPageUserScrolling by remember { mutableStateOf(false) }
     val pagerHazeState = remember { HazeState() }
     val hazeEnabled =
@@ -147,7 +134,7 @@ fun ReadAloudPlayerScreenContent(
         Modifier
     }
     LaunchedEffect(horizontalPagerState.currentPage) {
-        if (horizontalPagerState.currentPage != 1) isTextPageUserScrolling = false
+        if (horizontalPagerState.currentPage != 2) isTextPageUserScrolling = false
     }
     val pageContentPadding = PaddingValues(
         top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 88.dp,
@@ -316,46 +303,6 @@ fun ReadAloudPlayerScreenContent(
                         SmallAnimatedButton(
                             containerColor = Color.Transparent,
                             checked = false,
-                            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-                            iconChecked = Icons.Default.KeyboardArrowUp,
-                            text = stringResource(
-                                if (verticalPagerState.currentPage == 0) {
-                                    R.string.chapter_list
-                                } else {
-                                    R.string.back
-                                }
-                            ),
-                            contentDescription = stringResource(
-                                if (verticalPagerState.currentPage == 0) {
-                                    R.string.chapter_list
-                                } else {
-                                    R.string.back
-                                }
-                            ),
-                            onCheckedChange = {
-                                coroutineScope.launch {
-                                    if (horizontalPagerState.currentPage != 0) {
-                                        horizontalPagerState.animateScrollToPage(
-                                            page = 0,
-                                            animationSpec = tween(
-                                                durationMillis = 520,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                        )
-                                    }
-                                    verticalPagerState.animateScrollToPage(
-                                        page = if (verticalPagerState.currentPage == 0) 1 else 0,
-                                        animationSpec = tween(
-                                            durationMillis = 520,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
-                                }
-                            },
-                        )
-                        SmallAnimatedButton(
-                            containerColor = Color.Transparent,
-                            checked = false,
                             icon = Icons.Default.Tune,
                             text = stringResource(R.string.switch_to_classic_read_aloud),
                             contentDescription = stringResource(R.string.switch_to_classic_read_aloud),
@@ -415,29 +362,17 @@ fun ReadAloudPlayerScreenContent(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
             ) { page ->
-                if (page == 0) {
-                    VerticalPager(
-                        state = verticalPagerState,
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        pageNestedScrollConnection = verticalPagerNestedScrollConnection,
-                    ) { verticalPage ->
-                        if (verticalPage == 0) {
-                            CoverPage(state, pageContentPadding, flowingTextModifier)
-                        } else {
-                            PlayerTocPage(
-                                chapters = state.chapters,
-                                currentIndex = state.chapterIndex,
-                                isPaused = state.isPaused,
-                                onSelect = {
-                                    onIntent(ReadAloudPlayerIntent.SelectChapter(it))
-                                },
-                                contentPadding = pageContentPadding,
-                            )
-                        }
-                    }
-                } else {
-                    ChapterTextPage(
+                when (page) {
+                    0 -> PlayerTocPage(
+                        chapters = state.chapters,
+                        currentIndex = state.chapterIndex,
+                        isPaused = state.isPaused,
+                        onSelect = { onIntent(ReadAloudPlayerIntent.SelectChapter(it)) },
+                        contentPadding = pageContentPadding,
+                    )
+
+                    1 -> CoverPage(state, pageContentPadding, flowingTextModifier)
+                    else -> ChapterTextPage(
                         state = state,
                         contentPadding = pageContentPadding,
                         flowingTextModifier = flowingTextModifier,
@@ -665,24 +600,17 @@ private fun ChapterTextPage(
                     contentType = { _, _ -> "read_aloud_text_line" },
                 ) { index, line ->
                     val active = index == state.activeTextLine
-                    val backgroundColor by animateColorAsState(
-                        targetValue = if (active) LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0f),
-                        animationSpec = tween(durationMillis = 400),
-                        label = "active_line_background"
-                    )
                     AppText(
                         text = line.text,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
                             .clickable { onIntent(ReadAloudPlayerIntent.SeekTo(line.chapterPosition)) }
-                            .background(backgroundColor)
                             .padding(horizontal = 12.dp, vertical = 12.dp)
                             .then(flowingTextModifier),
-                        style = if (active) LegadoTheme.typography.bodyLargeEmphasized else LegadoTheme.typography.bodyLarge,
-                        color = if (active) LegadoTheme.colorScheme.onPrimaryContainer
-                        else LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                        lineHeight = LegadoTheme.typography.bodyLarge.lineHeight,
+                        style = LegadoTheme.typography.titleLargeEmphasized,
+                        color = if (active) LegadoTheme.colorScheme.onSurface
+                        else LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     )
                 }
             }

@@ -3,6 +3,7 @@ package io.legado.app.ui.book.manga
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -13,9 +14,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
+import io.legado.app.constant.BookType
+import io.legado.app.model.SourceCallBack
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
+import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.openUrl
@@ -47,6 +51,11 @@ fun MangaReaderRouteScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val networkChangedListener = remember(activity) { NetworkChangedListener(activity) }
+    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
+        result?.let { (chapterIndex, chapterPos, _) ->
+            viewModel.onIntent(MangaReaderIntent.OpenChapter(chapterIndex, chapterPos))
+        }
+    }
 
     LaunchedEffect(viewModel, bookUrl, inBookshelf, chapterChanged, openRequestId) {
         viewModel.onIntent(
@@ -81,6 +90,14 @@ fun MangaReaderRouteScreen(
                 }
                 is MangaReaderEffect.OpenSourceLogin -> onOpenSourceLogin(effect.sourceUrl)
                 is MangaReaderEffect.OpenSourceEdit -> onOpenSourceEdit(effect.sourceUrl)
+                is MangaReaderEffect.RunSourceCustomButton -> SourceCallBack.callBackBtn(
+                    activity,
+                    effect.event,
+                    effect.source,
+                    effect.book,
+                    effect.chapter,
+                    BookType.image,
+                )
                 is MangaReaderEffect.OpenPaymentUrl -> onOpenWebView(
                     activity.getString(io.legado.app.R.string.chapter_pay),
                     effect.url,
@@ -203,6 +220,7 @@ fun MangaReaderRouteScreen(
                 viewModel.onIntent(MangaReaderIntent.DismissSheet)
                 onOpenBookInfo(state.bookName, state.bookAuthor, state.bookUrl)
             },
+            onOpenFullToc = { tocLauncher.launch(state.bookUrl) },
         )
     }
 }

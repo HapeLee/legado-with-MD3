@@ -1988,6 +1988,7 @@
     <string name="locate_current_reading">跳轉到目前閱讀位置</string>
     <string name="login_error">登錄失敗</string>
     <string name="long_click_to_custom">長按自訂</string>
+    <string name="source_custom_button_long_action">長按操作</string>
     <string name="long_press_group">長按分組</string>
     <string name="manage_tag_colors">管理標籤顏色</string>
     <string name="manga">漫畫</string>

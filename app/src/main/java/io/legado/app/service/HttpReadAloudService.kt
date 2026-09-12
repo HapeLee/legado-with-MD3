@@ -423,7 +423,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         } else {
             listOf(displayTitle.trim()).filter { it.isNotEmpty() } +
                     readAloudChapter.paragraphs(readAloudSettings.readAloudByPage)
-                .map { it.text.replace(Regex("[袮祢꧁]"), " ") }
+                        .map { it.text.replace(Regex("[袮祢꧁\uFFFC]"), " ") }
         }
         return PreDownloadChapter(displayTitle, queue, contentList)
     }

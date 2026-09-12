@@ -150,7 +150,7 @@ class ReadAloudPlayerCoordinator(
             chapterTitle = chapter?.title.orEmpty(),
             chapterText = input?.source?.semanticContent.orEmpty(),
             textLines = chapter?.paragraphs.orEmpty().mapNotNull { paragraph ->
-                paragraph.text.replace(Regex("[袮祢꧁]"), " ").trim()
+                paragraph.text.replace(Regex("[袮祢꧁\uFFFC]"), " ").trim()
                     .takeIf(String::isNotEmpty)?.let {
                     ReadAloudTextLineUi(it, paragraph.chapterPosition)
                 }

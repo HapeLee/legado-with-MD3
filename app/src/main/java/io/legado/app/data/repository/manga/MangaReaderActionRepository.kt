@@ -13,6 +13,7 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Book.ReadConfig
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookSource
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.exception.NoStackTraceException
@@ -46,6 +47,12 @@ sealed interface MangaReaderActionPaymentResult {
     data object Refreshed : MangaReaderActionPaymentResult
 }
 
+data class MangaSourceCustomButtonPayload(
+    val source: BookSource,
+    val book: Book,
+    val chapter: BookChapter?,
+)
+
 /** One-shot reader operations. Every operation receives explicit session identity. */
 class MangaReaderActionRepository(
     private val application: Application,
@@ -58,6 +65,20 @@ class MangaReaderActionRepository(
 
     suspend fun refreshSource(sourceOrigin: String?) =
         sourceOrigin?.let { database.bookSourceDao.getBookSource(it) }
+
+    suspend fun getSourceCustomButtonPayload(
+        bookUrl: String,
+        chapterIndex: Int,
+    ): MangaSourceCustomButtonPayload? {
+        val book = database.bookDao.getBook(bookUrl) ?: return null
+        val source = database.bookSourceDao.getBookSource(book.origin)
+            ?.takeIf { it.customButton } ?: return null
+        return MangaSourceCustomButtonPayload(
+            source = source,
+            book = book,
+            chapter = database.bookChapterDao.getChapter(bookUrl, chapterIndex),
+        )
+    }
 
     suspend fun disableSource(sourceOrigin: String?) {
         val source = sourceOrigin?.let { database.bookSourceDao.getBookSource(it) } ?: return

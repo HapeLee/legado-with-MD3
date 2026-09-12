@@ -529,6 +529,28 @@ private fun WebtoonMangaList(
             }
     }
 
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            listState.isScrollInProgress to
+                    listState.layoutInfo.visibleItemsInfo.map { it.index }
+        }.distinctUntilChanged().collect { (scrolling, visibleIndices) ->
+            if (!scrolling) return@collect
+            val currentState = latestReaderState
+            mangaWebtoonFocusedPageIndex(
+                items = currentState.pages,
+                visibleItemIndices = visibleIndices,
+                currentChapterIndex = currentState.chapterIndex,
+            )?.let { itemIndex ->
+                onIntent(
+                    MangaReaderIntent.FooterItemChanged(
+                        itemIndex = itemIndex,
+                        navigationId = currentState.navigationId,
+                    )
+                )
+            }
+        }
+    }
+
     LaunchedEffect(state.scrollRequest?.id) {
         val request = state.scrollRequest ?: return@LaunchedEffect
         val targetKey = state.pages.getOrNull(request.itemIndex)?.key ?: return@LaunchedEffect
@@ -749,19 +771,24 @@ private fun HorizontalMangaPager(
         }.distinctUntilChanged()
             .collect { entry ->
                 val (isScrolling, indices, itemIndex) = entry ?: return@collect
-                if (isScrolling) return@collect
                 itemIndex?.let { index ->
                     when (val item = state.pages.getOrNull(index)) {
-                        is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
-                            itemIndex = index,
-                            firstItemIndex = indices.first(),
-                            lastItemIndex = indices.last(),
-                            currentChapterVisible = indices.any { visibleIndex ->
-                                (state.pages.getOrNull(visibleIndex) as? MangaReaderItemUi.Page)
-                                    ?.chapterIndex == state.chapterIndex
-                            },
-                            navigationId = state.navigationId,
-                        ))
+                        is MangaReaderItemUi.Page -> if (isScrolling) {
+                            onIntent(MangaReaderIntent.FooterItemChanged(index, state.navigationId))
+                        } else {
+                            onIntent(
+                                MangaReaderIntent.VisibleItemChanged(
+                                    itemIndex = index,
+                                    firstItemIndex = indices.first(),
+                                    lastItemIndex = indices.last(),
+                                    currentChapterVisible = indices.any { visibleIndex ->
+                                        (state.pages.getOrNull(visibleIndex) as? MangaReaderItemUi.Page)
+                                            ?.chapterIndex == state.chapterIndex
+                                    },
+                                    navigationId = state.navigationId,
+                                )
+                            )
+                        }
                         is MangaReaderItemUi.ChapterTransition -> Unit
                         is MangaReaderItemUi.ChapterEdge, null -> Unit
                     }
@@ -1010,13 +1037,18 @@ private fun VerticalMangaPager(
             Triple(pagerState.isScrollInProgress, pagerState.currentPage, item)
         }.distinctUntilChanged()
             .collect { (isScrolling, page, item) ->
-                if (isScrolling) return@collect
                 when (item) {
-                    is MangaReaderItemUi.Page -> onIntent(MangaReaderIntent.VisibleItemChanged(
-                        itemIndex = page,
-                        currentChapterVisible = item.chapterIndex == state.chapterIndex,
-                        navigationId = state.navigationId,
-                    ))
+                    is MangaReaderItemUi.Page -> if (isScrolling) {
+                        onIntent(MangaReaderIntent.FooterItemChanged(page, state.navigationId))
+                    } else {
+                        onIntent(
+                            MangaReaderIntent.VisibleItemChanged(
+                                itemIndex = page,
+                                currentChapterVisible = item.chapterIndex == state.chapterIndex,
+                                navigationId = state.navigationId,
+                            )
+                        )
+                    }
                     is MangaReaderItemUi.ChapterTransition -> Unit
                     is MangaReaderItemUi.ChapterEdge, null -> Unit
                 }

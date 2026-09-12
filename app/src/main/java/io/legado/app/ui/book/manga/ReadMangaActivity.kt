@@ -13,11 +13,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppConst
+import io.legado.app.constant.BookType
+import io.legado.app.model.SourceCallBack
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.info.READER_RESULT_DELETED
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
+import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.NetworkUtils
@@ -61,6 +64,12 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
             }
         }
 
+    private val tocActivity = registerForActivityResult(TocActivityResult()) { result ->
+        result?.let { (chapterIndex, chapterPos, _) ->
+            readerViewModel.onIntent(MangaReaderIntent.OpenChapter(chapterIndex, chapterPos))
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         isRestoredFromSavedState = savedInstanceState != null
         super.onCreate(savedInstanceState)
@@ -91,6 +100,7 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
                     readerViewModel.onIntent(MangaReaderIntent.DismissSheet)
                     openBookInfoActivity()
                 },
+                onOpenFullToc = { tocActivity.launch(state.bookUrl) },
             )
         }
     }
@@ -112,6 +122,14 @@ class ReadMangaActivity : BaseComposeActivity(imageBg = false) {
             )
             is MangaReaderEffect.OpenSourceEdit -> sourceEditActivity.launch(
                 MainActivity.createBookSourceEditIntent(this, effect.sourceUrl)
+            )
+            is MangaReaderEffect.RunSourceCustomButton -> SourceCallBack.callBackBtn(
+                this,
+                effect.event,
+                effect.source,
+                effect.book,
+                effect.chapter,
+                BookType.image,
             )
             is MangaReaderEffect.OpenPaymentUrl -> startActivity(
                 MainActivity.createWebViewIntent(

@@ -54,8 +54,8 @@ import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -132,6 +132,7 @@ fun ReaderBookSheetRoute(
     onChapterClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
     currentChapterIndex: Int? = null,
     onOpenFullBookInfo: () -> Unit,
+    onOpenFullToc: (() -> Unit)? = null,
     /** 书签页跳转：携带完整书签供跳转前校验。 */
     onBookmarkNavigate: (Bookmark) -> Unit = { _ -> },
     /** 笔记页跳转：携带完整展示项供跳转前校验。 */
@@ -203,15 +204,23 @@ fun ReaderBookSheetRoute(
         onOpenFullScreen = { tab ->
             when (tab) {
                 ReaderBookSheetTab.Information -> onOpenFullBookInfo()
-                ReaderBookSheetTab.Toc,
+                ReaderBookSheetTab.Toc -> {
+                    if (onOpenFullToc != null) {
+                        onOpenFullToc()
+                    } else {
+                        fullTocLauncher.launch(
+                            Intent(context, TocActivity::class.java)
+                                .putExtra("bookUrl", bookUrl)
+                                .putExtra("initialPage", 0)
+                        )
+                    }
+                }
+
                 ReaderBookSheetTab.Bookmarks -> {
                     fullTocLauncher.launch(
                         Intent(context, TocActivity::class.java)
                             .putExtra("bookUrl", bookUrl)
-                            .putExtra(
-                                "initialPage",
-                                if (tab == ReaderBookSheetTab.Bookmarks) 1 else 0,
-                            )
+                            .putExtra("initialPage", 1)
                     )
                 }
 

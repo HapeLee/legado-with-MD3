@@ -3,7 +3,6 @@ package io.legado.app.ui.book.audio
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -24,12 +23,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -42,7 +39,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Repeat
@@ -60,7 +56,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -100,7 +95,6 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
-import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.player.AnimatedPlayPauseButton
 import io.legado.app.ui.widget.components.player.PlayerAdjustmentSlider
 import io.legado.app.ui.widget.components.player.PlayerBackground
@@ -109,7 +103,6 @@ import io.legado.app.ui.widget.components.player.PlayerTocPage
 import io.legado.app.ui.widget.components.player.playerBgModeLabel
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import java.util.Locale
 import kotlin.math.abs
@@ -123,15 +116,9 @@ fun AudioPlayScreenContent(
     onBack: () -> Unit,
 ) {
     val horizontalPagerState = rememberPagerState(
-        initialPage = 0,
-        pageCount = { if (state.lyricLines.isEmpty()) 1 else 2 },
+        initialPage = 1,
+        pageCount = { if (state.lyricLines.isEmpty()) 2 else 3 },
     )
-    val verticalPagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
-    val verticalPagerNestedScrollConnection = rememberPagerFlingPassThroughConnection(
-        state = verticalPagerState,
-        orientation = Orientation.Vertical,
-    )
-    val coroutineScope = rememberCoroutineScope()
     var menuExpanded by remember { mutableStateOf(false) }
     val pagerHazeState = remember { HazeState() }
     val hazeEnabled =
@@ -386,46 +373,6 @@ fun AudioPlayScreenContent(
                     SmallAnimatedButton(
                         containerColor = Color.Transparent,
                         checked = false,
-                        icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-                        iconChecked = Icons.Default.KeyboardArrowUp,
-                        text = stringResource(
-                            if (verticalPagerState.currentPage == 0) {
-                                R.string.chapter_list
-                            } else {
-                                R.string.back
-                            }
-                        ),
-                        contentDescription = stringResource(
-                            if (verticalPagerState.currentPage == 0) {
-                                R.string.chapter_list
-                            } else {
-                                R.string.back
-                            }
-                        ),
-                        onCheckedChange = {
-                            coroutineScope.launch {
-                                if (horizontalPagerState.currentPage != 0) {
-                                    horizontalPagerState.animateScrollToPage(
-                                        page = 0,
-                                        animationSpec = tween(
-                                            durationMillis = 520,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
-                                }
-                                verticalPagerState.animateScrollToPage(
-                                    page = if (verticalPagerState.currentPage == 0) 1 else 0,
-                                    animationSpec = tween(
-                                        durationMillis = 520,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                )
-                            }
-                        },
-                    )
-                    SmallAnimatedButton(
-                        containerColor = Color.Transparent,
-                        checked = false,
                         icon = Icons.Default.WbTwilight,
                         text = playerBgModeLabel(state.bgMode),
                         contentDescription = playerBgModeLabel(state.bgMode),
@@ -485,27 +432,17 @@ fun AudioPlayScreenContent(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
             ) { page ->
-                if (page == 0) {
-                    VerticalPager(
-                        state = verticalPagerState,
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        pageNestedScrollConnection = verticalPagerNestedScrollConnection,
-                    ) { verticalPage ->
-                        if (verticalPage == 0) {
-                            AudioCoverPage(state, pageContentPadding)
-                        } else {
-                            PlayerTocPage(
-                                chapters = state.chapters,
-                                currentIndex = state.chapterIndex,
-                                isPaused = !state.isPlaying,
-                                onSelect = { onIntent(AudioPlayIntent.SelectChapter(it)) },
-                                contentPadding = pageContentPadding,
-                            )
-                        }
-                    }
-                } else {
-                    AudioLyricPage(
+                when (page) {
+                    0 -> PlayerTocPage(
+                        chapters = state.chapters,
+                        currentIndex = state.chapterIndex,
+                        isPaused = !state.isPlaying,
+                        onSelect = { onIntent(AudioPlayIntent.SelectChapter(it)) },
+                        contentPadding = pageContentPadding,
+                    )
+
+                    1 -> AudioCoverPage(state, pageContentPadding)
+                    else -> AudioLyricPage(
                         state = state,
                         contentPadding = pageContentPadding,
                         onIntent = onIntent,

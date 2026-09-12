@@ -24,8 +24,9 @@ class ReaderReadAloudChapterTest {
 
     @Test
     fun canonicalSpeechParagraphsUseDisplayedTextPositions() {
-        val chapter = ReaderReadAloudChapter.create(0, "", "袮甲\n乙\n", listOf(0))
+        val chapter = ReaderReadAloudChapter.create(0, "", "袮甲\n乙\uFFFC\n", listOf(0))
         assertEquals(" 甲", chapter.canonicalSpeechParagraphs()[0].text)
+        assertEquals("乙 ", chapter.canonicalSpeechParagraphs()[1].text)
         assertEquals(3, chapter.canonicalSpeechParagraphs()[1].chapterPosition)
     }
 }

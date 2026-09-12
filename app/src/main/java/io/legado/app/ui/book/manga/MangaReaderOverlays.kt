@@ -38,7 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.MoreVert
@@ -119,7 +119,8 @@ internal fun BoxScope.MangaFooter(state: MangaReaderUiState) {
         2 -> Alignment.BottomEnd
         else -> Alignment.BottomStart
     }
-    val page = state.pages.getOrNull(state.currentItemIndex) as? MangaReaderItemUi.Page ?: return
+    val page = state.pages.getOrNull(state.footerItemIndex ?: state.currentItemIndex)
+            as? MangaReaderItemUi.Page ?: return
     val progress = if (page.chapterCount <= 0 || page.pageCount <= 0) 0.0 else {
         (page.chapterIndex.toDouble() + (page.pageIndex + 1.0) / page.pageCount) / page.chapterCount
     }
@@ -596,7 +597,7 @@ private fun MangaMenuBottomBar(
                             buildList {
                                 add(
                                 ReaderMenuAction(
-                                    Icons.AutoMirrored.Filled.MenuBook,
+                                    Icons.AutoMirrored.Filled.List,
                                     stringResource(R.string.chapter_list)
                                 ) {
                                     onIntent(MangaReaderIntent.OpenCatalog)

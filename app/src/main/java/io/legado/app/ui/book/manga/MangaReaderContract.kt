@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.data.entities.BookSource
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -23,9 +24,11 @@ data class MangaReaderUiState(
     val sourceName: String = "",
     val sourceUrl: String? = null,
     val sourceType: Int? = null,
+    val sourceCustomButtonAvailable: Boolean = false,
     val changeSourceBook: MangaBookSnapshot? = null,
     val pages: ImmutableList<MangaReaderItemUi> = persistentListOf(),
     val currentItemIndex: Int = 0,
+    val footerItemIndex: Int? = null,
     val currentPage: Int = 0,
     val pageCount: Int = 0,
     val chapterIndex: Int = 0,
@@ -206,6 +209,7 @@ sealed interface MangaReaderIntent {
     data object PayCurrentChapter : MangaReaderIntent
     data object OpenSourceLogin : MangaReaderIntent
     data object OpenSourceEdit : MangaReaderIntent
+    data class SourceCustomButton(val longClick: Boolean) : MangaReaderIntent
     data object BackPressed : MangaReaderIntent
     data object ToggleMenu : MangaReaderIntent
     data object HideMenu : MangaReaderIntent
@@ -244,6 +248,11 @@ sealed interface MangaReaderIntent {
         val lastItemIndex: Int = itemIndex,
         /** Adjacent chapters may be precomposed; only promote after the current chapter leaves view. */
         val currentChapterVisible: Boolean,
+        val navigationId: Long,
+    ) : MangaReaderIntent
+
+    data class FooterItemChanged(
+        val itemIndex: Int,
         val navigationId: Long,
     ) : MangaReaderIntent
     data class PagerScrollChanged(val inProgress: Boolean) : MangaReaderIntent
@@ -340,6 +349,12 @@ sealed interface MangaReaderEffect {
     data class OpenChapterUrl(val externalBrowser: Boolean) : MangaReaderEffect
     data class OpenSourceLogin(val sourceUrl: String) : MangaReaderEffect
     data class OpenSourceEdit(val sourceUrl: String) : MangaReaderEffect
+    data class RunSourceCustomButton(
+        val event: String,
+        val source: BookSource,
+        val book: Book,
+        val chapter: BookChapter?,
+    ) : MangaReaderEffect
     data class OpenPaymentUrl(
         val url: String,
         val sourceOrigin: String?,

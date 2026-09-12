@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
@@ -23,6 +24,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -30,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.sheet.ReaderBookHeader
 import io.legado.app.ui.book.read.sheet.ReaderBookHeaderState
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.reader.ReaderMenuActionSquare
 
@@ -37,6 +44,7 @@ private data class MangaMoreAction(
     val label: String,
     val icon: ImageVector,
     val intent: MangaReaderIntent,
+    val longClickIntent: MangaReaderIntent? = null,
 )
 
 @Composable
@@ -70,14 +78,50 @@ internal fun MangaReaderSourceActionsSheet(
             )
         }
         Spacer(Modifier.height(16.dp))
-        val actions = listOf(
-            MangaMoreAction(stringResource(R.string.change_origin), Icons.Default.SwapHoriz, MangaReaderIntent.ChangeSource),
-            MangaMoreAction(stringResource(R.string.refresh), Icons.Default.Refresh, MangaReaderIntent.RefreshChapter),
-            MangaMoreAction(stringResource(R.string.login), Icons.AutoMirrored.Filled.Login, MangaReaderIntent.OpenSourceLogin),
-            MangaMoreAction(stringResource(R.string.manga_reader_buy_chapter), Icons.Default.ShoppingCart, MangaReaderIntent.RequestPayCurrentChapter),
-            MangaMoreAction(stringResource(R.string.edit_source), Icons.Default.Edit, MangaReaderIntent.OpenSourceEdit),
-            MangaMoreAction(stringResource(R.string.disable_source), Icons.Default.MoreVert, MangaReaderIntent.DisableCurrentSource),
-        )
+        val actions = buildList {
+            if (state.sourceCustomButtonAvailable) add(
+                MangaMoreAction(
+                    stringResource(R.string.custom_button),
+                    Icons.Default.Extension,
+                    MangaReaderIntent.SourceCustomButton(false),
+                    MangaReaderIntent.SourceCustomButton(true),
+                )
+            )
+            addAll(
+                listOf(
+                    MangaMoreAction(
+                        stringResource(R.string.change_origin),
+                        Icons.Default.SwapHoriz,
+                        MangaReaderIntent.ChangeSource
+                    ),
+                    MangaMoreAction(
+                        stringResource(R.string.refresh),
+                        Icons.Default.Refresh,
+                        MangaReaderIntent.RefreshChapter
+                    ),
+                    MangaMoreAction(
+                        stringResource(R.string.login),
+                        Icons.AutoMirrored.Filled.Login,
+                        MangaReaderIntent.OpenSourceLogin
+                    ),
+                    MangaMoreAction(
+                        stringResource(R.string.manga_reader_buy_chapter),
+                        Icons.Default.ShoppingCart,
+                        MangaReaderIntent.RequestPayCurrentChapter
+                    ),
+                    MangaMoreAction(
+                        stringResource(R.string.edit_source),
+                        Icons.Default.Edit,
+                        MangaReaderIntent.OpenSourceEdit
+                    ),
+                    MangaMoreAction(
+                        stringResource(R.string.disable_source),
+                        Icons.Default.MoreVert,
+                        MangaReaderIntent.DisableCurrentSource
+                    ),
+                )
+            )
+        }
         Column(Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)) {
@@ -87,11 +131,10 @@ internal fun MangaReaderSourceActionsSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     rowActions.forEach { action ->
-                        ReaderMenuActionSquare(
-                            icon = action.icon,
-                            text = action.label,
+                        MangaSourceActionSquare(
+                            action = action,
+                            dispatch = ::dispatch,
                             modifier = Modifier.weight(1f),
-                            onClick = { dispatch(action.intent) },
                         )
                     }
                     repeat(4 - rowActions.size) { Spacer(Modifier.weight(1f)) }
@@ -100,6 +143,35 @@ internal fun MangaReaderSourceActionsSheet(
             }
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun MangaSourceActionSquare(
+    action: MangaMoreAction,
+    dispatch: (MangaReaderIntent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember(action.intent) { mutableStateOf(false) }
+    Box(modifier) {
+        ReaderMenuActionSquare(
+            icon = action.icon,
+            text = action.label,
+            hasMore = action.longClickIntent != null,
+            onClick = { dispatch(action.intent) },
+            onMoreClick = { expanded = true },
+        )
+        RoundDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) { dismiss ->
+            action.longClickIntent?.let { intent ->
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.source_custom_button_long_action),
+                    onClick = { dismiss(); dispatch(intent) },
+                )
+            }
+        }
     }
 }
 

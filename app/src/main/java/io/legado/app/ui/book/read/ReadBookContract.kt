@@ -422,7 +422,7 @@ internal val ReadBookButtonIds = listOf(
 )
 
 internal val MoreActionIds = listOf(
-    "change_source", "refresh", "download", "edit_content", "add_bookmark",
+    "source_custom_button", "change_source", "refresh", "download", "edit_content", "add_bookmark",
     "text_processing", "reverse_content", "re_segment",
     "del_ruby", "del_h", "toc_rule", "charset", "image_style", "page_anim",
     "simulated_reading", "get_progress", "cover_progress", "highlight_rule",
