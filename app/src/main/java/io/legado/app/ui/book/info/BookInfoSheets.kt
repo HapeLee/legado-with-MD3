@@ -1,5 +1,12 @@
 package io.legado.app.ui.book.info
 
+// ============================================================================
+// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
+// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
+// 问题背景与完整清单见 LegadoMD3/fix/README.md。
+// ============================================================================
+
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +44,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.flowOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -198,7 +206,16 @@ fun ChangeCoverSheet(
     onSelect: (String) -> Unit,
     viewModel: ChangeCoverViewModel = koinViewModel(key = "cover-$name-$author"),
 ) {
-    val items by viewModel.dataFlow.collectAsStateWithLifecycle(initialValue = emptyList<SearchBook>())
+    val items by remember(show) {
+        // [FIX-AI] 原版行为：dataFlow 是无条件 collectAsStateWithLifecycle 收集的。
+        // ChangeCoverSheet 在编辑页（BookInfoEditContent）里是 show=false 也照样
+        // 组合的，callbackFlow 收集体立即执行：查库后若结果 ≤ 1 条就 startSearch()
+        // → 用全部启用书源并发搜书（每源执行搜索规则/登录检测脚本）——
+        // 这就是“每次点开编辑页都弹某书源未登录提示”的根源。
+        // 修复后：只有用户真正打开换封面面板（show=true）才开始收集/自动搜索；
+        // 隐藏时收集一个空的已完成 Flow，不触发任何网络与脚本。
+        if (show) viewModel.dataFlow else flowOf(emptyList())
+    }.collectAsStateWithLifecycle(initialValue = emptyList<SearchBook>())
     val isSearching by viewModel.isSearching.collectAsStateWithLifecycle()
 
     LaunchedEffect(name, author) {

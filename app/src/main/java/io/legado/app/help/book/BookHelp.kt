@@ -1,5 +1,12 @@
 package io.legado.app.help.book
 
+// ============================================================================
+// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
+// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
+// 问题背景与完整清单见 LegadoMD3/fix/README.md。
+// ============================================================================
+
+
 import android.graphics.BitmapFactory
 import android.os.ParcelFileDescriptor
 import android.system.Os
@@ -19,6 +26,7 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileUtils
+import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.ImageUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.NetworkUtils
@@ -209,7 +217,11 @@ object BookHelp {
             bookChapter.getFileName(),
         ).writeText(content)
         if (book.isOnLineTxt && readGateway.currentSettings.tocCountWords) {
-            val wordCount = StringUtils.wordCountFormat(content.length)
+            // [FIX-AI] 原版此处为 StringUtils.wordCountFormat(content.length)：正文里携带的
+            // <img src="data:base64">、内联 SVG 等富文本源码会把章节字数虚抬几倍
+            // （3 页正文显示 3000+ 字）。改为剔除标签/Base64 后按可读纯文本计数。
+            val readableLength = HtmlFormatter.countReadableTextLength(content)
+            val wordCount = StringUtils.wordCountFormat(readableLength)
             bookChapter.wordCount = wordCount
             appDb.bookChapterDao.update(bookChapter)
         }

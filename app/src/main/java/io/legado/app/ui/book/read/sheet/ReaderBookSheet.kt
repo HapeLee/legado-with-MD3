@@ -1,5 +1,12 @@
 package io.legado.app.ui.book.read.sheet
 
+// ============================================================================
+// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
+// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
+// 问题背景与完整清单见 LegadoMD3/fix/README.md。
+// ============================================================================
+
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -62,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import io.legado.app.utils.HtmlFormatter
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -420,6 +428,9 @@ internal fun ReaderBookHeader(
             author = book?.author,
             path = book?.getDisplayCover(),
             sourceOrigin = book?.origin,
+            // [FIX-AI] 新增：阅读抽屉也是书维度场景，本地优先不跑书源脚本
+            bookUrl = book?.bookUrl,
+            preferCache = true,
             modifier = Modifier.width(40.dp),
         )
         Column(
@@ -575,6 +586,18 @@ private fun ReaderBookSourceDropdown(
 private fun ReaderBookInformation(
     book: Book?,
 ) {
+    // [FIX-AI] 原版行为：简介直接以 book.intro 原样塑进 Text，部分书源的简介带
+    // <usehtml>/<useweb>/<md> 前缀、<button>@onclick:JS</button> 与 HTML 标签，
+    // 展示出来就是一堆调用源码；且上一版修复用的 formatDisplayText 会给每行
+    // 补段首缩进（两个全角空格），与详情页观感不一致。
+    // 修复后：用与详情页同一套解析规则的 formatReadableText 清洗——去前缀、
+    // 丢弃 @onclick:JS 片段（只保留按钮文字，如“💬 本书讨论”）、不补缩进。
+    // 注意：LazyColumn 的 content lambda 不是 composable 作用域，remember 必须
+    // 提在本函数体开头调用。
+    val rawIntro = book?.getDisplayIntro()?.takeIf { it.isNotBlank() }
+    val formattedIntro = remember(rawIntro) {
+        rawIntro?.let { HtmlFormatter.formatReadableText(it) }
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 8.dp),
@@ -590,8 +613,8 @@ private fun ReaderBookInformation(
         book?.remark?.takeIf { it.isNotBlank() }?.let { remark ->
             item { InformationRow(stringResource(R.string.book_remark), remark) }
         }
-        book?.getDisplayIntro()?.takeIf { it.isNotBlank() }?.let { intro ->
-            item { InformationRow(stringResource(R.string.book_intro), intro) }
+        if (!formattedIntro.isNullOrBlank()) {
+            item { InformationRow(stringResource(R.string.book_intro), formattedIntro) }
         }
     }
 }

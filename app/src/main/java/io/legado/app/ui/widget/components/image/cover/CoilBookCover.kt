@@ -1,5 +1,12 @@
 package io.legado.app.ui.widget.components.image.cover
 
+// ============================================================================
+// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
+// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
+// 问题背景与完整清单见 LegadoMD3/fix/README.md。
+// ============================================================================
+
+
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.Layout
@@ -77,6 +84,10 @@ fun BookCoverImage(
     modifier: Modifier = Modifier,
     sourceOrigin: String? = null,
     memoryCacheKey: String? = null,
+    // [FIX-AI] 新增（原版无）：本书 bookUrl（别名缓存键）与书架本地优先标志，
+    // 透传给 buildCoverImageRequest；默认值保持原版行为。
+    bookUrl: String? = null,
+    preferCache: Boolean = false,
     ignoreUseDefaultCover: Boolean = false,
     showLoadingPlaceholder: Boolean = true,
     contentScale: ContentScale = ContentScale.Crop,
@@ -186,6 +197,8 @@ fun BookCoverImage(
                     memoryCacheKey = sharedCoverKey?.let {
                         "$it:cover:${memoryCacheKey ?: finalPath}"
                     } ?: memoryCacheKey ?: finalPath,
+                    bookUrl = bookUrl,          // [FIX-AI] 新增透传
+                    preferCache = preferCache,  // [FIX-AI] 新增透传
                     configure = requestBuilder,
                 ),
                 contentDescription = null,
@@ -223,6 +236,9 @@ fun CoilBookCover(
     radius: Dp = 4.dp,
     modifier: Modifier = Modifier.width(64.dp),
     sourceOrigin: String? = null,
+    // [FIX-AI] 新增（原版无）：本书 bookUrl + 书架本地优先标志，透传给 BookCoverImage
+    bookUrl: String? = null,
+    preferCache: Boolean = false,
     onLoadFinish: (() -> Unit)? = null,
     onError: (() -> Unit)? = null,
     ignoreUseDefaultCover: Boolean = false,
@@ -299,6 +315,8 @@ fun CoilBookCover(
             path = path,
             modifier = Modifier.fillMaxSize(),
             sourceOrigin = sourceOrigin,
+            bookUrl = bookUrl,          // [FIX-AI] 新增透传
+            preferCache = preferCache,  // [FIX-AI] 新增透传
             ignoreUseDefaultCover = ignoreUseDefaultCover,
             showLoadingPlaceholder = showLoadingPlaceholder,
             onSuccess = {

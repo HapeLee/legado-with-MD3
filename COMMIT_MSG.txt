@@ -1,0 +1,35 @@
+fix: 封面持久化缓存与离线加载、目录字数剔除富文本、书架滚动性能等修复
+
+本 PR 包含以下修复（代码内搜索 [FIX-AI] 可定位全部改动点，每处注明原版行为与修复后行为）：
+
+1. 封面冷启动/重启重新下载、断网无封面
+   - 原版 Coil 磁盘缓存（cacheDir/image_cache）命中时 Fetcher 不执行，且 cacheDir 可被系统回收；
+     封面缓存键落在书源规则解析后的最终 URL 上，带时效 token 的书源每次解析都会变化。
+   - 新增 CoverFileCache（filesDir/cover_cache，100MB LRU）：以书架存储的原始封面地址
+     为精确键 + bookUrl 别名键双索引；命中直接返回本地文件，跳过规则解析与网络。
+   - 书维度请求（书架/详情页/编辑页/管理页/阅读抽屉/听书胶囊）才写入持久缓存，
+     发现页/搜索页临时封面不再挤占 LRU。
+   - 非漫画请求禁用 Coil 磁盘缓存层，保证 Fetcher 必然回填持久缓存。
+   - 网络失败回退本书别名缓存，弱网不灰图。
+   - 设置页"清除封面缓存"同时清除持久缓存目录。
+
+2. 书架冷启动/滚动时封面请求触发书源规则脚本（未登录/版本检测类书源弹 toast）
+   - 封面命中本地缓存时不再执行 AnalyzeUrl 规则解析，消除弹窗来源。
+
+3. 打开书籍编辑页会对全部启用书源发起并发搜索（ChangeCoverSheet 隐藏时仍收集 dataFlow，
+   callbackFlow 内 size<=1 即 startSearch）
+   - 改为仅在面板真正展开（show=true）时开始收集/搜索。
+
+4. 目录章节字数把正文内联的 <img base64>/<svg> 等富文本源码计入
+   - BookHelp.saveText 改用 HtmlFormatter.countReadableTextLength()：剔除媒体标签、
+     data:URI、Markdown 图片语法后按可读纯文本计数。
+
+5. 书架滚动卡顿（400+ 本书）
+   - BookItem 简介 Jsoup 解析改为仅列表模式按需执行，并增加跨 LazyList 回收存活的
+     全局 LRU 缓存，避免来回滚动反复重解析。
+
+6. 阅读页目录侧栏"信息"页内容简介显示未渲染的 HTML/onclick 源码
+   - 新增 HtmlFormatter.formatReadableText()：去 <usehtml> 等前缀、丢弃 @onclick:JS
+     片段（保留按钮文字）、不补段首缩进，与详情页观感一致。
+
+Co-authored-by: Chatbox <chatbox@chatboxai.com>

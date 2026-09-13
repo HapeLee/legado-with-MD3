@@ -1,5 +1,12 @@
 package io.legado.app.ui.book.manage
 
+// ============================================================================
+// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
+// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
+// 问题背景与完整清单见 LegadoMD3/fix/README.md。
+// ============================================================================
+
+
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1687,6 +1694,9 @@ private fun PreviewBookInfo(
                 author = book.author,
                 path = book.getDisplayCover(),
                 sourceOrigin = book.origin,
+                // [FIX-AI] 新增：书架管理类页面本地优先，不重复跑书源脚本
+                bookUrl = book.bookUrl,
+                preferCache = true,
                 modifier = Modifier.width(54.dp),
             )
             AppText(

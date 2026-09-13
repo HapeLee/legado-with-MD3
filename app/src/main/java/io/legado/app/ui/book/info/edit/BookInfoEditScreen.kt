@@ -1,5 +1,12 @@
 package io.legado.app.ui.book.info.edit
 
+// ============================================================================
+// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
+// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
+// 问题背景与完整清单见 LegadoMD3/fix/README.md。
+// ============================================================================
+
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -176,6 +183,13 @@ fun BookInfoEditContent(
                 name = uiState.name,
                 author = uiState.author,
                 path = uiState.coverUrl,
+                // [FIX-AI] 新增（原版无）：编辑页封面也走本地优先。原版行为：编辑页
+                // 封面请求不带书标识，URL 被启动刷新轮换后精确键 miss → 走慢速路径
+                // 解析书源规则（执行 headerRule 里的登录检测脚本）→ 每次进编辑页都
+                // 弹“未登录”提示。修复后：书架/详情页缓存过的封面（含别名命中）
+                // 直接本地返回，不碰书源。
+                bookUrl = uiState.book?.bookUrl,
+                preferCache = true,
                 modifier = Modifier
                     .width(110.dp)
             )

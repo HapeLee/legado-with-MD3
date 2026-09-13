@@ -1,5 +1,12 @@
 package io.legado.app.ui.main.bookshelf
 
+// ============================================================================
+// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
+// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
+// 问题背景与完整清单见 LegadoMD3/fix/README.md。
+// ============================================================================
+
+
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -277,6 +284,45 @@ private fun Modifier.bookshelfItemSemantics(label: String, isSelected: Boolean):
         if (isSelected) selected = true
     }
 
+/**
+ * [FIX-AI] 本缓存对象为修复新增（原版无）；原版在 BookItem 每次进入组合时无条件用
+ * remember 包裹 Jsoup 解析简介，网格模式不显示简介也照解析，LazyList 回收后
+ * remember 丢失、来回滚动反复重解析，400+ 本书时主线程被打爆（书架卡顿）。
+ * 修复：①只在列表模式真要显示简介时才解析；②用跨回收存活的全局 LRU 缓存。
+ * 跨 LazyList 回收存活的简介排版缓存。
+ * LazyGrid/LazyList 滚出可视范围的条目会离开组合，其 remember 被丢弃，滚回来又重建，
+ * 于是每本含长简介的书会被反复 Jsoup 解析——400+ 本书上下滚动时足够把主线程打爆。
+ * 这里用“行数设置 + 原始简介”做 key，全局只解析一次；上限限制避免无限增长。
+ */
+private object formattedIntroCache {
+    private const val MAX_ENTRIES = 500
+
+    // accessOrder=true 的 LinkedHashMap 天然 LRU；synchronized 内查写保证同 key 只解析一次。
+    private val cache = object : LinkedHashMap<String, String?>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, String?>): Boolean =
+            size > MAX_ENTRIES
+    }
+
+    fun getOrFormat(intro: String?, maxLines: Int): String? {
+        // 空简介直接返回 null，不进缓存，也不触发解析。
+        if (intro.isNullOrBlank()) return null
+        val key = "$maxLines|$intro"
+        return synchronized(cache) {
+            if (cache.containsKey(key)) {
+                cache[key]
+            } else {
+                val formatted = if (maxLines == 0) {
+                    HtmlFormatter.formatIntroText(intro)
+                } else {
+                    HtmlFormatter.formatSummaryText(intro)
+                }.takeIf { it.isNotBlank() }
+                cache[key] = formatted
+                formatted
+            }
+        }
+    }
+}
+
 @Composable
 fun BookGroupCover(
     settings: BookshelfSettings,
@@ -324,6 +370,8 @@ fun BookGroupCover(
                                     name = it.name,
                                     author = it.author,
                                     path = it.getDisplayCover(),
+                                    bookUrl = it.bookUrl,      // [FIX-AI] 新增：组封面同样本地优先
+                                    preferCache = true,        // [FIX-AI] 新增
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -339,6 +387,8 @@ fun BookGroupCover(
                                     name = it.name,
                                     author = it.author,
                                     path = it.getDisplayCover(),
+                                    bookUrl = it.bookUrl,      // [FIX-AI] 新增
+                                    preferCache = true,        // [FIX-AI] 新增
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -356,6 +406,8 @@ fun BookGroupCover(
                                     name = it.name,
                                     author = it.author,
                                     path = it.getDisplayCover(),
+                                    bookUrl = it.bookUrl,      // [FIX-AI] 新增
+                                    preferCache = true,        // [FIX-AI] 新增
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -371,6 +423,8 @@ fun BookGroupCover(
                                     name = it.name,
                                     author = it.author,
                                     path = it.getDisplayCover(),
+                                    bookUrl = it.bookUrl,      // [FIX-AI] 新增
+                                    preferCache = true,        // [FIX-AI] 新增
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -594,6 +648,8 @@ fun BookGroupItemHorizontalCovers(
                                 name = book.name,
                                 author = book.author,
                                 path = book.getDisplayCover(),
+                                bookUrl = book.bookUrl,      // [FIX-AI] 新增：分组展开预览行同样本地优先
+                                preferCache = true,          // [FIX-AI] 新增
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -638,16 +694,18 @@ fun BookItem(
     onLongClick: (() -> Unit)?
 ) {
     val book = bookUi.book
-    val intro = remember(book.intro, settings.bookshelfIntroMaxLines) {
-        val formatted = if (settings.bookshelfIntroMaxLines == 0) {
-            HtmlFormatter.formatIntroText(book.intro)
-        } else {
-            HtmlFormatter.formatSummaryText(book.intro)
-        }
-        formatted.takeIf { it.isNotBlank() }
-    }
     val showListDetails = layoutMode == 0 && !isCompact && settings.showBookIntro
-    val showIntro = showListDetails && settings.bookshelfShowIntro && intro != null
+    val showIntroText = showListDetails && settings.bookshelfShowIntro
+    // 简介排版包含 Jsoup 解析 + 多轮正则，是主线程重活；LazyList 回收后 remember 会丢失，
+    // 来回滚动就会反复重解析。这里只在列表模式真要显示时才算，并用跨回收的 LRU 缓存兜住。
+    val intro = remember(showIntroText, book.intro, settings.bookshelfIntroMaxLines) {
+        if (showIntroText) {
+            formattedIntroCache.getOrFormat(book.intro, settings.bookshelfIntroMaxLines)
+        } else {
+            null
+        }
+    }
+    val showIntro = showIntroText && intro != null
     val showIntroBelowContent = showIntro && settings.bookshelfListIntroBelowContent
     val unreadCount = book.getUnreadChapterNum()
     val unreadText = if (settings.showUnread && unreadCount > 0) unreadCount.toString() else null
@@ -684,6 +742,9 @@ fun BookItem(
                 .fillMaxWidth()
                 .aspectRatio(5f / 7f),
             sourceOrigin = book.origin,
+            // [FIX-AI] 新增：传本书 bookUrl，封面命中本地（含别名）缓存时
+            // 不解析书源规则、不弹登录提示、不重新下载
+            bookUrl = book.bookUrl,
             badgeText = if (layoutMode != 0) unreadText else null,
             showBadgeDot = showUpdateBadge,
             leftBottomText = matchedSourceLabel ?: bookTypeLabel,
