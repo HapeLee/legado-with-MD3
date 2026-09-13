@@ -461,6 +461,14 @@
     <string name="book_source_check_save_failed">Check failed: unable to save result, %1$s</string>
     <string name="book_source_check_incomplete">Check failed: task did not finish</string>
     <string name="book_source_check_item_cancelled">Check cancelled</string>
+    <string name="book_source_check_default_keyword">My</string>
+    <string name="book_source_import_success">Import completed</string>
+    <string name="book_source_import_failed">Import failed</string>
+    <string name="book_source_invalid_source">Not a book source</string>
+    <string name="book_source_export_open_failed">Unable to open export file</string>
+    <string name="book_source_export_failed">Export failed: %1$s</string>
+    <string name="book_source_upload_success">Upload completed: %1$s</string>
+    <string name="book_source_upload_failed">Upload failed: %1$s</string>
     <string name="check_select_source">Check the selected source</string>
     <string name="progress_show">%1$s      Progress %2$d/%3$d</string>
     <string name="tts_fix">Please install and select Chinese TTS!</string>

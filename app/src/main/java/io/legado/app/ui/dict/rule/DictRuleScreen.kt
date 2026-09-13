@@ -227,6 +227,7 @@ fun DictRuleScreen(
         data = showDeleteRuleDialog,
         onDismissRequest = { showDeleteRuleDialog = null },
         title = stringResource(R.string.delete),
+        text = stringResource(R.string.sure_del),
         confirmText = stringResource(R.string.ok),
         onConfirm = { rule ->
             onIntent(DictRuleIntent.DeleteRule(rule))

@@ -224,6 +224,7 @@ fun HighlightTagRuleScreen(
         data = showDeleteRuleDialog,
         onDismissRequest = { showDeleteRuleDialog = null },
         title = stringResource(R.string.delete),
+        text = stringResource(R.string.sure_del),
         confirmText = stringResource(R.string.ok),
         onConfirm = { rule ->
             onIntent(HighlightTagRuleIntent.DeleteRule(rule))

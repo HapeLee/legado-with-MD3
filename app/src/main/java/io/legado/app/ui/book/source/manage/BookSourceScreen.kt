@@ -172,7 +172,7 @@ fun BookSourceScreen(
     var showOnlineImport by remember { mutableStateOf(false) }
     var checkSourceIds by remember { mutableStateOf<Set<String>?>(null) }
     var checkSheet by remember { mutableStateOf<CheckSheet?>(null) }
-    var checkOptionsDraft by remember { mutableStateOf(state.checkOptions) }
+    var checkOptionsDraft by remember(state.checkOptions) { mutableStateOf(state.checkOptions) }
     var pendingExportIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showExportSheet by remember { mutableStateOf(false) }
     var showImportOptions by remember { mutableStateOf(false) }
@@ -414,6 +414,7 @@ fun BookSourceScreen(
         deleteIds,
         { deleteIds = null },
         stringResource(R.string.delete),
+        text = stringResource(R.string.sure_del),
         confirmText = stringResource(R.string.ok),
         onConfirm = { ids -> onIntent(BookSourceIntent.Delete(ids)); deleteIds = null },
         dismissText = stringResource(R.string.cancel),
@@ -513,7 +514,10 @@ fun BookSourceScreen(
                 showExportSheet = true
             },
         ),
-        onDeleteSelected = { deleteIds = @Suppress("UNCHECKED_CAST") (it as Set<String>) },
+        onDeleteSelected = {
+            @Suppress("UNCHECKED_CAST")
+            onIntent(BookSourceIntent.Delete(it as Set<String>))
+        },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 text = stringResource(R.string.group_manage),
@@ -766,7 +770,8 @@ private fun CheckBookSourceSheet(
     onOpenSettings: () -> Unit,
     onConfirm: (Set<String>, String, BookSourceCheckOptionsUi) -> Unit,
 ) {
-    var keyword by remember(sourceIds) { mutableStateOf("我的") }
+    val defaultKeyword = stringResource(R.string.book_source_check_default_keyword)
+    var keyword by remember(sourceIds, defaultKeyword) { mutableStateOf(defaultKeyword) }
     AppModalBottomSheet(
         data = sourceIds,
         onDismissRequest = onDismissRequest,

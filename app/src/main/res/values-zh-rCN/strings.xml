@@ -431,6 +431,14 @@
     <string name="book_source_check_save_failed">校验失败：无法保存结果，%1$s</string>
     <string name="book_source_check_incomplete">校验失败：任务未完成</string>
     <string name="book_source_check_item_cancelled">校验已取消</string>
+    <string name="book_source_check_default_keyword">我的</string>
+    <string name="book_source_import_success">导入完成</string>
+    <string name="book_source_import_failed">导入失败</string>
+    <string name="book_source_invalid_source">不是书源</string>
+    <string name="book_source_export_open_failed">无法打开导出文件</string>
+    <string name="book_source_export_failed">导出失败：%1$s</string>
+    <string name="book_source_upload_success">上传成功：%1$s</string>
+    <string name="book_source_upload_failed">上传失败：%1$s</string>
     <string name="check_select_source">校验所选</string>
     <string name="progress_show">%1$s      进度 %2$d/%3$d</string>
     <string name="tts_fix">请安装并选择中文 TTS！</string>
