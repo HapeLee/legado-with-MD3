@@ -9,6 +9,7 @@ import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
@@ -96,6 +97,7 @@ class ReadAloudDelegate(
                         readAloudFinishCurrentChapterAfterTimer =
                             prefs.finishCurrentChapterAfterTimer,
                         speechAnalysisMode = prefs.speechAnalysisMode,
+                        speechAnalysisReasoningLevel = prefs.speechAnalysisReasoningLevel,
                         useMultiSpeaker = prefs.useMultiSpeaker,
                         defaultReadAloudInterface = prefs.defaultInterface,
                         preDownloadNum = host.preDownloadNum,
@@ -431,6 +433,16 @@ class ReadAloudDelegate(
             readAloudSettingsRepository.update { it.copy(speechAnalysisMode = value) }
             host.updateState { it.copy(speechAnalysisMode = value) }
         }
+    }
+
+    /**
+     * 朗读分析的推理级别。关闭思考模式是 AI 朗读分析的默认值：默认思考的模型（智谱 GLM 等）
+     * 只把内容放在 reasoning_content 里，分析会直接失败。
+     */
+    fun setSpeechAnalysisReasoningLevel(value: String) {
+        val level = AiReasoningLevel.fromStorage(value, AiReasoningLevel.OFF)
+        updateSettings { it.copy(speechAnalysisReasoningLevel = level.storageValue) }
+        host.updateState { it.copy(speechAnalysisReasoningLevel = level.storageValue) }
     }
 
     /**

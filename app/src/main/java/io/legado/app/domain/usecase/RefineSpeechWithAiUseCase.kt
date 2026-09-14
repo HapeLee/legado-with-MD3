@@ -8,8 +8,10 @@ import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.ChapterSpeechGateway
 import io.legado.app.domain.model.AiGenerateRequest
+import io.legado.app.domain.model.AiGenerationParams
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
@@ -56,6 +58,7 @@ class RefineSpeechWithAiUseCase(
         analysisResult: ChapterSpeechAnalysisResult,
         paragraphs: List<CanonicalSpeechParagraph>,
         mode: SpeechAnalysisMode,
+        reasoningLevel: AiReasoningLevel = AiReasoningLevel.OFF,
         now: Long = System.currentTimeMillis(),
     ): ChapterSpeechAnalysisResult {
         if (mode == SpeechAnalysisMode.Rule) return analysisResult
@@ -72,13 +75,14 @@ class RefineSpeechWithAiUseCase(
                 analysisResult = analysisResult,
                 profiles = profiles,
                 preset = preset,
+                reasoningLevel = reasoningLevel,
                 now = now,
             )
             SpeechAnalysisMode.AiUnderstanding -> {
                 if (analysisResult.segments.any(ChapterSpeechSegment::userLocked)) {
-                    completeRuleSegments(analysisResult, profiles, preset, now)
+                    completeRuleSegments(analysisResult, profiles, preset, reasoningLevel, now)
                 } else {
-                    understandAtoms(analysisResult, paragraphs, profiles, preset, now)
+                    understandAtoms(analysisResult, paragraphs, profiles, preset, reasoningLevel, now)
                 }
             }
         }
@@ -105,6 +109,7 @@ class RefineSpeechWithAiUseCase(
         analysisResult: ChapterSpeechAnalysisResult,
         profiles: List<BookCharacterProfile>,
         preset: AiTaskPresetConfig,
+        reasoningLevel: AiReasoningLevel,
         now: Long,
     ): List<ChapterSpeechSegment> {
         val candidates = analysisResult.segments.filter { segment ->
@@ -132,7 +137,9 @@ class RefineSpeechWithAiUseCase(
                     )
                 },
             )
-            parseSegmentDecisions(generate(preset, SpeechAnalysisMode.RuleWithAi, payload))
+            parseSegmentDecisions(
+                generate(preset, SpeechAnalysisMode.RuleWithAi, payload, reasoningLevel)
+            )
                 .forEach { decision ->
                     require(decision.segmentId in chunk.map(ChapterSpeechSegment::id)) {
                         "AI returned an unknown segmentId: ${decision.segmentId}"
@@ -171,6 +178,7 @@ class RefineSpeechWithAiUseCase(
         paragraphs: List<CanonicalSpeechParagraph>,
         profiles: List<BookCharacterProfile>,
         preset: AiTaskPresetConfig,
+        reasoningLevel: AiReasoningLevel,
         now: Long,
     ): List<ChapterSpeechSegment> {
         val atoms = paragraphs.flatMap(AiSpeechAtomizer::atomize)
@@ -184,7 +192,8 @@ class RefineSpeechWithAiUseCase(
                     mapOf("atomId" to atom.id, "text" to atom.text)
                 },
             )
-            val groups = parseAtomGroups(generate(preset, SpeechAnalysisMode.AiUnderstanding, payload))
+            val groups =
+                parseAtomGroups(generate(preset, SpeechAnalysisMode.AiUnderstanding, payload, reasoningLevel))
             validateCoverage(chunk, groups)
             require(groups.all { group ->
                 group.characterId == null || profilesById.containsKey(group.characterId)
@@ -232,6 +241,7 @@ class RefineSpeechWithAiUseCase(
         preset: AiTaskPresetConfig,
         mode: SpeechAnalysisMode,
         payload: Any,
+        reasoningLevel: AiReasoningLevel,
     ): String = aiTextGateway.generate(
         AiGenerateRequest(
             model = preset.model,
@@ -239,7 +249,7 @@ class RefineSpeechWithAiUseCase(
                 AiMessage(AiMessageRole.SYSTEM, systemPrompt(preset, mode)),
                 AiMessage(AiMessageRole.USER, GSON.toJson(payload)),
             ),
-            params = preset.params.copy(temperature = 0f),
+            params = speechAnalysisParams(preset, reasoningLevel),
         )
     ).getOrThrow().text
 
@@ -391,3 +401,21 @@ class RefineSpeechWithAiUseCase(
                 "character IDs, infer emotion conservatively, and use null when uncertain."
     }
 }
+
+/**
+ * Request params for AI speech analysis.
+ *
+ * The caller's level wins because the preset/model default (MEDIUM) would otherwise force thinking
+ * on for every analysis: models that think by default (Zhipu GLM, DeepSeek) then spend the answer on
+ * `reasoning_content` and the strict JSON contract of this task fails. AUTO keeps the presets in
+ * charge, mirroring [io.legado.app.domain.usecase.IdentifyBookCharactersUseCase.identifyStream].
+ */
+internal fun speechAnalysisParams(
+    preset: AiTaskPresetConfig,
+    reasoningLevel: AiReasoningLevel,
+): AiGenerationParams = preset.params.copy(
+    temperature = 0f,
+    reasoningLevel = reasoningLevel
+        .takeUnless { it == AiReasoningLevel.AUTO }
+        ?: preset.params.reasoningLevel,
+)

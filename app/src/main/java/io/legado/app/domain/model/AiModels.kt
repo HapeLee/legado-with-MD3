@@ -226,6 +226,8 @@ enum class AiReasoningLevel(val effort: String, val budgetTokens: Int) {
 
     val isEnabled: Boolean get() = this != OFF
 
+    val storageValue: String get() = name.lowercase()
+
     fun effortFor(provider: AiProviderConfig): String? {
         val identity = "${provider.id} ${provider.name} ${provider.baseUrl}".lowercase()
         return when {
@@ -247,6 +249,16 @@ enum class AiReasoningLevel(val effort: String, val budgetTokens: Int) {
 
         fun fromEffort(effort: String): AiReasoningLevel =
             entries.firstOrNull { it.effort == effort } ?: AUTO
+
+        /**
+         * Task level settings (read-aloud analysis, …) persist the level themselves and use OFF as
+         * their fallback: a corrupted value must never silently re-enable reasoning, because models
+         * that think by default return no content and break strict JSON tasks.
+         */
+        fun fromStorage(
+            value: String,
+            default: AiReasoningLevel = AUTO
+        ): AiReasoningLevel = entries.firstOrNull { it.storageValue == value } ?: default
 
         fun fromThinkingStrength(mode: String, strength: Int): AiReasoningLevel {
             return when (mode) {
