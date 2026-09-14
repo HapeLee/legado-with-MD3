@@ -1,12 +1,5 @@
 package io.legado.app.ui.widget.components.image.cover
 
-// ============================================================================
-// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
-// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
-// 问题背景与完整清单见 LegadoMD3/fix/README.md。
-// ============================================================================
-
-
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -39,7 +32,7 @@ fun BookshelfCover(
     showBadgeDot: Boolean = false,
     leftBottomText: String? = null,
     sourceOrigin: String? = null,
-    // [FIX-AI] 新增（原版无）：本书 bookUrl，供封面别名缓存键；书架组件默认本地优先
+    // 本书 bookUrl，供封面别名缓存键；书架组件默认本地优先
     // （preferCache=true）：有缓存（含别名命中）直接显示，不跑书源规则脚本、不联网。
     bookUrl: String? = null,
     onLoadFinish: (() -> Unit)? = null,
@@ -55,8 +48,8 @@ fun BookshelfCover(
             path = path,
             modifier = coverModifier,
             sourceOrigin = sourceOrigin,
-            bookUrl = bookUrl,        // [FIX-AI] 新增透传
-            preferCache = true,       // [FIX-AI] 书架组件：本地优先
+            bookUrl = bookUrl,
+            preferCache = true,
             onLoadFinish = onLoadFinish,
             showLoadingPlaceholder = showLoadingPlaceholder,
             sharedTransitionScope = sharedTransitionScope,

@@ -1,12 +1,5 @@
 package io.legado.app.help.book
 
-// ============================================================================
-// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
-// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
-// 问题背景与完整清单见 LegadoMD3/fix/README.md。
-// ============================================================================
-
-
 import android.graphics.BitmapFactory
 import android.os.ParcelFileDescriptor
 import android.system.Os
@@ -217,9 +210,9 @@ object BookHelp {
             bookChapter.getFileName(),
         ).writeText(content)
         if (book.isOnLineTxt && readGateway.currentSettings.tocCountWords) {
-            // [FIX-AI] 原版此处为 StringUtils.wordCountFormat(content.length)：正文里携带的
-            // <img src="data:base64">、内联 SVG 等富文本源码会把章节字数虚抬几倍
-            // （3 页正文显示 3000+ 字）。改为剔除标签/Base64 后按可读纯文本计数。
+            // 正文里携带的 <img src="data:base64">、内联 SVG 等富文本源码会把章节字数虚抬
+            // 几倍（3 页正文显示 3000+ 字）。这里剔除标签/Base64 后按可读纯文本计数，
+            // 取代原先的 StringUtils.wordCountFormat(content.length)。
             val readableLength = HtmlFormatter.countReadableTextLength(content)
             val wordCount = StringUtils.wordCountFormat(readableLength)
             bookChapter.wordCount = wordCount

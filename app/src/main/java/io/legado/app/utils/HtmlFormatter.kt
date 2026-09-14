@@ -1,12 +1,5 @@
 package io.legado.app.utils
 
-// ============================================================================
-// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
-// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
-// 问题背景与完整清单见 LegadoMD3/fix/README.md。
-// ============================================================================
-
-
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import org.jsoup.Jsoup
 import java.net.URL
@@ -21,7 +14,7 @@ object HtmlFormatter {
     private val notImgHtmlRegex = "</?(?!img)[a-zA-Z]+(?=[ >])[^<>]*>".toRegex()
     private val otherHtmlRegex = "</?[a-zA-Z]+(?=[ >])[^<>]*>".toRegex()
 
-    // —— [FIX-AI] 以下为修复新增（原版无）：字数统计专用，正文里携带的图片 Base64/SVG 源码不能计入字数 ——
+    // 字数统计专用：正文里携带的图片 Base64/SVG 源码不能计入字数。
     // 容器型媒体标签整体连内容一起删除(base64、SVG 路径数据都藏在标签内部)
     private val mediaBlockRegex = Regex(
         "(?is)<(script|style|svg|math|video|audio|canvas|picture|iframe|object|embed|figure|template)\\b[^>]*>.*?</\\1\\s*>"
@@ -40,7 +33,7 @@ object HtmlFormatter {
     // Markdown 图片/链接语法 ![alt](url)
     private val markdownMediaRegex = Regex("!\\[[^\\]]*\\]\\([^)]*\\)")
 
-    // [FIX-AI] 新增（原版无）：简介前缀与按钮 onclick 片段，供 formatReadableText 使用
+    // 简介前缀与按钮 onclick 片段，供 formatReadableText 使用
     private val introPrefixRegex = Regex("^<(usehtml|useweb|md)>", RegexOption.IGNORE_CASE)
     private val onClickSuffixRegex = Regex("@onclick:[^<\\n]*", RegexOption.IGNORE_CASE)
 
@@ -176,7 +169,7 @@ object HtmlFormatter {
     }
 
     /**
-     * [FIX-AI] 新增（原版无）：把书源简介渲染成与详情页观感一致的“可读纯文本”，用于
+     * 把书源简介渲染成与详情页观感一致的“可读纯文本”，用于
      * 不支持交互的只读卡片（如阅读页目录侧栏“信息”页）：
      * 1) 去掉 <usehtml>/<useweb>/<md> 前缀（与详情页 parseBookInfoIntro 同一处理，
      *    否则字面量前缀会被当未知标签丢弃但尾部残留调用代码）；
@@ -204,7 +197,7 @@ object HtmlFormatter {
     }
 
     /**
-     * [FIX-AI] 本函数为修复新增（原版无）：统计正文真实可读字数。部分书源的 content 携带
+     * 统计正文真实可读字数。部分书源的 content 携带
      * `<img src="data:image/png;base64,...">`、内联 `<svg>...</svg>` 等富文本源码，
      * 直接取 content.length 会把整段 Base64/标签算进目录字数（几百字显示成几千字）。
      * 这里先剔除媒体标签及其内容、残留 data: URI 与 Markdown 图片语法，

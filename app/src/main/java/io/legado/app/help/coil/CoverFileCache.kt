@@ -1,36 +1,23 @@
 package io.legado.app.help.coil
 
-// ============================================================================
-// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
-// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
-// 问题背景与完整清单见 LegadoMD3/fix/README.md。
-// ============================================================================
-
-
 import io.legado.app.utils.MD5Utils
 import splitties.init.appCtx
 import java.io.File
 
 /**
- * [FIX-AI] 本文件为修复新增（原版工程无此文件），修复"书架/详情页封面重启后重新下载、
- * 打开时触发书源脚本（登录/版本检测弹窗）"问题。
+ * filesDir 下的持久化封面文件缓存（不受“清除缓存”策略与系统低存储回收影响）。
  *
- * 背景（原版行为）：
- * - 原版 MD3 的封面链路是 Coil → CoverInterceptor(AnalyzeUrl 解析书源规则) → CoverFetcher
- *   (OkHttp 缓存/网络)。缓存键都落在"解析后的最终 URL"上。很多书源的封面最终 URL 带
- *   时效 token/签名，每次重新解析都会变 → Coil 磁盘缓存与 OkHttp 缓存全部 miss →
- *   重启后书架大量封面重新走网络；同时解析过程会执行书源 headerRule/coverUrl 里的
- *   JS/Java 检查脚本，触发"未登录""非官方版本"等书源自定义弹窗（原版 View 版 Glide
- *   以书架存储的原始 coverUrl 字符串为缓存键，所以没有这个问题）。
+ * 存在的理由：封面链路的缓存键传统上落在 AnalyzeUrl 解析出的最终 URL 上，而不少
+ * 书源的封面最终 URL 带时效 token/签名，每次解析都不同 → Coil 与 OkHttp 缓存全部
+ * miss，重启后书架要重新走网络；解析过程还会执行书源 headerRule/coverUrl 里的
+ * JS/Java 检查脚本，触发“未登录”“非官方版本”等书源自定义弹窗。
  *
- * 修复方案：
- * - 以【书架/详情页存储的原始封面地址】（稳定）的 MD5 为键，把解密后的图片字节持久化到
- *   filesDir/cover_cache（系统不会按"可清除缓存"回收，重启仍在）。
- * - CoverInterceptor 命中该文件时直接改写请求为本地文件，完全跳过书源规则解析与网络，
- *   所以重启加载、编辑页重载封面都不再执行书源脚本 → 不弹窗、不重新下载。
- * - 封面链接真的变化（换源/刷新详情）时 key 变化 → 自动回退到解析+网络路径，符合预期。
+ * 因此这里以【书架/详情页存下的原始封面地址】（稳定）的 MD5 为键保存解密后的图片字节：
+ * - CoverInterceptor 命中时直接改写请求为本地文件，完全跳过规则解析与网络，
+ *   重启加载、编辑页重载封面都不再执行书源脚本。
+ * - 封面链接真的变化（换源/刷新详情）时 key 变化，自动回退到解析+网络路径。
  * - 总量上限 100MB，LRU 修剪到 80MB；单文件上限 20MB。
- * - 设置 → 下载与缓存 → "清除封面缓存" 会连同本目录一起清空（见 HttpHelper.clearHttpCache）。
+ * - 设置 → 下载与缓存 → “清除封面缓存”会连同本目录一起清空（见 HttpHelper.clearHttpCache）。
  */
 object CoverFileCache {
 
@@ -57,7 +44,7 @@ object CoverFileCache {
         return if (len > 0L && len <= MAX_CACHE_FILE_BYTES) f else null
     }
 
-    // [FIX-AI] 新增：bookUrl 别名键。链接带 token 轮转的书源每次刷新 coverUrl 都会变，
+    // bookUrl 别名键。链接带 token 轮转的书源每次刷新 coverUrl 都会变，
     // 纯 URL 键必 miss；别名＝“这本书最近一次成功缓存的封面文件”，与链接无关。
     // 实现：bk_<md5(bookUrl)>.lnk 小文本文件，内容为主缓存文件名，不重复存图片字节。
     private fun aliasFileFor(bookUrl: String): File =
@@ -79,9 +66,8 @@ object CoverFileCache {
     }
 
     /**
-     * [FIX-AI] 新增：别名回填。拦截器精确键命中时调用，把“本书→该文件”的指针补上
-     * （已有且指向相同则直接返回）。这样旧版本只建了精确键的书，下次冷启动
-     * 命中时顺手建立别名，之后书源再轮换 URL 也能命中，无需重新下载。
+     * 别名回填：拦截器精确键命中时调用，把“本书→该文件”的指针补上
+     * （已有且指向相同则直接返回），之后书源再轮换 URL 也能命中。
      */
     fun ensureAlias(bookUrl: String, targetFile: File) {
         try {

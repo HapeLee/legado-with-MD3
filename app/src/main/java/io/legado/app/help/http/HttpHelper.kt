@@ -1,12 +1,5 @@
 package io.legado.app.help.http
 
-// ============================================================================
-// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
-// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
-// 问题背景与完整清单见 LegadoMD3/fix/README.md。
-// ============================================================================
-
-
 import io.legado.app.constant.AppConst
 import io.legado.app.help.CacheManager
 import io.legado.app.help.glide.progress.ProgressManager.LISTENER
@@ -186,7 +179,7 @@ fun getHttpCacheSize(type: HttpCacheType): Long {
 
 fun clearHttpCache(type: HttpCacheType) {
     when (type) {
-        // [FIX-AI] 设置页“封面缓存”条目同时清掉持久化封面文件缓存（CoverFileCache，
+        // 设置页“封面缓存”条目同时清掉持久化封面文件缓存（CoverFileCache，
         // 位于 filesDir/cover_cache，不在“清除缓存”目录扫描范围内），
         // 保证用户能彻底删除封面数据腾空间。
         HttpCacheType.COVER -> {

@@ -1,12 +1,5 @@
 package io.legado.app.help.coil
 
-// ============================================================================
-// [FIX-AI] 本文件由 AI 助手（Chatbox）修改（2026-09-13）。
-// 搜索 [FIX-AI] 可定位本文件全部改动点，每处均注明 原版行为 -> 修复后行为。
-// 问题背景与完整清单见 LegadoMD3/fix/README.md。
-// ============================================================================
-
-
 import coil3.Extras
 import io.legado.app.data.entities.BaseSource
 
@@ -35,23 +28,22 @@ object CoverExtras {
     val MangaBookUrl = Extras.Key<String?>(null)
 
     /**
-     * [FIX-AI] 新增（原版无）：CoverInterceptor 在改写 request.data 为最终解析 URL 之前，
-     * 把书架/详情页存储的原始封面地址存进来。CoverFetcher 回写持久文件缓存时用这个
-     * 稳定键（而不是带动态 token 的最终 URL），保证重启后拦截器快速路径仍能命中。
+     * CoverInterceptor 在把 request.data 改写为最终解析 URL 之前，把书架/详情页
+     * 存下的原始封面地址放进来。CoverFetcher 回写持久文件缓存时用这个稳定键
+     * （而不是带动态 token 的最终 URL），保证重启后拦截器快速路径仍能命中。
      */
     val OriginalUrl = Extras.Key<String?>(null)
 
     /**
-     * [FIX-AI] 新增（原版无）：封面请求所属书籍的 bookUrl。用于“别名缓存键”：
-     * 部分书源启动刷新时会把 coverUrl 重写成带新 token 的链接（图片内容相同），
-     * 纯 URL 键会 miss → 书架重新下载。别名键＝“本书最近一次成功缓存的封面”，
-     * 与链接无关，书架优先命中它。
+     * 封面请求所属书籍的 bookUrl，用于别名缓存键：部分书源启动刷新时会把 coverUrl
+     * 重写成带新 token 的链接（图片内容相同），纯 URL 键会 miss，书架只能重新下载。
+     * 别名键＝“本书最近一次成功缓存的封面”，与链接无关，书架优先命中它。
      */
     val BookUrl = Extras.Key<String?>(null)
 
     /**
-     * [FIX-AI] 新增（原版无）：书架类请求专用——本地有缓存（含别名命中）就直接用，
-     * 绝不进“解析书源规则→可能跑登录检测脚本/弹 toast/走网络”的慢速路径。
+     * 书架类请求专用：本地有缓存（含别名命中）就直接用，绝不进“解析书源规则 →
+     * 可能跑登录检测脚本/弹 toast/走网络”的慢速路径。
      * 详情页不设置此标志：在线时仍会拉新链接并刷新别名，保证封面真换图后能更新。
      */
     val PreferCache = Extras.Key<Boolean?>(null)
