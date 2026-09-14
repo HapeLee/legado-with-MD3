@@ -66,7 +66,7 @@ quickChineseTransfer = "0.2.17"
 # 应用代码不直接依赖它；加密走 JCA / help/crypto/CryptoUtils.kt。版本固定，勿升级（参考上游基线）。
 hutool = "5.8.22"
 room = "2.8.4"
-robolectric = "4.16.1"
+robolectric = "4.17"
 splitties = "3.0.0"
 rhino = "1.8.1"
 desugar = "2.1.5"
