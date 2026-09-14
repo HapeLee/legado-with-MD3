@@ -4,6 +4,9 @@ import io.legado.app.data.entities.BookMarking
 import kotlinx.coroutines.flow.Flow
 
 interface BookMarkingGateway {
+    /** 全部划线与笔记，供书签管理页按书聚合和跨书搜索。 */
+    fun flowAll(): Flow<List<BookMarking>>
+
     /** 按「书名+作者」查，供保存去重/定位；chapterIndex 可空。 */
     suspend fun getByBook(
         bookName: String,

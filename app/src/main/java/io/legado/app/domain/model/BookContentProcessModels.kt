@@ -49,18 +49,19 @@ data class TextProcessStyle(
 )
 
 /**
- * 用户划线/高亮笔记的 5 种效果（5x1 互斥）：单实线/波浪线/虚线/背景色/字体色。
+ * 用户划线/高亮笔记的互斥效果。
  *
  * 样式即类型：book_marks 不再存 kind 列，效果由 [TextProcessStyle] 推导/生成，
  * 渲染引擎按 styleJson 画线，效果本身与「划线 vs 高亮」的老二元 kind 等价。
  */
 @Keep
 enum class MarkingEffect {
-    SOLID, WAVE, DASHED, BG, TEXT;
+    SOLID, WAVE, DASHED, STRIKE, HIGHLIGHT, BG, TEXT;
 
     /** 是否属于下划线类效果（对应 underlineMode != 0）。 */
     val isUnderline: Boolean
-        get() = this == SOLID || this == WAVE || this == DASHED
+        get() = this == SOLID || this == WAVE || this == DASHED ||
+                this == STRIKE || this == HIGHLIGHT
 
     /**
      * 由效果 + 选中颜色生成样式。背景色自动半透明（约 20% alpha），
@@ -70,6 +71,11 @@ enum class MarkingEffect {
         SOLID -> TextProcessStyle(underlineMode = 1, underlineColor = color)
         WAVE -> TextProcessStyle(underlineMode = 3, underlineColor = color)
         DASHED -> TextProcessStyle(underlineMode = 2, underlineColor = color)
+        STRIKE -> TextProcessStyle(underlineMode = 6, underlineColor = color)
+        HIGHLIGHT -> TextProcessStyle(
+            underlineMode = 7,
+            underlineColor = (color and 0x00FFFFFF) or 0x66000000,
+        )
         BG -> TextProcessStyle(bgColor = (color and 0x00FFFFFF) or 0x33000000)
         TEXT -> TextProcessStyle(textColor = color)
     }
@@ -83,6 +89,8 @@ enum class MarkingEffect {
             style?.underlineMode == 1 -> SOLID
             style?.underlineMode == 3 -> WAVE
             style?.underlineMode == 2 -> DASHED
+            style?.underlineMode == 6 -> STRIKE
+            style?.underlineMode == 7 -> HIGHLIGHT
             style?.bgColor != null -> BG
             style?.textColor != null -> TEXT
             else -> SOLID

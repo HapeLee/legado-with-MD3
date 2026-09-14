@@ -391,6 +391,7 @@ class ReadSettingsRepository(
             expandTextMenu = compatDsValue(Keys.ExpandTextMenu, false),
             showSelectMenuIcon = compatDsValue(Keys.ShowSelectMenuIcon, true),
             textSelectMenuConfig = compatDsValue(Keys.TextSelectMenuConfig, ""),
+            lastMarkingStyle = compatDsValue(Keys.LastMarkingStyle, ""),
             showReadTitleAddition = compatDsValue(Keys.ShowReadTitleAddition, true),
             autoReadSpeed = compatDsValue(Keys.AutoReadSpeed, 10),
             systemTypefaces = compatDsValue(Keys.SystemTypefaces, 0),
@@ -512,6 +513,7 @@ class ReadSettingsRepository(
         val ExpandTextMenu = booleanPreferencesKey(PreferKey.expandTextMenu)
         val ShowSelectMenuIcon = booleanPreferencesKey(PreferKey.showSelectMenuIcon)
         val TextSelectMenuConfig = stringPreferencesKey(PreferKey.textSelectMenuConfig)
+        val LastMarkingStyle = stringPreferencesKey(PreferKey.lastMarkingStyle)
         val ShowReadTitleAddition = booleanPreferencesKey(PreferKey.showReadTitleAddition)
         val AutoReadSpeed = intPreferencesKey(PreferKey.autoReadSpeed)
         val SystemTypefaces = intPreferencesKey(PreferKey.systemTypefaces)
@@ -643,6 +645,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.expandTextMenu to expandTextMenu,
     PreferKey.showSelectMenuIcon to showSelectMenuIcon,
     PreferKey.textSelectMenuConfig to textSelectMenuConfig,
+    PreferKey.lastMarkingStyle to lastMarkingStyle,
     PreferKey.showReadTitleAddition to showReadTitleAddition,
     PreferKey.autoReadSpeed to autoReadSpeed,
     PreferKey.systemTypefaces to systemTypefaces,

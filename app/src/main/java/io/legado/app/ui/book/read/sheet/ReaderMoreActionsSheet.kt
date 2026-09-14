@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CleanHands
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.DisplaySettings
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FindReplace
@@ -46,6 +47,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.MoreActionIds
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookMenuRoute
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.ConfigListEntry
@@ -324,6 +326,9 @@ private fun moreActionSpecs(
     MoreActionSpec(
         "highlight_rule", stringResource(R.string.highlight_rule_config), Icons.Default.Tune,
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.HighlightRuleConfig)) }),
+    MoreActionSpec(
+        "read_style", stringResource(R.string.read_config), Icons.Default.DisplaySettings,
+        onClick = { dispatch(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle)) }),
     MoreActionSpec(
         "reverse_content", stringResource(R.string.reverse_content), Icons.Default.SwapVert,
         onClick = { dispatch(ReadBookIntent.MenuReverseContent) }),

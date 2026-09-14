@@ -50,7 +50,9 @@ class ReaderLongImageScrollTest {
 
         assertEquals(2, pages.size)
         assertEquals(400f, pages.first().scrollExtentPx, 0f)
-        assertEquals(100f, pages.last().scrollExtentPx, 0f)
+        // 章末页的页高是排版游标（一行 10f），不向内容区高度 100f 收口：下一章正文紧接
+        // 图片后的一行出现（对照旧 TextChapterLayout 的 `height = durY + 20dp`）。
+        assertEquals(10f, pages.last().scrollExtentPx, 0f)
         assertTrue(pages.last().elements.single() is ReaderElement.Text)
     }
 
@@ -67,7 +69,8 @@ class ReaderLongImageScrollTest {
             ),
         ).single()
 
-        assertEquals(70f, page.scrollExtentPx, 0f)
+        // 页高为排版游标：只含正文行高 10f，上下留白都不计入堆叠高度。
+        assertEquals(10f, page.scrollExtentPx, 0f)
         assertEquals(10f, page.contentTopPx, 0f)
         assertEquals(80f, page.contentBottomPx, 0f)
     }

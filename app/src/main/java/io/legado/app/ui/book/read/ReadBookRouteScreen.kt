@@ -156,6 +156,7 @@ fun ReadBookRouteScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
+    val markingState by viewModel.markingState.collectAsStateWithLifecycle()
     val readerRenderState by readerSessionViewModel.uiState.collectAsStateWithLifecycle()
     val readerPageWindow = readerRenderState.pageWindow
     val readerPaginationError = readerRenderState.paginationError
@@ -704,6 +705,7 @@ fun ReadBookRouteScreen(
                 backgroundRevision = readerBackground.revision,
                 backgroundImageAlpha = readerBackgroundAlpha(state.styleConfig.bgAlpha),
                 selectionColor = LegadoTheme.colorScheme.primary.copy(alpha = 0.28f),
+                    selectionPreviewStyle = markingState.previewStyle,
                 textAccentColor = Color(state.sheetConfig.textAccentColor),
                 autoPageIndicatorColor = LegadoTheme.colorScheme.primary,
                 modifier = Modifier
@@ -913,7 +915,10 @@ fun ReadBookRouteScreen(
             )
             ReaderTextSelectionOverlay(
                 controller = controller,
+                viewModel = viewModel,
                 expandTextMenu = readPreferences.expandTextMenu,
+                showSelectMenuIcon = readPreferences.showSelectMenuIcon,
+                lastMarkingStyle = readPreferences.lastMarkingStyle,
                 onOpenManage = { showSelectMenuConfigSheet = true },
             )
             var configItems by remember { mutableStateOf<List<ActionMenuItem>>(emptyList()) }
@@ -1010,20 +1015,43 @@ private fun rememberReaderSharedClipRadiusDp(
 @Composable
 private fun ReaderTextSelectionOverlay(
     controller: ReadBookController,
+    viewModel: ReadBookViewModel,
     expandTextMenu: Boolean,
+    showSelectMenuIcon: Boolean,
+    lastMarkingStyle: String,
     onOpenManage: () -> Unit,
 ) {
     val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
-    TextActionSelectionMenu(
-        menuState = textMenuState,
-        expandTextMenu = expandTextMenu,
-        onDismiss = controller::dismissTextActionMenu,
-        onItemClick = controller::onTextMenuItemClick,
-        onOpenManage = {
-            controller.dismissTextActionMenu()
-            onOpenManage()
-        },
-    )
+    val markingState by viewModel.markingState.collectAsStateWithLifecycle()
+    val currentMenuState = textMenuState
+    if (markingState.inlineMode && currentMenuState != null) {
+        MarkingSelectionMenu(
+            menuState = currentMenuState,
+            state = markingState,
+            lastMarkingStyle = lastMarkingStyle,
+            onDismiss = controller::onMenuActionFinally,
+            onApply = { style, note ->
+                viewModel.onIntent(ReadBookIntent.ApplyQuickMarking(style, note))
+            },
+            onDelete = {
+                viewModel.onIntent(ReadBookIntent.DeleteMarking)
+                controller.onMenuActionFinally()
+            },
+        )
+    } else {
+        TextActionSelectionMenu(
+            menuState = textMenuState,
+            expandTextMenu = expandTextMenu,
+            showSelectMenuIcon = showSelectMenuIcon,
+            onDismiss = controller::dismissTextActionMenu,
+            onItemClick = controller::onTextMenuItemClick,
+            onOpenQuickMarking = controller::openQuickMarking,
+            onOpenManage = {
+                controller.dismissTextActionMenu()
+                onOpenManage()
+            },
+        )
+    }
 }
 
 

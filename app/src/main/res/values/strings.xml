@@ -407,10 +407,13 @@
     <string name="bookmark_mark_effect_solid">Solid</string>
     <string name="bookmark_mark_effect_wave">Wave</string>
     <string name="bookmark_mark_effect_dash">Dash</string>
+    <string name="bookmark_mark_effect_strike">Strike</string>
+    <string name="bookmark_mark_effect_highlight">Highlight</string>
     <string name="bookmark_mark_effect_bg">Bg</string>
     <string name="bookmark_mark_effect_text">Text</string>
     <string name="bookmark_mark_custom_color">Custom color</string>
     <string name="bookmark_mark_note">Note</string>
+    <string name="bookmark_mark_delete_note">Delete note</string>
     <string name="bookmark_mark_note_hint">Write a note…</string>
     <string name="bookmark_mark_editing">Existing mark — saving will update it</string>
     <string name="content_process_ai_section">AI edits</string>
@@ -902,7 +905,7 @@
     <string name="nine_patch_split_bottom">Bottom Split</string>
     <string name="manual_nine_slice">Manual 9-slice</string>
     <string name="edit_nine_slice">Edit stretch region</string>
-    <string name="nine_slice_drag_hint">Drag the green handles to select the source region that may stretch</string>
+    <string name="nine_slice_drag_hint">The green region stretches in both directions; the four edge slices stretch along their length only, and the corners are never deformed. To keep rounded corners intact, drag the split lines outside the arcs (slice ≥ corner radius). Use the image scale, not the split lines, to make the whole frame bigger or smaller.</string>
     <string name="nine_slice_mode_all">All</string>
     <string name="nine_slice_mode_horizontal">Horizontal</string>
     <string name="nine_slice_mode_vertical">Vertical</string>
@@ -3281,4 +3284,11 @@
     <string name="manga_reader_cache_following">Cache following</string>
     <string name="manga_reader_cache_all">Cache entire comic</string>
     <string name="manga_reader_cache_enqueued">Added to offline cache queue</string>
+    <string name="feature_bookmarks_search_notes">Search note content</string>
+    <string name="feature_bookmarks_search_current">Search current %1$s</string>
+    <string name="feature_bookmarks_counts">%1$d bookmarks · %2$d notes</string>
+    <string name="feature_bookmarks_match_hint">Matching note found — tap to view</string>
+    <string name="feature_bookmarks_no_matching_notes">No matching notes</string>
+    <string name="feature_bookmarks_no_notes">No notes</string>
+    <string name="feature_bookmarks_chapter_fallback">Chapter %1$d</string>
 </resources>

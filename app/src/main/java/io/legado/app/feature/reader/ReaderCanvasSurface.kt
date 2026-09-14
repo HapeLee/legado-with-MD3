@@ -87,6 +87,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
+import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.feature.reader.core.accessibility.ReaderAccessibilityPolicy
 import io.legado.app.feature.reader.core.gesture.PullBookmarkDefaults
 import io.legado.app.feature.reader.core.gesture.PullBookmarkGesture
@@ -182,6 +183,7 @@ fun ReaderCanvasSurface(
     backgroundRevision: Long,
     backgroundImageAlpha: Float,
     selectionColor: Color,
+    selectionPreviewStyle: TextProcessStyle? = null,
     textAccentColor: Color,
     autoPageIndicatorColor: Color,
     modifier: Modifier = Modifier,
@@ -1368,9 +1370,33 @@ fun ReaderCanvasSurface(
                 } else if (released && !suppressTap && total.getDistance() < pageTouchSlop) {
                     // 元素命中复用 DOWN 时刻的布局：与长按同一坐标系，且不被
                     // 松手前可能发生的窗口替换干扰。
-                    val elementHandled = downPlacement?.page
-                        ?.elementAt(down.position.x, downPageY)
-                        ?.let(onElementClick) == true
+                    val hitPage = downPlacement?.page
+                    val hitElement = hitPage?.elementAt(down.position.x, downPageY)
+                    val elementHandled = if (
+                        hitPage != null && hitElement is ReaderElement.Text &&
+                        hitElement.markingId != null
+                    ) {
+                        val markingElements = hitPage.elements
+                            .filterIsInstance<ReaderElement.Text>()
+                            .filter { it.markingId == hitElement.markingId }
+                            .sortedBy { it.chapterPosition }
+                        val first = markingElements.firstOrNull()
+                        val last = markingElements.lastOrNull()
+                        if (first != null && last != null && onElementClick(hitElement)) {
+                            val markingSelection = ReaderSelection(
+                                chapterIndex = hitPage.id.chapterIndex,
+                                anchor = first.chapterPosition,
+                                focus = last.chapterPosition,
+                                anchorIsTitle = first.emphasized,
+                                focusIsTitle = last.emphasized,
+                            )
+                            textSelection = markingSelection
+                            showSelectionMenu(markingSelection, downWindow)
+                            true
+                        } else false
+                    } else {
+                        hitElement?.let(onElementClick) == true
+                    }
                     if (elementHandled) {
                         // Element actions take precedence over reader tap zones.
                     } else dispatchTapAction(
@@ -1410,6 +1436,7 @@ fun ReaderCanvasSurface(
                     selection = selectionColor,
                     readAloud = textAccentColor,
                     selectionProvider = { textSelection },
+                    selectionPreviewStyle = selectionPreviewStyle,
                     cachedImage = cachedImage,
                     loadImage = loadImage,
                 )
@@ -1433,6 +1460,7 @@ fun ReaderCanvasSurface(
                 selectionColor,
                 textAccentColor,
                 textSelection,
+                selectionPreviewStyle,
                 cachedImage,
                 loadImage
             )
@@ -1449,6 +1477,7 @@ fun ReaderCanvasSurface(
                             alpha = transform.alpha
                         },
                     textSelection,
+                    selectionPreviewStyle,
                     cachedImage,
                     loadImage,
                 )
@@ -1486,7 +1515,19 @@ fun ReaderCanvasSurface(
                     .drawWithContent {
                         clipRect(bottom = autoRevealPx.coerceAtMost(size.height)) { this@drawWithContent.drawContent() }
                     }) {
-                    ReaderPageCanvas(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha, selectionColor, textAccentColor, Modifier.fillMaxSize(), textSelection, cachedImage, loadImage)
+                    ReaderPageCanvas(
+                        page,
+                        backgroundColor,
+                        pageBackgroundImage,
+                        backgroundImageAlpha,
+                        selectionColor,
+                        textAccentColor,
+                        Modifier.fillMaxSize(),
+                        textSelection,
+                        selectionPreviewStyle,
+                        cachedImage,
+                        loadImage
+                    )
                 }
             }
             Canvas(Modifier.fillMaxSize()) {
@@ -1667,6 +1708,7 @@ private fun ScrollPageStack(
     selection: Color,
     readAloud: Color,
     selectionProvider: () -> ReaderSelection?,
+    selectionPreviewStyle: TextProcessStyle?,
     cachedImage: (ReaderElement.Image) -> Bitmap?,
     loadImage: suspend (ReaderElement.Image) -> Bitmap?,
 ) {
@@ -1735,6 +1777,7 @@ private fun ScrollPageStack(
                     readAloud,
                     activeSelection,
                     selectedBounds,
+                    selectionPreviewStyle,
                     cachedImage
                 )
             }
@@ -1757,16 +1800,30 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     readAloud: Color,
     activeSelection: ReaderSelection?,
     selectedBounds: List<ReaderRect>,
+    selectionPreviewStyle: TextProcessStyle?,
     cachedImage: (ReaderElement.Image) -> Bitmap?,
 ) {
     val native = drawContext.canvas.nativeCanvas
+    val visibleDecorationCache = if (selectionPreviewStyle != null && activeSelection != null) {
+        ReaderPageDecorationDrawCache.create(page.withoutSelectionDecorations(activeSelection))
+    } else data.decorationDrawCache
     data.textBackgroundRevision.value
     data.textBackgrounds.forEach { run ->
         ReaderTextBackgroundLoader.cached(run.image.source)?.let { bitmap ->
             drawTextBackground(native, bitmap, run, data.textBackgroundPaint)
         }
     }
-    data.textBackgroundBands.forEach { band ->
+    val previewing = selectionPreviewStyle != null && activeSelection != null
+    val previewBounds = if (previewing) {
+        data.textElements.filter { activeSelection.contains(it, page.id.chapterIndex) }
+            .map(ReaderElement.Text::bounds)
+            .mergeSelectionBounds()
+    } else emptyList()
+    val visibleTextBackgroundBands = if (previewing) {
+        data.textElements.filterNot { activeSelection.contains(it, page.id.chapterIndex) }
+            .mergeBackgroundBounds()
+    } else data.textBackgroundBands
+    visibleTextBackgroundBands.forEach { band ->
         drawRect(
             Color(band.colorArgb),
             Offset(band.bounds.left, band.bounds.top),
@@ -1776,10 +1833,14 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     selectedBounds.forEach { rect ->
         drawRect(selection, Offset(rect.left, rect.top), Size(rect.width, rect.height))
     }
+    drawSelectionStylePreview(selectionPreviewStyle, previewBounds, beforeText = true)
+    visibleDecorationCache.halfHighlights.forEach { it.draw(native) }
     page.elements.forEach { e -> when (e) {
         is ReaderElement.Text -> {
             val paint = data.paints.getValue(e.style)
-            paint.color = page.resolvedColorArgb(e, readAloud.toArgb())
+            paint.color = if (previewing && activeSelection.contains(e, page.id.chapterIndex)) {
+                selectionPreviewStyle.textColor ?: page.previewBaseTextColor(e)
+            } else page.resolvedColorArgb(e, readAloud.toArgb())
             paint.isUnderlineText = e.style.nativeUnderline || e.drawsLinkUnderline
             native.drawText(e.value, e.bounds.left, e.baselinePx, paint)
         }
@@ -1821,9 +1882,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
             strokeWidth = run.style.widthPx,
         )
     }
-    data.decorationDrawCache.contentRules.forEach { it.draw(native) }
-    data.decorationDrawCache.styledUnderlines.forEach { it.draw(native) }
-    data.decorationDrawCache.overlayRules.forEach { it.draw(native) }
+    visibleDecorationCache.contentRules.forEach { it.draw(native) }
+    visibleDecorationCache.styledUnderlines.forEach { it.draw(native) }
+    drawSelectionStylePreview(selectionPreviewStyle, previewBounds, beforeText = false)
+    visibleDecorationCache.overlayRules.forEach { it.draw(native) }
 }
 
 @Composable
@@ -1840,6 +1902,7 @@ private fun SimulationPageStack(
     selection: Color,
     readAloud: Color,
     activeSelection: ReaderSelection?,
+    selectionPreviewStyle: TextProcessStyle?,
     cachedImage: (ReaderElement.Image) -> Bitmap?,
     loadImage: suspend (ReaderElement.Image) -> Bitmap?,
 ) {
@@ -1872,6 +1935,7 @@ private fun SimulationPageStack(
                 readAloud,
                 Modifier.fillMaxSize(),
                 activeSelection,
+                selectionPreviewStyle,
                 cachedImage,
                 loadImage
             )
@@ -1890,6 +1954,7 @@ private fun SimulationPageStack(
                     .fillMaxSize()
                     .graphicsLayer { translationX = baseTranslation },
                 activeSelection,
+                selectionPreviewStyle,
                 cachedImage,
                 loadImage,
             )
@@ -1906,7 +1971,19 @@ private fun SimulationPageStack(
                 baseLayer.record { this@drawWithContent.drawContent() }
                 clipPath(path0, ClipOp.Difference) { drawLayer(baseLayer) }
             }) {
-            ReaderPageCanvas(basePage, background, backgroundImage, backgroundImageAlpha, selection, readAloud, Modifier.fillMaxSize(), activeSelection, cachedImage, loadImage)
+            ReaderPageCanvas(
+                basePage,
+                background,
+                backgroundImage,
+                backgroundImageAlpha,
+                selection,
+                readAloud,
+                Modifier.fillMaxSize(),
+                activeSelection,
+                selectionPreviewStyle,
+                cachedImage,
+                loadImage
+            )
         }
         Box(Modifier
             .fillMaxSize()
@@ -1918,7 +1995,19 @@ private fun SimulationPageStack(
                     }
                 }
             }) {
-            ReaderPageCanvas(revealPage, background, backgroundImage, backgroundImageAlpha, selection, readAloud, Modifier.fillMaxSize(), activeSelection, cachedImage, loadImage)
+            ReaderPageCanvas(
+                revealPage,
+                background,
+                backgroundImage,
+                backgroundImageAlpha,
+                selection,
+                readAloud,
+                Modifier.fillMaxSize(),
+                activeSelection,
+                selectionPreviewStyle,
+                cachedImage,
+                loadImage
+            )
         }
         Canvas(Modifier.fillMaxSize()) {
             clipPath(path0) { clipPath(pathBack) {
@@ -2052,6 +2141,7 @@ private fun ReaderPageCanvas(
     readAloud: Color,
     modifier: Modifier,
     activeSelection: ReaderSelection?,
+    selectionPreviewStyle: TextProcessStyle?,
     cachedImage: (ReaderElement.Image) -> Bitmap?,
     loadImage: suspend (ReaderElement.Image) -> Bitmap?,
     drawBackground: Boolean = true,
@@ -2091,10 +2181,18 @@ private fun ReaderPageCanvas(
     val textBackgroundPaint = remember {
         Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     }
-    val decorationDrawCache = remember(page.elements) {
-        ReaderPageDecorationDrawCache.create(page)
+    val previewing = selectionPreviewStyle != null && activeSelection != null
+    val decorationDrawCache = remember(page.elements, activeSelection, previewing) {
+        ReaderPageDecorationDrawCache.create(
+            if (previewing) page.withoutSelectionDecorations(activeSelection) else page
+        )
     }
-    val textBackgroundBands = remember(textElements) { textElements.mergeBackgroundBounds() }
+    val textBackgroundBands = remember(textElements, activeSelection, previewing) {
+        if (previewing) {
+            textElements.filterNot { activeSelection.contains(it, page.id.chapterIndex) }
+                .mergeBackgroundBounds()
+        } else textElements.mergeBackgroundBounds()
+    }
     val selectedTextBounds = remember(
         textElements,
         activeSelection,
@@ -2108,6 +2206,13 @@ private fun ReaderPageCanvas(
             }
             .map(ReaderElement.Text::bounds)
             .mergeSelectionBounds()
+    }
+    val previewBounds = remember(textElements, activeSelection, previewing) {
+        if (previewing) {
+            textElements.filter { activeSelection.contains(it, page.id.chapterIndex) }
+                .map(ReaderElement.Text::bounds)
+                .mergeSelectionBounds()
+        } else emptyList()
     }
     val textBackgroundSources = remember(textBackgrounds) {
         textBackgrounds.map { it.image.source }.distinct()
@@ -2157,10 +2262,14 @@ private fun ReaderPageCanvas(
         selectedTextBounds.forEach { rect ->
             drawRect(selection, Offset(rect.left, rect.top), Size(rect.width, rect.height))
         }
+        drawSelectionStylePreview(selectionPreviewStyle, previewBounds, beforeText = true)
+        decorationDrawCache.halfHighlights.forEach { it.draw(native) }
         page.elements.forEach { e -> when (e) {
             is ReaderElement.Text -> {
                 val paint = paints.getValue(e.style)
-                paint.color = page.resolvedColorArgb(e, readAloud.toArgb())
+                paint.color = if (previewing && activeSelection.contains(e, page.id.chapterIndex)) {
+                    selectionPreviewStyle.textColor ?: page.previewBaseTextColor(e)
+                } else page.resolvedColorArgb(e, readAloud.toArgb())
                 paint.isUnderlineText = e.style.nativeUnderline || e.drawsLinkUnderline
                 native.drawText(e.value, e.bounds.left, e.baselinePx, paint)
             }
@@ -2203,8 +2312,93 @@ private fun ReaderPageCanvas(
         }
         decorationDrawCache.contentRules.forEach { it.draw(native) }
         decorationDrawCache.styledUnderlines.forEach { it.draw(native) }
+        drawSelectionStylePreview(selectionPreviewStyle, previewBounds, beforeText = false)
         decorationDrawCache.overlayRules.forEach { it.draw(native) }
         if (drawDecoration) drawPageDecoration(native, page, tipPaints, badgeImage)
+    }
+}
+
+private fun ReaderPage.withoutSelectionDecorations(selection: ReaderSelection): ReaderPage = copy(
+    elements = elements.map { element ->
+        if (element is ReaderElement.Text && selection.contains(element, id.chapterIndex)) {
+            element.copy(style = element.style.copy(backgroundArgb = null, underline = null))
+        } else element
+    },
+)
+
+private fun ReaderPage.previewBaseTextColor(selected: ReaderElement.Text): Int =
+    elements.asSequence()
+        .filterIsInstance<ReaderElement.Text>()
+        .filter { it.markingId == null && it.emphasized == selected.emphasized }
+        .minByOrNull { kotlin.math.abs(it.chapterPosition - selected.chapterPosition) }
+        ?.style?.colorArgb
+        ?: selected.style.colorArgb
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSelectionStylePreview(
+    style: TextProcessStyle?,
+    bounds: List<ReaderRect>,
+    beforeText: Boolean,
+) {
+    style ?: return
+    if (beforeText) {
+        style.bgColor?.let { color ->
+            bounds.forEach { rect ->
+                drawRect(Color(color), Offset(rect.left, rect.top), Size(rect.width, rect.height))
+            }
+        }
+        if (style.underlineMode == 7) {
+            val color = style.underlineColor ?: return
+            bounds.forEach { rect ->
+                drawRect(
+                    Color(color),
+                    Offset(rect.left, rect.top + rect.height * 0.5f),
+                    Size(rect.width, rect.height * 0.5f),
+                )
+            }
+        }
+        return
+    }
+    val color = style.underlineColor ?: return
+    val stroke = style.underlineWidth.dp.toPx().coerceAtLeast(1f)
+    bounds.forEach { rect ->
+        val y = when (style.underlineMode) {
+            6 -> rect.top + rect.height * 0.52f
+            else -> rect.bottom + style.underlineOffset.dp.toPx()
+        }
+        when (style.underlineMode) {
+            1, 6 -> drawLine(Color(color), Offset(rect.left, y), Offset(rect.right, y), stroke)
+            2 -> {
+                val on = 8.dp.toPx()
+                val off = 5.dp.toPx()
+                var x = rect.left
+                while (x < rect.right) {
+                    drawLine(
+                        Color(color),
+                        Offset(x, y),
+                        Offset((x + on).coerceAtMost(rect.right), y),
+                        stroke
+                    )
+                    x += on + off
+                }
+            }
+
+            3 -> {
+                val amplitude = 3.dp.toPx()
+                val length = 12.dp.toPx()
+                val path = Path().apply {
+                    moveTo(rect.left, y)
+                    var x = rect.left
+                    var up = true
+                    while (x < rect.right) {
+                        val next = (x + length).coerceAtMost(rect.right)
+                        quadraticTo((x + next) / 2f, y + if (up) -amplitude else amplitude, next, y)
+                        up = !up
+                        x = next
+                    }
+                }
+                drawPath(path, Color(color), style = Stroke(stroke))
+            }
+        }
     }
 }
 

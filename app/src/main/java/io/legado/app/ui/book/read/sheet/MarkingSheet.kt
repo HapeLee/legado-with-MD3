@@ -378,6 +378,8 @@ internal fun MarkingEffect.labelRes(): Int = when (this) {
     MarkingEffect.SOLID -> R.string.bookmark_mark_effect_solid
     MarkingEffect.WAVE -> R.string.bookmark_mark_effect_wave
     MarkingEffect.DASHED -> R.string.bookmark_mark_effect_dash
+    MarkingEffect.STRIKE -> R.string.bookmark_mark_effect_strike
+    MarkingEffect.HIGHLIGHT -> R.string.bookmark_mark_effect_highlight
     MarkingEffect.BG -> R.string.bookmark_mark_effect_bg
     MarkingEffect.TEXT -> R.string.bookmark_mark_effect_text
 }

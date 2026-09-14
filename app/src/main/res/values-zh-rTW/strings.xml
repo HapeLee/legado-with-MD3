@@ -322,10 +322,13 @@
     <string name="bookmark_mark_effect_solid">單實線</string>
     <string name="bookmark_mark_effect_wave">波浪線</string>
     <string name="bookmark_mark_effect_dash">虛線</string>
+    <string name="bookmark_mark_effect_strike">刪除線</string>
+    <string name="bookmark_mark_effect_highlight">螢光</string>
     <string name="bookmark_mark_effect_bg">背景色</string>
     <string name="bookmark_mark_effect_text">字體色</string>
     <string name="bookmark_mark_custom_color">自訂顏色</string>
     <string name="bookmark_mark_note">備註</string>
+    <string name="bookmark_mark_delete_note">刪除筆記</string>
     <string name="bookmark_mark_note_hint">輸入備註…</string>
     <string name="bookmark_mark_editing">已有標記，儲存將更新</string>
     <string name="content_process_ai_section">AI 改寫</string>
@@ -1638,7 +1641,7 @@
     <string name="nine_patch_split_bottom">下切分線</string>
     <string name="manual_nine_slice">手動九宮格切圖</string>
     <string name="edit_nine_slice">編輯拉伸區域</string>
-    <string name="nine_slice_drag_hint">拖曳綠色選區，選擇允許拉伸的原圖區域</string>
+    <string name="nine_slice_drag_hint">綠色選區會被橫向和縱向雙向拉伸；上下兩條邊只沿長度橫向拉伸，左右兩條邊只沿長度縱向拉伸，四個角只等比縮放、不變形。要讓圓角完整保留，切分線必須拖到圓弧外側（切片寬度 ≥ 圓角半徑）；想整體調大調小框請用「縮放」，不要靠切分。</string>
     <string name="nine_slice_mode_all">全部</string>
     <string name="nine_slice_mode_horizontal">水平</string>
     <string name="nine_slice_mode_vertical">垂直</string>
@@ -2909,4 +2912,11 @@
     <string name="ai_auto_group_error_invalid_response">AI 未回傳可解析的分組方案。</string>
     <string name="ai_auto_group_error_unexpected">AI 自動分組失敗。</string>
     <string name="ai_auto_group_result">已建立 %1$d 個分組，沿用 %2$d 個分組，更新 %3$d 本書，略過 %4$d 本書。</string>
+    <string name="feature_bookmarks_search_notes">搜尋筆記內容</string>
+    <string name="feature_bookmarks_search_current">搜尋目前%1$s</string>
+    <string name="feature_bookmarks_counts">%1$d 個書籤 · %2$d 個筆記</string>
+    <string name="feature_bookmarks_match_hint">包含相符筆記，點擊查看</string>
+    <string name="feature_bookmarks_no_matching_notes">找不到相關筆記</string>
+    <string name="feature_bookmarks_no_notes">暫無筆記</string>
+    <string name="feature_bookmarks_chapter_fallback">第 %1$d 章</string>
 </resources>

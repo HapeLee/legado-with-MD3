@@ -80,6 +80,7 @@ import io.legado.app.model.translation.TranslationManager
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
+import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.isAbsUrl
@@ -225,7 +226,7 @@ class ReadBookViewModel(
         saveMarkingUseCase = saveMarkingUseCase,
         host = object : MarkingDelegate.Host {
             override fun reloadCurrentChapter() {
-                contentProcessDelegate.reloadCurrentChapter()
+                contentProcessDelegate.reloadCurrentChapterPreservingSnapshot()
             }
 
             override fun dismissMarkingSheet() {
@@ -1445,6 +1446,30 @@ class ReadBookViewModel(
                 markingDelegate.open(intent.selection)
                 _uiState.update { it.copy(activeSheet = ReadBookSheet.Marking) }
             }
+
+            is ReadBookIntent.OpenQuickMarking -> {
+                markingReturnSheet = null
+                markingDelegate.open(intent.selection, inlineMode = true)
+            }
+
+            is ReadBookIntent.OpenQuickMarkingEdit -> {
+                markingReturnSheet = null
+                markingDelegate.openForEdit(intent.id, inlineMode = true)
+            }
+
+            is ReadBookIntent.ApplyQuickMarking -> {
+                viewModelScope.launch {
+                    readSettingsRepository.update {
+                        it.copy(lastMarkingStyle = GSON.toJson(intent.style))
+                    }
+                }
+                markingDelegate.save(
+                    style = intent.style,
+                    note = intent.note ?: markingDelegate.uiState.value.editing?.note.orEmpty(),
+                )
+            }
+
+            ReadBookIntent.DismissQuickMarking -> markingDelegate.closeInlineSession()
 
             is ReadBookIntent.EditMarking -> {
                 // 从目录 Sheet 进入：记住原 sheet，保存/删除/取消后返回

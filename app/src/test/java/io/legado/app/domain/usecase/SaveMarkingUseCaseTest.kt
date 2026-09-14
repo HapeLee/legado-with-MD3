@@ -192,6 +192,8 @@ class SaveMarkingUseCaseTest {
     private class FakeBookMarkingGateway : BookMarkingGateway {
         private val marks = mutableListOf<BookMarking>()
 
+        override fun flowAll(): Flow<List<BookMarking>> = flowOf(marks.toList())
+
         override suspend fun getByBook(
             bookName: String,
             bookAuthor: String,

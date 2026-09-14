@@ -132,6 +132,46 @@ class ReaderSingleImageTest {
         )
     }
 
+    /**
+     * 单图样式的**正文页**恒为一屏：旧 `TextChapterLayout.setTypeText` 对每一行文本都做
+     * `if (textPage.height < visibleHeight) textPage.height = visibleHeight`
+     * （`isSingleImageStyle`），滚动模式下由此维持一屏一页。非单图样式仍是排版游标。
+     */
+    @Test fun scrollModeSingleImageStyleKeepsTextPagesOneScreenTall() = runBlocking {
+        val measured = measure("甲")
+
+        val singleImagePage = ReaderPaginator.paginateBlocks(
+            measured.blocks,
+            config.copy(continuousScroll = true, singleImageStyle = true),
+        ).single()
+        // 内容区高 200f（240 − 20 − 20）：一行 10f 的正文页同样取一屏。
+        assertEquals(200f, singleImagePage.scrollExtentPx, 0f)
+
+        val plainPage = ReaderPaginator.paginateBlocks(
+            measured.blocks,
+            config.copy(continuousScroll = true),
+        ).single()
+        assertEquals(10f, plainPage.scrollExtentPx, 0f)
+    }
+
+    /**
+     * 单图样式的**图片页**不受该收口影响：旧 `setTypeImage` 的 `imgStyleSingle` 分支只把
+     * `durY` 移到竖直居中位置（`durY = (visibleHeight - height) / 2`），页高仍是排版游标
+     * `(visibleHeight + height) / 2`，不补满一屏。
+     */
+    @Test fun scrollModeSingleImageStyleKeepsImagePagesAtTheirContentCursor() = runBlocking {
+        val measured = measure("　　<img src=\"a\">")
+
+        val page = ReaderPaginator.paginateBlocks(
+            measured.blocks,
+            config.copy(continuousScroll = true, singleImageStyle = true),
+        ).single()
+        val image = page.elements.single() as ReaderElement.Image
+        // 100×50 的图铺满 100f 内容宽、在 200f 高内容区竖直居中：页高 = (200 + 50) / 2 = 125f。
+        assertEquals(95f, image.bounds.top, 0f)
+        assertEquals(125f, page.scrollExtentPx, 0f)
+    }
+
     @Test fun inlineIconKeepsItsIndentPrefix() = runBlocking {
         val source = ReaderChapterSourceParser.parse(0, "", listOf("　　<img src=\"icon\">甲"), false, false)
         val measured = ReaderChapterBlockMeasurer(shaper, shaper, { ReaderImageDimensions(10f, 10f) })

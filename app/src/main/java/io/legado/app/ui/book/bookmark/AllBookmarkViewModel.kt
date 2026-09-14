@@ -5,220 +5,296 @@ import android.net.Uri
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookmarkRepository
+import io.legado.app.domain.gateway.BookMarkingGateway
+import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
 import io.legado.app.utils.createFileIfNotExist
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.openOutputStream
 import io.legado.app.utils.writeToOutputStream
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
-import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-data class BookmarkGroupHeader(
-    val bookName: String,
-    val bookAuthor: String
-) {
-    override fun toString(): String = "$bookName|$bookAuthor"
+@Stable
+data class BookmarkBookKey(val name: String, val author: String)
+
+@Stable
+data class BookmarkBookUi(
+    val key: BookmarkBookKey,
+    val coverPath: String? = null,
+    val sourceOrigin: String? = null,
+    val bookUrl: String? = null,
+    val bookmarkCount: Int,
+    val markingCount: Int,
+    val matchedMarkingId: String? = null,
+)
+
+sealed interface BookmarkDetailItemUi {
+    val stableId: String
+    val chapterIndex: Int
+    val chapterPosition: Int
+    val chapterName: String
+
+    @Stable
+    data class SavedBookmark(val bookmark: Bookmark) : BookmarkDetailItemUi {
+        override val stableId = "bookmark:${bookmark.time}"
+        override val chapterIndex = bookmark.chapterIndex
+        override val chapterPosition = bookmark.chapterPos
+        override val chapterName = bookmark.chapterName
+    }
+
+    @Stable
+    data class Marking(
+        val marking: BookMarking,
+        val selectedText: String,
+        override val chapterPosition: Int,
+    ) : BookmarkDetailItemUi {
+        override val stableId = "marking:${marking.id}"
+        override val chapterIndex = marking.chapterIndex ?: 0
+        override val chapterName = marking.chapterName
+    }
 }
 
 @Stable
-data class BookmarkItemUi(
-    val id: Long,
-    val content: String,
-    val chapterName: String,
-    val bookText: String,
-    val bookName: String,
-    val bookAuthor: String,
-    val rawBookmark: Bookmark
-)
-
-@Stable
 data class BookmarkUiState(
-    val isLoading: Boolean = false,
-    val bookmarks: ImmutableMap<BookmarkGroupHeader, ImmutableList<BookmarkItemUi>> = persistentMapOf(),
-    val error: Throwable? = null,
+    val isLoading: Boolean = true,
+    val books: ImmutableList<BookmarkBookUi> = persistentListOf(),
+    val selectedBook: BookmarkBookUi? = null,
+    val detailItems: ImmutableList<BookmarkDetailItemUi> = persistentListOf(),
     val searchQuery: String = "",
-    val collapsedGroups: ImmutableSet<String> = persistentSetOf()
+    val targetMarkingId: String? = null,
+    val error: Throwable? = null,
 )
 
 sealed interface AllBookmarkIntent {
     data class SetSearchQuery(val query: String) : AllBookmarkIntent
-    data class ToggleGroupCollapse(val group: BookmarkGroupHeader) : AllBookmarkIntent
-    data class ToggleAllCollapse(val groups: Set<BookmarkGroupHeader>) : AllBookmarkIntent
+    data class OpenBook(val key: BookmarkBookKey, val targetMarkingId: String? = null) :
+        AllBookmarkIntent
+
+    data object CloseBook : AllBookmarkIntent
+    data object TargetConsumed : AllBookmarkIntent
     data class UpdateBookmark(val bookmark: Bookmark) : AllBookmarkIntent
     data class DeleteBookmark(val bookmark: Bookmark) : AllBookmarkIntent
-    data class Export(val treeUri: Uri, val isMarkdown: Boolean) : AllBookmarkIntent
+    data class Export(val treeUri: Uri, val isMarkdown: Boolean, val book: BookmarkBookKey) :
+        AllBookmarkIntent
 }
 
 sealed interface AllBookmarkEffect {
     data class ShowMessage(val message: String) : AllBookmarkEffect
 }
 
-
 class AllBookmarkViewModel(
     application: Application,
     private val bookmarkRepository: BookmarkRepository,
+    private val markingGateway: BookMarkingGateway,
+    private val bookRepository: BookRepository,
 ) : AndroidViewModel(application) {
 
-    private val _searchQuery = MutableStateFlow("")
-    private val _collapsedGroups = MutableStateFlow<Set<String>>(emptySet())
-    private val _effects = MutableSharedFlow<AllBookmarkEffect>(extraBufferCapacity = 16)
-    val effects = _effects.asSharedFlow()
+    private val searchQuery = MutableStateFlow("")
+    private val selectedBook = MutableStateFlow<BookmarkBookKey?>(null)
+    private val targetMarkingId = MutableStateFlow<String?>(null)
+    private val effectsFlow = MutableSharedFlow<AllBookmarkEffect>(extraBufferCapacity = 16)
+    val effects = effectsFlow.asSharedFlow()
+
+    private val library =
+        combine(bookmarkRepository.flowAll(), markingGateway.flowAll()) { bookmarks, markings ->
+            bookmarks to markings
+        }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<BookmarkUiState> = combine(
-        _searchQuery,
-        _collapsedGroups,
-        bookmarkRepository.flowAll()
-    ) { query, collapsed, allBookmarks ->
-
-        val filteredList = if (query.isBlank()) {
-            allBookmarks
-        } else {
-            allBookmarks.filter {
-                it.bookName.contains(query, ignoreCase = true) ||
-                        it.content.contains(query, ignoreCase = true) ||
-                        it.bookAuthor.contains(query, ignoreCase = true)
-            }
-        }
-
-        val grouped = filteredList.asSequence()
-            .map { bookmark ->
-                BookmarkItemUi(
-                    id = bookmark.time,
-                    content = bookmark.content,
-                    chapterName = bookmark.chapterName,
-                    bookText = bookmark.bookText,
-                    bookName = bookmark.bookName,
-                    bookAuthor = bookmark.bookAuthor,
-                    rawBookmark = bookmark
-                )
-            }
-            .groupBy { item ->
-                BookmarkGroupHeader(item.bookName, item.bookAuthor)
-            }
-            .mapValues { (_, items) -> items.toImmutableList() }
-            .toImmutableMap()
-
-        BookmarkUiState(
-            isLoading = false,
-            bookmarks = grouped,
-            searchQuery = query,
-            collapsedGroups = collapsed.toImmutableSet()
-        )
-    }.catch { e ->
-        emit(BookmarkUiState(isLoading = false, error = e))
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = BookmarkUiState(isLoading = true)
-    )
+        library, searchQuery, selectedBook, targetMarkingId,
+    ) { (bookmarks, markings), query, selectedKey, targetId ->
+        RawState(bookmarks, markings, query.trim(), selectedKey, targetId)
+    }.mapLatest(::buildUiState)
+        .catch { emit(BookmarkUiState(isLoading = false, error = it)) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BookmarkUiState())
 
     fun onIntent(intent: AllBookmarkIntent) {
         when (intent) {
-            is AllBookmarkIntent.SetSearchQuery -> _searchQuery.value = intent.query
-            is AllBookmarkIntent.ToggleGroupCollapse -> toggleGroupCollapse(intent.group)
-            is AllBookmarkIntent.ToggleAllCollapse -> toggleAllCollapse(intent.groups)
-            is AllBookmarkIntent.UpdateBookmark -> updateBookmark(intent.bookmark)
-            is AllBookmarkIntent.DeleteBookmark -> deleteBookmark(intent.bookmark)
-            is AllBookmarkIntent.Export -> exportBookmark(intent.treeUri, intent.isMarkdown)
+            is AllBookmarkIntent.SetSearchQuery -> searchQuery.value = intent.query
+            is AllBookmarkIntent.OpenBook -> {
+                selectedBook.value = intent.key
+                targetMarkingId.value = intent.targetMarkingId
+                searchQuery.value = ""
+            }
+
+            AllBookmarkIntent.CloseBook -> {
+                selectedBook.value = null
+                targetMarkingId.value = null
+                searchQuery.value = ""
+            }
+
+            AllBookmarkIntent.TargetConsumed -> targetMarkingId.value = null
+            is AllBookmarkIntent.UpdateBookmark -> viewModelScope.launch(Dispatchers.IO) {
+                bookmarkRepository.save(intent.bookmark)
+            }
+
+            is AllBookmarkIntent.DeleteBookmark -> viewModelScope.launch(Dispatchers.IO) {
+                bookmarkRepository.delete(intent.bookmark)
+            }
+
+            is AllBookmarkIntent.Export -> exportBook(
+                intent.treeUri,
+                intent.isMarkdown,
+                intent.book
+            )
         }
     }
 
-    fun toggleGroupCollapse(groupKey: BookmarkGroupHeader) {
-        val stringKey = groupKey.toString()
-        _collapsedGroups.update { current ->
-            if (current.contains(stringKey)) current - stringKey else current + stringKey
-        }
-    }
+    private suspend fun buildUiState(raw: RawState): BookmarkUiState {
+        val keys = (raw.bookmarks.map { BookmarkBookKey(it.bookName, it.bookAuthor) } +
+                raw.markings.map { BookmarkBookKey(it.bookName, it.bookAuthor) }).distinct()
+        val books = keys.map { key ->
+            val bookMarkings = raw.markings.filter { it.matches(key) }
+            val matchedMarking = if (raw.selectedBook == null && raw.query.isNotBlank()) {
+                bookMarkings.firstOrNull { it.matchesNoteQuery(raw.query) }
+            } else null
+            val book = bookRepository.getBook(key.name, key.author)
+            BookmarkBookUi(
+                key = key,
+                coverPath = book?.getDisplayCover(),
+                sourceOrigin = book?.origin,
+                bookUrl = book?.bookUrl,
+                bookmarkCount = raw.bookmarks.count { it.matches(key) },
+                markingCount = bookMarkings.size,
+                matchedMarkingId = matchedMarking?.id,
+            )
+        }.filter { raw.selectedBook != null || raw.query.isBlank() || it.matchedMarkingId != null }
+            .sortedBy { it.key.name }
 
-    fun toggleAllCollapse(currentKeys: Set<BookmarkGroupHeader>) {
-        val stringKeys = currentKeys.map { it.toString() }.toSet()
-        _collapsedGroups.update { current ->
-            if (current.containsAll(stringKeys) && stringKeys.isNotEmpty()) {
-                emptySet()
-            } else {
-                stringKeys
+        val selected = raw.selectedBook?.let { key ->
+            books.firstOrNull { it.key == key } ?: run {
+                val book = bookRepository.getBook(key.name, key.author)
+                BookmarkBookUi(
+                    key = key,
+                    coverPath = book?.getDisplayCover(),
+                    sourceOrigin = book?.origin,
+                    bookUrl = book?.bookUrl,
+                    bookmarkCount = raw.bookmarks.count { it.matches(key) },
+                    markingCount = raw.markings.count { it.matches(key) },
+                )
             }
         }
-    }
-
-    fun updateBookmark(bookmark: Bookmark) {
-        viewModelScope.launch(Dispatchers.IO) {
-            bookmarkRepository.save(bookmark)
-        }
-    }
-
-    fun deleteBookmark(bookmark: Bookmark) {
-        viewModelScope.launch(Dispatchers.IO) {
-            bookmarkRepository.delete(bookmark)
-        }
-    }
-
-    fun exportBookmark(treeUri: Uri, isMarkdown: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val dateFormat = SimpleDateFormat("yyMMddHHmmss", Locale.getDefault())
-                val suffix = if (isMarkdown) "md" else "json"
-                val fileName = "bookmark-${dateFormat.format(Date())}.$suffix"
-
-                val dirDoc = FileDoc.fromUri(treeUri, true)
-                val fileDoc = dirDoc.createFileIfNotExist(fileName)
-
-                fileDoc.openOutputStream().getOrThrow().use { outputStream ->
-                    val allData = bookmarkRepository.getAll()
-                    if (isMarkdown) {
-                        writeMarkdown(outputStream, allData)
-                    } else {
-                        GSON.writeToOutputStream(outputStream, allData)
+        val details = selected?.key?.let { key ->
+            val allItems = raw.bookmarks.filter { it.matches(key) }
+                .map { BookmarkDetailItemUi.SavedBookmark(it) } +
+                    raw.markings.filter { it.matches(key) }.map { marking ->
+                        val anchor =
+                            GSON.fromJsonObject<TextProcessAnchor>(marking.anchorJson).getOrNull()
+                        BookmarkDetailItemUi.Marking(
+                            marking,
+                            anchor?.selectedText.orEmpty(),
+                            anchor?.chapterPosition ?: 0
+                        )
                     }
-                }
+            allItems.filter { raw.query.isBlank() || it.matchesDetailQuery(raw.query) }
+                .sortedWith(compareBy({ it.chapterIndex }, { it.chapterPosition }))
+                .toImmutableList()
+        } ?: persistentListOf()
+        return BookmarkUiState(
+            isLoading = false,
+            books = books.toImmutableList(),
+            selectedBook = selected,
+            detailItems = details,
+            searchQuery = raw.query,
+            targetMarkingId = raw.targetMarkingId,
+        )
+    }
 
-                _effects.emit(AllBookmarkEffect.ShowMessage("导出成功: $fileName"))
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _effects.emit(AllBookmarkEffect.ShowMessage("导出失败: ${e.message}"))
-            }
+    private fun exportBook(treeUri: Uri, markdown: Boolean, key: BookmarkBookKey) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val suffix = if (markdown) "md" else "json"
+                val stamp = SimpleDateFormat("yyMMddHHmmss", Locale.getDefault()).format(Date())
+                val fileName = "${key.name}-notes-$stamp.$suffix"
+                val bookmarks = bookmarkRepository.getByBook(key.name, key.author)
+                val markings = markingGateway.getByBook(key.name, key.author, null)
+                FileDoc.fromUri(treeUri, true).createFileIfNotExist(fileName)
+                    .openOutputStream().getOrThrow().use { output ->
+                        if (markdown) writeMarkdown(output, key, bookmarks, markings)
+                        else GSON.writeToOutputStream(output, ExportData(bookmarks, markings))
+                    }
+                fileName
+            }.onSuccess { effectsFlow.emit(AllBookmarkEffect.ShowMessage("导出成功: $it")) }
+                .onFailure { effectsFlow.emit(AllBookmarkEffect.ShowMessage("导出失败: ${it.message}")) }
         }
     }
 
-    private fun writeMarkdown(outputStream: java.io.OutputStream, bookmarks: List<Bookmark>) {
-        val sb = StringBuilder()
-        var lastHeader = ""
-
-        bookmarks.forEach {
-            val currentHeader = "${it.bookName}|${it.bookAuthor}"
-            if (currentHeader != lastHeader) {
-                lastHeader = currentHeader
-                sb.append("\n## ${it.bookName} - ${it.bookAuthor}\n\n")
+    private fun writeMarkdown(
+        output: OutputStream,
+        key: BookmarkBookKey,
+        bookmarks: List<Bookmark>,
+        markings: List<BookMarking>
+    ) {
+        val text = buildString {
+            append("# ${key.name}\n\n")
+            if (key.author.isNotBlank()) append("作者：${key.author}\n\n")
+            append("## 书签（${bookmarks.size}）\n\n")
+            bookmarks.forEach {
+                append("### ${it.chapterName}\n\n> ${it.bookText}\n\n")
+                if (it.content.isNotBlank()) append("${it.content}\n\n")
             }
-            sb.append("#### ${it.chapterName}\n")
-            sb.append("> **原文：** ${it.bookText}\n\n")
-            sb.append("${it.content}\n\n")
-            sb.append("---\n")
+            append("## 笔记（${markings.size}）\n\n")
+            markings.forEach {
+                val selectedText = GSON.fromJsonObject<TextProcessAnchor>(it.anchorJson)
+                    .getOrNull()?.selectedText.orEmpty()
+                append("### ${it.chapterName}\n\n> $selectedText\n\n")
+                if (it.note.isNotBlank()) append("${it.note}\n\n")
+            }
         }
-        outputStream.write(sb.toString().toByteArray())
+        output.write(text.toByteArray())
     }
+
+    private data class RawState(
+        val bookmarks: List<Bookmark>, val markings: List<BookMarking>, val query: String,
+        val selectedBook: BookmarkBookKey?, val targetMarkingId: String?,
+    )
+
+    private data class ExportData(val bookmarks: List<Bookmark>, val notes: List<BookMarking>)
+}
+
+private fun Bookmark.matches(key: BookmarkBookKey) =
+    bookName == key.name && bookAuthor == key.author
+
+private fun BookMarking.matches(key: BookmarkBookKey) =
+    bookName == key.name && bookAuthor == key.author
+
+private fun BookMarking.matchesNoteQuery(query: String): Boolean {
+    val selectedText =
+        GSON.fromJsonObject<TextProcessAnchor>(anchorJson).getOrNull()?.selectedText.orEmpty()
+    return note.contains(query, true) || selectedText.contains(query, true) || chapterName.contains(
+        query,
+        true
+    )
+}
+
+private fun BookmarkDetailItemUi.matchesDetailQuery(query: String): Boolean = when (this) {
+    is BookmarkDetailItemUi.SavedBookmark -> bookmark.chapterName.contains(query, true) ||
+            bookmark.bookText.contains(query, true) || bookmark.content.contains(query, true)
+
+    is BookmarkDetailItemUi.Marking -> marking.chapterName.contains(query, true) ||
+            selectedText.contains(query, true) || marking.note.contains(query, true)
 }

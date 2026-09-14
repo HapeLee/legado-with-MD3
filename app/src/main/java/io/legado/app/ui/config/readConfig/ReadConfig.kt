@@ -58,6 +58,7 @@ object ReadConfig {
     val progressBarBehavior get() = read.progressBarBehavior
     val showSelectMenuIcon get() = read.showSelectMenuIcon
     val textSelectMenuConfig get() = read.textSelectMenuConfig
+    val lastMarkingStyle get() = read.lastMarkingStyle
     val showReadTitleAddition get() = read.showReadTitleAddition
     val clickActionTL get() = read.clickActionTL
     val clickActionTC get() = read.clickActionTC

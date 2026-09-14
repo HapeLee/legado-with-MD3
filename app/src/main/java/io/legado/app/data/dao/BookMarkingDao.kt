@@ -18,6 +18,14 @@ interface BookMarkingDao {
     )
     val all: List<BookMarking>
 
+    @Query(
+        """
+        select * from book_marks
+        order by bookName collate localized, bookAuthor collate localized, chapterIndex, createdAt
+        """
+    )
+    fun flowAll(): Flow<List<BookMarking>>
+
     /** 恢复备份用：按主键整批写入（同 id 覆盖，重复导入幂等）。 */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(vararg bookMarkings: BookMarking)

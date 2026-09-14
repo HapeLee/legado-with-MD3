@@ -15,6 +15,7 @@ import io.legado.app.feature.reader.core.model.underlineRuns
 /** Immutable Android draw data prepared once for a page snapshot revision. */
 internal data class ReaderPageDecorationDrawCache(
     val contentRules: List<ReaderRuleDrawCommand>,
+    val halfHighlights: List<ReaderHalfHighlightDrawCommand>,
     val styledUnderlines: List<ReaderUnderlineDrawCommand>,
     val overlayRules: List<ReaderRuleDrawCommand>,
 ) {
@@ -23,12 +24,33 @@ internal data class ReaderPageDecorationDrawCache(
             contentRules = page.elements.filterIsInstance<ReaderElement.Rule>()
                 .filterNot(ReaderElement.Rule::overlayStyledUnderline)
                 .map(::ReaderRuleDrawCommand),
-            styledUnderlines = page.underlineRuns().map { run ->
+            halfHighlights = page.underlineRuns().filter { it.underline.mode == 7 }.map { run ->
+                ReaderHalfHighlightDrawCommand(run.bounds, run.underline.colorArgb)
+            },
+            styledUnderlines = page.underlineRuns().filterNot { it.underline.mode == 7 }
+                .map { run ->
                 ReaderUnderlineDrawCommand(run.bounds, run.underline)
             },
             overlayRules = page.elements.filterIsInstance<ReaderElement.Rule>()
                 .filter(ReaderElement.Rule::overlayStyledUnderline)
                 .map(::ReaderRuleDrawCommand),
+        )
+    }
+}
+
+internal class ReaderHalfHighlightDrawCommand(
+    private val bounds: ReaderRect,
+    colorArgb: Int,
+) {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = colorArgb }
+
+    fun draw(canvas: Canvas) {
+        canvas.drawRect(
+            bounds.left,
+            bounds.top + bounds.height * 0.5f,
+            bounds.right,
+            bounds.bottom,
+            paint,
         )
     }
 }
@@ -83,6 +105,13 @@ internal class ReaderUnderlineDrawCommand(
                 canvas.drawPath(path, paint)
                 canvas.restore()
             }
+            6 -> canvas.drawLine(
+                start,
+                bounds.top + bounds.height * 0.52f,
+                end,
+                bounds.top + bounds.height * 0.52f,
+                paint
+            )
         }
     }
 

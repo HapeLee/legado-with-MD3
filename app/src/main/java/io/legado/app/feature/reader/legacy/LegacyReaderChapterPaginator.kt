@@ -220,6 +220,7 @@ object LegacyReaderChapterPaginator {
                 baselineOffsetPx = paginationStyle.bodyBaselineOffsetPx,
                 lineSpacingMultiplier = paginationStyle.lineSpacingExtra,
                 continuousScroll = paginationStyle.isScroll,
+                singleImageStyle = singleImage,
                 chapterEndPaddingPx = CHAPTER_END_PADDING_DP.dpToPx(),
                 inlineImagesPreserveScrollLine = imageLayoutMode == ReaderImageLayoutMode.INLINE,
                 textBottomJustify = paginationStyle.textBottomJustify,

@@ -1,7 +1,6 @@
 package io.legado.app.feature.reader.core.model
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderNineSliceLayoutTest {
@@ -28,14 +27,25 @@ class ReaderNineSliceLayoutTest {
     }
 
     @Test
-    fun collapsedFrameRowsAreOmittedInsteadOfDrawingInvertedRects() {
-        val image = ReaderTextBackgroundImage("frame.png", 3, 1f)
-        val content = ReaderRect(0f, 0f, 20f, 10f)
+    fun withoutALineGapOnlyTheCenterAndTheSideCellsSurvive() {
+        // 无行距时上下边厚度为 0（对照旧 View TextLine.drawNineSliceFrames 里
+        // overflowScale = 0），上下两行连同四角一起消失，只剩中心 + 左右两条边。
+        val image = ReaderTextBackgroundImage(
+            "frame.png", 3, 1f,
+            contentInsetLeftPx = 7f,
+            contentInsetRightPx = 5f,
+        )
+        val content = ReaderRect(10f, 20f, 40f, 50f)
+        val frame = ReaderRect(3f, 20f, 45f, 50f)
 
-        val cells = ReaderNineSliceLayout.cells(10, 10, content, content, image)
+        val cells = ReaderNineSliceLayout.cells(10, 10, content, frame, image)
 
-        assertTrue(cells.all { it.destination.width > 0f && it.destination.height > 0f })
-        assertEquals(1, cells.size)
+        assertEquals(3, cells.size)
+        // 左右边保持原图厚度，且落在文字框外侧（不压在字上）。
+        assertEquals(ReaderRect(3f, 20f, 10f, 50f), cells.first().destination)
+        assertEquals(ReaderRect(40f, 20f, 45f, 50f), cells.last().destination)
+        assertEquals(content, cells[1].destination)
+        assertEquals(ReaderIntRect(1, 1, 9, 9), cells[1].source)
     }
 
     @Test

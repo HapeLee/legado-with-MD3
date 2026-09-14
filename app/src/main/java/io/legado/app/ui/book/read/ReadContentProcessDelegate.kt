@@ -124,6 +124,17 @@ class ReadContentProcessDelegate(
         ReadBook.loadContent(resetPageOffset = false)
     }
 
+    /**
+     * Reprocesses only the current chapter while retaining its last readable input/page snapshot.
+     * Marking style changes are paint-only, so clearing the entire three-chapter window would
+     * expose a loading/empty frame for no benefit.
+     */
+    fun reloadCurrentChapterPreservingSnapshot() {
+        val chapterIndex = ReadBook.durChapterIndex
+        ReadBook.removeLoading(chapterIndex)
+        ReadBook.loadContent(chapterIndex, resetPageOffset = false)
+    }
+
     private fun BookContentProcess.toContentProcessItemUi(): ContentProcessItemUi? {
         val anchor = GSON.fromJsonObject<TextProcessAnchor>(anchorJson).getOrNull()
             ?: return null

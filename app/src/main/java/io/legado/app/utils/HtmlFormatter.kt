@@ -84,6 +84,20 @@ object HtmlFormatter {
     }
 
     /**
+     * Returns reader content as text for character counting.
+     *
+     * Cached chapters can retain image tags for rendering; their tag names, attributes, and
+     * URLs are markup rather than readable content and must not contribute to the count.
+     */
+    fun textForWordCount(html: String): String {
+        if (html.isBlank()) return ""
+        val document = Jsoup.parseBodyFragment(html)
+        document.outputSettings().prettyPrint(false)
+        document.body().select("script, style, noscript").remove()
+        return document.text()
+    }
+
+    /**
      * 书架/列表用的简介: 在 [formatDisplayText] 之上再丢掉书源排版进简介的状态面板,
      * 即"📡 当前服务：xxx"这类图标开头的整行, 以及纯符号的分隔行。
      * 详情页不做这一步 —— 那里是书源和用户交互的地方(登录提示等), 状态面板有用。

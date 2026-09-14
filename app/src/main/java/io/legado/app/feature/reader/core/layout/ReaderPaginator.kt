@@ -10,15 +10,33 @@ import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import kotlin.math.max
 
-private fun ReaderTextBackgroundImage.fitIntoLineGap(
-    lineHeightPx: Float,
-    lineSpacingMultiplier: Float,
+/**
+ * 按这一行上下真正能借到的留白，把九宫格**四边等比**收紧。
+ *
+ * [topBudgetPx] / [bottomBudgetPx] 由调用方按邻行情况给出：邻行没有高亮框时是**整个行距**
+ * （那段留白反正空着），邻行也有框时才各让**半个行距**——两个框正好相接、不重叠。
+ *
+ * 四边共用一个因子是这里的要点：旧 View `TextLine.drawNineSliceFrames` 只把
+ * `overflowScale = halfGap / max(上厚, 下厚)` 用在上下边，左右边永远按原图厚度画，于是行距
+ * 一紧就变成「左右两条宽竖边 + 上下两条发丝横线、四角被纵向抹平」的各向异性；而只做各向
+ * 同性的等比例收紧时，框又会整体被钉死在半个行距上（默认行距 1.2、行高 60px 只有 6px）。
+ * 放宽纵向预算 + 等比收紧，两个毛病一起解掉。
+ *
+ * 上下边为 0 的色带型图片纵向没有约束，左右按 图片 × scale 原样画；行距为 0 时上下边归零，
+ * [ReaderNineSliceLayout] 会跳过高度为 0 的上下两行，自然回落成旧 View 的「中心 + 左右两条边」。
+ */
+private fun ReaderTextBackgroundImage.fitIntoLineBudget(
+    topBudgetPx: Float,
+    bottomBudgetPx: Float,
 ): ReaderTextBackgroundImage {
-    val largestFixedRow = maxOf(contentInsetTopPx, contentInsetBottomPx)
-    if (largestFixedRow <= 0f) return this
-    val halfGap = ((lineSpacingMultiplier - 1f).coerceAtLeast(0f) * lineHeightPx) / 2f
-    val frameScale = (halfGap / largestFixedRow).coerceIn(0f, 1f)
+    if (maxOf(contentInsetTopPx, contentInsetBottomPx) <= 0f) return this
+    val frameScale = minOf(
+        1f,
+        if (contentInsetTopPx > 0f) topBudgetPx / contentInsetTopPx else 1f,
+        if (contentInsetBottomPx > 0f) bottomBudgetPx / contentInsetBottomPx else 1f,
+    ).coerceIn(0f, 1f)
     if (frameScale >= 1f) return this
+    if (frameScale <= 0f) return copy(contentInsetTopPx = 0f, contentInsetBottomPx = 0f)
     return copy(
         contentInsetLeftPx = contentInsetLeftPx * frameScale,
         contentInsetRightPx = contentInsetRightPx * frameScale,
@@ -64,6 +82,13 @@ data class ReaderPaginationConfig(
     val columnCount: Int = 1,
     val lineSpacingMultiplier: Float = 1f,
     val continuousScroll: Boolean = false,
+    /**
+     * 单图样式（旧 `Book.imgStyleSingle`，`TextChapterLayout.isSingleImageStyle`）。旧实现
+     * `setTypeText` 对**每一行文本**都做 `if (textPage.height < visibleHeight) textPage.height =
+     * visibleHeight`，因此该样式下含文本的页在滚动堆叠时恒为一屏；纯图片页不受影响
+     * （`setTypeImage` 只把 `durY` 移到竖直居中位置）。见 [ReaderPaginator.paginateBlocks]。
+     */
+    val singleImageStyle: Boolean = false,
     /**
      * 章末页在堆叠高度上额外留出的空档。旧 `TextChapterLayout.setTypeText` 收尾时统一
      * `height = max(height, durY + 20.dpToPx())`，让下一章正文与本章末尾之间不会贴在一起。
@@ -213,6 +238,13 @@ object ReaderPaginator {
         var columnElementStart = 0
         var columnRows = mutableListOf<ReaderLayoutRow>()
 
+        /**
+         * 上一个视觉行是否画了九宫格框。九宫格上下边要借用邻行的留白：邻行没有框时可以
+         * 用满整个行距，邻行也有框时只能各让半个。空行 / 图片 / 分隔线 / 分页本身就带空隙，
+         * 在这些位置复位。
+         */
+        var previousLineHadFrame = false
+
         fun columnLeft() = config.paddingLeftPx + columnIndex * config.columnStridePx
         fun columnHasContent() = elements.size > columnElementStart
 
@@ -301,6 +333,8 @@ object ReaderPaginator {
 
         fun advanceColumn() {
             if (!columnHasContent()) return
+            // 换栏/换页后上一行已经不在同一屏，页边距本身就是空隙。
+            previousLineHadFrame = false
             if (columnIndex + 1 < config.columnCount) {
                 justifyColumnBottom()
                 columnIndex++
@@ -378,6 +412,8 @@ object ReaderPaginator {
                 columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + lineHeight)
                 y += lineHeight * (paragraph.lineSpacingMultiplier ?: config.lineSpacingMultiplier)
             }
+            // 这条路径（整段共用一个 style）不参与九宫格预算，但下一行仍要知道本段带框。
+            previousLineHadFrame = paragraph.style.backgroundImage?.fit == 3
             if (appendSeparator) {
                 pageText.append('\n')
                 y += if (paragraph.isTitle) config.titleParagraphSpacingPx ?: config.paragraphSpacingPx
@@ -386,6 +422,7 @@ object ReaderPaginator {
         }
 
         fun addImage(image: ReaderMeasuredBlock.Image) {
+            previousLineHadFrame = false
             if (image.pageBreakBefore) advanceColumn()
             val sourceWidth = image.intrinsicWidthPx.coerceAtLeast(1f)
             val sourceHeight = image.intrinsicHeightPx.coerceAtLeast(1f)
@@ -447,26 +484,44 @@ object ReaderPaginator {
                     is ReaderMeasuredInlineItem.Image -> "\uFFFC"
                 }
             }
-            fun backgroundImage(index: Int) =
+            val lineGapPx =
+                (paragraph.lineSpacingMultiplier - 1f).coerceAtLeast(0f) * paragraph.lineHeightPx
+            val halfLineGapPx = lineGapPx / 2f
+
+            fun itemFrame(index: Int) =
                 (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)
                     ?.style?.backgroundImage?.takeIf { it.fit == 3 }
-                    ?.fitIntoLineGap(
-                        lineHeightPx = paragraph.lineHeightPx,
-                        lineSpacingMultiplier = paragraph.lineSpacingMultiplier,
-                    )
 
-            fun backgroundInsetBefore(index: Int, lineStart: Int): Float {
-                val image = backgroundImage(index) ?: return 0f
-                return if (index == lineStart || backgroundImage(index - 1) != image) {
-                    image.contentInsetLeftPx
-                } else 0f
+            fun lineHasFrame(from: Int, until: Int): Boolean =
+                (from until until.coerceAtMost(paragraph.items.size)).any { itemFrame(it) != null }
+
+            fun frameOf(index: Int, topBudgetPx: Float, bottomBudgetPx: Float) =
+                itemFrame(index)?.fitIntoLineBudget(topBudgetPx, bottomBudgetPx)
+
+            fun backgroundInsetBefore(
+                index: Int,
+                lineStart: Int,
+                topBudgetPx: Float,
+                bottomBudgetPx: Float,
+            ): Float {
+                val image = frameOf(index, topBudgetPx, bottomBudgetPx) ?: return 0f
+                return if (
+                    index == lineStart ||
+                    frameOf(index - 1, topBudgetPx, bottomBudgetPx) != image
+                ) image.contentInsetLeftPx else 0f
             }
 
-            fun backgroundInsetAfter(index: Int, lineEnd: Int): Float {
-                val image = backgroundImage(index) ?: return 0f
-                return if (index + 1 == lineEnd || backgroundImage(index + 1) != image) {
-                    image.contentInsetRightPx
-                } else 0f
+            fun backgroundInsetAfter(
+                index: Int,
+                lineEnd: Int,
+                topBudgetPx: Float,
+                bottomBudgetPx: Float,
+            ): Float {
+                val image = frameOf(index, topBudgetPx, bottomBudgetPx) ?: return 0f
+                return if (
+                    index + 1 == lineEnd ||
+                    frameOf(index + 1, topBudgetPx, bottomBudgetPx) != image
+                ) image.contentInsetRightPx else 0f
             }
             val breaker = ChineseLineBreaker(
                 clusters = clusters,
@@ -481,6 +536,10 @@ object ReaderPaginator {
             )
             val originalEnds = breaker.lineClusterStarts.drop(1)
             val starts = mutableListOf(0)
+            // 每行的纵向预算在断行阶段就定死，绘制阶段直接复用——排版预留与绘制的外框必须
+            // 用同一份 inset，否则框会压到相邻文字上或者留出多余的空档。
+            val lineTopBudgets = mutableListOf<Float>()
+            val lineBottomBudgets = mutableListOf<Float>()
             // The View reader reserves the left/right pieces around every visual-line run.
             // Refine the shaped line ends so those pieces cannot overlap adjacent text or
             // escape the column. Keep a forbidden Chinese break intact even if its frame has
@@ -490,17 +549,30 @@ object ReaderPaginator {
                 val lineIndent =
                     if (starts.size == 1) indentWidth else paragraph.restLineIndentWidthPx
                 val available = config.contentWidthPx - lineIndent
+                val topBudgetPx = if (previousLineHadFrame) halfLineGapPx else lineGapPx
+                // 下一行的范围在断行阶段还没最终定下来（本行可能被九宫格宽度挤短，把尾巴
+                // 让给下一行），用原始断行结果近似探测那一行有没有框。
+                val breakerEnd = originalEnds.getOrElse(starts.lastIndex) { paragraph.items.size }
+                    .coerceAtLeast(from + 1)
+                val nextBreakerEnd =
+                    originalEnds.getOrElse(starts.lastIndex + 1) { paragraph.items.size }
+                val bottomBudgetPx =
+                    if (lineHasFrame(breakerEnd, nextBreakerEnd)) halfLineGapPx else lineGapPx
                 // Advance the original visual-line cursor even when a frame forces the
                 // preceding row shorter. Reusing the first end after `from` would strand the
                 // remainder of that row as an unnecessary one-character line.
-                var until = originalEnds.getOrElse(starts.lastIndex) { paragraph.items.size }
-                    .coerceAtLeast(from + 1)
+                var until = breakerEnd
 
                 fun occupiedWidth(endExclusive: Int): Float =
                     (from until endExclusive).sumOf { index ->
                         (paragraph.items[index].widthPx +
-                                backgroundInsetBefore(index, from) +
-                                backgroundInsetAfter(index, endExclusive)).toDouble()
+                                backgroundInsetBefore(index, from, topBudgetPx, bottomBudgetPx) +
+                                backgroundInsetAfter(
+                                    index,
+                                    endExclusive,
+                                    topBudgetPx,
+                                    bottomBudgetPx
+                                )).toDouble()
                     }.toFloat() + letterSpacing * (endExclusive - from - 1).coerceAtLeast(0)
                 while (until - from > 1 && occupiedWidth(until) > available) {
                     val candidate = until - 1
@@ -512,6 +584,9 @@ object ReaderPaginator {
                     until = candidate
                 }
                 starts += until
+                lineTopBudgets += topBudgetPx
+                lineBottomBudgets += bottomBudgetPx
+                previousLineHadFrame = lineHasFrame(from, until)
             }
             for (lineIndex in 0 until starts.lastIndex) {
                 val from = starts[lineIndex]
@@ -549,8 +624,13 @@ object ReaderPaginator {
                 if (y + actualLineHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
                 val indent = if (lineIndex == 0) indentWidth else paragraph.restLineIndentWidthPx
                 val available = (config.contentWidthPx - indent).coerceAtLeast(0f)
-                fun backgroundInsetBefore(index: Int) = backgroundInsetBefore(from + index, from)
-                fun backgroundInsetAfter(index: Int) = backgroundInsetAfter(from + index, until)
+                val topBudgetPx = lineTopBudgets[lineIndex]
+                val bottomBudgetPx = lineBottomBudgets[lineIndex]
+                fun backgroundInsetBefore(index: Int) =
+                    backgroundInsetBefore(from + index, from, topBudgetPx, bottomBudgetPx)
+
+                fun backgroundInsetAfter(index: Int) =
+                    backgroundInsetAfter(from + index, until, topBudgetPx, bottomBudgetPx)
                 val naturalWidth = lineItems.sumOf { it.widthPx.toDouble() }.toFloat() +
                         letterSpacing * (lineItems.size - 1).coerceAtLeast(0) +
                         lineItems.indices.sumOf {
@@ -612,7 +692,7 @@ object ReaderPaginator {
                 val underlineElementStart = elements.size + indentItems
                 lineItems.forEachIndexed { itemIndex, item ->
                     x += backgroundInsetBefore(itemIndex)
-                    val itemBackground = backgroundImage(from + itemIndex)
+                    val itemBackground = frameOf(from + itemIndex, topBudgetPx, bottomBudgetPx)
                     when (item) {
                         is ReaderMeasuredInlineItem.Text -> {
                             val expandedWordSpace = if (item.value == " ") wordSpaceExtra else 0f
@@ -635,7 +715,12 @@ object ReaderPaginator {
                                 // 富文本逐项样式：与前一项同背景图才视作同一 run 的延续
                                 continuesBackgroundRun = itemBackground != null &&
                                         itemIndex > 0 &&
-                                        backgroundImage(from + itemIndex - 1) == itemBackground,
+                                        frameOf(
+                                            from + itemIndex - 1,
+                                            topBudgetPx,
+                                            bottomBudgetPx
+                                        ) ==
+                                        itemBackground,
                                 backgroundFrameTopPx = itemBackground?.contentInsetTopPx ?: 0f,
                                 backgroundFrameBottomPx = itemBackground?.contentInsetBottomPx
                                     ?: 0f,
@@ -658,6 +743,8 @@ object ReaderPaginator {
                 }
                 addPageUnderline(underlineElementStart, y + actualLineHeight)
                 columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + actualLineHeight)
+                // 按实际落笔顺序（含换页）记录，供下一段第一行判断上方有没有框。
+                previousLineHadFrame = lineHasFrame(from, until)
                 y += actualLineHeight * paragraph.lineSpacingMultiplier
             }
             if (appendSeparator) {
@@ -668,6 +755,7 @@ object ReaderPaginator {
         }
 
         fun addRule(rule: ReaderMeasuredBlock.Rule) {
+            previousLineHadFrame = false
             val requiredHeight = rule.verticalPaddingPx * 2f + rule.widthPx
             if (y + requiredHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
             val lineY = y + rule.verticalPaddingPx
@@ -688,6 +776,7 @@ object ReaderPaginator {
             appendSeparator: Boolean,
         ) {
             val height = blank.lineHeightPx
+            previousLineHadFrame = false
             if (y + height > config.contentBottomPx && columnHasContent()) advanceColumn()
             val rowElementStart = elements.size
             elements += ReaderElement.Spacer(
@@ -717,7 +806,10 @@ object ReaderPaginator {
                 is ReaderMeasuredBlock.InlineParagraph -> addInlineParagraph(block, index, index < blocks.lastIndex)
                 is ReaderMeasuredBlock.BlankLine -> addBlankLine(block, index, index < blocks.lastIndex)
                 is ReaderMeasuredBlock.Rule -> addRule(block)
-                ReaderMeasuredBlock.PageBreak -> advanceColumn()
+                ReaderMeasuredBlock.PageBreak -> {
+                    previousLineHadFrame = false
+                    advanceColumn()
+                }
             }
             if (isTitle) {
                 y += if (blocks.getOrNull(index + 1)?.isTitle() == true) {
@@ -745,17 +837,29 @@ object ReaderPaginator {
             }
         }
         return pages.mapIndexed { pageIndex, pageElements ->
-            // 连续滚动模式按 scrollExtentPx 堆叠相邻页。中间页沿用排版游标（对照旧 View 逐页
-            // 堆叠 durY，ReaderLineSpacingTest 明确要求「不是一整屏」）；章末页取「内容覆盖
-            // 高度」与「内容区高度下限」的较大者——旧 View 的章末/提示页同样按可见高度收口
-            // （`TextPage.kt` 的 `height = ChapterProvider.visibleHeight`），否则残页与卷名页
-            // 会让下一章正文压在本页内容上，滚动也会立刻跨页。
-            // 章末页再留出 [chapterEndPaddingPx]，对照旧 View 的 `height = durY + 20dp`。
+            // 连续滚动模式按 scrollExtentPx 堆叠相邻页，页高一律是排版游标：对照旧
+            // `ContentTextView.drawPage`（下一页画在 `相对偏移 + textPage.height`）与
+            // `TextChapterLayout`（正文页 `textPage.height = durY`）。章末页只额外加
+            // [chapterEndPaddingPx]（旧 `height = durY + 20dp`），**不**向内容区高度收口——
+            // 收口会让残页后面的空白顶满一屏，必须滚过整屏空白才接上下一章正文。
+            // 只有提示页才按可见高度收口（旧 `TextPage.format` 的 `isMsgPage`），那条路径
+            // 在 `ReadBookController` 的占位页上，不经过这里。
+            // 卷名/空正文章整页标题的垂直居中位移必须计入覆盖高度（[centeredPageShiftPx]），
+            // 否则下一章正文会压在本页卷名上。
             val contentCoveredExtentPx = pageExtents[pageIndex] + centeredPageShiftPx
-            val stackedExtentPx = if (config.continuousScroll && pageIndex == pages.lastIndex) {
-                maxOf(contentCoveredExtentPx, config.contentBottomPx - config.paddingTopPx) +
-                        config.chapterEndPaddingPx
-            } else pageExtents[pageIndex]
+            // 单图样式的正文页恒为一屏：旧 `setTypeText` 逐行收口到 `visibleHeight`，
+            // 保证一屏一页；纯图片页沿用排版游标（`setTypeImage` 只把 durY 移到竖直居中位置，
+            // 不做收口），所以按「本页是否含文本/分隔等内容」区分，而不是整章一律收口。
+            val isFullViewportPage = config.singleImageStyle &&
+                    pageElements.any { it !is ReaderElement.Image }
+            val pageExtentPx = if (isFullViewportPage) {
+                maxOf(contentCoveredExtentPx, config.contentBottomPx - config.paddingTopPx)
+            } else contentCoveredExtentPx
+            val stackedExtentPx = when {
+                !config.continuousScroll -> pageExtents[pageIndex]
+                pageIndex == pages.lastIndex -> pageExtentPx + config.chapterEndPaddingPx
+                else -> pageExtentPx
+            }
             ReaderPage(
                 id = ReaderPageId(config.chapterIndex, pageIndex),
                 chapterTitle = config.chapterTitle,

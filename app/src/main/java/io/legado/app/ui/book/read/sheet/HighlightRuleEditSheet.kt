@@ -37,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -389,8 +390,10 @@ fun HighlightRuleEditSheet(
                         stringResource(R.string.underline_wave),
                         stringResource(R.string.underline_title_bar),
                         stringResource(R.string.underline_svg),
+                        stringResource(R.string.bookmark_mark_effect_strike),
+                        stringResource(R.string.bookmark_mark_effect_highlight),
                     )
-                    val underlineValues = arrayOf("1", "2", "3", "4", "5")
+                    val underlineValues = arrayOf("1", "2", "3", "4", "5", "6", "7")
                     TinyDropdownSettingItem(
                         title = stringResource(R.string.underline_style),
                         selectedValue = underlineMode.toString(),
@@ -737,6 +740,16 @@ private fun HighlightRulePreview(
                 size = size.copy(height = textResult.size.height.toFloat()),
             )
         }
+        if (underlineMode == 7) {
+            drawRect(
+                color = resolvedUnderlineColor.copy(alpha = 0.4f),
+                topLeft = Offset(0f, textResult.size.height * 0.5f),
+                size = Size(
+                    textResult.size.width.toFloat(),
+                    textResult.size.height * 0.5f,
+                ),
+            )
+        }
         drawText(textResult)
 
         if (underlineMode > 0) {
@@ -798,6 +811,15 @@ private fun HighlightRulePreview(
                         end = Offset(textResult.size.width.toFloat(), yBaseline),
                         strokeWidth = barHeight,
                         cap = StrokeCap.Round,
+                    )
+                }
+                6 -> {
+                    val y = textResult.size.height * 0.52f
+                    drawLine(
+                        color = resolvedUnderlineColor,
+                        start = Offset(0f, y),
+                        end = Offset(textResult.size.width.toFloat(), y),
+                        strokeWidth = strokeWidth,
                     )
                 }
             }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
+import io.legado.app.domain.model.TextProcessStyle
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -23,4 +24,10 @@ data class MarkingUiState(
     val highlightRules: ImmutableList<HighlightRule> = persistentListOf(),
     /** 编辑模式异步加载标记期间的占位，避免 Sheet 先空再弹内容。 */
     val loading: Boolean = false,
+    /** True while the selection popup owns this editing session. */
+    val inlineMode: Boolean = false,
+    /** Inline menu preview; it is painted over the selection without repaginating the chapter. */
+    val previewStyle: TextProcessStyle? = null,
+    /** An inline save happened and the persisted page snapshot must be refreshed once on close. */
+    val inlineDirty: Boolean = false,
 )

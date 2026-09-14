@@ -56,6 +56,15 @@ class HtmlFormatterTest {
     }
 
     @Test
+    fun textForWordCount_excludesImageMarkupAndNonReadableElements() {
+        val result = HtmlFormatter.textForWordCount(
+            "<p>正文</p><img src=\"https://example.com/cover.jpg\" alt=\"封面\"><script>ignored()</script><style>.hidden {}</style>"
+        )
+
+        assertEquals("正文", result)
+    }
+
+    @Test
     fun formatSummaryText_dropsIndentAndLineBreaks() {
         assertEquals(
             "第一段 第二段",

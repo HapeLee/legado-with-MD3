@@ -30,8 +30,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BorderColor
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FindReplace
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.VerticalDivider
@@ -46,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.platform.LocalDensity
@@ -72,8 +84,10 @@ import kotlin.math.roundToInt
 fun TextActionSelectionMenu(
     menuState: TextMenuState?,
     expandTextMenu: Boolean,
+    showSelectMenuIcon: Boolean,
     onDismiss: () -> Unit,
     onItemClick: (ActionMenuItem) -> Unit,
+    onOpenQuickMarking: () -> Boolean,
     onOpenManage: () -> Unit
 ) {
 
@@ -88,9 +102,8 @@ fun TextActionSelectionMenu(
 
     val localDensity = LocalDensity.current
     val containerSize = LocalWindowInfo.current.containerSize
-    val maxMenuWidth = with(localDensity){ containerSize.width.toDp() } - 32.dp
+    val menuCardWidth = with(localDensity) { containerSize.width.toDp() } - 32.dp
     val menuShadowPadding = 12.dp
-    val menuCardMaxWidth = maxMenuWidth - menuShadowPadding * 2
     var showMoreMenu by remember { mutableStateOf(false) }
     var moreMenuAnchor by remember { mutableStateOf<IntRect?>(null) }
     val view = LocalView.current
@@ -98,13 +111,22 @@ fun TextActionSelectionMenu(
     val moreVisibilityState = remember { MutableTransitionState(false) }
     moreVisibilityState.targetState = showMoreMenu
     LaunchedEffect(menuState) {
-        if (menuState == null) showMoreMenu = false
+        if (menuState == null) {
+            showMoreMenu = false
+        }
     }
     val draftItems = displayedMenuState.items
 
     val primaryItems = remember(draftItems) { draftItems.filter { it.showState == 0 } }
     val collapsedItems = remember(draftItems) { draftItems.filter { it.showState == 1 } }
     val activeMultiItems = remember(draftItems) { draftItems.filter { it.showState == 0 || it.showState == 1 } }
+    val handleItemClick: (ActionMenuItem) -> Unit = handleItemClick@{ item ->
+        if (item.id == R.id.menu_mark && onOpenQuickMarking()) {
+            showMoreMenu = false
+        } else if (item.id != R.id.menu_mark) {
+            onItemClick(item)
+        }
+    }
 
     val density = localDensity.density
     val shadowPaddingPx = with(localDensity) { menuShadowPadding.roundToPx() }
@@ -136,31 +158,28 @@ fun TextActionSelectionMenu(
 
             AnimatedVisibility(
                 visibleState = visibilityState,
-                enter = fadeIn(animationSpec = tween(360)) + scaleIn(
-                    initialScale = 0.94f,
-                    animationSpec = tween(400),
-                ),
-                exit = fadeOut(animationSpec = tween(320)) + scaleOut(
-                    targetScale = 0.96f,
-                    animationSpec = tween(280),
-                ),
+                enter = SelectionMenuMotion.enter(),
+                exit = SelectionMenuMotion.exit(),
             ) {
                 if (expandTextMenu) {
                     Box(modifier = Modifier.padding(menuShadowPadding)) {
-                        NormalCard(
-                            modifier = Modifier.widthIn(max = menuCardMaxWidth),
-                            containerColor = LegadoTheme.colorScheme.surfaceBright,
-                            elevation = 12.dp,
-                            cornerRadius = 12.dp,
-                        ) {
-                            MultiLineMenuView(
-                                items = activeMultiItems,
-                                onItemClick = onItemClick,
-                                onManageClick = {
-                                    onDismiss()
-                                    onOpenManage()
-                                }
-                            )
+                        Column(modifier = Modifier.width(menuCardWidth)) {
+                            NormalCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                containerColor = LegadoTheme.colorScheme.surfaceBright,
+                                elevation = 12.dp,
+                                cornerRadius = 12.dp,
+                            ) {
+                                MultiLineMenuView(
+                                    items = activeMultiItems,
+                                    showIcons = showSelectMenuIcon,
+                                    onItemClick = handleItemClick,
+                                    onManageClick = {
+                                        onDismiss()
+                                        onOpenManage()
+                                    }
+                                )
+                            }
                         }
                     }
                 } else {
@@ -185,23 +204,26 @@ fun TextActionSelectionMenu(
                             }
                             .padding(menuShadowPadding),
                     ) {
-                        NormalCard(
-                            modifier = Modifier.widthIn(max = menuCardMaxWidth),
-                            containerColor = LegadoTheme.colorScheme.surfaceBright,
-                            elevation = 6.dp,
-                            cornerRadius = 12.dp,
-                        ) {
-                            QuickMenuView(
-                                items = primaryItems,
-                                hasMore = collapsedItems.isNotEmpty(),
-                                onItemClick = onItemClick,
-                                onMoreClick = { showMoreMenu = true },
-                                onMoreAnchorChanged = { moreMenuAnchor = it },
-                                onSettingsClick = {
-                                    onDismiss()
-                                    onOpenManage()
-                                }
-                            )
+                        Column(modifier = Modifier.width(menuCardWidth)) {
+                            NormalCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                containerColor = LegadoTheme.colorScheme.surfaceBright,
+                                elevation = 6.dp,
+                                cornerRadius = 12.dp,
+                            ) {
+                                QuickMenuView(
+                                    items = primaryItems,
+                                    hasMore = collapsedItems.isNotEmpty(),
+                                    showIcons = showSelectMenuIcon,
+                                    onItemClick = handleItemClick,
+                                    onMoreClick = { showMoreMenu = true },
+                                    onMoreAnchorChanged = { moreMenuAnchor = it },
+                                    onSettingsClick = {
+                                        onDismiss()
+                                        onOpenManage()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -252,14 +274,15 @@ fun TextActionSelectionMenu(
                         modifier = Modifier.padding(menuShadowPadding),
                     ) {
                         NormalCard(
-                            modifier = Modifier.widthIn(max = menuCardMaxWidth),
+                            modifier = Modifier.widthIn(max = menuCardWidth),
                             containerColor = LegadoTheme.colorScheme.surfaceBright,
                             elevation = 6.dp,
                             cornerRadius = 12.dp,
                         ) {
                             MoreMenuView(
                                 items = collapsedItems,
-                                onItemClick = onItemClick,
+                                showIcons = showSelectMenuIcon,
+                                onItemClick = handleItemClick,
                                 onBack = { showMoreMenu = false },
                                 onManageClick = {
                                     onDismiss()
@@ -277,6 +300,7 @@ fun TextActionSelectionMenu(
 @Composable
 private fun MultiLineMenuView(
     items: List<ActionMenuItem>,
+    showIcons: Boolean,
     onItemClick: (ActionMenuItem) -> Unit,
     onManageClick: () -> Unit
 ) {
@@ -290,6 +314,7 @@ private fun MultiLineMenuView(
         items.forEach { item ->
             QuickMenuItem(
                 item = item,
+                showIcon = showIcons,
                 onClick = { onItemClick(item) },
                 verticalPadding = 12.dp,
             )
@@ -320,6 +345,7 @@ private fun MultiLineMenuView(
 private fun QuickMenuView(
     items: List<ActionMenuItem>,
     hasMore: Boolean,
+    showIcons: Boolean,
     onItemClick: (ActionMenuItem) -> Unit,
     onMoreClick: () -> Unit,
     onMoreAnchorChanged: (IntRect) -> Unit,
@@ -339,6 +365,7 @@ private fun QuickMenuView(
             ) { index, item ->
                 QuickMenuItem(
                     item = item,
+                    showIcon = showIcons,
                     onClick = { onItemClick(item) },
                     startPadding = if (index == 0) 16.dp else 10.dp,
                     endPadding = 8.dp,
@@ -383,12 +410,13 @@ private fun QuickMenuView(
 @Composable
 private fun QuickMenuItem(
     item: ActionMenuItem,
+    showIcon: Boolean,
     onClick: () -> Unit,
     startPadding: androidx.compose.ui.unit.Dp = 16.dp,
     endPadding: androidx.compose.ui.unit.Dp = 16.dp,
     verticalPadding: androidx.compose.ui.unit.Dp = 12.dp,
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .clickable(onClick = onClick)
             .padding(
@@ -397,9 +425,19 @@ private fun QuickMenuItem(
                 top = verticalPadding,
                 bottom = verticalPadding,
             ),
-        verticalAlignment = Alignment.CenterVertically
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        if (item.iconDrawable != null) {
+        val builtInIcon = if (showIcon) item.builtInIcon() else null
+        if (builtInIcon != null) {
+            Icon(
+                imageVector = builtInIcon,
+                contentDescription = item.title,
+                tint = LegadoTheme.colorScheme.onSurface,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        } else if (showIcon && item.iconDrawable != null) {
             AsyncImage(
                 model = item.iconDrawable,
                 contentDescription = item.title,
@@ -407,7 +445,7 @@ private fun QuickMenuItem(
                     .size(16.dp)
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.height(3.dp))
         }
         AppText(
             text = item.title,
@@ -420,6 +458,7 @@ private fun QuickMenuItem(
 @Composable
 private fun MoreMenuView(
     items: List<ActionMenuItem>,
+    showIcons: Boolean,
     onItemClick: (ActionMenuItem) -> Unit,
     onBack: () -> Unit,
     onManageClick: () -> Unit
@@ -460,7 +499,7 @@ private fun MoreMenuView(
                 .fillMaxWidth()
         ) {
             items.forEach { item ->
-                MoreMenuItem(item = item, onClick = { onItemClick(item) })
+                MoreMenuItem(item = item, showIcon = showIcons, onClick = { onItemClick(item) })
             }
         }
 
@@ -498,6 +537,7 @@ private fun MoreMenuView(
 @Composable
 private fun MoreMenuItem(
     item: ActionMenuItem,
+    showIcon: Boolean,
     onClick: () -> Unit
 ) {
     Row(
@@ -507,7 +547,16 @@ private fun MoreMenuItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (item.iconDrawable != null) {
+        val builtInIcon = if (showIcon) item.builtInIcon() else null
+        if (builtInIcon != null) {
+            Icon(
+                imageVector = builtInIcon,
+                contentDescription = item.title,
+                tint = LegadoTheme.colorScheme.onSurface,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        } else if (showIcon && item.iconDrawable != null) {
             AsyncImage(
                 model = item.iconDrawable,
                 contentDescription = item.title,
@@ -521,6 +570,21 @@ private fun MoreMenuItem(
             style = LegadoTheme.typography.labelMedium
         )
     }
+}
+
+private fun ActionMenuItem.builtInIcon(): ImageVector? = when (id) {
+    R.id.menu_copy -> Icons.Outlined.ContentCopy
+    R.id.menu_share_str -> Icons.Outlined.Share
+    R.id.menu_browser -> Icons.Outlined.Language
+    R.id.menu_aloud -> Icons.AutoMirrored.Outlined.VolumeUp
+    R.id.menu_bookmark -> Icons.Outlined.Bookmark
+    R.id.menu_mark -> Icons.Outlined.BorderColor
+    R.id.menu_dict -> Icons.AutoMirrored.Outlined.MenuBook
+    R.id.menu_replace -> Icons.Outlined.FindReplace
+    R.id.menu_edit -> Icons.Outlined.Edit
+    R.id.menu_ai_clean, R.id.menu_ai_rewrite -> Icons.Outlined.SmartToy
+    R.id.menu_search_content -> Icons.Outlined.Search
+    else -> null
 }
 
 
@@ -569,7 +633,7 @@ private class MoreMenuPositionProvider(
     }
 }
 
-private class TextMenuPositionProvider(
+internal class TextMenuPositionProvider(
     private val density: Float,
     private val startX: Int,
     private val startTopY: Int,
@@ -577,6 +641,7 @@ private class TextMenuPositionProvider(
     private val endX: Int,
     private val endBottomY: Int,
     private val shadowPadding: Int,
+    private val placeOppositeHalf: Boolean = false,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -601,7 +666,15 @@ private class TextMenuPositionProvider(
         val isSpaceEnoughBelowSelection = windowSize.height - endBottomY >
                 cardHeight + textMargin + cursorHandleClearance + marginVertical
 
-        if (!preferBelowForTopSelection && isSpaceEnoughAtTop) {
+        if (placeOppositeHalf) {
+            x = startX - shadowPadding
+            val selectionCenterY = (startTopY + endBottomY) / 2
+            y = if (selectionCenterY < windowSize.height / 2) {
+                endBottomY + cursorHandleClearance + textMargin - shadowPadding
+            } else {
+                startTopY - popupContentSize.height + shadowPadding - textMargin
+            }
+        } else if (!preferBelowForTopSelection && isSpaceEnoughAtTop) {
             x = startX - shadowPadding
             y = startTopY - popupContentSize.height + shadowPadding - textMargin
         } else if (isSpaceEnoughBelowSelection) {

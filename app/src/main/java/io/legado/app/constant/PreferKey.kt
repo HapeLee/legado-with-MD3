@@ -145,6 +145,7 @@ object PreferKey {
     const val expandTextMenu = "expandTextMenu"
     const val showSelectMenuIcon = "showSelectMenuIcon"
     const val textSelectMenuConfig = "textSelectMenuConfig"
+    const val lastMarkingStyle = "lastMarkingStyle"
     const val doublePageHorizontal = "doubleHorizontalPage"
     const val readUrlOpenInBrowser = "readUrlInBrowser"
     const val defaultBookTreeUri = "defaultBookTreeUri"

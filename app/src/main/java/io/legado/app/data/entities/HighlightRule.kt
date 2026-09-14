@@ -55,6 +55,8 @@ data class HighlightRule(
                     3 -> "波浪下划线"
                     4 -> "双下划线"
                     5 -> "自定义SVG"
+                    6 -> "删除线"
+                    7 -> "荧光"
                     else -> "下划线"
                 } + underlineColor?.let { " ${it.toHexColor()}" }.orEmpty()
             )

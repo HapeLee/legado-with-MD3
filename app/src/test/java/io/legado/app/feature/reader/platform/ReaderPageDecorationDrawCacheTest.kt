@@ -61,6 +61,31 @@ class ReaderPageDecorationDrawCacheTest {
         assertNotSame(first, ReaderSvgPathCache.parse(data))
     }
 
+    @Test
+    fun halfHighlightIsSeparatedSoItCanBeDrawnBehindText() {
+        val style = ReaderTextStyle(
+            colorArgb = 0xff000000.toInt(),
+            fontSizePx = 16f,
+            underline = ReaderUnderline(7, 0x66ffd54f, 1f, 0f),
+        )
+        val cache = ReaderPageDecorationDrawCache.create(
+            page(
+                ReaderElement.Text(
+                    ReaderRect(0f, 0f, 10f, 10f),
+                    8f,
+                    "甲",
+                    style,
+                    false,
+                    false,
+                    chapterPosition = 0
+                )
+            )
+        )
+
+        assertEquals(1, cache.halfHighlights.size)
+        assertEquals(0, cache.styledUnderlines.size)
+    }
+
     @Test(timeout = 1_000) fun zeroDashAndWaveLengthsCannotStallDrawing() {
         val canvas = Canvas(Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888))
         val bounds = ReaderRect(0f, 0f, 10f, 10f)

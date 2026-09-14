@@ -24,6 +24,11 @@ class ReaderPaginatorTest {
         baselineOffsetPx = 15f,
     )
 
+    /** 单行段落：内容区宽 40f、每字 20f，必定排成一行、占 20f 行高。 */
+    private fun paragraph(text: String, position: Int = 0) = ReaderMeasuredParagraph(
+        text, text.map(Char::toString), List(text.length) { 20f }, style, position,
+    )
+
     @Test fun emphasisUnderlineStyleIsCarriedByEveryPublishedPage() {
         val emphasis = ReaderEmphasisUnderline(0xff123456.toInt(), 2f, 1f)
         val pages = ReaderPaginator.paginate(
@@ -549,8 +554,57 @@ class ReaderPaginatorTest {
         assertEquals(glyphs[0].bounds.top, glyphs[1].bounds.top, 0f)
     }
 
+    /**
+     * 孤立的一行高亮：上下邻行都没有框，整段行距都空着，框可以按原图尺寸画——不再像
+     * 旧 View 那样被钉死在一半行距上（`TextLine.drawNineSliceFrames` 的 overflowScale）。
+     */
     @Test
-    fun nineSliceFrameUniformlyScalesIntoAvailableLineGap() {
+    fun lonelyNineSliceLineMayUseTheWholeLineGap() {
+        val framedStyle = style.copy(
+            backgroundImage = ReaderTextBackgroundImage(
+                "frame.png", 3, 1f,
+                contentInsetLeftPx = 3f,
+                contentInsetRightPx = 4f,
+                contentInsetTopPx = 8f,
+                contentInsetBottomPx = 8f,
+            )
+        )
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = listOf(ReaderMeasuredInlineItem.Text("字", 10f, framedStyle, 0)),
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                    lineSpacingMultiplier = 1.5f,
+                )
+            ),
+            config.copy(viewportHeightPx = 100),
+        ).single()
+
+        val glyph = page.elements.single() as ReaderElement.Text
+        // 行距 1.5 ⇒ 整段留白 10px，一半只有 5px。
+        assertTrue(glyph.backgroundFrameTopPx > 5f)
+        assertEquals(8f, glyph.backgroundFrameTopPx, 0.001f)
+        assertEquals(8f, glyph.backgroundFrameBottomPx, 0.001f)
+        val fittedImage = glyph.style.backgroundImage!!
+        assertEquals(3f, fittedImage.contentInsetLeftPx, 0.001f)
+        assertEquals(4f, fittedImage.contentInsetRightPx, 0.001f)
+        val run = page.textBackgroundRuns().single()
+        assertEquals(glyph.bounds.left - 3f, run.bounds.left, 0.001f)
+        assertEquals(glyph.bounds.right + 4f, run.bounds.right, 0.001f)
+        assertEquals(glyph.bounds.top - 8f, run.bounds.top, 0.001f)
+        assertEquals(glyph.bounds.bottom + 8f, run.bounds.bottom, 0.001f)
+    }
+
+    /**
+     * 行距不够时四边**等比**收紧：旧 View 只钳上下，左右保持原图厚度，于是「左右两条宽竖边
+     * + 上下两条发丝横线、四角被纵向抹平」；这里要求四条边共用同一个因子。
+     */
+    @Test
+    fun nineSliceShrinksAllFourEdgesByTheSameFactorWhenTheGapIsTight() {
         val framedStyle = style.copy(backgroundImage = ReaderTextBackgroundImage(
             "frame.png", 3, 1f,
             contentInsetLeftPx = 3f,
@@ -566,22 +620,122 @@ class ReaderPaginatorTest {
                 lineHeightPx = 20f,
                 baselineOffsetPx = 15f,
                 baseTextSizePx = 10f,
-                lineSpacingMultiplier = 1.5f,
-            )),
+                lineSpacingMultiplier = 1.2f,
+            )
+            ),
             config.copy(viewportHeightPx = 100),
         ).single()
 
         val glyph = page.elements.single() as ReaderElement.Text
-        assertEquals(10f / 3f, glyph.backgroundFrameTopPx, 0.001f)
-        assertEquals(5f, glyph.backgroundFrameBottomPx, 0.001f)
-        val fittedImage = glyph.style.backgroundImage!!
-        assertEquals(2.5f, fittedImage.contentInsetLeftPx, 0.001f)
-        assertEquals(10f / 3f, fittedImage.contentInsetRightPx, 0.001f)
+        val fitted = glyph.style.backgroundImage!!
+        // 行距留白 4px：因子取 min(1, 4/4, 4/6) = 2/3。
+        val factor = 2f / 3f
+        assertEquals(3f * factor, fitted.contentInsetLeftPx, 0.001f)
+        assertEquals(4f * factor, fitted.contentInsetRightPx, 0.001f)
+        assertEquals(4f * factor, fitted.contentInsetTopPx, 0.001f)
+        assertEquals(6f * factor, fitted.contentInsetBottomPx, 0.001f)
+        assertEquals(fitted.contentInsetTopPx, glyph.backgroundFrameTopPx, 0.001f)
+        assertEquals(fitted.contentInsetBottomPx, glyph.backgroundFrameBottomPx, 0.001f)
+        // 左右边不再独立于上下边：缩放比例一致，四角不会被纵向抹平。
+        assertEquals(
+            fitted.contentInsetLeftPx / 3f,
+            fitted.contentInsetTopPx / 4f,
+            0.001f,
+        )
+    }
+
+    /**
+     * 连续多行都带框时，相邻两行各让一半行距：`上一行的下边 + 下一行的上边 ≤ 行距`，
+     * 两个框正好相接不重叠，也不会出现两条平行描边。
+     */
+    @Test
+    fun adjacentNineSliceLinesShareTheLineGapInsteadOfOverlapping() {
+        val framedStyle = style.copy(
+            backgroundImage = ReaderTextBackgroundImage(
+                "frame.png", 3, 1f,
+                contentInsetLeftPx = 3f,
+                contentInsetRightPx = 4f,
+                contentInsetTopPx = 8f,
+                contentInsetBottomPx = 8f,
+            )
+        )
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = (0 until 4).map { index ->
+                        ReaderMeasuredInlineItem.Text("字", 10f, framedStyle, index)
+                    },
+                indentCharacters = 0,
+                alignment = ReaderTextAlignment.START,
+                lineHeightPx = 20f,
+                baselineOffsetPx = 15f,
+                baseTextSizePx = 10f,
+                lineSpacingMultiplier = 1.5f,
+            )),
+            config.copy(viewportWidthPx = 25, viewportHeightPx = 100),
+        ).single()
+
+        val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
+        val lineGapPx = 10f
+        val lines = glyphs.groupBy { it.bounds.top }.values.toList()
+        assertEquals(2, lines.size)
+        // 同一行共用一份 inset（同一个因子），左右与上下等比。
+        lines.forEach { line ->
+            val image = line.first().style.backgroundImage!!
+            line.forEach { assertEquals(image, it.style.backgroundImage) }
+            assertEquals(3f * 5f / 8f, image.contentInsetLeftPx, 0.001f)
+            assertEquals(5f, image.contentInsetTopPx, 0.001f)
+            assertEquals(5f, image.contentInsetBottomPx, 0.001f)
+        }
+        // 相邻两边各让半个行距：正好相接，不会叠出两条平行描边。
+        val upper = lines[0].first().style.backgroundImage!!
+        val lower = lines[1].first().style.backgroundImage!!
+        assertTrue(upper.contentInsetBottomPx + lower.contentInsetTopPx <= lineGapPx + 0.001f)
+        assertEquals(lineGapPx / 2f, upper.contentInsetBottomPx, 0.001f)
+        assertEquals(lineGapPx / 2f, lower.contentInsetTopPx, 0.001f)
+        assertEquals(upper.contentInsetBottomPx, lines[0].first().backgroundFrameBottomPx, 0.001f)
+        assertEquals(lower.contentInsetTopPx, lines[1].first().backgroundFrameTopPx, 0.001f)
+    }
+
+    /**
+     * 行距 1.0 ⇒ 上下边归零。旧 View 此时画「中心 + 左右两条边」：左右边仍是原图厚度，
+     * 且落在文字框外侧；文字照常内缩，不再出现把九格塞进文字框、压住首末字的情形。
+     */
+    @Test
+    fun nineSliceWithoutALineGapKeepsTheSideEdgesOutsideTheTextRect() {
+        val framedStyle = style.copy(
+            backgroundImage = ReaderTextBackgroundImage(
+                "frame.png", 3, 1f,
+                contentInsetLeftPx = 3f,
+                contentInsetRightPx = 4f,
+                contentInsetTopPx = 4f,
+                contentInsetBottomPx = 6f,
+            )
+        )
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = listOf(ReaderMeasuredInlineItem.Text("字", 10f, framedStyle, 0)),
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                    lineSpacingMultiplier = 1f,
+                )
+            ),
+            config.copy(viewportHeightPx = 100),
+        ).single()
+
+        val glyph = page.elements.single() as ReaderElement.Text
+        assertEquals(0f, glyph.backgroundFrameTopPx, 0f)
+        assertEquals(0f, glyph.backgroundFrameBottomPx, 0f)
+        assertEquals(3f, glyph.bounds.left, 0.001f)
         val run = page.textBackgroundRuns().single()
-        assertEquals(glyph.bounds.top, run.contentBounds.top, 0f)
-        assertEquals(glyph.bounds.bottom, run.contentBounds.bottom, 0f)
-        assertEquals(glyph.bounds.top - 10f / 3f, run.bounds.top, 0.001f)
-        assertEquals(glyph.bounds.bottom + 5f, run.bounds.bottom, 0.001f)
+        assertEquals(glyph.bounds.top, run.bounds.top, 0f)
+        assertEquals(glyph.bounds.bottom, run.bounds.bottom, 0f)
+        assertEquals(glyph.bounds.left - 3f, run.bounds.left, 0.001f)
+        assertEquals(glyph.bounds.right + 4f, run.bounds.right, 0.001f)
     }
 
     /**
@@ -603,10 +757,40 @@ class ReaderPaginatorTest {
         }
         val pages = ReaderPaginator.paginate(lines, scrollConfig)
         assertEquals(2, pages.size)
-        // 内容区高度 40f（45 − 5）：中间页就是排版游标，章末页取「覆盖高度 / 内容区」的
-        // 较大者后再加 20f 留白（对照旧 TextChapterLayout 的 `height = durY + 20dp`）。
+        // 内容区高度 40f（45 − 5）：中间页就是排版游标；章末页同样是游标（20f）加 20f 留白，
+        // 不向内容区高度收口（对照旧 TextChapterLayout 的 `height = durY + 20dp`）。
         assertEquals(40f, pages[0].scrollExtentPx, 0.01f)
-        assertEquals(60f, pages[1].scrollExtentPx, 0.01f)
+        assertEquals(40f, pages[1].scrollExtentPx, 0.01f)
+    }
+
+    /**
+     * 滚动模式章末残页只占自身内容高度 + [ReaderPaginationConfig.chapterEndPaddingPx]：下一章
+     * 正文紧接本章末尾出现，中间不会先顶满一屏空白。
+     *
+     * 旧 `TextChapterLayout.setTypeText` 收尾时 `textPage.height = durY + 20dp`（`durY` 是排版
+     * 游标），`ContentTextView.drawPage` 把下一页画在 `相对偏移 + textPage.height` 处；把章末页
+     * 收口到「内容区高度」会让残页后的空白撑满一屏，必须滚过整屏才接上下一章。
+     */
+    @Test
+    fun scrollModeChapterEndIsFollowedImmediatelyByTheNextChapterContent() {
+        val scrollConfig = config.copy(continuousScroll = true, chapterEndPaddingPx = 20f)
+        val chapterEnd = ReaderPaginator.paginate(listOf(paragraph("甲")), scrollConfig).single()
+        val nextChapter = ReaderPaginator.paginate(
+            listOf(paragraph("乙")),
+            scrollConfig.copy(chapterIndex = config.chapterIndex + 1),
+        ).single()
+
+        // 内容区高 40f（45 − 5），本章只有一行 20f：章末页页高 = 20f 内容 + 20f 留白。
+        assertEquals(40f, chapterEnd.scrollExtentPx, 0.01f)
+        val stackedGap = chapterEnd.scrollExtentPx +
+                nextChapter.elements.minOf { it.bounds.top } -
+                chapterEnd.elements.maxOf { it.bounds.bottom }
+        assertEquals(
+            "下一章首行与本章末行之间只应留 chapterEndPaddingPx",
+            scrollConfig.chapterEndPaddingPx,
+            stackedGap,
+            0.01f,
+        )
     }
 
     @Test

@@ -62,10 +62,11 @@ class ReaderVolumeTitlePageTest {
     }
 
     /**
-     * 连续滚动模式按 scrollExtentPx 堆叠相邻页（ScrollPageStack / ReaderPageViewportLayout），
-     * 短页的页高下限是「内容区高度」，因此卷名页无论是否居中都会撑满一屏；否则下一章正文
-     * 会压在本页卷名上。同见 `ReaderLongImageScrollTest
-     * .continuousPagesExcludeFixedViewportChromeFromTheirStackingExtent`。
+     * 连续滚动模式按 scrollExtentPx 堆叠相邻页（ScrollPageStack / ReaderPageViewportLayout）。
+     * 旧 `TextChapterLayout` 的卷名/空正文章把标题居中后按排版游标 `durY` 发布页高
+     * （`emptyContent && textPages.isEmpty()` 分支 + 收尾的 `height = durY + 20dp`），
+     * 所以页高只覆盖居中后的卷名本身：下一章正文紧接卷名下方排下去，不先顶满一屏空白。
+     * 居中位移必须计入页高，否则下一章正文会压在本页卷名上。
      */
     @Test
     fun scrollModeVerticallyCenteredTitleStaysInsidePageExtent() {
@@ -85,8 +86,9 @@ class ReaderVolumeTitlePageTest {
                     "${centered.contentTopPx + centered.scrollExtentPx}",
             centeredBottom <= centered.contentTopPx + centered.scrollExtentPx,
         )
-        // 内容区高度 = 200 − 10 − 20 = 170：短页一律取该下限，居中与否都不改变页高。
-        assertEquals(170f, centered.scrollExtentPx, 0.01f)
-        assertEquals(170f, topAnchored.scrollExtentPx, 0.01f)
+        // 居中后标题字形落在 [85, 105]，页高 = 标题底边 − 内容区顶 = 105 − 10 = 95；
+        // 未居中时标题仍在 [15, 35]，页高 = 排版游标 25f。两者都不是内容区高度 170f。
+        assertEquals(95f, centered.scrollExtentPx, 0.01f)
+        assertEquals(25f, topAnchored.scrollExtentPx, 0.01f)
     }
 }

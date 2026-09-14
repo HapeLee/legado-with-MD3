@@ -19,6 +19,7 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileUtils
+import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.ImageUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.NetworkUtils
@@ -208,8 +209,10 @@ object BookHelp {
             book.getFolderName(),
             bookChapter.getFileName(),
         ).writeText(content)
-        if (book.isOnLineTxt && readGateway.currentSettings.tocCountWords) {
-            val wordCount = StringUtils.wordCountFormat(content.length)
+        if (book.isOnLineTxt) {
+            val wordCount = StringUtils.wordCountFormat(
+                HtmlFormatter.textForWordCount(content).length
+            )
             bookChapter.wordCount = wordCount
             appDb.bookChapterDao.update(bookChapter)
         }

@@ -377,10 +377,13 @@
     <string name="bookmark_mark_effect_solid">单实线</string>
     <string name="bookmark_mark_effect_wave">波浪线</string>
     <string name="bookmark_mark_effect_dash">虚线</string>
+    <string name="bookmark_mark_effect_strike">删除线</string>
+    <string name="bookmark_mark_effect_highlight">荧光</string>
     <string name="bookmark_mark_effect_bg">背景色</string>
     <string name="bookmark_mark_effect_text">字体色</string>
     <string name="bookmark_mark_custom_color">自定义颜色</string>
     <string name="bookmark_mark_note">备注</string>
+    <string name="bookmark_mark_delete_note">删除笔记</string>
     <string name="bookmark_mark_note_hint">输入备注…</string>
     <string name="bookmark_mark_editing">已有标记，保存将更新</string>
     <string name="content_process_ai_section">AI 改写</string>
@@ -871,7 +874,7 @@
     <string name="nine_patch_split_bottom">下切分线</string>
     <string name="manual_nine_slice">手动九切片</string>
     <string name="edit_nine_slice">编辑拉伸区域</string>
-    <string name="nine_slice_drag_hint">拖拽绿色选区选择允许拉伸的原图区域</string>
+    <string name="nine_slice_drag_hint">绿色选区会被横向和纵向双向拉伸；上下两条边只沿长度横向拉伸，左右两条边只沿长度纵向拉伸，四个角只等比缩放、不变形。要让圆角完整保留，切分线必须拖到圆弧外侧（切片宽度 ≥ 圆角半径）；想整体调大调小框请用「缩放」，不要靠切分。</string>
     <string name="nine_slice_mode_all">全部</string>
     <string name="nine_slice_mode_horizontal">水平</string>
     <string name="nine_slice_mode_vertical">垂直</string>
@@ -3276,4 +3279,11 @@
     <string name="manga_reader_cache_following">缓存后续章节</string>
     <string name="manga_reader_cache_all">缓存整部漫画</string>
     <string name="manga_reader_cache_enqueued">已加入离线缓存队列</string>
+    <string name="feature_bookmarks_search_notes">搜索笔记内容</string>
+    <string name="feature_bookmarks_search_current">搜索当前%1$s</string>
+    <string name="feature_bookmarks_counts">%1$d 个书签 · %2$d 个笔记</string>
+    <string name="feature_bookmarks_match_hint">包含匹配笔记，点击查看</string>
+    <string name="feature_bookmarks_no_matching_notes">没有找到相关笔记</string>
+    <string name="feature_bookmarks_no_notes">暂无笔记</string>
+    <string name="feature_bookmarks_chapter_fallback">第 %1$d 章</string>
 </resources>

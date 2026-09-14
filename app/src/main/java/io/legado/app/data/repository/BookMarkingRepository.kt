@@ -12,6 +12,8 @@ class BookMarkingRepository(
     private val dao: BookMarkingDao,
 ) : BookMarkingGateway {
 
+    override fun flowAll(): Flow<List<BookMarking>> = dao.flowAll().flowOn(Dispatchers.IO)
+
     override suspend fun getByBook(
         bookName: String,
         bookAuthor: String,

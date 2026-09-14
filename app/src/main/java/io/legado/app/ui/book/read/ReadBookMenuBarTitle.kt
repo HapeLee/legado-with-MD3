@@ -209,7 +209,10 @@ internal fun MenuTitleBar(
                         text = state.bookName,
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { onIntent(ReadBookIntent.OpenBookInfo) }
+                            .combinedClickable(
+                                onClick = { onIntent(ReadBookIntent.OpenBookInfo) },
+                                onLongClick = { onIntent(ReadBookIntent.OpenBookInfoDirect) },
+                            )
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         style = LegadoTheme.typography.titleMedium.copy(
                             shadow = menuTextShadow
@@ -305,7 +308,10 @@ internal fun MenuTitleBar(
                 text = state.bookName,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onIntent(ReadBookIntent.OpenBookInfo) }
+                    .combinedClickable(
+                        onClick = { onIntent(ReadBookIntent.OpenBookInfo) },
+                        onLongClick = { onIntent(ReadBookIntent.OpenBookInfoDirect) },
+                    )
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 style = LegadoTheme.typography.titleMedium.copy(
                     shadow = menuTextShadow
