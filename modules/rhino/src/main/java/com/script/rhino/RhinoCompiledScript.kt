@@ -55,7 +55,7 @@ internal class RhinoCompiledScript(
     }
 
     override fun eval(scope: Scriptable, coroutineContext: CoroutineContext?): Any? {
-        val cx = Context.enter() as RhinoContext
+        val cx = enterRhinoContext()
         val previousCoroutineContext = cx.coroutineContext
         if (coroutineContext != null && coroutineContext[Job] != null) {
             cx.coroutineContext = coroutineContext
@@ -87,7 +87,7 @@ internal class RhinoCompiledScript(
     }
 
     override suspend fun evalSuspend(scope: Scriptable): Any? {
-        val cx = Context.enter() as RhinoContext
+        val cx = enterRhinoContext()
         var ret: Any?
         withContext(VMBridgeReflect.contextLocal.asContextElement()) {
             cx.allowScriptRun = true

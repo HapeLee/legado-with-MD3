@@ -176,6 +176,13 @@ class App : Application(), SingletonImageLoader.Factory {
             ThreadUtils.setThreadAssertsDisabledForTesting(true)
         }
         registerActivityLifecycleCallbacks(LifecycleHelp)
+        // Rhino 的全局 ContextFactory 必须在任何线程执行 Context.enter() 之前安装：
+        // 它只在 RhinoScriptEngine 的 object init 里通过 ContextFactory.initGlobal 生效，
+        // 而 Context.enter() 取的就是这个全局工厂。原先 initRhino() 排在下面那个
+        // Coroutine.async 的末尾，冷启动早期执行的脚本（书源登录/换源/解析）可能先拿到
+        // 普通 Context，强转 RhinoContext 会直接崩溃并把该线程永久污染。
+        // 这里改为在 onCreate 中同步执行；RhinoWrapFactory 注册同理要早于任何脚本执行。
+        initRhino()
         Coroutine.async {
             get<BackupSettingsGateway>().settings
                 .map {
@@ -212,7 +219,6 @@ class App : Application(), SingletonImageLoader.Factory {
             DispatchersMonitor.init()
             URL.setURLStreamHandlerFactory(ObsoleteUrlFactory(okHttpClient))
             launch { installGmsTlsProvider(appCtx) }
-            initRhino()
             //初始化封面
             BookCover.toString()
             //清除过期数据
