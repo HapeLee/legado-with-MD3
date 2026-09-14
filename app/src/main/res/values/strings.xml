@@ -2893,6 +2893,8 @@
     <string name="speech_analysis_rule_ai_summary">Rules preserve stable boundaries; AI only completes uncertain speakers, roles and emotions</string>
     <string name="speech_analysis_ai_summary">AI understands boundaries, speakers and emotions; slower and may incur model costs</string>
     <string name="speech_analysis_ai_model_required">Configure an AI model before enabling AI chapter segmentation</string>
+    <string name="speech_analysis_reasoning_level">Analysis reasoning</string>
+    <string name="speech_analysis_reasoning_level_summary">Off by default. Models that think by default (Zhipu GLM, DeepSeek, …) return the answer only in the reasoning field, which makes analysis fail</string>
     <string name="use_multi_speaker">Multi-speaker reading</string>
     <string name="use_multi_speaker_summary">Use different voices for narration, dialogue and other roles</string>
     <string name="read_aloud_adjust_speed">Adjust reading speed</string>

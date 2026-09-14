@@ -17,4 +17,20 @@ class AiReasoningLevelTest {
 
         assertEquals("medium", AiReasoningLevel.MEDIUM.effortFor(provider))
     }
+
+    @Test
+    fun storageValueRoundTripsForEveryLevel() {
+        AiReasoningLevel.entries.forEach { level ->
+            assertEquals(level, AiReasoningLevel.fromStorage(level.storageValue))
+        }
+    }
+
+    @Test
+    fun unknownStorageValuesFallBackToTheGivenDefault() {
+        assertEquals(AiReasoningLevel.OFF, AiReasoningLevel.fromStorage("", AiReasoningLevel.OFF))
+        assertEquals(
+            AiReasoningLevel.OFF,
+            AiReasoningLevel.fromStorage("medium ", AiReasoningLevel.OFF),
+        )
+    }
 }

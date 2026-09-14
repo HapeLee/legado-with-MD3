@@ -2888,6 +2888,8 @@
     <string name="speech_analysis_rule_ai_summary">保留稳定规则边界，仅由 AI 补全不确定的人物、角色和情感</string>
     <string name="speech_analysis_ai_summary">AI 综合理解分片边界、说话人和情感，速度较慢且可能产生模型费用</string>
     <string name="speech_analysis_ai_model_required">请先配置 AI 模型，再启用 AI 章节分片</string>
+    <string name="speech_analysis_reasoning_level">分析推理级别</string>
+    <string name="speech_analysis_reasoning_level_summary">默认关闭。默认开启思考的模型（智谱 GLM、DeepSeek 等）只把内容放在推理字段里，会导致分析失败</string>
     <string name="use_multi_speaker">多角色朗读</string>
     <string name="use_multi_speaker_summary">为旁白、对话等不同角色使用不同音色</string>
     <string name="read_aloud_adjust_speed">调整语速</string>
