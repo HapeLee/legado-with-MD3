@@ -291,6 +291,7 @@ data class ReadBookUiState(
     val readAloudTtsTimer: Int = 0,
     val readAloudFinishCurrentChapterAfterTimer: Boolean = false,
     val speechAnalysisMode: String = "rule",
+    val speechAnalysisReasoningLevel: String = AiReasoningLevel.OFF.storageValue,
     val useMultiSpeaker: Boolean = true,
     val defaultReadAloudInterface: String = ReadAloudSettingsRepository.DEFAULT_INTERFACE_CLASSIC,
     val readAloudParagraphInterval: Int = 0,
@@ -799,6 +800,7 @@ sealed interface ReadBookIntent {
     data class SetReadAloudTtsFollowSys(val value: Boolean) : ReadBookIntent
     data class SetReadAloudTtsSpeechRate(val value: Int) : ReadBookIntent
     data class SetSpeechAnalysisMode(val value: String) : ReadBookIntent
+    data class SetSpeechAnalysisReasoningLevel(val value: String) : ReadBookIntent
     data class SetUseMultiSpeaker(val value: Boolean) : ReadBookIntent
     data class SetDefaultReadAloudInterface(val value: String) : ReadBookIntent
     data object OpenSystemTtsSettings : ReadBookIntent

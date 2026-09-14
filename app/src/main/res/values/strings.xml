@@ -464,6 +464,14 @@
     <string name="book_source_check_save_failed">Check failed: unable to save result, %1$s</string>
     <string name="book_source_check_incomplete">Check failed: task did not finish</string>
     <string name="book_source_check_item_cancelled">Check cancelled</string>
+    <string name="book_source_check_default_keyword">My</string>
+    <string name="book_source_import_success">Import completed</string>
+    <string name="book_source_import_failed">Import failed</string>
+    <string name="book_source_invalid_source">Not a book source</string>
+    <string name="book_source_export_open_failed">Unable to open export file</string>
+    <string name="book_source_export_failed">Export failed: %1$s</string>
+    <string name="book_source_upload_success">Upload completed: %1$s</string>
+    <string name="book_source_upload_failed">Upload failed: %1$s</string>
     <string name="check_select_source">Check the selected source</string>
     <string name="progress_show">%1$s      Progress %2$d/%3$d</string>
     <string name="tts_fix">Please install and select Chinese TTS!</string>
@@ -2896,6 +2904,8 @@
     <string name="speech_analysis_rule_ai_summary">Rules preserve stable boundaries; AI only completes uncertain speakers, roles and emotions</string>
     <string name="speech_analysis_ai_summary">AI understands boundaries, speakers and emotions; slower and may incur model costs</string>
     <string name="speech_analysis_ai_model_required">Configure an AI model before enabling AI chapter segmentation</string>
+    <string name="speech_analysis_reasoning_level">Analysis reasoning</string>
+    <string name="speech_analysis_reasoning_level_summary">Off by default. Models that think by default (Zhipu GLM, DeepSeek, …) return the answer only in the reasoning field, which makes analysis fail</string>
     <string name="use_multi_speaker">Multi-speaker reading</string>
     <string name="use_multi_speaker_summary">Use different voices for narration, dialogue and other roles</string>
     <string name="read_aloud_adjust_speed">Adjust reading speed</string>

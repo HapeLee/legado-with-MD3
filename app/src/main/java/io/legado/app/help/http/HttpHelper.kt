@@ -179,7 +179,13 @@ fun getHttpCacheSize(type: HttpCacheType): Long {
 
 fun clearHttpCache(type: HttpCacheType) {
     when (type) {
-        HttpCacheType.COVER -> okHttpClient.cache?.delete()
+        // 设置页“封面缓存”条目同时清掉持久化封面文件缓存（CoverFileCache，
+        // 位于 filesDir/cover_cache，不在“清除缓存”目录扫描范围内），
+        // 保证用户能彻底删除封面数据腾空间。
+        HttpCacheType.COVER -> {
+            okHttpClient.cache?.delete()
+            io.legado.app.help.coil.CoverFileCache.clear()
+        }
         HttpCacheType.MANGA -> okHttpClientManga.cache?.delete()
     }
 }

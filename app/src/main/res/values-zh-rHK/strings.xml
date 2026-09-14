@@ -373,6 +373,14 @@
     <string name="book_source_check_save_failed">校驗失敗：無法保存結果，%1$s</string>
     <string name="book_source_check_incomplete">校驗失敗：任務未完成</string>
     <string name="book_source_check_item_cancelled">校驗已取消</string>
+    <string name="book_source_check_default_keyword">我的</string>
+    <string name="book_source_import_success">導入完成</string>
+    <string name="book_source_import_failed">導入失敗</string>
+    <string name="book_source_invalid_source">不是書源</string>
+    <string name="book_source_export_open_failed">無法打開導出文件</string>
+    <string name="book_source_export_failed">導出失敗：%1$s</string>
+    <string name="book_source_upload_success">上傳成功：%1$s</string>
+    <string name="book_source_upload_failed">上傳失敗：%1$s</string>
     <string name="check_select_source">校驗所選</string>
     <string name="progress_show">%1$s      進度 %2$d/%3$d</string>
     <string name="tts_fix">請安裝並選擇中文 TTS!</string>
@@ -2674,6 +2682,8 @@
     <string name="speech_analysis_rule_ai_summary">保留穩定規則邊界，僅由 AI 補全不確定的人物、角色和情感</string>
     <string name="speech_analysis_ai_summary">AI 綜合理解分片邊界、說話人和情感，速度較慢且可能產生模型費用</string>
     <string name="speech_analysis_ai_model_required">請先設定 AI 模型，再啟用 AI 章節分片</string>
+    <string name="speech_analysis_reasoning_level">分析推理級別</string>
+    <string name="speech_analysis_reasoning_level_summary">預設關閉。預設開啟思考的模型（智譜 GLM、DeepSeek 等）只把內容放在推理欄位裡，會導致分析失敗</string>
     <string name="use_multi_speaker">多角色朗讀</string>
     <string name="use_multi_speaker_summary">為旁白、對話等不同角色使用不同音色</string>
     <string name="read_aloud_adjust_speed">調整語速</string>

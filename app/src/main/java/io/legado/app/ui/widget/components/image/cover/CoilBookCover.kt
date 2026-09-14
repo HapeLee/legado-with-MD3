@@ -77,6 +77,9 @@ fun BookCoverImage(
     modifier: Modifier = Modifier,
     sourceOrigin: String? = null,
     memoryCacheKey: String? = null,
+    // 本书 bookUrl（别名缓存键）与书架本地优先标志，透传给 buildCoverImageRequest。
+    bookUrl: String? = null,
+    preferCache: Boolean = false,
     ignoreUseDefaultCover: Boolean = false,
     showLoadingPlaceholder: Boolean = true,
     contentScale: ContentScale = ContentScale.Crop,
@@ -186,6 +189,8 @@ fun BookCoverImage(
                     memoryCacheKey = sharedCoverKey?.let {
                         "$it:cover:${memoryCacheKey ?: finalPath}"
                     } ?: memoryCacheKey ?: finalPath,
+                    bookUrl = bookUrl,
+                    preferCache = preferCache,
                     configure = requestBuilder,
                 ),
                 contentDescription = null,
@@ -223,6 +228,9 @@ fun CoilBookCover(
     radius: Dp = 4.dp,
     modifier: Modifier = Modifier.width(64.dp),
     sourceOrigin: String? = null,
+    // 本书 bookUrl + 书架本地优先标志，透传给 BookCoverImage
+    bookUrl: String? = null,
+    preferCache: Boolean = false,
     onLoadFinish: (() -> Unit)? = null,
     onError: (() -> Unit)? = null,
     ignoreUseDefaultCover: Boolean = false,
@@ -299,6 +307,8 @@ fun CoilBookCover(
             path = path,
             modifier = Modifier.fillMaxSize(),
             sourceOrigin = sourceOrigin,
+            bookUrl = bookUrl,
+            preferCache = preferCache,
             ignoreUseDefaultCover = ignoreUseDefaultCover,
             showLoadingPlaceholder = showLoadingPlaceholder,
             onSuccess = {

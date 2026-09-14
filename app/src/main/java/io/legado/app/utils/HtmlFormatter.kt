@@ -13,6 +13,30 @@ object HtmlFormatter {
     private val commentRegex = "<!--[^>]*-->".toRegex() //注释
     private val notImgHtmlRegex = "</?(?!img)[a-zA-Z]+(?=[ >])[^<>]*>".toRegex()
     private val otherHtmlRegex = "</?[a-zA-Z]+(?=[ >])[^<>]*>".toRegex()
+
+    // 字数统计专用：正文里携带的图片 Base64/SVG 源码不能计入字数。
+    // 容器型媒体标签整体连内容一起删除(base64、SVG 路径数据都藏在标签内部)
+    private val mediaBlockRegex = Regex(
+        "(?is)<(script|style|svg|math|video|audio|canvas|picture|iframe|object|embed|figure|template)\\b[^>]*>.*?</\\1\\s*>"
+    )
+    // 未闭合的 <svg>(后面没有 </svg>): 删到结尾, 避免剩余矢量数据被当成正文
+    private val unclosedSvgRegex = Regex("(?is)<svg\\b[^>]*>[\\s\\S]*$")
+    // 自闭合/空元素标签(img 的 src 里就是整段 data:image;base64)
+    private val voidMediaRegex = Regex(
+        "(?is)<(?:img|br|hr|input|source|track|area|col|link|meta)\\b[^>]*/?>"
+    )
+    // 散落在属性之外的 data: URI 与 XML 声明/doctype
+    private val dataUriRegex = Regex(
+        "(?i)['\"(]?data:[a-z0-9.+-]+/[a-z0-9.+,-]+(?:;[a-z0-9.+-]+)?(?:;base64)?[^\\s'\"<>)]*['\")]?"
+    )
+    private val xmlDeclRegex = Regex("(?is)<\\?[\\s\\S]*?\\?>|<!doctype[^>]*>")
+    // Markdown 图片/链接语法 ![alt](url)
+    private val markdownMediaRegex = Regex("!\\[[^\\]]*\\]\\([^)]*\\)")
+
+    // 简介前缀与按钮 onclick 片段，供 formatReadableText 使用
+    private val introPrefixRegex = Regex("^<(usehtml|useweb|md)>", RegexOption.IGNORE_CASE)
+    private val onClickSuffixRegex = Regex("@onclick:[^<\\n]*", RegexOption.IGNORE_CASE)
+
     private val formatImagePattern = Regex(
         "<img[^>]*\\ssrc\\s*=\\s*['\"]([^'\"{>]*\\{(?:[^{}]|\\{[^}>]+\\})+\\})['\"][^>]*>|<img[^>]*\\s(?:data-src|src)\\s*=\\s*['\"]([^'\">]+)['\"][^>]*>|<img[^>]*\\sdata-[^=>]*=\\s*['\"]([^'\">]*)['\"][^>]*>",
         RegexOption.IGNORE_CASE
@@ -156,5 +180,53 @@ object HtmlFormatter {
             )
         )
         return sb.toString()
+    }
+
+    /**
+     * 把书源简介渲染成与详情页观感一致的“可读纯文本”，用于
+     * 不支持交互的只读卡片（如阅读页目录侧栏“信息”页）：
+     * 1) 去掉 <usehtml>/<useweb>/<md> 前缀（与详情页 parseBookInfoIntro 同一处理，
+     *    否则字面量前缀会被当未知标签丢弃但尾部残留调用代码）；
+     * 2) 丢弃按钮里的 @onclick:JS 片段（详情页渲染成可点按钮，只读场景只保留按钮文字，
+     *    如“💬 本书讨论”）；
+     * 3) 不补段首缩进（formatDisplayText 会给每行加两个全角空格，只读卡片里显得
+     *    每行缩进，详情页则没有）。
+     */
+    fun formatReadableText(html: String?): String {
+        if (html.isNullOrBlank()) return ""
+        var body = html.trim()
+        introPrefixRegex.find(body)?.let { m ->
+            val lastLt = body.lastIndexOf('<')
+            body = if (lastLt > m.range.last) {
+                body.substring(m.range.last + 1, lastLt)
+            } else {
+                body.substring(m.range.last + 1)
+            }
+        }
+        body = onClickSuffixRegex.replace(body, "")
+        val document = Jsoup.parseBodyFragment(body)
+        document.outputSettings().prettyPrint(false)
+        document.select("script, style, noscript").remove()
+        return format(document.body().html(), otherHtmlRegex, "")
+    }
+
+    /**
+     * 统计正文真实可读字数。部分书源的 content 携带
+     * `<img src="data:image/png;base64,...">`、内联 `<svg>...</svg>` 等富文本源码，
+     * 直接取 content.length 会把整段 Base64/标签算进目录字数（几百字显示成几千字）。
+     * 这里先剔除媒体标签及其内容、残留 data: URI 与 Markdown 图片语法，
+     * 再按纯文本（解码实体、去空白）计算字符数。
+     */
+    fun countReadableTextLength(content: String?): Int {
+        if (content.isNullOrEmpty()) return 0
+        var text = mediaBlockRegex.replace(content, "")
+        text = unclosedSvgRegex.replace(text, "")
+        text = voidMediaRegex.replace(text, "")
+        text = markdownMediaRegex.replace(text, "")
+        text = xmlDeclRegex.replace(text, "")
+        text = dataUriRegex.replace(text, "")
+        // 剩余标签与 HTML 实体交给 Jsoup 按纯文本解出
+        text = Jsoup.parse(text).text()
+        return text.count { !it.isWhitespace() && it != '\u00a0' && it != '\u3000' }
     }
 }

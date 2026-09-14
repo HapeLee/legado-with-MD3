@@ -209,10 +209,12 @@ object BookHelp {
             book.getFolderName(),
             bookChapter.getFileName(),
         ).writeText(content)
-        if (book.isOnLineTxt) {
-            val wordCount = StringUtils.wordCountFormat(
-                HtmlFormatter.textForWordCount(content).length
-            )
+        if (book.isOnLineTxt && readGateway.currentSettings.tocCountWords) {
+            // 正文里携带的 <img src="data:base64">、内联 SVG 等富文本源码会把章节字数虚抬
+            // 几倍（3 页正文显示 3000+ 字）。这里剔除标签/Base64 后按可读纯文本计数，
+            // 取代原先的 StringUtils.wordCountFormat(content.length)。
+            val readableLength = HtmlFormatter.countReadableTextLength(content)
+            val wordCount = StringUtils.wordCountFormat(readableLength)
             bookChapter.wordCount = wordCount
             appDb.bookChapterDao.update(bookChapter)
         }

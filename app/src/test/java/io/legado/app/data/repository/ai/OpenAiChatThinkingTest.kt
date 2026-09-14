@@ -43,6 +43,24 @@ class OpenAiChatThinkingTest {
         assertFalse(body.containsKey("thinking"))
     }
 
+    @Test
+    fun forcedThinkingGlmIsNotSentDisabledThinking() {
+        val body = mutableMapOf<String, Any?>()
+
+        body.applyZhipuThinking(zhipuProvider(), "glm-5.3", AiReasoningLevel.OFF)
+
+        assertFalse(body.containsKey("thinking"))
+    }
+
+    @Test
+    fun forcedThinkingGlmStillReceivesEnabledThinking() {
+        val body = mutableMapOf<String, Any?>()
+
+        body.applyZhipuThinking(zhipuProvider(), "glm-5.3-flash", AiReasoningLevel.HIGH)
+
+        assertEquals(mapOf("type" to "enabled"), body["thinking"])
+    }
+
     private fun zhipuProvider() = AiProviderConfig(
         id = "zhipu",
         name = "Zhipu AI",

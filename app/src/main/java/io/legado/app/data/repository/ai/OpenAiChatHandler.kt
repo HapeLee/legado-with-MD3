@@ -210,12 +210,20 @@ internal fun MutableMap<String, Any?>.applyZhipuThinking(
     val identity = "${provider.id} ${provider.name} ${provider.baseUrl}".lowercase()
     val isZhipuProvider = "zhipu" in identity || "bigmodel" in identity
     val isGlmModel = modelId.lowercase().startsWith("glm-")
-    if (isZhipuProvider || isGlmModel) {
-        this["thinking"] = mapOf(
-            "type" to if (reasoningLevel == AiReasoningLevel.OFF) "disabled" else "enabled"
-        )
-    }
+    if (!isZhipuProvider && !isGlmModel) return
+    // GLM-5.3 系列官方标注为强制思考，thinking.type=disabled 会被拒绝；想关只能不发这个参数。
+    if (reasoningLevel == AiReasoningLevel.OFF && isAlwaysThinkingGlm(modelId)) return
+    this["thinking"] = mapOf(
+        "type" to if (reasoningLevel == AiReasoningLevel.OFF) "disabled" else "enabled"
+    )
 }
+
+/**
+ * GLM-5.3 / GLM-5.3-Flash 强制思考，无法通过 thinking.type 关闭（z.ai 文档），
+ * 对这些模型发 disabled 只会换回一个错误响应。
+ */
+internal fun isAlwaysThinkingGlm(modelId: String): Boolean =
+    modelId.lowercase().startsWith("glm-5.3")
 
 // ---- Message & tool format converters ----
 

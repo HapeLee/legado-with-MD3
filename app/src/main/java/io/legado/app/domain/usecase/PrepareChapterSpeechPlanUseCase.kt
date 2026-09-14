@@ -1,5 +1,6 @@
 package io.legado.app.domain.usecase
 
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
 import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
@@ -25,6 +26,7 @@ class PrepareChapterSpeechPlanUseCase(
         paragraphs: List<CanonicalSpeechParagraph>,
         preferredDefaultVoiceId: String? = null,
         analysisMode: SpeechAnalysisMode = SpeechAnalysisMode.Rule,
+        analysisReasoningLevel: AiReasoningLevel = AiReasoningLevel.OFF,
         useMultiSpeaker: Boolean = true,
     ): List<SpeechPlanItem> {
         if (paragraphs.isEmpty()) return emptyList()
@@ -58,6 +60,7 @@ class PrepareChapterSpeechPlanUseCase(
                     analysisResult = locallyResolved,
                     paragraphs = paragraphs,
                     mode = effectiveMode,
+                    reasoningLevel = analysisReasoningLevel,
                 )
             }.getOrDefault(locallyResolved)
         }

@@ -1,6 +1,7 @@
 package io.legado.app.data.repository
 
 import io.legado.app.constant.PreferKey
+import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -8,14 +9,14 @@ import org.junit.Test
 class ReadAloudSettingsMappingTest {
 
     @Test
-    fun `朗读设置 27 键写映射逐字段对应`() {
+    fun `朗读设置 28 键写映射逐字段对应`() {
         readAloudMappingSamples().forEach { settings ->
             assertEquals(settings.expectedPrefMap(), settings.toPrefMap())
         }
     }
 
     @Test
-    fun `朗读设置 27 键读映射逐字段对应`() {
+    fun `朗读设置 28 键读映射逐字段对应`() {
         readAloudMappingSamples().forEach { expected ->
             assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toReadAloudSettings())
         }
@@ -59,6 +60,13 @@ class ReadAloudSettingsMappingTest {
 
         assertEquals(false, settings.finishCurrentChapterAfterTimer)
     }
+
+    @Test
+    fun `朗读分析推理级别默认关闭`() {
+        val settings = emptyMap<String, Any?>().toTestPreferences().toReadAloudSettings()
+
+        assertEquals(AiReasoningLevel.OFF.storageValue, settings.speechAnalysisReasoningLevel)
+    }
 }
 
 private const val CAPSULE_OFFSET_X = "read_aloud_capsule_offset_x"
@@ -75,6 +83,7 @@ private fun readAloudMappingSamples(): List<ReadAloudSettings> {
         ttsTimer = 33,
         ttsSpeechRate = 44,
         speechAnalysisMode = "ai",
+        speechAnalysisReasoningLevel = "medium",
         defaultInterface = "player",
         contentSelectSpeakMode = 55,
         audioPreDownloadNum = 66,
@@ -123,6 +132,7 @@ private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.ttsFollowSys to ttsFollowSys,
     PreferKey.ttsSpeechRate to ttsSpeechRate,
     PreferKey.speechAnalysisMode to speechAnalysisMode,
+    PreferKey.speechAnalysisReasoningLevel to speechAnalysisReasoningLevel,
     PreferKey.useMultiSpeaker to useMultiSpeaker,
     PreferKey.defaultReadAloudInterface to defaultInterface,
     PreferKey.contentSelectSpeakMod to contentSelectSpeakMode,

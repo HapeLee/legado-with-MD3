@@ -12,6 +12,10 @@ fun buildCoverImageRequest(
     loadOnlyWifi: Boolean,
     crossfade: Boolean = true,
     memoryCacheKey: String? = null,
+    // bookUrl 供别名缓存键；preferCache 标记书架类
+    // “本地优先、绝不跑书源脚本”的请求。
+    bookUrl: String? = null,
+    preferCache: Boolean = false,
     configure: ImageRequest.Builder.() -> Unit = {},
 ): ImageRequest {
     return ImageRequest.Builder(context)
@@ -24,6 +28,9 @@ fun buildCoverImageRequest(
             }
             extras[CoverExtras.SourceOrigin] = sourceOrigin
             extras[CoverExtras.LoadOnlyWifi] = loadOnlyWifi
+            // 透传别名键与书架优先标志给 CoverInterceptor/CoverFetcher
+            extras[CoverExtras.BookUrl] = bookUrl
+            extras[CoverExtras.PreferCache] = preferCache
         }
         .apply(configure)
         .build()
