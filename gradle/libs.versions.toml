@@ -65,7 +65,7 @@ quickChineseTransfer = "0.2.17"
 # 书源 JS 通过 Packages.cn.hutool.* 直接调用，Hutool 作为书源运行时加密库保留在 classpath。
 # 应用代码不直接依赖它；加密走 JCA / help/crypto/CryptoUtils.kt。版本固定，勿升级（参考上游基线）。
 hutool = "5.8.22"
-room = "2.8.4"
+room = "2.8.5"
 robolectric = "4.16.1"
 splitties = "3.0.0"
 rhino = "1.8.1"
