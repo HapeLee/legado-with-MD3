@@ -176,6 +176,12 @@ fun BookInfoEditContent(
                 name = uiState.name,
                 author = uiState.author,
                 path = uiState.coverUrl,
+                // 编辑页封面同样本地优先：编辑页封面请求不带书标识时，URL 被启动刷新轮换后
+                // 精确键会 miss，只能走慢速路径解析书源规则（执行 headerRule 里的登录检测脚本），
+                // 每次进编辑页都弹“未登录”提示。
+                // 传 bookUrl 后，书架/详情页缓存过的封面（含别名命中）直接本地返回，不碰书源。
+                bookUrl = uiState.book?.bookUrl,
+                preferCache = true,
                 modifier = Modifier
                     .width(110.dp)
             )

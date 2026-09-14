@@ -268,6 +268,9 @@ private fun ExpandedCapsuleContent(
             author = book?.author,
             path = book?.getDisplayCover(),
             sourceOrigin = book?.origin,
+            // 听书胶囊也是书维度场景，本地优先不跑书源脚本
+            bookUrl = book?.bookUrl,
+            preferCache = true,
             modifier = Modifier
                 .size(40.dp)
                 .graphicsLayer { rotationZ = coverRotation }

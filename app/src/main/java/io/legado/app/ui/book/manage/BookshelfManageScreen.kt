@@ -1687,6 +1687,9 @@ private fun PreviewBookInfo(
                 author = book.author,
                 path = book.getDisplayCover(),
                 sourceOrigin = book.origin,
+                // 书架管理类页面本地优先，不重复跑书源脚本
+                bookUrl = book.bookUrl,
+                preferCache = true,
                 modifier = Modifier.width(54.dp),
             )
             AppText(
