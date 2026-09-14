@@ -16,7 +16,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightTagRule
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.RuleBigDataHelp
+import io.legado.app.data.bigdata.RuleDataFileStore
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -526,7 +526,7 @@ fun Book.updateTo(newBook: Book): Book {
 }
 
 fun Book.hasVariable(key: String): Boolean {
-    return variableMap.contains(key) || RuleBigDataHelp.hasBookVariable(bookUrl, key)
+    return variableMap.contains(key) || RuleDataFileStore.hasBookVariable(bookUrl, key)
 }
 
 fun Book.getFolderNameNoCache(): String {

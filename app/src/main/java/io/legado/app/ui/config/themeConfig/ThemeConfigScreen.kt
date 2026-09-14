@@ -1,7 +1,6 @@
 package io.legado.app.ui.config.themeConfig
 
 import android.annotation.SuppressLint
-import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
@@ -137,7 +136,6 @@ fun ThemeConfigScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         ThemeCard(
-                            context = context,
                             value = theme.appTheme,
                             isDark = isDarkTheme,
                             isAmoled = theme.isPureBlack,
@@ -235,7 +233,6 @@ fun ThemeConfigScreen(
                             value != "4" || state.showEInkTheme
                         }
                         ThemeColorSelector(
-                            context = context,
                             themes = visibleThemes,
                             selectedTheme = theme.appTheme,
                             isDark = isDarkTheme,
@@ -1018,7 +1015,6 @@ fun ThemeModeSelector(
 
 @Composable
 fun ThemeColorSelector(
-    context: Context,
     themes: List<Pair<String, String>>,
     selectedTheme: String,
     isDark: Boolean,
@@ -1034,7 +1030,6 @@ fun ThemeColorSelector(
     ) {
         items(themes) { (label, value) ->
             ThemeColorButton(
-                context = context,
                 label = label,
                 value = value,
                 isSelected = selectedTheme == value,
@@ -1052,7 +1047,6 @@ fun ThemeColorSelector(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeColorButton(
-    context: Context,
     label: String,
     value: String,
     isSelected: Boolean,
@@ -1068,7 +1062,6 @@ fun ThemeColorButton(
         value, isDark, isAmoled, paletteStyle, customLightSeedColor, customNightSeedColor
     ) {
         getThemeColorPalette(
-            context = context,
             value = value,
             isDark = isDark,
             isAmoled = isAmoled,
@@ -1161,7 +1154,6 @@ fun ThemeColorButton(
 
 @Composable
 fun ThemeCard(
-    context: Context,
     value: String,
     isDark: Boolean,
     isAmoled: Boolean,
@@ -1173,7 +1165,6 @@ fun ThemeCard(
         value, isDark, isAmoled, paletteStyle, customLightSeedColor, customNightSeedColor
     ) {
         getThemeColors(
-            context = context,
             value = value,
             isDark = isDark,
             isAmoled = isAmoled,
@@ -1274,7 +1265,6 @@ data class ThemeColors(
 
 @SuppressLint("ResourceType")
 private fun getThemeColorPalette(
-    context: Context,
     value: String,
     isDark: Boolean,
     isAmoled: Boolean,
@@ -1286,7 +1276,6 @@ private fun getThemeColorPalette(
     val appThemeMode = ThemeResolver.resolveThemeMode(value)
     val customSeedColor = if (isDark) customNightSeedColor else customLightSeedColor
     val colorScheme = ThemeEngine.getColorScheme(
-        context = context,
         mode = appThemeMode,
         darkTheme = isDark,
         isAmoled = isAmoled,
@@ -1305,7 +1294,6 @@ private fun getThemeColorPalette(
 
 @SuppressLint("ResourceType")
 private fun getThemeColors(
-    context: Context,
     value: String,
     isDark: Boolean,
     isAmoled: Boolean,
@@ -1317,7 +1305,6 @@ private fun getThemeColors(
     val appThemeMode = ThemeResolver.resolveThemeMode(value)
     val customSeedColor = if (isDark) customNightSeedColor else customLightSeedColor
     val colorScheme = ThemeEngine.getColorScheme(
-        context = context,
         mode = appThemeMode,
         darkTheme = isDark,
         isAmoled = isAmoled,

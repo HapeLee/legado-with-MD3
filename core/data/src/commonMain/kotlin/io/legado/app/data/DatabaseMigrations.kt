@@ -7,7 +7,7 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 import io.legado.app.constant.BookSourceType
 import io.legado.app.constant.BookType
-import io.legado.app.core.platform.SourceRuntimeProvider
+import io.legado.app.core.platform.DeviceId
 
 object DatabaseMigrations {
 
@@ -91,7 +91,7 @@ object DatabaseMigrations {
                 """CREATE TABLE IF NOT EXISTS `readRecordNew` (`androidId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `readTime` INTEGER NOT NULL, 
                     PRIMARY KEY(`androidId`, `bookName`))"""
             )
-            connection.execSQL("INSERT INTO readRecordNew(androidId, bookName, readTime) select '${SourceRuntimeProvider.current.androidId()}' as androidId, bookName, readTime from readRecord")
+            connection.execSQL("INSERT INTO readRecordNew(androidId, bookName, readTime) select '${DeviceId.value}' as androidId, bookName, readTime from readRecord")
             connection.execSQL("DROP TABLE readRecord")
             connection.execSQL("ALTER TABLE readRecordNew RENAME TO readRecord")
         }

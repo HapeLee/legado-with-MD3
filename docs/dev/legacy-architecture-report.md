@@ -54,16 +54,45 @@ report」的产物：把当前 legacy 耦合的**真实分布**扫出来、冻�
 
 ### 4.1 直接阻塞 KMP/CMP 的债（优先清）
 
-- **`core:data` 共享层 47 处 Provider 委托**：`commonMain/.../data/entities` 45 处
-  （`BaseSource` 用 `KeyValueStoreProvider`/`SourceRuntimeProvider`/`CookieStoreProvider` 直连
-  KeyValue 与 source runtime）+ `commonMain/.../data` 2 处。共享实体里出现静态 service locator，
+- **`core:data` 共享层 Provider 委托 47 → 35 处（M2-2 / M2-3，2026-09-14）**：`commonMain/.../data/entities`
+  **45 → 36 → 33** + `commonMain/.../data` 2 处。共享实体里出现静态 service locator，
   是 M2「删除 9 个 core Provider」最先要解的一批。
+  - **已清退：`BigDataStoreProvider`（9 处，M2-2）。** 实现下沉共享层
+    （`core/data/commonMain` 的 `RuleDataFileStore`，承载全部 `book`/`rss` 路径与标记文件语义），
+    只依赖一个平台原语 `core:platform` 的 `expect object RuleDataStorage`
+    （根目录 + 文件 IO + MD5，**不认识任何业务名词**）。三个 entity 改为直接引用共享实现，
+    `Provider` object 删除。计划里写的「entity 变纯数据 + 上游注入 UseCase」在本仓
+    **没有装配点**（entity 由 Room 构造、方法名是书源 JS 兼容面、求值入口全是 `object` 单例），
+    详见 `feature-slicing-audit-tagrules.md` §33 与 `cmp-module-convention.md` §15。
+  - **已清退：`SymmetricCryptoProvider`（3 处，M2-3）。** 改为 `core:platform` 的
+    `expect object SymmetricCrypto`（JCA 在 android/desktop 两个 JVM target 上语义恒等、
+    无第三实现）。原判「实现依赖 `:app` 工具」经核实**不成立**：那些工具只用到 stdlib 的
+    `kotlin.io.encoding.Base64` 与 JVM 自带的 `MessageDigest`。兼容面（既有用户已落库的
+    `userInfo_<sourceKey>` 密文能否读回）由 `openssl` 与 Node 两个**独立实现交叉确认**的硬编码
+    向量钉住。详见 `feature-slicing-audit-tagrules.md` §34。
+  - **剩余 33 处**全是 `BaseSource` 的 `KeyValueStoreProvider` 15 / `SourceRuntimeProvider` 9 /
+    `LoggerProvider` 5 / `CookieStoreProvider` 4。⚠️ **M2-3 已实测否掉「上游装配可行」这个猜想**：
+    卡点是**可达性**而非写法——这些实现要 `AppDatabase`（`caches`/`cookies` 表）或 okhttp
+    `CookieManager` 这类 **host 实例**，而 `expect/actual` 的 actual 够不着 `:app`；
+    `Logger` 则因实现是同名同义的 `constant.AppLog`（300+ 调用方、日志界面读 `AppLog.logs`）
+    而不能换成 `android.util.Log`。详见 §34「下一步」。
 - **`feature/*` 的 Provider/base/GSON 债**（正是 M1-3 的目标）：
-  `tagrules/group` 7 + `tagrules/highlight` 3、`replacerules/edit` 5、`txttocrules` 5、
-  `dict/rule` 3 处 Provider；`tagrules` 另有 `legacyBase` 5、`gson` 2。
-  这些 Feature 已停在 Stage B，转成 CMP 前必须先把 `Provider.current` 换成注入。
-- **`core:ui` 2+2 处 Provider**：`ui/widget/components/importComponents` 走 `ImportJsonEditorProvider`，
-  与 `:core:ui` 不依赖 `:core:data`/Gson 的约束相关。
+  已清零：`tagrules/group` 7 + `tagrules/highlight` 3（M1-3w）、`replacerules/edit` 5（M1-3x）、
+  `txttocrules` 5（M1-3y）、`tagrules` 的 `legacyBase` 5 与 `gson` 2、
+  `dict/rule` 6（`gson` 1 + `legacyBase` 2 + `coreProvider` 3，M1-3z）。
+  **截至 M1-3z 本项已全部清零** —— `tagrules`/`replacerules`/`txttocrules`/`dict` 四个 Feature
+  均已 CMP 化，`feature/*` 下不再有 `main` 源集条目。
+  ⚠️ `feature/*` 之外仍有两个规则 VM 停在 Android（`TocViewModel` / `RssSourceViewModel`，
+  仍继承 `BaseRuleViewModel`）⇒ `BaseRuleViewModel` / `BaseRuleEvent` 需保留到 M2 退役。
+  ⚠️ 注意转 CMP 会把 `main` 源集换成 `commonMain`/`androidMain` ⇒ 基线里的 `<module>/main/...`
+  条目要**删除或下调**，且新源集/新包目录在棘轮上**起步为零**（不允许放宽基线，只能把依赖
+  搬到干净包名）。详见 `cmp-module-convention.md` §10。
+- **`core:ui` 的 Provider 已清退一半（M2-1，2026-09-14）**：`ui/widget/components/importComponents`
+  曾是 `ImportJsonEditorProvider.current`——当初为了避免 `:core:ui` 依赖 `:core:data`/Gson，
+  把 Gson 树模型收敛成契约 + 一个全局注入点；M2-1 进一步改成 `BatchImportDialog` 的**参数注入**
+  并删除 Provider（通用组件库不再认识 service locator），计数归零。
+  剩 `ui/widget/components` 的 2 处是 `LoadMoreFooter` 的 `ClipboardProvider.current`，
+  等它随页面迁进 `:core:designsystem` 时一并处理（单独搬一个组件只为清零 2 计数不划算）。
 
 ### 4.2 blocking 区域（新代码 day-one 拦截）
 

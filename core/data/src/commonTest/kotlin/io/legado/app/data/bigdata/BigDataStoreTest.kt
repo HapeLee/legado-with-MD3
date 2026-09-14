@@ -2,32 +2,18 @@ package io.legado.app.data.bigdata
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/**
+ * [InMemoryBigDataStore] 的语义测试：读写删、按实体标识隔离、空 key 行为。
+ *
+ * 生产实现 [RuleDataFileStore] 走真文件系统（需要 `core:platform` 的 actual），
+ * 其验证在 `desktopTest` 的 `RuleDataFileStoreDesktopTest` —— 那里额外覆盖
+ * 「路径布局与迁移前逐字节一致」，那是既有用户数据能否读回的关键。
+ */
 class BigDataStoreTest {
-
-    @Test
-    fun 未安装时显式失败而不是静默返回空() {
-        BigDataStoreProvider.uninstall()
-        assertFalse(BigDataStoreProvider.isInstalled)
-        val error = assertFailsWith<IllegalStateException> {
-            BigDataStoreProvider.current
-        }
-        assertTrue(error.message!!.contains("BigDataStore 未安装"))
-    }
-
-    @Test
-    fun 安装后可读回同一实现() {
-        val store = InMemoryBigDataStore()
-        BigDataStoreProvider.install(store)
-        assertTrue(BigDataStoreProvider.isInstalled)
-        assertEquals(store, BigDataStoreProvider.current)
-        BigDataStoreProvider.uninstall()
-        assertFalse(BigDataStoreProvider.isInstalled)
-    }
 
     @Test
     fun 书籍变量支持写入读回删除() {

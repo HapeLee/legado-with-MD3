@@ -6,7 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.Index
 import io.legado.app.core.platform.JsonCodec
-import io.legado.app.data.bigdata.BigDataStoreProvider
+import io.legado.app.data.bigdata.RuleDataFileStore
 import io.legado.app.model.analyzeRule.RuleDataInterface
 
 /**
@@ -69,11 +69,11 @@ data class BookChapter(
     }
 
     override fun putBigVariable(key: String, value: String?) {
-        BigDataStoreProvider.current.putChapterVariable(bookUrl, url, key, value)
+        RuleDataFileStore.putChapterVariable(bookUrl, url, key, value)
     }
 
     override fun getBigVariable(key: String): String? {
-        return BigDataStoreProvider.current.getChapterVariable(bookUrl, url, key)
+        return RuleDataFileStore.getChapterVariable(bookUrl, url, key)
     }
 
     override fun hashCode() = url.hashCode()

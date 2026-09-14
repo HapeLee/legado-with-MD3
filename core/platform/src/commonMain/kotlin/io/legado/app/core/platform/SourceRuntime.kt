@@ -1,25 +1,24 @@
 package io.legado.app.core.platform
 
 /**
- * 源运行时契约（P4-e BaseSource 下沉第 5 刀）。
+ * 源运行时契约（P4-e BaseSource 下沉第 5 刀，M2-4b 收窄）。
  *
  * 承载 BaseSource 里「源生命周期/运行时杂项」能力，这些能力原本散落在 app 侧的
  * `HandlerUtils.isMainThread`、`BaseSourceExtensions.getShareScope`、
  * `BookSourceExtensions.clearExploreKindsCache`、`SharedJsScope.remove`、
  * `ConcurrentRateLimiter.updateConcurrentRate`、`AppConst.androidId` 里。
  *
- * 它们共同点是：都是「源实体运行时需要、但依赖平台/Android 栈」的能力，
- * 且只在 `refreshExplore`/`refreshJSLib`/`putConcurrent`/`evalJS` 这几个 JS 桥方法里
- * 被使用。收进一个契约，避免为每个杂项各立一个 provider
- * （AGENTS.md「接口 + DI」对「无调用方抽象」的平衡：这些是同一职责簇）。
+ * **M2-4b 已清退其中 3 项**（`Provider` 存在的唯一理由就是实现在 `:app`，能搬走就删方法）：
+ *  - `isMainThread` → 平台原语 [isOnMainThread]；
+ *  - `androidId` → 宿主配置项 [DeviceId]；
+ *  - `updateConcurrentRate` → 并发率登记表下沉 `:core:data`（`ConcurrentRateRegistry`）。
  *
- * 方法签名刻意用基础类型 / `Any` 而非 `BaseSource`，避免 core:platform 反向依赖
- * core:data 的实体类型（`clearExploreKindsCache(source: Any)` 由实现侧判定 `is BookSource`）。
+ * 剩下的 3 项都用的是 `SharedJsScope`/`BookSource` 的 app 侧状态或 okhttp/gson 栈，
+ * 仍进不了共享层，故契约保留。方法签名刻意用基础类型 / `Any` 而非 `BaseSource`，
+ * 避免 core:platform 反向依赖 core:data 的实体类型
+ * （`clearExploreKindsCache(source: Any)` 由实现侧判定 `is BookSource`）。
  */
 interface SourceRuntime {
-
-    /** 当前是否主线程（对齐 `HandlerUtils.isMainThread`）。 */
-    fun isMainThread(): Boolean
 
     /** 获取共享 JS 作用域（对齐 `SharedJsScope.getScope(jsLib, null)`）。 */
     fun getShareScope(jsLib: String?): JsScope?
@@ -29,12 +28,6 @@ interface SourceRuntime {
 
     /** 清理探索分类缓存；`source` 为实体（实现侧判定 `is BookSource`）。 */
     fun clearExploreKindsCache(source: Any)
-
-    /** 更新并发率限制（对齐 `ConcurrentRateLimiter.updateConcurrentRate`）。 */
-    fun updateConcurrentRate(key: String, value: String)
-
-    /** 设备唯一标识（对齐 `AppConst.androidId`，用作 AES 密钥来源）。 */
-    fun androidId(): String
 }
 
 /**

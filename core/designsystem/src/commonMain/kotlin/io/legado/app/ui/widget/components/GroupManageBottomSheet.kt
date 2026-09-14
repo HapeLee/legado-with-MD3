@@ -1,0 +1,149 @@
+package io.legado.app.ui.widget.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.unit.dp
+import io.legado.app.core.designsystem.res.Res
+import io.legado.app.core.designsystem.res.delete
+import io.legado.app.core.designsystem.res.edit
+import io.legado.app.core.designsystem.res.group_manage
+import io.legado.app.core.designsystem.res.ok
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.SettingItem
+
+/**
+ * M1-3x-pre 从 `:core:ui` 搬进 `:core:designsystem/commonMain`（包名不变 ⇒ `:app` 的
+ * `BookSourceScreen` / `RssSourceScreen` 两处 import 零改动）。搬迁原因：`:feature:replacerules`
+ * 转 CMP 后要在 `commonMain` 用它（规则页的分组管理弹层）。
+ *
+ * 唯一的 Android 依赖是 4 条 `R.string.*`（`:core:ui` 的 Android res，namespace
+ * `io.legado.app.core.ui`）——按 M1-3j 起的 CMP 资源配方换成 `Res.string.*`：`group_manage`
+ * 是本次新增，另外 3 条（`edit` / `delete` / `ok`）designsystem 的 `composeResources` 里已有，
+ * 且四语言取值与 `:core:ui` / `:app` 的 Android 同名条目**逐字一致**（搬前用脚本比对过）。
+ * 其余依赖（`AppModalBottomSheet` / `SettingItem` / `SmallPlainButton` / `AppTextField`）
+ * 都是 designsystem 自己的组件。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GroupManageBottomSheet(
+    show: Boolean,
+    groups: List<String>,
+    onDismissRequest: () -> Unit,
+    onUpdateGroup: (oldGroup: String, newGroup: String) -> Unit,
+    onDeleteGroup: (group: String) -> Unit
+) {
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(Res.string.group_manage),
+    ) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(groups, key = { it }) { group ->
+                GroupItem(
+                    group = group,
+                    onUpdateGroup = onUpdateGroup,
+                    onDeleteGroup = onDeleteGroup
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupItem(
+    group: String,
+    onUpdateGroup: (oldGroup: String, newGroup: String) -> Unit,
+    onDeleteGroup: (group: String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val state = rememberTextFieldState(initialText = group)
+
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            state.edit {
+                replace(0, length, group)
+            }
+        }
+    }
+
+    SettingItem(
+        title = group,
+        expanded = expanded,
+        cornerRadius = 12.dp,
+        color = MaterialTheme.colorScheme.surface,
+        onExpandChange = { expanded = it },
+        trailingContent = {
+            Row {
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = stringResource(Res.string.edit)
+                    )
+                }
+                IconButton(onClick = { onDeleteGroup(group) }) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(Res.string.delete)
+                    )
+                }
+            }
+        },
+        expandContent = {
+            AppTextField(
+                state = state,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                label = stringResource(Res.string.edit),
+                contentPadding = PaddingValues(
+                    top = 4.dp,
+                    bottom = 4.dp,
+                    start = 12.dp,
+                    end = 12.dp
+                ),
+                onKeyboardAction = {
+                    onUpdateGroup(group, state.text.toString())
+                    expanded = false
+                }
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                SmallPlainButton(
+                    onClick = {
+                        onUpdateGroup(group, state.text.toString())
+                        expanded = false
+                    },
+                    icon = Icons.Default.Check,
+                    text = stringResource(Res.string.ok)
+                )
+            }
+        }
+    )
+}
+

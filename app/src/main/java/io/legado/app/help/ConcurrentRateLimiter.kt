@@ -1,53 +1,19 @@
 package io.legado.app.help
 
 import io.legado.app.data.entities.BaseSource
+import io.legado.app.data.rate.ConcurrentRateRegistry
+import io.legado.app.data.rate.ConcurrentRecord
 import io.legado.app.exception.ConcurrentException
-import io.legado.app.model.analyzeRule.AnalyzeUrl.ConcurrentRecord
 import kotlinx.coroutines.delay
-import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * 并发率限流器。
+ *
+ * M2-4b：`ConcurrentRecord` 与登记表已下沉 `:core:data` 的 [ConcurrentRateRegistry]，
+ * 好让 `BaseSource.putConcurrent` 不再经 `SourceRuntimeProvider`。本类只保留运行时逻辑
+ * （等待/抛 `ConcurrentException`，用到 `Thread.sleep` 等 JVM-only API，仍属 `:app`）。
+ */
 class ConcurrentRateLimiter(source: BaseSource?) {
-
-    companion object {
-        val concurrentRecordMap = ConcurrentHashMap<String, ConcurrentRecord>()
-
-        /**
-         * 更新并发率
-         */
-        fun updateConcurrentRate(key: String, concurrentRate: String) {
-            concurrentRecordMap.compute(key) { _, record ->
-                try {
-                    val rateIndex = concurrentRate.indexOf("/")
-                    when {
-                        rateIndex > 0 -> {
-                            val accessLimit = concurrentRate.take(rateIndex).toInt()
-                            val interval = concurrentRate.substring(rateIndex + 1).toInt()
-                            if (accessLimit <= 0 || interval <= 0) throw NumberFormatException()
-                            ConcurrentRecord(
-                                record?.time ?: System.currentTimeMillis(),
-                                accessLimit,
-                                interval,
-                                record?.frequency ?: 0
-                            )
-                        }
-
-                        concurrentRate.toInt() > 0 -> {
-                            ConcurrentRecord(
-                                record?.time ?: System.currentTimeMillis(),
-                                1,
-                                concurrentRate.toInt(),
-                                record?.frequency ?: 0
-                            )
-                        }
-
-                        else -> record
-                    }
-                } catch (_: NumberFormatException) {
-                    record
-                }
-            }
-        }
-    }
 
     private val concurrentRate = source?.concurrentRate
     private val key = source?.getKey()
@@ -61,7 +27,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
         }
         val key = key ?: return null
         var isNewRecord = false
-        val fetchRecord = concurrentRecordMap.computeIfAbsent(key) {
+        val fetchRecord = ConcurrentRateRegistry.records.computeIfAbsent(key) {
             isNewRecord = true
             val rateIndex = concurrentRate.indexOf("/")
             if (rateIndex > 0) {

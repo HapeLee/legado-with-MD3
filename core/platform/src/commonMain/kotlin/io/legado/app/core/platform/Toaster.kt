@@ -19,7 +19,7 @@ interface Toaster {
 }
 
 /**
- * [Toaster] 的注入点。模式同 [LoggerProvider]。
+ * [Toaster] 的注入点。模式同 [KeyValueStoreProvider]。
  */
 object ToasterProvider {
 

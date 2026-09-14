@@ -25,7 +25,6 @@
     <string name="color_value">色值</string>
     <string name="confirm">确认</string>
     <string name="confirm_delete_bookmark">删除书签？</string>
-    <string name="copy_rule">拷贝规则</string>
     <string name="copy_text">拷贝内容</string>
     <string name="count_unit">次</string>
     <string name="day">白天</string>
@@ -40,9 +39,7 @@
     <string name="enable_selection">启用所选</string>
     <string name="error">错误</string>
     <string name="error_details">错误详情</string>
-    <string name="example_is_empty">示例为空</string>
     <string name="expand">展开</string>
-    <string name="group_manage">分组管理</string>
     <string name="history_label">历史记录:</string>
     <string name="import_action">导入</string>
     <string name="import_status_error">错误</string>
@@ -50,7 +47,6 @@
     <string name="import_status_new">新增</string>
     <string name="import_status_update">更新</string>
     <string name="input_value_range">输入数值（%1$d-%2$d）</string>
-    <string name="invalid_regex">正则表达式无效</string>
     <string name="invert_selection">反选</string>
     <string name="less_count">少(</string>
     <string name="list_loading_title">请稍后…</string>
@@ -65,15 +61,12 @@
     <string name="more_count">多(</string>
     <string name="more_menu">更多菜单</string>
     <string name="multi_select_items">多选项目</string>
-    <string name="name">名称</string>
     <string name="night">夜间</string>
     <string name="no_earlier_data">没有更早数据</string>
     <string name="no_more_data">已经到底了~</string>
     <string name="ok">确认</string>
-    <string name="paste_rule">粘贴规则</string>
     <string name="pull_to_refresh">下拉刷新</string>
     <string name="refreshing">正在刷新</string>
-    <string name="regex_is_empty">正则表达式为空</string>
     <string name="release_to_refresh">松开刷新</string>
     <string name="reload">重新加载</string>
     <string name="reset">重置</string>
@@ -88,7 +81,6 @@
     <string name="sure_del">是否确认删除?</string>
     <string name="sys_file_picker">系统文件选择器</string>
     <string name="sys_folder_picker">系统文件夹选择器</string>
-    <string name="test">测试</string>
     <string name="text_default">默认</string>
     <string name="timeline">时间线</string>
     <string name="upload_url">上传 URL</string>

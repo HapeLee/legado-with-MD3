@@ -10,7 +10,7 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.ReplaceAnalyzer
+import io.legado.app.data.rules.ReplaceAnalyzer
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient

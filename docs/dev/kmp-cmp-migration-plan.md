@@ -192,8 +192,8 @@ KMP convention 已使用官方 `com.android.kotlin.multiplatform.library`，当�
 | `CookieStoreProvider` | `data:source` 私有 cookie store | network/source tests 不依赖全局状态 |
 | `SymmetricCryptoProvider` | 使用方所属 domain port + platform implementation | 已知向量和错误 contract |
 | `SourceRuntimeProvider` | 拆成 typed ports；移除 `Any`、`androidId` | 每个 port 有单一职责/消费方 |
-| `BigDataStoreProvider` | `SourceVariableRepository` 注入 UseCase | Room entity 变纯数据，不执行 I/O |
-| `ImportJsonEditorProvider` | 导入流程的 Feature effect/usecase | 取消、错误、保存行为测试 |
+| `BigDataStoreProvider` ✅ M2-2 | 实现**下沉共享层**（`RuleDataFileStore`），经平台原语 `expect object RuleDataStorage` 拿文件 IO | 路径布局与迁移前逐字节一致（硬编码 MD5 向量钉住）；Provider 删除，`entities` 区域计数 45 → 36 |
+| `ImportJsonEditorProvider` ✅ M2-1 | 公共组件的能力走**参数注入**（调用方传入） | 漏传即编译错误；desktop 侧显式 unsupported |
 | `BaseViewModel/BaseRuleViewModel` | 每 Feature ViewModel + 共享无 UI usecase | 删除 `core:viewmodel` |
 | `utils.*` in `core:model` | 迁到所属 model/domain 包并改职责名 | `io.legado.app.utils` commonMain = 0 |
 | `help.*` in `core:data/viewmodel` | 迁到 data/domain/runtime owner | KMP/CMP 模块旧 package = 0 |
@@ -396,20 +396,625 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      验证：四门禁 + 45 用例（core:viewmodel 19 / tagrules 14 / designsystem 12）+ 变异验证 +
      `:app:compileAppDebugKotlin` 全绿；基线 326 → **323** 条。细节见
      [feature-slicing-audit-tagrules.md](./feature-slicing-audit-tagrules.md) §10。
-   - **M1-3c 待办**：② 文件选择能力契约化（`FilePickerSheet` + `ActivityResultContracts`），
-     Screen 只收回调；之后 ③ Screen/VM/Contract 整体进 `commonMain`，模块登记为 `cmp`。
-     Android route 是回滚点。
-6. **M1-4：最小 Desktop/iOS host 主路径**
+   - **M1-3c 已完成（2026-09-10）**：文件选择能力契约化。新增 `:core:platform` 的
+     `DocumentPicker`（`openDocument` / `createDocument`，结果用**不透明引用字符串**而非 `Uri`）+
+     `:core:ui` 的 `rememberDocumentPicker()`（SAF 实现）。launcher 必须在 Composition 里注册，
+     所以由 Route 持有并只向 Screen 暴露回调；Screen 里的 `rememberLauncherForActivityResult` ×2、
+     `LocalContext`、`contentResolver.openInputStream` 全部删除（读取交给
+     `RuleTransferPlatform.readImportSource`，`Uri.readText` 与之语义等价）。
+     验证：四门禁 + 46 用例（core:viewmodel 19 / tagrules 15 / designsystem 12）+ 变异验证 +
+     `:app:compileAppDebugKotlin` 全绿；基线维持 **323**。
+     细节见 [feature-slicing-audit-tagrules.md](./feature-slicing-audit-tagrules.md) §11。
+   - **③ 仍未完成（下一个切片）**：Screen/VM/Contract 进 `commonMain` 还差——
+     `FilePickerSheet`（`:core:ui`，内含 `android.webkit.MimeTypeMap`）、
+     以及 Screen/Sheet 的 `R.string.*`（26 键）与 `LocalClipboard` 换 CMP 资源/契约。
+     ~~`AppModalBottomSheet` 的 CMP material3 expressive API~~ **已由 M1-3g 解除，M1-3h 已搬进
+     designsystem**。组件原子件（按钮/分割线/进度条）已由 **M1-3i** 整族搬走，
+     故 Screen 侧剩下的阻塞已收敛为**平台契约类**（文件选择、剪贴板、字符串资源）而非组件。
+     之后模块才能登记为 `cmp`。Android route 是回滚点。
+
+6. **M1-3d / M1-3e / M1-3f / M1-3g / M1-3h / M1-3i：主题层、组件原子件与 material3 pin（2026-09-10 完成，为 ③ 清路）**
+   - **起因**：把 ③ 拆解时发现 `LegadoTheme` 是所有组件的必经依赖（`OptionSheet` /
+     `AppModalBottomSheet` / `VerticalFastScroller` / `AppText` / `AppIcon` 全都指向它），
+     不先搬它，`FilePickerSheet` 与任何组件都动不了。
+   - **先做制品可用性验证（checklist 要求 unknown 必须先 PoC）**：`LegadoTheme.kt` 依赖的四个
+     第三方库此前都是「未知」。查 Maven Central 的 `.module` 元数据后**全部有非 Android 变体**：
+     haze→`haze-jvm`、material-kolor→`material-kolor-jvm`、kyant0:backdrop→`backdrop-desktop`、
+     miuix→`miuix-*-desktop`。**踩坑：不能拿本地 Gradle 缓存反推**——Android-only 构建的缓存里
+     只会出现 `-android` 制品，看着就像没有 jvm 变体；判据必须是上游元数据。
+   - **实测各文件 Android 依赖密度**（推翻旧结论）：`ui/theme` 23 个文件里只有 4 个带 `android.*`
+     （`ImageSeedColorExtractor` / `ThemeComponents` / `ThemeEngine` / `ThemeSeedColorProvider`）；
+     常见组件（`AppAlertDialog` / `AppText` / `AppIcon` / `LazyList` / `OptionSheet` /
+     `RoundDropdownMenuItem` / `SmallPlainButton`）都是 0 个 `android.*`。
+     `:core:ui/build.gradle.kts` 里「这套主题与组件大量使用 Context/Bitmap/Uri，只能落在 Android 侧」
+     的理由属于 `composeMain` 时代（该约束现在只对 `pure`/`data` 模块成立），已就地修正。
+   - **切片**：`theme/LegadoTheme.kt`（自包含、0 个 `android.*`、184 行）整体移入
+     `:core:designsystem/commonMain`，**hash 逐字节一致**。包名 `io.legado.app.ui.theme` 不变 →
+     消费方 import 零改动；已核对 `app` / `core:ui` / `feature:tagrules` / `feature:replacerules`
+     四个使用方都已显式声明 `:core:designsystem`（否则会因 `implementation` 不暴露而断）。
+     designsystem 侧补 `haze-core` / `material-kolor` / `backdrop` 三个坐标
+     （`ColorSchemeMode` 来自已依赖的 `miuix-ui`，不在 `miuix-core`——与 `basic.Switch` 同一个坑）。
+   - **验证**：`:core:designsystem:compileKotlinDesktop` 编译通过（**真实非 Android 目标证据**，
+     并确认 `haze-jvm` / `material-kolor-jvm` / `backdrop-desktop` 三个制品被实际解析下来）；
+     四门禁全绿（legacy 基线维持 323）；**681 用例 0 失败**
+     （app 635 / core:viewmodel 19 / tagrules 15 / designsystem desktop 12）；
+     `:app:compileAppDebugKotlin` 通过。
+   - **M1-3d 回滚点**：把 `LegadoTheme.kt` 移回 `:core:ui` 并撤掉三个坐标即可，无调用方改动。
+   - **M1-3e 已完成（2026-09-10）**：原子组件的直接依赖闭包再搬 6 个文件进 `commonMain`——
+     `AppThemeMode` / `ThemeColorSpec` / `ThemeResolver` / `AppContentColor` /
+     `LocalAppUiConfiguration` / `AppDensity`，其中 5 个 **hash 逐字节一致**（纯搬动）。
+     唯一行为相关改动是 `AppDensity`：Android-only 的 `LocalConfiguration.current.fontScale`
+     换成**同源**的 `LocalDensity.current.fontScale`（两者都由同一个 `context.resources` 派生，
+     论证与源码依据见 [cmp-module-convention.md](./cmp-module-convention.md) §3）。
+     另新增 `AppFontScaleTest`（3 用例）钉住 0.8~1.6 区间与越界回落，避免后续再动它时静默改字号。
+     验证：`:core:designsystem:compileKotlinDesktop` + 四门禁 + **684 用例 0 失败**
+     （app 635 / core:viewmodel 19 / tagrules 15 / designsystem 15）。
+   - **M1-3f 已完成（2026-09-10）**：组件原子件第一块。`AppText` / `AppIcon` / `AppIcons`
+     整体搬入（hash 逐字节一致，`miuix-icons` 按**不带 `-android` 后缀**的 KMP 坐标补进
+     designsystem——`MiuixIcons` 与 `icon.extended.*` 只在它里面，不在 `miuix-ui`/`miuix-core`）；
+     `NormalCard` 从 `GlassCard.kt` 拆出，与它的底层表面一起进共享层（新 `card/AppCardSurface.kt`）。
+     - **关键取舍 1（卡片基元的 seam）**：`GlassCard` 的「条目背景层」依赖
+       `BitmapFactory`/`NinePatch`/Coil（Android）。没有把它抽象成布尔开关，而是建模为
+       `AppCardSurface(itemBackground: Modifier?)` 这个**可空 modifier 槽**：`null` = 不要背景层
+       （`NormalCard`），非 `null` = 在内容下叠一层 `matchParentSize` 并应用它（`GlassCard` 传
+       `Modifier.appContainerBackground(Item)`）。共享层因此不认识平台类型，`:core:ui` 的
+       `GlassCard` 也不必复制一份卡片表面；分支与搬动前逐字等价。
+     - **关键取舍 2（唯一定义）**：圆角/描边的主题覆盖决议抽成纯函数 `resolveCardDecoration`
+       （入参 `ThemeSettings` + `isDark`，不读 CompositionLocal），`NormalCard` 与 `GlassCard`
+       共用它，避免两份会漂移的覆盖语义；纯函数也让 `CardDecorationTest`（5 用例）不用 Compose
+       runtime 就能钉住语义，并做了**变异验证**（翻转 `isDark` 分支 → 2 用例精确变红）。
+     - **两个真阻塞**：
+       ① `androidx.compose.material.ExperimentalMaterialApi` 属 **material2** 制品，designsystem
+       没有它 → 搬文件时**连带删掉该 `@OptIn`**，不许为它顺手加 material2 依赖；
+       ② `AppModalBottomSheet` 用的 CMP material3 **expressive 系列**（`ExperimentalMaterial3ExpressiveApi`
+       / `MaterialExpressiveTheme` / `MotionScheme` / `rememberBottomSheetState` /
+       `BottomSheetDefaults.modalWindowInsets`）当时编不过 → 它**未搬**，与 `OptionSheet` 一起留在
+       `:core:ui`，`LocalUseMiuixWindowPopup` 也据此原地不动（避免"借任务重构无关代码"）。
+       ⚠️ **当时的归因写错了**（写成"只有 android 变体有"）——实为**版本问题**：符号都在
+       `commonMain`，只是 1.9.0 把它们标成了 `internal`。已由 **M1-3g** 解除，两个文件不再阻塞。
+     - 验证：`:core:designsystem:compileKotlinDesktop` + `desktopTest`（designsystem 15 → **20** 用例）
+       + `:app:compileAppDebugKotlin` + 四门禁全绿；legacy 基线维持 **323**。
+       回滚点：把 4 个文件移回 `:core:ui` 即可，无调用方 import 或签名改动。
+   - **M1-3g 已完成（2026-09-10）：CMP material3 升到 1.12.0-alpha03，解除 expressive 阻塞。**
+     - **纠错**：M1-3f 把 expressive 编不过归因为「只有 android 变体有」是**错的**。实证（解上游
+       `-sources.jar`）：符号就在 CMP material3 的 `commonMain`，android / desktop / ios / js /
+       wasm / macos 变体齐全；**1.9.0 把它们声明为 `internal`**，故跨模块报
+       `Cannot access '…': it is internal in file`（`rememberBottomSheetState` / `modalWindowInsets`
+       在 1.9.0 则压根不存在）。**这是版本问题，不是平台问题。**
+     - **实测放开时间线**：`MaterialExpressiveTheme` / `MotionScheme` /
+       `@ExperimentalMaterial3ExpressiveApi` 自 **1.10.0-alpha05** 转 public，`modalWindowInsets`
+       自 **1.11.0-alpha07**，`rememberBottomSheetState` 自 **1.12.0-alpha03** → 取
+       **1.12.0-alpha03**（满足全部 expressive 需求的最低版本）。
+     - **做法**：`composeMultiplatformMaterial3` 改 1.12.0-alpha03；convention 的
+       `assertComposeVersionsInSync` 把 material3 的期望值从「插件常量」换成**显式登记的
+       `MATERIAL3_PIN`**，并新增「pin 不得低于插件常量」的断言——**防漂移能力不丢**，只是登记处
+       从插件常量换成带理由的常量。`composeMultiplatform` 那条仍严格等于插件常量。
+     - **连带风险已实测**：`material3-android:1.12.0-alpha03` 只委托
+       `androidx.compose.material3:1.5.0-alpha22`，低于本仓锁定的 **1.5.0-alpha23**，Gradle 取高版本
+       → **Android 侧不降级**；skiko 统一到 `0.150.1`。
+     - **解锁面**：`AppModalBottomSheet` / `OptionSheet`；`ThemeComponents.kt` 的
+       `MaterialThemeWrapper`（用的是同一组 expressive 符号）——即「`AppTheme` 全栈进 `commonMain`」
+       的前置；以及 `AppAlertDialog` 等一批此前**被三分法欠判**的 `:core:ui` 组件（脚本看不见可见性）。
+     - 验证：desktop + Android 双目标编译、`desktopTest`、`testAppDebugUnitTest`（0 失败）、四门禁、
+       `assembleAppDebug` 全绿；**变异验证**——把 toml 改回 1.9.0 而不同步 pin → 配置期精确报
+       `CMP 版本漂移` 并失败。
+     - 回滚点：toml 改回 1.9.0 + convention 恢复即可，**无源码改动**。
+   - **M1-3h 已完成（2026-09-10）：弹层 `AppModalBottomSheet` + `OptionSheet` 进 `commonMain`。**
+     - **搬法**：`git mv` 两个文件到 `:core:designsystem` 的**同一包名**
+       `io.legado.app.ui.widget.components.modalBottomSheet` ⇒ 85 个带显式 import 的消费文件
+       （`:app` 77 / `:core:ui` 6 / `:feature:tagrules` 2）**import 语句零改动**，三个模块本来
+       就已依赖 `:core:designsystem`。
+     - **连带依赖——`LocalUseMiuixWindowPopup` 要有个共享的家**：它原本声明在 `:core:ui` 的
+       `menuItem/RoundDropdownMenu.kt` 里，而 `AppModalBottomSheet`（Miuix 分支）要 provide 它。
+       `:core:ui` → `:core:designsystem` 是单向的，反向不可行，故把**声明**下沉到 designsystem 的
+       **同名包** `widget/components/menuItem/`。`RoundDropdownMenu.kt` 留在 `:core:ui`（它经
+       `rememberOpaqueColorScheme` → `ThemeEngine` → `Context` 仍带 `android.*`），同包引用无需
+       import。**跨模块同包可见性在本仓已有先例**（`core:ui` 的 `ui/theme` 直接引用本模块的
+       `LocalLegadoThemeColors` / `LocalAppUiConfiguration`），不是新机制。
+     - **补一个显式依赖**：`AppModalBottomSheet` 用 `Modifier.animateContentSize`——它在
+       `org.jetbrains.compose.animation:animation`（不是 foundation）。foundation 会传递带上，但按
+       「依赖只列实际用到的」显式加别名 `compose-multiplatform-animation`（源集与 runtime/foundation
+       同在 1.12.0 线）。
+     - **搬前复核的三个传递闭包维度**（M1-3f 的教训固化）：① 文件自身 0 个 `android.*`；
+       ② 其引用闭包（`LegadoTheme` / `LocalLegadoThemeColors` / `ProvideAppDensity` /
+       `ProvideAppContentColor` / `ThemeResolver` / `NormalCard` / `AppIcon` / `AppText`）都已在
+       designsystem；③ **依赖库里用到的 API 在非 Android 源集里存在**——`WindowBottomSheet` 位于
+       miuix 的 `commonMain`（查 sources jar 实为 `commonMain/top/yukonga/miuix/kmp/window/`，
+       desktop 变体存在），expressive 系列由 M1-3g 的 pin 保证。
+     - 验证：desktop 编译、`testAppDebugUnitTest`、四门禁、`:app:compileAppDebugKotlin`；跨模块搬文件
+       按规程**删 `app/build` + `core/*/build` 干净重建**（否则增量编译会假绿）。
+   - **M1-3i 已完成（2026-09-10）：原子组件整族搬进 `commonMain`（25 个文件）。**
+     - **范围**：`button/`（`AppButton` / `AppIconButton` / `ConfirmDismissButtonsRow` / `ToggleChip`）、
+       `button/series/`（`AnimatedActionButtonCore` / `AnimatedIcon` / `Medium*` ×5 /
+       `Small*` ×5 / `SeriesIconButton`，共 13）、`divider/`（`PillDivider` /
+       `PillHeaderDivider` / `SettingItemDivider`）、`progressIndicator/`（`AppCircular*` /
+       `AppContainedLoadingIndicator` / `AppLinear*`）、`title/SmallTitle.kt`、`SectionTitle.kt`。
+       全部 `git mv` 到 `:core:designsystem` 的**同一包名**（`io.legado.app.ui.widget.components.**`）
+       ⇒ 本模块内文件与 `:app` / `:feature:*` 的 import **零改动**。
+     - **候选筛选用两条机械判据**（脚本扫 `:core:ui` 全部 117 个 Compose 文件）：
+       ① **文件内**零 `android.*`、零 `R.`、零 Android-only Compose API——注意后一类**不是**
+       `android.*`，正则要显式列出（`LocalContext` / `LocalConfiguration` / `LocalInspectionMode` /
+       `androidx.compose.ui.res.*` / `stringResource` / `painterResource` / `AndroidView` /
+       `viewinterop` / `LocalClipboard*` / `LocalUriHandler`）；② **引用闭包**全部落在 designsystem。
+       76/117 个文件过第 ① 条，本族过第 ② 条（唯一跨模块边是 `ToggleChip → card.NormalCard`，
+       已在 `AppCardSurface.kt`）。
+     - **同类被排除的**（提醒别误判）：`checkBox/CheckboxItem.kt` 自身干净，但它依赖 `GlassCard`，
+       而 `GlassCard` 的 `Modifier.appContainerBackground` 走 `BitmapFactory`/`NinePatch` 读九宫格
+       ——**判据必须看闭包，不能只看文件**；`EmptyMessage` / `AppPullToRefresh` / `GroupManageBottomSheet`
+       等 40 个文件则卡在 `R.string.*`。
+     - **第三方依赖零新增**：本族只用到 Miuix（`basic`/`theme`，已依赖）与
+       `androidx.compose.material.icons`（`materialIcons` 已声明，且 `Check` 属 icons-core）。
+       `:core:ui` 侧反而核查了一遍是否有依赖变成死代码——`miuix.icons.android` /
+       `compose.materialIcons` / `reorderable` / `capsule` 都仍有本模块内的使用方，无需删。
+     - 验证：`:core:designsystem:compileKotlinDesktop` 通过 + 四门禁 + 全量单测 + `assembleAppDebug`
+       （干净重建）。新增显式依赖时按「依赖只列实际用到的」判断，本切片**无需改任何 build.gradle.kts 依赖**。
+   - **M1-3j 已完成（2026-09-11）：CMP 多平台资源打通，`R.string.*` 不再是搬件阻塞。**
+     - **决策**：共享组件的文案走 CMP 的 `org.jetbrains.compose.resources`
+       （`commonMain/composeResources/values*/` + 生成的 `Res.string.*`），而不是「宿主传文案」
+       或薄 `StringProvider` 契约。依赖 `org.jetbrains.compose.components:components-resources`，
+       ref `composeMultiplatform`（与插件严格同线）。
+     - **convention 两处改动**：① 从模块 path 推导 `packageOfResClass`
+       （`:core:designsystem` → `io.legado.app.core.designsystem.res`，必须显式设——项目没有
+       `group`，CMP 默认包名会退化）；② CMP 模块的 `androidLibrary` target 开
+       `androidResources.enable = true`（AGP 默认不启用，不开则 Android 运行期读不到 assets 里的
+       `.cvr`）。`resources` 是 `ComposeExtension` 的**子扩展**而非属性 ⇒ 只能
+       `extensions.configure<ResourcesExtension>` / 模块侧 `compose.resources { }`。
+     - **⚠️ 语义变化**：`composeResources` 打进 **assets**，**不参与 Android 资源合并**
+       ⇒ app 侧同名 `strings.xml` **覆盖不到**它，共享层必须自带全部支持语言目录
+       （`values` + `values-zh-rCN` + `values-zh-rHK` + `values-zh-rTW`）。
+       值与 `:core:ui` 同名资源逐字节核对，**无用户可见变化**。
+     - **实际搬入 3 个**：`AppFloatingActionButton.kt` / `ReorderAccessibility.kt` /
+       `reader/ReaderMenuActionSquare.kt`。**另 4 个已退回 `:core:ui`**
+       （`SearchBar` / `topbar/TopBarButton` / `ReorderableConfigList` / `player/PlayerTocPage`）：
+       除 `R` 外还引用留在 `:core:ui` 的**同包兄弟**（`AppDenseTextField` /
+       `GlassTopAppBarDefaults`）或平台库（coil3 / `sh.calvin.reorderable` /
+       `kotlinx.collections.immutable`）⇒ **不是纯资源阻塞**。
+       教训：**静态 import 扫描看不见「不带 import 的同包引用」，只有 desktop 编译能判**。
+     - 机制、convention 改法、生成物位置、脚本坑（必须保 CRLF + 先删旧 import 再插新 import）
+       见 `docs/dev/cmp-module-convention.md` §7；切片实录见
+       `feature-slicing-audit-tagrules.md` §13。
+     - 验证：`:core:designsystem:compileKotlinDesktop` + `compileAndroidMain`、四门禁、全量单测
+       （基线 689）、`:app:assembleAppDebug`（干净重建）。
+   - **M1-3k 已完成（2026-09-11）：§12 剩余「可直接机械搬」收敛，台账清零。**
+     搬入 `alert/AppAlertDialog.kt`、`AppTextField.kt`、`DraggableSelectionHandler.kt`、
+     `menuItem/RoundDropdownMenuItem.kt`（零新增依赖）；退回 `lazylist/LazyList.kt`
+     （同包兄弟 `VerticalFastScroller.kt` 用了 Android-only 的 `Modifier.systemGestureExclusion()`。
+     **该阻塞已由 M1-3v 解除**：那个 API 下沉为 `expect/actual` 原语后，`lazylist/*`
+     两个文件已搬进 `commonMain`）。
+     `portability-triage.py` 补两处结构性盲区：**同包兄弟边**（同包顶层声明不需 import，
+     原闭包扫描看不见）与**种子结论**（闭包内任一成员 HARD ⇒ 种子搬不动）。实测记录于
+     `cmp-module-convention.md` §3「foundation 侧的 Android-only 成员」。
+   - **M1-3l 已完成（2026-09-11）：配色平台契约，theme 引擎进 `commonMain`（17 文件 + 1 契约）。**
+     - **动机**：`SelectionItemCard` / `SelectionBottomBar` / `RuleListScaffold` 原判「只因 `R`
+       卡住」是**欠判**——闭包都经 `theme/OpaqueColorScheme.kt` → `ThemeEngine` →
+       `android.content.Context`/`android.os.Build`。该主题链同时卡住 `menuItem/RoundDropdownMenu.kt`，
+       做一片可解锁多个。
+     - **搬入**（`git mv`，包名不变）：`theme/{BaseColorScheme,CustomColorScheme,ThemeEngine,
+       OpaqueColorScheme}.kt` + `theme/colorScheme/*.kt` ×12 → `:core:designsystem/commonMain`。
+       **零新增依赖**（material3 / material-kolor / `:core:model` 已在）。
+     - **契约**：两处 `android.*` 抽成单方法 `fun interface` —— `ThemeSeedColorProvider.primaryColor()`
+       （去掉了原先的 `context` 形参）与 `DynamicColorSchemeProvider.colorScheme(darkTheme)`；
+       Android 实现落在 **app**（回退主色要 `lib.theme.ThemeStore`，`:core:ui` 依赖不到），
+       由 `App.onCreate` 的 `installAndroidThemePlatform(this)` 注入。
+     - **⚠️ 语义风险 ≈ 0，且是实测出来的**：改造前逐个调用点查「上下文是否真参与计算」——
+       `ThemeSeedColors.primaryColor(context)` 在**所有**调用点都不可达（三个调用点传非空 `Int`；
+       `OpaqueColorScheme` 恒 `forceOpaque = true` ⇒ `Transparent` 归一到 `WH`）。两个差异都只是
+       「Activity context → Application context」，前者对系统调色板 / `ThemeStore` 默认值均无影响。
+     - **失败语义按「缺失是否合理」区分**：回退主色未注入 ⇒ `requireNotNull` 抛异常（配置错误）；
+       动态取色未注入 ⇒ 返回 `null` 回落预定义配色（desktop/iOS 本就没有系统调色板，是正常状态）。
+     - **踩到的坑**：G4 `checkLegacyArchitecture` 把**新区域**（`app/main/…/ui/theme`）首次出现的
+       `import splitties.init.appCtx` 判为 blocking ⇒ 改为 `Context` 显式传参，**不要**往基线登记。
+       另修 `portability-triage.py` 的**同名不同包**误判（CMP 的 `stringResource` vs androidx 的），
+       改为 import 溯源。
+     - **解锁**：`menuItem/RoundDropdownMenu.kt` 已搬入；`SelectionBottomBar` 只剩 `R`；
+       `SelectionItemCard` / `RuleListScaffold` 另有真实阻塞（九宫格、`RuntimeShader`）。
+     - 手法与门禁细节见 `cmp-module-convention.md` §8；切片实录见
+       `feature-slicing-audit-tagrules.md` §15。
+   - **M1-3m 已完成（2026-09-11）：`SelectionBottomBar.kt` 进 `commonMain`（CMP 资源配方首次复用）。**
+     `git mv` 进 `:core:designsystem/commonMain`（包名不变 ⇒ 消费方 import 零改动），
+     `R.string.*` → `Res.string.*`；`composeResources/values*/strings.xml` 各补 3 条
+     （`select_all` / `invert_selection` / `more_menu`，值与 `:core:ui`、`app` 两侧逐字节核对
+     ⇒ 无用户可见变化）。**零新增依赖**。顺带实证 `WindowInsets.navigationBars` /
+     `.tappableElement` / `.ime` / `.union` / `windowInsetsPadding` 在 desktop 均有实现
+     （M1-3k 的 foundation 正反清单）。
+     - **验证**：干净重建，四门禁 + `compileAppDebugKotlin` + 全量单测（基线 689 逐字一致）
+       + `assembleAppDebug` 全绿。
+     - ~~新工具坑：`Edit` 会把文件转成 LF、必须转回 CRLF~~ **已于 M1-3n 实测推翻**：
+       `core.autocrlf=true` 下 blob 一律存 LF，工作区行尾（LF / CRLF / MIXED）既不影响 blob
+       也不产生内容 diff。见 `cmp-module-convention.md` §7.6。
+   - **M1-3n 已完成（2026-09-11）：`FilePickerSheet.kt` 进 `commonMain`，MIME 推断下沉为窄契约。**
+     - **两个阻塞分开做**：6 条 `R.string` 走 CMP 资源（4 语言，值与 `:core:ui`、`app` 两侧
+       逐字节核对 ⇒ 无用户可见变化）；`android.webkit.MimeTypeMap` 下沉为 `:core:platform`
+       的 `fun interface MimeTypeResolver` + `MimeTypeResolverProvider`（install / uninstall /
+       isInstalled / current）。Android 实现在 app 的
+       `io.legado.app.platform.AndroidPlatformCapabilities.mimeTypeResolver()`，由
+       `PlatformServices.install()` 注入——与 `clipboard` / `toaster` 同一组工厂、
+       **不需要 `Context`**（`MimeTypeMap` 是进程级单例）。
+     - **契约面是先量清输入域再定的**：22 个调用点的 `allowExtensions` 只有 `null` /
+       `arrayOf("json")` / `arrayOf("json", "txt")` 三种，真正走平台查表的只有 `"json"`
+       （`*` / `txt` / `xml` 都是特判）。这一步排除了「把扩展名表抄进共享层」那个看起来
+       更省事的选项——它在今天的调用点上等价，但明天多传一个扩展名就会静默退化成
+       `application/octet-stream`（Android 原本认得）。
+     - **失败语义**沿用 M1-3l 的判据：未注入 ⇒ 「一律 `null`」⇒ 调用方回落
+       `application/octet-stream`，与 Android「未知扩展名」同一条路径。
+       desktop 没有 MIME 表是**正常状态**，不抛异常。
+     - **新增模块依赖 1 条**：`:core:designsystem` → `:core:platform`（方向无环，G1/G2 通过）。
+     - **首例 characterization 测试带来的基线变动**：`typesOfExtensions` 提为 `internal`，
+       新增 `FilePickerSheetMimeTest`（10 用例，desktopTest）并做**变异验证**（改回落值 ⇒
+       2 个用例变红）。**主验证集 689 → 699**（designsystem 20 → 30），不是回归。
+     - **踩到的坑**：① Kotlin 块注释**可嵌套**——KDoc 里写 MIME 通配字面量会同时引入
+       `*/`（提前闭合）与 `/*`（再开一层），编译报一片 `Expecting a top level declaration`；
+       同名序列在**字符串字面量**里合法（见 `cmp-module-convention.md` §7.9）。
+       ② 向 `strings.xml` 追加条目要插在**已有 `</resources>` 之前**，否则双闭合标签。
+     - 实录见 `feature-slicing-audit-tagrules.md` §17。
+   - **M1-3o 已完成（2026-09-11）：`plainTextClipEntry` 进 `commonMain`，`ClipEntry` 构造下沉为窄契约。**
+     - `git mv` `core/ui/.../ui/util/PlainTextClipEntry.kt` → `:core:designsystem/commonMain`
+       （**包名 `io.legado.app.ui.util` 不变** ⇒ 9 个文件、14 处调用点**一行没动**）。
+     - **为什么不能按原判「换 `ClipboardProvider`」**：那个 `setText` 会 `longToastOnUi` 弹一次
+       「复制完成」，而这 14 处全是 Snackbar 的「复制链接」动作 ⇒ 换过去是**行为变化**。
+     - **为什么必须抽契约**：`ClipEntry` 是 CMP 的 `expect class`，common 侧**无构造器**
+       （Android 要 `ClipData`、desktop 要 AWT）。`LocalClipboard` / `setClipEntry` 本身在
+       common 就有，卡住的只有构造这一步。旧 API `ClipboardManager` 已弃用，不采用。
+     - 契约 `PlainTextClipEntryFactory` + `PlainTextClipEntryProvider`（install / uninstall /
+       isInstalled / current）**住在 `:core:designsystem`**——`:core:platform` 零 Compose
+       装不下。**首个「契约住在 Compose 模块」的先例**，见 `cmp-module-convention.md` §8.5。
+     - 失败语义 = **抛异常**（判据同 `ClipboardProvider`：用户主动动作，没接上就该炸，
+       不能静默 no-op）。Android 实现在 `AndroidPlatformCapabilities.plainTextClipEntryFactory()`，
+       由 `PlatformServices.install()` 注入，**不需要 `Context`**。
+     - 新增 `PlainTextClipEntryTest`（3 用例，desktopTest）：未注入 ⇒ 抛异常、install/uninstall
+       同步、参数透传（哨兵异常技巧——共享层造不出 `ClipEntry`，成功路径无法断言）。
+       **主验证集 699 → 702**（designsystem 30 → 33）；变异验证：调换实参 ⇒ 精准 1/3 变红。
+     - 实录见 `feature-slicing-audit-tagrules.md` §18。
+   - **M1-3p 已完成（2026-09-11）：九宫格下沉为窄契约，`GlassCard` / `AppCheckbox` / `CheckboxItem` 进 `commonMain`。**
+     - `git mv` 4 个文件进 `:core:designsystem/commonMain`（**包名一律不变** ⇒ `app` / `core:ui` /
+       `feature:*` 的 import 一行没动；`GlassCard` 被 59 个文件引用）：
+       `widget/components/AppContainerBackground.kt`（**改写**）、`card/GlassCard.kt`、
+       `checkBox/AppCheckbox.kt`、`checkBox/CheckboxItem.kt`。
+     - **契约面**：`:core:platform` 新增 `NinePatchLoader { fun load(path: String): Any? }`
+       + `NinePatchLoaderProvider`。返回类型是**不透明 payload**（就是图像加载器 `data` 形参的
+       类型），因此**可以**住零 Compose 的 `:core:platform`——与 M1-3o 的 `ClipEntry`（CMP
+       `expect class`，只能住 designsystem）恰好构成一组对照：**契约住哪个模块由契约的返回类型
+       决定**。Android 实现是 `AndroidPlatformCapabilities.ninePatchLoader()`（**逐字搬运**原私有
+       `loadNinePatch`，含 `.9.png` 预筛与 `runCatching`），由 `PlatformServices.install()` 注入。
+     - **失败语义 = 一律 `null`**（判据同 `MimeTypeResolver`）：「这个平台没有九宫格」是正常状态。
+       三种 `null`（非 `.9.png` / 解析失败 / 无平台能力）收敛成**同一条回落路径**——按原路径交给
+       Coil。唯一行为差异：desktop 上背景图按普通位图缩放，不按九宫格拉伸。
+     - **没有把「整层绘制」下沉**（契约返回 `Modifier` 或 `Painter` 两条路都量过）：前者要
+       `@Composable` 契约方法、且会把跨平台的 Coil 管线整段推进 `app`；后者要光栅化九宫格并丢掉
+       Coil 的 crossfade/缓存，是**行为变化**。只切真正平台相关的那一步。
+     - **搬动时换掉的两处平台绑定**：`LocalContext` → coil3 的 `LocalPlatformContext`（Android 上
+       同一个 `Context`）；`LocalConfiguration.screenWidthDp/HeightDp` → CMP 的
+       `LocalWindowInfo.containerSize`（只作 Coil 解码目标尺寸；补了「尺寸为 0 时不设显式请求」
+       的守卫）。另**删掉 `koinInject<ImageLoader>()`**——`App` 的 `newImageLoader(context) = get()`
+       就是这个 Koin 单例，走 `SingletonImageLoader` 拿到的是同一实例 ⇒ **designsystem 不必引入
+       Koin**。`designsystem` 新增 1 个依赖：`libs.coil.compose`（KMP，有 `coil-compose-jvm`）。
+     - **踩坑**：`git mv` 不会替你建目标父目录（搬进 designsystem 里尚不存在的 `checkBox/` 时报
+       `renaming … failed: No such file or directory`，先 `mkdir -p`）；`GlassCard` 上历史遗留的
+       material2 `@OptIn(ExperimentalMaterialApi::class)` 是死注解，按 M1-3f 的处理删掉。
+     - **新增 `NinePatchLoaderContractTest`（3 用例，desktopTest）**：未注入 ⇒ 一律 `null`、
+       install/uninstall 同步、路径原样透传。主验证集 **702 不变**（本片没动可测语义），
+       `:core:platform:desktopTest` 76 → 79 ⇒ 全量 **862**。变异验证：兜底改成返回空串 ⇒
+       2/3 精确变红。
+     - 实录见 `feature-slicing-audit-tagrules.md` §19。
+   - **M1-3q 已完成（2026-09-11）：`SelectionItemCard` 进 `commonMain`，CMP 资源配方第三次复用。**
+     - `git mv` `widget/components/card/SelectionItemCard.kt` 进 `:core:designsystem/commonMain`
+       （包名不变 ⇒ **26 个引用文件的 import 一行没动**；它承载 `SelectionItemCard` /
+       `SelectionItemCardContent` / `ReorderableSelectionItem` 三个组件）。
+     - **拆开后的两条阻塞其实都不算阻塞**：`R.string.edit` 是纯资源问题（走 M1-3j 配方，
+       按 `:core:ui` 的原值补进 4 个语言文件）；`sh.calvin.reorderable` 实测**是 KMP 制品**
+       （`reorderable-3.1.0.module` 含 `reorderable-jvm` 变体）。⚠️ 之前 §12 把它与 coil3 一并
+       当作「平台库」是连带误判——判据只有一条：**`.module` 里有没有非 Android 变体**。
+     - `:core:ui` 的 `edit` 资源与 `libs.reorderable` 依赖**都保留**（`ReorderableConfigList`、
+       `GroupManageBottomSheet`、`InputSettingItem`、`SliderSettingItem` 仍在用）。
+     - **踩坑**：`ListItem(modifier = …, supportingContent = …, colors = …) { AppText(title) }`
+       的括号外 lambda 在 **Android 目标能编译**、在 **desktop 目标**报
+       `No value passed for parameter 'headlineContent'`（`headlineContent` 在签名里是第一个
+       参数）。改成显式命名参数 `headlineContent = { … }`，两边都成立且语义不变。
+     - 实录见 `feature-slicing-audit-tagrules.md` §20。
+   - **M1-3r 已完成（2026-09-12）：topbar 全家桶进 `commonMain`，两条平台契约。**
+     - `git mv` 11 个文件（topbar ×6、`theme/GlassDefaults` + `HazeStyle` + `hazeStyle/HazeLegado`、
+       `SearchBar`、`text/AnimatedText`）进 `:core:designsystem/commonMain`，包名不变 ⇒
+       消费方 import 零改动。补齐 7 条文案到 4 个语言文件（与 `app` 原值逐个比对一致）。
+     - **两条新契约都住 `:core:designsystem`**（签名里分别是 `WindowInsets` 与 `Modifier`）：
+       - `StatusBarInsets`：Android 注入 `statusBarsIgnoringVisibility`（**保住「顶栏高度恒定」**
+         这一真实行为），其它平台回落 `statusBars`（desktop 恒为零）；
+       - `LiquidGlassEffects`：断开 `Glass*TopAppBar ──同包──> TopBarActionsRow ─>
+         `topBarLiquidGlass ─> InteractiveHighlight ─> RuntimeShader(AGSL)` 这条链。
+         未注入 ⇒ 关闭液态玻璃（这本来就是原实现在 API < 33 时的合法状态）。
+     - ⚠️ **§21 的「已证伪」只对 `RuleListScaffold` 自身成立**：搬 topbar 全家桶**确实会**
+       碰到 `RuntimeShader`。旧记录没判错平台能力，错在归因；§21 里「四件套不引用
+       `TopBarButton`」那一行也已回改（同包调用不需要 import）。详见 §22。
+     - **零新增依赖**：`HazeStyle.kt` 的 `@OptIn(ExperimentalHazeMaterialsApi::class)` 是空
+       opt-in（materials 的真实用户 `ReaderMenuEffects` 仍在 `:core:ui`），删掉即不需要
+       `libs.haze.materials`。
+     - 新增 `TopBarPlatformContractsTest`（4 例）⇒ **主验证集 702 → 706、全量 862 → 866**
+       （有意变更，已做变异验证：回落改成每次新建 ⇒ 4 例全红）。
+       实录见 `feature-slicing-audit-tagrules.md` **§22**。
+   - **M1-3s 已完成（2026-09-12）：`AppScaffold` 进 `commonMain`（`ListScaffold` /
+     `RuleListScaffold` 随行）。**
+     - ⚠️ **台账漏了 `AppScaffold`**：`ListScaffold` 明文 import 它，而 designsystem 不能反向
+       依赖 `:core:ui` ⇒ 必须先搬。它是本片消费方最多的文件（**58 文件 / 114 处引用**），
+       **包名不变 ⇒ 调用点一行没动**。另纠正两处过期记录：`list/ListUiState.kt` 早已在
+       commonMain；`:core:ui` 的 `rules/` 只剩不引用 `RuleListScaffold` 的 `RuleEditSheet.kt`。
+     - 闭包 55 文件里除三个种子自身外全 `ok` ⇒ **零新契约、零新模块依赖**。唯一不可跨端的
+       `koinInject<ImageLoader>()` 直接删掉（沿用 M1-3p 的 `SingletonImageLoader` 配方：
+       `App.newImageLoader()` 就是 `get()`，给到同一个实例），不给 designsystem 加 Koin。
+     - **维度 3 实测**：`MiuixScaffold` / `FabPosition`（miuix-ui-desktop）、`layerBackdrop` /
+       `rememberLayerBackdrop` / `rememberCombinedBackdrop`（backdrop-desktop 的 `backdrops/*`）
+       在 desktop 制品里均存在；判据仍是 `compileKotlinDesktop`。
+     - 5 条文案（`add` / `delete` / `sure_del` / `ok` / `cancel`）× 4 语言；`.cvr` 解码比对
+       **100/100** 与 `app` 逐字节一致。⚠️ 坑：`build/` 下多份 `.cvr`，旧的 `assets/` 那份是
+       陈的（只有 20 条），只有 `resourceGenerator/preparedResources/` 是本次生成的。
+     - **验证**：干净重建后四门禁 + desktop 编译 + `assembleAppDebug` 全绿；
+       主验证集 706 不变、全量 866 不变（本片没动共享层可测语义）。
+       实录见 `feature-slicing-audit-tagrules.md` §23。
+   - **M1-3t 已完成（2026-09-12）：导入/设置组件闭包进 `commonMain`，`MiuixPreferenceRenderer`
+     新契约。**
+     - 起点是把 `feature:tagrules` 的 7 个文件搬进 commonMain；逐个符号定位后发现真正的阻塞是
+       它们消费的 **`:core:ui` 组件**（Android library，`commonMain` 不能反向依赖）⇒ 拆成 4 组前置，
+       本回合啃第 1 组：`ImportComponents.kt` 及其传递闭包共 **5 文件 / 858 行**
+       （`SplicedColumnGroup` / `card/SettingCard` / `settingItem/SettingItem` /
+       `settingItem/SwitchSettingItem`），包名不变 ⇒ 消费方 import 零改动。
+     - **新契约 `MiuixPreferenceRenderer`**（住 `:core:designsystem`，Android 实现留 `:core:ui`，
+       在 `PlatformServices.install()` 注入）：`miuix-preference` 是**整个 miuix 里唯一没有
+       desktop 变体的制品**（只有 `miuix-preference-android`；`miuix-ui-desktop` 里连
+       `preference/` 包都没有）⇒ 必然走 seam。失败语义取 **`current` 返回 `null`**，由调用方显式
+       落 Material3：判据是 `LocalComposeEngine` 默认 Material3、Miuix 引擎只由 Android 侧提供
+       ⇒ desktop 上该分支不可达（同 M1-3r `LiquidGlassEffects` 的判据）。
+     - **零新增依赖**：`SettingCard.kt` 的 `ExperimentalMaterialApi`（material2）是空 opt-in，删掉
+       即可。`LocalConfiguration`（Android-only）→ `LocalWindowInfo.containerSize` + `LocalDensity`
+       （3 处），首帧可能为 0 的差异已写进 KDoc。
+     - 12 条文案 × 4 语言（另复用已有的 `ok` / `cancel`，原 `android.R.string`）⇒ 每语言 **37 条**；
+       产物级核对 148/148 与源 XML 一致、新增 48/48 与 `app` 逐字节一致。
+     - G4：唯一的 `ImportJsonEditorProvider.current` 使用点随文件换区域 ⇒ 旧 key 归零删除、新 key
+       同计数补登并写明是路径迁移（Backlog 第 8 项清完时应归零删除）。
+     - 新增 `MiuixPreferenceRendererContractTest`（2 例）⇒ **主验证集 706 → 708、全量 866 → 868**
+       （有意变更，已做变异验证：未注入返回空实现 / 每次新建实例 ⇒ 2 例全红）。
+       实录见 `feature-slicing-audit-tagrules.md` **§24**。
+   - **M1-3v 已完成（2026-09-13）：`lazylist/*` 进 `commonMain`，`systemGestureExclusion` 下沉为平台原语。**
+     - `git mv` `widget/components/lazylist/{LazyList,VerticalFastScroller}.kt` →
+       `:core:designsystem/commonMain`（包名不变 ⇒ 5 个消费方 `app` +
+       `feature/{dict,tagrules,replacerules,txttocrules}` 的 import 零改动）。
+     - 它唯一的 Android-only 点是 `Modifier.systemGestureExclusion()`（全仓仅此文件的 2 个调用点）。
+       实测解 CMP `foundation-desktop-1.12.0.jar` 确认整个制品无 `*Exclu*` 类 ⇒ 新增
+       `expect fun Modifier.systemGestureExclusionCompat()`（androidMain 转发原生 / desktopMain 恒等）。
+       刻意**不用** Provider 注入：没有第三个实现、没有失败语义，恒等返回就是正确语义；
+       零状态的 `Modifier` 工厂也无法用 DI 表达。`:core:designsystem` 因此**首次出现
+       `androidMain` / `desktopMain` 源集**；**零新增依赖**。
+     - 验证：`clean` 后四门禁 + 两个 desktop 编译器 + `:app:compileAppDebugKotlin` + 6 个测试任务
+       + `:app:assembleAppDebug` 全绿；用例 **708 / 868 与基线逐字不变**（纯搬迁切片）。
+       实录见 `feature-slicing-audit-tagrules.md` **§25**。
+   - **M1-3w 已完成（2026-09-13）：`feature:tagrules` 转 KMP/CMP —— 首个 CMP Feature 模块。**
+     - 7 个源文件拆源集：`commonMain` 6 个（Contract ×2 / VM ×2 / EditSheet ×2 / 纯 Screen），
+       `androidMain` = `HighlightTagRuleRouteScreen`（从 `HighlightTagRuleScreen.kt` 拆出——它要
+       `koinViewModel()` 与 `rememberDocumentPicker()`，两者都 Android-only）；
+       `androidHostTest` = characterization 测试。**`:app` 侧 import 零改动。**
+     - 31 条文案 × 4 语言从 `src/main/res/values*/` 搬进 `src/commonMain/composeResources/values*/`，
+       `R.string.x` → `Res.string.x`（每个名字单独 import）；根登记 `"feature/tagrules" to "cmp"`。
+     - **文案等价性用解 APK 证明**（不靠读源码）：`assets/composeResources/io.legado.app.feature.tagrules.res/`
+       4 个语言目录齐全，解码 `.cvr` 与 `app/src/main/res` 同名条目逐条比对 **124/124 一致**。
+     - 依赖侧四个 KMP 坑（都不在「读 import」的可见范围内，详见 §26）：
+       ① KMP 源集依赖块里没有 `platform()` ⇒ `project.dependencies.platform(...)`；
+       ② 无版本 alias（koin 系列靠 BOM）在 KMP 模块里会断链 ⇒ 显式引 BOM；
+       ③ `lifecycle-runtime-compose-android` 传递的 `navigationevent-compose` 解析到本机没缓存的
+       1.0.2 ⇒ 按 app 侧既有理由抬到 1.2.0-alpha04（版本对齐）；
+       ④ lifecycle 要取 **`androidx.lifecycle` 的 KMP 坐标**（有 `-desktop` 变体，与 Android 侧同号
+       2.11.0），而**不是** `org.jetbrains.androidx.lifecycle`（其 2.9.6 元数据要求 androidx 2.9.4）。
+     - 验证：**单独 `clean`** 后四门禁 + `:feature:tagrules:compileKotlinDesktop` +
+       `:core:designsystem|viewmodel:compileKotlinDesktop` + `:app:compileAppDebugKotlin` +
+       6 个测试任务 + `:app:assembleAppDebug` 全绿；用例 **708 / 868 与基线逐字不变**（纯搬迁）。
+     实录见 `feature-slicing-audit-tagrules.md` **§26**。
+   - **M1-3x-pre 已完成（2026-09-13）：4 件 UI 资产从 `:core:ui` 上提到 `:core:designsystem/commonMain`。**
+     - 动因是本批 Feature（`replacerules` / `txttocrules` / `dict`）的共同前置：它们的 `commonMain`
+       里用到的 `AppTabRow` / `GroupManageBottomSheet` / `rules/RuleEditSheet` /
+       `contentProcess/ContentProcessUiState` 仍声明在 **Android-only** 的 `:core:ui`。
+       `tagrules` 恰好没用到它们，故 §26 未暴露这条判据——现已补进 skill 与
+       `cmp-module-convention.md` §10.1（判据是**声明文件的模块**，不是包名像不像）。
+     - `git mv` 4 文件进 `:core:designsystem/src/commonMain`（包名不变 ⇒ 消费方 import 零改动；
+       两个文件的 `R.string.*` → `Res.string.*`，新增 10 条文案 × 4 语言；`:core:ui` 侧 8 条
+       变死资源删除）。
+     - `:core:designsystem` **首次声明依赖** `kotlinx.collections.immutable`
+       （`ContentProcessUiState` 需要；此前该模块零依赖）。
+     - 验证：`clean` 后四门禁 + 两个 desktop 编译器 + `:app:compileAppDebugKotlin` 全绿；
+       用例 **708 / 868 逐字不变**；文案经解 APK 比对 `designsystem 188/188` 一致。
+   - **M1-3x 已完成（2026-09-13）：`feature:replacerules` 转 KMP/CMP（本批最脏的一个）。**
+     - 7 个源文件拆源集：`commonMain` 8 个（Contract ×2 / VM ×2 / Screen ×2 / Route-contract /
+       `ReplaceRuleImportCompat`），`androidMain` = 两个新拆的 Route（要 `koinViewModel()` 与
+       `rememberDocumentPicker()`）；`ReplaceRuleStateTest` 从 `:app/src/test` **搬进**
+       `androidHostTest`。**`:app` 侧屏幕 import 零改动。**
+     - 52 条文案 × 4 语言搬进 `composeResources`，`R.string.x` → `Res.string.x`；
+       根登记 `"feature/replacerules" to "cmp"`。
+     - **四处平台直连的收口**：① 三个 VM 都不再继承吃 `Application` 的 `BaseRuleViewModel`，
+       导入/导出/上传下沉 `RuleTransferUseCase`；② `exportToUri(Uri)` → 契约本来就是 `String`；
+       ③ `GSON` → `JsonCodec`（配置严格对齐、`ReplaceRule` 无自定义 deserializer ⇒ 字节等价）；
+       ④ 旧格式导入依赖的 `ReplaceAnalyzer`（jsonpath）抽成平台契约 `ReplaceRuleImportCompat`，
+       Android 实现直接委托，**行为逐字不变**（仅两处畸形输入属有意宽松化，已写进 KDoc）。
+     - G4 棘轮三条战线：销 5 条旧 `main` 条目 + 下调 2 处 `legacyHelp`；新区域 `coreProvider`
+       清零（`ToasterProvider.current` → `koinInject<Toaster>()`）；`ReplaceAnalyzer` 搬到
+       `io.legado.app.data.rules`、`AndroidReplaceRuleImportCompat` 搬到 `io.legado.app.domain.gateway`
+       （**搬到干净包名**，不放宽基线）。
+     - 两个新坑（§27）：**`combine` 的类型化重载最多 5 个流**（6 个退化到 `Array<Any>` 重载，
+       类型推导崩塌并级联报一堆假错）⇒ 两级嵌套；**`when` 的 `data class` 分支必须带 `is`**
+       （漏掉会被当成伴生对象引用，报「不穷尽」）。
+     - 验证：**单独 `clean`** 后四门禁 + 4 个 desktop 编译器 + `:app:compileAppDebugKotlin` +
+       `:app:assembleAppDebug` + **7 个测试任务**全绿；用例 **708 / 868 与基线逐字不变**
+       （其中 `ReplaceRuleStateTest` 2 例从 app 搬到本模块 ⇒ app **635 → 633**、replacerules
+       **0 → 2**，合计不变，`count-test-results.py` 已加映射）。
+     - 文案等价性：**解 APK** 比对 `assets/composeResources/io.legado.app.feature.replacerules.res/**`
+       四语言齐全、与 `app/src/main/res` 同名条目 **208/208（52×4）逐字一致**。本片把该核对固化成
+       `tools/verify-compose-resources.py`（先用 tagrules 自证复现 124/124）。
+     实录见 `feature-slicing-audit-tagrules.md` **§27**。
+   - **M1-3y 已完成（2026-09-13）：`feature:txttocrules` 转 KMP/CMP。**
+     - 3 个源文件：`commonMain` 装 Contract（未改）/ 纯 Screen / 重写的 VM + 新增平台契约
+       `TxtTocRuleImportCompat`；`androidMain` 只装新拆的 `TxtRuleRouteScreen`；
+       26 条文案 × 4 语言进 `composeResources`；根登记 `"feature/txttocrules" to "cmp"`。
+       **本模块无模块级测试**（`TxtTocRuleDeserializerTest` 属 `:core:data`）。
+     - **与 replacerules 的关键差异——契约面由「实体的 JSON 兼容逻辑在哪」决定**：
+       `TxtTocRule.chapterRule` 的旧键名兼容（`rule` → `chapterRule`）已从
+       `@SerializedName(alternate=…)` 改成了 `GSON` 门面上的
+       `txtTocRuleJsonDeserializer`，而共享层 `JsonCodec` **不含**它 ⇒ **标准 JSON 也必须走平台**
+       （不像 replacerules 只有旧 jsonpath 格式才回落）。解析实现放
+       `core/data/androidMain/.../utils/GsonExtensions.kt`（与 `GSON` **同包**、引用无需 import
+       ⇒ 不增 G4 `gson` 计数），契约实现 `AndroidTxtTocRuleImportCompat` 住 `domain/gateway` 只做转接。
+     - VM 内三处 `context.getString` **不能**改成字面量（原文本地化，会回退）⇒ 用 CMP
+       `getString(Res.string.x)`（suspend，故在协程内发 effect）；Screen 内联 toast 改
+       `onShowToast` 回调（Route 侧 `koinInject<Toaster>()`，仍是 toast）；
+       `BaseRuleEvent` → `RuleTransferEvent`（避免 `legacyBase` 新区域欠账）。
+     - G4：删 3 条 `feature/txttocrules/main/...`（gson / legacyBase / coreProvider），
+       新区域零欠账，**未放宽基线**。
+     - 文案等价性：`98/98`（26+26+23+23）与 `:app` 同名条目逐字一致。⚠️ `zh-rHK` / `zh-rTW`
+       合法地比 `values` 少 3 条（源模块 res 与 `:app` res 都缺 ⇒ 两侧都按 qualifier 回落默认）。
+       据此修正了 `tools/verify-compose-resources.py` 的第 ② 项判据：**「与 `:app` 对应语言一致」
+       而非「各语言彼此一致」**；四模块回归（98/124/208/188）全绿。
+     - 验证：**单独 `clean`** 后四门禁 + 5 个 desktop 编译器 + `:app:compileAppDebugKotlin` +
+       `:app:assembleAppDebug` + 7 个测试任务全绿；用例 **708 / 868 与基线逐字不变**。
+     实录见 `feature-slicing-audit-tagrules.md` **§28**。
+   - **M1-3z 已完成（2026-09-13）：`feature:dict` 转 KMP/CMP —— 本批最干净的一个，M1-3 收官。**
+     - 勘察结论比预估好：**「查询面板是 platform island」不在模块里**——`feature/dict` 只装
+       `rule/` 子域，查询弹窗（`DictActivity`/`DictSheet`/`DictViewModel`）本来就在 `:app`。
+     - 3 个源文件：`commonMain` 装 Contract（未改）/ 纯 Screen / 重写的 VM；`androidMain` 只装
+       新拆的 `DictRuleRouteScreen`；19 条文案 × 4 语言进 `composeResources`；
+       根登记 `"feature/dict" to "cmp"`。本模块无模块级测试。
+     - **唯一需要判断的问题：要不要平台契约？—— 不要**。判据被三片收敛成一句话：
+       **看「实体的 JSON 兼容逻辑是否落在共享层看不见的地方」**（门面 deserializer /
+       JVM-only 库），而不是看「有没有旧格式」。`GSON` 门面只注册 7 个自定义 deserializer
+       （`Explore`/`Search`/`BookInfo`/`Toc`/`Content`/`Review`/`TxtTocRule`），**不含
+       `DictRule`**；实体也无 `@SerializedName(alternate=)`；`JsonCodec` 的 GSON 配置与
+       `INITIAL_GSON` 逐字一致 ⇒ 对 `DictRule` 完全等价，直接换。
+     - VM 不再继承 `BaseRuleViewModel`，导入/导出/上传下沉 `RuleTransferUseCase`；
+       `uiState` **仍用 5 流 `combine`**（与父类逐字一致，`groupFilter` 一路本 VM 从不写）。
+       剪贴板：VM 的 `ClipboardProvider.current` → 注入 `Clipboard`（`coreProvider` 3 条清零）。
+       ⚠️ Screen 里的 `LocalClipboard.current` 是 `androidx.compose.ui.platform` 的 CMP 共享 API，
+       不是 Provider，保留不动；判据是**有没有 `Provider` 后缀**。
+       `BaseRuleEvent` → `RuleTransferEvent`。
+     - G4：删 3 条 `feature/dict/main/...`（gson 1 / legacyBase 2 / coreProvider 3），
+       新区域零欠账，**未放宽基线**。
+     - ⚠️ **新坑：CMP 资源包名 = 模块 Gradle path + `.res`，不含源集子包**。本模块源集目录是
+       `.../feature/dict/rule/` 但资源包名是 `io.legado.app.feature.dict.res`（资源在
+       `commonMain/composeResources/` 根下）。按 Kotlin 包名推 ⇒ `Res` Unresolved。
+     - 验证：**单独 `clean`** 后四门禁 + **6 个** desktop 编译器 + `:app:compileAppDebugKotlin` +
+       `:app:assembleAppDebug` + 7 个测试任务全绿；用例 **708 / 868 与基线逐字不变**；
+       文案 `76/76`（19×4）一致。
+     实录见 `feature-slicing-audit-tagrules.md` **§29**。
+     至此 **M1-3「把干净 UI 页切成 Feature 模块」全部收官**：`tagrules` / `replacerules` /
+     `txttocrules` / `dict` 四个 Feature 均已 CMP 化。
+   - **③ 的剩余阻塞（M1-3v 后重新逐个符号核算）**：`tagrules` 本体 7 个文件的依赖面**已清空**——
+     - ✅ `:core:viewmodel` 的 `core/rules`（M1-3u 完成）；
+     - ✅ `FastScrollLazyColumn` / `lazylist/*`（M1-3v 完成）；
+     - ❌ ~~`AndroidDocumentPicker`~~ **不是前置**：`rememberDocumentPicker()` 只在
+       `HighlightTagRuleRouteScreen` 里调用，而 Route 本来就该留 `androidMain`（它还要用
+       Android-only 的 `org.koin.androidx.compose.koinViewModel`）。纯 Screen 只收
+       `onPickImportSource` / `onPickExportTarget` 两个回调。
+     - 其余依赖（designsystem 组件 17 个、`:core:data` 实体与仓储、`:core:platform` 三契约、
+       `:core:model` 的 `isJson*`、`sh.calvin.reorderable`）**全部已在 `commonMain`**。
+     - ⇒ 这 4 组阻塞**已全部解除**，实施结果见上条 **M1-3w**：7 个文件拆源集、31 条文案 × 4 语言
+       搬进 `composeResources`、登记 `"feature/tagrules" to "cmp"` 全部落地；文案等价性由解 APK 的
+       `.cvr` 比对证明（124/124 逐字一致）。
+7. **M1-4：最小 Desktop/iOS host 主路径**
    - 展示同一 Feature，验证 Koin graph、ViewModel lifecycle、resources、Nav3 和一条数据路径。
+   - **已完成（2026-09-13）：最小 Desktop host（`feature:dict` + 真实 Room + headless UI 测试）。**
+     - 新建 `smoke/compose-desktop-probe`（工具链探针）与 `host:desktop`（最小 host）。
+       **desktop 证据第一次越过「能编译」**：`desktopTest` 里建真库、起 Koin、渲染
+       `DictRuleScreen`，断言数据从 Room 流到界面那一行。
+     - ⚠️ **本片最重要的产出是一个此前被掩盖的阻塞**：`:core:designsystem` 的组件读
+       `LegadoTheme.colorScheme` ⇒ `LocalLegadoColorScheme`，其默认值是
+       `error("No ColorScheme provided")`；而提供它的 `ThemeComponents` 在 **Android-only 的
+       `:core:ui`**。四个 Feature 转 CMP 时 `compileKotlinDesktop` 全绿，但**一渲染就抛异常**。
+       解法是把两个纯映射函数（`ColorScheme.toLegadoColorScheme`、整个 `Typography.kt`）
+       上提到 `core/designsystem/commonMain`（包名不变 ⇒ `:core:ui` 零改动），desktop 侧用
+       `DesktopTheme`（MaterialTheme + 两个映射）自己搭语义色。
+       ⚠️ `DesktopTheme` 是**最小可用**主题，不是 `AppTheme` 等价物（无自定义字体 / Miuix
+       引擎切换 / 动态取色）；`AppTheme` 整体搬进共享层仍是独立切片。
+     - 两个 CMP 1.12.0 陷阱：`compose.runtime|foundation|material3` accessor 已废弃且
+       `compose.uiTestJUnit4` 已移除（须显式加 `org.jetbrains.compose.ui:ui-test-junit4`）；
+       `runComposeUiTest` 要用 **v2**（v1 废弃且默认立即执行协程，会掩盖首帧时序问题）。
+     - 平台能力缺失一律显式建模：`UploadRepository` / `RuleTransferPlatform` 的 URL 分支
+       抛 `UnsupportedOperationException`；`Clipboard` 是进程内的（KDoc 写明不是系统剪贴板）。
+       只有 `writeExport` 按契约静默吞异常——那是迁移前的既有语义。
+     - 变异验证：插入的规则名与断言不一致 ⇒ 测试必须失败（实测失败），证明不是假绿。
+     - 用例基线 **708 → 709 / 868 → 870**（新增 host 1 例 + 探针 1 例，属有意变更）。
+     实录见 `feature-slicing-audit-tagrules.md` **§30**。
+   - **M1-4b（2026-09-14）：Nav3 在 desktop 上的边界已实测并落地。**
+     `host:desktop` 现在有真正的两目的地导航图（host 入口页 → `DictRuleScreen`），
+     渲染层自建：`nav/DesktopNavHost` = `NavBackStack.last()` + `NavEntry.Content()` +
+     `rememberSaveableStateHolder()` + 自维护的 `ViewModelStore`（entry 离栈即 `clear()`）。
+     desktop UI 测试 2 例（导航切换 + entry 级 VM 释放），并做了变异验证（改动栈顶取值与
+     清理前提 ⇒ 两例均失败）。
+     实测结论（`javap` 解制品，不是推测）：**`navigation3-runtime` 可共享（desktop/jvm 与 iOS
+     native 都是真变体）；`navigation3-ui` 在桌面端只有 `jvmStubs`，`NavDisplay` 连编译都过不去；
+     `lifecycle-viewmodel-navigation3` 只有 `-android` 变体，但 entry 级 VM 作用域可用 KMP 的
+     `ViewModelStore` 自行补齐；nav key + back stack 逻辑可住 `commonMain` 并被双 target 编译。**
+     实录见 `feature-slicing-audit-tagrules.md` §31，制品矩阵见 `cmp-module-convention.md` §13。
+   - **未做**：iOS host（本机 Windows 无法编译 Kotlin/Native iOS ⇒ 产生不了验证证据，硬写只会
+     得到"看起来做了"的假象）；`AppTheme` 整体搬共享层（`DesktopTheme` 仍是最小主题）；
+     `NavDisplay` 的入场/退场动画、predictive back、scene strategy 与同栈结果回传（picker）
+     在 desktop 上未复刻；跨 Feature 导航未接（第二个 Feature 的 desktop 平台契约尚未实现，
+     见 `cmp-module-convention.md` §13.6）。
 
 ### 随后执行
 
-7. 按 M2 表逐一删除 9 个已知 core Provider；先处理会阻塞现有四个 Feature 的 clipboard/toast/import。
-8. 将 `core:model` 的 `utils` 文件按领域改包改名；同一 PR 迁完调用方，不加 typealias façade。
-9. 把 `core:viewmodel` 的共享流程下沉为无 UI UseCase，迁四个 Feature 后删除模块。
-10. 以 rules/settings 为第一个 `core:data` 拆分样板；Feature 不再见 DAO/entity。
-11. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
-12. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
+8. 按 M2 表逐一删除 9 个已知 core Provider；先处理会阻塞现有四个 Feature 的 clipboard/toast/import。
+   - **M2-1 已完成（2026-09-14）：`ImportJsonEditorProvider` 退役 → `BatchImportDialog` 参数注入。**
+     clipboard/toast 在 M1-3a 已改成构造注入并被四个 Feature 消费，**import 是剩下唯一还住在
+     CMP 共享层（`:core:designsystem/commonMain`）里的静态委托**——通用 UI 组件库直接读全局
+     单例，且这是公共 API 的隐藏前置条件（不注册就 `error()`，签名上看不出来）。
+     形态：给 `BatchImportDialog` 加无默认值的 `importJsonEditor: ImportJsonEditor` 参数
+     （8 个调用点显式传：4 个 CMP Feature 的 Screen/commonMain + Route/androidMain、4 个 app 屏），
+     删掉 `:core:platform` 的 Provider object；`:app` 的 `appModule` 绑 `GsonImportJsonEditor`、
+     `PlatformServices` 的 install 路径整体退役；`host:desktop` 绑显式抛
+     `UnsupportedOperationException` 的 `DesktopImportJsonEditor`（desktop 复刻 Gson 版需先建立
+     等价证据，属独立切片）。
+     G4：`coreProvider|…importComponents` 归零（条目删除）、`app/…/help` 8→7，总条目 **328→327**；
+     用例 **711→712 / 872→873**（新增 `DesktopImportJsonEditorTest` 锁住「desktop 显式不支持」）。
+     变异验证：删掉 desktop 的绑定 ⇒ 2 例以 `NoDefinitionFoundException` 失败。
+     实录见 `feature-slicing-audit-tagrules.md` §32。
+   - **M2-2 已完成（2026-09-14）：`BigDataStoreProvider` 退役 → 实现下沉共享层 + 平台原语。**
+     侦察否掉了两条常规路：调用方是 **Room 构造**的 entity 实例方法（进不了 DI），且方法名是
+     **书源 JS 兼容面**（`bindings["book"] = ruleData` 后脚本直接调 `book.putVariable`，签名不可动）；
+     规则求值入口（`WebBook`/`BookList`/`BookContent`/`Rss`）又全是 `object` 单例，
+     所以"上游装配到数据层"（`SourceVariableRepository`）在本仓**没有装配点**。
+     形态：`BigDataStore` 实现下沉到 `core/data/commonMain` 的 `RuleDataFileStore`（携带全部路径
+     语义），只依赖 `core/platform` 的新原语 `expect object RuleDataStorage`（根目录 + 文件 IO + MD5）；
+     `Provider` object 删除，三个 entity 直接引用共享实现；根目录由 host 的 composition root 设置
+     （Android `App.onCreate`、desktop `desktopHostModule` 构造体），未设置显式抛异常；
+     需要 `appDb` 的清理逻辑留在 `:app` 的新 `RuleDataCleaner`。
+     G4：`coreProvider|…entities` 45→36，`coreProvider|app/main/io/legado/app` 2→0（条目删除）；
+     另有 `appCtx`/`legacyHelp`/`legacyNaming` 四条因删掉 `RuleBigDataHelp` 门面连带下调
+     ⇒ `coreProvider` 条目 **5→4**、基线数据行 311→310。
+     用例 **712→712 / 873→877**（删 2 个失去被测对象的 Provider 用例、新增 6 例桌面真文件系统用例）。
+     变异验证：hex 改大写 ⇒ 1 例失败；`book`→`books` ⇒ 3 例失败，均随后还原。
+     实录见 `feature-slicing-audit-tagrules.md` §33；形态见 `cmp-module-convention.md` §15。
+   - **M2-3 已完成（2026-09-14）：`SymmetricCryptoProvider` 退役 → 平台原语 + `CryptoCodecs`。**
+     这是 `entities` 那 36 条里**唯一真正可退休**的一条，其余四条被两类硬约束卡住（见下一条）。
+     `SymmetricCrypto` 从「interface + Provider」改成 `:core:platform` 的
+     `expect object`：androidMain/desktopMain 各一份内容相同的 JCA actual。判据是 AGENTS.md
+     「无第三实现且语义恒等」——原判成注入的理由是「实现依赖 `:app` 工具」，移植时发现那些工具
+     只用到 `kotlin.io.encoding.Base64`（stdlib）与 `MessageDigest`（JVM 自带），本模块自足。
+     兼容面（既有 `userInfo_<sourceKey>` 密文能否读回）由**硬编码密文向量**钉住，向量由
+     `openssl enc -aes-128-ecb` 与 Node `createCipheriv` 两个独立实现交叉确认，不是自证。
+     刻意不移植三条无调用方的分支（`setIv`/随机密钥/DES-DESede 密钥截断），已在契约 KDoc 列明。
+     G4：`coreProvider|…entities` 36→33、`coreProvider|app/…/help` 7→6，并因删掉
+     `import io.legado.app.help.crypto.SymmetricCryptoAndroid` 连带 `legacyHelp|…/help` 35→34；
+     **零新增区域**，基线数据行 310 不变。
+     用例 **712→712 / 877→882**（`core:platform` 的 `SymmetricCryptoContractTest` 2→7，
+     主验证集不变——`core:platform` 只进全量）。
+     变异验证：断掉 hex 解密分支 ⇒ 精确 1 例失败；`encodeBase64` 换 URL-safe ⇒ 2 例失败。
+     实录见 `feature-slicing-audit-tagrules.md` §34。
+   - 剩余 3 条 `coreProvider` 里最大的债是 `core/data/.../entities`（33，`BaseSource` 的
+     `KeyValueStore` 15 / `SourceRuntime` 9 / `Logger` 5 / `CookieStore` 4）；另一条
+     `core/ui/.../widget/components`（2，`LoadMoreFooter` 的 `ClipboardProvider.current`）
+     等它随页面迁 designsystem 时一起做。
+     ⚠️ **这 33 条不能照搬 M2-2/M2-3 的原语方案**，侦察已确认两类硬约束（详见 §34「下一步」）：
+     ① 实现真的需要 host 实例（`AppDatabase` / okhttp `CookieManager`），而
+     `:core:platform` 的 actual 够不着 `:app` ⇒ 要么先让 `:core:data` 自己拥有库实例
+     （会连带动 `appDb` 全局，是里程碑级前置），要么接受一个新的共享层持有者（与「零 service
+     locator」冲突，必须显式决策）；② `Logger` 的实现是同名同义的 `:app` `constant.AppLog`，
+     它有 300+ 调用方且日志界面读 `AppLog.logs`，换成 `android.util.Log` 会**静默丢掉站内日志**。
+9. 将 `core:model` 的 `utils` 文件按领域改包改名；同一 PR 迁完调用方，不加 typealias façade。
+10. 把 `core:viewmodel` 的共享流程下沉为无 UI UseCase，迁四个 Feature 后删除模块。
+11. 以 rules/settings 为第一个 `core:data` 拆分样板；Feature 不再见 DAO/entity。
+12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
+13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 
 ## 6. 验证矩阵
 

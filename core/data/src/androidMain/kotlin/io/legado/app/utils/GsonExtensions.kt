@@ -241,3 +241,23 @@ class MapDeserializerDoubleAsIntFix :
     }
 
 }
+
+/**
+ * 解析 TXT 目录规则数组（M1-3y，供 `:feature:txttocrules` 的平台契约调用）。
+ *
+ * 为什么单独给两个函数、而不是让 Feature 直接 `GSON.fromJsonArray<TxtTocRule>`：
+ * [TxtTocRule] 需要旧版本备份的键名兼容（`rule` → `chapterRule`），这由 [GSON] 上注册的
+ * [txtTocRuleJsonDeserializer] 完成，而共享层的 `JsonCodec` **不含**该 deserializer。
+ * 本函数与 GSON 门面同居 `io.legado.app.utils`，因此引用 [GSON] 无需 import ——
+ * 这不是风格问题：G4 的 `gson` 规则按 `import io.legado.app.utils.GSON` 锚定并做目录级计数，
+ * 在已 import 它的文件之外新增使用会撑爆棘轮。放在这里既复用门面又不新增计分点。
+ *
+ * 失败语义与迁移前 `TxtTocRuleViewModel.parseImportRules` 一致：**抛异常**
+ * （调用方 `RuleTransferUseCase` 据此把导入状态置成 `Error`），不静默返回空。
+ */
+fun parseTxtTocRules(json: String): List<TxtTocRule> =
+    GSON.fromJsonArray<TxtTocRule>(json).getOrThrow()
+
+/** 解析单个 TXT 目录规则对象，语义同 [parseTxtTocRules]。 */
+fun parseTxtTocRule(json: String): TxtTocRule =
+    GSON.fromJsonObject<TxtTocRule>(json).getOrThrow()

@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.fromHttpTTSJson
 import io.legado.app.domain.model.readaloud.CloudTtsProviderType
@@ -78,6 +79,7 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @Composable
 fun CloudTtsScreen(
@@ -372,8 +374,12 @@ fun CloudTtsScreen(
             showHttpTtsUrlInput = false; onIntent(CloudTtsIntent.ImportHttpTtsSource(it))
         },
     )
+    // M2-1：导入对话框「编辑」页的字段拆解能力（原全局 ImportJsonEditorProvider 已删）。
+    val importJsonEditor: ImportJsonEditor = koinInject()
+
     BatchImportDialog(
         title = stringResource(R.string.import_tts),
+        importJsonEditor = importJsonEditor,
         importState = state.httpTtsImportState,
         onDismissRequest = { onIntent(CloudTtsIntent.CancelHttpTtsImport) },
         onToggleItem = { onIntent(CloudTtsIntent.ToggleHttpTtsImportSelection(it)) },

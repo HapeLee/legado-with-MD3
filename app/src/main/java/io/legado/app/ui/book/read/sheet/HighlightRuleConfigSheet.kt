@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.R
+import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.configNames
 import io.legado.app.ui.book.read.HighlightRuleConfigUiState
@@ -44,6 +45,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
+import org.koin.compose.koinInject
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -96,8 +98,12 @@ fun HighlightRuleConfigSheet(
         },
         allowExtensions = arrayOf("json", "txt"),
     )
+    // M2-1：导入对话框「编辑」页的字段拆解能力（原全局 ImportJsonEditorProvider 已删）。
+    val importJsonEditor: ImportJsonEditor = koinInject()
+
     BatchImportDialog(
         title = stringResource(R.string.highlight_rule_config),
+        importJsonEditor = importJsonEditor,
         importState = state.importState,
         onDismissRequest = { onIntent(ReadBookIntent.CancelHighlightRuleImport) },
         onToggleItem = {

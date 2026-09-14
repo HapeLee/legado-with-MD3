@@ -9,6 +9,7 @@ import android.webkit.WebSettings
 import io.legado.app.BuildConfig
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
+import io.legado.app.core.platform.APP_LOGGER_NAME
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.help.globalExecutor
 import org.koin.core.context.GlobalContext
@@ -52,8 +53,15 @@ object LogUtils {
         logger.log(Level.WARNING, "$tag $msg")
     }
 
+    /**
+     * 宿主日志框架的 logger。
+     *
+     * 名字取自共享层常量 [APP_LOGGER_NAME]：`:core:platform` 的 `PlatformLog`（供
+     * `AppLogStore` 写共享层日志）用的是同一个名字，因此两边写进同一个日志文件。
+     * 这两处必须共用常量，不要各自硬编码字符串。
+     */
     val logger: Logger by lazy {
-        Logger.getLogger("Legado")
+        Logger.getLogger(APP_LOGGER_NAME)
     }
 
     private var fileHandler: FileHandler? = null

@@ -1,14 +1,17 @@
 package io.legado.app.data.entities
 
+import io.legado.app.core.platform.AppLogStore
 import io.legado.app.core.platform.CookieStoreProvider
+import io.legado.app.core.platform.DeviceId
 import io.legado.app.core.platform.JsBindings
 import io.legado.app.core.platform.JsEngine
 import io.legado.app.core.platform.JsonCodec
 import io.legado.app.core.platform.KeyValueStoreProvider
-import io.legado.app.core.platform.LoggerProvider
 import io.legado.app.core.platform.SourceRuntimeProvider
-import io.legado.app.core.platform.SymmetricCryptoProvider
+import io.legado.app.core.platform.SymmetricCrypto
+import io.legado.app.core.platform.isOnMainThread
 import io.legado.app.data.entities.rule.RowUi
+import io.legado.app.data.rate.ConcurrentRateRegistry
 import io.legado.app.utils.has
 import kotlinx.coroutines.runBlocking
 
@@ -99,11 +102,11 @@ interface BaseSource {
                 JsonCodec.decodeStringMapStrict(json)?.let { map ->
                     putAll(map)
                 } ?: JsonCodec.decodeStringMap(json)?.let { map ->
-                    LoggerProvider.current.debug("请求头规则 JSON 格式不规范，请改为规范格式")
+                    AppLogStore.putDebug("请求头规则 JSON 格式不规范，请改为规范格式")
                     putAll(map)
                 }
             } catch (e: Exception) {
-                LoggerProvider.current.error("执行请求头规则出错\n$e", e)
+                AppLogStore.put("执行请求头规则出错\n$e", e)
             }
         }
         if (!has("User-Agent", true)) {
@@ -151,11 +154,11 @@ interface BaseSource {
      */
     fun getLoginInfo(): String? {
         try {
-            val key = SourceRuntimeProvider.current.androidId().encodeToByteArray(0, 16)
+            val key = DeviceId.value.encodeToByteArray(0, 16)
             val cache = KeyValueStoreProvider.current.get("userInfo_${getKey()}") ?: return null
-            return SymmetricCryptoProvider.current.decryptStr("AES", key, cache)
+            return SymmetricCrypto.decryptStr("AES", key, cache)
         } catch (e: Exception) {
-            LoggerProvider.current.error("获取登陆信息出错", e)
+            AppLogStore.put("获取登陆信息出错", e)
             return null
         }
     }
@@ -202,12 +205,12 @@ interface BaseSource {
      */
     fun putLoginInfo(info: String): Boolean {
         return try {
-            val key = SourceRuntimeProvider.current.androidId().encodeToByteArray(0, 16)
-            val encodeStr = SymmetricCryptoProvider.current.encryptBase64("AES", key, info)
+            val key = DeviceId.value.encodeToByteArray(0, 16)
+            val encodeStr = SymmetricCrypto.encryptBase64("AES", key, info)
             KeyValueStoreProvider.current.put("userInfo_${getKey()}", encodeStr)
             true
         } catch (e: Exception) {
-            LoggerProvider.current.error("保存登陆信息出错", e)
+            AppLogStore.put("保存登陆信息出错", e)
             false
         }
     }
@@ -276,7 +279,7 @@ interface BaseSource {
      * 刷新发现
      */
     fun refreshExplore() {
-        if (SourceRuntimeProvider.current.isMainThread()) {
+        if (isOnMainThread()) {
             error("refreshExplore must be called on a background thread")
         }
         runBlocking {
@@ -288,7 +291,7 @@ interface BaseSource {
      * 刷新JSLib
      */
     fun refreshJSLib() {
-        if (SourceRuntimeProvider.current.isMainThread()) {
+        if (isOnMainThread()) {
             error("refreshJSLib must be called on a background thread")
         }
         runBlocking {
@@ -300,7 +303,7 @@ interface BaseSource {
      * 设置并发率
      */
     fun putConcurrent(value: String) {
-        SourceRuntimeProvider.current.updateConcurrentRate(getKey(), value)
+        ConcurrentRateRegistry.update(getKey(), value)
     }
 
     /**

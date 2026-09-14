@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.service.BookSourceCheckService
 import io.legado.app.ui.qrcode.QrCodeResult
 import io.legado.app.ui.theme.LegadoTheme
@@ -78,6 +79,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.foundation.lazy.grid.items as gridItems
 
@@ -247,8 +249,12 @@ fun BookSourceScreen(
         onDismissRequest = { showOnlineImport = false },
         onConfirm = { text -> showOnlineImport = false; onIntent(BookSourceIntent.Import(text)) })
 
+    // M2-1：导入对话框「编辑」页的字段拆解能力（原全局 ImportJsonEditorProvider 已删）。
+    val importJsonEditor: ImportJsonEditor = koinInject()
+
     BatchImportDialog(
         title = stringResource(R.string.import_book_source),
+        importJsonEditor = importJsonEditor,
         importState = state.importState,
         onDismissRequest = {
             onIntent(BookSourceIntent.CancelImport)

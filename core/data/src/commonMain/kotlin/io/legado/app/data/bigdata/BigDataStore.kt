@@ -6,17 +6,19 @@ package io.legado.app.data.bigdata
  * 书源规则里超过 10000 字符的变量（见 [io.legado.app.model.analyzeRule.RuleDataInterface.putVariable]
  * 的大值分支）不进数据库，而是落到以「实体标识 + key」为路径的文件里。
  *
- * 原实现是 `:app` 的 `help.RuleBigDataHelp`，它同时依赖 `Context.externalFiles`、`MD5Utils`、
- * `FileUtils` 和 `appDb`，整体无法下沉。因此这里只抽出「读写大变量」这一件事，
- * 实现仍留在平台侧。
+ * **实现已在共享层（M2-2）**：[RuleDataFileStore] 直接实现本契约，只借助
+ * `core:platform` 的 [io.legado.app.core.platform.RuleDataStorage] 原语
+ * （根目录 + 文件 IO + MD5）——路径规则、目录分区、标记文件都在共享层。
  *
- * **为什么是 interface + composition root 注入，而不是 expect/actual**：
- * 存储根目录来自 Android `Context`，且实现复用 `:app` 的 `MD5Utils`/`FileUtils`
- * （`core:*` 不能反向依赖 `:app`）。按 AGENTS.md「可用普通接口 + DI 表达的能力，
- * 不使用 expect/actual」，这里走接口注入。
+ * **为什么不再是「接口 + 全局注入点」**：调用方是 Room entity 的实例方法
+ * （`BaseBook`/`BaseRssArticle`/`BookChapter` 的 `putBigVariable`），它们由 Room 构造、
+ * 不经过 DI，而方法名又是书源 JS 的兼容面（`AnalyzeRule` 里 `bindings["book"] = book`，
+ * 脚本直接调 `book.putVariable`），签名不能改。这类对象访问平台能力只有「全局
+ * service locator」或「平台原语」两条路；实现下沉共享层后，entity 直接引用
+ * [RuleDataFileStore]，两条都不要——既没有全局注入点，也没有「漏装配」缺口。
  *
- * **未注入时显式失败**：[BigDataStoreProvider.current] 在未安装时抛异常，
- * 不做静默空实现——平台能力不可用必须显式可见（AGENTS.md）。
+ * 平台差异只剩「根目录」一项，由 host 在 composition root 设置
+ * [io.legado.app.core.platform.RuleDataStorage.rootDir]，未设置时读写显式失败。
  */
 interface BigDataStore {
 
@@ -40,43 +42,6 @@ interface BigDataStore {
 
     /** 读取 RSS 文章级变量，不存在返回 `null`。 */
     fun getRssVariable(origin: String, link: String, key: String): String?
-}
-
-/**
- * [BigDataStore] 的注入点。
- *
- * 注意：调用方包括 Room entity 的实例方法（`BaseRssArticle.putBigVariable` 等），
- * 而 entity 由 Room 构造、不经过 DI，因此这里用全局 holder 而非构造函数注入——
- * 与 `:app` 的 `appDb` 同模式。平台侧在应用 composition root 注入一次即可。
- */
-object BigDataStoreProvider {
-
-    @Volatile
-    private var delegate: BigDataStore? = null
-
-    /** 注入平台实现；重复调用以最后一次为准。 */
-    fun install(store: BigDataStore) {
-        delegate = store
-    }
-
-    /** 移除已注入的实现，回到「未安装」状态；用于测试隔离。 */
-    fun uninstall() {
-        delegate = null
-    }
-
-    /** 是否已注入平台实现。 */
-    val isInstalled: Boolean get() = delegate != null
-
-    /**
-     * 当前实现。
-     *
-     * @throws IllegalStateException 未注入时抛出，提示调用方先完成 composition root 组装。
-     */
-    val current: BigDataStore
-        get() = delegate ?: error(
-            "BigDataStore 未安装：请在应用 composition root 调用 " +
-                "BigDataStoreProvider.install(...) 注入平台实现（Android 为 RuleBigDataHelp）。"
-        )
 }
 
 /**

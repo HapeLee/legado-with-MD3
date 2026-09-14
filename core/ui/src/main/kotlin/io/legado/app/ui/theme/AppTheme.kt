@@ -8,7 +8,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Density
@@ -70,7 +69,6 @@ private fun AppThemeActual(
 ) {
     val appShellSettings = configuration.appShell
     val themeSettings = configuration.theme
-    val context = LocalContext.current
     
     // 1. 获取基础配置
     val appThemeMode = ThemeResolver.resolveThemeMode(themeSettings.appTheme)
@@ -101,7 +99,7 @@ private fun AppThemeActual(
 
     // 4. 解析配色方案 (Material 3 ColorScheme)
     val colorScheme = remember(
-        context, appThemeMode, effectiveDarkTheme, isPureBlack, customPrimary, customNightPrimary,
+        appThemeMode, effectiveDarkTheme, isPureBlack, customPrimary, customNightPrimary,
         enableDeepPersonalization, customColors,
         paletteStyleValue, materialVersion, customContrast,
     ) {
@@ -121,7 +119,6 @@ private fun AppThemeActual(
         } else {
             val customSeedColor = if (effectiveDarkTheme) customNightPrimary else customPrimary
             ThemeEngine.getColorScheme(
-                context = context,
                 mode = appThemeMode,
                 darkTheme = effectiveDarkTheme,
                 isAmoled = isPureBlack,

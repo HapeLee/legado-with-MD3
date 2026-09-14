@@ -9,10 +9,15 @@ package io.legado.app.core.platform
  * 依赖 Gson，或者依赖 `:core:data` 才能拿到 app 配置好的 `GSON`——两条路都把 UI 层往数据层拽。
  *
  * 这里把「怎么拆字段、怎么回写」收敛成三个方法，JSON 树细节留在实现侧
- * （`:core:data/androidMain` 的 `GsonImportJsonEditor`，与 `GSON` 同模块），UI 只见值模型。
+ * （Android 侧是 `:core:data` 的 `GsonImportJsonEditor`，与 `GSON` 同模块），UI 只见值模型。
  *
  * **不是**通用 JSON 库抽象：只覆盖导入对话框「编辑」页的真实需求
  * （AGENTS.md「无调用方抽象」）。
+ *
+ * M2-1 起这个契约**不再有全局注入点**（原 `ImportJsonEditorProvider` 已删）：唯一的消费方
+ * `BatchImportDialog` 是 designsystem 的公共 API，由调用方把实现作为参数传进来，各 host 的
+ * composition root（`:app` 的 `appModule` / `host:desktop` 的 `desktopHostModule`）负责绑定。
+ * 这样通用 UI 组件库既不认识 service locator，也不需要为了拿实现而依赖数据层。
  */
 interface ImportJsonEditor {
 
@@ -55,29 +60,4 @@ sealed interface ImportFieldValue {
 
     /** JSON null：渲染为空单行。 */
     data object Null : ImportFieldValue
-}
-
-/**
- * [ImportJsonEditor] 的注入点。模式同 [ClipboardProvider]。
- */
-object ImportJsonEditorProvider {
-
-    @Volatile
-    private var delegate: ImportJsonEditor? = null
-
-    fun install(editor: ImportJsonEditor) {
-        delegate = editor
-    }
-
-    fun uninstall() {
-        delegate = null
-    }
-
-    val isInstalled: Boolean get() = delegate != null
-
-    val current: ImportJsonEditor
-        get() = delegate ?: error(
-            "ImportJsonEditor 未安装：请在应用 composition root 调用 " +
-                "ImportJsonEditorProvider.install(...) 注入平台实现。"
-        )
 }

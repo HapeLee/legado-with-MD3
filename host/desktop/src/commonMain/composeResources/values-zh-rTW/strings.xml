@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="desktop_home_title">規則管理</string>
+    <string name="desktop_open_dict_rules">詞典規則</string>
+    <string name="desktop_file_picker_unavailable">桌面端暫不支援檔案選擇</string>
+</resources>

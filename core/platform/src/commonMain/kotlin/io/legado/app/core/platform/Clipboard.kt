@@ -20,7 +20,7 @@ interface Clipboard {
 }
 
 /**
- * [Clipboard] 的注入点。模式同 [LoggerProvider]。
+ * [Clipboard] 的注入点。模式同 [KeyValueStoreProvider]。
  */
 object ClipboardProvider {
 

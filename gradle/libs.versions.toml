@@ -11,11 +11,18 @@ composeBom = "2026.08.00"
 # CMP 版本（声明处之一）。另一处是 build-logic 里 compose-gradle-plugin 的版本；
 # convention `legado.kmp.compose` 在配置期断言两处相等，漂了就失败。
 composeMultiplatform = "1.12.0"
-# CMP material3 的版本**不是**插件版本号，而是插件自带常量
-# `ComposeBuildConfig.composeMaterial3Version`，语义是「material3 的最新 stable」：
-# 目前只有 1.9.0 是 stable，1.10/1.11/1.12/1.13 全是 alpha——别凭"插件是 1.12.0"
-# 就往上挑 alpha。该值同样被 convention 断言。
-composeMultiplatformMaterial3 = "1.9.0"
+# CMP 模块 commonMain 用的 lifecycle 版本：与 android-only 侧的
+# `lifecycleViewmodelCompose` 同一个值，两条线在 Android 上收敛到同一套 androidx 实现。
+lifecycleKmp = "2.11.0"
+# CMP material3 的版本**不是**插件版本号。插件常量
+# `ComposeBuildConfig.composeMaterial3Version` 语义是「material3 的最新 stable」，目前停在
+# 1.9.0；但 1.9.0 把 expressive 系列（`MaterialExpressiveTheme` / `MotionScheme` /
+# `@ExperimentalMaterial3ExpressiveApi`）标成了 `internal`，跨模块用不了（编译报
+# "it is internal in file"）。上游源码实测的放开点：**1.10.0-alpha05** 起上述三个转 public，
+# **1.11.0-alpha07** 起有 `modalWindowInsets`，**1.12.0-alpha03** 起有 `rememberBottomSheetState`。
+# 因此这里**有意偏离插件常量**，取「满足全部 expressive 需求的最低版本」；该偏离不是随手挑
+# alpha，而是由 convention 的 `MATERIAL3_PIN` 显式登记并断言——改了这里却不同步登记就失败。
+composeMultiplatformMaterial3 = "1.12.0-alpha03"
 constraintlayoutCompose = "1.1.2"
 coreSplashscreen = "1.2.0"
 datastorePreferences = "1.2.1"
@@ -58,6 +65,19 @@ navigation3 = "1.2.0-beta01"
 navigationevent = "1.2.0-alpha04"
 markwon = "4.6.2"
 material = "1.14.0"
+# androidx material3，**只给 android-only 模块**用（app / core:ui / feature:*）。
+# 它的版本线与 **compose 版本线绑定**：本值属于 compose 1.12.0 线（与 `composeBom` /
+# `foundation` / `runtime` 同线）。⚠️ 既不要把它「以 CMP 为基准同步」，也不要为了「只留一个
+# 版本号」删掉本条改用 CMP 坐标——两条路都实测过（见 .workbuddy/memory/2026-09-10.md）：
+#   - CMP pin 停在 1.12.0-alpha03 ⇒ android 侧**降级**到 1.5.0-alpha22（`core:ui` 编译失败）；
+#   - CMP pin 抬到 1.13.0-alpha01 ⇒ material3 拿到 alpha27，但**整条 compose 栈被抬到
+#     1.13.0-alpha02**（`composeBom` 与各 pin 全失效，实测 `:app:dependencies`）。
+# 抬升的**准确归因**（2026-09-10 复测）：来自 **CMP 整条制品线同版本发布**——CMP material3 的
+# commonMain 元数据要求 `org.jetbrains.compose.foundation/runtime/ui` = 1.13.0-alpha01，其 android
+# 变体再转发给 androidx；**不是** androidx material3 自己要 1.13.0-alpha02（alpha27 的 android
+# 变体只要 compose **1.12.0-beta01**，所以本条其实可以独立小步升）。
+# 注意 alpha28 起 foundation 被要求到 1.13.0-alpha01，同样撕裂栈 ⇒ 要留在 1.12.0 线就止步 alpha27。
+# 两侧是**不同的版本体系**，数字永久不可能相等；现状自洽：android 侧只解析出一个 material3。
 material3 = "1.5.0-alpha23"
 material3IconsExtended = "1.7.8"
 materialKolor = "4.1.1"
@@ -130,10 +150,44 @@ androidx-navigationevent-compose = { module = "androidx.navigationevent:navigati
 compose-materialIcons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material3IconsExtended" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 # CMP（commonMain）用的 material3：**真 KMP 模块**，android/desktop/ios/js/wasm 都有产物；
-# 其 android 变体自己再委托给 `androidx.compose.material3:material3`（Google 那份），
-# 于是「在 android 上最终就是 AndroidX Material3」——平台解析由 CMP 负责，不用手工分支。
-# android-only 的模块继续用上面那条 androidx 坐标（version.ref = material3）。
+# 其 android 变体是**纯转发空壳**（classes.jar 里没有任何 material3 类），内部用 **`strictly`**
+# 委托 `androidx.compose.material3:material3`（Google 那份），于是「在 android 上最终就是
+# AndroidX Material3」——平台解析由 CMP 负责，不用手工分支。**那条 strictly 会钉死 androidx
+# 版本**，所以只在 CMP 模块里用本坐标；android-only 的模块走上面 `material3` 那条。
 compose-multiplatform-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMultiplatformMaterial3" }
+# CMP（commonMain）用的 animation：`modalBottomSheet/AppModalBottomSheet.kt` 要用
+# `Modifier.animateContentSize`（`androidx.compose.animation` 包的顶层扩展，M1-3h 搬入）。
+# foundation 会传递带上它，但按本仓「依赖只列实际用到的」约定显式声明，不赖传递闭包。
+compose-multiplatform-animation = { module = "org.jetbrains.compose.animation:animation", version.ref = "composeMultiplatform" }
+# CMP 多平台资源（`org.jetbrains.compose.resources`，M1-3j 引入）。CMP 模块的
+# `composeResources/` 目录由它编译/打包，生成 `Res` 访问器对象（包名在模块侧用
+# `compose.resources { packageOfResClass }` 显式指定）：
+#   - `@Composable fun stringResource(Res.string.x)` —— 替代 android-only 的
+#     `androidx.compose.ui.res.stringResource`（后者在 desktop 不存在）；
+#   - 版本必须与 CMP 插件严格同线，故 ref `composeMultiplatform`（convention 已在
+#     配置期断言该值等于插件常量）；
+#   - **不参与 Android 资源合并**：`composeResources/values*` 打进 assets 由 Res 读取，
+#     与被 app 覆盖无关，所以共享层必须自带全部语言目录，不能只放默认值。
+compose-multiplatform-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
+# CMP UI 测试（`org.jetbrains.compose.ui:ui-test-*`），M1-4 引入。
+# 用途：`desktopTest` 里用 `runComposeUiTest` 真实渲染 commonMain 的 CMP 代码并断言，
+# 让 desktop 证据不再止于「能编译」。三个注意点：
+#   - 版本 ref `composeMultiplatform`：必须与 CMP 插件严格同线（理由同 resources）；
+#   - 只有 `ui-test-junit4`（JUnit4 驱动）。CMP **没有** AndroidX 那套
+#     `createComposeRule` / `ComposeContentTestRule`，用的是 `runComposeUiTest`；
+#   - desktop 上还要配 `compose.desktop.currentOs` 提供 Skiko 渲染运行时，否则测不出画面。
+compose-multiplatform-ui-test-junit4 = { module = "org.jetbrains.compose.ui:ui-test-junit4", version.ref = "composeMultiplatform" }
+# CMP（commonMain）用的 lifecycle：**这就是坐标本身，KMP 发布带 `-desktop` 变体**
+# （与 `androidx-lifecycle-viewmodel` 那条 `-android` 后端壳不同，后者只能给
+# android-only 模块）。M1-3w 引入：tagrules 的 VM 在 commonMain，要
+# `ViewModel` / `viewModelScope` 与 `collectAsStateWithLifecycle`（Route 侧）。
+# ⚠️ 别换 `org.jetbrains.androidx.lifecycle` 那套 CMP 移植坐标：它 2.9.6 的元数据
+# `requires androidx.lifecycle:…:2.9.4`，而本地只有 2.11.0 的 `-desktop` jar，
+# 会去网上拉 2.9.4（内网/代理不可用时直接解析失败）。本仓已有的这一条 2.11.0
+# 与 Android 侧版本同号，desktop 变体（`lifecycle-viewmodel-desktop` /
+# `lifecycle-runtime-compose-desktop`）实测三件齐全。
+androidx-lifecycle-viewmodel-kmp = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycleKmp" }
+androidx-lifecycle-runtime-compose-kmp = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleKmp" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
@@ -262,6 +316,10 @@ timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "tim
 # `:core:ui`、`:app` 这类 Android 模块用。
 miuix-core = { module = "top.yukonga.miuix.kmp:miuix-core", version.ref = "miuix" }
 miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }
+# `AppIcons`（已进 `:core:designsystem` commonMain）要 `MiuixIcons` 与 `icon.extended.*`，
+# 它们只在 miuix-icons 里。0.9.3 的 Maven Central `.module` 实测含 desktopApiElements-published
+# （available-at: miuix-icons-desktop）与 androidApiElements-published，故不带后缀的 KMP 坐标可用。
+miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
 miuix-blur-android = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
 miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
 miuix-preference-android = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }

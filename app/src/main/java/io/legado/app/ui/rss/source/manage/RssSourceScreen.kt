@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.util.plainTextClipEntry
@@ -51,6 +52,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -208,8 +210,12 @@ fun RssSourceScreen(
         allowExtensions = arrayOf("json")
     )
 
+    // M2-1：导入对话框「编辑」页的字段拆解能力（原全局 ImportJsonEditorProvider 已删）。
+    val importJsonEditor: ImportJsonEditor = koinInject()
+
     BatchImportDialog(
         title = stringResource(R.string.import_rss_source),
+        importJsonEditor = importJsonEditor,
         importState = importState,
         onDismissRequest = { onIntent(RssSourceIntent.CancelImport) },
         onToggleItem = { onIntent(RssSourceIntent.ToggleImportItem(it)) },

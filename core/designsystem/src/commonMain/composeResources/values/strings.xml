@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  :core:designsystem 的跨端字符串（M1-3j 起）。由 CMP 的 `org.jetbrains.compose.resources`
+  编译，生成 `Res` 访问器（包名见 build.gradle.kts 的 `compose.resources { packageOfResClass }`）。
+
+  ⚠️ 与 `:core:ui` 的 Android res **语义不同**：这里打进 assets 由 Res 读取，
+  **不参与 Android 资源合并**，app 侧同名 `strings.xml` 覆盖不到它。
+  所以每个支持的语言都必须在本目录下有对应文件，不能只放默认值。
+
+  内容从 `:core:ui/src/main/res/values*` 逐条原样搬入（值逐字节一致，
+  已核对与 app 侧同名资源的值也一致，故无用户可见变化）。
+  只放当前已被共享组件实际引用的条目；新增引用时同步补。
+-->
+<resources>
+    <string name="menu">Menu</string>
+    <string name="a11y_move_down">Move down</string>
+    <string name="a11y_move_up">Move up</string>
+    <string name="more_actions">More Actions</string>
+    <string name="select_all">Select all</string>
+    <string name="invert_selection">Invert Selection</string>
+    <string name="more_menu">More menu</string>
+    <string name="edit">Edit</string>
+    <string name="select_operation">Select an operation</string>
+    <string name="sys_folder_picker">System folder picker</string>
+    <string name="sys_file_picker">System file picker</string>
+    <string name="multi_select_items">Multi-select Items</string>
+    <string name="manual_input">Manual Input</string>
+    <string name="upload_url">upload URL</string>
+    <string name="back">Back</string>
+    <string name="cancel_select">Cancel Selection</string>
+    <string name="list_loading_title">Please wait…</string>
+    <string name="list_selected_count">Selected %1$d/%2$d</string>
+    <string name="search">Search</string>
+    <string name="search_placeholder">Search…</string>
+    <string name="add">Add</string>
+    <string name="delete">Delete</string>
+    <string name="sure_del">Are you sure to delete it?</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="select_count">(%1$d/%2$d)</string>
+    <string name="loading">Loading…</string>
+    <string name="import_status_update">Update</string>
+    <string name="import_status_new">New</string>
+    <string name="import_status_existing">Existing</string>
+    <string name="import_status_error">Error</string>
+    <string name="import_action">Import</string>
+    <string name="history_label">History:</string>
+    <string name="error">Error</string>
+    <string name="edit_not_supported">Editing not supported</string>
+    <string name="details">Details</string>
+    <string name="deselect_all">Deselect All</string>
+    <string name="group_manage">Group Management</string>
+    <string name="close">Close</string>
+    <string name="name">Name</string>
+    <string name="test">Test</string>
+    <string name="copy_rule">Copy Rule</string>
+    <string name="paste_rule">Paste Rule</string>
+    <string name="regex_is_empty">Regex is empty</string>
+    <string name="example_is_empty">Example is empty</string>
+    <string name="invalid_regex">Invalid regex</string>
+    <string name="action_save">Save</string>
+</resources>

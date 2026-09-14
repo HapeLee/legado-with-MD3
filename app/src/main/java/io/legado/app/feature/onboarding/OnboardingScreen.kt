@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -324,7 +323,6 @@ private fun BookFolderPage(state: OnboardingUiState, onIntent: (OnboardingIntent
 
 @Composable
 private fun ThemePage(state: OnboardingUiState, onIntent: (OnboardingIntent) -> Unit) {
-    val context = LocalContext.current
     val isDark = LegadoTheme.isDark
     val themeItems = stringArrayResource(R.array.themes_item)
     val themeValues = stringArrayResource(R.array.themes_value)
@@ -344,7 +342,6 @@ private fun ThemePage(state: OnboardingUiState, onIntent: (OnboardingIntent) -> 
         }
         Box(modifier = Modifier.padding(top = 16.dp)) {
             ThemeColorSelector(
-                context = context,
                 themes = themes,
                 selectedTheme = state.theme.appTheme,
                 isDark = isDark,

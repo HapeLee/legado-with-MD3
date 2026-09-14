@@ -13,7 +13,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.rule.*
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.ReplaceAnalyzer
+import io.legado.app.data.rules.ReplaceAnalyzer
 import io.legado.app.utils.*
 import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx

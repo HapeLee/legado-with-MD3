@@ -15,7 +15,7 @@ appCtx|app/main/io/legado/app/exception|1
 appCtx|app/main/io/legado/app/feature/onboarding|1
 appCtx|app/main/io/legado/app/feature/reader/legacy|3
 appCtx|app/main/io/legado/app/feature/reader/platform|2
-appCtx|app/main/io/legado/app/help|10
+appCtx|app/main/io/legado/app/help|9
 appCtx|app/main/io/legado/app/help/book|3
 appCtx|app/main/io/legado/app/help/coil|1
 appCtx|app/main/io/legado/app/help/config|6
@@ -134,10 +134,6 @@ gson|app/main/io/legado/app/ui/widget/components/text|1
 gson|app/main/io/legado/app/ui/widget/dialog|1
 gson|app/main/io/legado/app/web/socket|1
 gson|core/data/androidMain/io/legado/app/data/json|1
-gson|feature/dict/main/io/legado/app/feature/dict/rule|1
-gson|feature/replacerules/main/io/legado/app/feature/replacerules|1
-gson|feature/replacerules/main/io/legado/app/feature/replacerules/edit|1
-gson|feature/txttocrules/main/io/legado/app/feature/txttocrules|1
 legacyHelp|app/main/io/legado/app|25
 legacyHelp|app/main/io/legado/app/api/controller|7
 legacyHelp|app/main/io/legado/app/base|6
@@ -153,15 +149,15 @@ legacyHelp|app/main/io/legado/app/di|5
 legacyHelp|app/main/io/legado/app/domain/usecase|30
 legacyHelp|app/main/io/legado/app/feature/onboarding|3
 legacyHelp|app/main/io/legado/app/feature/reader/legacy|5
-legacyHelp|app/main/io/legado/app/help|35
-legacyHelp|app/main/io/legado/app/help/book|2
+legacyHelp|app/main/io/legado/app/help|33
+legacyHelp|app/main/io/legado/app/help/book|1
 legacyHelp|app/main/io/legado/app/help/coil|1
 legacyHelp|app/main/io/legado/app/help/config|1
 legacyHelp|app/main/io/legado/app/help/exoplayer|1
 legacyHelp|app/main/io/legado/app/help/http|21
 legacyHelp|app/main/io/legado/app/help/readaloud/playback|1
 legacyHelp|app/main/io/legado/app/help/source|5
-legacyHelp|app/main/io/legado/app/help/storage|21
+legacyHelp|app/main/io/legado/app/help/storage|20
 legacyHelp|app/main/io/legado/app/help/update|5
 legacyHelp|app/main/io/legado/app/help/webView|2
 legacyHelp|app/main/io/legado/app/lib/cronet|11
@@ -180,7 +176,7 @@ legacyHelp|app/main/io/legado/app/model/webBook|16
 legacyHelp|app/main/io/legado/app/receiver|1
 legacyHelp|app/main/io/legado/app/service|26
 legacyHelp|app/main/io/legado/app/ui/about|5
-legacyHelp|app/main/io/legado/app/ui/association|35
+legacyHelp|app/main/io/legado/app/ui/association|34
 legacyHelp|app/main/io/legado/app/ui/book/audio|7
 legacyHelp|app/main/io/legado/app/ui/book/cache/manage|4
 legacyHelp|app/main/io/legado/app/ui/book/changesource|3
@@ -193,7 +189,7 @@ legacyHelp|app/main/io/legado/app/ui/book/read/sheet|6
 legacyHelp|app/main/io/legado/app/ui/book/readaloud/cloudtts|7
 legacyHelp|app/main/io/legado/app/ui/book/readaloud/player|2
 legacyHelp|app/main/io/legado/app/ui/book/source/debug|1
-legacyHelp|app/main/io/legado/app/ui/book/source/edit|9
+legacyHelp|app/main/io/legado/app/ui/book/source/edit|8
 legacyHelp|app/main/io/legado/app/ui/book/source/manage|6
 legacyHelp|app/main/io/legado/app/ui/book/toc|7
 legacyHelp|app/main/io/legado/app/ui/book/toc/rule/preview|1
@@ -221,8 +217,13 @@ legacyHelp|app/main/io/legado/app/ui/widget/components/image/cover|1
 legacyHelp|app/main/io/legado/app/ui/widget/components/image/sourceIcon|1
 legacyHelp|app/main/io/legado/app/ui/widget/dialog|15
 legacyHelp|app/main/io/legado/app/utils|16
-legacyHelp|core/viewmodel/main/io/legado/app/base|1
-legacyHelp|feature/replacerules/main/io/legado/app/feature/replacerules|1
+# M1-3u：`:core:viewmodel` 从 Android library 转成 KMP，`base/BaseViewModel.kt`
+# 与 `base/BaseRuleViewModel.kt` 整批从 `src/main` 挪到 `src/androidMain`，下面这条 key
+# 只是**跟着文件换了源集目录**（`main` → `androidMain`），计数仍是 1
+# （`BaseViewModel.kt:7` 的 `import io.legado.app.help.coroutine.Coroutine`）。
+# 它不是新增债：`Coroutine` 已随本模块下沉，这已是同模块内的跨包引用。待 `help/coroutine`
+# 一并迁出 `io.legado.app.help.*` 包名后，本条应归零删除。
+legacyHelp|core/viewmodel/androidMain/io/legado/app/base|1
 legacyBase|app/main/io/legado/app/di|2
 legacyBase|app/main/io/legado/app/help|1
 legacyBase|app/main/io/legado/app/lib/prefs|3
@@ -255,19 +256,15 @@ legacyBase|app/main/io/legado/app/ui/rss/source/manage|2
 legacyBase|app/main/io/legado/app/ui/welcome|1
 legacyBase|app/main/io/legado/app/ui/widget|2
 legacyBase|app/main/io/legado/app/ui/widget/dialog|1
-legacyBase|feature/dict/main/io/legado/app/feature/dict/rule|2
-legacyBase|feature/replacerules/main/io/legado/app/feature/replacerules|3
-legacyBase|feature/txttocrules/main/io/legado/app/feature/txttocrules|2
-legacyNaming|app/main/io/legado/app|6
+legacyNaming|app/main/io/legado/app|5
 legacyNaming|app/main/io/legado/app/api/controller|3
 legacyNaming|app/main/io/legado/app/base|4
-legacyNaming|app/main/io/legado/app/constant|1
 legacyNaming|app/main/io/legado/app/data/entities|4
 legacyNaming|app/main/io/legado/app/data/repository|14
 legacyNaming|app/main/io/legado/app/data/repository/manga|6
 legacyNaming|app/main/io/legado/app/domain/usecase|15
-legacyNaming|app/main/io/legado/app/help|23
-legacyNaming|app/main/io/legado/app/help/book|10
+legacyNaming|app/main/io/legado/app/help|21
+legacyNaming|app/main/io/legado/app/help/book|9
 legacyNaming|app/main/io/legado/app/help/coil|2
 legacyNaming|app/main/io/legado/app/help/config|8
 legacyNaming|app/main/io/legado/app/help/http|4
@@ -317,12 +314,30 @@ legacyNaming|app/main/io/legado/app/ui/widget/components/log|1
 legacyNaming|app/main/io/legado/app/ui/widget/text|2
 legacyNaming|app/main/io/legado/app/utils|2
 legacyNaming|app/main/io/legado/app/web|1
-coreProvider|app/main/io/legado/app|2
-coreProvider|app/main/io/legado/app/help|8
-coreProvider|core/data/commonMain/io/legado/app/data|2
-coreProvider|core/data/commonMain/io/legado/app/data/entities|45
+# M2-2：`App.kt` 不再 `BigDataStoreProvider.install(RuleBigDataHelp)`，改为在
+# composition root 直接设置平台原语 `RuleDataStorage.rootDir`。原 key
+# `coreProvider|app/main/io/legado/app` 已归零故删除。
+# M2-4a 删掉 `LoggerProvider.install`，但 M2-4c 把 `MimeTypeResolver` / `NinePatchLoader` 补进名单后，
+# 该文件里两条**既有**的 `.install(...)` 首次被计入 ⇒ 6 → 7。这是测量修正，不是新增债。
+coreProvider|app/main/io/legado/app/help|7
+# M2-2：`BigDataStore` 实现下沉共享层（`RuleDataFileStore`），静态委托
+# `BigDataStoreProvider` 删除；三个 entity（BaseBook/BaseRssArticle/BookChapter）
+# 改为直接引用共享实现。entities 区域 coreProvider 45→36。
+# M2-4a/M2-4b：`BaseSource.kt` 的 `LoggerProvider`（4 调用 + 1 import）清退，`SourceRuntimeProvider` 的
+# `androidId`×2 / `isMainThread`×2 / `updateConcurrentRate`×1 改走平台原语与共享实现
+# （`DeviceId` / `isOnMainThread` / `ConcurrentRateRegistry`）⇒ 33 → 23。
+# 剩下 23 = `KeyValueStoreProvider` 15 + `SourceRuntimeProvider` 4（import + getShareScope/removeJsLib/clearExploreKindsCache）
+# + `CookieStoreProvider` 4。KV/Cookie 两组仍卡在「内存 LRU 与 CookieManager 归属」这条里程碑级闸门上。
+coreProvider|core/data/commonMain/io/legado/app/data/entities|23
+# M1-3t：`importComponents/ImportComponents.kt` 整文件从 `:core:ui`（Android library）搬进
+# `:core:designsystem/commonMain`，下面这条 key 只是**跟着文件换了区域**，计数仍是 2
+# （= import 行 + 使用行，同一个 `ImportJsonEditorProvider.current`）；原 key
+# `core/ui/main/.../importComponents` 已归零故删除。它不是新增债：全仓仅此一处使用，
+# 清 `ImportJsonEditor` 静态 Provider 属 Backlog 第 8 项，届时本条应连带归零删除。
 coreProvider|core/ui/main/io/legado/app/ui/widget/components|2
-coreProvider|core/ui/main/io/legado/app/ui/widget/components/importComponents|2
-coreProvider|feature/dict/main/io/legado/app/feature/dict/rule|3
-coreProvider|feature/replacerules/main/io/legado/app/feature/replacerules/edit|5
-coreProvider|feature/txttocrules/main/io/legado/app/feature/txttocrules|5
+# M2-4c：补齐 `coreProvider` 名单（MimeTypeResolver / NinePatchLoader）后首次现形的**既有**用法。
+# 不是新增债：`FilePickerSheet` 与 `AppContainerBackground` 早就在 `:core:designsystem/commonMain`
+# 读这两个 Provider，只是名单漏了它们、门禁一直没看见（原来谁用都被静默放过）。
+# 清退方向是参数注入（M2-1 的手法），属独立切片；此处先显式登记，以免继续静默增长。
+coreProvider|core/designsystem/commonMain/io/legado/app/ui/widget/components|2
+coreProvider|core/designsystem/commonMain/io/legado/app/ui/widget/components/filePicker|2

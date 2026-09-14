@@ -25,7 +25,6 @@
     <string name="color_value">Color Value</string>
     <string name="confirm">Confirm</string>
     <string name="confirm_delete_bookmark">Delete bookmark?</string>
-    <string name="copy_rule">Copy Rule</string>
     <string name="copy_text">Copy</string>
     <string name="count_unit">times</string>
     <string name="day">Day</string>
@@ -40,9 +39,7 @@
     <string name="enable_selection">Enable selected</string>
     <string name="error">Error</string>
     <string name="error_details">Error Details</string>
-    <string name="example_is_empty">Example is empty</string>
     <string name="expand">Expand</string>
-    <string name="group_manage">Group Management</string>
     <string name="history_label">History:</string>
     <string name="import_action">Import</string>
     <string name="import_status_error">Error</string>
@@ -50,7 +47,6 @@
     <string name="import_status_new">New</string>
     <string name="import_status_update">Update</string>
     <string name="input_value_range">Enter value (%1$d-%2$d)</string>
-    <string name="invalid_regex">Invalid regex</string>
     <string name="invert_selection">Invert Selection</string>
     <string name="less_count">Less(</string>
     <string name="list_loading_title">Please wait…</string>
@@ -65,15 +61,12 @@
     <string name="more_count">More(</string>
     <string name="more_menu">More menu</string>
     <string name="multi_select_items">Multi-select Items</string>
-    <string name="name">Name</string>
     <string name="night">Night</string>
     <string name="no_earlier_data">No earlier data</string>
     <string name="no_more_data">No more data</string>
     <string name="ok">OK</string>
-    <string name="paste_rule">Paste Rule</string>
     <string name="pull_to_refresh">Pull to refresh</string>
     <string name="refreshing">Refreshing</string>
-    <string name="regex_is_empty">Regex is empty</string>
     <string name="release_to_refresh">Release to refresh</string>
     <string name="reload">Reload</string>
     <string name="reset">Reset</string>
@@ -88,7 +81,6 @@
     <string name="sure_del">Are you sure to delete it?</string>
     <string name="sys_file_picker">System file picker</string>
     <string name="sys_folder_picker">System folder picker</string>
-    <string name="test">Test</string>
     <string name="text_default">Default</string>
     <string name="timeline">Timeline</string>
     <string name="upload_url">upload URL</string>

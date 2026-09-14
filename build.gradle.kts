@@ -413,9 +413,13 @@ abstract class CheckLegacyArchitectureTask : DefaultTask() {
                 RegexOption.MULTILINE,
             ),
         )
+        // M2-4c 补齐名单：`MimeTypeResolver` 与 `NinePatchLoader` 的 Provider 确实存在于
+        // `core/platform/commonMain`（M1-3n / M1-3p 加的，晚于本名单），此前任何调用点
+        // 都被静默放过。补上后 `:core:designsystem` 里两处既有用法会首次现形，
+        // 已在基线中显式登记（不是新增债，是测量修正）。
         val providerUse = Regex(
             """\b(Clipboard|CookieStore|ImportJsonEditor|KeyValueStore|Logger|SourceRuntime""" +
-                """|SymmetricCrypto|Toaster|BigDataStore)Provider\b"""
+                """|SymmetricCrypto|Toaster|BigDataStore|MimeTypeResolver|NinePatchLoader)Provider\b"""
         )
         val providerDeclaration = Regex("""\bobject\s+([A-Za-z0-9_]*Provider)\b""")
         // legacy 大本营：这些目录本身就是待下沉/待删除的债主体，其内部浮动只警告不失败，
@@ -558,8 +562,11 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             // 不属 UI 层债务：替换规则的排序偏好由 :app 侧 impl 持有，契约侧只见 String。
             "io/legado/app/domain/gateway/AndroidReplaceRuleSettingsGateway.kt" to 2,
             // 已清零：排序模式改走 ReplaceRuleSettingsGateway。
-            // 保留 0 值条目让棘轮继续盯着——VM 里再出现偏好直连会立即报红。
-            "io/legado/app/feature/replacerules/ReplaceRuleViewModel.kt" to 0,
+            // ⚠️ M1-3x 起 `ReplaceRuleViewModel.kt` 连同 `:feature:replacerules` 整体迁出
+            // `app/src/main/java`，本门禁只扫该目录 ⇒ 它已不在覆盖面内，原来的 0 值条目
+            // 成了指向不存在文件的死条目，随迁移删除（不保留假覆盖）。该文件现在由
+            // `feature/replacerules` 自己的源集编译，偏好直连已被编译期契约
+            // （`ReplaceRuleSettingsGateway`）挡住。
             "io/legado/app/help/config/LocalConfig.kt" to 3,
             "io/legado/app/help/config/ThemeConfigStore.kt" to 8,
             "io/legado/app/help/storage/Restore.kt" to 2,
@@ -623,12 +630,45 @@ val checkSharedPurity = tasks.register<CheckSharedPurityTask>(
             "smoke/room-kmp-probe" to "data", // commonMain import androidx.room
             "smoke/network-kmp-probe" to "data", // commonMain 用 io.ktor
             "core/model" to "pure",
+            // M1-3u：`:core:viewmodel` 从 Android library 转成 KMP。它的 `commonMain` 只放
+            // `io.legado.app.core.rules.*`（规则导入/导出协议），`base/`（要 `Application`/`Uri`
+            // / `viewModelScope`）与 `help/coroutine/` 落到 `androidMain`。按 **pure** 登记
+            // 是故意取严：`commonMain` 里不允许出现任何 `androidx.*`，而 data / cmp
+            // 两种类型都会放行一部分 androidx。
+            "core/viewmodel" to "pure",
             // M1-2：转真 CMP（convention `legado.kmp.compose`），Compose 进 commonMain。
             // 应用该 convention 的模块必须在这里登记 "cmp"，两者成对出现，否则 G2 拦。
             "core/designsystem" to "cmp",
+            // M1-3w：**首个转 CMP 的 Feature 模块**——Contract / ViewModel / Screen / EditSheet
+            // 全进 commonMain（Route 留 androidMain）。与 `legado.kmp.compose` 成对出现。
+            "feature/tagrules" to "cmp",
+            // M1-3x：第二个转 CMP 的 Feature（本模块的 VM 比 tagrules 脏：三个 VM 都曾继承
+            // 吃 `Application` 的 `BaseRuleViewModel`，还有 `Uri`/`GSON`/jsonpath 直连）。
+            // commonMain 里 `:core:ui` 被彻底移出——它只在 androidMain 的两个 Route 里出现。
+            "feature/replacerules" to "cmp",
+            // M1-3y：第三个转 CMP 的 Feature（前置 M1-3x-pre 已把 `RuleEditSheet` 与
+            // `ContentProcessUiState` 上提到 designsystem）。与 replacerules 的主要差异：
+            // `TxtTocRule` 带旧键名（`rule` → `chapterRule`）的兼容 deserializer，而共享层的
+            // `JsonCodec` 不含它 ⇒ 抽了平台契约 `TxtTocRuleImportCompat`（Android 实现委托
+            // GSON 门面）；另外它的 VM 内三处文案原本走 `context.getString`，改用 CMP
+            // `getString` 保留本地化。
+            "feature/txttocrules" to "cmp",
+            // M1-3z：第四个转 CMP 的 Feature（本批最干净的一个）。它只需 `rule` 子域——
+            // 「词典查询面板」是 platform island（`DictRule.search` 依赖 app 独有的
+            // AnalyzeRule 引擎），本来就不在本模块、留 `:app`。与 txttocrules 的关键差异：
+            // `DictRule` 在 GSON 门面上没有自定义 deserializer ⇒ **不需要平台契约**，
+            // 导入解析直接在共享层用 `JsonCodec`。它也没有「本书状态」流，uiState 仍是
+            // 迁移前那 5 流单次 `combine`（不像 replacerules 需要两级嵌套）。
+            "feature/dict" to "cmp",
             "feature/reader/core" to "pure",
             "smoke/kmp-probe" to "pure",
             "smoke/rhino-capability-probe" to "pure",
+            // M1-4 前置探针：验证 CMP 代码能在 desktop 上被真实渲染并断言（不只是编译）。
+            // 登记为 cmp 是因为它 apply `legado.kmp.compose` —— 两者必须成对出现，否则 G2 拦。
+            "smoke/compose-desktop-probe" to "cmp",
+            // M1-4：最小 Desktop host。它 apply `legado.kmp.compose`（要 CMP 的 desktop
+            // 渲染与资源运行时），故按 cmp 登记——登记与插件必须成对，否则 G2 拦。
+            "host/desktop" to "cmp",
         )
     )
     // 自动发现全仓 KMP 模块的 commonMain 源码：新增 KMP 模块无需改此配置即可被覆盖。

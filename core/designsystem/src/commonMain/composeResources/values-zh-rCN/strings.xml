@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  :core:designsystem 的跨端字符串（M1-3j 起）。由 CMP 的 `org.jetbrains.compose.resources`
+  编译，生成 `Res` 访问器（包名见 build.gradle.kts 的 `compose.resources { packageOfResClass }`）。
+
+  ⚠️ 与 `:core:ui` 的 Android res **语义不同**：这里打进 assets 由 Res 读取，
+  **不参与 Android 资源合并**，app 侧同名 `strings.xml` 覆盖不到它。
+  所以每个支持的语言都必须在本目录下有对应文件，不能只放默认值。
+
+  内容从 `:core:ui/src/main/res/values*` 逐条原样搬入（值逐字节一致，
+  已核对与 app 侧同名资源的值也一致，故无用户可见变化）。
+  只放当前已被共享组件实际引用的条目；新增引用时同步补。
+-->
+<resources>
+    <string name="menu">菜单</string>
+    <string name="a11y_move_down">下移</string>
+    <string name="a11y_move_up">上移</string>
+    <string name="more_actions">更多操作</string>
+    <string name="select_all">全选</string>
+    <string name="invert_selection">反选</string>
+    <string name="more_menu">更多菜单</string>
+    <string name="edit">编辑</string>
+    <string name="select_operation">选择操作</string>
+    <string name="sys_folder_picker">系统文件夹选择器</string>
+    <string name="sys_file_picker">系统文件选择器</string>
+    <string name="multi_select_items">多选项目</string>
+    <string name="manual_input">输入URL</string>
+    <string name="upload_url">上传 URL</string>
+    <string name="back">返回</string>
+    <string name="cancel_select">取消选择</string>
+    <string name="list_loading_title">请稍后…</string>
+    <string name="list_selected_count">已选择 %1$d/%2$d</string>
+    <string name="search">搜索</string>
+    <string name="search_placeholder">搜索…</string>
+    <string name="add">添加</string>
+    <string name="delete">删除</string>
+    <string name="sure_del">是否确认删除?</string>
+    <string name="ok">确认</string>
+    <string name="cancel">取消</string>
+    <string name="select_count">已选 %1$d / %2$d</string>
+    <string name="loading">加载中…</string>
+    <string name="import_status_update">更新</string>
+    <string name="import_status_new">新增</string>
+    <string name="import_status_existing">已有</string>
+    <string name="import_status_error">错误</string>
+    <string name="import_action">导入</string>
+    <string name="history_label">历史记录:</string>
+    <string name="error">错误</string>
+    <string name="edit_not_supported">不支持编辑</string>
+    <string name="details">详情</string>
+    <string name="deselect_all">全不选</string>
+    <string name="group_manage">分组管理</string>
+    <string name="close">关闭</string>
+    <string name="name">名称</string>
+    <string name="test">测试</string>
+    <string name="copy_rule">拷贝规则</string>
+    <string name="paste_rule">粘贴规则</string>
+    <string name="regex_is_empty">正则表达式为空</string>
+    <string name="example_is_empty">示例为空</string>
+    <string name="invalid_regex">正则表达式无效</string>
+    <string name="action_save">保存</string>
+</resources>

@@ -17,6 +17,7 @@ import com.google.android.material.color.DynamicColorsOptions
 import com.script.rhino.ReadOnlyJavaObject
 import com.script.rhino.RhinoScriptEngine
 import com.script.rhino.RhinoWrapFactory
+import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.channelIdBookSourceCheck
 import io.legado.app.core.viewmodel.DebugFlags
 import io.legado.app.constant.AppConst.channelIdDownload
@@ -24,7 +25,9 @@ import io.legado.app.constant.AppConst.channelIdReadAloud
 import io.legado.app.constant.AppConst.channelIdWeb
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
-import io.legado.app.data.bigdata.BigDataStoreProvider
+import io.legado.app.core.platform.DeviceId
+import io.legado.app.core.platform.LogSettings
+import io.legado.app.core.platform.RuleDataStorage
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -53,7 +56,7 @@ import io.legado.app.help.JsExtProvider
 import io.legado.app.help.JsExtFactory
 import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.PlatformServices
-import io.legado.app.help.RuleBigDataHelp
+import io.legado.app.help.RuleDataCleaner
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.AppConfig
@@ -69,11 +72,12 @@ import io.legado.app.help.rhino.NativeBaseSource
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.theme.primaryColor
-import io.legado.app.ui.theme.ThemeSeedColors
+import io.legado.app.ui.theme.installAndroidThemePlatform
 import io.legado.app.model.BookCover
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.FirebaseManager
 import io.legado.app.utils.LogUtils
+import io.legado.app.utils.externalFiles
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isDebuggable
@@ -177,19 +181,30 @@ class App : Application(), SingletonImageLoader.Factory {
             }
         }
         super.onCreate()
-        // 大变量存储必须在任何书源规则求值之前注入：entity 的实例方法
+        // 大变量存储的根目录必须在任何书源规则求值之前设置：entity 的实例方法
         // （BaseRssArticle/BaseBook/BookChapter 的 putBigVariable/getBigVariable）
-        // 会同步读取它，未注入时契约显式抛异常。
-        BigDataStoreProvider.install(RuleBigDataHelp)
-        // BaseSource 已下沉 core:data，其方法体经 KeyValueStore/CookieStore/SymmetricCrypto/
-        // Logger/SourceRuntime 五契约访问平台能力，这里注入 app 侧实现。
+        // 会同步读它，未设置时显式抛异常。存储实现本身已在 :core:data 的
+        // RuleDataFileStore（共享层），这里只提供 Context 才能给出的路径。
+        RuleDataStorage.rootDir = File(appCtx.externalFiles, "ruleData").absolutePath
+        // M2-4b：设备标识。共享层（BaseSource 的登录信息 AES 密钥、DatabaseMigrations
+        // 的 readRecord 迁移）只能拿到字符串、拿不到 ContentResolver，故由 host 提供；
+        // 与 rootDir 同一处设置，且必须在任何书源规则求值之前。
+        DeviceId.value = AppConst.androidId
+        // M2-4a：共享层日志缓冲的 recordLog 门控。先给一次初值，之后由下面的
+        // 设置流持续同步（覆盖设置界面开关与恢复备份等所有写入路径）。
+        LogSettings.recordLog = otherGateway.currentSettings.recordLog
+        // BaseSource 已下沉 core:data，其方法体经 KeyValueStore/CookieStore/
+        // SourceRuntime 三个契约访问平台能力，这里注入 app 侧实现。
+        // （M2-3 起 SymmetricCrypto、M2-4 起 Logger 都不再需要注入：前者是 :core:platform
+        // 的原语，后者已整体下沉为共享层的 AppLogStore。）
         PlatformServices.install()
         // WebView 注入的 BaseSource 包装器工厂：@JavascriptInterface 注解已从实体剥离，
         // 页面 JS 的 source.xxx() 通过包装器转发回实体（见 JsExtProvider 注释）。
         JsExtProvider.install(JsExtFactory { source -> BookSourceJsExt(source) })
-        // 主题已下沉 :core:ui，其中「自定义配色未指定 seed 时的回退主色」来自 app 的
-        // 主题偏好存储（ThemeStore），属于应用层状态，这里以 provider 形式注入。
-        ThemeSeedColors.install { context -> context.primaryColor }
+        // 配色引擎（ThemeEngine/OpaqueColorScheme）已随 M1-3l 下沉 :core:designsystem 的
+        // commonMain，它需要的两项平台能力（动态取色 / 自定义配色未指定 seed 时的回退主色）
+        // 在此注入；实现见 ui/theme/AndroidThemePlatform.kt。
+        installAndroidThemePlatform(this)
         FirebaseManager.init(this)
         CrashHandler(this)
         if (isDebuggable) {
@@ -215,6 +230,13 @@ class App : Application(), SingletonImageLoader.Factory {
                     withContext(Main) { ThemeConfigStore.initNightMode() }
                 }
         }
+        // M2-4a：把「记录日志」设置持续同步给共享层（见上面 LogSettings 初值处）。
+        Coroutine.async {
+            get<OtherSettingsGateway>().settings
+                .map { it.recordLog }
+                .distinctUntilChanged()
+                .collect { LogSettings.recordLog = it }
+        }
         Coroutine.async {
             LogUtils.init(this@App)
             LogUtils.d("App", "onCreate")
@@ -236,7 +258,7 @@ class App : Application(), SingletonImageLoader.Factory {
                 val clearTime = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)
                 appDb.searchBookDao.clearExpired(clearTime)
             }
-            RuleBigDataHelp.clearInvalid()
+            RuleDataCleaner.clearInvalid()
             BookHelp.clearInvalidCache()
             Backup.clearCache()
             get<ReadStyleGateway>().clearUnusedBackgrounds()

@@ -1,7 +1,7 @@
 package io.legado.app.data.entities
 
 import io.legado.app.core.platform.JsonCodec
-import io.legado.app.data.bigdata.BigDataStoreProvider
+import io.legado.app.data.bigdata.RuleDataFileStore
 import io.legado.app.model.analyzeRule.RuleDataInterface
 
 interface BaseRssArticle : RuleDataInterface {
@@ -19,11 +19,11 @@ interface BaseRssArticle : RuleDataInterface {
     }
 
     override fun putBigVariable(key: String, value: String?) {
-        BigDataStoreProvider.current.putRssVariable(origin, link, key, value)
+        RuleDataFileStore.putRssVariable(origin, link, key, value)
     }
 
     override fun getBigVariable(key: String): String? {
-        return BigDataStoreProvider.current.getRssVariable(origin, link, key)
+        return RuleDataFileStore.getRssVariable(origin, link, key)
     }
 
 }

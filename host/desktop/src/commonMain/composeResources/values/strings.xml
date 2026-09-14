@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="desktop_home_title">Rules</string>
+    <string name="desktop_open_dict_rules">Dictionary Rules</string>
+    <string name="desktop_file_picker_unavailable">File picking is not available on desktop yet</string>
+</resources>

@@ -9,7 +9,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.ConcurrentRateLimiter.Companion.concurrentRecordMap
+import io.legado.app.data.rate.ConcurrentRateRegistry
 import io.legado.app.help.RuleComplete
 import io.legado.app.help.config.SourceConfig
 import io.legado.app.help.http.CookieStore
@@ -227,7 +227,7 @@ class BookSourceEditViewModel(
                     }
             }
             repository.insert(source)
-            concurrentRecordMap.remove(source.bookSourceUrl)
+            ConcurrentRateRegistry.records.remove(source.bookSourceUrl)
                 originalSource = source
                 baselineJson = GSON.toJson(source)
                 source.bookSourceUrl

@@ -978,23 +978,4 @@ class AnalyzeUrl(
         }
     }
 
-    data class ConcurrentRecord(
-        /**
-         * 开始访问时间
-         */
-        var time: Long,
-        /**
-         * 限制次数
-         */
-        var accessLimit: Int,
-        /**
-         * 间隔时间
-         */
-        var interval: Int,
-        /**
-         * 正在访问的个数
-         */
-        var frequency: Int
-    )
-
 }

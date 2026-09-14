@@ -17,12 +17,9 @@ class SourceRuntimeContractTest {
     @Test
     fun providerInstalledReturnsDelegate() {
         val runtime = object : SourceRuntime {
-            override fun isMainThread(): Boolean = false
             override fun getShareScope(jsLib: String?): JsScope? = null
             override fun removeJsLib(jsLib: String?) {}
             override fun clearExploreKindsCache(source: Any) {}
-            override fun updateConcurrentRate(key: String, value: String) {}
-            override fun androidId(): String = "test-id"
         }
         SourceRuntimeProvider.install(runtime)
         try {

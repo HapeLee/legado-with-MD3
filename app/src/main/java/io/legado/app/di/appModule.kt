@@ -8,8 +8,10 @@ import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import io.legado.app.BuildConfig
 import io.legado.app.core.platform.Clipboard
+import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.core.platform.Toaster
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.json.GsonImportJsonEditor
 import io.legado.app.data.repository.AiArtifactRepository
 import io.legado.app.data.repository.AiChatRepository
 import io.legado.app.data.repository.AiMemoryRepository
@@ -117,8 +119,10 @@ import io.legado.app.domain.gateway.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.gateway.AndroidReadBookReplaceSessionGateway
+import io.legado.app.domain.gateway.AndroidReplaceRuleImportCompat
 import io.legado.app.domain.gateway.AndroidReplaceRuleChangeNotifier
 import io.legado.app.domain.gateway.AndroidReplaceRuleSettingsGateway
+import io.legado.app.domain.gateway.AndroidTxtTocRuleImportCompat
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppStartupGateway
@@ -281,6 +285,7 @@ import io.legado.app.ui.book.source.debug.BookSourceDebugViewModel
 import io.legado.app.ui.book.source.edit.BookSourceEditViewModel
 import io.legado.app.ui.book.source.manage.BookSourceViewModel
 import io.legado.app.ui.book.toc.TocViewModel
+import io.legado.app.feature.txttocrules.TxtTocRuleImportCompat
 import io.legado.app.feature.txttocrules.TxtTocRuleViewModel
 import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewViewModel
 import io.legado.app.ui.browser.WebViewModel
@@ -317,6 +322,7 @@ import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.main.rss.RssViewModel
 import io.legado.app.feature.replacerules.ReplaceEditRoute
+import io.legado.app.feature.replacerules.ReplaceRuleImportCompat
 import io.legado.app.feature.replacerules.ReplaceRuleViewModel
 import io.legado.app.feature.replacerules.edit.ReplaceEditViewModel
 import io.legado.app.ui.rss.article.RssArticlesViewModel
@@ -483,6 +489,10 @@ val appModule = module {
     // 实现刻意放在 io.legado.app.platform 而非 help，避免让 di 新增 legacy help import。
     single<Clipboard> { AndroidPlatformCapabilities.clipboard(androidContext()) }
     single<Toaster> { AndroidPlatformCapabilities.toaster(androidContext()) }
+    // M2-1：导入对话框编辑页的字段拆解。原先 designsystem 直接读全局
+    // ImportJsonEditorProvider；现在由 BatchImportDialog 的调用方传参，实现在这里绑定。
+    // 实现留在 :core:data（与 GSON 同模块），契约在 :core:platform，两边都不认识对方。
+    single<ImportJsonEditor> { GsonImportJsonEditor() }
     // 「导入内置规则」的平台实现留在 :app（DefaultData 依赖 appDb/assets）；契约在
     // :core:viewmodel 的 base.rules，供规则类 ViewModel 注入。
     single<BuiltInRulesImporter> { AndroidBuiltInRulesImporter() }
@@ -491,6 +501,15 @@ val appModule = module {
     // 替换规则页的显示偏好与变更广播：实现留在 :app（偏好存储与事件总线均为 Android 侧能力）。
     single<ReplaceRuleSettingsGateway> { AndroidReplaceRuleSettingsGateway(get()) }
     single<ReplaceRuleChangeNotifier> { AndroidReplaceRuleChangeNotifier() }
+    // 替换规则旧格式导入文本的兼容解析：实现委托 `ReplaceAnalyzer`（依赖 jsonpath，只能留平台侧）。
+    // M1-3x 起 `:feature:replacerules` 的 VM 不再继承吃 `Application` 的 `BaseRuleViewModel`，
+    // 这条能力由构造参数注入（`viewModelOf` 按类型解析），共享层因此看不到 jsonpath。
+    single<ReplaceRuleImportCompat> { AndroidReplaceRuleImportCompat() }
+    // TXT 目录规则导入文本的键名兼容解析（旧备份里 `chapterRule` 的键名是 `rule`）：实现委托
+    // `io.legado.app.utils.GSON` 门面（只有它注册了 `txtTocRuleJsonDeserializer`）。
+    // M1-3y 起 `:feature:txttocrules` 的 VM 不再继承 `BaseRuleViewModel`，这条能力由构造参数
+    // 注入（`viewModelOf` 按类型解析），共享层因此看不到这个 Android-only 的兼容逻辑。
+    single<TxtTocRuleImportCompat> { AndroidTxtTocRuleImportCompat() }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     single<AiProfileGateway> { AiProfileRepository(get()) }
     single<AiArtifactGateway> { AiArtifactRepository(get()) }
@@ -824,6 +843,9 @@ val appModule = module {
         ReplaceEditViewModel(
             replaceRuleRepository = get(),
             changeNotifier = get(),
+            // M1-3x：`ClipboardProvider` 静态委托换成注入的 `Clipboard`（`single<Clipboard>`
+            // 见本文件 486 行，与 Provider 路径共用同一工厂）。
+            clipboard = get(),
             route = route
         )
     }

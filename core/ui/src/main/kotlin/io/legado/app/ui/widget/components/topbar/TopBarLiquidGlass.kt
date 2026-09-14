@@ -23,8 +23,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tanh
 
+// 顶栏组件本体（Glass*TopAppBar / TopBarButton / DynamicTopAppBar）已于 M1-3r 搬进
+// `:core:designsystem/commonMain`，共享层通过 `LiquidGlassEffects` 契约回调这里。
+// 实现之所以留在 `:core:ui` 而不是像其它契约那样放进 `app/.../platform`：本文件的
+// `drawBackdrop` 链依赖 `InteractiveHighlight`（`android.graphics.RuntimeShader` / AGSL）与
+// `android.os.Build`，而 `topBarLiquidGlass` 是 `internal`——`app` 看不见它。与其为搬家把
+// 内部 API 提为 public，不如让实现留在自己的可见性范围里，只把 public 工厂
+// `androidLiquidGlassEffects()` 交给 `PlatformServices.install()` 注入。
+
 @Composable
-internal fun Modifier.topBarLiquidGlass(shape: Shape): Modifier {
+internal fun Modifier.androidTopBarLiquidGlass(shape: Shape): Modifier {
     val backdrop = LocalTopBarBackdrop.current ?: return this
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return this
     val containerColor = LegadoTheme.colorScheme.surface.copy(
@@ -77,5 +85,19 @@ internal fun Modifier.topBarLiquidGlass(shape: Shape): Modifier {
 }
 
 @Composable
-internal fun topBarLiquidGlassEnabled(): Boolean =
+internal fun androidTopBarLiquidGlassEnabled(): Boolean =
     LocalTopBarBackdrop.current != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+
+/**
+ * Android 侧的 [LiquidGlassEffects] 实现。由 `app` 的 `PlatformServices.install()` 注入
+ * `LiquidGlassEffectsProvider`，共享层顶栏因此不直接依赖 `RuntimeShader` / `Build.VERSION`。
+ */
+fun androidLiquidGlassEffects(): LiquidGlassEffects = AndroidLiquidGlassEffects
+
+private object AndroidLiquidGlassEffects : LiquidGlassEffects {
+    @Composable
+    override fun enabled(): Boolean = androidTopBarLiquidGlassEnabled()
+
+    @Composable
+    override fun Modifier.liquidGlass(shape: Shape): Modifier = androidTopBarLiquidGlass(shape)
+}
