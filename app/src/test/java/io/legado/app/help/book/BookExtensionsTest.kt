@@ -1,7 +1,7 @@
 package io.legado.app.help.book
 
 import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.HighlightTagRule
+import io.legado.app.domain.rules.HighlightTagRule
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

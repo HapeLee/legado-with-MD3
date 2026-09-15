@@ -9,12 +9,13 @@ import io.legado.app.core.platform.Clipboard
 import io.legado.app.core.platform.JsonCodec
 import io.legado.app.core.platform.Toaster
 import io.legado.app.data.AppDatabase
-import io.legado.app.data.entities.HighlightTagRule
 import io.legado.app.data.entities.TagGroupRule
-import io.legado.app.data.repository.HighlightTagRuleRepository
+import io.legado.app.data.rules.HighlightTagRuleRepositoryImpl
 import io.legado.app.data.repository.TagGroupRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookGroupMutationGateway
+import io.legado.app.domain.rules.HighlightTagRule
+import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.domain.model.BookGroupUpdate
 import io.legado.app.domain.model.NewBookGroup
 import io.legado.app.domain.model.TagGroupRuleUpdate
@@ -334,7 +335,7 @@ class TagRulesImportExportCharacterizationTest {
             FakeUploadRepository(),
             transfer,
             FakeClipboard(),
-            HighlightTagRuleRepository(db),
+            HighlightTagRuleRepositoryImpl(db.highlightTagRuleDao),
         )
 
         viewModel.onIntent(HighlightIntent.ImportSource(pickedUri))
@@ -351,7 +352,7 @@ class TagRulesImportExportCharacterizationTest {
 
     @Test
     fun `高亮规则的 hasChanged 包含 enabled 字段`() = runBlocking {
-        val repository = HighlightTagRuleRepository(db)
+        val repository = HighlightTagRuleRepositoryImpl(db.highlightTagRuleDao)
         repository.insert(HighlightTagRule(id = 1, title = "标题", pattern = "p", enabled = true))
         val viewModel = HighlightTagRuleViewModel(
             FakeUploadRepository(),

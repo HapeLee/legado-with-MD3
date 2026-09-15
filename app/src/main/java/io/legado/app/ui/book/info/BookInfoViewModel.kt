@@ -24,7 +24,7 @@ import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
-import io.legado.app.data.repository.HighlightTagRuleRepository
+import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.SearchRepository

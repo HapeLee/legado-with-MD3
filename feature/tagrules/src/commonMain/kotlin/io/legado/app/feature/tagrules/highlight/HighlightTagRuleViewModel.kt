@@ -7,8 +7,8 @@ import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.core.rules.RuleTransferUseCase
 import io.legado.app.core.platform.Clipboard
 import io.legado.app.core.platform.JsonCodec
-import io.legado.app.data.entities.HighlightTagRule
-import io.legado.app.data.repository.HighlightTagRuleRepository
+import io.legado.app.domain.rules.HighlightTagRule
+import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState

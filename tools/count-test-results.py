@@ -55,6 +55,8 @@ RESULT_DIRS = {
     # 层模块一致（`core:data` / `core:platform` 都只取 `desktopTest`，见上），故**不进主集**。
     # 用例是 `ReplaceRuleMapperTest`：实体 ↔ 领域模型逐字段往返、默认值集合、只按 id 判等的
     # 语义、`isValid()` / `getValidTimeoutMillisecond()` 与实体行为一致。
+    # M3-2 起同一模块还装高亮标签规则域的 `HighlightTagRuleMapperTest`（6 例），故本目录
+    # 计数为两片之和（7 + 6 = 13）。
     "data:rules      (desktopTest)": ("data/rules/build/test-results/desktopTest", False),
 }
 
@@ -70,7 +72,11 @@ BASELINE_MAIN = 712
 # 新模块的用例是**新增**而非搬迁，故基线必须上调；已做变异验证：把映射器里的
 # `timeoutMillisecond` 去掉、把 `excludeScope` 写成 `scope`、把 `order` 映射删掉，
 # 三种变异都会让 `ReplaceRuleMapperTest` 变红。
-BASELINE_ALL = 898
+# M3-2：898 → 904（`:data:rules` 新增 `HighlightTagRuleMapperTest` 6 例）。主验证集**仍是 712**
+# ——本片只搬实现与类型、不改 `:app` / Feature 的用例句，故 app 633 与 tagrules 15 逐字不变。
+# 同样做了变异验证：把 `enabled` 写死为 `true`、把 `order` 错映射成 `id`、把 `title` 与
+# `pattern` 对调，三种变异都会让 `HighlightTagRuleMapperTest` 变红。
+BASELINE_ALL = 904
 
 
 def tally(d: pathlib.Path):

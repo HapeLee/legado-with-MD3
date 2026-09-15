@@ -18,7 +18,10 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.HighlightRule
-import io.legado.app.data.entities.HighlightTagRule
+// M3-2：备份文件 `highlightTagRule.json` 的格式 owner 仍是 Room 实体（`GSON` 门面按实体
+// 反序列化），故这里给实体起别名；领域模型只活在仓储与 UI 之间，回写 DAO 的边界上映射。
+import io.legado.app.data.entities.HighlightTagRule as HighlightTagRuleEntity
+import io.legado.app.data.rules.toDomain
 import io.legado.app.data.entities.HomepageCustomSet
 import io.legado.app.data.entities.HomepageModule
 import io.legado.app.data.entities.HttpTTS
@@ -263,7 +266,10 @@ object Restore : KoinComponent {
             }
         }
         if (BackupConfig.dbIsNotIgnored("highlightTagRule")) {
-            fileToListT<HighlightTagRule>(path, "highlightTagRule.json")?.let {
+            // M3-2：备份文件里的 `highlightTagRule.json` 由 `GSON` 门面（`:core:data/androidMain`）
+            // 按 Room 实体反序列化——实体才是备份格式的 owner，本片**不改文件格式**。
+            // 领域模型只活在仓储与 UI 之间，故在「回写 DAO」这一处边界上映射回实体。
+            fileToListT<HighlightTagRuleEntity>(path, "highlightTagRule.json")?.let {
                 appDb.highlightTagRuleDao.replaceAll(it)
             }
         }

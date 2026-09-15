@@ -14,7 +14,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseBook
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.HighlightTagRule
+import io.legado.app.domain.rules.HighlightTagRule
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.data.bigdata.RuleDataFileStore
 import io.legado.app.domain.gateway.BookExportSettingsGateway

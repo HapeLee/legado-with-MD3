@@ -49,6 +49,11 @@ kotlin {
             // 来自 `:core:designsystem`；消费方编译时要看得见。
             api(project(":core:data"))
             api(project(":core:designsystem"))
+            // M3-2：`HighlightTagRuleContract` / `HighlightTagRuleScreen` / `EditSheet` 的
+            // public 签名里出现了 `io.legado.app.domain.rules.HighlightTagRule` 与
+            // `BaseImportUiState<HighlightTagRule>`，消费方编译时要看得见 ⇒ 用 `api`。
+            // 分组规则（`TagGroupRule`）本片仍走 `:core:data` 的实体，随 M3 后续片收口。
+            api(project(":domain:rules"))
             // `isJsonArray()` / `isJsonObject()`（`io.legado.app.utils`，纯 KMP 扩展）。
             implementation(project(":core:model"))
             // `Clipboard` / `JsonCodec` / `Toaster` / `RuleTransferPlatform` 窄契约
@@ -105,6 +110,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             // 只为 `Room.inMemoryDatabaseBuilder`；`:core:data` 以 implementation 引入故不传递。
             implementation(libs.room.runtime)
+            // M3-2：特征化测试要构造**真实实现**（`HighlightTagRuleRepositoryImpl`）来跑内存
+            // Room 端到端，而 `:data:rules` 在 `commonMain` 是 `implementation`（端口才走 `api`）
+            // ⇒ 主机测源集自己声明一次。桌面侧不需要：那边的用例只到端口。
+            implementation(project(":data:rules"))
         }
     }
 }

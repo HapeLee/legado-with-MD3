@@ -59,8 +59,8 @@ import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.DownloadCacheSettingsRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
+import io.legado.app.data.dao.HighlightTagRuleDao
 import io.legado.app.data.repository.HighlightRuleRepository
-import io.legado.app.data.repository.HighlightTagRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.HomepageSettingsRepository
@@ -109,6 +109,7 @@ import io.legado.app.data.repository.WebDavReadingProgressRepository
 import io.legado.app.data.repository.manga.DefaultMangaReaderSession
 import io.legado.app.data.repository.manga.MangaReaderActionRepository
 import io.legado.app.data.repository.manga.MangaReaderDataRepository
+import io.legado.app.data.rules.HighlightTagRuleRepositoryImpl
 import io.legado.app.data.rules.ReplaceRuleRepositoryImpl
 import io.legado.app.data.security.CloudTtsCredentialCipher
 import io.legado.app.domain.gateway.AiArtifactGateway
@@ -178,6 +179,7 @@ import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.gateway.WebDavBackupGateway
+import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
 import io.legado.app.domain.rules.ReplaceRuleRepository
 import io.legado.app.domain.repository.BookDomainRepository
@@ -430,7 +432,9 @@ val appModule = module {
     singleOf(::HttpTtsRepository)
     singleOf(::ApplyReadSettingUseCase)
     singleOf(::HighlightRuleRepository)
-    singleOf(::HighlightTagRuleRepository)
+    // M3-2：端口的实现住 `:data:rules`，构造参数是 DAO（`appDatabaseModule` 已绑定
+    // `HighlightTagRuleDao`），故用显式绑定而不是 `singleOf`——接口归属必须看得见。
+    single<HighlightTagRuleRepository> { HighlightTagRuleRepositoryImpl(get<HighlightTagRuleDao>()) }
     singleOf(::ReadStyleRepository)
     singleOf(::ReadStyleConfigStore)
     singleOf(::ReadBookStyleConfigRepository)
