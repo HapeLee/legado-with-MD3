@@ -6,6 +6,8 @@ export type webReadConfig = {
   infiniteLoading: boolean
   customFontName: string
   jumpDuration: number
+  autoPage: boolean
+  autoPageSpeed: number
   spacing: {
     paragraph: number
     line: number
