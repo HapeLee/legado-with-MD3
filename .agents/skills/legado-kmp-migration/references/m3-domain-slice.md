@@ -20,10 +20,10 @@ No new module per slice, and no facade / typealias / deprecation shim left behin
 Rank candidates by **real Feature consumer > existing test guardrail > no platform contract >
 callers that die with the slice**. What is left of the rule domain, as measured:
 
-| Candidate | Feature consumer | Guardrail | What blocks it |
+| Candidate | Feature consumer | Guardrail | Status |
 |---|---|---|---|
-| `RuleSub` | none — only the `:app` RSS page (`ui/rss/subscription`) | **none** | add a characterization test as part of the slice |
-| `TagGroupRule` | yes | partial | `TagGroupRuleApplier` and `BookExtensions.applyTagGroupRulesForBook` duplicate the semantics — merge first |
+| `RuleSub` | none — only the `:app` RSS page (`ui/rss/subscription`) | **none** | **done (M3-5)** — the mapper test shipped with the slice |
+| `TagGroupRule` | yes | partial | **next** — `TagGroupRuleApplier` and `BookExtensions.applyTagGroupRulesForBook` duplicate the semantics; merge first |
 
 A zero-guardrail candidate is not disqualified, but then the mapper test is **part of the
 slice, written before the move** — not a bonus added afterwards.
@@ -38,8 +38,15 @@ already been paid, and the slice only added `.map { it.toDomain() }` at the cont
    - Field-for-field copy of the entity, and **every field is `var`**. These models are fed
      through `JsonCodec` (Gson) by reflection on import / paste / single-object import, and a
      `final` field behaves differently on JVM vs ART with **no unit test covering it**.
-   - `equals` / `hashCode` key on the **primary key only** (usually `id`; `DictRule` uses
-     `name: String`). Consequence: mapper tests must assert **every** field — never `==` alone.
+   - `equals` / `hashCode` and field mutability: **copy whatever the entity does — do not infer
+     it from the previous slice.** Five of the six rule entities override `equals`/`hashCode` to
+     compare the **primary key only**; `RuleSub` overrides neither, so its comparison is the
+     data-class **all-field** one, and its `id` is a `val` where the others are `var`.
+     Consequence for step 5: with key-only comparison a mapper test **must** assert every field —
+     a whole-object `assertEquals` passes even when a field is dropped. With all-field comparison
+     that assertion is valid and strictly stronger, and you additionally need a **negative** case
+     (two models differing only in e.g. `name` must not be equal) so nobody later "aligns" the
+     model with the other five and silently forks the semantics.
    - No default value that needs a platform function. `RuleSub.id` / `RuleSub.update` default
      to `systemTimeMillis()` (`:core:platform`), which a pure model cannot reference; the
      entity stays the creation entry point.
@@ -116,6 +123,15 @@ git diff --check
 ```
 
 - Cross-module moves and dependency-graph changes **require** a clean rebuild.
+- ⚠️ **Always exclude `:smoke:room-kmp-probe:testAndroidHostTest`** from root-level test runs
+  (`-x :smoke:room-kmp-probe:testAndroidHostTest`). That module's `RoomKmpProbeTest` is an
+  **abstract** base class whose only concrete subclass lives in `desktopTest`, so
+  `androidHostTest` discovers zero tests and Gradle 9's `failOnNoDiscoveredTests` fails the
+  build. Nothing to do with your slice (`smoke/` is untouched), but it turns a green run into
+  `BUILD FAILED`. Excluding it: 335 tasks `BUILD SUCCESSFUL`.
+- One FAILED task fails the whole build even though `--continue` keeps executing the rest ⇒
+  grep `Task .* FAILED` instead of trusting the last line. The test-count script is unaffected
+  (result directories are still written).
 - Mutation-verify the mapper test: 3 targeted mutations, each turning exactly one case red,
   then restore via `try/finally`. ⚠️ The pattern string must include the **function signature
   prefix** — matching `) = TxtTocRule(` against an expression-bodied mapper finds **0 hits**,
@@ -131,7 +147,8 @@ git diff --check
 | M3-1 | `ReplaceRule` | `fb64d2be95` |
 | M3-2 | `HighlightTagRule` | `9d21369475` |
 | M3-3 | `DictRule` | `df00c585d8` |
-| M3-4 | `TxtTocRule` | pending |
+| M3-4 | `TxtTocRule` | `8a0b7cd1c9` |
+| M3-5 | `RuleSub` | pending |
 
 Milestone-level blocker behind these slices is `data:database` (the single Room owner):
 `entities/BaseSource.kt` alone carries 23 `coreProvider` hits, and `:app` still has 8 files
