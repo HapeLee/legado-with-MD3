@@ -166,6 +166,38 @@
             >开启</span
           >
         </li>
+        <li class="infinite-loading">
+          <i>自动翻页</i>
+          <span
+            class="infinite-loading-item"
+            :key="0"
+            :class="{ selected: autoPage == false }"
+            @click="setAutoPage(false)"
+            >关闭</span
+          >
+          <span
+            class="infinite-loading-item"
+            :key="1"
+            :class="{ selected: autoPage == true }"
+            @click="setAutoPage(true)"
+            >开启</span
+          >
+        </li>
+        <li class="paragraph-spacing">
+          <i>自动翻页速度（秒/页）</i>
+          <div class="resize">
+            <div class="resize">
+              <span class="less" @click="lessAutoPageSpeed">
+                <em class="iconfont">&#xe625;</em>
+              </span>
+              <b></b> <span class="lang">{{ autoPageSpeed }}</span
+              ><b></b>
+              <span class="more" @click="moreAutoPageSpeed"
+                ><em class="iconfont">&#xe626;</em></span
+              >
+            </div>
+          </div>
+        </li>
       </ul>
     </div>
   </div>
@@ -353,6 +385,25 @@ const infiniteLoading = computed(() => {
 })
 const setInfiniteLoading = (loading: boolean) => {
   store.config.infiniteLoading = loading
+}
+
+//自动翻页
+const autoPage = computed(() => {
+  return store.config.autoPage
+})
+const setAutoPage = (on: boolean) => {
+  store.config.autoPage = on
+}
+
+//自动翻页速度（秒/页，1-120）
+const autoPageSpeed = computed(() => {
+  return store.config.autoPageSpeed
+})
+const moreAutoPageSpeed = () => {
+  if (store.config.autoPageSpeed < 120) store.config.autoPageSpeed += 1
+}
+const lessAutoPageSpeed = () => {
+  if (store.config.autoPageSpeed > 1) store.config.autoPageSpeed -= 1
 }
 </script>
 
