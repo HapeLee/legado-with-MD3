@@ -61,6 +61,7 @@ import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.dao.DictRuleDao
 import io.legado.app.data.dao.HighlightTagRuleDao
 import io.legado.app.data.dao.RuleSubDao
+import io.legado.app.data.dao.TagGroupRuleDao
 import io.legado.app.data.dao.TxtTocRuleDao
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
@@ -93,7 +94,6 @@ import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.TagGroupRuleApplier
-import io.legado.app.data.repository.TagGroupRuleRepository
 import io.legado.app.data.repository.ThemePackageSettingsRepository
 import io.legado.app.data.repository.ThemeSettingsRepository
 import io.legado.app.data.repository.TranslationCacheRepositoryImpl
@@ -113,6 +113,7 @@ import io.legado.app.data.rules.DictRuleRepositoryImpl
 import io.legado.app.data.rules.HighlightTagRuleRepositoryImpl
 import io.legado.app.data.rules.ReplaceRuleRepositoryImpl
 import io.legado.app.data.rules.RuleSubRepositoryImpl
+import io.legado.app.data.rules.TagGroupRuleRepositoryImpl
 import io.legado.app.data.rules.TxtTocRuleRepositoryImpl
 import io.legado.app.data.security.CloudTtsCredentialCipher
 import io.legado.app.domain.gateway.AiArtifactGateway
@@ -187,6 +188,7 @@ import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
 import io.legado.app.domain.rules.ReplaceRuleRepository
 import io.legado.app.domain.rules.RuleSubRepository
+import io.legado.app.domain.rules.TagGroupRuleRepository
 import io.legado.app.domain.rules.TxtTocRuleRepository
 import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
@@ -372,7 +374,10 @@ val appModule = module {
     singleOf(::BookmarkRepository)
     singleOf(::BookCacheManageRepository)
     singleOf(::TagGroupRuleApplier)
-    singleOf(::TagGroupRuleRepository)
+    // M3-6：标签分组规则的仓储端口住 `:domain:rules`，实现住 `:data:rules`。注入面是端口，
+    // 故用显式绑定而不是 `singleOf`——接口归属必须看得见（与 M3-2…M3-5 同形：构造参数收
+    // DAO，不是 `AppDatabase` 聚合根）。被删除的 `:core:data` 旧类**不留门面、不留 typealias**。
+    single<TagGroupRuleRepository> { TagGroupRuleRepositoryImpl(get<TagGroupRuleDao>()) }
     single<BookGroupMutationGateway> { BookGroupMutationRepository(get(), get()) }
     single<BookshelfAutoGroupGateway> { BookshelfAutoGroupRepository(get()) }
     single<BookshelfAutoGroupPromptGateway> { BookshelfAutoGroupPromptRepository(get()) }

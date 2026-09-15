@@ -240,4 +240,35 @@ class BookGroupMutationRepositoryTest {
         assertEquals("Fantasy", group.groupName)
         assertEquals(group.groupId, database.bookDao.getBook(book.bookUrl)?.group)
     }
+
+    /**
+     * M3-6：单本书路径（`TagGroupRuleApplier.applyToBook`）——`Book.save()` 走的就是它。
+     *
+     * 与全量重算的差别只在**范围与落库**：只处理传入的这一本书，且**不写库**（调用方
+     * `Book.save()` 随后自己 `bookDao.update` / `insert`）。本用例把这两点一起钉住：迁移前
+     * 这段逻辑住在 `:app` 的 `applyTagGroupRulesForBook`（全仓**零测试**，只靠注释约定与
+     * `:core:data` 的 `TagGroupRuleApplier` 同步），M3-6 把它并进本类时靠的正是这条护栏。
+     */
+    @Test
+    fun `单本书路径只改内存分组位而不写库`() = runBlocking {
+        val fantasy = BookGroup(groupId = 1L, groupName = "Fantasy")
+        val book = Book(
+            bookUrl = "book-1",
+            name = "Book",
+            author = "Author",
+            kind = "fantasy",
+        )
+        database.bookGroupDao.insert(fantasy)
+        database.tagGroupRuleDao.insert(
+            TagGroupRule(id = 1L, groupName = fantasy.groupName, pattern = "fantasy"),
+        )
+        database.bookDao.insert(book)
+
+        TagGroupRuleApplier(database).applyToBook(book)
+
+        // 匹配语义与全量重算同源：命中就 `or` 上分组位。
+        assertEquals(fantasy.groupId, book.group)
+        // 但**不落库**——库里那份仍是构造时的 0，持久化是 `Book.save()` 的职责。
+        assertEquals(0L, database.bookDao.getBook(book.bookUrl)?.group)
+    }
 }

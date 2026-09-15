@@ -62,7 +62,13 @@ RESULT_DIRS = {
     "data:rules      (desktopTest)": ("data/rules/build/test-results/desktopTest", False),
 }
 
-BASELINE_MAIN = 712
+# M3-6：主验证集 712 → 713（**本片独有**）。合并「标签分组规则匹配语义」的两份实现时，给
+# `:app` 侧的单本书路径补了一条护栏用例——那段逻辑迁前住在
+# `io.legado.app.help.book.applyTagGroupRulesForBook`，全仓**零测试**。新用例
+# （`BookGroupMutationRepositoryTest.单本书路径只改内存分组位而不写库`）同时钉住「只处理这一本书」
+# 与「不写库（persist = false）」，住 `:app` 主集，故基线必须上调 1。
+# 前面五片（M3-1～M3-5）都只动 `:data:rules`，主集始终是 712。
+BASELINE_MAIN = 713
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -94,7 +100,11 @@ BASELINE_MAIN = 712
 # 相反），一条钉住领域侧 `RuleSubType` 与实体侧常量的镜像关系与数值。主验证集**仍是 712**
 # ——本片只搬实现与类型，`:app` 的 RSS 订阅页（`RuleSubViewModel` / `RuleSubScreen`）用例数
 # 本来就是零。
-BASELINE_ALL = 925
+# M3-6：925 → 933（净 +8 = `:app` +1、`:data:rules` +7）。后者是 `TagGroupRuleMapperTest` 7 例
+# ——与 M3-1～M3-4 同形（逐字段断言，因为实体与领域模型**都只按 `id` 判等**，整对象
+# `assertEquals` 漏映射时照样通过），没有 M3-5 那种「判等是全字段」的反向用例，故回到 7 例。
+# 前者见 `BASELINE_MAIN` 上方。
+BASELINE_ALL = 933
 
 
 def tally(d: pathlib.Path):

@@ -44,15 +44,17 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // `api`：public 签名里出现这两个模块的类型——`TagGroupRuleEditSheet(rule: TagGroupRule)`
-            // 来自 `:core:data`，`HighlightTagRuleScreen(importState: BaseImportUiState<…>)`
-            // 来自 `:core:designsystem`；消费方编译时要看得见。
+            // `api`：public 签名里出现这两个模块的类型——`HighlightTagRuleScreen(importState:
+            // BaseImportUiState<…>)` 来自 `:core:designsystem`；M3-6 之后 `TagGroupRule` 一族
+            // 已改由 `:domain:rules` 提供，但 VM 的构造参数仍有 `UploadRepository` 与
+            // `BookGroupMutationGateway`（`:core:data`），消费方编译时要看得见。
             api(project(":core:data"))
             api(project(":core:designsystem"))
             // M3-2：`HighlightTagRuleContract` / `HighlightTagRuleScreen` / `EditSheet` 的
             // public 签名里出现了 `io.legado.app.domain.rules.HighlightTagRule` 与
             // `BaseImportUiState<HighlightTagRule>`，消费方编译时要看得见 ⇒ 用 `api`。
-            // 分组规则（`TagGroupRule`）本片仍走 `:core:data` 的实体，随 M3 后续片收口。
+            // M3-6：分组规则也已收口——`TagGroupRule` 与 `TagGroupRuleRepository` 都住本模块；
+            // `commonMain` 里不再出现任何 `:core:data` 的**规则实体**类型。
             api(project(":domain:rules"))
             // `isJsonArray()` / `isJsonObject()`（`io.legado.app.utils`，纯 KMP 扩展）。
             implementation(project(":core:model"))

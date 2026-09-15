@@ -4,13 +4,13 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.repository.BookGroupRepository
-import io.legado.app.data.repository.TagGroupRuleRepository
 import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.domain.model.BookGroupUpdate
 import io.legado.app.domain.model.NewBookGroup
 import io.legado.app.domain.model.TagGroupRuleUpdate
+import io.legado.app.domain.rules.TagGroupRule
+import io.legado.app.domain.rules.TagGroupRuleRepository
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch

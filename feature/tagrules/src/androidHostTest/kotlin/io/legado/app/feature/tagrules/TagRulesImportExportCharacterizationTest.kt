@@ -9,13 +9,14 @@ import io.legado.app.core.platform.Clipboard
 import io.legado.app.core.platform.JsonCodec
 import io.legado.app.core.platform.Toaster
 import io.legado.app.data.AppDatabase
-import io.legado.app.data.entities.TagGroupRule
 import io.legado.app.data.rules.HighlightTagRuleRepositoryImpl
-import io.legado.app.data.repository.TagGroupRuleRepository
+import io.legado.app.data.rules.TagGroupRuleRepositoryImpl
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.domain.rules.HighlightTagRule
 import io.legado.app.domain.rules.HighlightTagRuleRepository
+import io.legado.app.domain.rules.TagGroupRule
+import io.legado.app.domain.rules.TagGroupRuleRepository
 import io.legado.app.domain.model.BookGroupUpdate
 import io.legado.app.domain.model.NewBookGroup
 import io.legado.app.domain.model.TagGroupRuleUpdate
@@ -97,7 +98,7 @@ class TagRulesImportExportCharacterizationTest {
 
     @Test
     fun `导入分组规则时按 groupName 与 pattern 变化分为 新增 更新 已有`() = runBlocking {
-        val repository = TagGroupRuleRepository(db)
+        val repository = TagGroupRuleRepositoryImpl(db.tagGroupRuleDao)
         repository.insert(
             TagGroupRule(id = 1, pattern = "a", groupName = "A"),
             TagGroupRule(id = 2, pattern = "b", groupName = "旧分组"),
@@ -123,7 +124,7 @@ class TagRulesImportExportCharacterizationTest {
 
     @Test
     fun `导入分组规则时只改 order 不算变化`() = runBlocking {
-        val repository = TagGroupRuleRepository(db)
+        val repository = TagGroupRuleRepositoryImpl(db.tagGroupRuleDao)
         repository.insert(TagGroupRule(id = 1, pattern = "a", groupName = "A", order = 0))
         val viewModel = newGroupViewModel(repository)
 
@@ -140,7 +141,7 @@ class TagRulesImportExportCharacterizationTest {
 
     @Test
     fun `导入单条对象时得到一条规则`() = runBlocking {
-        val viewModel = newGroupViewModel(TagGroupRuleRepository(db))
+        val viewModel = newGroupViewModel(TagGroupRuleRepositoryImpl(db.tagGroupRuleDao))
 
         viewModel.onIntent(
             GroupIntent.ImportSource(GSON.toJson(TagGroupRule(id = 7, pattern = "x", groupName = "X")))
@@ -153,7 +154,7 @@ class TagRulesImportExportCharacterizationTest {
 
     @Test
     fun `导入非法文本时进入 Error 并保留原因`() = runBlocking {
-        val viewModel = newGroupViewModel(TagGroupRuleRepository(db))
+        val viewModel = newGroupViewModel(TagGroupRuleRepositoryImpl(db.tagGroupRuleDao))
 
         viewModel.onIntent(GroupIntent.ImportSource("not json"))
 
@@ -165,7 +166,7 @@ class TagRulesImportExportCharacterizationTest {
     @Test
     fun `导入文本先 trim 再交给平台读取`() = runBlocking {
         val transfer = FakeTransferPlatform()
-        val viewModel = newGroupViewModel(TagGroupRuleRepository(db), transfer = transfer)
+        val viewModel = newGroupViewModel(TagGroupRuleRepositoryImpl(db.tagGroupRuleDao), transfer = transfer)
 
         viewModel.onIntent(GroupIntent.ImportSource("  []  "))
 
@@ -178,7 +179,7 @@ class TagRulesImportExportCharacterizationTest {
     @Test
     fun `导出未选中任何规则时只提示不写入`() = runBlocking {
         val transfer = FakeTransferPlatform()
-        val viewModel = newGroupViewModel(TagGroupRuleRepository(db), transfer = transfer)
+        val viewModel = newGroupViewModel(TagGroupRuleRepositoryImpl(db.tagGroupRuleDao), transfer = transfer)
 
         val event = async { viewModel.events.first() }
         viewModel.onIntent(GroupIntent.ExportSelection(EXPORT_URI.toString()))
@@ -193,7 +194,7 @@ class TagRulesImportExportCharacterizationTest {
     @Test
     fun `导出选中规则时写入等价 JSON 并提示成功`() = runBlocking {
         val transfer = FakeTransferPlatform()
-        val repository = TagGroupRuleRepository(db)
+        val repository = TagGroupRuleRepositoryImpl(db.tagGroupRuleDao)
         val viewModel = newGroupViewModel(repository, transfer = transfer)
         val collector = collectUiState(viewModel)
         try {
@@ -226,7 +227,7 @@ class TagRulesImportExportCharacterizationTest {
     @Test
     fun `导出写入失败时上报原因`() = runBlocking {
         val transfer = FakeTransferPlatform(writeError = IllegalStateException("磁盘满"))
-        val repository = TagGroupRuleRepository(db)
+        val repository = TagGroupRuleRepositoryImpl(db.tagGroupRuleDao)
         val viewModel = newGroupViewModel(repository, transfer = transfer)
         val collector = collectUiState(viewModel)
         try {
@@ -252,7 +253,7 @@ class TagRulesImportExportCharacterizationTest {
     @Test
     fun `保存导入时只落勾选项 并在分组侧应用到所有书`() = runBlocking {
         val gateway = FakeBookGroupMutationGateway()
-        val repository = TagGroupRuleRepository(db)
+        val repository = TagGroupRuleRepositoryImpl(db.tagGroupRuleDao)
         val viewModel = newGroupViewModel(repository, gateway = gateway)
 
         viewModel.onIntent(
@@ -285,7 +286,7 @@ class TagRulesImportExportCharacterizationTest {
 
     @Test
     fun `列表按 order 升序且搜索命中 groupName 与 pattern`() = runBlocking {
-        val repository = TagGroupRuleRepository(db)
+        val repository = TagGroupRuleRepositoryImpl(db.tagGroupRuleDao)
         repository.insert(
             TagGroupRule(id = 1, pattern = "alpha", groupName = "分组一", order = 2),
             TagGroupRule(id = 2, pattern = "beta", groupName = "分组二", order = 1),
@@ -307,7 +308,7 @@ class TagRulesImportExportCharacterizationTest {
 
     @Test
     fun `分组名为空时展示名回退到 pattern`() = runBlocking {
-        val repository = TagGroupRuleRepository(db)
+        val repository = TagGroupRuleRepositoryImpl(db.tagGroupRuleDao)
         repository.insert(TagGroupRule(id = 1, pattern = "p1", groupName = ""))
         val viewModel = newGroupViewModel(repository)
 
@@ -395,7 +396,7 @@ class TagRulesImportExportCharacterizationTest {
         val clipboard = FakeClipboard()
         val toaster = FakeToaster()
         val viewModel = newGroupViewModel(
-            TagGroupRuleRepository(db), clipboard = clipboard, toaster = toaster,
+            TagGroupRuleRepositoryImpl(db.tagGroupRuleDao), clipboard = clipboard, toaster = toaster,
         )
         val rule = TagGroupRule(id = 3, pattern = "p3", groupName = "G3")
 

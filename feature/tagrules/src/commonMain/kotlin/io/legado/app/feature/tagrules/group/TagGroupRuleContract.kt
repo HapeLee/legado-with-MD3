@@ -1,7 +1,7 @@
 package io.legado.app.feature.tagrules.group
 
 import androidx.compose.runtime.Stable
-import io.legado.app.data.entities.TagGroupRule
+import io.legado.app.domain.rules.TagGroupRule
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState

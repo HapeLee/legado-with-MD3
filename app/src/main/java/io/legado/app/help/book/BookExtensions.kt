@@ -11,6 +11,7 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookSourceType
 import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
+import io.legado.app.data.repository.TagGroupRuleApplier
 import io.legado.app.data.entities.BaseBook
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
@@ -53,6 +54,11 @@ private val otherGateway by lazy { GlobalContext.get().get<OtherSettingsGateway>
 private val importBookGateway by lazy { GlobalContext.get().get<ImportBookSettingsGateway>() }
 private val readGateway by lazy { GlobalContext.get().get<ReadSettingsGateway>() }
 private val exportGateway by lazy { GlobalContext.get().get<BookExportSettingsGateway>() }
+
+// M3-6：标签分组规则的匹配语义（正则编译、非法正则跳过、分组名 → 分组 id、`or` 掩码合并、
+// 只加不删）只在 `:core:data` 的 `TagGroupRuleApplier` 里有一份。`applyTagGroupRulesForBook`
+// 现在是它的薄委托，不再自带镜像实现。
+private val tagGroupRuleApplier by lazy { GlobalContext.get().get<TagGroupRuleApplier>() }
 
 val Book.isAudio: Boolean
     get() = isType(BookType.audio)
@@ -423,49 +429,15 @@ fun parseHighlightedTags(
 /**
  * Apply tag group rules to a single book. Called from Book.save().
  * Lightweight: only processes the given book, not all books.
+ *
+ * M3-6：本函数是 `TagGroupRuleApplier.applyToBook` 的**薄委托**。此前这里有一份手抄的匹配
+ * 实现（正则编译 / 非法正则跳过 / 分组名 → 分组 id 的解析 / `or` 掩码合并），与 `:core:data`
+ * 的 `TagGroupRuleApplier` 互为镜像，只能靠注释约定"改匹配语义时两处同步"。现在匹配语义全仓
+ * 只有一份。行为不变：**只就地改 `book.group`、不写库**——`Book.save()` 随后自己
+ * `bookDao.update` / `insert`。
  */
 fun applyTagGroupRulesForBook(book: Book) {
-    val rules = runBlocking { appDb.tagGroupRuleDao.getAll() }
-    if (rules.isEmpty()) return
-
-    val compiledRules = rules.mapNotNull { rule ->
-        val regex = try { Regex(rule.pattern) } catch (_: Exception) { return@mapNotNull null }
-        rule to regex
-    }
-    if (compiledRules.isEmpty()) return
-
-    val groupDao = appDb.bookGroupDao
-    val groupCache = mutableMapOf<String, Long>()
-    runBlocking {
-        for ((rule, _) in compiledRules) {
-            if (rule.groupName !in groupCache) {
-                val existing = groupDao.getByName(rule.groupName)
-                val groupId = existing?.groupId ?: run {
-                    val newId = groupDao.getUnusedId()
-                    groupDao.insert(
-                        io.legado.app.data.entities.BookGroup(
-                            groupId = newId,
-                            groupName = rule.groupName,
-                        )
-                    )
-                    newId
-                }
-                groupCache[rule.groupName] = groupId
-            }
-        }
-    }
-
-    val kinds = book.getDisplayTagList()
-    var newGroupMask = 0L
-    for ((rule, regex) in compiledRules) {
-        if (kinds.any { regex.containsMatchIn(it) }) {
-            newGroupMask = newGroupMask or (groupCache[rule.groupName] ?: 0L)
-        }
-    }
-    val finalGroup = book.group or newGroupMask
-    if (book.group != finalGroup) {
-        book.group = finalGroup
-    }
+    runBlocking { tagGroupRuleApplier.applyToBook(book) }
 }
 
 fun Book.sync(oldBook: Book) {

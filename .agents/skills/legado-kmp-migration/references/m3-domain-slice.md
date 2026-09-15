@@ -10,7 +10,8 @@ exact template; treat the steps as a checklist, not a suggestion.
 domain**, one repository per slice, into a module pair that already exists:
 
 - `domain/rules` — **pure**: domain models + ports (`interface`). No Room, no `android.*`, no
-  `io.legado.app.core.platform`, no Gson.
+  JVM file handles, no Gson. Purity is enforced by **import prefix** (G2), not by module type —
+  so a platform `expect fun` is fine; see the default-value note in step 1.
 - `data/rules` — **data**: `XxxRepositoryImpl` (takes the **DAO**) + `XxxMapper` + `XxxMapperTest`.
 
 No new module per slice, and no facade / typealias / deprecation shim left behind in `:core:data`.
@@ -23,10 +24,26 @@ callers that die with the slice**. What is left of the rule domain, as measured:
 | Candidate | Feature consumer | Guardrail | Status |
 |---|---|---|---|
 | `RuleSub` | none — only the `:app` RSS page (`ui/rss/subscription`) | **none** | **done (M3-5)** — the mapper test shipped with the slice |
-| `TagGroupRule` | yes | partial | **next** — `TagGroupRuleApplier` and `BookExtensions.applyTagGroupRulesForBook` duplicate the semantics; merge first |
+| `TagGroupRule` | yes — tagrules group page + group-manage sheet | partial | **done (M3-6)** — the duplicated matcher was merged first (see below), then the repository sank |
 
 A zero-guardrail candidate is not disqualified, but then the mapper test is **part of the
 slice, written before the move** — not a bonus added afterwards.
+
+**Merge duplicated semantics before moving.** `TagGroupRule` was the one candidate whose matching
+logic had two live copies: `:core:data`'s `TagGroupRuleApplier` (full sweep, in a transaction) and
+`:app`'s `applyTagGroupRulesForBook` (single book, called from `Book.save()`). The two could only
+be kept in sync by a comment. A one-line delegation —
+`applyTagGroupRulesForBook(book) = runBlocking { applier.applyToBook(book) }` — removed the mirror
+*before* the module move, so the slice ends with exactly one implementation. The deleted path had
+**zero** tests, so the delegation shipped with a new `:app` case pinning both of its properties:
+single-book scope, and **no DB write** (`applyToBook` calls the shared private helper with
+`persist = false`; `Book.save()` persists afterwards). Budget for that guardrail, and declare it —
+it lands in the **main** test set (`BASELINE_MAIN` 712 → 713).
+
+Note the direction of the merge: the mirror was on the `:app` side, so the shared implementation
+stays where its dependencies already are (`:core:data`, which also owns `Book` / `BookGroup` /
+`BookGroupMutationRepository`). Moving it out would have created a cycle
+(`BookGroupMutationRepository` → `TagGroupRuleApplier` → back).
 
 Also check whether the entity's compatibility surface is already sealed. `TxtTocRule` looked
 expensive (custom GSON `JsonDeserializer`) until the M1-3y contract was located: the cost had
@@ -47,9 +64,15 @@ already been paid, and the slice only added `.map { it.toDomain() }` at the cont
      that assertion is valid and strictly stronger, and you additionally need a **negative** case
      (two models differing only in e.g. `name` must not be equal) so nobody later "aligns" the
      model with the other five and silently forks the semantics.
-   - No default value that needs a platform function. `RuleSub.id` / `RuleSub.update` default
-     to `systemTimeMillis()` (`:core:platform`), which a pure model cannot reference; the
-     entity stays the creation entry point.
+   - Copy the entity's default **verbatim, even when it calls a platform function**.
+     `RuleSub.id` / `RuleSub.update` — and every other rule model's `id` — default to
+     `systemTimeMillis()` from `:core:platform`. That is allowed in a pure module: G2's pure
+     policy keys on **import prefixes** (`android.*`, `java.io.File`, `kotlin.jvm.*`,
+     `androidx.*`, jsoup / gson / rhino / okhttp); `io.legado.app.core.platform` is not on
+     that list, and `domain/rules` has had `implementation(":core:platform")` since M3-1.
+     Do **not** "purify" the model by inlining a clock call or dropping the default — that
+     silently changes id generation. There is no "the entity stays the creation entry point"
+     rule to preserve here.
    - KDoc the traps the entity hides: surprising defaults (`serialNumber = -1`, not `0`),
      field naming (`enable`, not `enabled`), nullability (`example: String? = null`).
 
@@ -148,7 +171,8 @@ git diff --check
 | M3-2 | `HighlightTagRule` | `9d21369475` |
 | M3-3 | `DictRule` | `df00c585d8` |
 | M3-4 | `TxtTocRule` | `8a0b7cd1c9` |
-| M3-5 | `RuleSub` | pending |
+| M3-5 | `RuleSub` | `0555a0acc0` |
+| M3-6 | `TagGroupRule` | pending |
 
 Milestone-level blocker behind these slices is `data:database` (the single Room owner):
 `entities/BaseSource.kt` alone carries 23 `coreProvider` hits, and `:app` still has 8 files

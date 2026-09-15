@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.getManageName
+import io.legado.app.domain.rules.TagGroupRule
 import io.legado.app.ui.book.group.GroupDeleteAction
 import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupResetCoverAction
@@ -81,12 +82,12 @@ fun GroupManageSheet(
     var isEditing by remember { mutableStateOf(false) }
     var coverPath by remember(editingGroup) { mutableStateOf(editingGroup?.cover) }
 
-    var editingTagRule by remember { mutableStateOf<io.legado.app.data.entities.TagGroupRule?>(null) }
+    var editingTagRule by remember { mutableStateOf<TagGroupRule?>(null) }
     var showTagRuleEdit by remember { mutableStateOf(false) }
     var showAiAutoGroup by remember { mutableStateOf(false) }
     var aiAutoGroupSessionKey by rememberSaveable { mutableStateOf(0L) }
 
-    var editingGroupTagRule by remember { mutableStateOf<io.legado.app.data.entities.TagGroupRule?>(null) }
+    var editingGroupTagRule by remember { mutableStateOf<TagGroupRule?>(null) }
 
     LaunchedEffect(editingGroup) {
         editingGroupTagRule = editingGroup?.let { group ->

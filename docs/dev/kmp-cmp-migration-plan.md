@@ -1013,6 +1013,29 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
 9. 将 `core:model` 的 `utils` 文件按领域改包改名；同一 PR 迁完调用方，不加 typealias façade。
 10. 把 `core:viewmodel` 的共享流程下沉为无 UI UseCase，迁四个 Feature 后删除模块。
 11. 以 rules/settings 为第一个 `core:data` 拆分样板；Feature 不再见 DAO/entity。
+   - **M3-6 已完成（2026-09-15）：标签分组规则域下沉 `domain/rules` + `data/rules` —— `rules` 域拆完。**
+     本片是 M3 的最后一片，也是唯一一片**要先合并语义双份**才能动的：`TagGroupRuleApplier`
+     （全量重算，事务内）与 `:app` 的 `applyTagGroupRulesForBook`（单本书，`Book.save()` 调用）
+     各持一份匹配实现，只靠注释约定同步。合并方向是把单本书路径变成
+     `TagGroupRuleApplier.applyToBook` 的薄委托，共享同一个私有实现，只多一个 `persist = false`
+     ——镜像在 `:app` 侧，而共享实现必须留在 `:core:data`（它同时是 `Book` / `BookGroup` /
+     `BookGroupMutationRepository` 的 owner，搬出去会构成环）。该路径迁前**零测试**，故补了一条
+     `:app` 用例同时钉住「只处理这一本书」与「**不写库**」（因此 `BASELINE_MAIN` 712 → 713，
+     属有意变更，已显式声明）。
+     形态：`domain/rules` 加 `TagGroupRule`（`var id = systemTimeMillis()`、**id-only 判等**——
+     与 M3-5 的 `RuleSub` 恰好相反，见领域模型 KDoc）+ 端口；`data/rules` 加 Mapper + Impl
+     （收 `TagGroupRuleDao`，**保留**迁移前的 `withContext(Dispatchers.IO)`）+ `TagGroupRuleMapperTest`
+     7 例；旧 `:core:data` 仓储删除，不留门面/typealias；消费方 `appModule` / `GroupViewModel` /
+     `GroupEditSheet` / `GroupManageSheet` 与 `feature:tagrules`（Contract / EditSheet / VM /
+     特征化测试）全部改见领域模型与端口。`Restore.kt` / `Backup.kt` 仍按**实体**读写
+     `tagGroupRule.json`——备份格式的 owner 是实体，本片**不改文件格式**（同 M3-4）。
+     用例 **712 → 713 / 925 → 933**；四门禁 `--rerun` 全绿，G4 **零变更**（`:app` 的 UI 层与
+     `feature/*` 都不落在受监测的计数项上，无新增区域、无下降项）。
+     模板、选片表与验证配方见 `.agents/skills/legado-kmp-migration/references/m3-domain-slice.md`。
+   - M3-1～M3-5（替换规则 / 高亮标签 / 字典 / TXT 目录 / 规则订阅）只改了代码与
+     `tools/count-test-results.py` 的台账注释，提交见同上 reference 的 Measured slices 表
+     （`fb64d2be95` / `9d21369475` / `df00c585d8` / `8a0b7cd1c9` / `0555a0acc0`）。
+     下一步 M4/M5 的 rules 侧已无剩余域；`core:data` 仍有 settings / library / source 等域待拆。
 12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
 13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 

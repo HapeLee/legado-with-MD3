@@ -24,7 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.legado.app.data.entities.TagGroupRule
+import io.legado.app.domain.rules.TagGroupRule
 import io.legado.app.feature.tagrules.res.Res
 import io.legado.app.feature.tagrules.res.close
 import io.legado.app.feature.tagrules.res.copy_rule
