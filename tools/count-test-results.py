@@ -56,7 +56,8 @@ RESULT_DIRS = {
     # 用例是 `ReplaceRuleMapperTest`：实体 ↔ 领域模型逐字段往返、默认值集合、只按 id 判等的
     # 语义、`isValid()` / `getValidTimeoutMillisecond()` 与实体行为一致。
     # M3-2 起同一模块还装高亮标签规则域的 `HighlightTagRuleMapperTest`（6 例）、M3-3 再加
-    # 字典规则域的 `DictRuleMapperTest`（6 例），故本目录计数为**三片之和**（7 + 6 + 6 = 19）。
+    # 字典规则域的 `DictRuleMapperTest`（6 例）、M3-4 再加 TXT 目录规则域的
+    # `TxtTocRuleMapperTest`（7 例），故本目录计数为**四片之和**（7 + 6 + 6 + 7 = 26）。
     "data:rules      (desktopTest)": ("data/rules/build/test-results/desktopTest", False),
 }
 
@@ -81,7 +82,13 @@ BASELINE_MAIN = 712
 # 是「同步阻塞换 suspend」，用例数不变；`feature:dict` 模块级测试本来就是零）。
 # 同样做了变异验证：把 `enabled` 写死为 `true`、把 `sortNumber` 错映射、把集合映射的
 # `urlRule` 与 `showRule` 对调，三种变异都会让 `DictRuleMapperTest` 变红。
-BASELINE_ALL = 910
+# M3-4：910 → 917（`:data:rules` 新增 `TxtTocRuleMapperTest` 7 例 —— 比前几片多一条
+# 「`example` 的 `null` 原样穿过映射」）。主验证集**仍是 712**——本片只搬实现与类型，
+# `:app` 侧 `TxtTocRuleDeserializerTest`（6 例，测实体级键名提升）逐字未改，Feature 侧
+# 模块级测试本来就是零。
+# 同样做了变异验证：把 `example` 的 `null` 归一成 `""`、把 `serialNumber` 的默认值改成 0、
+# 把集合映射的 `chapterRule` 与 `volumeRule` 对调，三种变异都会让 `TxtTocRuleMapperTest` 变红。
+BASELINE_ALL = 917
 
 
 def tally(d: pathlib.Path):

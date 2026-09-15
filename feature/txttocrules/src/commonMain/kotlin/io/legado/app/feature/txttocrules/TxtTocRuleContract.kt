@@ -1,7 +1,7 @@
 package io.legado.app.feature.txttocrules
 
 import androidx.compose.runtime.Immutable
-import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.domain.rules.TxtTocRule
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState

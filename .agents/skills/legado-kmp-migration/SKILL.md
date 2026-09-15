@@ -13,6 +13,8 @@ slice, and use baselines as ratchets rather than waivers.
 
 Before acting, read repository `AGENTS.md` and `docs/dev/kmp-cmp-modernization.md`. For an
 implementation or review, also read [references/slice-checklist.md](references/slice-checklist.md).
+For a `:core:data` by-domain split (`domain/<x>` + `data/<x>`), also read
+[references/m3-domain-slice.md](references/m3-domain-slice.md) — the checked template M3-1…M3-4 walked.
 
 ## Select the mode
 

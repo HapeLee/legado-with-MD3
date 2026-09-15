@@ -5,9 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.repository.BookRepository
-import io.legado.app.data.repository.TxtTocRuleRepository
+import io.legado.app.data.rules.toDomain
+import io.legado.app.domain.rules.TxtTocRule
+import io.legado.app.domain.rules.TxtTocRuleRepository
 import io.legado.app.help.DefaultData
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.Utf8BomUtils
@@ -222,7 +223,9 @@ class TxtTocRulePreviewViewModel(
     private suspend fun getAllRules(): List<TxtTocRule> {
         var rules = repository.all()
         if (repository.count() == 0) {
-            val defaultRules = DefaultData.txtTocRules
+            // M3-4：`DefaultData.txtTocRules` 是 Room 实体（`DefaultData` 直连 DAO，属格式
+            // owner，留给 `data:database` 收口），端口收的是领域模型，故在边界上转换。
+            val defaultRules = DefaultData.txtTocRules.map { it.toDomain() }
             repository.insert(*defaultRules.toTypedArray())
             rules = repository.all()
         }

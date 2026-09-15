@@ -8,9 +8,9 @@ import io.legado.app.core.rules.BuiltInRulesImporter
 import io.legado.app.core.rules.RuleEntitySpec
 import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.core.rules.RuleTransferUseCase
-import io.legado.app.data.entities.TxtTocRule
-import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.rules.TxtTocRule
+import io.legado.app.domain.rules.TxtTocRuleRepository
 import io.legado.app.feature.txttocrules.res.Res
 import io.legado.app.feature.txttocrules.res.clipboard_empty
 import io.legado.app.feature.txttocrules.res.import_built_in_rules

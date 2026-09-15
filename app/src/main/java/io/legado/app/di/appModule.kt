@@ -60,6 +60,7 @@ import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.dao.DictRuleDao
 import io.legado.app.data.dao.HighlightTagRuleDao
+import io.legado.app.data.dao.TxtTocRuleDao
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
 import io.legado.app.data.repository.HomepageModulesRepository
@@ -97,7 +98,6 @@ import io.legado.app.data.repository.ThemePackageSettingsRepository
 import io.legado.app.data.repository.ThemeSettingsRepository
 import io.legado.app.data.repository.TranslationCacheRepositoryImpl
 import io.legado.app.data.repository.TranslationSettingsRepository
-import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.base.rules.AndroidBuiltInRulesImporter
 import io.legado.app.base.rules.AndroidRuleTransferPlatform
@@ -112,6 +112,7 @@ import io.legado.app.data.repository.manga.MangaReaderDataRepository
 import io.legado.app.data.rules.DictRuleRepositoryImpl
 import io.legado.app.data.rules.HighlightTagRuleRepositoryImpl
 import io.legado.app.data.rules.ReplaceRuleRepositoryImpl
+import io.legado.app.data.rules.TxtTocRuleRepositoryImpl
 import io.legado.app.data.security.CloudTtsCredentialCipher
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiChatGateway
@@ -184,6 +185,7 @@ import io.legado.app.domain.rules.DictRuleRepository
 import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
 import io.legado.app.domain.rules.ReplaceRuleRepository
+import io.legado.app.domain.rules.TxtTocRuleRepository
 import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.AddToBookshelfUseCase
@@ -378,7 +380,9 @@ val appModule = module {
     // 故用显式绑定而不是 `singleOf`——接口归属必须看得见（与 M3-2 的
     // `HighlightTagRuleRepository` 同一形态：构造参数收 DAO，不是 `AppDatabase`）。
     single<DictRuleRepository> { DictRuleRepositoryImpl(get<DictRuleDao>()) }
-    singleOf(::TxtTocRuleRepository)
+    // M3-4：TXT 目录规则同形——端口住 `:domain:rules`，实现住 `:data:rules`，构造参数收
+    // `TxtTocRuleDao`（不是 `AppDatabase`）。
+    single<TxtTocRuleRepository> { TxtTocRuleRepositoryImpl(get<TxtTocRuleDao>()) }
     single {
         SearchContentRepository(
             titleModeProvider = { io.legado.app.help.config.ReadBookConfig.titleMode },

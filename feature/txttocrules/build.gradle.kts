@@ -8,7 +8,9 @@ plugins {
 // `commonMain`，一份 UI 代码跨 android / desktop。
 //
 // 它承载「TXT 目录规则管理」一个屏幕（TxtRuleScreen / TxtTocRuleContract / TxtTocRuleViewModel）：
-//   - 数据/仓储来自 `:core:data`（TxtTocRule 实体、DAO、TxtTocRuleRepository 均已在 commonMain）；
+//   - 领域模型与仓储端口来自 `:domain:rules`（**M3-4 起**）：`TxtTocRule` /
+//     `TxtTocRuleRepository` 都不再是 `:core:data` 的实体/实现，Room 的实体与 DAO 仍归
+//     `:core:data`，实现住 `:data:rules` 并由宿主在 Koin 里绑定；
 //   - 导入/导出/上传编排来自 `:core:viewmodel` 的 `RuleTransferUseCase`，内置规则导入走
 //     `BuiltInRulesImporter`（两者都在 `io.legado.app.core.rules` 的 commonMain）；
 //   - UI 组件与主题来自 `:core:designsystem`，剪贴板/轻提示/文件选择走 `:core:platform` 的契约。
@@ -39,20 +41,31 @@ plugins {
 // - G2 把本模块登记为 **cmp**（放行 `androidx.compose.*` / `androidx.lifecycle.*` /
 //   `androidx.navigation3.*`）；必须在根 `build.gradle.kts` 的 `kmpModuleTypes` 同步登记，
 //   否则 G2 拦。
+// - **M3-4**：规则的领域模型/端口住 `:domain:rules`（`io.legado.app.domain.rules`），
+//   Room 实体与 DAO 仍归 `:core:data`。本模块 `commonMain` 里因此**不再**出现
+//   `io.legado.app.data.entities.TxtTocRule`；唯一还需要实体的是平台契约的 Android 实现
+//   （住 `:app` 的 `AndroidTxtTocRuleImportCompat`），因为旧键名 `rule` → `chapterRule`
+//   的键名提升注册在**实体类型**上，且 `Restore.kt` 按实体反序列化备份。
 //
 // 测试：本模块**没有**模块级测试。`TxtTocRuleDeserializerTest` 测的是 `:core:data` 的实体
-// 反序列化（住 `app/src/test/.../data/entities`），不随本模块走。
+// 反序列化（住 `app/src/test/.../data/entities`），不随本模块走；M3-4 起映射器的等价性基线
+// 住 `:data:rules` 的 `TxtTocRuleMapperTest`（7 例，随该模块的 `desktopTest` 跑）。
 //
 // 包名 `io.legado.app.feature.txttocrules`，`:app` 侧 import 零改动。
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // `api`：public 签名里出现这两个模块的类型——`TxtTocRuleImportCompat` /
-            // `TxtRuleScreen` 的实体参数来自 `:core:data`，`BaseImportUiState<TxtTocRule>`
-            // 来自 `:core:designsystem`；消费方编译时要看得见。
+            // `api`：public 签名里出现这三个模块的类型——`UploadRepository`（
+            // `TxtTocRuleViewModel` 的构造参数）来自 `:core:data`，
+            // `BaseImportUiState<TxtTocRule>` 来自 `:core:designsystem`，
+            // `TxtTocRule` 领域模型（`TxtTocRuleItemUi.rule`、
+            // `TxtTocRuleIntent.SaveRule.rule`、`TxtTocRuleRenderState.importState` 的泛型
+            // 实参、`TxtTocRuleImportCompat` 的返回类型）来自 `:domain:rules`；
+            // 消费方编译时要看得见。
             api(project(":core:data"))
             api(project(":core:designsystem"))
+            api(project(":domain:rules"))
             // `isJsonArray()` / `isJsonObject()`（`io.legado.app.utils`，纯 KMP 扩展）。
             implementation(project(":core:model"))
             // `Clipboard` / `JsonCodec` / `Toaster` / `DocumentPicker` 窄契约

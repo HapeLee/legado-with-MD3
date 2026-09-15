@@ -1,6 +1,6 @@
 package io.legado.app.feature.txttocrules
 
-import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.domain.rules.TxtTocRule
 
 /**
  * TXT 目录规则的**平台侧反序列化契约**（M1-3y）。
@@ -14,6 +14,12 @@ import io.legado.app.data.entities.TxtTocRule
  * 解析在这里也必须走平台实现——这与 `replacerules` 的
  * [io.legado.app.feature.replacerules.ReplaceRuleImportCompat] 不同：那里的标准格式能在共享层
  * 直接解，只有旧 jsonpath 格式才回落平台；这里**两种格式都需要**这个键名提升。
+ *
+ * ⚠️ **M3-4 起返回领域模型**（`io.legado.app.domain.rules.TxtTocRule`）而不是 Room 实体。
+ * 键名提升仍然发生在**实体**上（deserializer 注册在 `io.legado.app.data.entities.TxtTocRule`
+ * 这个类型上，见 `:core:data/androidMain` 的 `GsonExtensions.kt`），领域模型那一侧什么都不用做。
+ * 所以 Android 实现（`AndroidTxtTocRuleImportCompat`，住 `:app` 的 `domain/gateway`）在边界上
+ * 多做一步 `:data:rules` 的 `toDomain()` 映射——**这一步是恒等的**，不改任何字段语义。
  *
  * 失败语义：解析不了必须**抛异常**（调用方会转成导入状态 `Error`），不要返回空列表或 null
  * 来静默吞掉坏数据。

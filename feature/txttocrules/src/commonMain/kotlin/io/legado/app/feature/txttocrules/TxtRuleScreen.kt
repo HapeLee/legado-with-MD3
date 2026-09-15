@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.core.rules.RuleTransferEvent
-import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.domain.rules.TxtTocRule
 import io.legado.app.feature.txttocrules.res.Res
 import io.legado.app.feature.txttocrules.res.a11y_delete_named
 import io.legado.app.feature.txttocrules.res.a11y_edit_named

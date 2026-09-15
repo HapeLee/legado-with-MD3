@@ -1,7 +1,7 @@
 package io.legado.app.ui.book.toc.rule.preview
 
 import androidx.compose.runtime.Stable
-import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.domain.rules.TxtTocRule
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList

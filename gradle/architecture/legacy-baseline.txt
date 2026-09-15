@@ -109,7 +109,14 @@ gson|app/main/io/legado/app/model/localBook|1
 gson|app/main/io/legado/app/model/webBook|1
 gson|app/main/io/legado/app/service|2
 gson|app/main/io/legado/app/ui/ai/chat|1
-gson|app/main/io/legado/app/ui/association|8
+# M3-4：`ImportTxtTocRuleViewModel.kt` 不再 import `io.legado.app.utils.GSON`，改用同包的
+# `parseTxtTocRules` / `parseTxtTocRule` 两个顶层函数（旧键名 `rule` → `chapterRule` 的键名
+# 提升仍由 `GSON` 门面上注册的 deserializer 完成，只是调用点从本文件挪到了那两个函数里）。
+# 该文件本就是「老导入路径」的既有债之一，这一步是**真实减少**，按棘轮只降不升下调。
+# 8 → 7：`gson` 规则按 `^import io\.legado\.app\.utils\.GSON$` 在目录级计数，本目录还剩
+# 7 个文件 import 它（AddToBookshelfDialog / ImportDictRuleViewModel / ImportHttpTtsDialog /
+# ImportRssSourceViewModel / ImportThemeDialog / ImportThemeViewModel / ImportTxtTocRuleDialog）。
+gson|app/main/io/legado/app/ui/association|7
 gson|app/main/io/legado/app/ui/book/bookmark|1
 gson|app/main/io/legado/app/ui/book/info|1
 gson|app/main/io/legado/app/ui/book/knowledge|3

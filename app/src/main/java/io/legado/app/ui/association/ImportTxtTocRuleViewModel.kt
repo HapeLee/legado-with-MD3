@@ -7,20 +7,20 @@ import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.data.entities.TxtTocRule
-import io.legado.app.data.repository.TxtTocRuleRepository
+import io.legado.app.data.rules.toDomain
+import io.legado.app.domain.rules.TxtTocRule
+import io.legado.app.domain.rules.TxtTocRuleRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonArray
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isUri
+import io.legado.app.utils.parseTxtTocRule
+import io.legado.app.utils.parseTxtTocRules
 import io.legado.app.utils.readText
 import splitties.init.appCtx
 
@@ -82,16 +82,30 @@ class ImportTxtTocRuleViewModel(
         }
     }
 
+    /**
+     * M3-4：规则的公开类型全部换成领域模型（`io.legado.app.domain.rules.TxtTocRule`），
+     * 而 JSON 的解析仍在**实体**上完成——旧版本备份里 `chapterRule` 的键名是 `rule`，那条
+     * 键名提升注册在实体类型上（`:core:data/androidMain` 的 `txtTocRuleJsonDeserializer`），
+     * 共享层的 `JsonCodec` 不含它。所以这里走 `parseTxtTocRules` / `parseTxtTocRule`
+     * （`io.legado.app.utils`，与 `GSON` 门面同包），再在边界上 `toDomain()`。
+     *
+     * ⚠️ 不要图省事改回 `JsonCodec.fromJsonObject<TxtTocRule>`：那会让老用户导入旧备份时
+     * `rule` 键被静默丢掉（规则名还在、章节正则变空串），而且没有任何用例会红。
+     *
+     * 与 `feature:txttocrules` 的 `TxtTocRuleImportCompat` 是同一份实现的两个入口：那边服务
+     * CMP Feature 的导入对话框（共享层），这边服务本老路径（URL / URI / 纯文本多形态）。
+     * 前四片也是这个形态（见 `ImportReplaceRuleViewModel` 直接用 `ReplaceAnalyzer`）。
+     */
     private suspend fun importSourceAwait(text: String) {
         when {
             text.isJsonObject() -> {
-                GSON.fromJsonObject<TxtTocRule>(text).getOrThrow().let {
+                parseTxtTocRule(text).toDomain().let {
                     allSources.add(it)
                 }
             }
-            text.isJsonArray() -> GSON.fromJsonArray<TxtTocRule>(text).getOrThrow()
+            text.isJsonArray() -> parseTxtTocRules(text)
                 .let { items ->
-                    allSources.addAll(items)
+                    allSources.addAll(items.map { it.toDomain() })
                 }
             text.isAbsUrl() -> {
                 importSourceUrl(text)
