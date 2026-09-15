@@ -60,6 +60,7 @@ import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.dao.DictRuleDao
 import io.legado.app.data.dao.HighlightTagRuleDao
+import io.legado.app.data.dao.RuleSubDao
 import io.legado.app.data.dao.TxtTocRuleDao
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
@@ -87,7 +88,6 @@ import io.legado.app.data.repository.RssFavoriteRepository
 import io.legado.app.data.repository.RssReadRecordRepository
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.RssSourceEditRepository
-import io.legado.app.data.repository.RuleSubscriptionRepository
 import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
@@ -112,6 +112,7 @@ import io.legado.app.data.repository.manga.MangaReaderDataRepository
 import io.legado.app.data.rules.DictRuleRepositoryImpl
 import io.legado.app.data.rules.HighlightTagRuleRepositoryImpl
 import io.legado.app.data.rules.ReplaceRuleRepositoryImpl
+import io.legado.app.data.rules.RuleSubRepositoryImpl
 import io.legado.app.data.rules.TxtTocRuleRepositoryImpl
 import io.legado.app.data.security.CloudTtsCredentialCipher
 import io.legado.app.domain.gateway.AiArtifactGateway
@@ -185,6 +186,7 @@ import io.legado.app.domain.rules.DictRuleRepository
 import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
 import io.legado.app.domain.rules.ReplaceRuleRepository
+import io.legado.app.domain.rules.RuleSubRepository
 import io.legado.app.domain.rules.TxtTocRuleRepository
 import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
@@ -561,7 +563,10 @@ val appModule = module {
     singleOf(::RssArticleRepository)
     singleOf(::RssReadRecordRepository)
     singleOf(::RssSourceEditRepository)
-    singleOf(::RuleSubscriptionRepository)
+    // M3-5：规则订阅同形——端口住 `:domain:rules`，实现住 `:data:rules`，构造参数收
+    // `RuleSubDao`（不是 `AppDatabase`）。端口随本片从 `RuleSubscriptionRepository`
+    // 改名为 `RuleSubRepository`（与领域模型 `RuleSub` 及其余四个规则端口对齐）。
+    single<RuleSubRepository> { RuleSubRepositoryImpl(get<RuleSubDao>()) }
     single {
         SearchRepositoryImpl(get())
     }

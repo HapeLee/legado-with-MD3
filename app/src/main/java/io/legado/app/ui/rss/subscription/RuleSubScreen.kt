@@ -37,8 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.data.entities.RuleSub
-import io.legado.app.data.entities.RuleSubType
+import io.legado.app.domain.rules.RuleSub
+import io.legado.app.domain.rules.RuleSubType
 import io.legado.app.ui.association.ImportReplaceRuleDialog
 import io.legado.app.ui.association.ImportRssSourceDialog
 import io.legado.app.ui.theme.LegadoTheme

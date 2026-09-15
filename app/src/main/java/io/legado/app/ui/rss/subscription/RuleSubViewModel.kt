@@ -5,8 +5,8 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
-import io.legado.app.data.entities.RuleSub
-import io.legado.app.data.repository.RuleSubscriptionRepository
+import io.legado.app.domain.rules.RuleSub
+import io.legado.app.domain.rules.RuleSubRepository
 import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 
 class RuleSubViewModel(
     application: Application,
-    private val repository: RuleSubscriptionRepository,
+    private val repository: RuleSubRepository,
 ) : ViewModel() {
     private val app = application
     private val searchKey = MutableStateFlow("")

@@ -57,7 +57,8 @@ RESULT_DIRS = {
     # 语义、`isValid()` / `getValidTimeoutMillisecond()` 与实体行为一致。
     # M3-2 起同一模块还装高亮标签规则域的 `HighlightTagRuleMapperTest`（6 例）、M3-3 再加
     # 字典规则域的 `DictRuleMapperTest`（6 例）、M3-4 再加 TXT 目录规则域的
-    # `TxtTocRuleMapperTest`（7 例），故本目录计数为**四片之和**（7 + 6 + 6 + 7 = 26）。
+    # `TxtTocRuleMapperTest`（7 例）、M3-5 再加规则订阅域的 `RuleSubMapperTest`（8 例），
+    # 故本目录计数为**五片之和**（7 + 6 + 6 + 7 + 8 = 34）。
     "data:rules      (desktopTest)": ("data/rules/build/test-results/desktopTest", False),
 }
 
@@ -88,7 +89,12 @@ BASELINE_MAIN = 712
 # 模块级测试本来就是零。
 # 同样做了变异验证：把 `example` 的 `null` 归一成 `""`、把 `serialNumber` 的默认值改成 0、
 # 把集合映射的 `chapterRule` 与 `volumeRule` 对调，三种变异都会让 `TxtTocRuleMapperTest` 变红。
-BASELINE_ALL = 917
+# M3-5：917 → 925（`:data:rules` 新增 `RuleSubMapperTest` 8 例 —— 比前几片多两条：一条钉住
+# 「判等是**全字段**而非主键」（`RuleSub` 是六个规则实体里唯一没重写 `equals` 的，其余五片恰好
+# 相反），一条钉住领域侧 `RuleSubType` 与实体侧常量的镜像关系与数值。主验证集**仍是 712**
+# ——本片只搬实现与类型，`:app` 的 RSS 订阅页（`RuleSubViewModel` / `RuleSubScreen`）用例数
+# 本来就是零。
+BASELINE_ALL = 925
 
 
 def tally(d: pathlib.Path):
