@@ -66,6 +66,10 @@ RESULT_DIRS = {
     # 故**不进主集**。用例是 `AiPromptPresetMapperTest`（7 例）：实体 ↔ 领域模型逐字段
     # 往返、默认值集合（`enabled` / `builtIn` / `sortNumber`）、`createdAt` / `updatedAt`
     # 默认取当前毫秒、判等按**全字段**而非主键（与 M3-6 相反、与 M3-5 同侧）、集合映射保序。
+    # M4-2：同目录再加 `AiMemoryMapperTest`（7 例）与 `AiMemoryRepositoryImplTest`（4 例）
+    # ⇒ **11 例**。后者是 M4-2 起的新形态：`AiMemoryRepositoryImpl` 不像 M4-1 的纯委派，
+    # 它有两条真实逻辑（`upsert` 写前覆盖 `updatedAt`、`getForPrompt` 的「全局+会话」拼接
+    # 与空白会话 id 短路），光靠 mapper 用例护不住 ⇒ 用手写的 DAO 假实现钉住。
     "data:ai         (desktopTest)": ("data/ai/build/test-results/desktopTest", False),
 }
 
@@ -114,7 +118,9 @@ BASELINE_MAIN = 713
 # M4-1：933 → 940（净 +7 = `:data:ai` 新增 `AiPromptPresetMapperTest` 7 例）。本片是第一个
 # 非 rules 域：映射用例的写法回到「全字段判等」一侧（同 M3-5 `RuleSubMapperTest`），
 # 用例数同样是 7。主验证集**不变**（713）——新用例不进主集，`:app` 侧只换了 import。
-BASELINE_ALL = 940
+# M4-2：940 → 951（净 +11 = `:data:ai` 新增 `AiMemoryMapperTest` 7 例 +
+# `AiMemoryRepositoryImplTest` 4 例）。主验证集**不变**（713）——新用例不进主集，`:app` 侧只换了 import 与 DI 绑定。
+BASELINE_ALL = 951
 
 
 def tally(d: pathlib.Path):

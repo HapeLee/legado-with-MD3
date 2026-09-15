@@ -7,14 +7,14 @@ import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.entities.AiArtifact
-import io.legado.app.data.entities.AiMemory
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookCharacterEvent
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.data.entities.BookCharacterRelation
 import io.legado.app.data.entities.BookKnowledgeEntry
 import io.legado.app.data.entities.BookOutlineNode
-import io.legado.app.domain.gateway.AiMemoryGateway
+import io.legado.app.domain.ai.AiMemory
+import io.legado.app.domain.ai.AiMemoryGateway
 import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.model.AiToolCall

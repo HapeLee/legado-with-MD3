@@ -1053,6 +1053,28 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      **保留**迁移前的 `withContext(Dispatchers.IO)`。旧仓储与旧 Gateway 一并删除、不留门面。
      用例 **713 不变 / 933 → 940**（新增 `AiPromptPresetMapperTest` 7 例，不进主集）；四门禁
      `--rerun` 全绿，G4 零变更。
+   - **M4-2 已完成（2026-09-15）：AI 长期记忆域下沉 —— 复用 `domain/ai` + `data:ai`，不再新建模块对。**
+     选片依据同 M4-1，本片的价值在三点「与上一片不同」：
+     ① **复用模块对**：AI 域第二片直接放进已有 `domain/ai` + `data:ai`，不再动 `settings.gradle`
+     与 `kmpModuleTypes`（M4-1 已建好）。判据是「域」而不是「实体」——AI 域的其余 Gateway
+     （`AiArtifact` / `AiChat` / `AiProfile` …）后续都走这条路。
+     ② **端口只留 3 / 8 个方法**：`observeByConversation` / `observeGlobal` / `getByConversation`
+     / `getGlobal` / `deleteAllForConversation` 全仓零调用方，随片不进端口。前两个是 `Flow` 形态
+     ⇒ 本域下沉后**不再有任何 Flow 端口方法**；`getByConversation` / `getGlobal` 的 DAO 方法被
+     `getForPrompt` 内部使用，只删端口不动 DAO。
+     ③ **实现有真实逻辑，光 mapper 测试不够**：`upsert` 写前用当前时间**覆盖** `updatedAt`
+     （迁移前 `System.currentTimeMillis()`），`getForPrompt` 是「全局 + 本会话」拼接且有空白
+     会话 id 的短路。因此 M4-2 起新增**第二种测试形态**：`AiMemoryRepositoryImplTest` 用手写的
+     DAO 假实现（纯 Kotlin 实现 Room 的 `@Dao` interface，不碰 Room 运行时）钉住这两条。
+     `System.currentTimeMillis()` 换成 `:core:platform` 的 `systemTimeMillis()`（android/desktop
+     的 `actual` 都是它，语义等价）—— 换的原因是 commonMain 拿不到 `java.lang.System`；
+     为此 `data:ai` 新增 `implementation(project(":core:platform"))`。
+     ⚠️ 本域**复合主键**（`conversationId` + `key`，无 `id` 字段），且**空 `conversationId` 是
+     语义值**（表示全局记忆，DAO 查询写 `WHERE conversationId = ''`）⇒ 映射必须原样搬运、
+     不得归一化。判等仍是**全字段**（data class 默认），陷阱从「补 id-only `equals`」变成
+     「补按复合主键的 `equals`」——那会吞掉 `upsert` 刷新 `updatedAt` 的差异。
+     用例 **713 不变 / 940 → 951**（`AiMemoryMapperTest` 7 例 + `AiMemoryRepositoryImplTest`
+     4 例，均不进主集）；四门禁 `--rerun` 全绿，G4 零变更；变异 5 轮全红后回绿。
 12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
 13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 

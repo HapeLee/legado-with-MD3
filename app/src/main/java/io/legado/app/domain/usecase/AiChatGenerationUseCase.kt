@@ -4,7 +4,7 @@ import com.google.gson.JsonObject
 import io.legado.app.domain.gateway.AiChatGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
-import io.legado.app.domain.gateway.AiMemoryGateway
+import io.legado.app.domain.ai.AiMemoryGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.model.AiGenerateRequest

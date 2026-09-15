@@ -12,10 +12,10 @@ import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.core.platform.Toaster
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.json.GsonImportJsonEditor
+import io.legado.app.data.ai.AiMemoryRepositoryImpl
 import io.legado.app.data.ai.AiPromptPresetRepositoryImpl
 import io.legado.app.data.repository.AiArtifactRepository
 import io.legado.app.data.repository.AiChatRepository
-import io.legado.app.data.repository.AiMemoryRepository
 import io.legado.app.data.repository.AiProfileRepository
 import io.legado.app.data.repository.AiTextRepositoryImpl
 import io.legado.app.data.repository.AiToolRepository
@@ -58,6 +58,7 @@ import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.DownloadCacheSettingsRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
+import io.legado.app.data.dao.AiMemoryDao
 import io.legado.app.data.dao.AiPromptPresetDao
 import io.legado.app.data.dao.DictRuleDao
 import io.legado.app.data.dao.HighlightTagRuleDao
@@ -117,10 +118,10 @@ import io.legado.app.data.rules.RuleSubRepositoryImpl
 import io.legado.app.data.rules.TagGroupRuleRepositoryImpl
 import io.legado.app.data.rules.TxtTocRuleRepositoryImpl
 import io.legado.app.data.security.CloudTtsCredentialCipher
+import io.legado.app.domain.ai.AiMemoryGateway
 import io.legado.app.domain.ai.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiChatGateway
-import io.legado.app.domain.gateway.AiMemoryGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.AiToolGateway
@@ -536,7 +537,7 @@ val appModule = module {
     single<AiProfileGateway> { AiProfileRepository(get()) }
     single<AiArtifactGateway> { AiArtifactRepository(get()) }
     single<AiChatGateway> { AiChatRepository(get()) }
-    single<AiMemoryGateway> { AiMemoryRepository(get()) }
+    single<AiMemoryGateway> { AiMemoryRepositoryImpl(get<AiMemoryDao>()) }
     single<AiPromptPresetGateway> { AiPromptPresetRepositoryImpl(get<AiPromptPresetDao>()) }
     single<AiTextGateway> { AiTextRepositoryImpl() }
     single<AiToolGateway> { AiToolRepository(get(), get(), get(), get(), get(), get(), get()) }

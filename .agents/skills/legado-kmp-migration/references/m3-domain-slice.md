@@ -26,6 +26,7 @@ callers that die with the slice**. What is left of the rule domain, as measured:
 | `RuleSub` | none — only the `:app` RSS page (`ui/rss/subscription`) | **none** | **done (M3-5)** — the mapper test shipped with the slice |
 | `TagGroupRule` | yes — tagrules group page + group-manage sheet | partial | **done (M3-6)** — the duplicated matcher was merged first (see below), then the repository sank |
 | `AiPromptPreset` | none — `:app` reading AI delegate (`ui/book/read`) | **none** | **done (M4-1)** — first non-rules domain; needs its **own module pair**, see below |
+| `AiMemory` | none — `:app` `AiToolRepository` (AI tool calls) | **none** | **done (M4-2)** — reuses the M4-1 module pair; port keeps only **3 of 8** methods; **needs an Impl behaviour test**, not just a mapper test (see below) |
 
 A zero-guardrail candidate is not disqualified, but then the mapper test is **part of the
 slice, written before the move** — not a bonus added afterwards.
@@ -190,7 +191,26 @@ git diff --check
 | M3-4 | `TxtTocRule` | `8a0b7cd1c9` |
 | M3-5 | `RuleSub` | `0555a0acc0` |
 | M3-6 | `TagGroupRule` | `5406f151fb` |
-| M4-1 | `AiPromptPreset` | pending |
+| M4-1 | `AiPromptPreset` | `00e841ed46` |
+| M4-2 | `AiMemory` | pending |
+
+### When a mapper test is not enough: the Impl behaviour test
+
+M3-1～M4-1 implementations are **pure DAO delegation** — each method body is a single
+`dao.xxx()` call — so the mapper equivalence baseline is sufficient. M4-2's
+`AiMemoryRepositoryImpl` is not: `upsert` overwrites `updatedAt` with the current time
+before writing, and `getForPrompt` concatenates global + conversation memories with a
+blank-id short circuit. None of that lives in the mapper, so **no mapper case can catch its
+removal**. The test decision rule:
+
+- If the Impl contains a `copy(`, a conditional branch, or a composition of several DAO
+  calls ⇒ add `XxxRepositoryImplTest` next to the mapper test.
+- Use a hand-written fake DAO (plain Kotlin class implementing the Room `@Dao` interface;
+  it never touches the Room runtime) and `runBlocking`, **not** `runTest` — the module only
+  depends on `kotlinx.coroutines.core`, and a test file is not a reason to add a new
+  test dependency.
+- Pick inputs that **discriminate implementations** (blank vs non-blank conversation id;
+  multiple elements to pin ordering), not merely 'returns something non-empty'.
 
 Milestone-level blocker behind these slices is `data:database` (the single Room owner):
 `entities/BaseSource.kt` alone carries 23 `coreProvider` hits, and `:app` still has 8 files
