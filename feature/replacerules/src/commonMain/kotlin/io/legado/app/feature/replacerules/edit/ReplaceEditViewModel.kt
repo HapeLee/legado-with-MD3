@@ -5,9 +5,9 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.core.platform.Clipboard
 import io.legado.app.core.platform.JsonCodec
 import io.legado.app.core.platform.systemTimeMillis
-import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.domain.gateway.ReplaceRuleChangeNotifier
+import io.legado.app.domain.rules.ReplaceRule
+import io.legado.app.domain.rules.ReplaceRuleRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.replacerules.ReplaceEditRoute
 import kotlinx.coroutines.Dispatchers

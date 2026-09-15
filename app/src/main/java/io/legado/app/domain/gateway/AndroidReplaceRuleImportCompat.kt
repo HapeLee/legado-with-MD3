@@ -1,8 +1,9 @@
 package io.legado.app.domain.gateway
 
-import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.feature.replacerules.ReplaceRuleImportCompat
 import io.legado.app.data.rules.ReplaceAnalyzer
+import io.legado.app.data.rules.toDomain
+import io.legado.app.domain.rules.ReplaceRule
+import io.legado.app.feature.replacerules.ReplaceRuleImportCompat
 
 /**
  * [ReplaceRuleImportCompat] 的 Android 实现。
@@ -24,8 +25,8 @@ import io.legado.app.data.rules.ReplaceAnalyzer
 class AndroidReplaceRuleImportCompat : ReplaceRuleImportCompat {
 
     override fun parseRules(json: String): List<ReplaceRule> =
-        ReplaceAnalyzer.jsonToReplaceRules(json).getOrThrow()
+        ReplaceAnalyzer.jsonToReplaceRules(json).getOrThrow().map { it.toDomain() }
 
     override fun parseRule(json: String): ReplaceRule =
-        ReplaceAnalyzer.jsonToReplaceRule(json).getOrThrow()
+        ReplaceAnalyzer.jsonToReplaceRule(json).getOrThrow().toDomain()
 }

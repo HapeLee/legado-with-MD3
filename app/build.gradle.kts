@@ -240,6 +240,9 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:viewmodel"))
     implementation(project(":core:ui"))
+    // M3-1：替换规则域（端口住 domain，实现与映射器住 data:rules）。
+    implementation(project(":domain:rules"))
+    implementation(project(":data:rules"))
     implementation(libs.okhttp)
     implementation(fileTree(mapOf("dir" to "cronetlib", "include" to listOf("*.jar", "*.aar"))))
     implementation(libs.protobuf.javalite)

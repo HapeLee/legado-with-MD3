@@ -630,6 +630,11 @@ val checkSharedPurity = tasks.register<CheckSharedPurityTask>(
             "smoke/room-kmp-probe" to "data", // commonMain import androidx.room
             "smoke/network-kmp-probe" to "data", // commonMain 用 io.ktor
             "core/model" to "pure",
+            // M3-1：`core:data` 按域拆分的第一个样板。`domain/rules` 只装领域模型与 port
+            // （零 androidx，按 pure 取严）；`data/rules` 装实现与 mapper，过渡期经
+            // `:core:data` 使用 Room 的 DAO/实体，故按 data 登记（允许 androidx.room）。
+            "domain/rules" to "pure",
+            "data/rules" to "data",
             // M1-3u：`:core:viewmodel` 从 Android library 转成 KMP。它的 `commonMain` 只放
             // `io.legado.app.core.rules.*`（规则导入/导出协议），`base/`（要 `Application`/`Uri`
             // / `viewModelScope`）与 `help/coroutine/` 落到 `androidMain`。按 **pure** 登记

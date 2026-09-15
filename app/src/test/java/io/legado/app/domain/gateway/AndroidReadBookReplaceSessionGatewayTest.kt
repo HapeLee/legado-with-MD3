@@ -16,7 +16,8 @@ import org.robolectric.annotation.Config
  * 只覆盖「当前无书」这一条：`ReadBook.book` 是 `private set`，单测无法注入书籍；
  * 而 `saveRead()` / `loadContent(false)` 会真实落库并启动加载协程，不适合放进单测。
  *
- * 钉住的是契约最关键的约定——无书时 [ReadBookReplaceSessionGateway.snapshot] 返回 null、
+ * 钉住的是契约最关键的约定——无书时
+ * [io.legado.app.domain.rules.ReadBookReplaceSessionGateway.snapshot] 返回 null、
  * 两个 setter 静默跳过。这与迁移前 `ReplaceRuleViewModel` 里的
  * `ReadBook.book?.setUseReplaceRule(...)` / `?.setReSegment(...)` 逐条一致；
  * 一旦实现退化成直接解引用，这个测试会先红。

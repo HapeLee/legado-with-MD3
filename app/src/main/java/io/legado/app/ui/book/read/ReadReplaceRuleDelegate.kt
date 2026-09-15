@@ -1,7 +1,7 @@
 package io.legado.app.ui.book.read
 
-import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.data.repository.ReplaceRuleRepository
+import io.legado.app.domain.rules.ReplaceRule
+import io.legado.app.domain.rules.ReplaceRuleRepository
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ReadBook

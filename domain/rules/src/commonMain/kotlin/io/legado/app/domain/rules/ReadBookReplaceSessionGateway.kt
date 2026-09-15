@@ -1,6 +1,4 @@
-package io.legado.app.domain.gateway
-
-import io.legado.app.data.entities.ReplaceRule
+package io.legado.app.domain.rules
 
 /**
  * 当前阅读会话中与「替换规则」有关的只读快照。
@@ -29,9 +27,13 @@ data class ReadBookReplaceSnapshot(
  * （外部只能通过语义化命令改写会话字段）保持一致：调用方拿不到 `Book` 实体，
  * 也就无法绕过命令直接改写会话。
  *
- * 契约不暴露 Android 类型；`ReplaceRule` 是 `:core:data` 的共享实体，故本文件放在
- * `:core:data` 的 commonMain。Android 实现留在 `:app`
- * （[AndroidReadBookReplaceSessionGateway]），由 Koin 注入。
+ * M3-1 之前本文件的宿主是 `:core:data`（包 `io.legado.app.domain.gateway`），
+ * 因为快照里的 [ReadBookReplaceSnapshot.effectiveReplaceRules] 用的是 `:core:data` 的
+ * Room 实体 `ReplaceRule`。本片把该字段换成领域模型 [ReplaceRule] 后，本契约不再需要
+ * `:core:data` 的任何类型 ⇒ **整份文件随域搬进 `:domain:rules`**（端口住领域层，
+ * 与 `docs/dev/kmp-cmp-migration-plan.md` 的 M3 模板一致）。
+ * Android 实现 `io.legado.app.domain.gateway.AndroidReadBookReplaceSessionGateway`
+ * 留在 `:app`（它要读 `ReadBook` 单例），由 Koin 注入；它在边界上把实体映射成领域模型。
  *
  * **语义必须与迁移前逐条一致**，任何一条改动都会改变用户可见行为：
  * - [setReSegment] 与 [loadContent] 是两次独立调用：迁移前即使当前无书，

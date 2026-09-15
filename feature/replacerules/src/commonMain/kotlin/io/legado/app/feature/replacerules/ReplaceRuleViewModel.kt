@@ -7,16 +7,16 @@ import io.legado.app.core.rules.RuleEntitySpec
 import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.core.rules.RuleTransferUseCase
 import io.legado.app.data.entities.BookContentProcess
-import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReadSettingsRepository
-import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookContentProcessGateway
-import io.legado.app.domain.gateway.ReadBookReplaceSessionGateway
 import io.legado.app.domain.gateway.ReplaceRuleChangeNotifier
 import io.legado.app.domain.gateway.ReplaceRuleSettingsGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
+import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
+import io.legado.app.domain.rules.ReplaceRule
+import io.legado.app.domain.rules.ReplaceRuleRepository
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiState
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -333,12 +333,12 @@ class ReplaceRuleViewModel(
         order = order
     )
 
-    /** 当前选中项对应的实体；`UploadSelection` / `ExportSelection` 共用。 */
+    /** 当前选中项对应的领域模型；`UploadSelection` / `ExportSelection` 共用。 */
     private fun selectedRules(): List<ReplaceRule> {
         val state = uiState.value
         return state.items
             .filter { state.selectedIds.contains(it.id) }
-            .map { it.toEntity() }
+            .map { it.toDomain() }
     }
 
     private fun sortRules(rules: List<ReplaceRule>, mode: String): List<ReplaceRule> {
@@ -360,7 +360,7 @@ class ReplaceRuleViewModel(
     private fun saveSortOrder() {
         val currentLocal = _localItems.value ?: return
         viewModelScope.launch {
-            repository.moveOrder(currentLocal.map { it.toEntity() }, _sortMode.value == "desc")
+            repository.moveOrder(currentLocal.map { it.toDomain() }, _sortMode.value == "desc")
             _localItems.value = null
             notifyRuleChanged()
         }

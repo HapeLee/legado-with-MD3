@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.core.rules.RuleTransferEvent
-import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.domain.rules.ReplaceRule
 import io.legado.app.feature.replacerules.res.Res
 import io.legado.app.feature.replacerules.res.a11y_edit_named
 import io.legado.app.feature.replacerules.res.a11y_long_press_reorder
@@ -447,21 +447,21 @@ fun ReplaceRuleScreen(
                             RoundDropdownMenuItem(
                                 text = stringResource(Res.string.move_to_top),
                                 onClick = {
-                                    onIntent(ReplaceRuleIntent.ToTop(ui.toEntity()))
+                                    onIntent(ReplaceRuleIntent.ToTop(ui.toDomain()))
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
                                 text = stringResource(Res.string.move_to_bottom),
                                 onClick = {
-                                    onIntent(ReplaceRuleIntent.ToBottom(ui.toEntity()))
+                                    onIntent(ReplaceRuleIntent.ToBottom(ui.toDomain()))
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
                                 text = stringResource(Res.string.delete),
                                 onClick = {
-                                    showDeleteRuleDialog = ui.toEntity()
+                                    showDeleteRuleDialog = ui.toDomain()
                                     dismiss()
                                 }
                             )

@@ -2,7 +2,7 @@ package io.legado.app.feature.replacerules
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.domain.rules.ReplaceRule
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiState
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import io.legado.app.ui.widget.components.list.InteractionState
@@ -29,7 +29,14 @@ data class ReplaceRuleItemUi(
     val timeoutMillisecond: Long,
     val order: Int
 ) : SelectableItem<Long> {
-    fun toEntity() = ReplaceRule(
+    /**
+     * 列表项 → 领域模型（M3-1）。
+     *
+     * 名字是 `toDomain` 而不是搬过来的 `toEntity`：本片起，Feature 面（Contract / Screen /
+     * ViewModel / 平台契约）只见 `:domain:rules` 的领域模型，Room 实体不再出现在本模块，
+     * 实体与领域模型之间的转换只在 `:data:rules` 的映射器与 `:app` 的契约实现里发生。
+     */
+    fun toDomain() = ReplaceRule(
         id = id,
         name = name,
         group = group,

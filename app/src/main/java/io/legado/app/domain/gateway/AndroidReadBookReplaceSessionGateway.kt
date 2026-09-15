@@ -1,6 +1,9 @@
 package io.legado.app.domain.gateway
 
 import io.legado.app.data.entities.getUseReplaceRule
+import io.legado.app.data.rules.toDomain
+import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
+import io.legado.app.domain.rules.ReadBookReplaceSnapshot
 import io.legado.app.model.ReadBook
 
 /**
@@ -25,7 +28,9 @@ class AndroidReadBookReplaceSessionGateway(
                 otherSettingsGateway.currentSettings.replaceEnableDefault
             ),
             reSegment = book.getReSegment(),
-            effectiveReplaceRules = chapterInput?.content?.effectiveReplaceRules.orEmpty(),
+            // 章节内容里存的是 Room 实体 ⇒ 在契约边界上转成领域模型（M3-1）。
+            effectiveReplaceRules = chapterInput?.content?.effectiveReplaceRules.orEmpty()
+                .map { it.toDomain() },
         )
     }
 

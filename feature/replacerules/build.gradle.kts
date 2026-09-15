@@ -45,6 +45,12 @@ kotlin {
             // （`:core:designsystem`）；消费方编译时要看得见。
             api(project(":core:data"))
             api(project(":core:designsystem"))
+            // M3-1：替换规则的领域模型与仓储端口（`io.legado.app.domain.rules`）。
+            // 用 `api` 而非 `implementation`：`ReplaceRuleItemUi.toDomain()`、
+            // `ReplaceRuleUiState.effectiveRules`、`ReplaceRuleIntent.DeleteRule(rule)`、
+            // `ReplaceRuleImportCompat` 以及 `ReplaceRuleViewModel` 的构造参数（仓储端口）
+            // 都把这个类型露在 public 签名里，消费方（`:app` 的 DI 与契约实现）必须看得见。
+            api(project(":domain:rules"))
             // `isJsonArray()` / `isJsonObject()`（`io.legado.app.utils`，纯 KMP 扩展）与 `AppPattern`。
             implementation(project(":core:model"))
             // `Clipboard` / `JsonCodec` / `DocumentPicker` 窄契约（实现由 `:app` 在 Koin 里注入）。

@@ -81,7 +81,6 @@ import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.ReadStyleConfigStore
 import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.data.repository.RemoteBookRepository
-import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.RssArticleRepository
 import io.legado.app.data.repository.RssFavoriteRepository
 import io.legado.app.data.repository.RssReadRecordRepository
@@ -110,6 +109,7 @@ import io.legado.app.data.repository.WebDavReadingProgressRepository
 import io.legado.app.data.repository.manga.DefaultMangaReaderSession
 import io.legado.app.data.repository.manga.MangaReaderActionRepository
 import io.legado.app.data.repository.manga.MangaReaderDataRepository
+import io.legado.app.data.rules.ReplaceRuleRepositoryImpl
 import io.legado.app.data.security.CloudTtsCredentialCipher
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiChatGateway
@@ -168,7 +168,6 @@ import io.legado.app.domain.gateway.OtherConfigSystemGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudVoiceGateway
-import io.legado.app.domain.gateway.ReadBookReplaceSessionGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
@@ -179,6 +178,8 @@ import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.gateway.WebDavBackupGateway
+import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
+import io.legado.app.domain.rules.ReplaceRuleRepository
 import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.AddToBookshelfUseCase
@@ -569,7 +570,9 @@ val appModule = module {
     singleOf(::SaveMarkingUseCase)
     singleOf(::VerifyBookmarkTargetUseCase)
     singleOf(::RelocateMarkingTargetUseCase)
-    singleOf(::ReplaceRuleRepository)
+    // M3-1：替换规则的仓储端口住 `:domain:rules`，实现住 `:data:rules`。注入面是端口，
+    // 实现拿 `ReplaceRuleDao`（`appDatabaseModule` 已 `factory<ReplaceRuleDao>{...}` 绑定）。
+    single<ReplaceRuleRepository> { ReplaceRuleRepositoryImpl(get()) }
     single<DictionaryGateway> { DictionaryRepositoryImpl() }
     singleOf(::TranslateChapterUseCase)
     singleOf(::AiChatGenerationUseCase)

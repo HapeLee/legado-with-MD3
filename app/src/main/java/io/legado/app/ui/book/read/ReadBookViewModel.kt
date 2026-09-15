@@ -24,7 +24,6 @@ import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.ReadSettingsRepository
-import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.AiArtifactGateway
@@ -40,6 +39,7 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
+import io.legado.app.domain.rules.ReplaceRuleRepository
 import io.legado.app.domain.usecase.AiTextFactoryUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.CleanSelectedTextUseCase
@@ -107,6 +107,7 @@ import io.legado.app.data.entities.getUseReplaceRule
 import io.legado.app.data.entities.save
 import io.legado.app.data.entities.getAbsoluteURL
 import io.legado.app.data.entities.getFileName
+import io.legado.app.data.rules.toDomain
 
 private const val READER_SYNC_MIN_INTERVAL_MS = 250L
 
@@ -889,7 +890,10 @@ class ReadBookViewModel(
                 replaceRuleDelegate.setEnabled(intent.id, intent.enabled)
             is ReadBookIntent.MoveReplaceRule ->
                 replaceRuleDelegate.move(intent.draggedId, intent.anchorId, intent.afterAnchor)
-            is ReadBookIntent.DisableEffectiveReplace -> replaceRuleDelegate.disable(intent.rule)
+            is ReadBookIntent.DisableEffectiveReplace ->
+                // `ReadBookUiState.effectiveReplaceRules` 仍是 Room 实体（阅读页 UI 本片不迁），
+                // 净化规则域已按领域模型收口 ⇒ 在调用点映射一次。
+                replaceRuleDelegate.disable(intent.rule.toDomain())
             ReadBookIntent.DisableChineseConverter -> {
                 configUpdateDelegate.handle(ConfigUpdate.ChineseConverterType(0))
             }

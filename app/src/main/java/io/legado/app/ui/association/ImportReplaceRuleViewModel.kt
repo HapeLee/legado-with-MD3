@@ -7,10 +7,11 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
-import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.data.repository.ReplaceRuleRepository
-import io.legado.app.exception.NoStackTraceException
 import io.legado.app.data.rules.ReplaceAnalyzer
+import io.legado.app.data.rules.toDomain
+import io.legado.app.domain.rules.ReplaceRule
+import io.legado.app.domain.rules.ReplaceRuleRepository
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
@@ -101,12 +102,12 @@ class ImportReplaceRuleViewModel(
             text.isAbsUrl() -> importUrl(text)
             text.isJsonArray() -> {
                 val rules = ReplaceAnalyzer.jsonToReplaceRules(text).getOrThrow()
-                allRules.addAll(rules)
+                allRules.addAll(rules.map { it.toDomain() })
             }
 
             text.isJsonObject() -> {
                 val rule = ReplaceAnalyzer.jsonToReplaceRule(text).getOrThrow()
-                allRules.add(rule)
+                allRules.add(rule.toDomain())
             }
 
             text.isUri() -> {

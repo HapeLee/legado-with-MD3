@@ -51,6 +51,11 @@ RESULT_DIRS = {
     # M1-4 工具链探针（CMP UI 测试能否在 desktop 跑）。只进全量：证明过一次即可，
     # 不必每次主验证都跑。
     "compose-probe   (desktopTest)": ("smoke/compose-desktop-probe/build/test-results/desktopTest", False),
+    # M3-1：`:data:rules`（替换规则域的实现与映射器）自带的等价性基线。口径与其它 data
+    # 层模块一致（`core:data` / `core:platform` 都只取 `desktopTest`，见上），故**不进主集**。
+    # 用例是 `ReplaceRuleMapperTest`：实体 ↔ 领域模型逐字段往返、默认值集合、只按 id 判等的
+    # 语义、`isValid()` / `getValidTimeoutMillisecond()` 与实体行为一致。
+    "data:rules      (desktopTest)": ("data/rules/build/test-results/desktopTest", False),
 }
 
 BASELINE_MAIN = 712
@@ -61,7 +66,11 @@ BASELINE_MAIN = 712
 # `AppLogStoreContractTest` 6 例（core:platform desktopTest）。**主验证集仍 712**
 # （两个模块都在非主集一侧）。新增用例已做变异验证：改 trim 上界 / 改 `add` 顺序 /
 # 交换 accessLimit 与 interval 都会让它们变红。
-BASELINE_ALL = 891
+# M3-1：891 → 898（`:data:rules` 新增 `ReplaceRuleMapperTest` 7 例）。主验证集不变（仍 712）。
+# 新模块的用例是**新增**而非搬迁，故基线必须上调；已做变异验证：把映射器里的
+# `timeoutMillisecond` 去掉、把 `excludeScope` 写成 `scope`、把 `order` 映射删掉，
+# 三种变异都会让 `ReplaceRuleMapperTest` 变红。
+BASELINE_ALL = 898
 
 
 def tally(d: pathlib.Path):
