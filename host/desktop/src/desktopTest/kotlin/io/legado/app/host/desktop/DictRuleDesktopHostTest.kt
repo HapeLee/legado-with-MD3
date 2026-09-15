@@ -7,8 +7,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.v2.runComposeUiTest
 import io.legado.app.core.platform.ImportJsonEditor
-import io.legado.app.data.entities.DictRule
-import io.legado.app.data.repository.DictRuleRepository
+import io.legado.app.domain.rules.DictRule
+import io.legado.app.domain.rules.DictRuleRepository
 import io.legado.app.feature.dict.rule.DictRuleScreen
 import io.legado.app.feature.dict.rule.DictRuleViewModel
 import kotlin.test.AfterTest

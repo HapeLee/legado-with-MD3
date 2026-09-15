@@ -9,8 +9,9 @@ import io.legado.app.core.platform.RuleDataStorage
 import io.legado.app.core.platform.Toaster
 import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.data.AppDatabase
-import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.data.rules.DictRuleRepositoryImpl
+import io.legado.app.domain.rules.DictRuleRepository
 import io.legado.app.feature.dict.rule.DictRuleViewModel
 import kotlinx.coroutines.Dispatchers
 import org.koin.core.module.Module
@@ -45,7 +46,10 @@ fun desktopHostModule(
     DeviceId.value = "desktop-" + dataDir.hashCode()
     return module {
         single<AppDatabase> { createDesktopDatabase(databasePath) }
-        single<DictRuleRepository> { DictRuleRepository(get<AppDatabase>().dictRuleDao) }
+        // M3-3：注入面是 `:domain:rules` 的端口，实现住 `:data:rules`。本模块没有单独
+        // 绑定 DAO（host 只有这一处需要它），故直接从聚合根取——与 `:app` 的
+        // `appDatabaseModule` + `appModule` 两段式绑定等价，只是这里合成一行。
+        single<DictRuleRepository> { DictRuleRepositoryImpl(get<AppDatabase>().dictRuleDao) }
 
         // 平台能力：三个都是 desktop 侧实现，UploadRepository 显式不可用。
         single<Toaster> { DesktopToaster() }

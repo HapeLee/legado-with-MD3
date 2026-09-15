@@ -9,7 +9,9 @@ plugins {
 //
 // 它承载「词典规则管理」一个屏幕（`rule` 子域：DictRuleScreen / DictRuleContract /
 // DictRuleViewModel）：
-//   - 数据/仓储来自 `:core:data`（DictRule 实体、DAO、DictRuleRepository 均已在 commonMain）；
+//   - 领域模型与仓储端口来自 `:domain:rules`（**M3-3 起**）：`DictRule` /
+//     `DictRuleRepository` 都不再是 `:core:data` 的实体/实现，Room 的实体与 DAO 仍归
+//     `:core:data`，实现住 `:data:rules` 并由宿主在 Koin 里绑定；
 //   - 导入/导出/上传编排来自 `:core:viewmodel` 的 `RuleTransferUseCase`（`io.legado.app.core.rules`）；
 //   - UI 组件与主题来自 `:core:designsystem`，剪贴板走 `:core:platform` 的契约。
 //
@@ -55,11 +57,14 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // `api`：public 签名里出现这两个模块的类型——`DictRuleScreen` / `DictRuleContract`
-            // 的实体参数来自 `:core:data`，`BaseImportUiState<DictRule>` 来自 `:core:designsystem`；
-            // 消费方编译时要看得见。
+            // `api`：public 签名里出现这三个模块的类型——`UploadRepository`（`DictRuleViewModel`
+            // 的构造参数）来自 `:core:data`，`BaseImportUiState<DictRule>` 来自
+            // `:core:designsystem`，`DictRule` 领域模型（`DictRuleItemUi.rule`、
+            // `DictRuleIntent.SaveRule.rule`、`DictRuleRenderState.importState` 的泛型实参）
+            // 来自 `:domain:rules`；消费方编译时要看得见。
             api(project(":core:data"))
             api(project(":core:designsystem"))
+            api(project(":domain:rules"))
             // `isJsonArray()` / `isJsonObject()`（`io.legado.app.utils`，纯 KMP 扩展）。
             implementation(project(":core:model"))
             // `Clipboard` / `JsonCodec` 窄契约（实现由 `:app` 在 Koin 里注入）。

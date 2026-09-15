@@ -11,7 +11,7 @@ BUILD SUCCESSFUL 只能证明没失败，**证明不了没少跑**——「悄�
 
     python tools/count-test-results.py
 
-当前基线：主验证集 **712**、全量 **877**（详见 .workbuddy/memory/topics/gates-and-verification.md）。
+当前基线：主验证集 **712**、全量 **910**（详见 .workbuddy/memory/topics/gates-and-verification.md）。
 """
 import pathlib
 import sys
@@ -55,8 +55,8 @@ RESULT_DIRS = {
     # 层模块一致（`core:data` / `core:platform` 都只取 `desktopTest`，见上），故**不进主集**。
     # 用例是 `ReplaceRuleMapperTest`：实体 ↔ 领域模型逐字段往返、默认值集合、只按 id 判等的
     # 语义、`isValid()` / `getValidTimeoutMillisecond()` 与实体行为一致。
-    # M3-2 起同一模块还装高亮标签规则域的 `HighlightTagRuleMapperTest`（6 例），故本目录
-    # 计数为两片之和（7 + 6 = 13）。
+    # M3-2 起同一模块还装高亮标签规则域的 `HighlightTagRuleMapperTest`（6 例）、M3-3 再加
+    # 字典规则域的 `DictRuleMapperTest`（6 例），故本目录计数为**三片之和**（7 + 6 + 6 = 19）。
     "data:rules      (desktopTest)": ("data/rules/build/test-results/desktopTest", False),
 }
 
@@ -76,7 +76,12 @@ BASELINE_MAIN = 712
 # ——本片只搬实现与类型、不改 `:app` / Feature 的用例句，故 app 633 与 tagrules 15 逐字不变。
 # 同样做了变异验证：把 `enabled` 写死为 `true`、把 `order` 错映射成 `id`、把 `title` 与
 # `pattern` 对调，三种变异都会让 `HighlightTagRuleMapperTest` 变红。
-BASELINE_ALL = 904
+# M3-3：904 → 910（`:data:rules` 新增 `DictRuleMapperTest` 6 例）。主验证集**仍是 712**
+# ——本片只搬实现与类型、不改 `:app` / Feature 的用例句（`:app` 的 `DictViewModel` 那处改动
+# 是「同步阻塞换 suspend」，用例数不变；`feature:dict` 模块级测试本来就是零）。
+# 同样做了变异验证：把 `enabled` 写死为 `true`、把 `sortNumber` 错映射、把集合映射的
+# `urlRule` 与 `showRule` 对调，三种变异都会让 `DictRuleMapperTest` 变红。
+BASELINE_ALL = 910
 
 
 def tally(d: pathlib.Path):

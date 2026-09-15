@@ -52,13 +52,13 @@ import io.legado.app.data.repository.CloudTtsEngineRepository
 import io.legado.app.data.repository.CoverAlbumRepository
 import io.legado.app.data.repository.CoverSettingsRepository
 import io.legado.app.data.repository.DatabaseMaintenanceRepository
-import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.data.repository.DictionaryRepositoryImpl
 import io.legado.app.data.repository.DirectLinkSettingsRepository
 import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.DownloadCacheSettingsRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
+import io.legado.app.data.dao.DictRuleDao
 import io.legado.app.data.dao.HighlightTagRuleDao
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
@@ -109,6 +109,7 @@ import io.legado.app.data.repository.WebDavReadingProgressRepository
 import io.legado.app.data.repository.manga.DefaultMangaReaderSession
 import io.legado.app.data.repository.manga.MangaReaderActionRepository
 import io.legado.app.data.repository.manga.MangaReaderDataRepository
+import io.legado.app.data.rules.DictRuleRepositoryImpl
 import io.legado.app.data.rules.HighlightTagRuleRepositoryImpl
 import io.legado.app.data.rules.ReplaceRuleRepositoryImpl
 import io.legado.app.data.security.CloudTtsCredentialCipher
@@ -179,6 +180,7 @@ import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.gateway.WebDavBackupGateway
+import io.legado.app.domain.rules.DictRuleRepository
 import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
 import io.legado.app.domain.rules.ReplaceRuleRepository
@@ -372,7 +374,10 @@ val appModule = module {
     single<BookshelfAutoGroupPromptGateway> { BookshelfAutoGroupPromptRepository(get()) }
     singleOf(::BookSourceRepository)
     singleOf(::BookshelfRepository)
-    singleOf(::DictRuleRepository)
+    // M3-3：字典规则的仓储端口住 `:domain:rules`，实现住 `:data:rules`。注入面是端口，
+    // 故用显式绑定而不是 `singleOf`——接口归属必须看得见（与 M3-2 的
+    // `HighlightTagRuleRepository` 同一形态：构造参数收 DAO，不是 `AppDatabase`）。
+    single<DictRuleRepository> { DictRuleRepositoryImpl(get<DictRuleDao>()) }
     singleOf(::TxtTocRuleRepository)
     single {
         SearchContentRepository(

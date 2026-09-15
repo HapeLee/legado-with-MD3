@@ -50,10 +50,12 @@ kotlin {
             // `RuleTransferPlatform` / `RuleTransferUseCase` 在 `:core:viewmodel` 的 commonMain。
             // ⚠️ 不能指望从 `:feature:dict` 传递过来：那边对它是 `implementation`，不传递。
             implementation(project(":core:viewmodel"))
-            // 数据路径：Repository + Room DAO + `AppDatabase`。
-            // `:feature:dict` 已 `api(project(":core:data"))`，这里仍显式声明：
-            // host 自己要直接拿到 DAO 来建库与插种子数据，不该依赖传递可见。
+            // 数据路径：`AppDatabase` / DAO / 实体。host 自己要建库并从聚合根取
+            // `dictRuleDao` 组装绑定，不该依赖传递可见（`:feature:dict` 那边是 `api`）。
             implementation(project(":core:data"))
+            // M3-3：仓储端口的**实现**（`DictRuleRepositoryImpl`）住 `:data:rules`
+            // ——`:core:data` 与 `:domain:rules` 里分别只有实体/DAO 和模型/端口。
+            implementation(project(":data:rules"))
             // 主题与共用组件（`RuleListScaffold` 等），渲染 Screen 时需要包一层主题。
             implementation(project(":core:designsystem"))
 

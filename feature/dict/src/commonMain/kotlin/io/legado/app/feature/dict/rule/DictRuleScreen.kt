@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.core.rules.RuleTransferEvent
-import io.legado.app.data.entities.DictRule
+import io.legado.app.domain.rules.DictRule
 import io.legado.app.feature.dict.res.Res
 import io.legado.app.feature.dict.res.a11y_delete_named
 import io.legado.app.feature.dict.res.a11y_edit_named

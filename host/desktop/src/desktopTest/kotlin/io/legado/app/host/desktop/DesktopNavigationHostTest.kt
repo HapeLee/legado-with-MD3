@@ -16,8 +16,8 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.entryProvider
-import io.legado.app.data.entities.DictRule
-import io.legado.app.data.repository.DictRuleRepository
+import io.legado.app.domain.rules.DictRule
+import io.legado.app.domain.rules.DictRuleRepository
 import io.legado.app.feature.dict.rule.DictRuleViewModel
 import io.legado.app.host.desktop.nav.DesktopNavHost
 import io.legado.app.host.desktop.nav.DesktopRoute

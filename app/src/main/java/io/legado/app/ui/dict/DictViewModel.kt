@@ -2,9 +2,9 @@ package io.legado.app.ui.dict
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.data.entities.DictRule
-import io.legado.app.data.entities.search
-import io.legado.app.data.repository.DictRuleRepository
+import io.legado.app.domain.rules.DictRule
+import io.legado.app.domain.rules.DictRuleRepository
+import io.legado.app.domain.rules.search
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

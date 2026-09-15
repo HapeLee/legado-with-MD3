@@ -1,7 +1,7 @@
 package io.legado.app.feature.dict.rule
 
 import androidx.compose.runtime.Stable
-import io.legado.app.data.entities.DictRule
+import io.legado.app.domain.rules.DictRule
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState

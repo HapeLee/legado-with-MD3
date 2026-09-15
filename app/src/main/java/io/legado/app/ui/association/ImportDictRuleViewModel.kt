@@ -7,8 +7,8 @@ import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.data.entities.DictRule
-import io.legado.app.data.repository.DictRuleRepository
+import io.legado.app.domain.rules.DictRule
+import io.legado.app.domain.rules.DictRuleRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
