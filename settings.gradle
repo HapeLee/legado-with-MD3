@@ -66,4 +66,9 @@ include ':core:viewmodel'
 // 待 `data:database` 成为 Room 唯一 owner 后再改为依赖它（见迁移计划 M3）。
 include ':domain:rules'
 include ':data:rules'
+// M4-1：`core:data` 按域拆分的第一个**非 rules** 域（AI 提示词预设）。形态与 M3 同构：
+// domain 只放领域模型与 port，data 放实现与 mapper —— 过渡期 data 依赖 `:core:data`
+// 取 Room 的 DAO/实体，待 `data:database` 成为 Room 唯一 owner 后再改为依赖它。
+include ':domain:ai'
+include ':data:ai'
 project(':baselineprofile').projectDir = file('baselineProfile')

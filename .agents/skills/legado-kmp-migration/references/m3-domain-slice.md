@@ -25,6 +25,7 @@ callers that die with the slice**. What is left of the rule domain, as measured:
 |---|---|---|---|
 | `RuleSub` | none — only the `:app` RSS page (`ui/rss/subscription`) | **none** | **done (M3-5)** — the mapper test shipped with the slice |
 | `TagGroupRule` | yes — tagrules group page + group-manage sheet | partial | **done (M3-6)** — the duplicated matcher was merged first (see below), then the repository sank |
+| `AiPromptPreset` | none — `:app` reading AI delegate (`ui/book/read`) | **none** | **done (M4-1)** — first non-rules domain; needs its **own module pair**, see below |
 
 A zero-guardrail candidate is not disqualified, but then the mapper test is **part of the
 slice, written before the move** — not a bonus added afterwards.
@@ -44,6 +45,22 @@ Note the direction of the merge: the mirror was on the `:app` side, so the share
 stays where its dependencies already are (`:core:data`, which also owns `Book` / `BookGroup` /
 `BookGroupMutationRepository`). Moving it out would have created a cycle
 (`BookGroupMutationRepository` → `TagGroupRuleApplier` → back).
+
+**A new domain needs its own module pair.** `domain/rules` + `data/rules` are named after the
+*rules* domain — do not pour a second domain into them. `AiPromptPreset` (M4-1) got
+`domain/ai` + `data/ai`, and the two registrations are a **pair**: `include ':domain:ai'` in
+`settings.gradle`, **and** `"domain/ai" to "pure"` / `"data/ai" to "data"` in the root
+`build.gradle.kts` `kmpModuleTypes` map (an unregistered KMP module is treated as `pure` by G2).
+G4 tolerates **no new region**, so the new modules' sources must contain zero `appCtx` / `appDb` /
+`GSON` / `coreProvider` hits — the gate reporting "zero change" is the evidence.
+
+**Port naming: keep the existing contract name.** The rules ports are `XxxRepository`, but this
+repo also has 60+ `XxxGateway` contracts under `core:data`'s `domain/gateway` (the AI domain
+alone has `AiArtifactGateway` / `AiMemoryGateway` / `AiChatGateway` …). When the slice is really
+*"an existing contract sinks, with its payload type swapped to the domain model"*, keep the name:
+renaming makes it churn and forces the injected property to be renamed too. The
+"only methods that have a caller" rule applies either way — `AiPromptPresetGateway.savePreset`
+had zero callers and died with the slice.
 
 Also check whether the entity's compatibility surface is already sealed. `TxtTocRule` looked
 expensive (custom GSON `JsonDeserializer`) until the M1-3y contract was located: the cost had
@@ -172,7 +189,8 @@ git diff --check
 | M3-3 | `DictRule` | `df00c585d8` |
 | M3-4 | `TxtTocRule` | `8a0b7cd1c9` |
 | M3-5 | `RuleSub` | `0555a0acc0` |
-| M3-6 | `TagGroupRule` | pending |
+| M3-6 | `TagGroupRule` | `5406f151fb` |
+| M4-1 | `AiPromptPreset` | pending |
 
 Milestone-level blocker behind these slices is `data:database` (the single Room owner):
 `entities/BaseSource.kt` alone carries 23 `coreProvider` hits, and `:app` still has 8 files

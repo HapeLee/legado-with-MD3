@@ -1036,6 +1036,23 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      `tools/count-test-results.py` 的台账注释，提交见同上 reference 的 Measured slices 表
      （`fb64d2be95` / `9d21369475` / `df00c585d8` / `8a0b7cd1c9` / `0555a0acc0`）。
      下一步 M4/M5 的 rules 侧已无剩余域；`core:data` 仍有 settings / library / source 等域待拆。
+   - **M4-1 已完成（2026-09-15）：AI 提示词预设域下沉 `domain/ai` + `data/ai` —— 第一个非 rules 域。**
+     `rules` 域拆完后，按同一套模板继续拆 `core:data` 的其它域。选片依据（真实 Feature 消费 >
+     测试护栏 > 无平台契约、面最小）：`AiPromptPreset` 实体 9 字段、仓储 33 行，实体在 `:app` 侧
+     **只有 1 个文件**引用（`ReadAiDelegate`），且**不进备份/恢复、不经 `JsonCodec` 反序列化**
+     ⇒ 领域模型可逐字照抄实体——字段**全 `val`**、判等为 data class **全字段**（与 M3-5 `RuleSub`
+     同侧，与 M3-6 `TagGroupRule` 的 `var` + id-only 判等相反）。
+     ⚠️ 本片**新建了模块对**（`domain/ai` pure + `data/ai` data）：`domain/rules` + `data/rules`
+     是 rules 域专用，不能往里塞别的域。两处登记必须成对出现——`settings.gradle` 的
+     `include ':domain:ai'` 与根 `build.gradle.kts` 的 `kmpModuleTypes`（未登记一律按 pure 处理）。
+     G4 对新区域零容忍 ⇒ 新模块源码必须零 `appCtx` / `appDb` / `GSON` / `coreProvider`（实测零变更）。
+     端口形态与 rules 域不同：本域**沿用既有契约名** `AiPromptPresetGateway`（本仓 `domain/gateway`
+     下有 60+ 个同形态契约，改名是无收益的 rename churn，还会连带改注入点变量名），只把收发类型
+     换成领域模型；零调用方的 `savePreset(preset)` 随片删除（底层 DAO 的 `upsert` 留在 DAO 上，
+     归 `data:database` 债务）。实现 `AiPromptPresetRepositoryImpl` 收 `AiPromptPresetDao`，
+     **保留**迁移前的 `withContext(Dispatchers.IO)`。旧仓储与旧 Gateway 一并删除、不留门面。
+     用例 **713 不变 / 933 → 940**（新增 `AiPromptPresetMapperTest` 7 例，不进主集）；四门禁
+     `--rerun` 全绿，G4 零变更。
 12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
 13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 

@@ -243,6 +243,9 @@ dependencies {
     // M3-1：替换规则域（端口住 domain，实现与映射器住 data:rules）。
     implementation(project(":domain:rules"))
     implementation(project(":data:rules"))
+    // M4-1：AI 提示词预设域（`core:data` 按域拆分的第一个**非 rules** 域，形态同上）。
+    implementation(project(":domain:ai"))
+    implementation(project(":data:ai"))
     implementation(libs.okhttp)
     implementation(fileTree(mapOf("dir" to "cronetlib", "include" to listOf("*.jar", "*.aar"))))
     implementation(libs.protobuf.javalite)

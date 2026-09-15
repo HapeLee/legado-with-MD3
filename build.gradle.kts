@@ -635,6 +635,11 @@ val checkSharedPurity = tasks.register<CheckSharedPurityTask>(
             // `:core:data` 使用 Room 的 DAO/实体，故按 data 登记（允许 androidx.room）。
             "domain/rules" to "pure",
             "data/rules" to "data",
+            // M4-1：AI 域（AI 提示词预设）。与 `domain/rules` / `data/rules` 同形：
+            // domain 按 pure 取严（零 androidx），data 过渡期经 `:core:data` 用 Room 的
+            // DAO/实体，故按 data 登记（允许 androidx.room）。
+            "domain/ai" to "pure",
+            "data/ai" to "data",
             // M1-3u：`:core:viewmodel` 从 Android library 转成 KMP。它的 `commonMain` 只放
             // `io.legado.app.core.rules.*`（规则导入/导出协议），`base/`（要 `Application`/`Uri`
             // / `viewModelScope`）与 `help/coroutine/` 落到 `androidMain`。按 **pure** 登记

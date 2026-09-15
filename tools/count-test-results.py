@@ -57,9 +57,16 @@ RESULT_DIRS = {
     # 语义、`isValid()` / `getValidTimeoutMillisecond()` 与实体行为一致。
     # M3-2 起同一模块还装高亮标签规则域的 `HighlightTagRuleMapperTest`（6 例）、M3-3 再加
     # 字典规则域的 `DictRuleMapperTest`（6 例）、M3-4 再加 TXT 目录规则域的
-    # `TxtTocRuleMapperTest`（7 例）、M3-5 再加规则订阅域的 `RuleSubMapperTest`（8 例），
-    # 故本目录计数为**五片之和**（7 + 6 + 6 + 7 + 8 = 34）。
+    # `TxtTocRuleMapperTest`（7 例）、M3-5 再加规则订阅域的 `RuleSubMapperTest`（8 例）、
+    # M3-6 再加标签分组规则域的 `TagGroupRuleMapperTest`（7 例），故本目录计数为
+    # **六片之和**（7 + 6 + 6 + 7 + 8 + 7 = 41）。
     "data:rules      (desktopTest)": ("data/rules/build/test-results/desktopTest", False),
+    # M4-1：`:data:ai`（AI 提示词预设域的实现与映射器）自带的等价性基线。口径与其它 data
+    # 层模块一致（`core:data` / `core:platform` / `data:rules` 都只取 `desktopTest`），
+    # 故**不进主集**。用例是 `AiPromptPresetMapperTest`（7 例）：实体 ↔ 领域模型逐字段
+    # 往返、默认值集合（`enabled` / `builtIn` / `sortNumber`）、`createdAt` / `updatedAt`
+    # 默认取当前毫秒、判等按**全字段**而非主键（与 M3-6 相反、与 M3-5 同侧）、集合映射保序。
+    "data:ai         (desktopTest)": ("data/ai/build/test-results/desktopTest", False),
 }
 
 # M3-6：主验证集 712 → 713（**本片独有**）。合并「标签分组规则匹配语义」的两份实现时，给
@@ -104,7 +111,10 @@ BASELINE_MAIN = 713
 # ——与 M3-1～M3-4 同形（逐字段断言，因为实体与领域模型**都只按 `id` 判等**，整对象
 # `assertEquals` 漏映射时照样通过），没有 M3-5 那种「判等是全字段」的反向用例，故回到 7 例。
 # 前者见 `BASELINE_MAIN` 上方。
-BASELINE_ALL = 933
+# M4-1：933 → 940（净 +7 = `:data:ai` 新增 `AiPromptPresetMapperTest` 7 例）。本片是第一个
+# 非 rules 域：映射用例的写法回到「全字段判等」一侧（同 M3-5 `RuleSubMapperTest`），
+# 用例数同样是 7。主验证集**不变**（713）——新用例不进主集，`:app` 侧只换了 import。
+BASELINE_ALL = 940
 
 
 def tally(d: pathlib.Path):
