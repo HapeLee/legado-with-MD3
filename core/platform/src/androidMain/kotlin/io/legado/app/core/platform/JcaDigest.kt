@@ -10,4 +10,7 @@ import java.security.MessageDigest
 object JcaDigest : Digest {
     override fun sha256(data: ByteArray): ByteArray =
         MessageDigest.getInstance("SHA-256").digest(data)
+
+    override fun md5(data: ByteArray): ByteArray =
+        MessageDigest.getInstance("MD5").digest(data)
 }

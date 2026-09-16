@@ -1,6 +1,5 @@
 package io.legado.app.help.crypto
 
-import io.legado.app.utils.nameUuidFromBytes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -78,13 +77,6 @@ class CryptoCompatibilityTest {
         val crypto = SymmetricCryptoAndroid("DES", "1234567890123456".toByteArray())
         val data = "des data".toByteArray()
         assertTrue(data.contentEquals(crypto.decrypt(crypto.encrypt(data))))
-    }
-
-    @Test
-    fun `nameUuidFromBytes 与 java UUID v3 一致`() {
-        val input = "provider123:model-abc".toByteArray()
-        val expected = java.util.UUID.nameUUIDFromBytes(input).toString()
-        assertEquals(expected, nameUuidFromBytes(input).toString())
     }
 
     @Test

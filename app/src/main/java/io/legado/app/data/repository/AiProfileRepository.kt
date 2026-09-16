@@ -1,5 +1,7 @@
 package io.legado.app.data.repository
 
+import io.legado.app.core.platform.JcaDigest
+import io.legado.app.core.platform.nameUuidFromBytes
 import io.legado.app.data.dao.AiProfileDao
 import io.legado.app.data.entities.AiModelProfile
 import io.legado.app.data.entities.AiProviderProfile
@@ -21,7 +23,6 @@ import io.legado.app.domain.model.AiTaskPresetConfig
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.utils.GSON
-import io.legado.app.utils.nameUuidFromBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -429,7 +430,7 @@ class AiProfileRepository(
         fun newId(prefix: String): String = "${prefix}_${Uuid.random().toString().replace("-", "")}"
 
         fun stableModelId(providerId: String, modelId: String): String {
-            val uuid = nameUuidFromBytes("$providerId:$modelId".toByteArray())
+            val uuid = nameUuidFromBytes("$providerId:$modelId".toByteArray(), JcaDigest)
                 .toString()
                 .replace("-", "")
             return "model_$uuid"

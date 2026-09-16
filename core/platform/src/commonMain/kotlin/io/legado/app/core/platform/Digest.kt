@@ -14,4 +14,19 @@ package io.legado.app.core.platform
 interface Digest {
     /** SHA-256 摘要；同一输入必产生同一 32 字节输出。 */
     fun sha256(data: ByteArray): ByteArray
+
+    /**
+     * MD5 摘要；同一输入必产生同一 16 字节输出。
+     *
+     * ⚠️ 与 [sha256] 不同，MD5 在本仓承担**持久化兼容**职责，不是可替换的实现细节：
+     * `nameUuidFromBytes`（UUID v3 名称空间哈希的字节级复刻）用它生成会落库、会参与
+     * 查询、且必须跨版本稳定的标识（如 `ai_model_profiles.id = "model_<hex>"`）。
+     * 实现必须与 `java.security.MessageDigest.getInstance("MD5")` **逐字节一致**，
+     * 不得因为「MD5 不安全」而换算法或换实现——换掉会让既有用户的模型档案 ID 全部漂移，
+     * 表现为「升级后模型列表空了」。这里只用它做名称哈希，不承担任何密码学职责。
+     *
+     * 实现必须返回**调用方拥有的新数组**：`nameUuidFromBytes` 会就地改写其中两个字节
+     * （版本位 / 变体位）。不得返回缓存数组或共享缓冲。
+     */
+    fun md5(data: ByteArray): ByteArray
 }

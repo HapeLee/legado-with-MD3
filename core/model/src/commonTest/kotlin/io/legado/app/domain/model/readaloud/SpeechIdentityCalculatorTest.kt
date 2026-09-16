@@ -62,6 +62,11 @@ class SpeechIdentityCalculatorTest {
             lastInput = data.decodeToString()
             return ByteArray(32) { it.toByte() }
         }
+
+        override fun md5(data: ByteArray): ByteArray {
+            lastInput = data.decodeToString()
+            return ByteArray(16) { it.toByte() }
+        }
     }
 
     private companion object {

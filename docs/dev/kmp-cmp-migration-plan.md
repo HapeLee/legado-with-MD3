@@ -1158,6 +1158,72 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      ⚠️ 流程教训：**变异脚本绝不能与其它 Gradle 构建并发**——两者共用 `data/ai/build/`，
      实测导致全量验证集报出 7 个「假失败」（源码其实是好的，全是变异泄漏），并把结果 XML 冲掉。
      脚本已加锁 + `atexit`/信号还原，见 `legado-verify/m4-4-mutate.py`。
+   - **M4-5a 已完成（2026-09-16）：`Digest` 契约扩展 `md5()` —— AI profile 域下沉的平台前置。**
+     本片不改任何业务代码，只补能力；它的存在理由是下一片（M4-5b）**搬不动**：AI profile 域的
+     `AiProfileRepository.stableModelId` 调 `:app/utils/nameUuidFromBytes`，而后者用
+     `java.security.MessageDigest.getInstance("MD5")`（JVM-only）⇒ 不先把 MD5 变成共享能力，
+     那条 `model_<uuid>` 的 ID 生成就进不了 `commonMain`。
+     ① ⚠️ **扩展平台契约的判据是「出现了真实消费方」，不是「对称/完整性」**：`Digest` 的原始
+     注释写得很明确——「只暴露 [sha256]：当前唯一真实消费方只需它；AES/HMAC 等在有真实消费方时
+     再加，**不为对称提前扩接口**」。本片补 `md5` 正是因为它**终于**有了真实消费方；反过来若有人
+     为了「对称」提前加 `md5`，那条注释就是反例。这一条与 AGENTS.md 的「无调用方抽象」同源。
+     ② ⚠️ **MD5 在本仓是「持久化兼容」而非实现细节**（已在 `Digest.md5` 的 KDoc 里写明）：
+     `nameUuidFromBytes` 是 UUID v3 名称空间哈希的字节级复刻，输出会**落库**（
+     `ai_model_profiles.id = "model_<hex>"`）并**参与查询**。换算法/换实现会让既有用户的模型档案
+     ID 全部漂移，表现为「升级后模型列表空了」——所以哪怕 MD5 在密码学上不安全也不能动它。
+     `DigestContractTest` 的 4 条用例（空输入 / `abc` 两个 RFC 1321 向量、`hello` 的独立实现向量、
+     两个不同输入的**各自固定向量**）就是这个承诺的护栏。
+     ③ ⚠️ **契约测试的向量必须是独立实现算出的固定值**：本片第一版我写成
+     `assertEquals("a3b1...".length, composite.length)` 这类「只比长度」的假断言，以及
+     `assertFalse(a == b)` 这种「互相不等就算过」的形式——两者都**无法区分实现**（换个摘要算法
+     照样通过）。最终四条用例全部比对 Python `hashlib` 独立算出的常量，脚本里还有一步
+     「向量自证」先验证常量本身。
+     ④ ⚠️ **契约测试是抽象基类 + 每 target 子类 ⇒ 「量一边」不等于「两边都对」**：本片的变异
+     验证因此特意做了三轮，第 3 轮**只改 `androidMain` 的 `md5` 并只跑
+     `:core:platform:testAndroidHostTest`**，同样 4 例变红——这才排除掉「android 侧子类没接上 /
+     没跑」的可能。**只做 desktop 侧变异是不充分的**（`DigestContractTest` 同时跑
+     `testAndroidHostTest` 与 `desktopTest`，但计数口径只取 desktopTest）。
+     改动：`Digest.md5()`（`commonMain` 契约）+ `JcaDigest` 两份 `override`（android/desktop）+
+     `DigestContractTest` **+4 例** + `SpeechIdentityCalculatorTest.RecordingDigest` 补实现
+     （它实现 `Digest` 接口，加抽象方法后必须同步）。用例 **主集 713 不变 / 全量 1069 → 1073**
+     （`:core:platform` 88 → 92，该模块不在主集一侧）；四门禁全绿、G4 零变更；变异 3 轮全红后回绿。
+     脚本：`legado-verify/m4-5a-*.py`、`legado-verify/m4-5-baseline.py`。
+   - **M4-5b 已完成（2026-09-16）：`nameUuidFromBytes` 下沉 `:core:platform`。与 M4-5a 合并为
+     一次提交**（理由见末尾「为什么合并」）。
+     把 `:app/utils/UuidExtensions.kt`（UUID v3 名称空间哈希）搬成 `:core:platform` 的
+     `NameUuid.kt`。它是 M4-5c（AI profile 域下沉）的**第二个**平台前置：AI profile 的
+     `stableModelId` 用它生成 `model_<hex>`。
+     ① ⚠️ **它不做成 `expect/actual`，而是「共享纯函数 + 参数注入」**——这是本片最值得复用的一条
+     判断：函数体只有「MD5 + 两个位运算 + `Uuid.fromByteArray`」，**不含任何平台 API**；
+     真正平台相关的是它的**依赖**（MD5）。所以签名为
+     `fun nameUuidFromBytes(bytes: ByteArray, digest: Digest): Uuid`：算法留共享层，摘要交
+     `Digest` 契约由调用方注入 `JcaDigest`。按 AGENTS.md「`expect/actual` 只用于平台原语」，
+     这里用普通顶层函数更贴切。**判据：先看函数体有没有平台 API，再看它的依赖**——只看
+     「它原来住 `:app`」会误判成 expect/actual。
+     ② 于是 M4-5a 的 `Digest.md5` 有了**首个真实消费方**（这也是两片合并提交的理由：拆开提交
+     会让先提交的 A 里 `md5` 零消费方，反而违反「无调用方抽象」）。
+     ③ ⚠️ **下沉「被测对象」时要显式处理它的既有护栏**：`:app` 的 `CryptoCompatibilityTest`
+     有一条 `nameUuidFromBytes 与 java UUID v3 一致`（对照 `java.util.UUID.nameUUIDFromBytes`）。
+     被测对象搬走后这条用例失去对象 ⇒ 按 M2-2 / M2-4 先例删除，**同时**在新位置补更强的版本：
+     `NameUuidContractTest` 在 androidHostTest 与 desktopTest **两个** target 上各 6 例，
+     其中 `matches java UUID nameUUIDFromBytes` 就是原用例的搬家（`java.util.UUID` 是 JVM API，
+     只能写在 target 子类、不能进 commonTest）。护栏没丢、覆盖面还扩到两个 target。
+     ④ ⚠️ **第一版写错的断言值得记下来**：变体位写成 `assertEquals('8', uuid[19])`。实际
+     `(b[8] and 0x3F) or 0x80` 的结果落在 `0x80..0xBF` ⇒ hex nibble 是 `{8,9,a,b}` 之一，
+     **不是固定值**（本仓向量实际是 `'b'`）。那条断言会把**正确**实现判错。修法是
+     `assertTrue(uuid[19] in "89ab")`。教训：写「格式/位域」类断言前先用独立实现验一遍**边界内
+     有几种取值**，别把「我算出来的那一个」当成契约。
+     改动：新增 `NameUuid.kt`（commonMain）+ `NameUuidContractTest`（commonTest 抽象基类）+
+     两个 target 子类；删 `:app/utils/UuidExtensions.kt`；`:app` 的 `AiProfileRepository`
+     调用点补 `JcaDigest` 实参（该文件本体到 M4-5c 才搬走）；`CryptoCompatibilityTest` 删
+     失效用例与 import。用例 **主集 713 → 712（-1）/ 全量 1073 → 1078（+6 -1）**——主集下调是因为
+     删掉的那条 `:app` 用例在被计模块内；四门禁全绿、G4 零变更；变异 **4 轮全红**（删 version 行 /
+     删 variant 行 / `md5[6]→md5[7]` / 摘要换成 `sha256` 前 16 字节，末轮只跑
+     `testAndroidHostTest` 顺带证明 android 侧子类有效）。
+     脚本：`legado-verify/m4-5b-*.py`。
+     **为什么 M4-5a 与 M4-5b 合并为一次提交**：B 的 `nameUuidFromBytes` 是 A 的 `Digest.md5` 的
+     首个真实消费方，没有 A 则 B 不存在、没有 B 则 A 违反「无调用方抽象」；且两片的
+     `count-test-results.py` 基线变更落在同一处。分两次提交只会让第一次的 `md5` 暂时零调用方。
 12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
 13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 

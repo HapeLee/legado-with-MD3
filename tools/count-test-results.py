@@ -11,7 +11,7 @@ BUILD SUCCESSFUL 只能证明没失败，**证明不了没少跑**——「悄�
 
     python tools/count-test-results.py
 
-当前基线：主验证集 **712**、全量 **910**（详见 .workbuddy/memory/topics/gates-and-verification.md）。
+当前基线：主验证集 **712**、全量 **1078**（详见 .workbuddy/memory/topics/gates-and-verification.md）。
 """
 import pathlib
 import sys
@@ -21,6 +21,13 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # 显示名 -> (结果 XML 目录, 是否计入「主验证集」)
 RESULT_DIRS = {
+    # M4-5b：634 → 633（**-1**）。原 `CryptoCompatibilityTest` 里那条
+    # `nameUuidFromBytes 与 java UUID v3 一致` 的被测对象（`:app/utils/UuidExtensions.kt`）随本片
+    # 下沉到 `:core:platform` ⇒ 该用例失去被测对象而删除（同 M2-2 删 `BigDataStoreProvider` 的
+    # 两例、M2-4 删 `LoggerContractTest` 两例的处理）。护栏本身**没丢**，而是被更强的版本接替：
+    # `NameUuidContractTest` 在 androidHostTest 与 desktopTest **两个** target 上各 6 例，其中
+    # `matches java UUID nameUUIDFromBytes` 就是原用例的搬家版（因为 `java.util.UUID` 是 JVM API，
+    # 只能写在 target 子类里）。本模块在主验证集内 ⇒ **主集基线随之下调 1**。
     "app            (testAppDebugUnitTest)": ("app/build/test-results/testAppDebugUnitTest", True),
     # designsystem / tagrules 的 `commonTest` 在两个目标上各跑一遍；统一取
     # `testAndroidHostTest`（KMP android 目标的主机测任务名）。⚠️ 模块转 KMP 后
@@ -42,6 +49,20 @@ RESULT_DIRS = {
     # `SymmetricCryptoProvider` 的 install/uninstall（被测对象已删除），换成 7 例对原语本身的
     # 契约测试（硬编码 AES 密文向量，由 openssl 与 node 两个独立实现交叉确认）。该文件同时跑在
     # `testAndroidHostTest` 与 `desktopTest` 上，但**只统计 desktopTest**（口径与其它模块一致）。
+    # M4-5a：+4 = `DigestContractTest` 的 md5 契约用例（空输入 / `abc` 两个 RFC 1321 向量、
+    # `hello` 的独立实现向量 + 16 字节、以及两个不同输入的**各自固定向量**——最后一条不是
+    # 「互相不等就算过」，而是各自比对 Python hashlib 算出的常量）⇒ **88 → 92**。
+    # 变异验证另外证明**两个 target 各自有效**：把 androidMain 的 md5 换成 SHA-256 前 16 字节
+    # 并只跑 `testAndroidHostTest`，同样 4 例变红（否则「只测 desktop」会让 android 侧的
+    # 错误实现在任何用例上都看不出来）。
+    # M4-5b：92 → **98**（+6 = `NameUuidContractTest` 5 例 + target 子类的
+    # `matches java UUID nameUUIDFromBytes` 1 例）。这是把 `:app/utils/nameUuidFromBytes`
+    # （UUID v3 名称空间哈希）下沉到本模块的护栏：5 条基类用例钉住「与独立实现算出的 UUID 向量
+    # 一致」「空输入的 version/variant 位改写」「版本位恒为 3、变体位 ∈ {8,9,a,b}」「同输入确定性
+    # 且不同输入可区分」「对分隔符敏感」，1 条 target 用例与 `java.util.UUID.nameUUIDFromBytes`
+    # 交叉确认。变异 4 轮全红：删 version 行 / 删 variant 行 / `md5[6]→md5[7]` 索引错 /
+    # 摘要把 `md5` 换成 `sha256` 前 16 字节（第 4 轮只跑 `testAndroidHostTest`，同时证明
+    # android 侧子类有效）。
     "core:platform  (desktopTest)": ("core/platform/build/test-results/desktopTest", False),
     # M1-4：desktop host 的主路径证据。**计入主验证集**——它是本仓第一个越过「能编译」的
     # desktop 断言，少跑就没人发现。基线与 app 侧一样靠它兜底。
@@ -97,7 +118,12 @@ RESULT_DIRS = {
 # （`BookGroupMutationRepositoryTest.单本书路径只改内存分组位而不写库`）同时钉住「只处理这一本书」
 # 与「不写库（persist = false）」，住 `:app` 主集，故基线必须上调 1。
 # 前面五片（M3-1～M3-5）都只动 `:data:rules`，主集始终是 712。
-BASELINE_MAIN = 713
+# M4-5（M4-5b）：713 → **712**（**下调 1**）。`:app` 的 `CryptoCompatibilityTest` 里
+# `nameUuidFromBytes 与 java UUID v3 一致` 的被测对象随本片下沉到 `:core:platform`
+# （见 RESULT_DIRS 里 app 条目的说明），`:app` 在主集内 ⇒ 主集基线必须同步下调。
+# ⚠️ 这是**有意减少**（被测对象搬走），不是用例丢失；替代护栏在 `:core:platform` 的两个
+# target 上各 6 例。前一次下调是 M2-4（契约删除）与 M2-2（Provider 删除）。
+BASELINE_MAIN = 712
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -147,7 +173,18 @@ BASELINE_MAIN = 713
 # `AiChatConversationMapperTest` 8 例 + `AiChatMessageMapperTest` 9 例 +
 # `AiChatRepositoryImplTest` 18 例；② `:core:model` 首次纳入的 59 例既有 + 本片新增
 # `AiMessagePartJsonTest` 8 例 = 67。主验证集**不变**（713）——两块都不进主集。
-BASELINE_ALL = 1069
+# M4-5a：1069 → 1073（净 +4 = `:core:platform` 的 `DigestContractTest` 新增 md5 用例）。
+# `Digest` 契约的原文写明「只暴露 sha256：当前唯一真实消费方只需它；AES/HMAC 等在有真实消费方
+# 时再加，不为对称提前扩接口」——本片补 md5 正是因为出现了**真实消费方**：AI profile 域下沉需要
+# `nameUuidFromBytes`（UUID v3 名称空间哈希的字节级复刻），而它用 MD5。
+# 主验证集**不变**（713）：`:core:platform` 不在主集一侧。
+# M4-5：1073 → **1078**（净 **+5** = `:core:platform` +4（M4-5a 的 md5 契约）
+# + 再 +6（M4-5b 的 NameUuid 契约）= +10，减去 `:app` 的 -1（被测对象搬走）… 分两步看更清楚：
+# M4-5a 结束时 1073（= 1069 + 4）；M4-5b 再 +6 -1 ⇒ **1078**。
+# 两片合为一次提交的理由：M4-5b 的 `nameUuidFromBytes` 正是 M4-5a 的 `Digest.md5` 的
+# **首个真实消费方**，没有 A 则 B 无法存在；拆开提交会让「先提交的 A 里 md5 零消费方」，
+# 反而违反「无调用方抽象」的纪律。
+BASELINE_ALL = 1078
 
 
 def tally(d: pathlib.Path):
