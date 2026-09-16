@@ -34,6 +34,7 @@ data class ReaderAndroidPaginationStyle(
     val textBottomJustify: Boolean = false,
     val pageUnderline: ReaderPageUnderline? = null,
     val emphasisUnderlineStyle: ReaderEmphasisUnderline? = null,
+    val excludeActionImages: Boolean = false,
 ) {
     fun columnCount(widthPx: Int, heightPx: Int): Int =
         columnMode.columnCount(widthPx, heightPx, isTablet, isScroll)

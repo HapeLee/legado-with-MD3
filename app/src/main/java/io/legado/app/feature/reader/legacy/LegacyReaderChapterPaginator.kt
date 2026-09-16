@@ -181,6 +181,7 @@ object LegacyReaderChapterPaginator {
                 imagePageBreakAfter = singleImage,
                 titlePageBreakAfter = singleImage && content.textList.isNotEmpty(),
                 imageLayoutMode = imageLayoutMode,
+                excludeActionImages = paginationStyle.excludeActionImages,
                 imageAvailableWidthPx = (
                     viewportWidthPx / paginationStyle.columnCount(viewportWidthPx, viewportHeightPx) -
                         paginationStyle.paddingLeftPx - paginationStyle.paddingRightPx -

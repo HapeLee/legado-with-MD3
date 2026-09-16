@@ -949,6 +949,7 @@ class ReadBookController(
             append(',').append(contentPadding.right).append(',').append(contentPadding.bottom)
             append('|').append(resolvedPaginationStyle.columnCount(width, height))
             append('|').append(resolvedPaginationStyle.isScroll)
+            append('|').append(resolvedPaginationStyle.excludeActionImages)
             append('|').append(resolvedPaginationStyle.textBottomJustify)
             append('|').append(resolvedPaginationStyle.pageUnderline)
             append('|').append(resolvedPaginationStyle.emphasisUnderlineStyle)
