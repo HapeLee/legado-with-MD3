@@ -3,7 +3,7 @@ package io.legado.app.ui.ai.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
-import io.legado.app.domain.gateway.AiChatGateway
+import io.legado.app.domain.ai.AiChatGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessagePartJson

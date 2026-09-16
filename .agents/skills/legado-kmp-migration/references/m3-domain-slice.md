@@ -27,6 +27,8 @@ callers that die with the slice**. What is left of the rule domain, as measured:
 | `TagGroupRule` | yes — tagrules group page + group-manage sheet | partial | **done (M3-6)** — the duplicated matcher was merged first (see below), then the repository sank |
 | `AiPromptPreset` | none — `:app` reading AI delegate (`ui/book/read`) | **none** | **done (M4-1)** — first non-rules domain; needs its **own module pair**, see below |
 | `AiMemory` | none — `:app` `AiToolRepository` (AI tool calls) | **none** | **done (M4-2)** — reuses the M4-1 module pair; port keeps only **3 of 8** methods; **needs an Impl behaviour test**, not just a mapper test (see below) |
+| `AiArtifact` | none — `:app` AI tool repo + reader AI delegate | **none** | **done (M4-3)** — first `Flow` port method; first *added* (not moved) port method; `:core:data` turned out to be a consumer too |
+| `AiChatConversation` / `AiChatMessage` | yes — the `:app` AI chat feature (VM + sheets + use case) | **none** | **done (M4-4)** — heaviest implementation so far (5 branches); **two entities ⇒ one mapper file each**; surfaced a latent **serialization-plugin** bug in `:core:model` (see below) |
 
 A zero-guardrail candidate is not disqualified, but then the mapper test is **part of the
 slice, written before the move** — not a bonus added afterwards.
@@ -80,8 +82,55 @@ driving the fake DAO's flow, not by calling `first()`.
 **Sink `withContext` verbatim — including its absence.** M4-1 / M4-2 implementations each wrapped
 every method in `withContext(Dispatchers.IO)`, so the shared implementations copied it. M4-3's
 repository was **bare DAO delegation** (Room `suspend` DAOs schedule themselves), so the new
-implementation imports no `Dispatchers` at all. "Align with the previous slice" would have
-silently added a dispatch hop. Decide per slice by reading the code being moved.
+implementation imports no `Dispatchers` at all. M4-4 went back the other way: its repository
+wrapped *every* non-`Flow` method, and it matters most there — the branch logic chains several
+DAO calls (read siblings → rewrite each → insert the new row → bump the conversation timestamp),
+and none of that should run on the caller's dispatcher. "Align with the previous slice" would
+have silently added or dropped a dispatch hop. Decide per slice by reading the code being moved.
+
+⚠️ **A `@Serializable` class only gets its serializer if *its own module* applies the
+serialization compiler plugin.** This is not a migration step so much as a trap that the move
+*creates*, and M4-4 hit it live. `AiMessageParts.kt` (`@Serializable sealed interface
+AiMessagePart` + six subclasses + `AiMessagePartJson`) was created in `:app`, which applies
+`org.jetbrains.kotlin.plugin.serialization`. Commit `86c7428d24` **moved** it into `:core:model`
+— and `:core:model` never applied the plugin. The upstream plugin does not generate serializers
+for a downstream module's classes, and `legado.kmp.library` does not carry it.
+
+The failure mode is what makes it dangerous, so learn the two signatures:
+
+1. **It compiles cleanly.** `@Serializable` without the plugin is not a compile error; you just
+   get no generated code. Confirm by looking for artifacts: with the plugin,
+   `build/classes/kotlin/<target>/...` contains `X$$serializer.class` for each `@Serializable`
+   class. Absent ⇒ broken, regardless of a green build.
+2. **It fails at runtime, and one half fails *silently*.** `encode` throws
+   `SerializationException: Serializer for subclass 'X' is not found in the polymorphic scope of
+   'Base'`. `decode` — if it wraps `runCatching { … }.getOrElse { emptyList() }`, as
+   `AiMessagePartJson` does — swallows that exception and returns an **empty list**. So a chat
+   message's parts decode to nothing: no crash, no log, content quietly gone.
+
+The reason it survived from `86c7428d24` until M4-4 is the general lesson: **this path had zero
+test coverage**, and the containing module was not in the test-count baseline at all, so nobody
+would have noticed the guardrail's absence either. When a move crosses a *plugin/config* boundary
+rather than just a package boundary, add the check and the test as part of the move:
+
+- Add `alias(libs.plugins.kotlin.serialization)` to the destination module (and sweep for other
+  modules holding `@Serializable` without it — `grep -rl '@Serializable' <mod>/src` × check its
+  `build.gradle.kts`).
+- Add a round-trip test **in the module that now owns the classes**, and wire that module into
+  `tools/count-test-results.py` in the same slice, so the guardrail cannot be deleted unnoticed.
+- The round-trip test's real job is to be the *only* thing standing between this config and
+  silent data loss; when it goes red, suspect the plugin before touching the JSON logic.
+  `host/desktop` still holds one `@Serializable` file without the plugin — deliberately deferred
+  and documented in `DesktopRoute.kt`, so leave it alone and read that note first.
+
+**One mapper file per entity, because of JVM platform declaration clash.** M4-4 sunk two
+entities at once. Two `internal fun List<XEntity>.toDomainList()` declarations — even in the same
+file, even in different files of the same module — erase to the same JVM signature on one facade
+class and fail to compile. M4-3 could park its single `toDomainList` inside `*RepositoryImpl.kt`;
+M4-4 could not, so each entity got `<Entity>Mapper.kt` owning its own mapper + collection
+overload. This also matches the existing `data/rules` layout (six domains ⇒ six files, one
+`toDomainList` each). Before adding a second collection mapper, check the facade:
+`grep -rn 'fun List<.*>\.\(toDomain\|toEntity\)' <module>/src`.
 
 **A port method may be *added*, not just moved — when a caller still holds the DAO.** M4-3 was
 the first slice where a `:app` class (`AiToolRepository`) called `aiArtifactDao.queryArtifacts`
@@ -236,10 +285,11 @@ git diff --check
 | M3-6 | `TagGroupRule` | `5406f151fb` |
 | M4-1 | `AiPromptPreset` | `00e841ed46` |
 | M4-2 | `AiMemory` | `3f9fb54d16` |
-| M4-3 | `AiArtifact` | pending |
+| M4-3 | `AiArtifact` | `f81c4813c8` |
+| M4-4 | `AiChatConversation` / `AiChatMessage` | pending |
 
 Per-slice test counts in `:data:ai`: M4-1 7, M4-2 11 (7 mapper + 4 impl), M4-3 16
-(9 mapper + 7 impl) ⇒ directory total 34.
+(9 mapper + 7 impl), M4-4 35 (8 + 9 mapper + 18 impl) ⇒ directory total 69.
 
 ### When a mapper test is not enough: the Impl behaviour test
 
@@ -283,3 +333,57 @@ of code rather than by a shared declaration.
 Milestone-level blocker behind these slices is `data:database` (the single Room owner):
 `entities/BaseSource.kt` alone carries 23 `coreProvider` hits, and `:app` still has 8 files
 importing the `ReplaceRule` entity plus 8 direct `replaceRuleDao` call sites.
+
+### Mutation verification: run it alone, and make it restore on any exit
+
+Every slice closes with N rounds of "mutate the source → the new tests must go red → restore →
+green". The rounds are only meaningful if the harness is trustworthy, and M4-4 produced two
+rules worth carrying forward. The reusable scripts live in `C:/Users/www13/legado-verify/` as
+`m4-3-mutate.py` / `m4-4-mutate.py`.
+
+**Never run it concurrently with another Gradle build.** It rewrites a source file, runs a
+Gradle test task, then restores — so for the duration of each round the working tree is
+deliberately broken. A second build touching the same module (a full verification set, a
+compile probe) reads the mutated file and fails. M4-4 lost time to exactly this: a full
+verification run reported **7 failing tests in `:data:ai`**, all `title` coming back empty,
+which looked like a real regression in the slice — the source was fine; it was the mutation
+leaked into a concurrently-running build. They also race on the same output directory, so each
+can clobber the other's `build/test-results/*.xml` and make counts meaningless. Guard the
+script with a lock file, and if you ever see a small cluster of same-symptom failures in one
+module, check `git diff` on the file before believing them.
+
+**Restore must survive being killed.** Because the working tree is broken *by design* between
+mutate and restore, a `KeyboardInterrupt` / `SIGTERM` / crash in that window leaves the mutation
+on disk — and a *new module's* files are untracked, so `git diff` shows nothing and can't warn
+you. M4-4's round-1 `title = ""` survived a kill and would have been committed. So:
+
+- Keep an explicit pending-changes map and `try/finally` restore per round (as before).
+- **Also** restore from an `atexit` hook and from `SIGINT`/`SIGTERM` handlers. `finally` alone
+  does not run when the process is signalled.
+- Re-assert every anchor hits **exactly once** before starting (a symmetric `toDomain`/`toEntity`
+  pair makes each field name appear twice — anchor on the function signature to pick a direction,
+  and when the anchor spans several field lines, include the lines *between* the signature and
+  the field you target, since they must match verbatim).
+- Put the whole file's line endings back on restore: write CRLF (repo-wide policy), and read
+  with `newline=''` then normalise `\r\n` → `\n` before comparing, or every `\n` anchor misses.
+
+**A surviving mutation is a finding about your test, not just about the code.** M4-4 got 7/8 and
+the failure was informative: mutating `partsJson = partsJson` → `partsJson = partsJson.trim()`
+stayed **green**. The test meant to guard that field did exist and was well argued — "use a
+string that is not valid JSON, so a stray `decode`/`encode` would normalise it" — but its literal
+was `"not-a-json-at-all { unbalanced"`, which has **no leading or trailing whitespace**. So it
+discriminated against decode/encode but not against `trim()`. Widening the fixture to
+`"  not-a-json-at-all { unbalanced  "` made the same round go red with no production change.
+
+The generalised rule, which belongs next to "pick inputs that discriminate implementations":
+**when a round survives, the input failed to separate the mutant from the original — go widen the
+fixture, do not weaken or drop the round.** Concretely, ask what *minimal* edit your assertion
+would tolerate, and make the input sit exactly on that boundary. For a `String` field that is
+"copied verbatim", that means whitespace at both ends plus a non-normalisable shape; for a
+`List`, that means more than one element in a non-sorted order; for a nullable field, `null`
+(not just a non-null value).
+
+Also note which rounds describe *implementation* logic rather than mapping — M4-4's rounds 6–8
+(`branchIndex` source, the sibling-deselect loop, delete ordering) are only catchable because an
+`Impl` behaviour test exists. If every mutation you can think of targets mapper fields, that is
+itself a signal that the slice's risky logic is untested.

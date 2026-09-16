@@ -1109,6 +1109,55 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      旧 `AiArtifactGateway` / `AiArtifactRepository` 一并删除、不留门面。用例 **713 不变 /
      951 → 967**；四门禁 `--rerun` 全绿，G4 零变更；变异 6 轮全红后回绿。
      模板与新增要点见 `.agents/skills/legado-kmp-migration/references/m3-domain-slice.md`。
+   - **M4-4 已完成（2026-09-16）：AI 会话域下沉 —— 复用模块对，本片的价值是「顺手挖出并修掉一个
+     静默的生产故障」。** 选片 `AiChat`（两个实体 `AiChatConversation` 6 字段 /
+     `AiChatMessage` 9 字段；端口 13 方法但只有 **11 个有调用方**；**实现逻辑最重的一片**，
+     有 5 处真实分支）。四点与前几片不同：
+     ① ⚠️ **`AiMessageParts.kt` 所在的 `core:model` 缺 serialization 编译器插件**（本片发现并修复）。
+     `AiMessagePartJson` 的多态编解码走 `@Serializable sealed interface AiMessagePart` + 六个子类，
+     而 `86c7428d24` 把该文件从 `:app`（该模块 apply 了 `org.jetbrains.kotlin.plugin.serialization`）
+     移进 `core:model` 时**漏了给目标模块 apply 插件** ⇒ 六个子类的 `$$serializer` 一个都没生成
+     （实测 `core:model/build/classes/.../desktop` 下零个 `*$$serializer.class`）。后果是双重的：
+     `encode` 直接抛 `SerializationException: Serializer for subclass 'X' is not found in the
+     polymorphic scope of 'AiMessagePart'`；而 `decode` 把异常 `runCatching` 吞成 `emptyList()`
+     ⇒ **聊天记录会静默丢光内容，不崩不报错**。编译期完全无感（插件缺失只影响代码生成），
+     该路径**零测试覆盖**，故潜伏至今。修法＝ `core:model/build.gradle.kts` 加
+     `alias(libs.plugins.kotlin.serialization)`；同时补 `AiMessagePartJsonTest` **8 例**钉住它，
+     并把 `:core:model`（此前各片从未跟踪）纳入 `count-test-results.py`。这是本片**修 bug 与迁
+     移同片**的唯一处，且是**迁移前置**：不修它，新 `AiChatRepositoryImpl` 的两处 `encode`
+     照样是坏的。
+     ② **集合映射一实体一文件**（`AiChatConversationMapper` / `AiChatMessageMapper`），不合并：
+     两条 `List<*>.toDomainList()` 放进同一文件会因泛型擦除编译成同一个 JVM facade 类里的
+     同名同形方法 ⇒ platform declaration clash。`data:ai` 因此从「一个 Mapper 一个 `Impl` 文件」
+     变为「2 个 Mapper + 1 个 `Impl`」；`Impl` 里不再有集合重载（M4-3 是放在 `Impl` 里的）。
+     ③ **端口删两个方法**：`observeMessages` / `getBranches` 零外部调用方 ⇒ 不进端口。
+     但 `getBranches` 的 **DAO 方法要留**（`saveRegeneratedMessage` 与 `selectBranch` 都在实现内部
+     调它），故是「只删端口、不删 DAO」；这与 M4-3「只删端口、不删 DAO」同律、与 M4-2「删端口
+     且 DAO 方法本来就零调用方」不同。
+     ④ **保留迁移前的 `withContext(Dispatchers.IO)`**（除两个 `Flow` 方法外每方法都包），与
+     M4-1/M4-2 同侧、与 M4-3 相反（那边迁前就是裸调 DAO）。本片是**最需要照抄调度行为的一片**：
+     分支逻辑里 DAO 调用成串（读兄弟 → 逐条改写 → 写新消息 → 推会话时间戳）。
+     实现体有 5 处真实逻辑 ⇒ 按 M4-2 判据**必须**配 `AiChatRepositoryImplTest`（**18 例**，
+     假 DAO 记录调用序列，钉住 `branchIndex = countBranches(...)` 的取值、`saveRegeneratedMessage`
+     的「不删旧分支只逐条取消选中」、`selectBranch` 的两处提前返回、`getBranchCounts` 的
+     `List<BranchCount>` → `Map` 聚合、`deleteConversation` 的**先删消息再删会话**顺序）；
+     `AiChatConversationMapperTest` **8 例** + `AiChatMessageMapperTest` **9 例**（后者含
+     `partsJson` 原样搬运的往返约束）。
+     合计 `data:ai` **34 → 69 例**（+35）。旧 `AiChatGateway` / `AiChatRepository` 一并删除、
+     不留门面；消费方只有 `:app` 三处（`appModule` / `AiChatGenerationUseCase` / `AiChatViewModel`），
+     **本轮没有 `:core:data` 内部消费方**（与 M4-3 不同）。用例 **713 不变 / 967 → 1069**；
+     四门禁 `--rerun` 全绿，G4 零变更；变异 8 轮全红后回绿。
+     ⑤ ⚠️ **变异验证在第 5 轮抓出测试自身的盲区**（这是本片第二条值得复用的通则）：
+     「`partsJson` 被顺手 `trim()`」那一轮**首轮仍绿**——用例思路是对的（用**非法 JSON** 挡
+     「顺手 decode/encode」），但字面量首尾没有空白 ⇒ `trim()` 隐形。把 fixture 改成
+     `"  not-a-json-at-all { unbalanced  "` 后**生产代码一行未动**、同一轮立刻变红。
+     **通则：某一轮幸存时要改的是「测试输入」而不是「删掉这一轮」**——问「我的断言能容忍的
+     最小改动是什么」，把输入正好放在那条边界上（逐字搬运的 `String` ⇒ 首尾空白 + 不可规范化；
+     `List` ⇒ 多元素且顺序非平凡；可空字段 ⇒ 放 `null`）。配套信号：若能想出的变异全落在 mapper
+     字段上，说明本片有风险的逻辑没被测到。
+     ⚠️ 流程教训：**变异脚本绝不能与其它 Gradle 构建并发**——两者共用 `data/ai/build/`，
+     实测导致全量验证集报出 7 个「假失败」（源码其实是好的，全是变异泄漏），并把结果 XML 冲掉。
+     脚本已加锁 + `atexit`/信号还原，见 `legado-verify/m4-4-mutate.py`。
 12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
 13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 

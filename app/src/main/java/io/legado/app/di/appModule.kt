@@ -15,7 +15,7 @@ import io.legado.app.data.json.GsonImportJsonEditor
 import io.legado.app.data.ai.AiArtifactRepositoryImpl
 import io.legado.app.data.ai.AiMemoryRepositoryImpl
 import io.legado.app.data.ai.AiPromptPresetRepositoryImpl
-import io.legado.app.data.repository.AiChatRepository
+import io.legado.app.data.ai.AiChatRepositoryImpl
 import io.legado.app.data.repository.AiProfileRepository
 import io.legado.app.data.repository.AiTextRepositoryImpl
 import io.legado.app.data.repository.AiToolRepository
@@ -122,7 +122,7 @@ import io.legado.app.data.security.CloudTtsCredentialCipher
 import io.legado.app.domain.ai.AiArtifactGateway
 import io.legado.app.domain.ai.AiMemoryGateway
 import io.legado.app.domain.ai.AiPromptPresetGateway
-import io.legado.app.domain.gateway.AiChatGateway
+import io.legado.app.domain.ai.AiChatGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.AiToolGateway
@@ -537,7 +537,7 @@ val appModule = module {
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     single<AiProfileGateway> { AiProfileRepository(get()) }
     single<AiArtifactGateway> { AiArtifactRepositoryImpl(get<AiArtifactDao>()) }
-    single<AiChatGateway> { AiChatRepository(get()) }
+    single<AiChatGateway> { AiChatRepositoryImpl(get()) }
     single<AiMemoryGateway> { AiMemoryRepositoryImpl(get<AiMemoryDao>()) }
     single<AiPromptPresetGateway> { AiPromptPresetRepositoryImpl(get<AiPromptPresetDao>()) }
     single<AiTextGateway> { AiTextRepositoryImpl() }

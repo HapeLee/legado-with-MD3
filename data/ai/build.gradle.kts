@@ -6,6 +6,12 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":domain:ai"))
+            // `AiMessagePart` / `AiMessagePartJson`（M4-4 起）：`AiChatRepositoryImpl` 在写入前用
+            // `AiMessagePartJson.encode(parts)` 把分片编码成字符串列（与迁移前一致），端口签名也收
+            // `List<AiMessagePart>`。它们住 `:core:model`，而 `:core:data` 对它是 `implementation`
+            // （不向消费方传递）⇒ 本模块必须**显式**声明，否则 `Unresolved reference`。
+            // 先例：`data/rules` 因 `splitNotBlank` 同样显式依赖 `:core:model`。
+            implementation(project(":core:model"))
             // 过渡期依赖：Room 的 DAO 与实体仍归 `:core:data`（M3 的 `data:database`
             // 「Room 唯一 owner」尚未拆出）。等它落地后本行改成 `:data:database`。
             implementation(project(":core:data"))

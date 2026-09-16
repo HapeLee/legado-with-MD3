@@ -80,6 +80,15 @@ RESULT_DIRS = {
     # 发射都会 `ClassCastException`。故按 M4-2 立的判据补 Impl 测试，用假 DAO 驱动
     # **多次发射**的流，钉住「每次发射都映射」+ `queryArtifacts` 三个可空筛选参数的透传。
     "data:ai         (desktopTest)": ("data/ai/build/test-results/desktopTest", False),
+    # M4-4：`:core:model` **首次纳入统计**（此前各片从未跟踪本模块，既有 59 例）。
+    # 现在才加的理由：本片在这条路径上修掉了一个**静默的生产故障** —— `AiMessageParts.kt`
+    # 由 `86c7428d24` 从 `:app`（该模块 apply 了 serialization 插件）移进本模块时漏了给
+    # 目标模块 apply 插件 ⇒ 六个子类的 `$$serializer` 一个都没生成，`AiMessagePartJson`
+    # 的多态编解码在运行期抛 `SerializationException`（`decode` 还 `runCatching` 吞成
+    # `emptyList()` ⇒ 聊天记录静默丢内容），而这条路径**零测试覆盖** ⇒ 一直没暴露。
+    # 新增 `AiMessagePartJsonTest` 8 例（往返 / 判别字段 / legacy 迁移 / null 省略 /
+    # 未知字段 / 空白 / 坏 JSON）钉住它；不跟踪本模块，这个护栏被删掉也没人知道。
+    "core:model     (desktopTest)": ("core/model/build/test-results/desktopTest", False),
 }
 
 # M3-6：主验证集 712 → 713（**本片独有**）。合并「标签分组规则匹配语义」的两份实现时，给
@@ -134,7 +143,11 @@ BASELINE_MAIN = 713
 # 只换了 import 与 DI 绑定（并把 `AiToolRepository` 的 DAO 直连换成 Gateway，不涉及被计模式）。
 # Impl 测试是本片**必须**补的：`observeBookArtifacts` 是唯一的 `Flow` 端口方法，mapper 测试
 # 不驱动那条流 ⇒ 流内映射的变异能穿过后者的全部用例。
-BASELINE_ALL = 967
+# M4-4：967 → 1069（净 +102）。两块：① `:data:ai` +35 = AI 会话域的
+# `AiChatConversationMapperTest` 8 例 + `AiChatMessageMapperTest` 9 例 +
+# `AiChatRepositoryImplTest` 18 例；② `:core:model` 首次纳入的 59 例既有 + 本片新增
+# `AiMessagePartJsonTest` 8 例 = 67。主验证集**不变**（713）——两块都不进主集。
+BASELINE_ALL = 1069
 
 
 def tally(d: pathlib.Path):
