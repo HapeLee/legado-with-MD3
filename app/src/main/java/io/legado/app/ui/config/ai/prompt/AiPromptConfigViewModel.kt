@@ -3,7 +3,7 @@ package io.legado.app.ui.config.ai.prompt
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.utils.toastOnUi

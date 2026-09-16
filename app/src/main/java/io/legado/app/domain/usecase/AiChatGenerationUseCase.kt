@@ -2,7 +2,7 @@ package io.legado.app.domain.usecase
 
 import com.google.gson.JsonObject
 import io.legado.app.domain.ai.AiChatGateway
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.ai.AiMemoryGateway
 import io.legado.app.domain.gateway.AiTextGateway

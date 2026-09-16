@@ -2,7 +2,7 @@ package io.legado.app.ui.config.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiGenerationParams

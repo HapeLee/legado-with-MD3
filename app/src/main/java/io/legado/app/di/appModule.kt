@@ -8,6 +8,7 @@ import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import io.legado.app.BuildConfig
 import io.legado.app.core.platform.Clipboard
+import io.legado.app.core.platform.JcaDigest
 import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.core.platform.Toaster
 import io.legado.app.data.AppDatabase
@@ -16,7 +17,7 @@ import io.legado.app.data.ai.AiArtifactRepositoryImpl
 import io.legado.app.data.ai.AiMemoryRepositoryImpl
 import io.legado.app.data.ai.AiPromptPresetRepositoryImpl
 import io.legado.app.data.ai.AiChatRepositoryImpl
-import io.legado.app.data.repository.AiProfileRepository
+import io.legado.app.data.ai.AiProfileRepositoryImpl
 import io.legado.app.data.repository.AiTextRepositoryImpl
 import io.legado.app.data.repository.AiToolRepository
 import io.legado.app.data.repository.AppLocaleRepository
@@ -123,7 +124,7 @@ import io.legado.app.domain.ai.AiArtifactGateway
 import io.legado.app.domain.ai.AiMemoryGateway
 import io.legado.app.domain.ai.AiPromptPresetGateway
 import io.legado.app.domain.ai.AiChatGateway
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.gateway.AndroidReadBookReplaceSessionGateway
@@ -535,7 +536,10 @@ val appModule = module {
     // 注入（`viewModelOf` 按类型解析），共享层因此看不到这个 Android-only 的兼容逻辑。
     single<TxtTocRuleImportCompat> { AndroidTxtTocRuleImportCompat() }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
-    single<AiProfileGateway> { AiProfileRepository(get()) }
+    // ⚠️ 两个构造参数都要传：`digest` 是**参数注入**的平台能力（`stableModelId` 要复刻
+    // UUID v3 名称空间哈希，而 MD5 是平台原语），没有任何可回落默认 ⇒ 漏传即编译错误。
+    // 类型是接口 `Digest`，实现是 `:core:platform` 的 `JcaDigest`（JCA / MessageDigest）。
+    single<AiProfileGateway> { AiProfileRepositoryImpl(get(), JcaDigest) }
     single<AiArtifactGateway> { AiArtifactRepositoryImpl(get<AiArtifactDao>()) }
     single<AiChatGateway> { AiChatRepositoryImpl(get()) }
     single<AiMemoryGateway> { AiMemoryRepositoryImpl(get<AiMemoryDao>()) }

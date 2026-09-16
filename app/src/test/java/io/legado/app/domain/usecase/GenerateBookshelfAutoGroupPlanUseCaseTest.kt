@@ -1,9 +1,9 @@
 package io.legado.app.domain.usecase
 
-import io.legado.app.data.entities.AiModelProfile
-import io.legado.app.data.entities.AiProviderProfile
-import io.legado.app.data.entities.AiTaskPreset
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiModelProfile
+import io.legado.app.domain.ai.AiProviderProfile
+import io.legado.app.domain.ai.AiTaskPreset
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.BookshelfAutoGroupGateway
@@ -14,7 +14,6 @@ import io.legado.app.domain.model.AiGenerateResponse
 import io.legado.app.domain.model.AiGenerationParams
 import io.legado.app.domain.model.AiModelConfig
 import io.legado.app.domain.model.AiModelDraft
-import io.legado.app.domain.model.AiProfileDraft
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
 import io.legado.app.domain.model.AiProviderDraft
@@ -434,7 +433,6 @@ class GenerateBookshelfAutoGroupPlanUseCaseTest {
         override suspend fun getProvider(id: String): AiProviderProfile? = null
         override suspend fun getModel(id: String): AiModelProfile? = null
         override suspend fun getTaskPreset(taskType: String) = preset
-        override suspend fun getProviderApiKey(providerId: String) = ""
         override suspend fun saveProvider(draft: AiProviderDraft): AiProviderProfile = error("unused")
         override suspend fun saveModel(draft: AiModelDraft): AiModelProfile = error("unused")
         override suspend fun importProviderModels(
@@ -442,7 +440,6 @@ class GenerateBookshelfAutoGroupPlanUseCaseTest {
             models: List<AiAvailableModel>,
         ): List<AiModelProfile> = error("unused")
         override suspend fun setDefaultModel(modelProfileId: String): AiTaskPresetConfig = error("unused")
-        override suspend fun saveDefaultChatProfile(draft: AiProfileDraft): AiTaskPresetConfig = error("unused")
         override suspend fun saveTaskPreset(
             taskType: String,
             promptTemplate: String,

@@ -286,10 +286,17 @@ git diff --check
 | M4-1 | `AiPromptPreset` | `00e841ed46` |
 | M4-2 | `AiMemory` | `3f9fb54d16` |
 | M4-3 | `AiArtifact` | `f81c4813c8` |
-| M4-4 | `AiChatConversation` / `AiChatMessage` | pending |
+| M4-4 | `AiChatConversation` / `AiChatMessage` | `c5fd859da1` |
+| M4-5a + M4-5b | *(platform prerequisites: `Digest.md5` + `nameUuidFromBytes`)* | `a113b9130d` |
+| M4-5c | `AiProviderProfile` / `AiModelProfile` / `AiTaskPreset` | pending |
 
 Per-slice test counts in `:data:ai`: M4-1 7, M4-2 11 (7 mapper + 4 impl), M4-3 16
-(9 mapper + 7 impl), M4-4 35 (8 + 9 mapper + 18 impl) ⇒ directory total 69.
+(9 mapper + 7 impl), M4-4 35 (8 + 9 mapper + 18 impl), M4-5c 74 (9 + 10 + 9 mapper + 46 impl)
+⇒ directory total **143**.
+
+M4-5c closes the AI domain, so the next sink target is no longer an AI entity. The blocking
+item is `data:database` (Room's sole owner): `entities/BaseSource.kt` carries 23 `coreProvider`
+references on its own, so moving it trips G4's "a new area must be zero" rule.
 
 ### When a mapper test is not enough: the Impl behaviour test
 
@@ -319,6 +326,11 @@ removal**. The test decision rule:
   test dependency.
 - Pick inputs that **discriminate implementations** (blank vs non-blank conversation id;
   multiple elements to pin ordering), not merely 'returns something non-empty'.
+- **One Mapper file per entity**, even when several entities are sunk behind one port. M4-5c
+  moved three entities that share a single `AiProfileGateway`, and put each in its own file:
+  two `List<XEntity>.toDomainList()` extension functions in the same file erase to the same
+  JVM facade signature ⇒ *platform declaration clash*. Self-check with
+  `grep -rn 'fun List<.*>\.\(toDomain\|toEntity\)'`.
 
 **Companion-object constants on the entity are a second, invisible copy.** `AiArtifact` (M4-3)
 is the first sunk entity with a `companion object` four `STATUS_*` constants. The DAO's `@Query`
@@ -333,6 +345,38 @@ of code rather than by a shared declaration.
 Milestone-level blocker behind these slices is `data:database` (the single Room owner):
 `entities/BaseSource.kt` alone carries 23 `coreProvider` hits, and `:app` still has 8 files
 importing the `ReplaceRule` entity plus 8 direct `replaceRuleDao` call sites.
+
+### Reaching the platform from a `commonMain`-only module
+
+`data/<domain>` has **only** `commonMain`. When the implementation you are moving used an
+`:app` facility, the move fails at compile time and you need a shared-layer equivalent.
+M4-5c hit two distinct shapes:
+
+- **`GSON` → `JsonCodec`.** The `io.legado.app.utils.GSON` facade lives in
+  `core/data/src/androidMain` and is unreachable from `commonMain`; `:core:platform`'s
+  `JsonCodec` (`expect object`, with android + desktop actuals) exposes the same Gson
+  configuration. Decide by **comparing the configurations line by line**, not by the name:
+  `JsonCodec` matches `INITIAL_GSON` exactly (the `MapDeserializerDoubleAsIntFix` type adapter,
+  the `Int`/`String` deserializers, `ToNumberPolicy.LONG_OR_DOUBLE`, `disableHtmlEscaping`,
+  `setPrettyPrinting`); the only delta is the seven **rule-type** deserializers `GSON`
+  registers, and they cannot apply to this domain's payloads (`AiGenerationParams`,
+  `AiTaskRuntimeOptions`, a plain `Map`). Swap only the call sites (`toJson` /
+  `fromJsonObject` / `decodeAnyMap`) and behaviour stays identical.
+- **A platform capability with no fallback ⇒ constructor parameter injection.**
+  `stableModelId` reproduces `java.util.UUID.nameUUIDFromBytes`, whose MD5 is a platform
+  primitive. Per AGENTS.md the dispatch is by "is there a sensible fallback": none ⇒ inject
+  the parameter (`AiProfileRepositoryImpl(dao, digest: Digest)`, so omitting it is a *compile*
+  error); some ⇒ an injection point whose `current` is nullable; display-only ⇒ a
+  CompositionLocal with a default. The algorithm itself stays in `:core:platform` as a plain
+  top-level function (`nameUuidFromBytes(bytes, digest)`) — **not** `expect/actual`, because
+  its body contains no platform API; only its dependency does.
+
+⚠️ When the value you compute is **persisted**, look for a compatibility boundary and pin
+it. `stableModelId`'s output lands in `ai_model_profiles.id` and is queried, so its byte
+semantics are frozen: `toString().replace("-", "")` and the MD5 algorithm cannot change even
+though MD5 is cryptographically broken — a change shows up as "the model list is empty after
+upgrading". Freeze it with a hard-coded vector, and add a case asserting the digest **input**
+(`"$providerId:$modelId"`) so a separator change cannot slip through.
 
 ### Mutation verification: run it alone, and make it restore on any exit
 
@@ -387,3 +431,26 @@ Also note which rounds describe *implementation* logic rather than mapping — M
 (`branchIndex` source, the sibling-deselect loop, delete ordering) are only catchable because an
 `Impl` behaviour test exists. If every mutation you can think of targets mapper fields, that is
 itself a signal that the slice's risky logic is untested.
+
+### The green that isn't: `UP-TO-DATE` test tasks and JUnit 4's `void` rule
+
+M4-5c's first verification pass reported `:data:ai:desktopTest` **green**, and it was false: the
+task was `UP-TO-DATE`, so not a single test executed. A clean rebuild went red. Two rules follow.
+
+- **A green test task means "not failed", never "ran".** Use `clean` (cross-module moves need it
+  anyway) or `--rerun-tasks` before believing a test result — and always for a slice that adds a
+  test class, since the new class may not have been compiled when the earlier green was recorded.
+- **JUnit 4 requires `@Test` methods to return `void`.** Kotlin's expression-bodied
+  `fun x() = runBlocking { ... }` infers its return type from the lambda's last expression, and
+  `assertFailsWith` returns the exception while `assertNotNull` returns `T` — so the class is
+  rejected with `InvalidTestClassError` and the report shows **one** `initializationError` with
+  **zero** real cases. Symptom to recognise: `tests=1 fail=1` for a class you wrote dozens of
+  cases in. Fix by making the last statement return `Unit` (`assertTrue` / `assertEquals`), or by
+  using a block body (`fun x() { runBlocking { ... } }`). `assertTrue` returning `Unit` is why
+  most of these files are accidentally fine.
+
+And when an `Impl` test assertion fails, **check the expectation against the pre-migration
+source before touching the implementation**: `git show HEAD:<old-path>` works even while the
+file is deleted in the working tree, and settles the question in seconds. In M4-5c,
+`setDefaultModel`'s returned config carries the **preset's** id, not the model's — the verbatim
+move was correct and the freshly written assertion was wrong.

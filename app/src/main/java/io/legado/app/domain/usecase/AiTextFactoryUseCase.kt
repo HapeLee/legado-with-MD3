@@ -2,7 +2,7 @@ package io.legado.app.domain.usecase
 
 import io.legado.app.domain.ai.AiArtifact
 import io.legado.app.domain.ai.AiArtifactGateway
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiMessage

@@ -1224,6 +1224,63 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      **为什么 M4-5a 与 M4-5b 合并为一次提交**：B 的 `nameUuidFromBytes` 是 A 的 `Digest.md5` 的
      首个真实消费方，没有 A 则 B 不存在、没有 B 则 A 违反「无调用方抽象」；且两片的
      `count-test-results.py` 基线变更落在同一处。分两次提交只会让第一次的 `md5` 暂时零调用方。
+   - **M4-5c 已完成（2026-09-16）：AI profile 域下沉 `domain/ai` + `data/ai` —— M4 AI 域下沉的
+     末片，也是最大的一片。** 前两片（M4-5a/5b）正是为它清障：`stableModelId` 要 MD5 与
+     UUID v3 字节语义，两者都不在 `commonMain` 可达范围。
+     搬走的是**三个实体**（`AiProviderProfile` 17 字段 / `AiModelProfile` 12 字段 /
+     `AiTaskPreset` 12 字段）**共用一个端口** `AiProfileGateway`（既有契约，13 方法）＋
+     实现 `AiProfileRepositoryImpl`（`AiProfileRepository` 439 行整份搬迁）＋三个 Mapper；
+     19 个消费方迁移，2 个旧件删除（`:core:data` 的 gateway、`:app` 的 repository）。
+     ① ⚠️ **端口是「既有契约搬家」，名字不改**（本仓 `domain/gateway` 有 60+ 个 `XxxGateway`；
+     改名会连带改全部注入点变量名）。与 M3 的 rules 端口叫 `XxxRepository` 的区别在于：
+     那边「它本来就叫那个名字」，与本片同律——**判据是「新造端口 vs 既有契约搬家」**。
+     ② ⚠️ **随片删掉两个零调用方的方法**（15 → 13）：`getProviderApiKey` / `saveDefaultChatProfile`
+     全仓只有「声明 + 实现 + 测试假实现」三处、**零真实调用**（后者写在 M4-1 之前，此后被
+     `AiConfigViewModel` 的新路径取代）。**背后的 DAO 方法一个都没删**（留给 `data:database`）。
+     ③ ⚠️ **`GSON` → `:core:platform` 的 `JsonCodec`，判据是「模块可达性 + 配置逐行相同」**：
+     `GSON` 门面住 `core/data/src/androidMain`，而 `data/ai` **只有 commonMain** ⇒ 编译期拿不到。
+     `JsonCodec` 的 Gson 配置与 `INITIAL_GSON` 逐行相同（`MapDeserializerDoubleAsIntFix` +
+     `Int`/`String` deserializer + `ToNumberPolicy.LONG_OR_DOUBLE` + `disableHtmlEscaping` +
+     `setPrettyPrinting`），唯一差异是 `GSON` 多注册的 7 个 **rule 类型** deserializer——
+     本域序列化的是 `AiGenerationParams` / `AiTaskRuntimeOptions` / `Map`，都不是 rule 类型
+     ⇒ 字节输出与解析行为一致。替换点只有三处：`toJson` / `fromJsonObject` / `decodeAnyMap`。
+     **先比对配置再替换，不要凭「名字不一样」就认定语义不同**。
+     ④ ⚠️ **`stableModelId` 是持久化兼容边界，MD5 由构造注入**：它复刻
+     `java.util.UUID.nameUUIDFromBytes`，输出落库成 `ai_model_profiles.id = "model_<hex>"` 并
+     **参与查询**；`toString().replace("-", "")` 的大小写与去横线方式逐字保留（改一个字符就是
+     「升级后模型列表空了」）。平台能力的分派按 AGENTS.md：**没有可回落默认 ⇒ 参数注入**
+     （`AiProfileRepositoryImpl(dao, digest: Digest)`，漏传即编译错误），算法本体留在
+     `:core:platform` 的 `nameUuidFromBytes`。**没有做成 `expect/actual`**（它不是平台原语）、
+     **也没做成 CompositionLocal**（没有任何展示性回落）。
+     ⑤ ⚠️ **`withContext(Dispatchers.IO)` 逐条照抄迁移前行为**：迁移前**除三个 `Flow` 方法外每个
+     方法都包了 IO**，本片照抄（与 M4-1/M4-2/M4-4 同侧，与 M4-3「迁前就是裸调 DAO」相反）。
+     拒绝「向上一片对齐」——那会改变实际调度行为而测试仍全绿。
+     ⑥ ⚠️ **三个 `observeXxx()` 必须在流内映射**（`map` 挂在 DAO 的 `Flow` 上，不是先 `first()`），
+     否则后续每次发射都不会再映射；mapper 测试碰不到这条路径 ⇒ 由 Impl 测试用假 DAO
+     发射**多次**来钉住（M4-3 立的判据，本片是第二次应用）。
+     ⑦ ⚠️ **JVM facade 泛型擦除 ⇒ 一实体一 Mapper 文件**：两条 `List<XEntity>.toDomainList()`
+     放进同一个文件会编译成同一个 facade 类里的同名同形方法，构成 platform declaration clash。
+     自检：`grep -rn 'fun List<.*>\.\(toDomain\|toEntity\)'`。
+     ⑧ ⚠️ **G4 基线要随「删掉一个带 GSON 的文件」下调**：`:app/data/repository` 的 `gson` 门面计数
+     7 → **6**（`AiProfileRepository.kt` 内有 `import io.legado.app.utils.GSON`），棘轮只降不升
+     ⇒ 同一片里改 `gradle/architecture/legacy-baseline.txt`。同类先例：M3-4 的 `ui/association` 8 → 7。
+     改动：`domain/ai` 新增三个领域模型 + 端口；`data/ai` 新增三个 Mapper + Impl；删除
+     `:core:data/.../gateway/AiProfileGateway.kt` 与 `:app/.../data/repository/AiProfileRepository.kt`；
+     `appModule` 绑定改 `single<AiProfileGateway> { AiProfileRepositoryImpl(get(), JcaDigest) }`。
+     用例 **主集 712 不变 / 全量 1078 → 1152（+74 = `:data:ai` 69 → 143：三个 Mapper 测试 9+10+9
+     ＝ 28，Impl 行为测试 46）**；四门禁全绿（含 G4 基线下调）；变异 **10 轮全红后回绿**
+     （三实体映射字段 / `id` 不得重算 / `isDefault` 不得写死 / 摘要分隔符 / apiKey 回落 /
+     `deleteProvider` 顺序 / `mergeWithFallback` 方向 / 流内映射）。脚本 `legado-verify/m4-5c-*.py`。
+     ⑨ ⚠️ ⚠️ **本片最值得记的流程教训：增量构建下的「绿」可以是假的。** 第一遍定向验证报
+     `:data:ai:desktopTest` 绿，但那次该任务是 **UP-TO-DATE**（没真跑）。干净重建后它**红**：
+     4 条**表达式体** `@Test 方法`（`fun x() = runBlocking { ...; assertFailsWith<...>{...} }`）
+     的返回类型取自 lambda 末表达式，`assertFailsWith` 返回异常对象、`assertNotNull` 返回 `T`
+     ⇒ **不是 `void`**，JUnit 4 把整个测试类判 `InvalidTestClassError`（只报 1 个
+     `initializationError`，**0 个真实用例执行**）。同一遍还揪出第二条：`setDefaultModel` 的
+     返回配置 `id` 是**预设**的 id（`default_translate_chapter`）而不是模型 id——已用
+     `git show HEAD:app/.../AiProfileRepository.kt` 逐行核对确认**是测试写错、不是搬错**。
+     两条都说明同一件事：**「绿」必须来自 `clean` 或 `--rerun-tasks` 的真实执行**；
+     且 Impl 测试断言要拿 `git show HEAD:<原文件>` 对齐语义，别凭直觉。
 12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
 13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 

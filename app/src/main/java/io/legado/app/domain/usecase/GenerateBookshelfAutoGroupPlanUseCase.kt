@@ -1,7 +1,7 @@
 package io.legado.app.domain.usecase
 
 import com.google.gson.Gson
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.BookshelfAutoGroupGateway
 import io.legado.app.domain.gateway.BookshelfAutoGroupPromptGateway

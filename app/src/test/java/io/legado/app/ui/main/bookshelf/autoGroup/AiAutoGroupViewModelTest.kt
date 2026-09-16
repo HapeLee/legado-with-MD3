@@ -2,7 +2,7 @@ package io.legado.app.ui.main.bookshelf.autoGroup
 
 import android.app.Application
 import android.os.Looper
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.BookshelfAutoGroupGateway

@@ -4,7 +4,7 @@ import androidx.annotation.Keep
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.TranslationCache
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.DictionaryGateway

@@ -11,7 +11,7 @@ BUILD SUCCESSFUL 只能证明没失败，**证明不了没少跑**——「悄�
 
     python tools/count-test-results.py
 
-当前基线：主验证集 **712**、全量 **1078**（详见 .workbuddy/memory/topics/gates-and-verification.md）。
+当前基线：主验证集 **712**、全量 **1152**（详见 .workbuddy/memory/topics/gates-and-verification.md）。
 """
 import pathlib
 import sys
@@ -100,6 +100,21 @@ RESULT_DIRS = {
     # ⇒ 把流内映射换成 `as List<AiArtifact>` 能编译通过且九条 mapper 用例全绿，而真机每次
     # 发射都会 `ClassCastException`。故按 M4-2 立的判据补 Impl 测试，用假 DAO 驱动
     # **多次发射**的流，钉住「每次发射都映射」+ `queryArtifacts` 三个可空筛选参数的透传。
+    # M4-5c：同目录再加 AI profile 域（`AiProviderProfile` / `AiModelProfile` / `AiTaskPreset`
+    # 三个实体 + `AiProfileGateway` 的 `AiProfileRepositoryImpl`）：三个 Mapper 测试
+    # （9 + 10 + 9 = 28）＋ 一个 Impl 行为测试 **46 例** ⇒ **69 → 143**。
+    # 46 例是 M4-2 以来最大的一个 Impl 测试，理由是 13 个端口方法里 **10 个带真实逻辑**，
+    # 且全是 mapper 测试碰不到的：`saveProvider` 的 apiKey 回落与 7 个可选字段的沿用、
+    # `saveModel` 的 `stableModelId`（UUID v3 字节语义）与能力合并保序、`importProviderModels`
+    # 的「>0 才覆盖」两级回落、`setDefaultModel` 一次写三个内建预设（三条取值来源各不相同）、
+    # `deleteProvider` 的两条 DAO 调用**顺序**、`toConfig` 的**合并方向**与三条路径回落、
+    # 以及坏 JSON 的容错兜底。手写假 DAO 把 `@Insert` 写进内存表（回读才有意义）并用
+    # `callLog` 记录调用序列（两个独立列表看不出 `deleteProvider` 的先后）。
+    # ⚠️ 本片还踩到一个**只有干净重建才暴露**的坑：4 条表达式体 `@Test 方法`（
+    # `fun x() = runBlocking { ... assertFailsWith ... }`）因末表达式返回异常对象而**不是
+    # `void`**，JUnit 4 直接把整个测试类判 `InvalidTestClassError`（只跑出 1 个
+    # `initializationError`、**0 个真实用例执行**）。增量构建下这个任务常是 UP-TO-DATE，
+    # 于是「绿」是假的 —— 必须 `clean` 或 `--rerun`。修法是让末语句落回 Unit。
     "data:ai         (desktopTest)": ("data/ai/build/test-results/desktopTest", False),
     # M4-4：`:core:model` **首次纳入统计**（此前各片从未跟踪本模块，既有 59 例）。
     # 现在才加的理由：本片在这条路径上修掉了一个**静默的生产故障** —— `AiMessageParts.kt`
@@ -184,7 +199,12 @@ BASELINE_MAIN = 712
 # 两片合为一次提交的理由：M4-5b 的 `nameUuidFromBytes` 正是 M4-5a 的 `Digest.md5` 的
 # **首个真实消费方**，没有 A 则 B 无法存在；拆开提交会让「先提交的 A 里 md5 零消费方」，
 # 反而违反「无调用方抽象」的纪律。
-BASELINE_ALL = 1078
+# M4-5c：1078 → **1152**（净 **+74** = `:data:ai` 的 69 → 143，见上方该模块条目的说明）。
+# 本片是 M4 AI 域下沉的**末片**，也是最大的一片（12 个新文件 + 19 个消费方 + 2 个旧件删除）。
+# 主验证集**不变**（712）——新用例全在 `:data:ai`（不在主集一侧），`:app` 侧只换 import、
+# 删两个零调用方的 override（用例数不变）。10 轮变异全红后回绿，脚本
+# `legado-verify/m4-5c-mutate.py`。
+BASELINE_ALL = 1152
 
 
 def tally(d: pathlib.Path):

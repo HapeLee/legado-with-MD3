@@ -88,7 +88,7 @@ appDb|app/main/io/legado/app/utils|2
 appDb|app/main/io/legado/app/web/socket|2
 gson|app/main/io/legado/app/api/controller|4
 gson|app/main/io/legado/app/data/entities|1
-gson|app/main/io/legado/app/data/repository|7
+gson|app/main/io/legado/app/data/repository|6
 gson|app/main/io/legado/app/data/repository/ai|4
 gson|app/main/io/legado/app/domain/usecase|9
 gson|app/main/io/legado/app/feature/reader/legacy|2

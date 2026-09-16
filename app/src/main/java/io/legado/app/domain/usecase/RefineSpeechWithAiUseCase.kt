@@ -3,7 +3,7 @@ package io.legado.app.domain.usecase
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import io.legado.app.data.entities.BookCharacterProfile
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.ChapterSpeechGateway

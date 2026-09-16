@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
 import io.legado.app.domain.ai.AiChatGateway
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessagePartJson
 import io.legado.app.domain.model.AiMessageRole

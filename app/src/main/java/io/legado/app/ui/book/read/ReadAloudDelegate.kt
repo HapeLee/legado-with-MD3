@@ -8,7 +8,7 @@ import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadSettingsRepository
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus

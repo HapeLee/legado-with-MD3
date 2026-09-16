@@ -2,7 +2,7 @@ package io.legado.app.ui.config.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.domain.gateway.AiProfileGateway
+import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.model.AiTaskType
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
