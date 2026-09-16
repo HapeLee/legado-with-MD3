@@ -1075,6 +1075,40 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      「补按复合主键的 `equals`」——那会吞掉 `upsert` 刷新 `updatedAt` 的差异。
      用例 **713 不变 / 940 → 951**（`AiMemoryMapperTest` 7 例 + `AiMemoryRepositoryImplTest`
      4 例，均不进主集）；四门禁 `--rerun` 全绿，G4 零变更；变异 5 轮全红后回绿。
+   - **M4-3 已完成（2026-09-15）：AI 产物域下沉 —— 复用模块对，但踩到三个「本片独有」。**
+     选片 `AiArtifact`（实体 13 字段、仓储 53 行纯 DAO 委派、`:app` 侧 7 文件引用、四个端口
+     方法全有调用方、不进备份/恢复、零既有护栏 ⇒ 自带 mapper 测试）。三点与前两片不同：
+     ① **`Flow` 端口方法首次出现**：`observeBookArtifacts(...): Flow<List<AiArtifact>>`。
+     M4-2 把本域仅有的两个 `Flow` 方法删掉后，`domain/ai` 的端口全是 `suspend`，模块无需
+     coroutines 依赖；本片起必须加 `implementation(libs.kotlinx.coroutines.core)`
+     （与 `domain/rules` 同因）。实现侧因此必须 `dao.observeX().map { it.toDomainList() }`
+     ——映射发生在**流内、每次发射都做**，不能透传 DAO 的实体 `Flow`。
+     ② **首次「扩端口」而非搬端口**：`:app` 的 `AiToolRepository` 原本直连
+     `aiArtifactDao.queryArtifacts`。本片把该 DAO 直连收窄成走新端口方法 `queryArtifacts`
+     ⇒ `AiToolRepository` 从「1 个 DAO + 3 个 Gateway」变成「0 个 DAO + 4 个 Gateway」。
+     不选「让 `:app` 自己 `toEntity()`」是为了不把映射细节漏出数据层。构造注入的 DAO
+     **不落 G4 的 `appDb|...` 模式**（只有 `appDb.` 锚定的访问才算）⇒ 扩端口对门禁中性。
+     ③ ⚠️ **`:core:data` 自己也是消费方**（M3/M4 前几片从未遇到）：`:core:data` 的
+     `domain/usecase/AiTaskManager.kt` import 旧 Gateway 与实体，删旧件后在 `:core:data`
+     编译失败（不是 `:app`）。修法＝ `:core:data` 新增 `implementation(project(":domain:ai"))`
+     （方向合规：G1 只禁 core→feature/宿主；AGENTS.md 目标依赖图 domain 在 data abstractions
+     之上）。**`AiTaskManager` 不搬**——它是应用级用例编排器而非仓储，不属数据域切片；
+     其 `System.currentTimeMillis()` 也**不换** `systemTimeMillis()`（该模块已能编译，
+     换是行为噪音，一片只改一个边界；M4-2 的换是因为文件本身要迁进共享层 commonMain）。
+     领域模型逐字照抄实体（全 `val`、全字段判等，与 M4-1/M4-2 同侧），并**首次复刻
+     `companion object` 的四个 `STATUS_*` 常量**（DAO 用实体的常量做 SQL 插值，`:app` 已改用
+     领域模型的常量 ⇒ 两侧并存且取值必须一致，mapper 测试有一条逐值比对钉它）。
+     实现体本身仍是纯委派（无 `copy(`、无分支），但**本片必须补 Impl 测试**——
+     `observeBookArtifacts` 是本域唯一的 `Flow` 端口方法，而 mapper 测试只测
+     `toDomain` / `toEntity` / `toDomainList`、**不驱动那条流**：把流内映射换成
+     `as List<AiArtifact>` 能编译通过（仅 unchecked cast 告警）且九条 mapper 用例全绿，
+     真机每次发射才 `ClassCastException`。故 `AiArtifactRepositoryImplTest`（**7 例**）
+     用假 DAO 驱动**多次发射**的流，钉住「每次发射都映射」+ `queryArtifacts` 三个可空筛选
+     参数的透传 + 未命中缓存透传 `null`；`AiArtifactMapperTest` **9 例**。
+     合计 `data:ai` **27 → 34 例**。
+     旧 `AiArtifactGateway` / `AiArtifactRepository` 一并删除、不留门面。用例 **713 不变 /
+     951 → 967**；四门禁 `--rerun` 全绿，G4 零变更；变异 6 轮全红后回绿。
+     模板与新增要点见 `.agents/skills/legado-kmp-migration/references/m3-domain-slice.md`。
 12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
 13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 

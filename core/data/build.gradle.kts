@@ -9,6 +9,10 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":core:platform"))
             implementation(project(":core:model"))
+            // M4-3：`:core:data` 内的 `domain/usecase/AiTaskManager.kt` 用 `domain.ai.AiArtifact`
+            // 做任务编排（读写 status/updatedAt），并由 `:app` 侧注入 `AiArtifactGateway` 实现。
+            // 方向合规（G1 只禁 core→feature/宿主；AGENTS.md 目标依赖图 domain 在 data abstractions 之上）。
+            implementation(project(":domain:ai"))
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
             implementation(libs.kotlinx.coroutines.core)

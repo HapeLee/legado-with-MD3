@@ -3,7 +3,7 @@ package io.legado.app.ui.book.knowledge
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
-import io.legado.app.data.entities.AiArtifact
+import io.legado.app.domain.ai.AiArtifact
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.usecase.IdentifyBookCharactersUseCase

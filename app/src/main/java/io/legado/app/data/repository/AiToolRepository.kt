@@ -1,18 +1,18 @@
 package io.legado.app.data.repository
 
 import com.google.gson.JsonObject
-import io.legado.app.data.dao.AiArtifactDao
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.ReadRecordDao
-import io.legado.app.data.entities.AiArtifact
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookCharacterEvent
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.data.entities.BookCharacterRelation
 import io.legado.app.data.entities.BookKnowledgeEntry
 import io.legado.app.data.entities.BookOutlineNode
+import io.legado.app.domain.ai.AiArtifact
+import io.legado.app.domain.ai.AiArtifactGateway
 import io.legado.app.domain.ai.AiMemory
 import io.legado.app.domain.ai.AiMemoryGateway
 import io.legado.app.domain.gateway.AiToolGateway
@@ -34,7 +34,7 @@ class AiToolRepository(
     private val bookChapterDao: BookChapterDao,
     private val bookmarkDao: BookmarkDao,
     private val readRecordDao: ReadRecordDao,
-    private val aiArtifactDao: AiArtifactDao,
+    private val aiArtifactGateway: AiArtifactGateway,
     private val aiMemoryGateway: AiMemoryGateway,
     private val bookKnowledgeGateway: BookKnowledgeGateway,
 ) : AiToolGateway {
@@ -341,7 +341,7 @@ class AiToolRepository(
         val taskType = args.string("taskType")?.trim()?.takeIf { it.isNotBlank() }
         val chapterIndex = args.string("chapterIndex")?.toIntOrNull()
         val limit = args.int("limit", 8).coerceIn(1, 30)
-        val artifacts = aiArtifactDao.queryArtifacts(
+        val artifacts = aiArtifactGateway.queryArtifacts(
             bookUrl = book?.bookUrl,
             taskType = taskType,
             chapterIndex = chapterIndex,
@@ -485,7 +485,7 @@ class AiToolRepository(
             createdAt = now,
             updatedAt = now
         )
-        aiArtifactDao.upsert(artifact)
+        aiArtifactGateway.upsertArtifact(artifact)
         return GSON.toJson(
             mapOf(
                 "saved" to true,

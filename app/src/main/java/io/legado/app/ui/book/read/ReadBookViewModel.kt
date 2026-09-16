@@ -26,7 +26,7 @@ import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.UploadRepository
-import io.legado.app.domain.gateway.AiArtifactGateway
+import io.legado.app.domain.ai.AiArtifactGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.ai.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway

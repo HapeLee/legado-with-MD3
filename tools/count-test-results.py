@@ -70,6 +70,15 @@ RESULT_DIRS = {
     # ⇒ **11 例**。后者是 M4-2 起的新形态：`AiMemoryRepositoryImpl` 不像 M4-1 的纯委派，
     # 它有两条真实逻辑（`upsert` 写前覆盖 `updatedAt`、`getForPrompt` 的「全局+会话」拼接
     # 与空白会话 id 短路），光靠 mapper 用例护不住 ⇒ 用手写的 DAO 假实现钉住。
+    # M4-3：同目录再加 `AiArtifactMapperTest`（9 例）与 `AiArtifactRepositoryImplTest`（7 例）
+    # ⇒ **27 例**。前者比 M4-1/M4-2 多两例，因为本域有两样别处没有的东西：**四个 `STATUS_*`
+    # 常量**（DAO 用实体的常量做 SQL 插值，`:app` 已改用领域模型的常量 ⇒ 取值必须一致）与
+    # **三个可空字段**（`chapterIndex` / `output` / `errorMessage`，映射不得归一化）。
+    # 后者是本片**必须**补的：`observeBookArtifacts` 是本域唯一的 `Flow` 端口方法，
+    # `AiArtifactMapperTest` 只测 `toDomain` / `toEntity` / `toDomainList`、**不驱动那条流**
+    # ⇒ 把流内映射换成 `as List<AiArtifact>` 能编译通过且九条 mapper 用例全绿，而真机每次
+    # 发射都会 `ClassCastException`。故按 M4-2 立的判据补 Impl 测试，用假 DAO 驱动
+    # **多次发射**的流，钉住「每次发射都映射」+ `queryArtifacts` 三个可空筛选参数的透传。
     "data:ai         (desktopTest)": ("data/ai/build/test-results/desktopTest", False),
 }
 
@@ -120,7 +129,12 @@ BASELINE_MAIN = 713
 # 用例数同样是 7。主验证集**不变**（713）——新用例不进主集，`:app` 侧只换了 import。
 # M4-2：940 → 951（净 +11 = `:data:ai` 新增 `AiMemoryMapperTest` 7 例 +
 # `AiMemoryRepositoryImplTest` 4 例）。主验证集**不变**（713）——新用例不进主集，`:app` 侧只换了 import 与 DI 绑定。
-BASELINE_ALL = 951
+# M4-3：951 → 967（净 +16 = `:data:ai` 的 `AiArtifactMapperTest` 9 例 +
+# `AiArtifactRepositoryImplTest` 7 例）。主验证集**不变**（713）——新用例不进主集，`:app` 侧
+# 只换了 import 与 DI 绑定（并把 `AiToolRepository` 的 DAO 直连换成 Gateway，不涉及被计模式）。
+# Impl 测试是本片**必须**补的：`observeBookArtifacts` 是唯一的 `Flow` 端口方法，mapper 测试
+# 不驱动那条流 ⇒ 流内映射的变异能穿过后者的全部用例。
+BASELINE_ALL = 967
 
 
 def tally(d: pathlib.Path):

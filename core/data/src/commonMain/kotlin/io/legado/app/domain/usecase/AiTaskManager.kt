@@ -1,7 +1,7 @@
 package io.legado.app.domain.usecase
 
-import io.legado.app.data.entities.AiArtifact
-import io.legado.app.domain.gateway.AiArtifactGateway
+import io.legado.app.domain.ai.AiArtifact
+import io.legado.app.domain.ai.AiArtifactGateway
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

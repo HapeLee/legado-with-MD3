@@ -11,8 +11,11 @@ kotlin {
             // 各 target 都有 actual，不是平台实现库 —— pure 模块引用它不越界（G2 只拦
             // `android.*` / `java.io.File` / `kotlin.jvm.*` / `androidx.*` / 三方实现库）。
             implementation(project(":core:platform"))
-            // 本域的 port（[AiPromptPresetGateway]）只声明 `suspend` 方法、不用 `Flow`，
-            // 因此不需要 `kotlinx-coroutines-core`（`suspend` 由语言/标准库提供）。
+            // `kotlinx-coroutines-core`（M4-3 起）：本域的 port 到 M4-2 为止只声明 `suspend`
+            // 方法（`suspend` 由语言/标准库提供，不需要这个依赖）；M4-3 的 [AiArtifactGateway]
+            // 有一个 `Flow` 端口方法（`observeBookArtifacts`）⇒ 必须显式声明。
+            // 注意这与「实现侧包不包 IO」无关：`domain` 只用 `Flow` 的类型，不用 `Dispatchers`。
+            implementation(libs.kotlinx.coroutines.core)
         }
         // 无 commonTest 块：`legado.kmp.library` 已在约定的 sourceSets 里给 commonTest
         // 加了 `kotlin("test")`（见 build-logic 的 LegadoKmpLibraryConventionPlugin），

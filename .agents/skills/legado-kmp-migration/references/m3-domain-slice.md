@@ -67,12 +67,55 @@ Also check whether the entity's compatibility surface is already sealed. `TxtToc
 expensive (custom GSON `JsonDeserializer`) until the M1-3y contract was located: the cost had
 already been paid, and the slice only added `.map { it.toDomain() }` at the contract end.
 
+**A `Flow` port method forces a coroutines dependency in the pure module.** Up to M4-2 every
+`domain/ai` port method was `suspend`, which the stdlib alone covers — so `domain/ai` compiled
+with only `:core:platform`. M4-3 added `observeBookArtifacts(...): Flow<List<AiArtifact>>`, and
+`Flow` lives in `kotlinx-coroutines-core` ⇒ the module needs
+`implementation(libs.kotlinx.coroutines.core)` (`domain/rules` declares it for the same reason).
+The implementation side then **must map inside the stream** — `dao.observeX().map { it.toDomainList() }`
+— not return the DAO's `Flow<List<Entity>>` unchanged: the type system rejects the latter, but the
+deeper point is the mapping must run **on every emission**, not once. Test the mapping by
+driving the fake DAO's flow, not by calling `first()`.
+
+**Sink `withContext` verbatim — including its absence.** M4-1 / M4-2 implementations each wrapped
+every method in `withContext(Dispatchers.IO)`, so the shared implementations copied it. M4-3's
+repository was **bare DAO delegation** (Room `suspend` DAOs schedule themselves), so the new
+implementation imports no `Dispatchers` at all. "Align with the previous slice" would have
+silently added a dispatch hop. Decide per slice by reading the code being moved.
+
+**A port method may be *added*, not just moved — when a caller still holds the DAO.** M4-3 was
+the first slice where a `:app` class (`AiToolRepository`) called `aiArtifactDao.queryArtifacts`
+directly. The choice was either (a) let `:app` do `artifact.toEntity()` and keep the DAO, or
+(b) widen the port with `queryArtifacts` so the caller drops the DAO. (b) wins: it keeps mapping
+inside the data layer and took `AiToolRepository` from "1 DAO + 3 gateways" to "0 DAOs + 4
+gateways". A constructor-injected DAO is **not** a G4 hit (only `appDb.`-anchored access is), so
+this widening is gate-neutral. Widen only when a real caller exists — never pre-emptively.
+
+**`:core:data` can itself be a consumer of the port you are sinking.** Every earlier slice's
+consumers were in `:app` or `feature/*`. M4-3 broke that: `:core:data`'s own
+`domain/usecase/AiTaskManager.kt` imports the gateway and the entity. After deleting the old
+gateway the build failed in `:core:data`, not `:app`. Two consequences:
+- Before deleting anything, grep the whole repo (`core/*/src`, not just `app/src`) for the
+  contract and the entity.
+- The fix may need a **new dependency edge in the opposite direction**: `:core:data` now has
+  `implementation(project(":domain:ai"))`. That direction is legal (G1 only forbids
+  core→feature/host; AGENTS.md's target graph puts domain above data abstractions). It does
+  **not** mean the feature or use case should move — `AiTaskManager` is an application-scoped
+  use-case orchestrator, not a repository, and is out of scope for a data-domain slice.
+- Do **not** opportunistically swap its `System.currentTimeMillis()` for `systemTimeMillis()`.
+  It compiles (the module already has a desktop target), the swap is behavioural noise, and a
+  slice should change one boundary. (M4-2's swap was different: that file was *being moved* into
+  commonMain of a shared module where the platform call genuinely is unavailable.)
+
 ## The template
 
 1. **Domain model** — `domain/<x>/src/commonMain/kotlin/io/legado/app/domain/<x>/Xxx.kt`
-   - Field-for-field copy of the entity, and **every field is `var`**. These models are fed
-     through `JsonCodec` (Gson) by reflection on import / paste / single-object import, and a
-     `final` field behaves differently on JVM vs ART with **no unit test covering it**.
+   - Field-for-field copy of the entity. In the **rules** domain every field is `var` — those
+     models are fed through `JsonCodec` (Gson) by reflection on import / paste / single-object
+     import, and a `final` field behaves differently on JVM vs ART with **no unit test covering
+     it**. But do not generalise: the AI domain's entities are all-`val` (no reflective
+     round-trip), and `AiPromptPreset` / `AiMemory` / `AiArtifact` copied that. Follow the entity
+     in front of you.
    - `equals` / `hashCode` and field mutability: **copy whatever the entity does — do not infer
      it from the previous slice.** Five of the six rule entities override `equals`/`hashCode` to
      compare the **primary key only**; `RuleSub` overrides neither, so its comparison is the
@@ -192,7 +235,11 @@ git diff --check
 | M3-5 | `RuleSub` | `0555a0acc0` |
 | M3-6 | `TagGroupRule` | `5406f151fb` |
 | M4-1 | `AiPromptPreset` | `00e841ed46` |
-| M4-2 | `AiMemory` | pending |
+| M4-2 | `AiMemory` | `3f9fb54d16` |
+| M4-3 | `AiArtifact` | pending |
+
+Per-slice test counts in `:data:ai`: M4-1 7, M4-2 11 (7 mapper + 4 impl), M4-3 16
+(9 mapper + 7 impl) ⇒ directory total 34.
 
 ### When a mapper test is not enough: the Impl behaviour test
 
@@ -205,12 +252,33 @@ removal**. The test decision rule:
 
 - If the Impl contains a `copy(`, a conditional branch, or a composition of several DAO
   calls ⇒ add `XxxRepositoryImplTest` next to the mapper test.
+- **Also add one when the port has a `Flow` method that the mapper test cannot reach.** M4-3's
+  `AiArtifactRepositoryImpl` is pure delegation by the rule above, so it looked like a
+  mapper-test-only slice. It is not: `observeBookArtifacts` maps *inside* the stream, and
+  `AiArtifactMapperTest` only exercises `toDomain` / `toEntity` / `toDomainList` — it never
+  drives the flow. Replacing `.map { it.toDomainList() }` with `.map { it as List<AiArtifact> }`
+  **compiles** (one unchecked-cast warning) and passes all nine mapper cases, yet throws
+  `ClassCastException` on every real emission. Drive the fake DAO's flow with **several
+  emissions** and collect them all — a single `first()` only proves the first one mapped.
+- The general form of the rule: **the mapper test only covers the functions it calls.** Before
+  declaring "mapper test is enough", list the port's methods and ask which ones no test
+  executes. A method with no coverage is where the silent breakage will be.
 - Use a hand-written fake DAO (plain Kotlin class implementing the Room `@Dao` interface;
   it never touches the Room runtime) and `runBlocking`, **not** `runTest` — the module only
   depends on `kotlinx.coroutines.core`, and a test file is not a reason to add a new
   test dependency.
 - Pick inputs that **discriminate implementations** (blank vs non-blank conversation id;
   multiple elements to pin ordering), not merely 'returns something non-empty'.
+
+**Companion-object constants on the entity are a second, invisible copy.** `AiArtifact` (M4-3)
+is the first sunk entity with a `companion object` four `STATUS_*` constants. The DAO's `@Query`
+string-interpolates the **entity's** `STATUS_SUCCESS` (it becomes a SQL literal), while `:app`
+switch branches were migrated to the **domain model's** constants. Both definitions coexist and
+nothing fails to compile if their values drift — the "successful artifacts" query and the UI
+branch would simply desync. So the domain model gets its own `companion object` with the same
+values, and the mapper test carries a case asserting each constant **against the entity's** and
+against its literal (`0/1/2/3`). Do this for any entity whose constants are referenced by colour
+of code rather than by a shared declaration.
 
 Milestone-level blocker behind these slices is `data:database` (the single Room owner):
 `entities/BaseSource.kt` alone carries 23 `coreProvider` hits, and `:app` still has 8 files
