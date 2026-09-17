@@ -17,6 +17,8 @@ interface GamepadConfig {
   BUTTON_INDEX: {
     A: number
     B: number
+    LB: number
+    RB: number
   }
 }
 
@@ -28,6 +30,8 @@ interface DPadState {
 
   a: boolean
   b: boolean
+  lb: boolean
+  rb: boolean
 }
 
 interface GamepadState {
@@ -52,6 +56,8 @@ function createGamepadState(): GamepadState {
       right: false,
       a: false,
       b: false,
+      lb: false,
+      rb: false,
     },
   }
 }
@@ -76,8 +82,9 @@ const CONFIG: GamepadConfig = {
   // Xbox 按键
   BUTTON_INDEX: {
     A: 0,
-
     B: 1,
+    LB: 4,
+    RB: 5,
   },
 }
 
@@ -255,6 +262,10 @@ function handleDPad(gp: Gamepad, gs: GamepadState): void {
     a: gp.buttons[buttons.A]?.pressed || false,
 
     b: gp.buttons[buttons.B]?.pressed || false,
+
+    lb: gp.buttons[buttons.LB]?.pressed || false,
+
+    rb: gp.buttons[buttons.RB]?.pressed || false,
   }
 
   // 十字 ↑ 顶部
@@ -289,6 +300,22 @@ function handleDPad(gp: Gamepad, gs: GamepadState): void {
 
   if (isPressedOnce(current.b, gs.dpadPressed.b)) {
     toggleCatalog()
+  }
+
+  // LB 向上翻页
+
+  if (isPressedOnce(current.lb, gs.dpadPressed.lb)) {
+    log('🎮 LB 向上翻页')
+
+    scrollPage(-1)
+  }
+
+  // RB 向下翻页
+
+  if (isPressedOnce(current.rb, gs.dpadPressed.rb)) {
+    log('🎮 RB 向下翻页')
+
+    scrollPage(1)
   }
 
   gs.dpadPressed = current
