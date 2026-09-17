@@ -1657,6 +1657,10 @@
     <string name="sample_text">範例文字</string>
     <string name="sure_delete">確定要刪除嗎？</string>
     <string name="save_to_source">儲存到來源檔案（重設將不可用）</string>
+    <string name="edit_chapter">編輯章節</string>
+    <string name="content_edit_reset">還原</string>
+    <string name="content_edit_title">章節標題</string>
+    <string name="content_edit_body_only">僅顯示正文</string>
     <string name="add_regex_rule">新增正則規則</string>
     <string name="custom_regex_rule">自訂正則規則</string>
     <string name="custom_regex">自訂規則</string>

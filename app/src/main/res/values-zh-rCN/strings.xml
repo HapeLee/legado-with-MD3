@@ -890,6 +890,10 @@
     <string name="sample_text">示例文本</string>
     <string name="sure_delete">确定要删除吗？</string>
     <string name="save_to_source">保存到源文件，保存后重置功能将无效</string>
+    <string name="edit_chapter">编辑章节</string>
+    <string name="content_edit_reset">还原</string>
+    <string name="content_edit_title">章节标题</string>
+    <string name="content_edit_body_only">仅显示正文</string>
     <string name="add_regex_rule">添加正则规则</string>
     <string name="custom_regex_rule">自定义正则规则</string>
     <string name="custom_regex">自定义规则</string>

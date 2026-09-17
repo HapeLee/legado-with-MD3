@@ -1055,9 +1055,12 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenContentEdit -> contentEditDelegate.open()
             is ReadBookIntent.LoadContentEdit -> contentEditDelegate.load()
             is ReadBookIntent.SaveContentEdit ->
-                contentEditDelegate.save(intent.content, intent.saveToSource)
+                contentEditDelegate.save(intent.content, intent.saveToSource, intent.chapterTitle)
             is ReadBookIntent.ResetContentEdit -> contentEditDelegate.reset()
             is ReadBookIntent.SetContentEditText -> contentEditDelegate.setText(intent.text)
+            is ReadBookIntent.SetContentEditTitle -> contentEditDelegate.setTitle(intent.title)
+            is ReadBookIntent.SetContentEditBodyOnly ->
+                contentEditDelegate.setBodyOnly(intent.enabled)
             is ReadBookIntent.SetContentEditSaveToSource ->
                 contentEditDelegate.setSaveToSource(intent.value)
             is ReadBookIntent.RefreshImage -> refreshImage(intent.src)

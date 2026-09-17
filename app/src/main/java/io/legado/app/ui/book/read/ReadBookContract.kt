@@ -568,9 +568,15 @@ sealed interface ReadBookIntent {
     // Content edit
     data object OpenContentEdit : ReadBookIntent
     data object LoadContentEdit : ReadBookIntent
-    data class SaveContentEdit(val content: String, val saveToSource: Boolean) : ReadBookIntent
+    data class SaveContentEdit(
+        val content: String,
+        val saveToSource: Boolean,
+        val chapterTitle: String,
+    ) : ReadBookIntent
     data object ResetContentEdit : ReadBookIntent
     data class SetContentEditText(val text: String) : ReadBookIntent
+    data class SetContentEditTitle(val title: String) : ReadBookIntent
+    data class SetContentEditBodyOnly(val enabled: Boolean) : ReadBookIntent
     data class SetContentEditSaveToSource(val value: Boolean) : ReadBookIntent
 
     // Tools

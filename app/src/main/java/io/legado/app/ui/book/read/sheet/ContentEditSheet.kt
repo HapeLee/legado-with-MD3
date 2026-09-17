@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndSelectAll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,22 +21,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ContentEditUiState
+import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
+import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
@@ -48,6 +52,7 @@ fun ContentEditSheet(
     val editorScrollState = rememberScrollState()
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     var pendingLocateOffset by remember { mutableStateOf<Int?>(null) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(show) {
         if (!show) return@LaunchedEffect
@@ -97,13 +102,36 @@ fun ContentEditSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = state.title,
+        title = stringResource(R.string.edit_chapter),
         startAction = {
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.ResetContentEdit) },
-                icon = Icons.Default.Restore,
-                contentDescription = stringResource(R.string.reset),
-            )
+            Box {
+                MediumTonalButton(
+                    onClick = { menuExpanded = true },
+                    icon = Icons.Default.MoreVert,
+                    contentDescription = stringResource(R.string.more_menu),
+                )
+                RoundDropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) { dismiss ->
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.content_edit_reset),
+                        leadingIcon = { MenuItemIcon(Icons.Default.Restore) },
+                        onClick = {
+                            dismiss()
+                            onIntent(ReadBookIntent.ResetContentEdit)
+                        },
+                    )
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.content_edit_body_only),
+                        isSelected = state.bodyOnly,
+                        onClick = {
+                            dismiss()
+                            onIntent(ReadBookIntent.SetContentEditBodyOnly(!state.bodyOnly))
+                        },
+                    )
+                }
+            }
         },
         endAction = {
             MediumTonalButton(
@@ -112,6 +140,7 @@ fun ContentEditSheet(
                         ReadBookIntent.SaveContentEdit(
                             editorState.text.toString(),
                             state.saveToSource,
+                            state.chapterTitle,
                         )
                     )
                     onDismissRequest()
@@ -126,6 +155,15 @@ fun ContentEditSheet(
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
         ) {
+            AppTextField(
+                value = state.chapterTitle,
+                onValueChange = { onIntent(ReadBookIntent.SetContentEditTitle(it)) },
+                label = stringResource(R.string.content_edit_title),
+                singleLine = true,
+                enabled = !state.loading,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             if (state.loading) {
                 Box(
                     modifier = Modifier
