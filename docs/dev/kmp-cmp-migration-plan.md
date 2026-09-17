@@ -1325,6 +1325,19 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        `clickable` 内需 `rememberCoroutineScope()` + `launch`。验证：desktop 编译 + `:app`/
        `:core:ui` 编译 + 四门禁全绿（无需下调基线）+ 干净重建全量集 712/1152 零偏离 +
        消费方解析变异（移走文件 ⇒ 5 个消费方 13 处 `Unresolved reference`，还原回绿）。
+     - **M5-1c-pre 已完成（2026-09-17）**：about 闭包缺的两件共享 UI 资产收口到
+       designsystem（同 M1-3x-pre 形态）——`MarkdownSheet`（`AboutSheets.kt` 拆出，**6 个包外调用方**：
+       book/rss 的 debug+edit 屏、`SourceLoginSheets`、`MainActivity`；若随 about 文件一并进 Feature
+       会让它们反向依赖 about）与 `EmptyMessage`（`:core:ui/src/main`，~40 调用方）。
+       后者只有一处平台依赖且只在一个重载里：`@StringRes messageResId: Int` +
+       `androidx.compose.ui.res.stringResource`（CMP 的同名 API 接 `StringResource` 不接 `Int`）
+       ⇒ **按源集分家**：commonMain 放 String 重载、`androidMain/….android.kt` 放 Int 重载；
+       宁可分源集也不在 commonMain 放假实现（AGENTS.md）。`EmptyMessage` 保包名
+       （零 import 改动），`MarkdownSheet` **改包名**到 `...components.modalBottomSheet`
+       （一个叫 `about` 的包不该出现在 designsystem；7 处 import 改动）。
+       验证：三个模块编译 + 四门禁全绿（无需下调基线）+ clean 全量集 712/1152 零偏离 +
+       消费方解析变异三轮（MarkdownSheet 7 文件 / EmptyMessage 25 文件 61 处 /
+       只移走 commonMain 那份 ⇒ androidMain 重载断链）。
      - 后续分片：M5-1c 建 `:feature:about`（`CrashLogSheet` 私有化 + 三个平台契约 + desktop 显式
        unsupported）；M5-1d 消费方迁移（DI / nav3 route / `CrashReportActivity` / 删旧包）。
 

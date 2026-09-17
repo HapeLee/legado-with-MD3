@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components
 
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -28,6 +26,17 @@ import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
+
+// M5-1c-pre：本文件原住 `:core:ui/src/main`（Android-only）。上提的理由是**调用方分布**——
+// `CrashLogSheet`（M5-1c 要搬进 `:feature:about`）的空态用它，而它自身有 ~40 个调用方，
+// 不该在 about 里重写一份（那是可见 UI 变化）。机械判据同 M5-1a/1b：文件内零 `android.*` /
+// 零 `R.`，依赖闭包全在 designsystem（`AnimatedTextLine` / `AppIcons` /
+// `AppContainedLoadingIndicator` / `SmallTonalButton` / `LegadoTheme`）。
+//
+// ⚠️ **`@StringRes` 的 `Int` 重载不在本文件**：它依赖 `androidx.compose.ui.res.stringResource`
+// （Android-only，且 CMP 的 `org.jetbrains.compose.resources.stringResource` 接的是
+// `StringResource` 而不是 `Int`），故留到 `androidMain` 的同名文件里。包名不变 ⇒
+// `:app` 侧的 ~40 个调用方 import 零改动。
 
 @Composable
 fun EmptyMessage(
@@ -91,33 +100,4 @@ fun EmptyMessage(
             )
         }
     }
-}
-
-@Composable
-fun EmptyMessage(
-    @StringRes messageResId: Int,
-    modifier: Modifier = Modifier,
-    isLoading: Boolean = false,
-    buttonText: String? = null,
-    buttonImageVector: ImageVector = AppIcons.Search,
-    onButtonClick: (() -> Unit)? = null,
-    faces: List<String> = listOf(
-        "(；′⌒`)", "(つ﹏⊂)", "(•̀ᴗ•́)و", "(๑•́ ₃ •̀๑)",
-        "(눈‸눈)", "(ಥ﹏ಥ)", "(｡•́︿•̀｡)"
-    ),
-    faceTextSize: TextUnit = 32.sp,
-    onFaceClick: (() -> Unit)? = null
-) {
-    val message = stringResource(id = messageResId)
-    EmptyMessage(
-        message = message,
-        modifier = modifier,
-        isLoading = isLoading,
-        buttonText = buttonText,
-        buttonImageVector = buttonImageVector,
-        onButtonClick = onButtonClick,
-        faces = faces,
-        faceTextSize = faceTextSize,
-        onFaceClick = onFaceClick
-    )
 }

@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -28,36 +26,9 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.text.MarkdownBlock
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MarkdownSheet(
-    show: Boolean,
-    title: String,
-    content: String,
-    onDismissRequest: () -> Unit,
-    endAction: @Composable (() -> Unit)? = null,
-) {
-    AppModalBottomSheet(
-        show = show,
-        onDismissRequest = onDismissRequest,
-        title = title,
-        endAction = endAction,
-    ) {
-        SelectionContainer {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                MarkdownBlock(
-                    content = content,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(modifier = Modifier.heightIn(min = 16.dp))
-            }
-        }
-    }
-}
+// M5-1c-pre：原同居本文件的 `MarkdownSheet` 已上提到 `:core:designsystem` 的
+// `io.legado.app.ui.widget.components.modalBottomSheet`（6 个包外调用方，不属于 about）。
+// 本文件现在只剩 about 私有的 `UpdateSheet`。
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -533,3 +533,34 @@ contract. **The contract was not needed** — that is the lesson:
 - Verification for such a move is the same as a verbatim one: compile + gates + clean full set +
   **consumer-resolution mutation** (removing the shared file made all 5 consumers fail with 13
   `Unresolved reference` errors).
+
+### When only *one overload* has the platform dependency (M5-1c-pre)
+
+`EmptyMessage` (~40 callers, `:core:ui/src/main`) had exactly one Android-only thing in it:
+an `@StringRes messageResId: Int` overload whose body calls
+`androidx.compose.ui.res.stringResource`. The `String` overload was 100% portable.
+CMP cannot replace it — `org.jetbrains.compose.resources.stringResource` takes a
+`StringResource`, **not** an `Int` — so the convenience overload has no cross-platform form.
+
+The right move is **to split the declaration by source set**, not to invent a shim:
+
+- `commonMain/.../EmptyMessage.kt` — the `String` overload only.
+- `androidMain/.../EmptyMessage.android.kt` — the `Int` overload with `@StringRes`, delegating
+  to the common one. `androidx.annotation.*` / `androidx.compose.ui.res.*` are legal there.
+- **Trim the relocated overload to the parameters its existing callers actually pass.** Here all
+  5 `:app` call sites passed only `messageResId` + `modifier`. Repeating the common overload's
+  9-parameter signature (including a 7-element default `faces` list) would only create two
+  copies of the same defaults to drift apart. Verify the call sites before trimming.
+- **Keep the package name** when only the directory changes (`EmptyMessage` did) ⇒ zero caller
+  import churn. Change it only when the old package would be *semantically wrong* in the new
+  module — `MarkdownSheet` moved `io.legado.app.ui.about` → `...components.modalBottomSheet`
+  because a package called `about` does not belong in `:core:designsystem`; 7 imports changed.
+  Note the same-package case: `AboutScreen.kt` used `MarkdownSheet` **without an import**, so a
+  package change there *adds* a line rather than editing one.
+
+Mutation caveat: Gradle fast-fails inside the owning module, so removing both files at once only
+ever reports the intra-module break. Run the mutations **one at a time** — and there are three
+worth running here: (1) remove the shared file ⇒ N consumers fail; (2) remove the shared file
+while keeping the `androidMain` one ⇒ the androidMain overload itself fails to resolve, which is
+the evidence that the two source sets really form a pair; (3) remove both ⇒ the full consumer
+list. M5-1c-pre produced 7 files / 2 sites, 25 files / 61 sites, and the pairing error respectively.

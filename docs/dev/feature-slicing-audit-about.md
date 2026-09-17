@@ -21,6 +21,9 @@
 | `TextCard` | `:core:ui/src/main` | 90 | **39** | 0 | designsystem/commonMain（**M5-1a 已搬**） |
 | `MarkdownBlock` | `:app` ui/widget/components/text | 894 | 6 | `android.content.Intent` x2、Splitties `clipboardManager` x1、`R.drawable.ic_copy` | 需先契约化（M5-1b） |
 | `CrashLogSheet` | `:app` ui/widget/components/log` | 67 | **仅 about** | `FileDoc`、`R.string` | **`:feature:about` 私有组件**（单调用方不进 core） |
+| `MarkdownSheet` | `:app` ui/about (`AboutSheets.kt`) | 28 | **6**（about 自身 + book/source/debug + book/source/edit + `SourceLoginSheets` + `MainActivity` + rss/source/debug + rss/source/edit） | 0（M5-1b 之后） | **`:core:designsystem`**（跨 book/rss/login/main 的通用组件，不放 Feature） |
+| `EmptyMessage` | `:core:ui/src/main` | 106 | **~40** | `@StringRes` + `androidx.compose.ui.res.stringResource`（仅 Int 重载） | **`:core:designsystem/commonMain`**（String 重载）+ `androidMain`（Int 重载） |
+| `UpdateSheet` | `:app` ui/about (`AboutSheets.kt`) | 112 | **仅 about** | `BuildConfig.VERSION_NAME`、`Build.SUPPORTED_ABIS` | `:feature:about` commonMain（平台值改**参数注入**） |
 | `FileDoc` | `:app` utils | - | **23** | 深 SAF/DocumentFile 依赖 | **不迁**；共享侧改不透明引用（同 tagrules 的 `Uri`->String 判据） |
 
 已在共享层的（无需处理）：`AppScaffold` / `SplicedColumnGroup` / `SettingItemWithDivider` /
@@ -84,12 +87,22 @@ ViewModel/domain」）。
 这条对后续所有 UI 组件搬迁都适用：**要么把主题 provide 点也下沉（独立大工程），
 要么承认共享层组件的验证止于「编译 + 门禁」，渲染证据仍由 Android 侧承担**。
 
+## 3.4 审计漏掉的两件共享组件（深入后补上）
+
+首轮审计只算了「about 渲染要用什么」，没算「哪些同包文件其实不属于 about」。深入后发现两件：
+
+- **`MarkdownSheet` 有 6 个包外调用方**（`BookSourceDebugScreen` / `BookSourceEditScreen` / `SourceLoginSheets` / `MainActivity` / `RssSourceDebugScreen` / `RssSourceEditScreen`）——它与 `UpdateSheet` 同住 `AboutSheets.kt`，但**本身不是 about 特有的**。若随 `AboutSheets.kt` 一并搬进 `:feature:about`，会让 book/rss/login 的屏幕反向依赖 about Feature（`AGENTS.md`：Feature 之间不直接依赖实现）。零平台依赖（M5-1b 之后）⇒ 归 designsystem。
+- **`EmptyMessage` 位于 `:core:ui/src/main`**（~40 调用方），`CrashLogSheet` 的空态用它。它只有一处平台依赖：`@StringRes` + `androidx.compose.ui.res.stringResource` 的 **Int 重载**（`String` 重载零平台依赖）。⇒ commonMain 放 String 重载，Int 重载跨到 designsystem 的 **androidMain**。若不上提，就得在 about 里重写空态——那是**可见 UI 行为变化**，不取。
+
+这两件合并为 **M5-1c-pre**（同 M1-3x-pre 形态：先把 Feature 闭包缺的共享组件提上去，再搬 Feature）。包名不变 ⇒ 调用方 import 零改动。
+
 ## 4. 分片计划
 
 | 片 | 内容 | 状态 |
 |---|---|---|
 | **M5-1a** | `TextCard` 上提 designsystem/commonMain（39 引用方，零平台依赖） | **已完成** |
 | **M5-1b** | `MarkdownBlock` 上提 designsystem/commonMain（6 引用方）；三处平台依赖全部用**既有**回调/组件就地消除，**未新增任何平台契约**；`markdown-jvm` → `markdown`（真 KMP 坐标） | **已完成** |
+| **M5-1c-pre** | `MarkdownSheet`（`git mv`，6 包外调用方）+ `EmptyMessage`（~40 调用方；`@StringRes` 的 Int 重载跨到 androidMain）上提 designsystem | **已完成** |
 | M5-1c | 建 `:feature:about`：Contract / VM / Material Screen / Sheets 进 commonMain，`CrashLogSheet` 私有化（`FileDoc` → 不透明引用），三个平台能力契约 + desktop 显式 unsupported 实现，文案与图标进 composeResources，Route 留 androidMain | 待做 |
 | M5-1d | 消费方迁移：DI 绑定、nav3 route、`CrashReportActivity`（Activity ABI 留 `:app`）、删除旧包 | 待做 |
 
@@ -167,3 +180,80 @@ metadataApiElements (common)  +  jvm  +  js/wasm-js/wasm-wasi
 
 **为什么没加测试**：同 §3.3——`MarkdownBlock` 渲染依赖 `LegadoTheme`，desktop 无法独立构造主题。
 纯搬迁零逻辑改动，故计数不变。
+
+## 7. M5-1c-pre 实录
+
+**改动**：
+
+1. `MarkdownSheet` 从 `app/.../ui/about/AboutSheets.kt` 拆出，新建
+   `core/designsystem/src/commonMain/.../modalBottomSheet/MarkdownSheet.kt`
+   （与 `AppModalBottomSheet` / `OptionSheet` 同包）。
+2. `git mv core/ui/src/main/.../components/EmptyMessage.kt
+   → core/designsystem/src/commonMain/.../components/EmptyMessage.kt`，并把
+   `@StringRes` 的 Int 重载拆到
+   `core/designsystem/src/androidMain/.../components/EmptyMessage.android.kt`。
+
+### 7.1 为什么这两件是同一片而不是两片
+
+它们的共同点是「**被 about 的闭包牵出来、但本身不属于 about**」：
+
+- `MarkdownSheet` —— `AboutSheets.kt` 里和它同居的 `UpdateSheet` 确实只有 about 一个调用方，
+  但 `MarkdownSheet` 自己有 **6 个包外调用方**；若随文件一并进 `:feature:about`，
+  book / rss / login 的屏幕就要反向依赖 about Feature。
+- `EmptyMessage` —— `CrashLogSheet`（M5-1c 要进 `:feature:about`）的空态用它，
+  而它自身有 ~40 个调用方。不上提就只能在 about 里重写一份空态——
+  那是**可见 UI 变化**（少了表情动画与 `AnimatedTextLine`），不取。
+
+合并为一片的理由是「一个可说明的边界变化」：
+**把 about 闭包缺的共享 UI 资产一次性收口到 designsystem**（同 M1-3x-pre 形态）。
+
+### 7.2 `EmptyMessage`：一个声明重载靠 `@StringRes` 强行分家
+
+它只有一处平台依赖，而且只在**一个重载**里：
+
+```kotlin
+@Composable
+fun EmptyMessage(@StringRes messageResId: Int, ...) {
+    val message = stringResource(id = messageResId)   // androidx.compose.ui.res，Android-only
+    ...
+}
+```
+
+CMP 的替代品 `org.jetbrains.compose.resources.stringResource` 接的是
+`StringResource` 而不是 `Int`，所以这条「传资源 id」的便利写法**无法跨平台**。
+⇒ 按源集分家：commonMain 只放 `message: String` 重载，
+`androidMain` 放 Int 重载（同名文件 `EmptyMessage.android.kt`）。
+`AGENTS.md` 的「不得静默空实现伪造跨平台支持」在这里的落地就是：
+**宁可分源集，不在 commonMain 放一个假实现。**
+
+androidMain 重载**只保留现存调用方用到的两个参数**（`messageResId` + `modifier`）——
+`:app` 侧 5 处调用全部只传这两个。其余可选参数共享层的 String 重载已提供，
+重复一套 7 元素的 `faces` 默认值只会让两处定义漂移。
+
+### 7.3 包名：`MarkdownSheet` 改名，`EmptyMessage` 不改
+
+- `EmptyMessage` 保包名 `io.legado.app.ui.widget.components` ⇒ **40 个调用方 import 零改动**。
+- `MarkdownSheet` **改包名**为 `...ui.widget.components.modalBottomSheet`（与 `AppModalBottomSheet` 同包）。
+  这与 M5-1a/1b「保包名换目录」不同是有意的：一个叫 `about` 的包出现在
+  `:core:designsystem` 里语义就是错的。代价是 7 处 import 改动（含 `AboutScreen.kt`——
+  它原本与 `MarkdownSheet` 同包，**没有** import，这次是新增一行）。
+
+### 7.4 验证
+
+- `:core:designsystem:compileKotlinDesktop` + `:app:compileAppDebugKotlin` +
+  `:core:ui:compileDebugKotlin` 全绿（第一次 `:app` 编译 54s）
+- 四门禁 `--rerun-tasks` 全绿，**无需下调 G4 基线**
+- `clean` + 全量验证集 BUILD SUCCESSFUL（463 tasks / 6m31s），
+  用例计数 **712 / 1152 零偏离**
+- **消费方解析变异**（逐个做，因为 Gradle fast-fail 会卡在
+  `:core:designsystem` 而不进 `:app`）：
+  - 移走 `modalBottomSheet/MarkdownSheet.kt` ⇒ 7 个消费文件各 2 处
+    `Unresolved reference 'MarkdownSheet'`（`AboutScreen` / `BookSourceDebugScreen` /
+    `BookSourceEditScreen` / `SourceLoginSheets` / `MainActivity` / `RssSourceDebugScreen` /
+    `RssSourceEditScreen`）。
+  - 移走 `EmptyMessage.kt` + `EmptyMessage.android.kt` ⇒ **25 个消费文件 / 61 处**
+    `Unresolved reference 'EmptyMessage'`。
+  - 只移走 `EmptyMessage.kt`（保留 androidMain）⇒ `:core:designsystem`
+    自身报 `EmptyMessage.android.kt:27 No parameter with name 'message' found`
+    ——这正是「两个源集的重载真的是一对」的证据。
+  共三轮，每轮均还原回绿。
