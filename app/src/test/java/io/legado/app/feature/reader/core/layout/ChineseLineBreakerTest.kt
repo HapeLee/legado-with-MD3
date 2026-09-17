@@ -49,4 +49,90 @@ class ChineseLineBreakerTest {
         assertArrayEquals(intArrayOf(0, 3, 6), result.lineStarts)
         assertArrayEquals(floatArrayOf(30f, 18f), result.lineWidthsPx, 0f)
     }
+
+    @Test
+    fun latinWordMovesIntactToNextLine() {
+        val result = breakText("one two".map(Char::toString), 55)
+
+        assertEquals(2, result.lineCount)
+        assertArrayEquals(intArrayOf(0, 4, 7), result.lineStarts)
+        assertArrayEquals(floatArrayOf(40f, 30f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun overlongLatinWordFallsBackToCharacterBreaks() {
+        val result = breakText("abcdef".map(Char::toString), 25)
+
+        assertEquals(3, result.lineCount)
+        assertArrayEquals(intArrayOf(0, 2, 4, 6), result.lineStarts)
+        assertArrayEquals(floatArrayOf(20f, 20f, 20f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun latinHandlingDoesNotInterceptCjkPunctuation() {
+        val result = breakText(listOf("我", "是", "，", "三"), 25)
+
+        assertEquals(3, result.lineCount)
+        assertArrayEquals(intArrayOf(0, 1, 3, 4), result.lineStarts)
+        assertArrayEquals(floatArrayOf(10f, 20f, 10f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun latinWordBeforeCjkPeriodStaysIntact() {
+        val result = breakText("aa words。".map(Char::toString), 80)
+
+        assertArrayEquals(intArrayOf(0, 3, 9), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 60f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun latinWordBeforeCjkCommaStaysIntact() {
+        val result = breakText("aa layout、".map(Char::toString), 90)
+
+        assertArrayEquals(intArrayOf(0, 3, 10), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 70f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun latinWordBeforeAsciiPeriodStaysIntact() {
+        val result = breakText("aa lines.".map(Char::toString), 80)
+
+        assertArrayEquals(intArrayOf(0, 3, 9), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 60f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun rewindDoesNotSplitLatinWordBeforeClosingPunctuation() {
+        val words = "aa word。”".map(Char::toString)
+        val result = ChineseLineBreaker(
+            words, List(7) { 10f } + listOf(4f, 4f), 0, 75, 10f, 0f,
+        )
+
+        assertArrayEquals(intArrayOf(0, 3, 9), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 48f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun latinWordWithApostropheAndDigitsStaysIntactBeforePunctuation() {
+        val result = breakText("aa R2D2's.".map(Char::toString), 90)
+
+        assertArrayEquals(intArrayOf(0, 3, 10), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 70f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun latinGraphemeClusterStaysWithItsWordBeforePunctuation() {
+        val result = breakText(listOf("a", "a", " ", "c", "a", "f", "e\u0301", "."), 70)
+
+        assertArrayEquals(intArrayOf(0, 3, 9), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 50f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun overlongLatinWordBeforePunctuationStillUsesCharacterFallback() {
+        val result = breakText("abcdef.".map(Char::toString), 25)
+
+        assertArrayEquals(intArrayOf(0, 2, 4, 5, 7), result.lineStarts)
+        assertArrayEquals(floatArrayOf(20f, 20f, 10f, 20f), result.lineWidthsPx, 0f)
+    }
 }
