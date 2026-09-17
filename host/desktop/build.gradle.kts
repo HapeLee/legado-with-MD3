@@ -45,6 +45,10 @@ kotlin {
         desktopMain.dependencies {
             // 被展示的 Feature（commonMain 的 Contract / Screen / ViewModel 全在这里）。
             implementation(project(":feature:dict"))
+            // M5-1c：`:feature:about` 的三个平台契约（desktop 侧显式不可用）。
+            // 这里只用到 `commonMain` 的契约类型，`androidMain` 的 Route 与 `:app` 的实现
+            // 都不参与 desktop 编译。
+            implementation(project(":feature:about"))
             // 平台契约（`Clipboard` / `Toaster`）与共享能力（`JsonCodec`）。
             implementation(project(":core:platform"))
             // `RuleTransferPlatform` / `RuleTransferUseCase` 在 `:core:viewmodel` 的 commonMain。

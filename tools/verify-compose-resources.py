@@ -19,7 +19,11 @@
   2. 传 `--apk`：从 APK 里 `assets/composeResources/<CMP资源包名>/values*/*.cvr` 取
      —— 这是**打包后**形态，证据最强（tagrules / replacerules 两片都用它下结论）。
 
-比对基准：`app/src/main/res/values*/strings.xml` 里的同名条目。
+比对基准：`app/src/main/res/values*/strings.xml` 里的同名条目，但**在运行期层比对**：
+`:app` 侧先展开 aapt2 会解释的 Java 风格转义（`\\uXXXX`、`\\n`、`\\t`、`\\'`、`\\"`、`\\\\`），
+因为 `.cvr` 里存的是**已解码**的文本，而源 XML 里可能写的是**字面**转义
+（M5-1c-2 实测：`about_description` 的原文就是字面的 `\\u3000\\u3000`）。
+源 XML 文本一致 **不等于** 运行期一致 —— 见 `android_unescape()` 的注释。
 
 三项检查：
   ① 四个语言目录齐全（composeResources 不参与 Android 资源合并，缺目录只会静默回落）；
@@ -27,7 +31,7 @@
      「各语言彼此一致」：源 res 本身就缺某条时，Android 资源合并与 CMP 都会按 qualifier
      回落到默认 `values`，两者行为一致才算等价（`feature/txttocrules` 的 zh-rHK/zh-rTW
      合法地比 values 少 3 条）；
-  ③ 与 `:app` 同名条目**逐字一致**。
+  ③ 与 `:app` 同名条目**运行期逐字一致**。
 
 为什么解 `.cvr` 而不是读 `composeResources` 的源 XML：源 XML 只证明「我写的是什么」，
 证明不了「实际生成/打包进去的是什么」。而且「四个语言目录是否齐全」只有在产物里才看得见
@@ -99,6 +103,60 @@ def parse_android_strings(path: pathlib.Path) -> dict[str, str]:
             continue
         out[name] = "".join(el.itertext())
     return out
+
+
+# aapt2 会解释的 Java 风格转义。顺序重要：`\\` 要先于 `\u` 之外的单字符转义处理，
+# 所以用一个「发现反斜杠后看下一个字符」的单遍扫描，而不是连续 replace。
+_AAPT2_SIMPLE = {
+    "n": "\n",
+    "t": "\t",
+    "r": "\r",
+    "'": "'",
+    '"': '"',
+    "\\": "\\",
+    "0": "\0",
+}
+
+
+def android_unescape(raw: str) -> str:
+    """把 aapt2 会在编译期展开的转义展开，得到**运行期**真正拿到的字符串。
+
+    ⚠️ 为什么必须做这一步（M5-1c-2 实测）：本仓库的 `app/src/main/res/values*/strings.xml` 里
+    **真的**用了 Java 风格转义。`about_description` 的原文是字面的 `\\u3000\\u3000`（全角空格），
+    aapt2 会把它解码成 U+3000；而 CMP 的资源生成器**也**解码（实测 `.cvr` 里就是 UTF-8 的
+    `E3 80 80`）。于是不展开 `:app` 侧就会得到**假差异**：
+    `cmp = '\\u3000'`（真字符）对 `app = '\\\\u3000'`（字面反斜杠 + u3000）。
+
+    换句话说：**源 XML 文本一致 ≠ 运行期一致**，比对必须发生在运行期这一层。CMP 生成器与 aapt2
+    对 `\\uXXXX`、`\\n`、`\\t`、`\\'`、`\\"`、`\\\\` 的处理实测一致；不认识的转义（如 `\\d` 正则
+    里常见的写法）原样保留，aapt2 同样只在 `\\u` 与上表字符上动手。
+    """
+    if "\\" not in raw:
+        return raw
+    out: list[str] = []
+    i, n = 0, len(raw)
+    while i < n:
+        c = raw[i]
+        if c != "\\" or i + 1 >= n:
+            out.append(c)
+            i += 1
+            continue
+        nxt = raw[i + 1]
+        if nxt == "u" and i + 6 <= n:
+            hexs = raw[i + 2:i + 6]
+            try:
+                out.append(chr(int(hexs, 16)))
+                i += 6
+                continue
+            except ValueError:
+                pass
+        if nxt in _AAPT2_SIMPLE:
+            out.append(_AAPT2_SIMPLE[nxt])
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
 
 
 def load_module(module: pathlib.Path, ns: str, apk: pathlib.Path | None):
@@ -203,7 +261,7 @@ def main() -> int:
             if keys - expected:
                 print(f"   composeResources 有而 :app 无：{sorted(keys - expected)}")
 
-    # ③ 与 :app Android res 的同名条目逐字比对
+    # ③ 与 :app Android res 的同名条目逐条比对（**运行期**层：`:app` 侧先展开 aapt2 的转义）
     total = same = 0
     mismatches: list[str] = []
     for lang in LANG_DIRS:
@@ -214,13 +272,18 @@ def main() -> int:
             if name not in theirs:
                 mismatches.append(f"{lang}/{name}: :app 侧没有同名条目（安全，仅记录）")
                 continue
-            if theirs[name] == text:
+            want = android_unescape(theirs[name])
+            if want == text:
                 same += 1
             else:
                 ok = False
-                mismatches.append(
-                    f"{lang}/{name}:\n     cmp : {text!r}\n     app : {theirs[name]!r}"
-                )
+                extra = ""
+                if want != theirs[name]:
+                    extra = (
+                        f"\n     app（展开转义后）: {want!r}"
+                        f"\n     app（源 XML 原文）: {theirs[name]!r}"
+                    )
+                mismatches.append(f"{lang}/{name}:\n     cmp : {text!r}\n     app : {theirs[name]!r}{extra}")
 
     print(f"\n逐字比对：{same}/{total} 与 :app 同名条目一致")
     if mismatches:

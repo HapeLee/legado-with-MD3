@@ -11,7 +11,7 @@ BUILD SUCCESSFUL 只能证明没失败，**证明不了没少跑**——「悄�
 
     python tools/count-test-results.py
 
-当前基线：主验证集 **712**、全量 **1152**（详见 .workbuddy/memory/topics/gates-and-verification.md）。
+当前基线：主验证集 **714**、全量 **1154**（详见 .workbuddy/memory/topics/gates-and-verification.md）。
 """
 import pathlib
 import sys
@@ -39,6 +39,13 @@ RESULT_DIRS = {
     # `androidHostTest`。app 的 635 相应降到 633、本模块 +2 ⇒ **主验证集合计仍是 708**，
     # 只是分布变了（这是有意的归属调整，不是用例增减）。
     "replacerules   (testAndroidHostTest)": ("feature/replacerules/build/test-results/testAndroidHostTest", True),
+    # M5-1c：`:feature:about`（M5 批次 2 第一站）首次纳入统计。**进主集**，与其它 Feature 同口径。
+    # 2 例 = 搬来的 `更新渠道通过唯一UiState入口下发`（原住 `:app/src/test/.../AboutViewModelTest.kt`，
+    # 被测对象下沉 ⇒ 用例跟着搬，属归属调整）+ 新增的
+    # `未设置备份目录时保存日志只提示不落盘`（`saveLog` 里那条判定以前写在 `:app` 的 VM 里、
+    # 顺手用 `context`，下沉后成了共享层自己的分支逻辑，必须钉住「提示了但**没有**调用
+    # `diagnostics.saveLogs()`」——否则提示与动作会同时发生）。
+    "about          (testAndroidHostTest)": ("feature/about/build/test-results/testAndroidHostTest", True),
     # M2-2：`core:data` 的 commonTest 与 desktopTest 加 4 —— 删掉 2 个已失去被测对象的
     # `BigDataStoreProvider` 用例（未安装/安装后读回），新增 6 例 `RuleDataFileStoreDesktopTest`
     # （真文件系统 + **硬编码 MD5 向量**钉住「路径布局与迁移前逐字节一致」，那是既有用户数据
@@ -138,7 +145,15 @@ RESULT_DIRS = {
 # （见 RESULT_DIRS 里 app 条目的说明），`:app` 在主集内 ⇒ 主集基线必须同步下调。
 # ⚠️ 这是**有意减少**（被测对象搬走），不是用例丢失；替代护栏在 `:core:platform` 的两个
 # target 上各 6 例。前一次下调是 M2-4（契约删除）与 M2-2（Provider 删除）。
-BASELINE_MAIN = 712
+# M5-1c：712 → **714**（净 **+2**）。三项相加：`:app` **-1**（`AboutViewModelTest`
+# 随被测对象 `AboutViewModel` 下沉到 `:feature:about` ⇒ 用例跟着搬）+ 新模块 **+2**
+# （搬来 1 例 + 新增 1 例，见 RESULT_DIRS 里 about 条目的说明）+ `:host:desktop` **+1**
+# （`DesktopAboutCapabilitiesTest`：钉住三个新平台契约在 desktop 上**显式抛
+# UnsupportedOperationException** 而不是降级返回空列表/`null`/`false`）。
+# 前两片（M5-1a / M5-1b / M5-1c-pre）都是纯搬迁，主集与全量逐字不变；本片是 M5 里第一次
+# 动基线，因为**第一次出现共享层自己的分支逻辑**（`saveLog` / `createHeapDump` 的
+# 目录与开关判定）和**第一组需要显式 unsupported 的 desktop 契约**。
+BASELINE_MAIN = 714
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -204,7 +219,9 @@ BASELINE_MAIN = 712
 # 主验证集**不变**（712）——新用例全在 `:data:ai`（不在主集一侧），`:app` 侧只换 import、
 # 删两个零调用方的 override（用例数不变）。10 轮变异全红后回绿，脚本
 # `legado-verify/m4-5c-mutate.py`。
-BASELINE_ALL = 1152
+# M5-1c：1152 → **1154**（净 **+2**，同 `BASELINE_MAIN` 上方）；主集与全量同为 +2
+# ——三个新用例全在计入口径内（about 进主集、host:desktop 进主集、`:app` 减 1）。
+BASELINE_ALL = 1154
 
 
 def tally(d: pathlib.Path):

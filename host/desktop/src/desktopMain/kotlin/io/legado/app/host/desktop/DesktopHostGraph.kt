@@ -12,6 +12,9 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.data.rules.DictRuleRepositoryImpl
 import io.legado.app.domain.rules.DictRuleRepository
+import io.legado.app.feature.about.AboutDiagnostics
+import io.legado.app.feature.about.AppUpdateChecker
+import io.legado.app.feature.about.BundledTextReader
 import io.legado.app.feature.dict.rule.DictRuleViewModel
 import kotlinx.coroutines.Dispatchers
 import org.koin.core.module.Module
@@ -59,6 +62,14 @@ fun desktopHostModule(
         // .serialization 复刻 Gson 版——那要另立行为等价证据，属独立切片）。
         single<ImportJsonEditor> { DesktopImportJsonEditor }
         single<UploadRepository> { DesktopUploadRepository }
+
+        // M5-1c：`:feature:about` 的三个平台契约。desktop 侧全部**显式不可用**
+        // （见 `DesktopAboutCapabilities` 的 KDoc 与 `DesktopAboutCapabilitiesTest`）。
+        // 绑定在这里而不留空，是为了让「缺能力」在 Koin 解析处就暴露，而不是等到点开
+        // 某个菜单才抛——与 `DesktopUploadRepository` 同一个理由。
+        single<AppUpdateChecker> { DesktopAppUpdateChecker }
+        single<AboutDiagnostics> { DesktopAboutDiagnostics }
+        single<BundledTextReader> { DesktopBundledTextReader }
 
         // ViewModel 用 factory（desktop 上没有 Android 的 `ViewModelStoreOwner` 语义，
         // 生命周期由调用方持有）。四个构造参数全部由上面的 graph 解析——如果哪个平台能力漏了注册，

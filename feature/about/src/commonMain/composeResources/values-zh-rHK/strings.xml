@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- :feature:about 自带的字符串副本（M5-1c-2 从 :app 的 values-zh-rHK/strings.xml 逐字搬来）。
+     composeResources 不参与 Android 资源合并，故共享层必须自带全部 4 个语言目录。 -->
+<resources>
+    <string name="about">關於</string>
+    <string name="app_name">閲讀</string>
+    <string name="about_description">&#10;        \u3000\u3000這是一款使用 Kotlin 全新開發的開源的閲讀應用程式，歡迎你的加入。&#10;    </string>
+    <string name="about_open_project_homepage">開啟項目首頁</string>
+    <string name="about_open_github">開啟 GitHub</string>
+    <string name="check_update">檢查更新</string>
+    <string name="contributors">開發人員</string>
+    <string name="privacy_policy">用户隐私与协议</string>
+    <string name="license">開源許可</string>
+    <string name="disclaimer">免責聲明</string>
+    <string name="crash_log">崩潰日誌</string>
+    <string name="save_log">保存日志</string>
+    <string name="create_heap_dump">创建堆转储</string>
+    <string name="about_privacy_policy_title">私隱政策</string>
+    <string name="about_license_title">開源許可</string>
+    <string name="about_disclaimer_title">免責聲明</string>
+    <string name="about_installed_version_title">已安裝版本</string>
+    <string name="about_current_version">已安裝版本</string>
+    <string name="about_new_version">最新版本</string>
+    <string name="about_update_channel">發佈渠道</string>
+    <string name="about_update_action">下載更新</string>
+    <string name="clear">清除</string>
+    <string name="no_crash_logs">無崩潰日誌</string>
+    <string name="crash_report">崩潰報告</string>
+    <string name="crash_report_message">應用程式發生崩潰。回報問題時，請複製以下錯誤資訊。</string>
+    <string name="crash_report_empty">找不到崩潰資訊。</string>
+    <string name="restart_app">重新啟動應用程式</string>
+    <string name="copy_text">拷貝內容</string>
+    <string name="about_backup_dir_not_set">請先設定備份目錄</string>
+    <string name="about_log_recording_disabled">日誌記錄已關閉。請先在其它設定中開啟。</string>
+    <string name="about_saved_to_backup_dir">已儲存至備份資料夾</string>
+    <string name="about_heap_dump_recording_disabled">堆轉儲記錄已關閉。請先在其它設定中開啟。</string>
+    <string name="about_heap_dump_creating">正在建立堆轉儲…</string>
+    <string name="about_heap_dump_not_found">找不到堆轉儲檔案</string>
+    <string name="about_download_info_incomplete">更新下載資訊不完整</string>
+</resources>

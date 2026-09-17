@@ -483,8 +483,10 @@ into `:core:designsystem` (`commonMain`, registered `cmp`). Criteria measured in
   `top.yukonga.miuix.kmp.blur.*` is **Unresolved** on desktop, while `kmp.utils.*` and
   `kmp.shader.isRenderEffectSupported` resolve fine. Any screen calling `textureBlur` /
   `layerBackdrop` directly is a **platform island** (same verdict as the `dict` query sheet):
-  leave it in `:app`, and let the androidMain Route branch on
-  `ThemeResolver.isMiuixEngine`, with **both branches sharing one ViewModel/Contract**.
+  leave it in `:app`, branch on `ThemeResolver.isMiuixEngine`, with **both branches sharing one
+  ViewModel/Contract**. ⚠️ *Where* that branch lives is itself a decision — see
+  "Hosting a platform island: where the fork goes (M5-1c)" below; putting it in the feature's
+  `androidMain` is only right when the host actions do not have to move with it.
   Checking this first can delete most of a slice's work — in M5-1 it removed ~1100 lines of
   `MiuixUtils` / `BgEffect*` that turned out to have only miuix-screen callers.
 - **designsystem `commonMain` components cannot be UI-tested standalone on desktop.**
@@ -496,6 +498,49 @@ into `:core:designsystem` (`commonMain`, registered `cmp`). Criteria measured in
   Accept that shared-layer UI verification **stops at compile + gates**, with rendering
   evidence owned by the Android side. (`smoke:compose-desktop-probe` passes only because it
   renders a self-made component that ignores `LegadoTheme`.)
+
+### Hosting a platform island: where the fork goes (M5-1c)
+
+The verdict "leave `MiuixAboutScreen` in `:app`" leaves the **fork itself** homeless: the shared layer
+cannot `import` an `:app` class (that is the cycle `:app → :feature:about → :app`). Three options:
+
+1. Fork inside the feature's `androidMain` Route — which drags the host actions in with it (open URL,
+   Toast, start download) and therefore needs **three more platform contracts**, while `:app` still
+   needs a wrapper to hand in the island.
+2. Fork in `commonMain` behind an injected `miuixContent: (@Composable () -> Unit)?` — a shared
+   signature then carries a parameter that exactly one host can ever fill.
+3. **Fork in `:app`** — pick this one. `AGENTS.md` already assigns the job there: "App host 聚合导航和
+   DI", "导航、权限、文件选择和其他宿主动作通过回调或 Effect 处理". The feature exports
+   `MaterialAboutScreen` + `AboutOverlays`; `MainNavGraph`'s entry does the branching and collects
+   the Effects.
+
+Consequence: **that feature's `androidMain` ends up with no code at all.** That is the accepted cost —
+but then delete the now-caller-less `androidMain` dependencies (`:core:ui`, Koin) and keep only what
+resolution needs (here `navigationevent` for version alignment). A declared-but-unused source-set
+dependency is dead config, not future-proofing.
+
+### Porting a custom Android vector drawable (M5-1c-2)
+
+Android vector XML **cannot** go into `composeResources` — CMP reads `.xml` vectors on Android only,
+so desktop would have no image. A drawable with no `Icons.Default.*` equivalent (the app icon, the
+GitHub mark, Material-Symbols-960-viewport icons) must be rebuilt **verbatim** as an `ImageVector`
+with `addPathNodes(String)`, which *is* a `commonMain` API. Generator: `tools/gen-about-icons.py`
+(recipe in its docstring; re-running it must reproduce the committed file byte-for-byte except for
+edits you made on purpose).
+
+⚠️ **Compose 1.12's `ImageVector.Builder.addGroup` no longer takes a content lambda.** It pushes the
+group onto an internal node stack (`nodes.push(group)`) and every later `addPath` belongs to it until
+`clearGroup()` pops. Writing `addGroup(…) { … }` fails with `Too many arguments` / the trailing lambda
+being matched against `clipPathData: List<PathNode>` (symptom: `Unresolved reference 'addPath'`).
+Correct form: `addGroup(...)` and then **keep chaining** `.addPath(...)`. Verify the signature rather
+than guessing — `javap` the jar containing `ImageVector$Builder`, or read
+`commonMain/androidx/compose/ui/graphics/vector/ImageVector.kt` from
+`org.jetbrains.compose.ui:ui:<ver>-sources.jar`.
+
+Also: **a CMP feature that uses `AppScaffold` / a glass top bar must declare `haze.core` itself.**
+Those public signatures mention `dev.chrisbanes.haze.HazeState`, and haze is `implementation` inside
+`:core:designsystem`, so it does not leak. Symptom: `Cannot access class 'dev.chrisbanes.haze.HazeState'`.
+Precedent: `:feature:replacerules`.
 
 ### Choosing a slice: audit the closure, not the line count
 

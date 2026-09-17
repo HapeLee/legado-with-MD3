@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- :feature:about 自带的字符串副本（M5-1c-2 从 :app 的 values-zh-rCN/strings.xml 逐字搬来）。
+     composeResources 不参与 Android 资源合并，故共享层必须自带全部 4 个语言目录。 -->
+<resources>
+    <string name="about">关于</string>
+    <string name="app_name">阅读</string>
+    <string name="about_description">全新设计的阅读 3.0</string>
+    <string name="about_open_project_homepage">打开项目主页</string>
+    <string name="about_open_github">打开 GitHub</string>
+    <string name="check_update">检查更新</string>
+    <string name="contributors">开发人员</string>
+    <string name="privacy_policy">用户隐私与协议</string>
+    <string name="license">开源许可</string>
+    <string name="disclaimer">免责声明</string>
+    <string name="crash_log">崩溃日志</string>
+    <string name="save_log">保存日志</string>
+    <string name="create_heap_dump">创建堆转储</string>
+    <string name="about_privacy_policy_title">隐私政策</string>
+    <string name="about_license_title">许可证</string>
+    <string name="about_disclaimer_title">免责声明</string>
+    <string name="about_installed_version_title">当前版本</string>
+    <string name="about_current_version">当前版本</string>
+    <string name="about_new_version">新版本</string>
+    <string name="about_update_channel">渠道</string>
+    <string name="about_update_action">更新</string>
+    <string name="clear">清除</string>
+    <string name="no_crash_logs">暂无崩溃日志</string>
+    <string name="crash_report">崩溃报告</string>
+    <string name="crash_report_message">应用发生崩溃。报告问题时，请复制以下错误信息。</string>
+    <string name="crash_report_empty">未找到崩溃信息。</string>
+    <string name="restart_app">重启应用</string>
+    <string name="copy_text">拷贝内容</string>
+    <string name="about_backup_dir_not_set">未设置备份目录</string>
+    <string name="about_log_recording_disabled">未开启日志记录，请去其他设置里打开记录日志</string>
+    <string name="about_saved_to_backup_dir">已保存至备份目录</string>
+    <string name="about_heap_dump_recording_disabled">未开启堆转储记录，请去其他设置里打开记录堆转储</string>
+    <string name="about_heap_dump_creating">开始创建堆转储</string>
+    <string name="about_heap_dump_not_found">未找到堆转储文件</string>
+    <string name="about_download_info_incomplete">下载信息不完整</string>
+</resources>

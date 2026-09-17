@@ -670,6 +670,14 @@ val checkSharedPurity = tasks.register<CheckSharedPurityTask>(
             // 导入解析直接在共享层用 `JsonCodec`。它也没有「本书状态」流，uiState 仍是
             // 迁移前那 5 流单次 `combine`（不像 replacerules 需要两级嵌套）。
             "feature/dict" to "cmp",
+            // M5-1c：第五个转 CMP 的 Feature，也是**首个非规则类**（M5 批次 2 的第一站）。
+            // 与四个规则 Feature 的关键差异：`ui/about` 的业务本体高度依赖 Android
+            // （更新检查走 GSON+OkHttp、诊断走 File/SAF/Runtime.exec、内置 markdown 走 assets），
+            // 迁移前都是 VM 里直连 ⇒ 本片抽出三个平台契约（`AppUpdateChecker` /
+            // `AboutDiagnostics` / `BundledTextReader`），实现全部留 `:app`。另外
+            // `MiuixAboutScreen` 因 `miuix-blur` 无 desktop 变体而留 `:app`（platform island），
+            // 由宿主按引擎分流，两支复用同一 VM/Contract。
+            "feature/about" to "cmp",
             "feature/reader/core" to "pure",
             "smoke/kmp-probe" to "pure",
             "smoke/rhino-capability-probe" to "pure",

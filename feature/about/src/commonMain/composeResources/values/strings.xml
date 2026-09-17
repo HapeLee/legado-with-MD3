@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- :feature:about 自带的字符串副本（M5-1c-2 从 :app 的 values/strings.xml 逐字搬来）。
+     composeResources 不参与 Android 资源合并，故共享层必须自带全部 4 个语言目录。 -->
+<resources>
+    <string name="about">About</string>
+    <string name="app_name">Legado</string>
+    <string name="about_description">&#10;        \u3000\u3000 This is an open source reading software newly developed by Kotlin, welcome to join us.&#10;    </string>
+    <string name="about_open_project_homepage">Open project homepage</string>
+    <string name="about_open_github">Open GitHub</string>
+    <string name="check_update">Check for Updates</string>
+    <string name="contributors">Contributors</string>
+    <string name="privacy_policy">User Privacy and Agreement</string>
+    <string name="license">License</string>
+    <string name="disclaimer">Disclaimer</string>
+    <string name="crash_log">Crash log</string>
+    <string name="save_log">Save logs</string>
+    <string name="create_heap_dump">Create Heap Dump</string>
+    <string name="about_privacy_policy_title">Privacy Policy</string>
+    <string name="about_license_title">License</string>
+    <string name="about_disclaimer_title">Disclaimer</string>
+    <string name="about_installed_version_title">Installed Version</string>
+    <string name="about_current_version">Installed Version</string>
+    <string name="about_new_version">Latest Version</string>
+    <string name="about_update_channel">Release Channel</string>
+    <string name="about_update_action">Download Update</string>
+    <string name="clear">Clear</string>
+    <string name="no_crash_logs">No crash logs</string>
+    <string name="crash_report">Crash report</string>
+    <string name="crash_report_message">The app crashed. Copy the error information below when reporting the issue.</string>
+    <string name="crash_report_empty">No crash information found.</string>
+    <string name="restart_app">Restart app</string>
+    <string name="copy_text">Copy</string>
+    <string name="about_backup_dir_not_set">Set a backup directory first</string>
+    <string name="about_log_recording_disabled">Log recording is off. Turn it on in Other Settings first.</string>
+    <string name="about_saved_to_backup_dir">Saved to backup folder</string>
+    <string name="about_heap_dump_recording_disabled">Heap dump recording is off. Turn it on in Other Settings first.</string>
+    <string name="about_heap_dump_creating">Creating heap dump…</string>
+    <string name="about_heap_dump_not_found">Heap dump file not found</string>
+    <string name="about_download_info_incomplete">Update download information is incomplete</string>
+</resources>

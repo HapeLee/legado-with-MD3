@@ -367,6 +367,16 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   first on a module whose result is already known** (tagrules ⇒ 124/124) to validate the tool, then on
   the new module. Also assert the APK actually contains the module's four `.cvr` entries — a module
   whose resources never got packaged would otherwise "pass" an empty comparison.
+  ⚠️ **Compare at the runtime layer, not the source layer (fixed in M5-1c-2).** `.cvr` stores the
+  *decoded* text, while the source XML may hold **literal Java-style escapes**: this repo's
+  `about_description` is written as literal `\u3000\u3000`, which aapt2 expands to U+3000 — and CMP's
+  generator expands it too (measured: the `.cvr` holds UTF-8 `E3 80 80`). Comparing raw XML therefore
+  reported 3 **false** differences (`cmp = '\u3000'` real char vs `app = '\\u3000'` backslash + `u3000`).
+  The script now applies `android_unescape()` to the `:app` side (`\uXXXX`, `\n`, `\t`, `\r`, `\'`,
+  `\"`, `\\`, `\0`; unknown escapes left alone) ⇒ about went from a false `137/140` to `140/140`,
+  tagrules stayed `124/124`. **Source text equality is not runtime equality** — when you write the new
+  `strings.xml`, never encode a newline as `\n` (it would be read as a literal backslash + n); use the
+  `&#10;` character reference.
 - CMP `*-metadata` artifacts need network on first resolution (`--offline` fails with
   "No cached version available for offline mode"); offline works after one successful resolve.
 - Full recipe, dependency table and measurements: `docs/dev/cmp-module-convention.md`.

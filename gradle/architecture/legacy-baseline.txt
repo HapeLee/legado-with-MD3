@@ -180,6 +180,14 @@ legacyHelp|app/main/io/legado/app/model/remote|1
 legacyHelp|app/main/io/legado/app/model/rss|2
 legacyHelp|app/main/io/legado/app/model/translation|2
 legacyHelp|app/main/io/legado/app/model/webBook|16
+# M5-1c：`:feature:about` 三个平台契约（AppUpdateChecker / AboutDiagnostics /
+# BundledTextReader）的 Android 适配住 `io/legado/app/platform`（本包一直是「共享契约的
+# Android 适配」的指定住所，见 `AndroidPlatformCapabilities.kt`）。**不是新增债**，而是
+# 同一段平台逻辑从 `ui/about` 挪过来：legacyHelp 2 = `help.CrashHandler` +
+# `help.update.AppUpdate`；legacyNaming 2 = `utils.FileUtils` + `utils.compress.ZipUtils`
+# （迁移前它们就在 `AboutViewModel` 里，属那 5 条 legacyHelp 的一部分）。旧 `ui/about`
+# 的计数在本片末（删旧文件时）随之下调。
+legacyHelp|app/main/io/legado/app/platform|2
 legacyHelp|app/main/io/legado/app/receiver|1
 legacyHelp|app/main/io/legado/app/service|26
 legacyHelp|app/main/io/legado/app/ui/about|5
@@ -288,6 +296,14 @@ legacyNaming|app/main/io/legado/app/model/remote|1
 legacyNaming|app/main/io/legado/app/model/rss|2
 legacyNaming|app/main/io/legado/app/model/translation|1
 legacyNaming|app/main/io/legado/app/model/webBook|6
+# M5-1c：`:feature:about` 三个平台契约（AppUpdateChecker / AboutDiagnostics /
+# BundledTextReader）的 Android 适配住 `io/legado/app/platform`（本包一直是「共享契约的
+# Android 适配」的指定住所，见 `AndroidPlatformCapabilities.kt`）。**不是新增债**，而是
+# 同一段平台逻辑从 `ui/about` 挪过来：legacyHelp 2 = `help.CrashHandler` +
+# `help.update.AppUpdate`；legacyNaming 2 = `utils.FileUtils` + `utils.compress.ZipUtils`
+# （迁移前它们就在 `AboutViewModel` 里，属那 5 条 legacyHelp 的一部分）。旧 `ui/about`
+# 的计数在本片末（删旧文件时）随之下调。
+legacyNaming|app/main/io/legado/app/platform|2
 legacyNaming|app/main/io/legado/app/receiver|2
 legacyNaming|app/main/io/legado/app/service|14
 legacyNaming|app/main/io/legado/app/ui/about|2
