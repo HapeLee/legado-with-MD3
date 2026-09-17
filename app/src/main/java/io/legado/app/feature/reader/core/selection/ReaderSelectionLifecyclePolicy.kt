@@ -9,8 +9,6 @@ object ReaderSelectionLifecyclePolicy {
     fun shouldClearForPageChange(origin: ReaderPageChangeOrigin): Boolean =
         origin == ReaderPageChangeOrigin.PROGRAMMATIC
 
-    fun shouldPauseAutoPage(hasSelection: Boolean): Boolean = hasSelection
-
     fun shouldReanchorMenuAfterLayoutChange(
         hasSelection: Boolean,
         menuVisible: Boolean,

@@ -25,12 +25,6 @@ class ReaderSelectionLifecyclePolicyTest {
     }
 
     @Test
-    fun `auto page pauses only while a selection exists`() {
-        assertTrue(ReaderSelectionLifecyclePolicy.shouldPauseAutoPage(hasSelection = true))
-        assertFalse(ReaderSelectionLifecyclePolicy.shouldPauseAutoPage(hasSelection = false))
-    }
-
-    @Test
     fun `visible selection menu is reanchored only for real geometry change`() {
         assertTrue(
             ReaderSelectionLifecyclePolicy.shouldReanchorMenuAfterLayoutChange(

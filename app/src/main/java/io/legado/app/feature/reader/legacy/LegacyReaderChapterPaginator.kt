@@ -10,7 +10,7 @@ import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureStyle
 import io.legado.app.feature.reader.core.layout.ReaderImageDimensions
 import io.legado.app.feature.reader.core.layout.ReaderImageLayoutMode
 import io.legado.app.feature.reader.core.layout.ReaderPaginationConfig
-import io.legado.app.feature.reader.core.layout.ReaderPaginator
+import io.legado.app.feature.reader.core.layout.ReaderPaginationSession
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
 import io.legado.app.feature.reader.core.layout.ReaderTextShaperFactory
 import io.legado.app.feature.reader.core.model.ReaderPage
@@ -116,6 +116,8 @@ object LegacyReaderChapterPaginator {
         contentPaddingBottomPx: Int = 0,
         paginationStyle: ReaderAndroidPaginationStyle,
         highlightRules: List<HighlightRule>,
+        /** 每页成型即回调（对照旧 View `TextChapterLayout` 的 `channel.trySend`）；为空表示只要整章批次。 */
+        onPage: ((ReaderPage) -> Unit)? = null,
     ): LegacyReaderChapterPaginationResult {
         if (viewportWidthPx <= 0 || viewportHeightPx <= 0) {
             return LegacyReaderChapterPaginationResult.Unsupported("viewport")
@@ -163,6 +165,46 @@ object LegacyReaderChapterPaginator {
             ),
             imageOptionsResolver = LegacyReaderImageOptionsResolver,
         )
+        // 分页会话先于测量建立：块一到就推进排版游标，页成型即经 [onPage] 流出
+        // （旧 View `TextChapterLayout` 也是边排版边 `channel.trySend`）。
+        val paginationConfig = ReaderPaginationConfig(
+            chapterIndex = chapter.index,
+            chapterTitle = displayTitle,
+            columnCount = paginationStyle.columnCount(viewportWidthPx, viewportHeightPx),
+            viewportWidthPx = viewportWidthPx,
+            viewportHeightPx = viewportHeightPx,
+            paddingLeftPx = (paginationStyle.paddingLeftPx + contentPaddingLeftPx).toFloat(),
+            paddingTopPx = (paginationStyle.paddingTopPx + contentPaddingTopPx).toFloat() +
+                    LegacyReaderPageDecorationFactory.headerExtentPx(),
+            paddingRightPx = (paginationStyle.paddingRightPx + contentPaddingRightPx).toFloat(),
+            paddingBottomPx = (paginationStyle.paddingBottomPx + contentPaddingBottomPx).toFloat() +
+                    LegacyReaderPageDecorationFactory.footerExtentPx(),
+            lineHeightPx = paginationStyle.bodyTextHeightPx,
+            baselineOffsetPx = paginationStyle.bodyBaselineOffsetPx,
+            lineSpacingMultiplier = paginationStyle.lineSpacingExtra,
+            continuousScroll = paginationStyle.isScroll,
+            singleImageStyle = singleImage,
+            chapterEndPaddingPx = CHAPTER_END_PADDING_DP.dpToPx(),
+            inlineImagesPreserveScrollLine = imageLayoutMode == ReaderImageLayoutMode.INLINE,
+            textBottomJustify = paginationStyle.textBottomJustify,
+            // 旧 `setTypeHtml` 的 `setLineSpacing(paragraphSpacing.toFloat(), ...)`：用原始设置值。
+            htmlLineSpacingAddPx = paginationStyle.paragraphSpacing.toFloat(),
+            pageUnderline = paginationStyle.pageUnderline,
+            emphasisUnderlineStyle = paginationStyle.emphasisUnderlineStyle,
+            paragraphSpacingPx = paginationStyle.bodyTextHeightPx * paginationStyle.paragraphSpacing / 10f,
+            titleTopSpacingPx = paginationStyle.titleTopSpacingPx,
+            titleBottomSpacingPx = paginationStyle.titleBottomSpacingPx,
+            // 旧 `TextChapterLayout.kt:977-1010` 的居中只发生在"空正文"（`emptyContent`）与
+            // `imgStyleSingle` 两种情形；**卷章有正文时旧版不居中**（走 `durY + titleTopSpacing`），
+            // 所以这里不并入 `chapter.isVolume`。
+            titlePageCenterVertical = content.textList.isEmpty() || singleImage,
+            titleParagraphSpacingPx = paginationStyle.titleTextHeightPx * paginationStyle.paragraphSpacing / 10f,
+            titleSegmentSpacingPx = paginationStyle.titleTextHeightPx * paginationStyle.titleLineSpacingSub,
+            letterSpacingPx = bodyPaint.letterSpacing * bodyPaint.textSize,
+            revision = revision,
+        )
+        val paginationSession = ReaderPaginationSession(paginationConfig)
+        paginationSession.onPage = onPage
         val measured = ReaderPerfTrace.section("pagination.measure") {
             measurer.measure(
             layoutSource,
@@ -195,48 +237,15 @@ object LegacyReaderChapterPaginator {
                 letterSpacingEm = bodyPaint.letterSpacing,
                 styleRanges = styleRanges,
             ),
+                onBlock = { block -> paginationSession.accept(block) },
             )
         }
         if (measured is ReaderChapterMeasureResult.Unsupported) {
+            // 测量失败说明这一章的页不可信：已流出的部分页由调用方按 Unsupported 丢弃。
             return LegacyReaderChapterPaginationResult.Unsupported(measured.reason)
         }
-        val blocks = (measured as ReaderChapterMeasureResult.Success).blocks
-        val pages = ReaderPerfTrace.section("pagination.pages") {
-            ReaderPaginator.paginateBlocks(
-            blocks = blocks,
-            config = ReaderPaginationConfig(
-                chapterIndex = chapter.index,
-                chapterTitle = displayTitle,
-                columnCount = paginationStyle.columnCount(viewportWidthPx, viewportHeightPx),
-                viewportWidthPx = viewportWidthPx,
-                viewportHeightPx = viewportHeightPx,
-                paddingLeftPx = (paginationStyle.paddingLeftPx + contentPaddingLeftPx).toFloat(),
-                paddingTopPx = (paginationStyle.paddingTopPx + contentPaddingTopPx).toFloat() +
-                    LegacyReaderPageDecorationFactory.headerExtentPx(),
-                paddingRightPx = (paginationStyle.paddingRightPx + contentPaddingRightPx).toFloat(),
-                paddingBottomPx = (paginationStyle.paddingBottomPx + contentPaddingBottomPx).toFloat() +
-                    LegacyReaderPageDecorationFactory.footerExtentPx(),
-                lineHeightPx = paginationStyle.bodyTextHeightPx,
-                baselineOffsetPx = paginationStyle.bodyBaselineOffsetPx,
-                lineSpacingMultiplier = paginationStyle.lineSpacingExtra,
-                continuousScroll = paginationStyle.isScroll,
-                singleImageStyle = singleImage,
-                chapterEndPaddingPx = CHAPTER_END_PADDING_DP.dpToPx(),
-                inlineImagesPreserveScrollLine = imageLayoutMode == ReaderImageLayoutMode.INLINE,
-                textBottomJustify = paginationStyle.textBottomJustify,
-                pageUnderline = paginationStyle.pageUnderline,
-                emphasisUnderlineStyle = paginationStyle.emphasisUnderlineStyle,
-                paragraphSpacingPx = paginationStyle.bodyTextHeightPx * paginationStyle.paragraphSpacing / 10f,
-                titleTopSpacingPx = paginationStyle.titleTopSpacingPx,
-                titleBottomSpacingPx = paginationStyle.titleBottomSpacingPx,
-                titlePageCenterVertical = chapter.isVolume || content.textList.isEmpty() || singleImage,
-                titleParagraphSpacingPx = paginationStyle.titleTextHeightPx * paginationStyle.paragraphSpacing / 10f,
-                titleSegmentSpacingPx = paginationStyle.titleTextHeightPx * paginationStyle.titleLineSpacingSub,
-                letterSpacingPx = bodyPaint.letterSpacing * bodyPaint.textSize,
-                revision = revision,
-            ),
-            )
-        }
+        // 测量与分页现在交错进行，"pagination.pages" 只剩收尾（章末页）的开销，两者之和不变。
+        val pages = ReaderPerfTrace.section("pagination.pages") { paginationSession.finish() }
         return LegacyReaderChapterPaginationResult.Success(pages)
     }
 }

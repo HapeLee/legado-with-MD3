@@ -52,6 +52,10 @@ object ReaderPageNavigator {
      * 章节边界占位语义（对照 shutiao 的"正在加载中"页）：当前真实页的邻章在书中
      * 存在但尚未分页进 [pages] 时，需要预置占位页，让手势层在邻章未装载时也能把
      * 页面拖/滚进"加载中"。占位页本身不再扩展（装载完成前是死端）。
+     *
+     * 判定不看邻章正文是否已缓存：旧 View `TextPageFactory.nextPage/prevPage` 在邻章
+     * 还没有页时一律给出 `R.string.data_loading` 兜底页，而"正文已缓存、只差排版"恰恰
+     * 是最容易读到章末的窗口——缺了占位页，章末残页下方就没有任何页面承接。
      */
     fun missingAdjacentChapters(
         pages: List<ReaderPage>,
@@ -64,6 +68,16 @@ object ReaderPageNavigator {
             chapter in 0 until chapterCount && pages.none { it.id.chapterIndex == chapter }
         }
     }
+
+    /**
+     * 章末第三槽（`ReaderPageWindow.nextPlus`）是否需要"继续滑动以加载下一章…"兜底页，
+     * 对照旧 View `TextPageFactory.nextPlusPage`：本章最后一页的下一章还没有第二页
+     * （只有一页，或该章还没排完）时，旧实现用 `R.string.keep_swipe_tip` 的提示页占住
+     * 第三槽；书末没有下一章也就不需要提示页。滚动模式会把第三槽画出来，缺了它章末
+     * 连续滑动会先看到一段没有页面的空档。
+     */
+    fun needsSwipeTipNextPlus(window: ReaderPageWindow, hasNextChapter: Boolean): Boolean =
+        hasNextChapter && window.next != null && window.nextPlus == null
 
     fun move(pages: List<ReaderPage>, pageIndex: Int, delta: Int): ReaderNavigationResult {
         if (pages.isEmpty()) return ReaderNavigationResult(0, ReaderPageWindow(), true)
@@ -160,6 +174,12 @@ object ReaderPageNavigator {
         )
     }
 
+    /**
+     * 页首章内位置。**排除标题元素**：新模型的标题与正文是两套独立坐标（见 [ReaderSelection]
+     * 的 anchorIsTitle 说明），把标题位置当成正文页首会把书签/朗读定位拖进标题坐标空间。
+     * 旧 View 的 `TextPage.chapterPosition = textLines.first().chapterPosition` 建立在两者同空间的
+     * 前提上，迁移后不再等价。
+     */
     fun pageStart(page: ReaderPage): Int = page.elements.mapNotNull(::elementRange)
         .minOfOrNull { it.first } ?: 0
 

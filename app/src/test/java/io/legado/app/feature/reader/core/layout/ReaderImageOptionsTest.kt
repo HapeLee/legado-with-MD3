@@ -38,7 +38,7 @@ class ReaderImageOptionsTest {
     }
 
     @Test
-    fun inlineImageStaysWithinParagraphLineNotTextArea() = runBlocking {
+    fun inlineImageUsesOneCharacterCellWidth() = runBlocking {
         val result = measure(
             ReaderImageOptions(ReaderImageLayoutMode.INLINE, action = "run()"),
             baseStyle.copy(
@@ -49,19 +49,20 @@ class ReaderImageOptionsTest {
         )
         val paragraph = result.blocks.single() as ReaderMeasuredBlock.InlineParagraph
         val image = paragraph.items.single() as ReaderMeasuredInlineItem.Image
-        // 文字嵌入图只受当前行高约束（10px 字号），不允许放大到铺满可视文字区。
-        assertEquals(20f, image.widthPx, 0f)
-        assertEquals(10f, image.heightPx, 0f)
+        // 对照旧 `ImageColumn`：占位宽 = 一个字符格（字号 10f），高按原图比例换算（100×50 → 5f）。
+        assertEquals(10f, image.widthPx, 0f)
+        assertEquals(5f, image.heightPx, 0f)
         assertEquals("run()", image.action)
     }
 
     @Test
-    fun requestedFractionAppliesWithinLineCap() = runBlocking {
+    fun requestedWidthFractionIsIgnoredForInlineImages() = runBlocking {
         val result = measure(ReaderImageOptions(requestedWidthFraction = .5f))
         val paragraph = result.blocks.single() as ReaderMeasuredBlock.InlineParagraph
         val image = paragraph.items.single() as ReaderMeasuredInlineItem.Image
-        assertEquals(20f, image.widthPx, 0f)
-        assertEquals(10f, image.heightPx, 0f)
+        // 旧版行内图不使用 width 参数（占位宽恒为一个字符格）。
+        assertEquals(10f, image.widthPx, 0f)
+        assertEquals(5f, image.heightPx, 0f)
     }
 
     @Test

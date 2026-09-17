@@ -30,6 +30,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +76,7 @@ import io.legado.app.feature.reader.ReaderCanvasSurface
 import io.legado.app.feature.reader.core.gesture.ReaderTapActionGrid
 import io.legado.app.feature.reader.core.model.readerBackgroundAlpha
 import io.legado.app.feature.reader.core.transition.ReaderTransitionMode
+import io.legado.app.feature.reader.core.transition.ReaderViewportLayerPolicy
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
@@ -582,6 +586,16 @@ fun ReadBookRouteScreen(
     LaunchedEffect(isDarkTheme) {
         controller.onAppThemeChanged(isDarkTheme)
     }
+    // 消息进出时重发窗口：消息页由画布按普通页渲染，画布要在 msg 变化当帧拿到它。
+    LaunchedEffect(state.msg) {
+        controller.onReaderMessageChanged()
+    }
+    val readerSnackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(controller) {
+        controller.composeBoundaryMessages.collect { message ->
+            readerSnackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+        }
+    }
     LaunchedEffect(readerPageWindow.current?.id, readerPageWindow.current?.layoutRevision) {
         if (readerPageWindow.current != null) {
             withFrameNanos { }
@@ -624,10 +638,11 @@ fun ReadBookRouteScreen(
     }
     val displayedReaderPageWindow =
         readerPageWindow.takeIf { it.current != null } ?: lastReadablePageWindow
-    // A retained page bridges only a transient chapter-window gap. A real pagination failure
-    // must replace it with the retryable error state instead of leaving stale content visible.
+    // 消息（`state.msg`）由画布按普通页绘制：旧 View 的取页器在 `msg != null` 时整窗返回
+    // 消息页（chrome 保留），所以画布不再因为 msg 隐藏。保留的上一窗只用于跨章瞬间；
+    // 真正的排版失败仍要让位给可重试的错误态，不能留着过期正文。
     val hasReadablePage = displayedReaderPageWindow?.current != null &&
-            state.msg == null && readerPaginationError == null
+            readerPaginationError == null
     var readerContentRevealAllowed by remember(sharedCoverKey) {
         mutableStateOf(sharedCoverKey == null || animatedVisibilityScope == null)
     }
@@ -686,20 +701,29 @@ fun ReadBookRouteScreen(
                     )
                 }
         ) {
-            ReaderBackgroundSurface(
-                backgroundImage = readerBackground.drawable,
-                backgroundImageAlpha = readerBackgroundAlpha(state.styleConfig.bgAlpha),
-                modifier = Modifier.fillMaxSize(),
-                animateAppearance = true,
-            )
+            // 滚动模式的背景由画布内的固定层绘制（画布还要当菜单 haze 的源），根层再画一遍
+            // 会让半透明背景图叠加两次、比设置值更浓，且与分页模式（页面自绘不透明底色挡住
+            // 根层，实际只画一次）观感不一致。画布可见时让出根层，其它状态仍由根层兜底。
+            val readerCanvasVisible = readerContentRevealAllowed && hasReadablePage
+            val readerTransitionMode = ReaderTransitionMode.fromPageAnim(controller.pageAnim)
+            if (!(ReaderViewportLayerPolicy.usesFixedBackground(readerTransitionMode) &&
+                        readerCanvasVisible)
+            ) {
+                ReaderBackgroundSurface(
+                    backgroundImage = readerBackground.drawable,
+                    backgroundImageAlpha = readerBackgroundAlpha(state.styleConfig.bgAlpha),
+                    modifier = Modifier.fillMaxSize(),
+                    animateAppearance = true,
+                )
+            }
             AnimatedVisibility(
-                visible = readerContentRevealAllowed && hasReadablePage,
+                visible = readerCanvasVisible,
                 enter = fadeIn(animationSpec = tween(400)),
                 exit = fadeOut(animationSpec = tween(450)),
             ) {
                 ReaderCanvasSurface(
                     hostPages = displayedReaderPageWindow ?: readerPageWindow,
-                transitionMode = ReaderTransitionMode.fromPageAnim(controller.pageAnim),
+                    transitionMode = readerTransitionMode,
                 backgroundColor = readerSurfaceColor,
                 backgroundImage = readerBackground.drawable,
                 backgroundRevision = readerBackground.revision,
@@ -759,15 +783,16 @@ fun ReadBookRouteScreen(
                 noAnimationScrollPage = readPreferences.noAnimScrollPage,
                 externalPageTurns = controller.composePageTurns,
                 externalSelectionCancels = controller.composeSelectionCancels,
+                    externalSelections = controller.composeSelections,
                     onVisibleBodyTextPositionProvider = controller::setComposeVisibleBodyTextPositionProvider,
                 )
             }
             AnimatedVisibility(
-                // Generic "loading data" duplicated the Canvas placeholder and could flash
-                // before a warm cached chapter page was republished. The body renderer owns
-                // normal loading feedback; this outer layer is reserved for messages/errors.
-                visible = readerEntranceSettled && !hasReadablePage &&
-                        (state.msg != null || readerPaginationError != null),
+                // 旧 View 把消息画成页（chrome 保留）；只有画布无从成页（还没有窗口/视口）
+                // 或排版失败需要重试入口时，才退回外层浮层。
+                visible = readerEntranceSettled && (
+                        readerPaginationError != null || (state.msg != null && !hasReadablePage)
+                        ),
                 enter = fadeIn(animationSpec = tween(300)),
                 exit = fadeOut(animationSpec = tween(300)),
             ) {
@@ -797,6 +822,12 @@ fun ReadBookRouteScreen(
                     )
                 }
             }
+            // 触边界提示：对照旧 `PageDelegate` 的 Snackbar（LENGTH_SHORT），不再用 Toast，
+            // 重复由控制器侧 1.5s 抑制窗口挡掉。
+            SnackbarHost(
+                hostState = readerSnackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
         ReadBookColorTheme(
             styleConfig = state.styleConfig,

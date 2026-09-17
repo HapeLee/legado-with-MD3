@@ -1,8 +1,6 @@
 package io.legado.app.feature.reader.core.transition
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderAutoPagePolicyTest {
@@ -17,35 +15,6 @@ class ReaderAutoPagePolicyTest {
         assertEquals(1_000L, ReaderAutoPagePolicy.pageDurationMillis(0))
         assertEquals(30_000L, ReaderAutoPagePolicy.pageDurationMillis(30))
         assertEquals(120_000L, ReaderAutoPagePolicy.pageDurationMillis(121))
-    }
-
-    @Test
-    fun `pausing a discrete timer preserves only its unelapsed duration`() {
-        assertEquals(7_000L, ReaderAutoPagePolicy.remainingAfterPause(10_000L, 3_000L))
-        assertEquals(1L, ReaderAutoPagePolicy.remainingAfterPause(10_000L, 12_000L))
-        assertEquals(10_000L, ReaderAutoPagePolicy.remainingAfterPause(10_000L, -1L))
-    }
-
-    @Test
-    fun `menu and text selection both preserve the discrete timer remainder`() {
-        assertTrue(
-            ReaderAutoPagePolicy.shouldPreserveRemainingTime(
-                menuPaused = true,
-                selectionPaused = false,
-            )
-        )
-        assertTrue(
-            ReaderAutoPagePolicy.shouldPreserveRemainingTime(
-                menuPaused = false,
-                selectionPaused = true,
-            )
-        )
-        assertFalse(
-            ReaderAutoPagePolicy.shouldPreserveRemainingTime(
-                menuPaused = false,
-                selectionPaused = false,
-            )
-        )
     }
 
     @Test

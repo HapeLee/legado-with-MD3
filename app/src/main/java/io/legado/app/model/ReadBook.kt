@@ -1005,6 +1005,20 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         return followReadAloudAfterManualNavigation()
     }
 
+    /**
+     * Compose 画布手动翻页提交后的旧 `curPageChanged` 副作用：阅读时长、预下载、进度落库。
+     *
+     * 旧 View 的 `moveToNextPage/moveToPrevPage/setPageIndex` 每次翻页都做这三件事
+     * （`saveRead(true)` 内部自带 300ms 合并窗口与尾随写入，正为快速翻页准备）。Compose 画布
+     * 把"发布快照"从热路径摘掉后连带丢了它们，表现为：翻页中崩溃/被杀回到上次切章位置、
+     * 纯静读的阅读时长不计、N+2 章预取推迟。`publishSnapshot()` 仍不发——那是热路径性能决定。
+     */
+    fun onComposeManualPageCommitted() {
+        upReadTime()
+        preDownload()
+        saveRead(pageChanged = true)
+    }
+
     fun moveToNextPage(): Boolean {
         prepareManualNavigation()
         val nextPagePos = readerPagination()?.nextPageStart(durChapterPos) ?: return false
@@ -1095,6 +1109,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (durChapterIndex > 0) {
             durChapterPos = if (toLast) {
                 readerPagination(durChapterIndex - 1)?.lastPageStart
+                    ?: previousChapterEndPosition(durChapterIndex - 1)
                     ?: Int.MAX_VALUE
             } else 0
             durChapterIndex--
@@ -1115,6 +1130,19 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         } else {
             return false
         }
+    }
+
+    /**
+     * 上一章末页位置的兜底：分页快照被清空（换样式/字号/高亮后重排未完成）时旧实现是现算
+     * `TextChapter.lastReadLength`；这里退用已缓存正文的末尾位置，避免把 `Int.MAX_VALUE`
+     * 落库成脏进度（视觉上都会被钳到末页，但进度同步/书签会带上失真值）。
+     */
+    private fun previousChapterEndPosition(chapterIndex: Int): Int? {
+        val input = readerChapterInputWindow.previous?.takeIf { it.chapter.index == chapterIndex }
+            ?: readerChapterInputWindow.current?.takeIf { it.chapter.index == chapterIndex }
+            ?: return null
+        val length = input.source.semanticContent.length
+        return (length - 1).coerceAtLeast(0)
     }
 
     fun skipToPage(index: Int, success: (() -> Unit)? = null) {

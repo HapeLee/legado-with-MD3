@@ -5,7 +5,6 @@ import android.graphics.BitmapShader
 import android.graphics.Paint
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
-import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -159,6 +158,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import splitties.init.appCtx
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -221,6 +221,8 @@ fun ReaderCanvasSurface(
     noAnimationScrollPage: Boolean,
     externalPageTurns: Flow<ReaderTurnDirection>,
     externalSelectionCancels: Flow<Unit>,
+    /** 宿主要求建立选区（全文搜索命中）：旧 View 的命中就是一次真选区，带手柄与菜单。 */
+    externalSelections: Flow<ReaderSelection>,
     onVisibleBodyTextPositionProvider: ((() -> ReaderVisibleTextPosition?)?) -> Unit,
 ) {
     // 滚动跨页同步换窗：跨页帧内宿主回调直接返回新窗口，先写入 pending 供绘制与
@@ -355,7 +357,6 @@ fun ReaderCanvasSurface(
     var selectionDragHandleCenter by remember { mutableStateOf<Offset?>(null) }
     var selectionDragEndpoint by remember { mutableStateOf<ReaderSelectionEndpoint?>(null) }
     val selectionHandleRadiusPx = with(LocalDensity.current) { SelectionHandleRadius.toPx() }
-    val latestSelectionPausesAutoPage by rememberUpdatedState(textSelection != null)
     var selectionMenuVisible by remember { mutableStateOf(false) }
     var selectionLayoutRevision by remember { mutableLongStateOf(current.layoutRevision) }
     LaunchedEffect(
@@ -719,6 +720,17 @@ fun ReaderCanvasSurface(
             selectionMenuVisible = false
         }
     }
+    LaunchedEffect(externalSelections) {
+        externalSelections.collect { selection ->
+            // 旧 View 的搜索结果即真选区：建选区、带手柄，并按当前窗口弹一次选区菜单。
+            clearSelectionForPageChange(ReaderPageChangeOrigin.PROGRAMMATIC)
+            textSelection = selection
+            selectionMagnifierSource = null
+            selectionDragHandleCenter = null
+            selectionDragEndpoint = null
+            showSelectionMenu(selection, latestPages)
+        }
+    }
     LaunchedEffect(hostPages) {
         // pending 窗口的收尾：宿主回声（与 pending 同实例）到达后解除；外部换窗
         // （其他实例，如跳转/重排）直接丢弃 pending。偏移归零由下方 current.id
@@ -775,33 +787,17 @@ fun ReaderCanvasSurface(
             autoPageRemainingMillis = ReaderAutoPagePolicy.pageDurationMillis(autoReadSpeedSeconds)
             return@LaunchedEffect
         }
-        if (ReaderSelectionLifecyclePolicy.shouldPauseAutoPage(textSelection != null)) {
-            return@LaunchedEffect
-        }
         if (autoPagePaused) return@LaunchedEffect
         // 滚动动画期间挂起：对照旧 View 的 ReadView.onScrollAnimStart/Stop →
         // autoPager.pause()/resume()，避免 fling / 点击步距与自动滚屏叠加。
         if (scrollMotionActive) return@LaunchedEffect
         if (ReaderAutoPagePolicy.visualMode(isEInkMode) == ReaderAutoPageVisualMode.DISCRETE) {
+            // 旧 `AutoPager` 的电子墨水分支：`pause()` 只 removeCallbacks，`resume()` 重新
+            // `postDelayed(this, autoReadSpeed * 1000L)` —— **整段重新计时**，不保留剩余时间。
             autoRevealPx = 0f
-            val plannedMillis = autoPageRemainingMillis
-            val startedAt = SystemClock.uptimeMillis()
-            try {
-                delay(plannedMillis)
-                autoPageRemainingMillis = ReaderAutoPagePolicy.pageDurationMillis(autoReadSpeedSeconds)
-                if (!canTurn(ReaderTurnDirection.NEXT)) latestAutoPageStop() else latestNextPage()
-            } finally {
-                if (ReaderAutoPagePolicy.shouldPreserveRemainingTime(
-                        menuPaused = latestAutoPagePaused,
-                        selectionPaused = latestSelectionPausesAutoPage,
-                    )
-                ) {
-                    autoPageRemainingMillis = ReaderAutoPagePolicy.remainingAfterPause(
-                        plannedMillis,
-                        SystemClock.uptimeMillis() - startedAt,
-                    )
-                }
-            }
+            delay(autoPageRemainingMillis)
+            autoPageRemainingMillis = ReaderAutoPagePolicy.pageDurationMillis(autoReadSpeedSeconds)
+            if (!canTurn(ReaderTurnDirection.NEXT)) latestAutoPageStop() else latestNextPage()
             return@LaunchedEffect
         }
         var previousFrame = withFrameNanos { it }
@@ -1006,31 +1002,31 @@ fun ReaderCanvasSurface(
                     } else dismissSelectionMenu()
                 }
                 val longPressJob = animationScope.launch {
-                    delay(viewConfiguration.longPressTimeoutMillis)
-                    if (!movedPastSlop && !grabbingStart && !grabbingEnd) {
-                        downPage?.let { page ->
-                            val element = page.elementAt(down.position.x, downPageY)
-                            if (element != null && onElementLongPress(
-                                    element,
-                                    down.position.x,
-                                    down.position.y
-                                )
-                            ) {
-                                longPressed = true
-                            } else if (latestSelectionEnabled && !latestAutoPageActive) {
-                                ReaderSelectionPolicy.startWord(page, down.position.x, downPageY)
-                                    ?.let {
-                                        textSelection = it
-                                        selectionMagnifierSource = selectionCursorCenter(
-                                            it,
-                                            ReaderSelectionEndpoint.FOCUS,
-                                        )
-                                        if (latestSelectionHapticsEnabled) {
-                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        }
-                                        longPressed = true
-                                    }
-                            }
+                    // 旧 `ReadView.longPressTimeout = 600L`（不是平台 longPressTimeout）。
+                    delay(LONG_PRESS_TIMEOUT_MILLIS)
+                    if (movedPastSlop || grabbingStart || grabbingEnd) return@launch
+                    // 旧版长按一旦成立就吞掉这次抬手（`ReadView`: `if (!longPressed && !pressOnTextSelected) onSingleTapUp()`）：
+                    // 即使没命中文字/元素，也不该再执行点击分区动作（否则长按空白处会翻页）。
+                    longPressed = true
+                    val page = downPage ?: return@launch
+                    val element = page.elementAt(down.position.x, downPageY)
+                    if (element != null && onElementLongPress(
+                            element,
+                            down.position.x,
+                            down.position.y
+                        )
+                    ) {
+                        return@launch
+                    }
+                    if (!latestSelectionEnabled || latestAutoPageActive) return@launch
+                    ReaderSelectionPolicy.startWord(page, down.position.x, downPageY)?.let {
+                        textSelection = it
+                        selectionMagnifierSource = selectionCursorCenter(
+                            it,
+                            ReaderSelectionEndpoint.FOCUS,
+                        )
+                        if (latestSelectionHapticsEnabled) {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         }
                     }
                 }
@@ -1422,9 +1418,12 @@ fun ReaderCanvasSurface(
             Box(Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    // 外扩阴影/斜体溢出，对照旧 View 的 ChapterProvider.visibleRect。
+                    // 外扩阴影/斜体溢出，对照旧 View 的 ChapterProvider.visibleRect：
+                    // 矩形裁剪，四边都按阴影/斜体外扩，右侧到 `viewWidth - paddingRight`。
                     clipRect(
+                        left = current.contentLeftPx - contentClipPad,
                         top = current.contentTopPx - contentClipPad,
+                        right = current.contentRightPx + contentClipPad,
                         bottom = current.contentBottomPx + contentClipPad,
                     ) {
                         this@drawWithContent.drawContent()
@@ -1698,6 +1697,19 @@ private fun pullBookmark(offset: Offset, height: Float, density: Float, mode: Re
 
 private class ReaderScrollBoundaryReached : CancellationException()
 
+/** 旧 `ReadView.longPressTimeout`：长按判定的固定阈值（不是平台 `longPressTimeout`）。 */
+private const val LONG_PRESS_TIMEOUT_MILLIS = 600L
+
+/** 旧 `TextColumn.selectedPaint`（`#63858585`）：选区/搜索命中是压在字形上的 39% 灰块。 */
+private val legacySelectionFill = Color(0x63858585)
+
+/** 旧 `BatteryViewOrgin` 经典模式的数字字体（`assets/font/number.ttf`）。 */
+private val batteryClassicTypeface: android.graphics.Typeface? by lazy {
+    runCatching {
+        android.graphics.Typeface.createFromAsset(appCtx.assets, "font/number.ttf")
+    }.getOrNull()
+}
+
 private fun ReaderPage.scrollViewportExtentPx(): Float =
     (contentBottomPx - contentTopPx).coerceAtLeast(1f)
 
@@ -1830,9 +1842,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
             Size(band.bounds.width, band.bounds.height),
         )
     }
-    selectedBounds.forEach { rect ->
-        drawRect(selection, Offset(rect.left, rect.top), Size(rect.width, rect.height))
-    }
     drawSelectionStylePreview(selectionPreviewStyle, previewBounds, beforeText = true)
     visibleDecorationCache.halfHighlights.forEach { it.draw(native) }
     page.elements.forEach { e -> when (e) {
@@ -1874,6 +1883,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
         }
         is ReaderElement.Rule -> Unit
     } }
+    // 旧 `TextColumn.draw`：先画字，再把 39% 灰的选区块压上去（字形被冲淡），不是先铺色块。
+    selectedBounds.forEach { rect ->
+        drawRect(legacySelectionFill, Offset(rect.left, rect.top), Size(rect.width, rect.height))
+    }
     page.dynamicEmphasisUnderlineRuns().forEach { run ->
         drawLine(
             color = Color(run.style.colorArgb),
@@ -2247,6 +2260,17 @@ private fun ReaderPageCanvas(
             drawable.alpha = (backgroundImageAlpha.coerceIn(0f, 1f) * 255).roundToInt()
             drawable.draw(native)
         }
+        // 内容按旧 `ChapterProvider.visibleRect` 裁：背景色/背景图不裁（旧 View 里它们在
+        // ContentTextView 之外），九宫格左右外扩与斜体/阴影字缘因此不会画进页边距。
+        // 与 Image/Selection 的绘制共用同一个 native canvas，故用原生 save/clipRect 即可。
+        val contentClipPad = page.contentClipPadPx
+        val contentClipSave = native.save()
+        native.clipRect(
+            page.contentLeftPx - contentClipPad,
+            page.contentTopPx - contentClipPad,
+            page.contentRightPx + contentClipPad,
+            page.contentBottomPx + contentClipPad,
+        )
         textBackgrounds.forEach { run ->
             textBackgroundBitmaps[run.image.source]?.let { bitmap ->
                 drawTextBackground(native, bitmap, run, textBackgroundPaint)
@@ -2259,9 +2283,6 @@ private fun ReaderPageCanvas(
                 Size(band.bounds.width, band.bounds.height),
             )
         }
-        selectedTextBounds.forEach { rect ->
-            drawRect(selection, Offset(rect.left, rect.top), Size(rect.width, rect.height))
-        }
         drawSelectionStylePreview(selectionPreviewStyle, previewBounds, beforeText = true)
         decorationDrawCache.halfHighlights.forEach { it.draw(native) }
         page.elements.forEach { e -> when (e) {
@@ -2270,7 +2291,11 @@ private fun ReaderPageCanvas(
                 paint.color = if (previewing && activeSelection.contains(e, page.id.chapterIndex)) {
                     selectionPreviewStyle.textColor ?: page.previewBaseTextColor(e)
                 } else page.resolvedColorArgb(e, readAloud.toArgb())
-                paint.isUnderlineText = e.style.nativeUnderline || e.drawsLinkUnderline
+                // HTML 原生下划线（<u>）在与规则自定义下划线同时存在时只画自定义那条：
+                // 旧版从不画 HTML 原生下划线，两条线叠在一起是迁移后新增的观感问题。
+                // 链接下划线仍按旧版优先（`TextHtmlColumn.draw` 的 isUnderlineText）。
+                paint.isUnderlineText = (e.style.nativeUnderline && e.style.underline == null) ||
+                        e.drawsLinkUnderline
                 native.drawText(e.value, e.bounds.left, e.baselinePx, paint)
             }
             is ReaderElement.Image -> images[e]?.let { bitmap ->
@@ -2302,6 +2327,14 @@ private fun ReaderPageCanvas(
             }
             is ReaderElement.Rule -> Unit
         } }
+        // 同旧 `TextColumn.draw`：先画字，再把选区块压上去。
+        selectedTextBounds.forEach { rect ->
+            drawRect(
+                legacySelectionFill,
+                Offset(rect.left, rect.top),
+                Size(rect.width, rect.height)
+            )
+        }
         page.dynamicEmphasisUnderlineRuns().forEach { run ->
             drawLine(
                 color = Color(run.style.colorArgb),
@@ -2314,6 +2347,10 @@ private fun ReaderPageCanvas(
         decorationDrawCache.styledUnderlines.forEach { it.draw(native) }
         drawSelectionStylePreview(selectionPreviewStyle, previewBounds, beforeText = false)
         decorationDrawCache.overlayRules.forEach { it.draw(native) }
+        // 页眉页脚与角标必须画在内容裁剪之外：旧 View 里它们属于 PageView（在 ContentTextView
+        // 之外），不受 `visibleRect` 约束；页脚整体位于 `contentBottomPx` 之下、页眉在
+        // `contentTopPx` 之上，若留在裁剪里会被整条裁掉。
+        native.restoreToCount(contentClipSave)
         if (drawDecoration) drawPageDecoration(native, page, tipPaints, badgeImage)
     }
 }
@@ -2436,8 +2473,10 @@ private fun ReaderPage.isSearchResult(text: ReaderElement.Text): Boolean {
     return text.chapterPosition <= maxOf(start, end) && textEnd >= minOf(start, end)
 }
 
+// 旧 `TextPage.upPageAloudSpan` 遍历页内**所有**行（含标题行）设置朗读高亮，因此这里不再
+// 排除 emphasized：标题/标题分段在被朗读时同样高亮。
 private fun ReaderPage.isReadAloud(text: ReaderElement.Text): Boolean =
-    !text.emphasized && readAloudParagraphIndex != null && text.paragraphIndex == readAloudParagraphIndex
+    readAloudParagraphIndex != null && text.paragraphIndex == readAloudParagraphIndex
 
 private fun ReaderPage.resolvedColorArgb(text: ReaderElement.Text, accentColorArgb: Int): Int =
     if (text.link != null || isSearchResult(text) || isReadAloud(text)) accentColorArgb else text.style.colorArgb
@@ -2466,7 +2505,7 @@ private fun ReaderPageDecorationOverlay(page: ReaderPage, modifier: Modifier) {
 private fun createTipPaint(row: ReaderTipRow) = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
     color = row.colorArgb
     textSize = row.fontSizePx
-    typeface = ReaderAndroidPaintFactory.loadTypeface(row.fontPath, 400, false)
+    typeface = ReaderAndroidPaintFactory.loadTypeface(row.fontPath, 400, false, row.fontFamily)
 }
 
 internal fun <T> resolveReaderTipResource(
@@ -2487,14 +2526,15 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageDecoration(
             canvas,
             row,
             paint,
-            ReaderTipRowLayout.headerBaseline(row.paddingTopPx, paint.fontMetrics.top),
+            // 旧版页眉是 includeFontPadding=false 的 TextView：基线 = −ascent（不含 leading）。
+            ReaderTipRowLayout.headerBaseline(row.paddingTopPx, paint.fontMetrics.ascent),
         )
         row.dividerColorArgb?.let {
             val metrics = paint.fontMetrics
             val dividerY = ReaderTipRowLayout.extent(
-                row.paddingTopPx, metrics.top, metrics.bottom, row.paddingBottomPx,
+                row.paddingTopPx, metrics.ascent, metrics.descent, row.paddingBottomPx,
             )
-            drawLine(Color(it), Offset(0f, dividerY), Offset(size.width, dividerY), 1f)
+            drawReaderTipDivider(row, dividerY, it)
         }
     }
     page.decoration.footer?.takeIf { it.visible }?.let { row ->
@@ -2504,15 +2544,15 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageDecoration(
             row,
             paint,
             ReaderTipRowLayout.footerBaseline(
-                size.height, row.paddingBottomPx, paint.fontMetrics.bottom,
+                size.height, row.paddingBottomPx, paint.fontMetrics.descent,
             ),
         )
         row.dividerColorArgb?.let {
             val metrics = paint.fontMetrics
             val dividerY = size.height - ReaderTipRowLayout.extent(
-                row.paddingTopPx, metrics.top, metrics.bottom, row.paddingBottomPx,
+                row.paddingTopPx, metrics.ascent, metrics.descent, row.paddingBottomPx,
             )
-            drawLine(Color(it), Offset(0f, dividerY), Offset(size.width, dividerY), 1f)
+            drawReaderTipDivider(row, dividerY, it)
         }
     }
     page.decoration.bookmarkBadge?.let { badge ->
@@ -2651,23 +2691,116 @@ private fun drawReview(canvas: android.graphics.Canvas, review: ReaderElement.Re
     canvas.drawText(review.count.coerceAtMost(999).toString(), (start + height / 9f + end) / 2f, baseline - height * .23f, paint)
 }
 
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawReaderTipDivider(
+    row: ReaderTipRow,
+    dividerY: Float,
+    colorArgb: Int,
+) {
+    // 旧版分隔线是 0.5dp 的 View，且随 `vwRoot` 的刘海 padding 内缩（不是整屏通栏）。
+    val left = row.insetLeftPx
+    val right = size.width - row.insetRightPx
+    if (right <= left) return
+    drawLine(
+        Color(colorArgb),
+        Offset(left, dividerY),
+        Offset(right, dividerY),
+        TIP_DIVIDER_THICKNESS_DP.dp.toPx(),
+    )
+}
+
+private const val TIP_DIVIDER_THICKNESS_DP = 0.5f
+
+private val ellipsizedTipCache = object : LinkedHashMap<String, String>(16, 0.75f, true) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean =
+        size > 64
+}
+
+/**
+ * 对照旧版页眉页脚 `TextView` 的 `maxLines=1 ellipsize=end`：装不下就在末尾加省略号截断，
+ * 避免长章名/长模板把中、右槽的文案压在一起。结果按（文案、可用宽度、字号、字体）缓存，
+ * 绘制期不重复测量。
+ */
+internal fun ellipsizeTipText(text: String, paint: Paint, maxWidthPx: Float): String {
+    if (text.isEmpty()) return text
+    if (maxWidthPx <= 0f) return ""
+    if (paint.measureText(text) <= maxWidthPx) return text
+    val key =
+        "$text\u0000${maxWidthPx.toInt()}\u0000${paint.textSize}\u0000${paint.typeface?.hashCode()}"
+    ellipsizedTipCache[key]?.let { return it }
+    val ellipsis = "…"
+    val ellipsisWidth = paint.measureText(ellipsis)
+    var end = text.length
+    while (end > 0 && paint.measureText(text, 0, end) + ellipsisWidth > maxWidthPx) end--
+    val result = if (end <= 0) "" else text.substring(0, end) + ellipsis
+    ellipsizedTipCache[key] = result
+    return result
+}
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTipRow(
     canvas: android.graphics.Canvas,
     row: ReaderTipRow,
     paint: Paint,
     baseline: Float,
 ) {
+    val leftEdge = row.paddingLeftPx
+    val rightEdge = size.width - row.paddingRightPx
+    val startTip = row.tips.firstOrNull { it.alignment == ReaderTipAlignment.START }
+    val centerTip = row.tips.firstOrNull { it.alignment == ReaderTipAlignment.CENTER }
+    val endTip = row.tips.firstOrNull { it.alignment == ReaderTipAlignment.END }
+    fun tipWidth(tip: ReaderPageTip): Float =
+        if (tip.visual == ReaderTipVisual.TEXT) paint.measureText(tip.text)
+        else visualTipWidthPx(tip, paint)
+    // 对照旧 `view_book_page.xml` 的三槽约束：
+    // - 左槽 `layout_width=0dp` + `constraintHorizontal_weight=1`，右边界是 `barrier`
+    //   （`barrierDirection=start`、`barrierAllowsGoneWidgets=false`）= 可见的中/右槽起始边的最小值，
+    //   GONE（即没有该槽 tip）不参与；所以**只有左槽会被邻槽挤压**并在 barrier 处省略；
+    // - 中槽 `wrap_content` 居中、右槽 `wrap_content` 靠右，两者都不受邻槽约束，只在整行宽度处省略
+    //   （旧版就是这样：中/右槽长文案会压到邻槽上，不额外让位）。
+    val barrierStart = listOfNotNull(
+        centerTip?.let { size.width / 2f - tipWidth(it) / 2f },
+        endTip?.let { rightEdge - tipWidth(it) },
+    ).minOrNull()
     row.tips.forEach { tip ->
         if (tip.visual == ReaderTipVisual.TEXT) {
+            val available = when (tip.alignment) {
+                ReaderTipAlignment.START -> (barrierStart ?: rightEdge) - leftEdge
+                else -> rightEdge - leftEdge
+            }.coerceAtLeast(0f)
+            val text = ellipsizeTipText(tip.text, paint, available)
+            if (text.isEmpty()) return@forEach
             val x = when (tip.alignment) {
-                ReaderTipAlignment.START -> { paint.textAlign = Paint.Align.LEFT; row.paddingLeftPx }
+                ReaderTipAlignment.START -> {
+                    paint.textAlign = Paint.Align.LEFT; leftEdge
+                }
                 ReaderTipAlignment.CENTER -> { paint.textAlign = Paint.Align.CENTER; size.width / 2f }
-                ReaderTipAlignment.END -> { paint.textAlign = Paint.Align.RIGHT; size.width - row.paddingRightPx }
+                ReaderTipAlignment.END -> {
+                    paint.textAlign = Paint.Align.RIGHT; rightEdge
+                }
             }
-            canvas.drawText(tip.text, x, baseline, paint)
+            canvas.drawText(text, x, baseline, paint)
         } else {
             drawVisualTip(canvas, row, tip, paint, baseline)
         }
+    }
+}
+
+/** 非文字 tip（电池/箭头）的绘制宽度：`drawVisualTip` 与左槽 barrier 计算共用同一份几何。 */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.visualTipWidthPx(
+    tip: ReaderPageTip,
+    paint: Paint,
+): Float {
+    val unit = density
+    val gap = 4f * unit
+    val batteryWidth = 28f * unit
+    val numberWidth = paint.measureText(tip.batteryPercent.coerceIn(0, 100).toString())
+    val textWidth = paint.measureText(tip.text)
+    return when (tip.visual) {
+        ReaderTipVisual.BATTERY_OUTER -> batteryWidth + 2f * unit + numberWidth
+        ReaderTipVisual.BATTERY_INNER -> (if (tip.text.isEmpty()) 0f else textWidth + gap) + batteryWidth
+        ReaderTipVisual.BATTERY_ICON -> batteryWidth
+        ReaderTipVisual.BATTERY_CLASSIC -> (if (tip.text.isEmpty()) 0f else textWidth + gap) + numberWidth + 10f * unit
+        ReaderTipVisual.ARROW -> 12f * unit + 8f * unit + textWidth
+        ReaderTipVisual.TEXT -> textWidth
     }
 }
 
@@ -2684,14 +2817,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawVisualTip(
     val number = tip.batteryPercent.coerceIn(0, 100).toString()
     val numberWidth = paint.measureText(number)
     val textWidth = paint.measureText(tip.text)
-    val visualWidth = when (tip.visual) {
-        ReaderTipVisual.BATTERY_OUTER -> batteryWidth + 2f * unit + numberWidth
-        ReaderTipVisual.BATTERY_INNER -> (if (tip.text.isEmpty()) 0f else textWidth + gap) + batteryWidth
-        ReaderTipVisual.BATTERY_ICON -> batteryWidth
-        ReaderTipVisual.BATTERY_CLASSIC -> (if (tip.text.isEmpty()) 0f else textWidth + gap) + numberWidth + 10f * unit
-        ReaderTipVisual.ARROW -> 12f * unit + 8f * unit + textWidth
-        ReaderTipVisual.TEXT -> textWidth
-    }
+    val visualWidth = visualTipWidthPx(tip, paint)
     val left = when (tip.alignment) {
         ReaderTipAlignment.START -> row.paddingLeftPx
         ReaderTipAlignment.CENTER -> (size.width - visualWidth) / 2f
@@ -2700,7 +2826,15 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawVisualTip(
     paint.textAlign = Paint.Align.LEFT
     when (tip.visual) {
         ReaderTipVisual.BATTERY_OUTER -> {
-            drawBatteryGlyph(canvas, left, baseline, tip.batteryPercent, paint, drawNumberInside = false)
+            drawBatteryGlyph(
+                canvas,
+                left,
+                baseline,
+                tip.batteryPercent,
+                paint,
+                drawNumberInside = false,
+                fillInner = true
+            )
             canvas.drawText(number, left + batteryWidth + 2f * unit, baseline, paint)
         }
         ReaderTipVisual.BATTERY_INNER -> {
@@ -2708,26 +2842,56 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawVisualTip(
                 canvas.drawText(tip.text, left, baseline, paint)
                 left + textWidth + gap
             }
-            drawBatteryGlyph(canvas, batteryLeft, baseline, tip.batteryPercent, paint, drawNumberInside = true)
+            // 旧 `BatteryView`：INNER 模式 `batteryFill.visibility = GONE`，只留外框与框内数字。
+            drawBatteryGlyph(
+                canvas,
+                batteryLeft,
+                baseline,
+                tip.batteryPercent,
+                paint,
+                drawNumberInside = true,
+                fillInner = false,
+            )
         }
         ReaderTipVisual.BATTERY_ICON ->
-            drawBatteryGlyph(canvas, left, baseline, tip.batteryPercent, paint, drawNumberInside = false)
+            drawBatteryGlyph(
+                canvas,
+                left,
+                baseline,
+                tip.batteryPercent,
+                paint,
+                drawNumberInside = false,
+                fillInner = true
+            )
         ReaderTipVisual.BATTERY_CLASSIC -> {
-            val numberLeft = if (tip.text.isEmpty()) left + 4f * unit else {
-                canvas.drawText(tip.text, left, baseline, paint)
-                left + textWidth + gap + 4f * unit
+            // 旧 `BatteryViewOrgin`：经典模式的文字与数字都用 `assets/font/number.ttf`。
+            val numberPaint = Paint(paint).apply {
+                batteryClassicTypeface?.let { typeface = it }
             }
-            canvas.drawText(number, numberLeft, baseline, paint)
-            val top = baseline + paint.fontMetrics.ascent - 2f * unit
-            val bottom = baseline + paint.fontMetrics.descent + 2f * unit
-            val frame = Paint(paint).apply { style = Paint.Style.STROKE; strokeWidth = unit.coerceAtLeast(1f) }
-            canvas.drawRect(numberLeft - 2f * unit, top, numberLeft + numberWidth + 2f * unit, bottom, frame)
+            val classicNumberWidth = numberPaint.measureText(number)
+            val numberLeft = if (tip.text.isEmpty()) left + 4f * unit else {
+                canvas.drawText(tip.text, left, baseline, numberPaint)
+                left + numberPaint.measureText(tip.text) + gap + 4f * unit
+            }
+            canvas.drawText(number, numberLeft, baseline, numberPaint)
+            val top = baseline + numberPaint.fontMetrics.ascent - 2f * unit
+            val bottom = baseline + numberPaint.fontMetrics.descent + 2f * unit
+            val frame = Paint(numberPaint).apply {
+                style = Paint.Style.STROKE; strokeWidth = unit.coerceAtLeast(1f)
+            }
             canvas.drawRect(
-                numberLeft + numberWidth + 2f * unit,
+                numberLeft - 2f * unit,
+                top,
+                numberLeft + classicNumberWidth + 2f * unit,
+                bottom,
+                frame
+            )
+            canvas.drawRect(
+                numberLeft + classicNumberWidth + 2f * unit,
                 top + (bottom - top) / 3f,
-                numberLeft + numberWidth + 4f * unit,
+                numberLeft + classicNumberWidth + 4f * unit,
                 bottom - (bottom - top) / 3f,
-                Paint(paint).apply { style = Paint.Style.FILL },
+                Paint(numberPaint).apply { style = Paint.Style.FILL },
             )
         }
         ReaderTipVisual.ARROW -> {
@@ -2737,11 +2901,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawVisualTip(
                 lineTo(left + 3f * unit, centerY)
                 lineTo(left + 8f * unit, centerY + 5f * unit)
             }
+            // 旧 `BatteryView`：arrowIcon.alpha = 0.76（194/255）。
             canvas.drawPath(arrow, Paint(paint).apply {
                 style = Paint.Style.STROKE
                 strokeWidth = 1.5f * unit
                 strokeCap = Paint.Cap.SQUARE
                 strokeJoin = Paint.Join.MITER
+                alpha = 194
             })
             canvas.drawText(tip.text, left + 20f * unit, baseline, paint)
         }
@@ -2756,6 +2922,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryGlyph(
     batteryPercent: Int,
     paint: Paint,
     drawNumberInside: Boolean,
+    fillInner: Boolean,
 ) {
     val unit = density
     val bodyWidth = 22f * unit
@@ -2777,7 +2944,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryGlyph(
         fill,
     )
     val innerWidth = (bodyWidth - 4f * unit) * batteryPercent.coerceIn(0, 100) / 100f
-    if (innerWidth > 0f) {
+    if (fillInner && innerWidth > 0f) {
         canvas.drawRoundRect(
             bodyLeft + 2f * unit,
             top + 2f * unit,

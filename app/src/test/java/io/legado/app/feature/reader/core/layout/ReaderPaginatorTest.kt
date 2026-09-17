@@ -809,4 +809,65 @@ class ReaderPaginatorTest {
         assertEquals(1, runs.size)
         assertEquals(34f, runs.single().contentBounds.right, 0f)
     }
+
+    /**
+     * 流式会话（对照旧 View `TextChapterLayout.onPageCompleted()` 的 `channel.trySend`）：
+     * 逐 block 推送得到的页必须与整章批次入口完全一致，流出顺序也与最终列表一致。
+     */
+    @Test
+    fun streamingSessionEmitsExactlyTheBatchPages() {
+        val scrollConfig = config.copy(continuousScroll = true, chapterEndPaddingPx = 7f)
+        val blocks = (0..4).map { index ->
+            ReaderMeasuredBlock.Paragraph(paragraph(index.toString(), index))
+        }
+        val batch = ReaderPaginator.paginateBlocks(blocks, scrollConfig)
+
+        val session = ReaderPaginationSession(scrollConfig)
+        val streamed = mutableListOf<io.legado.app.feature.reader.core.model.ReaderPage>()
+        session.onPage = { streamed += it }
+        blocks.forEach(session::accept)
+        val finished = session.finish()
+
+        assertEquals(batch.size, finished.size)
+        assertEquals(batch.map { it.id }, finished.map { it.id })
+        assertEquals(batch.map { it.text }, finished.map { it.text })
+        assertEquals(batch.map { it.scrollExtentPx }, finished.map { it.scrollExtentPx })
+        // 5 个单行段落排成 3 页（2/2/1）：章末留白只加在最后一页（20f 内容 + 7f 留白）。
+        assertEquals(listOf(40f, 40f, 27f), finished.map { it.scrollExtentPx })
+        assertEquals(finished.map { it.id }, streamed.map { it.id })
+        assertEquals(finished.map { it.scrollExtentPx }, streamed.map { it.scrollExtentPx })
+    }
+
+    /**
+     * 章末页延迟到收尾才流出：刚收尾的页只有在下一次收尾（或章末）才知道自己是不是最后一页，
+     * 而最后一页的堆叠高度要加 [ReaderPaginationConfig.chapterEndPaddingPx]。
+     */
+    @Test
+    fun streamingSessionHoldsTheChapterEndPageUntilFinish() {
+        val scrollConfig = config.copy(continuousScroll = true, chapterEndPaddingPx = 7f)
+        // 内容区高 40f、每行 20f：6 个单行段落排成 3 页（2/2/2）。
+        val blocks = (0..5).map { index ->
+            ReaderMeasuredBlock.Paragraph(paragraph(index.toString(), index))
+        }
+        val session = ReaderPaginationSession(scrollConfig)
+        val emitted = mutableListOf<Int>()
+        session.onPage = { emitted += it.id.pageIndex }
+        blocks.forEach(session::accept)
+
+        // 第 2 页成型时第 1 页流出；第 3 页（章末页）要等 finish。
+        assertEquals(listOf(0), emitted)
+        val pages = session.finish()
+        assertEquals(listOf(0, 1, 2), pages.map { it.id.pageIndex })
+        assertEquals(listOf(0, 1, 2), emitted)
+    }
+
+    /** 空章（没有任何 block）不产出页，也不能让流式会话收尾时越界。 */
+    @Test
+    fun streamingSessionWithNoBlocksProducesNoPages() {
+        val session = ReaderPaginationSession(config)
+        val emitted = mutableListOf<Int>()
+        session.onPage = { emitted += it.id.pageIndex }
+        assertEquals(emptyList<Any>(), session.finish())
+        assertEquals(emptyList<Int>(), emitted)
+    }
 }

@@ -13,8 +13,13 @@ enum class ReaderSelectionEndpoint {
     FOCUS,
 }
 
+/**
+ * 选区可跨的页：对照旧 `ContentTextView.upSelectChars`（`relativePage(0..2)`）——当前页、
+ * 下一页、下下页，**不含上一页**；滚动模式的连续堆叠允许选到邻章首页（`nextPlusPage` 语义），
+ * 分页模式实际只有当前页可见。
+ */
 fun ReaderPageWindow.selectionPages(): List<ReaderPage> =
-    listOfNotNull(previous, current, next, nextPlus)
+    listOfNotNull(current, next, nextPlus)
 
 @Stable
 data class ReaderSelection(

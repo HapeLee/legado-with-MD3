@@ -211,6 +211,47 @@ class ReaderPageNavigatorTest {
     }
 
     @Test
+    fun swipeTipFillsTheThirdSlotOnlyWhenTheNextChapterHasNoSecondPage() {
+        val lastPage = page(1, 20)
+        // 下一章只有一页（或还没排到第二页）：第三槽需要"继续滑动以加载下一章…"兜底页。
+        assertTrue(
+            ReaderPageNavigator.needsSwipeTipNextPlus(
+                ReaderPageWindow(
+                    previous = page(0, 0),
+                    current = lastPage,
+                    next = page(0, 0, chapterIndex = 5)
+                ),
+                hasNextChapter = true,
+            )
+        )
+        // 下一章已经有第二页：让真实页占第三槽。
+        assertTrue(
+            !ReaderPageNavigator.needsSwipeTipNextPlus(
+                ReaderPageWindow(
+                    current = lastPage,
+                    next = page(0, 0, chapterIndex = 5),
+                    nextPlus = page(1, 0, chapterIndex = 5),
+                ),
+                hasNextChapter = true,
+            )
+        )
+        // 窗口里没有后继页：由占位页承接，不是提示页的场景。
+        assertTrue(
+            !ReaderPageNavigator.needsSwipeTipNextPlus(
+                ReaderPageWindow(current = lastPage),
+                hasNextChapter = true,
+            )
+        )
+        // 书末没有下一章。
+        assertTrue(
+            !ReaderPageNavigator.needsSwipeTipNextPlus(
+                ReaderPageWindow(current = lastPage, next = page(0, 0, chapterIndex = 5)),
+                hasNextChapter = false,
+            )
+        )
+    }
+
+    @Test
     fun locateReportsMissingChapterInsteadOfCollapsingToBookStart() {
         // 章不在页表中时 locate 折叠成 0（全书首页是合法下标），发布该下标会把阅读
         // 位置跳回书首；调用方用 locateOrNull 区分"未定位"与"第一章"。

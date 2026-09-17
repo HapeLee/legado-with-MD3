@@ -1,19 +1,19 @@
 package io.legado.app.feature.reader.core.layout
 
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
-import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
-import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
 import io.legado.app.feature.reader.core.source.ReaderTitleSegmentation
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import io.legado.app.feature.reader.core.style.ReaderStyleRange
 import io.legado.app.feature.reader.core.style.ReaderStyleTarget
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlinx.coroutines.runBlocking
 
 class ReaderChapterBlockMeasurerTest {
     @Test
@@ -175,7 +175,7 @@ class ReaderChapterBlockMeasurerTest {
     }
 
     @Test
-    fun `missing inline image keeps chapter text and uses line sized placeholder`() = runBlocking {
+    fun `missing inline image keeps chapter text and reserves one character cell`() = runBlocking {
         val source = ReaderChapterSource(1, "", listOf(
             ReaderChapterSourceBlock.Paragraph(listOf(
                 ReaderChapterInlineSource.Text("甲", 0),
@@ -193,8 +193,9 @@ class ReaderChapterBlockMeasurerTest {
         val items = (result.blocks.single() as ReaderMeasuredBlock.InlineParagraph).items
         val image = items[1] as ReaderMeasuredInlineItem.Image
         assertEquals(listOf(0, 1, 2), items.map { it.chapterPosition })
-        assertEquals(24f, image.widthPx, 0f)
-        assertEquals(24f, image.heightPx, 0f)
+        // 行内图占位宽 = 一个字符格（正文字号 10f），高按原图比例；缺失尺寸时按正方形占位。
+        assertEquals(10f, image.widthPx, 0f)
+        assertEquals(10f, image.heightPx, 0f)
     }
 
     @Test

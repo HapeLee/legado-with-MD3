@@ -181,6 +181,13 @@ data class ReaderPage(
     val readAloudParagraphIndex: Int? = null,
     /** 邻章未装载时预置的"加载中"占位页，分页批次落地后被同 id 真实页替换。 */
     val isPlaceholder: Boolean = false,
+    /**
+     * 内容区左右边界，对照旧 `ChapterProvider.visibleRect` 的左右边
+     * （`paddingLeft` / `viewWidth - paddingRight`）。放在构造参数末尾是为了不破坏按位置
+     * 构造 `ReaderPage` 的既有调用点；默认值等价于"整页宽"，即不额外裁剪。
+     */
+    val contentLeftPx: Float = 0f,
+    val contentRightPx: Float = widthPx.toFloat(),
 ) {
     fun elementAt(x: Float, y: Float): ReaderElement? =
         elements.firstOrNull { it.bounds.contains(x, y) }
@@ -227,6 +234,11 @@ data class ReaderTipRow(
     val paddingRightPx: Float,
     val paddingBottomPx: Float,
     val dividerColorArgb: Int?,
+    /** 未设页眉页脚字体时回落正文字体族（旧 `tipTypeface ?: ChapterProvider.typeface`）。 */
+    val fontFamily: String = "sans-serif",
+    /** 根层安全区内缩：分隔线只画在内缩后的宽度里（旧 `vwRoot` 的刘海 padding）。 */
+    val insetLeftPx: Float = 0f,
+    val insetRightPx: Float = 0f,
 )
 
 data class ReaderPageDecoration(
