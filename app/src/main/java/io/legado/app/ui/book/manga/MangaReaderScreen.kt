@@ -78,6 +78,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.ImageLoader
+import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
@@ -1320,6 +1321,7 @@ private fun MangaPageImage(
         .onSizeChanged { imageViewportSize = it }
         .onGloballyPositioned { positionInRoot = it.positionInRoot() }
 
+    // 仅分页模式使用；条漫的缩放/平移在 WebtoonMangaList 外层统一处理，见下方分支说明。
     val zoomableImageState = rememberZoomableImageState(
         rememberZoomableState(
             ZoomSpec(
@@ -1387,12 +1389,14 @@ private fun MangaPageImage(
     }
 
     Box(imageModifier) {
-        ZoomableAsyncImage(
+        // 条漫模式刻意不用 ZoomableAsyncImage：Telephoto 的 zoomable 会把每页内容渲染进
+        // 自己的图层再合成，在「长图逐页堆叠」时会在页边界丢一行像素，视觉上就是两页之间
+        // 的一条极细横线（图源本身不透明、页框几何也完全对齐，可排除数据与布局原因）。
+        // 条漫的缩放/平移由 WebtoonMangaList 在外层统一处理，单页不需要再包一层。
+        AsyncImage(
             model = request,
             imageLoader = imageLoader,
             contentDescription = contentDescription,
-            state = zoomableImageState,
-            gestures = EnabledZoomGestures.None,
             contentScale = ContentScale.FillWidth,
             colorFilter = mangaColorFilter(settings),
             modifier = Modifier.fillMaxSize(),
