@@ -292,7 +292,11 @@ gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 json-path = { module = "com.jayway.jsonpath:json-path", version.ref = "jsonPath" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 jsoupxpath = { module = "cn.wanghaomiao:JsoupXpath", version.ref = "jsoupxpath" }
-intellij-markdown = { module = "org.jetbrains:markdown-jvm", version.ref = "intellijMarkdown" }
+# M5-1b：从 `markdown-jvm` 换成不带后缀的 KMP 坐标——`:core:designsystem` 的 commonMain
+# 要装 `MarkdownBlock`，必须解析到 common 变体。已核对 Maven Central 的 `markdown-0.7.3.module`：
+# 含 `metadataApiElements`(common) + `jvm` + `js`/`wasm` + iOS/macOS/linux/mingw 全套 native 变体。
+# `markdown-jvm` 仍然存在且是同一个上游项目的 jvm 制品，但只解析 jvm —— 共用坐标能同时服务两边。
+intellij-markdown = { module = "org.jetbrains:markdown", version.ref = "intellijMarkdown" }
 junit = { module = "junit:junit", version = "4.13.2" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }

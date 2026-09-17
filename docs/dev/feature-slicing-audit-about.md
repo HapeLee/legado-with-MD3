@@ -89,7 +89,7 @@ ViewModel/domain」）。
 | 片 | 内容 | 状态 |
 |---|---|---|
 | **M5-1a** | `TextCard` 上提 designsystem/commonMain（39 引用方，零平台依赖） | **已完成** |
-| M5-1b | `MarkdownBlock` 契约化并进共享层：`Intent(ACTION_VIEW)` → `onOpenUrl` 回调；Splitties 剪贴板 → `Clipboard` 契约（**注意**：现有 `Clipboard.setText` 自带「复制完成」提示，而原代码是静默 `setPrimaryClip`，其 KDoc 明确要求「只复制不提示应另立能力」⇒ 需新增静默方法）；`ic_copy` → composeResources | 待做 |
+| **M5-1b** | `MarkdownBlock` 上提 designsystem/commonMain（6 引用方）；三处平台依赖全部用**既有**回调/组件就地消除，**未新增任何平台契约**；`markdown-jvm` → `markdown`（真 KMP 坐标） | **已完成** |
 | M5-1c | 建 `:feature:about`：Contract / VM / Material Screen / Sheets 进 commonMain，`CrashLogSheet` 私有化（`FileDoc` → 不透明引用），三个平台能力契约 + desktop 显式 unsupported 实现，文案与图标进 composeResources，Route 留 androidMain | 待做 |
 | M5-1d | 消费方迁移：DI 绑定、nav3 route、`CrashReportActivity`（Activity ABI 留 `:app`）、删除旧包 | 待做 |
 
@@ -110,3 +110,60 @@ material3 Expressive API，desktop 的 CMP material3 1.9.0 实测有。
 **为什么没加测试**：见 §3.3——共享层无法独立渲染 `LegadoTheme` 系组件。
 本片是纯搬迁、零逻辑改动，原 `:core:ui` 下也无测试，故主集/全量计数均不变。
 渲染证据仍由 Android 侧（`:app:assembleAppDebug` + 真机）承担。
+
+## 6. M5-1b 实录
+
+**改动**：`git mv app/src/main/java/io/legado/app/ui/widget/components/text/MarkdownBlock.kt
+→ core/designsystem/src/commonMain/kotlin/io/legado/app/ui/widget/components/text/MarkdownBlock.kt`
+（894 → 907 行；包名不变 ⇒ 6 个调用方 import 零改动）。
+
+### 6.1 三处平台依赖的处置（全部复用既有能力，零新增契约）
+
+审计 §2.1 原计划新增「静默剪贴板」契约。**实测不需要**——侦察发现三处都已有现成出口：
+
+| 原代码 | 处置 | 依据 |
+|---|---|---|
+| `context.startActivity(Intent(ACTION_VIEW, linkDest.toUri()))` | 删掉 `else` 分支，改 `onClickLink?.invoke(linkDest)` | `onClickLink: ((String) -> Unit)?` **回调本就存在**，只是原来只用于内链，外链走 Intent 兜底 |
+| 图片兜底 `painterResource` / 加载失败跳转 | 改为 `LocalMarkdownImageHandlers.current.onClick(imageUrl)` | 该 CompositionLocal 在 designsystem `ui/util`，已有 `MarkdownImageHandlers` 数据类 |
+| `clipboardManager.setText(...)` + `R.drawable.ic_copy` | `Icons.Default.ContentCopy` + `LocalClipboard.setClipEntry(plainTextClipEntry("code", code))` | `plainTextClipEntry`（`PlainTextClipEntryFactory`）**纯写入不弹提示**，与 `ClipData.newPlainText` + `setPrimaryClip` 语义等价 |
+
+**关键判断**：共享层的静默剪贴板能力**已经存在**，且**刻意**没有与 `:core:platform` 的
+`Clipboard.setText`（会弹「复制完成」）合并——后者 KDoc 也写明「只复制不提示应另立能力」，
+而 `plainTextClipEntry` 就是那个「另立的能力」。所以本片**不动任何契约**，
+只把调用点从 Android API 换成共享 API。这条对后续 UI 搬迁是通用经验：
+**先 grep 共享层有没有等价出口，再考虑新增契约。**
+
+### 6.2 `markdown-jvm` → `markdown`（真 KMP 坐标）
+
+`gradle/libs.versions.toml` 里原坐标是 `org.jetbrains:markdown-jvm`。以 `curl` 取
+Maven Central 的 `markdown-0.7.3.module` 后用 Python 解析变体清单，实测：
+
+```
+metadataApiElements (common)  +  jvm  +  js/wasm-js/wasm-wasi
++ iOS(iosArm64/iosSimulatorArm64/iosX64) + macOS + linux + mingw
+```
+
+⇒ `org.jetbrains:markdown` 是**真 KMP 制品**，去掉 `-jvm` 后缀即可进 commonMain。
+版本目录已就地改正并附注释说明核对结果。
+
+### 6.3 一个编译期坑：`setClipEntry` 是 suspend
+
+复制按钮写在 `clickable { ... }` 里（非挂起上下文），首次编译报
+`Suspend function 'setClipEntry' can only be called from a coroutine`。
+修法：`val clipboardScope = rememberCoroutineScope()` + `clipboardScope.launch { ... }`。
+既有调用点（dict / replacerules / tagrules 的 Screen）都在 `LaunchedEffect` 内，所以此前没暴露。
+
+### 6.4 验证
+
+- `:core:designsystem:compileKotlinDesktop` BUILD SUCCESSFUL（20s）
+- `:app:compileAppDebugKotlin` + `:core:ui:compileDebugKotlin` BUILD SUCCESSFUL（6 个调用方零改动）
+- 四门禁 `--rerun` 全绿，**无需下调 G4 基线**（`MarkdownBlock` 不含被计数的 GSON/coreProvider 模式）
+- `clean` + 全量验证集（458 tasks / 7m54s）BUILD SUCCESSFUL，用例计数 **712 / 1152 零偏离**
+- **消费方解析变异**：移走 `core/designsystem/.../text/MarkdownBlock.kt` ⇒
+  `:app:compileAppDebugKotlin` 立即报 13 处 `Unresolved reference 'MarkdownBlock'`
+  （`OnboardingScreen.kt` 3 处 / `AboutSheets.kt` 3 处 / `AiGeneratedMessageContent.kt` 2 处 /
+  `AiThinkingCard.kt` 3 处 / `BookInfoScreen.kt` 2 处），还原后回绿。
+  证明「文件真的从共享层被消费」，而非仍有副本在原位。
+
+**为什么没加测试**：同 §3.3——`MarkdownBlock` 渲染依赖 `LegadoTheme`，desktop 无法独立构造主题。
+纯搬迁零逻辑改动，故计数不变。

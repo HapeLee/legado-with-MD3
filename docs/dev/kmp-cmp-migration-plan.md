@@ -1313,10 +1313,20 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        验证：`:core:designsystem:compileKotlinDesktop` + `:core:ui:compileDebugKotlin` +
        `:app:compileAppDebugKotlin` + 四门禁全绿（**无需下调 G4 基线**）+ 干净重建全量集通过，
        用例计数不变（纯搬迁、零逻辑改动，原本也无测试）。
-     - 后续分片：M5-1b `MarkdownBlock` 契约化（注意现有 `Clipboard.setText` 自带「复制完成」
-       提示，而原代码是静默 `setPrimaryClip`，其 KDoc 要求「只复制不提示应另立能力」）；
-       M5-1c 建 `:feature:about`（`CrashLogSheet` 私有化 + 三个平台契约 + desktop 显式
-       unsupported）；M5-1d 消费方迁移。
+     - **M5-1b 已完成（2026-09-17）**：`MarkdownBlock`（894 行）从 `:app` 的
+       `ui/widget/components/text` 上提 `designsystem/commonMain`（`git mv`，包名不变 ⇒
+       6 个调用方 import 零改动）。**三处平台依赖全部用既有出口就地消除，零新增契约**：
+       `Intent(ACTION_VIEW)` 兜底删掉走已存在的 `onClickLink` 回调；图片兜底走已存在的
+       `LocalMarkdownImageHandlers`；剪贴板走 `LocalClipboard.setClipEntry(plainTextClipEntry(…))`
+       ——共享层的**静默**写入能力**早已存在**（`PlainTextClipEntryFactory`），且刻意未与
+       `:core:platform` 的 `Clipboard.setText`（会弹「复制完成」）合并。**通用经验：先 grep
+       共享层有没有等价出口，再考虑新增契约。** 另：版本目录 `markdown-jvm` → `markdown`
+       （经 Maven Central `.module` 变体清单核对，是真 KMP 制品）；`setClipEntry` 是 suspend，
+       `clickable` 内需 `rememberCoroutineScope()` + `launch`。验证：desktop 编译 + `:app`/
+       `:core:ui` 编译 + 四门禁全绿（无需下调基线）+ 干净重建全量集 712/1152 零偏离 +
+       消费方解析变异（移走文件 ⇒ 5 个消费方 13 处 `Unresolved reference`，还原回绿）。
+     - 后续分片：M5-1c 建 `:feature:about`（`CrashLogSheet` 私有化 + 三个平台契约 + desktop 显式
+       unsupported）；M5-1d 消费方迁移（DI / nav3 route / `CrashReportActivity` / 删旧包）。
 
 ## 6. 验证矩阵
 

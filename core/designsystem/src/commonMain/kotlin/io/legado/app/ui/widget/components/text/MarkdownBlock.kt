@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components.text
 
-import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -39,9 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -53,14 +51,17 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import coil3.compose.AsyncImage
-import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.util.plainTextClipEntry
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -75,7 +76,17 @@ import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import org.intellij.markdown.parser.MarkdownParser
-import splitties.systemservices.clipboardManager
+
+// M5-1b：本文件从 `:app` 的 `ui/widget/components/text` 搬进 `:core:designsystem` 的
+// `commonMain`（包名不变 ⇒ 6 个调用方 import 零改动）。三处平台依赖的处置：
+//   1. `Intent(Intent.ACTION_VIEW, ...)` x2（图片与链接的**兜底**跳转）——直接删除。
+//      两处本来就有注入回调（`onImageClick` / `onClickLink`），兜底只是「没传回调时偷偷
+//      用 Android Intent 打开」。链接跳转是宿主职责，共享层不伪造平台能力。
+//   2. Splitties 的 `clipboardManager.setPrimaryClip(...)` —— 换成共享层既有的
+//      `LocalClipboard.setClipEntry(plainTextClipEntry(label, text))`：**纯写入、不弹提示**，
+//      与迁移前语义等价（该契约的 KDoc 正是为这种场景立的）。
+//   3. `R.drawable.ic_copy` —— 换成 `Icons.Default.ContentCopy`。
+// 其余依赖（`org.jetbrains:markdown` KMP 坐标、`coil3`）在 designsystem 均可解析。
 
 // ---- Markdown parser (lazy singleton) ----
 
@@ -245,13 +256,16 @@ private fun MarkdownNode(
             val altText = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_TEXT)?.getTextInNode(content) ?: ""
             val imageUrl = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)?.getTextInNode(content) ?: ""
             if (imageUrl.isNotBlank()) {
-                val context = LocalContext.current
+                // M5-1b：删掉「无回调就 startActivity」的兜底——那是 Android-only 的隐式平台动作，
+                // 且与上面 IMAGE 分支的 `onImageClick` 语义重复。图片点击现在一律经
+                // `LocalMarkdownImageHandlers` 的 onClick 回调，由宿主决定怎么打开。
+                val handlers = LocalMarkdownImageHandlers.current
                 AppText(
                     text = "🖼 $altText",
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.primary,
                     modifier = modifier.clickable {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, imageUrl.toUri()))
+                        handlers.onClick(imageUrl)
                     }
                 )
             }
@@ -566,17 +580,14 @@ private fun MarkdownInlineLink(
 ) {
     val linkDest = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)?.getTextInNode(content) ?: ""
     val linkText = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_TEXT)?.getTextInNode(content) ?: linkDest
-    val context = LocalContext.current
     AppText(
         text = linkText,
         color = LegadoTheme.colorScheme.primary,
         textDecoration = TextDecoration.Underline,
         modifier = modifier.clickable {
-            if (onClickLink != null) {
-                onClickLink(linkDest)
-            } else {
-                context.startActivity(Intent(Intent.ACTION_VIEW, linkDest.toUri()))
-            }
+            // M5-1b：`onClickLink` 为空时**不再兜底 startActivity**（Android-only 平台动作）。
+            // 链接跳转是宿主的职责，由调用方注入；未注入则点击无响应，不伪造跨平台支持。
+            onClickLink?.invoke(linkDest)
         }
     )
 }
@@ -604,7 +615,9 @@ private fun MarkdownCodeBlock(
     language: String?,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    // `Clipboard.setClipEntry` 是 suspend（CMP 新 API 的签名如此）。
+    val clipboardScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val collapsedLines = 10
     val codeLines = remember(code) { code.lines() }
@@ -638,13 +651,19 @@ private fun MarkdownCodeBlock(
             }
             Spacer(modifier = Modifier.weight(1f))
             Icon(
-                painter = painterResource(R.drawable.ic_copy),
+                // M5-1b：`R.drawable.ic_copy` -> `Icons.Default.ContentCopy`（本仓通用做法，
+                // AiGeneratedMessageContent / AudioPlayScreen 都用它），省掉搬一个 drawable。
+                imageVector = Icons.Default.ContentCopy,
                 contentDescription = null,
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
                     .clickable {
-                        val clip = android.content.ClipData.newPlainText("code", code)
-                        clipboardManager.setPrimaryClip(clip)
+                        // 静默写入：语义对齐迁移前的 `ClipData.newPlainText("code", code)` +
+                        // `setPrimaryClip`（不弹提示）。刻意不用 `:core:platform` 的 `Clipboard.setText`
+                        // ——它的 KDoc 写明会顺带弹「复制完成」，那是行为变化。
+                        clipboardScope.launch {
+                            clipboard.setClipEntry(plainTextClipEntry("code", code))
+                        }
                     }
                     .padding(4.dp)
                     .size(16.dp),

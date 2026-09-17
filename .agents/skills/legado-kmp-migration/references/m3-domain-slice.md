@@ -505,3 +505,31 @@ It is 7 files / 1442 lines with 4 `android.*` imports — but its dependency clo
 deep SAF coupling, plus three platform capabilities in the ViewModel). **Draw the dependency
 closure before committing to a slice; do not pick pages by line count.** Catalog notes written
 in an earlier phase are hypotheses, not measurements — correct them in place when disproved.
+
+### Lifting a component that *does* touch platform APIs (M5-1b)
+
+`MarkdownBlock` had three Android couplings. The audit predicted a new "silent clipboard"
+contract. **The contract was not needed** — that is the lesson:
+
+- **Grep the shared layer for an existing exit before designing a contract.** The silent
+  clipboard write already existed: `LocalClipboard.setClipEntry(plainTextClipEntry(label, text))`
+  (`PlainTextClipEntryFactory` in designsystem `ui/util`) is a pure write with no toast, exactly
+  equivalent to `ClipData.newPlainText` + `setPrimaryClip`. It is **deliberately not merged**
+  with `:core:platform`'s `Clipboard.setText`, which shows a "copied" toast — that one's own KDoc
+  says a quiet variant should be a separate capability, and `plainTextClipEntry` *is* it.
+- **Deleted `else` branches often reveal the callback already exists.** `Intent(ACTION_VIEW)`
+  for external links was only a fallback — `onClickLink: ((String) -> Unit)?` was already a
+  parameter, used for internal links. Likewise images: `LocalMarkdownImageHandlers.current.onClick`
+  was already there. In both cases the fix is to drop the platform fallback, not to add an
+  abstraction.
+- **`R.drawable.*` → `Icons.Default.*`** is the cheap path for an icon with a material
+  equivalent; only genuinely custom artwork needs `composeResources`.
+- **`markdown-jvm` → `markdown`**: check the Maven Central `.module` file for
+  `metadataApiElements` + the native variants before trusting a `-jvm` suffix. Version-catalog
+  coordinates written for a JVM module can often just drop the suffix and become commonMain-safe.
+- **`Clipboard.setClipEntry` is `suspend`** (new CMP API). A call inside `clickable { }` needs
+  `rememberCoroutineScope()` + `launch`. Existing call sites hid this because they all sat in
+  `LaunchedEffect`.
+- Verification for such a move is the same as a verbatim one: compile + gates + clean full set +
+  **consumer-resolution mutation** (removing the shared file made all 5 consumers fail with 13
+  `Unresolved reference` errors).

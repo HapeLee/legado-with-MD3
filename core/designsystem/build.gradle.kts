@@ -167,6 +167,13 @@ kotlin {
                 // 类型不改回 `List` 是有意的：AGENTS.md 要求 Compose 渲染边界的集合用 immutable，
                 // 且改成 `List` 会削弱 `@Stable` 的稳定性承诺。
                 implementation(libs.kotlinx.collections.immutable)
+                // M5-1b：`MarkdownBlock.kt` 从 `:app` 的 `ui/widget/components/text` 搬入。
+                // 它用 `org.intellij.markdown` 做 GFM AST 解析。原先版本目录里是
+                // `org.jetbrains:markdown-jvm`（JVM-only 坐标，进不了 commonMain），
+                // 已换成不带后缀的 `org.jetbrains:markdown`——核对 Maven Central 的
+                // `markdown-0.7.3.module` 确认含 `metadataApiElements`(common) + jvm + js/wasm
+                // + iOS/macOS/linux/mingw 全套 native 变体，是**真 KMP 制品**，共用同一坐标即可。
+                implementation(libs.intellij.markdown)
             }
         }
 
