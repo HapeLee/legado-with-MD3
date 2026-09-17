@@ -454,3 +454,54 @@ source before touching the implementation**: `git show HEAD:<old-path>` works ev
 file is deleted in the working tree, and settles the question in seconds. In M4-5c,
 `setDefaultModel`'s returned config carries the **preset's** id, not the model's — the verbatim
 move was correct and the freshly written assertion was wrong.
+
+
+## Lifting a UI component into `:core:designsystem` (M5)
+
+Domain sinking is not the only move — M5 also lifts UI components from `:core:ui` (Android-only)
+into `:core:designsystem` (`commonMain`, registered `cmp`). Criteria measured in M5-1a:
+
+- **Mechanical gates for "can move verbatim"** (same as M1-3i): zero `android.*`, zero `R.`,
+  zero Android-only Compose API (`LocalContext` / `LocalConfiguration` /
+  `androidx.compose.ui.res.*` / `AndroidView`); closure entirely inside designsystem.
+  material3 **Expressive** APIs (`labelSmallEmphasized`) do exist in desktop CMP material3 1.9.0
+  — verify by compiling, do not assume.
+- **Keep the package name** ⇒ every caller's import stays untouched, provided the caller already
+  depends on `:core:designsystem` (`:app` and `:core:ui` both do). Use `git mv` so git records a
+  rename and review sees it.
+- **Do not assume the G4 baseline must be lowered.** `TextCard` carries no counted
+  GSON/coreProvider pattern, so the gate passed untouched. Run the gate first.
+- **When a verbatim move adds no tests**, replace ordinary mutation testing with a
+  **consumer-resolution mutation**: temporarily move the shared copy away and check that
+  `:core:ui` / `:app` fail with `Unresolved reference 'X'`. That proves the N callers really
+  resolve to the shared copy instead of a leftover duplicate — and it is far cheaper than
+  fabricating a test.
+
+### Two platform facts that change slicing decisions
+
+- **`miuix-blur` has no desktop variant** (only `miuix-blur-android`). Compile probe:
+  `top.yukonga.miuix.kmp.blur.*` is **Unresolved** on desktop, while `kmp.utils.*` and
+  `kmp.shader.isRenderEffectSupported` resolve fine. Any screen calling `textureBlur` /
+  `layerBackdrop` directly is a **platform island** (same verdict as the `dict` query sheet):
+  leave it in `:app`, and let the androidMain Route branch on
+  `ThemeResolver.isMiuixEngine`, with **both branches sharing one ViewModel/Contract**.
+  Checking this first can delete most of a slice's work — in M5-1 it removed ~1100 lines of
+  `MiuixUtils` / `BgEffect*` that turned out to have only miuix-screen callers.
+- **designsystem `commonMain` components cannot be UI-tested standalone on desktop.**
+  `LegadoTheme.typography/colorScheme` are `staticCompositionLocalOf { error(...) }` and the
+  only `provides` sites live in `:core:ui` (`ThemeComponents.kt` /
+  `ThemeColorSchemeOverride.kt`). `runComposeUiTest` therefore fails with
+  `IllegalStateException: No Typography provided`. Building a `LegadoTypography` (24 fields,
+  no defaults) just to satisfy it would duplicate the whole theme for a test — forbidden.
+  Accept that shared-layer UI verification **stops at compile + gates**, with rendering
+  evidence owned by the Android side. (`smoke:compose-desktop-probe` passes only because it
+  renders a self-made component that ignores `LegadoTheme`.)
+
+### Choosing a slice: audit the closure, not the line count
+
+`feature-catalog.md` described `ui/about` as "small boundary, good first relocation sample".
+It is 7 files / 1442 lines with 4 `android.*` imports — but its dependency closure needs
+**1.5x more** than the screen itself (`MarkdownBlock` 894 lines, `FileDoc` with 23 callers and
+deep SAF coupling, plus three platform capabilities in the ViewModel). **Draw the dependency
+closure before committing to a slice; do not pick pages by line count.** Catalog notes written
+in an earlier phase are hypotheses, not measurements — correct them in place when disproved.

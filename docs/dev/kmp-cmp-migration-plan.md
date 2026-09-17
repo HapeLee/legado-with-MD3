@@ -1284,6 +1284,40 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
 12. 建真实书源 corpus，再决定 native JS/parser，不先搬 `JsExtensions`。
 13. 从 Feature catalog 逐域推进 M5；reader、TTS、service 使用 M6 专项门禁。
 
+13.1. **M5-1：`ui/about` 转 CMP（进行中）—— 审计先于动手，先修 catalog 的旧判断。**
+     完整审计见 [feature-slicing-audit-about.md](./feature-slicing-audit-about.md)。
+     - 警告 **catalog 说它「边界小，适合首个样板候选」是错的**（该判断写在 M1 时代）。
+       本体 7 文件 / 1442 行、表面只有 4 处 `android.*`，但依赖闭包牵出的缺口是它本体的
+       1.5 倍以上：`TextCard`（39 引用方）/ `MarkdownBlock`（894 行，含 `Intent` 与
+       Splitties 剪贴板）/ `CrashLogSheet`（`FileDoc`）/ `FileDoc`（**23 个引用方、深 SAF
+       依赖，不迁**），外加 VM 的更新检查、诊断（崩溃日志/堆转储/`logcat`）、assets 读 md
+       三组平台能力。**先审计依赖闭包再决定切法，别按行数挑「小页面」。**
+     - 警告 **`miuix-blur` 只有 `miuix-blur-android`，无 desktop 变体**（编译探测：
+       `top.yukonga.miuix.kmp.blur.*` Unresolved，而 `kmp.utils.*` 与 `kmp.shader.*` 可解析）
+       ⇒ `MiuixAboutScreen`（519 行，直接调 `textureBlur`/`layerBackdrop`）**与 dict 查询面板
+       同判据：platform island，留 `:app`**。由 androidMain 的 Route 按
+       `ThemeResolver.isMiuixEngine` 分流，两支**复用同一 ViewModel/Contract**
+       （M5 风险表：「必要时平台 Screen 复用同一 ViewModel/domain」）。
+       连带 `MiuixUtils`（160 行）与 `BgEffect*`（907 行）**都不必搬**——它们只有 miuix 屏用。
+     - 警告 **designsystem 的 commonMain 组件在 desktop 上无法独立做 Compose UI 测试**：
+       `LegadoTheme.typography/colorScheme` 的 provide 点在 `:core:ui`（Android），
+       designsystem 自己没有 provide 点 ⇒ `runComposeUiTest` 一律
+       `IllegalStateException: No Typography provided`。构造 `LegadoTypography`（24 个无默认值
+       字段）来提供主题等于为测试复制整套主题定义，属禁止的「为测试造重复抽象」。
+       **共享层 UI 组件的验证因此止于「编译 + 门禁」，渲染证据由 Android 侧承担**——
+       `smoke:compose-desktop-probe` 的探针能过是因为它渲染的是不依赖 `LegadoTheme` 的自制组件。
+     - **M5-1a 已完成（2026-09-16）**：`TextCard` 从 `:core:ui/src/main` 上提
+       `designsystem/commonMain`（`git mv`，包名不变 ⇒ 39 个调用方 import 零改动）。
+       判据：文件内零 `android.*`/零 `R.`；闭包全在 designsystem；
+       `labelSmallEmphasized`（material3 Expressive）在 desktop 的 CMP material3 1.9.0 实测有。
+       验证：`:core:designsystem:compileKotlinDesktop` + `:core:ui:compileDebugKotlin` +
+       `:app:compileAppDebugKotlin` + 四门禁全绿（**无需下调 G4 基线**）+ 干净重建全量集通过，
+       用例计数不变（纯搬迁、零逻辑改动，原本也无测试）。
+     - 后续分片：M5-1b `MarkdownBlock` 契约化（注意现有 `Clipboard.setText` 自带「复制完成」
+       提示，而原代码是静默 `setPrimaryClip`，其 KDoc 要求「只复制不提示应另立能力」）；
+       M5-1c 建 `:feature:about`（`CrashLogSheet` 私有化 + 三个平台契约 + desktop 显式
+       unsupported）；M5-1d 消费方迁移。
+
 ## 6. 验证矩阵
 
 ### 6.1 当前真实任务
