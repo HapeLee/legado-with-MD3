@@ -1456,6 +1456,7 @@
     <string name="update_book_fail">Update failed</string>
     <string name="notification_permission_rationale">Reading requires sending notifications to show reading control and download progress</string>
     <string name="permission_not_required">Permission not required</string>
+    <string name="web_service_local_network_permission_denied">Web service requires local network permission, otherwise it cannot be accessed from other devices</string>
     <string name="webdav_after_local_restore_confirm">The WebDAV book source is newer than the local one. Do you want to restore it?</string>
     <string name="c_whitelist">Whitelist (contentWhitelist)</string>
     <string name="c_blacklist">Blacklist (contentBlacklist)</string>

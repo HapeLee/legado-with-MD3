@@ -1399,6 +1399,7 @@
     <string name="update_book_fail">更新失败</string>
     <string name="notification_permission_rationale">阅读需要发送通知来显示朗读控制和下载进度。</string>
     <string name="permission_not_required">无需申请</string>
+    <string name="web_service_local_network_permission_denied">Web 服务需要本地网络权限，否则其他设备无法访问</string>
     <string name="webdav_after_local_restore_confirm">WebDav 书源比本地新,是否恢复</string>
     <string name="c_whitelist">白名单(contentWhitelist)</string>
     <string name="c_blacklist">黑名单(contentBlacklist)</string>

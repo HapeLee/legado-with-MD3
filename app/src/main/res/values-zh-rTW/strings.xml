@@ -1747,6 +1747,7 @@
     <string name="found_cloud_progress">發現雲端進度，是否復原？</string>
     <string name="progress_exceeds_cloud">目前進度超過雲端進度，是否覆蓋？</string>
     <string name="permission_not_required">不需要權限</string>
+    <string name="web_service_local_network_permission_denied">Web 服務需要區域網路權限，否則其他裝置無法存取</string>
     <string name="about_privacy_policy_title">隱私政策</string>
     <string name="about_license_title">開源許可</string>
     <string name="about_disclaimer_title">免責聲明</string>

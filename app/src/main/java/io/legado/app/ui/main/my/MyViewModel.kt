@@ -36,9 +36,15 @@ sealed class PrefClickEvent {
 
 sealed interface MyIntent {
     data object ToggleWebService : MyIntent
+
+    /** 本地网络权限授予后由界面触发，避免再次进入申请分支。 */
+    data object StartWebService : MyIntent
 }
 
-sealed interface MyEffect
+sealed interface MyEffect {
+    /** Android 17 起 Web 服务需要先获得本地网络权限才能被其他设备访问。 */
+    data object RequestLocalNetworkPermission : MyEffect
+}
 
 class MyViewModel(
     application: Application
@@ -71,16 +77,17 @@ class MyViewModel(
     fun onIntent(intent: MyIntent) {
         when (intent) {
             MyIntent.ToggleWebService -> {
-                val currentIsRun = _uiState.value.isWebServiceRun
-
-                if (!currentIsRun) {
-                    WebService.start(context)
-                } else {
+                if (_uiState.value.isWebServiceRun) {
                     WebService.stop(context)
                     _uiState.update { it.copy(isWebServiceRun = false, webServiceAddress = "") }
+                } else if (WebService.hasLocalNetworkPermission(context)) {
+                    WebService.start(context)
+                } else {
+                    _effects.tryEmit(MyEffect.RequestLocalNetworkPermission)
                 }
-
             }
+
+            MyIntent.StartWebService -> WebService.start(context)
         }
     }
 

@@ -2061,6 +2061,7 @@
     <string name="palette_style">調色板樣式</string>
     <string name="paragraph_typeface">段落樣式</string>
     <string name="permission_not_required">不需要權限</string>
+    <string name="web_service_local_network_permission_denied">Web 服務需要區域網絡權限，否則其他裝置無法存取</string>
     <string name="photo">相片</string>
     <string name="play_mode">播放模式</string>
     <string name="position_bottom_end">右下角</string>

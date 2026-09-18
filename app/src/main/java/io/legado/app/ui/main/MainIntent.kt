@@ -39,6 +39,7 @@ object MainIntent {
     const val EXTRA_RSS_SOURCE_URL = "extra_rss_source_url"
     const val EXTRA_RSS_SORT_URL = "extra_rss_sort_url"
     const val EXTRA_RSS_KEY = "extra_rss_key"
+    const val EXTRA_WEB_SERVICE_LOCAL_NETWORK = "webServiceLocalNetwork"
 
     const val EXTRA_RSS_READ_TITLE = "extra_rss_read_title"
     const val EXTRA_RSS_READ_ORIGIN = "extra_rss_read_origin"
@@ -60,6 +61,15 @@ object MainIntent {
             putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_MAIN)
         }
     }
+
+    /**
+     * 磁贴等无 Activity 的入口无法自行申请本地网络权限，转到宿主 Activity 申请并补启 Web 服务。
+     */
+    fun createWebServiceLocalNetworkIntent(context: Context): Intent =
+        createLauncherIntent(context).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(EXTRA_WEB_SERVICE_LOCAL_NETWORK, true)
+        }
 
     fun createSourceLoginIntent(
         context: Context,

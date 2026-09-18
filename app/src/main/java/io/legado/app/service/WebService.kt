@@ -1,13 +1,17 @@
 package io.legado.app.service
 
 // ——————【新增引用】——————
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseService
 import io.legado.app.constant.AppConst
@@ -15,15 +19,14 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
-import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.printOnDebug
-import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.servicePendingIntent
 import io.legado.app.utils.startForegroundServiceCompat
@@ -31,21 +34,38 @@ import io.legado.app.utils.startService
 import io.legado.app.utils.stopService
 import io.legado.app.utils.toastOnUi
 import io.legado.app.web.KtorServer
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import splitties.init.appCtx
 import splitties.systemservices.powerManager
 import splitties.systemservices.wifiManager
-import java.io.IOException
 
 class WebService : BaseService() {
 
     private val otherSettingsGateway by inject<OtherSettingsGateway>()
 
     companion object {
+        /**
+         * Android 17 (API 37) 起本地网络默认屏蔽（入站连接同样受限），
+         * SDK 尚未提供对应的 Build.VERSION_CODES 常量，这里用字面量。
+         */
+        private const val LOCAL_NETWORK_PERMISSION_SDK_INT = 37
+
         var isRun = false
         var hostAddress = ""
+
+        private val isLocalNetworkPermissionRequired: Boolean
+            get() = Build.VERSION.SDK_INT >= LOCAL_NETWORK_PERMISSION_SDK_INT
+
+        /**
+         * 未授予时系统会静默丢弃局域网入站连接，Web 服务在其它设备上不可达。
+         * 需要本地网络访问前必须先检查；低于 API 37 的设备隐式授予，无需申请。
+         */
+        fun hasLocalNetworkPermission(context: Context): Boolean =
+            !isLocalNetworkPermissionRequired || ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_LOCAL_NETWORK
+            ) == PackageManager.PERMISSION_GRANTED
 
         fun start(context: Context) {
             context.startService<WebService>()
