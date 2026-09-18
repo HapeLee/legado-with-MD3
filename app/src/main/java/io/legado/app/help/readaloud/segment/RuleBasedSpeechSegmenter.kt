@@ -1,6 +1,7 @@
 package io.legado.app.help.readaloud.segment
 
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
+import io.legado.app.domain.model.readaloud.ContentSplitPolicy
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.readaloud.SpeechSegmentDraft
 
@@ -9,10 +10,13 @@ import io.legado.app.domain.model.readaloud.SpeechSegmentDraft
  *
  * Every non-empty input paragraph is fully covered by ordered, non-overlapping output ranges.
  * Character identity resolution is intentionally left to a later stage.
+ *
+ * 输入段落已经是「内容划分方式」切好的朗读单元；[ContentSplitPolicy.allowRoleSplits] 为 false 时
+ * （整段/整页划分）不再在单元内按引号与冒号拆出角色片段，保证一个单元就是一个播放片段。
  */
 object RuleBasedSpeechSegmenter {
 
-    const val VERSION = "rule-segmenter-v2-emotion"
+    const val VERSION = "rule-segmenter-v3-content-split"
 
     private val quotePairs = mapOf(
         '“' to '”',
@@ -28,8 +32,25 @@ object RuleBasedSpeechSegmenter {
         "(?:说|说道|问|问道|答|答道|喊|喊道|叫|叫道|喝道|笑道|低声道|沉声道|怒道|开口道)$"
     )
 
-    fun segment(paragraphs: List<CanonicalSpeechParagraph>): List<SpeechSegmentDraft> {
+    fun segment(paragraphs: List<CanonicalSpeechParagraph>): List<SpeechSegmentDraft> =
+        segment(paragraphs, ContentSplitPolicy.SentenceLevel)
+
+    fun segment(
+        paragraphs: List<CanonicalSpeechParagraph>,
+        policy: ContentSplitPolicy?,
+    ): List<SpeechSegmentDraft> {
         if (paragraphs.isEmpty()) return emptyList()
+        if (policy != null && !policy.allowRoleSplits) {
+            return paragraphs.mapNotNull { paragraph ->
+                if (paragraph.text.isEmpty()) null
+                else paragraph.segment(
+                    0,
+                    paragraph.text.length,
+                    SpeechRoleType.Narrator,
+                    0.95f,
+                )
+            }
+        }
         val result = mutableListOf<SpeechSegmentDraft>()
         var openQuote: OpenQuote? = null
 

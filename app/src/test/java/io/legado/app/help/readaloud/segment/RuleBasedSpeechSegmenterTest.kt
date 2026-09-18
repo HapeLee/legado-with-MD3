@@ -1,9 +1,11 @@
 package io.legado.app.help.readaloud.segment
 
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
-import io.legado.app.domain.model.readaloud.SpeechRoleType
+import io.legado.app.domain.model.readaloud.ContentSplitPolicies
 import io.legado.app.domain.model.readaloud.SpeechEmotion
+import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.readaloud.SpeechSegmentDraft
+import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -123,6 +125,26 @@ class RuleBasedSpeechSegmenterTest {
 
         assertEquals(listOf(SpeechRoleType.Narrator), result.map { it.roleType })
         assertCoverage(listOf(paragraph), result)
+    }
+
+    @Test
+    fun `paragraph policy keeps a paragraph as one untouched unit`() {
+        val paragraphs = listOf(
+            paragraph(0, "张三停下脚步。“你终于来了！”他看向门口。"),
+            paragraph(1, "李四说道：我先走了。", 20),
+        )
+
+        val result = RuleBasedSpeechSegmenter.segment(
+            paragraphs,
+            policy = ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Paragraph),
+        )
+
+        assertEquals(
+            listOf(SpeechRoleType.Narrator, SpeechRoleType.Narrator),
+            result.map { it.roleType })
+        assertEquals(paragraphs.map { it.text }, result.map { it.text })
+        assertEquals(paragraphs.map { it.chapterPosition }, result.map { it.chapterPosition })
+        assertCoverage(paragraphs, result)
     }
 
     private fun paragraph(index: Int, text: String, chapterPosition: Int = 0) =

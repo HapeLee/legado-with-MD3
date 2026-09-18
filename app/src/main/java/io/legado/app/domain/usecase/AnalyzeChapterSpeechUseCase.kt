@@ -5,6 +5,7 @@ import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
 import io.legado.app.domain.model.readaloud.ChapterSpeechAnalysis
 import io.legado.app.domain.model.readaloud.ChapterSpeechAnalysisResult
 import io.legado.app.domain.model.readaloud.ChapterSpeechSegment
+import io.legado.app.domain.model.readaloud.ContentSplitPolicy
 import io.legado.app.domain.model.readaloud.SpeechAnalysisStatus
 import io.legado.app.domain.model.readaloud.SpeechIdentity
 import io.legado.app.domain.model.readaloud.SpeechRoleType
@@ -19,6 +20,7 @@ class AnalyzeChapterSpeechUseCase(
         chapterIndex: Int,
         paragraphs: List<CanonicalSpeechParagraph>,
         resolverVersion: String = RuleBasedSpeechSegmenter.VERSION,
+        policy: ContentSplitPolicy,
         now: Long = System.currentTimeMillis(),
     ): ChapterSpeechAnalysisResult {
         val contentHash = SpeechIdentity.chapterContentHash(paragraphs)
@@ -45,7 +47,7 @@ class AnalyzeChapterSpeechUseCase(
             contentHash = contentHash,
             resolverVersion = resolverVersion,
         )
-        val drafts = RuleBasedSpeechSegmenter.segment(paragraphs)
+        val drafts = RuleBasedSpeechSegmenter.segment(paragraphs, policy)
         val segments = drafts.map { draft ->
             ChapterSpeechSegment(
                 id = SpeechIdentity.segmentId(

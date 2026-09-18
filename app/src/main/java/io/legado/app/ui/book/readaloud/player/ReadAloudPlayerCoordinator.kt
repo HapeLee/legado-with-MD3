@@ -7,7 +7,9 @@ import io.legado.app.constant.EventBus
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.PlaybackTimer
+import io.legado.app.domain.model.readaloud.ContentSplitPolicies
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
+import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
@@ -132,12 +134,19 @@ class ReadAloudPlayerCoordinator(
     private fun snapshotBook(): BookState {
         val book = ReadBook.book
         val input = ReadBook.readerChapterInputWindow.current
+        val settings = readAloudSettingsGateway.currentSettings
         val chapter = input?.let {
             ReaderReadAloudChapter.create(
                 chapterIndex = it.chapter.index,
                 title = it.displayTitle,
                 semanticContent = it.source.semanticContent,
                 pageStarts = ReadBook.readerPagination(it.chapter.index)?.pageStarts.orEmpty(),
+                // 与朗读服务同口径：「默认」在多角色关闭时落到整段，否则听书页展示的
+                // 文本行会与服务实际播放的单元粒度不一致。
+                contentSplitMode = ContentSplitPolicies.resolve(
+                    mode = ReadAloudContentSplitMode.fromStorage(settings.contentSplitMode),
+                    useMultiSpeaker = settings.useMultiSpeaker,
+                ),
             )
         }
         return BookState(

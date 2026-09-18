@@ -2,6 +2,7 @@ package io.legado.app.data.repository
 
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -100,6 +101,10 @@ private fun readAloudMappingSamples(): List<ReadAloudSettings> {
         base.copy(showReadAloudCapsule = false),
         base.copy(mediaButtonPerNext = true),
         base.copy(readAloudByPage = true),
+        base.copy(
+            contentSplitMode = ReadAloudContentSplitMode.Symbols.storageValue,
+            contentSplitSymbols = setOf("，", "。"),
+        ),
         base.copy(androidMediaControlEnabled = true),
         base.copy(systemMediaControlCompatibilityChange = false),
         base.copy(streamReadAloudAudio = true),
@@ -124,6 +129,8 @@ private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     CAPSULE_OFFSET_Y to capsuleOffsetY,
     MEDIA_BUTTON_PER_NEXT to mediaButtonPerNext,
     PreferKey.readAloudByPage to readAloudByPage,
+    PreferKey.readAloudContentSplitMode to contentSplitMode,
+    PreferKey.readAloudContentSplitSymbols to contentSplitSymbols,
     PreferKey.readAloudAndroidMediaControl to androidMediaControlEnabled,
     PreferKey.systemMediaControlCompatibilityChange to systemMediaControlCompatibilityChange,
     PreferKey.streamReadAloudAudio to streamReadAloudAudio,

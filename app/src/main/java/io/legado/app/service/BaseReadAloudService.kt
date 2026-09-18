@@ -39,6 +39,8 @@ import io.legado.app.constant.Status
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
+import io.legado.app.domain.model.readaloud.ContentSplitPolicies
+import io.legado.app.domain.model.readaloud.ContentSplitPolicy
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackInfo
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
@@ -46,6 +48,7 @@ import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
 import io.legado.app.domain.model.readaloud.resolveReadAloudStartPosition
+import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.usecase.PrepareChapterSpeechPlanUseCase
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
 import io.legado.app.help.MediaHelp
@@ -235,8 +238,6 @@ abstract class BaseReadAloudService : BaseService(),
     var pageChanged = false
     private var toLast = false
     var paragraphStartPos = 0
-    var readAloudByPage = false
-        private set
 
     /** 当前朗读段在章节语义文本中的绝对起始位置；页内切段不引入换行符，进度必须以它为准 */
     protected fun paragraphChapterPositionAt(index: Int): Int? =
@@ -396,12 +397,15 @@ abstract class BaseReadAloudService : BaseService(),
                 AppLog.put("启动朗读失败：章节分页未完成 chapterIndex=${input.chapter.index}")
                 return@execute
             }
+            val contentSplitMode = resolveContentSplitMode()
             val preparedChapter = ReaderReadAloudChapter.create(
                 chapterIndex = input.chapter.index,
                 title = input.displayTitle,
                 semanticContent = input.source.semanticContent,
                 pageStarts = pagination.pageStarts,
+                contentSplitMode = contentSplitMode,
             )
+            val splitPolicy = contentSplitPolicy(contentSplitMode)
             val start = resolveReadAloudStartPosition(
                 requestedPageIndex = requestedPageIndex,
                 requestedOffsetInPage = requestedStartPos,
@@ -411,10 +415,14 @@ abstract class BaseReadAloudService : BaseService(),
             )
             val pageIndex = start.pageIndex
             val startPos = start.offsetInPage
-            val preparedReadAloudByPage = ReadConfig.readAloudByPage
+            val preparedReadAloudByPage =
+                contentSplitMode == ReadAloudContentSplitMode.Page
             var preparedReadAloudNumber = preparedChapter.pageStart(pageIndex) + startPos
             val startsAtChapterBeginning = preparedReadAloudNumber == 0
-            val preparedParagraphs = preparedChapter.paragraphs(preparedReadAloudByPage)
+            val preparedParagraphs = preparedChapter.paragraphs(
+                splitByPage = preparedReadAloudByPage,
+                policy = splitPolicy,
+            )
             var preparedContentList = preparedParagraphs
                 .map { it.text.replace(Regex("[袮祢꧁\uFFFC]"), " ") }
             var preparedContentChapterPositions: List<Int?> =
@@ -422,7 +430,11 @@ abstract class BaseReadAloudService : BaseService(),
             val preparedSpeechPlan = buildSpeechPlan(
                 bookUrl = ReadBook.book?.bookUrl.orEmpty(),
                 chapterIndex = ReadBook.durChapterIndex,
-                paragraphs = preparedChapter.canonicalSpeechParagraphs(),
+                paragraphs = preparedChapter.canonicalSpeechParagraphs(
+                    splitByPage = preparedReadAloudByPage,
+                    policy = splitPolicy,
+                ),
+                splitPolicy = splitPolicy,
             )
             if (generation != prepareReadAloudGeneration) return@execute
             var preparedPlaybackQueue = runCatching {
@@ -435,7 +447,8 @@ abstract class BaseReadAloudService : BaseService(),
             val usePreparedPlaybackQueue = useSpeechPlaybackQueue && !preparedPlaybackQueue.isEmpty
             var preparedNowSpeak = preparedChapter.paragraphIndexAtOrAfter(
                 preparedReadAloudNumber + 1,
-                preparedReadAloudByPage,
+                splitByPage = preparedReadAloudByPage,
+                policy = splitPolicy,
             )
             if (!usePreparedPlaybackQueue && preparedNowSpeak !in preparedContentList.indices) {
                 AppLog.put(
@@ -492,7 +505,6 @@ abstract class BaseReadAloudService : BaseService(),
             if (generation != prepareReadAloudGeneration) return@execute
             this@BaseReadAloudService.pageIndex = pageIndex
             readerReadAloudChapter = preparedChapter
-            readAloudByPage = preparedReadAloudByPage
             contentList = preparedContentList
             contentChapterPositions = preparedContentChapterPositions
             speechPlan = preparedSpeechPlan
@@ -519,6 +531,7 @@ abstract class BaseReadAloudService : BaseService(),
         bookUrl: String,
         chapterIndex: Int,
         paragraphs: List<CanonicalSpeechParagraph>,
+        splitPolicy: ContentSplitPolicy,
     ): List<SpeechPlanItem> {
         if (bookUrl.isEmpty() || !ReadConfig.useMultiSpeaker) return emptyList()
         val prepareSpeechPlan: PrepareChapterSpeechPlanUseCase =
@@ -534,11 +547,37 @@ abstract class BaseReadAloudService : BaseService(),
                     AiReasoningLevel.OFF,
                 ),
                 useMultiSpeaker = ReadConfig.useMultiSpeaker,
+                policy = splitPolicy,
             )
         }.onFailure {
             AppLog.put("生成多角色朗读计划失败，使用原朗读方式\n${it.localizedMessage}", it)
         }.getOrDefault(emptyList())
     }
+
+    /**
+     * 把用户选择的划分方式解析成实际生效的划分方式。
+     *
+     * 章节划分与播放单元划分都必须经这里解析：`ReaderReadAloudChapter.create` 的切分在
+     * 建章节时完成，若它拿到未解析的「默认」而 `paragraphs(policy)` 拿到解析后的整段，
+     * 两侧粒度就会不一致（多角色开关变化后尤其明显）。
+     */
+    protected fun resolveContentSplitMode(
+        mode: ReadAloudContentSplitMode = ReadAloudContentSplitMode.fromStorage(
+            ReadConfig.contentSplitMode
+        ),
+    ): ReadAloudContentSplitMode =
+        ContentSplitPolicies.resolve(mode, ReadConfig.useMultiSpeaker)
+
+    /** 当前生效的内容划分策略，供朗读服务与预合成共用。 */
+    protected fun contentSplitPolicy(
+        mode: ReadAloudContentSplitMode = ReadAloudContentSplitMode.fromStorage(
+            ReadConfig.contentSplitMode
+        ),
+    ): ContentSplitPolicy =
+        ContentSplitPolicies.forMode(
+            mode = resolveContentSplitMode(mode),
+            storedSymbols = ReadConfig.contentSplitSymbols,
+        )
 
     @SuppressLint("WakelockTimeout")
     open fun play() {
@@ -669,6 +708,8 @@ abstract class BaseReadAloudService : BaseService(),
             title = input.displayTitle,
             semanticContent = input.source.semanticContent,
             pageStarts = pagination.pageStarts,
+            contentSplitMode = readerReadAloudChapter?.contentSplitMode
+                ?: resolveContentSplitMode(),
         )
         val latestPageIndex = latestChapter.pageIndexAt((currentProgress - 1).coerceAtLeast(0))
         readerReadAloudChapter = latestChapter

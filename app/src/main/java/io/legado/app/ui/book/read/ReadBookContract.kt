@@ -17,6 +17,7 @@ import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.domain.model.readaloud.SpeechRoleType
+import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.model.settings.ReadStyleItem
 import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.model.translation.TranslationChapterStatus
@@ -24,8 +25,10 @@ import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlin.uuid.Uuid
 
 @Stable
@@ -283,6 +286,10 @@ data class ReadBookUiState(
     val readAloudCapsuleOffsetY: Float = 0f,
     val readAloudMediaButtonPerNext: Boolean = false,
     val readAloudByPage: Boolean = false,
+    /** 内容划分方式（[ReadAloudContentSplitMode.storageValue]）。 */
+    val readAloudContentSplitMode: String = ReadAloudContentSplitMode.Default.storageValue,
+    /** 「按符号」划分方式选中的标点，空集合表示使用默认句末标点。 */
+    val readAloudContentSplitSymbols: ImmutableSet<String> = persistentSetOf(),
     val readAloudSystemMediaCompat: Boolean = true,
     val readAloudAndroidMediaControl: Boolean = false,
     val readAloudStreamAudio: Boolean = false,
@@ -787,7 +794,12 @@ sealed interface ReadBookIntent {
     data object ResetReadAloudCapsulePosition : ReadBookIntent
     data class SetReadAloudCapsulePosition(val x: Float, val y: Float) : ReadBookIntent
     data class SetReadAloudMediaButtonPerNext(val value: Boolean) : ReadBookIntent
-    data class SetReadAloudByPage(val value: Boolean) : ReadBookIntent
+
+    /**
+     * 内容划分方式与配套标点集合，取值是
+     * [io.legado.app.domain.model.readaloud.ReadAloudContentSplitSetting.encode] 的编码。
+     */
+    data class SetReadAloudContentSplitMode(val value: String) : ReadBookIntent
     data class SetReadAloudSystemMediaCompat(val value: Boolean) : ReadBookIntent
     data class SetReadAloudAndroidMediaControl(val value: Boolean) : ReadBookIntent
     data class SetReadAloudStreamAudio(val value: Boolean) : ReadBookIntent

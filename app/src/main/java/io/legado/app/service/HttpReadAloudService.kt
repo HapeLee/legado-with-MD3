@@ -44,6 +44,7 @@ import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.readaloud.SpeechVoiceRouter
 import io.legado.app.domain.model.readaloud.SystemTtsVoiceConfig
 import io.legado.app.domain.model.settings.OtherSettings
+import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.exception.NoStackTraceException
@@ -405,16 +406,24 @@ class HttpReadAloudService : BaseReadAloudService(),
             adaptSpecialStyle = readSettings.adaptSpecialStyle,
             htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
         )
+        // 预合成必须与实时朗读用同一种划分方式解析，否则预合成好的音频与实际朗读单元对不上
+        val contentSplitMode = resolveContentSplitMode(
+            ReadAloudContentSplitMode.fromStorage(readAloudSettings.contentSplitMode)
+        )
         val readAloudChapter = ReaderReadAloudChapter.create(
             chapterIndex = chapter.index,
             title = displayTitle,
             semanticContent = source.semanticContent,
             pageStarts = ReadBook.readerPagination(chapter.index)?.pageStarts.orEmpty(),
+            contentSplitMode = contentSplitMode,
         )
+        val splitPolicy = contentSplitPolicy(contentSplitMode)
+        val splitByPage = contentSplitMode == ReadAloudContentSplitMode.Page
         val plan = buildSpeechPlan(
             bookUrl = book.bookUrl,
             chapterIndex = chapter.index,
-            paragraphs = readAloudChapter.canonicalSpeechParagraphs(),
+            paragraphs = readAloudChapter.canonicalSpeechParagraphs(splitByPage, splitPolicy),
+            splitPolicy = splitPolicy,
         )
         val queue = runCatching { ReadAloudPlaybackQueue.from(plan).withChapterTitle(displayTitle) }
             .getOrDefault(ReadAloudPlaybackQueue.Empty)
@@ -422,7 +431,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             queue.cues.map { it.text }
         } else {
             listOf(displayTitle.trim()).filter { it.isNotEmpty() } +
-                    readAloudChapter.paragraphs(readAloudSettings.readAloudByPage)
+                    readAloudChapter.paragraphs(splitByPage, splitPolicy)
                         .map { it.text.replace(Regex("[袮祢꧁\uFFFC]"), " ") }
         }
         return PreDownloadChapter(displayTitle, queue, contentList)

@@ -4,12 +4,18 @@ import io.legado.app.domain.gateway.ChapterSpeechGateway
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
 import io.legado.app.domain.model.readaloud.ChapterSpeechAnalysis
 import io.legado.app.domain.model.readaloud.ChapterSpeechSegment
+import io.legado.app.domain.model.readaloud.ContentSplitPolicies
 import io.legado.app.domain.model.readaloud.SpeechAnalysisStatus
+import io.legado.app.domain.model.readaloud.SpeechRoleType
+import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+
+private val roleSplitPolicy =
+    ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Default)
 
 class AnalyzeChapterSpeechUseCaseTest {
 
@@ -21,8 +27,8 @@ class AnalyzeChapterSpeechUseCaseTest {
             CanonicalSpeechParagraph(0, "旁白。“你好！”", 0),
         )
 
-        val first = useCase("book", 3, paragraphs, now = 100)
-        val second = useCase("book", 3, paragraphs, now = 200)
+        val first = useCase("book", 3, paragraphs, policy = roleSplitPolicy, now = 100)
+        val second = useCase("book", 3, paragraphs, policy = roleSplitPolicy, now = 200)
 
         assertFalse(first.fromCache)
         assertTrue(second.fromCache)
@@ -40,13 +46,32 @@ class AnalyzeChapterSpeechUseCaseTest {
         val firstParagraphs = listOf(CanonicalSpeechParagraph(0, "只有旁白。", 0))
         val secondParagraphs = listOf(CanonicalSpeechParagraph(0, "旁白改变了。", 0))
 
-        val first = useCase("book", 0, firstParagraphs, now = 100)
-        val second = useCase("book", 0, secondParagraphs, now = 200)
+        val first = useCase("book", 0, firstParagraphs, policy = roleSplitPolicy, now = 100)
+        val second = useCase("book", 0, secondParagraphs, policy = roleSplitPolicy, now = 200)
 
         assertFalse(second.fromCache)
         assertFalse(first.analysis.id == second.analysis.id)
         assertFalse(first.segments.map { it.id } == second.segments.map { it.id })
         assertEquals(2, gateway.saveCount)
+    }
+
+    @Test
+    fun `paragraph policy keeps a whole paragraph as a single narrator segment`() = runBlocking {
+        val gateway = MemoryChapterSpeechGateway()
+        val useCase = AnalyzeChapterSpeechUseCase(gateway)
+        val paragraphs = listOf(CanonicalSpeechParagraph(0, "旁白。“你好！”", 0))
+
+        val result = useCase(
+            "book",
+            0,
+            paragraphs,
+            policy = ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Paragraph),
+            now = 100,
+        )
+
+        assertEquals(1, result.segments.size)
+        assertEquals(SpeechRoleType.Narrator, result.segments.single().roleType)
+        assertEquals(paragraphs.single().text, result.segments.single().text)
     }
 }
 

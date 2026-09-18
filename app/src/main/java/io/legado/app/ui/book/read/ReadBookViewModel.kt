@@ -1337,7 +1337,8 @@ class ReadBookViewModel(
                 readAloudDelegate.setCapsulePosition(intent.x, intent.y)
             is ReadBookIntent.SetReadAloudMediaButtonPerNext ->
                 readAloudDelegate.setMediaButtonPerNext(intent.value)
-            is ReadBookIntent.SetReadAloudByPage -> readAloudDelegate.setByPage(intent.value)
+            is ReadBookIntent.SetReadAloudContentSplitMode ->
+                readAloudDelegate.setContentSplitMode(intent.value)
             is ReadBookIntent.SetReadAloudSystemMediaCompat ->
                 readAloudDelegate.setSystemMediaCompat(intent.value)
             is ReadBookIntent.SetReadAloudAndroidMediaControl ->

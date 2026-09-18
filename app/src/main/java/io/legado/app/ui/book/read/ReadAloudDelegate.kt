@@ -12,7 +12,9 @@ import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.PlaybackTimer
+import io.legado.app.domain.model.readaloud.ReadAloudContentSplitSetting
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
+import io.legado.app.domain.model.readaloud.ReadAloudSplitSymbol
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.VoiceCatalogEntry
 import io.legado.app.domain.model.settings.ReadAloudSettings
@@ -23,6 +25,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.utils.TTSCacheUtils
 import io.legado.app.utils.postEvent
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.first
@@ -87,6 +90,8 @@ class ReadAloudDelegate(
                         readAloudCapsuleOffsetY = prefs.capsuleOffsetY,
                         readAloudMediaButtonPerNext = prefs.mediaButtonPerNext,
                         readAloudByPage = prefs.readAloudByPage,
+                        readAloudContentSplitMode = prefs.contentSplitMode,
+                        readAloudContentSplitSymbols = prefs.contentSplitSymbols.toImmutableSet(),
                         readAloudSystemMediaCompat =
                             prefs.systemMediaControlCompatibilityChange,
                         readAloudAndroidMediaControl = prefs.androidMediaControlEnabled,
@@ -362,6 +367,29 @@ class ReadAloudDelegate(
     fun setByPage(value: Boolean) {
         updateSettings { it.copy(readAloudByPage = value) }
         if (value) postEvent(EventBus.MEDIA_BUTTON, false)
+    }
+
+    /**
+     * 应用内容划分方式（含标点集合）。[value] 是
+     * [ReadAloudContentSplitSetting.encode] 的 `方式|标点` 编码。
+     *
+     * 一个意图同时承载两者：划分方式决定是否展示标点多选，两者始终一起提交，
+     * 拆成两套意图只会让 ReadBookViewModel 多长一条 when 分支。
+     */
+    fun setContentSplitMode(value: String) {
+        val (mode, symbols) = ReadAloudContentSplitSetting.decode(value)
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            readAloudSettingsRepository.setContentSplit(
+                mode = mode,
+                symbols = ReadAloudSplitSymbol.storageValues(symbols),
+            )
+        }
+        host.updateState {
+            it.copy(
+                readAloudContentSplitMode = mode.storageValue,
+                readAloudContentSplitSymbols = symbols.map(Char::toString).toImmutableSet(),
+            )
+        }
     }
 
     fun setStreamAudio(value: Boolean) {

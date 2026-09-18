@@ -99,11 +99,39 @@ OpenAI Speech、Gemini TTS、MiMo、Azure Speech、阿里云百炼、Amazon Poll
 
 ```text
 CanonicalChapter（与分页无关）
+  -> ContentSplitMode（内容划分方式，决定朗读单元粒度）
   -> SpeechSegmenter（纯规则切分）
   -> SpeakerResolver（本地匹配 + 可选 AI 增量解析）
   -> SpeechPlanBuilder（关联人物与声音绑定）
   -> SpeechPlaybackCoordinator（合成、缓存、排序、播放、降级）
 ```
+
+### 内容划分方式
+
+朗读单元粒度是用户可见设置项（`ReadAloudContentSplitMode`），因为它同时决定
+「哪里会停顿」和「多角色能切多细」：
+
+| 取值          | 切分行为                         | 段内角色切分 |
+|-------------|------------------------------|--------|
+| `default`   | 多角色开启 → 句末标点（`。！？…`）；关闭 → 整段 | 跟随左列   |
+| `paragraph` | 整段（`\n` 分段）                  | 关闭     |
+| `page`      | 整页（分页边界，等同原「按页朗读」）           | 关闭     |
+| `symbols`   | 用户多选的标点，标点保留在单元末尾            | 开启     |
+
+不变量：
+
+- **关闭多角色朗读时不按标点切分**。`default` 在 `ReadConfig.useMultiSpeaker == false`
+  时解析为整段，legacy `contentList` 与多角色播放队列都不会在段内产生停顿。
+- **一段正文 = 一个单元**（`paragraph` / `page`）：规则分段器不再按引号与冒号切出
+  角色片段，否则「整段」会在段内重新引入停顿——这正是 issue #2261 里
+  「段内分两段 / 无法上句」的成因。
+- **单元位置只用绝对字符位置**。`ReaderReadAloudChapter.paragraphs(splitByPage, policy)`
+  是唯一入口，段内偏移一律由 `chapterPosition` 反查，禁止累加推算（按页切分不引入
+  换行符，累加会漂移）。
+- **划分方式参与缓存键**。`ContentSplitPolicy.identifier` 进入
+  `ruleResolverVersion`，否则切换划分方式会命中按旧粒度切好的分析缓存。
+- 旧「按页朗读」布尔值通过一次性迁移标记并入 `page`，标记与划分方式同批落盘，
+  避免旧值反过来覆盖用户显式选择。
 
 关键原则：角色识别结果与声音渲染配置分开缓存。修改人物姓名可能需要重新解析，修改人物声音只需要重新合成受影响的音频。
 
@@ -190,7 +218,9 @@ data class SpeechPlanItem(
 
 ### 3.4 规则与 AI 协作
 
-规则分段器必须是纯 Kotlin、确定性、可单测的组件。它在规范化章节段落上工作，不依赖分页。输出必须覆盖全文且区间不重叠。
+规则分段器必须是纯 Kotlin、确定性、可单测的组件。它在按「内容划分方式」切好的朗读单元上工作，
+不依赖分页。输出必须覆盖全文且区间不重叠。当划分方式是整段/整页时，分段器按
+`ContentSplitPolicy.allowRoleSplits == false` 直接返回整单元，不再做段内角色切分。
 
 AI 请求只发送：
 
@@ -294,12 +324,14 @@ voiceId + voiceRevision + emotionTag + speechRate + synthesizerVersion
 ## 5. 测试清单
 
 - 分段：中英文引号、跨段引号、嵌套引号、冒号对白、引用/书名号、心理活动、空段和图片标记；
+- 划分方式：`default` 在多角色开/关两种取值下分别落到句末标点与整段；`paragraph` / `page`
+  不产生任何段内片段；`symbols` 的多选标点、连续标点合并、空选择回退、标点集合参与缓存键；
 - 区间：所有输出在原文范围内、无重叠、无丢字，合并后等于规范化输入；
 - 人物：本名、别名、同姓短名、未知性别、角色删除/禁用、用户锁定；
 - 缓存：改声音不重跑角色识别，改人物别名只使相关章节解析过期，改语速只使音频缓存过期；
 - 播放：系统/HTTP 混合、单引擎失败、超时、暂停恢复、跳段、切章、进程重建、来电与音频焦点；
 - MVI：所有用户操作经 Intent，导航/Toast 经 Effect，Screen 不访问数据库或 Service；
-- 回归：关闭多角色时行为与现有单发言人朗读一致。
+- 回归：关闭多角色时行为与现有单发言人朗读一致；**关闭多角色时不得出现任何标点级切分**。
 
 ## 6. 第一批建议文件
 

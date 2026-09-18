@@ -17,6 +17,7 @@ import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
 import io.legado.app.domain.model.readaloud.ChapterSpeechAnalysisResult
 import io.legado.app.domain.model.readaloud.ChapterSpeechSegment
+import io.legado.app.domain.model.readaloud.ContentSplitPolicy
 import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
 import io.legado.app.domain.model.readaloud.SpeechAnalysisStatus
 import io.legado.app.domain.model.readaloud.SpeechEmotion
@@ -25,7 +26,6 @@ import io.legado.app.domain.model.readaloud.SpeechResolutionSource
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.help.readaloud.segment.AiSpeechAtom
 import io.legado.app.help.readaloud.segment.AiSpeechAtomizer
-import io.legado.app.help.readaloud.segment.RuleBasedSpeechSegmenter
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 
@@ -36,8 +36,12 @@ class RefineSpeechWithAiUseCase(
     private val chapterSpeechGateway: ChapterSpeechGateway,
 ) {
 
-    suspend fun resolverVersion(bookUrl: String, mode: SpeechAnalysisMode): String {
-        if (mode == SpeechAnalysisMode.Rule) return RuleBasedSpeechSegmenter.VERSION
+    suspend fun resolverVersion(
+        bookUrl: String,
+        mode: SpeechAnalysisMode,
+        policy: ContentSplitPolicy,
+    ): String {
+        if (mode == SpeechAnalysisMode.Rule) return ruleResolverVersion(policy)
         val preset = resolvePreset()
         val profiles = activeProfiles(bookUrl)
         val characterRevision = profiles
@@ -45,7 +49,8 @@ class RefineSpeechWithAiUseCase(
             .joinToString("|") { "${it.id}:${it.updatedAt}" }
         val promptHash = MD5Utils.md5Encode(systemPrompt(preset, mode))
         return listOf(
-            RuleBasedSpeechSegmenter.VERSION,
+            // 与纯规则分段共用同一前缀，AI 结果才不会被误判成规则模式
+            ruleResolverVersion(policy),
             VERSION,
             mode.storageValue,
             preset.model.id,
@@ -59,6 +64,7 @@ class RefineSpeechWithAiUseCase(
         paragraphs: List<CanonicalSpeechParagraph>,
         mode: SpeechAnalysisMode,
         reasoningLevel: AiReasoningLevel = AiReasoningLevel.OFF,
+        policy: ContentSplitPolicy = ContentSplitPolicy.SentenceLevel,
         now: Long = System.currentTimeMillis(),
     ): ChapterSpeechAnalysisResult {
         if (mode == SpeechAnalysisMode.Rule) return analysisResult
@@ -79,7 +85,10 @@ class RefineSpeechWithAiUseCase(
                 now = now,
             )
             SpeechAnalysisMode.AiUnderstanding -> {
-                if (analysisResult.segments.any(ChapterSpeechSegment::userLocked)) {
+                // 整段/整页划分下不能走原子理解：`AiSpeechAtomizer` 会按句末标点把一段重新
+                // 拆成多个片段，让用户显式选择的「一段 = 一个播放单元」失效。此时只让 AI
+                // 补全说话人与情绪，边界仍由规则分段器提供的整单元保持。
+                if (!policy.allowRoleSplits || analysisResult.segments.any(ChapterSpeechSegment::userLocked)) {
                     completeRuleSegments(analysisResult, profiles, preset, reasoningLevel, now)
                 } else {
                     understandAtoms(analysisResult, paragraphs, profiles, preset, reasoningLevel, now)

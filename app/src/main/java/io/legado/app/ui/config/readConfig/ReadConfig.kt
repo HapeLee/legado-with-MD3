@@ -93,7 +93,8 @@ object ReadConfig {
     val pauseReadAloudWhilePhoneCalls get() = aloud.pauseReadAloudWhilePhoneCalls
     val readAloudWakeLock get() = aloud.readAloudWakeLock
     val mediaButtonPerNext get() = aloud.mediaButtonPerNext
-    val readAloudByPage get() = aloud.readAloudByPage
+    val contentSplitMode get() = aloud.contentSplitMode
+    val contentSplitSymbols get() = aloud.contentSplitSymbols
     val androidMediaControlEnabled get() = aloud.androidMediaControlEnabled
     val systemMediaControlCompatibilityChange get() = aloud.systemMediaControlCompatibilityChange
     val streamReadAloudAudio get() = aloud.streamReadAloudAudio
