@@ -377,4 +377,139 @@ class ReaderChapterBlockMeasurerTest {
         assertEquals(10f, items[0].style.fontSizePx, 0f)
         assertEquals(10f, items[1].style.fontSizePx, 0f)
     }
+
+    @Test
+    fun excludeActionImagesDropsInlineActionImagesAndKeepsPlainImages() = runBlocking {
+        var dimensionResolves = 0
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Paragraph(listOf(
+                ReaderChapterInlineSource.Text("甲", 0),
+                ReaderChapterInlineSource.Image("badge.png,{\"click\":\"showCmt(1)\"}", 1),
+                ReaderChapterInlineSource.Text("乙", 2),
+                ReaderChapterInlineSource.Image("plain.png", 3),
+            ), 0),
+        ), 5)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = {
+                dimensionResolves++; ReaderImageDimensions(12f, 12f)
+            },
+            imageOptionsResolver = { src ->
+                if ("\"click\"" in src) ReaderImageOptions(action = "showCmt(1)") else null
+            },
+        ).measure(source, style.copy(excludeActionImages = true)) as ReaderChapterMeasureResult.Success
+
+        val items = (result.blocks.single() as ReaderMeasuredBlock.InlineParagraph).items
+        val texts = items.filterIsInstance<ReaderMeasuredInlineItem.Text>()
+        assertEquals(listOf("甲", "乙"), texts.map { it.value })
+        assertEquals(listOf(0, 2), texts.map { it.chapterPosition })
+        assertEquals(listOf(3), items.filterIsInstance<ReaderMeasuredInlineItem.Image>()
+            .map { it.chapterPosition })
+        assertEquals(1, dimensionResolves)
+    }
+
+    @Test
+    fun excludeActionImagesFlagOffKeepsActionImages() = runBlocking {
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Paragraph(listOf(
+                ReaderChapterInlineSource.Image("badge.png,{\"click\":\"js\"}", 0),
+            ), 0),
+        ), 2)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = { ReaderImageDimensions(12f, 12f) },
+            imageOptionsResolver = { ReaderImageOptions(action = "js") },
+        ).measure(source, style) as ReaderChapterMeasureResult.Success
+        assertEquals(
+            1,
+            (result.blocks.single() as ReaderMeasuredBlock.InlineParagraph)
+                .items.filterIsInstance<ReaderMeasuredInlineItem.Image>().size,
+        )
+    }
+
+    @Test
+    fun excludeActionImagesDropsStandaloneActionImageBlockAndKeepsPositions() = runBlocking {
+        var dimensionResolves = 0
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Image("banner.png,{\"click\":\"js\"}", 0),
+            ReaderChapterSourceBlock.Text("正文", 1),
+        ), 4)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = {
+                dimensionResolves++; ReaderImageDimensions(300f, 300f)
+            },
+            imageOptionsResolver = { ReaderImageOptions(action = "js") },
+        ).measure(source, style.copy(excludeActionImages = true)) as ReaderChapterMeasureResult.Success
+
+        assertTrue(result.blocks.none { it is ReaderMeasuredBlock.Image })
+        val body = result.blocks.filterIsInstance<ReaderMeasuredBlock.InlineParagraph>().single()
+        assertEquals(listOf(1, 2), body.items.map { it.chapterPosition })
+        assertEquals(0, dimensionResolves)
+    }
+
+    @Test
+    fun excludeActionImagesDropsBubbleOnlyParagraphEntirely() = runBlocking {
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Paragraph(listOf(
+                ReaderChapterInlineSource.Image("badge.png,{\"click\":\"js\"}", 0),
+            ), 0),
+        ), 1)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = { ReaderImageDimensions(12f, 12f) },
+            imageOptionsResolver = { ReaderImageOptions(action = "js") },
+        ).measure(source, style.copy(excludeActionImages = true)) as ReaderChapterMeasureResult.Success
+
+        assertTrue(result.blocks.isEmpty())
+    }
+
+    @Test
+    fun excludeActionImagesSuppressesBlankPaddingLeftByDroppedImage() = runBlocking {
+        // 整行图片段自带缩进/空白填充（如「　　<img>」独立成段）：图被剔除后
+        // 残留的纯空白不得再排成一行空行——与「图不存在」的排版等价
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Paragraph(listOf(
+                ReaderChapterInlineSource.Text("　　", 0),
+                ReaderChapterInlineSource.Image("banner.png,{\"click\":\"js\"}", 2),
+            ), 0),
+        ), 3)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = { ReaderImageDimensions(12f, 12f) },
+            imageOptionsResolver = { ReaderImageOptions(action = "js") },
+        ).measure(source, style.copy(excludeActionImages = true)) as ReaderChapterMeasureResult.Success
+
+        assertTrue(result.blocks.isEmpty())
+    }
+
+    @Test
+    fun excludeActionImagesKeepsRealTextInParagraphWithDroppedImage() = runBlocking {
+        // 抑制只针对「全空白 + 被剔除图」的段；同段有正文时正文照常保留
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Paragraph(listOf(
+                ReaderChapterInlineSource.Text("　　", 0),
+                ReaderChapterInlineSource.Image("badge.png,{\"click\":\"js\"}", 2),
+                ReaderChapterInlineSource.Text("正文", 3),
+            ), 0),
+        ), 5)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = { ReaderImageDimensions(12f, 12f) },
+            imageOptionsResolver = { ReaderImageOptions(action = "js") },
+        ).measure(source, style.copy(excludeActionImages = true)) as ReaderChapterMeasureResult.Success
+
+        val paragraphs = result.blocks.filterIsInstance<ReaderMeasuredBlock.InlineParagraph>()
+        assertEquals(1, paragraphs.size)
+        val items = paragraphs.single().items
+        assertTrue(items.none { it is ReaderMeasuredInlineItem.Image })
+        assertEquals("　　正文", items.filterIsInstance<ReaderMeasuredInlineItem.Text>()
+            .joinToString("") { it.value })
+    }
 }

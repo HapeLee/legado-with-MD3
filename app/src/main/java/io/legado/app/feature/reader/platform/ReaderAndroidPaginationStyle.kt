@@ -34,6 +34,13 @@ data class ReaderAndroidPaginationStyle(
     val textBottomJustify: Boolean = false,
     val pageUnderline: ReaderPageUnderline? = null,
     val emphasisUnderlineStyle: ReaderEmphasisUnderline? = null,
+    /**
+     * 带 click 动作脚本的图片（段评气泡）不参与排版：不产出测量项，也不解析图片尺寸。
+     *
+     * 注意：当前尚未接线。`LegacyReaderPaginationStyleFactory.create()` 还没有从阅读设置读取
+     * 该字段，生产路径恒为 `false`，因此默认行为零变化；接线前不要把它当作已生效能力。
+     */
+    val excludeActionImages: Boolean = false,
 ) {
     fun columnCount(widthPx: Int, heightPx: Int): Int =
         columnMode.columnCount(widthPx, heightPx, isTablet, isScroll)
