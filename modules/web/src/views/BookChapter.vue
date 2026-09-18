@@ -186,6 +186,81 @@ const onReachBottom = (entries: IntersectionObserverEntry[]) => {
   }
 }
 
+// 自动翻页（滚动模式，行为对齐App端）
+const autoPagePaused = ref(false)
+let autoPageRaf = 0
+let autoPageLastFrame = 0
+let autoPageResumeTimer: number | undefined
+
+const startAutoPage = () => {
+  if (autoPageRaf || !store.config.autoPage) return
+  // 弹窗打开期间不启动滚动（细节5：目录/设置弹窗打开时暂停）
+  if (popCataVisible.value || readSettingsVisible.value) {
+    autoPagePaused.value = true
+    return
+  }
+  autoPageLastFrame = 0
+  const tick = (now: number) => {
+    if (!store.config.autoPage || autoPagePaused.value) {
+      autoPageRaf = 0
+      return
+    }
+    if (autoPageLastFrame === 0) autoPageLastFrame = now
+    const elapsed = now - autoPageLastFrame
+    autoPageLastFrame = now
+    // 与App端一致：每帧滚动 视口高度 / (速度秒数 × 1000ms) × 本帧毫秒数
+    const duration = store.config.autoPageSpeed * 1000
+    window.scrollBy(0, (window.innerHeight / duration) * elapsed)
+    autoPageRaf = requestAnimationFrame(tick)
+  }
+  autoPageRaf = requestAnimationFrame(tick)
+}
+const stopAutoPage = () => {
+  if (autoPageRaf) cancelAnimationFrame(autoPageRaf)
+  autoPageRaf = 0
+}
+const resumeAutoPage = () => {
+  if (autoPageResumeTimer) {
+    window.clearTimeout(autoPageResumeTimer)
+    autoPageResumeTimer = undefined
+  }
+  if (!store.config.autoPage) return
+  autoPagePaused.value = false
+  startAutoPage()
+}
+/**
+ * 暂停自动翻页
+ * @param idleResumeMs 大于0时在用户停止交互一段时间后自动恢复；0表示保持暂停直到手动恢复
+ */
+const pauseAutoPage = (idleResumeMs = 3000) => {
+  if (autoPageResumeTimer) {
+    window.clearTimeout(autoPageResumeTimer)
+    autoPageResumeTimer = undefined
+  }
+  if (!store.config.autoPage) return
+  autoPagePaused.value = true
+  stopAutoPage()
+  if (idleResumeMs > 0) {
+    autoPageResumeTimer = window.setTimeout(resumeAutoPage, idleResumeMs)
+  }
+}
+// 开关切换
+watch(
+  () => store.config.autoPage,
+  on => (on ? startAutoPage() : stopAutoPage()),
+)
+// 打开目录/设置弹窗时暂停，关闭后恢复
+watch([popCataVisible, readSettingsVisible], ([cata, settings]) => {
+  if (cata || settings) {
+    pauseAutoPage(0)
+  } else {
+    resumeAutoPage()
+  }
+})
+// 用户滚轮/触摸交互时暂停，停止操作一段时间后自动恢复
+const onUserWheel = () => pauseAutoPage()
+const onUserTouch = () => pauseAutoPage()
+
 // 字体
 const fontFamily = computed(() => {
   if (store.config.font >= 0) {
@@ -270,9 +345,11 @@ watch(
 const top = ref()
 const bottom = ref()
 const toTop = () => {
+  pauseAutoPage()
   jump(top.value)
 }
 const toBottom = () => {
+  pauseAutoPage()
   jump(bottom.value)
 }
 
@@ -382,11 +459,17 @@ const onVisibilityChange = () => {
   if (document.visibilityState == 'hidden' && _bookProgress) {
     store.saveBookProgress()
   }
+  if (document.visibilityState === 'hidden') {
+    pauseAutoPage(0)
+  } else {
+    resumeAutoPage()
+  }
 }
 // 定时同步
 
 // 章节切换
 const toNextChapter = () => {
+  pauseAutoPage()
   store.setContentLoading(true)
   const index = chapterIndex.value + 1
   if (typeof catalog.value[index] !== 'undefined') {
@@ -404,6 +487,7 @@ const toNextChapter = () => {
   }
 }
 const toPreChapter = () => {
+  pauseAutoPage()
   store.setContentLoading(true)
   const index = chapterIndex.value - 1
   if (typeof catalog.value[index] !== 'undefined') {
@@ -425,6 +509,9 @@ let canJump = true
 // 监听方向键
 const handleKeyPress = (event: KeyboardEvent) => {
   if (!canJump) return
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    pauseAutoPage()
+  }
   switch (event.key) {
     case 'ArrowLeft':
       event.stopPropagation()
@@ -479,6 +566,9 @@ const ignoreKeyPress = (event: KeyboardEvent) => {
 
 onMounted(async () => {
   await store.loadWebConfig()
+  if (store.config.autoPage) startAutoPage()
+  window.addEventListener('wheel', onUserWheel, { passive: true })
+  window.addEventListener('touchstart', onUserTouch, { passive: true })
   //获取书籍数据
   const bookUrl = sessionStorage.getItem('bookUrl')
   const name = sessionStorage.getItem('bookName')
@@ -531,8 +621,15 @@ onUnmounted(() => {
   window.removeEventListener('keyup', handleKeyPress)
   window.removeEventListener('keydown', ignoreKeyPress)
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('wheel', onUserWheel)
+  window.removeEventListener('touchstart', onUserTouch)
   // 兼容Safari < 14
   document.removeEventListener('visibilitychange', onVisibilityChange)
+  stopAutoPage()
+  if (autoPageResumeTimer) {
+    window.clearTimeout(autoPageResumeTimer)
+    autoPageResumeTimer = undefined
+  }
   readSettingsVisible.value = false
   popCataVisible.value = false
   scrollObserver?.disconnect()

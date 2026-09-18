@@ -18,6 +18,8 @@ const default_config: webReadConfig = {
   infiniteLoading: false,
   customFontName: '',
   jumpDuration: 1000,
+  autoPage: false,
+  autoPageSpeed: 10,
   spacing: {
     paragraph: 1,
     line: 0.8,
