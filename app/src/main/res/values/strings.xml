@@ -771,6 +771,13 @@
     <string name="reading">Read</string>
     <string name="battery_show">%d%%</string>
     <string name="timer_m">%d min</string>
+    <string name="timer_chapters">%d chapters</string>
+    <string name="finish_current_chapter_after_timer">Finish current chapter after timer</string>
+    <string name="finish_current_chapter_after_timer_summary">When the timer expires, continue reading until the current chapter finishes</string>
+    <string name="read_aloud_timer_mode">Timer mode</string>
+    <string name="read_aloud_timer_by_minute">By time</string>
+    <string name="read_aloud_timer_by_chapter">By chapters</string>
+    <string name="read_aloud_timer_chapter_summary">Stop at the end of the chapter once the selected number of chapters is read</string>
     <string name="brightness_auto">Auto-Brightness %s</string>
     <string name="read_aloud_by_page">Speak by pages</string>
     <string name="speak_engine">Speak Engine</string>
@@ -1737,8 +1744,6 @@
     <string name="padding_display_cutouts">Fill Display Cutout</string>
     <string name="read_aloud_android_media_control">Android media controls</string>
     <string name="read_aloud_android_media_control_summary">Replace the default read-aloud notification with Android system media controls when enabled</string>
-    <string name="finish_current_chapter_after_timer">Finish current chapter after timer</string>
-    <string name="finish_current_chapter_after_timer_summary">When the timer expires, continue reading until the current chapter finishes</string>
     <string name="system_media_control_compatibility_change">System Media Control Compatibility</string>
     <string name="system_media_control_compatibility_change_summary">Enable if system media controls are missing on lock screen (e.g. OneUI 7.0, OriginOS)</string>
     <string name="read_aloud_pause_resume">Pause/Resume Reading Aloud</string>
@@ -2878,6 +2883,8 @@
     <string name="http_tts">HTTP TTS</string>
     <string name="show_read_aloud_capsule">Show read-aloud capsule</string>
     <string name="show_read_aloud_capsule_summary">Show cover, pause and stop controls over the reading page</string>
+    <string name="read_aloud_keep_on_exit">Keep reading aloud after exit</string>
+    <string name="read_aloud_keep_on_exit_summary">Keep reading aloud in the background after leaving the reader</string>
     <string name="reset_read_aloud_capsule_position">Reset capsule position</string>
     <string name="reset_read_aloud_capsule_position_summary">Move the read aloud capsule back to its default position</string>
     <string name="pause_read_aloud">Pause read aloud</string>

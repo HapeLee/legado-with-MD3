@@ -677,6 +677,13 @@
     <string name="reading">閱讀</string>
     <string name="battery_show">%d%%</string>
     <string name="timer_m">%d分鐘</string>
+    <string name="timer_chapters">%d 章</string>
+    <string name="finish_current_chapter_after_timer">定時到點後讀完本章</string>
+    <string name="finish_current_chapter_after_timer_summary">定時結束後繼續朗讀，讀完目前章節再停止</string>
+    <string name="read_aloud_timer_mode">定時方式</string>
+    <string name="read_aloud_timer_by_minute">按時間</string>
+    <string name="read_aloud_timer_by_chapter">按章節</string>
+    <string name="read_aloud_timer_chapter_summary">讀滿所選章數後，在章節末尾停止</string>
     <string name="brightness_auto">自動亮度%s</string>
     <string name="read_aloud_by_page">按頁朗讀</string>
     <string name="speak_engine">朗讀引擎</string>
@@ -1857,8 +1864,6 @@
     <string name="locate_current">定位目前位置</string>
     <string name="read_aloud_android_media_control">Android 媒體控制</string>
     <string name="read_aloud_android_media_control_summary">啟用後，以 Android 系統媒體控制取代預設朗讀通知</string>
-    <string name="finish_current_chapter_after_timer">定時到點後讀完本章</string>
-    <string name="finish_current_chapter_after_timer_summary">定時結束後繼續朗讀，讀完目前章節再停止</string>
     <string name="system_media_control_compatibility_change">系統媒體控制相容性</string>
     <string name="system_media_control_compatibility_change_summary">如果鎖定畫面上缺少系統媒體控制項，請啟用此選項（例如 OneUI 7.0、OriginOS）</string>
     <string name="read_aloud_pause_resume">暫停/繼續朗讀</string>
@@ -2661,6 +2666,8 @@
     <string name="http_tts">HTTP TTS</string>
     <string name="show_read_aloud_capsule">顯示朗讀膠囊</string>
     <string name="show_read_aloud_capsule_summary">朗讀時在閱讀頁顯示封面、暫停和關閉按鈕</string>
+    <string name="read_aloud_keep_on_exit">離開閱讀時繼續朗讀</string>
+    <string name="read_aloud_keep_on_exit_summary">關閉閱讀介面後不停朗讀，繼續在背景播放</string>
     <string name="reset_read_aloud_capsule_position">重設朗讀膠囊位置</string>
     <string name="reset_read_aloud_capsule_position_summary">將朗讀膠囊移回預設位置</string>
     <string name="pause_read_aloud">暫停朗讀</string>

@@ -27,6 +27,28 @@ object MainNavigator {
         route: NavKey,
         resetToHome: Boolean = false,
     ) {
+        navigateToRoute(backStack, route, null, resetToHome)
+    }
+
+    /**
+     * [tracker] 非空时在同一调用里记录栈顶路由：Activity 级叠层（全局朗读胶囊）据此
+     * 在导航发生的那一刻就重算显隐，而不是等 back stack 快照回灌后才被动刷新。
+     */
+    fun navigateToRoute(
+        backStack: MutableList<NavKey>,
+        route: NavKey,
+        tracker: MainNavRouteTracker?,
+        resetToHome: Boolean = false,
+    ) {
+        navigateToRouteInternal(backStack, route, tracker, resetToHome)
+    }
+
+    private fun navigateToRouteInternal(
+        backStack: MutableList<NavKey>,
+        route: NavKey,
+        tracker: MainNavRouteTracker?,
+        resetToHome: Boolean,
+    ) {
         if (resetToHome) {
             backStack.clear()
             backStack.add(MainRouteHome)
@@ -151,6 +173,18 @@ object MainNavigator {
 
             is MainRouteSearchContent -> {
                 backStack.add(route)
+            }
+
+            MainRouteReadAloudPlayer -> {
+                // 单例语义：已在栈上则回到那一层，避免重复按媒体键叠出多个播放界面
+                val existingPlayerIndex = backStack.indexOfLast { it is MainRouteReadAloudPlayer }
+                if (existingPlayerIndex >= 0) {
+                    while (backStack.lastIndex > existingPlayerIndex) {
+                        backStack.removeAt(backStack.lastIndex)
+                    }
+                } else {
+                    backStack.add(route)
+                }
             }
 
             is MainRouteSearch -> {
@@ -304,15 +338,27 @@ object MainNavigator {
                 }
             }
         }
+        // 同步栈快照：Activity 级叠层（全局朗读胶囊）据此立刻重算显隐，不必等 back stack 回灌
+        tracker?.onBackStackChanged(backStack)
     }
 
     fun navigateBack(activity: Activity, backStack: MutableList<NavKey>) {
+        navigateBack(activity, backStack, null)
+    }
+
+    /** [tracker] 非空时同步栈顶快照，供 Activity 级叠层立即重算显隐。 */
+    fun navigateBack(
+        activity: Activity,
+        backStack: MutableList<NavKey>,
+        tracker: MainNavRouteTracker?,
+    ) {
         if (backNavigationInProgress) {
             return
         }
         if (backStack.size > 1) {
             backNavigationInProgress = true
             backStack.removeLastOrNull()
+            tracker?.onBackStackChanged(backStack)
         } else {
             activity.finish()
         }

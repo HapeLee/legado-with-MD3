@@ -7,12 +7,16 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,8 +46,10 @@ import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.help.coil.CoverExtras
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.Download
+import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.SourceCallBack
 import io.legado.app.service.AudioPlayService
+import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.about.AboutEffect
 import io.legado.app.ui.about.AboutScreen
 import io.legado.app.ui.about.AboutViewModel
@@ -96,6 +102,7 @@ import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsEffect
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsIntent
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsScreen
 import io.legado.app.ui.book.readaloud.cloudtts.CloudTtsViewModel
+import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerRouteScreen
 import io.legado.app.ui.book.search.SearchIntent
 import io.legado.app.ui.book.search.SearchRouteScreen
 import io.legado.app.ui.book.search.SearchViewModel
@@ -153,6 +160,8 @@ import io.legado.app.utils.toggleSystemBar
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
@@ -202,6 +211,43 @@ private fun webViewEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
                 animationSpec = tween(easing = FastOutSlowInEasing),
                 targetOffset = { fullWidth -> fullWidth }
             )
+        }
+    }
+}
+
+/**
+ * 听书播放页的转场：整页纵向位移，无淡入淡出。
+ *
+ * 进入自下而上滑入、退出从上往下滑出，上一站在进出期间保持不动
+ * （`EnterTransition.None` / `ExitTransition.None`），所以视觉上是「盖上来 / 收下去」
+ * 而不是交叉替换。
+ *
+ * 三个 key 都要覆写：只写 `TransitionKey` / `PopTransitionKey` 时，开启预测性返回的设备
+ * 走系统返回手势会落回 `NavDisplay` 默认的横向转场 —— 这正是「退出时还在走默认动画」的原因
+ * （与 [webViewEntryMetadata] 同款，它同样覆写三个 key）。
+ */
+private fun readAloudPlayerEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
+    put(NavDisplay.TransitionKey) {
+        slideInVertically(
+            animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+            initialOffsetY = { fullHeight -> fullHeight },
+        ) togetherWith ExitTransition.None
+    }
+    put(NavDisplay.PopTransitionKey) {
+        EnterTransition.None togetherWith
+                slideOutVertically(
+                    animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+                    targetOffsetY = { fullHeight -> fullHeight },
+                )
+    }
+    if (predictiveBackEnabled) {
+        // 与 PopTransitionKey 同一套位移：系统返回手势不再跟手，只播这段固定时长动画。
+        put(NavDisplay.PredictivePopTransitionKey) { _ ->
+            EnterTransition.None togetherWith
+                    slideOutVertically(
+                        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+                        targetOffsetY = { fullHeight -> fullHeight },
+                    )
         }
     }
 }
@@ -696,11 +742,26 @@ fun MainActivity.mainEntryProvider(
         val effectsReady = remember(readBookViewModel) { CompletableDeferred<Unit>() }
         val readerResumeState = remember(controller, lifecycleOwner) { booleanArrayOf(false) }
         val collectorReady = remember(readBookViewModel) { booleanArrayOf(false) }
+        // 是否跟随朗读位置：用户手动翻页/跳章后为 false，此时回阅读界面不回拉可见页。
+        val readAloudSessionStore: ReadAloudSessionStore = org.koin.compose.koinInject()
+        val readAloudFollow = remember(readBookViewModel) { booleanArrayOf(true) }
+        LaunchedEffect(readAloudSessionStore) {
+            readAloudSessionStore.state
+                .map { it.followReadAloudPosition }
+                .distinctUntilChanged()
+                .collect { readAloudFollow[0] = it }
+        }
         fun resumeReader() {
             if (readerResumeState[0]) return
             readerResumeState[0] = true
             controller.onResume()
             readBookViewModel.onIntent(ReadBookIntent.OnResume)
+            // 回到阅读界面时把可见页对齐到当前朗读位置：朗读期间用户可能进听书页跳段/跳章，
+            // 服务驱动的是内部页游标，可见页需要显式回位，否则停在离开时那一页。
+            // 只在跟随状态下做（用户手动翻页脱离后不回拉），语义与「回到朗读位置」一致。
+            if (BaseReadAloudService.isRun && readAloudFollow[0]) {
+                readBookViewModel.onIntent(ReadBookIntent.BackToSpeakingPosition)
+            }
         }
 
         fun pauseReader() {
@@ -737,6 +798,11 @@ fun MainActivity.mainEntryProvider(
             },
             onOpenTtsCache = {
                 onNavigateToRoute(MainRouteTtsCache)
+            },
+            // 经典控制面板的「切换到听书播放器」：目的地是 nav3 路由，
+            // 必须在这里接上，否则意图只发到效果层、没人导航。
+            onOpenReadAloudPlayer = {
+                onNavigateToRoute(MainRouteReadAloudPlayer)
             },
         )
 
@@ -1357,6 +1423,19 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteTtsCache> {
         TtsCacheRouteScreen(
             onBackClick = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteReadAloudPlayer>(
+        metadata = readAloudPlayerEntryMetadata(configuration.appShell.predictiveBackEnabled)
+    ) {
+        // 听书播放界面独立于阅读器：从胶囊或媒体按键打开时，阅读器可能根本不在栈上，
+        // 因此这里不复用阅读器的状态宿主，只依赖全局朗读会话状态。
+        var readAloudConfigOpen by rememberSaveable { mutableStateOf(false) }
+        ReadAloudPlayerRouteScreen(
+            showReadAloudConfig = readAloudConfigOpen,
+            onReadAloudConfigVisibleChange = { readAloudConfigOpen = it },
+            onBack = { onNavigateBack() },
         )
     }
 

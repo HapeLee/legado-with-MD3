@@ -18,6 +18,7 @@ import io.legado.app.domain.model.readaloud.ReadAloudSplitSymbol
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.VoiceCatalogEntry
 import io.legado.app.domain.model.settings.ReadAloudSettings
+import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
@@ -84,6 +85,7 @@ class ReadAloudDelegate(
                         readAloudIgnoreAudioFocus = prefs.ignoreAudioFocus,
                         readAloudPauseOnPhoneCall = prefs.pauseReadAloudWhilePhoneCalls,
                         readAloudWakeLock = prefs.readAloudWakeLock,
+                        readAloudKeepOnExit = prefs.keepReadAloudOnExit,
                         showReadAloudCapsule = prefs.showReadAloudCapsule,
                         capsuleAutoCollapse = prefs.capsuleAutoCollapse,
                         readAloudCapsuleOffsetX = prefs.capsuleOffsetX,
@@ -101,6 +103,8 @@ class ReadAloudDelegate(
                         readAloudTtsTimer = prefs.ttsTimer,
                         readAloudFinishCurrentChapterAfterTimer =
                             prefs.finishCurrentChapterAfterTimer,
+                        readAloudTimerMode = prefs.timerMode,
+                        readAloudTimerChapters = prefs.timerChapters,
                         speechAnalysisMode = prefs.speechAnalysisMode,
                         speechAnalysisReasoningLevel = prefs.speechAnalysisReasoningLevel,
                         useMultiSpeaker = prefs.useMultiSpeaker,
@@ -205,29 +209,30 @@ class ReadAloudDelegate(
 
     // --- 界面入口 ---
 
-    /** 媒体键/胶囊触发的默认朗读界面：按设置决定开播放器弹层还是经典控制面板。 */
+    /** 媒体键/胶囊触发的默认朗读界面：按设置决定开播放器还是经典控制面板。 */
     fun openDefaultInterface() {
         if (
             host.uiState.defaultReadAloudInterface ==
             ReadAloudSettingsRepository.DEFAULT_INTERFACE_PLAYER
         ) {
-            host.updateState {
-                it.copy(
-                    menuState = ReadBookMenuState(),
-                    activeSheet = ReadBookSheet.ReadAloudPlayer,
-                )
-            }
+            openPlayer()
         } else {
             host.openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
         }
     }
 
+    /**
+     * 打开听书播放界面。
+     *
+     * 播放界面是 Navigation 3 目的地而非阅读器弹层，所以这里发导航意图；
+     * 先把菜单状态收起来，返回阅读界面时不会停在半开的菜单上。
+     */
     fun openPlayer() {
-        host.updateState {
-            it.copy(menuState = ReadBookMenuState(), activeSheet = ReadBookSheet.ReadAloudPlayer)
-        }
+        host.updateState { it.copy(menuState = ReadBookMenuState(), activeSheet = null) }
+        host.emitEffect(ReadBookEffect.OpenReadAloudPlayer)
     }
 
+    /** 经典朗读控制面板：阅读菜单里的一页，不遮挡正文区域之外的交互。 */
     fun openClassicControls() {
         host.updateState { it.copy(activeSheet = null) }
         host.openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
@@ -351,6 +356,8 @@ class ReadAloudDelegate(
 
     fun setWakeLock(value: Boolean) = updateSettings { it.copy(readAloudWakeLock = value) }
 
+    fun setKeepOnExit(value: Boolean) = updateSettings { it.copy(keepReadAloudOnExit = value) }
+
     fun setShowCapsule(value: Boolean) = updateSettings { it.copy(showReadAloudCapsule = value) }
 
     fun setCapsuleAutoCollapse(value: Boolean) =
@@ -415,13 +422,70 @@ class ReadAloudDelegate(
     fun setTtsTimer(value: Int) {
         val timer = PlaybackTimer.normalize(value)
         ReadAloud.setTimer(context, timer)
-        updateSettings { it.copy(ttsTimer = timer) }
-        host.updateState { it.copy(readAloudTtsTimer = timer) }
+        // 两种定时互斥：设分钟定时即切到分钟模式并清掉章节配额
+        updateSettings {
+            it.copy(
+                ttsTimer = timer,
+                timerMode = ReadAloudTimerMode.Minute.storageValue,
+                timerChapters = 0,
+            )
+        }
+        ReadAloud.setTimerChapters(context, 0)
+        host.updateState {
+            it.copy(
+                readAloudTtsTimer = timer,
+                readAloudTimerMode = ReadAloudTimerMode.Minute.storageValue,
+                readAloudTimerChapters = 0,
+            )
+        }
     }
 
     fun setFinishCurrentChapterAfterTimer(value: Boolean) {
         updateSettings { it.copy(finishCurrentChapterAfterTimer = value) }
         host.updateState { it.copy(readAloudFinishCurrentChapterAfterTimer = value) }
+    }
+
+    fun setTimerMode(mode: ReadAloudTimerMode) {
+        val prefs = readAloudSettingsRepository.currentSettings
+        val minutes = if (mode == ReadAloudTimerMode.Minute) prefs.ttsTimer else 0
+        val chapters = if (mode == ReadAloudTimerMode.Chapter) prefs.timerChapters else 0
+        updateSettings {
+            it.copy(
+                timerMode = mode.storageValue,
+                ttsTimer = minutes,
+                timerChapters = chapters,
+            )
+        }
+        ReadAloud.setTimer(context, minutes)
+        ReadAloud.setTimerChapters(context, chapters)
+        host.updateState {
+            it.copy(
+                readAloudTimerMode = mode.storageValue,
+                readAloudTtsTimer = minutes,
+                readAloudTimerChapters = chapters,
+            )
+        }
+    }
+
+    fun setTimerChapters(value: Int) {
+        val chapters = PlaybackTimer.normalizeChapters(value)
+        ReadAloud.setTimerChapters(context, chapters)
+        updateSettings {
+            it.copy(
+                timerChapters = chapters,
+                timerMode = ReadAloudTimerMode.Chapter.storageValue,
+                ttsTimer = 0,
+            )
+        }
+        // 切到章节模式要同时停掉正在跑的分钟倒计时
+        ReadAloud.setTimer(context, 0)
+        host.updateState {
+            it.copy(
+                readAloudTimerChapters = chapters,
+                readAloudTimerMode = ReadAloudTimerMode.Chapter.storageValue,
+                readAloudTtsTimer = 0,
+            )
+        }
     }
 
     fun setTtsSpeechRate(value: Int) {

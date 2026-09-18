@@ -10,6 +10,7 @@ import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ContentSplitPolicies
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
+import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
@@ -95,6 +96,8 @@ class ReadAloudPlayerCoordinator(
             isPaused = session.status != ReadAloudSessionStatus.Playing,
             speed = readAloudSettingsGateway.currentSettings.ttsSpeechRate,
             timerMinutes = session.timerMinutes,
+            timerMode = settings.timerMode,
+            timerChapters = settings.timerChapters,
             finishCurrentChapterAfterTimer = settings.finishCurrentChapterAfterTimer,
         )
     }
@@ -122,6 +125,8 @@ class ReadAloudPlayerCoordinator(
             isPaused = session.status != ReadAloudSessionStatus.Playing,
             speed = readAloudSettingsGateway.currentSettings.ttsSpeechRate,
             timerMinutes = session.timerMinutes,
+            timerMode = readAloudSettingsGateway.currentSettings.timerMode,
+            timerChapters = readAloudSettingsGateway.currentSettings.timerChapters,
             finishCurrentChapterAfterTimer =
                 readAloudSettingsGateway.currentSettings.finishCurrentChapterAfterTimer,
         )
@@ -175,6 +180,9 @@ class ReadAloudPlayerCoordinator(
         }
     }
 
+    /** 悬浮胶囊与播放界面的停止入口共用。 */
+    fun stop() = ReadAloud.stop(application)
+
     fun previousParagraph() = ReadAloud.prevParagraph(application)
     fun nextParagraph() = ReadAloud.nextParagraph(application)
     fun previousChapter() = ReadBook.moveToPrevChapter(true, false)
@@ -188,10 +196,51 @@ class ReadAloudPlayerCoordinator(
 
     suspend fun setTimer(minutes: Int) {
         val timer = PlaybackTimer.normalize(minutes)
-        readAloudSettingsGateway.update { it.copy(ttsTimer = timer) }
+        readAloudSettingsGateway.update {
+            it.copy(
+                ttsTimer = timer,
+                timerMode = ReadAloudTimerMode.Minute.storageValue,
+                // 两种模式互斥：切到分钟模式时清掉章节配额，避免两个倒计时同时生效
+                timerChapters = 0,
+            )
+        }
         ReadAloud.setTimer(application, timer)
     }
 
+    /** 切换定时模式；切过去的模式若没设过值，等于关闭定时。 */
+    suspend fun setTimerMode(mode: ReadAloudTimerMode) {
+        readAloudSettingsGateway.update {
+            it.copy(
+                timerMode = mode.storageValue,
+                ttsTimer = if (mode == ReadAloudTimerMode.Chapter) 0 else it.ttsTimer,
+                timerChapters = if (mode == ReadAloudTimerMode.Minute) 0 else it.timerChapters,
+            )
+        }
+        val settings = readAloudSettingsGateway.currentSettings
+        ReadAloud.setTimer(
+            application,
+            if (mode == ReadAloudTimerMode.Minute) settings.ttsTimer else 0,
+        )
+        ReadAloud.setTimerChapters(
+            application,
+            if (mode == ReadAloudTimerMode.Chapter) settings.timerChapters else 0,
+        )
+    }
+
+    /** 章节定时剩余章数；0 关闭。 */
+    suspend fun setTimerChapters(chapters: Int) {
+        val quota = PlaybackTimer.normalizeChapters(chapters)
+        readAloudSettingsGateway.update {
+            it.copy(
+                timerChapters = quota,
+                timerMode = ReadAloudTimerMode.Chapter.storageValue,
+                ttsTimer = 0,
+            )
+        }
+        ReadAloud.setTimerChapters(application, quota)
+    }
+
+    /** 分钟定时到点后是否读完本章再停。 */
     suspend fun setFinishCurrentChapterAfterTimer(value: Boolean) {
         readAloudSettingsGateway.update { it.copy(finishCurrentChapterAfterTimer = value) }
     }
@@ -249,6 +298,8 @@ data class ReadAloudPlayerSourceState(
     val isPaused: Boolean,
     val speed: Int,
     val timerMinutes: Int,
+    val timerMode: String,
+    val timerChapters: Int,
     val finishCurrentChapterAfterTimer: Boolean,
 )
 

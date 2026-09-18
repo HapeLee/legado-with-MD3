@@ -2247,6 +2247,8 @@ class ReadBookController(
             is ReadBookEffect.OpenSystemTtsSettings,
             ReadBookEffect.OpenTtsEnginesAndVoices,
             ReadBookEffect.OpenTtsCache,
+                // 朗读播放界面是 Navigation 3 目的地，由路由层导航，这里不处理
+            ReadBookEffect.OpenReadAloudPlayer,
             is ReadBookEffect.OpenBookVoiceCasting,
             is ReadBookEffect.OpenHighlightRuleImportPicker,
             is ReadBookEffect.OpenHighlightRuleExportPicker,

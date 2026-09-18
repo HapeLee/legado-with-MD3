@@ -291,6 +291,7 @@ import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleViewModel
 import io.legado.app.ui.login.SourceLoginViewModel
+import io.legado.app.ui.main.MainNavRouteTracker
 import io.legado.app.ui.main.MainRouteSearchContent
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
@@ -389,6 +390,7 @@ val appModule = module {
     single<ReadSettingsGateway> { get<ReadSettingsRepository>() }
     singleOf(::ReadAloudSettingsRepository)
     singleOf(::ReadAloudSessionStore)
+    singleOf(::MainNavRouteTracker)
     // R2.3：会话每个所有者一份。ReadBook.callBack 的身份是「阅读页已挂载」信号
     // （prefetchForOpen / upData 判 callBack != null），register 还会给上一个持有者
     // 发 notifyBookChanged——单例会把两个 ReadBookViewModel 的注册身份混成一个。
@@ -688,7 +690,14 @@ val appModule = module {
     viewModelOf(::CloudTtsViewModel)
     viewModelOf(::TtsCacheViewModel)
     singleOf(::ReadAloudPlayerCoordinator)
-    viewModelOf(::ReadAloudPlayerViewModel)
+    /**
+     * 朗读播放界面状态宿主。
+     *
+     * 用单例而不是 `viewModelOf`：悬浮胶囊（Activity 叠层）与听书页目的地会同时存在，
+     * 若各自持有实例，`activeSheet` 之类的瞬态状态与设置快照就会各改各的。
+     * 播放状态本身在 `ReadAloudSessionStore`/服务里，这里只是界面投影。
+     */
+    single { ReadAloudPlayerViewModel(get(), get(), get()) }
     viewModel { (bookUrl: String, entryId: String?) ->
         BookKnowledgeDetailViewModel(
             bookUrl = bookUrl,

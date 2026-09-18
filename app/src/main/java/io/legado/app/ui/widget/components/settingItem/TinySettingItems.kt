@@ -293,6 +293,14 @@ fun TinySliderSettingItem(
     showDecimal: Boolean = false,
     valueFormat: ((Float) -> String)? = null,
     onValueChange: (Float) -> Unit,
+    /**
+     * 拖动结束（或步进按钮点完）后回调。
+     *
+     * 需要「拖动中只更新本地预览、松手才写设置」的场景必须用这个而不是 [onValueChange]：
+     * 拖动中每帧写设置会触发外部 [value] 回流，与本组件内部的 `LaunchedEffect(value)` 同步
+     * 打架，表现为滑块来回跳。
+     */
+    onValueChangeFinished: () -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
     var sliderValue by remember(value) { mutableFloatStateOf(value) }
@@ -331,6 +339,7 @@ fun TinySliderSettingItem(
                 },
                 onValueChangeFinished = {
                     dragState?.stopDragging()
+                    onValueChangeFinished()
                 },
                 valueRange = valueRange,
                 steps = steps,

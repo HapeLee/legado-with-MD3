@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.readaloud.player
 
 import androidx.compose.runtime.Stable
+import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.ui.widget.components.player.PlayerChapterUi
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -31,9 +32,21 @@ data class ReadAloudPlayerUiState(
     val engineName: String = "",
     val speakerName: String = "",
     val isPaused: Boolean = false,
+    /**
+     * 朗读服务是否在跑（`BaseReadAloudService.isRun`）。
+     *
+     * 全局胶囊的显隐以它为准，而不是 `ReadAloudSessionStore.status`：status 只在
+     * play/pause/stop 事件里更新，服务仍在跑时可能停在旧值。
+     */
+    val readAloudRunning: Boolean = false,
     val speed: Int = 10,
     val timerMinutes: Int = 0,
+    /** 分钟定时到点后读完本章再停；只对分钟模式有意义。 */
     val finishCurrentChapterAfterTimer: Boolean = false,
+    /** 定时模式：分钟 / 章节；两者互斥。 */
+    val timerMode: String = ReadAloudTimerMode.Minute.storageValue,
+    /** 章节定时剩余章数；0 表示未开启。 */
+    val timerChapters: Int = 0,
     val bgMode: Int = 0,
     val activeSheet: ReadAloudPlayerSheet? = null,
 )
@@ -46,6 +59,9 @@ sealed interface ReadAloudPlayerSheet {
 sealed interface ReadAloudPlayerIntent {
     data object Refresh : ReadAloudPlayerIntent
     data object TogglePause : ReadAloudPlayerIntent
+
+    /** 悬浮胶囊上的停止按钮与经典控制面板同义。 */
+    data object StopReadAloud : ReadAloudPlayerIntent
     data object PreviousChapter : ReadAloudPlayerIntent
     data object NextChapter : ReadAloudPlayerIntent
     data object PreviousParagraph : ReadAloudPlayerIntent
@@ -57,6 +73,14 @@ sealed interface ReadAloudPlayerIntent {
     data class SetBgMode(val value: Int) : ReadAloudPlayerIntent
     data class SetSpeed(val value: Int) : ReadAloudPlayerIntent
     data class SetTimer(val minutes: Int) : ReadAloudPlayerIntent
+
+    /** 切换定时模式；切到分钟模式会清掉章节配额，反之亦然。 */
+    data class SetTimerMode(val value: String) : ReadAloudPlayerIntent
+
+    /** 章节定时剩余章数；0 表示关闭章节定时。 */
+    data class SetTimerChapters(val value: Int) : ReadAloudPlayerIntent
+
+    /** 分钟定时到点后是否读完本章再停。 */
     data class SetFinishCurrentChapterAfterTimer(val value: Boolean) : ReadAloudPlayerIntent
     data class OpenSheet(val sheet: ReadAloudPlayerSheet) : ReadAloudPlayerIntent
     data object DismissSheet : ReadAloudPlayerIntent

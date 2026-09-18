@@ -222,4 +222,14 @@ object ReadAloud {
         }
     }
 
+    /** 章节定时剩余章数；0 关闭。走独立 action，避免清掉分钟倒计时。 */
+    fun setTimerChapters(context: Context, chapters: Int) {
+        if (BaseReadAloudService.isRun) {
+            val intent = Intent(context, aloudClass)
+            intent.action = IntentAction.setTimerChapters
+            intent.putExtra("chapters", PlaybackTimer.normalizeChapters(chapters))
+            context.startForegroundServiceCompat(intent)
+        }
+    }
+
 }

@@ -12,6 +12,9 @@ object IntentAction {
     const val pause = "pause"
     const val addTimer = "addTimer"
     const val setTimer = "setTimer"
+
+    /** 章节定时剩余章数（不是分钟）；翻页/换章都不应清除它。 */
+    const val setTimerChapters = "setTimerChapters"
     const val prevParagraph = "prevParagraph"
     const val nextParagraph = "nextParagraph"
     const val upTtsSpeechRate = "upTtsSpeechRate"

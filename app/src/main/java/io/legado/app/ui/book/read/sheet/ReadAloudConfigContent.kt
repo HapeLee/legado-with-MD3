@@ -45,6 +45,11 @@ fun ReadAloudConfigContent(
     onIntent: (ReadBookIntent) -> Unit,
     onPlayerIntent: (ReadAloudPlayerIntent) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * true 表示内容被整页宿主承载，数值项就地铺开成滑块；
+     * false（默认）表示宿主是卡片弹层，数值项继续打开选择器弹层。
+     */
+    asPage: Boolean = false,
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
@@ -73,7 +78,7 @@ fun ReadAloudConfigContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(top = 8.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
+                    .padding(top = 8.dp, bottom = 16.dp),
             ) {
                 if (page == 0) {
                     TinyDropdownSettingItem(
@@ -145,6 +150,14 @@ fun ReadAloudConfigContent(
                         checked = state.readAloudWakeLock,
                         onCheckedChange = {
                             onIntent(ReadBookIntent.SetReadAloudWakeLock(it))
+                        },
+                    )
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.read_aloud_keep_on_exit),
+                        description = stringResource(R.string.read_aloud_keep_on_exit_summary),
+                        checked = state.readAloudKeepOnExit,
+                        onCheckedChange = {
+                            onIntent(ReadBookIntent.SetReadAloudKeepOnExit(it))
                         },
                     )
                     TinySwitchSettingItem(
@@ -315,22 +328,74 @@ fun ReadAloudConfigContent(
                         title = stringResource(R.string.sys_tts_config),
                         onClick = { onIntent(ReadBookIntent.OpenSystemTtsSettings) },
                     )
-                    TinyClickableSettingItem(
-                        title = stringResource(R.string.read_aloud_preload),
-                        onClick = { onIntent(ReadBookIntent.OpenPreDownloadNumPicker) },
-                    )
-                    TinyClickableSettingItem(
-                        title = stringResource(R.string.tts_pre_synthesis_concurrency),
-                        onClick = { onIntent(ReadBookIntent.OpenPreSynthesisConcurrencyPicker) },
-                    )
-                    TinyClickableSettingItem(
-                        title = stringResource(R.string.tts_paragraph_interval),
-                        onClick = { onIntent(ReadBookIntent.OpenParagraphIntervalPicker) },
-                    )
-                    TinyClickableSettingItem(
-                        title = stringResource(R.string.audio_cache_clean_time),
-                        onClick = { onIntent(ReadBookIntent.OpenCacheCleanTimePicker) },
-                    )
+                    if (asPage) {
+                        // 整页宿主自己就是一层，数值项直接铺开成滑块：
+                        // 再叠一层选择器 sheet 会重新引入「sheet 套 sheet」的层级问题。
+                        ReadAloudNumberSliderItem(
+                            title = stringResource(R.string.read_aloud_preload),
+                            description = stringResource(
+                                R.string.read_aloud_preload_summary, state.preDownloadNum,
+                            ),
+                            value = state.preDownloadNum,
+                            defaultValue = 10,
+                            valueRange = 0f..100f,
+                            onValueChange = { onIntent(ReadBookIntent.ApplyPreDownloadNum(it)) },
+                        )
+                        ReadAloudNumberSliderItem(
+                            title = stringResource(R.string.tts_pre_synthesis_concurrency),
+                            description = stringResource(
+                                R.string.tts_pre_synthesis_concurrency_summary,
+                                state.preSynthesisConcurrency,
+                            ),
+                            value = state.preSynthesisConcurrency,
+                            defaultValue = 3,
+                            valueRange = 1f..8f,
+                            onValueChange = {
+                                onIntent(ReadBookIntent.ApplyPreSynthesisConcurrency(it))
+                            },
+                        )
+                        ReadAloudNumberSliderItem(
+                            title = stringResource(R.string.tts_paragraph_interval),
+                            description = stringResource(
+                                R.string.tts_paragraph_interval_summary,
+                                state.readAloudParagraphInterval,
+                            ),
+                            value = state.readAloudParagraphInterval,
+                            defaultValue = 0,
+                            valueRange = 0f..5000f,
+                            onValueChange = { onIntent(ReadBookIntent.ApplyParagraphInterval(it)) },
+                        )
+                        ReadAloudNumberSliderItem(
+                            title = stringResource(R.string.audio_cache_clean_time),
+                            description = stringResource(
+                                R.string.audio_cache_clean_time_summary,
+                                state.audioCacheCleanTime,
+                            ),
+                            value = state.audioCacheCleanTime,
+                            defaultValue = 10,
+                            valueRange = 0f..10080f,
+                            onValueChange = { onIntent(ReadBookIntent.ApplyAudioCacheCleanTime(it)) },
+                        )
+                    } else {
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.read_aloud_preload),
+                            onClick = { onIntent(ReadBookIntent.OpenPreDownloadNumPicker) },
+                        )
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.tts_pre_synthesis_concurrency),
+                            onClick = {
+                                onIntent(ReadBookIntent.OpenPreSynthesisConcurrencyPicker)
+                            },
+                        )
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.tts_paragraph_interval),
+                            onClick = { onIntent(ReadBookIntent.OpenParagraphIntervalPicker) },
+                        )
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.audio_cache_clean_time),
+                            onClick = { onIntent(ReadBookIntent.OpenCacheCleanTimePicker) },
+                        )
+                    }
                     TinyClickableSettingItem(
                         title = stringResource(R.string.clear_cache),
                         onClick = { onIntent(ReadBookIntent.ClearTtsCache) },
@@ -339,6 +404,28 @@ fun ReadAloudConfigContent(
             }
         }
     }
+}
+
+/**
+ * 整页宿主用的数值项：直接铺开滑块，不再叠一层选择器弹层。
+ */
+@Composable
+private fun ReadAloudNumberSliderItem(
+    title: String,
+    description: String,
+    value: Int,
+    defaultValue: Int,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Int) -> Unit,
+) {
+    SliderSettingItem(
+        title = title,
+        description = description,
+        value = value.toFloat(),
+        defaultValue = defaultValue.toFloat(),
+        valueRange = valueRange,
+        onValueChange = { onValueChange(it.toInt()) },
+    )
 }
 
 /**

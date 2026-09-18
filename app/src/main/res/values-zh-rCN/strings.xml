@@ -741,6 +741,13 @@
     <string name="reading">阅读</string>
     <string name="battery_show">%d%%</string>
     <string name="timer_m">%d 分钟</string>
+    <string name="timer_chapters">%d 章</string>
+    <string name="finish_current_chapter_after_timer">定时到点后读完本章</string>
+    <string name="finish_current_chapter_after_timer_summary">定时结束后继续朗读，读完当前章节再停止</string>
+    <string name="read_aloud_timer_mode">定时方式</string>
+    <string name="read_aloud_timer_by_minute">按时间</string>
+    <string name="read_aloud_timer_by_chapter">按章节</string>
+    <string name="read_aloud_timer_chapter_summary">读满所选章数后，在章节末尾停止</string>
     <string name="brightness_auto">自动亮度 %s</string>
     <string name="read_aloud_by_page">按页朗读</string>
     <string name="speak_engine">朗读引擎</string>
@@ -1682,8 +1689,6 @@
     <string name="padding_display_cutouts">填充刘海区域</string>
     <string name="read_aloud_android_media_control">安卓媒体控制</string>
     <string name="read_aloud_android_media_control_summary">开启后，使用安卓系统媒体控制替换默认朗读通知</string>
-    <string name="finish_current_chapter_after_timer">定时到点后读完本章</string>
-    <string name="finish_current_chapter_after_timer_summary">定时结束后继续朗读，读完当前章节再停止</string>
     <string name="system_media_control_compatibility_change">使用媒体通道</string>
     <string name="system_media_control_compatibility_change_summary">使用OEM厂商提供的媒体通道，可能解决一些通知无法显示的问题</string>
     <string name="read_aloud_pause_resume">朗读暂停/继续</string>
@@ -2873,6 +2878,8 @@
     <string name="http_tts">HTTP TTS</string>
     <string name="show_read_aloud_capsule">显示朗读胶囊</string>
     <string name="show_read_aloud_capsule_summary">朗读时在阅读页显示封面、暂停和关闭按钮</string>
+    <string name="read_aloud_keep_on_exit">退出阅读时继续朗读</string>
+    <string name="read_aloud_keep_on_exit_summary">关闭阅读界面后不停朗读，继续在后台播放</string>
     <string name="reset_read_aloud_capsule_position">重置朗读胶囊位置</string>
     <string name="reset_read_aloud_capsule_position_summary">将朗读胶囊移回默认位置</string>
     <string name="pause_read_aloud">暂停朗读</string>

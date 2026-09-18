@@ -88,6 +88,8 @@ object ReadConfig {
     val ttsSpeechRate get() = aloud.ttsSpeechRate
     val ttsTimer get() = aloud.ttsTimer
     val finishCurrentChapterAfterTimer get() = aloud.finishCurrentChapterAfterTimer
+    val readAloudTimerMode get() = aloud.timerMode
+    val readAloudTimerChapters get() = aloud.timerChapters
     val ttsParagraphInterval get() = aloud.ttsParagraphInterval
     val ignoreAudioFocus get() = aloud.ignoreAudioFocus
     val pauseReadAloudWhilePhoneCalls get() = aloud.pauseReadAloudWhilePhoneCalls

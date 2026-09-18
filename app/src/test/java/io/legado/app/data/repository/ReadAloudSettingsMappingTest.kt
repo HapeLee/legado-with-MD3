@@ -4,20 +4,21 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.model.settings.ReadAloudSettings
+import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ReadAloudSettingsMappingTest {
 
     @Test
-    fun `朗读设置 28 键写映射逐字段对应`() {
+    fun `朗读设置 29 键写映射逐字段对应`() {
         readAloudMappingSamples().forEach { settings ->
             assertEquals(settings.expectedPrefMap(), settings.toPrefMap())
         }
     }
 
     @Test
-    fun `朗读设置 28 键读映射逐字段对应`() {
+    fun `朗读设置 29 键读映射逐字段对应`() {
         readAloudMappingSamples().forEach { expected ->
             assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toReadAloudSettings())
         }
@@ -56,7 +57,15 @@ class ReadAloudSettingsMappingTest {
     }
 
     @Test
-    fun `定时到点后读完本章默认关闭`() {
+    fun `定时默认按时间且未开启`() {
+        val settings = emptyMap<String, Any?>().toTestPreferences().toReadAloudSettings()
+
+        assertEquals(ReadAloudTimerMode.Minute.storageValue, settings.timerMode)
+        assertEquals(0, settings.timerChapters)
+    }
+
+    @Test
+    fun `到点后读完本章默认关闭`() {
         val settings = emptyMap<String, Any?>().toTestPreferences().toReadAloudSettings()
 
         assertEquals(false, settings.finishCurrentChapterAfterTimer)
@@ -98,6 +107,7 @@ private fun readAloudMappingSamples(): List<ReadAloudSettings> {
         base.copy(readAloudByMediaButton = true),
         base.copy(pauseReadAloudWhilePhoneCalls = true),
         base.copy(readAloudWakeLock = true),
+        base.copy(keepReadAloudOnExit = true),
         base.copy(showReadAloudCapsule = false),
         base.copy(mediaButtonPerNext = true),
         base.copy(readAloudByPage = true),
@@ -108,6 +118,10 @@ private fun readAloudMappingSamples(): List<ReadAloudSettings> {
         base.copy(androidMediaControlEnabled = true),
         base.copy(systemMediaControlCompatibilityChange = false),
         base.copy(streamReadAloudAudio = true),
+        base.copy(
+            timerMode = ReadAloudTimerMode.Chapter.storageValue,
+            timerChapters = 3,
+        ),
         base.copy(finishCurrentChapterAfterTimer = true),
         base.copy(ttsFollowSys = false),
         base.copy(useMultiSpeaker = false),
@@ -123,6 +137,7 @@ private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.readAloudByMediaButton to readAloudByMediaButton,
     PreferKey.pauseReadAloudWhilePhoneCalls to pauseReadAloudWhilePhoneCalls,
     PreferKey.readAloudWakeLock to readAloudWakeLock,
+    PreferKey.keepReadAloudOnExit to keepReadAloudOnExit,
     PreferKey.showReadAloudCapsule to showReadAloudCapsule,
     PreferKey.capsuleAutoCollapse to capsuleAutoCollapse,
     CAPSULE_OFFSET_X to capsuleOffsetX,
@@ -136,6 +151,8 @@ private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.streamReadAloudAudio to streamReadAloudAudio,
     PreferKey.ttsTimer to ttsTimer,
     PreferKey.finishCurrentChapterAfterTimer to finishCurrentChapterAfterTimer,
+    PreferKey.readAloudTimerMode to timerMode,
+    PreferKey.readAloudTimerChapters to timerChapters,
     PreferKey.ttsFollowSys to ttsFollowSys,
     PreferKey.ttsSpeechRate to ttsSpeechRate,
     PreferKey.speechAnalysisMode to speechAnalysisMode,
