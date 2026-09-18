@@ -71,13 +71,16 @@ class AndroidReaderHtmlSourceResolver(
                     when (span) {
                         is QuoteSpan -> add(ReaderParagraphDecoration(
                             ReaderParagraphDecorationKind.QUOTE,
-                            span.color,
+                            // QuoteSpan/BulletSpan 的 getColor() 是 API 28 才加入的方法：
+                            // minSdk 26/27 上读 span.color 会在运行期抛 NoSuchMethodError，
+                            // 带 <blockquote>/<ul><li> 的章节会整章崩掉，颜色回落 null。
+                            if (Build.VERSION.SDK_INT >= 28) span.color else null,
                             if (Build.VERSION.SDK_INT >= 28) span.stripeWidth.toFloat() else 2f,
                             leadingOffset,
                         ))
                         is BulletSpan -> add(ReaderParagraphDecoration(
                             ReaderParagraphDecorationKind.BULLET,
-                            span.color.takeUnless { it == 0 },
+                            if (Build.VERSION.SDK_INT >= 28) span.color.takeUnless { it == 0 } else null,
                             if (Build.VERSION.SDK_INT >= 28) span.bulletRadius.toFloat() else 4f,
                             leadingOffset,
                         ))
