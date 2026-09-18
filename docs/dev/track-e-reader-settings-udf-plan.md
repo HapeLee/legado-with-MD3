@@ -20,8 +20,8 @@
 
 | 底座 | 内容 | 存储 | 是否响应式 |
 |---|---|---|---|
-| **A. `ReadSettings`** | 101 个字段（手势/亮度/菜单外观/键位/朗读…） | DataStore | ✅ `preferencesFlow` → 真 `StateFlow`（[ReadSettingsRepository.kt:29-33](../../app/src/main/java/io/legado/app/data/repository/ReadSettingsRepository.kt#L29)） |
-| **B. `ReadBookConfig.Config`** | 排版预设（字号/行距/标题/页眉页脚/下划线/背景…），即 `readConfig.json` | JSON 文件 + 内存 `ArrayList<Config>` | ❌ **可变全局单例，无 flow**（[ReadBookConfig.kt:31,77,103](../../app/src/main/java/io/legado/app/help/config/ReadBookConfig.kt#L31)） |
+| **A. `ReadSettings`** | 112 个字段（手势/亮度/菜单外观/键位/朗读…） | DataStore | ✅ `preferencesFlow` → 真 `StateFlow`（`ReadSettingsRepository.kt:29-33`） |
+| **B. `ReadBookConfig.Config`** | 排版预设（字号/行距/标题/页眉页脚/下划线/背景…），即 `readConfig.json` | JSON 文件 + 内存 `ArrayList<Config>` | ❌ **可变全局单例，无 flow**（`ReadBookConfig.kt:31,77,103`） |
 
 `ReadBookConfig` 目前是**混合门面**：A 类字段是 `get() = readSettings.x` 只读转发（:182-243，干净），
 B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两种语义，是"乱"的第一层来源。
@@ -29,10 +29,10 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 ### 1.2 底座 B 无 flow ⇒ UDF 是手工模拟的
 
 `ReadStyleGateway.state` 只暴露 `items / selectedIndex / shareLayout` 三项
-（[ReadStyleState.kt](../../app/src/main/java/io/legado/app/domain/model/settings/ReadStyleState.kt)），
+（`ReadStyleState.kt`），
 **不含任何排版字段**。于是 VM 只能在每次写入后**手动重建**两份快照：
 
-- `buildStyleConfig()`（[ReadBookViewModel.kt:2290](../../app/src/main/java/io/legado/app/ui/book/read/ReadBookViewModel.kt#L2290)）—— 从可变全局裸读 ~25 字段
+- `buildStyleConfig()`（`ReadBookViewModel.kt:2290`）—— 从可变全局裸读 ~25 字段
 - `buildSheetConfig()`（:2322）—— 从可变全局裸读 ~50 字段
 
 **失败模式是结构性的**：任何新增的写入路径只要忘了重建，弹层就显示旧值。2026-07-24 的
@@ -42,7 +42,7 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 ### 1.3 渲染副作用靠 157 条手写映射表
 
 `ConfigUpdate` 有 **157 个成员**，每个手写 `actions: Set<ConfigUpdateAction>`（13 种动作）
-（[ReadBookContract.kt:1006-1558](../../app/src/main/java/io/legado/app/ui/book/read/ReadBookContract.kt#L1006)）。
+（`ReadBookContract.kt:1006-1558`）。
 
 - 手写 ⇒ 错配即「改了不生效」。已确认两例并已修：`StatusIconDark`（缺 `UpdateSystemUi`）、
   `UnderlineColor`（缺 `UpdateContent+InvalidateTextPage+SubmitRenderTask`）。
@@ -65,7 +65,7 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 ### 1.5 EventBus 整数码仍在
 
 `postEvent(EventBus.UP_CONFIG, arrayListOf(整数码))` —— 8 个生产者，VM 在
-[:2084](../../app/src/main/java/io/legado/app/ui/book/read/ReadBookViewModel.kt#L2084) 把整数翻回
+`ReadBookViewModel.kt:2084` 把整数翻回
 `ConfigUpdateAction`。生产者：`ApplyReadSettingUseCase`×2、`ChapterProvider:1111`、`ReadBook:304`、
 `ThemeConfigStore`×2、`ReadAloudPlayerCoordinator:146`。
 
@@ -73,7 +73,7 @@ B 类字段是 `var x get/set config.x`（:310+，可变）。同一个对象两
 
 排版写入**已经**收敛到 `ReadStyleGateway.updateCurrentStyle(ReadStyleMutation)` 的类型化键
 （`ReadStyleIntKey`/`FloatKey`/`BooleanKey`/`StringKey`/`ColorKey`，
-[ReadStyleMutation.kt](../../app/src/main/java/io/legado/app/domain/gateway/ReadStyleMutation.kt)），
+`ReadStyleMutation.kt`），
 全库对 `ReadBookConfig.x = v` 的直接写入**只剩** `ReadBookStyleConfigRepository` 一个文件。
 **Track E 不重做写入面**，只补"写完之后怎么让所有人看到新值"。
 
