@@ -218,16 +218,25 @@ class ReadBookDomainSplitBoundaryTest {
      * 短路判定（含注释）。逐行都摘不掉：关闭朗读的决策点就在 VM 的 `closeReadBook` 路径上，
      * 设置读取与 delegate 转发分别在 `ReadAloudSettingsRepository` 与 `ReadAloudDelegate`，
      * VM 只剩这两处接线。
+     *
+     * 2743 → 2746：上一条的 2743 校准对应的是该特性的**中间态**；最终合并的 `6d23ad6ec2`
+     * （朗读定时改为「时间 / 章节」两种模式 + 退出阅读继续后台朗读）把 VM 定在 2746 行，
+     * 本次按实际接线校准，不新增实现空间。可提取的逻辑都已在 `ReadAloudDelegate` /
+     * `ReadAloudSettingsRepository`；2746 行里属于本特性的是：`ReadAloudTimerMode` 的 import、
+     * `SetReadAloudTimerMode` / `SetReadAloudTimerChapters` / `SetReadAloudKeepOnExit`
+     * 三个意图分支（各 1–2 行转发）、`SetFinishCurrentChapterAfterTimer` 因参数超长折行多出的
+     * 2 行（纯格式化），以及 `stopReadAloudForClose()` 里读 `keepReadAloudOnExit` 决定是否
+     * 继续后台朗读的短路（含注释）——关闭决策点只能在 VM，摘不成 delegate。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2743 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2746 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2743。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2746。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2743,
+            lineCount <= 2746,
         )
     }
 
