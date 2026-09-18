@@ -20,7 +20,7 @@
 
 | 底座 | 内容 | 存储 | 是否响应式 |
 |---|---|---|---|
-| **A. `ReadSettings`** | 101 个字段（手势/亮度/菜单外观/键位/朗读…） | DataStore | ✅ `preferencesFlow` → 真 `StateFlow`（`ReadSettingsRepository.kt:29-33`） |
+| **A. `ReadSettings`** | 112 个字段（手势/亮度/菜单外观/键位/朗读…） | DataStore | ✅ `preferencesFlow` → 真 `StateFlow`（`ReadSettingsRepository.kt:29-33`） |
 | **B. `ReadBookConfig.Config`** | 排版预设（字号/行距/标题/页眉页脚/下划线/背景…），即 `readConfig.json` | JSON 文件 + 内存 `ArrayList<Config>` | ❌ **可变全局单例，无 flow**（`ReadBookConfig.kt:31,77,103`） |
 
 `ReadBookConfig` 目前是**混合门面**：A 类字段是 `get() = readSettings.x` 只读转发（:182-243，干净），
