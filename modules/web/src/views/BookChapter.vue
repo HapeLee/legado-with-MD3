@@ -192,6 +192,22 @@ let autoPageRaf = 0
 let autoPageLastFrame = 0
 let autoPageResumeTimer: number | undefined
 
+/**
+ * 自动翻页速度（毫秒/页）。防御历史配置或手改 JSON：非法值回落到默认 10 秒/页，
+ * 避免 0 造成 `innerHeight / 0` 一次性滚到章末。
+ */
+const autoPageDurationMs = () => {
+  const seconds = Number(store.config.autoPageSpeed)
+  return Math.min(120, Math.max(1, Number.isFinite(seconds) ? seconds : 10)) * 1000
+}
+
+/**
+ * 章末判定。要求内容超过一屏，避免首屏尚未加载时把空页面误判为已到章末。
+ */
+const atChapterEnd = () =>
+  document.documentElement.scrollHeight > window.innerHeight + 1 &&
+  window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 1
+
 const startAutoPage = () => {
   if (autoPageRaf || !store.config.autoPage) return
   // 弹窗打开期间不启动滚动（细节5：目录/设置弹窗打开时暂停）
@@ -209,8 +225,12 @@ const startAutoPage = () => {
     const elapsed = now - autoPageLastFrame
     autoPageLastFrame = now
     // 与App端一致：每帧滚动 视口高度 / (速度秒数 × 1000ms) × 本帧毫秒数
-    const duration = store.config.autoPageSpeed * 1000
-    window.scrollBy(0, (window.innerHeight / duration) * elapsed)
+    window.scrollBy(0, (window.innerHeight / autoPageDurationMs()) * elapsed)
+    // 未开启无限加载时章末不会再有新内容：停在章末，不继续空转
+    if (!infiniteLoading.value && atChapterEnd()) {
+      pauseAutoPage(0)
+      return
+    }
     autoPageRaf = requestAnimationFrame(tick)
   }
   autoPageRaf = requestAnimationFrame(tick)
@@ -257,9 +277,10 @@ watch([popCataVisible, readSettingsVisible], ([cata, settings]) => {
     resumeAutoPage()
   }
 })
-// 用户滚轮/触摸交互时暂停，停止操作一段时间后自动恢复
+// 用户滚轮/触摸交互时暂停，停止操作一段时间后自动恢复（touchmove 保证长按拖动期间持续暂停）
 const onUserWheel = () => pauseAutoPage()
 const onUserTouch = () => pauseAutoPage()
+const onUserTouchMove = () => pauseAutoPage()
 
 // 字体
 const fontFamily = computed(() => {
@@ -569,6 +590,7 @@ onMounted(async () => {
   if (store.config.autoPage) startAutoPage()
   window.addEventListener('wheel', onUserWheel, { passive: true })
   window.addEventListener('touchstart', onUserTouch, { passive: true })
+  window.addEventListener('touchmove', onUserTouchMove, { passive: true })
   //获取书籍数据
   const bookUrl = sessionStorage.getItem('bookUrl')
   const name = sessionStorage.getItem('bookName')
@@ -623,6 +645,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', onResize)
   window.removeEventListener('wheel', onUserWheel)
   window.removeEventListener('touchstart', onUserTouch)
+  window.removeEventListener('touchmove', onUserTouchMove)
   // 兼容Safari < 14
   document.removeEventListener('visibilitychange', onVisibilityChange)
   stopAutoPage()
