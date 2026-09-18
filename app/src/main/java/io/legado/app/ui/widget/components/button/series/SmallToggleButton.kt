@@ -1,10 +1,7 @@
 package io.legado.app.ui.widget.components.button.series
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -25,16 +22,6 @@ fun SmallToggleButton(
     text: String? = null,
     contentDescription: String? = null
 ) {
-    val containerColor by animateColorAsState(
-        targetValue = if (checked) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer,
-        animationSpec = tween(150),
-        label = "SmallToggleContainerColor"
-    )
-    val iconTint by animateColorAsState(
-        targetValue = if (checked) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(150),
-        label = "SmallToggleIconTint"
-    )
     SeriesButton(
         onClick = { onCheckedChange(!checked) },
         modifier = modifier,
@@ -48,10 +35,17 @@ fun SmallToggleButton(
             ToggleStyle.Outlined -> SeriesIconButtonStyle.Outlined
             ToggleStyle.Tonal -> SeriesIconButtonStyle.Tonal
         },
-        containerColor = containerColor,
-        selectedContainerColor = containerColor,
-        contentColor = iconTint,
-        selectedContentColor = iconTint
+        // Outlined 未选中态留空，交给样式解析成透明容器
+        containerColor = if (style == ToggleStyle.Tonal) {
+            LegadoTheme.colorScheme.surfaceContainer
+        } else {
+            null
+        },
+        contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+        // M3E 实心 toggle 选中态：反色容器，背景与描边用 inverseSurface，内容用 inverseOnSurface
+        selectedContainerColor = LegadoTheme.colorScheme.inverseSurface,
+        selectedContentColor = LegadoTheme.colorScheme.inverseOnSurface,
+        selectedBorderColor = LegadoTheme.colorScheme.inverseSurface
     ) { contentColor ->
         SeriesButtonContent(
             icon = if (checked) (iconChecked ?: icon)!! else icon!!,

@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -78,6 +79,7 @@ internal fun SeriesButton(
     containerColor: Color? = null,
     selectedContainerColor: Color = LegadoTheme.colorScheme.primaryContainer,
     selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
+    selectedBorderColor: Color? = null,
     content: @Composable (Color) -> Unit
 ) {
     var lastEnabled by remember { mutableStateOf(enabled) }
@@ -109,7 +111,12 @@ internal fun SeriesButton(
         animationSpec = animSpec,
         label = "SeriesIconContentColor"
     )
-    val border = borderStroke(style, enabled)
+    // 描边只由 style 决定，选中态仅覆盖颜色，因此 Tonal 不会凭空多出描边
+    val border = if (enabled && selected && selectedBorderColor != null) {
+        borderStroke(style, enabled)?.copy(brush = SolidColor(selectedBorderColor))
+    } else {
+        borderStroke(style, enabled)
+    }
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(
