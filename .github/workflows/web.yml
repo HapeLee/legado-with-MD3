@@ -3,13 +3,19 @@ name: Build Web
 on:
   push:
     branches:
-      - master
+      # 本仓库默认分支是 main；原写 master 导致下面的「自动提交产物」步骤从未触发过。
+      - main
     paths:
       - '**/modules/web/**'
   pull_request:
     paths:
       - '**/modules/web/**'
   workflow_dispatch:
+
+# git-auto-commit-action 要往 main 提交 app/src/main/assets/web/vue/**，需要写权限；
+# 缺这段时 GITHUB_TOKEN 默认只读，push changes 会 403（与 auto-release.yml 的写法一致）。
+permissions:
+  contents: write
 
 
 jobs:
