@@ -117,6 +117,7 @@ import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPosition
 import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPositionPolicy
 import io.legado.app.feature.reader.core.selection.ReaderPageChangeOrigin
 import io.legado.app.feature.reader.core.selection.ReaderSelection
+import io.legado.app.feature.reader.core.selection.ReaderSelectionDragState
 import io.legado.app.feature.reader.core.selection.ReaderSelectionEndpoint
 import io.legado.app.feature.reader.core.selection.ReaderSelectionLifecyclePolicy
 import io.legado.app.feature.reader.core.selection.ReaderSelectionMenuAnchor
@@ -899,6 +900,10 @@ fun ReaderCanvasSurface(
                 viewConfiguration.touchSlop,
                 configuredTouchSlopPx,
             )
+            // 长按后进拖选的阈值不跟随 pageTouchSlop：后者是防误触翻页设置，可配到 1000px。
+            val selectionDragSlop = ReaderGestureSettingsPolicy.selectionDragSlopPx(
+                viewConfiguration.touchSlop,
+            )
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 latestReaderInteraction()
@@ -929,6 +934,7 @@ fun ReaderCanvasSurface(
                 var scrollHitBoundary: ReaderTurnDirection? = null
                 var movedPastSlop = false
                 var longPressed = false
+                var selectionDragState = ReaderSelectionDragState()
                 var grabbingStart = false
                 var grabbingEnd = false
                 var grabbedEndpoint: ReaderSelectionEndpoint? = null
@@ -1052,6 +1058,22 @@ fun ReaderCanvasSurface(
                         if (longPressed || grabbingStart || grabbingEnd) {
                             val selection = textSelection
                             val movingEndpoint = grabbedEndpoint ?: ReaderSelectionEndpoint.FOCUS
+                            // 长按刚成立时的手抖不该破坏整词选区：越过拖选阈值前保持初始
+                            // selection，只更新放大镜位置。把手拖动不受阈值限制（见
+                            // ReaderSelectionDragState.handleGrabbed）。
+                            selectionDragState = selectionDragState.update(
+                                longPressed = longPressed,
+                                handleGrabbed = grabbingStart || grabbingEnd,
+                                distancePx = total.getDistance(),
+                                dragSlopPx = selectionDragSlop,
+                            )
+                            if (!selectionDragState.started) {
+                                selectionMagnifierSource = selection?.let {
+                                    selectionCursorCenter(it, movingEndpoint)
+                                }
+                                change.consume()
+                                continue
+                            }
                             // PointerInput 会先派发一个与 DOWN 位置相同的事件。把手尚未移动时
                             // 不能再用行底去 hit-test，否则该边界可能直接吸附到下一行。
                             if (grabbedEndpoint != null && !handleHasMoved) {

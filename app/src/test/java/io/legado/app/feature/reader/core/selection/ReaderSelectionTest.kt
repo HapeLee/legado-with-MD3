@@ -21,6 +21,27 @@ class ReaderSelectionTest {
         ), 1L,
     )
 
+    /**
+     * 每个 [ReaderElement.Text] 占 10px 宽、一行高。元素粒度由排版层决定，这里由测试
+     * 自己构造，因此断言只保证“一个元素作为整体被选中/跳过”，不保证排版层如何分词。
+     */
+    private fun textPage(values: List<String>): ReaderPage {
+        var position = 0
+        val elements = values.mapIndexed { index, value ->
+            ReaderElement.Text(
+                ReaderRect(index * 10f, 0f, index * 10f + 10f, 20f),
+                15f,
+                value,
+                style,
+                selected = false,
+                emphasized = false,
+                chapterPosition = position.also { position += value.length },
+                paragraphIndex = 0,
+            )
+        }
+        return page.copy(text = values.joinToString(""), elements = elements)
+    }
+
     @Test fun reverseSelectionNormalizesAndPreservesTextOrder() {
         val selection = ReaderSelection(0, 2, 0)
         assertEquals(0, selection.start)
@@ -94,6 +115,85 @@ class ReaderSelectionTest {
         val selection = ReaderSelectionPolicy.startWord(paragraphs, 5f, 40f, Locale.ENGLISH)!!
 
         assertEquals("word", selection.selectedText(paragraphs))
+    }
+
+    @Test fun intentionalLatinDragReturnsToElementGranularity() {
+        val latin = textPage("one two three".map { it.toString() })
+        val initial = ReaderSelectionPolicy.startWord(latin, 5f, 10f, Locale.ENGLISH)!!
+
+        val expandedInsideWord = ReaderSelectionPolicy.extend(initial, latin, 105f, 10f)
+        val contractedInsideWord = ReaderSelectionPolicy.extend(
+            ReaderSelection(0, 0, 12), latin, 95f, 10f,
+        )
+
+        assertEquals("one", initial.selectedText(latin))
+        assertEquals("one two thr", expandedInsideWord.selectedText(latin))
+        assertEquals("one two th", contractedInsideWord.selectedText(latin))
+    }
+
+    @Test fun reversedDragRemainsElementGranular() {
+        val latin = textPage("one two three".map { it.toString() })
+        val reversed = ReaderSelection(0, 12, 0)
+
+        val moved = ReaderSelectionPolicy.extend(reversed, latin, 15f, 10f)
+
+        assertEquals(12, moved.anchor)
+        assertEquals(1, moved.focus)
+        assertEquals("ne two three", moved.selectedText(latin))
+    }
+
+    @Test fun bothSemanticEndpointsCanMoveInsideLatinWords() {
+        val latin = textPage("one two three".map { it.toString() })
+        val selection = ReaderSelection(0, 0, 12)
+
+        val anchorMoved = selection.moveEndpoint(ReaderSelectionEndpoint.ANCHOR, 1)
+        val focusMoved = selection.moveEndpoint(ReaderSelectionEndpoint.FOCUS, 9)
+
+        assertEquals("ne two three", anchorMoved.selectedText(latin))
+        assertEquals("one two th", focusMoved.selectedText(latin))
+    }
+
+    @Test fun eitherEndpointCanCrossWithoutChangingItsIdentity() {
+        val anchorCrossed = ReaderSelection(0, 0, 6)
+            .moveEndpoint(ReaderSelectionEndpoint.ANCHOR, 9)
+        val focusCrossed = ReaderSelection(0, 6, 12)
+            .moveEndpoint(ReaderSelectionEndpoint.FOCUS, 5)
+
+        assertEquals(9, anchorCrossed.anchor)
+        assertEquals(6, anchorCrossed.focus)
+        assertEquals(6, focusCrossed.anchor)
+        assertEquals(5, focusCrossed.focus)
+    }
+
+    @Test fun cjkDragKeepsExistingElementGranularity() {
+        val selection = ReaderSelection(0, 0, 2)
+
+        val contracted = ReaderSelectionPolicy.extend(selection, page, 15f, 10f)
+
+        assertEquals("甲乙", contracted.selectedText(page))
+        assertEquals(1, contracted.focus)
+    }
+
+    @Test fun apostrophesRemainOrdinaryReaderElementsDuringDrag() {
+        listOf("'", "’").forEach { apostrophe ->
+            val latin = textPage(listOf("d", "o", "n", apostrophe, "t"))
+            val selection = ReaderSelection(0, 0, 4)
+
+            val contracted = ReaderSelectionPolicy.extend(selection, latin, 35f, 10f)
+
+            assertEquals("don$apostrophe", contracted.selectedText(latin))
+            assertEquals(3, contracted.focus)
+        }
+    }
+
+    @Test fun dragKeepsAMultiCodeUnitElementWhole() {
+        val latin = textPage(listOf("c", "a", "f", "e\u0301", "x"))
+        val selection = ReaderSelection(0, 0, 6)
+
+        val contracted = ReaderSelectionPolicy.extend(selection, latin, 35f, 10f)
+
+        assertEquals(3, contracted.focus)
+        assertEquals("cafe\u0301", contracted.selectedText(latin))
     }
 
     @Test
