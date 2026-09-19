@@ -11,19 +11,19 @@ class ReaderSelectionDragStateTest {
             longPressed = true,
             handleGrabbed = false,
             distancePx = 3f,
-            touchSlopPx = 8f,
+            dragSlopPx = 8f,
         )
 
         assertFalse(state.started)
     }
 
     @Test
-    fun movementAtSlopStartsGraphemeDrag() {
+    fun movementAtSlopStartsSelectionDrag() {
         val state = ReaderSelectionDragState().update(
             longPressed = true,
             handleGrabbed = false,
             distancePx = 8f,
-            touchSlopPx = 8f,
+            dragSlopPx = 8f,
         )
 
         assertTrue(state.started)
@@ -35,7 +35,7 @@ class ReaderSelectionDragStateTest {
             longPressed = true,
             handleGrabbed = false,
             distancePx = 8f,
-            touchSlopPx = 8f,
+            dragSlopPx = 8f,
         )
 
         assertTrue(
@@ -43,7 +43,7 @@ class ReaderSelectionDragStateTest {
                 longPressed = true,
                 handleGrabbed = false,
                 distancePx = 2f,
-                touchSlopPx = 8f,
+                dragSlopPx = 8f,
             ).started
         )
     }
@@ -54,9 +54,33 @@ class ReaderSelectionDragStateTest {
             longPressed = false,
             handleGrabbed = true,
             distancePx = 0f,
-            touchSlopPx = 8f,
+            dragSlopPx = 8f,
         )
 
         assertTrue(state.started)
+    }
+
+    @Test
+    fun movementWithoutLongPressOrHandleNeverStartsDrag() {
+        val state = ReaderSelectionDragState().update(
+            longPressed = false,
+            handleGrabbed = false,
+            distancePx = 200f,
+            dragSlopPx = 8f,
+        )
+
+        assertFalse(state.started)
+    }
+
+    @Test
+    fun aZeroSlopStillRequiresSomeMovement() {
+        val state = ReaderSelectionDragState().update(
+            longPressed = true,
+            handleGrabbed = false,
+            distancePx = 0f,
+            dragSlopPx = 1f,
+        )
+
+        assertFalse(state.started)
     }
 }

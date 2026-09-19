@@ -900,6 +900,10 @@ fun ReaderCanvasSurface(
                 viewConfiguration.touchSlop,
                 configuredTouchSlopPx,
             )
+            // 长按后进拖选的阈值不跟随 pageTouchSlop：后者是防误触翻页设置，可配到 1000px。
+            val selectionDragSlop = ReaderGestureSettingsPolicy.selectionDragSlopPx(
+                viewConfiguration.touchSlop,
+            )
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 latestReaderInteraction()
@@ -1054,15 +1058,18 @@ fun ReaderCanvasSurface(
                         if (longPressed || grabbingStart || grabbingEnd) {
                             val selection = textSelection
                             val movingEndpoint = grabbedEndpoint ?: ReaderSelectionEndpoint.FOCUS
+                            // 长按刚成立时的手抖不该破坏整词选区：越过拖选阈值前保持初始
+                            // selection，只更新放大镜位置。把手拖动不受阈值限制（见
+                            // ReaderSelectionDragState.handleGrabbed）。
                             selectionDragState = selectionDragState.update(
                                 longPressed = longPressed,
                                 handleGrabbed = grabbingStart || grabbingEnd,
                                 distancePx = total.getDistance(),
-                                touchSlopPx = pageTouchSlop,
+                                dragSlopPx = selectionDragSlop,
                             )
                             if (!selectionDragState.started) {
                                 selectionMagnifierSource = selection?.let {
-                                    selectionCursorCenter(it, ReaderSelectionEndpoint.FOCUS)
+                                    selectionCursorCenter(it, movingEndpoint)
                                 }
                                 change.consume()
                                 continue

@@ -21,6 +21,10 @@ class ReaderSelectionTest {
         ), 1L,
     )
 
+    /**
+     * 每个 [ReaderElement.Text] 占 10px 宽、一行高。元素粒度由排版层决定，这里由测试
+     * 自己构造，因此断言只保证“一个元素作为整体被选中/跳过”，不保证排版层如何分词。
+     */
     private fun textPage(values: List<String>): ReaderPage {
         var position = 0
         val elements = values.mapIndexed { index, value ->
@@ -182,7 +186,7 @@ class ReaderSelectionTest {
         }
     }
 
-    @Test fun dragAndCopyKeepAMultiCodeUnitGraphemeWhole() {
+    @Test fun dragKeepsAMultiCodeUnitElementWhole() {
         val latin = textPage(listOf("c", "a", "f", "e\u0301", "x"))
         val selection = ReaderSelection(0, 0, 6)
 
