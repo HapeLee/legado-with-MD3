@@ -1,121 +1,87 @@
 # Legado Compose Review Checklist
 
-## Files to Read
+Use only the sections relevant to the scoped surface.
 
-For a feature review, inspect the smallest complete slice:
+## Context
 
-- `FeatureScreen.kt` and any `FeatureSheets.kt` / `FeatureDialogs.kt`.
-- `FeatureViewModel.kt`.
-- `FeatureContract.kt` if present.
-- Canonical owner under `feature/<name>` or the documented reason it remains in legacy `ui/...`.
-- Host route in `MainActivity.kt` or retained `FeatureActivity.kt`.
-- Koin registration in `di/appModule.kt`.
-- Repositories/usecases used by the feature.
-- Old View caller or XML/adapters only when still used for compatibility or behavior comparison.
+- Confirm the canonical Feature owner and whether any legacy `ui/...` file is a compatibility owner.
+- Read Screen/Content, ViewModel/state contract, route/Activity, DI and directly used domain/data
+  contracts.
+- Read old XML/View/adapters only when needed for parity or a live caller.
+- Identify all entry points: MainActivity route, Intent/deep link, notification/widget/service or
+  Activity Result.
 
-Use current examples as references:
+## Behavior and state
 
-- `ui/main/MainActivity.kt` for Navigation3 route ownership.
-- `ui/book/info/BookInfoContract.kt`, `BookInfoViewModel.kt`, `BookInfoScreen.kt` for behavior-heavy MVI/UDF.
-- `ui/book/search/SearchContract.kt`, `SearchViewModel.kt`, `SearchScreen.kt` for route-level search state.
-- `ui/widget/components/...` and `ui/theme/...` for shared UI conventions.
+- Is there one durable state owner, or can ViewModel, Activity, `remember`, adapter and repository
+  copies diverge?
+- Is each state hoisted only to the lowest owner that needs to read and write it? Local expansion,
+  focus or animation state need not be forced into a ViewModel; business state must not be copied
+  into local Compose state.
+- Can loading, empty, error, selection, query, sorting and dialog/sheet states be reconstructed
+  after
+  recreation where required?
+- Are one-shot effects consumed once without becoming persistent replayable flags?
+- Can a ViewModel-produced effect be emitted while the route has no active collector? If losing it
+  would leave navigation, results or durable business state inconsistent, model/acknowledge it as
+  state rather than relying on `SharedFlow` buffering.
+- Are success, failure, cancellation and stale-response ordering handled?
+- Do `LaunchedEffect` keys match the intended lifetime and avoid duplicate loads/navigation/toasts?
+- Is `Flow`-backed Android UI state collected with `collectAsStateWithLifecycle`, or is there a
+  documented lifecycle reason for another collector?
+- Are mutable collections/entities exposed in a way that invalidates a claimed `@Stable` contract?
+- With Strong Skipping, are unstable parameters recreated on each update and compared by identity?
+  Ask for compiler/measurement evidence before treating ordinary recomposition as a defect.
+- Do lazy items use stable identity where insert/remove/reorder can attach state to the wrong row?
 
-## Architecture Checks
+## Architecture and ownership
 
-Flag issues when:
+- Screen/Content renders state and emits semantic actions; it does not access DAO, repository,
+  network, storage, service or global application state.
+- New ViewModel code uses Gateway/Repository/UseCase boundaries and does not add DAO or old global
+  access.
+- Host owns navigation, framework launchers, permissions, Context/URI work and root lifecycle.
+- A retained Activity translates compatibility inputs/results without becoming a second business or
+  navigation owner.
+- Feature code does not depend on another Feature implementation.
+- New files do not extend a legacy package after a canonical Feature owner exists.
 
-- A new Compose-first screen is implemented as a standalone Activity instead of a `MainActivity` destination without a compatibility reason.
-- A retained Activity contains feature business logic instead of acting as a thin Android `Intent` compatibility host.
-- Business rules, repository calls, DAO calls, persistence writes, or service orchestration live in composables.
-- ViewModel exposes mutable state directly, exposes `MutableStateFlow`, or lets UI mutate domain objects.
-- UI state is split across Activity fields, composable `remember` state, adapter state, and ViewModel state in a way that can diverge.
-- One-shot events such as navigation, result codes, file opening, permission requests, or clipboard writes are represented as persistent `UiState` fields that can replay incorrectly.
-- MVI `FeatureIntent` user actions are confused with Android `Intent` launch/extras.
-- Domain/usecase boundaries are bypassed in new screens when a meaningful business action exists.
-- A migration introduces new domain abstractions for a single trivial UI action without reducing real complexity.
-- New Compose-first files extend a legacy `ui/...` package after the Feature has a canonical
-  `feature/<name>` owner, or the same Feature is split across both roots without an explicit
-  compatibility boundary.
+## Navigation and compatibility
 
-## UDF and State Checks
+- New in-app destinations are registered in the current MainActivity graph unless an external-entry
+  requirement justifies an Activity.
+- Existing extras, result codes, deep links and callers preserve semantics.
+- Multiple entry paths initialize equivalent state and converge on the same owner.
+- Nested UI requests navigation through callbacks/effects rather than mutating the root stack.
+- Pure UI navigation can call a host callback directly. Check rapid taps and lifecycle state; use a
+  lifecycle-aware guard such as `dropUnlessResumed` where supported rather than inventing a
+  ViewModel effect solely to move the navigation call.
+- Back interception covers real selection/unsaved state without breaking predictive back or host
+  result delivery.
+- Custom gesture-progress UI uses `PredictiveBackHandler`; customized Navigation 3 pop transitions
+  also define/verify predictive-pop behavior.
 
-Flag issues when:
+## UI, Insets and accessibility
 
-- `Screen` functions own business state instead of receiving `state` and callbacks.
-- `remember` / `rememberSaveable` stores source-of-truth data that should survive process or route recreation through ViewModel state.
-- `LaunchedEffect` keys are unstable or cause repeated data loading, duplicate navigation, duplicate toasts, or repeated service calls.
-- Flows are collected without lifecycle awareness in UI routes where `collectAsStateWithLifecycle()` should be used.
-- List items lack stable keys where mutation, selection, or animation can make state attach to the wrong row.
-- Selection, search query, sorting, filtering, loading, and error states are not represented in a single coherent `UiState`.
-- Derived values are recomputed expensively on every recomposition instead of living in ViewModel state or `remember(key)`.
+- Trace `Scaffold` `contentWindowInsets`, inner padding consumption, nested scaffolds/sheets, system
+  bars and IME. Check for both overlap and double padding.
+- User-facing strings retain localization and fallback behavior.
+- Project components/theme are used when their semantics fit; wrappers are not applied mechanically.
+- Touch targets, focus order, semantics/content descriptions and keyboard behavior fit the control.
+- Custom pointer input has an accessible semantic action and keyboard/D-pad alternative; standard
+  Material/Foundation interactions are preferred when their behavior fits.
+- Lists/images preserve existing cache, loading and accessibility behavior where relevant.
+- Removed XML/binding/menu resources have no remaining references.
 
-## Navigation and Compatibility Checks
+## Verification and output
 
-Flag issues when:
+Tie each finding to evidence and the smallest fix. Recommend only checks that can observe the risk:
 
-- New Compose destinations skip `MainActivity` Navigation3 route registration.
-- Legacy Android `Intent` extras or result codes change without an explicit compatibility plan.
-- A migrated screen is reachable both through `MainActivity` and a retained Activity with inconsistent state initialization.
-- Navigation is performed directly inside nested composables instead of through callbacks/effects.
-- Activity Result launchers, file pickers, permission requests, or Android DialogFragments are hidden inside reusable UI composables.
-- Back behavior bypasses ViewModel decisions when unsaved changes, selection mode, add-to-shelf prompts, or confirmation dialogs exist.
+- compilation for Kotlin wiring;
+- assemble for resources, manifest, XML/binding and packaging;
+- focused unit tests for reducers/ViewModels/use cases;
+- route plus retained Intent/result path checks for navigation compatibility;
+- device/emulator checks for Insets, IME, accessibility, predictive back and rendering performance.
 
-## UI and Project Convention Checks
-
-Flag issues when:
-
-- Raw Material components ignore `LegadoTheme` or existing shared components where the project already has a wrapper.
-- A screen recreates shared UI already present under `ui/widget/components`.
-- User-facing text is hardcoded instead of using string resources, except for temporary debug-only text.
-- Compose UI keeps ViewBinding, adapter, or XML assumptions after migration.
-- Dialogs and bottom sheets use inconsistent project components when `AppAlertDialog`, `AppModalBottomSheet`, or existing option sheets fit.
-- Image loading bypasses existing Coil cover/image helpers where cover behavior, cache, SVG, or GIF handling matters.
-
-## Clean Architecture Checks
-
-For new screens, expect:
-
-- Compose renders state and emits user actions.
-- ViewModel owns state, intent handling, and effect emission.
-- Usecases own reusable business actions.
-- Repositories mediate data access.
-- DAOs remain behind repositories unless adding a boundary would be disproportionate and local project patterns already allow direct use.
-
-For migrated screens, allow pragmatic intermediate code only when:
-
-- It preserves behavior.
-- It is isolated behind a clear compatibility boundary.
-- It does not spread View-era assumptions into new Compose-first code.
-
-## Output Template
-
-Use this shape unless the user asks for another format:
-
-```text
-Findings
-- [P1] Title
-  file:line
-  Impact: ...
-  Fix: ...
-
-Open Questions
-- ...
-
-Notes
-- No issues found in ... / Tests not run ...
-```
-
-When using Codex inline review comments, emit one directive per finding with tight line ranges:
-
-```text
-::code-comment{title="[P2] Keep route state in ViewModel" body="..." file="/absolute/path/FeatureScreen.kt" start=42 end=45 priority=2 confidence=0.8}
-```
-
-## Verification Suggestions
-
-Recommend verification based on the reviewed change:
-
-- Kotlin-only review/fix: `.\gradlew.bat :app:compileAppDebugKotlin`.
-- Resource/XML/manifest impact: `.\gradlew.bat :app:assembleAppDebug`.
-- Navigation or compatibility changes: manually open both `MainActivity` route and any retained legacy Android `Intent` entry point.
-- Behavior-heavy ViewModel changes: add or run focused tests only where the project has a practical test seam.
+Use P0/P1/P2/P3 from the skill. If there are no findings, explicitly list what was not executed or
+observed.

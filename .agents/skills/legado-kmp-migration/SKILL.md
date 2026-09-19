@@ -1,99 +1,133 @@
 ---
 name: legado-kmp-migration
-description: Plan, implement, or review Legado Gradle modularization and Kotlin/Compose Multiplatform migration slices. Use for build-logic, module boundaries, commonMain extraction, expect/actual or platform interfaces, CMP feature sharing, KMP migration gates, capability matrices, and related scaffolding. Do not use for an ordinary Android-only Compose screen migration unless it also changes a multiplatform or Gradle boundary.
+description: Plan, implement, or review Legado KMP-first modularization across shared domain, data, and presentation code with independently chosen Android, Desktop, Windows-native, and optional iOS renderers. Use for Gradle boundaries, commonMain extraction, platform capabilities, native or process bridges, selective CMP, target gates, and legacy-owner removal. Do not use for an Android-only View-to-Compose rewrite unless it also changes a multiplatform or Gradle boundary.
 ---
 
-# Legado KMP/CMP Migration
+# Legado KMP-first Migration
 
 ## Purpose
 
-Move one verified boundary toward KMP/CMP without weakening Android behavior. Treat
-platform-specific implementations as valid architecture, keep the Android app shippable after every
-slice, and use baselines as ratchets rather than waivers.
+Move one verified responsibility toward a reusable KMP boundary without weakening Android behavior
+or forcing every host to use Compose. Optimize for shared behavior and explicit platform contracts,
+not maximum shared UI percentage.
 
-Before acting, read repository `AGENTS.md` and `docs/dev/kmp-cmp-modernization.md`. For an
-implementation or review, also read [references/slice-checklist.md](references/slice-checklist.md).
+Valid renderers include Android Compose/View islands, Compose Desktop with Material or Fluent,
+Windows-native WinUI 3, and optional SwiftUI/UIKit. CMP is one renderer technology, not the
+architecture root.
 
-## Select the mode
+Before acting, read repository `AGENTS.md`, `docs/dev/kmp-cmp-modernization.md`, and the relevant
+part of `docs/dev/feature-first-structure.md`.
 
-- **Plan:** produce a dependency inventory, target seam, capability impact, phases, gates and
-  rollback point. Do not create the full target module tree.
-- **Extract:** move a narrow set of models/rules/contracts behind adapters, migrate callers, run
-  both common and Android verification, then lower relevant baselines.
-- **Build logic:** add or change convention plugins and dependency rules using one representative
-  module before broad rollout.
-- **CMP feature:** share state/reducer/UI only where platform effects and navigation have explicit
-  host boundaries.
-- **Scaffold:** generate only conventions proven by at least two accepted manual examples; require
-  dry-run and no-overwrite behavior.
-- **Review:** report behavior and boundary findings before recommending changes. Do not edit unless
-  fixes were requested.
+Read supporting references only when applicable:
 
-## Required workflow
+- Implementation or review: [references/slice-checklist.md](references/slice-checklist.md).
+- Multiple renderers, WinUI 3, SwiftUI/UIKit, native export or IPC:
+  [references/renderer-host-strategy.md](references/renderer-host-strategy.md).
 
-1. Define the slice and evidence.
-    - Name exact source files/packages, current callers, intended target module/source set, and
-      behavior that must not change.
-    - Separate current facts from planned modules and task names.
-    - Inspect Gradle files, version catalog, relevant tests, and imports rather than assuming an API
-      is multiplatform.
-    - For Feature work, read `docs/dev/feature-first-structure.md` and distinguish package
-      colocation, Android module extraction, and KMP conversion as separate stages.
+## Choose the work mode
 
-2. Classify every dependency.
-    - `common-ready`: Kotlin/common library API with a non-Android compile target.
-    - `contract-needed`: behavior can be represented by a narrow interface and platform
-      implementation.
-    - `platform-island`: lifecycle, service, reader rendering, Rhino/JVM or another capability that
-      should remain platform-specific.
-    - `unknown`: verify against primary documentation or a compile PoC before designing around it.
+- **Architecture/plan:** inventory current dependencies and consumers, then choose the sharing
+  boundary, renderer strategy, targets, gates and rollback point.
+- **Pure KMP extraction:** move stable models, rules, ports, use cases, reducers or stores into
+  Compose-free `commonMain`.
+- **Data/runtime extraction:** separate domain contracts from storage, network, files and rule
+  engines while retaining compatibility semantics under contract tests.
+- **Renderer boundary:** split renderer-neutral presentation from Material/Miuix, Fluent, WinUI 3,
+  SwiftUI/UIKit or specialized reader UI.
+- **Selective CMP:** share a Compose Screen/resource set only when real hosts deliberately choose
+  the same renderer and interaction model.
+- **Native host bridge:** expose a small, versioned API through an Apple framework, Windows DLL/C
+  ABI, or process/IPC boundary; do not export the internal Kotlin object graph.
+- **Build logic:** prove a target/convention/gate change with one representative module before
+  broader rollout.
+- **Review:** report findings and unverified targets first; edit only when fixes or plans were
+  requested.
 
-3. Choose the smallest seam.
-    - Prefer stable values, pure rules, gateways and use cases before storage, engines and UI.
-    - Prefer ordinary interfaces plus DI over `expect/actual`; reserve `expect/actual` for platform
-      primitives that every target must provide statically.
-    - Keep platform assembly in the app/Koin composition root.
-    - Do not change storage, network, navigation, DI and UI technology in the same slice.
-    - Create Feature `api/impl` only when a real Gradle boundary and caller require it.
+## Decisions required before implementation
 
-4. Establish gates before moving code.
-    - Add characterization/contract tests at the old boundary.
-    - Use report → freeze baseline → blocking for a new rule.
-    - Never raise a platform-import or dependency baseline to make a migration pass.
+1. **What is shared?**
+    - Default candidates are domain values, business rules, repository ports, use cases,
+      serialization models, state snapshots, commands and reducers.
+    - Screens, design-system components, navigation renderers, platform ViewModel owners, resource
+      handles, lifecycle and OS integration are not shared by default.
+    - A pure presentation API must not expose Compose annotations/types, Material/Fluent types,
+      Android resources, Koin, Room, or platform SDK objects.
 
-5. Implement additively.
-    - Introduce contract/module and Android adapter first.
-    - Migrate a bounded caller set.
-    - Delete the old entry only after no callers remain; otherwise document its removal condition.
-    - Keep app-host composition, navigation runtime and platform effects outside shared UI.
-    - Preserve the canonical `io.legado.app.feature.<name>` package when promoting `:app` code to
-      `:feature:<name>` so module extraction does not require another conceptual reorganization.
+2. **Who renders it?**
+    - Name each committed host and renderer separately; “Desktop” is not a renderer.
+    - Different renderers may consume the same presentation contract while owning distinct layouts,
+      resources, navigation and accessibility.
+    - Do not invent universal UI wrappers across unrelated design systems. Share semantic values
+      only
+      when their meaning is genuinely common.
 
-6. Verify and report.
-    - Always retain the repository G0 Android gates.
-    - For common code, run the actual `commonTest`, metadata, and selected non-Android target
-      compile tasks that exist in the changed project.
-    - For adapters, run contract and Android behavior tests. For reader/rule/service changes,
-      include parity or performance evidence proportional to risk.
-    - Report exact commands, dependency/baseline deltas, capability changes, rollback path, and
-      unverified targets.
+3. **How does a non-Kotlin host consume it?**
+    - JVM Compose hosts can depend on KMP/JVM modules directly.
+    - SwiftUI/UIKit needs a deliberately exported Apple framework facade.
+    - WinUI 3 needs either a Kotlin/Native `mingwX64` DLL with a narrow C ABI or a separately
+      packaged
+      JVM process reached through a versioned local IPC protocol.
+    - Keep rich Kotlin types internal. Define DTO/state snapshots, commands, errors, cancellation,
+      callback threads, allocation ownership and disposal at the bridge.
 
-## Non-negotiable boundaries
+4. **What evidence supports the claim?**
+    - Distinguish metadata/compile, contract-test, host smoke, package and release-ready evidence.
+    - Android plus JVM compilation does not prove iOS or Windows Native readiness.
+    - Do not document a module, target, task or host as current until it exists in this repository.
 
-- No Android, JDK-only, Room DAO/entity, resource ID, `File`, URI, service, Activity or View type in
-  shared public contracts.
-- No core → feature, Feature `api` → Feature, or Feature `impl` → another Feature `impl` dependency.
-- No silent no-op implementation for an unsupported target; model the capability explicitly.
-- Report target support by evidence level: compile, contract-test, smoke, package, and
-  release-ready. Do not collapse them into one supported/unsupported flag.
-- No generic dumping-ground module and no empty architecture-shaped modules.
-- Do not make Compose reader replacement a KMP prerequisite; share render models while allowing the
-  Android renderer to remain specialized.
-- Preserve current rule-script, import/export, database, settings and reader semantics until
-  dedicated tests authorize a behavior change.
+## Workflow
 
-## Relationship to Android Compose work
+1. Bound one slice: exact files, callers, behavior, intended owner/source set, host impact and
+   rollback point.
+2. Classify dependencies as `common-ready`, `contract-needed`, `renderer-specific`,
+   `platform-island`, or `unknown`. Imports are only a first pass; compile every claimed target.
+3. Establish characterization or contract tests before moving behavior. Preserve storage, script
+   ABI, serialization, error, cancellation, ordering and threading semantics.
+4. Choose the smallest seam. Prefer interfaces plus constructor injection; use `expect/actual` only
+   for true platform primitives or a documented case where injection cannot provide the boundary.
+5. Implement additively, migrate a bounded caller set, then delete the old owner when no callers
+   remain. Do not keep internal `Help/Utils/Base/Provider` facades for import compatibility.
+6. Run actual repository gates and target tasks. Never infer task support from the target design.
+7. Report behavior evidence, dependency/baseline delta, capability changes, exact commands,
+   rollback path and unverified hosts/devices.
 
-Use `legado-compose-migration` for Android-only View→Compose work and `legado-compose-review` for
-Android Compose review. Combine them with this skill only when the same bounded change crosses a
-KMP/CMP or Gradle-module boundary.
+## Boundary rules
+
+- Pure KMP domain/presentation does not depend on Compose, AndroidX ViewModel, Room entities/DAO,
+  Koin, platform resources, `File`/URI, JVM-only libraries or renderer types.
+- Renderer modules may depend on presentation; presentation never depends on a renderer.
+- Each host owns its composition root, root navigation/window lifecycle, platform effects,
+  implementation selection and packaging.
+- Unsupported capabilities are explicit; a successful no-op is not an implementation.
+- Feature-to-Feature implementation dependencies remain forbidden. Create `api/impl` only for a
+  real Gradle consumer; split renderers by responsibility instead of generic layering names.
+- Do not change storage, network, DI, navigation and UI technology in one slice.
+- Historical baselines only decrease. A new source set starts at zero and cannot justify raising a
+  baseline.
+
+## Verification minimums
+
+- Always retain the affected Android G0 gates.
+- Pure KMP: common tests plus every claimed target compile.
+- Data/runtime: adapter contracts and compatibility checks proportional to storage, serialization,
+  cancellation and error risks.
+- CMP renderer: target compile plus rendered UI/semantics smoke and runtime dependency alignment.
+- WinUI 3 DLL: native link, generated API review, consumer smoke, memory/disposal/error/thread tests
+  and package loading.
+- WinUI 3 IPC: protocol compatibility, startup/shutdown/reconnect, local-access policy,
+  cancellation and installer smoke.
+- iOS native UI: framework export plus a Swift consumer compile/observation/lifecycle smoke.
+- Always run `git diff --check`; use a clean rebuild after cross-module moves.
+
+## Review output
+
+List findings by impact with tight file/line evidence and the smallest credible fix:
+
+- P0/P1: behavior or data loss, ABI/storage incompatibility, broken target, lifecycle/thread/
+  cancellation defect, or package/runtime failure.
+- P2: renderer leakage into presentation, illegal dependency, false capability, untested bridge,
+  state duplication, baseline relaxation, or unnecessary abstraction.
+- P3: convention, naming, documentation, graph or template drift.
+
+If there are no findings, state which host, package, device, renderer, interop and performance paths
+remain unverified.

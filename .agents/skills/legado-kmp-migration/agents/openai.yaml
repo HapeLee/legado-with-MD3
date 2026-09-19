@@ -1,4 +1,4 @@
 interface:
-  display_name: "Legado KMP Migration"
-  short_description: "Plan and review Legado KMP/CMP migration slices"
-  default_prompt: "Use $legado-kmp-migration to plan a reviewable KMP/CMP migration slice with explicit gates."
+  display_name: "Legado KMP-first Migration"
+  short_description: "Plan shared KMP logic and independent native or Compose renderers"
+  default_prompt: "Use $legado-kmp-migration to plan a reviewable KMP-first slice with explicit host, renderer, interop, and verification boundaries."

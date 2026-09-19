@@ -1,206 +1,146 @@
-# Legado Compose Migration Project Patterns
+# Legado Android Compose Project Patterns
 
-## Existing Shape
+Read this reference while implementing a screen. Confirm every referenced API against the current
+checkout because the repository is mid-migration.
 
-- App module: `app`.
-- Main source root: `app/src/main/java/io/legado/app`.
-- Legacy UI package: `ui/...`; it remains a migration zone, not the destination for new
-  Compose-first Feature ownership.
-- Canonical new Feature package: `feature/<name>` as defined by
-  `docs/dev/feature-first-structure.md`.
-- Data package: `data/dao`, `data/entities`, `data/repository`.
-- Domain package: `domain/gateway`, `domain/model`, `domain/repository`, `domain/usecase`.
-- DI: `di/appModule.kt`, using Koin `singleOf`, `viewModelOf`, and parameterized `viewModel { ... }`.
-- Main navigation: `ui/main/MainActivity.kt`, using Navigation3 `NavKey`, `rememberNavBackStack`, `entryProvider`, and `NavDisplay`, plus legacy route extras such as `EXTRA_START_ROUTE`.
-- Base Compose host: `base/BaseComposeActivity.kt`, which wraps `Content()` in `AppTheme`, configures system bars, locale/font, background image, and LiveBus recreation events.
-- Compose dependencies are already enabled in `app/build.gradle.kts`; do not add new UI libraries unless the target screen truly requires one.
-- `kotlinx.collections.immutable` is available for Compose-facing screen state. Prefer `ImmutableList`, `ImmutableSet`, and `ImmutableMap` at `UiState` boundaries when collection state is passed to composables and changes often.
+## Ownership and placement
 
-## Files to Inspect Before Migrating
+- Android application module: `:app`.
+- Canonical new Feature package: `io.legado.app.feature.<name>`.
+- `ui/...` is legacy/migration territory. Keep only explicit compatibility owners there after a
+  Feature establishes its canonical package.
+- `MainActivity` owns new in-app Navigation 3 destinations and the root graph.
+- A retained Activity translates stable external/legacy Intent inputs and results; it is not a
+  second presentation or navigation owner.
+- App-level Koin aggregation remains in the host. Use the repository's existing `viewModelOf` or
+  parameterized `viewModel` convention rather than adding a second DI pattern.
 
-Inspect these as local examples, not as APIs to copy blindly:
+A Feature may contain Contract, ViewModel, Route, Screen, components, dialogs, sheets and
+presentation models, but create only the files its behavior needs. Directory shape is not an
+acceptance criterion.
 
-- `ui/book/info/BookInfoActivity.kt`
-- `ui/book/info/BookInfoContract.kt`
-- `ui/book/info/BookInfoViewModel.kt`
-- `ui/book/info/BookInfoScreen.kt`
-- `ui/book/search/SearchContract.kt`
-- `ui/book/search/SearchViewModel.kt`
-- `ui/book/search/SearchScreen.kt`
-- `ui/main/MainActivity.kt`
-- `ui/main/MainScreen.kt`
-- `ui/widget/components/AppScaffold.kt`
-- `ui/widget/components/list/ListScaffold.kt`
-- `ui/theme/LegadoTheme.kt`
-- `ui/theme/AppTheme.kt`
+## State and effects
 
-## Recommended Feature Layout
+For a behavior-heavy new screen, the repository expects:
 
-For a migrated feature, prefer colocated files:
+- `@Stable` Compose-facing `UiState` and UI item models;
+- immutable collections at the Compose rendering boundary;
+- private `MutableStateFlow`, exposed as read-only `StateFlow`;
+- when best-effort transient effects are actually needed, private
+  `MutableSharedFlow(extraBufferCapacity = 16)`, exposed as read-only `SharedFlow`;
+- one `onIntent` dispatcher for user actions;
+- host actions expressed as effects or callbacks.
 
-```text
-feature/<feature>/
-  FeatureActivity.kt       # only for legacy Intent compatibility or full-screen migration host
-  FeatureContract.kt
-  FeatureViewModel.kt
-  FeatureRoute.kt          # only when route/host wiring is substantial
-  FeatureScreen.kt
-  components/              # Feature-private UI only
-  sheet/                   # only if sheets are substantial
-  dialog/                  # only if dialogs are substantial
-  model/                   # presentation-only UI models
-  legacy/                  # temporary compatibility bridge with removal condition
-```
+`@Stable` is an assertion, not a magic optimization. Every public property must remain stable and
+changes observed by Compose. Wrap unstable data only when the wrapper has correct equality and
+mutation semantics. Use measurement/compiler reports before inventing performance abstractions.
 
-Use the smallest set of files. Do not split files just to match this shape.
+Keep source-of-truth business state in the ViewModel. Local `remember`/`rememberSaveable` is
+suitable
+for UI affordances and restorable drafts/IDs, not a second copy of repository state. Avoid
+UI-to-ViewModel feedback loops; restore consistency in the reducer or flow that produces the state.
 
-The directory is `feature/book-info`, the Gradle path is `:feature:book-info`, and the Kotlin
-package is `io.legado.app.feature.bookinfo`. Start with this shape inside `:app`; promote it to a
-Gradle module only after the boundary has real callers and verification. Do not create `api/impl` by
-default.
+Classify host actions by delivery semantics:
 
-## MVI and UDF Rules
+- A user click whose only meaning is UI navigation can call a host callback directly; use a
+  lifecycle-aware rapid-click guard such as `dropUnlessResumed` where the available Lifecycle
+  version supports it.
+- A ViewModel outcome that must survive a missing collector becomes state with an acknowledgement
+  or another explicit durable protocol.
+- Snackbar/toast/haptic feedback that is intentionally best-effort may use the Feature effect
+  stream. Document the loss behavior rather than assuming `extraBufferCapacity` solves it.
 
-Use this shape for behavior-heavy screens:
+## Host boundaries
 
-```kotlin
-@Stable
-data class FeatureUiState(
-    val isLoading: Boolean = false,
-    val items: ImmutableList<Item> = persistentListOf(),
-    val dialog: FeatureDialog? = null,
-    val sheet: FeatureSheet = FeatureSheet.None,
-)
+Keep these at the route/host unless the project already has a tested abstraction:
 
-sealed interface FeatureIntent {
-    data object BackPressed : FeatureIntent
-    data object Refresh : FeatureIntent
-    data class ItemClick(val id: Long) : FeatureIntent
-}
+- navigation and result delivery;
+- permission and Activity Result launchers;
+- file/document pickers;
+- Android framework dialogs and services;
+- Context-dependent clipboard, URI and external-app operations.
 
-sealed interface FeatureEffect {
-    data object Finish : FeatureEffect
-    data class OpenDetail(val id: Long) : FeatureEffect
-}
-```
+Reusable Screen functions receive state and semantic callbacks. They do not know an Activity,
+binding, DAO, application singleton or root back stack.
 
-ViewModel rules:
+## Lists, lifecycle and recomposition
 
-- Keep `_uiState = MutableStateFlow(FeatureUiState())` private and expose `uiState = _uiState.asStateFlow()`.
-- Keep `_effects = MutableSharedFlow<FeatureEffect>(extraBufferCapacity = 8)` private and expose `effects = _effects.asSharedFlow()`.
-- Prefer `fun onIntent(intent: FeatureIntent)` as the UI entry point.
-- Treat `FeatureIntent` as an MVI/user-action type. When Android `Intent` launch/extras are also involved, name variables and explanations clearly enough that the two concepts are not confused.
-- Use `_uiState.update { it.copy(...) }` for state changes.
-- Emit one-shot work through effects, not booleans in state.
-- Keep cached current entities private in the ViewModel when existing project behavior needs mutation or incremental sync, but publish immutable render state.
-- Annotate `UiState` data classes with `@Stable` to give the Compose compiler the strongest stability guarantee. This is especially important when `UiState` fields include collections or entity types that come from non-Compose modules.
-- For collection-heavy `UiState`, convert DAO/repository `List`/`Set`/`Map` values to `kotlinx.collections.immutable` at the ViewModel/UI-state boundary with `toImmutableList()`, `toImmutableSet()`, or `toImmutableMap()`. Do not force repository, DAO, or domain APIs to use persistent collections unless the domain contract truly benefits.
-- Keep internal flow pipelines free to use normal Kotlin collections for sorting, grouping, and persistence work; the immutable collection rule is primarily for values exposed to Compose.
-- Use existing `BaseViewModel.execute { ... }.onSuccess { ... }.onError { ... }` when the surrounding ViewModel already uses that pattern.
+- Use stable keys when item identity survives insertion, removal or reorder; use `contentType` when
+  heterogeneous reuse matters.
+- Collect Android route state with `collectAsStateWithLifecycle` unless another lifecycle is
+  deliberate and documented. Apply the same delivery analysis to effect collectors; composition
+  lifetime and host `RESUMED` state are not interchangeable.
+- Key `LaunchedEffect` by the lifetime it represents. Use `rememberUpdatedState` for changing
+  callbacks captured by an effect that should not restart.
+- Derive cheap display values in composition; memoize or move work only when its cost/lifetime
+  warrants it.
+- Prefer immutable Compose-facing collections, while leaving temporary computations and data-layer
+  APIs in their natural collection types.
+- Strong Skipping is enabled by default on modern Kotlin/Compose compiler versions. Unstable
+  parameters are compared by identity, so avoid needless instance churn, but do not add wrappers or
+  `@Stable` solely from intuition. The repository requires the annotation on UI state/item types;
+  those types must actually satisfy its equality and observable-mutation contract.
 
-Activity rules:
+## Insets and back
 
-- Prefer `MainActivity` as the owner of Compose-first navigation. Add a Navigation3 route/key and `entryProvider` entry there for new destinations.
-- Extend `BaseComposeActivity` for migrated Activity screens only when a standalone Activity remains necessary.
-- Keep a legacy Activity for a migrated screen only when unreworked View code still calls it through `Intent`; in that case, make the Activity a thin compatibility host that translates extras/results and delegates to Compose state/effects.
-- Keep Activity Result launchers, file openers, clipboard, permission APIs, Android DialogFragments, and framework navigation in the Activity.
-- In `Content()`, collect state with `collectAsStateWithLifecycle().value`.
-- Collect effects in `LaunchedEffect(Unit) { viewModel.effects.collectLatest { ... } }`.
-- Pass only `state` and callbacks into the screen.
-- Edge-to-edge: Since target SDK ≥ 35, edge-to-edge is enforced. In `BaseComposeActivity`, `enableEdgeToEdge()` is called before `setContent`. Ensure screen-level composables apply `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)` on the outermost non-scaffold container, or rely on Material 3 `Scaffold` (which handles `WindowInsets` automatically). Do not use manual `statusBarsPadding()` / `navigationBarsPadding()` on top of scaffold-level insets — double-padding is a common pitfall.
+Trace which layer owns each inset. For a Material 3 `Scaffold`, inspect its configured
+`contentWindowInsets` and verify that content applies/consumes the provided padding correctly.
+Sheets, dialogs, IME and nested scaffolds may need separate treatment. Visual/manual evidence is
+required; the presence of `Scaffold`, `safeDrawing` or padding modifiers alone proves nothing.
 
-Navigation rules:
+Navigation 3 integration does not remove the need to verify custom back interception, selection
+mode, unsaved changes and retained Activity entry points. Route back actions through the same owner
+that decides whether leaving is allowed. Use `PredictiveBackHandler` when gesture progress drives
+UI;
+when customizing `NavDisplay` transitions, also supply/test predictive-pop behavior.
 
-- For new Compose-first destinations, add the route to `MainActivity` instead of adding a new Activity.
-- Follow `MainActivity`'s current route style: serializable `NavKey` routes for in-process navigation and launcher `Intent` helper methods only when external or legacy callers need a stable entry point.
-- Keep legacy extra names stable when replacing an old Activity entry point.
-- When a compatibility Activity is retained, let it translate old `Intent` inputs/results; do not make it the source of truth for navigation or business behavior.
-- Predictive back: Navigation 3 enables predictive back by default on Android 14+. New composable destinations work with it automatically. When a screen needs back confirmation (unsaved changes, selection mode, add-to-shelf prompt), use `BackHandler(enabled = ...) { onIntent(FeatureIntent.BackPressed) }` to intercept and let the ViewModel decide — don't bypass ViewModel back logic.
+## Adaptive layouts and accessibility
 
-Screen rules:
+Because this app targets API 37, large-screen orientation, aspect-ratio and resizability
+restrictions
+cannot be used as a compatibility fallback. Treat the current app window as dynamic across rotation,
+fold/unfold, split-screen and desktop windowing.
 
-- Make `FeatureScreen(state, onIntent, ...)` stateless for business state.
-- Use `remember` and `rememberSaveable` only for local UI affordances such as menu expansion, scroll state, transient animation state, and text field drafts when committing through an intent.
-- Use `rememberSaveable` for user-driven transient targets that should survive recreation, such as a delete-confirmation item ID or URL. Store only the stable ID in saved state and resolve the current entity from `UiState`.
-- Use `BackHandler` to route back actions through `FeatureIntent.BackPressed` when ViewModel decisions matter.
-- Keep expensive derived values in `remember(key)` or ViewModel state when they depend on repository data.
-- Prefer `LazyColumn`, `LazyRow`, stable keys, and existing fast-scroller/list components for adapter migrations. For heterogeneous lazy lists or grids, provide `contentType` in addition to `key`.
-- In long-lived `LaunchedEffect` collectors, wrap changing callbacks, `Context`-dependent operations, or lambdas from parents with `rememberUpdatedState` when the effect should not restart.
-- Hoist state only to the lowest common owner that reads and writes it. Move branch-only ViewModel lookup and Flow collection into the branch or a small child composable instead of collecting at a high-level route.
-- Avoid UI-state feedback loops such as `LaunchedEffect(uiState.items) { viewModel.pruneSelection(...) }`. Prefer deriving consistency inside the ViewModel with `combine(...)`, or reduce the state as part of the flow that produces the data.
+- Test compact and expanded widths for new or substantially migrated destinations.
+- Use current window metrics/window size classes for layout decisions; do not branch on a physical
+  device category or assume portrait.
+- Preserve important input/draft/selection state across recreation with the appropriate local
+  saveable state or `SavedStateHandle`, based on the state owner and size.
+- Do not stretch a phone layout indefinitely. Adopt list-detail/supporting panes or adaptive
+  navigation only when the Feature benefits; avoid adding a library merely to satisfy a checklist.
+- Prefer standard interactive components/modifiers. Custom pointer input needs semantic actions,
+  focus/keyboard access and a usable touch target.
 
-## Current Compose Performance Notes
+## Architecture boundary
 
-- Kotlin 2.x + Compose compiler plugin (`org.jetbrains.kotlin.plugin.compose`) enables **strong skipping by default**. This means composable functions with unstable parameters CAN still be skipped if their arguments are equal by `equals()`. However, ordinary Kotlin `List`, `Set`, and `Map` are still **unstable types** — passing them as parameters prevents the compiler from inferring stability, so changing a list reference still triggers recomposition of callers even with strong skipping.
-- Use `@Stable` on `UiState` data classes and UI model wrappers to give the Compose compiler the strongest stability guarantee. `@Stable` tells the compiler: "if `equals()` says two instances are the same, the UI hasn't changed." This is critical for data classes holding collections.
-- Use `kotlinx.collections.immutable` (`ImmutableList`, `ImmutableSet`, `ImmutableMap`) for render state that crosses into Compose. These are recognized as stable by the Compose compiler. Do not mechanically replace every temporary collection, Room query result, or internal mutable accumulator.
-- If data entities come from modules where the Compose compiler plugin is not applied, consider a `@Stable` UI model wrapper when the entity is passed deeply through composables and causes measurable recomposition cost.
-- Treat `SnapshotStateList` / `SnapshotStateMap` as UI-owned mutable state, not as a default ViewModel `UiState` transport type.
+New UI and ViewModels do not add DAO, `appDb`, network-client or old preference access. Use existing
+Gateway/Repository/UseCase contracts, or add the smallest real boundary with an actual caller.
 
-## Clean Architecture Boundaries
+For a strictly UI-only migration, an existing presentation-layer violation may remain to avoid
+combining architecture and UI rewrites. Freeze rather than duplicate it, document it, and do not
+describe the screen as fully modernized until the boundary is corrected.
 
-This project is mid-migration, so use Clean Architecture pragmatically. For newly created screens, default to standard modern Android architecture and avoid mixed legacy patterns unless they are needed to interoperate with View screens that have not been rewritten.
+## Verification selection
 
-- For new screens, keep UI, presentation, domain, and data boundaries explicit: Compose renders state, ViewModel owns state and intent handling, usecases hold reusable business actions, repositories mediate data access.
-- For new screens, do not place business rules in Activity/Fragment or composables.
-- For new screens, do not read DAOs directly from UI/presentation unless the project already has no reasonable repository/usecase boundary and adding one would be disproportionate.
-- For migrations, use existing DAOs/repositories directly if the old ViewModel already does and the migration is UI-only.
-- Prefer existing `domain/usecase` classes for reusable business actions such as cache, delete, group update, startup maintenance, reading progress, and WebDAV flows.
-- Add a usecase when a new screen has meaningful business rules, when logic would otherwise be duplicated across features, or when a UI migration needs to extract meaningful business rules from an Activity/adapter.
-- Keep UI-only formatting and Compose layout decisions out of domain.
-- Keep entity-to-display mapping near the UI or ViewModel unless it is reused business language.
+- Kotlin-only: `:app:compileAppDebugKotlin`.
+- Resources/manifest/XML/generated binding/package: `:app:assembleAppDebug`.
+- Changed state transitions: focused unit tests with success/failure/cancellation cases as relevant.
+- Navigation or compatibility: exercise the MainActivity route and every retained Intent/result
+  entry.
+- Insets, IME, accessibility and predictive back: device/emulator evidence where risk warrants it.
+- New/substantially changed destinations: representative compact and expanded window checks plus
+  rotation/recreation; add targeted adaptive UI tests when layout branching is meaningful.
 
-## Compose Components and Theme
+Use `AGENTS.md` for the canonical full verification set and exact wrapper command.
 
-Prefer project components before raw Material widgets:
+## Current official references
 
-- Scaffold/top bars: `AppScaffold`, `GlassTopAppBar...`, `DynamicTopAppBar`, `TopBarActionButton`, `TopBarNavigationButton`.
-- Lists: `ListScaffold`, `TopFloatingStickyItem`, `VerticalFastScroller`, `SelectionBottomBar`.
-- Dialog/sheet: `AppAlertDialog`, `AppModalBottomSheet`, `OptionSheet`, text list input components.
-- Settings: `ClickableSettingItem`, `SwitchSettingItem`, `SliderSettingItem`, `ListSettingItem`, `SettingCard`.
-- Buttons/chips: `AppIconButton`, `SmallIconButton`, `SmallTextButton`, `ToggleChip`, `AlertButton`.
-- Covers/images: `CoilBookCover`, `BookshelfCover`, `buildCoverImageRequest`; use Coil for Compose image loading.
-- Theme: `LegadoTheme.colorScheme`, `LegadoTheme.typography`, `ThemeResolver`, `ProvideThemeOverride` where existing feature behavior needs theme override.
-
-Avoid introducing a second visual system. If a raw Material 3 component is used, style it from `LegadoTheme`.
-
-## Migration Checklist
-
-Before editing:
-
-- Identify old XML layouts, ViewBinding fields, adapters, decorations, menu XML, dialogs, and result contracts.
-- Capture behavior: empty/loading/error states, refresh, search, sort, selection, long click, swipe, menu actions, back behavior, result codes, events, and persisted preferences.
-- Decide whether the task is UI-only or needs domain extraction.
-- For new screens, explicitly decide the presentation/domain/data boundary before coding; do not default to legacy mixed architecture.
-
-During editing:
-
-- Create/update `Contract`, then `ViewModel`, then `Screen`, then `MainActivity` route or compatibility host.
-- For new Compose destinations, wire navigation through `MainActivity` unless a legacy `Intent` caller must remain supported.
-- When retaining an Activity for compatibility, keep it small: parse legacy extras, collect effects, bridge result codes, and avoid placing feature business logic there.
-- Verify edge-to-edge: ensure the screen draws edge-to-edge without overlapping system bars. Use `Scaffold` or `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)`. Remove any `fitsSystemWindows`-based margin hacks from the old layout.
-- Reuse existing string resources and add new resources for new user-facing text.
-- Register the ViewModel in `di/appModule.kt`.
-- Remove only resources made obsolete by this migration.
-- Keep existing public intent extra names and result codes unless explicitly changing an API.
-
-Verification:
-
-- Run `.\gradlew.bat :app:compileAppDebugKotlin` for Kotlin-only changes.
-- Run `.\gradlew.bat :app:assembleAppDebug` when resources, manifests, XML deletion, or generated bindings are affected.
-- If a screen uses Room queries or migration-sensitive repositories, run the relevant existing Android/unit tests if practical.
-- For manual verification, open the migrated screen and compare core flows against the old behavior list.
-
-## Common Pitfalls
-
-- Do not put navigation or Activity launchers inside composables.
-- Do not store one-time navigation as nullable fields in `UiState` unless the existing local pattern already does; prefer `SharedFlow` effects.
-- Do not keep adapter selection state split between old adapter and new Compose state.
-- Do not delete XML/menu resources until all references and generated binding imports are gone.
-- Do not add speculative domain layers for a single migrated screen.
-- Do not use mixed architecture for new screens unless compatibility with unreworked View UI requires it.
-- Do not make a migrated screen's retained Activity the primary navigation model when `MainActivity` can own the Compose destination.
-- Do not bypass `BaseComposeActivity` unless the screen must remain inside a Fragment or legacy host.
-- Do not replace existing event bus or service interactions as part of a UI migration unless required for correctness.
-- Do not forget edge-to-edge: XML `fitsSystemWindows` does not carry over to Compose. Rely on `Scaffold` or `Modifier.windowInsetsPadding()` instead.
-- Do not forget `@Stable` on `UiState` data classes — missing annotations cause unnecessary recomposition, especially when state contains collections.
+- [State hoisting](https://developer.android.com/develop/ui/compose/state-hoisting)
+- [Lifecycle-aware Compose collection](https://developer.android.com/topic/libraries/architecture/lifecycle)
+- [UI event delivery](https://developer.android.com/topic/architecture/ui-layer/events)
+- [Strong Skipping](https://developer.android.com/develop/ui/compose/performance/stability/strongskipping)
+- [Compose side effects](https://developer.android.com/develop/ui/compose/side-effects)
+- [Material Insets](https://developer.android.com/develop/ui/compose/system/material-insets)
+- [Predictive back](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture)
+- [Adaptive layouts for resizable apps](https://developer.android.com/develop/adaptive-apps/guides/app-orientation-aspect-ratio-resizability)
+- [Compose accessibility defaults](https://developer.android.com/develop/ui/compose/accessibility/api-defaults)

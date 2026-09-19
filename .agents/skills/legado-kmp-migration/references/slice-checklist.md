@@ -1,78 +1,82 @@
-# KMP/CMP Slice Checklist
+# KMP Slice Checklist
 
-Read this reference for implementation plans, extraction work, scaffolding, or reviews.
+Use this reference for implementation plans, extraction work, scaffolding or reviews. The default
+path is renderer-neutral KMP. CMP checks apply only after a shared Compose renderer has been chosen;
+they are not instructions to convert every Feature or host to Compose.
 
 ## Before change
 
-- Scope names exact packages/files and one target boundary.
-- Existing behavior is captured by tests or a written manual parity list.
-- Current callers and module edges are known.
-- Imports/dependencies are classified as common-ready, contract-needed, platform-island, or unknown.
-- The chosen non-Android target and actual Gradle verification tasks are known.
-- A rollback point exists and does not require reverting unrelated work.
+- Scope names exact files/packages, current callers, one boundary and one rollback point.
+- Existing behavior is captured by tests or a written parity list.
+- The target owner, source set and consumers are real rather than copied from the target diagram.
+- Dependencies are classified as common-ready, contract-needed, renderer-specific,
+  platform-island or unknown.
+- Actual Gradle target and verification task names have been inspected.
 
 ## Contract quality
 
-- Public types express domain values, not Android/JVM/storage implementation details.
-- Error, cancellation, threading, transaction, ordering and serialization semantics are explicit.
-- Capability absence is representable and visible to callers.
+- Public types express domain values instead of Android/JVM/storage/rendering details.
+- Error, cancellation, threading, transaction, ordering, serialization and ownership semantics are
+  explicit where they cross the boundary.
+- Capability absence is visible to callers.
 - An ordinary interface is used unless `expect/actual` provides a concrete static benefit.
-- New abstractions have a real caller and reduce a measurable dependency.
+- Every abstraction has a real caller and removes a measurable dependency.
+- Native or IPC exports are smaller and more stable than the internal Kotlin API.
 
-## Module graph
+## Module and source-set graph
 
-- App host owns implementation aggregation, DI and navigation graph aggregation.
-- Core does not import Feature.
-- Feature API does not import another Feature.
-- Feature implementation uses other Feature APIs only.
-- Shared modules do not depend on platform implementations.
-- Platform implementations are injected from Koin/app composition roots.
-- Gradle `api` exposure is intentional; other dependencies use `implementation`.
-- No module is created only to match the target diagram.
-- Package colocation, Android Gradle module extraction, and KMP/CMP conversion are separate
-  reviewable stages; the slice does not combine all three by default.
+- The app host owns implementation aggregation, DI, navigation/window lifecycle and packaging.
+- Core does not import Feature; Feature does not import another Feature implementation.
+- Shared modules do not depend on platform implementations or renderer modules.
+- Gradle `api` exposure is intentional; otherwise use `implementation`.
+- Package colocation, Android module extraction, KMP conversion and renderer sharing remain separate
+  changes unless evidence requires combining them.
+- `commonMain` is compiled by at least one non-Android target before being called shared.
+- JVM+Android-only sharing has an honest owner and is not mislabeled as common.
+- Platform files live in the narrowest relevant source set.
+- Android services, Context/URI/resources and notifications remain Android-side.
+- Rhino/JS behavior remains behind a capability boundary until another target has a compatible,
+  tested implementation.
 
-## Source sets and platform code
+## Renderer and host checks
 
-- `commonMain` is compiled by at least one non-Android target.
-- JVM+Android-only sharing has an explicit source-set/module owner and verified IDE/consumer
-  behavior; it is not mislabeled as common.
-- Platform files are in the narrowest relevant source set.
-- Android services, Room/Context/URI/resources, notifications and renderer code stay Android-side.
-- Rhino/JS behavior stays behind a capability boundary until another target has a compatible
-  implementation.
-- Shared Compose code emits callbacks/effects; host navigation and platform launchers stay outside.
+- Presentation contracts contain no Compose, Material/Miuix, Fluent, WinUI, SwiftUI or platform
+  resource types.
+- A renderer owns its resources, accessibility, layout and navigation presentation.
+- Shared Compose UI emits semantic callbacks/effects; the host owns platform launchers.
+- A CMP Screen has at least two intentional consumers or another documented product reason.
+- WinUI/iOS bridges define versioning, lifecycle, cancellation, error and memory ownership.
+- A sidecar protocol defines startup, readiness, shutdown, crash recovery, upgrade and local-access
+  behavior.
 
 ## Gates
 
-- G0 Android test/lint/architecture/debug gates pass.
+- Affected Android unit/lint/architecture/package gates pass.
 - Common tests and actual metadata/target compile tasks pass.
-- Capability status distinguishes compile, contract-test, smoke, package, and release-ready
-  evidence.
-- Adapter contract tests cover success, failure and cancellation where relevant.
-- Serialization/database changes have forward/backward or migration evidence.
-- Reader/rule/service changes have parity and, when relevant, real-device performance evidence.
+- Capability status distinguishes compile, contract-test, smoke, package and release-ready.
+- Adapter tests cover success, failure and cancellation where relevant.
+- Serialization/database changes include backward/forward or migration evidence.
+- Reader/rule/service changes include parity and, where relevant, real-device performance evidence.
 - Reduced historical violations lower their baseline in the same change.
 - `git diff --check` passes.
 
 ## Scaffolding
 
-- At least two accepted manual examples prove the convention.
+- At least two accepted manual examples prove a convention before it is generated.
 - Dry-run is available and default execution refuses overwrites.
-- Existing graphs/DI are not replaced wholesale.
-- Only necessary files are generated; no empty layers.
-- Template fixtures or compile tests cover generator changes.
-- Generated committed source is reviewed like handwritten code.
+- Existing graph/DI files are amended safely rather than replaced wholesale.
+- Only necessary files are generated; no empty layers or speculative targets.
+- Generator behavior has fixture, snapshot or compilation evidence.
 
 ## Review output
 
-List findings by impact:
+For each finding give a tight file/line reference, concrete impact and smallest credible fix:
 
-- P0/P1: behavior/data loss, incompatible rule or storage semantics, broken actual,
-  lifecycle/thread/cancellation defects, reader regression.
-- P2: illegal dependency, platform leakage, false capability, state duplication, baseline
-  relaxation, or unnecessary cross-platform abstraction.
+- P0/P1: behavior/data loss, incompatible rule/storage/ABI semantics, broken target, lifecycle,
+  thread, cancellation, native ownership or packaging defects.
+- P2: illegal dependency, renderer/platform leakage, false capability, state duplication, baseline
+  relaxation or unnecessary abstraction.
 - P3: convention, naming, documentation, graph or template drift.
 
-For each finding, give a tight file/line reference, concrete impact, and smallest credible fix. If
-no finding exists, state remaining unverified platform, device or performance risks.
+If no issue is found, state the remaining unverified host, device, package, interop and performance
+risks.
