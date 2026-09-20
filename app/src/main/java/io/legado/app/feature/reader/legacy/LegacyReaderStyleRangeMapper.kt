@@ -1,8 +1,8 @@
 package io.legado.app.feature.reader.legacy
 
-import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.domain.contentprocess.BookContentProcess
 import io.legado.app.data.entities.HighlightRule
-import io.legado.app.domain.model.BookContentProcessEngine
+import io.legado.app.domain.contentprocess.BookContentProcessEngine
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage

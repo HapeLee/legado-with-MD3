@@ -82,4 +82,9 @@ include ':data:marking'
 // `io.legado.app.domain.model`（共享层），本片**不搬它们**——只搬端口与实现。
 include ':domain:homepage'
 include ':data:homepage'
+// M4-8：正文处理域（book_content_processes）。除领域模型与端口外，**纯函数引擎**
+// `BookContentProcessEngine` 也一并从 `:core:data` 的 `domain/model` 搬进来（它只依赖
+// `JsonCodec` 与 `:core:model` 的锚点/动作类型，属 domain 层）。
+include ':domain:contentprocess'
+include ':data:contentprocess'
 project(':baselineprofile').projectDir = file('baselineProfile')

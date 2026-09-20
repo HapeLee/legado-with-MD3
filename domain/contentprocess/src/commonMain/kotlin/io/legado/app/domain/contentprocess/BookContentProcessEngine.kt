@@ -1,9 +1,26 @@
-package io.legado.app.domain.model
+package io.legado.app.domain.contentprocess
 
 import io.legado.app.core.platform.JsonCodec
-import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.domain.model.TextProcessAction
+import io.legado.app.domain.model.TextProcessAnchor
 import kotlin.math.abs
 
+/**
+ * 正文处理引擎（M4-8 从 `:core:data` 的 `io.legado.app.domain.model` 搬来）。
+ *
+ * 纯函数 object：**零 Room、零 Android、零 `:app` 依赖**，只依赖 `JsonCodec`（`:core:platform`）
+ * 与 `TextProcessAnchor` / `TextProcessAction`（`:core:model`）。它在语义上本来就是 domain 层
+ * 的东西，此前只是因为历史原因躺在 `:core:data` 里 —— 本片随正文处理域一起收进来。
+ *
+ * 三处搬迁改动，别的逐字照抄：
+ *  1. `package` 从 `io.legado.app.domain.model` 改成 `io.legado.app.domain.contentprocess`。
+ *  2. `TextProcessAnchor` / `TextProcessAction` 原本与它**同包**（跨模块同包，`:core:model`
+ *     与 `:core:data` 都有 `io.legado.app.domain.model`）⇒ 此前不需要 import，搬走后必须
+ *     **显式 import**。这是"跨模块同包"这个本仓既有现象的代价，不是新机制。
+ *  3. `List<BookContentProcess>` 的类型从 Room 实体换成领域模型（同包的 [BookContentProcess]），
+ *     逻辑一行未动 —— `STATUS_ACTIVE` / `STAGE_CONTENT` / `KIND_USER_*` 现在解析到模型自己
+ *     的 companion 常量，取值与实体一致（由 `BookContentProcessMapperTest` 逐值钉住）。
+ */
 object BookContentProcessEngine {
 
     data class ApplyResult(

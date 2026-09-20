@@ -25,7 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.domain.contentprocess.BookContentProcess
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiState
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi

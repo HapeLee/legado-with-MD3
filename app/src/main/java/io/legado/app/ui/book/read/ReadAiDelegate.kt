@@ -4,7 +4,7 @@ import android.content.Context
 import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.domain.contentprocess.BookContentProcess
 import io.legado.app.domain.ai.AiArtifact
 import io.legado.app.domain.ai.AiArtifactGateway
 import io.legado.app.domain.ai.AiPromptPreset

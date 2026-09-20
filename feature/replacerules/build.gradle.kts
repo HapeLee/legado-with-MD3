@@ -51,6 +51,10 @@ kotlin {
             // `ReplaceRuleImportCompat` 以及 `ReplaceRuleViewModel` 的构造参数（仓储端口）
             // 都把这个类型露在 public 签名里，消费方（`:app` 的 DI 与契约实现）必须看得见。
             api(project(":domain:rules"))
+            // M4-8：`ReplaceRuleViewModel` 的构造参数里有 `BookContentProcessGateway`
+            // （它读/写正文处理项以展示「该规则产生了哪些处理项」），该类型出现在**构造签名**里
+            // ⇒ 与 `:domain:rules` 同理必须是 `api`，否则 `:app` 的 DI 编译时看不见它。
+            api(project(":domain:contentprocess"))
             // `isJsonArray()` / `isJsonObject()`（`io.legado.app.utils`，纯 KMP 扩展）与 `AppPattern`。
             implementation(project(":core:model"))
             // `Clipboard` / `JsonCodec` / `DocumentPicker` 窄契约（实现由 `:app` 在 Koin 里注入）。

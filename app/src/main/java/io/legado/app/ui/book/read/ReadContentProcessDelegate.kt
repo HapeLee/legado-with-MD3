@@ -2,8 +2,8 @@ package io.legado.app.ui.book.read
 
 import android.content.Context
 import io.legado.app.R
-import io.legado.app.data.entities.BookContentProcess
-import io.legado.app.domain.gateway.BookContentProcessGateway
+import io.legado.app.domain.contentprocess.BookContentProcess
+import io.legado.app.domain.contentprocess.BookContentProcessGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.model.ReadBook

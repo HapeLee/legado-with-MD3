@@ -7,11 +7,12 @@ import io.legado.app.constant.AppPattern.spaceRegex
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.domain.contentprocess.BookContentProcess
 import io.legado.app.domain.marking.BookMarking
 import io.legado.app.domain.marking.BookMarkingGateway
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.domain.model.BookContentProcessEngine
+import io.legado.app.domain.contentprocess.BookContentProcessEngine
+import io.legado.app.domain.contentprocess.BookContentProcessGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.exception.RegexTimeoutException
@@ -74,6 +75,11 @@ class ContentProcessor private constructor(
     // M4-6：原先这里直连 `appDb.bookMarkingDao.getForChapterSync(...)`（书源渲染热路径上唯一的
     // marking DAO 直连）。标记域下沉后改走端口，`getForChapter` 是为此新增的端口方法。
     private val bookMarkingGateway by lazy { GlobalContext.get().get<BookMarkingGateway>() }
+    // M4-8：同一段渲染管线里的另一处 DAO 直连（`appDb.bookContentProcessDao.getForChapter`）
+    // 也改走端口 —— 端口本来就有 `getForChapter`，无需新增方法。
+    private val bookContentProcessGateway by lazy {
+        GlobalContext.get().get<BookContentProcessGateway>()
+    }
 
     init {
         upReplaceRules()
@@ -214,7 +220,7 @@ class ContentProcessor private constructor(
                 mContent = mContent.replace(placeholder, originalContent)
             }
             val contentProcesses = runBlocking {
-                appDb.bookContentProcessDao.getForChapter(
+                bookContentProcessGateway.getForChapter(
                     bookUrl = book.bookUrl,
                     chapterIndex = chapter.index,
                 )

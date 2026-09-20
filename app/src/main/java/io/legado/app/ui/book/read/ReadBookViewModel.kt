@@ -32,7 +32,7 @@ import io.legado.app.domain.ai.AiPromptPresetGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.gateway.BackupSettingsGateway
-import io.legado.app.domain.gateway.BookContentProcessGateway
+import io.legado.app.domain.contentprocess.BookContentProcessGateway
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway

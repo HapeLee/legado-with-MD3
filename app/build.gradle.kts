@@ -253,6 +253,9 @@ dependencies {
     // M4-7：首页模块域（homepage_modules / homepage_custom_sets）。
     implementation(project(":domain:homepage"))
     implementation(project(":data:homepage"))
+    // M4-8：正文处理域（book_content_processes）。
+    implementation(project(":domain:contentprocess"))
+    implementation(project(":data:contentprocess"))
     implementation(libs.okhttp)
     implementation(fileTree(mapOf("dir" to "cronetlib", "include" to listOf("*.jar", "*.aar"))))
     implementation(libs.protobuf.javalite)

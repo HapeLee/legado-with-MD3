@@ -6,10 +6,10 @@ import io.legado.app.core.platform.JsonCodec
 import io.legado.app.core.rules.RuleEntitySpec
 import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.core.rules.RuleTransferUseCase
-import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.domain.contentprocess.BookContentProcess
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.UploadRepository
-import io.legado.app.domain.gateway.BookContentProcessGateway
+import io.legado.app.domain.contentprocess.BookContentProcessGateway
 import io.legado.app.domain.gateway.ReplaceRuleChangeNotifier
 import io.legado.app.domain.gateway.ReplaceRuleSettingsGateway
 import io.legado.app.domain.model.TextProcessAction

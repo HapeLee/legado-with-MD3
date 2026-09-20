@@ -1401,6 +1401,28 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      `deleteCustomSet` 的「先摘模块、再删集合」是跨两个 DAO 的顺序，而断言分别检查两个 fake
      **各自的**调用列表 ⇒ 对调两条语句后两边列表都仍只有一条，全绿。改为两个 fake 共享一个
      `CallOrder` 序列后同一轮立刻变红（通则已写进 skill reference）。
+   - **M4-8 已完成（2026-09-21）：正文处理域（`BookContentProcess`）下沉，纯函数引擎一并搬。**
+     `domain/contentprocess` + `data/contentprocess`。三处与前几片不同：
+     ① **闭包要按"去注释后的代码"量**：naive grep `\bBookContentProcess\b` 命中 22 个文件，
+     去注释与字符串后真实闭包是 **16** —— 6 个假阳性全是 KDoc 里"提到"该类型（含
+     `:core:designsystem` 的 `ContentProcessUiState`，它自己在注释里写明**不含**实体字段）。
+     这是「注释干扰扫描」的又一例（同变异锚点、portability-triage）。
+     ② **纯函数引擎属于 domain，随之搬迁**：`BookContentProcessEngine`（192 行、零 Room/Android）
+     此前只因历史原因躺在 `:core:data` 的 `io.legado.app.domain.model`，本片收进
+     `domain/contentprocess`；它的测试从 `:app/src/test` 搬进该模块 `commonTest`，并把
+     JUnit4/`GSON`/`MD5Utils` 换成 `kotlin.test`/`JsonCodec`/常量（引擎从不读
+     `normalizedTextHash`），断言与输入逐字未动并新增 1 例。**这是首个 domain 模块自带测试的
+     切片 ⇒ 主验证集首次因本方向下修**（`BASELINE_MAIN` 714 → **709**）。
+     ③ **15 个 companion 常量是"看不见的第二副本"**：实体那份被 DAO 的 `@Query` 字符串插值成
+     SQL 字面量，模型这份被 `:app` 的 `when` 与引擎使用 ⇒ 漂移无编译错误。按 M4-3 配方复刻
+     全部 15 个，并让 mapper 测试**双向**逐值比对（对实体常量 **和** 对字面量）。
+     端口 6 → 5 个方法（`flowForChapter` 零调用方，随片删；DAO 方法保留），副作用是本模块
+     不再需要 coroutines 依赖。另把 `ContentProcessor` 里另一处 `appDb.bookContentProcessDao`
+     直连也改走端口（端口本就有 `getForChapter`）。
+     验证：`clean` 后四门禁 + `:app` 编译/单测/`assembleAppDebug` + 18 个模块测试任务全绿；
+     计数 **主集 714 → 709 / 全量 1189 → 1204**，0 失败；`lintAppDebug` 仍 **5 errors /
+     78 warnings**。变异 **5 轮全红后回绿**（`nextOrder` 漏 `+1` / `delete` 改走 `setEnabled` /
+     漏映射 `kind` / 模型 `STATUS_DELETED` 改值 / 引擎去掉 `STATUS_ACTIVE` 过滤）。
 
 ## 6. 验证矩阵
 

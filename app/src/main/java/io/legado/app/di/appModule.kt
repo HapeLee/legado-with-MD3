@@ -18,6 +18,7 @@ import io.legado.app.data.ai.AiMemoryRepositoryImpl
 import io.legado.app.data.ai.AiPromptPresetRepositoryImpl
 import io.legado.app.data.ai.AiChatRepositoryImpl
 import io.legado.app.data.ai.AiProfileRepositoryImpl
+import io.legado.app.data.contentprocess.BookContentProcessRepositoryImpl
 import io.legado.app.data.homepage.HomepageModulesRepositoryImpl
 import io.legado.app.data.marking.BookMarkingRepositoryImpl
 import io.legado.app.data.repository.AiTextRepositoryImpl
@@ -30,7 +31,6 @@ import io.legado.app.data.repository.BackupRestoreRepository
 import io.legado.app.data.repository.BackupSettingsRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
 import io.legado.app.data.repository.BookCacheManageRepository
-import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookExportSettingsRepository
 import io.legado.app.data.repository.BookGroupMutationRepository
@@ -140,7 +140,7 @@ import io.legado.app.domain.gateway.BackupRestoreGateway
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.BookCacheCleanupGateway
 import io.legado.app.domain.gateway.BookCacheDownloadGateway
-import io.legado.app.domain.gateway.BookContentProcessGateway
+import io.legado.app.domain.contentprocess.BookContentProcessGateway
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
@@ -575,7 +575,9 @@ val appModule = module {
     // 端口声明 + 实体↔模型映射 + 实现；实现收两个 DAO。
     single<HomepageModulesGateway> { HomepageModulesRepositoryImpl(get(), get()) }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
-    single<BookContentProcessGateway> { BookContentProcessRepository(get()) }
+    // M4-8：正文处理域下沉 `:domain:contentprocess` + `:data:contentprocess`（含纯函数引擎）。
+    // 端口沿用旧名，`flowForChapter` 因零调用方随片删除；实现收 DAO。
+    single<BookContentProcessGateway> { BookContentProcessRepositoryImpl(get()) }
     // M4-6：用户划线/高亮笔记域下沉 `:domain:marking` + `:data:marking`。端口沿用旧名
     // （本仓 60+ 个同形态 `XxxGateway`），实现换成 `BookMarkingRepositoryImpl`（收 DAO）。
     single<BookMarkingGateway> { BookMarkingRepositoryImpl(get()) }

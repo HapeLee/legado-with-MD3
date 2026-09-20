@@ -1,16 +1,31 @@
-package io.legado.app.domain.model
+package io.legado.app.domain.contentprocess
 
-import io.legado.app.data.entities.BookContentProcess
-import io.legado.app.utils.GSON
-import io.legado.app.utils.MD5Utils
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import io.legado.app.core.platform.JsonCodec
+import io.legado.app.domain.model.TextProcessAction
+import io.legado.app.domain.model.TextProcessAnchor
+import io.legado.app.domain.model.TextProcessStyle
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
+/**
+ * 正文处理引擎的用例（M4-8：从 `:app/src/test/.../domain/model/` 随被测对象搬到本模块
+ * `commonTest`）。
+ *
+ * 搬迁时改了四处，都是"目标模块拿不到"造成的**等价替换**，断言与输入逐字未动：
+ *  1. `org.junit.Test` / `org.junit.Assert` → `kotlin.test`（本模块是 KMP，commonTest 只有后者）；
+ *  2. `GSON.toJson(...)` → `JsonCodec.toJson(...)`：`GSON` 门面住 `:core:data` 的 androidMain，
+ *     本模块只能看见 `:core:platform` 的 `JsonCodec`；两者写出配置一致，且引擎本身就用
+ *     `JsonCodec.fromJsonObject` 读回 ⇒ 用同一个编解码器构造输入反而更贴实。
+ *  3. `MD5Utils.md5Encode(...)` → 常量：`normalizedTextHash` 在引擎里**从未被读取**
+ *     （`findTargetRange` 只用 `selectedText` 与 `chapterPosition`），原测试填它也只是为了
+ *     构造一个"完整"的锚点。这里显式写明，免得后人以为它参与匹配。
+ *  4. `BookContentProcess` 从 Room 实体换成领域模型（同包），常量解析到模型自己的 companion。
+ */
 class BookContentProcessEngineTest {
 
     @Test
-    fun `matches reader selection with layout whitespace`() {
+    fun matchesReaderSelectionWithLayoutWhitespace() {
         val selectedText = "　　他走进\n房间，看见桌上的信。"
         val process = process(
             selectedText = selectedText,
@@ -30,7 +45,7 @@ class BookContentProcessEngineTest {
     }
 
     @Test
-    fun `uses closest normalized match`() {
+    fun usesClosestNormalizedMatch() {
         val process = process(
             selectedText = "　　他走进\n房间，看见桌上的信。",
             replacement = "他推门进屋，看见桌上的信。",
@@ -50,7 +65,7 @@ class BookContentProcessEngineTest {
     }
 
     @Test
-    fun `用户划线标记不改文本但计入 effectiveProcesses`() {
+    fun userMarkDoesNotRewriteTextButCountsAsEffective() {
         val mark = markProcess(
             selectedText = "看见桌上的信",
             kind = BookContentProcess.KIND_USER_UNDERLINE,
@@ -68,7 +83,7 @@ class BookContentProcessEngineTest {
     }
 
     @Test
-    fun `锚点解析不到的标记不进 effectiveProcesses`() {
+    fun markWithUnresolvableAnchorIsDropped() {
         val mark = markProcess(
             selectedText = "不存在的文本",
             kind = BookContentProcess.KIND_USER_HIGHLIGHT,
@@ -83,13 +98,8 @@ class BookContentProcessEngineTest {
     }
 
     @Test
-    fun `resolveRange 返回锚点文本对应的字符区间`() {
-        val anchor = TextProcessAnchor(
-            chapterIndex = 0,
-            chapterPosition = 4,
-            selectedText = "看见桌上的信",
-            normalizedTextHash = MD5Utils.md5Encode("看见桌上的信"),
-        )
+    fun resolveRangeReturnsCharacterRangeOfAnchorText() {
+        val anchor = anchor(selectedText = "看见桌上的信", chapterPosition = 4)
 
         val range = BookContentProcessEngine.resolveRange(
             content = "他走进房间，看见桌上的信。",
@@ -98,6 +108,38 @@ class BookContentProcessEngineTest {
 
         assertEquals(6 until 12, range)
     }
+
+    /** 非 `STATUS_ACTIVE` 的处理项被过滤掉（引擎的第一个 filter）。 */
+    @Test
+    fun disabledOrDraftProcessIsFilteredOut() {
+        val draft = process(
+            selectedText = "他走进房间",
+            replacement = "X",
+        ).copy(status = BookContentProcess.STATUS_DRAFT)
+        val disabled = process(
+            selectedText = "他走进房间",
+            replacement = "Y",
+        ).copy(enabled = false)
+
+        val result = BookContentProcessEngine.apply(
+            content = "他走进房间，看见桌上的信。",
+            processes = listOf(draft, disabled),
+        )
+
+        assertEquals("他走进房间，看见桌上的信。", result.text)
+        assertTrue(result.effectiveProcesses.isEmpty())
+    }
+
+    private fun anchor(
+        selectedText: String,
+        chapterPosition: Int,
+    ) = TextProcessAnchor(
+        chapterIndex = 0,
+        chapterPosition = chapterPosition,
+        selectedText = BookContentProcessEngine.normalizeProcessText(selectedText),
+        // 引擎不读这个字段，填常量即可（见文件头第 3 点）。
+        normalizedTextHash = "unused-by-engine",
+    )
 
     private fun markProcess(
         selectedText: String,
@@ -111,21 +153,14 @@ class BookContentProcessEngineTest {
             kind = kind,
             stage = BookContentProcess.STAGE_CONTENT,
             target = BookContentProcess.TARGET_SELECTION,
-            anchorJson = GSON.toJson(
-                TextProcessAnchor(
-                    chapterIndex = 0,
-                    chapterPosition = 0,
-                    selectedText = normalized,
-                    normalizedTextHash = MD5Utils.md5Encode(normalized),
-                )
-            ),
-            actionJson = GSON.toJson(
+            anchorJson = JsonCodec.toJson(anchor(selectedText, 0)),
+            actionJson = JsonCodec.toJson(
                 TextProcessAction(
                     TextProcessAction.TYPE_MARK,
                     text = normalized
                 )
             ),
-            styleJson = GSON.toJson(
+            styleJson = JsonCodec.toJson(
                 TextProcessStyle(
                     underlineMode = 1,
                     underlineColor = 0xFFFF0000.toInt()
@@ -139,21 +174,13 @@ class BookContentProcessEngineTest {
         replacement: String,
         chapterPosition: Int = 0,
     ): BookContentProcess {
-        val normalizedSelectedText = BookContentProcessEngine.normalizeProcessText(selectedText)
         return BookContentProcess(
             id = "test",
             bookUrl = "book",
             chapterIndex = 0,
             kind = BookContentProcess.KIND_AI_CLEAN,
-            anchorJson = GSON.toJson(
-                TextProcessAnchor(
-                    chapterIndex = 0,
-                    chapterPosition = chapterPosition,
-                    selectedText = normalizedSelectedText,
-                    normalizedTextHash = MD5Utils.md5Encode(normalizedSelectedText),
-                )
-            ),
-            actionJson = GSON.toJson(TextProcessAction.replace(replacement)),
+            anchorJson = JsonCodec.toJson(anchor(selectedText, chapterPosition)),
+            actionJson = JsonCodec.toJson(TextProcessAction.replace(replacement)),
         )
     }
 }

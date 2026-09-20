@@ -138,6 +138,16 @@ RESULT_DIRS = {
     # `createCustomSet` 的 id 形状（`cs_<millis>`）与 `deleteCustomSet` 顺序（先摘模块再删集合）
     # 的地方。不进主集（同 `:data:rules` / `:data:ai` / `:data:marking`）。
     "data:homepage   (desktopTest)": ("data/homepage/build/test-results/desktopTest", False),
+    # M4-8：正文处理域。两个模块都有用例 —— **首次**出现「domain 模块自带测试」。
+    #   `domain/contentprocess` 6 例 = 从 `:app/src/test/.../domain/model/` **搬来**的
+    #   `BookContentProcessEngineTest`（原 5 例，随引擎一起下沉）＋ 新增 1 例
+    #   （`disabledOrDraftProcessIsFilteredOut`：引擎第一个 filter 原先无用例）。
+    #   搬迁时把 `GSON` 换成 `JsonCodec`、`MD5Utils` 换成常量（引擎从不读该字段）、
+    #   JUnit4 换成 `kotlin.test` —— 断言与输入逐字未动。
+    #   `data/contentprocess` 14 例 = mapper 8（含 15 个 companion 常量的双向逐值比对）
+    #   + impl 6（`nextOrder` 的 `maxOrder()+1`、`delete` 走软删 `markDeleted` 等）。
+    "domain/contentprocess (desktopTest)": ("domain/contentprocess/build/test-results/desktopTest", False),
+    "data/contentprocess (desktopTest)": ("data/contentprocess/build/test-results/desktopTest", False),
     # M4-4：`:core:model` **首次纳入统计**（此前各片从未跟踪本模块，既有 59 例）。
     # 现在才加的理由：本片在这条路径上修掉了一个**静默的生产故障** —— `AiMessageParts.kt`
     # 由 `86c7428d24` 从 `:app`（该模块 apply 了 serialization 插件）移进本模块时漏了给
@@ -168,7 +178,11 @@ RESULT_DIRS = {
 # 前两片（M5-1a / M5-1b / M5-1c-pre）都是纯搬迁，主集与全量逐字不变；本片是 M5 里第一次
 # 动基线，因为**第一次出现共享层自己的分支逻辑**（`saveLog` / `createHeapDump` 的
 # 目录与开关判定）和**第一组需要显式 unsupported 的 desktop 契约**。
-BASELINE_MAIN = 714
+# M4-8：714 → **709**（**下调 5**）。`:app` 的 `BookContentProcessEngineTest`（5 例）随被测
+# 对象 `BookContentProcessEngine` 一起下沉到 `:domain:contentprocess` 的 commonTest，
+# 并在那里扩到 6 例。`:app` 在主集内 ⇒ 主集基线同步下调。这是**有意减少**（被测对象搬走），
+# 不是用例丢失；先例：M4-5b、M5-1c 各下调 1。
+BASELINE_MAIN = 709
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -240,7 +254,10 @@ BASELINE_MAIN = 714
 # 主验证集**不变**（714）：新模块在非主集一侧，与 `:data:rules` / `:data:ai` 同口径。
 # M4-7：1169 → **1189**（净 **+20** = `:data:homepage` 的 mapper 7+6 + impl 7）。
 # 主验证集仍不变（714）。
-BASELINE_ALL = 1189
+# M4-8：1189 → **1204**（净 **+15** = 1189 − 5（`:app` 的引擎测试搬走）
+# + 6（`:domain:contentprocess`）+ 14（`:data:contentprocess`））。
+# 主验证集同步下调到 709。
+BASELINE_ALL = 1204
 
 
 def tally(d: pathlib.Path):

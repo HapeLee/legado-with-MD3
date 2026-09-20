@@ -2,7 +2,7 @@ package io.legado.app.domain.usecase
 
 import io.legado.app.domain.marking.BookMarking
 import io.legado.app.domain.marking.BookMarkingGateway
-import io.legado.app.domain.model.BookContentProcessEngine
+import io.legado.app.domain.contentprocess.BookContentProcessEngine
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.utils.GSON

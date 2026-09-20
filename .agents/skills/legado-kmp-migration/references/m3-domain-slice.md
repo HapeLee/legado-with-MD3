@@ -291,6 +291,25 @@ git diff --check
 | M4-5c | `AiProviderProfile` / `AiModelProfile` / `AiTaskPreset` | pending |
 | M4-6 | `BookMarking`（用户划线/高亮笔记，`book_marks`） | pending |
 | M4-7 | `HomepageModule` / `HomepageCustomSet`（首页模块） | pending |
+| M4-8 | `BookContentProcess`（+ 纯函数 `BookContentProcessEngine`） | pending |
+
+M4-8 is the first slice where a **domain module carries its own tests**: the engine's test moved
+from `:app/src/test` into `domain/contentprocess/src/commonTest`, which means the **main set goes
+down** (5 cases leave `:app`) while the all-set goes up. Two traps it exercised:
+
+- **A `javac`-style import scan over-reports: comments count too.** The naive `\bBookContentProcess\b`
+  grep found 22 files; stripping comments and string literals first showed the real closure is
+  **16**. The 6 false positives were KDoc sentences *about* the type (including
+  `:core:designsystem`'s `ContentProcessUiState`, which explicitly documents that it does **not**
+  hold entity fields). Measure the closure on comment-stripped code before rejecting or accepting
+  a slice — the same "comments fool scanners" family as the mutation-anchor and portability-triage
+  issues.
+- **A pure-function engine belongs to `domain`, and its test must move with it.** `BookContentProcessEngine`
+  had zero Room/Android dependencies and lived in `:core:data`'s `io.legado.app.domain.model`
+  package only by history. Moving it into `domain/contentprocess` also required converting its test
+  from JUnit 4 + `GSON` + `MD5Utils` to `kotlin.test` + `JsonCodec` + a constant (the engine never
+  reads `normalizedTextHash`), and adding `:domain:contentprocess`'s first entries to
+  `tools/count-test-results.py` — with `BASELINE_MAIN` lowered by 5 in the same change.
 
 M4-6 is the first slice after the AI domain closed, and it is worth noting **why this entity and
 not a "bigger" one**. `Bookmark`（书签）was the obvious-looking candidate (12+ references) but it

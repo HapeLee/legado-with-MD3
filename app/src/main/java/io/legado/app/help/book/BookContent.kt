@@ -1,6 +1,6 @@
 package io.legado.app.help.book
 
-import io.legado.app.data.entities.BookContentProcess
+import io.legado.app.domain.contentprocess.BookContentProcess
 import io.legado.app.data.entities.ReplaceRule
 
 data class BookContent(
