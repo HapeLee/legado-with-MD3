@@ -173,13 +173,14 @@ class ReaderScrollStateTest {
 
     @Test
     fun stepDurationScalesWithDistanceLikeTheLegacyScroller() {
-        // 旧 PageDelegate.startScroll：animationSpeed(300) * |dy| / viewHeight。
-        assertEquals(300, ReaderScrollPolicy.stepDurationMillis(-800f, 800f))
-        assertEquals(150, ReaderScrollPolicy.stepDurationMillis(-400f, 800f))
-        assertEquals(300, ReaderScrollPolicy.stepDurationMillis(800f, 800f))
+        // 旧 PageDelegate.startScroll：animationSpeed * |dy| / viewHeight，
+        // 其中 animationSpeed 现取全动画共用的统一基准 360（旧 ReadView 的 300 已并入）。
+        assertEquals(360, ReaderScrollPolicy.stepDurationMillis(-800f, 800f))
+        assertEquals(180, ReaderScrollPolicy.stepDurationMillis(-400f, 800f))
+        assertEquals(360, ReaderScrollPolicy.stepDurationMillis(800f, 800f))
         // 零步距与零视口都不能退化成 0 时长（tween 需要正值）。
         assertEquals(1, ReaderScrollPolicy.stepDurationMillis(0f, 800f))
-        assertEquals(300, ReaderScrollPolicy.stepDurationMillis(-800f, 0f))
+        assertEquals(360, ReaderScrollPolicy.stepDurationMillis(-800f, 0f))
     }
 
     private fun text(top: Float, bottom: Float, position: Int) = ReaderElement.Text(

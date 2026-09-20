@@ -95,6 +95,8 @@ data class ReadBookStyleConfig(
     // Page anim
     val pageAnim: Int = 0,
     val pageAnimEInk: Int = 4,
+    // 翻页速度挡位 0:极速 1:快速 2:适中(默认) 3:优雅，取值与时长见 ReaderPageTurnSpeed
+    val pageAnimSpeed: Int = 2,
     // Layout
     val shareLayout: Boolean = false,
     // 排版自带的阅读菜单配色，作为 DataStore 里 readMenu*Color 为 0（未自定义）时的回退
@@ -1358,6 +1360,12 @@ sealed interface ConfigUpdate {
             ConfigUpdateAction.RebuildWholeBookPageIndex,
             ConfigUpdateAction.ReloadContent,
         )
+    }
+
+    // 翻页动画速度挡位只改翻页动画的折算基准时长，不改变动画种类、页高或排版，
+    // 因此没有任何渲染副作用：下一次翻页现读新挡位即可。
+    data class PageAnimSpeed(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
     }
 
     // --- Menu colors ---

@@ -81,8 +81,9 @@ class PageCurlGeometryTest {
     }
 
     @Test fun simulationSettleDurationUsesItsFullLegacyCurlTravel() {
-        assertEquals(570, ReaderCurlTouchPolicy.settleDurationMillis(900f, -1000f, 1000f))
-        assertEquals(300, ReaderCurlTouchPolicy.settleDurationMillis(0f, 1000f, 1000f))
+        // 基准已统一为 360（= 适中挡）：整段折页走满 360，1.9 屏折页距离按比例放大。
+        assertEquals(684, ReaderCurlTouchPolicy.settleDurationMillis(900f, -1000f, 1000f))
+        assertEquals(360, ReaderCurlTouchPolicy.settleDurationMillis(0f, 1000f, 1000f))
         assertEquals(0, ReaderCurlTouchPolicy.settleDurationMillis(1000f, 1000f, 1000f))
     }
 
@@ -91,6 +92,31 @@ class PageCurlGeometryTest {
         assertEquals(960f, ReaderCurlTouchPolicy.dragX(ReaderTurnDirection.NEXT, 999f, 1000f))
         assertEquals(40f, ReaderCurlTouchPolicy.dragX(ReaderTurnDirection.PREVIOUS, 1f, 1000f))
         assertEquals(90, ReaderCurlTouchPolicy.settleDurationMillis(999f, 1000f, 1000f))
+    }
+
+    @Test
+    fun simulationSettleFloorScalesWithTheTierBase() {
+        // 下限取基准的 25%：默认 360 → 90（与改造前一致），换挡后同步缩小/放大。
+        // 写死 90ms 会让快速挡的短距离收尾慢得不成比例（90 / 240 = 37%）。
+        assertEquals(90, ReaderCurlTouchPolicy.settleDurationMillis(999f, 1000f, 1000f))
+        assertEquals(
+            60,
+            ReaderCurlTouchPolicy.settleDurationMillis(
+                999f,
+                1000f,
+                1000f,
+                baseDurationMillis = 240
+            ),
+        )
+        assertEquals(
+            135,
+            ReaderCurlTouchPolicy.settleDurationMillis(
+                999f,
+                1000f,
+                1000f,
+                baseDurationMillis = 540
+            ),
+        )
     }
 
     @Test

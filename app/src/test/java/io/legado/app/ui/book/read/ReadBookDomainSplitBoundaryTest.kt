@@ -227,16 +227,23 @@ class ReadBookDomainSplitBoundaryTest {
      * 三个意图分支（各 1–2 行转发）、`SetFinishCurrentChapterAfterTimer` 因参数超长折行多出的
      * 2 行（纯格式化），以及 `stopReadAloudForClose()` 里读 `keepReadAloudOnExit` 决定是否
      * 继续后台朗读的短路（含注释）——关闭决策点只能在 VM，摘不成 delegate。
+     *
+     * 2746 → 2747：翻页动画速度挡位（极速 / 快速 / 适中 / 优雅）在 `buildStyleConfig()` 的
+     * `ReadBookStyleConfig` 快照里多一个字段，VM 侧只有这一行取值。没有摘成 delegate：
+     * 挡位要和 `pageAnim` 落进同一份快照，GlobalThemePage 才能反应式读到它，
+     * 而该快照的构造点就在 VM 的 `buildStyleConfig()`；单独拆一个类只会得到
+     * 「把一行赋值搬进新文件」的空壳。其余改动都在 `ReaderPageTurnSpeed`、
+     * `ReaderCanvasSurface` 与配置链路（`ReadBookConfig` / `ReadStyleGateway`），不占 VM 行。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2746 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2747 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2746。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2747。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2746,
+            lineCount <= 2747,
         )
     }
 

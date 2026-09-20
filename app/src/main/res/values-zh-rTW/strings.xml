@@ -484,6 +484,11 @@
     <string name="page_anim_simulation">模擬</string>
     <string name="page_anim_scroll">滾動</string>
     <string name="page_anim_none">無動畫</string>
+    <string name="page_anim_speed">翻頁動畫速度</string>
+    <string name="page_anim_speed_fastest">極速</string>
+    <string name="page_anim_speed_fast">快速</string>
+    <string name="page_anim_speed_moderate">適中</string>
+    <string name="page_anim_speed_elegant">優雅</string>
     <string name="up_change_source_last_chapter_t">後台更新換源最新章節</string>
     <string name="up_change_source_last_chapter_s">開啟則會在軟體打開1分鐘後開始更新</string>
     <string name="behavior_main_t">書架ToolBar自動隱藏</string>

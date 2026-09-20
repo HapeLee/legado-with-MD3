@@ -576,6 +576,11 @@
     <string name="page_anim_simulation">Simulation</string>
     <string name="page_anim_scroll">Scroll</string>
     <string name="page_anim_none">None</string>
+    <string name="page_anim_speed">Flip Speed</string>
+    <string name="page_anim_speed_fastest">Fastest</string>
+    <string name="page_anim_speed_fast">Fast</string>
+    <string name="page_anim_speed_moderate">Moderate</string>
+    <string name="page_anim_speed_elegant">Elegant</string>
     <string name="up_change_source_last_chapter_t">Update the latest chapter after changed origin in the background</string>
     <string name="up_change_source_last_chapter_s">If enabled,the update will start 1 minute later when the software is run</string>
     <string name="behavior_main_t">Auto Hide Toolbar</string>

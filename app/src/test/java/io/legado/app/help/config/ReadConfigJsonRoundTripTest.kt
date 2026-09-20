@@ -52,11 +52,11 @@ class ReadConfigJsonRoundTripTest {
 
     @Test
     fun `私有的模式相关字段也能往返`() {
-        // textColor / textColorNight / pageAnim / darkStatusIcon 是 private 构造参数，
-        // 只能经由 withCurXxx 写、getXxx 读——但它们同样要落盘。
+        // textColor / textColorNight / pageAnim / pageAnimSpeed / darkStatusIcon 是 private
+        // 构造参数，只能经由 withCurXxx 写、getXxx 读——但它们同样要落盘。
         val json = """
             {"name":"x","textColor":"#112233","textColorNight":"#445566",
-             "textColorEInk":"#778899","pageAnim":3,"pageAnimEInk":1,
+             "textColorEInk":"#778899","pageAnim":3,"pageAnimEInk":1,"pageAnimSpeed":2,
              "darkStatusIcon":false,"darkStatusIconNight":true}
         """.trimIndent()
 
@@ -67,6 +67,7 @@ class ReadConfigJsonRoundTripTest {
         assertEquals("#778899", restored.getTextColorEInk())
         assertEquals(3, restored.getPageAnim())
         assertEquals(1, restored.getPageAnimEInk())
+        assertEquals(2, restored.getPageAnimSpeed())
         assertEquals(false, restored.getDarkStatusIcon())
         assertEquals(true, restored.getDarkStatusIconNight())
     }
@@ -80,6 +81,7 @@ class ReadConfigJsonRoundTripTest {
         assertEquals(100, restored.bgAlpha)
         assertEquals("　　", restored.paragraphIndent)
         assertEquals(12, restored.lineSpacingExtra)
+        assertEquals("缺字段应回落到适中挡（2 = 统一基准 360ms）", 2, restored.getPageAnimSpeed())
     }
 
     @Test

@@ -252,6 +252,18 @@ class LegacyConfigUpdateActionsTest {
     }
 
     /**
+     * 翻页动画速度是 Compose 时代新增项（旧 View 无对应事件码）：只缩放收尾动画时长，
+     * 不改变动画种类、页高或排版，因此不得驱动任何正文副作用。
+     */
+    @Test
+    fun `page turn speed never repaints the reading content`() {
+        assertEquals(
+            emptySet<ConfigUpdateAction>(),
+            ConfigUpdate.PageAnimSpeed(2).actions,
+        )
+    }
+
+    /**
      * 菜单颜色/边框是 Compose 时代新增项（旧 View 无对应事件码），只被阅读菜单读取。
      * 除 `MenuBgColor` 需要刷新状态栏图标外，不得驱动任何正文副作用——尤其不能带
      * `ReloadContent`（改个菜单颜色就重载正文）。

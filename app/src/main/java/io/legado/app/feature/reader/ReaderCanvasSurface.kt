@@ -136,6 +136,7 @@ import io.legado.app.feature.reader.core.transition.ReaderHorizontalDrag
 import io.legado.app.feature.reader.core.transition.ReaderPageTransform
 import io.legado.app.feature.reader.core.transition.ReaderPageTransition
 import io.legado.app.feature.reader.core.transition.ReaderPageTransitionPolicy
+import io.legado.app.feature.reader.core.transition.ReaderPageTurnSpeed
 import io.legado.app.feature.reader.core.transition.ReaderProgrammaticTurnPolicy
 import io.legado.app.feature.reader.core.transition.ReaderScrollCrossing
 import io.legado.app.feature.reader.core.transition.ReaderScrollPolicy
@@ -178,6 +179,8 @@ private const val SelectionHandleFadeInMillis = 140
 fun ReaderCanvasSurface(
     hostPages: ReaderPageWindow,
     transitionMode: ReaderTransitionMode,
+    /** 翻页动画速度挡位；只改折算基准时长，不改变动画种类与几何。 */
+    pageTurnSpeed: ReaderPageTurnSpeed,
     backgroundColor: Color,
     backgroundImage: Drawable?,
     backgroundRevision: Long,
@@ -289,6 +292,8 @@ fun ReaderCanvasSurface(
     val latestTapAction by rememberUpdatedState(onTapAction)
     val latestReaderInteraction by rememberUpdatedState(onReaderInteraction)
     val latestNoAnimationScrollPage by rememberUpdatedState(noAnimationScrollPage)
+    // 手势协程长驻，速度挡位必须现读，否则改挡后要等下次重组/手势重启才生效。
+    val latestPageTurnSpeed by rememberUpdatedState(pageTurnSpeed)
     var bookmarkOffset by remember { mutableFloatStateOf(0f) }
     var bookmarkArmed by remember { mutableStateOf(false) }
     var bookmarkWillRemove by remember { mutableStateOf(false) }
@@ -472,15 +477,19 @@ fun ReaderCanvasSurface(
         val targetCurlX = transition.direction?.let {
             ReaderCurlTouchPolicy.settledX(it, decision.commit, transition.pageExtentPx)
         } ?: curlTouchX
+        // 速度挡位只换折算基准：提交判定、目标位移与折页几何都不变。
+        val baseDurationMillis = latestPageTurnSpeed.baseDurationMillis
         val durationMillis = if (transitionMode == ReaderTransitionMode.SIMULATION) {
             ReaderCurlTouchPolicy.settleDurationMillis(
                 curlTouchX,
                 targetCurlX,
                 transition.pageExtentPx,
+                baseDurationMillis = baseDurationMillis,
             )
         } else {
             ReaderPageTransitionPolicy.settleDurationMillis(
                 transitionMode, displayOffset, decision.targetOffsetPx, transition.pageExtentPx,
+                baseDurationMillis = baseDurationMillis,
             )
         }
         if (durationMillis == 0) {
@@ -637,6 +646,7 @@ fun ReaderCanvasSurface(
                 val durationMillis = ReaderScrollPolicy.stepDurationMillis(
                     distance,
                     page.scrollViewportExtentPx(),
+                    animationSpeedMillis = latestPageTurnSpeed.baseDurationMillis,
                 )
                 var lastValue = 0f
                 Animatable(0f).animateTo(

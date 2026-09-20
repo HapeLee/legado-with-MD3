@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.SpaceBar
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -91,6 +92,7 @@ fun GlobalThemePage(
     // Derive values directly from styleConfig (reactive state)
     val textSize = styleConfig.textSize
     val pageAnim = styleConfig.pageAnim
+    val pageAnimSpeed = styleConfig.pageAnimSpeed
     val styleSelect = styleConfig.styleSelect
     val shareLayout = styleConfig.shareLayout
     val isNightTheme = LegadoTheme.isDark
@@ -323,9 +325,18 @@ fun GlobalThemePage(
         )
         var showPageAnimMenu by remember { mutableStateOf(false) }
         val pageAnimEntries = pageAnimOptions.map { stringResource(it) }.toTypedArray()
-        val pageAnimEntryValues = pageAnimOptions.indices.map { it.toString() }.toTypedArray()
-        val currentPageAnimDisplay =
-            pageAnimEntries.getOrNull(pageAnimEntryValues.indexOf(pageAnim.toString())) ?: ""
+        // 菜单项顺序就是 PageAnim 的常量值，直接用 pageAnim 当下标；
+        // 越界（脏配置）时留空，与原先 indexOf 得到 -1 的行为一致。
+        val currentPageAnimDisplay = pageAnimEntries.getOrNull(pageAnim) ?: ""
+
+        val pageAnimSpeedOptions = listOf(
+            R.string.page_anim_speed_fastest,
+            R.string.page_anim_speed_fast,
+            R.string.page_anim_speed_moderate,
+            R.string.page_anim_speed_elegant,
+        )
+        var showPageAnimSpeedMenu by remember { mutableStateOf(false) }
+        val pageAnimSpeedEntries = pageAnimSpeedOptions.map { stringResource(it) }.toTypedArray()
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -359,6 +370,42 @@ fun GlobalThemePage(
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(index)))
                                 dismiss()
                             },
+                        )
+                    }
+                }
+            }
+            // 翻页动画速度挡位：与右侧 SpaceBar 卡片同款方卡，点开选极速 / 快速 / 适中 / 优雅。
+            Box {
+                NormalCard(
+                    onClick = { showPageAnimSpeedMenu = true },
+                    modifier = Modifier
+                        .height(56.dp)
+                        .aspectRatio(1f),
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    cornerRadius = 12.dp,
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = stringResource(R.string.page_anim_speed),
+                            tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                RoundDropdownMenu(
+                    expanded = showPageAnimSpeedMenu,
+                    onDismissRequest = { showPageAnimSpeedMenu = false },
+                ) { dismiss ->
+                    pageAnimSpeedEntries.forEachIndexed { index, display ->
+                        RoundDropdownMenuItem(
+                            text = display,
+                            onClick = {
+                                onIntent(
+                                    ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnimSpeed(index))
+                                )
+                                dismiss()
+                            },
+                            isSelected = index == pageAnimSpeed,
                         )
                     }
                 }

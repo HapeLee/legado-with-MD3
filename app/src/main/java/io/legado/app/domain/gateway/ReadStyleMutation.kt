@@ -34,6 +34,7 @@ enum class ReadStyleIntKey {
     HeaderFontSize,
     FooterFontSize,
     PageAnim,
+    PageAnimSpeed,
     UnderlineHeight,
     UnderlinePadding,
     PaddingTop,

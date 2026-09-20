@@ -73,8 +73,9 @@ object ReaderScrollPolicy {
 
     /**
      * 点击/按键滚动翻页的时长：对照旧 `PageDelegate.startScroll` 的
-     * `animationSpeed * |dy| / viewHeight`（`animationSpeed` 即
-     * `ReadView.defaultAnimationSpeed = 300`）。
+     * `animationSpeed * |dy| / viewHeight`；`animationSpeed` 取全动画共用的
+     * [ReaderPageTurnSpeed.BASE_DURATION_MILLIS]（旧 `ReadView.defaultAnimationSpeed = 300`
+     * 已随「翻页动画统一基准」并入 360，不再单独保留）。
      *
      * 时长随步距缩放，而不是固定帧数：旧版整屏步距（图片页）与"保留一行"步距（文本页，
      * 约为一屏减一行）落在这条曲线的不同位置，固定 18 帧会把短步距拖成与整屏一样久。
@@ -82,7 +83,7 @@ object ReaderScrollPolicy {
     fun stepDurationMillis(
         distancePx: Float,
         viewportExtentPx: Float,
-        animationSpeedMillis: Int = LEGACY_ANIMATION_SPEED_MILLIS,
+        animationSpeedMillis: Int = ReaderPageTurnSpeed.BASE_DURATION_MILLIS,
     ): Int {
         if (viewportExtentPx <= 0f) return animationSpeedMillis
         val scaled = animationSpeedMillis * abs(distancePx) / viewportExtentPx
@@ -121,7 +122,4 @@ object ReaderScrollPolicy {
         }
         return ReaderScrollResult(next)
     }
-
-    /** 旧 `ReadView.defaultAnimationSpeed`：滚动与翻页动画的基准速度（ms / 一屏）。 */
-    private const val LEGACY_ANIMATION_SPEED_MILLIS = 300
 }

@@ -550,6 +550,9 @@ object ReadBookConfig {
         private val textAccentColorEInk: String = "#000000",
         private val pageAnim: Int = 0,//翻页动画
         private val pageAnimEInk: Int = 4,
+        // 翻页动画速度挡位 0:极速(240ms) 1:快速(300ms) 2:适中(360ms,默认) 3:优雅(540ms)。
+        // 只改翻页动画的折算基准时长，不参与排版。
+        private val pageAnimSpeed: Int = 2,
         val textFont: String = "",//字体
         val titleFont: String = "",//标题字体
         val headerFont: String = "",//页眉字体
@@ -716,6 +719,7 @@ object ReadBookConfig {
             "textAccentColorIntEInk" to textAccentColorIntEInk,
             "pageAnim" to pageAnim,
             "pageAnimEInk" to pageAnimEInk,
+            "pageAnimSpeed" to pageAnimSpeed,
             "textFont" to textFont,
             "titleFont" to titleFont,
             "headerFont" to headerFont,
@@ -904,6 +908,9 @@ object ReadBookConfig {
             )
         }
 
+        /** 翻页速度挡位不随日夜/墨水屏分叉，直接写单一字段。 */
+        fun withPageAnimSpeed(speed: Int): Config = copy(pageAnimSpeed = speed)
+
         // Public getters for mode-specific values (for ReadBookStyleConfig)
         fun getDarkStatusIcon(): Boolean = darkStatusIcon
         fun getDarkStatusIconNight(): Boolean = darkStatusIconNight
@@ -913,6 +920,7 @@ object ReadBookConfig {
         fun getTextColorEInk(): String = textColorEInk
         fun getPageAnim(): Int = pageAnim
         fun getPageAnimEInk(): Int = pageAnimEInk
+        fun getPageAnimSpeed(): Int = pageAnimSpeed
 
         fun withCurBg(bgType: Int, bg: String): Config =
             ReadStyleResolver.withCurrentBackground(this, bgType, bg)

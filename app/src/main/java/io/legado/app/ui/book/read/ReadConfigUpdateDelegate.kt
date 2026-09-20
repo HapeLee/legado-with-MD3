@@ -128,6 +128,7 @@ class ReadConfigUpdateDelegate(
                 }
             }
             is ConfigUpdate.PageAnim -> Unit
+            is ConfigUpdate.PageAnimSpeed -> Unit
 
             // --- Menu appearance ---
             is ConfigUpdate.MenuBgColor -> {
@@ -828,6 +829,7 @@ class ReadConfigUpdateDelegate(
             colorMutation(ReadStyleColorKey.TipFooterNight, color)
         is ConfigUpdate.TipDividerColor -> colorMutation(ReadStyleColorKey.TipDivider, color)
         is ConfigUpdate.PageAnim -> intMutation(ReadStyleIntKey.PageAnim, value)
+        is ConfigUpdate.PageAnimSpeed -> intMutation(ReadStyleIntKey.PageAnimSpeed, value)
         is ConfigUpdate.TextShadow -> booleanMutation(ReadStyleBooleanKey.TextShadow, value)
         is ConfigUpdate.ShadowRadius -> floatMutation(ReadStyleFloatKey.ShadowRadius, value)
         is ConfigUpdate.ShadowDx -> floatMutation(ReadStyleFloatKey.ShadowDx, value)

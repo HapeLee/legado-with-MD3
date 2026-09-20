@@ -2,18 +2,18 @@ package io.legado.app.data.repository
 
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
-import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadStyleBooleanKey
 import io.legado.app.domain.gateway.ReadStyleColorKey
 import io.legado.app.domain.gateway.ReadStyleFloatKey
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadStyleIntKey
 import io.legado.app.domain.gateway.ReadStyleMutation
 import io.legado.app.domain.gateway.ReadStyleStringKey
 import io.legado.app.domain.model.settings.ReadStyleItem
 import io.legado.app.domain.model.settings.ReadStyleState
 import io.legado.app.help.DefaultData
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.CancellationException
@@ -225,6 +225,7 @@ class ReadBookStyleConfigRepository(
             ReadStyleIntKey.HeaderFontSize -> mutateEffective { it.copy(headerFontSize = value) }
             ReadStyleIntKey.FooterFontSize -> mutateEffective { it.copy(footerFontSize = value) }
             ReadStyleIntKey.PageAnim -> mutateEffective { it.withCurPageAnim(value) }
+            ReadStyleIntKey.PageAnimSpeed -> mutateEffective { it.withPageAnimSpeed(value) }
             ReadStyleIntKey.UnderlineHeight -> mutateEffective { it.copy(underlineHeight = value) }
             ReadStyleIntKey.UnderlinePadding -> mutateEffective { it.copy(underlinePadding = value) }
             ReadStyleIntKey.PaddingTop -> mutateEffective { it.copy(paddingTop = value) }

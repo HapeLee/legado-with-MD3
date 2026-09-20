@@ -50,18 +50,32 @@ object ReaderCurlVisualPolicy {
 }
 
 object ReaderCurlTouchPolicy {
+    /**
+     * 收尾下限占基准的比例。
+     *
+     * 下限跟着基准走而不是写死 90ms：写死会让快速挡的短距离收尾慢得不成比例
+     * （90 / 240 = 37%，而 90 / 540 只有 17%），换挡就不再是「整体快慢」。
+     * 360ms 基准下这正好是原来的 90ms，默认挡逐帧不变。
+     */
+    private const val MIN_SETTLE_FRACTION = .25f
+
+    /**
+     * 仿真折页收尾时长：按剩余折页距离折算到 [baseDurationMillis]（由当前挡位给定，
+     * 见 [ReaderPageTurnSpeed]）。
+     */
     fun settleDurationMillis(
         currentX: Float,
         targetX: Float,
         pageWidth: Float,
-        baseDurationMillis: Int = 300,
+        baseDurationMillis: Int = ReaderPageTurnSpeed.BASE_DURATION_MILLIS,
     ): Int {
         if (pageWidth <= 0f || baseDurationMillis <= 0) return 0
         val distance = abs(targetX - currentX)
         if (distance < .01f) return 0
         // A one- or two-pixel final travel previously rounded to 0 ms, committing the page
         // before Compose had a chance to present the final curl frame.
-        return (baseDurationMillis * distance / pageWidth).toInt().coerceAtLeast(90)
+        val minDurationMillis = (baseDurationMillis * MIN_SETTLE_FRACTION).toInt().coerceAtLeast(1)
+        return (baseDurationMillis * distance / pageWidth).toInt().coerceAtLeast(minDurationMillis)
     }
 
     /**

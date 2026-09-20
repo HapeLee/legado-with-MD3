@@ -15,7 +15,8 @@ class ReaderPageTransitionTest {
 
     @Test
     fun `settle duration scales with the remaining legacy scroll distance`() {
-        // 基准 360：点击与按键共用同一收尾基准（产品确认保留，不回退旧 View 的 300）。
+        // 基准 360：点击与按键共用同一收尾基准，且与仿真折页、滚动翻屏共用
+        // 同一个 ReaderPageTurnSpeed.BASE_DURATION_MILLIS。
         assertEquals(360, ReaderPageTransitionPolicy.settleDurationMillis(0f, -800f, 800f))
         assertEquals(90, ReaderPageTransitionPolicy.settleDurationMillis(-600f, -800f, 800f))
         assertEquals(270, ReaderPageTransitionPolicy.settleDurationMillis(-600f, 0f, 800f))
@@ -24,7 +25,8 @@ class ReaderPageTransitionTest {
 
     @Test
     fun `both settle overloads share the same base duration`() {
-        // 两个重载的默认基准必须一致：分叉过一次（360 / 300），测试便无法同时代表生产路径。
+        // 两个重载的默认基准必须一致（历史上分叉过一次 360 / 300），
+        // 否则任一断言都无法同时代表生产路径。
         assertEquals(
             ReaderPageTransitionPolicy.settleDurationMillis(0f, -800f, 800f),
             ReaderPageTransitionPolicy.settleDurationMillis(
