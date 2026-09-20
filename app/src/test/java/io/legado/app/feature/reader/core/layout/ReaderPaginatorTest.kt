@@ -811,6 +811,39 @@ class ReaderPaginatorTest {
     }
 
     /**
+     * 高亮规则命中的段落走富文本路径（逐 item 样式），背景图 fit=1（拉伸）/0（平铺）/2（裁剪）
+     * 不参与九宫格预算，但放行标记必须照发：默认字间距 0.1em 远大于 1px 的几何相邻阈值，
+     * 少发标记就会把一条连续气泡切成逐字绘制（issue #2286）。
+     */
+    @Test
+    fun stretchedBackgroundMergesAcrossLetterSpacingOnRichTextRow() {
+        val stretched = ReaderTextBackgroundImage("bubble.png", fit = 1, scale = 1f)
+        val stretchedStyle = style.copy(backgroundImage = stretched)
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = (0 until 3).map { index ->
+                        ReaderMeasuredInlineItem.Text("字", 10f, stretchedStyle, index)
+                    },
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                )
+            ),
+            config.copy(viewportWidthPx = 100, viewportHeightPx = 100, letterSpacingPx = 5f),
+        ).single()
+
+        val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
+        // 字间距在每个字之间留下 5f 间隙，几何相邻判定必然失败。
+        assertEquals(listOf(0f, 15f, 30f), glyphs.map { it.bounds.left })
+        val run = page.textBackgroundRuns().single()
+        assertEquals(0f, run.contentBounds.left, 0f)
+        assertEquals(40f, run.contentBounds.right, 0f)
+    }
+
+    /**
      * 流式会话（对照旧 View `TextChapterLayout.onPageCompleted()` 的 `channel.trySend`）：
      * 逐 block 推送得到的页必须与整章批次入口完全一致，流出顺序也与最终列表一致。
      */

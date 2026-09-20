@@ -1922,6 +1922,7 @@
     <string name="highlight_bg_image">背景圖片</string>
     <string name="highlight_bg_image_scale">圖片縮放</string>
     <string name="highlight_rule_config">高亮規則</string>
+    <string name="highlight_rule_presets">預設規則</string>
     <string name="highlight_tag_add_rule">添加規則</string>
     <string name="highlight_tag_config">標籤規則</string>
     <string name="highlight_tag_display_mode">顯示模式</string>

@@ -6,6 +6,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.HighlightRule
+import io.legado.app.data.repository.HighlightRulePresets
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.exception.NoStackTraceException
@@ -68,6 +69,7 @@ class ReadHighlightRuleDelegate(
                 showNewRule = false,
                 deleteRule = null,
                 importState = BaseImportUiState.Idle,
+                presetImport = false,
             )
         }
     }
@@ -80,6 +82,7 @@ class ReadHighlightRuleDelegate(
                 showNewRule = false,
                 deleteRule = null,
                 importState = BaseImportUiState.Idle,
+                presetImport = false,
             )
         }
     }
@@ -164,10 +167,45 @@ class ReadHighlightRuleDelegate(
         host.notifyRulesChanged()
     }
 
+    // --- 预设规则 ---
+
+    /**
+     * 打开内置预设清单，走和导入同一套批量选择弹层。
+     *
+     * 与导入不同的是默认勾选：只勾「缺失」的预设，已存在同 id 的规则标为已有且不勾选。
+     * 预设是给用户补规则的，不该把用户改过样式的旧规则悄悄覆盖掉——真要覆盖，用户自己勾。
+     */
+    fun showPresets() {
+        val oldRules = highlightRuleRepository.load(ReadBookConfig.durConfig.name)
+            .associateBy { it.id }
+        val items = HighlightRulePresets.rules.map { rule ->
+            val oldRule = oldRules[rule.id]
+            val status = when {
+                oldRule == null -> ImportStatus.New
+                oldRule != rule -> ImportStatus.Update
+                else -> ImportStatus.Existing
+            }
+            ImportItemWrapper(
+                data = rule,
+                oldData = oldRule,
+                status = status,
+                isSelected = status == ImportStatus.New,
+            )
+        }
+        _uiState.update {
+            it.copy(
+                presetImport = true,
+                importState = BaseImportUiState.Success(source = "", items = items),
+            )
+        }
+    }
+
     // --- 导入 ---
 
     fun importSource(text: String) {
-        _uiState.update { it.copy(importState = BaseImportUiState.Loading) }
+        _uiState.update {
+            it.copy(importState = BaseImportUiState.Loading, presetImport = false)
+        }
         Coroutine.async(scope, Dispatchers.IO) {
             val importedRules = importSourceAwait(text.trim())
                 .map(highlightRuleRepository::sanitizeRule)
@@ -257,7 +295,7 @@ class ReadHighlightRuleDelegate(
     }
 
     fun cancelImport() {
-        _uiState.update { it.copy(importState = BaseImportUiState.Idle) }
+        _uiState.update { it.copy(importState = BaseImportUiState.Idle, presetImport = false) }
     }
 
     fun toggleImportSelection(index: Int) {

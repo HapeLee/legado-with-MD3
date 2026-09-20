@@ -34,8 +34,8 @@ import io.legado.app.ui.book.read.HighlightRuleConfigUiState
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -97,7 +97,13 @@ fun HighlightRuleConfigSheet(
         allowExtensions = arrayOf("json", "txt"),
     )
     BatchImportDialog(
-        title = stringResource(R.string.highlight_rule_config),
+        title = stringResource(
+            if (state.presetImport) {
+                R.string.highlight_rule_presets
+            } else {
+                R.string.highlight_rule_config
+            }
+        ),
         importState = state.importState,
         onDismissRequest = { onIntent(ReadBookIntent.CancelHighlightRuleImport) },
         onToggleItem = {
@@ -139,6 +145,13 @@ fun HighlightRuleConfigSheet(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
                 ) {
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.highlight_rule_presets),
+                        onClick = {
+                            expanded = false
+                            onIntent(ReadBookIntent.ShowHighlightRulePresets)
+                        },
+                    )
                     RoundDropdownMenuItem(
                         text = stringResource(R.string.import_action),
                         onClick = {

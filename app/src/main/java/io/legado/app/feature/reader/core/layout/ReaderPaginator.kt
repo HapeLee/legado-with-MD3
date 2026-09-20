@@ -649,6 +649,23 @@ internal class ReaderPaginationSession(private val config: ReaderPaginationConfi
         fun frameOf(index: Int, topBudgetPx: Float, bottomBudgetPx: Float) =
             itemFrame(index)?.fitIntoLineBudget(topBudgetPx, bottomBudgetPx)
 
+        /**
+         * 元素绘制时真正使用的背景图：九宫格按行预算收紧，拉伸/裁剪/平铺按原样。
+         *
+         * 行内连续放行标记必须用「绘制用实例」比较，不能只看 [frameOf]（它只认 `fit == 3`）。
+         * 旧 View `TextLine.drawStyledBackgrounds` 对行内连续的同图段无条件合并，新实现多了
+         * 「几何相邻 < 1px」这条，靠分页期放行标记兜住字间距（默认 0.1em，远大于 1px）。
+         * 放行标记若只发给九宫格，fit≠3 的背景图就会逐字绘制成一条条断开的气泡。
+         */
+        fun drawnBackgroundOf(index: Int, topBudgetPx: Float, bottomBudgetPx: Float) =
+            (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)
+                ?.style?.backgroundImage?.let { image ->
+                    if (image.fit == 3) image.fitIntoLineBudget(
+                        topBudgetPx,
+                        bottomBudgetPx
+                    ) else image
+                }
+
         fun backgroundInsetBefore(
             index: Int,
             lineStart: Int,
@@ -847,7 +864,8 @@ internal class ReaderPaginationSession(private val config: ReaderPaginationConfi
             val underlineElementStart = elements.size + indentItems
             lineItems.forEachIndexed { itemIndex, item ->
                 x += backgroundInsetBefore(itemIndex)
-                val itemBackground = frameOf(from + itemIndex, topBudgetPx, bottomBudgetPx)
+                val itemBackground =
+                    drawnBackgroundOf(from + itemIndex, topBudgetPx, bottomBudgetPx)
                 when (item) {
                     is ReaderMeasuredInlineItem.Text -> {
                         val expandedWordSpace = if (item.value == " ") wordSpaceExtra else 0f
@@ -867,10 +885,12 @@ internal class ReaderPaginationSession(private val config: ReaderPaginationConfi
                             markingId = item.markingId,
                             chapterPosition = item.chapterPosition,
                             paragraphIndex = paragraphIndex,
-                            // 富文本逐项样式：与前一项同背景图才视作同一 run 的延续
+                            // 富文本逐项样式：与前一项同背景图才视作同一 run 的延续。
+                            // 比较「绘制用实例」，非九宫格背景图同样要拿到放行标记，
+                            // 否则字间距会把它切成逐字绘制。
                             continuesBackgroundRun = itemBackground != null &&
                                     itemIndex > 0 &&
-                                    frameOf(
+                                    drawnBackgroundOf(
                                         from + itemIndex - 1,
                                         topBudgetPx,
                                         bottomBudgetPx

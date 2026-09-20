@@ -1625,6 +1625,7 @@
     <string name="show_password">顯示密碼</string>
     <string name="hide_password">隱藏密碼</string>
     <string name="highlight_rule_config">高亮規則</string>
+    <string name="highlight_rule_presets">預設規則</string>
     <string name="new_rule">新規則</string>
     <string name="edit_rule">編輯規則</string>
     <string name="rule_info">規則資訊</string>

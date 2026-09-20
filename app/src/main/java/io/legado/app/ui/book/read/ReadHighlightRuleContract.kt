@@ -17,4 +17,6 @@ data class HighlightRuleConfigUiState(
     val showNewRule: Boolean = false,
     val deleteRule: HighlightRule? = null,
     val importState: BaseImportUiState<HighlightRule> = BaseImportUiState.Idle,
+    /** 当前批量弹层来自「预设规则」而非文件/URL 导入，只影响标题与默认勾选。 */
+    val presetImport: Boolean = false,
 )

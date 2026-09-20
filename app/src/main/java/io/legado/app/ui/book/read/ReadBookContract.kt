@@ -684,6 +684,9 @@ sealed interface ReadBookIntent {
         val rule: HighlightRule,
     ) : ReadBookIntent
     data object SaveImportedHighlightRules : ReadBookIntent
+
+    /** 打开内置预设规则清单（多选后按 [SaveImportedHighlightRules] 入库）。 */
+    data object ShowHighlightRulePresets : ReadBookIntent
     data object ExportHighlightRules : ReadBookIntent
     data object ExportHighlightRulesAsUrl : ReadBookIntent
     data class ExportHighlightRulesToFile(val uri: Uri) : ReadBookIntent
