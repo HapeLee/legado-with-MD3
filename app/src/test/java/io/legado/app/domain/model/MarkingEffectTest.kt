@@ -24,14 +24,23 @@ class MarkingEffectTest {
     }
 
     @Test
-    fun `效果到样式 - 删除线与半高荧光使用独立绘制模式`() {
+    fun `效果到样式 - 删除线与半高荧光使用独立绘制模式且荧光不附加默认透明度`() {
         val color = 0xFFFFD54F.toInt()
         assertEquals(6, MarkingEffect.STRIKE.toStyle(color).underlineMode)
         val highlight = MarkingEffect.HIGHLIGHT.toStyle(color)
         assertEquals(7, highlight.underlineMode)
-        assertEquals(0x66FFD54F, highlight.underlineColor)
+        assertEquals(0xFFFFD54F.toInt(), highlight.underlineColor)
         assertTrue(MarkingEffect.STRIKE.isUnderline)
         assertTrue(MarkingEffect.HIGHLIGHT.isUnderline)
+    }
+
+    @Test
+    fun `效果到样式 - 荧光保留所选颜色的透明度`() {
+        val translucent = 0x40FFD54F.toInt()
+        assertEquals(
+            translucent,
+            MarkingEffect.HIGHLIGHT.toStyle(translucent).underlineColor,
+        )
     }
 
     @Test

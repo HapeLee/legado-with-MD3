@@ -1,9 +1,11 @@
 package io.legado.app.ui.book.read
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +59,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.domain.model.MarkingEffect
 import io.legado.app.domain.model.TextProcessStyle
+import io.legado.app.ui.book.read.sheet.MarkingPresetColors
 import io.legado.app.ui.book.read.sheet.labelRes
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
@@ -82,7 +85,11 @@ fun MarkingSelectionMenu(
     val windowSize = LocalWindowInfo.current.containerSize
     val width = with(density) { windowSize.width.toDp() } - 32.dp
     val maxHeight = with(density) { windowSize.height.toDp() } - 32.dp
-    val opensBelow = (menuState.startTopY + menuState.endBottomY) / 2f < windowSize.height / 2f
+    // 与 TextMenuPositionProvider 同一套落位规则：默认在选区下方展开，只有选区贴近窗口底部、
+    // 下方放不下卡片时才上翻。卡片真实高度要等测量，而缩放原点必须在入场动画前确定，这里用
+    // 标记卡的常规高度估算；它只影响缩放动画的原点，落位始终由 positionProvider 决定。
+    val opensBelow = windowSize.height - menuState.endBottomY >
+            with(density) { MARKING_MENU_ESTIMATED_HEIGHT.toPx() }
     val transformOrigin = TransformOrigin(0.5f, if (opensBelow) 0f else 1f)
     val shadowPadding = 12.dp
     val positionProvider = remember(menuState, density.density) {
@@ -94,7 +101,6 @@ fun MarkingSelectionMenu(
             endX = menuState.endX,
             endBottomY = menuState.endBottomY,
             shadowPadding = with(density) { shadowPadding.roundToPx() },
-            placeOppositeHalf = true,
         )
     }
 
@@ -126,6 +132,10 @@ fun MarkingSelectionMenu(
     var noteInitialized by remember(state.selection, state.editing?.id) { mutableStateOf(false) }
     var noteDirty by remember(state.selection, state.editing?.id) { mutableStateOf(false) }
     var showColorPicker by remember(state.selection, state.editing?.id) { mutableStateOf(false) }
+    // 打开取色器的起始色：点尾部按钮用当前色，长按预设色则用被长按的色做基准微调
+    var colorPickerSeed by remember(state.selection, state.editing?.id) {
+        mutableStateOf(selectedColor)
+    }
     var menuVisible by remember(menuState) { mutableStateOf(false) }
     var closing by remember(menuState) { mutableStateOf(false) }
 
@@ -207,7 +217,14 @@ fun MarkingSelectionMenu(
                                     style = selectedEffect.toStyle(color)
                                     onApply(style, note)
                                 },
-                                onCustomColor = { showColorPicker = true },
+                                onColorLongPress = { color ->
+                                    colorPickerSeed = color
+                                    showColorPicker = true
+                                },
+                                onCustomColor = {
+                                    colorPickerSeed = selectedColor
+                                    showColorPicker = true
+                                },
                             )
 
                             if (useRules) {
@@ -275,7 +292,7 @@ fun MarkingSelectionMenu(
 
     ColorPickerSheet(
         show = showColorPicker,
-        initialColor = selectedColor,
+        initialColor = colorPickerSeed,
         onDismissRequest = { showColorPicker = false },
         onColorSelected = { color ->
             selectedColor = color
@@ -287,6 +304,10 @@ fun MarkingSelectionMenu(
     )
 }
 
+/**
+ * 预设颜色行：点按选中，长按以该色为基准打开取色器微调（与尾部自定义色按钮一致）。
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MarkingColorRow(
     selectedColor: Int,
@@ -294,6 +315,7 @@ private fun MarkingColorRow(
     enabled: Boolean,
     onToggleRules: () -> Unit,
     onColorSelected: (Int) -> Unit,
+    onColorLongPress: (Int) -> Unit,
     onCustomColor: () -> Unit,
 ) {
     LazyRow(
@@ -310,13 +332,17 @@ private fun MarkingColorRow(
                 onClick = onToggleRules,
             )
         }
-        items(MarkingMenuColors, key = { it }) { color ->
+        items(MarkingPresetColors, key = { it }) { color ->
             Box(
                 modifier = Modifier
                     .size(26.dp)
                     .clip(CircleShape)
                     .background(Color(color))
-                    .clickable(enabled = enabled) { onColorSelected(color) },
+                    .combinedClickable(
+                        enabled = enabled,
+                        onClick = { onColorSelected(color) },
+                        onLongClick = { onColorLongPress(color) },
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 if (color == selectedColor && !useRules) {
@@ -483,8 +509,8 @@ private fun HighlightRule.toProcessStyle() = TextProcessStyle(
     underlineSvgPath = underlineSvgPath,
 )
 
-private val MarkingMenuColors = listOf(
-    0xFFF44848.toInt(), 0xFF22C55E.toInt(), 0xFF3B82F6.toInt(),
-    0xFFA855F7.toInt(), 0xFFFF7417.toInt(), 0xFFEC4899.toInt(),
-    0xFF18B5A4.toInt(), 0xFF9A4D0F.toInt(), 0xFF111111.toInt(),
-)
+/**
+ * 标记卡（颜色行 + 效果格 + 备注框）的常规高度估算，含选择柄与间距余量。
+ * 仅用于推断缩放动画的展开方向，不参与实际落位。
+ */
+private val MARKING_MENU_ESTIMATED_HEIGHT = 240.dp

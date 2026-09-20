@@ -65,17 +65,15 @@ enum class MarkingEffect {
 
     /**
      * 由效果 + 选中颜色生成样式。背景色自动半透明（约 20% alpha），
-     * 避免不透明背景盖住正文；下划线/字体色用原色。
+     * 避免不透明背景盖住正文；下划线/荧光/字体色用原色，透明度由所选颜色的
+     * alpha 决定，不再附加默认透明度。
      */
     fun toStyle(color: Int): TextProcessStyle = when (this) {
         SOLID -> TextProcessStyle(underlineMode = 1, underlineColor = color)
         WAVE -> TextProcessStyle(underlineMode = 3, underlineColor = color)
         DASHED -> TextProcessStyle(underlineMode = 2, underlineColor = color)
         STRIKE -> TextProcessStyle(underlineMode = 6, underlineColor = color)
-        HIGHLIGHT -> TextProcessStyle(
-            underlineMode = 7,
-            underlineColor = (color and 0x00FFFFFF) or 0x66000000,
-        )
+        HIGHLIGHT -> TextProcessStyle(underlineMode = 7, underlineColor = color)
         BG -> TextProcessStyle(bgColor = (color and 0x00FFFFFF) or 0x33000000)
         TEXT -> TextProcessStyle(textColor = color)
     }

@@ -1,8 +1,10 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -111,6 +113,8 @@ fun MarkingSheet(
         mutableStateOf(editingStyle?.underlineSvgPath)
     }
     var showColorPicker by remember(show, editing) { mutableStateOf(false) }
+    // 打开取色器的起始色：点尾部按钮用当前色，长按预设色则用被长按的色做基准微调
+    var colorPickerSeed by remember(show, editing) { mutableStateOf(markColor) }
     val noteState = key(show, editing) {
         rememberTextFieldState(initialText = editing?.note ?: "")
     }
@@ -230,7 +234,14 @@ fun MarkingSheet(
                 MarkingColorRow(
                     selectedColor = markColor,
                     onColorSelected = { markColor = it },
-                    onCustomColorClick = { showColorPicker = true },
+                    onColorLongPress = { color ->
+                        colorPickerSeed = color
+                        showColorPicker = true
+                    },
+                    onCustomColorClick = {
+                        colorPickerSeed = markColor
+                        showColorPicker = true
+                    },
                 )
                 MarkingEffectGrid(
                     selectedEffect = effect,
@@ -254,7 +265,7 @@ fun MarkingSheet(
 
     ColorPickerSheet(
         show = showColorPicker,
-        initialColor = markColor,
+        initialColor = colorPickerSeed,
         onDismissRequest = { showColorPicker = false },
         onColorSelected = { color ->
             markColor = color
@@ -263,11 +274,15 @@ fun MarkingSheet(
     )
 }
 
-/** 自定义样式区：预设颜色行（尾部为自定义颜色，打开取色器）。 */
+/**
+ * 自定义样式区：预设颜色行（尾部为自定义颜色，打开取色器）。
+ * 点按预设色直接选中；长按预设色以该色为基准打开取色器微调，与尾部按钮一致。
+ */
 @Composable
 private fun MarkingColorRow(
     selectedColor: Int,
     onColorSelected: (Int) -> Unit,
+    onColorLongPress: (Int) -> Unit,
     onCustomColorClick: () -> Unit,
 ) {
     Row(
@@ -283,6 +298,7 @@ private fun MarkingColorRow(
                 color = color,
                 selected = color == selectedColor,
                 onClick = { onColorSelected(color) },
+                onLongClick = { onColorLongPress(color) },
             )
         }
         // 尾部自定义颜色：未选自定义色时显示取色图标，选中后显示该色并高亮
@@ -296,11 +312,13 @@ private fun MarkingColorRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MarkingColorSwatch(
     color: Int?,
     selected: Boolean,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     custom: Boolean = false,
 ) {
     val borderColor = if (selected) {
@@ -316,7 +334,7 @@ private fun MarkingColorSwatch(
                 if (color != null) Color(color) else LegadoTheme.colorScheme.surfaceContainerHigh
             )
             .border(2.dp, borderColor, CircleShape)
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         contentAlignment = Alignment.Center,
     ) {
         if (custom && color == null) {
@@ -424,18 +442,27 @@ private fun HighlightRule.toProcessStyle(): TextProcessStyle = TextProcessStyle(
     underlineSvgPath = underlineSvgPath,
 )
 
-/** 自定义模式的预设颜色（尾部之外的自定义色用取色器）。 */
-private val MarkingPresetColors = listOf(
-    0xFFFF5252.toInt(),
-    0xFFFF9800.toInt(),
-    0xFFFFEB3B.toInt(),
-    0xFF4CAF50.toInt(),
-    0xFF26A6D6.toInt(),
-    0xFF2196F3.toInt(),
-    0xFF9C27B0.toInt(),
-    0xFFEC407A.toInt(),
-    0xFF795548.toInt(),
-    0xFF607D8B.toInt(),
+/**
+ * 划线/高亮自定义模式的预设颜色，内联编辑悬浮窗（[io.legado.app.ui.book.read.MarkingSelectionMenu]）
+ * 与本 Sheet 共用一套，避免两处色板漂移；更精细的颜色由尾部取色按钮打开取色器选择。
+ */
+internal val MarkingPresetColors = listOf(
+    0xFFF44848.toInt(), // 红
+    0xFFFF7417.toInt(), // 橙
+    0xFFFFC107.toInt(), // 琥珀
+    0xFFFFEB3B.toInt(), // 黄
+    0xFF9CCC65.toInt(), // 黄绿
+    0xFF22C55E.toInt(), // 绿
+    0xFF18B5A4.toInt(), // 青绿
+    0xFF26C6DA.toInt(), // 青
+    0xFF3B82F6.toInt(), // 蓝
+    0xFF5C6BC0.toInt(), // 靛蓝
+    0xFF9C27B0.toInt(), // 紫
+    0xFFA855F7.toInt(), // 亮紫
+    0xFFEC4899.toInt(), // 粉
+    0xFF9A4D0F.toInt(), // 棕
+    0xFF607D8B.toInt(), // 蓝灰
+    0xFF111111.toInt(), // 黑
 )
 
 private const val STYLE_SOURCE_RULE = "rule"

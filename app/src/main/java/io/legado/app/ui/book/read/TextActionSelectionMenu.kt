@@ -633,6 +633,14 @@ private class MoreMenuPositionProvider(
     }
 }
 
+/**
+ * 选区浮层的落位规则：**默认贴着选区下沿展开**，并把整个选区与末端选择柄留在浮层之外。
+ * 只有选区贴近窗口底部、下方放不下卡片时才上翻，此时末行压在选区上沿；上下都放不下时
+ * 仍贴选区下沿，由末尾的 clamp 兜底。
+ *
+ * [TextActionSelectionMenu] 与 [MarkingSelectionMenu] 共用该规则：两者在同一次选区里互相
+ * 切换，落位必须一致，否则切换时浮层会跳。
+ */
 internal class TextMenuPositionProvider(
     private val density: Float,
     private val startX: Int,
@@ -641,7 +649,6 @@ internal class TextMenuPositionProvider(
     private val endX: Int,
     private val endBottomY: Int,
     private val shadowPadding: Int,
-    private val placeOppositeHalf: Boolean = false,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -659,27 +666,13 @@ internal class TextMenuPositionProvider(
         val cursorHandleClearance = (14 * density).toInt()
 
         val cardHeight = popupContentSize.height - shadowPadding * 2
-        val isSpaceEnoughAtTop = startTopY > cardHeight + textMargin + marginVertical
-        // 仅阅读区域最顶部 10% 的选区优先在下方展开；其余位置遵循原本“有上方空间
-        // 就放上方”的策略，避免菜单在普通位置不必要地遮挡后文。
-        val preferBelowForTopSelection = startTopY < windowSize.height / 10
         val isSpaceEnoughBelowSelection = windowSize.height - endBottomY >
                 cardHeight + textMargin + cursorHandleClearance + marginVertical
+        val isSpaceEnoughAtTop = startTopY > cardHeight + textMargin + marginVertical
 
-        if (placeOppositeHalf) {
+        if (isSpaceEnoughBelowSelection) {
             x = startX - shadowPadding
-            val selectionCenterY = (startTopY + endBottomY) / 2
-            y = if (selectionCenterY < windowSize.height / 2) {
-                endBottomY + cursorHandleClearance + textMargin - shadowPadding
-            } else {
-                startTopY - popupContentSize.height + shadowPadding - textMargin
-            }
-        } else if (!preferBelowForTopSelection && isSpaceEnoughAtTop) {
-            x = startX - shadowPadding
-            y = startTopY - popupContentSize.height + shadowPadding - textMargin
-        } else if (isSpaceEnoughBelowSelection) {
-            x = startX - shadowPadding
-            // 顶部选区没有空间放菜单时，必须避开整个选区及末端把手，不能只从首行下方弹出。
+            // 贴选区下沿展开，避开整个选区及末端把手，不能只从首行下方弹出。
             y = endBottomY + cursorHandleClearance + textMargin - shadowPadding
         } else if (isSpaceEnoughAtTop) {
             x = startX - shadowPadding
