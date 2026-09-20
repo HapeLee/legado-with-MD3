@@ -43,13 +43,60 @@ class MarkingDelegate(
     private var inlineSaveVersion = 0L
 
     interface Host {
+        val activeSheet: ReadBookSheet?
+        fun setActiveSheet(sheet: ReadBookSheet?)
         fun reloadCurrentChapter()
-        fun dismissMarkingSheet()
         fun showToast(message: String)
     }
 
     private val _uiState = MutableStateFlow(MarkingUiState())
     val uiState = _uiState.asStateFlow()
+
+    /**
+     * 标记 sheet 的「来源」：从目录 Sheet 的标记列表进入编辑时记下目录，
+     * 保存/删除/取消后回到它，而不是把用户丢回阅读页。从划词菜单新建时为 null。
+     *
+     * 这个状态属于标记域自己的会话，不该散落在 ViewModel 里。
+     */
+    private var returnSheet: ReadBookSheet? = null
+
+    /** 从划词菜单新建标记：没有可返回的来源 sheet。 */
+    fun openFromMenu(selection: Bookmark) {
+        returnSheet = null
+        open(selection)
+        host.setActiveSheet(ReadBookSheet.Marking)
+    }
+
+    /** 从目录 Sheet 的标记列表进入编辑：记住目录以便关闭时返回。 */
+    fun openForEditFromSheet(markingId: String) {
+        returnSheet = host.activeSheet
+        openForEdit(markingId)
+        host.setActiveSheet(ReadBookSheet.Marking)
+    }
+
+    /** 划词菜单的快速标记：以行内模式打开，不改动当前 sheet。 */
+    fun openQuick(selection: Bookmark) {
+        returnSheet = null
+        open(selection, inlineMode = true)
+    }
+
+    /** 划词菜单的快速标记编辑。 */
+    fun openQuickForEdit(markingId: String) {
+        returnSheet = null
+        openForEdit(markingId, inlineMode = true)
+    }
+
+    /** 用户主动关闭标记 sheet：清空会话并回到进入前的 sheet。 */
+    fun dismissSheetByUser() {
+        onSheetDismissed()
+        dismissSheet()
+    }
+
+    private fun dismissSheet() {
+        val target = returnSheet
+        returnSheet = null
+        host.setActiveSheet(target)
+    }
 
     fun open(selection: Bookmark, inlineMode: Boolean = false) {
         val book = ReadBook.book
@@ -142,7 +189,7 @@ class MarkingDelegate(
                     }
                     if (!current.inlineMode) {
                         host.reloadCurrentChapter()
-                        host.dismissMarkingSheet()
+                        dismissSheet()
                     }
                 }.onFailure { error ->
                     host.showToast(error.localizedMessage ?: context.getString(R.string.error))
@@ -159,7 +206,7 @@ class MarkingDelegate(
                 saveMarkingUseCase.delete(editing.id)
             }.onSuccess {
                 host.reloadCurrentChapter()
-                host.dismissMarkingSheet()
+                dismissSheet()
             }.onFailure { error ->
                 host.showToast(error.localizedMessage ?: context.getString(R.string.error))
             }

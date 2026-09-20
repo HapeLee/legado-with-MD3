@@ -75,9 +75,7 @@ import io.legado.app.model.activeReadAloudProgress
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
-import io.legado.app.model.translation.TranslationChapterKey
 import io.legado.app.model.translation.TranslationChapterStatus
-import io.legado.app.model.translation.TranslationManager
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
@@ -102,7 +100,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -226,12 +223,15 @@ class ReadBookViewModel(
         highlightRuleRepository = highlightRuleRepository,
         saveMarkingUseCase = saveMarkingUseCase,
         host = object : MarkingDelegate.Host {
-            override fun reloadCurrentChapter() {
-                contentProcessDelegate.reloadCurrentChapterPreservingSnapshot()
+            override val activeSheet: ReadBookSheet?
+                get() = _uiState.value.activeSheet
+
+            override fun setActiveSheet(sheet: ReadBookSheet?) {
+                _uiState.update { it.copy(activeSheet = sheet) }
             }
 
-            override fun dismissMarkingSheet() {
-                restoreMarkingReturnSheet()
+            override fun reloadCurrentChapter() {
+                contentProcessDelegate.reloadCurrentChapterPreservingSnapshot()
             }
 
             override fun showToast(message: String) {
@@ -241,17 +241,6 @@ class ReadBookViewModel(
     ) }
 
     val markingState get() = markingDelegate.uiState
-    /**
-     * 划线笔记编辑可能从目录 Sheet 进入：保存/删除/取消后应回到原 sheet（目录），
-     * 而不是被丢回阅读页。从划词菜单新建时无原 sheet，回 null。
-     */
-    private var markingReturnSheet: ReadBookSheet? = null
-
-    private fun restoreMarkingReturnSheet() {
-        val returnSheet = markingReturnSheet
-        markingReturnSheet = null
-        _uiState.update { it.copy(activeSheet = returnSheet) }
-    }
 
     // --- 跳转校验域：书签/笔记跳转前比对源与章节标题 ---
 
@@ -306,6 +295,13 @@ class ReadBookViewModel(
 
         override suspend fun listChapters(bookUrl: String): List<BookChapter> =
             bookRepository.getChapters(bookUrl)
+
+        override val translationStatus: TranslationChapterStatus
+            get() = _uiState.value.translationStatus
+
+        override fun updateTranslationStatus(status: TranslationChapterStatus) {
+            _uiState.update { it.copy(translationStatus = status) }
+        }
     }
 
     private val aiDelegate by lazy { ReadAiDelegate(
@@ -598,8 +594,6 @@ class ReadBookViewModel(
     val readPreferences = _readPreferences.asStateFlow()
 
     private var pendingBooksDirReloadChapterList: Boolean = false
-    private var translationStatusJob: Job? = null
-    private var observedTranslationKey: TranslationChapterKey? = null
     private var deferredReaderFeaturesStarted = false
 
     val isInitFinish: Boolean get() = _uiState.value.isInitFinish
@@ -1453,22 +1447,11 @@ class ReadBookViewModel(
 
             is ReadBookIntent.TextActionBookmark -> bookmarkDelegate.openEditor(intent.bookmark)
 
-            is ReadBookIntent.OpenMarking -> {
-                // 从划词菜单新建：无原 sheet 可回
-                markingReturnSheet = null
-                markingDelegate.open(intent.selection)
-                _uiState.update { it.copy(activeSheet = ReadBookSheet.Marking) }
-            }
+            is ReadBookIntent.OpenMarking -> markingDelegate.openFromMenu(intent.selection)
 
-            is ReadBookIntent.OpenQuickMarking -> {
-                markingReturnSheet = null
-                markingDelegate.open(intent.selection, inlineMode = true)
-            }
+            is ReadBookIntent.OpenQuickMarking -> markingDelegate.openQuick(intent.selection)
 
-            is ReadBookIntent.OpenQuickMarkingEdit -> {
-                markingReturnSheet = null
-                markingDelegate.openForEdit(intent.id, inlineMode = true)
-            }
+            is ReadBookIntent.OpenQuickMarkingEdit -> markingDelegate.openQuickForEdit(intent.id)
 
             is ReadBookIntent.ApplyQuickMarking -> {
                 viewModelScope.launch {
@@ -1484,17 +1467,9 @@ class ReadBookViewModel(
 
             ReadBookIntent.DismissQuickMarking -> markingDelegate.closeInlineSession()
 
-            is ReadBookIntent.EditMarking -> {
-                // 从目录 Sheet 进入：记住原 sheet，保存/删除/取消后返回
-                markingReturnSheet = _uiState.value.activeSheet
-                markingDelegate.openForEdit(intent.id)
-                _uiState.update { it.copy(activeSheet = ReadBookSheet.Marking) }
-            }
+            is ReadBookIntent.EditMarking -> markingDelegate.openForEditFromSheet(intent.id)
 
-            is ReadBookIntent.DismissMarking -> {
-                markingDelegate.onSheetDismissed()
-                restoreMarkingReturnSheet()
-            }
+            ReadBookIntent.DismissMarking -> markingDelegate.dismissSheetByUser()
 
             is ReadBookIntent.SaveMarking -> {
                 markingDelegate.save(intent.style, intent.note)
@@ -2042,7 +2017,7 @@ class ReadBookViewModel(
         val chapterInput = ReadBook.readerChapterInputWindow.current
         val canvasPage = composePagePosition
             ?.takeIf { it.chapterIndex == ReadBook.durChapterIndex }
-        val translationStatus = observeCurrentTranslation(book, ReadBook.durChapterIndex)
+        val translationStatus = aiDelegate.observeChapterTranslation(book, ReadBook.durChapterIndex)
         return current.copy(
             book = book,
             bookSource = ReadBook.bookSource,
@@ -2124,42 +2099,6 @@ class ReadBookViewModel(
                 titleBarCompact = ReadBookConfig.titleBarCompact,
             ),
         )
-    }
-
-    private fun observeCurrentTranslation(
-        book: Book?,
-        chapterIndex: Int,
-    ): TranslationChapterStatus {
-        val key = book
-            ?.takeIf { it.getTranslationMode() }
-            ?.let { TranslationChapterKey(it.bookUrl, chapterIndex) }
-        if (key == observedTranslationKey && translationStatusJob?.isActive == true) {
-            return _uiState.value.translationStatus
-        }
-
-        translationStatusJob?.cancel()
-        val taskFlow = key?.let {
-            TranslationManager.getChapterTaskStateFlow(it.bookUrl, it.chapterIndex)
-        }
-        if (taskFlow == null) {
-            observedTranslationKey = null
-            return TranslationChapterStatus.Idle
-        }
-
-        observedTranslationKey = key
-        translationStatusJob = viewModelScope.launch {
-            taskFlow.takeWhile { taskState ->
-                if (observedTranslationKey == taskState.key) {
-                    _uiState.update { state ->
-                        state.copy(translationStatus = taskState.status)
-                    }
-                }
-                taskState.status == TranslationChapterStatus.Translating ||
-                    taskState.status == TranslationChapterStatus.Thinking
-            }.collect {}
-            if (observedTranslationKey == key) observedTranslationKey = null
-        }
-        return taskFlow.value.status
     }
 
     private fun calculateSeekProgress(): Int {
@@ -2708,7 +2647,6 @@ class ReadBookViewModel(
     }
 
     override fun onCleared() {
-        translationStatusJob?.cancel()
         super.onCleared()
         if (BaseReadAloudService.isRun && BaseReadAloudService.pause) {
             ReadAloud.stop(context)

@@ -1,5 +1,7 @@
 package io.legado.app.feature.reader.core.navigation
 
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -90,6 +92,43 @@ class ReaderPartialPagePolicyTest {
                 targetChapterIndex = 4,
                 fromChapterStreaming = true,
                 targetChapterStreaming = true,
+            )
+        )
+    }
+
+    @Test
+    fun chapterTurnKeepsTheNewCurrentChaptersStreamedPages() {
+        // 旧 `TextChapter.isLayoutRunning`："还在排"时已排出的页继续可用，换章不摘掉它们。
+        assertEquals(
+            5,
+            ReaderPartialPagePolicy.retainedStreamedChapter(
+                chapterIndex = 5,
+                environmentChanged = false,
+                streamedChapters = setOf(4, 5, 6),
+            )
+        )
+    }
+
+    @Test
+    fun chapterWithoutStreamedPagesKeepsNothing() {
+        // 新当前章还没有部分页：没有可承接的页，不改变原有行为。
+        assertNull(
+            ReaderPartialPagePolicy.retainedStreamedChapter(
+                chapterIndex = 5,
+                environmentChanged = false,
+                streamedChapters = setOf(4, 6),
+            )
+        )
+    }
+
+    @Test
+    fun reflowDropsStreamedPagesOfEveryChapter() {
+        // 排版环境变化（旧 `TextChapter.isLayoutSizeMatch()` 失败）：旧几何失效，整批重排。
+        assertNull(
+            ReaderPartialPagePolicy.retainedStreamedChapter(
+                chapterIndex = 5,
+                environmentChanged = true,
+                streamedChapters = setOf(5),
             )
         )
     }

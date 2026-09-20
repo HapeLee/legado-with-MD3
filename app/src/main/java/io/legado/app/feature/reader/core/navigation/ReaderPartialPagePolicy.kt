@@ -50,6 +50,28 @@ object ReaderPartialPagePolicy {
         else -> true
     }
 
+    /**
+     * 换章（layout key 变化）时该保留哪个章节"已流出但整章还没提交"的页。
+     *
+     * 旧 View 的页是**增量追加**的：`TextChapterLayout.onPageCompleted()`
+     * （`7a61ea86d^` `TextChapterLayout.kt`）把成型的页 `textPages.add(textPage)`，整章排完才置
+     * `TextChapter.isCompleted`；`TextChapter.isLayoutRunning` 的注释写明它用来区分"还在排"和
+     * "排到一半就废了"，**前者可以继续用已排出的页**。所以换章只是换阅读位置，已排好的页照旧
+     * 可见，尾部交给空白页承接——而不是把它们摘掉、等新一批从头排完再重新出现。
+     *
+     * 两种不能保留的情况：
+     * - 排版环境变化（对照旧 `TextChapter.isLayoutSizeMatch()` 失败）：几何全部失效，必须整批重排；
+     * - 新当前章本来就没有部分页：没有可承接的页，与旧行为一致。
+     *
+     * @param streamedChapters 当前挂着"部分页"的章节下标集合。
+     * @return 需要保留的章节下标；null 表示不保留任何部分页。
+     */
+    fun retainedStreamedChapter(
+        chapterIndex: Int,
+        environmentChanged: Boolean,
+        streamedChapters: Set<Int>,
+    ): Int? = chapterIndex.takeIf { !environmentChanged && it in streamedChapters }
+
     /** 旧 `ReadBook.loadContent`：下一章排到 `page.index > 1` 就不再提前重绘。 */
     private const val NEXT_CHAPTER_EARLY_PAGE_LIMIT = 1
 

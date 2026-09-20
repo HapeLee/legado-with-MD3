@@ -234,16 +234,80 @@ class ReadBookDomainSplitBoundaryTest {
      * 而该快照的构造点就在 VM 的 `buildStyleConfig()`；单独拆一个类只会得到
      * 「把一行赋值搬进新文件」的空壳。其余改动都在 `ReaderPageTurnSpeed`、
      * `ReaderCanvasSurface` 与配置链路（`ReadBookConfig` / `ReadStyleGateway`），不占 VM 行。
+     *
+     * 2747 → 2696：加入书架冲突处理把 `ReadBookViewModel` 顶到 2755（超线 8 行）后的一次定向
+     * 清偿 —— 摘的是**域状态**，不是接线：
+     * 1. 翻译章节状态的观察与两个字段（`translationStatusJob` / `observedTranslationKey`）
+     *    整体下沉到 `ReadAiDelegate`（它本就依赖 `TranslationManager`），新增 Host 的
+     *    `translationStatus` / `updateTranslationStatus` 两个反向依赖；
+     * 2. 划线笔记 sheet 的「来源 sheet」（`markingReturnSheet` 与恢复函数）下沉到
+     *    `MarkingDelegate`，并把 `OpenMarking` / `EditMarking` / 快速标记四个入口收敛成
+     *    delegate 的语义方法，VM 侧只剩单行转发。
+     * 同期新增 `域状态不回流进 ReadBookViewModel` 守卫：这类散落在 VM 的域内状态比总行数
+     * 更能说明边界是否干净，行数只作粗棘轮。本次按实测值把线校准到 2696。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2747 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2696 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2747。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2696。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2747,
+            lineCount <= 2696,
+        )
+    }
+
+    /**
+     * 允许留在宿主 ViewModel 的私有状态，以及它必须留下的理由。
+     *
+     * 键必须与 VM 里实际声明的状态一一对应，双向校验：
+     * - 出现未登记的字段 → 说明有域状态回流。能摘进 delegate 的就摘；
+     * - 登记的字段已不存在 → 必须删条目，防止名单只增不减、变成永久豁免。
+     *
+     * 锚点字段（`_xxx` 流后备）与可变状态（`private var`）都算；`by lazy` 的 delegate
+     * 字段与依赖注入不在此列。
+     */
+    private val hostOwnedState = mapOf(
+        "_uiState" to "阅读页唯一的对外状态源，宿主渲染直接消费",
+        "_effects" to "一次性效果与 toast 通道",
+        "_readAloudProgress" to "朗读进度流，服务层与 UI 协作",
+        "_readPreferences" to "阅读偏好流，多屏共用",
+        "readBookSyncJob" to "UiState 全量重建的尾随合并，属于宿主渲染节流",
+        "backupJob" to "退出/切后台触发的备份任务，绑定宿主生命周期",
+        "pendingBooksDirReloadChapterList" to "跨 Activity Result 回调的参数，由宿主持有",
+        "deferredReaderFeaturesStarted" to "入口动画结束后的多域启动协调，属于宿主编排",
+        "composePagePosition" to "Compose 阅读页跨帧进度（待下沉：进度/排版域）",
+        "composePageContext" to "Compose 跨帧渲染上下文（待下沉：进度/排版域）",
+        "composeProgressJob" to "Compose 进度节流任务（待下沉：进度/排版域）",
+        "justInitData" to "加载域经 Host 暴露的状态（待下沉：加载域）",
+        "closeReadBookKeepReadAloud" to "关闭阅读是否保留朗读的参数（待下沉：朗读域）",
+    )
+
+    @Test
+    fun `域状态不回流进 ReadBookViewModel`() {
+        val source = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt").readText()
+        val declared = buildSet {
+            Regex("""^\s*(?:@\w+\s+)?private var (\w+)""", RegexOption.MULTILINE)
+                .findAll(source)
+                .forEach { add(it.groupValues[1]) }
+            Regex("""^\s+private val (_\w+)""", RegexOption.MULTILINE)
+                .findAll(source)
+                .forEach { add(it.groupValues[1]) }
+        }
+
+        val unregistered = declared - hostOwnedState.keys
+        assertTrue(
+            "以下状态没有登记归属：$unregistered。\n" +
+                    "域状态请摘进 io/legado/app/ui/book/read/ 下对应的 XxxDelegate；" +
+                    "确实属于宿主编排的，在 hostOwnedState 里补一条并写明理由。",
+            unregistered.isEmpty(),
+        )
+
+        val stale = hostOwnedState.keys - declared
+        assertTrue(
+            "hostOwnedState 里这些字段已不在 ViewModel 中，请删除条目：$stale",
+            stale.isEmpty(),
         )
     }
 

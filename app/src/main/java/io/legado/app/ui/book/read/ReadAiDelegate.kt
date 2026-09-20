@@ -19,6 +19,8 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
+import io.legado.app.model.translation.TranslationChapterKey
+import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.model.translation.TranslationManager
 import io.legado.app.utils.MD5Utils
 import kotlinx.collections.immutable.toImmutableList
@@ -29,6 +31,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -76,6 +79,11 @@ class ReadAiDelegate(
         suspend fun findChapter(bookUrl: String, chapterIndex: Int): BookChapter?
 
         suspend fun listChapters(bookUrl: String): List<BookChapter>
+
+        /** 翻译任务状态落在阅读态快照里，由阅读页统一渲染。 */
+        val translationStatus: TranslationChapterStatus
+
+        fun updateTranslationStatus(status: TranslationChapterStatus)
     }
 
     private val _uiState = MutableStateFlow(ReadAiUiState())
@@ -86,6 +94,44 @@ class ReadAiDelegate(
     private var aiTextRewriteJob: Job? = null
     private var pendingAiTextCleanRequest: PendingAiTextCleanRequest? = null
     private var pendingAiTextRewriteRequest: PendingAiTextRewriteRequest? = null
+    private var translationStatusJob: Job? = null
+    private var observedTranslationKey: TranslationChapterKey? = null
+
+    /**
+     * 观察当前章节的翻译任务状态，并把变化推给阅读页。
+     *
+     * 返回当前状态，供阅读态快照同步取用；同一章节已在观察中时直接复用，不重建订阅。
+     */
+    fun observeChapterTranslation(book: Book?, chapterIndex: Int): TranslationChapterStatus {
+        val key = book
+            ?.takeIf { it.getTranslationMode() }
+            ?.let { TranslationChapterKey(it.bookUrl, chapterIndex) }
+        if (key == observedTranslationKey && translationStatusJob?.isActive == true) {
+            return host.translationStatus
+        }
+
+        translationStatusJob?.cancel()
+        val taskFlow = key?.let {
+            TranslationManager.getChapterTaskStateFlow(it.bookUrl, it.chapterIndex)
+        }
+        if (taskFlow == null) {
+            observedTranslationKey = null
+            return TranslationChapterStatus.Idle
+        }
+
+        observedTranslationKey = key
+        translationStatusJob = scope.launch {
+            taskFlow.takeWhile { taskState ->
+                if (observedTranslationKey == taskState.key) {
+                    host.updateTranslationStatus(taskState.status)
+                }
+                taskState.status == TranslationChapterStatus.Translating ||
+                        taskState.status == TranslationChapterStatus.Thinking
+            }.collect {}
+            if (observedTranslationKey == key) observedTranslationKey = null
+        }
+        return taskFlow.value.status
+    }
 
     /**
      * 关闭 sheet 时的收尾：取消在途任务并清空对应子状态。
