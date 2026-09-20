@@ -1355,6 +1355,30 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        而 `:app` 目前没有宿主 graph creation test（`grep checkModules` 只命中 `App.kt` 的
        `startKoin`）⇒ **漏绑只在运行期暴露**。补该测试是独立切片（本片不引入 Koin test 依赖）。
        行为等价清单与未验证项见 `feature-slicing-audit-about.md` §8。
+   - **M4-6 已完成（2026-09-21）：用户划线/高亮笔记域（`BookMarking`，`book_marks`）下沉
+     `domain/marking` + `data/marking`。** M4-5c 关闭 AI 域后的第一片，选片判据是**依赖闭包**
+     而非引用数：看起来更该做的 `Bookmark`（书签）闭包有 **42 个文件**（含 `Restore`/`Backup`/
+     `BookmarkExporter`/`feature:reader:core`），是好几片而不是一片；`BookMarking` 则
+     **已有 `BookMarkingGateway`**（端口是搬家不是新造）、**已有 `SaveMarkingUseCaseTest`
+     护栏**、**无 `companion object` 常量**（避开 M4-3 `AiArtifact` 的 SQL 插值陷阱）、
+     **不进备份/恢复**（无兼容面）。
+     形态：`domain/marking` 装领域模型（12 字段逐字照抄，全 `val`、全字段判等）+ 端口；
+     `data/marking` 装 `BookMarkingMapper` + `BookMarkingRepositoryImpl`（照抄迁移前每个方法的
+     `withContext(Dispatchers.IO)`，`flowByBook` 的映射留在**流内**）。
+     两处与模板同律的判断：① `setEnabled` **零调用方** ⇒ 随片从端口删除（DAO 方法保留，
+     测试假实现的 override 同步去掉）；② `ContentProcessor` 此前直连
+     `appDb.bookMarkingDao.getForChapterSync(...)`（渲染热路径）⇒ 端口**新增**
+     `getForChapter(bookUrl, chapterIndex)` 把它收进来，顺带消掉一条 `appDb.` 计数。
+     旧 `BookMarkingGateway`（在 `core:data` 的 `domain/gateway`）+ `BookMarkingRepository`
+     一并删除，不留门面；13 个消费文件改 import，`appModule` 绑
+     `single<BookMarkingGateway> { BookMarkingRepositoryImpl(get()) }`。
+     新增用例 **15 例**（mapper 9 + impl 6）。impl 测试**必须存在**：端口有 `Flow` 方法，
+     把流内映射换成 unchecked cast 能编译且九个 mapper 用例全绿，只有驱动多次发射才抓得住。
+     验证：`clean` 后四门禁 + `:app:compileAppDebugKotlin` + `testAppDebugUnitTest` +
+     `assembleAppDebug` + 13 个模块测试任务全绿；计数 **主集 714 不变 / 全量 1154 → 1169
+     （+15）**，0 失败；`lintAppDebug` 仍是既有的 **5 errors**（warnings 79 → 78）。
+     变异 **4 轮全红后回绿**（流内 cast / 漏映射 `styleJson` / `getForChapter` 参数不透传 /
+     `chapterIndex` 归一化）——第 1 轮正是上面那条「mapper 测试抓不到」的判据。
 
 ## 6. 验证矩阵
 

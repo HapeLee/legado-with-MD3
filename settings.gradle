@@ -72,4 +72,9 @@ include ':data:rules'
 // 取 Room 的 DAO/实体，待 `data:database` 成为 Room 唯一 owner 后再改为依赖它。
 include ':domain:ai'
 include ':data:ai'
+// M4-6：`core:data` 按域拆分的第四个域（用户划线/高亮笔记，book_marks 表）。形态与
+// M3/M4 同构：domain 只放领域模型与 port，data 放实现与 mapper —— 过渡期 data 依赖
+// `:core:data` 取 Room 的 DAO/实体，待 `data:database` 成为 Room 唯一 owner 后再改。
+include ':domain:marking'
+include ':data:marking'
 project(':baselineprofile').projectDir = file('baselineProfile')

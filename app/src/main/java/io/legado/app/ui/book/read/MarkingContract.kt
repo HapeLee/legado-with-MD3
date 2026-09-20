@@ -2,7 +2,7 @@ package io.legado.app.ui.book.read
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import io.legado.app.data.entities.BookMarking
+import io.legado.app.domain.marking.BookMarking
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.HighlightRule
 import kotlinx.collections.immutable.ImmutableList

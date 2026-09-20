@@ -247,6 +247,9 @@ dependencies {
     // M4-1：AI 提示词预设域（`core:data` 按域拆分的第一个**非 rules** 域，形态同上）。
     implementation(project(":domain:ai"))
     implementation(project(":data:ai"))
+    // M4-6：用户划线/高亮笔记域（book_marks）。
+    implementation(project(":domain:marking"))
+    implementation(project(":data:marking"))
     implementation(libs.okhttp)
     implementation(fileTree(mapOf("dir" to "cronetlib", "include" to listOf("*.jar", "*.aar"))))
     implementation(libs.protobuf.javalite)

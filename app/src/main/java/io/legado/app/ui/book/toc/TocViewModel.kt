@@ -12,14 +12,14 @@ import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.entities.BookMarking
+import io.legado.app.domain.marking.BookMarking
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.ReadSettingsRepository
-import io.legado.app.domain.gateway.BookMarkingGateway
+import io.legado.app.domain.marking.BookMarkingGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase

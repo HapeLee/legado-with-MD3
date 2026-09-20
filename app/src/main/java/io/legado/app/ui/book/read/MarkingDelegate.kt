@@ -2,7 +2,7 @@ package io.legado.app.ui.book.read
 
 import android.content.Context
 import io.legado.app.R
-import io.legado.app.data.entities.BookMarking
+import io.legado.app.domain.marking.BookMarking
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.domain.model.TextProcessAnchor

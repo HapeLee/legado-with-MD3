@@ -1,6 +1,6 @@
 package io.legado.app.ui.book.read
 
-import io.legado.app.data.entities.BookMarking
+import io.legado.app.domain.marking.BookMarking
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.domain.model.TextProcessAnchor

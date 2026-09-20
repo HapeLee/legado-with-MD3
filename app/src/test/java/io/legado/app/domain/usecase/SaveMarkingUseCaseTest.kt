@@ -1,7 +1,7 @@
 package io.legado.app.domain.usecase
 
-import io.legado.app.data.entities.BookMarking
-import io.legado.app.domain.gateway.BookMarkingGateway
+import io.legado.app.domain.marking.BookMarking
+import io.legado.app.domain.marking.BookMarkingGateway
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.utils.GSON
@@ -222,10 +222,12 @@ class SaveMarkingUseCaseTest {
             marks.add(bookMarking)
         }
 
-        override suspend fun setEnabled(id: String, enabled: Boolean) {
-            marks.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.let { i ->
-                marks[i] = marks[i].copy(enabled = enabled)
-            }
+        // M4-6：`setEnabled` 零调用方 ⇒ 端口里删掉了，假实现同步去掉。
+        override suspend fun getForChapter(
+            bookUrl: String,
+            chapterIndex: Int?,
+        ): List<BookMarking> = marks.filter {
+            it.bookUrl == bookUrl && (chapterIndex == null || it.chapterIndex == chapterIndex)
         }
 
         override suspend fun delete(id: String) {

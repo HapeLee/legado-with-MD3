@@ -123,6 +123,14 @@ RESULT_DIRS = {
     # `initializationError`、**0 个真实用例执行**）。增量构建下这个任务常是 UP-TO-DATE，
     # 于是「绿」是假的 —— 必须 `clean` 或 `--rerun`。修法是让末语句落回 Unit。
     "data:ai         (desktopTest)": ("data/ai/build/test-results/desktopTest", False),
+    # M4-6：用户划线/高亮笔记域（`book_marks`）。新模块对 `domain/marking` + `data/marking`
+    # 的用例全在 `data:marking`（domain 只放模型与端口，没有可测逻辑）。
+    # 15 例 = `BookMarkingMapperTest` 9 + `BookMarkingRepositoryImplTest` 6。
+    # 后者**必须存在**：端口有 `Flow` 方法 `flowByBook`，映射在流内每次发射都跑，
+    # 而 mapper 测试只调 `toDomain`/`toEntity`/`toDomainList`，**从不驱动那条流** ——
+    # 把 `.map { it.toDomainList() }` 换成 unchecked cast 能编译、九个 mapper 用例全绿，
+    # 真机每次发射才 `ClassCastException`（M4-3 立的判据）。不进主集（同 `:data:ai`）。
+    "data:marking    (desktopTest)": ("data/marking/build/test-results/desktopTest", False),
     # M4-4：`:core:model` **首次纳入统计**（此前各片从未跟踪本模块，既有 59 例）。
     # 现在才加的理由：本片在这条路径上修掉了一个**静默的生产故障** —— `AiMessageParts.kt`
     # 由 `86c7428d24` 从 `:app`（该模块 apply 了 serialization 插件）移进本模块时漏了给
@@ -221,7 +229,9 @@ BASELINE_MAIN = 714
 # `legado-verify/m4-5c-mutate.py`。
 # M5-1c：1152 → **1154**（净 **+2**，同 `BASELINE_MAIN` 上方）；主集与全量同为 +2
 # ——三个新用例全在计入口径内（about 进主集、host:desktop 进主集、`:app` 减 1）。
-BASELINE_ALL = 1154
+# M4-6：1154 → **1169**（净 **+15** = `:data:marking` 的 mapper 9 + impl 6）。
+# 主验证集**不变**（714）：新模块在非主集一侧，与 `:data:rules` / `:data:ai` 同口径。
+BASELINE_ALL = 1169
 
 
 def tally(d: pathlib.Path):

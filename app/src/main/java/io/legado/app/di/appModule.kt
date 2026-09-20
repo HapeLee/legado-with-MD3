@@ -18,6 +18,7 @@ import io.legado.app.data.ai.AiMemoryRepositoryImpl
 import io.legado.app.data.ai.AiPromptPresetRepositoryImpl
 import io.legado.app.data.ai.AiChatRepositoryImpl
 import io.legado.app.data.ai.AiProfileRepositoryImpl
+import io.legado.app.data.marking.BookMarkingRepositoryImpl
 import io.legado.app.data.repository.AiTextRepositoryImpl
 import io.legado.app.data.repository.AiToolRepository
 import io.legado.app.data.repository.AppLocaleRepository
@@ -35,7 +36,6 @@ import io.legado.app.data.repository.BookGroupMutationRepository
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookImportRepository
 import io.legado.app.data.repository.BookKnowledgeRepository
-import io.legado.app.data.repository.BookMarkingRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
 import io.legado.app.data.repository.BookSourceCheckRepository
@@ -144,7 +144,7 @@ import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.BookGroupMutationGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
-import io.legado.app.domain.gateway.BookMarkingGateway
+import io.legado.app.domain.marking.BookMarkingGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.BookSourceCheckGateway
@@ -573,7 +573,9 @@ val appModule = module {
     single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
     single<BookContentProcessGateway> { BookContentProcessRepository(get()) }
-    single<BookMarkingGateway> { BookMarkingRepository(get()) }
+    // M4-6：用户划线/高亮笔记域下沉 `:domain:marking` + `:data:marking`。端口沿用旧名
+    // （本仓 60+ 个同形态 `XxxGateway`），实现换成 `BookMarkingRepositoryImpl`（收 DAO）。
+    single<BookMarkingGateway> { BookMarkingRepositoryImpl(get()) }
     single<BookKnowledgeGateway> { BookKnowledgeRepository(get()) }
     single<ReadAloudVoiceGateway> { ReadAloudVoiceRepository(get()) }
     singleOf(::CloudTtsCredentialCipher)

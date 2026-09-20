@@ -8,7 +8,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookContentProcess
-import io.legado.app.data.entities.BookMarking
+import io.legado.app.domain.marking.BookMarking
+import io.legado.app.domain.marking.BookMarkingGateway
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.domain.model.BookContentProcessEngine
 import io.legado.app.domain.model.TextProcessAction
@@ -70,6 +71,9 @@ class ContentProcessor private constructor(
 
     private val otherGateway by lazy { GlobalContext.get().get<OtherSettingsGateway>() }
     private val readGateway by lazy { GlobalContext.get().get<ReadSettingsGateway>() }
+    // M4-6：原先这里直连 `appDb.bookMarkingDao.getForChapterSync(...)`（书源渲染热路径上唯一的
+    // marking DAO 直连）。标记域下沉后改走端口，`getForChapter` 是为此新增的端口方法。
+    private val bookMarkingGateway by lazy { GlobalContext.get().get<BookMarkingGateway>() }
 
     init {
         upReplaceRules()
@@ -218,7 +222,7 @@ class ContentProcessor private constructor(
             // 用户划线/高亮笔记独立存于 book_marks，渲染时转成合成 BookContentProcess
             // 混进现有管线（锚点/样式不变，引擎对标记类不改文本）。
             val markings = runBlocking {
-                appDb.bookMarkingDao.getForChapterSync(
+                bookMarkingGateway.getForChapter(
                     bookUrl = book.bookUrl,
                     chapterIndex = chapter.index,
                 )

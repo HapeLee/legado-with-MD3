@@ -289,6 +289,25 @@ git diff --check
 | M4-4 | `AiChatConversation` / `AiChatMessage` | `c5fd859da1` |
 | M4-5a + M4-5b | *(platform prerequisites: `Digest.md5` + `nameUuidFromBytes`)* | `a113b9130d` |
 | M4-5c | `AiProviderProfile` / `AiModelProfile` / `AiTaskPreset` | pending |
+| M4-6 | `BookMarking`（用户划线/高亮笔记，`book_marks`） | pending |
+
+M4-6 is the first slice after the AI domain closed, and it is worth noting **why this entity and
+not a "bigger" one**. `Bookmark`（书签）was the obvious-looking candidate (12+ references) but it
+has **42 files** in its closure — including `Restore.kt` / `Backup.kt` / `BookmarkExporter` and
+`feature:reader:core` — which is several slices, not one. `BookMarking` was chosen because it
+already had an **existing `BookMarkingGateway`** (so the port is a move, not a new abstraction),
+an **existing guardrail** (`SaveMarkingUseCaseTest`), **no `companion object` constants** (the
+`AiArtifact` trap), and **no backup/restore surface**. Rank by closure, not by reference count.
+
+Two decisions it documents:
+
+- **A port method can be *added* to absorb a DAO that `:app` still holds.** `ContentProcessor`
+  called `appDb.bookMarkingDao.getForChapterSync(...)` on the render hot path. Rather than leaving
+  the DAO there, the port gained `getForChapter(bookUrl, chapterIndex)` and the caller now holds
+  the port. That also removes one `appDb.`-anchored access, which G4 counts.
+- **A zero-caller port method dies with the slice.** `setEnabled` appeared only in the declaration,
+  the implementation and the test fake ⇒ removed from the port; the DAO method stays (that is
+  `data:database`'s debt). The test fake had to lose its override in the same change.
 
 Per-slice test counts in `:data:ai`: M4-1 7, M4-2 11 (7 mapper + 4 impl), M4-3 16
 (9 mapper + 7 impl), M4-4 35 (8 + 9 mapper + 18 impl), M4-5c 74 (9 + 10 + 9 mapper + 46 impl)
