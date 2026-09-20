@@ -2015,6 +2015,7 @@
     <string name="tool_bar_style">Tool bar style</string>
     <string name="bookshelf_total_count">%1$d books</string>
     <string name="bookshelf_selected_count">%1$d selected</string>
+    <string name="bookshelf_edit_subtitle">%1$s · %2$s</string>
     <string name="bookshelf_empty_global_search">No books here. Try global search.</string>
     <string name="global_search">Global search</string>
     <string name="cache_management">Cache management</string>

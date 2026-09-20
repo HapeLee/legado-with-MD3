@@ -137,6 +137,7 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -481,6 +482,7 @@ fun BookshelfScreen(
                         ?.let(onNavigateToSearch)
                 },
                 onClearSearch = { onIntent(BookshelfIntent.SetSearchKey("")) },
+                onExitEditMode = exitEditMode,
                 actions = {
                     AnimatedVisibility(visible = isEditMode) {
                         TopBarActionButton(
@@ -1119,12 +1121,23 @@ private fun BookshelfTopBar(
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: (String) -> Unit,
     onClearSearch: () -> Unit,
+    onExitEditMode: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     val searchContentDescription = stringResource(R.string.search)
+    val exitEditModeDescription = stringResource(R.string.cancel_select)
     GlassMediumFlexibleTopAppBar(
         modifier = Modifier.fillMaxWidth(),
+        navigationIcon = {
+            if (uiState.isEditMode) {
+                TopBarNavigationButton(
+                    onClick = onExitEditMode,
+                    imageVector = AppIcons.Close,
+                    contentDescription = exitEditModeDescription
+                )
+            }
+        },
         title = if (uiState.isLoading) {
             stringResource(R.string.loading)
         } else {
