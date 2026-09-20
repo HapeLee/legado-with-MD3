@@ -87,6 +87,7 @@ import io.legado.app.ui.book.knowledge.saveCharacterAvatar
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
 import io.legado.app.ui.book.manga.MangaReaderRouteScreen
 import io.legado.app.ui.book.manga.MangaReaderViewModel
+import io.legado.app.ui.book.read.ReadAloudControlsRequestBus
 import io.legado.app.ui.book.read.ReadBookController
 import io.legado.app.ui.book.read.ReadBookInitRequest
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -251,6 +252,13 @@ private fun readAloudPlayerEntryMetadata(predictiveBackEnabled: Boolean) = metad
         }
     }
 }
+
+/**
+ * 听书播放页「经典控制」的目标判定：上一站是阅读界面时回到已有阅读界面并打开经典朗读控制，
+ * 否则打开阅读界面。抽成纯函数以便单测覆盖这条分支。
+ */
+internal fun hasReadBookParent(backStack: List<NavKey>): Boolean =
+    backStack.dropLast(1).lastOrNull() is MainRouteReadBook
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun MainActivity.mainEntryProvider(
@@ -1436,6 +1444,17 @@ fun MainActivity.mainEntryProvider(
             showReadAloudConfig = readAloudConfigOpen,
             onReadAloudConfigVisibleChange = { readAloudConfigOpen = it },
             onBack = { onNavigateBack() },
+            onSwitchToClassic = { bookUrl ->
+                // 上级是阅读界面（从阅读界面进入听书页）：回退到它，并让它直接落在经典朗读控制页。
+                // 上级不是阅读界面（胶囊/媒体键在任意界面之上打开）：没有可回的阅读界面，
+                // 改为打开阅读界面。
+                if (hasReadBookParent(backStack)) {
+                    ReadAloudControlsRequestBus.request()
+                    onNavigateBack()
+                } else {
+                    onNavigateToRoute(MainRouteReadBook(bookUrl = bookUrl.ifBlank { null }))
+                }
+            },
         )
     }
 

@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.readaloud.player
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,11 +29,27 @@ fun ReadAloudPlayerRouteScreen(
     showReadAloudConfig: Boolean,
     onReadAloudConfigVisibleChange: (Boolean) -> Unit,
     onBack: () -> Unit,
+    /**
+     * 「经典控制」按钮：交给宿主决定回到已有阅读界面还是新开阅读界面。
+     * 参数是当前朗读的书籍 url。
+     */
+    onSwitchToClassic: (bookUrl: String) -> Unit,
 ) {
     val playerViewModel: ReadAloudPlayerViewModel = koinInject()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val settingsState by playerViewModel.readAloudSettings.collectAsStateWithLifecycle()
     val playerTheme = rememberPlayerThemeOverride(playerState)
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.effects.collect { effect ->
+            when (effect) {
+                ReadAloudPlayerEffect.ReturnToClassic ->
+                    onSwitchToClassic(playerViewModel.uiState.value.bookUrl)
+
+                ReadAloudPlayerEffect.ReturnToReaderSettings -> Unit
+            }
+        }
+    }
 
     ProvideThemeOverride(playerTheme) {
         ReadAloudPlayerScreenContent(
