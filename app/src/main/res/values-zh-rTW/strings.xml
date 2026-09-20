@@ -98,9 +98,6 @@
     <string name="offline_cache_t">離線快取</string>
     <string name="offline_cache_s">快取選擇的章節到本機</string>
     <string name="change_origin">換源</string>
-    <string name="about_description">
-        \u3000\u3000這是一款使用Kotlin全新開發的開源的閱讀軟體，歡迎您的加入。
-    </string>
     <string name="app_share_description">
         閱讀3.0下載網址：\nhttps://github.com/gedoor/legado/releases
     </string>
@@ -1316,10 +1313,6 @@
     <string name="key_page_on_long_press">按键长按翻页</string>
     <string name="save_log">保存日志</string>
     <string name="create_heap_dump">创建堆转储</string>
-    <string name="crash_report">崩潰報告</string>
-    <string name="crash_report_message">應用程式發生崩潰。回報問題時，請複製以下錯誤資訊。</string>
-    <string name="crash_report_empty">找不到崩潰資訊。</string>
-    <string name="restart_app">重新啟動應用程式</string>
     <string name="record_heap_dump_s">当应用发生OOM崩溃时保存堆转储</string>
     <string name="record_heap_dump_t">记录堆转储</string>
     <string name="font_weight_text">字重</string>
@@ -1723,17 +1716,6 @@
     <string name="about_license_title">開源許可</string>
     <string name="about_disclaimer_title">免責聲明</string>
     <string name="about_installed_version_title">已安裝版本</string>
-    <string name="about_current_version">已安裝版本</string>
-    <string name="about_new_version">最新版本</string>
-    <string name="about_update_channel">發布渠道</string>
-    <string name="about_update_action">下載更新</string>
-    <string name="about_backup_dir_not_set">請先設定備份目錄</string>
-    <string name="about_log_recording_disabled">日誌記錄已關閉。請先在其它設定中開啟。</string>
-    <string name="about_saved_to_backup_dir">已儲存至備份資料夾</string>
-    <string name="about_heap_dump_recording_disabled">堆轉儲記錄已關閉。請先在其它設定中開啟。</string>
-    <string name="about_heap_dump_creating">正在建立堆轉儲…</string>
-    <string name="about_heap_dump_not_found">找不到堆轉儲檔案</string>
-    <string name="about_download_info_incomplete">更新下載資訊不完整</string>
     <string name="about_no_data">無更新日誌</string>
     <string name="about_start_download">正在下載 %1$s</string>
     <string name="ungroup">未分組</string>
@@ -2395,7 +2377,6 @@
     <string name="format_json">格式化</string>
     <string name="minify_json">壓縮</string>
     <string name="no_logs">無日誌</string>
-    <string name="no_crash_logs">無崩潰日誌</string>
     <string name="select_or_search_category">選擇或搜尋分類</string>
     <string name="multi_select_items">多選項目</string>
     <string name="recently_read">最近閱讀：</string>
@@ -2617,8 +2598,6 @@
     <string name="not_cached">未快取</string>
     <string name="delete_book_cache_message">刪除《%1$s》的全部快取，並從下載佇列移除？</string>
     <string name="delete_chapter_cache_message">刪除章節快取：%1$s？</string>
-    <string name="about_open_project_homepage">開啟專案首頁</string>
-    <string name="about_open_github">開啟 GitHub</string>
     <string name="book_voice_casting">人物配音</string>
     <string name="book_voice_casting_summary">為旁白和人物指定聲音。使用者指定的聲音會保持鎖定，並優先於自動分配。</string>
     <string name="book_voice_casting_entry_summary">設定旁白和人物使用的聲音</string>

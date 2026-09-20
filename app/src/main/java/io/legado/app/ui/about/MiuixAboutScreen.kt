@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.constant.AppConst.appInfo
+import io.legado.app.feature.about.AboutIntent
+import io.legado.app.feature.about.AboutUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.util.BlurredBar
 import io.legado.app.ui.util.LocalAppState

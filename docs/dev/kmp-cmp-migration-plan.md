@@ -1338,8 +1338,23 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        验证：三个模块编译 + 四门禁全绿（无需下调基线）+ clean 全量集 712/1152 零偏离 +
        消费方解析变异三轮（MarkdownSheet 7 文件 / EmptyMessage 25 文件 61 处 /
        只移走 commonMain 那份 ⇒ androidMain 重载断链）。
-     - 后续分片：M5-1c 建 `:feature:about`（`CrashLogSheet` 私有化 + 三个平台契约 + desktop 显式
-       unsupported）；M5-1d 消费方迁移（DI / nav3 route / `CrashReportActivity` / 删旧包）。
+     - **M5-1c 已完成（2026-09-21）**，分两次提交：1c-1+1c-2 建共享层（三契约 + VM + 屏幕 +
+       composeResources，不接线）；**1c-3 接线并删旧包** —— `appModule` 绑三个契约实现、
+       `MainNavGraph` 的 `entry<MainRouteAbout>` 收 4 个 Effect 分支 + 按 `isMiuixEngine` 分流
+       （`MiuixAboutScreen` 是 platform island，共享层引用它会成环）、`CrashReportActivity` 改
+       import feature 的 `CrashReportScreen`，删 `:app` 的
+       `ui/about/{AboutScreen,AboutSheets,AboutViewModel,AboutContract,CrashReportScreen}.kt`
+       与 `ui/widget/components/log/CrashLogSheet.kt`（留 `MiuixAboutScreen` + `CrashReportActivity`）。
+       **G4 随之下调**：`legacyHelp|ui/about` 5→1、`legacyBase|ui/about` 2→1、
+       `legacyNaming|ui/about` 2→0（条目删除）。
+       验证：单独 `clean` 后四门禁 + `:feature:about` 的 desktop 编译与 `testAndroidHostTest`
+       （2 例）+ `:app:compileAppDebugKotlin` + `assembleAppDebug` 全绿；全量计数 **714/1154
+       零偏离**；资源回归 about 140/140、tagrules 124/124。
+       ⚠️ **变异验证实测出一个真实缺口**：删掉 `single<BundledTextReader>` 后
+       `:app:compileAppDebugKotlin` **仍然绿** —— Koin 的 `viewModelOf` 是运行期解析，
+       而 `:app` 目前没有宿主 graph creation test（`grep checkModules` 只命中 `App.kt` 的
+       `startKoin`）⇒ **漏绑只在运行期暴露**。补该测试是独立切片（本片不引入 Koin test 依赖）。
+       行为等价清单与未验证项见 `feature-slicing-audit-about.md` §8。
 
 ## 6. 验证矩阵
 

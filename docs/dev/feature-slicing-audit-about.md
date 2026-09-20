@@ -103,8 +103,8 @@ ViewModel/domain」）。
 | **M5-1a** | `TextCard` 上提 designsystem/commonMain（39 引用方，零平台依赖） | **已完成** |
 | **M5-1b** | `MarkdownBlock` 上提 designsystem/commonMain（6 引用方）；三处平台依赖全部用**既有**回调/组件就地消除，**未新增任何平台契约**；`markdown-jvm` → `markdown`（真 KMP 坐标） | **已完成** |
 | **M5-1c-pre** | `MarkdownSheet`（`git mv`，6 包外调用方）+ `EmptyMessage`（~40 调用方；`@StringRes` 的 Int 重载跨到 androidMain）上提 designsystem | **已完成** |
-| M5-1c | 建 `:feature:about`：Contract / VM / Material Screen / Sheets 进 commonMain，`CrashLogSheet` 私有化（`FileDoc` → 不透明引用），三个平台能力契约 + desktop 显式 unsupported 实现，文案与图标进 composeResources，Route 留 androidMain | 待做 |
-| M5-1d | 消费方迁移：DI 绑定、nav3 route、`CrashReportActivity`（Activity ABI 留 `:app`）、删除旧包 | 待做 |
+| **M5-1c** | 建 `:feature:about` 并完成接线：`Contract / VM / Material Screen / Sheets` 进 commonMain，`CrashLogSheet` 私有化（`FileDoc` → 不透明引用），三个平台能力契约 + desktop 显式 unsupported 实现，文案与图标进 composeResources；**分流与 Route 留 `:app`** | **已完成**：1c-1+1c-2 建共享层（不接线），**1c-3 接线 + 删旧包**（`appModule` 三绑定 / `MainNavGraph` 分流 + Effect 收集 / `CrashReportActivity` 改 import / 删 6 个旧文件）。实录见 §8 |
+| ~~M5-1d~~ | 原计划的「消费方迁移」 | **已并入 1c-3**（实际内容就是那四项，拆开只会让中间态既没接线又没删旧包） |
 
 ## 5. M5-1a 实录
 
@@ -257,3 +257,96 @@ androidMain 重载**只保留现存调用方用到的两个参数**（`messageRe
     自身报 `EmptyMessage.android.kt:27 No parameter with name 'message' found`
     ——这正是「两个源集的重载真的是一对」的证据。
   共三轮，每轮均还原回绿。
+
+## 8. M5-1c-3 实录：接线 + 删旧包
+
+M5-1c-1/1c-2 只建了共享层、`:app` 一个原文件没动。本片把它接上并删掉旧实现，
+是这一批里**唯一会改变 `:app` 运行路径**的一片。
+
+### 8.1 接线形态（三处）
+
+| 位置 | 内容 |
+|---|---|
+| `appModule` | 三个 `single<>` 绑定：`AppUpdateChecker` → `AndroidAppUpdateChecker()`、`AboutDiagnostics` → `AndroidAboutDiagnostics(androidContext(), get())`、`BundledTextReader` → `AndroidBundledTextReader(androidContext())`。`viewModelOf(::AboutViewModel)` 不变，由 Koin 按类型解析 5 个构造参数 |
+| `MainNavGraph` 的 `entry<MainRouteAbout>` | 收集 Effect（4 个分支）+ **分流**（miuix / material）+ `AboutOverlays` |
+| `CrashReportActivity` | 只改一行 import，指向 feature 的 `CrashReportScreen` |
+
+**分流为什么留在宿主**：`MiuixAboutScreen` 直连 `miuix-blur`（只有 `-android` 制品），
+共享层引用它会形成 `:app → :feature:about → :app` 的环。两支**复用同一 ViewModel/Contract**
+——这是 §3.1 判定的 platform island 的既定处置，不是本片新引入的取舍。
+
+### 8.2 行为等价清单（本片没有自动化测试，故逐条列出对照）
+
+| 行为 | 迁移前 | 迁移后 | 判据 |
+|---|---|---|---|
+| 引擎分流 | `AboutScreen` 内 `if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine))` | 同一条件搬到 entry 内 | 表达式逐字搬运 |
+| 版本号 | `AboutScreen` 的默认参 `versionName = appInfo.versionName`，传给两个分支与 `UpdateSheet` | 显式传给 `MaterialAboutScreen` 与 `AboutOverlays`，两处同一表达式 | 同一表达式，无第二来源 |
+| ABI | `UpdateSheet` 内 `Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"` | `AboutOverlays(abi = …)`，回落留在宿主 | 逐字 |
+| 更新检查失败提示 | `"${context.getString(R.string.check_update)}\n${e.localizedMessage}"` | `buildString { append(msg.localizedText()); detail?.let { append('\n').append(it) } }` | 同一「文案 + `\n` + 异常」格式 |
+| 其余 7 条提示 | `context.getString(R.string.x)` | `AboutMessage.localizedText()` | 8 条文案的**值**由 `verify-compose-resources.py` 140/140 与 `:app` 逐字比对钉住 |
+| 运行期文本提示 | `toastOnUi(it.localizedMessage ?: "")` | `AboutEffect.ShowText` → 同 | 逐字 |
+| 打开链接 / 启动下载 | `context.openUrl` / `Download.start` | 同 | 未改 |
+| 崩溃报告页 | `:app` 的 `CrashReportScreen` | feature 的同名 Screen | M5-1c-2 已逐字搬迁（仅 `R` → `Res`） |
+
+### 8.3 G4 基线随之下调（三条）
+
+删掉的旧文件里带走了 `AboutViewModel` 的 `help.*` / `base.*` / `utils.*Utils` import：
+
+- `legacyHelp|app/main/io/legado/app/ui/about` **5 → 1**（剩 `CrashReportActivity` 的 `help.CrashHandler`）
+- `legacyBase|app/main/io/legado/app/ui/about` **2 → 1**（剩 `CrashReportActivity` 的 `base.BaseComposeActivity`）
+- `legacyNaming|app/main/io/legado/app/ui/about` **2 → 0**（`utils.FileUtils` / `utils.compress.ZipUtils`
+  已随实现搬进 `io/legado/app/platform`，那边的计数在 1c-1 已登记 ⇒ **条目删除**）
+
+`ui/widget/components/log` 的 `legacyNaming|1` 未变（删的是 `CrashLogSheet`，
+`AppLogSheet` / `LogDetailSheet` 仍在）。
+
+### 8.4 验证
+
+- 单独 `clean` 后：四门禁（`checkSharedPurity` / `checkModuleDependencies` /
+  `checkLegacyArchitecture` / `verifyConfigArchitecture`）全绿
+- `:feature:about:compileKotlinDesktop` + `:feature:about:testAndroidHostTest` **2 例 0 失败**
+- `:app:compileAppDebugKotlin` + `:app:assembleAppDebug` 全绿
+- 全量计数 **714 / 1154 零偏离**（app 632 / designsystem 39 / viewmodel 19 / tagrules 15 /
+  replacerules 2 / about 2 / host:desktop 5 = 714；本片无用例增删）
+- 资源回归：about **140/140**、tagrules **124/124**
+- `lintAppDebug` 仍是迁移前就有的 **5 个 error**（`BookInfoScreen` ×3 / `BackstageWebView` /
+  `BottomWebViewDialog`），全部与 about 无关，数量未变
+
+### 8.5 变异验证：DI 绑定缺一条，编译照样绿
+
+删掉 `single<BundledTextReader> { … }` 后跑 `:app:compileAppDebugKotlin` ⇒ **BUILD SUCCESSFUL**。
+即 Koin 的 `viewModelOf(::AboutViewModel)` 是**运行期**按类型解析，漏绑不会在编译期暴露；
+而 `grep checkModules` 在 `:app` 只命中 `App.kt` 的 `startKoin` ⇒ 本仓**尚无宿主 graph creation
+test**（AGENTS.md 目标态里有，当前未建立）。
+
+已还原并复跑 `:app:assembleAppDebug` 回绿。**后续项**：给 `:app` 补一个启动期 Koin graph
+creation test（属独立切片，本片不引入 Koin test 依赖——一次只改一个风险维度）。
+
+### 8.6 死资源清理，以及 `verify-compose-resources.py` 的判据演进
+
+迁走后 `:app` 侧有 **19 条字符串 × 4 语言**与 **2 个 drawable**（`ic_github.xml` /
+`ic_import.xml`）变成零引用（判定方式：扫 `app/src/main` 全部 `.kt`/`.xml` 的
+`R.string.x` 与 `@string/x`、`R.drawable.x` 与 `@drawable/x`，与已删文件的引用集合做差集）。
+已按「只移除本次改动产生的无用资源」删除；`ic_launcher_foreground`（5 处）与
+`ic_web_outline`（1 处）**仍在用**，保留。
+
+⚠️ 这一删把 `tools/verify-compose-resources.py` 的第 ② 项判据打破了：它要求
+「composeResources 的 key 集合 = `:app` 同语言的 key 集合」，删副本后直接红。
+但**这个判据本身是过渡期的**——页面迁进 Feature 后 `:app` 那份副本**必然**要删，
+否则每次清理都会让脚本永久报噪音。故把反向差集拆成两类：
+
+| 方向 | 含义 | 处置 |
+|---|---|---|
+| `:app` 有、composeResources 无 | 模块**漏搬** | **硬错误**（保持原判据） |
+| composeResources 有、`:app` 无 | `:app` 副本**已随迁移下线** | 只记录条数与键名，不判失败；且不进 ③ 的分母（没有可比对象） |
+
+代价与补偿：这些条目此后不再被逐字校验。补偿是**在删副本之前先跑一次**——本片删前
+about 是 **140/140**，删后 `64/64` + 「已下线 19 条 × 4 语言」。
+回归：tagrules **124/124**、dict **76/76**（两者均无已下线条目）。
+
+### 8.7 未验证（需真机冒烟）
+
+about 页的**运行期**行为没有自动化覆盖：更新检查成功/失败、崩溃日志列举/读取/清空、
+保存日志、堆转储、markdown 弹层、下载启动，以及 Miuix 分支的渲染。
+本片能证明的是「编译 + 门禁 + 打包 + 文案逐字一致 + 计数零偏离」，
+不能替代打开一次关于页并逐个点一遍。

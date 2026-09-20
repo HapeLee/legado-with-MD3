@@ -245,6 +245,10 @@ import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.domain.usecase.readRecord.GetReadRecordOverviewUseCase
+import io.legado.app.feature.about.AboutDiagnostics
+import io.legado.app.feature.about.AboutViewModel
+import io.legado.app.feature.about.AppUpdateChecker
+import io.legado.app.feature.about.BundledTextReader
 import io.legado.app.help.coil.CoverFetcher
 import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.config.ThemePackageManager
@@ -253,8 +257,10 @@ import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.model.LegacyReaderSession
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReaderSession
+import io.legado.app.platform.AndroidAboutDiagnostics
+import io.legado.app.platform.AndroidAppUpdateChecker
+import io.legado.app.platform.AndroidBundledTextReader
 import io.legado.app.platform.AndroidPlatformCapabilities
-import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.ai.chat.AiChatViewModel
 import io.legado.app.ui.association.ImportDictRuleViewModel
 import io.legado.app.ui.association.ImportHttpTtsViewModel
@@ -535,6 +541,12 @@ val appModule = module {
     // M1-3y 起 `:feature:txttocrules` 的 VM 不再继承 `BaseRuleViewModel`，这条能力由构造参数
     // 注入（`viewModelOf` 按类型解析），共享层因此看不到这个 Android-only 的兼容逻辑。
     single<TxtTocRuleImportCompat> { AndroidTxtTocRuleImportCompat() }
+    // M5-1c-3：`:feature:about` 的三个平台能力（更新检查 / 诊断 / 内置 markdown）。
+    // 实现整体留在 `:app`（`AppUpdate` + GSON+OkHttp、`FileDoc`+SAF+`Runtime.exec`、`assets`），
+    // 这里只做接口→实现的显式绑定（AGENTS.md「Koin 中 Gateway 接口到 Repository 实现保持显式绑定」）。
+    single<AppUpdateChecker> { AndroidAppUpdateChecker() }
+    single<AboutDiagnostics> { AndroidAboutDiagnostics(androidContext(), get()) }
+    single<BundledTextReader> { AndroidBundledTextReader(androidContext()) }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     // ⚠️ 两个构造参数都要传：`digest` 是**参数注入**的平台能力（`stableModelId` 要复刻
     // UUID v3 名称空间哈希，而 MD5 是平台原语），没有任何可回落默认 ⇒ 漏传即编译错误。

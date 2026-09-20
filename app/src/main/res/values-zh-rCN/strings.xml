@@ -136,7 +136,6 @@
     <string name="offline_cache_t">离线缓存</string>
     <string name="offline_cache_s">缓存选择的章节到本地</string>
     <string name="change_origin">换源</string>
-    <string name="about_description">全新设计的阅读 3.0</string>
     <string name="app_share_description">
         阅读 3.0 下载地址：\nhttps://github.com/gedoor/legado/releases
     </string>
@@ -1476,23 +1475,8 @@
     <string name="about_license_title">许可证</string>
     <string name="about_disclaimer_title">免责声明</string>
     <string name="about_installed_version_title">当前版本</string>
-    <string name="about_current_version">当前版本</string>
-    <string name="about_new_version">新版本</string>
-    <string name="about_update_channel">渠道</string>
-    <string name="about_update_action">更新</string>
-    <string name="about_backup_dir_not_set">未设置备份目录</string>
-    <string name="about_log_recording_disabled">未开启日志记录，请去其他设置里打开记录日志</string>
-    <string name="about_saved_to_backup_dir">已保存至备份目录</string>
-    <string name="about_heap_dump_recording_disabled">未开启堆转储记录，请去其他设置里打开记录堆转储</string>
-    <string name="about_heap_dump_creating">开始创建堆转储</string>
-    <string name="about_heap_dump_not_found">未找到堆转储文件</string>
-    <string name="about_download_info_incomplete">下载信息不完整</string>
     <string name="about_no_data">没有数据</string>
     <string name="about_start_download">开始下载: %1$s</string>
-    <string name="crash_report">崩溃报告</string>
-    <string name="crash_report_message">应用发生崩溃。报告问题时，请复制以下错误信息。</string>
-    <string name="crash_report_empty">未找到崩溃信息。</string>
-    <string name="restart_app">重启应用</string>
     <string name="record_heap_dump_s">当应用发生OOM崩溃时保存堆转储</string>
     <string name="record_heap_dump_t">记录堆转储</string>
     <string name="font_weight_text">字重</string>
@@ -2488,7 +2472,6 @@
     <string name="format_json">格式化</string>
     <string name="minify_json">压缩</string>
     <string name="no_logs">暂无日志</string>
-    <string name="no_crash_logs">暂无崩溃日志</string>
     <string name="select_or_search_category">选择或搜索分类</string>
     <string name="multi_select_items">多选项目</string>
     <string name="recently_read">最近阅读：</string>
@@ -2743,8 +2726,6 @@
     <string name="not_cached">未缓存</string>
     <string name="delete_book_cache_message">删除《%1$s》的全部缓存，并从下载队列移除？</string>
     <string name="delete_chapter_cache_message">删除章节缓存：%1$s？</string>
-    <string name="about_open_project_homepage">打开项目主页</string>
-    <string name="about_open_github">打开 GitHub</string>
     <string name="book_characters">人物</string>
     <string name="book_info_knowledge">知识</string>
     <string name="character_network">关系网</string>

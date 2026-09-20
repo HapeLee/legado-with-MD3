@@ -164,9 +164,6 @@
     <string name="offline_cache_t">Offline cache</string>
     <string name="offline_cache_s">Cache the selected chapter(s) to Storage</string>
     <string name="change_origin">Change Origin</string>
-    <string name="about_description">
-        \u3000\u3000 This is an open source reading software newly developed by Kotlin, welcome to join us.
-    </string>
     <string name="app_share_description">
         Legado (YueDu 3.0) download link：\n https://github.com/gedoor/legado/releases
     </string>
@@ -1535,23 +1532,8 @@
     <string name="about_license_title">License</string>
     <string name="about_disclaimer_title">Disclaimer</string>
     <string name="about_installed_version_title">Installed Version</string>
-    <string name="about_current_version">Installed Version</string>
-    <string name="about_new_version">Latest Version</string>
-    <string name="about_update_channel">Release Channel</string>
-    <string name="about_update_action">Download Update</string>
-    <string name="about_backup_dir_not_set">Set a backup directory first</string>
-    <string name="about_log_recording_disabled">Log recording is off. Turn it on in Other Settings first.</string>
-    <string name="about_saved_to_backup_dir">Saved to backup folder</string>
-    <string name="about_heap_dump_recording_disabled">Heap dump recording is off. Turn it on in Other Settings first.</string>
-    <string name="about_heap_dump_creating">Creating heap dump…</string>
-    <string name="about_heap_dump_not_found">Heap dump file not found</string>
-    <string name="about_download_info_incomplete">Update download information is incomplete</string>
     <string name="about_no_data">No update log available</string>
     <string name="about_start_download">Downloading %1$s</string>
-    <string name="crash_report">Crash report</string>
-    <string name="crash_report_message">The app crashed. Copy the error information below when reporting the issue.</string>
-    <string name="crash_report_empty">No crash information found.</string>
-    <string name="restart_app">Restart app</string>
     <string name="record_heap_dump_s">Saving a heap dump when the application crashes by OOM</string>
     <string name="record_heap_dump_t">Capture heap dump</string>
     <string name="font_weight_text">N/B/L</string>
@@ -2512,7 +2494,6 @@
     <string name="format_json">Format</string>
     <string name="minify_json">Minify</string>
     <string name="no_logs">No logs</string>
-    <string name="no_crash_logs">No crash logs</string>
     <string name="select_or_search_category">Select or search category</string>
     <string name="multi_select_items">Multi-select Items</string>
     <string name="recently_read">Recently Read: </string>
@@ -2748,8 +2729,6 @@
     <string name="not_cached">Not cached</string>
     <string name="delete_book_cache_message">Delete all cache for “%1$s” and remove it from the download queue?</string>
     <string name="delete_chapter_cache_message">Delete chapter cache: %1$s?</string>
-    <string name="about_open_project_homepage">Open project homepage</string>
-    <string name="about_open_github">Open GitHub</string>
     <string name="book_characters">Characters</string>
     <string name="book_info_knowledge">Knowledge</string>
     <string name="character_network">Character network</string>

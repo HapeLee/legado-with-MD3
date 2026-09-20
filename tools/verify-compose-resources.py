@@ -245,33 +245,41 @@ def main() -> int:
     #    ⚠️ **不能**改成「各语言 key 集合必须彼此相同」：`feature/txttocrules` 的
     #    `zh-rHK`/`zh-rTW` 就合法地比 `values` 少 3 条（模块 res 与 `:app` res 都缺，
     #    属既有回落行为，迁移前后一致）。判据是「与 :app 一致」，不是「语言之间一致」。
+    #    ⚠️ 但**反向**（模块有、`:app` 无）在 M5-1c-3 起是**正常且期望**的状态：页面迁进
+    #    Feature 后 `:app` 侧那份副本就成了死资源，会被删掉（本仓要求「只移除本次改动产生的
+    #    无用资源」）。把它判为失败会让脚本在每次删副本后永久报噪音，反而掩盖真问题。
+    #    ⇒ 拆成两类：**缺失**（`:app` 还在用、模块没搬）= 硬错误；**已下线**（模块搬了、
+    #    `:app` 副本已删）= 只记录。后者的值等价性必须在**删副本之前**跑一次本脚本证明。
     all_module_keys: set[str] = set()
     for d in cmp_by_lang.values():
         all_module_keys |= set(d)
+    retired: dict[str, list[str]] = {}
     for lang in LANG_DIRS:
         if lang not in cmp_by_lang:
             continue
         keys = set(cmp_by_lang[lang])
         expected = set(app_by_lang.get(lang, {})) & all_module_keys
-        if keys != expected:
+        if expected - keys:
             ok = False
-            print(f"\n!! {lang} 的 key 集合与 :app 对应语言不一致")
-            if expected - keys:
-                print(f"   :app 有而 composeResources 缺：{sorted(expected - keys)}")
-            if keys - expected:
-                print(f"   composeResources 有而 :app 无：{sorted(keys - expected)}")
+            print(f"\n!! {lang} 缺条目（:app 有而 composeResources 无）：{sorted(expected - keys)}")
+        if keys - expected:
+            retired[lang] = sorted(keys - expected)
+    if retired:
+        print("\n-- 已下线（composeResources 有、:app 副本已随迁移删除）：正常态，不判失败")
+        for lang in sorted(retired):
+            print(f"   {lang}: {len(retired[lang])} 条 {retired[lang]}")
 
     # ③ 与 :app Android res 的同名条目逐条比对（**运行期**层：`:app` 侧先展开 aapt2 的转义）
+    #    「已下线」的条目不进分母——它们没有可比对象，计入只会让 x/y 失真。
     total = same = 0
     mismatches: list[str] = []
     for lang in LANG_DIRS:
         mine = cmp_by_lang.get(lang, {})
         theirs = app_by_lang.get(lang, {})
         for name, text in sorted(mine.items()):
-            total += 1
             if name not in theirs:
-                mismatches.append(f"{lang}/{name}: :app 侧没有同名条目（安全，仅记录）")
                 continue
+            total += 1
             want = android_unescape(theirs[name])
             if want == text:
                 same += 1

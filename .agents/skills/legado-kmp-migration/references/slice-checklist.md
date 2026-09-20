@@ -98,6 +98,15 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
 - Feature implementation uses other Feature APIs only.
 - Shared modules do not depend on platform implementations.
 - Platform implementations are injected from Koin/app composition roots.
+- **A missing Koin binding does not fail the build.** `viewModelOf(::XxxViewModel)` resolves
+  constructor parameters **at runtime**, so deleting `single<SomeContract> { … }` leaves
+  `:app:compileAppDebugKotlin` green — measured in M5-1c-3 by removing
+  `single<BundledTextReader>` (BUILD SUCCESSFUL). This repo has no host graph-creation test yet
+  (`grep checkModules` only hits `App.kt`'s `startKoin`), so the failure mode is a runtime
+  `NoDefinitionFoundException` on first navigation to that destination. Consequences: a `single<>`
+  wiring slice cannot be proven by compilation alone — read the wiring, and report the runtime
+  path (open the screen once) as smoke-required. Adding the graph-creation test is its own slice;
+  do not pull `koin-test` in alongside a wiring change.
 - Gradle `api` exposure is intentional; other dependencies use `implementation`.
 - No module is created only to match the target diagram.
 - Package colocation, Android Gradle module extraction, and KMP/CMP conversion are separate
@@ -299,6 +308,14 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   1.12.0's `components-resources`: `stringResource`, `vectorResource`, `painterResource`,
   `imageResource`, `pluralStringResource`, `stringArrayResource` exist; **`dimensionResource` does
   not** (no `dimen` support) and stays Android-only.
+  ⚠️ **`verify-compose-resources.py` distinguishes two directions of key-set drift (M5-1c-3).**
+  "`:app` has it, `composeResources` does not" = the module **failed to migrate** a string ⇒ hard
+  failure. "composeResources has it, `:app` does not" = the `:app` copy was **retired** as a dead
+  resource after the move (this repo deletes resources left dead by the current change) ⇒ reported
+  with count and names, not a failure, and excluded from the byte-comparison denominator. The
+  original undifferentiated check went permanently red after any legitimate cleanup. Consequence:
+  retired entries stop being byte-verified, so **run the script once before deleting the `:app`
+  copies** and quote that result (about: 140/140 before; 64/64 + 19 retired × 4 languages after).
   A batch rewrite script must delete old import lines *before* inserting the new ones, or import
   order breaks the diff.
   ⚠️ **Line endings are a non-issue here — do not spend time on them** (measured 2026-09-11).

@@ -190,7 +190,10 @@ legacyHelp|app/main/io/legado/app/model/webBook|16
 legacyHelp|app/main/io/legado/app/platform|2
 legacyHelp|app/main/io/legado/app/receiver|1
 legacyHelp|app/main/io/legado/app/service|26
-legacyHelp|app/main/io/legado/app/ui/about|5
+# M5-1c-3：`ui/about` 的旧文件（About* / CrashReportScreen）已删，业务本体迁进
+# `:feature:about`。剩下的 1 条是 `CrashReportActivity` 的 `help.CrashHandler`
+# （它是 Android 崩溃处理路径的宿主，按现状留在 `:app`）。
+legacyHelp|app/main/io/legado/app/ui/about|1
 legacyHelp|app/main/io/legado/app/ui/association|34
 legacyHelp|app/main/io/legado/app/ui/book/audio|7
 legacyHelp|app/main/io/legado/app/ui/book/cache/manage|4
@@ -243,7 +246,8 @@ legacyBase|app/main/io/legado/app/di|2
 legacyBase|app/main/io/legado/app/help|1
 legacyBase|app/main/io/legado/app/lib/prefs|3
 legacyBase|app/main/io/legado/app/service|7
-legacyBase|app/main/io/legado/app/ui/about|2
+# M5-1c-3：同上，剩下的 1 条是 `CrashReportActivity` 继承的 `base.BaseComposeActivity`。
+legacyBase|app/main/io/legado/app/ui/about|1
 legacyBase|app/main/io/legado/app/ui/association|34
 legacyBase|app/main/io/legado/app/ui/book/cache/manage|1
 legacyBase|app/main/io/legado/app/ui/book/changecover|1
@@ -306,7 +310,8 @@ legacyNaming|app/main/io/legado/app/model/webBook|6
 legacyNaming|app/main/io/legado/app/platform|2
 legacyNaming|app/main/io/legado/app/receiver|2
 legacyNaming|app/main/io/legado/app/service|14
-legacyNaming|app/main/io/legado/app/ui/about|2
+# M5-1c-3：`ui/about` 的 `utils.FileUtils` / `utils.compress.ZipUtils` 随 AboutViewModel
+# 一起迁走（实现现在住在 `io/legado/app/platform`，计数已在那边登记）⇒ 本目录归零，条目删除。
 legacyNaming|app/main/io/legado/app/ui/association|7
 legacyNaming|app/main/io/legado/app/ui/book/cache/manage|1
 legacyNaming|app/main/io/legado/app/ui/book/group|2

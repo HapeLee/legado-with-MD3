@@ -3,6 +3,7 @@ package io.legado.app.ui.main
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +33,7 @@ import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import coil3.ImageLoader
 import io.legado.app.R
+import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.constant.BookType
 import io.legado.app.constant.Status
 import io.legado.app.domain.model.BookSearchScope
@@ -41,9 +43,12 @@ import io.legado.app.model.AudioPlay
 import io.legado.app.model.Download
 import io.legado.app.model.SourceCallBack
 import io.legado.app.service.AudioPlayService
-import io.legado.app.ui.about.AboutEffect
-import io.legado.app.ui.about.AboutScreen
-import io.legado.app.ui.about.AboutViewModel
+import io.legado.app.feature.about.AboutEffect
+import io.legado.app.feature.about.AboutOverlays
+import io.legado.app.feature.about.AboutViewModel
+import io.legado.app.feature.about.MaterialAboutScreen
+import io.legado.app.feature.about.localizedText
+import io.legado.app.ui.about.MiuixAboutScreen
 import io.legado.app.ui.ai.chat.AiChatRouteScreen
 import io.legado.app.ui.book.audio.AudioPlayEffect
 import io.legado.app.ui.book.audio.AudioPlayIntent
@@ -151,7 +156,9 @@ import io.legado.app.ui.rss.source.edit.RssSourceEditRoute
 import io.legado.app.ui.rss.source.edit.RssSourceEditViewModel
 import io.legado.app.ui.rss.source.manage.RssSourceRouteScreen
 import io.legado.app.ui.rss.subscription.RuleSubRouteScreen
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideThemeOverride
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
@@ -1703,7 +1710,16 @@ fun MainActivity.mainEntryProvider(
             viewModel.effects.collectLatest { effect ->
                 when (effect) {
                     is AboutEffect.OpenUrl -> context.openUrl(effect.url)
-                    is AboutEffect.ShowToast -> context.toastOnUi(effect.message)
+                    // 迁移前 VM 用 `context.getString(R.string.x)` 就地取好文案；共享层发的是
+                    // 枚举，由宿主在协程里查 CMP 资源表（`localizedText()` 是 suspend）。
+                    is AboutEffect.ShowMessage -> context.toastOnUi(
+                        buildString {
+                            append(effect.message.localizedText())
+                            effect.detail?.let { append('\n').append(it) }
+                        }
+                    )
+
+                    is AboutEffect.ShowText -> context.toastOnUi(effect.text)
                     is AboutEffect.StartDownload -> Download.start(
                         context,
                         effect.url,
@@ -1712,10 +1728,29 @@ fun MainActivity.mainEntryProvider(
                 }
             }
         }
-        AboutScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+        val state = viewModel.uiState.collectAsStateWithLifecycle().value
+        // M5-1c：分流点留在宿主。`MiuixAboutScreen` 直连 `miuix-blur`（只有 `-android` 制品，
+        // 无 desktop 变体），共享层引用它会形成 `:app → :feature:about → :app` 的环；
+        // 两支复用同一 ViewModel/Contract（审计文档「platform island 的分支留在 host」）。
+        if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+            MiuixAboutScreen(
+                state = state,
+                onIntent = viewModel::onIntent,
+                onBack = { onNavigateBack() },
+            )
+        } else {
+            MaterialAboutScreen(
+                state = state,
+                onIntent = viewModel::onIntent,
+                onBack = { onNavigateBack() },
+                versionName = appInfo.versionName,
+            )
+        }
+        AboutOverlays(
+            state = state,
             onIntent = viewModel::onIntent,
-            onBack = { onNavigateBack() },
+            versionName = appInfo.versionName,
+            abi = Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown",
         )
     }
 }

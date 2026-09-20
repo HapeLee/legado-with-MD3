@@ -3,6 +3,7 @@ package io.legado.app.ui.about
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.feature.about.CrashReportScreen
 import io.legado.app.help.CrashHandler
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.sendToClip
