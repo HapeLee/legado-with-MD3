@@ -1,21 +1,24 @@
 package io.legado.app.ui.book.explore
 
+import android.content.res.Configuration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.data.repository.ExploreRepository
+import io.legado.app.data.repository.SettingsRepository
+import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.usecase.AddToBookshelfUseCase
 import io.legado.app.domain.usecase.BookShelfKey
 import io.legado.app.domain.usecase.ExploreBooksUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
+import io.legado.app.domain.usecase.ResolveBookshelfConflictUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
-import io.legado.app.domain.gateway.CoverSettingsGateway
-import android.content.res.Configuration
-import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.repository.SettingsRepository
+import io.legado.app.ui.book.conflict.BookshelfConflictController
 import io.legado.app.utils.stackTraceStr
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -23,7 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
 
@@ -52,6 +54,7 @@ class ExploreShowViewModel(
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
+    private val resolveBookshelfConflictUseCase: ResolveBookshelfConflictUseCase,
     private val localPreferencesRepository: SettingsRepository,
     private val coverSettingsGateway: CoverSettingsGateway,
 ) : ViewModel() {
@@ -90,8 +93,15 @@ class ExploreShowViewModel(
     private val _effects = MutableSharedFlow<ExploreShowEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
+    private val conflictController = BookshelfConflictController(
+        scope = viewModelScope,
+        addToBookshelfUseCase = addToBookshelfUseCase,
+        resolveBookshelfConflictUseCase = resolveBookshelfConflictUseCase,
+    )
+
     init {
         observeBookshelf()
+        observeBookshelfConflict()
         combineUiState()
         loadLayoutMode()
         loadGridCount()
@@ -119,8 +129,54 @@ class ExploreShowViewModel(
                 )
             )
 
-            is ExploreShowIntent.AddToShelf -> viewModelScope.launch {
-                addToBookshelfUseCase.execute(intent.book)
+            is ExploreShowIntent.AddToShelf -> conflictController.addToShelf(intent.book)
+
+            ExploreShowIntent.DismissBookshelfConflict -> conflictController.dismiss()
+
+            is ExploreShowIntent.OpenBookshelfConflictBook -> {
+                // 先收起 Sheet 再导航，否则返回本页时 Sheet 会重新显示并吃掉一次返回键。
+                conflictController.dismiss()
+                emitEffect(
+                    ExploreShowEffect.OpenBookInfo(
+                        name = intent.summary.name,
+                        author = intent.summary.author,
+                        bookUrl = intent.summary.bookUrl,
+                        origin = intent.summary.origin,
+                        coverPath = intent.summary.displayCover,
+                        sharedCoverKey = null,
+                    )
+                )
+            }
+
+            is ExploreShowIntent.CoexistWithBookshelfConflict -> conflictController.coexist(
+                intent.existingBookUrl,
+                intent.options,
+            )
+
+            is ExploreShowIntent.MigrateBookshelfConflict -> conflictController.migrate(
+                intent.existingBookUrl,
+                intent.options,
+            )
+        }
+    }
+
+    private fun observeBookshelfConflict() {
+        viewModelScope.launch {
+            conflictController.conflict.collect { conflict ->
+                _uiState.update { it.copy(bookshelfConflict = conflict) }
+            }
+        }
+        viewModelScope.launch {
+            conflictController.isResolving.collect { resolving ->
+                _uiState.update { it.copy(isResolvingBookshelfConflict = resolving) }
+            }
+        }
+        viewModelScope.launch {
+            conflictController.effects.collect { effect ->
+                when (effect) {
+                    is BookshelfConflictController.Effect.ShowMessage ->
+                        _effects.emit(ExploreShowEffect.ShowMessage(appCtx.getString(effect.messageRes)))
+                }
             }
         }
     }

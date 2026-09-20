@@ -58,18 +58,12 @@ class BookDaoTest {
     }
 
     @Test
-    fun getShelfBookConflictReturnsMostRecentlyReadShelfBook() {
-        val olderBook = Book(
-            bookUrl = "https://older.example/book",
+    fun getShelfBookSummariesSkipsNotShelfBooks() {
+        val shelfBook = Book(
+            bookUrl = "https://shelf.example/book",
             name = "Book",
             author = "Author",
             durChapterTime = 100,
-        )
-        val newerBook = Book(
-            bookUrl = "https://newer.example/book",
-            name = "Book",
-            author = "Author",
-            durChapterTime = 200,
         )
         val previewBook = Book(
             bookUrl = "https://preview.example/book",
@@ -78,10 +72,13 @@ class BookDaoTest {
             durChapterTime = 300,
             type = BookType.notShelf,
         )
-        database.bookDao.insert(olderBook, newerBook, previewBook)
+        database.bookDao.insert(shelfBook, previewBook)
 
-        val conflict = database.bookDao.getShelfBookConflict("Book", "Author")
+        val summaries = database.bookDao.getShelfBookSummaries()
 
-        assertEquals(newerBook, conflict)
+        assertEquals(
+            listOf("https://shelf.example/book"),
+            summaries.map { it.bookUrl },
+        )
     }
 }

@@ -3345,4 +3345,16 @@
     <string name="feature_bookmarks_no_matching_notes">No matching notes</string>
     <string name="feature_bookmarks_no_notes">No notes</string>
     <string name="feature_bookmarks_chapter_fallback">Chapter %1$d</string>
+
+    <string name="bookshelf_conflict_title">Possible Duplicate</string>
+    <string name="bookshelf_conflict_existing_title">Already on bookshelf</string>
+    <string name="bookshelf_conflict_open_hint">Tap a book to open its details</string>
+    <string name="bookshelf_conflict_coexist">Keep Both</string>
+    <string name="bookshelf_conflict_migrate">Migrate</string>
+    <string name="bookshelf_conflict_options_title">Data to Carry Over</string>
+    <string name="bookshelf_conflict_actions_hint">Keep both: copy the selected fields from the existing book to the new one. Migrate: replace the existing book with the new one using the selected fields.</string>
+    <string name="bookshelf_conflict_coexist_done">Added as another copy</string>
+    <string name="bookshelf_conflict_migrate_done">Migrated to the new source</string>
+    <string name="bookshelf_conflict_resolve_failed">Could not finish the operation</string>
+    <string name="bookshelf_conflict_toc_failed">Could not load the table of contents. Migration cancelled, please retry.</string>
 </resources>

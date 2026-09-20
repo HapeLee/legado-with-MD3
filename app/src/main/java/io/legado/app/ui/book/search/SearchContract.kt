@@ -5,8 +5,11 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.domain.model.BookShelfState
+import io.legado.app.domain.model.BookshelfConflict
+import io.legado.app.domain.model.ConflictBookSummary
 import io.legado.app.domain.model.ContentQualityStage
 import io.legado.app.domain.model.MatchMode
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -85,6 +88,8 @@ data class SearchUiState(
     val expandedSourceSavedScrollIndex: Int = 0,
     val expandedSourceSavedScrollOffset: Int = 0,
     val contentQuality: ContentQualityUiState = ContentQualityUiState(),
+    val bookshelfConflict: BookshelfConflict? = null,
+    val isResolvingBookshelfConflict: Boolean = false,
 )
 
 data class SearchEmptyScopeAction(
@@ -139,6 +144,17 @@ sealed interface SearchIntent {
     data object OpenSourceManage : SearchIntent
     data class SaveScrollState(val index: Int, val offset: Int) : SearchIntent
     data class SaveExpandedSourceScrollState(val index: Int, val offset: Int) : SearchIntent
+    data object DismissBookshelfConflict : SearchIntent
+    data class OpenBookshelfConflictBook(val summary: ConflictBookSummary) : SearchIntent
+    data class CoexistWithBookshelfConflict(
+        val existingBookUrl: String,
+        val options: ChangeSourceMigrationOptions,
+    ) : SearchIntent
+
+    data class MigrateBookshelfConflict(
+        val existingBookUrl: String,
+        val options: ChangeSourceMigrationOptions,
+    ) : SearchIntent
 }
 
 sealed interface SearchEffect {

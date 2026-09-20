@@ -2,11 +2,14 @@ package io.legado.app.data.repository
 
 import android.app.Application
 import androidx.room.Room
+import androidx.room.withTransaction
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.help.config.AppConfigStore
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -204,6 +207,125 @@ class ReadRecordRepositoryTest {
         assertNull(database.readRecordDao.getDetail(deviceId, targetName, author, date))
         assertEquals(0, database.readRecordDao.getSessionsByBook(deviceId, targetName, author).size)
     }
+
+    @Test
+    fun `coexisting copies are timed independently while the work total is their sum`() =
+        runBlocking {
+            val copyA = "https://a.example/book"
+            val copyB = "https://b.example/book"
+            repository.saveReadSession(session(bookUrl = copyA, start = 1_000, end = 1_200))
+            repository.saveReadSession(session(bookUrl = copyB, start = 2_000, end = 2_300))
+
+            assertEquals(200L, repository.getBookCopyReadTime(copyA, targetName, author).first())
+            assertEquals(300L, repository.getBookCopyReadTime(copyB, targetName, author).first())
+            // 作品维度 = 两个副本之和
+            assertEquals(500L, repository.getBookReadTime(targetName, author).first())
+        }
+
+    @Test
+    fun `copy without owned session falls back to unowned legacy sessions`() = runBlocking {
+        val copyA = "https://a.example/book"
+        database.readRecordDao.insertSession(session(bookUrl = "", start = 1_000, end = 1_200))
+
+        assertEquals(200L, repository.getBookCopyReadTime(copyA, targetName, author).first())
+    }
+
+    @Test
+    fun `unowned legacy sessions leave both copies once a second copy exists`() = runBlocking {
+        val copyA = "https://a.example/book"
+        val copyB = "https://b.example/book"
+        // 走 saveReadSession，让汇总记录（作品维度）与会话一起建立
+        repository.saveReadSession(session(bookUrl = "", start = 1_000, end = 1_200))
+        database.bookDao.insert(Book(bookUrl = copyA, name = targetName, author = author))
+
+        // 作品只有一个副本时，未归属的历史时长算在它头上，避免升级后凭空消失
+        assertEquals(200L, repository.getBookCopyReadTime(copyA, targetName, author).first())
+
+        // 共存出第二个副本后，谁都不再显示，避免同一段历史在两个副本里各出现一次
+        database.bookDao.insert(Book(bookUrl = copyB, name = targetName, author = author))
+        assertEquals(0L, repository.getBookCopyReadTime(copyA, targetName, author).first())
+        assertEquals(0L, repository.getBookCopyReadTime(copyB, targetName, author).first())
+        // 作品维度始终保留这段历史
+        assertEquals(200L, repository.getBookReadTime(targetName, author).first())
+    }
+
+    @Test
+    fun `migrating a copy moves its sessions without doubling the total`() = runBlocking {
+        val oldBook = Book(bookUrl = "https://old.example/book", name = targetName, author = author)
+        val newBook = Book(bookUrl = "https://new.example/book", name = targetName, author = author)
+        database.readRecordDao.insertSession(
+            session(
+                bookUrl = oldBook.bookUrl,
+                start = 1_000,
+                end = 1_200
+            )
+        )
+        database.readRecordDao.insert(ReadRecord(deviceId, targetName, author, 200, 1_200))
+
+        database.withTransaction { repository.reassignBookReadSessions(oldBook, newBook) }
+
+        assertEquals(
+            200L,
+            repository.getBookCopyReadTime(newBook.bookUrl, targetName, author).first()
+        )
+        assertEquals(
+            0L,
+            repository.getBookCopyReadTime(oldBook.bookUrl, targetName, author).first()
+        )
+        assertEquals(
+            200L,
+            database.readRecordDao.getReadRecord(deviceId, targetName, author)?.readTime
+        )
+    }
+
+    @Test
+    fun `migrating to a renamed book moves the total instead of keeping an orphan`() = runBlocking {
+        val oldBook = Book(bookUrl = "https://old.example/book", name = targetName, author = author)
+        val newBook = Book(bookUrl = "https://new.example/book", name = sourceName, author = author)
+        val date = "1970-01-01"
+        database.readRecordDao.insertSession(
+            session(
+                bookUrl = oldBook.bookUrl,
+                start = 1_000,
+                end = 1_200
+            )
+        )
+        database.readRecordDao.insert(ReadRecord(deviceId, targetName, author, 200, 1_200))
+        database.readRecordDao.insertDetail(
+            ReadRecordDetail(deviceId, targetName, author, date, 200, 10, 1_000, 1_200)
+        )
+
+        database.withTransaction { repository.reassignBookReadSessions(oldBook, newBook) }
+
+        assertEquals(
+            200L,
+            repository.getBookCopyReadTime(newBook.bookUrl, sourceName, author).first()
+        )
+        assertNull(database.readRecordDao.getReadRecord(deviceId, targetName, author))
+        assertNull(database.readRecordDao.getDetail(deviceId, targetName, author, date))
+        assertEquals(
+            200L,
+            database.readRecordDao.getReadRecord(deviceId, sourceName, author)?.readTime
+        )
+        assertEquals(
+            200L,
+            database.readRecordDao.getDetail(deviceId, sourceName, author, date)?.readTime
+        )
+    }
+
+    private fun session(
+        bookUrl: String,
+        start: Long,
+        end: Long,
+    ) = ReadRecordSession(
+        deviceId = deviceId,
+        bookName = targetName,
+        bookAuthor = author,
+        bookUrl = bookUrl,
+        startTime = start,
+        endTime = end,
+        words = 10,
+    )
 
     private suspend fun mergeAndAssert(targetSessionDuration: Long = 0, sourceSessionDuration: Long = 0, targetLegacyTime: Long = 0, sourceLegacyTime: Long = 0) {
         val source = insertRecord(sourceName, sourceSessionDuration + sourceLegacyTime, sourceSessionDuration)

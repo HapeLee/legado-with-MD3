@@ -6,6 +6,7 @@ import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.GroupBookCount
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.ShelfBookSummary
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -56,9 +57,9 @@ class BookRepository(
         }
     }
 
-    suspend fun getShelfBookConflict(name: String, author: String): Book? {
+    suspend fun getShelfBookSummaries(): List<ShelfBookSummary> {
         return withContext(Dispatchers.IO) {
-            bookDao.getShelfBookConflict(name, author)
+            bookDao.getShelfBookSummaries()
         }
     }
 

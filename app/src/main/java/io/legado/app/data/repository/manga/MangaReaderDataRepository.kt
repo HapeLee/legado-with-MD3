@@ -201,6 +201,7 @@ class MangaReaderDataRepository(
                 ReadRecordSession(
                     bookName = book.name,
                     bookAuthor = book.author,
+                    bookUrl = book.bookUrl,
                     startTime = start,
                     endTime = end,
                 )

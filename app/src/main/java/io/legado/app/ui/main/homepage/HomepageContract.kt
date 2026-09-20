@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.model.BookShelfState
+import io.legado.app.domain.model.BookshelfConflict
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.domain.model.ModuleDef
 import kotlinx.collections.immutable.ImmutableList
@@ -20,7 +21,9 @@ data class HomepageUiState(
     val modules: ImmutableList<HomepageModuleUi> = persistentListOf(),
     val isManageMode: Boolean = false,
     val isRefreshing: Boolean = false,
-    val manageState: HomepageManageUiState = HomepageManageUiState()
+    val manageState: HomepageManageUiState = HomepageManageUiState(),
+    val bookshelfConflict: BookshelfConflict? = null,
+    val isResolvingBookshelfConflict: Boolean = false,
 )
 
 @Stable

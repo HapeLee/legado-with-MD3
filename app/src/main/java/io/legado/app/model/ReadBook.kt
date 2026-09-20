@@ -837,10 +837,16 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun initReadTime() {
         synchronized(this) {
-            val currentBookName = book?.name ?: return
-            val currentBookAuthor = book?.author ?: ""
+            val currentBook = book ?: return
+            val currentBookUrl = currentBook.bookUrl
+            val currentBookName = currentBook.name
+            val currentBookAuthor = currentBook.author
             if (currentActiveSession != null &&
-                (currentActiveSession!!.bookName != currentBookName || currentActiveSession!!.bookAuthor != currentBookAuthor)
+                currentActiveSession!!.matchesBook(
+                    currentBookUrl,
+                    currentBookName,
+                    currentBookAuthor
+                ).not()
             ) {
                 commitReadSession()
             }
@@ -851,6 +857,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     deviceId = "",
                     bookName = currentBookName,
                     bookAuthor = currentBookAuthor,
+                    bookUrl = currentBookUrl,
                     startTime = readStartTime,
                     endTime = readStartTime,
                     words = durChapterIndex.toLong()
@@ -861,14 +868,19 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun upReadTime() {
         synchronized(this) {
+            val currentBook = book ?: return
             val currentLength = currentReadLength
-            val currentBookName = book?.name ?: return
-            val currentBookAuthor = book?.author ?: ""
+            val currentBookUrl = currentBook.bookUrl
+            val currentBookName = currentBook.name
+            val currentBookAuthor = currentBook.author
             val endTime = System.currentTimeMillis()
 
             if (currentActiveSession == null ||
-                currentActiveSession!!.bookName != currentBookName ||
-                currentActiveSession!!.bookAuthor != currentBookAuthor
+                currentActiveSession!!.matchesBook(
+                    currentBookUrl,
+                    currentBookName,
+                    currentBookAuthor
+                ).not()
             ) {
                 initReadTime()
                 return
@@ -933,8 +945,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         synchronized(this) {
             val current = currentActiveSession
             if (current != null &&
-                current.bookName == sessionToSave.bookName &&
-                current.bookAuthor == sessionToSave.bookAuthor
+                current.matchesBook(
+                    sessionToSave.bookUrl,
+                    sessionToSave.bookName,
+                    sessionToSave.bookAuthor
+                )
             ) {
                 currentActiveSession = current.copy(
                     startTime = sessionToSave.endTime,

@@ -3339,4 +3339,16 @@
     <string name="feature_bookmarks_no_matching_notes">没有找到相关笔记</string>
     <string name="feature_bookmarks_no_notes">暂无笔记</string>
     <string name="feature_bookmarks_chapter_fallback">第 %1$d 章</string>
+
+    <string name="bookshelf_conflict_title">检测到可能重复的作品</string>
+    <string name="bookshelf_conflict_existing_title">书架中已有的作品</string>
+    <string name="bookshelf_conflict_open_hint">点击卡片查看该作品详情</string>
+    <string name="bookshelf_conflict_coexist">共存</string>
+    <string name="bookshelf_conflict_migrate">迁移</string>
+    <string name="bookshelf_conflict_options_title">要携带的数据</string>
+    <string name="bookshelf_conflict_actions_hint">共存：把勾选的数据从已有作品复制到新加入的书。迁移：用勾选的数据以新书替换已有作品。</string>
+    <string name="bookshelf_conflict_coexist_done">已作为另一本加入书架</string>
+    <string name="bookshelf_conflict_migrate_done">已迁移到新的书源</string>
+    <string name="bookshelf_conflict_resolve_failed">处理失败，请重试</string>
+    <string name="bookshelf_conflict_toc_failed">获取目录失败，已取消迁移，请重试</string>
 </resources>

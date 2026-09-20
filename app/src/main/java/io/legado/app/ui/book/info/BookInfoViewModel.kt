@@ -31,12 +31,16 @@ import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.model.BookshelfConflict
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.domain.usecase.BookTocUnavailableException
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
+import io.legado.app.domain.usecase.FindBookshelfConflictUseCase
+import io.legado.app.domain.usecase.ResolveBookshelfConflictUseCase
 import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
@@ -103,6 +107,8 @@ class BookInfoViewModel(
     private val clearBookCacheUseCase: ClearBookCacheUseCase,
     private val bookGroupRepository: BookGroupRepository,
     private val bookRepository: BookRepository,
+    private val findBookshelfConflictUseCase: FindBookshelfConflictUseCase,
+    private val resolveBookshelfConflictUseCase: ResolveBookshelfConflictUseCase,
     private val bookSourceRepository: BookSourceRepository,
     private val searchRepository: SearchRepository,
     private val highlightTagRuleRepository: HighlightTagRuleRepository,
@@ -186,6 +192,9 @@ class BookInfoViewModel(
     private var currentReadRecordTimelineDays: List<ReadRecordTimelineDay> = emptyList()
     private var observingReadRecordKey: String? = null
     private var chapterChanged = false
+
+    /** 命中重复、等待用户在冲突 Sheet 上选择共存还是迁移的那本书。 */
+    private var pendingShelfBook: Book? = null
 
     var inBookshelf = false
         private set
@@ -287,6 +296,12 @@ class BookInfoViewModel(
 
             BookInfoIntent.GroupClick -> setSheet(BookInfoSheet.GroupPicker)
             BookInfoIntent.ChangeSourceClick -> currentBook?.uiCopy()
+                ?.apply {
+                    // 详情页的 currentBook 多来自书源解析结果，并不带 notShelf 标记，而它才是
+                    // 「未上架」的唯一事实来源。这里按 inBookshelf 如实补位，换源 Sheet 才能
+                    // 知道不需要询问「新增还是替换」。
+                    if (!inBookshelf) addType(BookType.notShelf)
+                }
                 ?.let { setSheet(BookInfoSheet.SourcePicker(it)) }
             BookInfoIntent.ReadRecordClick -> setSheet(BookInfoSheet.ReadRecord)
             BookInfoIntent.RemarkClick -> showDialog(BookInfoDialog.EditRemark(currentBook?.remark))
@@ -323,6 +338,39 @@ class BookInfoViewModel(
                     showMessage("已添加到书架")
                 }
             }
+
+            BookInfoIntent.DismissShelfConflict -> {
+                pendingShelfBook = null
+                _screenState.update { it.copy(shelfConflict = null) }
+            }
+
+            is BookInfoIntent.OpenShelfConflictBook -> {
+                // 先收起冲突 Sheet 再导航：详情页之间跳转会复用同一份冲突状态，
+                // 不收起来的话新页面一进来就显示 Sheet，并把第一次返回键吃掉。
+                pendingShelfBook = null
+                _screenState.update { it.copy(shelfConflict = null) }
+                emitEffect(
+                    BookInfoEffect.NavigateToBookInfo(
+                        name = intent.summary.name,
+                        author = intent.summary.author,
+                        bookUrl = intent.summary.bookUrl,
+                        origin = intent.summary.origin,
+                        coverPath = intent.summary.displayCover,
+                    )
+                )
+            }
+
+            is BookInfoIntent.CoexistWithShelfConflict -> resolveShelfConflict(
+                existingBookUrl = intent.existingBookUrl,
+                options = intent.options,
+                coexist = true,
+            )
+
+            is BookInfoIntent.MigrateShelfConflict -> resolveShelfConflict(
+                existingBookUrl = intent.existingBookUrl,
+                options = intent.options,
+                coexist = false,
+            )
 
             is BookInfoIntent.ReplaceConflictingBook -> {
                 dismissSheet()
@@ -717,32 +765,122 @@ class BookInfoViewModel(
     fun addToBookshelf(success: (() -> Unit)? = null) {
         val book = currentBook ?: return
         execute {
-            book.removeType(BookType.notShelf)
-            if (book.order == 0) {
-                book.order = bookRepository.getMinOrder() - 1
+            // 书架允许同名同作者在架，入架前必须先查重：命中就交给冲突 Sheet 让用户选共存还是迁移，
+            // 绝不静默插一份，也绝不把已有作品的阅读进度悄悄挪到这本新书上。
+            val conflict = findBookshelfConflictUseCase.execute(book)
+            if (conflict != null) {
+                conflict
+            } else {
+                prepareBookForShelf(book)
+                book.save()
+                SourceCallBack.callBackBook(SourceCallBack.ADD_BOOK_SHELF, bookSource, book)
+                bookRepository.insertChapters(*currentChapterList.toTypedArray())
+                book
             }
-            bookRepository.getBook(book.name, book.author)?.let {
-                book.durChapterIndex = it.durChapterIndex
-                book.durChapterPos = it.durChapterPos
-                book.durChapterTitle = it.durChapterTitle
+        }.onSuccess { result ->
+            when (result) {
+                is BookshelfConflict -> {
+                    pendingShelfBook = book
+                    _screenState.update { state ->
+                        state.copy(shelfConflict = result, isResolvingShelfConflict = false)
+                    }
+                }
+
+                else -> {
+                    (result as? Book)?.let { added ->
+                        applyBookOnShelf(added)
+                        success?.invoke()
+                    }
+                }
             }
-            if (ReadBook.isCurrentBook(book)) {
-                ReadBook.replaceCurrentBook(book)
-            } else if (AudioPlay.book?.isSameNameAuthor(book) == true) {
-                AudioPlay.book = book
-            }
-            book.save()
-            SourceCallBack.callBackBook(SourceCallBack.ADD_BOOK_SHELF, bookSource, book)
-            bookRepository.insertChapters(*currentChapterList.toTypedArray())
-            book
-        }.onSuccess {
-            currentBook = it
-            inBookshelf = true
-            syncUiState()
-            success?.invoke()
         }
     }
 
+    /** 入架前的通用处理：去掉「未上架」标记并保证排序值落在书架最前。 */
+    private suspend fun prepareBookForShelf(book: Book) {
+        book.removeType(BookType.notShelf)
+        if (book.order == 0) {
+            book.order = bookRepository.getMinOrder() - 1
+        }
+    }
+
+    /** 书籍成功进入书架后，详情页需要同步的宿主状态。 */
+    private fun applyBookOnShelf(book: Book) {
+        if (ReadBook.isCurrentBook(book)) {
+            ReadBook.replaceCurrentBook(book)
+        } else if (AudioPlay.book?.isSameNameAuthor(book) == true) {
+            AudioPlay.book = book
+        }
+        currentBook = book
+        inBookshelf = true
+        syncUiState()
+    }
+
+    /**
+     * 共存 / 迁移的落地执行。
+     *
+     * 两条路径都复用 [ResolveBookshelfConflictUseCase]（与搜索页加入书架同一套语义与选项），
+     * 完成后只补做详情页特有的宿主同步。目录优先用详情页已经加载好的，避免再发一次请求。
+     */
+    private fun resolveShelfConflict(
+        existingBookUrl: String,
+        options: ChangeSourceMigrationOptions,
+        coexist: Boolean,
+    ) {
+        val book = pendingShelfBook ?: return
+        val chapters = currentChapterList.takeIf { it.isNotEmpty() }
+        _screenState.update { it.copy(isResolvingShelfConflict = true) }
+        execute {
+            if (coexist) {
+                resolveBookshelfConflictUseCase.coexist(
+                    existingBookUrl = existingBookUrl,
+                    newBook = book,
+                    options = options,
+                    chapters = chapters,
+                )
+            } else {
+                resolveBookshelfConflictUseCase.migrate(
+                    existingBookUrl = existingBookUrl,
+                    newBook = book,
+                    options = options,
+                    chapters = chapters,
+                )
+            }
+            book
+        }.onSuccess { resolved ->
+            // 迁移后书架上的旧书已被删除，补一次回调让书源收到入架事件。
+            SourceCallBack.callBackBook(SourceCallBack.ADD_BOOK_SHELF, bookSource, resolved)
+            if (chapters != null) {
+                currentChapterList = chapters
+            }
+            pendingShelfBook = null
+            _screenState.update { it.copy(shelfConflict = null, isResolvingShelfConflict = false) }
+            applyBookOnShelf(resolved)
+            showMessage(
+                if (coexist) R.string.bookshelf_conflict_coexist_done
+                else R.string.bookshelf_conflict_migrate_done
+            )
+        }.onError {
+            AppLog.put("处理书架冲突出错", it)
+            pendingShelfBook = null
+            _screenState.update { it.copy(shelfConflict = null, isResolvingShelfConflict = false) }
+            showMessage(
+                if (it is BookTocUnavailableException) {
+                    R.string.bookshelf_conflict_toc_failed
+                } else {
+                    R.string.bookshelf_conflict_resolve_failed
+                }
+            )
+        }
+    }
+
+    /**
+     * 「另存新书」入架。
+     *
+     * 这里**有意不做查重**：该入口只由换源 Sheet 的「新增书籍」选项触发，而换源 Sheet 在
+     * 走这条分支之前已经调用过 `FindBookshelfConflictUseCase`，命中冲突时会改为弹冲突 Sheet
+     * （见 [resolveShelfConflict]），不会落到这里。重复检测放在一处，避免同一动作被问两次。
+     */
     fun addToBookshelf(book: Book, toc: List<BookChapter>, success: (() -> Unit)? = null) {
         execute {
             book.removeType(BookType.notShelf)
@@ -1386,14 +1524,15 @@ class BookInfoViewModel(
             clearReadRecordObserve()
             return
         }
-        val key = "${book.name}|||${book.author}"
+        // 阅读统计按书籍副本统计：书架允许同名作者作品共存，不能让一个副本继承另一个副本的时长。
+        val key = "${book.name}|||${book.author}|||${book.bookUrl}"
         if (observingReadRecordKey == key && readRecordObserveJob?.isActive == true) return
         observingReadRecordKey = key
         readRecordObserveJob?.cancel()
         readRecordObserveJob = viewModelScope.launch {
             combine(
-                readRecordRepository.getBookReadTime(book.name, book.author),
-                readRecordRepository.getBookTimelineDays(book.name, book.author)
+                readRecordRepository.getBookCopyReadTime(book.bookUrl, book.name, book.author),
+                readRecordRepository.getBookCopyTimelineDays(book.bookUrl, book.name, book.author)
             ) { totalTime, timelineDays ->
                 totalTime to timelineDays
             }.collectLatest { (totalTime, timelineDays) ->

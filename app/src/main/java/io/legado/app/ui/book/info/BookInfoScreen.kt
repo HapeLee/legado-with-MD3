@@ -133,6 +133,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.HighlightTagRow
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
+import io.legado.app.ui.widget.components.conflict.BookshelfConflictSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
@@ -529,6 +530,19 @@ private fun BookInfoScreenContent(
             onDismissRequest = { onIntent(BookInfoIntent.DismissSheet) },
         )
     }
+
+    BookshelfConflictSheet(
+        conflict = state.shelfConflict,
+        isResolving = state.isResolvingShelfConflict,
+        onDismissRequest = { onIntent(BookInfoIntent.DismissShelfConflict) },
+        onOpenExistingBook = { onIntent(BookInfoIntent.OpenShelfConflictBook(it)) },
+        onCoexist = { existingBookUrl, options ->
+            onIntent(BookInfoIntent.CoexistWithShelfConflict(existingBookUrl, options))
+        },
+        onMigrate = { existingBookUrl, options ->
+            onIntent(BookInfoIntent.MigrateShelfConflict(existingBookUrl, options))
+        },
+    )
 
     BookInfoDialogs(state = state, onIntent = onIntent)
 }

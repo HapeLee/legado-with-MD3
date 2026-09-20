@@ -2,12 +2,12 @@ package io.legado.app.ui.book.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.data.repository.SearchRepository
+import io.legado.app.data.repository.SettingsRepository
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.ContentQualityConfig
 import io.legado.app.domain.model.ContentQualityProgress
@@ -19,8 +19,10 @@ import io.legado.app.domain.usecase.BookShelfKey
 import io.legado.app.domain.usecase.CheckBookContentQualityUseCase
 import io.legado.app.domain.usecase.ExploreBooksUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
+import io.legado.app.domain.usecase.ResolveBookshelfConflictUseCase
 import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.SearchRunEvent
+import io.legado.app.ui.book.conflict.BookshelfConflictController
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
@@ -45,6 +47,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import splitties.init.appCtx
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(
@@ -53,6 +56,7 @@ class SearchViewModel(
     private val searchBooksUseCase: SearchBooksUseCase,
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
+    private val resolveBookshelfConflictUseCase: ResolveBookshelfConflictUseCase,
     private val checkBookContentQualityUseCase: CheckBookContentQualityUseCase,
     private val localPreferencesRepository: SettingsRepository,
     private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
@@ -89,6 +93,12 @@ class SearchViewModel(
     private val _effects = MutableSharedFlow<SearchEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
+    private val conflictController = BookshelfConflictController(
+        scope = viewModelScope,
+        addToBookshelfUseCase = addToBookshelfUseCase,
+        resolveBookshelfConflictUseCase = resolveBookshelfConflictUseCase,
+    )
+
     private val queryFlow = MutableStateFlow("")
     private val bookshelfKeys = MutableStateFlow<Set<BookShelfKey>>(emptySet())
     private var persistedSearchScopeRaw = ""
@@ -111,6 +121,7 @@ class SearchViewModel(
 
     init {
         syncScopeState()
+        observeBookshelfConflict()
         observeSearchScope()
         observeEnabledGroups()
         observeEnabledSources()
@@ -124,8 +135,27 @@ class SearchViewModel(
     }
 
     fun onAddToShelf(book: SearchBook) {
+        conflictController.addToShelf(book)
+    }
+
+    private fun observeBookshelfConflict() {
         viewModelScope.launch {
-            addToBookshelfUseCase.execute(book)
+            conflictController.conflict.collect { conflict ->
+                _uiState.update { it.copy(bookshelfConflict = conflict) }
+            }
+        }
+        viewModelScope.launch {
+            conflictController.isResolving.collect { resolving ->
+                _uiState.update { it.copy(isResolvingBookshelfConflict = resolving) }
+            }
+        }
+        viewModelScope.launch {
+            conflictController.effects.collect { effect ->
+                when (effect) {
+                    is BookshelfConflictController.Effect.ShowMessage ->
+                        _effects.emit(SearchEffect.ShowMessage(appCtx.getString(effect.messageRes)))
+                }
+            }
         }
     }
 
@@ -170,9 +200,35 @@ class SearchViewModel(
                 )
             }
 
-            is SearchIntent.AddToShelf -> viewModelScope.launch {
-                addToBookshelfUseCase.execute(intent.book)
+            is SearchIntent.AddToShelf -> conflictController.addToShelf(intent.book)
+
+            SearchIntent.DismissBookshelfConflict -> conflictController.dismiss()
+
+            is SearchIntent.OpenBookshelfConflictBook -> {
+                // 先收起 Sheet 再导航：目标页与返回后的本页都会复用这份冲突状态，
+                // 不收起来的话返回时 Sheet 会被重新显示并吃掉一次返回键。
+                conflictController.dismiss()
+                emitEffect(
+                    SearchEffect.OpenBookInfo(
+                        name = intent.summary.name,
+                        author = intent.summary.author,
+                        bookUrl = intent.summary.bookUrl,
+                        origin = intent.summary.origin,
+                        coverPath = intent.summary.displayCover,
+                        sharedCoverKey = null,
+                    )
+                )
             }
+
+            is SearchIntent.CoexistWithBookshelfConflict -> conflictController.coexist(
+                intent.existingBookUrl,
+                intent.options,
+            )
+
+            is SearchIntent.MigrateBookshelfConflict -> conflictController.migrate(
+                intent.existingBookUrl,
+                intent.options,
+            )
 
             is SearchIntent.OpenBookshelfBook -> {
                 emitEffect(

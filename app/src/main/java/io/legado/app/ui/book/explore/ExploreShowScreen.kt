@@ -48,8 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import io.legado.app.data.entities.SearchBook
 import io.legado.app.R
+import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
@@ -63,6 +63,7 @@ import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.conflict.BookshelfConflictSheet
 import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -70,7 +71,9 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
+import splitties.init.appCtx
 
 private enum class BookFilterState(val id: Int) {
     SHOW_ALL(0),
@@ -113,7 +116,7 @@ fun ExploreShowRouteScreen(
                     effect.sharedCoverKey,
                 )
 
-                is ExploreShowEffect.ShowMessage -> {}
+                is ExploreShowEffect.ShowMessage -> appCtx.toastOnUi(effect.message)
             }
         }
     }
@@ -264,6 +267,19 @@ fun ExploreShowScreen(
                 onIntent(ExploreShowIntent.SwitchKind(kind))
             }
         }
+    )
+
+    BookshelfConflictSheet(
+        conflict = state.bookshelfConflict,
+        isResolving = state.isResolvingBookshelfConflict,
+        onDismissRequest = { onIntent(ExploreShowIntent.DismissBookshelfConflict) },
+        onOpenExistingBook = { onIntent(ExploreShowIntent.OpenBookshelfConflictBook(it)) },
+        onCoexist = { existingBookUrl, options ->
+            onIntent(ExploreShowIntent.CoexistWithBookshelfConflict(existingBookUrl, options))
+        },
+        onMigrate = { existingBookUrl, options ->
+            onIntent(ExploreShowIntent.MigrateBookshelfConflict(existingBookUrl, options))
+        },
     )
 
     AppScaffold(

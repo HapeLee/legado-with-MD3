@@ -273,7 +273,7 @@ interface ReadRecordDao {
         DELETE FROM readRecordSession
         WHERE id NOT IN (
             SELECT MIN(id) FROM readRecordSession
-            GROUP BY bookName, bookAuthor, startTime, endTime, words
+            GROUP BY bookName, bookAuthor, bookUrl, startTime, endTime, words
         )
         """
     )
@@ -286,7 +286,7 @@ interface ReadRecordDao {
         WHERE id NOT IN (
             SELECT MIN(id) FROM readRecordSession
             WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor
-            GROUP BY bookName, bookAuthor, startTime, endTime, words
+            GROUP BY bookName, bookAuthor, bookUrl, startTime, endTime, words
         )
         AND deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor
         """
@@ -299,6 +299,7 @@ interface ReadRecordDao {
         WHERE deviceId = :deviceId
         AND bookName = :bookName
         AND bookAuthor = :bookAuthor
+        AND bookUrl = :bookUrl
         AND startTime = :startTime
         AND endTime = :endTime
         AND words = :words
@@ -309,10 +310,35 @@ interface ReadRecordDao {
         deviceId: String,
         bookName: String,
         bookAuthor: String,
+        bookUrl: String,
         startTime: Long,
         endTime: Long,
         words: Long
     ): ReadRecordSession?
+
+    /** 按书籍副本取全部阅读时段，用于副本归属迁移前的快照。 */
+    @Query("SELECT * FROM readRecordSession WHERE bookUrl = :bookUrl ORDER BY startTime ASC")
+    suspend fun getSessionsByBookUrl(bookUrl: String): List<ReadRecordSession>
+
+    /**
+     * 把某个书籍副本的阅读时段整体交给另一个副本。
+     *
+     * 迁移/换源后旧书被删除，会话必须改挂新副本，否则新副本会从零开始计时、
+     * 旧时长变成孤儿；若新书书名作者发生变化，会话的聚合键同步改写。
+     */
+    @Query(
+        """
+        UPDATE readRecordSession
+        SET bookUrl = :newBookUrl, bookName = :newBookName, bookAuthor = :newBookAuthor
+        WHERE bookUrl = :oldBookUrl
+        """
+    )
+    suspend fun reassignSessionOwnership(
+        oldBookUrl: String,
+        newBookUrl: String,
+        newBookName: String,
+        newBookAuthor: String,
+    )
 
     @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId AND bookName = :bookName AND bookAuthor = :bookAuthor ORDER BY startTime DESC")
     fun getSessionsByBookFlow(deviceId: String, bookName: String, bookAuthor: String): Flow<List<ReadRecordSession>>

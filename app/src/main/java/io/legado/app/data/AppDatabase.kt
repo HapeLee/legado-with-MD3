@@ -112,7 +112,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 105,
+    version = 106,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -192,7 +192,9 @@ val appDb by lazy {
         AutoMigration(from = 101, to = 102),
         // httpTTS 新增可空列 speed（源级语速）
         AutoMigration(from = 103, to = 104),
-        AutoMigration(from = 104, to = 105)
+        AutoMigration(from = 104, to = 105),
+        // readRecordSession 新增 bookUrl 归属列：同名作者作品共存时按书籍副本分别计时
+        AutoMigration(from = 105, to = 106)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

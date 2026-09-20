@@ -1,6 +1,11 @@
 package io.legado.app.data.entities.readRecord
 
-/** 阅读记录聚合与恢复共同使用的规范化身份工具。 */
+/**
+ * 规范化身份工具。
+ *
+ * 阅读记录的聚合与恢复、加入书架的重复检测都依赖它：同一本书在不同书源下可能带
+ * 非零宽空格、全半角或首尾空白差异，聚合/查重前必须先把键收敛到同一种写法。
+ */
 object ReadRecordIdentity {
     /** 规范化书名：折叠连续空白并去除首尾空白。 */
     fun bookName(value: String): String = normalize(value)

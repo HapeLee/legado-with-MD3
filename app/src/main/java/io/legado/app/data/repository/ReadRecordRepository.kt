@@ -3,19 +3,25 @@ package io.legado.app.data.repository
 import androidx.room.withTransaction
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.ReadRecordDao
+import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordAliasAction
 import io.legado.app.data.entities.readRecord.ReadRecordAliasDecision
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
-import io.legado.app.data.entities.readRecord.ReadRecordSession
-import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 import io.legado.app.data.entities.readRecord.ReadRecordIdentity
 import io.legado.app.data.entities.readRecord.ReadRecordRepairReport
+import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.entities.readRecord.ReadRecordTimeTotals
+import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.domain.model.BookMatchKey
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -100,9 +106,10 @@ class ReadRecordRepository(
 
     fun getAllSessions(): Flow<List<ReadRecordSession>> {
         // UI 展示的是跨设备合并后的时间线；去重键不包含自增 id，避免同步副本重复计时。
+        // 保留书籍副本维度，避免同名作品的不同副本的会话被误判为重复而丢弃。
         return dao.getAllSessions().map { sessions ->
             sessions.distinctBy {
-                listOf(it.bookName, it.bookAuthor, it.startTime, it.endTime, it.words)
+                listOf(it.bookName, it.bookAuthor, it.bookUrl, it.startTime, it.endTime, it.words)
             }
         }
     }
@@ -112,28 +119,178 @@ class ReadRecordRepository(
         return dao.getAllSessions().map { sessions ->
             sessions.asSequence()
                 .filter { it.bookName == bookName && it.bookAuthor == bookAuthor }
-                .distinctBy { listOf(it.bookName, it.bookAuthor, it.startTime, it.endTime, it.words) }
+                .distinctBy {
+                    listOf(
+                        it.bookName,
+                        it.bookAuthor,
+                        it.bookUrl,
+                        it.startTime,
+                        it.endTime,
+                        it.words
+                    )
+                }
                 .toList()
         }
     }
 
-    fun getBookTimelineDays(bookName: String, bookAuthor: String): Flow<List<ReadRecordTimelineDay>> {
-        return getBookSessions(bookName, bookAuthor).map { sessions ->
-            sessions.groupBy { it.startTime.toDateString() }
-                .toSortedMap(compareByDescending { it })
-                .map { (date, daySessions) ->
-                    ReadRecordTimelineDay(
-                        date = date,
-                        sessions = daySessions.sortedByDescending { it.startTime }
-                    )
+    /**
+     * 单个书籍副本的阅读时段。
+     *
+     * 书架允许同名作者作品共存，[getBookSessions] 返回的是作品维度（所有副本），而这里只取
+     * 挂在指定 bookUrl 下的会话。
+     *
+     * 未归属会话（`bookUrl` 为空）是升级前写入的历史，本身不携带副本信息，按下面的规则处理：
+     * - 作品在书架里只有这一个副本时，计入该副本。否则老用户升级后只要读一次，新会话就有归属，
+     *   历史会话会从详情页凭空消失；
+     * - 有多个副本时不计入任何副本，避免同一段历史在两个副本视图里各显示一次。
+     * 作品维度口径（[getBookReadTime]）始终包含未归属会话，不受这里影响。
+     */
+    fun getBookCopySessions(
+        bookUrl: String,
+        bookName: String,
+        bookAuthor: String,
+    ): Flow<List<ReadRecordSession>> {
+        if (bookUrl.isBlank()) return getBookSessions(bookName, bookAuthor)
+        // 同时监听 books 表：副本的增删或改名必须让这里的「是否还有别的副本」重新判定，
+        // 否则共存出第二个副本后，原书详情页会一直显示已不属于它的历史时长。
+        return combine(dao.getAllSessions(), database.bookDao.flowBookCount()) { sessions, _ ->
+            val scoped = sessions.filter { it.bookName == bookName && it.bookAuthor == bookAuthor }
+            val owned = scoped.filter { it.bookUrl == bookUrl }
+            val unowned = scoped.filter { it.bookUrl.isBlank() }
+            val includeUnowned = unowned.isNotEmpty() &&
+                    countShelfCopies(bookName, bookAuthor) <= 1
+            (if (includeUnowned) owned + unowned else owned)
+                .distinctBy {
+                    listOf(it.bookName, it.bookAuthor, it.startTime, it.endTime, it.words)
                 }
         }
+            .flowOn(Dispatchers.IO)
     }
 
+    /**
+     * 书架中与 (bookName, bookAuthor) 视为同一作品的作品数。
+     *
+     * 走 [BookMatchKey] 的比对口径，与加入书架查重完全一致 —— 阅读记录的副本归属判断也依赖它，
+     * 两处结论不能互相矛盾。这里连同 [getBookCopySessions] 一起构成「这部作品到底有几个副本」
+     * 的唯一实现。
+     */
+    suspend fun countShelfCopies(bookName: String, bookAuthor: String): Int =
+        withContext(Dispatchers.IO) {
+            val name = BookMatchKey.of(bookName)
+            if (name.isBlank()) return@withContext 0
+            val author = BookMatchKey.of(bookAuthor)
+            database.bookDao.getShelfBookSummaries()
+                .count { candidate ->
+                    BookMatchKey.of(candidate.name) == name &&
+                            BookMatchKey.authorCompatible(author, BookMatchKey.of(candidate.author))
+                }
+        }
+
+    /** 单个书籍副本的累计阅读时长（毫秒），口径与 [getBookCopySessions] 一致。 */
+    fun getBookCopyReadTime(
+        bookUrl: String,
+        bookName: String,
+        bookAuthor: String,
+    ): Flow<Long> = getBookCopySessions(bookUrl, bookName, bookAuthor)
+        .map { sessions -> sessions.sumOf { it.endTime - it.startTime } }
+
+    /** 单个书籍副本按天聚合的阅读时间线。 */
+    fun getBookCopyTimelineDays(
+        bookUrl: String,
+        bookName: String,
+        bookAuthor: String,
+    ): Flow<List<ReadRecordTimelineDay>> = getBookCopySessions(bookUrl, bookName, bookAuthor)
+        .map { sessions -> sessions.toTimelineDays() }
+
+    /** 作品维度的累计时长，包含同名作者共存的所有副本，用于阅读统计总览。 */
     fun getBookReadTime(bookName: String, bookAuthor: String): Flow<Long> {
         // 统计所有设备的汇总时长，与跨设备时间线保持一致。
         return dao.getReadTimeFlow(bookName, bookAuthor).map { it ?: 0L }
     }
+
+    /**
+     * 书籍副本合并/迁移后，把原副本名下的阅读时段整体改挂到目标副本。
+     *
+     * 只为「同一段历史换了一个副本」服务：会话是平移与重算，绝不做 sum 合并，
+     * 否则同一段阅读会被计入两次。汇总与每日明细均以会话为权威重算，未被会话覆盖的
+     * 历史时长按原 key 保留。
+     *
+     * 调用方必须已经处于事务中（换源会先删旧书再插新书，阅读会话必须和它同生共死）。
+     */
+    internal suspend fun reassignBookReadSessions(oldBook: Book, newBook: Book) {
+        if (oldBook.bookUrl == newBook.bookUrl) return
+        val oldName = ReadRecordIdentity.bookName(oldBook.name)
+        val oldAuthor = ReadRecordIdentity.author(oldBook.author)
+        val newName = ReadRecordIdentity.bookName(newBook.name)
+        val newAuthor = ReadRecordIdentity.author(newBook.author)
+        val deviceIds = dao.getSessionsByBookUrl(oldBook.bookUrl)
+            .mapTo(linkedSetOf()) { it.deviceId }
+        // 书名作者不变时，会话改挂只换了副本归属，作品维度的聚合完全不变，无需重算明细。
+        val sameIdentity = oldName == newName && oldAuthor == newAuthor
+        // 明细里已计入旧会话的时间只能靠改挂前的快照还原，因此必须在 UPDATE 前取数。
+        val oldKeySessions =
+            deviceIds.associateWith { dao.getSessionsByBook(it, oldName, oldAuthor) }
+        val oldKeyDetails = deviceIds.associateWith { dao.getDetailsByBook(it, oldName, oldAuthor) }
+        val newKeySessions =
+            deviceIds.associateWith { dao.getSessionsByBook(it, newName, newAuthor) }
+        val newKeyDetails = deviceIds.associateWith { dao.getDetailsByBook(it, newName, newAuthor) }
+        // 汇总里的「历史时长」（没有会话支撑的部分）也属于对应 key，改挂前先算出来，
+        // 否则旧 key 会把自己已经不属于它的会话时间当成历史时长保留下来，导致同一段时长被算两次。
+        val oldKeyRecords = deviceIds.associateWith { dao.getReadRecord(it, oldName, oldAuthor) }
+        val newKeyRecords = deviceIds.associateWith { dao.getReadRecord(it, newName, newAuthor) }
+        dao.reassignSessionOwnership(
+            oldBookUrl = oldBook.bookUrl,
+            newBookUrl = newBook.bookUrl,
+            newBookName = newName,
+            newBookAuthor = newAuthor,
+        )
+        if (deviceIds.isEmpty() || sameIdentity) return
+        deviceIds.forEach { deviceId ->
+            dao.deleteDuplicateSessionsByBook(deviceId, newName, newAuthor)
+            rebuildDetailsAfterSessionRepair(
+                deviceId,
+                oldName,
+                oldAuthor,
+                oldKeySessions.getValue(deviceId),
+                oldKeyDetails.getValue(deviceId),
+            )
+            rebuildDetailsAfterSessionRepair(
+                deviceId,
+                newName,
+                newAuthor,
+                newKeySessions.getValue(deviceId),
+                newKeyDetails.getValue(deviceId),
+            )
+            updateReadRecordTotal(
+                deviceId,
+                oldName,
+                oldAuthor,
+                ReadRecordTimeTotals.legacy(
+                    oldKeyRecords.getValue(deviceId)?.readTime ?: 0L,
+                    oldKeySessions.getValue(deviceId).sumOf { it.endTime - it.startTime },
+                ),
+            )
+            updateReadRecordTotal(
+                deviceId,
+                newName,
+                newAuthor,
+                ReadRecordTimeTotals.legacy(
+                    newKeyRecords.getValue(deviceId)?.readTime ?: 0L,
+                    newKeySessions.getValue(deviceId).sumOf { it.endTime - it.startTime },
+                ),
+            )
+        }
+    }
+
+    private fun List<ReadRecordSession>.toTimelineDays(): List<ReadRecordTimelineDay> =
+        groupBy { it.startTime.toDateString() }
+            .toSortedMap(compareByDescending { it })
+            .map { (date, daySessions) ->
+                ReadRecordTimelineDay(
+                    date = date,
+                    sessions = daySessions.sortedByDescending { it.startTime }
+                )
+            }
 
     suspend fun getMergeCandidates(targetRecord: ReadRecord): List<ReadRecord> {
         return if (targetRecord.deviceId.isBlank()) {
@@ -189,6 +346,7 @@ class ReadRecordRepository(
                 normalizedSession.deviceId,
                 normalizedSession.bookName,
                 normalizedSession.bookAuthor,
+                normalizedSession.bookUrl,
                 normalizedSession.startTime,
                 normalizedSession.endTime,
                 normalizedSession.words
@@ -669,6 +827,7 @@ class ReadRecordRepository(
                         normalized.deviceId,
                         normalized.bookName,
                         normalized.bookAuthor,
+                        normalized.bookUrl,
                         normalized.startTime,
                         normalized.endTime,
                         normalized.words,

@@ -4,6 +4,9 @@ import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.model.BookShelfState
+import io.legado.app.domain.model.BookshelfConflict
+import io.legado.app.domain.model.ConflictBookSummary
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -21,6 +24,8 @@ data class ExploreShowUiState(
     val errorMsg: String? = null,
     val sheet: ExploreShowSheet = ExploreShowSheet.None,
     val filterStateId: Int = 0,
+    val bookshelfConflict: BookshelfConflict? = null,
+    val isResolvingBookshelfConflict: Boolean = false,
 )
 
 @Stable
@@ -51,6 +56,17 @@ sealed interface ExploreShowIntent {
     data object DismissSheet : ExploreShowIntent
     data class OpenBook(val book: SearchBook, val sharedCoverKey: String?) : ExploreShowIntent
     data class AddToShelf(val book: SearchBook) : ExploreShowIntent
+    data object DismissBookshelfConflict : ExploreShowIntent
+    data class OpenBookshelfConflictBook(val summary: ConflictBookSummary) : ExploreShowIntent
+    data class CoexistWithBookshelfConflict(
+        val existingBookUrl: String,
+        val options: ChangeSourceMigrationOptions,
+    ) : ExploreShowIntent
+
+    data class MigrateBookshelfConflict(
+        val existingBookUrl: String,
+        val options: ChangeSourceMigrationOptions,
+    ) : ExploreShowIntent
 }
 
 sealed interface ExploreShowEffect {

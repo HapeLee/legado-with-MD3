@@ -11,6 +11,7 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.ShelfBookSummary
 import io.legado.app.domain.model.CacheableBook
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.ui.main.bookshelf.BookShelfItem
@@ -714,22 +715,37 @@ interface BookDao {
     )
     fun getCacheableBooks(bookUrls: Set<String>): List<CacheableBook>
 
+    /**
+     * 书架作品的轻量快照，供加入书架查重使用。
+     *
+     * 这是一次全表行扫描（未下架的作品），省掉的只是 `intro` / `variable` 等重字段，不是扫描行数。
+     * 规范化后的重名判定（全角半角、空白折叠）必须在 Kotlin 侧做，因此无法再用 `name` 等值条件
+     * 预筛；书架量级下这个代价可以接受，真要到需要预筛的规模，应先把规范化结果落成持久列。
+     */
+    @Query(
+        """
+        SELECT bookUrl, name, author, coverUrl, customCoverUrl, origin, originName,
+               totalChapterNum, latestChapterTitle, durChapterTime
+        FROM books
+        WHERE type & ${BookType.notShelf} = 0
+        """
+    )
+    fun getShelfBookSummaries(): List<ShelfBookSummary>
+
+    /**
+     * books 表的轻量失效信号（含未上架的书）。
+     *
+     * 只用于让依赖「书架里有几本同名作品」的 Flow 能在书架增删、改名时重新计算，
+     * 调用方不关心具体数值。
+     */
+    @Query("SELECT COUNT(*) FROM books")
+    fun flowBookCount(): Flow<Int>
+
     @Query("SELECT * FROM books WHERE bookUrl = :bookUrl")
     fun flowGetBook(bookUrl: String): Flow<Book?>
 
     @Query("SELECT * FROM books WHERE name = :name and author = :author")
     fun getBook(name: String, author: String): Book?
-
-    @Query(
-        """
-        SELECT * FROM books
-        WHERE name = :name AND author = :author
-            AND type & ${BookType.notShelf} = 0
-        ORDER BY durChapterTime DESC
-        LIMIT 1
-        """
-    )
-    fun getShelfBookConflict(name: String, author: String): Book?
 
     @Query("""select distinct bs.* from books, book_sources bs 
         where origin == bookSourceUrl and origin not like '${BookType.localTag}%' 
