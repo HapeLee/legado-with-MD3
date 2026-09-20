@@ -1,9 +1,17 @@
 package io.legado.app.ui.book.info
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Message
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -75,11 +83,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -87,6 +96,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import coil3.ImageLoader
@@ -147,6 +157,7 @@ import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.topbar.miuixTopBarActionsEndPadding
 import io.legado.app.ui.widget.components.topbar.miuixTopBarSlotPadding
 import io.legado.app.ui.widget.components.variable.VariableEditorSheet
+import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.openUrl
 import kotlinx.collections.immutable.ImmutableList
@@ -155,6 +166,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import kotlin.math.abs
 import io.legado.app.model.BookCover as BookCoverModel
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
@@ -1401,13 +1413,13 @@ private sealed interface BookInfoIntroContent {
 
 /**
  * 解析简介前缀，与上游 showBookIntro 一致：
- * 前缀 `<useweb>`/`<usehtml>`/`<md>` 后直到最后一个 `<` 之间的内容为待渲染文本；
+ * 前缀 `<useweb>`/`<usehtml>`/`<md>`（忽略大小写）后直到最后一个 `<` 之间的内容为待渲染文本；
  * 前缀残缺时按纯文本回退。
  */
 private fun parseBookInfoIntro(intro: String?): BookInfoIntroContent? {
     if (intro.isNullOrBlank()) return null
     return when {
-        intro.startsWith("<useweb>") -> {
+        intro.startsWith("<useweb>", ignoreCase = true) -> {
             val lastIndex = intro.lastIndexOf("<")
             if (lastIndex < 8) {
                 BookInfoIntroContent.Plain(HtmlFormatter.formatDisplayText(intro))
@@ -1416,7 +1428,7 @@ private fun parseBookInfoIntro(intro: String?): BookInfoIntroContent? {
             }
         }
 
-        intro.startsWith("<usehtml>") -> {
+        intro.startsWith("<usehtml>", ignoreCase = true) -> {
             val lastIndex = intro.lastIndexOf("<")
             if (lastIndex < 9) {
                 BookInfoIntroContent.Plain(HtmlFormatter.formatDisplayText(intro))
@@ -1425,7 +1437,7 @@ private fun parseBookInfoIntro(intro: String?): BookInfoIntroContent? {
             }
         }
 
-        intro.startsWith("<md>") -> {
+        intro.startsWith("<md>", ignoreCase = true) -> {
             val lastIndex = intro.lastIndexOf("<")
             if (lastIndex < 4) {
                 BookInfoIntroContent.Plain(HtmlFormatter.formatDisplayText(intro))
@@ -1444,6 +1456,7 @@ private fun parseBookInfoIntro(intro: String?): BookInfoIntroContent? {
  * 并处理 legado/yuedu scheme（导入）与其他 scheme（确认后跳转）。
  */
 @Composable
+@SuppressLint("SetJavaScriptEnabled")
 private fun BookInfoWebIntro(
     html: String,
     baseUrl: String?,
@@ -1451,55 +1464,45 @@ private fun BookInfoWebIntro(
     onJumpToAnotherApp: (Uri) -> Unit,
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current
-    var contentHeight by remember { mutableStateOf(0) }
+    // 初始高度先给一屏，否则 WebView 在 0 高度下不会被布局，也就无法测量内容高度
+    val pageHeight = LocalConfiguration.current.screenHeightDp.dp.coerceAtLeast(320.dp)
+    val textColor = LegadoTheme.colorScheme.onSurface
+    val textColorHex = remember(textColor) {
+        ColorUtils.intToString(textColor.toArgb())
+    }
+    val wrappedHtml = remember(html, textColorHex) {
+        buildBookInfoWebIntroHtml(html, textColorHex)
+    }
+    val loadKey = remember(baseUrl, wrappedHtml) { "${baseUrl.orEmpty()}\n$wrappedHtml" }
+    val contentHeightState = remember(loadKey) { mutableStateOf<Dp?>(null) }
+    val loadedKeyState = remember { mutableStateOf<String?>(null) }
+    val isCurrentLoad = { loadedKeyState.value == loadKey }
+    // evaluateJavascript 返回的是 CSS px，与 Compose dp 等值，不能再乘/除 density
+    val onCssHeight: (Float) -> Unit = { cssHeight ->
+        val next = cssHeight.dp
+        val current = contentHeightState.value
+        if (current == null || abs(current.value - next.value) > 8f) {
+            contentHeightState.value = next
+        }
+    }
     val webView = remember(bookSource?.bookSourceUrl) {
         WebView(context).apply {
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
-                useWideViewPort = true
-                loadWithOverviewMode = true
+                loadsImagesAutomatically = true
+                blockNetworkImage = false
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                mediaPlaybackRequiresUserGesture = false
+                builtInZoomControls = false
+                displayZoomControls = false
+                textZoom = 100
             }
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                ): Boolean {
-                    request?.url?.let { url ->
-                        return when (url.scheme) {
-                            "http", "https" -> false
-                            "legado", "yuedu" -> {
-                                context.startActivity(
-                                    Intent(context, OnLineImportActivity::class.java).apply {
-                                        data = url
-                                    }
-                                )
-                                true
-                            }
-
-                            else -> {
-                                onJumpToAnotherApp(url)
-                                true
-                            }
-                        }
-                    }
-                    return super.shouldOverrideUrlLoading(view, request)
-                }
-
-                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                    super.onPageStarted(view, url, favicon)
-                    view?.evaluateJavascript(WebJsExtensions.getInjectionString, null)
-                }
-
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    view?.post {
-                        contentHeight = view.contentHeight
-                    }
-                }
-            }
+            // useweb 简介可能是整页 HTML：禁用 overscroll 与滚动条，滚动交给外层 LazyColumn
+            overScrollMode = View.OVER_SCROLL_NEVER
+            isVerticalScrollBarEnabled = false
+            webChromeClient = buildBookInfoWebChromeClient()
             addJavascriptInterface(WebCacheManager, WebJsExtensions.nameCache)
             bookSource?.let { source ->
                 addJavascriptInterface(source as BaseSource, WebJsExtensions.nameSource)
@@ -1510,8 +1513,11 @@ private fun BookInfoWebIntro(
             }
         }
     }
-    DisposableEffect(Unit) {
+    DisposableEffect(webView) {
+        webView.onResume()
         onDispose {
+            webView.stopLoading()
+            (webView.parent as? ViewGroup)?.removeView(webView)
             webView.destroy()
         }
     }
@@ -1519,15 +1525,207 @@ private fun BookInfoWebIntro(
         factory = { webView },
         modifier = Modifier
             .fillMaxWidth()
-            .height(with(density) { contentHeight.toDp() }),
+            .height(contentHeightState.value ?: pageHeight),
         update = { view ->
-            val loadedHtml = view.tag as? String
-            if (loadedHtml != html) {
-                view.tag = html
-                view.loadDataWithBaseURL(baseUrl, html, "text/html", "utf-8", baseUrl)
+            view.webViewClient = buildBookInfoWebIntroClient(
+                context = context,
+                isCurrentLoad = isCurrentLoad,
+                onCssHeight = onCssHeight,
+                onJumpToAnotherApp = onJumpToAnotherApp,
+            )
+            view.setOnTouchListener { _, event ->
+                if (
+                    event.action == MotionEvent.ACTION_UP ||
+                    event.action == MotionEvent.ACTION_CANCEL
+                ) {
+                    scheduleBookInfoWebIntroHeightMeasure(
+                        webView = view,
+                        isCurrentLoad = isCurrentLoad,
+                        onCssHeight = onCssHeight,
+                        delays = bookInfoWebIntroTouchMeasureDelays,
+                    )
+                }
+                false
+            }
+            if (loadedKeyState.value != loadKey) {
+                loadedKeyState.value = loadKey
+                view.stopLoading()
+                view.loadDataWithBaseURL(baseUrl, wrappedHtml, "text/html", "utf-8", baseUrl)
             }
         },
     )
+}
+
+/**
+ * `<useweb>` 简介的 HTML 外壳：透明背景 + viewport + 主题文字色。
+ * 缺少 viewport 时 WebView 会按 980px 视口布局，简介排版会塌缩。
+ */
+private fun buildBookInfoWebIntroHtml(html: String, textColorHex: String): String = """
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <style>
+        html, body {
+          background: transparent !important;
+          color: $textColorHex;
+          margin: 0;
+          padding: 0;
+          font-size: 14px;
+          line-height: 1.7;
+          word-break: break-word;
+          -webkit-user-select: text !important;
+          user-select: text !important;
+        }
+        body * {
+          -webkit-user-select: text !important;
+          user-select: text !important;
+        }
+        img, video, iframe {
+          max-width: 100%;
+          height: auto;
+        }
+      </style>
+    </head>
+    <body>$html</body>
+    </html>
+""".trimIndent()
+
+private fun buildBookInfoWebIntroClient(
+    context: Context,
+    isCurrentLoad: () -> Boolean,
+    onCssHeight: (Float) -> Unit,
+    onJumpToAnotherApp: (Uri) -> Unit,
+): WebViewClient = object : WebViewClient() {
+
+    private val injectionString = WebJsExtensions.getInjectionString
+
+    override fun shouldOverrideUrlLoading(
+        view: WebView?,
+        request: WebResourceRequest?,
+    ): Boolean {
+        val url = request?.url ?: return super.shouldOverrideUrlLoading(view, request)
+        return when (url.scheme) {
+            "http", "https" -> false
+            "legado", "yuedu" -> {
+                context.startActivity(
+                    Intent(context, OnLineImportActivity::class.java).apply {
+                        data = url
+                    }
+                )
+                true
+            }
+
+            else -> {
+                onJumpToAnotherApp(url)
+                true
+            }
+        }
+    }
+
+    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+        super.onPageStarted(view, url, favicon)
+        view?.let { runCatching { it.evaluateJavascript(injectionString, null) } }
+    }
+
+    override fun onPageFinished(view: WebView?, url: String?) {
+        super.onPageFinished(view, url)
+        val webView = view ?: return
+        runCatching { webView.evaluateJavascript(injectionString, null) }
+        scheduleBookInfoWebIntroHeightMeasure(
+            webView = webView,
+            isCurrentLoad = isCurrentLoad,
+            onCssHeight = onCssHeight,
+            delays = bookInfoWebIntroPageLoadMeasureDelays,
+        )
+    }
+}
+
+@SuppressLint("SetJavaScriptEnabled")
+private fun buildBookInfoWebChromeClient(): WebChromeClient = object : WebChromeClient() {
+
+    override fun onCreateWindow(
+        view: WebView?,
+        isDialog: Boolean,
+        isUserGesture: Boolean,
+        resultMsg: Message?,
+    ): Boolean {
+        val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+        val host = view ?: return false
+        val popup = WebView(host.context).apply {
+            settings.javaScriptEnabled = true
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                    popupView: WebView?,
+                    request: WebResourceRequest?,
+                ): Boolean {
+                    request?.url?.let { host.loadUrl(it.toString()) }
+                    popupView?.post { popupView.destroy() }
+                    return true
+                }
+            }
+        }
+        transport.webView = popup
+        resultMsg.sendToTarget()
+        return true
+    }
+}
+
+private val bookInfoWebIntroPageLoadMeasureDelays = longArrayOf(0L, 120L, 360L, 720L, 1200L)
+
+private val bookInfoWebIntroTouchMeasureDelays = longArrayOf(120L, 360L, 720L)
+
+/**
+ * 读取文档真实高度（CSS px）。只统计可见子元素底部，避免 useweb 页面把 body 撑满视口
+ * 导致高度被拉到整屏。
+ */
+private val bookInfoWebIntroHeightJs = """
+    (function() {
+      var body = document.body;
+      var doc = document.documentElement;
+      var bottom = 0;
+      if (body) {
+        Array.prototype.forEach.call(body.children || [], function(el) {
+          var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+          if (style && (style.display === 'none' || style.visibility === 'hidden')) return;
+          var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+          if (!rect) return;
+          bottom = Math.max(bottom, rect.bottom + window.pageYOffset);
+        });
+      }
+      var documentHeight = Math.max(
+        body ? body.scrollHeight || 0 : 0,
+        body ? body.offsetHeight || 0 : 0,
+        doc ? doc.scrollHeight || 0 : 0,
+        doc ? doc.offsetHeight || 0 : 0
+      );
+      return bottom > 1 ? bottom : documentHeight;
+    })();
+""".trimIndent()
+
+private fun scheduleBookInfoWebIntroHeightMeasure(
+    webView: WebView,
+    isCurrentLoad: () -> Boolean,
+    onCssHeight: (Float) -> Unit,
+    delays: LongArray,
+) {
+    if (!isCurrentLoad()) return
+    delays.forEach { delayMillis ->
+        webView.postDelayed({
+            if (!isCurrentLoad() || webView.handler == null || !webView.isAttachedToWindow) {
+                return@postDelayed
+            }
+            runCatching {
+                webView.evaluateJavascript(bookInfoWebIntroHeightJs) { result ->
+                    if (!isCurrentLoad()) return@evaluateJavascript
+                    val cssHeight = result?.trim()?.trim('"')?.toFloatOrNull()
+                        ?: return@evaluateJavascript
+                    if (cssHeight > 1f) {
+                        onCssHeight(cssHeight)
+                    }
+                }
+            }
+        }, delayMillis)
+    }
 }
 @Composable
 private fun BookInfoDialogs(
