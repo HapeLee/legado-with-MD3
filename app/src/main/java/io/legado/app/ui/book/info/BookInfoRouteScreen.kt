@@ -2,7 +2,6 @@ package io.legado.app.ui.book.info
 
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -253,6 +252,7 @@ private fun runSourceCallback(
         effect.source,
         effect.book,
         null,
+        result = effect.action.resultText,
     ) {
         when (val action = effect.action) {
             is BookInfoCallbackAction.Search -> {
@@ -279,6 +279,19 @@ private fun runSourceCallback(
         }
     }
 }
+
+/**
+ * 书源 callBackJs 使用的 result 变量，取值与旧版 BookInfoActivity 各点击入口一致：
+ * 作者/书名/标签点击传关键字，分享与复制传对应文本，其余为空。
+ */
+private val BookInfoCallbackAction.resultText: String?
+    get() = when (this) {
+        is BookInfoCallbackAction.Search -> keyword
+        is BookInfoCallbackAction.ShareText -> text
+        is BookInfoCallbackAction.CopyText -> text
+        BookInfoCallbackAction.ClearCache -> null
+        BookInfoCallbackAction.None -> null
+    }
 
 private fun runIntroJs(activity: AppCompatActivity, effect: BookInfoEffect.RunIntroJs) {
     val source = effect.source ?: return
