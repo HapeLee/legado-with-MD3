@@ -94,6 +94,7 @@ import io.legado.app.ui.widget.components.heatmap.WeekdayLabelsColumn
 import io.legado.app.ui.widget.components.heatmap.heatmapCalendarTitle
 import io.legado.app.ui.widget.components.heatmap.rememberDateRange
 import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
+import io.legado.app.ui.widget.components.heatmap.rememberHeatmapScale
 import io.legado.app.ui.widget.components.heatmap.rememberWeeks
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
@@ -847,6 +848,7 @@ fun HeatmapCalendarSection(
     val (startDate, endDate) = rememberDateRange(dailyReadCounts, dailyReadTimes)
     val days = rememberDaysInRange(startDate, endDate)
     val weeks = rememberWeeks(days, startDate)
+    val scale = rememberHeatmapScale(dailyReadCounts, dailyReadTimes)
 
     val listState = rememberLazyListState()
 
@@ -893,6 +895,7 @@ fun HeatmapCalendarSection(
                     HeatmapWeekColumn(
                         week = weeks[weekIndex],
                         mode = currentMode,
+                        scale = scale,
                         dailyReadCounts = dailyReadCounts,
                         dailyReadTimes = dailyReadTimes,
                         selectedDate = selectedDate,
