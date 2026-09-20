@@ -11,8 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -86,7 +86,7 @@ fun TinySwitch(
         )
     } else {
         IconSwitch(
-            modifier = modifier.scale(0.8f),
+            modifier = modifier.scale(0.72f),
             checked = checked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,
