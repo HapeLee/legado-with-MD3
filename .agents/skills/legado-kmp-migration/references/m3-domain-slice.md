@@ -290,6 +290,7 @@ git diff --check
 | M4-5a + M4-5b | *(platform prerequisites: `Digest.md5` + `nameUuidFromBytes`)* | `a113b9130d` |
 | M4-5c | `AiProviderProfile` / `AiModelProfile` / `AiTaskPreset` | pending |
 | M4-6 | `BookMarking`（用户划线/高亮笔记，`book_marks`） | pending |
+| M4-7 | `HomepageModule` / `HomepageCustomSet`（首页模块） | pending |
 
 M4-6 is the first slice after the AI domain closed, and it is worth noting **why this entity and
 not a "bigger" one**. `Bookmark`（书签）was the obvious-looking candidate (12+ references) but it
@@ -345,6 +346,17 @@ removal**. The test decision rule:
   test dependency.
 - Pick inputs that **discriminate implementations** (blank vs non-blank conversation id;
   multiple elements to pin ordering), not merely 'returns something non-empty'.
+- **To pin an ordering that spans two DAOs, the fakes must share one call sequence (M4-7).**
+  `deleteCustomSet` must call `moduleDao.deleteByCustomSetId(id)` **before**
+  `customSetDao.delete(id)`; reversing the two leaves orphaned modules pointing at a deleted set.
+  The first version of the test asserted each fake's *own* call list
+  (`assertEquals(listOf("deleteByCustomSetId:cs_1"), modules.calls)` plus the same for the set
+  DAO) — and the mutation **survived**: swapping the two statements changes neither list, because
+  each list still holds exactly one entry. The fix is structural, not a stronger assertion: give
+  both fakes a **shared** `CallOrder` object, record `"<dao>.<method>:<arg>"` into it, and assert
+  the single interleaved sequence. Any production logic whose contract is "A happens before B"
+  across two collaborators needs this shape — per-collaborator lists can only ever prove
+  *that* each ran, never *when*.
 - **One Mapper file per entity**, even when several entities are sunk behind one port. M4-5c
   moved three entities that share a single `AiProfileGateway`, and put each in its own file:
   two `List<XEntity>.toDomainList()` extension functions in the same file erase to the same

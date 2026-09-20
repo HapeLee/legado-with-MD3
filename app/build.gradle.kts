@@ -250,6 +250,9 @@ dependencies {
     // M4-6：用户划线/高亮笔记域（book_marks）。
     implementation(project(":domain:marking"))
     implementation(project(":data:marking"))
+    // M4-7：首页模块域（homepage_modules / homepage_custom_sets）。
+    implementation(project(":domain:homepage"))
+    implementation(project(":data:homepage"))
     implementation(libs.okhttp)
     implementation(fileTree(mapOf("dir" to "cronetlib", "include" to listOf("*.jar", "*.aar"))))
     implementation(libs.protobuf.javalite)

@@ -18,6 +18,7 @@ import io.legado.app.data.ai.AiMemoryRepositoryImpl
 import io.legado.app.data.ai.AiPromptPresetRepositoryImpl
 import io.legado.app.data.ai.AiChatRepositoryImpl
 import io.legado.app.data.ai.AiProfileRepositoryImpl
+import io.legado.app.data.homepage.HomepageModulesRepositoryImpl
 import io.legado.app.data.marking.BookMarkingRepositoryImpl
 import io.legado.app.data.repository.AiTextRepositoryImpl
 import io.legado.app.data.repository.AiToolRepository
@@ -69,7 +70,6 @@ import io.legado.app.data.dao.TagGroupRuleDao
 import io.legado.app.data.dao.TxtTocRuleDao
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HomeDashboardRepository
-import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.HomepageSettingsRepository
 import io.legado.app.data.repository.HttpTtsEngineRepository
 import io.legado.app.data.repository.HttpTtsRepository
@@ -163,7 +163,7 @@ import io.legado.app.domain.gateway.DirectLinkSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.ExploreBooksGateway
 import io.legado.app.domain.gateway.HomeDashboardGateway
-import io.legado.app.domain.gateway.HomepageModulesGateway
+import io.legado.app.domain.homepage.HomepageModulesGateway
 import io.legado.app.domain.gateway.HomepageSettingsGateway
 import io.legado.app.domain.gateway.HttpTtsEngineGateway
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
@@ -570,7 +570,10 @@ val appModule = module {
     single<DatabaseMaintenanceGateway> { DatabaseMaintenanceRepository(get()) }
     single<WebDavBackupGateway> { WebDavBackupRepository() }
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
-    single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
+    // M4-7：首页模块域下沉 `:domain:homepage` + `:data:homepage`。端口沿用旧名，收发类型
+    // 本来就是领域模型（`ModuleItem` / `CustomSetItem`，住 `:core:model`），本片搬的是
+    // 端口声明 + 实体↔模型映射 + 实现；实现收两个 DAO。
+    single<HomepageModulesGateway> { HomepageModulesRepositoryImpl(get(), get()) }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
     single<BookContentProcessGateway> { BookContentProcessRepository(get()) }
     // M4-6：用户划线/高亮笔记域下沉 `:domain:marking` + `:data:marking`。端口沿用旧名

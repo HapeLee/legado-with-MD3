@@ -9,7 +9,7 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.SearchRepository
-import io.legado.app.domain.gateway.HomepageModulesGateway
+import io.legado.app.domain.homepage.HomepageModulesGateway
 import io.legado.app.domain.gateway.HomepageSettingsGateway
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.domain.model.CustomSetItem

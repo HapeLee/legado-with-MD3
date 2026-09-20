@@ -1379,6 +1379,28 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      （+15）**，0 失败；`lintAppDebug` 仍是既有的 **5 errors**（warnings 79 → 78）。
      变异 **4 轮全红后回绿**（流内 cast / 漏映射 `styleJson` / `getForChapter` 参数不透传 /
      `chapterIndex` 归一化）——第 1 轮正是上面那条「mapper 测试抓不到」的判据。
+   - **M4-7 已完成（2026-09-21）：首页模块域（`HomepageModule` / `HomepageCustomSet`）下沉
+     `domain/homepage` + `data/homepage`。** 本片的价值在于它**推翻了两个"看起来该做"的候选**：
+     ① `RssArticle` 实现 `BaseRssArticle`（`putVariable` / `putBigVariable`，**书源 JS ABI**）
+     且被 `Rss` / `RssParser*` 等 object 单例消费 ⇒ 属 AGENTS.md 划的高行为风险区，没有 corpus
+     之前不碰；② `BookContentProcess` 闭包 **22 个文件**（含 `feature:replacerules` 与
+     `:core:designsystem` 的 `ContentProcessUiState`），远超单片。**先量闭包再选片**这条又救了一次。
+     形态：`domain/homepage` 只装**端口**（`HomepageModulesGateway`，既有契约搬家、名字不改）
+     —— 本域的**领域模型** `ModuleItem` / `CustomSetItem` 早在下沉前就住 `:core:model`，
+     本片**不搬它们**（共享层是它们的正确归属，搬走只会让 2 个消费方多改 import 而无边界收益）。
+     `data/homepage` 装两个 Mapper（**一实体一文件**，避免 JVM facade 擦除冲突）+
+     `HomepageModulesRepositoryImpl`（**裸调 DAO、不包 `withContext(IO)`**——迁移前就是如此，
+     与 M4-3 同侧、与 M4-1/2/4/6 相反）；
+     `createCustomSet` 的 `System.currentTimeMillis()` → `systemTimeMillis()`（文件本身要进
+     commonMain，M4-2 的判据）。端口 **20 → 18 个方法**：`setSortOrder` /
+     `setCustomSetSortOrder` 零调用方 ⇒ 随片删除（DAO 方法保留）。
+     新增用例 **20 例**（mapper 7 + 6、impl 7）。验证：`clean` 后四门禁 + `:app` 编译/单测/
+     `assembleAppDebug` + 16 个模块测试任务全绿；计数 **主集 714 不变 / 全量 1169 → 1189
+     （+20）**，0 失败；`lintAppDebug` 仍 **5 errors / 78 warnings**（均不变）。
+     变异 **4 轮全红后回绿**，其中**第 4 轮首跑幸存**，暴露的是**测试结构**缺陷而非用例缺失：
+     `deleteCustomSet` 的「先摘模块、再删集合」是跨两个 DAO 的顺序，而断言分别检查两个 fake
+     **各自的**调用列表 ⇒ 对调两条语句后两边列表都仍只有一条，全绿。改为两个 fake 共享一个
+     `CallOrder` 序列后同一轮立刻变红（通则已写进 skill reference）。
 
 ## 6. 验证矩阵
 

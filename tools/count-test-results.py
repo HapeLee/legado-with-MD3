@@ -131,6 +131,13 @@ RESULT_DIRS = {
     # 把 `.map { it.toDomainList() }` 换成 unchecked cast 能编译、九个 mapper 用例全绿，
     # 真机每次发射才 `ClassCastException`（M4-3 立的判据）。不进主集（同 `:data:ai`）。
     "data:marking    (desktopTest)": ("data/marking/build/test-results/desktopTest", False),
+    # M4-7：首页模块域（`homepage_modules` / `homepage_custom_sets`）。
+    # 20 例 = `HomepageModuleMapperTest` 7 + `HomepageCustomSetMapperTest` 6 +
+    # `HomepageModulesRepositoryImplTest` 7。Impl 测试同样是**必须**的：本域端口有**四个**
+    # `Flow` 方法，映射在流内每次发射都跑，mapper 测试一个都碰不到；另外它还是唯一能钉住
+    # `createCustomSet` 的 id 形状（`cs_<millis>`）与 `deleteCustomSet` 顺序（先摘模块再删集合）
+    # 的地方。不进主集（同 `:data:rules` / `:data:ai` / `:data:marking`）。
+    "data:homepage   (desktopTest)": ("data/homepage/build/test-results/desktopTest", False),
     # M4-4：`:core:model` **首次纳入统计**（此前各片从未跟踪本模块，既有 59 例）。
     # 现在才加的理由：本片在这条路径上修掉了一个**静默的生产故障** —— `AiMessageParts.kt`
     # 由 `86c7428d24` 从 `:app`（该模块 apply 了 serialization 插件）移进本模块时漏了给
@@ -231,7 +238,9 @@ BASELINE_MAIN = 714
 # ——三个新用例全在计入口径内（about 进主集、host:desktop 进主集、`:app` 减 1）。
 # M4-6：1154 → **1169**（净 **+15** = `:data:marking` 的 mapper 9 + impl 6）。
 # 主验证集**不变**（714）：新模块在非主集一侧，与 `:data:rules` / `:data:ai` 同口径。
-BASELINE_ALL = 1169
+# M4-7：1169 → **1189**（净 **+20** = `:data:homepage` 的 mapper 7+6 + impl 7）。
+# 主验证集仍不变（714）。
+BASELINE_ALL = 1189
 
 
 def tally(d: pathlib.Path):

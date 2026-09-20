@@ -77,4 +77,9 @@ include ':data:ai'
 // `:core:data` 取 Room 的 DAO/实体，待 `data:database` 成为 Room 唯一 owner 后再改。
 include ':domain:marking'
 include ':data:marking'
+// M4-7：首页模块域（homepage_modules / homepage_custom_sets）。形态与 M3/M4 同构。
+// ⚠️ 本域的**领域模型**（`ModuleItem` / `CustomSetItem`）已住 `:core:model` 的
+// `io.legado.app.domain.model`（共享层），本片**不搬它们**——只搬端口与实现。
+include ':domain:homepage'
+include ':data:homepage'
 project(':baselineprofile').projectDir = file('baselineProfile')

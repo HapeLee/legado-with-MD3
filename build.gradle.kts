@@ -643,6 +643,9 @@ val checkSharedPurity = tasks.register<CheckSharedPurityTask>(
             // M4-6：用户划线/高亮笔记域（book_marks）。与上面两对同一形态。
             "domain/marking" to "pure",
             "data/marking" to "data",
+            // M4-7：首页模块域。同上。
+            "domain/homepage" to "pure",
+            "data/homepage" to "data",
             // M1-3u：`:core:viewmodel` 从 Android library 转成 KMP。它的 `commonMain` 只放
             // `io.legado.app.core.rules.*`（规则导入/导出协议），`base/`（要 `Application`/`Uri`
             // / `viewModelScope`）与 `help/coroutine/` 落到 `androidMain`。按 **pure** 登记
