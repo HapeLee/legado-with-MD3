@@ -15,6 +15,8 @@ import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiToolApprovalState
 import io.legado.app.domain.model.AiToolCall
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.domain.model.toolParts
 import io.legado.app.ui.ai.chat.AiChatBookResultUi
 import io.legado.app.ui.ai.chat.AiChatMessageUi

@@ -8,12 +8,12 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.help.JsExtensions
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.ui.association.AddToBookshelfDialog
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.MainActivity
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO

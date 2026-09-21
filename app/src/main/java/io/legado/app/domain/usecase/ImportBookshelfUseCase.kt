@@ -7,6 +7,7 @@ import io.legado.app.data.entities.getBookSource
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.model.json.isJsonArray
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
@@ -16,7 +17,6 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.readText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers

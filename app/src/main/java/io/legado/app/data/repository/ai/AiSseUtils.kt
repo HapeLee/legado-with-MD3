@@ -3,6 +3,8 @@ package io.legado.app.data.repository.ai
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import io.legado.app.domain.model.AiCapability
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.utils.GSON
 import okhttp3.Response
 

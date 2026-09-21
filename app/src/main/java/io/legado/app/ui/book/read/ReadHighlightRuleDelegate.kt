@@ -8,6 +8,8 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
@@ -22,8 +24,6 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.sendToClip
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope

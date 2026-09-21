@@ -9,6 +9,8 @@ import io.legado.app.core.rules.RuleEntitySpec
 import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.core.rules.RuleTransferUseCase
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.domain.rules.TxtTocRule
 import io.legado.app.domain.rules.TxtTocRuleRepository
 import io.legado.app.feature.txttocrules.res.Res
@@ -17,8 +19,6 @@ import io.legado.app.feature.txttocrules.res.import_built_in_rules
 import io.legado.app.feature.txttocrules.res.invalid_format
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow

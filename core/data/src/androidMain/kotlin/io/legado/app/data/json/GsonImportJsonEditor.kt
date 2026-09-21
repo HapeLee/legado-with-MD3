@@ -8,6 +8,8 @@ import com.google.gson.JsonPrimitive
 import io.legado.app.core.platform.ImportFieldValue
 import io.legado.app.core.platform.ImportJsonEditor
 import io.legado.app.core.platform.ImportJsonField
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.utils.GSON
 
 /**

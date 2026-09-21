@@ -13,6 +13,8 @@ import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.fromHttpTTSJson
 import io.legado.app.data.entities.fromHttpTTSJsonArray
 import io.legado.app.data.repository.HttpTtsRepository
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
@@ -20,8 +22,6 @@ import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isDataUrl
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isUri
 import io.legado.app.utils.readText
 import splitties.init.appCtx

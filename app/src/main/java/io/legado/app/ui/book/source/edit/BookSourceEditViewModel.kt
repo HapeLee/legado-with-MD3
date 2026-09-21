@@ -8,6 +8,8 @@ import com.google.gson.JsonParser
 import io.legado.app.R
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.data.rate.ConcurrentRateRegistry
 import io.legado.app.help.RuleComplete
@@ -24,8 +26,6 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.jsonPath
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap

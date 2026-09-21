@@ -10,12 +10,12 @@ import io.legado.app.core.platform.JsonCodec
 import io.legado.app.core.platform.Toaster
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.gateway.BookGroupMutationGateway
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.domain.rules.TagGroupRule
 import io.legado.app.domain.rules.TagGroupRuleRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers

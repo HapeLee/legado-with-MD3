@@ -11,6 +11,8 @@ import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiToolApprovalState
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.domain.model.reasoningContent
 import io.legado.app.domain.model.textContent
 import io.legado.app.domain.model.toolParts

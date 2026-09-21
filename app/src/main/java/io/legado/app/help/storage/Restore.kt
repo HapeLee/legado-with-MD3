@@ -41,6 +41,7 @@ import io.legado.app.data.entities.readRecord.ReadRecordIdentity
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
+import io.legado.app.domain.model.json.isJsonArray
 import io.legado.app.ui.book.read.ConfigUpdateAction
 import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.help.DirectLinkUpload
@@ -62,7 +63,6 @@ import io.legado.app.utils.compress.ZipUtils
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isUri
 import io.legado.app.utils.openInputStream
 import io.legado.app.utils.toastOnUi

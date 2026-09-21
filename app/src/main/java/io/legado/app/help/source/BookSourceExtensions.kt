@@ -8,12 +8,12 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.getBookSource
 import io.legado.app.data.entities.rule.ExploreKind
+import io.legado.app.domain.model.json.isJsonArray
 import io.legado.app.utils.ACache
 import io.legado.app.utils.GSON
 import io.legado.app.utils.InfoMap
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.fromJsonArray
-import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.printOnDebug
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex

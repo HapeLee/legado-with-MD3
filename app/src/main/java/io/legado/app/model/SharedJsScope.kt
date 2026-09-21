@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken
 import io.legado.app.core.platform.JsBindings
 import io.legado.app.core.platform.JsEngine
 import io.legado.app.core.platform.JsScope
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.help.http.okHttpClient
@@ -12,7 +13,6 @@ import io.legado.app.utils.ACache
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonObject
 import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 import java.io.File

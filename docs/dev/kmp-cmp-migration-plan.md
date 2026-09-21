@@ -1460,7 +1460,21 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      `:core:model` 内 `BookSearchScope.kt` 断链；Gradle 在拥有者模块就 fast-fail，下游不再编译，
      这是 M5-1c-pre 记过的现象）+ **静态检查**（`splitNotBlank` / `has` / `get` /
      `getOrPutLimit` 的旧 import 全仓计数均为 **0**）。
-     剩余最后 1 个 `JsonStringExtensions`（`isJsonObject` 21 / `isJsonArray` 20 处）留给下一片。
+   - **M2-7 已完成（2026-09-22，收官）：`core:model` 的 `io.legado.app.utils` 归零 —— M2 表
+     「`utils.*` in `core:model` → 迁到所属 model/domain 包并改职责名」这一行完成。**
+     最后一个文件 `JsonStringExtensions`（`isJsonObject` / `isJsonArray`）→
+     `domain.model.json`（新建包，比塞进 `text` 更准：这两个函数是 JSON 形状判定）。
+     消费方 **32 个文件**（含 4 个 CMP Feature 的 VM 与 `:core:data` 的 androidMain）。
+     ⚠️ **批量推断 import 会误伤**：脚本按"含 `isJsonObject`"给 `:core:platform` 的两个
+     `JsonCodec.android/desktop.kt` 也插了 import，但 `:core:platform` **不依赖 `:core:model`**
+     ⇒ 编译失败。那里只是同名方法/注释，并不需要 import。教训：全仓批量脚本必须
+     **先确认目标模块已依赖符号所在模块**，否则"看起来一致的插入"会插到够不着的地方；
+     宁可少批量、让编译器报。
+     验证：`clean` 后四门禁全绿（**无需下调基线**）+ `:app` 编译/单测/`assembleAppDebug`
+     + 18 个模块测试任务全绿；计数 **709 / 1204 零偏离**；`lintAppDebug` 仍 **5 errors /
+     78 warnings**。**归零用静态检查确证**：`core/model/src` 下 `package io.legado.app.utils`
+     的文件数 = **0**；全仓 `import io.legado.app.utils.(isJsonObject|isJsonArray)` = **0**。
+     同样无语义变更，不做常规变异。
 
 ## 6. 验证矩阵
 

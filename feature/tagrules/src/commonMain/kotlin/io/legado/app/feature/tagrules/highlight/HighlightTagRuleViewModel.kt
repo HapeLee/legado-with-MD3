@@ -7,13 +7,13 @@ import io.legado.app.core.rules.RuleTransferPlatform
 import io.legado.app.core.rules.RuleTransferUseCase
 import io.legado.app.core.platform.Clipboard
 import io.legado.app.core.platform.JsonCodec
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.domain.rules.HighlightTagRule
 import io.legado.app.domain.rules.HighlightTagRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.flow.Flow

@@ -26,6 +26,8 @@ import io.legado.app.data.entities.rule.reviewRuleJsonDeserializer
 import io.legado.app.data.entities.rule.searchRuleJsonDeserializer
 import io.legado.app.data.entities.rule.tocRuleJsonDeserializer
 import io.legado.app.data.entities.txtTocRuleJsonDeserializer
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream

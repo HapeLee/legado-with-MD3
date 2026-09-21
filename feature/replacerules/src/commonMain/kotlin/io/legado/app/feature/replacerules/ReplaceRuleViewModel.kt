@@ -14,6 +14,8 @@ import io.legado.app.domain.gateway.ReplaceRuleChangeNotifier
 import io.legado.app.domain.gateway.ReplaceRuleSettingsGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.domain.rules.ReadBookReplaceSessionGateway
 import io.legado.app.domain.rules.ReplaceRule
 import io.legado.app.domain.rules.ReplaceRuleRepository
@@ -21,8 +23,6 @@ import io.legado.app.ui.widget.components.contentProcess.ContentProcessConfigUiS
 import io.legado.app.ui.widget.components.contentProcess.ContentProcessItemUi
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.InteractionState
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList

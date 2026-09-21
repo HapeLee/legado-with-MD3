@@ -1,6 +1,7 @@
 package io.legado.app.data.entities.rule
 
 import com.google.gson.JsonDeserializer
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.utils.INITIAL_GSON
 
 /**

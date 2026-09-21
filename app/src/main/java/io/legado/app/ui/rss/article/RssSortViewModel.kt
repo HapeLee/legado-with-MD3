@@ -10,11 +10,11 @@ import io.legado.app.data.repository.RssArticleRepository
 import io.legado.app.data.repository.RssReadRecordRepository
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.help.source.removeSortCache
 import io.legado.app.help.source.sortUrls
 import io.legado.app.utils.GSONStrict
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 import androidx.lifecycle.viewModelScope

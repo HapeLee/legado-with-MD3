@@ -14,6 +14,8 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.model.collections.get
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.ConcurrentRateLimiter
@@ -42,8 +44,6 @@ import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isJson
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import org.mozilla.javascript.Scriptable
 import io.legado.app.utils.isXml
 import io.legado.app.utils.parseIpsFromString

@@ -10,6 +10,8 @@ import io.legado.app.domain.model.BookshelfAutoGroupIgnoredBook
 import io.legado.app.domain.model.BookshelfAutoGroupPlan
 import io.legado.app.domain.model.BookshelfAutoGroupPlanBook
 import io.legado.app.domain.model.BookshelfAutoGroupPlanGroup
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import kotlin.uuid.Uuid
 
 internal class BookshelfAutoGroupPlanParser {

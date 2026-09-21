@@ -9,6 +9,8 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.rules.ReplaceAnalyzer
 import io.legado.app.data.rules.toDomain
+import io.legado.app.domain.model.json.isJsonArray
+import io.legado.app.domain.model.json.isJsonObject
 import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.domain.rules.ReplaceRule
 import io.legado.app.domain.rules.ReplaceRuleRepository
@@ -18,8 +20,6 @@ import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isUri
 import io.legado.app.utils.readText
 import splitties.init.appCtx

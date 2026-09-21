@@ -1,4 +1,4 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.json
 
 /**
  * JSON 文本形状判定（P4 规则 VM 去 app 直连第 3 刀）。
