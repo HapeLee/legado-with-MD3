@@ -101,12 +101,26 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
 - **A missing Koin binding does not fail the build.** `viewModelOf(::XxxViewModel)` resolves
   constructor parameters **at runtime**, so deleting `single<SomeContract> { … }` leaves
   `:app:compileAppDebugKotlin` green — measured in M5-1c-3 by removing
-  `single<BundledTextReader>` (BUILD SUCCESSFUL). This repo has no host graph-creation test yet
-  (`grep checkModules` only hits `App.kt`'s `startKoin`), so the failure mode is a runtime
-  `NoDefinitionFoundException` on first navigation to that destination. Consequences: a `single<>`
-  wiring slice cannot be proven by compilation alone — read the wiring, and report the runtime
-  path (open the screen once) as smoke-required. Adding the graph-creation test is its own slice;
-  do not pull `koin-test` in alongside a wiring change.
+  `single<BundledTextReader>` (BUILD SUCCESSFUL). Consequence: a `single<>` wiring slice cannot be
+  proven by compilation alone — read the wiring, and report the runtime path (open the screen once)
+  as smoke-required.
+  **As of M2-8 there is a host graph-creation test** (`:app`'s `AppModuleGraphTest`), and its shape
+  is worth copying:
+  - **Do not use `checkModules()`.** `io.insert-koin:koin-test:4.2.2` does not resolve in this
+    environment. The zero-dependency替代 is to iterate the `single<Interface> { … }` bindings and
+    call `koin.get<T>()` on each (the list is derived from `appModule`; it must be extended by hand
+    when a binding is added).
+  - **Assert `NoDefinitionFoundException`, not "no exception".** Most bindings legitimately fail to
+    *instantiate* under Robolectric (missing `AppConfigStore.init(...)`, splitties `appCtx`,
+    `AppConfig.initialize`'s later steps). Treating those as failures makes the test red at a place
+    unrelated to binding correctness. Checking the cause chain for `NoDefinitionFoundException`
+    still catches both a missing binding and a missing *transitive* dependency, which is the actual
+    failure mode. Print the environment-class failures without asserting on them.
+  - **Host = `Application::class`, not the project's `App`.** Using `App` makes Robolectric run
+    `App.onCreate`, which dies at `LocalConfig`'s static init before reaching Koin. With a plain
+    `Application` you must call `AppConfigStore.init(app)` and `app.injectAsAppCtx()` yourself.
+  - `@Config(application = Application::class, sdk = [35])` — Robolectric rejects the project's
+    `targetSdk = 37` (`targetSdkVersion=37 > maxSdkVersion=36`).
 - Gradle `api` exposure is intentional; other dependencies use `implementation`.
 - No module is created only to match the target diagram.
 - Package colocation, Android Gradle module extraction, and KMP/CMP conversion are separate

@@ -1475,6 +1475,30 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      78 warnings**。**归零用静态检查确证**：`core/model/src` 下 `package io.legado.app.utils`
      的文件数 = **0**；全仓 `import io.legado.app.utils.(isJsonObject|isJsonArray)` = **0**。
      同样无语义变更，不做常规变异。
+   - **M2-8 已完成（2026-09-22）：给 `:app` 补上 Koin graph creation test，关闭 M5-1c-3 实测出的
+     缺口。** 新增 `app/src/test/java/io/legado/app/di/AppModuleGraphTest.kt`：逐条解析
+     `appModule` 的 **83 条 `single<接口>` 绑定**（清单由 `single<` 派生），断言
+     「**异常链上没有 `NoDefinitionFoundException`**」。
+     三处形态判断（都是实测逼出来的，已写进 skill reference）：
+     ① **不用 `checkModules()`** —— `io.insert-koin:koin-test:4.2.2` 在本环境解析不到
+     （Koin 4 的 KMP 模块），改用零依赖的「逐条 `koin.get<T>()`」；
+     ② **判据是「缺定义」而非「实例化成功」** —— 补完 `AppConfigStore.init` / `injectAsAppCtx`
+     后仍有 1 条红（`ReadStyleGateway` 炸在 `ReadBookConfig` 的 `lateinit`，那个字段由
+     `AppConfig.initialize` 在生产启动链的**更后面**赋值）。把环境性失败当失败，测试就会长期
+     红在一处与绑定正确性无关的地方；而真正要防的漏绑（含**传递依赖**缺失）恰好都以
+     `NoDefinitionFoundException` 出现，判据依然精准。环境性失败**打印但不断言**；
+     ③ **宿主用 `Application::class` 而非项目的 `App`** —— 用 `App` 时 Robolectric 会跑
+     `App.onCreate`，它死在 `LocalConfig` 的静态初始化（`App.kt:121`），根本到不了 Koin；
+     改用干净宿主后需自己补 `AppConfigStore.init(app)` + `app.injectAsAppCtx()`（缺前者
+     61/83 条红、缺后者同样，两条根因）。另需 `@Config(application = …, sdk = [35])`
+     （Robolectric 不吃项目的 `targetSdk = 37`）。
+     **对照变异**：把 M5-1c-3 删过的同一条 `single<BundledTextReader>` 再删一次 ⇒ 本测试
+     **变红**并报 `NoDefinitionFoundException: No definition found for type
+     'io.legado.app.feature.about.BundledTextReader'`，而当时 `:app:compileAppDebugKotlin`
+     保持绿 —— 缺口闭环。已还原回绿。
+     验证：`clean` 后四门禁 + `:app` 编译/单测/`assembleAppDebug` + 18 个模块测试任务全绿；
+     计数 **主集 709 → 710 / 全量 1204 → 1205**（各 +1，即本测试）；`lintAppDebug` 仍
+     **5 errors / 78 warnings**。
 
 ## 6. 验证矩阵
 

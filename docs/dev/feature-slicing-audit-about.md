@@ -319,8 +319,13 @@ M5-1c-1/1c-2 只建了共享层、`:app` 一个原文件没动。本片把它接
 而 `grep checkModules` 在 `:app` 只命中 `App.kt` 的 `startKoin` ⇒ 本仓**尚无宿主 graph creation
 test**（AGENTS.md 目标态里有，当前未建立）。
 
-已还原并复跑 `:app:assembleAppDebug` 回绿。**后续项**：给 `:app` 补一个启动期 Koin graph
-creation test（属独立切片，本片不引入 Koin test 依赖——一次只改一个风险维度）。
+已还原并复跑 `:app:assembleAppDebug` 回绿。
+
+**该后续项已由 M2-8 关闭**：`:app/src/test/.../di/AppModuleGraphTest.kt` 逐条解析
+`appModule` 的 83 条 `single<接口>` 绑定，判据是「异常链上出现 `NoDefinitionFoundException`」。
+对照实验：同一条 `single<BundledTextReader>` 再删一次，本测试**变红**并报
+`No definition found for type 'io.legado.app.feature.about.BundledTextReader'` ——
+而当时 `:app:compileAppDebugKotlin` 是**绿**的，缺口由此闭环。
 
 ### 8.6 死资源清理，以及 `verify-compose-resources.py` 的判据演进
 

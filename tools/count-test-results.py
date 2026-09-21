@@ -182,7 +182,9 @@ RESULT_DIRS = {
 # 对象 `BookContentProcessEngine` 一起下沉到 `:domain:contentprocess` 的 commonTest，
 # 并在那里扩到 6 例。`:app` 在主集内 ⇒ 主集基线同步下调。这是**有意减少**（被测对象搬走），
 # 不是用例丢失；先例：M4-5b、M5-1c 各下调 1。
-BASELINE_MAIN = 709
+# M2-8：709 → **710**（**+1**）。`:app` 新增 `AppModuleGraphTest`（Koin graph creation test），
+# 补上 M5-1c-3 变异实测出的缺口「删掉一条 `single<>` 绑定后编译仍然绿」。
+BASELINE_MAIN = 710
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -257,7 +259,8 @@ BASELINE_MAIN = 709
 # M4-8：1189 → **1204**（净 **+15** = 1189 − 5（`:app` 的引擎测试搬走）
 # + 6（`:domain:contentprocess`）+ 14（`:data:contentprocess`））。
 # 主验证集同步下调到 709。
-BASELINE_ALL = 1204
+# M2-8：1204 → **1205**（**+1** = `:app` 的 `AppModuleGraphTest`）。主集同步 +1 到 710。
+BASELINE_ALL = 1205
 
 
 def tally(d: pathlib.Path):
