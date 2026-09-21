@@ -318,6 +318,14 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   copies** and quote that result (about: 140/140 before; 64/64 + 19 retired × 4 languages after).
   A batch rewrite script must delete old import lines *before* inserting the new ones, or import
   order breaks the diff.
+  ⚠️ **The symptom of a *stale* old import is misleading (M2-5).** When a batch script inserts the
+  new import but leaves the old `import io.legado.app.utils.X` line, the compiler reports
+  `Unresolved reference 'X'` — **not** "unresolved reference 'utils'". That reads exactly like "the
+  new package did not take effect", and the natural (wrong) next move is to re-check the new
+  package or the Gradle dependency. Always grep the file for the old import line first. Note that
+  a caller in a **same-named package in another module** (`:app` has its own
+  `io.legado.app.utils`) never had an import at all — it resolved the symbol by package — so for
+  those callers the migration is *insert an import that did not exist before*.
   ⚠️ **Line endings are a non-issue here — do not spend time on them** (measured 2026-09-11).
   `core.autocrlf=true` means the repo **stores LF blobs**; CRLF in the working tree is produced by
   the smudge filter on checkout. Converting a file to LF / CRLF / MIXED all hash to the *same*

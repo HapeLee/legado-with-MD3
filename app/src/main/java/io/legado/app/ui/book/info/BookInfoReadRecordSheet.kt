@@ -26,13 +26,13 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
+import io.legado.app.domain.model.readrecord.formatReadDuration
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.formatReadDuration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

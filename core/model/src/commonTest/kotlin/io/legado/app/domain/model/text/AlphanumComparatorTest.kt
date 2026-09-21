@@ -1,4 +1,4 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.text
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -1,7 +1,13 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.text
 
-/** UTF-8 byte-order-mark handling shared by local-book and HTTP decoding paths. */
-object Utf8BomUtils {
+/**
+ * UTF-8 byte-order-mark handling shared by the local-book and HTTP decoding paths.
+ *
+ * M2-5：从 `io.legado.app.utils.Utf8BomUtils` 迁来并**去掉 `Utils` 后缀**
+ * （AGENTS.md 目标态：`help` / `utils` 这类以形态命名的包与 `XxxUtils` 类型都要退场）。
+ * 行为一字未改，只是换了个能说明"它是什么"的名字与包。
+ */
+object Utf8Bom {
     private val utf8BomBytes = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
 
     fun removeUTF8BOM(xmlText: String): String {

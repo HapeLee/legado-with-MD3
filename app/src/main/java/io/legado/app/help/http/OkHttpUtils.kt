@@ -1,8 +1,8 @@
 package io.legado.app.help.http
 
+import io.legado.app.domain.model.text.Utf8Bom
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.GSON
-import io.legado.app.utils.Utf8BomUtils
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
@@ -77,7 +77,7 @@ suspend fun Call.await(): Response = suspendCancellableCoroutine { block ->
 }
 
 fun ResponseBody.text(encode: String? = null): String {
-    val responseBytes = Utf8BomUtils.removeUTF8BOM(bytes())
+    val responseBytes = Utf8Bom.removeUTF8BOM(bytes())
     var charsetName: String? = encode
 
     charsetName?.let {

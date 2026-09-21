@@ -6,6 +6,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.model.text.Utf8Bom
 import io.legado.app.exception.EmptyFileException
 import io.legado.app.help.DefaultData
 import io.legado.app.help.book.isLocalModified
@@ -13,7 +14,6 @@ import io.legado.app.help.book.upKind
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.StringUtils
-import io.legado.app.utils.Utf8BomUtils
 import java.io.FileNotFoundException
 import java.nio.charset.Charset
 import java.util.regex.PatternSyntaxException
@@ -175,7 +175,7 @@ class TextFile(private var book: Book) {
             val buffer = ByteArray(bufferSize)
             var bufferStart = 3
             bis.read(buffer, 0, 3)
-            if (Utf8BomUtils.hasBom(buffer)) {
+            if (Utf8Bom.hasBom(buffer)) {
                 bufferStart = 0
                 curOffset = 3
             }
@@ -379,7 +379,7 @@ class TextFile(private var book: Book) {
             var bufferStart = 3
             if (fileStart == 0L) {
                 bis.read(buffer, 0, 3)
-                if (Utf8BomUtils.hasBom(buffer)) {
+                if (Utf8Bom.hasBom(buffer)) {
                     bufferStart = 0
                     curOffset = 3
                 }

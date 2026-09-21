@@ -1,4 +1,4 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.text
 
 /**
  * 十六进制字符串判定（P4 组件下沉配套）。

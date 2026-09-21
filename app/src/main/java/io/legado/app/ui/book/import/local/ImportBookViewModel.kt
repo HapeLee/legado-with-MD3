@@ -19,10 +19,10 @@ import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.model.settings.ImportBookSettings
 import io.legado.app.domain.model.settings.OtherSettings
+import io.legado.app.domain.model.text.AlphanumComparator
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
-import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.delete

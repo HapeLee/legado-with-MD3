@@ -41,11 +41,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import io.legado.app.core.ui.R
+import io.legado.app.domain.model.readrecord.formatReadDuration
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.MediumToggleButton
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.formatReadDuration
 import java.time.LocalDate
 
 /**

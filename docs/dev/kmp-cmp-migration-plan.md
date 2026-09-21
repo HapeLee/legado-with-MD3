@@ -1423,6 +1423,27 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      计数 **主集 714 → 709 / 全量 1189 → 1204**，0 失败；`lintAppDebug` 仍 **5 errors /
      78 warnings**。变异 **5 轮全红后回绿**（`nextOrder` 漏 `+1` / `delete` 改走 `setEnabled` /
      漏映射 `kind` / 模型 `STATUS_DELETED` 改值 / 引擎去掉 `STATUS_ACTIVE` 过滤）。
+   - **M2-5 已完成（2026-09-22，首片）：`core:model` 的 `io.legado.app.utils` 收口，8 个文件中的
+     5 个已迁走。** M2 表里的「`utils.*` in `core:model` → 迁到所属 model/domain 包并改职责名」
+     分几片做，本片选**调用面最小**的 5 个：`Utf8BomUtils` →
+     `io.legado.app.domain.model.text.Utf8Bom`（**去 `Utils` 后缀**）、`StringHexExtensions`
+     （`isHex`）与 `ByteArrayExtensions`（KMP 的 `ByteArray.indexOf`）→ 同 `text` 包、
+     `AlphanumComparator` → `text` 包、`ReadRecordTimeFormatter`（`formatReadDuration`）→
+     `domain.model.readrecord` 包；4 个测试文件随之搬包。剩余 3 个
+     （`JsonStringExtensions` / `MapExtensions` / `StringSplitExtensions`，调用面 32+29+26）
+     留给后续片 —— 特意**不**混进本片，免得一次改 60+ 文件而没法逐条复核。
+     ⚠️ 本片又踩了一次「批量改 import 必须**先删旧再插新**」：`core:ui` 的两个文件插了新
+     import 却留下旧的 `import io.legado.app.utils.isHex`，编译器报的是
+     `Unresolved reference 'isHex'` 而**不是** 'utils'，极易误判成"新包没生效"。
+     另：`:app` 的 `io.legado.app.utils`（同名包、不同模块）里的 `EncodingDetect.kt` 此前靠
+     **同包**用 `ByteArray.indexOf`、根本没有 import ⇒ 这类调用方要"新增一个原本不存在的
+     import"。G4 随之下调三条 `legacyNaming`（`Utf8BomUtils` 这个标识符在三个目录各少出现
+     一次，`toc/rule/preview` 归零删除条目）。
+     验证：`clean` 后四门禁 + `:app` 编译/单测/`assembleAppDebug` + 18 个模块测试任务全绿；
+     计数 **709 / 1204 零偏离**（纯重命名，用例数不变）；`lintAppDebug` 仍 **5 errors /
+     78 warnings**。本片无语义变更，**不做常规变异**，改用**消费方解析变异**：把
+     `object Utf8Bom` 临时改名 ⇒ 3 个 `:app` 文件 7 处 `Unresolved reference 'Utf8Bom'`
+     （证明调用方真的解析到新位置、没有遗留旧副本），随后还原回绿。
 
 ## 6. 验证矩阵
 

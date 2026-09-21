@@ -1,7 +1,7 @@
 package io.legado.app.help.crypto
 
 import androidx.annotation.Keep
-import io.legado.app.utils.isHex
+import io.legado.app.domain.model.text.isHex
 import java.io.InputStream
 import java.nio.charset.Charset
 import javax.crypto.Cipher

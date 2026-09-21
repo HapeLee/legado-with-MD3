@@ -7,6 +7,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.toBookProgress
+import io.legado.app.domain.model.text.AlphanumComparator
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.help.config.LocalConfig
@@ -18,7 +19,6 @@ import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.lib.webdav.WebDavFile
 import io.legado.app.model.remote.RemoteBookWebDav
-import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.NetworkUtils

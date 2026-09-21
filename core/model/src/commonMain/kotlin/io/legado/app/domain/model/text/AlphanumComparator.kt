@@ -1,4 +1,4 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.text
 
 /** Natural sort order for filenames and remote directory entries. */
 object AlphanumComparator : Comparator<String> {

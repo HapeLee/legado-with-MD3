@@ -15,6 +15,7 @@ import io.legado.app.data.repository.BookImportRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.model.text.AlphanumComparator
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.model.localBook.LocalBook
@@ -23,7 +24,6 @@ import io.legado.app.model.remote.RemoteBookWebDav
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
-import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.ConvertUtils
 import io.legado.app.utils.FileDoc

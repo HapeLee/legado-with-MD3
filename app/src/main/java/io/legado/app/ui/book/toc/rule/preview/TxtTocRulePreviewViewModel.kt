@@ -7,11 +7,11 @@ import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.rules.toDomain
+import io.legado.app.domain.model.text.Utf8Bom
 import io.legado.app.domain.rules.TxtTocRule
 import io.legado.app.domain.rules.TxtTocRuleRepository
 import io.legado.app.help.DefaultData
 import io.legado.app.model.localBook.LocalBook
-import io.legado.app.utils.Utf8BomUtils
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -244,7 +244,7 @@ class TxtTocRulePreviewViewModel(
                 val buffer = ByteArray(bufferSize)
                 var bufferStart = 3
                 bis.read(buffer, 0, 3)
-                if (Utf8BomUtils.hasBom(buffer)) {
+                if (Utf8Bom.hasBom(buffer)) {
                     bufferStart = 0
                 }
                 var length: Int

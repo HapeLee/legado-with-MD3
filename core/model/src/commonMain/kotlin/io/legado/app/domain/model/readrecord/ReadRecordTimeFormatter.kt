@@ -1,4 +1,4 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.readrecord
 
 /** Formats accumulated reading time using the existing Chinese display convention. */
 fun formatReadDuration(millis: Long): String {

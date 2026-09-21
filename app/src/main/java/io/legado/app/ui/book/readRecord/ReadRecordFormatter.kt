@@ -1,6 +1,6 @@
 package io.legado.app.ui.book.readRecord
 
-import io.legado.app.utils.formatReadDuration
+import io.legado.app.domain.model.readrecord.formatReadDuration
 import kotlin.time.Duration.Companion.milliseconds
 
 object ReadRecordFormatter {

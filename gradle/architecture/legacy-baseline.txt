@@ -286,7 +286,8 @@ legacyNaming|app/main/io/legado/app/help|21
 legacyNaming|app/main/io/legado/app/help/book|9
 legacyNaming|app/main/io/legado/app/help/coil|2
 legacyNaming|app/main/io/legado/app/help/config|8
-legacyNaming|app/main/io/legado/app/help/http|4
+# M2-5：`Utf8BomUtils` → `Utf8Bom`（去 Utils 后缀）⇒ 该标识符在本目录少出现一次。
+legacyNaming|app/main/io/legado/app/help/http|3
 legacyNaming|app/main/io/legado/app/help/source|4
 legacyNaming|app/main/io/legado/app/help/storage|9
 legacyNaming|app/main/io/legado/app/lib/prefs|1
@@ -295,7 +296,8 @@ legacyNaming|app/main/io/legado/app/lib/webdav|1
 legacyNaming|app/main/io/legado/app/model|11
 legacyNaming|app/main/io/legado/app/model/analyzeRule|3
 legacyNaming|app/main/io/legado/app/model/cache|1
-legacyNaming|app/main/io/legado/app/model/localBook|15
+# M2-5：同上（`Utf8BomUtils` → `Utf8Bom`）。
+legacyNaming|app/main/io/legado/app/model/localBook|14
 legacyNaming|app/main/io/legado/app/model/remote|1
 legacyNaming|app/main/io/legado/app/model/rss|2
 legacyNaming|app/main/io/legado/app/model/translation|1
@@ -327,7 +329,7 @@ legacyNaming|app/main/io/legado/app/ui/book/source/debug|1
 legacyNaming|app/main/io/legado/app/ui/book/source/edit|1
 legacyNaming|app/main/io/legado/app/ui/book/source/manage|2
 legacyNaming|app/main/io/legado/app/ui/book/toc|1
-legacyNaming|app/main/io/legado/app/ui/book/toc/rule/preview|1
+# M2-5：本目录唯一的 `*Utils` 门面就是 `Utf8BomUtils` 的引用，随改名消失 ⇒ 归零，条目删除。
 legacyNaming|app/main/io/legado/app/ui/browser|4
 legacyNaming|app/main/io/legado/app/ui/config/downloadCacheConfig|1
 legacyNaming|app/main/io/legado/app/ui/config/otherConfig|1

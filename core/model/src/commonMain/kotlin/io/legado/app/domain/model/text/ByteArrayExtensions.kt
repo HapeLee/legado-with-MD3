@@ -1,4 +1,4 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.text
 
 /** Finds the first occurrence of [pattern] with a Knuth-Morris-Pratt scan. */
 fun ByteArray.indexOf(pattern: ByteArray, start: Int = 0, stop: Int = size): Int {

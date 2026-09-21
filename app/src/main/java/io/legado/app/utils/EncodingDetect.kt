@@ -1,6 +1,7 @@
 package io.legado.app.utils
 
 import android.text.TextUtils
+import io.legado.app.domain.model.text.indexOf
 import io.legado.app.lib.icu4j.CharsetDetector
 import org.jsoup.Jsoup
 import java.io.File

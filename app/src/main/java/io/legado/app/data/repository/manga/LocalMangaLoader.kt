@@ -6,8 +6,8 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.model.manga.MangaChapterContent
 import io.legado.app.domain.model.manga.MangaPageContent
+import io.legado.app.domain.model.text.AlphanumComparator
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.MD5Utils
 import splitties.init.appCtx
