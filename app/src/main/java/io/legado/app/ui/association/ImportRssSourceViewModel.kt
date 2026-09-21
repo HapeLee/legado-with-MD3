@@ -12,6 +12,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.repository.RssRepository
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
@@ -26,7 +27,6 @@ import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isUri
 import io.legado.app.utils.jsonPath
 import io.legado.app.utils.readText
-import io.legado.app.utils.splitNotBlank
 import splitties.init.appCtx
 
 class ImportRssSourceViewModel(

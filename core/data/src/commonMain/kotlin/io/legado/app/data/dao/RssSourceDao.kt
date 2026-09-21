@@ -9,7 +9,7 @@ import androidx.room.Update
 import io.legado.app.constant.AppPattern
 import io.legado.app.core.platform.cnCompare
 import io.legado.app.data.entities.RssSource
-import io.legado.app.utils.splitNotBlank
+import io.legado.app.domain.model.text.splitNotBlank
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn

@@ -13,7 +13,7 @@ import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.ReviewRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.data.entities.rule.TocRule
-import io.legado.app.utils.splitNotBlank
+import io.legado.app.domain.model.text.splitNotBlank
 
 @Suppress("unused")
 @Entity(

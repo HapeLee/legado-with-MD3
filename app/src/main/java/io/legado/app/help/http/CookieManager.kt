@@ -3,9 +3,9 @@ package io.legado.app.help.http
 import android.webkit.CookieManager
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.help.CacheManager
 import io.legado.app.utils.NetworkUtils
-import io.legado.app.utils.splitNotBlank
 import okhttp3.Cookie
 import okhttp3.Headers
 import okhttp3.HttpUrl

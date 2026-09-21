@@ -1,4 +1,4 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.collections
 
 fun HashMap<String, *>.has(key: String, ignoreCase: Boolean = false): Boolean {
     for (item in this) {

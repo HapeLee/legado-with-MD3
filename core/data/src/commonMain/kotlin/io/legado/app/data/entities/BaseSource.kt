@@ -12,7 +12,7 @@ import io.legado.app.core.platform.SymmetricCrypto
 import io.legado.app.core.platform.isOnMainThread
 import io.legado.app.data.entities.rule.RowUi
 import io.legado.app.data.rate.ConcurrentRateRegistry
-import io.legado.app.utils.has
+import io.legado.app.domain.model.collections.has
 import kotlinx.coroutines.runBlocking
 
 /**

@@ -3,7 +3,7 @@ package io.legado.app.ui.main.bookshelf
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookShelfItem
-import io.legado.app.utils.splitNotBlank
+import io.legado.app.domain.model.text.splitNotBlank
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 

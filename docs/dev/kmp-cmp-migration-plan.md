@@ -1444,6 +1444,23 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      78 warnings**。本片无语义变更，**不做常规变异**，改用**消费方解析变异**：把
      `object Utf8Bom` 临时改名 ⇒ 3 个 `:app` 文件 7 处 `Unresolved reference 'Utf8Bom'`
      （证明调用方真的解析到新位置、没有遗留旧副本），随后还原回绿。
+   - **M2-6 已完成（2026-09-22，第二片）：再迁 2 个，`core:model` 的 `io.legado.app.utils`
+     只剩 1 个文件。** `StringSplitExtensions`（`splitNotBlank`，26 处引用）→
+     `domain.model.text`；`MapExtensions`（`HashMap<String,*>.has` / `.get(key, ignoreCase)` /
+     `MutableMap.getOrPutLimit`）→ 新建 `domain.model.collections.MapLookup.kt`
+     （文件名从"形态命名"改成"职责命名"，扩展函数名不动 —— 它们就是 API）。
+     消费方 **24 个文件**（9 个在 `:core:data`、1 个 `:data:rules`、14 个 `:app`）。
+     ⚠️ 两个新情况：① `BaseSource.kt` 的 `has("User-Agent", true)` 是**隐式 receiver**调用
+     （前面没有点），`\.has\(` 这类正则抓不到 ⇒ 靠编译器逐个报出来再补；② 反过来
+     `has` / `get` 这种**通用名**不适合批量推断 import（会与 `Map.get`、任意 `.has(` 混），
+     本片只对 `splitNotBlank` / `getOrPutLimit` 做批量，其余交给编译器。
+     验证：`clean` 后四门禁 + `:app` 编译/单测/`assembleAppDebug` + 18 个模块测试任务全绿；
+     计数 **709 / 1204 零偏离**；`lintAppDebug` 仍 **5 errors / 78 warnings**。
+     同样无语义变更，**不做常规变异**：改用消费方解析变异（改名 `splitNotBlank` ⇒
+     `:core:model` 内 `BookSearchScope.kt` 断链；Gradle 在拥有者模块就 fast-fail，下游不再编译，
+     这是 M5-1c-pre 记过的现象）+ **静态检查**（`splitNotBlank` / `has` / `get` /
+     `getOrPutLimit` 的旧 import 全仓计数均为 **0**）。
+     剩余最后 1 个 `JsonStringExtensions`（`isJsonObject` 21 / `isJsonArray` 20 处）留给下一片。
 
 ## 6. 验证矩阵
 

@@ -2,8 +2,8 @@ package io.legado.app.data.entities
 
 import io.legado.app.core.platform.JsonCodec
 import io.legado.app.data.bigdata.RuleDataFileStore
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.model.analyzeRule.RuleDataInterface
-import io.legado.app.utils.splitNotBlank
 
 interface BaseBook : RuleDataInterface {
     var name: String

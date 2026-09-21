@@ -2,7 +2,7 @@ package io.legado.app.data.entities
 
 import androidx.room.DatabaseView
 import io.legado.app.constant.AppPattern
-import io.legado.app.utils.splitNotBlank
+import io.legado.app.domain.model.text.splitNotBlank
 
 
 @DatabaseView(

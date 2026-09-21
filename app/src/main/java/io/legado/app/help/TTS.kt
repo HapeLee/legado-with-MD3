@@ -4,8 +4,8 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import io.legado.app.R
 import io.legado.app.constant.AppLog
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.utils.buildMainHandler
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 

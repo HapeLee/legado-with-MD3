@@ -15,6 +15,7 @@ import io.legado.app.data.repository.TagGroupRuleApplier
 import io.legado.app.data.entities.BaseBook
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.domain.rules.HighlightTagRule
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.data.bigdata.RuleDataFileStore
@@ -32,7 +33,6 @@ import io.legado.app.utils.find
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.isUri
 import io.legado.app.utils.normalizeFileName
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 import java.io.File

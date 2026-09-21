@@ -6,6 +6,7 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.RssSource
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.help.AppCacheManager
 import io.legado.app.help.config.SourceConfig
 import io.legado.app.help.coroutine.Coroutine
@@ -13,7 +14,6 @@ import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadBook
 import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.NetworkUtils
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 import kotlinx.coroutines.runBlocking

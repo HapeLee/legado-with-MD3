@@ -1,5 +1,6 @@
 package io.legado.app.utils
 
+import io.legado.app.domain.model.text.splitNotBlank
 import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.CDataNode
 import org.jsoup.nodes.Element

@@ -1,5 +1,6 @@
 package io.legado.app.domain.model
 
+import io.legado.app.domain.model.text.splitNotBlank
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive

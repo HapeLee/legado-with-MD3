@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import io.legado.app.constant.AppPattern
-import io.legado.app.utils.splitNotBlank
+import io.legado.app.domain.model.text.splitNotBlank
 
 @Entity(tableName = "rssSources", indices = [(Index(value = ["sourceUrl"], unique = false))])
 data class RssSource(

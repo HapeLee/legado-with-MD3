@@ -6,7 +6,7 @@ import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.TagGroupRule
-import io.legado.app.utils.splitNotBlank
+import io.legado.app.domain.model.text.splitNotBlank
 
 /**
  * Applies tag-group rules to shelf books, resolving rule patterns into group masks.

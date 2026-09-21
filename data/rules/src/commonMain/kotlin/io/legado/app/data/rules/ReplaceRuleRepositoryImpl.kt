@@ -2,9 +2,9 @@ package io.legado.app.data.rules
 
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.entities.ReplaceRule as ReplaceRuleEntity
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.domain.rules.ReplaceRule
 import io.legado.app.domain.rules.ReplaceRuleRepository
-import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn

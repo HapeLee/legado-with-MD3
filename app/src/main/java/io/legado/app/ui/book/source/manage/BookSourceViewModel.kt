@@ -20,6 +20,7 @@ import io.legado.app.domain.gateway.BookSourceCheckStatus
 import io.legado.app.domain.gateway.CheckSourceSettings
 import io.legado.app.domain.gateway.CheckSourceSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
@@ -38,7 +39,6 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isUri
-import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers

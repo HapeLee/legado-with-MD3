@@ -17,6 +17,8 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.model.collections.getOrPutLimit
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.JsExtensions
@@ -30,12 +32,10 @@ import io.legado.app.utils.GSONStrict
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getOrPutLimit
 import io.legado.app.utils.isDataUrl
 import io.legado.app.utils.isJson
 import io.legado.app.utils.isMainThread
 import io.legado.app.utils.printOnDebug
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking

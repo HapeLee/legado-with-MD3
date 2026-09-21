@@ -9,6 +9,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.rules.ReplaceAnalyzer
 import io.legado.app.data.rules.toDomain
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.domain.rules.ReplaceRule
 import io.legado.app.domain.rules.ReplaceRuleRepository
 import io.legado.app.exception.NoStackTraceException
@@ -21,7 +22,6 @@ import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isUri
 import io.legado.app.utils.readText
-import io.legado.app.utils.splitNotBlank
 import splitties.init.appCtx
 
 class ImportReplaceRuleViewModel(

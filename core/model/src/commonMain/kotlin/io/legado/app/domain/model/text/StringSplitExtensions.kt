@@ -1,4 +1,4 @@
-package io.legado.app.utils
+package io.legado.app.domain.model.text
 
 /** Splits, trims, and drops blank fields from persisted rule and grouping strings. */
 fun String.splitNotBlank(vararg delimiter: String, limit: Int = 0): Array<String> =

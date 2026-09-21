@@ -30,6 +30,7 @@ import com.script.rhino.runScriptWithContext
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
+import io.legado.app.domain.model.text.splitNotBlank
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.JsExtProvider
 import io.legado.app.help.WebCacheManager
@@ -48,7 +49,6 @@ import io.legado.app.utils.isTrue
 import io.legado.app.utils.longSnackbar
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.setDarkeningAllowed
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO
