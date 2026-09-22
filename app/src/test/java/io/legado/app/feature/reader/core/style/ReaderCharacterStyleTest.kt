@@ -3,8 +3,34 @@ package io.legado.app.feature.reader.core.style
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import kotlin.random.Random
 
 class ReaderCharacterStyleTest {
+    @Test
+    fun compiledRangesMatchDirectResolutionAtEveryBoundaryAndOverlap() {
+        val random = Random(21)
+        repeat(100) {
+            val ranges = List(random.nextInt(0, 20)) { index ->
+                ReaderStyleRange(
+                    start = random.nextInt(-5, 25),
+                    endExclusive = random.nextInt(-5, 25),
+                    target = ReaderStyleTarget.entries[random.nextInt(3)],
+                    style = ReaderCharacterStyle(colorArgb = index),
+                    priority = random.nextInt(-2, 3),
+                )
+            }
+            val compiled = ReaderCharacterStyleResolver.compile(ranges)
+            for (position in -6..25) {
+                for (isTitle in listOf(false, true)) {
+                    assertEquals(
+                        ReaderCharacterStyleResolver.resolve(ranges, position, isTitle),
+                        compiled.resolve(position, isTitle),
+                    )
+                }
+            }
+        }
+    }
+
     @Test
     fun higherPriorityMarkingOverridesRegexStyle() {
         val ranges = listOf(

@@ -7,6 +7,7 @@ import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyleResolver
+import io.legado.app.feature.reader.core.style.ReaderCompiledStyleRanges
 import io.legado.app.feature.reader.core.style.ReaderStyleRange
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -108,13 +109,13 @@ class ReaderChapterMeasureMetrics(private val nanoTime: () -> Long) {
     }
 
     fun resolveStyle(
-        ranges: List<ReaderStyleRange>,
+        ranges: ReaderCompiledStyleRanges,
         position: Int,
         isTitle: Boolean
     ): ReaderCharacterStyle? {
         val start = nanoTime()
         return try {
-            ReaderCharacterStyleResolver.resolve(ranges, position, isTitle)
+            ranges.resolve(position, isTitle)
         } finally {
             styleLookupNs += nanoTime() - start
             styleLookups++
@@ -141,6 +142,8 @@ class ReaderChapterBlockMeasurer(
         style: ReaderChapterMeasureStyle,
         onBlock: ((ReaderMeasuredBlock) -> Unit)? = null,
     ): ReaderChapterMeasureResult {
+        val compiledStyleRanges = style.styleRanges.takeIf { it.isNotEmpty() }
+            ?.let(ReaderCharacterStyleResolver::compile)
         // `blocks += x` 就是 `add(x)`：覆写 add 即可在每个追加点回调，无需在六处追加点重复。
         val blocks = object : ArrayList<ReaderMeasuredBlock>(source.blocks.size) {
             override fun add(element: ReaderMeasuredBlock): Boolean {
@@ -246,11 +249,10 @@ class ReaderChapterBlockMeasurer(
                         var offset = 0
                         initiallyShaped.text.forEachIndexed { clusterIndex, cluster ->
                             val position = item.chapterPosition + offset
-                            val rangeStyle = style.styleRanges
-                                .takeIf(List<ReaderStyleRange>::isNotEmpty)
+                            val rangeStyle = compiledStyleRanges
                                 ?.let {
                                     if (metrics != null) metrics.resolveStyle(it, position, isTitle)
-                                    else ReaderCharacterStyleResolver.resolve(it, position, isTitle)
+                                    else it.resolve(position, isTitle)
                                 }
                             val textStyle = htmlStyle.merge(rangeStyle)
                             val textShaper = shaper(textStyle)

@@ -33,6 +33,24 @@ data class ReaderStyleRange(
 }
 
 object ReaderCharacterStyleResolver {
+    /** Build the winning style once per interval instead of scanning every range for each glyph. */
+    fun compile(ranges: List<ReaderStyleRange>): ReaderCompiledStyleRanges {
+        val boundaries = ranges.asSequence()
+            .filter { it.start < it.endExclusive }
+            .flatMap { sequenceOf(it.start, it.endExclusive) }
+            .distinct()
+            .sorted()
+            .toList()
+            .toIntArray()
+        val bodyStyles = Array<ReaderCharacterStyle?>(boundaries.size.coerceAtLeast(1) - 1) {
+            resolve(ranges, boundaries[it], false)
+        }
+        val titleStyles = Array<ReaderCharacterStyle?>(bodyStyles.size) {
+            resolve(ranges, boundaries[it], true)
+        }
+        return ReaderCompiledStyleRanges(boundaries, bodyStyles, titleStyles)
+    }
+
     fun resolve(
         ranges: List<ReaderStyleRange>,
         position: Int,
@@ -48,5 +66,25 @@ object ReaderCharacterStyleResolver {
             }
         }
         return winner?.style
+    }
+}
+
+class ReaderCompiledStyleRanges internal constructor(
+    private val boundaries: IntArray,
+    private val bodyStyles: Array<ReaderCharacterStyle?>,
+    private val titleStyles: Array<ReaderCharacterStyle?>,
+) {
+    fun resolve(position: Int, isTitle: Boolean): ReaderCharacterStyle? {
+        var low = 0
+        var high = boundaries.size - 2
+        while (low <= high) {
+            val middle = (low + high) ushr 1
+            when {
+                position < boundaries[middle] -> high = middle - 1
+                position >= boundaries[middle + 1] -> low = middle + 1
+                else -> return if (isTitle) titleStyles[middle] else bodyStyles[middle]
+            }
+        }
+        return null
     }
 }

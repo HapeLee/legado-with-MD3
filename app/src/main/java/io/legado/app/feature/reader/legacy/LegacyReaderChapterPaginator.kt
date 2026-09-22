@@ -11,6 +11,7 @@ import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureStyle
 import io.legado.app.feature.reader.core.layout.ReaderImageDimensions
 import io.legado.app.feature.reader.core.layout.ReaderImageLayoutMode
 import io.legado.app.feature.reader.core.layout.ReaderPaginationConfig
+import io.legado.app.feature.reader.core.layout.ReaderPaginationMetrics
 import io.legado.app.feature.reader.core.layout.ReaderPaginationSession
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
 import io.legado.app.feature.reader.core.layout.ReaderTextShaperFactory
@@ -208,7 +209,8 @@ object LegacyReaderChapterPaginator {
             letterSpacingPx = bodyPaint.letterSpacing * bodyPaint.textSize,
             revision = revision,
         )
-        val paginationSession = ReaderPaginationSession(paginationConfig)
+        val paginationMetrics = if (tracing) ReaderPaginationMetrics() else null
+        val paginationSession = ReaderPaginationSession(paginationConfig, paginationMetrics)
         paginationSession.onPage = onPage
         if (tracing) {
             ReaderPerfTrace.counter(
@@ -287,6 +289,22 @@ object LegacyReaderChapterPaginator {
             )
             ReaderPerfTrace.counter("pagination.shape-calls", measureMetrics?.shapingCalls ?: 0)
             ReaderPerfTrace.counter("pagination.style-lookups", measureMetrics?.styleLookups ?: 0)
+            ReaderPerfTrace.counter(
+                "pagination.line-break.us",
+                paginationMetrics?.lineBreakNs?.div(1_000) ?: 0
+            )
+            ReaderPerfTrace.counter(
+                "pagination.line-refine.us",
+                paginationMetrics?.lineRefineNs?.div(1_000) ?: 0
+            )
+            ReaderPerfTrace.counter(
+                "pagination.line-placement.us",
+                paginationMetrics?.linePlacementNs?.div(1_000) ?: 0
+            )
+            ReaderPerfTrace.counter(
+                "pagination.inline-paragraphs",
+                paginationMetrics?.inlineParagraphs ?: 0
+            )
         }
         if (measured is ReaderChapterMeasureResult.Unsupported) {
             // 测量失败说明这一章的页不可信：已流出的部分页由调用方按 Unsupported 丢弃。
