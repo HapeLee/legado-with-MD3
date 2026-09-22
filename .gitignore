@@ -24,3 +24,8 @@ __pycache__/
 # 项目本地记忆与临时日志
 .workbuddy/
 debug.log
+
+# 迁移过程中产生的一次性脚本/构建日志/提交信息草稿。
+# 加这条是因为 `git add -A` 会连它们一起暂存 —— 已因此误带入 3 次（M5-1c-3、M5-2a、M5-2b）。
+tmp-*
+commit-msg-*.txt
