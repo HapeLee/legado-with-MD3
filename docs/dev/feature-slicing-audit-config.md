@@ -322,9 +322,29 @@ translation 3 + customTheme 3 + aiSummary 4）+ `:app` 编译/单测/打包 + �
 计数 **723 / 1218 零偏离**（本片未新增用例，见下）；资源 **226/226 逐字一致**。
 
 **未新增用例（与前面几片的差异，需记一笔）**：本页 VM 现在会调
-`getString(Res.string.*)`（默认提示词要写回 gateway），构造 VM 就会触碰 CMP 资源运行时，
-在 `androidHostTest` 下的可行性**未验证**。为不引入一个可能不稳的测试，本片先不加；
-补测需要先确认「Robolectric 里 CMP 资源可读」这件事，属独立小片。
+`getString(Res.string.*)`（默认提示词要写回 gateway），构造 VM 就会触碰 CMP 资源运行时。
+
+**⇒ M5-4d 探针已把这个前提量出来了（2026-09-23，做法同 M1-4 的桌面探针）：结论是「不可读」。**
+
+在 `androidHostTest` 里 `getString(Res.string.confirm)` 抛
+
+```
+MissingResourceException: Missing resource with path:
+  composeResources/io.legado.app.feature.settings.res/values/strings.commonMain.cvr.
+  Android context is not initialized.
+```
+
+即使 `@Config(application = Application::class)` 也一样 —— CMP 资源的 Android 实现要一个
+**已初始化**的 Context，Robolectric 宿主不满足。探针验证完即删除（不留一个必然红的测试），
+结论写进 skill。
+
+**这条的后果超出「测试写不了」，它是一条架构判据**：
+
+- **只在展示用的文案 ⇒ VM 发枚举、UI 侧查表**（`AboutMessage` / `AiSummaryMessage` 的做法）。
+  这样 VM 可构造 ⇒ **可测**。这不是风格偏好，是可测性差异。
+- **VM 真的要把字符串当数据用**（`AiPromptConfigViewModel` 把默认提示词写回 gateway）⇒
+  仍然**不要**在 VM 里调 `getString`，而是**把值注入进去**。本页目前是在 VM 里直接调，
+  **属已知待改项**：改成注入后即可补回测试（下一片处理）。
 
 **下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
 `otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。

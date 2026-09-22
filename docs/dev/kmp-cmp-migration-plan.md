@@ -1610,7 +1610,17 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      **G4 随之下调**：`appCtx|app/main/io/legado/app/ui/config/ai/prompt` **1 → 0**（条目删除）。
      死资源 33 条删除。验证：四门禁全绿 + `:app` 编译/单测/打包 + 全模块测试；
      计数 **723 / 1218 零偏离**（**本片未新增用例**——VM 会调 `getString(Res.string.*)`，
-     构造即触碰 CMP 资源运行时，其在 `androidHostTest` 下的可行性未验证；补测属独立小片）。
+     构造即触碰 CMP 资源运行时，其在 `androidHostTest` 下的可行性当时未验证）。
+   - **M5-4d 已完成（2026-09-23）：探针量出「CMP 资源在 `androidHostTest` 下不可读」。**
+     做法同 M1-4 的桌面探针：在 `:feature:settings` 的 `androidHostTest` 里直接
+     `getString(Res.string.confirm)`，抛 `MissingResourceException: ... Android context is not
+     initialized.`（即使 `@Config(application = Application::class)`）。探针验证完即删除，
+     结论写进 skill。
+     **后果是一条架构判据**：① 只用于展示的文案 ⇒ VM 发枚举、UI 侧查表（about / ai/summary
+     的做法），VM 因此**可构造、可测**；② VM 真要把字符串当数据用（ai/prompt 的默认提示词
+     写回 gateway）⇒ 也应**注入而非在 VM 里 `getString`**。ai/prompt 目前是后者，
+     **属已知待改项**，改完即可补回测试。
+     本片无代码产出（探针已删），只有 skill 与文档更新；计数不变。
      **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵

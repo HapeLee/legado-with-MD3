@@ -347,6 +347,17 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   Do not diagnose this through the script's own `repr` output — it prints the source line already
   escaped, which made a single `\"` look like `\\\"` and cost M5-4c a round. Count the actual code
   points instead.
+  ⚠️ **A VM that calls `getString(Res.string.*)` becomes UNTESTABLE in `androidHostTest`.**
+  Measured (M5-4d probe, same style as the M1-4 desktop probe): `getString` throws
+  `MissingResourceException: Missing resource with path: .../strings.commonMain.cvr. Android context
+  is not initialized.` under Robolectric, even with `@Config(application = Application::class)`.
+  ⇒ Constructing such a VM in a test fails before any assertion runs.
+  **Architectural consequence, not just a test detail:** emit an enum and localise on the UI side
+  (`AboutMessage.localizedText()`, `AiSummaryMessage.localizedText()`) whenever the string is only
+  *displayed* — that keeps the VM constructible and therefore testable. Only let a VM read `Res`
+  when it genuinely needs the string as **data** (e.g. `AiPromptConfigViewModel` writes default
+  prompts back to a gateway); in that case prefer **injecting the strings/named values** into the VM
+  over calling `getString` inside it, and say so in the slice notes.
   A batch rewrite script must delete old import lines *before* inserting the new ones, or import
   order breaks the diff.
   ⚠️ **The symptom of a *stale* old import is misleading (M2-5).** When a batch script inserts the
