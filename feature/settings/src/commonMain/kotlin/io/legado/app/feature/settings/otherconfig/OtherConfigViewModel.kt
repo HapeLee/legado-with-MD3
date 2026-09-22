@@ -1,10 +1,8 @@
-package io.legado.app.ui.config.otherConfig
+package io.legado.app.feature.settings.otherconfig
 
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
-import io.legado.app.constant.AppLog
+import io.legado.app.core.platform.AppLogStore
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.DirectLinkRule
 import io.legado.app.domain.gateway.DirectLinkSettingsGateway
@@ -24,6 +22,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// M5-8a：从 `:app` 的 `io.legado.app.ui.config.otherConfig` 迁来（本片只迁逻辑层，见 Contract 注释）。
+//
+// 这个 VM **本来就已经全走 gateway** —— 它需要的八个依赖里七个是共享契约
+// （`OtherSettingsGateway` / `ReadAloudSettingsGateway` / `AppLocaleGateway` /
+// `DownloadCacheSettingsGateway` / `DirectLinkSettingsGateway` / `LocalPasswordGateway` /
+// `OtherConfigSystemGateway`），都是先前切片的成果。所以本片只需处理两处平台耦合：
+//
+// 1. **`R.string.*` 三处 → [OtherConfigMessageRes] 枚举**（`showMessage` 的资源重载）。
+//    契约侧同步改造，见 `OtherConfigContract` 的注释。
+// 2. **`AppLog.put(...)` → `AppLogStore.put(...)`**（`:core:platform` 的内存环形缓冲 + 落盘）。
+//    ⚠️ 语义有一处**刻意的差异**：`:app` 的 `AppLog` 保留了「轻提示（`toast = true` 时
+//    `appCtx.toastOnUi`）」与「debug 构建的 Logcat 直投」，而共享的 `AppLogStore` 两者都不做
+//    —— 这也是当初把它留在 `:app` 当薄适配层的原因（见 `AppLogStore` 的 KDoc）。
+//    这里迁移前那行是 `AppLog.put(message, throwable)`（两参、**不带 toast**），所以行为等价：
+//    只记录 + 落盘，不弹提示、也没有 Logcat 差异。
 class OtherConfigViewModel(
     private val appLocaleGateway: AppLocaleGateway,
     private val readAloudSettingsGateway: ReadAloudSettingsGateway,
@@ -224,11 +237,11 @@ class OtherConfigViewModel(
             runCatching { systemGateway.clearWebViewData() }
                 .onSuccess {
                     restartRequested = true
-                    showMessage(R.string.clear_webview_data_success)
+                    showMessage(OtherConfigMessageRes.ClearWebViewDataSuccess)
                     _effects.tryEmit(OtherConfigEffect.RestartApp)
                 }.onFailure {
-                    AppLog.put("清除 WebView 数据失败", it)
-                    showMessage(R.string.clear_webview_data_failed)
+                    AppLogStore.put("清除 WebView 数据失败", it)
+                    showMessage(OtherConfigMessageRes.ClearWebViewDataFailed)
                 }
         }
     }
@@ -288,7 +301,7 @@ class OtherConfigViewModel(
             state.directDownloadUrlRule.isBlank() ||
             state.directSummary.isBlank()
         ) {
-            showMessage(R.string.complete_required_information)
+            showMessage(OtherConfigMessageRes.CompleteRequiredInformation)
             return
         }
         val rule = DirectLinkRule(
@@ -323,11 +336,11 @@ class OtherConfigViewModel(
         }
     }
 
-    private fun showMessage(@StringRes resId: Int) {
+    private fun showMessage(res: OtherConfigMessageRes) {
         _uiState.update {
             it.copy(
                 pendingMessages = (
-                    it.pendingMessages + OtherConfigMessage.resource(++nextMessageId, resId)
+                    it.pendingMessages + OtherConfigMessage.resource(++nextMessageId, res)
                 ).toImmutableList()
             )
         }

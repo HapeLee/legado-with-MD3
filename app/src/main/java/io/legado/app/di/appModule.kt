@@ -328,7 +328,7 @@ import io.legado.app.feature.settings.downloadcache.DownloadCacheConfigViewModel
 import io.legado.app.feature.settings.downloadcache.DownloadCachePlatform
 import io.legado.app.platform.AndroidDownloadCachePlatform
 import io.legado.app.feature.settings.lab.LabConfigViewModel
-import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
+import io.legado.app.feature.settings.otherconfig.OtherConfigViewModel
 import io.legado.app.ui.config.readConfig.ApplyReadSettingUseCase
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
 import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel

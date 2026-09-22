@@ -1190,7 +1190,6 @@
     <string name="regex_is_empty">Regex is empty</string>
     <string name="example_is_empty">Example is empty</string>
     <string name="invalid_regex">Invalid regex</string>
-    <string name="complete_required_information">Fill in all required information</string>
     <string name="export_success">export success</string>
     <string name="path">path</string>
     <string name="direct_link_upload_rule">Direct Link Upload Rules</string>
@@ -1519,8 +1518,6 @@
     <string name="del_h_tag">Delete h tag</string>
     <string name="adjust_chapter_page">Adjust of chapter page</string>
     <string name="adjust_chapter_index">Adjust of chapter index</string>
-    <string name="clear_webview_data_success">Cleared successfully, automatically restarts the application after 3 seconds</string>
-    <string name="clear_webview_data_failed">Failed to clear WebView data</string>
     <string name="key_page_on_long_press">Press and Hold the Key to Turn Page</string>
     <string name="save_log">Save logs</string>
     <string name="create_heap_dump">Create Heap Dump</string>

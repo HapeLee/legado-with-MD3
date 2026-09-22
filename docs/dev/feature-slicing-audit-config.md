@@ -647,5 +647,86 @@ import 保持最朴素的形式、如实计数。盲点本身已记进
 **下一步**：`backupConfig`（5 文件 / 1144 行；需抽 `Permissions` / `ImportOldData`）或
 `otherConfig`（1157 行；需抽 `WebService` 状态 / `Permissions` / 最后 1 处 `GSON`）。
 
+### M5-8a：`otherConfig` 的**逻辑层**（Contract + VM）→ `:feature:settings/otherconfig/`
+
+本片是**按层分片**，不是按页整体迁移 —— 这是一个刻意的粒度选择，理由在下面第一段。
+
+#### 为什么拆成两片
+
+先做的勘察发现：`otherConfig` 的六个文件里，**VM(374) 和 Screen(253) 只依赖 `R`**，
+而平台耦合集中在 `OtherConfigRouteScreen`(146，权限/SAF/重启/WebService) 与
+`DirectLinkUploadBottomSheet`(215，剪贴板/GSON/文件选择)。同时 Screen 需要
+**54 条文案 + 4 个 `string-array`**。
+
+而那个数组有个坑：`default_app_variant` 的 4 个条目是 **`@string/*` 间接引用**，
+而共享层的数组约定是**纯字面量**（`paletteStyle` 那批），需要先展开成各语言的实际文本。
+⇒ 把「逻辑迁移」（本片）与「页面 + 资源迁移」（下一片）分开，各是一个风险维度。
+
+#### 本片只处理两处平台耦合（其余前置工作先前已做完）
+
+`OtherConfigViewModel` 需要的八个依赖里**七个本来就是共享契约**
+（`OtherSettingsGateway` / `ReadAloudSettingsGateway` / `AppLocaleGateway` /
+`DownloadCacheSettingsGateway` / `DirectLinkSettingsGateway` / `LocalPasswordGateway` /
+`OtherConfigSystemGateway`）——都是先前切片抽出来的。所以只剩：
+
+| 迁移前 | 迁移后 | 说明 |
+|---|---|---|
+| `OtherConfigMessage.resId: Int?`（`@StringRes`） | `res: OtherConfigMessageRes?` 枚举 + 表 | 沿用 `AboutMessage.localizedText()` 的模式；表只在 `OtherConfigMessageText.kt` 里 import `Res`，公开契约零资源依赖 |
+| `AppLog.put(msg, throwable)` | `AppLogStore.put(msg, throwable)` | `:core:platform` 的共享实现。迁移前那行是**两参形式**（不带 `toast`）⇒ 不含「轻提示」与「Logcat 直投」，行为等价 |
+| `R.string.clear_webview_data_success` 等 3 处 | `OtherConfigMessageRes.*` | 三处分支各映射一个枚举值 |
+
+#### ⚠️ 门禁拦下了一个「顺手改好」的念头
+
+`OtherConfigRouteScreen` 渲染消息时原本是 `Toast.makeText(...)`。迁移顺手把它换成共享的
+`Toaster` 很自然（前面几片都这么干），但门禁直接报：
+
+```
+app/main/io/legado/app/ui/config/otherConfig：core Provider 静态委托首次出现 2 处；
+新区域必须为零，或经评审后在基线中显式登记
+```
+
+`ToasterProvider` 是 **service locator**，用它会让 `ui/config/otherConfig` 成为 `coreProvider`
+的**新区域**（import 行 + 调用点 = 2 处）。棘轮的意图正是「新代码不要引入新的静态委托」
+⇒ **改回 `Toast.makeText`**（同一文件下一段的 `permission_not_required` 提示本来就是它，
+保持一致）。这是门禁在设计上赢了直觉的一次。
+
+#### ⚠️ 一处我该先发现的重复：`:app` 里已有一份 VM 测试
+
+动 VM 之前我只查了**目标模块**的测试目录（`feature/settings`），没查源模块 ——
+而 `:app` 早已有 `app/src/test/.../ui/config/otherConfig/OtherConfigViewModelTest.kt`（**5 例**）。
+它是在完整构建那一步才暴露的（编译不过），此时我已新写了 8 例。
+
+处理方式：**合并**成一份并删掉 `:app` 那份。原用例有几条我漏掉的覆盖 ——
+语言变更**同时**刷新 `uiState`、两条失败消息**排队**且逐条确认、直接链接规则的**成功**路径
+（写 `savedRule` + 关闭弹层）。合并后 9 例。
+
+⇒ 计数因此是 **净 +4**（9 新 − 5 旧），不是 +9。教训已写进 skill checklist：
+**迁 VM 前先 `grep 类名` 找它已有的测试**。
+
+#### 另一处：我自己写错的断言（测试抓到了）
+
+「直接链接规则必填缺失」那条用例我原本断言「弹层保持打开」，但**测试里根本没先打开弹层**
+⇒ 断言在 `activeOverlay == null` 上假通过。改成先 `ShowOverlay(DirectLinkUpload)` 再确认，
+断言才有意义（钉「校验失败时弹层不能关，成功路径才 `copy(activeOverlay = null)`」）。
+这类「断言恒真」的测试比没有测试更糟 —— 它会让人以为该分支被覆盖了。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需任何基线变动** —— VM 带走的 `R.string` / `AppLog` 都不在门禁口径内）
+- `:feature:settings` 的 desktop 编译与 `testAndroidHostTest`（**46 例 0 失败**）
++ `:app` 编译/单测/打包 + 全模块测试
+- 计数 **747 → 751 / 1242 → 1246**（净 +4），零失败
+- 资源 **272/272 逐字一致**；死资源 3 条删除（`clear_webview_data_success` / `_failed` /
+  `complete_required_information`）
+- `lintAppDebug` 仍 **5 errors / 95 warnings**
+
+#### 本片后 `ui/config/otherConfig` 的剩余
+
+`OtherConfigScreen.kt`（253，54 条文案 + 4 个数组）与两个平台文件
+（`OtherConfigRouteScreen.kt` 146、`DirectLinkUploadBottomSheet.kt` 215）仍在 `:app`。
+**下一片**：迁 Screen（重点是把 `default_app_variant` 的 `@string/*` 展开成字面量）。
+`RouteScreen` 与 `DirectLinkUploadBottomSheet` 是**宿主壳**（`rememberLauncherForActivityResult`
+/ `selector` / 剪贴板），按现状留 `:app` —— 与 lab / ai 的 host 拆分同一判据。
+
 **下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
 `otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。

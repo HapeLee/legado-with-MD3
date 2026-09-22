@@ -158,4 +158,7 @@
     <string name="shrink_database_summary">减小数据库文件的大小</string>
     <string name="sure_del">是否確認刪除？</string>
     <string name="sure">確認</string>
+    <string name="clear_webview_data_success">清除成功，3秒后自动重启应用</string>
+    <string name="clear_webview_data_failed">清除 WebView 資料失敗</string>
+    <string name="complete_required_information">填寫所有必填資訊</string>
 </resources>

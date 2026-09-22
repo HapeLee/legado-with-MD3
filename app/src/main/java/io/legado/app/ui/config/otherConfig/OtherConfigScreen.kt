@@ -10,6 +10,9 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.feature.settings.otherconfig.OtherConfigIntent
+import io.legado.app.feature.settings.otherconfig.OtherConfigOverlay
+import io.legado.app.feature.settings.otherconfig.OtherConfigUiState
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup

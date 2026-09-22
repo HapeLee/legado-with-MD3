@@ -18,6 +18,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.feature.settings.otherconfig.OtherConfigEffect
+import io.legado.app.feature.settings.otherconfig.OtherConfigIntent
+import io.legado.app.feature.settings.otherconfig.OtherConfigOverlay
+import io.legado.app.feature.settings.otherconfig.OtherConfigViewModel
+import io.legado.app.feature.settings.otherconfig.localizedText
 import io.legado.app.service.WebService
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
@@ -82,11 +87,17 @@ fun OtherConfigRouteScreen(
     val pendingMessage = state.pendingMessages.firstOrNull()
     LaunchedEffect(pendingMessage?.id, context) {
         val message = pendingMessage ?: return@LaunchedEffect
-        if (message.resId != null) {
-            Toast.makeText(context, message.resId, Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(context, message.text.orEmpty(), Toast.LENGTH_SHORT).show()
-        }
+        // M5-8a：契约不再携带 `@StringRes Int`（那是 Android 概念，进不了共享层）
+        // ⇒ 改成枚举 + 查表（`localizedText()` 是 suspend，这里本来就在 LaunchedEffect 里）。
+        // `res` / `text` 必有一个非空（`OtherConfigMessage` 的 init 保证），故回落即可。
+        //
+        // ⚠️ 这里**刻意继续用 `Toast.makeText`**、没有换成共享的 `Toaster`：
+        // `ToasterProvider` 是 service locator，用它会让 `ui/config/otherConfig` 成为
+        // `checkLegacyArchitecture` 里 `coreProvider` 的**新区域**（实测门禁直接拦下
+        // 「新区域必须为零」）。新代码不该引入新的静态委托 —— 本文件下一段的
+        // `permission_not_required` 提示本来就是 `Toast.makeText`，保持一致。
+        val text = message.res?.localizedText() ?: message.text.orEmpty()
+        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
         viewModel.onIntent(OtherConfigIntent.MessageShown(message.id))
     }
 

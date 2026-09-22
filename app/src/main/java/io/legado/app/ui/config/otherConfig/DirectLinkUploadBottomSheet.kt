@@ -27,6 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.feature.settings.otherconfig.DirectLinkRuleUi
+import io.legado.app.feature.settings.otherconfig.OtherConfigIntent
+import io.legado.app.feature.settings.otherconfig.OtherConfigUiState
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField

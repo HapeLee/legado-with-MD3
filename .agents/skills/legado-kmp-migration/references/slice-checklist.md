@@ -448,6 +448,17 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   "No cached version available for offline mode"); offline works after one successful resolve.
 - Full recipe, dependency table and measurements: `docs/dev/cmp-module-convention.md`.
 
+- **Before moving a ViewModel, search for the tests it already has.** They live next to the *old*
+  location, not the new one. Measured in M5-8a: `:app` already had
+  `app/src/test/.../ui/config/otherConfig/OtherConfigViewModelTest.kt` with 5 cases; the slice only
+  checked the destination module, wrote 8 fresh cases, and discovered the collision at the full-build
+  step — by which point the old file no longer compiled. `grep -r "<ClassName>Test"` across the repo
+  (or `search_file "*.kt"` for the class name) *before* touching the VM. Then **merge** rather than
+  pick one: the old file typically has cases the new one misses (here: language change refreshing
+  `uiState` too, two messages queueing, the direct-link **success** path), and after a move it is
+  dead weight that fails to compile. Delete it once merged, and expect the count delta to be
+  `new − old`, not `new`.
+
 ## Tests
 
 - **A migrated page is not automatically a tested page.** ViewModels are where the testable logic

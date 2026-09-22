@@ -175,4 +175,7 @@
     <string name="shrink_database_summary">Reduce the size of the database file</string>
     <string name="sure_del">Are you sure to delete it?</string>
     <string name="sure">OK</string>
+    <string name="clear_webview_data_success">Cleared successfully, automatically restarts the application after 3 seconds</string>
+    <string name="clear_webview_data_failed">Failed to clear WebView data</string>
+    <string name="complete_required_information">Fill in all required information</string>
 </resources>

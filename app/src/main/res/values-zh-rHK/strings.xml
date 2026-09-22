@@ -1303,8 +1303,6 @@
     <string name="del_h_tag">删除h标签</string>
     <string name="adjust_chapter_page">调整本章页数</string>
     <string name="adjust_chapter_index">调整章节位置</string>
-    <string name="clear_webview_data_success">清除成功，3秒后自动重启应用</string>
-    <string name="clear_webview_data_failed">清除 WebView 資料失敗</string>
     <string name="key_page_on_long_press">按键长按翻页</string>
     <string name="save_log">保存日志</string>
     <string name="create_heap_dump">创建堆转储</string>
@@ -1664,7 +1662,6 @@
     <string name="compact_details">緊湊詳情</string>
     <string name="compact_grid">緊湊網格</string>
     <string name="compact_list">緊湊列表</string>
-    <string name="complete_required_information">填寫所有必填資訊</string>
     <string name="compose_engine">主題樣式</string>
     <string name="compose_related">Compose 相關</string>
     <string name="blur_effects">模糊效果</string>

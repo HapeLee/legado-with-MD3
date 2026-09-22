@@ -1727,6 +1727,34 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        图片缓存重分配 / 收缩数据库），需真机冒烟。
      **下一步**：`backupConfig`（1144 行；抽 `Permissions` / `ImportOldData`）或
      `otherConfig`（1157 行；抽 `WebService` 状态 / `Permissions` / 最后 1 处 `GSON`）。
+   - **M5-8a 已完成（2026-09-23）：`otherConfig` 的*逻辑层*（Contract + VM）→
+     `:feature:settings/otherconfig/`。** 本片是**按层分片**：勘察发现 VM(374)/Screen(253)
+     只依赖 `R`，平台耦合集中在 `RouteScreen`(146) 与 `DirectLinkUploadBottomSheet`(215)；
+     而 Screen 需要 54 条文案 + 4 个 `string-array`（其中 `default_app_variant` 的条目是
+     `@string/*` **间接引用**，要展开成字面量——共享层的数组约定是纯字面量）⇒ 拆成
+     「逻辑迁移」（本片）与「页面+资源迁移」（下一片）两个风险维度。
+     - VM 的八个依赖里**七个本来就是共享契约**（先前切片的成果）⇒ 本片只处理两处耦合：
+       ① `OtherConfigMessage.resId: Int?`（`@StringRes`）→ `OtherConfigMessageRes` 枚举 +
+       `OtherConfigMessageText.kt` 查表（`AboutMessage.localizedText()` 的模式）；
+       ② `AppLog.put(msg, throwable)` → `AppLogStore.put(...)`（迁移前是**两参**形式，
+       不含轻提示与 Logcat 直投 ⇒ 行为等价）。
+     - ⚠️ **门禁拦下一个「顺手改好」的念头**：把 RouteScreen 的 `Toast.makeText` 换成共享
+       `Toaster` 很自然，但 `ToasterProvider` 是 service locator，会让
+       `ui/config/otherConfig` 成为 `coreProvider` 的**新区域**（门禁实测报
+       「首次出现 2 处；新区域必须为零」）⇒ **改回 `Toast.makeText`**。棘轮的意图正是
+       「新代码别引入新的静态委托」——这次是门禁赢了直觉。
+     - ⚠️ **一处我该先发现的重复**：`:app` 里**早已有**一份 `OtherConfigViewModelTest`（5 例），
+       到完整构建才暴露（编译不过）。已**合并**并删除旧文件 —— 原用例有 3 条我漏掉的覆盖
+       （语言变更同时刷新 uiState、两条消息排队与逐条确认、直接链接**成功**路径）。
+       ⚠️ 计数因此是**净 +4**（9 新 − 5 旧），不是 +9。教训写进 checklist：
+       **迁 VM 前先 grep 类名找它已有的测试**。
+     - ⚠️ 还抓到一条**我自己写错的断言**：「必填缺失」用例断言「弹层保持打开」却没先打开弹层
+       ⇒ 假通过。已改成先 `ShowOverlay` 再确认。这类恒真断言比没有测试更糟。
+     - 验证：四门禁全绿（**G4 无需基线变动**）+ `:feature:settings`（**46 例**）+
+       `:app` 编译/单测/打包 + 全模块测试；计数 **747 → 751 / 1242 → 1246**；
+       资源 **272/272**；死资源 3 条；lint 仍 **5 errors / 95 warnings**。
+     **下一片**：迁 `OtherConfigScreen`（54 条文案 + 4 个数组，重点是展开 `@string/*`）；
+     `RouteScreen` 与 `DirectLinkUploadBottomSheet` 是宿主壳，按现状留 `:app`。
      **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵

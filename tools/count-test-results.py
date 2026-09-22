@@ -229,7 +229,19 @@ RESULT_DIRS = {
 # 设置流变化刷新 state。
 # ⚠️ 用例重心是**契约交互**（断言调了平台的哪个方法、按什么参数）——本片的实质改动就是
 # 把五处平台直连收进 `DownloadCachePlatform`，只断言「状态变了」抓不到接线错。
-BASELINE_MAIN = 747
+# M5-8a：747 → **751**（净 **+4** = `:feature:settings` 的 `OtherConfigViewModelTest` 9 例
+# − `:app` 被删的 5 例）。otherConfig 的**逻辑层**（Contract + VM）迁入
+# `:feature:settings/otherconfig`；VM 的测试随之搬家，并**合并**了 `:app` 原有那份
+# （原文件已删）——所以这里是「+9 新 −5 旧」而不是「+9」。
+# ⚠️ 原 `:app` 测试是**先写新测试才发现**的：本片动 VM 前只查了目标模块的测试目录，
+# 漏查源模块。教训已记进 skill checklist：**迁 VM 前先检索它已有的测试**（`grep 类名`），
+# 否则要么留下编译不过的旧测试、要么重复覆盖。
+# 合并后 9 例覆盖：init 合并三项设置且 processText 以系统侧为准 / 语言变更同时交 gateway
+# 并刷新 uiState / 设置失败消息排队与逐条确认（原用例）/ 改端口成功后要求重启 web 服务 /
+# processText 失败回滚（钉 `previous != enable`）/ 清 webview 成功发成功枚举并重启 /
+# 清 webview 失败发失败枚举并记日志 / 直接链接规则成功写 gateway 并关弹层（原用例）/
+# 必填缺失时不写 gateway 且弹层保持打开。
+BASELINE_MAIN = 751
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -314,7 +326,8 @@ BASELINE_MAIN = 747
 # M5-5b：1226 → **1230**（**+4** = `AiModelEditViewModelTest`）。主集同步到 735。
 # M5-5c：1230 → **1235**（**+5** = `AiProviderEditViewModelTest`）。主集同步到 740。
 # M5-7：1235 → **1242**（**+7** = `DownloadCacheConfigViewModelTest`）。主集同步到 747。
-BASELINE_ALL = 1242
+# M5-8a：1242 → **1246**（净 **+4** = 9 新 − 5 旧，同主集）。主集同步到 751。
+BASELINE_ALL = 1246
 
 
 def tally(d: pathlib.Path):
