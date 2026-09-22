@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.ai.summary
+package io.legado.app.feature.settings.ai.summary
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,11 +15,23 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
 import io.legado.app.domain.model.TranslationConstants
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.action_save
+import io.legado.app.feature.settings.res.ai_chapter_summary_config
+import io.legado.app.feature.settings.res.ai_current_value
+import io.legado.app.feature.settings.res.ai_custom_prompt
+import io.legado.app.feature.settings.res.ai_custom_prompt_desc
+import io.legado.app.feature.settings.res.ai_max_output_tokens
+import io.legado.app.feature.settings.res.ai_not_set
+import io.legado.app.feature.settings.res.ai_param_setting
+import io.legado.app.feature.settings.res.ai_prompt_setting
+import io.legado.app.feature.settings.res.ai_prompt_template
+import io.legado.app.feature.settings.res.ai_reset_prompt
+import io.legado.app.feature.settings.res.ai_temperature
+import io.legado.app.feature.settings.res.cancel
+import io.legado.app.feature.settings.res.confirm
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
@@ -34,20 +46,21 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
-import org.koin.androidx.compose.koinViewModel
+import org.jetbrains.compose.resources.stringResource
 
-@Composable
-fun AiSummaryConfigRouteScreen(
-    onBackClick: () -> Unit,
-    viewModel: AiSummaryConfigViewModel = koinViewModel()
-) {
-    AiSummaryConfigScreen(
-        state = viewModel.uiState.collectAsStateWithLifecycle().value,
-        effects = viewModel.effects,
-        onIntent = viewModel::onIntent,
-        onBackClick = onBackClick
-    )
-}
+// M5-4b：从 `:app` 的 `io.legado.app.ui.config.ai.summary.AiSummaryConfigScreen` 迁来。
+//
+// 三类差异：
+//   1. `R.string.*` → `Res.string.*`（17 条 ×4 语言；其中 10 条在 `:app` 的 zh-rHK/TW 里
+//      本来就没有，靠 fallback 到默认语言——与迁移前一致，不是本片漏搬）。
+//   2. `AiSummaryConfigRouteScreen` 不搬（只做 `koinViewModel()`），宿主那边与 translation
+//      同形：只剩「取 VM、收 state」。
+//   3. ⚠️ **提示文案的取法变了**：这个 Screen 自己收集 Effect 并用 **Snackbar** 显示，
+//      迁移前 VM 已经把文案取好（成品 `String`）。现在 VM 发的是枚举 ⇒ 这里要
+//      `effect.message.localizedText()`（suspend，在 `LaunchedEffect` 里调用，天然满足）。
+//      运行期文本（`ShowRawMessage`）直接显示。
+//
+// 本页用到的 `InputSettingItem` 由 M5-4a-pre 上提到 designsystem。
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +77,10 @@ fun AiSummaryConfigScreen(
         effects.collectLatest { effect ->
             when (effect) {
                 is AiSummaryConfigEffect.ShowMessage -> {
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showSnackbar(effect.message.localizedText())
+                }
+                is AiSummaryConfigEffect.ShowRawMessage -> {
+                    snackbarHostState.showSnackbar(effect.text)
                 }
                 is AiSummaryConfigEffect.NavigateBack -> {
                     onBackClick()
@@ -79,7 +95,7 @@ fun AiSummaryConfigScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.ai_chapter_summary_config),
+                title = stringResource(Res.string.ai_chapter_summary_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -90,7 +106,7 @@ fun AiSummaryConfigScreen(
             AppFloatingActionButton(
                 onClick = { onIntent(AiSummaryConfigIntent.Save) },
                 icon = Icons.Default.Save,
-                tooltipText = stringResource(R.string.action_save)
+                tooltipText = stringResource(Res.string.action_save)
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
@@ -103,17 +119,17 @@ fun AiSummaryConfigScreen(
             )
         ) {
             item {
-                SplicedColumnGroup(title = stringResource(R.string.ai_prompt_setting)) {
+                SplicedColumnGroup(title = stringResource(Res.string.ai_prompt_setting)) {
                     ClickableSettingItem(
-                        title = stringResource(R.string.ai_custom_prompt),
-                        description = stringResource(R.string.ai_custom_prompt_desc),
+                        title = stringResource(Res.string.ai_custom_prompt),
+                        description = stringResource(Res.string.ai_custom_prompt_desc),
                         onClick = {
                             onIntent(AiSummaryConfigIntent.OpenPromptDialog(state.promptTemplate))
                         }
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.ai_reset_prompt),
-                        description = stringResource(R.string.ai_prompt_template),
+                        title = stringResource(Res.string.ai_reset_prompt),
+                        description = stringResource(Res.string.ai_prompt_template),
                         onClick = {
                             onIntent(AiSummaryConfigIntent.ResetPrompt)
                         }
@@ -121,9 +137,9 @@ fun AiSummaryConfigScreen(
                 }
             }
             item {
-                SplicedColumnGroup(title = stringResource(R.string.ai_param_setting)) {
+                SplicedColumnGroup(title = stringResource(Res.string.ai_param_setting)) {
                     SliderSettingItem(
-                        title = stringResource(R.string.ai_temperature),
+                        title = stringResource(Res.string.ai_temperature),
                         value = state.temperature,
                         defaultValue = TranslationConstants.DEFAULT_TEMPERATURE,
                         valueRange = TranslationConstants.MIN_TEMPERATURE..TranslationConstants.MAX_TEMPERATURE,
@@ -133,10 +149,17 @@ fun AiSummaryConfigScreen(
                         onValueChange = { onIntent(AiSummaryConfigIntent.UpdateTemperature(it)) }
                     )
                     InputSettingItem(
-                        title = stringResource(R.string.ai_max_output_tokens),
+                        title = stringResource(Res.string.ai_max_output_tokens),
                         value = if (state.maxOutputTokens > 0) state.maxOutputTokens.toString() else "",
                         defaultValue = "0",
-                        description = if (state.maxOutputTokens > 0) stringResource(R.string.ai_current_value, formatTokenLimit(state.maxOutputTokens)) else stringResource(R.string.ai_not_set),
+                        description = if (state.maxOutputTokens > 0) {
+                            stringResource(
+                                Res.string.ai_current_value,
+                                formatTokenLimit(state.maxOutputTokens)
+                            )
+                        } else {
+                            stringResource(Res.string.ai_not_set)
+                        },
                         onConfirm = { input ->
                             val tokens = input.trim().toIntOrNull() ?: 0
                             onIntent(AiSummaryConfigIntent.UpdateMaxOutputTokens(tokens))
@@ -152,14 +175,14 @@ fun AiSummaryConfigScreen(
     AppAlertDialog(
         show = editPromptDialog != null,
         onDismissRequest = { onIntent(AiSummaryConfigIntent.CloseDialog) },
-        title = stringResource(R.string.ai_custom_prompt),
-        confirmText = stringResource(R.string.confirm),
+        title = stringResource(Res.string.ai_custom_prompt),
+        confirmText = stringResource(Res.string.confirm),
         onConfirm = {
             if (editPromptDialog != null) {
                 onIntent(AiSummaryConfigIntent.UpdatePrompt(editPromptDialog.currentPrompt))
             }
         },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { onIntent(AiSummaryConfigIntent.CloseDialog) },
         content = {
             if (editPromptDialog != null) {

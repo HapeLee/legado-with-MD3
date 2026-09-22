@@ -1,8 +1,7 @@
-package io.legado.app.ui.config.ai.summary
+package io.legado.app.feature.settings.ai.summary
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
 import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.model.AiPromptTemplate
 import io.legado.app.domain.model.AiTaskType
@@ -13,8 +12,26 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import splitties.init.appCtx
 
+// M5-4b：从 `:app` 的 `io.legado.app.ui.config.ai.summary` 迁来。
+//
+// 这是本批第一个「**VM 自己带着平台依赖**」的页：迁移前它直接
+// `appCtx.getString(R.string.x)` 拼提示文案（3 处）。共享层没有 `Context` ⇒ 按 M5-1c 的
+// about 先例改成发**枚举**，由 Screen 侧查表（见 `AiSummaryMessages.kt`）。
+//
+// 三处文案的对应关系：
+//   迁移前                                   迁移后
+//   `getString(ai_prompt_reset_success)`   → ShowMessage(ResetPromptSuccess)
+//   `getString(ai_config_saved_success)`   → ShowMessage(SaveSuccess)
+//   `error.message ?: getString(ai_config_save_failed)`
+//                                          → 有 message 时 ShowRawMessage(message)，
+//                                            否则 ShowMessage(SaveFailed)
+//
+// ⚠️ 最后那条**不能**合成一个枚举参数：原语义是「有异常文案就用它，没有才回落资源文案」，
+// 两个来源不同。合成会丢掉这个 fallback。
+//
+// 另外 `init` 里那句「加载章节摘要配置失败: …」迁移前就是**硬编码**（不是资源），
+// 迁移后保持硬编码 —— 这是既有行为，不是本片引入的，也不在本次改动范围内。
 class AiSummaryConfigViewModel(
     private val aiProfileGateway: AiProfileGateway
 ) : ViewModel() {
@@ -51,7 +68,7 @@ class AiSummaryConfigViewModel(
                     )
                 }
                 _effects.tryEmit(
-                    AiSummaryConfigEffect.ShowMessage(
+                    AiSummaryConfigEffect.ShowRawMessage(
                         "加载章节摘要配置失败: ${error.localizedMessage ?: "使用默认参数"}"
                     )
                 )
@@ -84,7 +101,9 @@ class AiSummaryConfigViewModel(
             }
             is AiSummaryConfigIntent.ResetPrompt -> {
                 _uiState.update { it.copy(promptTemplate = AiPromptTemplate.DEFAULT_CHAPTER_SUMMARY) }
-                _effects.tryEmit(AiSummaryConfigEffect.ShowMessage(appCtx.getString(R.string.ai_prompt_reset_success)))
+                _effects.tryEmit(
+                    AiSummaryConfigEffect.ShowMessage(AiSummaryMessage.ResetPromptSuccess)
+                )
             }
             is AiSummaryConfigIntent.Save -> save()
         }
@@ -109,14 +128,15 @@ class AiSummaryConfigViewModel(
                 }
             }.onSuccess {
                 _effects.tryEmit(
-                    AiSummaryConfigEffect.ShowMessage(appCtx.getString(R.string.ai_config_saved_success))
+                    AiSummaryConfigEffect.ShowMessage(AiSummaryMessage.SaveSuccess)
                 )
                 _effects.tryEmit(AiSummaryConfigEffect.NavigateBack)
             }.onFailure { error ->
+                // 有异常文案就用它，没有才回落到资源里的「保存失败」
+                // ——这两个来源不能合成枚举的一个参数，见本文件头部注释。
                 _effects.tryEmit(
-                    AiSummaryConfigEffect.ShowMessage(
-                        error.message ?: appCtx.getString(R.string.ai_config_save_failed)
-                    )
+                    error.message?.let { AiSummaryConfigEffect.ShowRawMessage(it) }
+                        ?: AiSummaryConfigEffect.ShowMessage(AiSummaryMessage.SaveFailed)
                 )
             }
         }

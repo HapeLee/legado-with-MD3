@@ -133,7 +133,8 @@ import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
 import io.legado.app.ui.config.ai.prompt.AiPromptConfigRouteScreen
-import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
+import io.legado.app.feature.settings.ai.summary.AiSummaryConfigScreen
+import io.legado.app.feature.settings.ai.summary.AiSummaryConfigViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigRouteScreen
@@ -541,7 +542,16 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsAiSummary> {
-        AiSummaryConfigRouteScreen(onBackClick = { onNavigateBack() })
+        // M5-4b：`AiSummaryConfigRouteScreen` 只做 `koinViewModel()`——与 translation 同形。
+        // ⚠️ 本页的提示文案**不走宿主**：Screen 自己收 Effect 并用 Snackbar 显示（迁移前就是
+        // 这样），只是文案取法从「VM 取好的成品 String」变成「枚举 + 查表 `localizedText()`」。
+        val viewModel = koinViewModel<AiSummaryConfigViewModel>()
+        AiSummaryConfigScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            effects = viewModel.effects,
+            onIntent = viewModel::onIntent,
+            onBackClick = { onNavigateBack() },
+        )
     }
 
     entry<MainRouteSettingsAiPrompt> {

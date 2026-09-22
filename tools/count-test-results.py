@@ -198,7 +198,11 @@ RESULT_DIRS = {
 # M5-3b：716 → **719**（**+3**）。customTheme 子页迁入，新增 `CustomThemeViewModelTest`
 # 3 例（迁移前零测试）：DaySeed 选色要「写设置 + 发旧引擎通知」两件事都做 / DeepColor
 # 映射到对应 slot 且不发那条通知 / 写失败时把提示发出去而不是静默吞掉。`:app` 没减。
-BASELINE_MAIN = 719
+# M5-4b：719 → **723**（**+4**）。ai/summary 子页迁入，新增 `AiSummaryConfigViewModelTest`
+# 4 例（迁移前零测试），钉的是本片改的那条 fallback 语义：「保存失败时**有**异常文案就用它、
+# **没有**才回落到资源里的保存失败」+ 重置提示走资源枚举 + 加载失败走运行期文本 +
+# 保存成功要「提示 + 返回」都发。`:app` 没减。
+BASELINE_MAIN = 723
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -277,7 +281,8 @@ BASELINE_MAIN = 719
 # M5-2a：1205 → **1208**（**+3** = `:feature:settings` 的 `LabConfigViewModelTest`）。主集同步到 713。
 # M5-2d：1208 → **1211**（**+3** = `TranslationConfigViewModelTest`）。主集同步到 716。
 # M5-3b：1211 → **1214**（**+3** = `CustomThemeViewModelTest`）。主集同步到 719。
-BASELINE_ALL = 1214
+# M5-4b：1214 → **1218**（**+4** = `AiSummaryConfigViewModelTest`）。主集同步到 723。
+BASELINE_ALL = 1218
 
 
 def tally(d: pathlib.Path):

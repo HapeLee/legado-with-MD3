@@ -1580,8 +1580,26 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      验证：四门禁全绿 + 新模块 `testAndroidHostTest`（**9 例**）+ `:app` 编译/单测/打包；
      计数 **716 → 719 / 1211 → 1214**；资源 **72/72 逐字一致**；lint errors 未增加。
      未验证：两套 UI 切换、下拉取值、`ThemeStore` 那条路径是否真的跟上。需真机冒烟。
-     **下一步（本域）**：`otherConfig` / `backupConfig`（B 级，需先抽 `WebService` /
-     `ImportOldData` 平台胶水），或体量大但零硬阻塞的 `ai`（15 文件 2470 行）。
+   - **M5-4a-pre / M5-4b 已完成（2026-09-23）：ai/summary 子页 —— ai 域的第一片。**
+     M5-4a-pre 上提 `InputSettingItem`（133 行 + 3 条文案；本次**删掉** `:core:ui` 的
+     `edit`/`text_default`/`confirm` 副本，因两个 settingItem 都迁走后它们零引用）。
+     M5-4b 迁页面：本批第一个「**VM 自己带着平台依赖**」的页——迁移前 VM 直接
+     `appCtx.getString(R.string.x)`（3 处）⇒ 照 about 先例改成「发枚举 + UI 侧查表」。
+     ⚠️ **Effect 必须分成 `ShowMessage`（资源枚举）与 `ShowRawMessage`（运行期文本）两个**：
+     `save()` 失败原文是 `error.message ?: getString(ai_config_save_failed)`，
+     「有异常文案就用它、没有才回落资源」，合成一个参数会丢这个 fallback。
+     另一个点：**本页提示不走宿主**（Screen 自己收 Effect 显示 Snackbar），
+     宿主只剩「取 VM、收 state」——与 translation 同形；加上 labConfig（宿主解释
+     `ACTION_SEND`）与 customTheme（宿主调 `ThemeStore` + Toast），
+     **同一 Feature 域里 Route 留下的理由已出现三种**。
+     **G4 随之下调**：`appCtx|app/main/io/legado/app/ui/config/ai/summary` **1 → 0**
+     （条目删除）——删掉那处 `appCtx` 后**门禁主动拦下并要求下调**，棘轮生效。
+     新增 `:feature:settings` 对 `:domain:ai` 的依赖（`AiProfileGateway` 是 M4 建好的共享端口）。
+     验证：四门禁全绿 + 新模块 `testAndroidHostTest`（**13 例**）+ `:app` 编译/单测/打包；
+     计数 **719 → 723 / 1214 → 1218**；资源 **120/120 逐字一致**。
+     未验证：Snackbar 实际弹出、滑块/输入交互、编辑提示词弹层。需真机冒烟。
+     **下一步（本域）**：`ai/prompt`（VM 还多一个 `toastOnUi`）或 `ai` 主域
+     （VM 用 `GSON` + `appCtx`，最重）；也可转去 `otherConfig` / `backupConfig`。
 
 ## 6. 验证矩阵
 

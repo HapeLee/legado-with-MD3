@@ -35,4 +35,21 @@
     <string name="theme_manage_secondary_text_color">次要字体色</string>
     <string name="theme_manage_background_color">背景色</string>
     <string name="theme_manage_label_container_color">标签容器色</string>
+    <string name="ai_chapter_summary_config">章节梗概配置</string>
+    <string name="action_save">保存</string>
+    <string name="ai_prompt_setting">提示词设置</string>
+    <string name="ai_custom_prompt">自定义提示词</string>
+    <string name="ai_custom_prompt_desc">点击修改或查看当前章节梗概提示词</string>
+    <string name="ai_reset_prompt">重置提示词</string>
+    <string name="ai_prompt_template">提示词模板</string>
+    <string name="ai_param_setting">参数设置</string>
+    <string name="ai_temperature">温度</string>
+    <string name="ai_max_output_tokens">最大输出 Tokens</string>
+    <string name="ai_current_value">当前：%1$s</string>
+    <string name="ai_not_set">未设置</string>
+    <string name="confirm">确认</string>
+    <string name="cancel">取消</string>
+    <string name="ai_prompt_reset_success">提示词已重置为默认</string>
+    <string name="ai_config_saved_success">配置已保存</string>
+    <string name="ai_config_save_failed">保存配置失败</string>
 </resources>

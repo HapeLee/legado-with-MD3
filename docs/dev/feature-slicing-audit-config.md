@@ -252,5 +252,41 @@ translation 3 + customTheme 3）+ `:app` 编译/单测/打包；计数 **716 →
 深度自定义/种子色两套 UI 的切换、6 个下拉的实际取值、颜色选择器在 Miuix 下的外观、
 以及「改种子色后旧主题引擎是否真的跟上」（`ThemeStore` 那条路径）。需真机冒烟。
 
-**下一步**：`otherConfig` 或 `backupConfig`（B 级，都需先抽平台胶水：
-`WebService`/`ImportOldData`）；`ai`（15 文件 2470 行，零硬阻塞但体量大）。
+### M5-4a-pre / M5-4b：ai/summary 页（ai 域第一片）
+
+**M5-4a-pre（资产）**：`InputSettingItem`（133 行 + `confirm` 等 3 条文案）上提。
+形态与 `SliderSettingItem` / `ColorPickerSheet` 同形（Miuix 用 `miuix-ui`，不撞契约）。
+本次**删掉了 `:core:ui` 的 `edit` / `text_default` / `confirm` 副本** —— 随着两个
+settingItem 先后迁走，它们在 `:core:ui` 内已零引用（与 M5-2c 那次"保留"相反，
+因为那时 `InputSettingItem.kt` 还在用）。
+
+**M5-4b（页面）**：本批第一个「**VM 自己带着平台依赖**」的页——迁移前 VM 直接
+`appCtx.getString(R.string.x)` 拼提示（3 处）。照 M5-1c 的 about 先例改成
+**发枚举 + UI 侧查表**（`AiSummaryMessages.kt`，只有它 import `Res`）。
+
+⚠️ **契约必须分成两个 Effect**，否则会丢语义：`save()` 失败时原文是
+`error.message ?: getString(ai_config_save_failed)` —— 「**有**异常文案就用它，
+**没有**才回落资源文案」。合成枚举的一个参数会丢失这个 fallback ⇒
+`ShowMessage(AiSummaryMessage)`（资源）+ `ShowRawMessage(text)`（运行期）。
+4 条新增用例里有 2 条专门钉这条。
+
+另一个值得记的点：**本页的提示不走宿主**。Screen 自己收 Effect 并显示 **Snackbar**
+（迁移前就是这样），所以宿主那侧只剩「取 VM、收 state」——与 translation 同形。
+这与 labConfig（宿主解释 `ACTION_SEND`）、customTheme（宿主调 `ThemeStore` + Toast）
+又不一样：**同一个 Feature 域里，Route 留下的理由已经出现三种**。
+
+**G4 随之下调**：`appCtx|app/main/io/legado/app/ui/config/ai/summary` **1 → 0**（条目删除）
+—— 删掉 VM 里那处 `appCtx` 后该目录归零，**门禁主动拦下并要求下调**，棘轮生效。
+
+**死资源**：17 条里 6 条删除（`ai_chapter_summary_config` 等），其余仍被其它 ai 页面共用。
+另有 10 条在 `:app` 的 zh-rHK/TW 里本来就没有（靠 fallback 到默认语言），与迁移前一致。
+
+**验证**：四门禁全绿 + 新模块 desktop 编译与 `testAndroidHostTest`（**13 例** = lab 3 +
+translation 3 + customTheme 3 + aiSummary 4）+ `:app` 编译/单测/打包 + 全模块测试；
+计数 **719 → 723 / 1214 → 1218**；资源 **120/120 逐字一致**（删副本前跑）。
+
+**未验证**：Snackbar 的实际弹出（含 `localizedText()` 在真实资源表下的取值）、
+滑块与输入项的交互、编辑提示词弹层。需真机冒烟。
+
+**下一步**：`ai/prompt`（3 文件 473 行，VM 还多一个 `toastOnUi`）或 `ai` 主域
+（9 文件，VM 用 `GSON` + `appCtx`，最重）；也可转去 `otherConfig` / `backupConfig`。

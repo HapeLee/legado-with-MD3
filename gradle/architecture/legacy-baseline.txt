@@ -47,7 +47,10 @@ appCtx|app/main/io/legado/app/ui/book/readaloud/casting|1
 appCtx|app/main/io/legado/app/ui/book/search|1
 appCtx|app/main/io/legado/app/ui/config/ai|1
 appCtx|app/main/io/legado/app/ui/config/ai/prompt|1
-appCtx|app/main/io/legado/app/ui/config/ai/summary|1
+# M5-4b：ai/summary 页迁进 `:feature:settings`，VM 里那处 `appCtx.getString(R.string.x)`
+# 改成「发枚举 + UI 侧查表」（同 about 的 `AboutMessage.localizedText()`）⇒ 本目录
+# 的 `appCtx` 直连归零，条目删除（棘轮只降不升）。
+
 appCtx|app/main/io/legado/app/ui/config/downloadCacheConfig|1
 appCtx|app/main/io/legado/app/ui/config/themeConfig|2
 appCtx|app/main/io/legado/app/ui/rss/article|1

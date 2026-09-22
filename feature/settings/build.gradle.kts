@@ -38,6 +38,9 @@ kotlin {
             api(project(":core:designsystem"))
             // `LabSettings` 设置模型。
             implementation(project(":core:model"))
+            // M5-4b：`AiProfileGateway`（AI 任务预设的读写端口）在 `:domain:ai`——
+            // ai/* 子页的 VM 都用它，而它是 M4 域下沉时建好的共享端口，不需要新契约。
+            implementation(project(":domain:ai"))
             // `LocalPageEstimateMetrics`（诊断计数与导出）——它已经是共享层的 object，
             // 不新增契约。这是本模块不产生 Android 实现的直接原因。
             implementation(project(":feature:reader:core"))
