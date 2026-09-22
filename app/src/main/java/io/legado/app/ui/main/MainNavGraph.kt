@@ -133,7 +133,8 @@ import io.legado.app.feature.settings.ai.AiConfigScreen
 import io.legado.app.feature.settings.ai.AiConfigViewModel
 import io.legado.app.feature.settings.ai.AiModelEditScreen
 import io.legado.app.feature.settings.ai.AiModelEditViewModel
-import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
+import io.legado.app.feature.settings.ai.AiProviderEditScreen
+import io.legado.app.feature.settings.ai.AiProviderEditViewModel
 import io.legado.app.feature.settings.ai.prompt.AiPromptConfigScreen
 import io.legado.app.feature.settings.ai.prompt.AiPromptConfigViewModel
 import io.legado.app.feature.settings.ai.summary.AiSummaryConfigScreen
@@ -579,9 +580,20 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsAiProviderEdit> { route ->
-        AiProviderEditRouteScreen(
-            providerId = route.providerId,
-            onBackClick = { onNavigateBack() }
+        // M5-5c（ai 域收官）：`AiProviderEditRouteScreen` 只做
+        // `koinViewModel(parameters = { parametersOf(providerId) })`——与 translation / ai 域
+        // 其余页同形。本页是 ai 域里唯一**带四个对话框**的（API Key / 模型编辑 / 删除
+        // provider / 删除 model），但它们全是 Compose 状态、无平台动作 ⇒ 都留在共享层，
+        // 宿主这侧只剩「取 VM、收 state」。
+        val viewModel = koinViewModel<AiProviderEditViewModel>(
+            key = route.providerId.orEmpty(),
+            parameters = { parametersOf(route.providerId) }
+        )
+        AiProviderEditScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            effects = viewModel.effects,
+            onIntent = viewModel::onIntent,
+            onBackClick = { onNavigateBack() },
         )
     }
 

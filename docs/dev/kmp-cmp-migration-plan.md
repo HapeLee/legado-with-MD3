@@ -1653,7 +1653,26 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      `initialized` 后流刷新**不覆盖**用户正在编辑的字段 / 保存成功发提示+返回并回写 id。
      死资源 3 条。验证：四门禁全绿 + `:feature:settings`（**25 例**）+ `:app` 编译/单测/打包 +
      全模块测试；计数 **731 → 735 / 1226 → 1230**；资源 **176/176**。
-     **下一步（本域收官）**：`AiProviderEdit`（另用 `appCtx.getString` 3 处）。
+   - **M5-5c 已完成（2026-09-23）：AiProviderEdit 页 —— ai 域收官。**
+     `ui/config/ai` 整个目录清空（四片：M5-5a 主入口 / M5-5b modelEdit / M5-5c providerEdit /
+     M5-4b-4c summary+prompt）。本页是本域平台依赖最集中的一页（同时用 `R`/`appCtx`/`GSON`）：
+     ① `GSON.fromJson` → `JsonCodec.fromJsonObject`（ai 域最后一处 GSON，顺带修空安全差异）；
+     ② 三处 `appCtx.getString` → 注入的 `AiProviderStringSource`（沿用 M5-4e 的模式——
+     M5-4d 探针已量出 VM 里不能直接 `getString`，否则不可测）。
+     其余提示保持硬编码英文（迁移前就如此）。
+     **G4 同时下调两条**：`appCtx|…/ui/config/ai` 与 `gson|…/ui/config/ai` 各 **1 → 0**
+     （条目删除）——本批第一次一片内同时归零两个维度。
+     顺带清掉跨片遗留：M5-5b 为未迁的 `AiProviderEditScreen` 在 `:app` 留的
+     `ai/TokenLimitFormat.kt` **临时副本已删**（共享层同名 `internal fun` 与它同包可见）。
+     新增 5 例：init 填充且 initialized 后不覆盖用户编辑 / 测试连接「0 个模型」用注入文案 /
+     「N 个模型」把 count 传进格式参数 / 失败时拼「兜底文案: 详情」（含无详情分支）/
+     `defaultParamsJson` 经 `JsonCodec` 反序列化。
+     ⚠️ 前三条钉的是注入改动——假文案源给带标记的假值，所以「真的走了注入路径」被断言验证。
+     死资源 24 条删除（保留 `hide_password`/`show_password`/`ok`/`delete`）。
+     验证：四门禁全绿（G4 按下调）+ `:feature:settings`（**30 例**）+ `:app` 编译/单测/打包 +
+     全模块测试；计数 **735 → 740 / 1230 → 1235**；资源 **276/276**。
+     **下一步**：`otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）
+     或 `themeConfig`（撞 `ui.main.*`，成本更高）。
      **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵

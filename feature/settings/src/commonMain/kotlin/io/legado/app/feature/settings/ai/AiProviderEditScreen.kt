@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.ai
+package io.legado.app.feature.settings.ai
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -24,15 +24,53 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.ai_add_model_manually
+import io.legado.app.feature.settings.res.ai_advanced
+import io.legado.app.feature.settings.res.ai_api_key
+import io.legado.app.feature.settings.res.ai_api_key_summary
+import io.legado.app.feature.settings.res.ai_base_url
+import io.legado.app.feature.settings.res.ai_context_window
+import io.legado.app.feature.settings.res.ai_custom_provider
+import io.legado.app.feature.settings.res.ai_delete_model
+import io.legado.app.feature.settings.res.ai_delete_model_confirm
+import io.legado.app.feature.settings.res.ai_delete_provider
+import io.legado.app.feature.settings.res.ai_delete_provider_confirm
+import io.legado.app.feature.settings.res.ai_fetch_and_save_models
+import io.legado.app.feature.settings.res.ai_fetch_models
+import io.legado.app.feature.settings.res.ai_max_output_tokens
+import io.legado.app.feature.settings.res.ai_model_edit
+import io.legado.app.feature.settings.res.ai_model_id
+import io.legado.app.feature.settings.res.ai_model_name
+import io.legado.app.feature.settings.res.ai_models_url
+import io.legado.app.feature.settings.res.ai_models_url_summary
+import io.legado.app.feature.settings.res.ai_protocol
+import io.legado.app.feature.settings.res.ai_provider
+import io.legado.app.feature.settings.res.ai_provider_edit
+import io.legado.app.feature.settings.res.ai_provider_models
+import io.legado.app.feature.settings.res.ai_provider_name
+import io.legado.app.feature.settings.res.ai_provider_preset
+import io.legado.app.feature.settings.res.ai_reasoning_level_high
+import io.legado.app.feature.settings.res.ai_reasoning_level_low
+import io.legado.app.feature.settings.res.ai_reasoning_level_max
+import io.legado.app.feature.settings.res.ai_reasoning_level_medium
+import io.legado.app.feature.settings.res.ai_reasoning_level_xhigh
+import io.legado.app.feature.settings.res.ai_save_model
+import io.legado.app.feature.settings.res.ai_save_provider
+import io.legado.app.feature.settings.res.ai_temperature
+import io.legado.app.feature.settings.res.ai_test_connection
+import io.legado.app.feature.settings.res.ai_thinking_strength
+import io.legado.app.feature.settings.res.cancel
+import io.legado.app.feature.settings.res.delete
+import io.legado.app.feature.settings.res.hide_password
+import io.legado.app.feature.settings.res.ok
+import io.legado.app.feature.settings.res.show_password
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
@@ -48,25 +86,19 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
-import org.koin.androidx.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
+import org.jetbrains.compose.resources.stringResource
 
-@Composable
-fun AiProviderEditRouteScreen(
-    providerId: String?,
-    onBackClick: () -> Unit,
-    viewModel: AiProviderEditViewModel = koinViewModel(
-        key = providerId.orEmpty(),
-        parameters = { parametersOf(providerId) }
-    )
-) {
-    AiProviderEditScreen(
-        state = viewModel.uiState.collectAsStateWithLifecycle().value,
-        effects = viewModel.effects,
-        onIntent = viewModel::onIntent,
-        onBackClick = onBackClick
-    )
-}
+// M5-5c：从 `:app` 的 `io.legado.app.ui.config.ai.AiProviderEditScreen` 迁来。
+//
+// 差异两类：`R.string.*` → `Res.string.*`（28 条），`AiProviderEditRouteScreen` 不搬
+// （它只做 `koinViewModel(parameters = { parametersOf(providerId) })`，宿主那侧照原样接）。
+//
+// ⚠️ `formatFetchedLimit` 用的 `formatTokenLimit` 原本来自 M5-5b 留在 `:app` 的
+// **临时副本** `ai/TokenLimitFormat.kt`。本片把最后一页也迁走后，那个副本连同它一起删除
+// ——共享层里 `AiModelEditScreen.kt` 的 `internal fun formatTokenLimit` 与这里同包，直接可见。
+//
+// 本页是 ai 域里唯一**带多个对话框**的（API Key / 模型编辑 / 删除 provider / 删除 model），
+// 但都是 Compose 状态 ⇒ 无平台依赖，全留在共享层。
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +110,7 @@ fun AiProviderEditScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val snackbarHostState = remember { SnackbarHostState() }
-    val providerPresetEntries = arrayOf(stringResource(R.string.ai_custom_provider)) +
+    val providerPresetEntries = arrayOf(stringResource(Res.string.ai_custom_provider)) +
             state.providerPresets
                 .filter { it.protocol == state.protocol }
                 .map { it.name }
@@ -109,7 +141,7 @@ fun AiProviderEditScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.ai_provider_edit),
+                title = stringResource(Res.string.ai_provider_edit),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -120,7 +152,7 @@ fun AiProviderEditScreen(
             AppFloatingActionButton(
                 onClick = { onIntent(AiProviderEditIntent.SaveProvider) },
                 icon = Icons.Default.Save,
-                tooltipText = stringResource(R.string.ai_save_provider)
+                tooltipText = stringResource(Res.string.ai_save_provider)
             )
         }
     ) { paddingValues ->
@@ -132,14 +164,14 @@ fun AiProviderEditScreen(
             )
         ) {
             item {
-                SplicedColumnGroup(title = stringResource(R.string.ai_provider)) {
+                SplicedColumnGroup(title = stringResource(Res.string.ai_provider)) {
                     InputSettingItem(
-                        title = stringResource(R.string.ai_provider_name),
+                        title = stringResource(Res.string.ai_provider_name),
                         value = state.providerName,
                         onConfirm = { onIntent(AiProviderEditIntent.UpdateProviderName(it)) }
                     )
                     DropdownListSettingItem(
-                        title = stringResource(R.string.ai_protocol),
+                        title = stringResource(Res.string.ai_protocol),
                         selectedValue = state.protocol,
                         displayEntries = arrayOf("OpenAI Chat Completions", "OpenAI Responses", "Anthropic Messages"),
                         entryValues = arrayOf(
@@ -150,27 +182,27 @@ fun AiProviderEditScreen(
                         onValueChange = { onIntent(AiProviderEditIntent.UpdateProtocol(it)) }
                     )
                     DropdownListSettingItem(
-                        title = stringResource(R.string.ai_provider_preset),
+                        title = stringResource(Res.string.ai_provider_preset),
                         selectedValue = state.selectedProviderPresetId,
                         displayEntries = providerPresetEntries,
                         entryValues = providerPresetValues,
                         onValueChange = { onIntent(AiProviderEditIntent.ApplyProviderPreset(it)) }
                     )
                     InputSettingItem(
-                        title = stringResource(R.string.ai_base_url),
+                        title = stringResource(Res.string.ai_base_url),
                         value = state.baseUrl,
                         onConfirm = { onIntent(AiProviderEditIntent.UpdateBaseUrl(it)) }
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.ai_api_key),
-                        description = stringResource(R.string.ai_api_key_summary),
+                        title = stringResource(Res.string.ai_api_key),
+                        description = stringResource(Res.string.ai_api_key_summary),
                         onClick = {
                             apiKeyDraft = state.apiKey
                             showApiKeyDialog = true
                         }
                     )
                     ClickableSettingItem(
-                        title = if (state.isTesting) "${stringResource(R.string.ai_test_connection)}..." else stringResource(R.string.ai_test_connection),
+                        title = if (state.isTesting) "${stringResource(Res.string.ai_test_connection)}..." else stringResource(Res.string.ai_test_connection),
                         onClick = {
                             if (!state.isTesting && !state.isSaving && !state.isFetchingModels) {
                                 onIntent(AiProviderEditIntent.TestConnection)
@@ -181,7 +213,7 @@ fun AiProviderEditScreen(
             }
 
             item {
-                SplicedColumnGroup(title = stringResource(R.string.ai_provider_models)) {
+                SplicedColumnGroup(title = stringResource(Res.string.ai_provider_models)) {
                     state.providerModels.forEach { model ->
                         ClickableSettingItem(
                             title = model.modelName,
@@ -191,23 +223,23 @@ fun AiProviderEditScreen(
                         )
                     }
                     ClickableSettingItem(
-                        title = stringResource(R.string.ai_add_model_manually),
+                        title = stringResource(Res.string.ai_add_model_manually),
                         onClick = { onIntent(AiProviderEditIntent.AddModel) }
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.ai_fetch_and_save_models),
-                        description = stringResource(R.string.ai_fetch_models),
+                        title = stringResource(Res.string.ai_fetch_and_save_models),
+                        description = stringResource(Res.string.ai_fetch_models),
                         onClick = { onIntent(AiProviderEditIntent.SyncModels) }
                     )
                 }
             }
 
             item {
-                SplicedColumnGroup(title = stringResource(R.string.ai_advanced)) {
+                SplicedColumnGroup(title = stringResource(Res.string.ai_advanced)) {
                     InputSettingItem(
-                        title = stringResource(R.string.ai_models_url),
+                        title = stringResource(Res.string.ai_models_url),
                         value = state.modelsUrl,
-                        description = stringResource(R.string.ai_models_url_summary),
+                        description = stringResource(Res.string.ai_models_url_summary),
                         onConfirm = { onIntent(AiProviderEditIntent.UpdateModelsUrl(it)) }
                     )
                 }
@@ -216,7 +248,7 @@ fun AiProviderEditScreen(
             if (state.providerId != null) {
                 item {
                     ClickableSettingItem(
-                        title = stringResource(R.string.ai_delete_provider),
+                        title = stringResource(Res.string.ai_delete_provider),
                         onClick = { showDeleteProviderDialog = true }
                     )
                 }
@@ -227,7 +259,7 @@ fun AiProviderEditScreen(
     AppAlertDialog(
         show = showApiKeyDialog,
         onDismissRequest = { showApiKeyDialog = false },
-        title = stringResource(R.string.ai_api_key),
+        title = stringResource(Res.string.ai_api_key),
         content = {
             Column {
                 AppTextField(
@@ -235,15 +267,15 @@ fun AiProviderEditScreen(
                     onValueChange = { apiKeyDraft = it },
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = stringResource(R.string.ai_api_key),
+                    label = stringResource(Res.string.ai_api_key),
                     visualTransformation = if (apiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
                         val image = if (apiKeyVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         val description = if (apiKeyVisible) {
-                            stringResource(R.string.hide_password)
+                            stringResource(Res.string.hide_password)
                         } else {
-                            stringResource(R.string.show_password)
+                            stringResource(Res.string.show_password)
                         }
                         IconButton(onClick = { apiKeyVisible = !apiKeyVisible }) {
                             Icon(imageVector = image, contentDescription = description)
@@ -253,19 +285,19 @@ fun AiProviderEditScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
         },
-        confirmText = stringResource(R.string.ok),
+        confirmText = stringResource(Res.string.ok),
         onConfirm = {
             onIntent(AiProviderEditIntent.UpdateApiKey(apiKeyDraft))
             showApiKeyDialog = false
         },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { showApiKeyDialog = false }
     )
 
     AppAlertDialog(
         data = state.editingModel,
         onDismissRequest = { onIntent(AiProviderEditIntent.DismissModelEditor) },
-        title = stringResource(R.string.ai_model_edit),
+        title = stringResource(Res.string.ai_model_edit),
         content = { model ->
             Column {
                 AppTextField(
@@ -273,7 +305,7 @@ fun AiProviderEditScreen(
                     onValueChange = { onIntent(AiProviderEditIntent.UpdateEditingModelName(it)) },
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = stringResource(R.string.ai_model_name)
+                    label = stringResource(Res.string.ai_model_name)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 AppTextField(
@@ -281,7 +313,7 @@ fun AiProviderEditScreen(
                     onValueChange = { onIntent(AiProviderEditIntent.UpdateEditingModelId(it)) },
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = stringResource(R.string.ai_model_id)
+                    label = stringResource(Res.string.ai_model_id)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 AppTextField(
@@ -289,7 +321,7 @@ fun AiProviderEditScreen(
                     onValueChange = { onIntent(AiProviderEditIntent.UpdateEditingContextWindow(it)) },
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = stringResource(R.string.ai_context_window),
+                    label = stringResource(Res.string.ai_context_window),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -298,7 +330,7 @@ fun AiProviderEditScreen(
                     onValueChange = { onIntent(AiProviderEditIntent.UpdateEditingMaxOutputTokens(it)) },
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = stringResource(R.string.ai_max_output_tokens),
+                    label = stringResource(Res.string.ai_max_output_tokens),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -307,19 +339,19 @@ fun AiProviderEditScreen(
                     onValueChange = { onIntent(AiProviderEditIntent.UpdateEditingTemperature(it)) },
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = stringResource(R.string.ai_temperature),
+                    label = stringResource(Res.string.ai_temperature),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 DropdownListSettingItem(
-                    title = stringResource(R.string.ai_thinking_strength),
+                    title = stringResource(Res.string.ai_thinking_strength),
                     selectedValue = model.reasoningLevel.effort,
                     displayEntries = arrayOf(
-                        stringResource(R.string.ai_reasoning_level_low),
-                        stringResource(R.string.ai_reasoning_level_medium),
-                        stringResource(R.string.ai_reasoning_level_high),
-                        stringResource(R.string.ai_reasoning_level_xhigh),
-                        stringResource(R.string.ai_reasoning_level_max)
+                        stringResource(Res.string.ai_reasoning_level_low),
+                        stringResource(Res.string.ai_reasoning_level_medium),
+                        stringResource(Res.string.ai_reasoning_level_high),
+                        stringResource(Res.string.ai_reasoning_level_xhigh),
+                        stringResource(Res.string.ai_reasoning_level_max)
                     ),
                     entryValues = AiReasoningLevel.modelConfigEntries
                         .map { it.effort }
@@ -331,7 +363,7 @@ fun AiProviderEditScreen(
                 if (model.modelProfileId != null) {
                     Spacer(modifier = Modifier.height(16.dp))
                     ClickableSettingItem(
-                        title = stringResource(R.string.ai_delete_model),
+                        title = stringResource(Res.string.ai_delete_model),
                         onClick = {
                             showDeleteModelDialog = model.modelProfileId
                         }
@@ -339,37 +371,37 @@ fun AiProviderEditScreen(
                 }
             }
         },
-        confirmText = stringResource(R.string.ai_save_model),
+        confirmText = stringResource(Res.string.ai_save_model),
         onConfirm = { onIntent(AiProviderEditIntent.SaveEditingModel) },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { onIntent(AiProviderEditIntent.DismissModelEditor) }
     )
 
     AppAlertDialog(
         show = showDeleteProviderDialog,
         onDismissRequest = { showDeleteProviderDialog = false },
-        title = stringResource(R.string.ai_delete_provider),
-        text = stringResource(R.string.ai_delete_provider_confirm),
-        confirmText = stringResource(R.string.delete),
+        title = stringResource(Res.string.ai_delete_provider),
+        text = stringResource(Res.string.ai_delete_provider_confirm),
+        confirmText = stringResource(Res.string.delete),
         onConfirm = {
             onIntent(AiProviderEditIntent.DeleteProvider)
             showDeleteProviderDialog = false
         },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { showDeleteProviderDialog = false }
     )
 
     AppAlertDialog(
         show = showDeleteModelDialog != null,
         onDismissRequest = { showDeleteModelDialog = null },
-        title = stringResource(R.string.ai_delete_model),
-        text = stringResource(R.string.ai_delete_model_confirm),
-        confirmText = stringResource(R.string.delete),
+        title = stringResource(Res.string.ai_delete_model),
+        text = stringResource(Res.string.ai_delete_model_confirm),
+        confirmText = stringResource(Res.string.delete),
         onConfirm = {
             showDeleteModelDialog?.let { onIntent(AiProviderEditIntent.DeleteModel(it)) }
             showDeleteModelDialog = null
         },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { showDeleteModelDialog = null }
     )
 }

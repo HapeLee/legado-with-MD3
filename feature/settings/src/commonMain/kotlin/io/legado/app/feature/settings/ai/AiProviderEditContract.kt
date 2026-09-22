@@ -1,10 +1,17 @@
-package io.legado.app.ui.config.ai
+package io.legado.app.feature.settings.ai
 
 import androidx.compose.runtime.Stable
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiReasoningLevel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+
+// M5-5c：从 `:app` 的 `io.legado.app.ui.config.ai` 迁来（**只改包名**，结构逐字一致）。
+//
+// 与 `AiConfigContract` / `AiModelEditContract` 一样：`AiProviderEditEffect.ShowMessage` 带
+// **裸 `String`**，因为迁移前 VM 里那些提示多数是硬编码英文（"AI model saved" /
+// "AI provider saved" / "Failed to save AI provider" …）。本片唯一改动的是其中**三条**
+// 走 `appCtx.getString` 的（测试连接结果）⇒ 见 `AiProviderStringSource`。
 
 @Stable
 data class AiProviderEditUiState(

@@ -45,7 +45,7 @@ appCtx|app/main/io/legado/app/ui/book/read/sheet|1
 appCtx|app/main/io/legado/app/ui/book/readaloud/cache|1
 appCtx|app/main/io/legado/app/ui/book/readaloud/casting|1
 appCtx|app/main/io/legado/app/ui/book/search|1
-appCtx|app/main/io/legado/app/ui/config/ai|1
+# M5-5c：`ui/config/ai` **整个目录**迁完（ai 域收官）⇒ 本条 `appCtx` 直连归零，条目删除。
 # M5-4c：ai/prompt 页迁进 `:feature:settings`，VM 里那 4 处 `appCtx.getString(...)`
 # 改成 CMP 的 `getString`（commonMain 可用）、`toastOnUi` 改成注入 `:core:platform` 的
 # `Toaster` ⇒ 本目录的 `appCtx` 直连归零，条目删除（棘轮只降不升）。
@@ -137,7 +137,7 @@ gson|app/main/io/legado/app/ui/book/toc|1
 # `GSON.fromJson(json, AiGenerationParams::class.java)` 换成 `JsonCodec.fromJsonObject`
 # （`:core:platform` 的 expect object）⇒ 本目录的 GSON 门面从 2 降到 1。
 # 剩下的 1 处在尚未迁移的 `AiProviderEditViewModel`（ai 域收官时会归零）。
-gson|app/main/io/legado/app/ui/config/ai|1
+# M5-5c：ai 域收官 ⇒ 那一处已迁走，本条删除（`ui/config/ai` 的 GSON 门面完全归零）。
 gson|app/main/io/legado/app/ui/config/otherConfig|1
 gson|app/main/io/legado/app/ui/login|1
 gson|app/main/io/legado/app/ui/main/bookshelf|1

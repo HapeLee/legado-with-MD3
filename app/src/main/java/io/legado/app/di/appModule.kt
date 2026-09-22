@@ -312,7 +312,9 @@ import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewViewModel
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.feature.settings.ai.AiConfigViewModel
 import io.legado.app.feature.settings.ai.AiModelEditViewModel
-import io.legado.app.ui.config.ai.AiProviderEditViewModel
+import io.legado.app.feature.settings.ai.AiProviderEditViewModel
+import io.legado.app.feature.settings.ai.AiProviderStringSource
+import io.legado.app.feature.settings.ai.composeResourceProviderStrings
 import io.legado.app.feature.settings.ai.prompt.AiPromptConfigViewModel
 import io.legado.app.feature.settings.ai.summary.AiSummaryConfigViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
@@ -552,6 +554,9 @@ val appModule = module {
     // 按 M5-4d 探针的结论，VM 里不能直接 `getString`（会让 VM 在 androidHostTest 下不可构造）
     // ⇒ 抽成可注入的来源，这里绑定「读 CMP 资源」的生产实现。
     single<AiPromptStringSource> { composeResourcePromptStrings() }
+    // M5-5c：同理，ai/providerEdit 的 VM 要用资源文案拼「测试连接」的结果
+    // （`appCtx.getString` 3 处），而 VM 里不能直接 `getString`（M5-4d 探针的结论）。
+    single<AiProviderStringSource> { composeResourceProviderStrings() }
     single<BundledTextReader> { AndroidBundledTextReader(androidContext()) }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     // ⚠️ 两个构造参数都要传：`digest` 是**参数注入**的平台能力（`stableModelId` 要复刻
@@ -719,7 +724,8 @@ val appModule = module {
         AiProviderEditViewModel(
             initialProviderId = providerId,
             aiProfileGateway = get(),
-            aiTextGateway = get()
+            aiTextGateway = get(),
+            strings = get()
         )
     }
     viewModel { (providerId: String?, modelProfileId: String?) ->

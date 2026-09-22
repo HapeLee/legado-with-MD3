@@ -432,9 +432,60 @@ translation 3 + customTheme 3 + aiSummary 4 + aiPrompt 4）+ `:app` 编译/单�
 `:app` 编译/单测/打包 + 全模块测试；计数 **731 → 735 / 1226 → 1230**；
 资源 **176/176 逐字一致**（删副本前跑）。
 
-**下一步**：ai 域最后一页 `AiProviderEdit`（384/352/98，另用 `appCtx.getString` 3 处发
-测试连接的提示）——做完它 `ui/config/ai` 就整个归零，那份 `TokenLimitFormat.kt` 临时副本
-也可以删掉了。
+### M5-5c：AiProviderEdit 页（ai 域收官）
+
+`AiProviderEdit`（Screen 384 / VM 352 / Contract 98）迁进 `:feature:settings/ai/` ——
+**ai 域最后一页**，也是本域里平台依赖最集中的一页（搬迁前同时用 `R` / `appCtx` / `GSON`）。
+
+**两处非机械改动**：
+
+1. **`GSON.fromJson` → `JsonCodec.fromJsonObject`** —— ai 域两处 `GSON` 的最后一处。
+   同 M5-5b 顺带修掉空安全差异（`GSON.fromJson` 是平台类型、null 时 `getOrDefault` 兜不住）。
+2. **三处 `appCtx.getString(R.string.*)` → 注入的 `AiProviderStringSource`**。那是「测试连接」
+   的结果提示（取到几个模型 / 失败原因）。沿用 M5-4e 为 ai/prompt 建立的注入模式——
+   M5-4d 的探针已量出**不能**改成在 VM 里 `getString`（会让 VM 不可测）。
+
+其余提示保持**硬编码英文**（"AI model saved" / "AI provider saved" / "No models found" /
+"Fetched and saved N models" …）——迁移前就如此。
+
+**G4 同时下调两条**：`appCtx|…/ui/config/ai` **1 → 0** 与 `gson|…/ui/config/ai` **1 → 0**
+（条目删除）。这是本批第一次一片内同时归零两个维度。
+
+#### ai 域收官：`ui/config/ai` 整个目录清空
+
+四片（M5-5a 主入口 / M5-5b modelEdit / M5-5c providerEdit / M5-4b-4c summary+prompt）
+搬完后，`:app/src/main/java/io/legado/app/ui/config/ai` **不再有文件**。
+
+顺带清掉一处跨片遗留：M5-5b 为未迁的 `AiProviderEditScreen` 在 `:app` 留了一份
+`formatTokenLimit` 的**临时副本** `ai/TokenLimitFormat.kt`（因为原函数是 `internal` 且同包）
+—— 本片把最后一页也迁走后，那份副本**已删**；共享层里
+`AiModelEditScreen.kt` 的 `internal fun formatTokenLimit` 与 `AiProviderEditScreen.kt` 同包，
+直接可见。
+
+**新增 5 条用例**（迁移前零测试）：
+
+- `init` 填充 provider 字段，且 `initialized` 之后流刷新**不覆盖**用户正在编辑的字段；
+- 测试连接「0 个模型」用注入的文案；
+- 测试连接「N 个模型」把 `count` 传进**格式参数**；
+- 失败时拼成 `"兜底文案: 详情"`（含 `error.message` 为空时只发兜底文案的分支）；
+- `defaultParamsJson` 经 `JsonCodec` 反序列化进模型列表。
+
+前三条钉的是本片的注入改动：假文案源给的是**带标记的假值**（`[no-models]` /
+`[with-models:3]` / `[failed]`），所以「VM 真的走了注入路径」是被断言验证的，
+而不是"能编译就行"。
+
+**死资源**：28 条里 24 条删除；保留 `hide_password` / `show_password` / `ok` / `delete`
+（`:app` 别处仍在用）。
+
+**验证**：四门禁全绿（G4 按上述下调两条）+ `:feature:settings:testAndroidHostTest`
+（**30 例**）+ `:app` 编译/单测/打包 + 全模块测试；计数 **735 → 740 / 1230 → 1235**；
+资源 **276/276 逐字一致**（删副本前跑）。
+
+**未验证**：页面的渲染与四个对话框的交互（API Key 的可见性切换、协议/预设两个下拉的联动、
+模型编辑表单、两个删除确认）以及「测试连接 / 同步模型」两条真实的网络路径。需真机冒烟。
+
+**下一步**：`otherConfig` / `backupConfig`（B 级，需先抽 `WebService` / `ImportOldData` 胶水），
+或 `themeConfig`（撞 `ui.main.*`，成本更高）。
 
 **下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
 `otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。

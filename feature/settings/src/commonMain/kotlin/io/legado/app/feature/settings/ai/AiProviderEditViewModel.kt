@@ -1,8 +1,8 @@
-package io.legado.app.ui.config.ai
+package io.legado.app.feature.settings.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
+import io.legado.app.core.platform.JsonCodec
 import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.model.AiAvailableModel
@@ -13,7 +13,6 @@ import io.legado.app.domain.model.AiProviderDraft
 import io.legado.app.domain.model.AiProviderPresets
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.TranslationConstants
-import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,12 +22,30 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import splitties.init.appCtx
 
+// M5-5c：从 `:app` 的 `io.legado.app.ui.config.ai` 迁来。**ai 域最后一页**，
+// 也是本域里平台依赖最集中的一页（搬迁前它同时用 `R` / `appCtx` / `GSON`）。
+//
+// 三处改动，都不是机械搬迁：
+//
+// 1. **`GSON.fromJson` → `JsonCodec.fromJsonObject`**（`:core:platform` 的 expect object）。
+//    这是 ai 域两处 `GSON` 的最后一处 ⇒ 迁完后 `gson|…/ui/config/ai` 归零。
+//    同 M5-5b 顺带修掉空安全差异：`GSON.fromJson` 是平台类型，返回 null 时
+//    `getOrDefault` 兜不住（null 不是异常）⇒ 改成 `getOrNull() ?: AiGenerationParams()`。
+//
+// 2. **三处 `appCtx.getString(R.string.*)` → 注入的 [AiProviderStringSource]**。
+//    那是「测试连接」的结果提示（取到几个模型 / 失败原因）。共享层没有 `Context`，
+//    而 M5-4d 的探针已量出**不能**改成在 VM 里 `getString`（会让 VM 不可测）⇒
+//    沿用 M5-4e 为 ai/prompt 建立的注入模式。
+//
+// 3. 其余提示**保持硬编码英文**（"AI model saved" / "AI provider saved" /
+//    "Failed to save AI provider" / "No models found" / "Fetched and saved N models" …）
+//    ——迁移前就如此，原样保留。
 class AiProviderEditViewModel(
     private val initialProviderId: String?,
     private val aiProfileGateway: AiProfileGateway,
-    private val aiTextGateway: AiTextGateway
+    private val aiTextGateway: AiTextGateway,
+    private val strings: AiProviderStringSource,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -223,15 +240,15 @@ class AiProviderEditViewModel(
                 val models = aiTextGateway.fetchModels(_uiState.value.toProviderConfig()).getOrThrow()
                 val count = models.size
                 val message = if (count == 0) {
-                    appCtx.getString(R.string.ai_test_success_no_models)
+                    strings.testSuccessNoModels()
                 } else {
-                    appCtx.getString(R.string.ai_test_success_with_models, count)
+                    strings.testSuccessWithModels(count)
                 }
                 _effects.tryEmit(AiProviderEditEffect.ShowMessage(message))
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 val errorMsg = error.message
-                val failMsg = appCtx.getString(R.string.ai_test_failed)
+                val failMsg = strings.testFailed()
                 val message = if (errorMsg.isNullOrBlank()) failMsg else "$failMsg: $errorMsg"
                 _effects.tryEmit(AiProviderEditEffect.ShowMessage(message))
             } finally {
@@ -339,11 +356,14 @@ class AiProviderEditViewModel(
         )
     }
 
+    /**
+     * 见文件头注释第 1 条：`GSON.fromJson` 是平台类型，null 时 `getOrDefault` 兜不住。
+     */
     private fun parseParams(json: String?): AiGenerationParams {
         if (json.isNullOrBlank()) return AiGenerationParams()
         return runCatching {
-            GSON.fromJson(json, AiGenerationParams::class.java)
-        }.getOrDefault(AiGenerationParams())
+            JsonCodec.fromJsonObject(json, AiGenerationParams::class)
+        }.getOrNull() ?: AiGenerationParams()
     }
 
     private fun AiReasoningLevel.toModelConfigLevel(): AiReasoningLevel {

@@ -216,7 +216,13 @@ RESULT_DIRS = {
 # 4 例（迁移前零测试）：`defaultParamsJson` 经 `JsonCodec` 反序列化进状态（**本片的实质改动**：
 # `GSON.fromJson` → `JsonCodec.fromJsonObject`）/ 非法 JSON 回落默认参数而不崩 /
 # `initialized` 之后流刷新**不覆盖**用户正在编辑的字段 / 保存成功发提示+返回并回写 modelProfileId。
-BASELINE_MAIN = 735
+# M5-5c：735 → **740**（**+5**）。AiProviderEdit（ai 域收官）迁入，新增
+# `AiProviderEditViewModelTest` 5 例（迁移前零测试）：init 填充且 initialized 后不覆盖
+# 用户编辑 / 测试连接「0 个模型」用注入文案 / 「带 count」把 count 传进格式参数 /
+# 失败时拼「兜底文案: 详情」（含无详情分支）/ `defaultParamsJson` 经 `JsonCodec` 反序列化。
+# ⚠️ 前三条钉的是本片的实质改动「`appCtx.getString` → 注入 `AiProviderStringSource`」——
+# 假文案源给的是带标记的假值，所以「VM 真的走了注入路径」是被断言验证的。
+BASELINE_MAIN = 740
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -299,7 +305,8 @@ BASELINE_MAIN = 735
 # M5-4e：1218 → **1222**（**+4** = `AiPromptConfigViewModelTest`）。主集同步到 727。
 # M5-5a：1222 → **1226**（**+4** = `AiConfigViewModelTest`）。主集同步到 731。
 # M5-5b：1226 → **1230**（**+4** = `AiModelEditViewModelTest`）。主集同步到 735。
-BASELINE_ALL = 1230
+# M5-5c：1230 → **1235**（**+5** = `AiProviderEditViewModelTest`）。主集同步到 740。
+BASELINE_ALL = 1235
 
 
 def tally(d: pathlib.Path):
