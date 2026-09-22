@@ -1742,6 +1742,11 @@ private val batteryClassicTypeface: android.graphics.Typeface? by lazy {
     }.getOrNull()
 }
 
+/** View 版 `BatteryView` 使用的轮廓；绘制时复用原有 `ic_battery` 矢量资源。 */
+private val batteryOutlineState: Drawable.ConstantState? by lazy {
+    appCtx.getDrawable(R.drawable.ic_battery)?.constantState
+}
+
 private fun ReaderPage.scrollViewportExtentPx(): Float =
     (contentBottomPx - contentTopPx).coerceAtLeast(1f)
 
@@ -2957,31 +2962,27 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryGlyph(
     fillInner: Boolean,
 ) {
     val unit = density
-    val bodyWidth = 22f * unit
-    val bodyHeight = 10f * unit
-    val top = baseline + (paint.fontMetrics.ascent + paint.fontMetrics.descent) / 2f - bodyHeight / 2f
-    val bodyLeft = left + 2f * unit
-    val outline = Paint(paint).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = unit.coerceAtLeast(1f)
-        alpha = 194
+    val iconTop = baseline + (paint.fontMetrics.ascent + paint.fontMetrics.descent) / 2f - 6f * unit
+    // 旧 ImageView 为 28×12dp centerCrop：24dp 矢量放大到 28dp，垂直裁去两侧各 8dp。
+    batteryOutlineState?.newDrawable(appCtx.resources)?.mutate()?.apply {
+        setTint(paint.color)
+        alpha = 194 // 旧 BatteryView.batteryIcon.alpha = 0.76
+        setBounds(
+            left.toInt(),
+            (iconTop - 8f * unit).toInt(),
+            (left + 28f * unit).toInt(),
+            (iconTop + 20f * unit).toInt(),
+        )
+        draw(canvas)
     }
-    val fill = Paint(paint).apply { style = Paint.Style.FILL; alpha = 194 }
-    canvas.drawRoundRect(bodyLeft, top, bodyLeft + bodyWidth, top + bodyHeight, unit, unit, outline)
-    canvas.drawRect(
-        bodyLeft + bodyWidth,
-        top + bodyHeight / 3f,
-        bodyLeft + bodyWidth + 2f * unit,
-        top + bodyHeight * 2f / 3f,
-        fill,
-    )
-    val innerWidth = (bodyWidth - 4f * unit) * batteryPercent.coerceIn(0, 100) / 100f
+    val innerWidth = 17f * unit * batteryPercent.coerceIn(0, 100) / 100f
     if (fillInner && innerWidth > 0f) {
+        val fill = Paint(paint).apply { style = Paint.Style.FILL }
         canvas.drawRoundRect(
-            bodyLeft + 2f * unit,
-            top + 2f * unit,
-            bodyLeft + 2f * unit + innerWidth,
-            top + bodyHeight - 2f * unit,
+            left + 4.2f * unit,
+            iconTop + 2f * unit,
+            left + 4.2f * unit + innerWidth,
+            iconTop + 10f * unit,
             unit,
             unit,
             fill,
@@ -2989,14 +2990,15 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryGlyph(
     }
     if (drawNumberInside) {
         val numberPaint = Paint(paint).apply {
-            textSize = minOf(textSize * .72f, 8f * unit)
+            textSize = 8f * unit
             textAlign = Paint.Align.CENTER
             isFakeBoldText = true
         }
-        val centerY = top + bodyHeight / 2f - (numberPaint.fontMetrics.ascent + numberPaint.fontMetrics.descent) / 2f
+        val centerY =
+            iconTop + 6f * unit - (numberPaint.fontMetrics.ascent + numberPaint.fontMetrics.descent) / 2f
         canvas.drawText(
             batteryPercent.coerceIn(0, 100).toString(),
-            bodyLeft + bodyWidth / 2f,
+            left + 12.8f * unit,
             centerY,
             numberPaint,
         )
