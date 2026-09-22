@@ -84,4 +84,18 @@
     <string name="ai_no_models_imported">未匯入模型</string>
     <string name="ai_fetch_and_save_models">獲取並儲存模型</string>
     <string name="ai_current">目前</string>
+    <string name="ai_model_edit">模型設定</string>
+    <string name="ai_save_default_model">儲存預設模型</string>
+    <string name="ai_model_config">模型</string>
+    <string name="ai_provider">供應商</string>
+    <string name="ai_no_provider_configured">請先建立供應商</string>
+    <string name="ai_model_name">模型名稱</string>
+    <string name="ai_model_id">模型 ID</string>
+    <string name="ai_context_window">上下文窗口</string>
+    <string name="ai_thinking_strength">強度</string>
+    <string name="ai_reasoning_level_low">輕度</string>
+    <string name="ai_reasoning_level_medium">中</string>
+    <string name="ai_reasoning_level_high">高</string>
+    <string name="ai_reasoning_level_xhigh">極高</string>
+    <string name="ai_reasoning_level_max">最高</string>
 </resources>

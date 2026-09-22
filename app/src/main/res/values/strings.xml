@@ -2141,12 +2141,10 @@
     <string name="ai_models_url">Models URL</string>
     <string name="ai_api_key">API Key</string>
     <string name="ai_api_key_summary">Stored locally. Leave blank to keep the saved key.</string>
-    <string name="ai_model_config">Model</string>
     <string name="ai_model_edit">Model Configuration</string>
     <string name="ai_provider_models">Provider Models</string>
     <string name="ai_fetch_models">Fetch Models</string>
     <string name="ai_fetch_and_save_models">Fetch And Save Models</string>
-    <string name="ai_no_provider_configured">Create a provider first</string>
     <string name="ai_select_model">Select Model</string>
     <string name="ai_add_model_manually">Add Model Manually</string>
     <string name="ai_not_set">Not Set</string>
@@ -2157,7 +2155,6 @@
     <string name="ai_max_output_tokens">Max Output Tokens</string>
     <string name="ai_temperature">Temperature</string>
     <string name="ai_model_actions">Actions</string>
-    <string name="ai_save_default_model">Save Default Model</string>
     <string name="ai_save_provider">Save Provider</string>
     <string name="ai_save_and_sync_models">Save And Sync Models</string>
     <string name="ai_save_model">Save Model</string>

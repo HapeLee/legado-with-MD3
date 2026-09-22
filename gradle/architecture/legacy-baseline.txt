@@ -133,7 +133,11 @@ gson|app/main/io/legado/app/ui/book/readaloud/cloudtts|2
 gson|app/main/io/legado/app/ui/book/source/edit|2
 gson|app/main/io/legado/app/ui/book/source/manage|1
 gson|app/main/io/legado/app/ui/book/toc|1
-gson|app/main/io/legado/app/ui/config/ai|2
+# M5-5b：`AiModelEditViewModel` 迁进 `:feature:settings`，它的
+# `GSON.fromJson(json, AiGenerationParams::class.java)` 换成 `JsonCodec.fromJsonObject`
+# （`:core:platform` 的 expect object）⇒ 本目录的 GSON 门面从 2 降到 1。
+# 剩下的 1 处在尚未迁移的 `AiProviderEditViewModel`（ai 域收官时会归零）。
+gson|app/main/io/legado/app/ui/config/ai|1
 gson|app/main/io/legado/app/ui/config/otherConfig|1
 gson|app/main/io/legado/app/ui/login|1
 gson|app/main/io/legado/app/ui/main/bookshelf|1

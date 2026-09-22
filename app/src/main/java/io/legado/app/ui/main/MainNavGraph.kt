@@ -131,7 +131,8 @@ import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.feature.settings.ai.AiConfigScreen
 import io.legado.app.feature.settings.ai.AiConfigViewModel
-import io.legado.app.ui.config.ai.AiModelEditRouteScreen
+import io.legado.app.feature.settings.ai.AiModelEditScreen
+import io.legado.app.feature.settings.ai.AiModelEditViewModel
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
 import io.legado.app.feature.settings.ai.prompt.AiPromptConfigScreen
 import io.legado.app.feature.settings.ai.prompt.AiPromptConfigViewModel
@@ -602,10 +603,18 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsAiModelEdit> { route ->
-        AiModelEditRouteScreen(
-            providerId = route.providerId,
-            modelProfileId = route.modelProfileId,
-            onBackClick = { onNavigateBack() }
+        // M5-5b：`AiModelEditRouteScreen` 只做 `koinViewModel(parameters = { parametersOf(…) })`
+        // ——与 translation 同形。VM 的构造带两个导航参数（由 route 提供），
+        // Koin 侧仍是原来的 `viewModel { (providerId, modelProfileId) -> … }` 工厂。
+        val viewModel = koinViewModel<AiModelEditViewModel>(
+            key = "${route.providerId.orEmpty()}_${route.modelProfileId.orEmpty()}",
+            parameters = { parametersOf(route.providerId, route.modelProfileId) }
+        )
+        AiModelEditScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            effects = viewModel.effects,
+            onIntent = viewModel::onIntent,
+            onBackClick = { onNavigateBack() },
         )
     }
 

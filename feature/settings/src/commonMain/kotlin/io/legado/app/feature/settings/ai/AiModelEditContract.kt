@@ -1,10 +1,17 @@
-package io.legado.app.ui.config.ai
+package io.legado.app.feature.settings.ai
 
 import androidx.compose.runtime.Stable
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.TranslationConstants
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+
+// M5-5b：从 `:app` 的 `io.legado.app.ui.config.ai` 迁来（**只改包名**，结构逐字一致）。
+//
+// 与 `AiConfigContract` 一样：`AiModelEditEffect.ShowMessage` 带**裸 `String`**，
+// 因为迁移前 VM 里那 4 条提示就是硬编码英文（"Default AI model saved" /
+// "Failed to save AI model" / "AI connection test succeeded" / "AI connection test failed"）
+// ⇒ 原样保留。
 
 @Stable
 data class AiModelEditUiState(

@@ -2126,12 +2126,10 @@
     <string name="ai_models_url">模型 URL</string>
     <string name="ai_api_key">API 金鑰</string>
     <string name="ai_api_key_summary">儲存在本機。留空則保留已儲存的金鑰。</string>
-    <string name="ai_model_config">模型</string>
     <string name="ai_model_edit">模型設定</string>
     <string name="ai_provider_models">供應商模型</string>
     <string name="ai_fetch_models">擷取模型</string>
     <string name="ai_fetch_and_save_models">擷取並儲存模型</string>
-    <string name="ai_no_provider_configured">請先建立供應商</string>
     <string name="ai_select_model">選擇模型</string>
     <string name="ai_add_model_manually">手動新增模型</string>
     <string name="ai_not_set">未設定</string>
@@ -2142,7 +2140,6 @@
     <string name="ai_max_output_tokens">最大輸出 Token 數</string>
     <string name="ai_temperature">溫度</string>
     <string name="ai_model_actions">操作</string>
-    <string name="ai_save_default_model">儲存預設模型</string>
     <string name="ai_save_provider">儲存供應商</string>
     <string name="ai_save_and_sync_models">儲存並同步模型</string>
     <string name="ai_save_model">儲存模型</string>

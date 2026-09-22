@@ -400,9 +400,41 @@ translation 3 + customTheme 3 + aiSummary 4 + aiPrompt 4）+ `:app` 编译/单�
 `:feature:settings:testAndroidHostTest`（**21 例**）+ `:app` 编译/单测/打包 + 全模块测试；
 计数 **727 → 731 / 1222 → 1226**；资源 **164/164 逐字一致**（删副本前跑）。
 
-**下一步**：`ai` 域的剩下两页 —— `AiModelEdit`（239/167/48，用 `GSON` 反序列化
-`AiGenerationParams`，可换共享层的 `JsonCodec`）与 `AiProviderEdit`（384/352/98，另用
-`appCtx.getString` 3 处发测试连接的提示）。
+### M5-5b：AiModelEdit 页
+
+`AiModelEdit`（Screen 239 / VM 167 / Contract 48）迁进 `:feature:settings/ai/`。
+
+**唯一的非机械改动**是 ai 域两处 `GSON` 之一：
+`GSON.fromJson(json, AiGenerationParams::class.java)` → `JsonCodec.fromJsonObject(json, AiGenerationParams::class)`
+（`:core:platform` 的 `expect object`，平台原语、无需注入）。
+
+⚠️ **顺带修掉一个空安全差异**：`GSON.fromJson` 在 Kotlin 里是**平台类型**，返回 null 时
+`runCatching{}.getOrDefault(...)` **兜不住**（null 不是异常）⇒ 后面 `params.temperature` 会 NPE。
+`JsonCodec.fromJsonObject` 的返回类型是显式的 `T?`，所以改成 `getOrNull() ?: AiGenerationParams()`。
+对正常 JSON 行为等价，把潜在 NPE 变成明确的回落值；用例 2 专门钉「非法 JSON 回落而不崩」。
+
+**另一个跨文件的坑**：`formatTokenLimit` 原来定义在 `AiModelEditScreen.kt` 里且是 `internal`，
+而**同包的 `AiProviderEditScreen` 也在用它** ⇒ 迁走后 `:app` 编译不过。
+处理：在 `:app` 留一份**临时副本** `ai/TokenLimitFormat.kt`，注释里写明
+「`AiProviderEdit` 迁走（ai 域收官）后删除」。
+
+**G4 随之下调**：`gson|app/main/io/legado/app/ui/config/ai` **2 → 1**
+（剩下的 1 处在尚未迁移的 `AiProviderEditViewModel`）。
+
+**新增 4 条用例**（迁移前零测试）：`defaultParamsJson` 经 `JsonCodec` 反序列化进状态
+（钉本片的实质改动）/ 非法 JSON 回落默认参数而不崩 / **`initialized` 之后流刷新不覆盖用户
+正在编辑的字段**（写反了会让用户输入的字在保存前被抹掉）/ 保存成功发「提示 + 返回」并回写
+`modelProfileId`。
+
+**死资源**：14 条里 3 条删除；其余 11 条仍被未迁的 `AiProviderEditScreen` 使用。
+
+**验证**：四门禁全绿（G4 按下调）+ `:feature:settings:testAndroidHostTest`（**25 例**）+
+`:app` 编译/单测/打包 + 全模块测试；计数 **731 → 735 / 1226 → 1230**；
+资源 **176/176 逐字一致**（删副本前跑）。
+
+**下一步**：ai 域最后一页 `AiProviderEdit`（384/352/98，另用 `appCtx.getString` 3 处发
+测试连接的提示）——做完它 `ui/config/ai` 就整个归零，那份 `TokenLimitFormat.kt` 临时副本
+也可以删掉了。
 
 **下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
 `otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。

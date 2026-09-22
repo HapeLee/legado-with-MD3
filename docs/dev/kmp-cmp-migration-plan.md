@@ -1640,8 +1640,20 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      与过滤后的 `models.size` 本来就不等 —— 已把差异钉进注释。
      死资源 11 条删除。验证：四门禁全绿 + `:feature:settings`（**21 例**）+ `:app` 编译/单测/
      打包 + 全模块测试；计数 **727 → 731 / 1222 → 1226**；资源 **164/164**。
-     **下一步（本域）**：`AiModelEdit`（用 `GSON` 反序列化 `AiGenerationParams`，可换
-     `JsonCodec`）与 `AiProviderEdit`（另用 `appCtx.getString` 3 处）。
+   - **M5-5b 已完成（2026-09-23）：AiModelEdit 页。**
+     唯一的非机械改动是 ai 域两处 `GSON` 之一 → `JsonCodec.fromJsonObject`（`:core:platform`
+     的 expect object）。⚠️ 顺带修掉空安全差异：`GSON.fromJson` 是平台类型，返回 null 时
+     `getOrDefault` 兜不住 ⇒ 后面会 NPE；改成 `getOrNull() ?: …`（对正常 JSON 等价，
+     把潜在 NPE 变成明确回落）。
+     另一个跨文件的坑：`formatTokenLimit` 原是 `AiModelEditScreen.kt` 里的 `internal`，
+     **同包的 `AiProviderEditScreen` 也在用** ⇒ 迁走后 `:app` 编译不过，已在 `:app` 留一份
+     **临时副本** `ai/TokenLimitFormat.kt`（ai 域收官时删除）。
+     **G4 随之下调**：`gson|…/ui/config/ai` **2 → 1**。
+     新增 4 例：JSON 经 `JsonCodec` 反序列化进状态 / 非法 JSON 回落不崩 /
+     `initialized` 后流刷新**不覆盖**用户正在编辑的字段 / 保存成功发提示+返回并回写 id。
+     死资源 3 条。验证：四门禁全绿 + `:feature:settings`（**25 例**）+ `:app` 编译/单测/打包 +
+     全模块测试；计数 **731 → 735 / 1226 → 1230**；资源 **176/176**。
+     **下一步（本域收官）**：`AiProviderEdit`（另用 `appCtx.getString` 3 处）。
      **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵

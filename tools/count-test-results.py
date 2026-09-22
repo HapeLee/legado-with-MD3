@@ -212,7 +212,11 @@ RESULT_DIRS = {
 # 指向的模型 / 没有预设时退到第一个模型 / 设为默认的两条**硬编码英文**提示逐字。
 # ⚠️ 写这 4 例时被纠正了一个既有语义：`modelCount` 是**原始**模型数（含孤儿），
 # 与过滤后的 `models.size` 本来就不等 —— 已把差异钉进用例注释。
-BASELINE_MAIN = 731
+# M5-5b：731 → **735**（**+4**）。AiModelEdit 页迁入，新增 `AiModelEditViewModelTest`
+# 4 例（迁移前零测试）：`defaultParamsJson` 经 `JsonCodec` 反序列化进状态（**本片的实质改动**：
+# `GSON.fromJson` → `JsonCodec.fromJsonObject`）/ 非法 JSON 回落默认参数而不崩 /
+# `initialized` 之后流刷新**不覆盖**用户正在编辑的字段 / 保存成功发提示+返回并回写 modelProfileId。
+BASELINE_MAIN = 735
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -294,7 +298,8 @@ BASELINE_MAIN = 731
 # M5-4b：1214 → **1218**（**+4** = `AiSummaryConfigViewModelTest`）。主集同步到 723。
 # M5-4e：1218 → **1222**（**+4** = `AiPromptConfigViewModelTest`）。主集同步到 727。
 # M5-5a：1222 → **1226**（**+4** = `AiConfigViewModelTest`）。主集同步到 731。
-BASELINE_ALL = 1226
+# M5-5b：1226 → **1230**（**+4** = `AiModelEditViewModelTest`）。主集同步到 735。
+BASELINE_ALL = 1230
 
 
 def tally(d: pathlib.Path):

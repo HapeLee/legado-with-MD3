@@ -1563,7 +1563,6 @@
     <string name="ai_max_input_chars">最大輸入字元數</string>
     <string name="ai_max_output_tokens">最大輸出 Token 數</string>
     <string name="ai_model_actions">操作</string>
-    <string name="ai_model_config">模型</string>
     <string name="ai_model_edit">模型設定</string>
     <string name="ai_model_id">模型 ID</string>
     <string name="ai_model_name">模型名稱</string>
@@ -1573,7 +1572,6 @@
     <string name="ai_new_chat">新對話</string>
     <string name="ai_new_model">新模型</string>
     <string name="ai_new_profile">新設定檔</string>
-    <string name="ai_no_provider_configured">請先建立供應商</string>
     <string name="ai_not_set">未設定</string>
     <string name="ai_profile_counts">供應商：%1$d，模型：%2$d，預設：%3$d</string>
     <string name="ai_profile_database">設定檔</string>
@@ -1593,7 +1591,6 @@
     <string name="ai_replying">AI 正在回覆…</string>
     <string name="ai_retry_count">重試次數</string>
     <string name="ai_save_and_sync_models">儲存並同步模型</string>
-    <string name="ai_save_default_model">儲存預設模型</string>
     <string name="ai_save_model">儲存模型</string>
     <string name="ai_save_profile">儲存預設設定檔</string>
     <string name="ai_save_provider">儲存供應商</string>
