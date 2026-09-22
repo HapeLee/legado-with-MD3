@@ -128,7 +128,7 @@ import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewRouteScreen
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.browser.WebViewRouteScreen
-import io.legado.app.ui.config.ConfigNavScreen
+import io.legado.app.feature.settings.nav.ConfigNavScreen
 import io.legado.app.feature.settings.ai.AiConfigScreen
 import io.legado.app.feature.settings.ai.AiConfigViewModel
 import io.legado.app.feature.settings.ai.AiModelEditScreen

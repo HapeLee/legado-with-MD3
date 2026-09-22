@@ -143,4 +143,11 @@
     <string name="ai_test_success_no_models">AI connection test succeeded, but no models found</string>
     <string name="ai_test_success_with_models">AI connection test succeeded (%1$d models found)</string>
     <string name="ai_test_failed">AI connection test failed</string>
+    <string name="setting">Settings</string>
+    <string name="theme_setting">Theme Settings</string>
+    <string name="other_setting">Other Settings</string>
+    <string name="read_config">Reading Interface Settings</string>
+    <string name="cover_config">Cover Config</string>
+    <string name="download_cache_config">Download &amp; Cache</string>
+    <string name="backup_restore">Backup and Restore</string>
 </resources>

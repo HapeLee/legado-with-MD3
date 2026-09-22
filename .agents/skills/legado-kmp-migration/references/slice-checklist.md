@@ -448,6 +448,19 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   "No cached version available for offline mode"); offline works after one successful resolve.
 - Full recipe, dependency table and measurements: `docs/dev/cmp-module-convention.md`.
 
+## Tests
+
+- **A migrated page is not automatically a tested page.** ViewModels are where the testable logic
+  lives; migrating one without adding coverage for the branches you touched is a finding.
+- **A stateless screen with no ViewModel gets no test — and you must not add a test dependency to
+  get one.** Measured in M5-6b (`ConfigNavScreen`: 9 `ClickableSettingItem`s wired to 9 `() -> Unit`
+  callbacks, zero state). `:feature:settings` has **no Compose UI test infrastructure** (`ui-test`
+  appears in no shared module's build file; all 8 of its test files are ViewModel tests), so any
+  screen test would require pulling in `org.jetbrains.compose.ui:ui-test` first. Same judgement as
+  `koin-test` in M2-8: **do not pull a test dependency in alongside a wiring change** — it is a
+  separate risk dimension. Report "no test added, and why" instead of fabricating one that merely
+  re-asserts the source.
+
 ## Gates
 
 - G0 Android test/lint/architecture/debug gates pass.

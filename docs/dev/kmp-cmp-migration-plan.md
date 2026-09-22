@@ -1673,6 +1673,30 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      全模块测试；计数 **735 → 740 / 1230 → 1235**；资源 **276/276**。
      **下一步**：`otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）
      或 `themeConfig`（撞 `ui.main.*`，成本更高）。
+   - **M5-6a 已完成（2026-09-23）：删除 `ui/config` 下 3 个零引用的 `@Deprecated` 兼容壳。**
+     `ImportBookConfig`(14) / `ReadMangaConfig`(39) / `BookshelfConfig`(56)，共 109 行——
+     都是「设置下沉到 gateway 时留下的过渡壳」，调用方早已全部改走 gateway（脚本扫
+     `.kt`/`.java`/`.xml`/`.kts` 确认为全仓零引用）。**删而不迁**：依赖虽已全在共享层，
+     但把死代码换个地方放没有价值。
+     ⚠️ git 跟踪的生成物 `app/src/appNoR8/generated/baselineProfiles/*-prof.txt` 里有
+     `BookshelfConfig` 的旧条目——**不手改**（编译器会忽略不存在的类，设备重跑即消失）。
+   - **M5-6b 已完成（2026-09-23）：`ConfigNavScreen` → `:feature:settings/nav/`。**
+     `:feature:settings` 里**第一个不是子页面的成员**：设置域首页（9 项导航列表），
+     原住 `ui/config` 根包。迁入标志模块从「子页面集合」变成「域」。
+     - **零硬阻塞**：9 个导航动作全是 `() -> Unit` ⇒ 宿主**无需改 entry**（本就已写成回调形态），
+       只换一行 import。无 VM / 无 Effect / 无 `R.string` 以外资源。
+     - 10 条文案：7 新增、3 已存在（`ai_config`/`translation_config`/`lab_setting` 此前因
+       **这一页还在 `:app`** 而两边都有）。**无死资源**——7 条在 `:app` 侧仍被其他未迁子页引用。
+     - `ConfigTag`（12 行常量）**留在 `:app`**：只被 `MainIntent` 用于 deep-link 路由 tag 映射。
+     - **本片不加测试**：无状态、无 VM 的纯组合函数；`:feature:settings` **没有 Compose UI
+       测试基建**（本模块 8 个测试文件全是 VM 测试），要写就得先引 `compose.ui:ui-test` ——
+       与 M2-8 拒绝 `koin-test` 同判据：**不在接线片里顺带引入测试依赖**。
+       宁可写明「未加及原因」，不写只把源码再断言一遍的假测试。
+     - 验证：四门禁全绿 + `:feature:settings`（30 例）+ `:app` 编译/单测/打包 + 全模块测试；
+       计数 **740 / 1235 零偏离**；资源 **208/208**；lint 仍 **5 errors / 95 warnings**。
+       未验证：首页渲染与 9 条导航的实际跳转，需真机冒烟。
+     **下一步**：`otherConfig` / `backupConfig`（各需先抽 1–2 个平台契约）或 `themeConfig`
+     （撞 `ui.main.*` 的 10 个 `Launcher*` 图标资源）。
      **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵

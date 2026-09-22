@@ -487,5 +487,61 @@ translation 3 + customTheme 3 + aiSummary 4 + aiPrompt 4）+ `:app` 编译/单�
 **下一步**：`otherConfig` / `backupConfig`（B 级，需先抽 `WebService` / `ImportOldData` 胶水），
 或 `themeConfig`（撞 `ui.main.*`，成本更高）。
 
+### M5-6a：删除 3 个零引用的 `@Deprecated` 兼容壳
+
+`ui/config` 剩 52 文件里，有 3 个是**设置下沉到 gateway 时留下的过渡壳**，共 109 行：
+
+| 文件 | 行数 | 代理的 gateway |
+|---|---|---|
+| `importBookConfig/ImportBookConfig.kt` | 14 | `ImportBookSettingsGateway` |
+| `readMangaConfig/ReadMangaConfig.kt` | 39 | `MangaSettingsGateway` |
+| `bookshelfConfig/BookshelfConfig.kt` | 56 | `BookshelfSettingsGateway` |
+
+三者都带 `@Deprecated("使用 XxxSettingsGateway.currentSettings 读取，通过 update() 写入")`，
+调用方早已全部改走 gateway ⇒ **全仓零引用**（脚本扫 `.kt`/`.java`/`.xml`/`.kts` 确认）。
+
+**为什么删而不是迁**：它们的依赖已全在共享层，`git mv` 进 `:feature:settings` 做得到——
+但那只是**把死代码换个地方放**。`@Deprecated` + 零引用 ⇒ 直接删。
+
+⚠️ **一处生成物副作用**：git 跟踪的
+`app/src/appNoR8/generated/baselineProfiles/{baseline,startup}-prof.txt` 里有
+`BookshelfConfig` 的旧条目（`baseline-prof.txt:22730-22743`）。那是上次在设备上跑
+baseline profile 任务生成的记录，**不手改**——类不存在时该编译器会忽略这些条目，
+下次在设备上重跑任务即自动消失。
+
+### M5-6b：`ConfigNavScreen` → `:feature:settings/nav/`
+
+`:feature:settings` 里**第一个不是子页面迁移**的成员：它是**设置域首页**（9 项导航列表），
+原来住在 `ui/config` 的根包下。它迁进来标志着模块从「子页面的集合」变成「域」。
+
+- **零硬阻塞**：9 个导航动作全是 `() -> Unit` 回调 ⇒ 宿主侧**无需改 `MainNavGraph` 的
+  entry**（它本来就已写成 9 个回调形态），只换一行 import。
+- 无 VM、无 Effect、无 `R.string` 以外的资源 ⇒ 本模块里平台依赖最少的一页。
+- 10 条文案：7 条新增、3 条（`ai_config` / `translation_config` / `lab_setting`）此前
+  因为**这一页还在 `:app`** 而保留在 `:app`、也早已在 `:feature:settings` 里。**本片无死资源**：
+  7 条在 `:app` 侧仍被其他未迁子页引用（`theme_setting` 2 处 / `other_setting` 5 处 /
+  `read_config` 4 处 / `cover_config` 4 处 / `backup_restore` 4 处 / `download_cache_config` 1 处 /
+  `setting` 12 处）。
+- **`ConfigTag` 留在 `:app`**：`ui/config/ConfigTag.kt`（12 行常量）只被 `:app` 的 `MainIntent`
+  用来把 deep-link 的路由 tag 映射成 `MainRouteConst`——纯 `:app` 内部路由细节，本页用不到。
+
+**本片不加测试，理由记录在此**：这是一个**无状态、无 ViewModel** 的纯组合函数（9 个按钮 +
+9 个回调）。`:feature:settings` **没有 Compose UI 测试基建**（`ui-test` 不在任何共享模块的
+build 文件里；本模块 8 个测试文件全是 ViewModel 测试），要给它写测试就得先引入
+`org.jetbrains.compose.ui:ui-test` —— 与 M2-8 拒绝 `koin-test` 同一条判据：
+**不在接线片里顺带引入测试依赖**（独立风险维度）。宁可写明「未加测试及原因」，
+也不写一个只是把源码再断言一遍的假测试。
+
+验证：`:app:compileAppDebugKotlin` + 四门禁 + `:feature:settings` 测试（30 例）+ `:app` 单测/打包
++ 全模块测试全绿；计数 **740 / 1235 零偏离**（本片无用例增减）；资源 **208/208 逐字一致**；
+`lintAppDebug` 仍 **5 errors / 95 warnings**。
+
+**未验证**：首页列表的渲染，以及 9 条导航的实际跳转（点击「外观」是否真的到外观页）。
+需真机冒烟。
+
+**下一步**：`otherConfig` / `backupConfig`（各需先抽 1–2 个平台契约：
+`WebService` 状态 / `Permissions` / `ImportOldData`），或 `themeConfig`（撞 `ui.main.*`
+的 10 个 `Launcher*` 图标资源，成本更高）。
+
 **下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
 `otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。
