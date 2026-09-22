@@ -79,6 +79,14 @@ data class Book(
     // 自定义分组索引号
     @ColumnInfo(defaultValue = "0")
     var group: Long = 0,
+    // 单独标记为私密书籍（与所属分组无关；私密判定 = 本标记 ∪ 所属私密分组）
+    //
+    // 关于备份：这个字段会随 bookshelf.json 明文进本地/云备份（Gson 不认 @Transient）。
+    // 这是刻意的——书架备份本来就含书名、作者、简介，私密标记只是书架结构的一部分，
+    // 单独把它剔出去会导致恢复后"哪些书是私密"丢失、反而把内容暴露在公开书架上。
+    // 真正的敏感信息（本地密码及其派生凭据）另有排除规则，见 BackupConfig。
+    @ColumnInfo(defaultValue = "0")
+    var isPrivate: Boolean = false,
     // 最新章节标题
     var latestChapterTitle: String? = null,
     // 最新章节标题更新时间

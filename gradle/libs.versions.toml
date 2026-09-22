@@ -107,6 +107,7 @@ activity-compose = { module = "androidx.activity:activity-compose", version.ref 
 activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activity" }
 
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version = "1.10.0" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometricKtx" }
 androidx-collection = { module = "androidx.collection:collection", version.ref = "collection" }
 androidx-compose-adaptive = { module = "androidx.compose.material3.adaptive:adaptive", version.ref = "adaptive" }
 androidx-compose-adaptive-layout = { module = "androidx.compose.material3.adaptive:adaptive-layout", version.ref = "adaptiveLayout" }

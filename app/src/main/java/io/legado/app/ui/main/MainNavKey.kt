@@ -100,6 +100,9 @@ data object MainRouteSettingsCustomTheme : MainRoute
 data object MainRouteSettingsThemeManage : MainRoute
 
 @Serializable
+data object MainRouteSettingsPrivate : MainRoute
+
+@Serializable
 data object MainRouteSettingsLabConfig : MainRoute
 
 @Serializable
@@ -271,6 +274,7 @@ object MainRouteConst {
     const val ROUTE_SETTINGS_AI_PROMPT = "settings/ai/prompt"
     const val ROUTE_AI_CHAT = "ai/chat"
     const val ROUTE_SETTINGS_CUSTOM_THEME = "settings/custom_theme"
+    const val ROUTE_SETTINGS_PRIVATE = "settings/private"
     const val ROUTE_SETTINGS_LAB_CONFIG = "settings/lab_config"
     const val ROUTE_SETTINGS_DOWNLOAD_CACHE = "settings/download_cache"
     const val ROUTE_SETTINGS_TRANSLATION = "settings/translation"

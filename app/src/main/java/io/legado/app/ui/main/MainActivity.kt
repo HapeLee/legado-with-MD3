@@ -66,6 +66,7 @@ import io.legado.app.ui.book.readaloud.ReadAloudShellHost
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.welcome.WelcomeActivity
+import io.legado.app.ui.widget.components.privacy.PrivateAppStartGate
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
@@ -470,107 +471,127 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         val currentRoute = navBackStack.lastOrNull()
 
         SharedTransitionLayout {
-            Box(modifier = Modifier.fillMaxSize()) {
-            NavDisplay(
-                backStack = backStack,
-                entryDecorators = listOf(
-                    rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberViewModelStoreNavEntryDecorator(),
-                ),
-                sceneStrategies = listOf(
-                    ModalOverlaySceneStrategy(),
-                    SinglePaneSceneStrategy(),
-                ),
-                transitionSpec = {
-                    (slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
-                        initialOffset = { fullWidth -> fullWidth }
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 360,
-                            easing = LinearOutSlowInEasing
+            // 启动验证做成单独的 screen：门槛未过时完全不组合应用界面，
+            // 因此验证页背后看不到书架/阅读界面，也没有可交互的入口
+            PrivateAppStartGate {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    NavDisplay(
+                        backStack = backStack,
+                        entryDecorators = listOf(
+                            rememberSaveableStateHolderNavEntryDecorator(),
+                            rememberViewModelStoreNavEntryDecorator(),
+                        ),
+                        sceneStrategies = listOf(
+                            ModalOverlaySceneStrategy(),
+                            SinglePaneSceneStrategy(),
+                        ),
+                        transitionSpec = {
+                            (slideIntoContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                animationSpec = tween(
+                                    durationMillis = 480,
+                                    easing = FastOutSlowInEasing
+                                ),
+                                initialOffset = { fullWidth -> fullWidth }
+                            ) + fadeIn(
+                                animationSpec = tween(
+                                    durationMillis = 360,
+                                    easing = LinearOutSlowInEasing
+                                )
+                            )) togetherWith (slideOutOfContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                animationSpec = tween(
+                                    durationMillis = 480,
+                                    easing = FastOutSlowInEasing
+                                ),
+                                targetOffset = { fullWidth -> fullWidth / 4 }
+                            ) + fadeOut(
+                                animationSpec = tween(
+                                    durationMillis = 360,
+                                    easing = LinearOutSlowInEasing
+                                )
+                            ))
+                        },
+                        popTransitionSpec = {
+                            (slideIntoContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                animationSpec = tween(
+                                    durationMillis = 480,
+                                    easing = FastOutSlowInEasing
+                                ),
+                                initialOffset = { fullWidth -> -fullWidth / 4 }
+                            ) + fadeIn(
+                                animationSpec = tween(
+                                    durationMillis = 360,
+                                    easing = LinearOutSlowInEasing
+                                )
+                            )) togetherWith (scaleOut(
+                                targetScale = 0.8f,
+                                animationSpec = tween(
+                                    durationMillis = 480,
+                                    easing = FastOutSlowInEasing
+                                )
+                            ) + fadeOut(animationSpec = tween(durationMillis = 360)))
+                        },
+                        predictivePopTransitionSpec = { _ ->
+                            (slideIntoContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                animationSpec = tween(easing = FastOutSlowInEasing),
+                                initialOffset = { fullWidth -> -fullWidth / 4 }
+                            ) + fadeIn(animationSpec = tween(easing = LinearOutSlowInEasing))) togetherWith (scaleOut(
+                                targetScale = 0.8f,
+                                animationSpec = tween(easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween()))
+                        },
+                        onBack = { MainNavigator.navigateBack(this@MainActivity, backStack) },
+                        entryProvider = mainEntryProvider(
+                            backStack = backStack,
+                            configuration = configuration,
+                            showMangaUi = mangaSettings.showMangaUi,
+                            useRail = useRail,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            onNavigateToRoute = { route ->
+                                MainNavigator.navigateToRoute(
+                                    backStack,
+                                    route,
+                                    navRouteTracker,
+                                )
+                            },
+                            onNavigateBack = {
+                                MainNavigator.navigateBack(
+                                    this@MainActivity,
+                                    backStack,
+                                    navRouteTracker
+                                )
+                            },
                         )
-                    )) togetherWith (slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
-                        targetOffset = { fullWidth -> fullWidth / 4 }
-                    ) + fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 360,
-                            easing = LinearOutSlowInEasing
-                        )
-                    ))
-                },
-                popTransitionSpec = {
-                    (slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
-                        initialOffset = { fullWidth -> -fullWidth / 4 }
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 360,
-                            easing = LinearOutSlowInEasing
-                        )
-                    )) togetherWith (scaleOut(
-                        targetScale = 0.8f,
-                        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(durationMillis = 360)))
-                },
-                predictivePopTransitionSpec = { _ ->
-                    (slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(easing = FastOutSlowInEasing),
-                        initialOffset = { fullWidth -> -fullWidth / 4 }
-                    ) + fadeIn(animationSpec = tween(easing = LinearOutSlowInEasing))) togetherWith (scaleOut(
-                        targetScale = 0.8f,
-                        animationSpec = tween(easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween()))
-                },
-                onBack = { MainNavigator.navigateBack(this@MainActivity, backStack) },
-                entryProvider = mainEntryProvider(
-                    backStack = backStack,
-                    configuration = configuration,
-                    showMangaUi = mangaSettings.showMangaUi,
-                    useRail = useRail,
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    onNavigateToRoute = { route ->
-                        MainNavigator.navigateToRoute(
-                            backStack,
-                            route,
-                            navRouteTracker,
-                        )
-                    },
-                    onNavigateBack = {
-                        MainNavigator.navigateBack(this@MainActivity, backStack, navRouteTracker)
-                    },
-                )
-            )
-                // 朗读悬浮胶囊叠在整个导航之上：阅读器只是其中一个目的地，
-                // 挂在阅读器里会导致离开阅读界面后胶囊消失。
-                ReadAloudShellHost(
-                    playerState = pageShellPlayerState,
-                    showCapsule = pageShellShowCapsule,
-                    hidden = currentRoute is MainRouteReadAloudPlayer,
-                    onIntent = pageShellPlayerViewModel::onIntent,
-                    onCapsulePositionChanged = { x, y ->
-                        pageShellCapsuleScope.launch {
-                            readAloudSettingsRepository.putCapsulePosition(x, y)
-                        }
-                    },
-                    onOpenPlayer = {
-                        MainNavigator.navigateToRoute(
-                            backStack,
-                            MainRouteReadAloudPlayer,
-                            navRouteTracker
-                        )
-                    },
-            )
-            }
-            BackHandler(
-                enabled = !configuration.appShell.predictiveBackEnabled
-            ) {
-                MainNavigator.navigateBack(this@MainActivity, backStack)
+                    )
+                    // 朗读悬浮胶囊叠在整个导航之上：阅读器只是其中一个目的地，
+                    // 挂在阅读器里会导致离开阅读界面后胶囊消失。
+                    ReadAloudShellHost(
+                        playerState = pageShellPlayerState,
+                        showCapsule = pageShellShowCapsule,
+                        hidden = currentRoute is MainRouteReadAloudPlayer,
+                        onIntent = pageShellPlayerViewModel::onIntent,
+                        onCapsulePositionChanged = { x, y ->
+                            pageShellCapsuleScope.launch {
+                                readAloudSettingsRepository.putCapsulePosition(x, y)
+                            }
+                        },
+                        onOpenPlayer = {
+                            MainNavigator.navigateToRoute(
+                                backStack,
+                                MainRouteReadAloudPlayer,
+                                navRouteTracker
+                            )
+                        },
+                    )
+                }
+                BackHandler(
+                    enabled = !configuration.appShell.predictiveBackEnabled
+                ) {
+                    MainNavigator.navigateBack(this@MainActivity, backStack)
+                }
             }
         }
         TextSheetHost()

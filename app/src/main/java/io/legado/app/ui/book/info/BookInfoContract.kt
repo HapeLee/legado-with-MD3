@@ -9,6 +9,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 import io.legado.app.domain.model.BookshelfConflict
 import io.legado.app.domain.model.ConflictBookSummary
+import io.legado.app.domain.model.PrivateAccessState
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.ui.widget.components.variable.VariableEditorUiState
 import kotlinx.collections.immutable.ImmutableList
@@ -57,6 +58,15 @@ data class BookInfoUiState(
     /** 加入书架时发现的疑似重复；非空时由冲突 Sheet 决定共存还是迁移。 */
     val shelfConflict: BookshelfConflict? = null,
     val isResolvingShelfConflict: Boolean = false,
+    /** 本书是否私密（单本标记 ∪ 所属私密分组）；菜单里"标记/取消私密"读它 */
+    val bookPrivate: Boolean = false,
+    /** 进入本页时这本书是否需要验证（页面内刚标记私密不会立刻脱敏） */
+    val privateLockedByEntry: Boolean = false,
+    /** 本书为私密书籍且尚未解锁：详情页只显示锁定态 */
+    val privateLocked: Boolean = false,
+    val privateAccess: PrivateAccessState = PrivateAccessState(),
+    /** 应用内密码解锁弹窗（生物不可用或用户选择密码时） */
+    val showPrivatePasswordDialog: Boolean = false,
 )
 
 @Stable
@@ -242,10 +252,22 @@ sealed interface BookInfoIntent {
 
     /** 简介 HTML 图片长按。 */
     data class IntroImageLongClick(val source: String) : BookInfoIntent
+
+    /** 私密书籍未解锁时的验证入口 */
+    data object RequestPrivateUnlock : BookInfoIntent
+    data object ShowPrivatePassword : BookInfoIntent
+    data class SubmitPrivatePassword(val password: String) : BookInfoIntent
+    data object DismissPrivatePassword : BookInfoIntent
 }
 
 sealed interface BookInfoEffect {
     data class ShowMessage(val message: String) : BookInfoEffect
+
+    /** 交给宿主弹出系统生物验证框（需要 FragmentActivity） */
+    data object RequestBiometricUnlock : BookInfoEffect
+
+    /** 私密功能需要本地密码：引导去设置页 */
+    data object NavigateToLocalPasswordSettings : BookInfoEffect
 
     data class Finish(
         val resultCode: Int? = null,
@@ -339,4 +361,5 @@ enum class BookInfoMenuAction {
     ToggleDeleteAlert,
     ClearCache,
     ShowLog,
+    TogglePrivate,
 }

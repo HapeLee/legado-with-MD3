@@ -17,6 +17,7 @@ import io.legado.app.data.entities.BookOutlineNode
 import io.legado.app.domain.gateway.AiMemoryGateway
 import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
+import io.legado.app.domain.gateway.PrivateAccessGateway
 import io.legado.app.domain.model.AiToolCall
 import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.domain.model.AiToolResult
@@ -36,7 +37,30 @@ class AiToolRepository(
     private val aiArtifactDao: AiArtifactDao,
     private val aiMemoryGateway: AiMemoryGateway,
     private val bookKnowledgeGateway: BookKnowledgeGateway,
+    private val privateAccessGateway: PrivateAccessGateway,
 ) : AiToolGateway {
+
+    /**
+     * 私密书在未获准时一律当作**不存在**：书名、简介、目录、正文都不交给模型。
+     *
+     * 判定复用与书架/详情页同一套规则（单本标记 ∪ 所属私密分组 + 授权），工具全是同步拼接，
+     * 所以走同步读——调用方已经在 Dispatchers.IO 上（见 [execute]）。
+     * 返回的错误刻意与"书不存在"完全一致，不泄露"这本书是私密的"。
+     */
+    private fun isReadable(bookUrl: String): Boolean {
+        val facts = bookDao.privateFacts(bookUrl)
+        return !facts.isPrivate ||
+                privateAccessGateway.isGrantedNow(bookUrl, facts.groupMask)
+    }
+
+    private fun Book.isReadable(): Boolean = isReadable(bookUrl)
+
+    /** 只有书名+作者时（书签、阅读统计）按名作者反查一次再判定；查不到就当与私密无关 */
+    private fun isReadable(name: String, author: String): Boolean {
+        if (name.isBlank() || author.isBlank()) return true
+        val book = bookDao.getBook(name, author) ?: return true
+        return book.isReadable()
+    }
 
     override fun availableTools(): List<AiToolDefinition> = tools
 
@@ -83,6 +107,7 @@ class AiToolRepository(
         val limit = args.int("limit", 8).coerceIn(1, 20)
         val books = bookDao.all
             .asSequence()
+            .filter { it.isReadable() }
             .filter { book ->
                 query.isBlank() ||
                     book.name.contains(query, ignoreCase = true) ||
@@ -246,6 +271,8 @@ class AiToolRepository(
         val bookAuthor = args.string("bookAuthor")?.trim().orEmpty()
         val bookmarks = bookmarkDao.all
             .asSequence()
+            // 私密书未获准时连笔记与正文片段都不给
+            .filter { isReadable(it.bookName, it.bookAuthor) }
             .filter { bookmark ->
                 (bookName.isBlank() || bookmark.bookName.equals(bookName, ignoreCase = true)) &&
                     (bookAuthor.isBlank() || bookmark.bookAuthor.equals(bookAuthor, ignoreCase = true)) &&
@@ -280,6 +307,7 @@ class AiToolRepository(
         val limit = args.int("limit", 10).coerceIn(1, 30)
         val records = readRecordDao.all
             .asSequence()
+            .filter { isReadable(it.bookName, it.bookAuthor) }
             .filter {
                 query.isBlank() ||
                     it.bookName.contains(query, ignoreCase = true) ||
@@ -709,7 +737,16 @@ class AiToolRepository(
         return GSON.toJson(mapOf("deleted" to true, "key" to key))
     }
 
-    private fun resolveBook(args: JsonObject): Book? {
+    /**
+     * 唯一能吐正文的入口：解析出来的书必须仍然可读，否则一律按"找不到"处理。
+     *
+     * 这道守卫必须在这里而不是各个工具里——工具是十来处，漏一个就漏一次正文。
+     */
+    private fun resolveBook(args: JsonObject): Book? = resolveBookIgnoringPrivacy(args)?.takeIf {
+        it.isReadable()
+    }
+
+    private fun resolveBookIgnoringPrivacy(args: JsonObject): Book? {
         args.string("bookUrl")?.takeIf { it.isNotBlank() }?.let { url ->
             bookDao.getBook(url)?.let { return it }
         }

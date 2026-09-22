@@ -6,6 +6,7 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.Update
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.TextCard
@@ -40,6 +42,10 @@ fun BookshelfCover(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
+    /** 内容模糊：透传给封面组件，作用点在共享元素节点内部，转场时才不会被落下 */
+    contentBlur: Dp = 0.dp,
+    /** 盖在封面上的叠加层（遮罩/点阵/锁标），必须渲染在共享节点内部 */
+    overlayContent: (@Composable BoxScope.() -> Unit)? = null,
 ) {
     Box(modifier = modifier) {
         CoilBookCover(
@@ -55,6 +61,8 @@ fun BookshelfCover(
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope,
             sharedCoverKey = sharedCoverKey,
+            contentBlur = contentBlur,
+            overlayContent = overlayContent,
         )
 
         // 使用 animatedVisibilityScope 的 animateEnterExit 为叠加层添加同步动画

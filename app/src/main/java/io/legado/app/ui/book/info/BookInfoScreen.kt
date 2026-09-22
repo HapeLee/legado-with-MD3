@@ -143,6 +143,9 @@ import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.privacy.PrivateLockedCover
+import io.legado.app.ui.widget.components.privacy.PrivateLockedHint
+import io.legado.app.ui.widget.components.privacy.PrivateMaskLine
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
@@ -248,6 +251,27 @@ fun BookInfoScreen(
             },
         )
     }
+
+    if (state.showPrivatePasswordDialog) {
+        var password by remember { mutableStateOf("") }
+        AppAlertDialog(
+            show = true,
+            onDismissRequest = { onIntent(BookInfoIntent.DismissPrivatePassword) },
+            title = stringResource(R.string.private_unlock_password_title),
+            content = {
+                AppTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = stringResource(R.string.private_unlock_password_title),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmText = stringResource(R.string.ok),
+            onConfirm = { onIntent(BookInfoIntent.SubmitPrivatePassword(password)) },
+            dismissText = stringResource(R.string.cancel),
+            onDismiss = { onIntent(BookInfoIntent.DismissPrivatePassword) },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class,
@@ -306,13 +330,16 @@ private fun BookInfoScreenContent(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { onIntent(BookInfoIntent.ReadClick) },
-                containerColor = LegadoTheme.colorScheme.primaryContainer,
-                contentColor = LegadoTheme.colorScheme.onPrimaryContainer,
-                icon = { Icon(Icons.Default.Book, null) },
-                text = { Text(stringResource(R.string.reading)) },
-            )
+            // 未验证时不提供"直接开始阅读"的入口，避免绕过验证
+            if (!state.privateLocked) {
+                ExtendedFloatingActionButton(
+                    onClick = { onIntent(BookInfoIntent.ReadClick) },
+                    containerColor = LegadoTheme.colorScheme.primaryContainer,
+                    contentColor = LegadoTheme.colorScheme.onPrimaryContainer,
+                    icon = { Icon(Icons.Default.Book, null) },
+                    text = { Text(stringResource(R.string.reading)) },
+                )
+            }
         },
         alwaysDrawBehindBars = true,
     ) { paddingValues ->
@@ -320,119 +347,154 @@ private fun BookInfoScreenContent(
         if (book == null) {
             Box(modifier = Modifier.fillMaxSize())
         } else {
-            val resolvedBackdropStyle = requireNotNull(backdropStyle)
-            Box(modifier = Modifier.fillMaxSize()) {
-                BookInfoBackdrop(
-                    book = book,
-                    style = resolvedBackdropStyle,
-                    usesDefaultCover = usesDefaultCover,
-                    onNetworkCoverLoadError = onNetworkCoverLoadError,
-                )
-                AppPullToRefresh(
-                    modifier = Modifier.fillMaxSize(),
-                    isRefreshing = state.isTocLoading,
-                    onRefresh = { onIntent(BookInfoIntent.MenuAction(BookInfoMenuAction.Refresh)) },
-                    topPadding = paddingValues.calculateTopPadding(),
-                    scrollBehavior = scrollBehavior
-                ) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            top = paddingValues.calculateTopPadding() + 8.dp,
-                            bottom = paddingValues.calculateBottomPadding() + 88.dp,
-                        ),
-                    ) {
-                        item {
-                            BookInfoHeader(
-                                book = book,
-                                highlightedTags = state.highlightedTags,
-                                kindLabels = state.kindLabels,
-                                groupNames = state.groupNames,
-                                onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
-                                onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
-                                onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
-                                onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
-                                onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
-                                onNetworkCoverLoadError = {
-                                    onNetworkCoverLoadError(book.coverPath)
-                                },
-                                usesDefaultCover = usesDefaultCover,
-                                applySeedOverlay = resolvedBackdropStyle.applySeedOverlay,
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                sharedCoverKey = sharedCoverKey,
-                            )
-                        }
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(
-                                        color = LegadoTheme.colorScheme.surface
-                                    )
-                                    .padding(bottom = 24.dp)
+            // 脱敏 ⇄ 解锁用交叉淡化过渡。
+            // 刻意不在整页上加模糊：那会把脱敏封面的圆角与阴影一起糊掉，
+            // 而且整页级别的大区域模糊在低端机上开销明显。
+            Crossfade(
+                targetState = state.privateLocked,
+                modifier = Modifier.fillMaxSize(),
+                animationSpec = tween(320),
+            ) { locked ->
+                // 过渡期间新旧两份内容会同时组合：共享元素 key 只交给与目标一致的那一份，
+                // 否则同一个 sharedBounds key 会短暂出现两个持有者
+                if (locked) {
+                    BookInfoLockedContent(
+                        book = book,
+                        hasLocalPassword = state.privateAccess.hasPassword,
+                        paddingValues = paddingValues,
+                        usesDefaultCover = usesDefaultCover,
+                        applySeedOverlay = backdropStyle?.applySeedOverlay == true,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        sharedCoverKey = sharedCoverKey.takeIf { state.privateLocked },
+                        onVerify = { onIntent(BookInfoIntent.RequestPrivateUnlock) },
+                    )
+                } else {
+                    val resolvedBackdropStyle = requireNotNull(backdropStyle)
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        BookInfoBackdrop(
+                            book = book,
+                            style = resolvedBackdropStyle,
+                            usesDefaultCover = usesDefaultCover,
+                            onNetworkCoverLoadError = onNetworkCoverLoadError,
+                        )
+                        AppPullToRefresh(
+                            modifier = Modifier.fillMaxSize(),
+                            isRefreshing = state.isTocLoading,
+                            onRefresh = { onIntent(BookInfoIntent.MenuAction(BookInfoMenuAction.Refresh)) },
+                            topPadding = paddingValues.calculateTopPadding(),
+                            scrollBehavior = scrollBehavior
+                        ) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(
+                                    top = paddingValues.calculateTopPadding() + 8.dp,
+                                    bottom = paddingValues.calculateBottomPadding() + 88.dp,
+                                ),
                             ) {
-                                BookInfoActions(
-                                    inBookshelf = state.inBookshelf,
-                                    onShelfClick = { onIntent(BookInfoIntent.ShelfClick) },
-                                    onTocClick = { onIntent(BookInfoIntent.TocClick) },
-                                    onGroupClick = { onIntent(BookInfoIntent.GroupClick) },
-                                    onSourceClick = { onIntent(BookInfoIntent.ChangeSourceClick) },
-                                    onReadRecordClick = { onIntent(BookInfoIntent.ReadRecordClick) },
-                                )
-                                if (
-                                    state.characters.isNotEmpty() ||
-                                    state.knowledgeEntries.isNotEmpty() ||
-                                    state.recentEvents.isNotEmpty()
-                                ) {
-                                    BookInfoCharacters(
-                                        characters = state.characters,
-                                        onCharacterClick = {
-                                            onIntent(BookInfoIntent.CharacterClick(it))
+                                item {
+                                    BookInfoHeader(
+                                        book = book,
+                                        highlightedTags = state.highlightedTags,
+                                        kindLabels = state.kindLabels,
+                                        groupNames = state.groupNames,
+                                        onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
+                                        onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
+                                        onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
+                                        onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
+                                        onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
+                                        onNetworkCoverLoadError = {
+                                            onNetworkCoverLoadError(book.coverPath)
                                         },
-                                        onNetworkClick = {
-                                            onIntent(BookInfoIntent.CharacterNetworkClick)
-                                        },
-                                        onViewAllClick = {
-                                            onIntent(BookInfoIntent.CharacterListClick)
-                                        },
-                                        onKnowledgeClick = {
-                                            onIntent(BookInfoIntent.KnowledgeListClick)
-                                        },
-                                        onEventsClick = {
-                                            onIntent(BookInfoIntent.EventListClick)
-                                        },
+                                        usesDefaultCover = usesDefaultCover,
+                                        applySeedOverlay = resolvedBackdropStyle.applySeedOverlay,
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        sharedCoverKey = sharedCoverKey.takeIf { !state.privateLocked },
                                     )
                                 }
-                                state.relatedBooks.forEach { module ->
-                                    RelatedBooksBanner(
-                                        title = module.title,
-                                        books = module.books,
-                                        onBookClick = { book, _ ->
-                                            onIntent(BookInfoIntent.RelatedBookClick(book))
-                                        },
-                                        onMoreClick = {
-                                            onIntent(BookInfoIntent.RelatedBooksMore(module.title, module.resolvedUrl))
-                                        },
-                                    )
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                color = LegadoTheme.colorScheme.surface
+                                            )
+                                            .padding(bottom = 24.dp)
+                                    ) {
+                                        BookInfoActions(
+                                            inBookshelf = state.inBookshelf,
+                                            onShelfClick = { onIntent(BookInfoIntent.ShelfClick) },
+                                            onTocClick = { onIntent(BookInfoIntent.TocClick) },
+                                            onGroupClick = { onIntent(BookInfoIntent.GroupClick) },
+                                            onSourceClick = { onIntent(BookInfoIntent.ChangeSourceClick) },
+                                            onReadRecordClick = { onIntent(BookInfoIntent.ReadRecordClick) },
+                                        )
+                                        if (
+                                            state.characters.isNotEmpty() ||
+                                            state.knowledgeEntries.isNotEmpty() ||
+                                            state.recentEvents.isNotEmpty()
+                                        ) {
+                                            BookInfoCharacters(
+                                                characters = state.characters,
+                                                onCharacterClick = {
+                                                    onIntent(BookInfoIntent.CharacterClick(it))
+                                                },
+                                                onNetworkClick = {
+                                                    onIntent(BookInfoIntent.CharacterNetworkClick)
+                                                },
+                                                onViewAllClick = {
+                                                    onIntent(BookInfoIntent.CharacterListClick)
+                                                },
+                                                onKnowledgeClick = {
+                                                    onIntent(BookInfoIntent.KnowledgeListClick)
+                                                },
+                                                onEventsClick = {
+                                                    onIntent(BookInfoIntent.EventListClick)
+                                                },
+                                            )
+                                        }
+                                        state.relatedBooks.forEach { module ->
+                                            RelatedBooksBanner(
+                                                title = module.title,
+                                                books = module.books,
+                                                onBookClick = { book, _ ->
+                                                    onIntent(BookInfoIntent.RelatedBookClick(book))
+                                                },
+                                                onMoreClick = {
+                                                    onIntent(
+                                                        BookInfoIntent.RelatedBooksMore(
+                                                            module.title,
+                                                            module.resolvedUrl
+                                                        )
+                                                    )
+                                                },
+                                            )
+                                        }
+                                        BookInfoSummary(
+                                            book = book,
+                                            tocLoadFailed = state.tocLoadFailed,
+                                            onRemarkClick = { onIntent(BookInfoIntent.RemarkClick) },
+                                            bookSource = state.bookSource,
+                                            onJumpToAnotherApp = jumpToAnotherApp,
+                                            onIntroButtonClick = { name, click ->
+                                                onIntent(
+                                                    BookInfoIntent.IntroButtonClick(
+                                                        name,
+                                                        click
+                                                    )
+                                                )
+                                            },
+                                            onIntroImageClick = { click ->
+                                                onIntent(BookInfoIntent.IntroImageClick(click))
+                                            },
+                                            onIntroImageLongClick = { source ->
+                                                onIntent(BookInfoIntent.IntroImageLongClick(source))
+                                            },
+                                        )
+                                    }
                                 }
-                                BookInfoSummary(
-                                    book = book,
-                                    tocLoadFailed = state.tocLoadFailed,
-                                    onRemarkClick = { onIntent(BookInfoIntent.RemarkClick) },
-                                    bookSource = state.bookSource,
-                                    onJumpToAnotherApp = jumpToAnotherApp,
-                                    onIntroButtonClick = { name, click ->
-                                        onIntent(BookInfoIntent.IntroButtonClick(name, click))
-                                    },
-                                    onIntroImageClick = { click ->
-                                        onIntent(BookInfoIntent.IntroImageClick(click))
-                                    },
-                                    onIntroImageLongClick = { source ->
-                                        onIntent(BookInfoIntent.IntroImageLongClick(source))
-                                    },
-                                )
                             }
                         }
                     }
@@ -572,6 +634,85 @@ private fun BookInfoColorTheme(
         overrideIsDark = theme?.isDark ?: baseTheme.isDark,
         content = content,
     )
+}
+
+/**
+ * 未验证时的详情页：**沿用正常详情页的同一套布局**，只是封面模糊、文字全部换成占位条。
+ *
+ * 复用 `BookInfoHeader`（而不是另写一份骨架）有两个直接好处：
+ * 1. 共享元素动画能接上——封面用的还是同一个 sharedCoverKey 与同一个 scope；
+ * 2. 脱敏态就是最终形态，不存在"进去时先是一样、再变成另一样"的闪烁。
+ */
+@Composable
+private fun BookInfoLockedContent(
+    book: BookInfoBookUi,
+    hasLocalPassword: Boolean,
+    paddingValues: PaddingValues,
+    usesDefaultCover: Boolean,
+    applySeedOverlay: Boolean,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
+    sharedCoverKey: String?,
+    onVerify: () -> Unit,
+) {
+    // 刻意不渲染 BookInfoBackdrop：脱敏态连背景大图都不出现
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = paddingValues.calculateTopPadding() + 8.dp,
+            bottom = paddingValues.calculateBottomPadding() + 96.dp,
+        ),
+    ) {
+        item {
+            BookInfoHeader(
+                book = book,
+                highlightedTags = emptyList(),
+                kindLabels = emptyList(),
+                groupNames = null,
+                onCoverClick = {},
+                onCoverLongClick = {},
+                onAuthorClick = {},
+                onBookNameClick = {},
+                onOriginClick = {},
+                onNetworkCoverLoadError = {},
+                usesDefaultCover = usesDefaultCover,
+                applySeedOverlay = applySeedOverlay,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                sharedCoverKey = sharedCoverKey,
+                locked = true,
+            )
+        }
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                // 只保留书名/作者/书源的占位（在 header 内），正文区直接给提示，不再铺占位条
+                PrivateLockedHint(
+                    title = stringResource(R.string.private_locked_book_title),
+                    description = stringResource(
+                        if (hasLocalPassword) {
+                            R.string.private_locked_book_desc
+                        } else {
+                            R.string.private_content_no_password
+                        }
+                    ),
+                    actionText = stringResource(
+                        if (hasLocalPassword) {
+                            R.string.private_verify_and_open
+                        } else {
+                            R.string.set_local_password
+                        }
+                    ),
+                    onAction = onVerify,
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -720,6 +861,8 @@ private fun BookInfoTopBarActions(
     state: BookInfoUiState,
     onMenuAction: (BookInfoMenuAction) -> Unit,
 ) {
+    // 未验证时只留返回：编辑/分享/更多都会导出真实书信息
+    if (state.privateLocked) return
     if (state.inBookshelf) {
         TopBarActionButton(
             onClick = { onMenuAction(BookInfoMenuAction.Edit) },
@@ -963,6 +1106,13 @@ private fun BookInfoOverflowMenu(
             text = stringResource(R.string.log),
             onClick = { onMenuAction(BookInfoMenuAction.ShowLog) }
         )
+        RoundDropdownMenuItem(
+            text = stringResource(
+                if (state.bookPrivate) R.string.private_unmark_book else R.string.private_mark_book
+            ),
+            onClick = { onMenuAction(BookInfoMenuAction.TogglePrivate) },
+            isSelected = state.bookPrivate
+        )
     }
 }
 
@@ -983,8 +1133,11 @@ private fun BookInfoHeader(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     sharedCoverKey: String?,
+    // 未验证时就地脱敏：保留同一套布局与共享元素，只把封面模糊、文字换成占位条
+    locked: Boolean = false,
 ) {
     val coverDescription = stringResource(R.string.a11y_book_cover_actions, book.name)
+    val hiddenDescription = stringResource(R.string.private_hidden_label)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1017,30 +1170,57 @@ private fun BookInfoHeader(
                 Box(
                     modifier = Modifier
                         .width(112.dp)
-                        .combinedClickable(onClick = onCoverClick, onLongClick = onCoverLongClick)
+                        .then(
+                            // 脱敏时封面不可点：点开大图等于直接泄漏
+                            if (locked) {
+                                Modifier
+                            } else {
+                                Modifier.combinedClickable(
+                                    onClick = onCoverClick,
+                                    onLongClick = onCoverLongClick
+                                )
+                            }
+                        )
                         .semantics {
                             role = Role.Button
-                            contentDescription = coverDescription
+                            contentDescription = if (locked) hiddenDescription else coverDescription
                         }
                 ) {
-                    CoilBookCover(
-                        name = book.name,
-                        author = book.author,
-                        path = if (usesDefaultCover) null else book.coverPath,
-                        sourceOrigin = if (usesDefaultCover) null else book.origin,
-                        // 传 bookUrl 供别名缓存键。详情页故意不设 preferCache：
-                        // 在线时仍走完整链路拉新链接并刷新别名，保证封面换图后书架也能更新；
-                        // 精确命中时同样不跑脚本。
-                        bookUrl = book.bookUrl,
-                        onError = onNetworkCoverLoadError,
-                        modifier = Modifier
-                            .width(112.dp)
-                            .aspectRatio(5f / 7f),
-                        showLoadingPlaceholder = sharedCoverKey == null,
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        sharedCoverKey = sharedCoverKey
-                    )
+                    if (locked) {
+                        PrivateLockedCover(
+                            name = null,
+                            author = null,
+                            path = if (usesDefaultCover) null else book.coverPath,
+                            sourceOrigin = if (usesDefaultCover) null else book.origin,
+                            bookUrl = book.bookUrl,
+                            modifier = Modifier
+                                .width(112.dp)
+                                .aspectRatio(5f / 7f),
+                            // 同一个 key + 同一个 scope：共享元素动画在脱敏态下依然连续
+                            sharedCoverKey = sharedCoverKey,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        )
+                    } else {
+                        CoilBookCover(
+                            name = book.name,
+                            author = book.author,
+                            path = if (usesDefaultCover) null else book.coverPath,
+                            sourceOrigin = if (usesDefaultCover) null else book.origin,
+                            // 传 bookUrl 供别名缓存键。详情页故意不设 preferCache：
+                            // 在线时仍走完整链路拉新链接并刷新别名，保证封面换图后书架也能更新；
+                            // 精确命中时同样不跑脚本。
+                            bookUrl = book.bookUrl,
+                            onError = onNetworkCoverLoadError,
+                            modifier = Modifier
+                                .width(112.dp)
+                                .aspectRatio(5f / 7f),
+                            showLoadingPlaceholder = sharedCoverKey == null,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            sharedCoverKey = sharedCoverKey
+                        )
+                    }
                 }
                 Column(
                     modifier = Modifier
@@ -1049,60 +1229,83 @@ private fun BookInfoHeader(
                         .padding(top = 8.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    var showTitleMenu by remember { mutableStateOf(false) }
-                    var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
-                    Box {
-                        AnimatedTextLine(
-                            text = book.name,
-                            style = LegadoTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = if (isTitleExpanded) Int.MAX_VALUE else 2,
-                            modifier = Modifier.combinedClickable(
-                                onClick = { onBookNameClick(false) },
-                                onLongClick = { showTitleMenu = true }
-                            )
+                    if (locked) {
+                        // 书名 / 作者 / 来源全部换成占位条：不渲染任何真实字符串，也不响应点击
+                        PrivateMaskLine(widthFraction = 0.72f, thickness = 20.dp)
+                        PrivateMaskLine(
+                            modifier = Modifier.padding(top = 6.dp),
+                            widthFraction = 0.42f,
+                            thickness = 12.dp
                         )
-                        RoundDropdownMenu(
-                            expanded = showTitleMenu,
-                            onDismissRequest = { showTitleMenu = false }
-                        ) {
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.search),
-                                onClick = {
-                                    showTitleMenu = false
-                                    onBookNameClick(true)
-                                }
+                        PrivateMaskLine(
+                            modifier = Modifier.padding(top = 6.dp),
+                            widthFraction = 0.3f,
+                            thickness = 9.dp
+                        )
+                    } else {
+                        var showTitleMenu by remember { mutableStateOf(false) }
+                        var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
+                        Box {
+                            AnimatedTextLine(
+                                text = book.name,
+                                style = LegadoTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = if (isTitleExpanded) Int.MAX_VALUE else 2,
+                                modifier = Modifier.combinedClickable(
+                                    onClick = { onBookNameClick(false) },
+                                    onLongClick = { showTitleMenu = true }
+                                )
                             )
-                            RoundDropdownMenuItem(
-                                text = stringResource(if (isTitleExpanded) R.string.collapse else R.string.expand),
-                                onClick = {
-                                    showTitleMenu = false
-                                    isTitleExpanded = !isTitleExpanded
-                                }
-                            )
+                            RoundDropdownMenu(
+                                expanded = showTitleMenu,
+                                onDismissRequest = { showTitleMenu = false }
+                            ) {
+                                RoundDropdownMenuItem(
+                                    text = stringResource(R.string.search),
+                                    onClick = {
+                                        showTitleMenu = false
+                                        onBookNameClick(true)
+                                    }
+                                )
+                                RoundDropdownMenuItem(
+                                    text = stringResource(if (isTitleExpanded) R.string.collapse else R.string.expand),
+                                    onClick = {
+                                        showTitleMenu = false
+                                        isTitleExpanded = !isTitleExpanded
+                                    }
+                                )
+                            }
                         }
-                    }
-                    AnimatedTextLine(
-                        text = stringResource(R.string.author_show, book.realAuthor),
-                        style = LegadoTheme.typography.bodyLarge,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.combinedClickable(
-                            onClick = { onAuthorClick(false) },
-                            onLongClick = { onAuthorClick(true) }
+                        AnimatedTextLine(
+                            text = stringResource(R.string.author_show, book.realAuthor),
+                            style = LegadoTheme.typography.bodyLarge,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.combinedClickable(
+                                onClick = { onAuthorClick(false) },
+                                onLongClick = { onAuthorClick(true) }
+                            )
                         )
-                    )
-                    AnimatedTextLine(
-                        text = stringResource(R.string.origin_show, book.originName),
-                        style = LegadoTheme.typography.labelMedium,
-                        color = LegadoTheme.colorScheme.primary,
-                        modifier = Modifier.clickable(onClick = onOriginClick)
-                    )
+                        AnimatedTextLine(
+                            text = stringResource(R.string.origin_show, book.originName),
+                            style = LegadoTheme.typography.labelMedium,
+                            color = LegadoTheme.colorScheme.primary,
+                            modifier = Modifier.clickable(onClick = onOriginClick)
+                        )
+                    }
                 }
             }
-            if (highlightedTags.isNotEmpty()) {
+            if (locked) {
+                PrivateMaskLine(widthFraction = 0.5f, thickness = 24.dp)
+            } else if (highlightedTags.isNotEmpty()) {
                 HighlightTagRow(tags = highlightedTags)
             }
-            if (kindLabels.isNotEmpty() || !groupNames.isNullOrBlank()) {
+            if (locked) {
+                PrivateMaskLine(
+                    modifier = Modifier.padding(top = 2.dp),
+                    widthFraction = 0.34f,
+                    thickness = 20.dp
+                )
+            } else if (kindLabels.isNotEmpty() || !groupNames.isNullOrBlank()) {
                 val kindListState = rememberLazyListState()
                 LazyRow(
                     state = kindListState,

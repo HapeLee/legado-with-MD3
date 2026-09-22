@@ -30,10 +30,15 @@ import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.PrivateAccessGateway
+import io.legado.app.domain.gateway.PrivateContentGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.BookshelfConflict
+import io.legado.app.domain.model.PrivateAccessState
+import io.legado.app.domain.model.PrivateUnlockTarget
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.OtherSettings
+import io.legado.app.domain.model.settings.PrivateAccessSettings
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.usecase.BookTocUnavailableException
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
@@ -92,6 +97,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -117,12 +123,33 @@ class BookInfoViewModel(
     private val themeSettingsGateway: ThemeSettingsGateway,
     private val coverSettingsGateway: CoverSettingsGateway,
     private val otherSettingsGateway: OtherSettingsGateway,
+    private val privateAccessGateway: PrivateAccessGateway,
+    private val privateContentGateway: PrivateContentGateway,
 ) : BaseViewModel(application) {
 
     val allGroups = bookGroupRepository.flowSelect().map { it.toImmutableList() }
 
     // 仅保存“每本书/屏幕”状态；外观与其他设置不在此存储，避免整体重置时被抹掉。
     private val _screenState = MutableStateFlow(BookInfoUiState())
+
+    /** 当前书籍是否私密（单本标记 ∪ 所属私密分组）；菜单里"标记/取消私密"读它 */
+    private val bookPrivateFlow = MutableStateFlow(false)
+
+    /**
+     * 进入本页时这本书是否需要验证。
+     *
+     * 与 [bookPrivateFlow] 分开：用户在页面内刚把这本书标成私密时，页面不应该立刻变成
+     * 脱敏态——是否要验证只在进入本页时定一次。
+     */
+    private val privateLockedByEntryFlow = MutableStateFlow(false)
+
+    private val privateAccessState: StateFlow<PrivateAccessState> =
+        privateAccessGateway.state
+            .stateIn(viewModelScope, SharingStarted.Eagerly, PrivateAccessState())
+
+    private val privateAccessSettings: StateFlow<PrivateAccessSettings> =
+        privateAccessGateway.settings
+            .stateIn(viewModelScope, SharingStarted.Eagerly, PrivateAccessSettings())
 
     // 设置类字段始终从各自 gateway（唯一 SSOT）派生叠加，重置屏幕状态无法影响它们。
     val uiState: StateFlow<BookInfoUiState> = combine(
@@ -132,6 +159,19 @@ class BookInfoViewModel(
         otherSettingsGateway.settings,
     ) { screen, theme, cover, other ->
         screen.withSettings(theme, cover, other)
+    }.combine(bookPrivateFlow) { screen, bookPrivate ->
+        screen.copy(bookPrivate = bookPrivate)
+    }.combine(privateLockedByEntryFlow) { screen, lockedByEntry ->
+        screen.copy(privateLockedByEntry = lockedByEntry)
+    }.combine(privateAccessState) { screen, privateAccess ->
+        screen.copy(privateAccess = privateAccess)
+    }.combine(privateAccessSettings) { screen, privateSettings ->
+        val group = screen.book?.group ?: 0L
+        screen.copy(
+            privateLocked = privateSettings.verifyOnOpenBook &&
+                    screen.privateLockedByEntry &&
+                    !screen.privateAccess.isTargetGranted(screen.book?.bookUrl, group)
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -179,6 +219,60 @@ class BookInfoViewModel(
             field = value
             observeReadRecordIfNeeded(value)
         }
+
+    override fun onCleared() {
+        // "每次验证"频率下离开详情页即撤销授权，下次进来要重新验证
+        currentBook?.bookUrl?.let {
+            privateAccessGateway.revoke(PrivateUnlockTarget.Book(it))
+        }
+        super.onCleared()
+    }
+
+    /** 详情页溢出菜单里的"标记/取消私密" */
+    private fun toggleBookPrivate() {
+        val bookUrl = currentBook?.bookUrl ?: return
+        val target = !bookPrivateFlow.value
+        execute {
+            privateContentGateway.setBooksPrivate(setOf(bookUrl), target)
+        }.onSuccess {
+            bookPrivateFlow.value = target
+            showMessage(
+                context.getString(
+                    if (target) R.string.private_mark_book else R.string.private_unmark_book
+                )
+            )
+        }.onError {
+            showMessage(context.getString(R.string.save_failed))
+        }
+    }
+
+    /** 与书架同一套降级顺序：生物快捷 → 应用内密码 → 引导设密码 */
+    private fun requestPrivateUnlock() {
+        val access = privateAccessState.value
+        // 已经获准查看（进程解锁或本目标已授权）就不必再打扰
+        if (!uiState.value.privateLocked) return
+        if (!access.hasPassword) {
+            emitEffect(BookInfoEffect.NavigateToLocalPasswordSettings)
+            return
+        }
+        if (access.canUseBiometricShortcut) {
+            emitEffect(BookInfoEffect.RequestBiometricUnlock)
+        } else {
+            _screenState.update { it.copy(showPrivatePasswordDialog = true) }
+        }
+    }
+
+    private fun submitPrivatePassword(password: String) {
+        if (password.isEmpty()) return
+        val target = currentBook?.bookUrl?.let { PrivateUnlockTarget.Book(it) }
+        viewModelScope.launch {
+            if (privateAccessGateway.verifyPassword(password, target)) {
+                _screenState.update { it.copy(showPrivatePasswordDialog = false) }
+            } else {
+                showMessage(context.getString(R.string.private_unlock_password_error))
+            }
+        }
+    }
     private var currentChapterList: List<BookChapter> = emptyList()
     private var tocLoadFailed = false
     private var currentWebFiles: List<BookInfoWebFile> = emptyList()
@@ -225,38 +319,58 @@ class BookInfoViewModel(
     ) {
         val current = currentBook
         if (current != null) return
-        currentBook = if (!name.isNullOrBlank() && !author.isNullOrBlank()) {
-            Book(
-                bookUrl = bookUrl,
-                name = name,
-                author = author,
-                origin = origin ?: BookType.localTag,
-                coverUrl = coverPath
-            ).apply {
-                addType(BookType.notShelf)
-            }
-        } else {
-            null
-        }
         clearReadRecordObserve()
         relatedBooksLoadJob?.cancel()
         characterLoadJob?.cancel()
-        syncUiState()
         execute {
-            val dbBook = bookRepository.getBook(bookUrl)
-            if (dbBook != null) {
-                inBookshelf = !dbBook.isNotShelf
-                dbBook
+            // 私密标记与书籍信息一次取回：先确定是否私密，再发布书籍。
+            // 分开查会先渲染真实书名/封面、再切成锁定态，既闪烁又泄漏。
+            val isPrivate = privateContentGateway.isBookPrivate(bookUrl)
+            val fallback = if (!name.isNullOrBlank() && !author.isNullOrBlank()) {
+                Book(
+                    bookUrl = bookUrl,
+                    name = name,
+                    author = author,
+                    origin = origin ?: BookType.localTag,
+                    coverUrl = coverPath
+                ).apply {
+                    addType(BookType.notShelf)
+                }
             } else {
-                val searchBook = searchRepository.getSearchBook(bookUrl)?.toBook()
-                if (searchBook != null) {
-                    inBookshelf = false
-                    searchBook
-                } else {
-                    currentBook ?: throw NoStackTraceException("未找到书籍")
+                null
+            }
+            val dbBook = bookRepository.getBook(bookUrl)
+            val book = when {
+                dbBook != null -> {
+                    inBookshelf = !dbBook.isNotShelf
+                    dbBook
+                }
+
+                else -> {
+                    val searchBook = searchRepository.getSearchBook(bookUrl)?.toBook()
+                    if (searchBook != null) {
+                        inBookshelf = false
+                        searchBook
+                    } else {
+                        fallback ?: throw NoStackTraceException("未找到书籍")
+                    }
                 }
             }
-        }.onSuccess { book ->
+            book to isPrivate
+        }.onSuccess { (book, isPrivate) ->
+            // 先落私密状态再发布书籍：第一帧就已经是最终形态，没有中间态
+            bookPrivateFlow.value = isPrivate
+            privateLockedByEntryFlow.value = isPrivate
+            if (isPrivate) {
+                // 私密书籍的详情页直接弹验证，不用用户再点一次；取消后停在脱敏页，
+                // 那里仍有"验证"入口可以重试。
+                // privateLocked 是组合流，等它真正算出 true 再申请——否则会被
+                // requestPrivateUnlock 的前置判断挡回去，弹不出来。first 保证只弹一次。
+                viewModelScope.launch {
+                    uiState.first { it.privateLocked }
+                    requestPrivateUnlock()
+                }
+            }
             // 如果从数据库/搜索中拿到的书没有封面，但我们有传入的封面，则保留传入的封面
             if (book.coverUrl.isNullOrBlank() && !coverPath.isNullOrBlank()) {
                 book.coverUrl = coverPath
@@ -285,6 +399,16 @@ class BookInfoViewModel(
             BookInfoIntent.OriginClick -> onOriginClick()
             BookInfoIntent.DismissAppLogSheet -> {
                 _screenState.update { it.copy(showAppLogSheet = false) }
+            }
+
+            BookInfoIntent.RequestPrivateUnlock -> requestPrivateUnlock()
+            BookInfoIntent.ShowPrivatePassword -> {
+                _screenState.update { it.copy(showPrivatePasswordDialog = true) }
+            }
+
+            is BookInfoIntent.SubmitPrivatePassword -> submitPrivatePassword(intent.password)
+            BookInfoIntent.DismissPrivatePassword -> {
+                _screenState.update { it.copy(showPrivatePasswordDialog = false) }
             }
 
             BookInfoIntent.ReadClick -> onReadClick()
@@ -1400,6 +1524,7 @@ class BookInfoViewModel(
             )
 
             BookInfoMenuAction.ShowLog -> showAppLog()
+            BookInfoMenuAction.TogglePrivate -> toggleBookPrivate()
         }
     }
 
