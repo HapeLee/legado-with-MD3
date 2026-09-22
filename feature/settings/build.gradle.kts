@@ -41,6 +41,10 @@ kotlin {
             // M5-4b：`AiProfileGateway`（AI 任务预设的读写端口）在 `:domain:ai`——
             // ai/* 子页的 VM 都用它，而它是 M4 域下沉时建好的共享端口，不需要新契约。
             implementation(project(":domain:ai"))
+            // M5-4c：`Toaster`（M1-3a 建的轻提示共享契约）。ai/prompt 的 VM 迁移前直接
+            // `appCtx.toastOnUi(...)`，且那条提示是 **Toast 而非 Snackbar**（与页面里其它
+            // 提示的展示方式不同）⇒ 注入这个既有的共享契约，不新造平台能力。
+            implementation(project(":core:platform"))
             // `LocalPageEstimateMetrics`（诊断计数与导出）——它已经是共享层的 object，
             // 不新增契约。这是本模块不产生 Android 实现的直接原因。
             implementation(project(":feature:reader:core"))

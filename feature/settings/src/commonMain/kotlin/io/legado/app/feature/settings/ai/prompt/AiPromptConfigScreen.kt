@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.ai.prompt
+package io.legado.app.feature.settings.ai.prompt
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,16 +12,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.ai_prompt_config
+import io.legado.app.feature.settings.res.ai_prompt_edit_title
+import io.legado.app.feature.settings.res.ai_prompt_reset_single
+import io.legado.app.feature.settings.res.ai_prompt_restore_all
+import io.legado.app.feature.settings.res.ai_prompt_restore_all_confirm
+import io.legado.app.feature.settings.res.ai_prompt_restore_all_desc
+import io.legado.app.feature.settings.res.ai_prompt_setting
+import io.legado.app.feature.settings.res.cancel
+import io.legado.app.feature.settings.res.confirm
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -33,20 +39,20 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
-import org.koin.androidx.compose.koinViewModel
+import org.jetbrains.compose.resources.stringResource
 
-@Composable
-fun AiPromptConfigRouteScreen(
-    onBackClick: () -> Unit,
-    viewModel: AiPromptConfigViewModel = koinViewModel()
-) {
-    AiPromptConfigScreen(
-        state = viewModel.uiState.collectAsStateWithLifecycle().value,
-        effects = viewModel.effects,
-        onIntent = viewModel::onIntent,
-        onBackClick = onBackClick
-    )
-}
+// M5-4c：从 `:app` 的 `io.legado.app.ui.config.ai.prompt.AiPromptConfigScreen` 迁来。
+//
+// 三类差异：
+//   1. `R.string.*` → `Res.string.*`。
+//   2. ⚠️ **条目文案的取法变了**：迁移前是 `stringResource(item.nameResId)`（状态里存着
+//      Android 资源 id），现在状态存 [AiPromptTask] 枚举 ⇒ 这里用
+//      `item.task.displayName()` / `item.task.description()` 查表。
+//      这是本片最实质的改动——资源 id 不再出现在 UI 状态里。
+//   3. `AiPromptConfigRouteScreen` 不搬（只做 `koinViewModel()`）；提示文案仍由**本 Screen**
+//      自己收 Effect 显示（Snackbar），与 `ai/summary` 同形。
+//      ⚠️ 保存成功那条**不在这里**——它是 Toast，由 VM 注入的 `Toaster` 直接发
+//      （见 `AiPromptConfigViewModel` 的注释：Snackbar 与 Toast 的差异要保住）。
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,7 +69,10 @@ fun AiPromptConfigScreen(
         effects.collectLatest { effect ->
             when (effect) {
                 is AiPromptConfigEffect.ShowMessage -> {
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showSnackbar(effect.message.localizedText())
+                }
+                is AiPromptConfigEffect.ShowRawMessage -> {
+                    snackbarHostState.showSnackbar(effect.text)
                 }
             }
         }
@@ -75,7 +84,7 @@ fun AiPromptConfigScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.ai_prompt_config),
+                title = stringResource(Res.string.ai_prompt_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -92,11 +101,11 @@ fun AiPromptConfigScreen(
             )
         ) {
             item {
-                SplicedColumnGroup(title = stringResource(R.string.ai_prompt_setting)) {
+                SplicedColumnGroup(title = stringResource(Res.string.ai_prompt_setting)) {
                     state.items.forEach { item ->
                         ClickableSettingItem(
-                            title = stringResource(item.nameResId),
-                            description = stringResource(item.descResId),
+                            title = item.task.displayName(),
+                            description = item.task.description(),
                             trailingContent = {
                                 IconButton(
                                     onClick = {
@@ -105,7 +114,9 @@ fun AiPromptConfigScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Restore,
-                                        contentDescription = stringResource(R.string.ai_prompt_reset_single)
+                                        contentDescription = stringResource(
+                                            Res.string.ai_prompt_reset_single
+                                        )
                                     )
                                 }
                             },
@@ -124,8 +135,8 @@ fun AiPromptConfigScreen(
             item {
                 SplicedColumnGroup {
                     ClickableSettingItem(
-                        title = stringResource(R.string.ai_prompt_restore_all),
-                        description = stringResource(R.string.ai_prompt_restore_all_desc),
+                        title = stringResource(Res.string.ai_prompt_restore_all),
+                        description = stringResource(Res.string.ai_prompt_restore_all_desc),
                         onClick = { onIntent(AiPromptConfigIntent.OpenRestoreAllDialog) }
                     )
                 }
@@ -138,12 +149,12 @@ fun AiPromptConfigScreen(
             AppAlertDialog(
                 data = dialog,
                 onDismissRequest = { onIntent(AiPromptConfigIntent.CloseDialog) },
-                title = stringResource(R.string.ai_prompt_edit_title),
-                confirmText = stringResource(R.string.confirm),
+                title = stringResource(Res.string.ai_prompt_edit_title),
+                confirmText = stringResource(Res.string.confirm),
                 onConfirm = {
                     onIntent(AiPromptConfigIntent.SavePrompt(dialog.taskType, dialog.currentPrompt))
                 },
-                dismissText = stringResource(R.string.cancel),
+                dismissText = stringResource(Res.string.cancel),
                 onDismiss = { onIntent(AiPromptConfigIntent.CloseDialog) },
                 content = {
                     AppTextField(
@@ -164,12 +175,12 @@ fun AiPromptConfigScreen(
             AppAlertDialog(
                 data = dialog,
                 onDismissRequest = { onIntent(AiPromptConfigIntent.CloseDialog) },
-                title = stringResource(R.string.ai_prompt_restore_all),
-                confirmText = stringResource(R.string.confirm),
+                title = stringResource(Res.string.ai_prompt_restore_all),
+                confirmText = stringResource(Res.string.confirm),
                 onConfirm = { onIntent(AiPromptConfigIntent.RestoreAllDefaults) },
-                dismissText = stringResource(R.string.cancel),
+                dismissText = stringResource(Res.string.cancel),
                 onDismiss = { onIntent(AiPromptConfigIntent.CloseDialog) },
-                text = stringResource(R.string.ai_prompt_restore_all_confirm)
+                text = stringResource(Res.string.ai_prompt_restore_all_confirm)
             )
         }
 

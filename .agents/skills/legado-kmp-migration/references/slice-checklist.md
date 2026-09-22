@@ -339,6 +339,14 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   original undifferentiated check went permanently red after any legitimate cleanup. Consequence:
   retired entries stop being byte-verified, so **run the script once before deleting the `:app`
   copies** and quote that result (about: 140/140 before; 64/64 + 19 retired × 4 languages after).
+  ⚠️ **aapt2 expands `\"` / `\'` inside string bodies; the Compose Resources generator does NOT**
+  (measured M5-4c on the AI prompt templates: 7 entries red, all containing `\"replacement\"` or
+  `reader\'s`). Copying the line verbatim therefore ships a **visible backslash** to users while
+  `commonMain` still compiles ⇒ **the byte-comparison script is the gate, not the compiler**.
+  Fix: write the bare character in `composeResources` (`"` / `'` need no escaping inside XML text).
+  Do not diagnose this through the script's own `repr` output — it prints the source line already
+  escaped, which made a single `\"` look like `\\\"` and cost M5-4c a round. Count the actual code
+  points instead.
   A batch rewrite script must delete old import lines *before* inserting the new ones, or import
   order breaks the diff.
   ⚠️ **The symptom of a *stale* old import is misleading (M2-5).** When a batch script inserts the

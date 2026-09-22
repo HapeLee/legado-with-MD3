@@ -1598,8 +1598,20 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      验证：四门禁全绿 + 新模块 `testAndroidHostTest`（**13 例**）+ `:app` 编译/单测/打包；
      计数 **719 → 723 / 1214 → 1218**；资源 **120/120 逐字一致**。
      未验证：Snackbar 实际弹出、滑块/输入交互、编辑提示词弹层。需真机冒烟。
-     **下一步（本域）**：`ai/prompt`（VM 还多一个 `toastOnUi`）或 `ai` 主域
-     （VM 用 `GSON` + `appCtx`，最重）；也可转去 `otherConfig` / `backupConfig`。
+   - **M5-4c 已完成（2026-09-23）：ai/prompt 子页（本域最重的一页）。**
+     两处结构性改动：① `AiPromptTaskItem` 不再存 Android 资源 id（`nameResId: Int`）
+     ——**资源句柄泄漏进 UI 状态**，改成 `AiPromptTask` 枚举 + UI 侧查表；这条**编译期不报**。
+     ② 保存成功的提示是 **Toast**（`appCtx.toastOnUi`）而非页面里的 Snackbar ⇒ 改由 VM 注入的
+     `Toaster`（`:core:platform` 既有契约）直发，其余提示照旧走 Effect。
+     ⚠️ **本片最有价值的发现**：同一个 XML 片段，**aapt2 会展开 `\"` / `\'`，CMP 的资源生成器
+     不展开** ⇒ 照搬源 XML 会把多余的反斜杠发给用户，**而 commonMain 照样编译通过**。
+     `verify-compose-resources.py` 报 7 条不一致，修正 13 处后 **226/226**。
+     ⇒ 搬这类文案必须在 CMP 侧写裸字符；**以那个脚本为准，不是以编译器为准**（已写进 skill）。
+     **G4 随之下调**：`appCtx|app/main/io/legado/app/ui/config/ai/prompt` **1 → 0**（条目删除）。
+     死资源 33 条删除。验证：四门禁全绿 + `:app` 编译/单测/打包 + 全模块测试；
+     计数 **723 / 1218 零偏离**（**本片未新增用例**——VM 会调 `getString(Res.string.*)`，
+     构造即触碰 CMP 资源运行时，其在 `androidHostTest` 下的可行性未验证；补测属独立小片）。
+     **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵
 

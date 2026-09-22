@@ -288,5 +288,43 @@ translation 3 + customTheme 3 + aiSummary 4）+ `:app` 编译/单测/打包 + �
 **未验证**：Snackbar 的实际弹出（含 `localizedText()` 在真实资源表下的取值）、
 滑块与输入项的交互、编辑提示词弹层。需真机冒烟。
 
-**下一步**：`ai/prompt`（3 文件 473 行，VM 还多一个 `toastOnUi`）或 `ai` 主域
-（9 文件，VM 用 `GSON` + `appCtx`，最重）；也可转去 `otherConfig` / `backupConfig`。
+### M5-4c：ai/prompt 页（本域最重的一页）
+
+**两处结构性改动**（都不是机械搬迁）：
+
+1. **`AiPromptTaskItem` 不再存 Android 资源 id**。迁移前它是 `nameResId: Int` /
+   `descResId: Int`，Screen 用 `stringResource(item.nameResId)` 取文案 —— **资源句柄泄漏进
+   UI 状态**，而 CMP 的资源不是 `Int`。⇒ 改成 `task: AiPromptTask` 枚举，文案由
+   `AiPromptMessages.kt` 查表（`displayName()` / `description()` 是 `@Composable`，
+   `defaultPrompt()` 是 `suspend`——**默认提示词要写回 gateway，VM 必须拿到实际字符串**，
+   所以这里 VM 允许 import `Res`，与 ai/summary 的「VM 零资源」不同）。
+   这条**编译期不报**（`Int` 在 commonMain 合法），只有跑起来才会发现取不到文案。
+
+2. **保存成功的提示不走 Effect**：迁移前是 `appCtx.toastOnUi(...)`（**Toast**），而
+   `ShowMessage` 在 Screen 里是 **Snackbar** ⇒ 为保住这个差异，那一条改由 VM 注入的
+   `Toaster`（`:core:platform` 既有契约）直发。其余提示照旧走 Effect + Snackbar。
+
+**⚠️ 本片最有价值的发现：aapt2 与 CMP 对字符串转义的展开层数不同**
+
+提示词里含 `\"replacement\"` / `reader\'s`。同一个 XML 片段，**aapt2 会把 `\"` / `\'`
+展开成裸字符，而 CMP 的资源生成器不展开**，原样留下反斜杠 ⇒ 用户会在提示词里看到多余的反斜杠，
+**而 `commonMain` 照样编译通过**。`verify-compose-resources.py` 报 **7 条不一致**，实测修正
+13 处后 **226/226 逐字一致**。
+⇒ 搬运这类文案时**必须在 CMP 侧写裸字符**（XML 元素文本里的 `"` / `'` 无需转义）；
+并且**以那个脚本为准，不是以编译器为准**。
+
+**G4 随之下调**：`appCtx|app/main/io/legado/app/ui/config/ai/prompt` **1 → 0**（条目删除）。
+
+**死资源**：37 条里 33 条删除（8 个任务类型 ×3 的文案 + 页面提示），保留
+`ai_prompt_config` / `confirm` / `cancel` 与 `ai_prompt_default_bookshelf_auto_group`（别处仍在用）。
+
+**验证**：四门禁全绿（G4 按下调）+ `:app` 编译/单测/打包 + 全模块测试；
+计数 **723 / 1218 零偏离**（本片未新增用例，见下）；资源 **226/226 逐字一致**。
+
+**未新增用例（与前面几片的差异，需记一笔）**：本页 VM 现在会调
+`getString(Res.string.*)`（默认提示词要写回 gateway），构造 VM 就会触碰 CMP 资源运行时，
+在 `androidHostTest` 下的可行性**未验证**。为不引入一个可能不稳的测试，本片先不加；
+补测需要先确认「Robolectric 里 CMP 资源可读」这件事，属独立小片。
+
+**下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
+`otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。

@@ -132,7 +132,8 @@ import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
-import io.legado.app.ui.config.ai.prompt.AiPromptConfigRouteScreen
+import io.legado.app.feature.settings.ai.prompt.AiPromptConfigScreen
+import io.legado.app.feature.settings.ai.prompt.AiPromptConfigViewModel
 import io.legado.app.feature.settings.ai.summary.AiSummaryConfigScreen
 import io.legado.app.feature.settings.ai.summary.AiSummaryConfigViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigRouteScreen
@@ -555,7 +556,17 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsAiPrompt> {
-        AiPromptConfigRouteScreen(onBackClick = { onNavigateBack() })
+        // M5-4c：`AiPromptConfigRouteScreen` 只做 `koinViewModel()`——与 translation /
+        // ai/summary 同形。提示文案由 Screen 自己收 Effect 显示（Snackbar）；
+        // 唯一例外是「保存成功」那条 Toast，由 VM 注入的 `Toaster` 发（`:app` 已绑定实现），
+        // 所以这里不需要收集任何 Effect。
+        val viewModel = koinViewModel<AiPromptConfigViewModel>()
+        AiPromptConfigScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            effects = viewModel.effects,
+            onIntent = viewModel::onIntent,
+            onBackClick = { onNavigateBack() },
+        )
     }
 
     entry<MainRouteSettingsAiProviderEdit> { route ->

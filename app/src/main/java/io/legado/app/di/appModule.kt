@@ -313,7 +313,7 @@ import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.config.ai.AiConfigViewModel
 import io.legado.app.ui.config.ai.AiModelEditViewModel
 import io.legado.app.ui.config.ai.AiProviderEditViewModel
-import io.legado.app.ui.config.ai.prompt.AiPromptConfigViewModel
+import io.legado.app.feature.settings.ai.prompt.AiPromptConfigViewModel
 import io.legado.app.feature.settings.ai.summary.AiSummaryConfigViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
