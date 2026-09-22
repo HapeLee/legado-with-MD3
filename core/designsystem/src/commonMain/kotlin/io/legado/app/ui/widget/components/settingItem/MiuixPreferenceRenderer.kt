@@ -1,6 +1,7 @@
 package io.legado.app.ui.widget.components.settingItem
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * Miuix `preference` 系列渲染的平台面。
@@ -62,6 +63,26 @@ interface MiuixPreferenceRenderer {
         title: String,
         summary: String?,
         onClick: () -> Unit,
+    )
+
+    /**
+     * 渲染一个 Miuix 风格的「下拉选择设置项」（M5-2b 新增，为 `DropdownListSettingItem`
+     * 上提让路）。与 [arrowPreference] 同一个约束：`miuix-preference` 没有 desktop 变体。
+     *
+     * ⚠️ 契约面刻意**不出现 miuix 类型**：迁移前那段代码构造的是
+     * `DropdownItem(title = display)` 列表，而 `DropdownItem` 是 miuix 制品里的类，
+     * 进契约会把共享层的签名绑死在一个 Android-only 制品上 ⇒ 契约只收 `List<String>`，
+     * 由实现侧包装。同理 `startAction`（一个 `@Composable () -> Unit`）退化成
+     * `imageVector: ImageVector?`——调用方本来就只传一个图标。
+     */
+    @Composable
+    fun overlaySpinnerPreference(
+        title: String,
+        summary: String?,
+        items: List<String>,
+        selectedIndex: Int,
+        imageVector: ImageVector?,
+        onSelectedIndexChange: (Int) -> Unit,
     )
 }
 

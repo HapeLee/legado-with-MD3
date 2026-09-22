@@ -1,0 +1,48 @@
+refactor(m5-2b): 上提 AppSlider 与 DropdownListSettingItem 到 designsystem
+
+为 `:feature:settings` 的下一页（translation）铺路的资产收口片（"pre 片"）。
+`ui/config/translation` 用了 `DropdownListSettingItem` 与 `SliderSettingItem`，两者都还在
+`:core:ui`（Android-only）⇒ 共享层依赖不到。本片先上提其中两个较小的资产
+（`SliderSettingItem` 268 行且带 `:core:ui` 自己的 `R`，留给下一片单独处理）。
+
+一、上提的内容
+
+- `AppSlider.kt`（62 行）：`SliderSettingItem` 的 `sliderAccessibility` 定义在它里面。
+  它只依赖 `LegadoTheme` / `ThemeResolver`（都在 designsystem）⇒ **零阻碍直接上提**。
+- `ListSettingItem.kt`（87 行，`DropdownListSettingItem`）：Miuix 分支用
+  `OverlaySpinnerPreference` —— 与 M5-2a-pre 的 `ClickableSettingItem` 撞上**同一条**约束
+  （`miuix-preference` 是本仓用到的 miuix 制品里唯一没有 desktop 变体的那个）
+  ⇒ 走同一个 `MiuixPreferenceRenderer` 契约。
+
+两个都是 `git mv`（**包名不变** ⇒ 调用方 import 零改动，`:core:ui` 里的
+`AppVerticalSlider.kt` / `CompactSettingItems.kt` 也不受影响）。
+
+二、契约扩展的第二轮：`overlaySpinnerPreference`
+
+契约面刻意**不出现 miuix 类型**（否则共享层签名会绑死在一个 Android-only 制品上）：
+
+| 迁移前 | 契约 |
+|---|---|
+| `List<DropdownItem>` | `List<String>`（实现侧再包 `DropdownItem(title = …)`） |
+| `startAction: (@Composable () -> Unit)?` | `imageVector: ImageVector?`（调用方本来就只传图标） |
+
+Android 实现加在 `AndroidMiuixPreferenceRenderer`；注入点 `PlatformServices.install()`
+本来就在 ⇒ **无需改 `:app`**。失败语义同族：未注入 ⇒ 落 Material3 分支。
+
+⚠️ 契约扩展**再次**被 `MiuixPreferenceRendererContractTest` 的匿名探针抓住（缺新方法）。
+这是它该有的反应——扩展契约时所有实现方（含测试探针）必须显式跟上。已补实现；
+不为新方法加用例，因为该测试验的是宿主语义（未注入 ⇒ null），不是渲染结果。
+
+三、验证
+
+- 四门禁全绿（**无需下调 G4 基线**）
+- `:core:designsystem:compileKotlinDesktop` + `compileAndroidHostTest` +
+  `:core:ui:compileDebugKotlin` + `:app:compileAppDebugKotlin` 全绿
+- `:core:designsystem:testAndroidHostTest` 通过；计数 **713 / 1208 零偏离**
+  （本片是资产移动，无用例增减）
+
+四、未验证
+
+两个组件在 **Miuix 引擎下**的实际外观（`OverlaySpinnerPreference` 的下拉弹层、
+滑块的无障碍语义）无自动化覆盖——成功路径在 commonTest 里既跑不到也没有意义
+（`miuix-preference` 只有 `-android` 变体）。需真机在 Miuix 主题下人工核对一次。

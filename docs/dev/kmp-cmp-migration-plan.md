@@ -1589,6 +1589,20 @@ Windows 若复现跨盘 Gradle cache 问题，再使用仓库已验证的 `-Dgra
 | `core:data/platform/ui` 再次长成倾倒区 | 新文件无明确 owner | gate 阻止新增；按业务域迁出后删除过渡模块 |
 | Android 行为在多端重构中回退 | 任何垂直切片 | Android route/adapter 是回滚点；G0/G5 不通过不合并 |
 
+### 7.1 与 upstream `main` 的关系（2026-09-23 决定）
+
+本分支与 `origin/main` 已显著分叉（main 有 68 个本分支没有的提交，本分支有 114 个 main 没有的）。
+**决定：不合、不覆盖，以本分支为准。**两条分别记下理由，免得每次同步都重判一次：
+
+| 上游内容 | 规模 | 处置 |
+|---|---|---|
+| `main` 的功能提交（听书、翻页速度、书源兼容、详情页 Web 渲染…） | 68 提交 / 120 文件 / **+10139 −2004** | **不合进本分支**。与 KMP/CMP 迁移无关，且会把上游未适配的旧架构代码带进来；分歧 68/114 意味着合并冲突面很大。等本里程碑收敛后再单独评估 |
+| `.agents/skills/legado-kmp-migration/**` 的重写版 | `SKILL.md` 287→**109** 行、`slice-checklist.md` 501→**65** 行、`renderer-host-strategy.md` +71（新增），`m3-domain-slice.md`/`check-kotlin-comments.py`/`portability-triage.py` **删除**，净 **−3061** | **保留本分支版本**。本地那 501 行里钉的是逐片实测出来的坑（Koin 漏绑不会让编译失败、`verify-compose-resources` 的双向判据、`miuix-preference` 无 desktop 变体、Robolectric 必须 `sdk=[35]`、契约扩展会撞测试探针…），整体覆盖会一次性丢掉。上游新增的 `renderer-host-strategy.md`（多渲染宿主视角：WinUI 3 / SwiftUI / IPC）**暂不引入**——本仓库当前没有对应宿主，不为架构完整留空配置 |
+| `.agents/skills/legado-compose-{migration,review}`、`.claude/skills/**` | 上游新增/调整 | 同上，暂不引入 |
+
+⚠️ 将来若要对齐上游 skill，**不能整体覆盖**：需逐条比对、把本地实测条目回填进新结构，
+否则本节列出的那些"踩过才知道"的约束会静默消失（它们多数不会在编译期暴露）。
+
 ## 8. 迁移完成清单
 
 - [ ] Android、Desktop、iOS 三个宿主均能 clean build/test/package。

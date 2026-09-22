@@ -1,6 +1,7 @@
 package io.legado.app.ui.widget.components.settingItem
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.ImageVector
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -80,6 +81,17 @@ class MiuixPreferenceRendererContractTest {
             title: String,
             summary: String?,
             onClick: () -> Unit,
+        ) = Unit
+
+        // M5-2b：契约再扩一个方法，探针同样只需实现完整（本源集验的是宿主语义）。
+        @Composable
+        override fun overlaySpinnerPreference(
+            title: String,
+            summary: String?,
+            items: List<String>,
+            selectedIndex: Int,
+            imageVector: ImageVector?,
+            onSelectedIndexChange: (Int) -> Unit,
         ) = Unit
     }
 }

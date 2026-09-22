@@ -1,0 +1,396 @@
+
+> Configure project :app
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+This version of the Baseline Profile Gradle Plugin was tested with versions below Android
+Gradle Plugin version Android Gradle Plugin version 9.0.0-alpha01 and it may not work as intended.
+Current version is Android Gradle Plugin version 9.2.1.
+
+This warning can be disabled setting the following property:
+baselineProfile {
+    warnings {
+        maxAgpVersion = false
+    }
+}
+
+> Task :build-logic:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :build-logic:compileKotlin UP-TO-DATE
+> Task :build-logic:compileJava NO-SOURCE
+> Task :build-logic:pluginDescriptors UP-TO-DATE
+> Task :build-logic:processResources UP-TO-DATE
+> Task :build-logic:classes UP-TO-DATE
+> Task :build-logic:jar UP-TO-DATE
+> Task :checkSharedPurity
+> Task :checkModuleDependencies
+> Task :checkLegacyArchitecture
+> Task :verifyConfigArchitecture
+> Task :core:designsystem:kmpPartiallyResolvedDependenciesChecker
+> Task :core:designsystem:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:designsystem:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :core:designsystem:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :core:designsystem:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :core:designsystem:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :core:designsystem:convertXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :core:designsystem:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :core:designsystem:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :core:designsystem:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :core:designsystem:generateActualResourceCollectorsForAndroidMain UP-TO-DATE
+> Task :core:designsystem:androidPreBuild UP-TO-DATE
+> Task :core:designsystem:preAndroidMainBuild UP-TO-DATE
+> Task :core:designsystem:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :core:designsystem:copyAndroidMainComposeResourcesToAndroidAssets UP-TO-DATE
+> Task :core:designsystem:packageAndroidMainResources UP-TO-DATE
+> Task :core:designsystem:parseAndroidMainLocalResources UP-TO-DATE
+> Task :core:designsystem:generateAndroidMainRFile UP-TO-DATE
+> Task :core:designsystem:generateComposeResClass UP-TO-DATE
+> Task :core:designsystem:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :core:model:kmpPartiallyResolvedDependenciesChecker
+> Task :core:model:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:platform:kmpPartiallyResolvedDependenciesChecker
+> Task :core:platform:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :modules:rhino:preBuild UP-TO-DATE
+> Task :modules:rhino:preReleaseBuild UP-TO-DATE
+> Task :modules:rhino:generateReleaseResources UP-TO-DATE
+> Task :modules:rhino:packageReleaseResources UP-TO-DATE
+> Task :modules:rhino:processReleaseNavigationResources UP-TO-DATE
+> Task :modules:rhino:parseReleaseLocalResources UP-TO-DATE
+> Task :modules:rhino:generateReleaseRFile UP-TO-DATE
+> Task :modules:rhino:compileReleaseKotlin UP-TO-DATE
+> Task :modules:rhino:javaPreCompileRelease UP-TO-DATE
+> Task :modules:rhino:compileReleaseJavaWithJavac NO-SOURCE
+> Task :modules:rhino:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:platform:compileAndroidMain UP-TO-DATE
+> Task :core:platform:androidPreBuild UP-TO-DATE
+> Task :core:platform:preAndroidMainBuild UP-TO-DATE
+> Task :core:platform:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :core:model:compileAndroidMain UP-TO-DATE
+> Task :core:model:androidPreBuild UP-TO-DATE
+> Task :core:model:preAndroidMainBuild UP-TO-DATE
+> Task :core:model:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :core:designsystem:compileAndroidMain UP-TO-DATE
+> Task :core:designsystem:androidJar UP-TO-DATE
+> Task :core:designsystem:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :core:designsystem:convertXmlValueResourcesForAndroidHostTest NO-SOURCE
+> Task :core:designsystem:copyNonXmlValueResourcesForAndroidHostTest NO-SOURCE
+> Task :core:designsystem:prepareComposeResourcesTaskForAndroidHostTest NO-SOURCE
+> Task :core:designsystem:generateResourceAccessorsForAndroidHostTest NO-SOURCE
+> Task :core:designsystem:convertXmlValueResourcesForCommonTest NO-SOURCE
+> Task :core:designsystem:copyNonXmlValueResourcesForCommonTest NO-SOURCE
+> Task :core:designsystem:prepareComposeResourcesTaskForCommonTest NO-SOURCE
+> Task :core:designsystem:generateResourceAccessorsForCommonTest NO-SOURCE
+> Task :core:designsystem:compileAndroidHostTest UP-TO-DATE
+> Task :core:designsystem:preAndroidHostTestBuild UP-TO-DATE
+> Task :core:designsystem:processAndroidHostTestJavaRes NO-SOURCE
+> Task :core:designsystem:processAndroidMainJavaRes
+> Task :core:model:bundleAndroidMainClassesToRuntimeJar UP-TO-DATE
+> Task :core:model:processAndroidMainJavaRes UP-TO-DATE
+> Task :core:designsystem:bundleAndroidMainClassesToRuntimeJar
+> Task :core:platform:bundleAndroidMainClassesToRuntimeJar UP-TO-DATE
+> Task :core:platform:processAndroidMainJavaRes UP-TO-DATE
+> Task :modules:rhino:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :modules:rhino:processReleaseJavaRes UP-TO-DATE
+> Task :core:designsystem:testAndroidHostTest
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preAppDebugBuild UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsAppDebug UP-TO-DATE
+> Task :app:generateAppDebugResources UP-TO-DATE
+> Task :app:processAppDebugGoogleServices UP-TO-DATE
+> Task :core:data:androidPreBuild UP-TO-DATE
+> Task :core:data:preAndroidMainBuild UP-TO-DATE
+> Task :core:data:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :core:model:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :core:platform:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :core:ui:preBuild UP-TO-DATE
+> Task :core:ui:preDebugBuild UP-TO-DATE
+> Task :core:ui:generateDebugResources UP-TO-DATE
+> Task :core:ui:packageDebugResources UP-TO-DATE
+> Task :core:viewmodel:androidPreBuild UP-TO-DATE
+> Task :core:viewmodel:preAndroidMainBuild UP-TO-DATE
+> Task :core:viewmodel:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :data:ai:androidPreBuild UP-TO-DATE
+> Task :data:ai:preAndroidMainBuild UP-TO-DATE
+> Task :data:ai:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :data:contentprocess:androidPreBuild UP-TO-DATE
+> Task :data:contentprocess:preAndroidMainBuild UP-TO-DATE
+> Task :data:contentprocess:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :data:homepage:androidPreBuild UP-TO-DATE
+> Task :data:homepage:preAndroidMainBuild UP-TO-DATE
+> Task :data:homepage:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :data:marking:androidPreBuild UP-TO-DATE
+> Task :data:marking:preAndroidMainBuild UP-TO-DATE
+> Task :data:marking:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :data:rules:androidPreBuild UP-TO-DATE
+> Task :data:rules:preAndroidMainBuild UP-TO-DATE
+> Task :data:rules:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :domain:ai:androidPreBuild UP-TO-DATE
+> Task :domain:ai:preAndroidMainBuild UP-TO-DATE
+> Task :domain:ai:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :domain:contentprocess:androidPreBuild UP-TO-DATE
+> Task :domain:contentprocess:preAndroidMainBuild UP-TO-DATE
+> Task :domain:contentprocess:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :domain:homepage:androidPreBuild UP-TO-DATE
+> Task :domain:homepage:preAndroidMainBuild UP-TO-DATE
+> Task :domain:homepage:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :domain:marking:androidPreBuild UP-TO-DATE
+> Task :domain:marking:preAndroidMainBuild UP-TO-DATE
+> Task :domain:marking:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :domain:rules:androidPreBuild UP-TO-DATE
+> Task :domain:rules:preAndroidMainBuild UP-TO-DATE
+> Task :domain:rules:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :feature:about:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:about:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:about:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :feature:about:convertXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :feature:about:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :feature:about:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :feature:about:copyAndroidMainComposeResourcesToAndroidAssets UP-TO-DATE
+> Task :feature:about:androidPreBuild UP-TO-DATE
+> Task :feature:about:preAndroidMainBuild UP-TO-DATE
+> Task :feature:about:packageAndroidMainResources UP-TO-DATE
+> Task :feature:dict:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:dict:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:dict:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :feature:dict:convertXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :feature:dict:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :feature:dict:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :feature:dict:copyAndroidMainComposeResourcesToAndroidAssets UP-TO-DATE
+> Task :feature:dict:androidPreBuild UP-TO-DATE
+> Task :feature:dict:preAndroidMainBuild UP-TO-DATE
+> Task :feature:dict:packageAndroidMainResources UP-TO-DATE
+> Task :feature:replacerules:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:replacerules:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:replacerules:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :feature:replacerules:convertXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :feature:replacerules:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :feature:replacerules:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :feature:replacerules:copyAndroidMainComposeResourcesToAndroidAssets UP-TO-DATE
+> Task :feature:replacerules:androidPreBuild UP-TO-DATE
+> Task :feature:replacerules:preAndroidMainBuild UP-TO-DATE
+> Task :feature:replacerules:packageAndroidMainResources UP-TO-DATE
+> Task :feature:settings:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:settings:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:settings:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :feature:settings:convertXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :feature:settings:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :feature:settings:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :feature:settings:copyAndroidMainComposeResourcesToAndroidAssets UP-TO-DATE
+> Task :feature:settings:androidPreBuild UP-TO-DATE
+> Task :feature:settings:preAndroidMainBuild UP-TO-DATE
+> Task :feature:settings:packageAndroidMainResources UP-TO-DATE
+> Task :feature:tagrules:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:tagrules:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:tagrules:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :feature:tagrules:convertXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :feature:tagrules:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :feature:tagrules:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :feature:tagrules:copyAndroidMainComposeResourcesToAndroidAssets UP-TO-DATE
+> Task :feature:tagrules:androidPreBuild UP-TO-DATE
+> Task :feature:tagrules:preAndroidMainBuild UP-TO-DATE
+> Task :feature:tagrules:packageAndroidMainResources UP-TO-DATE
+> Task :feature:txttocrules:convertXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:txttocrules:copyNonXmlValueResourcesForAndroidMain NO-SOURCE
+> Task :feature:txttocrules:prepareComposeResourcesTaskForAndroidMain NO-SOURCE
+> Task :feature:txttocrules:convertXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :feature:txttocrules:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :feature:txttocrules:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :feature:txttocrules:copyAndroidMainComposeResourcesToAndroidAssets UP-TO-DATE
+> Task :feature:txttocrules:androidPreBuild UP-TO-DATE
+> Task :feature:txttocrules:preAndroidMainBuild UP-TO-DATE
+> Task :feature:txttocrules:packageAndroidMainResources UP-TO-DATE
+> Task :modules:book:preBuild UP-TO-DATE
+> Task :modules:book:preDebugBuild UP-TO-DATE
+> Task :modules:book:generateDebugResources UP-TO-DATE
+> Task :modules:book:packageDebugResources UP-TO-DATE
+> Task :modules:rhino:preDebugBuild UP-TO-DATE
+> Task :modules:rhino:generateDebugResources UP-TO-DATE
+> Task :modules:rhino:packageDebugResources UP-TO-DATE
+> Task :feature:reader:core:androidPreBuild UP-TO-DATE
+> Task :feature:reader:core:preAndroidMainBuild UP-TO-DATE
+> Task :feature:reader:core:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :app:mergeAppDebugResources UP-TO-DATE
+> Task :app:packageAppDebugResources UP-TO-DATE
+> Task :core:ui:processDebugNavigationResources UP-TO-DATE
+> Task :feature:about:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :feature:dict:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :feature:replacerules:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :feature:settings:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :feature:tagrules:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :feature:txttocrules:generateAndroidMainEmptyResourceFiles UP-TO-DATE
+> Task :modules:book:processDebugNavigationResources UP-TO-DATE
+> Task :modules:rhino:processDebugNavigationResources UP-TO-DATE
+> Task :app:processAppDebugNavigationResources UP-TO-DATE
+> Task :app:parseAppDebugLocalResources UP-TO-DATE
+> Task :core:ui:parseDebugLocalResources UP-TO-DATE
+> Task :core:ui:generateDebugRFile UP-TO-DATE
+> Task :feature:about:parseAndroidMainLocalResources UP-TO-DATE
+> Task :feature:about:generateAndroidMainRFile UP-TO-DATE
+> Task :feature:dict:parseAndroidMainLocalResources UP-TO-DATE
+> Task :feature:dict:generateAndroidMainRFile UP-TO-DATE
+> Task :feature:replacerules:parseAndroidMainLocalResources UP-TO-DATE
+> Task :feature:replacerules:generateAndroidMainRFile UP-TO-DATE
+> Task :feature:settings:parseAndroidMainLocalResources UP-TO-DATE
+> Task :feature:settings:generateAndroidMainRFile UP-TO-DATE
+> Task :feature:tagrules:parseAndroidMainLocalResources UP-TO-DATE
+> Task :feature:tagrules:generateAndroidMainRFile UP-TO-DATE
+> Task :feature:txttocrules:parseAndroidMainLocalResources UP-TO-DATE
+> Task :feature:txttocrules:generateAndroidMainRFile UP-TO-DATE
+> Task :modules:book:parseDebugLocalResources UP-TO-DATE
+> Task :modules:book:generateDebugRFile UP-TO-DATE
+> Task :modules:rhino:parseDebugLocalResources UP-TO-DATE
+> Task :modules:rhino:generateDebugRFile UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesAppDebug UP-TO-DATE
+> Task :app:generateAppDebugBuildConfig UP-TO-DATE
+> Task :app:generateAppDebugRFile UP-TO-DATE
+> Task :core:data:kmpPartiallyResolvedDependenciesChecker
+> Task :core:data:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:ai:kmpPartiallyResolvedDependenciesChecker
+> Task :domain:ai:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:ai:compileAndroidMain UP-TO-DATE
+> Task :domain:ai:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :core:data:kspAndroidMain UP-TO-DATE
+> Task :core:data:copyRoomSchemas NO-SOURCE
+> Task :core:data:compileAndroidMain UP-TO-DATE
+> Task :core:data:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :core:ui:compileDebugKotlin UP-TO-DATE
+> Task :core:ui:javaPreCompileDebug UP-TO-DATE
+> Task :core:ui:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:viewmodel:kmpPartiallyResolvedDependenciesChecker
+> Task :core:viewmodel:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :data:ai:kmpPartiallyResolvedDependenciesChecker
+> Task :data:ai:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :data:ai:compileAndroidMain UP-TO-DATE
+> Task :data:ai:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :data:contentprocess:kmpPartiallyResolvedDependenciesChecker
+> Task :data:contentprocess:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:contentprocess:kmpPartiallyResolvedDependenciesChecker
+> Task :domain:contentprocess:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:contentprocess:compileAndroidMain UP-TO-DATE
+> Task :domain:contentprocess:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :core:ui:bundleLibCompileToJarDebug
+> Task :data:contentprocess:compileAndroidMain UP-TO-DATE
+> Task :data:contentprocess:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :data:homepage:kmpPartiallyResolvedDependenciesChecker
+> Task :data:homepage:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:homepage:kmpPartiallyResolvedDependenciesChecker
+> Task :domain:homepage:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:homepage:compileAndroidMain UP-TO-DATE
+> Task :domain:homepage:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :core:viewmodel:compileAndroidMain
+> Task :data:homepage:compileAndroidMain UP-TO-DATE
+> Task :core:viewmodel:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :data:homepage:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :data:marking:kmpPartiallyResolvedDependenciesChecker
+> Task :data:marking:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:marking:kmpPartiallyResolvedDependenciesChecker
+> Task :domain:marking:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:marking:compileAndroidMain UP-TO-DATE
+> Task :domain:marking:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :data:marking:compileAndroidMain UP-TO-DATE
+> Task :data:marking:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :data:rules:kmpPartiallyResolvedDependenciesChecker
+> Task :data:rules:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:rules:kmpPartiallyResolvedDependenciesChecker
+> Task :domain:rules:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :domain:rules:compileAndroidMain UP-TO-DATE
+> Task :domain:rules:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :data:rules:compileAndroidMain UP-TO-DATE
+> Task :data:rules:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :feature:about:kmpPartiallyResolvedDependenciesChecker
+> Task :feature:about:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:about:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :feature:about:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :feature:about:generateActualResourceCollectorsForAndroidMain UP-TO-DATE
+> Task :feature:about:generateComposeResClass UP-TO-DATE
+> Task :feature:about:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :core:ui:preReleaseBuild UP-TO-DATE
+> Task :core:ui:generateReleaseResources UP-TO-DATE
+> Task :core:ui:packageReleaseResources UP-TO-DATE
+> Task :core:ui:processReleaseNavigationResources UP-TO-DATE
+> Task :core:ui:parseReleaseLocalResources UP-TO-DATE
+> Task :core:ui:generateReleaseRFile UP-TO-DATE
+> Task :feature:about:compileAndroidMain
+> Task :feature:about:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :core:ui:javaPreCompileRelease UP-TO-DATE
+> Task :feature:dict:kmpPartiallyResolvedDependenciesChecker
+> Task :feature:dict:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:dict:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :feature:dict:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :feature:dict:generateActualResourceCollectorsForAndroidMain UP-TO-DATE
+> Task :feature:dict:generateComposeResClass UP-TO-DATE
+> Task :feature:dict:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :feature:replacerules:kmpPartiallyResolvedDependenciesChecker
+> Task :feature:replacerules:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:replacerules:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :feature:replacerules:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :feature:replacerules:generateActualResourceCollectorsForAndroidMain UP-TO-DATE
+> Task :feature:replacerules:generateComposeResClass UP-TO-DATE
+> Task :feature:replacerules:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :feature:settings:kmpPartiallyResolvedDependenciesChecker
+> Task :feature:settings:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:settings:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :feature:settings:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :feature:settings:generateActualResourceCollectorsForAndroidMain UP-TO-DATE
+> Task :feature:settings:generateComposeResClass UP-TO-DATE
+> Task :feature:settings:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :feature:reader:core:kmpPartiallyResolvedDependenciesChecker
+> Task :feature:reader:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:reader:core:compileAndroidMain UP-TO-DATE
+> Task :feature:reader:core:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :feature:tagrules:kmpPartiallyResolvedDependenciesChecker
+> Task :feature:tagrules:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:tagrules:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :feature:tagrules:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :feature:tagrules:generateActualResourceCollectorsForAndroidMain UP-TO-DATE
+> Task :feature:tagrules:generateComposeResClass UP-TO-DATE
+> Task :feature:tagrules:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :feature:txttocrules:kmpPartiallyResolvedDependenciesChecker
+> Task :feature:txttocrules:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:txttocrules:generateResourceAccessorsForAndroidMain NO-SOURCE
+> Task :feature:txttocrules:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :feature:txttocrules:generateActualResourceCollectorsForAndroidMain UP-TO-DATE
+> Task :feature:txttocrules:generateComposeResClass UP-TO-DATE
+> Task :feature:txttocrules:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :modules:book:compileDebugKotlin NO-SOURCE
+> Task :modules:book:javaPreCompileDebug UP-TO-DATE
+> Task :modules:book:compileDebugJavaWithJavac UP-TO-DATE
+> Task :modules:book:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :feature:settings:compileAndroidMain
+> Task :modules:rhino:compileDebugKotlin UP-TO-DATE
+> Task :feature:settings:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :modules:rhino:javaPreCompileDebug UP-TO-DATE
+> Task :modules:rhino:compileDebugJavaWithJavac NO-SOURCE
+> Task :modules:rhino:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:ui:compileReleaseKotlin
+> Task :core:ui:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:ui:bundleLibCompileToJarRelease
+> Task :feature:dict:compileAndroidMain
+> Task :feature:dict:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :feature:replacerules:compileAndroidMain
+> Task :feature:replacerules:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :feature:tagrules:compileAndroidMain
+> Task :feature:tagrules:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :feature:txttocrules:compileAndroidMain
+> Task :feature:txttocrules:bundleAndroidMainClassesToCompileJar UP-TO-DATE
+> Task :app:kspAppDebugKotlin
+> Task :app:copyRoomSchemas NO-SOURCE
+> Task :app:compileAppDebugKotlin
+
+[Incubating] Problems report is available at: file:///D:/Project/legado-with-MD3-p1/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 31s
+230 actionable tasks: 41 executed, 189 up-to-date

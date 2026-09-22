@@ -1,9 +1,13 @@
 package io.legado.app.ui.widget.components.settingItem
 
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
@@ -52,6 +56,35 @@ private object AndroidMiuixPreferenceRenderer : MiuixPreferenceRenderer {
             summary = summary,
             insideMargin = BasicComponentDefaults.InsideMargin,
             onClick = onClick,
+        )
+    }
+
+    // M5-2b：与迁移前 `DropdownListSettingItem` 里那段 `OverlaySpinnerPreference(...)` 逐字等价。
+    // 契约把 miuix 的 `DropdownItem` 换成了 `List<String>`、`startAction` 换成了
+    // `ImageVector?`，所以这里要做回那层包装（`DropdownItem(title = …)` 与 `Icon(...)`）。
+    @Composable
+    override fun overlaySpinnerPreference(
+        title: String,
+        summary: String?,
+        items: List<String>,
+        selectedIndex: Int,
+        imageVector: ImageVector?,
+        onSelectedIndexChange: (Int) -> Unit,
+    ) {
+        OverlaySpinnerPreference(
+            title = title,
+            summary = summary,
+            items = items.map { display -> DropdownItem(title = display) },
+            selectedIndex = selectedIndex,
+            startAction = imageVector?.let { icon ->
+                {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null
+                    )
+                }
+            },
+            onSelectedIndexChange = onSelectedIndexChange,
         )
     }
 }
