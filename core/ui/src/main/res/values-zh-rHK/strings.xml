@@ -23,7 +23,6 @@
     <string name="close">閂咗</string>
     <string name="collapse">收起</string>
     <string name="color_value">顏色值</string>
-    <string name="confirm">确认</string>
     <string name="confirm_delete_bookmark">刪除書籤？</string>
     <string name="copy_text">拷貝內容</string>
     <string name="count_unit">次</string>
@@ -34,7 +33,6 @@
     <string name="details">詳情</string>
     <string name="disable_selection">禁用所選</string>
     <string name="duration_unit">時長</string>
-    <string name="edit">編輯</string>
     <string name="edit_not_supported">不支援編輯</string>
     <string name="enable_selection">啟用所選</string>
     <string name="error">錯誤</string>
@@ -81,7 +79,6 @@
     <string name="sure_del">是否確認刪除？</string>
     <string name="sys_file_picker">系統文件選擇器</string>
     <string name="sys_folder_picker">系統文件夾選擇器</string>
-    <string name="text_default">默认</string>
     <string name="timeline">時間線</string>
     <string name="upload_url">上傳URL</string>
     <string name="variable_comment">变量说明(variableComment)</string>

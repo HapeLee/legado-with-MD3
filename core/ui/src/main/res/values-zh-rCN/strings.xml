@@ -23,7 +23,6 @@
     <string name="close">关闭</string>
     <string name="collapse">折叠</string>
     <string name="color_value">色值</string>
-    <string name="confirm">确认</string>
     <string name="confirm_delete_bookmark">删除书签？</string>
     <string name="copy_text">拷贝内容</string>
     <string name="count_unit">次</string>
@@ -34,7 +33,6 @@
     <string name="details">详情</string>
     <string name="disable_selection">禁用所选</string>
     <string name="duration_unit">长</string>
-    <string name="edit">编辑</string>
     <string name="edit_not_supported">不支持编辑</string>
     <string name="enable_selection">启用所选</string>
     <string name="error">错误</string>
@@ -81,7 +79,6 @@
     <string name="sure_del">是否确认删除?</string>
     <string name="sys_file_picker">系统文件选择器</string>
     <string name="sys_folder_picker">系统文件夹选择器</string>
-    <string name="text_default">默认</string>
     <string name="timeline">时间线</string>
     <string name="upload_url">上传 URL</string>
     <string name="variable_comment">变量说明(variableComment)</string>

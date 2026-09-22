@@ -23,7 +23,6 @@
     <string name="close">Close</string>
     <string name="collapse">Collapse</string>
     <string name="color_value">Color Value</string>
-    <string name="confirm">Confirm</string>
     <string name="confirm_delete_bookmark">Delete bookmark?</string>
     <string name="copy_text">Copy</string>
     <string name="count_unit">times</string>
@@ -34,7 +33,6 @@
     <string name="details">Details</string>
     <string name="disable_selection">Disable selected</string>
     <string name="duration_unit">duration</string>
-    <string name="edit">Edit</string>
     <string name="edit_not_supported">Editing not supported</string>
     <string name="enable_selection">Enable selected</string>
     <string name="error">Error</string>
@@ -81,7 +79,6 @@
     <string name="sure_del">Are you sure to delete it?</string>
     <string name="sys_file_picker">System file picker</string>
     <string name="sys_folder_picker">System folder picker</string>
-    <string name="text_default">Default</string>
     <string name="timeline">Timeline</string>
     <string name="upload_url">upload URL</string>
     <string name="variable_comment">Variable Description (variableComment)</string>

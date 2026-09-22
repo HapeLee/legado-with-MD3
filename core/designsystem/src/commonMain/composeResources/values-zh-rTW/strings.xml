@@ -65,4 +65,5 @@
     <string name="select_color">選擇顏色</string>
     <string name="reset">重設</string>
     <string name="color_value">顏色值</string>
+    <string name="confirm">确认</string>
 </resources>

@@ -65,4 +65,5 @@
     <string name="select_color">Select Color</string>
     <string name="reset">Reset</string>
     <string name="color_value">Color Value</string>
+    <string name="confirm">Confirm</string>
 </resources>
