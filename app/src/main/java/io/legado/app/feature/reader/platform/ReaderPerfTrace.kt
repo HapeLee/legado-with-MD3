@@ -34,4 +34,11 @@ internal object ReaderPerfTrace {
         Trace.beginSection("reader.$name")
         Trace.endSection()
     }
+
+    fun isEnabled(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && Trace.isEnabled()
+
+    /** Aggregate costs from an interleaved operation without tracing every paragraph. */
+    fun counter(name: String, value: Long) {
+        if (isEnabled()) Trace.setCounter("reader.$name", value)
+    }
 }

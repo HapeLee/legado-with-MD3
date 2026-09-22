@@ -5,6 +5,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.feature.reader.core.layout.ReaderChapterBlockMeasurer
+import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureMetrics
 import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureResult
 import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureStyle
 import io.legado.app.feature.reader.core.layout.ReaderImageDimensions
@@ -122,6 +123,9 @@ object LegacyReaderChapterPaginator {
         if (viewportWidthPx <= 0 || viewportHeightPx <= 0) {
             return LegacyReaderChapterPaginationResult.Unsupported("viewport")
         }
+        val tracing = ReaderPerfTrace.isEnabled()
+        val preparationStartNs = if (tracing) System.nanoTime() else 0L
+        val measureMetrics = if (tracing) ReaderChapterMeasureMetrics(System::nanoTime) else null
         val imageLayoutMode = when (book.getImageStyle()?.uppercase()) {
             Book.imgStyleText -> ReaderImageLayoutMode.INLINE
             Book.imgStyleFull -> ReaderImageLayoutMode.FULL_WIDTH
@@ -164,6 +168,7 @@ object LegacyReaderChapterPaginator {
                 density = appCtx.resources.displayMetrics.density,
             ),
             imageOptionsResolver = LegacyReaderImageOptionsResolver,
+            metrics = measureMetrics,
         )
         // 分页会话先于测量建立：块一到就推进排版游标，页成型即经 [onPage] 流出
         // （旧 View `TextChapterLayout` 也是边排版边 `channel.trySend`）。
@@ -205,6 +210,16 @@ object LegacyReaderChapterPaginator {
         )
         val paginationSession = ReaderPaginationSession(paginationConfig)
         paginationSession.onPage = onPage
+        if (tracing) {
+            ReaderPerfTrace.counter(
+                "pagination.prepare.us",
+                (System.nanoTime() - preparationStartNs) / 1_000
+            )
+            ReaderPerfTrace.counter("pagination.style-ranges", styleRanges.size.toLong())
+        }
+        var acceptNs = 0L
+        var acceptedBlocks = 0L
+        val measureStartNs = if (tracing) System.nanoTime() else 0L
         val measured = ReaderPerfTrace.section("pagination.measure") {
             measurer.measure(
             layoutSource,
@@ -238,8 +253,40 @@ object LegacyReaderChapterPaginator {
                 letterSpacingEm = bodyPaint.letterSpacing,
                 styleRanges = styleRanges,
             ),
-                onBlock = { block -> paginationSession.accept(block) },
+                onBlock = { block ->
+                    if (tracing) {
+                        val startNs = System.nanoTime()
+                        try {
+                            paginationSession.accept(block)
+                        } finally {
+                            acceptNs += System.nanoTime() - startNs
+                            acceptedBlocks++
+                        }
+                    } else {
+                        paginationSession.accept(block)
+                    }
+                },
             )
+        }
+        if (tracing) {
+            val measureNs = System.nanoTime() - measureStartNs
+            ReaderPerfTrace.counter("pagination.chapter-index", chapter.index.toLong())
+            ReaderPerfTrace.counter("pagination.accept.us", acceptNs / 1_000)
+            ReaderPerfTrace.counter(
+                "pagination.measure-other.us",
+                (measureNs - acceptNs).coerceAtLeast(0) / 1_000
+            )
+            ReaderPerfTrace.counter("pagination.blocks", acceptedBlocks)
+            ReaderPerfTrace.counter(
+                "pagination.shape.us",
+                measureMetrics?.shapingNs?.div(1_000) ?: 0
+            )
+            ReaderPerfTrace.counter(
+                "pagination.style-lookup.us",
+                measureMetrics?.styleLookupNs?.div(1_000) ?: 0
+            )
+            ReaderPerfTrace.counter("pagination.shape-calls", measureMetrics?.shapingCalls ?: 0)
+            ReaderPerfTrace.counter("pagination.style-lookups", measureMetrics?.styleLookups ?: 0)
         }
         if (measured is ReaderChapterMeasureResult.Unsupported) {
             // 测量失败说明这一章的页不可信：已流出的部分页由调用方按 Unsupported 丢弃。

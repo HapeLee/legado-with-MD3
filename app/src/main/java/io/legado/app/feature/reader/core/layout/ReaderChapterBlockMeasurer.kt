@@ -86,6 +86,42 @@ sealed interface ReaderChapterMeasureResult {
     data class Unsupported(val reason: String) : ReaderChapterMeasureResult
 }
 
+/** Optional clock supplied by the platform while profiling; core pagination stays platform-free. */
+class ReaderChapterMeasureMetrics(private val nanoTime: () -> Long) {
+    var shapingNs: Long = 0
+        private set
+    var styleLookupNs: Long = 0
+        private set
+    var shapingCalls: Long = 0
+        private set
+    var styleLookups: Long = 0
+        private set
+
+    fun shape(shaper: ReaderTextShaper, text: String): GlyphClusters {
+        val start = nanoTime()
+        return try {
+            shaper.shape(text)
+        } finally {
+            shapingNs += nanoTime() - start
+            shapingCalls++
+        }
+    }
+
+    fun resolveStyle(
+        ranges: List<ReaderStyleRange>,
+        position: Int,
+        isTitle: Boolean
+    ): ReaderCharacterStyle? {
+        val start = nanoTime()
+        return try {
+            ReaderCharacterStyleResolver.resolve(ranges, position, isTitle)
+        } finally {
+            styleLookupNs += nanoTime() - start
+            styleLookups++
+        }
+    }
+}
+
 class ReaderChapterBlockMeasurer(
     bodyShaper: ReaderTextShaper,
     titleShaper: ReaderTextShaper,
@@ -93,6 +129,7 @@ class ReaderChapterBlockMeasurer(
     private val textShaperFactory: ReaderTextShaperFactory = ReaderTextShaperFactory { bodyShaper },
     private val htmlSourceResolver: ReaderHtmlSourceResolver = ReaderHtmlSourceResolver { _, _ -> null },
     private val imageOptionsResolver: ReaderImageOptionsResolver = ReaderImageOptionsResolver { null },
+    private val metrics: ReaderChapterMeasureMetrics? = null,
 ) {
     /**
      * 测量整章。给出 [onBlock] 时每产出一个 block 就立即回调——旧 View
@@ -117,7 +154,9 @@ class ReaderChapterBlockMeasurer(
         }
         val bodyIndentText = style.bodyIndentText ?: "　".repeat(style.bodyIndentCharacters.coerceAtLeast(0))
         val bodyIndentWidth by lazy {
-            val shaped = shaper(style.bodyStyle).shape(bodyIndentText)
+            val bodyShaper = shaper(style.bodyStyle)
+            val shaped =
+                metrics?.shape(bodyShaper, bodyIndentText) ?: bodyShaper.shape(bodyIndentText)
             shaped.widthsPx.sum() + (style.letterSpacingEm ?: 0f) * style.bodyStyle.fontSizePx * shaped.text.size
         }
         suspend fun addStyledParagraph(
@@ -201,18 +240,17 @@ class ReaderChapterBlockMeasurer(
                 when (item) {
                     is ReaderChapterInlineSource.Text -> {
                         val htmlStyle = baseStyle.merge(item.style)
-                        val initiallyShaped = shaper(htmlStyle).shape(item.value)
+                        val initialShaper = shaper(htmlStyle)
+                        val initiallyShaped = metrics?.shape(initialShaper, item.value)
+                            ?: initialShaper.shape(item.value)
                         var offset = 0
                         initiallyShaped.text.forEachIndexed { clusterIndex, cluster ->
                             val position = item.chapterPosition + offset
                             val rangeStyle = style.styleRanges
                                 .takeIf(List<ReaderStyleRange>::isNotEmpty)
                                 ?.let {
-                                    ReaderCharacterStyleResolver.resolve(
-                                        it,
-                                        position,
-                                        isTitle
-                                    )
+                                    if (metrics != null) metrics.resolveStyle(it, position, isTitle)
+                                    else ReaderCharacterStyleResolver.resolve(it, position, isTitle)
                                 }
                             val textStyle = htmlStyle.merge(rangeStyle)
                             val textShaper = shaper(textStyle)
@@ -222,7 +260,8 @@ class ReaderChapterBlockMeasurer(
                             val width = if (textStyle == htmlStyle) {
                                 initiallyShaped.widthsPx.getOrElse(clusterIndex) { 0f }
                             } else {
-                                textShaper.shape(cluster).widthsPx.firstOrNull() ?: 0f
+                                (metrics?.shape(textShaper, cluster) ?: textShaper.shape(cluster))
+                                    .widthsPx.firstOrNull() ?: 0f
                             }
                             // The paragraph already owns the base line box (including the special
                             // subtitle bounds). Style overrides and baseline-shift spans need

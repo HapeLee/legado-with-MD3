@@ -26,7 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -215,6 +217,21 @@ private fun webViewEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
                 animationSpec = tween(easing = FastOutSlowInEasing),
                 targetOffset = { fullWidth -> fullWidth }
             )
+        }
+    }
+}
+
+/** Full-screen book destinations share the same scene fade as the text reader. */
+private fun readerEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
+    put(NavDisplay.TransitionKey) {
+        fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
+    }
+    put(NavDisplay.PopTransitionKey) {
+        fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
+    }
+    if (predictiveBackEnabled) {
+        put(NavDisplay.PredictivePopTransitionKey) { _ ->
+            fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
         }
     }
 }
@@ -445,9 +462,19 @@ fun MainActivity.mainEntryProvider(
             },
             onOpenBookshelfBook = { book, sharedCoverKey ->
                 if (book.isAudio) {
-                    this@mainEntryProvider.startActivityForBook(book)
+                    onNavigateToRoute(
+                        MainRouteAudioPlay(
+                            bookUrl = book.bookUrl,
+                            sharedCoverKey = sharedCoverKey
+                        )
+                    )
                 } else if (!book.isLocal && book.isImage && showMangaUi) {
-                    onNavigateToRoute(MainRouteReadManga(bookUrl = book.bookUrl))
+                    onNavigateToRoute(
+                        MainRouteReadManga(
+                            bookUrl = book.bookUrl,
+                            sharedCoverKey = sharedCoverKey
+                        )
+                    )
                 } else {
                     onNavigateToRoute(
                         MainRouteReadBook(
@@ -716,22 +743,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteReadBook>(
-        metadata = metadata {
-            put(NavDisplay.TransitionKey) {
-                fadeIn(animationSpec = tween(600)) togetherWith
-                        fadeOut(animationSpec = tween(600))
-            }
-            put(NavDisplay.PopTransitionKey) {
-                fadeIn(animationSpec = tween(600)) togetherWith
-                        fadeOut(animationSpec = tween(600))
-            }
-            if (configuration.appShell.predictiveBackEnabled) {
-                put(NavDisplay.PredictivePopTransitionKey) { _ ->
-                    fadeIn(animationSpec = tween(600)) togetherWith
-                            fadeOut(animationSpec = tween(600))
-                }
-            }
-        }
+        metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
     ) { route ->
         // 私密闸门：阅读记录 / 通知栏 / 深链等直开阅读器的路径全都在这里被拦一次，
         // 未授权时阅读器根本不会被组合（也就没有加载正文的机会）
@@ -899,7 +911,9 @@ fun MainActivity.mainEntryProvider(
         }
     }
 
-    entry<MainRouteReadManga> { route ->
+    entry<MainRouteReadManga>(
+        metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
+    ) { route ->
         val mangaViewModel = koinViewModel<MangaReaderViewModel>(
             key = "ReadManga:${route.bookUrl ?: "last-read"}",
         )
@@ -910,6 +924,9 @@ fun MainActivity.mainEntryProvider(
             openRequestId = route.openRequestId,
             viewModel = mangaViewModel,
             restoreSystemBarsVisible = configuration.appShell.showStatusBar,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+            sharedCoverKey = route.sharedCoverKey,
             onFinish = { onNavigateBack() },
             onOpenBookInfo = { name, author, bookUrl ->
                 onNavigateToRoute(MainRouteBookInfo(name, author, bookUrl))
@@ -928,11 +945,17 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteAudioPlay> { route ->
+    entry<MainRouteAudioPlay>(
+        metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
+    ) { route ->
         val audioPlayViewModel = koinViewModel<AudioPlayViewModel>(
             key = "AudioPlay:${route.bookUrl}",
         )
         val lifecycleOwner = LocalLifecycleOwner.current
+        val density = LocalDensity.current.density
+        val platformCapabilities = remember(this@mainEntryProvider) {
+            AndroidPlatformCapabilities(this@mainEntryProvider)
+        }
         val uiState by audioPlayViewModel.uiState.collectAsStateWithLifecycle()
         var showAudioChangeSource by remember { mutableStateOf(false) }
         val imageLoader: ImageLoader = koinInject()
@@ -1046,6 +1069,13 @@ fun MainActivity.mainEntryProvider(
                 state = uiState,
                 onIntent = audioPlayViewModel::onIntent,
                 onBack = { audioPlayViewModel.onIntent(AudioPlayIntent.BackPressed) },
+                modifier = Modifier.readerSharedBounds(
+                    sharedTransitionScope,
+                    LocalNavAnimatedContentScope.current,
+                    route.sharedCoverKey,
+                    platformCapabilities.displayCornerRadiusPx,
+                    density,
+                ),
             )
         }
         val audioBook = AudioPlay.book
@@ -1294,6 +1324,8 @@ fun MainActivity.mainEntryProvider(
                         inBookshelf = inBookshelf,
                         chapterChanged = chapterChanged,
                         openRequestId = System.nanoTime(),
+                        sharedCoverKey = route.sharedCoverKey
+                            ?: bookCoverSharedElementKey(route.bookUrl),
                     )
                 )
             },
@@ -1302,6 +1334,8 @@ fun MainActivity.mainEntryProvider(
                     MainRouteAudioPlay(
                         bookUrl = bookUrl,
                         inBookshelf = inBookshelf,
+                        sharedCoverKey = route.sharedCoverKey
+                            ?: bookCoverSharedElementKey(route.bookUrl),
                     )
                 )
             },

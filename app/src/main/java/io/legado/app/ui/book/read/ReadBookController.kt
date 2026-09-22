@@ -662,6 +662,7 @@ class ReadBookController(
         density: Float,
         contentPadding: ReaderPadding,
     ) {
+        ReaderPerfTrace.marker("viewport.received")
         val viewport = ReaderViewport(
             widthPx = widthPx,
             heightPx = heightPx,
@@ -694,6 +695,7 @@ class ReadBookController(
             paginationStyle = viewportPaginationStyle,
             paginationEnvironmentPublished = viewportChanged,
         )
+        ReaderPerfTrace.marker("viewport.published")
     }
 
     private fun publishReaderPageWindow(
@@ -1043,12 +1045,14 @@ class ReadBookController(
     }
 
     override fun readerChapterInputChanged() {
+        ReaderPerfTrace.marker("input.changed")
         // Current/previous/next chapter inputs are published independently during opening.
         // Coalesce that short burst so an arriving adjacent chapter does not repeatedly cancel
         // the expensive current-chapter measurement before its first page can be committed.
         readerChapterInputPublishJob?.cancel()
         readerChapterInputPublishJob = activity.lifecycleScope.launch {
             delay(80)
+            ReaderPerfTrace.marker("input.coalesced")
             pendingSearchNavigation?.let { navigation ->
                 ReadBook.readerChapterInputWindow.current
                     ?.takeIf { it.chapter.index == navigation.result.chapterIndex }
@@ -1409,14 +1413,17 @@ class ReadBookController(
         // 旧任务作废：它流出一半的页可能是按旧正文/旧几何排的，必须先撤掉，否则新任务排出的
         // 同 id 页会被"已经存在"挡掉，页表里反而留下旧内容的那几页。
         clearStreamedReaderChapter(chapterIndex)
+        // This method is called on Main. Register the stream before launching the IO job so
+        // its first page does not wait for a Main dispatcher round trip after rule loading.
+        beginStreamedReaderChapter(chapterIndex, streamGeneration)
         // 先登记、后启动：任务收尾要判断"表里的还是不是自己"，若先启动，快速跑完的任务会在
         // 主线程登记之前就把自己摘掉，随后又被登记回去，留下一个永不清理的残留条目。
         val job = activity.lifecycleScope.launch(IO, start = CoroutineStart.LAZY) {
-            val highlightRules =
+            ReaderPerfTrace.marker("pagination.job-start")
+            val highlightRules = ReaderPerfTrace.suspendSection("pagination.highlight-rules") {
                 HighlightRuleRepository().loadEnabled(ReadBookConfig.durConfig.name)
-            withContext(Main) {
-                beginStreamedReaderChapter(chapterIndex, streamGeneration)
             }
+            ReaderPerfTrace.marker("pagination.stream-ready")
             val result = ReaderPerfTrace.suspendSection("pagination.chapter") {
                 paginateLegacyReaderChapterSafely {
                     LegacyReaderChapterPaginator.paginate(
@@ -1460,6 +1467,7 @@ class ReadBookController(
             }
         }
         readerChapterPaginationJobs[chapterIndex] = ReaderChapterPaginationTask(identity, job)
+        ReaderPerfTrace.marker("pagination.scheduled")
         job.start()
     }
 

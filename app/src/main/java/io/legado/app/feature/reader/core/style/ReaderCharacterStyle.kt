@@ -1,7 +1,7 @@
 package io.legado.app.feature.reader.core.style
 
-import io.legado.app.feature.reader.core.model.ReaderUnderline
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
+import io.legado.app.feature.reader.core.model.ReaderUnderline
 
 enum class ReaderStyleTarget { ALL, TITLE, BODY }
 
@@ -33,9 +33,20 @@ data class ReaderStyleRange(
 }
 
 object ReaderCharacterStyleResolver {
-    fun resolve(ranges: List<ReaderStyleRange>, position: Int, isTitle: Boolean): ReaderCharacterStyle? =
-        ranges.withIndex().asSequence()
-            .filter { it.value.contains(position, isTitle) }
-            .maxWithOrNull(compareBy<IndexedValue<ReaderStyleRange>> { it.value.priority }.thenBy { it.index })
-            ?.value?.style
+    fun resolve(
+        ranges: List<ReaderStyleRange>,
+        position: Int,
+        isTitle: Boolean
+    ): ReaderCharacterStyle? {
+        var winner: ReaderStyleRange? = null
+        for (range in ranges) {
+            if (range.contains(position, isTitle) &&
+                (winner == null || range.priority >= winner.priority)
+            ) {
+                // Equal priority keeps the later range, matching the original index tie-break.
+                winner = range
+            }
+        }
+        return winner?.style
+    }
 }

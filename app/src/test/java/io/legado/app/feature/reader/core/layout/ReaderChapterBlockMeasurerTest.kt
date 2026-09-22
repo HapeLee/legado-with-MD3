@@ -17,6 +17,28 @@ import org.junit.Test
 
 class ReaderChapterBlockMeasurerTest {
     @Test
+    fun profilingKeepsMeasuredBlocksIdenticalWhenMostCharactersHaveNoStyle() = runBlocking {
+        val source = ReaderChapterSourceParser.parse(0, "", listOf("甲乙丙丁"), false, false)
+        val measuredStyle = style.copy(
+            styleRanges = listOf(
+                ReaderStyleRange(1, 2, ReaderStyleTarget.BODY, ReaderCharacterStyle(colorArgb = 9)),
+            )
+        )
+        val regular = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper, titleShaper = shaper, imageDimensionsResolver = { null },
+        ).measure(source, measuredStyle) as ReaderChapterMeasureResult.Success
+        val metrics = ReaderChapterMeasureMetrics(System::nanoTime)
+        val profiled = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper, titleShaper = shaper, imageDimensionsResolver = { null },
+            metrics = metrics,
+        ).measure(source, measuredStyle) as ReaderChapterMeasureResult.Success
+
+        assertEquals(regular.blocks, profiled.blocks)
+        assertTrue(metrics.shapingCalls > 0)
+        assertTrue(metrics.styleLookups > 0)
+    }
+
+    @Test
     fun cachesShaperPerStyleAndRetainsInheritedFontProperties() = runBlocking {
         var creations = 0
         val body = style.bodyStyle.copy(
