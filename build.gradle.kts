@@ -687,6 +687,16 @@ val checkSharedPurity = tasks.register<CheckSharedPurityTask>(
             // `MiuixAboutScreen` 因 `miuix-blur` 无 desktop 变体而留 `:app`（platform island），
             // 由宿主按引擎分流，两支复用同一 VM/Contract。
             "feature/about" to "cmp",
+            // M5-2a：第六个转 CMP 的 Feature，也是 **M5 批次 2（低风险管理页）的第二站**。
+            // 与 about 的关键差异：本模块的**第一批**只装 `ui/config/labConfig`（实验室页），
+            // 是「按子页面分片」的第一步 —— `ui/config/*` 在 feature-catalog 里是一个
+            // Feature 域（settings），但整域 78 文件不适合一片做完，故按页逐步迁入，模块名
+            // 取域级 `:feature:settings`，包名 `io.legado.app.feature.settings.<子页>`。
+            // 本页没有平台依赖：设置读写走 `:core:data` 的 `LabSettingsGateway`，
+            // 诊断计数读 `:feature:reader:core` 的 `LocalPageEstimateMetrics`（已是共享 object）
+            // ⇒ **不需要任何新的平台契约**（对比 about 的三个）。唯一离开共享层的是
+            // `android.content.Intent` 的分享动作，按前例留在 `:app` 的 entry 里收 Effect。
+            "feature/settings" to "cmp",
             "feature/reader/core" to "pure",
             "smoke/kmp-probe" to "pure",
             "smoke/rhino-capability-probe" to "pure",

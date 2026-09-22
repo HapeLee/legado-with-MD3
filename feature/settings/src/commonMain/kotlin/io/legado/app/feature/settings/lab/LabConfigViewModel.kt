@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.labConfig
+package io.legado.app.feature.settings.lab
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +11,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// M5-2a：从 `:app` 的 `io.legado.app.ui.config.labConfig` 迁来（**只改包名**）。
+//
+// 迁移前它的两个依赖已经是共享层的：`LabSettingsGateway`（`:core:data` 的端口）与
+// `LocalPageEstimateMetrics`（`:feature:reader:core` 的 object）。因此这里**没有**
+// 任何平台改写 —— 这是本页与 about 最大的差别（后者要抽三个契约）。
+//
+// `LocalPageEstimateMetrics` 保留**直接引用**而不是抽端口：它已经在共享层，且语义是
+// 「进程内的诊断计数器」，抽端口只会多一层无实现的间接（AGENTS.md：只在跨平台实现
+// 真需要分化时才抽契约）。
 class LabConfigViewModel(
     private val settingsGateway: LabSettingsGateway,
 ) : ViewModel() {
@@ -34,6 +43,7 @@ class LabConfigViewModel(
     }
 
     fun onIntent(intent: LabConfigIntent) {
+        // 导出诊断不改设置、且要立即产出 Effect（不等协程调度），故先于 update 分支返回。
         if (intent is LabConfigIntent.ExportPageEstimateDiagnostics) {
             _effects.tryEmit(
                 LabConfigEffect.SharePageEstimateDiagnostics(LocalPageEstimateMetrics.export())

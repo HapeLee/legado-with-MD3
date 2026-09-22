@@ -22,6 +22,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -48,6 +49,9 @@ import io.legado.app.feature.about.AboutOverlays
 import io.legado.app.feature.about.AboutViewModel
 import io.legado.app.feature.about.MaterialAboutScreen
 import io.legado.app.feature.about.localizedText
+import io.legado.app.feature.settings.lab.LabConfigEffect
+import io.legado.app.feature.settings.lab.LabConfigScreen
+import io.legado.app.feature.settings.lab.LabConfigViewModel
 import io.legado.app.ui.about.MiuixAboutScreen
 import io.legado.app.ui.ai.chat.AiChatRouteScreen
 import io.legado.app.ui.book.audio.AudioPlayEffect
@@ -128,7 +132,6 @@ import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigRouteScreen
 import io.legado.app.ui.config.customTheme.CustomThemeRouteScreen
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigRouteScreen
-import io.legado.app.ui.config.labConfig.LabConfigRouteScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigRouteScreen
 import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
@@ -584,7 +587,33 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsLabConfig> {
-        LabConfigRouteScreen(onBackClick = { onNavigateBack() })
+        // M5-2a：`LabConfigRouteScreen` 的两件事按职责拆开——
+        //   · 「取 ViewModel + 收 state」留在这里（entry 的本职）；
+        //   · 「把 Diagnostic 文本分享出去」原本直接 `Intent.ACTION_SEND`，现在收 Effect 后做，
+        //     因为 `android.content.Intent` 不能进共享层（同 about 的 `OpenUrl`/`StartDownload`）。
+        // 分享标题取 `:app` 的 `R.string`：它只在这一处用，没必要搬进 composeResources
+        // （搬了反而在共享层成为零引用条目）。
+        val viewModel = koinViewModel<LabConfigViewModel>()
+        val context = LocalContext.current
+        val shareTitle = stringResource(R.string.lab_page_estimate_diagnostics_share_title)
+        LaunchedEffect(viewModel) {
+            viewModel.effects.collectLatest { effect ->
+                when (effect) {
+                    is LabConfigEffect.SharePageEstimateDiagnostics -> {
+                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                            putExtra(Intent.EXTRA_TEXT, effect.text)
+                            type = "text/plain"
+                        }
+                        context.startActivity(Intent.createChooser(sendIntent, shareTitle))
+                    }
+                }
+            }
+        }
+        LabConfigScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            onBackClick = { onNavigateBack() },
+        )
     }
 
     entry<MainRouteSettingsCustomTheme> {

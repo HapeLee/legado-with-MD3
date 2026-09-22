@@ -44,6 +44,25 @@ interface MiuixPreferenceRenderer {
         enabled: Boolean,
         onCheckedChange: (Boolean) -> Unit,
     )
+
+    /**
+     * 渲染一个 Miuix 风格的「带右箭头的可点击设置项」（M5-2a-pre 新增）。
+     *
+     * 它对应 `ClickableSettingItem` 的 Miuix 分支 —— 那个文件原先在 `:core:ui`，
+     * 为了给 `:feature:settings` 复用而按 M1-3x-pre 的先例上提到 designsystem。
+     * 上提时它的 Miuix 分支撞上和 [switchPreference] 同一个约束：`miuix-preference`
+     * 没有 desktop 变体。⇒ 走同一个契约，不再新开一个接口。
+     *
+     * 参数只取迁移前那段 `ArrowPreference(...)` 真正用到的三个：
+     * `insideMargin` 是常量（`BasicComponentDefaults.InsideMargin`），由实现侧给，
+     * 不进契约（与 `switchPreference` 的 `modifier` 同一个判据）。
+     */
+    @Composable
+    fun arrowPreference(
+        title: String,
+        summary: String?,
+        onClick: () -> Unit,
+    )
 }
 
 /**

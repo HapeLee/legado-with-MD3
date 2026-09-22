@@ -2365,16 +2365,6 @@
 
     <!-- Lab -->
     <string name="lab_setting">Lab</string>
-    <string name="lab_enabled_title">Enable Lab</string>
-    <string name="lab_enabled_summary">Turn on to show experimental features. These may be unstable.</string>
-    <string name="lab_display">Display</string>
-    <string name="lab_eink_display_title">E-Ink Display</string>
-    <string name="lab_eink_display_summary">Show E-Ink display option in the tablet interface</string>
-    <string name="lab_eink_display_hint">You can adjust E-Ink display settings in Theme → Display options</string>
-    <string name="lab_diagnostics">Diagnostics</string>
-    <string name="lab_page_estimate_diagnostics_title">Export page estimate diagnostics</string>
-    <string name="lab_page_estimate_diagnostics_summary">Share the latest local-only estimate and correction records. Nothing is uploaded automatically.</string>
-    <string name="lab_page_estimate_diagnostics_count">%1$d records</string>
     <string name="lab_page_estimate_diagnostics_share_title">Share page estimate diagnostics</string>
 
     <!-- Eye Protection -->

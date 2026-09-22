@@ -2,6 +2,8 @@ package io.legado.app.ui.widget.components.settingItem
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
@@ -34,6 +36,22 @@ private object AndroidMiuixPreferenceRenderer : MiuixPreferenceRenderer {
             onCheckedChange = onCheckedChange,
             modifier = Modifier,
             enabled = enabled,
+        )
+    }
+
+    // M5-2a-pre：与迁移前 `ClickableSettingItem` 里那段 `ArrowPreference(...)` 逐字等价
+    // （`insideMargin` 一直是 `BasicComponentDefaults.InsideMargin`）。
+    @Composable
+    override fun arrowPreference(
+        title: String,
+        summary: String?,
+        onClick: () -> Unit,
+    ) {
+        ArrowPreference(
+            title = title,
+            summary = summary,
+            insideMargin = BasicComponentDefaults.InsideMargin,
+            onClick = onClick,
         )
     }
 }

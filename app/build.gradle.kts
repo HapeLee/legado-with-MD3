@@ -235,6 +235,9 @@ dependencies {
     implementation(project(":feature:dict"))
     implementation(project(":feature:txttocrules"))
     implementation(project(":feature:about"))
+    // M5-2a：`ui/config/labConfig` 迁进 `:feature:settings`。第一批只有实验室页，
+    // 其余子页（appearance / reading / backup / theme …）随后续切片进来。
+    implementation(project(":feature:settings"))
     implementation(project(":core:platform"))
     implementation(project(":core:model"))
     implementation(project(":core:data"))

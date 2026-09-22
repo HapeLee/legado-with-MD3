@@ -69,5 +69,17 @@ class MiuixPreferenceRendererContractTest {
             enabled: Boolean,
             onCheckedChange: (Boolean) -> Unit,
         ) = Unit
+
+        // M5-2a-pre：契约加了 `arrowPreference`（`ClickableSettingItem` 上提到 designsystem 时
+        // 撞上同一个「`miuix-preference` 没有 desktop 变体」约束）。这个探针只需要**实现完整**
+        // ——本源集验的是宿主语义（未注入 ⇒ null、install/uninstall 往返），不是渲染结果，
+        // 所以不为新方法加用例。这个编译错误是**契约测试该有的反应**：扩展契约时，
+        // 所有实现方（含探针）都必须显式跟上。
+        @Composable
+        override fun arrowPreference(
+            title: String,
+            summary: String?,
+            onClick: () -> Unit,
+        ) = Unit
     }
 }

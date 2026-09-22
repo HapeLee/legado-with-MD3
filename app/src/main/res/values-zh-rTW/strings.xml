@@ -2261,12 +2261,6 @@
     <string name="read_menu_bar_blur">啟用模糊</string>
     <string name="read_menu_bar_liquid_glass">液態玻璃背景</string>
     <string name="lab_setting">實驗室</string>
-    <string name="lab_enabled_title">啟用實驗室</string>
-    <string name="lab_enabled_summary">開啟以顯示實驗性功能。這些功能可能不穩定。</string>
-    <string name="lab_display">顯示</string>
-    <string name="lab_eink_display_title">電子墨水屏顯示</string>
-    <string name="lab_eink_display_summary">在平板介面中顯示電子墨水屏選項</string>
-    <string name="lab_eink_display_hint">您可以在主題 → 顯示選項中調整電子墨水屏顯示設定</string>
     <string name="eye_protection">護眼模式</string>
     <string name="eye_protection_enabled">啟用護眼模式</string>
     <string name="eye_protection_enabled_summary">透過暖色色調減少藍光</string>
@@ -2801,10 +2795,6 @@
     <string name="character_deleted">已刪除人物</string>
     <string name="whole_book_page_format">全書 %1$d / %2$d</string>
     <string name="whole_book_page_estimated_format">全書 %1$s / %2$s</string>
-    <string name="lab_diagnostics">診斷</string>
-    <string name="lab_page_estimate_diagnostics_title">匯出全文頁碼診斷</string>
-    <string name="lab_page_estimate_diagnostics_summary">分享本機最近的估算與校正記錄，不會自動上傳。</string>
-    <string name="lab_page_estimate_diagnostics_count">%1$d 筆</string>
     <string name="lab_page_estimate_diagnostics_share_title">分享全文頁碼診斷</string>
     <string name="whole_book_page_unavailable">全書 - / -</string>
     <string name="translation_model_thinking">模型思考中</string>

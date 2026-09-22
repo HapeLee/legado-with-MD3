@@ -2343,16 +2343,6 @@
 
     <!-- 实验室 -->
     <string name="lab_setting">实验室</string>
-    <string name="lab_enabled_title">启用实验室</string>
-    <string name="lab_enabled_summary">开启后显示实验性功能，可能不稳定</string>
-    <string name="lab_display">显示</string>
-    <string name="lab_eink_display_title">墨水屏显示</string>
-    <string name="lab_eink_display_summary">在平板界面显示墨水屏选项</string>
-    <string name="lab_eink_display_hint">可在 主题 → 显示 中调整墨水屏设置</string>
-    <string name="lab_diagnostics">诊断</string>
-    <string name="lab_page_estimate_diagnostics_title">导出全文页码诊断</string>
-    <string name="lab_page_estimate_diagnostics_summary">分享本机最近的估算与校正记录，不会自动上传。</string>
-    <string name="lab_page_estimate_diagnostics_count">%1$d 条</string>
     <string name="lab_page_estimate_diagnostics_share_title">分享全文页码诊断</string>
 
     <!-- 护眼模式 -->

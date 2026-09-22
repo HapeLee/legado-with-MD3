@@ -22,7 +22,7 @@
 | `ui/book/audio`                          | `feature/audio-playback`    | Feature + platform adapter    | 播放服务、媒体会话和通知留 Android platform                                               |
 | `ui/book/read`                           | `platform/android/reader`   | platform island               | 当前不作为普通 Feature 搬迁；共享状态/模型另行立项                                               |
 | `ui/book/manga`                          | `feature/manga`             | Feature + renderer capability | 图片渲染、缓存和手势需专项边界审计                                                            |
-| `ui/config/*`                            | `feature/settings`          | Feature domain                | 先保留 settings 下的 `appearance`、`reading`、`backup`、`advanced` 等 section，不为每页建模块 |
+| `ui/config/*`                            | `feature/settings`          | Feature domain                | ** `:feature:settings` 已建（M5-2a，2026-09-22），按子页分片填充：第一批 = `lab/`（实验室页，4 文件 209 行）；**下一片应是 `translation`（审计的 A 级首选）**。先保留 settings 下的 `appearance`、`reading`、`backup`、`advanced` 等 section，不为每页建模块 |
 | `ui/theme`                               | `core/designsystem`         | core candidate                | theme engine、token 与基础主题；Feature 专属样式不进入 core                                |
 | `ui/widget/components`                   | owner audit                 | core/ui candidate             | 有至少两个 Feature 调用且职责稳定的组件才进入 `core/ui` 或 `core/designsystem`                  |
 | `ui/widget` 其余 View-era 控件               | legacy/platform owner       | migration zone                | Recycler/View/Dialog 控件按实际调用方迁走，禁止整目录改名为 core                                |

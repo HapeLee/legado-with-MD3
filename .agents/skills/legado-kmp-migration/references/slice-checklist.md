@@ -260,6 +260,15 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
     and deprecated — neither path grows, so new icons mean migrating to Material Symbols.
   - **Miuix**: reference **without** the `-android` suffix, and `basic.Switch` lives in `miuix-ui`,
     not `miuix-core`.
+    ⚠️ **`miuix-preference` is the one miuix artifact with no desktop variant** (the version catalog
+    only has `miuix-preference-android`; `miuix-ui`/`-core`/`-icons`/`-shader`/`-squircle` all have
+    `*-desktop` counterparts). Any component whose Miuix branch renders a `preference` must go
+    through the `MiuixPreferenceRenderer` contract (designsystem `commonMain`) with the Android
+    implementation left in `:core:ui`. Measured twice: `SwitchSettingItem` (M1-3t) and
+    `ClickableSettingItem` (M5-2a-pre).
+    ⚠️ **Extending that contract breaks `MiuixPreferenceRendererContractTest`, and that is correct
+    behaviour.** Its anonymous probe fails to compile when a method is added. Every implementor —
+    including the test probe — must be updated explicitly. Don't weaken the contract to avoid it.
 - **Android-only Compose members exist in `androidx.compose.foundation` too, not just `ui`.**
   Measured (M1-3k) and also absent on desktop: `Modifier.systemGestureExclusion()` (this one is
   why `lazylist/VerticalFastScroller.kt` cannot move), `excludeFromSystemGesture()`,

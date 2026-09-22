@@ -1500,6 +1500,35 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      计数 **主集 709 → 710 / 全量 1204 → 1205**（各 +1，即本测试）；`lintAppDebug` 仍
      **5 errors / 78 warnings**。
 
+   - **M5-2a 已完成（2026-09-22）：`ui/config/labConfig` 迁进 `:feature:settings` ——
+     M5 批次 2（低风险管理页）的第二站，也是 `ui/config/*` 这个 Feature 域的第一片。**
+     按审计文档 [feature-slicing-audit-config.md](./feature-slicing-audit-config.md)
+     的分级，labConfig 属 B 级「0 硬阻塞（仅系统分享 Intent）」；本片选它而不是 A 级的
+     translation，判据是**依赖闭包**：它的两个依赖（`LabSettingsGateway` /
+     `LocalPageEstimateMetrics`）**已经在共享层** ⇒ **零新增契约**，适合先把
+     「域级模块 + 按页分片」这个形态跑通一次。**下一片应是 translation**。
+     - **模块形态**：域级 `:feature:settings`，按子页分片填充（`lab/` 第一片），
+       而不是一次搬完 78 文件的 `ui/config/*`——各子域依赖闭包差异太大。
+     - **意外工作（M5-2a-pre）**：页面用的 `ClickableSettingItem` 还在 `:core:ui`
+       （Android-only），按 M1-3x-pre 先例 `git mv` 到 `:core:designsystem/commonMain`
+       （包名不变 ⇒ 36 个调用方 import 零改动）。它的 Miuix 分支撞上和 `SwitchSettingItem`
+       当初**同一条**约束（`miuix-preference` 无 desktop 变体）⇒ 沿用 M1-3t 的窄契约，
+       给 `MiuixPreferenceRenderer` 加 `arrowPreference(...)`，实现留 `:core:ui`
+       （注入点 `PlatformServices.install()` 本就在，无需改 `:app`）。
+     - ⚠️ **契约扩展被既有契约测试抓住**：`MiuixPreferenceRendererContractTest` 的匿名探针
+       编译失败（缺新方法）。这是它该有的反应——扩展契约时所有实现方（含探针）必须跟上。
+     - **新增 3 条用例**（迁移前这个 VM 零测试）：唯一 uiState 入口 / 导出诊断发 Effect
+       且**不写设置**（这条分支写错会退化成「点了导出顺带写一次设置」）/ 诊断计数初值。
+     - **死资源**：`:app` 侧 10 条 lab 文案 ×4 语言删除；保留 `lab_setting`
+       （`ConfigNavScreen` 用）与 `lab_page_estimate_diagnostics_share_title`
+       （`MainNavGraph` 用）。
+     - 验证：`clean` 后四门禁全绿（无需下调基线）+ 新模块 desktop 编译与
+       `testAndroidHostTest`（3 例）+ `:app` 编译/单测/打包；计数
+       **710 → 713 / 1205 → 1208**（各 +3）；资源 4/4 逐字一致（回归 about 64/64）；
+       `lintAppDebug` 仍 **5 errors / 78 warnings**。
+       未验证：实验室页的渲染与交互（开关联动显隐、Miuix 下 `ArrowPreference` 外观、
+       导出→系统分享整条路径）需真机冒烟。
+
 ## 6. 验证矩阵
 
 ### 6.1 当前真实任务

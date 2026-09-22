@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- :feature:settings 自带的字符串（M5-2a 从 :app 的 values/strings.xml 逐字搬来）。
+     composeResources 不参与 Android 资源合并，故共享层必须自带全部 4 个语言目录。
+     ⚠️ `:app` 侧的 `lab_setting` **本片不删**：`ui/config/ConfigNavScreen.kt`（设置导航
+     列表）仍在用它当条目标题，等那一页也迁进来才归零。 -->
+<resources>
+    <string name="lab_setting">Lab</string>
+    <string name="lab_enabled_title">Enable Lab</string>
+    <string name="lab_enabled_summary">Turn on to show experimental features. These may be unstable.</string>
+    <string name="lab_display">Display</string>
+    <string name="lab_eink_display_title">E-Ink Display</string>
+    <string name="lab_eink_display_summary">Show E-Ink display option in the tablet interface</string>
+    <string name="lab_eink_display_hint">You can adjust E-Ink display settings in Theme → Display options</string>
+    <string name="lab_diagnostics">Diagnostics</string>
+    <string name="lab_page_estimate_diagnostics_title">Export page estimate diagnostics</string>
+    <string name="lab_page_estimate_diagnostics_summary">Share the latest local-only estimate and correction records. Nothing is uploaded automatically.</string>
+    <string name="lab_page_estimate_diagnostics_count">%1$d records</string>
+</resources>

@@ -46,6 +46,11 @@ RESULT_DIRS = {
     # 顺手用 `context`，下沉后成了共享层自己的分支逻辑，必须钉住「提示了但**没有**调用
     # `diagnostics.saveLogs()`」——否则提示与动作会同时发生）。
     "about          (testAndroidHostTest)": ("feature/about/build/test-results/testAndroidHostTest", True),
+    # M5-2a：`:feature:settings`（M5 批次 2 第二站，第一批只装实验室页）首次纳入统计。进主集。
+    # 3 例**全部新增**——迁移前 `LabConfigViewModel` 一个测试都没有。三条分别钉住：
+    # 「设置经唯一 uiState 入口下发」、「导出诊断发 Effect 且**不写设置**」（这条分支写错会
+    # 退化成点了导出顺带写一次设置）、以及「诊断计数初值来自共享计数器」。
+    "settings       (testAndroidHostTest)": ("feature/settings/build/test-results/testAndroidHostTest", True),
     # M2-2：`core:data` 的 commonTest 与 desktopTest 加 4 —— 删掉 2 个已失去被测对象的
     # `BigDataStoreProvider` 用例（未安装/安装后读回），新增 6 例 `RuleDataFileStoreDesktopTest`
     # （真文件系统 + **硬编码 MD5 向量**钉住「路径布局与迁移前逐字节一致」，那是既有用户数据
@@ -184,7 +189,10 @@ RESULT_DIRS = {
 # 不是用例丢失；先例：M4-5b、M5-1c 各下调 1。
 # M2-8：709 → **710**（**+1**）。`:app` 新增 `AppModuleGraphTest`（Koin graph creation test），
 # 补上 M5-1c-3 变异实测出的缺口「删掉一条 `single<>` 绑定后编译仍然绿」。
-BASELINE_MAIN = 710
+# M5-2a：710 → **713**（**+3**）。`:feature:settings` 首次入表，3 例全是新增
+# （迁移前 `LabConfigViewModel` 零测试）。`:app` 本片**没减**——它的 labConfig 目录
+# （4 文件，含 1 个 0 行空文件）本来就没有测试。
+BASELINE_MAIN = 713
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -260,7 +268,8 @@ BASELINE_MAIN = 710
 # + 6（`:domain:contentprocess`）+ 14（`:data:contentprocess`））。
 # 主验证集同步下调到 709。
 # M2-8：1204 → **1205**（**+1** = `:app` 的 `AppModuleGraphTest`）。主集同步 +1 到 710。
-BASELINE_ALL = 1205
+# M5-2a：1205 → **1208**（**+3** = `:feature:settings` 的 `LabConfigViewModelTest`）。主集同步到 713。
+BASELINE_ALL = 1208
 
 
 def tally(d: pathlib.Path):
