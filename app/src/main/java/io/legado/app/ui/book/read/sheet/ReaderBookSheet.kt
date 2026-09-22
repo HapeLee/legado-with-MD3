@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
@@ -62,7 +63,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import io.legado.app.utils.HtmlFormatter
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -110,6 +110,7 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.HtmlFormatter
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -802,6 +803,12 @@ private fun ReaderBookTocPage(
                 onQueryChange = { onIntent(TocIntent.SetSearchQuery(it)) },
                 placeholder = stringResource(R.string.search_chapters),
                 modifier = Modifier.weight(1f),
+            )
+            CompactToolIconBox(
+                selected = action.useReplace,
+                icon = Icons.Default.FindReplace,
+                contentDescription = stringResource(R.string.use_replace_rule),
+                onClick = { onIntent(TocIntent.ToggleUseReplace) },
             )
             CompactToolIconBox(
                 selected = action.showWordCount,
