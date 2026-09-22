@@ -30,12 +30,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import io.legado.app.core.ui.R
+import io.legado.app.core.designsystem.res.Res
+import io.legado.app.core.designsystem.res.action_save
+import io.legado.app.core.designsystem.res.color_value
+import io.legado.app.core.designsystem.res.reset
+import io.legado.app.core.designsystem.res.select_color
 import io.legado.app.domain.model.text.isHex
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
@@ -45,8 +48,22 @@ import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.ColorPalette
 import top.yukonga.miuix.kmp.basic.ColorPicker
 import top.yukonga.miuix.kmp.basic.ColorSpace
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
+// M5-3a-pre：本文件从 `:core:ui/src/main` 上提到 `:core:designsystem/commonMain`
+// （`git mv`，**包名不变** ⇒ 调用方 import 零改动）。目的与前面三片资产上提一样：
+// 给 `:feature:settings` 的下一个子页（customTheme）让路。
+//
+// 依赖链很浅——`AppTextField` / `MediumTonalButton` / `AppModalBottomSheet` / `AppText`
+// 都已经在 designsystem，Miuix 的 `ColorPicker` / `ColorPalette` / `ColorSpace` 在
+// `miuix-ui` 里（**有** desktop 变体）⇒ 不需要 `MiuixPreferenceRenderer` 契约。
+//
+// 唯一的额外工作与 `SliderSettingItem`(M5-2c) 同形：**它要带资源**。迁移前这 4 条文案
+// （`select_color` / `reset` / `action_save` / `color_value`）来自 `:core:ui` 自己的 `R`，
+// 已按 composeResources 的做法搬进 `core/designsystem/src/commonMain/composeResources/`
+// （4 个语言各一份，值逐字照搬）。
+
 @Composable
 fun ColorPickerSheet(
     show: Boolean,
@@ -71,7 +88,7 @@ fun ColorPickerSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.select_color),
+        title = stringResource(Res.string.select_color),
         startAction = {
             MediumTonalButton(
                 onClick = {
@@ -80,7 +97,7 @@ fun ColorPickerSheet(
                     isHexInputError = false
                 },
                 icon = Icons.Default.Restore,
-                contentDescription = stringResource(R.string.reset),
+                contentDescription = stringResource(Res.string.reset),
             )
         },
         endAction = {
@@ -91,7 +108,7 @@ fun ColorPickerSheet(
                 },
                 enabled = parsedHexColor != null && !isHexInputError,
                 icon = Icons.Default.Save,
-                contentDescription = stringResource(R.string.action_save),
+                contentDescription = stringResource(Res.string.action_save),
             )
         },
     ) {
@@ -146,7 +163,7 @@ fun ColorPickerSheet(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    label = stringResource(R.string.color_value),
+                    label = stringResource(Res.string.color_value),
                     singleLine = true,
                     isError = isHexInputError,
                     backgroundColor = LegadoTheme.colorScheme.surfaceContainerLow,

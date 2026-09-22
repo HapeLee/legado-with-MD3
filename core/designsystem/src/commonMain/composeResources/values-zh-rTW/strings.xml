@@ -62,4 +62,7 @@
     <string name="input_value_range">輸入數值（%1$d-%2$d）</string>
     <string name="slider">滑桿</string>
     <string name="text_default">默认</string>
+    <string name="select_color">選擇顏色</string>
+    <string name="reset">重設</string>
+    <string name="color_value">顏色值</string>
 </resources>
