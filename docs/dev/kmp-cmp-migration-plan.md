@@ -1528,6 +1528,23 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        `lintAppDebug` 仍 **5 errors / 78 warnings**。
        未验证：实验室页的渲染与交互（开关联动显隐、Miuix 下 `ArrowPreference` 外观、
        导出→系统分享整条路径）需真机冒烟。
+   - **M5-2b / M5-2c 已完成（2026-09-22）：translation 页的三个前置资产上提。**
+     `ui/config/translation` 用了三个还在 `:core:ui`（Android-only）的组件，故先按
+     M1-3x-pre 先例逐个上提（均 `git mv`、**包名不变** ⇒ 调用方 import 零改动）：
+     `AppSlider.kt`（62 行，含 `sliderAccessibility`，零阻碍）、
+     `DropdownListSettingItem`（87 行，Miuix 分支撞 `miuix-preference` ⇒ 契约加
+     `overlaySpinnerPreference`）、`SliderSettingItem`（268 行，**要带资源**——它用 `:core:ui`
+     自己的 `R`，故 4 条文案 ×4 语言搬进 designsystem 的 composeResources，值逐字照搬；
+     `:core:ui` 副本不删，`InputSettingItem.kt` 仍在用其中两条）。
+     契约面刻意**不出现 miuix 类型**（`DropdownItem` → `List<String>`、
+     `startAction` → `ImageVector?`），否则共享层签名会绑死在 Android-only 制品上。
+     ⚠️ **契约被扩展两次，两次都被 `MiuixPreferenceRendererContractTest` 的探针抓住**
+     ——这是它该有的反应：扩展契约时所有实现方（含测试探针）必须显式跟上。
+     验证：四门禁全绿 + designsystem 的 desktop/`androidHostTest` 编译与测试 +
+     `:core:ui` / `:app` 编译 + 全模块测试；计数 **713 / 1208 零偏离**（资产移动，无用例增减）；
+     文案 4 条 ×4 语言与 `:core:ui` 逐字一致（脚本核对）。
+     未验证：三个组件在 **Miuix 引擎下**的实际外观（下拉弹层、滑块无障碍语义）无自动化
+     覆盖——成功路径在 commonTest 里既跑不到也没有意义。需真机在 Miuix 主题下人工核对。
 
 ## 6. 验证矩阵
 

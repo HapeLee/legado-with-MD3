@@ -28,11 +28,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
-import io.legado.app.core.ui.R
+import io.legado.app.core.designsystem.res.Res
+import io.legado.app.core.designsystem.res.edit
+import io.legado.app.core.designsystem.res.input_value_range
+import io.legado.app.core.designsystem.res.slider
+import io.legado.app.core.designsystem.res.text_default
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -43,6 +46,27 @@ import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
 import top.yukonga.miuix.kmp.basic.TextField as MiuixTextField
+import org.jetbrains.compose.resources.stringResource
+
+// M5-2c：本文件从 `:core:ui/src/main` 上提到 `:core:designsystem/commonMain`
+// （`git mv`，**包名不变** ⇒ 调用方 import 零改动）。它是 `:feature:settings` 下一个子页
+// （translation）的最后一个前置资产——`ClickableSettingItem`(M5-2a-pre)、
+// `DropdownListSettingItem`(M5-2b) 已分别上提。
+//
+// 与前面两个资产的关键差异：**它要带资源一起走**。迁移前这 4 条文案
+// （`slider` / `edit` / `text_default` / `input_value_range`）来自 `:core:ui` 自己的
+// `R`（`io.legado.app.core.ui.R`），而 Android 的 `R` 在 CMP 模块里不存在 ⇒ 按
+// composeResources 的既有做法搬进 `core/designsystem/src/commonMain/composeResources/`
+// （4 个语言各一份，**值逐字照搬**，含 `input_value_range` 的两个占位符 `%1$d-%2$d`）。
+//
+// ⚠️ `:core:ui` 的那份副本**不删**：`InputSettingItem.kt` 仍在用 `edit` 与 `text_default`
+// （本仓规则是只移除「本次改动产生的」无用资源）。
+//
+// 另外两个依赖已经随前面的片上提到 designsystem：`sliderAccessibility`（在
+// `AppSlider.kt`，M5-2b）与 `ConfirmDismissButtonsRow`。Miuix 分支用的
+// `BasicComponent` / `Slider` / `TextField` 都在 `miuix-ui` 里（**有 desktop 变体**），
+// 所以本文件**不需要** `MiuixPreferenceRenderer` 契约——它与 `ClickableSettingItem` /
+// `DropdownListSettingItem` 那两个撞 `miuix-preference` 的情况不同。
 
 @Composable
 fun SliderSettingItem(
@@ -135,7 +159,7 @@ fun SliderSettingItem(
                                 state = textFieldState,
                                 lineLimits = TextFieldLineLimits.SingleLine,
                                 label = stringResource(
-                                    R.string.input_value_range,
+                                    Res.string.input_value_range,
                                     valueRange.start.toInt(),
                                     valueRange.endInclusive.toInt()
                                 ),
@@ -173,11 +197,11 @@ fun SliderSettingItem(
                             }
                         },
                         dismissText = if (isInputMode) {
-                            stringResource(R.string.slider)
+                            stringResource(Res.string.slider)
                         } else {
-                            stringResource(R.string.edit)
+                            stringResource(Res.string.edit)
                         },
-                        confirmText = stringResource(R.string.text_default)
+                        confirmText = stringResource(Res.string.text_default)
                     )
                 }
             }
@@ -207,7 +231,7 @@ fun SliderSettingItem(
                                 label = {
                                     AppText(
                                         stringResource(
-                                            R.string.input_value_range,
+                                            Res.string.input_value_range,
                                             valueRange.start.toInt(),
                                             valueRange.endInclusive.toInt()
                                         )
@@ -256,11 +280,11 @@ fun SliderSettingItem(
                         }
                     },
                     dismissText = if (isInputMode) {
-                        stringResource(R.string.slider)
+                        stringResource(Res.string.slider)
                     } else {
-                        stringResource(R.string.edit)
+                        stringResource(Res.string.edit)
                     },
-                    confirmText = stringResource(R.string.text_default)
+                    confirmText = stringResource(Res.string.text_default)
                 )
             }
         )

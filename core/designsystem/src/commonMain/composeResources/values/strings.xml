@@ -59,4 +59,7 @@
     <string name="example_is_empty">Example is empty</string>
     <string name="invalid_regex">Invalid regex</string>
     <string name="action_save">Save</string>
+    <string name="input_value_range">Enter value (%1$d-%2$d)</string>
+    <string name="slider">Slider</string>
+    <string name="text_default">Default</string>
 </resources>

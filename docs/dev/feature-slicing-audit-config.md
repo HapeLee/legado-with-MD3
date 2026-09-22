@@ -151,3 +151,29 @@ Android 实现留 `:core:ui`，由 `:app` 的 `PlatformServices.install()` 注�
 实验室页的**渲染与交互**无自动化覆盖：开关的联动显隐（`lab_enabled` → `lab_display` 组）、
 `eInkDisplay` 开启后的提示文本、Miuix 引擎下 `ArrowPreference` 的实际外观、
 以及「导出诊断 → 系统分享弹层」这一整条运行时路径。需真机冒烟。
+
+### M5-2b / M5-2c：translation 页的三个前置资产上提
+
+`ui/config/translation` 用了三个还在 `:core:ui`（Android-only）的组件，故在迁页面之前
+先按 M1-3x-pre 的先例逐个上提（都是 `git mv`，**包名不变** ⇒ 调用方 import 零改动）：
+
+| 片 | 资产 | 行数 | 撞到的约束 | 处置 |
+|---|---|---|---|---|
+| M5-2a-pre | `ClickableSettingItem` | 55 | `miuix-preference` 无 desktop 变体 | `MiuixPreferenceRenderer` 加 `arrowPreference` |
+| M5-2b | `AppSlider.kt`（`sliderAccessibility`） | 62 | 无（只依赖 theme） | 直接搬 |
+| M5-2b | `DropdownListSettingItem` | 87 | 同上，`OverlaySpinnerPreference` | 契约加 `overlaySpinnerPreference` |
+| M5-2c | `SliderSettingItem` | 268 | **要带资源**：用的是 `:core:ui` 自己的 `R` | 4 条文案 ×4 语言搬进 designsystem 的 composeResources |
+
+**契约面刻意不出现 miuix 类型**：`DropdownItem` → `List<String>`、
+`startAction: (@Composable () -> Unit)?` → `imageVector: ImageVector?`
+（否则共享层签名会绑死在一个 Android-only 制品上）。
+
+⚠️ **契约被扩展了两次，两次都被 `MiuixPreferenceRendererContractTest` 的匿名探针抓住**
+（缺新方法 ⇒ 编译失败）。这是它该有的反应：扩展契约时**所有**实现方（含测试探针）必须
+显式跟上。不为新方法加用例——该测试验的是宿主语义（未注入 ⇒ null），不是渲染结果。
+
+`SliderSettingItem` 与另外两个不同：**它的 Miuix 分支用 `miuix-ui` 的
+`BasicComponent`/`Slider`/`TextField`（**有** desktop 变体），不走 `MiuixPreferenceRenderer`。
+`:core:ui` 那 4 条文案的副本**不删**——`InputSettingItem.kt` 仍在用 `edit` 与 `text_default`。
+
+至此 translation 页的前置资产齐了，下一片可以迁页面本体。
