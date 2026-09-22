@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.downloadCacheConfig
+package io.legado.app.feature.settings.downloadcache
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -6,10 +6,35 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.legado.app.R
-import io.legado.app.model.CacheBook
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.bitmap_cache_size
+import io.legado.app.feature.settings.res.bitmap_cache_size_summary
+import io.legado.app.feature.settings.res.cache_book_threads_num_summary
+import io.legado.app.feature.settings.res.cache_book_threads_num_title
+import io.legado.app.feature.settings.res.cache_size_mb
+import io.legado.app.feature.settings.res.clear_cache
+import io.legado.app.feature.settings.res.clear_cache_summary
+import io.legado.app.feature.settings.res.cover_cache
+import io.legado.app.feature.settings.res.download_cache_config
+import io.legado.app.feature.settings.res.download_setting
+import io.legado.app.feature.settings.res.http_cache
+import io.legado.app.feature.settings.res.image_cache
+import io.legado.app.feature.settings.res.image_retain_number
+import io.legado.app.feature.settings.res.image_retain_number_summary
+import io.legado.app.feature.settings.res.manga_cache
+import io.legado.app.feature.settings.res.network
+import io.legado.app.feature.settings.res.other_setting
+import io.legado.app.feature.settings.res.pre_download
+import io.legado.app.feature.settings.res.pre_download_s
+import io.legado.app.feature.settings.res.pref_cronet_summary
+import io.legado.app.feature.settings.res.shrink_database
+import io.legado.app.feature.settings.res.shrink_database_summary
+import io.legado.app.feature.settings.res.sure
+import io.legado.app.feature.settings.res.sure_del
+import io.legado.app.feature.settings.res.threads_num_summary
+import io.legado.app.feature.settings.res.threads_num_title
+import io.legado.app.feature.settings.res.user_agent
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -21,20 +46,21 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import org.koin.androidx.compose.koinViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.jetbrains.compose.resources.stringResource
 
-@Composable
-fun DownloadCacheConfigRouteScreen(
-    onBackClick: () -> Unit,
-    viewModel: DownloadCacheConfigViewModel = koinViewModel(),
-) {
-    DownloadCacheConfigScreen(
-        state = viewModel.uiState.collectAsStateWithLifecycle().value,
-        onIntent = viewModel::onIntent,
-        onBackClick = onBackClick,
-    )
-}
+// M5-7：从 `:app` 的 `io.legado.app.ui.config.downloadCacheConfig` 迁来。
+//
+// 差异两类：
+//  ① `R.string.*` → `Res.string.*`（27 条）；
+//  ② **3 处 `CacheBook.maxDownloadConcurrency` → `state.maxDownloadConcurrency`** ——
+//     迁移前这个 composable 自己读 `:app` 的 `CacheBook`（见 `DownloadCacheConfigContract`
+//     文件头注释：值由 VM 从平台契约填进 state）。
+//
+// `DownloadCacheConfigRouteScreen` 不搬 —— 它只做 `koinViewModel()`（本页路由不带参数），
+// 宿主那侧照原样接。
+//
+// 四个确认对话框全是 Compose 状态（`state.dialog`），无平台动作 ⇒ 全留在共享层。
+// 「Cronet」是硬编码字面量（迁移前就是，不是资源）⇒ 原样保留。
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +76,7 @@ fun DownloadCacheConfigScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.download_cache_config),
+                title = stringResource(Res.string.download_cache_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -66,11 +92,11 @@ fun DownloadCacheConfigScreen(
             )
         ) {
             item {
-                SplicedColumnGroup(title = stringResource(R.string.http_cache)) {
+                SplicedColumnGroup(title = stringResource(Res.string.http_cache)) {
                     ClickableSettingItem(
-                        title = stringResource(R.string.cover_cache),
+                        title = stringResource(Res.string.cover_cache),
                         description = stringResource(
-                            R.string.cache_size_mb,
+                            Res.string.cache_size_mb,
                             state.coverCacheSizeMb
                         ),
                         onClick = {
@@ -82,9 +108,9 @@ fun DownloadCacheConfigScreen(
                         }
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.manga_cache),
+                        title = stringResource(Res.string.manga_cache),
                         description = stringResource(
-                            R.string.cache_size_mb,
+                            Res.string.cache_size_mb,
                             state.mangaCacheSizeMb
                         ),
                         onClick = {
@@ -97,10 +123,10 @@ fun DownloadCacheConfigScreen(
                     )
                 }
 
-                SplicedColumnGroup(title = stringResource(R.string.download_setting)) {
+                SplicedColumnGroup(title = stringResource(Res.string.download_setting)) {
                     SliderSettingItem(
-                        title = stringResource(R.string.threads_num_title),
-                        description = stringResource(R.string.threads_num_summary),
+                        title = stringResource(Res.string.threads_num_title),
+                        description = stringResource(Res.string.threads_num_summary),
                         value = settings.threadCount.toFloat(),
                         defaultValue = 8f,
                         valueRange = 1f..256f,
@@ -110,13 +136,13 @@ fun DownloadCacheConfigScreen(
                     )
 
                     SliderSettingItem(
-                        title = stringResource(R.string.cache_book_threads_num_title),
-                        description = stringResource(R.string.cache_book_threads_num_summary),
+                        title = stringResource(Res.string.cache_book_threads_num_title),
+                        description = stringResource(Res.string.cache_book_threads_num_summary),
                         value = settings.cacheBookThreadCount
-                            .coerceIn(1, CacheBook.maxDownloadConcurrency)
+                            .coerceIn(1, state.maxDownloadConcurrency)
                             .toFloat(),
-                        defaultValue = CacheBook.maxDownloadConcurrency.toFloat(),
-                        valueRange = 1f..CacheBook.maxDownloadConcurrency.toFloat(),
+                        defaultValue = state.maxDownloadConcurrency.toFloat(),
+                        valueRange = 1f..state.maxDownloadConcurrency.toFloat(),
                         onValueChange = {
                             onIntent(
                                 DownloadCacheConfigIntent.SetCacheBookThreadCount(it.toInt())
@@ -125,9 +151,9 @@ fun DownloadCacheConfigScreen(
                     )
 
                     SliderSettingItem(
-                        title = stringResource(R.string.pre_download),
+                        title = stringResource(Res.string.pre_download),
                         description = stringResource(
-                            R.string.pre_download_s,
+                            Res.string.pre_download_s,
                             settings.preDownloadNum
                         ),
                         value = settings.preDownloadNum.toFloat(),
@@ -139,11 +165,11 @@ fun DownloadCacheConfigScreen(
                     )
                 }
 
-                SplicedColumnGroup(title = stringResource(R.string.image_cache)) {
+                SplicedColumnGroup(title = stringResource(Res.string.image_cache)) {
                     SliderSettingItem(
-                        title = stringResource(R.string.bitmap_cache_size),
+                        title = stringResource(Res.string.bitmap_cache_size),
                         description = stringResource(
-                            R.string.bitmap_cache_size_summary,
+                            Res.string.bitmap_cache_size_summary,
                             settings.bitmapCacheSize
                         ),
                         value = settings.bitmapCacheSize.toFloat(),
@@ -155,9 +181,9 @@ fun DownloadCacheConfigScreen(
                     )
 
                     SliderSettingItem(
-                        title = stringResource(R.string.image_retain_number),
+                        title = stringResource(Res.string.image_retain_number),
                         description = stringResource(
-                            R.string.image_retain_number_summary,
+                            Res.string.image_retain_number_summary,
                             settings.imageRetainNum
                         ),
                         value = settings.imageRetainNum.toFloat(),
@@ -169,16 +195,16 @@ fun DownloadCacheConfigScreen(
                     )
                 }
 
-                SplicedColumnGroup(title = stringResource(R.string.network)) {
+                SplicedColumnGroup(title = stringResource(Res.string.network)) {
                     InputSettingItem(
-                        title = stringResource(R.string.user_agent),
+                        title = stringResource(Res.string.user_agent),
                         value = settings.userAgent,
                         onConfirm = { onIntent(DownloadCacheConfigIntent.SetUserAgent(it)) }
                     )
 
                     SwitchSettingItem(
                         title = "Cronet",
-                        description = stringResource(R.string.pref_cronet_summary),
+                        description = stringResource(Res.string.pref_cronet_summary),
                         checked = settings.cronetEnabled,
                         onCheckedChange = {
                             onIntent(DownloadCacheConfigIntent.SetCronetEnabled(it))
@@ -186,10 +212,10 @@ fun DownloadCacheConfigScreen(
                     )
                 }
 
-                SplicedColumnGroup(title = stringResource(R.string.other_setting)) {
+                SplicedColumnGroup(title = stringResource(Res.string.other_setting)) {
                     ClickableSettingItem(
-                        title = stringResource(R.string.clear_cache),
-                        description = stringResource(R.string.clear_cache_summary),
+                        title = stringResource(Res.string.clear_cache),
+                        description = stringResource(Res.string.clear_cache_summary),
                         onClick = {
                             onIntent(
                                 DownloadCacheConfigIntent.ShowDialog(
@@ -200,8 +226,8 @@ fun DownloadCacheConfigScreen(
                     )
 
                     ClickableSettingItem(
-                        title = stringResource(R.string.shrink_database),
-                        description = stringResource(R.string.shrink_database_summary),
+                        title = stringResource(Res.string.shrink_database),
+                        description = stringResource(Res.string.shrink_database_summary),
                         onClick = {
                             onIntent(
                                 DownloadCacheConfigIntent.ShowDialog(
@@ -217,8 +243,8 @@ fun DownloadCacheConfigScreen(
         AppAlertDialog(
             show = state.dialog == DownloadCacheConfigDialog.ClearBookCache,
             onDismissRequest = { onIntent(DownloadCacheConfigIntent.DismissDialog) },
-            title = stringResource(R.string.clear_cache),
-            text = stringResource(R.string.sure_del),
+            title = stringResource(Res.string.clear_cache),
+            text = stringResource(Res.string.sure_del),
             onConfirm = {
                 onIntent(DownloadCacheConfigIntent.ConfirmDialog)
             },
@@ -228,8 +254,8 @@ fun DownloadCacheConfigScreen(
         AppAlertDialog(
             show = state.dialog == DownloadCacheConfigDialog.ClearCoverCache,
             onDismissRequest = { onIntent(DownloadCacheConfigIntent.DismissDialog) },
-            title = stringResource(R.string.cover_cache),
-            text = stringResource(R.string.sure_del),
+            title = stringResource(Res.string.cover_cache),
+            text = stringResource(Res.string.sure_del),
             onConfirm = {
                 onIntent(DownloadCacheConfigIntent.ConfirmDialog)
             },
@@ -239,8 +265,8 @@ fun DownloadCacheConfigScreen(
         AppAlertDialog(
             show = state.dialog == DownloadCacheConfigDialog.ClearMangaCache,
             onDismissRequest = { onIntent(DownloadCacheConfigIntent.DismissDialog) },
-            title = stringResource(R.string.manga_cache),
-            text = stringResource(R.string.sure_del),
+            title = stringResource(Res.string.manga_cache),
+            text = stringResource(Res.string.sure_del),
             onConfirm = {
                 onIntent(DownloadCacheConfigIntent.ConfirmDialog)
             },
@@ -250,8 +276,8 @@ fun DownloadCacheConfigScreen(
         AppAlertDialog(
             show = state.dialog == DownloadCacheConfigDialog.ShrinkDatabase,
             onDismissRequest = { onIntent(DownloadCacheConfigIntent.DismissDialog) },
-            title = stringResource(R.string.shrink_database),
-            text = stringResource(R.string.sure),
+            title = stringResource(Res.string.shrink_database),
+            text = stringResource(Res.string.sure),
             onConfirm = {
                 onIntent(DownloadCacheConfigIntent.ConfirmDialog)
             },

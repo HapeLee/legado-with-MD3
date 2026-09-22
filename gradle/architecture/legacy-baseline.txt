@@ -53,7 +53,6 @@ appCtx|app/main/io/legado/app/ui/book/search|1
 # 改成「发枚举 + UI 侧查表」（同 about 的 `AboutMessage.localizedText()`）⇒ 本目录
 # 的 `appCtx` 直连归零，条目删除（棘轮只降不升）。
 
-appCtx|app/main/io/legado/app/ui/config/downloadCacheConfig|1
 appCtx|app/main/io/legado/app/ui/config/themeConfig|2
 appCtx|app/main/io/legado/app/ui/rss/article|1
 appCtx|app/main/io/legado/app/ui/rss/read|1
@@ -196,7 +195,15 @@ legacyHelp|app/main/io/legado/app/model/webBook|16
 # `help.update.AppUpdate`；legacyNaming 2 = `utils.FileUtils` + `utils.compress.ZipUtils`
 # （迁移前它们就在 `AboutViewModel` 里，属那 5 条 legacyHelp 的一部分）。旧 `ui/about`
 # 的计数在本片末（删旧文件时）随之下调。
-legacyHelp|app/main/io/legado/app/platform|2
+# M5-7：同一件事再做一次 —— `downloadCacheConfig` 的 3 处 `help.http`
+# （`HttpCacheType` / `clearHttpCache` / `getHttpCacheSize`）随该页迁进
+# `AndroidDownloadCachePlatform`，2 → **5**。**净变化为零**：旧 `ui/config/downloadCacheConfig`
+# 的 3 条已同片删除（54 + 3 = 5）。同样是「同一段平台逻辑换住所」，不是新增债。
+# ⚠️ 踩到一个门禁盲点：`legacyHelp` 正则是 `^import io\.legado\.app\.help\.[A-Za-z0-9_.]+$`
+# （行尾锚定），因此 `import X as Y` 形式的 import **不被计入**。本片最初的实现用别名绕开了
+# 成员遮蔽，结果是这里只 +2 而不是 +3（凭空少记一笔）。已改为「顶层私有函数 + 朴素 import」，
+# 让计数如实反映耦合 —— 见 `AndroidDownloadCachePlatform` 的 KDoc。
+legacyHelp|app/main/io/legado/app/platform|5
 legacyHelp|app/main/io/legado/app/receiver|1
 legacyHelp|app/main/io/legado/app/service|26
 # M5-1c-3：`ui/about` 的旧文件（About* / CrashReportScreen）已删，业务本体迁进
@@ -223,7 +230,10 @@ legacyHelp|app/main/io/legado/app/ui/book/toc/rule/preview|1
 legacyHelp|app/main/io/legado/app/ui/browser|7
 legacyHelp|app/main/io/legado/app/ui/config/backupConfig|1
 legacyHelp|app/main/io/legado/app/ui/config/coverConfig|1
-legacyHelp|app/main/io/legado/app/ui/config/downloadCacheConfig|3
+# M5-7：`downloadCacheConfig` 整页迁进 `:feature:settings`（VM/Screen 里那 3 处
+# `help.http` 引用收进 `DownloadCachePlatform`）⇒ 本目录归零，条目删除。
+# 同时 `ui/config/downloadCacheConfig` 的 `appCtx` 直连也归零（`appCtx.cacheDir` /
+# `externalCacheDir` 进了适配器），该条目同样删除。
 legacyHelp|app/main/io/legado/app/ui/config/readConfig|2
 legacyHelp|app/main/io/legado/app/ui/config/themeConfig|3
 legacyHelp|app/main/io/legado/app/ui/config/themeManage|5
@@ -318,7 +328,10 @@ legacyNaming|app/main/io/legado/app/model/webBook|6
 # `help.update.AppUpdate`；legacyNaming 2 = `utils.FileUtils` + `utils.compress.ZipUtils`
 # （迁移前它们就在 `AboutViewModel` 里，属那 5 条 legacyHelp 的一部分）。旧 `ui/about`
 # 的计数在本片末（删旧文件时）随之下调。
-legacyNaming|app/main/io/legado/app/platform|2
+# M5-7：`downloadCacheConfig` 的 `utils.FileUtils`（清缓存目录那一步）同上次一样搬进
+# `AndroidDownloadCachePlatform`，2 → **3**。**净变化为零**：旧 `ui/config/downloadCacheConfig`
+# 的 1 条已同片删除。legacyHelp 那条的说明见上文（含 `as` 别名逃过计数的门禁盲点）。
+legacyNaming|app/main/io/legado/app/platform|3
 legacyNaming|app/main/io/legado/app/receiver|2
 legacyNaming|app/main/io/legado/app/service|14
 # M5-1c-3：`ui/about` 的 `utils.FileUtils` / `utils.compress.ZipUtils` 随 AboutViewModel
@@ -340,7 +353,6 @@ legacyNaming|app/main/io/legado/app/ui/book/source/manage|2
 legacyNaming|app/main/io/legado/app/ui/book/toc|1
 # M2-5：本目录唯一的 `*Utils` 门面就是 `Utf8BomUtils` 的引用，随改名消失 ⇒ 归零，条目删除。
 legacyNaming|app/main/io/legado/app/ui/browser|4
-legacyNaming|app/main/io/legado/app/ui/config/downloadCacheConfig|1
 legacyNaming|app/main/io/legado/app/ui/config/otherConfig|1
 legacyNaming|app/main/io/legado/app/ui/config/themeConfig|4
 legacyNaming|app/main/io/legado/app/ui/file|1

@@ -302,9 +302,6 @@
     <string name="cache_download_failed">缓存失败：%1$s</string>
     <string name="import_select_book">导入选择书籍</string>
     <string name="threads_num_title">更新和搜索线程</string>
-    <string name="threads_num_summary">控制更新和搜索线程的并发数量。数值越高越不稳定</string>
-    <string name="cache_book_threads_num_title">书籍缓存下载线程</string>
-    <string name="cache_book_threads_num_summary">控制离线缓存章节下载的并发数量。数值越高越不稳定</string>
     <string name="change_icon">切换图标</string>
     <string name="remove_from_bookshelf">已在书架</string>
     <string name="already_in_bookshelf">已在书架</string>
@@ -651,7 +648,6 @@
     <string name="network_connection_unavailable">网络连接不可用</string>
     <string name="yes">是</string>
     <string name="no">否</string>
-    <string name="sure">确认</string>
     <string name="sure_del">是否确认删除?</string>
     <string name="sure_del_private_group">删除后，相关书籍可能在公开书架中显示，是否确认删除？</string>
     <string name="sure_disable_private_group">关闭后，本组书籍可能在公开书架中显示，是否确认关闭？</string>
@@ -1935,14 +1931,6 @@
     <string name="content_quality_stage_cleaning">清洗</string>
     <string name="content_quality_stage_matching">匹配</string>
     <string name="content_quality_stage_excluding">排除</string>
-    <string name="download_cache_config">下载与缓存</string>
-    <string name="http_cache">HTTP缓存</string>
-    <string name="cover_cache">封面缓存</string>
-    <string name="manga_cache">漫画缓存</string>
-    <string name="cache_size_mb">%1$.1f MB</string>
-    <string name="download_setting">下载</string>
-    <string name="image_cache">图片缓存</string>
-    <string name="network">网络</string>
     <string name="personalization_setting">深度个性化设置</string>
     <string name="personalization_setting_s">字体等深度个性化设置</string>
     <string name="theme_pack">主题管理</string>

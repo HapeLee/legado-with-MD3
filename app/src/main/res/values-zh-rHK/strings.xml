@@ -577,7 +577,6 @@
     <string name="network_connection_unavailable">網絡連接不可用</string>
     <string name="yes">係</string>
     <string name="no">唔係</string>
-    <string name="sure">確認</string>
     <string name="sure_del">是否確認刪除？</string>
     <string name="sure_del_private_group">刪除後，相關書籍可能喺公開書架中顯示，是否確認刪除？</string>
     <string name="sure_disable_private_group">關閉後，本組書籍可能喺公開書架中顯示，是否確認關閉？</string>
@@ -1644,10 +1643,7 @@
     <string name="brightness_bar_vertical">縱向</string>
     <string name="brightness_follow_system">跟隨系統</string>
     <string name="by_duration">按時長</string>
-    <string name="cache_book_threads_num_summary">控制離線書籍緩存的並發章節下載數。數值過大可能增加記憶體不足風險</string>
-    <string name="cache_book_threads_num_title">緩存下載執行緒數</string>
     <string name="cache_download_failed">緩存失敗：%1$s</string>
-    <string name="cache_size_mb">%1$.1f MB</string>
     <string name="cancel_select">取消選擇</string>
     <string name="cannot_open_url">無法直接打開此 URL</string>
     <string name="change_icon_success">圖標已更新</string>
@@ -1685,7 +1681,6 @@
     <string name="contrast_source_system_summary">來源：系統對比度</string>
     <string name="copy_from">從剪貼簿導入</string>
     <string name="count_unit">次</string>
-    <string name="cover_cache">封面緩存</string>
     <string name="cover_grid">封面網格</string>
     <string name="cover_reset">重置封面</string>
     <string name="cover_rule_fields_required">搜索 URL 和封面規則不能為空</string>
@@ -1732,11 +1727,9 @@
     <string name="disable_manga_scroll_animation">關閉翻頁動畫</string>
     <string name="dotted_line_black">線段長度</string>
     <string name="dotted_line_while">間隔長度</string>
-    <string name="download_cache_config">下載與緩存</string>
     <string name="download_link">下載連結</string>
     <string name="download_no_storage_permission">下載失敗：沒有存儲權限</string>
     <string name="download_selected_count">下載所選（%1$d）</string>
-    <string name="download_setting">下載</string>
     <string name="drag_disabled_in_sort_mode">此排序模式下禁用拖拽</string>
     <string name="duration_unit">時長</string>
     <string name="dynamic_colors">動態顏色</string>
@@ -1837,8 +1830,6 @@
     <string name="homepage_select_multiple_kinds">選擇多個分類</string>
     <string name="homepage_select_one_kind">選擇一個分類</string>
     <string name="horizontal_cover_count">橫向封面數量</string>
-    <string name="http_cache">HTTP 緩存</string>
-    <string name="image_cache">圖片緩存</string>
     <string name="image_style_full">全屏</string>
     <string name="image_style_single">單頁</string>
     <string name="image_style_text">文字貼合</string>
@@ -1896,7 +1887,6 @@
     <string name="long_press_group">長按分組</string>
     <string name="manage_tag_colors">管理標籤顏色</string>
     <string name="manga">漫畫</string>
-    <string name="manga_cache">漫畫緩存</string>
     <string name="manga_cross_fade">關閉載入淡入動畫</string>
     <string name="manga_epaper">E-Ink 螢幕</string>
     <string name="manga_epaper_stting">E-Ink 設定</string>
@@ -1920,7 +1910,6 @@
     <string name="move_to_top">移至頂部</string>
     <string name="multi_select_items">多選項目</string>
     <string name="nav_label_mode">導航欄標籤模式</string>
-    <string name="network">網路</string>
     <string name="network_book_badge_setting">網路書籍標記</string>
     <string name="new_rule">新建規則</string>
     <string name="night_card_bg_color">夜間卡片背景色</string>
@@ -2284,7 +2273,6 @@
     <string name="theme_manage_top_bar_blur_opacity">頂欄模糊不透明度</string>
     <string name="theme_manage_top_bar_blur_radius">頂欄模糊半徑</string>
     <string name="theme_manage_use_palette_colors">從調色板生成顏色</string>
-    <string name="threads_num_summary">控制並發下載任務。數值過大可能增加記憶體不足風險</string>
     <string name="timeline">時間線</string>
     <string name="timeout_ms">超時（毫秒）</string>
     <string name="tip_compose_set">這些選項僅影響以 Compose 重寫的介面。已停用的選項為佔位符，將在實作後啟用。</string>

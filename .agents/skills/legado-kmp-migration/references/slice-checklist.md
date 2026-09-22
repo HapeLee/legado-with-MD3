@@ -509,6 +509,28 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   would show `legacyHelp` counts and fail. Leave it in its existing report-only area and only add an
   import for the relocated interface. "Contract moved down, implementation still in `:app`" is an
   accepted transition state, not a defect to force-fix in the same slice.
+- **Raising a non-report-only area is allowed *only* as a relocation registered in the same change.**
+  The bullets above describe the conservative route (leave the implementation in its report-only
+  area). The other accepted route is to move it into `io.legado.app.platform` — the designated home
+  for shared-contract Android adapters — and register the increase there. Measured twice:
+  M5-1c (about's contracts → `platform`, `legacyHelp` 0 → 2) and M5-7 (`downloadCacheConfig` →
+  `platform`, `legacyHelp` 2 → **5** while the old `ui/config/downloadCacheConfig` entry went
+  3 → deleted, i.e. **net zero**; `legacyNaming` 2 → 3, also net zero). `platform` is **not** in
+  `reportOnlyAreas`, so an increase there is a hard failure unless you edit the baseline — do that
+  edit **deliberately, in the same commit as the deletion**, and write the arithmetic in the comment
+  (`5 = 2 + 3`, `3 = 2 + 1`) plus the words "relocation, not new debt" so a reviewer can verify the
+  net at a glance. Pick the `platform` route when the adapter genuinely belongs there; pick the
+  report-only route when it does not.
+- ⚠️ **`import io.legado.app.help.X as Y` escapes every ratchet rule.** The regexes are end-anchored
+  (`^import io\.legado\.app\.help\.[A-Za-z0-9_.]+$`), so an **aliased import is never counted**.
+  M5-7 hit this by accident: the contract method `clearHttpCache(kind)` shadows the top-level
+  `help.http.clearHttpCache(type)` inside the class body, and the obvious fix
+  (`as clearOkHttpCache`) silently under-counted the relocation by 1 — the gate reported `+2` when
+  3 imports had actually moved. Resolve shadowing **without an alias**: a top-level `private fun`
+  sits outside the class, so the member no longer shadows the import and a plain `import` counts as
+  it should. Never let a legitimate technical workaround quietly shrink a legacy number — the whole
+  point of moving coupling into an adapter is to *account* for it. Record the blind spot
+  (`docs/dev/legacy-architecture-report.md` §7) rather than relying on it.
 - When extracting a use case out of a ViewModel, re-check every `withContext(Dispatchers.IO)` wrapper
   you pass through. `viewModelScope` runs on Main, so dropping a wrapper silently moves batch DB
   writes / re-indexing onto the UI thread while all tests still pass.

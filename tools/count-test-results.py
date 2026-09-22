@@ -222,7 +222,14 @@ RESULT_DIRS = {
 # 失败时拼「兜底文案: 详情」（含无详情分支）/ `defaultParamsJson` 经 `JsonCodec` 反序列化。
 # ⚠️ 前三条钉的是本片的实质改动「`appCtx.getString` → 注入 `AiProviderStringSource`」——
 # 假文案源给的是带标记的假值，所以「VM 真的走了注入路径」是被断言验证的。
-BASELINE_MAIN = 740
+# M5-7：740 → **747**（**+7**）。`:feature:settings` 新增
+# `DownloadCacheConfigViewModelTest`：平台并发上限进 state 并用于夹取（含上下界与区间内）/
+# 缓存字节→MB 换算 / 改图片缓存大小「写设置 + 重分配」两件事都发生 / 清封面缓存调平台并归零 /
+# 清书缓存是「先 use case 清条目、再平台清目录」两步且不动 OkHttp 缓存 / 收缩数据库只走 use case /
+# 设置流变化刷新 state。
+# ⚠️ 用例重心是**契约交互**（断言调了平台的哪个方法、按什么参数）——本片的实质改动就是
+# 把五处平台直连收进 `DownloadCachePlatform`，只断言「状态变了」抓不到接线错。
+BASELINE_MAIN = 747
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -306,7 +313,8 @@ BASELINE_MAIN = 740
 # M5-5a：1222 → **1226**（**+4** = `AiConfigViewModelTest`）。主集同步到 731。
 # M5-5b：1226 → **1230**（**+4** = `AiModelEditViewModelTest`）。主集同步到 735。
 # M5-5c：1230 → **1235**（**+5** = `AiProviderEditViewModelTest`）。主集同步到 740。
-BASELINE_ALL = 1235
+# M5-7：1235 → **1242**（**+7** = `DownloadCacheConfigViewModelTest`）。主集同步到 747。
+BASELINE_ALL = 1242
 
 
 def tally(d: pathlib.Path):

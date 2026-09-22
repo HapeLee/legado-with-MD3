@@ -142,7 +142,8 @@ import io.legado.app.feature.settings.ai.summary.AiSummaryConfigViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigRouteScreen
-import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigRouteScreen
+import io.legado.app.feature.settings.downloadcache.DownloadCacheConfigScreen
+import io.legado.app.feature.settings.downloadcache.DownloadCacheConfigViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigRouteScreen
 import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
@@ -631,7 +632,14 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsDownloadCache> {
-        DownloadCacheConfigRouteScreen(onBackClick = { onNavigateBack() })
+        // M5-7：`DownloadCacheConfigRouteScreen` 只做 `koinViewModel()`（本页路由不带参数），
+        // 且 `DownloadCacheConfigEffect` 是空的 ⇒ 宿主这侧没有 Effect 要收，只剩「取 VM、收 state」。
+        val viewModel = koinViewModel<DownloadCacheConfigViewModel>()
+        DownloadCacheConfigScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            onBackClick = { onNavigateBack() },
+        )
     }
 
     entry<MainRouteSettingsTranslation> {

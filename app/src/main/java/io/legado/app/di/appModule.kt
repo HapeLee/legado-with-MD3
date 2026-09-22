@@ -324,7 +324,9 @@ import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
 import io.legado.app.feature.settings.ai.prompt.AiPromptStringSource
 import io.legado.app.feature.settings.ai.prompt.composeResourcePromptStrings
 import io.legado.app.feature.settings.customtheme.CustomThemeViewModel
-import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigViewModel
+import io.legado.app.feature.settings.downloadcache.DownloadCacheConfigViewModel
+import io.legado.app.feature.settings.downloadcache.DownloadCachePlatform
+import io.legado.app.platform.AndroidDownloadCachePlatform
 import io.legado.app.feature.settings.lab.LabConfigViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.config.readConfig.ApplyReadSettingUseCase
@@ -558,6 +560,10 @@ val appModule = module {
     // （`appCtx.getString` 3 处），而 VM 里不能直接 `getString`（M5-4d 探针的结论）。
     single<AiProviderStringSource> { composeResourceProviderStrings() }
     single<BundledTextReader> { AndroidBundledTextReader(androidContext()) }
+    // M5-7：downloadCacheConfig 页的五处平台直连（引擎并发上限 / OkHttp 缓存大小与清理 /
+    // 缓存目录 / 图片内存缓存 resize）收成一个窄契约。实现留在 `:app`
+    // （`CacheBook` + `HttpHelper` + `FileUtils` + `ImageProvider` 都在这里）。
+    single<DownloadCachePlatform> { AndroidDownloadCachePlatform(androidContext()) }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     // ⚠️ 两个构造参数都要传：`digest` 是**参数注入**的平台能力（`stableModelId` 要复刻
     // UUID v3 名称空间哈希，而 MD5 是平台原语），没有任何可回落默认 ⇒ 漏传即编译错误。

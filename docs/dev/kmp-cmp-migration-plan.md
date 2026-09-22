@@ -1697,6 +1697,36 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        未验证：首页渲染与 9 条导航的实际跳转，需真机冒烟。
      **下一步**：`otherConfig` / `backupConfig`（各需先抽 1–2 个平台契约）或 `themeConfig`
      （撞 `ui.main.*` 的 10 个 `Launcher*` 图标资源）。
+   - **M5-7 已完成（2026-09-23）：`downloadCacheConfig` → `:feature:settings/downloadcache/`。
+     剩余子域里最小的一块（4 文件 420 行），也是本批**第一次需要新抽平台契约**。**
+     新契约 `DownloadCachePlatform`（5 成员）收掉迁移前 VM+Screen 的 5 处平台直连：
+     引擎并发上限 / OkHttp 缓存大小 / OkHttp 缓存清理 / 缓存目录清理 / 图片内存缓存重分配。
+     - **两条边界判断**：① `maxDownloadConcurrency` 走契约而非在共享层写 `const val 8`
+       —— 否则引擎与共享层各有一份上限，日后引擎放宽会静默漂移（表现为「滑块拉不到底」）；
+       ② `clearCacheDirectories` 与 `:core:data` 的 `ClearBookCacheUseCase` **不合并**
+       —— 条目清理与目录清理是两步，合并会让 use case 失去独立性。
+       `HttpCacheKind` 只保留两值枚举，不带 Android `HttpCacheType` 的 `dirName` / `maxSize`。
+     - **一处结构变更**：UI state 新增 `maxDownloadConcurrency`（迁移前 Screen 自己读
+       `CacheBook`，共 3 处）。该字段**刻意不给默认值** —— 给默认值 = 共享层写死第二真源。
+     - **G4：两根棘轮同时下调 + 两个「净变化为零」的上调**。
+       `ui/config/downloadCacheConfig` 的 `appCtx`(1)/`legacyHelp`(3)/`legacyNaming`(1) 全部归零；
+       `io.legado.app.platform` 的 `legacyHelp` 2 → **5**、`legacyNaming` 2 → **3**，
+       但净变化为零（5 = 2+3，3 = 2+1）。`platform` 是「共享契约的 Android 适配」指定住所，
+       **不在 `reportOnlyAreas`** ⇒ 上调必须显式登记并注释「换住所、非新增债」（先例 M5-1c）。
+     - ⚠️ **踩到门禁盲点**：`legacyHelp` 规则行尾锚定为 `$`，故
+       `import X as Y` 形式**不被计入**。最初为绕开成员遮蔽写的别名导致只 +2 而非 +3
+       （本该搬 3 处）——**凭空少记一笔**。已改成「顶层私有函数 + 朴素 import」让计数如实；
+       盲点本身记进 `legacy-architecture-report.md` §7，附修复方向（属独立切片）。
+     - 新增 7 例（迁移前零测试），重心是**契约交互**：并发上限进 state 并夹取 /
+       字节→MB 换算 / 改图片缓存「写设置 + 重分配」两件事都发生 / 清封面缓存调平台并归零 /
+       清书缓存「先清条目再清目录」且不碰 OkHttp / 收缩数据库只走 use case / 设置流刷新 state。
+     - 验证：四门禁全绿 + `:feature:settings`（**37 例**）+ `:app` 编译/单测/打包 +
+       全模块测试；计数 **740 → 747 / 1235 → 1242**；资源 **308/308**；死资源 12 条；
+       lint 仍 **5 errors / 95 warnings**。
+       未验证：页面渲染、四个确认对话框、四条真实平台路径（清 OkHttp / 清缓存目录 /
+       图片缓存重分配 / 收缩数据库），需真机冒烟。
+     **下一步**：`backupConfig`（1144 行；抽 `Permissions` / `ImportOldData`）或
+     `otherConfig`（1157 行；抽 `WebService` 状态 / `Permissions` / 最后 1 处 `GSON`）。
      **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵

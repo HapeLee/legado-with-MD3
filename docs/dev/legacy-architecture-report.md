@@ -137,6 +137,16 @@ report」的产物：把当前 legacy 耦合的**真实分布**扫出来、冻�
 - 目录级聚合允许「同目录内删一处、加一处」互相抵消；这是为了减少基线维护噪音主动接受的代价
   （`verifyConfigArchitecture` 的 DAO 基线是文件级，两者互补）。
 - 只认 import 形态的**直接**引用：同包内不 import 的使用、`*Help.xxx()` 的全限定写法不在统计内。
+- ⚠️ **带别名的 import 不被计入**（M5-7 实测发现）。规则是
+  `^import io\.legado\.app\.help\.[A-Za-z0-9_.]+$`（`legacyHelp`）等，**行尾锚定**，
+  因此 `import io.legado.app.help.http.clearHttpCache as clearOkHttpCache` **不匹配** ——
+  一条真实的 help 耦合会凭空少记一笔。`legacyNaming` 同理。
+  修复方向：把每条规则的行尾从 `$` 放宽为 `(?:\s+as\s+[A-Za-z0-9_]+)?$`
+  （同时保留原式），并重扫基线。**暂未修**，因为改规则会让所有既有基线计数变动，
+  属独立切片。
+  M5-7 的做法是**不去利用这个漏网**：最初为绕开成员遮蔽写了别名，发现计数只 +2 而非 +3
+  （本该搬过去 3 处），于是改成「顶层私有函数 + 朴素 import」，让计数如实反映耦合
+  —— 迁移记账少一笔就失去意义。见 `AndroidDownloadCachePlatform` 的 KDoc。
 - `legacyHelp` 与 `legacyNaming` 有重叠（`help` 包下的 `XxxHelp` 会同时命中两条），
   分开统计是为了分别跟踪「包级债」和「命名级债」的下降趋势。
 - 本报告只冻结数量，不判断每处是否合理；真正的清理顺序由 M1/M2 的切片决定。

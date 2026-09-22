@@ -586,7 +586,6 @@
     <string name="network_connection_unavailable">網路連接不可用</string>
     <string name="yes">是</string>
     <string name="no">否</string>
-    <string name="sure">確認</string>
     <string name="sure_del">是否確認刪除？</string>
     <string name="sure_del_private_group">刪除後，相關書籍可能在公開書架中顯示，是否確認刪除？</string>
     <string name="sure_disable_private_group">關閉後，本組書籍可能在公開書架中顯示，是否確認關閉？</string>
@@ -1585,9 +1584,6 @@
     <string name="select_color">選擇顏色</string>
     <string name="color_value">顏色值</string>
     <string name="cache_download_failed">快取失敗：%1$s</string>
-    <string name="threads_num_summary">控制並發下載任務。數值越大，OOM 風險越高</string>
-    <string name="cache_book_threads_num_title">快取下載執行緒數</string>
-    <string name="cache_book_threads_num_summary">控制離線快取書籍的並發章節下載數。數值越大，OOM 風險越高</string>
     <string name="rule_sub_content">副內容（subContent）</string>
     <string name="speak_engine_apply_scope">選擇套用所選朗讀引擎的範圍</string>
     <string name="use_bg_image">使用背景圖片</string>
@@ -2038,14 +2034,6 @@
     <string name="search_book_source_count">%1$d</string>
     <string name="search_layout_list">列表佈局</string>
     <string name="search_layout_source_grouped">按來源分組</string>
-    <string name="download_cache_config">下載與快取</string>
-    <string name="http_cache">HTTP 快取</string>
-    <string name="cover_cache">封面快取</string>
-    <string name="manga_cache">漫畫快取</string>
-    <string name="cache_size_mb">%1$.1f MB</string>
-    <string name="download_setting">下載</string>
-    <string name="image_cache">圖片快取</string>
-    <string name="network">網路</string>
     <string name="translation_config">翻譯設定</string>
     <string name="llm_translate_enabled">啟用章節翻譯</string>
     <string name="openai_config">OpenAI 設定</string>

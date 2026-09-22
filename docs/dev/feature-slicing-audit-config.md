@@ -543,5 +543,109 @@ build 文件里；本模块 8 个测试文件全是 ViewModel 测试），要给
 `WebService` 状态 / `Permissions` / `ImportOldData`），或 `themeConfig`（撞 `ui.main.*`
 的 10 个 `Launcher*` 图标资源，成本更高）。
 
+### M5-7：`downloadCacheConfig` → `:feature:settings/downloadcache/`
+
+剩余子域里最小的一块（4 文件 / 420 行），也是**第一次需要新抽平台契约**（前几片
+`lab` / `translation` / `ai` 的依赖恰好都已在共享层）。
+
+#### 新契约 `DownloadCachePlatform`（5 个成员）
+
+迁移前 VM + Screen 有 **5 处**平台直连，互不同源，但都服务于「让用户看到并清掉各类缓存」：
+
+| 迁移前 | 为什么不能进 commonMain |
+|---|---|
+| `CacheBook.maxDownloadConcurrency` | 下载引擎（`:app` 的 `model.CacheBook`）的并发上限 |
+| `getHttpCacheSize(HttpCacheType.COVER/MANGA)` | 走 `appCtx.cacheDir` 遍历文件系统 |
+| `clearHttpCache(HttpCacheType.COVER/MANGA)` | 直接 `okHttpClient.cache?.delete()` |
+| `FileUtils.delete(appCtx.cacheDir.absolutePath)` + `externalCacheDir?.deleteRecursively()` | `Context` + `java.io.File` |
+| `ImageProvider.bitmapLruCache.resize(ImageProvider.cacheSize)` | `android.graphics.Bitmap` 的 LruCache |
+
+两条边界判断：
+
+1. **`maxDownloadConcurrency` 走契约而不是在共享层写 `const val 8`。** 它是纯数值、看着能搬，
+   但那样**引擎与共享层各有一份上限**，日后引擎放宽会静默漂移（表现为「滑块拉不到底」，
+   没人会报）。实现侧转发 `CacheBook.maxDownloadConcurrency`，唯一真源留在引擎。
+2. **`clearCacheDirectories` 与 `ClearBookCacheUseCase` 不合并**：条目清理由 `:core:data`
+   的 use case 负责，契约只做它之后那步「把缓存目录本身也删掉」。迁移前这两步就在同一个
+   `when` 分支里前后相邻 —— 但合并会让 use case 失去独立性。
+
+**`HttpCacheKind` 而非搬 `HttpCacheType`**：共享层只留「是哪一种」两值枚举，不带
+`dirName` / `maxSize`（存储与策略细节）。
+
+#### 一处结构变更：UI state 新增 `maxDownloadConcurrency`
+
+迁移前 **Screen 自己**读 `CacheBook.maxDownloadConcurrency`（3 处：当前值夹取、`defaultValue`、
+`valueRange` 上界）。共享层的 composable 拿不到 `:app` 的 `CacheBook`，故由 VM 从契约填进 state
+（另一条路是宿主把值当参数传，那会让 `MainNavGraph` 也依赖平台契约）。
+
+该字段**刻意不给默认值**：给 `= 8` 等于在共享层写死第二真源 —— 与上面第 1 条同一个理由，
+编译器会拦住漏填。
+
+#### G4 基线：两根棘轮同时下调 + 一个「净变化为零」的上调
+
+```
+appCtx    |…/ui/config/downloadCacheConfig| 1 → 0   （条目删除）
+legacyHelp|…/ui/config/downloadCacheConfig| 3 → 0   （条目删除）
+legacyHelp|…/platform                    | 2 → 5   ← 上调，但净变化为零（5 = 2 + 3）
+legacyNaming|…/ui/config/downloadCacheConfig| 1 → 0 （条目删除）
+legacyNaming|…/platform                  | 2 → 3   ← 上调，净变化为零（3 = 2 + 1）
+```
+
+`platform`（`io.legado.app.platform`）是「共享契约的 Android 适配」的指定住所，
+**不在 `reportOnlyAreas`** ⇒ 出现「新增」是硬失败。先例是 M5-1c（about 的三个契约同样把
+`ui/about` 的 `legacyHelp` 搬进 `platform` 并上调基线）。本次照同一模式处理，
+并在基线文件里逐条注释「同一段平台逻辑换住所，不是新增债」。
+
+#### ⚠️ 踩到一个门禁盲点：带别名的 import 逃过计数
+
+契约方法 `clearHttpCache(kind)` 与 `help.http` 的顶层 `clearHttpCache(type)` **同名**，
+类体内直接调会解析到自己的成员 ⇒ 无限递归。常规解法是
+`import io.legado.app.help.http.clearHttpCache as clearOkHttpCache`。
+
+但门禁的 `legacyHelp` 规则是 `^import io\.legado\.app\.help\.[A-Za-z0-9_.]+$`（**行尾锚定**），
+别名形式**不匹配** ⇒ 实测 `platform` 只 +2 而非 +3，**凭空少记一笔**。
+
+本片的意义就是「把耦合从 ui 层搬进 platform 并记账」，记账少一笔就失去意义。故**改用
+顶层私有函数**（类外没有成员遮蔽，`clearHttpCache(...)` 正常解析到 `help.http`），
+import 保持最朴素的形式、如实计数。盲点本身已记进
+`legacy-architecture-report.md` §7「已知局限」，附带修复方向（规则行尾放宽为
+`(?:\s+as\s+[A-Za-z0-9_]+)?$`，属独立切片）。
+
+#### 两处非逐字改动（已注释说明）
+
+1. **`launch(Dispatchers.IO)` → `launch`**：调度器下沉到实现侧（契约标 `suspend`，
+   Android 实现内部 `withContext(IO)`），与 `AndroidAboutDiagnostics` 同一写法。
+2. **`loadCacheSizes` 里两次取大小从 `_uiState.update { }` 的 lambda 内挪到外面**：
+   契约里是 `suspend`，而 `update { }` 的 lambda 不是挂起上下文。语义不变
+   （迁移前也是先封面后漫画），新写法反而少在原子更新里做两次阻塞 IO。
+
+#### 新增 7 条用例（迁移前零测试）
+
+`平台并发上限进 state 并用于夹取`（含上下界与区间内）/ `缓存字节→MB 换算` /
+`改图片缓存大小同时写设置并让平台重新分配` / `清封面缓存调平台并归零` /
+`清书缓存是「先 use case 清条目、再平台清目录」两步且不动 OkHttp 缓存` /
+`收缩数据库只走 use case` / `设置流变化刷新 state`。
+
+⚠️ 用例重心是**契约交互**（断言调了平台的哪个方法、按什么参数），不只断言「状态变了」
+—— 本片的实质改动就是接线，只断言状态抓不到接错。
+
+#### 验证
+
+- 四门禁全绿（G4 按上述五条处理）+ `:feature:settings` 的 desktop 编译与
+  `testAndroidHostTest`（**37 例 0 失败**）+ `:app` 编译/单测/打包 + 全模块测试
+- 计数 **740 → 747 / 1235 → 1242**（+7），零失败
+- 资源 **308/308 逐字一致**；死资源 12 条删除（保留 `threads_num_title` / `pre_download` /
+  `bitmap_cache_size` / `user_agent` / `clear_cache` / `sure_del` / `other_setting` 等 15 条 ——
+  在 `:app` 侧仍被其他未迁子页引用）
+- `lintAppDebug` 仍 **5 errors / 95 warnings**
+
+#### 未验证
+
+页面的渲染与四个确认对话框的交互，以及**四条真实平台路径**（清 OkHttp 缓存、
+清缓存目录、`ImageProvider` 重分配、收缩数据库）。需真机冒烟。
+
+**下一步**：`backupConfig`（5 文件 / 1144 行；需抽 `Permissions` / `ImportOldData`）或
+`otherConfig`（1157 行；需抽 `WebService` 状态 / `Permissions` / 最后 1 处 `GSON`）。
+
 **下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
 `otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。

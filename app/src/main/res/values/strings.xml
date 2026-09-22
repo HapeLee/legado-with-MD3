@@ -330,9 +330,6 @@
     <string name="cache_download_failed">Cache failed: %1$s</string>
     <string name="import_select_book">Import selected book(s)</string>
     <string name="threads_num_title">Number of Concurrent Tasks</string>
-    <string name="threads_num_summary">Controls concurrent download tasks. Higher values increase OOM risk</string>
-    <string name="cache_book_threads_num_title">Cache Download Threads</string>
-    <string name="cache_book_threads_num_summary">Controls concurrent chapter downloads for offline book cache. Higher values increase OOM risk</string>
     <string name="change_icon">Change Icon</string>
     <string name="remove_from_bookshelf">In library</string>
     <string name="already_in_bookshelf">Already in Bookshelf</string>
@@ -679,7 +676,6 @@
     <string name="network_connection_unavailable">Network connection is not available</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="sure">OK</string>
     <string name="sure_del">Are you sure to delete it?</string>
     <string name="sure_del_private_group">Related books may appear in public bookshelf views after deletion. Are you sure to delete?</string>
     <string name="sure_disable_private_group">Books in this group may appear in public bookshelf views after disabling. Are you sure to disable?</string>
@@ -1992,14 +1988,6 @@
     <string name="content_quality_stage_cleaning">Clean</string>
     <string name="content_quality_stage_matching">Match</string>
     <string name="content_quality_stage_excluding">Exclude</string>
-    <string name="download_cache_config">Download &amp; Cache</string>
-    <string name="http_cache">HTTP Cache</string>
-    <string name="cover_cache">Cover Cache</string>
-    <string name="manga_cache">Manga Cache</string>
-    <string name="cache_size_mb">%1$.1f MB</string>
-    <string name="download_setting">Download</string>
-    <string name="image_cache">Image Cache</string>
-    <string name="network">Network</string>
 
     <!-- Translation -->
     <string name="translation_config">Translation Settings</string>
