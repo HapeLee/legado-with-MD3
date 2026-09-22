@@ -1,8 +1,16 @@
-package io.legado.app.ui.config.ai
+package io.legado.app.feature.settings.ai
 
 import androidx.compose.runtime.Stable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+
+// M5-5a：从 `:app` 的 `io.legado.app.ui.config.ai` 迁来（**只改包名**，结构逐字一致）。
+//
+// ⚠️ `AiConfigEffect.ShowMessage` 携带的是**裸 `String`**，不是枚举 —— 与
+// ai/summary、ai/prompt 都不同。原因是迁移前 VM 里那两条文案就是**硬编码英文**
+// （`"Default AI model saved"` / `"Failed to save default AI model"`），根本不在资源表里。
+// 本片保持原样：**硬编码是既有行为，不是本片引入的**，也不在本次改动范围内
+// （改成资源是另一个决策，会让 4 个语言下的文案发生变化）。
 
 @Stable
 data class AiConfigUiState(
@@ -41,8 +49,7 @@ data class AiModelListItemUi(
     val isCurrent: Boolean
 )
 
-sealed interface AiConfigIntent
-{
+sealed interface AiConfigIntent {
     data class SetDefaultModel(val modelProfileId: String) : AiConfigIntent
 }
 

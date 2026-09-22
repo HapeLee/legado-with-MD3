@@ -2075,15 +2075,8 @@
     <string name="translation_started">翻譯已開始，請稍候…</string>
     <string name="ai_config">AI 設定</string>
     <string name="ai_profile_database">設定檔資料庫</string>
-    <string name="ai_model_database">模型</string>
-    <string name="ai_provider_database">供應商</string>
-    <string name="ai_tasks">任務</string>
     <string name="ai_chapter_summary">章節摘要</string>
-    <string name="ai_prompt_config">提示詞設定</string>
-    <string name="ai_prompt_config_desc">編輯各 AI 工具的提示詞</string>
     <string name="ai_prompt_reset_single_desc">恢復為此提示詞的預設值</string>
-    <string name="ai_skills">技能</string>
-    <string name="ai_new_skill">新建技能</string>
     <string name="ai_chat">AI 聊天</string>
     <string name="ai_recent_chats">最近對話</string>
     <string name="ai_new_chat">新建對話</string>
@@ -2120,10 +2113,7 @@
     <string name="ai_tool_input">輸入：</string>
     <string name="ai_tool_output">輸出：</string>
     <string name="ai_current_provider">目前供應商</string>
-    <string name="ai_current_model">目前模型</string>
-    <string name="ai_current">目前</string>
     <string name="ai_model_not_configured">尚未設定模型</string>
-    <string name="ai_new_provider">新建供應商</string>
     <string name="ai_new_model">新建模型</string>
     <string name="ai_new_profile">新建設定檔</string>
     <string name="ai_provider">供應商</string>
@@ -2142,7 +2132,6 @@
     <string name="ai_fetch_models">擷取模型</string>
     <string name="ai_fetch_and_save_models">擷取並儲存模型</string>
     <string name="ai_no_provider_configured">請先建立供應商</string>
-    <string name="ai_no_models_imported">尚未匯入模型</string>
     <string name="ai_select_model">選擇模型</string>
     <string name="ai_add_model_manually">手動新增模型</string>
     <string name="ai_not_set">未設定</string>

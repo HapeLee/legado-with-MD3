@@ -1630,6 +1630,18 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      失败 fallback（有异常文案用它、没有才回落资源）/ 重置单个用默认值并提示成功。
      验证：四门禁全绿 + `:feature:settings` 的 `testAndroidHostTest`（**17 例**）+
      `:app` 编译/单测/打包 + 全模块测试；计数 **723 → 727 / 1218 → 1222**；资源 226/226 未变。
+   - **M5-5a 已完成（2026-09-23）：ai 主入口页迁进 `:feature:settings/ai/`。**
+     本批**最干净**的 VM（只依赖 `AiProfileGateway`，不碰 `R`/`appCtx`/`GSON`）⇒ 可测性无碍。
+     两条提示是**硬编码英文**（迁移前就如此，原样保留）⇒ `AiConfigEffect.ShowMessage` 带裸
+     `String` 而非枚举，与本域另两页不同。
+     新增 4 例：模型按 provider 归组且孤儿模型被过滤 / 「当前模型」优先取默认翻译预设指向的
+     模型（写反会让主页面与翻译页不一致）/ 没有预设时退到第一个模型 / 两条硬编码提示逐字。
+     ⚠️ 写用例时被纠正了一个**既有语义**：`modelCount` 是原始模型数（**含**孤儿），
+     与过滤后的 `models.size` 本来就不等 —— 已把差异钉进注释。
+     死资源 11 条删除。验证：四门禁全绿 + `:feature:settings`（**21 例**）+ `:app` 编译/单测/
+     打包 + 全模块测试；计数 **727 → 731 / 1222 → 1226**；资源 **164/164**。
+     **下一步（本域）**：`AiModelEdit`（用 `GSON` 反序列化 `AiGenerationParams`，可换
+     `JsonCodec`）与 `AiProviderEdit`（另用 `appCtx.getString` 3 处）。
      **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵

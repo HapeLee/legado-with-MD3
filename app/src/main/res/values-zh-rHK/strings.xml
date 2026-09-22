@@ -1555,8 +1555,6 @@
     <string name="ai_concurrent_requests">並發請求數</string>
     <string name="ai_config">AI 設定</string>
     <string name="ai_context_window">上下文窗口</string>
-    <string name="ai_current">目前</string>
-    <string name="ai_current_model">目前模型</string>
     <string name="ai_current_provider">目前供應商</string>
     <string name="ai_current_value">目前：%1$s</string>
     <string name="ai_custom_provider">自訂供應商</string>
@@ -1566,7 +1564,6 @@
     <string name="ai_max_output_tokens">最大輸出 Token 數</string>
     <string name="ai_model_actions">操作</string>
     <string name="ai_model_config">模型</string>
-    <string name="ai_model_database">模型</string>
     <string name="ai_model_edit">模型設定</string>
     <string name="ai_model_id">模型 ID</string>
     <string name="ai_model_name">模型名稱</string>
@@ -1576,20 +1573,14 @@
     <string name="ai_new_chat">新對話</string>
     <string name="ai_new_model">新模型</string>
     <string name="ai_new_profile">新設定檔</string>
-    <string name="ai_new_provider">新供應商</string>
-    <string name="ai_new_skill">新技能</string>
-    <string name="ai_no_models_imported">未匯入模型</string>
     <string name="ai_no_provider_configured">請先建立供應商</string>
     <string name="ai_not_set">未設定</string>
     <string name="ai_profile_counts">供應商：%1$d，模型：%2$d，預設：%3$d</string>
     <string name="ai_profile_database">設定檔</string>
     <string name="ai_profile_status">設定檔</string>
     <string name="ai_protocol">協議</string>
-    <string name="ai_prompt_config">提示詞設定</string>
-    <string name="ai_prompt_config_desc">編輯各 AI 工具的提示詞</string>
     <string name="ai_prompt_reset_single_desc">恢復為此提示詞的預設值</string>
     <string name="ai_provider">供應商</string>
-    <string name="ai_provider_database">供應商</string>
     <string name="ai_provider_edit">供應商設定</string>
     <string name="ai_provider_models">供應商模型</string>
     <string name="ai_provider_name">供應商名稱</string>
@@ -1609,8 +1600,6 @@
     <string name="ai_scroll_to_bottom">滾動到底部</string>
     <string name="ai_select_model">選擇模型</string>
     <string name="ai_send">發送</string>
-    <string name="ai_skills">技能</string>
-    <string name="ai_tasks">任務</string>
     <string name="ai_temperature">Temperature</string>
     <string name="ai_test_connection">測試連線</string>
     <string name="ai_test_success_no_models">AI 連線測試成功，但未找到任何模型</string>

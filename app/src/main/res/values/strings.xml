@@ -2032,12 +2032,7 @@
 
     <string name="ai_config">AI Settings</string>
     <string name="ai_profile_database">Profile Database</string>
-    <string name="ai_model_database">Models</string>
-    <string name="ai_provider_database">Providers</string>
-    <string name="ai_tasks">Tasks</string>
     <string name="ai_chapter_summary">Chapter Summary</string>
-    <string name="ai_prompt_config">Prompt Settings</string>
-    <string name="ai_prompt_config_desc">Edit prompts for each AI tool</string>
     <string name="ai_prompt_reset_single_desc">Restore this prompt to its default value</string>
     <string name="ai_chapter_summary_loading">Summarizing the current chapter…</string>
     <string name="ai_chapter_changed">The current chapter has changed. Please try again.</string>
@@ -2097,8 +2092,6 @@
     <string name="content_process_replace_action">Replace</string>
     <string name="content_process_delete_action">Delete</string>
     <string name="content_process_insert_action">Insert</string>
-    <string name="ai_skills">Skills</string>
-    <string name="ai_new_skill">New Skill</string>
     <string name="ai_chat">AI Chat</string>
     <string name="ai_recent_chats">Recent Chats</string>
     <string name="ai_new_chat">New Chat</string>
@@ -2135,10 +2128,7 @@
     <string name="ai_tool_input">Input:</string>
     <string name="ai_tool_output">Output:</string>
     <string name="ai_current_provider">Current Provider</string>
-    <string name="ai_current_model">Current Model</string>
-    <string name="ai_current">Current</string>
     <string name="ai_model_not_configured">No model configured</string>
-    <string name="ai_new_provider">New Provider</string>
     <string name="ai_new_model">New Model</string>
     <string name="ai_new_profile">New Profile</string>
     <string name="ai_provider">Provider</string>
@@ -2157,7 +2147,6 @@
     <string name="ai_fetch_models">Fetch Models</string>
     <string name="ai_fetch_and_save_models">Fetch And Save Models</string>
     <string name="ai_no_provider_configured">Create a provider first</string>
-    <string name="ai_no_models_imported">No models imported</string>
     <string name="ai_select_model">Select Model</string>
     <string name="ai_add_model_manually">Add Model Manually</string>
     <string name="ai_not_set">Not Set</string>

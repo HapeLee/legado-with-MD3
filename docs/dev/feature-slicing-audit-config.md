@@ -370,5 +370,39 @@ module 绑定（与其它平台能力同一装配方式）。**测试实现给�
 translation 3 + customTheme 3 + aiSummary 4 + aiPrompt 4）+ `:app` 编译/单测/打包 +
 全模块测试；计数 **723 → 727 / 1218 → 1222**；资源未变（**226/226**）。
 
+### M5-5a：ai 主入口页（本域最干净的一个 VM）
+
+`AiConfig`（Screen 201 / VM 107 / Contract 51）迁进 `:feature:settings/ai/`。
+
+它是本批**最干净**的 VM：唯一依赖 `AiProfileGateway`，**不碰** `R` / `appCtx` / `GSON` /
+`toastOnUi` ⇒ 可测性没有障碍（不像 ai/prompt 要 M5-4e 那样注入字符串来源）。
+
+两条提示文案是**硬编码英文**（`"Default AI model saved"` / `"Failed to save default AI model"`）
+——迁移前就如此，**原样保留**（改成资源会让 4 个语言的文案发生变化，那是另一个决策）。
+因此 `AiConfigEffect.ShowMessage` 携带的是裸 `String` 而非枚举，与本域另两页不同。
+
+**新增 4 条用例**（迁移前零测试）：
+
+- 模型按 provider 归组，且**所属 provider 未知的「孤儿」模型被过滤掉**
+  （否则下拉面板会出现没有 provider 名可显示的分组）；
+- **「当前模型」的取值优先级**：先看默认的**翻译**预设指向哪个模型，没有预设才退到
+  「第一个模型」——写反了会让主页面显示的当前模型与翻译页实际用的不一致；
+- 没有默认翻译预设时退到第一个模型；
+- 设为默认的两条硬编码英文提示逐字。
+
+⚠️ **写用例时被纠正了一个既有语义**：`modelCount` 是**原始**模型数（**含**孤儿），
+而 `models.size` 是过滤后的可展示项，两者**本来就不等**。我起初按相等断言，被测试纠正；
+差异已钉进用例注释（不是本片引入的，保持等价）。
+
+**死资源**：17 条里 11 条删除；其余 6 条仍被尚未迁移的 `AiProviderEdit` / `AiModelEdit` 使用。
+
+**验证**：四门禁全绿（本目录无 G4 条目需下调——主域 VM 本来就不用 `appCtx`）+
+`:feature:settings:testAndroidHostTest`（**21 例**）+ `:app` 编译/单测/打包 + 全模块测试；
+计数 **727 → 731 / 1222 → 1226**；资源 **164/164 逐字一致**（删副本前跑）。
+
+**下一步**：`ai` 域的剩下两页 —— `AiModelEdit`（239/167/48，用 `GSON` 反序列化
+`AiGenerationParams`，可换共享层的 `JsonCodec`）与 `AiProviderEdit`（384/352/98，另用
+`appCtx.getString` 3 处发测试连接的提示）。
+
 **下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
 `otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。

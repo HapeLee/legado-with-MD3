@@ -129,7 +129,8 @@ import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewRouteScreen
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
-import io.legado.app.ui.config.ai.AiConfigRouteScreen
+import io.legado.app.feature.settings.ai.AiConfigScreen
+import io.legado.app.feature.settings.ai.AiConfigViewModel
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
 import io.legado.app.feature.settings.ai.prompt.AiPromptConfigScreen
@@ -523,7 +524,14 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsAi> {
-        AiConfigRouteScreen(
+        // M5-5a：`AiConfigRouteScreen` 只做 `koinViewModel()` 与转发 5 个导航回调——与
+        // translation / ai/summary 同形：宿主只剩「取 VM、收 state、接回调」，
+        // 提示文案由 Screen 自己收 Effect 显示（Snackbar）。
+        val viewModel = koinViewModel<AiConfigViewModel>()
+        AiConfigScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            effects = viewModel.effects,
+            onIntent = viewModel::onIntent,
             onBackClick = { onNavigateBack() },
             onNavigateToProviderEdit = { providerId ->
                 backStack.add(MainRouteSettingsAiProviderEdit(providerId = providerId))

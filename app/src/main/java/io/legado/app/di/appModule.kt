@@ -310,7 +310,7 @@ import io.legado.app.feature.txttocrules.TxtTocRuleImportCompat
 import io.legado.app.feature.txttocrules.TxtTocRuleViewModel
 import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewViewModel
 import io.legado.app.ui.browser.WebViewModel
-import io.legado.app.ui.config.ai.AiConfigViewModel
+import io.legado.app.feature.settings.ai.AiConfigViewModel
 import io.legado.app.ui.config.ai.AiModelEditViewModel
 import io.legado.app.ui.config.ai.AiProviderEditViewModel
 import io.legado.app.feature.settings.ai.prompt.AiPromptConfigViewModel

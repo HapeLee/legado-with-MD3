@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.ai
+package io.legado.app.feature.settings.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +13,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// M5-5a：从 `:app` 的 `io.legado.app.ui.config.ai` 迁来（**只改包名**，逻辑逐字一致）。
+//
+// 它是本批**最干净**的一个 VM：唯一依赖是 `:domain:ai` 的 `AiProfileGateway`，
+// 没有 `R` / `appCtx` / `GSON` / `toastOnUi` —— 因此可测性没有障碍（不像 ai/prompt
+// 需要 M5-4e 那样注入字符串来源）。
+//
+// 两条提示文案（`"Default AI model saved"` / `"Failed to save default AI model"`）是
+// **硬编码英文**，迁移前就如此 ⇒ 原样保留（见 `AiConfigContract.kt` 的注释）。
+//
+// 编排逻辑是本页真正值得测的部分：`combine(providers, models, presets)` 三个流，
+// 再算「当前模型」= **默认的翻译预设所指的模型，没有则取第一个模型**，
+// 并把模型按 provider 分组供下拉面板使用。
 class AiConfigViewModel(
     private val aiProfileGateway: AiProfileGateway
 ) : ViewModel() {

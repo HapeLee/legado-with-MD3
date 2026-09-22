@@ -87,4 +87,18 @@
     <string name="ai_prompt_edit_title">Edit Prompt</string>
     <string name="ai_prompt_restore_all_confirm">Are you sure you want to restore all prompts to their default values?</string>
     <string name="ai_prompt_restored_all">All prompts restored to defaults</string>
+    <string name="ai_provider_database">Providers</string>
+    <string name="ai_new_provider">New Provider</string>
+    <string name="ai_model_database">Models</string>
+    <string name="ai_current_model">Current Model</string>
+    <string name="ai_model_not_configured">No model configured</string>
+    <string name="ai_tasks">Tasks</string>
+    <string name="ai_chapter_summary">Chapter Summary</string>
+    <string name="ai_prompt_config_desc">Edit prompts for each AI tool</string>
+    <string name="ai_skills">Skills</string>
+    <string name="ai_new_skill">New Skill</string>
+    <string name="ai_select_model">Select Model</string>
+    <string name="ai_no_models_imported">No models imported</string>
+    <string name="ai_fetch_and_save_models">Fetch And Save Models</string>
+    <string name="ai_current">Current</string>
 </resources>

@@ -70,4 +70,18 @@
     <string name="ai_prompt_edit_title">編輯提示詞</string>
     <string name="ai_prompt_restore_all_confirm">確定要將所有提示詞恢復為預設值嗎？</string>
     <string name="ai_prompt_restored_all">所有提示詞已恢復為預設值</string>
+    <string name="ai_provider_database">供應商</string>
+    <string name="ai_new_provider">新供應商</string>
+    <string name="ai_model_database">模型</string>
+    <string name="ai_current_model">目前模型</string>
+    <string name="ai_model_not_configured">未設定模型</string>
+    <string name="ai_tasks">任務</string>
+    <string name="ai_chapter_summary">章節摘要</string>
+    <string name="ai_prompt_config_desc">編輯各 AI 工具的提示詞</string>
+    <string name="ai_skills">技能</string>
+    <string name="ai_new_skill">新技能</string>
+    <string name="ai_select_model">選擇模型</string>
+    <string name="ai_no_models_imported">未匯入模型</string>
+    <string name="ai_fetch_and_save_models">獲取並儲存模型</string>
+    <string name="ai_current">目前</string>
 </resources>
