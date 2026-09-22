@@ -202,7 +202,12 @@ RESULT_DIRS = {
 # 4 例（迁移前零测试），钉的是本片改的那条 fallback 语义：「保存失败时**有**异常文案就用它、
 # **没有**才回落到资源里的保存失败」+ 重置提示走资源枚举 + 加载失败走运行期文本 +
 # 保存成功要「提示 + 返回」都发。`:app` 没减。
-BASELINE_MAIN = 723
+# M5-4e：723 → **727**（**+4**）。**补回** ai/prompt 的用例 —— M5-4c 迁移时欠下的：
+# 当时 VM 内部直接调 `getString`，M5-4d 探针量出这会让 VM 在 androidHostTest 下无法构造，
+# 于是 M5-4e 把「VM 需要的资源字符串」抽成可注入的 `AiPromptStringSource`，VM 恢复可测。
+# 4 例钉：已存提示词优先于默认值 / 保存成功走 Toast 而非 Effect（本页与 ai/summary 的差异）/
+# 失败时「有异常文案用它、没有才回落资源」/ 重置单个用默认提示词并提示成功。
+BASELINE_MAIN = 727
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -282,7 +287,8 @@ BASELINE_MAIN = 723
 # M5-2d：1208 → **1211**（**+3** = `TranslationConfigViewModelTest`）。主集同步到 716。
 # M5-3b：1211 → **1214**（**+3** = `CustomThemeViewModelTest`）。主集同步到 719。
 # M5-4b：1214 → **1218**（**+4** = `AiSummaryConfigViewModelTest`）。主集同步到 723。
-BASELINE_ALL = 1218
+# M5-4e：1218 → **1222**（**+4** = `AiPromptConfigViewModelTest`）。主集同步到 727。
+BASELINE_ALL = 1222
 
 
 def tally(d: pathlib.Path):

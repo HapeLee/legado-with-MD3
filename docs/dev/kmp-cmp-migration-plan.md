@@ -1621,6 +1621,15 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      写回 gateway）⇒ 也应**注入而非在 VM 里 `getString`**。ai/prompt 目前是后者，
      **属已知待改项**，改完即可补回测试。
      本片无代码产出（探针已删），只有 skill 与文档更新；计数不变。
+   - **M5-4e 已完成（2026-09-23）：把 M5-4d 那条判据落地，补回 ai/prompt 的用例。**
+     新增 `AiPromptStringSource`（可注入的资源字符串来源）：默认提示词与「保存成功」的
+     Toast 文案都改为从它取，生产实现 `composeResourcePromptStrings()` 读 composeResources
+     并由 `:app` 绑定 —— **测试实现给假值 ⇒ VM 重新可构造**。
+     **补回 4 条用例**（M5-4c 欠下）：init 的取值优先级（已存优先于默认，写反会让用户
+     自定义提示词每次被重置）/ 保存成功走 Toast 而非 Effect（本页与 ai/summary 的差异）/
+     失败 fallback（有异常文案用它、没有才回落资源）/ 重置单个用默认值并提示成功。
+     验证：四门禁全绿 + `:feature:settings` 的 `testAndroidHostTest`（**17 例**）+
+     `:app` 编译/单测/打包 + 全模块测试；计数 **723 → 727 / 1218 → 1222**；资源 226/226 未变。
      **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
 
 ## 6. 验证矩阵

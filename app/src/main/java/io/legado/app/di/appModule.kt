@@ -319,6 +319,8 @@ import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageViewModel
 import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
+import io.legado.app.feature.settings.ai.prompt.AiPromptStringSource
+import io.legado.app.feature.settings.ai.prompt.composeResourcePromptStrings
 import io.legado.app.feature.settings.customtheme.CustomThemeViewModel
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigViewModel
 import io.legado.app.feature.settings.lab.LabConfigViewModel
@@ -546,6 +548,10 @@ val appModule = module {
     // 这里只做接口→实现的显式绑定（AGENTS.md「Koin 中 Gateway 接口到 Repository 实现保持显式绑定」）。
     single<AppUpdateChecker> { AndroidAppUpdateChecker() }
     single<AboutDiagnostics> { AndroidAboutDiagnostics(androidContext(), get()) }
+    // M5-4e：ai/prompt 的 VM 需要把资源文案当**数据**用（默认提示词写回 gateway、保存成功发 Toast）。
+    // 按 M5-4d 探针的结论，VM 里不能直接 `getString`（会让 VM 在 androidHostTest 下不可构造）
+    // ⇒ 抽成可注入的来源，这里绑定「读 CMP 资源」的生产实现。
+    single<AiPromptStringSource> { composeResourcePromptStrings() }
     single<BundledTextReader> { AndroidBundledTextReader(androidContext()) }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     // ⚠️ 两个构造参数都要传：`digest` 是**参数注入**的平台能力（`stableModelId` 要复刻

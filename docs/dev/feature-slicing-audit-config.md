@@ -343,8 +343,32 @@ MissingResourceException: Missing resource with path:
 - **只在展示用的文案 ⇒ VM 发枚举、UI 侧查表**（`AboutMessage` / `AiSummaryMessage` 的做法）。
   这样 VM 可构造 ⇒ **可测**。这不是风格偏好，是可测性差异。
 - **VM 真的要把字符串当数据用**（`AiPromptConfigViewModel` 把默认提示词写回 gateway）⇒
-  仍然**不要**在 VM 里调 `getString`，而是**把值注入进去**。本页目前是在 VM 里直接调，
-  **属已知待改项**：改成注入后即可补回测试（下一片处理）。
+  仍然**不要**在 VM 里调 `getString`，而是**把值注入进去**。
+
+### M5-4e：把这条判据落地，补回 ai/prompt 的用例
+
+新增 `AiPromptStringSource`（可注入的资源字符串来源），VM 构造参数从「自己 `getString`」
+改成注入：
+
+| VM 需要的字符串 | 迁移前的取法 | 现在 |
+|---|---|---|
+| 8 个任务类型的默认提示词（写回 gateway） | `appCtx.getString(meta.defaultPromptResId)` | `strings.defaultFor(task)` |
+| 「保存成功」（发 **Toast**） | `appCtx.toastOnUi(R.string.ai_config_saved_success)` | `toaster.toast(strings.savedMessage())` |
+
+生产实现 `composeResourcePromptStrings()` 读本模块 composeResources，由 `:app` 的 Koin
+module 绑定（与其它平台能力同一装配方式）。**测试实现给假值** ⇒ VM 重新可构造。
+
+**补回 4 条用例**（M5-4c 欠下的）：
+
+1. `init` 的**取值优先级**：gateway 里有已存提示词就用它、没有才用默认值
+   ——写反了会让用户的自定义提示词每次进页面被重置；
+2. 保存成功走 **Toast**（`Toaster`）而非 Effect/Snackbar（本页与 ai/summary 的差异）；
+3. 失败路径 fallback：有异常文案用它，没有才回落资源里的「保存失败」；
+4. 重置单个用默认提示词并提示成功。
+
+**验证**：四门禁全绿 + `:feature:settings:testAndroidHostTest`（**17 例** = lab 3 +
+translation 3 + customTheme 3 + aiSummary 4 + aiPrompt 4）+ `:app` 编译/单测/打包 +
+全模块测试；计数 **723 → 727 / 1218 → 1222**；资源未变（**226/226**）。
 
 **下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
 `otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。

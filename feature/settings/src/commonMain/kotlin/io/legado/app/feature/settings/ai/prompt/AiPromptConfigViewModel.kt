@@ -5,8 +5,6 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.core.platform.Toaster
 import io.legado.app.domain.ai.AiProfileGateway
 import io.legado.app.domain.model.TranslationConstants
-import io.legado.app.feature.settings.res.Res
-import io.legado.app.feature.settings.res.ai_config_saved_success
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +35,7 @@ import org.jetbrains.compose.resources.getString
 class AiPromptConfigViewModel(
     private val aiProfileGateway: AiProfileGateway,
     private val toaster: Toaster,
+    private val strings: AiPromptStringSource,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AiPromptConfigUiState())
@@ -50,7 +49,7 @@ class AiPromptConfigViewModel(
             val items = AiPromptTask.entries.map { task ->
                 val config =
                     runCatching { aiProfileGateway.getTaskPreset(task.taskType) }.getOrNull()
-                val defaultPrompt = task.defaultPrompt()
+                val defaultPrompt = strings.defaultFor(task)
                 AiPromptTaskItem(
                     task = task,
                     defaultPrompt = defaultPrompt,
@@ -118,7 +117,7 @@ class AiPromptConfigViewModel(
                     )
                 }
             }.onSuccess {
-                toaster.toast(getString(Res.string.ai_config_saved_success))
+                toaster.toast(strings.savedMessage())
             }.onFailure { error ->
                 emitFailure(error)
             }
@@ -128,7 +127,7 @@ class AiPromptConfigViewModel(
     private fun resetPrompt(taskType: String) {
         val task = AiPromptTask.entries.find { it.taskType == taskType } ?: return
         viewModelScope.launch {
-            val defaultPrompt = task.defaultPrompt()
+            val defaultPrompt = strings.defaultFor(task)
             runCatching {
                 val existingConfig = aiProfileGateway.getTaskPreset(taskType)
                 aiProfileGateway.saveTaskPreset(
@@ -161,7 +160,7 @@ class AiPromptConfigViewModel(
             var allSuccess = true
             for (task in AiPromptTask.entries) {
                 runCatching {
-                    val defaultPrompt = task.defaultPrompt()
+                    val defaultPrompt = strings.defaultFor(task)
                     val existingConfig = aiProfileGateway.getTaskPreset(task.taskType)
                     aiProfileGateway.saveTaskPreset(
                         taskType = task.taskType,
@@ -177,7 +176,7 @@ class AiPromptConfigViewModel(
             _uiState.update { current ->
                 current.copy(
                     items = AiPromptTask.entries.map { task ->
-                        val defaultPrompt = task.defaultPrompt()
+                        val defaultPrompt = strings.defaultFor(task)
                         AiPromptTaskItem(
                             task = task,
                             defaultPrompt = defaultPrompt,
