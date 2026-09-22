@@ -192,7 +192,10 @@ RESULT_DIRS = {
 # M5-2a：710 → **713**（**+3**）。`:feature:settings` 首次入表，3 例全是新增
 # （迁移前 `LabConfigViewModel` 零测试）。`:app` 本片**没减**——它的 labConfig 目录
 # （4 文件，含 1 个 0 行空文件）本来就没有测试。
-BASELINE_MAIN = 713
+# M5-2d：713 → **716**（**+3**）。translation 子页迁入，新增 `TranslationConfigViewModelTest`
+# 3 例（迁移前同样零测试）：初值来自 gateway / `SetProvider` 经唯一入口下发 /
+# 另两个 Intent 各映射到自己的字段（防 `when` 分支复制粘贴串行）。`:app` 本片也没减。
+BASELINE_MAIN = 716
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -269,7 +272,8 @@ BASELINE_MAIN = 713
 # 主验证集同步下调到 709。
 # M2-8：1204 → **1205**（**+1** = `:app` 的 `AppModuleGraphTest`）。主集同步 +1 到 710。
 # M5-2a：1205 → **1208**（**+3** = `:feature:settings` 的 `LabConfigViewModelTest`）。主集同步到 713。
-BASELINE_ALL = 1208
+# M5-2d：1208 → **1211**（**+3** = `TranslationConfigViewModelTest`）。主集同步到 716。
+BASELINE_ALL = 1211
 
 
 def tally(d: pathlib.Path):

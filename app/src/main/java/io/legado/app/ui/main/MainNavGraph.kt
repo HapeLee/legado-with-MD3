@@ -52,6 +52,8 @@ import io.legado.app.feature.about.localizedText
 import io.legado.app.feature.settings.lab.LabConfigEffect
 import io.legado.app.feature.settings.lab.LabConfigScreen
 import io.legado.app.feature.settings.lab.LabConfigViewModel
+import io.legado.app.feature.settings.translation.TranslationConfigScreen
+import io.legado.app.feature.settings.translation.TranslationConfigViewModel
 import io.legado.app.ui.about.MiuixAboutScreen
 import io.legado.app.ui.ai.chat.AiChatRouteScreen
 import io.legado.app.ui.book.audio.AudioPlayEffect
@@ -136,7 +138,6 @@ import io.legado.app.ui.config.otherConfig.OtherConfigRouteScreen
 import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
 import io.legado.app.ui.config.themeManage.ThemeManageRouteScreen
-import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
 import io.legado.app.feature.replacerules.ReplaceEditRoute
 import io.legado.app.feature.replacerules.ReplaceRuleRouteScreen
 import io.legado.app.feature.replacerules.edit.ReplaceEditRouteScreen
@@ -580,9 +581,16 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsTranslation> {
-        TranslationConfigRouteScreen(
+        // M5-2d：`TranslationConfigRouteScreen` 原本只做两件事——`koinViewModel()` 与转发
+        // `onNavigateToAi`。与 labConfig 不同，本页**没有**平台动作（`TranslationConfigEffect`
+        // 是空的 sealed interface），所以宿主这侧没有 Effect 要收，剩下的就是「取 VM、收
+        // state、把导航回调接上」——`koinViewModel()` 不进共享层是唯一的拆分理由。
+        val viewModel = koinViewModel<TranslationConfigViewModel>()
+        TranslationConfigScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
             onBackClick = { onNavigateBack() },
-            onNavigateToAi = { backStack.add(MainRouteSettingsAi) }
+            onNavigateToAi = { backStack.add(MainRouteSettingsAi) },
         )
     }
 

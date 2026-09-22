@@ -2048,15 +2048,10 @@
     <string name="network">網路</string>
     <string name="translation_config">翻譯設定</string>
     <string name="llm_translate_enabled">啟用章節翻譯</string>
-    <string name="translation_provider">翻譯供應商</string>
-    <string name="llm_provider">供應商</string>
     <string name="openai_config">OpenAI 設定</string>
     <string name="llm_base_url">Base URL</string>
     <string name="llm_api_key">API 金鑰</string>
     <string name="llm_model">模型</string>
-    <string name="translation_options">翻譯選項</string>
-    <string name="llm_target_language">目標語言</string>
-    <string name="llm_max_chars_per_chunk">每個區塊最大字元數</string>
     <string name="llm_concurrent_chunks">並發區塊數</string>
     <string name="llm_retry_count">重試次數</string>
     <string name="llm_temperature">溫度</string>
@@ -2078,8 +2073,6 @@
     <string name="return_to_original">返回原文</string>
     <string name="translation_progress">翻譯中 %1$d%%</string>
     <string name="translation_started">翻譯已開始，請稍候…</string>
-    <string name="translation_app_ai_provider">使用應用 AI 介面</string>
-    <string name="translation_app_ai_provider_summary">模型、API 金鑰和協定在 AI 設定中配置。</string>
     <string name="ai_config">AI 設定</string>
     <string name="ai_profile_database">設定檔資料庫</string>
     <string name="ai_model_database">模型</string>

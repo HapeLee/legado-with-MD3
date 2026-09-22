@@ -34,7 +34,7 @@ app 私有 `service.*`/`lib.*`、以及 app 私有 `utils.*`（此类属软阻�
 
 | 子域 | 文件/行数/R.string | 阻塞 | 迁移路径 |
 |---|---|---|---|
-| **translation** | 3 文件 / 174 行 / 9 条 | **0 硬阻塞、0 app 私有** | 最干净候选。依赖全在 core：`TranslationSettingsGateway`(core:data)、`TranslationConstants`(core:model)、`TranslationSettings`(core:data domain.model.settings)、ui.theme/components(core:ui)。`TranslationConfigRouteScreen` 就在 `TranslationConfigScreen.kt` 内且干净。VM 是纯 `ViewModel`，只依赖一个 gateway。**与 tagrules Stage B 完全同构，直接整域迁 `:feature:translation`。** |
+| **translation** ✅ **已完成（M5-2d，2026-09-23，见末尾实录）** | 3 文件 / 174 行 / 9 条 | **0 硬阻塞、0 app 私有**（实测确认） | 最干净候选。依赖全在 core：`TranslationSettingsGateway`(core:data)、`TranslationConstants`(core:model)、`TranslationSettings`(core:data domain.model.settings)、ui.theme/components(core:ui)。`TranslationConfigRouteScreen` 就在 `TranslationConfigScreen.kt` 内且干净。VM 是纯 `ViewModel`，只依赖一个 gateway。**与 tagrules Stage B 完全同构，直接整域迁 `:feature:translation`。** |
 
 ### B 级：需先抽单一契约 / 留 RouteScreen 胶水在 host
 
@@ -176,4 +176,39 @@ Android 实现留 `:core:ui`，由 `:app` 的 `PlatformServices.install()` 注�
 `BasicComponent`/`Slider`/`TextField`（**有** desktop 变体），不走 `MiuixPreferenceRenderer`。
 `:core:ui` 那 4 条文案的副本**不删**——`InputSettingItem.kt` 仍在用 `edit` 与 `text_default`。
 
-至此 translation 页的前置资产齐了，下一片可以迁页面本体。
+至此 translation 页的前置资产齐了。
+
+### M5-2d：translation 页本体迁进 `:feature:settings/translation/`
+
+**形态**：与 labConfig 同构——`Contract` / `ViewModel` / `Screen` 进 `commonMain`
+（只改包名 + `R.string.*` → `Res.string.*`），`TranslationConfigRouteScreen` 留 `:app`。
+
+⚠️ **与 labConfig 的差异**：本页**没有**平台动作。`TranslationConfigEffect` 是**空的**
+sealed interface（迁移前就是这样：VM 备了 `effects` 流但没有分支），所以宿主那侧没有
+Effect 要收——`MainNavGraph` 的 entry 里只剩下「取 VM、收 state、接导航回调」。
+**Route 保留纯粹是为了 `koinViewModel()` 不进共享层**，不是为了隔离平台动作。
+
+迁移前的 A 级判定（零 app 私有依赖）实测成立：VM 只依赖 `TranslationSettingsGateway`
+（`:core:data` 端口），Screen 只多一个 `TranslationConstants`（`:core:model`）⇒ **零新增契约**。
+它之所以排在三片资产上提之后才做，纯粹是因为 UI 组件当时还在 `:core:ui`。
+
+**新增 3 条用例**（迁移前零测试）：初值来自 gateway 的 `currentSettings`、
+`SetProvider` 经唯一 uiState 入口下发、另两个 Intent 各自映射到自己的字段
+（第三条防的是 `when` 分支复制粘贴串行——`onIntent` 的 `when` 对 sealed interface
+穷举，所以「漏处理」由编译期兜住，但「处理错字段」不会）。
+
+**死资源**：9 条里 7 条变零引用 ⇒ 删除；保留 `translation_config`
+（`ConfigNavScreen` 的条目标题）与 `ai_config`（AI 配置页在用）。
+
+**验证**：四门禁全绿（无需下调基线）+ 新模块 desktop 编译与 `testAndroidHostTest`
+（**6 例 0 失败** = lab 3 + translation 3）+ `:app` 编译/单测/打包；
+计数 **713 → 716 / 1208 → 1211**（各 +3）；资源 **40/40 逐字一致**（删副本前跑的）。
+`lintAppDebug` **errors 仍 5**；warnings 78 → **95**，增量**全部**是 `GradleDependency`
+（"a newer version … is available"，38 条）——它是 lint 联网查询的结果、**非确定性**，
+与本次改动无关；已确认报告里没有任何一条指向 `feature/settings` 或新迁的文件。
+
+**未验证**：页面的渲染与交互无自动化覆盖——下拉选择（provider / 目标语言）、
+滑块的「默认值 / 范围 / 步进」三参数、以及 `provider == PROVIDER_APP_AI` 时
+才出现的「应用内 AI」跳转条目。需真机冒烟。
+
+**下一步**：`customTheme`（B 级小切，需处理 `ThemeStore` 那一个 RouteScreen 胶水点）。

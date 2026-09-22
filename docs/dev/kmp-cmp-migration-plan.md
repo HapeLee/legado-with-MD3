@@ -1545,6 +1545,26 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      文案 4 条 ×4 语言与 `:core:ui` 逐字一致（脚本核对）。
      未验证：三个组件在 **Miuix 引擎下**的实际外观（下拉弹层、滑块无障碍语义）无自动化
      覆盖——成功路径在 commonTest 里既跑不到也没有意义。需真机在 Miuix 主题下人工核对。
+   - **M5-2d 已完成（2026-09-23）：translation 子页本体迁进 `:feature:settings/translation/`。**
+     审计的 A 级判定（零 app 私有依赖）实测成立：VM 只依赖 `TranslationSettingsGateway`，
+     Screen 只多一个 `TranslationConstants` ⇒ **零新增契约**。它排在三片资产上提之后才做，
+     纯粹是因为那三个 UI 组件当时还在 `:core:ui`。
+     ⚠️ **与 labConfig 的形态差异**：本页**没有**平台动作——`TranslationConfigEffect` 是
+     **空的** sealed interface（迁移前就如此），所以宿主那侧没有 Effect 要收，`MainNavGraph`
+     的 entry 只剩「取 VM、收 state、接导航回调」。**Route 保留纯粹是为了
+     `koinViewModel()` 不进共享层**，不是为了隔离平台动作。
+     新增 3 条用例（迁移前零测试）：初值来自 gateway / `SetProvider` 经唯一入口下发 /
+     另两个 Intent 各映射到自己的字段（防 `when` 分支复制粘贴串行——穷举由编译期兜住，
+     但"处理错字段"不会）。
+     死资源：9 条里 7 条删除，保留 `translation_config`（`ConfigNavScreen` 用）与
+     `ai_config`（AI 配置页在用）。
+     验证：四门禁全绿 + 新模块 desktop 编译与 `testAndroidHostTest`（**6 例** = lab 3 +
+     translation 3）+ `:app` 编译/单测/打包 + 全模块测试；计数 **713 → 716 / 1208 → 1211**；
+     资源 **40/40 逐字一致**（删副本前跑）；lint **errors 仍 5**（warnings 78→95，增量
+     全是联网查询的 `GradleDependency`，与改动无关）。
+     未验证：页面渲染与交互（下拉选择、滑块的默认值/范围/步进、
+     `provider == PROVIDER_APP_AI` 时才出现的跳转条目）需真机冒烟。
+     **下一步（本域）**：`customTheme`（B 级，需处理 `ThemeStore` 那一个 RouteScreen 胶水点）。
 
 ## 6. 验证矩阵
 

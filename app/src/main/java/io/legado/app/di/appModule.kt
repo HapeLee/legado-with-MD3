@@ -327,7 +327,7 @@ import io.legado.app.ui.config.readConfig.ApplyReadSettingUseCase
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
 import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel
 import io.legado.app.ui.config.themeManage.ThemeManageViewModel
-import io.legado.app.ui.config.translation.TranslationConfigViewModel
+import io.legado.app.feature.settings.translation.TranslationConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.feature.dict.rule.DictRuleViewModel
 import io.legado.app.feature.tagrules.highlight.HighlightTagRuleViewModel

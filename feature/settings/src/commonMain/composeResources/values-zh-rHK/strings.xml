@@ -11,4 +11,13 @@
     <string name="lab_page_estimate_diagnostics_title">匯出全文頁碼診斷</string>
     <string name="lab_page_estimate_diagnostics_summary">分享本機最近的估算與校正記錄，不會自動上傳。</string>
     <string name="lab_page_estimate_diagnostics_count">%1$d 條</string>
+    <string name="translation_config">翻譯設定</string>
+    <string name="translation_provider">翻譯供應商</string>
+    <string name="llm_provider">供應商</string>
+    <string name="translation_options">翻譯選項</string>
+    <string name="llm_target_language">目標語言</string>
+    <string name="llm_max_chars_per_chunk">每個區塊最大字元數</string>
+    <string name="ai_config">AI 設定</string>
+    <string name="translation_app_ai_provider">使用應用 AI 介面</string>
+    <string name="translation_app_ai_provider_summary">模型、API Key 和協議在 AI 設定中配置。</string>
 </resources>

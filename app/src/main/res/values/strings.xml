@@ -2004,15 +2004,10 @@
     <!-- Translation -->
     <string name="translation_config">Translation Settings</string>
     <string name="llm_translate_enabled">Enable Chapter Translation</string>
-    <string name="translation_provider">Translation Provider</string>
-    <string name="llm_provider">Provider</string>
     <string name="openai_config">OpenAI Configuration</string>
     <string name="llm_base_url">Base URL</string>
     <string name="llm_api_key">API Key</string>
     <string name="llm_model">Model</string>
-    <string name="translation_options">Translation Options</string>
-    <string name="llm_target_language">Target Language</string>
-    <string name="llm_max_chars_per_chunk">Max Chars Per Chunk</string>
     <string name="llm_concurrent_chunks">Concurrent Chunks</string>
     <string name="llm_retry_count">Retry Count</string>
     <string name="llm_temperature">Temperature</string>
@@ -2034,8 +2029,6 @@
     <string name="return_to_original">Return to Original</string>
     <string name="translation_progress">Translating %1$d%%</string>
     <string name="translation_started">Translation started, please wait…</string>
-    <string name="translation_app_ai_provider">Use App AI Interface</string>
-    <string name="translation_app_ai_provider_summary">Model, API key, and protocol are configured in AI Settings.</string>
 
     <string name="ai_config">AI Settings</string>
     <string name="ai_profile_database">Profile Database</string>
