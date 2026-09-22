@@ -817,8 +817,8 @@ fun MainActivity.mainEntryProvider(
             fun pauseReader() {
                 if (!readerResumeState[0]) return
                 readerResumeState[0] = false
-                controller.onPause()
                 readBookViewModel.onIntent(ReadBookIntent.OnPause)
+                controller.onPause()
             }
 
             ReadBookRouteScreen(

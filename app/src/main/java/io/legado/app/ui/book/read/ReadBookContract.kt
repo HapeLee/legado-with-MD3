@@ -1010,11 +1010,7 @@ sealed interface ReadBookEffect {
     // Download chapters — Activity calls CacheBook.start()
     data class DownloadChapters(val start: Int, val end: Int) : ReadBookEffect
 
-    // Lifecycle — route-level Activity operations
-    data object RegisterTimeBatteryReceiver : ReadBookEffect
-    data object UnregisterTimeBatteryReceiver : ReadBookEffect
-    data object RegisterNetworkListener : ReadBookEffect
-    data object UnregisterNetworkListener : ReadBookEffect
+    // Other route-level Activity operations
     data object SetOrientation : ReadBookEffect
     data object OpenBooksDirPicker : ReadBookEffect
     data object BackupNow : ReadBookEffect
