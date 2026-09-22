@@ -382,6 +382,9 @@ class ReadBookController(
     private val readerChapterPaginationJobs =
         mutableMapOf<Int, ReaderChapterPaginationTask>()
 
+    /** Identity of the chapter input used by pages already committed to the window. */
+    private val paginatedChapterIdentities = mutableMapOf<Int, LegacyReaderChapterLayoutIdentity>()
+
     /** 一章的分页任务：结果只在 [identity] 与当前内容一致、且排版环境未变时才有意义。 */
     private class ReaderChapterPaginationTask(
         val identity: LegacyReaderChapterLayoutIdentity,
@@ -732,6 +735,13 @@ class ReadBookController(
         directReaderPaginationEnvironmentKey = null
         directReaderStreamGeneration += 1
         clearStreamedReaderChapters()
+        // Clearing only the key leaves complete pages in the window. The next publish then
+        // sees hasShapedPages and skips pagination, so every config change appears on re-entry.
+        directReaderPages = emptyList()
+        directReaderPageIndex = null
+        directReaderChapterPageCounts = emptyMap()
+        directReaderPageContexts.clear()
+        paginatedChapterIdentities.clear()
         ReadBook.clearReaderPagination()
         updateReaderPaginationError(null)
         publishReaderPageWindow()
@@ -1133,6 +1143,19 @@ class ReadBookController(
         // 首屏只依赖当前章；相邻章异步到达不应重启当前章测量。环境身份则单独保存：
         // 普通换章可复用相邻页，主题/高亮规则/排版参数变化必须废弃整窗旧页。
         val chapterLayoutIdentity = chapter.layoutIdentity()
+        // Reloading replacement rules can change the chapter input without changing its style.
+        // The old complete pages must not satisfy ensureReaderChapterPagination in that case.
+        chapters.forEach { candidate ->
+            val index = candidate.chapter.index
+            val previous = paginatedChapterIdentities[index]
+            if (previous != null && previous != candidate.layoutIdentity()) {
+                directReaderPages = directReaderPages.filterNot { it.id.chapterIndex == index }
+                directReaderPageContexts.clear()
+                paginatedChapterIdentities.remove(index)
+                readerChapterPaginationJobs.remove(index)?.job?.cancel()
+                clearStreamedReaderChapter(index)
+            }
+        }
         val paginationEnvironmentKey = buildString {
             append('|').append(width).append('x').append(height)
             append('|').append(contentPadding.left).append(',').append(contentPadding.top)
@@ -1220,6 +1243,7 @@ class ReadBookController(
                 // 各章的新页随各自的批次填回（旧 View 重建 TextChapter 后同样是整章重排）。
                 directReaderPages = emptyList()
                 directReaderPageContexts.clear()
+                paginatedChapterIdentities.clear()
             }
             // 换章接力：新当前章若在旧 key 下已经排出过部分页（上一轮邻章预排的产物），保留它们。
             // 切章后画布继续显示"已排好的几页 + 尾部加载中"，而不是先把它们摘掉退化成占位页、
@@ -1471,6 +1495,9 @@ class ReadBookController(
             }
             directReaderPages = (retainedPages + replacementPages)
                 .sortedWith(compareBy({ it.id.chapterIndex }, { it.id.pageIndex }))
+            if (replacementChapterIndexes.isNotEmpty()) {
+                paginatedChapterIdentities[chapterIndex] = chapter.layoutIdentity()
+            }
             // 批次提交即"这一章排完了"（旧 `TextChapter.isCompleted = true`）：撤掉流出态与尾部承接页。
             directReaderStreamingChapters.removeAll(replacementChapterIndexes)
             directReaderStreamedPages.keys.removeAll(replacementChapterIndexes)
