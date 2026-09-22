@@ -3,6 +3,7 @@ package io.legado.app.ui.main
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -740,6 +741,7 @@ fun MainActivity.mainEntryProvider(
         remember(readBookViewModel, route) {
         }
         val lifecycleOwner = LocalLifecycleOwner.current
+        val activity = LocalContext.current as AppCompatActivity
         val initRequest = remember(route) {
             ReadBookInitRequest(
                 bookUrl = route.bookUrl,
@@ -835,10 +837,30 @@ fun MainActivity.mainEntryProvider(
                 }
             }
             lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+            // App 级前后台切换不会触发 Navigation 路由的 ON_PAUSE/ON_RESUME（应用切到后台时
+            // Activity 只到 onStop，路由保持当前，没有第二个路由覆盖它）。因此切后台再回前台后
+            // TimeBatteryReceiver 保持注销、页脚电量不再刷新。这里只在 Activity 的 ON_RESUME
+            // （回前台）与 ON_PAUSE（出后台）重注册/注销电量广播，不触碰阅读器 resume/pause，
+            // 避免连带触发朗读位置回位、页面状态恢复等整套逻辑。注册本身幂等，注册后
+            // ACTION_BATTERY_CHANGED 作为 sticky 广播会立即回调一次完成页脚电量刷新。
+            // 注意 ON_PAUSE 注销不可省：registerTimeBatteryReceiver() 带幂等早退，若接收器仍
+            // 在注册状态，回前台时不会重新投递 sticky 的 ACTION_BATTERY_CHANGED，页脚电量也
+            // 就无法立即刷新。所以 ON_PAUSE 注销与 ON_RESUME 重注册必须成对存在。
+            // activity 已在 entry 组合体内取好（DisposableEffect 的 effect lambda 非 @Composable，
+            // 不能在其中读取 LocalContext）。
+            val activityLifecycleObserver = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> controller.registerTimeBatteryReceiver()
+                    Lifecycle.Event.ON_PAUSE -> controller.unregisterTimeBatteryReceiver()
+                    else -> Unit
+                }
+            }
+            activity.lifecycle.addObserver(activityLifecycleObserver)
             onDispose {
                 pauseReader()
                 readBookViewModel.onIntent(ReadBookIntent.OnDispose)
                 lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+                activity.lifecycle.removeObserver(activityLifecycleObserver)
                 if (activeReadBookInputHandler === controller) {
                     activeReadBookInputHandler = null
                 }

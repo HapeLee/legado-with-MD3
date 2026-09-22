@@ -2944,7 +2944,12 @@ class ReadBookController(
         }
     }
 
-    private fun registerTimeBatteryReceiver() {
+    /**
+     * 注册时间/电量广播。幂等：重复调用直接返回。注册后 ACTION_BATTERY_CHANGED 作为 sticky
+     * 广播会立即回调一次，页脚电量随之刷新。App 回前台时需要重注册（见 MainNavGraph 的
+     * Activity 生命周期监听），因为它此时已被 [unregisterTimeBatteryReceiver] 注销。
+     */
+    fun registerTimeBatteryReceiver() {
         if (timeBatteryReceiverRegistered) return
         ContextCompat.registerReceiver(
             activity, timeBatteryReceiver, timeBatteryReceiver.filter,
@@ -2953,7 +2958,7 @@ class ReadBookController(
         timeBatteryReceiverRegistered = true
     }
 
-    private fun unregisterTimeBatteryReceiver() {
+    fun unregisterTimeBatteryReceiver() {
         if (!timeBatteryReceiverRegistered) return
         activity.unregisterReceiver(timeBatteryReceiver)
         timeBatteryReceiverRegistered = false
