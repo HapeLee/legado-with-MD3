@@ -211,4 +211,46 @@ Effect 要收——`MainNavGraph` 的 entry 里只剩下「取 VM、收 state、
 滑块的「默认值 / 范围 / 步进」三参数、以及 `provider == PROVIDER_APP_AI` 时
 才出现的「应用内 AI」跳转条目。需真机冒烟。
 
-**下一步**：`customTheme`（B 级小切，需处理 `ThemeStore` 那一个 RouteScreen 胶水点）。
+### M5-3a-pre / M5-3b：customTheme 页
+
+**M5-3a-pre（资产）**：页面用了 `ColorPickerSheet`，它还在 `:core:ui` ⇒ 按先例上提
+（182 行 + 4 条文案）。依赖链很浅：`AppTextField` / `MediumTonalButton` /
+`AppModalBottomSheet` / `AppText` 都已在 designsystem，Miuix 的 `ColorPicker` 系列在
+`miuix-ui`（有 desktop 变体）⇒ **不撞** `miuix-preference`，与 `SliderSettingItem` 同形。
+
+**M5-3b（页面）**：`Contract` / `ViewModel` / `Screen` 进 `:feature:settings/customtheme/`，
+`RouteScreen` 的两个 Effect 留宿主：
+`ApplyLegacyPrimarySeed` → `ThemeStore.editTheme(context).primaryColor(…).apply()`，
+`SettingsUpdateFailed` → Toast。这与前两页都不同——**本页是三页里唯一「Route 留下是因为
+真有平台动作」的**（translation 只为了 `koinViewModel()`，labConfig 是 `ACTION_SEND`）。
+
+#### 两处不在编译期暴露的坑
+
+1. **`stringArrayResource` 返回类型变了**：Android 返回 `Array<String>`，CMP 返回
+   `List<String>` ⇒ 调用点要加 `.toTypedArray()`（本仓第一次把 `string-array` 搬进
+   composeResources）。6 个 array 的覆盖情况与 `:app` 一致：`paletteStyle` /
+   `customContrast` / `materialVersion` 在 `arrays.xml`（zh-rCN 有覆盖），
+   三个 `*_value` 只在默认语言的 `array_values.xml`（靠 fallback）。
+2. **`Integer.toHexString` 在 `commonMain` 不存在**：它和 `Int.toString(16)` 有一处
+   实质差异——对负数给**无符号**十六进制（`0xFF000000.toInt()` ⇒ `"ff000000"`），
+   而 `toString(16)` 会给 `"-1000000"`。颜色值确实可能为负 ⇒ 必须用
+   `.toUInt().toString(16)` 才逐字等价。**编译不会报**，只会让颜色显示错。
+
+#### 死资源：无
+
+15 条 string 与 6 个 array 在 `:app` 侧**全部仍在被其它页面引用**
+（themeManage 等共用）⇒ **不删副本**。这是本批第一片没有死资源清理的。
+
+#### 验证
+
+四门禁全绿 + 新模块 desktop 编译与 `testAndroidHostTest`（**9 例** = lab 3 +
+translation 3 + customTheme 3）+ `:app` 编译/单测/打包；计数 **716 → 719 / 1211 → 1214**；
+资源 **72/72 逐字一致**；lint errors 未增加。
+
+#### 未验证
+
+深度自定义/种子色两套 UI 的切换、6 个下拉的实际取值、颜色选择器在 Miuix 下的外观、
+以及「改种子色后旧主题引擎是否真的跟上」（`ThemeStore` 那条路径）。需真机冒烟。
+
+**下一步**：`otherConfig` 或 `backupConfig`（B 级，都需先抽平台胶水：
+`WebService`/`ImportOldData`）；`ai`（15 文件 2470 行，零硬阻塞但体量大）。

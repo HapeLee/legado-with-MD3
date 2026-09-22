@@ -1,6 +1,13 @@
-package io.legado.app.ui.config.customTheme
+package io.legado.app.feature.settings.customtheme
 
 import androidx.compose.runtime.Stable
+
+// M5-3b：从 `:app` 的 `io.legado.app.ui.config.customTheme` 迁来（**只改包名**，
+// 结构逐字一致）。
+//
+// 数据全是 `Int` 颜色值与字符串枚举值——没有平台类型，所以本页的 Contract 能整份进
+// `commonMain`。两个 `Effect` 分支（`ApplyLegacyPrimarySeed` / `SettingsUpdateFailed`）
+// 由 `:app` 的 entry 解释成 `ThemeStore` 与 Toast。
 
 @Stable
 data class CustomThemeUiState(

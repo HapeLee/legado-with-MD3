@@ -24,4 +24,19 @@
     <string name="ai_config">AI Settings</string>
     <string name="translation_app_ai_provider">Use App AI Interface</string>
     <string name="translation_app_ai_provider_summary">Model, API key, and protocol are configured in AI Settings.</string>
+    <string name="custom_theme_colors">Custom Colors</string>
+    <string name="theme_manage_use_palette_colors">Generate Colors from Palette</string>
+    <string name="day">Day</string>
+    <string name="night">Night</string>
+    <string name="seed_color">Seed Color</string>
+    <string name="click_to_select">Click to select</string>
+    <string name="palette_style">Palette Style</string>
+    <string name="preferred_contrast">Preferred contrast</string>
+    <string name="material_version">Color Specification</string>
+    <string name="theme_manage_primary_color">Primary Color</string>
+    <string name="theme_manage_secondary_color">Secondary Color</string>
+    <string name="theme_manage_primary_text_color">Primary Text Color</string>
+    <string name="theme_manage_secondary_text_color">Secondary Text Color</string>
+    <string name="theme_manage_background_color">Background Color</string>
+    <string name="theme_manage_label_container_color">Label Container Color</string>
 </resources>

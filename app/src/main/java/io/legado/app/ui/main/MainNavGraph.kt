@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,7 +54,11 @@ import io.legado.app.feature.settings.lab.LabConfigEffect
 import io.legado.app.feature.settings.lab.LabConfigScreen
 import io.legado.app.feature.settings.lab.LabConfigViewModel
 import io.legado.app.feature.settings.translation.TranslationConfigScreen
+import io.legado.app.feature.settings.customtheme.CustomThemeEffect
+import io.legado.app.feature.settings.customtheme.CustomThemeScreen
+import io.legado.app.feature.settings.customtheme.CustomThemeViewModel
 import io.legado.app.feature.settings.translation.TranslationConfigViewModel
+import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.ui.about.MiuixAboutScreen
 import io.legado.app.ui.ai.chat.AiChatRouteScreen
 import io.legado.app.ui.book.audio.AudioPlayEffect
@@ -132,7 +137,6 @@ import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigRouteScreen
-import io.legado.app.ui.config.customTheme.CustomThemeRouteScreen
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigRouteScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigRouteScreen
 import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
@@ -625,8 +629,30 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsCustomTheme> {
-        CustomThemeRouteScreen(
-            onBackClick = { onNavigateBack() }
+        // M5-3b：`CustomThemeRouteScreen` 的两个 Effect 是**本页为什么要留 Route 在宿主**
+        // 的原因（与 labConfig 的分享、translation 的「无 Effect」都不同）：
+        //   · `ApplyLegacyPrimarySeed` → `ThemeStore.editTheme(context).primaryColor(…).apply()`，
+        //     而 `ThemeStore` 是 `:app` 的 `lib.theme`（旧主题引擎），共享层不能知道它；
+        //   · `SettingsUpdateFailed` → Toast。
+        // 两者都只是**解释动作**，不动业务状态，故按前例留在 entry，不为此抽平台契约。
+        val viewModel = koinViewModel<CustomThemeViewModel>()
+        val context = LocalContext.current
+        LaunchedEffect(viewModel) {
+            viewModel.effects.collectLatest { effect ->
+                when (effect) {
+                    is CustomThemeEffect.ApplyLegacyPrimarySeed -> {
+                        ThemeStore.editTheme(context).primaryColor(effect.color).apply()
+                    }
+                    is CustomThemeEffect.SettingsUpdateFailed -> {
+                        Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        CustomThemeScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            onBackClick = { onNavigateBack() },
         )
     }
 

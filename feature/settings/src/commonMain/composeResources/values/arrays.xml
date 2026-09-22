@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string-array name="paletteStyle">
+        <item>TonalSpot</item>
+        <item>Neutral</item>
+        <item>Vibrant</item>
+        <item>Expressive</item>
+        <item>Rainbow</item>
+        <item>FruitSalad</item>
+        <item>Monochrome</item>
+        <item>Fidelity</item>
+        <item>Content</item>
+    </string-array>
+<string-array name="customContrast">
+		<item>Default</item>
+		<item>High</item>
+		<item>Maximum</item>
+	</string-array>
+<string-array name="materialVersion">
+		<item>Material 3 (2021)</item>
+		<item>Material 3 Expressive (2025)</item>
+	</string-array>
+<string-array name="paletteStyle_value">
+        <item>tonalSpot</item>
+        <item>neutral</item>
+        <item>vibrant</item>
+        <item>expressive</item>
+        <item>rainbow</item>
+        <item>fruitSalad</item>
+        <item>monochrome</item>
+        <item>fidelity</item>
+        <item>content</item>
+    </string-array>
+<string-array name="customContrast_value">
+        <item>Default</item>
+        <item>Medium</item>
+        <item>High</item>
+    </string-array>
+<string-array name="materialVersion_value">
+        <item>material3</item>
+        <item>material3Expressive</item>
+    </string-array>
+</resources>

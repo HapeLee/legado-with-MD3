@@ -1564,7 +1564,24 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      全是联网查询的 `GradleDependency`，与改动无关）。
      未验证：页面渲染与交互（下拉选择、滑块的默认值/范围/步进、
      `provider == PROVIDER_APP_AI` 时才出现的跳转条目）需真机冒烟。
-     **下一步（本域）**：`customTheme`（B 级，需处理 `ThemeStore` 那一个 RouteScreen 胶水点）。
+   - **M5-3a-pre / M5-3b 已完成（2026-09-23）：customTheme 子页。**
+     M5-3a-pre 上提 `ColorPickerSheet`（182 行 + 4 条文案；依赖链浅、Miuix 的 `ColorPicker`
+     在 `miuix-ui` 有 desktop 变体 ⇒ **不撞** `miuix-preference`）。
+     M5-3b 迁页面本体：Contract/VM/Screen 进 `:feature:settings/customtheme/`，
+     `RouteScreen` 的两个 Effect 留宿主（`ThemeStore.editTheme(…).primaryColor(…).apply()` 与
+     Toast）——**这是三页里唯一「Route 留下是因为真有平台动作」的**（translation 只为了
+     `koinViewModel()`，labConfig 是 `ACTION_SEND`）。
+     ⚠️ **两处不在编译期暴露**：① CMP 的 `stringArrayResource` 返回 `List<String>`
+     （Android 是 `Array<String>`）⇒ 6 个 array 的调用点要 `.toTypedArray()`，且覆盖情况
+     与 `:app` 一致（三个 `*_value` 只在默认语言、靠 fallback）；
+     ② `Integer.toHexString` 在 `commonMain` 不存在，且它与 `Int.toString(16)` 对**负数**
+     不等价（颜色值可能为负）⇒ 必须 `.toUInt().toString(16)`，否则颜色显示错而编译不报。
+     **本批第一片没有死资源**：15 条 string + 6 个 array 在 `:app` 侧仍被 themeManage 等共用。
+     验证：四门禁全绿 + 新模块 `testAndroidHostTest`（**9 例**）+ `:app` 编译/单测/打包；
+     计数 **716 → 719 / 1211 → 1214**；资源 **72/72 逐字一致**；lint errors 未增加。
+     未验证：两套 UI 切换、下拉取值、`ThemeStore` 那条路径是否真的跟上。需真机冒烟。
+     **下一步（本域）**：`otherConfig` / `backupConfig`（B 级，需先抽 `WebService` /
+     `ImportOldData` 平台胶水），或体量大但零硬阻塞的 `ai`（15 文件 2470 行）。
 
 ## 6. 验证矩阵
 

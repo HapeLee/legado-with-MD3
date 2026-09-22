@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.customTheme
+package io.legado.app.feature.settings.customtheme
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +11,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// M5-3b：从 `:app` 的 `io.legado.app.ui.config.customTheme` 迁来（**只改包名**，
+// 逻辑逐字一致）。
+//
+// 与前面两个子页的 VM 相比，它多了一处值得注意的语义：
+// `update()` 用 `runCatching` 包住 `themeSettingsGateway.update`，失败时发
+// `SettingsUpdateFailed`（带 `error.message ?: error.javaClass.simpleName`）。
+// 这条路径在共享层，但它**不碰平台**：文案由宿主解释成 Toast。
+//
+// 另外 `CustomThemePicker.DaySeed` 分支要做**两件事**——写设置**并且**发
+// `ApplyLegacyPrimarySeed`（让旧的 `ThemeStore` 也跟上种子色）。后者是纯 `:app` 的概念，
+// 故以 Effect 形式交给宿主，而不是让共享层知道 `ThemeStore` 的存在。
 class CustomThemeViewModel(
     private val themeSettingsGateway: ThemeSettingsGateway,
 ) : ViewModel() {

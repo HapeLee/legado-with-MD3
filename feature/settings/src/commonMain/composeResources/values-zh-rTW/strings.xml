@@ -20,4 +20,19 @@
     <string name="ai_config">AI 設定</string>
     <string name="translation_app_ai_provider">使用應用 AI 介面</string>
     <string name="translation_app_ai_provider_summary">模型、API 金鑰和協定在 AI 設定中配置。</string>
+    <string name="custom_theme_colors">自訂顏色</string>
+    <string name="theme_manage_use_palette_colors">從調色板生成顏色</string>
+    <string name="day">白天</string>
+    <string name="night">夜間</string>
+    <string name="seed_color">種子色</string>
+    <string name="click_to_select">點擊選擇</string>
+    <string name="palette_style">調色板樣式</string>
+    <string name="preferred_contrast">偏好對比度</string>
+    <string name="material_version">色彩規格</string>
+    <string name="theme_manage_primary_color">主色</string>
+    <string name="theme_manage_secondary_color">輔助色</string>
+    <string name="theme_manage_primary_text_color">主文字色</string>
+    <string name="theme_manage_secondary_text_color">輔助文字色</string>
+    <string name="theme_manage_background_color">背景色</string>
+    <string name="theme_manage_label_container_color">標籤容器色</string>
 </resources>
