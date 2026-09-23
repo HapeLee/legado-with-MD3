@@ -253,7 +253,12 @@ RESULT_DIRS = {
 # 但顺手修掉 M5-9a 留下的**竞态测试**：`恢复网络备份与测试连接都先进对应对话框` 拆成
 # 「测试连接先进测试中对话框」+「请求网络恢复先进通用加载对话框并关弹层」两例
 # ⇒ 净 +1。见下方 Baseline 说明与 checklist 的「Tests」一节。
-BASELINE_MAIN = 762
+# M5-10a：762 → **765**（**+3** —— **不是新增覆盖**）。`TimePickerDialogTest` 随实现从
+# `:core:ui/src/test`（JVM 专用源集，**不在本工具的扫描范围内**，因此从来没有被计入）
+# 迁到 `:core:designsystem/src/commonTest`（本工具扫 `designsystem (testAndroidHostTest)`）。
+# ⚠️ 它此前并非没在跑 —— CI 的 `verify.yml` 明确执行 `:core:ui:testDebugUnitTest`，
+# 只是本计数器的模块清单里没有 `:core:ui`。所以这 +3 是**可见性**增加，不是用例增加。
+BASELINE_MAIN = 765
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -341,7 +346,8 @@ BASELINE_MAIN = 762
 # M5-8a：1242 → **1246**（净 **+4** = 9 新 − 5 旧，同主集）。主集同步到 751。
 # M5-9a：1246 → **1256**（**+10** = `BackupConfigViewModelTest`）。主集同步到 761。
 # M5-9b：1256 → **1257**（**+1** = 拆掉一例竞态测试得到的两例）。主集同步到 762。
-BASELINE_ALL = 1257
+# M5-10a：1257 → **1260**（**+3** = 迁入的 `TimePickerDialogTest`，可见性变化而非新增覆盖）。
+BASELINE_ALL = 1260
 
 
 def tally(d: pathlib.Path):
