@@ -1135,3 +1135,74 @@ invalidateTextPage()      // ReadConfigUpdateBus.post({InvalidateTextPage})
 **下一步**：`readConfig` 页面本体 —— 前置是 `ClickActionConfigSheet`（`BackHandler` +
 `koinInject` 两个策略决定）、`PageKeySheet`（`android.view.KeyEvent`）、
 `CanvasRecorderFactory`（`android.os.Build`）。
+
+### M5-11b：确立两条共享层跨端策略 + `PageKeySheet` 迁进 `:feature:settings/readconfig/`
+
+上一轮说清了 `readConfig` 页面被三个移植问题挡住，其中 **`BackHandler` 与 `KeyEvent` 两条会
+在阅读器栈反复用到** —— 所以本片先把这两条**策略**定下来，并顺带把用到 `KeyEvent` 的
+`PageKeySheet`(121 行) 迁进去作为落地验证。
+
+#### 策略一：按键事件 ✅ `event.type` + `event.key.nativeKeyCode`（已验证可用）
+
+| 迁移前（Android 专用） | 迁移后（跨端） |
+|---|---|
+| `event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN` | `event.type == KeyEventType.KeyDown` |
+| `android.view.KeyEvent.KEYCODE_BACK / KEYCODE_DEL` | 本文件两个局部常量（`4` / `67`） |
+
+⚠️ **为什么是 `nativeKeyCode` 而不是 CMP 的 `Key.*` 语义常量**：这个设置存的是**数字 keyCode
+的逗号分隔串**（如 `"21,22"`），阅读器按数字匹配 ⇒ 必须拿到数字，换成语义 Key 等于改存储格式
+与匹配逻辑。`nativeKeyCode` 在 Android 上就是 `android.view.KeyEvent` 的 keyCode ✓
+（桌面/其它端是各自编码 —— 本设置本质是手机翻页键配置，只在 Android 有意义，与迁移前一致）。
+
+⚠️ 踩到一点：`key` 是**扩展属性**，必须 `import androidx.compose.ui.input.key.key`
+（和 `type` 一样），否则报 `Unresolved reference 'key'`。已编译验证（desktop 目标）。
+
+#### 策略二：返回键 ⚠️ **共享层用不了 `BackHandler`** ⇒ 由宿主按共享 state 接线
+
+CMP 常见做法是 `androidx.compose.ui.backhandler.BackHandler`。本片**实测不可用**：
+
+1. 在 designsystem 的 `commonMain` 写探针引用它 → `Unresolved reference 'backhandler'`；
+2. 进而把 Gradle 缓存里所有 compose 的 jar 遍历一遍找 `backhandler` 条目 → **0 命中**。
+
+⇒ 本项目的依赖集里根本没有这个类（不是版本差异，是坐标/产物里没有）。**策略定为**：
+共享 composable **不**自带 `BackHandler`，只暴露 `onDismissRequest`；由**宿主**按共享 state
+接线（宿主看得到 `viewModel.uiState`）：
+
+```kotlin
+// :app 的宿主壳
+BackHandler(enabled = state.activeSheet == ReadConfigSheet.ClickActions) {
+    viewModel.onIntent(ReadConfigIntent.DismissSheet)
+}
+```
+
+这与既有判据「契约发 Effect、宿主执行平台动作」一致，且不需要为共享层引入新依赖
+（也符合「不为架构完整留空配置」—— 探针确认完即删，不留空组件）。
+
+#### `PageKeySheet` 迁移
+
+5 条文案（`custom_page_key` / `prev_page_key` / `next_page_key` / `page_key_set_help` / `reset`），
+**无死资源** —— 五条在 `:app` 侧全部仍被引用（其中一个引用方是 **`res/xml/pref_config_read.xml`**，
+又是那个遗留 PreferenceScreen）。
+
+⚠️ **顺带发现一处重复**：`:app` 里还有一个 `ui/book/read/sheet/PageKeyConfigSheet.kt`，
+与本页面做的事情几乎一样（同样用 `prev_page_key` / `next_page_key` / `page_key_set_help`）——
+和护眼 sheet 一样是「阅读菜单与设置页各一份」。将来迁阅读器栈时要一并处理
+（要么共用一份，要么明确各自归属）。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需 baseline 变动**）+ designsystem / `:feature:settings` desktop 编译
+  + `:app` 编译/单测/打包 + 全模块测试
+- 计数 **774 / 1269 零偏离**（本片纯 UI 迁移、无新增用例 —— 依 checklist「无 VM 的纯
+  composable 不加测试」那条判据）
+- lint **5 errors / 94 warnings**
+
+#### 未验证
+
+`PageKeySheet` 的按键捕获在**真机**上的行为（共享层写法只在 desktop 编译通过；
+`nativeKeyCode` 的实际取值需要在 Android 上按一次键才能确认等于 `android.view.KeyEvent` 的
+keyCode）。这是本片最需要冒烟的一点 —— 若不等，翻页键配置会静默失效。
+
+**下一步**：`ClickActionConfigSheet`（`BackHandler` 策略已定 ⇒ 宿主接线即可；
+剩 `koinInject` → 改成参数注入的决定），之后 `CanvasRecorderFactory`（窄契约），
+再之后才是 `readConfig` 页面本体。

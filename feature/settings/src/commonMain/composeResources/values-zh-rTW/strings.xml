@@ -277,4 +277,9 @@
     <string name="eye_protection_schedule">定時開啟</string>
     <string name="eye_protection_schedule_summary">僅在設定的時間範圍內生效</string>
     <string name="eye_protection_start_time">開始時間</string>
+    <string name="custom_page_key">自訂翻頁按鍵</string>
+    <string name="prev_page_key">上一頁按鍵</string>
+    <string name="next_page_key">下一頁按鍵</string>
+    <string name="page_key_set_help">將焦點放到輸入框按下物理按鍵會自動輸入鍵值，多個按鍵會自動用英文逗號隔開。</string>
+    <string name="reset">重設</string>
 </resources>

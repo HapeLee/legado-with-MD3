@@ -288,4 +288,9 @@
     <string name="eye_protection_schedule">定时开启</string>
     <string name="eye_protection_schedule_summary">仅在设定的时间段内生效</string>
     <string name="eye_protection_start_time">开始时间</string>
+    <string name="custom_page_key">自定义翻页按键</string>
+    <string name="prev_page_key">上一页按键</string>
+    <string name="next_page_key">下一页按键</string>
+    <string name="page_key_set_help">将焦点放到输入框按下物理按键会自动录入键值，多个按键会自动用英文逗号隔开。</string>
+    <string name="reset">重置</string>
 </resources>

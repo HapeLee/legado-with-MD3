@@ -514,6 +514,22 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   collection), and never let one test fire two IO-launched operations whose tails can cross.
   When a test does need an async tail, prove the fix by running the task **repeatedly**
   (`--rerun-tasks` ×3) — a single green run proves nothing about a race.
+- **Verify a "well-known" multiplatform API actually exists in *this* project before designing
+  around it.** M5-11b assumed CMP's common `androidx.compose.ui.backhandler.BackHandler` (the
+  usual answer for back handling in shared code) — it does not resolve here. Confirmed two ways:
+  a throwaway composable in designsystem's `commonMain` failed with
+  `Unresolved reference 'backhandler'`, and scanning every compose jar in the Gradle cache for a
+  `backhandler` entry returned **0 hits** — so it is missing from the artifacts, not merely a
+  version difference. Wrote nothing permanent: no shared wrapper for a component with no caller.
+  The resulting rule: shared composables take `onDismissRequest` and the **host** wires
+  `androidx.activity.compose.BackHandler` against shared state
+  (`BackHandler(enabled = state.activeSheet == …)`), which also needs no new dependency.
+- **Prefer the platform's numeric code over CMP's semantic `Key.*` when the stored value is a
+  number.** The page-key setting persists a comma-separated list of Android key codes
+  (`"21,22"`) that the reader matches numerically, so `event.key.nativeKeyCode` is required —
+  switching to semantic `Key` constants would silently change the storage format and matching.
+  (CMP: `event.type == KeyEventType.KeyDown` replaces `nativeKeyEvent.action == ACTION_DOWN`;
+  `key` and `type` are **extension properties** and need explicit imports.)
 - **A migrated page is not automatically a tested page.** ViewModels are where the testable logic
   lives; migrating one without adding coverage for the branches you touched is a finding.
 - **A stateless screen with no ViewModel gets no test — and you must not add a test dependency to

@@ -1899,6 +1899,30 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      **下一步**：`readConfig` 页面本体 —— 前置是 `ClickActionConfigSheet`（`BackHandler` +
      `koinInject` 两个策略决定）、`PageKeySheet`（`android.view.KeyEvent`）、
      `CanvasRecorderFactory`（`android.os.Build`）。
+   - **M5-11b 已完成（2026-09-24）：确立两条共享层跨端策略 + `PageKeySheet` 迁进
+     `:feature:settings/readconfig/`。** 那两条策略会在阅读器栈反复用到，故先定策略再落地。
+     - **按键 ✅**：`event.type == KeyEventType.KeyDown` + `event.key.nativeKeyCode`
+       替代 `android.view.KeyEvent` 的 `nativeKeyEvent.action/keyCode`。
+       用 `nativeKeyCode` 而非 CMP 的 `Key.*` 语义常量，是因为该设置存的是**数字 keyCode
+       逗号分隔串**（如 `"21,22"`），换成语义 Key 等于改存储格式与匹配逻辑。
+       ⚠️ `key` 是**扩展属性**，须 `import androidx.compose.ui.input.key.key`（否则
+       `Unresolved reference 'key'`）。已 desktop 编译验证。
+     - **返回键 ⚠️**：CMP 常见的 `androidx.compose.ui.backhandler.BackHandler` **实测不可用**
+       —— ① designsystem `commonMain` 探针报 `Unresolved reference 'backhandler'`；
+       ② 遍历 Gradle 缓存所有 compose jar 找 `backhandler` → **0 命中**（不是版本差异，
+       是产物里没有）。**策略：共享 composable 不自带 BackHandler，只暴露 `onDismissRequest`，
+       由宿主按共享 state 接线**（`BackHandler(enabled = state.activeSheet == …)`），
+       与「宿主执行平台动作」判据一致，也不必为共享层引入新依赖。探针确认完即删。
+     - `PageKeySheet`(121) 迁移：5 条文案、**无死资源**（五条在 `:app` 侧仍被引用，
+       其中一个引用方又是遗留的 `res/xml/pref_config_read.xml`）。
+       ⚠️ 顺带发现 `:app` 另有一个 `ui/book/read/sheet/PageKeyConfigSheet.kt` 做着几乎一样的事
+       （与护眼 sheet 同样是「阅读菜单与设置页各一份」），迁阅读器栈时要一并处理。
+     - 验证：四门禁全绿（G4 无需变动）+ 两端编译 + 全模块测试；计数 **774/1269 零偏离**
+       （纯 UI 迁移，依 checklist「无 VM 的纯 composable 不加测试」）；lint **5/94**。
+       ⚠️ 未验证：`nativeKeyCode` 在**真机**上是否等于 Android 的 keyCode —— 本片只做到
+       desktop 编译通过；若不等，翻页键配置会静默失效（本片最需要冒烟的一点）。
+     **下一步**：`ClickActionConfigSheet`（BackHandler 已由宿主接线解决；
+     剩 `koinInject` → 改参数注入），之后 `CanvasRecorderFactory`（窄契约），再迁页面本体。
      验证：四门禁全绿（G4 无需变动）+ designsystem（**42 例**，含迁入 3 例）/`:core:ui`/
      `:feature:settings`/`:app` 编译 + 全模块测试；计数 **762 → 765 / 1257 → 1260**；
      资源 11×4 逐字一致 + designsystem 216/216；死资源 2 条；lint **5 errors / 94 warnings**。

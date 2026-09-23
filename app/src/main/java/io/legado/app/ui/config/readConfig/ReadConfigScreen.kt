@@ -26,6 +26,7 @@ import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import io.legado.app.feature.settings.readconfig.ReadConfigUiState
 import io.legado.app.feature.settings.readconfig.ReadConfigIntent
 import io.legado.app.feature.settings.readconfig.ReadConfigSheet
+import io.legado.app.feature.settings.readconfig.PageKeySheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

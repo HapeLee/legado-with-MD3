@@ -292,4 +292,9 @@
     <string name="eye_protection_schedule">Scheduled</string>
     <string name="eye_protection_schedule_summary">Only apply during the configured time range</string>
     <string name="eye_protection_start_time">Start Time</string>
+    <string name="custom_page_key">Set Page-Turning Buttons</string>
+    <string name="prev_page_key">Page up button</string>
+    <string name="next_page_key">Page down button</string>
+    <string name="page_key_set_help">Focusing on the input box and pressing a physical key will automatically enter the value of the key, and multiple keys will be automatically separated by commas.</string>
+    <string name="reset">Reset</string>
 </resources>
