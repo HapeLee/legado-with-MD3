@@ -279,4 +279,17 @@ private class FakeCoverAlbumProvider(
     override suspend fun selectAlbum(albumId: String?) {
         selectedIds += albumId
     }
+
+    // M5-14a：契约扩展了（图库管理页迁进共享层）⇒ 本 dummy 补上新增的五个方法。
+    // 本文件（封面设置页）不用它们，所以是空实现。
+    override suspend fun createAlbum(name: String): String = "unused"
+
+    override suspend fun renameAlbum(albumId: String, name: String) = Unit
+
+    override suspend fun deleteAlbum(albumId: String) = Unit
+
+    override suspend fun addImages(albumId: String, isDark: Boolean, uriStrings: List<String>) = Unit
+
+    override suspend fun removeImage(albumId: String, isDark: Boolean, imageId: String) = Unit
+
 }

@@ -321,7 +321,6 @@ import io.legado.app.feature.settings.backup.BackupConfigViewModel
 import io.legado.app.feature.settings.backup.BackupIgnoreStore
 import io.legado.app.platform.AndroidBackupIgnoreStore
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
-import io.legado.app.ui.config.coverConfig.CoverAlbumManageViewModel
 import io.legado.app.feature.settings.ai.prompt.AiPromptStringSource
 import io.legado.app.feature.settings.ai.prompt.composeResourcePromptStrings
 import io.legado.app.feature.settings.customtheme.CustomThemeViewModel
@@ -378,6 +377,7 @@ import io.legado.app.feature.settings.coverconfig.CoverRulePlatform
 import io.legado.app.platform.AndroidCoverRulePlatform
 import io.legado.app.feature.settings.coverconfig.CoverAlbumProvider
 import io.legado.app.platform.AndroidCoverAlbumProvider
+import io.legado.app.feature.settings.coverconfig.CoverAlbumManageViewModel
 
 val appModule = module {
 
@@ -581,7 +581,7 @@ val appModule = module {
     single<CoverRulePlatform> { AndroidCoverRulePlatform() }
     // M5-12a：封面图库的「列表 + 选中 + 切换」收成契约；实现用 :app 既有的
     // \CoverAlbumUseCase\（其依赖链含 \java.io.InputStream\，留在 :app 不动）。
-    single<CoverAlbumProvider> { AndroidCoverAlbumProvider(get()) }
+    single<CoverAlbumProvider> { AndroidCoverAlbumProvider(androidContext(), get()) }
     // M5-9a：backupConfig 的四组「备份/恢复忽略项」（`:app` 的 `help.storage.BackupConfig`）。
     // 实现无状态、不持有 Context ⇒ 直接 new；那四组 map 本身是 `:app` 侧的 `by lazy` 全局。
     single<BackupIgnoreStore> { AndroidBackupIgnoreStore() }

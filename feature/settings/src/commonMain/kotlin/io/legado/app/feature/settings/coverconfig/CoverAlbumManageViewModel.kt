@@ -1,15 +1,8 @@
-package io.legado.app.ui.config.coverConfig
+package io.legado.app.feature.settings.coverconfig
 
-import android.content.Context
-import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.domain.model.CoverAlbumImageInput
-import io.legado.app.domain.usecase.CoverAlbumUseCase
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,16 +11,20 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import io.legado.app.feature.settings.coverconfig.CoverAlbumManageUiState
-import io.legado.app.feature.settings.coverconfig.CoverAlbumIntent
-import io.legado.app.feature.settings.coverconfig.CoverAlbumEffect
-import io.legado.app.feature.settings.coverconfig.CoverAlbumDialog
-import io.legado.app.feature.settings.coverconfig.CoverAlbumItemUi
-import io.legado.app.feature.settings.coverconfig.CoverAlbumImageUi
+
+// M5-14a：从 `:app` 的 `ui/config/coverConfig` 迁来。三处改动：
+//   ① `Context` + `CoverAlbumUseCase` → 注入的 `CoverAlbumProvider`（见其 KDoc）；
+//   ② `addImages` 里那段「URI 串 → 图片输入」的活（`Uri.parse` / `ContentResolver.query`
+//      取 `DISPLAY_NAME` / `openInputStream`）整段搬进宿主实现 —— 共享层拿不到 `Context`，
+//      而 `CoverAlbumImageInput` 携带 `openStream`（`java.io.InputStream`）本就出不了 `:app`；
+//   ③ `launch(Dispatchers.IO)` 不再指定调度器（IO 在实现侧），与 M5-7 / M5-12a 同一处理。
+//
+// 其余（编辑态 / 对话框状态机、各 intent 分支、异常 → ShowMessage）**逐字保留**。
+// ⚠️ 唯一的行为等价性说明：迁移前 `launchOperation` 显式跑在 `Dispatchers.IO`；现在
+// `viewModelScope.launch`（Main）+ 实现内部各自 `withContext(IO)` ⇒ 净效果相同。
 
 class CoverAlbumManageViewModel(
-    private val context: Context,
-    private val coverAlbumUseCase: CoverAlbumUseCase,
+    private val provider: CoverAlbumProvider,
 ) : ViewModel() {
 
     private val editingAlbumId = MutableStateFlow<String?>(null)
@@ -36,14 +33,13 @@ class CoverAlbumManageViewModel(
     val effects = _effects.asSharedFlow()
 
     val uiState = combine(
-        coverAlbumUseCase.albums,
-        coverAlbumUseCase.selection,
+        provider.selection,
         editingAlbumId,
         dialog,
-    ) { albums, selection, editingId, activeDialog ->
+    ) { selection, editingId, activeDialog ->
         CoverAlbumManageUiState(
-            albums = albums.map { it.toUi() }.toImmutableList(),
-            selectedAlbumId = selection.albumId,
+            albums = selection.albums,
+            selectedAlbumId = selection.selectedAlbumId,
             editingAlbumId = editingId,
             dialog = activeDialog,
         )
@@ -100,12 +96,12 @@ class CoverAlbumManageViewModel(
         launchOperation {
             when (activeDialog) {
                 CoverAlbumDialog.Create -> {
-                    val id = coverAlbumUseCase.createAlbum(trimmedName)
+                    val id = provider.createAlbum(trimmedName)
                     editingAlbumId.value = id
                 }
 
                 is CoverAlbumDialog.Rename -> {
-                    coverAlbumUseCase.renameAlbum(activeDialog.albumId, trimmedName)
+                    provider.renameAlbum(activeDialog.albumId, trimmedName)
                 }
 
                 else -> Unit
@@ -118,47 +114,25 @@ class CoverAlbumManageViewModel(
         dialog.value = null
         editingAlbumId.update { id -> if (id == activeDialog.albumId) null else id }
         launchOperation {
-            coverAlbumUseCase.deleteAlbum(activeDialog.albumId)
+            provider.deleteAlbum(activeDialog.albumId)
         }
     }
 
     private fun addImages(albumId: String, isDark: Boolean, uriStrings: List<String>) {
         if (uriStrings.isEmpty()) return
         launchOperation {
-            val inputs = uriStrings.map { uriString ->
-                val uri = Uri.parse(uriString)
-                CoverAlbumImageInput(
-                    displayName = queryDisplayName(uri),
-                    openStream = {
-                        context.contentResolver.openInputStream(uri)
-                            ?: error("无法读取图片")
-                    },
-                )
-            }
-            coverAlbumUseCase.addImages(albumId, isDark, inputs)
+            provider.addImages(albumId, isDark, uriStrings)
         }
     }
 
     private fun removeImage(albumId: String, isDark: Boolean, imageId: String) {
         launchOperation {
-            coverAlbumUseCase.removeImage(albumId, isDark, imageId)
+            provider.removeImage(albumId, isDark, imageId)
         }
     }
 
-    private fun queryDisplayName(uri: Uri): String {
-        return context.contentResolver.query(
-            uri,
-            arrayOf(OpenableColumns.DISPLAY_NAME),
-            null,
-            null,
-            null,
-        )?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.getString(0) else null
-        } ?: "cover_image"
-    }
-
     private fun launchOperation(block: suspend () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
                 block()
             } catch (error: CancellationException) {
@@ -173,20 +147,3 @@ class CoverAlbumManageViewModel(
         }
     }
 }
-
-/**
- * M5-12a：原先是 `CoverConfigViewModel.kt` 里的 `internal fun CoverAlbum.toUi()`，
- * 随该 VM 迁进 `:feature:settings` 后改由 `AndroidCoverAlbumProvider` 持有；
- * 本文件（仍在 `:app`）自己要一份 ⇒ 就地补上（实现逐字相同）。
- */
-private fun io.legado.app.domain.model.CoverAlbum.toUi() = CoverAlbumItemUi(
-    id = id,
-    name = name,
-    lightImages = lightImages.map {
-        CoverAlbumImageUi(id = it.id, path = it.path)
-    }.toImmutableList(),
-    darkImages = darkImages.map {
-        CoverAlbumImageUi(id = it.id, path = it.path)
-    }.toImmutableList(),
-)
-

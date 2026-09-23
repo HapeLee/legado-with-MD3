@@ -72,6 +72,7 @@ import io.legado.app.feature.settings.coverconfig.CoverAlbumManageUiState
 import io.legado.app.feature.settings.coverconfig.CoverAlbumIntent
 import io.legado.app.feature.settings.coverconfig.CoverAlbumEffect
 import io.legado.app.feature.settings.coverconfig.CoverAlbumDialog
+import io.legado.app.feature.settings.coverconfig.CoverAlbumManageViewModel
 
 @Composable
 fun CoverAlbumManageRouteScreen(

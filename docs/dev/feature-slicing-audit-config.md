@@ -1557,3 +1557,51 @@ legacyHelp|app/main/io/legado/app/ui/config/coverConfig  1 → 0   （条目删�
 **下一步**：`ui/config/coverConfig` 只剩**封面图库那一半** —— `CoverAlbumManageScreen`(449，
 带 `rememberLauncherForActivityResult` ⇒ 要拆宿主壳)、`CoverAlbumManageViewModel`(169，用
 `Context`/`OpenableColumns`/`Uri` ⇒ 要抽读文件名的契约或直接把选择结果交给宿主)。
+
+### M5-14a：`CoverAlbumManageViewModel` → `:feature:settings/coverconfig/`
+
+图库管理页的**逻辑层**先迁（页面下一片）。按"先逻辑层、后页面"的节奏。
+
+#### 契约：**扩** `CoverAlbumProvider`，而不是另造一个
+
+那个 VM 需要图库的增删改 + 加图，而 `CoverAlbumProvider`（M5-12a 建的）当时只收了封面设置页
+要的三个能力（`selection` / `selectAlbum`）。本片**扩同一个契约**（补 `createAlbum` /
+`renameAlbum` / `deleteAlbum` / `addImages` / `removeImage`），理由：两页同属「封面图库」
+**一个功能面**，宿主侧也只需要一个实现 —— 与 `DownloadCachePlatform` / `ReadConfigApplyPlatform`
+的粒度判据一致（一个功能面一个契约）。
+
+⚠️ `addImages` 收的是**选中的 URI 串**，不是图片输入对象。把 URI 变成 `CoverAlbumImageInput`
+需要 `ContentResolver`（`query(... DISPLAY_NAME)` 取文件名 + `openInputStream` 取内容），
+而 `CoverAlbumImageInput` 携带 `java.io.InputStream` ⇒ **这个类型出不了 `:app`**。
+所以那段活整段搬进 `AndroidCoverAlbumProvider`，共享层只看到 `List<String>`。
+
+#### 三处改动（其余逐字保留）
+
+1. `Context` + `CoverAlbumUseCase` → 注入的 `CoverAlbumProvider`；
+2. `addImages` 里「URI 串 → 图片输入」整段移到宿主实现；
+3. `launch(Dispatchers.IO)` 不再指定调度器（IO 在实现侧），与 M5-7 / M5-12a 同一处理。
+
+#### 新增 10 例
+
+建相册后**进编辑态**（`createAlbum` 返回的 id 要写进去，否则用户看不到自己刚建的相册）；
+空名字不落盘；重命名走契约；**删「正在编辑的那个」要退出编辑态、删别的不能连带清**
+（写反的表现很隐蔽：删了 A 之后编辑面板挂在已不存在的 B 上）；`AddImagesClick` 只发 Effect
+不打契约；选择器返回后把 URI 串交给契约；**空列表不打契约**（取消选择就是这个路径）；
+删图走契约；异常 → `ShowMessage`。
+
+⚠️ 踩到两点：
+
+- 那个 VM 的 `uiState` 是 `stateIn(WhileSubscribed(5_000))` ⇒ **没人订阅就不更新**，测试必须先挂
+  收集者，否则断言到的是初始值（这与 M5-9b 那条"断言要在 `idle()` 之前"是**相反方向**的坑：
+  一个是别让异步跑进来，一个是必须先让订阅建立起来）。
+- 两个测试文件在同包内**重名**了 `FakeCoverAlbumProvider` ⇒ 重声明冲突；且契约一扩，
+  旧 fake 缺 5 个方法就编译不过。已各自改名/补空实现。
+
+#### 验证
+
+- 四门禁全绿 + feature 两端编译 + `:app` 编译/单测/打包 + 全模块测试
+- 计数 **784 → 794 / 1279 → 1289**（+10），零偏离
+
+**下一步**：`CoverAlbumManageScreen`(449) —— 拆宿主壳（`rememberLauncherForActivityResult`
+`GetMultipleContents` + `toastOnUi` 收 `ShowMessage`/`SelectImages`）+ 页面本体进共享层。
+做完 `ui/config/coverConfig` 整个子域干净。

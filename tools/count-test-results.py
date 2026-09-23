@@ -268,7 +268,12 @@ RESULT_DIRS = {
 # 「与默认规则相同 ⇒ 删除配置」那条隐蔽分支（写反了表现为「存了与默认相同的规则、之后改默认
 # 不生效」）、保存前的空字段校验（只提示不落盘、且不关弹层）、`ShowSheet(Rule)` 才读规则、
 # `RestoreDefaultRule` 从平台取默认值、图库流与切换选中走 `CoverAlbumProvider`。
-BASELINE_MAIN = 784
+# M5-14a：784 → **794**（**+10** = `CoverAlbumManageViewModelTest`）。图库管理 VM 迁进共享层
+# （`Context` + `CoverAlbumUseCase` → 扩展后的 `CoverAlbumProvider`），用例重心是**契约交互**：
+# 建相册后进编辑态、删除「正在编辑的那个」要退出编辑态而删别的不能连带清、选择器返回空列表
+# 不打契约、`AddImagesClick` 只发 Effect、异常 → `ShowMessage`。
+# ⚠️ 那个 VM 的 `uiState` 是 `stateIn(WhileSubscribed)` ⇒ 测试必须先挂订阅者，否则断言到初始值。
+BASELINE_MAIN = 794
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -359,7 +364,8 @@ BASELINE_MAIN = 784
 # M5-10a：1257 → **1260**（**+3** = 迁入的 `TimePickerDialogTest`，可见性变化而非新增覆盖）。
 # M5-11a：1260 → **1269**（**+9** = `ApplyReadSettingUseCaseTest`）。主集同步到 774。
 # M5-12b：1269 → **1279**（**+10** = `CoverConfigViewModelTest`）。主集同步到 784。
-BASELINE_ALL = 1279
+# M5-14a：1279 → **1289**（**+10** = `CoverAlbumManageViewModelTest`）。主集同步到 794。
+BASELINE_ALL = 1289
 
 
 def tally(d: pathlib.Path):
