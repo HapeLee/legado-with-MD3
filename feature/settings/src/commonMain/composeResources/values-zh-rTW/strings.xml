@@ -346,4 +346,6 @@
     <string name="reading_anchor_summary">跳轉章節兩次或以上後，顯示返回原閱讀位置的懸浮按鈕</string>
     <string name="selectText">長按選擇文字</string>
     <string name="show_menu_icon">顯示選單項目圖示</string>
+    <string name="restore_default">復原預設</string>
+    <string name="cover_rule_fields_required">搜尋 URL 和封面規則不能為空</string>
 </resources>

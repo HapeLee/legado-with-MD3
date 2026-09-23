@@ -34,6 +34,13 @@ import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.platform.LocalContext
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
+import io.legado.app.feature.settings.coverconfig.CoverConfigUiState
+import io.legado.app.feature.settings.coverconfig.CoverConfigIntent
+import io.legado.app.feature.settings.coverconfig.CoverConfigEffect
+import io.legado.app.feature.settings.coverconfig.CoverConfigSheet
+import io.legado.app.feature.settings.coverconfig.CoverConfigViewModel
+import io.legado.app.feature.settings.coverconfig.CoverColorField
+import io.legado.app.feature.settings.coverconfig.localizedText
 
 @Composable
 fun CoverConfigRouteScreen(
@@ -46,7 +53,7 @@ fun CoverConfigRouteScreen(
     LaunchedEffect(Unit) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
-                is CoverConfigEffect.ShowToast -> context.toastOnUi(effect.stringRes)
+                is CoverConfigEffect.ShowToast -> context.toastOnUi(effect.toast.localizedText())
             }
         }
     }

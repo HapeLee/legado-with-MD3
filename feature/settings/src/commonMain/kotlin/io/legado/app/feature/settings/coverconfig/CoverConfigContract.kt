@@ -1,8 +1,16 @@
-package io.legado.app.ui.config.coverConfig
+package io.legado.app.feature.settings.coverconfig
 
 import androidx.compose.runtime.Stable
 import io.legado.app.domain.model.settings.CoverSettings
 
+/**
+ * M5-12a：从 `:app` 的 `ui/config/coverConfig` 迁来。**唯一改动**在 [CoverConfigEffect] ——
+ * `ShowToast` 携带的从 `@StringRes Int` 换成 [CoverConfigToast] 枚举（Android 资源 id 进不了
+ * 共享层，与 M5-9a 的 `BackupConfigText`、M5-11a 的做法同一条理由）。
+ *
+ * ⚠️ 本文件**只包含封面设置这一半**的契约；封面图库（`CoverAlbum*`）是另一半，
+ * 有自己的契约文件，本片没动。
+ */
 @Stable
 data class CoverConfigUiState(
     val settings: CoverSettings = CoverSettings(),
@@ -58,5 +66,6 @@ sealed interface CoverConfigIntent {
 }
 
 sealed interface CoverConfigEffect {
-    data class ShowToast(val stringRes: Int) : CoverConfigEffect
+    /** 一次性提示。文案由 [CoverConfigToast] 枚举 + `localizedText()` 查表得到。 */
+    data class ShowToast(val toast: CoverConfigToast) : CoverConfigEffect
 }

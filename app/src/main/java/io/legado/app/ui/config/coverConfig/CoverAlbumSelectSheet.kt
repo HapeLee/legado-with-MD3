@@ -29,6 +29,7 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.feature.settings.coverconfig.CoverAlbumSelectionUiState
 
 @Composable
 fun CoverAlbumSelectSheet(

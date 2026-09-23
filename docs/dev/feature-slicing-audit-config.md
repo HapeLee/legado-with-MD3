@@ -1323,3 +1323,72 @@ PreferenceScreen、阅读器、`ReadConfig.kt` 弃用门面等）⇒ 本片一�
 外加几个宿主壳 —— **三者都是重活**（`ui.main.*` 的 10 个 `Launcher*` 图标；
 `ThemePackageManager`(1254 行深依赖 `Context`/`Uri`/`AppCompatDelegate`) 与
 `BookCover`(`Bitmap`/`Drawable`) 那条存储链）。建议先确认优先级。
+
+### M5-12a：`coverConfig` 逻辑层 → `:feature:settings/coverconfig/`
+
+`CoverConfigContract`(62) + `CoverConfigViewModel`(149) + `CoverAlbumContract`(68) 迁进共享层。
+理由与做法：
+
+- `CoverConfigContract` 持有 `CoverAlbumSelectionUiState`，后者在 `CoverAlbumContract`
+  ⇒ **两份契约必须一起上提**（`CoverAlbumContract` 本就零 Android 依赖，逐字搬）。
+  这也意味着封面图库的 Screen/VM（仍在 `:app`）改为 import 共享契约。
+- Toast effect 携带的 `@StringRes Int` → `CoverConfigToast` 枚举 + `getString` 查表
+  （沿用 M5-9a `BackupConfigText` 的模式）。
+
+#### ⚠️ 本片最大的收获：`io.legado.app.domain.**` **不是**"共享层"信号
+
+`CoverConfigViewModel` 依赖 `CoverAlbumUseCase`，后者 import 的是
+`io.legado.app.domain.usecase` —— 一个**长得完全像共享层**的包。但：
+
+```
+CoverAlbumUseCase    -> app/src/main/java/io/legado/app/domain/usecase/   ← 在 :app
+CoverAlbumGateway    -> app/src/main/java/io/legado/app/domain/gateway/   ← 在 :app
+CoverAlbumImageInput -> app/src/main/java/io/legado/app/domain/model/     ← 在 :app，且用 java.io.InputStream
+CoverAlbum           -> core/model/.../domain/model/                       ← 真共享
+```
+
+⇒ **我的勘察脚本按包名分类是错的**：它把 `io.legado.app.domain.**` 当成共享层
+（只检查了 `help` / `model` / `utils` / `R` / `android`），于是 coverConfig 看起来"只需一个契约"，
+实际下面还挂着一条链。**判据要按文件的实际位置分类，不能按包名**。
+
+#### 因此改成两个窄契约，而不是上提整条链
+
+上提 `CoverAlbumUseCase` 就得连带 `CoverAlbumGateway` 与 `CoverAlbumImageInput`，
+而后者用了 **`java.io.InputStream`**（JVM 专用）⇒ 要先为"图片输入"定一个跨端表示。
+那是与 M5-11b 定 BackHandler / KeyEvent **同性质的独立设计决定**，不该在本片顺手定掉。
+
+⇒ 改为只把共享层真正需要的那三个能力收成 `CoverAlbumProvider`（`selection` 流 + `selectAlbum`），
+由 `AndroidCoverAlbumProvider` 用既有的 `CoverAlbumUseCase` 实现；链留在 `:app` 不动。
+
+（中途我确实先把 `CoverAlbumUseCase` 上提到了 `:core:data`，随即发现它依赖 `:app` 的
+gateway、`core:data` 根本编不过 ⇒ **已撤销**。这也是"包名像共享层"造成的误判。）
+
+`BookCover` / `DefaultData` 那一侧则照常收成 `CoverRulePlatform`（只传 `CoverRuleSpec`
+原始值，不搬 `BookCover.CoverRule` 嵌套类型）。
+
+#### 一处时序变化
+
+`RestoreDefaultRule` 迁移前同步读 `DefaultData.coverRule`（`by lazy` 读 assets）并立即更新
+state；现在 `default()` 是 suspend ⇒ 放进 `launch`，**state 晚一帧更新**。与 `loadRule` /
+`saveRule` 一致（它们本来就是异步），用户不可分辨 —— 但这是真实的差异，记在这里。
+
+#### G4：又是"搬迁式上调"，净零
+
+```
+legacyHelp|app/main/io/legado/app/platform       6 → 7   （DefaultData 随实现搬来）
+legacyHelp|app/main/io/legado/app/ui/config/coverConfig  1 → 0   （条目删除）
+```
+
+#### 验证与未验证
+
+- 四门禁全绿 + feature 两端编译 + `:app` 编译/单测/打包 + 全模块测试；计数 **774/1269 零偏离**
+- `lintAppDebug` 仍 **5 errors / 94 warnings**
+- ⚠️ 未验证：封面规则的读写路径（`BookCover` / assets 读 JSON）**无测试执行**；
+  图库流改由 provider 提供后，页面上的"当前图库/选中项"是否照旧显示。
+- ⚠️ **本片没有新增用例** —— 按 checklist 的判据，迁 VM 而不为改动到的分支补覆盖属于 finding。
+  `CoverRulePlatform` / `CoverAlbumProvider` 的交互（尤其"与默认规则相同 ⇒ 删除"这条分支）
+  应由下一片补上。
+
+**下一步**：① 补 `CoverConfigViewModelTest`（钉"恢复默认 / 保存 / 空字段提示 / 与默认相同则删除"
+这几条与契约的交互）；② 迁 `CoverConfigScreen`(364) + `CoverRuleConfigSheet`(83) 页面本体；
+③ 封面图库那一半（Screen 449 带 launcher、VM 169 用 `Context`/`Uri`/`OpenableColumns`）。

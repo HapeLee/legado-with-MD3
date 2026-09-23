@@ -1,9 +1,19 @@
-package io.legado.app.ui.config.coverConfig
+package io.legado.app.feature.settings.coverconfig
 
 import androidx.compose.runtime.Stable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
+/**
+ * M5-12a：从 `:app` 的 `ui/config/coverConfig` 迁来，**逐字**（本文件本就零 Android 依赖：
+ * 只用 Compose 的 `Stable` 与 `kotlinx.collections.immutable`）。
+ *
+ * ⚠️ 本片搬它是**被逼的**：`CoverConfigContract.CoverConfigUiState` 持有
+ * `CoverAlbumSelectionUiState`，而后者在 `:app` ⇒ 只搬那一半契约会编译不过。
+ * 本文件里的 `CoverAlbumManageUiState` / `CoverAlbumIntent` / `CoverAlbumEffect` /
+ * `CoverAlbumDialog` 属于**封面图库那一半**（其 Screen/VM 仍在 `:app`，下一片再迁），
+ * 但它们与本文件同一份契约，无法拆开搬 ⇒ 一起上来。
+ */
 @Stable
 data class CoverAlbumItemUi(
     val id: String,

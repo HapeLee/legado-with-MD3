@@ -360,4 +360,6 @@
     <string name="reading_anchor_summary">跳转章节两次及以上后，显示返回原阅读位置的悬浮按钮</string>
     <string name="selectText">长按选择文本</string>
     <string name="show_menu_icon">展示菜单项图标</string>
+    <string name="restore_default">恢复默认</string>
+    <string name="cover_rule_fields_required">搜索 URL 和封面规则不能为空</string>
 </resources>

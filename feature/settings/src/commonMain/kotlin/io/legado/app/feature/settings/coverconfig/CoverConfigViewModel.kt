@@ -1,15 +1,9 @@
-package io.legado.app.ui.config.coverConfig
+package io.legado.app.feature.settings.coverconfig
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.model.settings.CoverSettings
-import io.legado.app.domain.usecase.CoverAlbumUseCase
-import io.legado.app.help.DefaultData
-import io.legado.app.model.BookCover
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -18,9 +12,20 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// M5-12a：从 `:app` 的 `ui/config/coverConfig` 迁来。三处改动：
+//   ① `BookCover` / `DefaultData` → 注入的 `CoverRulePlatform`（见其 KDoc）；
+//   ② `R.string.*` → `CoverConfigToast` 枚举（见 `CoverConfigText`）；
+//   ③ `Dispatchers.IO` 下沉到实现侧 ⇒ 这里的 `launch` 不再指定调度器（M5-7 同一处理）。
+//
+// ⚠️ 一处**时序**变化：`RestoreDefaultRule` 迁移前是同步读 `DefaultData.coverRule`
+// （`by lazy` 从 assets 读）并立即更新 state；现在 `default()` 是 suspend ⇒ 必须放进
+// `launch`。表现为「点『恢复默认』后 state 晚一帧更新」—— 同为异步状态更新，
+// 与 `loadRule()` / `saveRule()` 一致，用户不可分辨。
+
 class CoverConfigViewModel(
-    private val coverAlbumUseCase: CoverAlbumUseCase,
+    private val coverAlbumProvider: CoverAlbumProvider,
     private val settingsGateway: CoverSettingsGateway,
+    private val coverRulePlatform: CoverRulePlatform,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -34,15 +39,10 @@ class CoverConfigViewModel(
     init {
         viewModelScope.launch {
             combine(
-                coverAlbumUseCase.albums,
-                coverAlbumUseCase.selection,
+                coverAlbumProvider.selection,
                 settingsGateway.settings,
-            ) { albums, selection, settings ->
-                settings to CoverAlbumSelectionUiState(
-                    albums = albums.map { it.toUi() }.toImmutableList(),
-                    selectedAlbumId = selection.albumId,
-                )
-            }.collect { (settings, albumSelection) ->
+            ) { albumSelection, settings -> settings to albumSelection }
+                .collect { (settings, albumSelection) ->
                 _uiState.update {
                     it.copy(settings = settings, albumSelection = albumSelection)
                 }
@@ -88,8 +88,8 @@ class CoverConfigViewModel(
             }
             CoverConfigIntent.DismissSheet ->
                 _uiState.update { it.copy(activeSheet = null) }
-            is CoverConfigIntent.SelectAlbum -> viewModelScope.launch(Dispatchers.IO) {
-                coverAlbumUseCase.selectAlbum(intent.id)
+            is CoverConfigIntent.SelectAlbum -> viewModelScope.launch {
+                coverAlbumProvider.selectAlbum(intent.id)
             }
             is CoverConfigIntent.SetRuleEnabled ->
                 _uiState.update { it.copy(rule = it.rule.copy(enabled = intent.value)) }
@@ -97,15 +97,7 @@ class CoverConfigViewModel(
                 _uiState.update { it.copy(rule = it.rule.copy(searchUrl = intent.value)) }
             is CoverConfigIntent.SetRuleExpression ->
                 _uiState.update { it.copy(rule = it.rule.copy(coverRule = intent.value)) }
-            CoverConfigIntent.RestoreDefaultRule -> {
-                val rule = DefaultData.coverRule
-                _uiState.update {
-                    it.copy(
-                        rule = CoverRuleUiState(rule.enable, rule.searchUrl, rule.coverRule)
-                    )
-                }
-                _effects.tryEmit(CoverConfigEffect.ShowToast(R.string.restore_default))
-            }
+            CoverConfigIntent.RestoreDefaultRule -> restoreDefaultRule()
             CoverConfigIntent.SaveRule -> saveRule()
         }
     }
@@ -115,35 +107,44 @@ class CoverConfigViewModel(
     }
 
     private fun loadRule() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val rule = BookCover.getCoverRule()
+        viewModelScope.launch {
+            val rule = coverRulePlatform.current()
             _uiState.update {
-                it.copy(rule = CoverRuleUiState(rule.enable, rule.searchUrl, rule.coverRule))
+                it.copy(rule = CoverRuleUiState(rule.enabled, rule.searchUrl, rule.expression))
             }
+        }
+    }
+
+    private fun restoreDefaultRule() {
+        viewModelScope.launch {
+            val rule = coverRulePlatform.default()
+            _uiState.update {
+                it.copy(rule = CoverRuleUiState(rule.enabled, rule.searchUrl, rule.expression))
+            }
+            _effects.tryEmit(CoverConfigEffect.ShowToast(CoverConfigToast.RestoredDefault))
         }
     }
 
     private fun saveRule() {
         val state = _uiState.value.rule
         if (state.searchUrl.isBlank() || state.coverRule.isBlank()) {
-            _effects.tryEmit(CoverConfigEffect.ShowToast(R.string.cover_rule_fields_required))
+            _effects.tryEmit(CoverConfigEffect.ShowToast(CoverConfigToast.RuleFieldsRequired))
             return
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            val rule = BookCover.CoverRule(state.enabled, state.searchUrl, state.coverRule)
-            if (rule == DefaultData.coverRule) BookCover.delCoverRule() else BookCover.saveCoverRule(rule)
+        viewModelScope.launch {
+            val spec = CoverRuleSpec(
+                enabled = state.enabled,
+                searchUrl = state.searchUrl,
+                expression = state.coverRule,
+            )
+            // 与默认规则相同 ⇒ 删掉自定义配置（回落到内置默认），否则写入
+            if (spec == coverRulePlatform.default()) {
+                coverRulePlatform.delete()
+            } else {
+                coverRulePlatform.save(spec)
+            }
             _uiState.update { it.copy(activeSheet = null) }
         }
     }
 }
 
-internal fun io.legado.app.domain.model.CoverAlbum.toUi() = CoverAlbumItemUi(
-    id = id,
-    name = name,
-    lightImages = lightImages.map {
-        CoverAlbumImageUi(id = it.id, path = it.path)
-    }.toImmutableList(),
-    darkImages = darkImages.map {
-        CoverAlbumImageUi(id = it.id, path = it.path)
-    }.toImmutableList(),
-)

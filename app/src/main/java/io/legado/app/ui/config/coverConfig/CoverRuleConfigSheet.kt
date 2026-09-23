@@ -19,6 +19,8 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.feature.settings.coverconfig.CoverConfigIntent
+import io.legado.app.feature.settings.coverconfig.CoverRuleUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

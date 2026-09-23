@@ -213,7 +213,10 @@ legacyHelp|app/main/io/legado/app/model/webBook|16
 # 真实受害者）。本片把 FQN 换成契约后，实现侧写的是朴素 `import … help.storage.BackupConfig`
 # ⇒ 门禁这才看见它。**净债务没变，是账本变准了**；反过来若为压住这个数字而改回 FQN，
 # 就是刻意利用盲点掩盖耦合（M5-7 已立此判据）。
-legacyHelp|app/main/io/legado/app/platform|6
+# M5-12a：同上，再一次「同一段平台逻辑换住所」—— `coverConfig` 的 VM 里那 1 处
+# `help.DefaultData`（默认封面规则）随 VM 迁进 `AndroidCoverRulePlatform`，6 → **7**。
+# **净债务为零**：旧 `ui/config/coverConfig` 的那 1 条已同片删除（见下）。
+legacyHelp|app/main/io/legado/app/platform|7
 legacyHelp|app/main/io/legado/app/receiver|1
 legacyHelp|app/main/io/legado/app/service|26
 # M5-1c-3：`ui/about` 的旧文件（About* / CrashReportScreen）已删，业务本体迁进
@@ -239,7 +242,9 @@ legacyHelp|app/main/io/legado/app/ui/book/toc|7
 legacyHelp|app/main/io/legado/app/ui/book/toc/rule/preview|1
 legacyHelp|app/main/io/legado/app/ui/browser|7
 legacyHelp|app/main/io/legado/app/ui/config/backupConfig|1
-legacyHelp|app/main/io/legado/app/ui/config/coverConfig|1
+# M5-12a：`coverConfig` 的逻辑层（Contract / VM）迁进 `:feature:settings/coverconfig/`，
+# VM 里那 1 处 `help.DefaultData` 随实现搬进 `AndroidCoverRulePlatform`（那条计数已在
+# `app/main/io/legado/app/platform` 登记为 6 → 7）⇒ 本目录归零，条目删除。
 # M5-7：`downloadCacheConfig` 整页迁进 `:feature:settings`（VM/Screen 里那 3 处
 # `help.http` 引用收进 `DownloadCachePlatform`）⇒ 本目录归零，条目删除。
 # 同时 `ui/config/downloadCacheConfig` 的 `appCtx` 直连也归零（`appCtx.cacheDir` /

@@ -67,6 +67,11 @@ import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
+import io.legado.app.feature.settings.coverconfig.CoverAlbumItemUi
+import io.legado.app.feature.settings.coverconfig.CoverAlbumManageUiState
+import io.legado.app.feature.settings.coverconfig.CoverAlbumIntent
+import io.legado.app.feature.settings.coverconfig.CoverAlbumEffect
+import io.legado.app.feature.settings.coverconfig.CoverAlbumDialog
 
 @Composable
 fun CoverAlbumManageRouteScreen(

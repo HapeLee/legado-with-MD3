@@ -364,4 +364,6 @@
     <string name="reading_anchor_summary">Show a floating button to return to the original reading position after jumping chapters twice or more</string>
     <string name="selectText">Long Tap to Select Text</string>
     <string name="show_menu_icon">Show Menu Item Icons</string>
+    <string name="restore_default">Restore default</string>
+    <string name="cover_rule_fields_required">Search URL and cover rule cannot be empty</string>
 </resources>

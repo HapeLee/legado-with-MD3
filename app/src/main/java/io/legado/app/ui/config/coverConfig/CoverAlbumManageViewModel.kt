@@ -18,6 +18,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import io.legado.app.feature.settings.coverconfig.CoverAlbumManageUiState
+import io.legado.app.feature.settings.coverconfig.CoverAlbumIntent
+import io.legado.app.feature.settings.coverconfig.CoverAlbumEffect
+import io.legado.app.feature.settings.coverconfig.CoverAlbumDialog
+import io.legado.app.feature.settings.coverconfig.CoverAlbumItemUi
+import io.legado.app.feature.settings.coverconfig.CoverAlbumImageUi
 
 class CoverAlbumManageViewModel(
     private val context: Context,
@@ -167,3 +173,20 @@ class CoverAlbumManageViewModel(
         }
     }
 }
+
+/**
+ * M5-12a：原先是 `CoverConfigViewModel.kt` 里的 `internal fun CoverAlbum.toUi()`，
+ * 随该 VM 迁进 `:feature:settings` 后改由 `AndroidCoverAlbumProvider` 持有；
+ * 本文件（仍在 `:app`）自己要一份 ⇒ 就地补上（实现逐字相同）。
+ */
+private fun io.legado.app.domain.model.CoverAlbum.toUi() = CoverAlbumItemUi(
+    id = id,
+    name = name,
+    lightImages = lightImages.map {
+        CoverAlbumImageUi(id = it.id, path = it.path)
+    }.toImmutableList(),
+    darkImages = darkImages.map {
+        CoverAlbumImageUi(id = it.id, path = it.path)
+    }.toImmutableList(),
+)
+
