@@ -263,7 +263,12 @@ RESULT_DIRS = {
 # （`ReadBook` / `ReadConfigUpdateBus` / `ConfigUpdateAction` / `postEvent`）里解放出来
 # ⇒ 它第一次可测。用例断言的是**调了平台的哪个方法**（假实现只记方法名），
 # 含「渲染优化 = 先带参刷新再重排」的**顺序**、以及「不在映射表里的改动不通知阅读器」。
-BASELINE_MAIN = 774
+# M5-12b：774 → **784**（**+10** = `CoverConfigViewModelTest`）。M5-12a 把该 VM 迁进共享层时
+# 没有补覆盖（已作为 finding 记在审计里），本片补上 —— 重心是**契约交互**：
+# 「与默认规则相同 ⇒ 删除配置」那条隐蔽分支（写反了表现为「存了与默认相同的规则、之后改默认
+# 不生效」）、保存前的空字段校验（只提示不落盘、且不关弹层）、`ShowSheet(Rule)` 才读规则、
+# `RestoreDefaultRule` 从平台取默认值、图库流与切换选中走 `CoverAlbumProvider`。
+BASELINE_MAIN = 784
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -353,7 +358,8 @@ BASELINE_MAIN = 774
 # M5-9b：1256 → **1257**（**+1** = 拆掉一例竞态测试得到的两例）。主集同步到 762。
 # M5-10a：1257 → **1260**（**+3** = 迁入的 `TimePickerDialogTest`，可见性变化而非新增覆盖）。
 # M5-11a：1260 → **1269**（**+9** = `ApplyReadSettingUseCaseTest`）。主集同步到 774。
-BASELINE_ALL = 1269
+# M5-12b：1269 → **1279**（**+10** = `CoverConfigViewModelTest`）。主集同步到 784。
+BASELINE_ALL = 1279
 
 
 def tally(d: pathlib.Path):

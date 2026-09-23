@@ -514,6 +514,15 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   collection), and never let one test fire two IO-launched operations whose tails can cross.
   When a test does need an async tail, prove the fix by running the task **repeatedly**
   (`--rerun-tasks` ×3) — a single green run proves nothing about a race.
+- ⚠️ **Check a task's *exit status*, not just the summary line you grep for.** Measured in
+  M5-12b: for a dozen slices the lint step was reported as "lintAppDebug: 5 errors / 94 warnings",
+  grepped from its output — but the task had been **failing** the whole time (`Lint found errors in
+  the project; aborting build`). Same count every time, so nothing looked wrong. The 5 errors are
+  all in unmigrated legacy `:app` files (`BookInfoScreen`, `BackstageWebView`, `BottomWebViewDialog`)
+  and predate the migration work, so no slice caused them — but "lint is clean" was never true here,
+  and reporting a number as if it were a status is exactly the failure mode. Recipe: after running a
+  gate/task, confirm `BUILD SUCCESSFUL` (or read the task outcome) in addition to any counter you
+  scrape; a stable number can hide a stable failure.
 - **Verify a "well-known" multiplatform API actually exists in *this* project before designing
   around it.** M5-11b assumed CMP's common `androidx.compose.ui.backhandler.BackHandler` (the
   usual answer for back handling in shared code) — it does not resolve here. Confirmed two ways:

@@ -1392,3 +1392,51 @@ legacyHelp|app/main/io/legado/app/ui/config/coverConfig  1 → 0   （条目删�
 **下一步**：① 补 `CoverConfigViewModelTest`（钉"恢复默认 / 保存 / 空字段提示 / 与默认相同则删除"
 这几条与契约的交互）；② 迁 `CoverConfigScreen`(364) + `CoverRuleConfigSheet`(83) 页面本体；
 ③ 封面图库那一半（Screen 449 带 launcher、VM 169 用 `Context`/`Uri`/`OpenableColumns`）。
+
+### M5-12b：补 `CoverConfigViewModelTest`（10 例）
+
+兑现 M5-12a 留下的 finding（迁 VM 而不补覆盖）。用例重心是**契约交互**：
+
+- **「与默认规则相同 ⇒ 删除配置」** —— 迁移前是
+  `if (rule == DefaultData.coverRule) delCoverRule() else saveCoverRule(rule)`。这条分支很隐蔽：
+  写反了表现为「用户存了一条与默认相同的规则、之后改默认不生效」。⚠️ 测试里必须给它
+  **非空**且与默认相同的值 —— 因为 `saveRule()` **先**过「字段不能为空」那关。
+- 保存前的空字段校验：只提示、**不落盘**、**且不关弹层**（关了用户就看不到自己填的表单）。
+- `ShowSheet(Rule)` 才读规则（`ShowSheet(Album)` 不读）—— 不钉住就可能"打开弹层看到上次的值"。
+- `RestoreDefaultRule` 从平台取默认值（不再是本地常量）。
+- 图库流进状态 + 切换选中走 `CoverAlbumProvider`。
+- 契约字段名映射：UI 侧叫 `coverRule`、契约侧叫 `expression`（`CoverRuleSpec`）。
+
+`--rerun-tasks` 连跑 2 次全绿（本模块的 VM 测试用 Robolectric + `idle()`，假实现是同步的 ⇒ 无竞态）。
+
+⚠️ **一处我自己踩的坑**：第一版里「空字段」那条用例断言了 `activeSheet == Rule`，但那个用例
+**没有先打开弹层** ⇒ 实际是 `null`，测试失败。修法是让用例走真实流程（先 `ShowSheet(Rule)`
+再保存）。**测试失败时先怀疑自己的断言**：那次 VM 的行为是对的。
+
+#### ⚠️ 顺带发现的一个**验证漏洞**（与本片无关，但必须记）
+
+跑完 `lintAppDebug` 我照例 grep `Lint found N errors` 那一行，这次多看了一眼**任务状态** ——
+`BUILD FAILED`。也就是说 **`lintAppDebug` 一直在失败**，而我在过去十几片里只记录了
+"5 errors / 94 warnings"这个数字、**从未检查过退出状态**。
+
+查清 5 个 error 的位置：全部在**未迁移的遗留 `:app` 文件**里，与迁移工作无关：
+
+| 位置 | 规则 |
+|---|---|
+| `ui/book/info/BookInfoScreen.kt:269/270` | `LocalContextGetResourceValueCall` |
+| `ui/book/info/BookInfoScreen.kt:1497` | 接口方法未标注（`UnsafeOptInUsageError` 类） |
+| `help/http/BackstageWebView.kt:113` | 同上 |
+| `ui/widget/dialog/BottomWebViewDialog.kt:524` | 同上 |
+
+⇒ **既有失败，不是任何一片迁移引入的**。但它意味着「lint 全绿」这句话在本仓库一直不成立；
+要么修这 5 处、要么进 `lint-baseline.xml`。已记进 checklist 的验证纪律一节
+（**检查任务状态，而不是只 grep 汇总行**）。
+
+#### 验证
+
+- 四门禁全绿 + `:feature:settings` **76 例 0 失败** + `:app` 编译/单测/打包 + 全模块测试
+- 计数 **774 → 784 / 1269 → 1279**（+10），零偏离
+- `lintAppDebug`：数字仍 **5 errors / 94 warnings**（⚠️ 但任务本身 FAILED，见上）
+
+**下一步**：`CoverConfigScreen`(364) + `CoverRuleConfigSheet`(83) 页面本体 →
+再之后封面图库那一半（Screen 449 带 launcher、VM 169 用 `Context`/`Uri`/`OpenableColumns`）。
