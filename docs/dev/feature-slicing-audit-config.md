@@ -1440,3 +1440,37 @@ legacyHelp|app/main/io/legado/app/ui/config/coverConfig  1 → 0   （条目删�
 
 **下一步**：`CoverConfigScreen`(364) + `CoverRuleConfigSheet`(83) 页面本体 →
 再之后封面图库那一半（Screen 449 带 launcher、VM 169 用 `Context`/`Uri`/`OpenableColumns`）。
+
+### M5-13a：`CoverRuleConfigSheet` → `:feature:settings/coverconfig/`
+
+封面设置页本体的前置件之一（另一个是 `CoverAlbumSelectSheet`）。83 行、**唯一改动**是资源访问
+（6 条文案），结构逐字保留。它已是共享契约（`CoverConfigIntent` / `CoverRuleUiState`）的纯消费者
+⇒ 自身零平台依赖。
+
+死资源 3 条（`restore_default` / `search_via_url` / `cover_rule_edit`）；另外 3 条在 `:app` 侧
+仍被引用（`cover_rule` 2 处、`save` 14 处、`enable` 3 处）。
+
+#### ⚠️ 另一件事：`CoverAlbumSelectSheet` 需要**给本模块新增 coil 依赖**
+
+页面本体（下一片）除了规则弹层，还引用 `CoverAlbumSelectSheet`(164 行)——而它用
+`coil3.compose.AsyncImage` 渲染图库缩略图。
+
+`:feature:settings` 目前经 `api(project(":core:designsystem"))` 间接看到 designsystem 的组件，
+但 designsystem 里的 coil 是 `implementation` ⇒ **不传递**，本模块看不到 `AsyncImage`。
+⇒ 要迁那个 sheet，就得二选一：
+
+| 选项 | 说明 |
+|---|---|
+| 给 `:feature:settings` 加 `libs.coil.compose` | 直接，但这是**模块依赖的净增**（不是搬迁） |
+| 在 designsystem 加一个公开的图片组件 | 更符合"共享组件归 designsystem"，但要先有第二个消费者 |
+
+⚠️ 这是**构建层的决定**，不是搬代码 ⇒ 本片不顺手做。已作为下一片的前置记在这里。
+
+#### 验证
+
+- 四门禁全绿 + feature 两端编译 + `:app` 编译/单测/打包 + 全模块测试
+- 计数 **784 / 1279 零偏离**（纯 UI 迁移，依 checklist 不加测试）
+- `lintAppDebug`：数字仍 5 errors / 94 warnings（⚠️ 任务本身 FAILED —— 既有问题，见 M5-12b 的说明）
+
+**下一步**：① 定 coil 那件事（见上）；② 迁 `CoverAlbumSelectSheet` + `CoverConfigScreen`(371) 本体，
+并把其宿主壳（46–67 行，含 `toastOnUi`）拆成独立的 `CoverConfigRouteScreen.kt`。

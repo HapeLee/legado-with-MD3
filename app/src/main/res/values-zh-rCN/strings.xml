@@ -672,7 +672,6 @@
     <string name="select_folder">选择文件夹</string>
     <string name="select_file">选择文件</string>
     <string name="no_find">没有发现，可以在书源里添加。</string>
-    <string name="restore_default">恢复默认</string>
     <string name="set_download_per">自定义缓存路径需要存储权限</string>
     <string name="black">黑色</string>
     <string name="content_empty">文章内容为空</string>
@@ -1239,8 +1238,6 @@
     <string name="only_wifi">仅 WiFi</string>
     <string name="only_wifi_summary">仅在 WiFi 下加载网络封面</string>
     <string name="cover_rule">封面规则</string>
-    <string name="search_via_url">搜索URL</string>
-	<string name="cover_rule_edit">封面规则</string>
     <string name="cover_rule_summary">进入详情页时使用封面规则重新获取封面</string>
     <string name="cover_rule_fields_required">搜索 URL 和封面规则不能为空</string>
     <string name="cover_selected_images_count">已选择 %1$d 张图片</string>

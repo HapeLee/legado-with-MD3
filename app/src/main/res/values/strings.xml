@@ -700,7 +700,6 @@
     <string name="select_folder">Select a folder</string>
     <string name="select_file">Select a file</string>
     <string name="no_find">No Discovery, you can add it in BookSource</string>
-    <string name="restore_default">Restore default</string>
     <string name="set_download_per">Custom cache path requires Storage permission</string>
     <string name="black">Black</string>
     <string name="content_empty">No content</string>
@@ -1290,8 +1289,6 @@
     <string name="only_wifi">Wi-Fi Only</string>
     <string name="only_wifi_summary">Load network cover only under wifi</string>
     <string name="cover_rule">Cover Rules</string>
-    <string name="search_via_url">Search via URL</string>
-	<string name="cover_rule_edit">Cover Rules</string>
     <string name="cover_rule_summary">Use the cover rule to retrieve the cover when entering the details page</string>
     <string name="cover_rule_fields_required">Search URL and cover rule cannot be empty</string>
     <string name="cover_selected_images_count">%1$d images selected</string>

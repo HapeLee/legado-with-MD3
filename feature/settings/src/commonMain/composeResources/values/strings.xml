@@ -366,4 +366,8 @@
     <string name="show_menu_icon">Show Menu Item Icons</string>
     <string name="restore_default">Restore default</string>
     <string name="cover_rule_fields_required">Search URL and cover rule cannot be empty</string>
+    <string name="cover_rule">Cover Rules</string>
+    <string name="enable">Enable</string>
+    <string name="search_via_url">Search via URL</string>
+    <string name="cover_rule_edit">Cover Rules</string>
 </resources>

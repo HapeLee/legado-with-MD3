@@ -606,7 +606,6 @@
     <string name="select_folder">選擇文件夾</string>
     <string name="select_file">選擇文件</string>
     <string name="no_find">沒有發現，可以在書源裏添加。</string>
-    <string name="restore_default">恢復默認</string>
     <string name="set_download_per">自定義緩存路徑需要存儲權限</string>
     <string name="black">黑色</string>
     <string name="content_empty">文章內容為空</string>
@@ -1077,8 +1076,6 @@
     <string name="only_wifi">仅WIFI</string>
     <string name="only_wifi_summary">仅在wifi下加载网络封面</string>
     <string name="cover_rule">封面规则</string>
-    <string name="search_via_url">搜索URL</string>
-	<string name="cover_rule_edit">封面规则</string>
     <string name="cover_rule_summary">进入详情页时使用封面规则重新获取封面</string>
     <string name="scroll_to_dur_source">定位到当前书源</string>
     <string name="sys_tts_config">系统tts设置</string>

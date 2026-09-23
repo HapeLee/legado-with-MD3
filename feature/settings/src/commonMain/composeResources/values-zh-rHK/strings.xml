@@ -345,4 +345,8 @@
     <string name="show_menu_icon">顯示選單項目圖標</string>
     <string name="restore_default">恢復默認</string>
     <string name="cover_rule_fields_required">搜索 URL 和封面規則不能為空</string>
+    <string name="cover_rule">封面规则</string>
+    <string name="enable">啟用</string>
+    <string name="search_via_url">搜索URL</string>
+    <string name="cover_rule_edit">封面规则</string>
 </resources>
