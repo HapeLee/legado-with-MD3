@@ -209,6 +209,39 @@ class ReadRecordRepositoryTest {
     }
 
     @Test
+    fun `deleting one timeline session keeps other sessions for the same book`() = runBlocking {
+        val first = session(bookUrl = "https://book.example", start = 1_000, end = 11_000)
+        val second = session(bookUrl = "https://book.example", start = 1_311_000, end = 1_321_000)
+        val third = session(bookUrl = "https://book.example", start = 2_621_000, end = 2_631_000)
+        repository.saveReadSession(first)
+        repository.saveReadSession(second)
+        repository.saveReadSession(third)
+
+        assertEquals(true, repository.deleteSession(first))
+
+        val remaining = database.readRecordDao.getSessionsByBook(deviceId, targetName, author)
+        assertEquals(2, remaining.size)
+        assertEquals(setOf(1_311_000L, 2_621_000L), remaining.map { it.startTime }.toSet())
+    }
+
+    @Test
+    fun `deleting a merged timeline item removes only its continuous session group`() = runBlocking {
+        val first = session(bookUrl = "https://book.example", start = 1_000, end = 11_000)
+        val second = session(bookUrl = "https://book.example", start = 21_000, end = 31_000)
+        val separate = session(bookUrl = "https://book.example", start = 1_431_000, end = 1_441_000)
+        repository.saveReadSession(first)
+        repository.saveReadSession(second)
+        repository.saveReadSession(separate)
+
+        val mergedDisplayItem = database.readRecordDao.allSession.first { it.startTime == first.startTime }
+            .copy(endTime = second.endTime)
+        assertEquals(true, repository.deleteSession(mergedDisplayItem))
+
+        val remaining = database.readRecordDao.getSessionsByBook(deviceId, targetName, author)
+        assertEquals(listOf(1_431_000L), remaining.map { it.startTime })
+    }
+
+    @Test
     fun `coexisting copies are timed independently while the work total is their sum`() =
         runBlocking {
             val copyA = "https://a.example/book"

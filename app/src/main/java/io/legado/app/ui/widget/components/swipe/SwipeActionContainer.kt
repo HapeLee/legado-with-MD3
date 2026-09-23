@@ -16,6 +16,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -33,6 +35,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.absoluteValue
 
 /** 滑动露出底块上下内缩量，让操作提示呈现为圆角矩形而不是整行色块。 */
@@ -51,16 +54,23 @@ private val SwipeActionIconSize = 24.dp
 @Composable
 fun SwipeActionContainer(
     modifier: Modifier = Modifier,
+    resetKey: Any? = null,
     startAction: SwipeAction? = null,
     endAction: SwipeAction? = null,
     content: @Composable () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    val currentStartAction by rememberUpdatedState(startAction)
+    val currentEndAction by rememberUpdatedState(endAction)
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { totalDistance ->
             totalDistance * 0.6f
         }
     )
+
+    LaunchedEffect(resetKey) {
+        dismissState.reset()
+    }
 
     LaunchedEffect(dismissState.targetValue) {
         if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) {
@@ -70,19 +80,25 @@ fun SwipeActionContainer(
         }
     }
 
-    LaunchedEffect(dismissState.settledValue) {
-        when (dismissState.settledValue) {
-            SwipeToDismissBoxValue.StartToEnd -> {
-                startAction?.onSwipe?.invoke()
-                dismissState.reset()
-            }
+    LaunchedEffect(dismissState) {
+        snapshotFlow { dismissState.settledValue }.collectLatest { settledValue ->
+            when (settledValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    currentStartAction?.onSwipe?.invoke()
+                    if (currentStartAction?.resetAfterSwipe != false) {
+                        dismissState.reset()
+                    }
+                }
 
-            SwipeToDismissBoxValue.EndToStart -> {
-                endAction?.onSwipe?.invoke()
-                dismissState.reset()
-            }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    currentEndAction?.onSwipe?.invoke()
+                    if (currentEndAction?.resetAfterSwipe != false) {
+                        dismissState.reset()
+                    }
+                }
 
-            else -> {}
+                else -> {}
+            }
         }
     }
 

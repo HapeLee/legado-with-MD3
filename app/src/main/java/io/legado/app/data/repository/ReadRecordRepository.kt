@@ -41,8 +41,15 @@ class ReadRecordRepository(
     val readRecordEnabled: Flow<Boolean> =
         localPreferencesRepository.getPreference(LocalPreferencesKeys.ENABLE_READ_RECORD, true)
 
+    val skipDeleteConfirm: Flow<Boolean> =
+        localPreferencesRepository.getBoolean(LocalPreferencesKeys.READ_RECORD_SKIP_DELETE_CONFIRM.name, false)
+
     suspend fun setReadRecordEnabled(enabled: Boolean) {
         localPreferencesRepository.updatePreference(LocalPreferencesKeys.ENABLE_READ_RECORD, enabled)
+    }
+
+    suspend fun setSkipDeleteConfirm(enabled: Boolean) {
+        localPreferencesRepository.putBoolean(LocalPreferencesKeys.READ_RECORD_SKIP_DELETE_CONFIRM.name, enabled)
     }
 
     /**
@@ -430,8 +437,11 @@ class ReadRecordRepository(
         }
     }
 
-    suspend fun deleteDetail(detail: ReadRecordDetail) {
-        database.withTransaction {
+    suspend fun deleteDetail(detail: ReadRecordDetail): Boolean {
+        return database.withTransaction {
+            val existed = dao.allDetail.any {
+                it.bookName == detail.bookName && it.bookAuthor == detail.bookAuthor && it.date == detail.date
+            }
             // 聚合详情代表所有设备同一天的阅读，删除时必须同步删除底层阅读时段记录。
             val affectedDevices = dao.allSession.asSequence()
                 .filter {
@@ -459,18 +469,59 @@ class ReadRecordRepository(
                     legacyReadTimes[deviceId] ?: 0L,
                 )
             }
+            existed
         }
     }
 
-    suspend fun deleteSession(session: ReadRecordSession) {
-        database.withTransaction {
+    suspend fun deleteSession(requestedSession: ReadRecordSession): Boolean {
+        return database.withTransaction {
+            // 时间线展示项可能经过合并或跨设备聚合，优先使用 Room 行 ID 定位真实记录，
+            // 避免使用展示层的结束时间反查不到底层会话。
+            val session = if (requestedSession.id > 0L) {
+                dao.allSession.firstOrNull { it.id == requestedSession.id }
+            } else {
+                dao.allSession.firstOrNull {
+                    it.bookName == requestedSession.bookName &&
+                        it.bookAuthor == requestedSession.bookAuthor &&
+                        it.startTime == requestedSession.startTime &&
+                        it.endTime == requestedSession.endTime &&
+                        it.words == requestedSession.words
+                }
+            } ?: return@withTransaction false
+            val sessionGroup = dao.allSession
+                .asSequence()
+                .filter {
+                    it.bookName == session.bookName &&
+                        it.bookAuthor == session.bookAuthor &&
+                        it.startTime.toDateString() == session.startTime.toDateString()
+                }
+                .sortedBy { it.startTime }
+                .toList()
+                .let { sessions ->
+                    val groups = sessions.fold(mutableListOf<MutableList<ReadRecordSession>>()) { groups, current ->
+                        val previous = groups.lastOrNull()?.lastOrNull()
+                        if (previous != null && current.startTime - previous.endTime <= 20 * 60 * 1000L) {
+                            groups.last().add(current)
+                        } else {
+                            groups.add(mutableListOf(current))
+                        }
+                        groups
+                    }
+                    groups.firstOrNull { group -> group.any { it.id == session.id } }
+                        ?: groups.firstOrNull { group ->
+                            group.any {
+                                it.startTime == session.startTime &&
+                                    it.endTime == session.endTime &&
+                                    it.words == session.words
+                            }
+                        }
+                        .orEmpty()
+                }
             val affectedDevices = dao.allSession.asSequence()
                 .filter {
                     it.bookName == session.bookName &&
                         it.bookAuthor == session.bookAuthor &&
-                        it.startTime == session.startTime &&
-                        it.endTime == session.endTime &&
-                        it.words == session.words
+                        it.id in sessionGroup.map { grouped -> grouped.id }
                 }
                 .mapTo(linkedSetOf()) { it.deviceId }
                 .apply { addAll(dao.getReadRecordsByName(session.bookName, session.bookAuthor).map { it.deviceId }) }
@@ -488,13 +539,7 @@ class ReadRecordRepository(
                     session.startTime.toDateString(),
                 )
             }
-            dao.deleteSessionByIdentity(
-                session.bookName,
-                session.bookAuthor,
-                session.startTime,
-                session.endTime,
-                session.words,
-            )
+            sessionGroup.forEach { dao.deleteSession(it) }
             val dateString = session.startTime.toDateString()
             affectedDevices.forEach { deviceId ->
                     val record = ReadRecord(
@@ -559,6 +604,7 @@ class ReadRecordRepository(
                         legacyReadTimes[deviceId] ?: 0L,
                     )
                 }
+            sessionGroup.isNotEmpty()
         }
     }
 
@@ -605,19 +651,25 @@ class ReadRecordRepository(
         }
     }
 
-    suspend fun deleteReadRecord(record: ReadRecord) {
-        database.withTransaction {
+    suspend fun deleteReadRecord(record: ReadRecord): Boolean {
+        return database.withTransaction {
+            val existed = dao.all.any {
+                it.bookName == record.bookName && it.bookAuthor == record.bookAuthor
+            }
             dao.deleteByName(record.bookName, record.bookAuthor)
             dao.deleteDetailByName(record.bookName, record.bookAuthor)
             dao.deleteSessionByName(record.bookName, record.bookAuthor)
+            existed
         }
     }
 
-    suspend fun clearReadRecords() {
-        database.withTransaction {
+    suspend fun clearReadRecords(): Boolean {
+        return database.withTransaction {
+            val existed = dao.all.isNotEmpty() || dao.allDetail.isNotEmpty() || dao.allSession.isNotEmpty()
             dao.clearReadRecordSessions()
             dao.clearReadRecordDetails()
             dao.clearReadRecords()
+            existed
         }
     }
 

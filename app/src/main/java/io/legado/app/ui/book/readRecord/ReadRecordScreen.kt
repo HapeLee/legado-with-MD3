@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,6 +54,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -75,6 +77,7 @@ import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppRadioButton
 import io.legado.app.ui.widget.components.CollapsibleHeader
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
@@ -147,6 +150,9 @@ fun ReadRecordRouteScreen(
         onScanRepair = { viewModel.onIntent(ReadRecordIntent.ScanRepair) },
         onRepairDatabase = { viewModel.onIntent(ReadRecordIntent.RepairDatabase) },
         effects = viewModel.effects,
+        onSetSkipDeleteConfirm = { enabled ->
+            viewModel.onIntent(ReadRecordIntent.SetSkipDeleteConfirm(enabled))
+        },
     )
 }
 
@@ -164,11 +170,12 @@ fun ReadRecordScreen(
     effects: Flow<ReadRecordEffect> = emptyFlow(),
     onScanRepair: () -> Unit = {},
     onRepairDatabase: () -> Unit = {},
+    onSetSkipDeleteConfirm: (Boolean) -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val noMergeCandidatesMessage = stringResource(R.string.no_merge_candidates)
-    val operationFailedMessage = stringResource(R.string.operation_failed)
 
     val displayMode = state.displayMode
     val readRecordEnabled = state.readRecordEnabled
@@ -184,19 +191,20 @@ fun ReadRecordScreen(
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
-                is ReadRecordEffect.ShowError -> {
-                    snackbarHostState.showSnackbar(effect.message.ifBlank { operationFailedMessage })
+                is ReadRecordEffect.ShowMessage -> {
+                    snackbarHostState.showSnackbar(context.getString(effect.messageRes))
                 }
             }
         }
     }
 
-    var skipDeleteConfirm by remember { mutableStateOf(false) }
+    var skipDeleteConfirmForPage by remember { mutableStateOf(false) }
+    var swipeResetKey by remember { mutableIntStateOf(0) }
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var pendingDeleteCount by remember { mutableStateOf(1) }
     var mergeDialogData by remember { mutableStateOf<Pair<ReadRecord, List<ReadRecord>>?>(null) }
     val onConfirmDelete: (Int, () -> Unit) -> Unit = { count, action ->
-        if (skipDeleteConfirm) {
+        if (skipDeleteConfirmForPage || state.skipDeleteConfirm) {
             action()
         } else {
             pendingDeleteCount = count
@@ -401,6 +409,7 @@ fun ReadRecordScreen(
                                 loadChapterTitle = loadChapterTitle,
                                 onBookClick = onBookClick,
                                 onConfirmDelete = onConfirmDelete,
+                                swipeResetKey = swipeResetKey,
                                 selectedItemKeys = selectedItemKeys,
                                 inSelectionMode = inSelectionMode,
                                 onToggleSelection = { key ->
@@ -463,6 +472,7 @@ fun ReadRecordScreen(
         show = showActionsSheet,
         showCalendar = showCalendar,
         readRecordEnabled = readRecordEnabled,
+        skipDeleteConfirm = state.skipDeleteConfirm,
         onDismissRequest = { showActionsSheet = false },
         onToggleCalendar = {
             showCalendar = !showCalendar
@@ -479,7 +489,12 @@ fun ReadRecordScreen(
             }
         },
         onScanRepair = { showActionsSheet = false; onScanRepair() },
-        onRepairDatabase = { showActionsSheet = false; onRepairDatabase() }
+        onRepairDatabase = { showActionsSheet = false; onRepairDatabase() },
+        onResetDeleteConfirm = {
+            showActionsSheet = false
+            skipDeleteConfirmForPage = false
+            onIntent(ReadRecordIntent.RestoreDeleteConfirmation)
+        }
     )
 
     state.repairReport?.let { report ->
@@ -499,10 +514,14 @@ fun ReadRecordScreen(
     }
 
     var skipDeleteConfirmTemp by remember(pendingDeleteAction != null) { mutableStateOf(false) }
+    var skipDeleteConfirmLongTermTemp by remember(pendingDeleteAction != null) { mutableStateOf(false) }
 
     AppAlertDialog(
         data = pendingDeleteAction,
-        onDismissRequest = { pendingDeleteAction = null },
+        onDismissRequest = {
+            pendingDeleteAction = null
+            swipeResetKey++
+        },
         title = stringResource(R.string.confirm_delete_read_record),
         content = { _ ->
             Column {
@@ -517,10 +536,21 @@ fun ReadRecordScreen(
                 )
                 if (pendingDeleteCount != -1) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    CheckboxItem(
-                        title = stringResource(R.string.do_not_remind_again),
-                        checked = skipDeleteConfirmTemp,
-                        onCheckedChange = { skipDeleteConfirmTemp = it }
+                    DeleteConfirmationChoice(
+                        text = stringResource(R.string.do_not_remind_again_this_page),
+                        selected = skipDeleteConfirmTemp,
+                        onClick = {
+                            skipDeleteConfirmTemp = !skipDeleteConfirmTemp
+                            if (skipDeleteConfirmTemp) skipDeleteConfirmLongTermTemp = false
+                        },
+                    )
+                    DeleteConfirmationChoice(
+                        text = stringResource(R.string.do_not_remind_again_long_term),
+                        selected = skipDeleteConfirmLongTermTemp,
+                        onClick = {
+                            skipDeleteConfirmLongTermTemp = !skipDeleteConfirmLongTermTemp
+                            if (skipDeleteConfirmLongTermTemp) skipDeleteConfirmTemp = false
+                        },
                     )
                 }
             }
@@ -530,12 +560,16 @@ fun ReadRecordScreen(
             action.invoke()
             pendingDeleteAction = null
             if (pendingDeleteCount != -1) {
-                skipDeleteConfirm = skipDeleteConfirmTemp
+                skipDeleteConfirmForPage = skipDeleteConfirmTemp || skipDeleteConfirmLongTermTemp
+                if (skipDeleteConfirmLongTermTemp) {
+                    onSetSkipDeleteConfirm(true)
+                }
             }
         },
         dismissText = stringResource(R.string.cancel),
         onDismiss = {
             pendingDeleteAction = null
+            swipeResetKey++
         }
     )
 
@@ -677,12 +711,14 @@ private fun ReadRecordActionsSheet(
     show: Boolean,
     showCalendar: Boolean,
     readRecordEnabled: Boolean,
+    skipDeleteConfirm: Boolean,
     onDismissRequest: () -> Unit,
     onToggleCalendar: () -> Unit,
     onReadRecordEnabledChange: (Boolean) -> Unit,
     onClearReadRecords: () -> Unit,
     onScanRepair: () -> Unit,
     onRepairDatabase: () -> Unit,
+    onResetDeleteConfirm: () -> Unit,
 ) {
     AppModalBottomSheet(
         show = show,
@@ -721,6 +757,14 @@ private fun ReadRecordActionsSheet(
                 imageVector = Icons.Default.Merge,
                 onClick = onRepairDatabase
             )
+            if (skipDeleteConfirm) {
+                CompactClickableSettingItem(
+                    title = stringResource(R.string.restore_delete_confirmation),
+                    description = stringResource(R.string.restore_delete_confirmation_summary),
+                    imageVector = Icons.Default.Delete,
+                    onClick = onResetDeleteConfirm,
+                )
+            }
             CompactClickableSettingItem(
                 title = stringResource(R.string.clear_read_records),
                 description = stringResource(R.string.clear_read_records_summary),
@@ -728,6 +772,24 @@ private fun ReadRecordActionsSheet(
                 onClick = onClearReadRecords
             )
         }
+    }
+}
+
+@Composable
+private fun DeleteConfirmationChoice(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick)
+            .semantics { role = Role.RadioButton },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AppRadioButton(selected = selected, onClick = onClick)
+        AppText(text = text)
     }
 }
 
@@ -923,6 +985,7 @@ fun LazyListScope.renderListByMode(
     loadChapterTitle: suspend (String, String, Long) -> String?,
     onBookClick: (String, String) -> Unit,
     onConfirmDelete: (Int, () -> Unit) -> Unit,
+    swipeResetKey: Int,
     selectedItemKeys: Set<String>,
     inSelectionMode: Boolean,
     onToggleSelection: (String) -> Unit,
@@ -964,6 +1027,7 @@ fun LazyListScope.renderListByMode(
                         itemContent(Modifier.animateItem())
                     } else {
                         SwipeActionContainer(
+                            resetKey = swipeResetKey,
                             modifier = Modifier.animateItem(),
                             startAction = SwipeAction(
                                 icon = Icons.Default.Delete,
@@ -974,6 +1038,7 @@ fun LazyListScope.renderListByMode(
                                     }
                                 },
                                 contentDescription = deleteActionDescription
+                                ,resetAfterSwipe = false
                             )
                         ) {
                             itemContent(Modifier)
@@ -1012,6 +1077,7 @@ fun LazyListScope.renderListByMode(
                         itemContent(Modifier.animateItem())
                     } else {
                         SwipeActionContainer(
+                            resetKey = swipeResetKey,
                             modifier = Modifier.animateItem(),
                             startAction = SwipeAction(
                                 icon = Icons.Default.Delete,
@@ -1022,6 +1088,7 @@ fun LazyListScope.renderListByMode(
                                     }
                                 },
                                 contentDescription = deleteActionDescription
+                                ,resetAfterSwipe = false
                             )
                         ) {
                             itemContent(Modifier)
@@ -1058,6 +1125,7 @@ fun LazyListScope.renderListByMode(
                     itemContent(Modifier.animateItem())
                 } else {
                     SwipeActionContainer(
+                        resetKey = swipeResetKey,
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
                             icon = Icons.Default.Delete,
@@ -1067,7 +1135,8 @@ fun LazyListScope.renderListByMode(
                                     onIntent(ReadRecordIntent.DeleteRecord(record))
                                 }
                             },
-                            contentDescription = deleteActionDescription
+                                contentDescription = deleteActionDescription
+                                ,resetAfterSwipe = false
                         ),
                         endAction = SwipeAction(
                             icon = Icons.Default.Merge,

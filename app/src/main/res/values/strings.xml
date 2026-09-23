@@ -2724,6 +2724,14 @@
     <string name="read_record_repair">Repair reading records</string>
     <string name="read_record_repair_summary">Merge records with a determined owner and remove reading-period records with identical fields</string>
     <string name="operation_failed">Operation failed</string>
+    <string name="do_not_remind_again_this_page">Don’t ask again until this screen is closed</string>
+    <string name="do_not_remind_again_long_term">Do not remind me again in the future</string>
+    <string name="restore_delete_confirmation">Restore delete confirmation</string>
+    <string name="restore_delete_confirmation_summary">Ask for confirmation before deleting reading records again</string>
+    <string name="delete_confirmation_restored">Delete confirmation restored</string>
+    <string name="read_record_deleted">Reading record deleted</string>
+    <string name="read_records_cleared">Reading records cleared</string>
+    <string name="read_records_merged">Reading records merged</string>
     <string name="merge_read_records_message">Merge selected reading records into “%1$s” by %2$s.</string>
     <string name="merge_read_record_candidate">%1$s / %2$s (%3$s)</string>
     <string name="no_merge_candidates">No other reading records can be merged</string>

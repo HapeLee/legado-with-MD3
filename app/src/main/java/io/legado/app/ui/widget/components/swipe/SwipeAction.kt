@@ -8,5 +8,7 @@ data class SwipeAction(
     val background: Color,
     val onSwipe: () -> Unit,
     val hapticFeedback: Boolean = true,
-    val contentDescription: String? = null
+    val contentDescription: String? = null,
+    /** 删除类操作由数据刷新移除列表项，不立即回弹；普通操作保持自动复位。 */
+    val resetAfterSwipe: Boolean = true,
 )

@@ -2587,6 +2587,14 @@
     <string name="read_record_repair">修復閱讀記錄</string>
     <string name="read_record_repair_summary">合併可確定歸屬的記錄，並清理欄位完全相同的閱讀時段記錄</string>
     <string name="operation_failed">操作失敗</string>
+    <string name="do_not_remind_again_this_page">本次開啟不再提示</string>
+    <string name="do_not_remind_again_long_term">今後不再提醒</string>
+    <string name="restore_delete_confirmation">恢復刪除確認</string>
+    <string name="restore_delete_confirmation_summary">刪除閱讀記錄前再次進行確認</string>
+    <string name="delete_confirmation_restored">已恢復刪除確認</string>
+    <string name="read_record_deleted">已刪除閱讀記錄</string>
+    <string name="read_records_cleared">已清空閱讀記錄</string>
+    <string name="read_records_merged">已合併閱讀記錄</string>
     <string name="merge_read_records_message">將選取的閱讀記錄合併到「%1$s」/%2$s。</string>
     <string name="merge_read_record_candidate">%1$s / %2$s（%3$s）</string>
     <string name="no_merge_candidates">沒有可合併的其他閱讀記錄</string>
