@@ -2053,3 +2053,32 @@ Windows 若复现跨盘 Gradle cache 问题，再使用仓库已验证的 `-Dgra
 - [ ] 所有 capability 显式说明 available/unavailable；无成功 no-op。
 - [ ] PoC 模块已删除或仍有明确未知项与删除条件。
 - [ ] CI、模块图、Feature catalog、target matrix 与源码一致。
+
+## 进度补记（M5-12a → M5-15a）
+
+⚠️ 这一段是**补记**：M5-12a 之后我连续若干片只更新了 `feature-slicing-audit-config.md`（详细记录），
+漏了本文件的逐片条目 ⇒ 这里按片补回一行摘要，**详情以审计文档为准**。
+
+| 片 | 内容 | 关键判断 / 发现 |
+|---|---|---|
+| M5-12a | `coverConfig` 逻辑层（Contract + VM + `CoverAlbumContract`）→ `:feature:settings/coverconfig/` | ⚠️ **`io.legado.app.domain.**` 不是"共享层"信号**：`CoverAlbumUseCase`/`Gateway`/`CoverAlbumImageInput`（后者用 `java.io.InputStream`）都定义在 `:app` ⇒ 改收窄契约 `CoverRulePlatform` + `CoverAlbumProvider`，不搬整条链 |
+| M5-12b | `CoverConfigViewModelTest`（10 例） | 兑现 M5-12a 留下的 finding（迁 VM 未补覆盖） |
+| M5-13a/b/c | `CoverRuleConfigSheet` / `CoverAlbumSelectSheet` / 封面设置页本体 | M5-13b 引入本模块**首个 coil 依赖**（designsystem 内是 `implementation`、不透出；用真实需求直接加，而非为单一消费者造共享组件）；M5-13c 抓到 `Integer.toHexString`（`java.lang.Integer`，JVM 专用 → `toString(16)`） |
+| M5-14a/b | 图库逻辑层（扩 `CoverAlbumProvider` + 10 例）/ 图库管理页本体 | 「URI 串 → 图片输入」整段留宿主（`CoverAlbumImageInput` 带 `java.io.InputStream`，出不了 `:app`）；**`coverConfig` 子域收官** |
+| M5-15a | 勘察 `themeManage` / `themeConfig`（只量不改） | ⚠️ **勘察工具三个盲点**（只索引类 / 不区分源集 / `:app` 未进索引且"查不到"被静默跳过）—— 三次都给出过"无 `:app` 私有依赖"的错误结论 |
+
+### 一处重要的验证教训（贯穿上述多片）
+
+M5-12b 发现：`lintAppDebug` **一直在失败**，而我过去十几片只 grep 了它的汇总数字
+（"5 errors / 94 warnings"）从未检查任务退出状态 ⇒ 稳定的数字掩盖了稳定的失败。
+那 5 个 error 都在未迁移的遗留 `:app` 文件里（`BookInfoScreen` ×3、`BackstageWebView`、
+`BottomWebViewDialog`），**非迁移引入**；处理方式（修 / 进 `lint-baseline.xml` / 暂不处理）
+待定。自那以后每片都同时看 `BUILD SUCCESSFUL|FAILED`。已并入 checklist。
+
+### 下一步（M5-15b）
+
+上提 `CompactSettingItems`(311 行，4 个组件，无任何 `android./java./R.` 导入) + 其依赖
+`ValueStepper`(73 行，⚠️ **不是零改动**：带 `androidx.compose.ui.res.stringResource` 与
+`:core:ui` 自己的 `R`)，从 `:core:ui` 到 `:core:designsystem/commonMain`。
+理由：这是 `themeManage` 与 `themeConfig` **两块共用的前置**，且被 10 个 `:app` 文件使用、
+同包名 ⇒ 零 import 改动。

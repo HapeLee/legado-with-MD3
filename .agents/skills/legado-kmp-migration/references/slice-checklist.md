@@ -598,6 +598,29 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   would show `legacyHelp` counts and fail. Leave it in its existing report-only area and only add an
   import for the relocated interface. "Contract moved down, implementation still in `:app`" is an
   accepted transition state, not a defect to force-fix in the same slice.
+- ⚠️ **A dependency survey must be built from *definition sites*, and "not found" must never be
+  silent.** Measured in M5-15a: three successive versions of my own survey tool each printed a
+  confident **"no `:app`-private dependencies"** verdict for the same two subdomains, and each was
+  wrong for a different reason:
+  1. **Only indexing uppercase symbols (classes).** Most of the `:app` coupling in this repo arrives
+     through **top-level functions and extension properties** — `postEvent`, `toastOnUi`,
+     `getCompatDrawable`, `externalFiles`, `inputStream`, `openInputStream`,
+     `takePersistablePermissionSafely`. They are lowercase in the import line, so a class-only index
+     reports nothing.
+  2. **Ignoring source sets.** A symbol defined in designsystem's `androidMain` (or in Android-only
+     `:core:ui`) is *not* visible from a feature's `commonMain`. The test is "definition lives in
+     `<module>/src/commonMain`", not "definition is in a shared module".
+  3. **Never indexing `:app` at all** — the most ironic one. `:app` paths look like
+     `app/src/main/...` (no module segment), so a path regex written for `<module>/src/<set>/`
+     matches nothing under `:app`. Both real blockers (`ThemePackageManager`, `SavedTheme`) were
+     silently absent from the index. Compounding it, the lookup miss was handled with `continue`
+     (drop it), so the output looked clean.
+  Recipe: index **every** declaration kind (class / interface / object / `fun Name(` /
+  `fun Type.name(` / `val`/`var` incl. extensions) from **all** modules, resolve each import to a
+  **(module, source set)** pair, and when a symbol cannot be located, **print it as unresolved**
+  rather than skipping it. A silent skip is indistinguishable from "clean" — the same failure mode
+  as M5-12a, where `io.legado.app.domain.**` *looked* like the shared layer while `:app` was
+  defining classes in that very package.
 - **Hoisting a widget from `:core:ui` to `:core:designsystem/commonMain` is mechanical *only if you
   check first*.** The recipe (same package ⇒ zero import churn for consumers) has been used many
   times, but it is a claim about the file's contents, not a property of the move. Measured in

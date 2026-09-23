@@ -1656,3 +1656,66 @@ M5-14a/14b（图库逻辑层 + 页面）。`:app` 侧只剩**两个宿主壳**
 `themeConfig` 系的 `LauncherIconPickerSheet` 等三个重活，外加各页的宿主壳。
 建议下一轮从 `themeManage` 或 `themeConfig` 里挑一个先做**勘察**（它们的前置数可能比
 `readConfig` 更多，值得先量清再决定是否拆片）。
+
+### M5-15a：勘察 `themeManage` / `themeConfig`（本片只做量，不改代码）
+
+⚠️ **这次勘察推翻了我先前的一个判断**：M5-10a 那轮我记的是「`themeManage` 卡在 `SavedTheme` +
+`ThemePackageManager`」—— 方向对，但**当时是猜的**，且漏了很多（见下方真实清单与工具盲点）。
+
+#### 真实阻塞清单（按**定义文件的模块+源集**判定）
+
+**`themeManage`（4 文件 / 1138 行）**
+
+| 文件 | 阻塞 |
+|---|---|
+| `ThemeManageViewModel`(303) | `SavedTheme` · `ThemePackageManager`（**都在 `:app` 的 `help.config`**）· `android.net.Uri` · `androidx.annotation.StringRes` |
+| `ThemeManageScreen`(331) | `SavedTheme` |
+| `EditThemeSheet`(403) | 4 × `Compact*SettingItem`（在 Android-only 的 `:core:ui`） |
+| `ThemeManageRouteScreen`(101) | `SavedTheme` · `ThemePackageManager` · `toastOnUi`（宿主壳，按判据留 `:app` ✓） |
+
+**`themeConfig`（11 文件 / 3388 行）** —— 明显更重，`ThemeConfigViewModel`(612) 一处就带 7 个：
+
+`LauncherIconHelp` · `ThemeConfigStore` · `MD5Utils` · `FileDoc` · `FileUtils` · `externalFiles` ·
+`inputStream` · `openInputStream` · 8 × `Launcher*`（`Launcher0…Launcher6` / `LauncherW`）·
+`MainDestination` · `mainDestinationIcon` · `move` · `TagColorGenerator` · `FontFolderState` ·
+`FontSelectSheet` · 4 × `Compact*SettingItem`，外加 `AppCompatDelegate` / `ConstraintLayout` /
+`Uri` / `ColorUtils` / `ComponentName` / `ImageView` / `SuppressLint`。
+
+> 反直觉的一点：**1326 行的 `ThemeConfigScreen` 反而是最干净的** —— 23 个 `io.legado.app` 导入
+> 全在共享层，只有 `FontFolderState` / `FontSelectSheet` 两个 `:app` 符号。
+
+#### 两块共用的前置：`Compact*SettingItem` 家族可上提
+
+`core/ui/.../settingItem/CompactSettingItems.kt`(311 行，4 个组件) **无任何
+`android.` / `java.` / `R.` 导入** ⇒ 与 `CardTabRow`(M5-9b-pre) 同一形态的上提候选。
+它被 **10 个 `:app` 文件**使用（含 `themeManage` 的 `EditThemeSheet` 与 `themeConfig` 的两个
+sheet）⇒ 上提后两块同时受益；同包名（designsystem 已有 `...components.settingItem/`）⇒ 零 import 改动。
+
+⚠️ 连带项：它依赖的 `ValueStepper`(73 行) 也还在 `:core:ui`，**且不是零改动上提** ——
+它带 `androidx.compose.ui.res.stringResource` 与 `:core:ui` 自己的 `R`
+（与 M5-10a-pre 的 `TimePickerDialog` 同一课：**看着纯 Compose，藏着平台写法**）。
+具体用了哪几条文案待下一片核。
+
+#### ⚠️ 我这次勘察脚本踩了**三个**盲点，每个都曾给出"看起来没问题"的错误结论
+
+1. **只索引大写符号（类）** ⇒ 漏掉真正的耦合。本仓库的 `:app` 私有耦合大量来自
+   **顶层函数与扩展属性**（`postEvent` / `toastOnUi` / `getCompatDrawable` / `externalFiles` /
+   `inputStream` / `openInputStream` / `takePersistablePermissionSafely` …），它们在 import 里是小写。
+   第一版报「无 `:app` 私有依赖」，差点让我以为两块都能直接搬。
+2. **不区分源集** ⇒ 把 designsystem 的 `androidMain` / `:core:ui` 的实现算成"共享"，
+   而 feature 的 `commonMain` 根本看不到它。判定标准必须是「定义落在 `<模块>/src/commonMain`」。
+3. **`:app` 从未进索引**（最讽刺的一个）：`:app` 的路径是 `app/src/main/...`（**没有模块段**），
+   而我照 `core|feature|…/<模块>/src/<源集>` 形态写了正则 ⇒ `app:` 类路径一条都没匹配上，
+   于是 `ThemePackageManager` / `SavedTheme` 这两个**真正的阻塞**被漏报。
+   更糟的是我把"查不到"写成 `continue` **静默跳过** —— 与 M5-12a 那次（`io.legado.app.domain.**`
+   看着像共享层）是**同一个失效模式**：工具不报错，结论却是错的。
+
+⇒ 已并入 checklist：**勘察工具的"没找到"必须报出来，不能静默跳过**；判定依赖要按
+**定义文件的模块+源集**，不按包名、也不按符号名大小写。
+
+#### 本片验证
+
+不改代码 ⇒ 四门禁跑一次确认工作区干净即可（临时勘察脚本已清理）。
+
+**下一步**：M5-15b＝上提 `CompactSettingItems` + `ValueStepper`（两块共用的前置，
+纯搬运 + 少量改写，可独立验证）→ 之后按 `themeManage` 逻辑层/页面、`themeConfig` 逻辑层/页面推进。
