@@ -342,6 +342,28 @@ object MainNavigator {
         tracker?.onBackStackChanged(backStack)
     }
 
+    /**
+     * 替换栈顶路由。
+     *
+     * 「在架」跳转必须用这个而不是 [navigateToRoute]：BookInfo -> BookInfo 走的是
+     * `backStack.add(route)`，会让返回栈变成 Search -> BookInfo(A) -> BookInfo(B)，
+     * 用户要按两次返回才回得去。替换栈顶后，一次返回即可回到搜索 / 发现。
+     *
+     * 只换栈顶，不清栈也不跳首页，因此保留了用户来时的返回目标。
+     */
+    fun replaceTopRoute(
+        backStack: MutableList<NavKey>,
+        route: NavKey,
+        tracker: MainNavRouteTracker? = null,
+    ) {
+        if (backStack.isEmpty()) {
+            backStack.add(route)
+        } else {
+            backStack[backStack.lastIndex] = route
+        }
+        tracker?.onBackStackChanged(backStack)
+    }
+
     fun navigateBack(activity: Activity, backStack: MutableList<NavKey>) {
         navigateBack(activity, backStack, null)
     }

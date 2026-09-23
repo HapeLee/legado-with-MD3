@@ -541,6 +541,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                             navRouteTracker,
                         )
                     },
+                    onReplaceTopRoute = { route ->
+                        MainNavigator.replaceTopRoute(backStack, route, navRouteTracker)
+                    },
                     onNavigateBack = {
                         MainNavigator.navigateBack(this@MainActivity, backStack, navRouteTracker)
                     },

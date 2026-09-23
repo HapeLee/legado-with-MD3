@@ -14,6 +14,8 @@ data class OtherSettings(
     val replaceEnableDefault: Boolean = true,
     val autoClearExpired: Boolean = true,
     val showAddToShelfAlert: Boolean = true,
+    /** 非在架书籍详情页命中确定的在架同作品时，自动触发「在架」行为（单本跳转 / 多本弹窗）。 */
+    val autoJumpToShelfBook: Boolean = false,
     val showMangaUi: Boolean = true,
     val webServiceWakeLock: Boolean = false,
     val sourceEditMaxLine: Int = Int.MAX_VALUE,

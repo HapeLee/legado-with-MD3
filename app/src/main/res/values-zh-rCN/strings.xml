@@ -1344,6 +1344,10 @@
     <string name="check_selected_interval">选中所选区间</string>
     <string name="show_add_to_shelf_alert_title">返回时提示放入书架</string>
     <string name="show_add_to_shelf_alert_summary">阅读未放入书架的书籍在返回时提示放入书架</string>
+    <string name="auto_jump_to_shelf_book_title">自动跳转到在架书籍</string>
+    <string name="auto_jump_to_shelf_book_summary">非在架书籍被确定为与书架中已有书籍为同一部作品时，自动触发「在架」行为，无需手动点击</string>
+    <string name="shelf_existing">在架</string>
+    <string name="shelf_candidate_picker_title">选择在架书籍</string>
     <string name="review">段评</string>
     <string name="rule_review_url">段评URL（reviewUrl）</string>
     <string name="rule_avatar">段评发布者头像（avatarRule）</string>

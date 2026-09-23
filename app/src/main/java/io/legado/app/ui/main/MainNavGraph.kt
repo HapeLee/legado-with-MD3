@@ -268,6 +268,7 @@ fun MainActivity.mainEntryProvider(
     useRail: Boolean,
     sharedTransitionScope: SharedTransitionScope,
     onNavigateToRoute: (NavKey) -> Unit,
+    onReplaceTopRoute: (NavKey) -> Unit,
     onNavigateBack: () -> Unit,
 ) = entryProvider {
     entry<MainRouteWebView>(
@@ -1271,6 +1272,10 @@ fun MainActivity.mainEntryProvider(
             },
             onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath ->
                 onNavigateToRoute(MainRouteBookInfo(name, author, bookUrl, origin, coverPath))
+            },
+            onNavigateToShelfBook = { name, author, bookUrl, origin, coverPath ->
+                // 替换栈顶：一次返回就回到搜索 / 发现，不会停在刚才那本非在架书籍的详情页
+                onReplaceTopRoute(MainRouteBookInfo(name, author, bookUrl, origin, coverPath))
             },
             onNavigateToExploreShow = { title, sourceUrl, exploreUrl ->
                 onNavigateToRoute(MainRouteExploreShow(title, sourceUrl, exploreUrl))

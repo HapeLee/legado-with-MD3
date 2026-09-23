@@ -67,6 +67,7 @@ fun BookInfoRouteScreen(
     onOpenMangaReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
     onOpenAudioPlay: (bookUrl: String, inBookshelf: Boolean) -> Unit = { _, _ -> },
     onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
+    onNavigateToShelfBook: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
     onOpenCharacterDetail: (bookUrl: String, characterId: String?) -> Unit = { _, _ -> },
     onOpenCharacterNetwork: (bookUrl: String) -> Unit = {},
@@ -190,6 +191,16 @@ fun BookInfoRouteScreen(
 
                 is BookInfoEffect.NavigateToBookInfo -> {
                     onNavigateToBookInfo(effect.name, effect.author, effect.bookUrl, effect.origin, effect.coverPath)
+                }
+
+                is BookInfoEffect.NavigateToShelfBook -> {
+                    onNavigateToShelfBook(
+                        effect.name,
+                        effect.author,
+                        effect.bookUrl,
+                        effect.origin,
+                        effect.coverPath,
+                    )
                 }
 
                 is BookInfoEffect.NavigateToExploreShow -> {

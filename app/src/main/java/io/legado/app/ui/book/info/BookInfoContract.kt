@@ -57,6 +57,15 @@ data class BookInfoUiState(
     /** 加入书架时发现的疑似重复；非空时由冲突 Sheet 决定共存还是迁移。 */
     val shelfConflict: BookshelfConflict? = null,
     val isResolvingShelfConflict: Boolean = false,
+    /**
+     * 书架上**确定为同一部作品**的在架书籍（书名归一化相等且两边作者都非空且相等）。
+     *
+     * 与 [shelfConflict] 的宽松「疑似」口径刻意不同：本字段用于展示「在架」入口并执行跳转，
+     * 误判代价是把用户导航到另一本书，因此只在能确定时填充。
+     */
+    val shelfCandidates: ImmutableList<ConflictBookSummary> = persistentListOf(),
+    /** 多本在架同作品时，由选择 Sheet 让用户决定去哪一本。 */
+    val showShelfCandidatePicker: Boolean = false,
 )
 
 @Stable
@@ -193,6 +202,9 @@ sealed interface BookInfoIntent {
 
     data object DismissShelfConflict : BookInfoIntent
     data class OpenShelfConflictBook(val summary: ConflictBookSummary) : BookInfoIntent
+    data object OpenShelfCandidates : BookInfoIntent
+    data object DismissShelfCandidatePicker : BookInfoIntent
+    data class SelectShelfCandidate(val summary: ConflictBookSummary) : BookInfoIntent
     data class CoexistWithShelfConflict(
         val existingBookUrl: String,
         val options: ChangeSourceMigrationOptions,
@@ -270,6 +282,21 @@ sealed interface BookInfoEffect {
         val action: BookInfoCallbackAction,
     ) : BookInfoEffect
     data class NavigateToBookInfo(
+        val name: String?,
+        val author: String?,
+        val bookUrl: String,
+        val origin: String?,
+        val coverPath: String?,
+    ) : BookInfoEffect
+
+    /**
+     * 「在架」跳转。
+     *
+     * 与 [NavigateToBookInfo] 的区别只在导航方式：宿主会**替换栈顶**而不是压栈，
+     * 这样一次返回就回到搜索 / 发现，不会停在刚才那本非在架书籍的详情页。
+     * 不复用 NavigateToBookInfo 是为了不改动入架冲突里「打开已有书」的既有返回行为。
+     */
+    data class NavigateToShelfBook(
         val name: String?,
         val author: String?,
         val bookUrl: String,

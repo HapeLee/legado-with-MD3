@@ -109,6 +109,8 @@ class OtherConfigViewModel(
                 updateOtherSetting { it.copy(autoClearExpired = intent.value) }
             is OtherConfigIntent.ShowAddToShelfAlertChanged ->
                 updateOtherSetting { it.copy(showAddToShelfAlert = intent.value) }
+            is OtherConfigIntent.AutoJumpToShelfBookChanged ->
+                updateOtherSetting { it.copy(autoJumpToShelfBook = intent.value) }
             is OtherConfigIntent.ShowMangaUiChanged ->
                 updateOtherSetting { it.copy(showMangaUi = intent.value) }
             is OtherConfigIntent.WebServiceWakeLockChanged ->
@@ -364,6 +366,7 @@ private fun OtherSettings.toUiState(current: OtherConfigUiState): OtherConfigUiS
         replaceEnableDefault = replaceEnableDefault,
         autoClearExpired = autoClearExpired,
         showAddToShelfAlert = showAddToShelfAlert,
+        autoJumpToShelfBook = autoJumpToShelfBook,
         showMangaUi = showMangaUi,
         webServiceWakeLock = webServiceWakeLock,
         sourceEditMaxLine = sourceEditMaxLine,

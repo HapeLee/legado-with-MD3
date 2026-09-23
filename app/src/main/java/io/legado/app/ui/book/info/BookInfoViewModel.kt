@@ -32,6 +32,7 @@ import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.BookshelfConflict
+import io.legado.app.domain.model.ConflictBookSummary
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ThemeSettings
@@ -40,6 +41,7 @@ import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.domain.usecase.FindBookshelfConflictUseCase
+import io.legado.app.domain.usecase.FindShelfSameBookUseCase
 import io.legado.app.domain.usecase.ResolveBookshelfConflictUseCase
 import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
@@ -73,6 +75,7 @@ import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.postEvent
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -108,6 +111,7 @@ class BookInfoViewModel(
     private val bookGroupRepository: BookGroupRepository,
     private val bookRepository: BookRepository,
     private val findBookshelfConflictUseCase: FindBookshelfConflictUseCase,
+    private val findShelfSameBookUseCase: FindShelfSameBookUseCase,
     private val resolveBookshelfConflictUseCase: ResolveBookshelfConflictUseCase,
     private val bookSourceRepository: BookSourceRepository,
     private val searchRepository: SearchRepository,
@@ -266,6 +270,9 @@ class BookInfoViewModel(
             } else {
                 bookSourceRepository.getBookSource(book.origin)
             }
+            // ① 第一次检测：用的是已知的 name/author（DB 或搜索缓存）。
+            // 命中且开启自动跳转时会直接跳走，可以省下这一次详情请求。
+            if (checkShelfSameBooks(book)) return@onSuccess
             upBook(book, source)
         }.onError {
             showMessage(it.localizedMessage ?: "未找到书籍")
@@ -343,6 +350,21 @@ class BookInfoViewModel(
                 pendingShelfBook = null
                 _screenState.update { it.copy(shelfConflict = null) }
             }
+
+            BookInfoIntent.OpenShelfCandidates -> {
+                val candidates = _screenState.value.shelfCandidates
+                when {
+                    candidates.isEmpty() -> Unit
+                    candidates.size == 1 -> navigateToShelfCandidate(candidates.first())
+                    else -> _screenState.update { it.copy(showShelfCandidatePicker = true) }
+                }
+            }
+
+            BookInfoIntent.DismissShelfCandidatePicker -> {
+                _screenState.update { it.copy(showShelfCandidatePicker = false) }
+            }
+
+            is BookInfoIntent.SelectShelfCandidate -> navigateToShelfCandidate(intent.summary)
 
             is BookInfoIntent.OpenShelfConflictBook -> {
                 // 先收起冲突 Sheet 再导航：详情页之间跳转会复用同一份冲突状态，
@@ -796,6 +818,49 @@ class BookInfoViewModel(
         }
     }
 
+    /**
+     * 检测书架上**确定为同一部作品**的在架书籍，结果写入 [BookInfoUiState.shelfCandidates]。
+     *
+     * 三处调用：
+     * ① `initData` 后（已知身份，命中且自动跳转时可省掉详情请求）；
+     * ② `loadBookInfo` 爬取后（身份最可信，无条件刷新 ① 的结果）；
+     * ③ `upBook` 非爬取分支（本地书 / 已有 tocUrl，否则这些书永远不显示入口）。
+     *
+     * 已在架的书本身就是用户要看的那本，不需要这个入口。
+     *
+     * @return true 表示已触发跳转，调用方应跳过后续加载。
+     */
+    private suspend fun checkShelfSameBooks(book: Book): Boolean {
+        if (inBookshelf) {
+            _screenState.update { it.copy(shelfCandidates = persistentListOf()) }
+            return false
+        }
+        val candidates = findShelfSameBookUseCase.execute(book)
+        _screenState.update { it.copy(shelfCandidates = candidates.toImmutableList()) }
+        if (candidates.isEmpty()) return false
+        if (!otherSettingsGateway.currentSettings.autoJumpToShelfBook) return false
+        if (candidates.size == 1) {
+            navigateToShelfCandidate(candidates.first())
+            return true
+        }
+        // 多本：书架里确实存在多本同名同作者（通常来自共存），交给用户选
+        _screenState.update { it.copy(showShelfCandidatePicker = true) }
+        return false
+    }
+
+    private fun navigateToShelfCandidate(summary: ConflictBookSummary) {
+        _screenState.update { it.copy(showShelfCandidatePicker = false) }
+        emitEffect(
+            BookInfoEffect.NavigateToShelfBook(
+                name = summary.name,
+                author = summary.author,
+                bookUrl = summary.bookUrl,
+                origin = summary.origin,
+                coverPath = summary.displayCover,
+            )
+        )
+    }
+
     /** 入架前的通用处理：去掉「未上架」标记并保证排序值落在书架最前。 */
     private suspend fun prepareBookForShelf(book: Book) {
         book.removeType(BookType.notShelf)
@@ -976,6 +1041,10 @@ class BookInfoViewModel(
                     if (inBookshelf) {
                         loadedBook.save()
                     }
+                    // ② 第二次检测：用爬取后的真实 name/author 无条件刷新第一次结果。
+                    // 搜索侧常缺作者（第一次会不命中），而 canReName 又可能改写身份，
+                    // 所以无论第一次是否命中都要重算一次。
+                    if (checkShelfSameBooks(loadedBook)) return@onSuccess
                     syncUiState(isTocLoading = showLoading)
                     refreshMeta(loadedBook)
                     if (loadedBook.isWebFile) {
@@ -1048,6 +1117,9 @@ class BookInfoViewModel(
         if (book.tocUrl.isEmpty() && !book.isLocal) {
             loadBookInfo(book, runPreUpdateJs = inBookshelf, showLoading = false)
         } else {
+            // ③ 非爬取路径（本地书 / 已有 tocUrl）也要检测，否则这些书永远不显示「在架」。
+            // 这里没有昂贵的详情请求要省，异步跑即可。
+            viewModelScope.launch { checkShelfSameBooks(book) }
             execute {
                 bookRepository.getChapters(book.bookUrl)
             }.onSuccess { chapters ->

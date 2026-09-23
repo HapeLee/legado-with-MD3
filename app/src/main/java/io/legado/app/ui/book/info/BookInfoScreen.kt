@@ -31,14 +31,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -47,6 +50,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.BookmarkAdd
@@ -305,15 +309,6 @@ private fun BookInfoScreenContent(
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { onIntent(BookInfoIntent.ReadClick) },
-                containerColor = LegadoTheme.colorScheme.primaryContainer,
-                contentColor = LegadoTheme.colorScheme.onPrimaryContainer,
-                icon = { Icon(Icons.Default.Book, null) },
-                text = { Text(stringResource(R.string.reading)) },
-            )
-        },
         alwaysDrawBehindBars = true,
     ) { paddingValues ->
         val book = state.book
@@ -437,6 +432,16 @@ private fun BookInfoScreenContent(
                         }
                     }
                 }
+
+                // 必须放在 Box 的最后一个子项：AppPullToRefresh / LazyColumn 是
+                // fillMaxSize 且绘制在它之后，会拦截这一整片的触摸事件，
+                // 放在前面的话两个按钮就点不动了。
+                BookInfoFloatingActions(
+                    showShelfEntry = state.shelfCandidates.isNotEmpty() && !state.inBookshelf,
+                    onShelfClick = { onIntent(BookInfoIntent.OpenShelfCandidates) },
+                    onReadClick = { onIntent(BookInfoIntent.ReadClick) },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
         }
     }
@@ -542,6 +547,13 @@ private fun BookInfoScreenContent(
         onMigrate = { existingBookUrl, options ->
             onIntent(BookInfoIntent.MigrateShelfConflict(existingBookUrl, options))
         },
+    )
+
+    ShelfCandidatePickerSheet(
+        show = state.showShelfCandidatePicker,
+        candidates = state.shelfCandidates,
+        onDismissRequest = { onIntent(BookInfoIntent.DismissShelfCandidatePicker) },
+        onSelect = { onIntent(BookInfoIntent.SelectShelfCandidate(it)) },
     )
 
     BookInfoDialogs(state = state, onIntent = onIntent)
@@ -1135,6 +1147,48 @@ private fun BookInfoHeader(
                 }
             }
         }
+    }
+}
+
+/**
+ * 「在架」与「阅读」两个悬浮按钮，同排左右分置。
+ *
+ * 不用 Scaffold 的 `floatingActionButton` 槽位：该槽位是右对齐放置的，
+ * 在里面放 `fillMaxWidth` 的容器会整体向左溢出屏幕，左侧按钮会被裁掉。
+ * 这里自己对齐 BottomStart / BottomEnd，两个按钮共用同一套
+ * 导航栏 inset + 内边距，因此左右严格对称。
+ */
+@Composable
+private fun BookInfoFloatingActions(
+    showShelfEntry: Boolean,
+    onShelfClick: () -> Unit,
+    onReadClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+    ) {
+        if (showShelfEntry) {
+            ExtendedFloatingActionButton(
+                onClick = onShelfClick,
+                modifier = Modifier.align(Alignment.CenterStart),
+                containerColor = LegadoTheme.colorScheme.primaryContainer,
+                contentColor = LegadoTheme.colorScheme.onPrimaryContainer,
+                icon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, null) },
+                text = { Text(stringResource(R.string.shelf_existing)) },
+            )
+        }
+        ExtendedFloatingActionButton(
+            onClick = onReadClick,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            containerColor = LegadoTheme.colorScheme.primaryContainer,
+            contentColor = LegadoTheme.colorScheme.onPrimaryContainer,
+            icon = { Icon(Icons.Default.Book, null) },
+            text = { Text(stringResource(R.string.reading)) },
+        )
     }
 }
 

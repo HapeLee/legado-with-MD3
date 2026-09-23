@@ -186,6 +186,13 @@ fun OtherConfigScreen(
                 )
 
                 SwitchSettingItem(
+                    title = stringResource(R.string.auto_jump_to_shelf_book_title),
+                    description = stringResource(R.string.auto_jump_to_shelf_book_summary),
+                    checked = state.autoJumpToShelfBook,
+                    onCheckedChange = { onIntent(OtherConfigIntent.AutoJumpToShelfBookChanged(it)) }
+                )
+
+                SwitchSettingItem(
                     title = stringResource(R.string.show_manga_ui),
                     checked = state.showMangaUi,
                     onCheckedChange = { onIntent(OtherConfigIntent.ShowMangaUiChanged(it)) }

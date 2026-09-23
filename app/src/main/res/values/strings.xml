@@ -1401,6 +1401,10 @@
     <string name="check_selected_interval">Select zones</string>
     <string name="show_add_to_shelf_alert_title">Prompt to Add to Bookshelf When Return</string>
     <string name="show_add_to_shelf_alert_summary">Prompt to add to bookshelf when return from reading books that are not on the bookshelf</string>
+    <string name="auto_jump_to_shelf_book_title">Jump to Book on Shelf Automatically</string>
+    <string name="auto_jump_to_shelf_book_summary">When a book not on the shelf is confirmed to be the same work as one already on the shelf, trigger the "On Shelf" action automatically instead of waiting for you to tap it</string>
+    <string name="shelf_existing">On Shelf</string>
+    <string name="shelf_candidate_picker_title">Select a Book on Shelf</string>
     <string name="review">Review</string>
     <string name="rule_avatar">Paragraph Review Author Avatar (avatarRule)</string>
     <string name="rule_review_url">Paragraph Review URL (reviewUrl)</string>

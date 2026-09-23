@@ -157,6 +157,7 @@ object PreferKey {
     const val localBookImportSort = "localBookImportSort"
     const val pageTouchSlop = "pageTouchSlop"
     const val showAddToShelfAlert = "showAddToShelfAlert"
+    const val autoJumpToShelfBook = "autoJumpToShelfBook"
     const val ignoreAudioFocus = "ignoreAudioFocus"
     const val parallelExportBook = "parallelExportBook"
     const val progressBarBehavior = "progressBarBehavior"

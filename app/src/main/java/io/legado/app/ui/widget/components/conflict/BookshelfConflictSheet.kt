@@ -192,7 +192,7 @@ fun BookshelfConflictSheet(
 }
 
 @Composable
-private fun ConflictBookCard(
+internal fun ConflictBookCard(
     summary: ConflictBookSummary,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

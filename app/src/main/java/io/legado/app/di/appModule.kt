@@ -185,6 +185,7 @@ import io.legado.app.domain.usecase.ExploreBooksUseCase
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.domain.usecase.ExportBookshelfUseCase
 import io.legado.app.domain.usecase.FindBookshelfConflictUseCase
+import io.legado.app.domain.usecase.FindShelfSameBookUseCase
 import io.legado.app.domain.usecase.GenerateBookshelfAutoGroupPlanUseCase
 import io.legado.app.domain.usecase.GenerateChapterSummaryUseCase
 import io.legado.app.domain.usecase.GetChapterContentUseCase
@@ -446,6 +447,7 @@ val appModule = module {
     singleOf(::AddBookUseCase)
     singleOf(::AddToBookshelfUseCase)
     singleOf(::FindBookshelfConflictUseCase)
+    singleOf(::FindShelfSameBookUseCase)
     singleOf(::ResolveBookshelfConflictUseCase)
     singleOf(::ImportBookshelfUseCase)
     singleOf(::ExportBookshelfUseCase)
