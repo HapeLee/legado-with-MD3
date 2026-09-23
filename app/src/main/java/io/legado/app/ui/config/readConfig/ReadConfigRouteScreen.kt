@@ -7,6 +7,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
+import io.legado.app.feature.settings.readconfig.ReadConfigEffect
+import io.legado.app.feature.settings.readconfig.ReadConfigViewModel
 
 @Composable
 fun ReadConfigRouteScreen(

@@ -1046,3 +1046,92 @@ expected:<Loading(title=Loading)> but was:<null>
 - 护眼 sheet 在两个入口（阅读设置页 / 阅读菜单）的渲染与两个时间选择器的实际交互。需真机冒烟。
 
 **下一步**：见上方「战略结论」—— 建议先定优先级。
+
+### M5-11a：`readConfig` 逻辑层 → `:feature:settings/readconfig/`
+
+按 M5-8a/M5-9a 的节奏（**先逻辑层、后页面**）：`ReadConfigContract`(118) + `ReadConfigViewModel`(225)
++ `ApplyReadSettingUseCase`(62) 迁进共享层。VM 与契约**逐字**保留 —— 它们的依赖本来就全在共享层
+（两个 gateway + `ReadSettings` / `ThemeSettings`）。真正要处理的是另外两件。
+
+#### 一、`EyeProtectionUiState` 必须上提（读者与设置页共用）
+
+它是 `@Stable` data class，原声明在 `:app` 的 `ReadBookContract.kt` 里（与阅读器契约同文件），
+被**阅读器**（`ReadBookContract` / `ReadStyleDelegate`）与**设置页**（`ReadConfigContract` / VM）共用
+⇒ 必须落在双方都能看见的地方。本片放进设置页契约（与 `ReadConfigUiState` 同文件），阅读器侧改
+import —— 与 M5-9b 里 `:app` 的 `HomeScreen` 改 import 特征模块的 `BackupOptionSheet` 是同一处境。
+
+⚠️ **临时归属**（KDoc 已注明）：护眼本质属于「外观」，阅读菜单只是入口之一；将来若有
+`:feature:reader`，这类「读者与设置共用」的 UI 状态应重新划分。
+
+#### 二、⚠️ 刻意**没有**把 `ConfigUpdateAction` 搬进共享层
+
+`ApplyReadSettingUseCase` 迁移前直接调四个 `:app` 符号，其中 `ConfigUpdateAction` 是
+`ui.book.read` 里的 `sealed interface`，被 **10 个 `:app` 文件**使用（`ReadBookViewModel` /
+`ReadConfigUpdateDelegate` / `ReadStyleDelegate` / `ReadBookController` / `ThemeConfigStore` …）。
+
+它是**阅读器**的类型：阅读器**收集并分发**这些动作，设置页只是**投递方**。搬进共享层会让共享层
+反向依赖阅读器的概念 —— 与既有判据「契约发 Effect、宿主执行平台动作」相反。
+
+⇒ 收成窄契约 `ReadConfigApplyPlatform`（**7 个方法，与迁移前的调用一一对应**），
+Android 实现 `AndroidReadConfigApplyPlatform` 留在 `:app/platform/`，由它去拼具体的
+`ConfigUpdateAction` 集合 / 调 `ReadBook`。与 M5-7 的 `DownloadCachePlatform` 同一形态。
+
+```kotlin
+updateSystemUiAndStyle()  // ReadConfigUpdateBus.post({UpdateSystemUi, UpdateStyle})
+updateActionBar()         // postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+reloadContent()           // ReadBook.loadContent(false)
+updateSeekBar()           // postEvent(EventBus.UP_SEEK_BAR, true)
+updatePageSlopSquare()    // ReadConfigUpdateBus.post({UpdatePageSlopSquare})
+updatePageAnim(animate)   // renderCallBack?.upPageAnim(animate)
+invalidateTextPage()      // ReadConfigUpdateBus.post({InvalidateTextPage})
+```
+
+两处需要留意的等价改写：
+
+- `upPageAnim()` 的迁移前是**无参调用**，而 `upPageAnim(upRecorder: Boolean = false)` ⇒
+  契约显式传 `false`（`NoAnimScrollPageChanged`），`OptimizeRenderChanged` 传 `true`。
+- `OptimizeRenderChanged` 迁移前是 `upPageAnim(true)` **然后** `loadContent(false)` 两步 ⇒
+  契约保留这个顺序，并由用例断言顺序。
+
+#### ⚠️ 一处 blanket 替换的误伤（当场发现并回退）
+
+我把 `:app` 里 `import io.legado.app.ui.config.readConfig.*` 批量改成 feature 包时，误伤了两个
+服务文件与 `MainNavGraph` —— 它们 import 的是 **`ReadConfig`（弃用门面）与 `ReadConfigRouteScreen`
+（宿主壳）**，这两个**仍留在 `:app`**。编译前靠人工核对发现并回退。
+⇒ 教训：批量改 import 前，先分清「哪些符号迁走了、哪些留下」。
+
+另有一处编译才暴露的遗漏：`app/src/test/.../EyeProtectionTest.kt` 与**同包**的
+`readConfig` 三个文件（`ReadConfigRouteScreen` / `ReadConfigScreen` / `PageKeySheet`）此前靠
+「同包」直接引用契约类型、没有 import 行 ⇒ blanket 替换覆盖不到它们（补 import 解决）。
+
+#### 新增 9 条用例（迁移前**零测试**）
+
+`ApplyReadSettingUseCaseTest`：状态栏/导航栏 → 刷系统UI与样式；菜单四项 → 只刷操作栏；
+排版四项 → 重新排版；进度条 → 只刷进度条；热区 → 只刷热区；下划线 → 文本页失效；
+关动画 → `updatePageAnim(false)`；渲染优化 → **`pageAnim:true` 然后 `reloadContent`（顺序）**；
+不在映射表里的改动（含护眼）→ **什么都不调**。
+
+⚠️ 断言的是**调了平台的哪个方法**（假实现只记方法名），而不是「有没有副作用」——
+接错线会被抓住。这张表不是可以顺手整理的地方：改错的表现是「改了设置、当前页没反应」
+或「无谓地重排整本书」，评审里看不出来。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需 baseline 变动**：`AndroidReadConfigApplyPlatform` 只 import
+  `ReadBook` / `EventBus` / `ReadConfigUpdateBus` / `ConfigUpdateAction` / `postEvent`，
+  不含 `*Utils` / `*Help` 类型名 ⇒ 不触 `legacyNaming`；也不含 `help.*` ⇒ 不触 `legacyHelp`）
+- `:feature:settings` 编译 + 测试（**66 例 0 失败**）+ `:app` 编译/单测/打包 + 全模块测试
+- 计数 **765 → 774 / 1260 → 1269**（+9），零偏离
+- `lintAppDebug` 仍 **5 errors / 94 warnings**
+
+#### 未验证
+
+- ⚠️ `AndroidReadConfigApplyPlatform` 的七个方法**没有被任何测试执行** —— 它们只在真机
+  上跑（需要正在运行的阅读器）。本片只保证「共享层调对了方法名」，**方法体里调的
+  `ReadBook` / `ReadConfigUpdateBus` 是否还是原来那些动作**靠人工逐条对照（已写在
+  KDoc 的注释里），没有自动化保证。
+- 页面本身未迁（见 M5-10a 的战略结论）。
+
+**下一步**：`readConfig` 页面本体 —— 前置是 `ClickActionConfigSheet`（`BackHandler` +
+`koinInject` 两个策略决定）、`PageKeySheet`（`android.view.KeyEvent`）、
+`CanvasRecorderFactory`（`android.os.Build`）。

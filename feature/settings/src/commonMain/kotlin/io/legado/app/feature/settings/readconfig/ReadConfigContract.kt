@@ -1,7 +1,31 @@
-package io.legado.app.ui.config.readConfig
+package io.legado.app.feature.settings.readconfig
 
 import androidx.compose.runtime.Stable
-import io.legado.app.ui.book.read.EyeProtectionUiState
+
+/**
+ * 护眼模式设置，来源是 `ThemeSettings`，与外观设置共用同一份值。
+ *
+ * M5-11a：从 `:app` 的 `ui/book/read/ReadBookContract.kt` 迁来（**逐字**，含 `configured`
+ * 派生字段）。它同时被**阅读器**与**阅读设置页**使用，而两者分属 `:app` 与 `:feature:settings`
+ * ⇒ 必须落在共享层。本片放在设置页契约里（与 [ReadConfigUiState] 同文件），阅读器侧改为
+ * import 本文件 —— 与 M5-9b 里 `:app` 的 `HomeScreen` 改 import 特征模块的
+ * `BackupOptionSheet` 是同一处境。
+ *
+ * ⚠️ **临时归属**：护眼本质属于「外观」，阅读菜单只是入口之一。将来若有 `:feature:reader`，
+ * 这类「读者与设置共用」的 UI 状态应重新划分归属。
+ */
+@Stable
+data class EyeProtectionUiState(
+    val enabled: Boolean = false,
+    val intensity: Int = 50,
+    val autoNight: Boolean = false,
+    val schedule: Boolean = false,
+    val startTime: String = "22:00",
+    val endTime: String = "07:00",
+) {
+    val configured: Boolean
+        get() = enabled || autoNight
+}
 
 @Stable
 data class ReadConfigUiState(

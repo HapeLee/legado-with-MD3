@@ -331,8 +331,10 @@ import io.legado.app.feature.settings.downloadcache.DownloadCachePlatform
 import io.legado.app.platform.AndroidDownloadCachePlatform
 import io.legado.app.feature.settings.lab.LabConfigViewModel
 import io.legado.app.feature.settings.otherconfig.OtherConfigViewModel
-import io.legado.app.ui.config.readConfig.ApplyReadSettingUseCase
-import io.legado.app.ui.config.readConfig.ReadConfigViewModel
+import io.legado.app.feature.settings.readconfig.ApplyReadSettingUseCase
+import io.legado.app.feature.settings.readconfig.ReadConfigApplyPlatform
+import io.legado.app.feature.settings.readconfig.ReadConfigViewModel
+import io.legado.app.platform.AndroidReadConfigApplyPlatform
 import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel
 import io.legado.app.ui.config.themeManage.ThemeManageViewModel
 import io.legado.app.feature.settings.translation.TranslationConfigViewModel
@@ -566,6 +568,10 @@ val appModule = module {
     // 缓存目录 / 图片内存缓存 resize）收成一个窄契约。实现留在 `:app`
     // （`CacheBook` + `HttpHelper` + `FileUtils` + `ImageProvider` 都在这里）。
     single<DownloadCachePlatform> { AndroidDownloadCachePlatform(androidContext()) }
+    // M5-11a：readConfig 的「改完设置要通知正在运行的阅读器」那一组动作收成窄契约。
+    // 实现留在 `:app` —— `ReadBook` / `ReadConfigUpdateBus` / `ConfigUpdateAction` 都在这里，
+    // 且 `ConfigUpdateAction` 是**阅读器**的类型（设置页只是投递方，不该反向依赖它）。
+    single<ReadConfigApplyPlatform> { AndroidReadConfigApplyPlatform() }
     // M5-9a：backupConfig 的四组「备份/恢复忽略项」（`:app` 的 `help.storage.BackupConfig`）。
     // 实现无状态、不持有 Context ⇒ 直接 new；那四组 map 本身是 `:app` 侧的 `by lazy` 全局。
     single<BackupIgnoreStore> { AndroidBackupIgnoreStore() }

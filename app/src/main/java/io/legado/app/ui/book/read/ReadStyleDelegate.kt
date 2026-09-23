@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
 import kotlin.time.Duration.Companion.milliseconds
 import androidx.core.graphics.ColorUtils as AndroidColorUtils
+import io.legado.app.feature.settings.readconfig.EyeProtectionUiState
 
 /**
  * 阅读样式域（R2.2 续批）：字体、取色、背景图、样式方案导入导出、日夜切换与其提醒、护眼。

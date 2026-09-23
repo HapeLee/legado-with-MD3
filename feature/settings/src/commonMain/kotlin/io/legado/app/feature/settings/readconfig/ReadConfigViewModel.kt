@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.readConfig
+package io.legado.app.feature.settings.readconfig
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -6,13 +6,17 @@ import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.domain.model.settings.ThemeSettings
-import io.legado.app.ui.book.read.EyeProtectionUiState
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+// M5-11a：从 `:app` 的 `ui/config/readConfig` 迁来，**逐字** —— 它的依赖本来就全在共享层
+// （两个 gateway + `ReadSettings` / `ThemeSettings`），唯一要处理的是 `EyeProtectionUiState`
+// 与 `ApplyReadSettingUseCase`：前者随本片搬进同包（见 `ReadConfigContract.kt` 的 KDoc），
+// 后者也随本片搬来并改为注入 `ReadConfigApplyPlatform`。所以本文件除 import 外零改动。
 
 class ReadConfigViewModel(
     private val settingsGateway: ReadSettingsGateway,

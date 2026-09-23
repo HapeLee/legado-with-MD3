@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalTime
+import io.legado.app.feature.settings.readconfig.EyeProtectionUiState
 
 class EyeProtectionTest {
 

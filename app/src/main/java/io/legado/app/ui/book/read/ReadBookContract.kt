@@ -28,6 +28,7 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlin.uuid.Uuid
+import io.legado.app.feature.settings.readconfig.EyeProtectionUiState
 
 @Stable
 data class ReminderUiState(
@@ -305,20 +306,6 @@ data class ReadBookUiState(
 ) {
     val menuVisible: Boolean
         get() = menuState.visible
-}
-
-/** 护眼模式设置，来源是 ThemeSettings，与外观设置共用同一份值。 */
-@Stable
-data class EyeProtectionUiState(
-    val enabled: Boolean = false,
-    val intensity: Int = 50,
-    val autoNight: Boolean = false,
-    val schedule: Boolean = false,
-    val startTime: String = "22:00",
-    val endTime: String = "07:00",
-) {
-    val configured: Boolean
-        get() = enabled || autoNight
 }
 
 @Stable

@@ -1875,6 +1875,30 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      `BookCover`(`Bitmap`/`Drawable`) 那条链）——
      **`ui/config` 剩余项已进入「每片都要先跨端化或抽重契约」的区间**。
      建议下一轮先与使用者确认优先级，而不是默认按文件数挑最小的继续啃。
+   - **M5-11a 已完成（2026-09-24）：`readConfig` 逻辑层 → `:feature:settings/readconfig/`。**
+     按「先逻辑层、后页面」的节奏：Contract(118) + VM(225) + ApplyReadSettingUseCase(62)。
+     VM 与契约**逐字**（依赖本就在共享层）。两件真要处理的事：
+     - **`EyeProtectionUiState` 上提**：读者与设置页共用 ⇒ 必须双方可见。放进设置页契约，
+       阅读器改 import（与 M5-9b 的 `HomeScreen` 改 import 特征模块同一处境）。⚠️ 临时归属。
+     - ⚠️ **刻意没有**把 `ConfigUpdateAction` 搬进共享层：它是**阅读器**的类型
+       （被 10 个 `:app` 文件使用，阅读器收集并分发），设置页只是投递方 ⇒ 搬过来会让共享层
+       反向依赖阅读器概念。改为窄契约 `ReadConfigApplyPlatform`（7 方法，与迁移前调用一一对应），
+       Android 实现留 `:app/platform/`。等价改写两处：`upPageAnim()` 无参 = `false`；
+       `OptimizeRenderChanged` = `upPageAnim(true)` **然后** `loadContent(false)`（顺序保留）。
+     - ⚠️ **一处 blanket 替换误伤**（当场回退）：批量改 import 时误伤了 import `ReadConfig`
+       （**弃用门面，留在 `:app`**）的两个服务文件与 `MainNavGraph`（`ReadConfigRouteScreen`
+       也是宿主壳）⇒ 批量改 import 前要先分清哪些符号迁走了、哪些留下。
+       另有同包无 import 的文件（`EyeProtectionTest`、三个 readConfig 文件）覆盖不到，靠编译暴露。
+     - 新增 **9 例**（迁移前零测试）：断言**调了平台的哪个方法**（假实现只记方法名），
+       含渲染优化的**顺序**、以及「不在映射表里的改动（含护眼）什么都不调」。
+     - 验证：四门禁全绿（**G4 无需变动** —— 新适配器不含 `*Utils`/`*Help`/`help.*`）
+       + `:feature:settings`（**66 例**）+ `:app` 编译/单测/打包 + 全模块测试；
+       计数 **765 → 774 / 1260 → 1269**；lint 仍 **5 errors / 94 warnings**。
+       ⚠️ 未验证：`AndroidReadConfigApplyPlatform` 七个方法**无测试执行**（需真机正在运行的
+       阅读器），方法体是否仍为原来那些动作靠人工逐条对照 + KDoc 注释。
+     **下一步**：`readConfig` 页面本体 —— 前置是 `ClickActionConfigSheet`（`BackHandler` +
+     `koinInject` 两个策略决定）、`PageKeySheet`（`android.view.KeyEvent`）、
+     `CanvasRecorderFactory`（`android.os.Build`）。
      验证：四门禁全绿（G4 无需变动）+ designsystem（**42 例**，含迁入 3 例）/`:core:ui`/
      `:feature:settings`/`:app` 编译 + 全模块测试；计数 **762 → 765 / 1257 → 1260**；
      资源 11×4 逐字一致 + designsystem 216/216；死资源 2 条；lint **5 errors / 94 warnings**。

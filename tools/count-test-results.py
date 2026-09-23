@@ -258,7 +258,12 @@ RESULT_DIRS = {
 # 迁到 `:core:designsystem/src/commonTest`（本工具扫 `designsystem (testAndroidHostTest)`）。
 # ⚠️ 它此前并非没在跑 —— CI 的 `verify.yml` 明确执行 `:core:ui:testDebugUnitTest`，
 # 只是本计数器的模块清单里没有 `:core:ui`。所以这 +3 是**可见性**增加，不是用例增加。
-BASELINE_MAIN = 765
+# M5-11a：765 → **774**（**+9** = `ApplyReadSettingUseCaseTest`）。readConfig 的逻辑层迁进
+# `:feature:settings`，把「intent → 通知阅读器做什么」那张映射表从四个 `:app` 直连
+# （`ReadBook` / `ReadConfigUpdateBus` / `ConfigUpdateAction` / `postEvent`）里解放出来
+# ⇒ 它第一次可测。用例断言的是**调了平台的哪个方法**（假实现只记方法名），
+# 含「渲染优化 = 先带参刷新再重排」的**顺序**、以及「不在映射表里的改动不通知阅读器」。
+BASELINE_MAIN = 774
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -347,7 +352,8 @@ BASELINE_MAIN = 765
 # M5-9a：1246 → **1256**（**+10** = `BackupConfigViewModelTest`）。主集同步到 761。
 # M5-9b：1256 → **1257**（**+1** = 拆掉一例竞态测试得到的两例）。主集同步到 762。
 # M5-10a：1257 → **1260**（**+3** = 迁入的 `TimePickerDialogTest`，可见性变化而非新增覆盖）。
-BASELINE_ALL = 1260
+# M5-11a：1260 → **1269**（**+9** = `ApplyReadSettingUseCaseTest`）。主集同步到 774。
+BASELINE_ALL = 1269
 
 
 def tally(d: pathlib.Path):
