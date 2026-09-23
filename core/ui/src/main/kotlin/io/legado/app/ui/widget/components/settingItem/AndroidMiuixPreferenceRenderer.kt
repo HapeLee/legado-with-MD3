@@ -9,6 +9,7 @@ import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 
 /**
  * [MiuixPreferenceRenderer] 的 Android 实现。
@@ -75,6 +76,36 @@ private object AndroidMiuixPreferenceRenderer : MiuixPreferenceRenderer {
             title = title,
             summary = summary,
             items = items.map { display -> DropdownItem(title = display) },
+            selectedIndex = selectedIndex,
+            startAction = imageVector?.let { icon ->
+                {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null
+                    )
+                }
+            },
+            onSelectedIndexChange = onSelectedIndexChange,
+        )
+    }
+
+    // M5-15c：与迁移前 `CompactSettingItems` 里那段 `WindowDropdownPreference(...)` 逐字等价。
+    // 与 `overlaySpinnerPreference` 的区别只在两处：`items` **不做** `DropdownItem` 包装
+    // （该组件的 `items` 本来就是字符串列表），其余（`startAction` 的那个 Icon、`insideMargin`
+    // 之类常量）与那段原调用一致。
+    @Composable
+    override fun windowDropdownPreference(
+        title: String,
+        summary: String?,
+        items: List<String>,
+        selectedIndex: Int,
+        imageVector: ImageVector?,
+        onSelectedIndexChange: (Int) -> Unit,
+    ) {
+        WindowDropdownPreference(
+            title = title,
+            summary = summary,
+            items = items,
             selectedIndex = selectedIndex,
             startAction = imageVector?.let { icon ->
                 {

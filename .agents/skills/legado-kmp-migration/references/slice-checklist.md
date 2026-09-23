@@ -651,6 +651,25 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   rather than skipping it. A silent skip is indistinguishable from "clean" — the same failure mode
   as M5-12a, where `io.legado.app.domain.**` *looked* like the shared layer while `:app` was
   defining classes in that very package.
+- **When the target module already has a *designed seam* for your blocker, extend the seam — do not
+  invent a parallel one, and do not silently reuse a neighbouring method.** M5-15c (the follow-up to
+  M5-15b's failed hoist) is the worked example: `CompactSettingItems` had to go onto
+  `MiuixPreferenceRenderer`, and of its three bypassed call sites, **two matched existing contract
+  methods parameter-for-parameter** (`switchPreference`, `arrowPreference`) while the third
+  (`WindowDropdownPreference`) genuinely needed a new method. The temptation was to route the third
+  through the existing `overlaySpinnerPreference` — same-looking signature, and it would have
+  compiled. It would also have **changed the widget**: `WindowDropdownPreference` takes
+  `List<String>` while `OverlaySpinnerPreference` takes wrapped `DropdownItem`s, i.e. two different
+  miuix components. The codebase's own stated criterion is "behaviour verbatim-equivalent to before
+  the move" (`ClickableSettingItem`'s note), so the correct move was to grow the contract and say in
+  its KDoc **why the new method looks like its neighbour but is not it**. Two corollaries:
+  constants used at the call site (`modifier = Modifier`, `insideMargin = BasicComponentDefaults…`)
+  belong in the implementation, not the contract — that precedent is already documented; and
+  extending an `interface` **breaks every implementer**, including the `commonTest` probe, whose own
+  comment calls that compile error "what a contract test is supposed to do" — update the probe, don't
+  test-shortcut around it.
+  Also verify the seam did not leak: after migrating, the shared-layer signature must still contain
+  **zero** third-party (Android-only artifact) types.
 - **Hoisting a widget from `:core:ui` to `:core:designsystem/commonMain` is mechanical *only if you
   check first*.** The recipe (same package ⇒ zero import churn for consumers) has been used many
   times, but it is a claim about the file's contents, not a property of the move. Measured in

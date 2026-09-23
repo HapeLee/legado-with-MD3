@@ -84,6 +84,32 @@ interface MiuixPreferenceRenderer {
         imageVector: ImageVector?,
         onSelectedIndexChange: (Int) -> Unit,
     )
+
+    /**
+     * 渲染一个 Miuix 风格的「窗口下拉选择设置项」（M5-15c 新增，为 `CompactSettingItems`
+     * 上提让路）。与 [overlaySpinnerPreference] 同一个约束：`miuix-preference` 没有 desktop 变体。
+     *
+     * ⚠️ 参数面与 [overlaySpinnerPreference] **看起来一样，但是另一个方法** —— 因为迁移前
+     * `CompactDropdownSettingItem` 调的是 miuix 的 `WindowDropdownPreference`，而
+     * `ListSettingItem` 调的是 `OverlaySpinnerPreference`：**两个不同的组件**。
+     * 既有先例的判据是「迁移后行为与迁移前**逐字等价**」（见 `ClickableSettingItem` 的注释），
+     * 所以这里不去把 `Compact*` 改成复用 `overlaySpinnerPreference` —— 那等于顺手换了渲染。
+     *
+     * 两处细节取自迁移前那段 `WindowDropdownPreference(...)` 的实际调用：
+     * - `items` 直接收 `List<String>`：该组件的 `items` 本来就是字符串列表，**不需要**
+     *   [overlaySpinnerPreference] 里那层 `DropdownItem(title = …)` 包装。
+     * - `startAction`（一个 `@Composable () -> Unit`）与 [arrowPreference] 同理退化成
+     *   `imageVector: ImageVector?` —— 调用方本来就只传一个 `Icon(imageVector, null)`。
+     */
+    @Composable
+    fun windowDropdownPreference(
+        title: String,
+        summary: String?,
+        items: List<String>,
+        selectedIndex: Int,
+        imageVector: ImageVector?,
+        onSelectedIndexChange: (Int) -> Unit,
+    )
 }
 
 /**

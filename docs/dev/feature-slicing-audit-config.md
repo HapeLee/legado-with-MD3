@@ -1794,3 +1794,57 @@ sheet）⇒ 上提后两块同时受益；同包名（designsystem 已有 `...co
 **下一步**：把 `CompactSettingItems` 的三处 miuix `preference` 直接调用改写成走
 `MiuixPreferenceRenderer` 契约（先读契约与三个既有范文的写法，再决定是否扩契约参数面），
 之后才是 `themeManage` / `themeConfig`。
+
+### M5-15c：`CompactSettingItems` 改写到契约上并上提（M5-15b 的坑填上了）
+
+先读契约（`MiuixPreferenceRenderer.kt`）+ Android 实现（`AndroidMiuixPreferenceRenderer.kt`）
++ 三个既有范文（`SwitchSettingItem` / `ClickableSettingItem` / `ListSettingItem`）后再动手。
+结果比预想干净：
+
+**三个站点里两个与既有契约方法 1:1 对应**（参数逐项一致）：
+
+| 站点 | 迁移前直调 | 契约方法 |
+|---|---|---|
+| `CompactSwitchSettingItem` | `SwitchPreference(title, summary, checked, onCheckedChange, modifier = Modifier, enabled)` | `switchPreference(title, summary, checked, enabled, onCheckedChange)` ✓ 现成 |
+| `CompactClickableSettingItem` | `ArrowPreference(title, summary, insideMargin = BasicComponentDefaults.InsideMargin, onClick)` | `arrowPreference(title, summary, onClick)` ✓ 现成 |
+| `CompactDropdownSettingItem` | `WindowDropdownPreference(title, summary, items, selectedIndex, startAction, onSelectedIndexChange)` | **本次新增** `windowDropdownPreference(...)` |
+
+**为什么第三个要新增而不复用**：`WindowDropdownPreference`（`Compact*` 用的）与
+`OverlaySpinnerPreference`（`ListSettingItem` 用的）是**两个不同的 miuix 组件** ——
+前者 `items` 直接收 `List<String>`，后者要 `DropdownItem` 包装。既有先例的判据是「迁移后行为与
+迁移前**逐字等价**」（`ClickableSettingItem` 的注释原话）⇒ 复用等于顺手换了渲染，不可以。
+新契约方法的参数面因此照 `overlaySpinnerPreference` 的形状取（`imageVector: ImageVector?`
+替掉 `startAction`，与 `arrowPreference` 同一判据），KDoc 写明了它**看起来一样但是另一个方法**。
+
+**逐字等价性**（三处都核过，不是"看起来对"）：`modifier = Modifier`、
+`insideMargin = BasicComponentDefaults.InsideMargin` 两个常量由实现侧补（与契约 KDoc 里
+`modifier` / `insideMargin` 的既有说明同一判据）；`startAction` 就是那个
+`Icon(imageVector, null)`，与原内联写法一致；`items` 直接传 `displayEntries.toList()`。
+
+**契约扩展的连带项**：`commonTest` 里的探针（`MiuixPreferenceRendererContractTest`）必须实现完整
+—— 那个文件自己的注释写着「这个编译错误是**契约测试该有的反应**」，所以照例补 override、
+不为新方法加用例（本源集验的是宿主语义）。
+
+#### 验证
+
+- 四门禁全绿 + `:core:designsystem` desktop/android 编译与 `testAndroidHostTest` +
+  `:core:ui` / `:feature:settings` / `:app` 编译、单测、打包 → **BUILD SUCCESSFUL**
+- 全模块测试通过；计数 **794 / 1289 零偏离**（依 checklist 不加测试：契约扩展由编译锁、
+  宿主语义由既有契约测试锁）
+- `lintAppDebug` 重测：**5 errors / 95 warnings** —— 与 M5-15b 测得**完全相同** ⇒ 本片零影响
+  （顺带说明 M5-15b 记的那个 94→95 漂移发生在更早的片里，不是 M5-15b/c 造成的）
+- `:core:ui` 的 `miuix-preference-android` 依赖**没有被扩散**：新契约方法只加在
+  `AndroidMiuixPreferenceRenderer`（`:core:ui`）里，共享层签名里不出现任何 miuix 类型
+
+#### 未验证
+
+三个 `Compact*` 组件的 Miuix 分支在真机上的渲染（`windowDropdownPreference` 的窗口下拉、
+`switchPreference`、`arrowPreference`），以及「未注入 ⇒ 落 Material3」的降级路径在 desktop 上
+的实际表现。本模块无 UI 测试，需冒烟。
+
+⚠️ `CompactSettingItems` 上提后，`ui/config` 剩余两块（`themeManage` 的 `EditThemeSheet`、
+`themeConfig` 的两个 sheet）在 `Compact*` 这一项上**已解阻**。
+
+**下一步**：`themeManage`（4 文件 / 1138 行，阻塞项：`SavedTheme` / `ThemePackageManager`
+两个 `:app/help.config` 类型 + VM 的 `Uri` / `StringRes`）—— 建议先做逻辑层（按 M5-8a/9a/12a 的
+节奏：VM 先走，走窄契约），再做页面。`themeConfig`(11/3388) 明显更重，排在后面。

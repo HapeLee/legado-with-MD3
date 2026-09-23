@@ -93,5 +93,17 @@ class MiuixPreferenceRendererContractTest {
             imageVector: ImageVector?,
             onSelectedIndexChange: (Int) -> Unit,
         ) = Unit
+
+        // M5-15c：契约扩到第三个方法（`CompactSettingItems` 上提）。同上，探针只需实现完整 ——
+        // 这三处编译错误都是**契约测试该有的反应**：扩展契约时所有实现方必须显式跟上。
+        @Composable
+        override fun windowDropdownPreference(
+            title: String,
+            summary: String?,
+            items: List<String>,
+            selectedIndex: Int,
+            imageVector: ImageVector?,
+            onSelectedIndexChange: (Int) -> Unit,
+        ) = Unit
     }
 }

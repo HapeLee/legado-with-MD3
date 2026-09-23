@@ -1,5 +1,34 @@
 package io.legado.app.ui.widget.components.settingItem
 
+/**
+ * M5-15c：从 `:core:ui` 搬进 `:core:designsystem/commonMain`（包名不变 ⇒ 10 处 `:app` 消费方
+ * import 零改动）。触发条件同 `CardTabRow`(M5-9b-pre) / `TimePickerDialog`(M5-10a-pre)：
+ * **共享层出现第一个消费者** —— `themeManage` 的 `EditThemeSheet` 与 `themeConfig` 的两个 sheet
+ * 都要用它，而它们是 `ui/config` 剩余两块的前置。
+ *
+ * ⚠️ **不是纯搬运**（M5-15b 的原计划在这里落空，见下）：
+ *
+ * 1. 三个组件的 Miuix 分支原先**直接调** `top.yukonga.miuix.kmp.preference` 的
+ *    `WindowDropdownPreference` / `SwitchPreference` / `ArrowPreference`，而该制品**没有
+ *    desktop 变体**（只有 `miuix-preference-android`）⇒ 直接引用进不了 `commonMain`。
+ *    改写为走既有的窄契约 [MiuixPreferenceRenderer]（宿主注入点
+ *    [MiuixPreferenceRendererProvider]），与 `SwitchSettingItem` / `ClickableSettingItem` /
+ *    `ListSettingItem` 三个先例**同一范式**：未注入 ⇒ 显式落回各自**原本就存在**的 Material3
+ *    渲染路径（不是画空白）。
+ * 2. 其中 `WindowDropdownPreference` 对应的契约方法是本次**新增**的
+ *    [MiuixPreferenceRenderer.windowDropdownPreference]：它与 `ListSettingItem` 用的
+ *    `OverlaySpinnerPreference` 是**两个不同的 miuix 组件**，既有先例的判据是「迁移后行为与
+ *    迁移前**逐字等价**」⇒ 不复用 `overlaySpinnerPreference`（那等于顺手换了渲染）。
+ *
+ * 行为等价性：三个分支改写后与迁移前的调用**参数逐项一致**（`WindowDropdownPreference` 的
+ * `items` 直接收字符串列表、`startAction` 就是那个 `Icon(imageVector, null)`；
+ * `SwitchPreference` 的 `modifier = Modifier` 由实现侧补；`ArrowPreference` 的
+ * `insideMargin = BasicComponentDefaults.InsideMargin` 由实现侧补）。这三个常量不进契约的理由
+ * 与契约 KDoc 里 `modifier` / `insideMargin` 的既有说明一致。
+ *
+ * ⚠️ 与 `ValueStepper`(M5-15b) 的关系：本文件依赖它，它先一步搬了进来。
+ */
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,10 +64,6 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.sliderAccessibility
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -54,26 +79,23 @@ fun CompactDropdownSettingItem(
     cornerRadius: androidx.compose.ui.unit.Dp = 8.dp,
     onValueChange: (String) -> Unit
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
-        val spinnerItems = displayEntries.toList()
+    // M5-15c：Miuix 分支改走 `MiuixPreferenceRenderer` 窄契约（原先直接调 miuix 的
+    // `WindowDropdownPreference`，而 `miuix-preference` 没有 desktop 变体 ⇒ 本文件进不了
+    // `commonMain`）。未注入 ⇒ 走下面那条原本就存在的 Material3 渲染路径；理由见契约 KDoc。
+    val miuixRenderer = MiuixPreferenceRendererProvider.current
 
-        WindowDropdownPreference(
+    if (miuixRenderer != null && ThemeResolver.isMiuixEngine(composeEngine)) {
+        val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
+
+        miuixRenderer.windowDropdownPreference(
             title = title,
             summary = description,
-            items = spinnerItems,
+            items = displayEntries.toList(),
             selectedIndex = selectedIndex,
-            startAction = imageVector?.let { icon ->
-                {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null
-                    )
-                }
-            },
+            imageVector = imageVector,
             onSelectedIndexChange = { index ->
                 onValueChange(entryValues[index])
-            }
+            },
         )
     } else {
         val currentEntry =
@@ -240,14 +262,16 @@ fun CompactSwitchSettingItem(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        SwitchPreference(
+    // M5-15c：同 `CompactDropdownSettingItem`，Miuix 分支改走窄契约（未注入 ⇒ 落 Material3）。
+    val miuixRenderer = MiuixPreferenceRendererProvider.current
+
+    if (miuixRenderer != null && ThemeResolver.isMiuixEngine(composeEngine)) {
+        miuixRenderer.switchPreference(
             title = title,
             summary = description,
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier,
             enabled = enabled,
+            onCheckedChange = onCheckedChange,
         )
     } else {
         SettingItem(
@@ -284,12 +308,14 @@ fun CompactClickableSettingItem(
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        ArrowPreference(
+    // M5-15c：同 `CompactDropdownSettingItem`，Miuix 分支改走窄契约（未注入 ⇒ 落 Material3）。
+    val miuixRenderer = MiuixPreferenceRendererProvider.current
+
+    if (miuixRenderer != null && ThemeResolver.isMiuixEngine(composeEngine)) {
+        miuixRenderer.arrowPreference(
             title = title,
             summary = description,
-            insideMargin = BasicComponentDefaults.InsideMargin,
-            onClick = onClick
+            onClick = onClick,
         )
     } else {
         SettingItem(

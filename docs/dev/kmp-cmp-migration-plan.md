@@ -2117,3 +2117,35 @@ M5-12b 发现：`lintAppDebug` **一直在失败**，而我过去十几片只 gr
 
 **下一步**：把 `CompactSettingItems` 的三处 miuix 直接调用改写成走 `MiuixPreferenceRenderer`
 契约（先读契约与三个既有范文），之后才是 `themeManage` / `themeConfig`。
+
+### M5-15c 已完成（2026-09-24）：`CompactSettingItems` 改写到契约上并上提 —— M5-15b 的坑填上了
+
+先读契约 + Android 实现 + 三个既有范文再动手，结果比预想干净：**三个站点里两个与既有契约方法
+1:1 对应**（`switchPreference` / `arrowPreference`，参数逐项一致），只有
+`CompactDropdownSettingItem` 需要新增一个方法。
+
+**为什么第三个要新增而不复用 `overlaySpinnerPreference`**：`WindowDropdownPreference`
+（`Compact*` 用的）与 `OverlaySpinnerPreference`（`ListSettingItem` 用的）是**两个不同的 miuix
+组件**（前者 `items` 收 `List<String>`，后者要 `DropdownItem` 包装）。既有先例的判据是
+「迁移后行为与迁移前**逐字等价**」⇒ 复用等于顺手换渲染，不可以 ⇒ 契约加
+`windowDropdownPreference`，KDoc 写明它**看起来一样但是另一个方法**。
+
+**逐字等价性核过**（不是"看起来对"）：`modifier = Modifier` 与
+`insideMargin = BasicComponentDefaults.InsideMargin` 两个常量由实现侧补（与契约 KDoc 里既有说明
+同一判据）；`startAction` 就是那个 `Icon(imageVector, null)`；`items` 直接传
+`displayEntries.toList()`。
+
+**契约扩展的连带项**：`commonTest` 的探针必须实现完整 —— 那个文件自己的注释写着「这个编译错误是
+**契约测试该有的反应**」⇒ 照例补 override、不加用例（本源集验宿主语义）。
+
+验证：四门禁全绿 + designsystem desktop/android 编译与 testAndroidHostTest + `:core:ui` /
+`:feature:settings` / `:app` 编译、单测、打包 → **BUILD SUCCESSFUL**；全模块测试通过；
+计数 **794 / 1289 零偏离**；`lintAppDebug` 重测 **5 errors / 95 warnings**（与 M5-15b 完全相同
+⇒ 本片零影响，且说明 M5-15b 记的那个 94→95 漂移发生在更早的片里）；`:core:ui` 的
+`miuix-preference-android` **没有被扩散**（新方法只加在 `:core:ui` 的实现类里，共享层签名无 miuix 类型）。
+
+⚠️ 至此 `ui/config` 剩余两块在 `Compact*` 这一项上**已解阻**。
+
+**下一步**：`themeManage`（4/1138；阻塞 = `SavedTheme` / `ThemePackageManager` 两个
+`:app/help.config` 类型 + VM 的 `Uri`/`StringRes`）—— 建议先逻辑层（VM 走窄契约），再页面；
+`themeConfig`(11/3388) 排在后面。
