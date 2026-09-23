@@ -651,6 +651,19 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   rather than skipping it. A silent skip is indistinguishable from "clean" — the same failure mode
   as M5-12a, where `io.legado.app.domain.**` *looked* like the shared layer while `:app` was
   defining classes in that very package.
+- ⚠️ **A model can be blocked from `commonMain` by its *serialization* annotations, not just by
+  `java.` / `android.` imports.** M5-16a: `ThemeExportData` hoisted cleanly, but `SavedTheme` carries
+  `ThemePackageManifest`, which is read/written by **GSON reflection** and therefore annotated
+  `@SerializedName` (`com.google.gson.annotations`) + `@Keep` (`androidx.annotation`). Neither
+  library exists in `commonMain`. Before assuming a data class is hoistable, grep it (and everything
+  it references) for serialization annotations, not only for platform imports. And note the
+  distinction from the module's existing precedent: `:core:model` documents that dropping
+  `androidx.annotation.IntDef` is safe because it is `SOURCE`-retained and irrelevant to R8 —
+  **`@Keep` is not**: it exists precisely to stop R8 touching those members, so removing it silently
+  changes release-build behaviour. When the model cannot move, take the projection + narrow-contract
+  route (the `CoverAlbumImageInput` shape from M5-12a): expose only the fields the UI truly needs,
+  key the contract by the identifier the host already uses (here: the directory name = theme name),
+  and let the host resolve back to the real object.
 - **When the target module already has a *designed seam* for your blocker, extend the seam — do not
   invent a parallel one, and do not silently reuse a neighbouring method.** M5-15c (the follow-up to
   M5-15b's failed hoist) is the worked example: `CompactSettingItems` had to go onto

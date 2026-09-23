@@ -1848,3 +1848,72 @@ sheet）⇒ 上提后两块同时受益；同包名（designsystem 已有 `...co
 **下一步**：`themeManage`（4 文件 / 1138 行，阻塞项：`SavedTheme` / `ThemePackageManager`
 两个 `:app/help.config` 类型 + VM 的 `Uri` / `StringRes`）—— 建议先做逻辑层（按 M5-8a/9a/12a 的
 节奏：VM 先走，走窄契约），再做页面。`themeConfig`(11/3388) 明显更重，排在后面。
+
+### M5-16a：`themeManage` 逻辑层（VM + 平台契约）→ `:feature:settings/thememanage/`
+
+#### 勘察结论：`SavedTheme` **不能**上提 —— 卡在**序列化注解**上
+
+`ThemeExportData`（`:core:model`）是干净的可共享模型 ✓，但 `SavedTheme`（`:app/help/config/
+ThemeImportExport.kt`）携带 `packageManifest: ThemePackageManifest?`，而后者靠 **GSON 反射**读写
+（`GSON.toJson(manifest)` / `GSON.fromJson(json, ThemePackageManifest::class.java)`）⇒ 带
+`@Keep`（`androidx.annotation`）+ `@SerializedName`（`com.google.gson.annotations`）两个注解。
+两者**都进不了 `commonMain`**。这是 M5-12a 的 `CoverAlbumImageInput`（`java.io.InputStream`）
+之后，第二类「看着是纯模型、其实被平台库绑住」的阻塞 —— 但这次的判据是**注解**而不是 `import java.`。
+
+⚠️ 与 `:core:model` 既有约定（`PageAnim` 的 KDoc：`IntDef` 可以移除，因为它是 `SOURCE` 保留、
+运行时与 R8 均无影响）**不同**：`@Keep` 不是 SOURCE 保留，它**就是**为了让 R8 别动这些字段。
+移除它 = 悄悄改变 release 行为 ⇒ 不能照 `IntDef` 的先例处理。
+
+⇒ 沿用 M5-12a 的既定形态：**投影 + 窄契约**。
+
+| 迁移前 | 迁移后 |
+|---|---|
+| VM 直接注入 `ThemePackageManager`（1254 行，绑 `Context`/`Uri`/`AppCompatDelegate`/GSON） | 窄契约 `ThemeManagePlatform`（9 个方法），实现 `AndroidThemeManagePlatform` 住 `:app` |
+| UI 状态持 `SavedTheme` | 持投影 `SavedThemeSummary(name, data)` —— 只留 UI 真正要的两样；`packageRootPath` / `packageManifest` 是平台侧组织细节，**不进契约**（与 `CoverRuleSpec` 同一判据） |
+| `@param:StringRes val messageRes: Int` | 语义枚举 `ThemeManageText`（7 条） |
+
+**契约以 `name` 为键**：宿主侧本来就是「一个主题一个目录、目录名即主题名」⇒ `apply/delete/export`
+传名字，由实现侧 `loadSavedThemes().first { it.name == name }` 解析回真实对象。代价是每次
+多一次目录扫描（用户点一次的操作，且本身要读盘），换来契约面里不出现平台路径与清单类型。
+
+一个刻意的宽松处（已写进实现 KDoc）：`deleteSavedTheme` 找不到对象时**仍然继续删**（用只带
+`name` 的替身）—— 迁移前那个方法本身就只用 `name` 与 `packageRootPath`，「删一个界面上还看得见、
+目录已被外部清掉的主题」不该报别的错；而 `apply` 相反，没有清单就**无法**应用 ⇒ 明确失败。
+
+#### 7 条结果文案**没有**搬进 `:feature:settings`
+
+它们从 `R.string.*` 换成枚举 `ThemeManageText`，由**宿主壳**映射回 `:app` 自己的
+`R.string.theme_manage_*`（`private fun ThemeManageText.toStringRes()`）。理由：这条 effect 由宿主
+消费（它要 `context.toastOnUi`），文案属宿主那次 toast 的渲染 ⇒ 搬进共享层只会得到两份要手动
+同步的副本。与 `theme_manage_migrate_success/_partial`（带参数，本来就在宿主拼）同判据。
+
+#### 门禁：G4 基线两处下调（棘轮只降不升）
+
+- `legacyHelp|app/main/io/legado/app/platform`：7 → **9**（`SavedTheme` + `ThemePackageManager`
+  两条随实现搬进来）
+- `legacyHelp|.../ui/config/themeManage`：5 → **1**（**净债务为零**，第三次「同一段平台逻辑换住所」）
+- 剩下的那 **1** 条是宿主壳用的 `ThemePackageManager.FILE_EXTENSION`（导出 SAF 的文件名后缀）——
+  宿主壳按判据留在 `:app` ✓
+
+#### 验证
+
+- 四门禁全绿（含改后的 G4 基线）；`:feature:settings` desktop 编译 + `:app` 编译/单测/打包
+  → **BUILD SUCCESSFUL**
+- 全模块测试通过；计数 **794 / 1289 零偏离**（**本片不加测试**，依 M5-12a→M5-12b 的先例：
+  逻辑层先落、测试单独一片）
+- `lintAppDebug` 重测：5 errors（与既有集合一致 ✓）/**102 warnings**。归因（逐条查过报告）：
+  - `UseKtx` 95 → 98 的 **+3** 是我的新文件里 3 处 `Uri.parse` —— **但旧 VM 里同样是这 3 处**，
+    它们原本被 `app/lint-baseline.xml` 压着（报告里 filtered 242 → **239**，正好 −3）
+    ⇒ **净零，只是移出了基线**。刻意不改写成 `String.toUri()`：那是把一次 lint 清理夹进搬迁里。
+    ⚠️ 遗留：`app/lint-baseline.xml` 里那 3 条现在指向已删除的路径，需另行处理（本片不动）。
+  - `GradleDependency` **+4** 是 libs.versions.toml 的「有更新版本可用」提示，**与本片无关**
+    （diff 没碰任何依赖或版本；这类提示由版本元数据驱动）。
+
+#### 未验证
+
+页面（`ThemeManageScreen` / `EditThemeSheet` 仍留 `:app`）与 4 个 SAF launcher 的交互、
+toast 文案在 4 个语言下的实际显示。需真机冒烟。
+
+**下一步**：M5-16b ＝ `ThemeManageViewModelTest`（按 M5-12b 的模式锁：互斥 `launchExclusive`、
+错误映射到 `ThemeManageText`、旧版迁移的两个计数、`saveTheme` 改名时的删除分支）；
+之后 `themeManage` 页面 + 表单，再 `themeConfig`。

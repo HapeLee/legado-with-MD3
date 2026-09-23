@@ -1,14 +1,9 @@
-package io.legado.app.ui.config.themeManage
+package io.legado.app.feature.settings.thememanage
 
-import android.net.Uri
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
 import io.legado.app.domain.model.settings.ThemeExportData
-import io.legado.app.help.config.SavedTheme
-import io.legado.app.help.config.ThemePackageManager
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -20,8 +15,26 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 
+/**
+ * M5-16a：从 `:app` 的 `ui/config/themeManage/ThemeManageViewModel.kt` 迁入（**逻辑逐字保留**）。
+ *
+ * 三处与迁移前的**有意差异**，都不是顺手改的：
+ *
+ * 1. **平台操作走窄契约** [ThemeManagePlatform]（迁移前直接注入 `:app` 的 `ThemePackageManager`
+ *    —— 1254 行，深绑 `Context` / `Uri` / `AppCompatDelegate` / GSON）。理由见契约 KDoc。
+ * 2. **UI 状态里的主题是投影** [SavedThemeSummary] 而不是 `:app` 的 `SavedTheme`
+ *    （后者携带 GSON 反射的 `ThemePackageManifest`，进不了 `commonMain`）。
+ * 3. **结果文案从 `@StringRes Int` 换成语义枚举** [ThemeManageText]（迁移前是
+ *    `R.string.*` 的 id）。共享层拿不到 `R`；而这条 effect 由**宿主壳**消费（它要
+ *    `context.toastOnUi`）⇒ 在宿主侧把枚举映射回 `:app` 自己的 `R.string.*`。
+ *    ⚠️ 因此本片**没有**把 7 条文案搬进 `:feature:settings` 的 composeResources：文案属于
+ *    宿主那次 toast 的渲染，搬过来只会得到两份要同步的副本。
+ *
+ * `LegacyMigrationFinished` 仍然只带两个计数（迁移前也是如此）——拼文案要用
+ * `theme_manage_migrate_success` / `_partial` 两个**带参数**的宿主文案，留在宿主拼。
+ */
 class ThemeManageViewModel(
-    private val themePackageManager: ThemePackageManager,
+    private val platform: ThemeManagePlatform,
 ) : ViewModel() {
 
     private val operationMutex = Mutex()
@@ -75,8 +88,8 @@ class ThemeManageViewModel(
     private fun loadSavedThemes() {
         launchExclusive {
             _uiState.update { it.copy(loading = true) }
-            val themes = themePackageManager.loadSavedThemes()
-            val hasLegacyThemes = themePackageManager.hasLegacySavedThemes()
+            val themes = platform.loadSavedThemes()
+            val hasLegacyThemes = platform.hasLegacySavedThemes()
             _uiState.update {
                 it.copy(
                     loading = false,
@@ -88,7 +101,7 @@ class ThemeManageViewModel(
     }
 
     private suspend fun refreshSavedThemes() {
-        val themes = themePackageManager.loadSavedThemes()
+        val themes = platform.loadSavedThemes()
         _uiState.update {
             it.copy(
                 loading = false,
@@ -101,13 +114,13 @@ class ThemeManageViewModel(
         launchExclusive {
             _uiState.update { it.copy(loading = true) }
             val result = runCatching {
-                themePackageManager.saveTheme(
+                platform.saveTheme(
                     name = intent.name,
                     data = intent.data,
                 )
                 intent.replacedTheme
                     ?.takeIf { it.name != intent.name }
-                    ?.let { themePackageManager.deleteSavedTheme(it).getOrThrow() }
+                    ?.let { platform.deleteSavedTheme(it.name).getOrThrow() }
             }
             if (result.isSuccess) {
                 refreshSavedThemes()
@@ -115,7 +128,7 @@ class ThemeManageViewModel(
                 _uiState.update { it.copy(loading = false) }
                 _effects.emit(
                     ThemeManageEffect.ShowResult(
-                        messageRes = R.string.theme_manage_save_failed,
+                        text = ThemeManageText.SaveFailed,
                         detail = result.exceptionOrNull()?.localizedMessage,
                     )
                 )
@@ -123,10 +136,10 @@ class ThemeManageViewModel(
         }
     }
 
-    private fun applySavedTheme(theme: SavedTheme) {
+    private fun applySavedTheme(theme: SavedThemeSummary) {
         launchExclusive {
             _uiState.update { it.copy(loading = true) }
-            val result = themePackageManager.applySavedTheme(theme)
+            val result = platform.applySavedTheme(theme.name)
             if (result.isSuccess) {
                 // Compose 由响应式设置直接更新；旧 View 由 BaseActivity 的配置兼容层处理。
                 refreshSavedThemes()
@@ -134,7 +147,7 @@ class ThemeManageViewModel(
                 _uiState.update { it.copy(loading = false) }
                 _effects.emit(
                     ThemeManageEffect.ShowResult(
-                        messageRes = R.string.theme_manage_apply_failed,
+                        text = ThemeManageText.ApplyFailed,
                         detail = result.exceptionOrNull()?.localizedMessage,
                     )
                 )
@@ -142,17 +155,17 @@ class ThemeManageViewModel(
         }
     }
 
-    private fun deleteSavedTheme(theme: SavedTheme) {
+    private fun deleteSavedTheme(theme: SavedThemeSummary) {
         launchExclusive {
             _uiState.update { it.copy(loading = true) }
-            val result = themePackageManager.deleteSavedTheme(theme)
+            val result = platform.deleteSavedTheme(theme.name)
             if (result.isSuccess) {
                 refreshSavedThemes()
             } else {
                 _uiState.update { it.copy(loading = false) }
                 _effects.emit(
                     ThemeManageEffect.ShowResult(
-                        messageRes = R.string.theme_manage_delete_failed,
+                        text = ThemeManageText.DeleteFailed,
                         detail = result.exceptionOrNull()?.localizedMessage,
                     )
                 )
@@ -162,18 +175,18 @@ class ThemeManageViewModel(
 
     private fun exportPackage(intent: ThemeManageIntent.ExportPackage) {
         launchExclusive {
-            val result = themePackageManager.exportPackage(
-                uri = Uri.parse(intent.uri),
+            val result = platform.exportPackage(
+                uri = intent.uri,
                 themeName = intent.themeName,
                 themeData = intent.themeData,
-                savedTheme = intent.savedTheme,
+                savedThemeName = intent.savedThemeName,
             )
             _effects.emit(
                 if (result.isSuccess) {
-                    ThemeManageEffect.ShowResult(R.string.theme_manage_export_success)
+                    ThemeManageEffect.ShowResult(ThemeManageText.ExportSuccess)
                 } else {
                     ThemeManageEffect.ShowResult(
-                        messageRes = R.string.theme_manage_export_failed,
+                        text = ThemeManageText.ExportFailed,
                         detail = result.exceptionOrNull()?.localizedMessage,
                     )
                 }
@@ -183,13 +196,13 @@ class ThemeManageViewModel(
 
     private fun importPackage(uri: String) {
         launchExclusive {
-            emitImportResult(themePackageManager.importPackage(Uri.parse(uri)))
+            emitImportResult(platform.importPackage(uri))
         }
     }
 
     private fun importLegacyJson(uri: String) {
         launchExclusive {
-            emitImportResult(themePackageManager.importLegacyJson(Uri.parse(uri)))
+            emitImportResult(platform.importLegacyJson(uri))
         }
     }
 
@@ -200,11 +213,11 @@ class ThemeManageViewModel(
         _effects.emit(
             if (result.isSuccess) {
                 ThemeManageEffect.ShowResult(
-                    messageRes = R.string.theme_manage_import_success,
+                    text = ThemeManageText.ImportSuccess,
                 )
             } else {
                 ThemeManageEffect.ShowResult(
-                    messageRes = R.string.theme_manage_import_failed,
+                    text = ThemeManageText.ImportFailed,
                     detail = result.exceptionOrNull()?.localizedMessage,
                 )
             }
@@ -214,7 +227,7 @@ class ThemeManageViewModel(
     private fun migrateLegacyThemes() {
         launchExclusive {
             _uiState.update { it.copy(loading = true) }
-            val result = themePackageManager.migrateLegacySavedThemes()
+            val result = platform.migrateLegacySavedThemes()
             refreshSavedThemes()
             _uiState.update { it.copy(hasLegacyThemes = result.failedCount > 0) }
             _effects.emit(
@@ -241,7 +254,7 @@ class ThemeManageViewModel(
 @Stable
 data class ThemeManageUiState(
     val loading: Boolean = false,
-    val savedThemes: ImmutableList<SavedTheme> = persistentListOf(),
+    val savedThemes: ImmutableList<SavedThemeSummary> = persistentListOf(),
     val searchQuery: String = "",
     val hasLegacyThemes: Boolean = false,
     val dialog: ThemeManageDialog? = null,
@@ -249,9 +262,9 @@ data class ThemeManageUiState(
 
 sealed interface ThemeManageDialog {
     data class Save(val name: String = "") : ThemeManageDialog
-    data class Apply(val theme: SavedTheme) : ThemeManageDialog
-    data class Delete(val theme: SavedTheme) : ThemeManageDialog
-    data class Edit(val theme: SavedTheme) : ThemeManageDialog
+    data class Apply(val theme: SavedThemeSummary) : ThemeManageDialog
+    data class Delete(val theme: SavedThemeSummary) : ThemeManageDialog
+    data class Edit(val theme: SavedThemeSummary) : ThemeManageDialog
 }
 
 sealed interface ThemeManageIntent {
@@ -261,7 +274,7 @@ sealed interface ThemeManageIntent {
         val uri: String,
         val themeName: String? = null,
         val themeData: ThemeExportData? = null,
-        val savedTheme: SavedTheme? = null,
+        val savedThemeName: String? = null,
     ) : ThemeManageIntent
 
     data class ImportPackage(val uri: String) : ThemeManageIntent
@@ -269,26 +282,26 @@ sealed interface ThemeManageIntent {
     data class SaveTheme(
         val name: String,
         val data: ThemeExportData? = null,
-        val replacedTheme: SavedTheme? = null,
+        val replacedTheme: SavedThemeSummary? = null,
     ) : ThemeManageIntent
 
-    data class ApplySavedTheme(val theme: SavedTheme) : ThemeManageIntent
-    data class DeleteSavedTheme(val theme: SavedTheme) : ThemeManageIntent
+    data class ApplySavedTheme(val theme: SavedThemeSummary) : ThemeManageIntent
+    data class DeleteSavedTheme(val theme: SavedThemeSummary) : ThemeManageIntent
     data object MigrateLegacyThemes : ThemeManageIntent
     data object OpenSaveDialog : ThemeManageIntent
     data class UpdateSaveName(val value: String) : ThemeManageIntent
     data class UpdateSearchQuery(val value: String) : ThemeManageIntent
-    data class OpenApplyDialog(val theme: SavedTheme) : ThemeManageIntent
-    data class OpenDeleteDialog(val theme: SavedTheme) : ThemeManageIntent
-    data class OpenEditSheet(val theme: SavedTheme) : ThemeManageIntent
+    data class OpenApplyDialog(val theme: SavedThemeSummary) : ThemeManageIntent
+    data class OpenDeleteDialog(val theme: SavedThemeSummary) : ThemeManageIntent
+    data class OpenEditSheet(val theme: SavedThemeSummary) : ThemeManageIntent
     data object DismissDialog : ThemeManageIntent
-    data class RequestExport(val theme: SavedTheme? = null) : ThemeManageIntent
+    data class RequestExport(val theme: SavedThemeSummary? = null) : ThemeManageIntent
     data object RequestImportPackage : ThemeManageIntent
     data object RequestImportLegacyJson : ThemeManageIntent
 }
 
 sealed interface ThemeManageEffect {
-    data class OpenExportDocument(val theme: SavedTheme?) : ThemeManageEffect
+    data class OpenExportDocument(val theme: SavedThemeSummary?) : ThemeManageEffect
     data object OpenImportPackage : ThemeManageEffect
     data object OpenImportLegacyJson : ThemeManageEffect
     data class LegacyMigrationFinished(
@@ -296,8 +309,23 @@ sealed interface ThemeManageEffect {
         val failedCount: Int,
     ) : ThemeManageEffect
 
+    /**
+     * 结果提示。[text] 是**语义枚举**，由宿主壳映射回它自己的 `R.string.*`
+     * （迁移前这里直接是 `@param:StringRes val messageRes: Int`）。理由见 VM KDoc 第 3 条。
+     */
     data class ShowResult(
-        @param:StringRes val messageRes: Int,
+        val text: ThemeManageText,
         val detail: String? = null,
     ) : ThemeManageEffect
+}
+
+/** 与 `:app` 的 `R.string.theme_manage_*` 一一对应（7 条，无参数）。 */
+enum class ThemeManageText {
+    SaveFailed,
+    ApplyFailed,
+    DeleteFailed,
+    ExportSuccess,
+    ExportFailed,
+    ImportSuccess,
+    ImportFailed,
 }

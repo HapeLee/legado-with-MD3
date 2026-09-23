@@ -2149,3 +2149,39 @@ M5-12b 发现：`lintAppDebug` **一直在失败**，而我过去十几片只 gr
 **下一步**：`themeManage`（4/1138；阻塞 = `SavedTheme` / `ThemePackageManager` 两个
 `:app/help.config` 类型 + VM 的 `Uri`/`StringRes`）—— 建议先逻辑层（VM 走窄契约），再页面；
 `themeConfig`(11/3388) 排在后面。
+
+### M5-16a 已完成（2026-09-24）：`themeManage` 逻辑层 → `:feature:settings/thememanage/`
+
+**勘察结论：`SavedTheme` 不能上提 —— 卡在「序列化注解」上。** `ThemeExportData`（`:core:model`）
+是干净模型 ✓，但 `SavedTheme` 携带 `packageManifest: ThemePackageManifest?`，后者靠 **GSON 反射**
+读写 ⇒ 带 `@Keep`（`androidx.annotation`）+ `@SerializedName`（`com.google.gson.annotations`），
+两者都进不了 `commonMain`。这是 M5-12a 的 `CoverAlbumImageInput` 之后**第二类**「看着是纯模型、
+其实被平台库绑住」的阻塞，但判据是**注解**而不是 `import java.`。
+
+⚠️ 与 `:core:model` 既有约定（`PageAnim`：`IntDef` 可移除，因为 SOURCE 保留、运行时与 R8 无影响）
+**不同**：`@Keep` 不是 SOURCE 保留，它**就是**为了让 R8 别动这些字段 ⇒ 移除它等于悄悄改 release
+行为。不能照 `IntDef` 的先例办。
+
+⇒ 沿用 M5-12a 的形态：**投影 + 窄契约**。
+- 窄契约 `ThemeManagePlatform`（9 方法），实现 `AndroidThemeManagePlatform` 住 `:app`
+- UI 状态改持投影 `SavedThemeSummary(name, data)`（`packageRootPath`/`packageManifest` 不进契约）
+- `@StringRes Int` → 语义枚举 `ThemeManageText`（7 条）；**7 条文案刻意没搬进 composeResources**
+  —— 这条 effect 由宿主消费（要 `context.toastOnUi`），文案属宿主那次 toast 的渲染
+- 契约**以 `name` 为键**：宿主侧本就是「一个主题一个目录、目录名即主题名」⇒ 实现侧自己解析回
+  真实 `SavedTheme`（代价是多一次目录扫描，换契约面里不出现平台路径/清单类型）
+
+命名/实现细节：`deleteSavedTheme` 找不到对象**也照删**（迁移前那个方法只用 `name` 与
+`packageRootPath`）；`apply` 相反，没清单就无法应用 ⇒ 明确失败。
+
+**G4 基线两处下调**（棘轮只降不升）：`platform` 7 → **9**、`ui/config/themeManage` 5 → **1**
+（净债务为零；剩的 1 条是宿主壳用的 `ThemePackageManager.FILE_EXTENSION`）。
+
+验证：四门禁全绿 + `:feature:settings` desktop 编译 + `:app` 编译/单测/打包 → **BUILD SUCCESSFUL**；
+全模块测试通过；计数 **794 / 1289 零偏离**（本片不加测试，依 M5-12a→M5-12b 先例）；
+`lintAppDebug` 重测 5 errors / **102 warnings**，且逐条归因：`UseKtx +3` 是旧 VM 同 3 处 `Uri.parse`
+移出 lint 基线（filtered 正好 −3，净零），`GradleDependency +4` 是版本提示、与本片无关。
+
+未验证：页面与 4 个 SAF launcher 的交互、toast 在 4 语言下的显示。需真机冒烟。
+
+**下一步**：M5-16b ＝ `ThemeManageViewModelTest`（锁互斥、错误→枚举映射、迁移计数、
+`saveTheme` 改名时的删除分支）→ 然后 `themeManage` 页面 + 表单 → 再 `themeConfig`。

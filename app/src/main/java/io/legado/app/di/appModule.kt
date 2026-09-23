@@ -334,7 +334,9 @@ import io.legado.app.feature.settings.readconfig.ReadConfigApplyPlatform
 import io.legado.app.feature.settings.readconfig.ReadConfigViewModel
 import io.legado.app.platform.AndroidReadConfigApplyPlatform
 import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel
-import io.legado.app.ui.config.themeManage.ThemeManageViewModel
+import io.legado.app.feature.settings.thememanage.ThemeManagePlatform
+import io.legado.app.feature.settings.thememanage.ThemeManageViewModel
+import io.legado.app.platform.AndroidThemeManagePlatform
 import io.legado.app.feature.settings.translation.TranslationConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.feature.dict.rule.DictRuleViewModel
@@ -582,6 +584,10 @@ val appModule = module {
     // M5-12a：封面图库的「列表 + 选中 + 切换」收成契约；实现用 :app 既有的
     // \CoverAlbumUseCase\（其依赖链含 \java.io.InputStream\，留在 :app 不动）。
     single<CoverAlbumProvider> { AndroidCoverAlbumProvider(androidContext(), get()) }
+    // M5-16a：主题管理（保存/应用/删除/导出/导入/旧版迁移）。实现留在 `:app` ——
+    // `ThemePackageManager`（1254 行）深绑 Context/Uri/AppCompatDelegate/GSON，
+    // 其产出的 `SavedTheme` 又携带靠 GSON 反射读写的 `ThemePackageManifest`。
+    single<ThemeManagePlatform> { AndroidThemeManagePlatform(get()) }
     // M5-9a：backupConfig 的四组「备份/恢复忽略项」（`:app` 的 `help.storage.BackupConfig`）。
     // 实现无状态、不持有 Context ⇒ 直接 new；那四组 map 本身是 `:app` 侧的 `by lazy` 全局。
     single<BackupIgnoreStore> { AndroidBackupIgnoreStore() }
