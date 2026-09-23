@@ -24,8 +24,10 @@ import top.yukonga.miuix.kmp.basic.TabRowWithContour
  * `LegadoTheme` / `ThemeResolver` / `AppText`，以及 `miuix-ui`（designsystem 的 `commonMain`
  * 早已依赖并确认有 desktop 变体）⇒ 零源码改动、零新增依赖。
  *
- * 同目录的 `CardTabRow.kt` 刻意**没有**跟着搬：它目前只有 `:app` 的 10 处消费方，没有非
- * Android 消费者。等真出现时按同一配方再搬。
+ * 同目录的 `CardTabRow.kt` 当时**没有**跟着搬：它那时只有 `:app` 的 10 处消费方，没有非
+ * Android 消费者。**M5-9b-pre 已按同一配方补搬**（前提是 `backupConfig` 页面本体迁进
+ * `:feature:settings`，它在 `IgnoreItemsSheet` 里用 `CardTabRow` 做两个页签）——
+ * 即当初「等真出现时再搬」那句话的兑现，包名同样不变。
  */
 @Composable
 fun AppTabRow(

@@ -24,6 +24,19 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
 
+/**
+ * M5-9b-pre 从 `:core:ui` 搬进 `:core:designsystem/commonMain`（包名不变 ⇒ 10 处 `:app`
+ * 消费方 import 零改动）。
+ *
+ * 这与同目录 [AppTabRow] 的搬运是**同一配方**，也正是 `AppTabRow.kt` 的 KDoc 当初预告的
+ * 那一步 —— 它写着「`CardTabRow.kt` 刻意没有跟着搬：目前只有 `:app` 的 10 处消费方，
+ * 没有非 Android 消费者。**等真出现时按同一配方再搬**」。本片的 `backupConfig` 页面本体
+ * 迁进 `:feature:settings`（它在 `IgnoreItemsSheet` 里用本组件做「配置项 / 数据库」两个页签）
+ * ⇒ 第一个非 Android 消费者出现，前提不再成立。
+ *
+ * 本文件本来就零 Android 依赖：只用 Compose foundation/runtime 与 designsystem 自己的
+ * `LegadoTheme` / `NormalCard` / `AppText` ⇒ 零源码改动、零新增依赖。
+ */
 @Composable
 fun CardTabRow(
     tabTitles: List<String>,
