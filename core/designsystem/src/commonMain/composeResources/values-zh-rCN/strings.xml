@@ -12,6 +12,8 @@
   只放当前已被共享组件实际引用的条目；新增引用时同步补。
 -->
 <resources>
+    <string name="a11y_decrease">减小</string>
+    <string name="a11y_increase">增大</string>
     <string name="menu">菜单</string>
     <string name="a11y_move_down">下移</string>
     <string name="a11y_move_up">上移</string>

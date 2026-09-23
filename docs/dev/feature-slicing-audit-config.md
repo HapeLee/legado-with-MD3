@@ -1719,3 +1719,78 @@ sheet）⇒ 上提后两块同时受益；同包名（designsystem 已有 `...co
 
 **下一步**：M5-15b＝上提 `CompactSettingItems` + `ValueStepper`（两块共用的前置，
 纯搬运 + 少量改写，可独立验证）→ 之后按 `themeManage` 逻辑层/页面、`themeConfig` 逻辑层/页面推进。
+
+### M5-15b：⚠️ 计划落空 —— `CompactSettingItems` 不是"可上提"，而撞上一个**既有已解决问题**
+
+按 M5-15a 的判断开工：`git mv` 两个文件到 designsystem、改写 `ValueStepper` 的两处资源访问、
+把 `a11y_decrease` / `a11y_increase` 从 `:core:ui` 的 4 个语言目录搬进 designsystem 的 4 个。
+
+编译后 `CompactSettingItems` 报 `Unresolved reference`：`preference`(×3) ·
+`WindowDropdownPreference` · `SwitchPreference` · `ArrowPreference`。**这三个符号不在本仓库** ——
+它们来自 `top.yukonga.miuix.kmp.preference.*`。
+
+**而答案早就写在 designsystem 自己的 KDoc 里**（`MiuixPreferenceRenderer.kt`，我该先读它）：
+
+> `top.yukonga.miuix.kmp.preference` 是**整个 miuix 里唯一没有 desktop 变体的制品**
+> （版本目录里只有 `miuix-preference-android`）⇒ 它**进不了 `commonMain`**。
+
+而且为这件事**早就建好了既定方案**：designsystem 里已有窄契约 `MiuixPreferenceRenderer`
+（`switchPreference` / `arrowPreference` / `dropdownPreference`）+ 宿主注入点
+`MiuixPreferenceRendererProvider`；Android 实现留在 `:core:ui` 的 `AndroidMiuixPreferenceRenderer`
+（那里才看得见 `miuix-preference-android`）；行为判据是「renderer 未安装或引擎为 Material3 时
+走非 miuix 分支，**不是画空白**」。`ClickableSettingItem`(M5-2a-pre) /
+`SwitchSettingItem` / `DropdownListSettingItem` 当初就是这么过桥的。
+
+⇒ **`CompactSettingItems` 的正确形态不是"搬运"，而是"改写走契约"** —— 它有 3 处直接调 miuix
+`preference` 组件（第 73 / 256 / 300 行附近），要逐一改成 `MiuixPreferenceRendererProvider.current`
++ 引擎判定。这需要决定是否扩契约（现有 `dropdownPreference` 的参数面与
+`WindowDropdownPreference`（带 `items` / `selectedIndex` / `startAction`）未必对齐），
+**不属于"零改动上提"，我不在一片里顺手定掉** ⇒ 已把该文件 `git mv` 退回原位（`git diff` 为空，
+**字节一致** ✓）。
+
+#### 本片实际交付（缩到真正干净的那部分）
+
+只保留 `ValueStepper` 的上提（73 行）：
+
+| 项 | 说明 |
+|---|---|
+| `ValueStepper` `:core:ui` → `:core:designsystem/commonMain` | 包名不变 ⇒ 3 处消费者（`CompactSettingItems` / `TinySettingItems` 在 `:core:ui`、`TypographyTabs` 在 `:app`）**import 零改动**，编译已证 |
+| 两处改写 | `androidx.compose.ui.res.stringResource` → `org.jetbrains.compose.resources.stringResource`；`io.legado.app.core.ui.R` → designsystem 的 `Res` |
+| 两条文案 | `a11y_decrease` / `a11y_increase` 逐字搬入 designsystem 4 语言目录，并从 `:core:ui` 删除 |
+| `:app` 侧 8 行死文案 | 同两条在 `:app` res 里也有（原为**覆盖值**）；取值来源改到 designsystem（不参与 Android 资源合并）后无任何引用 ⇒ 已删 |
+
+⚠️ **一个查过的真实风险**：Android 资源合并时 `:app` 的同名条目会**覆盖** `:core:ui` 的 ⇒
+`ValueStepper` 原来**运行时显示的其实是 `:app` 的值**。逐语言比对：4 个语言目录 × 2 条
+**全部一致** ⇒ 搬运未改变任何用户可见文案 ✅。
+
+#### ⚠️ 归因失败的一处数字
+
+`lintAppDebug` **仍是 FAILED**，5 个 error 与 M5-12b 记录的既有集合**逐行一致**
+（`BookInfoScreen:269/270/1497`、`BackstageWebView:113`、`BottomWebViewDialog:524`）⇒ 本片未新增 error。
+但 warnings **94 → 95**，**我没能归因**：查过 `app/lint-baseline.xml` 无 `a11y_*` 条目
+（报告里的 `LintBaselineFixed` 与本片无关），而 lint 只跑 `:app`，本片改的 designsystem 文件不在其扫描范围。
+
+⇒ 更该记的是**过程问题**：M5-10a 之后我在若干片里引用「lint 一致（94）」——那其实是
+**没有重测的旧值**。以后每片必须重新测、并把 `BUILD FAILED` 与数字一起记（M5-12b 的教训只让我
+加了"看任务状态"，没让我加"每片重测"）。
+
+#### 验证
+
+- 四门禁全绿；`:core:designsystem` desktop/android 编译 + `testAndroidHostTest`、
+  `:core:ui` 编译、`:feature:settings` 编译、`:app` 编译/单测/打包 → **BUILD SUCCESSFUL**
+- 全模块测试通过；计数 **794 / 1289 零偏离**（纯搬运与资源，依 checklist 不加测试）
+- designsystem 资源 **224/224**（54×4 → 56×4，正好 +2 key）
+- `CompactSettingItems` 退回后 `git diff` 为空（字节一致）
+- `:app` 4 个 res 文件删除后 XML 均通过解析
+
+#### 未验证
+
+`ValueStepper` 上提后**没有任何行为测试**（本模块无 UI 测试）；它的三个消费者在真机/desktop 上的
+渲染（尤其是 `TypographyTabs` 的字号步进与 `Compact*/Tiny*` 设置项）需冒烟确认。
+⚠️ 另注：`ValueStepper` 在 designsystem 里目前**没有共享层消费者**（消费者都在 `:core:ui`/`:app`）
+—— 按「共享层出现第一个消费者才搬」的克制原则，它严格说还没到该搬的时候；本片搬它的理由是为
+`CompactSettingItems` 改走契约后（下一片）预置，**代价极低且零风险**（编译已证），已在 KDoc 写明。
+
+**下一步**：把 `CompactSettingItems` 的三处 miuix `preference` 直接调用改写成走
+`MiuixPreferenceRenderer` 契约（先读契约与三个既有范文的写法，再决定是否扩契约参数面），
+之后才是 `themeManage` / `themeConfig`。

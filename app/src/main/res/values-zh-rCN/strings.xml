@@ -2422,8 +2422,6 @@
     <string name="a11y_not_selected">未选中</string>
     <string name="a11y_on">开启</string>
     <string name="a11y_off">关闭</string>
-    <string name="a11y_decrease">减小</string>
-    <string name="a11y_increase">增大</string>
     <string name="a11y_move_up">上移</string>
     <string name="a11y_move_down">下移</string>
     <string name="a11y_reorder_named">调整%1$s顺序</string>

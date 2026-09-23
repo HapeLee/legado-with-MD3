@@ -598,6 +598,36 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   would show `legacyHelp` counts and fail. Leave it in its existing report-only area and only add an
   import for the relocated interface. "Contract moved down, implementation still in `:app`" is an
   accepted transition state, not a defect to force-fix in the same slice.
+- ⚠️ **Before hoisting, check *third-party* imports — and read the target module's existing KDoc,
+  which often already documents why your planned move is impossible.** Measured in M5-15b:
+  `CompactSettingItems.kt` passed every check that M5-15a's lesson prescribed (no `android.` /
+  `java.` / `R.`, all `io.legado.app.*` deps in shared modules, same package already in
+  designsystem) and still failed to compile — it calls `top.yukonga.miuix.kmp.preference.*`
+  directly. Two generalisable gaps:
+  1. A "platform-construct" filter that only looks at `android.` / `java.` / `R.` **misses
+     third-party artifacts**. A shared-module hoist additionally requires that the *target* module
+     declares that artifact — grep the file for **all** imports and check each one against the
+     target module's build file, not just against a platform blocklist.
+  2. The reason was **already written down**: `MiuixPreferenceRenderer.kt` (designsystem) carries a
+     KDoc stating that `miuix-preference` is the one miuix artifact with **no desktop variant**, and
+     that the established fix is a narrow contract (`MiuixPreferenceRenderer` +
+     `MiuixPreferenceRendererProvider`, Android impl in `:core:ui`). Three sibling files had
+     already been migrated that way. Reading the destination package's KDoc **before** moving a
+     file into it would have caught this in minutes. When a module has a *designed seam* for a
+     problem, a file that bypasses it is not "ready to hoist" — it needs rewriting onto the seam,
+     which is a different (and larger) slice than a move.
+  Practical rule: after `git mv`, if the compile fails with references that are neither yours nor
+  the platform's, treat it as "this file was built for a specific module's dependency set" and
+  consider reverting the move rather than adding a dependency. In M5-15b the right call was to
+  **revert `CompactSettingItems` (byte-identical, `git diff` empty) and keep only the genuinely
+  clean part (`ValueStepper`)** — a slice that ends smaller than planned is fine; a slice that
+  smuggles a dependency decision into a move is not.
+- ⚠️ **Re-measure lint every slice; never quote the previous slice's number.** M5-15b: the error
+  set matched M5-12b's record line-for-line (so the slice added none), but warnings had drifted
+  94 → 95 and **could not be attributed** to the slice (the baseline contains no `a11y_*` entry,
+  and `lintAppDebug` does not scan designsystem). The real defect was procedural: several slices
+  had reported "lint unchanged (94)" by quoting a value measured back at M5-10a. A stale number
+  reads exactly like a fresh one.
 - ⚠️ **A dependency survey must be built from *definition sites*, and "not found" must never be
   silent.** Measured in M5-15a: three successive versions of my own survey tool each printed a
   confident **"no `:app`-private dependencies"** verdict for the same two subdomains, and each was

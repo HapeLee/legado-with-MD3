@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- :core:ui 组件自带的字符串默认值；app 侧同名资源按 Android 资源合并优先级覆盖本文件。 -->
 <resources>
-    <string name="a11y_decrease">Decrease</string>
     <string name="a11y_heatmap_day_count">%1$s, %2$d readings</string>
     <string name="a11y_heatmap_day_duration">%1$s, read for %2$s</string>
-    <string name="a11y_increase">Increase</string>
     <string name="a11y_move_down">Move down</string>
     <string name="a11y_move_up">Move up</string>
     <string name="a11y_reorder_named">Reorder %1$s</string>

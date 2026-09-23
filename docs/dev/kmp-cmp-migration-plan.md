@@ -2082,3 +2082,38 @@ M5-12b 发现：`lintAppDebug` **一直在失败**，而我过去十几片只 gr
 `:core:ui` 自己的 `R`)，从 `:core:ui` 到 `:core:designsystem/commonMain`。
 理由：这是 `themeManage` 与 `themeConfig` **两块共用的前置**，且被 10 个 `:app` 文件使用、
 同包名 ⇒ 零 import 改动。
+
+### M5-15b 已完成（2026-09-24）：⚠️ 计划**落空一半**，缩到只上提 `ValueStepper`
+
+**`CompactSettingItems` 不是"可上提"** —— 它直接调 `top.yukonga.miuix.kmp.preference.*`
+的三个组件（`WindowDropdownPreference` / `SwitchPreference` / `ArrowPreference`），
+而 `miuix-preference` 是**整个 miuix 里唯一没有 desktop 变体的制品**（只有
+`miuix-preference-android`）⇒ 进不了 `commonMain`。
+
+**这个原因早就写在 designsystem 的 `MiuixPreferenceRenderer.kt` KDoc 里**，而且为它**早就建好了
+既定方案**：窄契约 `MiuixPreferenceRenderer`（`switchPreference` / `arrowPreference` /
+`dropdownPreference`）+ 宿主注入点 `MiuixPreferenceRendererProvider`，Android 实现留在
+`:core:ui`；`ClickableSettingItem`(M5-2a-pre) / `SwitchSettingItem` / `DropdownListSettingItem`
+都是这么过桥的。
+
+⇒ 它的正确形态是**改写走契约**（需决定是否扩契约参数面），不是搬运 ⇒ 已 `git mv` 退回原位
+（`git diff` 为空，**字节一致**）。
+
+**本片实际交付**：`ValueStepper` `:core:ui` → `:core:designsystem/commonMain`（包名不变 ⇒
+3 处消费者 import 零改动），改写两处资源访问，`a11y_decrease` / `a11y_increase` 两条文案
+逐字搬入 designsystem 4 语言目录并从 `:core:ui` 删除，另删 `:app` 侧已成死文案的 8 行。
+
+⚠️ 查过一个真实风险：Android 资源合并时 `:app` 同名条目会**覆盖** `:core:ui` 的 ⇒
+`ValueStepper` 原来显示的其实是 `:app` 的值；逐语言比对 4 目录 × 2 条**全部一致** ⇒
+未改变用户可见文案 ✅。
+
+⚠️ 归因失败：`lintAppDebug` 仍 FAILED（5 个 error 与 M5-12b 记录**逐行一致** ⇒ 本片未新增），
+但 warnings 94 → 95 **归因不了**。更该记的是过程问题 —— M5-10a 之后若干片引用的「lint 一致(94)」
+是**没重测的旧值**。
+
+验证：四门禁全绿 + designsystem/`:core:ui`/`:feature:settings`/`:app` 编译与全模块测试
+（BUILD SUCCESSFUL）；计数 **794 / 1289 零偏离**；designsystem 资源 **224/224**
+（56×4，正好 +2 key）；`:app` 4 个 res 文件 XML 通过。
+
+**下一步**：把 `CompactSettingItems` 的三处 miuix 直接调用改写成走 `MiuixPreferenceRenderer`
+契约（先读契约与三个既有范文），之后才是 `themeManage` / `themeConfig`。

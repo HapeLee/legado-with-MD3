@@ -2425,8 +2425,6 @@
     <string name="a11y_not_selected">Not selected</string>
     <string name="a11y_on">On</string>
     <string name="a11y_off">Off</string>
-    <string name="a11y_decrease">Decrease</string>
-    <string name="a11y_increase">Increase</string>
     <string name="a11y_move_up">Move up</string>
     <string name="a11y_move_down">Move down</string>
     <string name="a11y_reorder_named">Reorder %1$s</string>
