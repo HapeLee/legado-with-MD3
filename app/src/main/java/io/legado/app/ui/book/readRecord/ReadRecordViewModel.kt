@@ -121,11 +121,10 @@ class ReadRecordViewModel(
             .mapValues { it.value.size }
 
         val dailyTimes = data.sessions
-            .groupBy { it.startTime.toDateString() }
+            .flatMap { session -> session.durationByDate().entries }
+            .groupingBy { it.key }
+            .fold(0L) { total, entry -> total + entry.value }
             .mapKeys { LocalDate.parse(it.key, DateTimeFormatter.ISO_LOCAL_DATE) }
-            .mapValues { (_, sessions) ->
-                sessions.sumOf { (it.endTime - it.startTime).coerceAtLeast(0L) }
-            }
 
         val filteredDetails = data.details.filter { detail ->
             dateStr == null || detail.date == dateStr
@@ -349,6 +348,21 @@ class ReadRecordViewModel(
 
     private fun Long.toDateString(): String =
         Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate().toString()
+
+    private fun ReadRecordSession.durationByDate(): Map<String, Long> {
+        if (endTime <= startTime) return emptyMap()
+        val zone = ZoneId.systemDefault()
+        var cursor = startTime
+        val result = linkedMapOf<String, Long>()
+        while (cursor < endTime) {
+            val date = java.time.Instant.ofEpochMilli(cursor).atZone(zone).toLocalDate()
+            val nextMidnight = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            val segmentEnd = minOf(endTime, nextMidnight)
+            result[date.toString()] = (result[date.toString()] ?: 0L) + (segmentEnd - cursor)
+            cursor = segmentEnd
+        }
+        return result
+    }
 }
 
 sealed interface ReadRecordIntent {
