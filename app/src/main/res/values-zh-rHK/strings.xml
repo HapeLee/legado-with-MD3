@@ -1747,8 +1747,6 @@
     <string name="eye_protection">護眼模式</string>
     <string name="eye_protection_enabled">啟用護眼模式</string>
     <string name="eye_protection_enabled_summary">透過暖色調減少藍光</string>
-    <string name="eye_protection_intensity">護眼強度</string>
-    <string name="eye_protection_intensity_summary">目前強度：%1$d</string>
     <string name="eye_protection_auto_night">深色閱讀模式時自動開啟</string>
     <string name="eye_protection_auto_night_summary">跟隨閱讀介面的深色/淺色模式自動切換</string>
     <string name="color_temperature">色溫</string>

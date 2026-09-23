@@ -1839,6 +1839,45 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        `ui/config/backupConfig` 至此**只剩 1 个宿主壳文件**。
      **下一步**：`readConfig`（7 文件 1149 行，但被 `ui/book/*` 的两个 Sheet 挡着）、
      `themeManage`（与 `coverConfig` 撞同一条存储链）、或 `themeConfig`（最重）。
+   - **M5-10a-pre 已完成（2026-09-23）：`TimePickerDialog` 从 `:core:ui` 上提到
+     `:core:designsystem/commonMain`。** 与 M5-9b-pre 搬 `CardTabRow` 同一配方/同一触发条件
+     （共享层出现第一个消费者），包名不变 ⇒ 两处消费方 import 零改动。
+     ⚠️ **但它不是零改动搬运**：三处 JVM/Android 专用写法必须改写 ——
+     `String.format(Locale.ROOT, …)` → `padStart` 拼接（`Locale.ROOT` 的用意就是恒输出 ASCII，
+     否则阿拉伯语地区出 `٢٢:٠٧`）；`Character.digit(c, 10)` → `Char.digitToIntOrNull(10)`
+     （原实现**刻意**接受非拉丁数字）；`R.string.ok/cancel` → designsystem 的 `Res`。
+     **两条改写有既存单测兜底**：`:core:ui` 原有一份 `TimePickerDialogTest`（用
+     `Locale.setDefault("ar")` 钉「恒输出 ASCII」+ 断言 `parseTimeNumber("٢٢") == 22`），
+     随实现迁到本模块 `commonTest`（`java.util` 进不去，去掉 `setDefault` 包装）。
+     实测 `digitToIntOrNull(10)` 在 JVM 上委托 `Character.digit` ⇒ **非拉丁数字语义保住**
+     （3 例全绿）。⚠️ 其它平台的数字表可能只认 ASCII，已记为未验证。
+     **计数 +3 不是新增覆盖**：那份测试原在 `:core:ui/src/test`（JVM 源集，
+     **不在计数器模块清单里**、从未被计入）。CI 的 `verify.yml` 一直在跑
+     `:core:ui:testDebugUnitTest` ⇒ 这是**可见性**增加。762 → **765**。
+   - **M5-10a 已完成（2026-09-23）：`EyeProtectionConfigSheet` → `:feature:settings/readconfig/`。**
+     仅资源访问改写（11 条，无数组），结构逐字保留。落位判断：它原是「阅读菜单与阅读设置共用」的一份，
+     字段全落在 `ThemeSettings` 上 ⇒ 放 `readconfig/`（与将迁来的 `ReadConfigScreen` 同包），
+     阅读器侧改 import；⚠️ 临时归属，将来有 `:feature:reader` 应重划。
+     死资源 2 条；其余 9 条在 `:app` 侧仍被 `ThemeConfigScreen` / `GlobalThemePage` /
+     `MoreConfigSheet` 引用。
+     ⚠️ **一处工具口径存疑**：`verify-compose-resources.py` 报 622/622，而按「同名条目」
+     应有 631 对（新增 9 条在两个源文件里都有，中间产物实测也含新 key）。未查出原因 ⇒
+     改用**直接按 key 逐字 diff**（11 × 4 语言）作为本片断言，结论一致 ✅。工具分母待独立排查。
+     **战略结论**：勘察后看清 `readConfig` 不是普通切片，而是**四个移植问题的集合** ——
+     `ClickActionConfigSheet`（`androidx.activity` 的 `BackHandler`（共享层零先例）
+     + 自 `koinInject` 仓储 vs `:feature:settings` 刻意无 koin 依赖）、
+     `PageKeySheet`（`android.view.KeyEvent.nativeKeyEvent`）、
+     `CanvasRecorderFactory`（`android.os.Build` + 具体 Impl）、
+     `ApplyReadSettingUseCase`（`EventBus`/`ReadConfigUpdateBus` 待核）。
+     前两片的性质是「**把阅读器栈跨端化**」而非「迁设置页」。
+     加上 `themeConfig`(3388 行/10 个 `Launcher*` 图标) 与 `themeManage`/`coverConfig`
+     （撞 `ThemePackageManager`(1254 行深依赖 `Context`/`Uri`/`AppCompatDelegate`) 与
+     `BookCover`(`Bitmap`/`Drawable`) 那条链）——
+     **`ui/config` 剩余项已进入「每片都要先跨端化或抽重契约」的区间**。
+     建议下一轮先与使用者确认优先级，而不是默认按文件数挑最小的继续啃。
+     验证：四门禁全绿（G4 无需变动）+ designsystem（**42 例**，含迁入 3 例）/`:core:ui`/
+     `:feature:settings`/`:app` 编译 + 全模块测试；计数 **762 → 765 / 1257 → 1260**；
+     资源 11×4 逐字一致 + designsystem 216/216；死资源 2 条；lint **5 errors / 94 warnings**。
 
 ## 6. 验证矩阵
 

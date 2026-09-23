@@ -30,7 +30,7 @@ import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
-import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
+import io.legado.app.feature.settings.readconfig.EyeProtectionConfigSheet
 import io.legado.app.ui.book.read.sheet.FloatingBarIconConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.MarkingSheet

@@ -11,7 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
-import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
+import io.legado.app.feature.settings.readconfig.EyeProtectionConfigSheet
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup

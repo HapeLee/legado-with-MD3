@@ -573,6 +573,29 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   would show `legacyHelp` counts and fail. Leave it in its existing report-only area and only add an
   import for the relocated interface. "Contract moved down, implementation still in `:app`" is an
   accepted transition state, not a defect to force-fix in the same slice.
+- **Hoisting a widget from `:core:ui` to `:core:designsystem/commonMain` is mechanical *only if you
+  check first*.** The recipe (same package ⇒ zero import churn for consumers) has been used many
+  times, but it is a claim about the file's contents, not a property of the move. Measured in
+  M5-10a-pre: `CardTabRow` was genuinely zero-change, while `TimePickerDialog` — which *looked*
+  identical, just Compose + designsystem — carried three JVM/Android-only constructs
+  (`String.format(Locale.ROOT, …)`, `Character.digit`, `R.string`). Grep the file for
+  `java.` / `android.` / `R.string` **before** calling a hoist mechanical, and say in the KDoc which
+  lines changed and why the rewrite is equivalent. `Locale.ROOT`-style formatting is worth pausing
+  over: it usually exists to force ASCII output, so a naive `padStart`/`String.format` swap can
+  silently change what users in Arabic/Devanagari locales see.
+- **A test that moves between modules can change the count without adding coverage — check where it
+  actually ran.** M5-10a-pre reported `+3`, which looks like new coverage; it was one JVM test moving
+  from `:core:ui/src/test` (absent from `count-test-results.py`'s module list, so never counted) into
+  designsystem's `commonTest` (counted). It had been running all along in CI
+  (`.github/workflows/verify.yml` runs `:core:ui:testDebugUnitTest`). Write the reason into the
+  baseline comment — a bare `+3` reads as new coverage next time.
+- **When a verifier's own number stops matching your arithmetic, do not just accept its verdict.**
+  M5-10a: `verify-compose-resources.py` printed `622/622` while the comparable pair count should have
+  been 631 (9 newly added keys exist on both sides, and the build intermediate demonstrably contains
+  them). The cause was not found, so the slice's resource claim rests on a **direct per-key diff**
+  (key × language, reporting "value differs" separately from "`:app` copy deleted") instead of the
+  tool's aggregate. An under-counting denominator is silent: it cannot report a mismatch it never
+  compared.
 - **Raising a non-report-only area is allowed *only* as a relocation registered in the same change.**
   The bullets above describe the conservative route (leave the implementation in its report-only
   area). The other accepted route is to move it into `io.legado.app.platform` — the designated home

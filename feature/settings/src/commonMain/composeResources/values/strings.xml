@@ -281,4 +281,15 @@
     <string name="backup_to_network">Backup to Network</string>
     <string name="restore_from_local">Restore from Local</string>
     <string name="restore_from_network">Restore from Network</string>
+    <string name="eye_protection">Eye Protection</string>
+    <string name="eye_protection_auto_night">Enable with dark reading mode</string>
+    <string name="eye_protection_auto_night_summary">Automatically follow the reader day/night mode</string>
+    <string name="eye_protection_enabled">Enable Eye Protection</string>
+    <string name="eye_protection_enabled_summary">Reduce blue light via warm color tint</string>
+    <string name="eye_protection_end_time">End Time</string>
+    <string name="eye_protection_intensity">Eye protection intensity</string>
+    <string name="eye_protection_intensity_summary">Current intensity: %1$d</string>
+    <string name="eye_protection_schedule">Scheduled</string>
+    <string name="eye_protection_schedule_summary">Only apply during the configured time range</string>
+    <string name="eye_protection_start_time">Start Time</string>
 </resources>

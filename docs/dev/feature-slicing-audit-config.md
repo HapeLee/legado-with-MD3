@@ -957,3 +957,92 @@ expected:<Loading(title=Loading)> but was:<null>
 `ClickActionConfigSheet` / `EyeProtectionConfigSheet` 挡住 —— 要么先迁那两个 sheet，
 要么它们随宿主壳留在 `:app`）、`themeManage`（与 `coverConfig` 撞同一条存储链）、
 或 `themeConfig`（11 文件 / 3388 行，撞 `ui.main.*` 的 10 个 `Launcher*` 图标，最重）。
+
+### M5-10a-pre：`TimePickerDialog` 上提到 `:core:designsystem/commonMain`
+
+与 M5-9b-pre 搬 `CardTabRow` 同一配方、同一触发条件（**共享层出现第一个消费者**：
+`EyeProtectionConfigSheet` 迁进 `:feature:settings` 后需要它）。包名不变 ⇒ 两处消费方
+（`ThemeConfigScreen`（`:app`）与本片迁入的 sheet）import 零改动。
+
+⚠️ **但它不是零改动搬运** —— `CardTabRow` 是，这个不是。三处 JVM/Android 专用写法必须改写：
+
+| 迁移前 | 迁移后 | 依据 |
+|---|---|---|
+| `String.format(Locale.ROOT, "%02d:%02d", h, m)` | `padStart(2, '0')` 拼接 | `Locale.ROOT` 的用意就是**恒定输出 ASCII 数字**（否则阿拉伯语地区出 `٢٢:٠٧`）；`Int.toString()` 本就恒为 ASCII ⇒ 语义一致 |
+| `Character.digit(char, 10)` | `Char.digitToIntOrNull(10)` | 原实现**刻意**接受非拉丁数字（见下） |
+| `R.string.ok / cancel` | designsystem 自己的 `Res` | 该模块四语言都已有这两条，无需新增文案 |
+
+**这两条改写有既存单测兜底**：`:core:ui` 里原有一份 `TimePickerDialogTest`，它用
+`java.util.Locale.setDefault("ar")` 包住断言，钉的正是「`formatTimeValue` 恒输出 ASCII」，
+并且断言 `parseTimeNumber("٢٢") == 22`（**接受阿拉伯-印度数字**）。该测试随实现迁到本模块
+`commonTest`（`java.util` 进不去，`setDefault` 那层包装随之去掉 —— 新实现按构造就 locale-free，
+那条性质恒真，但输出形状仍被断言）。
+
+实测结论：`digitToIntOrNull(10)` 在 JVM 上委托 `Character.digit`，**非拉丁数字语义保住了**
+（3 例全绿）。⚠️ 其它平台（native/JS）的数字表可能只认 ASCII —— 见下方未验证。
+
+**计数 +3 不是新增覆盖**：那份测试原在 `:core:ui/src/test`（JVM 专用源集），**不在
+`tools/count-test-results.py` 的模块清单里**、从未被计入；迁到 designsystem 的 `commonTest`
+后进了分母 ⇒ 762 → **765**。它此前并非没跑 —— CI 的 `verify.yml` 明确执行
+`:core:ui:testDebugUnitTest`。**是可见性增加，不是用例增加**，基线注释里写明了。
+
+### M5-10a：`EyeProtectionConfigSheet` → `:feature:settings/readconfig/`
+
+`readConfig` 页的前置件之一。**唯一改动**是资源访问（`R.string.*` → `Res.string.*`，11 条，
+无数组），结构逐字保留。
+
+落位时的一个判断：它原住 `ui/book/read/sheet/`（阅读菜单那侧），但**本页与阅读菜单共用同一份**，
+且它的全部字段都落在 `ThemeSettings` 上 ⇒ 既不是阅读器私有、也不是设置页私有。本片放
+`readconfig/`（与将迁来的 `ReadConfigScreen` 同包），阅读器侧（`:app` 的 `ReadBookScreen`）
+改为 import 本文件。⚠️ 这是**临时归属**，将来若有 `:feature:reader` 应重新划分。
+
+死资源 2 条（`eye_protection_intensity` / `_summary`）；其余 9 条在 `:app` 侧仍被
+`ThemeConfigScreen` / `GlobalThemePage` / `MoreConfigSheet` 引用。
+
+⚠️ **一处工具口径存疑**：`verify-compose-resources.py` 这次报 622/622，
+但按「feature 与 `:app` 同名条目」应有 631 对（新增 9 条非死文案在两个源文件里都存在，
+且中间产物 `strings.commonMain.cvr` 实测已含 `eye_protection_start_time`）。
+**没查出原因**（该脚本的分母逻辑见其 §③）。为了不留验证缺口，改用**直接按 key 逐字 diff**
+（11 条 × 4 语言）作为本片的资源断言 —— 结论一致 ✅，且能明确区分「值不一致」与
+「`:app` 侧已删」。工具本身的这个分母差异待独立排查。
+
+#### ⚠️ 战略结论：`readConfig` 不是一个普通切片，而是四个移植问题的集合
+
+勘察后才看清，`readConfig` 页本体（471 行）引用四个 `:app` 专属符号，**每个都需一个策略决定**：
+
+| 符号 | 阻塞点 |
+|---|---|
+| `ClickActionConfigSheet`(230) | ① 用 `androidx.activity.compose.BackHandler`（**共享层零先例**）；② 自己 `koinInject()` 仓储，而 `:feature:settings` **刻意没有 koin 依赖**（build 文件注明「没有任何调用方」）⇒ 要么加 koin、要么改成参数注入（改签名，两个消费方） |
+| `PageKeySheet`(121) | 用 `android.view.KeyEvent` 的 `nativeKeyEvent.keyCode` ⇒ 需 CMP 化的按键映射 |
+| `EyeProtectionConfigSheet`(133) | ✅ 本片已解决（上提 `TimePickerDialog` 即可） |
+| `CanvasRecorderFactory`(31) | 用 `android.os.Build` + 具体 `CanvasRecorder*Impl` ⇒ 需窄契约 |
+
+另有 `ApplyReadSettingUseCase`(62) 依赖 `EventBus` / `ReadConfigUpdateBus` 待核。
+
+⇒ 结论：**`readConfig` 应拆成多片、且前两片的性质是「把阅读器栈跨端化」而不是「迁设置页」**。
+而 `ui/config` 其余尾巴同样重（`themeConfig` 3388 行撞 10 个 `Launcher*` 图标；
+`themeManage` / `coverConfig` 撞 `ThemePackageManager`(1254 行，深依赖 `Context`/`Uri`/
+`AppCompatDelegate`) 与 `BookCover`(`Bitmap`/`Drawable`) 那条存储链）。
+
+**建议**：`ui/config` 的剩余项已进入「每片都要先做跨端化或抽重契约」的区间，
+下一轮宜先与使用者确认优先级（是继续啃这块，还是转去别的域），而不是默认继续按文件数挑最小的。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需基线变动**：两个上提都不改变 help/命名耦合的归属）
+- `:core:designsystem` 的 desktop/android 编译与 `testAndroidHostTest`（**42 例 0 失败**，
+  含迁入的 3 例）+ `:core:ui` 编译 + `:feature:settings` 编译 + `:app` 编译/单测/打包
+- 全模块测试通过；计数 **762 → 765 / 1257 → 1260**（+3 = 可见性，见上）
+- 资源：11 条 × 4 语言**直接逐字 diff 一致** ✅；designsystem **216/216** 一致 ✅
+- 死资源 2 条删除（`:app` 四个文件均可解析）
+- `lintAppDebug` 仍 **5 errors / 94 warnings**
+
+#### 未验证
+
+- 时间选择对话框的渲染与交互（`TimePickerDialog` 上提后**同一份代码**在两端跑，但本片只编译+单测，
+  没跑 UI）。
+- ⚠️ `parseTimeNumber` 的非拉丁数字语义**仅在 JVM 上验证**（`commonTest` 跑在
+  `testAndroidHostTest`）。若将来编 native/JS，需重跑这份测试确认数字表差异。
+- 护眼 sheet 在两个入口（阅读设置页 / 阅读菜单）的渲染与两个时间选择器的实际交互。需真机冒烟。
+
+**下一步**：见上方「战略结论」—— 建议先定优先级。
