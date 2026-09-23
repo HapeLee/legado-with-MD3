@@ -56,6 +56,14 @@ kotlin {
             // `dev.chrisbanes.haze.HazeState`，本模块要自行声明才能解析该类型
             // （`:core:designsystem` 内 haze 是 `implementation`，不透出）。与 about 同形。
             implementation(libs.haze.core)
+            // M5-13b：`CoverAlbumSelectSheet` 用 `coil3.compose.AsyncImage` 渲图库缩略图。
+            // 与上面 haze 同一条理由 —— `:core:designsystem` 内 coil 是 `implementation`，
+            // **不透出**，本模块要自行声明才能解析 `AsyncImage`。
+            // ⚠️ 这是本模块**依赖的净增**（不是搬迁）：迁移前该 sheet 在 `:app`，用的是 app 侧的
+            // coil。之所以选「直接加依赖」而不是「在 designsystem 加一个公开图片组件」：
+            // 后者在只有一个消费者时会造出一个没人复用的抽象（同 M5-11d 拒绝为
+            // `CanvasRecorderFactory.isSupport` 抽契约的判据）。
+            implementation(libs.coil.compose)
             // CMP 多平台资源：`Res.string.*` 替代 android-only 的 `R.string.*`。
             implementation(libs.compose.multiplatform.resources)
             implementation(libs.kotlinx.collections.immutable)

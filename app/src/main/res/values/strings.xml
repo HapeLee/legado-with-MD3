@@ -2420,8 +2420,6 @@
     <string name="switch_to_light_mode_action">Switch to light mode</string>
     <string name="switch_action">Switch</string>
     <string name="cover_albums">Cover albums</string>
-    <string name="manage_cover_albums">Manage cover albums</string>
-    <string name="select_cover_album">Select cover album</string>
     <string name="cover_album_none">Built-in default cover</string>
     <string name="cover_album_name">Album name</string>
     <string name="cover_album_empty">No cover albums</string>

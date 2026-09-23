@@ -42,6 +42,7 @@ import io.legado.app.feature.settings.coverconfig.CoverConfigViewModel
 import io.legado.app.feature.settings.coverconfig.CoverColorField
 import io.legado.app.feature.settings.coverconfig.localizedText
 import io.legado.app.feature.settings.coverconfig.CoverRuleConfigSheet
+import io.legado.app.feature.settings.coverconfig.CoverAlbumSelectSheet
 
 @Composable
 fun CoverConfigRouteScreen(

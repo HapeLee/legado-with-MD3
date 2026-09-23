@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.coverConfig
+package io.legado.app.feature.settings.coverconfig
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,18 +19,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import io.legado.app.R
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.cover_album_day_night_count
+import io.legado.app.feature.settings.res.cover_album_none
+import io.legado.app.feature.settings.res.manage_cover_albums
+import io.legado.app.feature.settings.res.select_cover_album
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.feature.settings.coverconfig.CoverAlbumSelectionUiState
+import org.jetbrains.compose.resources.stringResource
 
+/**
+ * 封面图库选择弹层（含"管理图库"入口）。
+ *
+ * M5-13b：从 `:app` 的 `ui/config/coverConfig` 迁来。**唯一改动**是资源访问
+ * （`androidx.compose.ui.res.stringResource` → CMP 的、`R.string.*` → `Res.string.*`，4 条），
+ * 结构逐字保留。
+ *
+ * ⚠️ 本文件是本模块**第一次用到 coil**（`AsyncImage`）—— 因此 `build.gradle.kts` 里新增了
+ * `implementation(libs.coil.compose)`（理由与取舍写在那条注释里：designsystem 内的 coil 是
+ * `implementation` 不透出；不在 designsystem 造"只有一个消费者的图片组件"）。
+ *
+ * 它只消费共享 UI 类型（[CoverAlbumSelectionUiState]）⇒ 自身零平台依赖。
+ */
 @Composable
 fun CoverAlbumSelectSheet(
     show: Boolean,
@@ -43,12 +59,12 @@ fun CoverAlbumSelectSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.select_cover_album),
+        title = stringResource(Res.string.select_cover_album),
         endAction = {
             MediumTonalButton(
                 onClick = onManage,
                 icon = Icons.Default.Settings,
-                contentDescription = stringResource(R.string.manage_cover_albums),
+                contentDescription = stringResource(Res.string.manage_cover_albums),
             )
         },
     ) {
@@ -60,7 +76,7 @@ fun CoverAlbumSelectSheet(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             CoverAlbumSelectionItem(
-                name = stringResource(R.string.cover_album_none),
+                name = stringResource(Res.string.cover_album_none),
                 imagePath = null,
                 lightImageCount = null,
                 darkImageCount = null,
@@ -144,7 +160,7 @@ private fun CoverAlbumSelectionItem(
                 if (lightImageCount != null && darkImageCount != null) {
                     AppText(
                         text = stringResource(
-                            R.string.cover_album_day_night_count,
+                            Res.string.cover_album_day_night_count,
                             lightImageCount,
                             darkImageCount,
                         ),

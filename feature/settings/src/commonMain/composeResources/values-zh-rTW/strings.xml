@@ -352,4 +352,8 @@
     <string name="enable">啟用</string>
     <string name="search_via_url">搜索URL</string>
     <string name="cover_rule_edit">封面规则</string>
+    <string name="select_cover_album">選擇封面圖集</string>
+    <string name="manage_cover_albums">管理封面圖集</string>
+    <string name="cover_album_none">應用程式內建封面</string>
+    <string name="cover_album_day_night_count">日間 %1$d · 夜間 %2$d</string>
 </resources>

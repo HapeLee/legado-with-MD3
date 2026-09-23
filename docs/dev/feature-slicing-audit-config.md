@@ -1474,3 +1474,48 @@ legacyHelp|app/main/io/legado/app/ui/config/coverConfig  1 → 0   （条目删�
 
 **下一步**：① 定 coil 那件事（见上）；② 迁 `CoverAlbumSelectSheet` + `CoverConfigScreen`(371) 本体，
 并把其宿主壳（46–67 行，含 `toastOnUi`）拆成独立的 `CoverConfigRouteScreen.kt`。
+
+### M5-13b：`CoverAlbumSelectSheet` → `:feature:settings/coverconfig/`（+ 本模块首次引入 coil）
+
+封面上页本体的**第二个前置件**。164 行、唯一逻辑改动是资源访问（4 条文案），但本片带一个
+**构建变更**：
+
+#### coil 复用方案的定夺（M5-13a 留下的问题）
+
+`CoverAlbumSelectSheet` 用 `coil3.compose.AsyncImage` 渲染图库缩略图，而
+`:core:designsystem` 内的 coil 是 `implementation`、**不透出** ⇒ `:feature:settings` 看不到它。
+
+两个候选（M5-13a 记过）：
+1. **给本模块加 `libs.coil.compose`**（本片选的）；
+2. 在 designsystem 加一个公开的图片组件。
+
+选 ① 的理由：② 在**只有一个消费者**时会造出一个没人复用的抽象 —— 与 M5-11d 拒绝为
+`CanvasRecorderFactory.isSupport` 抽契约、M5-7 拒绝为 `maxDownloadConcurrency` 在共享层写
+常量是同一条判据（**不为单一消费者造层**）。②若将来出现第二个消费者，再把它提上去也不迟。
+
+⚠️ 因此这条依赖是本模块**依赖的净增**（不是搬迁），已在 `build.gradle.kts` 的注释里写明取舍，
+并把 `haze` 那条现成的同因注释作为先例引用（同样是"designsystem 内是 implementation、不透出"）。
+
+#### 死资源 2 条
+
+`select_cover_album` / `manage_cover_albums`；另 2 条在 `:app` 侧仍被引用
+（`cover_album_none` 在 `CoverConfigScreen`、`cover_album_day_night_count` 在 `CoverConfigScreen`
+与 `CoverAlbumManageScreen`）—— 即**同一批文案里有的能删有的不能**，取决于 `:app` 还有谁在用。
+
+#### 验证
+
+- `:feature:settings` desktop + **Android** 两端编译（确认 coil 依赖在两端都解析得到）
+  + `:app` 编译/单测/打包 + 四门禁全绿
+- 计数 **784 / 1279 零偏离**（纯 UI 迁移，依 checklist 不加测试）
+- 4 个 `strings.xml` 删完均可解析
+- `lintAppDebug`：本片未重跑（上一片刚确认过 5/94 且逐项与迁移前一致；任务本身 FAILED 是既有问题）
+
+#### 未验证
+
+图库缩略图的渲染（`AsyncImage` 在 `:feature:settings` 里第一次被编译，但**没跑过 UI**）——
+尤其"有图 / 无图两条分支"与桌面端 coil 的行为。需真机 + desktop 冒烟。
+
+**下一步**：迁 `CoverConfigScreen`(371) 本体，并把宿主壳（46–67 行，含 `toastOnUi` 与
+`LocalContext`）拆成独立的 `CoverConfigRouteScreen.kt`（同 M5-9b 拆 backupConfig 的做法）。
+做完 `ui/config/coverConfig` 只剩图库那一半（Screen 449 带 launcher、VM 169 用
+`Context`/`Uri`/`OpenableColumns`）。

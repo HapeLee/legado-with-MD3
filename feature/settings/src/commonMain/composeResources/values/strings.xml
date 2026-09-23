@@ -370,4 +370,8 @@
     <string name="enable">Enable</string>
     <string name="search_via_url">Search via URL</string>
     <string name="cover_rule_edit">Cover Rules</string>
+    <string name="select_cover_album">Select cover album</string>
+    <string name="manage_cover_albums">Manage cover albums</string>
+    <string name="cover_album_none">Built-in default cover</string>
+    <string name="cover_album_day_night_count">Light %1$d · Dark %2$d</string>
 </resources>

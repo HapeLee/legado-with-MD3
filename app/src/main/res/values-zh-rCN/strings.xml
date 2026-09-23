@@ -2417,8 +2417,6 @@
     <string name="switch_to_light_mode_action">切换到浅色模式</string>
     <string name="switch_action">切换</string>
     <string name="cover_albums">封面图集</string>
-    <string name="manage_cover_albums">管理封面图集</string>
-    <string name="select_cover_album">选择封面图集</string>
     <string name="cover_album_none">应用内置封面</string>
     <string name="cover_album_name">图集名称</string>
     <string name="cover_album_empty">暂无封面图集</string>
