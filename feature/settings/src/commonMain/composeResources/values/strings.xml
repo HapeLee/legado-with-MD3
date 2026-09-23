@@ -229,4 +229,15 @@
     <string name="web_service_auto_start">Start Web Service When App Opens</string>
     <string name="web_service_wake_lock">WebService Wake Up Lock</string>
     <string name="web_service_wake_lock_summary">The wake-up lock is enabled when the web service is enabled, and some phones will be killed when the wake-up lock is enabled.</string>
+    <string name="test_sync_loading_text">Testing…</string>
+    <string name="test_sync_status_success">WebDAV service config success</string>
+    <string name="test_sync_status_fail">WebDAV service config failure</string>
+    <string name="backup">Backup</string>
+    <string name="backup_success">Backup succeed</string>
+    <string name="backup_fail">Backup failed\n%s</string>
+    <string name="on_restore">Restoring</string>
+    <string name="loading">Loading…</string>
+    <string name="restore_success">Restore succeed</string>
+    <string name="webdav_restore_fail">WebDAV restore failed\n%1$s</string>
+    <string name="restore_fail_with_error">Restore failed: %1$s</string>
 </resources>

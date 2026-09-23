@@ -469,6 +469,26 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   "No cached version available for offline mode"); offline works after one successful resolve.
 - Full recipe, dependency table and measurements: `docs/dev/cmp-module-convention.md`.
 
+- ⚠️ **Deleting retired strings line-by-line silently corrupts `strings.xml` when a value spans
+  lines.** Measured in M5-9a: `restore_fail_with_error`'s value contains a **literal newline**
+  (``復原失敗`` then ``%1$s</string>`` on the next line), so a `for line in lines: if key in line`
+  script removed only the first line and left an orphan ``%1$s</string>`` behind. The XML broke, the
+  Kotlin build still passed, and it only surfaced at `:app:mergeAppDebugResources`
+  ("元素类型 resources 必须由匹配的结束标记终止") two minutes into the full run.
+  **Fix:** delete by **element** with a DOTALL regex
+  (`[ \t]*<string name="K">.*?</string>\r?\n?`, `re.S`) and **always re-parse every file with
+  `xml.etree.ElementTree` right after any deletion script** — the parse check is 5 lines and it is
+  the only signal before the Android merger. (Earlier slices did run that check; M5-9a skipped it
+  and paid for it.)
+- **A `@Deprecated` compat shim can hide legacy coupling from the ratchet by forcing fully-qualified
+  references.** In M5-9a the VM sat in the same package as an unused `object BackupConfig` shim, so
+  every use of the *real* `help.storage.BackupConfig` had to be written out in full
+  (`io.legado.app.help.storage.BackupConfig.ignoreConfig[…]`). The gate's rules are import-anchored
+  (`^import io\.legado\.app\.help\.[A-Za-z0-9_.]+$`) and therefore counted **none** of it. Replacing
+  that coupling with a contract made the adapter's plain `import … help.storage.BackupConfig`
+  visible, so `legacyHelp|…/platform` went **5 → 6**. That is **the ledger getting accurate, not new
+  debt** — record it as such and never "fix" it by going back to FQN (same judgement as M5-7's
+  `as`-alias case).
 - **Before moving a ViewModel, search for the tests it already has.** They live next to the *old*
   location, not the new one. Measured in M5-8a: `:app` already had
   `app/src/test/.../ui/config/otherConfig/OtherConfigViewModelTest.kt` with 5 cases; the slice only

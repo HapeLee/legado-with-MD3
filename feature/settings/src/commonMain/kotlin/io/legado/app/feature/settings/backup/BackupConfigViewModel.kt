@@ -1,14 +1,11 @@
-package io.legado.app.ui.config.backupConfig
+package io.legado.app.feature.settings.backup
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.model.settings.BackupSettings
 import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
-import io.legado.app.utils.isContentScheme
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -19,18 +16,40 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// M5-9a：从 `:app` 的 `io.legado.app.ui.config.backupConfig` 迁来（本片只迁逻辑层，见 Contract 注释）。
+//
+// 需要处理的平台耦合有四类：
+//  ① `R.string.*` 11 处 → [BackupConfigText] 枚举（含 `Loading` 对话框标题与 `ShowMessage` 提示）；
+//  ② `io.legado.app.help.storage.BackupConfig` 的四组「忽略集」→ [BackupIgnoreStore] 契约
+//     （4 组 × keys/titles/isIgnored/setIgnored/save，语义见 `BackupIgnoreKind`）；
+//  ③ `Uri.parse(uri).toString()`（恢复本地备份那处）→ 直接用 `uri`。**行为等价**：
+//     宿主早就把 `uri.toString()` 传进来了（`RestoreLocal(it.toString())`），
+//     而 `Uri.parse(s).toString() == s`（`Uri` 不重新编码已解析的字符串）；
+//  ④ `String?.isContentScheme()`（`utils/StringExtensions.kt`，实现就是
+//     `startsWith("content://")`）→ 见 [isContentUriPath]：内联 + 注明出处。
+//     那是个纯 Kotlin 单行谓词，搬一行进共享层比多开一个契约划算，但**要写清出处**，
+//     免得日后 `:app` 那个帮助函数改了判据而这里悄悄漂移。
+//
+// 一处**有意的结构收敛**：迁移前有 4 个逐字同形的 loader（`loadIgnoreItems` /
+// `loadBackupIgnoreItems` / `loadDbIgnoreItems` / `loadBackupDbIgnoreItems`，各 9 行）——
+// 它们只差「读哪一组」。契约本身就是 kind 参数化的 ⇒ 收敛成一个 [loadIgnoreItems]。
+// ⚠️ 反过来说，4 个 `saveXxx` **刻意不合并**：它们并不同形 ——
+// `saveIgnoreItems` / `saveBackupIgnoreItems` 各写**两组**并关弹层，
+// 而 `saveDbIgnoreItems` / `saveBackupDbIgnoreItems` 只写**一组**且**不关弹层**。
+// 合并它们会静默改掉弹层关闭时机。
 class BackupConfigViewModel(
     private val settingsGateway: BackupSettingsGateway,
     private val webDavBackupUseCase: WebDavBackupUseCase,
     private val backupRestoreUseCase: BackupRestoreUseCase,
+    private val ignoreStore: BackupIgnoreStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
         BackupConfigUiState(
             settings = settingsGateway.currentSettings,
-            ignoreItems = loadIgnoreItems(),
-            backupIgnoreItems = loadBackupIgnoreItems(),
-            dbIgnoreItems = loadDbIgnoreItems(),
-            backupDbIgnoreItems = loadBackupDbIgnoreItems(),
+            ignoreItems = loadIgnoreItems(BackupIgnoreKind.RestoreConfig),
+            backupIgnoreItems = loadIgnoreItems(BackupIgnoreKind.BackupConfig),
+            dbIgnoreItems = loadIgnoreItems(BackupIgnoreKind.RestoreDb),
+            backupDbIgnoreItems = loadIgnoreItems(BackupIgnoreKind.BackupDb),
         )
     )
     val uiState = _uiState.asStateFlow()
@@ -48,6 +67,7 @@ class BackupConfigViewModel(
 
     fun onIntent(intent: BackupConfigIntent) {
         when (intent) {
+
             is BackupConfigIntent.SetWebDavUrl -> update { it.copy(webDavUrl = intent.value) }
             is BackupConfigIntent.SetWebDavDir -> update { it.copy(webDavDir = intent.value) }
             is BackupConfigIntent.SetWebDavDeviceName ->
@@ -152,7 +172,9 @@ class BackupConfigViewModel(
     }
 
     private fun testWebDav() {
-        _uiState.update { it.copy(activeDialog = BackupConfigDialog.Loading(R.string.test_sync_loading_text)) }
+        _uiState.update {
+            it.copy(activeDialog = BackupConfigDialog.Loading(BackupConfigText.TestSyncLoading))
+        }
         viewModelScope.launch {
             val success = withContext(Dispatchers.IO) {
                 runCatching { webDavBackupUseCase.test() }.getOrDefault(false)
@@ -160,7 +182,11 @@ class BackupConfigViewModel(
             _uiState.update { it.copy(activeDialog = null) }
             _effects.tryEmit(
                 BackupConfigEffect.ShowMessage(
-                    if (success) R.string.test_sync_status_success else R.string.test_sync_status_fail
+                    if (success) {
+                        BackupConfigText.TestSyncSuccess
+                    } else {
+                        BackupConfigText.TestSyncFail
+                    }
                 )
             )
         }
@@ -178,13 +204,13 @@ class BackupConfigViewModel(
 
     private fun saveIgnoreItems() {
         _uiState.value.ignoreItems.forEach { item ->
-            io.legado.app.help.storage.BackupConfig.ignoreConfig[item.key] = item.checked
+            ignoreStore.setIgnored(BackupIgnoreKind.RestoreConfig, item.key, item.checked)
         }
         _uiState.value.dbIgnoreItems.forEach { item ->
-            io.legado.app.help.storage.BackupConfig.dbIgnoreConfig[item.key] = item.checked
+            ignoreStore.setIgnored(BackupIgnoreKind.RestoreDb, item.key, item.checked)
         }
-        io.legado.app.help.storage.BackupConfig.saveIgnoreConfig()
-        io.legado.app.help.storage.BackupConfig.saveDbIgnoreConfig()
+        ignoreStore.save(BackupIgnoreKind.RestoreConfig)
+        ignoreStore.save(BackupIgnoreKind.RestoreDb)
         _uiState.update { it.copy(activeSheet = null) }
     }
 
@@ -200,13 +226,13 @@ class BackupConfigViewModel(
 
     private fun saveBackupIgnoreItems() {
         _uiState.value.backupIgnoreItems.forEach { item ->
-            io.legado.app.help.storage.BackupConfig.backupIgnoreConfig[item.key] = item.checked
+            ignoreStore.setIgnored(BackupIgnoreKind.BackupConfig, item.key, item.checked)
         }
         _uiState.value.backupDbIgnoreItems.forEach { item ->
-            io.legado.app.help.storage.BackupConfig.backupDbIgnoreConfig[item.key] = item.checked
+            ignoreStore.setIgnored(BackupIgnoreKind.BackupDb, item.key, item.checked)
         }
-        io.legado.app.help.storage.BackupConfig.saveBackupIgnoreConfig()
-        io.legado.app.help.storage.BackupConfig.saveBackupDbIgnoreConfig()
+        ignoreStore.save(BackupIgnoreKind.BackupConfig)
+        ignoreStore.save(BackupIgnoreKind.BackupDb)
         _uiState.update { it.copy(activeSheet = null) }
     }
 
@@ -222,9 +248,9 @@ class BackupConfigViewModel(
 
     private fun saveDbIgnoreItems() {
         _uiState.value.dbIgnoreItems.forEach { item ->
-            io.legado.app.help.storage.BackupConfig.dbIgnoreConfig[item.key] = item.checked
+            ignoreStore.setIgnored(BackupIgnoreKind.RestoreDb, item.key, item.checked)
         }
-        io.legado.app.help.storage.BackupConfig.saveDbIgnoreConfig()
+        ignoreStore.save(BackupIgnoreKind.RestoreDb)
     }
 
     private fun toggleBackupDbIgnoreItem(key: String, value: Boolean) {
@@ -239,9 +265,9 @@ class BackupConfigViewModel(
 
     private fun saveBackupDbIgnoreItems() {
         _uiState.value.backupDbIgnoreItems.forEach { item ->
-            io.legado.app.help.storage.BackupConfig.backupDbIgnoreConfig[item.key] = item.checked
+            ignoreStore.setIgnored(BackupIgnoreKind.BackupDb, item.key, item.checked)
         }
-        io.legado.app.help.storage.BackupConfig.saveBackupDbIgnoreConfig()
+        ignoreStore.save(BackupIgnoreKind.BackupDb)
     }
 
     private fun launchDirectoryPicker(runBackup: Boolean) {
@@ -263,7 +289,7 @@ class BackupConfigViewModel(
         _uiState.update { it.copy(activeSheet = null) }
         val path = selectedPath ?: _uiState.value.settings.backupPath.orEmpty()
         if (path.isEmpty() && mode != "webdav") return
-        if (path.isNotEmpty() && !path.isContentScheme()) {
+        if (path.isNotEmpty() && !path.isContentUriPath()) {
             _effects.tryEmit(BackupConfigEffect.RequestStoragePermission(path, mode))
         } else {
             performBackup(path, mode)
@@ -271,20 +297,27 @@ class BackupConfigViewModel(
     }
 
     private fun performBackup(path: String, mode: String) {
-        _uiState.update { it.copy(activeDialog = BackupConfigDialog.Loading(R.string.backup)) }
+        _uiState.update {
+            it.copy(activeDialog = BackupConfigDialog.Loading(BackupConfigText.BackingUp))
+        }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { backupRestoreUseCase.backup(path, mode) }
                 .onSuccess {
                     withContext(Dispatchers.Main) {
                         _uiState.update { it.copy(activeDialog = null) }
-                        _effects.tryEmit(BackupConfigEffect.ShowMessage(R.string.backup_success))
+                        _effects.tryEmit(
+                            BackupConfigEffect.ShowMessage(BackupConfigText.BackupSuccess)
+                        )
                     }
                 }
                 .onFailure { error ->
                     withContext(Dispatchers.Main) {
                         _uiState.update { it.copy(activeDialog = null) }
                         _effects.tryEmit(
-                            BackupConfigEffect.ShowMessage(R.string.backup_fail, error.localizedMessage)
+                            BackupConfigEffect.ShowMessage(
+                                BackupConfigText.BackupFail,
+                                error.localizedMessage,
+                            )
                         )
                     }
                 }
@@ -297,9 +330,11 @@ class BackupConfigViewModel(
     }
 
     private fun restoreLocal(uri: String) {
-        _uiState.update { it.copy(activeDialog = BackupConfigDialog.Loading(R.string.on_restore)) }
+        _uiState.update {
+            it.copy(activeDialog = BackupConfigDialog.Loading(BackupConfigText.Restoring))
+        }
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { backupRestoreUseCase.restoreLocal(Uri.parse(uri).toString()) }
+            runCatching { backupRestoreUseCase.restoreLocal(uri) }
                 .fold(
                     onSuccess = { finishRestoreSuccess() },
                     onFailure = { finishRestoreFailure(it.localizedMessage) },
@@ -309,7 +344,7 @@ class BackupConfigViewModel(
 
     private fun loadNetworkBackups() {
         _uiState.update {
-            it.copy(activeSheet = null, activeDialog = BackupConfigDialog.Loading(R.string.loading))
+            it.copy(activeSheet = null, activeDialog = BackupConfigDialog.Loading(BackupConfigText.Loading))
         }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { webDavBackupUseCase.getBackupNames() }
@@ -340,7 +375,7 @@ class BackupConfigViewModel(
 
     private fun restoreNetwork(name: String) {
         _uiState.update {
-            it.copy(activeSheet = null, activeDialog = BackupConfigDialog.Loading(R.string.on_restore))
+            it.copy(activeSheet = null, activeDialog = BackupConfigDialog.Loading(BackupConfigText.Restoring))
         }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { webDavBackupUseCase.restore(name) }
@@ -353,7 +388,7 @@ class BackupConfigViewModel(
 
     private suspend fun finishRestoreSuccess() = withContext(Dispatchers.Main) {
         _uiState.update { it.copy(activeDialog = null) }
-        _effects.tryEmit(BackupConfigEffect.ShowMessage(R.string.restore_success))
+        _effects.tryEmit(BackupConfigEffect.ShowMessage(BackupConfigText.RestoreSuccess))
     }
 
     private suspend fun finishRestoreFailure(message: String?, webDav: Boolean = false) =
@@ -361,53 +396,31 @@ class BackupConfigViewModel(
             _uiState.update { it.copy(activeDialog = null) }
             _effects.tryEmit(
                 BackupConfigEffect.ShowMessage(
-                    if (webDav) R.string.webdav_restore_fail else R.string.restore_fail_with_error,
+                    if (webDav) {
+                        BackupConfigText.WebDavRestoreFail
+                    } else {
+                        BackupConfigText.RestoreFailWithError
+                    },
                     message,
                 )
             )
         }
 
-    private companion object {
-        fun loadIgnoreItems() = io.legado.app.help.storage.BackupConfig.ignoreKeys
-            .mapIndexed { index, key ->
-                BackupIgnoreItem(
-                    key = key,
-                    title = io.legado.app.help.storage.BackupConfig.ignoreTitle[index],
-                    checked = io.legado.app.help.storage.BackupConfig.ignoreConfig[key] ?: false,
-                )
-            }
-            .toImmutableList()
-
-        fun loadBackupIgnoreItems() = io.legado.app.help.storage.BackupConfig.backupIgnoreKeys
-            .mapIndexed { index, key ->
-                BackupIgnoreItem(
-                    key = key,
-                    title = io.legado.app.help.storage.BackupConfig.backupIgnoreTitle[index],
-                    checked = io.legado.app.help.storage.BackupConfig.backupIgnoreConfig[key]
-                        ?: false,
-                )
-            }
-            .toImmutableList()
-
-        fun loadDbIgnoreItems() = io.legado.app.help.storage.BackupConfig.dbIgnoreKeys
-            .mapIndexed { index, key ->
-                BackupIgnoreItem(
-                    key = key,
-                    title = io.legado.app.help.storage.BackupConfig.dbIgnoreTitle[index],
-                    checked = io.legado.app.help.storage.BackupConfig.dbIgnoreConfig[key] ?: false,
-                )
-            }
-            .toImmutableList()
-
-        fun loadBackupDbIgnoreItems() = io.legado.app.help.storage.BackupConfig.backupDbIgnoreKeys
-            .mapIndexed { index, key ->
-                BackupIgnoreItem(
-                    key = key,
-                    title = io.legado.app.help.storage.BackupConfig.backupDbIgnoreTitle[index],
-                    checked = io.legado.app.help.storage.BackupConfig.backupDbIgnoreConfig[key]
-                        ?: false,
-                )
-            }
-            .toImmutableList()
-    }
+    /** 见文件头注释的「有意的结构收敛」：4 个同形 loader 收敛成一个 kind 参数化版本。 */
+    private fun loadIgnoreItems(kind: BackupIgnoreKind) = ignoreStore.keys(kind)
+        .mapIndexed { index, key ->
+            BackupIgnoreItem(
+                key = key,
+                title = ignoreStore.titles(kind)[index],
+                checked = ignoreStore.isIgnored(kind, key),
+            )
+        }
+        .toImmutableList()
 }
+
+/**
+ * 见文件头注释第 ④ 条：`:app` 的 `String?.isContentScheme()`
+ * （`utils/StringExtensions.kt`）实现就是 `this?.startsWith("content://") == true`。
+ * 这里内联同名判据；`:app` 侧若改动，这里必须跟着改。
+ */
+private fun String.isContentUriPath(): Boolean = startsWith("content://")

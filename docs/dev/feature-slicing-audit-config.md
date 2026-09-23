@@ -783,3 +783,81 @@ reviewer 不必在格式噪音里找差异。已在文件头 KDoc 写明。
 `coverConfig`（1534 行，但**需先下沉整条相册存储链** —— `CoverAlbumGateway`/`Repository`/
 `UseCase` 全在 `:app`，且 `CoverAlbumImageInput` 的 `java.io.InputStream` 要重新设计，
 是比前几片大的一档）。
+
+### M5-9a：`backupConfig` 的**逻辑层** → `:feature:settings/backup/`
+
+沿用 otherConfig 的按层分片（M5-8a/8b）。**勘察阶段的最大发现**：`backupConfig` 其实
+**已经有干净的宿主壳** —— `BackupConfigScreen.kt` 一个文件里同时放着 `BackupConfigRouteScreen`
+（4 个 launcher + `PermissionsCompat` + `ImportOldData`，即平台壳）与页面本体，
+两者职责已经分开。这使它的形态比 `themeManage` / `coverConfig` 干净得多。
+
+#### 三处平台耦合 → 两个新契约 + 两处内联
+
+| 迁移前 | 迁移后 |
+|---|---|
+| `BackupConfigDialog.Loading(@StringRes titleRes)` + `BackupConfigEffect.ShowMessage(@StringRes messageRes, argument)` + VM 里 11 处 `R.string.*` | `BackupConfigText` 枚举（11 值）+ `BackupConfigText.kt` 里**一张映射表派生两个适配器**（`@Composable localized()` 给对话框标题、`suspend localizedText(argument)` 给宿主收 Effect） |
+| `io.legado.app.help.storage.BackupConfig` 的**四组**「忽略集」（4 × keys/titles/`HashMap`/`save`） | `BackupIgnoreStore` 契约 + `BackupIgnoreKind` 四值枚举（语义已逐条核过 `BackupConfig.kt`：恢复/备份 × 配置项/数据库表） |
+| `Uri.parse(uri).toString()`（恢复本地备份） | 直接用 `uri` —— 宿主本来就传 `uri.toString()`，而 `Uri.parse(s).toString() == s` |
+| `String?.isContentScheme()`（`utils/StringExtensions.kt`，实现即 `startsWith("content://")`） | 内联 + 注明出处（纯单行谓词，搬一行比多开一个契约划算） |
+
+⚠️ **4 个 `saveXxx` 刻意不合并**：它们**并不对称** —— `saveIgnoreItems` /
+`saveBackupIgnoreItems` 各写**两组**并**关弹层**，而 `saveDbIgnoreItems` /
+`saveBackupDbIgnoreItems` 只写**一组**且**不关弹层**。合并会静默改掉弹层关闭时机，
+已写成测试断言钉住。
+（4 个同形 loader 则收敛成一个 kind 参数化版本 —— 契约本身就是 kind 化的，不收敛反而怪。）
+
+#### ⚠️ 坑一：按行删文案会破坏 `strings.xml`
+
+`restore_fail_with_error` 的值里有**字面换行**（`復原失敗` 与 `%1$s</string>` 分两行），
+按行删只删掉首行、留下孤立的 `%1$s</string>` ⇒ XML 破。**Kotlin 编译照样过**，
+要到 `:app:mergeAppDebugResources` 才报「元素类型 resources 必须由匹配的结束标记终止」。
+⇒ 改为**按元素删**（DOTALL 正则），并且**删完必须逐文件 `ET.parse` 校验** —— 前几片都做了这步，
+本片漏做，代价是完整验证跑了两分钟才暴露。已写进 checklist。
+
+#### ⚠️ 坑二：弃用壳会「藏住」棘轮该看的耦合
+
+`ui/config/backupConfig` 里有个**同名零引用**的弃用壳 `object BackupConfig`，为避开它，
+VM 调真身时只能写**全限定名** `io.legado.app.help.storage.BackupConfig.ignoreConfig[...]`。
+而门禁规则是 **import 锚定**的 ⇒ 那些耦合**一处都没被计入**（`legacy-architecture-report` §7 提到过
+「全限定写法不在统计内」，这是它第一个真实受害者）。
+
+本片把耦合换成契约后，实现侧写的是朴素 import ⇒ `legacyHelp|…/platform` **5 → 6**。
+**净债务没变，是账本变准了**，已按此在基线与报告里注释；反过来若为压住这个数字改回 FQN，
+就是刻意利用盲点掩盖耦合（M5-7 已立判据）。
+
+顺带：那个弃用壳确认**全仓零引用**（连 `import` 与同包裸用都查过）⇒ 删除（20 行）。
+
+#### 新增 10 条用例（迁移前零测试）
+
+四组的 kind **配对**（keys/titles/checked 不串组）/ `saveIgnoreItems` 写两组 + 关弹层 /
+`saveDbIgnoreItems` 只写一组 + **不关弹层** / `saveBackupIgnoreItems` 写两组 + 关弹层 /
+`saveBackupDbIgnoreItems` 只写一组 + **不关** / 勾选只改内存不碰 store /
+普通路径发 `RequestStoragePermission` 且此时**不该**有 Loading 对话框 /
+`content://` 路径**跳过**权限直接进 `Loading(BackingUp)` /
+`RequestLocalRestore` 清弹层并发 picker / `TestWebDav` 与 `RequestNetworkRestore` 各进对应 Loading。
+
+⚠️ **只钉同步可观测的行为**：VM 里 `launch(Dispatchers.IO)` 之后再 `withContext(Main)` 的尾巴
+（`performBackup` / `restoreLocal` / `testWebDav` 的结果与终态）在 Robolectric 下要跨真实线程池
++ 主 looper 才看得到，硬测会变成靠 `idle()` 轮询的脆弱写法 ⇒ 结果分支留给真机冒烟。
+
+#### 验证
+
+- 四门禁全绿（G4 按上述那一处「账本变准」上调 `platform` 的 `legacyHelp` 5 → 6）
+- `:feature:settings` 的 desktop 编译与 `testAndroidHostTest`（**56 例 0 失败**）
++ `:app` 编译/单测/打包 + 全模块测试
+- 计数 **751 → 761 / 1246 → 1256**（+10），零失败
+- 资源 **472/472 逐字一致**（500 − 7 条 ×4 语言退役）；死资源 7 条删除
+- `lintAppDebug` **5 errors / 95 warnings**（filtered 245 → 244、23 → 21）
+
+#### 未验证
+
+页面渲染、4 个 launcher 与 `PermissionsCompat` 的实际申请流程、`ImportOldData` 导入旧数据，
+以及 `performBackup` / `restoreLocal` / `testWebDav` 三条 IO 尾巴的**结果分支**。需真机冒烟。
+
+**`ui/config/backupConfig` 至此剩 2 个 `:app` 文件**（`BackupConfigScreen.kt` 的
+RouteScreen + 页面本体、`BackupRestoreOptionSheets.kt`）—— 下一片迁页面本体时**要先把这个
+文件拆成宿主壳与页面两部分**。
+
+**下一步**：`backupConfig` 页面本体（先拆文件）、`themeManage`（需 `SavedTheme` /
+`ThemePackageManager` 契约，但 `SavedTheme` 携带 `ThemePackageManifest` ⇒ 与 `coverConfig`
+撞同一条存储链）、或 `readConfig` / `themeConfig`（后者最重）。

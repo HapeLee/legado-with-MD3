@@ -1779,6 +1779,32 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      `themeManage`（1138 行，需 `SavedTheme` / `ThemePackageManager`）、或 `coverConfig`
      （1534 行，但**需先下沉整条相册存储链** + 重新设计 `CoverAlbumImageInput` 的
      `java.io.InputStream`，是更大的一档）。
+   - **M5-9a 已完成（2026-09-23）：`backupConfig` 的逻辑层（Contract + VM）→
+     `:feature:settings/backup/`。** 沿用 otherConfig 的按层分片。
+     勘察发现它**已经有干净的宿主壳**（`BackupConfigScreen.kt` 里 `BackupConfigRouteScreen`
+     与页面本体职责已分开）⇒ 形态比 `themeManage` / `coverConfig` 干净。
+     - 两个新契约/枚举：① `BackupConfigText`（11 值）+ 一张映射表派生**两个适配器**
+       （`@Composable localized()` 给对话框标题、`suspend localizedText(argument)` 给宿主收 Effect）；
+       ② `BackupIgnoreStore` + `BackupIgnoreKind` 四值枚举，替掉 `help.storage.BackupConfig`
+       的四组「忽略集」（语义逐条核过：恢复/备份 × 配置项/数据库表）。
+       另有两处内联：`Uri.parse(uri).toString()` → `uri`（恒等）；
+       `String?.isContentScheme()` → 内联 `startsWith("content://")` + 注明出处。
+     - ⚠️ **4 个 `saveXxx` 刻意不合并** —— 它们不对称（两个写两组并关弹层、两个只写一组且不关）。
+       合并会静默改掉弹层关闭时机，已写成测试断言。
+     - ⚠️ **坑一：按行删 `strings.xml` 会破坏 XML**。`restore_fail_with_error` 的值含**字面换行**，
+       按行删留下孤立 `%1$s</string>`；Kotlin 编译照样过，要到 `mergeAppDebugResources` 才报。
+       ⇒ 改为按元素删（DOTALL 正则）+ **删完必须 `ET.parse` 校验**（前几片都做，本片漏做）。
+     - ⚠️ **坑二：弃用壳会藏住棘轮该看的耦合**。同包那个零引用 `object BackupConfig` 逼得 VM 只能写
+       **全限定名**调真身，而门禁规则是 import 锚定的 ⇒ 那些耦合**一处都没被计入**。换成契约后
+       `legacyHelp|…/platform` **5 → 6** —— **净债务没变，是账本变准了**。顺带删掉那个弃用壳（零引用）。
+     - 新增 10 例（迁移前零测试），重心是 kind 配对 + 那处不对称；
+       ⚠️ **只钉同步可观测的行为**（IO 尾巴的结果分支留给真机）。
+     - 验证：四门禁全绿 + `:feature:settings`（**56 例**）+ `:app` 编译/单测/打包 + 全模块测试；
+       计数 **751 → 761 / 1246 → 1256**；资源 **472/472**；死资源 7 条；
+       lint **5 errors / 95 warnings**（filtered 245→244、23→21）。
+     **下一步**：`backupConfig` 页面本体（**要先把它那个文件拆成宿主壳 + 页面**）、
+     `themeManage`（其 `SavedTheme` 携带 `ThemePackageManifest` ⇒ 与 `coverConfig` 撞同一条存储链）、
+     或 `readConfig` / `themeConfig`（后者最重）。
 
 ## 6. 验证矩阵
 

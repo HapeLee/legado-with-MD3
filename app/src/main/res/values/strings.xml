@@ -190,15 +190,11 @@
     <string name="restore_confirmation">Restore confirmation</string>
     <string name="restore_message">Restoring the bookshelf data will overwrite the current Bookshelf.</string>
     <string name="backup_success">Backup succeed</string>
-    <string name="backup_fail">Backup failed\n%s</string>
-    <string name="on_restore">Restoring</string>
     <string name="restore_success">Restore succeed</string>
     <string name="restore_fail">Backup failed</string>
-    <string name="restore_fail_with_error">Restore failed: %1$s</string>
     <string name="restore_from_local">Restore from Local</string>
     <string name="restore_from_network">Restore from Network</string>
     <string name="webdav_restore_fallback_message">WebDAV error\n%1$s\nRestore from a local backup instead.</string>
-    <string name="webdav_restore_fail">WebDAV restore failed\n%1$s</string>
     <string name="screen_direction">Screen Orientation</string>
     <string name="screen_sensor">Auto(sensor)</string>
     <string name="screen_landscape">Landscape</string>
@@ -1089,9 +1085,6 @@
     <string name="cloud_progress_exceeds_current">The cloud progress exceeds the current progress. Do you want to synchronize?</string>
     <string name="test_sync_t">Test WebDAV Config</string>
     <string name="test_sync_d">Test WebDAV Service Status</string>
-    <string name="test_sync_loading_text">Testing…</string>
-    <string name="test_sync_status_success">WebDAV service config success</string>
-    <string name="test_sync_status_fail">WebDAV service config failure</string>
     <string name="sync_book_progress_t">Synchronous Reading Progress</string>
     <string name="sync_book_progress_s">Synchronize reading progress when entering / exiting the reading interface</string>
     <string name="sync_book_progress_plus_t">Sync Enhancement</string>

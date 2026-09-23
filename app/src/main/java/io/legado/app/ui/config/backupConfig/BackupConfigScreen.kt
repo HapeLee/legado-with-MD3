@@ -40,6 +40,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.feature.settings.backup.BackupConfigDialog
+import io.legado.app.feature.settings.backup.BackupConfigEffect
+import io.legado.app.feature.settings.backup.BackupConfigIntent
+import io.legado.app.feature.settings.backup.BackupConfigSheet
+import io.legado.app.feature.settings.backup.BackupConfigUiState
+import io.legado.app.feature.settings.backup.BackupConfigViewModel
+import io.legado.app.feature.settings.backup.BackupIgnoreItem
+import io.legado.app.feature.settings.backup.localized
+import io.legado.app.feature.settings.backup.localizedText
 import io.legado.app.help.storage.ImportOldData
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
@@ -120,10 +129,11 @@ fun BackupConfigRouteScreen(
                         .request()
                 }
                 is BackupConfigEffect.ShowMessage -> {
-                    val message = effect.argument?.let {
-                        context.getString(effect.messageRes, it)
-                    } ?: context.getString(effect.messageRes)
-                    snackbarHostState.showSnackbar(message)
+                    // M5-9a：契约不再携带 `@StringRes Int`（那是 Android 概念，进不了共享层）
+                    // ⇒ 枚举 + 查表。`localizedText(argument)` 对应迁移前的
+                    // `context.getString(res, argument)` / `context.getString(res)` 两个重载，
+                    // 且它是 suspend —— 这里本来就在 LaunchedEffect 里。
+                    snackbarHostState.showSnackbar(effect.message.localizedText(effect.argument))
                 }
             }
         }
@@ -519,7 +529,10 @@ private fun BackupConfigDialogs(
     AppAlertDialog(
         show = loading != null,
         onDismissRequest = { onIntent(BackupConfigIntent.DismissDialog) },
-        title = loading?.let { stringResource(it.titleRes) }.orEmpty(),
+        // M5-9a：`Loading.title` 从 `@StringRes Int` 换成枚举 ⇒ 组合内查表
+        // （`localized()` 是 `@Composable` 的，与 Effect 那条路径的 `localizedText()`
+        // 共用同一张映射表）。
+        title = loading?.let { it.title.localized() }.orEmpty(),
     )
 }
 

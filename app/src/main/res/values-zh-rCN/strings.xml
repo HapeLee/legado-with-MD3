@@ -162,15 +162,11 @@
     <string name="restore_confirmation">确认恢复吗？</string>
     <string name="restore_message">恢复书架会覆盖现有书架。</string>
     <string name="backup_success">备份成功</string>
-    <string name="backup_fail">备份失败\n%s</string>
-    <string name="on_restore">正在恢复</string>
     <string name="restore_success">恢复成功</string>
     <string name="restore_fail">恢复失败</string>
-    <string name="restore_fail_with_error">恢复出错：%1$s</string>
     <string name="restore_from_local">本地恢复</string>
     <string name="restore_from_network">网络恢复</string>
     <string name="webdav_restore_fallback_message">WebDAV 出错\n%1$s\n将从本地备份恢复。</string>
-    <string name="webdav_restore_fail">WebDAV 恢复出错\n%1$s</string>
     <string name="screen_direction">屏幕方向</string>
     <string name="screen_sensor">跟随传感器</string>
     <string name="screen_landscape">横向</string>
@@ -1450,9 +1446,6 @@
     <string name="cloud_progress_exceeds_current">云端进度超过当前进度，是否同步？</string>
     <string name="test_sync_t">测试 WebDav 配置</string>
     <string name="test_sync_d">测试 WebDav 服务工作状态</string>
-    <string name="test_sync_loading_text">测试中…</string>
-    <string name="test_sync_status_success">WebDav 配置正确</string>
-    <string name="test_sync_status_fail">WebDav 配置错误</string>
     <string name="keep_enable">保留启用状态</string>
     <string name="preview_image_by_click">点击预览图片</string>
     <string name="screen_portrait_reversed">反向竖屏</string>

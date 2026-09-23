@@ -1,10 +1,23 @@
-package io.legado.app.ui.config.backupConfig
+package io.legado.app.feature.settings.backup
 
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import io.legado.app.domain.model.settings.BackupSettings
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+
+// M5-9a：从 `:app` 的 `io.legado.app.ui.config.backupConfig` 迁来。
+//
+// 本片只迁**逻辑层**（Contract + ViewModel），页面本体（`BackupConfigScreen` 的 UI 部分）与
+// RouteScreen 宿主壳仍留在 `:app` —— 沿用 M5-8a/8b 在 otherConfig 上用过的按层分片。
+// （`:app` 的 `BackupConfigScreen.kt` 一个文件里同时有 RouteScreen 宿主壳与页面本体，
+// 迁页面时要先把它拆开，属下一片。）
+//
+// ⚠️ **两处结构变更**（不是改名）：
+//  ① `BackupConfigDialog.Loading(@StringRes titleRes: Int)` → `Loading(title: BackupConfigText)`；
+//  ② `BackupConfigEffect.ShowMessage(@StringRes messageRes: Int, argument: String?)`
+//     → `ShowMessage(message: BackupConfigText, argument: String? = null)`。
+//  理由同 about/otherConfig：`@StringRes` 与资源 id 都是 Android 概念，进不了 commonMain；
+//  契约改成枚举 + UI 侧查表（表在 `BackupConfigText.kt`），模块的公开契约因此零资源依赖。
 
 @Stable
 data class BackupConfigUiState(
@@ -43,7 +56,9 @@ sealed interface BackupConfigDialog {
     ) : BackupConfigDialog
 
     data class ConfirmLocalRestoreFallback(val error: String?) : BackupConfigDialog
-    data class Loading(@StringRes val titleRes: Int) : BackupConfigDialog
+
+    /** 加载中对话框的标题（迁移前是 `@StringRes Int`）。 */
+    data class Loading(val title: BackupConfigText) : BackupConfigDialog
 }
 
 sealed interface BackupConfigIntent {
@@ -92,6 +107,13 @@ sealed interface BackupConfigEffect {
     data object LaunchBackupAndRunDirectoryPicker : BackupConfigEffect
     data object LaunchRestoreFilePicker : BackupConfigEffect
     data object LaunchImportOldDataPicker : BackupConfigEffect
+
+    /** 需要存储权限才能往该路径写备份（迁移前由宿主用 `PermissionsCompat` 申请）。 */
     data class RequestStoragePermission(val path: String, val mode: String) : BackupConfigEffect
-    data class ShowMessage(@StringRes val messageRes: Int, val argument: String? = null) : BackupConfigEffect
+
+    /** 一次性提示；`argument` 是可选格式化参数（迁移前 `context.getString(res, argument)`）。 */
+    data class ShowMessage(
+        val message: BackupConfigText,
+        val argument: String? = null,
+    ) : BackupConfigEffect
 }

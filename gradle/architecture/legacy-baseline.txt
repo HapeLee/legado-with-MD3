@@ -203,7 +203,17 @@ legacyHelp|app/main/io/legado/app/model/webBook|16
 # （行尾锚定），因此 `import X as Y` 形式的 import **不被计入**。本片最初的实现用别名绕开了
 # 成员遮蔽，结果是这里只 +2 而不是 +3（凭空少记一笔）。已改为「顶层私有函数 + 朴素 import」，
 # 让计数如实反映耦合 —— 见 `AndroidDownloadCachePlatform` 的 KDoc。
-legacyHelp|app/main/io/legado/app/platform|5
+# M5-9a：`backupConfig` 的 VM 把四组「忽略集」收进 `AndroidBackupIgnoreStore`
+# （住本包）⇒ `help.storage.BackupConfig` 的耦合搬到这里，5 → **6**。
+# ⚠️ 这一处**不是「换了住所」而是「债首次变得可见」**，与上面几条不同：
+# 迁移前 `BackupConfigViewModel` 用的是**全限定名**
+# `io.legado.app.help.storage.BackupConfig.ignoreConfig[...]`（因为它同包有个同名弃用壳），
+# 而 `legacyHelp` 规则只认 `^import io.legado.app.help\.[A-Za-z0-9_.]+$` ⇒
+# 那些用法**从未被计入**（§7「已知局限」第 1 条提到过全限定写法不在统计内，这是它的第一个
+# 真实受害者）。本片把 FQN 换成契约后，实现侧写的是朴素 `import … help.storage.BackupConfig`
+# ⇒ 门禁这才看见它。**净债务没变，是账本变准了**；反过来若为压住这个数字而改回 FQN，
+# 就是刻意利用盲点掩盖耦合（M5-7 已立此判据）。
+legacyHelp|app/main/io/legado/app/platform|6
 legacyHelp|app/main/io/legado/app/receiver|1
 legacyHelp|app/main/io/legado/app/service|26
 # M5-1c-3：`ui/about` 的旧文件（About* / CrashReportScreen）已删，业务本体迁进

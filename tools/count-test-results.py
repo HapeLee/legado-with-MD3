@@ -241,7 +241,15 @@ RESULT_DIRS = {
 # processText 失败回滚（钉 `previous != enable`）/ 清 webview 成功发成功枚举并重启 /
 # 清 webview 失败发失败枚举并记日志 / 直接链接规则成功写 gateway 并关弹层（原用例）/
 # 必填缺失时不写 gateway 且弹层保持打开。
-BASELINE_MAIN = 751
+# M5-9a：751 → **761**（**+10**）。backupConfig 的**逻辑层**（Contract + VM）迁入
+# `:feature:settings/backup`，新增 `BackupConfigViewModelTest`（迁移前零测试；`:app` 里
+# 那几份 `*Test` 测的是 `help/storage` 与 `help/config` 的底层类，不是这个 VM）。
+# ⚠️ 用例**只钉同步可观测的行为**：VM 里 `launch(Dispatchers.IO)` 之后再
+# `withContext(Main)` 的尾巴在 Robolectric 下要跨真实线程池 + 主 looper 才看得到，
+# 硬测会变成靠 `idle()` 轮询的脆弱写法 ⇒ 结果分支留给真机冒烟（已进"未验证"清单）。
+# 重心是本片的实质改动：四组忽略集的 kind 配对 + 四个 `saveXxx` 里那处**不对称**
+# （两个写两组并关弹层、两个只写一组且不关）。
+BASELINE_MAIN = 761
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -327,7 +335,8 @@ BASELINE_MAIN = 751
 # M5-5c：1230 → **1235**（**+5** = `AiProviderEditViewModelTest`）。主集同步到 740。
 # M5-7：1235 → **1242**（**+7** = `DownloadCacheConfigViewModelTest`）。主集同步到 747。
 # M5-8a：1242 → **1246**（净 **+4** = 9 新 − 5 旧，同主集）。主集同步到 751。
-BASELINE_ALL = 1246
+# M5-9a：1246 → **1256**（**+10** = `BackupConfigViewModelTest`）。主集同步到 761。
+BASELINE_ALL = 1256
 
 
 def tally(d: pathlib.Path):

@@ -137,6 +137,12 @@ report」的产物：把当前 legacy 耦合的**真实分布**扫出来、冻�
 - 目录级聚合允许「同目录内删一处、加一处」互相抵消；这是为了减少基线维护噪音主动接受的代价
   （`verifyConfigArchitecture` 的 DAO 基线是文件级，两者互补）。
 - 只认 import 形态的**直接**引用：同包内不 import 的使用、`*Help.xxx()` 的全限定写法不在统计内。
+  ⚠️ **这不是理论风险，M5-9a 撞到了**：`ui/config/backupConfig` 里有个**同名的零引用弃用壳**
+  `object BackupConfig`，为避开它，`BackupConfigViewModel` 调真身时只能写全限定
+  `io.legado.app.help.storage.BackupConfig.ignoreConfig[...]` ⇒ 那些耦合**一处都没被计入**。
+  本片把它们换成契约后，实现侧写的是朴素 import，`legacyHelp|…/platform` 因此 **5 → 6**：
+  **债务没变，是账本变准了**。⇒ 见到某个区域「迁走后计数反而上升」，先查是不是这类
+  「口径之外的老用法被搬进了口径之内」，别急着当成新增债。
 - ⚠️ **带别名的 import 不被计入**（M5-7 实测发现）。规则是
   `^import io\.legado\.app\.help\.[A-Za-z0-9_.]+$`（`legacyHelp`）等，**行尾锚定**，
   因此 `import io.legado.app.help.http.clearHttpCache as clearOkHttpCache` **不匹配** ——

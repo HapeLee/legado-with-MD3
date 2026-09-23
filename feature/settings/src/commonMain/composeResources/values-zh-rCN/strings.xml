@@ -225,4 +225,15 @@
     <string name="web_service_auto_start">启动应用时打开Web服务</string>
     <string name="web_service_wake_lock">WebService 唤醒锁</string>
     <string name="web_service_wake_lock_summary">开启 Web 服务的时候启用唤醒锁，有些手机开启唤醒锁会被杀后台</string>
+    <string name="test_sync_loading_text">测试中…</string>
+    <string name="test_sync_status_success">WebDav 配置正确</string>
+    <string name="test_sync_status_fail">WebDav 配置错误</string>
+    <string name="backup">备份</string>
+    <string name="backup_success">备份成功</string>
+    <string name="backup_fail">备份失败\n%s</string>
+    <string name="on_restore">正在恢复</string>
+    <string name="loading">加载中…</string>
+    <string name="restore_success">恢复成功</string>
+    <string name="webdav_restore_fail">WebDAV 恢复出错\n%1$s</string>
+    <string name="restore_fail_with_error">恢复出错：%1$s</string>
 </resources>

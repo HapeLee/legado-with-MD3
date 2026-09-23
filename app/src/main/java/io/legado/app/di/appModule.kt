@@ -317,7 +317,9 @@ import io.legado.app.feature.settings.ai.AiProviderStringSource
 import io.legado.app.feature.settings.ai.composeResourceProviderStrings
 import io.legado.app.feature.settings.ai.prompt.AiPromptConfigViewModel
 import io.legado.app.feature.settings.ai.summary.AiSummaryConfigViewModel
-import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
+import io.legado.app.feature.settings.backup.BackupConfigViewModel
+import io.legado.app.feature.settings.backup.BackupIgnoreStore
+import io.legado.app.platform.AndroidBackupIgnoreStore
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageViewModel
 import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
@@ -564,6 +566,9 @@ val appModule = module {
     // 缓存目录 / 图片内存缓存 resize）收成一个窄契约。实现留在 `:app`
     // （`CacheBook` + `HttpHelper` + `FileUtils` + `ImageProvider` 都在这里）。
     single<DownloadCachePlatform> { AndroidDownloadCachePlatform(androidContext()) }
+    // M5-9a：backupConfig 的四组「备份/恢复忽略项」（`:app` 的 `help.storage.BackupConfig`）。
+    // 实现无状态、不持有 Context ⇒ 直接 new；那四组 map 本身是 `:app` 侧的 `by lazy` 全局。
+    single<BackupIgnoreStore> { AndroidBackupIgnoreStore() }
     single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     // ⚠️ 两个构造参数都要传：`digest` 是**参数注入**的平台能力（`stableModelId` 要复刻
     // UUID v3 名称空间哈希，而 MD5 是平台原语），没有任何可回落默认 ⇒ 漏传即编译错误。
