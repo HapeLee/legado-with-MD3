@@ -82,4 +82,110 @@
         <item>local</item>
         <item>webdav</item>
     </string-array>
+     <!-- M5-11d-pre：条目在 :app 里是 `@string/*` **间接引用**（Android 逐项按语言解析），
+          而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写）。 -->
+    <string-array name="brightness_bar_mode_title">
+        <item>Off</item>
+        <item>Horizontal</item>
+        <item>Vertical</item>
+    </string-array>
+    <string-array name="brightness_bar_mode_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+     <!-- M5-11d-pre：条目在 :app 里是 `@string/*` **间接引用**（Android 逐项按语言解析），
+          而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写）。 -->
+    <string-array name="brightness_bar_position_title">
+        <item>Left</item>
+        <item>Right</item>
+    </string-array>
+    <string-array name="brightness_bar_position_value">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
+    <string-array name="click_image_way_title">
+        <item>New Package Behavior</item>
+        <item>Preview Image</item>
+        <item>Classic</item>
+        <item>Disable Click</item>
+        <item>Double Click</item>
+    </string-array>
+    <string-array name="click_image_way_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+    <string-array name="double_page_title">
+        <item>Single page</item>
+        <item>Double page</item>
+        <item>Double page in landscape</item>
+        <item>Double page on tablet or landscape</item>
+    </string-array>
+    <string-array name="double_page_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+    <string-array name="progress_bar_behavior_title">
+        <item>@string/adjust_chapter_page</item>
+        <item>@string/adjust_chapter_index</item>
+    </string-array>
+    <string-array name="progress_bar_behavior_value">
+        <item>page</item>
+        <item>chapter</item>
+    </string-array>
+    <string-array name="read_slider_mode">
+        <item>Always</item>
+        <item>Disable</item>
+    </string-array>
+    <string-array name="read_slider_mode_value">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
+    <string-array name="screen_direction_title">
+        <item>@string/screen_unspecified</item>
+        <item>@string/screen_portrait</item>
+        <item>@string/screen_landscape</item>
+        <item>@string/screen_sensor</item>
+        <item>@string/screen_portrait_reversed</item>
+        <item>@string/screen_landscape_reversed</item>
+    </string-array>
+    <string-array name="screen_direction_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+    <string-array name="screen_time_out">
+        <item>Default</item>
+        <item>1 min</item>
+        <item>5 min</item>
+        <item>10 min</item>
+        <item>Always</item>
+    </string-array>
+    <string-array name="screen_time_out_value">
+        <item>0</item>
+        <item>60</item>
+        <item>300</item>
+        <item>600</item>
+        <item>-1</item>
+    </string-array>
+    <string-array name="title_bar_mode">
+        <item>Show in TopBar</item>
+        <item>Show in another line</item>
+        <item>Only Chapter</item>
+        <item>Not show</item>
+    </string-array>
+    <string-array name="title_bar_mode_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
 </resources>

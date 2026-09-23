@@ -25,4 +25,48 @@
         <item>備份至本地</item>
         <item>備份至網路</item>
     </string-array>
+     <!-- M5-11d-pre：条目在 :app 里是 `@string/*` **间接引用**（Android 逐项按语言解析），
+          而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写）。 -->
+    <string-array name="brightness_bar_mode_title">
+        <item>關閉</item>
+        <item>水平</item>
+        <item>垂直</item>
+    </string-array>
+     <!-- M5-11d-pre：条目在 :app 里是 `@string/*` **间接引用**（Android 逐项按语言解析），
+          而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写）。 -->
+    <string-array name="brightness_bar_position_title">
+        <item>左側</item>
+        <item>右側</item>
+    </string-array>
+    <string-array name="click_image_way_title">
+        <item>新版行為</item>
+        <item>預覽圖片</item>
+        <item>經典</item>
+        <item>停用點擊</item>
+        <item>雙擊</item>
+    </string-array>
+    <string-array name="double_page_title">
+        <item>全域單頁</item>
+        <item>全域雙頁</item>
+        <item>橫向雙頁</item>
+        <item>平板/橫向雙页</item>
+    </string-array>
+    <string-array name="progress_bar_behavior_title">
+        <item>調整本章頁數</item>
+        <item>調整章節位置</item>
+    </string-array>
+    <string-array name="screen_direction_title">
+        <item>@string/screen_unspecified</item>
+        <item>@string/screen_portrait</item>
+        <item>@string/screen_landscape</item>
+        <item>@string/screen_sensor</item>
+        <item>反向直向</item>
+    </string-array>
+    <string-array name="screen_time_out">
+        <item>預設</item>
+        <item>1分鐘</item>
+        <item>5分鐘</item>
+        <item>10分鐘</item>
+        <item>常亮</item>
+    </string-array>
 </resources>

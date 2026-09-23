@@ -25,4 +25,31 @@
         <item>備份至本地</item>
         <item>備份至網絡</item>
     </string-array>
+     <!-- M5-11d-pre：条目在 :app 里是 `@string/*` **间接引用**（Android 逐项按语言解析），
+          而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写）。 -->
+    <string-array name="brightness_bar_mode_title">
+        <item>關閉</item>
+        <item>橫向</item>
+        <item>縱向</item>
+    </string-array>
+     <!-- M5-11d-pre：条目在 :app 里是 `@string/*` **间接引用**（Android 逐项按语言解析），
+          而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写）。 -->
+    <string-array name="brightness_bar_position_title">
+        <item>左側</item>
+        <item>右側</item>
+    </string-array>
+    <string-array name="click_image_way_title">
+        <item>新版行為</item>
+        <item>預覽圖片</item>
+        <item>經典</item>
+        <item>停用點擊</item>
+        <item>雙擊</item>
+    </string-array>
+    <string-array name="screen_time_out">
+        <item>默認</item>
+        <item>1分鐘</item>
+        <item>5分鐘</item>
+        <item>10分鐘</item>
+        <item>常亮</item>
+    </string-array>
 </resources>

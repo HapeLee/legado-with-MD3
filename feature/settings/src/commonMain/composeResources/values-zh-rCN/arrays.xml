@@ -41,4 +41,47 @@
         <item>备份至本地</item>
         <item>备份至网络</item>
     </string-array>
+     <!-- M5-11d-pre：条目在 :app 里是 `@string/*` **间接引用**（Android 逐项按语言解析），
+          而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写）。 -->
+    <string-array name="brightness_bar_mode_title">
+        <item>关闭</item>
+        <item>横排</item>
+        <item>竖排</item>
+    </string-array>
+     <!-- M5-11d-pre：条目在 :app 里是 `@string/*` **间接引用**（Android 逐项按语言解析），
+          而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写）。 -->
+    <string-array name="brightness_bar_position_title">
+        <item>左侧</item>
+        <item>右侧</item>
+    </string-array>
+    <string-array name="click_image_way_title">
+        <item>新版行为</item>
+        <item>预览图片</item>
+        <item>经典</item>
+        <item>禁用点击</item>
+        <item>双击</item>
+    </string-array>
+    <string-array name="double_page_title">
+        <item>全局单页</item>
+        <item>全局双页</item>
+        <item>横屏双页</item>
+        <item>平板/横屏双页</item>
+    </string-array>
+    <string-array name="read_slider_mode">
+        <item>常驻</item>
+        <item>不显示</item>
+    </string-array>
+    <string-array name="screen_time_out">
+        <item>默认</item>
+        <item>1分钟</item>
+        <item>5分钟</item>
+        <item>10分钟</item>
+        <item>常亮</item>
+    </string-array>
+    <string-array name="title_bar_mode">
+        <item>在应用栏上显示</item>
+        <item>在独立行上显示</item>
+        <item>仅显示标题</item>
+        <item>不显示</item>
+    </string-array>
 </resources>
