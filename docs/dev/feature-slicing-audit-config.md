@@ -1206,3 +1206,69 @@ keyCode）。这是本片最需要冒烟的一点 —— 若不等，翻页键�
 **下一步**：`ClickActionConfigSheet`（`BackHandler` 策略已定 ⇒ 宿主接线即可；
 剩 `koinInject` → 改成参数注入的决定），之后 `CanvasRecorderFactory`（窄契约），
 再之后才是 `readConfig` 页面本体。
+
+### M5-11c：`ClickActionConfigSheet` → `:feature:settings/readconfig/`
+
+`readConfig` 页面的第二个前置件（230 行）。与 `PageKeySheet` 不同，这个文件有**两处结构性改动** ——
+两处都是"共享层不该有的东西"，不是可以逐字搬的。
+
+#### 一、去掉 `BackHandler`，改由宿主接线 —— ⚠️ 差点丢掉阅读器那侧的行为
+
+迁移前它自带 `androidx.activity.compose.BackHandler(onBack = onDismissRequest)`。按 M5-11b 定的
+策略（跨端 backhandler 在本项目不可用），共享层不再自带，改由宿主按共享 state 接线：
+
+```kotlin
+// ReadConfigRouteScreen（设置页入口）
+BackHandler(enabled = state.activeSheet == ReadConfigSheet.ClickActions) { … }
+// ReadBookScreen（阅读菜单入口）
+BackHandler(enabled = state.activeSheet is ReadBookSheet.ClickActionConfig) { dismissSheet() }
+```
+
+⚠️ **关键是两个宿主都要补** —— 这个 sheet 有**两个入口**，`ReadBookScreen` 里原本**没有**
+`BackHandler`（全靠 sheet 内部那个）。只补设置页那侧，阅读器入口就会**丢掉返回键关闭**这个行为，
+而且不会有任何编译错误提示。这个坑已在共享 sheet 的 KDoc 里写明。
+
+#### 二、去掉 `koinInject()`，改显式参数
+
+迁移前它自己 `koinInject<ReadSettingsRepository>()`：`collectAsStateWithLifecycle` 取 `preferences`、
+在 `rememberCoroutineScope` 里 `setClickAction`。不改的话进不了共享层 ——
+`:feature:settings` **刻意没有 koin 依赖**（build 文件注明「没有任何调用方」），且共享层的既有约定
+是**显式注入**（参 `AiProviderStringSource`）而非在 composable 里服务定位。
+
+⇒ 改为 `preferences` + `onSetClickAction` 两个参数，由调用方提供：
+- `ReadConfigRouteScreen`（宿主壳）：`koinInject` 仓储 + 收集 + `scope.launch { setClickAction }`；
+- `ReadBookScreen`：它**本来就有** `preferences: ReadPreferences` 参数 ✓，只需补仓储与作用域。
+
+⚠️ 语义等价性：迁移前是 `scope.launch { setClickAction(); selectingPrefKey = null }`；
+现在**同步**调 `onSetClickAction` 再置空 —— 对话框一样关，写入由调用方决定怎么调度
+（`setClickAction` 是 suspend）。
+
+#### 两处小坑
+
+- `ReadPreferences` 是 `ReadSettings` 的 **typealias** ⇒ 宿主里 `val preferences by …collectAsStateWithLifecycle()`
+  报 `State<ReadSettings> has no method 'getValue'` 时别去查类型，是**缺 `import androidx.compose.runtime.getValue`**。
+- ⚠️ **旧 import 没被清掉**：本片只批量改过 `ui.config.readConfig.*` 的 import，而这个 sheet 原住
+  `ui.book.read.sheet` ⇒ 两个调用点的**旧 import 行仍在**（指向已删文件），我又补了一条新的
+  ⇒ 出现**重复 import**。编译报 `Unresolved reference` 才发现。教训与 M5-11a 那条同类：
+  批量改 import 时要覆盖**所有**被迁走的包，而不只是"最显眼的那个"。
+
+#### 死资源 5 条
+
+`read_aloud_next_paragraph` / `read_aloud_pause_resume` / `read_aloud_prev_paragraph` /
+`replace_state_change` / `select_action`；其余 10 条在 `:app` 侧仍被引用
+（`chapter_list` 12 处、`next_chapter` / `previous_chapter` 各 10 处……）。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需 baseline 变动**）+ feature 两端编译 + `:app` 编译/单测/打包 + 全模块测试
+- 计数 **774 / 1269 零偏离**（纯 UI 迁移，依 checklist 不加测试）
+- `lintAppDebug` 仍 **5 errors / 94 warnings**
+
+#### 未验证
+
+⚠️ 两处**真实交互**都没有自动化保证：① 阅读器入口的返回键关闭（本片补的 `BackHandler`
+  是否真的在那个分支生效）；② 九宫格选动作后是否真的写进设置（写入路径搬到了宿主）。
+都需真机冒烟 —— 尤其①，这正是本片主动补的那条。
+
+**下一步**：`CanvasRecorderFactory`（31 行 → 窄契约，页面本体的最后一个前置），
+然后才是 `readConfig` 页面本体（471 行）。

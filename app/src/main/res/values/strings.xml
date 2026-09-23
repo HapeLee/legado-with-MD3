@@ -310,7 +310,6 @@
     <string name="book_source_share_url">Book sources sharing</string>
     <string name="replace_rule_summary">Rule name</string>
     <string name="replace_rule_invalid">Pattern rule is empty or does not conform the regex specification.</string>
-    <string name="select_action">Selection action</string>
     <string name="select_all">Select all</string>
     <string name="select_all_count">Select all(%1$d/%2$d)</string>
     <string name="select_cancel_count">Cancel select all(%1$d/%2$d)</string>
@@ -1188,8 +1187,6 @@
     <string name="cover_show_name_summary">Book title shown on cover</string>
     <string name="cover_show_author">Show Author</string>
     <string name="cover_show_author_summary">Author shown on cover</string>
-    <string name="read_aloud_prev_paragraph">Read aloud the previous paragraph</string>
-    <string name="read_aloud_next_paragraph">Read aloud the next paragraph</string>
     <string name="wait_download">wait download</string>
     <string name="download_success">download success</string>
     <string name="download_error">download failure</string>
@@ -1394,7 +1391,6 @@
     <string name="copy_rule">Copy Rule</string>
     <string name="paste_rule">Paste Rule</string>
     <string name="groups_or_source">Multi-group / book source</string>
-    <string name="replace_state_change">Replace (enable / disable)</string>
     <string name="show_last_update_time">Show Last Updated Time</string>
     <string name="refresh_list">Refresh list</string>
     <string name="tip_divider_color">Divider color</string>
@@ -1674,7 +1670,6 @@
     <string name="finish_current_chapter_after_timer_summary">When the timer expires, continue reading until the current chapter finishes</string>
     <string name="system_media_control_compatibility_change">System Media Control Compatibility</string>
     <string name="system_media_control_compatibility_change_summary">Enable if system media controls are missing on lock screen (e.g. OneUI 7.0, OriginOS)</string>
-    <string name="read_aloud_pause_resume">Pause/Resume Reading Aloud</string>
     <string name="play_mode">Play Mode</string>
     <string name="tabletInterface">Tablet Interface</string>
     <string name="progress">Progress</string>

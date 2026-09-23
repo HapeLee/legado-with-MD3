@@ -234,7 +234,6 @@
     <string name="book_source_share_url">書源共享</string>
     <string name="replace_rule_summary">取代規則名稱</string>
     <string name="replace_rule_invalid">取代規則為空或者不滿足正規表示式要求</string>
-    <string name="select_action">選擇操作</string>
     <string name="select_all">全選</string>
     <string name="select_all_count">全選(%1$d/%2$d)</string>
     <string name="select_cancel_count">取消全選(%1$d/%2$d)</string>
@@ -1004,8 +1003,6 @@
     <string name="cover_show_name_summary">封面上顯示書名</string>
     <string name="cover_show_author">顯示作者</string>
     <string name="cover_show_author_summary">封面上顯示作者</string>
-    <string name="read_aloud_prev_paragraph">朗讀上一段</string>
-    <string name="read_aloud_next_paragraph">朗讀下一段</string>
     <string name="wait_download">待下載</string>
     <string name="download_success">下載完成</string>
     <string name="download_error">下載失敗</string>
@@ -1195,7 +1192,6 @@
     <string name="copy_rule">複製規則</string>
     <string name="paste_rule">貼上規則</string>
     <string name="groups_or_source">多分組/書源</string>
-    <string name="replace_state_change">取代(啟用/禁用)</string>
     <string name="show_last_update_time">顯示上次更新時間</string>
     <string name="refresh_list">刷新列表</string>
     <string name="tip_divider_color">分隔线颜色</string>
@@ -1791,7 +1787,6 @@
     <string name="finish_current_chapter_after_timer_summary">定時結束後繼續朗讀，讀完目前章節再停止</string>
     <string name="system_media_control_compatibility_change">系統媒體控制相容性</string>
     <string name="system_media_control_compatibility_change_summary">如果鎖定畫面上缺少系統媒體控制項，請啟用此選項（例如 OneUI 7.0、OriginOS）</string>
-    <string name="read_aloud_pause_resume">暫停/繼續朗讀</string>
     <string name="play_mode">播放模式</string>
     <string name="tabletInterface">平板介面</string>
     <string name="progress">進度</string>

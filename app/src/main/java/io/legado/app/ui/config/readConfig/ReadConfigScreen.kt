@@ -10,7 +10,6 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.feature.settings.readconfig.EyeProtectionConfigSheet
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -27,6 +26,8 @@ import io.legado.app.feature.settings.readconfig.ReadConfigUiState
 import io.legado.app.feature.settings.readconfig.ReadConfigIntent
 import io.legado.app.feature.settings.readconfig.ReadConfigSheet
 import io.legado.app.feature.settings.readconfig.PageKeySheet
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.feature.settings.readconfig.ClickActionConfigSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +35,8 @@ fun ReadConfigScreen(
     state: ReadConfigUiState,
     onIntent: (ReadConfigIntent) -> Unit,
     onBackClick: () -> Unit,
+    preferences: ReadPreferences,
+    onSetClickAction: (String, Int) -> Unit,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val settings = state
@@ -452,7 +455,9 @@ fun ReadConfigScreen(
 
     if (state.activeSheet == ReadConfigSheet.ClickActions) {
         ClickActionConfigSheet(
+            preferences = preferences,
             onDismissRequest = { onIntent(ReadConfigIntent.DismissSheet) },
+            onSetClickAction = onSetClickAction,
         )
     }
 

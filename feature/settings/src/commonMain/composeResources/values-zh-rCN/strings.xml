@@ -293,4 +293,19 @@
     <string name="next_page_key">下一页按键</string>
     <string name="page_key_set_help">将焦点放到输入框按下物理按键会自动录入键值，多个按键会自动用英文逗号隔开。</string>
     <string name="reset">重置</string>
+    <string name="bookmark_add">添加书签</string>
+    <string name="chapter_list">目录</string>
+    <string name="edit_content">编辑内容</string>
+    <string name="menu">菜单</string>
+    <string name="next_chapter">下一章</string>
+    <string name="next_page">下一页</string>
+    <string name="non_action">无操作</string>
+    <string name="prev_page">上一页</string>
+    <string name="previous_chapter">上一章</string>
+    <string name="read_aloud_next_paragraph">朗读下一段</string>
+    <string name="read_aloud_pause_resume">朗读暂停/继续</string>
+    <string name="read_aloud_prev_paragraph">朗读上一段</string>
+    <string name="replace_state_change">替换(启用/禁用)</string>
+    <string name="search_content">全文搜索</string>
+    <string name="select_action">选择操作</string>
 </resources>

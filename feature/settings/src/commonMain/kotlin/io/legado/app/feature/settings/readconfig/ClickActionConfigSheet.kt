@@ -1,6 +1,5 @@
-package io.legado.app.ui.book.read.sheet
+package io.legado.app.feature.settings.readconfig
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -14,53 +13,87 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.bookmark_add
+import io.legado.app.feature.settings.res.chapter_list
+import io.legado.app.feature.settings.res.edit_content
+import io.legado.app.feature.settings.res.menu
+import io.legado.app.feature.settings.res.next_chapter
+import io.legado.app.feature.settings.res.next_page
+import io.legado.app.feature.settings.res.non_action
+import io.legado.app.feature.settings.res.prev_page
+import io.legado.app.feature.settings.res.previous_chapter
+import io.legado.app.feature.settings.res.read_aloud_next_paragraph
+import io.legado.app.feature.settings.res.read_aloud_pause_resume
+import io.legado.app.feature.settings.res.read_aloud_prev_paragraph
+import io.legado.app.feature.settings.res.replace_state_change
+import io.legado.app.feature.settings.res.search_content
+import io.legado.app.feature.settings.res.select_action
+import io.legado.app.feature.settings.res.sync_book_progress_t
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.text.AppText
-import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
+import org.jetbrains.compose.resources.stringResource
 
+/**
+ * 点击区域（九宫格）动作配置。阅读菜单与阅读设置共用这一份。
+ *
+ * M5-11c：从 `:app` 的 `ui/book/read/sheet` 迁来。与 `PageKeySheet` 不同，这个文件**有两处
+ * 结构性改动**，都是因为共享层不该有的东西：
+ *
+ * 1. **去掉 `BackHandler`**。迁移前它自带 `androidx.activity.compose.BackHandler`；
+ *    而 M5-11b 实测本项目依赖集里**没有**跨端的 `androidx.compose.ui.backhandler.BackHandler`
+ *    （遍历 Gradle 缓存所有 compose jar，0 命中）⇒ 按那次定的策略，**由宿主按共享 state 接线**：
+ *
+ *    ```kotlin
+ *    BackHandler(enabled = state.activeSheet == ReadConfigSheet.ClickActions) { … }
+ *    ```
+ *
+ *    ⚠️ 两个宿主都补了（`ReadConfigRouteScreen` 与阅读器的 `ReadBookScreen`）—— 否则阅读器
+ *    那个入口会**丢掉返回键关闭**这个行为。
+ *
+ * 2. **去掉 `koinInject()`，改显式参数**。迁移前它自己 `koinInject<ReadSettingsRepository>()`
+ *    并 `collectAsStateWithLifecycle` 取 `preferences`、在协程里 `setClickAction`。
+ *    `:feature:settings` **刻意没有 koin 依赖**（build 文件注明「没有任何调用方」），
+ *    且共享层的既有约定是**显式注入**（参 `AiProviderStringSource`）而非在 composable 里
+ *    服务定位 ⇒ 改为 `preferences` + `onSetClickAction` 两个参数，由调用方提供。
+ *
+ *    ⚠️ 语义等价性：迁移前是 `scope.launch { setClickAction(...); selectingPrefKey = null }`；
+ *    现在是**同步**调 `onSetClickAction` 再置空 —— 对话框一样会关，但**写入由调用方决定怎么
+ *    调度**（`setClickAction` 是 suspend，两个宿主各自 `rememberCoroutineScope().launch`）。
+ *
+ * 其余（九宫格布局、`actions` 映射表、选中弹层）**逐字保留**。
+ */
 @Composable
 fun ClickActionConfigSheet(
+    preferences: ReadPreferences,
     onDismissRequest: () -> Unit,
+    onSetClickAction: (String, Int) -> Unit,
 ) {
-    BackHandler(onBack = onDismissRequest)
-
-    val readSettingsRepository: ReadSettingsRepository = koinInject()
-    val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
-        initialValue = ReadPreferences()
-    )
-    val scope = rememberCoroutineScope()
-
     val actions = linkedMapOf(
-        -1 to stringResource(R.string.non_action),
-        0 to stringResource(R.string.menu),
-        1 to stringResource(R.string.next_page),
-        2 to stringResource(R.string.prev_page),
-        3 to stringResource(R.string.next_chapter),
-        4 to stringResource(R.string.previous_chapter),
-        5 to stringResource(R.string.read_aloud_prev_paragraph),
-        6 to stringResource(R.string.read_aloud_next_paragraph),
-        7 to stringResource(R.string.bookmark_add),
-        8 to stringResource(R.string.edit_content),
-        9 to stringResource(R.string.replace_state_change),
-        10 to stringResource(R.string.chapter_list),
-        11 to stringResource(R.string.search_content),
-        12 to stringResource(R.string.sync_book_progress_t),
-        13 to stringResource(R.string.read_aloud_pause_resume),
+        -1 to stringResource(Res.string.non_action),
+        0 to stringResource(Res.string.menu),
+        1 to stringResource(Res.string.next_page),
+        2 to stringResource(Res.string.prev_page),
+        3 to stringResource(Res.string.next_chapter),
+        4 to stringResource(Res.string.previous_chapter),
+        5 to stringResource(Res.string.read_aloud_prev_paragraph),
+        6 to stringResource(Res.string.read_aloud_next_paragraph),
+        7 to stringResource(Res.string.bookmark_add),
+        8 to stringResource(Res.string.edit_content),
+        9 to stringResource(Res.string.replace_state_change),
+        10 to stringResource(Res.string.chapter_list),
+        11 to stringResource(Res.string.search_content),
+        12 to stringResource(Res.string.sync_book_progress_t),
+        13 to stringResource(Res.string.read_aloud_pause_resume),
     )
 
     var selectingPrefKey by remember { mutableStateOf<String?>(null) }
@@ -178,7 +211,7 @@ fun ClickActionConfigSheet(
     AppAlertDialog(
         show = selectingPrefKey != null,
         onDismissRequest = { selectingPrefKey = null },
-        title = stringResource(R.string.select_action),
+        title = stringResource(Res.string.select_action),
         content = {
             Column {
                 actionValues.forEachIndexed { index, label ->
@@ -189,10 +222,8 @@ fun ClickActionConfigSheet(
                             .clickable {
                                 val selectedAction = actionKeys[index]
                                 selectingPrefKey?.let { key ->
-                                    scope.launch {
-                                        readSettingsRepository.setClickAction(key, selectedAction)
-                                        selectingPrefKey = null
-                                    }
+                                    onSetClickAction(key, selectedAction)
+                                    selectingPrefKey = null
                                 }
                             }
                             .padding(horizontal = 24.dp, vertical = 12.dp),

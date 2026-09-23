@@ -27,7 +27,6 @@ import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
 import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
 import io.legado.app.ui.book.read.sheet.ChapterSummarySheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
-import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.feature.settings.readconfig.EyeProtectionConfigSheet
@@ -66,6 +65,11 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.rememberCoroutineScope
+import io.legado.app.data.repository.ReadSettingsRepository
+import kotlinx.coroutines.launch
+import io.legado.app.feature.settings.readconfig.ClickActionConfigSheet
 
 /**
  * Stateless reader overlays: back handling, dialogs and sheets.
@@ -507,6 +511,9 @@ fun ReadBookScreen(
         styleConfig = state.styleConfig,
     )
 
+    // M5-11c：九宫格动作配置改为显式参数后，写入由宿主调度（共享层不 inject）。
+    val readSettingsRepository: ReadSettingsRepository = koinInject()
+    val scope = rememberCoroutineScope()
     val aloudPlayerViewModel: ReadAloudPlayerViewModel =
         org.koin.androidx.compose.koinViewModel()
     val aloudPlayerState by aloudPlayerViewModel.uiState.collectAsStateWithLifecycle()
@@ -603,10 +610,21 @@ fun ReadBookScreen(
     }
 
     // AlertDialog-based sheets and special cases — conditionally composed
+    // M5-11c：sheet 自带的 `BackHandler` 已随共享化移除（跨端 backhandler 在本项目
+    // 不可用，见 M5-11b）⇒ 改由宿主接线 —— 阅读器这个入口原本靠 sheet 内部那个，
+    // 不补就会**丢掉返回键关闭**这个行为。
+    BackHandler(enabled = state.activeSheet is ReadBookSheet.ClickActionConfig) {
+        dismissSheet()
+    }
+
     when (state.activeSheet) {
         is ReadBookSheet.ClickActionConfig -> {
             ClickActionConfigSheet(
+                preferences = preferences,
                 onDismissRequest = dismissSheet,
+                onSetClickAction = { key, action ->
+                    scope.launch { readSettingsRepository.setClickAction(key, action) }
+                },
             )
         }
 

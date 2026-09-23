@@ -232,7 +232,6 @@
     <string name="book_source_share_url">書源共享</string>
     <string name="replace_rule_summary">規則替換名稱</string>
     <string name="replace_rule_invalid">替換規則為空或不滿足正則表達式要求</string>
-    <string name="select_action">選擇操作</string>
     <string name="select_all">全選</string>
     <string name="select_all_count">全選 (%1$d/%2$d)</string>
     <string name="select_cancel_count">取消全選 (%1$d/%2$d)</string>
@@ -1001,8 +1000,6 @@
     <string name="cover_show_name_summary">封面上顯示書名</string>
     <string name="cover_show_author">顯示作者</string>
     <string name="cover_show_author_summary">封面上顯示作者</string>
-    <string name="read_aloud_prev_paragraph">朗讀上一段</string>
-    <string name="read_aloud_next_paragraph">朗讀下一段</string>
     <string name="wait_download">待下載</string>
     <string name="download_success">下載完成</string>
     <string name="download_error">下載失敗</string>
@@ -1192,7 +1189,6 @@
     <string name="copy_rule">拷贝规则</string>
     <string name="paste_rule">粘贴规则</string>
     <string name="groups_or_source">多分组/书源</string>
-    <string name="replace_state_change">替换(启用/禁用)</string>
     <string name="show_last_update_time">显示上次更新时间</string>
     <string name="refresh_list">刷新列表</string>
     <string name="tip_divider_color">分隔线颜色</string>
@@ -1934,7 +1930,6 @@
     <string name="re_sync_webdav">重新同步遠端書籍</string>
     <string name="read">閲讀</string>
     <string name="read_aloud_consecutive_errors">TTS 伺服器連續 5 次錯誤，朗讀已暫停。</string>
-    <string name="read_aloud_pause_resume">暫停/恢復朗讀</string>
     <string name="read_aloud_preload">朗讀預載入數量</string>
     <string name="read_aloud_preload_summary">%d</string>
     <string name="read_aloud_timer_format">朗讀定時：%1$d 分鐘</string>

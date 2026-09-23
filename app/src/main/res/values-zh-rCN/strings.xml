@@ -282,7 +282,6 @@
     <string name="book_source_share_url">书源共享</string>
     <string name="replace_rule_summary">替换规则名称</string>
     <string name="replace_rule_invalid">替换规则为空或者不满足正则表达式要求</string>
-    <string name="select_action">选择操作</string>
     <string name="select_all">全选</string>
     <string name="select_all_count">全选（%1$d/%2$d）</string>
     <string name="select_cancel_count">取消全选（%1$d/%2$d）</string>
@@ -1156,8 +1155,6 @@
     <string name="cover_show_name_summary">封面上显示书名</string>
     <string name="cover_show_author">显示作者</string>
     <string name="cover_show_author_summary">封面上显示作者</string>
-    <string name="read_aloud_prev_paragraph">朗读上一段</string>
-    <string name="read_aloud_next_paragraph">朗读下一段</string>
     <string name="wait_download">待下载</string>
     <string name="download_success">下载完成</string>
     <string name="download_error">下载失败</string>
@@ -1344,7 +1341,6 @@
     <string name="copy_rule">拷贝规则</string>
     <string name="paste_rule">粘贴规则</string>
     <string name="groups_or_source">多分组/书源</string>
-    <string name="replace_state_change">替换(启用/禁用)</string>
     <string name="show_last_update_time">显示上次更新时间</string>
     <string name="refresh_list">刷新列表</string>
     <string name="tip_divider_color">分隔线</string>
@@ -1621,7 +1617,6 @@
     <string name="finish_current_chapter_after_timer_summary">定时结束后继续朗读，读完当前章节再停止</string>
     <string name="system_media_control_compatibility_change">使用媒体通道</string>
     <string name="system_media_control_compatibility_change_summary">使用OEM厂商提供的媒体通道，可能解决一些通知无法显示的问题</string>
-    <string name="read_aloud_pause_resume">朗读暂停/继续</string>
     <string name="play_mode">播放模式</string>
     <string name="tabletInterface">平板界面</string>
     <string name="progress">进度</string>

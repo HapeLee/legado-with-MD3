@@ -297,4 +297,19 @@
     <string name="next_page_key">Page down button</string>
     <string name="page_key_set_help">Focusing on the input box and pressing a physical key will automatically enter the value of the key, and multiple keys will be automatically separated by commas.</string>
     <string name="reset">Reset</string>
+    <string name="bookmark_add">Add to Bookmarks</string>
+    <string name="chapter_list">Chapters</string>
+    <string name="edit_content">Edit Content</string>
+    <string name="menu">Menu</string>
+    <string name="next_chapter">Next</string>
+    <string name="next_page">Next page</string>
+    <string name="non_action">None</string>
+    <string name="prev_page">Prior page</string>
+    <string name="previous_chapter">Prior</string>
+    <string name="read_aloud_next_paragraph">Read aloud the next paragraph</string>
+    <string name="read_aloud_pause_resume">Pause/Resume Reading Aloud</string>
+    <string name="read_aloud_prev_paragraph">Read aloud the previous paragraph</string>
+    <string name="replace_state_change">Replace (enable / disable)</string>
+    <string name="search_content">Search content</string>
+    <string name="select_action">Selection action</string>
 </resources>

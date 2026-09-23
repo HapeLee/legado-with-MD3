@@ -1923,6 +1923,25 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        desktop 编译通过；若不等，翻页键配置会静默失效（本片最需要冒烟的一点）。
      **下一步**：`ClickActionConfigSheet`（BackHandler 已由宿主接线解决；
      剩 `koinInject` → 改参数注入），之后 `CanvasRecorderFactory`（窄契约），再迁页面本体。
+   - **M5-11c 已完成（2026-09-24）：`ClickActionConfigSheet`(230) → `:feature:settings/readconfig/`。**
+     两处**结构性改动**（不是逐字搬）：
+     - **去掉 `BackHandler`，宿主接线** —— ⚠️ **两个宿主都要补**：这个 sheet 有**两个入口**，
+       `ReadBookScreen`（阅读菜单）里原本**没有** `BackHandler`（全靠 sheet 内部那个）⇒
+       只补设置页那侧就会让阅读器入口**丢掉返回键关闭**，且无任何编译错误提示。
+     - **去掉 `koinInject()`，改显式参数**（`preferences` + `onSetClickAction`）：
+       `:feature:settings` 刻意无 koin 依赖，且既有约定是显式注入（参 `AiProviderStringSource`）。
+       `ReadBookScreen` 本来就有 `preferences` 参数 ⇒ 只需补仓储与作用域。
+       语义等价：原来 `scope.launch { setClickAction(); selectingPrefKey = null }`，
+       现在同步调回调再置空，写入由调用方调度（`setClickAction` 是 suspend）。
+     - 小坑两处：`ReadPreferences` 是 `ReadSettings` 的 **typealias**（报
+       `State<ReadSettings> has no method 'getValue'` 时缺的是 `getValue` import）；
+       ⚠️ **旧 import 没清掉** —— 本片只批量改过 `ui.config.readConfig.*`，而这个 sheet 原住
+       `ui.book.read.sheet` ⇒ 旧 import 行仍在 + 新补一条 = 重复 import，编译才暴露
+       （与 M5-11a 那条同类：批量改 import 要覆盖**所有**被迁走的包）。
+     - 死资源 5 条；其余 10 条仍被 `:app` 引用。验证：四门禁全绿（G4 无需变动）
+       + 两端编译 + 全模块测试；计数 **774/1269 零偏离**；lint **5/94**。
+       ⚠️ 未验证：阅读器入口的返回键关闭、以及选动作后是否真的写入设置（都需真机冒烟）。
+     **下一步**：`CanvasRecorderFactory`（31 行 → 窄契约，页面最后一个前置），再迁页面本体。
      验证：四门禁全绿（G4 无需变动）+ designsystem（**42 例**，含迁入 3 例）/`:core:ui`/
      `:feature:settings`/`:app` 编译 + 全模块测试；计数 **762 → 765 / 1257 → 1260**；
      资源 11×4 逐字一致 + designsystem 216/216；死资源 2 条；lint **5 errors / 94 warnings**。
