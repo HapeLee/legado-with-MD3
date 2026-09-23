@@ -397,4 +397,13 @@
     <string name="cover_show_name_summary">Book title shown on cover</string>
     <string name="cover_show_author">Show Author</string>
     <string name="cover_show_author_summary">Author shown on cover</string>
+    <string name="cover_album_add_images">Add images</string>
+    <string name="cover_album_create">Create cover album</string>
+    <string name="cover_album_delete">Delete cover album</string>
+    <string name="cover_album_delete_confirmation">Delete “%1$s” and all images in it?</string>
+    <string name="cover_album_empty">No cover albums</string>
+    <string name="cover_album_name">Album name</string>
+    <string name="cover_album_rename">Rename cover album</string>
+    <string name="cover_album_selected">Currently selected</string>
+    <string name="cover_albums">Cover albums</string>
 </resources>

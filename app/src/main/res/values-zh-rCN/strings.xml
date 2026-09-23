@@ -2411,18 +2411,9 @@
     <string name="switch_to_light_mode_action">切换到浅色模式</string>
     <string name="switch_action">切换</string>
     <string name="cover_albums">封面图集</string>
-    <string name="cover_album_name">图集名称</string>
-    <string name="cover_album_empty">暂无封面图集</string>
-    <string name="cover_album_create">新建封面图集</string>
-    <string name="cover_album_rename">重命名封面图集</string>
-    <string name="cover_album_delete">删除封面图集</string>
-    <string name="cover_album_delete_confirmation">删除“%1$s”及其中的全部图片？</string>
-    <string name="cover_album_add_images">添加图片</string>
     <string name="default_light_cover_album">默认日间封面</string>
     <string name="default_dark_cover_album">默认夜间封面</string>
     <string name="cover_album_imported_name">%1$s（导入）</string>
-    <string name="cover_album_day_night_count">日间 %1$d · 夜间 %2$d</string>
-    <string name="cover_album_selected">当前使用</string>
 
     <!-- 无障碍与 nav_my 子页面 -->
     <string name="list_loading_title">请稍后…</string>

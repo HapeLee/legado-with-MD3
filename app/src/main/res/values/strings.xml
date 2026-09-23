@@ -2414,18 +2414,9 @@
     <string name="switch_to_light_mode_action">Switch to light mode</string>
     <string name="switch_action">Switch</string>
     <string name="cover_albums">Cover albums</string>
-    <string name="cover_album_name">Album name</string>
-    <string name="cover_album_empty">No cover albums</string>
-    <string name="cover_album_create">Create cover album</string>
-    <string name="cover_album_rename">Rename cover album</string>
-    <string name="cover_album_delete">Delete cover album</string>
-    <string name="cover_album_delete_confirmation">Delete “%1$s” and all images in it?</string>
-    <string name="cover_album_add_images">Add images</string>
     <string name="default_light_cover_album">Default light cover</string>
     <string name="default_dark_cover_album">Default dark cover</string>
     <string name="cover_album_imported_name">%1$s (Imported)</string>
-    <string name="cover_album_day_night_count">Light %1$d · Dark %2$d</string>
-    <string name="cover_album_selected">Currently selected</string>
 
     <!-- Accessibility and nav_my subpages -->
     <string name="list_loading_title">Please wait…</string>

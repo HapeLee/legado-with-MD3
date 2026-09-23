@@ -1605,3 +1605,54 @@ legacyHelp|app/main/io/legado/app/ui/config/coverConfig  1 → 0   （条目删�
 **下一步**：`CoverAlbumManageScreen`(449) —— 拆宿主壳（`rememberLauncherForActivityResult`
 `GetMultipleContents` + `toastOnUi` 收 `ShowMessage`/`SelectImages`）+ 页面本体进共享层。
 做完 `ui/config/coverConfig` 整个子域干净。
+
+### M5-14b：`CoverAlbumManageScreen` 页面本体 → `:feature:settings/coverconfig/`（**封面图库收官**）
+
+455 行的文件里同时放着宿主壳（78–121 行）与页面本体 + 4 个私有子组件（125–455）⇒ 按职责拆开：
+壳留 `:app`（改名 `CoverAlbumManageRouteScreen.kt`），本体搬进共享层。15 条文案、无数组。
+
+#### 宿主壳保留的三件事
+
+1. `rememberLauncherForActivityResult(GetMultipleContents())` —— 系统多选图片；
+2. **记忆「这次选图是给哪个相册、亮色还是暗色」**（`imageTargetAlbumId` / `imageTargetIsDark`）：
+   选择器回调只给 URI，而 `CoverAlbumIntent.ImagesSelected` 需要那个上下文 ⇒ 这两块状态必须
+   活在壳里（它们跨越了"发 Effect"与"收回结果"两次组合）；
+3. `context.toastOnUi(effect.message)` —— ⚠️ `ShowMessage` 的文案是**运行期错误信息**
+   （不是资源 id），所以这里保持传字符串、**不涉及资源查表**，与其它页的 Toast 处理方式不同。
+
+#### 本片是这一批里最干净的搬运之一
+
+**唯一改动**就是资源访问（15 条）。没有数组、没有 JVM 专用调用 —— 对照 M5-13c 那个藏着
+`Integer.toHexString` 的页面。**但这不代表可以省掉那一步检查**：正是"看着干净"的文件最容易
+让人跳过 grep。
+
+#### 死资源 9 条
+
+`cover_album_*` 那 9 条（`add_images` / `create` / `day_night_count` / `delete` /
+`delete_confirmation` / `empty` / `name` / `rename` / `selected`）；另外 6 条
+（`cancel` / `day` / `delete` / `night` / `ok` / `cover_albums`）在 `:app` 侧仍被引用。
+
+#### `ui/config/coverConfig` 至此收官
+
+迁完的四片：M5-12a（Contract + VM + 图库契约）、M5-13a/13b（两个弹层）、M5-13c（封面设置页）、
+M5-14a/14b（图库逻辑层 + 页面）。`:app` 侧只剩**两个宿主壳**
+（`CoverConfigRouteScreen` / `CoverAlbumManageRouteScreen`），以及 `CoverConfig.kt`(26 行) ——
+后者是纯常量对象（零依赖），可留可迁。
+
+#### 验证
+
+- 四门禁全绿 + feature 两端编译 + `:app` 编译/单测/打包 + 全模块测试（**86 例 0 失败**）
+- 计数 **794 / 1289 零偏离**（纯 UI 迁移，依 checklist 不加测试）
+- 资源 **968/968 逐字一致**；删完 4 个 strings.xml 均可解析
+- 构建状态 `BUILD SUCCESSFUL`
+
+#### 未验证
+
+图库管理的**全部真实交互**：建/改名/删相册的落盘、多选图片后缩略图是否显示、亮/暗两个页签、
+删除图片按钮；以及 `AsyncImage` 在共享层（本模块 coil 依赖首次用于真实页面）的渲染。
+需真机 + desktop 冒烟。
+
+**下一步**：`ui/config` 只剩 `themeConfig`(11/3388) / `themeManage`(4/1138) /
+`themeConfig` 系的 `LauncherIconPickerSheet` 等三个重活，外加各页的宿主壳。
+建议下一轮从 `themeManage` 或 `themeConfig` 里挑一个先做**勘察**（它们的前置数可能比
+`readConfig` 更多，值得先量清再决定是否拆片）。

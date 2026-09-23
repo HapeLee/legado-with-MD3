@@ -393,4 +393,13 @@
     <string name="cover_show_name_summary">封面上显示书名</string>
     <string name="cover_show_author">显示作者</string>
     <string name="cover_show_author_summary">封面上显示作者</string>
+    <string name="cover_album_add_images">添加图片</string>
+    <string name="cover_album_create">新建封面图集</string>
+    <string name="cover_album_delete">删除封面图集</string>
+    <string name="cover_album_delete_confirmation">删除“%1$s”及其中的全部图片？</string>
+    <string name="cover_album_empty">暂无封面图集</string>
+    <string name="cover_album_name">图集名称</string>
+    <string name="cover_album_rename">重命名封面图集</string>
+    <string name="cover_album_selected">当前使用</string>
+    <string name="cover_albums">封面图集</string>
 </resources>
