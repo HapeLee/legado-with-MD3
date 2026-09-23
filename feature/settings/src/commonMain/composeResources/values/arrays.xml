@@ -40,4 +40,33 @@
         <item>material3</item>
         <item>material3Expressive</item>
     </string-array>
+<string-array name="language">
+        <item>Auto</item>
+        <item>Simplified_Chinese</item>
+        <item>Traditional_Chinese</item>
+        <item>English</item>
+    </string-array>
+<!-- M5-8b：`default_app_variant` 的条目在 :app 里是 `@string/*` **间接引用**，
+     Android 逐项按当前语言解析；而共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果。
+     ⚠️ zh-rHK / zh-rTW 的第 3 项是 'All Version'：`:app` 的 `all_version` 只在
+     `values/` 与 `values-zh-rCN/` 的 arrays.xml 里定义，那两个语言会回落到英文。
+     这是**既有行为**，本片逐字保留（改它属于产品文案决策，不是迁移决策）。 -->
+<string-array name="default_app_variant">
+        <item>Official</item>
+        <item>Beta</item>
+        <item>All Version</item>
+        <item>Coexist Version</item>
+    </string-array>
+<string-array name="language_value">
+        <item>auto</item>
+        <item>zh</item>
+        <item>tw</item>
+        <item>en</item>
+    </string-array>
+<string-array name="default_app_variant_value">
+        <item>official_version</item>
+        <item>beta_release_version</item>
+        <item>all_version</item>
+        <item>beta_releaseA_version</item>
+    </string-array>
 </resources>

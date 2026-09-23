@@ -21,6 +21,7 @@ import io.legado.app.R
 import io.legado.app.feature.settings.otherconfig.OtherConfigEffect
 import io.legado.app.feature.settings.otherconfig.OtherConfigIntent
 import io.legado.app.feature.settings.otherconfig.OtherConfigOverlay
+import io.legado.app.feature.settings.otherconfig.OtherConfigScreen
 import io.legado.app.feature.settings.otherconfig.OtherConfigViewModel
 import io.legado.app.feature.settings.otherconfig.localizedText
 import io.legado.app.service.WebService

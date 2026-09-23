@@ -1755,7 +1755,30 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        资源 **272/272**；死资源 3 条；lint 仍 **5 errors / 95 warnings**。
      **下一片**：迁 `OtherConfigScreen`（54 条文案 + 4 个数组，重点是展开 `@string/*`）；
      `RouteScreen` 与 `DirectLinkUploadBottomSheet` 是宿主壳，按现状留 `:app`。
-     **下一步**：`ai` 主域（VM 用 `GSON`）或 `otherConfig` / `backupConfig`（需先抽胶水）。
+   - **M5-8b 已完成（2026-09-23）：`OtherConfigScreen` → `:feature:settings/otherconfig/`
+     —— otherConfig 页面收官。** 51 条文案 ×4 语言 + 4 个 `string-array`。承接上片的判断：
+     `OtherConfigRouteScreen`(146) 与 `DirectLinkUploadBottomSheet`(215) 留 `:app`。
+     - **数组迁移的四个坑**（都不是搬运）：
+       ① CMP 的 `stringArrayResource` 返回 `List<String>`（androidx 返回 `Array<String>`）⇒
+       每个调用点要多一次 `.toTypedArray()`；
+       ② 显示数组逐语言本地化、`*_value` 只放默认 `values/`（本模块既有约定）——
+       真正的不变量是「各语言显示长度 == **默认**值数组长度」，不相等会让下拉框
+       **静默选错值**（编译器/lint 都不报），已脚本逐语言核对 4/4 OK；
+       ③ `default_app_variant` 的条目是 `@string/*` **间接引用**，Android 逐项逐语言解析而
+       CMP 表达不了 ⇒ 展开成字面量，从而**固化当前回落行为**：`all_version` 只在
+       `values/`+`values-zh-rCN/` 定义 ⇒ zh-rHK/zh-rTW **真的显示英文 `All Version`**。
+       逐字保留 + 写进 XML 注释（改它属产品文案决策）；
+       ④ 同名可既是 string 又是 array（`language`），实测**一条不加别名的 import 能同时引入两者**。
+     - ⚠️ `verify-compose-resources.py` **只比对 `strings.xml`**，数组不在覆盖内 ⇒ 单独脚本核。
+     - 保真取舍：迁移后的 Screen **保留原文两处缩进瑕疵**，让 `git mv` 的 diff 只反映语义改动。
+     - 验证：四门禁全绿（**G4 无需基线变动**）+ `:app` 编译/单测/打包 + 全模块测试；
+       计数 **751 / 1246 零偏离**（本片无测试增减 —— `OtherConfigScreen` 是无 VM 的纯组合函数，
+       与 M5-6b 的 `ConfigNavScreen` 同一判据）；资源 **464/464**；死资源 2 条；
+       lint 仍 **5 errors / 95 warnings**。
+     **下一步**：`backupConfig`（1144 行，抽 `Permissions` / `ImportOldData`）、
+     `themeManage`（1138 行，需 `SavedTheme` / `ThemePackageManager`）、或 `coverConfig`
+     （1534 行，但**需先下沉整条相册存储链** + 重新设计 `CoverAlbumImageInput` 的
+     `java.io.InputStream`，是更大的一档）。
 
 ## 6. 验证矩阵
 

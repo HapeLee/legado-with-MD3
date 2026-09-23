@@ -331,6 +331,27 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   1.12.0's `components-resources`: `stringResource`, `vectorResource`, `painterResource`,
   `imageResource`, `pluralStringResource`, `stringArrayResource` exist; **`dimensionResource` does
   not** (no `dimen` support) and stays Android-only.
+  ⚠️ **Migrating a `<string-array>` is not a copy — four traps, all measured in M5-8b.**
+  1. **`stringArrayResource` returns `List<String>`, not `Array<String>`** (androidx's returns the
+     array). Widgets taking `Array<String>` (e.g. `DropdownListSettingItem`) need
+     `.toTypedArray()` on every call. Existing example in the same module: `CustomThemeScreen`.
+  2. **Display arrays must be localized per language; `*_value` arrays live only in the default
+     `values/`.** That is this module's convention (`paletteStyle` / `paletteStyle_value`) — the
+     resource system falls back to `values/` **as a whole**, so pairing stays intact. Assert the
+     invariant **per language: display size == *default* value-array size** (a mismatch silently
+     selects the wrong value — no compiler or lint signal).
+  3. **Items may be `@string/other` indirections, which Android resolves *per item, per locale* —
+     something CMP arrays cannot express.** Resolve them to literals at migration time. That
+     **bakes the current fallback behaviour in**: `default_app_variant`'s third item is
+     `@string/all_version`, defined only for `values/` and `values-zh-rCN/`, so zh-rHK / zh-rTW
+     genuinely display the English `All Version`. Preserve it verbatim and write the reason into an
+     XML comment — "fixing" it is a product-wording decision, not part of a move.
+  4. **A name can be both a string and an array** (`language` is `Res.string.language` *and*
+     `Res.array.language`). The generated accessors are `internal val Res.string.x` /
+     `Res.array.x` in the same package, and **one unaliased `import …res.language` brings in both** —
+     `Res.string.language` and `Res.array.language` both resolve. No alias needed.
+  ⚠️ `verify-compose-resources.py` compares **`strings.xml` only** — arrays are not covered by it,
+  so check them by hand (or with a small script) and say so in the slice report.
   ⚠️ **`verify-compose-resources.py` distinguishes two directions of key-set drift (M5-1c-3).**
   "`:app` has it, `composeResources` does not" = the module **failed to migrate** a string ⇒ hard
   failure. "composeResources has it, `:app` does not" = the `:app` copy was **retired** as a dead

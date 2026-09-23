@@ -1,25 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-<string-array name="paletteStyle">
-        <item>柔和</item>
-        <item>中性</item>
-        <item>鲜艳</item>
-        <item>表现力</item>
-        <item>彩虹</item>
-        <item>水果拼盘</item>
-        <item>单色</item>
-        <item>仿真</item>
-        <item>内容取色</item>
-    </string-array>
-<string-array name="customContrast">
-        <item>默认</item>
-        <item>较强</item>
-        <item>最强</item>
-    </string-array>
 <string-array name="language">
-        <item>跟随系统</item>
-        <item>简体中文</item>
-        <item>繁体中文</item>
+        <item>跟隨系統</item>
+        <item>簡體中文</item>
+        <item>繁體中文</item>
         <item>英文</item>
     </string-array>
 <!-- M5-8b：`default_app_variant` 的条目在 :app 里是 `@string/*` **间接引用**，
@@ -30,7 +14,7 @@
 <string-array name="default_app_variant">
         <item>正式版</item>
         <item>测试版</item>
-        <item>所有版本</item>
+        <item>All Version</item>
         <item>共存版</item>
     </string-array>
 </resources>

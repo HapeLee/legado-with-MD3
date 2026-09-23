@@ -728,5 +728,58 @@ app/main/io/legado/app/ui/config/otherConfig：core Provider 静态委托首次�
 `RouteScreen` 与 `DirectLinkUploadBottomSheet` 是**宿主壳**（`rememberLauncherForActivityResult`
 / `selector` / 剪贴板），按现状留 `:app` —— 与 lab / ai 的 host 拆分同一判据。
 
-**下一步**：`ai` 主域（9 文件，VM 用 `GSON` + `appCtx`，最重）或转去
-`otherConfig` / `backupConfig`（需先抽 `WebService` / `ImportOldData` 胶水）。
+### M5-8b：`OtherConfigScreen` → `:feature:settings/otherconfig/`（otherConfig 页面收官）
+
+51 条文案 ×4 语言 + 4 个 `string-array`。承接上一段的判断：`OtherConfigRouteScreen`（146）
+与 `DirectLinkUploadBottomSheet`（215）**留在 `:app`** —— 这是「页面本体归共享层、平台壳留宿主」
+的既定拆分。
+
+#### 数组迁移的四个坑（都不是搬运）
+
+1. **`stringArrayResource` 在 CMP 返回 `List<String>`**（androidx 返回 `Array<String>`）⇒
+   每个调用点要多一次 `.toTypedArray()`。同模块 `CustomThemeScreen` 已是此写法。
+2. **显示数组逐语言本地化，`*_value` 数组只放默认 `values/`** —— 本模块既有约定
+   （`paletteStyle`/`paletteStyle_value`）。资源系统按**整体**回落到 `values/`，故配对不受影响。
+   真正的不变量是「**各语言显示数组长度 == 默认值数组长度**」——不相等会让下拉框
+   **静默选错值**（编译器与 lint 都不报）。已用脚本逐语言核对（4/4 全 OK）。
+3. **`default_app_variant` 的条目是 `@string/*` 间接引用**，Android 会**逐项、逐语言**解析，
+   而 CMP 数组表达不了这点 ⇒ 迁移时展开成字面量。展开会**把当前的回落行为固化**：
+   第 3 项 `@string/all_version` 只在 `values/` 与 `values-zh-rCN/` 定义 ⇒ zh-rHK/zh-rTW
+   **真的显示英文 `All Version`**。逐字保留，并把原因写进 arrays.xml 的 XML 注释
+   （改它属于产品文案决策，不是迁移决策）。
+4. **同名可以既是 string 又是 array**（`language` 两者都有）。生成的访问器是
+   `internal val Res.string.language` / `Res.array.language`（同包），实测**一条不加别名的
+   `import …res.language` 能同时引入两者**，无需别名。
+
+⚠️ `verify-compose-resources.py` **只比对 `strings.xml`**，数组不在覆盖内 ⇒ 数组要手工/脚本核，
+并在片报里说明（本片用脚本核了条目内容与配对长度）。
+
+#### 一处保真取舍：结构逐字保留
+
+迁移后的 Screen **保留了原文那两处缩进瑕疵**（`SplicedColumnGroup {` 后实体少缩进一层）。
+理由：这样 `git mv` 出来的 diff 只反映语义改动（package / `Res` / `.toTypedArray()`），
+reviewer 不必在格式噪音里找差异。已在文件头 KDoc 写明。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需基线变动**）
+- `:app` 编译/单测/打包 + 全模块测试；计数 **751 / 1246 零偏离**（本片无测试增减 ——
+  `OtherConfigScreen` 是**无 VM 的纯组合函数**，与 M5-6b 的 `ConfigNavScreen` 同一判据：
+  本模块没有 Compose UI 测试基建，不为它引入新测试依赖）
+- 资源 **464/464 逐字一致**；死资源 2 条删除（`auto_check_update_on_start_title` / `_summary`
+  —— 其余 50 条在 `:app` 别处仍被引用）
+- `lintAppDebug` 仍 **5 errors / 95 warnings**
+
+#### 未验证
+
+页面渲染与 4 个下拉的**实际取值**（尤其 zh-rHK/zh-rTW 下 `default_app_variant` 显示
+`All Version` 这一既有行为），以及权限申请、SAF 选目录、WebService 重启、清 WebView 后重启
+四条宿主路径。需真机冒烟。
+
+**`ui/config/otherConfig` 至此只剩 2 个宿主壳文件**，两者都按「平台壳留 `:app`」的判据保留。
+
+**下一步**：`backupConfig`（1144 行，需抽 `Permissions` / `ImportOldData`）、
+`themeManage`（1138 行，需 `SavedTheme` / `ThemePackageManager`）、或
+`coverConfig`（1534 行，但**需先下沉整条相册存储链** —— `CoverAlbumGateway`/`Repository`/
+`UseCase` 全在 `:app`，且 `CoverAlbumImageInput` 的 `java.io.InputStream` 要重新设计，
+是比前几片大的一档）。
