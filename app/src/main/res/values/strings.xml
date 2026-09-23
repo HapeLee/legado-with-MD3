@@ -26,7 +26,6 @@
     <string name="tip_cannot_jump_setting_page">Cannot jump to Settings.</string>
 
     <string name="manual_input">Manual Input</string>
-    <string name="preferred_contrast">Preferred contrast</string>
     <string name="contrast_source_system_summary">Source: System contrast</string>
     <string name="contrast_source_manual_summary">Source: Manual input</string>
     <string name="current_effective_contrast">Current effective value: %1$s</string>
@@ -1129,7 +1128,6 @@
     <string name="hide_when_status_bar_show">Hide when status bar show</string>
     <string name="reverse_toc">Reverse toc</string>
     <string name="show_discovery">Show Discovery</string>
-    <string name="show_home">Show Home</string>
     <string name="main_navigation_settings">Home and navigation</string>
     <string name="main_navigation_settings_summary">Configure Home, Discovery, Subscriptions, start page, and navigation icons</string>
     <string name="navigation_order">Navigation order</string>
@@ -1590,24 +1588,6 @@
     <string name="theme_manage_delete_message">Delete theme \"%1$s\"? This cannot be undone.</string>
     <string name="theme_manage_preview_day">Day</string>
     <string name="theme_manage_preview_night">Night</string>
-    <string name="theme_manage_edit_theme">Edit Theme</string>
-    <string name="theme_manage_section_basic">Basic Settings</string>
-    <string name="theme_manage_section_colors">Colors</string>
-    <string name="theme_manage_use_palette_colors">Generate Colors from Palette</string>
-    <string name="theme_manage_primary_color">Primary Color</string>
-    <string name="theme_manage_secondary_color">Secondary Color</string>
-    <string name="theme_manage_primary_text_color">Primary Text Color</string>
-    <string name="theme_manage_secondary_text_color">Secondary Text Color</string>
-    <string name="theme_manage_background_color">Background Color</string>
-    <string name="theme_manage_label_container_color">Label Container Color</string>
-    <string name="theme_manage_day_seed_color">Day Seed Color</string>
-    <string name="theme_manage_night_seed_color">Night Seed Color</string>
-    <string name="theme_manage_section_layout">Interface Layout</string>
-    <string name="theme_manage_show_discovery">Show Discovery</string>
-    <string name="theme_manage_status_bar">Status Bar</string>
-    <string name="theme_manage_page_turn_animation">Page Turn Animation</string>
-    <string name="theme_manage_label_visibility">Label Visibility</string>
-    <string name="theme_manage_section_blur">Blur Effects</string>
     <string name="book_info_page">Book details</string>
     <string name="book_info_follow_cover_color">Use colors from book cover</string>
     <string name="book_info_follow_cover_color_summary">Applied only while a background cover is visible</string>
@@ -1620,7 +1600,6 @@
     <string name="theme_manage_bottom_bar_blur_radius">Bottom Bar Blur Radius</string>
     <string name="theme_manage_top_bar_blur_opacity">Top Bar Blur Opacity</string>
     <string name="theme_manage_bottom_bar_blur_opacity">Bottom Bar Blur Opacity</string>
-    <string name="theme_manage_section_opacity">Opacity</string>
     <string name="theme_manage_section_container">Container</string>
     <string name="theme_config_manage_label_colors">Manage Label Colors</string>
     <string name="theme_config_label_color_name">Label %1$d</string>
@@ -1875,7 +1854,6 @@
     <string name="read_color">Color</string>
     <string name="reverse_volume_key_page">Reverse Volume-Key Page Turn Direction</string>
     <string name="palette_style">Palette Style</string>
-    <string name="material_version">Color Specification</string>
     <string name="tip_compose_set">These options only affect screens rewritten in Compose. Disabled options are placeholders and will be enabled after implementation.</string>
     <string name="is_blur_enable">Enable Element Blur</string>
     <string name="use_underline">Always Use Underline for Emphasized Text</string>

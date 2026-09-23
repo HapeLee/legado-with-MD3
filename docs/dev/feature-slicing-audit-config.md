@@ -1957,3 +1957,69 @@ toast 文案在 4 个语言下的实际显示。需真机冒烟。
 
 **下一步**：`themeManage` 页面 + 表单（`ThemeManageScreen` / `EditThemeSheet`，共 3 个文件在
 `:app`），再 `themeConfig`。
+
+### M5-17a：`EditThemeSheet` → `:feature:settings/thememanage/`
+
+表单先走（页面依赖它，与 M5-9b「先 sheet 后页面」同一顺序）。勘察结论：**两个文件都只有
+`io.legado.app.R` 这一处平台依赖**，无 `:app` 私有符号 ⇒ 不需要新契约 ✓。
+
+**资源面**：43 条字符串 + 7 组「标签/值」数组对（`theme_mode`/`_v`、`paletteStyle`、
+`materialVersion`、`customContrast`、`tabletInterface`、`label_vis_mode`、`default_home_page`）。
+
+#### 做法：**脚本化等价改写**，而不是手抄 403 行
+
+正文里有 40+ 处资源引用，手抄等于把「逐字保留」降级成「靠记忆重打」。改用一个脚本做四类改写，
+其余**逐字保留**：
+
+1. 包名 → `io.legado.app.feature.settings.thememanage`；
+2. `androidx.compose.ui.res.stringResource` / `stringArrayResource` → CMP 的那套；
+3. `R.string.*`（43）/ `R.array.*`（14）→ `Res.string.*` / `Res.array.*` + 逐 key import（58 行，本模块既有写法）；
+4. `Integer.toHexString(x).uppercase()` → `x.toString(16).uppercase()`（`java.lang.Integer` 进不了
+   `commonMain`；同 M5-13c 的处理。它只在色值非 0 时显示那个十六进制色号）。
+
+#### ⚠️ 资源脚本连踩三个坑（每个都会静默出错，值得记）
+
+1. **按文件名猜资源文件**：`:app` 的值数组住在 **`values/array_values.xml`**，而我只读了
+   `arrays.xml` / `strings.xml` ⇒ 3 个值数组没被复制，另 3 个「值不一致」是**假阳性**
+   （源侧读到 `None`）。⇒ 一律**遍历该语言目录下所有 `*.xml`**。同一个坑在**删除**脚本里
+   又踩了一次（`customContrast_value` / `materialVersion_value` 漏删）。
+2. **正则把 `-array` 吃掉**：我为了让 `translatable="false"` 这类属性通过，把标签正则放宽成
+   `<string[^>]*name="k"` —— 它**同时匹配 `<string-array name="k"`**（`[^>]*` 吃掉 `-array`），
+   于是把**数组体当成字符串值**插进去。受害者正是 `default_home_page` / `tabletInterface` /
+   `theme_mode` 这三个**同名不同类**的 key。修法是否定前瞻 `<string(?![-\w])`。已回退重做
+   （第一次还把数组重复插了一遍：跳过检查写成 `<array name="k"`，而 DEST 存的是
+   `<string-array name="k"`，前者不是后者的子串 ⇒ 每个 key 重插一次，values +82）。
+3. **CMP 的 `stringArrayResource` 返回 `List<String>`**，而 Android 版返回 `Array<String>` ——
+   designsystem 的 `Compact*SettingItem` 收 `Array<String>` ⇒ 14 处调用点都要 `.toTypedArray()`。
+   既有先例（`customtheme/CustomThemeScreen.kt`）里就留着这条发现的中文注释，我没先搜它。
+
+#### 死资源：:app 侧 22 条字符串 + 4 个数组（按元素级删除）
+
+43 条里 **21 条仍被 `:app` 用着**（`ThemeManageScreen` 自身 + `themeConfig` 等）⇒ 只删真正的
+22 条 + 4 个数组，共 91 项（跨 4 个语言目录）。删除按**元素**做（跨行正则），不用行删 ——
+`:app` 的 `arrays.xml` 条目是多行块，行删会留下半截标签，那种坏 XML 要一路走到资源合并才炸。
+删完：26 个 key 在 `:app` 的 res 里已无定义 ✅、XML 全部可解析 ✅。
+
+⚠️ 与 `default_home_page` 一样，**同名不同类的 key 在两边的类型要对得上**：这里 3 个 key 同时是
+`string` 与 `string-array`（Android 允许）——CMP 侧实测**没有**生成冲突（`Res.string.x` 与
+`Res.array.x` 的接收者不同），但 import 会重复 ⇒ 需去重（本次 3 行）。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需变动** —— 该 sheet 只有 `R` 依赖）
+- `:feature:settings` desktop 编译 + `:app` 编译/单测/打包 + 全模块测试 → **BUILD SUCCESSFUL**
+- 计数 **806 / 1301 零偏离**（纯 UI 迁移，依 checklist 不加测试）
+- 资源：43 字符串 × 4 语言、7 标签数组 × 4 语言、7 值数组（默认目录）**逐字一致** ✅（脚本核验，
+  比对面 = 「`:app` 同语言 → 回落默认」的可见值）；DEST 无重复 key ✅
+  - ⚠️ 逐 key 回落：`:app` 的 zh 目录只定义部分条目，其余靠 Android 合并回落 `values`；CMP 的
+    composeResources **不参与那次合并** ⇒ 每个语言目录都必须自带一份（值取回落结果，逐字一致）。
+  - 7 个值数组只落默认目录：实测它们在 `:app` 里只定义在 `values/array_values.xml`，与语言无关。
+- `lintAppDebug` **重测：与本片之前完全一致**（5 errors / 102 warnings / filtered 239）⇒ 零 delta
+
+#### 未验证
+
+表单在真机/desktop 的渲染与交互：7 个下拉、各开关与滑杆、颜色选择器（14 个色槽的读写路径）、
+深浅色两套控件、以及「十六进制色号」的显示。需冒烟。
+`themeManage` 至此 `:app` 侧剩 **2 个文件**（`ThemeManageRouteScreen` + `ThemeManageScreen`）。
+
+**下一步**：`ThemeManageScreen`（334 行，25 条字符串，无数组）→ 之后 `themeConfig`(11/3388)。

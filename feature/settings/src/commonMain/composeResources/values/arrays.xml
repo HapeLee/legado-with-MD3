@@ -188,4 +188,52 @@
         <item>2</item>
         <item>3</item>
     </string-array>
+<string-array name="default_home_page">
+    <item>@string/home</item>
+    <item>@string/bookshelf</item>
+    <item>@string/discovery</item>
+    <item>@string/rss</item>
+    <item>@string/my</item>
+</string-array>
+<string-array name="label_vis_mode">
+    <item>Auto</item>
+    <item>Selected</item>
+    <item>Labeled</item>
+    <item>Unlabeled</item>
+</string-array>
+<string-array name="tabletInterface">
+    <item>Auto</item>
+    <item>Always</item>
+    <item>Landscape Mode</item>
+    <item>Off</item>
+</string-array>
+<string-array name="theme_mode">
+    <item>Follow system</item>
+    <item>Bright mode</item>
+    <item>Dark mode</item>
+</string-array>
+<string-array name="label_vis_mode_value">
+    <item>auto</item>
+    <item>selected</item>
+    <item>labeled</item>
+    <item>unlabeled</item>
+</string-array>
+<string-array name="tabletInterface_value">
+    <item>auto</item>
+    <item>always</item>
+    <item>landscape</item>
+    <item>off</item>
+</string-array>
+<string-array name="theme_mode_v">
+    <item>0</item>
+    <item>1</item>
+    <item>2</item>
+</string-array>
+<string-array name="default_home_page_value">
+    <item>home</item>
+    <item>bookshelf</item>
+    <item>explore</item>
+    <item>rss</item>
+    <item>my</item>
+</string-array>
 </resources>

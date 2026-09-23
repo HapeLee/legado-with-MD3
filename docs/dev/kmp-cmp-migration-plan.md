@@ -2210,3 +2210,40 @@ M5-12b 发现：`lintAppDebug` **一直在失败**，而我过去十几片只 gr
 本片只加测试源码（不在 `:app`）⇒ `lintAppDebug` 无需重测。
 
 **下一步**：`themeManage` 页面 + 表单（`:app` 侧 3 个文件），再 `themeConfig`。
+
+### M5-17a 已完成（2026-09-24）：`EditThemeSheet` → `:feature:settings/thememanage/`
+
+勘察：两个待迁文件**都只有 `io.legado.app.R` 一处平台依赖** ⇒ 不需要新契约 ✓。
+资源面 43 条字符串 + 7 组「标签/值」数组对。
+
+**做法：脚本化等价改写**（403 行、40+ 处资源引用，手抄会把「逐字保留」降级成靠记忆重打）。
+只改四类：包名、两个资源函数 import→CMP 版、`R.*`→`Res.*`（+58 行逐 key import）、
+`Integer.toHexString(x).uppercase()`→`x.toString(16).uppercase()`（JVM 专用写法）。
+
+#### ⚠️ 资源脚本连踩三个坑（都会静默出错）
+
+1. **按文件名猜资源文件**：`:app` 的值数组住在 **`values/array_values.xml`**（不是 `arrays.xml`）
+   ⇒ 3 个值数组漏复制、3 个「不一致」是假阳性（源侧读到 None）；**同一个坑在删除脚本又踩一次**。
+   ⇒ 一律遍历该语言目录下所有 `*.xml`。
+2. **正则把 `-array` 吃掉**：为容忍 `translatable="false"` 放宽成 `<string[^>]*name="k"` ⇒ 同时匹配
+   `<string-array name="k"` ⇒ 把**数组体插成字符串值**，坏在 `default_home_page` / `tabletInterface` /
+   `theme_mode` 这三个**同名不同类**的 key 上。修法 `<string(?![-\w])`。同一族的还有：跳过检查写成
+   `<array name="k"` 永不匹配已存的 `<string-array name="k"` ⇒ 每个 key 被重插（values +82，已回退）；
+   以及重复 key 导致迁移后 Kotlin 里 **import 重复**（3 行，需去重）。
+3. **CMP 的 `stringArrayResource` 返回 `List<String>`**，而 Android 版返回 `Array<String>`，而
+   designsystem 的 `Compact*SettingItem` 收 `Array<String>` ⇒ 14 处调用点补 `.toTypedArray()`。
+   既有先例（`customtheme/CustomThemeScreen.kt`）里就留着这条发现的中文注释，我没先搜它。
+
+#### 死资源与回落
+
+`:app` 侧 43 条里只有 22 条变死（其余仍被 `ThemeManageScreen` / `themeConfig` 用着），连同 4 个数组
+共删 91 项（按**元素**跨行删除，行删会留半截标签）。逐 key 回落：`:app` 的 zh 目录只定义部分条目，
+CMP **不参与 Android 资源合并** ⇒ 每个语言目录都要自带一份（值取回落结果）；7 个值数组只落默认目录。
+
+验证：四门禁全绿（G4 无需变动）+ `:feature:settings` desktop 编译 + `:app` 编译/单测/打包 +
+全模块测试 → **BUILD SUCCESSFUL**；计数 **806 / 1301 零偏离**；资源**逐字一致**（脚本核验）+
+无重复 key；死资源 26 key 已无定义；`lintAppDebug` 重测与本片之前**完全一致**（零 delta）。
+
+未验证：表单在真机/desktop 的渲染与交互（7 个下拉、开关/滑杆、颜色选择器 14 个色槽）。
+
+**下一步**：`ThemeManageScreen`（334 行，25 条字符串，无数组）→ 再 `themeConfig`(11/3388)。

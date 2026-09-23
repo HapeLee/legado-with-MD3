@@ -69,4 +69,48 @@
         <item>10分鐘</item>
         <item>常亮</item>
     </string-array>
+<string-array name="customContrast">
+    <item>Default</item>
+    <item>High</item>
+    <item>Maximum</item>
+</string-array>
+<string-array name="default_home_page">
+    <item>@string/home</item>
+    <item>@string/bookshelf</item>
+    <item>@string/discovery</item>
+    <item>@string/rss</item>
+    <item>@string/my</item>
+</string-array>
+<string-array name="label_vis_mode">
+    <item>Auto</item>
+    <item>Selected</item>
+    <item>Labeled</item>
+    <item>Unlabeled</item>
+</string-array>
+<string-array name="materialVersion">
+    <item>Material 3 (2021)</item>
+    <item>Material 3 Expressive (2025)</item>
+</string-array>
+<string-array name="paletteStyle">
+    <item>TonalSpot</item>
+    <item>Neutral</item>
+    <item>Vibrant</item>
+    <item>Expressive</item>
+    <item>Rainbow</item>
+    <item>FruitSalad</item>
+    <item>Monochrome</item>
+    <item>Fidelity</item>
+    <item>Content</item>
+</string-array>
+<string-array name="tabletInterface">
+    <item>Auto</item>
+    <item>Always</item>
+    <item>Landscape Mode</item>
+    <item>Off</item>
+</string-array>
+<string-array name="theme_mode">
+    <item>跟隨系統</item>
+    <item>亮色主題</item>
+    <item>暗色主題</item>
+</string-array>
 </resources>

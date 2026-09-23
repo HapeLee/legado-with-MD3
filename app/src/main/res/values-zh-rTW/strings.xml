@@ -960,7 +960,6 @@
     <string name="hide_when_status_bar_show">狀態欄顯示時隱藏</string>
     <string name="reverse_toc">反轉目錄</string>
     <string name="show_discovery">顯示發現</string>
-    <string name="show_home">顯示首頁</string>
     <string name="main_navigation_settings">首頁與導覽</string>
     <string name="main_navigation_settings_summary">設定首頁、發現、訂閱、預設主頁和導航欄圖示</string>
     <string name="navigation_order">導覽順序</string>
@@ -1505,7 +1504,6 @@
 
     <!-- Auto-generated missing translations -->
     <string name="manual_input">手動輸入</string>
-    <string name="preferred_contrast">偏好對比度</string>
     <string name="contrast_source_system_summary">來源：系統對比度</string>
     <string name="contrast_source_manual_summary">來源：手動輸入</string>
     <string name="current_effective_contrast">目前有效值：%1$s</string>
@@ -1711,24 +1709,6 @@
     <string name="theme_manage_delete_message">刪除主題「%1$s」？此操作無法復原。</string>
     <string name="theme_manage_preview_day">日間</string>
     <string name="theme_manage_preview_night">夜間</string>
-    <string name="theme_manage_edit_theme">編輯主題</string>
-    <string name="theme_manage_section_basic">基本設定</string>
-    <string name="theme_manage_section_colors">顏色</string>
-    <string name="theme_manage_use_palette_colors">從調色板生成顏色</string>
-    <string name="theme_manage_primary_color">主色</string>
-    <string name="theme_manage_secondary_color">輔助色</string>
-    <string name="theme_manage_primary_text_color">主文字色</string>
-    <string name="theme_manage_secondary_text_color">輔助文字色</string>
-    <string name="theme_manage_background_color">背景色</string>
-    <string name="theme_manage_label_container_color">標籤容器色</string>
-    <string name="theme_manage_day_seed_color">日間種子色</string>
-    <string name="theme_manage_night_seed_color">夜間種子色</string>
-    <string name="theme_manage_section_layout">介面佈局</string>
-    <string name="theme_manage_show_discovery">顯示發現</string>
-    <string name="theme_manage_status_bar">狀態欄</string>
-    <string name="theme_manage_page_turn_animation">翻頁動畫</string>
-    <string name="theme_manage_label_visibility">標籤可見性</string>
-    <string name="theme_manage_section_blur">模糊效果</string>
     <string name="book_info_page">書籍詳情頁</string>
     <string name="book_info_follow_cover_color">介面顏色跟隨封面取色</string>
     <string name="book_info_follow_cover_color_summary">僅在顯示背景封面時生效</string>
@@ -1741,7 +1721,6 @@
     <string name="theme_manage_bottom_bar_blur_radius">底部工具列模糊半徑</string>
     <string name="theme_manage_top_bar_blur_opacity">頂部工具列模糊不透明度</string>
     <string name="theme_manage_bottom_bar_blur_opacity">底部工具列模糊不透明度</string>
-    <string name="theme_manage_section_opacity">不透明度</string>
     <string name="theme_manage_section_container">容器</string>
     <string name="theme_config_manage_label_colors">管理標籤顏色</string>
     <string name="theme_config_label_color_name">標籤 %1$d</string>
@@ -1957,7 +1936,6 @@
     <string name="read_color">顏色</string>
     <string name="reverse_volume_key_page">反轉音量鍵翻頁方向</string>
     <string name="palette_style">調色板樣式</string>
-    <string name="material_version">色彩規格</string>
     <string name="tip_compose_set">這些選項僅影響使用 Compose 重寫的介面。停用的選項為佔位符，將在實作後啟用。</string>
     <string name="is_blur_enable">啟用元素模糊</string>
     <string name="use_underline">強調文字始終使用底線</string>

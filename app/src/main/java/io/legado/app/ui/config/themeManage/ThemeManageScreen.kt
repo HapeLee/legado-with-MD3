@@ -30,6 +30,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.feature.settings.thememanage.EditThemeSheet
 import io.legado.app.feature.settings.thememanage.SavedThemeSummary
 import io.legado.app.feature.settings.thememanage.ThemeManageDialog
 import io.legado.app.feature.settings.thememanage.ThemeManageIntent

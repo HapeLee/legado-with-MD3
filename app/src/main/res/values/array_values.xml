@@ -110,11 +110,6 @@
         <item>content</item>
     </string-array>
 
-    <string-array name="materialVersion_value">
-        <item>material3</item>
-        <item>material3Expressive</item>
-    </string-array>
-
     <string-array name="composeEngine_value">
         <item>material</item>
         <item>miuix</item>
@@ -148,12 +143,6 @@
         <item>1</item>
         <item>2</item>
         <item>3</item>
-    </string-array>
-
-    <string-array name="customContrast_value">
-        <item>Default</item>
-        <item>Medium</item>
-        <item>High</item>
     </string-array>
 
     <string-array name="backup_sync_mode_value">

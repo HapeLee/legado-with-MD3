@@ -84,4 +84,32 @@
         <item>仅显示标题</item>
         <item>不显示</item>
     </string-array>
+<string-array name="default_home_page">
+    <item>@string/home</item>
+    <item>@string/bookshelf</item>
+    <item>@string/discovery</item>
+    <item>@string/rss</item>
+    <item>@string/my</item>
+</string-array>
+<string-array name="label_vis_mode">
+    <item>自动</item>
+    <item>选中时显示</item>
+    <item>常驻</item>
+    <item>不显示</item>
+</string-array>
+<string-array name="materialVersion">
+    <item>Material 3 (2021)</item>
+    <item>Material 3 Expressive (2025)</item>
+</string-array>
+<string-array name="tabletInterface">
+    <item>自动</item>
+    <item>总是</item>
+    <item>横屏时</item>
+    <item>关闭</item>
+</string-array>
+<string-array name="theme_mode">
+    <item>跟随系统</item>
+    <item>亮色主题</item>
+    <item>暗色主题</item>
+</string-array>
 </resources>

@@ -651,6 +651,34 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   rather than skipping it. A silent skip is indistinguishable from "clean" — the same failure mode
   as M5-12a, where `io.legado.app.domain.**` *looked* like the shared layer while `:app` was
   defining classes in that very package.
+- ⚠️ **When you script the resource side of a migration, do not guess resource *file names* — walk
+  every `*.xml`, on both the copy and the delete side.** Measured in M5-17a: `:app` keeps its
+  machine-value arrays in `values/array_values.xml` (not `arrays.xml`), so a script that opened only
+  `strings.xml` + `arrays.xml` silently copied 3 of 7 value arrays, reported 3 more as "value
+  mismatch" (the source side read `None`), and — after being fixed for the copy — repeated the same
+  omission in the deletion script. Android lets any `values/*.xml` hold any resource type.
+- ⚠️ **Regexes that match resource tags need a negative lookahead, or `<string` eats `<string-array`.**
+  M5-17a: relaxing `<string name="k">` to `<string[^>]*name="k"` (to tolerate `translatable="false"`)
+  also matched `<string-array name="k"` — `[^>]*` swallowed `-array` — so an **array body was inserted
+  as a string value**, breaking the XML of exactly the keys that are both a string and an array
+  (`default_home_page`, `tabletInterface`, `theme_mode`). Fix: `<string(?![-\w])`, and the same on
+  the array side. Two related traps from the same slice: a "already present?" check written as
+  `<array name="k"` never matches a stored `<string-array name="k"` (substring, not prefix) so every
+  key gets re-inserted; and duplicated keys mean **duplicate imports** in the migrated Kotlin that
+  must be de-duplicated. After any scripted resource edit: validate every touched XML by parsing it,
+  and re-assert "no duplicate keys" and "no remaining definitions" as separate checks.
+- **CMP's `stringArrayResource` returns `List<String>`; Android's returns `Array<String>`.** Measured
+  in M5-17a: designsystem widgets take `Array<String>` (`displayEntries` / `entryValues`), so every
+  call site needs `.toTypedArray()`. The precedent — and a comment recording exactly this — was
+  already in `customtheme/CustomThemeScreen.kt`; searching for the API before hitting the compiler
+  error would have saved a build cycle.
+- **For a large UI file (400+ lines) prefer a scripted equivalent rewrite over retyping.** M5-17a
+  migrated `EditThemeSheet` (403 lines, 40+ resource references) with a transform script that
+  touched only: package name, the two resource-function imports, `R.*` → `Res.*` plus per-key
+  imports, and the one JVM-only expression. Everything else stayed byte-identical **by
+  construction**, instead of by memory — which is what "verbatim migration" is supposed to mean.
+  Then verify the transformation itself (count replaced references, check for leftovers on
+  non-comment lines, de-duplicate imports) rather than trusting it.
 - ⚠️ **A concurrency test whose fake never suspends proves nothing — and it fails in the direction
   that looks like a bug.** Measured in M5-16b: a "second intent must be dropped while the first is
   in flight" test failed on its first version (`imports` contained both) for two stacked reasons:
