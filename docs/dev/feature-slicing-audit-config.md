@@ -1272,3 +1272,54 @@ BackHandler(enabled = state.activeSheet is ReadBookSheet.ClickActionConfig) { di
 
 **下一步**：`CanvasRecorderFactory`（31 行 → 窄契约，页面本体的最后一个前置），
 然后才是 `readConfig` 页面本体（471 行）。
+
+### M5-11d：`readConfig` 页面本体 → `:feature:settings/readconfig/`（**本域收官**）
+
+480 行，55 条文案 + **18 个数组（9 对「展示 + 机器值」）** —— 本批数组最集中的一页。
+结构**逐字保留**（含原文那些不齐的缩进），差异只有三类：资源函数换成 CMP 的、
+`R.string/array.*` → `Res.*`、以及下面这一处。
+
+#### ⚠️ `CanvasRecorderFactory.isSupport`：**没有**抽窄契约
+
+迁移前页面里直接 `if (CanvasRecorderFactory.isSupport)` 决定是否显示「优化渲染」那一项。
+它依赖 `android.os.Build` 与三个 Android 专用的 `CanvasRecorder*Impl` ⇒ 进不了共享层。
+
+但本片**刻意没有**为它抽接口 —— 与 M5-11a 那个 `ReadConfigApplyPlatform`（7 个方法）的差别是：
+
+- 那一个是**行为**（改完设置要去通知阅读器做什么），需要宿主执行 ⇒ 契约；
+- 这一个只是**事实**（当前设备支不支持某个渲染优化），只读一次即可 ⇒ 宿主读一次传进
+  `canvasRecorderSupported` 参数就够了。
+
+抽一层接口会得到一个**没有调用方**的抽象（违反「不为架构完整留空配置」），且把「读一次常量」
+变成「注入一个接口」并没有换来可测性 —— 本域的可测性来自 M5-11a 那张映射表，不来自这个开关。
+
+#### 死资源：**0**
+
+55 条文案 + 18 个数组在 `:app` 侧**全部仍被引用**（`res/xml/pref_config_read.xml` 那个遗留
+PreferenceScreen、阅读器、`ReadConfig.kt` 弃用门面等）⇒ 本片一条都没删。
+（与 M5-9b 那次 41 条里删 12 条形成对照：删不删完全取决于 `:app` 侧还有谁在用。）
+
+#### `ui/config/readConfig` 剩下的 2 个文件
+
+| 文件 | 为什么留下 |
+|---|---|
+| `ReadConfigRouteScreen.kt`(34→约 70) | **宿主壳**：Toast 提示、`koinInject` 仓储、BackHandler 接线、`CanvasRecorderFactory.isSupport` |
+| `ReadConfig.kt`(118) | **弃用门面**：被未迁移的 `BaseReadAloudService` / `TTSReadAloudService` 使用（M5-10a 勘察确认**不是死代码**） |
+
+#### 验证
+
+- 四门禁全绿（**G4 无需 baseline 变动**）+ feature 两端编译 + `:app` 编译/单测/打包 + 全模块测试
+- 计数 **774 / 1269 零偏离**（纯 UI 迁移，依 checklist 不加测试）
+- 资源 **884/884 逐字一致**（M5-11d-pre 已验证）
+- `lintAppDebug` 仍 **5 errors / 94 warnings**
+
+#### 未验证
+
+页面渲染与 9 个下拉的实际选项、两个滑块、三个 sheet 的交互；以及
+⚠️ **`canvasRecorderSupported` 为真时「优化渲染」那一项是否还显示** —— 本片把它从
+「页面直接读常量」改成「宿主传入」，值本身没变，但这条路径只有真机能确认。
+
+**下一步**：`ui/config` 只剩 `themeConfig`(11/3388) / `coverConfig`(9) / `themeManage`(4)，
+外加几个宿主壳 —— **三者都是重活**（`ui.main.*` 的 10 个 `Launcher*` 图标；
+`ThemePackageManager`(1254 行深依赖 `Context`/`Uri`/`AppCompatDelegate`) 与
+`BookCover`(`Bitmap`/`Drawable`) 那条存储链）。建议先确认优先级。

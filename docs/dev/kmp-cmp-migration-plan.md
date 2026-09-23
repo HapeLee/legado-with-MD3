@@ -1942,6 +1942,24 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
        + 两端编译 + 全模块测试；计数 **774/1269 零偏离**；lint **5/94**。
        ⚠️ 未验证：阅读器入口的返回键关闭、以及选动作后是否真的写入设置（都需真机冒烟）。
      **下一步**：`CanvasRecorderFactory`（31 行 → 窄契约，页面最后一个前置），再迁页面本体。
+   - **M5-11d 已完成（2026-09-24）：`readConfig` 页面本体 → `:feature:settings/readconfig/`
+     —— 本域收官。** 480 行、55 条文案、**18 个数组（9 对）**，结构逐字保留。
+     - ⚠️ `CanvasRecorderFactory.isSupport` **没有**抽窄契约：与 M5-11a 的
+       `ReadConfigApplyPlatform` 不同 —— 那是**行为**（需宿主执行）⇒ 契约；
+       这只是**事实**（设备支不支持某渲染优化）⇒ 宿主读一次传参即可。抽接口会得到一个
+       **没有调用方**的抽象，且换不来可测性（本域可测性来自那张映射表，不来自这个开关）。
+     - **死资源 0**：55 条文案 + 18 个数组在 `:app` 侧全部仍被引用（遗留
+       `res/xml/pref_config_read.xml`、阅读器、`ReadConfig.kt` 弃用门面）⇒ 一条没删。
+       （与 M5-9b 的 41 条删 12 条对照：删不删取决于 `:app` 侧还有谁在用。）
+     - `ui/config/readConfig` 剩 2 个文件：`ReadConfigRouteScreen`（宿主壳）+
+       `ReadConfig.kt`（弃用门面，被未迁移的 TTS 服务使用，非死代码）。
+     - 验证：四门禁全绿（G4 无需变动）+ 两端编译 + 全模块测试；计数 **774/1269 零偏离**
+       （纯 UI 迁移，不加测试）；资源 884/884；lint **5/94**。
+       ⚠️ 未验证：页面渲染与三个 sheet 交互，以及 `canvasRecorderSupported` 为真时
+       「优化渲染」那一项是否还显示（改为宿主传入，值没变，但只有真机能确认）。
+     **下一步**：`ui/config` 只剩 `themeConfig`(11/3388) / `coverConfig`(9) / `themeManage`(4)
+     + 几个宿主壳，**三者都是重活**（10 个 `Launcher*` 图标；`ThemePackageManager`(1254 行)
+     与 `BookCover`(`Bitmap`/`Drawable`) 那条存储链）⇒ 建议先确认优先级。
      验证：四门禁全绿（G4 无需变动）+ designsystem（**42 例**，含迁入 3 例）/`:core:ui`/
      `:feature:settings`/`:app` 编译 + 全模块测试；计数 **762 → 765 / 1257 → 1260**；
      资源 11×4 逐字一致 + designsystem 216/216；死资源 2 条；lint **5 errors / 94 warnings**。

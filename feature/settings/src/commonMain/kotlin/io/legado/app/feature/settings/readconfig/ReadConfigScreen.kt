@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.readConfig
+package io.legado.app.feature.settings.readconfig
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -6,11 +6,80 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringArrayResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.legado.app.R
-import io.legado.app.feature.settings.readconfig.EyeProtectionConfigSheet
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.adapt_special_style
+import io.legado.app.feature.settings.res.auto_change_source
+import io.legado.app.feature.settings.res.auto_switch_theme_reminder_desc
+import io.legado.app.feature.settings.res.auto_switch_theme_reminder_title
+import io.legado.app.feature.settings.res.brightness_bar_mode_title
+import io.legado.app.feature.settings.res.brightness_bar_mode_value
+import io.legado.app.feature.settings.res.brightness_bar_position
+import io.legado.app.feature.settings.res.brightness_bar_position_title
+import io.legado.app.feature.settings.res.brightness_bar_position_value
+import io.legado.app.feature.settings.res.click_image_way
+import io.legado.app.feature.settings.res.click_image_way_title
+import io.legado.app.feature.settings.res.click_image_way_value
+import io.legado.app.feature.settings.res.click_regional_config
+import io.legado.app.feature.settings.res.custom_page_key
+import io.legado.app.feature.settings.res.disable_return_key
+import io.legado.app.feature.settings.res.disabled
+import io.legado.app.feature.settings.res.double_page_title
+import io.legado.app.feature.settings.res.double_page_value
+import io.legado.app.feature.settings.res.double_page_horizontal
+import io.legado.app.feature.settings.res.enable_optimize_render
+import io.legado.app.feature.settings.res.enable_select_vibrator
+import io.legado.app.feature.settings.res.enable_slider_vibrator
+import io.legado.app.feature.settings.res.enabled
+import io.legado.app.feature.settings.res.eye_protection
+import io.legado.app.feature.settings.res.keep_light
+import io.legado.app.feature.settings.res.key_page_on_long_press
+import io.legado.app.feature.settings.res.menu_alpha
+import io.legado.app.feature.settings.res.menu_alpha_sum
+import io.legado.app.feature.settings.res.mouse_wheel_page
+import io.legado.app.feature.settings.res.no_anim_scroll_page
+import io.legado.app.feature.settings.res.no_toc_split_length_summary
+import io.legado.app.feature.settings.res.no_toc_split_length_title
+import io.legado.app.feature.settings.res.other
+import io.legado.app.feature.settings.res.padding_display_cutouts
+import io.legado.app.feature.settings.res.page_control
+import io.legado.app.feature.settings.res.page_touch_slop_summary
+import io.legado.app.feature.settings.res.page_touch_slop_title
+import io.legado.app.feature.settings.res.progress_bar_behavior
+import io.legado.app.feature.settings.res.progress_bar_behavior_title
+import io.legado.app.feature.settings.res.progress_bar_behavior_value
+import io.legado.app.feature.settings.res.pt_hide_navigation_bar
+import io.legado.app.feature.settings.res.pt_hide_status_bar
+import io.legado.app.feature.settings.res.read_aloud_detach_reminder
+import io.legado.app.feature.settings.res.read_aloud_detach_reminder_summary
+import io.legado.app.feature.settings.res.read_body_to_lh
+import io.legado.app.feature.settings.res.read_change_all
+import io.legado.app.feature.settings.res.read_change_all_s
+import io.legado.app.feature.settings.res.read_config
+import io.legado.app.feature.settings.res.read_slider_mode
+import io.legado.app.feature.settings.res.read_slider_mode_value
+import io.legado.app.feature.settings.res.reading_anchor
+import io.legado.app.feature.settings.res.reading_anchor_summary
+import io.legado.app.feature.settings.res.screen_direction
+import io.legado.app.feature.settings.res.screen_direction_title
+import io.legado.app.feature.settings.res.screen_direction_value
+import io.legado.app.feature.settings.res.screen_settings
+import io.legado.app.feature.settings.res.screen_time_out
+import io.legado.app.feature.settings.res.screen_time_out_value
+import io.legado.app.feature.settings.res.selectText
+import io.legado.app.feature.settings.res.show_brightness_view
+import io.legado.app.feature.settings.res.show_menu_icon
+import io.legado.app.feature.settings.res.show_read_title_addition
+import io.legado.app.feature.settings.res.text_bottom_justify
+import io.legado.app.feature.settings.res.text_full_justify
+import io.legado.app.feature.settings.res.title_bar_mode
+import io.legado.app.feature.settings.res.title_bar_mode_value
+import io.legado.app.feature.settings.res.use_new_toc_sheet
+import io.legado.app.feature.settings.res.use_underline
+import io.legado.app.feature.settings.res.use_zh_layout
+import io.legado.app.feature.settings.res.volume_key_page
+import io.legado.app.feature.settings.res.volume_key_page_on_play
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -21,14 +90,27 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
-import io.legado.app.feature.settings.readconfig.ReadConfigUiState
-import io.legado.app.feature.settings.readconfig.ReadConfigIntent
-import io.legado.app.feature.settings.readconfig.ReadConfigSheet
-import io.legado.app.feature.settings.readconfig.PageKeySheet
-import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.feature.settings.readconfig.ClickActionConfigSheet
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
 
+/**
+ * M5-11d：从 `:app` 的 `ui/config/readConfig` 迁来，**readConfig 域收官**（逻辑层见 M5-11a，
+ * 两个前置 sheet 见 M5-10a / M5-11b / M5-11c）。
+ *
+ * 差异三类（结构**逐字保留**，含原文的缩进与空行）：
+ *   ① `androidx.compose.ui.res.{stringResource,stringArrayResource}` → CMP 的同名函数；
+ *   ② `R.string.*`（55 条）/ `R.array.*`（18 个）→ `Res.string.*` / `Res.array.*`；
+ *   ③ `CanvasRecorderFactory.isSupport` → [canvasRecorderSupported] 参数（见下）。
+ *
+ * ⚠️ `stringArrayResource` 在 CMP 里返回 `List<String>`，故每处都多一次 `.toTypedArray()`
+ * （`DropdownListSettingItem` 收的是 `Array<String>`）—— 本页有 **9 对**数组，是最集中的一处。
+ *
+ * ⚠️ [canvasRecorderSupported]：迁移前这里是 `if (CanvasRecorderFactory.isSupport)`，
+ * 而 `CanvasRecorderFactory` 依赖 `android.os.Build` 与三个 Android 专用的
+ * `CanvasRecorder*Impl` ⇒ 不能直接进共享层。本片**没有**为它抽窄契约 —— 它是一个**只读的能力开关**，
+ * 宿主（`ReadConfigRouteScreen`）直接读一次传进来即可，抽接口反而多一层没有调用方的抽象
+ * （与 M5-11a 那个有 7 个动作的 `ReadConfigApplyPlatform` 不同：那个是**行为**，这个只是**事实**）。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReadConfigScreen(
@@ -37,6 +119,7 @@ fun ReadConfigScreen(
     onBackClick: () -> Unit,
     preferences: ReadPreferences,
     onSetClickAction: (String, Int) -> Unit,
+    canvasRecorderSupported: Boolean,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val settings = state
@@ -45,7 +128,7 @@ fun ReadConfigScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.read_config),
+                title = stringResource(Res.string.read_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -61,29 +144,29 @@ fun ReadConfigScreen(
             )
         ) {
             item {
-                SplicedColumnGroup(title = stringResource(R.string.screen_settings)) {
+                SplicedColumnGroup(title = stringResource(Res.string.screen_settings)) {
                 DropdownListSettingItem(
-                    title = stringResource(R.string.screen_direction),
+                    title = stringResource(Res.string.screen_direction),
                     selectedValue = settings.screenOrientation,
-                    displayEntries = stringArrayResource(R.array.screen_direction_title),
-                    entryValues = stringArrayResource(R.array.screen_direction_value),
+                    displayEntries = stringArrayResource(Res.array.screen_direction_title).toTypedArray(),
+                    entryValues = stringArrayResource(Res.array.screen_direction_value).toTypedArray(),
                     onValueChange = {
                         onIntent(ReadConfigIntent.ScreenOrientationChanged(it))
                     }
                 )
 
                 DropdownListSettingItem(
-                    title = stringResource(R.string.keep_light),
+                    title = stringResource(Res.string.keep_light),
                     selectedValue = settings.keepLight,
-                    displayEntries = stringArrayResource(R.array.screen_time_out),
-                    entryValues = stringArrayResource(R.array.screen_time_out_value),
+                    displayEntries = stringArrayResource(Res.array.screen_time_out).toTypedArray(),
+                    entryValues = stringArrayResource(Res.array.screen_time_out_value).toTypedArray(),
                     onValueChange = {
                         onIntent(ReadConfigIntent.KeepLightChanged(it))
                     }
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.pt_hide_status_bar),
+                    title = stringResource(Res.string.pt_hide_status_bar),
                     checked = settings.hideStatusBar,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.HideStatusBarChanged(it))
@@ -91,7 +174,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.pt_hide_navigation_bar),
+                    title = stringResource(Res.string.pt_hide_navigation_bar),
                     checked = settings.hideNavigationBar,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.HideNavigationBarChanged(it))
@@ -99,7 +182,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.padding_display_cutouts),
+                    title = stringResource(Res.string.padding_display_cutouts),
                     checked = settings.paddingDisplayCutouts,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.PaddingDisplayCutoutsChanged(it))
@@ -107,18 +190,18 @@ fun ReadConfigScreen(
                 )
 
                 DropdownListSettingItem(
-                    title = stringResource(R.string.title_bar_mode),
+                    title = stringResource(Res.string.title_bar_mode),
                     selectedValue = settings.titleBarMode,
-                    displayEntries = stringArrayResource(R.array.title_bar_mode),
-                    entryValues = stringArrayResource(R.array.title_bar_mode_value),
+                    displayEntries = stringArrayResource(Res.array.title_bar_mode).toTypedArray(),
+                    entryValues = stringArrayResource(Res.array.title_bar_mode_value).toTypedArray(),
                     onValueChange = {
                         onIntent(ReadConfigIntent.TitleBarModeChanged(it))
                     }
                 )
 
                 SliderSettingItem(
-                    title = stringResource(R.string.menu_alpha),
-                    description = stringResource(R.string.menu_alpha_sum, settings.readMenuBlurAlpha),
+                    title = stringResource(Res.string.menu_alpha),
+                    description = stringResource(Res.string.menu_alpha_sum, settings.readMenuBlurAlpha),
                     value = settings.readMenuBlurAlpha.toFloat(),
                     defaultValue = 60f,
                     valueRange = 0f..100f,
@@ -128,7 +211,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.read_body_to_lh),
+                    title = stringResource(Res.string.read_body_to_lh),
                     checked = settings.readBodyToLh,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.ReadBodyToLhChanged(it))
@@ -136,8 +219,8 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.read_change_all),
-                    description = stringResource(R.string.read_change_all_s),
+                    title = stringResource(Res.string.read_change_all),
+                    description = stringResource(Res.string.read_change_all_s),
                     checked = settings.defaultSourceChangeAll,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.DefaultSourceChangeAllChanged(it))
@@ -145,7 +228,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.text_full_justify),
+                    title = stringResource(Res.string.text_full_justify),
                     checked = settings.textFullJustify,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.TextFullJustifyChanged(it))
@@ -153,7 +236,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.text_bottom_justify),
+                    title = stringResource(Res.string.text_bottom_justify),
                     checked = settings.textBottomJustify,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.TextBottomJustifyChanged(it))
@@ -161,7 +244,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.adapt_special_style),
+                    title = stringResource(Res.string.adapt_special_style),
                     checked = settings.adaptSpecialStyle,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.AdaptSpecialStyleChanged(it))
@@ -169,7 +252,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.use_zh_layout),
+                    title = stringResource(Res.string.use_zh_layout),
                     checked = settings.useZhLayout,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.UseZhLayoutChanged(it))
@@ -177,20 +260,20 @@ fun ReadConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.eye_protection),
+                    title = stringResource(Res.string.eye_protection),
                     option = if (state.eyeProtection.configured) {
-                        stringResource(R.string.enabled)
+                        stringResource(Res.string.enabled)
                     } else {
-                        stringResource(R.string.disabled)
+                        stringResource(Res.string.disabled)
                     },
                     onClick = { onIntent(ReadConfigIntent.OpenEyeProtection) },
                 )
 
                     DropdownListSettingItem(
-                    title = stringResource(R.string.show_brightness_view),
+                    title = stringResource(Res.string.show_brightness_view),
                         selectedValue = settings.showBrightnessView,
-                        displayEntries = stringArrayResource(R.array.brightness_bar_mode_title),
-                        entryValues = stringArrayResource(R.array.brightness_bar_mode_value),
+                        displayEntries = stringArrayResource(Res.array.brightness_bar_mode_title).toTypedArray(),
+                        entryValues = stringArrayResource(Res.array.brightness_bar_mode_value).toTypedArray(),
                         onValueChange = {
                         onIntent(ReadConfigIntent.ShowBrightnessViewChanged(it))
                     }
@@ -198,10 +281,10 @@ fun ReadConfigScreen(
 
                     if (settings.showBrightnessView == "2") {
                         DropdownListSettingItem(
-                            title = stringResource(R.string.brightness_bar_position),
+                            title = stringResource(Res.string.brightness_bar_position),
                             selectedValue = settings.brightnessVwPos,
-                            displayEntries = stringArrayResource(R.array.brightness_bar_position_title),
-                            entryValues = stringArrayResource(R.array.brightness_bar_position_value),
+                            displayEntries = stringArrayResource(Res.array.brightness_bar_position_title).toTypedArray(),
+                            entryValues = stringArrayResource(Res.array.brightness_bar_position_value).toTypedArray(),
                             onValueChange = {
                                 onIntent(ReadConfigIntent.BrightnessVwPosChanged(it))
                             }
@@ -209,7 +292,7 @@ fun ReadConfigScreen(
                     }
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.use_underline),
+                    title = stringResource(Res.string.use_underline),
                     checked = settings.useUnderline,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.UseUnderlineChanged(it))
@@ -217,39 +300,39 @@ fun ReadConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.page_control)) {
+            SplicedColumnGroup(title = stringResource(Res.string.page_control)) {
                 DropdownListSettingItem(
-                    title = stringResource(R.string.read_slider_mode),
+                    title = stringResource(Res.string.read_slider_mode),
                     selectedValue = settings.readSliderMode,
-                    displayEntries = stringArrayResource(R.array.read_slider_mode),
-                    entryValues = stringArrayResource(R.array.read_slider_mode_value),
+                    displayEntries = stringArrayResource(Res.array.read_slider_mode).toTypedArray(),
+                    entryValues = stringArrayResource(Res.array.read_slider_mode_value).toTypedArray(),
                     onValueChange = {
                         onIntent(ReadConfigIntent.ReadSliderModeChanged(it))
                     }
                 )
 
                 DropdownListSettingItem(
-                    title = stringResource(R.string.double_page_horizontal),
+                    title = stringResource(Res.string.double_page_horizontal),
                     selectedValue = settings.doubleHorizontalPage,
-                    displayEntries = stringArrayResource(R.array.double_page_title),
-                    entryValues = stringArrayResource(R.array.double_page_value),
+                    displayEntries = stringArrayResource(Res.array.double_page_title).toTypedArray(),
+                    entryValues = stringArrayResource(Res.array.double_page_value).toTypedArray(),
                     onValueChange = {
                         onIntent(ReadConfigIntent.DoubleHorizontalPageChanged(it))
                     }
                 )
 
                 DropdownListSettingItem(
-                    title = stringResource(R.string.progress_bar_behavior),
+                    title = stringResource(Res.string.progress_bar_behavior),
                     selectedValue = settings.progressBarBehavior,
-                    displayEntries = stringArrayResource(R.array.progress_bar_behavior_title),
-                    entryValues = stringArrayResource(R.array.progress_bar_behavior_value),
+                    displayEntries = stringArrayResource(Res.array.progress_bar_behavior_title).toTypedArray(),
+                    entryValues = stringArrayResource(Res.array.progress_bar_behavior_value).toTypedArray(),
                     onValueChange = {
                         onIntent(ReadConfigIntent.ProgressBarBehaviorChanged(it))
                     }
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.mouse_wheel_page),
+                    title = stringResource(Res.string.mouse_wheel_page),
                     checked = settings.mouseWheelPage,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.MouseWheelPageChanged(it))
@@ -257,7 +340,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.volume_key_page),
+                    title = stringResource(Res.string.volume_key_page),
                     checked = settings.volumeKeyPage,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.VolumeKeyPageChanged(it))
@@ -265,7 +348,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.volume_key_page_on_play),
+                    title = stringResource(Res.string.volume_key_page_on_play),
                     checked = settings.volumeKeyPageOnPlay,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.VolumeKeyPageOnPlayChanged(it))
@@ -273,7 +356,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.key_page_on_long_press),
+                    title = stringResource(Res.string.key_page_on_long_press),
                     checked = settings.keyPageOnLongPress,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.KeyPageOnLongPressChanged(it))
@@ -281,9 +364,9 @@ fun ReadConfigScreen(
                 )
 
                 SliderSettingItem(
-                    title = stringResource(R.string.page_touch_slop_title),
+                    title = stringResource(Res.string.page_touch_slop_title),
                     description = stringResource(
-                        R.string.page_touch_slop_summary,
+                        Res.string.page_touch_slop_summary,
                         settings.pageTouchSlop
                     ),
                     value = settings.pageTouchSlop.toFloat(),
@@ -295,9 +378,9 @@ fun ReadConfigScreen(
                 )
             }
 
-                SplicedColumnGroup(title = stringResource(R.string.other)) {
+                SplicedColumnGroup(title = stringResource(Res.string.other)) {
                 SwitchSettingItem(
-                    title = stringResource(R.string.enable_slider_vibrator),
+                    title = stringResource(Res.string.enable_slider_vibrator),
                     checked = settings.sliderVibrator,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.SliderVibratorChanged(it))
@@ -305,7 +388,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.use_new_toc_sheet),
+                    title = stringResource(Res.string.use_new_toc_sheet),
                     checked = settings.useNewTocSheet,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.UseNewTocSheetChanged(it))
@@ -313,9 +396,9 @@ fun ReadConfigScreen(
                 )
 
                 SliderSettingItem(
-                    title = stringResource(R.string.no_toc_split_length_title),
+                    title = stringResource(Res.string.no_toc_split_length_title),
                     description = stringResource(
-                        R.string.no_toc_split_length_summary,
+                        Res.string.no_toc_split_length_summary,
                         settings.maxLengthWithNoToc
                     ),
                     value = settings.maxLengthWithNoToc.toFloat(),
@@ -327,7 +410,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.enable_select_vibrator),
+                    title = stringResource(Res.string.enable_select_vibrator),
                     checked = settings.selectVibrator,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.SelectVibratorChanged(it))
@@ -335,7 +418,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.auto_change_source),
+                    title = stringResource(Res.string.auto_change_source),
                     checked = settings.autoChangeSource,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.AutoChangeSourceChanged(it))
@@ -343,8 +426,8 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.auto_switch_theme_reminder_title),
-                    description = stringResource(R.string.auto_switch_theme_reminder_desc),
+                    title = stringResource(Res.string.auto_switch_theme_reminder_title),
+                    description = stringResource(Res.string.auto_switch_theme_reminder_desc),
                     checked = settings.autoSuggestDayNight,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.AutoSuggestDayNightChanged(it))
@@ -352,8 +435,8 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.reading_anchor),
-                    description = stringResource(R.string.reading_anchor_summary),
+                    title = stringResource(Res.string.reading_anchor),
+                    description = stringResource(Res.string.reading_anchor_summary),
                     checked = settings.readingAnchorEnabled,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.ReadingAnchorChanged(it))
@@ -361,8 +444,8 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.read_aloud_detach_reminder),
-                    description = stringResource(R.string.read_aloud_detach_reminder_summary),
+                    title = stringResource(Res.string.read_aloud_detach_reminder),
+                    description = stringResource(Res.string.read_aloud_detach_reminder_summary),
                     checked = settings.readAloudDetachReminderEnabled,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.ReadAloudDetachReminderChanged(it))
@@ -370,7 +453,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.selectText),
+                    title = stringResource(Res.string.selectText),
                     checked = settings.selectText,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.SelectTextChanged(it))
@@ -378,7 +461,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.no_anim_scroll_page),
+                    title = stringResource(Res.string.no_anim_scroll_page),
                     checked = settings.noAnimScrollPage,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.NoAnimScrollPageChanged(it))
@@ -386,18 +469,18 @@ fun ReadConfigScreen(
                 )
 
                 DropdownListSettingItem(
-                    title = stringResource(R.string.click_image_way),
+                    title = stringResource(Res.string.click_image_way),
                     selectedValue = settings.clickImgWay,
-                    displayEntries = stringArrayResource(R.array.click_image_way_title),
-                    entryValues = stringArrayResource(R.array.click_image_way_value),
+                    displayEntries = stringArrayResource(Res.array.click_image_way_title).toTypedArray(),
+                    entryValues = stringArrayResource(Res.array.click_image_way_value).toTypedArray(),
                     onValueChange = {
                         onIntent(ReadConfigIntent.ClickImgWayChanged(it))
                     }
                 )
 
-                if (CanvasRecorderFactory.isSupport) {
+                if (canvasRecorderSupported) {
                     SwitchSettingItem(
-                        title = stringResource(R.string.enable_optimize_render),
+                        title = stringResource(Res.string.enable_optimize_render),
                         checked = settings.optimizeRender,
                         onCheckedChange = {
                             onIntent(ReadConfigIntent.OptimizeRenderChanged(it))
@@ -406,12 +489,12 @@ fun ReadConfigScreen(
                 }
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.click_regional_config),
+                    title = stringResource(Res.string.click_regional_config),
                     onClick = { onIntent(ReadConfigIntent.OpenClickActions) }
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.disable_return_key),
+                    title = stringResource(Res.string.disable_return_key),
                     checked = settings.disableReturnKey,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.DisableReturnKeyChanged(it))
@@ -419,12 +502,12 @@ fun ReadConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.custom_page_key),
+                    title = stringResource(Res.string.custom_page_key),
                     onClick = { onIntent(ReadConfigIntent.OpenPageKeys) }
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.show_read_title_addition),
+                    title = stringResource(Res.string.show_read_title_addition),
                     checked = settings.showReadTitleAddition,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.ShowReadTitleAdditionChanged(it))
@@ -432,7 +515,7 @@ fun ReadConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.show_menu_icon),
+                    title = stringResource(Res.string.show_menu_icon),
                     checked = settings.showMenuIcon,
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.ShowMenuIconChanged(it))

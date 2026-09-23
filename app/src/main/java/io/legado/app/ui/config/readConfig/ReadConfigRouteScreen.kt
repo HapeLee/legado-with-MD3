@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import androidx.compose.runtime.getValue
 import io.legado.app.feature.settings.readconfig.ReadConfigIntent
+import io.legado.app.feature.settings.readconfig.ReadConfigScreen
+import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 
 @Composable
 fun ReadConfigRouteScreen(
@@ -58,5 +60,10 @@ fun ReadConfigRouteScreen(
         onSetClickAction = { key, action ->
             scope.launch { readSettingsRepository.setClickAction(key, action) }
         },
+        // M5-11d：迁移前是页面里直接读 `CanvasRecorderFactory.isSupport`。它依赖
+        // `android.os.Build` 与三个 Android 专用的 `CanvasRecorder*Impl` ⇒ 进不了共享层；
+        // 但它只是个**只读的能力开关**（决定是否显示「优化渲染」那一项），不是行为 ⇒
+        // 宿主读一次传进来即可，不值得抽一层契约。
+        canvasRecorderSupported = CanvasRecorderFactory.isSupport,
     )
 }
