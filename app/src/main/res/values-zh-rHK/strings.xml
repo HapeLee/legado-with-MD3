@@ -1369,7 +1369,6 @@
     <string name="bottom_bar_opacity">底欄不透明度</string>
     <string name="bottom_bar_opacity_summary">%d</string>
 	<string name="layout_setting">佈局設定</string>
-	<string name="cover_info_orientation">封面資訊方向</string>
 	<string name="rule_segment">Rule</string>
 	<string name="tool_bar_style">工具欄樣式</string>
 	<string name="split_title">標題分段</string>
@@ -1748,10 +1747,6 @@
     <string name="eye_protection_schedule_summary">僅在設定的時間範圍內生效</string>
     <string name="eye_protection_start_time">開始時間</string>
     <string name="eye_protection_end_time">結束時間</string>
-    <string name="filter_hide_in_shelf">隱藏書架中同源書籍</string>
-    <string name="filter_hide_same_name_author">隱藏書架中不同源書籍</string>
-    <string name="filter_show_all">顯示全部</string>
-    <string name="filter_show_not_in_shelf_only">僅顯示不在書架中的書籍</string>
     <string name="firebase_enable_summary">允許應用使用 Google Firebase 進行崩潰和效能報告</string>
     <string name="firebase_enable_title">匿名統計</string>
     <string name="first_read">請先閱讀服務條款和用戶協議</string>
@@ -1882,7 +1877,6 @@
     <string name="move_to_top">移至頂部</string>
     <string name="multi_select_items">多選項目</string>
     <string name="nav_label_mode">導航欄標籤模式</string>
-    <string name="network_book_badge_setting">網路書籍標記</string>
     <string name="new_rule">新建規則</string>
     <string name="night_card_bg_color">夜間卡片背景色</string>
 
@@ -2312,7 +2306,6 @@
     <string name="switch_to_light_mode_action">切換至淺色模式</string>
     <string name="switch_action">切換</string>
     <string name="cover_albums">封面圖集</string>
-    <string name="cover_album_none">應用程式內置封面</string>
     <string name="cover_album_name">圖集名稱</string>
     <string name="cover_album_empty">暫無封面圖集</string>
     <string name="cover_album_create">新增封面圖集</string>

@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.coverConfig
+package io.legado.app.feature.settings.coverconfig
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,16 +10,41 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.cover_album_day_night_count
+import io.legado.app.feature.settings.res.cover_album_none
+import io.legado.app.feature.settings.res.cover_config
+import io.legado.app.feature.settings.res.cover_info_orientation
+import io.legado.app.feature.settings.res.cover_rule
+import io.legado.app.feature.settings.res.cover_rule_summary
+import io.legado.app.feature.settings.res.cover_show_author
+import io.legado.app.feature.settings.res.cover_show_author_summary
+import io.legado.app.feature.settings.res.cover_show_name
+import io.legado.app.feature.settings.res.cover_show_name_summary
+import io.legado.app.feature.settings.res.cover_show_shadow
+import io.legado.app.feature.settings.res.cover_show_stroke
+import io.legado.app.feature.settings.res.day
+import io.legado.app.feature.settings.res.default_color
+import io.legado.app.feature.settings.res.default_cover
+import io.legado.app.feature.settings.res.filter_hide_in_shelf
+import io.legado.app.feature.settings.res.filter_hide_same_name_author
+import io.legado.app.feature.settings.res.filter_show_all
+import io.legado.app.feature.settings.res.filter_show_not_in_shelf_only
+import io.legado.app.feature.settings.res.network_book_badge_setting
+import io.legado.app.feature.settings.res.night
+import io.legado.app.feature.settings.res.only_wifi
+import io.legado.app.feature.settings.res.only_wifi_summary
+import io.legado.app.feature.settings.res.screen_landscape
+import io.legado.app.feature.settings.res.screen_portrait
+import io.legado.app.feature.settings.res.text_color
+import io.legado.app.feature.settings.res.text_shadow_color
+import io.legado.app.feature.settings.res.use_default_cover
+import io.legado.app.feature.settings.res.use_default_cover_s
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -30,43 +55,26 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import org.koin.androidx.compose.koinViewModel
-import androidx.compose.ui.platform.LocalContext
-import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.flow.collectLatest
-import io.legado.app.feature.settings.coverconfig.CoverConfigUiState
-import io.legado.app.feature.settings.coverconfig.CoverConfigIntent
-import io.legado.app.feature.settings.coverconfig.CoverConfigEffect
-import io.legado.app.feature.settings.coverconfig.CoverConfigSheet
-import io.legado.app.feature.settings.coverconfig.CoverConfigViewModel
-import io.legado.app.feature.settings.coverconfig.CoverColorField
-import io.legado.app.feature.settings.coverconfig.localizedText
-import io.legado.app.feature.settings.coverconfig.CoverRuleConfigSheet
-import io.legado.app.feature.settings.coverconfig.CoverAlbumSelectSheet
+import org.jetbrains.compose.resources.stringResource
 
-@Composable
-fun CoverConfigRouteScreen(
-    onBackClick: () -> Unit,
-    onNavigateToCoverAlbums: () -> Unit,
-    viewModel: CoverConfigViewModel = koinViewModel(),
-) {
-    val context = LocalContext.current
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) {
-        viewModel.effects.collectLatest { effect ->
-            when (effect) {
-                is CoverConfigEffect.ShowToast -> context.toastOnUi(effect.toast.localizedText())
-            }
-        }
-    }
-    CoverConfigScreen(
-        state = state,
-        onIntent = viewModel::onIntent,
-        onBackClick = onBackClick,
-        onNavigateToCoverAlbums = onNavigateToCoverAlbums,
-    )
-}
-
+/**
+ * M5-13c：从 `:app` 的 `ui/config/coverConfig/CoverConfigScreen.kt` 迁来
+ * **只有页面本体这一半**。那个文件里同时放着 `CoverConfigRouteScreen`（宿主壳：
+ * `LocalContext` + `toastOnUi` 收 Effect）与本函数 —— 本片按职责拆开，壳留在 `:app`
+ * （现住 `CoverConfigRouteScreen.kt`），本体搬到这里。
+ *
+ * 差异三类：
+ *   ① 资源访问：CMP 的 `stringResource`、`R.string.*` → `Res.string.*`（29 条，**无数组** ——
+ *      页面里的下拉是就地 `arrayOf(stringResource(...))`，所以不需要 `.toTypedArray()`）；
+ *   ② `Integer.toHexString(x).uppercase()` → `x.toString(16).uppercase()`（见下）；
+ *   ③ 无（其余结构逐字保留，含原文那些不齐的缩进）。
+ *
+ * ⚠️ **`Integer.toHexString` 是 JVM 专用**（`java.lang.Integer`），`commonMain` 里没有 ——
+ * 改用 Kotlin 的 `Int.toString(radix)`。两者对非负整数**等价**（都是不带前导零的小写十六进制，
+ * 颜色值恒非负），只差大小写 ⇒ 后面接的 `.uppercase()` 把这点也抹平了。
+ * 这是本片唯一的非资源改动，与 M5-10a-pre 改写 `TimePickerDialog` 的 `Locale`/`Character.digit`
+ * 是同一类处理。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoverConfigScreen(
@@ -85,7 +93,7 @@ fun CoverConfigScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.cover_config),
+                title = stringResource(Res.string.cover_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -103,8 +111,8 @@ fun CoverConfigScreen(
             item {
                 SplicedColumnGroup {
                 SwitchSettingItem(
-                    title = stringResource(R.string.only_wifi),
-                    description = stringResource(R.string.only_wifi_summary),
+                    title = stringResource(Res.string.only_wifi),
+                    description = stringResource(Res.string.only_wifi_summary),
                     checked = settings.loadOnlyOnWifi,
                     onCheckedChange = { value ->
                         onIntent(CoverConfigIntent.SetLoadOnlyOnWifi(value))
@@ -112,14 +120,14 @@ fun CoverConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.cover_rule),
-                    description = stringResource(R.string.cover_rule_summary),
+                    title = stringResource(Res.string.cover_rule),
+                    description = stringResource(Res.string.cover_rule_summary),
                     onClick = { onIntent(CoverConfigIntent.ShowSheet(CoverConfigSheet.Rule)) }
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.use_default_cover),
-                    description = stringResource(R.string.use_default_cover_s),
+                    title = stringResource(Res.string.use_default_cover),
+                    description = stringResource(Res.string.use_default_cover_s),
                     checked = settings.useDefaultCover,
                     onCheckedChange = { value ->
                         onIntent(CoverConfigIntent.SetUseDefaultCover(value))
@@ -127,21 +135,21 @@ fun CoverConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.default_cover),
+                    title = stringResource(Res.string.default_cover),
                     description = selectedAlbum?.let {
                         "${it.name} · ${
                             stringResource(
-                                R.string.cover_album_day_night_count,
+                                Res.string.cover_album_day_night_count,
                                 it.lightImages.size,
                                 it.darkImages.size,
                             )
                         }"
-                    } ?: stringResource(R.string.cover_album_none),
+                    } ?: stringResource(Res.string.cover_album_none),
                     onClick = { onIntent(CoverConfigIntent.ShowSheet(CoverConfigSheet.Album)) }
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_shadow),
+                    title = stringResource(Res.string.cover_show_shadow),
                     checked = settings.showShadow,
                     onCheckedChange = { value ->
                         onIntent(CoverConfigIntent.SetShowShadow(value))
@@ -149,7 +157,7 @@ fun CoverConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_stroke),
+                    title = stringResource(Res.string.cover_show_stroke),
                     checked = settings.showStroke,
                     onCheckedChange = { value ->
                         onIntent(CoverConfigIntent.SetShowStroke(value))
@@ -157,7 +165,7 @@ fun CoverConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.default_color),
+                    title = stringResource(Res.string.default_color),
                     checked = settings.useDefaultColor,
                     onCheckedChange = { value ->
                         onIntent(CoverConfigIntent.SetUseDefaultColor(value))
@@ -167,11 +175,11 @@ fun CoverConfigScreen(
 
             SplicedColumnGroup {
                 DropdownListSettingItem(
-                    title = stringResource(R.string.cover_info_orientation),
+                    title = stringResource(Res.string.cover_info_orientation),
                     selectedValue = settings.infoOrientation,
                     displayEntries = arrayOf(
-                        stringResource(R.string.screen_portrait),
-                        stringResource(R.string.screen_landscape)
+                        stringResource(Res.string.screen_portrait),
+                        stringResource(Res.string.screen_landscape)
                     ),
                     entryValues = arrayOf("0", "1"),
                     onValueChange = { value ->
@@ -180,15 +188,15 @@ fun CoverConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.network_book_badge_setting)) {
+            SplicedColumnGroup(title = stringResource(Res.string.network_book_badge_setting)) {
                 DropdownListSettingItem(
-                    title = stringResource(R.string.network_book_badge_setting),
+                    title = stringResource(Res.string.network_book_badge_setting),
                     selectedValue = settings.exploreFilterState.toString(),
                     displayEntries = arrayOf(
-                        stringResource(R.string.filter_show_all),
-                        stringResource(R.string.filter_hide_in_shelf),
-                        stringResource(R.string.filter_hide_same_name_author),
-                        stringResource(R.string.filter_show_not_in_shelf_only)
+                        stringResource(Res.string.filter_show_all),
+                        stringResource(Res.string.filter_hide_in_shelf),
+                        stringResource(Res.string.filter_hide_same_name_author),
+                        stringResource(Res.string.filter_show_not_in_shelf_only)
                     ),
                     entryValues = arrayOf("0", "1", "2", "3"),
                     onValueChange = { value ->
@@ -197,10 +205,10 @@ fun CoverConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.day)) {
+            SplicedColumnGroup(title = stringResource(Res.string.day)) {
                 ClickableSettingItem(
-                    title = stringResource(R.string.text_color),
-                    option = "#${Integer.toHexString(settings.textColor).uppercase()}",
+                    title = stringResource(Res.string.text_color),
+                    option = "#${settings.textColor.toString(16).uppercase()}",
                     onClick = {
                         onIntent(
                             CoverConfigIntent.ShowSheet(
@@ -220,8 +228,8 @@ fun CoverConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.text_shadow_color),
-                    option = "#${Integer.toHexString(settings.shadowColor).uppercase()}",
+                    title = stringResource(Res.string.text_shadow_color),
+                    option = "#${settings.shadowColor.toString(16).uppercase()}",
                     onClick = {
                         onIntent(
                             CoverConfigIntent.ShowSheet(
@@ -241,8 +249,8 @@ fun CoverConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_name),
-                    description = stringResource(R.string.cover_show_name_summary),
+                    title = stringResource(Res.string.cover_show_name),
+                    description = stringResource(Res.string.cover_show_name_summary),
                     checked = settings.showName,
                     onCheckedChange = { value ->
                         onIntent(CoverConfigIntent.SetShowName(value))
@@ -250,8 +258,8 @@ fun CoverConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_author),
-                    description = stringResource(R.string.cover_show_author_summary),
+                    title = stringResource(Res.string.cover_show_author),
+                    description = stringResource(Res.string.cover_show_author_summary),
                     checked = settings.showAuthor,
                     enabled = settings.showName,
                     onCheckedChange = { value ->
@@ -260,10 +268,10 @@ fun CoverConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.night)) {
+            SplicedColumnGroup(title = stringResource(Res.string.night)) {
                 ClickableSettingItem(
-                    title = stringResource(R.string.text_color),
-                    option = "#${Integer.toHexString(settings.textColorDark).uppercase()}",
+                    title = stringResource(Res.string.text_color),
+                    option = "#${settings.textColorDark.toString(16).uppercase()}",
                     onClick = {
                         onIntent(
                             CoverConfigIntent.ShowSheet(
@@ -283,8 +291,8 @@ fun CoverConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.text_shadow_color),
-                    option = "#${Integer.toHexString(settings.shadowColorDark).uppercase()}",
+                    title = stringResource(Res.string.text_shadow_color),
+                    option = "#${settings.shadowColorDark.toString(16).uppercase()}",
                     onClick = {
                         onIntent(
                             CoverConfigIntent.ShowSheet(
@@ -304,8 +312,8 @@ fun CoverConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_name),
-                    description = stringResource(R.string.cover_show_name_summary),
+                    title = stringResource(Res.string.cover_show_name),
+                    description = stringResource(Res.string.cover_show_name_summary),
                     checked = settings.showNameDark,
                     onCheckedChange = { value ->
                         onIntent(CoverConfigIntent.SetShowNameDark(value))
@@ -313,8 +321,8 @@ fun CoverConfigScreen(
                 )
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_author),
-                    description = stringResource(R.string.cover_show_author_summary),
+                    title = stringResource(Res.string.cover_show_author),
+                    description = stringResource(Res.string.cover_show_author_summary),
                     checked = settings.showAuthorDark,
                     enabled = settings.showNameDark,
                     onCheckedChange = { value ->

@@ -353,4 +353,27 @@
     <string name="manage_cover_albums">管理封面圖集</string>
     <string name="cover_album_none">應用程式內置封面</string>
     <string name="cover_album_day_night_count">日間 %1$d · 夜間 %2$d</string>
+    <string name="only_wifi">仅WIFI</string>
+    <string name="only_wifi_summary">仅在wifi下加载网络封面</string>
+    <string name="cover_rule_summary">进入详情页时使用封面规则重新获取封面</string>
+    <string name="use_default_cover">總是使用默認封面</string>
+    <string name="use_default_cover_s">總是使用默認封面,唔顯示網路封面</string>
+    <string name="default_cover">默認封面</string>
+    <string name="cover_show_shadow">顯示字體陰影</string>
+    <string name="cover_show_stroke">顯示字體描邊</string>
+    <string name="default_color">使用預設字體顏色</string>
+    <string name="cover_info_orientation">封面資訊方向</string>
+    <string name="screen_portrait">豎向</string>
+    <string name="screen_landscape">橫向</string>
+    <string name="network_book_badge_setting">網路書籍標記</string>
+    <string name="filter_show_all">顯示全部</string>
+    <string name="filter_hide_in_shelf">隱藏書架中同源書籍</string>
+    <string name="filter_hide_same_name_author">隱藏書架中不同源書籍</string>
+    <string name="filter_show_not_in_shelf_only">僅顯示不在書架中的書籍</string>
+    <string name="text_color">文字顏色</string>
+    <string name="text_shadow_color">陰影</string>
+    <string name="cover_show_name">顯示書名</string>
+    <string name="cover_show_name_summary">封面上顯示書名</string>
+    <string name="cover_show_author">顯示作者</string>
+    <string name="cover_show_author_summary">封面上顯示作者</string>
 </resources>

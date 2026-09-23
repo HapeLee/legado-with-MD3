@@ -1519,3 +1519,41 @@ legacyHelp|app/main/io/legado/app/ui/config/coverConfig  1 → 0   （条目删�
 `LocalContext`）拆成独立的 `CoverConfigRouteScreen.kt`（同 M5-9b 拆 backupConfig 的做法）。
 做完 `ui/config/coverConfig` 只剩图库那一半（Screen 449 带 launcher、VM 169 用
 `Context`/`Uri`/`OpenableColumns`）。
+
+### M5-13c：`CoverConfigScreen` 页面本体 → `:feature:settings/coverconfig/`（封面设置收官）
+
+371 行的文件里同时放着宿主壳（46–67 行）与页面本体（68–372）⇒ 按职责拆开：壳留 `:app`
+（改名 `CoverConfigRouteScreen.kt` 与函数同名），本体搬进共享层。29 条文案、**无数组**
+（页面里的下拉是就地 `arrayOf(stringResource(...))`，不需要 `.toTypedArray()`）。
+
+#### ⚠️ 一处 JVM 专用写法：`Integer.toHexString`
+
+页面里 4 处颜色值都写成 `"#" + Integer.toHexString(x).uppercase()`。`java.lang.Integer`
+在 `commonMain` 里没有 ⇒ 改为 Kotlin 的 **`x.toString(16).uppercase()`**。
+
+两者对非负整数**等价**（都是不带前导零的小写十六进制；颜色值恒非负），只差大小写 ——
+后面接的 `.uppercase()` 把这点也抹平了。这是本片唯一的非资源改动，与 M5-10a-pre 改写
+`TimePickerDialog` 的 `Locale` / `Character.digit` 属同一类处理（**"看着是纯 UI 的文件里
+藏着 JVM 专用调用"**）。
+
+#### 死资源 7 条
+
+`cover_album_none` / `cover_info_orientation` / `network_book_badge_setting` / `filter_show_all` /
+`filter_hide_in_shelf` / `filter_hide_same_name_author` / `filter_show_not_in_shelf_only`。
+其余 22 条在 `:app` 侧仍被引用（阅读器、`CoverAlbumManageScreen`、遗留 pref XML 等）。
+
+#### 验证
+
+- 四门禁全绿 + feature **两端**编译 + `:app` 编译/单测/打包 + 全模块测试
+- 计数 **784 / 1279 零偏离**（纯 UI 迁移，依 checklist 不加测试）
+- 资源 **968/968 逐字一致**；删完 4 个 strings.xml 均可解析
+
+#### 未验证
+
+页面渲染与 6 个分组、4 个颜色选择弹层、图库选择弹层、规则弹层的交互；以及
+⚠️ 颜色值那 4 处的**十六进制字符串**（`Integer.toHexString` → `toString(16)` 是等价改写，
+但只有真机/desktop 跑起来才能看到它们显示得一样）。
+
+**下一步**：`ui/config/coverConfig` 只剩**封面图库那一半** —— `CoverAlbumManageScreen`(449，
+带 `rememberLauncherForActivityResult` ⇒ 要拆宿主壳)、`CoverAlbumManageViewModel`(169，用
+`Context`/`OpenableColumns`/`Uri` ⇒ 要抽读文件名的契约或直接把选择结果交给宿主)。

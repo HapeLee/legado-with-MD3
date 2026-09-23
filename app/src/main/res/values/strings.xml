@@ -1905,12 +1905,6 @@
     <string name="underline_padding">Underline Gap</string>
 
     <!-- Missing strings -->
-    <string name="cover_info_orientation">Cover orientation</string>
-    <string name="network_book_badge_setting">Network Book Badge</string>
-    <string name="filter_show_all">Show All</string>
-    <string name="filter_hide_in_shelf">Hide Same Source Books in Shelf</string>
-    <string name="filter_hide_same_name_author">Hide Non-Same Source Books in Shelf</string>
-    <string name="filter_show_not_in_shelf_only">Show Only Books Not in Shelf</string>
     <string name="follow_read_background">Follow background</string>
     <string name="heading_spacing">Heading spacing</string>
     <string name="title_spacing">Spacing</string>
@@ -2420,7 +2414,6 @@
     <string name="switch_to_light_mode_action">Switch to light mode</string>
     <string name="switch_action">Switch</string>
     <string name="cover_albums">Cover albums</string>
-    <string name="cover_album_none">Built-in default cover</string>
     <string name="cover_album_name">Album name</string>
     <string name="cover_album_empty">No cover albums</string>
     <string name="cover_album_create">Create cover album</string>

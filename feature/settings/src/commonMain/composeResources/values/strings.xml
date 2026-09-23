@@ -374,4 +374,27 @@
     <string name="manage_cover_albums">Manage cover albums</string>
     <string name="cover_album_none">Built-in default cover</string>
     <string name="cover_album_day_night_count">Light %1$d · Dark %2$d</string>
+    <string name="only_wifi">Wi-Fi Only</string>
+    <string name="only_wifi_summary">Load network cover only under wifi</string>
+    <string name="cover_rule_summary">Use the cover rule to retrieve the cover when entering the details page</string>
+    <string name="use_default_cover">Always Show Default Cover</string>
+    <string name="use_default_cover_s">Always show the default cover, do not show the network cover</string>
+    <string name="default_cover">Default Cover</string>
+    <string name="cover_show_shadow">Show Font Shadow</string>
+    <string name="cover_show_stroke">Show Font Stroke</string>
+    <string name="default_color">Use Default Font Color</string>
+    <string name="cover_info_orientation">Cover orientation</string>
+    <string name="screen_portrait">Portrait</string>
+    <string name="screen_landscape">Landscape</string>
+    <string name="network_book_badge_setting">Network Book Badge</string>
+    <string name="filter_show_all">Show All</string>
+    <string name="filter_hide_in_shelf">Hide Same Source Books in Shelf</string>
+    <string name="filter_hide_same_name_author">Hide Non-Same Source Books in Shelf</string>
+    <string name="filter_show_not_in_shelf_only">Show Only Books Not in Shelf</string>
+    <string name="text_color">Text Color</string>
+    <string name="text_shadow_color">Shadow</string>
+    <string name="cover_show_name">Show Name</string>
+    <string name="cover_show_name_summary">Book title shown on cover</string>
+    <string name="cover_show_author">Show Author</string>
+    <string name="cover_show_author_summary">Author shown on cover</string>
 </resources>

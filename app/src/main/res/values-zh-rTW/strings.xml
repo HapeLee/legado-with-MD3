@@ -1379,7 +1379,6 @@
     <string name="miuix_monet">Miuix Monet</string>
     <string name="miuix_monet_summary">為 Miuix 使用 Monet 演算法產生配色。目前主題為動態主題且系統為 Android 12 以上時，會優先使用系統取色；否則使用下方種子色。</string>
 	<string name="layout_setting">佈局設定</string>
-	<string name="cover_info_orientation">封面資訊方向</string>
 	<string name="rule_segment">Rule</string>
 	<string name="tool_bar_style">工具欄樣式</string>
 	<string name="split_title">標題分段</string>
@@ -1980,11 +1979,6 @@
     <string name="enable_select_vibrator">選擇文字時震動</string>
     <string name="re_sync_webdav">重新同步遠端書籍</string>
     <string name="underline_padding">底線間距</string>
-    <string name="network_book_badge_setting">網路書籍標記</string>
-    <string name="filter_show_all">顯示全部</string>
-    <string name="filter_hide_in_shelf">隱藏書架中同源書籍</string>
-    <string name="filter_hide_same_name_author">隱藏書架中非同源書籍</string>
-    <string name="filter_show_not_in_shelf_only">僅顯示不在書架中的書籍</string>
     <string name="follow_read_background">跟隨背景</string>
     <string name="split_title_by_position">按位置分割</string>
     <string name="split_title_by_flag">按標記分割</string>
@@ -2314,7 +2308,6 @@
     <string name="switch_to_light_mode_action">切換至淺色模式</string>
     <string name="switch_action">切換</string>
     <string name="cover_albums">封面圖集</string>
-    <string name="cover_album_none">應用程式內建封面</string>
     <string name="cover_album_name">圖集名稱</string>
     <string name="cover_album_empty">暫無封面圖集</string>
     <string name="cover_album_create">新增封面圖集</string>
