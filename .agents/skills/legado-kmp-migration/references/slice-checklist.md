@@ -651,6 +651,18 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   rather than skipping it. A silent skip is indistinguishable from "clean" — the same failure mode
   as M5-12a, where `io.legado.app.domain.**` *looked* like the shared layer while `:app` was
   defining classes in that very package.
+- ⚠️ **A concurrency test whose fake never suspends proves nothing — and it fails in the direction
+  that looks like a bug.** Measured in M5-16b: a "second intent must be dropped while the first is
+  in flight" test failed on its first version (`imports` contained both) for two stacked reasons:
+  `viewModelScope` runs on **`Dispatchers.Main.immediate`**, so `launch { … }` executes **inline up
+  to the first suspension point** even in tests, and the contract fake was fully synchronous — so
+  the first operation ran to completion, the `finally` released the lock, and the second call was
+  legitimately accepted. Whenever a test asserts on *in-flight* state (mutex / debounce / dedup),
+  the fake must actually suspend: gate it behind a `CompletableDeferred` and assert **before**
+  completing the gate, then complete it and assert the dropped call is not replayed. Then run the
+  task repeatedly (`--rerun-tasks` ×3) — the same rule as M5-9b. Writing it this way also documents
+  the real semantics: the drop only happens *while the previous operation is in flight*; once it
+  has finished, a new call is simply a new operation.
 - ⚠️ **A model can be blocked from `commonMain` by its *serialization* annotations, not just by
   `java.` / `android.` imports.** M5-16a: `ThemeExportData` hoisted cleanly, but `SavedTheme` carries
   `ThemePackageManifest`, which is read/written by **GSON reflection** and therefore annotated

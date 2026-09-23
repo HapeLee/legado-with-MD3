@@ -1917,3 +1917,43 @@ toast 文案在 4 个语言下的实际显示。需真机冒烟。
 **下一步**：M5-16b ＝ `ThemeManageViewModelTest`（按 M5-12b 的模式锁：互斥 `launchExclusive`、
 错误映射到 `ThemeManageText`、旧版迁移的两个计数、`saveTheme` 改名时的删除分支）；
 之后 `themeManage` 页面 + 表单，再 `themeConfig`。
+
+### M5-16b：`ThemeManageViewModelTest`（12 例；迁移前零覆盖）
+
+按 M5-12b 的模式补上 M5-16a 留下的 finding。台架照 `CoverConfigViewModelTest`：Robolectric +
+`Shadows.shadowOf(Looper.getMainLooper()).idle()` 驱 `viewModelScope`，契约 fake 写在本文件内。
+
+锁住的 12 条：初始加载（列表 + 旧版标记）、保存成功刷新、保存失败→`SaveFailed`+detail、
+**改名保存删旧名**、**名字没变不删自己**（`takeIf { it.name != intent.name }` 这条写反就会
+「改个名多出一条」或「同一次保存把自己删掉」）、应用/删除/导出成功/导出失败/导入成功/导入失败
+的枚举映射、旧版迁移两个计数 + `hasLegacyThemes` 取 `failedCount > 0`、
+**互斥丢弃**、弹层意图的状态守卫（含「没有 Save 弹层时 `UpdateSaveName` 不凭空造一个」）。
+
+#### ⚠️ 互斥那条第一次写错了，而错误本身很有价值
+
+初版是把两次 `ImportPackage` 连着发、断言第二次被丢弃 —— **挂了**（`imports` 里两条都在）。
+原因是两层叠加：
+
+1. `viewModelScope` 在 **`Dispatchers.Main.immediate`** 上 ⇒ `launch` 会**内联执行到第一个
+   挂起点**（测试跑在主线程上，没有"排队"一说）；
+2. 我的契约 fake **全同步** ⇒ 第一次导入当场跑完、`finally` 里已解锁 ⇒ 第二次当然照跑。
+
+⇒ 「前一个操作仍在进行」是这条语义的**前提**，而前提必须由测试自己制造：改用
+`CompletableDeferred` 闸门把 fake 的 `importPackage` 卡住。改后连跑 3 次全绿
+（`--rerun-tasks` ×3，涉挂起的用例一次绿说明不了问题 —— M5-9b 的教训）。
+顺带把这条语义写清了：**丢弃只发生在「前一个仍在飞行中」时**，跑完之后再点就是一次新操作。
+
+#### 验证
+
+- 四门禁全绿；`:feature:settings` **98 例 0 失败**（57 → 98 是 M5-10a/11a/12b/14a/16b 累计）
+- `:feature:settings:testAndroidHostTest` `--rerun-tasks` **连跑 3 次全绿**
+- 计数 **794 → 806 / 1289 → 1301**，零偏离（基线注释写明了互斥那条的写法前提）
+- 全模块测试通过、`:app` 编译/单测/打包 → **BUILD SUCCESSFUL**
+- `lintAppDebug`：本片只加测试源码（不在 `:app`），**不需要重测**（`lintAppDebug` 只扫 `:app`）
+
+#### 未验证
+
+无。本片只加测试，未改生产代码。
+
+**下一步**：`themeManage` 页面 + 表单（`ThemeManageScreen` / `EditThemeSheet`，共 3 个文件在
+`:app`），再 `themeConfig`。

@@ -273,7 +273,15 @@ RESULT_DIRS = {
 # 建相册后进编辑态、删除「正在编辑的那个」要退出编辑态而删别的不能连带清、选择器返回空列表
 # 不打契约、`AddImagesClick` 只发 Effect、异常 → `ShowMessage`。
 # ⚠️ 那个 VM 的 `uiState` 是 `stateIn(WhileSubscribed)` ⇒ 测试必须先挂订阅者，否则断言到初始值。
-BASELINE_MAIN = 794
+# M5-16b：794 → **806**（**+12** = `ThemeManageViewModelTest`）。`themeManage` 的 VM 由 M5-16a
+# 迁进共享层（平台读写收成 `ThemeManagePlatform`），本片补上迁移前零覆盖的行为基线：初始加载、
+# 保存成功/失败、改名保存删旧名、名字没变不删自己、应用/删除/导出/导入的失败→枚举映射、
+# 旧版迁移两个计数与 `hasLegacyThemes` 取 `failedCount > 0`、弹层意图的状态守卫。
+# ⚠️ **互斥那条最容易写错**：`launchExclusive` 用 `tryLock`（丢弃）而不是排队，且
+# `viewModelScope` 在 `Dispatchers.Main.immediate` 上 ⇒ `launch` 会**内联执行到第一个挂起点**，
+# 所以契约 fake 若全同步，第一次当场跑完、锁已释放，**测不到互斥**（初版正是这么挂了一次）。
+# 必须用 `CompletableDeferred` 闸门把第一次卡在契约调用上。
+BASELINE_MAIN = 806
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -365,7 +373,8 @@ BASELINE_MAIN = 794
 # M5-11a：1260 → **1269**（**+9** = `ApplyReadSettingUseCaseTest`）。主集同步到 774。
 # M5-12b：1269 → **1279**（**+10** = `CoverConfigViewModelTest`）。主集同步到 784。
 # M5-14a：1279 → **1289**（**+10** = `CoverAlbumManageViewModelTest`）。主集同步到 794。
-BASELINE_ALL = 1289
+# M5-16b：1289 → **1301**（**+12** = `ThemeManageViewModelTest`）。主集同步到 806。
+BASELINE_ALL = 1301
 
 
 def tally(d: pathlib.Path):
