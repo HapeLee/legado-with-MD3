@@ -190,16 +190,20 @@ class BackupConfigViewModelTest {
         val effects = collect(viewModel)
 
         viewModel.onIntent(BackupConfigIntent.RequestBackup("both"))
-        idle()
 
-        assertTrue(
-            "content:// 路径（已持久授权的 SAF 目录）不需要存储权限",
-            effects.none { it is BackupConfigEffect.RequestStoragePermission },
-        )
+        // ⚠️ 断言必须放在 `idle()` **之前**：`performBackup` 先同步设 Loading 对话框、再
+        // `launch(Dispatchers.IO)`；一旦 `idle()` 放行那条 IO 尾巴，它会把对话框清成 null，
+        // 这里的断言就变成看运气（M5-9a 初版正是这么写的，隔一次全量跑才暴露）。
         assertEquals(
             "直接进「正在备份」对话框，枚举映射要正确",
             BackupConfigDialog.Loading(BackupConfigText.BackingUp),
             viewModel.uiState.value.activeDialog,
+        )
+
+        idle()
+        assertTrue(
+            "content:// 路径（已持久授权的 SAF 目录）不需要存储权限",
+            effects.none { it is BackupConfigEffect.RequestStoragePermission },
         )
     }
 
@@ -223,20 +227,29 @@ class BackupConfigViewModelTest {
     }
 
     @Test
-    fun `恢复网络备份与测试连接都先进对应对话框`() {
+    fun `测试连接先进测试中对话框`() {
         val viewModel = createViewModel(FakeIgnoreStore(oneKeyEachKind()))
         idle()
 
         viewModel.onIntent(BackupConfigIntent.TestWebDav)
-        idle()
+
+        // ⚠️ 这里**不**调用 `idle()`（同上一个用例的理由）：`testWebDav` 的同步那一半是
+        // 「进 Loading(TestSyncLoading)」，而它的 IO 尾巴会先清对话框、再按成功/失败发一条
+        // ShowMessage。清对话框与断言之间只要插进一次 `idle()` 就成了竞态。
         assertEquals(
             BackupConfigDialog.Loading(BackupConfigText.TestSyncLoading),
             viewModel.uiState.value.activeDialog,
         )
+    }
 
-        viewModel.onIntent(BackupConfigIntent.DismissDialog)
-        viewModel.onIntent(BackupConfigIntent.RequestNetworkRestore)
+    @Test
+    fun `请求网络恢复先进通用加载对话框并关弹层`() {
+        val viewModel = createViewModel(FakeIgnoreStore(oneKeyEachKind()))
         idle()
+        viewModel.onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.RestoreOptions))
+
+        viewModel.onIntent(BackupConfigIntent.RequestNetworkRestore)
+
         assertEquals(
             BackupConfigDialog.Loading(BackupConfigText.Loading),
             viewModel.uiState.value.activeDialog,

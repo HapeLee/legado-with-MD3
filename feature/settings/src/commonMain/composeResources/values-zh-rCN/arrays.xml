@@ -33,4 +33,12 @@
         <item>所有版本</item>
         <item>共存版</item>
     </string-array>
+<!-- M5-9b：`backup_sync_mode` 的条目在 :app 里是 `@string/*` **间接引用**，Android 逐项
+     按当前语言解析；共享层的数组约定是纯字面量 ⇒ 这里写解析后的结果（4 个语言都写了，
+     因为它确实是本地化文本）。机器值数组 `backup_sync_mode_value` 只放默认 values/。 -->
+<string-array name="backup_sync_mode">
+        <item>备份至本地与网络</item>
+        <item>备份至本地</item>
+        <item>备份至网络</item>
+    </string-array>
 </resources>

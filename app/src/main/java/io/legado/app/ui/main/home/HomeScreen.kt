@@ -91,8 +91,8 @@ import io.legado.app.domain.model.HomeDashboardSection
 import io.legado.app.domain.model.MAX_DAILY_READING_GOAL_MINUTES
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
-import io.legado.app.ui.config.backupConfig.BackupOptionSheet
-import io.legado.app.ui.config.backupConfig.RestoreOptionSheet
+import io.legado.app.feature.settings.backup.BackupOptionSheet
+import io.legado.app.feature.settings.backup.RestoreOptionSheet
 import io.legado.app.ui.main.homepage.HomepageFeedActions
 import io.legado.app.ui.main.homepage.HomepageManageActions
 import io.legado.app.ui.main.homepage.HomepageModuleFeed

@@ -693,7 +693,6 @@
     <string name="web_dav_url_s">輸入你的伺服器地址</string>
     <string name="web_dav_url">WebDav 伺服器地址</string>
     <string name="web_dav_account">WebDav 帳號</string>
-    <string name="web_dav_account_d">輸入你的WebDav帳號</string>
     <string name="rss_source">訂閱源</string>
     <string name="rss_source_edit">編輯訂閱源</string>
     <string name="screen">篩選</string>
@@ -824,8 +823,6 @@
     <string name="auto_page_speed">自動翻頁速度</string>
     <string name="sort_by_url">地址排序</string>
     <string name="backup_summary">本機和 WebDav 一起備份</string>
-    <string name="backup_sync_mode">自動備份同步</string>
-    <string name="backup_sync_mode_summary">選擇自動備份時的同步行為</string>
     <string name="backup_to_local_and_network">備份至本地與網路</string>
     <string name="backup_to_local">備份至本地</string>
     <string name="backup_to_network">備份至網路</string>
@@ -851,8 +848,6 @@
     <string name="default_cover">預設封面</string>
     <string name="restore_ignore">復原忽略列表</string>
     <string name="restore_ignore_summary">復原時忽略一些內容不復原，方便不同手機配置不同</string>
-    <string name="backup_ignore">備份忽略列表</string>
-    <string name="backup_ignore_summary">備份時忽略一些內容不備份</string>
     <string name="read_config">閱讀介面設定</string>
     <string name="group_name">分組名稱</string>
     <string name="note_content">備註內容</string>
@@ -1227,8 +1222,6 @@
     <string name="import_dict_rule">导入字典规则</string>
     <string name="keep_group">保留分组</string>
     <string name="server_config">服务器配置</string>
-    <string name="config_ignore">設定忽略</string>
-    <string name="database_ignore">資料庫忽略</string>
     <string name="database_ignore_summary">選擇忽略的資料庫表</string>
     <string name="source_sub">書源訂閱</string>
     <string name="book_group">書架分組</string>
@@ -1292,8 +1285,6 @@
     <string name="show_bookshelf_fast_scroller">显示快速滚动条</string>
     <string name="export_all_use_book_source">导出所有书的书源</string>
     <string name="cloud_progress_exceeds_current">雲端進度超過目前進度，是否同步？</string>
-    <string name="test_sync_t">測試 WebDav 配置</string>
-    <string name="test_sync_d">測試 WebDav 服務工作狀態</string>
     <string name="keep_enable">保留启用状态</string>
     <string name="preview_image_by_click">点击预览图片</string>
     <string name="screen_portrait_reversed">反向竖屏</string>
@@ -1559,11 +1550,6 @@
     <string name="tag">標籤</string>
     <string name="backup_error">備份失敗</string>
     <string name="restore_error">復原失敗</string>
-    <string name="restore_from_local">從本機復原</string>
-    <string name="restore_from_network">從網路復原</string>
-    <string name="webdav_restore_fallback_message">WebDAV 錯誤
-%1$s
-改從本機備份復原。</string>
     <string name="pull_to_refresh">下拉重新整理</string>
     <string name="release_to_refresh">釋放重新整理</string>
     <string name="refreshing">正在重新整理</string>

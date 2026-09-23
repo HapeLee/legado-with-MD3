@@ -1805,6 +1805,40 @@ legacy gate 归零；目标能力矩阵达到 release-ready。
      **下一步**：`backupConfig` 页面本体（**要先把它那个文件拆成宿主壳 + 页面**）、
      `themeManage`（其 `SavedTheme` 携带 `ThemePackageManifest` ⇒ 与 `coverConfig` 撞同一条存储链）、
      或 `readConfig` / `themeConfig`（后者最重）。
+   - **M5-9b-pre 已完成（2026-09-23）：`CardTabRow` 从 `:core:ui` 上提到
+     `:core:designsystem/commonMain`。** 纯搬运、**包名不变** ⇒ 10 处 `:app` 消费方
+     import 零改动。这正是 `AppTabRow.kt` 的 KDoc 当初预告的那一步（「`CardTabRow.kt`
+     刻意没跟着搬，只有 `:app` 消费方，**等真出现时按同一配方再搬**」）——M5-9b 让前提出现。
+   - **M5-9b 已完成（2026-09-23）：`backupConfig` 页面本体 + 两个选项 sheet →
+     `:feature:settings/backup/`。**
+     - **勘察发现**：`:app` 的 `BackupConfigScreen.kt` 里**宿主壳（80–150 行）与 5 个 UI
+       composable 边界干净** —— 18 处平台用法全在壳内 ⇒ 按职责拆开，壳留 `:app`
+       （改名 `BackupConfigRouteScreen.kt` 与函数同名），本体搬走。
+     - **`ConfirmDialog` 的可见性刻意没动**（迁移前 `public` 但只被同文件用）：
+       可见性属 API 表面，不该夹在搬迁里收紧。
+     - ⚠️ **漏查跨文件消费方**：`BackupOptionSheet` / `RestoreOptionSheet` 还被 `:app` 的
+       `HomeScreen` 使用 —— 事先只查了自身声明与文案，编译那步才暴露。教训并入 checklist
+       （与 M5-8a「VM 测试漏查源模块」同类）。
+     - **数组**：`backup_sync_mode` 与 M5-8b 的 `default_app_variant` 同形态（`@string/*`
+       间接引用 ⇒ 展开成字面量、4 语言都写）；`_value` 只放默认 `values/`。
+     - **死资源 12 条；另 29 条看着能删其实不能** —— 最意外的是遗留的
+       `res/xml/pref_config_backup.xml`（Android `PreferenceScreen`）仍引用
+       `auto_check_new_backup_s` / `sub_dir` / `web_dav_url` 等；另有 `OnboardingScreen` /
+       `ClickActionConfigSheet`。⇒ **删文案前必须全仓（含 `res/xml/*.xml`）核引用**。
+     - ⚠️ **顺手修掉 M5-9a 留下的一例竞态测试**：本片跑全量时
+       `恢复网络备份与测试连接都先进对应对话框` 挂了（`expected:<Loading(Loading)> but was:<null>`），
+       而它在 M5-9a 当时是**通过**的。根因：`testWebDav` / `loadNetworkBackups` 先**同步**设
+       Loading、再 `launch(IO)`，IO 尾巴 `withContext(Main)` 会清掉 `activeDialog`；
+       那两处断言前面各插了一次 `idle()` ⇒ 放行尾巴 ⇒ 看运气。
+       **修法：断言放在任何 `idle()` 之前**（只钉同步那一半），并把该例拆成两例；
+       用 `--rerun-tasks` **连跑 3 次**确认稳定。教训写进 checklist ——
+       这类竞态最恶劣之处是**首次绿**恰好把它藏住了。
+     - 验证：四门禁全绿（**G4 无需基线变动**）+ designsystem/`:core:ui`/`:app` 编译 +
+       全模块测试；`:feature:settings` **57 例 0 失败**；计数 **761 → 762 / 1256 → 1257**；
+       资源 **634/634**；死资源 12 条；lint **5 errors / 94 warnings**（filtered 245→244）。
+       `ui/config/backupConfig` 至此**只剩 1 个宿主壳文件**。
+     **下一步**：`readConfig`（7 文件 1149 行，但被 `ui/book/*` 的两个 Sheet 挡着）、
+     `themeManage`（与 `coverConfig` 撞同一条存储链）、或 `themeConfig`（最重）。
 
 ## 6. 验证矩阵
 

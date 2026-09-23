@@ -861,3 +861,99 @@ RouteScreen + 页面本体、`BackupRestoreOptionSheets.kt`）—— 下一片�
 **下一步**：`backupConfig` 页面本体（先拆文件）、`themeManage`（需 `SavedTheme` /
 `ThemePackageManager` 契约，但 `SavedTheme` 携带 `ThemePackageManifest` ⇒ 与 `coverConfig`
 撞同一条存储链）、或 `readConfig` / `themeConfig`（后者最重）。
+
+### M5-9b-pre：`CardTabRow` 上提到 `:core:designsystem/commonMain`
+
+**纯搬运，包名不变**（`io.legado.app.ui.widget.components.tabRow`）⇒ 10 处 `:app` 消费方
+import 零改动；`:core:ui` 本就 `implementation(project(":core:designsystem"))`，故删掉源文件
+对它也是透明的。
+
+这不是临时起意：`AppTabRow.kt` 的 KDoc 当初就写着「同目录的 `CardTabRow.kt` 刻意**没有**
+跟着搬：它目前只有 `:app` 的 10 处消费方，没有非 Android 消费者。**等真出现时按同一配方再搬**」。
+M5-9b 让那个前提出现了（`backupConfig` 的 `IgnoreItemsSheet` 用 `CardTabRow` 做两个页签），
+于是按预告的配方搬，并同步更新那句 KDoc 为「已兑现」。
+
+该文件零 Android 依赖（只用 Compose foundation/runtime + designsystem 的
+`LegadoTheme` / `NormalCard` / `AppText`）⇒ 零源码改动、零新增依赖。
+
+### M5-9b：`backupConfig` 页面本体 + 两个选项 sheet → `:feature:settings/backup/`
+
+承接 M5-9a。**勘察阶段的关键发现**：`:app` 的 `BackupConfigScreen.kt` 一个文件里同时放着
+**宿主壳**（80–150 行）与 **5 个 UI composable**（152–末行），而且两者边界干净 ——
+18 处平台用法**全部**落在宿主壳那 70 行内，本体只依赖 `R` / 数组 / designsystem 组件。
+⇒ 按职责拆开：壳留 `:app`（顺手改名 `BackupConfigRouteScreen.kt` 与函数同名，
+与其余宿主壳命名一致），本体搬进共享层。
+
+| 迁移前 | 迁移后 |
+|---|---|
+| `BackupConfigScreen.kt` 里的 5 个 composable（`BackupConfigScreen` / `BackupConfigSheets` / `IgnoreItemsSheet` / `BackupConfigDialogs` / `ConfirmDialog`） | `:feature:settings/backup/BackupConfigScreen.kt` |
+| `BackupRestoreOptionSheets.kt`（`BackupOptionSheet` / `RestoreOptionSheet`） | `:feature:settings/backup/BackupRestoreOptionSheets.kt` |
+
+**`ConfirmDialog` 的可见性刻意没动**：它迁移前是 `public` 而只被同文件用 → 本片**不**顺手改成
+`private`。可见性属 API 表面，改它不该夹在一次搬迁里（即便当前看起来无害）；真要收紧应由
+专门的清理切片做。已在 KDoc 写明。
+
+#### ⚠️ 一个跨文件消费方：`HomeScreen` 也用这两个 sheet
+
+`BackupOptionSheet` / `RestoreOptionSheet` 除了 `backupConfig` 自己，还被
+`:app` 的 `HomeScreen`（备份/恢复入口）使用 —— 我事先只查了这两个 composable 自身声明与
+文案，漏了这个消费方，是编译那一步才暴露的（`Unresolved reference 'BackupOptionSheet'`）。
+⇒ 迁一个「看似只在页面内用」的 composable 前，**按符号名全仓搜使用者**，别只看本目录。
+（与 M5-8a「VM 测试漏查源模块」是同一类疏漏，已并入 checklist 那条。）
+
+#### 数组：`backup_sync_mode` 与 M5-8b 的 `default_app_variant` 同一形态
+
+`:app` 里它只在默认 `values/` 定义、条目是 `@string/*` **间接引用**（Android 逐项按语言解析），
+而共享层的数组约定是纯字面量 ⇒ 展开成解析后的结果、**4 个语言都写**；
+机器值数组 `backup_sync_mode_value` 只放默认 `values/`。细节在 arrays.xml 的 XML 注释里。
+
+#### 死资源 12 条，但 29 条**看着能删其实不能**
+
+扫描时 41 条里有 29 条显示「仍在用」，其中最意外的是
+**`res/xml/pref_config_backup.xml`** —— 一个遗留的 Android `PreferenceScreen` 定义，
+仍然引用着 `auto_check_new_backup_s` / `sub_dir` / `web_dav_url` / `restore_ignore` /
+`backup_path` / `sync_book_progress_t` 等。另有 `OnboardingScreen`（`web_dav_url`）与
+`ClickActionConfigSheet`（`sync_book_progress_t`）。
+⇒ **删文案前必须全仓（含 `res/xml/*.xml`）核引用**，只查 Kotlin 会误删。
+
+#### ⚠️ 顺手修掉 M5-9a 留下的一例**竞态测试**
+
+本片跑完整验证时，M5-9a 新增的 `恢复网络备份与测试连接都先进对应对话框` **挂了** ——
+而它在 M5-9a 当时的全量跑里是**通过**的：
+
+```
+expected:<Loading(title=Loading)> but was:<null>
+```
+
+根因：`testWebDav` / `loadNetworkBackups` 都是「**先同步**设 `Loading` 对话框、**再**
+`launch(Dispatchers.IO)`」，而 IO 尾巴会 `withContext(Main)` 把 `activeDialog` 清成 `null`。
+那两处断言前面各插了一次 `idle()` ⇒ 放行了前一个操作的尾巴 ⇒ 断言变成看运气。
+
+修法：**断言放在任何 `idle()` 之前**（只钉同步那一半），并把那一例拆成两例
+（「测试连接先进测试中对话框」+「请求网络恢复先进通用加载对话框并关弹层」），
+保证一例内不会有两个 IO 操作的尾巴互相穿。然后用 `--rerun-tasks` **连跑 3 次**确认稳定
+（一次绿说明不了竞态）。教训写进 checklist：这类竞态最恶劣之处是**首次绿**恰好把它藏住了。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需基线变动** —— 宿主壳留在 `:app`，它的 `ImportOldData` /
+  `Permissions` / `isContentScheme` 引用原地不动）
+- `:core:designsystem:compileKotlinDesktop` + `:core:ui` + `:app` 编译 + 全模块测试
+- `:feature:settings` **57 例 0 失败**（拆分竞态用例后 +1）
+- 计数 **761 → 762 / 1256 → 1257**，零偏离
+- 资源 **634/634 逐字一致**；死资源 12 条删除
+- `lintAppDebug` 仍 **5 errors / 95 warnings**
+
+#### 未验证
+
+页面的渲染与 6 个 sheet/dialog 的交互（两处 `FilePickerSheet`、两个 `OptionSheet`、
+恢复文件列表、两个忽略项页签、WebDAV 认证与密码可见性、两个 Loading 对话框），
+以及宿主壳那 4 个 launcher 与 `PermissionsCompat` 的**真实申请流程**。需真机冒烟。
+
+**`ui/config/backupConfig` 至此只剩 1 个文件**（`BackupConfigRouteScreen.kt` —— 宿主壳，
+按「平台壳留 `:app`」的判据保留）。
+
+**下一步**：`readConfig`（7 文件 / 1149 行，但被 `ui/book/*` 的
+`ClickActionConfigSheet` / `EyeProtectionConfigSheet` 挡住 —— 要么先迁那两个 sheet，
+要么它们随宿主壳留在 `:app`）、`themeManage`（与 `coverConfig` 撞同一条存储链）、
+或 `themeConfig`（11 文件 / 3388 行，撞 `ui.main.*` 的 10 个 `Launcher*` 图标，最重）。

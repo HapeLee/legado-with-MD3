@@ -164,9 +164,6 @@
     <string name="backup_success">备份成功</string>
     <string name="restore_success">恢复成功</string>
     <string name="restore_fail">恢复失败</string>
-    <string name="restore_from_local">本地恢复</string>
-    <string name="restore_from_network">网络恢复</string>
-    <string name="webdav_restore_fallback_message">WebDAV 出错\n%1$s\n将从本地备份恢复。</string>
     <string name="screen_direction">屏幕方向</string>
     <string name="screen_sensor">跟随传感器</string>
     <string name="screen_landscape">横向</string>
@@ -759,7 +756,6 @@
     <string name="web_dav_url_s">输入你的WebDav服务器地址</string>
     <string name="web_dav_url">WebDav 服务器地址</string>
     <string name="web_dav_account">WebDav 账号</string>
-    <string name="web_dav_account_d">输入你的 WebDav 账号</string>
     <string name="rss_source">订阅源</string>
     <string name="rss_source_edit">编辑订阅源</string>
     <string name="screen">筛选</string>
@@ -938,8 +934,6 @@
     <string name="auto_page_speed">自动翻页速度</string>
     <string name="sort_by_url">地址排序</string>
     <string name="backup_summary">本地和 WebDav 一起备份</string>
-    <string name="backup_sync_mode">自动备份同步</string>
-    <string name="backup_sync_mode_summary">选择自动备份时的同步行为</string>
     <string name="backup_to_local_and_network">备份至本地与网络</string>
     <string name="backup_to_local">备份至本地</string>
     <string name="backup_to_network">备份至网络</string>
@@ -965,8 +959,6 @@
     <string name="default_cover">默认封面</string>
     <string name="restore_ignore">恢复忽略列表</string>
     <string name="restore_ignore_summary">选择恢复忽略内容</string>
-    <string name="backup_ignore">备份忽略列表</string>
-    <string name="backup_ignore_summary">选择备份忽略内容</string>
     <string name="read_config">阅读界面</string>
     <string name="read_config_global_theme">全局</string>
     <string name="read_config_layout_spacing">正文间距</string>
@@ -1380,8 +1372,6 @@
     <string name="import_dict_rule">导入字典规则</string>
     <string name="keep_group">保留分组</string>
     <string name="server_config">服务器配置</string>
-    <string name="config_ignore">配置忽略</string>
-    <string name="database_ignore">数据库忽略</string>
     <string name="database_ignore_summary">选择忽略的数据库表</string>
     <string name="source_sub">书源订阅</string>
     <string name="book_group">书架分组</string>
@@ -1444,8 +1434,6 @@
     <string name="show_bookshelf_fast_scroller">显示快速滚动条</string>
     <string name="export_all_use_book_source">导出所有书的书源</string>
     <string name="cloud_progress_exceeds_current">云端进度超过当前进度，是否同步？</string>
-    <string name="test_sync_t">测试 WebDav 配置</string>
-    <string name="test_sync_d">测试 WebDav 服务工作状态</string>
     <string name="keep_enable">保留启用状态</string>
     <string name="preview_image_by_click">点击预览图片</string>
     <string name="screen_portrait_reversed">反向竖屏</string>

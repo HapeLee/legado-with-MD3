@@ -684,7 +684,6 @@
     <string name="web_dav_url_s">輸入你的服務器地址</string>
     <string name="web_dav_url">WebDav 服務器地址</string>
     <string name="web_dav_account">WebDav 賬號</string>
-    <string name="web_dav_account_d">輸入你的 WebDav 賬號</string>
     <string name="rss_source">訂閲源</string>
     <string name="rss_source_edit">編輯訂閲源</string>
     <string name="screen">篩選</string>
@@ -815,8 +814,6 @@
     <string name="other">其它</string>
     <string name="official_account">legado-top</string>
     <string name="backup_summary">本地和WebDav壹起備份</string>
-    <string name="backup_sync_mode">自動備份同步</string>
-    <string name="backup_sync_mode_summary">選擇自動備份時的同步行為</string>
     <string name="backup_to_local_and_network">備份至本地與網絡</string>
     <string name="backup_to_local">備份至本地</string>
     <string name="backup_to_network">備份至網絡</string>
@@ -843,8 +840,6 @@
     <string name="default_cover">默認封面</string>
     <string name="restore_ignore">恢復忽略列表</string>
     <string name="restore_ignore_summary">恢復時忽略一些內容不恢復,方便不同手機配置不同</string>
-    <string name="backup_ignore">備份忽略列表</string>
-    <string name="backup_ignore_summary">備份時忽略一些內容不備份</string>
     <string name="read_config">閱讀界面設置</string>
     <string name="rule_image_style">圖片樣式 (imageStyle)</string>
     <string name="rule_replace_regex">替換規則 (replaceRegex)</string>
@@ -1224,8 +1219,6 @@
     <string name="import_dict_rule">导入字典规则</string>
     <string name="keep_group">保留分组</string>
     <string name="server_config">服务器配置</string>
-    <string name="config_ignore">設定忽略</string>
-    <string name="database_ignore">資料庫忽略</string>
     <string name="database_ignore_summary">選擇忽略的資料庫表</string>
     <string name="source_sub">書源訂閱</string>
     <string name="book_group">書架分組</string>
@@ -1289,8 +1282,6 @@
     <string name="show_bookshelf_fast_scroller">显示快速滚动条</string>
     <string name="export_all_use_book_source">导出所有书的书源</string>
     <string name="cloud_progress_exceeds_current">雲端進度超過目前進度，是否同步？</string>
-    <string name="test_sync_t">測試 WebDav 配置</string>
-    <string name="test_sync_d">測試 WebDav 服務工作狀態</string>
     <string name="keep_enable">保留启用状态</string>
     <string name="preview_image_by_click">点击预览图片</string>
     <string name="screen_portrait_reversed">反向竖屏</string>
@@ -2040,8 +2031,6 @@
     <string name="restart_required_message">更改此選項需要重啟</string>
     <string name="restart_to_apply">重啟以套用</string>
     <string name="restore_error">還原失敗</string>
-    <string name="restore_from_local">從本機還原</string>
-    <string name="restore_from_network">從網路還原</string>
     <string name="restore_progress">恢復進度</string>
     <string name="retranslate_chapter">重新翻譯章節</string>
     <string name="retranslate_confirm">這將刪除現有翻譯並重新翻譯。是否繼續？</string>
@@ -2309,7 +2298,6 @@
     <string name="use_underline">始終使用底線強調文字</string>
     <string name="volume_management">卷管理</string>
     <string name="web_service_auto_start">開啟應用時啟動 Web 服務</string>
-    <string name="webdav_restore_fallback_message">WebDAV 錯誤\n%1$s\n改為從本機備份還原。</string>
     <string name="website_disabled">網站已禁用</string>
     <string name="webtoon">條漫</string>
     <string name="weekday_fri">週五</string>

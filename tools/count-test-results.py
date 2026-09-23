@@ -249,7 +249,11 @@ RESULT_DIRS = {
 # 硬测会变成靠 `idle()` 轮询的脆弱写法 ⇒ 结果分支留给真机冒烟（已进"未验证"清单）。
 # 重心是本片的实质改动：四组忽略集的 kind 配对 + 四个 `saveXxx` 里那处**不对称**
 # （两个写两组并关弹层、两个只写一组且不关）。
-BASELINE_MAIN = 761
+# M5-9b：761 → **762**（**+1**）。本片是页面本体迁移（纯 UI，同 M5-8b 不加测试），
+# 但顺手修掉 M5-9a 留下的**竞态测试**：`恢复网络备份与测试连接都先进对应对话框` 拆成
+# 「测试连接先进测试中对话框」+「请求网络恢复先进通用加载对话框并关弹层」两例
+# ⇒ 净 +1。见下方 Baseline 说明与 checklist 的「Tests」一节。
+BASELINE_MAIN = 762
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -336,7 +340,8 @@ BASELINE_MAIN = 761
 # M5-7：1235 → **1242**（**+7** = `DownloadCacheConfigViewModelTest`）。主集同步到 747。
 # M5-8a：1242 → **1246**（净 **+4** = 9 新 − 5 旧，同主集）。主集同步到 751。
 # M5-9a：1246 → **1256**（**+10** = `BackupConfigViewModelTest`）。主集同步到 761。
-BASELINE_ALL = 1256
+# M5-9b：1256 → **1257**（**+1** = 拆掉一例竞态测试得到的两例）。主集同步到 762。
+BASELINE_ALL = 1257
 
 
 def tally(d: pathlib.Path):

@@ -502,6 +502,18 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
 
 ## Tests
 
+- ⚠️ **Assert *before* the first `idle()` — putting it after turns a ViewModel test into a coin
+  flip.** Measured in M5-9a/M5-9b: `performBackup` / `restoreLocal` / `testWebDav` set their
+  `Loading(...)` dialog **synchronously** and *then* `launch(Dispatchers.IO)`, whose tail hops back
+  to `Dispatchers.Main` and clears `activeDialog`. Under Robolectric that tail only runs when the
+  main looper is idled, so the intent→assert window is deterministic **only if you never idle in
+  it**. The first version of two tests idled first and passed on the initial full run, then failed
+  on a later one (`expected:<Loading(title=Loading)> but was:<null>`) — the worst kind of failure,
+  because the *first* green run is what made it look fine. Recipe: `onIntent(...)` then assert the
+  synchronous half immediately; do `idle()` afterwards only for assertions that need it (effect
+  collection), and never let one test fire two IO-launched operations whose tails can cross.
+  When a test does need an async tail, prove the fix by running the task **repeatedly**
+  (`--rerun-tasks` ×3) — a single green run proves nothing about a race.
 - **A migrated page is not automatically a tested page.** ViewModels are where the testable logic
   lives; migrating one without adding coverage for the branches you touched is a finding.
 - **A stateless screen with no ViewModel gets no test — and you must not add a test dependency to

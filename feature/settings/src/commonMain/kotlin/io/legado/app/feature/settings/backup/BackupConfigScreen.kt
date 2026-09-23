@@ -1,7 +1,5 @@
-package io.legado.app.ui.config.backupConfig
+package io.legado.app.feature.settings.backup
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -24,34 +22,60 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringArrayResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.R
-import io.legado.app.feature.settings.backup.BackupConfigDialog
-import io.legado.app.feature.settings.backup.BackupConfigEffect
-import io.legado.app.feature.settings.backup.BackupConfigIntent
-import io.legado.app.feature.settings.backup.BackupConfigSheet
-import io.legado.app.feature.settings.backup.BackupConfigUiState
-import io.legado.app.feature.settings.backup.BackupConfigViewModel
-import io.legado.app.feature.settings.backup.BackupIgnoreItem
-import io.legado.app.feature.settings.backup.localized
-import io.legado.app.feature.settings.backup.localizedText
-import io.legado.app.help.storage.ImportOldData
-import io.legado.app.lib.permission.Permissions
-import io.legado.app.lib.permission.PermissionsCompat
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.auto_check_new_backup_s
+import io.legado.app.feature.settings.res.auto_check_new_backup_t
+import io.legado.app.feature.settings.res.backup
+import io.legado.app.feature.settings.res.backup_ignore
+import io.legado.app.feature.settings.res.backup_ignore_summary
+import io.legado.app.feature.settings.res.backup_path
+import io.legado.app.feature.settings.res.backup_restore
+import io.legado.app.feature.settings.res.backup_summary
+import io.legado.app.feature.settings.res.backup_sync_mode
+import io.legado.app.feature.settings.res.backup_sync_mode_summary
+import io.legado.app.feature.settings.res.backup_sync_mode_value
+import io.legado.app.feature.settings.res.cancel
+import io.legado.app.feature.settings.res.config_ignore
+import io.legado.app.feature.settings.res.database_ignore
+import io.legado.app.feature.settings.res.hide_password
+import io.legado.app.feature.settings.res.import_old_summary
+import io.legado.app.feature.settings.res.menu_import_old_version
+import io.legado.app.feature.settings.res.ok
+import io.legado.app.feature.settings.res.only_latest_backup_s
+import io.legado.app.feature.settings.res.only_latest_backup_t
+import io.legado.app.feature.settings.res.restore
+import io.legado.app.feature.settings.res.restore_ignore
+import io.legado.app.feature.settings.res.restore_ignore_summary
+import io.legado.app.feature.settings.res.restore_summary
+import io.legado.app.feature.settings.res.save
+import io.legado.app.feature.settings.res.select_backup_path
+import io.legado.app.feature.settings.res.select_restore_file
+import io.legado.app.feature.settings.res.show_password
+import io.legado.app.feature.settings.res.sub_dir
+import io.legado.app.feature.settings.res.sync_book_progress_plus_s
+import io.legado.app.feature.settings.res.sync_book_progress_plus_t
+import io.legado.app.feature.settings.res.sync_book_progress_s
+import io.legado.app.feature.settings.res.sync_book_progress_t
+import io.legado.app.feature.settings.res.test_sync_d
+import io.legado.app.feature.settings.res.test_sync_t
+import io.legado.app.feature.settings.res.web_dav_account
+import io.legado.app.feature.settings.res.web_dav_account_d
+import io.legado.app.feature.settings.res.web_dav_pw
+import io.legado.app.feature.settings.res.web_dav_set
+import io.legado.app.feature.settings.res.web_dav_url
+import io.legado.app.feature.settings.res.web_dav_url_s
+import io.legado.app.feature.settings.res.webdav_device_name
+import io.legado.app.feature.settings.res.webdav_restore_fallback_message
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -71,81 +95,29 @@ import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.takePersistablePermissionSafely
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.collectLatest
-import org.koin.androidx.compose.koinViewModel
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
 
-@Composable
-fun BackupConfigRouteScreen(
-    onBackClick: () -> Unit,
-    viewModel: BackupConfigViewModel = koinViewModel(),
-) {
-    val context = LocalContext.current
-    val state = viewModel.uiState.collectAsStateWithLifecycle().value
-    val snackbarHostState = remember { SnackbarHostState() }
-    val selectBackupPathLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        uri.takePersistablePermissionSafely(context)
-        val path = if (uri.isContentScheme()) uri.toString() else uri.path.orEmpty()
-        viewModel.onIntent(BackupConfigIntent.BackupDirectorySelected(path, runBackup = false))
-    }
-    val backupAndSelectLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        uri.takePersistablePermissionSafely(context)
-        val path = if (uri.isContentScheme()) uri.toString() else uri.path.orEmpty()
-        viewModel.onIntent(BackupConfigIntent.BackupDirectorySelected(path, runBackup = true))
-    }
-    val restoreFileLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let { viewModel.onIntent(BackupConfigIntent.RestoreLocal(it.toString())) } }
-    val importOldLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let { ImportOldData.importUri(context, it) } }
-
-    LaunchedEffect(Unit) {
-        viewModel.effects.collectLatest { effect ->
-            when (effect) {
-                BackupConfigEffect.LaunchBackupDirectoryPicker -> selectBackupPathLauncher.launch(null)
-                BackupConfigEffect.LaunchBackupAndRunDirectoryPicker ->
-                    backupAndSelectLauncher.launch(null)
-                BackupConfigEffect.LaunchRestoreFilePicker ->
-                    restoreFileLauncher.launch(arrayOf("application/zip"))
-                BackupConfigEffect.LaunchImportOldDataPicker -> importOldLauncher.launch(arrayOf("*/*"))
-                is BackupConfigEffect.RequestStoragePermission -> {
-                    PermissionsCompat.Builder()
-                        .addPermissions(*Permissions.Group.STORAGE)
-                        .rationale(R.string.tip_perm_request_storage)
-                        .onGranted {
-                            viewModel.onIntent(
-                                BackupConfigIntent.PerformBackup(effect.path, effect.mode)
-                            )
-                        }
-                        .request()
-                }
-                is BackupConfigEffect.ShowMessage -> {
-                    // M5-9a：契约不再携带 `@StringRes Int`（那是 Android 概念，进不了共享层）
-                    // ⇒ 枚举 + 查表。`localizedText(argument)` 对应迁移前的
-                    // `context.getString(res, argument)` / `context.getString(res)` 两个重载，
-                    // 且它是 suspend —— 这里本来就在 LaunchedEffect 里。
-                    snackbarHostState.showSnackbar(effect.message.localizedText(effect.argument))
-                }
-            }
-        }
-    }
-
-    BackupConfigScreen(
-        state = state,
-        onIntent = viewModel::onIntent,
-        onBackClick = onBackClick,
-        snackbarHostState = snackbarHostState,
-    )
-}
+// M5-9b：从 `:app` 的 `io.legado.app.ui.config.backupConfig.BackupConfigScreen.kt` 迁来
+// **只有页面本体这一半**。那个文件里同时放着 `BackupConfigRouteScreen`（宿主壳：4 个
+// `rememberLauncherForActivityResult` + `PermissionsCompat` 申请存储权限 + `ImportOldData`）
+// 与 5 个 UI composable —— 本片把它按职责拆开，宿主壳留在 `:app`
+// （现住 `BackupConfigRouteScreen.kt`），本体搬到这里。
+//
+// 差异两类（**结构逐字保留**，含原文的缩进与空行 —— 这样 diff 只反映语义改动）：
+//   ① `androidx.compose.ui.res.{stringResource,stringArrayResource}`
+//      → `org.jetbrains.compose.resources.*`；
+//   ② `R.string.*` → `Res.string.*`（42 条）、`R.array.*` → `Res.array.*`（2 个）。
+//
+// ⚠️ **`stringArrayResource` 的返回值类型与 androidx 不同**：CMP 返回 `List<String>`，
+// 故要多一次 `.toTypedArray()`（`DropdownListSettingItem` 收的是 `Array<String>`）。
+// 同模块的 `OtherConfigScreen` / `CustomThemeScreen` 已是这个写法。
+//
+// ⚠️ **`backup_sync_mode` 数组不是纯搬运**：`:app` 里它的条目是 `@string/*` 间接引用
+// （Android 逐项按语言解析），而共享层的数组约定是纯字面量 ⇒ 写的是解析后的结果
+// （4 个语言都写了）；机器值数组 `backup_sync_mode_value` 只放默认 `values/`。
+// 细节见 `:feature:settings` 的 arrays.xml 注释。
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -162,7 +134,7 @@ fun BackupConfigScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.backup_restore),
+                title = stringResource(Res.string.backup_restore),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
             )
@@ -176,46 +148,46 @@ fun BackupConfigScreen(
             ),
         ) {
             item {
-                SplicedColumnGroup(title = stringResource(R.string.web_dav_set)) {
+                SplicedColumnGroup(title = stringResource(Res.string.web_dav_set)) {
                     InputSettingItem(
-                        title = stringResource(R.string.web_dav_url),
-                        description = stringResource(R.string.web_dav_url_s),
+                        title = stringResource(Res.string.web_dav_url),
+                        description = stringResource(Res.string.web_dav_url_s),
                         value = settings.webDavUrl,
                         defaultValue = "",
                         onConfirm = { onIntent(BackupConfigIntent.SetWebDavUrl(it)) },
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.web_dav_account),
-                        description = stringResource(R.string.web_dav_account_d),
+                        title = stringResource(Res.string.web_dav_account),
+                        description = stringResource(Res.string.web_dav_account_d),
                         onClick = { onIntent(BackupConfigIntent.OpenWebDavAuth) },
                     )
                     InputSettingItem(
-                        title = stringResource(R.string.sub_dir),
+                        title = stringResource(Res.string.sub_dir),
                         value = settings.webDavDir,
                         defaultValue = "legado",
                         onConfirm = { onIntent(BackupConfigIntent.SetWebDavDir(it)) },
                     )
                     InputSettingItem(
-                        title = stringResource(R.string.webdav_device_name),
+                        title = stringResource(Res.string.webdav_device_name),
                         value = settings.webDavDeviceName,
                         defaultValue = "",
                         onConfirm = { onIntent(BackupConfigIntent.SetWebDavDeviceName(it)) },
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.test_sync_t),
-                        description = stringResource(R.string.test_sync_d),
+                        title = stringResource(Res.string.test_sync_t),
+                        description = stringResource(Res.string.test_sync_d),
                         onClick = { onIntent(BackupConfigIntent.TestWebDav) },
                     )
                     SwitchSettingItem(
-                        title = stringResource(R.string.sync_book_progress_t),
-                        description = stringResource(R.string.sync_book_progress_s),
+                        title = stringResource(Res.string.sync_book_progress_t),
+                        description = stringResource(Res.string.sync_book_progress_s),
                         checked = settings.syncBookProgress,
                         onCheckedChange = { onIntent(BackupConfigIntent.SetSyncBookProgress(it)) },
                     )
                     if (settings.syncBookProgress) {
                         SwitchSettingItem(
-                            title = stringResource(R.string.sync_book_progress_plus_t),
-                            description = stringResource(R.string.sync_book_progress_plus_s),
+                            title = stringResource(Res.string.sync_book_progress_plus_t),
+                            description = stringResource(Res.string.sync_book_progress_plus_s),
                             checked = settings.syncBookProgressPlus,
                             onCheckedChange = {
                                 onIntent(BackupConfigIntent.SetSyncBookProgressPlus(it))
@@ -223,62 +195,62 @@ fun BackupConfigScreen(
                         )
                     }
                     SwitchSettingItem(
-                        title = stringResource(R.string.auto_check_new_backup_t),
-                        description = stringResource(R.string.auto_check_new_backup_s),
+                        title = stringResource(Res.string.auto_check_new_backup_t),
+                        description = stringResource(Res.string.auto_check_new_backup_s),
                         checked = settings.autoCheckNewBackup,
                         onCheckedChange = {
                             onIntent(BackupConfigIntent.SetAutoCheckNewBackup(it))
                         },
                     )
                     DropdownListSettingItem(
-                        title = stringResource(R.string.backup_sync_mode),
-                        description = stringResource(R.string.backup_sync_mode_summary),
+                        title = stringResource(Res.string.backup_sync_mode),
+                        description = stringResource(Res.string.backup_sync_mode_summary),
                         selectedValue = settings.backupSyncMode,
-                        displayEntries = stringArrayResource(R.array.backup_sync_mode),
-                        entryValues = stringArrayResource(R.array.backup_sync_mode_value),
+                        displayEntries = stringArrayResource(Res.array.backup_sync_mode).toTypedArray(),
+                        entryValues = stringArrayResource(Res.array.backup_sync_mode_value).toTypedArray(),
                         onValueChange = { onIntent(BackupConfigIntent.SetBackupSyncMode(it)) },
                     )
                 }
-                SplicedColumnGroup(title = stringResource(R.string.backup_restore)) {
+                SplicedColumnGroup(title = stringResource(Res.string.backup_restore)) {
                     ClickableSettingItem(
-                        title = stringResource(R.string.backup_path),
-                        description = settings.backupPath ?: stringResource(R.string.select_backup_path),
+                        title = stringResource(Res.string.backup_path),
+                        description = settings.backupPath ?: stringResource(Res.string.select_backup_path),
                         onClick = {
                             onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.ChooseBackupPath))
                         },
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.backup),
-                        description = stringResource(R.string.backup_summary),
+                        title = stringResource(Res.string.backup),
+                        description = stringResource(Res.string.backup_summary),
                         onClick = {
                             onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.BackupOptions))
                         },
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.restore),
-                        description = stringResource(R.string.restore_summary),
+                        title = stringResource(Res.string.restore),
+                        description = stringResource(Res.string.restore_summary),
                         onClick = {
                             onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.RestoreOptions))
                         },
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.restore_ignore),
-                        description = stringResource(R.string.restore_ignore_summary),
+                        title = stringResource(Res.string.restore_ignore),
+                        description = stringResource(Res.string.restore_ignore_summary),
                         onClick = { onIntent(BackupConfigIntent.OpenIgnoreDialog) },
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.backup_ignore),
-                        description = stringResource(R.string.backup_ignore_summary),
+                        title = stringResource(Res.string.backup_ignore),
+                        description = stringResource(Res.string.backup_ignore_summary),
                         onClick = { onIntent(BackupConfigIntent.OpenBackupIgnoreDialog) },
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.menu_import_old_version),
-                        description = stringResource(R.string.import_old_summary),
+                        title = stringResource(Res.string.menu_import_old_version),
+                        description = stringResource(Res.string.import_old_summary),
                         onClick = { onIntent(BackupConfigIntent.RequestImportOldData) },
                     )
                     SwitchSettingItem(
-                        title = stringResource(R.string.only_latest_backup_t),
-                        description = stringResource(R.string.only_latest_backup_s),
+                        title = stringResource(Res.string.only_latest_backup_t),
+                        description = stringResource(Res.string.only_latest_backup_s),
                         checked = settings.onlyLatestBackup,
                         onCheckedChange = { onIntent(BackupConfigIntent.SetOnlyLatestBackup(it)) },
                     )
@@ -322,7 +294,7 @@ private fun BackupConfigSheets(
     AppModalBottomSheet(
         show = state.activeSheet == BackupConfigSheet.RestoreFiles && state.backupNames.isNotEmpty(),
         onDismissRequest = { onIntent(BackupConfigIntent.DismissSheet) },
-        title = stringResource(R.string.select_restore_file),
+        title = stringResource(Res.string.select_restore_file),
     ) {
         LazyColumn(
             modifier = Modifier
@@ -341,7 +313,7 @@ private fun BackupConfigSheets(
     }
     IgnoreItemsSheet(
         show = state.activeSheet == BackupConfigSheet.IgnoreRestoreItems,
-        title = stringResource(R.string.restore_ignore),
+        title = stringResource(Res.string.restore_ignore),
         ignoreItems = state.ignoreItems,
         dbIgnoreItems = state.dbIgnoreItems,
         onToggleIgnoreItem = { key, value ->
@@ -365,7 +337,7 @@ private fun BackupConfigSheets(
     )
     IgnoreItemsSheet(
         show = state.activeSheet == BackupConfigSheet.IgnoreBackupItems,
-        title = stringResource(R.string.backup_ignore),
+        title = stringResource(Res.string.backup_ignore),
         ignoreItems = state.backupIgnoreItems,
         dbIgnoreItems = state.backupDbIgnoreItems,
         onToggleIgnoreItem = { key, value ->
@@ -410,7 +382,7 @@ private fun IgnoreItemsSheet(
             MediumTonalButton(
                 onClick = onConfirm,
                 icon = Icons.Default.Save,
-                contentDescription = stringResource(R.string.save),
+                contentDescription = stringResource(Res.string.save),
             )
         },
     ) {
@@ -422,8 +394,8 @@ private fun IgnoreItemsSheet(
         ) {
             CardTabRow(
                 tabTitles = listOf(
-                    stringResource(R.string.config_ignore),
-                    stringResource(R.string.database_ignore),
+                    stringResource(Res.string.config_ignore),
+                    stringResource(Res.string.database_ignore),
                 ),
                 selectedTabIndex = selectedTab,
                 onTabSelected = { selectedTab = it },
@@ -463,7 +435,7 @@ private fun BackupConfigDialogs(
     AppAlertDialog(
         show = auth != null,
         onDismissRequest = { onIntent(BackupConfigIntent.DismissDialog) },
-        title = stringResource(R.string.web_dav_account),
+        title = stringResource(Res.string.web_dav_account),
         content = {
             auth?.let {
                 Column {
@@ -473,7 +445,7 @@ private fun BackupConfigDialogs(
                             onIntent(BackupConfigIntent.EditWebDavAccount(value))
                         },
                         backgroundColor = LegadoTheme.colorScheme.surface,
-                        label = stringResource(R.string.web_dav_account),
+                        label = stringResource(Res.string.web_dav_account),
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     AppTextField(
@@ -482,7 +454,7 @@ private fun BackupConfigDialogs(
                             onIntent(BackupConfigIntent.EditWebDavPassword(value))
                         },
                         backgroundColor = LegadoTheme.colorScheme.surface,
-                        label = stringResource(R.string.web_dav_pw),
+                        label = stringResource(Res.string.web_dav_pw),
                         visualTransformation = if (it.passwordVisible) {
                             VisualTransformation.None
                         } else {
@@ -500,8 +472,8 @@ private fun BackupConfigDialogs(
                                         Icons.Filled.VisibilityOff
                                     },
                                     contentDescription = stringResource(
-                                        if (it.passwordVisible) R.string.hide_password
-                                        else R.string.show_password
+                                        if (it.passwordVisible) Res.string.hide_password
+                                        else Res.string.show_password
                                     ),
                                 )
                             }
@@ -510,17 +482,17 @@ private fun BackupConfigDialogs(
                 }
             }
         },
-        confirmText = stringResource(R.string.ok),
+        confirmText = stringResource(Res.string.ok),
         onConfirm = { onIntent(BackupConfigIntent.SaveWebDavAuth) },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { onIntent(BackupConfigIntent.DismissDialog) },
     )
 
     val fallback = dialog as? BackupConfigDialog.ConfirmLocalRestoreFallback
     ConfirmDialog(
         show = fallback != null,
-        title = stringResource(R.string.restore),
-        text = stringResource(R.string.webdav_restore_fallback_message, fallback?.error.orEmpty()),
+        title = stringResource(Res.string.restore),
+        text = stringResource(Res.string.webdav_restore_fallback_message, fallback?.error.orEmpty()),
         onConfirm = { onIntent(BackupConfigIntent.ConfirmLocalRestoreFallback) },
         onDismiss = { onIntent(BackupConfigIntent.DismissDialog) },
     )
@@ -536,6 +508,11 @@ private fun BackupConfigDialogs(
     )
 }
 
+/**
+ * ⚠️ 迁移前这个 composable 的可见性是 `public`，但它**只被同文件的 `BackupConfigDialogs` 用**。
+ * 本片**没有**顺手改成 `private`：可见性属于 API 表面，改它不该夹在一次搬迁里
+ * （即便当前看起来无害）。若日后确认无人使用，应由一个专门的清理切片收紧。
+ */
 @Composable
 fun ConfirmDialog(
     show: Boolean,
@@ -549,9 +526,9 @@ fun ConfirmDialog(
         onDismissRequest = onDismiss,
         title = title,
         text = text,
-        confirmText = stringResource(R.string.ok),
+        confirmText = stringResource(Res.string.ok),
         onConfirm = onConfirm,
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = onDismiss,
     )
 }
