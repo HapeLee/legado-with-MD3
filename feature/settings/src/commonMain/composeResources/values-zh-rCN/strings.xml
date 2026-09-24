@@ -431,4 +431,27 @@
     <string name="theme_mode">深色模式</string>
     <string name="top_bar_opacity">顶栏不透明度</string>
     <string name="use_flexible_top_bar">使用折叠应用栏</string>
+    <string name="edit">编辑</string>
+    <string name="search_placeholder">搜索…</string>
+    <string name="share">分享</string>
+    <string name="theme_manage_apply">应用</string>
+    <string name="theme_manage_apply_message">确定应用主题「%1$s」？应用后需要重启才能完全生效。</string>
+    <string name="theme_manage_apply_theme">应用主题</string>
+    <string name="theme_manage_delete_message">确定删除主题「%1$s」？此操作不可恢复。</string>
+    <string name="theme_manage_delete_theme">删除主题</string>
+    <string name="theme_manage_export_current">导出当前主题</string>
+    <string name="theme_manage_export_current_summary">将配置、图片、字体和当前图集导出为主题包</string>
+    <string name="theme_manage_import_config">导入旧版主题配置</string>
+    <string name="theme_manage_import_config_summary">从旧版 JSON 文件导入主题配置</string>
+    <string name="theme_manage_import_package">导入主题包</string>
+    <string name="theme_manage_import_package_summary">导入包含资源和封面图集的主题包</string>
+    <string name="theme_manage_migrate_legacy">迁移旧版主题</string>
+    <string name="theme_manage_migrate_legacy_summary">将已保存的 JSON 主题转换为新版主题格式</string>
+    <string name="theme_manage_name_hint">请输入主题名称</string>
+    <string name="theme_manage_save">保存</string>
+    <string name="theme_manage_save_current">保存当前设置</string>
+    <string name="theme_manage_save_current_summary">保存当前主题配置为新主题</string>
+    <string name="theme_manage_save_theme">保存主题</string>
+    <string name="theme_manage_saved_themes">已保存的主题</string>
+    <string name="theme_pack">主题管理</string>
 </resources>

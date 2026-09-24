@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.themeManage
+package io.legado.app.feature.settings.thememanage
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,9 +27,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.legado.app.R
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.cancel
+import io.legado.app.feature.settings.res.delete
+import io.legado.app.feature.settings.res.edit
+import io.legado.app.feature.settings.res.search_placeholder
+import io.legado.app.feature.settings.res.share
+import io.legado.app.feature.settings.res.theme_manage_apply
+import io.legado.app.feature.settings.res.theme_manage_apply_message
+import io.legado.app.feature.settings.res.theme_manage_apply_theme
+import io.legado.app.feature.settings.res.theme_manage_delete_message
+import io.legado.app.feature.settings.res.theme_manage_delete_theme
+import io.legado.app.feature.settings.res.theme_manage_export_current
+import io.legado.app.feature.settings.res.theme_manage_export_current_summary
+import io.legado.app.feature.settings.res.theme_manage_import_config
+import io.legado.app.feature.settings.res.theme_manage_import_config_summary
+import io.legado.app.feature.settings.res.theme_manage_import_package
+import io.legado.app.feature.settings.res.theme_manage_import_package_summary
+import io.legado.app.feature.settings.res.theme_manage_migrate_legacy
+import io.legado.app.feature.settings.res.theme_manage_migrate_legacy_summary
+import io.legado.app.feature.settings.res.theme_manage_name_hint
+import io.legado.app.feature.settings.res.theme_manage_save
+import io.legado.app.feature.settings.res.theme_manage_save_current
+import io.legado.app.feature.settings.res.theme_manage_save_current_summary
+import io.legado.app.feature.settings.res.theme_manage_save_theme
+import io.legado.app.feature.settings.res.theme_manage_saved_themes
+import io.legado.app.feature.settings.res.theme_pack
 import io.legado.app.feature.settings.thememanage.EditThemeSheet
 import io.legado.app.feature.settings.thememanage.SavedThemeSummary
 import io.legado.app.feature.settings.thememanage.ThemeManageDialog
@@ -49,8 +73,20 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * M5-18（M5-17b）：从 `:app` 的 `ui/config/themeManage/ThemeManageScreen.kt` 迁入。
+ * 宿主壳（`ThemeManageRouteScreen`，4 个 SAF launcher + toast）按判据留在 `:app`。
+ *
+ * **正文逐字保留**（脚本化等价改写，非手抄），只有三类改写：包名、`stringResource` 换成 CMP 版、
+ * `R.string.*`（25 条）→ `Res.string.*` + 逐 key import。
+ * 该文件无数组资源、无 JVM/Android 专用写法（已探）。
+ *
+ * ⚠️ 与 `EditThemeSheet`(M5-17a) 的关系：页面调用它，所以表单先迁（同 M5-9b「先 sheet 后页面」）。
+ */
+
 @Composable
 fun ThemeManageScreen(
     state: ThemeManageUiState,
@@ -69,7 +105,7 @@ fun ThemeManageScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.theme_pack),
+                title = stringResource(Res.string.theme_pack),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -88,30 +124,30 @@ fun ThemeManageScreen(
             item {
                 SplicedColumnGroup {
                     ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_save_current),
-                        description = stringResource(R.string.theme_manage_save_current_summary),
+                        title = stringResource(Res.string.theme_manage_save_current),
+                        description = stringResource(Res.string.theme_manage_save_current_summary),
                         onClick = { onIntent(ThemeManageIntent.OpenSaveDialog) }
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_export_current),
-                        description = stringResource(R.string.theme_manage_export_current_summary),
+                        title = stringResource(Res.string.theme_manage_export_current),
+                        description = stringResource(Res.string.theme_manage_export_current_summary),
                         onClick = { onIntent(ThemeManageIntent.RequestExport()) }
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_import_package),
-                        description = stringResource(R.string.theme_manage_import_package_summary),
+                        title = stringResource(Res.string.theme_manage_import_package),
+                        description = stringResource(Res.string.theme_manage_import_package_summary),
                         onClick = { onIntent(ThemeManageIntent.RequestImportPackage) }
                     )
                     ClickableSettingItem(
-                        title = stringResource(R.string.theme_manage_import_config),
-                        description = stringResource(R.string.theme_manage_import_config_summary),
+                        title = stringResource(Res.string.theme_manage_import_config),
+                        description = stringResource(Res.string.theme_manage_import_config_summary),
                         onClick = { onIntent(ThemeManageIntent.RequestImportLegacyJson) }
                     )
                     if (state.hasLegacyThemes) {
                         ClickableSettingItem(
-                            title = stringResource(R.string.theme_manage_migrate_legacy),
+                            title = stringResource(Res.string.theme_manage_migrate_legacy),
                             description = stringResource(
-                                R.string.theme_manage_migrate_legacy_summary
+                                Res.string.theme_manage_migrate_legacy_summary
                             ),
                             onClick = {
                                 onIntent(ThemeManageIntent.MigrateLegacyThemes)
@@ -128,14 +164,14 @@ fun ThemeManageScreen(
                         onQueryChange = {
                             onIntent(ThemeManageIntent.UpdateSearchQuery(it))
                         },
-                        placeholder = stringResource(R.string.search_placeholder),
+                        placeholder = stringResource(Res.string.search_placeholder),
                         autoFocus = false,
                     )
                 }
 
                 item {
                     AppText(
-                        text = stringResource(R.string.theme_manage_saved_themes),
+                        text = stringResource(Res.string.theme_manage_saved_themes),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -159,8 +195,8 @@ fun ThemeManageScreen(
     AppAlertDialog(
         show = state.dialog is ThemeManageDialog.Save,
         onDismissRequest = { onIntent(ThemeManageIntent.DismissDialog) },
-        title = stringResource(R.string.theme_manage_save_theme),
-        confirmText = stringResource(R.string.theme_manage_save),
+        title = stringResource(Res.string.theme_manage_save_theme),
+        confirmText = stringResource(Res.string.theme_manage_save),
         onConfirm = {
             val name = (state.dialog as? ThemeManageDialog.Save)?.name.orEmpty()
             if (name.isNotBlank()) {
@@ -168,13 +204,13 @@ fun ThemeManageScreen(
                 onIntent(ThemeManageIntent.DismissDialog)
             }
         },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { onIntent(ThemeManageIntent.DismissDialog) },
         content = {
             AppTextField(
                 value = (state.dialog as? ThemeManageDialog.Save)?.name.orEmpty(),
                 onValueChange = { onIntent(ThemeManageIntent.UpdateSaveName(it)) },
-                placeholder = { AppText(text = stringResource(R.string.theme_manage_name_hint)) },
+                placeholder = { AppText(text = stringResource(Res.string.theme_manage_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -185,18 +221,18 @@ fun ThemeManageScreen(
     AppAlertDialog(
         show = state.dialog is ThemeManageDialog.Apply,
         onDismissRequest = { onIntent(ThemeManageIntent.DismissDialog) },
-        title = stringResource(R.string.theme_manage_apply_theme),
-        confirmText = stringResource(R.string.theme_manage_apply),
+        title = stringResource(Res.string.theme_manage_apply_theme),
+        confirmText = stringResource(Res.string.theme_manage_apply),
         onConfirm = {
             (state.dialog as? ThemeManageDialog.Apply)?.theme?.let { theme ->
                 onIntent(ThemeManageIntent.ApplySavedTheme(theme))
             }
             onIntent(ThemeManageIntent.DismissDialog)
         },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { onIntent(ThemeManageIntent.DismissDialog) },
         text = stringResource(
-            R.string.theme_manage_apply_message,
+            Res.string.theme_manage_apply_message,
             (state.dialog as? ThemeManageDialog.Apply)?.theme?.name.orEmpty(),
         )
     )
@@ -205,18 +241,18 @@ fun ThemeManageScreen(
     AppAlertDialog(
         show = state.dialog is ThemeManageDialog.Delete,
         onDismissRequest = { onIntent(ThemeManageIntent.DismissDialog) },
-        title = stringResource(R.string.theme_manage_delete_theme),
-        confirmText = stringResource(R.string.delete),
+        title = stringResource(Res.string.theme_manage_delete_theme),
+        confirmText = stringResource(Res.string.delete),
         onConfirm = {
             (state.dialog as? ThemeManageDialog.Delete)?.theme?.let { theme ->
                 onIntent(ThemeManageIntent.DeleteSavedTheme(theme))
             }
             onIntent(ThemeManageIntent.DismissDialog)
         },
-        dismissText = stringResource(R.string.cancel),
+        dismissText = stringResource(Res.string.cancel),
         onDismiss = { onIntent(ThemeManageIntent.DismissDialog) },
         text = stringResource(
-            R.string.theme_manage_delete_message,
+            Res.string.theme_manage_delete_message,
             (state.dialog as? ThemeManageDialog.Delete)?.theme?.name.orEmpty(),
         )
     )
@@ -300,17 +336,17 @@ private fun SavedThemeItem(
             SmallPlainButton(
                 onClick = onEdit,
                 icon = Icons.Default.Edit,
-                contentDescription = stringResource(R.string.edit)
+                contentDescription = stringResource(Res.string.edit)
             )
             SmallPlainButton(
                 onClick = onExport,
                 icon = Icons.Default.Share,
-                contentDescription = stringResource(R.string.share)
+                contentDescription = stringResource(Res.string.share)
             )
             SmallPlainButton(
                 onClick = onDelete,
                 icon = Icons.Default.Delete,
-                contentDescription = stringResource(R.string.delete)
+                contentDescription = stringResource(Res.string.delete)
             )
         }
     }

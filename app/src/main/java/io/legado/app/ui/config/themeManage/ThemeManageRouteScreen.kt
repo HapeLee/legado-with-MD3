@@ -15,6 +15,7 @@ import io.legado.app.R
 import io.legado.app.feature.settings.thememanage.SavedThemeSummary
 import io.legado.app.feature.settings.thememanage.ThemeManageEffect
 import io.legado.app.feature.settings.thememanage.ThemeManageIntent
+import io.legado.app.feature.settings.thememanage.ThemeManageScreen
 import io.legado.app.feature.settings.thememanage.ThemeManageText
 import io.legado.app.feature.settings.thememanage.ThemeManageViewModel
 import io.legado.app.help.config.ThemePackageManager

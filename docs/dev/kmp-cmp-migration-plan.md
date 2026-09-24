@@ -2247,3 +2247,26 @@ CMP **不参与 Android 资源合并** ⇒ 每个语言目录都要自带一份�
 未验证：表单在真机/desktop 的渲染与交互（7 个下拉、开关/滑杆、颜色选择器 14 个色槽）。
 
 **下一步**：`ThemeManageScreen`（334 行，25 条字符串，无数组）→ 再 `themeConfig`(11/3388)。
+
+### M5-18（M5-17b）已完成（2026-09-24）：`ThemeManageScreen` → `:feature:settings/thememanage/`
+
+同一套脚本化迁移，但**把 M5-17a 踩过的三个坑直接写进了脚本**（遍历所有 `*.xml`、标签正则否定前瞻、
+逐 key 回落、生成 import 去重），并加了一步**阶段 0 探查**（先扫 `Integer.` / `System.` /
+`String.format(` / `Locale` / `Character.` / `java.` / `android.` / `@SuppressLint` / `LocalContext`
+与 `R.<其它类型>`）。该文件无任何 JVM/Android 专用写法、无数组 ⇒ 只需三类改写。
+
+**这一次三个坑一个都没踩** —— 因为它们是写进脚本的，不是记在脑子里的。
+
+死资源：25 条里 17 条在 `:app` 变死（另 8 条仍被别的页面用），删 68 项。
+
+验证：四门禁全绿（G4 无需变动）+ 全模块测试与 `:app` 编译/单测/打包 → **BUILD SUCCESSFUL**；
+计数 **806 / 1301 零偏离**；资源 25 × 4 语言逐字一致 + 无重复 key；`lintAppDebug` 重测与上一片
+**完全一致**（零 delta）。
+
+未验证：页面渲染与交互（搜索框、卡片操作按钮、三个确认弹层、空态、旧版迁移入口）。
+
+⚠️ **`themeManage` 子域收官**（只剩宿主壳 `ThemeManageRouteScreen` 按判据留 `:app`）。
+`ui/config` 实测剩 **21 个文件**（`themeConfig` 11 / `coverConfig` 3 / `readConfig` 2 /
+`otherConfig` 2 / `backupConfig` 1 / `themeManage` 1 / `bookshelfConfig` 1）。
+
+**下一步**：`themeConfig`(11/3388) —— 最大的一档，建议先照 M5-15a 的方式**勘察量清再切**。

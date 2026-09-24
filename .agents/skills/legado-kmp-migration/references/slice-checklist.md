@@ -651,6 +651,15 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   rather than skipping it. A silent skip is indistinguishable from "clean" — the same failure mode
   as M5-12a, where `io.legado.app.domain.**` *looked* like the shared layer while `:app` was
   defining classes in that very package.
+- **Encode each lesson into the script the first time you hit it — then the next migration hits
+  nothing.** M5-17b (the sibling page of M5-17a) re-used the same migration script shape with the
+  previous slice's three traps *built in*: walk every `*.xml` instead of guessing file names, use a
+  negative lookahead so `<string` cannot match `<string-array`, fall back per key for CMP resources,
+  and de-duplicate generated imports. It also added a cheap "phase 0" probe that greps the source
+  for JVM/Android-only constructs (`Integer.`, `System.`, `String.format(`, `Locale`, `Character.`,
+  `java.`, `android.`, `@SuppressLint`, `LocalContext`, and `R.<other type>`) before rewriting. The
+  result: zero traps triggered, on a file of the same kind. A lesson that stays in prose pays for
+  itself only on the next author; a lesson in the tool pays immediately.
 - ⚠️ **When you script the resource side of a migration, do not guess resource *file names* — walk
   every `*.xml`, on both the copy and the delete side.** Measured in M5-17a: `:app` keeps its
   machine-value arrays in `values/array_values.xml` (not `arrays.xml`), so a script that opened only

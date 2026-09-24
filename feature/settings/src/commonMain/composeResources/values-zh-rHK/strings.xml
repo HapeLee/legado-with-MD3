@@ -415,4 +415,27 @@
     <string name="theme_mode">主題模式</string>
     <string name="top_bar_opacity">頂欄不透明度</string>
     <string name="use_flexible_top_bar">使用彈性頂欄</string>
+    <string name="edit">編輯</string>
+    <string name="search_placeholder">搜尋…</string>
+    <string name="share">分享</string>
+    <string name="theme_manage_apply">套用</string>
+    <string name="theme_manage_apply_message">套用主題「%1$s」？需要重啟才能使所有更改生效。</string>
+    <string name="theme_manage_apply_theme">套用主題</string>
+    <string name="theme_manage_delete_message">刪除主題「%1$s」？此操作不可撤銷。</string>
+    <string name="theme_manage_delete_theme">刪除主題</string>
+    <string name="theme_manage_export_current">匯出目前主題</string>
+    <string name="theme_manage_export_current_summary">將設定、圖片、字體和目前圖集匯出為主題包</string>
+    <string name="theme_manage_import_config">匯入舊版主題設定</string>
+    <string name="theme_manage_import_config_summary">從舊版 JSON 檔案匯入主題設定</string>
+    <string name="theme_manage_import_package">匯入主題包</string>
+    <string name="theme_manage_import_package_summary">匯入包含資源和封面圖集的主題包</string>
+    <string name="theme_manage_migrate_legacy">遷移舊版主題</string>
+    <string name="theme_manage_migrate_legacy_summary">將已儲存的 JSON 主題轉換為新版主題格式</string>
+    <string name="theme_manage_name_hint">輸入主題名稱</string>
+    <string name="theme_manage_save">儲存</string>
+    <string name="theme_manage_save_current">儲存目前主題</string>
+    <string name="theme_manage_save_current_summary">將目前外觀設定儲存為主題</string>
+    <string name="theme_manage_save_theme">儲存主題</string>
+    <string name="theme_manage_saved_themes">已儲存主題</string>
+    <string name="theme_pack">主题管理</string>
 </resources>

@@ -2023,3 +2023,44 @@ toast 文案在 4 个语言下的实际显示。需真机冒烟。
 `themeManage` 至此 `:app` 侧剩 **2 个文件**（`ThemeManageRouteScreen` + `ThemeManageScreen`）。
 
 **下一步**：`ThemeManageScreen`（334 行，25 条字符串，无数组）→ 之后 `themeConfig`(11/3388)。
+
+### M5-18（M5-17b）：`ThemeManageScreen` → `:feature:settings/thememanage/`
+
+同一套脚本化迁移，但这次**把 M5-17a 踩过的坑直接写进了脚本**（遍历该语言目录下所有 `*.xml`、
+标签正则用否定前瞻、逐 key 回落默认值、生成 import 后去重），并顺手加了一步**阶段 0 探查**：
+先扫 `Integer.` / `System.` / `String.format(` / `Locale` / `Character.` / `java.` / `android.` /
+`@SuppressLint` / `LocalContext` 与 `R.<其它类型>` 的用法，再动刀。
+
+结果：该文件**无任何 JVM/Android 专用写法**、无数组、无 `R.<其它类型>` ⇒ 只需三类改写
+（包名 / CMP 版 `stringResource` / `R.string.*` → `Res.string.*` + 逐 key import）。
+
+**这一次三个坑一个都没踩** —— 因为它们是写进脚本的，不是记在脑子里的。
+
+#### 死资源
+
+25 条字符串里 **17 条**在 `:app` 变死（另 8 条是 `cancel` / `delete` / `edit` /
+`search_placeholder` / `share` / `theme_manage_apply` / `theme_manage_save` / `theme_pack`，
+仍被别的页面用着）⇒ 删 68 项（17 × 4 语言目录），XML 全部可解析 ✅。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需变动** —— 该页只有 `R` 依赖）
+- `:feature:settings` 编译 + `:app` 编译/单测/打包 + 全模块测试 → **BUILD SUCCESSFUL**
+- 计数 **806 / 1301 零偏离**
+- 资源：25 条字符串 × 4 语言**逐字一致** + 无重复 key + XML 通过 ✅
+- `lintAppDebug` 重测与上一片**完全一致**（5 errors / 102 warnings / filtered 239）⇒ 零 delta
+
+#### 未验证
+
+页面的渲染与交互（搜索框、卡片列表的操作按钮、三个确认弹层、空态、旧版迁移入口）。
+需真机/desktop 冒烟。
+
+⚠️ **`themeManage` 子域至此只剩宿主壳**（`ThemeManageRouteScreen`，按判据留 `:app`）：
+逻辑层 M5-16a、测试 M5-16b、表单 M5-17a、页面 M5-18。
+`ui/config` 侧实测剩 **21 个文件**（`themeConfig` 11 / `coverConfig` 3 / `readConfig` 2 /
+`otherConfig` 2 / `backupConfig` 1 / `themeManage` 1 / `bookshelfConfig` 1）。
+
+**下一步**：`themeConfig`(11 文件 / 3388 行) —— 勘察结论见 M5-15a：最大的一档，
+撞击点集中在 `ThemeConfigViewModel`(612) 的 7 个 `:app` 符号、8 个 `Launcher*` 图标、
+`ThemeConfigStore` / `FileDoc` / `FileUtils` / `MD5Utils` / `externalFiles` 一族，
+另有 `AppCompatDelegate` / `ConstraintLayout`。建议先做逻辑层勘察（像 M5-15a 那样量清再切）。
