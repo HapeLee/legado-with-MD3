@@ -2172,3 +2172,48 @@ M5-15a 那次勘察我用了三个一次性 tmp 脚本、踩了三个盲点（�
 **下一步（按依赖重排）**：`ThemeConfigContract`(109 行，唯一阻塞 `FileDoc`) 是多数 sheet 的前置
 ⇒ 先量它、把它（以及它声明的 `ThemeConfigIntent` / `UiState` / `Effect` / `Dialog` / `ThemeConfigSheet`）
 迁进共享层，再回头做第 2/3 档的四个 sheet。
+
+### M5-19b：`ThemeConfigContract` → `:feature:settings/themeconfig/`（**纯类型，无资源**）
+
+它是 M5-19a 那个退回 sheet 的前置，也是多数 sheet 的前置。109 行、没有任何 `R.*`
+⇒ 本片**不涉及资源搬运**，只有两个平台耦合点需要替代，而**两个都有现成先例**：
+
+| 迁移前 | 迁移后 | 依据 |
+|---|---|---|
+| `SelectAppFont(file: FileDoc)` | `SelectAppFont(name: String, uri: String)` | `FileDoc` 是 `utils` 里的**平台类型**（`Uri`/`DocumentFile`/`appCtx`）。既有判据写在 `AndroidAboutCapabilities` 的 KDoc 里：共享层不能出现 `Uri`/SAF 类型 ⇒ 边界上退化成「**id + 展示名**」，id 取 `FileDoc.uri.toString()`，宿主 `FileDoc.fromUri(Uri.parse(id), false)` 还原 |
+| `ShowToast(stringRes: Int)` | `ShowToast(text: ThemeConfigToast)` + 新枚举（2 条） | 共享层拿不到 `R`（M5-16a 的 `ThemeManageText` 同一形态），宿主壳映射回自己的文案 |
+
+`FileDoc` 的还原放在 `:app` 的 VM 里（`SelectAppFont` 分支）—— 与原 `setAppFont(fileDoc)`
+只差一次 `Uri` 往返；`:app` 的 `ThemeConfigScreen` 产出端改成
+`SelectAppFont(name = it.name, uri = it.uri.toString())`。
+
+#### 顺手把 M5-19a 的 (b) 方向自动化了
+
+迁走这个文件会让**同包兄弟**的一批类型变成"无 import 引用" ⇒ 用脚本按「本文件声明 ∩ 兄弟文件
+无 import 使用」自动补 import：**4 个文件、19 个符号**
+（`ThemeConfigScreen` 7 个 / `ThemeConfigViewModel` 6 个 / `ThemeConfigRouteScreen` 3 个 /
+`TopBottomBarSettingsSheet` 1 个 —— 最后这个正是 M5-19a 退回的原因，现在它的前置到位了）。
+
+#### ⚠️ lint 的 `+1` 是我自己的新代码，已按提示改掉
+
+改完测得 warnings **102 → 103**，逐条查报告归因到 `ThemeConfigViewModel.kt:488` 的 `UseKtx` ——
+**正是本片新写的那行** `Uri.parse(intent.uri)`。既然是我新写的代码（不是既有债），就按 lint 的
+建议写成 `intent.uri.toUri()`（+ `androidx.core.net.toUri`）；重测**回到 102** ⇒ 零 delta。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需变动** —— 纯类型搬迁）
+- `:feature:settings` 编译 + `:app` 编译/单测/打包 + 全模块测试 → **BUILD SUCCESSFUL**
+- 计数 **806 / 1301 零偏离**（纯类型迁移，依 checklist 不加测试）
+- `lintAppDebug` 重测 **5 errors / 102 warnings**（与迁移前一致，见上）
+
+#### 未验证
+
+无新增行为面（纯类型搬迁 + 两处等价替换）。`SelectAppFont` 的实际选字体链路（SAF 选文件 →
+`FileDoc` → id 往返还原 → 拷进字体目录）需真机冒烟确认。
+
+**下一步**：第 2/3 档的四个 sheet（契约的前置已到位）——
+`MainNavigationSettingsSheet` + `NavIconManageSheet`（阻塞：`MainDestination` / `mainDestinationIcon`
+/ `NavIconDestination` / `NavigationIconSlot` 一族）、
+`LabelColorManageSheet` + `LauncherIconPickerSheet`（阻塞：`TagColorGenerator` / 8 个 `Launcher*`
+图标 / `getCompatDrawable` / `ComponentName`/`ImageView`）—— 两者都先量清各自的同包符号族再切。

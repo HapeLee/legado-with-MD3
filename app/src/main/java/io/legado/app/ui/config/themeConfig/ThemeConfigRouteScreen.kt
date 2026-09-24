@@ -1,5 +1,8 @@
 package io.legado.app.ui.config.themeConfig
 
+import io.legado.app.feature.settings.themeconfig.ContainerBackgroundTarget
+import io.legado.app.feature.settings.themeconfig.ThemeConfigEffect
+import io.legado.app.feature.settings.themeconfig.ThemeConfigIntent
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +21,7 @@ import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
+import io.legado.app.feature.settings.themeconfig.ThemeConfigToast
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import java.io.File
@@ -108,7 +112,7 @@ fun ThemeConfigRouteScreen(
                     pendingBackgroundDark = effect.dark
                     backgroundImageLauncher.launch("image/*")
                 }
-                is ThemeConfigEffect.ShowToast -> context.toastOnUi(effect.stringRes)
+                is ThemeConfigEffect.ShowToast -> context.toastOnUi(effect.text.toStringRes())
             }
         }
     }
@@ -120,4 +124,16 @@ fun ThemeConfigRouteScreen(
         onNavigateToCustomTheme = onNavigateToCustomTheme,
         onNavigateToThemeManage = onNavigateToThemeManage,
     )
+}
+
+
+/**
+ * M5-19b：VM 迁进共享层后，`ShowToast` 不再传 `@StringRes Int`（共享层没有 `R`），
+ * 改传语义枚举 [ThemeConfigToast]；**由宿主把它映射回自己的文案**。
+ * 与 `themeManage`(M5-16a) 的 `ThemeManageText.toStringRes()` 完全同一判据：
+ * 这条 effect 由本文件消费（它要 `context.toastOnUi`），文案属宿主这次 toast 的渲染。
+ */
+private fun ThemeConfigToast.toStringRes(): Int = when (this) {
+    ThemeConfigToast.ResetSuccess -> io.legado.app.R.string.theme_config_reset_success
+    ThemeConfigToast.TransparentThemeAlarm -> io.legado.app.R.string.transparent_theme_alarm
 }

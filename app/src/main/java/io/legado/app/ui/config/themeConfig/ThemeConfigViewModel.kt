@@ -1,6 +1,7 @@
 package io.legado.app.ui.config.themeConfig
 
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
@@ -13,6 +14,13 @@ import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.feature.settings.themeconfig.ContainerBackgroundTarget
+import io.legado.app.feature.settings.themeconfig.ThemeConfigDialog
+import io.legado.app.feature.settings.themeconfig.ThemeConfigEffect
+import io.legado.app.feature.settings.themeconfig.ThemeConfigIntent
+import io.legado.app.feature.settings.themeconfig.ThemeConfigUiState
+import io.legado.app.feature.settings.themeconfig.ThemeTimeField
+import io.legado.app.feature.settings.themeconfig.ThemeConfigToast
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -161,7 +169,12 @@ class ThemeConfigViewModel(
                 target = intent.target,
                 dark = intent.dark,
             )
-            is ThemeConfigIntent.SelectAppFont -> setAppFont(intent.file)
+            // M5-19b：意图里的 `FileDoc` 换成「id（uri 串）+ 展示名」，与
+            // `AndroidAboutCapabilities` 的既有判据一致（共享层不能出现 Uri/SAF 类型）
+            // ⇒ 这里还原回等价对象，再走原来的 `setAppFont`。
+            // （用 `toUri()` 而非 `Uri.parse`：lint 的 UseKtx 提示，且这行是本片新写的。）
+            is ThemeConfigIntent.SelectAppFont ->
+                setAppFont(FileDoc.fromUri(intent.uri.toUri(), false))
             ThemeConfigIntent.ClearAppFont -> clearAppFont()
             is ThemeConfigIntent.SetFontFolder -> viewModelScope.launch {
                 readSettingsGateway.update { it.copy(fontFolder = intent.path) }
@@ -229,7 +242,7 @@ class ThemeConfigViewModel(
             _effects.tryEmit(ThemeConfigEffect.ApplyDayNight)
             _effects.tryEmit(ThemeConfigEffect.NotifyMain)
             _effects.tryEmit(ThemeConfigEffect.ChangeLauncherIcon(defaultShell.launcherIcon))
-            _effects.tryEmit(ThemeConfigEffect.ShowToast(R.string.theme_config_reset_success))
+            _effects.tryEmit(ThemeConfigEffect.ShowToast(ThemeConfigToast.ResetSuccess))
             _uiState.update { it.copy(activeDialog = null) }
         }
     }
@@ -239,7 +252,7 @@ class ThemeConfigViewModel(
         if (value == "13" &&
             (theme.backgroundImageLight.isNullOrEmpty() || theme.backgroundImageDark.isNullOrEmpty())
         ) {
-            _effects.tryEmit(ThemeConfigEffect.ShowToast(R.string.transparent_theme_alarm))
+            _effects.tryEmit(ThemeConfigEffect.ShowToast(ThemeConfigToast.TransparentThemeAlarm))
             return
         }
         viewModelScope.launch {

@@ -63,6 +63,13 @@ import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.feature.settings.themeconfig.BackgroundImageExtraOption
 import io.legado.app.feature.settings.themeconfig.BackgroundImageManageSheet
+import io.legado.app.feature.settings.themeconfig.BackgroundImageTarget
+import io.legado.app.feature.settings.themeconfig.ContainerBackgroundTarget
+import io.legado.app.feature.settings.themeconfig.ThemeConfigDialog
+import io.legado.app.feature.settings.themeconfig.ThemeConfigIntent
+import io.legado.app.feature.settings.themeconfig.ThemeConfigSheet
+import io.legado.app.feature.settings.themeconfig.ThemeConfigUiState
+import io.legado.app.feature.settings.themeconfig.ThemeTimeField
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -927,7 +934,9 @@ fun ThemeConfigScreen(
         folderState = fontFolderState,
         selectedFontPath = theme.appFontPath,
         onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
-        onSelectFont = { onIntent(ThemeConfigIntent.SelectAppFont(it)) },
+        onSelectFont = {
+            onIntent(ThemeConfigIntent.SelectAppFont(name = it.name, uri = it.uri.toString()))
+        },
         onOpenFolderPicker = { onIntent(ThemeConfigIntent.RequestFontFolder) },
         startAction = {
             MediumTonalButton(

@@ -2326,3 +2326,28 @@ CMP **不参与 Android 资源合并** ⇒ 每个语言目录都要自带一份�
 资源 4 × 4 语言逐字一致；`:app` 这 4 条**零死资源**；lint 重测**零 delta**。
 
 **下一步**：`ThemeConfigContract`(109 行，唯一阻塞 `FileDoc`)。
+
+### M5-19b 已完成（2026-09-24）：`ThemeConfigContract` → `:feature:settings/themeconfig/`
+
+纯类型文件、无 `R.*` ⇒ **不涉及资源搬运**。两个平台耦合点的替代**都有现成先例**：
+
+| 迁移前 | 迁移后 | 依据 |
+|---|---|---|
+| `SelectAppFont(file: FileDoc)` | `SelectAppFont(name: String, uri: String)` | `FileDoc` 是 `utils` 里的平台类型（`Uri`/`DocumentFile`/`appCtx`）。判据写在 `AndroidAboutCapabilities` 的 KDoc：共享层不能出现 `Uri`/SAF 类型 ⇒ 边界上退化成「**id + 展示名**」（id = `uri.toString()`），宿主 `FileDoc.fromUri(Uri.parse(id), false)` 还原 |
+| `ShowToast(stringRes: Int)` | `ShowToast(text: ThemeConfigToast)` + 枚举（2 条） | 共享层拿不到 `R`（M5-16a `ThemeManageText` 同一形态），宿主映射回自己的文案 |
+
+`FileDoc` 的还原放在 `:app` 的 VM；产出端（`ThemeConfigScreen`）改成
+`SelectAppFont(name = it.name, uri = it.uri.toString())`。
+
+**顺手把 M5-19a 的 (b) 方向自动化**：按「本文件声明 ∩ 兄弟文件无 import 使用」自动补 import ——
+4 个文件、19 个符号（含 M5-19a 退回的那个 `TopBottomBarSettingsSheet`，它的前置现在到位了）。
+
+⚠️ lint 的 `+1` 是**我自己的新代码**：归因到本片新写的 `Uri.parse(intent.uri)`（`UseKtx`）⇒
+按提示改写成 `intent.uri.toUri()`，重测**回到 102** ⇒ 零 delta。
+（与 M5-17a 那个决定互为镜像：那次 3 处 `UseKtx` 是**搬过来的既有债**，刻意不改；
+这次是**我新写的**，就按规则写。）
+
+验证：四门禁全绿（G4 无需变动）+ `:feature:settings`/`:app` 编译、单测、打包 + 全模块测试 →
+**BUILD SUCCESSFUL**；计数 **806 / 1301 零偏离**；lint 重测 **5 errors / 102 warnings**（与迁移前一致）。
+
+**下一步**：第 2/3 档的四个 sheet（前置已到位）—— 先量清各自的同包符号族再切。

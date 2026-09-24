@@ -648,6 +648,20 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   contract file is a prerequisite for *most* of the remaining sheets, i.e. the difficulty-ordered
   tier list had to be re-sorted by **dependency**. When a revert happens, spend a minute on what
   it implies for the remaining order — a wrong order costs a repeat of the same discovery.
+- **For every platform type you have to replace, look for the repo's own precedent first — it is
+  usually already written down.** M5-19b had two such replacements in one file and both had
+  precedents: `FileDoc` (a `Uri`/SAF type) degraded to **"id + display name"** exactly as
+  `AndroidAboutCapabilities`'s KDoc prescribes (id = `uri.toString()`, restored on the host side with
+  `FileDoc.fromUri(Uri.parse(id), false)`), and `@StringRes Int` in an effect became a **semantic
+  enum** whose text the host maps back (the `ThemeManageText` shape from M5-16a). Searching for the
+  pattern took less time than inventing a shape, and it keeps the shared layer's conventions uniform.
+- **When the lint warning count moves by exactly the number of call sites you just wrote, that delta
+  is yours — write it the way the rule wants instead of accepting it.** M5-19b: warnings went
+  102 → 103, attributable to the one `Uri.parse(...)` line the slice introduced (`UseKtx`). The fix
+  was to author that line as `.toUri()` (+ `androidx.core.net.toUri`), after which the count returned
+  to 102 — zero delta restored, with no exception or baseline edit. This is the mirror image of the
+  M5-17a decision (where the same 3 `UseKtx` warnings were *relocated* pre-existing debt and were
+  deliberately **not** rewritten): rewrite what you wrote, leave what you moved.
 - **Survey with `tools/audit-slice-deps.py`, not with a fresh ad-hoc script.** The hardened survey
   lives in the repo: it indexes every module including `:app` (whose paths have no module segment),
   indexes `fun` / `val` / extension properties as well as classes, resolves each import to
