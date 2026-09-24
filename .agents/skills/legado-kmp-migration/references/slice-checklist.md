@@ -628,6 +628,16 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   and `lintAppDebug` does not scan designsystem). The real defect was procedural: several slices
   had reported "lint unchanged (94)" by quoting a value measured back at M5-10a. A stale number
   reads exactly like a fresh one.
+- **Survey with `tools/audit-slice-deps.py`, not with a fresh ad-hoc script.** The hardened survey
+  lives in the repo: it indexes every module including `:app` (whose paths have no module segment),
+  indexes `fun` / `val` / extension properties as well as classes, resolves each import to
+  **(module, source set)** — precise by **FQN first**, falling back to the simple name with an
+  explicit "(simple-name fallback, verify)" marker — and **reports unresolved symbols** instead of
+  skipping them. Run `python tools/audit-slice-deps.py <dir>` on the directory you intend to slice,
+  and treat its output as the candidate list (platform/third-party imports still need a look at the
+  *target module's* build file). The three blind spots that motivated it, plus the same-name
+  false-positive it hit on its first use, are documented in its docstring — read that before
+  trusting a hand-rolled grep.
 - ⚠️ **A dependency survey must be built from *definition sites*, and "not found" must never be
   silent.** Measured in M5-15a: three successive versions of my own survey tool each printed a
   confident **"no `:app`-private dependencies"** verdict for the same two subdomains, and each was

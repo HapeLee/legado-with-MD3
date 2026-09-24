@@ -2064,3 +2064,53 @@ toast 文案在 4 个语言下的实际显示。需真机冒烟。
 撞击点集中在 `ThemeConfigViewModel`(612) 的 7 个 `:app` 符号、8 个 `Launcher*` 图标、
 `ThemeConfigStore` / `FileDoc` / `FileUtils` / `MD5Utils` / `externalFiles` 一族，
 另有 `AppCompatDelegate` / `ConstraintLayout`。建议先做逻辑层勘察（像 M5-15a 那样量清再切）。
+
+### M5-19a-pre：勘察 `themeConfig`（只量不改）+ **把勘察工具落进仓库**
+
+#### 先做了一件事：把工具变成仓库的一部分
+
+M5-15a 那次勘察我用了三个一次性 tmp 脚本、踩了三个盲点（只索引类 / 不分源集 / `:app` 未进索引
+且「查不到」被静默跳过）。M5-17b 的教训是「**教训留在散文里只对下一个作者有用，留在工具里立刻
+有用**」⇒ 这次直接把它落成 **`tools/audit-slice-deps.py`**（带用法与四类踩坑说明的 docstring），
+后续每片勘察都用 `python tools/audit-slice-deps.py <目录>`。
+
+工具本身在这一片又修了一个假阳性，也写进了它的 docstring：
+**按简单名索引会把「同名不同包」判错** —— `AppModalBottomSheet` 在 `:app` 与 designsystem
+各有一个，于是 6 个文件被误报成「`:app` 私有」。⇒ 改成**按 FQN 索引**，只有 FQN 查不到时才回退
+简单名，并在输出里标注「(简单名回退，需核对)」。
+
+#### `themeConfig` 的真实阻塞（FQN 精确解析）
+
+| 文件 | 行 | 阻塞 |
+|---|---|---|
+| `BackgroundImageManageSheet` | 199 | **✅ 无** |
+| `TopBottomBarSettingsSheet` | 177 | **✅ 无** |
+| `LabelColorManageSheet` | 161 | `TagColorGenerator`(`:app`) · `androidx.core.graphics.ColorUtils` |
+| `LauncherIconPickerSheet` | 199 | 8 × `Launcher*` 图标(`:app`) · `getCompatDrawable`(`:app`) · `android.content.ComponentName` · `android.widget.ImageView` |
+| `MainNavigationSettingsSheet` | 195 | `MainDestination`(`:app`) · `move`(`:app`) |
+| `NavIconManageSheet` | 226 | `MainDestination` · `mainDestinationIcon` · `androidx.annotation.StringRes` |
+| `ThemeConfig.kt` | 61 | `androidx.appcompat.app.AppCompatDelegate` |
+| `ThemeConfigContract.kt` | 109 | `FileDoc`(`:app`) |
+| `ThemeConfigScreen` | 1326 | `FontFolderState`(`:app`) · `FontSelectSheet`(`:app`) · `SuppressLint` |
+| `ThemeConfigViewModel` | 612 | `MainDestination` · `FileDoc` · `FileUtils` · `MD5Utils` · `externalFiles` · `inputStream` · `openInputStream` · `Uri` / `File` / `FileOutputStream` |
+| `ThemeConfigRouteScreen` | 123 | 宿主壳（按判据留 `:app` ✓） |
+
+⇒ **它不是一块铁板**，可按阻塞性质切成四档（由易到难）：
+
+1. **M5-19a：两个「✅ 无」的 sheet**（`BackgroundImageManageSheet` + `TopBottomBarSettingsSheet`，
+   376 行）—— 常规片，零契约。**先做这个**。
+2. **M5-19b：导航相关的两个 sheet**（`MainNavigationSettingsSheet` + `NavIconManageSheet`，421 行）
+   —— 需要为 `MainDestination`（导航目的地枚举）与 `mainDestinationIcon`（按目的地取图标）
+   定一个**投影 + 契约**，比第 1 档多一个策略决定，但形状与 M5-16a 的投影同类。
+3. **M5-19c：图标/颜色两个 sheet**（`LabelColorManageSheet` + `LauncherIconPickerSheet`，360 行）
+   —— `TagColorGenerator`（`:app`）+ 8 个 `Launcher*` 矢量图标 + `getCompatDrawable` +
+   `ComponentName`/`ImageView`（要把"选哪个启动图标"落到宿主）。这一档的图标资源本身可能
+   需要"改由宿主提供图标表"而不是搬资源。
+4. **M5-19d+：核心三件套**（`ThemeConfigContract` 109 + `ThemeConfigViewModel` 612 +
+   `ThemeConfigScreen` 1326 + `ThemeConfig.kt` 61）—— 最重，且 `ThemeConfigViewModel` 那 7 个
+   `:app` 符号里混着**文件/字体/主题包存储**一族（`FileDoc` / `FileUtils` / `MD5Utils` /
+   `externalFiles` / `inputStream` / `openInputStream`）⇒ 大概率要一个 `ThemeConfigPlatform`
+   契约（形状同 M5-16a / M5-12a），而 `ThemeConfigScreen`(1326) 里还挂着字体选择
+   （`FontFolderState` / `FontSelectSheet`）—— 字体族本身可能是独立的一小块。
+
+**下一步**：M5-19a（两个零阻塞 sheet）。

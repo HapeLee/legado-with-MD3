@@ -2270,3 +2270,25 @@ CMP **不参与 Android 资源合并** ⇒ 每个语言目录都要自带一份�
 `otherConfig` 2 / `backupConfig` 1 / `themeManage` 1 / `bookshelfConfig` 1）。
 
 **下一步**：`themeConfig`(11/3388) —— 最大的一档，建议先照 M5-15a 的方式**勘察量清再切**。
+
+### M5-19a-pre 已完成（2026-09-24）：勘察 `themeConfig` + 把勘察工具落进仓库
+
+**先把工具变成仓库的一部分**：M5-15a 那次用三个一次性 tmp 脚本、踩了三个盲点；M5-17b 的教训是
+「教训留在散文里只对下一个作者有用，留在工具里立刻有用」⇒ 这次落成
+**`tools/audit-slice-deps.py`**（docstring 里写明用法与四类踩坑），后续每片勘察都用它。
+工具在这一片又修了一个假阳性：**按简单名索引会把「同名不同包」判错**（`AppModalBottomSheet`
+在 `:app` 与 designsystem 各有一个 ⇒ 6 个文件被误报）⇒ 改成**按 FQN 索引**，只有 FQN 查不到时
+才回退简单名并标注。
+
+**`themeConfig` 的真实阻塞**（FQN 精确解析）：11 个文件里 **2 个完全干净**
+（`BackgroundImageManageSheet` 199 / `TopBottomBarSettingsSheet` 177）⇒ 它不是一块铁板，
+可按阻塞性质切成四档：
+
+| 档 | 片 | 内容 | 需要的策略决定 |
+|---|---|---|---|
+| 1 | **M5-19a** | 两个 ✅ 无 的 sheet（376 行） | 无（常规片） |
+| 2 | M5-19b | `MainNavigationSettingsSheet` + `NavIconManageSheet`（421 行） | `MainDestination` + `mainDestinationIcon` ⇒ 投影 + 契约（同 M5-16a 形状） |
+| 3 | M5-19c | `LabelColorManageSheet` + `LauncherIconPickerSheet`（360 行） | `TagColorGenerator` + 8 个 `Launcher*` 图标 + `getCompatDrawable` + `ComponentName`/`ImageView` ⇒ 图标表可能改由宿主提供 |
+| 4 | M5-19d+ | `ThemeConfigContract`(109) + VM(612) + Screen(1326) + `ThemeConfig.kt`(61) | VM 那 7 个 `:app` 符号混着**文件/字体/主题包存储**一族（`FileDoc`/`FileUtils`/`MD5Utils`/`externalFiles`/`inputStream`/`openInputStream`）⇒ 大概率要 `ThemeConfigPlatform`；Screen 里还挂着字体选择（`FontFolderState`/`FontSelectSheet`） |
+
+**下一步**：M5-19a（两个零阻塞 sheet）。
