@@ -63,7 +63,9 @@ import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.feature.settings.themeconfig.BackgroundImageExtraOption
 import io.legado.app.feature.settings.themeconfig.BackgroundImageManageSheet
+import io.legado.app.feature.settings.themeconfig.LauncherIconPickerSheet
 import io.legado.app.feature.settings.themeconfig.MainNavigationSettingsSheet
+import io.legado.app.platform.rememberLauncherIconOptions
 import io.legado.app.feature.settings.themeconfig.BackgroundImageTarget
 import io.legado.app.feature.settings.themeconfig.ContainerBackgroundTarget
 import io.legado.app.feature.settings.themeconfig.ThemeConfigDialog
@@ -894,6 +896,9 @@ fun ThemeConfigScreen(
     LauncherIconPickerSheet(
         show = state.activeSheet == ThemeConfigSheet.LauncherIcon,
         selectedValue = appShell.launcherIcon,
+        // M5-19e：图标表与渲染由宿主提供（`R.mipmap` / `getCompatDrawable` / `ImageView`
+        // 都是平台 API）。详见 `:app` 的 `platform/LauncherIconOptions.kt`。
+        icons = rememberLauncherIconOptions(),
         onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
         onValueChange = { onIntent(ThemeConfigIntent.SelectLauncherIcon(it)) }
     )

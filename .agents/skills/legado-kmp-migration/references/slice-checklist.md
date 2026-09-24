@@ -622,12 +622,48 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   **revert `CompactSettingItems` (byte-identical, `git diff` empty) and keep only the genuinely
   clean part (`ValueStepper`)** — a slice that ends smaller than planned is fine; a slice that
   smuggles a dependency decision into a move is not.
+- ⚠️ **Re-measure every number and every list you put in a doc — file counts and "what remains"
+  inventories are numbers too.** M5-19e caught two of its own bookkeeping errors: three successive
+  slices reported the remaining `:app` file count by **subtracting** (17 → 16 → 15) when the measured
+  value was 16, and the "remaining files" list had silently dropped `TopBottomBarSettingsSheet.kt`
+  (the earlier slice migrated `MainNavigationSettingsSheet` + `NavIconManageSheet`, verified with
+  `git show --stat`, and never touched the third). Same failure mode as the stale-lint-number rule
+  below: a value carried forward reads exactly like a fresh one. Run the two-line measurement
+  (`rglob('*.kt')` on the directory, `git show --stat <commit>` on a claim about a past slice) rather
+  than deriving it.
 - ⚠️ **Re-measure lint every slice; never quote the previous slice's number.** M5-15b: the error
   set matched M5-12b's record line-for-line (so the slice added none), but warnings had drifted
   94 → 95 and **could not be attributed** to the slice (the baseline contains no `a11y_*` entry,
   and `lintAppDebug` does not scan designsystem). The real defect was procedural: several slices
   had reported "lint unchanged (94)" by quoting a value measured back at M5-10a. A stale number
   reads exactly like a fresh one.
+- **Before relocating code, check whether what it drags along is actually *used* — the "debt" may
+  exist only to feed dead code, and deleting that is better than relocating it.** M5-19e moved a
+  widget whose file also held a small data table using `appCtx` to build nine
+  `ComponentName(appCtx, LauncherX::class.java)` values. Carrying the table into a fresh `:app`
+  package would have made that package show a **first-time** "global-context direct use" — which G4
+  treats as a new area that must be zero, i.e. solvable only by registering an entry. But measuring
+  first showed those nine constructions fed a field (`component`) that **is never read anywhere**,
+  and neither is its sibling `label`: icon switching goes through
+  `LauncherIconHelp.changeIcon(String)`, which compares the *value string* against
+  `className.substringAfterLast(".")`. Dropping the two dead fields removed the dependency outright,
+  and the slice's baseline change was a **ratchet-down only** (`appCtx` 2 → 1 in the source package,
+  nothing added). Ask "does anything read this?" before asking "how do I register this?".
+- **A composable should take its context from `LocalContext.current`, not the global `appCtx` — and
+  that is a correctness fix, not a metric dodge.** Same slice: the host-side renderer needed a
+  `Context` to load a mipmap. The gate's rule is about *global* context access (`splitties appCtx`);
+  inside a composable, `LocalContext.current` is the properly scoped idiom (and is exactly what the
+  original code used). Reaching for `appCtx` would have produced a violation that a baseline entry
+  could only paper over. Distinguish "the metric is wrong" (M5-19d: a false positive, fixed by
+  placement) from "the metric is right and my code is wrong" (this one: fix the code).
+- **Migrating a file out of its package breaks *both* directions — and the compiler only sees one of
+  them.** Consumers of the moved file now need an import (M5-19e: `ThemeConfigScreen` needed imports
+  for both the migrated sheet *and* the new host factory), while same-package symbols the file used
+  to see must be imported or supplied. The compiler catches the first, but it is worth running
+  `tools/audit-slice-deps.py <source-dir> <destination-module>` **before** the move so the list is
+  known up front. Note also that host glue added in a slice (here, the `:app` factory
+  `rememberLauncherIconOptions`) is itself detected as a `:app`-private symbol — i.e. **a slice can
+  create the next slice's blockers**, which is a reason to keep host glue thin and to record it.
 - **A pure reimplementation is not a move — it needs tests; a move does not.** The repo's habit for
   hoists is "verify by compiling and by `git diff` being byte-identical", and that is sufficient
   *because the code did not change*. M5-19d replaced AndroidX's `ColorUtils.colorToHSL` (an

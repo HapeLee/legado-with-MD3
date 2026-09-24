@@ -473,4 +473,5 @@
     <string name="ai_generate">生成</string>
     <string name="theme_config_label_color_name">标签 %1$d</string>
     <string name="theme_config_manage_label_colors">管理标签颜色</string>
+    <string name="change_icon">切换图标</string>
 </resources>

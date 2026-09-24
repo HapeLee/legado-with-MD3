@@ -477,4 +477,5 @@
     <string name="ai_generate">Generate</string>
     <string name="theme_config_label_color_name">Label %1$d</string>
     <string name="theme_config_manage_label_colors">Manage Label Colors</string>
+    <string name="change_icon">Change Icon</string>
 </resources>

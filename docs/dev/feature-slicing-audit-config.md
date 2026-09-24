@@ -2425,3 +2425,78 @@ import。我用 `tools/audit-slice-deps.py` 去查，结果它只报了一个**�
 
 **`themeConfig` 至此 `:app` 侧剩 6 个文件**：`LauncherIconPickerSheet`（需图标表契约）、
 VM 612 / Screen 1326 / `ThemeConfig.kt`，以及宿主壳。
+
+### M5-19e：`LauncherIconPickerSheet` → `:feature:settings/themeconfig/`（宿主注入图标表与渲染）
+
+勘察先把两件事查清了，后面所有判断都建立在这两条上：
+
+| 事实 | 依据 |
+|---|---|
+| 原文件尾部的 `LauncherIconItem` / `LauncherIcons` **零外部消费者** | 全仓 grep：除定义文件外无引用；`LauncherIcons.find` 也无人调 |
+| 它的 `label` 与 `component` 两个字段**全仓从未被读过** | 两者只在构造时赋值。换图标走 `LauncherIconHelp.changeIcon(String)`，它按 **value 字符串** 与 `className.substringAfterLast(".")` 比较，与 `ComponentName` 无关 |
+
+**契约形状**照同模块既有先例（`BackgroundImageExtraOption`，M5-19a）：**宿主把数据与回调摊平后
+作为参数传入**，不用 CompositionLocal —— 这是**必需**数据，没有"未安装就降级"的余地：
+
+```kotlin
+class LauncherIconOption(val value: String, val image: @Composable (modifier: Modifier) -> Unit)
+
+fun LauncherIconPickerSheet(
+    show: Boolean, selectedValue: String,
+    icons: List<LauncherIconOption>,     // 宿主给（顺序即展示顺序）
+    onDismissRequest: () -> Unit, onValueChange: (String) -> Unit,
+)
+```
+
+宿主实现在 `:app` 新文件 `platform/LauncherIconOptions.kt`：`rememberLauncherIconOptions()`
+把 `R.mipmap.*` 与 `getCompatDrawable` + `AndroidView(ImageView)` 包成渲染槽，
+与迁移前**逐字等价**（`FIT_CENTER` + `setImageDrawable`、`remember(resId)` 缓存）。
+网格布局、选中态、`key = { it.value }`、`48.dp` 尺寸 **逐字保留**。
+
+#### ⚠️ 两次"别登记假条目，直接消掉债"
+
+1. 把那份带 `appCtx` 的表原样搬到 `platform/`，会让该目录**首次出现「全局 Context 直连」**
+   —— G4 对"新区域"要求为零。但那 9 个 `ComponentName(appCtx, LauncherX::class.java)` 只服务于
+   **从未被读过**的 `component` 字段 ⇒ **删死字段**即真正消债（`themeConfig` 侧计数随本片 2 → 1，
+   按棘轮下调），而不是登记一笔"仅为构造死字段而存在"的债。
+2. 渲染取 drawable 的那处 Context，改回 `LocalContext.current`（原 sheet 本来就是它）——
+   这里本就在 composable 内，**作用域化的 Context 才是正确写法**；护栏针对的是"全局 Context 直连"，
+   不是"任何 Context" ⇒ 债真消掉，`platform/` 零新增条目 ✅。
+
+⇒ `gradle/architecture/legacy-baseline.txt` 本片只有**下调**（`themeConfig` 的 `appCtx` 2 → 1），
+没有新增任何条目。
+
+#### ⚠️ 同包陷阱的 (a) 方向，这次在**调用点**上
+
+`ThemeConfigScreen` 与被迁的 sheet 原先同包 ⇒ 无 import；迁走后**需要两行 import**
+（`...feature.settings.themeconfig.LauncherIconPickerSheet` 与
+`...platform.rememberLauncherIconOptions`）。另外用仓库工具核了一遍 `:app` 侧源目录，它报出
+`rememberLauncherIconOptions` 是 `:app` 私有符号 —— 即**本片在宿主新加的这层胶水，会自己成为
+`ThemeConfigScreen` 迁移时的前置**（已记入下片的账）。
+
+#### 验证
+
+- 四门禁全绿（基线只下调、未新增条目）；`:feature:settings` desktop 编译 + `testAndroidHostTest`、
+  `:app` 编译/单测/打包 + 全模块测试 → **BUILD SUCCESSFUL**
+- 计数 **810 / 1305 零偏离**（纯搬运 + 宿主胶水，按 checklist 不加测试）
+- 资源：`change_icon` × 4 语言**逐字一致**、完整、XML 通过 ✅
+- `lintAppDebug` **5 errors / 102 warnings**（与 M5-19d 完全一致 ⇒ 零 delta）
+
+#### 未验证
+
+真机上的图标网格渲染与点击切换（`AndroidView(ImageView)` 那条路径、`FIT_CENTER` 缩放、
+选中态边框），以及 9 个 `value` 与 manifest 里 8 个 alias + `ic_launcher` 的对应（本片**未动**
+`LauncherIconHelp` 与 manifest，只搬了选择器）。
+
+**`themeConfig` 至此 `:app` 侧剩 5 个文件**（2026-09-24 实测 `rglob('*.kt')`）：
+`ThemeConfigViewModel.kt`(612) · `ThemeConfigScreen.kt`(1326) · `ThemeConfigRouteScreen.kt` ·
+`ThemeConfig.kt`(61) · **`TopBottomBarSettingsSheet.kt`(178)**。
+
+⚠️ **顺带改正一处我自己的记账错误**：前两片我写"剩 17 → 16 → 15 个"是**累减估算**（实测 **16**），
+且把 `TopBottomBarSettingsSheet.kt` 漏出了"余下"清单 —— M5-19c 实际迁的是
+`MainNavigationSettingsSheet` + `NavIconManageSheet`（`git show --stat 94bd05c760` 核过），
+**从未**动 `TopBottomBarSettingsSheet`。与"lint 每片重测"同一失效模式：一个数在几片里被反复引用，
+读起来和新测的一样。⇒ **文件数与清单也必须每片实测**。
+
+下一片建议先做 VM —— 它带着 `LauncherIconHelp` / `ThemeConfigStore` / `MD5Utils` / `postEvent` /
+`toastOnUi` / `rememberLauncherIconOptions`（本片新加的宿主胶水）等一排 `:app` 私有符号。

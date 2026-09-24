@@ -2473,3 +2473,41 @@ filtered 239→238 属"账本变准"）。
 
 **`themeConfig` 剩 6 个文件**：`LauncherIconPickerSheet`（需图标表契约）+ VM 612 / Screen 1326 /
 `ThemeConfig.kt` + 宿主壳。
+
+### M5-19e 已完成（2026-09-24）：`LauncherIconPickerSheet` → 共享层（宿主注入图标表与渲染）
+
+勘察查出两件事，后面所有判断都靠它们：原文件尾部的 `LauncherIcons` / `LauncherIconItem`
+**零外部消费者**；其 `label` / `component` **全仓从未被读过**（换图标走
+`LauncherIconHelp.changeIcon(String)`，按 value 字符串比 `className`，与 `ComponentName` 无关）。
+
+契约照同模块先例 `BackgroundImageExtraOption`（宿主摊平数据作为参数，不用 CompositionLocal）：
+`icons: List<LauncherIconOption>`，每项是 `value` + 一个 `@Composable (Modifier) -> Unit` 渲染槽。
+宿主实现在 `:app` 新文件 `platform/LauncherIconOptions.kt`，渲染与迁移前**逐字等价**。
+
+⚠️ **两次"别登记假条目，直接消掉债"**：① 带 `appCtx` 的表原样搬进 `platform/` 会让该目录首次出现
+「全局 Context 直连」（G4 对新区域要求为零），而那 9 个 `ComponentName(appCtx, …)` 只服务于
+**从未被读过**的 `component` ⇒ **删死字段**即真正消债；② 渲染取 drawable 改回
+`LocalContext.current`（原 sheet 本就如此）—— composable 内作用域化的 Context 才是正确写法。
+⇒ 基线本片**只有下调**（`themeConfig` 的 `appCtx` 2 → 1），**没有新增任何条目** ✅。
+
+⚠️ 同包陷阱的 (a) 方向这次落在**调用点**：`ThemeConfigScreen` 需要两行新 import（被迁的 sheet +
+宿主工厂）。工具另报出 `rememberLauncherIconOptions` 是 `:app` 私有符号 —— 即**本片新加的宿主胶水
+会成为 `ThemeConfigScreen` 迁移时的前置**，已记账。
+
+验证：四门禁全绿 + `:feature:settings` desktop 编译/`testAndroidHostTest` + `:app` 编译、单测、
+打包 + 全模块测试 → **BUILD SUCCESSFUL**；计数 **810 / 1305 零偏离**；资源 `change_icon` × 4
+语言逐字一致；lint **5 errors / 102 warnings**（零 delta）。
+
+未验证：真机图标网格渲染与点击切换（`AndroidView(ImageView)`、`FIT_CENTER`、选中态边框）；
+本片**未动** `LauncherIconHelp` 与 manifest。
+
+**`themeConfig` 剩 5 个文件**（2026-09-24 实测）：`ThemeConfigViewModel.kt`(612) ·
+`ThemeConfigScreen.kt`(1326) · `ThemeConfigRouteScreen.kt` · `ThemeConfig.kt`(61) ·
+**`TopBottomBarSettingsSheet.kt`(178)**。
+
+⚠️ 改正一处记账错误：M5-19d/e 的"剩 17 → 16 → 15"是**累减估算**（实测 **16**），且"余下"清单漏了
+`TopBottomBarSettingsSheet.kt`（M5-19c 迁的是 `MainNavigationSettingsSheet` + `NavIconManageSheet`，
+`git show --stat` 核过）。⇒ 文件数与清单每片实测，不能拿上一片的值往下减。
+
+下一片建议先做 VM —— 它带着 `LauncherIconHelp` / `ThemeConfigStore` / `MD5Utils` / `postEvent` /
+`toastOnUi` / `rememberLauncherIconOptions`（本片新加的宿主胶水）等一排 `:app` 私有符号。

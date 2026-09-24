@@ -53,7 +53,14 @@ appCtx|app/main/io/legado/app/ui/book/search|1
 # 改成「发枚举 + UI 侧查表」（同 about 的 `AboutMessage.localizedText()`）⇒ 本目录
 # 的 `appCtx` 直连归零，条目删除（棘轮只降不升）。
 
-appCtx|app/main/io/legado/app/ui/config/themeConfig|2
+# M5-19e：`LauncherIconPickerSheet` 迁进 `:feature:settings/themeconfig/`，它文件尾部那份图标表
+# 随之搬到宿主（`app/.../platform/LauncherIconOptions.kt`）⇒ 本目录的 `appCtx` 直连 2 → **1**。
+# ⚠️ 搬家时把表里两个**从未被读过**的字段（`label` / `component`）删掉了：`component` 是那 9 个
+# `ComponentName(appCtx, LauncherX::class.java)` 的唯一用途，而换图标走的是
+# `LauncherIconHelp.changeIcon(String)`（按 value 字符串比 `className`）。删掉死字段即真正消掉
+# 这笔债，而不是把它搬到 `platform/` 去 —— 那会让新目录**首次出现**「全局 Context 直连」，
+# 属 G4 的"新区域必须为零"，只能靠登记假条目解决。
+appCtx|app/main/io/legado/app/ui/config/themeConfig|1
 appCtx|app/main/io/legado/app/ui/rss/article|1
 appCtx|app/main/io/legado/app/ui/rss/read|1
 appCtx|app/main/io/legado/app/ui/widget/code|1

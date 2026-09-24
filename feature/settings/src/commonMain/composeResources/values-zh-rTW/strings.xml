@@ -460,4 +460,5 @@
     <string name="ai_generate">Generate</string>
     <string name="theme_config_label_color_name">標籤 %1$d</string>
     <string name="theme_config_manage_label_colors">管理標籤顏色</string>
+    <string name="change_icon">切換圖示</string>
 </resources>
