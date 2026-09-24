@@ -2157,7 +2157,6 @@
     <string name="text_shadow_x">X 偏移</string>
     <string name="text_shadow_y">Y 偏移</string>
     <string name="text_typeface">字體樣式</string>
-    <string name="theme_config_add_nav_icon">添加 %1$s 圖標</string>
     <string name="theme_config_blur_radius_performance_summary">較高模糊半徑可能降低效能</string>
     <string name="theme_config_bottom_bar_lens_radius">底部欄模糊強度</string>
     <string name="theme_config_bottom_bar_lens_radius_summary">控制液態玻璃扭曲強度</string>
@@ -2166,9 +2165,6 @@
     <string name="theme_config_label_color_name">標籤 %1$d</string>
     <string name="theme_config_manage_label_colors">管理標籤顏色</string>
     <string name="theme_config_miuix_experimental_warning">Miuix 目前為實驗性功能，不適用於 View 介面。</string>
-    <string name="theme_config_nav_icons">導航欄圖標</string>
-    <string name="theme_config_nav_icons_custom_count">已設定 %1$d 個自訂圖標</string>
-    <string name="theme_config_nav_icons_default">使用預設圖標</string>
     <string name="theme_config_no_font_files">無字體檔案</string>
     <string name="theme_manage_apply">套用</string>
     <string name="theme_manage_bottom_bar_blur_opacity">底部欄模糊不透明度</string>

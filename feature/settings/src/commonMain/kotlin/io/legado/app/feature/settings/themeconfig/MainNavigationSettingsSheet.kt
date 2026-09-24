@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.themeConfig
+package io.legado.app.feature.settings.themeconfig
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,20 +16,51 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringArrayResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.legado.app.R
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.default_home_page
+import io.legado.app.feature.settings.res.main_navigation_settings
+import io.legado.app.feature.settings.res.nav_label_mode
+import io.legado.app.feature.settings.res.theme_config_nav_icons
+import io.legado.app.feature.settings.res.theme_config_nav_icons_custom_count
+import io.legado.app.feature.settings.res.theme_config_nav_icons_default
+import io.legado.app.feature.settings.res.label_vis_mode
+import io.legado.app.feature.settings.res.label_vis_mode_value
+import io.legado.app.feature.settings.res.home
+import io.legado.app.feature.settings.res.bookshelf
+import io.legado.app.feature.settings.res.discovery
+import io.legado.app.feature.settings.res.rss
+import io.legado.app.feature.settings.res.my
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.ui.main.MainDestination
-import io.legado.app.ui.main.toRes
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.utils.move
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
+import io.legado.app.ui.main.MainNavLabel
 import sh.calvin.reorderable.rememberReorderableLazyListState
+
+/**
+ * M5-19c：从 `:app` 的 `ui/config/themeConfig/MainNavigationSettingsSheet.kt` 迁入。
+ *
+ * **正文逐字保留**（脚本化等价改写），改写类别：
+ * 1. 包名 → `io.legado.app.feature.settings.themeconfig`；
+ * 2. `stringResource` / `stringArrayResource` → CMP 版，`stringArrayResource(…)` 补
+ *    `.toTypedArray()`（CMP 返回 `List`，组件要 `Array`）；
+ * 3. `R.string.*` → `Res.string.*` + 逐 key import；`R.array.*` 同理；
+ * 4. ⚠️ `stringResource(x.label.toRes())` → `stringResource(mainNavLabelRes(x.label))`：
+ *    `toRes()` 是**宿主**的文案映射（`:app/ui/main/MainNavLabelText.kt`），共享层用不了 ⇒
+ *    改为本文件内的 `mainNavLabelRes`（`Res.string.home/…`）。这与 M5-16a/19b 的
+ *    「共享层承载语义、宿主承载文案」同向：共享层自己要有文案时就用 `Res`。
+ *
+ * 前置（M5-19c-pre 已就位）：`MainDestination` / `MainDestinationIcons` / `MutableList.move`
+ * 都已上提到共享层。
+ */
 
 @Composable
 fun MainNavigationSettingsSheet(
@@ -88,7 +119,7 @@ fun MainNavigationSettingsSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.main_navigation_settings),
+        title = stringResource(Res.string.main_navigation_settings),
     ) {
         Column(
             modifier = Modifier
@@ -96,17 +127,17 @@ fun MainNavigationSettingsSheet(
                 .padding(bottom = 24.dp),
         ) {
             CompactDropdownSettingItem(
-                title = stringResource(R.string.default_home_page),
+                title = stringResource(Res.string.default_home_page),
                 selectedValue = selectedDefault,
-                displayEntries = visibleItems.map { stringResource(it.label.toRes()) }.toTypedArray(),
+                displayEntries = visibleItems.map { stringResource(mainNavLabelRes(it.label)) }.toTypedArray(),
                 entryValues = visibleItems.map { it.route }.toTypedArray(),
                 onValueChange = onSetDefault,
             )
             CompactDropdownSettingItem(
-                title = stringResource(R.string.nav_label_mode),
+                title = stringResource(Res.string.nav_label_mode),
                 selectedValue = settings.labelVisibilityMode,
-                displayEntries = stringArrayResource(R.array.label_vis_mode),
-                entryValues = stringArrayResource(R.array.label_vis_mode_value),
+                displayEntries = stringArrayResource(Res.array.label_vis_mode).toTypedArray(),
+                entryValues = stringArrayResource(Res.array.label_vis_mode_value).toTypedArray(),
                 onValueChange = onSetLabelVisibilityMode,
             )
             Spacer(modifier = Modifier.padding(bottom = 4.dp))
@@ -123,11 +154,11 @@ fun MainNavigationSettingsSheet(
                 settings.navIconMySelected,
             ).count { it.isNotEmpty() }
             CompactClickableSettingItem(
-                title = stringResource(R.string.theme_config_nav_icons),
+                title = stringResource(Res.string.theme_config_nav_icons),
                 description = if (customIconCount > 0) {
-                    stringResource(R.string.theme_config_nav_icons_custom_count, customIconCount)
+                    stringResource(Res.string.theme_config_nav_icons_custom_count, customIconCount)
                 } else {
-                    stringResource(R.string.theme_config_nav_icons_default)
+                    stringResource(Res.string.theme_config_nav_icons_default)
                 },
                 onClick = { showNavigationIcons = true },
             )
@@ -156,7 +187,7 @@ fun MainNavigationSettingsSheet(
                             }
                             onSetOrder(navigationItems.joinToString(",") { it.route })
                         },
-                        title = stringResource(destination.label.toRes()),
+                        title = stringResource(mainNavLabelRes(destination.label)),
                         isEnabled = true,
                         containerColor = LegadoTheme.colorScheme.onSheetContent,
                         onEnabledChange = {
@@ -172,7 +203,7 @@ fun MainNavigationSettingsSheet(
                         ReorderableSelectionItem(
                             state = reorderableState,
                             key = destination.route,
-                            title = stringResource(destination.label.toRes()),
+                            title = stringResource(mainNavLabelRes(destination.label)),
                             isEnabled = false,
                             canReorder = false,
                             containerColor = LegadoTheme.colorScheme.onSheetContent,
@@ -193,4 +224,13 @@ fun MainNavigationSettingsSheet(
         onSelectIcon = onRequestNavigationIcon,
         onClearIcon = onClearNavigationIcon,
     )
+}
+
+/** M5-19c：共享侧的 [MainNavLabel] → 文案（宿主那份 `toRes()` 不适用于共享层）。 */
+private fun mainNavLabelRes(label: MainNavLabel): StringResource = when (label) {
+    MainNavLabel.Home -> Res.string.home
+    MainNavLabel.Bookshelf -> Res.string.bookshelf
+    MainNavLabel.Explore -> Res.string.discovery
+    MainNavLabel.Rss -> Res.string.rss
+    MainNavLabel.My -> Res.string.my
 }

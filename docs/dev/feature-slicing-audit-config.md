@@ -2309,3 +2309,61 @@ import 零改动**），且触发条件都是「共享层出现消费者」（`t
 导航栏图标/文案在 5 个目的地 × 两套引擎（Material3 / Miuix）× 选中态的渲染。需冒烟。
 
 **下一步**：迁两个 sheet（前置已全部到位）。
+
+### M5-19c：`MainNavigationSettingsSheet` + `NavIconManageSheet` → `:feature:settings/themeconfig/`
+
+前置（M5-19c-pre 的三个上提）全部到位后，两片一并迁（195 + 226 行）。常规四类改写之外，本片有
+**一处新的改写类别**与**两个飞行中才暴露的阻塞**：
+
+#### 新的改写类别：共享层自己需要文案时用 `Res`
+
+迁移前这两处是 `stringResource(it.label.toRes())` —— `toRes()` 是**宿主**的文案映射
+（`:app/ui/main/MainNavLabelText.kt`），共享层用不了。改法是在**共享侧**再写一份映射：
+
+```kotlin
+private fun mainNavLabelRes(label: MainNavLabel): StringResource = when (label) {
+    MainNavLabel.Home -> Res.string.home
+    …
+}
+```
+
+—— 与 M5-16a/19b「共享层承载语义、宿主承载文案」同一判据的两面：**当共享层自己确实要渲染文案时，
+就用 `Res`**（对应 5 个 key 一并搬进 feature）。共 3 处调用点。
+
+#### 两个飞行中才暴露的阻塞
+
+1. **`sh.calvin.reorderable` 依赖**：`MainNavigationSettingsSheet` 用
+   `rememberReorderableLazyListState` 做拖拽重排，而 `:feature:settings` 没有这个依赖。
+   查过归属：`:app` / `:core:ui` / `:core:designsystem` / 四个规则 Feature
+   （dict / replacerules / tagrules / txttocrules）**每个用它的模块各自声明**，且都注明它是 KMP
+   制品（有 `reorderable-jvm` 变体）⇒ 给 feature 加一行是**既定做法**，已照该模块风格补注释。
+2. **文件内的 `@param:StringRes val labelRes: Int`**：`NavIconManageSheet` 里那个**私有**
+   `NavIconDestination` 把标签声明成 `Int`（`R.string` 时代）—— 我的脚本只按 `R.string.` 改写，
+   所以这里编译才报 `StringResource` vs `Int`。⇒ 已改成 `StringResource` 并清掉无用的
+   `androidx.annotation.StringRes` import。
+   ⚠️ 教训：**共享化一个文件时，要 grep 它内部的 `@StringRes` / `Int` 资源字段**，不能只看 `R.string.`
+   的调用点（这是第 2 次遇到：M5-16a 是在契约里，这次在私有的数据类里）。
+
+#### 死资源
+
+16 条里 **7 条**在 `:app` 变死（`theme_config_nav_icons*` 一族），删 22 项；另 9 条仍在用
+（`default_home_page` / `main_navigation_settings` / `nav_label_mode` / `home` / `bookshelf` /
+`discovery` / `rss` / `my` / `delete` —— 后 5 个是导航标签，`MainNavLabelText.toRes()` 就在用它们）。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需变动**）
+- `:feature:settings` desktop 编译 + `:app` 编译/单测/打包 + designsystem/settings 测试
+  → **BUILD SUCCESSFUL**
+- 计数 **806 / 1301 零偏离**（纯 UI 迁移 + 一处依赖声明）
+- 资源：16 条 × 4 语言**逐字一致**、完整、XML 通过 ✅；`tools/check-resource-indirection.py` **0 项** ✅
+- `lintAppDebug` 重测 **5 errors / 102 warnings**（live 与之前一致；filtered 239 → 238
+  —— 删掉的 `:app` 字符串里有一条原本被基线压着，属**账本变准**而非新债）
+
+#### 未验证
+
+两个 sheet 的真实交互：导航项**拖拽重排**（`reorderable` 在本模块首次使用）、显隐开关、默认主页
+下拉、导航图标选择与恢复默认、两套引擎下的渲染。需真机/desktop 冒烟。
+
+**`themeConfig` 至此 `:app` 侧剩 7 个文件**（VM 612 / Screen 1326 / `ThemeConfig.kt` 61 +
+`LabelColorManageSheet` / `LauncherIconPickerSheet` + 宿主壳等）。

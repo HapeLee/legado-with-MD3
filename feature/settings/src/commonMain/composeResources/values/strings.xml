@@ -460,4 +460,18 @@
     <string name="theme_pack">Theme Management</string>
     <string name="add">Add</string>
     <string name="close">Close</string>
+    <string name="bookshelf">Bookshelf</string>
+    <string name="discovery">Discovery</string>
+    <string name="home">Home</string>
+    <string name="main_navigation_settings">Home and navigation</string>
+    <string name="my">Me</string>
+    <string name="nav_label_mode">Navigation Bar Label Mode</string>
+    <string name="rss">RSS Feeds</string>
+    <string name="theme_config_add_nav_icon">Add %1$s icon</string>
+    <string name="theme_config_nav_icon_selected">Selected</string>
+    <string name="theme_config_nav_icon_unselected">Unselected</string>
+    <string name="theme_config_nav_icons">Navigation Bar Icons</string>
+    <string name="theme_config_nav_icons_custom_count">%1$d custom icons set</string>
+    <string name="theme_config_nav_icons_default">Using default icons</string>
+    <string name="theme_config_replace_nav_icon">Replace image</string>
 </resources>

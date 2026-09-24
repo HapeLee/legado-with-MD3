@@ -63,6 +63,7 @@ import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.feature.settings.themeconfig.BackgroundImageExtraOption
 import io.legado.app.feature.settings.themeconfig.BackgroundImageManageSheet
+import io.legado.app.feature.settings.themeconfig.MainNavigationSettingsSheet
 import io.legado.app.feature.settings.themeconfig.BackgroundImageTarget
 import io.legado.app.feature.settings.themeconfig.ContainerBackgroundTarget
 import io.legado.app.feature.settings.themeconfig.ThemeConfigDialog

@@ -2405,3 +2405,36 @@ CMP **不参与 Android 资源合并** ⇒ 每个语言目录都要自带一份�
 资源间接引用检查 **0 项**。
 
 **下一步**：迁两个 sheet（前置已全部到位）。
+
+### M5-19c 已完成（2026-09-24）：两个导航 sheet → `:feature:settings/themeconfig/`
+
+前置（三个上提）到位后一并迁（195 + 226 行）。三类值得记的东西：
+
+**① 新的改写类别 —— 共享层自己需要文案时用 `Res`。** 迁移前是
+`stringResource(it.label.toRes())`，而 `toRes()` 是宿主的映射 ⇒ 改在共享侧再写一份
+`mainNavLabelRes(label): StringResource`（`Res.string.home/…`，5 个 key 一并搬进 feature）。
+与 M5-16a/19b 同一判据的另一面：共享层自己确实要渲染文案时，就用 `Res`。
+
+**② `sh.calvin.reorderable` 依赖**：`MainNavigationSettingsSheet` 用它做拖拽重排，而
+`:feature:settings` 没有。查过归属：`:app` / `:core:ui` / designsystem / 四个规则 Feature
+**每个用它的模块各自声明**（都注明是 KMP 制品、有 `reorderable-jvm` 变体）⇒ 给 feature 加一行
+是既定做法，已照该模块风格补注释。
+
+**③ 文件内的 `@param:StringRes val labelRes: Int`**：`NavIconManageSheet` 的**私有**数据类把标签
+声明成 `Int`，而机械改写只跟着 `R.string.` 走 ⇒ 编译才暴露（`StringResource` vs `Int`）。
+⇒ 已改成 `StringResource` 并清掉无用 import。**教训**：共享化一个文件时要 grep 它内部的
+`@StringRes`/`Int` 资源字段（M5-16a 在契约里遇到过，这次在私有数据类里）。
+
+死资源：16 条里 7 条在 `:app` 变死，删 22 项；其余 9 条仍在用（含 5 个导航标签，宿主
+`MainNavLabelText.toRes()` 在用它们）。
+
+验证：四门禁全绿（G4 无需变动）+ `:feature:settings`/`:app` 编译、单测、打包 + 相关测试 →
+**BUILD SUCCESSFUL**；计数 **806 / 1301 零偏离**；资源 16 × 4 语言逐字一致 + 无残留；
+`tools/check-resource-indirection.py` 0 项；lint 5 errors / 102 warnings（live 一致，
+filtered 239→238 属"账本变准"）。
+
+未验证：拖拽重排（本模块首次用 `reorderable`）、显隐开关、默认主页下拉、导航图标选择与恢复默认、
+两套引擎下的渲染。
+
+**下一步**：`themeConfig` 剩 7 个文件 —— `LabelColorManageSheet` + `LauncherIconPickerSheet`
+（图标/颜色档）与核心三件套（VM 612 / Screen 1326 / `ThemeConfig.kt` 61）。

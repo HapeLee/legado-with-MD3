@@ -1,6 +1,5 @@
-package io.legado.app.ui.config.themeConfig
+package io.legado.app.feature.settings.themeconfig
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,10 +20,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import io.legado.app.R
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.bookshelf
+import io.legado.app.feature.settings.res.delete
+import io.legado.app.feature.settings.res.discovery
+import io.legado.app.feature.settings.res.home
+import io.legado.app.feature.settings.res.my
+import io.legado.app.feature.settings.res.rss
+import io.legado.app.feature.settings.res.theme_config_add_nav_icon
+import io.legado.app.feature.settings.res.theme_config_nav_icon_selected
+import io.legado.app.feature.settings.res.theme_config_nav_icon_unselected
+import io.legado.app.feature.settings.res.theme_config_nav_icons
+import io.legado.app.feature.settings.res.theme_config_replace_nav_icon
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.main.mainDestinationIcon
@@ -36,15 +45,35 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
 
 private data class NavIconDestination(
     val key: String,
-    @param:StringRes val labelRes: Int,
+    val labelRes: StringResource,
     val unselectedPath: String,
     val selectedPath: String,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * M5-19c：从 `:app` 的 `ui/config/themeConfig/NavIconManageSheet.kt` 迁入。
+ *
+ * **正文逐字保留**（脚本化等价改写），改写类别：
+ * 1. 包名 → `io.legado.app.feature.settings.themeconfig`；
+ * 2. `stringResource` / `stringArrayResource` → CMP 版，`stringArrayResource(…)` 补
+ *    `.toTypedArray()`（CMP 返回 `List`，组件要 `Array`）；
+ * 3. `R.string.*` → `Res.string.*` + 逐 key import；`R.array.*` 同理；
+ * 4. ⚠️ `stringResource(x.label.toRes())` → `stringResource(mainNavLabelRes(x.label))`：
+ *    `toRes()` 是**宿主**的文案映射（`:app/ui/main/MainNavLabelText.kt`），共享层用不了 ⇒
+ *    改为本文件内的 `mainNavLabelRes`（`Res.string.home/…`）。这与 M5-16a/19b 的
+ *    「共享层承载语义、宿主承载文案」同向：共享层自己要有文案时就用 `Res`。
+ *
+ * 前置（M5-19c-pre 已就位）：`MainDestination` / `MainDestinationIcons` / `MutableList.move`
+ * 都已上提到共享层。
+ */
+
 @Composable
 fun NavIconManageSheet(
     show: Boolean,
@@ -56,30 +85,30 @@ fun NavIconManageSheet(
     val destinations = listOf(
         NavIconDestination(
             "home",
-            R.string.home,
+            Res.string.home,
             settings.navIconHome,
             settings.navIconHomeSelected,
         ),
         NavIconDestination(
             "bookshelf",
-            R.string.bookshelf,
+            Res.string.bookshelf,
             settings.navIconBookshelf,
             settings.navIconBookshelfSelected,
         ),
         NavIconDestination(
             "explore",
-            R.string.discovery,
+            Res.string.discovery,
             settings.navIconExplore,
             settings.navIconExploreSelected,
         ),
-        NavIconDestination("rss", R.string.rss, settings.navIconRss, settings.navIconRssSelected),
-        NavIconDestination("my", R.string.my, settings.navIconMy, settings.navIconMySelected),
+        NavIconDestination("rss", Res.string.rss, settings.navIconRss, settings.navIconRssSelected),
+        NavIconDestination("my", Res.string.my, settings.navIconMy, settings.navIconMySelected),
     )
 
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.theme_config_nav_icons),
+        title = stringResource(Res.string.theme_config_nav_icons),
     ) {
         Column(
             modifier = Modifier
@@ -94,8 +123,8 @@ fun NavIconManageSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(modifier = Modifier.weight(1f))
-                NavigationIconColumnHeader(stringResource(R.string.theme_config_nav_icon_unselected))
-                NavigationIconColumnHeader(stringResource(R.string.theme_config_nav_icon_selected))
+                NavigationIconColumnHeader(stringResource(Res.string.theme_config_nav_icon_unselected))
+                NavigationIconColumnHeader(stringResource(Res.string.theme_config_nav_icon_selected))
             }
             destinations.forEach { destination ->
                 NormalCard(
@@ -125,13 +154,13 @@ fun NavIconManageSheet(
                             modifier = Modifier.weight(1f),
                         )
                         NavigationIconSlot(
-                            label = stringResource(R.string.theme_config_nav_icon_unselected),
+                            label = stringResource(Res.string.theme_config_nav_icon_unselected),
                             path = destination.unselectedPath,
                             onSelect = { onSelectIcon(destination.key) },
                             onClear = { onClearIcon(destination.key) },
                         )
                         NavigationIconSlot(
-                            label = stringResource(R.string.theme_config_nav_icon_selected),
+                            label = stringResource(Res.string.theme_config_nav_icon_selected),
                             path = destination.selectedPath,
                             onSelect = { onSelectIcon("${destination.key}:selected") },
                             onClear = { onClearIcon("${destination.key}:selected") },
@@ -172,7 +201,7 @@ private fun NavigationIconSlot(
                     AppIcon(
                         imageVector = Icons.Default.Add,
                         contentDescription = stringResource(
-                            R.string.theme_config_add_nav_icon,
+                            Res.string.theme_config_add_nav_icon,
                             label
                         ),
                         modifier = Modifier.size(24.dp),
@@ -186,14 +215,14 @@ private fun NavigationIconSlot(
             onDismissRequest = { menuExpanded = false },
         ) { dismiss ->
             RoundDropdownMenuItem(
-                text = stringResource(R.string.theme_config_replace_nav_icon),
+                text = stringResource(Res.string.theme_config_replace_nav_icon),
                 onClick = {
                     dismiss()
                     onSelect()
                 },
             )
             RoundDropdownMenuItem(
-                text = stringResource(R.string.delete),
+                text = stringResource(Res.string.delete),
                 onClick = {
                     dismiss()
                     onClear()

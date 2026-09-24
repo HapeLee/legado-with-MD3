@@ -68,6 +68,11 @@ kotlin {
             implementation(libs.compose.multiplatform.resources)
             implementation(libs.kotlinx.collections.immutable)
             implementation(libs.kotlinx.coroutines.core)
+            // M5-19c：`MainNavigationSettingsSheet` 用 `rememberReorderableLazyListState`
+            // 做导航项拖拽重排。与 `:core:ui` / `:core:designsystem` / 四个规则 Feature
+            // （dict / replacerules / tagrules / txttocrules）同形：每个用它的模块自行声明，
+            // 且它实测是 KMP 制品（`reorderable-jvm` 变体存在）。
+            implementation(libs.reorderable)
             // VM 基类，取 `androidx.lifecycle` 的 **KMP 坐标**（与 about / 四个规则 Feature 同版本）。
             implementation(libs.androidx.lifecycle.viewmodel.kmp)
             implementation(libs.androidx.lifecycle.runtime.compose.kmp)

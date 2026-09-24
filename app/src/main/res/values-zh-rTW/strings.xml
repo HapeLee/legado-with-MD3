@@ -1713,10 +1713,6 @@
     <string name="theme_config_blur_radius_performance_summary">較大的模糊半徑可能降低效能</string>
     <string name="theme_config_divider_width">分隔線寬度</string>
     <string name="theme_config_divider_length">分隔線長度</string>
-    <string name="theme_config_nav_icons">導航欄圖示</string>
-    <string name="theme_config_nav_icons_custom_count">已設定 %1$d 個自訂圖示</string>
-    <string name="theme_config_nav_icons_default">使用預設圖示</string>
-    <string name="theme_config_add_nav_icon">新增 %1$s 圖示</string>
     <string name="theme_config_no_font_files">無字體檔案</string>
     <string name="change_icon_success">圖示已更新</string>
     <string name="replace_rule_title_setting">設定取代規則</string>

@@ -628,6 +628,22 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   and `lintAppDebug` does not scan designsystem). The real defect was procedural: several slices
   had reported "lint unchanged (94)" by quoting a value measured back at M5-10a. A stale number
   reads exactly like a fresh one.
+- **Grep a file for `@StringRes` / `Int` resource *fields*, not just for `R.string.*` call sites.**
+  Measured twice: M5-16a in a contract (`SelectAppFont`'s type), M5-19c inside a migrated sheet's
+  **private** data class (`@param:StringRes val labelRes: Int`), where the mechanical rewrite
+  (which only follows `R.string.` usages) left an `Int` field receiving a `StringResource` and the
+  error surfaced only at compile. The "shared layer carries semantics, the host carries text" rule
+  has a second face worth stating explicitly: **when the shared layer genuinely renders text itself,
+  give it a `Res`-based mapping** (that is what the new `mainNavLabelRes` helper is), and add the
+  referenced keys to the module's `composeResources`.
+- **A migrated file may need a dependency that the target module does not declare — check how this
+  repo handles that library elsewhere before deciding.** M5-19c: `MainNavigationSettingsSheet` uses
+  `sh.calvin.reorderable`, and `:feature:settings` did not have it. The convention was discoverable:
+  `:app`, `:core:ui`, `:core:designsystem` and four feature modules each declare `libs.reorderable`
+  themselves, each with a comment noting it is a KMP artifact with a `reorderable-jvm` variant.
+  So the correct move was one line in the target module's `commonMain.dependencies`, written in that
+  file's commenting style (which documents *why* the module needs it) — not a change to the shared
+  module, and not a workaround.
 - **Treat "this stays here because X" KDocs as a to-do list — hoisting X invalidates the premise.**
   Two instances so far: `AppTabRow.kt` said `CardTabRow` was deliberately left behind "until a
   non-Android consumer appears" (M5-9b-pre then moved it), and `MainDestinationIcons.kt` said the
