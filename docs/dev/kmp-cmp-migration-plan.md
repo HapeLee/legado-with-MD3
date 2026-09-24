@@ -2292,3 +2292,37 @@ CMP **不参与 Android 资源合并** ⇒ 每个语言目录都要自带一份�
 | 4 | M5-19d+ | `ThemeConfigContract`(109) + VM(612) + Screen(1326) + `ThemeConfig.kt`(61) | VM 那 7 个 `:app` 符号混着**文件/字体/主题包存储**一族（`FileDoc`/`FileUtils`/`MD5Utils`/`externalFiles`/`inputStream`/`openInputStream`）⇒ 大概率要 `ThemeConfigPlatform`；Screen 里还挂着字体选择（`FontFolderState`/`FontSelectSheet`） |
 
 **下一步**：M5-19a（两个零阻塞 sheet）。
+
+### M5-19a 已完成（2026-09-24）：⚠️ 只迁成 1 个；另一个撞上**同包前置**
+
+计划里「两个 ✅ 无」的那对，实际只有一个能独立迁走：
+- **`BackgroundImageManageSheet`(199) 迁成** → `:feature:settings/themeconfig/`（4 条字符串）。
+- **`TopBottomBarSettingsSheet`(177) 退回 `:app`** —— 它无 import 地用了**同包的
+  `ThemeConfigIntent`**，而那个契约还没迁（属第 4 档）。
+
+#### ⚠️ 同包陷阱有两个方向，按 import 解析的勘察两边都看不见
+
+| 方向 | 例子 | 表现 |
+|---|---|---|
+| **(a) 往里用** | `TopBottomBarSettingsSheet` 用同包 `ThemeConfigIntent`（声明在 `ThemeConfigContract.kt`） | 勘察判「✅ 无」，一 `git mv` 就 `Unresolved reference`（M5-15b 同一类） |
+| **(b) 往外被用** | 迁移**后**才暴露：`ThemeConfigScreen` 无 import 地用 `BackgroundImageExtraOption`，而该符号是**被迁走的文件声明的** | 迁走后**兄弟文件**编译失败 |
+
+#### 工具升级：同包扫描 + **目标模块**参数
+
+`tools/audit-slice-deps.py` 现在多一节「同包陷阱」扫描（两方向都查），并接受**第二个参数 = 目标模块键**
+（`python tools/audit-slice-deps.py <dir> feature:settings`）—— 因为同包引用只在**跨模块**时才致命，
+判据是「迁到目标模块**之后**还成不成立」。实测它报出了 `TopBottomBarSettingsSheet` → `ThemeConfigIntent`
+这一条（**正是绊倒我的那条**），整个 `themeConfig` 报 24 处，等于把剩余各档的**前置图**列了出来。
+另修一处假阳性：文件**自己声明**的符号不算。
+
+#### 顺带修正了档位顺序
+
+契约（`ThemeConfigContract`）其实是**多数 sheet 的前置** ⇒ 原「由易到难」的档位表要按**依赖**重排：
+先迁契约（连同它声明的 `ThemeConfigIntent`/`UiState`/`Effect`/`Dialog`/`ThemeConfigSheet`），再回头做
+第 2/3 档的四个 sheet。
+
+退回时连带撤掉了 `TopBottomBarSettingsSheet` 的 21 条字符串与 1 组数组（不留"预置"）。
+验证：四门禁全绿 + 全模块测试与 `:app` 编译/单测/打包 → **BUILD SUCCESSFUL**；计数 **806 / 1301 零偏离**；
+资源 4 × 4 语言逐字一致；`:app` 这 4 条**零死资源**；lint 重测**零 delta**。
+
+**下一步**：`ThemeConfigContract`(109 行，唯一阻塞 `FileDoc`)。

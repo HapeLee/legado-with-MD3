@@ -628,6 +628,26 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   and `lintAppDebug` does not scan designsystem). The real defect was procedural: several slices
   had reported "lint unchanged (94)" by quoting a value measured back at M5-10a. A stale number
   reads exactly like a fresh one.
+- ⚠️ **The same-package trap has two directions, and neither leaves an import behind.** Measured in
+  M5-19a: one sheet used the same-package `ThemeConfigIntent` (declared in a sibling file that had
+  not been migrated) — invisible to an import-based survey, so it "looked clean" and failed on
+  `git mv`. The other direction surfaced only *after* migrating: the migrated file **declared**
+  `BackgroundImageExtraOption`, and a same-package sibling (`ThemeConfigScreen`) used it with no
+  import — so removing the file broke the sibling. Rule: before migrating a file out of a package,
+  check **both** — (a) every same-package symbol it uses that lives in another module, and (b) every
+  symbol it *declares* that same-package siblings reference without an import. `tools/audit-slice-deps.py`
+  now does both, given the **destination module key** as its second argument (`python
+  tools/audit-slice-deps.py <dir> feature:settings`), because the criterion is "does this break
+  *after* moving to the destination", not "is this broken now". Two implementation notes from that
+  work: a file's **own** declarations must be excluded (otherwise every file reports itself), and
+  the destination must be a parameter (with no destination the check cannot distinguish
+  same-module same-package — which is perfectly legal — from cross-module).
+- **A slice that comes out smaller than planned is fine — but re-check the plan's *order*, not just
+  its size.** M5-19a planned two "zero-blocker" sheets and shipped one; reverting the second was
+  correct (its prerequisite had not moved). The more valuable consequence was discovering that the
+  contract file is a prerequisite for *most* of the remaining sheets, i.e. the difficulty-ordered
+  tier list had to be re-sorted by **dependency**. When a revert happens, spend a minute on what
+  it implies for the remaining order — a wrong order costs a repeat of the same discovery.
 - **Survey with `tools/audit-slice-deps.py`, not with a fresh ad-hoc script.** The hardened survey
   lives in the repo: it indexes every module including `:app` (whose paths have no module segment),
   indexes `fun` / `val` / extension properties as well as classes, resolves each import to

@@ -458,4 +458,6 @@
     <string name="theme_manage_save_theme">Save Theme</string>
     <string name="theme_manage_saved_themes">Saved Themes</string>
     <string name="theme_pack">Theme Management</string>
+    <string name="add">Add</string>
+    <string name="close">Close</string>
 </resources>

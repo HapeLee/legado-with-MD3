@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.themeConfig
+package io.legado.app.feature.settings.themeconfig
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +17,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import io.legado.app.R
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.add
+import io.legado.app.feature.settings.res.close
+import io.legado.app.feature.settings.res.day
+import io.legado.app.feature.settings.res.night
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -28,6 +31,7 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.text.AppText
+import org.jetbrains.compose.resources.stringResource
 
 /** 背景图片对应的额外选项：应用背景图为模糊，大容器/项目背景图为透明度。 */
 sealed interface BackgroundImageExtraOption {
@@ -52,6 +56,18 @@ sealed interface BackgroundImageExtraOption {
  * 有图时显示图片与关闭按钮），下方是对应的额外选项（背景虚化或背景图透明度）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * M5-19a：从 `:app` 的 `ui/config/themeConfig/BackgroundImageManageSheet.kt` 迁入。
+ *
+ * **正文逐字保留**（脚本化等价改写，非手抄），改写只有三类：包名 →
+ * `io.legado.app.feature.settings.themeconfig`；`stringResource` / `stringArrayResource`
+ * 换成 CMP 版；`R.string.*`（4 条）/ `R.array.*`（0 个）→ `Res.string.*` / `Res.array.*`
+ * 并逐 key import。
+ *
+ * 该文件经 `tools/audit-slice-deps.py` 勘察为**零阻塞**（无 `:app` 私有依赖、无平台 import），
+ * 且无 JVM/Android 专用写法 ⇒ 只需上述三类改写。
+ */
+
 @Composable
 fun BackgroundImageManageSheet(
     show: Boolean,
@@ -81,14 +97,14 @@ fun BackgroundImageManageSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 BackgroundImageTile(
-                    label = stringResource(R.string.day),
+                    label = stringResource(Res.string.day),
                     path = lightPath,
                     modifier = Modifier.weight(1f),
                     onSelect = onSelectLight,
                     onRemove = onRemoveLight,
                 )
                 BackgroundImageTile(
-                    label = stringResource(R.string.night),
+                    label = stringResource(Res.string.night),
                     path = darkPath,
                     modifier = Modifier.weight(1f),
                     onSelect = onSelectDark,
@@ -159,7 +175,7 @@ private fun BackgroundImageTile(
                 ) {
                     AppIcon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(R.string.add),
+                        contentDescription = stringResource(Res.string.add),
                         modifier = Modifier.size(48.dp),
                         tint = LegadoTheme.colorScheme.primary
                     )
@@ -186,7 +202,7 @@ private fun BackgroundImageTile(
                         .padding(8.dp)
                         .size(32.dp),
                     icon = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.close)
+                    contentDescription = stringResource(Res.string.close)
                 )
             }
         }

@@ -2114,3 +2114,61 @@ M5-15a 那次勘察我用了三个一次性 tmp 脚本、踩了三个盲点（�
    （`FontFolderState` / `FontSelectSheet`）—— 字体族本身可能是独立的一小块。
 
 **下一步**：M5-19a（两个零阻塞 sheet）。
+
+### M5-19a：⚠️ 只迁成 1 个（`BackgroundImageManageSheet`），另一个撞上**同包前置**
+
+计划里「两个 ✅ 无」的那对，实际只有一个能独立迁走：
+
+- **`BackgroundImageManageSheet`(199) 迁成** → `:feature:settings/themeconfig/`（4 条字符串
+  `add` / `close` / `day` / `night`，其中 `day`/`night` 早已在共享层）。
+- **`TopBottomBarSettingsSheet`(177) 退回 `:app`** —— 它无 import 地用了**同包的
+  `ThemeConfigIntent`**，而那个契约（`ThemeConfigContract.kt`）**还没迁**，属第 4 档。
+
+#### ⚠️ 同包陷阱有**两个方向**，我的工具（按 import 解析）两边都看不见
+
+| 方向 | 例子 | 表现 |
+|---|---|---|
+| **(a) 往里用** | `TopBottomBarSettingsSheet` 用同包 `ThemeConfigIntent`（声明在 `ThemeConfigContract.kt`） | 勘察判它「✅ 无」，一 `git mv` 就 `Unresolved reference`（M5-15b 的 `CompactSettingItems` 是同一类） |
+| **(b) 往外被用** | 迁移**后**才发现：`ThemeConfigScreen` 无 import 地用 `BackgroundImageExtraOption` —— 那个符号是**被迁走的文件声明的** | 迁走后**兄弟文件**编译失败（这次是编译才暴露） |
+
+两个方向的共同点：**同包 ⇒ 没有 import 行 ⇒ 只看 import 的勘察必然漏掉**。
+
+#### 工具升级：同包扫描 + **目标模块**参数
+
+`tools/audit-slice-deps.py` 现在多一节「同包陷阱」扫描（两个方向都查），并且接受**第二个参数 =
+目标模块键**（如 `feature:settings`）—— 因为同包引用只在**跨模块**时才致命：判据必须是
+「迁到目标模块**之后**还成不成立」，而不是「现在有没有问题」。
+
+实测（拿退回后的 `themeConfig` 当样本）：
+
+```
+⚠️ ThemeConfigIntent：(a) 无 import 地用同包符号，它声明在 app:main:main ⇒ 迁到 feature:settings 后会缺前置
+   app/.../themeConfig/TopBottomBarSettingsSheet.kt
+```
+
+—— **正是刚才把我绊倒的那一条**。整个 `themeConfig` 报 24 处同包陷阱，等于把剩余各档的**前置图**
+直接列了出来。另外修了一处假阳性：文件**自己声明**的符号（如 `ThemeConfigContract` 里的
+`ThemeConfigIntent`）不算，否则每个文件都会报满自己。
+
+#### 这次「片比计划小」是有价值的
+
+退回时连带撤掉了 `TopBottomBarSettingsSheet` 的 21 条字符串与 1 组数组（不留在共享层当"预置"），
+`git diff` 只保留真正迁成的那一个文件 + `ThemeConfigScreen` 的两处 import。
+⇒ 顺带**修正了档位顺序**：契约（`ThemeConfigContract`）其实是**多数 sheet 的前置**，
+所以第 4 档里至少该把它提前到第 2/3 档之前 —— 档位表里的"由易到难"要按**依赖**重排。
+
+#### 验证
+
+- 四门禁全绿（**G4 无需变动**）
+- `:feature:settings` 编译 + `:app` 编译/单测/打包 + 全模块测试 → **BUILD SUCCESSFUL**
+- 计数 **806 / 1301 零偏离**
+- 资源：4 条 × 4 语言逐字一致、XML 通过 ✅；`:app` 侧这 4 条**零死资源**（仍被别处使用）
+- `lintAppDebug` 重测与上一片**完全一致**（0 delta）
+
+#### 未验证
+
+`BackgroundImageManageSheet` 的渲染与交互（背景图的选图/清除/深浅两套）。需冒烟。
+
+**下一步（按依赖重排）**：`ThemeConfigContract`(109 行，唯一阻塞 `FileDoc`) 是多数 sheet 的前置
+⇒ 先量它、把它（以及它声明的 `ThemeConfigIntent` / `UiState` / `Effect` / `Dialog` / `ThemeConfigSheet`）
+迁进共享层，再回头做第 2/3 档的四个 sheet。

@@ -441,4 +441,6 @@
     <string name="theme_manage_save_theme">儲存主題</string>
     <string name="theme_manage_saved_themes">已儲存的主題</string>
     <string name="theme_pack">主题管理</string>
+    <string name="add">新增</string>
+    <string name="close">關閉</string>
 </resources>

@@ -119,6 +119,105 @@ def verdict(locs: set[str]) -> str:
     return "non-common"
 
 
+def module_key_of(path: pathlib.Path) -> str | None:
+    """文件所属的模块键（与 locate 的前两段一致，如 `app:main` / `feature:settings`）。"""
+    loc = locate(path)
+    if loc is None:
+        return None
+    parts = loc.split(":")
+    return "{}:{}".format(parts[0], parts[1])
+
+
+def same_package_scan(files: list[pathlib.Path], dest: str | None) -> list[tuple[str, str, str]]:
+    """⚠️ **同包陷阱**（两个方向）—— 都不会在 import 列表里留下痕迹，所以按 import 解析的
+    上一节看不到它们。两条都是实测踩出来的：
+
+      (a) **往里用**（M5-15b）：被迁的文件用了**同包**符号（`TinySettingItems` 的、
+          `ThemeConfigIntent` 的），同包 ⇒ 无需 import ⇒ 上一步判它"干净"，一 `git mv` 就炸。
+      (b) **往外被用**（M5-19a）：被迁文件**声明**的符号（`BackgroundImageExtraOption`）被同包
+          兄弟无 import 使用 ⇒ 迁走后兄弟编译失败。
+
+    实现：用「包 → 声明位置」与「包 → 文件」两套映射互查（两遍 rglob，代价可接受）。
+    """
+    pkg_of_decl: dict[str, set[str]] = defaultdict(set)   # "pkg.Name" -> {loc}
+    decls_of_pkg: dict[str, set[str]] = defaultdict(set)  # pkg -> {Name}
+    files_of_pkg: dict[str, list[pathlib.Path]] = defaultdict(list)
+
+    for p in ROOT.rglob("*.kt"):
+        if any(part in SKIP_PARTS for part in p.parts):
+            continue
+        loc = locate(p)
+        if loc is None:
+            continue
+        try:
+            text = p.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        m = PKG.search(text)
+        if not m:
+            continue
+        pkg = m.group(1)
+        files_of_pkg[pkg].append(p)
+        names: set[str] = set()
+        for pat in DECL_PATTERNS:
+            names |= set(pat.findall(text))
+        for name in names:
+            pkg_of_decl["{}.{}".format(pkg, name)].add(loc)
+            decls_of_pkg[pkg].add(name)
+
+    findings: list[tuple[str, str, str]] = []
+    target_set = {p.resolve() for p in files}
+
+    for p in files:
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        m = PKG.search(text)
+        if not m:
+            continue
+        pkg = m.group(1)
+        my_loc = locate(p) or ""
+        # 关键：判据是「迁到**目标模块**之后还成不成立」。不传目标模块时退化成本文件所属模块
+        # （那样只会报「本来就有问题」的情况，不会报「迁走才有问题」）。
+        target_mod = dest or module_key_of(p) or ""
+        imports = set(IMPORT.findall(text))
+        own_decls: set[str] = set()
+        for pat in DECL_PATTERNS:
+            own_decls |= set(pat.findall(text))
+        body = "\n".join(l for l in text.splitlines()
+                         if not l.strip().startswith(("import", "//", "*")))
+        # (a) 往里用：本文件无 import 地用了同包符号，而该符号不在目标模块里
+        for name in sorted(decls_of_pkg.get(pkg, set())):
+            if name in own_decls:
+                continue          # 自己声明的（否则每个文件都会报自己，假阳性拉满）
+            if any(imp.endswith("." + name) for imp in imports):
+                continue
+            locs = pkg_of_decl.get("{}.{}".format(pkg, name), set())
+            if target_mod in locs:
+                continue
+            if re.search(r"\b" + re.escape(name) + r"\b", body):
+                findings.append((p.as_posix(), name,
+                                 "(a) 无 import 地用同包符号，它声明在 {} ⇒ 迁到 {} 后会缺前置"
+                                 .format(",".join(sorted(locs)) or "?", target_mod or "?")))
+        # (b) 往外被用：本文件声明的符号，被同包兄弟（不在目标模块里的）无 import 使用
+        for name in sorted(decls_of_pkg.get(pkg, set())):
+            if my_loc not in pkg_of_decl.get("{}.{}".format(pkg, name), set()):
+                continue
+            for q in files_of_pkg.get(pkg, []):
+                if q.resolve() in target_set:
+                    continue
+                if module_key_of(q) == target_mod:
+                    continue
+                qt = q.read_text(encoding="utf-8", errors="ignore")
+                if any(imp.endswith("." + name) for imp in IMPORT.findall(qt)):
+                    continue
+                qbody = "\n".join(l for l in qt.splitlines()
+                                  if not l.strip().startswith(("import", "//", "*")))
+                if re.search(r"\b" + re.escape(name) + r"\b", qbody):
+                    findings.append((q.as_posix(), name,
+                                     "(b) 同包兄弟无 import 用它（声明在 {}）⇒ 迁走后要给该文件补 import"
+                                     .format(p.name)))
+    return findings
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         print(__doc__)
@@ -127,6 +226,9 @@ def main() -> int:
     if not target.exists():
         print("目录不存在:", target)
         return 2
+    # 可选第二参数：**目标模块键**（如 `feature:settings`），用于判定同包陷阱 ——
+    # 只有「迁到目标模块之后才成问题」的同包引用才算阻塞。
+    dest = sys.argv[2] if len(sys.argv) > 2 else None
 
     by_fqn, by_simple = build_index()
     files = sorted(target.rglob("*.kt"))
@@ -184,8 +286,16 @@ def main() -> int:
             print("      ✅ 无 :app 私有依赖、无平台 import")
 
     print()
-    print("小计：{} 行；:app 私有 {} 处 / 非 commonMain {} 处 / 未定位 {} 处".format(
-        totals["lines"], totals["app"], totals["non-common"], totals["unresolved"]))
+    same_pkg = same_package_scan(files, dest)
+    print("=== 同包陷阱（import 列表里看不到，必须单独查）===")
+    if same_pkg:
+        for path, name, why in same_pkg:
+            print("  ⚠️ {}：{}   {}".format(name, why, path))
+    else:
+        print("  （无）")
+    print()
+    print("小计：{} 行；:app 私有 {} 处 / 非 commonMain {} 处 / 未定位 {} 处 / 同包陷阱 {} 处".format(
+        totals["lines"], totals["app"], totals["non-common"], totals["unresolved"], len(same_pkg)))
     print("说明：「？未定位」= 该符号在本仓顶层声明里找不到（可能是嵌套声明、也真的可能是"
           "外部/生成代码）—— **必须人工确认**，别当它不存在（M5-15a 的教训）。")
     return 0
