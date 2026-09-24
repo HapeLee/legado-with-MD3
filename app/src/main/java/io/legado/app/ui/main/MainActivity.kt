@@ -64,6 +64,7 @@ import io.legado.app.ui.book.read.ReadBookRouteHost
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.readaloud.ReadAloudShellHost
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
+import io.legado.app.ui.main.bookshelf.BookshelfCoverPreloader
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.components.privacy.PrivateAppStartGate
@@ -293,6 +294,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     }
 
     private val viewModel by viewModel<MainViewModel>()
+    private val bookshelfCoverPreloader by inject<BookshelfCoverPreloader>()
     private val otherSettingsGateway by inject<OtherSettingsGateway>()
     private val mangaSettingsGateway by inject<MangaSettingsGateway>()
     private val backupSettingsGateway by inject<BackupSettingsGateway>()
@@ -346,6 +348,14 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
             if (shouldAutoCheckUpdate) {
                 checkUpdateOnStart()
             }
+        }
+
+        // 书架封面预热：必须早于书架首帧发起。卡片请求带了 placeholderMemoryCacheKey，
+        // 内存缓存里已有同一键时 Coil 会在真实加载之前就把缓存图交给 target，于是进入书架
+        // 的第一帧就是封面，而不是"灰底 → 稍后出现"。独立协程，不阻塞上面的启动关键路径；
+        // 预热失败对 UI 无影响（卡片自己的请求会照常决定成功/错误态）。
+        lifecycleScope.launch {
+            runCatching { bookshelfCoverPreloader.preloadCurrentGroupFirstScreen() }
         }
     }
 

@@ -129,6 +129,7 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.image.cover.bookshelfSharedCoverSourceId
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
@@ -1679,7 +1680,7 @@ fun BookshelfPage(
                 val isSelected = selectedBookUrls.contains(bookUi.book.bookUrl)
                 val sharedCoverKey = bookCoverSharedElementKey(
                     bookUi.book.bookUrl,
-                    "bookshelf:$sharedCoverGroupId"
+                    bookshelfSharedCoverSourceId(sharedCoverGroupId)
                 )
                 ReorderableItem(
                     state = reorderableState,
