@@ -2066,7 +2066,6 @@
     <string name="tool_bar_style">Tool bar style</string>
     <string name="bookshelf_total_count">%1$d books</string>
     <string name="bookshelf_selected_count">%1$d selected</string>
-    <string name="bookshelf_edit_subtitle">%1$s · %2$s</string>
     <string name="bookshelf_empty_global_search">No books here. Try global search.</string>
     <string name="global_search">Global search</string>
     <string name="cache_management">Cache management</string>
@@ -3398,6 +3397,12 @@
     <string name="feature_bookmarks_chapter_fallback">Chapter %1$d</string>
 
     <string name="bookshelf_conflict_title">Possible Duplicate</string>
+    <!-- 详情页「加入书架」按钮的冲突态文案（按钮上的文字 / 读屏描述） -->
+    <string name="bookshelf_conflict_hint">Possible Duplicate</string>
+    <string name="bookshelf_conflict_hint_desc">Possible duplicate, tap to add to bookshelf</string>
+    <!-- 本书已在架、且还有 N 个同名同作者副本时，书架按钮上的计数与读屏描述 -->
+    <string name="shelf_duplicate_count">%1$d copies</string>
+    <string name="shelf_duplicate_count_desc">On bookshelf with %1$d other copies of the same work, tap to remove this one</string>
     <string name="bookshelf_conflict_existing_title">Already on bookshelf</string>
     <string name="bookshelf_conflict_open_hint">Tap a book to open its details</string>
     <string name="bookshelf_conflict_coexist">Keep Both</string>

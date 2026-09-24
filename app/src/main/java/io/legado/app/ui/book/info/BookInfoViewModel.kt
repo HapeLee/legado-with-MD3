@@ -33,6 +33,7 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.PrivateAccessGateway
 import io.legado.app.domain.gateway.PrivateContentGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.model.BookMatchKey
 import io.legado.app.domain.model.BookshelfConflict
 import io.legado.app.domain.model.PrivateAccessState
 import io.legado.app.domain.model.PrivateUnlockTarget
@@ -289,6 +290,21 @@ class BookInfoViewModel(
 
     /** 命中重复、等待用户在冲突 Sheet 上选择共存还是迁移的那本书。 */
     private var pendingShelfBook: Book? = null
+
+    /**
+     * 书架里同一部作品的其他副本数（宽松「疑似」口径，见 [refreshShelfDuplicateCount]）。
+     *
+     * 只驱动书架按钮的外观，不影响任何数据。
+     */
+    private var shelfDuplicateCount = 0
+
+    /**
+     * 上一次统计用的归一化身份键（书名 + 作者）。
+     *
+     * upBook 与爬取后各统计一次，而候选集来自一次全表扫描；身份没变就不必重查
+     * （`canReName` 真改写了身份时键会变，仍会重算）。书架的增删由本页动作显式作废。
+     */
+    private var shelfDuplicateIdentity: Pair<String, String>? = null
 
     var inBookshelf = false
         private set
@@ -937,7 +953,43 @@ class BookInfoViewModel(
         }
         currentBook = book
         inBookshelf = true
+        // 入架后按钮语义变了（点击=删除），副本数要按新状态重算：共存会多一本、迁移会少一本
+        invalidateShelfDuplicateCount()
         syncUiState()
+        viewModelScope.launch { refreshShelfDuplicateCount(book) }
+    }
+
+    /**
+     * 统计书架里同一部作品的**其他**副本数，驱动书架按钮的外观。
+     *
+     * 判定复用入架查重的同一个用例（[FindBookshelfConflictUseCase]，它按 bookUrl 排除自身），
+     * 因此本书未入架时「按钮是冲突态」⟺「点击真的会弹冲突 Sheet」，入口承诺与实际行为一致；
+     * 已入架时同一个数字就是「还有几本同名同作者副本」。
+     *
+     * 提示不改变任何数据，用户在 Sheet 里仍会看到具体是哪几本，所以用宽松「疑似」口径是安全的：
+     * 没有「静默把人带去另一本书」这种代价，不需要另立严格口径。
+     */
+    private suspend fun refreshShelfDuplicateCount(book: Book) {
+        val identity = BookMatchKey.of(book.name) to BookMatchKey.of(book.author)
+        // 身份没变就不重查（见 [shelfDuplicateIdentity]）
+        if (identity == shelfDuplicateIdentity) return
+        shelfDuplicateIdentity = identity
+        val count = findBookshelfConflictUseCase.execute(book)?.candidates?.size ?: 0
+        // 期间身份可能已被更可信的一次（爬取后）覆盖，旧结论不能反过来盖掉新的
+        if (shelfDuplicateIdentity == identity) {
+            setShelfDuplicateCount(count)
+        }
+    }
+
+    private fun setShelfDuplicateCount(value: Int) {
+        if (shelfDuplicateCount == value) return
+        shelfDuplicateCount = value
+        syncUiState()
+    }
+
+    /** 书架内容被本页动作改动后，之前的统计结论作废。 */
+    private fun invalidateShelfDuplicateCount() {
+        shelfDuplicateIdentity = null
     }
 
     /**
@@ -1032,6 +1084,7 @@ class BookInfoViewModel(
         val book = currentBook ?: return
         execute {
             inBookshelf = false
+            invalidateShelfDuplicateCount()
             if (book.isLocal) {
                 LocalBook.deleteBook(book, deleteOriginal)
             }
@@ -1100,6 +1153,8 @@ class BookInfoViewModel(
                     if (inBookshelf) {
                         loadedBook.save()
                     }
+                    // 爬取后的身份最可信（canReName 可能改写书名/作者），重算一次
+                    refreshShelfDuplicateCount(loadedBook)
                     syncUiState(isTocLoading = showLoading)
                     refreshMeta(loadedBook)
                     if (loadedBook.isWebFile) {
@@ -1148,6 +1203,8 @@ class BookInfoViewModel(
             currentKindLabels = emptyList()
             syncUiState(isTocLoading = false)
             refreshMeta(it)
+            // 换源会改写书名/作者，旧的副本统计已不对应这本书
+            refreshShelfDuplicateCount(it)
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }
     }
@@ -1169,6 +1226,8 @@ class BookInfoViewModel(
         loadBookEvents(book.bookUrl)
         refreshMeta(book)
         upCoverByRule(book)
+        // 副本统计与书籍加载无关，异步跑即可；爬取路径会在拿到更可信的身份后再重算一次
+        viewModelScope.launch { refreshShelfDuplicateCount(book) }
         if (book.tocUrl.isEmpty() && !book.isLocal) {
             loadBookInfo(book, runPreUpdateJs = inBookshelf, showLoading = false)
         } else {
@@ -1720,6 +1779,7 @@ class BookInfoViewModel(
                 bookSource = bookSource,
                 bookSourceUi = bookSource?.toBookInfoSourceUi(),
                 isTocLoading = isTocLoading,
+                shelfDuplicateCount = shelfDuplicateCount,
                 deleteAlertEnabled = LocalConfig.bookInfoDeleteAlert,
                 deleteOriginal = LocalConfig.deleteBookOriginal,
             )

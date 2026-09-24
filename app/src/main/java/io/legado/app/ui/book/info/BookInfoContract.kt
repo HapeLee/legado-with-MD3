@@ -58,6 +58,18 @@ data class BookInfoUiState(
     /** 加入书架时发现的疑似重复；非空时由冲突 Sheet 决定共存还是迁移。 */
     val shelfConflict: BookshelfConflict? = null,
     val isResolvingShelfConflict: Boolean = false,
+
+    /**
+     * 书架里同一部作品的**其他**副本数（不含本书自身）。
+     *
+     * 两种用途，都由书架按钮呈现：
+     * - 本书**未入架**且大于 0：入架会弹冲突 Sheet，按钮提前标成冲突态；
+     * - 本书**已入架**且大于 0：让用户看出「这本还有 N 个同名同作者副本」。
+     *
+     * 判定口径与 [shelfConflict] 完全一致（同一个用例），因此「按钮是冲突态」⟺「点击真的会
+     * 弹冲突 Sheet」；具体是哪几本仍由点击后的 Sheet 给出。
+     */
+    val shelfDuplicateCount: Int = 0,
     /** 本书是否私密（单本标记 ∪ 所属私密分组）；菜单里"标记/取消私密"读它 */
     val bookPrivate: Boolean = false,
     /** 进入本页时这本书是否需要验证（页面内刚标记私密不会立刻脱敏） */
