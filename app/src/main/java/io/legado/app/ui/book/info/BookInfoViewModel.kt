@@ -35,6 +35,7 @@ import io.legado.app.domain.gateway.PrivateContentGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.BookMatchKey
 import io.legado.app.domain.model.BookshelfConflict
+import io.legado.app.domain.model.ConflictBookSummary
 import io.legado.app.domain.model.PrivateAccessState
 import io.legado.app.domain.model.PrivateUnlockTarget
 import io.legado.app.domain.model.settings.CoverSettings
@@ -292,11 +293,12 @@ class BookInfoViewModel(
     private var pendingShelfBook: Book? = null
 
     /**
-     * 书架里同一部作品的其他副本数（宽松「疑似」口径，见 [refreshShelfDuplicateCount]）。
+     * 书架里同一部作品的其他副本（宽松「疑似」口径，见 [refreshShelfDuplicates]）。
      *
-     * 只驱动书架按钮的外观，不影响任何数据。
+     * 未入架时驱动书架按钮的冲突态外观；已入架时给「书架操作」Sheet 列出来。
+     * 只影响展示，不改动任何数据。
      */
-    private var shelfDuplicateCount = 0
+    private var shelfDuplicates: List<ConflictBookSummary> = emptyList()
 
     /**
      * 上一次统计用的归一化身份键（书名 + 作者）。
@@ -483,6 +485,12 @@ class BookInfoViewModel(
                 pendingShelfBook = null
                 _screenState.update { it.copy(shelfConflict = null) }
             }
+
+            is BookInfoIntent.OpenShelfDuplicate -> openShelfDuplicate(intent.summary)
+
+            BookInfoIntent.ShelfActionsGroup -> setSheet(BookInfoSheet.GroupPicker)
+
+            BookInfoIntent.ShelfActionsDelete -> onShelfActionsDelete()
 
             is BookInfoIntent.OpenShelfConflictBook -> {
                 // 先收起冲突 Sheet 再导航：详情页之间跳转会复用同一份冲突状态，
@@ -953,42 +961,42 @@ class BookInfoViewModel(
         }
         currentBook = book
         inBookshelf = true
-        // 入架后按钮语义变了（点击=删除），副本数要按新状态重算：共存会多一本、迁移会少一本
-        invalidateShelfDuplicateCount()
+        // 入架后按钮语义变了（点击=「书架操作」Sheet），副本要按新状态重算：共存会多一本、迁移会少一本
+        invalidateShelfDuplicates()
         syncUiState()
-        viewModelScope.launch { refreshShelfDuplicateCount(book) }
+        viewModelScope.launch { refreshShelfDuplicates(book) }
     }
 
     /**
-     * 统计书架里同一部作品的**其他**副本数，驱动书架按钮的外观。
+     * 统计书架里同一部作品的**其他**副本，驱动书架按钮的冲突态与「书架操作」Sheet 的副本列表。
      *
      * 判定复用入架查重的同一个用例（[FindBookshelfConflictUseCase]，它按 bookUrl 排除自身），
      * 因此本书未入架时「按钮是冲突态」⟺「点击真的会弹冲突 Sheet」，入口承诺与实际行为一致；
-     * 已入架时同一个数字就是「还有几本同名同作者副本」。
+     * 已入架时同一份结果就是「还有哪几本是同一部作品」。
      *
-     * 提示不改变任何数据，用户在 Sheet 里仍会看到具体是哪几本，所以用宽松「疑似」口径是安全的：
+     * 只影响展示，用户在 Sheet 里仍会看到具体是哪几本，所以用宽松「疑似」口径是安全的：
      * 没有「静默把人带去另一本书」这种代价，不需要另立严格口径。
      */
-    private suspend fun refreshShelfDuplicateCount(book: Book) {
+    private suspend fun refreshShelfDuplicates(book: Book) {
         val identity = BookMatchKey.of(book.name) to BookMatchKey.of(book.author)
         // 身份没变就不重查（见 [shelfDuplicateIdentity]）
         if (identity == shelfDuplicateIdentity) return
         shelfDuplicateIdentity = identity
-        val count = findBookshelfConflictUseCase.execute(book)?.candidates?.size ?: 0
+        val copies = findBookshelfConflictUseCase.execute(book)?.candidates.orEmpty()
         // 期间身份可能已被更可信的一次（爬取后）覆盖，旧结论不能反过来盖掉新的
         if (shelfDuplicateIdentity == identity) {
-            setShelfDuplicateCount(count)
+            setShelfDuplicates(copies)
         }
     }
 
-    private fun setShelfDuplicateCount(value: Int) {
-        if (shelfDuplicateCount == value) return
-        shelfDuplicateCount = value
+    private fun setShelfDuplicates(value: List<ConflictBookSummary>) {
+        if (shelfDuplicates == value) return
+        shelfDuplicates = value
         syncUiState()
     }
 
     /** 书架内容被本页动作改动后，之前的统计结论作废。 */
-    private fun invalidateShelfDuplicateCount() {
+    private fun invalidateShelfDuplicates() {
         shelfDuplicateIdentity = null
     }
 
@@ -1084,7 +1092,7 @@ class BookInfoViewModel(
         val book = currentBook ?: return
         execute {
             inBookshelf = false
-            invalidateShelfDuplicateCount()
+            invalidateShelfDuplicates()
             if (book.isLocal) {
                 LocalBook.deleteBook(book, deleteOriginal)
             }
@@ -1154,7 +1162,7 @@ class BookInfoViewModel(
                         loadedBook.save()
                     }
                     // 爬取后的身份最可信（canReName 可能改写书名/作者），重算一次
-                    refreshShelfDuplicateCount(loadedBook)
+                    refreshShelfDuplicates(loadedBook)
                     syncUiState(isTocLoading = showLoading)
                     refreshMeta(loadedBook)
                     if (loadedBook.isWebFile) {
@@ -1204,7 +1212,7 @@ class BookInfoViewModel(
             syncUiState(isTocLoading = false)
             refreshMeta(it)
             // 换源会改写书名/作者，旧的副本统计已不对应这本书
-            refreshShelfDuplicateCount(it)
+            refreshShelfDuplicates(it)
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }
     }
@@ -1227,7 +1235,7 @@ class BookInfoViewModel(
         refreshMeta(book)
         upCoverByRule(book)
         // 副本统计与书籍加载无关，异步跑即可；爬取路径会在拿到更可信的身份后再重算一次
-        viewModelScope.launch { refreshShelfDuplicateCount(book) }
+        viewModelScope.launch { refreshShelfDuplicates(book) }
         if (book.tocUrl.isEmpty() && !book.isLocal) {
             loadBookInfo(book, runPreUpdateJs = inBookshelf, showLoading = false)
         } else {
@@ -1387,16 +1395,38 @@ class BookInfoViewModel(
     private fun onShelfClick() {
         val book = currentBook ?: return
         if (inBookshelf) {
-            if (LocalConfig.bookInfoDeleteAlert) {
-                showDialog(BookInfoDialog.DeleteBook(book.isLocal))
-            } else {
-                deleteBook(LocalConfig.deleteBookOriginal)
-            }
+            // 已入架：先摊开「其他副本 / 分组 / 删除」。副本要切过去，删除也仍会再确认一次，
+            // 因此这里不再像以前那样点一下就直接问删不删。
+            setSheet(BookInfoSheet.ShelfActions)
         } else if (book.isWebFile) {
             setSheet(BookInfoSheet.WebFiles(openAfterImport = false))
         } else {
             addToBookshelf()
         }
+    }
+
+    private fun onShelfActionsDelete() {
+        dismissSheet()
+        if (LocalConfig.bookInfoDeleteAlert) {
+            showDialog(BookInfoDialog.DeleteBook(currentBook?.isLocal == true))
+        } else {
+            deleteBook(LocalConfig.deleteBookOriginal)
+        }
+    }
+
+    private fun openShelfDuplicate(summary: ConflictBookSummary) {
+        // 先收起 Sheet 再导航：详情页之间跳转会复用同一份 Sheet 状态，
+        // 不收起来的话新页面一进来就显示 Sheet，并把第一次返回键吃掉。
+        dismissSheet()
+        emitEffect(
+            BookInfoEffect.NavigateToBookInfo(
+                name = summary.name,
+                author = summary.author,
+                bookUrl = summary.bookUrl,
+                origin = summary.origin,
+                coverPath = summary.displayCover,
+            )
+        )
     }
 
     private fun onTocClick() {
@@ -1779,7 +1809,7 @@ class BookInfoViewModel(
                 bookSource = bookSource,
                 bookSourceUi = bookSource?.toBookInfoSourceUi(),
                 isTocLoading = isTocLoading,
-                shelfDuplicateCount = shelfDuplicateCount,
+                shelfDuplicates = shelfDuplicates.toImmutableList(),
                 deleteAlertEnabled = LocalConfig.bookInfoDeleteAlert,
                 deleteOriginal = LocalConfig.deleteBookOriginal,
             )

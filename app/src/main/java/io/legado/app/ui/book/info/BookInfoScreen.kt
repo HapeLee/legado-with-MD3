@@ -426,7 +426,7 @@ private fun BookInfoScreenContent(
                                     ) {
                                         BookInfoActions(
                                             inBookshelf = state.inBookshelf,
-                                            shelfDuplicateCount = state.shelfDuplicateCount,
+                                            hasShelfDuplicates = state.shelfDuplicates.isNotEmpty(),
                                             onShelfClick = { onIntent(BookInfoIntent.ShelfClick) },
                                             onTocClick = { onIntent(BookInfoIntent.TocClick) },
                                             onGroupClick = { onIntent(BookInfoIntent.GroupClick) },
@@ -535,6 +535,14 @@ private fun BookInfoScreenContent(
                 onConfirm = { onIntent(BookInfoIntent.SelectGroup(it)) },
             )
         }
+        BookInfoSheet.ShelfActions -> ShelfActionsSheet(
+            show = currentSheet == BookInfoSheet.ShelfActions,
+            copies = state.shelfDuplicates,
+            onOpenCopy = { onIntent(BookInfoIntent.OpenShelfDuplicate(it)) },
+            onGroup = { onIntent(BookInfoIntent.ShelfActionsGroup) },
+            onDelete = { onIntent(BookInfoIntent.ShelfActionsDelete) },
+            onDismissRequest = { onIntent(BookInfoIntent.DismissSheet) },
+        )
         is BookInfoSheet.SourcePicker -> {
             ChangeSourceSheet(
                 show = currentSheet is BookInfoSheet.SourcePicker,
@@ -1346,7 +1354,7 @@ private fun BookInfoHeader(
 @Composable
 private fun BookInfoActions(
     inBookshelf: Boolean,
-    shelfDuplicateCount: Int,
+    hasShelfDuplicates: Boolean,
     onShelfClick: () -> Unit,
     onTocClick: () -> Unit,
     onGroupClick: () -> Unit,
@@ -1373,27 +1381,19 @@ private fun BookInfoActions(
         }
     }
 
-    // 书架里存在同作品副本时把书架按钮标出来，两种情况都用「换图标 + 换底色 + 换文案」表示：
-    // - 未入架：点击会弹冲突 Sheet，提前告诉用户这一步要问「共存还是迁移」；
-    // - 已入架：让用户看出「这本还有 N 个同名同作者副本」（点击仍是删除本书，行为不变）。
-    val hasShelfDuplicate = shelfDuplicateCount > 0
-    val conflictHighlight = hasShelfDuplicate && !inBookshelf
-    val duplicateHighlight = hasShelfDuplicate && inBookshelf
+    // 未入架但书架里已有同作品副本时，把书架按钮标成冲突态：点击会弹冲突 Sheet，
+    // 提前告诉用户这一步要问「共存还是迁移」。
+    // 已入架时按钮不高亮：可做的事情（副本 / 分组 / 删除）改由点击后的「书架操作」Sheet 给出。
+    val conflictHighlight = !inBookshelf && hasShelfDuplicates
     val shelfLabel = when {
         showShelfRemoveHint -> stringResource(R.string.click_to_remove)
         showLongPressGroupHint -> stringResource(R.string.long_press_group)
-        duplicateHighlight -> stringResource(R.string.shelf_duplicate_count, shelfDuplicateCount)
         inBookshelf -> stringResource(R.string.already_in_bookshelf)
         conflictHighlight -> stringResource(R.string.bookshelf_conflict_hint)
         else -> stringResource(R.string.add_to_bookshelf)
     }
     val shelfDescription = when {
         conflictHighlight -> stringResource(R.string.bookshelf_conflict_hint_desc)
-        duplicateHighlight -> stringResource(
-            R.string.shelf_duplicate_count_desc,
-            shelfDuplicateCount,
-        )
-
         else -> shelfLabel
     }
 
@@ -1407,18 +1407,18 @@ private fun BookInfoActions(
         BookInfoActionCard(
             modifier = Modifier.weight(1f),
             icon = when {
-                hasShelfDuplicate -> Icons.Default.Shuffle
+                conflictHighlight -> Icons.Default.Shuffle
                 inBookshelf -> Icons.Outlined.Book
                 else -> Icons.Default.BookmarkAdd
             },
             label = shelfLabel,
             contentDescription = shelfDescription,
-            containerColor = if (hasShelfDuplicate) {
+            containerColor = if (conflictHighlight) {
                 LegadoTheme.colorScheme.secondaryContainer
             } else {
                 LegadoTheme.colorScheme.surfaceContainerLow
             },
-            contentColor = if (hasShelfDuplicate) {
+            contentColor = if (conflictHighlight) {
                 LegadoTheme.colorScheme.onSecondaryContainer
             } else {
                 LegadoTheme.colorScheme.onSurface
