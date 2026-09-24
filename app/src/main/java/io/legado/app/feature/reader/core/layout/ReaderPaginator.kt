@@ -640,9 +640,18 @@ internal class ReaderPaginationSession(
             ?: (paragraph.baseTextSizePx + letterSpacing) * paragraph.indentCharacters
         val ideographWidth = paragraph.items.filterIsInstance<ReaderMeasuredInlineItem.Text>()
             .firstOrNull { it.widthPx > 0f }?.widthPx ?: paragraph.lineHeightPx
+        // 背景图（九宫格框、色带、气泡）通常只出现在章内少数几段。整段没有背景图时，
+        // 内缩、绘制实例、邻行探测恒为空，却仍要逐字求值——当前章 2,292 个字形每行
+        // 约 6 次这样的调用，是 `line-placement` 里最大的一块纯开销。
+        // 顺带在建 `clusters` 那一趟里判定，不额外再扫一遍段落。
+        var hasBackgroundImages = false
         val clusters = paragraph.items.map {
             when (it) {
-                is ReaderMeasuredInlineItem.Text -> it.value
+                is ReaderMeasuredInlineItem.Text -> {
+                    if (it.style.backgroundImage != null) hasBackgroundImages = true
+                    it.value
+                }
+
                 is ReaderMeasuredInlineItem.Image -> "\uFFFC"
             }
         }
@@ -655,10 +664,13 @@ internal class ReaderPaginationSession(
                 ?.style?.backgroundImage?.takeIf { it.fit == 3 }
 
         fun lineHasFrame(from: Int, until: Int): Boolean =
-            (from until until.coerceAtMost(paragraph.items.size)).any { itemFrame(it) != null }
+            hasBackgroundImages &&
+                    (from until until.coerceAtMost(paragraph.items.size)).any { itemFrame(it) != null }
 
         fun frameOf(index: Int, topBudgetPx: Float, bottomBudgetPx: Float) =
-            itemFrame(index)?.fitIntoLineBudget(topBudgetPx, bottomBudgetPx)
+            if (hasBackgroundImages) {
+                itemFrame(index)?.fitIntoLineBudget(topBudgetPx, bottomBudgetPx)
+            } else null
 
         /**
          * 元素绘制时真正使用的背景图：九宫格按行预算收紧，拉伸/裁剪/平铺按原样。
@@ -669,13 +681,14 @@ internal class ReaderPaginationSession(
          * 放行标记若只发给九宫格，fit≠3 的背景图就会逐字绘制成一条条断开的气泡。
          */
         fun drawnBackgroundOf(index: Int, topBudgetPx: Float, bottomBudgetPx: Float) =
-            (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)
-                ?.style?.backgroundImage?.let { image ->
-                    if (image.fit == 3) image.fitIntoLineBudget(
-                        topBudgetPx,
-                        bottomBudgetPx
-                    ) else image
-                }
+            if (!hasBackgroundImages) null else
+                (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)
+                    ?.style?.backgroundImage?.let { image ->
+                        if (image.fit == 3) image.fitIntoLineBudget(
+                            topBudgetPx,
+                            bottomBudgetPx
+                        ) else image
+                    }
 
         fun backgroundInsetBefore(
             index: Int,
@@ -744,8 +757,18 @@ internal class ReaderPaginationSession(
             // remainder of that row as an unnecessary one-character line.
             var until = breakerEnd
 
-            fun occupiedWidth(endExclusive: Int): Float =
-                (from until endExclusive).sumOf { index ->
+            fun occupiedWidth(endExclusive: Int): Float {
+                // 无背景图时内缩恒为 0，宽度单独累加即可；带背景图时保持原来「宽度+内缩」
+                // 同序累加的写法，避免断行比较出现浮点差异。
+                if (!hasBackgroundImages) {
+                    var widthSum = 0.0
+                    for (index in from until endExclusive) {
+                        widthSum += paragraph.items[index].widthPx.toDouble()
+                    }
+                    return widthSum.toFloat() +
+                            letterSpacing * (endExclusive - from - 1).coerceAtLeast(0)
+                }
+                return (from until endExclusive).sumOf { index ->
                     (paragraph.items[index].widthPx +
                             backgroundInsetBefore(index, from, topBudgetPx, bottomBudgetPx) +
                             backgroundInsetAfter(
@@ -755,6 +778,7 @@ internal class ReaderPaginationSession(
                                 bottomBudgetPx
                             )).toDouble()
                 }.toFloat() + letterSpacing * (endExclusive - from - 1).coerceAtLeast(0)
+            }
             while (until - from > 1 && occupiedWidth(until) > available) {
                 val candidate = until - 1
                 if (ChineseLineBreaker.isForbiddenBreak(
@@ -774,39 +798,7 @@ internal class ReaderPaginationSession(
             val from = starts[lineIndex]
             val until = starts[lineIndex + 1]
             val lineItems = paragraph.items.subList(from, until)
-            val textItems = lineItems.filterIsInstance<ReaderMeasuredInlineItem.Text>()
-            // Inline HTML may shrink every glyph in a row (<small>, font-size, etc.).
-            // It changes glyph drawing but not the paragraph's base line box; otherwise a
-            // small final row advances less and makes the following paragraph gap collapse.
-            val maxTextScale = maxOf(
-                1f,
-                textItems.maxOfOrNull {
-                    it.style.fontSizePx / paragraph.baseTextSizePx.coerceAtLeast(1f)
-                } ?: 1f,
-            )
-            val fallbackLineHeight = paragraph.lineHeightPx * maxTextScale
-            val fallbackBaseline = paragraph.baselineOffsetPx * maxTextScale
-            // Keep the paragraph's unshifted line box as the minimum. A line containing
-            // only <sup> or only <sub> must not cancel its own visual movement by moving
-            // the shared baseline in the opposite direction.
-            val lineAscent = maxOf(fallbackBaseline, textItems.maxOfOrNull {
-                (it.baselineOffsetPx ?: fallbackBaseline) - it.baselineShiftPx
-            } ?: fallbackBaseline)
-            val fallbackDescent = fallbackLineHeight - fallbackBaseline
-            val lineDescent = maxOf(fallbackDescent, textItems.maxOfOrNull {
-                val height = it.lineHeightPx ?: fallbackLineHeight
-                height - (it.baselineOffsetPx ?: fallbackBaseline) + it.baselineShiftPx
-            } ?: fallbackDescent)
-            val textLineHeight = lineAscent + lineDescent
-            val actualLineHeight = maxOf(
-                textLineHeight,
-                lineItems.filterIsInstance<ReaderMeasuredInlineItem.Image>()
-                    .maxOfOrNull { it.heightPx } ?: 0f,
-            )
-            val lineBaselineOffset = lineAscent + (actualLineHeight - textLineHeight) / 2f
-            if (y + actualLineHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
-            val indent = if (lineIndex == 0) indentWidth else paragraph.restLineIndentWidthPx
-            val available = (config.contentWidthPx - indent).coerceAtLeast(0f)
+            val itemCount = until - from
             val topBudgetPx = lineTopBudgets[lineIndex]
             val bottomBudgetPx = lineBottomBudgets[lineIndex]
             fun backgroundInsetBefore(index: Int) =
@@ -815,23 +807,75 @@ internal class ReaderPaginationSession(
             fun backgroundInsetAfter(index: Int) =
                 backgroundInsetAfter(from + index, until, topBudgetPx, bottomBudgetPx)
 
-            val naturalWidth = lineItems.sumOf { it.widthPx.toDouble() }.toFloat() +
-                    letterSpacing * (lineItems.size - 1).coerceAtLeast(0) +
-                    lineItems.indices.sumOf {
-                        (backgroundInsetBefore(it) + backgroundInsetAfter(it)).toDouble()
-                    }.toFloat()
-            val indentItems = (paragraph.leadingIndentItems - from).coerceIn(0, lineItems.size)
-            val stretchableGaps = (lineItems.size - indentItems - 1).coerceAtLeast(0)
+            // 行内项每多一趟遍历，开销就乘上整章字形数：这里把字号缩放、首字颜色、
+            // 行内图高、自然宽度、内缩和空格数并为一次遍历，去掉原先各自产生的临时列表。
+            var maxTextScale = 1f
+            var maxImageHeightPx = 0f
+            var markerColorArgb: Int? = null
+            var widthSum = 0.0
+            var insetSum = 0.0
+            var wordSpaceCount = 0
+            for (itemIndex in 0 until itemCount) {
+                val item = lineItems[itemIndex]
+                widthSum += item.widthPx.toDouble()
+                if (hasBackgroundImages) {
+                    insetSum += (backgroundInsetBefore(itemIndex) +
+                            backgroundInsetAfter(itemIndex)).toDouble()
+                }
+                if (item is ReaderMeasuredInlineItem.Text) {
+                    // Inline HTML may shrink every glyph in a row (<small>, font-size, etc.).
+                    // It changes glyph drawing but not the paragraph's base line box; otherwise
+                    // a small final row advances less and makes the following paragraph gap
+                    // collapse.
+                    val scale = item.style.fontSizePx / paragraph.baseTextSizePx.coerceAtLeast(1f)
+                    if (scale > maxTextScale) maxTextScale = scale
+                    if (markerColorArgb == null) markerColorArgb = item.style.colorArgb
+                    if (item.value == " ") wordSpaceCount++
+                } else if (item is ReaderMeasuredInlineItem.Image &&
+                    item.heightPx > maxImageHeightPx
+                ) {
+                    maxImageHeightPx = item.heightPx
+                }
+            }
+            val fallbackLineHeight = paragraph.lineHeightPx * maxTextScale
+            val fallbackBaseline = paragraph.baselineOffsetPx * maxTextScale
+            // Keep the paragraph's unshifted line box as the minimum. A line containing
+            // only <sup> or only <sub> must not cancel its own visual movement by moving
+            // the shared baseline in the opposite direction.
+            var maxAscent = Float.NEGATIVE_INFINITY
+            var maxDescent = Float.NEGATIVE_INFINITY
+            for (itemIndex in 0 until itemCount) {
+                val item = lineItems[itemIndex]
+                if (item !is ReaderMeasuredInlineItem.Text) continue
+                val ascent = (item.baselineOffsetPx ?: fallbackBaseline) - item.baselineShiftPx
+                if (ascent > maxAscent) maxAscent = ascent
+                val descent = (item.lineHeightPx ?: fallbackLineHeight) -
+                        (item.baselineOffsetPx ?: fallbackBaseline) + item.baselineShiftPx
+                if (descent > maxDescent) maxDescent = descent
+            }
+            val lineAscent = maxOf(fallbackBaseline, maxAscent)
+            val fallbackDescent = fallbackLineHeight - fallbackBaseline
+            val lineDescent = maxOf(fallbackDescent, maxDescent)
+            val textLineHeight = lineAscent + lineDescent
+            val actualLineHeight = maxOf(textLineHeight, maxImageHeightPx)
+            val lineBaselineOffset = lineAscent + (actualLineHeight - textLineHeight) / 2f
+            if (y + actualLineHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
+            val indent = if (lineIndex == 0) indentWidth else paragraph.restLineIndentWidthPx
+            val available = (config.contentWidthPx - indent).coerceAtLeast(0f)
+            val naturalWidth = widthSum.toFloat() +
+                    letterSpacing * (itemCount - 1).coerceAtLeast(0) +
+                    insetSum.toFloat()
+            val indentItems = (paragraph.leadingIndentItems - from).coerceIn(0, itemCount)
+            val stretchableGaps = (itemCount - indentItems - 1).coerceAtLeast(0)
             val shouldJustify =
                 paragraph.alignment == ReaderTextAlignment.JUSTIFY &&
                         lineIndex < starts.lastIndex - 1
             val residualWidth = if (shouldJustify) {
                 (available - naturalWidth).coerceAtLeast(0f)
             } else 0f
-            val wordSpaceCount = if (paragraph.justifyAtWordBoundaries) {
-                lineItems.count { it is ReaderMeasuredInlineItem.Text && it.value == " " }
-            } else 0
-            val wordSpaceExtra = if (wordSpaceCount > 1) residualWidth / wordSpaceCount else 0f
+            val wordSpaceExtra = if (
+                paragraph.justifyAtWordBoundaries && wordSpaceCount > 1
+            ) residualWidth / wordSpaceCount else 0f
             val justifyGap = if (wordSpaceExtra == 0f && stretchableGaps > 0) {
                 residualWidth / stretchableGaps
             } else 0f
@@ -841,8 +885,7 @@ internal class ReaderPaginationSession(
                 else -> 0f
             }
             val rowElementStart = elements.size
-            val markerColor = textItems.firstOrNull()?.style?.colorArgb
-                ?: 0xff000000.toInt()
+            val markerColor = markerColorArgb ?: 0xff000000.toInt()
             paragraph.decorations.forEach { decoration ->
                 when (decoration.kind) {
                     ReaderParagraphDecorationKind.QUOTE -> elements += ReaderElement.ParagraphMarker(
@@ -875,6 +918,7 @@ internal class ReaderPaginationSession(
             // Processed body text can retain its indentation as real leading glyphs.
             // The View reader started a non-extended underline after those glyphs.
             val underlineElementStart = elements.size + indentItems
+            var previousItemBackground: ReaderTextBackgroundImage? = null
             lineItems.forEachIndexed { itemIndex, item ->
                 x += backgroundInsetBefore(itemIndex)
                 val itemBackground =
@@ -903,12 +947,7 @@ internal class ReaderPaginationSession(
                             // 否则字间距会把它切成逐字绘制。
                             continuesBackgroundRun = itemBackground != null &&
                                     itemIndex > 0 &&
-                                    drawnBackgroundOf(
-                                        from + itemIndex - 1,
-                                        topBudgetPx,
-                                        bottomBudgetPx
-                                    ) ==
-                                    itemBackground,
+                                    previousItemBackground == itemBackground,
                             backgroundFrameTopPx = itemBackground?.contentInsetTopPx ?: 0f,
                             backgroundFrameBottomPx = itemBackground?.contentInsetBottomPx
                                 ?: 0f,
@@ -934,6 +973,7 @@ internal class ReaderPaginationSession(
                 x += item.widthPx + backgroundInsetAfter(itemIndex) + letterSpacing +
                         if (item is ReaderMeasuredInlineItem.Text && item.value == " ") wordSpaceExtra else 0f
                 x += if (itemIndex >= indentItems) justifyGap else 0f
+                previousItemBackground = itemBackground
             }
             addPageUnderline(underlineElementStart, y + actualLineHeight)
             columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + actualLineHeight)

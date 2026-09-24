@@ -501,6 +501,44 @@ class ReaderPaginatorTest {
         assertEquals(frameBounds.right, glyphs[2].bounds.left, 0f)
     }
 
+    /** 放行标记按「绘制用实例」比较：同图连续才续接，换一张图就要断开。 */
+    @Test
+    fun backgroundRunContinuesOnlyAcrossEqualDrawnImages() {
+        val frame = ReaderTextBackgroundImage(
+            source = "frame.png",
+            fit = 3,
+            scale = 1f,
+            contentInsetLeftPx = 3f,
+            contentInsetRightPx = 4f,
+        )
+        val framed = style.copy(backgroundImage = frame)
+        val reframed = style.copy(backgroundImage = frame.copy(source = "other.png"))
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = listOf(
+                        ReaderMeasuredInlineItem.Text("甲", 10f, style, 0),
+                        ReaderMeasuredInlineItem.Text("乙", 10f, framed, 1),
+                        ReaderMeasuredInlineItem.Text("丙", 10f, framed, 2),
+                        ReaderMeasuredInlineItem.Text("丁", 10f, reframed, 3),
+                        ReaderMeasuredInlineItem.Text("戊", 10f, reframed, 4),
+                    ),
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                )
+            ),
+            config.copy(viewportWidthPx = 200, viewportHeightPx = 100),
+        ).single()
+
+        assertEquals(
+            listOf(false, false, true, false, true),
+            page.elements.filterIsInstance<ReaderElement.Text>().map { it.continuesBackgroundRun },
+        )
+    }
+
     @Test
     fun nineSliceReflowDoesNotStrandTheRemainderOfAnOriginalLine() {
         val frame = ReaderTextBackgroundImage(

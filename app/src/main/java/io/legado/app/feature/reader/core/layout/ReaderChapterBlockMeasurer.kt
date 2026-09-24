@@ -246,6 +246,14 @@ class ReaderChapterBlockMeasurer(
                         val initialShaper = shaper(htmlStyle)
                         val initiallyShaped = metrics?.shape(initialShaper, item.value)
                             ?: initialShaper.shape(item.value)
+                        // 同一区间内相邻字形的解析结果是同一个实例：合并后的样式和它的
+                        // shaper 只算一次即可。否则每个字形都要分配一个 ReaderTextStyle，
+                        // 还要对 12 字段的 data class 做一次 getOrPut 哈希。
+                        var cachedRangeStyle: ReaderCharacterStyle? = null
+                        var cachedTextStyle = htmlStyle
+                        var cachedTextStyleIsPlain = true
+                        var cachedShaper = initialShaper
+                        var hasCachedStyle = false
                         var offset = 0
                         initiallyShaped.text.forEachIndexed { clusterIndex, cluster ->
                             val position = item.chapterPosition + offset
@@ -254,12 +262,19 @@ class ReaderChapterBlockMeasurer(
                                     if (metrics != null) metrics.resolveStyle(it, position, isTitle)
                                     else it.resolve(position, isTitle)
                                 }
-                            val textStyle = htmlStyle.merge(rangeStyle)
-                            val textShaper = shaper(textStyle)
+                            if (!hasCachedStyle || rangeStyle !== cachedRangeStyle) {
+                                cachedRangeStyle = rangeStyle
+                                cachedTextStyle = htmlStyle.merge(rangeStyle)
+                                cachedTextStyleIsPlain = cachedTextStyle == htmlStyle
+                                cachedShaper = shaper(cachedTextStyle)
+                                hasCachedStyle = true
+                            }
+                            val textStyle = cachedTextStyle
+                            val textShaper = cachedShaper
                             // The paragraph was already shaped with htmlStyle to obtain its
                             // grapheme clusters. For the overwhelmingly common unstyled glyph,
                             // reuse that width instead of shaping the same glyph a second time.
-                            val width = if (textStyle == htmlStyle) {
+                            val width = if (cachedTextStyleIsPlain) {
                                 initiallyShaped.widthsPx.getOrElse(clusterIndex) { 0f }
                             } else {
                                 (metrics?.shape(textShaper, cluster) ?: textShaper.shape(cluster))

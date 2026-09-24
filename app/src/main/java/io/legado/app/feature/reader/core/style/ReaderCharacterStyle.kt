@@ -74,7 +74,18 @@ class ReaderCompiledStyleRanges internal constructor(
     private val bodyStyles: Array<ReaderCharacterStyle?>,
     private val titleStyles: Array<ReaderCharacterStyle?>,
 ) {
+    /**
+     * 上次命中的区间下标。每段内的字形位置单调递增，绝大多数查询会落回同一区间，
+     * 先做一次区间命中检查即可省掉二分。非线程安全：一个实例只服务一次 measure。
+     */
+    private var cursor = 0
+
     fun resolve(position: Int, isTitle: Boolean): ReaderCharacterStyle? {
+        if (boundaries.size < 2) return null
+        val last = cursor
+        if (position >= boundaries[last] && position < boundaries[last + 1]) {
+            return if (isTitle) titleStyles[last] else bodyStyles[last]
+        }
         var low = 0
         var high = boundaries.size - 2
         while (low <= high) {
@@ -82,7 +93,10 @@ class ReaderCompiledStyleRanges internal constructor(
             when {
                 position < boundaries[middle] -> high = middle - 1
                 position >= boundaries[middle + 1] -> low = middle + 1
-                else -> return if (isTitle) titleStyles[middle] else bodyStyles[middle]
+                else -> {
+                    cursor = middle
+                    return if (isTitle) titleStyles[middle] else bodyStyles[middle]
+                }
             }
         }
         return null

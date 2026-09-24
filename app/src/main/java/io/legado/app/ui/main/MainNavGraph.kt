@@ -45,6 +45,7 @@ import io.legado.app.constant.BookType
 import io.legado.app.constant.Status
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.settings.AppUiConfiguration
+import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.help.coil.CoverExtras
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.Download
@@ -763,12 +764,15 @@ fun MainActivity.mainEntryProvider(
                 onNavigateToRoute(MainRouteSettingsPrivate)
             },
         ) {
+            ReaderPerfTrace.marker("nav.entry.begin")
             val readBookViewModel = koinViewModel<ReadBookViewModel>(
                 key = "ReadBook:${route.bookUrl ?: "last-read"}"
             )
+            ReaderPerfTrace.marker("nav.book-vm.ready")
             val readerSessionViewModel = koinViewModel<ReaderSessionViewModel>(
                 key = "ReaderSession:${route.bookUrl ?: "last-read"}"
             )
+            ReaderPerfTrace.marker("nav.viewmodels.ready")
             val controller = remember(readBookViewModel, readerSessionViewModel) {
                 ReadBookController(
                     this@mainEntryProvider,
@@ -776,6 +780,7 @@ fun MainActivity.mainEntryProvider(
                     readerSessionViewModel,
                 )
             }
+            ReaderPerfTrace.marker("nav.controller.ready")
             // Canvas 阅读面在首次组合时就会请求分页，必须先告诉 ViewModel 本路由要打开哪本书。
             // 刻意用 remember 而非 LaunchedEffect：后者在组合之后才跑，赶不上首帧。
             @Suppress("RememberReturnType")
