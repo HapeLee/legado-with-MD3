@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -40,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -76,14 +76,11 @@ import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.AppRadioButton
-import io.legado.app.ui.widget.components.CollapsibleHeader
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarStartAction
@@ -534,20 +531,21 @@ fun ReadRecordScreen(
                 )
                 if (pendingDeleteCount != -1) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    DeleteConfirmationChoice(
-                        text = stringResource(R.string.do_not_remind_again_this_page),
-                        selected = skipDeleteConfirmTemp,
-                        onClick = {
-                            skipDeleteConfirmTemp = !skipDeleteConfirmTemp
-                            if (skipDeleteConfirmTemp) skipDeleteConfirmLongTermTemp = false
+                    CheckboxItem(
+                        title = stringResource(R.string.do_not_remind_again_this_page),
+                        checked = skipDeleteConfirmTemp,
+                        onCheckedChange = { checked ->
+                            skipDeleteConfirmTemp = checked
+                            if (checked) skipDeleteConfirmLongTermTemp = false
                         },
                     )
-                    DeleteConfirmationChoice(
-                        text = stringResource(R.string.do_not_remind_again_long_term),
-                        selected = skipDeleteConfirmLongTermTemp,
-                        onClick = {
-                            skipDeleteConfirmLongTermTemp = !skipDeleteConfirmLongTermTemp
-                            if (skipDeleteConfirmLongTermTemp) skipDeleteConfirmTemp = false
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CheckboxItem(
+                        title = stringResource(R.string.do_not_remind_again_long_term),
+                        checked = skipDeleteConfirmLongTermTemp,
+                        onCheckedChange = { checked ->
+                            skipDeleteConfirmLongTermTemp = checked
+                            if (checked) skipDeleteConfirmTemp = false
                         },
                     )
                 }
@@ -648,42 +646,18 @@ fun ReadRecordScreen(
                         val candidateKey = candidate.mergeKey()
                         val isChecked = selectedMergeKeys.contains(candidateKey)
 
-                        GlassCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                        ) {
-                            Box(modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp)) {
-                                Column(modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(end = 48.dp)) {
-                                    AppText(text = candidate.bookName)
-                                    AppText(
-                                        text = author,
-                                        style = LegadoTheme.typography.bodySmall,
-                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    AppText(
-                                        text = formatDuring(candidate.readTime),
-                                        style = LegadoTheme.typography.bodySmall,
-                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                                    )
+                        CheckboxItem(
+                            title = candidate.bookName,
+                            description = "$author · ${formatDuring(candidate.readTime)}",
+                            checked = isChecked,
+                            onCheckedChange = { checked ->
+                                selectedMergeKeys = if (checked) {
+                                    selectedMergeKeys + candidateKey
+                                } else {
+                                    selectedMergeKeys - candidateKey
                                 }
-                                AppCheckbox(
-                                    checked = isChecked,
-                                    onCheckedChange = { checked ->
-                                        selectedMergeKeys = if (checked) {
-                                            selectedMergeKeys + candidateKey
-                                        } else {
-                                            selectedMergeKeys - candidateKey
-                                        }
-                                    },
-                                    modifier = Modifier.align(Alignment.CenterEnd),
-                                )
-                            }
-                        }
+                            },
+                        )
                     }
                 }
             }
@@ -769,24 +743,6 @@ private fun ReadRecordActionsSheet(
                 onClick = onClearReadRecords
             )
         }
-    }
-}
-
-@Composable
-private fun DeleteConfirmationChoice(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = onClick)
-            .semantics { role = Role.RadioButton },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AppRadioButton(selected = selected, onClick = onClick)
-        AppText(text = text)
     }
 }
 
@@ -993,49 +949,54 @@ fun LazyListScope.renderListByMode(
         DisplayMode.AGGREGATE -> {
             state.groupedRecords.forEach { (date, details) ->
                 item(key = "header_$date") {
-                    DateHeader(date, details.sumOf { it.readTime })
-                }
-                items(
-                    items = details,
-                    key = { "agg_item_${date}|${it.deviceId}_${it.bookName}_${it.bookAuthor}_${it.date}" }
-                ) { detail ->
-                    val itemKey = detail.selectionKey()
-                    val isSelected = selectedItemKeys.contains(itemKey)
-                    val itemContent: @Composable (Modifier) -> Unit = { modifier ->
-                        ReadRecordItem(
-                            detail,
-                            loadBookCover,
-                            onClick = {
-                                if (inSelectionMode) {
-                                    onToggleSelection(itemKey)
-                                } else {
-                                    onBookClick(detail.bookName, detail.bookAuthor)
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth().animateItem()
+                            .adaptiveHorizontalPadding().padding(vertical = 4.dp),
+                        cornerRadius = 12.dp,
+                        containerColor = LegadoTheme.colorScheme.surfaceContainer,
+                    ) {
+                        DateHeader(date, details.sumOf { it.readTime })
+                        details.forEach { detail ->
+                            key(detail.selectionKey()) {
+                                val itemKey = detail.selectionKey()
+                                val isSelected = selectedItemKeys.contains(itemKey)
+                                val itemContent: @Composable (Modifier) -> Unit = { modifier ->
+                                    ReadRecordItem(
+                                        detail,
+                                        loadBookCover,
+                                        onClick = {
+                                            if (inSelectionMode) {
+                                                onToggleSelection(itemKey)
+                                            } else {
+                                                onBookClick(detail.bookName, detail.bookAuthor)
+                                            }
+                                        },
+                                        onLongClick = { onEnterSelection(itemKey) },
+                                        inSelectionMode = inSelectionMode,
+                                        isSelected = isSelected,
+                                        modifier = modifier,
+                                    )
                                 }
-                            },
-                            onLongClick = { onEnterSelection(itemKey) },
-                            inSelectionMode = inSelectionMode,
-                            isSelected = isSelected,
-                            modifier = modifier
-                        )
-                    }
-                    val deleteActionDescription = stringResource(R.string.del_read_record)
-                    if (inSelectionMode) {
-                        itemContent(Modifier.animateItem())
-                    } else {
-                        SwipeActionContainer(
-                            modifier = Modifier.animateItem(),
-                            startAction = SwipeAction(
-                                icon = Icons.Default.Delete,
-                                background = LegadoTheme.colorScheme.error,
-                                onSwipe = {
-                                    onConfirmDelete(1) {
-                                        onIntent(ReadRecordIntent.DeleteDetail(detail))
+                                val deleteActionDescription = stringResource(R.string.del_read_record)
+                                if (inSelectionMode) {
+                                    itemContent(Modifier)
+                                } else {
+                                    SwipeActionContainer(
+                                        startAction = SwipeAction(
+                                            icon = Icons.Default.Delete,
+                                            background = LegadoTheme.colorScheme.error,
+                                            onSwipe = {
+                                                onConfirmDelete(1) {
+                                                    onIntent(ReadRecordIntent.DeleteDetail(detail))
+                                                }
+                                            },
+                                            contentDescription = deleteActionDescription,
+                                        )
+                                    ) {
+                                        itemContent(Modifier)
                                     }
-                                },
-                                contentDescription = deleteActionDescription
-                            )
-                        ) {
-                            itemContent(Modifier)
+                                }
+                            }
                         }
                     }
                 }
@@ -1044,46 +1005,56 @@ fun LazyListScope.renderListByMode(
 
         DisplayMode.TIMELINE -> {
             state.timelineRecords.forEach { (date, sessions) ->
-                item(key = "timeline_header_$date") { DateHeader(date) }
-                items(items = sessions, key = { "timeline_item_${date}|${it.id}" }) { session ->
-                    val itemKey = session.selectionKey()
-                    val isSelected = selectedItemKeys.contains(itemKey)
-                    val itemContent: @Composable (Modifier) -> Unit = { modifier ->
-                        TimelineSessionItem(
-                            item = TimelineItem(session, true),
-                            onBookClick = { bookName, bookAuthor ->
-                                if (inSelectionMode) {
-                                    onToggleSelection(itemKey)
-                                } else {
-                                    onBookClick(bookName, bookAuthor)
+                item(key = "timeline_header_$date") {
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth().animateItem()
+                            .adaptiveHorizontalPadding().padding(vertical = 4.dp),
+                        cornerRadius = 12.dp,
+                        containerColor = LegadoTheme.colorScheme.surfaceContainer,
+                    ) {
+                        DateHeader(date)
+                        sessions.forEach { session ->
+                            key(session.id) {
+                                val itemKey = session.selectionKey()
+                                val isSelected = selectedItemKeys.contains(itemKey)
+                                val itemContent: @Composable (Modifier) -> Unit = { modifier ->
+                                    TimelineSessionItem(
+                                        item = TimelineItem(session, true),
+                                        onBookClick = { bookName, bookAuthor ->
+                                            if (inSelectionMode) {
+                                                onToggleSelection(itemKey)
+                                            } else {
+                                                onBookClick(bookName, bookAuthor)
+                                            }
+                                        },
+                                        onLongClick = { onEnterSelection(itemKey) },
+                                        inSelectionMode = inSelectionMode,
+                                        isSelected = isSelected,
+                                        loadBookCover = loadBookCover,
+                                        loadChapterTitle = loadChapterTitle,
+                                        modifier = modifier,
+                                    )
                                 }
-                            },
-                            onLongClick = { onEnterSelection(itemKey) },
-                            inSelectionMode = inSelectionMode,
-                            isSelected = isSelected,
-                            loadBookCover = loadBookCover,
-                            loadChapterTitle = loadChapterTitle,
-                            modifier = modifier
-                        )
-                    }
-                    val deleteActionDescription = stringResource(R.string.del_read_record)
-                    if (inSelectionMode) {
-                        itemContent(Modifier.animateItem())
-                    } else {
-                        SwipeActionContainer(
-                            modifier = Modifier.animateItem(),
-                            startAction = SwipeAction(
-                                icon = Icons.Default.Delete,
-                                background = LegadoTheme.colorScheme.error,
-                                onSwipe = {
-                                    onConfirmDelete(0) {
-                                        onIntent(ReadRecordIntent.DeleteSession(session))
+                                val deleteActionDescription = stringResource(R.string.del_read_record)
+                                if (inSelectionMode) {
+                                    itemContent(Modifier)
+                                } else {
+                                    SwipeActionContainer(
+                                        startAction = SwipeAction(
+                                            icon = Icons.Default.Delete,
+                                            background = LegadoTheme.colorScheme.error,
+                                            onSwipe = {
+                                                onConfirmDelete(0) {
+                                                    onIntent(ReadRecordIntent.DeleteSession(session))
+                                                }
+                                            },
+                                            contentDescription = deleteActionDescription,
+                                        )
+                                    ) {
+                                        itemContent(Modifier)
                                     }
-                                },
-                                contentDescription = deleteActionDescription
-                            )
-                        ) {
-                            itemContent(Modifier)
+                                }
+                            }
                         }
                     }
                 }
@@ -1222,11 +1193,11 @@ fun LatestReadItem(
                         initialDelayMillis = 1000
                     ),
                 text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.outline)) {
+                    withStyle(style = SpanStyle(color = LegadoTheme.colorScheme.outline)) {
                         append(formatDuring(record.readTime))
                         append(" • ")
                     }
-                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                    withStyle(style = SpanStyle(color = LegadoTheme.colorScheme.primary)) {
                         append(lastReadText)
                     }
                 },
@@ -1281,8 +1252,8 @@ fun TimelineSessionItem(
     val timelineX = 24.dp
     val contentPaddingStart = 32.dp
 
-    val lineColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    val nodeColor = MaterialTheme.colorScheme.primary
+    val lineColor = LegadoTheme.colorScheme.surfaceContainerHigh
+    val nodeColor = LegadoTheme.colorScheme.primary
 
     Box(
         modifier = modifier
@@ -1352,7 +1323,7 @@ fun TimelineSessionItem(
                     AppText(
                         text = author,
                         style = LegadoTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1360,7 +1331,7 @@ fun TimelineSessionItem(
                     AppText(
                         text = chapterTitle.orEmpty(),
                         style = LegadoTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1406,7 +1377,7 @@ fun ReadRecordItem(
                 contentDescription = itemDescription
                 role = Role.Button
             }
-            .adaptiveHorizontalPadding(vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         CoilBookCover(
@@ -1429,12 +1400,12 @@ fun ReadRecordItem(
             AppText(
                 text = author,
                 style = LegadoTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = LegadoTheme.colorScheme.outline,
             )
             Spacer(modifier = Modifier.height(8.dp))
             AppText(
                 text = stringResource(R.string.reading_time_with_value, formatDuring(detail.readTime)),
-                color = MaterialTheme.colorScheme.outline,
+                color = LegadoTheme.colorScheme.outline,
                 style = LegadoTheme.typography.labelSmall
             )
         }
@@ -1446,29 +1417,21 @@ fun DateHeader(
     date: String,
     dailyTotalTime: Long? = null
 ) {
-    CollapsibleHeader(
-        modifier = Modifier.adaptiveHorizontalPadding(),
-        showIcon = false,
-        isCollapsed = false,
-        onToggle = { },
-        title = "",
-        titleContent = {
-            val dateText = formatFriendlyDate(date)
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        AppText(
+            text = formatFriendlyDate(date),
+            style = LegadoTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = LegadoTheme.colorScheme.primary,
+        )
+        dailyTotalTime?.let { total ->
             AppText(
-                text = dateText,
-                style = LegadoTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = LegadoTheme.colorScheme.primary
+                text = stringResource(R.string.read_duration_done, formatDuring(total)),
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurface,
             )
-            dailyTotalTime?.let { total ->
-                AppText(
-                    text = stringResource(R.string.read_duration_done, formatDuring(total)),
-                    style = LegadoTheme.typography.bodySmall,
-                    color = LegadoTheme.colorScheme.onSurface
-                )
-            }
         }
-    )
+    }
 }
 
 @Composable
