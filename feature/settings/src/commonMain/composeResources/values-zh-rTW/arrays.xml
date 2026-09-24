@@ -56,10 +56,10 @@
         <item>調整章節位置</item>
     </string-array>
     <string-array name="screen_direction_title">
-        <item>@string/screen_unspecified</item>
-        <item>@string/screen_portrait</item>
-        <item>@string/screen_landscape</item>
-        <item>@string/screen_sensor</item>
+        <item>跟隨系統</item>
+        <item>豎向</item>
+        <item>橫向</item>
+        <item>跟隨感測器</item>
         <item>反向直向</item>
     </string-array>
     <string-array name="screen_time_out">
@@ -75,11 +75,11 @@
     <item>Maximum</item>
 </string-array>
 <string-array name="default_home_page">
-    <item>@string/home</item>
-    <item>@string/bookshelf</item>
-    <item>@string/discovery</item>
-    <item>@string/rss</item>
-    <item>@string/my</item>
+    <item>主頁</item>
+    <item>書架</item>
+    <item>發現</item>
+    <item>訂閱</item>
+    <item>我的</item>
 </string-array>
 <string-array name="label_vis_mode">
     <item>Auto</item>

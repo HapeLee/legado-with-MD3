@@ -2351,3 +2351,32 @@ CMP **不参与 Android 资源合并** ⇒ 每个语言目录都要自带一份�
 **BUILD SUCCESSFUL**；计数 **806 / 1301 零偏离**；lint 重测 **5 errors / 102 warnings**（与迁移前一致）。
 
 **下一步**：第 2/3 档的四个 sheet（前置已到位）—— 先量清各自的同包符号族再切。
+
+### M5-19c-0 已完成（2026-09-24）：⚠️ 修一个**静默的 UI bug**（`@string/` 间接引用）
+
+**发现**：勘察导航组时去看 feature 侧 `default_home_page` 数组的实际内容（M5-17a 搬过它），
+发现条目是字面量 **`@string/home`** 而不是「首页 / Home」。
+
+**为什么是 bug**：CMP 的 composeResources 是 assets，**不参与 Android 资源解析** ⇒
+`:app` 里的 `@string/home` 会逐项按语言解析，照抄到共享层则**原样显示 `"@string/home"`**。
+
+**为什么没被发现（两个"看不见"叠加）**：① 编译通过（它只是字符串字面量）；
+② 我的逐字比对口径错了 —— 比的是「feature 值 vs `:app` **原始**值」，而后者就是那个 token
+⇒ 报 ✅。**该比的是解析后的可见值。**
+
+**波及**：全仓扫描 **32 项 / 3 个数组** —— `progress_bar_behavior_title`、`screen_direction_title`
+（readConfig 那几片）与 `default_home_page`（**M5-17a，我自己的片**）。
+
+**修法**：按「数组所在语言 → 回落 `:app` 默认」解析成本地化字面量（= Android 的行为）。
+抽查：`default_home_page` 现为 `Home/Bookshelf/Discovery/RSS Feeds/Me`、
+`首页/书架/发现/订阅/我的`、`主頁/書架/發現/訂閱/我的` ✓。
+
+**新工具**：`tools/check-resource-indirection.py`（扫全仓 composeResources、发现即非零退出、
+`--fix` 展开）⇒ 修完全仓 **0 项** ✅。
+
+验证：四门禁全绿 + 全模块测试与 `:app` 编译/单测/打包 → BUILD SUCCESSFUL；计数 **806 / 1301
+零偏离**；4 个语言目录 XML 全部可解析；lint **5 errors / 102 warnings**（与本片之前一致）。
+
+未验证：**渲染结果本身**（这正是该 bug 唯一能暴露的地方）—— 需在真机/desktop 打开三个下拉确认。
+
+**下一步**：回到导航组（`MainDestination` 上提 + 两个 sheet）。

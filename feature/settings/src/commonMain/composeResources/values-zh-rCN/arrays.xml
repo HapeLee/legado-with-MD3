@@ -85,11 +85,11 @@
         <item>不显示</item>
     </string-array>
 <string-array name="default_home_page">
-    <item>@string/home</item>
-    <item>@string/bookshelf</item>
-    <item>@string/discovery</item>
-    <item>@string/rss</item>
-    <item>@string/my</item>
+    <item>首页</item>
+    <item>书架</item>
+    <item>发现</item>
+    <item>订阅</item>
+    <item>我的</item>
 </string-array>
 <string-array name="label_vis_mode">
     <item>自动</item>

@@ -2217,3 +2217,49 @@ M5-15a 那次勘察我用了三个一次性 tmp 脚本、踩了三个盲点（�
 / `NavIconDestination` / `NavigationIconSlot` 一族）、
 `LabelColorManageSheet` + `LauncherIconPickerSheet`（阻塞：`TagColorGenerator` / 8 个 `Launcher*`
 图标 / `getCompatDrawable` / `ComponentName`/`ImageView`）—— 两者都先量清各自的同包符号族再切。
+
+### M5-19c-0：⚠️ 修一个**静默的 UI bug**（`@string/` 间接引用被照抄进 CMP 资源）
+
+**发现方式**：勘察导航组时，为了确认 `MainDestination` 的 `labelId` 该怎么替代，我去看 feature 侧
+`default_home_page` 数组的实际内容（M5-17a 搬过它）—— 结果发现它的条目是字面量
+**`@string/home`**，不是「首页 / Home」。
+
+**为什么是 bug**：CMP 的 composeResources 是打进 assets 的资源，**不参与 Android 资源解析**。
+在 `:app` 里 `<item>@string/home</item>` 会逐项按语言解析；照抄到共享层则**原样显示
+`"@string/home"`**。本仓既有约定（M5-8b / M5-9b）本来就是「展开成解析后的字面量，4 个语言都写」——
+这两片遵守了，后面某几片没有。
+
+**为什么一直没被发现（两个"看不见"叠在一起）**：
+
+1. **编译通过** —— 它只是一个字符串字面量，类型没错；
+2. **我的逐字比对也"通过"** —— M5-17a 我做的核验是「feature 的值 vs `:app` 同语言（回落默认）的值」，
+   而 `:app` 那一侧的**原始值就是这个 token** ⇒ 两边一致，检查报 ✅。
+   ⚠️ **根因是核验口径**：该比的是**解析后的可见值**，不是原始 token。这条已进 checklist。
+
+**波及范围**（全仓扫描后）：**32 项**、跨 3 个数组 —— `progress_bar_behavior_title` 与
+`screen_direction_title`（来自 readConfig 那几片）、`default_home_page`（**M5-17a，我自己的片**）。
+
+**修法**：按「该数组所在语言目录 → 回落 `:app` 默认目录」解析每个 `@string/x` 成本地化字面量
+（这正是 Android 逐项解析的行为）。抽查确认：`default_home_page` 现在分别是
+`Home/Bookshelf/Discovery/RSS Feeds/Me`、`首页/书架/发现/订阅/我的`、`主頁/書架/發現/訂閱/我的` ✓。
+
+#### 顺手把这条检查做成了工具
+
+`tools/check-resource-indirection.py`：扫全仓所有 `composeResources` 的数组条目，报出并（`--fix`）
+展开 `@string/` / `@array/` / `@plurals/` 间接引用；**发现即返回非零**（可进 CI）。
+修完后全仓扫描 **0 项** ✅ ⇒ 也说明没有别的模块中招。
+
+#### 验证
+
+- 四门禁全绿；`:feature:settings` 测试 + `:app` 编译/单测/打包 → **BUILD SUCCESSFUL**
+- 计数 **806 / 1301 零偏离**（纯资源改动）
+- 展开 32 项，无残留、4 个语言目录 XML 全部可解析 ✅
+- `lintAppDebug` 重测 **5 errors / 102 warnings**（与本片之前一致）
+
+#### 未验证
+
+**渲染结果本身**（这正是这个 bug 唯一能暴露的地方）：需要在真机/desktop 打开「默认主页」下拉、
+「屏幕方向」下拉与「进度条行为」下拉，确认显示的是本地化文案而不是 `@string/…`。
+本片只能保证值 == Android 会解析出的值。
+
+**下一步**：回到导航组（`MainDestination` 上提 + 两个 sheet）。

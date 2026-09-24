@@ -58,11 +58,11 @@
     <item>Maximum</item>
 </string-array>
 <string-array name="default_home_page">
-    <item>@string/home</item>
-    <item>@string/bookshelf</item>
-    <item>@string/discovery</item>
-    <item>@string/rss</item>
-    <item>@string/my</item>
+    <item>主頁</item>
+    <item>書架</item>
+    <item>發現</item>
+    <item>訂閲</item>
+    <item>我的</item>
 </string-array>
 <string-array name="label_vis_mode">
     <item>Auto</item>

@@ -131,8 +131,8 @@
         <item>3</item>
     </string-array>
     <string-array name="progress_bar_behavior_title">
-        <item>@string/adjust_chapter_page</item>
-        <item>@string/adjust_chapter_index</item>
+        <item>Adjust of chapter page</item>
+        <item>Adjust of chapter index</item>
     </string-array>
     <string-array name="progress_bar_behavior_value">
         <item>page</item>
@@ -147,12 +147,12 @@
         <item>1</item>
     </string-array>
     <string-array name="screen_direction_title">
-        <item>@string/screen_unspecified</item>
-        <item>@string/screen_portrait</item>
-        <item>@string/screen_landscape</item>
-        <item>@string/screen_sensor</item>
-        <item>@string/screen_portrait_reversed</item>
-        <item>@string/screen_landscape_reversed</item>
+        <item>Follow system</item>
+        <item>Portrait</item>
+        <item>Landscape</item>
+        <item>Auto(sensor)</item>
+        <item>Portrait Reversed</item>
+        <item>Landscape Reversed</item>
     </string-array>
     <string-array name="screen_direction_value">
         <item>0</item>
@@ -189,11 +189,11 @@
         <item>3</item>
     </string-array>
 <string-array name="default_home_page">
-    <item>@string/home</item>
-    <item>@string/bookshelf</item>
-    <item>@string/discovery</item>
-    <item>@string/rss</item>
-    <item>@string/my</item>
+    <item>Home</item>
+    <item>Bookshelf</item>
+    <item>Discovery</item>
+    <item>RSS Feeds</item>
+    <item>Me</item>
 </string-array>
 <string-array name="label_vis_mode">
     <item>Auto</item>

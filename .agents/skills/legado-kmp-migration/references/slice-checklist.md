@@ -648,6 +648,20 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   contract file is a prerequisite for *most* of the remaining sheets, i.e. the difficulty-ordered
   tier list had to be re-sorted by **dependency**. When a revert happens, spend a minute on what
   it implies for the remaining order — a wrong order costs a repeat of the same discovery.
+- ⚠️ **Verify resources by their *resolved* value, never by the raw token — and run
+  `tools/check-resource-indirection.py` before claiming a resource migration is equivalent.**
+  Measured (late) in M5-19c-0: `:app` string arrays may contain `<item>@string/home</item>`, which
+  Android resolves per item and per locale. CMP's `composeResources` are assets and do **no**
+  resource resolution, so copying the token verbatim makes the UI print `"@string/home"` — while
+  the code compiles and a byte-identity check **passes**, because the `:app` side's raw value *is*
+  that token. Two independent "invisibilities" stacked: no compile error, and a verification whose
+  comparison basis was the token. The repo's own convention (M5-8b/M5-9b) was already "expand to the
+  resolved literal, in every locale directive" — later slices silently stopped doing it, and nothing
+  caught it for several slices. Fix: resolve `@string/x` through the **array's own locale → default**
+  (exactly Android's fallback) and write the literal. `tools/check-resource-indirection.py` scans
+  every `composeResources` for such items (non-zero exit when found, `--fix` to expand), and the
+  rule generalises: **for any migration, ask what the *rendered* value is and compare that** — an
+  equivalence claim about UI text that was never rendered is only as good as its comparison basis.
 - **For every platform type you have to replace, look for the repo's own precedent first — it is
   usually already written down.** M5-19b had two such replacements in one file and both had
   precedents: `FileDoc` (a `Uri`/SAF type) degraded to **"id + display name"** exactly as
