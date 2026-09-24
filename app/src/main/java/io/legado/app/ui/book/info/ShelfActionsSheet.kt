@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.info
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,15 +12,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.ConflictBookSummary
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.conflict.ConflictBookCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.text.AppText
 
 /**
@@ -73,18 +75,27 @@ fun ShelfActionsSheet(
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
-        TinySettingItem(
-            title = stringResource(R.string.group),
-            imageVector = Icons.Default.Group,
-            onClick = onGroup,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        TinySettingItem(
-            title = stringResource(R.string.delete),
-            imageVector = Icons.Default.Delete,
-            color = LegadoTheme.colorScheme.errorContainer,
-            onClick = onDelete,
-        )
+        // 两个动作同排、均分宽度。删除不铺底色，用 error 色的图标 + 文字表达危险性，
+        // 免得一个删除按钮在面板里显得比「分组」更重。
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            // 两个按钮的最小交互高度不同（plain 会被撑到 48dp），居中对齐免得看着错位
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            MediumTonalButton(
+                onClick = onGroup,
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Group,
+                text = stringResource(R.string.group),
+            )
+            MediumTonalButton(
+                onClick = onDelete,
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Delete,
+                text = stringResource(R.string.delete),
+            )
+        }
         Spacer(modifier = Modifier.height(12.dp))
     }
 }
