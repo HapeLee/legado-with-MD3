@@ -59,8 +59,5 @@ fun <T> MutableList<T>.removeLastElement(): T {
     }
 }
 
-fun <T> MutableList<T>.move(fromIndex: Int, toIndex: Int) {
-    if (fromIndex == toIndex) return
-    val element = removeAt(fromIndex)
-    add(toIndex, element)
-}
+// M5-19c-pre：`MutableList.move` 已上提到 `:core:designsystem/commonMain`
+// （包名不变 `io.legado.app.utils`），共享层出现消费者（themeConfig 的导航重排）时搬的。

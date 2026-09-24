@@ -2380,3 +2380,28 @@ CMP **不参与 Android 资源合并** ⇒ 每个语言目录都要自带一份�
 未验证：**渲染结果本身**（这正是该 bug 唯一能暴露的地方）—— 需在真机/desktop 打开三个下拉确认。
 
 **下一步**：回到导航组（`MainDestination` 上提 + 两个 sheet）。
+
+### M5-19c-pre 已完成（2026-09-24）：导航组的三个上提
+
+勘察结论：这一组**不是"造契约"，而是三个上提**，每个都符合既有配方（**包名不变 ⇒ 消费方 import
+零改动**），触发条件都是「共享层出现消费者」：
+
+| 上提 | 改动 |
+|---|---|
+| `MainDestination` → `:core:designsystem`（包名 `io.legado.app.ui.main` 不变） | ⚠️ 一处改写：`@StringRes labelId: Int` → 语义枚举 `MainNavLabel`（共享层拿不到 `R`/`StringRes`） |
+| `MainDestinationIcons` → 同上 | **逐字**（纯 Compose + designsystem + `miuix-icons`，designsystem 早已依赖） |
+| `MutableList<T>.move`（原 `:app/utils/CollectionExtensions.kt`）→ 同上，包名保持 `io.legado.app.utils` | **逐字**（纯泛型）。放 designsystem 的理由：8 处消费方全在 UI 侧 |
+
+`labelId` 的 9 处消费点：`MainScreen` 7 处（同包 ⇒ 无需 import）、`MainNavigationSettingsSheet` 3 处
+（需 import `toRes`）；宿主映射写在 `:app/ui/main/MainNavLabelText.kt`（与 M5-16a/19b 同一判据：
+共享层承载语义、宿主承载文案）。
+
+⚠️ 顺手更新了一处**被本条推翻前提**的 KDoc：`MainDestinationIcons.kt` 原写「映射属于导航语义、
+因此留在 `:app`」—— 那个前提正是被同片的 `MainDestination` 上提消掉的。（同类还有 M5-9b-pre 的
+`AppTabRow`：「等真出现时按同一配方再搬」。⇒ 已进 checklist：**这类 KDoc 是待办清单**。）
+
+验证：四门禁全绿（G4 无需变动）+ designsystem/`:app` 编译、单测、打包 + 相关测试 →
+**BUILD SUCCESSFUL**；计数 **806 / 1301 零偏离**；lint **5 errors / 102 warnings**（一致）；
+资源间接引用检查 **0 项**。
+
+**下一步**：迁两个 sheet（前置已全部到位）。

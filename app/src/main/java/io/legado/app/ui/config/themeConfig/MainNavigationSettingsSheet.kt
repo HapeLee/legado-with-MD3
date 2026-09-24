@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.ui.main.MainDestination
+import io.legado.app.ui.main.toRes
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -97,7 +98,7 @@ fun MainNavigationSettingsSheet(
             CompactDropdownSettingItem(
                 title = stringResource(R.string.default_home_page),
                 selectedValue = selectedDefault,
-                displayEntries = visibleItems.map { stringResource(it.labelId) }.toTypedArray(),
+                displayEntries = visibleItems.map { stringResource(it.label.toRes()) }.toTypedArray(),
                 entryValues = visibleItems.map { it.route }.toTypedArray(),
                 onValueChange = onSetDefault,
             )
@@ -155,7 +156,7 @@ fun MainNavigationSettingsSheet(
                             }
                             onSetOrder(navigationItems.joinToString(",") { it.route })
                         },
-                        title = stringResource(destination.labelId),
+                        title = stringResource(destination.label.toRes()),
                         isEnabled = true,
                         containerColor = LegadoTheme.colorScheme.onSheetContent,
                         onEnabledChange = {
@@ -171,7 +172,7 @@ fun MainNavigationSettingsSheet(
                         ReorderableSelectionItem(
                             state = reorderableState,
                             key = destination.route,
-                            title = stringResource(destination.labelId),
+                            title = stringResource(destination.label.toRes()),
                             isEnabled = false,
                             canReorder = false,
                             containerColor = LegadoTheme.colorScheme.onSheetContent,

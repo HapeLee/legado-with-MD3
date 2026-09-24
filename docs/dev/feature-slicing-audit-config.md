@@ -2263,3 +2263,49 @@ M5-15a 那次勘察我用了三个一次性 tmp 脚本、踩了三个盲点（�
 本片只能保证值 == Android 会解析出的值。
 
 **下一步**：回到导航组（`MainDestination` 上提 + 两个 sheet）。
+
+### M5-19c-pre：导航组的三个上提（`MainDestination` / `MainDestinationIcons` / `MutableList.move`）
+
+勘察结论：这一组**不是"造契约"，而是三个上提** —— 每个都符合既有配方（**包名不变 ⇒ 消费方
+import 零改动**），且触发条件都是「共享层出现消费者」（`themeConfig` 的两个 sheet）。
+
+| 上提 | 从 | 到 | 改动 |
+|---|---|---|---|
+| `MainDestination` | `:app/ui/main/` | `:core:designsystem/commonMain`（包名不变） | ⚠️ **一处改写**：`@StringRes labelId: Int` → 语义枚举 `MainNavLabel` |
+| `MainDestinationIcons` | 同上 | 同上 | **逐字**（纯 Compose + designsystem + `miuix-icons`，designsystem 早已依赖） |
+| `MutableList<T>.move` | `:app/utils/CollectionExtensions.kt` | 同上（包名不变 `io.legado.app.utils`） | **逐字**（纯泛型） |
+
+**为什么 `move` 放 designsystem 而不是 `:core:model`**：8 处消费方全在 UI 侧
+（`BookshelfManageScreen` / 其 VM / `BookshelfViewModel` / `GroupManageSheet` /
+`SetDetailPage` / `SetListPage` / `SourceBrowseDetailPage` + `MainNavigationSettingsSheet`）
+⇒ 放 UI 模块更贴合实际使用面。
+
+**`labelId` → 枚举**：共享层拿不到 `androidx.annotation.StringRes` 与 `R` ⇒
+`MainNavLabel`（5 项）+ 宿主侧 `:app/ui/main/MainNavLabelText.kt` 的 `toRes()`
+（与 M5-16a `ThemeManageText`、M5-19b `ThemeConfigToast` 同一判据：**共享层承载语义，
+宿主承载文案**）。消费点共 9 处：`MainScreen` 7 处（同包 ⇒ 无需 import）、
+`MainNavigationSettingsSheet` 3 处（需 import `toRes`）。
+
+#### ⚠️ 顺手更新了一处**被本条推翻前提**的 KDoc
+
+`MainDestinationIcons.kt` 原本写着：
+
+> 这段映射属于 app 的导航语义（`MainDestination` 定义在宿主侧），因此留在 `:app`
+
+—— 那个前提**正是被同片的 `MainDestination` 上提消掉的**。已改写为「保留这段说明是因为它记录了
+当初的判据：图标映射本身没有平台依赖，是**被数据类型的住所**牵连在宿主的」。
+（同类还有 M5-9b-pre 的 `AppTabRow`：「等真出现时按同一配方再搬」—— 这类 KDoc 其实是**待办清单**。）
+
+#### 验证
+
+- 四门禁全绿（**G4 无需变动**）
+- `:core:designsystem` desktop 编译 + `:app` 编译/单测/打包 + designsystem/settings 测试
+  → **BUILD SUCCESSFUL**
+- 计数 **806 / 1301 零偏离**（纯搬运 + 一处枚举替换，依 checklist 不加测试）
+- `lintAppDebug` 重测 **5 errors / 102 warnings**（与之前一致）；资源间接引用检查 **0 项** ✅
+
+#### 未验证
+
+导航栏图标/文案在 5 个目的地 × 两套引擎（Material3 / Miuix）× 选中态的渲染。需冒烟。
+
+**下一步**：迁两个 sheet（前置已全部到位）。

@@ -291,7 +291,7 @@ fun MainScreen(
                         val selected = pagerState.targetPage == index
                         var showGroupMenu by remember { mutableStateOf(false) }
                         val haptic = LocalHapticFeedback.current
-                        val destinationLabel = stringResource(destination.labelId)
+                        val destinationLabel = stringResource(destination.label.toRes())
                         Box {
                             MiuixNavigationRailItem(
                                 modifier = Modifier
@@ -379,7 +379,7 @@ fun MainScreen(
                     val selected = pagerState.targetPage == index
                     var showGroupMenu by remember { mutableStateOf(false) }
                     val haptic = LocalHapticFeedback.current
-                    val destinationLabel = stringResource(destination.labelId)
+                    val destinationLabel = stringResource(destination.label.toRes())
 
                     WideNavigationRailItem(
                         modifier = Modifier.semantics(mergeDescendants = true) {
@@ -425,7 +425,7 @@ fun MainScreen(
                             }
                         },
                         label = if (labelVisibilityMode != "unlabeled") {
-                            { AppText(stringResource(destination.labelId)) }
+                            { AppText(stringResource(destination.label.toRes())) }
                         } else null
                     )
                 }
@@ -445,7 +445,7 @@ fun MainScreen(
                             val customIconPath = mainUiState.customIconPath(destination)
                             val selectedCustomIconPath =
                                 mainUiState.selectedCustomIconPath(destination)
-                            val destinationLabel = stringResource(destination.labelId)
+                            val destinationLabel = stringResource(destination.label.toRes())
                             AppNavigationBarItem(
                                 modifier = Modifier.semantics(mergeDescendants = true) {
                                     contentDescription = destinationLabel
@@ -454,7 +454,7 @@ fun MainScreen(
                                 onClick = {
                                     handleMainDestinationClick(index, destination)
                                 },
-                                labelString = stringResource(destination.labelId),
+                                labelString = stringResource(destination.label.toRes()),
                                 iconVector = mainDestinationIcon(destination, selected),
                                 m3Icon = {
                                     NavigationIcon(
@@ -653,7 +653,7 @@ fun MainScreen(
                                 val customIconPath = mainUiState.customIconPath(destination)
                                 val selectedCustomIconPath =
                                     mainUiState.selectedCustomIconPath(destination)
-                                val destinationLabel = stringResource(destination.labelId)
+                                val destinationLabel = stringResource(destination.label.toRes())
                                 FloatingBottomBarItem(
                                     onClick = {
                                         handleMainDestinationClick(index, destination)
@@ -673,7 +673,7 @@ fun MainScreen(
                                     )
                                     if (showLabel && (alwaysShowLabel || selected)) {
                                         AppText(
-                                            text = stringResource(destination.labelId),
+                                            text = stringResource(destination.label.toRes()),
                                             style = MaterialTheme.typography.labelSmall,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis

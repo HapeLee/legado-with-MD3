@@ -25,8 +25,14 @@ import top.yukonga.miuix.kmp.icon.extended.Settings
 /**
  * 主导航目的地 → 图标。
  *
- * 这段映射属于 app 的导航语义（`MainDestination` 定义在宿主侧），因此留在 `:app`：
- * `AppIcons` 只保留与导航无关的通用图标，才能下沉到 `:core:ui` 而不反向依赖宿主。
+ * M5-19c-pre：从 `:app` 的 `ui/main/MainDestinationIcons.kt` 搬进
+ * `:core:designsystem/commonMain`，**包名不变 ⇒ 两处消费方 import 零改动**，
+ * 内容**逐字保留**（纯 Compose + designsystem + `miuix-icons` —— 后者 designsystem 早已依赖）。
+ *
+ * ⚠️ 迁移前这里写着「这段映射属于 app 的导航语义（`MainDestination` 定义在宿主侧），因此留在
+ * `:app`」—— 那个前提**正是被同片的 `MainDestination` 上提消掉的**（见其 KDoc）。
+ * 保留这段说明是因为它记录了当初的判据：图标映射本身没有平台依赖，是**被数据类型的住所**
+ * 牵连在宿主的。
  */
 @Composable
 fun mainDestinationIcon(destination: MainDestination, selected: Boolean): ImageVector {

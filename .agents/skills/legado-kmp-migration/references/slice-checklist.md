@@ -628,6 +628,14 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   and `lintAppDebug` does not scan designsystem). The real defect was procedural: several slices
   had reported "lint unchanged (94)" by quoting a value measured back at M5-10a. A stale number
   reads exactly like a fresh one.
+- **Treat "this stays here because X" KDocs as a to-do list — hoisting X invalidates the premise.**
+  Two instances so far: `AppTabRow.kt` said `CardTabRow` was deliberately left behind "until a
+  non-Android consumer appears" (M5-9b-pre then moved it), and `MainDestinationIcons.kt` said the
+  mapping stays in `:app` "because `MainDestination` is defined on the host side" (M5-19c-pre moved
+  `MainDestination` and had to update that very sentence). When you hoist something, grep the
+  neighbourhood for explanations that *depend* on where it lived — and when you rewrite one, keep
+  the original reasoning visible rather than deleting it: it records *why* the file had no platform
+  dependency all along (it was only ever tied to the host by the data type's address).
 - ⚠️ **The same-package trap has two directions, and neither leaves an import behind.** Measured in
   M5-19a: one sheet used the same-package `ThemeConfigIntent` (declared in a sibling file that had
   not been migrated) — invisible to an import-based survey, so it "looked clean" and failed on
