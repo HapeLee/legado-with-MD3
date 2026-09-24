@@ -254,7 +254,11 @@ legacyHelp|app/main/io/legado/app/ui/config/backupConfig|1
 # 同时 `ui/config/downloadCacheConfig` 的 `appCtx` 直连也归零（`appCtx.cacheDir` /
 # `externalCacheDir` 进了适配器），该条目同样删除。
 legacyHelp|app/main/io/legado/app/ui/config/readConfig|2
-legacyHelp|app/main/io/legado/app/ui/config/themeConfig|3
+# M5-19d：`LabelColorManageSheet` 迁进 `:feature:settings/themeconfig/`，它原先对
+# `help.config.TagColorGenerator` 的那 1 处导入随文件离开本目录 ⇒ 3 → **2**。
+# ⚠️ 该实现**没有**随迁移留在 `help.config` 包下（那会让共享层首次出现 `help.*` 导入，
+# 触发 G4 的假阳性）—— 已上提到 `:core:designsystem` 的 `io.legado.app.utils`，见其 KDoc。
+legacyHelp|app/main/io/legado/app/ui/config/themeConfig|2
 # M5-16a：`themeManage` 的 VM 迁进 `:feature:settings/thememanage/`，VM 里那 2 条
 # （`help.config.SavedTheme` / `help.config.ThemePackageManager`）随实现搬进
 # `AndroidThemeManagePlatform`（已在 `app/main/io/legado/app/platform` 登记为 7 → 9）；

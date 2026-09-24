@@ -2438,3 +2438,38 @@ filtered 239→238 属"账本变准"）。
 
 **下一步**：`themeConfig` 剩 7 个文件 —— `LabelColorManageSheet` + `LauncherIconPickerSheet`
 （图标/颜色档）与核心三件套（VM 612 / Screen 1326 / `ThemeConfig.kt` 61）。
+
+### M5-19d 已完成（2026-09-24）：`LabelColorManageSheet` + 两个上提 + 一个纯算法替代
+
+勘察把图标/颜色档分成两种难度：`LabelColorManageSheet`(161) 可做；
+`LauncherIconPickerSheet`(199) **重度 Android**（自持 `LauncherIconItem(… ComponentName)` /
+`LauncherIcons.list`，引用 8 个 `MainActivity` 子类 + `R.mipmap` + `ImageView`）⇒ 需要「启动图标表」
+契约，是独立一片。**本片只做前者**。
+
+三个前置动作：`TagColorPair` 上提（纯 data class，包名不变 ⇒ 5 处 import 零改动；同文件那个
+`@Deprecated` 且带 `AppCompatDelegate` 的 `ThemeConfig` 留在 `:app`）；`TagColorGenerator` 上提
+（唯一消费者就是本片的 sheet）；新增 `colorToHsl` 纯算式（替代 Android-only 的
+`ColorUtils.colorToHSL`，含 `max == r` 那支的 `g < b` 回绕）。
+
+⚠️ **`TagColorGenerator` 改了包名**（`io.legado.app.help.config` → `io.legado.app.utils`）：
+留在旧包会让共享层**首次出现 `help.*` 导入**，而 G4 把那个当「`:app` 私有耦合」⇒ 纯假阳性。
+**与其把假条目登记进基线，不如换个如实的住所**（它只有 1 个消费者，同片一并改 import ⇒ 零额外
+改动）。同片把 `:app` 侧 `themeConfig` 的 `legacyHelp` 基线按棘轮 3 → 2。
+
+✅ **纯算法替代 ≠ 搬运 ⇒ 必须有用例**：新增 `commonTest/ColorHslTest`（4 例：三原色 / 无彩色 /
+`max==r && g<b` 回绕 / 明度两支饱和度）。搬文件靠编译 + 空 diff 就够，换算法不够。
+
+⚠️ 顺带修掉工具自己的一个 bug：`tools/audit-slice-deps.py` 的「目标模块」判据里，索引存三段
+`模块:子模块:源集` 而传入的是两段 ⇒ `target_mod in locs` **永远为假** ⇒ 一个假阳性。
+已修（`loc_module_key` 截断后比），修后同包陷阱 0 处。
+
+验证：四门禁全绿（含下调后的基线）+ designsystem desktop/android 编译与
+`:feature:settings`/`:app` 编译、单测、打包 + 全模块测试 → **BUILD SUCCESSFUL**；
+计数 **806 → 810 / 1301 → 1305**（+4 = `ColorHslTest`，`commonTest` 只计一次）零偏离；
+资源 6 × 4 语言逐字一致 + 间接引用检查 0 项；lint 重测 **5 errors / 102 warnings**（零 delta）。
+
+未验证：sheet 的真机交互（AI 生成配色 8 档、增删标签色、取色后算背景色）；
+`colorToHsl` 与 `ColorUtils` 的等价性只由 4 个已知值用例担保（非全色域穷举）。
+
+**`themeConfig` 剩 6 个文件**：`LauncherIconPickerSheet`（需图标表契约）+ VM 612 / Screen 1326 /
+`ThemeConfig.kt` + 宿主壳。

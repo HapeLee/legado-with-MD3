@@ -474,4 +474,7 @@
     <string name="theme_config_nav_icons_custom_count">%1$d custom icons set</string>
     <string name="theme_config_nav_icons_default">Using default icons</string>
     <string name="theme_config_replace_nav_icon">Replace image</string>
+    <string name="ai_generate">Generate</string>
+    <string name="theme_config_label_color_name">Label %1$d</string>
+    <string name="theme_config_manage_label_colors">Manage Label Colors</string>
 </resources>

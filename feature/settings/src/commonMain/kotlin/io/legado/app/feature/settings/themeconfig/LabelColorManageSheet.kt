@@ -1,4 +1,4 @@
-package io.legado.app.ui.config.themeConfig
+package io.legado.app.feature.settings.themeconfig
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -22,11 +22,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.ColorUtils
-import io.legado.app.R
-import io.legado.app.help.config.TagColorGenerator
+import io.legado.app.feature.settings.res.Res
+import io.legado.app.feature.settings.res.add
+import io.legado.app.feature.settings.res.ai_generate
+import io.legado.app.feature.settings.res.delete
+import io.legado.app.feature.settings.res.edit
+import io.legado.app.feature.settings.res.theme_config_label_color_name
+import io.legado.app.feature.settings.res.theme_config_manage_label_colors
+import io.legado.app.ui.config.themeConfig.TagColorPair
+import io.legado.app.utils.TagColorGenerator
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
@@ -34,6 +39,23 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import org.jetbrains.compose.resources.stringResource
+import io.legado.app.utils.colorToHsl
+
+/**
+ * M5-19d：从 `:app` 的 `ui/config/themeConfig/LabelColorManageSheet.kt` 迁入。
+ *
+ * **正文逐字保留**（脚本化等价改写），改写类别：
+ * 1. 包名 → `io.legado.app.feature.settings.themeconfig`；
+ * 2. `stringResource` → CMP 版；`R.string.*`（6 条）→ `Res.string.*` + 逐 key import；
+ * 3. ⚠️ `androidx.core.graphics.ColorUtils.colorToHSL(selectedColor, hsl)`
+ *    → `val hsl = colorToHsl(selectedColor)`：`ColorUtils` 是 Android-only 制品，
+ *    换成共享层的纯算式 [io.legado.app.utils.colorToHsl]（算法逐句对应，等价性由
+ *    `ColorHslTest` 的已知值用例锁住）。**取色后重算背景色那段逻辑未改**
+ *    （`hsl[1] * 0.4` 后 `coerceAtMost(0.35)`、`hsl[2] = 0.90`、`Color.hsl(...).toArgb()`）。
+ *
+ * 参数面 `List<TagColorPair>` 里的 [TagColorPair] 是同片搬进共享层的（同一包名，import 不变）。
+ */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +77,7 @@ fun LabelColorManageSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.theme_config_manage_label_colors),
+        title = stringResource(Res.string.theme_config_manage_label_colors),
         startAction = {
             MediumTonalButton(
                 onClick = {
@@ -66,7 +88,7 @@ fun LabelColorManageSheet(
                     onColorsChange(tagColors.toList())
                 },
                 icon = Icons.Default.AutoAwesome,
-                contentDescription = stringResource(R.string.ai_generate)
+                contentDescription = stringResource(Res.string.ai_generate)
             )
         },
         endAction = {
@@ -78,7 +100,7 @@ fun LabelColorManageSheet(
                     showColorPicker = true
                 },
                 icon = Icons.Default.Add,
-                contentDescription = stringResource(R.string.add)
+                contentDescription = stringResource(Res.string.add)
             )
         }
     ) {
@@ -90,7 +112,7 @@ fun LabelColorManageSheet(
         ) {
             items(tagColors.size) { index ->
                 val colorPair = tagColors[index]
-                val label = stringResource(R.string.theme_config_label_color_name, index + 1)
+                val label = stringResource(Res.string.theme_config_label_color_name, index + 1)
                 NormalCard(
                     modifier = Modifier.fillMaxWidth(),
                     containerColor = LegadoTheme.colorScheme.onSheetContent
@@ -121,7 +143,7 @@ fun LabelColorManageSheet(
                                     showColorPicker = true
                                 },
                                 icon = Icons.Default.Edit,
-                                contentDescription = stringResource(R.string.edit)
+                                contentDescription = stringResource(Res.string.edit)
                             )
                             SmallPlainButton(
                                 onClick = {
@@ -129,7 +151,7 @@ fun LabelColorManageSheet(
                                     onColorsChange(tagColors.toList())
                                 },
                                 icon = Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.delete)
+                                contentDescription = stringResource(Res.string.delete)
                             )
                         }
                     }
@@ -144,8 +166,7 @@ fun LabelColorManageSheet(
             initialColor = editingTextColor,
             onDismissRequest = { showColorPicker = false },
             onColorSelected = { selectedColor ->
-                val hsl = FloatArray(3)
-                ColorUtils.colorToHSL(selectedColor, hsl)
+                val hsl = colorToHsl(selectedColor)
                 hsl[1] = (hsl[1] * 0.4f).coerceAtMost(0.35f)
                 hsl[2] = 0.90f
                 val bgColor = Color.hsl(hsl[0], hsl[1], hsl[2]).toArgb()

@@ -32,7 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.BookshelfSettings
-import io.legado.app.ui.config.themeConfig.LabelColorManageSheet
+import io.legado.app.feature.settings.themeconfig.LabelColorManageSheet
 import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet

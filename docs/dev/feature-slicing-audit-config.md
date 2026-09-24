@@ -2367,3 +2367,61 @@ private fun mainNavLabelRes(label: MainNavLabel): StringResource = when (label) 
 
 **`themeConfig` 至此 `:app` 侧剩 7 个文件**（VM 612 / Screen 1326 / `ThemeConfig.kt` 61 +
 `LabelColorManageSheet` / `LauncherIconPickerSheet` + 宿主壳等）。
+
+### M5-19d：`LabelColorManageSheet` → `:feature:settings/themeconfig/`（含两个上提 + 一个纯算法替代）
+
+勘察把这一档的两个 sheet 分成了两种难度：
+
+- `LabelColorManageSheet`(161)：阻塞是 `TagColorGenerator` + **同包** `TagColorPair` + 一处
+  `ColorUtils` ⇒ 可做。
+- `LauncherIconPickerSheet`(199)：**重度 Android** —— 自己声明 `LauncherIconItem(… ComponentName)`
+  与 `LauncherIcons.list`（引用 8 个 `MainActivity` 子类 + `R.mipmap`），还用 `ImageView` 渲染
+  ⇒ 需要一张「启动图标表」契约，是独立一片。**本片只做前者**。
+
+#### 三个前置动作
+
+| 动作 | 说明 |
+|---|---|
+| `TagColorPair` 上提 | 纯 data class（5 个消费者）。从 `:app` 的 `ThemeConfig.kt` **拆出来**搬进 designsystem，**包名不变** ⇒ 5 处 import 零改动；同文件那个已被 `@Deprecated` 且带 `AppCompatDelegate` 的 `ThemeConfig` 对象留在 `:app` |
+| `TagColorGenerator` 上提 | 唯一消费者就是本片的 sheet ⇒ 触发条件成立 |
+| `colorToHsl` 新增 | `ColorUtils.colorToHSL` 是 **Android-only** 制品，而共享层此前从未用过它（无先例）⇒ 写一份**纯算式**替代（算法逐句对应 AndroidX，含 `max == r` 那支的 `g < b` 回绕修正） |
+
+⚠️ **`TagColorGenerator` 的包名我改了**（`io.legado.app.help.config` → `io.legado.app.utils`）：
+搬进共享层后若仍留在 `help.config`，共享模块就会**首次出现 `import io.legado.app.help.*`**
+—— 而 G4 护栏把 `help.*` 导入当作「`:app` 私有耦合」的信号。本类其实**已不在 `:app`**，
+那条信号会是纯假阳性。**与其把假条目登记进基线（棘轮只降不升，且"新区域必须为零"），
+不如换个如实的住所** —— 它只有 1 个消费者（同片一并改 import）⇒ 依旧零额外改动。
+同片把 `:app` 侧 `ui/config/themeConfig` 的 `legacyHelp` 基线按棘轮 **3 → 2**（sheet 走了）。
+
+#### ✅ 纯算法替代 ≠ 搬运 ⇒ 必须有用例
+
+搬文件靠编译 + `git diff` 就够（字节一致）；**换算法不够**。所以新增
+`:core:designsystem` 的 `commonTest/ColorHslTest`（4 例）：三原色（H=0/120/240、S=1、L=0.5）、
+无彩色（白/黑/灰 S=0）、**`max == r` 且 `g < b` 的回绕**（品红 H 必须是 300 而不是 -60）、
+明度两支饱和度（`l > 0.5` 与 `l ≤ 0.5`）。计数 **+4**（`commonTest` 只计一次）。
+
+#### ⚠️ 顺带修掉工具自己的一个 bug
+
+迁移后编译报 `TagColorPair` 未解析 —— 它在 `:app` 原是**同包**（无需 import），迁走后需要
+import。我用 `tools/audit-slice-deps.py` 去查，结果它只报了一个**假阳性**
+（`NavIconManageSheet`），却没报这条。原因是我上一片给工具加的「目标模块」判据里，
+索引存的是三段 `模块:子模块:源集`，而传入的目标模块是两段 ⇒ `target_mod in locs`
+**永远为假**。已修（`loc_module_key` 截断后再比），修后同包陷阱 **0 处** ✓。
+（`TagColorPair` 那条本身不是"同包陷阱"—— 它已不在同包，属普通缺 import，编译必然会报 ✓。）
+
+#### 验证
+
+- 四门禁全绿（含按棘轮下调的 `legacyHelp` 基线）；`:core:designsystem` desktop/android 编译 +
+  `:feature:settings` / `:app` 编译、单测、打包 + 全模块测试 → **BUILD SUCCESSFUL**
+- 计数 **806 → 810 / 1301 → 1305**（+4 = `ColorHslTest`）零偏离
+- 资源：6 条 × 4 语言**逐字一致**、完整、XML 通过 ✅；`tools/check-resource-indirection.py` **0 项**
+- `lintAppDebug` 重测 **5 errors / 102 warnings**（与上一片完全一致 ⇒ 零 delta）
+
+#### 未验证
+
+`LabelColorManageSheet` 的真机/desktop 交互：AI 生成配色（8 档）、增删标签色、取色后自动算背景色、
+颜色选择器联动。另 `colorToHsl` 与原 `ColorUtils` 的**逐位一致**只由 4 个已知值用例担保
+（不是全色域穷举）—— 若日后出现肉眼可辨的偏差，先查这里。
+
+**`themeConfig` 至此 `:app` 侧剩 6 个文件**：`LauncherIconPickerSheet`（需图标表契约）、
+VM 612 / Screen 1326 / `ThemeConfig.kt`，以及宿主壳。

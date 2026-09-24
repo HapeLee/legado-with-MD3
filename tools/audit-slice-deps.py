@@ -119,6 +119,15 @@ def verdict(locs: set[str]) -> str:
     return "non-common"
 
 
+def loc_module_key(loc: str) -> str:
+    """把三段定位串（`模块:子模块:源集`）截成两段模块键（`模块:子模块`）。
+
+    索引里存的是三段，而用户传的目标模块是两段 —— 两者直接比较**永远不相等**（已踩过）。
+    """
+    parts = loc.split(":")
+    return "{}:{}".format(parts[0], parts[1]) if len(parts) >= 2 else loc
+
+
 def module_key_of(path: pathlib.Path) -> str | None:
     """文件所属的模块键（与 locate 的前两段一致，如 `app:main` / `feature:settings`）。"""
     loc = locate(path)
@@ -191,7 +200,10 @@ def same_package_scan(files: list[pathlib.Path], dest: str | None) -> list[tuple
             if any(imp.endswith("." + name) for imp in imports):
                 continue
             locs = pkg_of_decl.get("{}.{}".format(pkg, name), set())
-            if target_mod in locs:
+            # ⚠️ 索引里存的是三段 `模块:子模块:源集`，而 target_mod 是两段 `模块:子模块`
+            # —— 早期版本直接 `target_mod in locs` 比较，那**永远为假**，于是同模块同包的
+            # 正常引用也被报成阻塞（自测时在 `NavIconManageSheet` 上看到过）。
+            if any(loc_module_key(l) == target_mod for l in locs):
                 continue
             if re.search(r"\b" + re.escape(name) + r"\b", body):
                 findings.append((p.as_posix(), name,

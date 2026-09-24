@@ -470,4 +470,7 @@
     <string name="theme_config_nav_icons_custom_count">已设置 %1$d 个自定义图标</string>
     <string name="theme_config_nav_icons_default">使用默认图标</string>
     <string name="theme_config_replace_nav_icon">更换图片</string>
+    <string name="ai_generate">生成</string>
+    <string name="theme_config_label_color_name">标签 %1$d</string>
+    <string name="theme_config_manage_label_colors">管理标签颜色</string>
 </resources>

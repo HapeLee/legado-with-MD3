@@ -7,10 +7,9 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import org.koin.core.context.GlobalContext
 
-data class TagColorPair(
-    val textColor: Int = 0,
-    val bgColor: Int = 0,
-)
+// M5-19d：`TagColorPair` 已搬进 `:core:designsystem/commonMain`（**包名不变** ⇒ 5 处消费方
+// import 零改动）。本文件只剩这个已被 `@Deprecated` 的 `ThemeConfig` 对象 —— 它带
+// `androidx.appcompat.app.AppCompatDelegate`，进不了共享层，按判据留在 `:app`。
 
 @Deprecated("使用 ThemeSettingsGateway / AppShellSettingsGateway.currentSettings")
 object ThemeConfig {

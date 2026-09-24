@@ -281,7 +281,12 @@ RESULT_DIRS = {
 # `viewModelScope` 在 `Dispatchers.Main.immediate` 上 ⇒ `launch` 会**内联执行到第一个挂起点**，
 # 所以契约 fake 若全同步，第一次当场跑完、锁已释放，**测不到互斥**（初版正是这么挂了一次）。
 # 必须用 `CompletableDeferred` 闸门把第一次卡在契约调用上。
-BASELINE_MAIN = 806
+# M5-19d：806 → **810**（**+4** = `ColorHslTest`，住在 `:core:designsystem` 的 `commonTest`）。
+# 这片的代码不是"搬运"而是**纯算法替代**：`ColorUtils.colorToHSL`（Android-only）→
+# `io.legado.app.utils.colorToHsl`，所以**必须**有用例锁等价性（搬文件靠编译/ diff 就够，
+# 换算法不够）。4 个用例覆盖三原色 / 无彩色 / `max==r` 且 `g<b` 的色相回绕 / 明度两支饱和度。
+# ⚠️ 计数口径：`commonTest` 的用例在本次统计里只计一次（+4 而非 +8）。
+BASELINE_MAIN = 810
 # M2-3：877 → 882（`core:platform` 的 SymmetricCryptoContractTest 2 → 7 例）。主验证集不变。
 # M2-4：882 → 891（净 +9 = -2 +11）。`Logger` / `LoggerProvider` 契约删除 ⇒ 随契约走的
 # `LoggerContractTest` 2 例失去被测对象（同 M2-2 删 `BigDataStoreProvider` 用例的处理）；
@@ -374,7 +379,8 @@ BASELINE_MAIN = 806
 # M5-12b：1269 → **1279**（**+10** = `CoverConfigViewModelTest`）。主集同步到 784。
 # M5-14a：1279 → **1289**（**+10** = `CoverAlbumManageViewModelTest`）。主集同步到 794。
 # M5-16b：1289 → **1301**（**+12** = `ThemeManageViewModelTest`）。主集同步到 806。
-BASELINE_ALL = 1301
+# M5-19d：1301 → **1305**（**+4** = `ColorHslTest`）。主集同步到 810。
+BASELINE_ALL = 1305
 
 
 def tally(d: pathlib.Path):

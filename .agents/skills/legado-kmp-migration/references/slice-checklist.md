@@ -628,6 +628,34 @@ Read this reference for implementation plans, extraction work, scaffolding, or r
   and `lintAppDebug` does not scan designsystem). The real defect was procedural: several slices
   had reported "lint unchanged (94)" by quoting a value measured back at M5-10a. A stale number
   reads exactly like a fresh one.
+- **A pure reimplementation is not a move — it needs tests; a move does not.** The repo's habit for
+  hoists is "verify by compiling and by `git diff` being byte-identical", and that is sufficient
+  *because the code did not change*. M5-19d replaced AndroidX's `ColorUtils.colorToHSL` (an
+  Android-only artifact) with a hand-written `colorToHsl` in the shared layer: same behaviour
+  claimed, but nothing mechanical backs the claim. So the slice added `ColorHslTest` with
+  deterministic values — the three primaries (H = 0/120/240), achromatic colours (S = 0), the
+  `max == r && g < b` hue wrap-around (magenta must be 300, not −60), and both saturation branches
+  (`l > 0.5` vs `l ≤ 0.5`). Count +4, and `commonTest` sources are counted **once** by
+  `tools/count-test-results.py` (+4, not +8) — worth knowing before "fixing" a baseline. Rule: when
+  a slice changes *behaviour* (algorithm, formula, ordering) rather than *address*
+  (path/package/module), it needs a case; when it only changes address, compile + empty diff is the
+  stronger evidence.
+- **Resolve a legacy-package signal by *placement*, not by registering an exception in the
+  architecture baseline.** M5-19d hoisted `TagColorGenerator` out of `:app`; keeping its
+  `io.legado.app.help.config` package would have made a shared module import `io.legado.app.help.*`
+  for the first time — and the G4 gate reads `help.*` imports as ":app-private coupling", so that
+  finding would have been a **false positive** (the symbol no longer lives in `:app`). The gate's own
+  text permits "register it in the baseline after review", and the baseline is a ratchet. The cheaper
+  and more honest fix was to give the hoisted file a package that describes it
+  (`io.legado.app.utils`): its single consumer was being migrated in the same slice, so the import
+  churn was zero anyway. Ask "is the signal true?" before asking "how do I silence it?".
+- **Sanity-check your own tooling when its output looks wrong — including comparisons that can never
+  be true.** M5-19d's same-package scan reported one finding (a false positive) while missing the
+  real problem. Cause: the index stores `module:submodule:sourceSet` while the user-supplied
+  destination is `module:submodule`, and the guard compared them directly — so `target_mod in locs`
+  was **never** true, and every same-module same-package reference was flagged as a blocker. Fixed by
+  normalising both sides (`loc_module_key`). General pattern: a condition that can never hold turns an
+  important check into noise, and noise hides real findings.
 - **Grep a file for `@StringRes` / `Int` resource *fields*, not just for `R.string.*` call sites.**
   Measured twice: M5-16a in a contract (`SelectAppFont`'s type), M5-19c inside a migrated sheet's
   **private** data class (`@param:StringRes val labelRes: Int`), where the mechanical rewrite
