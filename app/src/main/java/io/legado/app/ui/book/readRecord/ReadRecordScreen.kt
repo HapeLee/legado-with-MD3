@@ -41,7 +41,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -199,7 +198,6 @@ fun ReadRecordScreen(
     }
 
     var skipDeleteConfirmForPage by remember { mutableStateOf(false) }
-    var swipeResetKey by remember { mutableIntStateOf(0) }
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var pendingDeleteCount by remember { mutableStateOf(1) }
     var mergeDialogData by remember { mutableStateOf<Pair<ReadRecord, List<ReadRecord>>?>(null) }
@@ -409,7 +407,6 @@ fun ReadRecordScreen(
                                 loadChapterTitle = loadChapterTitle,
                                 onBookClick = onBookClick,
                                 onConfirmDelete = onConfirmDelete,
-                                swipeResetKey = swipeResetKey,
                                 selectedItemKeys = selectedItemKeys,
                                 inSelectionMode = inSelectionMode,
                                 onToggleSelection = { key ->
@@ -520,7 +517,6 @@ fun ReadRecordScreen(
         data = pendingDeleteAction,
         onDismissRequest = {
             pendingDeleteAction = null
-            swipeResetKey++
         },
         title = stringResource(R.string.confirm_delete_read_record),
         content = { _ ->
@@ -528,6 +524,8 @@ fun ReadRecordScreen(
                 AppText(
                     if (pendingDeleteCount == -1) {
                         stringResource(R.string.clear_read_records_message)
+                    } else if (pendingDeleteCount == 0) {
+                        stringResource(R.string.delete_reading_period_message)
                     } else if (pendingDeleteCount > 1) {
                         stringResource(R.string.delete_selected_read_records_message, pendingDeleteCount)
                     } else {
@@ -569,7 +567,6 @@ fun ReadRecordScreen(
         dismissText = stringResource(R.string.cancel),
         onDismiss = {
             pendingDeleteAction = null
-            swipeResetKey++
         }
     )
 
@@ -985,7 +982,6 @@ fun LazyListScope.renderListByMode(
     loadChapterTitle: suspend (String, String, Long) -> String?,
     onBookClick: (String, String) -> Unit,
     onConfirmDelete: (Int, () -> Unit) -> Unit,
-    swipeResetKey: Int,
     selectedItemKeys: Set<String>,
     inSelectionMode: Boolean,
     onToggleSelection: (String) -> Unit,
@@ -1027,7 +1023,6 @@ fun LazyListScope.renderListByMode(
                         itemContent(Modifier.animateItem())
                     } else {
                         SwipeActionContainer(
-                            resetKey = swipeResetKey,
                             modifier = Modifier.animateItem(),
                             startAction = SwipeAction(
                                 icon = Icons.Default.Delete,
@@ -1038,7 +1033,6 @@ fun LazyListScope.renderListByMode(
                                     }
                                 },
                                 contentDescription = deleteActionDescription
-                                ,resetAfterSwipe = false
                             )
                         ) {
                             itemContent(Modifier)
@@ -1077,18 +1071,16 @@ fun LazyListScope.renderListByMode(
                         itemContent(Modifier.animateItem())
                     } else {
                         SwipeActionContainer(
-                            resetKey = swipeResetKey,
                             modifier = Modifier.animateItem(),
                             startAction = SwipeAction(
                                 icon = Icons.Default.Delete,
                                 background = LegadoTheme.colorScheme.error,
                                 onSwipe = {
-                                    onConfirmDelete(1) {
+                                    onConfirmDelete(0) {
                                         onIntent(ReadRecordIntent.DeleteSession(session))
                                     }
                                 },
                                 contentDescription = deleteActionDescription
-                                ,resetAfterSwipe = false
                             )
                         ) {
                             itemContent(Modifier)
@@ -1125,7 +1117,6 @@ fun LazyListScope.renderListByMode(
                     itemContent(Modifier.animateItem())
                 } else {
                     SwipeActionContainer(
-                        resetKey = swipeResetKey,
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
                             icon = Icons.Default.Delete,
@@ -1135,8 +1126,7 @@ fun LazyListScope.renderListByMode(
                                     onIntent(ReadRecordIntent.DeleteRecord(record))
                                 }
                             },
-                                contentDescription = deleteActionDescription
-                                ,resetAfterSwipe = false
+                            contentDescription = deleteActionDescription
                         ),
                         endAction = SwipeAction(
                             icon = Icons.Default.Merge,

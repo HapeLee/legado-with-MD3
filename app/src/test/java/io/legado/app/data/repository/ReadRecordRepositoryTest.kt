@@ -237,6 +237,9 @@ class ReadRecordRepositoryTest {
 
         val mergedDisplayItem = database.readRecordDao.allSession.first { it.startTime == first.startTime }
             .copy(endTime = second.endTime)
+        // 时间线保留首段的行 ID，但展示用 endTime 与数据库首段不同。
+        assertEquals(true, mergedDisplayItem.id > 0L)
+        assertEquals(true, mergedDisplayItem.endTime != first.endTime)
         assertEquals(true, repository.deleteSession(mergedDisplayItem))
 
         val remaining = database.readRecordDao.getSessionsByBook(deviceId, targetName, author)
@@ -255,6 +258,8 @@ class ReadRecordRepositoryTest {
         val nextDay = java.time.Instant.ofEpochMilli(record.endTime).atZone(zone).toLocalDate().toString()
         assertEquals(120_000L, database.readRecordDao.getDetail(deviceId, targetName, author, previousDay)?.readTime)
         assertEquals(480_000L, database.readRecordDao.getDetail(deviceId, targetName, author, nextDay)?.readTime)
+        assertEquals(midnight, database.readRecordDao.getDetail(deviceId, targetName, author, nextDay)?.firstReadTime)
+        assertEquals(record.endTime, database.readRecordDao.getDetail(deviceId, targetName, author, nextDay)?.lastReadTime)
         assertEquals(1, database.readRecordDao.getSessionsByBook(deviceId, targetName, author).size)
     }
 

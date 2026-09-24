@@ -8,6 +8,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.data.entities.readRecord.CONTINUOUS_READ_SESSION_GAP_MILLIS
 import io.legado.app.data.entities.readRecord.ReadRecordRepairReport
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.data.repository.SettingsRepository
@@ -286,11 +287,8 @@ class ReadRecordViewModel(
     }
 
     private fun emitMutationResult(succeeded: Boolean, successMessage: Int) {
-        _effects.tryEmit(
-            ReadRecordEffect.ShowMessage(
-                if (succeeded) successMessage else R.string.operation_failed
-            )
-        )
+        // 未找到记录是过期列表项或空列表的正常竞态；异常由调用方报告。
+        if (succeeded) _effects.tryEmit(ReadRecordEffect.ShowMessage(successMessage))
     }
 
     private fun mergeContinuousSessions(sessions: List<ReadRecordSession>): List<ReadRecordSession> {
@@ -298,7 +296,7 @@ class ReadRecordViewModel(
         val mergedList = mutableListOf<ReadRecordSession>()
         mergedList.add(sessions.first().copy())
 
-        val gapLimit = 20 * 60 * 1000L
+        val gapLimit = CONTINUOUS_READ_SESSION_GAP_MILLIS
 
         for (i in 1 until sessions.size) {
             val current = sessions[i]
