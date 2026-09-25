@@ -951,19 +951,22 @@ fun LazyListScope.renderListByMode(
             state.groupedRecords.forEach { (date, details) ->
                 item(key = "header_$date") {
                     GlassCard(
-                        modifier = Modifier.fillMaxWidth().animateItem()
-                            .adaptiveHorizontalPadding().padding(vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem()
+                            .adaptiveHorizontalPadding()
+                            .padding(vertical = 8.dp),
                         cornerRadius = 12.dp,
-                        containerColor = LegadoTheme.colorScheme.surfaceContainer,
+                        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                     ) {
                         DateHeader(date, details.sumOf { it.readTime })
                         HorizontalDivider(
-                            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                            color = LegadoTheme.colorScheme.surface,
                         )
                         details.forEachIndexed { index, detail ->
                             if (index > 0) {
                                 HorizontalDivider(
-                                    color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                    color = LegadoTheme.colorScheme.surface,
                                 )
                             }
                             key(detail.selectionKey()) {
@@ -1016,14 +1019,17 @@ fun LazyListScope.renderListByMode(
             state.timelineRecords.forEach { (date, sessions) ->
                 item(key = "timeline_header_$date") {
                     GlassCard(
-                        modifier = Modifier.fillMaxWidth().animateItem()
-                            .adaptiveHorizontalPadding().padding(vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem()
+                            .adaptiveHorizontalPadding()
+                            .padding(vertical = 8.dp),
                         cornerRadius = 12.dp,
-                        containerColor = LegadoTheme.colorScheme.surfaceContainer,
+                        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                     ) {
                         DateHeader(date)
                         HorizontalDivider(
-                            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                            color = LegadoTheme.colorScheme.surface,
                         )
                         sessions.forEach { session ->
                             key(session.id) {
@@ -1261,10 +1267,10 @@ fun TimelineSessionItem(
 
     val nodeRadius = 4.dp
     val lineWidth = 2.dp
-    val timelineX = 24.dp
+    val timelineX = 16.dp
     val contentPaddingStart = 32.dp
 
-    val lineColor = LegadoTheme.colorScheme.surfaceContainerHigh
+    val lineColor = LegadoTheme.colorScheme.surface
     val nodeColor = LegadoTheme.colorScheme.primary
 
     Box(
@@ -1310,7 +1316,7 @@ fun TimelineSessionItem(
             ) {
                 AppText(
                     text = endTimeText,
-                    style = LegadoTheme.typography.bodySmall
+                    style = LegadoTheme.typography.labelSmallEmphasized
                 )
             }
 
@@ -1389,7 +1395,7 @@ fun ReadRecordItem(
                 contentDescription = itemDescription
                 role = Role.Button
             }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(all = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         CoilBookCover(
@@ -1435,7 +1441,9 @@ fun DateHeader(
     dailyTotalTime: Long? = null
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(all = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1443,16 +1451,13 @@ fun DateHeader(
             text = formatFriendlyDate(date),
             modifier = Modifier.weight(1f),
             style = LegadoTheme.typography.titleSmallEmphasized,
-            color = LegadoTheme.colorScheme.onSurface,
+            color = LegadoTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         dailyTotalTime?.let { total ->
-            AppText(
-                text = stringResource(R.string.read_duration_done, formatDuring(total)),
-                style = LegadoTheme.typography.labelMedium,
-                color = LegadoTheme.colorScheme.primary,
-                maxLines = 1,
+            TextCard(
+                text = stringResource(R.string.read_duration_done, formatDuring(total))
             )
         }
     }
@@ -1491,7 +1496,7 @@ fun ReadingSummaryCard(
                 role = Role.Button
             }
             .adaptiveHorizontalPadding(vertical = 8.dp),
-        containerColor = LegadoTheme.colorScheme.surfaceContainer
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow
     ) {
         Row(
             modifier = Modifier
