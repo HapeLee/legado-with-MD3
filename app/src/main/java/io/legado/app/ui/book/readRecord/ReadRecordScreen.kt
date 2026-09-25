@@ -958,13 +958,11 @@ fun LazyListScope.renderListByMode(
                     ) {
                         DateHeader(date, details.sumOf { it.readTime })
                         HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
                             color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
                         )
                         details.forEachIndexed { index, detail ->
                             if (index > 0) {
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(start = 76.dp, end = 16.dp),
                                     color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                                 )
                             }
@@ -1025,7 +1023,6 @@ fun LazyListScope.renderListByMode(
                     ) {
                         DateHeader(date)
                         HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
                             color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
                         )
                         sessions.forEach { session ->
