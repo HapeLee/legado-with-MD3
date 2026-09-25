@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -951,12 +952,22 @@ fun LazyListScope.renderListByMode(
                 item(key = "header_$date") {
                     GlassCard(
                         modifier = Modifier.fillMaxWidth().animateItem()
-                            .adaptiveHorizontalPadding().padding(vertical = 4.dp),
+                            .adaptiveHorizontalPadding().padding(vertical = 8.dp),
                         cornerRadius = 12.dp,
                         containerColor = LegadoTheme.colorScheme.surfaceContainer,
                     ) {
                         DateHeader(date, details.sumOf { it.readTime })
-                        details.forEach { detail ->
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                        )
+                        details.forEachIndexed { index, detail ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 76.dp, end = 16.dp),
+                                    color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                )
+                            }
                             key(detail.selectionKey()) {
                                 val itemKey = detail.selectionKey()
                                 val isSelected = selectedItemKeys.contains(itemKey)
@@ -1008,11 +1019,15 @@ fun LazyListScope.renderListByMode(
                 item(key = "timeline_header_$date") {
                     GlassCard(
                         modifier = Modifier.fillMaxWidth().animateItem()
-                            .adaptiveHorizontalPadding().padding(vertical = 4.dp),
+                            .adaptiveHorizontalPadding().padding(vertical = 8.dp),
                         cornerRadius = 12.dp,
                         containerColor = LegadoTheme.colorScheme.surfaceContainer,
                     ) {
                         DateHeader(date)
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                        )
                         sessions.forEach { session ->
                             key(session.id) {
                                 val itemKey = session.selectionKey()
@@ -1289,7 +1304,7 @@ fun TimelineSessionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = contentPaddingStart, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                .padding(start = contentPaddingStart, end = 16.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
@@ -1377,7 +1392,7 @@ fun ReadRecordItem(
                 contentDescription = itemDescription
                 role = Role.Button
             }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         CoilBookCover(
@@ -1395,18 +1410,23 @@ fun ReadRecordItem(
             AppText(
                 text = detail.bookName,
                 style = LegadoTheme.typography.titleMedium,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             AppText(
                 text = author,
                 style = LegadoTheme.typography.bodySmall,
-                color = LegadoTheme.colorScheme.outline,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(8.dp))
             AppText(
                 text = stringResource(R.string.reading_time_with_value, formatDuring(detail.readTime)),
-                color = LegadoTheme.colorScheme.outline,
-                style = LegadoTheme.typography.labelSmall
+                color = LegadoTheme.colorScheme.primary,
+                style = LegadoTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -1417,18 +1437,25 @@ fun DateHeader(
     date: String,
     dailyTotalTime: Long? = null
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         AppText(
             text = formatFriendlyDate(date),
-            style = LegadoTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = LegadoTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+            style = LegadoTheme.typography.titleSmallEmphasized,
+            color = LegadoTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         dailyTotalTime?.let { total ->
             AppText(
                 text = stringResource(R.string.read_duration_done, formatDuring(total)),
-                style = LegadoTheme.typography.bodySmall,
-                color = LegadoTheme.colorScheme.onSurface,
+                style = LegadoTheme.typography.labelMedium,
+                color = LegadoTheme.colorScheme.primary,
+                maxLines = 1,
             )
         }
     }
