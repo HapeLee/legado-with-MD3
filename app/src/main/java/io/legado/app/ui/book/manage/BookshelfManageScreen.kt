@@ -182,9 +182,9 @@ private fun BookshelfManageScreen(
     var moreMenuBookUrl by remember { mutableStateOf<String?>(null) }
     var pendingDeleteBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
     var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
-    var pendingExportBookUrl by remember { mutableStateOf<String?>(null) }
-    var pendingExportSelection by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var exportSheetBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // 下面两处待导出集合直接存实体而不是 url：跨分组选中的书不在当前列表里，按 url 回查会漏掉
+    var pendingExportBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
+    var exportSheetBooks by remember { mutableStateOf<List<Book>>(emptyList()) }
     var customExportPath by remember { mutableStateOf("") }
     var customExportBook by remember { mutableStateOf<Book?>(null) }
     var customExportAllChapter by remember { mutableStateOf(false) }
@@ -196,7 +196,8 @@ private fun BookshelfManageScreen(
     var exportCharsetInput by remember { mutableStateOf(state.exportConfig.exportCharset) }
     var isSearchMode by remember { mutableStateOf(false) }
     var searchKey by remember { mutableStateOf("") }
-    var selectedBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // 选中集合由 ViewModel 持有：切分组、进详情再返回都不清空，因此可以跨分组多选
+    val selectedBookUrls: Set<String> = state.selectedBookUrls
     var deleteOriginalBookFile by remember { mutableStateOf(state.deleteBookOriginal) }
     val exportBookPathKey = remember { "exportBookPath" }
     val exportTypes = remember { arrayListOf("txt", "epub") }
@@ -212,10 +213,6 @@ private fun BookshelfManageScreen(
     val noGroupText = stringResource(R.string.no_group)
     val exportFileNameHintText = stringResource(R.string.export_file_name_template_hint)
     val exportFileNameHelpText = stringResource(R.string.export_file_name_template_help)
-    val booksByUrl = remember(state.books) { state.books.associateBy { it.bookUrl } }
-    val exportSheetBooks = remember(exportSheetBookUrls, booksByUrl) {
-        exportSheetBookUrls.mapNotNull(booksByUrl::get)
-    }
     val userGroups = remember(state.groupList) { state.groupList.filter { it.groupId > 0L } }
 
     val groupNameResolver: (Book) -> String = remember(userGroups, noGroupText) {
@@ -254,27 +251,29 @@ private fun BookshelfManageScreen(
         )
     }
     val inSelectionMode = selectedBookUrls.isNotEmpty()
-    val hasLocalBookInDeleteTarget = remember(state.books, pendingDeleteBookUrls) {
-        state.books.any { pendingDeleteBookUrls.contains(it.bookUrl) && it.isLocal }
+    // 跨分组选中的书里，有多少不在当前（分组 + 搜索）列表里
+    val selectedOutOfViewCount = remember(selectedBookUrls, filteredBooks) {
+        val inViewCount = filteredBooks.count { selectedBookUrls.contains(it.bookUrl) }
+        selectedBookUrls.size - inViewCount
+    }
+    // 跨分组时 selectedIds 可能多于当前列表条目，"已选/总数" 会失真，这里自己出文案
+    val selectionTitle = if (selectedOutOfViewCount > 0) {
+        "已选 ${selectedBookUrls.size} 本（$selectedOutOfViewCount 本不在当前列表）"
+    } else {
+        "已选 ${selectedBookUrls.size}/${filteredBooks.size}"
+    }
+    val hasLocalBookInDeleteTarget = remember(state.selectedBooks, pendingDeleteBookUrls) {
+        state.selectedBooks.any { pendingDeleteBookUrls.contains(it.bookUrl) && it.isLocal }
     }
     val clearSelection = {
-        selectedBookUrls = emptySet()
+        viewModel.dispatch(BookshelfManageScreenIntent.ClearBookSelection)
     }
     val toggleBookSelection: (Book) -> Unit = { book ->
-        selectedBookUrls = if (selectedBookUrls.contains(book.bookUrl)) {
-            selectedBookUrls - book.bookUrl
-        } else {
-            selectedBookUrls + book.bookUrl
-        }
+        viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookSelection(book.bookUrl))
     }
 
-    BackHandler(enabled = selectedBookUrls.isNotEmpty()) {
+    BackHandler(enabled = inSelectionMode) {
         clearSelection()
-    }
-
-    LaunchedEffect(state.books) {
-        val visibleBookUrls = booksByUrl.keys
-        selectedBookUrls = selectedBookUrls.intersect(visibleBookUrls)
     }
 
     val exportDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -294,26 +293,20 @@ private fun BookshelfManageScreen(
             }
         }
         if (!isReadyPath) return@rememberLauncherForActivityResult
-        if (pendingExportSelection.isNotEmpty()) {
-            pendingExportSelection.forEach { bookUrl ->
-                booksByUrl[bookUrl]?.let { book ->
-                    startExport(context, dirPath, book, state.exportConfig.exportType)
-                }
-            }
-            return@rememberLauncherForActivityResult
-        }
-        val bookUrl = pendingExportBookUrl ?: return@rememberLauncherForActivityResult
-        val book = booksByUrl[bookUrl] ?: return@rememberLauncherForActivityResult
-        if (state.exportConfig.isCustomEpubExportEnabled) {
+        val pendingBooks = pendingExportBooks
+        if (pendingBooks.isEmpty()) return@rememberLauncherForActivityResult
+        if (pendingBooks.size == 1 && state.exportConfig.isCustomEpubExportEnabled) {
             customExportPath = dirPath
-            customExportBook = book
+            customExportBook = pendingBooks.single()
             customExportAllChapter = false
             customEpubScopeInput = ""
             customEpubScopeError = null
             customEpubSizeInput = "1"
             customEpisodeExportNameInput = state.exportConfig.episodeExportFileName
             showCustomExportDialog = true
-        } else {
+            return@rememberLauncherForActivityResult
+        }
+        pendingBooks.forEach { book ->
             startExport(context, dirPath, book, state.exportConfig.exportType)
         }
     }
@@ -330,12 +323,8 @@ private fun BookshelfManageScreen(
         }
     }
 
-    fun selectExportFolder(
-        bookUrl: String? = null,
-        selection: Set<String> = emptySet()
-    ) {
-        pendingExportBookUrl = bookUrl
-        pendingExportSelection = selection
+    fun selectExportFolder(books: List<Book> = emptyList()) {
+        pendingExportBooks = books
         showFilePickerSheet = true
     }
 
@@ -343,10 +332,7 @@ private fun BookshelfManageScreen(
         if (books.isEmpty()) return
         val path = ACache.get().getAsString(exportBookPathKey)
         if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
-            when (books.size) {
-                1 -> selectExportFolder(books.single().bookUrl)
-                else -> selectExportFolder(selection = books.mapTo(linkedSetOf()) { it.bookUrl })
-            }
+            selectExportFolder(books)
         } else if (state.exportConfig.isCustomEpubExportEnabled && books.size == 1) {
             customExportPath = path
             customExportBook = books.single()
@@ -364,9 +350,9 @@ private fun BookshelfManageScreen(
     }
 
     fun showExportSheetFor(books: List<Book>) {
-        exportSheetBookUrls = books.mapTo(linkedSetOf()) { it.bookUrl }
+        exportSheetBooks = books
         showExportSettings = false
-        showExportSheet = exportSheetBookUrls.isNotEmpty()
+        showExportSheet = exportSheetBooks.isNotEmpty()
     }
 
     fun exportAll() {
@@ -374,10 +360,10 @@ private fun BookshelfManageScreen(
     }
 
     fun exportSelected() {
-        showExportSheetFor(selectedBookUrls.mapNotNull(booksByUrl::get))
+        showExportSheetFor(state.selectedBooks)
     }
     fun resolveSelectionGroupMask(): Long {
-        val targetBooks = selectedBookUrls.mapNotNull { booksByUrl[it] }
+        val targetBooks = state.selectedBooks
         if (targetBooks.isEmpty()) return 0L
         val firstGroup = targetBooks.first().group.coerceAtLeast(0L)
         return if (targetBooks.all { it.group == firstGroup }) firstGroup else 0L
@@ -387,14 +373,21 @@ private fun BookshelfManageScreen(
             Icons.Default.SelectAll,
             stringResource(R.string.select_all)
         ) {
-            selectedBookUrls = filteredBooks.mapTo(hashSetOf()) { it.bookUrl }
+            viewModel.dispatch(
+                BookshelfManageScreenIntent.SelectVisibleBooks(
+                    filteredBooks.mapTo(hashSetOf()) { it.bookUrl }
+                )
+            )
         },
         FabMenuItem(
             Icons.Default.Refresh,
             stringResource(R.string.revert_selection)
         ) {
-            val filteredUrls = filteredBooks.map { it.bookUrl }.toSet()
-            selectedBookUrls = (selectedBookUrls - filteredUrls) + (filteredUrls - selectedBookUrls)
+            viewModel.dispatch(
+                BookshelfManageScreenIntent.InvertVisibleBooks(
+                    filteredBooks.mapTo(hashSetOf()) { it.bookUrl }
+                )
+            )
         },
         FabMenuItem(
             Icons.Default.Download,
@@ -459,12 +452,11 @@ private fun BookshelfManageScreen(
         }
     }
     ListScaffold(
-        title = if (inSelectionMode) {
-            "已选 ${selectedBookUrls.size}/${filteredBooks.size}"
-        } else {
-            state.groupName ?: stringResource(R.string.offline_cache)
-        },
+        title = state.groupName ?: stringResource(R.string.offline_cache),
         state = listUiState,
+        selectionTitle = selectionTitle,
+        // 跨分组多选：选中后还要能继续搜索、切分组去挑别的书，所以顶栏 actions 不跟着选择态收起
+        keepActionsInSelection = true,
         onBackClick = onBackClick,
         onSearchToggle = { active ->
             isSearchMode = active

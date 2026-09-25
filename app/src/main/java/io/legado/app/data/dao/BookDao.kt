@@ -702,6 +702,13 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE bookUrl = :bookUrl")
     fun getBook(bookUrl: String): Book?
 
+    /**
+     * 按 bookUrl 批量取书，供跨分组多选解析选中实体（选中项可能不在当前分组列表里）。
+     * 调用方负责分批，避免单次绑定参数超过 SQLite 上限。
+     */
+    @Query("SELECT * FROM books WHERE bookUrl IN (:bookUrls)")
+    suspend fun getBooksByUrls(bookUrls: Set<String>): List<Book>
+
     @Query(
         """
         SELECT

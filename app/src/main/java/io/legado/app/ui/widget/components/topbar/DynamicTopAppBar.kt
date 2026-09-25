@@ -47,6 +47,19 @@ fun <T> DynamicTopAppBar(
     searchDropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
     onClearSelection: () -> Unit,
     topBarActions: @Composable RowScope.() -> Unit = {},
+    /**
+     * 选择模式下是否保留顶栏右侧 actions 区（搜索 / [topBarActions] / 更多菜单）。
+     *
+     * 默认关闭：多数列表页进入选择态后只需要「退出选择」和底部操作栏。
+     * 书架管理需要打开 —— 它支持跨分组多选，选中后还要继续搜索、切分组才能挑别的书。
+     */
+    keepActionsInSelection: Boolean = false,
+    /**
+     * 选择态标题。跨分组多选时 [ListUiState.selectedIds] 可能多于当前列表条目，
+     * 默认的 "Selected 已选/总数" 口径会失真，调用方可以在这里给出自己的文案；
+     * 为 null 时退回默认计数。
+     */
+    selectionTitle: String? = null,
     dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
     bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null
 ) {
@@ -59,7 +72,7 @@ fun <T> DynamicTopAppBar(
             .fillMaxWidth(),
         title = when {
             state.isLoading -> stringResource(R.string.list_loading_title)
-            isSelecting -> stringResource(
+            isSelecting -> selectionTitle ?: stringResource(
                 R.string.list_selected_count,
                 state.selectedIds.size,
                 state.items.size
@@ -80,7 +93,8 @@ fun <T> DynamicTopAppBar(
             }
         },
         actions = {
-            if (!isSelecting) {
+            // 选择态默认收起整个 actions 区，只有显式声明的调用方才继续显示
+            if (!isSelecting || keepActionsInSelection) {
                 if (showSearchAction) {
                     TopBarActionButton(
                         onClick = { onSearchToggle(!state.isSearch) },
@@ -113,7 +127,8 @@ fun <T> DynamicTopAppBar(
             AnimatedVisibility(
                 modifier = Modifier
                     .adaptiveHorizontalPadding(),
-                visible = state.isSearch && !isSelecting,
+                // 保留 actions 时必须同步保留输入框，否则选择态点搜索按钮会没有任何反馈
+                visible = state.isSearch && (!isSelecting || keepActionsInSelection),
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {

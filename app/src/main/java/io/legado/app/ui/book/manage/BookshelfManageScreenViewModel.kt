@@ -14,6 +14,8 @@ import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.gateway.BookExportSettingsGateway
+import io.legado.app.domain.gateway.BookshelfSettingsGateway
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.model.settings.BookExportSettings
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.BatchChangeSourceCandidate
@@ -31,13 +33,16 @@ import io.legado.app.help.book.removeType
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.service.ExportBookService
-import io.legado.app.domain.gateway.BookshelfSettingsGateway
-import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
-import org.koin.core.context.GlobalContext
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.main.bookshelf.toLightBook
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.move
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -48,16 +53,30 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
 
 private val bookshelfSettingsGateway get() = GlobalContext.get().get<BookshelfSettingsGateway>()
+
+/**
+ * 全选：只覆盖当前列表内的选择，其他分组里已选的书保留（跨分组多选的关键）。
+ */
+internal fun selectionOfSelectVisible(
+    selected: Set<String>,
+    visibleBookUrls: Set<String>
+): Set<String> = (selected - visibleBookUrls) + visibleBookUrls
+
+/**
+ * 反选：只翻转当前列表内的选择，其他分组里已选的书不受影响。
+ */
+internal fun selectionOfInvertVisible(
+    selected: Set<String>,
+    visibleBookUrls: Set<String>
+): Set<String> = (selected - visibleBookUrls) + (visibleBookUrls - selected)
 
 data class BookshelfManageScreenExportConfig(
     val exportUseReplace: Boolean = true,
@@ -80,6 +99,17 @@ data class BookshelfManageScreenUiState(
     val groupName: String? = null,
     val groupList: List<BookGroup> = emptyList(),
     val books: List<Book> = emptyList(),
+    /**
+     * 跨分组选中的书（只以 bookUrl 为准，不按分组分桶）。
+     * 切换分组、进入书籍详情再返回都不会清空它，批量操作因此可以横跨多个分组；
+     * 只有显式清除或书籍本身被删除才会移除。
+     */
+    val selectedBookUrls: ImmutableSet<String> = persistentSetOf(),
+    /**
+     * [selectedBookUrls] 解析出的实体快照，包含不在当前分组列表里的书。
+     * 导出 / 分组掩码 / 删除确认需要实体而不是 url，所以这里从库里回查一次。
+     */
+    val selectedBooks: ImmutableList<Book> = persistentListOf(),
     val bookSort: Int = bookshelfSettingsGateway.currentSettings.bookshelfSort,
     val bookSortOrder: Int = bookshelfSettingsGateway.currentSettings.bookshelfSortOrder,
     val isDownloadRunning: Boolean = false,
@@ -106,6 +136,10 @@ sealed interface BookshelfManageScreenIntent {
     data class ToggleBookDownload(val book: Book) : BookshelfManageScreenIntent
     data class DeleteBookDownload(val bookUrl: String) : BookshelfManageScreenIntent
     data class ClearBookCache(val book: Book) : BookshelfManageScreenIntent
+    data class ToggleBookSelection(val bookUrl: String) : BookshelfManageScreenIntent
+    data class SelectVisibleBooks(val visibleBookUrls: Set<String>) : BookshelfManageScreenIntent
+    data class InvertVisibleBooks(val visibleBookUrls: Set<String>) : BookshelfManageScreenIntent
+    data object ClearBookSelection : BookshelfManageScreenIntent
     data class MoveBooksToGroup(val bookUrls: Set<String>, val groupId: Long) : BookshelfManageScreenIntent
     data class DeleteBooks(val bookUrls: Set<String>, val deleteOriginal: Boolean) : BookshelfManageScreenIntent
     data class ClearCachesForBooks(val bookUrls: Set<String>) : BookshelfManageScreenIntent
@@ -188,6 +222,7 @@ class BookshelfManageScreenViewModel(
     private val downloadFailureMessages = ConcurrentHashMap<String, String>()
     private var booksJob: Job? = null
     private var groupsJob: Job? = null
+    private var selectionResolveJob: Job? = null
     private var cacheLoadJob: Job? = null
     private var observersStarted = false
     private val pendingDownloadStatusBookUrls = ConcurrentHashMap.newKeySet<String>()
@@ -219,6 +254,16 @@ class BookshelfManageScreenViewModel(
             is BookshelfManageScreenIntent.ToggleBookDownload -> toggleBookDownload(intent.book)
             is BookshelfManageScreenIntent.DeleteBookDownload -> CacheBook.remove(context, intent.bookUrl)
             is BookshelfManageScreenIntent.ClearBookCache -> clearCacheForBook(intent.book)
+            is BookshelfManageScreenIntent.ToggleBookSelection -> toggleBookSelection(intent.bookUrl)
+            is BookshelfManageScreenIntent.SelectVisibleBooks -> applySelection(
+                selectionOfSelectVisible(_uiState.value.selectedBookUrls, intent.visibleBookUrls)
+            )
+
+            is BookshelfManageScreenIntent.InvertVisibleBooks -> applySelection(
+                selectionOfInvertVisible(_uiState.value.selectedBookUrls, intent.visibleBookUrls)
+            )
+
+            BookshelfManageScreenIntent.ClearBookSelection -> applySelection(emptySet())
             is BookshelfManageScreenIntent.MoveBooksToGroup -> moveBooksToGroup(intent.bookUrls, intent.groupId)
             is BookshelfManageScreenIntent.DeleteBooks -> deleteBooks(intent.bookUrls, intent.deleteOriginal)
             is BookshelfManageScreenIntent.ClearCachesForBooks -> clearCachesForBooks(intent.bookUrls)
@@ -320,6 +365,45 @@ class BookshelfManageScreenViewModel(
         }
     }
 
+    private fun toggleBookSelection(bookUrl: String) {
+        val selected = _uiState.value.selectedBookUrls
+        applySelection(if (selected.contains(bookUrl)) selected - bookUrl else selected + bookUrl)
+    }
+
+    /**
+     * 提交新的选中集合。选中状态由 ViewModel 持有，因此切换分组、进入详情再返回、
+     * 配置变更都不会丢；只有 [ClearBookSelection] 或书籍被删除才会变化。
+     */
+    private fun applySelection(bookUrls: Set<String>) {
+        _uiState.update { it.copy(selectedBookUrls = bookUrls.toImmutableSet()) }
+        resolveSelectedBooks()
+    }
+
+    /**
+     * 回查选中书籍的实体。查询顺带做一次存在性校验：书可能在本页之外被删掉
+     * （书籍详情页删除、换源失败回滚等），这时它的 url 不能继续留在选中集合里。
+     * 分组不影响存在性，所以跨分组选中不会被这里清掉。
+     */
+    private fun resolveSelectedBooks() {
+        selectionResolveJob?.cancel()
+        val bookUrls = _uiState.value.selectedBookUrls
+        if (bookUrls.isEmpty()) {
+            _uiState.update { it.copy(selectedBooks = persistentListOf()) }
+            return
+        }
+        selectionResolveJob = viewModelScope.launch {
+            val books = bookRepository.getBooksByUrls(bookUrls)
+            val existingUrls = books.mapTo(hashSetOf()) { it.bookUrl }
+            _uiState.update { state ->
+                state.copy(
+                    selectedBookUrls = state.selectedBookUrls.intersect(existingUrls)
+                        .toImmutableSet(),
+                    selectedBooks = books.toImmutableList()
+                )
+            }
+        }
+    }
+
     fun getCacheCount(bookUrl: String): Int? = cacheCounts[bookUrl]
 
     fun isBookDownloading(bookUrl: String): Boolean {
@@ -343,6 +427,8 @@ class BookshelfManageScreenViewModel(
         observeBooks(groupId)
         observeDownloadAndExportChanges()
         refreshGroupName(groupId)
+        // 从书籍详情返回时 Initialize 会重跑，这里顺带清掉在别处被删掉的选中项
+        resolveSelectedBooks()
     }
 
     private fun changeGroup(groupId: Long) {
@@ -645,6 +731,11 @@ class BookshelfManageScreenViewModel(
         }.onSuccess { deletedBookUrls ->
             _uiState.update { it.copy(deleteBookOriginal = deleteOriginal) }
             deletedBookUrls.forEach { cacheCounts.remove(it) }
+            // 书已经不在书架里了，选中集合不能再留着它的 url（跨分组选中时它可能根本不在当前列表）
+            val remaining = _uiState.value.selectedBookUrls - deletedBookUrls
+            if (remaining.size != _uiState.value.selectedBookUrls.size) {
+                applySelection(remaining)
+            }
             _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("删除成功"))
         }.onError {
             _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("删除失败\n${it.localizedMessage}"))
