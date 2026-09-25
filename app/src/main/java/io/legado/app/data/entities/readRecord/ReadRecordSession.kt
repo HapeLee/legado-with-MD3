@@ -4,6 +4,8 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+internal const val CONTINUOUS_READ_SESSION_GAP_MILLIS = 20 * 60 * 1000L
+
 @Entity(tableName = "readRecordSession")
 data class ReadRecordSession(
     @PrimaryKey(autoGenerate = true)

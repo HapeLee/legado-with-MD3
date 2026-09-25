@@ -2570,6 +2570,7 @@
     <string name="long_press_select_mode">點按項目選擇，返回退出</string>
     <string name="confirm_delete_read_record">刪除閱讀記錄？</string>
     <string name="delete_read_record_message">確定要刪除這條記錄嗎？</string>
+    <string name="delete_reading_period_message">確定要刪除這個閱讀時段嗎？該列連續的所有工作階段（包括其他裝置的工作階段）都會被刪除。</string>
     <string name="delete_selected_read_records_message">確定要刪除所選的 %1$d 筆閱讀記錄嗎？</string>
     <string name="clear_read_records">清空閱讀記錄</string>
     <string name="clear_read_records_summary">刪除全部閱讀記錄、每日明細和時間線閱讀時段記錄</string>
@@ -2592,6 +2593,14 @@
     <string name="read_record_repair">修復閱讀記錄</string>
     <string name="read_record_repair_summary">合併可確定歸屬的記錄，並清理欄位完全相同的閱讀時段記錄</string>
     <string name="operation_failed">操作失敗</string>
+    <string name="do_not_remind_again_this_page">本次開啟不再提示</string>
+    <string name="do_not_remind_again_long_term">今後不再提醒</string>
+    <string name="restore_delete_confirmation">恢復刪除確認</string>
+    <string name="restore_delete_confirmation_summary">刪除閱讀記錄前再次進行確認</string>
+    <string name="delete_confirmation_restored">已恢復刪除確認</string>
+    <string name="read_record_deleted">已刪除閱讀記錄</string>
+    <string name="read_records_cleared">已清空閱讀記錄</string>
+    <string name="read_records_merged">已合併閱讀記錄</string>
     <string name="merge_read_records_message">將選取的閱讀記錄合併到「%1$s」/%2$s。</string>
     <string name="merge_read_record_candidate">%1$s / %2$s（%3$s）</string>
     <string name="no_merge_candidates">沒有可合併的其他閱讀記錄</string>
