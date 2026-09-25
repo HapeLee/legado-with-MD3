@@ -777,6 +777,47 @@ class ReaderPaginatorTest {
     }
 
     /**
+     * 标题行距收紧到 1.0（设置值 10）时，本段行距留白为 0，但九宫格上下两条边不能整条消失：
+     * 纵向预算回落到正文行距——旧 View 的预算取自全局 `ChapterProvider.lineSpacingExtra`，
+     * 标题与正文共用一份。只有正文行距同样为 1.0 时才退回上一条用例的「中心 + 左右两条边」。
+     */
+    @Test
+    fun tightTitleLineSpacingStillBudgetsTheNineSliceVerticalEdges() {
+        val framedStyle = style.copy(
+            backgroundImage = ReaderTextBackgroundImage(
+                "frame.png", 3, 1f,
+                contentInsetLeftPx = 3f,
+                contentInsetRightPx = 4f,
+                contentInsetTopPx = 8f,
+                contentInsetBottomPx = 8f,
+            )
+        )
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = listOf(ReaderMeasuredInlineItem.Text("字", 10f, framedStyle, 0)),
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                    emphasized = true,
+                    lineSpacingMultiplier = 1f,
+                )
+            ),
+            config.copy(viewportHeightPx = 100, lineSpacingMultiplier = 1.5f),
+        ).single()
+
+        val glyph = page.elements.single() as ReaderElement.Text
+        // 正文行距 1.5 ⇒ 留白 10px，够按原图厚度画满 8px 的上下边。
+        assertEquals(8f, glyph.backgroundFrameTopPx, 0.001f)
+        assertEquals(8f, glyph.backgroundFrameBottomPx, 0.001f)
+        val run = page.textBackgroundRuns().single()
+        assertEquals(glyph.bounds.top - 8f, run.bounds.top, 0.001f)
+        assertEquals(glyph.bounds.bottom + 8f, run.bounds.bottom, 0.001f)
+    }
+
+    /**
      * 章末页的堆叠高度额外加 [ReaderPaginationConfig.chapterEndPaddingPx]：旧
      * `TextChapterLayout.setTypeText` 收尾时 `height = max(height, durY + 20dp)`，让下一章
      * 正文与本章末尾之间留一段空档。中间页不受影响。

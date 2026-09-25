@@ -655,8 +655,14 @@ internal class ReaderPaginationSession(
                 is ReaderMeasuredInlineItem.Image -> "\uFFFC"
             }
         }
-        val lineGapPx =
-            (paragraph.lineSpacingMultiplier - 1f).coerceAtLeast(0f) * paragraph.lineHeightPx
+        // 纵向预算取「本段行距」与「正文行距」的较大者：旧 View
+        // `TextLine.drawNineSliceFrames` 的 `gap` 用的是全局（正文）的
+        // `ChapterProvider.lineSpacingExtra`，标题与正文共用一份。只按本段行距算时，
+        // 标题行距被设成 1.0（设置值 10，"标题不加行距"）就会得到 0 预算，九宫格上下两条边
+        // 随之被压成 0 高度整条消失——只剩中心格和左右两条边在上下切分线之间的那一段。
+        val lineGapPx = (
+                maxOf(paragraph.lineSpacingMultiplier, config.lineSpacingMultiplier) - 1f
+                ).coerceAtLeast(0f) * paragraph.lineHeightPx
         val halfLineGapPx = lineGapPx / 2f
 
         fun itemFrame(index: Int) =
