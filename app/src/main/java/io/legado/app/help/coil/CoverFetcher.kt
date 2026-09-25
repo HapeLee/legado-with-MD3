@@ -9,6 +9,7 @@ import coil3.fetch.Fetcher
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
 import io.legado.app.data.appDb
+import io.legado.app.help.glide.progress.ProgressUrlTag
 import io.legado.app.utils.ImageUtils
 import io.legado.app.utils.isWifiConnect
 import kotlinx.coroutines.CancellationException
@@ -94,6 +95,12 @@ class CoverFetcher(
         val bookUrl = options.extras[CoverExtras.BookUrl]
 
         val requestHeaders = options.extras[CoverExtras.Headers]
+        // 进度回报键：用书源规则改写前的原始地址，与阅读页持有的 imageUrl 一致
+        val progressUrl = options.extras[CoverExtras.OriginalUrl] ?: url
+        // 无需书源二次解密时可以把响应流直接交给解码器边下边解，
+        // 省掉“整张图先落一份 ByteArray”这一步（高画质大图时这就是转圈等很久的主因）
+        val canStream = isManga && ImageUtils.skipDecode(source, !isManga)
+        var streamedSource: ImageSource? = null
 
         // ===== 第二级：OkHttp HTTP 缓存（FORCE_CACHE 只读缓存，miss 返回 504，不碰网络）=====
         // 注意：WiFi 限制与失败冷却不能挡在本地缓存读取之前，
@@ -105,6 +112,7 @@ class CoverFetcher(
                 val cacheRequest = Request.Builder()
                     .url(url)
                     .tag(io.legado.app.data.entities.BaseSource::class.java, source)
+                    .tag(ProgressUrlTag::class.java, ProgressUrlTag(progressUrl))
                     .apply { requestHeaders?.forEach { (key, value) -> addHeader(key, value) } }
                     .cacheControl(CacheControl.FORCE_CACHE)
                     .build()
@@ -138,6 +146,7 @@ class CoverFetcher(
                     val networkRequest = Request.Builder()
                         .url(url)
                         .tag(io.legado.app.data.entities.BaseSource::class.java, source)
+                        .tag(ProgressUrlTag::class.java, ProgressUrlTag(progressUrl))
                         .apply { requestHeaders?.forEach { (key, value) -> addHeader(key, value) } }
                         .tag(COVER_REQUEST_TAG)
                         .cacheControl(
@@ -152,7 +161,15 @@ class CoverFetcher(
                         body.close()
                         throw IOException("HTTP ${networkResponse.code}")
                     }
-                    body.use { it.bytes() }
+                    if (canStream) {
+                        streamedSource = ImageSource(
+                            source = body.source(),
+                            fileSystem = options.fileSystem,
+                        )
+                        null
+                    } else {
+                        body.use { it.bytes() }
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -183,6 +200,16 @@ class CoverFetcher(
                 }
                 throw e
             }
+        }
+
+        // 流式分支：字节直接由解码器消费，这里只负责收尾，不再落 ByteArray。
+        streamedSource?.let { stream ->
+            clearFailure(url)
+            return SourceFetchResult(
+                source = stream,
+                mimeType = null,
+                dataSource = DataSource.NETWORK,
+            )
         }
 
         // 到这里必定已拿到字节（本地缓存/OkHttp 缓存/网络三选一，否则已抛出）。

@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -84,6 +85,8 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.request.transformations
+import coil3.size.Dimension
+import coil3.size.Size
 import coil3.toBitmap
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -99,6 +102,7 @@ import io.legado.app.ui.book.manga.config.MangaZoomStartPosition
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -195,6 +199,13 @@ fun MangaReaderScreen(
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val pageDecodeSize = mangaPageDecodeSize(
+        paged = state.settings.scrollMode != MangaScrollMode.WEBTOON &&
+                state.settings.scrollMode != MangaScrollMode.WEBTOON_WITH_GAP,
+        sidePaddingPercent = state.settings.sidePaddingPercent,
+        pageScaleType = state.settings.pageScaleType,
+        widePageMode = state.settings.widePageMode,
+    )
     val pendingMessage = state.pendingMessages.firstOrNull()
     LaunchedEffect(pendingMessage?.id, context, lifecycleOwner) {
         val message = pendingMessage ?: return@LaunchedEffect
@@ -216,6 +227,7 @@ fun MangaReaderScreen(
         state.settings.sourceOrigin,
         state.settings.enableEInk,
         state.settings.enableGray,
+        pageDecodeSize,
     ) {
         val ahead = state.settings.preDownloadCount.coerceIn(0, 10)
         val current = state.currentItemIndex
@@ -233,6 +245,7 @@ fun MangaReaderScreen(
                     page.imageRequest(
                         settings = state.settings,
                         context = context,
+                        decodeSize = pageDecodeSize,
                         onAspectRatio = { aspectRatios[page.key] = it },
                         onStart = { onIntent(MangaReaderIntent.PageLoadStarted(page.key)) },
                         onSuccess = { onIntent(MangaReaderIntent.PageLoadSucceeded(page.key)) },
@@ -1225,6 +1238,12 @@ private fun MangaPageImage(
     val automaticBackgrounds = LocalMangaBackgroundColors.current
     val context = LocalContext.current
     val fallbackHeight = LocalConfiguration.current.screenHeightDp.dp
+    val decodeSize = mangaPageDecodeSize(
+        paged = paged,
+        sidePaddingPercent = settings.sidePaddingPercent,
+        pageScaleType = settings.pageScaleType,
+        widePageMode = settings.widePageMode,
+    )
     val webtoonSizeModifier = if (paged) Modifier else {
         aspectRatios[page.key]?.takeIf { it > 0f }?.let { Modifier.aspectRatio(it) }
             ?: Modifier.height(fallbackHeight)
@@ -1237,6 +1256,7 @@ private fun MangaPageImage(
         settings.enableGray,
         settings.disableCrossFade,
         page.retryRevision,
+        decodeSize,
     ) {
         listOf(
             page.key,
@@ -1246,12 +1266,14 @@ private fun MangaPageImage(
             settings.enableGray,
             settings.disableCrossFade,
             page.retryRevision,
+            decodeSize,
         )
     }
     val request = remember(imagePipelineKey) {
         page.imageRequest(
             settings = settings,
             context = context,
+            decodeSize = decodeSize,
             onAspectRatio = { ratio -> aspectRatios[page.key] = ratio },
             onStart = { onIntent(MangaReaderIntent.PageLoadStarted(page.key)) },
             onSuccess = { onIntent(MangaReaderIntent.PageLoadSucceeded(page.key)) },
@@ -1434,18 +1456,77 @@ private fun MangaImageLoadOverlay(
             }
         }
     } else {
+        // 加载中不再整页压黑罩（#2082），因此百分比必须自带底色，
+        // 否则在纯白/纯黑的漫画页上都读不出来。
+        val progress = (loadState as? MangaPageLoadState.Loading)?.progress
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            androidx.compose.material3.CircularProgressIndicator()
+            Column(
+                modifier = Modifier
+                    .background(
+                        color = Color.Black.copy(alpha = 0.45f),
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AppCircularProgressIndicator(progress = progress?.let { it / 100f })
+                if (progress != null) {
+                    Text(
+                        text = "$progress%",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
         }
     }
+}
+
+/**
+ * 漫画正文的目标解码尺寸。
+ *
+ * 只按屏幕宽度推导，不读布局约束：条漫页的高度会在拿到宽高比后从「整屏高度」跳到
+ * 「图片真实高度」，用约束推导会让同一张图在不同时机解出不同分辨率。
+ */
+@Composable
+private fun mangaPageDecodeSize(
+    paged: Boolean,
+    sidePaddingPercent: Int,
+    pageScaleType: Int,
+    widePageMode: Int,
+): Size {
+    // 「原始尺寸」模式按位图固有尺寸绘制（ContentScale.None），降采样会直接把页面画小，
+    // 所以这里必须保持不缩放，沿用改动前的语义。
+    if (paged && pageScaleType == MangaPageScaleType.ORIGINAL) return Size.ORIGINAL
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() }
+    // 「旋转适配」把跨页图旋转 90°，图片的长边落在屏幕高度上（rotateWidePage 会交换约束）。
+    // 目标宽度必须换成屏幕高度，否则解码结果只有屏幕宽、显示时被放大两倍以上而发糊。
+    val contentWidthPx = if (paged && widePageMode == MangaWidePageMode.ROTATE_TO_FIT) {
+        maxOf(screenWidthPx, with(density) { configuration.screenHeightDp.dp.roundToPx() })
+    } else {
+        screenWidthPx
+    }
+    val fraction = if (paged) {
+        1f
+    } else {
+        1f - sidePaddingPercent.coerceIn(0, 45) * 2f / 100f
+    }
+    return Size(
+        width = Dimension((contentWidthPx * fraction).roundToInt().coerceAtLeast(1)),
+        height = Dimension.Undefined,
+    )
 }
 
 private fun MangaReaderItemUi.Page.imageRequest(
     settings: MangaReaderSettings,
     context: android.content.Context,
+    decodeSize: Size,
     onAspectRatio: (Float) -> Unit = {},
     onStart: () -> Unit = {},
     onSuccess: () -> Unit = {},
@@ -1456,6 +1537,14 @@ private fun MangaReaderItemUi.Page.imageRequest(
     return ImageRequest.Builder(context)
         .data(imageUrl)
         .allowHardware(true)
+        // 解码尺寸必须显式钉住，不能交给 AsyncImage 的 ConstraintsSizeResolver：
+        // 它只在请求启动时取一次当时的布局约束，而条漫页的约束会在拿到宽高比后突变，
+        // 于是同一张高画质图每次进入可能解出不同分辨率；又因为内存缓存键相同，
+        // 预取那轮按 Size.ORIGINAL 解出的全图与展示那轮按视口降采样解出的图会互相覆盖，
+        // 命中哪一份取决于谁先完成 —— 这才是“概率性发糊”的来源。
+        // 预取与展示共用这里钉死的尺寸后，缓存里只会存在同一种分辨率。
+        // 同时它等价于旧版 Glide 的 override(widthPixels, SIZE_ORIGINAL)。
+        .size(decodeSize)
         // The preload request has no view-size resolver while the displayed request does. A
         // shared key lets the displayed request reuse it immediately, then crossfade only if a
         // better-sized decode is needed.

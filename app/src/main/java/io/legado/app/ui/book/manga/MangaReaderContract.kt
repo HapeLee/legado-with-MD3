@@ -95,7 +95,13 @@ sealed interface MangaReaderItemUi {
 @Stable
 sealed interface MangaPageLoadState {
     data object Queued : MangaPageLoadState
-    data object Loading : MangaPageLoadState
+
+    /**
+     * @param progress 下载百分比 0..100；服务端未返回 Content-Length 时为 null，
+     * 此时 UI 退回不确定进度（只转圈，不显示数字）。
+     */
+    data class Loading(val progress: Int? = null) : MangaPageLoadState
+
     data object Ready : MangaPageLoadState
     data class Failed(val message: String?) : MangaPageLoadState
 }
