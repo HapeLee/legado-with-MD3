@@ -3,6 +3,9 @@ package io.legado.app.ui.main.bookshelf
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,9 +31,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -61,6 +66,10 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.BookshelfCover
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
+import io.legado.app.ui.widget.components.privacy.PrivateLockedCover
+import io.legado.app.ui.widget.components.privacy.PrivateLockedCoverBlurRadius
+import io.legado.app.ui.widget.components.privacy.PrivateLockedCoverOverlay
+import io.legado.app.ui.widget.components.privacy.RuntimeBlurSupported
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.toTimeAgo
@@ -678,12 +687,53 @@ fun BookItem(
     coverShadow: Boolean = false,
     isSearchMode: Boolean = false,
     searchKey: String = "",
+    /** 私密书籍且尚未解锁：只渲染模糊封面与占位内容，不渲染任何真实文字 */
+    locked: Boolean = false,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
+    val lockedHiddenLabel = stringResource(R.string.private_hidden_label)
+    // 锁定 ⇄ 解锁：封面走模糊深度、其余文字直接隐藏。
+    // 之所以不整体模糊卡片，是因为整体 blur 会把封面的圆角与阴影一起糊掉。
+    // 低版本运行时模糊不可用，这条动画自然退化成瞬间切换（此时脱敏走 Coil 静态模糊）。
+    val coverBlur by animateDpAsState(
+        targetValue = if (locked && RuntimeBlurSupported) PrivateLockedCoverBlurRadius else 0.dp,
+        animationSpec = tween(320),
+        label = "private-cover-blur",
+    )
+    val lockOverlayAlpha by animateFloatAsState(
+        targetValue = if (locked) 1f else 0f,
+        animationSpec = tween(260),
+        label = "private-lock-overlay",
+    )
+    // 低版本 Modifier.blur 是 no-op，脱敏只能靠 Coil 变换出的模糊封面兜底；
+    // 这条路径没有模糊动画，但同样不糊整卡，圆角完好。
+    if (locked && !RuntimeBlurSupported) {
+        PrivateLockedBookItem(
+            settings = settings,
+            bookUi = bookUi,
+            layoutMode = layoutMode,
+            modifier = modifier,
+            isSelected = isSelected,
+            gridStyle = gridStyle,
+            isCompact = isCompact,
+            titleSmallFont = titleSmallFont,
+            titleCenter = titleCenter,
+            titleMaxLines = titleMaxLines,
+            coverShadow = coverShadow,
+            // 脱敏封面也要带上与正常封面相同的共享元素参数，
+            // 否则源端没有 sharedBounds，进详情页的封面转场动画就无从接起
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+            sharedCoverKey = sharedCoverKey,
+            onClick = onClick,
+            onLongClick = onLongClick
+        )
+        return
+    }
     val book = bookUi.book
     val showListDetails = layoutMode == 0 && !isCompact && settings.showBookIntro
     val showIntroText = showListDetails && settings.bookshelfShowIntro
@@ -723,27 +773,43 @@ fun BookItem(
     }
 
     val cover: @Composable (Modifier) -> Unit = { coverModifier ->
-        BookshelfCover(
-            name = book.name,
-            author = book.author,
-            path = book.getDisplayCover(),
-            isUpdating = isUpdating,
-            modifier = coverModifier,
-            coverModifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(5f / 7f),
-            sourceOrigin = book.origin,
-            // 传本书 bookUrl：封面命中本地（含别名）缓存时
-            // 不解析书源规则、不弹登录提示、不重新下载
-            bookUrl = book.bookUrl,
-            badgeText = if (layoutMode != 0) unreadText else null,
-            showBadgeDot = showUpdateBadge,
-            leftBottomText = matchedSourceLabel ?: bookTypeLabel,
-            showLoadingPlaceholder = true,
-            sharedTransitionScope = sharedTransitionScope,
-            animatedVisibilityScope = animatedVisibilityScope,
-            sharedCoverKey = sharedCoverKey,
-        )
+        Box(modifier = coverModifier) {
+            BookshelfCover(
+                name = book.name,
+                author = book.author,
+                path = book.getDisplayCover(),
+                // 锁定态不露更新进度指示：它同样是在透露"这本书有更新"
+                isUpdating = isUpdating && !locked,
+                modifier = Modifier.fillMaxSize(),
+                coverModifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(5f / 7f),
+                sourceOrigin = book.origin,
+                // 传本书 bookUrl：封面命中本地（含别名）缓存时
+                // 不解析书源规则、不弹登录提示、不重新下载
+                bookUrl = book.bookUrl,
+                // 锁定态不露未读角标与来源标签：它们都是真实信息
+                badgeText = if (locked) null else if (layoutMode != 0) unreadText else null,
+                showBadgeDot = !locked && showUpdateBadge,
+                leftBottomText = if (locked) null else matchedSourceLabel ?: bookTypeLabel,
+                showLoadingPlaceholder = true,
+                // 模糊与"已隐藏"叠加层都交给封面组件在**共享元素节点内部**渲染。
+                // 这是关键：转场时 overlay 只搬运 sharedBounds 节点自己的内容，
+                // 加在祖先上的 blur、放在外面的兄弟节点都会被落下，
+                // 表现就是"动画一开始模糊和点阵就没了"。
+                contentBlur = coverBlur,
+                // 与详情页脱敏态共用同一份"已隐藏"叠层，只是整体做淡入淡出，
+                // 避免"糊一下、锁一下"的跳变
+                overlayContent = if (lockOverlayAlpha > 0f) {
+                    { PrivateLockedCoverOverlay(modifier = Modifier.alpha(lockOverlayAlpha)) }
+                } else {
+                    null
+                },
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                sharedCoverKey = sharedCoverKey,
+            )
+        }
     }
     val accessibilityLabel = bookAccessibilityLabel(
         name = book.name,
@@ -759,7 +825,9 @@ fun BookItem(
     if (layoutMode != 0) {
         BookshelfGridItem(
             cover = cover,
-            title = book.name,
+            // 锁定态不渲染书名：占位条与"已隐藏"字样都不再需要，封面那套
+            // （模糊 + 遮罩 + 点阵 + 锁标）已经说明了状态
+            title = if (locked) "" else book.name,
             gridStyle = gridStyle,
             modifier = modifier,
             isSelected = isSelected,
@@ -767,7 +835,7 @@ fun BookItem(
             titleCenter = titleCenter,
             titleMaxLines = titleMaxLines,
             coverShadow = coverShadow,
-            accessibilityLabel = accessibilityLabel,
+            accessibilityLabel = if (locked) lockedHiddenLabel else accessibilityLabel,
             coverWidth = settings.bookshelfGridCoverWidth,
             onClick = onClick,
             onLongClick = onLongClick,
@@ -779,10 +847,10 @@ fun BookItem(
         settings = settings,
         isCompact = isCompact,
         cover = cover,
-        title = book.name,
+        title = if (locked) "" else book.name,
         modifier = modifier,
         isSelected = isSelected,
-        titleEnd = if (unreadText != null) {
+        titleEnd = if (locked) null else if (unreadText != null) {
             {
                 TextCard(
                     text = unreadText,
@@ -794,13 +862,16 @@ fun BookItem(
                 )
             }
         } else null,
-        subTitle = if (isCompact) {
+        subTitle = if (locked) null else if (isCompact) {
             stringResource(R.string.author_read, book.author, unreadCount)
         } else {
             book.author
         },
-        desc = book.durChapterTitle ?: "",
-        columnContent = if (showListDetails) {
+        desc = if (locked) "" else book.durChapterTitle ?: "",
+        // 锁定态什么都不铺：不显示比"假装有内容"的占位条更干净
+        columnContent = if (locked) {
+            null
+        } else if (showListDetails) {
             {
                 val kindList = bookUi.displayTags
                 if (settings.bookshelfShowTag && kindList.isNotEmpty()) {
@@ -842,7 +913,7 @@ fun BookItem(
                 }
             }
         } else null,
-        bottomContent = if (showIntroBelowContent) {
+        bottomContent = if (locked) null else if (showIntroBelowContent) {
             {
                 GlassCard(
                     modifier = Modifier.padding(all = 4.dp),
@@ -857,7 +928,7 @@ fun BookItem(
                 }
             }
         } else null,
-        extra = if (showListDetails && settings.bookshelfShowLatestChapter) {
+        extra = if (locked) null else if (showListDetails && settings.bookshelfShowLatestChapter) {
             {
                 if (settings.showLastUpdateTime && !book.isLocal) {
                     AppText(
@@ -879,8 +950,85 @@ fun BookItem(
         } else null,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
-        accessibilityLabel = accessibilityLabel,
+        accessibilityLabel = if (locked) lockedHiddenLabel else accessibilityLabel,
         coverWidth = settings.bookshelfListCoverWidth,
+        onClick = onClick,
+        onLongClick = onLongClick,
+    )
+}
+
+/**
+ * 私密书籍的脱敏卡片。
+ *
+ * 刻意复用 BookshelfGridItem / BookshelfListItem 的骨架，只替换三处内容：
+ * 封面换成强模糊版、标题换成"已隐藏"、正文区域换成占位条。
+ * 未读角标、最新章节、标签、简介一律不渲染——它们都是真实信息。
+ */
+@Composable
+private fun PrivateLockedBookItem(
+    settings: BookshelfSettings,
+    bookUi: BookUiItem,
+    layoutMode: Int,
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+    gridStyle: Int = 0,
+    isCompact: Boolean = false,
+    titleSmallFont: Boolean = false,
+    titleCenter: Boolean = true,
+    titleMaxLines: Int = 2,
+    coverShadow: Boolean = false,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?
+) {
+    val book = bookUi.book
+    val hiddenLabel = stringResource(R.string.private_hidden_label)
+    val cover: @Composable (Modifier) -> Unit = { coverModifier ->
+        PrivateLockedCover(
+            name = book.name,
+            author = book.author,
+            path = book.getDisplayCover(),
+            modifier = coverModifier
+                .fillMaxWidth()
+                .aspectRatio(5f / 7f),
+            sharedCoverKey = sharedCoverKey,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+        )
+    }
+    if (layoutMode != 0) {
+        BookshelfGridItem(
+            cover = cover,
+            // 与正常态锁定卡片一致：不渲染书名文字，只留封面
+            title = "",
+            gridStyle = gridStyle,
+            modifier = modifier,
+            isSelected = isSelected,
+            titleSmallFont = titleSmallFont,
+            titleCenter = titleCenter,
+            titleMaxLines = titleMaxLines,
+            coverShadow = coverShadow,
+            accessibilityLabel = hiddenLabel,
+            coverWidth = settings.bookshelfGridCoverWidth,
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+        return
+    }
+    BookshelfListItem(
+        settings = settings,
+        isCompact = isCompact,
+        cover = cover,
+        title = "",
+        modifier = modifier,
+        isSelected = isSelected,
+        titleMaxLines = titleMaxLines,
+        coverShadow = coverShadow,
+        accessibilityLabel = hiddenLabel,
+        coverWidth = settings.bookshelfListCoverWidth,
+        columnContent = null,
         onClick = onClick,
         onLongClick = onLongClick,
     )

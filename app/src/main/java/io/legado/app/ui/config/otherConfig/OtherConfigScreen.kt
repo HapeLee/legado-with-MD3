@@ -99,35 +99,6 @@ fun OtherConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.privacy)) {
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.notification_permission),
-                    description = stringResource(R.string.notification_permission_rationale),
-                    onClick = { onIntent(OtherConfigIntent.RequestNotificationPermission) }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.background_permission),
-                    description = stringResource(R.string.ignore_battery_permission_rationale),
-                    onClick = { onIntent(OtherConfigIntent.RequestBatteryPermission) }
-                )
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.firebase_enable_title),
-                    description = stringResource(R.string.firebase_enable_summary),
-                    checked = state.firebaseEnable,
-                    onCheckedChange = { onIntent(OtherConfigIntent.FirebaseEnableChanged(it)) }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.set_local_password),
-                    description = stringResource(R.string.set_local_password_summary),
-                    onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.Password)) }
-                )
-
-            }
-
             SplicedColumnGroup(title = stringResource(R.string.read)) {
 
                 ClickableSettingItem(

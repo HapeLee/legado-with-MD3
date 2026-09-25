@@ -16,6 +16,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -58,6 +59,8 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.privacy.PrivateLockedCover
+import io.legado.app.ui.widget.components.privacy.rememberPrivateLockedBookUrls
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -337,6 +340,8 @@ private fun BookOverview(
     topPadding: androidx.compose.ui.unit.Dp,
     onBookClick: (BookmarkBookUi) -> Unit,
 ) {
+    // 私密书在这里不会有任何文字，只保留模糊封面
+    val lockedUrls = rememberPrivateLockedBookUrls(books.mapNotNull { it.bookUrl })
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -344,6 +349,7 @@ private fun BookOverview(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(books, key = { "${it.key.name}|${it.key.author}" }) { book ->
+            val locked = book.bookUrl?.let { it in lockedUrls } == true
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
                 cornerRadius = 16.dp,
@@ -357,40 +363,56 @@ private fun BookOverview(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // 私密且未获准：这一段文字整块不渲染（不铺占位条，
+                    // 也不显示"已隐藏"字样），只留模糊封面说明状态
                     Column(modifier = Modifier.weight(1f)) {
-                        AppText(
-                            text = book.key.name,
-                            style = LegadoTheme.typography.titleMediumEmphasized,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
+                        if (!locked) {
+                            AppText(
+                                text = book.key.name,
+                                style = LegadoTheme.typography.titleMediumEmphasized,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (book.key.author.isNotBlank()) AppText(
+                                text = book.key.author,
+                                style = LegadoTheme.typography.labelMediumEmphasized,
+                                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            )
+                            AppText(
+                                text = stringResource(
+                                    R.string.feature_bookmarks_counts,
+                                    book.bookmarkCount,
+                                    book.markingCount,
+                                ),
+                                style = LegadoTheme.typography.labelSmall,
+                                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (book.matchedMarkingId != null) AppText(
+                                text = stringResource(R.string.feature_bookmarks_match_hint),
+                                style = LegadoTheme.typography.labelSmall,
+                                color = LegadoTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    if (locked) {
+                        PrivateLockedCover(
+                            name = book.key.name,
+                            author = book.key.author,
+                            path = book.coverPath,
+                            sourceOrigin = book.sourceOrigin,
+                            modifier = Modifier
+                                .width(52.dp)
+                                .aspectRatio(5f / 7f),
                         )
-                        if (book.key.author.isNotBlank()) AppText(
-                            text = book.key.author,
-                            style = LegadoTheme.typography.labelMediumEmphasized,
-                            color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        )
-                        AppText(
-                            text = stringResource(
-                                R.string.feature_bookmarks_counts,
-                                book.bookmarkCount,
-                                book.markingCount,
-                            ),
-                            style = LegadoTheme.typography.labelSmall,
-                            color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        )
-                        if (book.matchedMarkingId != null) AppText(
-                            text = stringResource(R.string.feature_bookmarks_match_hint),
-                            style = LegadoTheme.typography.labelSmall,
-                            color = LegadoTheme.colorScheme.primary,
+                    } else {
+                        CoilBookCover(
+                            name = book.key.name,
+                            author = book.key.author,
+                            path = book.coverPath,
+                            sourceOrigin = book.sourceOrigin,
+                            modifier = Modifier.width(52.dp),
                         )
                     }
-                    CoilBookCover(
-                        name = book.key.name,
-                        author = book.key.author,
-                        path = book.coverPath,
-                        sourceOrigin = book.sourceOrigin,
-                        modifier = Modifier.width(52.dp),
-                    )
                 }
             }
         }

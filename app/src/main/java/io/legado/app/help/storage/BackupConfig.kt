@@ -21,6 +21,15 @@ internal val alwaysIgnoredPreferenceKeys = setOf(
     PreferKey.audioPlayWakeLock,
     LocalPreferencesKeys.PASSWORD.name,
     LocalPreferencesKeys.MIGRATED_TO_SETTINGS.name,
+    // 私密内容解锁的派生凭据。salt + verifier 是"可离线爆破的产物"：密码往往很短，
+    // PBKDF2 的迭代次数挡不住 GPU，进云备份等于把口令强度降了一个数量级。
+    // 生物信封（含 iv）与开关同样排除：换了设备 Keystore 密钥并不通用，导出只会得到一个
+    // "开关亮着、信封解不开"的假状态，不如让用户在新设备上重新开启一次。
+    LocalPreferencesKeys.PRIVATE_PASSWORD_SALT.name,
+    LocalPreferencesKeys.PRIVATE_PASSWORD_VERIFIER.name,
+    LocalPreferencesKeys.PRIVATE_BIOMETRIC_ENABLED.name,
+    LocalPreferencesKeys.PRIVATE_BIOMETRIC_ENVELOPE.name,
+    LocalPreferencesKeys.PRIVATE_BIOMETRIC_IV.name,
 )
 
 /**

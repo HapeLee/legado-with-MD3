@@ -19,7 +19,6 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -29,7 +28,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -54,8 +52,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
@@ -78,6 +74,7 @@ import io.legado.app.feature.reader.core.model.readerBackgroundAlpha
 import io.legado.app.feature.reader.core.transition.ReaderPageTurnSpeed
 import io.legado.app.feature.reader.core.transition.ReaderTransitionMode
 import io.legado.app.feature.reader.core.transition.ReaderViewportLayerPolicy
+import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
@@ -92,11 +89,11 @@ import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.AndroidPlatformCapabilities
 import io.legado.app.ui.main.MainActivity
+import io.legado.app.ui.main.readerSharedBounds
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
-import io.legado.app.ui.widget.components.image.cover.sharedCoverSourceRadius
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
@@ -646,13 +643,11 @@ fun ReadBookRouteScreen(
     // 真正的排版失败仍要让位给可重试的错误态，不能留着过期正文。
     val hasReadablePage = displayedReaderPageWindow?.current != null &&
             readerPaginationError == null
-    var readerContentRevealAllowed by remember(sharedCoverKey) {
-        mutableStateOf(sharedCoverKey == null || animatedVisibilityScope == null)
-    }
-    LaunchedEffect(sharedCoverKey, animatedVisibilityScope) {
-        if (!readerContentRevealAllowed) {
-            delay(240)
-            readerContentRevealAllowed = true
+    var firstReadablePageTraced by remember { mutableStateOf(false) }
+    LaunchedEffect(hasReadablePage) {
+        if (hasReadablePage && !firstReadablePageTraced) {
+            firstReadablePageTraced = true
+            ReaderPerfTrace.marker("surface.page-ready")
         }
     }
     // 阅读页 sharedBounds 的裁剪圆角动画：从封面源圆角渐变到设备屏幕圆角，
@@ -660,35 +655,15 @@ fun ReadBookRouteScreen(
     val platformCapabilities = remember(controller) { AndroidPlatformCapabilities(controller.activity) }
     val displayConfiguration = LocalConfiguration.current
     val displayCornerRadiusPx = remember(displayConfiguration) { platformCapabilities.displayCornerRadiusPx }
-    val readerClipRadiusDp = rememberReaderSharedClipRadiusDp(
-        sharedCoverKey = sharedCoverKey,
-        animatedVisibilityScope = animatedVisibilityScope,
-        targetRadiusPx = displayCornerRadiusPx,
-        density = density,
-    )
     Box(
         Modifier
             .fillMaxSize()
-            .then(
-                with(sharedTransitionScope) {
-                    if (this != null &&
-                        animatedVisibilityScope != null &&
-                        sharedCoverKey != null &&
-                        readerClipRadiusDp != null
-                    ) {
-                        Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(sharedCoverKey),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            enter = fadeIn(animationSpec = tween(600)),
-                            exit = fadeOut(animationSpec = tween(600)),
-                            clipInOverlayDuringTransition = OverlayClip(
-                                RoundedCornerShape(readerClipRadiusDp)
-                            ),
-                        )
-                    } else {
-                        Modifier
-                    }
-                }
+            .readerSharedBounds(
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                sharedCoverKey = sharedCoverKey,
+                displayCornerRadiusPx = displayCornerRadiusPx,
+                density = density,
             )
             .background(readerSurfaceColor)
     ) {
@@ -707,7 +682,7 @@ fun ReadBookRouteScreen(
             // 滚动模式的背景由画布内的固定层绘制（画布还要当菜单 haze 的源），根层再画一遍
             // 会让半透明背景图叠加两次、比设置值更浓，且与分页模式（页面自绘不透明底色挡住
             // 根层，实际只画一次）观感不一致。画布可见时让出根层，其它状态仍由根层兜底。
-            val readerCanvasVisible = readerContentRevealAllowed && hasReadablePage
+            val readerCanvasVisible = hasReadablePage
             val readerTransitionMode = ReaderTransitionMode.fromPageAnim(controller.pageAnim)
             if (!(ReaderViewportLayerPolicy.usesFixedBackground(readerTransitionMode) &&
                         readerCanvasVisible)
@@ -996,30 +971,6 @@ private fun sampleReaderSystemBarInsets(
         cutoutRightPx = cutout?.right ?: 0,
         cutoutBottomPx = cutout?.bottom ?: 0,
     )
-}
-
-/**
- * 阅读页 sharedBounds 转场期的裁剪圆角：起点 = 封面在源页面的圆角
- * （sharedCoverSourceRadius，与封面端动画同源），终点 = 设备屏幕圆角；
- * 非转场返回 null，不参与裁剪。镜像 CoilBookCover.rememberSharedCoverTransitionRadius。
- */
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Composable
-private fun rememberReaderSharedClipRadiusDp(
-    sharedCoverKey: String?,
-    animatedVisibilityScope: AnimatedVisibilityScope?,
-    targetRadiusPx: Float,
-    density: Float,
-): Dp? {
-    if (sharedCoverKey == null || animatedVisibilityScope == null) return null
-    val targetRadius = (targetRadiusPx / density).dp
-    val startRadius = sharedCoverSourceRadius(sharedCoverKey) ?: targetRadius
-    val animatedRadius by animatedVisibilityScope.transition.animateFloat(
-        label = "reader-clip-corner-radius",
-    ) { state ->
-        if (state == EnterExitState.Visible) targetRadius.value else startRadius.value
-    }
-    return animatedRadius.dp
 }
 
 @Composable

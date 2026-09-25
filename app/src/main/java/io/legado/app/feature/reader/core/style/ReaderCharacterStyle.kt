@@ -1,7 +1,7 @@
 package io.legado.app.feature.reader.core.style
 
-import io.legado.app.feature.reader.core.model.ReaderUnderline
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
+import io.legado.app.feature.reader.core.model.ReaderUnderline
 
 enum class ReaderStyleTarget { ALL, TITLE, BODY }
 
@@ -33,9 +33,58 @@ data class ReaderStyleRange(
 }
 
 object ReaderCharacterStyleResolver {
-    fun resolve(ranges: List<ReaderStyleRange>, position: Int, isTitle: Boolean): ReaderCharacterStyle? =
-        ranges.withIndex().asSequence()
-            .filter { it.value.contains(position, isTitle) }
-            .maxWithOrNull(compareBy<IndexedValue<ReaderStyleRange>> { it.value.priority }.thenBy { it.index })
-            ?.value?.style
+    /** Build the winning style once per interval instead of scanning every range for each glyph. */
+    fun compile(ranges: List<ReaderStyleRange>): ReaderCompiledStyleRanges {
+        val boundaries = ranges.asSequence()
+            .filter { it.start < it.endExclusive }
+            .flatMap { sequenceOf(it.start, it.endExclusive) }
+            .distinct()
+            .sorted()
+            .toList()
+            .toIntArray()
+        val bodyStyles = Array<ReaderCharacterStyle?>(boundaries.size.coerceAtLeast(1) - 1) {
+            resolve(ranges, boundaries[it], false)
+        }
+        val titleStyles = Array<ReaderCharacterStyle?>(bodyStyles.size) {
+            resolve(ranges, boundaries[it], true)
+        }
+        return ReaderCompiledStyleRanges(boundaries, bodyStyles, titleStyles)
+    }
+
+    fun resolve(
+        ranges: List<ReaderStyleRange>,
+        position: Int,
+        isTitle: Boolean
+    ): ReaderCharacterStyle? {
+        var winner: ReaderStyleRange? = null
+        for (range in ranges) {
+            if (range.contains(position, isTitle) &&
+                (winner == null || range.priority >= winner.priority)
+            ) {
+                // Equal priority keeps the later range, matching the original index tie-break.
+                winner = range
+            }
+        }
+        return winner?.style
+    }
+}
+
+class ReaderCompiledStyleRanges internal constructor(
+    private val boundaries: IntArray,
+    private val bodyStyles: Array<ReaderCharacterStyle?>,
+    private val titleStyles: Array<ReaderCharacterStyle?>,
+) {
+    fun resolve(position: Int, isTitle: Boolean): ReaderCharacterStyle? {
+        var low = 0
+        var high = boundaries.size - 2
+        while (low <= high) {
+            val middle = (low + high) ushr 1
+            when {
+                position < boundaries[middle] -> high = middle - 1
+                position >= boundaries[middle + 1] -> low = middle + 1
+                else -> return if (isTitle) titleStyles[middle] else bodyStyles[middle]
+            }
+        }
+        return null
+    }
 }

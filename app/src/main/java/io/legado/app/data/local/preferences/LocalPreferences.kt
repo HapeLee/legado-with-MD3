@@ -24,6 +24,26 @@ object LocalPreferencesKeys {
     val READ_URL_IN_BROWSER = booleanPreferencesKey("read_url_in_browser")
     val LAST_BACKUP = longPreferencesKey("last_backup")
     val PASSWORD = stringPreferencesKey("password")
+
+    // 私密内容解锁：password 仍是唯一权威凭据，下面几项只是它的校验值与生物快捷解锁信封。
+    // salt/verifier 由密码派生，绝不存放明文密码；envelope 是 Keystore 中
+    // 「每次使用都需生物验证」密钥加密后的密码，只有生物验证成功才能解开。
+    val PRIVATE_PASSWORD_SALT = stringPreferencesKey("private_password_salt")
+    val PRIVATE_PASSWORD_VERIFIER = stringPreferencesKey("private_password_verifier")
+    val PRIVATE_BIOMETRIC_ENABLED = booleanPreferencesKey("private_biometric_enabled")
+    val PRIVATE_BIOMETRIC_ENVELOPE = stringPreferencesKey("private_biometric_envelope")
+    val PRIVATE_BIOMETRIC_IV = stringPreferencesKey("private_biometric_iv")
+    val PRIVATE_VERIFY_ON_ENTER_GROUP = booleanPreferencesKey("private_verify_on_enter_group")
+    val PRIVATE_VERIFY_ON_OPEN_BOOK = booleanPreferencesKey("private_verify_on_open_book")
+    val PRIVATE_VERIFY_ON_APP_START = booleanPreferencesKey("private_verify_on_app_start")
+    val PRIVATE_UNLOCK_SCOPE = stringPreferencesKey("private_unlock_scope")
+
+    // 私密功能总开关：关掉即整体休眠（不验证、不脱敏、不守卫），密码与标记都留着
+    val PRIVATE_ENABLED = booleanPreferencesKey("private_enabled")
+
+    // "离开应用前有效"频率下的宽限期（秒）：0 = 离开即失效
+    val PRIVATE_BACKGROUND_GRACE_SECONDS = intPreferencesKey("private_background_grace_seconds")
+
     val PRIVACY_POLICY_OK = booleanPreferencesKey("privacy_policy_ok")
     val PERMISSION_CHECKED = booleanPreferencesKey("permission_checked")
     val DAILY_READING_GOAL_MINUTES = intPreferencesKey("daily_reading_goal_minutes")

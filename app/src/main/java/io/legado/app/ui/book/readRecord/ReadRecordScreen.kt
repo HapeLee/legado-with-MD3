@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -60,6 +61,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -100,6 +102,9 @@ import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.privacy.PrivateLockedCover
+import io.legado.app.ui.widget.components.privacy.PrivateRecordKey
+import io.legado.app.ui.widget.components.privacy.rememberPrivateLockedRecords
 import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 import io.legado.app.ui.widget.components.swipe.SwipeAction
@@ -1162,6 +1167,11 @@ fun LatestReadItem(
         lastReadText
     )
 
+    // 私密且未获准：书名、作者、封面全部脱敏（只留模糊封面，不留占位条与"已隐藏"字样）。
+    // 记录表里没有 bookUrl，所以身份只能取"书名+作者"。
+    val recordKey = PrivateRecordKey(record.bookName, record.bookAuthor)
+    val locked = recordKey in rememberPrivateLockedRecords(listOf(recordKey))
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -1171,18 +1181,30 @@ fun LatestReadItem(
                 onLongClick = onLongClick
             )
             .semantics(mergeDescendants = true) {
-                contentDescription = itemDescription
+                // 脱敏时连读屏描述也不给：它拼的正是书名与作者
+                contentDescription = if (locked) "" else itemDescription
                 role = Role.Button
             }
             .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CoilBookCover(
-            name = record.bookName,
-            author = record.bookAuthor,
-            path = coverPath,
-            modifier = Modifier.width(44.dp)
-        )
+        if (locked) {
+            PrivateLockedCover(
+                name = record.bookName,
+                author = record.bookAuthor,
+                path = coverPath,
+                modifier = Modifier
+                    .width(44.dp)
+                    .aspectRatio(5f / 7f),
+            )
+        } else {
+            CoilBookCover(
+                name = record.bookName,
+                author = record.bookAuthor,
+                path = coverPath,
+                modifier = Modifier.width(44.dp)
+            )
+        }
 
         SelectionCheckmark(inSelectionMode, isSelected)
 
@@ -1190,13 +1212,13 @@ fun LatestReadItem(
 
         Column(modifier = Modifier.weight(1f)) {
             AppText(
-                text = record.bookName,
+                text = if (locked) "" else record.bookName,
                 style = LegadoTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             AppText(
-                text = author,
+                text = if (locked) "" else author,
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.outline,
                 maxLines = 1,
@@ -1210,7 +1232,8 @@ fun LatestReadItem(
                         repeatDelayMillis = 2000,
                         initialDelayMillis = 1000
                     ),
-                text = buildAnnotatedString {
+                // 脱敏时整行不给：这里拼的是阅读时长 + 最后读到的章节（内容级信息）
+                text = if (locked) AnnotatedString("") else buildAnnotatedString {
                     withStyle(style = SpanStyle(color = LegadoTheme.colorScheme.outline)) {
                         append(formatDuring(record.readTime))
                         append(" • ")
@@ -1264,6 +1287,10 @@ fun TimelineSessionItem(
         duration,
         endTimeText
     )
+    // 私密且未获准：封面走模糊、文字一律不渲染，读屏描述同样不给。
+    // 时间（endTime）不是身份信息，保留
+    val lockedKey = PrivateRecordKey(session.bookName, session.bookAuthor)
+    val locked = lockedKey in rememberPrivateLockedRecords(listOf(lockedKey))
 
     val nodeRadius = 4.dp
     val lineWidth = 2.dp
@@ -1278,11 +1305,18 @@ fun TimelineSessionItem(
             .fillMaxWidth()
             .selectionBackground(isSelected)
             .combinedClickable(
+                // 锁定态：点击与长按都只走解锁（目的是阅读器入口，那里进入即弹验证）；
+                // 解锁之后这一条就是普通条目，长按恢复"选择模式"的原语义
                 onClick = { onBookClick(session.bookName, session.bookAuthor) },
-                onLongClick = onLongClick
+                onLongClick = if (locked) {
+                    { onBookClick(session.bookName, session.bookAuthor) }
+                } else {
+                    onLongClick
+                }
             )
             .semantics(mergeDescendants = true) {
-                contentDescription = itemDescription
+                // 脱敏时连读屏描述也不给：它拼的正是书名与章节名
+                contentDescription = if (locked) "" else itemDescription
                 role = Role.Button
             }
             .drawBehind {
@@ -1323,23 +1357,34 @@ fun TimelineSessionItem(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CoilBookCover(
-                    name = session.bookName,
-                    author = session.bookAuthor,
-                    path = coverPath,
-                    modifier = Modifier.width(44.dp)
-                )
+                if (locked) {
+                    PrivateLockedCover(
+                        name = session.bookName,
+                        author = session.bookAuthor,
+                        path = coverPath,
+                        modifier = Modifier
+                            .width(44.dp)
+                            .aspectRatio(5f / 7f),
+                    )
+                } else {
+                    CoilBookCover(
+                        name = session.bookName,
+                        author = session.bookAuthor,
+                        path = coverPath,
+                        modifier = Modifier.width(44.dp)
+                    )
+                }
                 SelectionCheckmark(inSelectionMode, isSelected)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     AppText(
-                        text = session.bookName,
+                        text = if (locked) "" else session.bookName,
                         style = LegadoTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     AppText(
-                        text = author,
+                        text = if (locked) "" else author,
                         style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.outline,
                         maxLines = 1,
@@ -1347,7 +1392,7 @@ fun TimelineSessionItem(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     AppText(
-                        text = chapterTitle.orEmpty(),
+                        text = if (locked) "" else chapterTitle.orEmpty(),
                         style = LegadoTheme.typography.labelSmall,
                         color = LegadoTheme.colorScheme.outline,
                         maxLines = 1,
@@ -1382,28 +1427,45 @@ fun ReadRecordItem(
         author,
         formatDuring(detail.readTime)
     )
+    // 私密且未获准：封面走模糊、文字一律不渲染，读屏描述同样不给
+    val lockedKey = PrivateRecordKey(detail.bookName, detail.bookAuthor)
+    val locked = lockedKey in rememberPrivateLockedRecords(listOf(lockedKey))
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .selectionBackground(isSelected)
             .combinedClickable(
+                // 锁定态：点击与长按都只走解锁（目的是阅读器入口，那里进入即弹验证）；
+                // 解锁后这一条就是普通条目，长按恢复"选择模式"的原语义
                 onClick = onClick,
-                onLongClick = onLongClick
+                onLongClick = if (locked) onClick else onLongClick
             )
             .semantics(mergeDescendants = true) {
-                contentDescription = itemDescription
+                // 脱敏时连读屏描述也不给：它拼的正是书名与作者
+                contentDescription = if (locked) "" else itemDescription
                 role = Role.Button
             }
             .padding(all = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CoilBookCover(
-            name = detail.bookName,
-            author = detail.bookAuthor,
-            path = coverPath,
-            modifier = Modifier.width(44.dp)
-        )
+        if (locked) {
+            PrivateLockedCover(
+                name = detail.bookName,
+                author = detail.bookAuthor,
+                path = coverPath,
+                modifier = Modifier
+                    .width(44.dp)
+                    .aspectRatio(5f / 7f),
+            )
+        } else {
+            CoilBookCover(
+                name = detail.bookName,
+                author = detail.bookAuthor,
+                path = coverPath,
+                modifier = Modifier.width(44.dp)
+            )
+        }
 
         SelectionCheckmark(inSelectionMode, isSelected)
 
@@ -1411,13 +1473,13 @@ fun ReadRecordItem(
 
         Column(modifier = Modifier.weight(1f)) {
             AppText(
-                text = detail.bookName,
+                text = if (locked) "" else detail.bookName,
                 style = LegadoTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             AppText(
-                text = author,
+                text = if (locked) "" else author,
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -1425,7 +1487,10 @@ fun ReadRecordItem(
             )
             Spacer(modifier = Modifier.height(8.dp))
             AppText(
-                text = stringResource(R.string.reading_time_with_value, formatDuring(detail.readTime)),
+                text = if (locked) "" else stringResource(
+                    R.string.reading_time_with_value,
+                    formatDuring(detail.readTime)
+                ),
                 color = LegadoTheme.colorScheme.primary,
                 style = LegadoTheme.typography.labelMedium,
                 maxLines = 1,

@@ -112,7 +112,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 106,
+    version = 107,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -194,7 +194,9 @@ val appDb by lazy {
         AutoMigration(from = 103, to = 104),
         AutoMigration(from = 104, to = 105),
         // readRecordSession 新增 bookUrl 归属列：同名作者作品共存时按书籍副本分别计时
-        AutoMigration(from = 105, to = 106)
+        AutoMigration(from = 105, to = 106),
+        // books 新增 isPrivate 列：单本私密标记，与所属私密分组共同决定书籍是否私密
+        AutoMigration(from = 106, to = 107)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

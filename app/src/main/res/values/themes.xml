@@ -5,6 +5,8 @@
         <item name="android:windowContentTransitions">true</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="tabStyle">@style/Widget.App.TabLayout</item>
         <item name="chipStyle">@style/Widget.MyApp.Chip.Assist</item>
         <item name="popupMenuBackground">@drawable/popup_background</item>

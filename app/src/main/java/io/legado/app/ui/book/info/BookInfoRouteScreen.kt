@@ -30,6 +30,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.security.BiometricUnlockLauncher
 import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
@@ -73,6 +74,8 @@ fun BookInfoRouteScreen(
     onOpenCharacterList: (bookUrl: String) -> Unit = {},
     onOpenKnowledgeList: (bookUrl: String) -> Unit = {},
     onOpenEventList: (bookUrl: String) -> Unit = {},
+    /** 私密功能需要本地密码，未设置时引导去设置页（与书架同一条路径） */
+    onOpenSettings: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -82,6 +85,11 @@ fun BookInfoRouteScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val showMangaUi by rememberUpdatedState(uiState.showMangaUi)
+    // 资源串在 composable 作用域内解析，避免 LocalContext.current.getString 拿到过期值
+    val unlockTitle = stringResource(R.string.private_unlock_title)
+    val unlockSubtitle = stringResource(R.string.private_unlock_subtitle)
+    val unlockUsePassword = stringResource(R.string.private_unlock_use_password)
+    val noPasswordHint = stringResource(R.string.private_content_no_password)
     var showSelectBooksDirSheet by remember { mutableStateOf(false) }
 
     val tocActivityResult = rememberLauncherForActivityResult(TocActivityResult()) {
@@ -214,6 +222,28 @@ fun BookInfoRouteScreen(
 
                 is BookInfoEffect.OpenEventList -> {
                     onOpenEventList(effect.bookUrl)
+                }
+
+                BookInfoEffect.RequestBiometricUnlock -> {
+                    BiometricUnlockLauncher.launch(
+                        activity = activity,
+                        title = unlockTitle,
+                        subtitle = unlockSubtitle,
+                        negativeButtonText = unlockUsePassword,
+                        onPassword = { password ->
+                            viewModel.onIntent(BookInfoIntent.SubmitPrivatePassword(password))
+                        },
+                        onFallback = {
+                            viewModel.onIntent(BookInfoIntent.ShowPrivatePassword)
+                        },
+                        onError = { message -> context.toastOnUi(message) },
+                    )
+                }
+
+                BookInfoEffect.NavigateToLocalPasswordSettings -> {
+                    // 只弹提示用户进不去设置页，这里与书架保持一致：说明原因后直接跳过去
+                    context.toastOnUi(noPasswordHint)
+                    onOpenSettings()
                 }
             }
         }

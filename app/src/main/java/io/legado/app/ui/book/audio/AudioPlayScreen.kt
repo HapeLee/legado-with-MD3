@@ -114,6 +114,7 @@ fun AudioPlayScreenContent(
     state: AudioPlayUiState,
     onIntent: (AudioPlayIntent) -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val horizontalPagerState = rememberPagerState(
         initialPage = 1,
@@ -133,7 +134,7 @@ fun AudioPlayScreenContent(
         bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 216.dp,
     )
     AppScaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         alwaysDrawBehindBars = true,
         disableContentSampling = true,
         contentWindowInsets = WindowInsets(0),
