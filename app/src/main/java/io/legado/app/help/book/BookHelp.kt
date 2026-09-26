@@ -28,7 +28,6 @@ import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.SvgUtils
 import io.legado.app.utils.UrlUtil
-import io.legado.app.utils.createFileIfNotExist
 import io.legado.app.utils.exists
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.getFile
@@ -51,13 +50,10 @@ import kotlinx.coroutines.withContext
 import org.apache.commons.text.similarity.JaccardSimilarity
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStream
-import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipFile
 import kotlin.math.abs
 import kotlin.math.max
@@ -73,21 +69,26 @@ object BookHelp {
     private const val cacheFolderName = "book_cache"
     private const val cacheImageFolderName = "images"
     private const val cacheEpubFolderName = "epub"
-    private val downloadImages = ConcurrentHashMap<String, Mutex>()
+    private val imageFiles = BookImageFileStore(::checkImage)
     private val imageDownloadSlots = Semaphore(2)
     private val imageDecodeSlots = Semaphore(1)
 
     val cachePath = FileUtils.getPath(downloadDir, cacheFolderName)
 
     fun clearCache() {
-        FileUtils.delete(
-            FileUtils.getPath(downloadDir, cacheFolderName)
-        )
+        deleteImageCacheDirectory(File(FileUtils.getPath(downloadDir, cacheFolderName)))
     }
 
     fun clearCache(book: Book) {
         val filePath = FileUtils.getPath(downloadDir, cacheFolderName, book.getFolderName())
-        FileUtils.delete(filePath)
+        deleteImageCacheDirectory(File(filePath))
+    }
+
+    private fun deleteImageCacheDirectory(directory: File) {
+        imageFiles.deleteIfIdle(directory) {
+            FileUtils.delete(it.absolutePath)
+            !it.exists()
+        }
     }
 
     fun updateCacheFolder(oldBook: Book, newBook: Book) {
@@ -122,7 +123,7 @@ object BookHelp {
             downloadDir.getFile(cacheFolderName)
                 .listFiles()?.forEach { bookFile ->
                     if (!bookFolderNames.contains(bookFile.name)) {
-                        FileUtils.delete(bookFile.absolutePath)
+                        deleteImageCacheDirectory(bookFile)
                     }
                 }
             downloadDir.getFile(cacheEpubFolderName)
@@ -167,8 +168,9 @@ object BookHelp {
             book.getFolderName(),
             cacheImageFolderName
         ).listFiles()?.forEach { imgFile ->
-            if (!imgNames.contains(imgFile.name)) {
-                imgFile.delete()
+            // 临时文件的所有权属于写入者；清理不能在校验/发布前删除它。
+            if (!imgNames.contains(imgFile.name) && !imgFile.name.endsWith(".tmp")) {
+                imageFiles.deleteIfIdle(imgFile)
             }
         }
     }
@@ -344,74 +346,56 @@ object BookHelp {
         failures
     }
 
-    /**
-     * @return true 表示图片已存在，或本次下载且校验通过。
-     * 数据异常时仍会落盘（避免反复拉坏图），但返回 false 以便调用方记失败。
-     */
+    /** @return true 表示已复用有效图片，或本次获取、校验并原子发布成功。 */
     suspend fun saveImage(
         bookSource: BookSource?,
         book: Book,
         src: String,
         chapter: BookChapter? = null
-    ): Boolean {
-        if (isImageExist(book, src)) {
-            return true
-        }
-        val mutex = synchronized(this) {
-            downloadImages.getOrPut(src) { Mutex() }
-        }
-        mutex.lock()
+    ): Boolean = withContext(IO) {
         try {
-            if (isImageExist(book, src)) {
-                return true
-            }
-            imageDownloadSlots.acquire()
-            try {
-                val analyzeUrl = AnalyzeUrl(
-                    src, source = bookSource, coroutineContext = currentCoroutineContext()
-                )
-                if (ImageUtils.skipDecode(bookSource, isCover = false)) {
-                    analyzeUrl.getInputStreamAwait().use {
-                        writeImage(book, src, it)
+            // 按实际书籍文件串行获取；等待者重新检查有效性，成功时不重复联网。
+            val image = getImage(book, src)
+            imageFiles.withFileLock(image) {
+                if (imageFiles.isValid(image)) return@withFileLock true
+                val context = currentCoroutineContext()
+                imageDownloadSlots.acquire()
+                try {
+                    val analyzeUrl = AnalyzeUrl(src, source = bookSource, coroutineContext = context)
+                    if (ImageUtils.skipDecode(bookSource, isCover = false)) {
+                        analyzeUrl.getInputStreamAwait().use { input ->
+                            imageFiles.write(image, input) { context.ensureActive() }
+                        }
+                        true
+                    } else {
+                        imageDecodeSlots.acquire()
+                        try {
+                            val bytes = analyzeUrl.getByteArrayAwait()
+                            val decoded = runScriptWithContext {
+                                ImageUtils.decode(src, bytes, isCover = false, bookSource, book)
+                            }
+                            if (decoded == null) {
+                                AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载失败 解码为空")
+                                false
+                            } else {
+                                decoded.inputStream().use { input ->
+                                    imageFiles.write(image, input) { context.ensureActive() }
+                                }
+                                true
+                            }
+                        } finally {
+                            imageDecodeSlots.release()
+                        }
                     }
-                    return true
-                } else {
-                    imageDecodeSlots.acquire()
-                    try {
-                        val bytes = analyzeUrl.getByteArrayAwait()
-                        //某些图片被加密，需要进一步解密
-                        val decoded = runScriptWithContext {
-                            ImageUtils.decode(
-                                src, bytes, isCover = false, bookSource, book
-                            )
-                        }
-                        if (decoded == null) {
-                            AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载失败 解码为空")
-                            return false
-                        }
-                        // 如果部分图片失效，每次进入正文都会花很长时间再次获取图片数据
-                        // 所以无论如何都要将数据写入到文件里；但仍记失败，避免章节被标为已缓存
-                        writeImage(book, src, decoded)
-                        if (!checkImage(decoded)) {
-                            AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载错误 数据异常")
-                            return false
-                        }
-                        return true
-                    } finally {
-                        imageDecodeSlots.release()
-                    }
+                } finally {
+                    imageDownloadSlots.release()
                 }
-            } finally {
-                imageDownloadSlots.release()
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             val msg = "${book.name} ${chapter?.title} 图片 $src 下载失败\n${e.localizedMessage}"
             AppLog.put(msg, e)
-            return false
-        } finally {
-            downloadImages.remove(src)
-            mutex.unlock()
+            false
         }
     }
 
@@ -429,7 +413,7 @@ object BookHelp {
     ): Boolean {
         return io.legado.app.help.book.isChapterImageCacheComplete(
             failures,
-            hasImageFilesCached(book, bookChapter),
+            failures == 0 && hasImageContent(book, bookChapter),
         )
     }
 
@@ -444,36 +428,7 @@ object BookHelp {
 
     @Synchronized
     fun writeImage(book: Book, src: String, bytes: ByteArray) {
-        getImage(book, src).createFileIfNotExist().writeBytes(bytes)
-    }
-
-    private fun writeImage(book: Book, src: String, inputStream: InputStream) {
-        val image = getImage(book, src)
-        val parent = image.parentFile ?: return
-        parent.mkdirs()
-        val temp = File(parent, "${image.name}.${System.nanoTime()}.tmp")
-        try {
-            FileOutputStream(temp).use { output ->
-                inputStream.copyTo(output, 16 * 1024)
-            }
-            if (!checkImage(temp)) {
-                AppLog.put("${book.name} 图片 $src 下载错误 数据异常")
-            }
-            if (image.exists()) {
-                image.delete()
-            }
-            if (!temp.renameTo(image)) {
-                image.createFileIfNotExist().outputStream().use { output ->
-                    temp.inputStream().use { input ->
-                        input.copyTo(output, 16 * 1024)
-                    }
-                }
-                temp.delete()
-            }
-        } catch (e: Exception) {
-            temp.delete()
-            throw e
-        }
+        bytes.inputStream().use { imageFiles.write(getImage(book, src), it) }
     }
 
     @Synchronized
@@ -592,22 +547,8 @@ object BookHelp {
             return false
         }
         var ret = true
-        val op = BitmapFactory.Options()
-        op.inJustDecodeBounds = true
         forEachImageSrc(book, bookChapter) { src ->
-            val image = getImage(book, src)
-            if (!image.exists()) {
-                ret = false
-                return@forEachImageSrc
-            }
-            BitmapFactory.decodeFile(image.absolutePath, op)
-            if (op.outWidth < 1 && op.outHeight < 1) {
-                if (SvgUtils.getSize(image.absolutePath) != null) {
-                    return@forEachImageSrc
-                }
-                ret = false
-                image.delete()
-            }
+            if (!imageFiles.isValid(getImage(book, src))) ret = false
         }
         return ret
     }
@@ -677,24 +618,14 @@ object BookHelp {
         buffer.delete(0, keepFrom)
     }
 
-    private fun checkImage(bytes: ByteArray): Boolean {
-        val op = BitmapFactory.Options()
-        op.inJustDecodeBounds = true
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, op)
-        if (op.outWidth < 1 && op.outHeight < 1) {
-            return SvgUtils.getSize(ByteArrayInputStream(bytes)) != null
-        }
-        return true
-    }
-
     private fun checkImage(file: File): Boolean {
-        val op = BitmapFactory.Options()
-        op.inJustDecodeBounds = true
-        BitmapFactory.decodeFile(file.absolutePath, op)
-        if (op.outWidth < 1 && op.outHeight < 1) {
-            return SvgUtils.getSize(file.absolutePath) != null
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        file.inputStream().use { BitmapFactory.decodeStream(it, null, options) }
+        if (options.outWidth > 0 && options.outHeight > 0) return true
+        // SvgUtils 的路径重载不负责关闭输入流；这里明确拥有并关闭。
+        return file.inputStream().use { input ->
+            SvgUtils.getSize(input)?.let { it.width > 0 && it.height > 0 } == true
         }
-        return true
     }
 
     /**

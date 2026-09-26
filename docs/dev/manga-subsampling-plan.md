@@ -1,7 +1,8 @@
 # 分页漫画区域解码与下载共用文件链路
 
-> 状态：实施设计，尚未接入区域解码。2026-09-26 对照仓库源码、Coil 3.6.3 和
-> Telephoto 0.19.0 校正。当前补丁只修正完整 URL 进度身份与分页解码目标。
+> 状态：实施中，尚未接入区域解码。2026-09-26 对照仓库源码、Coil 3.6.3、
+> Telephoto 0.19.0 与本机 Komikku 校正。进度与尺寸修复已提交为 `9f6f87872`；
+> 首个存储切片接入 BookHelp 的有效性检查、原子发布及等待者安全的文件锁。
 >
 > 目标：分页缩放时按需读取原图细节；阅读与后续漫画下载共用同一份有效文件，
 > 已有文件不重复获取，已保留的章节断网可读。
@@ -22,11 +23,13 @@
   `externalFiles/book_cache/<bookFolderName>/images/<md5Encode16(src)>.<suffix>`。
   `flowImages` 与下载使用同一章节基地址解析图片地址，应该沿用完整解析后原始 `src`
   （包含书源选项）作为身份，不能用带临时 token 的最终网络 URL 替代。
-- `isImageExist` 只看 exists；字节数组 `writeImage` 直接写目标文件。
-  `saveImage` 会保留部分坏数据，下次见文件存在就返回成功；流式分支校验失败也仍发布文件。
-  流式写入已有临时文件，但 rename 失败会退回直接复制到目标，不保证读者看不到半文件。
-- `saveImage` 的锁按 src 而不是书籍+src 建立，退出时直接移除；等待者尚在时，新请求可取得
-  新锁。阅读若在 Fetcher 中另写文件，也不会参与这个锁。共用路径不等于共用并发控制。
+- `isImageExist` 仍只看 exists，保留旧 UI/队列的低成本提示语义，不是下载完成证明。
+  首个存储切片让 `saveImage` 在文件锁内检查文件格式/尺寸，字节与流写入都先写临时文件、
+  校验后原子替换；不再发布新坏图或降级为直接复制到可见目标。
+  历史文件目前只检查结构，不具备完整性/书源版本的持久有效记录。
+- `saveImage` 的锁现在按实际书籍文件路径建立，引用数包括等待者，最后一个退出才移除。
+  当前是串行获取：成功后的等待者复用文件；首位取消时下一位接手获取。
+  尚未实现独立于任一订阅者的共享任务，也未接入阅读 Fetcher；不能宣称完整跨消费者去重已完成。
 - `clearInvalidCache` 在应用启动及主页面清理时执行；`clearComicCache` 按阅读章节窗口删除图片。
   现有规则不识别显式下载、活动阅读和瓦片解码中的文件。
 - `MangaSettings.autoOfflineCache` 已存在，不要新增同名设置。当前主要控制章节预取，
@@ -49,6 +52,26 @@ Telephoto 0.19.0 的 `Coil3ImageSource.kt` 在成功结果为 BitmapImage 时，
 
 来源：本机相应版本 sources.jar；
 [Telephoto 0.19.0 Coil3ImageSource](https://github.com/saket/telephoto/blob/0.19.0/zoomable-image/coil3/src/main/kotlin/me/saket/telephoto/zoomable/coil3/Coil3ImageSource.kt)。
+
+### Komikku 可以参考什么
+
+对照仓库 `D:/Project/komikku` 的下列实际调用链（只读参考，不修改该工程）：
+
+- `HttpPageLoader.internalLoadPage`：优先查 ChapterCache，miss 才请求网络；
+  `putImageToCache` 完成后才设置 page.stream 与 Ready。加载顺序可借鉴：完整文件在先，渲染在后。
+- `HttpPageLoader` 的 PriorityBlockingQueue：当前页/重试优先于普通预取，线程数有限。
+  可借鉴调度语义，不照搬独立的 readerThreads 设置与全局协程管理。
+- `ChapterCache`：保存章节 page list 和原图，DiskLruCache editor commit 后才发布。
+  在线缓存具有明确字节容量，支持重开、识别已淘汰图片并重新排队。
+- `Downloader.getOrDownloadImage`：已有下载优先，否则使用 ChapterCache 字节，最后才联网。
+  `copyImageFromCache` 把缓存复制到下载目录并删缓存文件；因此这是获取复用，**不是同一文件存储**，
+  也不能把“使用了缓存”当作无复制、无额外磁盘占用的证明。
+- `ReaderPageImageView`：静态图使用 SubsamplingScaleImageView，动画图单独渲染，
+  设置 onReady/onImageLoadError 再更新阅读器状态。可参考就绪与解码失败的阶段划分。
+
+结论：plan 的文件优先/区域解码方向与成熟阅读器一致；“阅读与下载永远共用同一份文件”
+是本项目自己的增强目标，Komikku 没有替我们证明它。不能照搬其在线 LRU 清理来删除保留下载，
+也不在本项目引入 SSIV、Voyager、SQLDelight 或其 source extension 架构。
 
 ## 3. 推荐决策：一份原图，独立保留策略
 
@@ -184,6 +207,28 @@ ViewModel 经现有 Gateway/Repository 使用它，不访问 BookHelp、DAO 或 
 先写测试，再修正 BookHelp 发布与有效性语义；接入现有 saveImage/saveImages 真实调用方。
 测试：取消/IO 失败无半文件、坏文件可重试、同图并发一次获取、等待者取消、锁回收竞争、
 原始 src/headers/解密参数兼容、历史文件采纳、失败批次不标下载完成。
+
+首个已实现子切片：`BookImageFileStore` 由 BookHelp 实际使用，负责非空/格式校验、
+同目录临时写入、原子发布与按文件串行获取；下载完成检查改为实际图片有效性检查。
+`hasImageContent` 不再边检查边删除坏图，避免检查后新文件已发布却被旧检查删除的竞争。
+图片及目录清理与写入登记原子协调：存在写入者或排队等待者时跳过清理，
+章节窗口清理不删除写入中的临时文件；同步 `writeImage` 也登记写入保护。
+目前是写入保护，不代表已经保护未来瓦片解码器的读取生命周期。
+此时还没有引入阅读自动落盘，所以不会增加无限增长的在线阅读存储。
+
+仍未完成：持久有效记录/源版本失效、完整传输长度记录、共享任务订阅取消语义、
+章节索引与保留用途、活动读取保护及保留感知清理。目录迁移仍需协调活动资源。
+格式/尺寸检查不是整图所有像素可解码的证明；
+后续渲染错误必须保持可重试，不能因已有文件无条件标 Ready。
+
+首个子切片的验证：`BookImageFileStoreTest` 10 项、`BookHelpImageFileTest` 在 API 26/35
+各 5 项 native graphics 测试、`BookHelpImageCacheCompleteTest` 1 项，共 21 项通过。
+`compileAppDebugKotlin`、`verifyConfigArchitecture`、`lintAppDebug` 与 `git diff --check` 通过；
+lint 仍有现有的 118 个警告、13 个提示，本切片没有放宽 baseline。
+覆盖并发、等待者取消、传输失败、发布前取消、坏数据不覆盖原图、PNG/SVG、
+历史坏文件重试、已有有效文件不解析网络 URL、写入与清理竞争。
+校验通过显式关闭的输入流读取图片头部。
+这些测试不替代真实外部存储、认证书源 JS 解密、断网章节恢复和瓦片生命周期的验证。
 
 ### B. 漫画会话到本地文件渲染
 

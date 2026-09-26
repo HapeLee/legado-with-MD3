@@ -1,0 +1,251 @@
+package io.legado.app.help.book
+
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
+import java.io.IOException
+import java.io.InputStream
+import java.nio.file.Files
+import kotlin.coroutines.cancellation.CancellationException
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class BookImageFileStoreTest {
+    private val image = byteArrayOf(1, 2, 3, 4)
+    private val store = BookImageFileStore { it.readBytes().contentEquals(image) }
+
+    private fun withDirectory(block: (File) -> Unit) {
+        val root = Files.createTempDirectory("book-image-test").toFile()
+        try {
+            block(root)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `synchronous publication is protected from cleanup during validation`() = withDirectory { root ->
+        val target = root.resolve("page.jpg")
+        lateinit var validatingStore: BookImageFileStore
+        validatingStore = BookImageFileStore {
+            assertFalse(validatingStore.deleteIfIdle(root, File::deleteRecursively))
+            it.readBytes().contentEquals(image)
+        }
+        image.inputStream().use { validatingStore.write(target, it) }
+        assertArrayEquals(image, target.readBytes())
+        assertTrue(validatingStore.deleteIfIdle(root, File::deleteRecursively))
+    }
+
+    @Test
+    fun `cleanup cannot delete an active target or its parent directory`() = runTest {
+        val root = Files.createTempDirectory("book-image-cleanup").toFile()
+        try {
+            val target = root.resolve("images/page.jpg").apply {
+                requireNotNull(parentFile).mkdirs()
+                writeBytes(image)
+            }
+            store.withFileLock(target) {
+                assertFalse(store.deleteIfIdle(target))
+                assertFalse(store.deleteIfIdle(root, File::deleteRecursively))
+                assertArrayEquals(image, target.readBytes())
+                val unrelated = root.resolve("other.jpg").apply { writeBytes(image) }
+                assertTrue(store.deleteIfIdle(unrelated))
+            }
+            assertTrue(store.deleteIfIdle(root, File::deleteRecursively))
+            assertFalse(root.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `queued writer protects target until it finishes`() = runTest {
+        val root = Files.createTempDirectory("book-image-cleanup-waiter").toFile()
+        try {
+            val target = root.resolve("page.jpg").apply { writeBytes(image) }
+            val ownerStarted = CompletableDeferred<Unit>()
+            val ownerRelease = CompletableDeferred<Unit>()
+            val waiterStarted = CompletableDeferred<Unit>()
+            val waiterRelease = CompletableDeferred<Unit>()
+            val owner = launch {
+                store.withFileLock(target) {
+                    ownerStarted.complete(Unit)
+                    ownerRelease.await()
+                }
+            }
+            ownerStarted.await()
+            val waiter = launch {
+                store.withFileLock(target) {
+                    waiterStarted.complete(Unit)
+                    waiterRelease.await()
+                }
+            }
+            runCurrent()
+            ownerRelease.complete(Unit)
+            owner.join()
+            assertFalse(store.deleteIfIdle(target))
+            waiterStarted.await()
+            waiterRelease.complete(Unit)
+            waiter.join()
+            assertTrue(store.deleteIfIdle(target))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `publish exposes only the complete validated image and replaces atomically`() = withDirectory { root ->
+        val oldImage = byteArrayOf(5, 6, 7, 8)
+        val target = root.resolve("image.jpg").apply { writeBytes(oldImage) }
+        var observedOldFile = false
+        val validatingStore = BookImageFileStore {
+            assertArrayEquals(oldImage, target.readBytes())
+            observedOldFile = true
+            it.readBytes().contentEquals(image)
+        }
+        image.inputStream().use { validatingStore.write(target, it) }
+        assertTrue(observedOldFile)
+        assertArrayEquals(image, target.readBytes())
+        assertEquals(listOf(target.name), root.listFiles()!!.map { it.name })
+    }
+
+    @Test
+    fun `failed transfer leaves no visible image or temporary file`() = withDirectory { root ->
+        val target = root.resolve("image.jpg")
+        val brokenStream = object : InputStream() {
+            private var reads = 0
+            override fun read(): Int {
+                if (reads++ < 2) return 1
+                throw IOException("connection lost")
+            }
+        }
+        try {
+            brokenStream.use { store.write(target, it) }
+            error("Expected transfer failure")
+        } catch (_: IOException) {
+            assertFalse(target.exists())
+            assertTrue(root.listFiles()!!.isEmpty())
+        }
+    }
+
+    @Test
+    fun `invalid bytes cannot replace an existing valid image`() = withDirectory { root ->
+        val target = root.resolve("image.jpg").apply { writeBytes(image) }
+        try {
+            byteArrayOf(9).inputStream().use { store.write(target, it) }
+            error("Expected validation failure")
+        } catch (_: IOException) {
+            assertTrue(store.isValid(target))
+            assertEquals(1, root.listFiles()!!.size)
+        }
+    }
+
+    @Test
+    fun `cancellation before publication preserves previous image and cleans temporary file`() = withDirectory { root ->
+        val target = root.resolve("image.jpg").apply { writeBytes(image) }
+        var checks = 0
+        try {
+            image.inputStream().use { input ->
+                store.write(target, input) {
+                    if (++checks == 3) throw CancellationException("cancelled")
+                }
+            }
+            error("Expected cancellation")
+        } catch (_: CancellationException) {
+            assertArrayEquals(image, target.readBytes())
+            assertEquals(1, root.listFiles()!!.size)
+        }
+    }
+
+    @Test
+    fun `existence is insufficient and failed data can be replaced on retry`() = withDirectory { root ->
+        val target = root.resolve("image.jpg").apply { writeBytes(byteArrayOf(9)) }
+        assertFalse(store.isValid(target))
+        image.inputStream().use { store.write(target, it) }
+        assertTrue(store.isValid(target))
+        target.writeBytes(byteArrayOf())
+        assertFalse(store.isValid(target))
+        assertFalse(store.isValid(root))
+    }
+
+    @Test
+    fun `concurrent consumers recheck validity under the same file lock`() = runTest {
+        val root = Files.createTempDirectory("book-image-concurrent").toFile()
+        try {
+            val target = root.resolve("image.jpg")
+            val acquired = CompletableDeferred<Unit>()
+            val finishTransfer = CompletableDeferred<Unit>()
+            var transfers = 0
+            val owner = async {
+                store.withFileLock(target) {
+                    if (!store.isValid(target)) {
+                        transfers++
+                        acquired.complete(Unit)
+                        finishTransfer.await()
+                        image.inputStream().use { store.write(target, it) }
+                    }
+                }
+            }
+            acquired.await()
+            val waiter = async {
+                store.withFileLock(target) {
+                    if (!store.isValid(target)) transfers++
+                }
+            }
+            runCurrent()
+            finishTransfer.complete(Unit)
+            awaitAll(owner, waiter)
+            assertEquals(1, transfers)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `finishing owner and cancelling waiter cannot create a second lock`() = runTest {
+        val target = File("book-image-lock-test.jpg")
+        val acquired = CompletableDeferred<Unit>()
+        val releaseOwner = CompletableDeferred<Unit>()
+        val waiterAcquired = CompletableDeferred<Unit>()
+        val releaseWaiter = CompletableDeferred<Unit>()
+        val owner = launch {
+            store.withFileLock(target) {
+                acquired.complete(Unit)
+                releaseOwner.await()
+            }
+        }
+        acquired.await()
+        val cancelledWaiter = launch { store.withFileLock(target) { error("Cancelled waiter entered") } }
+        val waiter = launch {
+            store.withFileLock(target) {
+                waiterAcquired.complete(Unit)
+                releaseWaiter.await()
+            }
+        }
+        runCurrent()
+        cancelledWaiter.cancelAndJoin()
+        releaseOwner.complete(Unit)
+        owner.join()
+        waiterAcquired.await()
+        var entered = false
+        val newcomer = launch { store.withFileLock(target) { entered = true } }
+        runCurrent()
+        assertFalse(entered)
+        releaseWaiter.complete(Unit)
+        waiter.join()
+        newcomer.join()
+        assertTrue(entered)
+        // 最后一位退出后，同一身份仍可以重新获取。
+        store.withFileLock(target) { assertTrue(entered) }
+    }
+}
