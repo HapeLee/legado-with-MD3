@@ -16,6 +16,8 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.help.book.BookHelp.saveText
 import io.legado.app.help.book.BookHelp.saveToLocalTxt
+import io.legado.app.help.glide.progress.ProgressManager
+import io.legado.app.help.glide.progress.ProgressResponseBody
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.localBook.TextFile
@@ -32,9 +34,14 @@ import io.legado.app.utils.exists
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.getFile
 import io.legado.app.utils.isContentScheme
+import io.legado.app.utils.isWifiConnect
 import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -54,6 +61,10 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.Closeable
+import java.io.InputStream
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipFile
 import kotlin.math.abs
 import kotlin.math.max
@@ -72,8 +83,32 @@ object BookHelp {
     private val imageFiles = BookImageFileStore(::checkImage)
     private val imageDownloadSlots = Semaphore(2)
     private val imageDecodeSlots = Semaphore(1)
+    private const val ONLINE_IMAGE_BUDGET = 256L * 1024 * 1024
+    private val imageCleanupScope = CoroutineScope(SupervisorJob() + IO)
+    private val imageCleanupRequests = Channel<Unit>(Channel.CONFLATED)
+    private val pendingImageCacheMoves = ConcurrentHashMap<File, File>()
 
     val cachePath = FileUtils.getPath(downloadDir, cacheFolderName)
+
+    init {
+        imageCleanupScope.launch {
+            for (request in imageCleanupRequests) {
+                try {
+                    pendingImageCacheMoves.forEach { (source, target) ->
+                        if (source.exists() && imageFiles.moveIfIdle(source, target, FileUtils::move)) {
+                            pendingImageCacheMoves.remove(source, target)
+                            if (pendingImageCacheMoves.isNotEmpty()) imageCleanupRequests.trySend(Unit)
+                        } else if (!source.exists() && !pendingImageCacheMoves.containsValue(source)) {
+                            pendingImageCacheMoves.remove(source, target)
+                        }
+                    }
+                    imageFiles.trimOnlineCache(File(cachePath), ONLINE_IMAGE_BUDGET)
+                } catch (error: IOException) {
+                    AppLog.put("在线漫画缓存清理失败", error)
+                }
+            }
+        }
+    }
 
     fun clearCache() {
         deleteImageCacheDirectory(File(FileUtils.getPath(downloadDir, cacheFolderName)))
@@ -105,7 +140,14 @@ object BookHelp {
             cacheFolderName,
             newFolderName
         )
-        FileUtils.move(oldFolderPath, newFolderPath)
+        val source = File(oldFolderPath)
+        val target = File(newFolderPath)
+        if ((source.exists() || pendingImageCacheMoves.containsValue(source)) &&
+            !imageFiles.moveIfIdle(source, target, FileUtils::move)
+        ) {
+            pendingImageCacheMoves[source] = target
+            imageCleanupRequests.trySend(Unit)
+        }
     }
 
     /**
@@ -170,7 +212,10 @@ object BookHelp {
         ).listFiles()?.forEach { imgFile ->
             // 临时文件的所有权属于写入者；清理不能在校验/发布前删除它。
             if (!imgNames.contains(imgFile.name) && !imgFile.name.endsWith(".tmp")) {
-                imageFiles.deleteIfIdle(imgFile)
+                imageFiles.deleteIfIdle(imgFile) {
+                    // 普通在线缓存由字节预算淘汰，不能被章节窗口清理绕过。
+                    if (it.name == BookImageFileStore.ONLINE_MARKER_DIRECTORY || imageFiles.isOnline(it)) false else it.delete()
+                }
             }
         }
     }
@@ -351,26 +396,40 @@ object BookHelp {
         bookSource: BookSource?,
         book: Book,
         src: String,
-        chapter: BookChapter? = null
+        chapter: BookChapter? = null,
+        onlineOnly: Boolean = false,
+        loadOnlyWifi: Boolean = false,
+        onDownload: () -> Unit = {},
     ): Boolean = withContext(IO) {
         try {
             // 按实际书籍文件串行获取；等待者重新检查有效性，成功时不重复联网。
             val image = getImage(book, src)
             imageFiles.withFileLock(image) {
-                if (imageFiles.isValid(image)) return@withFileLock true
+                if (imageFiles.isValid(image)) {
+                    if (!onlineOnly) imageFiles.setOnline(image, false)
+                    imageFiles.touch(image)
+                    return@withFileLock true
+                }
+                onDownload()
                 val context = currentCoroutineContext()
                 imageDownloadSlots.acquire()
                 try {
                     val analyzeUrl = AnalyzeUrl(src, source = bookSource, coroutineContext = context)
+                    if (onlineOnly && loadOnlyWifi && !appCtx.isWifiConnect &&
+                        !analyzeUrl.urlNoQuery.startsWith("data:", true)
+                    ) throw IOException("WiFi not available, loadOnlyWifi enabled")
+                    // 在首次发布前登记。历史未分类文件仍保守保留，下载则升级为保留文件。
+                    if (!onlineOnly) imageFiles.setOnline(image, false)
+                    else if (!image.exists()) imageFiles.setOnline(image, true)
                     if (ImageUtils.skipDecode(bookSource, isCover = false)) {
-                        analyzeUrl.getInputStreamAwait().use { input ->
+                        imageInputStream(analyzeUrl, src, onlineOnly).use { input ->
                             imageFiles.write(image, input) { context.ensureActive() }
                         }
                         true
                     } else {
                         imageDecodeSlots.acquire()
                         try {
-                            val bytes = analyzeUrl.getByteArrayAwait()
+                            val bytes = imageInputStream(analyzeUrl, src, onlineOnly).use(InputStream::readBytes)
                             val decoded = runScriptWithContext {
                                 ImageUtils.decode(src, bytes, isCover = false, bookSource, book)
                             }
@@ -396,6 +455,48 @@ object BookHelp {
             val msg = "${book.name} ${chapter?.title} 图片 $src 下载失败\n${e.localizedMessage}"
             AppLog.put(msg, e)
             false
+        }
+    }
+
+    private suspend fun imageInputStream(analyzeUrl: AnalyzeUrl, src: String, reportProgress: Boolean): InputStream {
+        if (!reportProgress || analyzeUrl.urlNoQuery.startsWith("data:", true)) {
+            return analyzeUrl.getInputStreamAwait()
+        }
+        val response = analyzeUrl.getResponseAwait()
+        if (!response.isSuccessful) {
+            response.close()
+            throw IOException("HTTP ${response.code}")
+        }
+        return ProgressResponseBody(src, ProgressManager.LISTENER, response.body).byteStream()
+    }
+
+    /** Android 图片适配器使用：先持有租约，再获取文件，避免发布与淘汰之间存在空窗。 */
+    suspend fun acquireReadingImage(
+        bookSource: BookSource?, book: Book, src: String, loadOnlyWifi: Boolean = false,
+        onDownload: () -> Unit = {},
+    ): Pair<File, Closeable> {
+        val file = getImage(book, src)
+        val lease = pinImageFile(file)
+        try {
+            if (!saveImage(bookSource, book, src, onlineOnly = true, loadOnlyWifi = loadOnlyWifi, onDownload = onDownload)) {
+                throw IOException("图片获取失败")
+            }
+            imageFiles.trimOnlineCache(File(cachePath), ONLINE_IMAGE_BUDGET)
+            return file to lease
+        } catch (error: Throwable) {
+            lease.close()
+            throw error
+        }
+    }
+
+    fun pinImageFile(file: File): Closeable {
+        val lease = imageFiles.pin(file)
+        val closed = AtomicBoolean()
+        return Closeable {
+            if (closed.compareAndSet(false, true)) {
+                lease.close()
+                imageCleanupRequests.trySend(Unit)
+            }
         }
     }
 

@@ -7,6 +7,8 @@ import android.util.Base64
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -42,6 +44,53 @@ class BookHelpImageFileTest {
             }
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    @Test
+    fun `book rename defers physical migration until image reader releases its file`() = runBlocking {
+        val renamed = book.copy(name = "Renamed image contract")
+        val src = "https://invalid.example/rename.jpg"
+        val original = BookHelp.getImage(book, src)
+        val destination = BookHelp.getImage(renamed, src)
+        BookHelp.clearCache(book)
+        BookHelp.clearCache(renamed)
+        BookHelp.writeImage(book, src, png())
+        val lease = BookHelp.pinImageFile(original)
+        try {
+            BookHelp.updateCacheFolder(book, renamed)
+            assertTrue(original.exists())
+            assertFalse(destination.exists())
+            lease.close()
+            withTimeout(5_000) { while (!destination.exists()) delay(10) }
+            assertFalse(original.exists())
+        } finally {
+            lease.close()
+            BookHelp.clearCache(book)
+            BookHelp.clearCache(renamed)
+        }
+    }
+
+    @Test
+    fun `chapter download upgrades online original without creating a second image`() = runBlocking {
+        val bytes = png()
+        val src = "data:image/png;base64,${Base64.encodeToString(bytes, Base64.NO_WRAP)}"
+        val expected = BookHelp.getImage(book, src)
+        val marker = java.io.File(java.io.File(expected.parentFile, ".online"), expected.name)
+        expected.delete()
+        marker.delete()
+        var lease: java.io.Closeable? = null
+        try {
+            val (image, acquired) = BookHelp.acquireReadingImage(null, book, src)
+            lease = acquired
+            assertEquals(expected, image)
+            assertTrue(marker.exists())
+            assertTrue(BookHelp.saveImage(null, book, src))
+            assertFalse(marker.exists())
+            assertArrayEquals(bytes, image.readBytes())
+        } finally {
+            lease?.close()
+            BookHelp.clearCache(book)
         }
     }
 

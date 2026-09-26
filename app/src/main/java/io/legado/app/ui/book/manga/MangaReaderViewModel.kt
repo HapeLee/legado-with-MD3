@@ -274,7 +274,7 @@ class MangaReaderViewModel(
             is MangaReaderIntent.RetryChapter -> executeSession(
                 MangaSessionCommand.RetryChapter(intent.chapterIndex)
             )
-            is MangaReaderIntent.PageLoadStarted -> markPageLoading(intent.key)
+            is MangaReaderIntent.PageLoadStarted -> markPageLoading(intent.key, intent.force)
 
             is MangaReaderIntent.PageLoadSucceeded -> updatePageLoadState(
                 intent.key,
@@ -1232,12 +1232,12 @@ class MangaReaderViewModel(
      * 置为 Loading，但保留已有百分比：预取请求与展示请求的 onStart 会先后到达，
      * 直接塞 [MangaPageLoadState.Loading] 会把已经走到的进度清回“不确定”。
      */
-    private fun markPageLoading(key: String) {
+    private fun markPageLoading(key: String, force: Boolean = false) {
         _uiState.update { state ->
             val index = state.pages.indexOfFirst { it.key == key }
             val page =
                 state.pages.getOrNull(index) as? MangaReaderItemUi.Page ?: return@update state
-            if (page.loadState == MangaPageLoadState.Ready) return@update state
+            if (!force && page.loadState == MangaPageLoadState.Ready) return@update state
             val progress = (page.loadState as? MangaPageLoadState.Loading)?.progress
             val next = MangaPageLoadState.Loading(progress)
             if (page.loadState == next) return@update state

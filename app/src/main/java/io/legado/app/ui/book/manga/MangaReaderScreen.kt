@@ -89,6 +89,8 @@ import coil3.size.Dimension
 import coil3.size.Scale
 import coil3.size.Size
 import coil3.toBitmap
+import io.legado.app.help.coil.MangaImageFileOwner
+import io.legado.app.help.coil.rememberMangaZoomableImageSource
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
@@ -112,7 +114,7 @@ import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.DoubleClickToZoomListener
 import me.saket.telephoto.zoomable.EnabledZoomGestures
 import me.saket.telephoto.zoomable.ZoomSpec
-import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
+import me.saket.telephoto.zoomable.ZoomableImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
@@ -226,6 +228,7 @@ fun MangaReaderScreen(
         pagePrefetchRevision,
         state.settings.preDownloadCount,
         state.settings.sourceOrigin,
+        state.settings.scrollMode,
         state.settings.enableEInk,
         state.settings.enableGray,
         pageDecodeSize,
@@ -242,11 +245,16 @@ fun MangaReaderScreen(
             .filterIsInstance<MangaReaderItemUi.Page>()
             .filterNot { it.loadState == MangaPageLoadState.Ready }
             .map { page ->
+                val owner = if (state.settings.scrollMode != MangaScrollMode.WEBTOON &&
+                    state.settings.scrollMode != MangaScrollMode.WEBTOON_WITH_GAP
+                ) MangaImageFileOwner() else null
                 imageLoader.enqueue(
                     page.imageRequest(
                         settings = state.settings,
                         context = context,
                         decodeSize = pageDecodeSize,
+                        fileOwner = owner,
+                        onFileTransfer = { onIntent(MangaReaderIntent.PageLoadStarted(page.key, force = true)) },
                         onAspectRatio = { aspectRatios[page.key] = it },
                         onStart = { onIntent(MangaReaderIntent.PageLoadStarted(page.key)) },
                         onSuccess = { onIntent(MangaReaderIntent.PageLoadSucceeded(page.key)) },
@@ -258,9 +266,9 @@ fun MangaReaderScreen(
                         // caused a slider jump to decode the same image again from scratch.
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .build()
-                )
+                ) to owner
             }
-        onDispose { requests.forEach { it.dispose() } }
+        onDispose { requests.forEach { (request, owner) -> request.dispose(); owner?.close() } }
     }
     CompositionLocalProvider(
         LocalReaderViewportSize provides viewportSize,
@@ -1251,6 +1259,8 @@ private fun MangaPageImage(
     }
     val imagePipelineKey = remember(
         page.key,
+        page.bookUrl,
+        paged,
         settings.sourceOrigin,
         settings.enableEInk,
         settings.eInkThreshold,
@@ -1261,6 +1271,8 @@ private fun MangaPageImage(
     ) {
         listOf(
             page.key,
+            page.bookUrl,
+            paged,
             settings.sourceOrigin,
             settings.enableEInk,
             settings.eInkThreshold,
@@ -1270,11 +1282,14 @@ private fun MangaPageImage(
             decodeSize,
         )
     }
+    val fileOwner = remember(imagePipelineKey) { MangaImageFileOwner() }
     val request = remember(imagePipelineKey) {
         page.imageRequest(
             settings = settings,
             context = context,
             decodeSize = decodeSize,
+            fileOwner = fileOwner.takeIf { paged },
+            onFileTransfer = { onIntent(MangaReaderIntent.PageLoadStarted(page.key, force = true)) },
             onAspectRatio = { ratio -> aspectRatios[page.key] = ratio },
             onStart = { onIntent(MangaReaderIntent.PageLoadStarted(page.key)) },
             onSuccess = { onIntent(MangaReaderIntent.PageLoadSucceeded(page.key)) },
@@ -1288,6 +1303,7 @@ private fun MangaPageImage(
         settings.scrollMode == MangaScrollMode.PAGE_RIGHT_TO_LEFT
     DisposableEffect(
         page.key,
+        imagePipelineKey,
         settings.autoBackground,
         settings.menuColorSource,
         settings.sourceOrigin,
@@ -1306,6 +1322,7 @@ private fun MangaPageImage(
                     sourceOrigin = settings.sourceOrigin,
                     fallbackColor = settings.backgroundColor,
                     aspectRatio = imageRatio,
+                    fileOwner = fileOwner.takeIf { paged },
                 ) { colors ->
                     automaticBackgrounds[page.key] = colors
                 },
@@ -1375,9 +1392,8 @@ private fun MangaPageImage(
             }
         }
         Box(imageModifier) {
-            ZoomableAsyncImage(
-                model = request,
-                imageLoader = imageLoader,
+            ZoomableImage(
+                image = rememberMangaZoomableImageSource(request, imageLoader, fileOwner, settings.enableEInk),
                 contentDescription = contentDescription,
                 state = zoomableImageState,
                 gestures = if (settings.disableScale || !interactionsEnabled) {
@@ -1556,13 +1572,15 @@ private fun MangaReaderItemUi.Page.imageRequest(
     settings: MangaReaderSettings,
     context: android.content.Context,
     decodeSize: Size,
+    fileOwner: MangaImageFileOwner? = null,
+    onFileTransfer: () -> Unit = {},
     onAspectRatio: (Float) -> Unit = {},
     onStart: () -> Unit = {},
     onSuccess: () -> Unit = {},
     onError: (String?) -> Unit = {},
 ): ImageRequest {
     val memoryCacheKey = "manga-page:$bookUrl:$imageUrl:${settings.sourceOrigin}:" +
-        "${settings.enableEInk}:${settings.eInkThreshold}:${settings.enableGray}"
+        "${settings.enableEInk}:${settings.eInkThreshold}:${settings.enableGray}:${fileOwner != null}:$retryRevision"
     return ImageRequest.Builder(context)
         .data(imageUrl)
         .allowHardware(true)
@@ -1581,6 +1599,8 @@ private fun MangaReaderItemUi.Page.imageRequest(
             extras[CoverExtras.Manga] = true
             extras[CoverExtras.SourceOrigin] = settings.sourceOrigin
             extras[CoverExtras.MangaBookUrl] = bookUrl
+            extras[CoverExtras.MangaFileOwner] = fileOwner
+            extras[CoverExtras.MangaFileTransferStarted] = onFileTransfer
         }
         .apply {
             when {
@@ -1606,6 +1626,7 @@ private fun MangaReaderItemUi.Page.backgroundColorRequest(
     sourceOrigin: String?,
     fallbackColor: Color,
     aspectRatio: Float,
+    fileOwner: MangaImageFileOwner? = null,
     onColors: (MangaPageEdgeColors) -> Unit,
 ): ImageRequest = ImageRequest.Builder(context)
     .data(imageUrl)
@@ -1619,6 +1640,7 @@ private fun MangaReaderItemUi.Page.backgroundColorRequest(
         extras[CoverExtras.Manga] = true
         extras[CoverExtras.SourceOrigin] = sourceOrigin
         extras[CoverExtras.MangaBookUrl] = bookUrl
+        extras[CoverExtras.MangaFileOwner] = fileOwner
     }
     .listener(onSuccess = { _, result ->
         onColors(extractMangaEdgeColors(result.image.toBitmap(), fallbackColor))

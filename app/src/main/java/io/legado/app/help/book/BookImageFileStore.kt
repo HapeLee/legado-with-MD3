@@ -6,18 +6,81 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** BookHelp 图片文件的发布边界；临时文件永远不作为可读图片暴露。 */
 internal class BookImageFileStore(private val validate: (File) -> Boolean) {
+    companion object {
+        const val ONLINE_MARKER_DIRECTORY = ".online"
+    }
     private class Entry {
         val mutex = Mutex()
         var users = 0
     }
 
     private val entries = mutableMapOf<String, Entry>()
+    private val evictionLock = Any()
+
+    /** 读取租约与写入共用保护登记，close 可在任意线程重复调用。 */
+    fun pin(file: File): Closeable {
+        val key = file.absolutePath
+        val entry = synchronized(entries) {
+            entries.getOrPut(key, ::Entry).also { it.users++ }
+        }
+        val closed = AtomicBoolean()
+        return Closeable {
+            if (closed.compareAndSet(false, true)) synchronized(entries) {
+                if (--entry.users == 0) entries.remove(key)
+            }
+        }
+    }
+
+    private fun onlineMarker(file: File) = File(File(file.parentFile, ONLINE_MARKER_DIRECTORY), file.name)
+
+    fun isOnline(file: File): Boolean = onlineMarker(file).isFile
+
+    /** 未分类的历史文件不自动纳入预算；现有章节下载可将在线文件升级为保留文件。 */
+    fun setOnline(file: File, online: Boolean) {
+        val marker = onlineMarker(file)
+        if (online) {
+            requireNotNull(marker.parentFile).mkdirs()
+            if (!marker.exists() && !marker.createNewFile()) throw IOException("无法登记在线图片")
+            marker.setLastModified(System.currentTimeMillis())
+        } else if (marker.exists() && !marker.delete()) {
+            throw IOException("无法保留图片缓存")
+        }
+    }
+
+    fun touch(file: File) {
+        onlineMarker(file).takeIf(File::isFile)?.setLastModified(System.currentTimeMillis())
+    }
+
+    /** 只淘汰明确登记的在线文件；活动读取/写入可暂时超过预算，释放后再次整理。 */
+    fun trimOnlineCache(root: File, maxBytes: Long) = synchronized(evictionLock) {
+        require(maxBytes >= 0)
+        val candidates = root.walkTopDown().filter {
+            it.isFile && it.parentFile?.name == ONLINE_MARKER_DIRECTORY
+        }
+            .map { marker -> File(requireNotNull(marker.parentFile).parentFile, marker.name) to marker }
+            .toList().sortedBy { (_, marker) -> marker.lastModified() }
+        var total = candidates.sumOf { (file, _) -> file.length() }
+        for ((file, marker) in candidates) {
+            if (total <= maxBytes && file.exists()) continue
+            val size = file.length()
+            if (deleteIfIdle(file) {
+                    // 下载可能已在枚举之后升级保留用途，必须在删除前复核。
+                    if (!marker.isFile) false
+                    else if (!file.exists() || file.delete()) {
+                        marker.delete()
+                        true
+                    } else false
+                }) total -= size
+        }
+    }
 
     /** 与获取写入锁原子协调；目录包含正在写入或等待写入的文件时整次清理跳过。 */
     fun deleteIfIdle(file: File, delete: (File) -> Boolean = File::delete): Boolean =
@@ -30,6 +93,10 @@ internal class BookImageFileStore(private val validate: (File) -> Boolean) {
                 delete(file)
             }
         }
+
+    /** 同时保护迁移的源和目标，不能移动瓦片仍通过路径打开的目录。 */
+    fun moveIfIdle(source: File, target: File, move: (File, File) -> Boolean): Boolean =
+        deleteIfIdle(source) { deleteIfIdle(target) { move(source, target) } }
 
     /** users 包括等待者，最后一位退出后才回收，避免同一文件同时出现两把锁。 */
     suspend fun <T> withFileLock(file: File, block: suspend () -> T): T {

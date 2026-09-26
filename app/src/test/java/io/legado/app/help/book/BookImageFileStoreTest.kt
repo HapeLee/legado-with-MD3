@@ -34,6 +34,68 @@ class BookImageFileStoreTest {
     }
 
     @Test
+    fun `directory migration waits for readers of both source and target`() = withDirectory { root ->
+        val source = root.resolve("old").apply { mkdirs() }
+        val target = root.resolve("new").apply { mkdirs() }
+        var moves = 0
+        val move: (File, File) -> Boolean = { _, _ -> moves++; true }
+        store.pin(source.resolve("page.jpg")).use {
+            assertFalse(store.moveIfIdle(source, target, move))
+        }
+        store.pin(target.resolve("page.jpg")).use {
+            assertFalse(store.moveIfIdle(source, target, move))
+        }
+        assertEquals(0, moves)
+        assertTrue(store.moveIfIdle(source, target, move))
+        assertEquals(1, moves)
+    }
+
+    @Test
+    fun `online budget evicts least recently used files but preserves history and retained files`() = withDirectory { root ->
+        val old = root.resolve("old.jpg").apply { writeBytes(image) }
+        val recent = root.resolve("recent.jpg").apply { writeBytes(image) }
+        val history = root.resolve("history.jpg").apply { writeBytes(image) }
+        val retained = root.resolve("retained.jpg").apply { writeBytes(image) }
+        store.setOnline(old, true)
+        store.setOnline(recent, true)
+        store.setOnline(retained, true)
+        store.setOnline(retained, false)
+        root.resolve(".online/old.jpg").setLastModified(1_000)
+        root.resolve(".online/recent.jpg").setLastModified(2_000)
+        // 模拟重启：用途和最近访问时间不依赖进程内的 map。
+        BookImageFileStore { true }.trimOnlineCache(root, image.size.toLong())
+        assertFalse(old.exists())
+        assertFalse(root.resolve(".online/old.jpg").exists())
+        assertTrue(recent.exists())
+        assertTrue(history.exists())
+        assertTrue(retained.exists())
+    }
+
+    @Test
+    fun `active online file survives zero budget until last reader releases it`() = withDirectory { root ->
+        val target = root.resolve("active.jpg").apply { writeBytes(image) }
+        store.setOnline(target, true)
+        val request = store.pin(target)
+        val tiles = store.pin(target)
+        request.close()
+        request.close()
+        store.trimOnlineCache(root, 0)
+        assertTrue(target.exists())
+        assertFalse(store.deleteIfIdle(root, File::deleteRecursively))
+        tiles.close()
+        store.trimOnlineCache(root, 0)
+        assertFalse(target.exists())
+    }
+
+    @Test
+    fun `orphan online marker is cleaned even below budget`() = withDirectory { root ->
+        val missing = root.resolve("missing.jpg")
+        store.setOnline(missing, true)
+        store.trimOnlineCache(root, 1_024)
+        assertFalse(root.resolve(".online/missing.jpg").exists())
+    }
+
+    @Test
     fun `synchronous publication is protected from cleanup during validation`() = withDirectory { root ->
         val target = root.resolve("page.jpg")
         lateinit var validatingStore: BookImageFileStore

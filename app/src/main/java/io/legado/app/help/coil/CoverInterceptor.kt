@@ -3,12 +3,30 @@ package io.legado.app.help.coil
 import coil3.intercept.Interceptor
 import coil3.request.CachePolicy
 import coil3.request.ImageResult
+import coil3.request.ImageRequest
 import io.legado.app.help.source.SourceHelp
+import io.legado.app.data.appDb
+import io.legado.app.help.book.BookHelp
+import io.legado.app.utils.isAbsUrl
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.Closeable
+import java.io.File
 
-class CoverInterceptor : Interceptor {
+class CoverInterceptor(
+    private val acquireMangaFile: suspend (ImageRequest, String) -> Pair<File, Closeable> = { request, data ->
+        val bookUrl = requireNotNull(request.extras[CoverExtras.MangaBookUrl])
+        val book = requireNotNull(appDb.bookDao.getBook(bookUrl)) { "Manga book missing" }
+        val source = appDb.bookSourceDao.getBookSource(
+            request.extras[CoverExtras.SourceOrigin] ?: book.origin,
+        )
+        BookHelp.acquireReadingImage(
+            source, book, data, request.extras[CoverExtras.LoadOnlyWifi] == true,
+            request.extras[CoverExtras.MangaFileTransferStarted] ?: {},
+        )
+    },
+) : Interceptor {
 
     companion object {
         private const val RESOLVED_URL_CACHE_MAX_SIZE = 100
@@ -34,6 +52,22 @@ class CoverInterceptor : Interceptor {
     override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
         val request = chain.request
         val data = request.data
+
+        val fileOwner = request.extras[CoverExtras.MangaFileOwner]
+        // 本地漫画与 content/file URI 保持现有平台加载器；仅在线页采用共享原图链路。
+        if (fileOwner != null && data is String &&
+            (data.isAbsUrl() || data.startsWith("data:", true)) &&
+            !data.startsWith("file:", true) && !data.startsWith("content:", true)
+        ) {
+            val file = withContext(Dispatchers.IO) {
+                val (file, lease) = acquireMangaFile(request, data)
+                fileOwner.attach(file, lease)
+                file
+            }
+            return chain.withRequest(
+                request.newBuilder().data(file).diskCachePolicy(CachePolicy.DISABLED).build()
+            ).proceed()
+        }
 
         if (data is String && data.isNotBlank()) {
             // 本地封面缓存快速路径：命中就改写为本地文件，跳过 AnalyzeUrl 的书源规则调用
