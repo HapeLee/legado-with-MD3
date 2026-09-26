@@ -34,6 +34,52 @@ class BookImageFileStoreTest {
     }
 
     @Test
+    fun `explicit index survives restart and protects shared original from online eviction`() = withDirectory { root ->
+        val file = root.resolve("page.jpg").apply { writeBytes(image) }
+        store.setOnline(file, true)
+        store.retainDownload(file, "3.hash")
+        store.retainDownload(file, "4.hash")
+        val restarted = BookImageFileStore { true }
+        assertTrue(restarted.hasDownloadChapter(file, "3.hash"))
+        assertTrue(restarted.hasDownloadChapter(file, "4.hash"))
+        assertFalse(restarted.hasDownloadChapter(file, "5.hash"))
+        // 即使遗留在线标记重新出现，也必须复核显式下载用途。
+        root.resolve(".online").mkdirs()
+        root.resolve(".online/${file.name}").writeText("")
+        val online = root.resolve("online.jpg").apply { writeBytes(image) }
+        restarted.setOnline(online, true)
+        restarted.trimOnlineCache(root, image.size.toLong())
+        assertTrue(online.isFile)
+        restarted.trimOnlineCache(root, 0)
+        assertFalse(online.isFile)
+        assertTrue(file.isFile)
+        assertArrayEquals(image, file.readBytes())
+    }
+
+    @Test
+    fun `corrupt download index protects bytes and explicit retry repairs its reference`() = withDirectory { root ->
+        val file = root.resolve("page.jpg").apply { writeBytes(image) }
+        val index = root.resolve(".downloads/page.jpg")
+        index.parentFile!!.mkdirs()
+        index.writeText("chapter.bad=\\uQQQQ")
+        assertTrue(store.isExplicitDownload(file))
+        assertFalse(store.hasDownloadChapter(file, "1.hash"))
+        store.retainDownload(file, "1.hash")
+        assertTrue(store.hasDownloadChapter(file, "1.hash"))
+        store.setOnline(file, true)
+        assertFalse(store.isOnline(file))
+        assertArrayEquals(image, file.readBytes())
+    }
+
+    @Test
+    fun `partial explicit download is retained but is not valid content`() = withDirectory { root ->
+        val file = root.resolve("missing.jpg")
+        store.retainDownload(file, "1.hash")
+        assertTrue(store.isExplicitDownload(file))
+        assertFalse(store.isValid(file))
+    }
+
+    @Test
     fun `directory migration waits for readers of both source and target`() = withDirectory { root ->
         val source = root.resolve("old").apply { mkdirs() }
         val target = root.resolve("new").apply { mkdirs() }

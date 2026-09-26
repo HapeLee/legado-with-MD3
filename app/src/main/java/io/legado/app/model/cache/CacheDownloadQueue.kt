@@ -106,12 +106,25 @@ class CacheDownloadQueue {
         }
     }
 
+    private val explicitIndices = IntRangeSet()
+
+    fun isExplicitDownload(index: Int): Boolean = synchronized(explicitIndices) { explicitIndices.contains(index) }
+
     private val ranges = ArrayDeque<RangeCursor>()
     private val indices = linkedSetOf<Int>()
     private val emittedIndices = IntRangeSet()
     private val removedIndices = IntRangeSet()
 
     fun enqueue(request: CacheDownloadRequest) {
+        if (request.source != CacheDownloadSource.ReadPreload) {
+            synchronized(explicitIndices) {
+                when (val selection = request.selection) {
+                    is ChapterSelection.Range -> explicitIndices.addRange(selection.start, selection.end)
+                    is ChapterSelection.Indices -> selection.values.forEach(explicitIndices::add)
+                    is ChapterSelection.Single -> explicitIndices.add(selection.index)
+                }
+            }
+        }
         enqueue(request.selection)
     }
 
@@ -159,6 +172,7 @@ class CacheDownloadQueue {
     }
 
     fun clear() {
+        synchronized(explicitIndices) { explicitIndices.clear() }
         ranges.clear()
         indices.clear()
         emittedIndices.clear()

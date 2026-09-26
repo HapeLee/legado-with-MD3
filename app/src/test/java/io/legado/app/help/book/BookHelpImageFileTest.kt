@@ -48,6 +48,29 @@ class BookHelpImageFileTest {
     }
 
     @Test
+    fun `explicit download promotes the same original and retains chapter references`() = runBlocking {
+        val src = "https://invalid.example/explicit.jpg"
+        val image = BookHelp.getImage(book, src)
+        val index = java.io.File(java.io.File(image.parentFile, ".downloads"), image.name)
+        try {
+            val bytes = png()
+            BookHelp.writeImage(book, src, bytes)
+            var transfers = 0
+            assertTrue(BookHelp.saveImage(null, book, src, onDownload = { transfers++ }, explicitDownloadChapter = "2.hash"))
+            assertTrue(BookHelp.saveImage(null, book, src, onDownload = { transfers++ }, explicitDownloadChapter = "3.hash"))
+            // 自动离线/阅读复用不会降级显式下载记录。
+            assertTrue(BookHelp.saveImage(null, book, src))
+            val properties = java.util.Properties().apply { index.inputStream().use { load(it) } }
+            assertEquals("explicit", properties.getProperty("chapter.2.hash"))
+            assertEquals("explicit", properties.getProperty("chapter.3.hash"))
+            assertEquals(0, transfers)
+            assertArrayEquals(bytes, image.readBytes())
+        } finally {
+            BookHelp.clearCache(book)
+        }
+    }
+
+    @Test
     fun `book rename defers physical migration until image reader releases its file`() = runBlocking {
         val renamed = book.copy(name = "Renamed image contract")
         val src = "https://invalid.example/rename.jpg"

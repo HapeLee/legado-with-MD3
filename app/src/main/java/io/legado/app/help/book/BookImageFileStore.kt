@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class BookImageFileStore(private val validate: (File) -> Boolean) {
     companion object {
         const val ONLINE_MARKER_DIRECTORY = ".online"
+        const val DOWNLOAD_INDEX_DIRECTORY = ".downloads"
     }
     private class Entry {
         val mutex = Mutex()
@@ -43,8 +44,49 @@ internal class BookImageFileStore(private val validate: (File) -> Boolean) {
 
     fun isOnline(file: File): Boolean = onlineMarker(file).isFile
 
+    private fun downloadIndex(file: File) = File(File(file.parentFile, DOWNLOAD_INDEX_DIRECTORY), file.name)
+
+    fun isExplicitDownload(file: File): Boolean = downloadIndex(file).isFile
+
+    fun hasDownloadChapter(file: File, chapterKey: String): Boolean = try {
+        val properties = java.util.Properties()
+        downloadIndex(file).inputStream().use(properties::load)
+        properties.getProperty("version") == "1" && properties.getProperty("chapter.$chapterKey") == "explicit"
+    } catch (_: IOException) {
+        false
+    } catch (_: IllegalArgumentException) {
+        false
+    }
+
+    /** 每张原图记录引用它的显式下载章节；失败的部分下载同样保留，完成状态仍验证原图。 */
+    fun retainDownload(file: File, chapterKey: String) = synchronized(entries) {
+        val index = downloadIndex(file)
+        val properties = java.util.Properties()
+        if (index.isFile) try {
+            index.inputStream().use(properties::load)
+        } catch (_: IllegalArgumentException) {
+            // 损坏索引仍保护原图，本次显式下载恢复可验证的引用。
+        }
+        properties.setProperty("version", "1")
+        properties.setProperty("chapter.$chapterKey", "explicit")
+        val parent = requireNotNull(index.parentFile)
+        if (!parent.isDirectory && !parent.mkdirs()) throw IOException("无法创建下载用途索引")
+        val temp = File.createTempFile("${file.name}.", ".tmp", parent)
+        try {
+            FileOutputStream(temp).use {
+                properties.store(it, null)
+                it.fd.sync()
+            }
+            Files.move(temp.toPath(), index.toPath(), ATOMIC_MOVE, REPLACE_EXISTING)
+            setOnline(file, false)
+        } finally {
+            temp.delete()
+        }
+    }
+
     /** 未分类的历史文件不自动纳入预算；现有章节下载可将在线文件升级为保留文件。 */
     fun setOnline(file: File, online: Boolean) {
+        if (online && isExplicitDownload(file)) return
         val marker = onlineMarker(file)
         if (online) {
             requireNotNull(marker.parentFile).mkdirs()
@@ -66,14 +108,19 @@ internal class BookImageFileStore(private val validate: (File) -> Boolean) {
             it.isFile && it.parentFile?.name == ONLINE_MARKER_DIRECTORY
         }
             .map { marker -> File(requireNotNull(marker.parentFile).parentFile, marker.name) to marker }
+            .filter { (file, _) -> !isExplicitDownload(file) }
             .toList().sortedBy { (_, marker) -> marker.lastModified() }
         var total = candidates.sumOf { (file, _) -> file.length() }
         for ((file, marker) in candidates) {
+            if (!marker.isFile || isExplicitDownload(file)) {
+                total -= file.length()
+                continue
+            }
             if (total <= maxBytes && file.exists()) continue
             val size = file.length()
             if (deleteIfIdle(file) {
                     // 下载可能已在枚举之后升级保留用途，必须在删除前复核。
-                    if (!marker.isFile) false
+                    if (!marker.isFile || isExplicitDownload(file)) false
                     else if (!file.exists() || file.delete()) {
                         marker.delete()
                         true

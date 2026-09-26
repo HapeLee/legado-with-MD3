@@ -508,7 +508,7 @@ class CacheBookModel(
             onSkipped(chapterIndex)
             return
         }
-        if (repository.hasImageContent(book, chapter)) {
+        if (repository.hasImageContent(book, chapter, queue.isExplicitDownload(chapter.index))) {
             onSkipped(chapterIndex)
             return
         }
@@ -521,6 +521,7 @@ class CacheBookModel(
                 bookSource = bookSource,
                 book = book,
                 chapter = chapter,
+                explicitDownload = queue.isExplicitDownload(chapter.index),
                 start = CoroutineStart.LAZY,
                 onProgress = { completed, total ->
                     reportImageDownloadProgress(chapter, completed, total)
@@ -619,8 +620,10 @@ class CacheBookModel(
         content: String? = null,
     ) {
         task.onSuccess(IO) {
-            if (chainImagesAfterContent && !repository.hasImageContent(book, chapter)) {
-                startImageCacheTask(scope, context, chapter, chapterIndex, it as String)
+            if ((chainImagesAfterContent || queue.isExplicitDownload(chapterIndex)) &&
+                !repository.hasImageContent(book, chapter, queue.isExplicitDownload(chapterIndex))) {
+                startImageCacheTask(scope, context, chapter, chapterIndex,
+                    (it as? String) ?: content ?: BookHelp.getContent(book, chapter).orEmpty())
                 return@onSuccess
             }
             completeChapterCache(chapter, content ?: (it as? String))
@@ -676,6 +679,7 @@ class CacheBookModel(
             bookSource = bookSource,
             book = book,
             chapter = chapter,
+            explicitDownload = queue.isExplicitDownload(chapter.index),
             start = CoroutineStart.LAZY,
             onProgress = { completed, total ->
                 reportImageDownloadProgress(chapter, completed, total)
@@ -721,12 +725,13 @@ class CacheBookModel(
     }
 
     private suspend fun ensureChapterImagesCached(chapter: BookChapter) {
-        if (repository.hasImageContent(book, chapter)) return
+        if (repository.hasImageContent(book, chapter, queue.isExplicitDownload(chapter.index))) return
         reportImageDownloadProgress(chapter, completed = 0)
         repository.saveCachedImagesAwait(
             bookSource = bookSource,
             book = book,
             chapter = chapter,
+            explicitDownload = queue.isExplicitDownload(chapter.index),
             onProgress = { completed, total ->
                 reportImageDownloadProgress(chapter, completed, total)
             },

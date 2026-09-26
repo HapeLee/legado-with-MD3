@@ -9,6 +9,21 @@ import org.junit.Test
 class CacheDownloadQueueTest {
 
     @Test
+    fun explicitPurposeSurvivesReadPreloadRetryAndPrioritization() {
+        val queue = CacheDownloadQueue()
+        queue.enqueue(CacheDownloadRequest("book", ChapterSelection.Range(2, 4), CacheDownloadSource.Manual))
+        queue.enqueue(CacheDownloadRequest("book", ChapterSelection.Single(3), CacheDownloadSource.ReadPreload))
+        queue.prioritize(3)
+        assertEquals(3, queue.next("book", emptySet())?.chapterIndex)
+        queue.enqueue(ChapterSelection.Single(3))
+        assertTrue(queue.isExplicitDownload(3))
+        queue.enqueue(CacheDownloadRequest("book", ChapterSelection.Single(8), CacheDownloadSource.ReadPreload))
+        assertFalse(queue.isExplicitDownload(8))
+        queue.clear()
+        assertFalse(queue.isExplicitDownload(3))
+    }
+
+    @Test
     fun rangeReturnsChaptersLazily() {
         val queue = CacheDownloadQueue()
 

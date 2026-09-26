@@ -5,6 +5,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.key
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.geometry.Size
 import coil3.ImageLoader
 import coil3.compose.rememberAsyncImagePainter
@@ -23,13 +25,17 @@ fun rememberMangaZoomableImageSource(
     imageLoader: ImageLoader,
     owner: MangaImageFileOwner,
     wholeImage: Boolean,
-): ZoomableImageSource = key(owner, wholeImage) {
-    val delegate = if (wholeImage) {
-        val painter = rememberAsyncImagePainter(request, imageLoader)
-        remember(painter) { PainterImageSource(painter) }
-    } else ZoomableImageSource.coil(request, imageLoader)
-    remember(delegate, owner, wholeImage) {
-        if (wholeImage) delegate else LeasedImageSource(delegate, owner)
+): ZoomableImageSource {
+    val failed by owner.regionDecodeFailed.collectAsState()
+    val usePainter = wholeImage || failed
+    return key(owner, usePainter) {
+        val delegate = if (usePainter) {
+            val painter = rememberAsyncImagePainter(request, imageLoader)
+            remember(painter) { PainterImageSource(painter) }
+        } else ZoomableImageSource.coil(request, imageLoader)
+        remember(delegate, owner, usePainter) {
+            if (usePainter) delegate else LeasedImageSource(delegate, owner)
+        }
     }
 }
 
@@ -52,9 +58,9 @@ private class LeasedImageSource(
         val leased = remember(tiles) {
             owner.borrowForTiles()?.let { (file, lease) ->
                 RememberedTileSource(ZoomableImageSource.SubSamplingDelegate(
-                    SubSamplingImageSource.file(file.toOkioPath(), tiles.source.preview) {
+                    RecoveringRegionImageSource(SubSamplingImageSource.file(file.toOkioPath(), tiles.source.preview) {
                         try { tiles.source.close() } finally { lease.close() }
-                    },
+                    }, owner::onRegionDecodeFailed),
                     tiles.imageOptions,
                 ))
             }

@@ -19,8 +19,8 @@ class CacheDownloadRepository {
         return appDb.bookChapterDao.getChapter(bookUrl, index)
     }
 
-    fun hasImageContent(book: Book, chapter: BookChapter): Boolean {
-        return BookHelp.hasImageContent(book, chapter)
+    fun hasImageContent(book: Book, chapter: BookChapter, explicitDownload: Boolean = false): Boolean {
+        return if (explicitDownload) BookHelp.hasExplicitImageContent(book, chapter) else BookHelp.hasImageContent(book, chapter)
     }
 
     fun hasContent(book: Book, chapter: BookChapter): Boolean {
@@ -35,9 +35,10 @@ class CacheDownloadRepository {
         chapter: BookChapter,
         start: CoroutineStart = CoroutineStart.LAZY,
         onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
+        explicitDownload: Boolean = false,
     ): Coroutine<Unit> {
         return Coroutine.async(scope, context, start = start, executeContext = context) {
-            saveCachedImagesAwait(bookSource, book, chapter, onProgress)
+            saveCachedImagesAwait(bookSource, book, chapter, onProgress, explicitDownload)
         }
     }
 
@@ -46,10 +47,11 @@ class CacheDownloadRepository {
         book: Book,
         chapter: BookChapter,
         onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
+        explicitDownload: Boolean = false,
     ) {
         val content = BookHelp.getContent(book, chapter)
             ?: throw NoStackTraceException("${book.name} ${chapter.title} 图片缓存未完成：缺少正文")
-        val failures = BookHelp.saveImages(bookSource, book, chapter, content, 1, onProgress)
+        val failures = BookHelp.saveImages(bookSource, book, chapter, content, 1, onProgress, explicitDownload)
         if (!BookHelp.isChapterImageCacheComplete(book, chapter, failures)) {
             throw NoStackTraceException("${book.name} ${chapter.title} 图片缓存未完成")
         }

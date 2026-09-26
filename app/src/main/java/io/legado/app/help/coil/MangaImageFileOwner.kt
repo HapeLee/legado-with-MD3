@@ -3,6 +3,9 @@ package io.legado.app.help.coil
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.RememberObserver
 import io.legado.app.help.book.BookHelp
+import io.legado.app.constant.AppLog
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.Closeable
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
@@ -10,6 +13,16 @@ import kotlin.coroutines.cancellation.CancellationException
 /** 一个渲染请求的文件所有权。仅管理平台资源生命周期，不持有 UI 或阅读会话。 */
 @Stable
 class MangaImageFileOwner : Closeable, RememberObserver {
+    private val regionFailure = MutableStateFlow(false)
+    val regionDecodeFailed = regionFailure.asStateFlow()
+
+    @Synchronized
+    fun onRegionDecodeFailed(error: Exception) {
+        if (!closed && regionFailure.compareAndSet(false, true)) {
+            AppLog.put("漫画区域解码失败，回退整图", error)
+        }
+    }
+
     private var closed = false
     private var file: File? = null
     private var lease: Closeable? = null

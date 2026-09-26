@@ -214,7 +214,9 @@ object BookHelp {
             if (!imgNames.contains(imgFile.name) && !imgFile.name.endsWith(".tmp")) {
                 imageFiles.deleteIfIdle(imgFile) {
                     // 普通在线缓存由字节预算淘汰，不能被章节窗口清理绕过。
-                    if (it.name == BookImageFileStore.ONLINE_MARKER_DIRECTORY || imageFiles.isOnline(it)) false else it.delete()
+                    if (it.name == BookImageFileStore.ONLINE_MARKER_DIRECTORY ||
+                        it.name == BookImageFileStore.DOWNLOAD_INDEX_DIRECTORY ||
+                        imageFiles.isOnline(it) || imageFiles.isExplicitDownload(it)) false else it.delete()
                 }
             }
         }
@@ -362,9 +364,19 @@ object BookHelp {
         return count
     }
 
-    /**
-     * @return 失败的图片数量（0 表示全部成功或无需下载）
-     */
+    /** 显式下载还需要当前章节的保留引用，不能仅凭在线文件命中跳过升级。 */
+    fun hasExplicitImageContent(book: Book, chapter: BookChapter): Boolean {
+        if (!hasContent(book, chapter)) return false
+        var complete = true
+        forEachImageSrc(book, chapter) { src ->
+            val image = getImage(book, src)
+            if (!imageFiles.hasDownloadChapter(image, "${chapter.index}.${MD5Utils.md5Encode16(chapter.url)}") ||
+                !imageFiles.isValid(image)) complete = false
+        }
+        return complete
+    }
+
+    /** @return 失败的图片数量（0 表示全部成功或无需下载） */
     suspend fun saveImages(
         bookSource: BookSource,
         book: Book,
@@ -372,6 +384,7 @@ object BookHelp {
         content: String,
         concurrency: Int = cacheGateway.currentSettings.threadCount,
         onProgress: (suspend (completed: Int, total: Int) -> Unit)? = null,
+        explicitDownload: Boolean = false,
     ): Int = coroutineScope {
         val imageUrls = flowImages(bookChapter, content).toList()
         val total = imageUrls.size
@@ -381,7 +394,12 @@ object BookHelp {
         var completed = 0
         var failures = 0
         imageUrls.asFlow().onEachParallel(concurrency) { mSrc ->
-            val ok = saveImage(bookSource, book, mSrc, bookChapter)
+            val ok = saveImage(
+                bookSource, book, mSrc, bookChapter,
+                explicitDownloadChapter = if (explicitDownload) {
+                    "${bookChapter.index}.${MD5Utils.md5Encode16(bookChapter.url)}"
+                } else null,
+            )
             progressMutex.withLock {
                 if (!ok) failures++
                 completed++
@@ -400,11 +418,13 @@ object BookHelp {
         onlineOnly: Boolean = false,
         loadOnlyWifi: Boolean = false,
         onDownload: () -> Unit = {},
+        explicitDownloadChapter: String? = null,
     ): Boolean = withContext(IO) {
         try {
             // 按实际书籍文件串行获取；等待者重新检查有效性，成功时不重复联网。
             val image = getImage(book, src)
             imageFiles.withFileLock(image) {
+                explicitDownloadChapter?.let { imageFiles.retainDownload(image, it) }
                 if (imageFiles.isValid(image)) {
                     if (!onlineOnly) imageFiles.setOnline(image, false)
                     imageFiles.touch(image)
