@@ -18,7 +18,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * 1. [progress] 全局事件流，供阅读页 ViewModel 订阅（无需注册/注销，生命周期安全）；
  * 2. [addListener] / [removeListener] 单个 URL 的回调，兼容旧的 View 侧用法。
  *
- * 只有当至少一方在监听时才向主线程投递事件，避免预取 N 张图时刷爆主线程消息队列。
+ * 只有当至少一方在监听时才分发事件；主线程投递由响应体按时间节流。
  */
 object ProgressManager {
     private val listenersMap = ConcurrentHashMap<String, CopyOnWriteArrayList<OnProgressListener>>()
@@ -43,7 +43,9 @@ object ProgressManager {
             listeners?.forEach { it.invoke(isComplete, percentage, bytesRead, totalBytes) }
             _progress.tryEmit(
                 DownloadProgress(
-                    url = key,
+                    // Flow 按完整请求身份匹配页面，不能丢掉书源 header 等选项。
+                    // 只有旧 View 监听器使用上面的规范化 key。
+                    url = url,
                     percentage = percentage,
                     bytesRead = bytesRead,
                     totalBytes = totalBytes,

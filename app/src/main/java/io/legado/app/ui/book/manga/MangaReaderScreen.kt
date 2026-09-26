@@ -86,6 +86,7 @@ import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.request.transformations
 import coil3.size.Dimension
+import coil3.size.Scale
 import coil3.size.Size
 import coil3.toBitmap
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -1489,8 +1490,8 @@ private fun MangaImageLoadOverlay(
 /**
  * 漫画正文的目标解码尺寸。
  *
- * 只按屏幕宽度推导，不读布局约束：条漫页的高度会在拿到宽高比后从「整屏高度」跳到
- * 「图片真实高度」，用约束推导会让同一张图在不同时机解出不同分辨率。
+ * 使用稳定的窗口尺寸，不读单页布局约束：条漫页的高度在拿到宽高比后会变化。
+ * 预取与展示共用此规则，分页按显示模式选择需要满足的宽度或高度。
  */
 @Composable
 private fun mangaPageDecodeSize(
@@ -1499,18 +1500,46 @@ private fun mangaPageDecodeSize(
     pageScaleType: Int,
     widePageMode: Int,
 ): Size {
-    // 「原始尺寸」模式按位图固有尺寸绘制（ContentScale.None），降采样会直接把页面画小，
-    // 所以这里必须保持不缩放，沿用改动前的语义。
-    if (paged && pageScaleType == MangaPageScaleType.ORIGINAL) return Size.ORIGINAL
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() }
-    // 「旋转适配」把跨页图旋转 90°，图片的长边落在屏幕高度上（rotateWidePage 会交换约束）。
-    // 目标宽度必须换成屏幕高度，否则解码结果只有屏幕宽、显示时被放大两倍以上而发糊。
-    val contentWidthPx = if (paged && widePageMode == MangaWidePageMode.ROTATE_TO_FIT) {
-        maxOf(screenWidthPx, with(density) { configuration.screenHeightDp.dp.roundToPx() })
-    } else {
-        screenWidthPx
+    return mangaPageDecodeSize(
+        viewport = with(density) {
+            IntSize(
+                configuration.screenWidthDp.dp.roundToPx(),
+                configuration.screenHeightDp.dp.roundToPx(),
+            )
+        },
+        paged = paged,
+        sidePaddingPercent = sidePaddingPercent,
+        pageScaleType = pageScaleType,
+        widePageMode = widePageMode,
+    )
+}
+
+internal fun mangaPageDecodeSize(
+    viewport: IntSize,
+    paged: Boolean,
+    sidePaddingPercent: Int,
+    pageScaleType: Int,
+    widePageMode: Int,
+): Size {
+    // ContentScale.None 必须保留原图固有尺寸。
+    if (paged && pageScaleType == MangaPageScaleType.ORIGINAL) return Size.ORIGINAL
+    val width = viewport.width.coerceAtLeast(1)
+    val height = viewport.height.coerceAtLeast(1)
+    val rotated = paged && widePageMode == MangaWidePageMode.ROTATE_TO_FIT
+    // 宽图才旋转，但预取时尚无宽高比；取两种方向的上界，避免加载后重发请求。
+    val targetWidth = if (rotated) maxOf(width, height) else width
+    val targetHeight = if (rotated) maxOf(width, height) else height
+    if (paged && pageScaleType == MangaPageScaleType.FIT_HEIGHT) {
+        // 宽图的 FIT_WIDTH 优先于普通页缩放。未知宽高比时同时满足两条显示路径。
+        if (widePageMode == MangaWidePageMode.FIT_WIDTH) {
+            return Size(Dimension(targetWidth), Dimension(targetHeight))
+        }
+        return Size(Dimension.Undefined, Dimension(targetHeight))
+    }
+    if (paged && pageScaleType == MangaPageScaleType.STRETCH) {
+        return Size(Dimension(targetWidth), Dimension(targetHeight))
     }
     val fraction = if (paged) {
         1f
@@ -1518,7 +1547,7 @@ private fun mangaPageDecodeSize(
         1f - sidePaddingPercent.coerceIn(0, 45) * 2f / 100f
     }
     return Size(
-        width = Dimension((contentWidthPx * fraction).roundToInt().coerceAtLeast(1)),
+        width = Dimension((targetWidth * fraction).roundToInt().coerceAtLeast(1)),
         height = Dimension.Undefined,
     )
 }
@@ -1537,14 +1566,12 @@ private fun MangaReaderItemUi.Page.imageRequest(
     return ImageRequest.Builder(context)
         .data(imageUrl)
         .allowHardware(true)
-        // 解码尺寸必须显式钉住，不能交给 AsyncImage 的 ConstraintsSizeResolver：
-        // 它只在请求启动时取一次当时的布局约束，而条漫页的约束会在拿到宽高比后突变，
-        // 于是同一张高画质图每次进入可能解出不同分辨率；又因为内存缓存键相同，
-        // 预取那轮按 Size.ORIGINAL 解出的全图与展示那轮按视口降采样解出的图会互相覆盖，
-        // 命中哪一份取决于谁先完成 —— 这才是“概率性发糊”的来源。
-        // 预取与展示共用这里钉死的尺寸后，缓存里只会存在同一种分辨率。
-        // 同时它等价于旧版 Glide 的 override(widthPixels, SIZE_ORIGINAL)。
+        // 稳定解码目标避免条漫首次占位高度参与降采样，也让预取与展示的尺寸一致。
+        // Coil 仍会检查缓存位图是否满足目标尺寸；分页放大清晰度需要另外接入区域解码。
         .size(decodeSize)
+        // STRETCH 的宽、高都必须满足，否则 FIT 降采样后会在另一个轴上被放大。
+        // 只有一个轴有目标值时（适应宽/高、条漫），Coil 按该轴计算缩放。
+        .scale(Scale.FILL)
         // The preload request has no view-size resolver while the displayed request does. A
         // shared key lets the displayed request reuse it immediately, then crossfade only if a
         // better-sized decode is needed.
