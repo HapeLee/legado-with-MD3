@@ -1547,6 +1547,8 @@ class ReadBookController(
                 AppLog.putDebug("Compose reader pagination unsupported: chapter=$index reason=$reason")
             }
             updateReaderPaginationError(batch.failureReasonFor(chapterIndex))
+            val previousPageId = directReaderPageIndex
+                ?.let { directReaderPages.getOrNull(it)?.id }
             val previousPages = directReaderPages.associateBy { it.id }
             // 每个任务只负责自己那一章：其它章的页原样保留。旧 View 各章的 `TextChapter.textPages`
             // 也是各自独立累积的，一章重排不会牵动别章的页，因此这里不再需要"整窗重建"分支。
@@ -1570,17 +1572,14 @@ class ReadBookController(
             directReaderPageContexts.clear()
             directReaderChapterPageCounts =
                 directReaderPages.groupingBy { it.id.chapterIndex }.eachCount()
-            directReaderPageIndex = directReaderPages.takeIf { it.isNotEmpty() }?.let { pages ->
-                // 当前章在批次结果中缺失时 locate 会折叠成 0（全书首页）：保留原下标，
-                // 由下面的 publishDirectReaderWindow 重新收敛到合法范围，避免跳回书首。
-                ReaderPageNavigator.locateOrNull(
-                    pages,
-                    chapterIndex,
-                    ReadBook.durChapterPos
-                )
-                    ?: directReaderPageIndex?.coerceIn(pages.indices)
-                    ?: 0
-            }
+            // 邻章或已经读过的章节可能晚于当前章完成排版，不能用任务的 chapterIndex
+            // 回拉可见页。当前章尚未排好时按页 ID 保留旧页，前章页数变化会使旧下标失效。
+            directReaderPageIndex = ReaderPageNavigator.locateAfterPagination(
+                pages = directReaderPages,
+                chapterIndex = ReadBook.durChapterIndex,
+                chapterPosition = ReadBook.durChapterPos,
+                previousPageId = previousPageId,
+            )
             val snapshotRange = ReadBook.durChapterIndex.let { it - 1..it + 1 }
             ReadBook.publishReaderPagination(
                 directReaderPages.groupBy { it.id.chapterIndex }.mapNotNull { (index, pages) ->

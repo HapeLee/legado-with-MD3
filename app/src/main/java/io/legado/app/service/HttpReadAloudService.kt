@@ -165,6 +165,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private var downloadTask: Coroutine<*>? = null
     private var preDownloadJob: Job? = null
     private var playIndexJob: Job? = null
+    private var paragraphIntervalJob: Coroutine<*>? = null
     private var downloadErrorNo: Int = 0
     private var playErrorNo = 0
     private val downloadTaskActiveLock = Mutex()
@@ -222,9 +223,12 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun playStop() {
-        exoPlayer.stop()
+        downloadTask?.cancel()
         playIndexJob?.cancel()
         preDownloadJob?.cancel()
+        paragraphIntervalJob?.cancel()
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
     }
 
     private fun updateNextPos(naturalCompletion: Boolean = false) {
@@ -1094,18 +1098,22 @@ class HttpReadAloudService : BaseReadAloudService(),
         playIndexJob = lifecycleScope.launch {
             if (isChapterTitleAt(nowSpeak)) return@launch
             if (exoPlayer.duration <= 0) {
-                upTtsProgress(readAloudNumber + 1)
+                upTtsProgress(readAloudNumber + paragraphStartPos + 1)
                 return@launch
             }
-            val speakTextLength = contentList[nowSpeak].length
+            val startOffset = paragraphStartPos
+            val speakTextLength = contentList[nowSpeak].length - startOffset
             if (speakTextLength <= 0) {
                 return@launch
             }
             val sleep = exoPlayer.duration / speakTextLength
-            val start = speakTextLength * exoPlayer.currentPosition / exoPlayer.duration
-            upTtsProgress(readAloudNumber + start.toInt())
+            val start = httpReadAloudParagraphOffset(
+                contentList[nowSpeak].length, startOffset,
+                exoPlayer.currentPosition, exoPlayer.duration,
+            )
+            upTtsProgress(readAloudNumber + start)
             for (i in start until contentList[nowSpeak].length) {
-                val chapterPosition = readAloudNumber + i.toInt()
+                val chapterPosition = readAloudNumber + i
                 updateReadAloudProgressSnapshot(chapterPosition)
                 if (moveToReadAloudPage(chapterPosition)) {
                     upTtsProgress(chapterPosition)
@@ -1153,7 +1161,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                     exoPlayer.clearMediaItems()
                     if (!pause && !isLastParagraph) {
                         AppLog.putDebug("HttpTTS段落开始停顿: $interval 毫秒")
-                        execute {
+                        paragraphIntervalJob?.cancel()
+                        paragraphIntervalJob = execute {
                             delay(interval)
                             if (!pause) {
                                 launch(Main) {
@@ -1235,6 +1244,19 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
+}
+
+/** 音频仅合成定位点后的文字，其时间轴须映射到裁剪后的段落范围。 */
+internal fun httpReadAloudParagraphOffset(
+    paragraphLength: Int,
+    startOffset: Int,
+    positionMs: Long,
+    durationMs: Long,
+): Int {
+    val offset = startOffset.coerceIn(0, paragraphLength.coerceAtLeast(0))
+    if (durationMs <= 0) return offset
+    val remaining = (paragraphLength - offset).coerceAtLeast(0)
+    return offset + (remaining * (positionMs.coerceIn(0, durationMs).toDouble() / durationMs)).toInt()
 }
 
 /** 源级语速默认值, 对应 1 倍速, 与全局语速共用 0..80 的刻度 */
