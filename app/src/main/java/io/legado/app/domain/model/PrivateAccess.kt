@@ -65,7 +65,7 @@ data class PrivateAccessState(
      * 私密功能总开关。关掉时 [isTargetGranted] 恒真——不验证、不脱敏、不守卫；
      * 密码与标记都留着，重新打开即刻恢复。判定集中在这里，所以各处不用各判一次。
      */
-    val isEnabled: Boolean = true,
+    val isEnabled: Boolean = false,
 ) {
     /** 是否可以直接弹系统生物验证框（而不是密码输入） */
     val canUseBiometricShortcut: Boolean

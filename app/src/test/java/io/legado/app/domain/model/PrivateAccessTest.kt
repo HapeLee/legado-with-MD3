@@ -60,6 +60,7 @@ class PrivateAccessTest {
         grantedBookUrls: Set<String> = emptySet(),
         grantedGroupIds: Set<Long> = emptySet(),
     ) = PrivateAccessState(
+        isEnabled = true,
         isUnlocked = isUnlocked,
         grantedBookUrls = grantedBookUrls,
         grantedGroupIds = grantedGroupIds,
