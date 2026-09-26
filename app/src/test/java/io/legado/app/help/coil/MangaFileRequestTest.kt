@@ -13,6 +13,8 @@ import coil3.request.allowHardware
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
 import kotlinx.coroutines.runBlocking
+import me.saket.telephoto.subsamplingimage.SubSamplingImageSource
+import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -84,7 +86,7 @@ class MangaFileRequestTest {
             assertEquals(DataSource.MEMORY_CACHE, next.dataSource)
             assertEquals(1, transfers)
             // 模拟 Compose 请求先退出，区域解码器最后退出。
-            val tiles = requireNotNull(owner.borrowForTiles()).second
+            val tiles = recoveringMangaTileSource(SubSamplingImageSource.file(image.toOkioPath()), owner)
             owner.close()
             BookHelp.clearCache(book)
             assertTrue(image.exists())

@@ -1579,7 +1579,7 @@ private fun MangaReaderItemUi.Page.imageRequest(
     onSuccess: () -> Unit = {},
     onError: (String?) -> Unit = {},
 ): ImageRequest {
-    val memoryCacheKey = "manga-page:$bookUrl:$imageUrl:${settings.sourceOrigin}:" +
+    val memoryCacheKey = "manga-page-v2:$bookUrl:$imageUrl:${settings.sourceOrigin}:" +
         "${settings.enableEInk}:${settings.eInkThreshold}:${settings.enableGray}:${fileOwner != null}:$retryRevision"
     return ImageRequest.Builder(context)
         .data(imageUrl)
@@ -1603,10 +1603,7 @@ private fun MangaReaderItemUi.Page.imageRequest(
             extras[CoverExtras.MangaFileTransferStarted] = onFileTransfer
         }
         .apply {
-            when {
-                settings.enableEInk -> transformations(MangaEInkTransformation(settings.eInkThreshold))
-                settings.enableGray -> transformations(MangaGrayscaleTransformation)
-            }
+            if (settings.enableEInk) transformations(MangaEInkTransformation(settings.eInkThreshold))
             crossfade(!settings.disableCrossFade)
         }
         .listener(onStart = { _ -> onStart() }, onError = { _, result ->
@@ -1779,16 +1776,25 @@ internal fun zoomStartOffset(
     }
 }
 
-private fun mangaColorFilter(settings: MangaReaderSettings): ColorFilter? {
-    if (settings.filterRed == 0 && settings.filterGreen == 0 &&
+private fun mangaColorFilter(settings: MangaReaderSettings): ColorFilter? =
+    mangaColorMatrix(settings)?.let(ColorFilter::colorMatrix)
+
+/** 灰度作用于最终绘制，预览、瓦片、动画和整图回退共用相同滤镜。 */
+internal fun mangaColorMatrix(settings: MangaReaderSettings): ColorMatrix? {
+    val grayscale = settings.enableGray && !settings.enableEInk
+    if (!grayscale && settings.filterRed == 0 && settings.filterGreen == 0 &&
         settings.filterBlue == 0 && settings.filterAlpha == 0
     ) return null
-    return ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
-        (255 - settings.filterRed) / 255f, 0f, 0f, 0f, 0f,
-        0f, (255 - settings.filterGreen) / 255f, 0f, 0f, 0f,
-        0f, 0f, (255 - settings.filterBlue) / 255f, 0f, 0f,
-        0f, 0f, 0f, (255 - settings.filterAlpha) / 255f, 0f,
-    )))
+    val matrix = ColorMatrix()
+    if (grayscale) matrix.setToSaturation(0f)
+    val scales = floatArrayOf(
+        (255 - settings.filterRed) / 255f,
+        (255 - settings.filterGreen) / 255f,
+        (255 - settings.filterBlue) / 255f,
+        (255 - settings.filterAlpha) / 255f,
+    )
+    for (row in 0..3) for (column in 0..4) matrix[row, column] *= scales[row]
+    return matrix
 }
 
 private fun clickAction(

@@ -55,18 +55,29 @@ private class LeasedImageSource(
     override fun resolve(canvasSize: Flow<Size>): ZoomableImageSource.ResolveResult {
         val resolved = delegate.resolve(canvasSize)
         val tiles = resolved.delegate as? ZoomableImageSource.SubSamplingDelegate ?: return resolved
-        val leased = remember(tiles) {
-            owner.borrowForTiles()?.let { (file, lease) ->
-                RememberedTileSource(ZoomableImageSource.SubSamplingDelegate(
-                    RecoveringRegionImageSource(SubSamplingImageSource.file(file.toOkioPath(), tiles.source.preview) {
-                        try { tiles.source.close() } finally { lease.close() }
-                    }, owner::onRegionDecodeFailed),
-                    tiles.imageOptions,
-                ))
-            }
+        val recovered = remember(tiles, owner) {
+            RememberedTileSource(ZoomableImageSource.SubSamplingDelegate(
+                recoveringMangaTileSource(tiles.source, owner),
+                tiles.imageOptions,
+            ))
         }
-        return resolved.copy(delegate = leased?.delegate ?: tiles)
+        return resolved.copy(delegate = recovered.delegate)
     }
+}
+
+/** 本地/content source 不需要在线租约，也必须覆盖区域解码失败。 */
+internal fun recoveringMangaTileSource(
+    source: SubSamplingImageSource,
+    owner: MangaImageFileOwner,
+): SubSamplingImageSource {
+    val borrowed = owner.borrowForTiles()
+    val leased = if (borrowed == null) source else {
+        val (file, lease) = borrowed
+        SubSamplingImageSource.file(file.toOkioPath(), source.preview) {
+            try { source.close() } finally { lease.close() }
+        }
+    }
+    return RecoveringRegionImageSource(leased, owner::onRegionDecodeFailed)
 }
 
 /** 正常退出由瓦片解码器关闭；未提交的组合尚无解码器，需要回收已创建的租约。 */

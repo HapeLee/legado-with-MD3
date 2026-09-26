@@ -138,10 +138,11 @@ class CacheDownloadQueue {
 
     fun next(bookUrl: String, runningIndices: Set<Int>): CacheDownloadCandidate? {
         while (indices.isNotEmpty()) {
-            val index = indices.first()
+            // 再次请求正在执行的章节必须等完成后复核，不能被调度器吞掉。
+            val index = indices.firstOrNull { it !in runningIndices } ?: break
             indices.remove(index)
             // indices 为显式排队：即使 range 上有 remove 孔也要出队
-            if (index in runningIndices || emittedIndices.contains(index)) continue
+            if (emittedIndices.contains(index)) continue
             emittedIndices.add(index)
             return CacheDownloadCandidate(bookUrl, index)
         }
@@ -152,9 +153,12 @@ class CacheDownloadQueue {
                 val index = cursor.next++
                 if (
                     removedIndices.contains(index) ||
-                    emittedIndices.contains(index) ||
-                    index in runningIndices
+                    emittedIndices.contains(index)
                 ) {
+                    continue
+                }
+                if (index in runningIndices) {
+                    indices.add(index)
                     continue
                 }
                 emittedIndices.add(index)
@@ -164,6 +168,14 @@ class CacheDownloadQueue {
         }
         return null
     }
+
+    fun hasLaunchableChapter(runningIndices: Set<Int>): Boolean =
+        indices.any { it !in runningIndices && !emittedIndices.contains(it) } ||
+            ranges.any { cursor ->
+                (cursor.next..cursor.end).any {
+                    it !in runningIndices && !removedIndices.contains(it) && !emittedIndices.contains(it)
+                }
+            }
 
     fun removeChapter(index: Int): Boolean {
         val removed = indices.remove(index) || isWaiting(index)
