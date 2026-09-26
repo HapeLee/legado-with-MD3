@@ -21,6 +21,16 @@ internal data class MangaPageSlot(
 
 internal enum class MangaPageSlice { FULL, LEFT, RIGHT }
 
+/** 尺寸重排优先保留完整 spread 身份，包括同页的左右半页；身份失效才按原图页定位。 */
+internal fun mangaSpreadReconcileTarget(
+    spreads: List<MangaPageSpread>,
+    itemIndex: Int,
+    previousKey: String?
+): Int {
+    val retained = spreads.indexOfFirst { it.key == previousKey }
+    return if (retained >= 0) retained else spreads.indexOfFirst { itemIndex in it }
+}
+
 internal fun buildMangaSpreads(
     items: List<MangaReaderItemUi>,
     doublePage: Boolean,

@@ -2,18 +2,21 @@ package io.legado.app.help.book
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.Closeable
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
-import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** BookHelp 图片文件的发布边界；临时文件永远不作为可读图片暴露。 */
-internal class BookImageFileStore(private val validate: (File) -> Boolean) {
+internal class BookImageFileStore(
+    private val readAccessTime: (File) -> Long = File::lastModified,
+    private val validate: (File) -> Boolean,
+) {
     companion object {
         const val ONLINE_MARKER_DIRECTORY = ".online"
         const val DOWNLOAD_INDEX_DIRECTORY = ".downloads"
@@ -22,6 +25,13 @@ internal class BookImageFileStore(private val validate: (File) -> Boolean) {
         val mutex = Mutex()
         var users = 0
     }
+
+    private data class OnlineCandidate(
+        val file: File,
+        val marker: File,
+        val accessTime: Long,
+        val size: Long
+    )
 
     private val entries = mutableMapOf<String, Entry>()
     private val evictionLock = Any()
@@ -107,17 +117,20 @@ internal class BookImageFileStore(private val validate: (File) -> Boolean) {
         val candidates = root.walkTopDown().filter {
             it.isFile && it.parentFile?.name == ONLINE_MARKER_DIRECTORY
         }
-            .map { marker -> File(requireNotNull(marker.parentFile).parentFile, marker.name) to marker }
-            .filter { (file, _) -> !isExplicitDownload(file) }
-            .toList().sortedBy { (_, marker) -> marker.lastModified() }
-        var total = candidates.sumOf { (file, _) -> file.length() }
-        for ((file, marker) in candidates) {
+            .map { marker ->
+                val file = File(requireNotNull(marker.parentFile).parentFile, marker.name)
+                // touch/下载可以并发修改文件；比较器只能读取本次枚举的固定值。
+                OnlineCandidate(file, marker, readAccessTime(marker), file.length())
+            }
+            .filter { !isExplicitDownload(it.file) }
+            .toList().sortedBy { it.accessTime }
+        var total = candidates.sumOf { it.size }
+        for ((file, marker, _, size) in candidates) {
             if (!marker.isFile || isExplicitDownload(file)) {
-                total -= file.length()
+                total -= size
                 continue
             }
             if (total <= maxBytes && file.exists()) continue
-            val size = file.length()
             if (deleteIfIdle(file) {
                     // 下载可能已在枚举之后升级保留用途，必须在删除前复核。
                     if (!marker.isFile || isExplicitDownload(file)) false

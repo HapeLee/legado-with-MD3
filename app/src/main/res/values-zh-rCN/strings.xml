@@ -3285,7 +3285,7 @@
     <string name="manga_reader_right_to_left">从右到左</string>
     <string name="manga_reader_top_to_bottom">从上到下</string>
     <string name="manga_reader_side_padding">条漫侧边留白</string>
-    <string name="manga_reader_preload_pages">预加载页数</string>
+    <string name="manga_reader_preload_chapter">预加载当前章图片</string>
     <string name="manga_reader_red">红</string>
     <string name="manga_reader_green">绿</string>
     <string name="manga_reader_blue">蓝</string>

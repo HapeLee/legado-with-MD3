@@ -37,10 +37,9 @@ import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isWifiConnect
 import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -50,21 +49,21 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.apache.commons.text.similarity.JaccardSimilarity
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
+import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.Closeable
 import java.io.InputStream
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.zip.ZipFile
 import kotlin.math.abs
 import kotlin.math.max
@@ -80,10 +79,8 @@ object BookHelp {
     private const val cacheFolderName = "book_cache"
     private const val cacheImageFolderName = "images"
     private const val cacheEpubFolderName = "epub"
-    private val imageFiles = BookImageFileStore(::checkImage)
-    private val imageDownloadSlots = Semaphore(2)
-    private val imageDecodeSlots = Semaphore(1)
-    private const val ONLINE_IMAGE_BUDGET = 256L * 1024 * 1024
+    private val imageFiles = BookImageFileStore(validate = ::checkImage)
+    private const val ONLINE_IMAGE_BUDGET = 1000L * 1024 * 1024
     private val imageCleanupScope = CoroutineScope(SupervisorJob() + IO)
     private val imageCleanupRequests = Channel<Unit>(Channel.CONFLATED)
     private val pendingImageCacheMoves = ConcurrentHashMap<File, File>()
@@ -94,6 +91,11 @@ object BookHelp {
         imageCleanupScope.launch {
             for (request in imageCleanupRequests) {
                 try {
+                    // 合并一批预取/预览/瓦片租约变化，避免每次释放都重新遍历缓存。
+                    kotlinx.coroutines.delay(250)
+                    while (imageCleanupRequests.tryReceive().isSuccess) {
+                        // 当前批次处理全部已到达的请求。
+                    }
                     pendingImageCacheMoves.forEach { (source, target) ->
                         if (source.exists() && imageFiles.moveIfIdle(source, target, FileUtils::move)) {
                             pendingImageCacheMoves.remove(source, target)
@@ -103,7 +105,9 @@ object BookHelp {
                         }
                     }
                     imageFiles.trimOnlineCache(File(cachePath), ONLINE_IMAGE_BUDGET)
-                } catch (error: IOException) {
+                } catch (error: kotlinx.coroutines.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
                     AppLog.put("在线漫画缓存清理失败", error)
                 }
             }
@@ -432,42 +436,33 @@ object BookHelp {
                 }
                 onDownload()
                 val context = currentCoroutineContext()
-                imageDownloadSlots.acquire()
-                try {
-                    val analyzeUrl = AnalyzeUrl(src, source = bookSource, coroutineContext = context)
-                    if (onlineOnly && loadOnlyWifi && !appCtx.isWifiConnect &&
-                        !analyzeUrl.urlNoQuery.startsWith("data:", true)
-                    ) throw IOException("WiFi not available, loadOnlyWifi enabled")
-                    // 在首次发布前登记。历史未分类文件仍保守保留，下载则升级为保留文件。
-                    if (!onlineOnly) imageFiles.setOnline(image, false)
-                    else if (!image.exists()) imageFiles.setOnline(image, true)
-                    if (ImageUtils.skipDecode(bookSource, isCover = false)) {
-                        imageInputStream(analyzeUrl, src, onlineOnly).use { input ->
+                val analyzeUrl = AnalyzeUrl(src, source = bookSource, coroutineContext = context)
+                if (onlineOnly && loadOnlyWifi && !appCtx.isWifiConnect &&
+                    !analyzeUrl.urlNoQuery.startsWith("data:", true)
+                ) throw IOException("WiFi not available, loadOnlyWifi enabled")
+                // 同文件获取互斥，跨图片并发只遵循书源自身的限流配置。
+                if (!onlineOnly) imageFiles.setOnline(image, false)
+                else if (!image.exists()) imageFiles.setOnline(image, true)
+                if (ImageUtils.skipDecode(bookSource, isCover = false)) {
+                    imageInputStream(analyzeUrl, src, onlineOnly).use { input ->
+                        imageFiles.write(image, input) { context.ensureActive() }
+                    }
+                    true
+                } else {
+                    val bytes =
+                        imageInputStream(analyzeUrl, src, onlineOnly).use(InputStream::readBytes)
+                    val decoded = runScriptWithContext {
+                        ImageUtils.decode(src, bytes, isCover = false, bookSource, book)
+                    }
+                    if (decoded == null) {
+                        AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载失败 解码为空")
+                        false
+                    } else {
+                        decoded.inputStream().use { input ->
                             imageFiles.write(image, input) { context.ensureActive() }
                         }
                         true
-                    } else {
-                        imageDecodeSlots.acquire()
-                        try {
-                            val bytes = imageInputStream(analyzeUrl, src, onlineOnly).use(InputStream::readBytes)
-                            val decoded = runScriptWithContext {
-                                ImageUtils.decode(src, bytes, isCover = false, bookSource, book)
-                            }
-                            if (decoded == null) {
-                                AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载失败 解码为空")
-                                false
-                            } else {
-                                decoded.inputStream().use { input ->
-                                    imageFiles.write(image, input) { context.ensureActive() }
-                                }
-                                true
-                            }
-                        } finally {
-                            imageDecodeSlots.release()
-                        }
                     }
-                } finally {
-                    imageDownloadSlots.release()
                 }
             }
         } catch (e: Exception) {
@@ -501,7 +496,7 @@ object BookHelp {
             if (!saveImage(bookSource, book, src, onlineOnly = true, loadOnlyWifi = loadOnlyWifi, onDownload = onDownload)) {
                 throw IOException("图片获取失败")
             }
-            imageFiles.trimOnlineCache(File(cachePath), ONLINE_IMAGE_BUDGET)
+            imageCleanupRequests.trySend(Unit)
             return file to lease
         } catch (error: Throwable) {
             lease.close()

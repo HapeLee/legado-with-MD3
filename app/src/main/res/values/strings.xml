@@ -3289,7 +3289,7 @@
     <string name="manga_reader_right_to_left">Right to left</string>
     <string name="manga_reader_top_to_bottom">Top to bottom</string>
     <string name="manga_reader_side_padding">Webtoon side padding</string>
-    <string name="manga_reader_preload_pages">Preload pages</string>
+    <string name="manga_reader_preload_chapter">Preload current chapter images</string>
     <string name="manga_reader_red">Red</string>
     <string name="manga_reader_green">Green</string>
     <string name="manga_reader_blue">Blue</string>

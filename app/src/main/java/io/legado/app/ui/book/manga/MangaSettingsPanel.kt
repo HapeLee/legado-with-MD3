@@ -459,12 +459,16 @@ private fun ReaderSettingsContent(
             )
         }
     }
-    SettingSlider(
-        stringResource(R.string.manga_reader_preload_pages),
-        settings.preDownloadCount,
-        0..10
+    SettingSwitch(
+        stringResource(R.string.manga_reader_preload_chapter),
+        settings.preDownloadCount > 0,
     ) {
-        onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.PRE_DOWNLOAD, it))
+        onIntent(
+            MangaReaderIntent.UpdateSetting(
+                MangaReaderSettingKey.PRE_DOWNLOAD,
+                if (it) 10 else 0
+            )
+        )
     }
     SettingSwitch(
         stringResource(R.string.manga_reader_auto_offline_cache),

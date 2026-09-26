@@ -97,6 +97,30 @@ class BookImageFileStoreTest {
     }
 
     @Test
+    fun `eviction snapshots access times once even while markers are touched during sorting`() =
+        withDirectory { root ->
+            val files =
+                (0..79).map { index -> root.resolve("page$index.jpg").apply { writeBytes(image) } }
+            files.forEach { store.setOnline(it, true) }
+            val reads = mutableMapOf<String, Int>()
+            val concurrentStore = BookImageFileStore(readAccessTime = { marker ->
+                val count = reads.getOrDefault(marker.name, 0) + 1
+                reads[marker.name] = count
+                // 旧实现比较器反复读文件属性，本检查能确定性暴露该问题。
+                check(count == 1) { "Access time read again during sorting" }
+                val snapshot = marker.name.removePrefix("page").removeSuffix(".jpg").toLong()
+                marker.setLastModified(100_000L - snapshot)
+                snapshot
+            }) { true }
+            concurrentStore.trimOnlineCache(root, image.size * 3L)
+            assertEquals(80, reads.size)
+            assertTrue(reads.values.all { it == 1 })
+            assertEquals(
+                files.takeLast(3).map { it.name },
+                files.filter { it.exists() }.map { it.name })
+        }
+
+    @Test
     fun `online budget evicts least recently used files but preserves history and retained files`() = withDirectory { root ->
         val old = root.resolve("old.jpg").apply { writeBytes(image) }
         val recent = root.resolve("recent.jpg").apply { writeBytes(image) }

@@ -30,6 +30,9 @@ object CoverExtras {
     /** 分页原图请求的生命周期；存在时先获取 BookHelp 文件，再交给 Coil 解码。 */
     val MangaFileOwner = Extras.Key<MangaImageFileOwner?>(null)
     val MangaFileTransferStarted = Extras.Key<(() -> Unit)?>(null)
+    val MangaAspectRatio = Extras.Key<((Float) -> Unit)?>(null)
+    val MangaWebtoon = Extras.Key(false)
+    val MangaDataPrefetch = Extras.Key(false)
 
     /**
      * CoverInterceptor 在把 request.data 改写为最终解析 URL 之前，把书架/详情页

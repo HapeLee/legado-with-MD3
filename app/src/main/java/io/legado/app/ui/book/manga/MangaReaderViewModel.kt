@@ -274,15 +274,15 @@ class MangaReaderViewModel(
             is MangaReaderIntent.RetryChapter -> executeSession(
                 MangaSessionCommand.RetryChapter(intent.chapterIndex)
             )
-            is MangaReaderIntent.PageLoadStarted -> markPageLoading(intent.key, intent.force)
+            is MangaReaderIntent.PageLoadStarted -> markPageLoading(intent.requestId, intent.force)
 
             is MangaReaderIntent.PageLoadSucceeded -> updatePageLoadState(
-                intent.key,
+                intent.requestId,
                 MangaPageLoadState.Ready,
             )
 
             is MangaReaderIntent.PageLoadFailed -> updatePageLoadState(
-                intent.key,
+                intent.requestId,
                 MangaPageLoadState.Failed(intent.message),
             )
 
@@ -1229,24 +1229,11 @@ class MangaReaderViewModel(
     }
 
     /**
-     * 置为 Loading，但保留已有百分比：预取请求与展示请求的 onStart 会先后到达，
+     * 置为 Loading，但保留已有百分比：同图的多个展示请求 onStart 会先后到达，
      * 直接塞 [MangaPageLoadState.Loading] 会把已经走到的进度清回“不确定”。
      */
-    private fun markPageLoading(key: String, force: Boolean = false) {
-        _uiState.update { state ->
-            val index = state.pages.indexOfFirst { it.key == key }
-            val page =
-                state.pages.getOrNull(index) as? MangaReaderItemUi.Page ?: return@update state
-            if (!force && page.loadState == MangaPageLoadState.Ready) return@update state
-            val progress = (page.loadState as? MangaPageLoadState.Loading)?.progress
-            val next = MangaPageLoadState.Loading(progress)
-            if (page.loadState == next) return@update state
-            state.copy(
-                pages = state.pages.mapIndexed { itemIndex, item ->
-                    if (itemIndex == index) page.copy(loadState = next) else item
-                }.toImmutableList(),
-            )
-        }
+    private fun markPageLoading(requestId: MangaPageRequestId, force: Boolean = false) {
+        updatePageLoadState(requestId, MangaPageLoadState.Loading(), force)
     }
 
     /**
@@ -1255,8 +1242,13 @@ class MangaReaderViewModel(
      */
     private fun applyPageProgress(imageUrl: String, percentage: Int) {
         _uiState.update { state ->
-            val from = state.currentItemIndex - PAGE_PROGRESS_WINDOW
-            val to = state.currentItemIndex + PAGE_PROGRESS_WINDOW
+            val anchor = mangaImagePrefetchIndex(
+                state.settings.scrollMode,
+                state.currentItemIndex,
+                state.footerItemIndex
+            )
+            val from = anchor - PAGE_PROGRESS_WINDOW
+            val to = anchor + PAGE_PROGRESS_WINDOW
             var changed = false
             val pages = state.pages.mapIndexed { itemIndex, item ->
                 if (itemIndex < from || itemIndex > to) {
@@ -1276,20 +1268,20 @@ class MangaReaderViewModel(
         }
     }
 
-    private fun updatePageLoadState(key: String, loadState: MangaPageLoadState) {
+    private fun updatePageLoadState(
+        requestId: MangaPageRequestId,
+        loadState: MangaPageLoadState,
+        force: Boolean = false,
+    ) {
         _uiState.update { state ->
-            val index = state.pages.indexOfFirst { it.key == key }
+            val index = state.pages.indexOfFirst { it.key == requestId.key }
             val page =
                 state.pages.getOrNull(index) as? MangaReaderItemUi.Page ?: return@update state
-            // 已就绪的页不被重新入队/预取触发 onStart 而降级回 Loading，避免已显示的图被
-            // 遮罩/转圈闪一下；重试走 retryPage 显式置回 Queued，不受此限制。
-            if (page.loadState == MangaPageLoadState.Ready) return@update state
-            if (page.loadState == loadState) return@update state
-            state.copy(
-                pages = state.pages.mapIndexed { itemIndex, item ->
-                    if (itemIndex == index) page.copy(loadState = loadState) else item
-                }.toImmutableList(),
-            )
+            val next = page.reduceImageLoad(requestId, loadState, force)
+            if (next === page) return@update state
+            state.copy(pages = state.pages.mapIndexed { itemIndex, item ->
+                if (itemIndex == index) next else item
+            }.toImmutableList())
         }
     }
 
