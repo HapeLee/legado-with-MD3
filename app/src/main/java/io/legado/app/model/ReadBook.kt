@@ -781,13 +781,24 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     fun uploadProgress(toast: Boolean = false, successAction: (() -> Unit)? = null) {
-        book?.let {
+        book?.let { uploadingBook ->
             launch(IO) {
-                AppWebDav.uploadBookProgress(it, toast) {
+                AppWebDav.uploadBookProgress(uploadingBook, toast) {
+                    ensureActive()
+                    onProgressUploaded(uploadingBook)
                     successAction?.invoke()
                 }
-                ensureActive()
-                it.update()
+            }
+        }
+    }
+
+    /** 上传期间可能重入阅读器并替换 Book 实例，完成时只能保存上传实际修改的同步时间。 */
+    internal fun onProgressUploaded(uploadedBook: Book) {
+        val syncTime = uploadedBook.syncTime
+        appDb.bookDao.upSyncTime(uploadedBook.bookUrl, syncTime)
+        synchronized(this) {
+            book?.takeIf { it.bookUrl == uploadedBook.bookUrl }?.let { currentBook ->
+                currentBook.syncTime = maxOf(currentBook.syncTime, syncTime)
             }
         }
     }
@@ -814,8 +825,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             ) {
                 // 服务器没有进度或者进度比服务器快，上传现有进度
                 Coroutine.async {
-                    AppWebDav.uploadBookProgress(book, onSuccess = uploadSuccessAction)
-                    book.update()
+                    AppWebDav.uploadBookProgress(book) {
+                        onProgressUploaded(book)
+                        uploadSuccessAction?.invoke()
+                    }
                 }
             } else if (progress.durChapterIndex > book.durChapterIndex ||
                 progress.durChapterPos > book.durChapterPos
