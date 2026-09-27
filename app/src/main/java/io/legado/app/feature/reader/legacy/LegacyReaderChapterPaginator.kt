@@ -127,11 +127,18 @@ object LegacyReaderChapterPaginator {
         val tracing = ReaderPerfTrace.isEnabled()
         val preparationStartNs = if (tracing) System.nanoTime() else 0L
         val measureMetrics = if (tracing) ReaderChapterMeasureMetrics(System::nanoTime) else null
-        val imageLayoutMode = when (book.getImageStyle()?.uppercase()) {
+        val bookImageStyle = book.getImageStyle()?.uppercase()
+        val imageLayoutMode = when (bookImageStyle) {
             Book.imgStyleText -> ReaderImageLayoutMode.INLINE
             Book.imgStyleFull -> ReaderImageLayoutMode.FULL_WIDTH
             Book.imgStyleSingle -> ReaderImageLayoutMode.SINGLE_PAGE
             else -> ReaderImageLayoutMode.AUTO
+        }
+        // 旧 `setTypeImage` 的整图对齐也认书级 `LEFT`/`RIGHT`（单图 style 缺失时的回落）。
+        val imageAlignment = when (bookImageStyle) {
+            "LEFT" -> ReaderTextAlignment.START
+            "RIGHT" -> ReaderTextAlignment.END
+            else -> null
         }
         val singleImage = imageLayoutMode == ReaderImageLayoutMode.SINGLE_PAGE
         val layoutSource = source.withTitleVisibility(
@@ -240,6 +247,7 @@ object LegacyReaderChapterPaginator {
                 imagePageBreakAfter = singleImage,
                 titlePageBreakAfter = singleImage && content.textList.isNotEmpty(),
                 imageLayoutMode = imageLayoutMode,
+                imageAlignment = imageAlignment,
                 excludeActionImages = paginationStyle.excludeActionImages,
                 imageAvailableWidthPx = (
                     viewportWidthPx / paginationStyle.columnCount(viewportWidthPx, viewportHeightPx) -

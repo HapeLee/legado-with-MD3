@@ -1892,7 +1892,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
         }
 
         is ReaderElement.Image -> cachedImage(e)?.let { bitmap ->
-            ReaderImageDrawLayout.fitCenter(e.bounds, bitmap.width, bitmap.height)?.let { layout ->
+            ReaderImageDrawLayout.forElement(e, bitmap.width, bitmap.height)?.let { layout ->
                 drawImage(
                     image = bitmap.asImageBitmap(),
                     dstOffset = IntOffset(layout.leftPx.roundToInt(), layout.topPx.roundToInt()),
@@ -2336,7 +2336,7 @@ private fun ReaderPageCanvas(
                 native.drawText(e.value, e.bounds.left, e.baselinePx, paint)
             }
             is ReaderElement.Image -> images[e]?.let { bitmap ->
-                ReaderImageDrawLayout.fitCenter(e.bounds, bitmap.width, bitmap.height)?.let { layout ->
+                ReaderImageDrawLayout.forElement(e, bitmap.width, bitmap.height)?.let { layout ->
                     drawImage(
                         image = bitmap.asImageBitmap(),
                         dstOffset = IntOffset(layout.leftPx.roundToInt(), layout.topPx.roundToInt()),

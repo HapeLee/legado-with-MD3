@@ -323,6 +323,41 @@ class ReaderPaginatorTest {
         assertEquals("甲\uFFFC乙丙", page.text)
     }
 
+    /**
+     * 旧 `setTypeHtml` 的行末特例：图片是本行最后一项时，绘制宽改用 `measureText("\uFFFC")`
+     * （[ReaderMeasuredInlineItem.Image.lineFinalWidthPx]），断行推进仍按 span advance——行末会像
+     * 旧版一样留出空档；行中的图则用 span advance。
+     */
+    @Test
+    fun htmlInlineImageUsesTheObjectReplacementWidthOnlyAtTheLineEnd() {
+        fun drawnWidth(items: List<ReaderMeasuredInlineItem>): Float =
+            ReaderPaginator.paginateBlocks(
+                listOf(
+                    ReaderMeasuredBlock.InlineParagraph(
+                        items = items,
+                        indentCharacters = 0,
+                        alignment = ReaderTextAlignment.START,
+                        lineHeightPx = 20f,
+                        baselineOffsetPx = 15f,
+                        baseTextSizePx = 10f,
+                    )
+                ),
+                config.copy(viewportWidthPx = 100, viewportHeightPx = 100),
+            ).single().elements.filterIsInstance<ReaderElement.Image>().single().bounds.width
+
+        val htmlImage = ReaderMeasuredInlineItem.Image("icon", 40f, 24f, 0, lineFinalWidthPx = 10f)
+        assertEquals(
+            10f,
+            drawnWidth(listOf(ReaderMeasuredInlineItem.Text("甲", 10f, style, 0), htmlImage)),
+            0.01f,
+        )
+        assertEquals(
+            40f,
+            drawnWidth(listOf(htmlImage, ReaderMeasuredInlineItem.Text("甲", 10f, style, 1))),
+            0.01f,
+        )
+    }
+
     @Test
     fun largerInlineFontExpandsLineAndBaseline() {
         val large = style.copy(fontSizePx = 20f)

@@ -1,14 +1,11 @@
 package io.legado.app.feature.reader.platform
 
-import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
-import android.text.Html
-import android.text.Spanned
 import android.text.Layout
-import android.text.style.AlignmentSpan
+import android.text.Spanned
 import android.text.style.AbsoluteSizeSpan
+import android.text.style.AlignmentSpan
 import android.text.style.BackgroundColorSpan
 import android.text.style.BulletSpan
 import android.text.style.ForegroundColorSpan
@@ -16,22 +13,23 @@ import android.text.style.ImageSpan
 import android.text.style.LeadingMarginSpan
 import android.text.style.QuoteSpan
 import android.text.style.RelativeSizeSpan
-import android.text.style.StyleSpan
 import android.text.style.StrikethroughSpan
+import android.text.style.StyleSpan
 import android.text.style.SubscriptSpan
 import android.text.style.SuperscriptSpan
 import android.text.style.TypefaceSpan
-import android.text.style.UnderlineSpan
 import android.text.style.URLSpan
+import android.text.style.UnderlineSpan
 import androidx.core.text.HtmlCompat
-import io.legado.app.feature.reader.core.layout.ReaderHtmlSourceResolver
 import io.legado.app.feature.reader.core.layout.ReaderHtmlParagraph
-import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
+import io.legado.app.feature.reader.core.layout.ReaderHtmlSourceResolver
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecoration
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
+import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
-import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
+import io.legado.app.feature.reader.core.source.ReaderHtmlImageSpanExtent
 import io.legado.app.feature.reader.core.source.ReaderHtmlSemanticTextResolver
+import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
 
 object AndroidReaderHtmlSemanticTextResolver : ReaderHtmlSemanticTextResolver {
     override fun resolve(html: String): String = parseReaderHtml(html).toString()
@@ -113,7 +111,13 @@ class AndroidReaderHtmlSourceResolver(
             }
             val image = text.getSpans(index, index + 1, ImageSpan::class.java).firstOrNull()
             if (image != null) {
-                image.source?.let { paragraph += ReaderChapterInlineSource.Image(it, position) }
+                image.source?.let {
+                    paragraph += ReaderChapterInlineSource.Image(
+                        source = it,
+                        chapterPosition = position,
+                        htmlSpanExtent = image.htmlSpanExtent(),
+                    )
+                }
                 index++
                 position++
                 continue
@@ -171,8 +175,22 @@ private fun Layout.Alignment.toReaderAlignment(): ReaderTextAlignment = when (th
 private fun parseReaderHtml(html: String): Spanned = HtmlCompat.fromHtml(
     html,
     HtmlCompat.FROM_HTML_MODE_COMPACT,
-    Html.ImageGetter {
-        ColorDrawable(Color.TRANSPARENT).apply { setBounds(0, 0, 1, 1) }
-    },
+    // 与旧 `setTypeHtml` 的 `parseAsHtml(FROM_HTML_MODE_COMPACT)` 完全一致：不给 ImageGetter，
+    // 让框架用系统 fallback 图标的固有尺寸生成 ImageSpan——旧版行内图的占位宽/行盒高就取自它。
+    null,
     null,
 )
+
+/**
+ * 旧 `setTypeHtml` 的图片占位尺寸：span 的宽（advance）与它给静态布局行盒带来的高。
+ * 框架给 fallback drawable 设的就是固有边界，因此这里读 bounds 与旧版 StaticLayout 量到的一致。
+ * 资源解析失败（如宿主无系统 drawable）时返回 null，回落占位字规则。
+ */
+private fun ImageSpan.htmlSpanExtent(): ReaderHtmlImageSpanExtent? {
+    val bounds = runCatching { drawable.bounds }.getOrNull() ?: return null
+    if (bounds.width() <= 0 || bounds.height() <= 0) return null
+    return ReaderHtmlImageSpanExtent(
+        widthPx = bounds.width().toFloat(),
+        heightPx = bounds.height().toFloat(),
+    )
+}

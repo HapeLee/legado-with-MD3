@@ -38,9 +38,30 @@ sealed interface ReaderChapterInlineSource {
         override val chapterPosition: Int,
         val style: ReaderInlineSourceStyle = ReaderInlineSourceStyle(),
     ) : ReaderChapterInlineSource
-    data class Image(val source: String, override val chapterPosition: Int) : ReaderChapterInlineSource
+    data class Image(
+        val source: String,
+        override val chapterPosition: Int,
+        /**
+         * 只有 HTML 段落（旧 `setTypeHtml`）的图片有：ImageSpan 在 `StaticLayout` 里的占位尺寸。
+         * 旧实现的行内图**宽**取 span 的 advance、**行盒高**取 span 的 ascent/descent，都不是
+         * 占位字 advance；纯文本路径（`getTextChapter`）为 `null`，走占位字规则。
+         */
+        val htmlSpanExtent: ReaderHtmlImageSpanExtent? = null,
+    ) : ReaderChapterInlineSource
     data class BlankLine(override val chapterPosition: Int) : ReaderChapterInlineSource
 }
+
+/**
+ * 旧 `setTypeHtml` 里 `ImageSpan` 的占位尺寸。
+ *
+ * - [widthPx]：`getPrimaryHorizontal(i + 1) - getPrimaryHorizontal(i)`，即 span 的 advance
+ *   （没有 ImageGetter 时框架用系统 fallback 图标的固有宽）。
+ * - [heightPx]：该 span 让静态布局行盒至少长到的高度（`getSize` 里 `ascent = -bounds.bottom`）。
+ *
+ * 旧版行内图的绘制几何是「宽 = 该 advance，高 = 宽 ÷ 位图宽 × 位图高，在行盒内居中」，行盒由
+ * [heightPx] 撑开；新 core 用同样两个数就能复刻。
+ */
+data class ReaderHtmlImageSpanExtent(val widthPx: Float, val heightPx: Float)
 
 data class ReaderInlineSourceStyle(
     val colorArgb: Int? = null,

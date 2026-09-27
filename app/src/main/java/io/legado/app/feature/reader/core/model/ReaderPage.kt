@@ -117,6 +117,15 @@ sealed interface ReaderElement {
         val source: String,
         val action: String?,
         val chapterPosition: Int = 0,
+        /**
+         * 文字嵌入（行内图），对照旧 View `TextChapterLayout` 的 `ImageColumn`：**宽恒为一个
+         * 字符格**，高按实际加载到的位图长宽比换算，竖直居中于行盒且允许高于当前行。
+         *
+         * [bounds] 里的高是测量期由 `imageDimensionsResolver` 给出的长宽比，只用于行盒预留；
+         * 绘制期必须按位图重算（见 `ReaderImageDrawLayout.forElement`），否则测量期长宽比与
+         * 位图不一致时 `fitCenter` 会在格内留白、把图片画小。
+         */
+        val inline: Boolean = false,
     ) : ReaderElement
 
     data class Review(
