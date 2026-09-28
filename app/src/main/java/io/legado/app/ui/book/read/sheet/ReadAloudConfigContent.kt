@@ -23,6 +23,7 @@ import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.readaloud.ReadAloudContentSplitSetting
 import io.legado.app.domain.model.readaloud.ReadAloudSplitSymbol
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
+import io.legado.app.feature.readaloud.overlay.ReadAloudOverlayPermissionRoute
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerIntent
@@ -118,6 +119,7 @@ fun ReadAloudConfigContent(
                         },
                     )
                     if (state.showReadAloudCapsule) {
+                        ReadAloudOverlayPermissionRoute()
                         TinySwitchSettingItem(
                             title = stringResource(R.string.capsule_auto_collapse),
                             description = stringResource(R.string.capsule_auto_collapse_summary),

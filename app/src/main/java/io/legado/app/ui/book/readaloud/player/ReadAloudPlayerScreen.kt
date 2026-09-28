@@ -88,7 +88,9 @@ import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallAnimatedButton
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.image.cover.BookCoverImage
+import io.legado.app.core.ui.player.PlayerMorphCover
+import io.legado.app.core.ui.player.PlayerMorphAppearance
+import io.legado.app.core.ui.player.TrackPlayerMorphCoverPage
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.player.AnimatedPlayPauseButton
 import io.legado.app.ui.widget.components.player.PlayerAdjustmentSlider
@@ -102,7 +104,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurBlendMode
-import top.yukonga.miuix.kmp.blur.BlurColors
+import top.yukonga.miuix.kmp.blur.BlurDefaults
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import kotlin.math.abs
@@ -119,6 +121,7 @@ fun ReadAloudPlayerScreenContent(
     onOpenConfig: () -> Unit,
 ) {
     val horizontalPagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
+    TrackPlayerMorphCoverPage(horizontalPagerState)
     var isTextPageUserScrolling by remember { mutableStateOf(false) }
     val pagerHazeState = remember { HazeState() }
     val hazeEnabled =
@@ -126,13 +129,19 @@ fun ReadAloudPlayerScreenContent(
     val textBackdrop = rememberBlurBackdrop()
     val flowingLightActive = state.bgMode == ReadAloudBgMode.FlowingLight
     val flowingTextModifier = if (flowingLightActive && textBackdrop != null) {
-        Modifier.textureBlur(
-            backdrop = textBackdrop,
-            shape = RoundedCornerShape(4.dp),
-            blurRadius = 150f,
-            colors = BlurColors(blendColors = flowingTextBlend()),
-            contentBlendMode = ComposeBlendMode.DstIn,
-        )
+        // textureBlur 每次调用都会新建内部 effects lambda，元素 equals 必然失败，
+        // 节点会对每次重组重跑一遍效果管线。这里用 remembered 的颜色与 Modifier，
+        // 让所有引用它的文本共用同一个元素实例，重组时直接命中 equals 短路。
+        val flowingTextColors = BlurDefaults.blurColors(blendColors = flowingTextBlend())
+        remember(textBackdrop, flowingTextColors) {
+            Modifier.textureBlur(
+                backdrop = textBackdrop,
+                shape = RoundedCornerShape(4.dp),
+                blurRadius = 150f,
+                colors = flowingTextColors,
+                contentBlendMode = ComposeBlendMode.DstIn,
+            )
+        }
     } else {
         Modifier
     }
@@ -167,6 +176,7 @@ fun ReadAloudPlayerScreenContent(
                     .fillMaxWidth()
                     .clip(RectangleShape)
                     .then(hazeModifier)
+                    // 只挡点击；纵向拖动留给 morph 宿主统一接管（见 ReadAloudPlayerMorphHost）。
                     .pointerInput(Unit) { detectTapGestures(onTap = {}) }
                     .windowInsetsPadding(WindowInsets.statusBars),
             ) {
@@ -432,15 +442,13 @@ private fun CoverPage(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.TopCenter,
         ) {
-            BookCoverImage(
-                name = state.bookName,
-                author = state.author,
-                path = state.coverPath,
-                sourceOrigin = state.sourceOrigin,
+            PlayerMorphCover(
+                appearance = PlayerMorphAppearance(
+                    state.bookName, state.author, state.coverPath, state.sourceOrigin, state.bgMode,
+                ),
                 modifier = Modifier
                     .fillMaxWidth(0.52f)
-                    .aspectRatio(5f / 7f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .aspectRatio(5f / 7f),
             )
         }
         AnimatedContent(

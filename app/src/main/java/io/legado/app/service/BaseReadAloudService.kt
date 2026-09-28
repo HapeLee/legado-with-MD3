@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -63,6 +64,9 @@ import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
 import io.legado.app.receiver.MediaButtonReceiver
 import io.legado.app.service.BaseReadAloudService.Companion.speechDrivingNavigation
+import io.legado.app.domain.gateway.PlaybackCapsuleGateway
+import io.legado.app.domain.model.PlaybackCapsuleSource
+import io.legado.app.service.readaloud.ReadAloudOverlayWindow
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.LogUtils
@@ -92,6 +96,8 @@ import splitties.systemservices.wifiManager
  */
 abstract class BaseReadAloudService : BaseService(),
     AudioManager.OnAudioFocusChangeListener {
+
+    private var capsuleOverlayWindow: ReadAloudOverlayWindow? = null
 
     companion object {
         @JvmStatic
@@ -283,6 +289,11 @@ abstract class BaseReadAloudService : BaseService(),
         stopRequested = false
         isRun = true
         pause = false
+        get<PlaybackCapsuleGateway>(PlaybackCapsuleGateway::class.java).setSessionAvailable(
+            PlaybackCapsuleSource.ReadAloud,
+            true
+        )
+        capsuleOverlayWindow = ReadAloudOverlayWindow(this)
         // 新朗读会话默认跟随当前显示页（用户手动翻页脱离后由阅读界面负责恢复）
         sessionStore.restoreReadAloudFollow()
         observeLiveBus()
@@ -324,7 +335,18 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        capsuleOverlayWindow?.onConfigurationChanged()
+    }
+
     override fun onDestroy() {
+        get<PlaybackCapsuleGateway>(PlaybackCapsuleGateway::class.java).setSessionAvailable(
+            PlaybackCapsuleSource.ReadAloud,
+            false
+        )
+        capsuleOverlayWindow?.close()
+        capsuleOverlayWindow = null
         ReadBook.upReadTime()
         super.onDestroy()
         prepareReadAloudGeneration++
@@ -667,6 +689,8 @@ abstract class BaseReadAloudService : BaseService(),
             val chapterLength = readerReadAloudChapter?.chapterLength ?: chapterPosition
             sessionStore.updatePlayback(
                 ReadAloudPlaybackInfo(
+                    chapterTitle = readerReadAloudChapter?.title.orEmpty(),
+                    chapterIndex = readerReadAloudChapter?.chapterIndex ?: -1,
                     chapterPosition = chapterPosition,
                     chapterLength = chapterLength.coerceAtLeast(1),
                     text = contentList.getOrNull(nowSpeak).orEmpty(),
@@ -840,6 +864,8 @@ abstract class BaseReadAloudService : BaseService(),
     private fun publishPlaybackInfo(cursor: ReadAloudPlaybackCursor) {
         val cue = playbackQueue.cues.getOrNull(cursor.cueIndex) ?: return
         sessionStore.updatePlayback(ReadAloudPlaybackInfo(
+            chapterTitle = readerReadAloudChapter?.title.orEmpty(),
+            chapterIndex = readerReadAloudChapter?.chapterIndex ?: -1,
             chapterPosition = cue.chapterStart + cursor.offset,
             chapterLength = playbackQueue.cues.lastOrNull()?.chapterEnd ?: cue.chapterEnd,
             text = cue.text,

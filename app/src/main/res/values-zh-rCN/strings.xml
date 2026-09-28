@@ -2945,7 +2945,7 @@
     <string name="clear_voice_binding">清除声音绑定</string>
     <string name="http_tts">HTTP TTS</string>
     <string name="show_read_aloud_capsule">显示朗读胶囊</string>
-    <string name="show_read_aloud_capsule_summary">朗读时在阅读页显示封面、暂停和关闭按钮</string>
+    <string name="show_read_aloud_capsule_summary">在应用内显示朗读控制，授权悬浮窗后可在其他应用上使用。</string>
     <string name="read_aloud_keep_on_exit">退出阅读时继续朗读</string>
     <string name="read_aloud_keep_on_exit_summary">关闭阅读界面后不停朗读，继续在后台播放</string>
     <string name="reset_read_aloud_capsule_position">重置朗读胶囊位置</string>
@@ -3418,4 +3418,11 @@
     <string name="bookshelf_conflict_migrate_done">已迁移到新的书源</string>
     <string name="bookshelf_conflict_resolve_failed">处理失败，请重试</string>
     <string name="bookshelf_conflict_toc_failed">获取目录失败，已取消迁移，请重试</string>
+    <string name="read_aloud_overlay_permission">允许胶囊显示在其他应用上层</string>
+    <string name="read_aloud_overlay_granted">已授权。朗读运行时可在桌面和其他应用上使用胶囊。</string>
+    <string name="read_aloud_overlay_required">授权后可在桌面和其他应用上使用胶囊，未授权不影响应用内胶囊。</string>
+    <string name="read_aloud_overlay_unavailable">此设备无法打开悬浮窗权限设置。</string>
+    <string name="home_capsule_restore_navigation">恢复导航栏</string>
+    <string name="home_capsule_expand_controls">展开播放控制</string>
+    <string name="home_capsule_chapter">第 %d 章</string>
 </resources>

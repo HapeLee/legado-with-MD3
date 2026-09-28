@@ -88,6 +88,8 @@ object MainNavigator {
             is MainRouteBookSourceDebug,
             is MainRouteRssSourceDebug -> backStack.add(route)
 
+            MainRouteReadAloudPlayer -> backStack.add(route)
+
             MainRouteHome -> {
                 backStack.clear()
                 backStack.add(MainRouteHome)
@@ -176,18 +178,6 @@ object MainNavigator {
 
             is MainRouteSearchContent -> {
                 backStack.add(route)
-            }
-
-            MainRouteReadAloudPlayer -> {
-                // 单例语义：已在栈上则回到那一层，避免重复按媒体键叠出多个播放界面
-                val existingPlayerIndex = backStack.indexOfLast { it is MainRouteReadAloudPlayer }
-                if (existingPlayerIndex >= 0) {
-                    while (backStack.lastIndex > existingPlayerIndex) {
-                        backStack.removeAt(backStack.lastIndex)
-                    }
-                } else {
-                    backStack.add(route)
-                }
             }
 
             is MainRouteSearch -> {

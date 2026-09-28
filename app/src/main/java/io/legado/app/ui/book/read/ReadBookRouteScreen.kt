@@ -158,7 +158,6 @@ fun ReadBookRouteScreen(
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
-    onOpenReadAloudPlayer: () -> Unit = {},
 ) {
     // 归因定界：与末尾 compose.screen.end 成对。若首帧 `Compose:recompose` 里出现
     // begin 之前的空档，说明那部分耗时在本屏之外（导航宿主 / 共享转场层）。
@@ -427,7 +426,6 @@ fun ReadBookRouteScreen(
                             }
                             ReadBookEffect.OpenTtsEnginesAndVoices -> onOpenTtsEnginesAndVoices()
                             ReadBookEffect.OpenTtsCache -> onOpenTtsCache()
-                            ReadBookEffect.OpenReadAloudPlayer -> onOpenReadAloudPlayer()
                             is ReadBookEffect.MenuSettingReplace -> {
                                 replaceLauncher.launch(
                                     ReplaceRuleActivity.startIntent(

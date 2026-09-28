@@ -2677,7 +2677,7 @@
     <string name="clear_voice_binding">清除聲音綁定</string>
     <string name="http_tts">HTTP TTS</string>
     <string name="show_read_aloud_capsule">顯示朗讀膠囊</string>
-    <string name="show_read_aloud_capsule_summary">朗讀時在閱讀頁顯示封面、暫停和關閉按鈕</string>
+    <string name="show_read_aloud_capsule_summary">在應用內顯示朗讀控制，授權懸浮視窗後可在其他應用程式上使用。</string>
     <string name="read_aloud_keep_on_exit">離開閱讀時繼續朗讀</string>
     <string name="read_aloud_keep_on_exit_summary">關閉閱讀介面後不停朗讀，繼續在背景播放</string>
     <string name="reset_read_aloud_capsule_position">重設朗讀膠囊位置</string>
@@ -2977,4 +2977,11 @@
     <string name="feature_bookmarks_no_matching_notes">找不到相關筆記</string>
     <string name="feature_bookmarks_no_notes">暫無筆記</string>
     <string name="feature_bookmarks_chapter_fallback">第 %1$d 章</string>
+    <string name="read_aloud_overlay_permission">允許膠囊顯示在其他應用程式上層</string>
+    <string name="read_aloud_overlay_granted">已授權。朗讀運行時可在桌面和其他應用程式上使用膠囊。</string>
+    <string name="read_aloud_overlay_required">授權後可在桌面和其他應用程式上使用膠囊，未授權不影響應用內膠囊。</string>
+    <string name="read_aloud_overlay_unavailable">此裝置無法開啟懸浮視窗權限設定。</string>
+    <string name="home_capsule_restore_navigation">恢復導覽列</string>
+    <string name="home_capsule_expand_controls">展開播放控制</string>
+    <string name="home_capsule_chapter">第 %d 章</string>
 </resources>

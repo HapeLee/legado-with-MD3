@@ -21,13 +21,14 @@ import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 fun AppTheme(
     configuration: AppUiConfiguration,
     darkTheme: Boolean = configuration.isDarkTheme,
+    applyBackground: Boolean = true,
     content: @Composable () -> Unit
 ) {
     CompositionLocalProvider(LocalAppUiConfiguration provides configuration) {
         if (LocalInspectionMode.current) {
-            AppThemePreview(darkTheme, content)
+            AppThemePreview(darkTheme, applyBackground, content)
         } else {
-            AppThemeActual(configuration, darkTheme, content)
+            AppThemeActual(configuration, darkTheme, applyBackground, content)
         }
     }
 }
@@ -36,6 +37,7 @@ fun AppTheme(
 @Composable
 private fun AppThemePreview(
     darkTheme: Boolean,
+    applyBackground: Boolean,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme()
@@ -54,6 +56,7 @@ private fun AppThemePreview(
         MaterialThemeWrapper(
             themeColors = themeColors,
             customFontFamily = null,
+            applyBackground = applyBackground,
             content = content
         )
     }
@@ -64,6 +67,7 @@ private fun AppThemePreview(
 private fun AppThemeActual(
     configuration: AppUiConfiguration,
     darkTheme: Boolean,
+    applyBackground: Boolean,
     content: @Composable () -> Unit
 ) {
     val appShellSettings = configuration.appShell
@@ -171,12 +175,14 @@ private fun AppThemeActual(
             MiuixThemeWrapper(
                 themeColors = themeColors,
                 customFontFamily = customFontFamily,
+                applyBackground = applyBackground,
                 content = content
             )
         } else {
             MaterialThemeWrapper(
                 themeColors = themeColors,
                 customFontFamily = customFontFamily,
+                applyBackground = applyBackground,
                 content = content
             )
         }

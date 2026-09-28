@@ -17,6 +17,8 @@ class ReadAloudSessionStoreTest {
             chapterPosition = 42,
             chapterLength = 100,
             text = "current paragraph",
+            chapterTitle = "正在朗读的章节",
+            chapterIndex = 3,
         )
 
         store.setStatus(ReadAloudSessionStatus.Playing)

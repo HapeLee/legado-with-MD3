@@ -985,14 +985,6 @@ sealed interface ReadBookEffect {
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookEffect
     data object OpenSystemTtsSettings : ReadBookEffect
-
-    /**
-     * 打开听书播放界面。
-     *
-     * 播放界面是 Navigation 3 目的地（[io.legado.app.ui.main.MainRouteReadAloudPlayer]），
-     * 不再是阅读器内的弹层，因此这里只发导航意图，不写 `activeSheet`。
-     */
-    data object OpenReadAloudPlayer : ReadBookEffect
     data object OpenTtsEnginesAndVoices : ReadBookEffect
     data object OpenTtsCache : ReadBookEffect
     data class OpenBookVoiceCasting(val bookUrl: String) : ReadBookEffect

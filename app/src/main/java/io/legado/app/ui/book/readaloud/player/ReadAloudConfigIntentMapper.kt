@@ -6,7 +6,7 @@ import io.legado.app.ui.book.read.ReadBookIntent
  * 把配置卡片的 [ReadBookIntent] 翻译成全局设置写入。
  *
  * 配置内容（`ReadAloudConfigContent`）的契约是 `ReadBookIntent`，因为它的主宿主是阅读器。
- * 听书播放界面是独立目的地、没有阅读器 ViewModel，所以这里把同一批意图落到
+ * 听书播放弹层是全局浮层、没有阅读器 ViewModel，所以这里把同一批意图落到
  * [ReadAloudPlayerViewModel.onConfigIntent]，两个宿主的设置语义完全一致。
  */
 internal fun ReadAloudPlayerViewModel.applyReadBookConfigIntent(intent: ReadBookIntent) {

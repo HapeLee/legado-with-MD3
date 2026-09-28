@@ -17,6 +17,17 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
+import io.legado.app.R
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -73,23 +84,30 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
 
+private val LocalFloatingBottomBarTabInteractive = staticCompositionLocalOf { true }
+
 val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
 
 @Composable
 fun RowScope.FloatingBottomBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val scale = LocalFloatingBottomBarTabScale.current
+    val interactive = enabled && LocalFloatingBottomBarTabInteractive.current
     Column(
         modifier
             .clip(ContinuousCapsule)
-            .clickable(
-                interactionSource = null,
-                indication = null,
-                role = Role.Tab,
-                onClick = onClick,
+            // 背景采样副本与隐藏的导航项不能保留触摸节点，alpha=0 不会取消命中。
+            .then(
+                if (interactive) Modifier.clickable(
+                    interactionSource = null,
+                    indication = null,
+                    role = Role.Tab,
+                    onClick = onClick,
+                ) else Modifier
             )
             .fillMaxHeight()
             .weight(1f)
@@ -114,8 +132,13 @@ fun FloatingBottomBar(
     tabsCount: Int,
     isBlurEnabled: Boolean = true,
     hasCustomIcons: Boolean = false,
+    compactProgress: Float = 0f,
+    expandedWidth: Dp? = null,
+    onRestoreNavigation: () -> Unit = {},
     content: @Composable RowScope.() -> Unit
 ) {
+    val navigationAlpha = (1f - compactProgress * 3f).coerceIn(0f, 1f)
+    val menuAlpha = ((compactProgress - 0.35f) / 0.65f).coerceIn(0f, 1f)
     val isInLightTheme = !LegadoTheme.isDark
     val themeSettings = LocalAppUiConfiguration.current.theme
     val customColors = themeSettings.customColors(LegadoTheme.isDark)
@@ -251,13 +274,9 @@ fun FloatingBottomBar(
         modifier = modifier.width(IntrinsicSize.Min),
         contentAlignment = Alignment.CenterStart
     ) {
-        Row(
+        Box(
             Modifier
-                .onGloballyPositioned { coords ->
-                    totalWidthPx = coords.size.width.toFloat()
-                    val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
-                    tabWidthPx = contentWidthPx / tabsCount
-                }
+                .fillMaxWidth()
                 .graphicsLayer { translationX = panelOffset }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -303,10 +322,30 @@ fun FloatingBottomBar(
                     }
                 )
                 .height(64.dp)
-                .padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content
-        )
+                .then(if (compactProgress > 0f) Modifier.clip(ContinuousCapsule) else Modifier),
+        ) {
+            Row(
+                Modifier
+                    .then(
+                        if (expandedWidth != null) Modifier
+                            .wrapContentWidth(
+                                Alignment.Start,
+                                unbounded = true
+                            )
+                            .requiredWidth(expandedWidth) else Modifier
+                    )
+                    .height(64.dp)
+                    .onGloballyPositioned { coords ->
+                        totalWidthPx = coords.size.width.toFloat()
+                        tabWidthPx = (totalWidthPx - with(density) { 8.dp.toPx() }) / tabsCount
+                    }
+                    .graphicsLayer { alpha = navigationAlpha }
+                    .then(if (compactProgress > 0f) Modifier.clearAndSetSemantics {} else Modifier)
+                    .padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        }
 
         CompositionLocalProvider(
             LocalFloatingBottomBarTabScale provides {
@@ -315,10 +354,19 @@ fun FloatingBottomBar(
                 } else {
                     1f
                 }
-            }
+            },
+            LocalFloatingBottomBarTabInteractive provides false,
         ) {
             Row(
                 Modifier
+                    .then(
+                        if (expandedWidth != null) Modifier
+                            .wrapContentWidth(
+                                Alignment.Start,
+                                unbounded = true
+                            )
+                            .requiredWidth(expandedWidth) else Modifier
+                    )
                     .clearAndSetSemantics {}
                     .alpha(0f)
                     .layerBackdrop(tabsBackdrop)
@@ -369,79 +417,103 @@ fun FloatingBottomBar(
         if (tabWidthPx > 0f) {
             Box(
                 Modifier
-                    .padding(horizontal = 4.dp)
-                    .graphicsLayer {
-                        val contentWidth = totalWidthPx - with(density) { 8.dp.toPx() }
-                        val singleTabWidth = contentWidth / tabsCount
-                        val progressOffset = dampedDragAnimation.value * singleTabWidth
+                    .matchParentSize()
+                    .then(if (compactProgress > 0f) Modifier.clip(ContinuousCapsule) else Modifier)
+            ) {
+                Box(
+                    Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(horizontal = 4.dp)
+                        .graphicsLayer {
+                            alpha = navigationAlpha
+                            val contentWidth = totalWidthPx - with(density) { 8.dp.toPx() }
+                            val singleTabWidth = contentWidth / tabsCount
+                            val progressOffset = dampedDragAnimation.value * singleTabWidth
 
-                        translationX = if (isLtr) {
-                            progressOffset + panelOffset
-                        } else {
-                            -progressOffset + panelOffset
-                        }
-                    }
-                    .then(
-                        if (isBlurEnabled && interactiveHighlight != null) {
-                            interactiveHighlight.gestureModifier
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .then(dampedDragAnimation.modifier)
-                    .drawBackdrop(
-                        backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
-                        shape = { ContinuousCapsule },
-                        effects = {
-                            if (isBlurEnabled) {
-                                val progress = dampedDragAnimation.pressProgress
-                                lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, true)
+                            translationX = if (isLtr) {
+                                progressOffset + panelOffset
+                            } else {
+                                -progressOffset + panelOffset
                             }
-                        },
-                        highlight = {
-                            Highlight.Default.copy(
-                                alpha = if (isBlurEnabled) {
-                                    dampedDragAnimation.pressProgress
-                                } else {
-                                    0f
+                        }
+                        .then(
+                            if (compactProgress <= 0f && isBlurEnabled && interactiveHighlight != null) {
+                                interactiveHighlight.gestureModifier
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .then(if (compactProgress <= 0f) dampedDragAnimation.modifier else Modifier)
+                        .drawBackdrop(
+                            backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                            shape = { ContinuousCapsule },
+                            effects = {
+                                if (isBlurEnabled) {
+                                    val progress = dampedDragAnimation.pressProgress
+                                    lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, true)
                                 }
-                            )
-                        },
-                        shadow = {
-                            Shadow(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
-                        },
-                        innerShadow = {
-                            InnerShadow(
-                                radius = 8f.dp * dampedDragAnimation.pressProgress,
-                                alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
-                            )
-                        },
-                        layerBlock = {
-                            if (isBlurEnabled) {
-                                scaleX = dampedDragAnimation.scaleX
-                                scaleY = dampedDragAnimation.scaleY
-                                val velocity = dampedDragAnimation.velocity / 10f
-                                scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
-                                scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                            },
+                            highlight = {
+                                Highlight.Default.copy(
+                                    alpha = if (isBlurEnabled) {
+                                        dampedDragAnimation.pressProgress
+                                    } else {
+                                        0f
+                                    }
+                                )
+                            },
+                            shadow = {
+                                Shadow(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
+                            },
+                            innerShadow = {
+                                InnerShadow(
+                                    radius = 8f.dp * dampedDragAnimation.pressProgress,
+                                    alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
+                                )
+                            },
+                            layerBlock = {
+                                if (isBlurEnabled) {
+                                    scaleX = dampedDragAnimation.scaleX
+                                    scaleY = dampedDragAnimation.scaleY
+                                    val velocity = dampedDragAnimation.velocity / 10f
+                                    scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
+                                    scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                                }
+                            },
+                            onDrawSurface = {
+                                val progress =
+                                    if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
+                                drawRect(
+                                    color = if (isInLightTheme) {
+                                        Color.Black.copy(0.1f)
+                                    } else {
+                                        Color.White.copy(0.1f)
+                                    },
+                                    alpha = 1f - progress
+                                )
+                                drawRect(Color.Black.copy(alpha = 0.03f * progress))
                             }
-                        },
-                        onDrawSurface = {
-                            val progress =
-                                if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
-                            drawRect(
-                                color = if (isInLightTheme) {
-                                    Color.Black.copy(0.1f)
-                                } else {
-                                    Color.White.copy(0.1f)
-                                },
-                                alpha = 1f - progress
-                            )
-                            drawRect(Color.Black.copy(alpha = 0.03f * progress))
-                        }
-                    )
-                    .height(56.dp)
-                    .width(with(density) { ((totalWidthPx - 8.dp.toPx()) / tabsCount).toDp() })
-            )
+                        )
+                        .height(56.dp)
+                        .width(with(density) { ((totalWidthPx - 8.dp.toPx()) / tabsCount).toDp() })
+                )
+            }
+        }
+        // 菜单位于根容器最上层，背景采样与指示器不参与它的触摸命中。
+        if (compactProgress > 0f) {
+            IconButton(
+                onClick = onRestoreNavigation,
+                enabled = compactProgress > 0.35f,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(64.dp)
+                    .graphicsLayer { alpha = menuAlpha },
+            ) {
+                Icon(
+                    Icons.Default.Menu, stringResource(R.string.home_capsule_restore_navigation),
+                    tint = LegadoTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }

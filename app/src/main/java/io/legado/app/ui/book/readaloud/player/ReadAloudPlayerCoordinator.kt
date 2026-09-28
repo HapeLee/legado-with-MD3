@@ -15,6 +15,7 @@ import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
+import io.legado.app.model.reader.ReaderChapterInput
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import kotlinx.collections.immutable.ImmutableList
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -49,8 +51,15 @@ class ReadAloudPlayerCoordinator(
         }
     }
     private val configChanges = ReadConfigUpdateBus.events.map { }
-    private val bookState =
-        merge(bookChanges, refreshRequests, configChanges).map { snapshotBook() }
+
+    /**
+     * `TTS_PROGRESS` 会按词回调（见 `BaseReadAloudService.upTtsProgress`），但绝大多数事件并不会
+     * 改变快照内容。这里去重，避免每次进度事件都让下游 `flatMapLatest` 重新订阅 Room 章节流、
+     * 重建目录列表实例（对照 `AudioPlayCoordinator.chapters` 的同名处理）。
+     */
+    private val bookState = merge(bookChanges, refreshRequests, configChanges)
+        .map { snapshotBook() }
+        .distinctUntilChanged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val bookWithChapters = bookState.flatMapLatest { book ->
@@ -136,24 +145,13 @@ class ReadAloudPlayerCoordinator(
         refreshRequests.tryEmit(Unit)
     }
 
+    private var chapterSnapshotKey: ChapterSnapshotKey? = null
+    private var chapterSnapshotCache: ChapterSnapshot? = null
+
     private fun snapshotBook(): BookState {
         val book = ReadBook.book
         val input = ReadBook.readerChapterInputWindow.current
-        val settings = readAloudSettingsGateway.currentSettings
-        val chapter = input?.let {
-            ReaderReadAloudChapter.create(
-                chapterIndex = it.chapter.index,
-                title = it.displayTitle,
-                semanticContent = it.source.semanticContent,
-                pageStarts = ReadBook.readerPagination(it.chapter.index)?.pageStarts.orEmpty(),
-                // 与朗读服务同口径：「默认」在多角色关闭时落到整段，否则听书页展示的
-                // 文本行会与服务实际播放的单元粒度不一致。
-                contentSplitMode = ContentSplitPolicies.resolve(
-                    mode = ReadAloudContentSplitMode.fromStorage(settings.contentSplitMode),
-                    useMultiSpeaker = settings.useMultiSpeaker,
-                ),
-            )
-        }
+        val chapter = input?.let(::chapterSnapshot)
         return BookState(
             bookUrl = book?.bookUrl.orEmpty(),
             bookName = book?.name.orEmpty(),
@@ -163,13 +161,53 @@ class ReadAloudPlayerCoordinator(
             chapterIndex = chapter?.chapterIndex ?: -1,
             chapterTitle = chapter?.title.orEmpty(),
             chapterText = input?.source?.semanticContent.orEmpty(),
-            textLines = chapter?.paragraphs.orEmpty().mapNotNull { paragraph ->
+            textLines = chapter?.textLines ?: persistentListOf(),
+        )
+    }
+
+    /**
+     * 章节切分与文本行派生。
+     *
+     * 整章切分（[ReaderReadAloudChapter.create]）和随后的逐段字符清洗都跑在主线程上，而
+     * `snapshotBook()` 会被每个 TTS 进度事件（逐词回调）触发，所以这里按真正影响结果的输入
+     * 记忆化：只有章节内容、标题、分页或划分方式变化时才重建。
+     */
+    private fun chapterSnapshot(input: ReaderChapterInput): ChapterSnapshot {
+        val settings = readAloudSettingsGateway.currentSettings
+        val key = ChapterSnapshotKey(
+            chapterIndex = input.chapter.index,
+            title = input.displayTitle,
+            semanticContent = input.source.semanticContent,
+            pageStarts = ReadBook.readerPagination(input.chapter.index)?.pageStarts.orEmpty(),
+            // 与朗读服务同口径：「默认」在多角色关闭时落到整段，否则听书页展示的
+            // 文本行会与服务实际播放的单元粒度不一致。
+            contentSplitMode = ContentSplitPolicies.resolve(
+                mode = ReadAloudContentSplitMode.fromStorage(settings.contentSplitMode),
+                useMultiSpeaker = settings.useMultiSpeaker,
+            ),
+        )
+        val cached = chapterSnapshotCache
+        if (cached != null && chapterSnapshotKey == key) return cached
+        val chapter = ReaderReadAloudChapter.create(
+            chapterIndex = key.chapterIndex,
+            title = key.title,
+            semanticContent = key.semanticContent,
+            pageStarts = key.pageStarts,
+            contentSplitMode = key.contentSplitMode,
+        )
+        val snapshot = ChapterSnapshot(
+            chapterIndex = chapter.chapterIndex,
+            title = chapter.title,
+            textLines = chapter.paragraphs.mapNotNull { paragraph ->
                 paragraph.text.replace(Regex("[袮祢꧁\uFFFC]"), " ").trim()
                     .takeIf(String::isNotEmpty)?.let {
                     ReadAloudTextLineUi(it, paragraph.chapterPosition)
                 }
             }.toImmutableList(),
         )
+        chapterSnapshotKey = key
+        chapterSnapshotCache = snapshot
+        return snapshot
     }
 
     fun togglePause() {
@@ -268,6 +306,22 @@ class ReadAloudPlayerCoordinator(
         val chapterIndex: Int,
         val chapterTitle: String,
         val chapterText: String,
+        val textLines: ImmutableList<ReadAloudTextLineUi>,
+    )
+
+    /** 影响章节切分结果的输入；任一项变化都需要重建 [ChapterSnapshot]。 */
+    private data class ChapterSnapshotKey(
+        val chapterIndex: Int,
+        val title: String,
+        val semanticContent: String,
+        val pageStarts: List<Int>,
+        val contentSplitMode: ReadAloudContentSplitMode,
+    )
+
+    /** 听书页展示需要的章节派生结果。 */
+    private data class ChapterSnapshot(
+        val chapterIndex: Int,
+        val title: String,
         val textLines: ImmutableList<ReadAloudTextLineUi>,
     )
 }

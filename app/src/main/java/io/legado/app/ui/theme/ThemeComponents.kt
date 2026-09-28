@@ -70,6 +70,7 @@ private fun loadCustomFont(context: Context, fontPath: String): FontFamily? =
 fun MiuixThemeWrapper(
     themeColors: LegadoThemeMode,
     customFontFamily: FontFamily?,
+    applyBackground: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val configuration = LocalAppUiConfiguration.current
@@ -234,7 +235,7 @@ fun MiuixThemeWrapper(
             LocalLegadoTypography provides legadoTypography,
             LocalLegadoColorScheme provides mappedColorScheme
         ) {
-            AppBackground(darkTheme = darkTheme) { content() }
+            if (applyBackground) AppBackground(darkTheme = darkTheme) { content() } else content()
         }
     }
 }
@@ -244,6 +245,7 @@ fun MiuixThemeWrapper(
 fun MaterialThemeWrapper(
     themeColors: LegadoThemeMode,
     customFontFamily: FontFamily?,
+    applyBackground: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val themeSettings = LocalAppUiConfiguration.current.theme
@@ -299,7 +301,7 @@ fun MaterialThemeWrapper(
             LocalLegadoTypography provides legadoTypography,
             LocalLegadoColorScheme provides semanticColors
         ) {
-            AppBackground(darkTheme = darkTheme) { content() }
+            if (applyBackground) AppBackground(darkTheme = darkTheme) { content() } else content()
         }
     }
 }

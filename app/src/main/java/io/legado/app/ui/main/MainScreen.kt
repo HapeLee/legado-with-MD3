@@ -6,12 +6,16 @@ import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,8 +26,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -51,6 +57,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,6 +83,11 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
+import io.legado.app.ui.book.readaloud.ReadAloudBarCapsuleEndPadding
+import io.legado.app.ui.book.readaloud.ReadAloudBarCapsuleSize
+import io.legado.app.ui.book.readaloud.ReadAloudBarCapsuleSlot
+import io.legado.app.ui.book.readaloud.ReadAloudPlayerOverlayBus
+import io.legado.app.ui.book.readaloud.morph.ReadAloudMorphState
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.ui.main.bookshelf.BookshelfRouteScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
@@ -110,6 +122,8 @@ import top.yukonga.miuix.kmp.basic.rememberNavigationRailState
 import top.yukonga.miuix.kmp.basic.NavigationRail as MiuixNavigationRail
 import top.yukonga.miuix.kmp.basic.NavigationRailItem as MiuixNavigationRailItem
 
+private val MainNavigationTabMinWidth = 76.dp
+
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class,
     ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class
@@ -120,6 +134,10 @@ fun MainScreen(
     onIntent: (MainUiIntent) -> Unit,
     effects: kotlinx.coroutines.flow.Flow<MainEffect>,
     useRail: Boolean,
+    /** 听书胶囊的形变状态：胶囊要排在悬浮底栏同一行，需要把锚点上报给同一个进度源。 */
+    readAloudMorph: ReadAloudMorphState?,
+    homePlaybackCapsuleEnabled: Boolean,
+    capsuleAnchorPreview: io.legado.app.domain.model.PlaybackCapsuleState?,
     onOpenSettings: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToSearch: (String?) -> Unit,
@@ -236,7 +254,10 @@ fun MainScreen(
     val labelVisibilityMode = mainUiState.labelVisibilityMode
     val isUnlabeled = labelVisibilityMode == "unlabeled"
     val useFloatingBottomBar =
-        !useRail && mainUiState.showBottomView && mainUiState.useFloatingBottomBar
+        shouldUseHomePlaybackCapsule(
+            onMainRoute = true, showBottomView = mainUiState.showBottomView,
+            useFloatingBottomBar = mainUiState.useFloatingBottomBar, useRail = useRail,
+        )
     val useLiquidGlass = useFloatingBottomBar &&
             mainUiState.useFloatingBottomBarLiquidGlass &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
@@ -603,26 +624,60 @@ fun MainScreen(
                     }
                 }
 
-                if (!useRail && mainUiState.showBottomView && useFloatingBottomBar) {
-                    Box(modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
+                if (useFloatingBottomBar) {
+                    var readAloudCapsuleShown by remember { mutableStateOf(false) }
+                    var playbackControlsExpanded by rememberSaveable { mutableStateOf(false) }
+                    val expansion by animateFloatAsState(
+                        targetValue = if (playbackControlsExpanded && readAloudCapsuleShown) 1f else 0f,
+                        animationSpec = spring(
+                            dampingRatio = 1f,
+                            stiffness = 260f,
+                            visibilityThreshold = 0.0001f
+                        ),
+                        label = "homePlaybackControls",
+                    )
+                    BoxWithConstraints(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(
+                                bottom = 12.dp + WindowInsets.navigationBars.asPaddingValues()
+                                    .calculateBottomPadding()
+                            )
                     ) {
+                        val gap = ReadAloudBarCapsuleEndPadding
+                        val capsuleReserve by animateDpAsState(
+                            targetValue = if (readAloudCapsuleShown) ReadAloudBarCapsuleSize + gap else 0.dp,
+                            // 入场前立即留出空间；退场后逐步归还，避免停播时导航宽度跳变。
+                            animationSpec = if (readAloudCapsuleShown) snap() else spring(
+                                dampingRatio = 1f,
+                                stiffness = 260f
+                            ),
+                            label = "homePlaybackReserve",
+                        )
+                        val navigationAvailableWidth =
+                            (maxWidth - capsuleReserve).coerceAtLeast(0.dp)
+                        // 保留原导航项的自然宽度和居中位置，不把没有胶囊的底栏拉满。
+                        val normalNavigationWidth =
+                            (MainNavigationTabMinWidth * destinations.size + 8.dp)
+                                .coerceAtMost(navigationAvailableWidth)
+                        val navigationStartInset =
+                            (navigationAvailableWidth - normalNavigationWidth) / 2
+                        val expandedCapsuleWidth = (maxWidth - ReadAloudBarCapsuleSize - gap)
+                            .coerceAtLeast(ReadAloudBarCapsuleSize)
+                        val capsuleWidth = ReadAloudBarCapsuleSize +
+                                (expandedCapsuleWidth - ReadAloudBarCapsuleSize) * expansion
+                        val navigationWidth = normalNavigationWidth +
+                                (ReadAloudBarCapsuleSize.coerceAtMost(maxWidth) - normalNavigationWidth) * expansion
                         FloatingBottomBar(
                             modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = {}
-                                )
-                                .padding(
-                                    start = 16.dp,
-                                    end = 16.dp,
-                                    bottom = 12.dp + WindowInsets.navigationBars
-                                        .asPaddingValues()
-                                        .calculateBottomPadding()
-                                ),
+                                .align(Alignment.BottomStart)
+                                .offset(x = navigationStartInset * (1f - expansion))
+                                .width(navigationWidth),
+                            compactProgress = expansion,
+                            expandedWidth = normalNavigationWidth,
+                            onRestoreNavigation = { playbackControlsExpanded = false },
                             selectedIndex = { pagerState.targetPage },
                             onSelected = { index ->
                                 destinations.getOrNull(index)?.let { destination ->
@@ -649,11 +704,14 @@ fun MainScreen(
                                     mainUiState.selectedCustomIconPath(destination)
                                 val destinationLabel = stringResource(destination.labelId)
                                 FloatingBottomBarItem(
+                                    enabled = !playbackControlsExpanded && expansion <= 0.05f,
                                     onClick = {
                                         handleMainDestinationClick(index, destination)
                                     },
                                     modifier = Modifier
-                                        .defaultMinSize(minWidth = 76.dp)
+                                        .defaultMinSize(
+                                            minWidth = MainNavigationTabMinWidth
+                                        )
                                         .semantics(mergeDescendants = true) {
                                             contentDescription = destinationLabel
                                         }
@@ -665,7 +723,9 @@ fun MainScreen(
                                         } else customIconPath,
                                         selected = selected
                                     )
-                                    if (showLabel && (alwaysShowLabel || selected)) {
+                                    if (
+                                        showLabel && (alwaysShowLabel || selected)
+                                    ) {
                                         AppText(
                                             text = stringResource(destination.labelId),
                                             style = MaterialTheme.typography.labelSmall,
@@ -676,6 +736,23 @@ fun MainScreen(
                                 }
                             }
                         }
+                        // 打开听书播放页：与阅读器共用同一条全局请求通道。
+                        ReadAloudBarCapsuleSlot(
+                            enabled = homePlaybackCapsuleEnabled,
+                            onOpenPlayer = { ReadAloudPlayerOverlayBus.request(it) },
+                            morph = readAloudMorph,
+                            anchorPreview = capsuleAnchorPreview,
+                            // 与悬浮底栏共用同一份 backdrop，液态玻璃开关一致。
+                            backdrop = floatingBarBackdrop,
+                            isBlurEnabled = useLiquidGlass,
+                            controlsExpanded = playbackControlsExpanded,
+                            expansion = expansion,
+                            width = capsuleWidth,
+                            expandedWidth = expandedCapsuleWidth,
+                            onControlsExpandedChange = { playbackControlsExpanded = it },
+                            onOccupiedWidthChanged = { readAloudCapsuleShown = it > 0 },
+                            modifier = Modifier.align(Alignment.BottomEnd),
+                        )
                     }
                 }
             }

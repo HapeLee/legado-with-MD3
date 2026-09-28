@@ -24,6 +24,7 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
 import io.legado.app.service.BaseReadAloudService
+import io.legado.app.ui.book.readaloud.ReadAloudPlayerOverlayBus
 import io.legado.app.utils.TTSCacheUtils
 import io.legado.app.utils.postEvent
 import kotlinx.collections.immutable.toImmutableSet
@@ -222,14 +223,15 @@ class ReadAloudDelegate(
     }
 
     /**
-     * 打开听书播放界面。
+     * 打开听书播放弹层。
      *
-     * 播放界面是 Navigation 3 目的地而非阅读器弹层，所以这里发导航意图；
-     * 先把菜单状态收起来，返回阅读界面时不会停在半开的菜单上。
+     * 播放弹层是 Activity 级全局浮层（[ReadAloudPlayerOverlayBus]），不占导航栈，
+     * 所以这里只请求宿主把它拉起来；先把菜单与已有弹层收掉，
+     * 关闭播放弹层时不会停在半开的菜单上。
      */
     fun openPlayer() {
         host.updateState { it.copy(menuState = ReadBookMenuState(), activeSheet = null) }
-        host.emitEffect(ReadBookEffect.OpenReadAloudPlayer)
+        ReadAloudPlayerOverlayBus.request()
     }
 
     /** 经典朗读控制面板：阅读菜单里的一页，不遮挡正文区域之外的交互。 */

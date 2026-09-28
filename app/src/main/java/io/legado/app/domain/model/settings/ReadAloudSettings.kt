@@ -57,6 +57,7 @@ data class ReadAloudSettings(
     val keepReadAloudOnExit: Boolean = false,
     val showReadAloudCapsule: Boolean = true,
     val capsuleAutoCollapse: Boolean = true,
+    /** 相对屏幕底部中央默认中心的 dp 偏移；应用内外共用，尺寸/系统栏不参与。 */
     val capsuleOffsetX: Float = 0f,
     val capsuleOffsetY: Float = 0f,
     val mediaButtonPerNext: Boolean = false,
