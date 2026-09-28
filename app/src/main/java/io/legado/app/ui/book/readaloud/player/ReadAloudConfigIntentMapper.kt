@@ -53,6 +53,12 @@ internal fun ReadAloudPlayerViewModel.applyReadBookConfigIntent(intent: ReadBook
         is ReadBookIntent.SetUseMultiSpeaker ->
             onConfigIntent(ReadAloudConfigOption.UseMultiSpeaker, selected = intent.value)
 
+        is ReadBookIntent.SetMultiRoleCast ->
+            onConfigIntent(ReadAloudConfigOption.MultiRoleCast, selected = intent.value)
+
+        is ReadBookIntent.SetBgmAssign ->
+            onConfigIntent(ReadAloudConfigOption.BgmAssign, selected = intent.value)
+
         is ReadBookIntent.SetReadAloudContentSplitMode ->
             onConfigIntent(ReadAloudConfigOption.ContentSplit, value = intent.value)
 

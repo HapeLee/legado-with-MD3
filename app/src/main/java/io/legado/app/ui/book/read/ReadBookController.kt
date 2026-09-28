@@ -574,6 +574,18 @@ class ReadBookController(
             }
             else -> false
         }
+        is ReaderElement.RoleCast -> {
+            // 多角色分配：点击胶囊打开分配弹层（确认/取消后重排当前章）
+            viewModel.onIntent(
+                ReadBookIntent.ShowSheet(ReadBookSheet.RoleCast(element.quoteOrdinal)),
+            )
+            true
+        }
+
+        is ReaderElement.BgmScene -> {
+            viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BgmScene(element.paragraphIndex)))
+            true
+        }
         is ReaderElement.Image -> handleComposeImageClick(element)
         is ReaderElement.Review -> { activity.toastOnUi("Button Pressed!"); true }
         is ReaderElement.Action -> { activity.toastOnUi("Button Pressed!"); true }
@@ -1209,6 +1221,11 @@ class ReadBookController(
                     directReaderPageIndex = index
                     publishDirectReaderWindow(index)
                 }
+            // [FIX-AI] clearTextChapter（如朗读定位触发的同章 upContent）可能只清快照而 layout
+            // key 未变：快速路径同样要按现存页表补发窗口快照，否则朗读等待的快照永远缺失。
+            if (ReadBook.readerPagination(chapter.chapter.index) == null) {
+                publishWindowReaderPaginationSnapshots(ReadBook.readerPaginationGeneration)
+            }
             scheduleAdjacentReaderChapterPagination(
                 chapters, chapter, width, height, contentPadding, resolvedPaginationStyle
             )
@@ -1298,6 +1315,14 @@ class ReadBookController(
     ) {
         recycleReaderChapterPaginationJobs()
         val currentIndex = current.chapter.index
+        // [FIX-AI] 换章路径会先 clearReaderPagination() 清空快照表，而渲染层 directReaderPages
+        // 多半原样保留（普通翻页复用上轮预排的整章页）。窗口内各章都有现成页时调度不再启动
+        // 任何分页任务，也就没有批次提交去重新发布快照——朗读服务按章号取快照恒为 null，
+        // 表现为"往回翻章后点朗读：启动朗读失败：章节分页未完成"（前进方向靠新邻章预排批次
+        // 顺带整窗补发，所以只有回退翻车）。调度前按现存页表补发一次窗口快照。
+        if (ReadBook.readerPagination(currentIndex) == null) {
+            publishWindowReaderPaginationSnapshots(paginationGeneration)
+        }
         // 该章已经有任务在跑（很可能正是上一轮作为邻章启动的那个）：不打断，等它收尾。
         // 内容换了一份时身份不同，会落到下面按新内容重排。
         if (isReaderChapterPaginationRunning(current)) return
@@ -1361,6 +1386,7 @@ class ReadBookController(
         bookUrl = book.bookUrl,
         bookOrigin = book.origin,
         bookSourceHash = bookSourceHash,
+        castRenderHash = castRenderHash,
     )
 
     /**
@@ -1445,6 +1471,10 @@ class ReadBookController(
                         contentPaddingBottomPx = padding.bottom,
                         paginationStyle = style,
                         highlightRules = highlightRules,
+                        castOptions = io.legado.app.help.readaloud.cast.CastRenderOptions.load(
+                            candidate.book.bookUrl,
+                            chapterIndex,
+                        ),
                         onPage = { page ->
                             onReaderPageStreamed(streamGeneration, chapterIndex, page)
                         },
@@ -1470,6 +1500,40 @@ class ReadBookController(
         readerChapterPaginationJobs[chapterIndex] = ReaderChapterPaginationTask(identity, job)
         ReaderPerfTrace.marker("pagination.scheduled")
         job.start()
+    }
+
+    /**
+     * [FIX-AI] 按现存页表发布窗口（durChapterIndex±1）的分页快照。
+     *
+     * 快照表被 clearReaderPagination() 清空后，若窗口内各章都已有整批页，渲染层不会再启动
+     * 任何分页任务，也没有批次提交来重新发布快照；朗读服务按章号取快照恒为 null（回退章节
+     * 后点朗读超时的根因）。本方法与批次提交时的发布规则完全一致，可安全重复调用
+     * （publishReaderPagination 按章合并覆盖）。
+     */
+    private fun publishWindowReaderPaginationSnapshots(paginationGeneration: Long) {
+        val snapshotRange = ReadBook.durChapterIndex.let { it - 1..it + 1 }
+        ReadBook.publishReaderPagination(
+            directReaderPages.groupBy { it.id.chapterIndex }.mapNotNull { (index, pages) ->
+                // 与旧 `chapters` 窗口等价：只有窗口内的章才值得发快照。
+                if (index !in snapshotRange) return@mapNotNull null
+                // 排了一半的流出章不能当整章快照发布：pageStarts/contentEnd 是半成品，
+                // 朗读会提前截断，等各自的提交批次覆盖。
+                if (index in directReaderStreamingChapters) return@mapNotNull null
+                // 占位页不是分页结果：把它当成该章的分页快照会以 pageCount=1 污染整书页数
+                // 估算（wholeBookPageCoordinator.correctChapter 拿 realPageCount 校正）。
+                if (pages.all { it.isPlaceholder }) return@mapNotNull null
+                val contentEnd = ReaderPageNavigator.pageContext(
+                    pages,
+                    pages.lastIndex,
+                )?.endPosition ?: return@mapNotNull null
+                ReaderChapterPaginationSnapshot(
+                    chapterIndex = index,
+                    pageStarts = pages.map(ReaderPageNavigator::pageStart),
+                    contentEnd = contentEnd,
+                    generation = paginationGeneration,
+                )
+            }
+        )
     }
 
     private fun applyDirectReaderPaginationBatch(
@@ -1525,27 +1589,7 @@ class ReadBookController(
                     ?: directReaderPageIndex?.coerceIn(pages.indices)
                     ?: 0
             }
-            val snapshotRange = ReadBook.durChapterIndex.let { it - 1..it + 1 }
-            ReadBook.publishReaderPagination(
-                directReaderPages.groupBy { it.id.chapterIndex }.mapNotNull { (index, pages) ->
-                    // 与旧 `chapters` 窗口等价：只有窗口内的章才值得发快照。
-                    if (index !in snapshotRange) return@mapNotNull null
-                    // 占位页不是分页结果：把它当成该章的分页快照会以 pageCount=1 污染整书页数
-                    // 估算（wholeBookPageCoordinator.correctChapter 拿 realPageCount 校正）。
-                    // 邻章正文已缓存但还没排版时也会预置占位页，必须显式排除。
-                    if (pages.all { it.isPlaceholder }) return@mapNotNull null
-                    val contentEnd = ReaderPageNavigator.pageContext(
-                        pages,
-                        pages.lastIndex,
-                    )?.endPosition ?: return@mapNotNull null
-                    ReaderChapterPaginationSnapshot(
-                        chapterIndex = index,
-                        pageStarts = pages.map(ReaderPageNavigator::pageStart),
-                        contentEnd = contentEnd,
-                        generation = paginationGeneration,
-                    )
-                }
-            )
+            publishWindowReaderPaginationSnapshots(paginationGeneration)
             directReaderPageIndex?.let(::publishDirectReaderWindow)
         }
     }

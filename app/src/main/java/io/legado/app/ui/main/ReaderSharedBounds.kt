@@ -35,12 +35,17 @@ fun Modifier.readerSharedBounds(
     ) { state ->
         if (state == EnterExitState.Visible) targetRadius else startRadius
     }
+    // 返回书架时把正文压在封面之上：封面那一侧的 sharedBounds 用的是库默认 fadeIn()（spring），
+    // 几百毫秒就满了，而正文是自己的 600ms 淡出。overlay 里谁在上面谁决定观感——封面在上面
+    // 就是「先闪出封面、再看着它缩小」，正文在上面才是打开动画的倒放（边缩小边让正文化掉、露出封面）。
+    // 进入方向上正文本来就是进入方、本来就画在上面，所以这条对打开的观感没有影响。
     return this.then(with(sharedTransitionScope) {
         Modifier.sharedBounds(
             sharedContentState = rememberSharedContentState(sharedCoverKey),
             animatedVisibilityScope = animatedVisibilityScope,
             enter = fadeIn(animationSpec = tween(600)),
             exit = fadeOut(animationSpec = tween(600)),
+            zIndexInOverlay = 1f,
             clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(radius.dp)),
         )
     })

@@ -31,8 +31,12 @@ internal object ReaderPerfTrace {
     }
 
     fun marker(name: String) {
-        Trace.beginSection("reader.$name")
-        Trace.endSection()
+        // [FIX-AI] 纯 JVM 单测（MainNavigatorBackStackTest）里 android.os.Trace 未 mock 会抛
+        // "Method beginSection not mocked"；性能打点不应影响宿主，失败静默降级。
+        runCatching {
+            Trace.beginSection("reader.$name")
+            Trace.endSection()
+        }
     }
 
     fun isEnabled(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && Trace.isEnabled()

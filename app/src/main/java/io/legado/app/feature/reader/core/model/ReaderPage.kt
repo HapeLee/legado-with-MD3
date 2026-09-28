@@ -132,6 +132,39 @@ sealed interface ReaderElement {
         val key: String,
     ) : ReaderElement
 
+    /**
+     * 多角色分配胶囊：对话开引号后的 <<名字（池）>> 标记在页面上的呈现，点击打开分配弹层。
+     *
+     * @param quoteOrdinal 所在章的开引号锚点序号（ChapterRoleAssignment 的键）。
+     * @param characterId 已分配时的角色档案 id（未分配为空串）。
+     * @param avatarUri 角色头像本地路径；无头像为空串（绘字符占位圆）。
+     * @param voiceEffectMark 这一句带变声器（段级或角色全局），右端画均衡器小标记。
+     */
+    data class RoleCast(
+        override val bounds: ReaderRect,
+        val name: String,
+        val voicePoolLabel: String,
+        val avatarUri: String,
+        val assigned: Boolean,
+        val voiceEffectMark: Boolean,
+        val quoteOrdinal: Int,
+        val characterId: String,
+        val chapterPosition: Int,
+    ) : ReaderElement
+
+    /**
+     * 段首背景音乐胶囊：点击打开场景配乐弹层。
+     *
+     * @param paragraphIndex 正文段落序号（bgm_scene_marks 的键），不是章节字符偏移。
+     */
+    data class BgmScene(
+        override val bounds: ReaderRect,
+        val paragraphIndex: Int,
+        val poolName: String,
+        val trackName: String,
+        val chapterPosition: Int,
+    ) : ReaderElement
+
     data class Spacer(
         override val bounds: ReaderRect,
         val chapterPosition: Int,

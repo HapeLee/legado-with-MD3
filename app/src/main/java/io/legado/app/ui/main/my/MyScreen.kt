@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Source
@@ -199,6 +200,12 @@ fun MyScreen(
                     title = stringResource(R.string.highlight_tag_config),
                     imageVector = Icons.Default.Sell,
                     onClick = { onNavigate(PrefClickEvent.OpenHighlightTagRule) }
+                )
+                ClickableSettingItem(
+                    title = stringResource(R.string.multi_role_rule),
+                    description = stringResource(R.string.multi_role_rule_summary),
+                    imageVector = Icons.Default.RecordVoiceOver,
+                    onClick = { onNavigate(PrefClickEvent.OpenMultiRoleRule) }
                 )
             }
 

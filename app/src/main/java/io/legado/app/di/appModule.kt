@@ -296,6 +296,12 @@ import io.legado.app.ui.config.themeManage.ThemeManageViewModel
 import io.legado.app.ui.config.translation.TranslationConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
+import io.legado.app.help.readaloud.cast.AiCastAssignUseCase
+import io.legado.app.help.readaloud.cast.AiSceneAssignUseCase
+import io.legado.app.ui.book.readaloud.cast.VoiceEffectViewModel
+import io.legado.app.ui.book.readaloud.cast.BgmPoolViewModel
+import io.legado.app.ui.book.readaloud.cast.MultiRoleRuleViewModel
+import io.legado.app.ui.book.readaloud.cast.MultiRoleRecognitionViewModel
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleViewModel
 import io.legado.app.ui.login.SourceLoginViewModel
 import io.legado.app.ui.main.MainNavRouteTracker
@@ -563,6 +569,12 @@ val appModule = module {
     viewModelOf(::ImportRssSourceViewModel)
     viewModelOf(::ImportTxtTocRuleViewModel)
     viewModelOf(::HighlightTagRuleViewModel)
+    viewModelOf(::MultiRoleRuleViewModel)
+    viewModelOf(::BgmPoolViewModel)
+    viewModelOf(::VoiceEffectViewModel)
+    viewModelOf(::MultiRoleRecognitionViewModel)
+    singleOf(::AiCastAssignUseCase)
+    singleOf(::AiSceneAssignUseCase)
     viewModelOf(::TagGroupRuleViewModel)
     viewModelOf(::DictViewModel)
     viewModelOf(::RssSourceViewModel)
@@ -755,6 +767,8 @@ val appModule = module {
             readSettingsRepository = get(),
             readBookStyleConfigRepository = get(),
             readAloudSettingsRepository = get(),
+            aiCastAssignUseCase = get(),
+            aiSceneAssignUseCase = get(),
             localPreferencesRepository = get(),
             highlightRuleRepository = get(),
             uploadRepository = get(),

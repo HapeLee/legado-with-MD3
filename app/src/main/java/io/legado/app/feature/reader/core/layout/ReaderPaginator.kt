@@ -106,6 +106,8 @@ data class ReaderPaginationConfig(
     val pageUnderline: ReaderPageUnderline? = null,
     val inlineImagesPreserveScrollLine: Boolean = true,
     val emphasisUnderlineStyle: ReaderEmphasisUnderline? = null,
+    /** 多角色分配渲染选项（默认关闭：不产生胶囊、零额外开销）。 */
+    val castOptions: ReaderCastOptions = ReaderCastOptions.Disabled,
 ) {
     init {
         require(columnCount in 1..2)
@@ -125,6 +127,35 @@ private data class ReaderLayoutRow(
 )
 
 /** A shaped paragraph. Android supplies glyph-cluster widths using the same font used by Canvas. */
+/** 角色配音档案快照（分页期用，平台层从 DB 预取，core 层不触 DB）。 */
+data class ReaderCastProfile(
+    val characterId: String,
+    val avatarUri: String,
+)
+
+/**
+ * 多角色分配的分页选项：开关 + 角色档案 + 变声器状态（段级优先，其次角色全局）。
+ *
+ * 胶囊上的变声器标记看的是这一句**最终**用不用变声器，与朗读侧
+ * `VoiceEffectStore.ofSpeech` 的取值顺序一致。
+ */
+data class ReaderCastOptions(
+    val enabled: Boolean,
+    val profiles: Map<String, ReaderCastProfile>,
+    /** 段级：本章开引号锚点序号 → 变声器预设名（空值不收录）。 */
+    val chapterEffects: Map<Int, String> = emptyMap(),
+    /** 角色级（全局）：角色名 → 变声器预设名（空值不收录）。 */
+    val characterEffects: Map<String, String> = emptyMap(),
+) {
+    fun hasVoiceEffect(characterName: String, quoteOrdinal: Int): Boolean =
+        chapterEffects[quoteOrdinal]?.isNotBlank() == true ||
+            (characterName.isNotBlank() && characterEffects[characterName]?.isNotBlank() == true)
+
+    companion object {
+        val Disabled = ReaderCastOptions(enabled = false, profiles = emptyMap())
+    }
+}
+
 data class ReaderMeasuredParagraph(
     val text: String,
     val clusters: List<String>,
@@ -221,6 +252,33 @@ sealed interface ReaderMeasuredInlineItem {
         override val chapterPosition: Int,
         val action: String? = null,
     ) : ReaderMeasuredInlineItem
+
+    /**
+     * 多角色分配胶囊（已测量）。raw 为标记原文（占语义坐标；未分配占位胶囊为空串）。
+     * [voiceEffectMark] = 这一句最终带变声器，胶囊右端画标记图标（宽度已含）。
+     */
+    data class RoleCast(
+        override val widthPx: Float,
+        val heightPx: Float,
+        override val chapterPosition: Int,
+        val raw: String,
+        val name: String,
+        val voicePoolLabel: String,
+        val quoteOrdinal: Int,
+        val voiceEffectMark: Boolean = false,
+    ) : ReaderMeasuredInlineItem
+
+    /** 段首背景音乐胶囊（纯视觉）：不占语义坐标。 */
+    data class BgmScene(
+        override val widthPx: Float,
+        val heightPx: Float,
+        override val chapterPosition: Int,
+        val paragraphIndex: Int,
+        val poolName: String,
+        val trackName: String,
+    ) : ReaderMeasuredInlineItem
+
+    /** 角色配音档案快照（分页期用，平台层从 DB 预取）。 */
 }
 
 /** Platform-free page assembler. It never creates or mutates legacy TextPage/TextLine objects. */
@@ -427,6 +485,8 @@ internal class ReaderPaginationSession(
             )
 
             is ReaderElement.Action -> element.copy(bounds = element.bounds.offsetY(deltaY))
+        is ReaderElement.RoleCast -> element.copy(bounds = element.bounds.offsetY(deltaY))
+            is ReaderElement.BgmScene -> element.copy(bounds = element.bounds.offsetY(deltaY))
             is ReaderElement.Spacer -> element.copy(bounds = element.bounds.offsetY(deltaY))
             is ReaderElement.Rule -> element.copy(bounds = element.bounds.offsetY(deltaY))
             is ReaderElement.ParagraphMarker -> element.copy(bounds = element.bounds.offsetY(deltaY))
@@ -644,6 +704,8 @@ internal class ReaderPaginationSession(
             when (it) {
                 is ReaderMeasuredInlineItem.Text -> it.value
                 is ReaderMeasuredInlineItem.Image -> "\uFFFC"
+                is ReaderMeasuredInlineItem.RoleCast -> "\uFFFC"
+                is ReaderMeasuredInlineItem.BgmScene -> ""
             }
         }
         val lineGapPx =
@@ -802,6 +864,11 @@ internal class ReaderPaginationSession(
                 textLineHeight,
                 lineItems.filterIsInstance<ReaderMeasuredInlineItem.Image>()
                     .maxOfOrNull { it.heightPx } ?: 0f,
+                lineItems.filterIsInstance<ReaderMeasuredInlineItem.RoleCast>()
+                    .maxOfOrNull { it.heightPx } ?: 0f,
+                // 配乐胶囊单独成行时行里没有任何文字，行高只能由它自己撑起来
+                lineItems.filterIsInstance<ReaderMeasuredInlineItem.BgmScene>()
+                    .maxOfOrNull { it.heightPx } ?: 0f,
             )
             val lineBaselineOffset = lineAscent + (actualLineHeight - textLineHeight) / 2f
             if (y + actualLineHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
@@ -929,8 +996,55 @@ internal class ReaderPaginationSession(
                             chapterPosition = item.chapterPosition,
                         )
                     }
+
+                    is ReaderMeasuredInlineItem.RoleCast -> {
+                        // 胶囊垂直居中于行盒；头像/角色 id 由平台预取的档案补全
+                        val capTop = y + (actualLineHeight - item.heightPx) / 2f
+                        val profile = config.castOptions.profiles[item.name]
+                        elements += ReaderElement.RoleCast(
+                            bounds = ReaderRect(
+                                x,
+                                capTop,
+                                x + item.widthPx,
+                                capTop + item.heightPx,
+                            ),
+                            name = item.name,
+                            voicePoolLabel = item.voicePoolLabel,
+                            avatarUri = profile?.avatarUri.orEmpty(),
+                            assigned = item.name.isNotEmpty(),
+                            voiceEffectMark = item.voiceEffectMark,
+                            quoteOrdinal = item.quoteOrdinal,
+                            characterId = profile?.characterId.orEmpty(),
+                            chapterPosition = item.chapterPosition,
+                        )
+                    }
+
+                    is ReaderMeasuredInlineItem.BgmScene -> {
+                        // 垂直居中于行盒，与角色胶囊同一套算法
+                        val capTop = y + (actualLineHeight - item.heightPx) / 2f
+                        elements += ReaderElement.BgmScene(
+                            bounds = ReaderRect(
+                                x,
+                                capTop,
+                                x + item.widthPx,
+                                capTop + item.heightPx,
+                            ),
+                            paragraphIndex = item.paragraphIndex,
+                            poolName = item.poolName,
+                            trackName = item.trackName,
+                            chapterPosition = item.chapterPosition,
+                        )
+                    }
                 }
-                pageText.append(if (item is ReaderMeasuredInlineItem.Text) item.value else '\uFFFC')
+                pageText.append(
+                    when (item) {
+                        is ReaderMeasuredInlineItem.Text -> item.value
+                        is ReaderMeasuredInlineItem.RoleCast -> item.raw
+                        // 配乐胶囊零字符：正文语义坐标与不开时逐字节一致
+                        is ReaderMeasuredInlineItem.BgmScene -> ""
+                        else -> "\uFFFC"
+                    },
+                )
                 x += item.widthPx + backgroundInsetAfter(itemIndex) + letterSpacing +
                         if (item is ReaderMeasuredInlineItem.Text && item.value == " ") wordSpaceExtra else 0f
                 x += if (itemIndex >= indentItems) justifyGap else 0f

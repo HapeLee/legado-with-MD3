@@ -81,6 +81,8 @@ object LegacyReaderStyleRangeMapper {
                         is ReaderChapterInlineSource.Text -> chars.writeText(item.chapterPosition, item.value)
                         is ReaderChapterInlineSource.Image -> chars.setOrNull(item.chapterPosition, '\uFFFC')
                         is ReaderChapterInlineSource.BlankLine -> Unit
+                        // 配乐胶囊零字符，不写语义坐标
+                        is ReaderChapterInlineSource.BgmScene -> Unit
                     }
                 }
                 is ReaderChapterSourceBlock.Html, is ReaderChapterSourceBlock.PageBreak -> Unit

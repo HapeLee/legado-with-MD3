@@ -28,6 +28,7 @@ object AiTaskType {
     const val ANALYZE_SPEECH = "analyze_speech"
     const val IDENTIFY_CHARACTERS = "identify_characters"
     const val BOOKSHELF_AUTO_GROUP = "bookshelf_auto_group"
+    const val CAST_ASSIGN = "cast_assign"
 }
 
 object AiPromptTemplate {

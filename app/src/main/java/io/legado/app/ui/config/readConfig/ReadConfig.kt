@@ -106,6 +106,8 @@ object ReadConfig {
     val speechAnalysisMode get() = aloud.speechAnalysisMode
     val speechAnalysisReasoningLevel get() = aloud.speechAnalysisReasoningLevel
     val useMultiSpeaker get() = aloud.useMultiSpeaker
+    val multiRoleCast get() = aloud.multiRoleCast
+    val bgmAssign get() = aloud.bgmAssign
     val defaultInterface get() = aloud.defaultInterface
 
     val syncBookProgress get() = backup.syncBookProgress

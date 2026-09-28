@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CleanHands
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FindReplace
@@ -171,6 +172,14 @@ private fun OverflowDropdownMenu(
                     text = stringResource(R.string.change_origin),
                     leadingIcon = menuIcon(Icons.Default.SwapHoriz),
                     onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.read_aloud_audio_download_entry),
+                    leadingIcon = menuIcon(Icons.Default.Download),
+                    onClick = {
+                        dismiss()
+                        onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AudioDownload))
+                    },
                 )
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.menu_refresh_dur),

@@ -205,6 +205,7 @@ internal fun MenuBottomBar(
         Spacer(Modifier.height(12.dp))
 
         // Tool buttons
+        // isActive 是这里的快照，开关态必须进 key 列表，否则点击后高亮不刷新
         val toolButtons = remember(
             context,
             state.menuConfig.bottomBarButtons,
@@ -213,6 +214,8 @@ internal fun MenuBottomBar(
             state.isAutoPage,
             state.translationMode,
             state.useReplaceRule,
+            state.useMultiSpeaker,
+            state.multiRoleCast,
             eyeProtectionEnabled,
         ) {
             loadToolButtons(

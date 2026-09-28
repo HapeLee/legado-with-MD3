@@ -2,6 +2,7 @@ package io.legado.app.help.readaloud.playback
 
 import io.legado.app.domain.model.readaloud.CharacterPerformanceProfile
 import io.legado.app.domain.model.readaloud.CloudTtsProviderType
+import io.legado.app.help.readaloud.cast.VoicePoolStore
 
 object CharacterPerformanceInstructionBuilder {
     const val VERSION = "character-performance-v1"
@@ -19,13 +20,13 @@ object CharacterPerformanceInstructionBuilder {
     ): String {
         if (provider !in supportedProviders || profile == null) return ""
         val role = profile.role.toRoleLabel()
-        val voiceAge = profile.voiceAgeBand.toAgeLabel()
+        val voicePool = VoicePoolStore.poolNameOrEmpty(profile.voiceAgeBand).toSafeTraitText()
         val personality = profile.personality.toSafeTraitText()
-        if (role.isBlank() && voiceAge.isBlank() && personality.isBlank()) return ""
+        if (role.isBlank() && voicePool.isBlank() && personality.isBlank()) return ""
         return buildString {
             append("保持该角色的声音表演一致。")
             if (role.isNotBlank()) append("角色定位：$role。")
-            if (voiceAge.isNotBlank()) append("声音年龄：$voiceAge。")
+            if (voicePool.isNotBlank()) append("声音池：$voicePool。")
             if (personality.isNotBlank()) append("性格特征：$personality。")
             append("这些内容仅用于控制表演，不要朗读，也不要修改台词。")
         }
@@ -44,15 +45,6 @@ object CharacterPerformanceInstructionBuilder {
             .replace(WHITESPACE, " ")
             .trim()
             .take(MAX_PERSONALITY_LENGTH)
-
-    private fun String.toAgeLabel(): String = when (trim()) {
-        "child" -> "儿童"
-        "teen" -> "少年或少女"
-        "young_adult" -> "青年"
-        "adult" -> "成年人"
-        "elderly" -> "老人"
-        else -> ""
-    }
 
     private const val MAX_PERSONALITY_LENGTH = 240
     private val CONTROL_CHARACTERS = Regex("[\\p{Cc}\\p{Cf}]")

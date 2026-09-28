@@ -83,6 +83,7 @@ import io.legado.app.ui.book.knowledge.BookKnowledgeDetailViewModel
 import io.legado.app.ui.book.knowledge.BookKnowledgeListScreen
 import io.legado.app.ui.book.knowledge.BookKnowledgeListViewModel
 import io.legado.app.ui.book.knowledge.CharacterAvatarCropDialog
+import io.legado.app.ui.book.knowledge.CharacterAvatarSourceSheet
 import io.legado.app.ui.book.knowledge.CharacterDetailIntent
 import io.legado.app.ui.book.knowledge.deleteCharacterAvatar
 import io.legado.app.ui.book.knowledge.saveCharacterAvatar
@@ -136,6 +137,12 @@ import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
 import io.legado.app.ui.config.themeManage.ThemeManageRouteScreen
 import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
+import io.legado.app.ui.book.readaloud.cast.BgmPoolRouteScreen
+import io.legado.app.ui.book.readaloud.cast.CastCapsuleStyleRouteScreen
+import io.legado.app.ui.book.readaloud.cast.MultiRoleRecognitionRouteScreen
+import io.legado.app.ui.book.readaloud.cast.MultiRoleRuleRouteScreen
+import io.legado.app.ui.book.readaloud.cast.VoiceEffectRouteScreen
+import io.legado.app.ui.book.readaloud.cast.VoicePoolRouteScreen
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleRouteScreen
 import io.legado.app.ui.login.SourceLoginIntent
 import io.legado.app.ui.login.SourceLoginRoute
@@ -557,6 +564,9 @@ fun MainActivity.mainEntryProvider(
             },
             onNavigateToHighlightTagRule = {
                 onNavigateToRoute(MainRouteHighlightTagRule)
+            },
+            onNavigateToMultiRoleRule = {
+                onNavigateToRoute(MainRouteMultiRoleRule)
             },
             onNavigateToAbout = {
                 onNavigateToRoute(MainRouteAbout)
@@ -1380,12 +1390,34 @@ fun MainActivity.mainEntryProvider(
         ) { uri ->
             pendingAvatarUri = uri?.toString()
         }
+        var showAvatarSource by remember { mutableStateOf(false) }
         BookCharacterDetailScreen(
             state = state,
             onIntent = viewModel::onIntent,
             effects = viewModel.effects,
             onBack = { onNavigateBack() },
-            onPickAvatar = { imagePicker.launch(arrayOf("image/*")) },
+            onPickAvatar = { showAvatarSource = true },
+        )
+        CharacterAvatarSourceSheet(
+            show = showAvatarSource,
+            onDismissRequest = { showAvatarSource = false },
+            onPickLocal = {
+                showAvatarSource = false
+                imagePicker.launch(arrayOf("image/*"))
+            },
+            onUrl = { url ->
+                showAvatarSource = false
+                scope.launch {
+                    // 换成链接之前那份是本地的，留着就再没人引用它了
+                    withContext(IO) { deleteCharacterAvatar(context, state.avatarUri) }
+                    viewModel.onIntent(CharacterDetailIntent.SetAvatarUri(url))
+                }
+            },
+            hasAvatar = state.avatarUri.isNotBlank(),
+            onEditAvatar = {
+                showAvatarSource = false
+                pendingAvatarUri = state.avatarUri
+            },
         )
         CharacterAvatarCropDialog(
             sourceUri = pendingAvatarUri?.let(Uri::parse),
@@ -1457,6 +1489,9 @@ fun MainActivity.mainEntryProvider(
             effects = viewModel.effects,
             onBack = { onNavigateBack() },
             onManageCloudTts = { onNavigateToRoute(MainRouteCloudTtsEngines(route.bookUrl)) },
+            onOpenCharacterDetail = { characterId ->
+                onNavigateToRoute(MainRouteBookCharacterDetail(route.bookUrl, characterId))
+            },
         )
     }
 
@@ -1621,6 +1656,48 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteHighlightTagRule> {
         HighlightTagRuleRouteScreen(
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteMultiRoleRule> {
+        MultiRoleRuleRouteScreen(
+            onBackClick = { onNavigateBack() },
+            onNavigateToVoicePool = { backStack.add(MainRouteVoicePool) },
+            onNavigateToBgmPool = { backStack.add(MainRouteBgmPool) },
+            onNavigateToVoiceEffect = { backStack.add(MainRouteVoiceEffect) },
+            onNavigateToCapsuleStyle = { backStack.add(MainRouteCastCapsuleStyle) },
+            onNavigateToEngines = { backStack.add(MainRouteCloudTtsEngines()) },
+            onNavigateToRecognition = { backStack.add(MainRouteMultiRoleRecognition) },
+        )
+    }
+
+    entry<MainRouteCastCapsuleStyle> {
+        CastCapsuleStyleRouteScreen(
+            onBackClick = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteVoicePool> {
+        VoicePoolRouteScreen(
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteBgmPool> {
+        BgmPoolRouteScreen(
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteVoiceEffect> {
+        VoiceEffectRouteScreen(
+            onBackClick = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteMultiRoleRecognition> {
+        MultiRoleRecognitionRouteScreen(
             onBackClick = { onNavigateBack() }
         )
     }

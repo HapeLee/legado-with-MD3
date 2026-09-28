@@ -97,6 +97,13 @@ data class ChapterSpeechSegment(
     val characterId: String? = null,
     val characterName: String = "",
     val emotion: String = "",
+    /**
+     * 只作用于这一段的变声器预设名（正文胶囊那一栏设的），空 = 跟随角色全局。
+     *
+     * 由 `CastSpeechOverlay` 从分配表抄进播放单元：朗读侧只拿得到单元，
+     * 让它带着名字下来就不用再去猜「这句是章内第几个引号」。
+     */
+    val voiceEffect: String = "",
     val confidence: Float = 0f,
     val source: SpeechResolutionSource,
     val userLocked: Boolean = false,

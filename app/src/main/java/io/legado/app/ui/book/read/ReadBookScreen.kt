@@ -277,6 +277,40 @@ fun ReadBookScreen(
     // for proper enter/exit animations
     val dismissSheet = { onIntent(ReadBookIntent.DismissSheet) }
 
+    // 多角色分配弹层（点击正文角色胶囊打开）
+    io.legado.app.ui.book.read.sheet.ReadAloudCastSheet(
+        show = state.activeSheet is ReadBookSheet.RoleCast,
+        ordinal = (state.activeSheet as? ReadBookSheet.RoleCast)?.ordinal ?: -1,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        menuConfig = state.menuConfig,
+    )
+
+    // 段首配乐弹层（点击正文 ♪ 胶囊打开）
+    io.legado.app.ui.book.read.sheet.BgmSceneSheet(
+        show = state.activeSheet is ReadBookSheet.BgmScene,
+        paragraphIndex = (state.activeSheet as? ReadBookSheet.BgmScene)?.paragraphIndex ?: -1,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        menuConfig = state.menuConfig,
+    )
+
+    // 本章背景音乐总览（配乐弹层/朗读面板打开，一屏改完本章所有区间）
+    io.legado.app.ui.book.read.sheet.BgmSceneTableSheet(
+        show = state.activeSheet is ReadBookSheet.BgmSceneTable,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        menuConfig = state.menuConfig,
+    )
+
+    // AI 分配角色悬浮窗
+    io.legado.app.ui.book.read.sheet.AiCastDialogSheet(
+        show = state.activeSheet is ReadBookSheet.AiCastDialog,
+        sceneOnly = (state.activeSheet as? ReadBookSheet.AiCastDialog)?.sceneOnly == true,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        menuConfig = state.menuConfig,
+    )
     ShadowSetSheet(
         show = state.activeSheet is ReadBookSheet.ShadowSet,
         config = state.sheetConfig,
@@ -571,6 +605,14 @@ fun ReadBookScreen(
                     onIntent(ReadBookIntent.DismissSheet)
                     onIntent(ReadBookIntent.DownloadChapters(start, end))
                 },
+            )
+        }
+
+        is ReadBookSheet.AudioDownload -> {
+            io.legado.app.ui.book.read.sheet.ReaderAudioDownloadSheet(
+                show = true,
+                onDismissRequest = dismissSheet,
+                menuConfig = state.menuConfig,
             )
         }
 

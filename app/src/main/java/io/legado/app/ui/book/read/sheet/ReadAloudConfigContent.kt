@@ -324,6 +324,22 @@ fun ReadAloudConfigContent(
                             onIntent(ReadBookIntent.SetUseMultiSpeaker(it))
                         },
                     )
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.multi_role_cast),
+                        description = stringResource(R.string.multi_role_cast_summary),
+                        checked = state.multiRoleCast,
+                        onCheckedChange = {
+                            onIntent(ReadBookIntent.SetMultiRoleCast(it))
+                        },
+                    )
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.bgm_assign),
+                        description = stringResource(R.string.bgm_assign_summary),
+                        checked = state.bgmAssign,
+                        onCheckedChange = {
+                            onIntent(ReadBookIntent.SetBgmAssign(it))
+                        },
+                    )
                     TinyClickableSettingItem(
                         title = stringResource(R.string.sys_tts_config),
                         onClick = { onIntent(ReadBookIntent.OpenSystemTtsSettings) },

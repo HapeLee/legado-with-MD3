@@ -318,6 +318,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         installSplashScreen()
         shouldApplyDefaultToRead = savedInstanceState == null
         restoredReadBookRoute = savedInstanceState?.restoreReadBookRoute()
+            ?: navRouteTracker.lastReadBookRoute()
         super.onCreate(savedInstanceState)
 
         if (checkStartupRoute()) return

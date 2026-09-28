@@ -6,6 +6,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.AiArtifact
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.domain.gateway.BookKnowledgeGateway
+import io.legado.app.help.readaloud.cast.CastProfileMirror
 import io.legado.app.domain.usecase.IdentifyBookCharactersUseCase
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
@@ -108,6 +109,8 @@ class BookCharacterListViewModel(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 allProfiles = withContext(Dispatchers.IO) {
+                    // 配音角色与官方人物是同一批人：只有 cast_characters 行的老角色先补档案再列
+                    CastProfileMirror.backfillAll(state.bookUrl)
                     bookKnowledgeGateway.getCharacterProfiles(state.bookUrl, 200)
                 }
                 applyFilter()

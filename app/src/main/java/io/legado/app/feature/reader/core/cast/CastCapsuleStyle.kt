@@ -1,0 +1,76 @@
+package io.legado.app.feature.reader.core.cast
+
+import com.google.gson.annotations.SerializedName
+import kotlin.math.max
+
+/**
+ * 一颗胶囊的显示样式。数值全部用百分比表达，正文字号怎么变，比例关系都不变。
+ *
+ * 圆角/头像圆角：100 = 现行那颗胶囊与圆形头像，0 = 矩形/直角。
+ * 头像大小：100 = 现行那格（胶囊高 × 0.66），拉大撑满胶囊高，拉小只剩一个点。
+ * 位移以「胶囊高」为单位，所以字号变大时头像位移同步变大，不会在小字号下跑出胶囊。
+ */
+data class CastCapsuleStyle(
+    @SerializedName("cornerRadius") val cornerRadius: Int = FULL,
+    /** 底色，0 = 跟随主题（沿用正文反色派生的那层淡底）。 */
+    @SerializedName("bgColor") val bgColor: Int = 0,
+    @SerializedName("bgColorNight") val bgColorNight: Int = 0,
+    @SerializedName("bgImage") val bgImage: String = "",
+    @SerializedName("bgImageNight") val bgImageNight: String = "",
+    @SerializedName("avatarRadius") val avatarRadius: Int = FULL,
+    /** 头像直径相对现行那格（胶囊高 × avatarRatio）的百分比。 */
+    @SerializedName("avatarScale") val avatarScale: Int = FULL,
+    @SerializedName("avatarDx") val avatarDx: Int = 0,
+    @SerializedName("avatarDy") val avatarDy: Int = 0,
+) {
+
+    /** 胶囊底板的圆角半径：100 时正好是高的一半（现在的样子）。 */
+    fun cornerPx(height: Float): Float =
+        height / 2f * (cornerRadius.coerceIn(0, FULL) / FULL.toFloat())
+
+    /** 头像的圆角半径：100 = 圆，0 = 直角方块。 */
+    fun avatarCornerPx(diameter: Float): Float =
+        diameter / 2f * (avatarRadius.coerceIn(0, FULL) / FULL.toFloat())
+
+    /** 头像直径：唯一取法，测量侧与绘制侧都从这里拿，否则宽度会量得和画的不一样。 */
+    fun avatarDiameter(height: Float): Float =
+        height * CastCapsuleGeometry.avatarRatio *
+            (avatarScale.coerceIn(AVATAR_SCALE_MIN, AVATAR_SCALE_MAX) / FULL.toFloat())
+
+    /** 头像左沿相对胶囊左沿的偏移，夹到「头像右沿不出胶囊」，免得整颗头像跑出去。 */
+    fun avatarLeft(height: Float): Float {
+        val diameter = avatarDiameter(height)
+        return (
+            height * CastCapsuleGeometry.padRatio + height * avatarDx / SHIFT_FULL.toFloat()
+            ).coerceIn(0f, max(0f, height - diameter))
+    }
+
+    /** 头像中心相对垂直中心的偏移。 */
+    fun avatarCenterOffset(height: Float): Float {
+        val room = (height - avatarDiameter(height)) / 2f
+        return (height * avatarDy / SHIFT_FULL.toFloat()).coerceIn(-room, room)
+    }
+
+    /** 深浅模式各自的底色与底图（0 / 空串 = 跟随主题、无底图）。 */
+    fun backgroundColor(isNight: Boolean): Int =
+        if (isNight) bgColorNight.takeIf { it != 0 } ?: bgColor else bgColor
+
+    fun backgroundImage(isNight: Boolean): String =
+        if (isNight) bgImageNight.takeIf { it.isNotEmpty() } ?: bgImage else bgImage
+
+    /** 这一份跟「从没设过」完全一致：走原来的绘制路径。 */
+    fun isDefault(): Boolean = this == Default
+
+    companion object {
+        const val FULL = 100
+        const val SHIFT_FULL = 50
+
+        /** 头像大小可调区间：拉满是刚好填满胶囊高，拉小只剩一个点。 */
+        const val AVATAR_SCALE_MIN = 30
+        const val AVATAR_SCALE_MAX = 150
+
+        val Default = CastCapsuleStyle()
+
+        fun safe(style: CastCapsuleStyle?): CastCapsuleStyle = style ?: Default
+    }
+}

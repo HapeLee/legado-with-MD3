@@ -77,6 +77,7 @@ class ReadAloudSettingsRepository : ReadAloudSettingsGateway {
 
 internal fun Preferences.toReadAloudSettings(): ReadAloudSettings = ReadAloudSettings(
     ttsEngine = compatDsString(PreferKey.ttsEngine),
+    voicePreviewText = compatDsString(PreferKey.voicePreviewText),
     ttsParagraphInterval = compatDsValue(ReadAloudKeys.TtsParagraphInterval, 0),
     audioCacheCleanTime = compatDsValue(ReadAloudKeys.AudioCacheCleanTime, 10),
     ignoreAudioFocus = compatDsValue(ReadAloudKeys.IgnoreAudioFocus, false),
@@ -116,6 +117,8 @@ internal fun Preferences.toReadAloudSettings(): ReadAloudSettings = ReadAloudSet
         AiReasoningLevel.OFF.storageValue,
     ),
     useMultiSpeaker = compatDsValue(ReadAloudKeys.UseMultiSpeaker, true),
+    multiRoleCast = compatDsValue(ReadAloudKeys.MultiRoleCast, false),
+    bgmAssign = compatDsValue(ReadAloudKeys.BgmAssign, false),
     defaultInterface = compatDsValue(
         ReadAloudKeys.DefaultInterface,
         ReadAloudSettingsRepository.DEFAULT_INTERFACE_CLASSIC,
@@ -149,6 +152,7 @@ private fun Preferences.compatContentSplitSymbols(): Set<String> =
 
 internal fun ReadAloudSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.ttsEngine to ttsEngine,
+    PreferKey.voicePreviewText to voicePreviewText,
     PreferKey.ttsParagraphInterval to ttsParagraphInterval,
     PreferKey.audioCacheCleanTime to audioCacheCleanTime,
     PreferKey.ignoreAudioFocus to ignoreAudioFocus,
@@ -177,6 +181,8 @@ internal fun ReadAloudSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.speechAnalysisMode to speechAnalysisMode,
     PreferKey.speechAnalysisReasoningLevel to speechAnalysisReasoningLevel,
     PreferKey.useMultiSpeaker to useMultiSpeaker,
+    PreferKey.multiRoleCast to multiRoleCast,
+    PreferKey.bgmAssign to bgmAssign,
     PreferKey.defaultReadAloudInterface to defaultInterface,
     PreferKey.contentSelectSpeakMod to contentSelectSpeakMode,
     PreferKey.audioPreDownloadNum to audioPreDownloadNum,
@@ -222,6 +228,8 @@ private object ReadAloudKeys {
     val SpeechAnalysisReasoningLevel =
         stringPreferencesKey(PreferKey.speechAnalysisReasoningLevel)
     val UseMultiSpeaker = booleanPreferencesKey(PreferKey.useMultiSpeaker)
+    val MultiRoleCast = booleanPreferencesKey(PreferKey.multiRoleCast)
+    val BgmAssign = booleanPreferencesKey(PreferKey.bgmAssign)
     val DefaultInterface = stringPreferencesKey(PreferKey.defaultReadAloudInterface)
     val ContentSelectSpeakMode = intPreferencesKey(PreferKey.contentSelectSpeakMod)
     val AudioPreDownloadNum = intPreferencesKey(PreferKey.audioPreDownloadNum)

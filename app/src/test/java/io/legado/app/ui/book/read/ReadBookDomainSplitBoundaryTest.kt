@@ -361,6 +361,14 @@ class ReadBookDomainSplitBoundaryTest {
 
     private companion object {
         val DOMAINS = listOf(
+            // 多角色分配域：确认/创建/取消与收尾全在 delegate，VM 只剩三个意图分支转发。
+            // 标记读写与角色表访问全收口 CastAssignmentStore（架构护栏）。
+            DomainSplit(
+                name = "多角色分配",
+                delegateFile = "io/legado/app/ui/book/read/ReadAloudCastDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf("CastAssignmentStore", "CastResult"),
+            ),
             DomainSplit(
                 name = "AI",
                 delegateFile = "io/legado/app/ui/book/read/ReadAiDelegate.kt",

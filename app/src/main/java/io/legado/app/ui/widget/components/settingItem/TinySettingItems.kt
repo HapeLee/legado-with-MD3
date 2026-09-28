@@ -318,10 +318,18 @@ fun TinySliderSettingItem(
         enabled = enabled,
         trailingContent = {
             ValueStepper(
-                value = value,
+                value = sliderValue,
                 displayValue = displayValue,
                 valueRange = valueRange,
-                onValueChange = onValueChange,
+                // 步进按钮没有「松手」这一步：只发 onValueChange 的话，把提交挂在
+                // onValueChangeFinished 上的调用方（预览式滑块）点加减会毫无反应，
+                // 所以这里跟滑块松手等价处理。
+                onValueChange = {
+                    sliderValue = it
+                    displayValue = it
+                    onValueChange(it)
+                    onValueChangeFinished()
+                },
                 enabled = enabled,
                 stepSize = stepSize,
                 showDecimal = showDecimal,

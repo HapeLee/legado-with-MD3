@@ -157,7 +157,7 @@ private fun CharacterDetailContent(
     var dialogAliases by remember(state.aliasesText) { mutableStateOf(state.aliasesText) }
     var dialogRole by remember(state.role) { mutableStateOf(state.role) }
     var dialogVoiceGender by remember(state.voiceGender) { mutableStateOf(state.voiceGender) }
-    var dialogVoiceAgeBand by remember(state.voiceAgeBand) { mutableStateOf(state.voiceAgeBand) }
+    var dialogPool by remember(state.voicePool) { mutableStateOf(state.voicePool) }
 
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -169,7 +169,7 @@ private fun CharacterDetailContent(
             avatarUri = state.avatarUri,
             roleDisplayName = state.role,
             voiceGender = state.voiceGender,
-            voiceAgeBand = state.voiceAgeBand,
+            voicePool = state.voicePool,
             tags = state.tags,
             onPickAvatar = onPickAvatar,
             onInfoClick = {
@@ -177,7 +177,7 @@ private fun CharacterDetailContent(
                 dialogAliases = state.aliasesText
                 dialogRole = state.role
                 dialogVoiceGender = state.voiceGender
-                dialogVoiceAgeBand = state.voiceAgeBand
+                dialogPool = state.voicePool
                 showProfileDialog = true
             },
         )
@@ -238,7 +238,7 @@ private fun CharacterDetailContent(
             onIntent(CharacterDetailIntent.SetAliasesText(dialogAliases))
             onIntent(CharacterDetailIntent.SetRole(dialogRole))
             onIntent(CharacterDetailIntent.SetVoiceGender(dialogVoiceGender))
-            onIntent(CharacterDetailIntent.SetVoiceAgeBand(dialogVoiceAgeBand))
+            onIntent(CharacterDetailIntent.SetVoicePool(dialogPool))
             showProfileDialog = false
         },
         dismissText = stringResource(R.string.cancel),
@@ -270,12 +270,19 @@ private fun CharacterDetailContent(
                     displayName = { voiceGenderDisplayName(it) },
                     onSelected = { dialogVoiceGender = it },
                 )
+                val poolOptions = buildList {
+                    add("")
+                    addAll(state.poolNames)
+                    if (dialogPool.isNotEmpty() && dialogPool !in state.poolNames) add(dialogPool)
+                }
                 ProfileVoiceTraitDropdown(
                     label = stringResource(R.string.character_voice_age_band),
-                    selected = dialogVoiceAgeBand,
-                    options = BookCharacterProfile.ALL_VOICE_AGE_BANDS,
-                    displayName = { voiceAgeBandDisplayName(it) },
-                    onSelected = { dialogVoiceAgeBand = it },
+                    selected = dialogPool,
+                    options = poolOptions,
+                    displayName = { pool ->
+                        pool.ifEmpty { stringResource(R.string.cast_unassigned) }
+                    },
+                    onSelected = { dialogPool = it },
                 )
             }
         },
@@ -359,16 +366,6 @@ private fun voiceGenderDisplayName(value: String): String = when (value) {
     else -> stringResource(R.string.voice_gender_unknown)
 }
 
-@Composable
-private fun voiceAgeBandDisplayName(value: String): String = when (value) {
-    BookCharacterProfile.VOICE_AGE_CHILD -> stringResource(R.string.voice_age_child)
-    BookCharacterProfile.VOICE_AGE_TEEN -> stringResource(R.string.voice_age_teen)
-    BookCharacterProfile.VOICE_AGE_YOUNG_ADULT -> stringResource(R.string.voice_age_young_adult)
-    BookCharacterProfile.VOICE_AGE_ADULT -> stringResource(R.string.voice_age_adult)
-    BookCharacterProfile.VOICE_AGE_ELDERLY -> stringResource(R.string.voice_age_elderly)
-    else -> stringResource(R.string.voice_age_unknown)
-}
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ProfileRoleDropdown(
@@ -424,7 +421,7 @@ private fun CharacterHeader(
     avatarUri: String,
     roleDisplayName: String,
     voiceGender: String,
-    voiceAgeBand: String,
+    voicePool: String,
     tags: ImmutableList<String>,
     onPickAvatar: () -> Unit,
     onInfoClick: () -> Unit,
@@ -496,8 +493,8 @@ private fun CharacterHeader(
                 if (voiceGender != BookCharacterProfile.VOICE_GENDER_UNKNOWN) {
                     TextCard(text = voiceGenderDisplayName(voiceGender))
                 }
-                if (voiceAgeBand != BookCharacterProfile.VOICE_AGE_UNKNOWN) {
-                    TextCard(text = voiceAgeBandDisplayName(voiceAgeBand))
+                if (voicePool.isNotBlank()) {
+                    TextCard(text = voicePool)
                 }
             }
             if (aliasesText.isNotBlank()) {

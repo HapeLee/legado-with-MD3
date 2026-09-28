@@ -10,6 +10,8 @@ data class ReadAloudPlaybackCue(
     val roleType: SpeechRoleType,
     val characterId: String?,
     val emotion: String = "",
+    /** 这一段的变声器预设名（空 = 跟随角色全局），见 [ChapterSpeechSegment.voiceEffect]。 */
+    val voiceEffect: String = "",
     val characterPerformance: CharacterPerformanceProfile? = null,
     val isChapterTitle: Boolean = false,
 ) {
@@ -114,6 +116,7 @@ class ReadAloudPlaybackQueue private constructor(
                     roleType = segment.roleType,
                     characterId = segment.characterId,
                     emotion = segment.emotion,
+                    voiceEffect = segment.voiceEffect,
                     characterPerformance = item.characterPerformance,
                 )
             }.sortedWith(compareBy(ReadAloudPlaybackCue::chapterStart, ReadAloudPlaybackCue::chapterEnd))

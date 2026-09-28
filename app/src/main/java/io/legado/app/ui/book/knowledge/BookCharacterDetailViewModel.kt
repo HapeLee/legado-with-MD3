@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.domain.gateway.BookKnowledgeGateway
+import io.legado.app.help.readaloud.cast.BookCastStore
+import io.legado.app.help.readaloud.cast.VoicePoolStore
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import kotlinx.collections.immutable.ImmutableList
@@ -70,7 +72,7 @@ class BookCharacterDetailViewModel(
 
             is CharacterDetailIntent.SetRole -> _uiState.update { it.copy(role = intent.value) }
             is CharacterDetailIntent.SetVoiceGender -> _uiState.update { it.copy(voiceGender = intent.value) }
-            is CharacterDetailIntent.SetVoiceAgeBand -> _uiState.update { it.copy(voiceAgeBand = intent.value) }
+            is CharacterDetailIntent.SetVoicePool -> _uiState.update { it.copy(voicePool = intent.value) }
             is CharacterDetailIntent.SetPersonality -> _uiState.update { it.copy(personality = intent.value) }
             is CharacterDetailIntent.SetSummary -> _uiState.update { it.copy(summary = intent.value) }
             CharacterDetailIntent.Save -> save()
@@ -103,6 +105,7 @@ class BookCharacterDetailViewModel(
                     bookKnowledgeGateway.getCharacterProfiles(state.bookUrl, 80)
                 }
                 val nameMap = profiles.associate { it.id to it.name }
+                val poolNames = withContext(Dispatchers.IO) { VoicePoolStore.enabledPoolNames() }
 
                 _uiState.update {
                     it.copy(
@@ -115,8 +118,8 @@ class BookCharacterDetailViewModel(
                         role = profile?.role.orEmpty(),
                         voiceGender = profile?.voiceGender
                             ?: BookCharacterProfile.VOICE_GENDER_UNKNOWN,
-                        voiceAgeBand = profile?.voiceAgeBand
-                            ?: BookCharacterProfile.VOICE_AGE_UNKNOWN,
+                        voicePool = VoicePoolStore.poolNameOrEmpty(profile?.voiceAgeBand),
+                        poolNames = poolNames.toImmutableList(),
                         personality = profile?.personality.orEmpty(),
                         summary = profile?.summary.orEmpty(),
                         events = events.map { event ->
@@ -176,7 +179,7 @@ class BookCharacterDetailViewModel(
                     tagsJson = state.tags.toTagsJson(),
                     role = state.role,
                     voiceGender = state.voiceGender,
-                    voiceAgeBand = state.voiceAgeBand,
+                    voiceAgeBand = state.voicePool,
                     personality = state.personality.trim(),
                     summary = state.summary.trim(),
                     status = existing?.status ?: BookCharacterProfile.STATUS_ACTIVE,
@@ -186,8 +189,21 @@ class BookCharacterDetailViewModel(
                     createdAt = existing?.createdAt ?: now,
                     updatedAt = now,
                 )
+                val avatarChanged = currentProfile?.avatarUri.orEmpty() != profile.avatarUri.orEmpty()
                 withContext(Dispatchers.IO) {
                     bookKnowledgeGateway.upsertCharacterProfile(profile)
+                    // 档案与配音角色是同一份信息（档案 id 就是角色 id）：这里改了名字或池，
+                    // 正文胶囊、分配表与朗读音色要立刻跟着改，否则朗读还在用旧池。
+                    BookCastStore.syncFromProfile(
+                        bookUrl = profile.bookUrl,
+                        profileId = profile.id,
+                        name = profile.name,
+                        poolLabel = VoicePoolStore.poolNameOrEmpty(profile.voiceAgeBand),
+                    )
+                    if (avatarChanged) {
+                        // 胶囊上那张图是分页时定下来的地址，不换一次重排就还是旧头像
+                        BookCastStore.reloadReaderChapter(profile.bookUrl)
+                    }
                 }
                 currentProfile = profile
                 _uiState.update {
@@ -221,6 +237,8 @@ class BookCharacterDetailViewModel(
                         deleteRelations = intent.deleteRelations,
                         deleteEvents = intent.deleteEvents,
                     )
+                    // 档案没了，以它建档的配音角色、分配句与音色绑定也不能留在表里
+                    BookCastStore.deleteCharacter(profile.bookUrl, profile.id, profile.name)
                 }
                 _effects.tryEmit(CharacterDetailEffect.NavigateBack)
             } catch (e: CancellationException) {

@@ -2711,7 +2711,7 @@
     <string name="use_multi_speaker_summary">為旁白、對話等不同角色使用不同音色</string>
     <string name="read_aloud_content_split_mode">內容劃分方式</string>
     <string name="read_aloud_content_split_default">預設</string>
-    <string name="read_aloud_content_split_default_summary">開啟多角色朗讀時按句末標點劃分，否則按整段劃分</string>
+    <string name="read_aloud_content_split_default_summary">按整段劃分，段內不產生停頓</string>
     <string name="read_aloud_content_split_paragraph">整段</string>
     <string name="read_aloud_content_split_paragraph_summary">一段正文作為一個朗讀單元，段內不產生停頓</string>
     <string name="read_aloud_content_split_page">整頁</string>
@@ -2857,7 +2857,7 @@
     <string name="source_categories">書源分類</string>
     <string name="my_tags">我的標籤</string>
     <string name="character_voice_gender">聲音性別</string>
-    <string name="character_voice_age_band">聲音年齡層</string>
+    <string name="character_voice_age_band">聲音池</string>
     <string name="voice_gender_male">男性</string>
     <string name="voice_gender_female">女性</string>
     <string name="voice_gender_unknown">未知</string>
@@ -2972,4 +2972,28 @@
     <string name="feature_bookmarks_no_matching_notes">找不到相關筆記</string>
     <string name="feature_bookmarks_no_notes">暫無筆記</string>
     <string name="feature_bookmarks_chapter_fallback">第 %1$d 章</string>
+    <string name="read_aloud_audio_download">聽書音頻下載</string>
+    <string name="read_aloud_audio_download_progress">章節 %1$d/%2$d · 句子 %3$d/%4$d</string>
+    <string name="read_aloud_audio_download_entry">聽書下載</string>
+    <string name="read_aloud_audio_download_this_chapter">只本章</string>
+    <string name="read_aloud_audio_download_by_range">按章範圍</string>
+    <string name="read_aloud_audio_download_start_chapter">起始章</string>
+    <string name="read_aloud_audio_download_end_chapter">結束章</string>
+    <string name="read_aloud_audio_download_start">開始下載</string>
+    <string name="read_aloud_audio_download_cancel">取消下載</string>
+    <string name="read_aloud_audio_download_chapter_bar">章節進度</string>
+    <string name="read_aloud_audio_download_sentence_bar">句子進度</string>
+    <string name="read_aloud_audio_download_downloaded">已下載章節</string>
+    <string name="read_aloud_audio_download_empty">還沒有下載過章節</string>
+    <string name="read_aloud_audio_download_sentences_count">%1$d 句</string>
+    <string name="read_aloud_audio_download_delete">刪除聽書</string>
+    <string name="read_aloud_audio_download_deleted">已刪除 %1$d 句音頻</string>
+    <string name="read_aloud_audio_download_deleted_chapters">已刪除 %1$d 章的聽書音頻</string>
+    <string name="read_aloud_audio_download_invalid_range">章範圍填得唔對</string>
+    <string name="read_aloud_audio_download_state">已下載聽書音頻</string>
+    <string name="cast_assignment_state">本章已分配角色</string>
+    <string name="cast_assignment_delete">刪除分配</string>
+    <string name="cast_assignment_deleted">已刪除 %1$d 條分配</string>
+    <string name="cast_assignment_deleted_chapters">已刪除 %1$d 章的角色分配</string>
+    <string name="read_aloud_audio_download_summary">下載過的章節點朗讀就直接播本地音頻，不聯網、不重新合成。</string>
 </resources>

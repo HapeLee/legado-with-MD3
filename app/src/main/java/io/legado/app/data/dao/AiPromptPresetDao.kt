@@ -18,6 +18,13 @@ interface AiPromptPresetDao {
     )
     fun getEnabledByTaskType(taskType: String): List<AiPromptPreset>
 
+    @Query("select * from ai_prompt_presets where id = :id limit 1")
+    fun getSync(id: String): AiPromptPreset?
+
+    /** 含停用行：内置预设的默认文本升级要连停用的那几条一起改。 */
+    @Query("select * from ai_prompt_presets where taskType = :taskType")
+    fun getAllByTaskType(taskType: String): List<AiPromptPreset>
+
     @Query("select count(*) from ai_prompt_presets where taskType = :taskType")
     suspend fun countByTaskType(taskType: String): Int
 

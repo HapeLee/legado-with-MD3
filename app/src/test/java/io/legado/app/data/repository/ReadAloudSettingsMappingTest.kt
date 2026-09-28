@@ -158,6 +158,7 @@ private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.speechAnalysisMode to speechAnalysisMode,
     PreferKey.speechAnalysisReasoningLevel to speechAnalysisReasoningLevel,
     PreferKey.useMultiSpeaker to useMultiSpeaker,
+    PreferKey.multiRoleCast to multiRoleCast,
     PreferKey.defaultReadAloudInterface to defaultInterface,
     PreferKey.contentSelectSpeakMod to contentSelectSpeakMode,
     PreferKey.audioPreDownloadNum to audioPreDownloadNum,

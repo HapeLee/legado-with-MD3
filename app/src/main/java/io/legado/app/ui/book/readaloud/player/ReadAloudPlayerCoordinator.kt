@@ -147,7 +147,8 @@ class ReadAloudPlayerCoordinator(
                 semanticContent = it.source.semanticContent,
                 pageStarts = ReadBook.readerPagination(it.chapter.index)?.pageStarts.orEmpty(),
                 // 与朗读服务同口径：「默认」在多角色关闭时落到整段，否则听书页展示的
-                // 文本行会与服务实际播放的单元粒度不一致。
+                // 文本行会与服务实际播放的单元粒度不一致。划分只认「多角色朗读」这一个开关，
+                // 「多角色分配」是正文胶囊的显示开关，不改朗读单元粒度。
                 contentSplitMode = ContentSplitPolicies.resolve(
                     mode = ReadAloudContentSplitMode.fromStorage(settings.contentSplitMode),
                     useMultiSpeaker = settings.useMultiSpeaker,

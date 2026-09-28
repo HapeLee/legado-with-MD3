@@ -311,6 +311,7 @@ object MainNavigator {
             }
 
             MainRouteHighlightTagRule,
+            MainRouteMultiRoleRule,
             MainRouteReadRecord -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)
@@ -320,6 +321,13 @@ object MainNavigator {
                     backStack.add(route)
                 }
             }
+
+            // 多角色规则的子页只由 hub 用 backStack.add 压栈；这里保底直推，不清栈
+            MainRouteVoicePool,
+            MainRouteBgmPool,
+            MainRouteVoiceEffect,
+            MainRouteCastCapsuleStyle,
+            MainRouteMultiRoleRecognition -> backStack.add(route)
 
             MainRouteAbout -> {
                 if (currentRoute == MainRouteHome) {
