@@ -1,14 +1,39 @@
 package io.legado.app.help.coil
 
+import coil3.BitmapImage
+import coil3.decode.DataSource
 import coil3.intercept.Interceptor
 import coil3.request.CachePolicy
+import coil3.request.ErrorResult
+import coil3.request.ImageRequest
 import coil3.request.ImageResult
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.request.crossfade
+import coil3.request.transformations
+import io.legado.app.data.appDb
+import io.legado.app.help.book.BookHelp
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.utils.isAbsUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.Closeable
+import java.io.File
 
-class CoverInterceptor : Interceptor {
+class CoverInterceptor(
+    private val acquireMangaFile: suspend (ImageRequest, String) -> Pair<File, Closeable> = { request, data ->
+        val bookUrl = requireNotNull(request.extras[CoverExtras.MangaBookUrl])
+        val book = requireNotNull(appDb.bookDao.getBook(bookUrl)) { "Manga book missing" }
+        val source = appDb.bookSourceDao.getBookSource(
+            request.extras[CoverExtras.SourceOrigin] ?: book.origin,
+        )
+        BookHelp.acquireReadingImage(
+            source, book, data, request.extras[CoverExtras.LoadOnlyWifi] == true,
+            request.extras[CoverExtras.MangaFileTransferStarted] ?: {},
+        )
+    },
+) : Interceptor {
 
     companion object {
         private const val RESOLVED_URL_CACHE_MAX_SIZE = 100
@@ -34,6 +59,58 @@ class CoverInterceptor : Interceptor {
     override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
         val request = chain.request
         val data = request.data
+
+        val fileOwner = request.extras[CoverExtras.MangaFileOwner]
+        // 分页与条漫在线页复用同一原图；本地漫画与 content/file URI 保持平台加载器。
+        if (fileOwner != null && data is String &&
+            (data.isAbsUrl() || data.startsWith("data:", true)) &&
+            !data.startsWith("file:", true) && !data.startsWith("content:", true)
+        ) {
+            val (file, version, ratio) = withContext(Dispatchers.IO) {
+                val acquired = fileOwner.acquire(data) { acquireMangaFile(request, data) }
+                Triple(
+                    acquired,
+                    "${acquired.length()}:${acquired.lastModified()}",
+                    MangaImageDimensions.read(acquired)
+                )
+            }
+            fileOwner.setAspectRatio(ratio)
+            ratio?.let { request.extras[CoverExtras.MangaAspectRatio]?.invoke(it) }
+            val memoryKey = "${request.memoryCacheKey ?: data}:original:$version"
+            val webtoon =
+                request.extras[CoverExtras.MangaWebtoon] == true && request.extras[CoverExtras.MangaDataPrefetch] != true
+            val previewKey = if (webtoon) MangaPreviewCache.key(memoryKey, request) else ""
+            val snapshot =
+                if (webtoon) withContext(Dispatchers.IO) { MangaPreviewCache.open(previewKey) } else null
+
+            fun localRequest(dataFile: File, cachedPreview: Boolean) = request.newBuilder()
+                .data(dataFile).memoryCacheKey(memoryKey)
+                .placeholderMemoryCacheKey(memoryKey).diskCachePolicy(CachePolicy.DISABLED)
+                .apply {
+                    if (webtoon) allowHardware(false)
+                    if (cachedPreview) transformations(emptyList())
+                }.build()
+
+            var usedPreview = snapshot != null
+            var result = try {
+                chain.withRequest(localRequest(snapshot?.data?.toFile() ?: file, usedPreview))
+                    .proceed()
+            } finally {
+                if (snapshot != null) withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { snapshot.close() }
+            }
+            if (usedPreview && result is ErrorResult) {
+                withContext(Dispatchers.IO) { MangaPreviewCache.remove(previewKey) }
+                usedPreview = false
+                result = chain.withRequest(localRequest(file, false)).proceed()
+            }
+            if (webtoon && !usedPreview && result is SuccessResult && result.image is BitmapImage) {
+                MangaPreviewCache.save(previewKey, (result.image as BitmapImage).bitmap)
+            }
+            // Telephoto 会对内存命中也重新淡入；已准备的预览直接显示，避免滑动时露出底色。
+            return if (result is SuccessResult && result.dataSource == DataSource.MEMORY_CACHE) {
+                result.copy(request = result.request.newBuilder().crossfade(false).build())
+            } else result
+        }
 
         if (data is String && data.isNotBlank()) {
             // 本地封面缓存快速路径：命中就改写为本地文件，跳过 AnalyzeUrl 的书源规则调用

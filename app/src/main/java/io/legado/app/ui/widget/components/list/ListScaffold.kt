@@ -59,6 +59,13 @@ fun <T> ListScaffold(
     dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
     onClearSelection: (() -> Unit)? = null,
     selectionActions: SelectionActions? = null,
+    /**
+     * 选择模式下是否保留顶栏右侧 actions 区（搜索 / [topBarActions] / 更多菜单），
+     * 默认关闭；详见 [DynamicTopAppBar]。需要跨分组多选的书架管理会打开它。
+     */
+    keepActionsInSelection: Boolean = false,
+    /** 选择态自定义标题，跨分组多选时默认计数口径会失真，详见 [DynamicTopAppBar]。 */
+    selectionTitle: String? = null,
     onAddClick: (() -> Unit)? = null,
     floatingActionButton: @Composable () -> Unit = {
         onAddClick?.let { onClick ->
@@ -103,6 +110,8 @@ fun <T> ListScaffold(
                 searchTrailingIcon = searchTrailingIcon,
                 searchPlaceholder = searchPlaceholder,
                 onClearSelection = { onClearSelection?.invoke() ?: selectionActions?.onClearSelection?.invoke() },
+                keepActionsInSelection = keepActionsInSelection,
+                selectionTitle = selectionTitle,
                 topBarActions = topBarActions,
                 dropDownMenuContent = dropDownMenuContent,
                 bottomContent = bottomContent

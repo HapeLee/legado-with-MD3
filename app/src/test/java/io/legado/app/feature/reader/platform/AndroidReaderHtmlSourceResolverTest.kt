@@ -2,10 +2,10 @@ package io.legado.app.feature.reader.platform
 
 import android.app.Application
 import android.graphics.Color
+import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
-import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -95,6 +95,11 @@ class AndroidReaderHtmlSourceResolverTest {
 
         assertEquals(source, image.source)
         assertEquals(3, image.chapterPosition)
+        // 与旧 `setTypeHtml` 一致：不给 ImageGetter，框架用系统 fallback 图标生成 ImageSpan，
+        // 旧版行内图的占位宽/行盒高就是它的固有尺寸。
+        val extent = image.htmlSpanExtent!!
+        assertTrue(extent.widthPx > 0f)
+        assertTrue(extent.heightPx > 0f)
     }
 
     @Test fun consecutiveBreaksPreserveANewlineOnlyVisualParagraphWithoutATrailingPhantomLine() {

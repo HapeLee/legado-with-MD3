@@ -13,6 +13,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -94,11 +95,13 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -129,6 +132,7 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.image.cover.bookshelfSharedCoverSourceId
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
@@ -178,8 +182,20 @@ fun BookshelfRouteScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val allGroups by viewModel.allGroupsFlow.collectAsStateWithLifecycle()
+    // 打开书籍会立刻把最后阅读时间落库，排序随之变化：退场动画期间若让书架跟着重排，
+    // 正参与共享转场的封面会和它所在的格子错位。因此只在「转场目标是离开书架」时渲染
+    // 离开前那一版列表；目标一旦回到可见（正常返回、预测性返回都算），立刻恢复用最新
+    // 排序 —— 重排发生在书架不可见的时候，回到书架时看到的已经是排好的结果。
+    val transition = animatedVisibilityScope?.transition
+    val isLeavingShelf = transition?.targetState == EnterExitState.PostExit
+    var leavingShelfState by remember { mutableStateOf<BookshelfUiState?>(null) }
+    LaunchedEffect(isLeavingShelf) {
+        if (isLeavingShelf) return@LaunchedEffect
+        // 可见期间持续跟随最新状态，快照因此不会残留成过期版本（例如点了私密书但没跳转）
+        snapshotFlow { state }.collect { leavingShelfState = it }
+    }
     BookshelfScreen(
-        uiState = state,
+        uiState = if (isLeavingShelf) leavingShelfState ?: state else state,
         onIntent = viewModel::onIntent,
         effects = viewModel.effects,
         allGroups = allGroups,
@@ -1660,7 +1676,11 @@ fun BookshelfPage(
             state = gridState,
             modifier = Modifier
                 .fillMaxSize()
-                .semantics { contentDescription = listContentDescription }
+                .semantics {
+                    contentDescription = listContentDescription
+                    testTagsAsResourceId = true
+                }
+                .testTag("bookshelf_list")
                 .then(
                     with(sharedTransitionScope) {
                         if (this != null) Modifier.skipToLookaheadSize() else Modifier
@@ -1679,7 +1699,7 @@ fun BookshelfPage(
                 val isSelected = selectedBookUrls.contains(bookUi.book.bookUrl)
                 val sharedCoverKey = bookCoverSharedElementKey(
                     bookUi.book.bookUrl,
-                    "bookshelf:$sharedCoverGroupId"
+                    bookshelfSharedCoverSourceId(sharedCoverGroupId)
                 )
                 ReorderableItem(
                     state = reorderableState,

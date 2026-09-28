@@ -10,6 +10,10 @@ sealed interface MainRoute : NavKey
 @Serializable
 data object MainRouteHome : MainRoute
 
+/** 只兼容旧版本保存的导航栈，新入口使用 Activity 播放浮层。 */
+@Serializable
+data object MainRouteReadAloudPlayer : MainRoute
+
 @Serializable
 data class MainRouteSourceLogin(
     val type: SourceLoginType,
@@ -154,13 +158,6 @@ data class MainRouteAudioPlay(
     val inBookshelf: Boolean = true,
     val sharedCoverKey: String? = null,
 ) : MainRoute
-
-/**
- * 听书播放界面。单例语义：可从阅读界面、悬浮胶囊或媒体按键在任意界面之上打开，
- * 重复进入只替换不叠加。
- */
-@Serializable
-data object MainRouteReadAloudPlayer : MainRoute
 
 @Serializable
 data class MainRouteSearch(

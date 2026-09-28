@@ -18,7 +18,7 @@ kotlinxCoroutinesAndroid = "1.11.0"
 kotlinxSerializationJson = "1.11.0"
 kotlinxCollectionsImmutable = "0.5.2"
 ksp = "2.3.12"
-agp = "9.2.1"
+agp = "9.4.1"
 appcompat = "1.8.0"
 colorpicker = "1.1.0"
 colorpicker-compose = "1.3.0"
@@ -44,11 +44,10 @@ coroutines = "1.11.0"
 kotlinxDatetime = "0.8.0"
 lifecycleViewmodelCompose = "2.11.0"
 liveeventbus = "1.8.14"
-navigation3 = "1.2.0-rc01"
-# 1.2.0-alpha02 修复了预测式返回手势中 NavigationEventInput.dispatchOnBackProgressed
-# 对已分离输入抛 IllegalStateException 的崩溃（1.1.2 仍会 checkNotNull 抛异常）。
-# 覆盖 navigation3 1.1.4 传递依赖的 1.1.2，等上游发布含该修复的稳定版后可移除。
-navigationevent = "1.2.0-alpha04"
+navigation3 = "1.2.0"
+# NavigationEvent 1.2 修复了预测式返回事件发往已分离输入时的崩溃；
+# 显式保持 1.2 系列，避免回退到尚未包含该修复的稳定版 1.1.2。
+navigationevent = "1.2.0-rc01"
 markwon = "4.6.2"
 material = "1.14.0"
 material3 = "1.5.0-alpha28"

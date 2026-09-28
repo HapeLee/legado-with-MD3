@@ -233,6 +233,8 @@ import io.legado.app.ui.association.ImportHttpTtsViewModel
 import io.legado.app.ui.association.ImportReplaceRuleViewModel
 import io.legado.app.ui.association.ImportRssSourceViewModel
 import io.legado.app.ui.association.ImportTxtTocRuleViewModel
+import io.legado.app.domain.gateway.PlaybackCapsuleGateway
+import io.legado.app.service.playback.PlaybackCapsuleGatewayAdapter
 import io.legado.app.ui.book.audio.AudioPlayCoordinator
 import io.legado.app.ui.book.audio.AudioPlayViewModel
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
@@ -307,6 +309,7 @@ import io.legado.app.ui.login.SourceLoginViewModel
 import io.legado.app.ui.main.MainNavRouteTracker
 import io.legado.app.ui.main.MainRouteSearchContent
 import io.legado.app.ui.main.MainViewModel
+import io.legado.app.ui.main.bookshelf.BookshelfCoverPreloader
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.bookshelf.autoGroup.AiAutoGroupViewModel
 import io.legado.app.ui.main.explore.ExploreViewModel
@@ -407,6 +410,7 @@ val appModule = module {
     single<ReadSettingsGateway> { get<ReadSettingsRepository>() }
     singleOf(::ReadAloudSettingsRepository)
     singleOf(::ReadAloudSessionStore)
+    single<PlaybackCapsuleGateway> { PlaybackCapsuleGatewayAdapter(get(), get()) }
     singleOf(::MainNavRouteTracker)
     // R2.3：会话每个所有者一份。ReadBook.callBack 的身份是「阅读页已挂载」信号
     // （prefetchForOpen / upData 判 callBack != null），register 还会给上一个持有者
@@ -561,6 +565,8 @@ val appModule = module {
             .crossfade(true)
             .build()
     }
+    // 书架首屏封面预热：依赖上面的 ImageLoader 单例，进程内复用已缓存封面
+    singleOf(::BookshelfCoverPreloader)
 
     viewModelOf(::DictRuleViewModel)
     viewModelOf(::ImportDictRuleViewModel)

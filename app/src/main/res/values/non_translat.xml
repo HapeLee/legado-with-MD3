@@ -10,6 +10,8 @@
     <string name="http_ip" translatable="false">http://%1$s:%2$d</string>
     <string name="git_hub" translatable="false">GitHub</string>
     <string name="diy_edit_source_group_title" translatable="false">【%s】</string>
+    <!-- 只有格式占位符、没有实词，各语言共用同一写法 -->
+    <string name="bookshelf_edit_subtitle" translatable="false">%1$s · %2$s</string>
     <string name="vip_title" translatable="false">🔒%s</string>
     <string name="payed_title" translatable="false">🔓%s</string>
 

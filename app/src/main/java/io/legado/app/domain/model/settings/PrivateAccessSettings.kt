@@ -25,7 +25,7 @@ data class PrivateAccessSettings(
      *
      * 放在末尾是为了不破坏按位置构造的调用方。
      */
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     /**
      * 离开前台后多久才要求重新验证（秒）。只在 [PrivateUnlockScope.UntilBackground] 下有意义：
      * 0 表示"离开即失效"，>0 表示这段时间内回来不重验。

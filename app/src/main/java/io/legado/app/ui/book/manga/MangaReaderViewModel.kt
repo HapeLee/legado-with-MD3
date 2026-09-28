@@ -20,6 +20,7 @@ import io.legado.app.domain.model.manga.MangaSessionState
 import io.legado.app.domain.model.settings.MangaSettings
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.coil.CoverFetcher
+import io.legado.app.help.glide.progress.ProgressManager
 import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.manga.config.MangaColorFilterConfig
 import io.legado.app.utils.GSON
@@ -37,6 +38,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import splitties.init.appCtx
+
+/** 会把下载百分比写进 UiState 的页窗口：当前页前后各若干项。 */
+private const val PAGE_PROGRESS_WINDOW = 3
 
 class MangaReaderViewModel(
     private val mangaSettingsGateway: MangaSettingsGateway,
@@ -97,6 +101,13 @@ class MangaReaderViewModel(
         viewModelScope.launch {
             otherSettingsGateway.settings.collect { settings ->
                 _uiState.update { it.copy(confirmAddToShelf = settings.showAddToShelfAlert) }
+            }
+        }
+        viewModelScope.launch {
+            // 下载进度由 OkHttp 层上报（okHttpClientManga），按“原始图片地址”投递，
+            // 这里只做 URL -> 页面状态的映射，不参与图片请求本身。
+            ProgressManager.progress.collect { event ->
+                applyPageProgress(event.url, event.percentage)
             }
         }
     }
@@ -263,18 +274,15 @@ class MangaReaderViewModel(
             is MangaReaderIntent.RetryChapter -> executeSession(
                 MangaSessionCommand.RetryChapter(intent.chapterIndex)
             )
-            is MangaReaderIntent.PageLoadStarted -> updatePageLoadState(
-                intent.key,
-                MangaPageLoadState.Loading,
-            )
+            is MangaReaderIntent.PageLoadStarted -> markPageLoading(intent.requestId, intent.force)
 
             is MangaReaderIntent.PageLoadSucceeded -> updatePageLoadState(
-                intent.key,
+                intent.requestId,
                 MangaPageLoadState.Ready,
             )
 
             is MangaReaderIntent.PageLoadFailed -> updatePageLoadState(
-                intent.key,
+                intent.requestId,
                 MangaPageLoadState.Failed(intent.message),
             )
 
@@ -1220,20 +1228,60 @@ class MangaReaderViewModel(
         }
     }
 
-    private fun updatePageLoadState(key: String, loadState: MangaPageLoadState) {
+    /**
+     * 置为 Loading，但保留已有百分比：同图的多个展示请求 onStart 会先后到达，
+     * 直接塞 [MangaPageLoadState.Loading] 会把已经走到的进度清回“不确定”。
+     */
+    private fun markPageLoading(requestId: MangaPageRequestId, force: Boolean = false) {
+        updatePageLoadState(requestId, MangaPageLoadState.Loading(), force)
+    }
+
+    /**
+     * 预取页也在并发下载，进度事件最高可达每秒上百条。只有当前页附近的百分比才会被看到，
+     * 因此窗口外的条目直接跳过，避免为了一个看不见的数字重建整份 UiState（进而重组阅读页）。
+     */
+    private fun applyPageProgress(imageUrl: String, percentage: Int) {
         _uiState.update { state ->
-            val index = state.pages.indexOfFirst { it.key == key }
+            val anchor = mangaImagePrefetchIndex(
+                state.settings.scrollMode,
+                state.currentItemIndex,
+                state.footerItemIndex
+            )
+            val from = anchor - PAGE_PROGRESS_WINDOW
+            val to = anchor + PAGE_PROGRESS_WINDOW
+            var changed = false
+            val pages = state.pages.mapIndexed { itemIndex, item ->
+                if (itemIndex < from || itemIndex > to) {
+                    item
+                } else if (item is MangaReaderItemUi.Page &&
+                    item.imageUrl == imageUrl &&
+                    item.loadState is MangaPageLoadState.Loading &&
+                    item.loadState.progress != percentage
+                ) {
+                    changed = true
+                    item.copy(loadState = MangaPageLoadState.Loading(percentage))
+                } else {
+                    item
+                }
+            }
+            if (changed) state.copy(pages = pages.toImmutableList()) else state
+        }
+    }
+
+    private fun updatePageLoadState(
+        requestId: MangaPageRequestId,
+        loadState: MangaPageLoadState,
+        force: Boolean = false,
+    ) {
+        _uiState.update { state ->
+            val index = state.pages.indexOfFirst { it.key == requestId.key }
             val page =
                 state.pages.getOrNull(index) as? MangaReaderItemUi.Page ?: return@update state
-            // 已就绪的页不被重新入队/预取触发 onStart 而降级回 Loading，避免已显示的图被
-            // 遮罩/转圈闪一下；重试走 retryPage 显式置回 Queued，不受此限制。
-            if (page.loadState == MangaPageLoadState.Ready) return@update state
-            if (page.loadState == loadState) return@update state
-            state.copy(
-                pages = state.pages.mapIndexed { itemIndex, item ->
-                    if (itemIndex == index) page.copy(loadState = loadState) else item
-                }.toImmutableList(),
-            )
+            val next = page.reduceImageLoad(requestId, loadState, force)
+            if (next === page) return@update state
+            state.copy(pages = state.pages.mapIndexed { itemIndex, item ->
+                if (itemIndex == index) next else item
+            }.toImmutableList())
         }
     }
 

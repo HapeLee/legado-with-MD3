@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -65,6 +66,9 @@ import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
 import io.legado.app.receiver.MediaButtonReceiver
 import io.legado.app.service.BaseReadAloudService.Companion.speechDrivingNavigation
+import io.legado.app.domain.gateway.PlaybackCapsuleGateway
+import io.legado.app.domain.model.PlaybackCapsuleSource
+import io.legado.app.service.readaloud.ReadAloudOverlayWindow
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.LogUtils
@@ -94,6 +98,8 @@ import splitties.systemservices.wifiManager
  */
 abstract class BaseReadAloudService : BaseService(),
     AudioManager.OnAudioFocusChangeListener {
+
+    private var capsuleOverlayWindow: ReadAloudOverlayWindow? = null
 
     companion object {
         /** 启动朗读等待章节分页快照的最长时间（排版异步发布，正常 <1s 就绪）。 */
@@ -180,6 +186,7 @@ abstract class BaseReadAloudService : BaseService(),
                     or PlaybackStateCompat.ACTION_PAUSE
                     or PlaybackStateCompat.ACTION_PLAY_PAUSE
                     or PlaybackStateCompat.ACTION_STOP
+                    or PlaybackStateCompat.ACTION_SEEK_TO
                     or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
                     or PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
 
@@ -288,6 +295,11 @@ abstract class BaseReadAloudService : BaseService(),
         stopRequested = false
         isRun = true
         pause = false
+        get<PlaybackCapsuleGateway>(PlaybackCapsuleGateway::class.java).setSessionAvailable(
+            PlaybackCapsuleSource.ReadAloud,
+            true
+        )
+        capsuleOverlayWindow = ReadAloudOverlayWindow(this)
         // 新朗读会话默认跟随当前显示页（用户手动翻页脱离后由阅读界面负责恢复）
         sessionStore.restoreReadAloudFollow()
         observeLiveBus()
@@ -329,7 +341,19 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        capsuleOverlayWindow?.onConfigurationChanged()
+    }
+
     override fun onDestroy() {
+        get<PlaybackCapsuleGateway>(PlaybackCapsuleGateway::class.java).setSessionAvailable(
+            PlaybackCapsuleSource.ReadAloud,
+            false
+        )
+        capsuleOverlayWindow?.close()
+        capsuleOverlayWindow = null
+        // 配乐是第二条音轨：服务销毁前必须自己收掉，否则留下停不下来的音乐
         readAloudBgm.release()
         ReadBook.upReadTime()
         super.onDestroy()
@@ -515,6 +539,7 @@ abstract class BaseReadAloudService : BaseService(),
                 val target = preparedParagraphs[preparedNowSpeak]
                 pos = (preparedReadAloudNumber - target.chapterPosition)
                     .coerceIn(0, target.text.length)
+                preparedReadAloudNumber = target.chapterPosition
             }
             var preparedParagraphStartPos = pos
             if (usePreparedPlaybackQueue) {
@@ -567,7 +592,7 @@ abstract class BaseReadAloudService : BaseService(),
             nowSpeak = preparedNowSpeak
             readAloudNumber = preparedReadAloudNumber
             paragraphStartPos = preparedParagraphStartPos
-            updateReadAloudProgressSnapshot(preparedReadAloudNumber + 1)
+            updateReadAloudProgressSnapshot(preparedReadAloudNumber + preparedParagraphStartPos + 1)
             onPlaybackStateReplaced()
             if (moveToLast) toLast = false
             preparedPlaybackCursor?.takeIf { hasSpeechPlaybackQueue }?.let(::publishPlaybackInfo)
@@ -752,6 +777,8 @@ abstract class BaseReadAloudService : BaseService(),
             val chapterLength = readerReadAloudChapter?.chapterLength ?: chapterPosition
             sessionStore.updatePlayback(
                 ReadAloudPlaybackInfo(
+                    chapterTitle = readerReadAloudChapter?.title.orEmpty(),
+                    chapterIndex = readerReadAloudChapter?.chapterIndex ?: -1,
                     chapterPosition = chapterPosition,
                     chapterLength = chapterLength.coerceAtLeast(1),
                     text = contentList.getOrNull(nowSpeak).orEmpty(),
@@ -1001,6 +1028,8 @@ abstract class BaseReadAloudService : BaseService(),
     private fun publishPlaybackInfo(cursor: ReadAloudPlaybackCursor) {
         val cue = playbackQueue.cues.getOrNull(cursor.cueIndex) ?: return
         sessionStore.updatePlayback(ReadAloudPlaybackInfo(
+            chapterTitle = readerReadAloudChapter?.title.orEmpty(),
+            chapterIndex = readerReadAloudChapter?.chapterIndex ?: -1,
             chapterPosition = cue.chapterStart + cursor.offset,
             chapterLength = playbackQueue.cues.lastOrNull()?.chapterEnd ?: cue.chapterEnd,
             // 这一份是给人看的，标记整段去掉（通知栏/悬浮窗里都不该出现 <<…>> 或一串空格）
@@ -1237,6 +1266,51 @@ abstract class BaseReadAloudService : BaseService(),
     private fun currentCharsPerSecond(): Float =
         (ESTIMATED_CHARS_PER_SECOND * currentSpeechRate).coerceAtLeast(0.1f)
 
+    /** 在已准备好的本章队列中定位，保留暂停状态和章节定时，不重新分析或切换章节。 */
+    internal fun seekToMediaPosition(positionMs: Long) {
+        if (stopRequested) return
+        val chapter = readerReadAloudChapter ?: return
+        val target = resolveReadAloudMediaSeek(
+            positionMs = positionMs,
+            charsPerSecond = currentCharsPerSecond(),
+            chapterLength = chapter.chapterLength,
+            content = contentList,
+            chapterPositions = contentChapterPositions,
+        ) ?: return
+        val wasPaused = pause
+        ++prepareReadAloudGeneration
+        prepareReadAloudJob?.cancel()
+        playStop()
+        onPlaybackStateReplaced()
+        nowSpeak = target.paragraphIndex
+        paragraphStartPos = target.offset
+        readAloudNumber = target.chapterPosition - target.offset
+        playbackCursor = if (hasSpeechPlaybackQueue) {
+            ReadAloudPlaybackCursor(target.paragraphIndex, target.offset)
+        } else {
+            null
+        }
+        toLast = false
+        pageIndex = chapter.pageIndexAt(target.chapterPosition)
+        // 主动定位允许前进或后退；暂停时也必须舍弃原来冻结的媒体时间。
+        lastMediaSessionPositionMs = -1L
+        updateReadAloudProgressSnapshot(target.chapterPosition)
+        upTtsProgress(target.chapterPosition)
+        upMediaMetadata(showContent = true)
+        if (sessionStore.state.value.followReadAloudPosition &&
+            ReadBook.durChapterIndex == chapter.chapterIndex
+        ) {
+            ReadBook.syncReadAloudPage(chapter.chapterIndex, chapter.pageStart(pageIndex))
+        }
+        if (wasPaused) {
+            // HTTP 引擎恢复时重新生成目标段音频，不能恢复已作废的播放器队列。
+            pageChanged = true
+            upReadAloudNotification()
+        } else {
+            play()
+        }
+    }
+
     /**
      * 更新媒体元数据, 用于车机蓝牙显示
      * @param showContent 是否显示当前朗读内容作为歌词
@@ -1292,6 +1366,10 @@ abstract class BaseReadAloudService : BaseService(),
 
             override fun onStop() {
                 stopReadAloudService()
+            }
+
+            override fun onSeekTo(pos: Long) {
+                if (androidMediaControlEnabled) seekToMediaPosition(pos)
             }
 
             override fun onCustomAction(action: String, extras: Bundle?) {
@@ -1631,8 +1709,18 @@ abstract class BaseReadAloudService : BaseService(),
             }
             when (decision.action) {
                 ChapterCompletionAction.STOP -> {
-                    pause = true
-                    stopReadAloudService()
+                    // 先标记停止，避免提交末页触发重排时重新启动朗读。章末不是最后一次
+                    // TTS/音频进度回调的位置：引擎可能只上报段首，或已把下一段游标归零。
+                    requestStop()
+                    if (sessionStore.state.value.followReadAloudPosition) {
+                        readerReadAloudChapter?.let { chapter ->
+                            ReadBook.syncReadAloudPage(
+                                chapterIndex = chapter.chapterIndex,
+                                chapterPos = (chapter.chapterLength - 1).coerceAtLeast(0),
+                            )
+                        }
+                    }
+                    stopSelf()
                 }
 
                 ChapterCompletionAction.ADVANCE -> {
@@ -1760,6 +1848,41 @@ internal fun estimatedReadAloudTimeMs(
     return (chars * 1000.0 / charsPerSecond).toLong()
 }
 
+internal data class ReadAloudMediaSeekPosition(
+    val paragraphIndex: Int,
+    val offset: Int,
+    val chapterPosition: Int,
+)
+
+/** 时间轴只对应正文；换行间隙落到下一段，章末落到最后一个字符，避免提交空发言。 */
+internal fun resolveReadAloudMediaSeek(
+    positionMs: Long,
+    charsPerSecond: Float,
+    chapterLength: Int,
+    content: List<String>,
+    chapterPositions: List<Int?>,
+): ReadAloudMediaSeekPosition? {
+    if (chapterLength <= 0 || !charsPerSecond.isFinite() || charsPerSecond <= 0f) return null
+    val position = (positionMs.coerceAtLeast(0) * charsPerSecond.toDouble() / 1000.0)
+        .coerceAtMost((chapterLength - 1).toDouble()).toInt()
+    var lastBodyIndex = -1
+    for (index in content.indices) {
+        val start = chapterPositions.getOrNull(index) ?: continue
+        if (content[index].isEmpty()) continue
+        lastBodyIndex = index
+        if (start + content[index].length > position) break
+    }
+    if (lastBodyIndex < 0) return null
+    val text = content[lastBodyIndex]
+    val start = chapterPositions[lastBodyIndex] ?: return null
+    var offset = (position - start).coerceIn(0, text.lastIndex)
+    // 媒体毫秒值可以落在 UTF-16 代理项中间，保留完整字符供引擎合成。
+    if (offset > 0 && text[offset].isLowSurrogate() && text[offset - 1].isHighSurrogate()) {
+        offset--
+    }
+    return ReadAloudMediaSeekPosition(lastBodyIndex, offset, start + offset)
+}
+
 /**
  * 计算推送给系统媒体播放器的进度位置。
  * 播放中保持单调不后退: 字符估算值领先时跟随估算值, 落后时按墙钟推进,
@@ -1781,7 +1904,7 @@ internal fun nextMediaSessionPositionMs(
             if (lastPosition < 0) estimate
             else lastPosition + (nowElapsedRealtime - lastUpdateElapsedRealtime)
 
-        state == paused -> lastPosition.coerceAtLeast(0)
+        state == paused -> if (lastPosition < 0) estimate else lastPosition
 
         state == playing && lastState == paused ->
             if (lastPosition < 0) estimate else lastPosition

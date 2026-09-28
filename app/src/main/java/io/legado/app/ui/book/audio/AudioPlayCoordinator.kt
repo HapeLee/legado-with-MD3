@@ -6,6 +6,7 @@ import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.Status
 import io.legado.app.data.repository.BookRepository
+import io.legado.app.domain.gateway.PlaybackCapsuleGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.help.book.getBookSource
@@ -38,6 +39,7 @@ class AudioPlayCoordinator(
     private val bookRepository: BookRepository,
     private val otherSettingsGateway: OtherSettingsGateway,
     private val readAloudSettingsGateway: ReadAloudSettingsGateway,
+    private val playbackCapsuleGateway: PlaybackCapsuleGateway,
 ) {
     private val refreshRequests = MutableSharedFlow<Unit>(replay = 1)
     private val loading = MutableStateFlow(false)
@@ -164,7 +166,12 @@ class AudioPlayCoordinator(
         }
     }
 
-    fun stop() = AudioPlay.stop()
+    fun prepareBook(bookUrl: String) = playbackCapsuleGateway.prepareAudioBook(bookUrl)
+
+    fun stop() {
+        AudioPlay.book?.bookUrl?.let(playbackCapsuleGateway::clearPreparedAudioBook)
+        AudioPlay.stop()
+    }
 
     fun previous() = AudioPlay.prev()
 

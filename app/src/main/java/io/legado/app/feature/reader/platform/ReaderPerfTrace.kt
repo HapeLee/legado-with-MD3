@@ -30,13 +30,15 @@ internal object ReaderPerfTrace {
         }
     }
 
+    /**
+     * 归因打点。`marker` 会被放在 composable 体内，每次重组都执行；未开 tracing 时必须尽早
+     * 返回，否则每条 marker 都是两次 `Trace` 静态调用乘以重组次数。
+     * 注意：API < 29 没有 `Trace.isEnabled()`，这里随之整体跳过（与 suspendSection 一致）。
+     */
     fun marker(name: String) {
-        // [FIX-AI] 纯 JVM 单测（MainNavigatorBackStackTest）里 android.os.Trace 未 mock 会抛
-        // "Method beginSection not mocked"；性能打点不应影响宿主，失败静默降级。
-        runCatching {
-            Trace.beginSection("reader.$name")
-            Trace.endSection()
-        }
+        if (!isEnabled()) return
+        Trace.beginSection("reader.$name")
+        Trace.endSection()
     }
 
     fun isEnabled(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && Trace.isEnabled()

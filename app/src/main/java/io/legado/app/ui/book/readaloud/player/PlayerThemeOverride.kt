@@ -18,38 +18,47 @@ import io.legado.app.model.BookCover as BookCoverModel
  * 与阅读器内播放页同源：按显示封面（含默认封面日夜选择）取种子色，再派生主题覆盖。
  */
 @Composable
-internal fun rememberPlayerThemeOverride(state: ReadAloudPlayerUiState) = run {
+internal fun rememberPlayerThemeOverride(state: ReadAloudPlayerUiState) =
+    rememberPlayerThemeOverride(state.bookName, state.author, state.coverPath, state.sourceOrigin)
+
+@Composable
+internal fun rememberPlayerThemeOverride(
+    bookName: String,
+    author: String,
+    coverPath: String?,
+    sourceOrigin: String?,
+) = run {
     val imageLoader: ImageLoader = koinInject()
     val coverSettings = koinInject<CoverSettingsGateway>().currentSettings
     val isNight = LegadoTheme.isDark
-    val useDefaultCover = usesDefaultBookCover(state.coverPath)
+    val useDefaultCover = usesDefaultBookCover(coverPath)
     val defaultCoverPaths =
         if (isNight) coverSettings.defaultCoverDark else coverSettings.defaultCover
-    val coverPath = remember(
-        state.bookName,
-        state.author,
-        state.coverPath,
+    val resolvedCoverPath = remember(
+        bookName,
+        author,
+        coverPath,
         useDefaultCover,
         isNight,
         defaultCoverPaths,
     ) {
         if (useDefaultCover) {
-            BookCoverModel.getRandomDefaultPath(seed = state.bookName, isNight = isNight)
+            BookCoverModel.getRandomDefaultPath(seed = bookName, isNight = isNight)
         } else {
-            state.coverPath
+            coverPath
         }
     }
-    val sourceOrigin = if (useDefaultCover) null else state.sourceOrigin
+    val resolvedSourceOrigin = if (useDefaultCover) null else sourceOrigin
     val loadOnlyWifi = !useDefaultCover && coverSettings.loadOnlyOnWifi
-    val requestKey = remember(coverPath, sourceOrigin, loadOnlyWifi) {
-        listOf(coverPath, sourceOrigin, loadOnlyWifi)
+    val requestKey = remember(resolvedCoverPath, resolvedSourceOrigin, loadOnlyWifi) {
+        listOf(resolvedCoverPath, resolvedSourceOrigin, loadOnlyWifi)
     }
     val seedColor = rememberImageSeedColor(
         imageLoader = imageLoader,
-        data = coverPath,
+        data = resolvedCoverPath,
         requestKey = requestKey,
     ) {
-        extras[CoverExtras.SourceOrigin] = sourceOrigin
+        extras[CoverExtras.SourceOrigin] = resolvedSourceOrigin
         extras[CoverExtras.LoadOnlyWifi] = loadOnlyWifi
     }
     rememberThemeOverride(seedColor)

@@ -9,14 +9,6 @@ import android.graphics.Paint
 import coil3.size.Size
 import coil3.transform.Transformation
 
-internal object MangaGrayscaleTransformation : Transformation() {
-    override val cacheKey: String = "manga-grayscale-v1"
-
-    override suspend fun transform(input: Bitmap, size: Size): Bitmap {
-        return input.filteredBitmap(ColorMatrix().apply { setSaturation(0f) })
-    }
-}
-
 internal class MangaEInkTransformation(private val threshold: Int) : Transformation() {
     override val cacheKey: String = "manga-eink-v1-$threshold"
 

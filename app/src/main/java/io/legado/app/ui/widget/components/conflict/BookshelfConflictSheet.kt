@@ -191,8 +191,9 @@ fun BookshelfConflictSheet(
     )
 }
 
+/** 「书架里已有的同作品」卡片：冲突 Sheet 与详情页的「书架操作」Sheet 共用。 */
 @Composable
-private fun ConflictBookCard(
+internal fun ConflictBookCard(
     summary: ConflictBookSummary,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

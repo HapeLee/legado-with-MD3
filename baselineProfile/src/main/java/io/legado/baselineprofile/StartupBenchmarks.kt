@@ -4,14 +4,10 @@ import androidx.benchmark.macro.BaselineProfileMode
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.StartupTimingMetric
-import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.By
-import androidx.test.uiautomator.Direction
-import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,8 +47,10 @@ class StartupBenchmarks {
         benchmark(CompilationMode.Partial(BaselineProfileMode.Require))
 
     private fun benchmark(compilationMode: CompilationMode) {
+        // 默认值必须是 applicationId（io.legato.kazusa），不是 namespace（io.legado.app）；
+        // AGP 在设备上跑 Macrobenchmark 时会传 targetAppId，只有手动跑用例时才用这个兜底值。
         val packageName = InstrumentationRegistry.getArguments().getString("targetAppId")
-            ?: "io.legado.app"
+            ?: "io.legato.kazusa"
 
         rule.measureRepeated(
             packageName = packageName,

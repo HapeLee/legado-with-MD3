@@ -333,7 +333,10 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 }
                 LogUtils.d(TAG, "朗读内容添加完成")
                 if (!isAddedText) {
-                    playStop()
+                    // 本协程仍需执行延迟后的章末处理，不能通过 playStop 取消自身。
+                    speakSession++
+                    needParagraphInterval = false
+                    tts.runCatching { stop() }
                     delay(1000)
                     completeCurrentChapter()
                 }
@@ -494,6 +497,8 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
 
     override fun playStop() {
         speakSession++
+        speakJob?.cancel()
+        needParagraphInterval = false
         pendingUtterances.clear()
         textToSpeech?.runCatching {
             stop()
@@ -564,20 +569,23 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 return
             }
             readerReadAloudChapter?.let {
+                val position = currentRangePosition(
+                    utteranceStartReadAloudNumber, 0, utteranceStartPos
+                )
                 if (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex)) {
                     nextParagraph(naturalCompletion = true)
                     // 游标已经挪到下一句了，再拿这一句算页码和进度就是把两句的位置混在一起
                     return@let
                 }
                 if (pageIndex + 1 < it.pageCount
-                    && readAloudNumber + 1 > it.pageStart(pageIndex + 1)
+                    && position + 1 > it.pageStart(pageIndex + 1)
                 ) {
                     pageIndex++
                     // This is the TTS engine advancing across a page boundary, not a user turn.
                     // Mark it so ReadBook neither detaches the session nor restarts TTS at page two.
                     withSpeechNavigation { ReadBook.moveToNextPage() }
                 }
-                upTtsProgress(readAloudNumber + 1)
+                upTtsProgress(position + 1)
                 upMediaMetadata(showContent = true)
             }
         }
@@ -615,6 +623,8 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             paragraphStartPos = storedStart
             if (isChapterTitleAt(nowSpeak)) return
             // 正在朗读的精确章内位置（段起点 + 段内偏移），保持 readAloudNumber 的"段起点"语义不被污染
+            // storedStart 已经把引擎下标换算回正文（含 utteranceStartPos 与被删掉的标记），
+            // 上游的 utteranceStartOffset 参数是我们这里的子集，不用再传一遍。
             val position = currentRangePosition(utteranceStartReadAloudNumber, storedStart)
             updateReadAloudProgressSnapshot(position)
             val msg =
@@ -758,7 +768,8 @@ internal fun nextParagraphPosition(
 internal fun currentRangePosition(
     utteranceStartPosition: Int,
     rangeStart: Int,
-): Int = utteranceStartPosition + rangeStart
+    utteranceStartOffset: Int = 0,
+): Int = utteranceStartPosition + utteranceStartOffset + rangeStart
 
 /**
  * TTS 回调只回传 utteranceId, 播放会话号必须编码进 id,

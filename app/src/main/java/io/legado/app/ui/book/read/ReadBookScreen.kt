@@ -533,8 +533,8 @@ fun ReadBookScreen(
     val aloudPlayerViewModel: ReadAloudPlayerViewModel =
         org.koin.compose.koinInject()
     val aloudPlayerShellState by aloudPlayerViewModel.uiState.collectAsStateWithLifecycle()
-    // 听书播放界面已是 Navigation 3 目的地（见 ReadAloudPlayerRouteScreen），
-    // 这里只保留朗读配置卡片；经典控制面板与听书播放界面共用同一份配置内容。
+    // 听书播放页是 Activity 级 morph 浮层（见 ReadAloudPlayerMorphHost），阅读器内
+    // 只保留经典控制面板自己的朗读配置卡片；两者共用同一份配置内容。
     AppModalBottomSheet(
         show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
         onDismissRequest = dismissSheet,

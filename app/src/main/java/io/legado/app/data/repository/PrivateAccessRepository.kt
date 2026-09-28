@@ -63,7 +63,7 @@ class PrivateAccessRepository(
         .distinctUntilChanged()
 
     private val enabledFlow = settingsRepository
-        .getBoolean(LocalPreferencesKeys.PRIVATE_ENABLED.name, true)
+        .getBoolean(LocalPreferencesKeys.PRIVATE_ENABLED.name, false)
         .distinctUntilChanged()
 
     private val backgroundGraceFlow = settingsRepository
@@ -214,7 +214,7 @@ class PrivateAccessRepository(
         grantedBookUrls = grantedBookUrlsFlow.value,
         grantedGroupIds = grantedGroupIdsFlow.value,
         // 读内存里的当前值而不是 flow：这个函数是同步的（AI 工具等同步路径要用）
-        isEnabled = AppConfigStore.getBoolean(LocalPreferencesKeys.PRIVATE_ENABLED.name) ?: true,
+        isEnabled = AppConfigStore.getBoolean(LocalPreferencesKeys.PRIVATE_ENABLED.name) ?: false,
     ).isTargetGranted(bookUrl, group)
 
     override fun revoke(target: PrivateUnlockTarget) {
@@ -312,7 +312,7 @@ class PrivateAccessRepository(
         unlockScope = AppConfigStore.getString(LocalPreferencesKeys.PRIVATE_UNLOCK_SCOPE.name)
             ?.let { stored -> PrivateUnlockScope.entries.firstOrNull { it.name == stored } }
             ?: PrivateUnlockScope.AppSession,
-        enabled = AppConfigStore.getBoolean(LocalPreferencesKeys.PRIVATE_ENABLED.name) ?: true,
+        enabled = AppConfigStore.getBoolean(LocalPreferencesKeys.PRIVATE_ENABLED.name) ?: false,
         backgroundGraceSeconds =
             AppConfigStore.getInt(LocalPreferencesKeys.PRIVATE_BACKGROUND_GRACE_SECONDS.name) ?: 0
     )

@@ -27,6 +27,13 @@ object CoverExtras {
     /** 漫画图片所属书籍。图片解密必须显式携带，不能读取全局阅读会话。 */
     val MangaBookUrl = Extras.Key<String?>(null)
 
+    /** 分页原图请求的生命周期；存在时先获取 BookHelp 文件，再交给 Coil 解码。 */
+    val MangaFileOwner = Extras.Key<MangaImageFileOwner?>(null)
+    val MangaFileTransferStarted = Extras.Key<(() -> Unit)?>(null)
+    val MangaAspectRatio = Extras.Key<((Float) -> Unit)?>(null)
+    val MangaWebtoon = Extras.Key(false)
+    val MangaDataPrefetch = Extras.Key(false)
+
     /**
      * CoverInterceptor 在把 request.data 改写为最终解析 URL 之前，把书架/详情页
      * 存下的原始封面地址放进来。CoverFetcher 回写持久文件缓存时用这个稳定键

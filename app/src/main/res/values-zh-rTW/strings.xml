@@ -1446,6 +1446,7 @@
     <string name="title_spacing">間距</string>
     <string name="bookshelf_total_count">共%1$d本</string>
     <string name="bookshelf_selected_count">已選%1$d本</string>
+    <string name="bookshelf_edit_subtitle">%1$s · %2$s</string>
     <string name="bookshelf_empty_global_search">沒有書籍，嘗試全域搜尋</string>
     <string name="global_search">全域搜尋</string>
     <string name="cache_management">快取管理</string>
@@ -2570,6 +2571,7 @@
     <string name="long_press_select_mode">點按項目選擇，返回退出</string>
     <string name="confirm_delete_read_record">刪除閱讀記錄？</string>
     <string name="delete_read_record_message">確定要刪除這條記錄嗎？</string>
+    <string name="delete_reading_period_message">確定要刪除這個閱讀時段嗎？該列連續的所有工作階段（包括其他裝置的工作階段）都會被刪除。</string>
     <string name="delete_selected_read_records_message">確定要刪除所選的 %1$d 筆閱讀記錄嗎？</string>
     <string name="clear_read_records">清空閱讀記錄</string>
     <string name="clear_read_records_summary">刪除全部閱讀記錄、每日明細和時間線閱讀時段記錄</string>
@@ -2592,6 +2594,14 @@
     <string name="read_record_repair">修復閱讀記錄</string>
     <string name="read_record_repair_summary">合併可確定歸屬的記錄，並清理欄位完全相同的閱讀時段記錄</string>
     <string name="operation_failed">操作失敗</string>
+    <string name="do_not_remind_again_this_page">本次開啟不再提示</string>
+    <string name="do_not_remind_again_long_term">今後不再提醒</string>
+    <string name="restore_delete_confirmation">恢復刪除確認</string>
+    <string name="restore_delete_confirmation_summary">刪除閱讀記錄前再次進行確認</string>
+    <string name="delete_confirmation_restored">已恢復刪除確認</string>
+    <string name="read_record_deleted">已刪除閱讀記錄</string>
+    <string name="read_records_cleared">已清空閱讀記錄</string>
+    <string name="read_records_merged">已合併閱讀記錄</string>
     <string name="merge_read_records_message">將選取的閱讀記錄合併到「%1$s」/%2$s。</string>
     <string name="merge_read_record_candidate">%1$s / %2$s（%3$s）</string>
     <string name="no_merge_candidates">沒有可合併的其他閱讀記錄</string>
@@ -2672,7 +2682,7 @@
     <string name="clear_voice_binding">清除聲音綁定</string>
     <string name="http_tts">HTTP TTS</string>
     <string name="show_read_aloud_capsule">顯示朗讀膠囊</string>
-    <string name="show_read_aloud_capsule_summary">朗讀時在閱讀頁顯示封面、暫停和關閉按鈕</string>
+    <string name="show_read_aloud_capsule_summary">在應用內顯示朗讀控制，授權懸浮視窗後可在其他應用程式上使用。</string>
     <string name="read_aloud_keep_on_exit">離開閱讀時繼續朗讀</string>
     <string name="read_aloud_keep_on_exit_summary">關閉閱讀介面後不停朗讀，繼續在背景播放</string>
     <string name="reset_read_aloud_capsule_position">重設朗讀膠囊位置</string>
@@ -2996,4 +3006,11 @@
     <string name="cast_assignment_deleted">已刪除 %1$d 條分配</string>
     <string name="cast_assignment_deleted_chapters">已刪除 %1$d 章的角色分配</string>
     <string name="read_aloud_audio_download_summary">下載過的章節點朗讀就直接播本地音頻，不聯網、不重新合成。</string>
+    <string name="read_aloud_overlay_permission">允許膠囊顯示在其他應用程式上層</string>
+    <string name="read_aloud_overlay_granted">已授權。朗讀運行時可在桌面和其他應用程式上使用膠囊。</string>
+    <string name="read_aloud_overlay_required">授權後可在桌面和其他應用程式上使用膠囊，未授權不影響應用內膠囊。</string>
+    <string name="read_aloud_overlay_unavailable">此裝置無法開啟懸浮視窗權限設定。</string>
+    <string name="home_capsule_restore_navigation">恢復導覽列</string>
+    <string name="home_capsule_expand_controls">展開播放控制</string>
+    <string name="home_capsule_chapter">第 %d 章</string>
 </resources>

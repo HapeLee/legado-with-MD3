@@ -132,7 +132,8 @@ fun AppModalBottomSheet(
             )
             val density = LocalDensity.current
             val maxHeight = with(density) {
-                LocalWindowInfo.current.containerSize.height.toDp() * 0.8f
+                val containerHeight = LocalWindowInfo.current.containerSize.height.toDp()
+                containerHeight * 0.8f
             }
 
             MaterialExpressiveTheme(

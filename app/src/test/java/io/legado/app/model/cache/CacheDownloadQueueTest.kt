@@ -9,6 +9,41 @@ import org.junit.Test
 class CacheDownloadQueueTest {
 
     @Test
+    fun explicitUpgradeWaitsForRunningPreloadForSingleAndRange() {
+        for (selection in listOf(ChapterSelection.Single(3), ChapterSelection.Range(3, 4))) {
+            val queue = CacheDownloadQueue()
+            queue.enqueue(CacheDownloadRequest("book", ChapterSelection.Single(3), CacheDownloadSource.ReadPreload))
+            assertEquals(3, queue.next("book", emptySet())?.chapterIndex)
+            queue.enqueue(CacheDownloadRequest("book", selection, CacheDownloadSource.Manual))
+            val next = queue.next("book", setOf(3))
+            if (selection is ChapterSelection.Range) assertEquals(4, next?.chapterIndex)
+            else assertNull(next)
+            assertTrue(queue.isWaiting(3))
+            assertEquals(1, queue.waitingCount())
+            assertFalse(queue.hasLaunchableChapter(setOf(3)))
+            assertTrue(queue.hasLaunchableChapter(emptySet()))
+            assertNull(queue.next("book", setOf(3)))
+            assertEquals(3, queue.next("book", emptySet())?.chapterIndex)
+            assertTrue(queue.isExplicitDownload(3))
+        }
+    }
+
+    @Test
+    fun explicitPurposeSurvivesReadPreloadRetryAndPrioritization() {
+        val queue = CacheDownloadQueue()
+        queue.enqueue(CacheDownloadRequest("book", ChapterSelection.Range(2, 4), CacheDownloadSource.Manual))
+        queue.enqueue(CacheDownloadRequest("book", ChapterSelection.Single(3), CacheDownloadSource.ReadPreload))
+        queue.prioritize(3)
+        assertEquals(3, queue.next("book", emptySet())?.chapterIndex)
+        queue.enqueue(ChapterSelection.Single(3))
+        assertTrue(queue.isExplicitDownload(3))
+        queue.enqueue(CacheDownloadRequest("book", ChapterSelection.Single(8), CacheDownloadSource.ReadPreload))
+        assertFalse(queue.isExplicitDownload(8))
+        queue.clear()
+        assertFalse(queue.isExplicitDownload(3))
+    }
+
+    @Test
     fun rangeReturnsChaptersLazily() {
         val queue = CacheDownloadQueue()
 
@@ -40,6 +75,8 @@ class CacheDownloadQueueTest {
         queue.enqueue(ChapterSelection.Indices(setOf(1, 2)))
 
         assertEquals(2, queue.next("book", setOf(1))?.chapterIndex)
+        assertNull(queue.next("book", setOf(1)))
+        assertEquals(1, queue.next("book", emptySet())?.chapterIndex)
         assertNull(queue.next("book", emptySet()))
     }
 

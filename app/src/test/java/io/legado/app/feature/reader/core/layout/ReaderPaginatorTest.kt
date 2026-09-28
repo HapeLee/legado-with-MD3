@@ -323,6 +323,41 @@ class ReaderPaginatorTest {
         assertEquals("甲\uFFFC乙丙", page.text)
     }
 
+    /**
+     * 旧 `setTypeHtml` 的行末特例：图片是本行最后一项时，绘制宽改用 `measureText("\uFFFC")`
+     * （[ReaderMeasuredInlineItem.Image.lineFinalWidthPx]），断行推进仍按 span advance——行末会像
+     * 旧版一样留出空档；行中的图则用 span advance。
+     */
+    @Test
+    fun htmlInlineImageUsesTheObjectReplacementWidthOnlyAtTheLineEnd() {
+        fun drawnWidth(items: List<ReaderMeasuredInlineItem>): Float =
+            ReaderPaginator.paginateBlocks(
+                listOf(
+                    ReaderMeasuredBlock.InlineParagraph(
+                        items = items,
+                        indentCharacters = 0,
+                        alignment = ReaderTextAlignment.START,
+                        lineHeightPx = 20f,
+                        baselineOffsetPx = 15f,
+                        baseTextSizePx = 10f,
+                    )
+                ),
+                config.copy(viewportWidthPx = 100, viewportHeightPx = 100),
+            ).single().elements.filterIsInstance<ReaderElement.Image>().single().bounds.width
+
+        val htmlImage = ReaderMeasuredInlineItem.Image("icon", 40f, 24f, 0, lineFinalWidthPx = 10f)
+        assertEquals(
+            10f,
+            drawnWidth(listOf(ReaderMeasuredInlineItem.Text("甲", 10f, style, 0), htmlImage)),
+            0.01f,
+        )
+        assertEquals(
+            40f,
+            drawnWidth(listOf(htmlImage, ReaderMeasuredInlineItem.Text("甲", 10f, style, 1))),
+            0.01f,
+        )
+    }
+
     @Test
     fun largerInlineFontExpandsLineAndBaseline() {
         val large = style.copy(fontSizePx = 20f)
@@ -499,6 +534,44 @@ class ReaderPaginatorTest {
         val frameBounds = page.textBackgroundRuns().single().bounds
         assertEquals(glyphs[0].bounds.right, frameBounds.left, 0f)
         assertEquals(frameBounds.right, glyphs[2].bounds.left, 0f)
+    }
+
+    /** 放行标记按「绘制用实例」比较：同图连续才续接，换一张图就要断开。 */
+    @Test
+    fun backgroundRunContinuesOnlyAcrossEqualDrawnImages() {
+        val frame = ReaderTextBackgroundImage(
+            source = "frame.png",
+            fit = 3,
+            scale = 1f,
+            contentInsetLeftPx = 3f,
+            contentInsetRightPx = 4f,
+        )
+        val framed = style.copy(backgroundImage = frame)
+        val reframed = style.copy(backgroundImage = frame.copy(source = "other.png"))
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = listOf(
+                        ReaderMeasuredInlineItem.Text("甲", 10f, style, 0),
+                        ReaderMeasuredInlineItem.Text("乙", 10f, framed, 1),
+                        ReaderMeasuredInlineItem.Text("丙", 10f, framed, 2),
+                        ReaderMeasuredInlineItem.Text("丁", 10f, reframed, 3),
+                        ReaderMeasuredInlineItem.Text("戊", 10f, reframed, 4),
+                    ),
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                )
+            ),
+            config.copy(viewportWidthPx = 200, viewportHeightPx = 100),
+        ).single()
+
+        assertEquals(
+            listOf(false, false, true, false, true),
+            page.elements.filterIsInstance<ReaderElement.Text>().map { it.continuesBackgroundRun },
+        )
     }
 
     @Test
@@ -736,6 +809,47 @@ class ReaderPaginatorTest {
         assertEquals(glyph.bounds.bottom, run.bounds.bottom, 0f)
         assertEquals(glyph.bounds.left - 3f, run.bounds.left, 0.001f)
         assertEquals(glyph.bounds.right + 4f, run.bounds.right, 0.001f)
+    }
+
+    /**
+     * 标题行距收紧到 1.0（设置值 10）时，本段行距留白为 0，但九宫格上下两条边不能整条消失：
+     * 纵向预算回落到正文行距——旧 View 的预算取自全局 `ChapterProvider.lineSpacingExtra`，
+     * 标题与正文共用一份。只有正文行距同样为 1.0 时才退回上一条用例的「中心 + 左右两条边」。
+     */
+    @Test
+    fun tightTitleLineSpacingStillBudgetsTheNineSliceVerticalEdges() {
+        val framedStyle = style.copy(
+            backgroundImage = ReaderTextBackgroundImage(
+                "frame.png", 3, 1f,
+                contentInsetLeftPx = 3f,
+                contentInsetRightPx = 4f,
+                contentInsetTopPx = 8f,
+                contentInsetBottomPx = 8f,
+            )
+        )
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = listOf(ReaderMeasuredInlineItem.Text("字", 10f, framedStyle, 0)),
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                    emphasized = true,
+                    lineSpacingMultiplier = 1f,
+                )
+            ),
+            config.copy(viewportHeightPx = 100, lineSpacingMultiplier = 1.5f),
+        ).single()
+
+        val glyph = page.elements.single() as ReaderElement.Text
+        // 正文行距 1.5 ⇒ 留白 10px，够按原图厚度画满 8px 的上下边。
+        assertEquals(8f, glyph.backgroundFrameTopPx, 0.001f)
+        assertEquals(8f, glyph.backgroundFrameBottomPx, 0.001f)
+        val run = page.textBackgroundRuns().single()
+        assertEquals(glyph.bounds.top - 8f, run.bounds.top, 0.001f)
+        assertEquals(glyph.bounds.bottom + 8f, run.bounds.bottom, 0.001f)
     }
 
     /**

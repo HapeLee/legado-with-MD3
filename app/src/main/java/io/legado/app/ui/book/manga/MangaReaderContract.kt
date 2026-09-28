@@ -95,7 +95,13 @@ sealed interface MangaReaderItemUi {
 @Stable
 sealed interface MangaPageLoadState {
     data object Queued : MangaPageLoadState
-    data object Loading : MangaPageLoadState
+
+    /**
+     * @param progress 下载百分比 0..100；服务端未返回 Content-Length 时为 null，
+     * 此时 UI 退回不确定进度（只转圈，不显示数字）。
+     */
+    data class Loading(val progress: Int? = null) : MangaPageLoadState
+
     data object Ready : MangaPageLoadState
     data class Failed(val message: String?) : MangaPageLoadState
 }
@@ -235,9 +241,12 @@ sealed interface MangaReaderIntent {
     data class UpdateMenuPaletteStyle(val value: String) : MangaReaderIntent
     data class UpdateClickAction(val index: Int, val action: Int) : MangaReaderIntent
     data class RetryChapter(val chapterIndex: Int) : MangaReaderIntent
-    data class PageLoadStarted(val key: String) : MangaReaderIntent
-    data class PageLoadSucceeded(val key: String) : MangaReaderIntent
-    data class PageLoadFailed(val key: String, val message: String?) : MangaReaderIntent
+    data class PageLoadStarted(val requestId: MangaPageRequestId, val force: Boolean = false) :
+        MangaReaderIntent
+
+    data class PageLoadSucceeded(val requestId: MangaPageRequestId) : MangaReaderIntent
+    data class PageLoadFailed(val requestId: MangaPageRequestId, val message: String?) :
+        MangaReaderIntent
     data class RetryPage(val key: String) : MangaReaderIntent
     data class RetryFailedPagesInChapter(val chapterIndex: Int) : MangaReaderIntent
     data class PageStep(val direction: Int) : MangaReaderIntent
@@ -365,4 +374,24 @@ sealed interface MangaReaderEffect {
     data class SetSystemBarsVisible(val visible: Boolean) : MangaReaderEffect
     data class ShareImage(val filePath: String) : MangaReaderEffect
     data class CopyImage(val filePath: String) : MangaReaderEffect
+}
+
+/** 加载回调必须同时匹配书籍、页面与重试代次。 */
+@Stable
+data class MangaPageRequestId(val bookUrl: String, val key: String, val retryRevision: Int)
+
+internal val MangaReaderItemUi.Page.requestId: MangaPageRequestId
+    get() = MangaPageRequestId(bookUrl, key, retryRevision)
+
+internal fun MangaReaderItemUi.Page.reduceImageLoad(
+    requestId: MangaPageRequestId,
+    next: MangaPageLoadState,
+    force: Boolean = false,
+): MangaReaderItemUi.Page {
+    if (this.requestId != requestId) return this
+    if (!force && next is MangaPageLoadState.Loading && loadState == MangaPageLoadState.Ready) return this
+    val reduced = if (next is MangaPageLoadState.Loading) {
+        next.copy(progress = (loadState as? MangaPageLoadState.Loading)?.progress ?: next.progress)
+    } else next
+    return if (loadState == reduced) this else copy(loadState = reduced)
 }

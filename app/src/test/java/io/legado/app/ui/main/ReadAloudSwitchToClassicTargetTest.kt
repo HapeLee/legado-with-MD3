@@ -6,47 +6,45 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 听书播放页「经典控制」按钮的目标判定。
+ * 听书播放弹层「经典控制」按钮的目标判定。
  *
- * 规则：上一站是阅读界面 → 回到已有阅读界面并打开经典朗读控制；否则 → 打开阅读界面。
- * 之前该按钮发出的 `ReturnToClassic` 效果没有任何收集方，点了没反应。
+ * 规则：栈顶是阅读界面 → 把请求交给它并打开经典朗读控制；否则 → 打开阅读界面。
+ * 播放弹层是全局浮层、不在导航栈上，所以判据是「当前顶层」而不是「上一站」。
  */
 class ReadAloudSwitchToClassicTargetTest {
 
     @Test
-    fun `returns to existing reader when immediate parent is read book`() {
+    fun `hands request to existing reader when reader is on top`() {
         val backStack: List<NavKey> = listOf(
             MainRouteHome,
             MainRouteReadBook(bookUrl = "book://a"),
-            MainRouteReadAloudPlayer,
         )
 
-        assertTrue(hasReadBookParent(backStack))
+        assertTrue(isReaderOnTop(backStack))
     }
 
     @Test
-    fun `opens reader when parent is home`() {
-        val backStack: List<NavKey> = listOf(MainRouteHome, MainRouteReadAloudPlayer)
+    fun `opens reader when home is on top`() {
+        val backStack: List<NavKey> = listOf(MainRouteHome)
 
-        assertFalse(hasReadBookParent(backStack))
+        assertFalse(isReaderOnTop(backStack))
     }
 
     @Test
-    fun `opens reader when player is the only entry`() {
-        val backStack: List<NavKey> = listOf(MainRouteReadAloudPlayer)
+    fun `opens reader when stack is empty`() {
+        val backStack: List<NavKey> = emptyList()
 
-        assertFalse(hasReadBookParent(backStack))
+        assertFalse(isReaderOnTop(backStack))
     }
 
     @Test
-    fun `opens reader when read book is not the immediate parent`() {
+    fun `opens reader when reader is not the top entry`() {
         val backStack: List<NavKey> = listOf(
             MainRouteHome,
             MainRouteReadBook(bookUrl = "book://a"),
             MainRouteBookInfo(name = null, author = null, bookUrl = "book://a"),
-            MainRouteReadAloudPlayer,
         )
 
-        assertFalse(hasReadBookParent(backStack))
+        assertFalse(isReaderOnTop(backStack))
     }
 }

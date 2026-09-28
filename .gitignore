@@ -22,3 +22,7 @@ node_modules/
 /.debug-runs/
 __pycache__/
 *.py[cod]
+# JVM / Gradle daemon 崩溃产物（多 JVM 构建时可能落在仓库根目录）
+hs_err_pid*.log
+replay_pid*.log
+*.hprof

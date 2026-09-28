@@ -5,6 +5,8 @@ import android.app.Application
 import android.os.Bundle
 import io.legado.app.base.BaseService
 import io.legado.app.utils.LogUtils
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.lang.ref.WeakReference
 
 /**
@@ -14,6 +16,12 @@ import java.lang.ref.WeakReference
 object LifecycleHelp : Application.ActivityLifecycleCallbacks {
 
     private const val TAG = "LifecycleHelp"
+
+    private val startedActivities = mutableSetOf<Activity>()
+    private val _appVisible = MutableStateFlow(false)
+
+    /** 至少一个应用 Activity 可见时不显示应用外朗读窗口。 */
+    val appVisible = _appVisible.asStateFlow()
 
     private val activities: MutableList<WeakReference<Activity>> = arrayListOf()
     private val services: MutableList<WeakReference<BaseService>> = arrayListOf()
@@ -66,10 +74,14 @@ object LifecycleHelp : Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityStarted(activity: Activity) {
+        startedActivities.add(activity)
+        _appVisible.value = true
         LogUtils.d(TAG, "${activity::class.simpleName} onStart")
     }
 
     override fun onActivityDestroyed(activity: Activity) {
+        startedActivities.remove(activity)
+        _appVisible.value = startedActivities.isNotEmpty()
         LogUtils.d(TAG, "${activity::class.simpleName} onDestroy")
         for (temp in activities) {
             if (temp.get() != null && temp.get() === activity) {
@@ -87,6 +99,8 @@ object LifecycleHelp : Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityStopped(activity: Activity) {
+        startedActivities.remove(activity)
+        _appVisible.value = startedActivities.isNotEmpty()
         LogUtils.d(TAG, "${activity::class.simpleName} onStop")
     }
 

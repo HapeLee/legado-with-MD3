@@ -37,6 +37,8 @@ data class ReadAloudPlaybackInfo(
     val engineName: String = "",
     val characterName: String = "",
     val roleType: SpeechRoleType = SpeechRoleType.Narrator,
+    val chapterTitle: String = "",
+    val chapterIndex: Int = -1,
 )
 
 /** Position-based playback queue independent from reader pagination. */

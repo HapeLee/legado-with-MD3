@@ -18,6 +18,7 @@ object MainIntent {
     const val EXTRA_CHARACTER_ID = "characterId"
     const val EXTRA_ENTRY_ID = "entryId"
     const val EXTRA_EVENT_ID = "eventId"
+    const val EXTRA_OPEN_READ_ALOUD_PLAYER = "openReadAloudPlayer"
     const val EXTRA_READ_ALOUD = "readAloud"
     const val EXTRA_IN_BOOKSHELF = "inBookshelf"
     const val EXTRA_CHAPTER_CHANGED = "chapterChanged"

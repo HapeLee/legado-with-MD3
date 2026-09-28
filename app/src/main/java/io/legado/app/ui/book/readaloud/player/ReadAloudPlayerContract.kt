@@ -66,7 +66,6 @@ sealed interface ReadAloudPlayerIntent {
     data object NextChapter : ReadAloudPlayerIntent
     data object PreviousParagraph : ReadAloudPlayerIntent
     data object NextParagraph : ReadAloudPlayerIntent
-    data object OpenSettings : ReadAloudPlayerIntent
     data object SwitchToClassic : ReadAloudPlayerIntent
     data object CycleBgMode : ReadAloudPlayerIntent
     data class SelectChapter(val index: Int) : ReadAloudPlayerIntent
@@ -88,6 +87,5 @@ sealed interface ReadAloudPlayerIntent {
 }
 
 sealed interface ReadAloudPlayerEffect {
-    data object ReturnToReaderSettings : ReadAloudPlayerEffect
     data object ReturnToClassic : ReadAloudPlayerEffect
 }

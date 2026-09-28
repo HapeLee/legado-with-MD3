@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
@@ -33,6 +34,9 @@ import io.legado.app.constant.NotificationId
 import io.legado.app.constant.Status
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.gateway.PlaybackCapsuleGateway
+import io.legado.app.domain.model.PlaybackCapsuleSource
+import io.legado.app.service.readaloud.ReadAloudOverlayWindow
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.coroutine.Coroutine
@@ -130,9 +134,14 @@ class AudioPlayService : BaseService(),
     private var cover: Bitmap =
         BitmapFactory.decodeResource(appCtx.resources, R.drawable.ic_launcher)!!
 
+    private var capsuleOverlayWindow: ReadAloudOverlayWindow? = null
+
     override fun onCreate() {
         super.onCreate()
         isRun = true
+        GlobalContext.get().get<PlaybackCapsuleGateway>()
+            .setSessionAvailable(PlaybackCapsuleSource.AudioBook, true)
+        capsuleOverlayWindow = ReadAloudOverlayWindow(this, PlaybackCapsuleSource.AudioBook)
         exoPlayer.addListener(this)
         AudioPlay.registerService(this)
         initMediaSession()
@@ -199,7 +208,16 @@ class AudioPlayService : BaseService(),
         return super.onStartCommand(intent, flags, startId)
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        capsuleOverlayWindow?.onConfigurationChanged()
+    }
+
     override fun onDestroy() {
+        GlobalContext.get().get<PlaybackCapsuleGateway>()
+            .setSessionAvailable(PlaybackCapsuleSource.AudioBook, false)
+        capsuleOverlayWindow?.close()
+        capsuleOverlayWindow = null
         super.onDestroy()
         if (useWakeLock) {
             wakeLock.release()

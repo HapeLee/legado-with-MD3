@@ -1,12 +1,13 @@
 package io.legado.app.help.http
 
 import io.legado.app.constant.AppConst
+import io.legado.app.data.entities.BaseSource
 import io.legado.app.help.CacheManager
+import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.help.glide.progress.ProgressManager.LISTENER
 import io.legado.app.help.glide.progress.ProgressResponseBody
+import io.legado.app.help.glide.progress.ProgressUrlTag
 import io.legado.app.help.http.CookieManager.cookieJarHeader
-import io.legado.app.data.entities.BaseSource
-import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.utils.NetworkUtils
 import okhttp3.Cache
 import okhttp3.ConnectionSpec
@@ -152,7 +153,9 @@ val okHttpClientManga by lazy {
         interceptors.add(1) { chain ->
             val request = chain.request()
             val response = chain.proceed(request)
-            val url = request.url.toString()
+            // 漫画正文地址会被书源规则改写，进度必须回报给“原始地址”才能与阅读页的
+            // page.imageUrl 对上；普通封面请求没有 tag，退回最终 URL。
+            val url = request.tag(ProgressUrlTag::class.java)?.url ?: request.url.toString()
             response.newBuilder()
                 .body(ProgressResponseBody(url, LISTENER, response.body))
                 .build()
