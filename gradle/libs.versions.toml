@@ -27,7 +27,7 @@ constraintlayout = "2.2.2"
 core = "1.19.0"
 firebaseBom = "34.6.0"
 flexbox = "3.0.0"
-fragment = "1.9.0"
+fragment = "1.9.1"
 
 libarchive = "1.1.6"
 lifecycle = "2.11.0"
