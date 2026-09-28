@@ -44,7 +44,7 @@ class ReaderReadAloudChapterTest {
     }
 
     @Test
-    fun defaultSplitModeCreatesOneUnitPerSentence() {
+    fun defaultSplitModeCreatesOneUnitPerParagraph() {
         val chapter = ReaderReadAloudChapter.create(
             chapterIndex = 0,
             title = "",
@@ -53,17 +53,18 @@ class ReaderReadAloudChapterTest {
             contentSplitMode = ReadAloudContentSplitMode.Default,
         )
 
+        // 「默认」= 整段：划分粒度停在段落，段内台词边界另由 CastSpeechOverlay 处理
         assertEquals(
-            listOf("他来了。", "她走了！", "下一段。"),
+            listOf("他来了。她走了！", "下一段。"),
             chapter.paragraphs(splitByPage = false).map { it.text },
         )
         assertEquals(
-            listOf(0, 4, 9),
+            listOf(0, 9),
             chapter.paragraphs(splitByPage = false).map { it.chapterPosition },
         )
         assertEquals(13, chapter.chapterLength)
         assertEquals(0, chapter.paragraphIndexAtOrAfter(1, splitByPage = false))
-        assertEquals(1, chapter.paragraphIndexAtOrAfter(5, splitByPage = false))
+        assertEquals(0, chapter.paragraphIndexAtOrAfter(5, splitByPage = false))
     }
 
     @Test

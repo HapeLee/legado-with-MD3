@@ -20,14 +20,14 @@ class ReadAloudContentSplitterTest {
     }
 
     @Test
-    fun `default mode splits after sentence-ending punctuation`() {
+    fun `default keeps whole paragraphs instead of splitting at sentence ends`() {
         val units = ReadAloudContentSplitter.splitLines(
             semanticContent = "他来了。她走了！你呢？\n下一段",
             policy = ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Default),
         )
 
-        assertEquals(listOf("他来了。", "她走了！", "你呢？", "下一段"), units.map { it.text })
-        assertEquals(listOf(0, 4, 8, 12), units.map { it.chapterPosition })
+        assertEquals(listOf("他来了。她走了！你呢？", "下一段"), units.map { it.text })
+        assertEquals(listOf(0, 12), units.map { it.chapterPosition })
     }
 
     @Test
@@ -76,14 +76,20 @@ class ReadAloudContentSplitterTest {
     }
 
     @Test
-    fun `role splits are disabled for paragraph and page modes`() {
+    fun `role splits are only enabled for symbol mode`() {
         assertFalse(ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Paragraph).allowRoleSplits)
         assertFalse(ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Page).allowRoleSplits)
-        assertTrue(ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Default).allowRoleSplits)
+        // 「默认」定成整段：段内的台词边界由 CastSpeechOverlay 切，不在这里制造句末停顿
+        assertFalse(ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Default).allowRoleSplits)
+        assertTrue(
+            ContentSplitPolicies
+                .forMode(ReadAloudContentSplitMode.Symbols, listOf("。"))
+                .allowRoleSplits
+        )
     }
 
     @Test
-    fun `default resolves to paragraph when multi-speaker is off`() {
+    fun `default resolves to paragraph whatever the multi-speaker switch says`() {
         assertEquals(
             ReadAloudContentSplitMode.Paragraph,
             ContentSplitPolicies.resolve(
@@ -92,7 +98,7 @@ class ReadAloudContentSplitterTest {
             ),
         )
         assertEquals(
-            ReadAloudContentSplitMode.Default,
+            ReadAloudContentSplitMode.Paragraph,
             ContentSplitPolicies.resolve(ReadAloudContentSplitMode.Default, useMultiSpeaker = true),
         )
     }

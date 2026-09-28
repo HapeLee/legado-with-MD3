@@ -245,16 +245,20 @@ class ReadBookDomainSplitBoundaryTest {
      *    delegate 的语义方法，VM 侧只剩单行转发。
      * 同期新增 `域状态不回流进 ReadBookViewModel` 守卫：这类散落在 VM 的域内状态比总行数
      * 更能说明边界是否干净，行数只作粗棘轮。本次按实测值把线校准到 2696。
+     *
+     * 2696 → 2705：合入官方 3.26.16-beta.41。官方在本文件加了朗读浮层与整书页数校正的接线
+     * （`MainRouteReadAloudPlayer` 兼容分支、`locateAfterPagination` 提交路径的快照发布等），
+     * 全是官方链路自己的收口，不属于我们任一域，因此按实测值把棘轮放到 2705，不替官方摘 delegate。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2696 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2705 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2696。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2705。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2696,
+            lineCount <= 2705,
         )
     }
 
