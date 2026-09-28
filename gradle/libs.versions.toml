@@ -29,7 +29,7 @@ firebaseBom = "34.6.0"
 flexbox = "3.0.0"
 fragment = "1.9.0"
 
-libarchive = "1.1.6"
+libarchive = "1.1.7"
 lifecycle = "2.11.0"
 glide = "5.0.9"
 gson = "2.14.0"
