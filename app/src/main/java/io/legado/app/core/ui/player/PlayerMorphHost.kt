@@ -105,12 +105,15 @@ fun PlayerMorphHost(
     awaitCapsuleAnchor: Boolean = false,
     backEnabled: Boolean = true,
     predictiveBackEnabled: Boolean = true,
+    verticalDragEnabled: Boolean = true,
+    onBeforeCollapse: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     content: @Composable (onCollapse: () -> Unit) -> Unit,
 ) {
     val view = LocalView.current
     val scope = rememberCoroutineScope()
     val currentVisible by rememberUpdatedState(visible)
+    val currentBeforeCollapse by rememberUpdatedState(onBeforeCollapse)
     var backSettleJob by remember { mutableStateOf<Job?>(null) }
     // 进度每帧都在变，用 derivedStateOf 收敛成布尔，避免宿主整体重组。
     // 必须带 visible 作为 key：derivedStateOf 的 lambda 只在首次组合捕获 visible，
@@ -123,6 +126,7 @@ fun PlayerMorphHost(
 
     val collapse: (Float) -> Unit = { velocity ->
         scope.launch {
+            currentBeforeCollapse?.invoke()
             morph.animateTo(0f, initialVelocity = velocity)
             currentDismiss()
         }
@@ -153,6 +157,7 @@ fun PlayerMorphHost(
                 return@PredictiveBackHandler
             }
             backSettleJob?.cancel()
+            currentBeforeCollapse?.invoke()
             val startProgress = morph.progress.value
             var lastProgress = startProgress
             var lastTimeNanos = 0L
@@ -248,52 +253,53 @@ fun PlayerMorphHost(
                         morph.reportScreenCorners(PlayerPanelCornerRadii.Zero)
                     }
                 }
-                // 下滑收起：只接管内容没有消费掉的纵向拖动。
-                // 用指针层而不是嵌套滚动——封面页、顶栏没有可滚动子节点，
-                // 嵌套滚动收不到事件，滑动收起会「时灵时不灵」。
-                .pointerInput(morph) {
-                    // 手势速度得自己采：detectVerticalDragGestures 只给位移，
-                    // 而「甩出去」的结算必须靠速度，否则手指一抬动画就从静止重新起步。
-                    val velocityTracker = VelocityTracker()
-                    detectVerticalDragGestures(
-                        onDragStart = {
-                            velocityTracker.resetTracking()
-                            morph.dragging = true
-                        },
-                        onVerticalDrag = { change, dragAmount ->
-                            velocityTracker.addPosition(change.uptimeMillis, change.position)
-                            // 已经全展开时再往上滑不处理（该留给正文/目录滚动）。
-                            if (dragAmount < 0f && morph.progress.value >= 1f) {
-                                return@detectVerticalDragGestures
-                            }
-                            change.consume()
-                            scope.launch {
-                                morph.progress.snapTo(
-                                    (morph.progress.value - dragAmount / morph.dragRangePx())
-                                        .coerceIn(0f, 1f)
+                .then(
+                    if (verticalDragEnabled) {
+                        Modifier
+                            .pointerInput(morph) {
+                                val velocityTracker = VelocityTracker()
+                                detectVerticalDragGestures(
+                                    onDragStart = {
+                                        velocityTracker.resetTracking()
+                                        morph.dragging = true
+                                    },
+                                    onVerticalDrag = { change, dragAmount ->
+                                        velocityTracker.addPosition(
+                                            change.uptimeMillis,
+                                            change.position
+                                        )
+                                        if (dragAmount < 0f && morph.progress.value >= 1f) {
+                                            return@detectVerticalDragGestures
+                                        }
+                                        change.consume()
+                                        scope.launch {
+                                            morph.progress.snapTo(
+                                                (morph.progress.value - dragAmount / morph.dragRangePx())
+                                                    .coerceIn(0f, 1f)
+                                            )
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        morph.dragging = false
+                                        settleMorph(
+                                            morph = morph,
+                                            scope = scope,
+                                            onCollapse = collapse,
+                                            progressVelocity = morphDragVelocity(
+                                                velocityTracker,
+                                                morph
+                                            ),
+                                        )
+                                    },
+                                    onDragCancel = {
+                                        morph.dragging = false
+                                        settleMorph(morph, scope, collapse, 0f)
+                                    },
                                 )
                             }
-                        },
-                        // 结束与取消都要结算，否则进度会停在中间，
-                        // 两个胶囊按进度淡出会表现为「胶囊消失」。
-                        onDragEnd = {
-                            morph.dragging = false
-                            settleMorph(
-                                morph = morph,
-                                scope = scope,
-                                onCollapse = collapse,
-                                progressVelocity = morphDragVelocity(velocityTracker, morph),
-                            )
-                        },
-                        onDragCancel = {
-                            morph.dragging = false
-                            settleMorph(morph, scope, collapse, 0f)
-                        },
-                    )
-                }
-                // 补充通道：正文 / 目录是可滚动内容，`scrollable` 会消费指针事件，
-                // 指针层收不到，只能靠嵌套滚动里「已到顶且仍在往下滑」的剩余位移。
-                .nestedScroll(morphCollapseNestedScroll(morph, scope, collapse)),
+                            .nestedScroll(morphCollapseNestedScroll(morph, scope, collapse))
+                    } else Modifier
+                ),
         ) {
             MorphPanelSurface(
                 morph = morph,

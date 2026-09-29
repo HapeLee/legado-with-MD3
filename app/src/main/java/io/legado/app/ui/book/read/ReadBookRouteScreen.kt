@@ -70,6 +70,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.ReadMenuBlurMode
+import io.legado.app.core.ui.morph.BookMorphHost
 import io.legado.app.feature.reader.ReaderBackgroundSurface
 import io.legado.app.feature.reader.ReaderCanvasSurface
 import io.legado.app.feature.reader.core.gesture.ReaderTapActionGrid
@@ -90,9 +91,7 @@ import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginType
-import io.legado.app.ui.main.AndroidPlatformCapabilities
 import io.legado.app.ui.main.MainActivity
-import io.legado.app.ui.main.readerSharedBounds
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.LegadoTheme
@@ -158,6 +157,7 @@ fun ReadBookRouteScreen(
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
+    onNavigateBack: () -> Unit = {},
 ) {
     // 归因定界：与末尾 compose.screen.end 成对。若首帧 `Compose:recompose` 里出现
     // begin 之前的空档，说明那部分耗时在本屏之外（导航宿主 / 共享转场层）。
@@ -203,7 +203,13 @@ fun ReadBookRouteScreen(
                     !state.menuConfig.readMenuFloatingBottomBar &&
                             state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
                     )
-    BackHandler {
+    val canMorphBack = state.activeSheet == null &&
+            !state.isShowingSearchResult &&
+            !state.isAutoPage &&
+            !state.menuState.canNavigateBack &&
+            state.activeDialog == null
+
+    BackHandler(enabled = !canMorphBack) {
         when {
             state.activeSheet != null -> viewModel.onIntent(ReadBookIntent.DismissSheet)
             state.isShowingSearchResult -> viewModel.onIntent(ReadBookIntent.ExitSearch)
@@ -654,24 +660,37 @@ fun ReadBookRouteScreen(
             ReaderPerfTrace.marker("surface.page-ready")
         }
     }
-    // 阅读页 sharedBounds 的裁剪圆角动画：从封面源圆角渐变到设备屏幕圆角，
-    // 转场收尾时正文页与物理圆角贴合（Compose 不会自动插值两端 clip，需自行驱动）。
-    val platformCapabilities = remember(controller) { AndroidPlatformCapabilities(controller.activity) }
-    val displayConfiguration = LocalConfiguration.current
-    val displayCornerRadiusPx = remember(displayConfiguration) { platformCapabilities.displayCornerRadiusPx }
-    Box(
-        Modifier
-            .fillMaxSize()
-            .semantics { testTagsAsResourceId = true }
-            .readerSharedBounds(
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-                sharedCoverKey = sharedCoverKey,
-                displayCornerRadiusPx = displayCornerRadiusPx,
-                density = density,
-            )
-            .background(readerSurfaceColor)
-    ) {
+    var isDismissed by remember { mutableStateOf(false) }
+    var closingFromController by remember { mutableStateOf(false) }
+    val dismissReader: () -> Unit = {
+        if (!isDismissed) {
+            isDismissed = true
+            if (!closingFromController) {
+                viewModel.onIntent(ReadBookIntent.CloseReadBook())
+            }
+            onNavigateBack()
+        }
+    }
+
+    BookMorphHost(
+        anchorKey = sharedCoverKey,
+        backgroundColor = readerSurfaceColor,
+        backEnabled = canMorphBack,
+        predictiveBackEnabled = true,
+        onDismiss = dismissReader,
+    ) { onCollapse ->
+        LaunchedEffect(onCollapse) {
+            controller.onClose = {
+                closingFromController = true
+                onCollapse()
+            }
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .semantics { testTagsAsResourceId = true }
+                .background(readerSurfaceColor)
+        ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -952,6 +971,7 @@ fun ReadBookRouteScreen(
             )
         }
         ReaderPerfTrace.marker("compose.chrome.end")
+    }
     }
     ReaderPerfTrace.marker("compose.screen.end")
 }

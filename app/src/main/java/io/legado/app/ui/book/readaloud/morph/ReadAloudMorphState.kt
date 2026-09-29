@@ -116,8 +116,24 @@ class ReadAloudMorphState(
 
     private var fadeOnlyOpening by mutableStateOf(false)
 
+    var isCoverAnchor by mutableStateOf(false)
+        private set
+
     fun prepareOpeningAnchors() {
         fadeOnlyOpening = false
+    }
+
+    /** 上报来自书架封面的形变锚点。不受胶囊类型限制，直接作为有效起点。 */
+    fun reportBookCoverAnchor(bounds: Rect, cornerRadiusPx: Float) {
+        if (progress.value > 0f && !expanded) return
+        isCoverAnchor = true
+        fadeOnlyOpening = false
+        panelStartBounds = bounds
+        panelStartCornerRadiusPx = cornerRadiusPx
+        coverStartBounds = bounds
+        coverStartCornerRadiusPx = cornerRadiusPx
+        panelStartColor = Color.Unspecified
+        capsuleProgressRing = null
     }
 
     /** 锚点等待失败后固定本次展开为淡入，迟到的测量不能在中途改变路径。 */
@@ -129,6 +145,7 @@ class ReadAloudMorphState(
     /** 路由/朗读会话改变后不沿用上一种胶囊的起点。 */
     fun clearStartAnchors() {
         if (progress.value > 0f && !expanded) return
+        isCoverAnchor = false
         panelStartBounds = Rect.Zero
         coverStartBounds = Rect.Zero
         panelStartCornerRadiusPx = 0f
@@ -144,7 +161,7 @@ class ReadAloudMorphState(
     private val coverAnchorMatches get() = expectedAnchorKind == null || coverAnchorKind == expectedAnchorKind
     val hasCapsuleAnchors: Boolean
         get() = !panelStartBounds.isEmpty && !coverStartBounds.isEmpty &&
-                panelAnchorMatches && coverAnchorMatches
+                (isCoverAnchor || (panelAnchorMatches && coverAnchorMatches))
 
     /** 路由交接不能用上一种胶囊的残留测量开始动画。 */
     fun expectCapsuleAnchors(kind: CapsuleAnchorKind?) {

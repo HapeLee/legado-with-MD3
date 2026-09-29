@@ -167,9 +167,10 @@ class PlayerMorphFramesTest {
     }
 
     @Test
-    fun `veil follows reference linear window without an extra easing`() {
-        assertEquals(0.25f, computeMorphVeil(0.8875f), 0.001f)
-        assertEquals(0.75f, computeMorphVeil(0.9625f), 0.001f)
+    fun `veil transitions smoothly in mid to late phase`() {
+        assertEquals(0f, computeMorphVeil(0.20f), 0.001f)
+        assertEquals(0.5f, computeMorphVeil(0.425f), 0.001f)
+        assertEquals(1f, computeMorphVeil(0.65f), 0.001f)
     }
 
     @Test
@@ -398,11 +399,11 @@ class PlayerMorphFramesTest {
     }
 
     @Test
-    fun `veil stays hidden until the last stretch`() {
+    fun `veil stays hidden until the mid phase`() {
         assertEquals(0f, computeMorphVeil(0f), 0.001f)
         assertEquals(0f, computeMorphVeil(MORPH_VEIL_START), 0.001f)
-        assertEquals(0f, computeMorphVeil(0.5f), 0.001f)
+        assertTrue(computeMorphVeil(0.5f) in 0.6f..0.8f)
         assertEquals(1f, computeMorphVeil(1f), 0.001f)
-        assertTrue(computeMorphVeil(0.925f) in 0.4f..0.6f)
+        assertEquals(1f, computeMorphVeil(MORPH_VEIL_END), 0.001f)
     }
 }

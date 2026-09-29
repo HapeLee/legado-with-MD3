@@ -176,7 +176,11 @@ fun MangaReaderScreen(
     imageLoader: ImageLoader = koinInject(),
     hazeState: HazeState? = null,
 ) {
-    BackHandler { onIntent(MangaReaderIntent.BackPressed) }
+    val canMorphBack = state.activeDialog == null &&
+            state.activeSheet == null &&
+            state.settingsCategory == null &&
+            !state.menuVisible
+    BackHandler(enabled = !canMorphBack) { onIntent(MangaReaderIntent.BackPressed) }
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
     var viewportOrigin by remember { mutableStateOf(Offset.Zero) }
     val aspectRatios = remember(state.bookUrl) { mutableStateMapOf<String, Float>() }

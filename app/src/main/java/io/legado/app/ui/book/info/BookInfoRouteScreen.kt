@@ -26,6 +26,7 @@ import androidx.lifecycle.lifecycleScope
 import com.script.rhino.runScriptWithContext
 import io.legado.app.R
 import io.legado.app.constant.AppLog
+import io.legado.app.core.ui.morph.BookMorphHost
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
@@ -35,6 +36,8 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginJsExtensions
+import io.legado.app.ui.main.bookCoverSharedElementKey
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.utils.RealPathUtil
 import io.legado.app.utils.StartActivityContract
@@ -92,6 +95,33 @@ fun BookInfoRouteScreen(
     val noPasswordHint = stringResource(R.string.private_content_no_password)
     var showSelectBooksDirSheet by remember { mutableStateOf(false) }
 
+    val canMorphBack = uiState.dialog == null &&
+            uiState.sheet == BookInfoSheet.None &&
+            !showSelectBooksDirSheet &&
+            !uiState.showAppLogSheet &&
+            !uiState.showPrivatePasswordDialog
+    val effectiveCoverKey = sharedCoverKey ?: bookCoverSharedElementKey(bookUrl)
+    var isDismissed by remember { mutableStateOf(false) }
+    var finishResultCode by remember { mutableStateOf<Int?>(null) }
+    var finishAfterTransition by remember { mutableStateOf(false) }
+    var collapseRequested by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    val dismissBookInfo: () -> Unit = {
+        if (!isDismissed) {
+            isDismissed = true
+            onFinish(finishResultCode, finishAfterTransition)
+        }
+    }
+
+    val handleBack: () -> Unit = {
+        val collapse = collapseRequested
+        if (collapse != null && canMorphBack) {
+            collapse()
+        } else {
+            dismissBookInfo()
+        }
+    }
+
     val tocActivityResult = rememberLauncherForActivityResult(TocActivityResult()) {
         viewModel.onTocResult(it)
     }
@@ -142,7 +172,14 @@ fun BookInfoRouteScreen(
             when (effect) {
                 is BookInfoEffect.ShowMessage -> context.toastOnUi(effect.message)
                 is BookInfoEffect.Finish -> {
-                    onFinish(effect.resultCode, effect.afterTransition)
+                    finishResultCode = effect.resultCode
+                    finishAfterTransition = effect.afterTransition
+                    val collapse = collapseRequested
+                    if (collapse != null && canMorphBack) {
+                        collapse()
+                    } else {
+                        dismissBookInfo()
+                    }
                 }
 
                 is BookInfoEffect.OpenBookInfoEdit -> {
@@ -249,25 +286,37 @@ fun BookInfoRouteScreen(
         }
     }
 
-    FilePickerSheet(
-        show = showSelectBooksDirSheet,
-        onDismissRequest = { showSelectBooksDirSheet = false },
-        title = stringResource(R.string.select_book_folder),
-        onSelectSysDir = {
-            showSelectBooksDirSheet = false
-            localBookTreeSelect.launch(null)
-        },
-    )
-    BookInfoScreen(
-        state = uiState,
-        groups = viewModel.allGroups
-            .collectAsStateWithLifecycle(persistentListOf<BookGroup>()).value,
-        onIntent = viewModel::onIntent,
-        onBack = onBack,
-        sharedTransitionScope = sharedTransitionScope,
-        animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = sharedCoverKey,
-    )
+    BookMorphHost(
+        anchorKey = effectiveCoverKey,
+        backgroundColor = LegadoTheme.colorScheme.background,
+        backEnabled = canMorphBack,
+        predictiveBackEnabled = true,
+        hasTargetCover = true,
+        onDismiss = dismissBookInfo,
+    ) { onCollapse ->
+        LaunchedEffect(onCollapse) {
+            collapseRequested = onCollapse
+        }
+        FilePickerSheet(
+            show = showSelectBooksDirSheet,
+            onDismissRequest = { showSelectBooksDirSheet = false },
+            title = stringResource(R.string.select_book_folder),
+            onSelectSysDir = {
+                showSelectBooksDirSheet = false
+                localBookTreeSelect.launch(null)
+            },
+        )
+        BookInfoScreen(
+            state = uiState,
+            groups = viewModel.allGroups
+                .collectAsStateWithLifecycle(persistentListOf<BookGroup>()).value,
+            onIntent = viewModel::onIntent,
+            onBack = handleBack,
+            sharedTransitionScope = null,
+            animatedVisibilityScope = null,
+            sharedCoverKey = null,
+        )
+    }
 }
 
 private fun runSourceCallback(
