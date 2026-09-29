@@ -4,7 +4,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Paint
-import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -38,7 +37,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -47,11 +45,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
@@ -59,20 +55,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -83,17 +65,10 @@ import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.configNames
 import io.legado.app.data.repository.toJsonArray
-import io.legado.app.feature.reader.core.model.ReaderRect
-import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundRun
-import io.legado.app.feature.reader.core.model.ReaderUnderline
-import io.legado.app.feature.reader.core.model.frameBottomPx
-import io.legado.app.feature.reader.core.model.frameTopPx
-import io.legado.app.feature.reader.core.model.nineSliceFrame
-import io.legado.app.feature.reader.core.model.withBitmapSize
+import io.legado.app.feature.reader.core.model.contentClipRect
 import io.legado.app.feature.reader.drawTextBackground
 import io.legado.app.feature.reader.platform.ReaderTextBackgroundLoader
-import io.legado.app.feature.reader.platform.ReaderUnderlineDrawCommand
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FontFolderState
@@ -113,11 +88,33 @@ import io.legado.app.utils.toastOnUi
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import io.legado.app.feature.reader.core.layout.ReaderChapterBlockMeasurer
+import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureResult
+import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureStyle
+import io.legado.app.feature.reader.core.layout.ReaderImageDimensionsResolver
+import io.legado.app.feature.reader.core.layout.ReaderPaginationConfig
+import io.legado.app.feature.reader.core.layout.ReaderPaginator
+import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
+import io.legado.app.feature.reader.core.layout.ReaderTextShaperFactory
+import io.legado.app.feature.reader.core.model.ReaderElement
+import io.legado.app.feature.reader.core.model.ReaderPage
+import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import io.legado.app.feature.reader.core.model.textBackgroundRuns
+import io.legado.app.feature.reader.core.source.ReaderChapterSource
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
+import io.legado.app.feature.reader.core.style.mergeBackgroundBounds
+import io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper
+import io.legado.app.feature.reader.platform.AndroidReaderTextShaper
+import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
+import io.legado.app.feature.reader.platform.ReaderPageDecorationDrawCache
 
 @Composable
 fun HighlightRuleEditSheet(
@@ -915,248 +912,190 @@ private fun HighlightPreviewCard(
 }
 
 /**
- * 规则预览：只有 [Regex] 命中的那一段会上样式，命中之外的一个字都不动。
+ * 规则预览：整块走正文那一条管线，预览里不留第二套排版。
  *
- * 背景图走正文同一份绘制函数（[drawTextBackground]）与同一份几何
- * （[ReaderTextBackgroundImage.withBitmapSize] / [frameBottomPx] / [nineSliceFrame]），
- * 所以预览里看到的气泡高度、横向拉伸与长度偏移就是正文页画出来的那个。
- *
- * 命中字距是「在命中段外面留一段空隙」：空隙挂在段首前一个字与段末那个字上，而装饰框只取命中
- * 那几个字自己的边界——正文在段首字那里就打断背景 run，所以调字距时气泡跟着文字平移，
- * 绝不会把空隙吞进中间那一格。命中行行距抬高整行行盒——示例句每一行都含命中，
- * 因此预览里看起来就是行距变大。
+ * 规则→样式用 [LegacyReaderStyleRangeMapper]（命中字距、命中行行距、背景图切线都在那里换算），
+ * 测量用 [ReaderChapterBlockMeasurer]，分页用 [ReaderPaginator]，绘制用正文同一份
+ * [drawTextBackground] 与 [ReaderPageDecorationDrawCache]。正文怎么断行、气泡多大、字落在哪，
+ * 预览就是那个结果——包括「命中字距只在段外留白，不许把图拉长」这一条。
  */
 @Composable
 private fun HighlightRulePreview(
     rule: HighlightRule,
     modifier: Modifier = Modifier,
 ) {
-    val textMeasurer = rememberTextMeasurer()
-    val baseColor = LegadoTheme.colorScheme.onSurface
-    val sample = rule.normalizedSampleText()
-    val hitRanges = remember(rule.pattern, sample) { previewHitRanges(rule.pattern, sample) }
-    val background = rememberPreviewBackground(rule)
-    val hitFont = rememberPreviewFontFamily(rule.fontPath)
-    val paint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
-    val underlineColor = rule.underlineColor?.let(::Color)
-        ?: rule.textColor?.let(::Color)
-        ?: baseColor
-
-    Canvas(modifier) {
-        val padX = 20.dp.toPx()
-        val padY = 16.dp.toPx()
-        val beforePx = rule.letterSpacingBefore.dp.toPx()
-        val afterPx = rule.letterSpacingAfter.dp.toPx()
-        val baseSizePx = 16.sp.toPx()
-        val hitSizePx = (16 + rule.fontSizeOffset).coerceAtLeast(1).sp.toPx()
-        val layout = textMeasurer.measure(
-            text = previewAnnotatedString(
-                rule = rule,
-                hits = hitRanges,
-                beforeEm = (beforePx / baseSizePx.coerceAtLeast(1f)).em,
-                afterEm = (afterPx / hitSizePx.coerceAtLeast(1f)).em,
-                fontFamily = hitFont,
-            ),
-            style = TextStyle(
-                fontSize = 16.sp,
-                color = baseColor,
-                lineHeight = (
-                    baseSizePx + rule.lineSpacingTop.dp.toPx() + rule.lineSpacingBottom.dp.toPx()
-                    ).toSp(),
-                lineHeightStyle = LineHeightStyle(
-                    alignment = LineHeightStyle.Alignment.Center,
-                    trim = LineHeightStyle.Trim.None,
-                ),
-            ),
-            constraints = Constraints(
-                maxWidth = (size.width - padX * 2f).toInt().coerceAtLeast(1),
-            ),
-            maxLines = 3,
-        )
-        val boxes = previewHitBoxes(layout, hitRanges)
-        translate(padX, padY) {
-            if (background != null) {
-                val native = drawContext.canvas.nativeCanvas
-                val image = background.image
-                boxes.forEach { box ->
-                    val content = ReaderRect(box.left, box.top, box.right, box.bottom)
-                    // 上下边按「图片总高按 scale 锁死、中间带子对着行盒居中」外扩，
-                    // 左右边按正文同一份口径外扩——用的就是分页那边同一对函数。
-                    val frame = image.nineSliceFrame(
-                        content.copy(
-                            top = content.top - image.frameTopPx(content.height),
-                            bottom = content.bottom + image.frameBottomPx(content.height),
-                        ),
-                    )
-                    drawTextBackground(
-                        native,
-                        background.bitmap,
-                        ReaderTextBackgroundRun(
-                            bounds = frame,
-                            contentBounds = content,
-                            image = image,
-                        ),
-                        paint,
-                    )
-                }
-            }
-            rule.bgColor?.let { color ->
-                val tint = Color(color)
-                boxes.forEach { box -> drawRect(tint, box.topLeft, box.size) }
-            }
-            if (rule.underlineMode == 7) {
-                boxes.forEach { box ->
-                    drawRect(
-                        color = underlineColor.copy(alpha = 0.4f),
-                        topLeft = Offset(box.left, box.top + box.height * 0.5f),
-                        size = Size(box.width, box.height * 0.5f),
-                    )
-                }
-            }
-            drawText(layout)
-            if (rule.underlineMode in 1..6) {
-                // 下划线直接复用正文那份绘制命令：虚线段长、波浪周期、双线的间距与 SVG
-                // 路径的缩放全走同一套常量，预览才会真的等于正文。
-                val underline = ReaderUnderline(
-                    mode = rule.underlineMode,
-                    colorArgb = underlineColor.toArgb(),
-                    widthPx = rule.underlineWidth.dp.toPx(),
-                    offsetPx = rule.underlineOffset.dp.toPx(),
-                    svgPath = rule.underlineSvgPath.orEmpty(),
-                    dashOnPx = 8.dp.toPx(),
-                    dashOffPx = 5.dp.toPx(),
-                    waveAmplitudePx = 3.dp.toPx(),
-                    waveLengthPx = 12.dp.toPx(),
-                    doubleLineGapPx = 3.dp.toPx(),
-                )
-                val native = drawContext.canvas.nativeCanvas
-                boxes.forEach { box ->
-                    ReaderUnderlineDrawCommand(
-                        ReaderRect(box.left, box.top, box.right, box.bottom),
-                        underline,
-                    ).draw(native)
-                }
-            }        }
-    }
-}
-
-/** 位图与几何参数：加载、自动切线、换算全用正文那一份，预览才会和正文一模一样。 */
-@Composable
-private fun rememberPreviewBackground(rule: HighlightRule): PreviewBackground? {
-    val source = rule.bgImage.orEmpty()
-    val manual = rule.manualNineSlice
-    val density = LocalDensity.current
-    var loaded by remember(source) { mutableStateOf<Bitmap?>(null) }
-    var automatic by remember(source) {
-        mutableStateOf<ReaderTextBackgroundLoader.NineSliceFractions?>(null)
-    }
-    LaunchedEffect(source, manual) {
-        loaded = withContext(Dispatchers.IO) { ReaderTextBackgroundLoader.load(source) }
-        // 正文在 manualNineSlice 关闭时读 .9.png 自己的引导边，忽略四个 np 值；
-        // 预览必须照做，否则「预览一套、正文一套」。逐像素扫描放 IO 线程。
-        automatic = if (manual) null else withContext(Dispatchers.IO) {
-            ReaderTextBackgroundLoader.nineSliceFractions(source)
-        }
-    }
-    val bitmap = loaded ?: return null
-    return with(density) {
-        PreviewBackground(
-            bitmap = bitmap,
-            image = ReaderTextBackgroundImage(
-                source = source,
-                fit = rule.bgImageFit,
-                scale = rule.bgImageScale,
-                ninePatchLeft = automatic?.left ?: rule.npLeft,
-                ninePatchRight = automatic?.right ?: rule.npRight,
-                ninePatchTop = automatic?.top ?: rule.npTop,
-                ninePatchBottom = automatic?.bottom ?: rule.npBottom,
-                lengthOffsetLeftPx = rule.bgLengthOffsetLeft.dp.toPx(),
-                lengthOffsetRightPx = rule.bgLengthOffsetRight.dp.toPx(),
-            ).withBitmapSize(bitmap.width, bitmap.height),
-        )
-    }
-}
-
-private data class PreviewBackground(val bitmap: Bitmap, val image: ReaderTextBackgroundImage)
-
-/** 命中的那几段。正则编辑到一半不合法就当没命中，不能让弹层崩掉。 */
-private fun previewHitRanges(pattern: String, text: String): List<IntRange> =
-    runCatching { Regex(pattern.ifBlank { ".*" }) }.getOrNull()
-        ?.findAll(text)
-        ?.map { it.range }
-        ?.filter { it.first <= it.last }
-        ?.toList()
-        .orEmpty()
-
-/** 只给命中的段加样式；命中字距按正文口径挂在段首前一个字与段末那个字上。 */
-private fun previewAnnotatedString(
-    rule: HighlightRule,
-    hits: List<IntRange>,
-    beforeEm: TextUnit,
-    afterEm: TextUnit,
-    fontFamily: FontFamily?,
-): AnnotatedString {
-    val text = rule.normalizedSampleText()
-    val hitStyle = SpanStyle(
-        color = rule.textColor?.let(::Color) ?: Color.Unspecified,
-        fontFamily = fontFamily,
-        fontWeight = rule.fontWeight.takeIf { it != 400 }?.let(::FontWeight),
-        fontStyle = if (rule.isItalic) FontStyle.Italic else null,
-        fontSize = if (rule.fontSizeOffset == 0) TextUnit.Unspecified else (16 + rule.fontSizeOffset).sp,
+    val baseColorArgb = LegadoTheme.colorScheme.onSurface.toArgb()
+    val padX = with(LocalDensity.current) { 20.dp.toPx() }
+    val padY = with(LocalDensity.current) { 16.dp.toPx() }
+    val baseTextSizePx = with(LocalDensity.current) { 16.sp.toPx() }
+    var viewport by remember { mutableStateOf(IntSize.Zero) }
+    val layout = rememberReaderPreviewLayout(
+        rule = rule,
+        sample = rule.normalizedSampleText(),
+        viewportWidthPx = viewport.width,
+        // 视口给高：示例句必须全落在第一页，不然一拉「命中行行距」就把最后一行挤到丢掉的第二页，
+        // 看着像规则失效。超出的部分由外层 clipToBounds 裁掉，跟正文一样不许装饰跑进页边距。
+        viewportHeightPx = (baseTextSizePx * 60f).toInt(),
+        paddingLeftPx = padX,
+        paddingTopPx = padY,
+        baseTextSizePx = baseTextSizePx,
+        baseColorArgb = baseColorArgb,
     )
-    return buildAnnotatedString {
-        append(text)
-        val last = text.lastIndex
-        hits.forEach { range ->
-            addStyle(hitStyle, range.first, range.last + 1)
-            if (beforeEm.value > 0f && range.first > 0) {
-                addStyle(SpanStyle(letterSpacing = beforeEm), range.first - 1, range.first)
-            }
-            if (afterEm.value > 0f && range.last < last) {
-                addStyle(SpanStyle(letterSpacing = afterEm), range.last, range.last + 1)
+    val decorations = remember(layout) { layout?.let { ReaderPageDecorationDrawCache.create(it.page) } }
+    val backgroundPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
+    val stylePaints = remember { mutableMapOf<ReaderTextStyle, Paint>() }
+    Canvas(modifier.onSizeChanged { viewport = it }) {
+        val page = layout?.page
+        if (page != null && decorations != null) {
+            val runs = page.textBackgroundRuns()
+            // 正文那一刀：裁剪框跟着背景走，气泡不会被页边距切成两截，字也超不出去。
+            val clip = page.contentClipRect(runs)
+            clipRect(clip.left, clip.top, clip.right, clip.bottom) {
+                drawReaderPreviewPage(layout, runs, decorations, backgroundPaint, stylePaints)
             }
         }
     }
 }
 
-/** 命中段在一行里的矩形：逐行切开，只取命中那几个字自己的边界，高度取整行行盒。 */
-private fun previewHitBoxes(
-    layout: TextLayoutResult,
-    hits: List<IntRange>,
-): List<Rect> {
-    val boxes = ArrayList<Rect>(hits.size)
-    hits.forEach { range ->
-        for (line in 0 until layout.lineCount) {
-            val from = maxOf(range.first, layout.getLineStart(line))
-            val to = minOf(range.last + 1, layout.getLineEnd(line))
-            if (to <= from) continue
-            val head = layout.getBoundingBox(from)
-            val tail = layout.getBoundingBox(to - 1)
-            boxes += Rect(
-                left = minOf(head.left, tail.left),
-                top = layout.getLineTop(line),
-                right = maxOf(head.right, tail.right),
-                bottom = layout.getLineBottom(line),
+/** 排版好的一页 + 背景图位图：几何全部已经在 [ReaderPage] 里按正文口径算完。 */
+private data class ReaderPreviewLayout(val page: ReaderPage, val background: Bitmap?)
+
+/**
+ * 算一页要读一次图片尺寸与字体度量，放后台线程；示例句最长三行，代价可以忽略。
+ * 重算期间沿用上一次的页，滑杆拖动时不会闪白。
+ */
+@Composable
+private fun rememberReaderPreviewLayout(
+    rule: HighlightRule,
+    sample: String,
+    viewportWidthPx: Int,
+    viewportHeightPx: Int,
+    paddingLeftPx: Float,
+    paddingTopPx: Float,
+    baseTextSizePx: Float,
+    baseColorArgb: Int,
+): ReaderPreviewLayout? {
+    var layout by remember { mutableStateOf<ReaderPreviewLayout?>(null) }
+    LaunchedEffect(
+        rule, sample, viewportWidthPx, viewportHeightPx, baseTextSizePx, baseColorArgb
+    ) {
+        if (viewportWidthPx <= 1 || viewportHeightPx <= 1) return@LaunchedEffect
+        layout = withContext(Dispatchers.Default) {
+            buildReaderPreviewLayout(
+                rule = rule,
+                sample = sample,
+                viewportWidthPx = viewportWidthPx,
+                viewportHeightPx = viewportHeightPx,
+                paddingLeftPx = paddingLeftPx,
+                paddingTopPx = paddingTopPx,
+                baseTextSizePx = baseTextSizePx,
+                baseColorArgb = baseColorArgb,
             )
         }
     }
-    return boxes
+    return layout
 }
 
-/**
- * 自定义字体：正文按 fontPath 取 Typeface，预览取同一份文件，
- * 否则「字体替换」这一栏在预览里永远看不出差别。
- */
-@Composable
-private fun rememberPreviewFontFamily(fontPath: String?): FontFamily? {
-    val path = fontPath?.takeIf { it.isNotBlank() } ?: return null
-    return produceState<FontFamily?>(initialValue = null, path) {
-        value = withContext(Dispatchers.IO) {
-            runCatching {
-                Typeface.createFromFile(path)?.let { FontFamily(it) }
-            }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+private suspend fun buildReaderPreviewLayout(
+    rule: HighlightRule,
+    sample: String,
+    viewportWidthPx: Int,
+    viewportHeightPx: Int,
+    paddingLeftPx: Float,
+    paddingTopPx: Float,
+    baseTextSizePx: Float,
+    baseColorArgb: Int,
+): ReaderPreviewLayout? {
+    val baseStyle = ReaderTextStyle(colorArgb = baseColorArgb, fontSizePx = baseTextSizePx)
+    val baseShaper = AndroidReaderTextShaper(ReaderAndroidPaintFactory.createTextPaint(baseStyle))
+    val lineMetrics = baseShaper.fontLineMetrics
+    val source = ReaderChapterSource(
+        chapterIndex = 0,
+        title = "",
+        blocks = listOf(ReaderChapterSourceBlock.Text(value = sample, chapterPosition = 0)),
+        characterCount = sample.length,
+        semanticContent = sample,
+    )
+    val measured = ReaderChapterBlockMeasurer(
+        bodyShaper = baseShaper,
+        titleShaper = baseShaper,
+        imageDimensionsResolver = ReaderImageDimensionsResolver { null },
+        // 命中段可以改字号：宽度得用放大后的那支笔量，和正文一样按样式各建一支。
+        textShaperFactory = ReaderTextShaperFactory {
+            AndroidReaderTextShaper(ReaderAndroidPaintFactory.createTextPaint(it))
+        },
+    ).measure(
+        source = source,
+        style = ReaderChapterMeasureStyle(
+            bodyStyle = baseStyle,
+            titleStyle = baseStyle,
+            // 预览卡只有一行示例句，缩进会把字往右推、可能挤成两行；气泡宽度与缩进无关。
+            // （`SheetGlobalConfigReadTest` 也禁止弹层直读 `ReadBookConfig`，段首缩进取不到快照。）
+            bodyIndentCharacters = 0,
+            bodyAlignment = ReaderTextAlignment.START,
+            titleAlignment = ReaderTextAlignment.START,
+            bodyLineHeightPx = lineMetrics.heightPx,
+            bodyBaselineOffsetPx = lineMetrics.baselineOffsetPx,
+            // 编辑一条停用/只作用于标题的规则时也要看得见效果：示例句按正文那段送去命中。
+            styleRanges = LegacyReaderStyleRangeMapper.map(
+                source = source,
+                rules = listOf(rule.copy(enabled = true, targetScope = HighlightRule.TARGET_ALL)),
+                processes = emptyList(),
+            ),
+        ),
+    ) as? ReaderChapterMeasureResult.Success ?: return null
+    val page = ReaderPaginator.paginateBlocks(
+        measured.blocks,
+        ReaderPaginationConfig(
+            chapterIndex = 0,
+            chapterTitle = "",
+            viewportWidthPx = viewportWidthPx,
+            viewportHeightPx = viewportHeightPx,
+            paddingLeftPx = paddingLeftPx,
+            paddingTopPx = paddingTopPx,
+            paddingRightPx = paddingLeftPx,
+            paddingBottomPx = paddingTopPx,
+            lineHeightPx = lineMetrics.heightPx,
+            baselineOffsetPx = lineMetrics.baselineOffsetPx,
+        ),
+    ).firstOrNull() ?: return null
+    val background = rule.bgImage?.takeIf { it.isNotBlank() }
+        ?.let(ReaderTextBackgroundLoader::load)
+    return ReaderPreviewLayout(page, background)
+}
+
+/** 与 `ReaderCanvasSurface` 同一顺序：背景色条 → 背景图 → 半截高亮 → 字 → 线。 */
+private fun DrawScope.drawReaderPreviewPage(
+    layout: ReaderPreviewLayout,
+    backgroundRuns: List<ReaderTextBackgroundRun>,
+    decorations: ReaderPageDecorationDrawCache,
+    backgroundPaint: Paint,
+    stylePaints: MutableMap<ReaderTextStyle, Paint>,
+) {
+    val native = drawContext.canvas.nativeCanvas
+    val textElements = layout.page.elements.filterIsInstance<ReaderElement.Text>()
+    textElements.mergeBackgroundBounds().forEach { band ->
+        drawRect(
+            Color(band.colorArgb),
+            Offset(band.bounds.left, band.bounds.top),
+            Size(band.bounds.width, band.bounds.height),
+        )
+    }
+    layout.background?.let { bitmap ->
+        backgroundRuns.forEach { run ->
+            drawTextBackground(native, bitmap, run, backgroundPaint)
         }
-    }.value
+    }
+    decorations.halfHighlights.forEach { it.draw(native) }
+    textElements.forEach { element ->
+        val paint = stylePaints.getOrPut(element.style) {
+            ReaderAndroidPaintFactory.create(element.style)
+        }
+        native.drawText(element.value, element.bounds.left, element.baselinePx, paint)
+    }
+    decorations.contentRules.forEach { it.draw(native) }
+    decorations.styledUnderlines.forEach { it.draw(native) }
+    decorations.overlayRules.forEach { it.draw(native) }
 }
 
 /**

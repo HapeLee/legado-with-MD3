@@ -38,6 +38,11 @@ class HighlightRuleSampleTextTest {
             "张三：「我是李四。」他惊了！",
             HighlightRule.matchingSampleText("「[^」]*」", ""),
         )
+        // 视频里那条：正则写的是 ASCII 单引号，示例句必须跟着换成单引号，否则预览一片空白。
+        assertEquals(
+            "张三：'我是李四。'他惊了！",
+            HighlightRule.matchingSampleText("'[^']*'", ""),
+        )
     }
 
     /** 正则没有成对符号时，示例句里不该凭空多出引号。 */
@@ -63,6 +68,7 @@ class HighlightRuleSampleTextTest {
         listOf(
             "“[^”]*”" to "张三：“我是李四。”他惊了！",
             "\"[^\"]*\"" to "张三：\"我是李四。\"他惊了！",
+            "'[^']*'" to "张三：'我是李四。'他惊了！",
             "「[^」]*」" to "张三：「我是李四。」他惊了！",
             "『[^』]*』" to "张三：『我是李四。』他惊了！",
             "（[^）]*）" to "张三：（我是李四。）他惊了！",
