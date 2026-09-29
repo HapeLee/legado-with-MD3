@@ -942,7 +942,7 @@ private fun HighlightRulePreview(
         baseColorArgb = baseColorArgb,
     )
     val decorations = remember(layout) { layout?.let { ReaderPageDecorationDrawCache.create(it.page) } }
-    val backgroundPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
+    val backgroundPaint = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
     val stylePaints = remember { mutableMapOf<ReaderTextStyle, Paint>() }
     Canvas(modifier.onSizeChanged { viewport = it }) {
         val page = layout?.page

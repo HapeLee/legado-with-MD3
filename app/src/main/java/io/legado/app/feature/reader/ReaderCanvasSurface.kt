@@ -1868,7 +1868,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
         ReaderPageDecorationDrawCache.create(page.withoutSelectionDecorations(activeSelection))
     } else data.decorationDrawCache
     data.textBackgroundRevision.value
-    drawCapsulePlates(native, page, castVariantArgb)
     val previewing = selectionPreviewStyle != null && activeSelection != null
     val previewBounds = if (previewing) {
         data.textElements.filter { activeSelection.contains(it, page.id.chapterIndex) }
@@ -1923,7 +1922,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
             castVariantArgb,
             io.legado.app.help.readaloud.cast.CastAvatarCache.cached(e.avatarUri),
         )
-        is ReaderElement.BgmScene -> drawBgmScene(native, e, castColorArgb)
+        is ReaderElement.BgmScene -> drawBgmScene(native, e, castColorArgb, castVariantArgb)
         is ReaderElement.Action -> Unit
         is ReaderElement.Spacer -> Unit
         is ReaderElement.ParagraphMarker -> {
@@ -2252,7 +2251,8 @@ private fun ReaderPageCanvas(
     }
     val textBackgrounds = remember(page.elements) { page.textBackgroundRuns() }
     val textBackgroundPaint = remember {
-        Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        // 背景图不许开抗锯齿：九宫格相邻两格各画一条半覆盖的边会合成出一条透底的切割线。
+        Paint(Paint.FILTER_BITMAP_FLAG)
     }
     val previewing = selectionPreviewStyle != null && activeSelection != null
     val decorationDrawCache = remember(page.elements, activeSelection, previewing) {
@@ -2332,7 +2332,6 @@ private fun ReaderPageCanvas(
             contentClip.right,
             contentClip.bottom,
         )
-        drawCapsulePlates(native, page, castVariantArgb)
         // 对照旧 `TextLine.drawStyledBackgrounds`：先背景色、再背景图。色块是按行盒画的直边
         // 矩形，画在九宫格上面就会把气泡切出一截直边（旧版还直接不给带图的列铺色）。
         textBackgroundBands.forEach { band ->
@@ -2381,7 +2380,7 @@ private fun ReaderPageCanvas(
                 castVariantArgb,
                 io.legado.app.help.readaloud.cast.CastAvatarCache.cached(e.avatarUri),
             )
-            is ReaderElement.BgmScene -> drawBgmScene(native, e, castColorArgb)
+            is ReaderElement.BgmScene -> drawBgmScene(native, e, castColorArgb, castVariantArgb)
             is ReaderElement.Action -> Unit
             is ReaderElement.Spacer -> Unit
             is ReaderElement.ParagraphMarker -> {
@@ -2646,6 +2645,10 @@ internal fun shouldDrawReaderBookmarkBadge(
  * 正文的文字背景图绘制：平铺 / 拉伸 / 裁剪 / 九宫格四种 fit 全在这里，分页侧只负责算出
  * [io.legado.app.feature.reader.core.model.ReaderTextBackgroundRun] 的两个矩形。
  * 高亮规则编辑页的预览共用这一份，预览才会和正文一模一样。
+ *
+ * 背景用的画笔不许开抗锯齿：九宫格九条边落在半像素上时，相邻两格各画一条半覆盖的边，
+ * source-over 合成不出满覆盖，气泡上就留下一条透出页面背景的笔直「切割线」。关掉之后每
+ * 个像素只被一格完整盖住。四周边缘的形状由图自身的 alpha 决定，与这条边的抗锯齿无关。
  */
 internal fun drawTextBackground(
     canvas: android.graphics.Canvas,
@@ -2660,6 +2663,7 @@ internal fun drawTextBackground(
     // One paint is retained per page layer so page-turn frames do not allocate per styled run.
     // A tiled predecessor leaves a shader behind, therefore always clear it before reusing it.
     paint.shader = null
+    paint.isAntiAlias = false
     val scale = image.scale.coerceIn(0.1f, 5f)
     when (image.fit) {
         1 -> {
@@ -2731,10 +2735,10 @@ private fun drawNineSliceBackground(
             bitmap,
             android.graphics.Rect(cell.source.left, cell.source.top, cell.source.right, cell.source.bottom),
             android.graphics.RectF(
-                cell.destination.left,
-                cell.destination.top,
-                cell.destination.right,
-                cell.destination.bottom,
+                cell.painted.left,
+                cell.painted.top,
+                cell.painted.right,
+                cell.painted.bottom,
             ),
             paint,
         )
@@ -2777,59 +2781,24 @@ private fun drawCapsuleBackground(
 }
 
 /**
- * 胶囊底板：先铺在正文背景（高亮气泡）**下面**的那一遍。
- *
- * 底板比行盒高（头像要冒出这一行），跟着元素画就会压在气泡的端头上面，把一整句的气泡
- * 切出一截直边——一句对白只该有一个完整的气泡。所以底板单独成一遍：底板 → 背景图/背景色
- * → 字 → 头像与文字，头像照旧画在最上层。
- */
-private fun drawCapsulePlates(
-    native: android.graphics.Canvas,
-    page: ReaderPage,
-    variantArgb: Int,
-) {
-    val capsules = page.elements.filter { it is ReaderElement.RoleCast || it is ReaderElement.BgmScene }
-    if (capsules.isEmpty()) return
-    val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        color = variantArgb
-    }
-    capsules.forEach { element ->
-        val style = capsuleStyleOf(element) ?: return@forEach
-        val bounds = element.bounds
-        if (bounds.height <= 0f || bounds.width <= 0f) return@forEach
-        drawCapsuleBackground(native, bounds, bounds.height, style, fill)
-    }
-}
-
-/** 这颗胶囊用哪一套底板样式；不是胶囊就返回 null（未分配的那颗是占位样式）。 */
-private fun capsuleStyleOf(
-    element: ReaderElement,
-): io.legado.app.feature.reader.core.cast.CastCapsuleStyle? {
-    val store = io.legado.app.help.readaloud.cast.CastCapsuleStyleStore
-    return when (element) {
-        is ReaderElement.RoleCast ->
-            store.current(if (element.name.isEmpty()) store.PLACEHOLDER else store.ROLE)
-
-        is ReaderElement.BgmScene -> store.current(store.BGM)
-        else -> null
-    }
-}
-
-/**
  * 段首配乐胶囊：`♪ 声音池名`。正文文字一字未改，朗读链路也读不到它。
  * 文案与宽度与测量侧共用 [io.legado.app.feature.reader.core.cast.CastCapsuleGeometry]。
- * 底板已经由 [drawCapsulePlates] 铺在正文背景下面，这里只画压在气泡上的那一层。
  */
 private fun drawBgmScene(
     native: android.graphics.Canvas,
     e: ReaderElement.BgmScene,
     colorArgb: Int,
+    variantArgb: Int,
 ) {
     val b = e.bounds
     val h = b.height
     if (h <= 0f || b.width <= 0f) return
     val style = io.legado.app.help.readaloud.cast.CastCapsuleStyleStore
         .current(io.legado.app.help.readaloud.cast.CastCapsuleStyleStore.BGM)
+    val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color = variantArgb
+    }
+    drawCapsuleBackground(native, b, h, style, fill)
     val geo = io.legado.app.feature.reader.core.cast.CastCapsuleGeometry
     val label = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = labelColor(colorArgb, style)
@@ -2868,7 +2837,7 @@ private fun drawRoleCast(
     val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = variantArgb
     }
-    // 底板已经由 [drawCapsulePlates] 铺在正文背景下面，这里只画压在气泡上的那一层。
+    drawCapsuleBackground(native, b, h, style, fill)
     val cy = (b.top + b.bottom) / 2f
     val geo = io.legado.app.feature.reader.core.cast.CastCapsuleGeometry
     val d = style.avatarDiameter(h)

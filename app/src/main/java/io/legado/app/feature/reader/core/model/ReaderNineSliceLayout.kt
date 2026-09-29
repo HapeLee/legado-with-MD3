@@ -7,6 +7,11 @@ data class ReaderIntRect(val left: Int, val top: Int, val right: Int, val bottom
 data class ReaderNineSliceCell(
     val source: ReaderIntRect,
     val destination: ReaderRect,
+    /**
+     * 真正画出去的那一块：[destination] 的四条边里，只跟相邻格共享的那两条各让出半像素，
+     * 外框那两条保持原位。相邻格因此在拼缝上互相叠压，谁也不会留下一条半透明的切线。
+     */
+    val painted: ReaderRect,
 )
 
 object ReaderNineSliceLayout {
@@ -70,10 +75,26 @@ object ReaderNineSliceLayout {
                 val destination = ReaderRect(dx[column], dy[row], dx[column + 1], dy[row + 1])
                 if (destination.width <= 0f || destination.height <= 0f) continue
                 add(ReaderNineSliceCell(
-                    ReaderIntRect(sx[column], sy[row], sx[column + 1], sy[row + 1]),
-                    destination,
+                    source = ReaderIntRect(sx[column], sy[row], sx[column + 1], sy[row + 1]),
+                    destination = destination,
+                    painted = ReaderRect(
+                        left = if (dx[column] > dx[0]) dx[column] - seamOverlapPx else dx[column],
+                        top = if (dy[row] > dy[0]) dy[row] - seamOverlapPx else dy[row],
+                        right = if (dx[column + 1] < dx[3]) dx[column + 1] + seamOverlapPx
+                        else dx[column + 1],
+                        bottom = if (dy[row + 1] < dy[3]) dy[row + 1] + seamOverlapPx
+                        else dy[row + 1],
+                    ),
                 ))
             }
         }
     }
+
+    /**
+     * 切片只是恰好贴合时，两侧各自抗锯齿会在拼缝上留下两条半覆盖的边：source-over 不是相加，
+     * 两条半覆盖合不成满覆盖，底下的页面背景就从缝里透出来，气泡上是一道笔直「切割线」。
+     * 内部边界各向外让半像素，相邻格互相叠压，缝永远被完整盖住（对照参考实现
+     * `TextLine.drawNineSlice` 的 `seamOverlap`）。外框边缘保持原位不动。
+     */
+    private const val seamOverlapPx = 0.5f
 }

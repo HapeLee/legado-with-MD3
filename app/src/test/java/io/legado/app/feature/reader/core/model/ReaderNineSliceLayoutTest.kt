@@ -186,6 +186,29 @@ class ReaderNineSliceLayoutTest {
         assertEquals(20f, frame.height, 0.01f)
     }
 
+    /** 拼缝：内部边界各让出半像素让相邻格叠压，外框那两条边保持原位，否则缝上会透出页面背景。 */
+    @Test
+    fun internalSeamsOverlapWhileTheOuterFrameEdgesStayPut() {
+        val content = ReaderRect(10f, 20f, 40f, 50f)
+        val cells = ReaderNineSliceLayout.cells(50, 40, content, frameOf(locked, content), locked)
+
+        val topLeft = cells.first()
+        val topCenter = cells[1]
+        assertEquals(topLeft.destination.left, topLeft.painted.left, 0f)
+        assertEquals(topLeft.destination.top, topLeft.painted.top, 0f)
+        assertEquals(topLeft.destination.right + .5f, topLeft.painted.right, 0f)
+        assertEquals(topLeft.destination.bottom + .5f, topLeft.painted.bottom, 0f)
+        assertEquals(topCenter.destination.left - .5f, topCenter.painted.left, 0f)
+        assertEquals(topCenter.destination.right + .5f, topCenter.painted.right, 0f)
+        assertEquals(topCenter.destination.top, topCenter.painted.top, 0f)
+        val bottomRight = cells.last()
+        assertEquals(bottomRight.destination.right, bottomRight.painted.right, 0f)
+        assertEquals(bottomRight.destination.bottom, bottomRight.painted.bottom, 0f)
+        // 相邻两格在缝上真正叠压，而不是恰好贴合。
+        assertTrue(topLeft.painted.right > topCenter.painted.left)
+        assertTrue(topCenter.painted.bottom > cells[4].painted.top)
+    }
+
     @Test
     fun fractionalMarginsRoundBackToTheirOriginalPixelBoundaries() {
         val image = ReaderTextBackgroundImage(
