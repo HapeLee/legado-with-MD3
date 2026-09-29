@@ -39,15 +39,20 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import io.legado.app.core.ui.morph.BookCoverMorphAnchors
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import org.koin.compose.koinInject
@@ -266,6 +271,9 @@ fun CoilBookCover(
      * 放成兄弟节点的话转场时不会被 overlay 带走，会出现"装饰停在原地、只有封面在飞"。
      */
     overlayContent: (@Composable BoxScope.() -> Unit)? = null,
+    badgeText: String? = null,
+    showBadgeDot: Boolean = false,
+    leftBottomText: String? = null,
 ) {
     val coverSettings = LocalAppUiConfiguration.current.cover
     val isNight = LegadoTheme.isDark
@@ -307,9 +315,30 @@ fun CoilBookCover(
         Modifier
     }
 
+    val coilDensity = LocalDensity.current
     Box(
         modifier = modifier
             .aspectRatio(5f / 7f)
+            .graphicsLayer {
+                alpha = if (BookCoverMorphAnchors.isOriginCoverHidden(sharedCoverKey)) 0f else 1f
+            }
+            .onGloballyPositioned { coordinates ->
+                if (sharedCoverKey != null) {
+                    BookCoverMorphAnchors.report(
+                        key = sharedCoverKey,
+                        bounds = coordinates.boundsInRoot(),
+                        cornerRadiusPx = with(coilDensity) { transitionRadius.toPx() },
+                        bookName = name,
+                        author = author,
+                        coverPath = finalPath ?: path,
+                        sourceOrigin = sourceOrigin,
+                        bookUrl = bookUrl,
+                        badgeText = badgeText,
+                        showBadgeDot = showBadgeDot,
+                        leftBottomText = leftBottomText,
+                    )
+                }
+            }
             .then(
                 with(sharedTransitionScope) {
                     if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {

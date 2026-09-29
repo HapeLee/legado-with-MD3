@@ -18,16 +18,18 @@ import androidx.compose.ui.geometry.Rect
  * 否则文字会被非等比缩放拉糊。
  */
 
-/** 遮罩 / 内容开始出现的进度点：过渡前段完全看不出背景在变。 */
-const val MORPH_VEIL_START = 0.85f
+/** 遮罩 / 内容开始淡入的下限点。 */
+const val MORPH_VEIL_START = 0.20f
+
+/** 遮罩 / 内容完全不透明的上限点：收起时在此点之前完全保持可见，之后在中后期渐变消失。 */
+const val MORPH_VEIL_END = 0.65f
 
 /**
  * 封面旋转归零的进度点。
  *
- * 必须早于 [MORPH_VEIL_START]：最后一段内容开始淡入，
- * 如果那时旋转还没停，交接处会看到一次「转着落地」的抖动。
+ * 必须早于内容淡入：胶囊展开前期旋转即平滑归零，交接处不产生抖动。
  */
-const val MORPH_ROTATION_SETTLE = 0.7f
+const val MORPH_ROTATION_SETTLE = 0.20f
 
 /**
  * 收起时保留播放页背景，只有进度降到最后 15% 才交还胶囊底色。
@@ -204,15 +206,17 @@ fun computeCoverMorphFrame(
  * 单独一条曲线是刻意的：内容一旦参与几何缩放就会被拉糊，所以它只吃透明度。
  * 收起时反过来用（进度越小越透明）。
  *
- * 内容可见度使用线性窗口。
+ * 内容可见度使用 smoothstep 平滑窗口，保证收起中后期优雅淡出、展开中前期自然显现。
  */
 fun computeMorphVeil(
     progress: Float,
     veilStart: Float = MORPH_VEIL_START,
+    veilEnd: Float = MORPH_VEIL_END,
 ): Float {
     val t = progress.coerceIn(0f, 1f)
-    if (veilStart >= 1f) return t
-    return ((t - veilStart) / (1f - veilStart)).coerceIn(0f, 1f)
+    if (t <= veilStart) return 0f
+    if (t >= veilEnd) return 1f
+    return smoothstep((t - veilStart) / (veilEnd - veilStart))
 }
 
 /**
