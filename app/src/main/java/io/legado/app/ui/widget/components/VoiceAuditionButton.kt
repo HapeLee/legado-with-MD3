@@ -31,6 +31,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import io.legado.app.R
+import io.legado.app.data.entities.VoiceEffectPreset
 import io.legado.app.help.readaloud.cast.VoiceAudition
 import io.legado.app.help.readaloud.effect.VoiceEffectAudio
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
@@ -56,6 +57,12 @@ fun VoiceAuditionButton(
     label: String = stringResource(R.string.cloud_tts_preview),
     /** 变声器预设名，空 = 不变声。 */
     effect: String = "",
+    /**
+     * 编辑框里还没保存的草稿预设。非空时直接按它出声：调滑杆的当下就能听见，
+     * 不用先保存再试听；也绕开了 [VoiceEffectStore.byName] 的「停用算没有」口径——
+     * 正在编辑的这份可能还没启用。
+     */
+    draft: VoiceEffectPreset? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -91,7 +98,8 @@ fun VoiceAuditionButton(
                 }
                 scope.launch {
                     busy = true
-                    val preset = withContext(Dispatchers.IO) {
+                    val preset = draft ?: withContext(Dispatchers.IO) {
+                        // byName 读的是内存表，先 list() 一次把它灌满
                         VoiceEffectStore.enabledNames()
                         VoiceEffectStore.byName(effect)
                     }

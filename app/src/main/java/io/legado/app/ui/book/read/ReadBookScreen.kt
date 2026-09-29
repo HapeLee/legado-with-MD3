@@ -311,6 +311,13 @@ fun ReadBookScreen(
         onIntent = onIntent,
         menuConfig = state.menuConfig,
     )
+    // 听书下载悬浮窗：和其余卡片一样常挂，show 由 sheet 类型驱动，退场动画才有地方播
+    io.legado.app.ui.book.read.sheet.ReaderAudioDownloadSheet(
+        show = state.activeSheet is ReadBookSheet.AudioDownload,
+        onDismissRequest = dismissSheet,
+        menuConfig = state.menuConfig,
+    )
+
     ShadowSetSheet(
         show = state.activeSheet is ReadBookSheet.ShadowSet,
         config = state.sheetConfig,
@@ -533,10 +540,19 @@ fun ReadBookScreen(
     val aloudPlayerViewModel: ReadAloudPlayerViewModel =
         org.koin.compose.koinInject()
     val aloudPlayerShellState by aloudPlayerViewModel.uiState.collectAsStateWithLifecycle()
+    /*
+     * 朗读设置是窗口级浮层（AppModalBottomSheet 在 miuix 引擎下走独立窗口），压上整屏页时它
+     * 不会跟着下沉，于是从「引擎与音色」那三行进新页面，朗读设置还悬在新页面上面。
+     * 导航栈顶不是阅读页就把它收起来；返回后栈顶回到阅读页，弹层自己摊回来，
+     * 停在哪个 tab 由 readAloudConfigTab 记着（见 ReadBookContract 里的注释）。
+     */
+    val navRouteTracker: io.legado.app.ui.main.MainNavRouteTracker = org.koin.compose.koinInject()
+    val readerIsTop = navRouteTracker.backStack.collectAsStateWithLifecycle()
+        .value.lastOrNull() is io.legado.app.ui.main.MainRouteReadBook
     // 听书播放页是 Activity 级 morph 浮层（见 ReadAloudPlayerMorphHost），阅读器内
     // 只保留经典控制面板自己的朗读配置卡片；两者共用同一份配置内容。
     AppModalBottomSheet(
-        show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
+        show = state.activeSheet is ReadBookSheet.ReadAloudConfig && readerIsTop,
         onDismissRequest = dismissSheet,
         title = stringResource(R.string.aloud_config),
     ) {
@@ -545,6 +561,8 @@ fun ReadBookScreen(
             playerState = aloudPlayerShellState,
             onIntent = onIntent,
             onPlayerIntent = aloudPlayerViewModel::onIntent,
+            selectedTab = state.readAloudConfigTab,
+            onTabSelected = { onIntent(ReadBookIntent.SetReadAloudConfigTab(it)) },
         )
     }
 
@@ -608,13 +626,7 @@ fun ReadBookScreen(
             )
         }
 
-        is ReadBookSheet.AudioDownload -> {
-            io.legado.app.ui.book.read.sheet.ReaderAudioDownloadSheet(
-                show = true,
-                onDismissRequest = dismissSheet,
-                menuConfig = state.menuConfig,
-            )
-        }
+        is ReadBookSheet.AudioDownload -> Unit
 
         is ReadBookSheet.Charset -> {
             CharsetConfigSheet(

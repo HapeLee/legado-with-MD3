@@ -110,7 +110,7 @@ import io.legado.app.feature.reader.core.model.ReaderTipAlignment
 import io.legado.app.feature.reader.core.model.ReaderTipRow
 import io.legado.app.feature.reader.core.model.ReaderTipRowLayout
 import io.legado.app.feature.reader.core.model.ReaderTipVisual
-import io.legado.app.feature.reader.core.model.contentClipPadPx
+import io.legado.app.feature.reader.core.model.contentClipRect
 import io.legado.app.feature.reader.core.model.emphasisUnderlineRunsFor
 import io.legado.app.feature.reader.core.model.textBackgroundRuns
 import io.legado.app.feature.reader.core.navigation.ReaderPageNavigator
@@ -1447,17 +1447,20 @@ fun ReaderCanvasSurface(
             )
         }
         if (transitionMode == ReaderTransitionMode.SCROLL) {
-            val contentClipPad = current.contentClipPadPx
+            val contentClip = remember(current) {
+                current.contentClipRect(current.textBackgroundRuns())
+            }
             Box(Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    // 外扩阴影/斜体溢出，对照旧 View 的 ChapterProvider.visibleRect：
-                    // 矩形裁剪，四边都按阴影/斜体外扩，右侧到 `viewWidth - paddingRight`。
+                    // 外扩阴影/斜体溢出，对照旧 View 的 ChapterProvider.visibleRect；
+                    // 但九宫格气泡与放大过的背景图本来就要画到内容框之外，裁剪必须跟着它们走，
+                    // 否则气泡会在滚动模式的视口边沿被切掉。
                     clipRect(
-                        left = current.contentLeftPx - contentClipPad,
-                        top = current.contentTopPx - contentClipPad,
-                        right = current.contentRightPx + contentClipPad,
-                        bottom = current.contentBottomPx + contentClipPad,
+                        left = contentClip.left,
+                        top = contentClip.top,
+                        right = contentClip.right,
+                        bottom = contentClip.bottom,
                     ) {
                         this@drawWithContent.drawContent()
                     }
@@ -2320,15 +2323,16 @@ private fun ReaderPageCanvas(
             drawable.draw(native)
         }
         // 内容按旧 `ChapterProvider.visibleRect` 裁：背景色/背景图不裁（旧 View 里它们在
-        // ContentTextView 之外），九宫格左右外扩与斜体/阴影字缘因此不会画进页边距。
+        // ContentTextView 之外）。但九宫格左右外扩与放大后的背景图天生超出内容框，裁剪框必须
+        // 并上它们实际画出来的矩形，否则气泡会被页边距上下左右切成几截。
         // 与 Image/Selection 的绘制共用同一个 native canvas，故用原生 save/clipRect 即可。
-        val contentClipPad = page.contentClipPadPx
+        val contentClip = page.contentClipRect(textBackgrounds)
         val contentClipSave = native.save()
         native.clipRect(
-            page.contentLeftPx - contentClipPad,
-            page.contentTopPx - contentClipPad,
-            page.contentRightPx + contentClipPad,
-            page.contentBottomPx + contentClipPad,
+            contentClip.left,
+            contentClip.top,
+            contentClip.right,
+            contentClip.bottom,
         )
         textBackgrounds.forEach { run ->
             textBackgroundBitmaps[run.image.source]?.let { bitmap ->
@@ -2641,7 +2645,12 @@ internal fun shouldDrawReaderBookmarkBadge(
     loaded: Pair<io.legado.app.feature.reader.core.model.ReaderBookmarkBadge, Bitmap?>?,
 ): Boolean = badge.imageSource.isBlank() || loaded?.first == badge
 
-private fun drawTextBackground(
+/**
+ * 正文的文字背景图绘制：平铺 / 拉伸 / 裁剪 / 九宫格四种 fit 全在这里，分页侧只负责算出
+ * [io.legado.app.feature.reader.core.model.ReaderTextBackgroundRun] 的两个矩形。
+ * 高亮规则编辑页的预览共用这一份，预览才会和正文一模一样。
+ */
+internal fun drawTextBackground(
     canvas: android.graphics.Canvas,
     bitmap: Bitmap,
     run: io.legado.app.feature.reader.core.model.ReaderTextBackgroundRun,

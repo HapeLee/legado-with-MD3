@@ -39,13 +39,11 @@ object LegacyReaderStyleRangeMapper {
             }
             targets.forEach { (text, target) ->
                 regex.findAll(text).forEach { match ->
-                    result += ReaderStyleRange(
-                        start = match.range.first,
-                        endExclusive = match.range.last + 1,
-                        target = target,
-                        style = rule.toReaderStyle(),
-                        priority = index,
-                    )
+                    val start = match.range.first
+                    val endExclusive = match.range.last + 1
+                    if (start < endExclusive) {
+                        result += rule.matchRanges(start, endExclusive, target, index)
+                    }
                 }
             }
         }
@@ -101,6 +99,68 @@ object LegacyReaderStyleRangeMapper {
         for (offset in 0 until count) this[start + offset] = text[offset]
     }
 
+    /**
+     * 一次命中拆成「首字 / 段内 / 末字」三段互不重叠的区间。
+     *
+     * 命中字距属于命中段与相邻字之间：只有首字那一段带 before、只有末字那一段带 after，
+     * 段内一个字都不加——段内也加的话，调的就不是间距而是整段的字号了。行距是行级属性，
+     * 三段都带上，由分页那边按整行取较大值（同一行里两条命中也只抬一次）。
+     */
+    private fun HighlightRule.matchRanges(
+        start: Int,
+        endExclusive: Int,
+        target: ReaderStyleTarget,
+        priority: Int,
+    ): List<ReaderStyleRange> {
+        val base = toReaderStyle()
+        val before = letterSpacingBefore.dpToPx().takeIf { it > 0f } ?: 0f
+        val after = letterSpacingAfter.dpToPx().takeIf { it > 0f } ?: 0f
+        if (endExclusive - start == 1) {
+            // 单字命中：它既是首字也是末字，两边都要让。
+            return listOf(
+                ReaderStyleRange(
+                    start = start,
+                    endExclusive = endExclusive,
+                    target = target,
+                    style = base.copy(
+                        matchSpacingBeforePx = before,
+                        matchSpacingAfterPx = after,
+                    ),
+                    priority = priority,
+                )
+            )
+        }
+        return buildList(3) {
+            add(
+                ReaderStyleRange(
+                    start = start,
+                    endExclusive = start + 1,
+                    target = target,
+                    style = base.copy(matchSpacingBeforePx = before),
+                    priority = priority,
+                )
+            )
+            add(
+                ReaderStyleRange(
+                    start = start + 1,
+                    endExclusive = endExclusive - 1,
+                    target = target,
+                    style = base,
+                    priority = priority,
+                )
+            )
+            add(
+                ReaderStyleRange(
+                    start = endExclusive - 1,
+                    endExclusive = endExclusive,
+                    target = target,
+                    style = base.copy(matchSpacingAfterPx = after),
+                    priority = priority,
+                )
+            )
+        }
+    }
+
     private fun HighlightRule.toReaderStyle() = ReaderCharacterStyle(
         colorArgb = textColor,
         backgroundArgb = bgColor,
@@ -129,6 +189,8 @@ object LegacyReaderStyleRangeMapper {
         fontWeight = fontWeight.takeIf { it != 400 },
         italic = isItalic,
         fontSizeOffsetPx = fontSizeOffset.toFloat().spToPx(),
+        linePadTopPx = lineSpacingTop.dpToPx().takeIf { it > 0f } ?: 0f,
+        linePadBottomPx = lineSpacingBottom.dpToPx().takeIf { it > 0f } ?: 0f,
         backgroundImage = bgImage?.takeIf(String::isNotBlank)?.let {
             val automatic = if (manualNineSlice) null else {
                 ReaderTextBackgroundLoader.nineSliceFractions(it)
@@ -141,6 +203,8 @@ object LegacyReaderStyleRangeMapper {
                 ninePatchRight = automatic?.right ?: npRight,
                 ninePatchTop = automatic?.top ?: npTop,
                 ninePatchBottom = automatic?.bottom ?: npBottom,
+                lengthOffsetLeftPx = bgLengthOffsetLeft.dpToPx(),
+                lengthOffsetRightPx = bgLengthOffsetRight.dpToPx(),
             ).let { image ->
                 val (width, height) = backgroundImageSize(it)
                 image.withBitmapSize(width, height)

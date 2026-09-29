@@ -317,6 +317,13 @@ data class ReadBookUiState(
     val bgmVolume: Float = 1f,
     val defaultReadAloudInterface: String = ReadAloudSettingsRepository.DEFAULT_INTERFACE_CLASSIC,
     val readAloudParagraphInterval: Int = 0,
+    /**
+     * 朗读设置卡片当前停在哪个 tab（0 常规 / 1 引擎与音色）。
+     *
+     * 存在这里而不是卡片里：卡片是窗口级浮层，压进整屏页（引擎与音色那三行）时它会被拆掉，
+     * `rememberPagerState` 的初值回到 0 —— 用户看到的正是「从引擎与音色进去、回来落在常规」。
+     */
+    val readAloudConfigTab: Int = 0,
     // Style config (reactive state for ReadBookConfig)
     val styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
     val sheetConfig: ReadSheetConfigUiState = ReadSheetConfigUiState(),
@@ -967,6 +974,8 @@ sealed interface ReadBookIntent {
     data object OpenTtsEnginesAndVoices : ReadBookIntent
     data object OpenTtsCache : ReadBookIntent
     data object OpenBookVoiceCasting : ReadBookIntent
+    /** 朗读设置卡片停在哪个 tab（滑页和点 tab 都走这里）。 */
+    data class SetReadAloudConfigTab(val tab: Int) : ReadBookIntent
     data object OpenReadAloudPlayer : ReadBookIntent
     data object OpenClassicReadAloudControls : ReadBookIntent
     data class SelectFont(val path: String) : ReadBookIntent

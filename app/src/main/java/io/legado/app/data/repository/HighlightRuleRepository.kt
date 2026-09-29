@@ -19,6 +19,9 @@ class HighlightRuleRepository(
 
     companion object {
         const val backupFileName = "highlightRule.json"
+
+        /** 命中排版四栏与长度偏移的滑杆上限（dp），与编辑弹层里的 valueRange 一致。 */
+        private const val MAX_MATCH_SPACING_DP = 40f
     }
 
     data class BackupData(
@@ -148,7 +151,10 @@ class HighlightRuleRepository(
                 listOf(name, pattern).joinToString("|").hashCode().toUInt().toString(16)
             }"
         }
-        return HighlightRule(
+        // 从 rule 本身 copy：新增字段只要不写进下面这张清单就不会被静默清零。
+        // 之前逐字段重建过一版，结果命中字距 / 命中行行距 / 九宫格左右偏移在保存时被抹平，
+        // 滑杆怎么调正文都不动——保存链路本身就是「不生效」的根因。
+        return rule.copy(
             id = id,
             name = name,
             pattern = pattern,
@@ -182,6 +188,18 @@ class HighlightRuleRepository(
             npTop = runCatching { rule.npTop }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
             npBottom = runCatching { rule.npBottom }.getOrDefault(0.1f).coerceIn(0f, 0.5f),
             manualNineSlice = runCatching { rule.manualNineSlice }.getOrDefault(true),
+            letterSpacingBefore = runCatching { rule.letterSpacingBefore }.getOrDefault(0f)
+                .coerceIn(0f, MAX_MATCH_SPACING_DP),
+            letterSpacingAfter = runCatching { rule.letterSpacingAfter }.getOrDefault(0f)
+                .coerceIn(0f, MAX_MATCH_SPACING_DP),
+            lineSpacingTop = runCatching { rule.lineSpacingTop }.getOrDefault(0f)
+                .coerceIn(0f, MAX_MATCH_SPACING_DP),
+            lineSpacingBottom = runCatching { rule.lineSpacingBottom }.getOrDefault(0f)
+                .coerceIn(0f, MAX_MATCH_SPACING_DP),
+            bgLengthOffsetLeft = runCatching { rule.bgLengthOffsetLeft }.getOrDefault(0f)
+                .coerceIn(-MAX_MATCH_SPACING_DP, MAX_MATCH_SPACING_DP),
+            bgLengthOffsetRight = runCatching { rule.bgLengthOffsetRight }.getOrDefault(0f)
+                .coerceIn(-MAX_MATCH_SPACING_DP, MAX_MATCH_SPACING_DP),
         )
     }
 

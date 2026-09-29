@@ -754,5 +754,11 @@ private fun ReaderTextStyle.merge(override: ReaderCharacterStyle?): ReaderTextSt
         italic = override.italic ?: italic,
         fontSizePx = (fontSizePx + override.fontSizeOffsetPx).coerceAtLeast(1f),
         backgroundImage = override.backgroundImage ?: backgroundImage,
+        // 命中排版取较大者：两条规则在同一处命中时，留白要按「留得最多的那条」算，
+        // 后一条把前一条抹成 0 会让上一轮调好的间距凭空消失。
+        matchSpacingBeforePx = maxOf(matchSpacingBeforePx, override.matchSpacingBeforePx),
+        matchSpacingAfterPx = maxOf(matchSpacingAfterPx, override.matchSpacingAfterPx),
+        linePadTopPx = maxOf(linePadTopPx, override.linePadTopPx),
+        linePadBottomPx = maxOf(linePadBottomPx, override.linePadBottomPx),
     )
 }

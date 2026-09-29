@@ -901,6 +901,17 @@
     <string name="nine_slice_mode_vertical">垂直</string>
     <string name="preview_effect">预览效果</string>
     <string name="sample_text">示例文本</string>
+    <string name="highlight_match_typography">命中排版</string>
+    <string name="highlight_match_typography_hint">下面这些调整只作用在正则命中的那一段文字上，命中之外的一个字都不动。</string>
+    <string name="highlight_spacing_before">命中字距（前）</string>
+    <string name="highlight_spacing_after">命中字距（后）</string>
+    <string name="highlight_line_spacing_above">命中行行距（上）</string>
+    <string name="highlight_line_spacing_below">命中行行距（下）</string>
+    <string name="highlight_bg_length_offset_left">九宫格左偏移</string>
+    <string name="highlight_bg_length_offset_right">九宫格右偏移</string>
+    <string name="nine_slice_split_hint">全程只有横向拉伸：只有绿框那一段会被拉长，高度按原图锁死，上下方向一条边都不拉伸。左右两条线决定这一段能拉多长；上下两条线只是把字框在图的哪一段里，拖动它们就是上下对齐。左偏移、右偏移在字数不变的情况下把绿框那一段的左沿、右沿各自往外出或往里收，靠它把气泡两端分别对齐。</string>
+    <string name="nine_slice_horizontal_hint">左右两条线：只有这两条线之间那一格会被横向拉长，整张图只有这一处拉伸。</string>
+    <string name="nine_slice_vertical_hint">上下两条线：字落在图的哪一段里。高度按原图锁死，纵向一条边都不拉伸。</string>
     <string name="sure_delete">确定要删除吗？</string>
     <string name="save_to_source">保存到源文件，保存后重置功能将无效</string>
     <string name="edit_chapter">编辑章节</string>
@@ -3661,6 +3672,8 @@
     <string name="read_aloud_audio_download_start">开始下载</string>
     <string name="read_aloud_audio_download_cancel">取消下载</string>
     <string name="read_aloud_audio_download_chapter_bar">章节进度</string>
+    <string name="read_aloud_audio_download_chapter_hint">本章已下载 %1$d 句，点朗读直接播本地音频</string>
+    <string name="read_aloud_audio_download_chapter_none">本章还没有下载</string>
     <string name="read_aloud_audio_download_sentence_bar">句子进度</string>
     <string name="read_aloud_audio_download_downloaded">已下载章节</string>
     <string name="read_aloud_audio_download_empty">还没有下载过章节</string>

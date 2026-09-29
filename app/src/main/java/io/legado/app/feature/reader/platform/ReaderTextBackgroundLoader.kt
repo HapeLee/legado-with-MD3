@@ -20,7 +20,20 @@ object ReaderTextBackgroundLoader {
         override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
     }
 
-    fun dimensions(source: String): Pair<Int, Int> = runCatching {
+    /**
+     * 这张图**真正解出来**有多大（与 [load] 给绘制侧的那张位图一致）。
+     *
+     * 九宫格的两条切分线、锁定高度都是按这个尺寸换算出来的，报成文件原尺寸就会和位图对不上：
+     * 大图降采样过一半时，四角按半尺寸画、中间那条带却按全尺寸留高，气泡接缝就错开了。
+     */
+    fun dimensions(source: String): Pair<Int, Int> {
+        val (width, height) = fileDimensions(source)
+        if (width <= 0 || height <= 0) return 0 to 0
+        val sample = sampleSizeFor(source, width, height)
+        return (width / sample) to (height / sample)
+    }
+
+    private fun fileDimensions(source: String): Pair<Int, Int> = runCatching {
         open(source)?.use { input ->
             BitmapFactory.Options().run {
                 inJustDecodeBounds = true
@@ -34,14 +47,9 @@ object ReaderTextBackgroundLoader {
         if (source.isBlank()) return null
         val key = cacheKey(source)
         cached(source)?.let { return it }
-        val dimensions = dimensions(source)
-        if (dimensions.first <= 0 || dimensions.second <= 0) return null
-        val sampleSize = if (isRawNinePatch(source)) 1 else calculateInSampleSize(
-            width = dimensions.first,
-            height = dimensions.second,
-            requestedWidth = appCtx.resources.displayMetrics.widthPixels,
-            requestedHeight = appCtx.resources.displayMetrics.heightPixels,
-        )
+        val (width, height) = fileDimensions(source)
+        if (width <= 0 || height <= 0) return null
+        val sampleSize = sampleSizeFor(source, width, height)
         return runCatching {
             open(source)?.use { input ->
                 BitmapFactory.decodeStream(
@@ -112,6 +120,15 @@ object ReaderTextBackgroundLoader {
 
     private fun isRawNinePatch(source: String): Boolean =
         source.substringBefore('?').substringBefore('#').endsWith(".9.png", ignoreCase = true)
+
+    /** `.9.png` 的引导边只有一像素，降采样会把切线吃掉，所以它一律原尺寸解。 */
+    private fun sampleSizeFor(source: String, width: Int, height: Int): Int =
+        if (isRawNinePatch(source)) 1 else calculateInSampleSize(
+            width = width,
+            height = height,
+            requestedWidth = appCtx.resources.displayMetrics.widthPixels,
+            requestedHeight = appCtx.resources.displayMetrics.heightPixels,
+        )
 
     private fun calculateInSampleSize(
         width: Int,

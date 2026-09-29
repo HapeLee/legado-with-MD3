@@ -133,7 +133,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 122,
+    version = 125,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -252,7 +252,13 @@ val appDb by lazy {
         // cast_characters.sortOrder：配音页人物拖动排序，没拖过的仍按男女主/男女配置顶
         AutoMigration(from = 120, to = 121),
         // read_aloud_audio_downloads：听书音频按章下载的记录（文件名清单 + 句数）
-        AutoMigration(from = 121, to = 122)
+        AutoMigration(from = 121, to = 122),
+        // highlight_rules 新增命中排版四列 + 九宫格长度偏移：全部默认 0，老规则读回来与本轮之前逐字节等价
+        AutoMigration(from = 122, to = 123),
+        // 123 这一版号被两个不同的列集合用过（第五十二轮那批 vs 本轮），身份哈希对不上，
+        // 覆盖安装时 Room 拒绝开库；124 用手工迁移按列名补齐，见 DatabaseMigrations。
+        // 125：九宫格长度偏移拆成左/右两列（DROP COLUMN 要 SQLite 3.35，minSdk 26 没有），
+        // 同样手工整表重建，老值按左右各一半落进新列。
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

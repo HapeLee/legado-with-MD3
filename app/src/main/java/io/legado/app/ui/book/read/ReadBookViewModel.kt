@@ -1383,10 +1383,8 @@ class ReadBookViewModel(
                 readAloudDelegate.setUseMultiSpeaker(intent.value)
             is ReadBookIntent.SetMultiRoleCast ->
                 readAloudDelegate.setMultiRoleCast(intent.value)
-            is ReadBookIntent.SetBgmAssign ->
-                readAloudDelegate.setBgmAssign(intent.value)
-            is ReadBookIntent.SetBgmVolume ->
-                readAloudDelegate.setBgmVolume(intent.value)
+            is ReadBookIntent.SetBgmAssign -> readAloudDelegate.setBgmAssign(intent.value)
+            is ReadBookIntent.SetBgmVolume -> readAloudDelegate.setBgmVolume(intent.value)
             is ReadBookIntent.ConfirmRoleCast -> readAloudCastDelegate.confirm(intent)
             is ReadBookIntent.CreateRoleCast -> readAloudCastDelegate.create(intent)
             ReadBookIntent.OpenAiCastDialog,
@@ -1395,6 +1393,7 @@ class ReadBookViewModel(
             is ReadBookIntent.UnassignRoleCast, is ReadBookIntent.SetBgmScene,
             is ReadBookIntent.ClearBgmScene, is ReadBookIntent.UpdateBgmScene,
             is ReadBookIntent.DeleteBgmScene -> readAloudCastDelegate.onCastIntent(intent)
+            is ReadBookIntent.SetReadAloudConfigTab -> readAloudDelegate.setConfigTab(intent.tab)
             is ReadBookIntent.SetDefaultReadAloudInterface ->
                 readAloudDelegate.setDefaultInterface(intent.value)
             is ReadBookIntent.OpenSystemTtsSettings -> readAloudDelegate.openSystemTtsSettings()

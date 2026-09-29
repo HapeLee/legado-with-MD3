@@ -3,6 +3,12 @@ package io.legado.app.ui.book.readaloud.cast
 import android.media.MediaPlayer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -297,7 +303,7 @@ fun BgmPoolScreen(
             onDismiss = { onIntent(BgmPoolIntent.DismissDeleteGroup) },
         )
     }
-    if (state.showMemberPicker) {
+    if (state.pickerPoolId != null) {
         MemberPickerDialog(
             pickerQuery = state.pickerQuery,
             candidates = state.pickerCandidates,
@@ -344,12 +350,12 @@ private fun bgmPoolActions(onIntent: (BgmPoolIntent) -> Unit) = CastPoolActions(
     onEditPool = { onIntent(BgmPoolIntent.ShowEditDialog(it)) },
     onDeletePool = { onIntent(BgmPoolIntent.AskDeletePool(it)) },
     onExpandPool = { onIntent(BgmPoolIntent.TogglePoolExpand(it)) },
-    onAddMembers = { onIntent(BgmPoolIntent.ShowMemberPicker) },
+    onAddMembers = { poolId -> onIntent(BgmPoolIntent.ShowMemberPicker(poolId)) },
     onMemberToggle = { poolId, trackId, enabled ->
         onIntent(BgmPoolIntent.ToggleMemberEnabled(poolId, trackId, enabled))
     },
     onMemberRemove = { poolId, trackId -> onIntent(BgmPoolIntent.RemoveMember(poolId, trackId)) },
-    onMemberQuery = { onIntent(BgmPoolIntent.UpdateMemberQuery(it)) },
+    onMemberQuery = { poolId, query -> onIntent(BgmPoolIntent.UpdateMemberQuery(poolId, query)) },
 )
 
 /**
@@ -416,7 +422,12 @@ private fun BgmLibraryCard(
                 tint = LegadoTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (expanded) {
+        // 展开/收起整段曲目列表要有过渡，硬蹦 hardest 的就在这一步
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(140)) + expandVertically(tween(200)),
+            exit = fadeOut(tween(110)) + shrinkVertically(tween(170)),
+        ) {
             if (state.tracks.isEmpty()) {
                 Text(
                     text = stringResource(R.string.cast_bgm_empty),

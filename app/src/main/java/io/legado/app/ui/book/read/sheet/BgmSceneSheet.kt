@@ -79,14 +79,18 @@ fun BgmSceneSheet(
     onIntent: (ReadBookIntent) -> Unit,
     menuConfig: ReadMenuConfig? = null,
 ) {
-    if (!show || paragraphIndex < 0) return
+    // 关掉后宿主立刻把 paragraphIndex 清成 -1：先记住它，再让整棵树多活 180ms，
+    // 否则退场动画一帧都播不出来。
+    val opened = show && paragraphIndex >= 0
+    val paragraphAt = rememberSheetArg(opened, paragraphIndex)
+    if (!rememberSheetAlive(opened) || paragraphAt < 0) return
     val book = ReadBook.book ?: return
     val bookUrl = book.bookUrl
     val chapterIndex = ReadBook.durChapterIndex
-    val loadKey = "$bookUrl#$chapterIndex#$paragraphIndex"
+    val loadKey = "$bookUrl#$chapterIndex#$paragraphAt"
     val data by produceState<BgmSceneStore.SheetData?>(initialValue = null, loadKey) {
         value = withContext(Dispatchers.IO) {
-            BgmSceneStore.sheetData(bookUrl, chapterIndex, paragraphIndex)
+            BgmSceneStore.sheetData(bookUrl, chapterIndex, paragraphAt)
         }
     }
     val sheet = data ?: return
@@ -108,11 +112,13 @@ fun BgmSceneSheet(
         onDispose { runCatching { player.release() } }
     }
 
+    val scrimAlpha = rememberSheetScrimAlpha(opened)
     CastImeScope {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f))
+                // 遮罩跟着卡片一起淡入淡出，否则黑底是硬蹦出来的
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
                 .safeDrawingPadding()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -124,6 +130,7 @@ fun BgmSceneSheet(
         ) {
             CastSheetCard(
                 menuConfig = menuConfig,
+                visible = opened,
                 modifier = Modifier
                     .fillMaxWidth()
                     // 只吞点击、不抢焦点：clickable 会让正在输入的框失焦→键盘先收再弹

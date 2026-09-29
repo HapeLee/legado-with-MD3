@@ -270,7 +270,7 @@ fun VoicePoolScreen(
             onDismiss = { onIntent(MultiRoleRuleIntent.DismissDeleteGroup) },
         )
     }
-    if (state.showMemberPicker) {
+    if (state.pickerPoolId != null) {
         MemberPickerDialog(
             pickerQuery = state.pickerQuery,
             candidates = state.pickerCandidates,
@@ -303,14 +303,16 @@ private fun voicePoolActions(onIntent: (MultiRoleRuleIntent) -> Unit) = CastPool
     onEditPool = { onIntent(MultiRoleRuleIntent.ShowEditDialog(it)) },
     onDeletePool = { onIntent(MultiRoleRuleIntent.AskDeletePool(it)) },
     onExpandPool = { onIntent(MultiRoleRuleIntent.TogglePoolExpand(it)) },
-    onAddMembers = { onIntent(MultiRoleRuleIntent.ShowMemberPicker) },
+    onAddMembers = { poolId -> onIntent(MultiRoleRuleIntent.ShowMemberPicker(poolId)) },
     onMemberToggle = { poolId, voiceId, enabled ->
         onIntent(MultiRoleRuleIntent.ToggleMemberEnabled(poolId, voiceId, enabled))
     },
     onMemberRemove = { poolId, voiceId ->
         onIntent(MultiRoleRuleIntent.RemoveMember(poolId, voiceId))
     },
-    onMemberQuery = { onIntent(MultiRoleRuleIntent.UpdateMemberQuery(it)) },
+    onMemberQuery = { poolId, query ->
+        onIntent(MultiRoleRuleIntent.UpdateMemberQuery(poolId, query))
+    },
 )
 
 /**

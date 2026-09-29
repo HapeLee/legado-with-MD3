@@ -15,6 +15,11 @@ data class ReaderCharacterStyle(
     val fontSizeOffsetPx: Float = 0f,
     val markingId: String? = null,
     val backgroundImage: ReaderTextBackgroundImage? = null,
+    /** 命中排版四条：见 [io.legado.app.feature.reader.core.model.ReaderTextStyle] 上的同名注释。 */
+    val matchSpacingBeforePx: Float = 0f,
+    val matchSpacingAfterPx: Float = 0f,
+    val linePadTopPx: Float = 0f,
+    val linePadBottomPx: Float = 0f,
 )
 
 data class ReaderStyleRange(

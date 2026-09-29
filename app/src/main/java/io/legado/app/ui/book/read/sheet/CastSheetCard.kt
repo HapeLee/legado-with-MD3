@@ -1,13 +1,21 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
@@ -27,6 +35,7 @@ import io.legado.app.ui.widget.components.reader.ReaderMenuVisualState
 import io.legado.app.ui.widget.components.reader.readerMenuHazeEffect
 import io.legado.app.ui.widget.components.reader.readerMenuLiquidGlassAvailable
 import io.legado.app.ui.widget.components.reader.readerMenuSurfaceBrush
+import kotlinx.coroutines.delay
 
 /**
  * 正文内新做的悬浮卡片（分配角色 / 分配表 / AI 分配角色）的公共外观。
@@ -41,6 +50,8 @@ import io.legado.app.ui.widget.components.reader.readerMenuSurfaceBrush
 fun CastSheetCard(
     menuConfig: ReadMenuConfig?,
     modifier: Modifier = Modifier,
+    /** 卡片是否处于打开态。宿主用 [rememberSheetAlive] 让它在关闭后再活一小段，退场动画才有地方播。 */
+    visible: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val config = menuConfig
@@ -105,8 +116,37 @@ fun CastSheetCard(
 
         else -> Modifier
     }
+    // 开合过渡抄官方对话框那一套窗口动画（正文里「离线缓存」那种 AlertDialog 就是它）：
+    // 淡入 120ms、从 0.8 放大 180ms，两样都延后 40ms 起步；收起 150ms 淡出同时缩回 0.8。
+    // 首帧先按关闭态挂上，下一帧再开：进场动画要有起点，否则一上来就是终值、什么都不动。
+    // 原来是 spring(StiffnessLow) 从 0.94 弹上来——官方窗口不弹，看着就不是同一种东西。
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { armed = true }
+    val opened = armed && visible
+    val appear = animateFloatAsState(
+        targetValue = if (opened) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = if (opened) ENTER_ALPHA_MS else EXIT_MS,
+            delayMillis = if (opened) ENTER_DELAY_MS else 0,
+        ),
+        label = "castSheetAlpha",
+    )
+    val pop = animateFloatAsState(
+        targetValue = if (opened) 1f else DIALOG_SCALE,
+        animationSpec = tween(
+            durationMillis = if (opened) ENTER_SCALE_MS else EXIT_MS,
+            delayMillis = if (opened) ENTER_DELAY_MS else 0,
+        ),
+        label = "castSheetScale",
+    )
     Surface(
-        modifier = modifier.then(effectModifier),
+        modifier = modifier
+            .then(effectModifier)
+            .graphicsLayer {
+                alpha = appear.value
+                scaleX = pop.value
+                scaleY = pop.value
+            },
         shape = shape,
         color = if (painted) Color.Transparent else LegadoTheme.colorScheme.surfaceContainerHigh,
         contentColor = contentColor,
@@ -126,3 +166,54 @@ data class CastSheetVisuals(
 )
 
 val LocalCastSheetVisuals = compositionLocalOf { CastSheetVisuals() }
+
+// Material3 对话框的窗口动画口径（AlertDialog 的 dialogTransitionSpec 默认值）
+private const val ENTER_DELAY_MS = 40
+private const val ENTER_ALPHA_MS = 120
+private const val ENTER_SCALE_MS = 180
+private const val EXIT_MS = 150
+private const val DIALOG_SCALE = 0.8f
+
+/**
+ * 悬浮卡片退场期间的「还要继续 compose」标记：show 撤下后再多留 [exitMillis]。
+ *
+ * 正文内这几张卡片的宿主一律是 `if (!show) return`，一撤整棵树就没了，淡出根本播不出来
+ * （官方那侧也是这个套路：ChangeChapterSourceSheet 先本地关掉、动画跑完再清 sheet）。
+ * 宿主拿这个返回值决定要不要继续挂树，真正的开关状态仍然用 `show` 传给 [CastSheetCard]。
+ */
+@Composable
+fun rememberSheetAlive(show: Boolean, exitMillis: Long = 180L): Boolean {
+    var alive by remember { mutableStateOf(show) }
+    LaunchedEffect(show) {
+        if (show) {
+            alive = true
+        } else {
+            delay(exitMillis)
+            alive = false
+        }
+    }
+    return alive
+}
+
+/** 退场那 180ms 里宿主会把行号清成 -1：记住最后一次有效值，卡片不能在半路换成空内容。 */
+@Composable
+fun rememberSheetArg(show: Boolean, value: Int): Int {
+    var held by remember { mutableStateOf(value) }
+    if (show && value >= 0) held = value
+    return held
+}
+
+/** 整屏遮罩的淡入淡出，与卡片同一条窗口动画口径；宿主贴在遮罩 Box 的 graphicsLayer 上。 */
+@Composable
+fun rememberSheetScrimAlpha(visible: Boolean): Float {
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { armed = true }
+    return animateFloatAsState(
+        targetValue = if (armed && visible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = if (visible) ENTER_ALPHA_MS else EXIT_MS,
+            delayMillis = if (visible) ENTER_DELAY_MS else 0,
+        ),
+        label = "castSheetScrim",
+    ).value
+}

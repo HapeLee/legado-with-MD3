@@ -74,7 +74,10 @@ fun BgmSceneTableSheet(
     onIntent: (ReadBookIntent) -> Unit,
     menuConfig: ReadMenuConfig? = null,
 ) {
-    if (!show) return
+    // show 一撤整棵树就没了，退场动画没有地方播：多留 180ms 让淡出跑完
+    val opened = show
+    if (!rememberSheetAlive(opened)) return
+    val scrimAlpha = rememberSheetScrimAlpha(opened)
     val book = ReadBook.book ?: return
     val bookUrl = book.bookUrl
     val chapterIndex = ReadBook.durChapterIndex
@@ -97,7 +100,7 @@ fun BgmSceneTableSheet(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
                 .safeDrawingPadding()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -109,6 +112,7 @@ fun BgmSceneTableSheet(
         ) {
             CastSheetCard(
                 menuConfig = menuConfig,
+                visible = opened,
                 modifier = Modifier
                     .fillMaxWidth()
                     // 只吞点击、不抢焦点：clickable 会让正在输入的框失焦→键盘先收再弹

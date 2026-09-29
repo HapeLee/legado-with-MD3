@@ -1,19 +1,25 @@
 package io.legado.app.ui.book.read.sheet
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,30 +31,48 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -59,6 +83,17 @@ import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.configNames
 import io.legado.app.data.repository.toJsonArray
+import io.legado.app.feature.reader.core.model.ReaderRect
+import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
+import io.legado.app.feature.reader.core.model.ReaderTextBackgroundRun
+import io.legado.app.feature.reader.core.model.ReaderUnderline
+import io.legado.app.feature.reader.core.model.frameBottomPx
+import io.legado.app.feature.reader.core.model.frameTopPx
+import io.legado.app.feature.reader.core.model.nineSliceFrame
+import io.legado.app.feature.reader.core.model.withBitmapSize
+import io.legado.app.feature.reader.drawTextBackground
+import io.legado.app.feature.reader.platform.ReaderTextBackgroundLoader
+import io.legado.app.feature.reader.platform.ReaderUnderlineDrawCommand
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FontFolderState
@@ -75,12 +110,14 @@ import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
+import java.io.File
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
-import java.io.File
-import kotlin.math.roundToInt
 
 @Composable
 fun HighlightRuleEditSheet(
@@ -101,7 +138,15 @@ fun HighlightRuleEditSheet(
     var targetScope by remember(show, rule) { mutableIntStateOf(initial.targetScope) }
     var enabled by remember(show, rule) { mutableStateOf(initial.enabled) }
     var sampleText by remember(show, rule) {
-        mutableStateOf(initial.sampleText.ifBlank { "她轻声说：今晚就出发。" })
+        mutableStateOf(HighlightRule.matchingSampleText(initial.pattern, initial.sampleText))
+    }
+    // 用户没手动改过示例句时，示例句跟着正则走：命中不了就换成能命中的那一句，
+    // 否则预览永远是一片空白，调什么参数都看不出差别。
+    var sampleEdited by remember(show, rule) { mutableStateOf(false) }
+    LaunchedEffect(pattern, sampleEdited) {
+        if (!sampleEdited) {
+            sampleText = HighlightRule.matchingSampleText(pattern, sampleText)
+        }
     }
 
     // Style state
@@ -147,6 +192,22 @@ fun HighlightRuleEditSheet(
     var npBottom by remember(show, rule) { mutableFloatStateOf(initial.npBottom) }
     var showNinePatchEditor by remember(show, rule) { mutableStateOf(false) }
     var manualNineSlice by remember(show, rule) { mutableStateOf(initial.manualNineSlice) }
+
+    // 命中排版 state：只作用在正则命中的那一段上，没设（0）就一个浮点差异都不引入。
+    var matchSpacingBefore by remember(show, rule) {
+        mutableFloatStateOf(initial.letterSpacingBefore)
+    }
+    var matchSpacingAfter by remember(show, rule) { mutableFloatStateOf(initial.letterSpacingAfter) }
+    var hitLineSpacingTop by remember(show, rule) { mutableFloatStateOf(initial.lineSpacingTop) }
+    var hitLineSpacingBottom by remember(show, rule) {
+        mutableFloatStateOf(initial.lineSpacingBottom)
+    }
+    var bgLengthOffsetLeft by remember(show, rule) {
+        mutableFloatStateOf(initial.bgLengthOffsetLeft)
+    }
+    var bgLengthOffsetRight by remember(show, rule) {
+        mutableFloatStateOf(initial.bgLengthOffsetRight)
+    }
 
     // Config binding state — empty set = global (applies to all configs)
     var configNames by remember(show, rule) {
@@ -214,6 +275,46 @@ fun HighlightRuleEditSheet(
         }
     }
 
+    /**
+     * 预览与保存共用这一份数据：预览看到的就是按下保存会写进库的那条规则，
+     * 不存在「预览一套、正文一套」的第二套口径。
+     */
+    val previewRule = HighlightRule(
+        id = initial.id,
+        name = name,
+        pattern = pattern,
+        sampleText = sampleText,
+        targetScope = targetScope,
+        enabled = enabled,
+        position = initial.position,
+        textColor = if (hasTextColor) textColor else null,
+        bgColor = if (hasBgColor) bgColor else null,
+        underlineMode = if (hasUnderline) underlineMode else 0,
+        underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
+        underlineWidth = underlineWidth,
+        underlineOffset = underlineOffset,
+        underlineSvgPath = underlineSvgPath.ifBlank { null },
+        bgImage = if (hasBgImage) bgImage.ifBlank { null } else null,
+        bgImageFit = bgImageFit,
+        bgImageScale = bgImageScale,
+        configName = if (configNames.isEmpty()) null else configNames.toList().toJsonArray(),
+        fontPath = if (hasFont) fontPath.ifBlank { null } else null,
+        fontWeight = fontWeight,
+        isItalic = isItalic,
+        fontSizeOffset = fontSizeOffset,
+        npLeft = npLeft,
+        npRight = npRight,
+        npTop = npTop,
+        npBottom = npBottom,
+        manualNineSlice = manualNineSlice,
+        letterSpacingBefore = matchSpacingBefore,
+        letterSpacingAfter = matchSpacingAfter,
+        lineSpacingTop = hitLineSpacingTop,
+        lineSpacingBottom = hitLineSpacingBottom,
+        bgLengthOffsetLeft = bgLengthOffsetLeft,
+        bgLengthOffsetRight = bgLengthOffsetRight,
+    )
+
     val titleRes = if (isNew) R.string.new_rule else R.string.edit_rule
 
     AppModalBottomSheet(
@@ -231,390 +332,461 @@ fun HighlightRuleEditSheet(
                         }
                     }
                     patternError = null
-                    onSave(
-                        HighlightRule(
-                            id = initial.id,
-                            name = name,
-                            pattern = pattern,
-                            sampleText = sampleText,
-                            targetScope = targetScope,
-                            enabled = enabled,
-                            position = initial.position,
-                            textColor = if (hasTextColor) textColor else null,
-                            bgColor = if (hasBgColor) bgColor else null,
-                            underlineMode = if (hasUnderline) underlineMode else 0,
-                            underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
-                            underlineWidth = underlineWidth,
-                            underlineOffset = underlineOffset,
-                            underlineSvgPath = underlineSvgPath.ifBlank { null },
-                            bgImage = if (hasBgImage) bgImage.ifBlank { null } else null,
-                            bgImageFit = bgImageFit,
-                            bgImageScale = bgImageScale,
-                            configName = if (configNames.isEmpty()) null else configNames.toList().toJsonArray(),
-                            fontPath = if (hasFont) fontPath.ifBlank { null } else null,
-                            fontWeight = fontWeight,
-                            isItalic = isItalic,
-                            fontSizeOffset = fontSizeOffset,
-                            npLeft = npLeft,
-                            npRight = npRight,
-                            npTop = npTop,
-                            npBottom = npBottom,
-                            manualNineSlice = manualNineSlice,
-                        )
-                    )
+                    onSave(previewRule)
                 },
                 icon = Icons.Default.Done,
                 contentDescription = stringResource(R.string.save),
             )
         },
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            // === Section 1: Rule Info ===
-            SectionTitle(stringResource(R.string.rule_info))
-
-            AppTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = stringResource(R.string.rule_name),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            AppTextField(
-                value = pattern,
-                onValueChange = {
-                    pattern = it
-                    patternError = null
-                },
-                label = stringResource(R.string.rule_pattern),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                isError = patternError != null,
-                supportingText = patternError?.let {
-                    { AppText(it, color = MaterialTheme.colorScheme.error) }
-                },
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            val scopeEntries = arrayOf(
-                stringResource(R.string.target_all),
-                stringResource(R.string.target_title),
-                stringResource(R.string.target_body),
-            )
-            val scopeValues = arrayOf(
-                HighlightRule.TARGET_ALL.toString(),
-                HighlightRule.TARGET_TITLE.toString(),
-                HighlightRule.TARGET_BODY.toString(),
-            )
-            TinyDropdownSettingItem(
-                title = stringResource(R.string.target_scope),
-                selectedValue = targetScope.toString(),
-                displayEntries = scopeEntries,
-                entryValues = scopeValues,
-                onValueChange = { targetScope = it.toIntOrNull() ?: HighlightRule.TARGET_ALL },
-            )
-
-            TinySwitchSettingItem(
-                title = stringResource(R.string.enable_rule),
-                checked = enabled,
-                onCheckedChange = { enabled = it },
-            )
-
-            // === Section 2: Style Settings ===
-            SectionTitle(stringResource(R.string.style_settings))
-
-            // Text color
-            TinySwitchSettingItem(
-                title = stringResource(R.string.text_color),
-                checked = hasTextColor,
-                onCheckedChange = { hasTextColor = it },
-            )
-            AnimatedVisibility(visible = hasTextColor) {
-                TinyColorSettingItem(
-                    title = stringResource(R.string.select_color),
-                    colorValue = textColor,
-                    onClick = { showTextColorPicker = true },
-                )
-            }
-
-            // Font weight — three options: Regular(400), Bold(700), Light(300)
-            val weightEntries = stringArrayResource(R.array.text_font_weight)
-            TinyDropdownSettingItem(
-                title = stringResource(R.string.font_weight_text),
-                selectedValue = fontWeight.toString(),
-                displayEntries = weightEntries,
-                entryValues = arrayOf("400", "700", "300"),
-                onValueChange = { fontWeight = it.toIntOrNull() ?: 400 },
-            )
-
-            // Italic
-            TinySwitchSettingItem(
-                title = stringResource(R.string.read_config_italic),
-                checked = isItalic,
-                onCheckedChange = { isItalic = it },
-            )
-
-            // Font size offset
-            TinySliderSettingItem(
-                title = stringResource(R.string.font_size_offset),
-                value = fontSizeOffset.toFloat(),
-                valueRange = -10f..10f,
-                steps = 19,
-                description = if (fontSizeOffset == 0) {
-                    stringResource(R.string.text_default)
-                } else {
-                    stringResource(R.string.font_size_offset_value, fontSizeOffset)
-                },
-                onValueChange = { fontSizeOffset = it.toInt() },
-            )
-
-            // Underline
-            TinySwitchSettingItem(
-                title = stringResource(R.string.underline_style),
-                checked = hasUnderline,
-                onCheckedChange = { hasUnderline = it },
-            )
-            AnimatedVisibility(visible = hasUnderline) {
-                Column {
-                    val underlineEntries = arrayOf(
-                        stringResource(R.string.underline_solid),
-                        stringResource(R.string.underline_dashed),
-                        stringResource(R.string.underline_wave),
-                        stringResource(R.string.underline_title_bar),
-                        stringResource(R.string.underline_svg),
-                        stringResource(R.string.bookmark_mark_effect_strike),
-                        stringResource(R.string.bookmark_mark_effect_highlight),
-                    )
-                    val underlineValues = arrayOf("1", "2", "3", "4", "5", "6", "7")
-                    TinyDropdownSettingItem(
-                        title = stringResource(R.string.underline_style),
-                        selectedValue = underlineMode.toString(),
-                        displayEntries = underlineEntries,
-                        entryValues = underlineValues,
-                        onValueChange = { underlineMode = it.toIntOrNull() ?: 1 },
-                    )
-
-                    TinySwitchSettingItem(
-                        title = stringResource(R.string.underline_color),
-                        checked = hasUnderlineColor,
-                        onCheckedChange = { hasUnderlineColor = it },
-                    )
-                    AnimatedVisibility(visible = hasUnderlineColor) {
-                        TinyColorSettingItem(
-                            title = stringResource(R.string.select_color),
-                            colorValue = underlineColor,
-                            onClick = { showUnderlineColorPicker = true },
-                        )
-                    }
-
-                    TinySliderSettingItem(
-                        title = stringResource(R.string.underline_width),
-                        value = underlineWidth,
-                        valueRange = 0.1f..10f,
-                        description = String.format("%.1f dp", underlineWidth),
-                        onValueChange = { underlineWidth = (it * 10).toInt() / 10f },
-                    )
-
-                    TinySliderSettingItem(
-                        title = stringResource(R.string.underline_offset),
-                        value = underlineOffset,
-                        valueRange = 0f..20f,
-                        description = String.format("%.1f dp", underlineOffset),
-                        onValueChange = { underlineOffset = (it * 10).toInt() / 10f },
-                    )
-
-                    AnimatedVisibility(visible = underlineMode == 5) {
-                        AppTextField(
-                            value = underlineSvgPath,
-                            onValueChange = { underlineSvgPath = it },
-                            label = stringResource(R.string.svg_path),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            }
-
-            // Background color
-            TinySwitchSettingItem(
-                title = stringResource(R.string.bg_color),
-                checked = hasBgColor,
-                onCheckedChange = { hasBgColor = it },
-            )
-            AnimatedVisibility(visible = hasBgColor) {
-                TinyColorSettingItem(
-                    title = stringResource(R.string.select_color),
-                    colorValue = bgColor,
-                    onClick = { showBgColorPicker = true },
-                )
-            }
-
-            // Background image
-            TinySwitchSettingItem(
-                title = stringResource(R.string.highlight_bg_image),
-                checked = hasBgImage,
-                onCheckedChange = { hasBgImage = it },
-            )
-            AnimatedVisibility(visible = hasBgImage) {
-                TinyClickableSettingItem(
-                    title = stringResource(R.string.highlight_bg_image),
-                    description = bgImage.ifBlank { null }?.let { File(it).name },
-                    onClick = {
-                        imagePicker.launch(arrayOf("image/*"))
-                    },
-                )
-            }
-            AnimatedVisibility(visible = hasBgImage && bgImage.isNotBlank()) {
-                Column {
-                    val fitEntries = arrayOf(
-                        stringResource(R.string.bg_fit_tile),
-                        stringResource(R.string.bg_fit_stretch),
-                        stringResource(R.string.bg_fit_crop),
-                        stringResource(R.string.bg_fit_nine_patch),
-                    )
-                    val fitValues = arrayOf("0", "1", "2", "3")
-                    TinyDropdownSettingItem(
-                        title = stringResource(R.string.bg_image_fit),
-                        selectedValue = bgImageFit.toString(),
-                        displayEntries = fitEntries,
-                        entryValues = fitValues,
-                        onValueChange = {
-                            val newFit = it.toIntOrNull() ?: 0
-                            bgImageFit = newFit
-                            if (newFit == 3) {
-                                showNinePatchEditor = true
-                            }
-                        },
-                    )
-
-                    TinySliderSettingItem(
-                        title = stringResource(R.string.highlight_bg_image_scale),
-                        value = bgImageScale,
-                        valueRange = 0.1f..5f,
-                        steps = 48,
-                        stepSize = 0.1f,
-                        showDecimal = true,
-                        valueFormat = { String.format("%.1f", it) },
-                        description = String.format("%.1fx", bgImageScale),
-                        onValueChange = { bgImageScale = (it * 10).roundToInt() / 10f },
-                    )
-                    if (bgImageFit == 3) {
-                        TinySwitchSettingItem(
-                            title = stringResource(R.string.manual_nine_slice),
-                            checked = manualNineSlice,
-                            onCheckedChange = {
-                                manualNineSlice = it
-                                if (it) showNinePatchEditor = true
-                            },
-                        )
-                        if (manualNineSlice) {
-                            TinyClickableSettingItem(
-                                title = stringResource(R.string.edit_nine_slice),
-                                onClick = { showNinePatchEditor = true },
-                            )
-                        }
-                    }
-                }
-            }
-
-            // === Section 3: Config Binding ===
-            if (allConfigNames.isNotEmpty()) {
-                SectionTitle("应用排版")
-                LazyRow(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Global toggle
-                    item {
-                        val selected = configNames.isEmpty()
-                        val bg = if (selected) LegadoTheme.colorScheme.secondaryContainer
-                        else LegadoTheme.colorScheme.surfaceContainerLow
-                        val fg = if (selected) LegadoTheme.colorScheme.onSecondaryContainer
-                        else LegadoTheme.colorScheme.onSurfaceVariant
-                        NormalCard(
-                            onClick = { configNames = emptySet() },
-                            containerColor = bg,
-                            cornerRadius = 8.dp,
-                        ) {
-                            AppText(
-                                "全局",
-                                style = LegadoTheme.typography.labelMedium,
-                                color = fg,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            )
-                        }
-                    }
-                    itemsIndexed(allConfigNames) { _, cn ->
-                        val selected = cn in configNames
-                        val bg = if (selected) LegadoTheme.colorScheme.secondaryContainer
-                        else LegadoTheme.colorScheme.surfaceContainerLow
-                        val fg = if (selected) LegadoTheme.colorScheme.onSecondaryContainer
-                        else LegadoTheme.colorScheme.onSurfaceVariant
-                        NormalCard(
-                            onClick = {
-                                configNames = if (selected) configNames - cn
-                                else configNames + cn
-                            },
-                            containerColor = bg,
-                            cornerRadius = 8.dp,
-                        ) {
-                            AppText(
-                                cn,
-                                style = LegadoTheme.typography.labelMedium,
-                                color = fg,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            )
-                        }
-                    }
-                }
-            }
-
-            // === Section 4: Font ===
-            SectionTitle("字体替换")
-            TinySwitchSettingItem(
-                title = "自定义字体",
-                checked = hasFont,
-                onCheckedChange = { hasFont = it },
-            )
-            AnimatedVisibility(visible = hasFont) {
-                TinyClickableSettingItem(
-                    title = stringResource(R.string.select_font),
-                    description = fontPath.ifBlank { null }?.let { File(it).name },
-                    onClick = { showFontSelect = true },
-                )
-            }
-
-            // === Section 5: Preview ===
-            SectionTitle(stringResource(R.string.preview_effect))
-
-            AppTextField(
-                value = sampleText,
-                onValueChange = { sampleText = it },
-                label = stringResource(R.string.sample_text),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            HighlightRulePreview(
-                sampleText = sampleText,
-                textColor = if (hasTextColor) textColor else null,
-                bgColor = if (hasBgColor) bgColor else null,
-                underlineMode = if (hasUnderline) underlineMode else 0,
-                underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
-                underlineWidth = underlineWidth,
-                underlineOffset = underlineOffset,
-                fontSizeOffset = fontSizeOffset,
+        val scrollState = rememberScrollState()
+        // 键盘顶着屏幕时不浮出预览：悬浮卡钉在弹层底边，输入框一拿到焦点就收回。
+        var typingFocused by remember(show) { mutableStateOf(false) }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
-                    .padding(top = 8.dp),
-            )
+                    .padding(bottom = 16.dp)
+                    .verticalScroll(scrollState),
+            ) {
+                // === Section 1: Rule Info ===
+                SectionTitle(stringResource(R.string.rule_info))
+
+                AppTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = stringResource(R.string.rule_name),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                AppTextField(
+                    value = pattern,
+                    onValueChange = {
+                        pattern = it
+                        patternError = null
+                    },
+                    label = stringResource(R.string.rule_pattern),
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusEvent { typingFocused = it.hasFocus },
+                    isError = patternError != null,
+                    supportingText = patternError?.let {
+                        { AppText(it, color = MaterialTheme.colorScheme.error) }
+                    },
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                val scopeEntries = arrayOf(
+                    stringResource(R.string.target_all),
+                    stringResource(R.string.target_title),
+                    stringResource(R.string.target_body),
+                )
+                val scopeValues = arrayOf(
+                    HighlightRule.TARGET_ALL.toString(),
+                    HighlightRule.TARGET_TITLE.toString(),
+                    HighlightRule.TARGET_BODY.toString(),
+                )
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.target_scope),
+                    selectedValue = targetScope.toString(),
+                    displayEntries = scopeEntries,
+                    entryValues = scopeValues,
+                    onValueChange = { targetScope = it.toIntOrNull() ?: HighlightRule.TARGET_ALL },
+                )
+
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.enable_rule),
+                    checked = enabled,
+                    onCheckedChange = { enabled = it },
+                )
+
+                // === Section 2: Style Settings ===
+                SectionTitle(stringResource(R.string.style_settings))
+
+                // Text color
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.text_color),
+                    checked = hasTextColor,
+                    onCheckedChange = { hasTextColor = it },
+                )
+                AnimatedVisibility(visible = hasTextColor) {
+                    TinyColorSettingItem(
+                        title = stringResource(R.string.select_color),
+                        colorValue = textColor,
+                        onClick = { showTextColorPicker = true },
+                    )
+                }
+
+                // Font weight — three options: Regular(400), Bold(700), Light(300)
+                val weightEntries = stringArrayResource(R.array.text_font_weight)
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.font_weight_text),
+                    selectedValue = fontWeight.toString(),
+                    displayEntries = weightEntries,
+                    entryValues = arrayOf("400", "700", "300"),
+                    onValueChange = { fontWeight = it.toIntOrNull() ?: 400 },
+                )
+
+                // Italic
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.read_config_italic),
+                    checked = isItalic,
+                    onCheckedChange = { isItalic = it },
+                )
+
+                // Font size offset
+                TinySliderSettingItem(
+                    title = stringResource(R.string.font_size_offset),
+                    value = fontSizeOffset.toFloat(),
+                    valueRange = -10f..10f,
+                    steps = 19,
+                    description = if (fontSizeOffset == 0) {
+                        stringResource(R.string.text_default)
+                    } else {
+                        stringResource(R.string.font_size_offset_value, fontSizeOffset)
+                    },
+                    onValueChange = { fontSizeOffset = it.toInt() },
+                )
+
+                // Underline
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.underline_style),
+                    checked = hasUnderline,
+                    onCheckedChange = { hasUnderline = it },
+                )
+                AnimatedVisibility(visible = hasUnderline) {
+                    Column {
+                        val underlineEntries = arrayOf(
+                            stringResource(R.string.underline_solid),
+                            stringResource(R.string.underline_dashed),
+                            stringResource(R.string.underline_wave),
+                            stringResource(R.string.underline_title_bar),
+                            stringResource(R.string.underline_svg),
+                            stringResource(R.string.bookmark_mark_effect_strike),
+                            stringResource(R.string.bookmark_mark_effect_highlight),
+                        )
+                        val underlineValues = arrayOf("1", "2", "3", "4", "5", "6", "7")
+                        TinyDropdownSettingItem(
+                            title = stringResource(R.string.underline_style),
+                            selectedValue = underlineMode.toString(),
+                            displayEntries = underlineEntries,
+                            entryValues = underlineValues,
+                            onValueChange = { underlineMode = it.toIntOrNull() ?: 1 },
+                        )
+
+                        TinySwitchSettingItem(
+                            title = stringResource(R.string.underline_color),
+                            checked = hasUnderlineColor,
+                            onCheckedChange = { hasUnderlineColor = it },
+                        )
+                        AnimatedVisibility(visible = hasUnderlineColor) {
+                            TinyColorSettingItem(
+                                title = stringResource(R.string.select_color),
+                                colorValue = underlineColor,
+                                onClick = { showUnderlineColorPicker = true },
+                            )
+                        }
+
+                        TinySliderSettingItem(
+                            title = stringResource(R.string.underline_width),
+                            value = underlineWidth,
+                            valueRange = 0.1f..10f,
+                            description = String.format("%.1f dp", underlineWidth),
+                            onValueChange = { underlineWidth = (it * 10).toInt() / 10f },
+                        )
+
+                        TinySliderSettingItem(
+                            title = stringResource(R.string.underline_offset),
+                            value = underlineOffset,
+                            valueRange = 0f..20f,
+                            description = String.format("%.1f dp", underlineOffset),
+                            onValueChange = { underlineOffset = (it * 10).toInt() / 10f },
+                        )
+
+                        AnimatedVisibility(visible = underlineMode == 5) {
+                            AppTextField(
+                                value = underlineSvgPath,
+                                onValueChange = { underlineSvgPath = it },
+                                label = stringResource(R.string.svg_path),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                }
+
+                // Background color
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.bg_color),
+                    checked = hasBgColor,
+                    onCheckedChange = { hasBgColor = it },
+                )
+                AnimatedVisibility(visible = hasBgColor) {
+                    TinyColorSettingItem(
+                        title = stringResource(R.string.select_color),
+                        colorValue = bgColor,
+                        onClick = { showBgColorPicker = true },
+                    )
+                }
+
+                // Background image
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.highlight_bg_image),
+                    checked = hasBgImage,
+                    onCheckedChange = { hasBgImage = it },
+                )
+                AnimatedVisibility(visible = hasBgImage) {
+                    TinyClickableSettingItem(
+                        title = stringResource(R.string.highlight_bg_image),
+                        description = bgImage.ifBlank { null }?.let { File(it).name },
+                        onClick = {
+                            imagePicker.launch(arrayOf("image/*"))
+                        },
+                    )
+                }
+                AnimatedVisibility(visible = hasBgImage && bgImage.isNotBlank()) {
+                    Column {
+                        val fitEntries = arrayOf(
+                            stringResource(R.string.bg_fit_tile),
+                            stringResource(R.string.bg_fit_stretch),
+                            stringResource(R.string.bg_fit_crop),
+                            stringResource(R.string.bg_fit_nine_patch),
+                        )
+                        val fitValues = arrayOf("0", "1", "2", "3")
+                        TinyDropdownSettingItem(
+                            title = stringResource(R.string.bg_image_fit),
+                            selectedValue = bgImageFit.toString(),
+                            displayEntries = fitEntries,
+                            entryValues = fitValues,
+                            onValueChange = {
+                                val newFit = it.toIntOrNull() ?: 0
+                                bgImageFit = newFit
+                                if (newFit == 3) {
+                                    showNinePatchEditor = true
+                                }
+                            },
+                        )
+
+                        TinySliderSettingItem(
+                            title = stringResource(R.string.highlight_bg_image_scale),
+                            value = bgImageScale,
+                            valueRange = 0.1f..5f,
+                            steps = 48,
+                            stepSize = 0.1f,
+                            showDecimal = true,
+                            valueFormat = { String.format("%.1f", it) },
+                            description = String.format("%.1fx", bgImageScale),
+                            onValueChange = { bgImageScale = (it * 10).roundToInt() / 10f },
+                        )
+                        // 只有九宫格才吃这两个偏移（其它 fit 的绘制根本不读它们），
+                        // 挂在 fit 外面就是两个拨了没反应的死滑杆。
+                        AnimatedVisibility(visible = bgImageFit == 3) {
+                            Column {
+                                TinySliderSettingItem(
+                                    title = stringResource(R.string.highlight_bg_length_offset_left),
+                                    value = bgLengthOffsetLeft,
+                                    valueRange = -40f..40f,
+                                    steps = 159,
+                                    stepSize = 0.5f,
+                                    showDecimal = true,
+                                    valueFormat = { String.format("%.1f", it) },
+                                    description = String.format("%.1f dp", bgLengthOffsetLeft),
+                                    onValueChange = { bgLengthOffsetLeft = (it * 2).roundToInt() / 2f },
+                                )
+                                TinySliderSettingItem(
+                                    title = stringResource(R.string.highlight_bg_length_offset_right),
+                                    value = bgLengthOffsetRight,
+                                    valueRange = -40f..40f,
+                                    steps = 159,
+                                    stepSize = 0.5f,
+                                    showDecimal = true,
+                                    valueFormat = { String.format("%.1f", it) },
+                                    description = String.format("%.1f dp", bgLengthOffsetRight),
+                                    onValueChange = { bgLengthOffsetRight = (it * 2).roundToInt() / 2f },
+                                )
+                            }
+                        }
+                        if (bgImageFit == 3) {
+                            TinySwitchSettingItem(
+                                title = stringResource(R.string.manual_nine_slice),
+                                checked = manualNineSlice,
+                                onCheckedChange = {
+                                    manualNineSlice = it
+                                    if (it) showNinePatchEditor = true
+                                },
+                            )
+                            if (manualNineSlice) {
+                                TinyClickableSettingItem(
+                                    title = stringResource(R.string.edit_nine_slice),
+                                    onClick = { showNinePatchEditor = true },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // === Section 2b: Match typography ===
+                SectionTitle(stringResource(R.string.highlight_match_typography))
+                AppText(
+                    stringResource(R.string.highlight_match_typography_hint),
+                    style = LegadoTheme.typography.labelMedium,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                TinySliderSettingItem(
+                    title = stringResource(R.string.highlight_spacing_before),
+                    value = matchSpacingBefore,
+                    valueRange = 0f..40f,
+                    steps = 79,
+                    stepSize = 0.5f,
+                    showDecimal = true,
+                    valueFormat = { String.format("%.1f", it) },
+                    description = String.format("%.1f dp", matchSpacingBefore),
+                    onValueChange = { matchSpacingBefore = (it * 2).roundToInt() / 2f },
+                )
+                TinySliderSettingItem(
+                    title = stringResource(R.string.highlight_spacing_after),
+                    value = matchSpacingAfter,
+                    valueRange = 0f..40f,
+                    steps = 79,
+                    stepSize = 0.5f,
+                    showDecimal = true,
+                    valueFormat = { String.format("%.1f", it) },
+                    description = String.format("%.1f dp", matchSpacingAfter),
+                    onValueChange = { matchSpacingAfter = (it * 2).roundToInt() / 2f },
+                )
+                TinySliderSettingItem(
+                    title = stringResource(R.string.highlight_line_spacing_above),
+                    value = hitLineSpacingTop,
+                    valueRange = 0f..40f,
+                    steps = 79,
+                    stepSize = 0.5f,
+                    showDecimal = true,
+                    valueFormat = { String.format("%.1f", it) },
+                    description = String.format("%.1f dp", hitLineSpacingTop),
+                    onValueChange = { hitLineSpacingTop = (it * 2).roundToInt() / 2f },
+                )
+                TinySliderSettingItem(
+                    title = stringResource(R.string.highlight_line_spacing_below),
+                    value = hitLineSpacingBottom,
+                    valueRange = 0f..40f,
+                    steps = 79,
+                    stepSize = 0.5f,
+                    showDecimal = true,
+                    valueFormat = { String.format("%.1f", it) },
+                    description = String.format("%.1f dp", hitLineSpacingBottom),
+                    onValueChange = { hitLineSpacingBottom = (it * 2).roundToInt() / 2f },
+                )
+
+                // === Section 3: Config Binding ===
+                if (allConfigNames.isNotEmpty()) {
+                    SectionTitle("应用排版")
+                    LazyRow(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Global toggle
+                        item {
+                            val selected = configNames.isEmpty()
+                            val bg = if (selected) LegadoTheme.colorScheme.secondaryContainer
+                            else LegadoTheme.colorScheme.surfaceContainerLow
+                            val fg = if (selected) LegadoTheme.colorScheme.onSecondaryContainer
+                            else LegadoTheme.colorScheme.onSurfaceVariant
+                            NormalCard(
+                                onClick = { configNames = emptySet() },
+                                containerColor = bg,
+                                cornerRadius = 8.dp,
+                            ) {
+                                AppText(
+                                    "全局",
+                                    style = LegadoTheme.typography.labelMedium,
+                                    color = fg,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                )
+                            }
+                        }
+                        itemsIndexed(allConfigNames) { _, cn ->
+                            val selected = cn in configNames
+                            val bg = if (selected) LegadoTheme.colorScheme.secondaryContainer
+                            else LegadoTheme.colorScheme.surfaceContainerLow
+                            val fg = if (selected) LegadoTheme.colorScheme.onSecondaryContainer
+                            else LegadoTheme.colorScheme.onSurfaceVariant
+                            NormalCard(
+                                onClick = {
+                                    configNames = if (selected) configNames - cn
+                                    else configNames + cn
+                                },
+                                containerColor = bg,
+                                cornerRadius = 8.dp,
+                            ) {
+                                AppText(
+                                    cn,
+                                    style = LegadoTheme.typography.labelMedium,
+                                    color = fg,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // === Section 4: Font ===
+                SectionTitle("字体替换")
+                TinySwitchSettingItem(
+                    title = "自定义字体",
+                    checked = hasFont,
+                    onCheckedChange = { hasFont = it },
+                )
+                AnimatedVisibility(visible = hasFont) {
+                    TinyClickableSettingItem(
+                        title = stringResource(R.string.select_font),
+                        description = fontPath.ifBlank { null }?.let { File(it).name },
+                        onClick = { showFontSelect = true },
+                    )
+                }
+
+                // === Section 5: Preview ===
+                SectionTitle(stringResource(R.string.preview_effect))
+
+                AppTextField(
+                    value = sampleText,
+                    onValueChange = {
+                        sampleText = it
+                        sampleEdited = true
+                    },
+                    label = stringResource(R.string.sample_text),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusEvent { typingFocused = it.hasFocus },
+                )
+
+                HighlightPreviewCard(
+                    rule = previewRule,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                )
+            }
+            // 预览悬浮窗：钉在弹层底边，不跟着内容滚走。还有内容在下面看不着、且焦点不在
+            // 输入框上（键盘顶着屏幕）的时候才浮出来。画的是正文同一份函数，不会两套口径。
+            androidx.compose.animation.AnimatedVisibility(
+                visible = scrollState.value < scrollState.maxValue && !typingFocused,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
+                modifier = Modifier.align(Alignment.BottomCenter),
+            ) {
+                HighlightPreviewCard(
+                    rule = previewRule,
+                    floating = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                )
+            }
         }
     }
 
@@ -655,6 +827,7 @@ fun HighlightRuleEditSheet(
         initialRight = npRight,
         initialTop = npTop,
         initialBottom = npBottom,
+        previewRule = previewRule,
         onDismissRequest = { showNinePatchEditor = false },
         onSave = { left, right, top, bottom ->
             npLeft = left
@@ -705,128 +878,292 @@ fun HighlightRuleEditSheet(
     )
 }
 
+/** 预览卡：正文卡与悬浮卡共用同一份内容，浮起来的那张多一行标题和阴影。 */
+@Composable
+private fun HighlightPreviewCard(
+    rule: HighlightRule,
+    modifier: Modifier = Modifier,
+    floating: Boolean = false,
+) {
+    NormalCard(
+        modifier = modifier,
+        cornerRadius = 16.dp,
+        containerColor = if (floating) {
+            LegadoTheme.colorScheme.surfaceContainerHigh
+        } else {
+            LegadoTheme.colorScheme.surfaceContainerLow
+        },
+        elevation = if (floating) 6.dp else 0.dp,
+    ) {
+        if (floating) {
+            AppText(
+                stringResource(R.string.preview_effect),
+                style = LegadoTheme.typography.labelMedium,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, top = 8.dp),
+            )
+        }
+        HighlightRulePreview(
+            rule = rule,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (floating) 128.dp else 168.dp)
+                .clipToBounds()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+    }
+}
+
+/**
+ * 规则预览：只有 [Regex] 命中的那一段会上样式，命中之外的一个字都不动。
+ *
+ * 背景图走正文同一份绘制函数（[drawTextBackground]）与同一份几何
+ * （[ReaderTextBackgroundImage.withBitmapSize] / [frameBottomPx] / [nineSliceFrame]），
+ * 所以预览里看到的气泡高度、横向拉伸与长度偏移就是正文页画出来的那个。命中字距挂在段首/段尾
+ * 那一个字上，命中行行距抬高整行行盒——示例句每一行都含命中，因此预览里看起来就是行距变大。
+ */
 @Composable
 private fun HighlightRulePreview(
-    sampleText: String,
-    textColor: Int?,
-    bgColor: Int?,
-    underlineMode: Int,
-    underlineColor: Int?,
-    underlineWidth: Float,
-    underlineOffset: Float,
-    fontSizeOffset: Int = 0,
+    rule: HighlightRule,
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
-    val defaultTextColor = LegadoTheme.colorScheme.onSurface
-    val resolvedTextColor = textColor?.let { Color(it) } ?: defaultTextColor
-    val resolvedUnderlineColor = underlineColor?.let { Color(it) } ?: resolvedTextColor
+    val baseColor = LegadoTheme.colorScheme.onSurface
+    val sample = rule.normalizedSampleText()
+    val hitRanges = remember(rule.pattern, sample) { previewHitRanges(rule.pattern, sample) }
+    val background = rememberPreviewBackground(rule)
+    val hitFont = rememberPreviewFontFamily(rule.fontPath)
+    val paint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
+    val underlineColor = rule.underlineColor?.let(::Color)
+        ?: rule.textColor?.let(::Color)
+        ?: baseColor
 
-    val textStyle = TextStyle(
-        fontSize = (16 + fontSizeOffset).sp,
-        color = resolvedTextColor,
-    )
-
-    Canvas(modifier = modifier) {
-        val textResult = textMeasurer.measure(
-            text = sampleText,
-            style = textStyle,
+    Canvas(modifier) {
+        val padX = 20.dp.toPx()
+        val padY = 16.dp.toPx()
+        val beforePx = rule.letterSpacingBefore.dp.toPx()
+        val afterPx = rule.letterSpacingAfter.dp.toPx()
+        val baseSizePx = 16.sp.toPx()
+        val hitSizePx = (16 + rule.fontSizeOffset).coerceAtLeast(1).sp.toPx()
+        val layout = textMeasurer.measure(
+            text = previewAnnotatedString(
+                rule = rule,
+                hits = hitRanges,
+                beforeEm = (beforePx / baseSizePx.coerceAtLeast(1f)).em,
+                afterEm = (afterPx / hitSizePx.coerceAtLeast(1f)).em,
+                fontFamily = hitFont,
+            ),
+            style = TextStyle(
+                fontSize = 16.sp,
+                color = baseColor,
+                lineHeight = (
+                    baseSizePx + rule.lineSpacingTop.dp.toPx() + rule.lineSpacingBottom.dp.toPx()
+                    ).toSp(),
+                lineHeightStyle = LineHeightStyle(
+                    alignment = LineHeightStyle.Alignment.Center,
+                    trim = LineHeightStyle.Trim.None,
+                ),
+            ),
+            constraints = Constraints(
+                maxWidth = (size.width - padX * 2f).toInt().coerceAtLeast(1),
+            ),
             maxLines = 3,
         )
-        if (bgColor != null) {
-            drawRect(
-                color = Color(bgColor),
-                topLeft = Offset(0f, 0f),
-                size = size.copy(height = textResult.size.height.toFloat()),
-            )
-        }
-        if (underlineMode == 7) {
-            drawRect(
-                color = resolvedUnderlineColor.copy(alpha = 0.4f),
-                topLeft = Offset(0f, textResult.size.height * 0.5f),
-                size = Size(
-                    textResult.size.width.toFloat(),
-                    textResult.size.height * 0.5f,
-                ),
-            )
-        }
-        drawText(textResult)
+        val boxes = previewHitBoxes(layout, hitRanges, beforePx, afterPx, sample.length - 1)
+        translate(padX, padY) {
+            if (background != null) {
+                val native = drawContext.canvas.nativeCanvas
+                val image = background.image
+                boxes.forEach { box ->
+                    val content = ReaderRect(box.left, box.top, box.right, box.bottom)
+                    // 上下边按「图片总高按 scale 锁死、中间带子对着行盒居中」外扩，
+                    // 左右边按正文同一份口径外扩——用的就是分页那边同一对函数。
+                    val frame = image.nineSliceFrame(
+                        content.copy(
+                            top = content.top - image.frameTopPx(content.height),
+                            bottom = content.bottom + image.frameBottomPx(content.height),
+                        ),
+                    )
+                    drawTextBackground(
+                        native,
+                        background.bitmap,
+                        ReaderTextBackgroundRun(
+                            bounds = frame,
+                            contentBounds = content,
+                            image = image,
+                        ),
+                        paint,
+                    )
+                }
+            }
+            rule.bgColor?.let { color ->
+                val tint = Color(color)
+                boxes.forEach { box -> drawRect(tint, box.topLeft, box.size) }
+            }
+            if (rule.underlineMode == 7) {
+                boxes.forEach { box ->
+                    drawRect(
+                        color = underlineColor.copy(alpha = 0.4f),
+                        topLeft = Offset(box.left, box.top + box.height * 0.5f),
+                        size = Size(box.width, box.height * 0.5f),
+                    )
+                }
+            }
+            drawText(layout)
+            if (rule.underlineMode in 1..6) {
+                // 下划线直接复用正文那份绘制命令：虚线段长、波浪周期、双线的间距与 SVG
+                // 路径的缩放全走同一套常量，预览才会真的等于正文。
+                val underline = ReaderUnderline(
+                    mode = rule.underlineMode,
+                    colorArgb = underlineColor.toArgb(),
+                    widthPx = rule.underlineWidth.dp.toPx(),
+                    offsetPx = rule.underlineOffset.dp.toPx(),
+                    svgPath = rule.underlineSvgPath.orEmpty(),
+                    dashOnPx = 8.dp.toPx(),
+                    dashOffPx = 5.dp.toPx(),
+                    waveAmplitudePx = 3.dp.toPx(),
+                    waveLengthPx = 12.dp.toPx(),
+                    doubleLineGapPx = 3.dp.toPx(),
+                )
+                val native = drawContext.canvas.nativeCanvas
+                boxes.forEach { box ->
+                    ReaderUnderlineDrawCommand(
+                        ReaderRect(box.left, box.top, box.right, box.bottom),
+                        underline,
+                    ).draw(native)
+                }
+            }        }
+    }
+}
 
-        if (underlineMode > 0) {
-            val strokeWidth = underlineWidth.dp.toPx()
-            val yBaseline = textResult.size.height.toFloat() - underlineOffset.dp.toPx()
+/** 位图与几何参数：加载、自动切线、换算全用正文那一份，预览才会和正文一模一样。 */
+@Composable
+private fun rememberPreviewBackground(rule: HighlightRule): PreviewBackground? {
+    val source = rule.bgImage.orEmpty()
+    val manual = rule.manualNineSlice
+    val density = LocalDensity.current
+    var loaded by remember(source) { mutableStateOf<Bitmap?>(null) }
+    var automatic by remember(source) {
+        mutableStateOf<ReaderTextBackgroundLoader.NineSliceFractions?>(null)
+    }
+    LaunchedEffect(source, manual) {
+        loaded = withContext(Dispatchers.IO) { ReaderTextBackgroundLoader.load(source) }
+        // 正文在 manualNineSlice 关闭时读 .9.png 自己的引导边，忽略四个 np 值；
+        // 预览必须照做，否则「预览一套、正文一套」。逐像素扫描放 IO 线程。
+        automatic = if (manual) null else withContext(Dispatchers.IO) {
+            ReaderTextBackgroundLoader.nineSliceFractions(source)
+        }
+    }
+    val bitmap = loaded ?: return null
+    return with(density) {
+        PreviewBackground(
+            bitmap = bitmap,
+            image = ReaderTextBackgroundImage(
+                source = source,
+                fit = rule.bgImageFit,
+                scale = rule.bgImageScale,
+                ninePatchLeft = automatic?.left ?: rule.npLeft,
+                ninePatchRight = automatic?.right ?: rule.npRight,
+                ninePatchTop = automatic?.top ?: rule.npTop,
+                ninePatchBottom = automatic?.bottom ?: rule.npBottom,
+                lengthOffsetLeftPx = rule.bgLengthOffsetLeft.dp.toPx(),
+                lengthOffsetRightPx = rule.bgLengthOffsetRight.dp.toPx(),
+            ).withBitmapSize(bitmap.width, bitmap.height),
+        )
+    }
+}
 
-            when (underlineMode) {
-                1 -> {
-                    drawLine(
-                        color = resolvedUnderlineColor,
-                        start = Offset(0f, yBaseline),
-                        end = Offset(textResult.size.width.toFloat(), yBaseline),
-                        strokeWidth = strokeWidth,
-                    )
-                }
-                2 -> {
-                    val dashLength = 8.dp.toPx()
-                    val gapLength = 4.dp.toPx()
-                    var x = 0f
-                    while (x < textResult.size.width) {
-                        val endX = minOf(x + dashLength, textResult.size.width.toFloat())
-                        drawLine(
-                            color = resolvedUnderlineColor,
-                            start = Offset(x, yBaseline),
-                            end = Offset(endX, yBaseline),
-                            strokeWidth = strokeWidth,
-                        )
-                        x += dashLength + gapLength
-                    }
-                }
-                3 -> {
-                    val amplitude = 2.dp.toPx()
-                    val period = 12.dp.toPx()
-                    val path = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(0f, yBaseline)
-                        var x = 0f
-                        while (x < textResult.size.width) {
-                            val nextX = minOf(x + period / 2, textResult.size.width.toFloat())
-                            val controlY = if ((x / period).toInt() % 2 == 0) {
-                                yBaseline - amplitude
-                            } else {
-                                yBaseline + amplitude
-                            }
-                            quadraticTo(x, controlY, nextX, yBaseline)
-                            x += period / 2
-                        }
-                    }
-                    drawPath(
-                        path = path,
-                        color = resolvedUnderlineColor,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                    )
-                }
-                4 -> {
-                    val barHeight = 3.dp.toPx()
-                    drawLine(
-                        color = resolvedUnderlineColor,
-                        start = Offset(0f, yBaseline),
-                        end = Offset(textResult.size.width.toFloat(), yBaseline),
-                        strokeWidth = barHeight,
-                        cap = StrokeCap.Round,
-                    )
-                }
-                6 -> {
-                    val y = textResult.size.height * 0.52f
-                    drawLine(
-                        color = resolvedUnderlineColor,
-                        start = Offset(0f, y),
-                        end = Offset(textResult.size.width.toFloat(), y),
-                        strokeWidth = strokeWidth,
-                    )
-                }
+private data class PreviewBackground(val bitmap: Bitmap, val image: ReaderTextBackgroundImage)
+
+/** 命中的那几段。正则编辑到一半不合法就当没命中，不能让弹层崩掉。 */
+private fun previewHitRanges(pattern: String, text: String): List<IntRange> =
+    runCatching { Regex(pattern.ifBlank { ".*" }) }.getOrNull()
+        ?.findAll(text)
+        ?.map { it.range }
+        ?.filter { it.first <= it.last }
+        ?.toList()
+        .orEmpty()
+
+/** 只给命中的段加样式；命中字距按正文口径挂在段首前一个字与段末那个字上。 */
+private fun previewAnnotatedString(
+    rule: HighlightRule,
+    hits: List<IntRange>,
+    beforeEm: TextUnit,
+    afterEm: TextUnit,
+    fontFamily: FontFamily?,
+): AnnotatedString {
+    val text = rule.normalizedSampleText()
+    val hitStyle = SpanStyle(
+        color = rule.textColor?.let(::Color) ?: Color.Unspecified,
+        fontFamily = fontFamily,
+        fontWeight = rule.fontWeight.takeIf { it != 400 }?.let(::FontWeight),
+        fontStyle = if (rule.isItalic) FontStyle.Italic else null,
+        fontSize = if (rule.fontSizeOffset == 0) TextUnit.Unspecified else (16 + rule.fontSizeOffset).sp,
+    )
+    return buildAnnotatedString {
+        append(text)
+        val last = text.lastIndex
+        hits.forEach { range ->
+            addStyle(hitStyle, range.first, range.last + 1)
+            if (beforeEm.value > 0f && range.first > 0) {
+                addStyle(SpanStyle(letterSpacing = beforeEm), range.first - 1, range.first)
+            }
+            if (afterEm.value > 0f && range.last < last) {
+                addStyle(SpanStyle(letterSpacing = afterEm), range.last, range.last + 1)
             }
         }
     }
 }
 
+/** 命中段在一行里的矩形：逐行切开，段首让出前距、段末让出后距，高度取整行行盒。 */
+private fun previewHitBoxes(
+    layout: TextLayoutResult,
+    hits: List<IntRange>,
+    beforePx: Float,
+    afterPx: Float,
+    lastCharIndex: Int,
+): List<Rect> {
+    val boxes = ArrayList<Rect>(hits.size)
+    hits.forEach { range ->
+        for (line in 0 until layout.lineCount) {
+            val from = maxOf(range.first, layout.getLineStart(line))
+            val to = minOf(range.last + 1, layout.getLineEnd(line))
+            if (to <= from) continue
+            val head = layout.getBoundingBox(from)
+            val tail = layout.getBoundingBox(to - 1)
+            boxes += Rect(
+                left = minOf(head.left, tail.left) -
+                        if (from == range.first && from > 0) beforePx else 0f,
+                top = layout.getLineTop(line),
+                right = maxOf(head.right, tail.right) +
+                        if (to - 1 == range.last && to - 1 < lastCharIndex) afterPx else 0f,
+                bottom = layout.getLineBottom(line),
+            )
+        }
+    }
+    return boxes
+}
+
+/**
+ * 自定义字体：正文按 fontPath 取 Typeface，预览取同一份文件，
+ * 否则「字体替换」这一栏在预览里永远看不出差别。
+ */
+@Composable
+private fun rememberPreviewFontFamily(fontPath: String?): FontFamily? {
+    val path = fontPath?.takeIf { it.isNotBlank() } ?: return null
+    return produceState<FontFamily?>(initialValue = null, path) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                Typeface.createFromFile(path)?.let { FontFamily(it) }
+            }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+        }
+    }.value
+}
+
+/**
+ * 九宫格切图：全程只有横向拉伸。左右两条线之间那一格是唯一会被拉长的地方，
+ * 上下两条线只决定「字落在图的哪一段里」——整张图的高度按缩放倍数锁死，纵向一条边都不拉。
+ */
 @Composable
 private fun NinePatchEditorDialog(
     show: Boolean,
@@ -835,6 +1172,7 @@ private fun NinePatchEditorDialog(
     initialRight: Float,
     initialTop: Float,
     initialBottom: Float,
+    previewRule: HighlightRule,
     onDismissRequest: () -> Unit,
     onSave: (left: Float, right: Float, top: Float, bottom: Float) -> Unit,
 ) {
@@ -842,7 +1180,6 @@ private fun NinePatchEditorDialog(
     var right by remember(show, imagePath) { mutableFloatStateOf(initialRight) }
     var top by remember(show, imagePath) { mutableFloatStateOf(initialTop) }
     var bottom by remember(show, imagePath) { mutableFloatStateOf(initialBottom) }
-    var stretchMode by remember(show) { mutableIntStateOf(0) }
     var dragHandle by remember { mutableStateOf<NineSliceHandle?>(null) }
 
     val bitmap = remember(imagePath) {
@@ -873,27 +1210,9 @@ private fun NinePatchEditorDialog(
                 .verticalScroll(rememberScrollState()),
         ) {
             AppText(
-                stringResource(R.string.nine_slice_drag_hint),
+                stringResource(R.string.nine_slice_split_hint),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf(
-                    R.string.nine_slice_mode_all,
-                    R.string.nine_slice_mode_horizontal,
-                    R.string.nine_slice_mode_vertical,
-                ).forEachIndexed { index, label ->
-                    FilterChip(
-                        selected = stretchMode == index,
-                        onClick = { stretchMode = index },
-                        label = { AppText(stringResource(label)) },
-                    )
-                }
-            }
             // Image preview with split lines — use single Canvas to avoid coordinate mismatch
             Box(
                 modifier = Modifier
@@ -906,23 +1225,23 @@ private fun NinePatchEditorDialog(
                     Canvas(
                         modifier = Modifier
                             .fillMaxSize()
-                            .pointerInput(bitmap, stretchMode) {
+                            .pointerInput(bitmap) {
                                 detectDragGestures(
                                     onDragStart = { point ->
                                         val rect = nineSlicePreviewRect(
                                             size.width.toFloat(), size.height.toFloat(),
                                             bitmap.width.toFloat(), bitmap.height.toFloat(),
                                         )
-                                        val candidates = buildList {
-                                            if (stretchMode != 2) {
-                                                add(NineSliceHandle.LEFT to kotlin.math.abs(point.x - (rect.left + rect.width * left)))
-                                                add(NineSliceHandle.RIGHT to kotlin.math.abs(point.x - (rect.right - rect.width * right)))
-                                            }
-                                            if (stretchMode != 1) {
-                                                add(NineSliceHandle.TOP to kotlin.math.abs(point.y - (rect.top + rect.height * top)))
-                                                add(NineSliceHandle.BOTTOM to kotlin.math.abs(point.y - (rect.bottom - rect.height * bottom)))
-                                            }
-                                        }
+                                        val candidates = listOf(
+                                            NineSliceHandle.LEFT to
+                                                    abs(point.x - (rect.left + rect.width * left)),
+                                            NineSliceHandle.RIGHT to
+                                                    abs(point.x - (rect.right - rect.width * right)),
+                                            NineSliceHandle.TOP to
+                                                    abs(point.y - (rect.top + rect.height * top)),
+                                            NineSliceHandle.BOTTOM to
+                                                    abs(point.y - (rect.bottom - rect.height * bottom)),
+                                        )
                                         dragHandle = candidates.minByOrNull { it.second }
                                             ?.takeIf { it.second <= 32.dp.toPx() }?.first
                                     },
@@ -983,6 +1302,7 @@ private fun NinePatchEditorDialog(
                         // Bottom line
                         val by = offsetY + imageH * (1f - bottom)
                         drawLine(lineColor, Offset(offsetX, by), Offset(offsetX + imageW, by), lineWidth)
+                        // 绿框里那一块就是会被横向拉长的中段，也是字待的那一段。
                         drawRect(
                             lineColor.copy(alpha = 0.18f),
                             topLeft = Offset(lx, ty),
@@ -996,6 +1316,25 @@ private fun NinePatchEditorDialog(
                     }
                 }
             }
+            // 拖完四条线马上看正文效果：背景图、缩放、长度偏移用的都是弹层里当前这份设置，
+            // 四条切分线则跟着拖动实时变。
+            HighlightPreviewCard(
+                rule = previewRule.copy(
+                    npLeft = left,
+                    npRight = right,
+                    npTop = top,
+                    npBottom = bottom,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            )
+            AppText(
+                stringResource(R.string.nine_slice_horizontal_hint),
+                style = LegadoTheme.typography.labelMedium,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
             NineSliceSlider(
                 title = stringResource(R.string.nine_patch_split_left),
                 value = left,
@@ -1005,6 +1344,12 @@ private fun NinePatchEditorDialog(
                 title = stringResource(R.string.nine_patch_split_right),
                 value = right,
                 onValueChange = { right = it },
+            )
+            AppText(
+                stringResource(R.string.nine_slice_vertical_hint),
+                style = LegadoTheme.typography.labelMedium,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
             NineSliceSlider(
                 title = stringResource(R.string.nine_patch_split_top),

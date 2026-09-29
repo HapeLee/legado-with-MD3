@@ -24,6 +24,17 @@ data class ReaderTextStyle(
     val strikeThrough: Boolean = false,
     /** Font-native underline used by HTML UnderlineSpan; custom reader underlines stay separate. */
     val nativeUnderline: Boolean = false,
+    /**
+     * 命中字距（px）：这一格是命中段的首字时要在它左边让出的空白。段内的字恒为 0——
+     * 留白属于命中段与相邻字之间，不属于段内。见 [io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper]。
+     */
+    val matchSpacingBeforePx: Float = 0f,
+    /** 命中字距（px）：这一格是命中段的末字时要在它右边让出的空白。 */
+    val matchSpacingAfterPx: Float = 0f,
+    /** 命中行行距（px）：包含命中的那一行整行往下抬这一截，行盒本身高度不变。 */
+    val linePadTopPx: Float = 0f,
+    /** 命中行行距（px）：这一行之后多留的空白。 */
+    val linePadBottomPx: Float = 0f,
 )
 
 data class ReaderTextBackgroundImage(
@@ -34,10 +45,16 @@ data class ReaderTextBackgroundImage(
     val ninePatchRight: Float = 0.1f,
     val ninePatchTop: Float = 0.1f,
     val ninePatchBottom: Float = 0.1f,
+    /** 九宫格左偏移（px）：中间那一格向左多拉（负值少拉）这么多，左边那两条边跟着平移。 */
+    val lengthOffsetLeftPx: Float = 0f,
+    /** 九宫格右偏移（px）：见 [lengthOffsetLeftPx]，方向相反。 */
+    val lengthOffsetRightPx: Float = 0f,
     val contentInsetLeftPx: Float = 0f,
     val contentInsetRightPx: Float = 0f,
     val contentInsetTopPx: Float = 0f,
     val contentInsetBottomPx: Float = 0f,
+    /** 上下两条切分线之间那一条带按 [scale] 换算后的锁定高度：纵向全程不拉伸。 */
+    val centerBandPx: Float = 0f,
 ) {
     val hasNinePatchBorder: Boolean
         get() = source.substringBefore('?').substringBefore('#')
@@ -54,13 +71,46 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
     val contentWidthPx = (widthPx - borderPx * 2).coerceAtLeast(0)
     val contentHeightPx = (heightPx - borderPx * 2).coerceAtLeast(0)
     val fixedScale = scale.coerceIn(0.1f, 5f)
+    val left = ninePatchLeft.coerceIn(0f, 1f)
+    val right = ninePatchRight.coerceIn(0f, 1f)
+    val top = ninePatchTop.coerceIn(0f, 1f)
+    val bottom = ninePatchBottom.coerceIn(0f, 1f)
     return copy(
-        contentInsetLeftPx = contentWidthPx * ninePatchLeft.coerceIn(0f, 1f) * fixedScale,
-        contentInsetRightPx = contentWidthPx * ninePatchRight.coerceIn(0f, 1f) * fixedScale,
-        contentInsetTopPx = contentHeightPx * ninePatchTop.coerceIn(0f, 1f) * fixedScale,
-        contentInsetBottomPx = contentHeightPx * ninePatchBottom.coerceIn(0f, 1f) * fixedScale,
+        contentInsetLeftPx = contentWidthPx * left * fixedScale,
+        contentInsetRightPx = contentWidthPx * right * fixedScale,
+        contentInsetTopPx = contentHeightPx * top * fixedScale,
+        contentInsetBottomPx = contentHeightPx * bottom * fixedScale,
+        centerBandPx = (contentHeightPx * (1f - top - bottom).coerceAtLeast(0f) * fixedScale)
+            .coerceAtLeast(0f),
     )
 }
+
+/**
+ * 九宫格上沿要在行盒上方再外扩多少。纵向一条边都不拉伸：整张图的高度按 [scale] 锁死为
+ * [contentInsetTopPx] + [centerBandPx] + [contentInsetBottomPx]，上下两条切分线只决定「字落在图的
+ * 哪一段里」，所以中间那条带按行盒高居中——带子比行盒高就把字上下各让出多余的一半，
+ * 比行盒矮就让字从带的上下沿各超出一样多，永远不会把图纵向拉开。非九宫格不外扩。
+ */
+fun ReaderTextBackgroundImage.frameTopPx(lineHeightPx: Float): Float =
+    if (fit != 3) 0f else contentInsetTopPx + (centerBandPx - lineHeightPx) / 2f
+
+/** [frameTopPx] 的下沿那一半：上沿外扩之后，下沿 = 图片总高 − 行盒高 − 上沿。 */
+fun ReaderTextBackgroundImage.frameBottomPx(lineHeightPx: Float): Float =
+    if (fit != 3) 0f else contentInsetBottomPx + (centerBandPx - lineHeightPx) / 2f
+
+/**
+ * 左/右偏移各自换算成中间那一格被推出去的量：正值往外拉，负值往里缩。
+ *
+ * 缩到底只能把中间那一格挤成零宽，不许它翻过去和另一条切分线交叉，所以下限取 `-文字宽/2`
+ * （两侧各让一半恰好归零）。外框（[io.legado.app.feature.reader.core.model.nineSliceFrame]）和
+ * 绘制切分（[ReaderNineSliceLayout]）共用这一份口径，气泡才会刚好包住画出来的那一格。
+ */
+fun ReaderTextBackgroundImage.stretchLeftPx(textWidthPx: Float): Float =
+    lengthOffsetLeftPx.coerceAtLeast(-textWidthPx / 2f)
+
+/** [stretchLeftPx] 的右侧那一半。 */
+fun ReaderTextBackgroundImage.stretchRightPx(textWidthPx: Float): Float =
+    lengthOffsetRightPx.coerceAtLeast(-textWidthPx / 2f)
 
 data class ReaderTextShadow(
     val colorArgb: Int,

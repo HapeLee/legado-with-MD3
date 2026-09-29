@@ -102,13 +102,10 @@ data class MultiRoleRuleUiState(
     val moveGroupTarget: String? = null,
     /** 分组删除确认对话框的目标组 id（非空 = 打开中）。 */
     val deleteGroupTarget: String? = null,
-    /** 展开中的池（行内显示成员列表），null = 无。 */
-    override val expandedPoolId: String? = null,
-    override val memberQuery: String = "",
-    /** 展开池的成员列表（含启用状态）。 */
-    override val members: ImmutableList<CastMemberUi> = persistentListOf(),
-    /** 「添加音色到池」对话框。 */
-    val showMemberPicker: Boolean = false,
+    /** 展开中的池（行内显示成员列表），支持同时展开多个，点开一个不把另一个顶掉。 */
+    override val expandedPools: ImmutableList<ExpandedPoolUi> = persistentListOf(),
+    /** 「添加音色到池」对话框（非空 = 打开中，值 = 加进哪个池）。 */
+    val pickerPoolId: String? = null,
     val pickerQuery: String = "",
     val pickerCandidates: ImmutableList<CastMemberUi> = persistentListOf(),
     val assignments: ImmutableList<CastAssignmentRowUi> = persistentListOf(),
@@ -184,16 +181,16 @@ sealed interface MultiRoleRuleIntent {
     data object DismissDeleteGroup : MultiRoleRuleIntent
     data class ConfirmDeleteGroup(val groupId: String) : MultiRoleRuleIntent
 
-    /** 池行展开/收起（行内成员列表）。 */
+    /** 池行展开/收起（行内成员列表），可同时展开多个。 */
     data class TogglePoolExpand(val poolId: String) : MultiRoleRuleIntent
-    data class UpdateMemberQuery(val query: String) : MultiRoleRuleIntent
+    data class UpdateMemberQuery(val poolId: String, val query: String) : MultiRoleRuleIntent
     /** 成员复选框 = 池内启用开关（勾上才会出现在分配角色音色菜单）。 */
     data class ToggleMemberEnabled(val poolId: String, val voiceId: String, val enabled: Boolean) : MultiRoleRuleIntent
     /** 从池中移除该音色（行尾删除）。 */
     data class RemoveMember(val poolId: String, val voiceId: String) : MultiRoleRuleIntent
 
-    /** 添加音色到池（对话框勾选，保存才加入）。 */
-    data object ShowMemberPicker : MultiRoleRuleIntent
+    /** 添加音色到池（对话框勾选，保存才加入）；可同时展开多个池，所以要带上目标池。 */
+    data class ShowMemberPicker(val poolId: String) : MultiRoleRuleIntent
     data object DismissMemberPicker : MultiRoleRuleIntent
     data class UpdatePickerQuery(val query: String) : MultiRoleRuleIntent
     data class TogglePickerSelection(val voiceId: String, val checked: Boolean) : MultiRoleRuleIntent

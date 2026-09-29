@@ -45,15 +45,15 @@ data class BgmPoolUiState(
     override val searchQuery: String = "",
     override val dragTargetGroupId: String? = null,
     override val dragSourceGroupId: String? = null,
-    override val expandedPoolId: String? = null,
-    override val members: ImmutableList<CastMemberUi> = persistentListOf(),
-    override val memberQuery: String = "",
+    /** 展开中的池，支持同时展开多个（与角色声音池一致）。 */
+    override val expandedPools: ImmutableList<ExpandedPoolUi> = persistentListOf(),
     val editDialog: PoolEditDialogState? = null,
     val deleteTarget: CastPoolRow? = null,
     val groupDialog: GroupEditDialogState? = null,
     val moveGroupTarget: String? = null,
     val deleteGroupTarget: String? = null,
-    val showMemberPicker: Boolean = false,
+    /** 「添加配乐到池」对话框（非空 = 打开中，值 = 加进哪个池）。 */
+    val pickerPoolId: String? = null,
     val pickerQuery: String = "",
     val pickerCandidates: ImmutableList<CastMemberUi> = persistentListOf(),
     /** 配乐库（导入进来的音频副本）。 */
@@ -106,11 +106,12 @@ sealed interface BgmPoolIntent {
     data class ConfirmDeleteGroup(val groupId: String) : BgmPoolIntent
 
     data class TogglePoolExpand(val poolId: String) : BgmPoolIntent
-    data class UpdateMemberQuery(val query: String) : BgmPoolIntent
+    data class UpdateMemberQuery(val poolId: String, val query: String) : BgmPoolIntent
     data class ToggleMemberEnabled(val poolId: String, val trackId: String, val enabled: Boolean) : BgmPoolIntent
     data class RemoveMember(val poolId: String, val trackId: String) : BgmPoolIntent
 
-    data object ShowMemberPicker : BgmPoolIntent
+    /** 可同时展开多个池，加成员的对话框要指明进哪个池。 */
+    data class ShowMemberPicker(val poolId: String) : BgmPoolIntent
     data object DismissMemberPicker : BgmPoolIntent
     data class UpdatePickerQuery(val query: String) : BgmPoolIntent
     data class TogglePickerSelection(val trackId: String, val checked: Boolean) : BgmPoolIntent

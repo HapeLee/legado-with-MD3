@@ -259,7 +259,8 @@ class BookVoiceCastingViewModel(
         }
     }
 
-    private fun showSaveError(error: Throwable) {        _effects.tryEmit(
+    private fun showSaveError(error: Throwable) {
+        _effects.tryEmit(
             BookVoiceCastingEffect.ShowToast(
                 error.localizedMessage ?: appCtx.getString(R.string.save_error)
             )

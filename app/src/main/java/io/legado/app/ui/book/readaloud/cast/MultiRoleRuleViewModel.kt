@@ -55,7 +55,7 @@ class MultiRoleRuleViewModel(
         when (intent) {
             MultiRoleRuleIntent.Refresh -> {
                 refreshPools()
-                _uiState.value.expandedPoolId?.let { refreshMembers(it) }
+                _uiState.value.expandedPools.forEach { refreshMembers(it.poolId) }
                 if (_uiState.value.tab == CastTab.Assignments) loadAssignments()
             }
 
@@ -186,11 +186,12 @@ class MultiRoleRuleViewModel(
             is MultiRoleRuleIntent.ConfirmDeletePool -> execute {
                 VoicePoolStore.deletePool(intent.poolId)
                 _uiState.update {
-                    if (it.expandedPoolId == intent.poolId) {
-                        it.copy(deleteTarget = null, expandedPoolId = null, members = persistentListOf())
-                    } else {
-                        it.copy(deleteTarget = null)
-                    }
+                    it.copy(
+                        deleteTarget = null,
+                        expandedPools = it.expandedPools
+                            .filterNot { pool -> pool.poolId == intent.poolId }
+                            .toImmutableList(),
+                    )
                 }
                 refreshPools()
             }
@@ -252,31 +253,48 @@ class MultiRoleRuleViewModel(
             }
 
             is MultiRoleRuleIntent.TogglePoolExpand -> {
-                val current = _uiState.value.expandedPoolId
-                if (current == intent.poolId) {
-                    _uiState.update { it.copy(expandedPoolId = null, members = persistentListOf()) }
-                } else {
-                    _uiState.update {
-                        it.copy(expandedPoolId = intent.poolId, memberQuery = "")
-                    }
-                    refreshMembers(intent.poolId)
+                // 展开/收起只管自己那一份：以前整个页面只存一个 expandedPoolId，
+                // 点开第二个池就把第一个顶掉了（2026-09-29 实测）。
+                val opening = _uiState.value.expandedPools.none { it.poolId == intent.poolId }
+                _uiState.update { state ->
+                    state.copy(
+                        expandedPools = if (opening) {
+                            (state.expandedPools + ExpandedPoolUi(intent.poolId)).toImmutableList()
+                        } else {
+                            state.expandedPools
+                                .filterNot { it.poolId == intent.poolId }
+                                .toImmutableList()
+                        },
+                    )
                 }
+                if (opening) refreshMembers(intent.poolId)
             }
 
             is MultiRoleRuleIntent.UpdateMemberQuery -> _uiState.update { state ->
-                val query = intent.query.trim()
+                // 只记筛选词，成员列表原样留着，筛选在界面里做（见 CastPoolCard）
                 state.copy(
-                    memberQuery = intent.query,
-                    members = filterMembers(state.members, allVoices, query),
+                    expandedPools = state.expandedPools
+                        .withExpandedPool(intent.poolId) { it.copy(memberQuery = intent.query) }
+                        .toImmutableList(),
                 )
             }
 
             is MultiRoleRuleIntent.ToggleMemberEnabled -> {
                 _uiState.update { state ->
                     state.copy(
-                        members = state.members.map { m ->
-                            if (m.voiceId == intent.voiceId) m.copy(checked = intent.enabled) else m
-                        }.toImmutableList(),
+                        expandedPools = state.expandedPools
+                            .withExpandedPool(intent.poolId) { pool ->
+                                pool.copy(
+                                    members = pool.members.map { m ->
+                                        if (m.voiceId == intent.voiceId) {
+                                            m.copy(checked = intent.enabled)
+                                        } else {
+                                            m
+                                        }
+                                    },
+                                )
+                            }
+                            .toImmutableList(),
                     )
                 }
                 execute {
@@ -293,14 +311,14 @@ class MultiRoleRuleViewModel(
                 refreshPools()
             }
 
-            MultiRoleRuleIntent.ShowMemberPicker -> execute {
-                val poolId = _uiState.value.expandedPoolId ?: return@execute
+            is MultiRoleRuleIntent.ShowMemberPicker -> execute {
+                val poolId = intent.poolId
                 allVoices = VoicePoolStore.allVoicePairs()
                 val engineNames = VoicePoolStore.voiceEngineNames()
                 val inPool = VoicePoolStore.memberVoiceIds(poolId)
                 _uiState.update {
                     it.copy(
-                        showMemberPicker = true,
+                        pickerPoolId = poolId,
                         pickerQuery = "",
                         pickerCandidates = allVoices
                             .filterNot { (id, _) -> inPool.contains(id) }
@@ -318,7 +336,7 @@ class MultiRoleRuleViewModel(
             }
 
             MultiRoleRuleIntent.DismissMemberPicker -> _uiState.update {
-                it.copy(showMemberPicker = false, pickerCandidates = persistentListOf())
+                it.copy(pickerPoolId = null, pickerCandidates = persistentListOf())
             }
 
             is MultiRoleRuleIntent.UpdatePickerQuery -> _uiState.update { state ->
@@ -338,7 +356,7 @@ class MultiRoleRuleViewModel(
             }
 
             MultiRoleRuleIntent.SaveMemberPicker -> {
-                val poolId = _uiState.value.expandedPoolId ?: return
+                val poolId = _uiState.value.pickerPoolId ?: return
                 val picked = _uiState.value.pickerCandidates
                     .filter { it.checked }
                     .map { it.voiceId }
@@ -347,7 +365,7 @@ class MultiRoleRuleViewModel(
                     val merged = VoicePoolStore.memberVoiceIds(poolId) + picked
                     VoicePoolStore.setMembers(poolId, merged)
                     _uiState.update {
-                        it.copy(showMemberPicker = false, pickerCandidates = persistentListOf())
+                        it.copy(pickerPoolId = null, pickerCandidates = persistentListOf())
                     }
                     refreshMembers(poolId)
                     refreshPools()
@@ -509,6 +527,7 @@ class MultiRoleRuleViewModel(
         }
     }
 
+    /** 添加对话框的候选筛选（成员列表的筛选在界面里做，见 CastPoolCard）。 */
     private fun filterMembers(
         list: kotlinx.collections.immutable.ImmutableList<CastMemberUi>,
         voices: List<Pair<String, String>>,
@@ -557,26 +576,26 @@ class MultiRoleRuleViewModel(
         VoicePoolStore.saveSlots(plan.first, plan.second)
     }
 
+    /**
+     * 重新取某个展开池的成员：存筛选前的全量（筛选在界面里做），这样清空筛选词
+     * 能把整池看回来。池已经收起就什么都不做，withExpandedPool 会原样返回。
+     */
     private fun refreshMembers(poolId: String) {
         execute {
             allVoices = VoicePoolStore.allVoicePairs()
             val detail = VoicePoolStore.poolDetail(poolId)
-            val query = _uiState.value.memberQuery.trim()
-            _uiState.update {
-                it.copy(
-                    members = detail.members
-                        .map { m ->
-                            CastMemberUi(
-                                voiceId = m.id,
-                                displayName = m.displayName,
-                                engineName = m.engineName,
-                                checked = m.enabled,
-                            )
-                        }
-                        .let { rows ->
-                            if (query.isEmpty()) rows
-                            else rows.filter { r -> r.displayName.contains(query, ignoreCase = true) }
-                        }
+            val rows = detail.members.map { m ->
+                CastMemberUi(
+                    voiceId = m.id,
+                    displayName = m.displayName,
+                    engineName = m.engineName,
+                    checked = m.enabled,
+                )
+            }
+            _uiState.update { state ->
+                state.copy(
+                    expandedPools = state.expandedPools
+                        .withExpandedPool(poolId) { pool -> pool.copy(members = rows) }
                         .toImmutableList(),
                 )
             }

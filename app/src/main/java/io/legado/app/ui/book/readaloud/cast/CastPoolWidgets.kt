@@ -137,12 +137,34 @@ interface CastPoolView {
     val searchQuery: String
     val dragTargetGroupId: String?
     val dragSourceGroupId: String?
-    val expandedPoolId: String?
 
-    /** 展开池的成员 + 成员筛选词。 */
-    val members: List<CastMemberUi>
-    val memberQuery: String
+    /** 展开中的池（行内显示成员列表），每个池自带成员与筛选词，所以能同时展开多个。 */
+    val expandedPools: List<ExpandedPoolUi>
 }
+
+/**
+ * 一个展开中的池。成员列表是筛选前的全量，[memberQuery] 只影响显示——
+ * 以前把筛完的结果写回状态，删空关键词后列表就永久变窄了。
+ */
+data class ExpandedPoolUi(
+    val poolId: String,
+    val members: List<CastMemberUi> = emptyList(),
+    val memberQuery: String = "",
+)
+
+/**
+ * 改掉 [poolId] 那一份展开状态；该池没展开就原样返回（后台刷新回来时池可能已经被收起了）。
+ * 两个池页共用，所以展开状态只有这一处口径。
+ */
+fun List<ExpandedPoolUi>.withExpandedPool(
+    poolId: String,
+    transform: (ExpandedPoolUi) -> ExpandedPoolUi,
+): List<ExpandedPoolUi> =
+    if (none { it.poolId == poolId }) {
+        this
+    } else {
+        map { if (it.poolId == poolId) transform(it) else it }
+    }
 
 /** 公共部件发回页面的动作，全部是回调：本文件不 import 任何页面的 Intent。 */
 class CastPoolActions(
@@ -158,11 +180,13 @@ class CastPoolActions(
     val onEditPool: (CastPoolRow) -> Unit,
     val onDeletePool: (CastPoolRow) -> Unit,
     val onExpandPool: (String) -> Unit,
-    val onAddMembers: () -> Unit,
-    /** (池 id, 成员 id, 勾选) —— 成员动作总是发生在展开中的那个池上。 */
+    /** 可以同时展开多个池，所以「加成员」这种池内动作一律带上池 id。 */
+    val onAddMembers: (String) -> Unit,
+    /** (池 id, 成员 id, 勾选) */
     val onMemberToggle: (String, String, Boolean) -> Unit,
     val onMemberRemove: (String, String) -> Unit,
-    val onMemberQuery: (String) -> Unit,
+    /** (池 id, 筛选词) */
+    val onMemberQuery: (String, String) -> Unit,
 )
 
 @Composable
@@ -299,13 +323,14 @@ fun PoolTreeList(
                         }
 
                         else -> row.pool?.let { pool ->
+                            val opened = view.expandedPools.firstOrNull { it.poolId == pool.id }
                             CastPoolCard(
                                 pool = pool,
                                 depth = row.depth,
                                 showGroup = !canReorder,
-                                expanded = view.expandedPoolId == pool.id,
-                                members = if (view.expandedPoolId == pool.id) view.members else emptyList(),
-                                memberQuery = if (view.expandedPoolId == pool.id) view.memberQuery else "",
+                                expanded = opened != null,
+                                members = opened?.members.orEmpty(),
+                                memberQuery = opened?.memberQuery.orEmpty(),
                                 wording = wording,
                                 dragModifier = dragModifier,
                                 elevation = elevation,
@@ -313,10 +338,10 @@ fun PoolTreeList(
                                 onEdit = { actions.onEditPool(pool) },
                                 onDelete = { actions.onDeletePool(pool) },
                                 onExpand = { actions.onExpandPool(pool.id) },
-                                onAddMembers = actions.onAddMembers,
+                                onAddMembers = { actions.onAddMembers(pool.id) },
                                 onMemberToggle = { id, on -> actions.onMemberToggle(pool.id, id, on) },
                                 onMemberRemove = { id -> actions.onMemberRemove(pool.id, id) },
-                                onQuery = actions.onMemberQuery,
+                                onQuery = { q -> actions.onMemberQuery(pool.id, q) },
                                 memberTrailing = memberTrailing,
                             )
                         }
@@ -534,6 +559,14 @@ private fun CastPoolCard(
     onQuery: (String) -> Unit,
     memberTrailing: (@Composable (CastMemberUi) -> Unit)?,
 ) {
+    // 筛选词只管显示：状态里留的是池的全量成员，删空关键词就能看回来。
+    // 以前是把筛完的结果写回状态，于是筛过一次再把词删掉，列表就永久变窄了。
+    val memberFilter = memberQuery.trim()
+    val visibleMembers = if (memberFilter.isEmpty()) {
+        members
+    } else {
+        members.filter { it.displayName.contains(memberFilter, ignoreCase = true) }
+    }
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -594,6 +627,10 @@ private fun CastPoolCard(
                 tint = LegadoTheme.colorScheme.onSurfaceVariant,
             )
         }
+        // 成员列表就地展开/收起，不套 expandVertically：整张池卡是 ReorderableItem 里的一行，
+        // 它自带 Modifier.animateItem()。两条高度动画口径不一致——animateItem 按「上一帧量到的
+        // 行高」摆放后面的行，expandVertically 每帧都在改这一行的真实高度，于是展开时
+        // 下面的行直接压在上面的行上（2026-09-29 实测「音色重叠了」）。
         if (expanded) {
             // 展开区：添加成员 + 成员复选框列表（复选框 = 池内启用）
             Row(
@@ -631,7 +668,7 @@ private fun CastPoolCard(
                     )
                 }
             }
-            if (members.isEmpty()) {
+            if (visibleMembers.isEmpty()) {
                 Text(
                     text = stringResource(wording.noMembers),
                     style = MaterialTheme.typography.bodyMedium,
@@ -639,7 +676,7 @@ private fun CastPoolCard(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 )
             }
-            members.forEach { member ->
+            visibleMembers.forEach { member ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

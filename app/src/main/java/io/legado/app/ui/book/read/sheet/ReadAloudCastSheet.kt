@@ -78,21 +78,25 @@ fun ReadAloudCastSheet(
     onIntent: (ReadBookIntent) -> Unit,
     menuConfig: ReadMenuConfig? = null,
 ) {
-    if (!show || ordinal < 0) return
+    // 关掉后宿主立刻把 ordinal 清成 -1：先把它记住，再让整棵树多活 180ms，
+    // 否则退场动画一帧都播不出来（官方那侧的 ChangeChapterSourceSheet 也是这个套路）。
+    val opened = show && ordinal >= 0
+    val ordinalAt = rememberSheetArg(opened, ordinal)
+    if (!rememberSheetAlive(opened) || ordinalAt < 0) return
     val book = ReadBook.book ?: return
     val bookUrl = book.bookUrl
     val chapterIndex = ReadBook.durChapterIndex
-    val loadKey = "$bookUrl#$chapterIndex#$ordinal"
+    val loadKey = "$bookUrl#$chapterIndex#$ordinalAt"
     val sheetData by produceState<CastAssignmentStore.SheetData?>(initialValue = null, loadKey) {
         value = withContext(Dispatchers.IO) {
-            CastAssignmentStore.sheetData(bookUrl, chapterIndex, ordinal)
+            CastAssignmentStore.sheetData(bookUrl, chapterIndex, ordinalAt)
         }
     }
     val data = sheetData ?: return
     // 试听念的就是这一句正文（锚点计数与胶囊同源）
     val quoteText by produceState<String?>(initialValue = null, loadKey) {
         value = withContext(Dispatchers.IO) {
-            CastAssignmentStore.quoteText(book, chapterIndex, ordinal)
+            CastAssignmentStore.quoteText(book, chapterIndex, ordinalAt)
         }
     }
 
@@ -122,11 +126,13 @@ fun ReadAloudCastSheet(
     }
 
     // 窗口内置空 Compose 键盘控制器：切换输入框不再先收再弹
+    val scrimAlpha = rememberSheetScrimAlpha(opened)
     CastImeScope {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f))
+                // 遮罩跟着卡片一起淡入淡出：只让卡片动、黑底硬蹦的话，看起来还是「突然一响」
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
                 // 键盘弹出时整个 overlay 可用区缩小 → 居中的卡片自然上移
                 .safeDrawingPadding()
                 .clickable(
@@ -139,6 +145,7 @@ fun ReadAloudCastSheet(
         ) {
             CastSheetCard(
                 menuConfig = menuConfig,
+                visible = opened,
                 modifier = Modifier
                     .fillMaxWidth()
                     // 只吞掉点击、不抢焦点：用 clickable 会让正在输入的框失焦→键盘先收再弹
@@ -268,7 +275,7 @@ fun ReadAloudCastSheet(
                     ) {
                         if (data.assigned) {
                             TextButton(onClick = {
-                                onIntent(ReadBookIntent.UnassignRoleCast(ordinal))
+                                onIntent(ReadBookIntent.UnassignRoleCast(ordinalAt))
                             }) {
                                 Text(stringResource(R.string.cast_unassign))
                             }
@@ -283,7 +290,7 @@ fun ReadAloudCastSheet(
                             onClick = {
                                 onIntent(
                                     ReadBookIntent.CreateRoleCast(
-                                        ordinal = ordinal,
+                                        ordinal = ordinalAt,
                                         characterName = name,
                                         voicePoolLabel = pool,
                                         voiceId = voiceId,
@@ -300,7 +307,7 @@ fun ReadAloudCastSheet(
                             onClick = {
                                 onIntent(
                                     ReadBookIntent.ConfirmRoleCast(
-                                        ordinal = ordinal,
+                                        ordinal = ordinalAt,
                                         selectedCharacterId = selectedCharacterId,
                                         characterName = name,
                                         voicePoolLabel = pool,

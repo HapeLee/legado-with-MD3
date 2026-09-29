@@ -16,6 +16,9 @@ fun ReaderPage.textBackgroundRuns(): List<ReaderTextBackgroundRun> {
     // 逐字渲染背景，也不会把跨栏/跨行或隔着未匹配文字的同图段错误拼接。
     var previousElement: ReaderElement? = null
     elements.forEach { element ->
+        // 胶囊（角色分配 / 背景音乐）只是压在气泡上的按钮，原文里没有它，它对背景完全透明：
+        // 既不更新 previousElement 也不打断 run，前后的字照样并成一段，胶囊被同一个气泡包住。
+        if (element is ReaderElement.RoleCast || element is ReaderElement.BgmScene) return@forEach
         val text = element as? ReaderElement.Text
         if (text == null) {
             previousElement = element
@@ -58,12 +61,19 @@ fun ReaderPage.textBackgroundRuns(): List<ReaderTextBackgroundRun> {
         }
         previousElement = text
     }
-    return runs.map { run ->
-        if (run.image.fit != 3) run else run.copy(
-            bounds = run.bounds.copy(
-                left = run.bounds.left - run.image.contentInsetLeftPx,
-                right = run.bounds.right + run.image.contentInsetRightPx,
-            ),
+    return runs.map { run -> run.copy(bounds = run.image.nineSliceFrame(run.bounds)) }
+}
+
+/**
+ * 文字段 → 九宫格外框：外框 = 文字段 + 左右偏移（中间那一格各自往两侧拉出去这么多）
+ * + 四周一圈的原图厚度。上下边不在这里算——分页期已按「锁定高度」逐字算好，再由上面的合并取 min/max。
+ * 预览侧共用这个函数，气泡才会和正文一样宽。
+ */
+fun ReaderTextBackgroundImage.nineSliceFrame(content: ReaderRect): ReaderRect =
+    if (fit != 3) content else {
+        val textWidthPx = content.right - content.left
+        content.copy(
+            left = content.left - contentInsetLeftPx - stretchLeftPx(textWidthPx),
+            right = content.right + contentInsetRightPx + stretchRightPx(textWidthPx),
         )
     }
-}

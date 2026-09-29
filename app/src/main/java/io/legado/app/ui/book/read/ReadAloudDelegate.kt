@@ -247,23 +247,34 @@ class ReadAloudDelegate(
     }
 
     fun openConfigSheet() {
-        host.updateState { it.copy(activeSheet = ReadBookSheet.ReadAloudConfig) }
+        // 从底栏重新打开算「新一次设置」，回到常规页；只有被整屏页盖住再回来才停在原来那一页
+        host.updateState {
+            it.copy(activeSheet = ReadBookSheet.ReadAloudConfig, readAloudConfigTab = 0)
+        }
         scope.launch { syncConfiguredTtsVoices() }
     }
 
+    /** 卡片里滑页/点 tab：tab 住在状态里，弹层被拆掉重建才不会退回常规。 */
+    fun setConfigTab(tab: Int) {
+        host.updateState { it.copy(readAloudConfigTab = tab.coerceIn(0, 1)) }
+    }
+
+    /*
+     * 下面三个目的地是整屏 NavKey。以前推送前先把 `activeSheet` 清空，返回后就看到裸正文，
+     * 也就是「从朗读设置的引擎与音色进去、回来落到别处」；不清空又会让窗口级浮层的朗读设置
+     * 悬在新页面上面。现在两件事分开管：`activeSheet` 保留（返回时弹层自己摊回来），
+     * 卡片停在哪个 tab 由 `readAloudConfigTab` 记住，压住时由 ReadBookScreen 按导航栈顶收起。
+     */
     fun openTtsEnginesAndVoices() {
-        host.updateState { it.copy(activeSheet = null) }
         host.emitEffect(ReadBookEffect.OpenTtsEnginesAndVoices)
     }
 
     fun openTtsCache() {
-        host.updateState { it.copy(activeSheet = null) }
         host.emitEffect(ReadBookEffect.OpenTtsCache)
     }
 
     fun openBookVoiceCasting() {
         ReadBook.book?.bookUrl?.let { bookUrl ->
-            host.updateState { it.copy(activeSheet = null) }
             host.emitEffect(ReadBookEffect.OpenBookVoiceCasting(bookUrl))
         }
     }

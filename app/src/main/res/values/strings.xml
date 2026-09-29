@@ -932,6 +932,17 @@
     <string name="nine_slice_mode_vertical">Vertical</string>
     <string name="preview_effect">Preview</string>
     <string name="sample_text">Sample Text</string>
+    <string name="highlight_match_typography">Match Typography</string>
+    <string name="highlight_match_typography_hint">Everything below applies to the text your regex matches, and to nothing else.</string>
+    <string name="highlight_spacing_before">Spacing Before Match</string>
+    <string name="highlight_spacing_after">Spacing After Match</string>
+    <string name="highlight_line_spacing_above">Line Gap Above Match</string>
+    <string name="highlight_line_spacing_below">Line Gap Below Match</string>
+    <string name="highlight_bg_length_offset_left">Bubble Left Offset</string>
+    <string name="highlight_bg_length_offset_right">Bubble Right Offset</string>
+    <string name="nine_slice_split_hint">Only the green band stretches, and sideways only — its height is locked to the image, nothing is ever stretched vertically. The two vertical lines set how far that band stretches; the top and bottom lines just pick which band of the image the glyphs sit in, so dragging them is vertical alignment. Left and right offset move the two ends of the stretched band apart, without touching the characters around it.</string>
+    <string name="nine_slice_horizontal_hint">The two vertical lines: only the band between them is stretched sideways, and this is the only stretch in the whole image.</string>
+    <string name="nine_slice_vertical_hint">The two horizontal lines: where the glyphs sit inside the image. The height stays locked, nothing stretches vertically.</string>
     <string name="sure_delete">Are you sure you want to delete?</string>
     <string name="save_to_source">Save to source file (reset will be unavailable)</string>
     <string name="edit_chapter">Edit chapter</string>
@@ -3665,6 +3676,8 @@
     <string name="read_aloud_audio_download_start">Start download</string>
     <string name="read_aloud_audio_download_cancel">Cancel download</string>
     <string name="read_aloud_audio_download_chapter_bar">Chapters</string>
+    <string name="read_aloud_audio_download_chapter_hint">This chapter is downloaded (%1$d sentences); reading aloud plays the local audio</string>
+    <string name="read_aloud_audio_download_chapter_none">This chapter is not downloaded yet</string>
     <string name="read_aloud_audio_download_sentence_bar">Sentences</string>
     <string name="read_aloud_audio_download_downloaded">Downloaded chapters</string>
     <string name="read_aloud_audio_download_empty">Nothing downloaded yet</string>

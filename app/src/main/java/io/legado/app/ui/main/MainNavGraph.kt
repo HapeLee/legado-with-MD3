@@ -85,7 +85,6 @@ import io.legado.app.ui.book.knowledge.BookKnowledgeListViewModel
 import io.legado.app.ui.book.knowledge.CharacterAvatarCropDialog
 import io.legado.app.ui.book.knowledge.CharacterAvatarSourceSheet
 import io.legado.app.ui.book.knowledge.CharacterDetailIntent
-import io.legado.app.ui.book.knowledge.deleteCharacterAvatar
 import io.legado.app.ui.book.knowledge.saveCharacterAvatar
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
 import io.legado.app.ui.book.manga.MangaReaderRouteScreen
@@ -1267,11 +1266,9 @@ fun MainActivity.mainEntryProvider(
             },
             onUrl = { url ->
                 showAvatarSource = false
-                scope.launch {
-                    // 换成链接之前那份是本地的，留着就再没人引用它了
-                    withContext(IO) { deleteCharacterAvatar(context, state.avatarUri) }
-                    viewModel.onIntent(CharacterDetailIntent.SetAvatarUri(url))
-                }
+                // 旧头像文件由 ViewModel 在落库成功后再删（见 save 的 avatarChanged 分支）：
+                // 在这里删的话，用户不保存就退出，档案里留的是个已被删掉的地址。
+                viewModel.onIntent(CharacterDetailIntent.SetAvatarUri(url))
             },
             hasAvatar = state.avatarUri.isNotBlank(),
             onEditAvatar = {
@@ -1292,7 +1289,6 @@ fun MainActivity.mainEntryProvider(
                             saveCharacterAvatar(context, sourceUri, crop)
                         }
                     }.onSuccess { avatarUri ->
-                        deleteCharacterAvatar(context, state.avatarUri)
                         viewModel.onIntent(CharacterDetailIntent.SetAvatarUri(avatarUri))
                     }.onFailure {
                         context.toastOnUi(

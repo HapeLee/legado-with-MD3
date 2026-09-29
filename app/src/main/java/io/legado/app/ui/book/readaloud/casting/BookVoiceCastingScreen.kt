@@ -180,6 +180,8 @@ private fun VoiceCastingList(
     fun commitAvatar(avatarUri: String) {
         val targetId = avatarTargetId ?: return
         avatarTargetId = null
+        // 勾了确定就是把话说到这儿了，窗口得跟着收起来（本地那条走裁剪框，本来就是关的）
+        showAvatarSource = false
         onIntent(BookVoiceCastingIntent.SetAvatar(targetId, avatarUri))
     }
     val listState = rememberLazyListState()
@@ -545,6 +547,9 @@ private fun VoiceCastingCard(
         ) {
             AnimatedTextLine(text = title)
         }
+        // 编辑面板就地展开。这里不能再套 expandVertically：整张卡是 ReorderableItem 的一行，
+        // 它自带 Modifier.animateItem()，行高变化本来就由列表按同一份时长统一补间——
+        // 再叠一条每帧改高度的动画，两条口径对不上，下面的角色行会压在上面的行上抖（2026-09-29 实测）。
         if (editing) {
             if (isCharacter) {
                 CastRoleEditorPanel(

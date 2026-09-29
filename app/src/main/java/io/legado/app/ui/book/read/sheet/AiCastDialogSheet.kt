@@ -104,7 +104,9 @@ fun AiCastDialogSheet(
     onIntent: (ReadBookIntent) -> Unit,
     menuConfig: ReadMenuConfig? = null,
 ) {
-    if (!show) return
+    // show 一撤整棵树就没了，退场动画没有地方播：多留 180ms 让淡出跑完
+    val opened = show
+    if (!rememberSheetAlive(opened)) return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val bookUrl = ReadBook.book?.bookUrl ?: return
@@ -168,16 +170,19 @@ fun AiCastDialogSheet(
     val hasLog = progress.reasoning.isNotBlank() || progress.answer.isNotBlank() || thinkingPending
     val cardMaxHeight = castCardMaxHeight(0.84f)
 
+    val scrimAlpha = rememberSheetScrimAlpha(opened)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f))
+            // 遮罩跟着卡片一起淡入淡出，否则黑底是硬蹦出来的
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
             .safeDrawingPadding()
             .clickable(onClick = onDismissRequest),
         contentAlignment = Alignment.Center,
     ) {
         CastSheetCard(
             menuConfig = menuConfig,
+            visible = opened,
             modifier = Modifier
                 .fillMaxWidth()
                 // 只吞掉点击、不抢焦点：用 clickable 会让正在输入的框失焦→键盘先收再弹

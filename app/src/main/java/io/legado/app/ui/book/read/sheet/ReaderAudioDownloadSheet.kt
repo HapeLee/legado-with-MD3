@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -77,7 +78,10 @@ fun ReaderAudioDownloadSheet(
     onDismissRequest: () -> Unit,
     menuConfig: ReadMenuConfig? = null,
 ) {
-    if (!show) return
+    // show 一撤整棵树就没了，退场动画没有地方播：多留 180ms 让淡出跑完
+    val opened = show
+    if (!rememberSheetAlive(opened)) return
+    val scrimAlpha = rememberSheetScrimAlpha(opened)
     val book = ReadBook.book ?: return
     val bookUrl = book.bookUrl
     val context = LocalContext.current
@@ -85,13 +89,16 @@ fun ReaderAudioDownloadSheet(
     val chapterCount = book.totalChapterNum.coerceAtLeast(1)
     val progress by ReadAloudAudioStore.progress.collectAsState()
     var refreshKey by remember { mutableStateOf(0) }
+    // null = 还没查完库。第一帧就断言「本章没下载过」会闪一句假话。
     val rows by produceState(
-        initialValue = emptyList<ReadAloudAudioDownload>(),
+        initialValue = null as List<ReadAloudAudioDownload>?,
         key1 = bookUrl,
         key2 = refreshKey,
     ) {
         value = withContext(Dispatchers.IO) { ReadAloudAudioStore.list(bookUrl) }
     }
+    val downloaded = rows.orEmpty()
+    val currentChapterRow = rows?.firstOrNull { it.chapterIndex == ReadBook.durChapterIndex }
     var byRange by remember { mutableStateOf(false) }
     var startText by remember { mutableStateOf((ReadBook.durChapterIndex + 1).toString()) }
     var endText by remember { mutableStateOf((ReadBook.durChapterIndex + 1).toString()) }
@@ -101,7 +108,7 @@ fun ReaderAudioDownloadSheet(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LegadoTheme.colorScheme.scrim.copy(alpha = 0.42f))
+                .background(LegadoTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
                 .safeDrawingPadding()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -162,6 +169,25 @@ fun ReaderAudioDownloadSheet(
                                 text = stringResource(
                                     R.string.read_aloud_audio_download_by_range,
                                 ),
+                            )
+                        }
+                        // 本章状态放在两个按钮下面：选「只下本章」时先看得到这句，再决定按不按下载
+                        if (rows != null) {
+                            AppText(
+                                text = if (currentChapterRow == null) {
+                                    stringResource(R.string.read_aloud_audio_download_chapter_none)
+                                } else {
+                                    stringResource(
+                                        R.string.read_aloud_audio_download_chapter_hint,
+                                        currentChapterRow.sentenceCount,
+                                    )
+                                },
+                                style = LegadoTheme.typography.labelSmall,
+                                color = if (currentChapterRow == null) {
+                                    LegadoTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    LegadoTheme.colorScheme.primary
+                                },
                             )
                         }
                         if (byRange) {
@@ -278,20 +304,21 @@ fun ReaderAudioDownloadSheet(
                     SheetSection(
                         stringResource(
                             R.string.read_aloud_audio_download_downloaded_count,
-                            rows.size,
-                            rows.sumOf { it.sentenceCount },
+                            downloaded.size,
+                            downloaded.sumOf { it.sentenceCount },
                         ),
                     ) {
-                        if (rows.isEmpty()) {
+                        if (downloaded.isEmpty()) {
                             AppText(
                                 text = stringResource(R.string.read_aloud_audio_download_empty),
                                 style = LegadoTheme.typography.bodyMedium,
                                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        rows.forEach { row ->
+                        downloaded.forEach { row ->
                             DownloadedRow(
                                 row = row,
+                                isCurrent = row.chapterIndex == ReadBook.durChapterIndex,
                                 onDelete = {
                                     scope.launch {
                                         val deleted = ReadAloudAudioStore.delete(
@@ -347,7 +374,9 @@ private fun SheetSection(title: String, content: @Composable ColumnScope.() -> U
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
                 .background(LegadoTheme.colorScheme.surfaceContainerHigh)
-                .padding(14.dp),
+                .padding(14.dp)
+                // 开关范围输入、进度出现、删掉一行——这一节的长短每次都变，让它长出来缩回去都是平滑的
+                .animateContentSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             content = content,
         )
@@ -397,9 +426,13 @@ private fun ProgressLine(
     }
 }
 
-/** 已下载的一章：章号徽标 + 标题 + 句数 + 删除。 */
+/** 已下载的一章：章号徽标 + 标题 + 句数 + 删除。当前章的徽标点亮，长列表里一眼找到自己在读的那章。 */
 @Composable
-private fun DownloadedRow(row: ReadAloudAudioDownload, onDelete: () -> Unit) {
+private fun DownloadedRow(
+    row: ReadAloudAudioDownload,
+    isCurrent: Boolean,
+    onDelete: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -408,13 +441,23 @@ private fun DownloadedRow(row: ReadAloudAudioDownload, onDelete: () -> Unit) {
             modifier = Modifier
                 .size(30.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(LegadoTheme.colorScheme.surfaceContainerHighest),
+                .background(
+                    if (isCurrent) {
+                        LegadoTheme.colorScheme.primaryContainer
+                    } else {
+                        LegadoTheme.colorScheme.surfaceContainerHighest
+                    },
+                ),
             contentAlignment = Alignment.Center,
         ) {
             AppText(
                 text = (row.chapterIndex + 1).toString(),
                 style = LegadoTheme.typography.labelSmall,
-                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                color = if (isCurrent) {
+                    LegadoTheme.colorScheme.onPrimaryContainer
+                } else {
+                    LegadoTheme.colorScheme.onSurfaceVariant
+                },
             )
         }
         AppText(

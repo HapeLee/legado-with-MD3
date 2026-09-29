@@ -346,6 +346,9 @@ private fun CastFieldShell(
                     },
             )
         }
+        // 候选列表就地展开，不加高度动画：这几行下拉出现在 AlertDialog、配音卡片和悬浮窗里，
+        // 宿主都是「按内容高 + 居中」或 LazyColumn 里的行，高度一边动宿主一边重新量自己，
+        // 结果就是整窗上下跳、行与行叠在一起（2026-09-29 实测）。
         if (spec.hasDropdown && spec.expanded) {
             CastOptionList(
                 options = options,

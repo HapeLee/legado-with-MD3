@@ -48,7 +48,7 @@ class BgmPoolViewModel(
             BgmPoolIntent.Refresh -> {
                 refreshPools()
                 refreshTracks()
-                _uiState.value.expandedPoolId?.let { refreshMembers(it) }
+                _uiState.value.expandedPools.forEach { refreshMembers(it.poolId) }
             }
 
             is BgmPoolIntent.ToggleGroup -> _uiState.update { state ->
@@ -165,11 +165,12 @@ class BgmPoolViewModel(
             is BgmPoolIntent.ConfirmDeletePool -> execute {
                 BgmPoolStore.deletePool(intent.poolId)
                 _uiState.update {
-                    if (it.expandedPoolId == intent.poolId) {
-                        it.copy(deleteTarget = null, expandedPoolId = null, members = persistentListOf())
-                    } else {
-                        it.copy(deleteTarget = null)
-                    }
+                    it.copy(
+                        deleteTarget = null,
+                        expandedPools = it.expandedPools
+                            .filterNot { pool -> pool.poolId == intent.poolId }
+                            .toImmutableList(),
+                    )
                 }
                 refreshPools()
             }
@@ -228,28 +229,47 @@ class BgmPoolViewModel(
             }
 
             is BgmPoolIntent.TogglePoolExpand -> {
-                val current = _uiState.value.expandedPoolId
-                if (current == intent.poolId) {
-                    _uiState.update { it.copy(expandedPoolId = null, members = persistentListOf()) }
-                } else {
-                    _uiState.update { it.copy(expandedPoolId = intent.poolId, memberQuery = "") }
-                    refreshMembers(intent.poolId)
+                // 与角色声音池同理：展开状态按池各存一份，点开一个不把别的顶掉
+                val opening = _uiState.value.expandedPools.none { it.poolId == intent.poolId }
+                _uiState.update { state ->
+                    state.copy(
+                        expandedPools = if (opening) {
+                            (state.expandedPools + ExpandedPoolUi(intent.poolId)).toImmutableList()
+                        } else {
+                            state.expandedPools
+                                .filterNot { it.poolId == intent.poolId }
+                                .toImmutableList()
+                        },
+                    )
                 }
+                if (opening) refreshMembers(intent.poolId)
             }
 
             is BgmPoolIntent.UpdateMemberQuery -> _uiState.update { state ->
+                // 只记筛选词，成员列表原样留着，筛选在界面里做（见 CastPoolCard）
                 state.copy(
-                    memberQuery = intent.query,
-                    members = filterRows(state.members, intent.query).toImmutableList(),
+                    expandedPools = state.expandedPools
+                        .withExpandedPool(intent.poolId) { pool -> pool.copy(memberQuery = intent.query) }
+                        .toImmutableList(),
                 )
             }
 
             is BgmPoolIntent.ToggleMemberEnabled -> {
                 _uiState.update { state ->
                     state.copy(
-                        members = state.members.map { m ->
-                            if (m.voiceId == intent.trackId) m.copy(checked = intent.enabled) else m
-                        }.toImmutableList(),
+                        expandedPools = state.expandedPools
+                            .withExpandedPool(intent.poolId) { pool ->
+                                pool.copy(
+                                    members = pool.members.map { m ->
+                                        if (m.voiceId == intent.trackId) {
+                                            m.copy(checked = intent.enabled)
+                                        } else {
+                                            m
+                                        }
+                                    },
+                                )
+                            }
+                            .toImmutableList(),
                     )
                 }
                 execute {
@@ -266,13 +286,13 @@ class BgmPoolViewModel(
                 refreshPools()
             }
 
-            BgmPoolIntent.ShowMemberPicker -> execute {
-                val poolId = _uiState.value.expandedPoolId ?: return@execute
+            is BgmPoolIntent.ShowMemberPicker -> execute {
+                val poolId = intent.poolId
                 allTracks = BgmPoolStore.allTrackPairs()
                 val inPool = BgmPoolStore.memberTrackIds(poolId)
                 _uiState.update {
                     it.copy(
-                        showMemberPicker = true,
+                        pickerPoolId = poolId,
                         pickerQuery = "",
                         pickerCandidates = allTracks
                             .filterNot { (id, _) -> inPool.contains(id) }
@@ -285,7 +305,7 @@ class BgmPoolViewModel(
             }
 
             BgmPoolIntent.DismissMemberPicker -> _uiState.update {
-                it.copy(showMemberPicker = false, pickerCandidates = persistentListOf())
+                it.copy(pickerPoolId = null, pickerCandidates = persistentListOf())
             }
 
             is BgmPoolIntent.UpdatePickerQuery -> _uiState.update { state ->
@@ -304,7 +324,7 @@ class BgmPoolViewModel(
             }
 
             BgmPoolIntent.SaveMemberPicker -> {
-                val poolId = _uiState.value.expandedPoolId ?: return
+                val poolId = _uiState.value.pickerPoolId ?: return
                 val picked = _uiState.value.pickerCandidates
                     .filter { it.checked }
                     .map { it.voiceId }
@@ -313,7 +333,7 @@ class BgmPoolViewModel(
                     val merged = BgmPoolStore.memberTrackIds(poolId) + picked
                     BgmPoolStore.setMembers(poolId, merged)
                     _uiState.update {
-                        it.copy(showMemberPicker = false, pickerCandidates = persistentListOf())
+                        it.copy(pickerPoolId = null, pickerCandidates = persistentListOf())
                     }
                     refreshMembers(poolId)
                     refreshPools()
@@ -343,19 +363,7 @@ class BgmPoolViewModel(
             is BgmPoolIntent.SetTrackEnabled -> execute {
                 BgmPoolStore.setEnabled(intent.id, intent.enabled)
                 refreshTracks()
-                _uiState.value.expandedPoolId?.let { refreshMembers(it) }
-            }
-
-            is BgmPoolIntent.AskTrackVolume -> {
-                val target = _uiState.value.tracks.firstOrNull { it.id == intent.id } ?: return
-                _uiState.update { it.copy(trackVolumeTarget = target) }
-            }
-
-            BgmPoolIntent.DismissTrackVolume -> _uiState.update { it.copy(trackVolumeTarget = null) }
-
-            is BgmPoolIntent.SetTrackVolume -> execute {
-                BgmPoolStore.setTrackVolume(intent.id, intent.volume)
-                refreshTracks()
+                _uiState.value.expandedPools.forEach { refreshMembers(it.poolId) }
             }
 
             is BgmPoolIntent.AskDeleteTrack -> {
@@ -376,7 +384,7 @@ class BgmPoolViewModel(
                 }
                 refreshTracks()
                 refreshPools()
-                _uiState.value.expandedPoolId?.let { refreshMembers(it) }
+                _uiState.value.expandedPools.forEach { refreshMembers(it.poolId) }
             }
 
             is BgmPoolIntent.PlayToggle -> {
@@ -456,17 +464,21 @@ class BgmPoolViewModel(
         BgmPoolStore.saveSlots(plan.first, plan.second)
     }
 
+    /**
+     * 重新取某个展开池的成员：存筛选前的全量，筛选在界面里做。
+     * 池已经收起时 withExpandedPool 原样返回，不会给它挂上一份没人看的列表。
+     */
     private fun refreshMembers(poolId: String) {
         execute {
             allTracks = BgmPoolStore.allTrackPairs()
             val detail = BgmPoolStore.poolDetail(poolId)
-            _uiState.update {
-                it.copy(
-                    members = detail.members
-                        .map { m ->
-                            CastMemberUi(voiceId = m.id, displayName = m.displayName, checked = m.enabled)
-                        }
-                        .let { rows -> filterRows(rows, it.memberQuery) }
+            val rows = detail.members.map { m ->
+                CastMemberUi(voiceId = m.id, displayName = m.displayName, checked = m.enabled)
+            }
+            _uiState.update { state ->
+                state.copy(
+                    expandedPools = state.expandedPools
+                        .withExpandedPool(poolId) { pool -> pool.copy(members = rows) }
                         .toImmutableList(),
                 )
             }

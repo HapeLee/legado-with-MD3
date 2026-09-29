@@ -38,12 +38,32 @@ object ReaderNineSliceLayout {
             sourceBottom,
         )
         if (sx[1] > sx[2] || sy[1] > sy[2]) return emptyList()
-        // 中心格落在文字框上，八个边框格落在外扩出来的 `frame` 上（对照旧 View
+        // 纵向一条边都不拉伸：整张图按 scale 原样高，`frame` 的上下边就是图自己的上下边
+        // （由 [ReaderTextBackgroundImage.centerBandPx] 定死），所以中间那一行的目标高度恒等于
+        // 源里那条带的高度。上下两条切分线因此只有一件事可做——把字框在图的哪一段里，
+        // 拖它们就是上下对齐。
+        //
+        // 横向只有左右两条线之间那一格被拉到文字宽度（再各加左/右偏移），四周一圈按原图宽度画，
+        // 四角原样。偏移可以为负（气泡比字短），但不许把中间那一格挤成反向：夹紧
+        // （[ReaderTextBackgroundImage.stretchLeftPx] / [stretchRightPx]，与外框同一份口径）。
+        val textWidthPx = content.right - content.left
+        val dx = floatArrayOf(
+            frame.left,
+            content.left - image.stretchLeftPx(textWidthPx),
+            content.right + image.stretchRightPx(textWidthPx),
+            frame.right,
+        )
+        val dy = floatArrayOf(
+            frame.top,
+            frame.top + image.contentInsetTopPx,
+            frame.bottom - image.contentInsetBottomPx,
+            frame.bottom,
+        )
+        if (dx[1] > dx[2] || dy[1] > dy[2]) return emptyList()
+        // 中心格落在「文字宽 + 长度偏移」上，八个边框格落在外扩出来的 `frame` 上（对照旧 View
         // `drawNineSliceCenter` 的中心 + `drawNineSliceFrames` 画在行框外的上下边/行框两侧的
-        // 左右边）。退化情形不需要特判：上下边被「半行距」压成 0 时，上下两行的目标高度为 0，
-        // 下面的循环直接跳过，只剩「中心 + 左右两条边」——正是旧 View 在无行距时的画法。
-        val dx = floatArrayOf(frame.left, content.left, content.right, frame.right)
-        val dy = floatArrayOf(frame.top, content.top, content.bottom, frame.bottom)
+        // 左右边）。退化情形不需要特判：中间那条带高度为 0 时，上下两行的目标高度为 0，
+        // 下面的循环直接跳过，只剩「中心 + 左右两条边」。
         return buildList(9) {
             for (row in 0..2) for (column in 0..2) {
                 if (sx[column] == sx[column + 1] || sy[row] == sy[row + 1]) continue
