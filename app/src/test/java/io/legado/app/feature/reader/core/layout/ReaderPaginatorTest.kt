@@ -7,6 +7,7 @@ import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.model.textBackgroundRuns
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -849,6 +850,92 @@ class ReaderPaginatorTest {
         val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
 
         assertEquals(listOf(6f, 16f, 26f, 42f), glyphs.map { it.bounds.left })
+    }
+
+    /**
+     * 命中字距留出的那截空隙在命中段**外面**：内容没变，图就不许被拉长。
+     * 两个共用同一张背景图的命中段之间隔着这截空隙时，run 必须在空隙处断成两个气泡，
+     * 而不是把空隙吞进中间那一格。
+     */
+    @Test
+    fun matchSpacingGapSplitsTheBubbleInsteadOfStretchingIt() {
+        val framed = ReaderTextBackgroundImage(
+            "frame.png", 3, 1f,
+            contentInsetLeftPx = 3f,
+            contentInsetRightPx = 4f,
+        )
+        val framedStyle = style.copy(backgroundImage = framed)
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(ReaderMeasuredBlock.InlineParagraph(
+                items = listOf(
+                    ReaderMeasuredInlineItem.Text("甲", 10f, framedStyle, 0),
+                    ReaderMeasuredInlineItem.Text("乙", 10f, framedStyle, 1),
+                    ReaderMeasuredInlineItem.Text(
+                        "丙", 10f, framedStyle.copy(matchSpacingBeforePx = 6f), 2
+                    ),
+                    ReaderMeasuredInlineItem.Text("丁", 10f, framedStyle, 3),
+                ),
+                indentCharacters = 0,
+                alignment = ReaderTextAlignment.START,
+                lineHeightPx = 20f,
+                baselineOffsetPx = 15f,
+                baseTextSizePx = 10f,
+            )),
+            config.copy(viewportWidthPx = 200, viewportHeightPx = 100),
+        ).single()
+
+        val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
+        // 空隙照常把后两个字推走：0 / 10 / 26 / 36。
+        assertEquals(listOf(0f, 10f, 26f, 36f), glyphs.map { it.bounds.left })
+        assertFalse(glyphs[2].continuesBackgroundRun)
+
+        val runs = page.textBackgroundRuns()
+        assertEquals(2, runs.size)
+        assertEquals(0f, runs[0].contentBounds.left, 0.01f)
+        assertEquals(20f, runs[0].contentBounds.right, 0.01f)
+        assertEquals(26f, runs[1].contentBounds.left, 0.01f)
+        assertEquals(46f, runs[1].contentBounds.right, 0.01f)
+        // 每个气泡只按自己那一段的宽度画，左右各留一条原厚边：20 宽 + 3 + 4。
+        assertEquals(27f, runs[0].bounds.width, 0.01f)
+        assertEquals(27f, runs[1].bounds.width, 0.01f)
+    }
+
+    /** 同理，空隙是上一段「命中字距（后）」让出来的，也要断在空隙之前。 */
+    @Test
+    fun matchSpacingAfterAlsoSplitsTheBubble() {
+        val framed = ReaderTextBackgroundImage(
+            "frame.png", 3, 1f,
+            contentInsetLeftPx = 3f,
+            contentInsetRightPx = 4f,
+        )
+        val framedStyle = style.copy(backgroundImage = framed)
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(ReaderMeasuredBlock.InlineParagraph(
+                items = listOf(
+                    ReaderMeasuredInlineItem.Text("甲", 10f, framedStyle, 0),
+                    ReaderMeasuredInlineItem.Text(
+                        "乙", 10f, framedStyle.copy(matchSpacingAfterPx = 6f), 1
+                    ),
+                    ReaderMeasuredInlineItem.Text("丙", 10f, framedStyle, 2),
+                    ReaderMeasuredInlineItem.Text("丁", 10f, framedStyle, 3),
+                ),
+                indentCharacters = 0,
+                alignment = ReaderTextAlignment.START,
+                lineHeightPx = 20f,
+                baselineOffsetPx = 15f,
+                baseTextSizePx = 10f,
+            )),
+            config.copy(viewportWidthPx = 200, viewportHeightPx = 100),
+        ).single()
+
+        val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
+        assertEquals(listOf(0f, 10f, 26f, 36f), glyphs.map { it.bounds.left })
+        assertFalse(glyphs[2].continuesBackgroundRun)
+        assertTrue(glyphs[3].continuesBackgroundRun)
+        val runs = page.textBackgroundRuns()
+        assertEquals(2, runs.size)
+        assertEquals(20f, runs[0].contentBounds.right, 0.01f)
+        assertEquals(26f, runs[1].contentBounds.left, 0.01f)
     }
 
     /**

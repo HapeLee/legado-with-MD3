@@ -874,6 +874,7 @@ internal class ReaderPaginationSession(
             // The View reader started a non-extended underline after those glyphs.
             val underlineElementStart = elements.size + indentItems
             var previousItemBackground: ReaderTextBackgroundImage? = null
+            var previousMatchSpacingAfterPx = 0f
             lineItems.forEachIndexed { itemIndex, item ->
                 val matchStyle = (item as? ReaderMeasuredInlineItem.Text)?.style
                 val spacingBefore = matchStyle?.matchSpacingBeforePx ?: 0f
@@ -900,9 +901,14 @@ internal class ReaderPaginationSession(
                             // 否则字间距会把它切成逐字绘制。
                             // 前一项是角色/配乐胶囊时放行标记要跨过去（见 previousItemBackground
                             // 的更新条件），否则一句对白会被中间的胶囊切成两个半截气泡。
+                            // 命中字距留出的那截空隙在命中段**外面**（正文里空隙前后都不属于
+                            // 任何字），所以它必须把 run 断掉：吞进气泡就等于内容没变、
+                            // 图却被拉长了。
                             continuesBackgroundRun = itemBackground != null &&
                                     itemIndex > 0 &&
-                                    previousItemBackground == itemBackground,
+                                    previousItemBackground == itemBackground &&
+                                    spacingBefore <= 0f &&
+                                    previousMatchSpacingAfterPx <= 0f,
                             // 九宫格纵向锁定：整张图按原样高，中间那条带按行盒高居中
                             // （上沿 = 图自己的上边条 + 带子比行盒多出来的一半，下沿同理）。
                             backgroundFrameTopPx = itemBackground?.frameTopPx(actualLineHeight) ?: 0f,
@@ -992,6 +998,7 @@ internal class ReaderPaginationSession(
                     item !is ReaderMeasuredInlineItem.BgmScene
                 ) {
                     previousItemBackground = itemBackground
+                    previousMatchSpacingAfterPx = matchStyle?.matchSpacingAfterPx ?: 0f
                 }
             }
             addPageUnderline(underlineElementStart, y + actualLineHeight)

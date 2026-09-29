@@ -919,8 +919,12 @@ private fun HighlightPreviewCard(
  *
  * 背景图走正文同一份绘制函数（[drawTextBackground]）与同一份几何
  * （[ReaderTextBackgroundImage.withBitmapSize] / [frameBottomPx] / [nineSliceFrame]），
- * 所以预览里看到的气泡高度、横向拉伸与长度偏移就是正文页画出来的那个。命中字距挂在段首/段尾
- * 那一个字上，命中行行距抬高整行行盒——示例句每一行都含命中，因此预览里看起来就是行距变大。
+ * 所以预览里看到的气泡高度、横向拉伸与长度偏移就是正文页画出来的那个。
+ *
+ * 命中字距是「在命中段外面留一段空隙」：空隙挂在段首前一个字与段末那个字上，而装饰框只取命中
+ * 那几个字自己的边界——正文在段首字那里就打断背景 run，所以调字距时气泡跟着文字平移，
+ * 绝不会把空隙吞进中间那一格。命中行行距抬高整行行盒——示例句每一行都含命中，
+ * 因此预览里看起来就是行距变大。
  */
 @Composable
 private fun HighlightRulePreview(
@@ -969,7 +973,7 @@ private fun HighlightRulePreview(
             ),
             maxLines = 3,
         )
-        val boxes = previewHitBoxes(layout, hitRanges, beforePx, afterPx, sample.length - 1)
+        val boxes = previewHitBoxes(layout, hitRanges)
         translate(padX, padY) {
             if (background != null) {
                 val native = drawContext.canvas.nativeCanvas
@@ -1115,13 +1119,10 @@ private fun previewAnnotatedString(
     }
 }
 
-/** 命中段在一行里的矩形：逐行切开，段首让出前距、段末让出后距，高度取整行行盒。 */
+/** 命中段在一行里的矩形：逐行切开，只取命中那几个字自己的边界，高度取整行行盒。 */
 private fun previewHitBoxes(
     layout: TextLayoutResult,
     hits: List<IntRange>,
-    beforePx: Float,
-    afterPx: Float,
-    lastCharIndex: Int,
 ): List<Rect> {
     val boxes = ArrayList<Rect>(hits.size)
     hits.forEach { range ->
@@ -1132,11 +1133,9 @@ private fun previewHitBoxes(
             val head = layout.getBoundingBox(from)
             val tail = layout.getBoundingBox(to - 1)
             boxes += Rect(
-                left = minOf(head.left, tail.left) -
-                        if (from == range.first && from > 0) beforePx else 0f,
+                left = minOf(head.left, tail.left),
                 top = layout.getLineTop(line),
-                right = maxOf(head.right, tail.right) +
-                        if (to - 1 == range.last && to - 1 < lastCharIndex) afterPx else 0f,
+                right = maxOf(head.right, tail.right),
                 bottom = layout.getLineBottom(line),
             )
         }
