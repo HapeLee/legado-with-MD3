@@ -88,4 +88,5 @@ sealed interface ReadAloudPlayerIntent {
 
 sealed interface ReadAloudPlayerEffect {
     data object ReturnToClassic : ReadAloudPlayerEffect
+    data object TtsCacheCleared : ReadAloudPlayerEffect
 }

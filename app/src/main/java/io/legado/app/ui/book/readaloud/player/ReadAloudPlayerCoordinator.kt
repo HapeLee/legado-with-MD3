@@ -18,9 +18,11 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.reader.ReaderChapterInput
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.ReadConfigUpdateBus
+import io.legado.app.utils.TTSCacheUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -32,6 +34,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** Compatibility boundary between the Compose player and the legacy reader/service state. */
@@ -226,6 +229,10 @@ class ReadAloudPlayerCoordinator(
     fun previousChapter() = ReadBook.moveToPrevChapter(true, false)
     fun nextChapter() = ReadBook.moveToNextChapter(true)
     fun selectChapter(index: Int) = ReadBook.openChapter(index, durChapterPos = 0)
+
+    suspend fun clearTtsCache() = withContext(Dispatchers.IO) {
+        TTSCacheUtils.clearTtsCache()
+    }
 
     suspend fun setSpeed(value: Int) {
         readAloudSettingsGateway.update { it.copy(ttsSpeechRate = coerceReadAloudSpeed(value)) }

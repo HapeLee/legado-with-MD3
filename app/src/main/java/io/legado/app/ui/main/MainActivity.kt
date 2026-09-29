@@ -758,6 +758,29 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 )
                             }
                         },
+                        onOpenTtsEnginesAndVoices = { bookUrl ->
+                            MainNavigator.navigateToRoute(
+                                backStack,
+                                MainRouteCloudTtsEngines(bookUrl.takeIf(String::isNotBlank)),
+                                navRouteTracker,
+                            )
+                        },
+                        onOpenTtsCache = {
+                            MainNavigator.navigateToRoute(
+                                backStack,
+                                MainRouteTtsCache,
+                                navRouteTracker,
+                            )
+                        },
+                        onOpenBookVoiceCasting = { bookUrl ->
+                            if (bookUrl.isNotBlank()) {
+                                MainNavigator.navigateToRoute(
+                                    backStack,
+                                    MainRouteBookVoiceCasting(bookUrl),
+                                    navRouteTracker,
+                                )
+                            }
+                        },
                     )
                     if (playerSource == PlaybackCapsuleSource.AudioBook &&
                         (audioPlayerVisible || morphPresent)
