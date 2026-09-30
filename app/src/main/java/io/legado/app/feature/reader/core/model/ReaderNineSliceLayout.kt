@@ -49,10 +49,11 @@ object ReaderNineSliceLayout {
         // 可拉即可——零宽的源什么也拉不出来（那一格被跳过），字底下会留一个洞。
         sx[2] = sx[2].coerceAtLeast((sx[1] + 1).coerceAtMost(sourceRight))
         sy[2] = sy[2].coerceAtLeast((sy[1] + 1).coerceAtMost(sourceBottom))
-        // 纵向：上下两条切线之间就是文字的显示区域，所以中间那一行恒按行盒高画（整张图因此
-        // 自适应大小，切线往中间挤气泡就长高，不是尺寸不变地对着字上下挪）。上下两条边各按
-        // 自己的源厚 × scale 原样画，纵向不拉伸的是它们；外框的上下边在分页期已由
-        // [ReaderTextBackgroundImage.frameTopPx] 让出了这两条边的厚度。
+        // 纵向：任何一格都不拉伸。上下两条切线之间就是文字的显示区域，中间那一行正好盖住行盒，
+        // 上下两条边各占 `frame` 与行盒之间的那截——它们是分页期按同一个等比倍率换算出来的
+        // （[ReaderTextBackgroundImage.frameTopPx]），所以三行的 目标/源 倍率完全一致：整张图
+        // 只是等比变大小，字号大了气泡跟着长高，绝不会出现「中间拉长、上下不动」或者「尺寸不变
+        // 地对着字上下挪」。
         //
         // 横向只有左右两条线之间那一格被拉到文字宽度（再各加左/右偏移），四周一圈按原图宽度画，
         // 四角原样。偏移可以为负（气泡比字短），但不许把中间那一格挤成反向：夹紧
@@ -64,12 +65,7 @@ object ReaderNineSliceLayout {
             content.right + image.stretchRightPx(textWidthPx),
             frame.right,
         )
-        val dy = floatArrayOf(
-            frame.top,
-            frame.top + image.contentInsetTopPx,
-            frame.bottom - image.contentInsetBottomPx,
-            frame.bottom,
-        )
+        val dy = floatArrayOf(frame.top, content.top, content.bottom, frame.bottom)
         // 目标坐标本来不会交叉（`stretchLeftPx/stretchRightPx` 已把两侧各夹到 -文字宽/2，
         // 中间那一格最窄归零），这里同样只夹平、不清空，理由与上面一致。
         if (dx[1] > dx[2]) dx[2] = dx[1]

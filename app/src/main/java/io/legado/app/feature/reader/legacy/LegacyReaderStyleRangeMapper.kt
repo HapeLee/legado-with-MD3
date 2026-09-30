@@ -404,6 +404,19 @@ object LegacyReaderStyleRangeMapper {
     private fun BookContentProcess.isUserMarking(): Boolean =
         kind == BookContentProcess.KIND_USER_UNDERLINE || kind == BookContentProcess.KIND_USER_HIGHLIGHT
 
-    private fun backgroundImageSize(path: String): Pair<Int, Int> =
-        ReaderTextBackgroundLoader.dimensions(path)
+    /**
+     * 量这张气泡图有多大，并顺手把它解进缓存。
+     *
+     * 只报尺寸不解图，绘制侧就要等 `produceState` 在 IO 上解完才拿到位图：翻到那一页的
+     * 头几帧气泡是空的，下一帧才补上，看上去就是「闪一下」。排版本来就在 IO 上跑，
+     * 在这里解一次，首帧就已经是热缓存，画出来的和量出来的还是同一张图。
+     */
+    private fun backgroundImageSize(path: String): Pair<Int, Int> {
+        val bitmap = ReaderTextBackgroundLoader.load(path)
+        return if (bitmap == null) {
+            ReaderTextBackgroundLoader.dimensions(path)
+        } else {
+            bitmap.width to bitmap.height
+        }
+    }
 }

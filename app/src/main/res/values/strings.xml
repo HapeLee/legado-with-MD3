@@ -942,9 +942,9 @@
     <string name="highlight_bg_length_offset_right">Bubble Right Offset</string>
     <string name="cast_bubble_menu">Set bubble</string>
     <string name="cast_bubble_clear">No bubble</string>
-    <string name="nine_slice_split_hint">Only the green band stretches: sideways to the text width, vertically to exactly the line the glyphs sit on, so the bubble grows and shrinks with the font size. The two vertical lines set how far it stretches sideways; the region between the two horizontal lines is where the text is displayed — push them together and the glyphs get less air above and below. All four lines go to 100%, which is how an off-centre pattern gets its stretch band moved wholly to one side. Left and right offset move the two ends of the stretched band apart, without touching the characters around it.</string>
+    <string name="nine_slice_split_hint">Only the green band stretches: sideways to the text width. Vertically nothing is stretched at all — the whole image is scaled proportionally so that the band between the two horizontal lines covers exactly the line the glyphs sit on. The two vertical lines set how far it stretches sideways. The band between the two horizontal lines sets the scale: a narrow band blows the whole image (edges included) up, so the glyphs get more air above and below; a wide band shrinks it. All four lines go to 100%, which is how an off-centre pattern gets its stretch band moved wholly to one side. Left and right offset move the two ends of the stretched band apart, without touching the characters around it.</string>
     <string name="nine_slice_horizontal_hint">The two vertical lines: only the band between them is stretched sideways; the left and right edges keep their original thickness.</string>
-    <string name="nine_slice_vertical_hint">The two horizontal lines: the region between them is where the text is displayed, and that cell adapts to the line height; the top and bottom edges keep their original thickness.</string>
+    <string name="nine_slice_vertical_hint">The two horizontal lines: the region between them is where the text is displayed. The whole image scales to that line by one uniform factor — the top and bottom edges grow and shrink with it, no cell is ever stretched vertically.</string>
     <string name="sure_delete">Are you sure you want to delete?</string>
     <string name="save_to_source">Save to source file (reset will be unavailable)</string>
     <string name="edit_chapter">Edit chapter</string>
@@ -1999,6 +1999,7 @@
     <string name="auto_check_new_backup_s">Check for new backups when opening the app, if new backups are found, prompt the user to update.</string>
     <string name="replace_purify_badge">Count Replacements and Purify Rules</string>
     <string name="page_anim_fade">Fade</string>
+    <string name="page_anim_duo">Duo</string>
     <string name="show_bookshelf_tab_menu">Show More Bookshelf Tab</string>
     <string name="show_unread_new">Show New Chapter Flag</string>
     <string name="read_change_all">Source Change Default Applies to Entire Book</string>
@@ -3721,6 +3722,12 @@
     <string name="capsule_style_avatar_size_summary">Slide up to fill the capsule height, down for a smaller dot</string>
     <string name="capsule_style_avatar_left_right">Avatar horizontal position</string>
     <string name="capsule_style_avatar_up_down">Avatar vertical position</string>
+    <string name="capsule_style_show_avatar">Show avatar</string>
+    <string name="capsule_style_show_avatar_summary">Off leaves only the text; the avatar slot and its width are gone too</string>
+    <string name="capsule_style_show_name">Show role name</string>
+    <string name="capsule_style_show_name_summary">Off keeps the avatar alone in the capsule</string>
+    <string name="capsule_style_show_pool">Show voice pool</string>
+    <string name="capsule_style_show_pool_summary">Off drops the small pool label after the name</string>
     <string name="capsule_style_reset">Restore defaults</string>
     <string name="capsule_style_reset_summary">Clears corner radius, background and avatar settings for this capsule</string>
     <string name="capsule_style_saved">Saved</string>
@@ -3729,6 +3736,7 @@
     <string name="capsule_style_preview_night">Dark</string>
     <string name="capsule_style_preview_name">Su Wan</string>
     <string name="capsule_style_preview_bgm">♪ Rainy night</string>
+    <string name="capsule_style_preview_pool">Rainy night</string>
     <string name="read_aloud_overlay_permission">Display capsule over other apps</string>
     <string name="read_aloud_overlay_granted">Allowed. The capsule appears outside this app while read aloud is running.</string>
     <string name="read_aloud_overlay_required">Grant permission to use the capsule on the home screen and in other apps. The in-app capsule works without it.</string>

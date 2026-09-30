@@ -93,11 +93,12 @@ class ReaderTextBackgroundRunTest {
     }
 
     /**
-     * 上下两条切线之间就是文字的显示区域：外沿只让出图自己的上下边条，中间那一格恒按行盒高画，
-     * 所以行盒一高整张图就跟着高——自适应大小，而不是尺寸不变地对着字上下挪。
+     * 上下两条切线之间就是文字的显示区域：中间带对上行盒高，整张图按同一个倍率变大小
+     * （等比缩放，没有哪一格被单独拉伸）。行盒 28 = 中间带自然高时倍率为 1，上下边条是 4/8；
+     * 行盒翻到 56 时三条一起翻倍，气泡高从 40 长到 80。
      */
     @Test
-    fun `the frame grows with the text row while the two edges keep their thickness`() {
+    fun `the whole image scales to the text row by one uniform factor`() {
         val sized = image.copy(
             ninePatchLeft = 0.2f,
             ninePatchRight = 0.3f,
@@ -105,11 +106,34 @@ class ReaderTextBackgroundRunTest {
             ninePatchBottom = 0.2f,
         ).withBitmapSize(50, 40)
 
-        assertEquals(4f, sized.frameTopPx(), 0.001f)
-        assertEquals(8f, sized.frameBottomPx(), 0.001f)
-        assertEquals(32f, 20f + sized.frameTopPx() + sized.frameBottomPx(), 0.001f)
-        // 行盒从 20 到 30：两条边一分不变，图高从 32 长到 42。
-        assertEquals(42f, 30f + sized.frameTopPx() + sized.frameBottomPx(), 0.001f)
+        assertEquals(28f, sized.contentBandHeightPx, 0.001f)
+        assertEquals(4f, sized.frameTopPx(28f), 0.001f)
+        assertEquals(8f, sized.frameBottomPx(28f), 0.001f)
+        assertEquals(40f, 28f + sized.frameTopPx(28f) + sized.frameBottomPx(28f), 0.001f)
+        // 行盒 28→56：倍率 1→2，上下边条跟着翻倍。
+        assertEquals(8f, sized.frameTopPx(56f), 0.001f)
+        assertEquals(16f, sized.frameBottomPx(56f), 0.001f)
+        assertEquals(80f, 56f + sized.frameTopPx(56f) + sized.frameBottomPx(56f), 0.001f)
+        // 行盒缩到中间带的一半：整张图等比缩到一半。
+        assertEquals(2f, sized.frameTopPx(14f), 0.001f)
+        assertEquals(4f, sized.frameBottomPx(14f), 0.001f)
+        assertEquals(20f, 14f + sized.frameTopPx(14f) + sized.frameBottomPx(14f), 0.001f)
+    }
+
+    /**
+     * 上下两条切线挤到一起时中间带趋近 0，按行盒算等比倍率会趋于无穷。所以整张图最高只让到
+     * 行盒的 4 倍，气泡不会高过屏幕。
+     */
+    @Test
+    fun `squeezed split lines cannot blow the bubble up`() {
+        val squeezed = image.copy(
+            ninePatchTop = 0.49f,
+            ninePatchBottom = 0.5f,
+        ).withBitmapSize(50, 40)
+
+        // 中间带 0.4px、整张图自然高 40：倍率本该是 28/0.4=70，被「总高 ≤ 行盒 4 倍」夹到 2.8。
+        assertEquals(0.4f, squeezed.contentBandHeightPx, 0.001f)
+        assertEquals(112f, 28f + squeezed.frameTopPx(28f) + squeezed.frameBottomPx(28f), 0.01f)
     }
 
     /** 左偏移只管左沿、右偏移只管右沿：两端能分别对齐，这才是要拆成两项的原因。 */
@@ -162,8 +186,8 @@ class ReaderTextBackgroundRunTest {
         val content = ReaderRect(10f, 0f, 20f, 20f)
 
         assertEquals(content, tiled.nineSliceFrame(content))
-        assertEquals(0f, tiled.frameTopPx(), 0f)
-        assertEquals(0f, tiled.frameBottomPx(), 0f)
+        assertEquals(0f, tiled.frameTopPx(20f), 0f)
+        assertEquals(0f, tiled.frameBottomPx(20f), 0f)
     }
 
     @Test

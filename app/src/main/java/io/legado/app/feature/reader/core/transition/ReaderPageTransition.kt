@@ -8,6 +8,7 @@ enum class ReaderTransitionMode {
     SIMULATION,
     SCROLL,
     FADE,
+    DUO,
     NONE;
 
     companion object {
@@ -17,6 +18,9 @@ enum class ReaderTransitionMode {
             2 -> SIMULATION
             3 -> SCROLL
             4 -> FADE
+            // 6 而不是 5：5 已经被官方的 noAnim 占了，新动画只能接在后面，
+            // 老配置里的 pageAnim 值才不会被重新解释。
+            6 -> DUO
             else -> NONE
         }
     }
@@ -34,6 +38,47 @@ object ReaderCoverShadowPolicy {
             ReaderTurnDirection.PREVIOUS -> displayOffsetPx
             ReaderTurnDirection.NEXT -> pageWidthPx + displayOffsetPx
         }
+}
+
+/**
+ * 叠页（iPhone Duo 风格）翻页的全部观感参数。
+ *
+ * 一律用「页宽的倍率」而不是 dp：转场侧只有 px 位移和页宽，拿不到 density，倍率在
+ * 任何屏幕上都是同一个观感（一页约 400dp 宽时 .075f ≈ 30dp）。
+ */
+object ReaderDuoVisualPolicy {
+    /** 被压住的旧页缩到多小、压到多暗：这一层「退到后面去」就是叠页的全部错觉。 */
+    const val recedeScale: Float = .92f
+    const val recedeAlpha: Float = .62f
+
+    /** 旧页跟着新页走一小截视差，不是钉在原地的。 */
+    const val parallax: Float = .28f
+
+    /** 圆角与前沿阴影占页宽的倍率。 */
+    const val cornerFraction: Float = .075f
+    const val shadowFraction: Float = .09f
+    const val shadowColorArgb: Int = 0x4D111111
+
+    fun recedeScaleAt(progress: Float): Float = 1f - (1f - recedeScale) * progress
+
+    fun recedeAlphaAt(progress: Float): Float = 1f - (1f - recedeAlpha) * progress
+
+    /** 新页刚进来时圆角最大，落位时正好是 0；旧页反之，退下去的过程中角越来越圆。 */
+    fun incomingCornerPx(pageWidthPx: Float, progress: Float): Float =
+        pageWidthPx * cornerFraction * (1f - progress)
+
+    fun recedingCornerPx(pageWidthPx: Float, progress: Float): Float =
+        pageWidthPx * cornerFraction * progress
+
+    /** 新页那条「压过来」的前沿所在 x。 */
+    fun leadingEdgePx(
+        direction: ReaderTurnDirection,
+        displayOffsetPx: Float,
+        pageWidthPx: Float,
+    ): Float = when (direction) {
+        ReaderTurnDirection.PREVIOUS -> displayOffsetPx
+        ReaderTurnDirection.NEXT -> pageWidthPx + displayOffsetPx
+    }
 }
 
 object ReaderProgrammaticTurnPolicy {
@@ -175,6 +220,10 @@ data class ReaderPageTransform(
     val translationX: Float = 0f,
     val translationY: Float = 0f,
     val alpha: Float = 1f,
+    /** 叠页模式里被压住的那一页用它「退到后面去」；其余模式恒为 1。 */
+    val scale: Float = 1f,
+    /** 大于 0 时绘制侧按这个圆角裁这一页。 */
+    val cornerRadiusPx: Float = 0f,
 )
 
 data class ReaderTransitionTransforms(
@@ -198,6 +247,19 @@ fun ReaderPageTransition.transforms(mode: ReaderTransitionMode): ReaderTransitio
                 previous = ReaderPageTransform(translationX = -width + offsetPx),
                 current = ReaderPageTransform(translationX = offsetPx),
             )
+            // 叠页：新页从左边压进来，旧页缩后退、变暗、起圆角，永远在下面。
+            ReaderTransitionMode.DUO -> ReaderTransitionTransforms(
+                previous = ReaderPageTransform(
+                    translationX = -width + offsetPx,
+                    cornerRadiusPx = ReaderDuoVisualPolicy.incomingCornerPx(width, progress),
+                ),
+                current = ReaderPageTransform(
+                    translationX = offsetPx * ReaderDuoVisualPolicy.parallax,
+                    scale = ReaderDuoVisualPolicy.recedeScaleAt(progress),
+                    alpha = ReaderDuoVisualPolicy.recedeAlphaAt(progress),
+                    cornerRadiusPx = ReaderDuoVisualPolicy.recedingCornerPx(width, progress),
+                ),
+            )
             else -> ReaderTransitionTransforms()
         }
         ReaderTurnDirection.NEXT -> when (mode) {
@@ -214,6 +276,18 @@ fun ReaderPageTransition.transforms(mode: ReaderTransitionMode): ReaderTransitio
                 next = ReaderPageTransform(translationX = width + offsetPx),
                 // SlidePageDelegate draws the destination first, then the current page.
                 currentOnTop = true,
+            )
+            ReaderTransitionMode.DUO -> ReaderTransitionTransforms(
+                current = ReaderPageTransform(
+                    translationX = offsetPx * ReaderDuoVisualPolicy.parallax,
+                    scale = ReaderDuoVisualPolicy.recedeScaleAt(progress),
+                    alpha = ReaderDuoVisualPolicy.recedeAlphaAt(progress),
+                    cornerRadiusPx = ReaderDuoVisualPolicy.recedingCornerPx(width, progress),
+                ),
+                next = ReaderPageTransform(
+                    translationX = width + offsetPx,
+                    cornerRadiusPx = ReaderDuoVisualPolicy.incomingCornerPx(width, progress),
+                ),
             )
             else -> ReaderTransitionTransforms()
         }

@@ -53,6 +53,11 @@ data class ReaderTextBackgroundImage(
     val contentInsetRightPx: Float = 0f,
     val contentInsetTopPx: Float = 0f,
     val contentInsetBottomPx: Float = 0f,
+    /**
+     * 上下两条切线之间那一横条（中间带）的自然高度，也就是不缩放时它在屏幕上占多高。
+     * 纵向的等比倍率以它为基准（见 [verticalScalePx]）。
+     */
+    val contentBandHeightPx: Float = 0f,
 ) {
     val hasNinePatchBorder: Boolean
         get() = source.substringBefore('?').substringBefore('#')
@@ -60,9 +65,9 @@ data class ReaderTextBackgroundImage(
 }
 
 /**
- * 把切线分数换算成四条边的原图厚度（像素）：横向按位图宽、纵向按位图高，各自再乘 [scale]。
- * 上下两条切线之间夹的就是文字的显示区域，它没有固定高度——画的时候一律拉成行盒高
- * （见 [frameTopPx]），所以整张图自适应大小。
+ * 把切线分数换算成四条边的自然厚度（像素）与中间带高度：横向按位图宽、纵向按位图高，
+ * 各自再乘 [scale]。这些只是「不缩放时长什么样」，画之前还要按行盒高等比换算一次
+ * （见 [verticalScalePx]），所以整张图随字号一起变大小。
  */
 fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): ReaderTextBackgroundImage {
     if (fit != 3 || widthPx <= 0) return this
@@ -79,18 +84,37 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
         contentInsetRightPx = contentWidthPx * right * fixedScale,
         contentInsetTopPx = contentHeightPx * top * fixedScale,
         contentInsetBottomPx = contentHeightPx * bottom * fixedScale,
+        contentBandHeightPx = contentHeightPx * (1f - top - bottom).coerceAtLeast(0f) * fixedScale,
     )
 }
 
 /**
- * 九宫格上沿要在行盒上方再外扩多少 = 图自己的上边条厚度。上下两条切线之间就是文字的显示
- * 区域：中间那一格恒按行盒高画，图因此随行盒一起长高或缩矮，而不是尺寸不变地对着字上下挪。
- * 纵向唯一不拉伸的是四条边本身（各按源厚 × [scale]）。非九宫格不外扩。
+ * 纵向的等比缩放倍率：上下两条切线之间就是文字的显示区域，所以让中间带正好等于行盒高，
+ * 整张图按这一个倍率变大小——上下边条跟着一起长缩，任何一格都不做纵向拉伸。
+ * 上下切线挤到一起时中间带趋近 0、倍率会趋于无穷，所以两条边合计最高只让到行盒的
+ * [maxEdgeHeightRatio] 倍（整张图因此不超过行盒的 4 倍）；切线交叉到没有中间带
+ * （[contentBandHeightPx] 为 0）时按 1 倍原样画。
  */
-fun ReaderTextBackgroundImage.frameTopPx(): Float = if (fit != 3) 0f else contentInsetTopPx
+fun ReaderTextBackgroundImage.verticalScalePx(lineHeightPx: Float): Float {
+    if (fit != 3 || contentBandHeightPx <= 0f || lineHeightPx <= 0f) return 1f
+    // 两条边都没有厚度时本来就不存在溢出，倍率只由中间带决定（除以 0 得无穷，min 自然取前者）。
+    val edgeHeightPx = contentInsetTopPx + contentInsetBottomPx
+    return minOf(
+        lineHeightPx / contentBandHeightPx,
+        lineHeightPx * maxEdgeHeightRatio / edgeHeightPx,
+    )
+}
+
+/** 九宫格上沿要在行盒上方再外扩多少 = 上边条按 [verticalScalePx] 换算后的厚度。非九宫格不外扩。 */
+fun ReaderTextBackgroundImage.frameTopPx(lineHeightPx: Float): Float =
+    if (fit != 3) 0f else contentInsetTopPx * verticalScalePx(lineHeightPx)
 
 /** [frameTopPx] 的下沿那一半。 */
-fun ReaderTextBackgroundImage.frameBottomPx(): Float = if (fit != 3) 0f else contentInsetBottomPx
+fun ReaderTextBackgroundImage.frameBottomPx(lineHeightPx: Float): Float =
+    if (fit != 3) 0f else contentInsetBottomPx * verticalScalePx(lineHeightPx)
+
+/** 上下切线交叉时等比倍率会爆掉：两条边合计最高只让到行盒的这么多倍，整张图不超过行盒 4 倍。 */
+private const val maxEdgeHeightRatio = 3f
 
 /**
  * 左/右偏移各自换算成中间那一格被推出去的量：正值往外拉，负值往里缩。

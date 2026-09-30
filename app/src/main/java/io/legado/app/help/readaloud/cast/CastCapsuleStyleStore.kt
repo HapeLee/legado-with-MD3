@@ -116,10 +116,17 @@ object CastCapsuleStyleStore {
     }
 }
 
-/** 胶囊底图的位图缓存：绘制侧同步取，未命中就只画底色。 */
+/**
+ * 胶囊底图的位图缓存：绘制侧同步取，未命中就只画底色。
+ *
+ * 上限按堆算，最少 8 MB：解码最长边夹在 1024，一张 1024×2048 的图就要 8 MB，
+ * 原来写死 4 MB 时它进缓存即被挤出去，每帧都是未命中——翻页时胶囊底图闪一下就是这么来的。
+ */
 object CastCapsuleImageCache {
 
-    private val cache = LruCache<String, Bitmap>(4 * 1024 * 1024)
+    private val cache = LruCache<String, Bitmap>(
+        maxOf(8 * 1024 * 1024, (Runtime.getRuntime().maxMemory() / 16).toInt()),
+    )
 
     fun cached(uri: String): Bitmap? =
         if (uri.isEmpty()) null else cache.get(uri)?.takeIf { !it.isRecycled }

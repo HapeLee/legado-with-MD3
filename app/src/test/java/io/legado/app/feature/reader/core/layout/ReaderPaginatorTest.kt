@@ -697,8 +697,8 @@ class ReaderPaginatorTest {
     }
 
     /**
-     * 纵向自适应：外沿只让出图自己的上/下边条，中间那一格恒按行盒高画。行距倍数只把下一行推远，
-     * 不改这一行的图高——图高归行盒与两条边条管，分页不许改写导入的厚度。
+     * 纵向等比缩放：中间带对上行盒高，上下两条边按同一倍率换算。行距倍数只把下一行推远，
+     * 不改这一行的行盒，因此图高也不变——图高归行盒与倍率管，分页不许改写导入的厚度。
      */
     @Test
     fun nineSliceFrameHeightFollowsTheLineBoxNotTheLineSpacing() {
@@ -708,6 +708,7 @@ class ReaderPaginatorTest {
             contentInsetRightPx = 4f,
             contentInsetTopPx = 4f,
             contentInsetBottomPx = 8f,
+            contentBandHeightPx = 20f,
         )
         val framedStyle = style.copy(backgroundImage = framed)
 
@@ -783,7 +784,7 @@ class ReaderPaginatorTest {
     }
 
     /**
-     * 连续两行都带框时各自量自己的行盒：两行的图一样高，都是「行盒 + 上下两条边条」，
+     * 连续两行都带框时各自量自己的行盒：两行的图一样高，都是「行盒 + 上下两条等比换算过的边条」，
      * 谁也不被行距挤扁，也不去盖住另一行。
      */
     @Test
@@ -794,6 +795,7 @@ class ReaderPaginatorTest {
             contentInsetRightPx = 4f,
             contentInsetTopPx = 4f,
             contentInsetBottomPx = 8f,
+            contentBandHeightPx = 20f,
         ))
         val page = ReaderPaginator.paginateBlocks(
             listOf(ReaderMeasuredBlock.InlineParagraph(

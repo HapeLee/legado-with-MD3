@@ -22,6 +22,10 @@ data class CastCapsuleStyle(
     @SerializedName("avatarScale") val avatarScale: Int = FULL,
     @SerializedName("avatarDx") val avatarDx: Int = 0,
     @SerializedName("avatarDy") val avatarDy: Int = 0,
+    /** 以下三个开关只作用于角色胶囊：关掉的那一栏连宽度一起省掉，不是画了再藏。 */
+    @SerializedName("showAvatar") val showAvatar: Boolean = true,
+    @SerializedName("showName") val showName: Boolean = true,
+    @SerializedName("showPool") val showPool: Boolean = true,
 ) {
 
     /** 胶囊底板的圆角半径：100 时正好是高的一半（现在的样子）。 */

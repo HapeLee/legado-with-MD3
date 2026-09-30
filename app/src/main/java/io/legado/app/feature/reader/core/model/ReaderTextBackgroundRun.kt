@@ -66,8 +66,8 @@ fun ReaderPage.textBackgroundRuns(): List<ReaderTextBackgroundRun> {
 
 /**
  * 文字段 → 九宫格外框：外框 = 文字段 + 左右偏移（中间那一格各自往两侧拉出去这么多）
- * + 四周一圈的原图厚度。上下边同理，只是厚度在分页期就逐字算好了（[frameTopPx]），
- * 再由上面的合并取 min/max。预览侧共用这个函数，气泡才会和正文一样宽。
+ * + 四周一圈的原图厚度。上下边同理，只是厚度要按行盒高等比换算，所以分页期就逐字算好了
+ * （[frameTopPx]），再由上面的合并取 min/max。预览侧共用这个函数，气泡才会和正文一样宽。
  */
 fun ReaderTextBackgroundImage.nineSliceFrame(content: ReaderRect): ReaderRect =
     if (fit != 3) content else {

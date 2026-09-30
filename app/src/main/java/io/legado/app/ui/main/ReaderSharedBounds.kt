@@ -12,14 +12,18 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import io.legado.app.ui.widget.components.image.cover.sharedCoverSourceRadius
 
 /**
@@ -46,11 +50,15 @@ fun Modifier.readerSharedBounds(
     }
     val targetRadius = displayCornerRadiusPx / density
     val startRadius = sharedCoverSourceRadius(sharedCoverKey)?.value ?: targetRadius
-    val radius by animatedVisibilityScope.transition.animateFloat(
+    val radiusState = animatedVisibilityScope.transition.animateFloat(
         label = "reader-clip-corner-radius",
     ) { state ->
         if (state == EnterExitState.Visible) targetRadius else startRadius
     }
+    // 裁剪半径只在裁剪轮廓真正被解析的那一刻读（绘制阶段）。原来写成 `radius.dp` 是把每帧都变的
+    // 值读进了重组：转场期间整个阅读页正文每帧重组一次，这就是「卡卡的」最直接的一处
+    //（`PlayerMorphHost` 里对同一件事有同样的告诫）。
+    val clipShape = remember(radiusState) { AnimatedCornerShape(radiusState::value) }
     // 裁剪框的曲线用播放器那一份临界阻尼弹簧：一次到位、不回弹，收尾是硬边而不是「弹一下」。
     return this.then(with(sharedTransitionScope) {
         Modifier.sharedBounds(
@@ -66,9 +74,26 @@ fun Modifier.readerSharedBounds(
             boundsTransform = BoundsTransform { _, _ -> readerBoundsSpring },
             resizeMode = ResizeMode.scaleToBounds(ContentScale.None, Alignment.TopStart),
             zIndexInOverlay = 1f,
-            clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(radius.dp)),
+            clipInOverlayDuringTransition = OverlayClip(clipShape),
         )
     })
+}
+
+/**
+ * 圆角值延迟读取的 [Shape]：`createOutline` 在绘制阶段被调用，那里读动画状态就只让轮廓重算，
+ * 不会把宿主 Composable 拖进每帧重组。
+ */
+private class AnimatedCornerShape(private val radiusDp: () -> Float) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        // 裁剪框刚长成封面那一格时比圆角还小，不夹住会画出自交的路径
+        val radiusPx = (radiusDp() * density.density)
+            .coerceAtMost(minOf(size.width, size.height) / 2f)
+        return Outline.Rounded(RoundRect(0f, 0f, size.width, size.height, radiusPx, radiusPx))
+    }
 }
 
 /** 与 `ReadAloudMorphState.SETTLE_SPEC` 同一条弹簧（那里是 Float，这里要 Rect，只保留同样的阻尼与刚度）。 */

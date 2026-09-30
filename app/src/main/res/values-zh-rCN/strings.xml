@@ -911,9 +911,9 @@
     <string name="highlight_bg_length_offset_right">九宫格右偏移</string>
     <string name="cast_bubble_menu">设置气泡</string>
     <string name="cast_bubble_clear">不设气泡</string>
-    <string name="nine_slice_split_hint">只有绿框那一段会被拉长：横向拉到文字宽度，纵向正好盖住这一行的字，所以气泡跟着字号自适应大小。左右两条线决定横着拉多长；上下两条线之间就是文字的显示区域，把两条线往中间挤，字上下留白就少。四条线都能拉到 100%，图案不在正中间的图靠它把拉伸带整个推到一侧。左偏移、右偏移在字数不变的情况下把绿框那一段的左沿、右沿各自往外出或往里收，靠它把气泡两端分别对齐。</string>
+    <string name="nine_slice_split_hint">只有绿框那一段会被拉长：横向拉到文字宽度，纵向一概不拉伸，整张图按等比缩放变大小——上下两条线之间那一条带子对上行盒高，气泡因此跟着字号变大变小。左右两条线决定横着拉多长；上下两条线之间就是文字的显示区域，这条带子多宽决定缩放倍率：带子窄，整张图（连上下两条边）一起放大，字上下留白就多；带子宽，整张图一起缩小。四条线都能拉到 100%，图案不在正中间的图靠它把拉伸带整个推到一侧。左偏移、右偏移在字数不变的情况下把绿框那一段的左沿、右沿各自往外出或往里收，靠它把气泡两端分别对齐。</string>
     <string name="nine_slice_horizontal_hint">左右两条线：只有这两条线之间那一格会被横向拉长，左右两条边按原图厚度画。</string>
-    <string name="nine_slice_vertical_hint">上下两条线：这两条线之间是文字的显示区域，那一格按行盒高自适应；上下两条边按原图厚度画，不跟着拉伸。</string>
+    <string name="nine_slice_vertical_hint">上下两条线：这两条线之间是文字的显示区域。整张图按同一个倍率等比缩放到盖住行盒，上下两条边跟着一起长缩，任何一格都不做纵向拉伸。</string>
     <string name="sure_delete">确定要删除吗？</string>
     <string name="save_to_source">保存到源文件，保存后重置功能将无效</string>
     <string name="edit_chapter">编辑章节</string>
@@ -1942,6 +1942,7 @@
     <string name="auto_check_new_backup_s">打开软件时检查是否有新备份，有新备份时提示是否更新</string>
     <string name="replace_purify_badge">计数替换净化</string>
     <string name="page_anim_fade">渐变</string>
+    <string name="page_anim_duo">叠页</string>
     <string name="show_bookshelf_tab_menu">显示更多分组按钮</string>
     <string name="show_unread_new">显示新章节更新标志</string>
     <string name="read_change_all">换源按钮默认弹出整书换源</string>
@@ -3717,6 +3718,12 @@
     <string name="capsule_style_avatar_size_summary">拉大到填满胶囊高，拉小只剩一个小圆点</string>
     <string name="capsule_style_avatar_left_right">头像左右位置</string>
     <string name="capsule_style_avatar_up_down">头像上下位置</string>
+    <string name="capsule_style_show_avatar">显示头像</string>
+    <string name="capsule_style_show_avatar_summary">关掉后胶囊里只剩文字，头像那一格连宽度一起省掉</string>
+    <string name="capsule_style_show_name">显示角色名</string>
+    <string name="capsule_style_show_name_summary">关掉后胶囊里只剩头像</string>
+    <string name="capsule_style_show_pool">显示声音池</string>
+    <string name="capsule_style_show_pool_summary">关掉后名字后面那串池名不再占宽度</string>
     <string name="capsule_style_reset">恢复默认</string>
     <string name="capsule_style_reset_summary">清掉这一类胶囊的圆角、背景与头像设置</string>
     <string name="capsule_style_saved">已保存</string>
@@ -3725,6 +3732,7 @@
     <string name="capsule_style_preview_night">深色</string>
     <string name="capsule_style_preview_name">苏晚</string>
     <string name="capsule_style_preview_bgm">♪ 雨夜</string>
+    <string name="capsule_style_preview_pool">雨夜</string>
     <string name="read_aloud_overlay_permission">允许胶囊显示在其他应用上层</string>
     <string name="read_aloud_overlay_granted">已授权。朗读运行时可在桌面和其他应用上使用胶囊。</string>
     <string name="read_aloud_overlay_required">授权后可在桌面和其他应用上使用胶囊，未授权不影响应用内胶囊。</string>

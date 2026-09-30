@@ -917,10 +917,11 @@ internal class ReaderPaginationSession(
                                     previousItemBackground == itemBackground &&
                                     spacingBefore <= 0f &&
                                     previousMatchSpacingAfterPx <= 0f,
-                            // 九宫格纵向自适应：上下两条切线之间就是字的显示区域，所以外沿
-                            // 只让出图自己的上/下边条厚度，中间那一格正好盖住行盒。
-                            backgroundFrameTopPx = itemBackground?.frameTopPx() ?: 0f,
-                            backgroundFrameBottomPx = itemBackground?.frameBottomPx() ?: 0f,
+                            // 九宫格纵向等比缩放：上下两条切线之间是字的显示区域，所以按行盒高
+                            // 算出一个倍率，外沿让出的是上下边条按同一倍率换算后的厚度
+                            // （切线之间那一格正好盖住行盒，上下边跟着一起长缩）。
+                            backgroundFrameTopPx = itemBackground?.frameTopPx(actualLineHeight) ?: 0f,
+                            backgroundFrameBottomPx = itemBackground?.frameBottomPx(actualLineHeight) ?: 0f,
                         )
                     }
 

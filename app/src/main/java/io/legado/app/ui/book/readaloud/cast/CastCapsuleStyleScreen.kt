@@ -57,6 +57,7 @@ import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
+import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -251,7 +252,27 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
                             }
                         },
                     )
-                    if (type != CastCapsuleStyleStore.BGM) {
+                    if (type == CastCapsuleStyleStore.ROLE) {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.capsule_style_show_avatar),
+                            description = stringResource(R.string.capsule_style_show_avatar_summary),
+                            checked = style.showAvatar,
+                            onCheckedChange = { update(style.copy(showAvatar = it)) },
+                        )
+                        SwitchSettingItem(
+                            title = stringResource(R.string.capsule_style_show_name),
+                            description = stringResource(R.string.capsule_style_show_name_summary),
+                            checked = style.showName,
+                            onCheckedChange = { update(style.copy(showName = it)) },
+                        )
+                        SwitchSettingItem(
+                            title = stringResource(R.string.capsule_style_show_pool),
+                            description = stringResource(R.string.capsule_style_show_pool_summary),
+                            checked = style.showPool,
+                            onCheckedChange = { update(style.copy(showPool = it)) },
+                        )
+                    }
+                    if (type != CastCapsuleStyleStore.BGM && style.showAvatar) {
                         SliderSettingItem(
                             title = stringResource(R.string.capsule_style_avatar_size),
                             description = stringResource(R.string.capsule_style_avatar_size_summary),
@@ -409,12 +430,17 @@ private fun PreviewCard(
     type: String,
 ) {
     // 未分配那颗正文里只有一个人形图标，一个字都没有
-    val withAvatar = type != CastCapsuleStyleStore.BGM
-    val withText = type != CastCapsuleStyleStore.PLACEHOLDER
-    val capsuleText = when {
-        !withText -> ""
-        withAvatar -> stringResource(R.string.capsule_style_preview_name)
-        else -> stringResource(R.string.capsule_style_preview_bgm)
+    val withAvatar = type != CastCapsuleStyleStore.BGM && style.showAvatar
+    // 关掉的那一栏在预览里同样连位置一起没有，和正文量出来的是同一颗胶囊
+    val nameText = when (type) {
+        CastCapsuleStyleStore.PLACEHOLDER -> ""
+        CastCapsuleStyleStore.BGM -> stringResource(R.string.capsule_style_preview_bgm)
+        else -> stringResource(R.string.capsule_style_preview_name).takeIf { style.showName }.orEmpty()
+    }
+    val poolText = if (type == CastCapsuleStyleStore.ROLE && style.showPool) {
+        stringResource(R.string.capsule_style_preview_pool)
+    } else {
+        ""
     }
     Row(
         modifier = Modifier
@@ -433,8 +459,8 @@ private fun PreviewCard(
             bgColor = style.bgColor,
             image = dayImage ?: nightImage,
             withAvatar = withAvatar,
-            withText = withText,
-            capsuleText = capsuleText,
+            nameText = nameText,
+            poolText = poolText,
         )
         PreviewBoard(
             modifier = Modifier.weight(1f),
@@ -445,8 +471,8 @@ private fun PreviewCard(
             bgColor = style.bgColorNight,
             image = nightImage ?: dayImage,
             withAvatar = withAvatar,
-            withText = withText,
-            capsuleText = capsuleText,
+            nameText = nameText,
+            poolText = poolText,
         )
     }
 }
@@ -461,8 +487,8 @@ private fun PreviewBoard(
     bgColor: Int,
     image: Bitmap?,
     withAvatar: Boolean,
-    withText: Boolean,
-    capsuleText: String,
+    nameText: String,
+    poolText: String,
 ) {
     val height = 40.dp
     val pad = height * CastCapsuleGeometry.padRatio
@@ -474,6 +500,7 @@ private fun PreviewBoard(
     } else {
         pad
     }
+    val withText = nameText.isNotEmpty() || poolText.isNotEmpty()
     Column(
         modifier = modifier.background(board).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -512,13 +539,24 @@ private fun PreviewBoard(
                         .fillMaxHeight()
                         .padding(start = textLeft, end = pad),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    AppText(
-                        text = capsuleText,
-                        fontSize = 13.sp,
-                        color = onColor,
-                        maxLines = 1,
-                    )
+                    if (nameText.isNotEmpty()) {
+                        AppText(
+                            text = nameText,
+                            fontSize = 13.sp,
+                            color = onColor,
+                            maxLines = 1,
+                        )
+                    }
+                    if (poolText.isNotEmpty()) {
+                        AppText(
+                            text = poolText,
+                            fontSize = 10.sp,
+                            color = onColor.copy(alpha = 0.72f),
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
             if (withAvatar) {
@@ -535,10 +573,10 @@ private fun PreviewBoard(
                         .background(onColor.copy(alpha = 0.35f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (withText) {
+                    if (nameText.isNotEmpty()) {
                         // 角色那颗画的是头像，占位那颗只有人形图标 → 这里用名字首字代表头像
                         AppText(
-                            text = capsuleText.take(1),
+                            text = nameText.take(1),
                             fontSize = 11.sp,
                             color = onColor,
                             maxLines = 1,

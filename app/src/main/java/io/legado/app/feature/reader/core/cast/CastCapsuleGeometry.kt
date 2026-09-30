@@ -39,11 +39,24 @@ object CastCapsuleGeometry {
 
     fun heightPx(fontSizePx: Float): Float = fontSizePx * heightRatio
 
-    /** 头像块之后文字该从哪儿起（头像大小与那个横向位移都会把文字顶过去）。 */
-    fun textLeftPx(heightPx: Float, style: CastCapsuleStyle): Float = max(
-        heightPx * padRatio,
-        style.avatarLeft(heightPx) + style.avatarDiameter(heightPx) + heightPx * gapRatio,
-    )
+    /** 头像块之后文字该从哪儿起（头像大小与那个横向位移都会把文字顶过去；头像关掉时直接是内边距）。 */
+    fun textLeftPx(heightPx: Float, style: CastCapsuleStyle): Float =
+        if (!style.showAvatar) {
+            heightPx * padRatio
+        } else {
+            max(
+                heightPx * padRatio,
+                style.avatarLeft(heightPx) + style.avatarDiameter(heightPx) + heightPx * gapRatio,
+            )
+        }
+
+    /** 名字之后池小字该从哪儿起（名字关掉时小字就顶到名字那个位置）。 */
+    fun poolLeftPx(
+        heightPx: Float,
+        style: CastCapsuleStyle,
+        nameWidthPx: Float,
+    ): Float = textLeftPx(heightPx, style) +
+        (if (style.showName) nameWidthPx + heightPx * poolGapRatio else 0f)
 
     /**
      * 配乐胶囊文案：`♪ 声音池名`。
@@ -63,6 +76,7 @@ object CastCapsuleGeometry {
     /**
      * 胶囊总宽 = 2×内边距 +（可选头像+间隙）+ 名字宽 +（可选池小字宽）+（可选变声器标记）+ 占位尾部。
      * [labelWidthPx] 现在只是名字文本宽（池小字单独传），不再有括号留白。
+     * 样式里关掉的那一栏按 0 计入，量出来的宽度就是画出来的宽度。
      */
     fun widthOf(
         fontSizePx: Float,
@@ -73,11 +87,17 @@ object CastCapsuleGeometry {
         style: CastCapsuleStyle = CastCapsuleStyle.Default,
     ): Float {
         val h = heightPx(fontSizePx)
-        val lead = if (withAvatar) textLeftPx(h, style) - h * padRatio else 0f
-        val pool = if (poolWidthPx > 0f) h * poolGapRatio + poolWidthPx else 0f
+        val hasAvatar = withAvatar && style.showAvatar
+        val lead = if (hasAvatar) textLeftPx(h, style) - h * padRatio else 0f
+        val name = if (style.showName) labelWidthPx else 0f
+        val pool = if (style.showPool && poolWidthPx > 0f) {
+            h * poolGapRatio + poolWidthPx
+        } else {
+            0f
+        }
         val tail = if (withAvatar) 0f else h * tailRatio
         val badge = if (withEffect) h * (effectRatio + effectGapRatio) else 0f
-        return h * padRatio * 2f + lead + labelWidthPx + pool + badge + tail
+        return h * padRatio * 2f + lead + name + pool + badge + tail
     }
 
     /**

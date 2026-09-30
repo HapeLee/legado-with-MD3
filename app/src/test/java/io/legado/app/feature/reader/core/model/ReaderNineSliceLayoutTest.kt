@@ -5,8 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderNineSliceLayoutTest {
-    // 50×40 的图，切线 20%/30%/10%/20%，scale 1：四条边的原图厚度 10/15/4/8。
-    // 上下两条切线之间那一格按行盒高画，所以整张图的高 = 4 + 行盒 + 8，随字号自适应。
+    // 50×40 的图，切线 20%/30%/10%/20%，scale 1：上边条 4 / 中间带 28 / 下边条 8。
+    // 纵向一律等比缩放：中间带对上行盒高，整张图就按同一个倍率变大小，谁也不被单独拉长。
     private val locked = ReaderTextBackgroundImage(
         source = "frame.png",
         fit = 3,
@@ -17,12 +17,15 @@ class ReaderNineSliceLayoutTest {
         ninePatchBottom = 0.2f,
     ).withBitmapSize(50, 40)
 
-    /** 分页给这一行算出的外框：上下各让出一条边自己的厚度，横向只有中间格被拉长。 */
+    /** 行盒高（= 中间带要盖住的那一截）与中间带自然高 28 之比，就是整张图的等比倍率。 */
+    private val lockedBandHeightPx = 28f
+
+    /** 分页给这一行算出的外框：上下各让出一条边按行盒高等比换算后的厚度，横向只有中间格被拉长。 */
     private fun frameOf(image: ReaderTextBackgroundImage, content: ReaderRect): ReaderRect =
         image.nineSliceFrame(
             content.copy(
-                top = content.top - image.frameTopPx(),
-                bottom = content.bottom + image.frameBottomPx(),
+                top = content.top - image.frameTopPx(content.height),
+                bottom = content.bottom + image.frameBottomPx(content.height),
             ),
         )
 
@@ -30,9 +33,9 @@ class ReaderNineSliceLayoutTest {
 
     private fun sourceHeight(cell: ReaderNineSliceCell) = cell.source.bottom - cell.source.top
 
-    /** 中间那一行（源里从第 4 像素起）按行盒高画，上下两条边按源厚原样画。 */
+    /** 每一格的目标高 = 源高 × 同一个等比倍率；中间那一行因此正好是行盒高。 */
     private fun expectedHeight(cell: ReaderNineSliceCell, lineHeight: Float) =
-        if (cell.source.top == 4) lineHeight else (cell.source.bottom - cell.source.top).toFloat()
+        sourceHeight(cell) * (lineHeight / lockedBandHeightPx)
 
     /**
      * 左右两条切分线现在都能拉到 100%（图案不在正中间的图需要把拉伸带整个推到一侧）。
@@ -69,12 +72,13 @@ class ReaderNineSliceLayoutTest {
     }
 
     @Test
-    fun theMiddleCellAdaptsToTheTextRowWhileEveryEdgeKeepsItsThickness() {
-        val content = ReaderRect(10f, 20f, 40f, 50f)
+    fun theWholeImageScalesToTheTextRowWithoutStretchingAnyCell() {
+        // 行盒高 28 = 中间带自然高，等比倍率正好是 1：整张图就是它自己的原始尺寸。
+        val content = ReaderRect(10f, 20f, 40f, 48f)
         val frame = frameOf(locked, content)
 
-        // 纵向：图高 = 上边条 4 + 行盒 30 + 下边条 8。
-        assertEquals(42f, frame.height, 0.01f)
+        // 纵向：图高 = 上边条 4 + 行盒 28 + 下边条 8。
+        assertEquals(40f, frame.height, 0.01f)
 
         val cells = ReaderNineSliceLayout.cells(50, 40, content, frame, locked)
 
@@ -82,7 +86,7 @@ class ReaderNineSliceLayoutTest {
         cells.forEach { cell ->
             assertEquals(expectedHeight(cell, content.height), cell.destination.height, 0.01f)
         }
-        // 中间那一格既被横向拉到文字宽度，也被纵向拉成行盒高：字底下正好铺满。
+        // 中间那一格被横向拉到文字宽度，纵向正好盖住行盒；倍率和上下两条边完全一致。
         val center = cells[4]
         assertEquals(ReaderIntRect(10, 4, 35, 32), center.source)
         assertEquals(content, center.destination)
@@ -91,16 +95,20 @@ class ReaderNineSliceLayoutTest {
         assertEquals(15f, cells.last().destination.width, 0.01f)
     }
 
-    /** 自适应大小：行盒长一分，气泡就高一分，切出来的字永远在上下两条线之间。 */
+    /** 等比缩放：行盒长一分，整张图（含上下两条边）按同一个倍率长一分，没有哪一格被单独拉伸。 */
     @Test
     fun theBubbleGrowsAndShrinksWithTheTextRow() {
-        listOf(12f, 30f, 64f).forEach { lineHeight ->
+        listOf(14f, 28f, 56f).forEach { lineHeight ->
             val content = ReaderRect(10f, 100f, 40f, 100f + lineHeight)
             val frame = frameOf(locked, content)
 
-            assertEquals(lineHeight + 12f, frame.height, 0.01f)
-            val center = ReaderNineSliceLayout.cells(50, 40, content, frame, locked)
-                .single { it.source == ReaderIntRect(10, 4, 35, 32) }
+            // 倍率 = 行盒 / 中间带 28：整张图高 40 也跟着同一个倍率走。
+            assertEquals(40f * lineHeight / lockedBandHeightPx, frame.height, 0.01f)
+            val cells = ReaderNineSliceLayout.cells(50, 40, content, frame, locked)
+            cells.forEach { cell ->
+                assertEquals(expectedHeight(cell, lineHeight), cell.destination.height, 0.01f)
+            }
+            val center = cells.single { it.source == ReaderIntRect(10, 4, 35, 32) }
             assertEquals(lineHeight, center.destination.height, 0.01f)
             assertEquals(100f, center.destination.top, 0.01f)
         }
@@ -109,7 +117,7 @@ class ReaderNineSliceLayoutTest {
     /** 左/右偏移各自只挪自己那一端：中间格 = 文字宽 + 左 + 右，两条边原厚、跟着平移。 */
     @Test
     fun lengthOffsetWidensOnlyTheMiddleCellAndSlidesTheEdgesWithIt() {
-        val content = ReaderRect(10f, 20f, 40f, 50f)
+        val content = ReaderRect(10f, 20f, 40f, 48f)
         val stretched = locked.copy(lengthOffsetLeftPx = 6f, lengthOffsetRightPx = 10f)
         val frame = frameOf(stretched, content)
 
@@ -117,10 +125,10 @@ class ReaderNineSliceLayoutTest {
 
         // 30 文字宽 + 6 左偏移 + 10 右偏移 = 46，加上 10/15 两条原厚边 → 外框 71。
         assertEquals(71f, frame.width, 0.01f)
-        assertEquals(42f, frame.height, 0.01f)
+        assertEquals(40f, frame.height, 0.01f)
         assertEquals(9, cells.size)
         assertEquals(46f, cells[4].destination.width, 0.01f)
-        // 上下两截带子跟着中间格一起变宽，厚度仍按原图。
+        // 上下两截带子跟着中间格一起变宽；这一行行盒等于中间带，所以倍率为 1、厚度按原图。
         assertEquals(46f, cells[1].destination.width, 0.01f)
         assertEquals(sourceHeight(cells[1]).toFloat(), cells[1].destination.height, 0.01f)
         assertEquals(10f, cells[3].destination.width, 0.01f)
@@ -210,13 +218,14 @@ class ReaderNineSliceLayoutTest {
 
         val topLeft = ReaderNineSliceLayout.cells(50, 40, content, frame, image).first()
 
-        // 源 10×4 → 目标 5×2：scale 0.5 一份不少地作用在四条边上。
+        // scale 0.5 之后：上边条 2、中间带 14、下边条 4。行盒 28 是中间带的两倍，于是整张图
+        // 再放大两倍，每一格共用同一个倍率（0.5 × 2 = 1）：源 10×4 → 目标 5×4。
         assertEquals(10, sourceWidth(topLeft))
         assertEquals(4, sourceHeight(topLeft))
         assertEquals(5f, topLeft.destination.width, 0f)
-        assertEquals(2f, topLeft.destination.height, 0f)
-        // 图高 34 = 上边条 2 + 行盒 28 + 下边条 4：两条边按 scale，中间那一格按字。
-        assertEquals(34f, frame.height, 0.01f)
+        assertEquals(4f, topLeft.destination.height, 0f)
+        // 图高 40 = 上边条 4 + 行盒 28 + 下边条 8：自然高 20 的整张图被等比放大两倍。
+        assertEquals(40f, frame.height, 0.01f)
     }
 
     /** 拼缝：内部边界各让出半像素让相邻格叠压，外框那两条边保持原位，否则缝上会透出页面背景。 */
