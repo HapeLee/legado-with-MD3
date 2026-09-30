@@ -942,9 +942,9 @@
     <string name="highlight_bg_length_offset_right">Bubble Right Offset</string>
     <string name="cast_bubble_menu">Set bubble</string>
     <string name="cast_bubble_clear">No bubble</string>
-    <string name="nine_slice_split_hint">Only the green band stretches, and sideways only — its height is locked to the image, nothing is ever stretched vertically. The two vertical lines set how far that band stretches; the top and bottom lines just pick which band of the image the glyphs sit in, so dragging them is vertical alignment. Left and right offset move the two ends of the stretched band apart, without touching the characters around it.</string>
-    <string name="nine_slice_horizontal_hint">The two vertical lines: only the band between them is stretched sideways, and this is the only stretch in the whole image.</string>
-    <string name="nine_slice_vertical_hint">The two horizontal lines: where the glyphs sit inside the image. The height stays locked, nothing stretches vertically.</string>
+    <string name="nine_slice_split_hint">Only the green band stretches: sideways to the text width, vertically to exactly the line the glyphs sit on, so the bubble grows and shrinks with the font size. The two vertical lines set how far it stretches sideways; the region between the two horizontal lines is where the text is displayed — push them together and the glyphs get less air above and below. All four lines go to 100%, which is how an off-centre pattern gets its stretch band moved wholly to one side. Left and right offset move the two ends of the stretched band apart, without touching the characters around it.</string>
+    <string name="nine_slice_horizontal_hint">The two vertical lines: only the band between them is stretched sideways; the left and right edges keep their original thickness.</string>
+    <string name="nine_slice_vertical_hint">The two horizontal lines: the region between them is where the text is displayed, and that cell adapts to the line height; the top and bottom edges keep their original thickness.</string>
     <string name="sure_delete">Are you sure you want to delete?</string>
     <string name="save_to_source">Save to source file (reset will be unavailable)</string>
     <string name="edit_chapter">Edit chapter</string>

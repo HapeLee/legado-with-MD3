@@ -90,18 +90,14 @@ class ReaderTextBackgroundRunTest {
         assertEquals(15f, resolved.contentInsetRightPx, 0.001f)
         assertEquals(4f, resolved.contentInsetTopPx, 0f)
         assertEquals(8f, resolved.contentInsetBottomPx, 0f)
-        // 上下两条切线之间那条带就是字要待的地方，高度按原图锁死：40×(1−0.1−0.2)=28。
-        assertEquals(28f, resolved.centerBandPx, 0.001f)
-        // 三条加起来 = 位图高，纵向一分都不拉伸。
-        assertEquals(
-            40f,
-            resolved.contentInsetTopPx + resolved.centerBandPx + resolved.contentInsetBottomPx,
-            0.001f,
-        )
     }
 
+    /**
+     * 上下两条切线之间就是文字的显示区域：外沿只让出图自己的上下边条，中间那一格恒按行盒高画，
+     * 所以行盒一高整张图就跟着高——自适应大小，而不是尺寸不变地对着字上下挪。
+     */
     @Test
-    fun `the locked band is centred on the text row and the frame height never changes`() {
+    fun `the frame grows with the text row while the two edges keep their thickness`() {
         val sized = image.copy(
             ninePatchLeft = 0.2f,
             ninePatchRight = 0.3f,
@@ -109,14 +105,11 @@ class ReaderTextBackgroundRunTest {
             ninePatchBottom = 0.2f,
         ).withBitmapSize(50, 40)
 
-        // 行盒 20：带子 28 比字高，上下各外扩一半多余 → 图高仍是 40。
-        assertEquals(8f, sized.frameTopPx(20f), 0.001f)
-        assertEquals(12f, sized.frameBottomPx(20f), 0.001f)
-        assertEquals(40f, 20f + sized.frameTopPx(20f) + sized.frameBottomPx(20f), 0.001f)
-        // 行盒 30：带子比字矮 2px，上下各少让 1px，图高依旧 40。
-        assertEquals(3f, sized.frameTopPx(30f), 0.001f)
-        assertEquals(7f, sized.frameBottomPx(30f), 0.001f)
-        assertEquals(40f, 30f + sized.frameTopPx(30f) + sized.frameBottomPx(30f), 0.001f)
+        assertEquals(4f, sized.frameTopPx(), 0.001f)
+        assertEquals(8f, sized.frameBottomPx(), 0.001f)
+        assertEquals(32f, 20f + sized.frameTopPx() + sized.frameBottomPx(), 0.001f)
+        // 行盒从 20 到 30：两条边一分不变，图高从 32 长到 42。
+        assertEquals(42f, 30f + sized.frameTopPx() + sized.frameBottomPx(), 0.001f)
     }
 
     /** 左偏移只管左沿、右偏移只管右沿：两端能分别对齐，这才是要拆成两项的原因。 */
@@ -169,8 +162,8 @@ class ReaderTextBackgroundRunTest {
         val content = ReaderRect(10f, 0f, 20f, 20f)
 
         assertEquals(content, tiled.nineSliceFrame(content))
-        assertEquals(0f, tiled.frameTopPx(20f), 0f)
-        assertEquals(0f, tiled.frameBottomPx(20f), 0f)
+        assertEquals(0f, tiled.frameTopPx(), 0f)
+        assertEquals(0f, tiled.frameBottomPx(), 0f)
     }
 
     @Test

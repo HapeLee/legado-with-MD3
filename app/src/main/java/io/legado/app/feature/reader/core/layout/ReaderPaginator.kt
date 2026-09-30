@@ -917,11 +917,10 @@ internal class ReaderPaginationSession(
                                     previousItemBackground == itemBackground &&
                                     spacingBefore <= 0f &&
                                     previousMatchSpacingAfterPx <= 0f,
-                            // 九宫格纵向锁定：整张图按原样高，中间那条带按行盒高居中
-                            // （上沿 = 图自己的上边条 + 带子比行盒多出来的一半，下沿同理）。
-                            backgroundFrameTopPx = itemBackground?.frameTopPx(actualLineHeight) ?: 0f,
-                            backgroundFrameBottomPx = itemBackground?.frameBottomPx(actualLineHeight)
-                                ?: 0f,
+                            // 九宫格纵向自适应：上下两条切线之间就是字的显示区域，所以外沿
+                            // 只让出图自己的上/下边条厚度，中间那一格正好盖住行盒。
+                            backgroundFrameTopPx = itemBackground?.frameTopPx() ?: 0f,
+                            backgroundFrameBottomPx = itemBackground?.frameBottomPx() ?: 0f,
                         )
                     }
 

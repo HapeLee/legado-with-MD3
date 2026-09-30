@@ -911,9 +911,9 @@
     <string name="highlight_bg_length_offset_right">九宫格右偏移</string>
     <string name="cast_bubble_menu">设置气泡</string>
     <string name="cast_bubble_clear">不设气泡</string>
-    <string name="nine_slice_split_hint">全程只有横向拉伸：只有绿框那一段会被拉长，高度按原图锁死，上下方向一条边都不拉伸。左右两条线决定这一段能拉多长；上下两条线只是把字框在图的哪一段里，拖动它们就是上下对齐。左偏移、右偏移在字数不变的情况下把绿框那一段的左沿、右沿各自往外出或往里收，靠它把气泡两端分别对齐。</string>
-    <string name="nine_slice_horizontal_hint">左右两条线：只有这两条线之间那一格会被横向拉长，整张图只有这一处拉伸。</string>
-    <string name="nine_slice_vertical_hint">上下两条线：字落在图的哪一段里。高度按原图锁死，纵向一条边都不拉伸。</string>
+    <string name="nine_slice_split_hint">只有绿框那一段会被拉长：横向拉到文字宽度，纵向正好盖住这一行的字，所以气泡跟着字号自适应大小。左右两条线决定横着拉多长；上下两条线之间就是文字的显示区域，把两条线往中间挤，字上下留白就少。四条线都能拉到 100%，图案不在正中间的图靠它把拉伸带整个推到一侧。左偏移、右偏移在字数不变的情况下把绿框那一段的左沿、右沿各自往外出或往里收，靠它把气泡两端分别对齐。</string>
+    <string name="nine_slice_horizontal_hint">左右两条线：只有这两条线之间那一格会被横向拉长，左右两条边按原图厚度画。</string>
+    <string name="nine_slice_vertical_hint">上下两条线：这两条线之间是文字的显示区域，那一格按行盒高自适应；上下两条边按原图厚度画，不跟着拉伸。</string>
     <string name="sure_delete">确定要删除吗？</string>
     <string name="save_to_source">保存到源文件，保存后重置功能将无效</string>
     <string name="edit_chapter">编辑章节</string>

@@ -42,11 +42,17 @@ object ReaderNineSliceLayout {
             sourceBottom - (sourceHeight * image.ninePatchBottom.coerceIn(0f, 1f)).roundToInt(),
             sourceBottom,
         )
-        if (sx[1] > sx[2] || sy[1] > sy[2]) return emptyList()
-        // 纵向一条边都不拉伸：整张图按 scale 原样高，`frame` 的上下边就是图自己的上下边
-        // （由 [ReaderTextBackgroundImage.centerBandPx] 定死），所以中间那一行的目标高度恒等于
-        // 源里那条带的高度。上下两条切分线因此只有一件事可做——把字框在图的哪一段里，
-        // 拖它们就是上下对齐。
+        // 左右（上下）两条切分线各自可以拉到 100%，两条就会在源里交叉。以前这里直接
+        // `return emptyList()` —— 整块气泡消失，用户看到的是「线一过中间图就没了」。
+        // 图案不在正中间的图恰恰需要这个：把拉伸带整个推到一侧，另一侧那条切片按原样画满，
+        // 图案才不会被切断。交叉只说明两条切片把源挤到了一起，给中间那一格至少留一个像素
+        // 可拉即可——零宽的源什么也拉不出来（那一格被跳过），字底下会留一个洞。
+        sx[2] = sx[2].coerceAtLeast((sx[1] + 1).coerceAtMost(sourceRight))
+        sy[2] = sy[2].coerceAtLeast((sy[1] + 1).coerceAtMost(sourceBottom))
+        // 纵向：上下两条切线之间就是文字的显示区域，所以中间那一行恒按行盒高画（整张图因此
+        // 自适应大小，切线往中间挤气泡就长高，不是尺寸不变地对着字上下挪）。上下两条边各按
+        // 自己的源厚 × scale 原样画，纵向不拉伸的是它们；外框的上下边在分页期已由
+        // [ReaderTextBackgroundImage.frameTopPx] 让出了这两条边的厚度。
         //
         // 横向只有左右两条线之间那一格被拉到文字宽度（再各加左/右偏移），四周一圈按原图宽度画，
         // 四角原样。偏移可以为负（气泡比字短），但不许把中间那一格挤成反向：夹紧
@@ -64,11 +70,13 @@ object ReaderNineSliceLayout {
             frame.bottom - image.contentInsetBottomPx,
             frame.bottom,
         )
-        if (dx[1] > dx[2] || dy[1] > dy[2]) return emptyList()
+        // 目标坐标本来不会交叉（`stretchLeftPx/stretchRightPx` 已把两侧各夹到 -文字宽/2，
+        // 中间那一格最窄归零），这里同样只夹平、不清空，理由与上面一致。
+        if (dx[1] > dx[2]) dx[2] = dx[1]
+        if (dy[1] > dy[2]) dy[2] = dy[1]
         // 中心格落在「文字宽 + 长度偏移」上，八个边框格落在外扩出来的 `frame` 上（对照旧 View
         // `drawNineSliceCenter` 的中心 + `drawNineSliceFrames` 画在行框外的上下边/行框两侧的
-        // 左右边）。退化情形不需要特判：中间那条带高度为 0 时，上下两行的目标高度为 0，
-        // 下面的循环直接跳过，只剩「中心 + 左右两条边」。
+        // 左右边）。退化情形不需要特判：某条边厚度为 0 时它在源里也是 0，下面的循环直接跳过。
         return buildList(9) {
             for (row in 0..2) for (column in 0..2) {
                 if (sx[column] == sx[column + 1] || sy[row] == sy[row + 1]) continue

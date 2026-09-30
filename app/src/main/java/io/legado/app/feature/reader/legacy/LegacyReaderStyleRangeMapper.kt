@@ -159,11 +159,14 @@ object LegacyReaderStyleRangeMapper {
     }
 
     /**
-     * 角色设过的那几栏换过来，没设的（null，或命中排版那四个 0）仍用这里原本赢着的样式。
+     * **角色设过的一律优先**：这一栏角色给了值就换成角色的，没给（null，或命中排版那四个 0）
+     * 才用这里原本赢着的那一份。
      *
-     * 命中字距的口径与 [matchRanges] 一致：只有整句的首字带 before、只有末字带 after，
-     * 段内一个字都不加 —— 段内也加的话，调的就不是间距而是整段的字号了。行距是行级属性，
-     * 每一段都带，由分页按整行取较大值。
+     * 命中排版的口径与 [matchRanges] 一致：只有整句的首字带 before、只有末字带 after，
+     * 段内一个字都不加。角色一旦设了自己的命中字距，整句的间距就完全归角色 ——
+     * 之前这里是 `maxOf(角色, 规则)`，规则把间距调得比角色大时，用户看到的就是
+     * 「气泡的命中排版不生效，关掉高亮规则才生效」，与「气泡任何设置都优先」相反。
+     * 行距同理（行级属性，角色给了就用角色的，不再与规则取大）。
      */
     private fun ReaderCharacterStyle?.overriddenBy(
         cast: ReaderCharacterStyle,
@@ -172,10 +175,8 @@ object LegacyReaderStyleRangeMapper {
     ): ReaderCharacterStyle {
         val winner = this
         val base = winner ?: cast
-        // 命中字距不能从 base 兜底：没有规则赢着的时候 base 就是角色自己那份，
-        // 那样段内每个字都会带上 before/after，等于把「让出间距」写成「整段拉长」。
-        val before = winner?.matchSpacingBeforePx ?: 0f
-        val after = winner?.matchSpacingAfterPx ?: 0f
+        // 角色一条间距都没设时，整句原样沿用规则那一份（含它自己的首末字让位）
+        val castOwnsSpacing = cast.matchSpacingBeforePx > 0f || cast.matchSpacingAfterPx > 0f
         return base.copy(
             colorArgb = cast.colorArgb ?: base.colorArgb,
             backgroundArgb = cast.backgroundArgb ?: base.backgroundArgb,
@@ -185,10 +186,18 @@ object LegacyReaderStyleRangeMapper {
             italic = cast.italic ?: base.italic,
             fontSizeOffsetPx = cast.fontSizeOffsetPx.takeIf { it != 0f } ?: base.fontSizeOffsetPx,
             backgroundImage = cast.backgroundImage ?: base.backgroundImage,
-            matchSpacingBeforePx = if (isHead) maxOf(cast.matchSpacingBeforePx, before) else before,
-            matchSpacingAfterPx = if (isTail) maxOf(cast.matchSpacingAfterPx, after) else after,
-            linePadTopPx = maxOf(cast.linePadTopPx, base.linePadTopPx),
-            linePadBottomPx = maxOf(cast.linePadBottomPx, base.linePadBottomPx),
+            matchSpacingBeforePx = if (castOwnsSpacing) {
+                if (isHead) cast.matchSpacingBeforePx else 0f
+            } else {
+                winner?.matchSpacingBeforePx ?: 0f
+            },
+            matchSpacingAfterPx = if (castOwnsSpacing) {
+                if (isTail) cast.matchSpacingAfterPx else 0f
+            } else {
+                winner?.matchSpacingAfterPx ?: 0f
+            },
+            linePadTopPx = cast.linePadTopPx.takeIf { it > 0f } ?: base.linePadTopPx,
+            linePadBottomPx = cast.linePadBottomPx.takeIf { it > 0f } ?: base.linePadBottomPx,
         )
     }
 

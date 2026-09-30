@@ -53,18 +53,17 @@ data class ReaderTextBackgroundImage(
     val contentInsetRightPx: Float = 0f,
     val contentInsetTopPx: Float = 0f,
     val contentInsetBottomPx: Float = 0f,
-    /** 上下两条切分线之间那一条带按 [scale] 换算后的锁定高度：纵向全程不拉伸。 */
-    val centerBandPx: Float = 0f,
 ) {
     val hasNinePatchBorder: Boolean
         get() = source.substringBefore('?').substringBefore('#')
             .endsWith(".9.png", ignoreCase = true)
 }
 
-fun ReaderTextBackgroundImage.withBitmapWidth(widthPx: Int): ReaderTextBackgroundImage {
-    return withBitmapSize(widthPx, 0)
-}
-
+/**
+ * 把切线分数换算成四条边的原图厚度（像素）：横向按位图宽、纵向按位图高，各自再乘 [scale]。
+ * 上下两条切线之间夹的就是文字的显示区域，它没有固定高度——画的时候一律拉成行盒高
+ * （见 [frameTopPx]），所以整张图自适应大小。
+ */
 fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): ReaderTextBackgroundImage {
     if (fit != 3 || widthPx <= 0) return this
     val borderPx = if (hasNinePatchBorder) 1 else 0
@@ -80,23 +79,18 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
         contentInsetRightPx = contentWidthPx * right * fixedScale,
         contentInsetTopPx = contentHeightPx * top * fixedScale,
         contentInsetBottomPx = contentHeightPx * bottom * fixedScale,
-        centerBandPx = (contentHeightPx * (1f - top - bottom).coerceAtLeast(0f) * fixedScale)
-            .coerceAtLeast(0f),
     )
 }
 
 /**
- * 九宫格上沿要在行盒上方再外扩多少。纵向一条边都不拉伸：整张图的高度按 [scale] 锁死为
- * [contentInsetTopPx] + [centerBandPx] + [contentInsetBottomPx]，上下两条切分线只决定「字落在图的
- * 哪一段里」，所以中间那条带按行盒高居中——带子比行盒高就把字上下各让出多余的一半，
- * 比行盒矮就让字从带的上下沿各超出一样多，永远不会把图纵向拉开。非九宫格不外扩。
+ * 九宫格上沿要在行盒上方再外扩多少 = 图自己的上边条厚度。上下两条切线之间就是文字的显示
+ * 区域：中间那一格恒按行盒高画，图因此随行盒一起长高或缩矮，而不是尺寸不变地对着字上下挪。
+ * 纵向唯一不拉伸的是四条边本身（各按源厚 × [scale]）。非九宫格不外扩。
  */
-fun ReaderTextBackgroundImage.frameTopPx(lineHeightPx: Float): Float =
-    if (fit != 3) 0f else contentInsetTopPx + (centerBandPx - lineHeightPx) / 2f
+fun ReaderTextBackgroundImage.frameTopPx(): Float = if (fit != 3) 0f else contentInsetTopPx
 
-/** [frameTopPx] 的下沿那一半：上沿外扩之后，下沿 = 图片总高 − 行盒高 − 上沿。 */
-fun ReaderTextBackgroundImage.frameBottomPx(lineHeightPx: Float): Float =
-    if (fit != 3) 0f else contentInsetBottomPx + (centerBandPx - lineHeightPx) / 2f
+/** [frameTopPx] 的下沿那一半。 */
+fun ReaderTextBackgroundImage.frameBottomPx(): Float = if (fit != 3) 0f else contentInsetBottomPx
 
 /**
  * 左/右偏移各自换算成中间那一格被推出去的量：正值往外拉，负值往里缩。

@@ -406,6 +406,7 @@ fun ReadBookScreen(
         show = state.activeSheet is ReadBookSheet.HighlightRuleConfig,
         state = highlightRuleState,
         allConfigNames = state.sheetConfig.configNames,
+        config = state.sheetConfig,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )

@@ -697,18 +697,17 @@ class ReaderPaginatorTest {
     }
 
     /**
-     * 纵向锁定：整张图的高 = 上边条 + 中间带 + 下边条，行距乘多少都不改它，只把带子对着行盒
-     * 上下挪。旧 View 那套「按行距预算把四条边等比收紧」已经废掉——分页不许改写导入的厚度。
+     * 纵向自适应：外沿只让出图自己的上/下边条，中间那一格恒按行盒高画。行距倍数只把下一行推远，
+     * 不改这一行的图高——图高归行盒与两条边条管，分页不许改写导入的厚度。
      */
     @Test
-    fun nineSliceFrameHeightIsTheImageHeightWhateverTheLineSpacing() {
+    fun nineSliceFrameHeightFollowsTheLineBoxNotTheLineSpacing() {
         val framed = ReaderTextBackgroundImage(
             "frame.png", 3, 1f,
             contentInsetLeftPx = 3f,
             contentInsetRightPx = 4f,
             contentInsetTopPx = 4f,
             contentInsetBottomPx = 8f,
-            centerBandPx = 28f,
         )
         val framedStyle = style.copy(backgroundImage = framed)
 
@@ -728,11 +727,11 @@ class ReaderPaginatorTest {
 
             val glyph = page.elements.single() as ReaderElement.Text
             val run = page.textBackgroundRuns().single()
-            // 行盒 20、带子 28：上下各多出 4px，再各自加上原图边条。
-            assertEquals(8f, glyph.backgroundFrameTopPx, 0.001f)
-            assertEquals(12f, glyph.backgroundFrameBottomPx, 0.001f)
-            // 图总高恒为 4+28+8=40，行距乘多少都不会把它拉开。
-            assertEquals(40f, run.bounds.height, 0.01f)
+            // 上下各让出图自己的边条 4 与 8，字就落在两条切线之间。
+            assertEquals(4f, glyph.backgroundFrameTopPx, 0.001f)
+            assertEquals(8f, glyph.backgroundFrameBottomPx, 0.001f)
+            // 图总高 = 4 + 行盒 20 + 8 = 32，与行距倍数无关。
+            assertEquals(32f, run.bounds.height, 0.01f)
             assertEquals(framed, glyph.style.backgroundImage)
         }
     }
@@ -784,18 +783,17 @@ class ReaderPaginatorTest {
     }
 
     /**
-     * 连续两行都带框时不再「各让半个行距」：纵向既然锁死，两行的图高就都还是原图高。
-     * 图比行距高是切线/缩放要解决的事，分页不参与压缩。
+     * 连续两行都带框时各自量自己的行盒：两行的图一样高，都是「行盒 + 上下两条边条」，
+     * 谁也不被行距挤扁，也不去盖住另一行。
      */
     @Test
-    fun consecutiveFramedLinesBothKeepTheLockedImageHeight() {
+    fun consecutiveFramedLinesBothSizeToTheirOwnLineBox() {
         val framedStyle = style.copy(backgroundImage = ReaderTextBackgroundImage(
             "frame.png", 3, 1f,
             contentInsetLeftPx = 3f,
             contentInsetRightPx = 4f,
             contentInsetTopPx = 4f,
             contentInsetBottomPx = 8f,
-            centerBandPx = 28f,
         ))
         val page = ReaderPaginator.paginateBlocks(
             listOf(ReaderMeasuredBlock.InlineParagraph(
@@ -815,7 +813,7 @@ class ReaderPaginatorTest {
         val runs = page.textBackgroundRuns()
 
         assertEquals(2, runs.size)
-        runs.forEach { assertEquals(40f, it.bounds.height, 0.01f) }
+        runs.forEach { assertEquals(32f, it.bounds.height, 0.01f) }
         // 两行的图一样高，只是各自往下挪了一行的距离——没有被行距挤扁。
         assertEquals(20f, runs[1].bounds.top - runs[0].bounds.top, 0.01f)
     }

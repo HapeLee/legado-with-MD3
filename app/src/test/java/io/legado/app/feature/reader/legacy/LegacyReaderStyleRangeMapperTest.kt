@@ -193,8 +193,9 @@ class LegacyReaderStyleRangeMapperTest {
     }
 
     /**
-     * 角色那一套与高亮规则同构：设了的栏（字色、命中字距）盖过规则，没设的仍归规则。
-     * 命中字距的口径和正文一样，只让在整句的首字与末字上。
+     * 「气泡的任何设置都是优先的」：角色设过的每一栏都要盖过同一条高亮规则，
+     * 包括**数值更小**的间距。之前按较大者取，规则把字距调大后角色的设置就永远显不出来，
+     * 只有把高亮规则关掉才看得到 —— 用户报的正是这个。
      */
     @Test
     fun characterStyleOverridesTheRuleWhereItSetItsOwnValue() {
@@ -212,9 +213,14 @@ class LegacyReaderStyleRangeMapperTest {
         )
         val cast = ReaderCharacterStyle(
             colorArgb = 0xFFEEDDCC.toInt(),
+            fontPath = "/sdjs/cast.ttf",
+            fontWeight = 700,
+            italic = true,
             backgroundImage = bubbleImage(),
-            matchSpacingBeforePx = 6f,
-            matchSpacingAfterPx = 8f,
+            matchSpacingBeforePx = 3f,
+            matchSpacingAfterPx = 4f,
+            linePadTopPx = 5f,
+            linePadBottomPx = 6f,
         )
 
         val ranges = LegacyReaderStyleRangeMapper.map(
@@ -224,22 +230,34 @@ class LegacyReaderStyleRangeMapperTest {
                     pattern = "我是李四",
                     targetScope = HighlightRule.TARGET_BODY,
                     textColor = 0xFF112233.toInt(),
+                    fontPath = "/sdjs/rule.ttf",
+                    letterSpacingBefore = 20f,
+                    letterSpacingAfter = 20f,
+                    lineSpacingTop = 20f,
+                    lineSpacingBottom = 20f,
                 ),
             ),
             processes = emptyList(),
             castBubbles = mapOf("张三" to cast),
         ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
 
-        // 角色设了字色，整句都换成角色的那一份
+        // 设过的栏全部换成角色的那一份，与规则的数值大小无关
         assertTrue(ranges.all { it.style.colorArgb == 0xFFEEDDCC.toInt() })
-        // 只有首字（开引号 3）让出 before、只有末字（闭引号 19）让出 after
-        assertEquals(
-            listOf(3),
-            ranges.filter { it.style.matchSpacingBeforePx > 0f }.map { it.start },
-        )
-        assertEquals(
-            listOf(19),
-            ranges.filter { it.style.matchSpacingAfterPx > 0f }.map { it.start },
+        assertTrue(ranges.all { it.style.fontPath == "/sdjs/cast.ttf" })
+        assertTrue(ranges.all { it.style.fontWeight == 700 && it.style.italic == true })
+        assertTrue(ranges.all { it.style.backgroundImage != null })
+        assertTrue(ranges.all { it.style.linePadTopPx == 5f && it.style.linePadBottomPx == 6f })
+        // 命中字距只让在整句的首字（开引号 3）与末字（闭引号 19）上，段内一个字都不加
+        val head = ranges.first { it.start == 3 }
+        val tail = ranges.first { it.endExclusive == 20 }
+        assertEquals(3f, head.style.matchSpacingBeforePx)
+        assertEquals(0f, head.style.matchSpacingAfterPx)
+        assertEquals(4f, tail.style.matchSpacingAfterPx)
+        assertEquals(0f, tail.style.matchSpacingBeforePx)
+        assertTrue(
+            ranges.filter { it != head && it != tail }.all {
+                it.style.matchSpacingBeforePx == 0f && it.style.matchSpacingAfterPx == 0f
+            },
         )
     }
 

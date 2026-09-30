@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import io.legado.app.data.entities.HighlightRule
+import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.book.read.sheet.HighlightRuleEditSheet
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -44,12 +46,31 @@ fun CastBubbleSheet(
         show = show,
         rule = cached?.copy(enabled = true) ?: HighlightRule(enabled = true),
         allConfigNames = configNames,
+        // 预览要沿用的是正文那一套排版。配音页不在阅读页里，拿不到弹层快照，就现读同一份全局配置
+        // （字段口径与 `ReadBookViewModel.buildSheetConfig` 一致）。
+        config = remember(show) { bodyTypography() },
         onDismissRequest = onDismissRequest,
         showRuleInfo = false,
         title = stringResource(R.string.cast_bubble_menu) + " · " + characterName,
         onSave = { rule -> onSave(if (rule.setsNothing()) "" else GSON.toJson(rule)) },
     )
 }
+
+/** 正文当前的字号/字距/行距/缩进/颜色/页边距：只取预览要用得到的那几栏。 */
+private fun bodyTypography() = ReadSheetConfigUiState(
+    textSize = ReadBookConfig.textSize,
+    letterSpacing = ReadBookConfig.letterSpacing,
+    lineSpacing = ReadBookConfig.lineSpacingExtra,
+    paragraphIndentCount = ReadBookConfig.paragraphIndent.length,
+    textItalic = ReadBookConfig.textItalic,
+    textBold = ReadBookConfig.textBold,
+    textColor = ReadBookConfig.durConfig.curTextColor(),
+    textFullJustify = ReadBookConfig.textFullJustify,
+    paddingTop = ReadBookConfig.paddingTop,
+    paddingBottom = ReadBookConfig.paddingBottom,
+    paddingLeft = ReadBookConfig.paddingLeft,
+    paddingRight = ReadBookConfig.paddingRight,
+)
 
 /** 一个可见效果都没设：这时保存等于把气泡撤掉，别在库里留一条空规则。 */
 private fun HighlightRule.setsNothing(): Boolean = bgImage.isNullOrBlank() &&

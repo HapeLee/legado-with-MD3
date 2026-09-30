@@ -5,8 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderNineSliceLayoutTest {
-    // 50×40 的图，切线 20%/30%/10%/20%，scale 1：四条边的原图厚度 10/15/4/8，
-    // 中间那条带锁死为 40×0.7=28 高。整张图总高 = 4+28+8 = 40，就是位图本身的高度。
+    // 50×40 的图，切线 20%/30%/10%/20%，scale 1：四条边的原图厚度 10/15/4/8。
+    // 上下两条切线之间那一格按行盒高画，所以整张图的高 = 4 + 行盒 + 8，随字号自适应。
     private val locked = ReaderTextBackgroundImage(
         source = "frame.png",
         fit = 3,
@@ -17,12 +17,12 @@ class ReaderNineSliceLayoutTest {
         ninePatchBottom = 0.2f,
     ).withBitmapSize(50, 40)
 
-    /** 分页给这一行算出的外框：纵向按锁定高度居中，横向只有中间格被拉长。 */
+    /** 分页给这一行算出的外框：上下各让出一条边自己的厚度，横向只有中间格被拉长。 */
     private fun frameOf(image: ReaderTextBackgroundImage, content: ReaderRect): ReaderRect =
         image.nineSliceFrame(
             content.copy(
-                top = content.top - image.frameTopPx(content.height),
-                bottom = content.bottom + image.frameBottomPx(content.height),
+                top = content.top - image.frameTopPx(),
+                bottom = content.bottom + image.frameBottomPx(),
             ),
         )
 
@@ -30,46 +30,79 @@ class ReaderNineSliceLayoutTest {
 
     private fun sourceHeight(cell: ReaderNineSliceCell) = cell.source.bottom - cell.source.top
 
+    /** 中间那一行（源里从第 4 像素起）按行盒高画，上下两条边按源厚原样画。 */
+    private fun expectedHeight(cell: ReaderNineSliceCell, lineHeight: Float) =
+        if (cell.source.top == 4) lineHeight else (cell.source.bottom - cell.source.top).toFloat()
+
+    /**
+     * 左右两条切分线现在都能拉到 100%（图案不在正中间的图需要把拉伸带整个推到一侧）。
+     * 两条线在源里交叉时，以前这里直接 `return emptyList()`，表现为「线一过中间，整块气泡消失」；
+     * 现在给中间那一格留一个像素可拉，气泡不断，字底下也不会留洞。
+     */
     @Test
-    fun onlyTheMiddleColumnStretchesWhileEveryRowKeepsItsOriginalHeight() {
+    fun crossingSplitLinesStillLeaveSomethingToStretch() {
+        val image = ReaderTextBackgroundImage(
+            source = "frame.png",
+            fit = 3,
+            scale = 1f,
+            ninePatchLeft = 0.8f,
+            ninePatchRight = 0.8f,
+            ninePatchTop = 0.1f,
+            ninePatchBottom = 0.2f,
+        ).withBitmapSize(50, 40)
+        val content = ReaderRect(10f, 20f, 40f, 50f)
+        val frame = frameOf(image, content)
+
+        val cells = ReaderNineSliceLayout.cells(50, 40, content, frame, image)
+
+        assertEquals(9, cells.size)
+        assertTrue(cells.none { it.destination.width <= 0f || it.destination.height <= 0f })
+        // 外框仍然首尾相接铺满，不会缺一条边
+        assertEquals(frame.left, cells.minOf { it.destination.left }, 0.01f)
+        assertEquals(frame.right, cells.maxOf { it.destination.right }, 0.01f)
+        // 左切片吃掉整张图的左 80%（源宽 40），图案因此不会被从中间切断
+        assertEquals(40, cells.maxOf { sourceWidth(it) })
+        // 交叉之后中间那一格只剩 1 个源像素，仍被拉到整段文字宽
+        val center = cells[4]
+        assertEquals(1, sourceWidth(center))
+        assertEquals(30f, center.destination.width, 0.01f)
+    }
+
+    @Test
+    fun theMiddleCellAdaptsToTheTextRowWhileEveryEdgeKeepsItsThickness() {
         val content = ReaderRect(10f, 20f, 40f, 50f)
         val frame = frameOf(locked, content)
 
-        // 纵向：整张图按原样高，一条边都没被拉开。
-        assertEquals(40f, frame.height, 0.01f)
+        // 纵向：图高 = 上边条 4 + 行盒 30 + 下边条 8。
+        assertEquals(42f, frame.height, 0.01f)
 
         val cells = ReaderNineSliceLayout.cells(50, 40, content, frame, locked)
 
         assertEquals(9, cells.size)
         cells.forEach { cell ->
-            assertEquals(sourceHeight(cell).toFloat(), cell.destination.height, 0.01f)
+            assertEquals(expectedHeight(cell, content.height), cell.destination.height, 0.01f)
         }
-        // 只有左右两条线之间那一格被横向拉长到文字宽度（源里它只有 25 宽）。
+        // 中间那一格既被横向拉到文字宽度，也被纵向拉成行盒高：字底下正好铺满。
         val center = cells[4]
         assertEquals(ReaderIntRect(10, 4, 35, 32), center.source)
-        assertEquals(30f, center.destination.width, 0.01f)
-        assertEquals(locked.centerBandPx, center.destination.height, 0.01f)
-        // 带子对着行盒居中：字在图里既不顶上天也不沉到底。
-        assertEquals(21f, center.destination.top, 0.01f)
-        assertEquals(49f, center.destination.bottom, 0.01f)
+        assertEquals(content, center.destination)
         // 左右两条边按原图厚度画，且落在文字框外侧（不压在字上）。
         assertEquals(10f, cells.first().destination.width, 0.01f)
         assertEquals(15f, cells.last().destination.width, 0.01f)
     }
 
+    /** 自适应大小：行盒长一分，气泡就高一分，切出来的字永远在上下两条线之间。 */
     @Test
-    fun theLockedHeightIgnoresHowTallTheTextRowIs() {
+    fun theBubbleGrowsAndShrinksWithTheTextRow() {
         listOf(12f, 30f, 64f).forEach { lineHeight ->
             val content = ReaderRect(10f, 100f, 40f, 100f + lineHeight)
             val frame = frameOf(locked, content)
 
-            // 行盒再高再矮都不改图高——纵向没有拉伸，只有中间那条带对着字上下挪。
-            assertEquals(40f, frame.height, 0.01f)
+            assertEquals(lineHeight + 12f, frame.height, 0.01f)
             val center = ReaderNineSliceLayout.cells(50, 40, content, frame, locked)
                 .single { it.source == ReaderIntRect(10, 4, 35, 32) }
-            assertEquals(locked.centerBandPx, center.destination.height, 0.01f)
-            assertEquals(100f - (locked.centerBandPx - lineHeight) / 2f,
-                center.destination.top, 0.01f)
+            assertEquals(lineHeight, center.destination.height, 0.01f)
+            assertEquals(100f, center.destination.top, 0.01f)
         }
     }
 
@@ -84,10 +117,10 @@ class ReaderNineSliceLayoutTest {
 
         // 30 文字宽 + 6 左偏移 + 10 右偏移 = 46，加上 10/15 两条原厚边 → 外框 71。
         assertEquals(71f, frame.width, 0.01f)
-        assertEquals(40f, frame.height, 0.01f)
+        assertEquals(42f, frame.height, 0.01f)
         assertEquals(9, cells.size)
         assertEquals(46f, cells[4].destination.width, 0.01f)
-        // 上下两截带子跟着中间格一起变宽，纵向仍一分不拉。
+        // 上下两截带子跟着中间格一起变宽，厚度仍按原图。
         assertEquals(46f, cells[1].destination.width, 0.01f)
         assertEquals(sourceHeight(cells[1]).toFloat(), cells[1].destination.height, 0.01f)
         assertEquals(10f, cells[3].destination.width, 0.01f)
@@ -111,16 +144,16 @@ class ReaderNineSliceLayoutTest {
         cells.forEach { cell ->
             assertTrue(cell.destination.width > 0f)
             assertEquals(sourceWidth(cell).toFloat(), cell.destination.width, 0.01f)
-            assertEquals(sourceHeight(cell).toFloat(), cell.destination.height, 0.01f)
+            assertEquals(expectedHeight(cell, content.height), cell.destination.height, 0.01f)
         }
         assertEquals(10f, cells.first().destination.width, 0.01f)
         assertEquals(15f, cells.last().destination.width, 0.01f)
     }
 
     @Test
-    fun withoutABandOnlyTheCenterAndTheSideCellsSurvive() {
-        // 上下两条切线之间没有带子（centerBandPx = 0）时，上下两行的目标高度为 0，
-        // 连同四角一起被跳过，只剩「中心 + 左右两条边」——纵向本来就没有东西可拉伸。
+    fun withoutVerticalEdgesOnlyTheCenterAndTheSideCellsSurvive() {
+        // 上下两条边厚度为 0（外框的上下边就是文字的上下边）时，上下两行的目标高度为 0，
+        // 连同四角一起被跳过，只剩「中心 + 左右两条边」。
         val image = ReaderTextBackgroundImage(
             "frame.png", 3, 1f,
             contentInsetLeftPx = 7f,
@@ -182,8 +215,8 @@ class ReaderNineSliceLayoutTest {
         assertEquals(4, sourceHeight(topLeft))
         assertEquals(5f, topLeft.destination.width, 0f)
         assertEquals(2f, topLeft.destination.height, 0f)
-        // 图高 20 = 2+14+4；行盒 28 比带子 14 高，外框落进行盒内部，仍然一分不拉。
-        assertEquals(20f, frame.height, 0.01f)
+        // 图高 34 = 上边条 2 + 行盒 28 + 下边条 4：两条边按 scale，中间那一格按字。
+        assertEquals(34f, frame.height, 0.01f)
     }
 
     /** 拼缝：内部边界各让出半像素让相邻格叠压，外框那两条边保持原位，否则缝上会透出页面背景。 */
