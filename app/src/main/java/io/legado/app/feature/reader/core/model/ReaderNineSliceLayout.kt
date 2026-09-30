@@ -59,9 +59,10 @@ object ReaderNineSliceLayout {
         // [ReaderTextBackgroundImage.ninePatchTop] / [ninePatchBottom]，倍率与这里的 sy 都从它
         // 换算。哪一处另算一遍，中间那一格就会与上下两条边用不同的倍率——那正是「纵向还是会拉伸」。
         //
-        // 横向只有左右两条线之间那一格被拉到文字宽度（再各加左/右偏移），四周一圈按原图宽度画，
-        // 四角原样。偏移可以为负（气泡比字短），但不许把中间那一格挤成反向：夹紧
-        // （[ReaderTextBackgroundImage.stretchLeftPx] / [stretchRightPx]，与外框同一份口径）。
+        // 横向只有左右两条线之间那一格被拉到文字宽度（再各加左/右偏移），四周一圈按**与纵向同一个
+        // 等比倍率**换算出来的宽度画（[ReaderTextBackgroundImage.frameLeftPx]）——四边若仍按原图像素
+        // 宽画，图就只缩了纵向，右边那块图案会被压扁。偏移可以为负（气泡比字短），但不许把中间那一格
+        // 挤成反向：夹紧（[ReaderTextBackgroundImage.stretchLeftPx] / [stretchRightPx]，与外框同一份口径）。
         val textWidthPx = content.right - content.left
         val dx = floatArrayOf(
             frame.left,

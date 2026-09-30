@@ -43,7 +43,7 @@ fun ReaderPage.textBackgroundRuns(): List<ReaderTextBackgroundRun> {
         ) {
             runs[runs.lastIndex] = previous.copy(
                 bounds = previous.bounds.copy(
-                    right = text.bounds.right,
+                    right = text.bounds.right + text.backgroundFrameRightPx,
                     top = minOf(previous.bounds.top, text.bounds.top - text.backgroundFrameTopPx),
                     bottom = maxOf(previous.bounds.bottom, text.bounds.bottom + text.backgroundFrameBottomPx),
                 ),
@@ -52,6 +52,8 @@ fun ReaderPage.textBackgroundRuns(): List<ReaderTextBackgroundRun> {
         } else {
             runs += ReaderTextBackgroundRun(
                 bounds = text.bounds.copy(
+                    left = text.bounds.left - text.backgroundFrameLeftPx,
+                    right = text.bounds.right + text.backgroundFrameRightPx,
                     top = text.bounds.top - text.backgroundFrameTopPx,
                     bottom = text.bounds.bottom + text.backgroundFrameBottomPx,
                 ),
@@ -61,19 +63,19 @@ fun ReaderPage.textBackgroundRuns(): List<ReaderTextBackgroundRun> {
         }
         previousElement = text
     }
-    return runs.map { run -> run.copy(bounds = run.image.nineSliceFrame(run.bounds)) }
+    return runs.map { run -> run.copy(bounds = run.image.nineSliceFrame(run.bounds, run.contentBounds.width)) }
 }
 
 /**
- * 文字段 → 九宫格外框：外框 = 文字段 + 左右偏移（中间那一格各自往两侧拉出去这么多）
- * + 四周一圈的原图厚度。上下边同理，只是厚度要按行盒高等比换算，所以分页期就逐字算好了
- * （[frameTopPx]），再由上面的合并取 min/max。预览侧共用这个函数，气泡才会和正文一样宽。
+ * 外框的最后一笔：中间那一格按左/右偏移各自往两侧推出去多少（[stretchLeftPx]），
+ * 夹住用的文字宽是 [textWidthPx] —— 必须是**纯文字宽**，不含四周一圈。
+ *
+ * 四周一圈的厚度不在这里加：上下左右四条边都是分页期按同一个等比倍率换算好的
+ * （[frameTopPx] / [frameLeftPx]），在 [textBackgroundRuns] 里就已经并进 bounds 了。
+ * 预览侧共用这个函数，气泡才会和正文一样宽。
  */
-fun ReaderTextBackgroundImage.nineSliceFrame(content: ReaderRect): ReaderRect =
-    if (fit != 3) content else {
-        val textWidthPx = content.right - content.left
-        content.copy(
-            left = content.left - contentInsetLeftPx - stretchLeftPx(textWidthPx),
-            right = content.right + contentInsetRightPx + stretchRightPx(textWidthPx),
-        )
-    }
+fun ReaderTextBackgroundImage.nineSliceFrame(content: ReaderRect, textWidthPx: Float): ReaderRect =
+    if (fit != 3) content else content.copy(
+        left = content.left - stretchLeftPx(textWidthPx),
+        right = content.right + stretchRightPx(textWidthPx),
+    )

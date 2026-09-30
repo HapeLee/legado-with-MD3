@@ -71,10 +71,11 @@ data class ReaderTextBackgroundImage(
  * 这些只是「不缩放时长什么样」，画之前还要按行盒高等比换算一次（见 [verticalScalePx]），
  * 所以整张图随字号一起变大小。
  *
- * 上下两条切线写回的也是**夹过并取整之后**的那一份（[ninePatchTop] / [ninePatchBottom]），
- * 绘制期切片位置读的是同一个数（见 [ReaderNineSliceLayout]）。这一步是「纵向绝不拉伸」的前提：
- * 只要倍率与切线两处各算各的（尤其一边取整、一边不取整），中间那一格的 目标/源 就跟上下
- * 两条边差一点点，拉伸又回来了——用户报的「都说了很多遍了还在拉伸」就是这一点点。
+ * 四条切线写回的也是**夹过并取整之后**的那一份（[ninePatchLeft] / [ninePatchRight] /
+ * [ninePatchTop] / [ninePatchBottom]），绘制期切片位置读的是同一个数（见 [ReaderNineSliceLayout]）。
+ * 这一步是「整张图等比、绝不形变」的前提：只要倍率与切线两处各算各的（尤其一边取整、一边不取整），
+ * 那一格的 目标/源 就跟别的格差一点点，拉伸又回来了——用户报的「都说了很多遍了还在拉伸」
+ * 就是这一点点。
  */
 fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): ReaderTextBackgroundImage {
     if (fit != 3 || widthPx <= 0) return this
@@ -82,8 +83,8 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
     val contentWidthPx = (widthPx - borderPx * 2).coerceAtLeast(0)
     val contentHeightPx = (heightPx - borderPx * 2).coerceAtLeast(0)
     val fixedScale = scale.coerceIn(0.1f, 5f)
-    val leftPx = (contentWidthPx * ninePatchLeft.coerceIn(0f, 1f)).roundToInt()
-    val rightPx = (contentWidthPx * ninePatchRight.coerceIn(0f, 1f)).roundToInt()
+    var leftPx = (contentWidthPx * ninePatchLeft.coerceIn(0f, 1f)).roundToInt()
+    var rightPx = (contentWidthPx * ninePatchRight.coerceIn(0f, 1f)).roundToInt()
     var topPx = (contentHeightPx * ninePatchTop.coerceIn(0f, 1f)).roundToInt()
     var bottomPx = (contentHeightPx * ninePatchBottom.coerceIn(0f, 1f)).roundToInt()
     val maxEdgePx = contentHeightPx - minContentBandPx(contentHeightPx)
@@ -93,7 +94,18 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
         // 余量全给下边：两条边的和正好落在上限上，倍率才不会因取整再多出一格。
         bottomPx = maxEdgePx - topPx
     }
+    // 横向同理，只是中间那一列只要还剩一个像素可拉就够（两条线交叉时图案不被切断，
+    // 见 [ReaderNineSliceLayout]）。夹在这里而不是夹在绘制期，是因为外框读的是下面这四个
+    // 厚度：绘制期另夹一次，左右边条就会与它自己的源切片差那一像素，等比倍率就对不上。
+    val maxColumnPx = (contentWidthPx - 1).coerceAtLeast(0)
+    val columnSum = leftPx + rightPx
+    if (columnSum > maxColumnPx && columnSum > 0) {
+        leftPx = (leftPx * maxColumnPx.toFloat() / columnSum).roundToInt()
+        rightPx = maxColumnPx - leftPx
+    }
     return copy(
+        ninePatchLeft = naturalFraction(leftPx, contentWidthPx),
+        ninePatchRight = naturalFraction(rightPx, contentWidthPx),
         ninePatchTop = naturalFraction(topPx, contentHeightPx),
         ninePatchBottom = naturalFraction(bottomPx, contentHeightPx),
         contentInsetLeftPx = leftPx * fixedScale,
@@ -120,8 +132,11 @@ private fun minContentBandPx(contentHeightPx: Int): Int =
     (contentHeightPx * minContentBandRatio).roundToInt().coerceIn(0, contentHeightPx)
 
 /**
- * 纵向的等比缩放倍率：上下两条切线之间就是文字的显示区域，所以让中间带正好等于行盒高，
+ * 整张图的等比缩放倍率：上下两条切线之间就是文字的显示区域，所以让中间带正好等于行盒高，
  * 整张图按这一个倍率变大小——上下边条跟着一起长缩，任何一格都不做纵向拉伸。
+ *
+ * 这是**唯一**一个倍率，四条边都用它（[frameTopPx] / [frameBottomPx] / [frameLeftPx] /
+ * [frameRightPx]）：只把纵向缩了、横向仍按原图像素画，等于把图压扁。
  *
  * 只此一个倍率，不再对边条厚度另设上限：[minContentBandPx] 已经把分母夹在整图高的
  * [minContentBandRatio] 以上，整张图因此最高不超过行盒的 `1 / minContentBandRatio` 倍，
@@ -139,6 +154,22 @@ fun ReaderTextBackgroundImage.frameTopPx(lineHeightPx: Float): Float =
 /** [frameTopPx] 的下沿那一半。 */
 fun ReaderTextBackgroundImage.frameBottomPx(lineHeightPx: Float): Float =
     if (fit != 3) 0f else contentInsetBottomPx * verticalScalePx(lineHeightPx)
+
+/**
+ * 九宫格左边条画出去多宽 = 左边条也按**同一个** [verticalScalePx] 换算。
+ *
+ * 这一条才是「整张图等比、不形变」的另一半：纵向已经按行盒高缩放过一次（[verticalScalePx]），
+ * 左右两条边若仍按原图像素宽画，同一张图就纵向缩了、横向没缩——倍率小于 1 时右边那块图案
+ * 被压扁，大于 1 时被拉长。用户拖上下两条线就是在改这个倍率，于是形变跟着线走
+ * （「上往下拉上半往上顶、下往上拉下半往下顶，整个图被压扁」）。
+ * 只有中间那一格允许被单独拉宽（那是文字宽度，见 [stretchLeftPx]）。
+ */
+fun ReaderTextBackgroundImage.frameLeftPx(lineHeightPx: Float): Float =
+    if (fit != 3) 0f else contentInsetLeftPx * verticalScalePx(lineHeightPx)
+
+/** [frameLeftPx] 的右边那一半。 */
+fun ReaderTextBackgroundImage.frameRightPx(lineHeightPx: Float): Float =
+    if (fit != 3) 0f else contentInsetRightPx * verticalScalePx(lineHeightPx)
 
 /**
  * 中间带（= 文字显示区域）的下限，占整张图高：倍率的最大值由它决定，
@@ -199,6 +230,10 @@ sealed interface ReaderElement {
         val paragraphIndex: Int = -1,
         val backgroundFrameTopPx: Float = 0f,
         val backgroundFrameBottomPx: Float = 0f,
+        /** 左右两边同理：左边条按同一倍率换算后的宽度（见 [frameLeftPx]）。 */
+        val backgroundFrameLeftPx: Float = 0f,
+        /** [backgroundFrameLeftPx] 的右边那一半。 */
+        val backgroundFrameRightPx: Float = 0f,
         /** 同一行内紧随同背景图元素之后（对照旧 View TextLine 的行内连续绘制）。 */
         val continuesBackgroundRun: Boolean = false,
     ) : ReaderElement {

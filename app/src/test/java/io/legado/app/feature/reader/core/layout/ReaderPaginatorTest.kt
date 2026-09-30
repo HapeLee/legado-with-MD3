@@ -731,10 +731,54 @@ class ReaderPaginatorTest {
             // 上下各让出图自己的边条 4 与 8，字就落在两条切线之间。
             assertEquals(4f, glyph.backgroundFrameTopPx, 0.001f)
             assertEquals(8f, glyph.backgroundFrameBottomPx, 0.001f)
+            // 左右同理：倍率正好是 1，所以边条就是它们自己的厚度。
+            assertEquals(3f, glyph.backgroundFrameLeftPx, 0.001f)
+            assertEquals(4f, glyph.backgroundFrameRightPx, 0.001f)
             // 图总高 = 4 + 行盒 20 + 8 = 32，与行距倍数无关。
             assertEquals(32f, run.bounds.height, 0.01f)
+            assertEquals(17f, run.bounds.width, 0.01f)
             assertEquals(framed, glyph.style.backgroundImage)
         }
+    }
+
+    /**
+     * 四条边共用一个倍率：行盒只有中间带的一半时，左右边条也必须跟着缩一半。
+     * 只缩纵向就等于把图横向拉一倍——右边那块图案被压扁，正是用户报的「预览都被压扁了」。
+     */
+    @Test
+    fun nineSliceFrameScalesAllFourEdgesByOneFactor() {
+        val framed = ReaderTextBackgroundImage(
+            "frame.png", 3, 1f,
+            contentInsetLeftPx = 20f,
+            contentInsetRightPx = 20f,
+            contentInsetTopPx = 10f,
+            contentInsetBottomPx = 10f,
+            contentBandHeightPx = 40f,
+        )
+        val framedStyle = style.copy(backgroundImage = framed)
+
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(ReaderMeasuredBlock.InlineParagraph(
+                items = listOf(ReaderMeasuredInlineItem.Text("字", 10f, framedStyle, 0)),
+                indentCharacters = 0,
+                alignment = ReaderTextAlignment.START,
+                lineHeightPx = 20f,
+                baselineOffsetPx = 15f,
+                baseTextSizePx = 10f,
+                lineSpacingMultiplier = 1f,
+            )),
+            config.copy(viewportHeightPx = 200),
+        ).single()
+
+        val glyph = page.elements.single() as ReaderElement.Text
+        val run = page.textBackgroundRuns().single()
+        // 倍率 = 行盒 20 / 中间带 40 = 0.5：四边各 10×0.5、20×0.5。
+        assertEquals(5f, glyph.backgroundFrameTopPx, 0.001f)
+        assertEquals(5f, glyph.backgroundFrameBottomPx, 0.001f)
+        assertEquals(10f, glyph.backgroundFrameLeftPx, 0.001f)
+        assertEquals(10f, glyph.backgroundFrameRightPx, 0.001f)
+        // 整张图高 = 5 + 行盒 20 + 5 = 30，正是自然高 60 的一半。
+        assertEquals(30f, run.bounds.height, 0.01f)
     }
 
     /**

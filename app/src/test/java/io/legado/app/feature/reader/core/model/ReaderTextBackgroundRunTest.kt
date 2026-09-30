@@ -65,13 +65,14 @@ class ReaderTextBackgroundRunTest {
         assertEquals(4, page.textBackgroundRuns().size)
     }
 
+    /** 外框两端让出的都是**等比换算后**的边条厚度（这里倍率 1，所以就是边条本身）。 */
     @Test
-    fun `nine slice frame keeps the image border thickness on both ends`() {
+    fun `nine slice frame grows both ends by the scaled border thickness`() {
         val framed = image.copy(contentInsetLeftPx = 3f, contentInsetRightPx = 4f)
         val framedStyle = style.copy(backgroundImage = framed)
         val page = page(
-            text(3f, 0f, 13f, 20f, framedStyle),
-            text(13f, 0f, 23f, 20f, framedStyle),
+            text(3f, 0f, 13f, 20f, framedStyle, frameLeft = 3f, frameRight = 4f),
+            text(13f, 0f, 23f, 20f, framedStyle, frameLeft = 3f, frameRight = 4f),
         )
 
         assertEquals(ReaderRect(0f, 0f, 27f, 20f), page.textBackgroundRuns().single().bounds)
@@ -145,23 +146,57 @@ class ReaderTextBackgroundRunTest {
         assertEquals(112f, 28f + squeezed.frameTopPx(28f) + squeezed.frameBottomPx(28f), 0.01f)
     }
 
-    /** 左偏移只管左沿、右偏移只管右沿：两端能分别对齐，这才是要拆成两项的原因。 */
+    /**
+     * 左偏移只管左沿、右偏移只管右沿：两端能分别对齐，这才是要拆成两项的原因。
+     * 四周一圈的厚度走分页期算好的 [frameLeftPx]（与上下同一条等比倍率），这里只补偏移。
+     */
     @Test
     fun `left and right offset each move only their own end of the frame`() {
         val framed = image.copy(
             contentInsetLeftPx = 3f,
             contentInsetRightPx = 4f,
+            contentBandHeightPx = 20f,
             lengthOffsetLeftPx = 10f,
             lengthOffsetRightPx = 6f,
         )
+        val text = ReaderRect(10f, 0f, 20f, 20f)
+        val frame = framed.nineSliceFrame(
+            text.copy(
+                left = text.left - framed.frameLeftPx(text.height),
+                right = text.right + framed.frameRightPx(text.height),
+            ),
+            text.width,
+        )
 
-        val frame = framed.nineSliceFrame(ReaderRect(10f, 0f, 20f, 20f))
-
+        // 行盒 20 = 中间带 20 → 倍率 1，左右边条各 3 / 4 像素。
+        assertEquals(3f, framed.frameLeftPx(20f), 0.001f)
+        assertEquals(4f, framed.frameRightPx(20f), 0.001f)
         // 中间那一格左沿 = 10 − 左边条 3 − 左偏移 10，右沿 = 20 + 右边条 4 + 右偏移 6。
         assertEquals(-3f, frame.left, 0.001f)
         assertEquals(30f, frame.right, 0.001f)
         assertEquals(0f, frame.top, 0f)
         assertEquals(20f, frame.bottom, 0f)
+    }
+
+    /** 纵向缩了一半，左右边条也必须跟着缩一半，否则整张图只缩一个方向——图案就被压扁了。 */
+    @Test
+    fun `all four edges share one scale so the art never deforms`() {
+        val framed = image.copy(
+            contentInsetLeftPx = 20f,
+            contentInsetRightPx = 20f,
+            contentInsetTopPx = 10f,
+            contentInsetBottomPx = 10f,
+            contentBandHeightPx = 40f,
+        )
+
+        // 行盒 20 是中间带 40 的一半 → 四边都按 0.5 换算。
+        assertEquals(0.5f, framed.verticalScalePx(20f), 0.001f)
+        assertEquals(10f, framed.frameLeftPx(20f), 0.001f)
+        assertEquals(10f, framed.frameRightPx(20f), 0.001f)
+        assertEquals(5f, framed.frameTopPx(20f), 0.001f)
+        assertEquals(5f, framed.frameBottomPx(20f), 0.001f)
+        // 非九宫格不参与这套换算。
+        assertEquals(0f, framed.copy(fit = 0).frameLeftPx(20f), 0f)
     }
 
     @Test
@@ -171,17 +206,17 @@ class ReaderTextBackgroundRunTest {
             contentInsetRightPx = 4f,
             lengthOffsetLeftPx = left,
             lengthOffsetRightPx = right,
-        ).nineSliceFrame(ReaderRect(10f, 0f, 20f, 20f))
+        ).nineSliceFrame(ReaderRect(10f, 0f, 20f, 20f), 10f)
 
         // 夹紧到把中间那一格缩到零为止：两侧各退回文字宽的一半（5px），外框不许反过来跨过文字。
         val both = frame(-100f, -100f)
-        assertEquals(12f, both.left, 0.001f)
-        assertEquals(19f, both.right, 0.001f)
+        assertEquals(15f, both.left, 0.001f)
+        assertEquals(15f, both.right, 0.001f)
 
         // 只收左边：右边一条边都不退。
         val onlyLeft = frame(-100f, 0f)
-        assertEquals(12f, onlyLeft.left, 0.001f)
-        assertEquals(24f, onlyLeft.right, 0.001f)
+        assertEquals(15f, onlyLeft.left, 0.001f)
+        assertEquals(20f, onlyLeft.right, 0.001f)
     }
 
     @Test
@@ -189,14 +224,17 @@ class ReaderTextBackgroundRunTest {
         val tiled = image.copy(
             fit = 0,
             contentInsetLeftPx = 3f,
+            contentBandHeightPx = 20f,
             lengthOffsetLeftPx = 10f,
             lengthOffsetRightPx = 10f,
         )
         val content = ReaderRect(10f, 0f, 20f, 20f)
 
-        assertEquals(content, tiled.nineSliceFrame(content))
+        assertEquals(content, tiled.nineSliceFrame(content, content.width))
         assertEquals(0f, tiled.frameTopPx(20f), 0f)
         assertEquals(0f, tiled.frameBottomPx(20f), 0f)
+        assertEquals(0f, tiled.frameLeftPx(20f), 0f)
+        assertEquals(0f, tiled.frameRightPx(20f), 0f)
     }
 
     @Test
@@ -281,8 +319,13 @@ class ReaderTextBackgroundRunTest {
     fun `content clip grows to the drawn bubble`() {
         val framed = image.copy(contentInsetLeftPx = 3f, contentInsetRightPx = 4f)
         val framedStyle = style.copy(backgroundImage = framed)
-        // 贴着内容框右下角的一截气泡：左右多出边条，上下多出「图比行盒高出来的那一截」。
-        val page = page(text(90f, 80f, 100f, 100f, framedStyle, frameTop = 5f, frameBottom = 6f))
+        // 贴着内容框右下角的一截气泡：四条边都是分页期按同一倍率换算出来的边条厚度。
+        val page = page(
+            text(
+                90f, 80f, 100f, 100f, framedStyle,
+                frameTop = 5f, frameBottom = 6f, frameLeft = 3f, frameRight = 4f,
+            ),
+        )
 
         val clip = page.contentClipRect(page.textBackgroundRuns())
 
@@ -290,6 +333,20 @@ class ReaderTextBackgroundRunTest {
         assertEquals(0f, clip.top, 0.001f)
         assertEquals(104f, clip.right, 0.001f)
         assertEquals(106f, clip.bottom, 0.001f)
+    }
+
+    /** 一段气泡的框 = 文字段四边各让出一条等比换算后的边条；合并时左右各取两端。 */
+    @Test
+    fun `run frame grows outward on all four edges by the per-glyph insets`() {
+        val page = page(
+            text(10f, 20f, 20f, 40f, style, frameTop = 5f, frameBottom = 6f, frameLeft = 3f, frameRight = 4f),
+            text(20f, 20f, 35f, 40f, style, frameTop = 5f, frameBottom = 6f, frameLeft = 3f, frameRight = 4f),
+        )
+
+        assertEquals(
+            listOf(ReaderRect(7f, 15f, 39f, 46f)),
+            page.textBackgroundRuns().map { it.bounds },
+        )
     }
 
     @Test
@@ -321,6 +378,8 @@ class ReaderTextBackgroundRunTest {
         continues: Boolean = false,
         frameTop: Float = 0f,
         frameBottom: Float = 0f,
+        frameLeft: Float = 0f,
+        frameRight: Float = 0f,
     ) = ReaderElement.Text(
         bounds = ReaderRect(left, top, right, bottom),
         baselinePx = bottom - 4f,
@@ -332,6 +391,8 @@ class ReaderTextBackgroundRunTest {
         continuesBackgroundRun = continues,
         backgroundFrameTopPx = frameTop,
         backgroundFrameBottomPx = frameBottom,
+        backgroundFrameLeftPx = frameLeft,
+        backgroundFrameRightPx = frameRight,
     )
 
     private fun page(vararg elements: ReaderElement) = ReaderPage(

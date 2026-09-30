@@ -9,6 +9,8 @@ import io.legado.app.feature.reader.core.model.ReaderRect
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.model.frameBottomPx
+import io.legado.app.feature.reader.core.model.frameLeftPx
+import io.legado.app.feature.reader.core.model.frameRightPx
 import io.legado.app.feature.reader.core.model.frameTopPx
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import kotlin.math.max
@@ -917,11 +919,14 @@ internal class ReaderPaginationSession(
                                     previousItemBackground == itemBackground &&
                                     spacingBefore <= 0f &&
                                     previousMatchSpacingAfterPx <= 0f,
-                            // 九宫格纵向等比缩放：上下两条切线之间是字的显示区域，所以按行盒高
-                            // 算出一个倍率，外沿让出的是上下边条按同一倍率换算后的厚度
-                            // （切线之间那一格正好盖住行盒，上下边跟着一起长缩）。
+                            // 九宫格等比缩放：上下两条切线之间是字的显示区域，所以按行盒高算出
+                            // 一个倍率，四条边让出去的都是各自边条按**同一个**倍率换算后的厚度
+                            // （切线之间那一格正好盖住行盒，上下左右四边跟着一起长缩）。
+                            // 左右若仍按原图像素宽画，图就只缩了纵向——右边那块图案会被压扁。
                             backgroundFrameTopPx = itemBackground?.frameTopPx(actualLineHeight) ?: 0f,
                             backgroundFrameBottomPx = itemBackground?.frameBottomPx(actualLineHeight) ?: 0f,
+                            backgroundFrameLeftPx = itemBackground?.frameLeftPx(actualLineHeight) ?: 0f,
+                            backgroundFrameRightPx = itemBackground?.frameRightPx(actualLineHeight) ?: 0f,
                         )
                     }
 

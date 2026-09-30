@@ -20,13 +20,19 @@ class ReaderNineSliceLayoutTest {
     /** 行盒高（= 中间带要盖住的那一截）与中间带自然高 28 之比，就是整张图的等比倍率。 */
     private val lockedBandHeightPx = 28f
 
-    /** 分页给这一行算出的外框：上下各让出一条边按行盒高等比换算后的厚度，横向只有中间格被拉长。 */
+    /**
+     * 分页给这一行算出的外框：四条边都让出一条边按行盒高等比换算后的厚度，
+     * 横向只有中间那一格被拉到文字宽。与 `ReaderPaginator` + `textBackgroundRuns` 同一份口径。
+     */
     private fun frameOf(image: ReaderTextBackgroundImage, content: ReaderRect): ReaderRect =
         image.nineSliceFrame(
             content.copy(
+                left = content.left - image.frameLeftPx(content.height),
+                right = content.right + image.frameRightPx(content.height),
                 top = content.top - image.frameTopPx(content.height),
                 bottom = content.bottom + image.frameBottomPx(content.height),
             ),
+            content.width,
         )
 
     private fun sourceWidth(cell: ReaderNineSliceCell) = cell.source.right - cell.source.left
@@ -63,12 +69,17 @@ class ReaderNineSliceLayoutTest {
         // 外框仍然首尾相接铺满，不会缺一条边
         assertEquals(frame.left, cells.minOf { it.destination.left }, 0.01f)
         assertEquals(frame.right, cells.maxOf { it.destination.right }, 0.01f)
-        // 左切片吃掉整张图的左 80%（源宽 40），图案因此不会被从中间切断
-        assertEquals(40, cells.maxOf { sourceWidth(it) })
+        // 两条线都拉到 80% 时按各自比例缩回：左切片 25、右切片 24（源宽 50 只剩 1 像素可拉），
+        // 图案仍不会被从中间切断
+        assertEquals(25, cells.maxOf { sourceWidth(it) })
         // 交叉之后中间那一格只剩 1 个源像素，仍被拉到整段文字宽
         val center = cells[4]
         assertEquals(1, sourceWidth(center))
         assertEquals(30f, center.destination.width, 0.01f)
+        // 边条画出去的就是它自己的源宽按同一个倍率换算——外框与切片不会为那一像素各算一遍
+        val ratio = image.verticalScalePx(content.height)
+        assertEquals(25f * ratio, cells.first().destination.width, 0.01f)
+        assertEquals(24f * ratio, cells.last().destination.width, 0.01f)
     }
 
     @Test
@@ -147,15 +158,16 @@ class ReaderNineSliceLayoutTest {
 
         val cells = ReaderNineSliceLayout.cells(50, 40, content, frame, shrunk)
 
-        // 偏移再负也只是把中间那一格缩到零：两条边各自保住原厚，谁也不越过谁。
+        // 偏移再负也只是把中间那一格缩到零：两条边各自保住等比换算后的厚度，谁也不越过谁。
+        val ratio = shrunk.verticalScalePx(content.height)
         assertEquals(6, cells.size)
         cells.forEach { cell ->
             assertTrue(cell.destination.width > 0f)
-            assertEquals(sourceWidth(cell).toFloat(), cell.destination.width, 0.01f)
-            assertEquals(expectedHeight(cell, content.height), cell.destination.height, 0.01f)
+            assertEquals(sourceWidth(cell) * ratio, cell.destination.width, 0.01f)
+            assertEquals(sourceHeight(cell) * ratio, cell.destination.height, 0.01f)
         }
-        assertEquals(10f, cells.first().destination.width, 0.01f)
-        assertEquals(15f, cells.last().destination.width, 0.01f)
+        assertEquals(10f * ratio, cells.first().destination.width, 0.01f)
+        assertEquals(15f * ratio, cells.last().destination.width, 0.01f)
     }
 
     @Test
@@ -219,10 +231,11 @@ class ReaderNineSliceLayoutTest {
         val topLeft = ReaderNineSliceLayout.cells(50, 40, content, frame, image).first()
 
         // scale 0.5 之后：上边条 2、中间带 14、下边条 4。行盒 28 是中间带的两倍，于是整张图
-        // 再放大两倍，每一格共用同一个倍率（0.5 × 2 = 1）：源 10×4 → 目标 5×4。
+        // 再放大两倍，四边共用同一个倍率（0.5 × 2 = 1）：源 10×4 → 目标 10×4。
+        // 左边条若仍按 0.5 的原图宽画（5），这一格就是 5×4 —— 图只缩了横向，正是「被压扁」。
         assertEquals(10, sourceWidth(topLeft))
         assertEquals(4, sourceHeight(topLeft))
-        assertEquals(5f, topLeft.destination.width, 0f)
+        assertEquals(10f, topLeft.destination.width, 0f)
         assertEquals(4f, topLeft.destination.height, 0f)
         // 图高 40 = 上边条 4 + 行盒 28 + 下边条 8：自然高 20 的整张图被等比放大两倍。
         assertEquals(40f, frame.height, 0.01f)
@@ -296,6 +309,54 @@ class ReaderNineSliceLayoutTest {
             }
             topStep++
         }
+    }
+
+    /**
+     * 用户口径：调上下两条线 = 整张图**等比缩放**（跟调图片大小一样），不是把上半往上顶、
+     * 下半往下顶。上一轮只把纵向四边统一了，左右两条边仍按原图像素宽画——纵向缩到一半时
+     * 右边那块图案就是 2:1 的压扁（预览里看到的就是这个）。
+     *
+     * 所以这里对四条线的每一组组合都要求：除中间那一列（它按设计被拉到文字宽）以外，
+     * 每一格的目标宽/源高与目标高/源高都等于同一个倍率，一格都不许形变。
+     */
+    @Test
+    fun noCellIsDeformedForEveryCombinationOfCutLines() {
+        val lineHeight = 60f
+        val content = ReaderRect(10f, 200f, 70f, 200f + lineHeight)
+        for (topStep in 0..10 step 2) for (bottomStep in 0..10 step 2)
+            for (leftStep in 0..10 step 2) for (rightStep in 0..10 step 2) {
+                val lines = "切线 左${leftStep / 10f} 右${rightStep / 10f} 上${topStep / 10f} 下${bottomStep / 10f}"
+                val image = ReaderTextBackgroundImage(
+                    source = "frame.png",
+                    fit = 3,
+                    scale = 1f,
+                    ninePatchLeft = leftStep / 10f,
+                    ninePatchRight = rightStep / 10f,
+                    ninePatchTop = topStep / 10f,
+                    ninePatchBottom = bottomStep / 10f,
+                ).withBitmapSize(100, 100)
+                val ratio = image.verticalScalePx(lineHeight)
+                val cells = ReaderNineSliceLayout.cells(100, 100, content, frameOf(image, content), image)
+                assertTrue("$lines 把气泡挤没了", cells.isNotEmpty())
+                cells.forEach { cell ->
+                    val stretchedColumn = cell.destination.left == content.left &&
+                        cell.destination.right == content.right
+                    assertEquals(
+                        "$lines 那一格被单独纵向拉伸",
+                        sourceHeight(cell) * ratio,
+                        cell.destination.height,
+                        0.01f,
+                    )
+                    if (!stretchedColumn) {
+                        assertEquals(
+                            "$lines 那一格被单独横向拉伸",
+                            sourceWidth(cell) * ratio,
+                            cell.destination.width,
+                            0.01f,
+                        )
+                    }
+                }
+            }
     }
 
     @Test
