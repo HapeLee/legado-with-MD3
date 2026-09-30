@@ -5,6 +5,7 @@ import io.legado.app.data.entities.HighlightRule
 import io.legado.app.domain.model.BookContentProcessEngine
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.TextProcessStyle
+import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderUnderline
 import io.legado.app.feature.reader.core.model.withBitmapSize
@@ -12,6 +13,7 @@ import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
+import io.legado.app.feature.reader.core.style.ReaderCharacterStyleResolver
 import io.legado.app.feature.reader.core.style.ReaderStyleRange
 import io.legado.app.feature.reader.core.style.ReaderStyleTarget
 import io.legado.app.feature.reader.platform.ReaderTextBackgroundLoader
@@ -22,10 +24,21 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.spToPx
 
 object LegacyReaderStyleRangeMapper {
+
+    /**
+     * 角色气泡的优先级：高于任何一条高亮规则（规则用下标 0..n，用户标记用 10_000+）。
+     *
+     * 同一句台词上规则与角色气泡撞车时按用户口径「优先用角色的」——但只换气泡那两栏，
+     * 字色/下划线/字号仍沿用那句里赢着的规则，见 [withBubbleOf]。
+     */
+    const val CAST_BUBBLE_PRIORITY = 20_000
+
     fun map(
         source: ReaderChapterSource,
         rules: List<HighlightRule>,
         processes: List<BookContentProcess>,
+        /** 角色名 → 该角色自己设的气泡样式；空表 = 本书没人设气泡。 */
+        castBubbles: Map<String, ReaderCharacterStyle> = emptyMap(),
     ): List<ReaderStyleRange> {
         val result = mutableListOf<ReaderStyleRange>()
         val bodyText = semanticBodyText(source)
@@ -63,8 +76,114 @@ object LegacyReaderStyleRangeMapper {
                     priority = 10_000 + index,
                 )
             }
+        if (castBubbles.isNotEmpty()) {
+            result += castBubbleRanges(source.blocks, result, castBubbles)
+        }
         return result
     }
+
+    /**
+     * 每个「分配了角色的引号段」盖一层该角色的气泡。
+     *
+     * 哪一句归谁已经写在注入的标记文本里（`<<名字（池）>>` 紧跟开引号），所以这里不再正则、
+     * 也不重新发明引号栈：喂同一个 [CastMarkers.CastQuoteTracker]，拿它报出的闭合区间。
+     * 区间包住整句台词连同引号——压在上面的角色胶囊因此落在同一个气泡里。
+     *
+     * 覆盖写法：把区间按已有样式的边界切开，每一小段先问「这里原本谁赢」，再把气泡
+     * 盖在那一份上。这样角色设了气泡不会把同一句的高亮字色吃掉；一句里原本没有任何规则时，
+     * 整段就只上气泡。
+     */
+    private fun castBubbleRanges(
+        blocks: List<ReaderChapterSourceBlock>,
+        existing: List<ReaderStyleRange>,
+        bubbles: Map<String, ReaderCharacterStyle>,
+    ): List<ReaderStyleRange> {
+        val tracker = CastMarkers.CastQuoteTracker()
+        val out = mutableListOf<ReaderStyleRange>()
+        fun scan(text: String, base: Int) {
+            // 跟踪器章级共享，它报的下标是整章的；减掉本段起点才落得回 text 与本段的语义坐标
+            val origin = tracker.fedCharacters
+            for (index in text.indices) {
+                tracker.feed(text[index])
+                val closed = tracker.lastClosedSpan ?: continue
+                val start = closed.start - origin
+                val endExclusive = closed.endExclusive - origin
+                val quoted = text.substring(start, endExclusive)
+                val owner = CastMarkers.findMarkers(quoted).firstOrNull() ?: continue
+                val bubble = bubbles[owner.name] ?: continue
+                val from = base + start
+                val to = base + endExclusive
+                val cuts = buildList {
+                    add(from)
+                    add(to)
+                    existing.forEach { range ->
+                        if (range.start in from until to) add(range.start)
+                        if (range.endExclusive in from until to) add(range.endExclusive)
+                    }
+                }.distinct().sorted()
+                for (edge in 0 until cuts.size - 1) {
+                    val start = cuts[edge]
+                    val endExclusive = cuts[edge + 1]
+                    if (start >= endExclusive) continue
+                    val winner = ReaderCharacterStyleResolver.resolve(existing, start, false)
+                    out += ReaderStyleRange(
+                        start = start,
+                        endExclusive = endExclusive,
+                        target = ReaderStyleTarget.BODY,
+                        style = winner.withBubbleOf(bubble),
+                        priority = CAST_BUBBLE_PRIORITY,
+                    )
+                }
+            }
+        }
+        blocks.forEach { block ->
+            when (block) {
+                is ReaderChapterSourceBlock.Text -> if (!block.isTitle) {
+                    scan(block.value, block.chapterPosition)
+                }
+                is ReaderChapterSourceBlock.Paragraph -> block.items.forEach { item ->
+                    if (item is ReaderChapterInlineSource.Text) {
+                        scan(item.value, item.chapterPosition)
+                    }
+                }
+                else -> Unit
+            }
+        }
+        return out
+    }
+
+    /** 只把气泡那两栏换过来：字色、下划线、字号、命中排版仍归原来那份样式。 */
+    private fun ReaderCharacterStyle?.withBubbleOf(bubble: ReaderCharacterStyle) =
+        (this ?: bubble).copy(
+            backgroundArgb = bubble.backgroundArgb ?: this?.backgroundArgb,
+            backgroundImage = bubble.backgroundImage ?: this?.backgroundImage,
+        )
+
+    /**
+     * 一条规则换算成 core 侧的字符样式（dp→px、九宫格切线、位图尺寸都在这里面）。
+     *
+     * 角色气泡存的就是「只填了气泡那几栏」的 [HighlightRule] JSON，平台层装配
+     * `ReaderCastOptions.bubbles` 时走这里，不再写第二份换算。
+     */
+    fun styleOf(rule: HighlightRule): ReaderCharacterStyle = rule.toReaderStyle()
+
+    /**
+     * 把一条规则的样式按**字面区间**挂上去，不走正则。
+     *
+     * 两个消费者：①规则编辑弹层的预览——每一项改动都必须看得见，而用户填的正则很可能命中不了
+     * 示例句，那样整块预览是死的（第六十轮的口径：改预览去迁就正则，不如直接把样式钉在示例段上）；
+     * ②角色气泡——哪一句归哪个角色由分配表给定，区间是已知的，不需要也不应该再正则一遍。
+     * 样式换算与命中段拆分复用正文那一份 [matchRanges]，不另写一套。
+     */
+    fun rangesForLiteralRange(
+        rule: HighlightRule,
+        start: Int,
+        endExclusive: Int,
+        target: ReaderStyleTarget,
+        priority: Int,
+    ): List<ReaderStyleRange> =
+        if (start < endExclusive) rule.matchRanges(start, endExclusive, target, priority)
+        else emptyList()
 
     private fun semanticBodyText(source: ReaderChapterSource): String {
         val chars = CharArray(source.characterCount) { '\n' }

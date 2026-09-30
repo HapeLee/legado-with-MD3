@@ -381,9 +381,12 @@ object AiCastPresetStore {
 
     /** 写记忆（AI 回写与手动编辑共用；超长截断保护）。 */
     suspend fun setMemory(bookUrl: String, text: String) {
+        val memory = text.trim().take(4000)
         appDb.bookCastMemoryDao.upsert(
-            BookCastMemory(bookUrl = bookUrl, memory = text.trim().take(4000)),
+            BookCastMemory(bookUrl = bookUrl, memory = memory),
         )
+        // 记忆里归并好的别名、关系与池要落到官方人物档案，否则人物页看到的还是改动前的那份
+        CastMemoryMirror.applyMemoryToProfiles(bookUrl, memory)
     }
 
     private fun ensureSeeded() {

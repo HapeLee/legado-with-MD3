@@ -4,6 +4,8 @@ import androidx.room.Entity
 import androidx.room.ColumnInfo
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
 
 /**
  * 配音角色：多角色分配功能自己的角色档案。
@@ -40,6 +42,23 @@ data class CastCharacter(
      */
     @ColumnInfo(defaultValue = "0")
     val sortOrder: Int = 0,
+    /**
+     * 这个角色自己的气泡：一条**只填了气泡那几栏**的 [HighlightRule] JSON
+     * （bgImage / bgImageFit / bgImageScale / np* / manualNineSlice /
+     * bgLengthOffsetLeft / bgLengthOffsetRight / bgColor）。
+     *
+     * 存成高亮规则的形状是为了不复写一套样式换算——正文那一份
+     * `LegacyReaderStyleRangeMapper.toReaderStyle()` 直接吃它。空串 = 不设气泡。
+     * 哪一句归这个角色由 chapter_role_assignments 给定，所以 pattern 与 targetScope 不参与。
+     */
+    @ColumnInfo(defaultValue = "")
+    val bubbleRuleJson: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-)
+) {
+
+    /** [bubbleRuleJson] 解出来的那条规则；没设气泡、JSON 读坏了都返回 null。 */
+    fun bubbleRule(): HighlightRule? = bubbleRuleJson.takeIf { it.isNotBlank() }?.let { json ->
+        GSON.fromJsonObject<HighlightRule>(json).getOrNull()
+    }
+}

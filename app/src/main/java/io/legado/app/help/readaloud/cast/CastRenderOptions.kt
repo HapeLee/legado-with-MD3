@@ -3,6 +3,7 @@ package io.legado.app.help.readaloud.cast
 import io.legado.app.data.appDb
 import io.legado.app.feature.reader.core.layout.ReaderCastOptions
 import io.legado.app.feature.reader.core.layout.ReaderCastProfile
+import io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper
 import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,7 +40,11 @@ object CastRenderOptions {
                 .map { "${it.id}|${it.avatarUri.orEmpty()}" }
                 .sorted()
             // 胶囊样式（头像位移）参与宽度，改了就得重排；签名每次写自增
-            listOf(chapterEffects, characterEffects, avatars, CastCapsuleStyleStore.signature)
+            // 角色气泡同理：换了图/切线/偏移，旧页上还挂着原来的气泡
+            val bubbles = appDb.castCharacterDao.getByBook(bookUrl)
+                .map { "${it.name}|${it.bubbleRuleJson}" }
+                .sorted()
+            listOf(chapterEffects, characterEffects, avatars, bubbles, CastCapsuleStyleStore.signature)
                 .hashCode()
         }
 
@@ -73,6 +78,15 @@ object CastRenderOptions {
                 characterEffects = appDb.castCharacterDao.getByBook(bookUrl)
                     .filter { it.voiceEffect.isNotBlank() }
                     .associate { it.name to it.voiceEffect },
+                // 角色自己设的气泡：dp→px 与位图尺寸在这里换算完，core 层只拿现成的样式。
+                // 位图走正文那一份 ReaderTextBackgroundLoader（与高亮规则同一套缓存与异步加载）。
+                bubbles = appDb.castCharacterDao.getByBook(bookUrl)
+                    .mapNotNull { character ->
+                        character.bubbleRule()?.let {
+                            character.name to LegacyReaderStyleRangeMapper.styleOf(it)
+                        }
+                    }
+                    .toMap(),
             )
         }
     }

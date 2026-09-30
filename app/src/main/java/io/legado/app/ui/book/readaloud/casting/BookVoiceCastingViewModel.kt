@@ -123,6 +123,7 @@ class BookVoiceCastingViewModel(
                 chapterCount = row?.chapterCount ?: 0,
                 lineCount = row?.lineCount ?: 0,
                 sortOrder = row?.sortOrder ?: 0,
+                bubbleRuleJson = row?.bubbleRuleJson.orEmpty(),
             )
         }.sortedWith(
             // 拖过排序的（sortOrder > 0）就按用户排的那份走；没排过的排在后面，

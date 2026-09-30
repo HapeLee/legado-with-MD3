@@ -6,9 +6,9 @@ import io.legado.app.data.entities.BookVoiceBindingEntity
 import io.legado.app.data.entities.CastCharacter
 import io.legado.app.domain.model.readaloud.BookVoiceBinding
 import io.legado.app.feature.reader.core.cast.CastMarkers
-import io.legado.app.help.book.BookHelp
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.model.ReadBook
+import io.legado.app.service.BaseReadAloudService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -34,6 +34,8 @@ object BookCastStore {
         val sortOrder: Int,
         val chapterCount: Int,
         val lineCount: Int,
+        /** 这个角色自己的气泡（只填了气泡那几栏的高亮规则 JSON），空 = 没设。 */
+        val bubbleRuleJson: String,
     )
 
         suspend fun rowsForBook(bookUrl: String): List<BookCharacterRow> {
@@ -60,6 +62,7 @@ object BookCastStore {
                 chapterCount = rows.map { it.chapterIndex }.distinct().size,
                 lineCount = rows.size,
                 sortOrder = c.sortOrder,
+                bubbleRuleJson = c.bubbleRuleJson,
             )
         }
     }
@@ -179,6 +182,33 @@ object BookCastStore {
                     ),
             )
         }
+        if (updated.name != character.name ||
+            updated.poolLabel != character.poolLabel ||
+            updated.voiceEffect != character.voiceEffect
+        ) {
+            // 只有正文里看得见的那几栏要重排：名字与池写在胶囊上、变声器是胶囊右端的徽记，
+            // 音色只影响朗读，改它不该动正文。
+            reloadReaderChapter(bookUrl)
+        }
+        return true
+    }
+
+    /**
+     * 设 / 清这个角色的气泡（null = 清掉，回到只跟高亮规则）。
+     *
+     * 存成一条只填了气泡那几栏的 [HighlightRule] JSON：样式换算与九宫格参数复用正文那一份，
+     * 不另写一套。气泡归角色，命中哪一句归分配表，所以 pattern / targetScope 一律不参与。
+     */
+    suspend fun updateBubble(bookUrl: String, characterId: String, bubbleJson: String): Boolean {
+        val character = appDb.castCharacterDao.getById(characterId) ?: return false
+        if (character.bookUrl != bookUrl) return false
+        val json = bubbleJson.trim()
+        if (json == character.bubbleRuleJson) return true
+        appDb.castCharacterDao.update(
+            character.copy(bubbleRuleJson = json, updatedAt = System.currentTimeMillis()),
+        )
+        // 气泡画在分页出来的那一遍里，不重排就还是旧样子
+        reloadReaderChapter(bookUrl)
         return true
     }
 
@@ -265,28 +295,31 @@ object BookCastStore {
      *
      * 配音角色建档时用档案 id 作主键，所以按 id 找就行：改名后按新名找不到旧行，
      * 按新名命中的会是另一个角色（即下面要挡的撞名）。
+     *
+     * 返回是否真的写了这一行：重排正文交给调用方决定，因为官方人物页那一次保存可能同时换了
+     * 头像，两次各自 reload 会把同一章重排两遍。
      */
     suspend fun syncFromProfile(
         bookUrl: String,
         profileId: String,
         name: String,
         poolLabel: String,
-    ) {
+    ): Boolean {
         val trimmed = name.trim()
         // 名字要能写进正文标记，否则注入时会被整条丢掉；这种档案改动宁可让配音侧沿用旧名
-        if (trimmed.isEmpty() || !CastMarkers.isValidName(trimmed)) return
+        if (trimmed.isEmpty() || !CastMarkers.isValidName(trimmed)) return false
         val pool = poolLabel.trim().take(12)
-        val character = appDb.castCharacterDao.getById(profileId) ?: return
+        val character = appDb.castCharacterDao.getById(profileId) ?: return false
         if (character.bookUrl != bookUrl ||
             (character.name == trimmed && character.poolLabel == pool)
         ) {
-            return
+            return false
         }
         // (bookUrl, name, poolLabel) 唯一：撞别的角色就什么都不改，留给用户自己合
         if (appDb.castCharacterDao.getByName(bookUrl, trimmed)
                 .any { it.id != character.id && it.poolLabel == pool }
         ) {
-            return
+            return false
         }
         val updated = CastVoicePicker.ensureVoice(
             character.copy(
@@ -299,7 +332,7 @@ object BookCastStore {
         appDb.chapterRoleAssignmentDao.updateForCharacter(
             bookUrl, updated.id, updated.name, updated.poolLabel, updated.updatedAt,
         )
-        reloadReaderChapter(bookUrl)
+        return true
     }
 
     private suspend fun forgetVoiceBinding(bookUrl: String, subjectId: String) {
@@ -321,15 +354,30 @@ object BookCastStore {
     }
 
     /**
-     * 改完角色后让正在读的这一章重取内容：正文里的角色胶囊写的是名字与池，
-     * 不重取就会一直显示改动前的写法。不是本书在读时什么都不做。
+     * 改完角色后让正在读的这一章重排：正文里的角色胶囊写的是名字与池，
+     * 不重排就会一直显示改动前的写法。不是本书在读时什么都不做。
+     *
+     * 这里**绝不能**碰正文缓存（`BookHelp.delContent`）：胶囊标记是解析期从数据库现取现注入的
+     * （[CastAssignmentStore.labelsForChapter] 与 [CastRenderOptions.signatureFor] 都在
+     * `ReadBook.contentLoadFinish` 里跑），缓存文件存的是书源原样正文，删掉它只会让
+     * `BookHelp.getContent` 返回 null，`loadContent` 于是走 `download` 把已经下好的章节再下一遍。
+     * 口径抄正文处理项那一份 `ReadContentProcessDelegate.reloadCurrentChapter`：清分页窗口 +
+     * 解开 loading 标记（不解锁的话 `addLoading` 会把这次重载整个吞掉，表现为「改了没反应」），
+     * 再从缓存重读、重排；正在朗读这一章时保位，避免重载变成从头重播。
      */
     suspend fun reloadReaderChapter(bookUrl: String) = withContext(Dispatchers.IO) {
         val book = ReadBook.book ?: return@withContext
         if (book.bookUrl != bookUrl) return@withContext
-        val chapter = appDb.bookChapterDao.getChapter(bookUrl, ReadBook.durChapterIndex)
-            ?: return@withContext
-        BookHelp.delContent(book, chapter)
-        ReadBook.loadContent(ReadBook.durChapterIndex, resetPageOffset = false)
+        val chapterIndex = ReadBook.durChapterIndex
+        ReadBook.clearTextChapter()
+        for (index in chapterIndex - 1..chapterIndex + 1) {
+            ReadBook.removeLoading(index)
+        }
+        ReadBook.loadContent(
+            chapterIndex,
+            resetPageOffset = false,
+            preserveReadAloudPosition = BaseReadAloudService.isRun &&
+                    BaseReadAloudService.currentChapterIndex == chapterIndex,
+        )
     }
 }

@@ -126,6 +126,17 @@ data class HighlightRule(
         return sampleText.ifBlank { DEFAULT_SAMPLE_TEXT }
     }
 
+    /**
+     * 预览里被上样的那一段在示例句中的 [start, endExclusive)。
+     *
+     * 用户把示例句改成不含 [SAMPLE_HIT_TEXT] 的内容时返回 null：这时没有「那一段」可钉，
+     * 预览退回按正则命中。
+     */
+    fun previewHitRange(): Pair<Int, Int>? {
+        val start = normalizedSampleText().indexOf(SAMPLE_HIT_TEXT)
+        return if (start < 0) null else start to start + SAMPLE_HIT_TEXT.length
+    }
+
     fun copyWithNewId(): HighlightRule {
         return copy(id = Uuid.random().toString())
     }
@@ -136,42 +147,17 @@ data class HighlightRule(
         const val TARGET_BODY = 2
 
         /**
-         * 预览示例句：引号里那句「我是李四。」正好是常见引号正则的命中段，引号外还留着
-         * 「张三：」和「他惊了！」——命中字距、命中行行距、背景图四周一圈都有相邻的字可以
-         * 参照，调一个参数就能看出它到底只作用在命中的那一段上。
+         * 预览示例句：固定这一句，不再按正则换着迁就。引号外留着「张三：」和「他惊了！」，
+         * 命中字距、命中行行距、背景图四周一圈都有相邻的字可以参照，调一个参数就能看出它
+         * 到底只作用在中间那一段上。
          */
-        const val DEFAULT_SAMPLE_TEXT = "张三：“我是李四。”他惊了！"
+        const val DEFAULT_SAMPLE_TEXT = "张三：我是李四。他惊了！"
 
         /**
-         * 预览用的示例句：现有示例被正则命中不了时，换一句命中得到的「张三：…我是李四…他惊了！」。
-         *
-         * 预览只给正则命中的那一段上样式，示例句一旦命不中，整块预览就是死的——调字色、下划线、
-         * 背景图、图片大小、命中字距都看不出任何差别。候选按「不带成对符号 → 各种成对符号」排列，
-         * 第一个被命中的即成为示例句：正则选的是被 “” 包裹的字，示例就是 张三：“我是李四。”他惊了！，
-         * 于是所有调整都落在那对引号连同「我是李四。」这一段上。用户自己写过、并且命得中的示例原样保留。
+         * [DEFAULT_SAMPLE_TEXT] 里被上样的那一段。规则编辑的每一项改动都保证落在它上面，
+         * 与用户填的正则命没命中无关（见 `LegacyReaderStyleRangeMapper.rangesForLiteralRange`）。
          */
-        fun matchingSampleText(pattern: String, sampleText: String): String {
-            val regex = runCatching { Regex(pattern.ifBlank { ".*" }) }.getOrNull()
-                ?: return sampleText.ifBlank { DEFAULT_SAMPLE_TEXT }
-            if (sampleText.isNotBlank() && regex.containsMatchIn(sampleText)) return sampleText
-            return SAMPLE_SENTENCES.firstOrNull { regex.containsMatchIn(it) }
-                ?: sampleText.ifBlank { DEFAULT_SAMPLE_TEXT }
-        }
-
-        /** [matchingSampleText] 的候选：同一句话，只换成对正则友好的那一种包裹符号。 */
-        private val SAMPLE_SENTENCES = listOf(
-            "张三：我是李四。他惊了！",
-            DEFAULT_SAMPLE_TEXT,
-            "张三：\"我是李四。\"他惊了！",
-            "张三：'我是李四。'他惊了！",
-            "张三：「我是李四。」他惊了！",
-            "张三：『我是李四。』他惊了！",
-            "张三：（我是李四。）他惊了！",
-            "张三：(我是李四。)他惊了！",
-            "张三：《我是李四。》他惊了！",
-            "张三：【我是李四。】他惊了！",
-            "张三：**我是李四。**他惊了！",
-        )
+        const val SAMPLE_HIT_TEXT = "我是李四。"
 
         fun Int.toHexColor(): String = String.format("#%08X", this)
     }

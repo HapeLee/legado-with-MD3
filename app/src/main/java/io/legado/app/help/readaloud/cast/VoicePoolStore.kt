@@ -507,10 +507,15 @@ object VoicePoolStore {
         }
     }
 
-    /** 删配音角色（连同其所有分配行）。 */
+    /**
+     * 删配音角色（连同其所有分配行）。
+     *
+     * 走配音侧那一份删除：它会把镜像的人物档案、音色绑定与本书记忆行一起清掉。
+     * 只删这两张表的话，官方人物页还留着一条刚「删掉」的人物，下次进配音页
+     * `migrateLegacyProfiles` 又照着那条档案把角色长回来。
+     */
     suspend fun deleteCharacter(characterId: String) {
         val character = appDb.castCharacterDao.getById(characterId) ?: return
-        appDb.chapterRoleAssignmentDao.deleteForCharacter(character.bookUrl, character.id)
-        appDb.castCharacterDao.delete(character.id)
+        BookCastStore.deleteCharacter(character.bookUrl, character.id)
     }
 }

@@ -940,6 +940,11 @@
     <string name="highlight_line_spacing_below">Line Gap Below Match</string>
     <string name="highlight_bg_length_offset_left">Bubble Left Offset</string>
     <string name="highlight_bg_length_offset_right">Bubble Right Offset</string>
+    <string name="cast_bubble">Bubble</string>
+    <string name="cast_bubble_menu">Set bubble</string>
+    <string name="cast_bubble_summary">This character\'s own bubble. It wins over a highlight rule that matches the same sentence, but only for the bubble itself — text colour, underline and size still come from the rule.</string>
+    <string name="cast_bubble_clear">No bubble</string>
+    <string name="cast_bubble_cleared">Bubble removed</string>
     <string name="nine_slice_split_hint">Only the green band stretches, and sideways only — its height is locked to the image, nothing is ever stretched vertically. The two vertical lines set how far that band stretches; the top and bottom lines just pick which band of the image the glyphs sit in, so dragging them is vertical alignment. Left and right offset move the two ends of the stretched band apart, without touching the characters around it.</string>
     <string name="nine_slice_horizontal_hint">The two vertical lines: only the band between them is stretched sideways, and this is the only stretch in the whole image.</string>
     <string name="nine_slice_vertical_hint">The two horizontal lines: where the glyphs sit inside the image. The height stays locked, nothing stretches vertically.</string>

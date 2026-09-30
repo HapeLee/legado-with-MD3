@@ -10,6 +10,7 @@ import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.model.frameBottomPx
 import io.legado.app.feature.reader.core.model.frameTopPx
+import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import kotlin.math.max
 
 enum class ReaderTextAlignment { START, CENTER, END, JUSTIFY }
@@ -113,6 +114,13 @@ data class ReaderCastOptions(
     val chapterEffects: Map<Int, String> = emptyMap(),
     /** 角色级（全局）：角色名 → 变声器预设名（空值不收录）。 */
     val characterEffects: Map<String, String> = emptyMap(),
+    /**
+     * 角色自己设的气泡：角色名 → 样式（只带背景图与背景色那两栏，见 `CastCharacter.bubbleRuleJson`）。
+     *
+     * 由平台层换算好再送进来（dp→px 与位图尺寸都在那边），core 层不碰 DB 也不碰配置。
+     * 命中哪一句由分配表给定，样式在 `LegacyReaderStyleRangeMapper` 里盖到高亮规则之上。
+     */
+    val bubbles: Map<String, ReaderCharacterStyle> = emptyMap(),
 ) {
     fun hasVoiceEffect(characterName: String, quoteOrdinal: Int): Boolean =
         chapterEffects[quoteOrdinal]?.isNotBlank() == true ||

@@ -269,6 +269,8 @@ class AiCastAssignUseCase(
                 // 老档案里池是空的（历史遗留），这次补上；非空一律不改，改了就等于换声音
                 character = character.copy(poolLabel = pool, updatedAt = System.currentTimeMillis())
                 appDb.castCharacterDao.update(character)
+                // 补上的池也要出现在人物详情页：档案里那一列一直空着就是「没分配过」的假象
+                CastProfileMirror.ensure(character)
             }
             // 音色由本地按池补（不联网、不猜），AI 永远没有改音色的权力
             if (character.voiceId.isBlank()) {

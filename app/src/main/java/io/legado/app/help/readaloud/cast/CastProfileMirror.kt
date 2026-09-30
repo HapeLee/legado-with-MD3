@@ -27,11 +27,12 @@ object CastProfileMirror {
     suspend fun ensure(character: CastCharacter) {
         if (character.name.isBlank()) return
         val bookUrl = character.bookUrl
-        // 改名后的角色按 id 还能找回原档案：不找回就会撞 (bookUrl, name) 唯一键
-        val target = appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, character.name)
+        // 先按 id 找：配音角色建档用的就是角色 id，那条档案一定是这个人的。
+        // 按名字找会命中别人的档案（getCharacterProfile 连别名都匹配），改完池与音色就挂错人了。
+        val target = appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, character.id)
             ?.takeIf { it.bookUrl == bookUrl }
-            ?: appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, character.id)
-                ?.takeIf { it.bookUrl == bookUrl }
+            ?: appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, character.name)
+                ?.takeIf { it.bookUrl == bookUrl && it.id != character.id }
         val now = System.currentTimeMillis()
         if (target != null) {
             val sameIdentity = target.name == character.name &&

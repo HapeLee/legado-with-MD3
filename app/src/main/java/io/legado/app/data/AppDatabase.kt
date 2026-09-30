@@ -133,7 +133,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 125,
+    version = 126,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -259,6 +259,9 @@ val appDb by lazy {
         // 覆盖安装时 Room 拒绝开库；124 用手工迁移按列名补齐，见 DatabaseMigrations。
         // 125：九宫格长度偏移拆成左/右两列（DROP COLUMN 要 SQLite 3.35，minSdk 26 没有），
         // 同样手工整表重建，老值按左右各一半落进新列。
+        // cast_characters.bubbleRuleJson：这个角色自己的气泡（只填气泡那几栏的高亮规则 JSON），
+        // 默认空串 = 不设气泡，老角色读回来与本轮之前逐字节等价。
+        AutoMigration(from = 125, to = 126),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -158,6 +158,8 @@ object LegacyReaderChapterPaginator {
             source = layoutSource,
             rules = highlightRules,
             processes = content.effectiveContentProcesses,
+            // 角色自己设的气泡：同一句上它赢过高亮规则的气泡那两栏，其余字段仍归规则
+            castBubbles = castOptions.bubbles,
         )
         val bodyPaint = paginationStyle.bodyPaint
         val titlePaint = paginationStyle.titlePaint

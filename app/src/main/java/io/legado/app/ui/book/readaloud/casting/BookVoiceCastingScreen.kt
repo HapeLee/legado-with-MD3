@@ -51,6 +51,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import io.legado.app.R
+import io.legado.app.help.readaloud.cast.BookCastStore
 import io.legado.app.ui.book.knowledge.CharacterAvatarCropDialog
 import io.legado.app.ui.book.knowledge.CharacterAvatarSourceSheet
 import io.legado.app.ui.book.knowledge.saveCharacterAvatar
@@ -168,9 +169,12 @@ private fun VoiceCastingList(
     // 卡片菜单里换头像：记下给谁换，选图/裁剪回来时还要靠这个 id 落库
     var avatarTargetId by remember { mutableStateOf<String?>(null) }
     var showAvatarSource by remember { mutableStateOf(false) }
+    // 卡片菜单里设气泡：记下给谁设，保存要落回这一行
+    var bubbleTarget by remember { mutableStateOf<VoiceCastingItemUi?>(null) }
     var pendingAvatarUri by rememberSaveable { mutableStateOf<String?>(null) }
     val avatarTarget = state.items.firstOrNull { it.subjectId == avatarTargetId }
     val avatarScope = rememberCoroutineScope()
+    val bubbleScope = rememberCoroutineScope()
     val avatarContext = LocalContext.current
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -303,6 +307,7 @@ private fun VoiceCastingList(
                                 avatarTargetId = item.subjectId
                                 showAvatarSource = true
                             },
+                            onSetBubble = { bubbleTarget = item },
                             onChanged = {
                                 editingId = null
                                 onIntent(BookVoiceCastingIntent.Refresh)
@@ -349,6 +354,24 @@ private fun VoiceCastingList(
             onDeleted = {
                 editingId = null
                 onIntent(BookVoiceCastingIntent.Refresh)
+            },
+        )
+        CastBubbleSheet(
+            show = bubbleTarget != null,
+            characterName = bubbleTarget?.name.orEmpty(),
+            initialJson = bubbleTarget?.bubbleRuleJson.orEmpty(),
+            onDismissRequest = { bubbleTarget = null },
+            onSave = { json ->
+                val target = bubbleTarget
+                bubbleTarget = null
+                if (target != null) {
+                    bubbleScope.launch {
+                        withContext(Dispatchers.IO) {
+                            BookCastStore.updateBubble(state.bookUrl, target.subjectId, json)
+                        }
+                        onIntent(BookVoiceCastingIntent.Refresh)
+                    }
+                }
             },
         )
         CharacterAvatarSourceSheet(
@@ -409,6 +432,7 @@ private fun VoiceCastingCard(
     onToggleEdit: () -> Unit = {},
     onDelete: () -> Unit = {},
     onSetAvatar: () -> Unit = {},
+    onSetBubble: () -> Unit = {},
     onChanged: () -> Unit = onToggleEdit,
     dragModifier: Modifier = Modifier,
     dragging: Boolean = false,
@@ -538,6 +562,7 @@ private fun VoiceCastingCard(
                             onToggleEdit = onToggleEdit,
                             onDelete = onDelete,
                             onSetAvatar = onSetAvatar,
+                            onSetBubble = onSetBubble,
                         )
                     }
                 }

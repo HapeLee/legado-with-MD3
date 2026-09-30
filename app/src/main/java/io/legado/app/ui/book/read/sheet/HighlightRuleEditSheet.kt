@@ -110,6 +110,7 @@ import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.model.textBackgroundRuns
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
+import io.legado.app.feature.reader.core.style.ReaderStyleTarget
 import io.legado.app.feature.reader.core.style.mergeBackgroundBounds
 import io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper
 import io.legado.app.feature.reader.platform.AndroidReaderTextShaper
@@ -134,17 +135,7 @@ fun HighlightRuleEditSheet(
     var name by remember(show, rule) { mutableStateOf(initial.name) }
     var targetScope by remember(show, rule) { mutableIntStateOf(initial.targetScope) }
     var enabled by remember(show, rule) { mutableStateOf(initial.enabled) }
-    var sampleText by remember(show, rule) {
-        mutableStateOf(HighlightRule.matchingSampleText(initial.pattern, initial.sampleText))
-    }
-    // 用户没手动改过示例句时，示例句跟着正则走：命中不了就换成能命中的那一句，
-    // 否则预览永远是一片空白，调什么参数都看不出差别。
-    var sampleEdited by remember(show, rule) { mutableStateOf(false) }
-    LaunchedEffect(pattern, sampleEdited) {
-        if (!sampleEdited) {
-            sampleText = HighlightRule.matchingSampleText(pattern, sampleText)
-        }
-    }
+    var sampleText by remember(show, rule) { mutableStateOf(initial.sampleText) }
 
     // Style state
     var textColor by remember(show, rule) {
@@ -751,10 +742,7 @@ fun HighlightRuleEditSheet(
 
                 AppTextField(
                     value = sampleText,
-                    onValueChange = {
-                        sampleText = it
-                        sampleEdited = true
-                    },
+                    onValueChange = { sampleText = it },
                     label = stringResource(R.string.sample_text),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -876,8 +864,9 @@ fun HighlightRuleEditSheet(
 }
 
 /** 预览卡：正文卡与悬浮卡共用同一份内容，浮起来的那张多一行标题和阴影。 */
+/** 角色气泡弹层复用同一张预览卡：它跑的就是正文那条管线，不留第二套口径。 */
 @Composable
-private fun HighlightPreviewCard(
+internal fun HighlightPreviewCard(
     rule: HighlightRule,
     modifier: Modifier = Modifier,
     floating: Boolean = false,
@@ -1036,8 +1025,19 @@ private suspend fun buildReaderPreviewLayout(
             titleAlignment = ReaderTextAlignment.START,
             bodyLineHeightPx = lineMetrics.heightPx,
             bodyBaselineOffsetPx = lineMetrics.baselineOffsetPx,
-            // 编辑一条停用/只作用于标题的规则时也要看得见效果：示例句按正文那段送去命中。
-            styleRanges = LegacyReaderStyleRangeMapper.map(
+            // 每一项改动都必须落在「我是李四。」上：区间钉死，不看用户填的正则命没命中——
+            // 命不中时整块预览是死的，调字色/背景图/命中字距全都看不出差别。
+            // 只有用户把示例句改成不含那一段的内容时，才退回按正则命中。
+            // （停用或只作用于标题的规则照样看得见效果：字面区间这两样都不参与。）
+            styleRanges = rule.previewHitRange()?.let { (hitStart, hitEnd) ->
+                LegacyReaderStyleRangeMapper.rangesForLiteralRange(
+                    rule = rule,
+                    start = hitStart,
+                    endExclusive = hitEnd,
+                    target = ReaderStyleTarget.BODY,
+                    priority = 0,
+                )
+            } ?: LegacyReaderStyleRangeMapper.map(
                 source = source,
                 rules = listOf(rule.copy(enabled = true, targetScope = HighlightRule.TARGET_ALL)),
                 processes = emptyList(),
@@ -1103,7 +1103,7 @@ private fun DrawScope.drawReaderPreviewPage(
  * 上下两条线只决定「字落在图的哪一段里」——整张图的高度按缩放倍数锁死，纵向一条边都不拉。
  */
 @Composable
-private fun NinePatchEditorDialog(
+internal fun NinePatchEditorDialog(
     show: Boolean,
     imagePath: String,
     initialLeft: Float,

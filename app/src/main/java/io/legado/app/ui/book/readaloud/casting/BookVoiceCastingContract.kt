@@ -26,6 +26,8 @@ data class VoiceCastingItemUi(
      */
     val role: String = "",
     val avatarUri: String? = null,
+    /** 这个角色自己的气泡（只填了气泡那几栏的高亮规则 JSON），空 = 没设。 */
+    val bubbleRuleJson: String = "",
     val hasBinding: Boolean = false,
     val voiceId: String = "",
     val voiceName: String = "",

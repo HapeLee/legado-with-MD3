@@ -2,9 +2,14 @@ package io.legado.app.feature.reader.legacy
 
 import android.app.Application
 import io.legado.app.data.entities.HighlightRule
+import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
+import io.legado.app.feature.reader.core.style.ReaderStyleTarget
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -96,4 +101,133 @@ class LegacyReaderStyleRangeMapperTest {
             assertEquals(0f, it.style.linePadBottomPx)
         }
     }
+
+    /**
+     * 预览与角色气泡走字面区间：样式照样拆成首字/段内/末字三段，但完全不问正则命没命中、
+     * 规则有没有停用、原本作用于标题还是正文——那三条都不该让一块预览变成死的。
+     */
+    @Test
+    fun literalRangeAppliesTheStyleWithoutConsultingThePattern() {
+        val rule = HighlightRule(
+            pattern = "这个词不会出现在示例句里",
+            enabled = false,
+            targetScope = HighlightRule.TARGET_TITLE,
+            letterSpacingBefore = 6f,
+            letterSpacingAfter = 8f,
+        )
+
+        val ranges = LegacyReaderStyleRangeMapper.rangesForLiteralRange(
+            rule = rule,
+            start = 3,
+            endExclusive = 8,
+            target = ReaderStyleTarget.BODY,
+            priority = 0,
+        )
+
+        assertEquals(listOf(3, 4, 7), ranges.map { it.start })
+        assertEquals(listOf(4, 7, 8), ranges.map { it.endExclusive })
+        assertEquals(listOf(6f, 0f, 0f), ranges.map { it.style.matchSpacingBeforePx })
+        assertEquals(listOf(0f, 0f, 8f), ranges.map { it.style.matchSpacingAfterPx })
+        assertTrue(ranges.all { it.target == ReaderStyleTarget.BODY })
+        // 空区间什么都不产出，调用方可以据此退回按正则命中
+        assertTrue(
+            LegacyReaderStyleRangeMapper
+                .rangesForLiteralRange(rule, 5, 5, ReaderStyleTarget.BODY, 0)
+                .isEmpty(),
+        )
+    }
+
+    /**
+     * 角色气泡：区间是「整句台词连同引号」，压在句首的角色胶囊因此落在同一个气泡里。
+     *
+     * 同一句上高亮规则也命中时，气泡那两栏归角色，字色仍归规则——
+     * 「优先用角色的」说的是气泡，不是把整条高亮规则吃掉。
+     */
+    @Test
+    fun characterBubbleWrapsTheQuoteAndKeepsTheRuleTextColor() {
+        // 张0 三1 ：2 “3  标记4..13  我14 是15 李16 四17 。18  ”19 他20 惊21 了22 ！23
+        val source = ReaderChapterSource(
+            chapterIndex = 0,
+            title = "",
+            blocks = listOf(
+                ReaderChapterSourceBlock.Text(
+                    value = "张三：“<<张三（男青）>>我是李四。”他惊了！",
+                    chapterPosition = 0,
+                ),
+            ),
+            characterCount = 24,
+            semanticContent = "张三：“<<张三（男青）>>我是李四。”他惊了！",
+        )
+        val bubble = ReaderCharacterStyle(backgroundImage = bubbleImage())
+
+        val ranges = LegacyReaderStyleRangeMapper.map(
+            source = source,
+            rules = listOf(
+                HighlightRule(
+                    pattern = "我是李四",
+                    targetScope = HighlightRule.TARGET_BODY,
+                    textColor = 0xFF112233.toInt(),
+                ),
+            ),
+            processes = emptyList(),
+            castBubbles = mapOf("张三" to bubble),
+        ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
+
+        // 引号段（连同引号与句首的角色胶囊）整段被气泡盖住
+        assertEquals(3, ranges.minOf { it.start })
+        assertEquals(20, ranges.maxOf { it.endExclusive })
+        assertTrue(ranges.all { it.style.backgroundImage != null })
+        // 规则命中的那五个字（我14 是15 李16 四17 → 14..18）仍然带着规则的字色：
+        // 气泡只换它自己那两栏，没有把整条高亮规则吃掉
+        val colored = ranges.filter { it.style.colorArgb == 0xFF112233.toInt() }
+        assertEquals(14, colored.minOf { it.start })
+        assertEquals(18, colored.maxOf { it.endExclusive })
+    }
+
+    /** 没人设气泡时一个区间都不该多出来：正文与本轮之前逐字节等价。 */
+    @Test
+    fun noBubbleLeavesTheRangesUntouched() {
+        val ranges = rangesFor(HighlightRule(pattern = "我是李四", targetScope = HighlightRule.TARGET_BODY))
+
+        assertTrue(ranges.none { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY })
+    }
+
+    /** 引号跟踪器是章级共享的：第二段里的气泡要用第二段自己的坐标，不能带上前一段的长度。 */
+    @Test
+    fun bubbleInALaterParagraphUsesThatParagraphsOwnCoordinates() {
+        val first = "第一段没有对话。"
+        val second = "她说：“<<王五（女青）>>你好。”"
+        val source = ReaderChapterSource(
+            chapterIndex = 0,
+            title = "",
+            blocks = listOf(
+                ReaderChapterSourceBlock.Text(value = first, chapterPosition = 0),
+                ReaderChapterSourceBlock.Text(value = second, chapterPosition = first.length),
+            ),
+            characterCount = first.length + second.length,
+            semanticContent = first + second,
+        )
+
+        val ranges = LegacyReaderStyleRangeMapper.map(
+            source = source,
+            rules = emptyList(),
+            processes = emptyList(),
+            castBubbles = mapOf("王五" to ReaderCharacterStyle(backgroundImage = bubbleImage())),
+        ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
+
+        // 气泡落在第二段自己的坐标上：从本段的开引号起、到本段闭引号后一位
+        // （少了 origin 换算的话这里会是 first.length 的两倍偏移）
+        assertEquals(listOf(first.length + second.indexOf('“')), ranges.map { it.start })
+        assertEquals(listOf(first.length + second.length), ranges.map { it.endExclusive })
+    }
+
+    private fun bubbleImage(): ReaderTextBackgroundImage = ReaderTextBackgroundImage(
+        source = "/tmp/bubble.png",
+        fit = 3,
+        scale = 1f,
+        ninePatchLeft = 0.1f,
+        ninePatchRight = 0.1f,
+        ninePatchTop = 0.1f,
+        ninePatchBottom = 0.1f,
+    )
 }

@@ -6,6 +6,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.help.readaloud.cast.BookCastStore
+import io.legado.app.help.readaloud.cast.CastMemoryMirror
 import io.legado.app.help.readaloud.cast.VoicePoolStore
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
@@ -198,16 +199,22 @@ class BookCharacterDetailViewModel(
                 withContext(Dispatchers.IO) {
                     bookKnowledgeGateway.upsertCharacterProfile(profile)
                     // 档案与配音角色是同一份信息（档案 id 就是角色 id）：这里改了名字或池，
-                    // 正文胶囊、分配表与朗读音色要立刻跟着改，否则朗读还在用旧池。
-                    BookCastStore.syncFromProfile(
+                    // 分配表与朗读音色要立刻跟着改，否则朗读还在用旧池。
+                    val castChanged = BookCastStore.syncFromProfile(
                         bookUrl = profile.bookUrl,
                         profileId = profile.id,
                         name = profile.name,
                         poolLabel = VoicePoolStore.poolNameOrEmpty(profile.voiceAgeBand),
                     )
-                    if (avatarChanged) {
-                        // 胶囊上那张图是分页时定下来的地址，不换一次重排就还是旧头像
+                    // 本书角色记忆也认这一份：AI 下一趟读的就是它，不改这里人物页补的别名
+                    // 与简介对下一次分配等于不存在。
+                    CastMemoryMirror.applyProfileToMemory(profile.bookUrl, profile)
+                    // 一次保存只重排一遍：头像与名字/池同时改时，两条各自 reload 会把同一章排两遍
+                    if (castChanged || avatarChanged) {
+                        // 胶囊上那张图与那行字都是分页时定下来的，不换一次重排就还是旧的
                         BookCastStore.reloadReaderChapter(profile.bookUrl)
+                    }
+                    if (avatarChanged) {
                         // 换掉的本地头像到这一步才真没人引用了：以前是选完新图就立刻删旧文件，
                         // 用户随后不保存就退出，档案里留着的反而是个被删掉的地址。
                         currentProfile?.avatarUri?.let { deleteCharacterAvatar(appCtx, it) }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,9 +43,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * 官方人物卡片行右侧的动作菜单：展开行内编辑、换头像、删除这个角色。
+ * 官方人物卡片行右侧的动作菜单：展开行内编辑、设这个角色自己的气泡、换头像、删除这个角色。
  *
- * 卡片本身点下去是官方的人物详情页。这里只补官方没有的三件事——改名字/声音池、
+ * 卡片本身点下去是官方的人物详情页。这里只补官方没有的几件事——改名字/声音池、
  * 不设进详情页就能换头像，以及把角色连同它的分配句一起删掉，样式沿用官方书源列表
  * 那套「更多」溢出菜单（`BookSourceItemMenu`），不在卡片上摆两个裸图标。
  */
@@ -54,6 +55,7 @@ fun CastRoleRowActions(
     onToggleEdit: () -> Unit,
     onDelete: () -> Unit,
     onSetAvatar: () -> Unit = {},
+    onSetBubble: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -92,6 +94,19 @@ fun CastRoleRowActions(
                 onClick = {
                     dismiss()
                     onSetAvatar()
+                },
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.cast_bubble_menu),
+                leadingIcon = {
+                    MenuItemIcon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    dismiss()
+                    onSetBubble()
                 },
             )
             RoundDropdownMenuItem(
@@ -248,8 +263,7 @@ fun CastRoleEditorPanel(
                             voiceEffect = voiceEffect,
                         )
                         if (ok) {
-                            // 胶囊上写的就是这个名字与池，正在读的这一章要重取
-                            BookCastStore.reloadReaderChapter(bookUrl)
+                            // 正文重排在 updateCharacter 里按「改的是不是正文看得见的那几栏」决定
                             withContext(Dispatchers.Main) { onSaved() }
                         }
                     }

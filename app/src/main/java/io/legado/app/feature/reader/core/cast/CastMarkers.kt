@@ -24,6 +24,12 @@ object CastMarkers {
         '“' to '”', '‘' to '’', '「' to '」', '『' to '』', '"' to '"', '\'' to '\'',
     )
 
+    /** 一个还没闭合的引号：期望的闭符号、它占用的锚点序号（非锚点为 -1）、开符号在流里的下标。 */
+    private class Frame(val close: Char, val ordinal: Int, val openAt: Int)
+
+    /** 一段锚点对话：[start] 是开引号在喂入流里的下标，[endExclusive] 是闭引号后一位。 */
+    data class ClosedSpan(val ordinal: Int, val start: Int, val endExclusive: Int)
+
     /**
      * 章级「分配锚点引号」跟踪器：注入侧与测量侧各持一个实例、喂同一字符流、同规则，
      * 保证 ordinal 一致。规则：
@@ -32,24 +38,45 @@ object CastMarkers {
      *   占用下一个 ordinal（深度 0 = 一级对话；更深的嵌套引号不加胶囊）。
      */
     class CastQuoteTracker(private val maxDepth: Int = 2) {
-        private val stack = ArrayDeque<Char>()
+        private val stack = ArrayDeque<Frame>()
         private var nextOrdinal = 0
+        private var position = 0
 
         /** 最近一次命中的锚点 ordinal（仅 [feed] 返回 true 后有效）。 */
         var lastCastOrdinal = -1
             private set
 
+        /**
+         * 已经喂进去多少个字符。跟踪器是章级共享的，[lastClosedSpan] 的下标因此是**整章**的；
+         * 一段一段喂的调用方要先记下进段前的这个数，再减回去才能落回本段字符串。
+         */
+        val fedCharacters: Int
+            get() = position
+
+        /**
+         * 本次 [feed] 是否刚好闭合了一段锚点对话（每次 feed 重置，仅返回后有效）。
+         *
+         * 角色气泡要包住整句台词（连同引号和压在上面的胶囊），区间在这里一次算出，
+         * 不再另写一份引号栈。
+         */
+        var lastClosedSpan: ClosedSpan? = null
+            private set
+
         fun feed(ch: Char): Boolean {
-            for ((_, close) in QuotePairs) {
-                if (ch == close && stack.isNotEmpty() && stack.last() == ch) {
-                    stack.removeLast()
-                    return false
+            lastClosedSpan = null
+            val at = position++
+            val top = stack.lastOrNull()
+            if (top != null && ch == top.close) {
+                stack.removeLast()
+                if (top.ordinal >= 0) {
+                    lastClosedSpan = ClosedSpan(top.ordinal, top.openAt, at + 1)
                 }
+                return false
             }
             for ((open, close) in QuotePairs) {
                 if (ch == open) {
                     val cast = stack.size < maxDepth
-                    stack.addLast(close)
+                    stack.addLast(Frame(close, if (cast) nextOrdinal else -1, at))
                     if (cast) lastCastOrdinal = nextOrdinal++
                     return cast
                 }
