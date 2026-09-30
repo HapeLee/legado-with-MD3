@@ -919,10 +919,10 @@ internal class ReaderPaginationSession(
                                     previousItemBackground == itemBackground &&
                                     spacingBefore <= 0f &&
                                     previousMatchSpacingAfterPx <= 0f,
-                            // 九宫格等比缩放：上下两条切线之间是字的显示区域，所以按行盒高算出
-                            // 一个倍率，四条边让出去的都是各自边条按**同一个**倍率换算后的厚度
-                            // （切线之间那一格正好盖住行盒，上下左右四边跟着一起长缩）。
-                            // 左右若仍按原图像素宽画，图就只缩了纵向——右边那块图案会被压扁。
+                            // 九宫格等比缩放：上下两条切线之间是字的显示区域，所以按行盒高与
+                            // 「图片大小」算出一个倍率，四条边让出去的都是各自边条按这**同一个**
+                            // 倍率换算后的厚度（上下两条还要再加上带子比行盒多出来、按上下对称分的
+                            // 那一截）。左右若仍按原图像素宽画，图就只缩了纵向——右边那块图案会被压扁。
                             backgroundFrameTopPx = itemBackground?.frameTopPx(actualLineHeight) ?: 0f,
                             backgroundFrameBottomPx = itemBackground?.frameBottomPx(actualLineHeight) ?: 0f,
                             backgroundFrameLeftPx = itemBackground?.frameLeftPx(actualLineHeight) ?: 0f,

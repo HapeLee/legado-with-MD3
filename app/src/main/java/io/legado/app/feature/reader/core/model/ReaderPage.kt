@@ -82,7 +82,6 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
     val borderPx = if (hasNinePatchBorder) 1 else 0
     val contentWidthPx = (widthPx - borderPx * 2).coerceAtLeast(0)
     val contentHeightPx = (heightPx - borderPx * 2).coerceAtLeast(0)
-    val fixedScale = scale.coerceIn(0.1f, 5f)
     var leftPx = (contentWidthPx * ninePatchLeft.coerceIn(0f, 1f)).roundToInt()
     var rightPx = (contentWidthPx * ninePatchRight.coerceIn(0f, 1f)).roundToInt()
     var topPx = (contentHeightPx * ninePatchTop.coerceIn(0f, 1f)).roundToInt()
@@ -108,11 +107,14 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
         ninePatchRight = naturalFraction(rightPx, contentWidthPx),
         ninePatchTop = naturalFraction(topPx, contentHeightPx),
         ninePatchBottom = naturalFraction(bottomPx, contentHeightPx),
-        contentInsetLeftPx = leftPx * fixedScale,
-        contentInsetRightPx = rightPx * fixedScale,
-        contentInsetTopPx = topPx * fixedScale,
-        contentInsetBottomPx = bottomPx * fixedScale,
-        contentBandHeightPx = (contentHeightPx - topPx - bottomPx).coerceAtLeast(0) * fixedScale,
+        // 这四个都是**源图自己**的厚度，一个像素都不乘 [scale]：图片大小是整张图的倍率，
+        // 只在 [verticalScalePx] 里乘一次。乘在这里就会被那个倍率再除回去——「图片大小调了没反应」
+        // 就是这么来的（非九宫格那三种适配在绘制侧自己乘，见 ReaderCanvasSurface 的 fit 分支）。
+        contentInsetLeftPx = leftPx.toFloat(),
+        contentInsetRightPx = rightPx.toFloat(),
+        contentInsetTopPx = topPx.toFloat(),
+        contentInsetBottomPx = bottomPx.toFloat(),
+        contentBandHeightPx = (contentHeightPx - topPx - bottomPx).coerceAtLeast(0).toFloat(),
     )
 }
 
@@ -131,29 +133,43 @@ private fun naturalFraction(px: Int, contentHeightPx: Int): Float =
 private fun minContentBandPx(contentHeightPx: Int): Int =
     (contentHeightPx * minContentBandRatio).roundToInt().coerceIn(0, contentHeightPx)
 
+/** 「图片大小」这一栏的取值范围：与另外三种适配（平铺/拉伸/居中）共用同一个口径。 */
+private fun ReaderTextBackgroundImage.sizeFactor(): Float = scale.coerceIn(0.1f, 5f)
+
 /**
- * 整张图的等比缩放倍率：上下两条切线之间就是文字的显示区域，所以让中间带正好等于行盒高，
- * 整张图按这一个倍率变大小——上下边条跟着一起长缩，任何一格都不做纵向拉伸。
+ * 整张图的等比缩放倍率：上下两条切线之间就是文字的显示区域，所以让中间带等于
+ * 「行盒高 × 图片大小」，整张图按这一个倍率变大小——四条边跟着一起长缩，任何一格都不被单独拉伸。
  *
  * 这是**唯一**一个倍率，四条边都用它（[frameTopPx] / [frameBottomPx] / [frameLeftPx] /
- * [frameRightPx]）：只把纵向缩了、横向仍按原图像素画，等于把图压扁。
+ * [frameRightPx]）：只把纵向缩了、横向仍按原图像素画，等于把图压扁（第六十七轮那个「预览都被压扁
+ * 了」就是漏了横向这一半）。
  *
  * 只此一个倍率，不再对边条厚度另设上限：[minContentBandPx] 已经把分母夹在整图高的
- * [minContentBandRatio] 以上，整张图因此最高不超过行盒的 `1 / minContentBandRatio` 倍，
- * 再夹一次只会让中间那一格与上下两条边用不同的倍率。
+ * [minContentBandRatio] 以上，所以图片大小 1 倍时整张图最高不超过行盒的 `1 / minContentBandRatio`
+ * 倍，再夹一次只会让中间那一格与上下两条边用不同的倍率。
  */
 fun ReaderTextBackgroundImage.verticalScalePx(lineHeightPx: Float): Float {
     if (fit != 3 || contentBandHeightPx <= 0f || lineHeightPx <= 0f) return 1f
-    return lineHeightPx / contentBandHeightPx
+    return lineHeightPx * sizeFactor() / contentBandHeightPx
 }
 
-/** 九宫格上沿要在行盒上方再外扩多少 = 上边条按 [verticalScalePx] 换算后的厚度。非九宫格不外扩。 */
-fun ReaderTextBackgroundImage.frameTopPx(lineHeightPx: Float): Float =
-    if (fit != 3) 0f else contentInsetTopPx * verticalScalePx(lineHeightPx)
+/**
+ * 图片大小 ≠ 1 时中间带不再正好等于行盒：多出来（或少掉）的那一截按上下对称分给带子，
+ * 字始终待在带子正中。这一截就是要额外外扩的量，负值表示气泡比字还矮。
+ */
+fun ReaderTextBackgroundImage.bandOverhangPx(lineHeightPx: Float): Float =
+    if (fit != 3) 0f else lineHeightPx * (sizeFactor() - 1f) / 2f
 
-/** [frameTopPx] 的下沿那一半。 */
+/**
+ * 九宫格上沿要在行盒上方再外扩多少 = 额外的那一截 + 上边条按 [verticalScalePx] 换算后的厚度。
+ * 非九宫格不外扩。
+ */
+fun ReaderTextBackgroundImage.frameTopPx(lineHeightPx: Float): Float =
+    if (fit != 3) 0f else bandOverhangPx(lineHeightPx) + contentInsetTopPx * verticalScalePx(lineHeightPx)
+
+/** [frameTopPx] 的下沿那一半：额外那一截上下各分一半，字才会留在带子正中。 */
 fun ReaderTextBackgroundImage.frameBottomPx(lineHeightPx: Float): Float =
-    if (fit != 3) 0f else contentInsetBottomPx * verticalScalePx(lineHeightPx)
+    if (fit != 3) 0f else bandOverhangPx(lineHeightPx) + contentInsetBottomPx * verticalScalePx(lineHeightPx)
 
 /**
  * 九宫格左边条画出去多宽 = 左边条也按**同一个** [verticalScalePx] 换算。

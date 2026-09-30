@@ -228,17 +228,52 @@ class ReaderNineSliceLayoutTest {
         val content = ReaderRect(5f, 2f, 30f, 30f)
         val frame = frameOf(image, content)
 
-        val topLeft = ReaderNineSliceLayout.cells(50, 40, content, frame, image).first()
+        val cells = ReaderNineSliceLayout.cells(50, 40, content, frame, image)
+        val topLeft = cells.first()
 
-        // scale 0.5 之后：上边条 2、中间带 14、下边条 4。行盒 28 是中间带的两倍，于是整张图
-        // 再放大两倍，四边共用同一个倍率（0.5 × 2 = 1）：源 10×4 → 目标 10×4。
-        // 左边条若仍按 0.5 的原图宽画（5），这一格就是 5×4 —— 图只缩了横向，正是「被压扁」。
+        // 中间带 28 正好等于行盒 28，图片大小 0.5 就是整张图的倍率：源 10×4 → 目标 5×2，
+        // 四边共用这同一个 0.5，一格都不形变。
+        // （左边条若仍按原图宽 10 画，这一格就是 10×2：图只缩了纵向，正是「被压扁」。）
         assertEquals(10, sourceWidth(topLeft))
         assertEquals(4, sourceHeight(topLeft))
-        assertEquals(10f, topLeft.destination.width, 0f)
-        assertEquals(4f, topLeft.destination.height, 0f)
-        // 图高 40 = 上边条 4 + 行盒 28 + 下边条 8：自然高 20 的整张图被等比放大两倍。
-        assertEquals(40f, frame.height, 0.01f)
+        assertEquals(5f, topLeft.destination.width, 0f)
+        assertEquals(2f, topLeft.destination.height, 0f)
+        // 图总高 = 40 × 0.5 = 20：中间那一行只剩 14，字会高出气泡上下各 7 像素。
+        assertEquals(20f, frame.height, 0.01f)
+        assertEquals(14f, cells[4].destination.height, 0.01f)
+        assertEquals(9f, cells[4].destination.top, 0.01f)
+    }
+
+    /**
+     * 用户口径：「编辑规则那的图片大小」必须真的改气泡尺寸。九宫格下它的语义与非九宫格一致——
+     * **整张图**按那个倍率放大/缩小（跟调图片大小一样），多出来的一截上下对称分给中间带，
+     * 字始终在带子正中；四条边仍然共用同一个倍率，所以放大缩小都不会形变。
+     */
+    @Test
+    fun imageSizeScalesTheWholeBubbleWithoutDeformingIt() {
+        val content = ReaderRect(10f, 20f, 40f, 48f)
+        val lineHeight = content.height
+        val big = locked.copy(scale = 2f).withBitmapSize(50, 40)
+
+        // 倍率 = 行盒 28 × 2 / 中间带 28 = 2；带子比行盒高出一截，上下各 14。
+        assertEquals(2f, big.verticalScalePx(lineHeight), 0.001f)
+        assertEquals(14f, big.bandOverhangPx(lineHeight), 0.001f)
+        val frame = frameOf(big, content)
+        // 整张图 50×40 → 画出来 100×80：高 = 上边条 8 + 带子 56 + 下边条 16。
+        assertEquals(80f, frame.height, 0.01f)
+        val cells = ReaderNineSliceLayout.cells(50, 40, content, frame, big)
+        val ratio = big.verticalScalePx(lineHeight)
+        cells.forEach { cell ->
+            assertEquals(sourceHeight(cell) * ratio, cell.destination.height, 0.01f)
+            if (cell.destination.left != content.left) {
+                assertEquals(sourceWidth(cell) * ratio, cell.destination.width, 0.01f)
+            }
+        }
+        // 中间那一行以文字框为中心长高，字不会跑出气泡。
+        val center = cells.single { it.source == ReaderIntRect(10, 4, 35, 32) }
+        assertEquals(56f, center.destination.height, 0.01f)
+        assertEquals(6f, center.destination.top, 0.01f)
+        assertEquals(62f, center.destination.bottom, 0.01f)
     }
 
     /** 拼缝：内部边界各让出半像素让相邻格叠压，外框那两条边保持原位，否则缝上会透出页面背景。 */
