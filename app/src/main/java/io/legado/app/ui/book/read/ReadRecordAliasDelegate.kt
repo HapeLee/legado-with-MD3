@@ -28,6 +28,7 @@ class ReadRecordAliasDelegate(
     /** 打开书籍时检查未知作者记录；已有决定则自动执行，否则请求显示确认框。 */
     suspend fun check(book: Book) {
         if (hasActiveDialog()) return
+        if (ReadRecordIdentity.author(book.author).isEmpty()) return
         val sources = readRecordRepository.getUnknownAuthorRecords(book.name)
         if (sources.isEmpty()) return
         val key = ReadRecordIdentity.key(book.name, book.author)

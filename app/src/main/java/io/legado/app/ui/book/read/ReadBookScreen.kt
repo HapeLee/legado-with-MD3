@@ -1,8 +1,7 @@
 package io.legado.app.ui.book.read
 
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -10,6 +9,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
@@ -50,6 +51,7 @@ import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
+import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -158,18 +160,20 @@ fun ReadBookScreen(
         dismissText = stringResource(R.string.read_record_alias_keep_separate),
         onDismiss = { onIntent(ReadBookIntent.ResolveReadRecordAlias(false, rememberAliasChoice)) },
         content = {
-            Row(
-                modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            Column(
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Checkbox(
+                CheckboxItem(
+                    title = stringResource(R.string.read_record_alias_remember),
                     checked = rememberAliasChoice,
                     onCheckedChange = { rememberAliasChoice = it },
                 )
-                AppText(stringResource(R.string.read_record_alias_remember))
-                TextButton(onClick = {
-                    onIntent(ReadBookIntent.ClearReadRecordAliasDecisions)
-                }) {
+                TextButton(
+                    onClick = {
+                        onIntent(ReadBookIntent.ClearReadRecordAliasDecisions)
+                    },
+                    modifier = Modifier.align(Alignment.End),
+                ) {
                     AppText(stringResource(R.string.read_record_alias_revoke))
                 }
             }
