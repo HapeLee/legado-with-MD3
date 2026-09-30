@@ -74,6 +74,18 @@ object CastCapsuleGeometry {
     private const val BGM_NOTE = "♪"
 
     /**
+     * 只剩头像：名字与池小字都不显示（池小字还要真的有内容），也没有变声器标记。
+     *
+     * 测量侧与绘制侧共用这一条判定，否则宽度按正方形量、头像按有文字排，两边就错开了。
+     */
+    fun isAvatarOnly(
+        style: CastCapsuleStyle,
+        hasPoolText: Boolean,
+        withEffect: Boolean,
+    ): Boolean = style.showAvatar && !style.showName &&
+        !(style.showPool && hasPoolText) && !withEffect
+
+    /**
      * 胶囊总宽 = 2×内边距 +（可选头像+间隙）+ 名字宽 +（可选池小字宽）+（可选变声器标记）+ 占位尾部。
      * [labelWidthPx] 现在只是名字文本宽（池小字单独传），不再有括号留白。
      * 样式里关掉的那一栏按 0 计入，量出来的宽度就是画出来的宽度。
@@ -88,6 +100,8 @@ object CastCapsuleGeometry {
     ): Float {
         val h = heightPx(fontSizePx)
         val hasAvatar = withAvatar && style.showAvatar
+        // 全部关掉只剩头像时，这颗胶囊就是一块正方形：圆角 0 是正方形，拉满是圆，中间是圆角矩形。
+        if (hasAvatar && isAvatarOnly(style, poolWidthPx > 0f, withEffect)) return h
         val lead = if (hasAvatar) textLeftPx(h, style) - h * padRatio else 0f
         val name = if (style.showName) labelWidthPx else 0f
         val pool = if (style.showPool && poolWidthPx > 0f) {

@@ -1,5 +1,7 @@
 package io.legado.app.feature.reader.core.model
 
+import kotlin.math.roundToInt
+
 data class ReaderPageId(val chapterIndex: Int, val pageIndex: Int)
 
 data class ReaderRect(val left: Float, val top: Float, val right: Float, val bottom: Float) {
@@ -65,9 +67,14 @@ data class ReaderTextBackgroundImage(
 }
 
 /**
- * 把切线分数换算成四条边的自然厚度（像素）与中间带高度：横向按位图宽、纵向按位图高，
- * 各自再乘 [scale]。这些只是「不缩放时长什么样」，画之前还要按行盒高等比换算一次
- * （见 [verticalScalePx]），所以整张图随字号一起变大小。
+ * 把四条切线换算成**整像素**的源切片厚度，再乘 [scale] 得到自然厚度与中间带高度。
+ * 这些只是「不缩放时长什么样」，画之前还要按行盒高等比换算一次（见 [verticalScalePx]），
+ * 所以整张图随字号一起变大小。
+ *
+ * 上下两条切线写回的也是**夹过并取整之后**的那一份（[ninePatchTop] / [ninePatchBottom]），
+ * 绘制期切片位置读的是同一个数（见 [ReaderNineSliceLayout]）。这一步是「纵向绝不拉伸」的前提：
+ * 只要倍率与切线两处各算各的（尤其一边取整、一边不取整），中间那一格的 目标/源 就跟上下
+ * 两条边差一点点，拉伸又回来了——用户报的「都说了很多遍了还在拉伸」就是这一点点。
  */
 fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): ReaderTextBackgroundImage {
     if (fit != 3 || widthPx <= 0) return this
@@ -75,34 +82,54 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
     val contentWidthPx = (widthPx - borderPx * 2).coerceAtLeast(0)
     val contentHeightPx = (heightPx - borderPx * 2).coerceAtLeast(0)
     val fixedScale = scale.coerceIn(0.1f, 5f)
-    val left = ninePatchLeft.coerceIn(0f, 1f)
-    val right = ninePatchRight.coerceIn(0f, 1f)
-    val top = ninePatchTop.coerceIn(0f, 1f)
-    val bottom = ninePatchBottom.coerceIn(0f, 1f)
+    val leftPx = (contentWidthPx * ninePatchLeft.coerceIn(0f, 1f)).roundToInt()
+    val rightPx = (contentWidthPx * ninePatchRight.coerceIn(0f, 1f)).roundToInt()
+    var topPx = (contentHeightPx * ninePatchTop.coerceIn(0f, 1f)).roundToInt()
+    var bottomPx = (contentHeightPx * ninePatchBottom.coerceIn(0f, 1f)).roundToInt()
+    val maxEdgePx = contentHeightPx - minContentBandPx(contentHeightPx)
+    val edgeSum = topPx + bottomPx
+    if (edgeSum > maxEdgePx && edgeSum > 0) {
+        topPx = (topPx * maxEdgePx.toFloat() / edgeSum).roundToInt()
+        // 余量全给下边：两条边的和正好落在上限上，倍率才不会因取整再多出一格。
+        bottomPx = maxEdgePx - topPx
+    }
     return copy(
-        contentInsetLeftPx = contentWidthPx * left * fixedScale,
-        contentInsetRightPx = contentWidthPx * right * fixedScale,
-        contentInsetTopPx = contentHeightPx * top * fixedScale,
-        contentInsetBottomPx = contentHeightPx * bottom * fixedScale,
-        contentBandHeightPx = contentHeightPx * (1f - top - bottom).coerceAtLeast(0f) * fixedScale,
+        ninePatchTop = naturalFraction(topPx, contentHeightPx),
+        ninePatchBottom = naturalFraction(bottomPx, contentHeightPx),
+        contentInsetLeftPx = leftPx * fixedScale,
+        contentInsetRightPx = rightPx * fixedScale,
+        contentInsetTopPx = topPx * fixedScale,
+        contentInsetBottomPx = bottomPx * fixedScale,
+        contentBandHeightPx = (contentHeightPx - topPx - bottomPx).coerceAtLeast(0) * fixedScale,
     )
 }
+
+/** 整像素切片厚度换回切线分数（[ReaderNineSliceLayout] 再乘回整图高，取整结果必然一致）。 */
+private fun naturalFraction(px: Int, contentHeightPx: Int): Float =
+    if (contentHeightPx > 0) px.toFloat() / contentHeightPx else 0f
+
+/**
+ * 中间带（= 文字的显示区域，也是等比倍率的分母）至少留整张图高的 [minContentBandRatio]
+ * 这么多像素，上下两条边按各自比例对称缩回。
+ *
+ * 带子越窄，整张图按同一个倍率放得越大；不设下限的话两条线一挤到中间，倍率就奔着无穷去
+ * （气泡高到出屏）。以前的做法是「倍率先算、再单独夹住上下两条边的厚度」，那等于让中间
+ * 那一格与上下两条边用不同的倍率——正是用户反复否掉的那个「纵向还是会拉伸」。
+ */
+private fun minContentBandPx(contentHeightPx: Int): Int =
+    (contentHeightPx * minContentBandRatio).roundToInt().coerceIn(0, contentHeightPx)
 
 /**
  * 纵向的等比缩放倍率：上下两条切线之间就是文字的显示区域，所以让中间带正好等于行盒高，
  * 整张图按这一个倍率变大小——上下边条跟着一起长缩，任何一格都不做纵向拉伸。
- * 上下切线挤到一起时中间带趋近 0、倍率会趋于无穷，所以两条边合计最高只让到行盒的
- * [maxEdgeHeightRatio] 倍（整张图因此不超过行盒的 4 倍）；切线交叉到没有中间带
- * （[contentBandHeightPx] 为 0）时按 1 倍原样画。
+ *
+ * 只此一个倍率，不再对边条厚度另设上限：[minContentBandPx] 已经把分母夹在整图高的
+ * [minContentBandRatio] 以上，整张图因此最高不超过行盒的 `1 / minContentBandRatio` 倍，
+ * 再夹一次只会让中间那一格与上下两条边用不同的倍率。
  */
 fun ReaderTextBackgroundImage.verticalScalePx(lineHeightPx: Float): Float {
     if (fit != 3 || contentBandHeightPx <= 0f || lineHeightPx <= 0f) return 1f
-    // 两条边都没有厚度时本来就不存在溢出，倍率只由中间带决定（除以 0 得无穷，min 自然取前者）。
-    val edgeHeightPx = contentInsetTopPx + contentInsetBottomPx
-    return minOf(
-        lineHeightPx / contentBandHeightPx,
-        lineHeightPx * maxEdgeHeightRatio / edgeHeightPx,
-    )
+    return lineHeightPx / contentBandHeightPx
 }
 
 /** 九宫格上沿要在行盒上方再外扩多少 = 上边条按 [verticalScalePx] 换算后的厚度。非九宫格不外扩。 */
@@ -113,8 +140,11 @@ fun ReaderTextBackgroundImage.frameTopPx(lineHeightPx: Float): Float =
 fun ReaderTextBackgroundImage.frameBottomPx(lineHeightPx: Float): Float =
     if (fit != 3) 0f else contentInsetBottomPx * verticalScalePx(lineHeightPx)
 
-/** 上下切线交叉时等比倍率会爆掉：两条边合计最高只让到行盒的这么多倍，整张图不超过行盒 4 倍。 */
-private const val maxEdgeHeightRatio = 3f
+/**
+ * 中间带（= 文字显示区域）的下限，占整张图高：倍率的最大值由它决定，
+ * 所以上下两条边、中间那一格共用同一个倍率时，气泡最高也就是行盒的 4 倍。
+ */
+private const val minContentBandRatio = 0.25f
 
 /**
  * 左/右偏移各自换算成中间那一格被推出去的量：正值往外拉，负值往里缩。

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -461,6 +462,7 @@ private fun PreviewCard(
             withAvatar = withAvatar,
             nameText = nameText,
             poolText = poolText,
+            squareAvatarOnly = type == CastCapsuleStyleStore.ROLE,
         )
         PreviewBoard(
             modifier = Modifier.weight(1f),
@@ -473,6 +475,7 @@ private fun PreviewCard(
             withAvatar = withAvatar,
             nameText = nameText,
             poolText = poolText,
+            squareAvatarOnly = type == CastCapsuleStyleStore.ROLE,
         )
     }
 }
@@ -489,18 +492,22 @@ private fun PreviewBoard(
     withAvatar: Boolean,
     nameText: String,
     poolText: String,
+    squareAvatarOnly: Boolean,
 ) {
     val height = 40.dp
     val pad = height * CastCapsuleGeometry.padRatio
+    val withText = nameText.isNotEmpty() || poolText.isNotEmpty()
+    // 与正文同一口径：全部关掉只剩头像时这颗胶囊是正方形（圆角拉满即圆，见 widthOf）。
+    // 未分配占位那颗在正文里走的是另一套宽度算法，不参与这条规则。
+    val avatarOnly = squareAvatarOnly && withAvatar && !withText
     val avatarSize = style.avatarDiameterDp(height)
-    val avatarLeft = style.avatarLeftDp(height)
+    val avatarLeft = style.avatarLeftDp(height, avatarOnly)
     val avatarShiftY = style.avatarShiftYDp(height)
     val textLeft = if (withAvatar) {
         maxOf(pad, avatarLeft + avatarSize + height * CastCapsuleGeometry.gapRatio)
     } else {
         pad
     }
-    val withText = nameText.isNotEmpty() || poolText.isNotEmpty()
     Column(
         modifier = modifier.background(board).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -510,7 +517,13 @@ private fun PreviewBoard(
         Box(
             modifier = Modifier
                 .height(height)
-                .widthIn(min = if (withText) 96.dp else avatarSize + pad * 2f)
+                .then(
+                    if (avatarOnly) {
+                        Modifier.width(height)
+                    } else {
+                        Modifier.widthIn(min = if (withText) 96.dp else avatarSize + pad * 2f)
+                    },
+                )
                 .clip(shape)
                 .background(
                     if (bgColor == 0) {
@@ -599,7 +612,8 @@ private fun PreviewBoard(
  * Dp 只是 Float 的单位包装，所以这里直接套正文那三个函数——预览与正文共用同一份
  * 夹取规则（头像大小、位移上限），不再抄一遍公式抄漏。
  */
-private fun CastCapsuleStyle.avatarLeftDp(height: Dp): Dp = avatarLeft(height.value).dp
+private fun CastCapsuleStyle.avatarLeftDp(height: Dp, avatarOnly: Boolean = false): Dp =
+    avatarLeft(height.value, avatarOnly).dp
 
 private fun CastCapsuleStyle.avatarShiftYDp(height: Dp): Dp =
     avatarCenterOffset(height.value).dp

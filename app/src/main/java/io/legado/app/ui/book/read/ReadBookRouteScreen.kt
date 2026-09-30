@@ -95,7 +95,9 @@ import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.AndroidPlatformCapabilities
 import io.legado.app.ui.main.MainActivity
-import io.legado.app.ui.main.readerSharedBounds
+import io.legado.app.ui.main.ReaderCoverMorphCover
+import io.legado.app.ui.main.rememberReaderCoverMorph
+import io.legado.app.ui.main.readerCoverMorphLayer
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.LegadoTheme
@@ -662,16 +664,15 @@ fun ReadBookRouteScreen(
     val platformCapabilities = remember(controller) { AndroidPlatformCapabilities(controller.activity) }
     val displayConfiguration = LocalConfiguration.current
     val displayCornerRadiusPx = remember(displayConfiguration) { platformCapabilities.displayCornerRadiusPx }
+    // 书架↔阅读页的形变：正文按全屏布局、每帧只改裁剪轮廓，封面留在原格按设置的百分比退场。
+    val coverMorph = rememberReaderCoverMorph(sharedCoverKey, animatedVisibilityScope)
     Box(
         Modifier
             .fillMaxSize()
             .semantics { testTagsAsResourceId = true }
-            .readerSharedBounds(
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-                sharedCoverKey = sharedCoverKey,
-                displayCornerRadiusPx = displayCornerRadiusPx,
-                density = density,
+            .readerCoverMorphLayer(
+                state = coverMorph,
+                screenCornerRadiusPx = displayCornerRadiusPx,
             )
             .background(readerSurfaceColor)
     ) {
@@ -962,6 +963,11 @@ fun ReadBookRouteScreen(
                 onSaved = { items -> controller.saveMenuConfig(items) }
             )
         }
+        // 遮罩内的封面层：与正文同一块裁剪面，面板从它身上长出去，按设置的百分比才退场。
+        ReaderCoverMorphCover(
+            state = coverMorph,
+            book = state.book,
+        )
         ReaderPerfTrace.marker("compose.chrome.end")
     }
     ReaderPerfTrace.marker("compose.screen.end")

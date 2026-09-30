@@ -121,8 +121,11 @@ class ReaderTextBackgroundRunTest {
     }
 
     /**
-     * 上下两条切线挤到一起时中间带趋近 0，按行盒算等比倍率会趋于无穷。所以整张图最高只让到
-     * 行盒的 4 倍，气泡不会高过屏幕。
+     * 上下两条切线挤到一起时中间带趋近 0，按行盒算等比倍率会趋于无穷。所以中间带一律留整张图
+     * 高的 25%（整像素），两条边按各自比例缩回——整张图最高也就是行盒的 4 倍，气泡不会高过屏幕。
+     *
+     * 注意夹的是**切线位置**而不是「边条厚度」：只夹厚度的话中间那一格就独享另一个倍率，
+     * 纵向拉伸又回来了（用户否掉过的那种）。
      */
     @Test
     fun `squeezed split lines cannot blow the bubble up`() {
@@ -131,8 +134,14 @@ class ReaderTextBackgroundRunTest {
             ninePatchBottom = 0.5f,
         ).withBitmapSize(50, 40)
 
-        // 中间带 0.4px、整张图自然高 40：倍率本该是 28/0.4=70，被「总高 ≤ 行盒 4 倍」夹到 2.8。
-        assertEquals(0.4f, squeezed.contentBandHeightPx, 0.001f)
+        // 整张图高 40：中间带留 10 像素，上下两条边各 15（合计正好 3 倍中间带）。
+        assertEquals(10f, squeezed.contentBandHeightPx, 0.001f)
+        assertEquals(15f, squeezed.contentInsetTopPx, 0.001f)
+        assertEquals(15f, squeezed.contentInsetBottomPx, 0.001f)
+        // 写回的切线就是绘制期切片读的那一份，倍率与切线不会各算各的。
+        assertEquals(0.375f, squeezed.ninePatchTop, 0.001f)
+        assertEquals(0.375f, squeezed.ninePatchBottom, 0.001f)
+        // 行盒 28 → 倍率 2.8，上下各 42：整张图 112 = 行盒的 4 倍。
         assertEquals(112f, 28f + squeezed.frameTopPx(28f) + squeezed.frameBottomPx(28f), 0.01f)
     }
 

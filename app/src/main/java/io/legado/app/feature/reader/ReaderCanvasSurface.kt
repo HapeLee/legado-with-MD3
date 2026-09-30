@@ -3,6 +3,7 @@ package io.legado.app.feature.reader
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Paint
+import android.graphics.Path.Op as AndroidPathOp
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.AnimatedVisibility
@@ -33,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -46,13 +48,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -60,6 +64,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.CompositingStrategy
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -394,6 +399,18 @@ fun ReaderCanvasSurface(
             .flatMap { page -> page.elements.asSequence().filterIsInstance<ReaderElement.Image>() }
             .distinctBy { element -> element.source to element.bounds }
             .forEach { element -> launch { prefetchSemaphore.withPermit { loadImage(element) } } }
+        // 气泡背景与正文图片同等待遇：翻页前先把 LRU 解好，绘制期直读必然命中，新页就不会
+        // 出现「有字无气泡」的那一两帧（翻页闪一下）。
+        withContext(Dispatchers.IO) {
+            listOfNotNull(pages.current, pages.next, pages.previous, pages.nextPlus)
+                .flatMap { page -> page.textBackgroundRuns().map { it.image.source } }
+                .distinct()
+                .forEach { source ->
+                    if (ReaderTextBackgroundLoader.cached(source) == null) {
+                        ReaderTextBackgroundLoader.load(source)
+                    }
+                }
+        }
     }
     // 仿真折页不用 transforms：这一行每帧拖拽都要重算，还会把整块正文的重组带起来
     //（翻页卡顿的一半来源）。折页自己只看下面的派生方向。
@@ -403,10 +420,16 @@ fun ReaderCanvasSurface(
         transition.copy(offsetPx = displayOffset).transforms(transitionMode)
     }
     // 拖拽方向只在「开始拖」与「换页」时变；offsetPx 每帧都变，绝不能读进重组。
-    val curlDirection by remember {
+    // `transitionMode` 必须是 remember 的键：不带键时 derivedStateOf 的 lambda 会永久捕获
+    // 首次重组时的模式（那时往往还是默认动画），之后怎么改设置它都返回 null，
+    // 折页分支再也进不去——这就是「仿真翻页直接没了，直接切页」。
+    val curlDirection by remember(transitionMode) {
         derivedStateOf {
-            if (transitionMode == ReaderTransitionMode.SIMULATION && transition.dragging) {
-                transition.direction
+            val t = transition
+            if (transitionMode == ReaderTransitionMode.SIMULATION &&
+                t.dragging && t.direction != null
+            ) {
+                t.direction
             } else {
                 null
             }
@@ -2026,6 +2049,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
  * 算：手指每动一下只重画一次裁剪。原来这两页是每帧重新绘制（`baseLayer.record` 每帧重录、
  * 进入页每帧整页重画），而且触点状态读在重组里，整块正文跟着手指一起重组——翻页「卡卡的」
  * 就是这两件事。现在状态只在这里读，拖拽帧零重组、零整页重栅格。
+ *
+ * 剩下的一半在渲染线程：`drawLayer` 只是把子显示列表挂上去，重演时仍是**逐条 op 重放**。
+ * 一帧里基础页被重演两次（未翻走的部分 + 折回来的镜像背面）、进入页一次，满屏正文约
+ * 280 条文字 op 就是这么来的（atrace：`AtlasTextOp` 277/帧、`flush commands` 12.7ms，UI 线程
+ * 再花 12.1ms `postAndWait` 等它）。镜像带斜切矩阵时字形还会被重新栅格化。两块层标成
+ * `CompositingStrategy.Offscreen` 后页内容解成一张 GPU 纹理，三次重放变三次纹理采样。
  */
 @Composable
 private fun SimulationPageStack(
@@ -2051,11 +2080,16 @@ private fun SimulationPageStack(
     if (basePage == null || revealPage == null) return
     val baseLayer = rememberGraphicsLayer()
     val revealLayer = rememberGraphicsLayer()
+    baseLayer.compositingStrategy = CompositingStrategy.Offscreen
+    revealLayer.compositingStrategy = CompositingStrategy.Offscreen
     val paths = remember { ReaderCurlRenderPaths() }
     val mirror = remember { Matrix() }
     Box(
         Modifier
             .fillMaxSize()
+            // graphicsLayer 是隔离边界：没有它，折页 Canvas 每帧失效会带着这个 Box 重跑
+            // `record{}`（正文显示列表重建 + 离屏纹理重新栅格化），上面的缓存等于白设。
+            .graphicsLayer { }
             .drawWithContent { baseLayer.record { this@drawWithContent.drawContent() } },
     ) {
         ReaderPageCanvas(
@@ -2075,6 +2109,7 @@ private fun SimulationPageStack(
     Box(
         Modifier
             .fillMaxSize()
+            .graphicsLayer { }
             .drawWithContent { revealLayer.record { this@drawWithContent.drawContent() } },
     ) {
         ReaderPageCanvas(
@@ -2091,7 +2126,8 @@ private fun SimulationPageStack(
             loadImage
         )
     }
-    Canvas(Modifier.fillMaxSize()) {
+    // 折页自身也要一块层：它每帧失效，没有层的话整块容器的显示列表跟着重建。
+    Canvas(Modifier.fillMaxSize().graphicsLayer { }) {
         val width = size.width
         val height = size.height
         val frame = PageCurlGeometry.calculate(
@@ -2119,38 +2155,34 @@ private fun SimulationPageStack(
             return@Canvas
         }
         frame.writeInto(paths, width, height)
-        clipPath(paths.front, ClipOp.Difference) {
+        clipPath(paths.outsideFront) {
             drawLayer(baseLayer)
         }
-        clipPath(paths.front) {
-            clipPath(paths.reveal) {
-                drawLayer(revealLayer)
-                drawCurlBackShadow(frame)
-            }
+        clipPath(paths.frontReveal) {
+            drawLayer(revealLayer)
+            drawCurlBackShadow(frame)
         }
-        clipPath(paths.front) {
-            clipPath(paths.back) {
-                drawRect(background)
-                mirror.values[Matrix.ScaleX] = frame.mirror.scaleX
-                mirror.values[Matrix.SkewX] = frame.mirror.skewX
-                mirror.values[Matrix.SkewY] = frame.mirror.skewY
-                mirror.values[Matrix.ScaleY] = frame.mirror.scaleY
-                mirror.values[Matrix.TranslateX] = frame.mirror.translateX
-                mirror.values[Matrix.TranslateY] = frame.mirror.translateY
-                // Canvas.drawBitmap() in the View implementation naturally kept sampling
-                // within the screenshot's bounds. A transformed GraphicsLayer otherwise
-                // samples beyond its recorded page surface as opaque black on some devices,
-                // producing a dark wedge between the two sides of a curl. Clip in source
-                // coordinates first so uncovered back-page pixels retain the mean background
-                // color drawn above, while the complete background image remains mirrored.
-                withTransform({
-                    transform(mirror)
-                    clipRect(0f, 0f, size.width, size.height)
-                }) {
-                    drawLayer(baseLayer)
-                }
-                drawCurlFolderShadow(frame)
+        clipPath(paths.frontBack) {
+            drawRect(background)
+            mirror.values[Matrix.ScaleX] = frame.mirror.scaleX
+            mirror.values[Matrix.SkewX] = frame.mirror.skewX
+            mirror.values[Matrix.SkewY] = frame.mirror.skewY
+            mirror.values[Matrix.ScaleY] = frame.mirror.scaleY
+            mirror.values[Matrix.TranslateX] = frame.mirror.translateX
+            mirror.values[Matrix.TranslateY] = frame.mirror.translateY
+            // Canvas.drawBitmap() in the View implementation naturally kept sampling
+            // within the screenshot's bounds. A transformed GraphicsLayer otherwise
+            // samples beyond its recorded page surface as opaque black on some devices,
+            // producing a dark wedge between the two sides of a curl. Clip in source
+            // coordinates first so uncovered back-page pixels retain the mean background
+            // color drawn above, while the complete background image remains mirrored.
+            withTransform({
+                transform(mirror)
+                clipRect(0f, 0f, size.width, size.height)
+            }) {
+                drawLayer(baseLayer)
             }
+            drawCurlFolderShadow(frame)
         }
         drawCurlFrontShadows(frame, paths)
     }
@@ -2160,38 +2192,59 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCurlFrontShadow
     frame: PageCurlFrame,
     paths: ReaderCurlRenderPaths,
 ) {
-    val curlPath = paths.front
     val reverse = frame.corner.x == 0f && frame.corner.y == size.height || frame.corner.x == size.width && frame.corner.y == 0f
-    clipPath(curlPath, ClipOp.Difference) { clipPath(paths.frontShadowHorizontal) {
+    val diagonal = hypot(size.width.toDouble(), size.height.toDouble()).toFloat()
+    val dark = Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)
+    clipPath(paths.outsideFront) { clipPath(paths.frontShadowHorizontal) {
         val left = if (reverse) frame.control1.x else frame.control1.x - 25f
         val right = if (reverse) frame.control1.x + 25f else frame.control1.x + 1f
         val rotation = (atan2((frame.touch.x - frame.control1.x).toDouble(), (frame.control1.y - frame.touch.y).toDouble()) * 180.0 / PI).toFloat()
         withTransform({ rotate(rotation, Offset(frame.control1.x, frame.control1.y)) }) {
-            drawRect(Brush.horizontalGradient(if (reverse) listOf(Color(ReaderCurlVisualPolicy.frontShadowDarkArgb), Color.Transparent) else listOf(Color.Transparent, Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)), left, right), Offset(left, frame.control1.y - hypot(size.width.toDouble(), size.height.toDouble()).toFloat()), Size(right - left, hypot(size.width.toDouble(), size.height.toDouble()).toFloat()))
+            drawRect(Brush.horizontalGradient(if (reverse) listOf(dark, Color.Transparent) else listOf(Color.Transparent, dark), left, right), Offset(left, frame.control1.y - diagonal), Size(right - left, diagonal))
         }
     } }
-    clipPath(curlPath, ClipOp.Difference) { clipPath(paths.frontShadowVertical) {
+    clipPath(paths.outsideFront) { clipPath(paths.frontShadowVertical) {
         val top = if (reverse) frame.control2.y else frame.control2.y - 25f
         val bottom = if (reverse) frame.control2.y + 25f else frame.control2.y + 1f
         val rotation = (atan2((frame.control2.y - frame.touch.y).toDouble(), (frame.control2.x - frame.touch.x).toDouble()) * 180.0 / PI).toFloat()
-        val diagonal = hypot(size.width.toDouble(), size.height.toDouble()).toFloat()
         val adjustedY = if (frame.control2.y < 0f) frame.control2.y - size.height else frame.control2.y
         val hmg = hypot(frame.control2.x.toDouble(), adjustedY.toDouble()).toFloat()
         val left = if (hmg > diagonal) frame.control2.x - 25f - hmg else frame.control2.x - diagonal
         val right = if (hmg > diagonal) frame.control2.x + diagonal - hmg else frame.control2.x
         withTransform({ rotate(rotation, Offset(frame.control2.x, frame.control2.y)) }) {
-            drawRect(Brush.verticalGradient(if (reverse) listOf(Color(ReaderCurlVisualPolicy.frontShadowDarkArgb), Color.Transparent) else listOf(Color.Transparent, Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)), top, bottom), Offset(left, top), Size(right - left, bottom - top))
+            drawRect(Brush.verticalGradient(if (reverse) listOf(dark, Color.Transparent) else listOf(Color.Transparent, dark), top, bottom), Offset(left, top), Size(right - left, bottom - top))
         }
     } }
 }
 
-/** 折页这五条形每帧都要重写，对象留着复用：60fps 下不再一直新建 Path。 */
+/**
+ * 折页的形每帧都要重写，对象留着复用：60fps 下不再一直新建 Path。
+ *
+ * `outsideFront` 与两条「折页 ∩ 面」的裁剪区同样留着复用，为的是把**差集裁剪**清零：
+ * `ClipOp.Difference` 不是矩形裁剪，渲染器每碰到一次都要按整屏大小另算一份遮罩
+ * （1440×3200 一屏 18 MB），原来一帧里有三处，就是仿真翻页「卡卡的」剩下的大头。
+ * 现在「屏减折页」由整屏轮廓 + 同一条折页轮廓走 EvenOdd 填充分量得到，折页那两面
+ * 预先算成交集路径，绘制期每一处只剩默认的相交裁剪，而且三处共用同一条 `outsideFront`。
+ * 裁掉的像素与原来逐像素一致。
+ */
 private class ReaderCurlRenderPaths {
     val front = Path()
     val reveal = Path()
     val back = Path()
     val frontShadowHorizontal = Path()
     val frontShadowVertical = Path()
+    val outsideFront = Path()
+    val frontReveal = Path()
+    val frontBack = Path()
+}
+
+/** this = a ∩ b，就地改写不留新对象。 */
+private fun Path.assignIntersect(a: Path, b: Path) {
+    val native = asAndroidPath()
+    reset()
+    addPath(a)
+    // 有一边是空形时布尔运算不出结果：留一条空路径，与原来「嵌套裁剪里空那层什么都不画」一致。
+    if (!native.op(b.asAndroidPath(), AndroidPathOp.INTERSECT)) reset()
 }
 
 private fun PageCurlFrame.writeInto(
@@ -2233,6 +2286,14 @@ private fun PageCurlFrame.writeInto(
         moveTo(shadowX, shadowY); lineTo(touch.x, touch.y); lineTo(control2.x, control2.y)
         lineTo(start2.x, start2.y); close()
     }
+    with(paths.outsideFront) {
+        reset()
+        addRect(Rect(0f, 0f, width, height), Path.Direction.Clockwise)
+        addPath(paths.front)
+        fillType = PathFillType.EvenOdd
+    }
+    paths.frontReveal.assignIntersect(paths.front, paths.reveal)
+    paths.frontBack.assignIntersect(paths.front, paths.back)
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCurlBackShadow(frame: PageCurlFrame) {
@@ -2343,17 +2404,22 @@ private fun ReaderPageCanvas(
                 .mergeSelectionBounds()
         } else emptyList()
     }
-    val textBackgroundSources = remember(textBackgrounds) {
-        textBackgrounds.map { it.image.source }.distinct()
+    val textBackgroundSources = textBackgrounds.map { it.image.source }.distinct()
+    // 位图归 ReaderTextBackgroundLoader 的字节上限 LRU 所有，组合里只留一个「解完了没有」的
+    // 重绘信号。原来用 produceState 把「源→位图」的映射存进组合状态：换页时源列表一换键，
+    // 映射就被重置成初始值，而初始值是组合期那一次同步查表——只要那一次没命中（LRU 被挤掉，
+    // 或这一页的气泡源首次进入窗口），正文先画出来、气泡晚一两帧才补上，就是「翻页闪一下」。
+    // 绘制期直读缓存（与滚动模式同一口径）没有这个窗口期：命中就画，而预热保证翻页前必命中。
+    var textBackgroundRevision by remember(page.id, page.revision, textBackgroundSources) {
+        mutableIntStateOf(0)
     }
-    val cachedTextBackgrounds = textBackgroundSources.mapNotNull { source ->
-        ReaderTextBackgroundLoader.cached(source)?.let { source to it }
-    }.toMap()
-    val textBackgroundBitmaps by produceState(cachedTextBackgrounds, textBackgroundSources) {
-        value = withContext(Dispatchers.IO) {
-            textBackgroundSources.mapNotNull { source ->
-                ReaderTextBackgroundLoader.load(source)?.let { source to it }
-            }.toMap()
+    LaunchedEffect(page.id, page.revision, textBackgroundSources) {
+        val missing = textBackgroundSources.filter { ReaderTextBackgroundLoader.cached(it) == null }
+        if (missing.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                missing.forEach(ReaderTextBackgroundLoader::load)
+            }
+            textBackgroundRevision++
         }
     }
     val tipPaints = remember(
@@ -2397,8 +2463,10 @@ private fun ReaderPageCanvas(
                 Size(band.bounds.width, band.bounds.height),
             )
         }
+        // 快照读放在绘制期：异步补解完成后只重绘，不重组整页正文。
+        textBackgroundRevision
         textBackgrounds.forEach { run ->
-            textBackgroundBitmaps[run.image.source]?.let { bitmap ->
+            ReaderTextBackgroundLoader.cached(run.image.source)?.let { bitmap ->
                 drawTextBackground(native, bitmap, run, textBackgroundPaint)
             }
         }
@@ -2897,7 +2965,14 @@ private fun drawRoleCast(
     val cy = (b.top + b.bottom) / 2f
     val geo = io.legado.app.feature.reader.core.cast.CastCapsuleGeometry
     val d = style.avatarDiameter(h)
-    val avatarLeft = b.left + style.avatarLeft(h)
+    // 只有角色那一颗才讲「全关掉＝正方形」；未分配占位那颗本来就只有一个图标，宽度另有算法，
+    // 别把它顺手改成居中。
+    val avatarOnly = e.name.isNotEmpty() && geo.isAvatarOnly(
+        style = style,
+        hasPoolText = e.voicePoolLabel.isNotEmpty(),
+        withEffect = e.voiceEffectMark,
+    )
+    val avatarLeft = b.left + style.avatarLeft(h, avatarOnly)
     val avatarCy = cy + style.avatarCenterOffset(h)
     val textPx = h / geo.heightRatio * geo.textScale
     val name = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {

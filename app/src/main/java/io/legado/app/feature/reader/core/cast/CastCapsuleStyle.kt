@@ -41,12 +41,17 @@ data class CastCapsuleStyle(
         height * CastCapsuleGeometry.avatarRatio *
             (avatarScale.coerceIn(AVATAR_SCALE_MIN, AVATAR_SCALE_MAX) / FULL.toFloat())
 
-    /** 头像左沿相对胶囊左沿的偏移，夹到「头像右沿不出胶囊」，免得整颗头像跑出去。 */
-    fun avatarLeft(height: Float): Float {
+    /**
+     * 头像左沿相对胶囊左沿的偏移，夹到「头像右沿不出胶囊」，免得整颗头像跑出去。
+     *
+     * [avatarOnly] 那一格是正方形（只剩头像，名字与池小字都关掉了），此时头像按整格居中，
+     * 否则左内边距 + 右空隙不对称，圆头像看着就是歪的。
+     */
+    fun avatarLeft(height: Float, avatarOnly: Boolean = false): Float {
         val diameter = avatarDiameter(height)
-        return (
-            height * CastCapsuleGeometry.padRatio + height * avatarDx / SHIFT_FULL.toFloat()
-            ).coerceIn(0f, max(0f, height - diameter))
+        val base = if (avatarOnly) (height - diameter) / 2f else height * CastCapsuleGeometry.padRatio
+        return (base + height * avatarDx / SHIFT_FULL.toFloat())
+            .coerceIn(0f, max(0f, height - diameter))
     }
 
     /** 头像中心相对垂直中心的偏移。 */

@@ -14,6 +14,8 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -45,6 +47,8 @@ import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.domain.model.PlaybackCapsuleState
 import io.legado.app.domain.model.settings.AppUiConfiguration
+import io.legado.app.feature.reader.core.transition.READER_MORPH_BACK_DURATION_MILLIS
+import io.legado.app.feature.reader.core.transition.READER_MORPH_OPEN_DURATION_MILLIS
 import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.Download
@@ -224,20 +228,58 @@ private fun webViewEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
     }
 }
 
-/** Full-screen book destinations share the same scene fade as the text reader. */
+/**
+ * 全屏书本目的地（文字阅读器、漫画阅读器）的转场。
+ *
+ * 这里刻意**不做任何淡入淡出**：书架↔阅读页的开合由阅读页自己那层裁剪形变驱动
+ * （`ReaderCoverMorph`），场景层只要负责两件事——
+ * 1. 把上一站留在组合里并保持完全不透明，形变的背景才是真的书架，而不是交叉溶解
+ *    （交叉溶解就是用户说的「返回动画还是旧的」）；
+ * 2. 撑住时长，让上一站活到形变走完的那一帧。
+ *
+ * 用位移 1px 的 slide 而不是 fade：fade 会给子树加 alpha 图层，`graphicsLayer` 又把
+ * AndroidView 画进离屏 RenderNode，这里没必要；而 1px 既能看穿（相对 1440px 宽的屏），
+ * 又真的往转场里注册了一段带时长的动画（见 `READER_MORPH_SCENE_SLIDE_PX`）。
+ * 时长取「形变那一段 + 收尾余量」，短了会把还没长完的阅读页直接摘掉。
+ */
 private fun readerEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
     put(NavDisplay.TransitionKey) {
-        fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
+        readerMorphSceneSpec(READER_MORPH_OPEN_DURATION_MILLIS)
     }
     put(NavDisplay.PopTransitionKey) {
-        fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
+        readerMorphSceneSpec(READER_MORPH_BACK_DURATION_MILLIS)
     }
     if (predictiveBackEnabled) {
         put(NavDisplay.PredictivePopTransitionKey) { _ ->
-            fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
+            readerMorphSceneSpec(READER_MORPH_BACK_DURATION_MILLIS)
         }
     }
 }
+
+/**
+ * 形变收尾余量：动画与场景同时结束会在最后一帧抢跑，留一点让形变先落地。
+ *
+ * 要盖住的是形变比转场晚起步的那一段：返回时书架是第一次组合（整屏封面要现解码），
+ * 实测这一帧把 `LaunchedEffect` 推到转场开始后 0~128ms（多次跑动抖动）。修好场景时长后
+ * 多数情况同帧起步，余量只在慢的那几次兜底。
+ */
+private const val READER_MORPH_TAIL_MILLIS = 160
+
+private fun readerMorphSceneSpec(durationMillis: Int) =
+    slideInHorizontally(animationSpec = tween(durationMillis + READER_MORPH_TAIL_MILLIS)) {
+        READER_MORPH_SCENE_SLIDE_PX
+    } togetherWith
+        slideOutHorizontally(animationSpec = tween(durationMillis + READER_MORPH_TAIL_MILLIS)) {
+            READER_MORPH_SCENE_SLIDE_PX
+        }
+
+/**
+ * 位移为什么是 1px 而不是 0：位移为 0 的 slide 不会往转场里注册任何动画，于是整个场景的
+ * 总时长退化成 `AnimatedContent` 尺寸动画那副约 300ms 的弹簧——出场的那一站在返回开始后
+ * 210~330ms（多次实测抖动）就被摘掉组合，420ms 的形变永远跑不完，面板缩到一半直接消失。
+ * 挂上一个真实的时长，上一站才会被撑到形变落地；1px 相对 1440px 宽的屏看不出来。
+ */
+private const val READER_MORPH_SCENE_SLIDE_PX = 1
 
 /**
  * 以底部弹层呈现的目的地（听书播放页、有声书播放页）。
@@ -605,7 +647,7 @@ fun MainActivity.mainEntryProvider(
         ThemeConfigRouteScreen(
             onBackClick = { onNavigateBack() },
             onNavigateToCustomTheme = { backStack.add(MainRouteSettingsCustomTheme) },
-            onNavigateToThemeManage = { backStack.add(MainRouteSettingsThemeManage) }
+            onNavigateToThemeManage = { backStack.add(MainRouteSettingsThemeManage) },
         )
     }
 
@@ -828,7 +870,6 @@ fun MainActivity.mainEntryProvider(
                 readerSessionViewModel = readerSessionViewModel,
                 host = controller,
                 controller = controller,
-                sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                 sharedCoverKey = route.sharedCoverKey,
                 onEffectsReady = { effectsReady.complete(Unit) },
@@ -921,7 +962,6 @@ fun MainActivity.mainEntryProvider(
             openRequestId = route.openRequestId,
             viewModel = mangaViewModel,
             restoreSystemBarsVisible = configuration.appShell.showStatusBar,
-            sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
             sharedCoverKey = route.sharedCoverKey,
             onFinish = { onNavigateBack() },

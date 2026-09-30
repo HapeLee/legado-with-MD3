@@ -55,6 +55,10 @@ object ReaderNineSliceLayout {
         // 只是等比变大小，字号大了气泡跟着长高，绝不会出现「中间拉长、上下不动」或者「尺寸不变
         // 地对着字上下挪」。
         //
+        // 这条一致性靠的是**两处读同一份切线**：[withBitmapSize] 把夹过的上下切线写回
+        // [ReaderTextBackgroundImage.ninePatchTop] / [ninePatchBottom]，倍率与这里的 sy 都从它
+        // 换算。哪一处另算一遍，中间那一格就会与上下两条边用不同的倍率——那正是「纵向还是会拉伸」。
+        //
         // 横向只有左右两条线之间那一格被拉到文字宽度（再各加左/右偏移），四周一圈按原图宽度画，
         // 四角原样。偏移可以为负（气泡比字短），但不许把中间那一格挤成反向：夹紧
         // （[ReaderTextBackgroundImage.stretchLeftPx] / [stretchRightPx]，与外框同一份口径）。

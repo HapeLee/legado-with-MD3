@@ -251,6 +251,53 @@ class ReaderNineSliceLayoutTest {
         assertTrue(topCenter.painted.bottom > cells[4].painted.top)
     }
 
+    /**
+     * 用户口径：上下两条线只决定文字的显示范围，动它们等于整张图**等比例**放大/缩小，
+     * 纵向一条边都不许拉伸。所以遍历两条线的全部组合，要求每一格的 目标高/源高 都等于
+     * 同一个倍率——只要有一格不是，画出来就是「纵向还是会拉伸」。
+     *
+     * 上一轮的实现把上限夹在「上下两条边的厚度」上，夹住的那一档里中间那一格仍然被单独拉长，
+     * 这个用例正是当时漏掉的那一类。
+     */
+    @Test
+    fun verticalRatiosStayUniformForEveryPairOfCutLines() {
+        val lineHeight = 60f
+        val content = ReaderRect(10f, 200f, 70f, 200f + lineHeight)
+        var topStep = 0
+        while (topStep <= 20) {
+            var bottomStep = 0
+            while (bottomStep <= 20) {
+                val image = ReaderTextBackgroundImage(
+                    source = "frame.png",
+                    fit = 3,
+                    scale = 1f,
+                    ninePatchTop = topStep / 20f,
+                    ninePatchBottom = bottomStep / 20f,
+                ).withBitmapSize(100, 100)
+                val ratio = image.verticalScalePx(lineHeight)
+                val cells = ReaderNineSliceLayout.cells(100, 100, content, frameOf(image, content), image)
+                assertTrue("切线 $topStep/$bottomStep 把气泡挤没了", cells.isNotEmpty())
+                cells.forEach { cell ->
+                    assertEquals(
+                        "切线 ${topStep / 20f}/${bottomStep / 20f} 那一格被单独纵向拉伸",
+                        sourceHeight(cell) * ratio,
+                        cell.destination.height,
+                        0.01f,
+                    )
+                }
+                // 中间那一格永远正好盖住行盒，整块气泡不超过行盒的 4 倍（分母夹在整图高 25%）。
+                val center = cells.single { it.destination == content }
+                assertEquals(lineHeight, center.destination.height, 0.01f)
+                assertTrue(
+                    "气泡高 ${frameOf(image, content).height} 超出上限",
+                    frameOf(image, content).height <= lineHeight * 4f + 0.01f,
+                )
+                bottomStep++
+            }
+            topStep++
+        }
+    }
+
     @Test
     fun fractionalMarginsRoundBackToTheirOriginalPixelBoundaries() {
         val image = ReaderTextBackgroundImage(
