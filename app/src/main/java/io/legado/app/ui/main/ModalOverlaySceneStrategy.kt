@@ -1,6 +1,9 @@
 package io.legado.app.ui.main
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.NavMetadataKey
@@ -40,6 +43,17 @@ private data class ModalOverlayScene(
 ) : OverlayScene<NavKey> {
     override val key: Any = entry.contentKey
     override val entries: List<NavEntry<NavKey>> = listOf(entry)
-    override val overlaidEntries: List<NavEntry<NavKey>> = previousEntries.takeLast(1)
-    override val content: @Composable () -> Unit = { entry.Content() }
+
+    // NavDisplay recursively resolves the scene underneath an overlay. Passing only the
+    // last entry turns a nested overlay (book info under a reader) into a SinglePane root,
+    // changing its composition/lifecycle owner and discarding its parent scene.
+    override val overlaidEntries: List<NavEntry<NavKey>> = previousEntries
+    override val content: @Composable () -> Unit = {
+        // NavDisplay retains existing overlays and appends newly opened ones. Their
+        // composition order can therefore differ from stack order for nested overlays.
+        // Draw and hit-test by stack depth so a reader always sits above book info.
+        Box(Modifier.zIndex(previousEntries.size.toFloat())) {
+            entry.Content()
+        }
+    }
 }

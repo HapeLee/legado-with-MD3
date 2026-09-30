@@ -71,6 +71,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.core.ui.morph.BookMorphHost
+import io.legado.app.core.ui.morph.LocalBookMorph
 import io.legado.app.feature.reader.ReaderBackgroundSurface
 import io.legado.app.feature.reader.ReaderCanvasSurface
 import io.legado.app.feature.reader.core.gesture.ReaderTapActionGrid
@@ -152,12 +153,13 @@ fun ReadBookRouteScreen(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
+    isTopRoute: Boolean = true,
     onEffectsReady: () -> Unit = {},
     onOpenSearch: (word: String?, bookUrl: String, autoFocus: Boolean) -> Unit = { _, _, _ -> },
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
-    onNavigateBack: () -> Unit = {},
+    onNavigateBack: () -> Boolean = { true },
 ) {
     // 归因定界：与末尾 compose.screen.end 成对。若首帧 `Compose:recompose` 里出现
     // begin 之前的空档，说明那部分耗时在本屏之外（导航宿主 / 共享转场层）。
@@ -203,21 +205,45 @@ fun ReadBookRouteScreen(
                     !state.menuConfig.readMenuFloatingBottomBar &&
                             state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
                     )
-    val canMorphBack = state.activeSheet == null &&
+    val canHandleBack = isTopRoute
+    val canMorphBack = canHandleBack &&
+            state.inBookshelf &&
+            ReadBook.inBookshelf &&
+            state.activeSheet == null &&
             !state.isShowingSearchResult &&
             !state.isAutoPage &&
             !state.menuState.canNavigateBack &&
             state.activeDialog == null
 
-    BackHandler(enabled = !canMorphBack) {
+    var isDismissed by remember { mutableStateOf(false) }
+    var collapseTrigger by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    val performExit: () -> Boolean = {
+        if (isDismissed) {
+            true
+        } else {
+            onNavigateBack().also { popped ->
+                if (popped) isDismissed = true
+            }
+        }
+    }
+
+    val requestClose: () -> Unit = {
+        if (!isDismissed) {
+            viewModel.onIntent(ReadBookIntent.CloseReadBook())
+        }
+    }
+
+    BackHandler(enabled = canHandleBack && !canMorphBack) {
         when {
             state.activeSheet != null -> viewModel.onIntent(ReadBookIntent.DismissSheet)
             state.isShowingSearchResult -> viewModel.onIntent(ReadBookIntent.ExitSearch)
             state.isAutoPage -> viewModel.onIntent(ReadBookIntent.StopAutoPage)
             state.menuState.canNavigateBack -> viewModel.onIntent(ReadBookIntent.ReadMenuBack)
-            else -> viewModel.onIntent(ReadBookIntent.CloseReadBook())
+            else -> requestClose()
         }
     }
+
     DisposableEffect(controller) {
         controller.onComposeRendererAttached()
         onDispose {
@@ -513,6 +539,13 @@ fun ReadBookRouteScreen(
                                 exportHighlightRulePicker.launch("highlightRule.json")
                             }
 
+                            is ReadBookEffect.Finish -> {
+                                if (!isDismissed) {
+                                    val collapse = collapseTrigger
+                                    if (collapse != null) collapse() else performExit()
+                                }
+                            }
+
                             // All other effects — delegate to bridge (View/Window/Activity operations)
                             else -> controller.handleEffect(effect)
                         }
@@ -660,30 +693,23 @@ fun ReadBookRouteScreen(
             ReaderPerfTrace.marker("surface.page-ready")
         }
     }
-    var isDismissed by remember { mutableStateOf(false) }
-    var closingFromController by remember { mutableStateOf(false) }
-    val dismissReader: () -> Unit = {
-        if (!isDismissed) {
-            isDismissed = true
-            if (!closingFromController) {
-                viewModel.onIntent(ReadBookIntent.CloseReadBook())
-            }
-            onNavigateBack()
-        }
-    }
-
     BookMorphHost(
         anchorKey = sharedCoverKey,
         backgroundColor = readerSurfaceColor,
         backEnabled = canMorphBack,
         predictiveBackEnabled = true,
-        onDismiss = dismissReader,
+        onDismiss = performExit,
+        onBackRequested = requestClose,
     ) { onCollapse ->
+        val morph = LocalBookMorph.current
+        LaunchedEffect(state.activeDialog, morph) {
+            // Membership can change while a gesture is in progress. If the close request
+            // needs confirmation, restore the reader behind that dialog instead of exiting.
+            if (state.activeDialog != null) morph?.animateTo(1f)
+        }
         LaunchedEffect(onCollapse) {
-            controller.onClose = {
-                closingFromController = true
-                onCollapse()
-            }
+            collapseTrigger = onCollapse
+            controller.onClose = requestClose
         }
         Box(
             Modifier

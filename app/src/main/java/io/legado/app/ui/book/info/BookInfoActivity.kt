@@ -21,10 +21,11 @@ class BookInfoActivity : BaseComposeActivity() {
         BookInfoRouteScreen(
             bookUrl = intent.getStringExtra("bookUrl").orEmpty(),
             viewModel = viewModel,
-            onBack = { finishAfterTransition() },
+            onBack = { finishAfterTransition(); true },
             onFinish = { resultCode, afterTransition ->
                 resultCode?.let { setResult(it) }
                 if (afterTransition) finishAfterTransition() else finish()
+                true
             },
             onOpenSearch = { keyword ->
                 startActivity(MainActivity.createSearchIntent(this, key = keyword))

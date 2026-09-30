@@ -735,7 +735,12 @@ fun MainActivity.mainEntryProvider(
             bookUrl = route.bookUrl,
             onExit = {
                 if (backStack.size > 1) {
-                    onNavigateBack()
+                    MainNavigator.navigateBack(
+                        this@mainEntryProvider,
+                        backStack,
+                        navRouteTracker,
+                        fromRoute = route,
+                    )
                 } else {
                     // 通知 / 深链可能让阅读器成为栈里唯一一项：没有"当前页"可退，
                     // 按约定落到书架，而不是把应用关掉
@@ -817,6 +822,9 @@ fun MainActivity.mainEntryProvider(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                 sharedCoverKey = route.sharedCoverKey,
+                isTopRoute = (backStack.lastOrNull() as? MainRouteReadBook)?.let {
+                    route.bookUrl == null || it.bookUrl == route.bookUrl
+                } ?: false,
                 onEffectsReady = { effectsReady.complete(Unit) },
                 onOpenSearch = { word, bookUrl, autoFocus ->
                     onNavigateToRoute(
@@ -837,7 +845,14 @@ fun MainActivity.mainEntryProvider(
                 onOpenTtsCache = {
                     onNavigateToRoute(MainRouteTtsCache)
                 },
-                onNavigateBack = { onNavigateBack() },
+                onNavigateBack = {
+                    MainNavigator.navigateBack(
+                        this@mainEntryProvider,
+                        backStack,
+                        navRouteTracker,
+                        fromRoute = route,
+                    )
+                },
             )
 
             DisposableEffect(controller, lifecycleOwner, route.readAloud) {
@@ -873,6 +888,7 @@ fun MainActivity.mainEntryProvider(
                         activeReadBookRoute = null
                     }
                     MainActivity.hasActiveReadBookRoute = false
+                    controller.onClose = null
                     controller.clearTts()
                     this@mainEntryProvider.toggleSystemBar(configuration.appShell.showStatusBar)
                 }
@@ -911,7 +927,17 @@ fun MainActivity.mainEntryProvider(
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
             sharedCoverKey = route.sharedCoverKey,
-            onFinish = { onNavigateBack() },
+            isTopRoute = (backStack.lastOrNull() as? MainRouteReadManga)?.let {
+                route.bookUrl == null || it.bookUrl == route.bookUrl
+            } ?: false,
+            onFinish = {
+                MainNavigator.navigateBack(
+                    this@mainEntryProvider,
+                    backStack,
+                    navRouteTracker,
+                    fromRoute = route,
+                )
+            },
             onOpenBookInfo = { name, author, bookUrl ->
                 onNavigateToRoute(MainRouteBookInfo(name, author, bookUrl))
             },
@@ -1133,8 +1159,22 @@ fun MainActivity.mainEntryProvider(
             origin = route.origin,
             coverPath = route.coverPath,
             viewModel = bookInfoViewModel,
-            onBack = { onNavigateBack() },
-            onFinish = { _, _ -> onNavigateBack() },
+            onBack = {
+                MainNavigator.navigateBack(
+                    this@mainEntryProvider,
+                    backStack,
+                    navRouteTracker,
+                    fromRoute = route,
+                )
+            },
+            onFinish = { _, _ ->
+                MainNavigator.navigateBack(
+                    this@mainEntryProvider,
+                    backStack,
+                    navRouteTracker,
+                    fromRoute = route,
+                )
+            },
             onOpenSearch = { keyword ->
                 onNavigateToRoute(MainRouteSearch(key = keyword))
             },
@@ -1154,7 +1194,7 @@ fun MainActivity.mainEntryProvider(
                         bookUrl = bookUrl,
                         inBookshelf = inBookshelf,
                         chapterChanged = chapterChanged,
-                        sharedCoverKey = route.sharedCoverKey ?: bookCoverSharedElementKey(route.bookUrl),
+                        sharedCoverKey = bookInfoCoverSharedElementKey(bookUrl),
                     )
                 )
             },
@@ -1165,8 +1205,7 @@ fun MainActivity.mainEntryProvider(
                         inBookshelf = inBookshelf,
                         chapterChanged = chapterChanged,
                         openRequestId = System.nanoTime(),
-                        sharedCoverKey = route.sharedCoverKey
-                            ?: bookCoverSharedElementKey(route.bookUrl),
+                        sharedCoverKey = bookInfoCoverSharedElementKey(bookUrl),
                     )
                 )
             },
@@ -1175,8 +1214,7 @@ fun MainActivity.mainEntryProvider(
                     MainRouteAudioPlay(
                         bookUrl = bookUrl,
                         inBookshelf = inBookshelf,
-                        sharedCoverKey = route.sharedCoverKey
-                            ?: bookCoverSharedElementKey(route.bookUrl),
+                        sharedCoverKey = bookInfoCoverSharedElementKey(bookUrl),
                     )
                 )
             },
@@ -1204,6 +1242,7 @@ fun MainActivity.mainEntryProvider(
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
             sharedCoverKey = route.sharedCoverKey ?: bookCoverSharedElementKey(route.bookUrl),
+            isTopRoute = (backStack.lastOrNull() as? MainRouteBookInfo)?.bookUrl == route.bookUrl,
         )
     }
 

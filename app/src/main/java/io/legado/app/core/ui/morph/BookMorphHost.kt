@@ -92,13 +92,15 @@ fun BookMorphHost(
     backEnabled: Boolean = true,
     predictiveBackEnabled: Boolean = true,
     hasTargetCover: Boolean = false,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Boolean,
+    onBackRequested: (() -> Unit)? = null,
     content: @Composable (onCollapse: () -> Unit) -> Unit,
 ) {
     val view = LocalView.current
     val scope = rememberCoroutineScope()
     val morph = rememberBookMorphState(anchorKey, hasTargetCover)
     val currentDismiss by rememberUpdatedState(onDismiss)
+    val currentBackRequested by rememberUpdatedState(onBackRequested)
     val currentBackEnabled by rememberUpdatedState(backEnabled)
     var backSettleJob by remember { mutableStateOf<Job?>(null) }
 
@@ -118,14 +120,17 @@ fun BookMorphHost(
         }
     }
 
-    val collapse: () -> Unit = {
-        scope.launch {
-            if (!anchorKey.isNullOrBlank()) {
-                BookCoverMorphAnchors.setActiveMorph(anchorKey, morph)
+    val collapse: () -> Unit = remember(scope, morph, anchorKey) {
+        {
+            backSettleJob?.cancel()
+            backSettleJob = scope.launch {
+                if (!anchorKey.isNullOrBlank()) {
+                    BookCoverMorphAnchors.setActiveMorph(anchorKey, morph)
+                }
+                BookCoverMorphAnchors.get(anchorKey)?.let(morph::updateAnchor)
+                morph.animateTo(0f)
+                if (!currentDismiss()) morph.animateTo(1f)
             }
-            refreshAnchor()
-            morph.animateTo(0f)
-            currentDismiss()
         }
     }
 
@@ -171,9 +176,16 @@ fun BookMorphHost(
                 morph.progress.snapTo(preview)
             }
             if (!predictiveBackEnabled) morph.progress.stop()
-            backSettleJob = scope.launch {
-                morph.animateTo(0f, initialVelocity = releaseVelocity)
-                currentDismiss()
+            val requestBack = currentBackRequested
+            if (requestBack != null) {
+                // Reader business logic authorizes the exit through Finish. It then calls
+                // collapse; the animation completion must never issue another close request.
+                requestBack()
+            } else {
+                backSettleJob = scope.launch {
+                    morph.animateTo(0f, initialVelocity = releaseVelocity)
+                    if (!currentDismiss()) morph.animateTo(1f)
+                }
             }
         } catch (cancelled: CancellationException) {
             morph.onPredictiveBackCancel()

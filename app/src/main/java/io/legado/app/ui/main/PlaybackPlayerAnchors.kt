@@ -19,9 +19,10 @@ internal fun shouldUseHomePlaybackCapsule(
     useRail: Boolean,
 ): Boolean = onMainRoute && showBottomView && useFloatingBottomBar && !useRail
 
-/** 播放浮层（包括进出场）优先处理返回，不能弹掉下层页面。 */
+/** 宿主只在真正的根页面（如主页）且未开启预测性返回时兜底处理退出，子页面由自身及导航层优先拦截。播放浮层优先处理返回。 */
 internal fun shouldHandleActivityBack(
     predictiveBackEnabled: Boolean,
-    playerPresent: Boolean
+    playerPresent: Boolean,
+    isRoot: Boolean = true,
 ): Boolean =
-    !predictiveBackEnabled && !playerPresent
+    !predictiveBackEnabled && !playerPresent && isRoot

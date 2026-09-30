@@ -51,12 +51,24 @@ object BookCoverMorphAnchors {
         val active = activeMorphKey ?: return false
         if (key.isNullOrBlank()) return false
         if (key == active) return true
-        val cleanActive = active.removePrefix("book-cover:")
-        val cleanKey = key.removePrefix("book-cover:")
-        return cleanActive == cleanKey ||
-                cleanActive.endsWith(":$cleanKey") ||
-                cleanKey.endsWith(":$cleanActive")
+        val isDetailActive = isDetailKey(active)
+        val isDetailCurrent = isDetailKey(key)
+        if (isDetailActive != isDetailCurrent) return false
+        val cleanActive = cleanKey(active)
+        val cleanCurrent = cleanKey(key)
+        return cleanActive == cleanCurrent ||
+                cleanActive.endsWith(":$cleanCurrent") ||
+                cleanCurrent.endsWith(":$cleanActive")
     }
+
+    private fun isDetailKey(key: String): Boolean =
+        key.startsWith("cover:detail:") || key.startsWith("book-info-cover:")
+
+    private fun cleanKey(key: String): String =
+        key.removePrefix("cover:shelf:")
+            .removePrefix("cover:detail:")
+            .removePrefix("book-info-cover:")
+            .removePrefix("book-cover:")
 
     /**
      * 判断指定书源/书架封面当前是否应当隐藏（让位给飞行封面）。
@@ -109,8 +121,12 @@ object BookCoverMorphAnchors {
         if (key.isNullOrBlank()) return null
         val direct = anchors[key]
         if (direct != null) return direct
-        // 兜底策略：若键名包含 bookUrl，允许部分匹配
-        return anchors.entries.firstOrNull { it.key.contains(key) || key.contains(it.key) }?.value
+        val isDetail = isDetailKey(key)
+        // 兜底策略：只在同一命名空间内允许部分匹配
+        return anchors.entries.firstOrNull {
+            isDetailKey(it.key) == isDetail &&
+                    (it.key.contains(key) || key.contains(it.key))
+        }?.value
     }
 
     fun remove(key: String?) {

@@ -37,6 +37,7 @@ import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.main.bookCoverSharedElementKey
+import io.legado.app.ui.main.bookInfoCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.utils.RealPathUtil
@@ -62,8 +63,8 @@ fun BookInfoRouteScreen(
     origin: String? = null,
     coverPath: String? = null,
     viewModel: BookInfoViewModel,
-    onBack: () -> Unit,
-    onFinish: (resultCode: Int?, afterTransition: Boolean) -> Unit,
+    onBack: () -> Boolean = { true },
+    onFinish: (resultCode: Int?, afterTransition: Boolean) -> Boolean = { _, _ -> true },
     onOpenSearch: (String) -> Unit,
     onOpenBookSourceEdit: (String) -> Unit,
     onOpenSourceLogin: (String) -> Unit,
@@ -82,6 +83,7 @@ fun BookInfoRouteScreen(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
+    isTopRoute: Boolean = true,
 ) {
     val context = LocalContext.current
     val activity = context as AppCompatActivity
@@ -95,7 +97,8 @@ fun BookInfoRouteScreen(
     val noPasswordHint = stringResource(R.string.private_content_no_password)
     var showSelectBooksDirSheet by remember { mutableStateOf(false) }
 
-    val canMorphBack = uiState.dialog == null &&
+    val canMorphBack = isTopRoute &&
+            uiState.dialog == null &&
             uiState.sheet == BookInfoSheet.None &&
             !showSelectBooksDirSheet &&
             !uiState.showAppLogSheet &&
@@ -106,10 +109,13 @@ fun BookInfoRouteScreen(
     var finishAfterTransition by remember { mutableStateOf(false) }
     var collapseRequested by remember { mutableStateOf<(() -> Unit)?>(null) }
 
-    val dismissBookInfo: () -> Unit = {
-        if (!isDismissed) {
-            isDismissed = true
-            onFinish(finishResultCode, finishAfterTransition)
+    val dismissBookInfo: () -> Boolean = {
+        if (isDismissed) {
+            true
+        } else {
+            onFinish(finishResultCode, finishAfterTransition).also { popped ->
+                if (popped) isDismissed = true
+            }
         }
     }
 
@@ -314,7 +320,7 @@ fun BookInfoRouteScreen(
             onBack = handleBack,
             sharedTransitionScope = null,
             animatedVisibilityScope = null,
-            sharedCoverKey = null,
+            sharedCoverKey = remember(bookUrl) { bookInfoCoverSharedElementKey(bookUrl) },
         )
     }
 }

@@ -318,7 +318,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     private val mangaSettingsGateway by inject<MangaSettingsGateway>()
     private val backupSettingsGateway by inject<BackupSettingsGateway>()
     private val readAloudSettingsRepository by inject<ReadAloudSettingsRepository>()
-    private val navRouteTracker by inject<MainNavRouteTracker>()
+    internal val navRouteTracker by inject<MainNavRouteTracker>()
     private val routeEvents = MutableSharedFlow<RouteEvent>(extraBufferCapacity = 1)
     private val localNetworkPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -800,7 +800,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                 }
                 BackHandler(
                     enabled = shouldHandleActivityBack(
-                        configuration.appShell.predictiveBackEnabled, playerVisible || morphPresent,
+                        predictiveBackEnabled = configuration.appShell.predictiveBackEnabled,
+                        playerPresent = playerVisible || morphPresent,
+                        isRoot = backStack.size <= 1,
                     )
                 ) {
                     MainNavigator.navigateBack(this@MainActivity, backStack)
