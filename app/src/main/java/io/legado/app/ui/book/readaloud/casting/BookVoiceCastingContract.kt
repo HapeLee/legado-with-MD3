@@ -10,6 +10,8 @@ data class BookVoiceCastingUiState(
     val isLoading: Boolean = true,
     val items: ImmutableList<VoiceCastingItemUi> = persistentListOf(),
     val voices: ImmutableList<VoiceOptionUi> = persistentListOf(),
+    /** 排版配置名：角色气泡弹层里「应用排版」那一节的候选，与高亮规则编辑弹层同一份来源。 */
+    val configNames: ImmutableList<String> = persistentListOf(),
 )
 
 @Stable

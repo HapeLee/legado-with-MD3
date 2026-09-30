@@ -56,6 +56,8 @@ fun CastRoleRowActions(
     onDelete: () -> Unit,
     onSetAvatar: () -> Unit = {},
     onSetBubble: () -> Unit = {},
+    hasBubble: Boolean = false,
+    onClearBubble: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -109,6 +111,22 @@ fun CastRoleRowActions(
                     onSetBubble()
                 },
             )
+            // 弹层里已经没有「启用」那一栏了，撤掉气泡只能在菜单里做一次
+            if (hasBubble) {
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.cast_bubble_clear),
+                    leadingIcon = {
+                        MenuItemIcon(
+                            imageVector = AppIcons.Close,
+                            contentDescription = null,
+                        )
+                    },
+                    onClick = {
+                        dismiss()
+                        onClearBubble()
+                    },
+                )
+            }
             RoundDropdownMenuItem(
                 text = stringResource(R.string.cast_delete_character),
                 color = LegadoTheme.colorScheme.error,

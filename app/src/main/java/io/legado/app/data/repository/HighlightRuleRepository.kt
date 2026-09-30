@@ -7,6 +7,7 @@ import io.legado.app.data.dao.HighlightRuleDao
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.putPrefBoolean
 import splitties.init.appCtx
@@ -355,11 +356,19 @@ class HighlightRuleRepository(
         )
     }
 
+    /**
+     * 清掉没人引用的背景图。
+     *
+     * 「在用」的集合必须把**角色气泡**算进来：气泡图与规则图共用 `bg_images` 这一目录
+     * （`CastCharacter.bubbleRuleJson` 里存的也是一条 HighlightRule），只查规则表的话
+     * 任何一次保存规则都会把只有角色在用的图物理删掉 —— 用户看到的就是
+     * 「编辑了和高亮规则重叠的那条规则并保存后，角色气泡失效，只能重新导入图片」。
+     */
     private fun cleanupUnusedBgImages() {
         val allRules = dao.getAll()
-        val usedPaths = allRules.mapNotNull { it.bgImage }
-            .filter { it.isNotBlank() && !it.startsWith("assets://") }
-            .toSet()
+        val usedPaths = (
+            allRules.mapNotNull { it.bgImage } + castBubblePaths()
+            ).filter { it.isNotBlank() && !it.startsWith("assets://") }.toSet()
         val dir = File(context.filesDir, "bg_images")
         if (!dir.exists()) return
         dir.listFiles()?.forEach { file ->
@@ -368,6 +377,12 @@ class HighlightRuleRepository(
             }
         }
     }
+
+    private fun castBubblePaths(): List<String> = runCatching {
+        appDb.castCharacterDao.getBubbleRefs().mapNotNull { json ->
+            GSON.fromJsonObject<HighlightRule>(json).getOrNull()?.bgImage
+        }
+    }.getOrDefault(emptyList())
 
     private fun restoreRuleBgImage(backupRootPath: String?, bgImage: String?): String? {
         val path = bgImage ?: return null

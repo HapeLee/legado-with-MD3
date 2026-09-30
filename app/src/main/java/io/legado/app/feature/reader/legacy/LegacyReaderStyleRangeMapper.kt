@@ -83,15 +83,16 @@ object LegacyReaderStyleRangeMapper {
     }
 
     /**
-     * 每个「分配了角色的引号段」盖一层该角色的气泡。
+     * 每个「分配了角色的引号段」盖一层该角色自己那套样式。
      *
      * 哪一句归谁已经写在注入的标记文本里（`<<名字（池）>>` 紧跟开引号），所以这里不再正则、
      * 也不重新发明引号栈：喂同一个 [CastMarkers.CastQuoteTracker]，拿它报出的闭合区间。
      * 区间包住整句台词连同引号——压在上面的角色胶囊因此落在同一个气泡里。
      *
-     * 覆盖写法：把区间按已有样式的边界切开，每一小段先问「这里原本谁赢」，再把气泡
-     * 盖在那一份上。这样角色设了气泡不会把同一句的高亮字色吃掉；一句里原本没有任何规则时，
-     * 整段就只上气泡。
+     * 角色那一套与高亮规则同构（编辑弹层就是同一个，只是没有「规则信息」那一段，命中靠分配表），
+     * 所以命中字距/行距也走正文那一份首字/段内/末字口径。覆盖写法：把区间按已有样式的边界切开，
+     * 每一小段先问「这里原本谁赢」，再把角色设过的那几栏盖上去 —— 角色没设的仍归那句里赢着的
+     * 规则，一句里原本没有任何规则时整段就只上角色的样式。
      */
     private fun castBubbleRanges(
         blocks: List<ReaderChapterSourceBlock>,
@@ -110,27 +111,32 @@ object LegacyReaderStyleRangeMapper {
                 val endExclusive = closed.endExclusive - origin
                 val quoted = text.substring(start, endExclusive)
                 val owner = CastMarkers.findMarkers(quoted).firstOrNull() ?: continue
-                val bubble = bubbles[owner.name] ?: continue
+                val cast = bubbles[owner.name] ?: continue
                 val from = base + start
                 val to = base + endExclusive
                 val cuts = buildList {
                     add(from)
                     add(to)
+                    // 整句的首字与末字也要能单独切开：命中字距只让在那两个字上
+                    if (to - from > 1) {
+                        add(from + 1)
+                        add(to - 1)
+                    }
                     existing.forEach { range ->
                         if (range.start in from until to) add(range.start)
                         if (range.endExclusive in from until to) add(range.endExclusive)
                     }
                 }.distinct().sorted()
                 for (edge in 0 until cuts.size - 1) {
-                    val start = cuts[edge]
-                    val endExclusive = cuts[edge + 1]
-                    if (start >= endExclusive) continue
-                    val winner = ReaderCharacterStyleResolver.resolve(existing, start, false)
+                    val pieceStart = cuts[edge]
+                    val pieceEnd = cuts[edge + 1]
+                    if (pieceStart >= pieceEnd) continue
                     out += ReaderStyleRange(
-                        start = start,
-                        endExclusive = endExclusive,
+                        start = pieceStart,
+                        endExclusive = pieceEnd,
                         target = ReaderStyleTarget.BODY,
-                        style = winner.withBubbleOf(bubble),
+                        style = ReaderCharacterStyleResolver.resolve(existing, pieceStart, false)
+                            .overriddenBy(cast, isHead = pieceStart == from, isTail = pieceEnd == to),
                         priority = CAST_BUBBLE_PRIORITY,
                     )
                 }
@@ -152,20 +158,52 @@ object LegacyReaderStyleRangeMapper {
         return out
     }
 
-    /** 只把气泡那两栏换过来：字色、下划线、字号、命中排版仍归原来那份样式。 */
-    private fun ReaderCharacterStyle?.withBubbleOf(bubble: ReaderCharacterStyle) =
-        (this ?: bubble).copy(
-            backgroundArgb = bubble.backgroundArgb ?: this?.backgroundArgb,
-            backgroundImage = bubble.backgroundImage ?: this?.backgroundImage,
+    /**
+     * 角色设过的那几栏换过来，没设的（null，或命中排版那四个 0）仍用这里原本赢着的样式。
+     *
+     * 命中字距的口径与 [matchRanges] 一致：只有整句的首字带 before、只有末字带 after，
+     * 段内一个字都不加 —— 段内也加的话，调的就不是间距而是整段的字号了。行距是行级属性，
+     * 每一段都带，由分页按整行取较大值。
+     */
+    private fun ReaderCharacterStyle?.overriddenBy(
+        cast: ReaderCharacterStyle,
+        isHead: Boolean,
+        isTail: Boolean,
+    ): ReaderCharacterStyle {
+        val winner = this
+        val base = winner ?: cast
+        // 命中字距不能从 base 兜底：没有规则赢着的时候 base 就是角色自己那份，
+        // 那样段内每个字都会带上 before/after，等于把「让出间距」写成「整段拉长」。
+        val before = winner?.matchSpacingBeforePx ?: 0f
+        val after = winner?.matchSpacingAfterPx ?: 0f
+        return base.copy(
+            colorArgb = cast.colorArgb ?: base.colorArgb,
+            backgroundArgb = cast.backgroundArgb ?: base.backgroundArgb,
+            underline = cast.underline ?: base.underline,
+            fontPath = cast.fontPath ?: base.fontPath,
+            fontWeight = cast.fontWeight ?: base.fontWeight,
+            italic = cast.italic ?: base.italic,
+            fontSizeOffsetPx = cast.fontSizeOffsetPx.takeIf { it != 0f } ?: base.fontSizeOffsetPx,
+            backgroundImage = cast.backgroundImage ?: base.backgroundImage,
+            matchSpacingBeforePx = if (isHead) maxOf(cast.matchSpacingBeforePx, before) else before,
+            matchSpacingAfterPx = if (isTail) maxOf(cast.matchSpacingAfterPx, after) else after,
+            linePadTopPx = maxOf(cast.linePadTopPx, base.linePadTopPx),
+            linePadBottomPx = maxOf(cast.linePadBottomPx, base.linePadBottomPx),
         )
+    }
 
     /**
      * 一条规则换算成 core 侧的字符样式（dp→px、九宫格切线、位图尺寸都在这里面）。
      *
-     * 角色气泡存的就是「只填了气泡那几栏」的 [HighlightRule] JSON，平台层装配
-     * `ReaderCastOptions.bubbles` 时走这里，不再写第二份换算。
+     * 角色气泡存的就是「与高亮规则同一套参数」的 [HighlightRule] JSON，平台层装配
+     * `ReaderCastOptions.bubbles` 时走这里，不再写第二份换算。命中字距不在
+     * [toReaderStyle] 里（它按字拆段时才落到首字/末字上），这里补带过去，
+     * 好让 [overriddenBy] 与正文的 [matchRanges] 用同一份口径。
      */
-    fun styleOf(rule: HighlightRule): ReaderCharacterStyle = rule.toReaderStyle()
+    fun styleOf(rule: HighlightRule): ReaderCharacterStyle = rule.toReaderStyle().copy(
+        matchSpacingBeforePx = rule.letterSpacingBefore.dpToPx().takeIf { it > 0f } ?: 0f,
+        matchSpacingAfterPx = rule.letterSpacingAfter.dpToPx().takeIf { it > 0f } ?: 0f,
+    )
 
     /**
      * 把一条规则的样式按**字面区间**挂上去，不走正则。

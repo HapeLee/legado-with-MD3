@@ -29,6 +29,16 @@ interface CastCharacterDao {
     @Query("SELECT * FROM cast_characters ORDER BY name COLLATE NOCASE")
     suspend fun getAllGlobal(): List<CastCharacter>
 
+    /**
+     * 所有设了气泡的角色的 `bubbleRuleJson`（一条只填了气泡那栏的 [HighlightRule]）。
+     *
+     * 同步版是给 `bg_images` 的垃圾回收用的：那些图按绝对路径存在共享目录里，
+     * 只看 highlightRules 会把只有角色气泡在用的文件当成没人要而删掉，
+     * 表现为「改完高亮规则，角色气泡就失效了，得重新导入图片」。
+     */
+    @Query("SELECT bubbleRuleJson FROM cast_characters WHERE bubbleRuleJson <> ''")
+    fun getBubbleRefs(): List<String>
+
     @Query(
         """
         SELECT * FROM cast_characters

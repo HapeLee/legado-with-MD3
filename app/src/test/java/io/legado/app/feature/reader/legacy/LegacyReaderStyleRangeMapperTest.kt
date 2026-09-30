@@ -192,6 +192,57 @@ class LegacyReaderStyleRangeMapperTest {
         assertTrue(ranges.none { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY })
     }
 
+    /**
+     * 角色那一套与高亮规则同构：设了的栏（字色、命中字距）盖过规则，没设的仍归规则。
+     * 命中字距的口径和正文一样，只让在整句的首字与末字上。
+     */
+    @Test
+    fun characterStyleOverridesTheRuleWhereItSetItsOwnValue() {
+        val source = ReaderChapterSource(
+            chapterIndex = 0,
+            title = "",
+            blocks = listOf(
+                ReaderChapterSourceBlock.Text(
+                    value = "张三：“<<张三（男青）>>我是李四。”他惊了！",
+                    chapterPosition = 0,
+                ),
+            ),
+            characterCount = 24,
+            semanticContent = "张三：“<<张三（男青）>>我是李四。”他惊了！",
+        )
+        val cast = ReaderCharacterStyle(
+            colorArgb = 0xFFEEDDCC.toInt(),
+            backgroundImage = bubbleImage(),
+            matchSpacingBeforePx = 6f,
+            matchSpacingAfterPx = 8f,
+        )
+
+        val ranges = LegacyReaderStyleRangeMapper.map(
+            source = source,
+            rules = listOf(
+                HighlightRule(
+                    pattern = "我是李四",
+                    targetScope = HighlightRule.TARGET_BODY,
+                    textColor = 0xFF112233.toInt(),
+                ),
+            ),
+            processes = emptyList(),
+            castBubbles = mapOf("张三" to cast),
+        ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
+
+        // 角色设了字色，整句都换成角色的那一份
+        assertTrue(ranges.all { it.style.colorArgb == 0xFFEEDDCC.toInt() })
+        // 只有首字（开引号 3）让出 before、只有末字（闭引号 19）让出 after
+        assertEquals(
+            listOf(3),
+            ranges.filter { it.style.matchSpacingBeforePx > 0f }.map { it.start },
+        )
+        assertEquals(
+            listOf(19),
+            ranges.filter { it.style.matchSpacingAfterPx > 0f }.map { it.start },
+        )
+    }
+
     /** 引号跟踪器是章级共享的：第二段里的气泡要用第二段自己的坐标，不能带上前一段的长度。 */
     @Test
     fun bubbleInALaterParagraphUsesThatParagraphsOwnCoordinates() {
@@ -216,9 +267,9 @@ class LegacyReaderStyleRangeMapperTest {
         ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
 
         // 气泡落在第二段自己的坐标上：从本段的开引号起、到本段闭引号后一位
-        // （少了 origin 换算的话这里会是 first.length 的两倍偏移）
-        assertEquals(listOf(first.length + second.indexOf('“')), ranges.map { it.start })
-        assertEquals(listOf(first.length + second.length), ranges.map { it.endExclusive })
+        // （少了 origin 换算的话这里会多出一整段前一段的长度）
+        assertEquals(first.length + second.indexOf('“'), ranges.minOf { it.start })
+        assertEquals(first.length + second.length, ranges.maxOf { it.endExclusive })
     }
 
     private fun bubbleImage(): ReaderTextBackgroundImage = ReaderTextBackgroundImage(

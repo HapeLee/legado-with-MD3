@@ -308,6 +308,14 @@ private fun VoiceCastingList(
                                 showAvatarSource = true
                             },
                             onSetBubble = { bubbleTarget = item },
+                            onClearBubble = {
+                                bubbleScope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        BookCastStore.updateBubble(state.bookUrl, item.subjectId, "")
+                                    }
+                                    onIntent(BookVoiceCastingIntent.Refresh)
+                                }
+                            },
                             onChanged = {
                                 editingId = null
                                 onIntent(BookVoiceCastingIntent.Refresh)
@@ -360,6 +368,7 @@ private fun VoiceCastingList(
             show = bubbleTarget != null,
             characterName = bubbleTarget?.name.orEmpty(),
             initialJson = bubbleTarget?.bubbleRuleJson.orEmpty(),
+            configNames = state.configNames,
             onDismissRequest = { bubbleTarget = null },
             onSave = { json ->
                 val target = bubbleTarget
@@ -433,6 +442,7 @@ private fun VoiceCastingCard(
     onDelete: () -> Unit = {},
     onSetAvatar: () -> Unit = {},
     onSetBubble: () -> Unit = {},
+    onClearBubble: () -> Unit = {},
     onChanged: () -> Unit = onToggleEdit,
     dragModifier: Modifier = Modifier,
     dragging: Boolean = false,
@@ -563,6 +573,8 @@ private fun VoiceCastingCard(
                             onDelete = onDelete,
                             onSetAvatar = onSetAvatar,
                             onSetBubble = onSetBubble,
+                            hasBubble = item.bubbleRuleJson.isNotBlank(),
+                            onClearBubble = onClearBubble,
                         )
                     }
                 }

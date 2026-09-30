@@ -1,9 +1,12 @@
 package io.legado.app.help.readaloud.cast
 
 import io.legado.app.data.appDb
+import io.legado.app.data.entities.HighlightRule
+import io.legado.app.data.repository.configNames
 import io.legado.app.feature.reader.core.layout.ReaderCastOptions
 import io.legado.app.feature.reader.core.layout.ReaderCastProfile
 import io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,14 +83,22 @@ object CastRenderOptions {
                     .associate { it.name to it.voiceEffect },
                 // 角色自己设的气泡：dp→px 与位图尺寸在这里换算完，core 层只拿现成的样式。
                 // 位图走正文那一份 ReaderTextBackgroundLoader（与高亮规则同一套缓存与异步加载）。
+                // 「应用排版」那一栏照样生效：绑定了排版的角色气泡只在那些排版下出现，
+                // 口径与高亮规则的 matchesConfig 一致。
                 bubbles = appDb.castCharacterDao.getByBook(bookUrl)
                     .mapNotNull { character ->
-                        character.bubbleRule()?.let {
-                            character.name to LegacyReaderStyleRangeMapper.styleOf(it)
-                        }
+                        character.bubbleRule()
+                            ?.takeIf { it.appliesToCurrentConfig() }
+                            ?.let { character.name to LegacyReaderStyleRangeMapper.styleOf(it) }
                     }
                     .toMap(),
             )
         }
+    }
+
+    /** 这条规则有没有绑到当前正在用的排版上（`configName` 为空 = 全局，永远生效）。 */
+    private fun HighlightRule.appliesToCurrentConfig(): Boolean {
+        val bound = configName.orEmpty().configNames()
+        return bound.isEmpty() || bound.contains(ReadBookConfig.durConfig.name)
     }
 }

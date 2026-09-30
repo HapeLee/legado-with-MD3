@@ -124,6 +124,9 @@ fun HighlightRuleEditSheet(
     allConfigNames: List<String>,
     onDismissRequest: () -> Unit,
     onSave: (HighlightRule) -> Unit,
+    /** false = 角色气泡那一份：样式/命中排版/应用排版/字体替换全都在，只去掉「规则信息」。 */
+    showRuleInfo: Boolean = true,
+    title: String? = null,
 ) {
     val isNew = rule == null
     val initial = remember(show, rule) { rule ?: HighlightRule() }
@@ -308,11 +311,11 @@ fun HighlightRuleEditSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(titleRes),
+        title = title ?: stringResource(titleRes),
         endAction = {
             MediumTonalButton(
                 onClick = {
-                    if (pattern.isNotBlank()) {
+                    if (showRuleInfo && pattern.isNotBlank()) {
                         val result = runCatching { Regex(pattern) }
                         if (result.isFailure) {
                             patternError = result.exceptionOrNull()?.message
@@ -338,60 +341,66 @@ fun HighlightRuleEditSheet(
                     .verticalScroll(scrollState),
             ) {
                 // === Section 1: Rule Info ===
-                SectionTitle(stringResource(R.string.rule_info))
+                // 角色气泡复用这一整套编辑器，只是没有「规则信息」：哪一句归哪个角色由分配表
+                // 给定，不需要正则、作用域与停用开关（见 CastBubbleSheet）。
+                if (showRuleInfo) {
+                    SectionTitle(stringResource(R.string.rule_info))
 
-                AppTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = stringResource(R.string.rule_name),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                    AppTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = stringResource(R.string.rule_name),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
 
-                AppTextField(
-                    value = pattern,
-                    onValueChange = {
-                        pattern = it
-                        patternError = null
-                    },
-                    label = stringResource(R.string.rule_pattern),
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusEvent { typingFocused = it.hasFocus },
-                    isError = patternError != null,
-                    supportingText = patternError?.let {
-                        { AppText(it, color = MaterialTheme.colorScheme.error) }
-                    },
-                )
+                    AppTextField(
+                        value = pattern,
+                        onValueChange = {
+                            pattern = it
+                            patternError = null
+                        },
+                        label = stringResource(R.string.rule_pattern),
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusEvent { typingFocused = it.hasFocus },
+                        isError = patternError != null,
+                        supportingText = patternError?.let {
+                            { AppText(it, color = MaterialTheme.colorScheme.error) }
+                        },
+                    )
 
-                Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
 
-                val scopeEntries = arrayOf(
-                    stringResource(R.string.target_all),
-                    stringResource(R.string.target_title),
-                    stringResource(R.string.target_body),
-                )
-                val scopeValues = arrayOf(
-                    HighlightRule.TARGET_ALL.toString(),
-                    HighlightRule.TARGET_TITLE.toString(),
-                    HighlightRule.TARGET_BODY.toString(),
-                )
-                TinyDropdownSettingItem(
-                    title = stringResource(R.string.target_scope),
-                    selectedValue = targetScope.toString(),
-                    displayEntries = scopeEntries,
-                    entryValues = scopeValues,
-                    onValueChange = { targetScope = it.toIntOrNull() ?: HighlightRule.TARGET_ALL },
-                )
+                    val scopeEntries = arrayOf(
+                        stringResource(R.string.target_all),
+                        stringResource(R.string.target_title),
+                        stringResource(R.string.target_body),
+                    )
+                    val scopeValues = arrayOf(
+                        HighlightRule.TARGET_ALL.toString(),
+                        HighlightRule.TARGET_TITLE.toString(),
+                        HighlightRule.TARGET_BODY.toString(),
+                    )
+                    TinyDropdownSettingItem(
+                        title = stringResource(R.string.target_scope),
+                        selectedValue = targetScope.toString(),
+                        displayEntries = scopeEntries,
+                        entryValues = scopeValues,
+                        onValueChange = {
+                            targetScope = it.toIntOrNull() ?: HighlightRule.TARGET_ALL
+                        },
+                    )
 
-                TinySwitchSettingItem(
-                    title = stringResource(R.string.enable_rule),
-                    checked = enabled,
-                    onCheckedChange = { enabled = it },
-                )
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.enable_rule),
+                        checked = enabled,
+                        onCheckedChange = { enabled = it },
+                    )
+                }
 
                 // === Section 2: Style Settings ===
                 SectionTitle(stringResource(R.string.style_settings))

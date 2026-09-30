@@ -729,6 +729,7 @@ val appModule = module {
             bookUrl = bookUrl,
             bookKnowledgeGateway = get(),
             voiceGateway = get(),
+            styleGateway = get(),
         )
     }
     viewModelOf(::CloudTtsViewModel)

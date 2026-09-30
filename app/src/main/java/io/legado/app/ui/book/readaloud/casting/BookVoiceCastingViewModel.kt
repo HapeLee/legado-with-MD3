@@ -6,6 +6,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.ReadAloudVoiceGateway
+import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.model.readaloud.BookVoiceBinding
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.help.readaloud.cast.BookCastStore
@@ -29,6 +30,8 @@ class BookVoiceCastingViewModel(
     private val bookUrl: String,
     private val bookKnowledgeGateway: BookKnowledgeGateway,
     private val voiceGateway: ReadAloudVoiceGateway,
+    /** 只为拿排版配置名列表：角色气泡弹层里「应用排版」那一节与高亮规则用同一份候选。 */
+    private val styleGateway: ReadStyleGateway,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BookVoiceCastingUiState(bookUrl = bookUrl))
@@ -161,6 +164,10 @@ class BookVoiceCastingViewModel(
                 isLoading = false,
                 items = items.toImmutableList(),
                 voices = voiceOptions.toImmutableList(),
+                configNames = styleGateway.currentState.items
+                    .map { config -> config.name }
+                    .filter { it.isNotBlank() }
+                    .toImmutableList(),
             )
         }
     }
