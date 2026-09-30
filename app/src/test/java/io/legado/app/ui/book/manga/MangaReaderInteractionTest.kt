@@ -610,4 +610,53 @@ class MangaReaderInteractionTest {
         assertTrue(isDoublePageActive(MangaDoublePageMode.LANDSCAPE, IntSize(1000, 600)))
         assertFalse(isDoublePageActive(MangaDoublePageMode.LANDSCAPE, IntSize(600, 1000)))
     }
+
+    @Test
+    fun `back action prioritizes dialog then sheet then settings then menu then close reader`() {
+        assertEquals(
+            MangaBackAction.DISMISS_DIALOG,
+            resolveMangaBackAction(
+                hasActiveDialog = true,
+                hasActiveSheet = true,
+                hasSettingsCategory = true,
+                menuVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaBackAction.DISMISS_SHEET,
+            resolveMangaBackAction(
+                hasActiveDialog = false,
+                hasActiveSheet = true,
+                hasSettingsCategory = true,
+                menuVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaBackAction.CLOSE_SETTINGS,
+            resolveMangaBackAction(
+                hasActiveDialog = false,
+                hasActiveSheet = false,
+                hasSettingsCategory = true,
+                menuVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaBackAction.HIDE_MENU,
+            resolveMangaBackAction(
+                hasActiveDialog = false,
+                hasActiveSheet = false,
+                hasSettingsCategory = false,
+                menuVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaBackAction.CLOSE_READER,
+            resolveMangaBackAction(
+                hasActiveDialog = false,
+                hasActiveSheet = false,
+                hasSettingsCategory = false,
+                menuVisible = false,
+            ),
+        )
+    }
 }

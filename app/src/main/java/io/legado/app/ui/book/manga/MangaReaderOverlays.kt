@@ -235,7 +235,7 @@ private fun MangaMenuTopBar(
                 description = stringResource(R.string.back),
                 glassEnabled = topBarGlass,
                 backdrop = backdrop,
-                onClick = { onIntent(MangaReaderIntent.BackPressed) },
+                onClick = { onIntent(MangaReaderIntent.CloseReader) },
             )
             MangaTitleCapsule(state, onIntent, glassEnabled = topBarGlass, backdrop = backdrop)
             if (compact) {

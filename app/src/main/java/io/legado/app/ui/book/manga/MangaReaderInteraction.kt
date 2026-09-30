@@ -211,3 +211,24 @@ internal class MangaWebtoonResizeQueue {
         if (changes.isNotEmpty()) apply { changes.forEach { it() } }
     }
 }
+
+internal enum class MangaBackAction {
+    DISMISS_DIALOG,
+    DISMISS_SHEET,
+    CLOSE_SETTINGS,
+    HIDE_MENU,
+    CLOSE_READER,
+}
+
+internal fun resolveMangaBackAction(
+    hasActiveDialog: Boolean,
+    hasActiveSheet: Boolean,
+    hasSettingsCategory: Boolean,
+    menuVisible: Boolean,
+): MangaBackAction = when {
+    hasActiveDialog -> MangaBackAction.DISMISS_DIALOG
+    hasActiveSheet -> MangaBackAction.DISMISS_SHEET
+    hasSettingsCategory -> MangaBackAction.CLOSE_SETTINGS
+    menuVisible -> MangaBackAction.HIDE_MENU
+    else -> MangaBackAction.CLOSE_READER
+}
