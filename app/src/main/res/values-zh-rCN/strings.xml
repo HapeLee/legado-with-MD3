@@ -3405,9 +3405,11 @@
     <!-- 详情页「加入书架」按钮的冲突态文案（按钮上的文字 / 读屏描述） -->
     <string name="bookshelf_conflict_hint">疑似重复</string>
     <string name="bookshelf_conflict_hint_desc">疑似重复，点击加入书架</string>
-    <!-- 已入架书籍的「书架操作」Sheet：标题与副本列表的分组标题 -->
-    <string name="shelf_actions_title">书架操作</string>
+    <!-- 已入架书籍的删除 Sheet：其他副本提示与跳转 -->
     <string name="shelf_duplicate_count">其他 %1$d 个副本</string>
+    <string name="shelf_delete_other_copies_hint">书架中仍保留有该书的其他 %1$d 个副本（来自【%2$s】），删除当前副本不影响其他副本。</string>
+    <string name="shelf_delete_view_copy">查看该副本</string>
+    <string name="shelf_delete_view_copies">查看副本 (%1$d)</string>
     <string name="bookshelf_conflict_existing_title">书架中已有的作品</string>
     <string name="bookshelf_conflict_open_hint">点击卡片查看该作品详情</string>
     <string name="bookshelf_conflict_coexist">共存</string>

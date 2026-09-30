@@ -3409,9 +3409,11 @@
     <!-- 详情页「加入书架」按钮的冲突态文案（按钮上的文字 / 读屏描述） -->
     <string name="bookshelf_conflict_hint">Possible Duplicate</string>
     <string name="bookshelf_conflict_hint_desc">Possible duplicate, tap to add to bookshelf</string>
-    <!-- 已入架书籍的「书架操作」Sheet：标题与副本列表的分组标题 -->
-    <string name="shelf_actions_title">On-shelf Actions</string>
+    <!-- Shelf delete sheet: other copies hint and view -->
     <string name="shelf_duplicate_count">Other copies: %1$d</string>
+    <string name="shelf_delete_other_copies_hint">The bookshelf still retains %1$d other copy of this book (from [%2$s]). Deleting this copy will not affect other copies.</string>
+    <string name="shelf_delete_view_copy">View Copy</string>
+    <string name="shelf_delete_view_copies">View Copies (%1$d)</string>
     <string name="bookshelf_conflict_existing_title">Already on bookshelf</string>
     <string name="bookshelf_conflict_open_hint">Tap a book to open its details</string>
     <string name="bookshelf_conflict_coexist">Keep Both</string>
