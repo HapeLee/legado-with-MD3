@@ -47,6 +47,7 @@ class Phase2SettingsMappingTest {
                 base.copy(migrateCover = false),
                 base.copy(migrateCategory = false),
                 base.copy(migrateRemark = false),
+                base.copy(migrateAuthor = false),
                 base.copy(migrateReadConfig = false),
                 base.copy(deleteDownloadedChapters = true),
             ),
