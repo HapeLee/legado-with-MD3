@@ -145,6 +145,7 @@ import io.legado.app.ui.book.readaloud.cast.BgmPoolRouteScreen
 import io.legado.app.ui.book.readaloud.cast.CastCapsuleStyleRouteScreen
 import io.legado.app.ui.book.readaloud.cast.MultiRoleRecognitionRouteScreen
 import io.legado.app.ui.book.readaloud.cast.MultiRoleRuleRouteScreen
+import io.legado.app.ui.book.readaloud.cast.RegexCastRuleRouteScreen
 import io.legado.app.ui.book.readaloud.cast.VoiceEffectRouteScreen
 import io.legado.app.ui.book.readaloud.cast.VoicePoolRouteScreen
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleRouteScreen
@@ -1541,6 +1542,7 @@ fun MainActivity.mainEntryProvider(
             onNavigateToCapsuleStyle = { backStack.add(MainRouteCastCapsuleStyle) },
             onNavigateToEngines = { backStack.add(MainRouteCloudTtsEngines()) },
             onNavigateToRecognition = { backStack.add(MainRouteMultiRoleRecognition) },
+            onNavigateToRegexCast = { backStack.add(MainRouteRegexCastRule) },
         )
     }
 
@@ -1571,6 +1573,12 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteMultiRoleRecognition> {
         MultiRoleRecognitionRouteScreen(
             onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteRegexCastRule> {
+        RegexCastRuleRouteScreen(
+            onBackClick = { onNavigateBack() },
         )
     }
 

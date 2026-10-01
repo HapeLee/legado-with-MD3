@@ -12,6 +12,11 @@ data class ReadAloudPlaybackCue(
     val emotion: String = "",
     /** 这一段的变声器预设名（空 = 跟随角色全局），见 [ChapterSpeechSegment.voiceEffect]。 */
     val voiceEffect: String = "",
+    /**
+     * 这一单元起播时要并行放的音频路径（正则角色里「命中不念、改放音效」那一种），
+     * 多条以换行分隔。空 = 不放。第三条音轨，不抢焦点，见 ReadAloudEffectPlayer。
+     */
+    val soundEffect: String = "",
     val characterPerformance: CharacterPerformanceProfile? = null,
     val isChapterTitle: Boolean = false,
 ) {
@@ -119,6 +124,7 @@ class ReadAloudPlaybackQueue private constructor(
                     characterId = segment.characterId,
                     emotion = segment.emotion,
                     voiceEffect = segment.voiceEffect,
+                    soundEffect = item.soundEffect,
                     characterPerformance = item.characterPerformance,
                 )
             }.sortedWith(compareBy(ReadAloudPlaybackCue::chapterStart, ReadAloudPlaybackCue::chapterEnd))

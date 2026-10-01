@@ -355,6 +355,7 @@ abstract class BaseReadAloudService : BaseService(),
         capsuleOverlayWindow = null
         // 配乐是第二条音轨：服务销毁前必须自己收掉，否则留下停不下来的音乐
         readAloudBgm.release()
+        readAloudEffect.release()
         ReadBook.upReadTime()
         super.onDestroy()
         prepareReadAloudGeneration++
@@ -796,6 +797,29 @@ abstract class BaseReadAloudService : BaseService(),
      */
     protected val readAloudBgm: io.legado.app.help.readaloud.playback.ReadAloudBgmPlayer by lazy {
         io.legado.app.help.readaloud.playback.ReadAloudBgmPlayer(applicationContext)
+    }
+
+    /**
+     * 第三条音轨：正则角色里「命中不念、改放音频」那一种放的那一下。
+     * 与朗读、背景音乐并行，不抢音频焦点。
+     */
+    protected val readAloudEffect: io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer by lazy {
+        io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer(applicationContext)
+    }
+
+    private var soundedCue: io.legado.app.domain.model.readaloud.ReadAloudPlaybackCue? = null
+
+    /**
+     * 一个朗读单元开播时，把挂在它身上的音效一起放掉（多条以换行分隔）。
+     *
+     * 同一个单元可能被好几个入口碰到（播放器转场、设置刷新、语速变化），靠单元对象本身
+     * 去重，只响一次。
+     */
+    protected fun playCueSounds(index: Int) {
+        val cue = playbackQueue.cues.getOrNull(index) ?: return
+        if (cue.soundEffect.isBlank() || cue === soundedCue) return
+        soundedCue = cue
+        readAloudEffect.play(cue.soundEffect.split('\n').filter { it.isNotBlank() })
     }
 
     private fun syncBgmToProgress(chapterPosition: Int) {

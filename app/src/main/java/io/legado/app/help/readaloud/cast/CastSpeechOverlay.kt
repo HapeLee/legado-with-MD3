@@ -48,17 +48,24 @@ object CastSpeechOverlay {
         paragraphs: List<CanonicalSpeechParagraph>,
         plan: List<SpeechPlanItem>,
     ): List<SpeechPlanItem> {
-        if (plan.isEmpty() || !ReadConfig.useMultiSpeaker) return plan
+        if (plan.isEmpty()) return plan
+        // 正则角色是独立的一套：命中文字换音色、或干脆不念改放音效。它不认引号也不依赖分配表，
+        // 所以「多角色朗读」关着的时候它照样生效。
+        val effects = runCatching {
+            appDb.bookDao.getBook(bookUrl)?.let { RegexCastRuleStore.effectsFor(it) }
+        }.getOrNull().orEmpty()
+        val multiRole = ReadConfig.useMultiSpeaker
+        if (!multiRole && effects.isEmpty()) return plan
         // 段级变声器按引号序号存在分配表里（正文胶囊那一栏设的，只管那一句）
-        val effectsOfQuote = if (paragraphs.isEmpty()) {
+        val effectsOfQuote = if (paragraphs.isEmpty() || !multiRole) {
             emptyMap()
         } else {
             appDb.chapterRoleAssignmentDao.getForChapter(bookUrl, chapterIndex)
                 .filter { it.voiceEffect.isNotBlank() }
                 .associate { it.quoteOrdinal to it.voiceEffect }
         }
-        val spans = spansOf(paragraphs, effectsOfQuote)
-        if (spans.isEmpty()) {
+        val spans = if (multiRole) spansOf(paragraphs, effectsOfQuote) else emptyList()
+        if (spans.isEmpty() && effects.isEmpty()) {
             // 正文里没有角色标记：要么没开「多角色分配」（标记由它注入），要么这一章还没分配过角色
             AppLog.put(
                 "多角色朗读: 第${chapterIndex + 1}章正文里没有角色标记（未开「多角色分配」或本章未分配），" +
@@ -79,31 +86,63 @@ object CastSpeechOverlay {
         // 否则那句角色台词会退回旁白音。ensureVoice 幂等，选完落库并镜像绑定。
         val picked = HashMap<String, CastCharacter>()
         var voiced = 0
+        var regexVoiced = 0
+        var regexMuted = 0
         val sample = StringBuilder()
-        val result = plan.flatMap { item ->
-            val base = item.segment.chapterPosition
-            piecesOf(item, spans).map { piece ->
-                val delta = piece.start - base
-                // 播放单元里保留标记原文：偏移要按含标记的正文算，去掉标记是送进引擎前的最后一步
-                val spoken = piece.text
-                val character = piece.span?.let { characters.match(it.name, it.pool) }
-                if (character == null) {
-                    item.copy(
-                        segment = item.segment.copy(
-                            text = spoken,
-                            start = item.segment.start + delta,
-                            end = item.segment.start + delta + spoken.length,
-                            chapterPosition = piece.start,
-                            roleType = SpeechRoleType.Narrator,
-                            characterId = null,
-                            characterName = "",
-                            voiceEffect = piece.span?.effect.orEmpty(),
-                        ),
-                        voice = narrator,
-                        fallbackVoices = emptyList(),
-                        characterPerformance = null,
-                    )
-                } else {
+        val result = ArrayList<SpeechPlanItem>()
+        // 整段文字都被「不念」吃掉时，音频没有后继单元可挂，先攒着落到下一个朗读单元上
+        var carrySound = ""
+
+        /**
+         * 一个切块 → 一个朗读单元。音色优先级：正则角色 > 分配表角色 > 旁白。
+         *
+         * [part] 带着切块自己的章内起点，所以被音效吃掉的那段文字在这里就是个空洞：
+         * 前后两块各归各的坐标，区间只留缝、不重叠（播放队列不许重叠）。
+         */
+        suspend fun speechFor(
+            item: SpeechPlanItem,
+            part: RegexCastSplitter.Part,
+            span: Span?,
+        ): SpeechPlanItem {
+            val delta = part.start - item.segment.chapterPosition
+            val spoken = part.text
+            val regexVoice = part.voiceId?.let { id ->
+                voices[id] ?: narrator.also {
+                    AppLog.put("正则角色「${part.label}」的音色 $id 不在启用的音色表里，这段按原声读")
+                }
+            }
+            if (part.voiceId != null && voices.containsKey(part.voiceId)) regexVoiced++
+            if (part.sound.isNotEmpty()) regexMuted++
+            val character = span?.let { characters.match(it.name, it.pool) }
+            // 播放单元里保留标记原文：偏移要按含标记的正文算，去掉标记是送进引擎前的最后一步
+            val segment = item.segment.copy(
+                text = spoken,
+                start = item.segment.start + delta,
+                end = item.segment.start + delta + spoken.length,
+                chapterPosition = part.start,
+            )
+            val built = when {
+                // 没开多角色朗读：官方解析出来的那个音色就是这句的声音，正则没顶到它就原样留着
+                !multiRole -> item.copy(
+                    segment = segment,
+                    voice = regexVoice ?: item.voice,
+                    fallbackVoices = item.fallbackVoices,
+                    characterPerformance = item.characterPerformance,
+                )
+
+                character == null -> item.copy(
+                    segment = segment.copy(
+                        roleType = SpeechRoleType.Narrator,
+                        characterId = null,
+                        characterName = "",
+                        voiceEffect = span?.effect.orEmpty(),
+                    ),
+                    voice = regexVoice ?: narrator,
+                    fallbackVoices = emptyList(),
+                    characterPerformance = null,
+                )
+
+                else -> {
                     val resolved = picked.getOrPut(character.id) {
                         CastVoicePicker.ensureVoice(character)
                     }
@@ -128,27 +167,55 @@ object CastSpeechOverlay {
                         }
                     }
                     item.copy(
-                        segment = item.segment.copy(
-                            text = spoken,
-                            start = item.segment.start + delta,
-                            end = item.segment.start + delta + spoken.length,
-                            chapterPosition = piece.start,
+                        segment = segment.copy(
                             roleType = SpeechRoleType.Character,
                             characterId = resolved.id,
                             characterName = resolved.name,
-                            voiceEffect = piece.span?.effect.orEmpty(),
+                            voiceEffect = span.effect,
                         ),
-                        voice = characterVoice ?: narrator,
+                        voice = regexVoice ?: characterVoice ?: narrator,
                         fallbackVoices = listOfNotNull(
-                            narrator?.takeIf { it.id != characterVoice?.id },
+                            narrator?.takeIf { it.id != (regexVoice ?: characterVoice)?.id },
                         ),
                         characterPerformance = item.characterPerformance
                             ?.takeIf { it.characterId == resolved.id },
                     )
                 }
             }
+            return built.copy(soundEffect = part.sound)
         }
-        AppLog.put("多角色朗读: 本章 ${plan.size} 个朗读单元，$voiced 段用角色音；$sample")
+
+        plan.forEach { item ->
+            piecesOf(item, spans).forEach { piece ->
+                val parts = if (effects.isEmpty()) {
+                    listOf(RegexCastSplitter.Part(piece.start, piece.text, null, ""))
+                } else {
+                    RegexCastSplitter
+                        .split(piece.start, piece.text, CastMarkers.blank(piece.text), effects)
+                        .let { split ->
+                            carrySound = RegexCastSplitter.mergeSound(carrySound, split.trailingSound)
+                            split.parts
+                        }
+                }
+                parts.forEach { part -> result += speechFor(item, part, piece.span) }
+            }
+        }
+        if (carrySound.isNotEmpty() && result.isNotEmpty()) {
+            // 章末只剩音效、后面没有文字可挂了：响在最后一个朗读单元起播时（早半拍，总比不响好）
+            val last = result.lastIndex
+            result[last] = result[last].copy(
+                soundEffect = RegexCastSplitter.mergeSound(result[last].soundEffect, carrySound)
+            )
+        }
+        AppLog.put(
+            "多角色朗读: 本章 ${plan.size} 个朗读单元，$voiced 段用角色音" +
+                if (effects.isEmpty()) {
+                    ""
+                } else {
+                    "；正则角色顶音色 $regexVoiced 段、吞字放音效 $regexMuted 段"
+                } +
+                "；$sample"
+        )
         return result
     }
 

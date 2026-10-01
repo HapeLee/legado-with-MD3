@@ -124,7 +124,7 @@ object CastCapsuleGeometry {
         style: CastCapsuleStyle = CastCapsuleStyle.Default,
     ): Float {
         val h = heightPx(fontSizePx)
-        val iconRight = style.avatarLeft(h) + style.avatarDiameter(h)
+        val iconRight = style.placeholderIconLeft(h) + style.avatarDiameter(h)
         return h * padRatio + max(h * padRatio, iconRight - h * padRatio) + h * padRatio
     }
 }

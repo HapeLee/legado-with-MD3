@@ -272,6 +272,10 @@ data object MainRouteVoiceEffect : MainRoute
 @Serializable
 data object MainRouteCastCapsuleStyle : MainRoute
 
+/** 朗读规则 → 正则角色管理：命中正文文字换音色 / 不念改放音效。 */
+@Serializable
+data object MainRouteRegexCastRule : MainRoute
+
 @Serializable
 data object MainRouteAbout : MainRoute
 

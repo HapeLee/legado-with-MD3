@@ -44,13 +44,23 @@ data class CastCapsuleStyle(
     /**
      * 头像左沿相对胶囊左沿的偏移，夹到「头像右沿不出胶囊」，免得整颗头像跑出去。
      *
-     * [avatarOnly] 那一格是正方形（只剩头像，名字与池小字都关掉了），此时头像按整格居中，
-     * 否则左内边距 + 右空隙不对称，圆头像看着就是歪的。
+     * 角色那颗**只有一种落点**：按整格垂直居中的那条线。头像的位置不能因为「显示角色名」
+     * 或「显示声音池」被顶开——胶囊是行内元素，左沿不动，头像就得一直在同一个地方，
+     * 关掉名字时看到的那颗同心圆，和打开名字时那颗，头像才是同一个位置。
      */
-    fun avatarLeft(height: Float, avatarOnly: Boolean = false): Float {
+    fun avatarLeft(height: Float): Float {
         val diameter = avatarDiameter(height)
-        val base = if (avatarOnly) (height - diameter) / 2f else height * CastCapsuleGeometry.padRatio
-        return (base + height * avatarDx / SHIFT_FULL.toFloat())
+        return ((height - diameter) / 2f + height * avatarDx / SHIFT_FULL.toFloat())
+            .coerceIn(0f, max(0f, height - diameter))
+    }
+
+    /**
+     * 未分配占位那颗里人形图标的左沿。它永远没有文字，所以按左右内边距居中就行，
+     * 不跟 [avatarLeft] 共用——那颗胶囊比头像宽，用居中的落点会让图标偏左。
+     */
+    fun placeholderIconLeft(height: Float): Float {
+        val diameter = avatarDiameter(height)
+        return (height * CastCapsuleGeometry.padRatio + height * avatarDx / SHIFT_FULL.toFloat())
             .coerceIn(0f, max(0f, height - diameter))
     }
 

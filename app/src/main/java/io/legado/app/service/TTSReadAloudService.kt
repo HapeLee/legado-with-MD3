@@ -256,6 +256,8 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                     ttsUtteranceListener.onDone(utteranceId)
                     return@execute
                 }
+                // 第三条音轨：这一单元身上挂了音效（正则角色「命中不念改放音频」）就一起响
+                playCueSounds(nowSpeak)
                 AppLog.putDebug("TTS开始Speak: ${spoken.text}")
                 val queueMode = if (hasSpeechPlaybackQueue
                     && continuesCurrentSpeech && paragraphStartPos == 0 && !isDelay

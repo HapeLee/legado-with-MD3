@@ -31,9 +31,23 @@ class CastCapsuleGeometryTest {
     @Test
     fun `avatar sits dead center in that square`() {
         val diameter = avatarOnlyStyle.avatarDiameter(height)
-        val left = avatarOnlyStyle.avatarLeft(height, avatarOnly = true)
+        val left = avatarOnlyStyle.avatarLeft(height)
         assertEquals((height - diameter) / 2f, left, 1e-3f)
         assertEquals(height, left + diameter + left, 1e-3f)
+    }
+
+    @Test
+    fun `avatar does not move when the name or the pool label appears`() {
+        // 胶囊是行内元素，左沿不动；头像的落点也不能因为开关而平移，否则「同心圆」那颗
+        // 和带名字那颗的头像就是两个位置，看着就是对不上。
+        val withName = CastCapsuleStyle(showPool = false).avatarLeft(height)
+        val withPool = CastCapsuleStyle(showName = false).avatarLeft(height)
+        val allOn = CastCapsuleStyle().avatarLeft(height)
+        assertEquals(avatarOnlyStyle.avatarLeft(height), withName, 1e-3f)
+        assertEquals(avatarOnlyStyle.avatarLeft(height), withPool, 1e-3f)
+        assertEquals(avatarOnlyStyle.avatarLeft(height), allOn, 1e-3f)
+        // 未分配那颗只有一个图标，它按自己的内边距居中，不跟着角色那颗走。
+        assertEquals(height * CastCapsuleGeometry.padRatio, CastCapsuleStyle().placeholderIconLeft(height), 1e-3f)
     }
 
     @Test

@@ -302,6 +302,7 @@ import io.legado.app.help.readaloud.cast.AiCastAssignUseCase
 import io.legado.app.help.readaloud.cast.AiSceneAssignUseCase
 import io.legado.app.ui.book.readaloud.cast.VoiceEffectViewModel
 import io.legado.app.ui.book.readaloud.cast.BgmPoolViewModel
+import io.legado.app.ui.book.readaloud.cast.RegexCastRuleViewModel
 import io.legado.app.ui.book.readaloud.cast.MultiRoleRuleViewModel
 import io.legado.app.ui.book.readaloud.cast.MultiRoleRecognitionViewModel
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleViewModel
@@ -577,6 +578,7 @@ val appModule = module {
     viewModelOf(::HighlightTagRuleViewModel)
     viewModelOf(::MultiRoleRuleViewModel)
     viewModelOf(::BgmPoolViewModel)
+    viewModelOf(::RegexCastRuleViewModel)
     viewModelOf(::VoiceEffectViewModel)
     viewModelOf(::MultiRoleRecognitionViewModel)
     singleOf(::AiCastAssignUseCase)

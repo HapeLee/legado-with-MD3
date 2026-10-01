@@ -2872,14 +2872,13 @@ private fun drawRoleCast(
     val cy = (b.top + b.bottom) / 2f
     val geo = io.legado.app.feature.reader.core.cast.CastCapsuleGeometry
     val d = style.avatarDiameter(h)
-    // 只有角色那一颗才讲「全关掉＝正方形」；未分配占位那颗本来就只有一个图标，宽度另有算法，
-    // 别把它顺手改成居中。
-    val avatarOnly = e.name.isNotEmpty() && geo.isAvatarOnly(
-        style = style,
-        hasPoolText = e.voicePoolLabel.isNotEmpty(),
-        withEffect = e.voiceEffectMark,
-    )
-    val avatarLeft = b.left + style.avatarLeft(h, avatarOnly)
+    // 角色那颗：头像落点与「显示角色名/声音池」无关（见 avatarLeft）。未分配那颗只有一个
+    // 图标、永远没有文字，宽度另有算法，所以图标按它自己的内边距居中。
+    val avatarLeft = b.left + if (e.name.isEmpty()) {
+        style.placeholderIconLeft(h)
+    } else {
+        style.avatarLeft(h)
+    }
     val avatarCy = cy + style.avatarCenterOffset(h)
     val textPx = h / geo.heightRatio * geo.textScale
     val name = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {

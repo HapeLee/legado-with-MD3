@@ -134,6 +134,8 @@ data class SpeechPlanItem(
     val voice: ReadAloudVoice?,
     val fallbackVoices: List<ReadAloudVoice>,
     val characterPerformance: CharacterPerformanceProfile? = null,
+    /** 正则角色「命中不念、改放音频」带下来的音频路径，多条以换行分隔；空 = 不放。 */
+    val soundEffect: String = "",
 )
 
 data class ChapterSpeechAnalysisResult(

@@ -317,6 +317,7 @@ object MainNavigator {
             MainRouteBgmPool,
             MainRouteVoiceEffect,
             MainRouteCastCapsuleStyle,
+            MainRouteRegexCastRule,
             MainRouteMultiRoleRecognition -> backStack.add(route)
 
             MainRouteAbout -> {
