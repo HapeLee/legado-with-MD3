@@ -817,27 +817,27 @@ abstract class BaseReadAloudService : BaseService(),
     private var soundedCue: io.legado.app.domain.model.readaloud.ReadAloudPlaybackCue? = null
 
     /**
-     * 一个朗读单元开播时，把挂在它身上的音效放掉（多条以换行分隔）。
-     *
-     * 同一个单元可能被好几个入口碰到（播放器转场、设置刷新、语速变化），靠单元对象本身
-     * 去重，只响一次。
+     * 取出这一单元身上挂的音效：`(路径, 千分位)`。同一个单元只给一次。
      *
      * 音效**不另起朗读单元**——多一个单元就是多向 TTS 引擎要一次音频，而合成一条要三五秒、
      * 整条链路是串行的，多要一次就当场断流（用户听到的「读到匹配处停顿一段时间」就是这个）。
-     * 所以命中的那个字在单元里排第几，只能用千分位近似：`路径#350` = 这一单元播到 35% 时响。
-     * [durationMs] 拿不到（系统 TTS 直读没有文件时长）就立刻响。
+     * 所以命中的字在单元里排第几只能按字符占比估：`路径#350` = 这一单元播到 35% 时响。
      */
-    protected fun playCueSounds(index: Int, durationMs: Long = 0L) {
-        val cue = playbackQueue.cues.getOrNull(index) ?: return
-        if (cue.soundEffect.isBlank() || cue === soundedCue) return
+    protected fun takeCueSounds(index: Int): List<Pair<String, Int>> {
+        val cue = playbackQueue.cues.getOrNull(index) ?: return emptyList()
+        if (cue.soundEffect.isBlank() || cue === soundedCue) return emptyList()
         soundedCue = cue
-        cue.soundEffect.split('\n').filter { it.isNotBlank() }.forEach { entry ->
+        return cue.soundEffect.split('\n').filter { it.isNotBlank() }.map { entry ->
             val at = entry.indexOf(RegexCastSplitter.OFFSET_SEPARATOR)
             val path = if (at > 0) entry.substring(0, at) else entry
             val permille = if (at > 0) entry.substring(at + 1).toIntOrNull() ?: 0 else 0
-            val delay = if (durationMs > 0) durationMs * permille / 1000L else 0L
-            readAloudEffect.play(path, delay)
+            path to permille
         }
+    }
+
+    /** 系统 TTS 直读那条路没有文件时长可依据，命中就立刻响。 */
+    protected fun playCueSounds(index: Int) {
+        takeCueSounds(index).forEach { (path, _) -> readAloudEffect.play(path) }
     }
 
     private fun syncBgmToProgress(chapterPosition: Int) {

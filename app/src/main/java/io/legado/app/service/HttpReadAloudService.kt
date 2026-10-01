@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
@@ -159,9 +160,58 @@ class HttpReadAloudService : BaseReadAloudService(),
     /** 变声器的会话级效果（混响 / 带通）挂在朗读播放器上，随当前条切换。 */
     private val voiceEffectAudio by lazy { VoiceEffectAudio() }
 
+    /** 只是用来把「读时长排音效位置」推到下一帧，不是计时器（计时交给媒体时钟）。 */
+    private val soundHandler = Handler(Looper.getMainLooper())
+
     private fun cueEffect(index: Int): VoiceEffectPreset? =
         playbackQueue.cues.getOrNull(index)
             ?.let { VoiceEffectStore.ofSpeech(it.voiceEffect, it.characterId) }
+
+    /**
+     * 把这一单元身上的音效排到**媒体时钟**的命中位置上。
+     *
+     * 上一版是「换句回调里 `postDelayed(时长 × 千分位)`」，两秒才响就是这么来的：
+     * 换句回调说的是解码/渲染线程读到新条的那一刻，比耳朵听到的位置**提前**一整段管线缓冲，
+     * 而 `duration` 在转场那一刻还可能还是上一条的；两个偏差叠起来就飘了。
+     * `PlayerMessage` 是按真正播到的位置投递的，基准就是出声本身。
+     *
+     * 同时立刻 [io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer.prime] 把文件读完：
+     * 到点只剩 `start()`，不然 prepare 那几百毫秒又要额外往后推。
+     */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun scheduleCueSounds(index: Int) {
+        val sounds = takeCueSounds(index)
+        if (sounds.isEmpty()) return
+        sounds.forEach { (path, permille) ->
+            // 先把文件读好，到点只剩 start()
+            readAloudEffect.prime(path)
+            if (permille <= 0) {
+                readAloudEffect.play(path)
+                return@forEach
+            }
+            // 下一个循环帧再读时长：转场那一刻 `duration` 有可能还是上一条的，
+            // 拿它算位置就会排到下一条音频里去（就是那两秒）。
+            soundHandler.post {
+                val durationMs = exoPlayer.duration
+                if (durationMs == C.TIME_UNSET || durationMs <= 0L) {
+                    readAloudEffect.play(path)
+                    return@post
+                }
+                val target = (exoPlayer.currentPosition + durationMs * permille / 1000L)
+                    .coerceAtMost(durationMs)
+                val sent = runCatching {
+                    exoPlayer.createMessage { _, _ -> readAloudEffect.play(path) }
+                        .setType(SOUND_MESSAGE_TYPE)
+                        .setLooper(Looper.getMainLooper())
+                        .setPosition(exoPlayer.currentMediaItemIndex, target)
+                        .setDeleteAfterDelivery(true)
+                        .send()
+                    true
+                }.getOrDefault(false)
+                if (!sent) readAloudEffect.play(path)
+            }
+        }
+    }
 
     /** 某一句应该有的播放参数：这一句的音高/语速 × 全局语速。 */
     private fun playbackParametersFor(index: Int) =
@@ -1714,7 +1764,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        playCueSounds(nowSpeak, exoPlayer.duration.coerceAtLeast(0L))
+        scheduleCueSounds(nowSpeak)
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
             // 首条不走 AUTO 分支，也要在开播时套上角色的变声
             applyCueVoiceEffect(nowSpeak)
@@ -1802,3 +1852,6 @@ private const val EFFECT_PITCH_SWITCH_LEAD_MS = 220L
 
 /** 只是转发给自家 Target 的标记，播放器不解释它。 */
 private const val PITCH_MESSAGE_TYPE = 0x4C470001
+
+/** 音效排期消息：由媒体时钟在单元里真正播到那个位置时投递。 */
+private const val SOUND_MESSAGE_TYPE = 0x4C470002
