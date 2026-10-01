@@ -47,41 +47,63 @@ object RegexCastSplitter {
         // 同一位置只应用排序在前的那条规则；重叠的后面那些整条丢掉
         hits.sortWith(compareBy<Hit> { it.start }.thenBy { it.rank })
         val parts = ArrayList<Part>()
-        val pending = ArrayList<String>()
-        var cursor = 0
-        fun flush(from: Int, to: Int, voiceId: String?, label: String = "") {
+        val pending = ArrayList<Pair<String, Int>>()
+        val text = StringBuilder()
+        var blockStart = -1
+        fun append(from: Int, to: Int) {
             if (to <= from) return
-            parts += Part(
-                start = base + from,
-                text = raw.substring(from, to),
-                voiceId = voiceId,
-                sound = pending.joinToString(SOUND_SEPARATOR).also { pending.clear() },
-                label = label,
-            )
+            if (blockStart < 0) blockStart = from
+            text.append(raw, from, to)
         }
-        var lastEnd = 0
+        /**
+         * 收一块。
+         *
+         * 音效命中的那几个月挂在这一块上，**不另起一块**：多一个朗读单元就是多一次
+         * 向 TTS 引擎要音频，而合成一条要三五秒、整条链路是串行的，多要一次就当场断流——
+         * 用户听到的「读到匹配处停顿一段时间」就是这个。所以音效只把那几个字从文字里抠掉，
+         * 音频按它在单元里的千分位延迟放，近似对准原来那个字的位置。
+         */
+        fun close() {
+            if (blockStart < 0 || text.isEmpty()) return
+            val spoken = text.toString()
+            val length = spoken.length.coerceAtLeast(1)
+            parts += Part(
+                start = base + blockStart,
+                text = spoken,
+                voiceId = null,
+                sound = pending.joinToString(SOUND_SEPARATOR) { (path, at) ->
+                    val permille = ((at - blockStart) * 1000 / length).coerceIn(0, 1000)
+                    if (permille > 0) "$path$OFFSET_SEPARATOR$permille" else path
+                },
+            )
+            pending.clear()
+            text.setLength(0)
+            blockStart = -1
+        }
+        var cursor = 0
         hits.forEach { hit ->
-            if (hit.start < lastEnd) return@forEach
-            lastEnd = hit.end
-            flush(cursor, hit.start, null)
+            if (hit.start < cursor) return@forEach
+            append(cursor, hit.start)
             cursor = hit.end
             val voiceId = hit.effect.voiceId
             if (voiceId != null) {
-                // 命中的文字照念，只是换成那个音色
-                flush(hit.start, hit.end, voiceId, hit.effect.label)
+                // 换音色必须单独成一块：一块只有一个音色
+                close()
+                parts += Part(base + hit.start, raw.substring(hit.start, hit.end), voiceId, "", hit.effect.label)
             } else {
-                hit.effect.soundPath?.let(pending::add)
+                hit.effect.soundPath?.let { pending += it to hit.start }
             }
         }
-        flush(cursor, raw.length, null)
+        append(cursor, raw.length)
+        close()
         if (parts.isEmpty()) {
-            return SplitResult(emptyList(), pending.joinToString(SOUND_SEPARATOR))
+            return SplitResult(emptyList(), pending.joinToString(SOUND_SEPARATOR) { it.first })
         }
         if (pending.isNotEmpty()) {
             // 音频落在整段末尾：没有「后面那块」可挂，就挂到前面最后一块上（早半拍响，总比不响好）
             val last = parts.lastIndex
             parts[last] = parts[last].copy(
-                sound = mergeSound(parts[last].sound, pending.joinToString(SOUND_SEPARATOR))
+                sound = mergeSound(parts[last].sound, pending.joinToString(SOUND_SEPARATOR) { it.first })
             )
         }
         return SplitResult(parts, "")
@@ -89,6 +111,9 @@ object RegexCastSplitter {
 
     /** 多条音频在一个朗读单元上一起响。 */
     const val SOUND_SEPARATOR = "\n"
+
+    /** 一条音频的「延迟千分位」分隔符：`路径#350` = 这一单元播到 35% 时响。 */
+    const val OFFSET_SEPARATOR = "#"
 
     fun mergeSound(left: String, right: String): String =
         (left.split(SOUND_SEPARATOR) + right.split(SOUND_SEPARATOR))

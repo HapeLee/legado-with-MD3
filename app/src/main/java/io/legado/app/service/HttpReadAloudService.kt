@@ -168,31 +168,20 @@ class HttpReadAloudService : BaseReadAloudService(),
         VoiceEffectAudio.parameters(cueEffect(index), globalPlaybackSpeed)
 
     /**
-     * 立刻把某一句的播放参数设到播放器上。
+     * 换句时把这一句的音高/语速设到播放器上。
      *
-     * 每条音频建项时已经带上自己那一份（见 [playbackParametersFor] 的调用点），Media3 会在
-     * 条目边界精确切换，所以这里只用于兜底与「全局语速当场要变」：条目级参数在换句那一刻才生效，
-     * 播放器级设置是马上生效。
+     * 边界串音这件事**没有干净的解**，三条路都试过（详见 fix/README 第七十三、七十四轮）：
+     * - 提前 900ms 投递下一句的参数（第五十轮）：本质是猜管线缓冲深度，猜多了啃上一句尾巴、
+     *   猜少了上一句的参数压住这一句开头——用户听到的「机器人串到邻句」就是这两头；
+     * - 把参数绑到每条音频上：本仓库锁的 media3 1.11.0 没有这个 API
+     *   （`MediaItem.LocalConfiguration` 不带 `playbackParameters`，也没有 `ExoPlayer.replaceItem`）；
+     * - 换句时 `seekTo` 冲一次管线：边界是准了，但句头会播两遍，比串音更难听（已撤）。
+     * 现在维持「提前量」这一种。要真正根除只能动音频本身：要么合成时就把音高烘进文件
+     * （云端 provider 的请求里已有 pitch 字段，本地 TTS Server 只收文本+语速，做不到），
+     * 要么在换句处垫一小段静音让管线自己排空。
      */
     private fun applyCuePitch(index: Int) {
         exoPlayer.playbackParameters = playbackParametersFor(index)
-    }
-
-    /**
-     * 换句时如果这一句的变声预设和上一句不同，就把音频管线冲一次。
-     *
-     * `playbackParameters` 是在解码链**当前位置**生效的，而解码比耳朵快半秒到一秒：
-     * 不冲的话新参数会啃到上一句的尾巴（提前设）或者上一句的参数压住这一句的开头（推迟设）。
-     * 上一轮用「提前 900ms 投递」猜边界，猜多猜少都会串到邻句去——听感就是用户说的
-     * 「机器人要么影响上一句末尾，要么影响下一句开头」。
-     *
-     * seek 会丢掉管线里那些还没出声的缓冲，让新参数正好从这一句的第一个样本开始生效。
-     * 代价是换句点可能有一次极短的重新起播，所以只在预设**真的变了**的那一句上做。
-     */
-    private fun flushPipelineIfPresetChanged(previous: String?) {
-        val next = cueEffect(nowSpeak)?.name
-        if (next == previous) return
-        runCatching { exoPlayer.seekTo(exoPlayer.currentMediaItemIndex, 0L) }
     }
 
     /** 只切会话级效果（混响 / 带通）：这一层挂在音频会话上，播出那一刻才听得到。 */
@@ -220,20 +209,29 @@ class HttpReadAloudService : BaseReadAloudService(),
     /** 上一次记日志时生效的预设名。 */
     private var effectLogName: String? = null
 
-    /** 排期消息的载荷：句下标 + 当时那一次队列的代次。 */
-    private class CuePitchTick(val index: Int, val generation: Int)
+    /**
+     * 排期消息的载荷：句下标 + 队列代次 + 这一条只管哪一层。
+     *
+     * 两层各一条消息，因为要的提前量不一样：混响/带通得等效果器起来（900ms 才勉强），
+     * 音高/语速只要盖过音频管线里那点还没出声的缓冲。拿 900ms 去设音高，
+     * 上一句的尾巴就被下一句的音色盖掉了——就是用户说的「上一句末尾出现短暂变声」。
+     */
+    private class CuePitchTick(val index: Int, val generation: Int, val pitch: Boolean)
 
-    /** 排下去还没投递的那条音高消息；换队列时要收回，不然旧句的参数会扣在新句上。 */
+    /** 排下去还没投递的两条消息；换队列时要收回，不然旧句的参数会扣在新句上。 */
     private var pendingPitchMessage: PlayerMessage? = null
+    private var pendingSessionMessage: PlayerMessage? = null
 
     /** 队列代次：播放器一重置就 +1，之前的排期全部作废。 */
     private var pitchGeneration = 0
 
-    /** 播放器重置（重新开播、停止、销毁）：作废所有还没投递的音高排期。 */
+    /** 播放器重置（重新开播、停止、销毁）：作废所有还没投递的排期。 */
     private fun resetPitchSchedule() {
         pitchGeneration++
         pendingPitchMessage?.cancel()
         pendingPitchMessage = null
+        pendingSessionMessage?.cancel()
+        pendingSessionMessage = null
     }
 
     /**
@@ -251,23 +249,36 @@ class HttpReadAloudService : BaseReadAloudService(),
         if (next > playbackQueue.cues.lastIndex) return
         val durationMs = exoPlayer.duration
         if (durationMs == C.TIME_UNSET || durationMs <= 0) return
-        val lead = minOf(EFFECT_PITCH_LEAD_MS, durationMs / 3)
+        val sessionLead = minOf(EFFECT_PITCH_LEAD_MS, durationMs / 3)
+        val pitchLead = minOf(EFFECT_PITCH_SWITCH_LEAD_MS, durationMs / 3)
         pendingPitchMessage?.cancel()
+        pendingSessionMessage?.cancel()
         runCatching {
-            pendingPitchMessage = exoPlayer
+            // 会话层先换（离边界远），音高层后换（离边界近），两条都由媒体时钟投递
+            pendingSessionMessage = exoPlayer
                 .createMessage { _, payload ->
                     val tick = payload as? CuePitchTick
-                    if (tick != null && tick.generation == pitchGeneration) {
-                        // 音高/语速已经绑在条目上、由 Media3 在边界精确切换，这里只剩会话层。
-                        // 会话层同理：等到换句回调才开，混响要一秒才起来；等到下一次换句才关，
-                        // 上一句的余音又会压住这一句开头。提前在这次播出前的静音里换好。
+                    if (tick != null && !tick.pitch && tick.generation == pitchGeneration) {
                         applyCueSessionEffect(tick.index)
                     }
                 }
                 .setType(PITCH_MESSAGE_TYPE)
-                .setPayload(CuePitchTick(next, pitchGeneration))
+                .setPayload(CuePitchTick(next, pitchGeneration, pitch = false))
                 .setLooper(Looper.getMainLooper())
-                .setPosition(exoPlayer.currentMediaItemIndex, durationMs - lead)
+                .setPosition(exoPlayer.currentMediaItemIndex, durationMs - sessionLead)
+                .setDeleteAfterDelivery(true)
+                .send()
+            pendingPitchMessage = exoPlayer
+                .createMessage { _, payload ->
+                    val tick = payload as? CuePitchTick
+                    if (tick != null && tick.pitch && tick.generation == pitchGeneration) {
+                        applyCuePitch(tick.index)
+                    }
+                }
+                .setType(PITCH_MESSAGE_TYPE)
+                .setPayload(CuePitchTick(next, pitchGeneration, pitch = true))
+                .setLooper(Looper.getMainLooper())
+                .setPosition(exoPlayer.currentMediaItemIndex, durationMs - pitchLead)
                 .setDeleteAfterDelivery(true)
                 .send()
         }.onFailure {
@@ -1703,13 +1714,10 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        playCueSounds(nowSpeak)
-        // 先记下上一句生效的预设，换完参数才知道这一句到底变没变
-        val previousPreset = effectLogName
+        playCueSounds(nowSpeak, exoPlayer.duration.coerceAtLeast(0L))
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
             // 首条不走 AUTO 分支，也要在开播时套上角色的变声
             applyCueVoiceEffect(nowSpeak)
-            flushPipelineIfPresetChanged(previousPreset)
             return
         }
         val auto = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
@@ -1718,7 +1726,6 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
         updateNextPos(naturalCompletion = auto)
         applyCueVoiceEffect(nowSpeak)
-        flushPipelineIfPresetChanged(previousPreset)
         upPlayPos()
         upMediaMetadata(showContent = true)
     }
@@ -1780,8 +1787,18 @@ internal fun httpReadAloudParagraphOffset(
 /** 源级语速默认值, 对应 1 倍速, 与全局语速共用 0..80 的刻度 */
 private const val DEFAULT_TTS_SPEED = 5
 
-/** 音高/语速提前换句的量：抵掉音频管线里那一段「已经读进来、还没出声」的缓冲。 */
+/**
+ * 会话级效果（混响/带通）提前换句的量：效果器起来要时间，
+ * 而且它的余音会拖到下一句，所以宁可提前一点。
+ */
 private const val EFFECT_PITCH_LEAD_MS = 900L
+
+/**
+ * 音高/语速提前换句的量。这一层只是 Sonic 的变调，不需要「预热」，
+ * 提前 900ms 会把上一句的尾巴一起变掉，所以单独给一个很小的值，只抵音频管线的缓冲。
+ * 换角色时如果还听得出串，就调这个数（大了串到上一句，小了串到下一句）。
+ */
+private const val EFFECT_PITCH_SWITCH_LEAD_MS = 220L
 
 /** 只是转发给自家 Target 的标记，播放器不解释它。 */
 private const val PITCH_MESSAGE_TYPE = 0x4C470001

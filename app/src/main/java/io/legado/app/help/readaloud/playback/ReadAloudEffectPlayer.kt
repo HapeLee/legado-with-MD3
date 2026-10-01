@@ -26,13 +26,15 @@ class ReadAloudEffectPlayer(private val context: Context) {
     private val active = ArrayList<MediaPlayer>()
     private var released = false
 
-    /** [paths] 里一条路径响一次；文件读不出来（被删/格式不支持）就静默跳过。 */
-    fun play(paths: List<String>) {
-        if (released || paths.isEmpty()) return
-        handler.post { paths.forEach { start(it) } }
+    /** 一条音频响一次，[delayMs] 后响；文件读不出来（被删/格式不支持）就静默跳过。 */
+    fun play(path: String, delayMs: Long = 0L) {
+        if (released || path.isBlank()) return
+        if (delayMs > 0L) {
+            handler.postDelayed({ start(path) }, delayMs)
+        } else {
+            handler.post { start(path) }
+        }
     }
-
-    fun play(path: String) = play(listOf(path))
 
     private fun start(path: String) {
         if (released || path.isBlank()) return

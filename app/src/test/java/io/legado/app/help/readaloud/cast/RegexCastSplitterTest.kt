@@ -24,6 +24,16 @@ class RegexCastSplitterTest {
         RegexCastSplitter.split(base, raw, CastMarkers.blank(raw), effects)
 
     @Test
+    fun `a voice swap still splits into its own unit`() {
+        // 换音色必须单独成块（一块只有一个音色），音效不用
+        val both = split("前面爆炸雷声来了", sound("/boom", "爆炸") + voice("v1", "雷声"))
+        assertEquals(listOf("前面", "雷声", "来了"), both.parts.map { it.text })
+        assertEquals(listOf(null, "v1", null), both.parts.map { it.voiceId })
+        // 「爆炸」正好在剩下的「前面」之后，千分位 1000 = 这一块念完就响
+        assertEquals("/boom#1000", both.parts[0].sound)
+    }
+
+    @Test
     fun `no effects leaves the unit untouched`() {
         val result = split("前面爆炸后面", emptyList())
         assertEquals(1, result.parts.size)
@@ -41,21 +51,23 @@ class RegexCastSplitterTest {
     }
 
     @Test
-    fun `sound match drops the words and queues the audio on the next unit`() {
+    fun `sound match eats the words without creating another unit`() {
         val result = split("前面爆炸后面", sound("/sdcard/boom.mp3", "爆炸"))
         // 「爆炸」整块消失，不留空格
-        assertEquals(listOf("前面", "后面"), result.parts.map { it.text })
-        // 坐标跳过被吃掉的那两个字：区间只留缝，不重叠
-        assertEquals(listOf(0, 4), result.parts.map { it.start })
-        assertEquals("/sdcard/boom.mp3", result.parts[1].sound)
-        assertEquals("", result.parts[0].sound)
+        assertEquals(listOf("前面后面"), result.parts.map { it.text })
+        // 关键：**不另起一个朗读单元**。多一个单元就是多向引擎要一次音频，
+        // 合成一条要三五秒、链路串行，当场就断流（用户听到的「匹配处停顿」）
+        assertEquals(1, result.parts.size)
+        assertEquals(0, result.parts[0].start)
+        // 命中的字在单元里排第 3~4 个字 / 共 4 个字 → 千分位 500，播到一半时响
+        assertEquals("/sdcard/boom.mp3#500", result.parts[0].sound)
     }
 
     @Test
-    fun `sound at the end of the unit rides on the previous unit`() {
+    fun `sound at the end of the unit rides on that unit at its tail`() {
         val result = split("前面爆炸", sound("/boom", "爆炸"))
         assertEquals(listOf("前面"), result.parts.map { it.text })
-        assertEquals("/boom", result.parts[0].sound)
+        assertEquals("/boom#1000", result.parts[0].sound)
     }
 
     @Test
