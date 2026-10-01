@@ -22,7 +22,6 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -388,7 +387,6 @@ fun ReadConfigScreen(
                     }
                 )
 
-                if (CanvasRecorderFactory.isSupport) {
                     SwitchSettingItem(
                         title = stringResource(R.string.enable_optimize_render),
                         checked = settings.optimizeRender,
@@ -396,7 +394,6 @@ fun ReadConfigScreen(
                             onIntent(ReadConfigIntent.OptimizeRenderChanged(it))
                         }
                     )
-                }
 
                 ClickableSettingItem(
                     title = stringResource(R.string.click_regional_config),

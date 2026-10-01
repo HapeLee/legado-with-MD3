@@ -49,6 +49,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -59,6 +60,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -144,6 +146,7 @@ import io.legado.app.feature.reader.core.transition.ReaderScrollPolicy
 import io.legado.app.feature.reader.core.transition.ReaderScrollResult
 import io.legado.app.feature.reader.core.transition.ReaderTransitionDecision
 import io.legado.app.feature.reader.core.transition.ReaderTransitionMode
+import io.legado.app.feature.reader.core.transition.ReaderTransitionTransforms
 import io.legado.app.feature.reader.core.transition.ReaderTurnDirection
 import io.legado.app.feature.reader.core.transition.ReaderViewportLayerPolicy
 import io.legado.app.feature.reader.core.transition.transforms
@@ -255,6 +258,19 @@ fun ReaderCanvasSurface(
     val scrollDecay = rememberSplineBasedDecay<Float>()
     var displayOffset by remember { mutableFloatStateOf(0f) }
     var transition by remember { mutableStateOf(ReaderPageTransition()) }
+    // 换页分支的判定只依赖低频状态：`transition` 每帧都会因 `offsetPx` 变化而失效，
+    // 在组合期读它会让整个画布每帧重组。`turnDirection` 只在一次换页开始/结束（或模式切换）
+    // 时改变；位移、透明度、折页几何一律在绘制期/layer 期读取。
+    var turnDirection by remember { mutableStateOf<ReaderTurnDirection?>(null) }
+
+    /**
+     * [transition] 的唯一写入口，顺带维护低频的 [turnDirection]。
+     * 不要把 `transition` 读到组合期，否则拖拽的每一帧都会重组整个画布。
+     */
+    fun applyTransition(next: ReaderPageTransition) {
+        transition = next
+        turnDirection = next.direction?.takeIf { next.dragging }
+    }
     var pageMotionJob by remember { mutableStateOf<Job?>(null) }
     // The first curl frame starts at a corner. Animate it into the safe fold position so
     // the entering page is revealed instead of popping in when horizontal capture begins.
@@ -309,7 +325,7 @@ fun ReaderCanvasSurface(
             pendingTurn = null
             pendingTurnOrigin = null
             displayOffset = 0f
-            transition = ReaderPageTransition()
+            applyTransition(ReaderPageTransition())
             bookmarkReturnJob?.cancel()
             curlRevealJob?.cancel()
             bookmarkOffset = 0f
@@ -327,7 +343,16 @@ fun ReaderCanvasSurface(
     }
     var curlTouchY by remember { mutableFloatStateOf(1f) }
     var curlTouchX by remember { mutableFloatStateOf(0f) }
-    var curlCornerY by remember { mutableStateOf(0f) }
+    var curlCornerY by remember { mutableFloatStateOf(0f) }
+    // 快照层与位图池都在会话级持有、跨回合复用，对照旧 View `CanvasRecorderFactory` 的对象池与
+    // `curBitmap/prevBitmap/nextBitmap`：不能再像以前那样每个回合 `rememberGraphicsLayer()` 新建。
+    val pageSnapshots = remember { PageSnapshotBitmapPool() }
+    val baseSnapshotLayer = rememberGraphicsLayer()
+    val revealSnapshotLayer = rememberGraphicsLayer()
+    val autoPageSnapshotLayer = rememberGraphicsLayer()
+    DisposableEffect(Unit) {
+        onDispose { pageSnapshots.clear() }
+    }
     // 滚动偏移只在 graphicsLayer 块（layer 属性期）读取：拖拽/fling 帧只更新层变换、
     // 零重组零重绘（对照 shutiao 的 contentOffset 语义）。
     val scrollOffsetState = remember { mutableFloatStateOf(0f) }
@@ -384,7 +409,8 @@ fun ReaderCanvasSurface(
             .distinctBy { element -> element.source to element.bounds }
             .forEach { element -> launch { prefetchSemaphore.withPermit { loadImage(element) } } }
     }
-    val transforms = transition.copy(offsetPx = displayOffset).transforms(transitionMode)
+    // `transforms` 只在非滚动/非折页分支使用，且读了每帧变化的 `transition`/`displayOffset`；
+    // 在这里（组合期）求值会让滚动惯性、封面滑动、仿真折页的每一帧都重组整个画布。
     fun pageViewportLayout(window: ReaderPageWindow = currentPageWindow()): ReaderPageViewportLayout =
         if (transitionMode == ReaderTransitionMode.SCROLL) {
             ReaderPageViewportLayout.scroll(window, scrollOffset)
@@ -472,7 +498,7 @@ fun ReaderCanvasSurface(
         if (transitionMode == ReaderTransitionMode.NONE) {
             completePendingTurn()
             displayOffset = 0f
-            transition = ReaderPageTransition()
+            applyTransition(ReaderPageTransition())
             return
         }
         val targetCurlX = transition.direction?.let {
@@ -497,7 +523,7 @@ fun ReaderCanvasSurface(
             displayOffset = decision.targetOffsetPx
             completePendingTurn()
             displayOffset = 0f
-            transition = ReaderPageTransition()
+            applyTransition(ReaderPageTransition())
             return
         }
         val startOffset = displayOffset
@@ -529,7 +555,7 @@ fun ReaderCanvasSurface(
             }
             completePendingTurn()
             displayOffset = 0f
-            transition = ReaderPageTransition()
+            applyTransition(ReaderPageTransition())
         }
     }
     fun tapPageTurn(direction: ReaderTurnDirection) {
@@ -553,7 +579,7 @@ fun ReaderCanvasSurface(
             )
         }
         val target = if (direction == ReaderTurnDirection.PREVIOUS) width else -width
-        transition = ReaderPageTransition(direction, 0f, width, dragging = true)
+        applyTransition(ReaderPageTransition(direction, 0f, width, dragging = true))
         displayOffset = 0f
         settlePageTurn(ReaderTransitionDecision(target, commit = true))
     }
@@ -712,7 +738,7 @@ fun ReaderCanvasSurface(
             }
             clearSelectionForPageChange(ReaderPageChangeOrigin.PROGRAMMATIC)
             displayOffset = 0f
-            transition = ReaderPageTransition()
+            applyTransition(ReaderPageTransition())
             dispatchTapAction(
                 if (direction == ReaderTurnDirection.PREVIOUS) {
                     ReaderTapAction.PREVIOUS_PAGE
@@ -762,7 +788,7 @@ fun ReaderCanvasSurface(
             pendingTurn = null
             pendingTurnOrigin = null
             displayOffset = 0f
-            transition = ReaderPageTransition()
+            applyTransition(ReaderPageTransition())
         }
     }
     LaunchedEffect(current.layoutRevision) {
@@ -924,7 +950,7 @@ fun ReaderCanvasSurface(
                 // 手势必须改用返回的窗口命中，否则长按会选中已不在屏幕上的旧页。
                 val turnedWindow = completePendingTurn()
                 displayOffset = 0f
-                transition = ReaderPageTransition()
+                applyTransition(ReaderPageTransition())
                 bookmarkReturnJob?.cancel()
                 bookmarkOffset = 0f
                 bookmarkArmed = false
@@ -1231,17 +1257,19 @@ fun ReaderCanvasSurface(
                             }
                         }
                         if (horizontalTurn && transitionMode != ReaderTransitionMode.SCROLL) {
-                            transition = horizontalDrag?.transition(
-                                total.x, size.width.toFloat(),
-                                ReaderPageNavigator.canTurnPrevious(
-                                    latestPages,
-                                    latestHasPreviousChapter(),
-                                ),
-                                ReaderPageNavigator.canTurnNext(
-                                    latestPages,
-                                    latestHasNextChapter(),
-                                ),
-                            ) ?: ReaderPageTransition(pageExtentPx = size.width.toFloat())
+                            applyTransition(
+                                horizontalDrag?.transition(
+                                    total.x, size.width.toFloat(),
+                                    ReaderPageNavigator.canTurnPrevious(
+                                        latestPages,
+                                        latestHasPreviousChapter(),
+                                    ),
+                                    ReaderPageNavigator.canTurnNext(
+                                        latestPages,
+                                        latestHasNextChapter(),
+                                    ),
+                                ) ?: ReaderPageTransition(pageExtentPx = size.width.toFloat())
+                            )
                             transition.direction?.takeIf { transitionMode == ReaderTransitionMode.SIMULATION }
                                 ?.let {
                                     curlTouchX = ReaderCurlTouchPolicy.dragX(
@@ -1304,7 +1332,7 @@ fun ReaderCanvasSurface(
                             settlePageTurn(ReaderTransitionDecision(0f, commit = false))
                         } else {
                             displayOffset = 0f
-                            transition = ReaderPageTransition()
+                            applyTransition(ReaderPageTransition())
                         }
                     }
                 }
@@ -1472,39 +1500,60 @@ fun ReaderCanvasSurface(
                     loadImage = loadImage,
                 )
             }
-        } else if (transitionMode == ReaderTransitionMode.SIMULATION && transition.dragging) {
+        } else if (transitionMode == ReaderTransitionMode.SIMULATION && turnDirection != null) {
             SimulationPageStack(
-                pages,
-                transition.direction!!,
-                displayOffset,
-                ReaderCurlTouchPolicy.revealX(
-                    transition.direction!!,
-                    curlTouchX,
-                    current.widthPx.toFloat(),
-                    curlRevealProgress
-                ),
-                curlTouchY,
-                curlCornerY,
-                backgroundColor,
-                pageBackgroundImage,
-                backgroundImageAlpha,
-                selectionColor,
-                textAccentColor,
-                textSelection,
-                selectionPreviewStyle,
-                cachedImage,
-                loadImage
+                pages = pages,
+                direction = turnDirection!!,
+                pageExtentPx = current.widthPx.toFloat(),
+                pageOffsetPx = { displayOffset },
+                touchX = { curlTouchX },
+                touchY = { curlTouchY },
+                cornerY = { curlCornerY },
+                revealProgress = { curlRevealProgress },
+                snapshots = pageSnapshots,
+                baseLayer = baseSnapshotLayer,
+                revealLayer = revealSnapshotLayer,
+                background = backgroundColor,
+                backgroundImage = pageBackgroundImage,
+                backgroundImageAlpha = backgroundImageAlpha,
+                selection = selectionColor,
+                readAloud = textAccentColor,
+                activeSelection = textSelection,
+                selectionPreviewStyle = selectionPreviewStyle,
+                cachedImage = cachedImage,
+                loadImage = loadImage
             )
         } else {
+            // Cover/Slide/Fade/无动画：本回合画哪几页只由低频的 [turnDirection] 决定，
+            // 位移与透明度在 layer 块（layer 属性期）现读，因此拖拽与收尾帧**零重组**。
+            // 页内容由 `graphicsLayer` 自带的 RenderNode 缓存，只有页内容变化才会重录——
+            // 等价于旧 View 的 Cover/Slide/Fade delegate：手势开始 `setBitmap()` 截一次，
+            // 之后每帧只 `withTranslation` / `withClip` / `setAlpha` 画 recorder。
+            val turnPreview = ReaderPageTransition(
+                direction = turnDirection,
+                offsetPx = 0f,
+                pageExtentPx = 1f,
+                dragging = turnDirection != null,
+            ).transforms(transitionMode)
             @Composable
-            fun PageLayer(page: ReaderPage, transform: ReaderPageTransform, offsetY: Float = 0f) {
+            fun PageLayer(page: ReaderPage, role: PagedLayerRole, offsetY: () -> Float) {
                 ReaderPageCanvas(
                     page, backgroundColor, pageBackgroundImage, backgroundImageAlpha, selectionColor, textAccentColor,
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
+                            val transform = transition
+                                .copy(offsetPx = displayOffset)
+                                .transforms(transitionMode)
+                                .forRole(role)
+                            if (transform == null) {
+                                // 与本回合方向不一致（理论上被上面的预览挡住）：显式隐藏，
+                                // 避免残留上一次的位移把邻页留在屏幕上。
+                                alpha = 0f
+                                return@graphicsLayer
+                            }
                             translationX = transform.translationX
-                            translationY = offsetY + transform.translationY
+                            translationY = offsetY() + transform.translationY
                             alpha = transform.alpha
                         },
                     textSelection,
@@ -1513,19 +1562,28 @@ fun ReaderCanvasSurface(
                     loadImage,
                 )
             }
-            if (transforms.currentOnTop) {
-                transforms.next?.let { t -> pages.next?.let { PageLayer(it, t) } }
+            // 只借 `transforms()` 判断"本回合哪些页参与绘制"与绘制顺序；位移/透明度不用它的值，
+            // 因为那些值必须留到 layer 期现读。
+            val currentOnTop = turnPreview.currentOnTop
+            val drawsNext = turnPreview.next != null
+            val drawsPrevious = turnPreview.previous != null
+            if (currentOnTop && drawsNext) {
+                pages.next?.let { page -> PageLayer(page, PagedLayerRole.NEXT) { 0f } }
             }
-            PageLayer(current, transforms.current, bookmarkOffset)
-            transforms.previous?.let { t -> pages.previous?.let { PageLayer(it, t) } }
-            if (!transforms.currentOnTop) {
-                transforms.next?.let { t -> pages.next?.let { PageLayer(it, t) } }
+            PageLayer(current, PagedLayerRole.CURRENT) { bookmarkOffset }
+            if (drawsPrevious) {
+                pages.previous?.let { page -> PageLayer(page, PagedLayerRole.PREVIOUS) { 0f } }
+            }
+            if (!currentOnTop && drawsNext) {
+                pages.next?.let { page -> PageLayer(page, PagedLayerRole.NEXT) { 0f } }
             }
         }
-        if (transitionMode == ReaderTransitionMode.COVER && transition.direction != null && displayOffset != 0f) {
+        if (transitionMode == ReaderTransitionMode.COVER && turnDirection != null) {
             Canvas(Modifier.fillMaxSize()) {
                 val direction = transition.direction ?: return@Canvas
-                val edge = ReaderCoverShadowPolicy.edgePx(direction, displayOffset, size.width)
+                val offsetPx = displayOffset
+                if (offsetPx == 0f) return@Canvas
+                val edge = ReaderCoverShadowPolicy.edgePx(direction, offsetPx, size.width)
                 val shadowWidth = ReaderCoverShadowPolicy.widthDp * density
                 val dark = Color(ReaderCoverShadowPolicy.colorArgb)
                 drawRect(
@@ -1539,13 +1597,13 @@ fun ReaderCanvasSurface(
                 )
             }
         }
-        if (transitionMode != ReaderTransitionMode.SCROLL && autoPageActive && autoRevealPx > 0f) {
+        if (transitionMode != ReaderTransitionMode.SCROLL && autoPageActive) {
+            // 自动翻页的"下一页揭示"，对照旧 `AutoPager.onDraw`：
+            // `canvasRecorder.recordIfNeeded(readView.nextPage)` 只录一次，之后每帧只有
+            // `withClip` + `draw` + 1px 指示线。这里把下一页录进快照层，`autoRevealPx`
+            // 只在绘制期读，因此整段自动阅读期间零重组、零重录（页码变化时才重录一次）。
             pages.next?.let { page ->
-                Box(Modifier
-                    .fillMaxSize()
-                    .drawWithContent {
-                        clipRect(bottom = autoRevealPx.coerceAtMost(size.height)) { this@drawWithContent.drawContent() }
-                    }) {
+                PageSnapshotLayer(autoPageSnapshotLayer) {
                     ReaderPageCanvas(
                         page,
                         backgroundColor,
@@ -1560,16 +1618,23 @@ fun ReaderCanvasSurface(
                         loadImage
                     )
                 }
-            }
-            Canvas(Modifier.fillMaxSize()) {
-                drawRect(
-                    color = autoPageIndicatorColor,
-                    topLeft = Offset(
-                        0f,
-                        ReaderAutoPagePolicy.indicatorTopPx(autoRevealPx, size.height),
-                    ),
-                    size = Size(size.width, 1f),
-                )
+                Canvas(Modifier.fillMaxSize()) {
+                    val reveal = autoRevealPx
+                    if (reveal <= 0f) return@Canvas
+                    clipRect(bottom = reveal.coerceAtMost(size.height)) {
+                        drawLayer(
+                            autoPageSnapshotLayer
+                        )
+                    }
+                    drawRect(
+                        color = autoPageIndicatorColor,
+                        topLeft = Offset(
+                            0f,
+                            ReaderAutoPagePolicy.indicatorTopPx(reveal, size.height),
+                        ),
+                        size = Size(size.width, 1f),
+                    )
+                }
             }
         }
         if (ReaderViewportLayerPolicy.usesFixedPageChrome(transitionMode)) {
@@ -1938,14 +2003,29 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     visibleDecorationCache.overlayRules.forEach { it.draw(native) }
 }
 
+/**
+ * 仿真折页：两页内容各录制一次，拖拽/收尾的每一帧只做裁剪与合成。
+ *
+ * 旧 View 的 `SimulationPageDelegate` 在 `setDirection()` 里对两页各做一次 `screenshot`，
+ * 之后每帧只 `drawBitmap` + `clipPath` + 复用成员的 GradientDrawable。迁移到 Compose 后
+ * 一度变成每帧重新录制整页（`GraphicsLayer.record` 直接放在 `drawWithContent` 里），
+ * 文字、行内图片、背景图每帧重画一遍并多次全屏合成，弱机必然掉帧。这里恢复旧语义。
+ *
+ * 折页触点与几何以 lambda 形式传入，只在绘制期读取：组合期读它们会让整个画布每帧重组。
+ */
 @Composable
 private fun SimulationPageStack(
     pages: ReaderPageWindow,
     direction: ReaderTurnDirection,
-    pageOffsetPx: Float,
-    touchX: Float,
-    touchY: Float,
-    cornerY: Float,
+    pageExtentPx: Float,
+    pageOffsetPx: () -> Float,
+    touchX: () -> Float,
+    touchY: () -> Float,
+    cornerY: () -> Float,
+    revealProgress: () -> Float,
+    snapshots: PageSnapshotBitmapPool,
+    baseLayer: GraphicsLayer,
+    revealLayer: GraphicsLayer,
     background: Color,
     backgroundImage: Drawable?,
     backgroundImageAlpha: Float,
@@ -1959,117 +2039,121 @@ private fun SimulationPageStack(
     val basePage = if (direction == ReaderTurnDirection.NEXT) pages.current else pages.previous
     val revealPage = if (direction == ReaderTurnDirection.NEXT) pages.next else pages.current
     if (basePage == null || revealPage == null) return
+    val renderPaths = remember { ReaderCurlRenderPaths() }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val width = with(density) { maxWidth.toPx() }
         val height = with(density) { maxHeight.toPx() }
-        val frame = remember(width, height, touchX, touchY, cornerY) {
-            PageCurlGeometry.calculate(
-                width,
-                height,
-                touchX,
-                touchY.coerceIn(.1f, height - .1f),
-                lockedCorner = CurlPoint(width, cornerY),
+        val widthPx = width.roundToInt().coerceAtLeast(1)
+        val heightPx = height.roundToInt().coerceAtLeast(1)
+        val baseKey = remember(
+            basePage, background, backgroundImage, backgroundImageAlpha,
+            selection, readAloud, activeSelection, selectionPreviewStyle, widthPx, heightPx,
+        ) {
+            pageSnapshotKey(
+                basePage, background, backgroundImage, backgroundImageAlpha,
+                selection, readAloud, activeSelection, selectionPreviewStyle, widthPx, heightPx,
             )
         }
-        if (frame == null) {
-            // A degenerate Bezier frame used to draw only the base page, which made the
-            // entering page disappear for an entire drag frame. Keep the destination visible
-            // with a cheap horizontal fallback until the next valid curl frame arrives.
-            ReaderPageCanvas(
-                revealPage,
-                background,
-                backgroundImage,
-                backgroundImageAlpha,
-                selection,
-                readAloud,
-                Modifier.fillMaxSize(),
-                activeSelection,
-                selectionPreviewStyle,
-                cachedImage,
-                loadImage
+        val revealKey = remember(
+            revealPage, background, backgroundImage, backgroundImageAlpha,
+            selection, readAloud, activeSelection, selectionPreviewStyle, widthPx, heightPx,
+        ) {
+            pageSnapshotKey(
+                revealPage, background, backgroundImage, backgroundImageAlpha,
+                selection, readAloud, activeSelection, selectionPreviewStyle, widthPx, heightPx,
             )
-            val baseTranslation = when (direction) {
-                ReaderTurnDirection.NEXT -> pageOffsetPx
-                ReaderTurnDirection.PREVIOUS -> pageOffsetPx - width
+        }
+        // 命中池子就用位图，连快照层都不用挂（该回合零页面重录）；未命中先走图层路径，
+        // 随后补拍 —— 一帧拍一页，把旧 View `setBitmap()` 那种"手势开始连拍两页"的卡顿摊开。
+        var baseBitmap by remember(baseKey) { mutableStateOf(snapshots.get(baseKey)) }
+        var revealBitmap by remember(revealKey) { mutableStateOf(snapshots.get(revealKey)) }
+        val baseSettled = basePage.isSnapshotSettled(cachedImage)
+        val revealSettled = revealPage.isSnapshotSettled(cachedImage)
+        LaunchedEffect(baseKey, revealKey, baseSettled, revealSettled) {
+            withFrameNanos { }
+            if (baseBitmap == null) {
+                snapshots.capture(baseLayer, baseKey, baseSettled)?.let { baseBitmap = it }
             }
-            ReaderPageCanvas(
-                basePage,
-                background,
-                backgroundImage,
-                backgroundImageAlpha,
-                selection,
-                readAloud,
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { translationX = baseTranslation },
-                activeSelection,
-                selectionPreviewStyle,
-                cachedImage,
-                loadImage,
-            )
-            return@BoxWithConstraints
+            withFrameNanos { }
+            if (revealBitmap == null) {
+                snapshots.capture(revealLayer, revealKey, revealSettled)?.let { revealBitmap = it }
+            }
         }
-        val paths = remember(frame, width, height) { frame.renderPaths(width, height) }
-        val path0 = paths.front
-        val pathNext = paths.reveal
-        val pathBack = paths.back
-        val baseLayer = rememberGraphicsLayer()
-        Box(Modifier
-            .fillMaxSize()
-            .drawWithContent {
-                baseLayer.record { this@drawWithContent.drawContent() }
-                clipPath(path0, ClipOp.Difference) { drawLayer(baseLayer) }
-            }) {
-            ReaderPageCanvas(
-                basePage,
-                background,
-                backgroundImage,
-                backgroundImageAlpha,
-                selection,
-                readAloud,
-                Modifier.fillMaxSize(),
-                activeSelection,
-                selectionPreviewStyle,
-                cachedImage,
-                loadImage
-            )
+        if (baseBitmap == null) {
+            PageSnapshotLayer(baseLayer) {
+                ReaderPageCanvas(
+                    basePage,
+                    background,
+                    backgroundImage,
+                    backgroundImageAlpha,
+                    selection,
+                    readAloud,
+                    Modifier.fillMaxSize(),
+                    activeSelection,
+                    selectionPreviewStyle,
+                    cachedImage,
+                    loadImage
+                )
+            }
         }
-        Box(Modifier
-            .fillMaxSize()
-            .drawWithContent {
-                clipPath(path0) {
-                    clipPath(pathNext) {
-                        this@drawWithContent.drawContent()
-                        drawCurlBackShadow(frame)
-                    }
-                }
-            }) {
-            ReaderPageCanvas(
-                revealPage,
-                background,
-                backgroundImage,
-                backgroundImageAlpha,
-                selection,
-                readAloud,
-                Modifier.fillMaxSize(),
-                activeSelection,
-                selectionPreviewStyle,
-                cachedImage,
-                loadImage
-            )
+        if (revealBitmap == null) {
+            PageSnapshotLayer(revealLayer) {
+                ReaderPageCanvas(
+                    revealPage,
+                    background,
+                    backgroundImage,
+                    backgroundImageAlpha,
+                    selection,
+                    readAloud,
+                    Modifier.fillMaxSize(),
+                    activeSelection,
+                    selectionPreviewStyle,
+                    cachedImage,
+                    loadImage
+                )
+            }
         }
         Canvas(Modifier.fillMaxSize()) {
+            val frame = PageCurlGeometry.calculate(
+                width,
+                height,
+                ReaderCurlTouchPolicy.revealX(direction, touchX(), pageExtentPx, revealProgress()),
+                touchY().coerceIn(.1f, height - .1f),
+                lockedCorner = CurlPoint(width, cornerY()),
+            )
+            if (frame == null) {
+                // A degenerate Bezier frame used to draw only the base page, which made the
+                // entering page disappear for an entire drag frame. Keep the destination visible
+                // with a cheap horizontal fallback until the next valid curl frame arrives.
+                drawPageSnapshot(revealBitmap, revealLayer, widthPx, heightPx)
+                val baseTranslation = when (direction) {
+                    ReaderTurnDirection.NEXT -> pageOffsetPx()
+                    ReaderTurnDirection.PREVIOUS -> pageOffsetPx() - width
+                }
+                withTransform({ translate(baseTranslation, 0f) }) {
+                    drawPageSnapshot(baseBitmap, baseLayer, widthPx, heightPx)
+                }
+                return@Canvas
+            }
+            val paths = renderPaths.update(frame, width, height)
+            val path0 = paths.front
+            val pathNext = paths.reveal
+            val pathBack = paths.back
+            // 翻起页正面（挖掉折起的角）
+            clipPath(path0, ClipOp.Difference) {
+                drawPageSnapshot(baseBitmap, baseLayer, widthPx, heightPx)
+            }
+            // 折页下方露出的下一页
+            clipPath(path0) {
+                clipPath(pathNext) {
+                    drawPageSnapshot(revealBitmap, revealLayer, widthPx, heightPx)
+                    drawCurlBackShadow(frame)
+                }
+            }
+            // 翻起页背面（镜像的当前页）+ 折缝阴影
             clipPath(path0) { clipPath(pathBack) {
                 drawRect(background)
-                val matrix = Matrix().apply {
-                    values[Matrix.ScaleX] = frame.mirror.scaleX
-                    values[Matrix.SkewX] = frame.mirror.skewX
-                    values[Matrix.SkewY] = frame.mirror.skewY
-                    values[Matrix.ScaleY] = frame.mirror.scaleY
-                    values[Matrix.TranslateX] = frame.mirror.translateX
-                    values[Matrix.TranslateY] = frame.mirror.translateY
-                }
                 // Canvas.drawBitmap() in the View implementation naturally kept sampling
                 // within the screenshot's bounds. A transformed GraphicsLayer otherwise
                 // samples beyond its recorded page surface as opaque black on some devices,
@@ -2077,10 +2161,10 @@ private fun SimulationPageStack(
                 // coordinates first so uncovered back-page pixels retain the mean background
                 // color drawn above, while the complete background image remains mirrored.
                 withTransform({
-                    transform(matrix)
+                    transform(paths.mirror)
                     clipRect(0f, 0f, size.width, size.height)
                 }) {
-                    drawLayer(baseLayer)
+                    drawPageSnapshot(baseBitmap, baseLayer, widthPx, heightPx)
                 }
                 drawCurlFolderShadow(frame)
             } }
@@ -2089,75 +2173,318 @@ private fun SimulationPageStack(
     }
 }
 
+/**
+ * 一页位图快照的身份。任何会改变该页像素的输入都必须进来，否则会命中过期位图：
+ * 页 id/revision/layoutRevision（图片刷新会改 revision）、背景色/背景图及其透明度、
+ * 选区与朗读高亮色、活动选区、选区预览样式、视口尺寸。
+ */
+private data class PageSnapshotKey(
+    val pageId: ReaderPageId,
+    val revision: Long,
+    val layoutRevision: Long,
+    val backgroundArgb: Int,
+    val backgroundImageIdentity: Int,
+    val backgroundImageAlpha: Float,
+    val selectionArgb: Int,
+    val readAloudArgb: Int,
+    val activeSelection: ReaderSelection?,
+    val previewStyle: TextProcessStyle?,
+    val widthPx: Int,
+    val heightPx: Int,
+)
+
+private fun pageSnapshotKey(
+    page: ReaderPage,
+    background: Color,
+    backgroundImage: Drawable?,
+    backgroundImageAlpha: Float,
+    selection: Color,
+    readAloud: Color,
+    activeSelection: ReaderSelection?,
+    selectionPreviewStyle: TextProcessStyle?,
+    widthPx: Int,
+    heightPx: Int,
+): PageSnapshotKey = PageSnapshotKey(
+    pageId = page.id,
+    revision = page.revision,
+    layoutRevision = page.layoutRevision,
+    backgroundArgb = background.toArgb(),
+    backgroundImageIdentity = System.identityHashCode(backgroundImage),
+    backgroundImageAlpha = backgroundImageAlpha,
+    selectionArgb = selection.toArgb(),
+    readAloudArgb = readAloud.toArgb(),
+    activeSelection = activeSelection,
+    previewStyle = selectionPreviewStyle,
+    widthPx = widthPx,
+    heightPx = heightPx,
+)
+
+/**
+ * 会话级页面位图快照池，对照旧 View 的 `curBitmap / prevBitmap / nextBitmap`。
+ *
+ * 旧实现在 `setBitmap()` 里复用同一张 Bitmap 的内存；Compose 做不到——`GraphicsLayer.toImageBitmap()`
+ * 每次都新建 Bitmap，`GraphicsLayer.draw` 是 internal，`Canvas.drawRenderNode` 又只能作用于硬件画布——
+ * 所以这里退一步：按页身份缓存最近几页的位图。收益有两处：
+ * ① 命中时该回合**完全不用重录页面**（快照层都不用挂载），每帧只做 blit；
+ * ② 取消后再拖、或连续翻页时，只需补拍新进入窗口的那一页（原来每回合都要重算两页）。
+ */
+private class PageSnapshotBitmapPool {
+    private val entries = LinkedHashMap<PageSnapshotKey, ImageBitmap>(4, .75f, true)
+
+    fun get(key: PageSnapshotKey): ImageBitmap? = entries[key]
+
+    fun put(key: PageSnapshotKey, bitmap: ImageBitmap) {
+        if (bitmap.width <= 0 || bitmap.height <= 0) return
+        entries[key] = bitmap
+        while (entries.size > MAX_ENTRIES) {
+            val oldest = entries.entries.iterator()
+            if (!oldest.hasNext()) break
+            oldest.next()
+            oldest.remove()
+        }
+    }
+
+    /**
+     * 未命中且本页异步像素源都已就绪（[isSnapshotSettled]）时才栅格化进池子。
+     * 未就绪时返回 null，调用方继续用图层路径——否则会把"图片还没加载"的占位图固化进池子，
+     * 之后每次折页都拿它当快照。
+     */
+    suspend fun capture(
+        layer: GraphicsLayer,
+        key: PageSnapshotKey,
+        settled: Boolean
+    ): ImageBitmap? {
+        if (!settled) return null
+        entries[key]?.let { return it }
+        val bitmap = runCatching { layer.toImageBitmap() }.getOrNull() ?: return null
+        if (bitmap.width <= 0 || bitmap.height <= 0) return null
+        put(key, bitmap)
+        return bitmap
+    }
+
+    fun clear() = entries.clear()
+
+    private companion object {
+        /** 三张全屏 ARGB 位图 ≈ 旧 View 的 cur/prev/next 三张快照；再多就是白占内存。 */
+        const val MAX_ENTRIES = 3
+    }
+}
+
+/**
+ * 该页的异步像素源是否都已就绪：内联图、文字背景图、书签角标。未就绪时不拍位图快照，
+ * 否则会把"加载中"的占位内容固化进池子，之后每次折页都拿它当快照。
+ */
+private fun ReaderPage.isSnapshotSettled(
+    cachedImage: (ReaderElement.Image) -> Bitmap?,
+): Boolean {
+    if (elements.any { it is ReaderElement.Image && cachedImage(it) == null }) return false
+    if (textBackgroundRuns().any { ReaderTextBackgroundLoader.cached(it.image.source) == null }) {
+        return false
+    }
+    val badge = decoration.bookmarkBadge ?: return true
+    return ReaderBookmarkBadgeRenderer.cachedResult(badge) != null
+}
+
+/** 有位图就用位图（一次 blit），否则退回快照层（display list 重放）。 */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageSnapshot(
+    image: ImageBitmap?,
+    layer: GraphicsLayer,
+    widthPx: Int,
+    heightPx: Int,
+) {
+    if (image != null) {
+        drawImage(
+            image = image,
+            dstOffset = IntOffset.Zero,
+            dstSize = IntSize(widthPx, heightPx),
+        )
+    } else {
+        drawLayer(layer)
+    }
+}
+
+/**
+ * 把 [content] 录制进 [layer]，本身不向屏幕画任何东西；合成由上层画布的 `drawLayer` 负责。
+ *
+ * `graphicsLayer` 让本节点拥有独立的 RenderNode：兄弟节点（每帧都失效的折页合成画布）
+ * 重绘时不会重新执行这里的绘制块，因此 `record` 只在本页内容真正变化（换页、图片加载完成、
+ * 选区变化……）时发生——等价于旧 View 的 `setBitmap()` 每次手势只截一次图。
+ */
+@Composable
+private fun PageSnapshotLayer(
+    layer: GraphicsLayer,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            // 空块是刻意的：`graphicsLayer` 只要传入非空 block 就会为本节点申请独立
+            // RenderNode（OwnedLayer），`RenderNodeLayer.updateDisplayList` 仅在自身脏时
+            // 才执行下面的绘制块。删掉它，`record` 会退化成每帧重录整页。
+            .graphicsLayer { }
+            .drawWithContent {
+                layer.record { this@drawWithContent.drawContent() }
+            }
+    ) {
+        content()
+    }
+}
+
+/** 分页模式下参与合成的一页在 [ReaderTransitionTransforms] 里的角色。 */
+private enum class PagedLayerRole { CURRENT, PREVIOUS, NEXT }
+
+private fun ReaderTransitionTransforms.forRole(role: PagedLayerRole): ReaderPageTransform? =
+    when (role) {
+        PagedLayerRole.CURRENT -> current
+        PagedLayerRole.PREVIOUS -> previous
+        PagedLayerRole.NEXT -> next
+    }
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCurlFrontShadows(
     frame: PageCurlFrame,
     paths: ReaderCurlRenderPaths,
 ) {
     val curlPath = paths.front
     val reverse = frame.corner.x == 0f && frame.corner.y == size.height || frame.corner.x == size.width && frame.corner.y == 0f
-    clipPath(curlPath, ClipOp.Difference) { clipPath(paths.frontShadowHorizontal) {
-        val left = if (reverse) frame.control1.x else frame.control1.x - 25f
-        val right = if (reverse) frame.control1.x + 25f else frame.control1.x + 1f
-        val rotation = (atan2((frame.touch.x - frame.control1.x).toDouble(), (frame.control1.y - frame.touch.y).toDouble()) * 180.0 / PI).toFloat()
-        withTransform({ rotate(rotation, Offset(frame.control1.x, frame.control1.y)) }) {
-            drawRect(Brush.horizontalGradient(if (reverse) listOf(Color(ReaderCurlVisualPolicy.frontShadowDarkArgb), Color.Transparent) else listOf(Color.Transparent, Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)), left, right), Offset(left, frame.control1.y - hypot(size.width.toDouble(), size.height.toDouble()).toFloat()), Size(right - left, hypot(size.width.toDouble(), size.height.toDouble()).toFloat()))
+    // 两条正面阴影共用同一个"折页之外"的裁剪：合成一次裁剪遮罩，别为每条阴影各来一次。
+    clipPath(curlPath, ClipOp.Difference) {
+        clipPath(paths.frontShadowHorizontal) {
+            val left = if (reverse) frame.control1.x else frame.control1.x - 25f
+            val right = if (reverse) frame.control1.x + 25f else frame.control1.x + 1f
+            val rotation = (atan2(
+                (frame.touch.x - frame.control1.x).toDouble(),
+                (frame.control1.y - frame.touch.y).toDouble()
+            ) * 180.0 / PI).toFloat()
+            withTransform({ rotate(rotation, Offset(frame.control1.x, frame.control1.y)) }) {
+                drawRect(
+                    Brush.horizontalGradient(
+                        if (reverse) listOf(
+                            Color(ReaderCurlVisualPolicy.frontShadowDarkArgb),
+                            Color.Transparent
+                        ) else listOf(
+                            Color.Transparent,
+                            Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)
+                        ),
+                        left,
+                        right
+                    ),
+                    Offset(
+                        left,
+                        frame.control1.y - hypot(
+                            size.width.toDouble(),
+                            size.height.toDouble()
+                        ).toFloat()
+                    ),
+                    Size(
+                        right - left,
+                        hypot(size.width.toDouble(), size.height.toDouble()).toFloat()
+                    )
+                )
+            }
         }
-    } }
-    clipPath(curlPath, ClipOp.Difference) { clipPath(paths.frontShadowVertical) {
-        val top = if (reverse) frame.control2.y else frame.control2.y - 25f
-        val bottom = if (reverse) frame.control2.y + 25f else frame.control2.y + 1f
-        val rotation = (atan2((frame.control2.y - frame.touch.y).toDouble(), (frame.control2.x - frame.touch.x).toDouble()) * 180.0 / PI).toFloat()
-        val diagonal = hypot(size.width.toDouble(), size.height.toDouble()).toFloat()
-        val adjustedY = if (frame.control2.y < 0f) frame.control2.y - size.height else frame.control2.y
-        val hmg = hypot(frame.control2.x.toDouble(), adjustedY.toDouble()).toFloat()
-        val left = if (hmg > diagonal) frame.control2.x - 25f - hmg else frame.control2.x - diagonal
-        val right = if (hmg > diagonal) frame.control2.x + diagonal - hmg else frame.control2.x
-        withTransform({ rotate(rotation, Offset(frame.control2.x, frame.control2.y)) }) {
-            drawRect(Brush.verticalGradient(if (reverse) listOf(Color(ReaderCurlVisualPolicy.frontShadowDarkArgb), Color.Transparent) else listOf(Color.Transparent, Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)), top, bottom), Offset(left, top), Size(right - left, bottom - top))
+        clipPath(paths.frontShadowVertical) {
+            val top = if (reverse) frame.control2.y else frame.control2.y - 25f
+            val bottom = if (reverse) frame.control2.y + 25f else frame.control2.y + 1f
+            val rotation = (atan2(
+                (frame.control2.y - frame.touch.y).toDouble(),
+                (frame.control2.x - frame.touch.x).toDouble()
+            ) * 180.0 / PI).toFloat()
+            val diagonal = hypot(size.width.toDouble(), size.height.toDouble()).toFloat()
+            val adjustedY =
+                if (frame.control2.y < 0f) frame.control2.y - size.height else frame.control2.y
+            val hmg = hypot(frame.control2.x.toDouble(), adjustedY.toDouble()).toFloat()
+            val left =
+                if (hmg > diagonal) frame.control2.x - 25f - hmg else frame.control2.x - diagonal
+            val right = if (hmg > diagonal) frame.control2.x + diagonal - hmg else frame.control2.x
+            withTransform({ rotate(rotation, Offset(frame.control2.x, frame.control2.y)) }) {
+                drawRect(
+                    Brush.verticalGradient(
+                        if (reverse) listOf(
+                            Color(ReaderCurlVisualPolicy.frontShadowDarkArgb),
+                            Color.Transparent
+                        ) else listOf(
+                            Color.Transparent,
+                            Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)
+                        ),
+                        top,
+                        bottom
+                    ), Offset(left, top), Size(right - left, bottom - top)
+                )
+            }
         }
-    } }
+    }
 }
 
-private data class ReaderCurlRenderPaths(
-    val front: Path,
-    val reveal: Path,
-    val back: Path,
-    val frontShadowHorizontal: Path,
-    val frontShadowVertical: Path,
-)
+/** 清空并重建一个复用的 [Path]（`rewind()` 保留内部缓冲，不逐帧新建）。 */
+private inline fun Path.rebuild(block: Path.() -> Unit) {
+    rewind()
+    block()
+}
 
-private fun PageCurlFrame.renderPaths(width: Float, height: Float): ReaderCurlRenderPaths {
-    val reverse = corner.x == 0f && corner.y == height || corner.x == width && corner.y == 0f
-    val angle = if (reverse) {
-        PI / 4 - atan2((control1.y - touch.y).toDouble(), (touch.x - control1.x).toDouble())
-    } else {
-        PI / 4 - atan2((touch.y - control1.y).toDouble(), (touch.x - control1.x).toDouble())
+/**
+ * 折页每帧重用的绘制载体，对照旧 `SimulationPageDelegate` 的成员 `mPath0/mPath1/mMatrix`：
+ * 折页是 60/120fps 热路径，逐帧新建 5 个 `Path` 只会给 GC 添压力。
+ */
+private class ReaderCurlRenderPaths {
+    val front = Path()
+    val reveal = Path()
+    val back = Path()
+    val frontShadowHorizontal = Path()
+    val frontShadowVertical = Path()
+    val mirror = Matrix()
+
+    fun update(frame: PageCurlFrame, width: Float, height: Float): ReaderCurlRenderPaths {
+        val reverse = frame.corner.x == 0f && frame.corner.y == height ||
+                frame.corner.x == width && frame.corner.y == 0f
+        val angle = if (reverse) {
+            PI / 4 - atan2(
+                (frame.control1.y - frame.touch.y).toDouble(),
+                (frame.touch.x - frame.control1.x).toDouble()
+            )
+        } else {
+            PI / 4 - atan2(
+                (frame.touch.y - frame.control1.y).toDouble(),
+                (frame.touch.x - frame.control1.x).toDouble()
+            )
+        }
+        val shadowX = (frame.touch.x + 25f * 1.414f * cos(angle)).toFloat()
+        val shadowY =
+            (frame.touch.y + (if (reverse) 1 else -1) * 25f * 1.414f * sin(angle)).toFloat()
+        front.rebuild {
+            moveTo(frame.start1.x, frame.start1.y)
+            quadraticTo(frame.control1.x, frame.control1.y, frame.end1.x, frame.end1.y)
+            lineTo(frame.touch.x, frame.touch.y); lineTo(frame.end2.x, frame.end2.y)
+            quadraticTo(frame.control2.x, frame.control2.y, frame.start2.x, frame.start2.y)
+            lineTo(frame.corner.x, frame.corner.y); close()
+        }
+        reveal.rebuild {
+            moveTo(frame.start1.x, frame.start1.y); lineTo(frame.vertex1.x, frame.vertex1.y)
+            lineTo(frame.vertex2.x, frame.vertex2.y)
+            lineTo(frame.start2.x, frame.start2.y); lineTo(frame.corner.x, frame.corner.y); close()
+        }
+        back.rebuild {
+            moveTo(frame.vertex2.x, frame.vertex2.y); lineTo(frame.vertex1.x, frame.vertex1.y)
+            lineTo(frame.end1.x, frame.end1.y)
+            lineTo(frame.touch.x, frame.touch.y); lineTo(frame.end2.x, frame.end2.y); close()
+        }
+        frontShadowHorizontal.rebuild {
+            moveTo(shadowX, shadowY); lineTo(frame.touch.x, frame.touch.y)
+            lineTo(frame.control1.x, frame.control1.y)
+            lineTo(frame.start1.x, frame.start1.y); close()
+        }
+        frontShadowVertical.rebuild {
+            moveTo(shadowX, shadowY); lineTo(frame.touch.x, frame.touch.y)
+            lineTo(frame.control2.x, frame.control2.y)
+            lineTo(frame.start2.x, frame.start2.y); close()
+        }
+        mirror.values[Matrix.ScaleX] = frame.mirror.scaleX
+        mirror.values[Matrix.SkewX] = frame.mirror.skewX
+        mirror.values[Matrix.SkewY] = frame.mirror.skewY
+        mirror.values[Matrix.ScaleY] = frame.mirror.scaleY
+        mirror.values[Matrix.TranslateX] = frame.mirror.translateX
+        mirror.values[Matrix.TranslateY] = frame.mirror.translateY
+        return this
     }
-    val shadowX = (touch.x + 25f * 1.414f * cos(angle)).toFloat()
-    val shadowY = (touch.y + (if (reverse) 1 else -1) * 25f * 1.414f * sin(angle)).toFloat()
-    return ReaderCurlRenderPaths(
-        front = Path().apply {
-            moveTo(start1.x, start1.y); quadraticTo(control1.x, control1.y, end1.x, end1.y)
-            lineTo(touch.x, touch.y); lineTo(end2.x, end2.y)
-            quadraticTo(control2.x, control2.y, start2.x, start2.y); lineTo(corner.x, corner.y); close()
-        },
-        reveal = Path().apply {
-            moveTo(start1.x, start1.y); lineTo(vertex1.x, vertex1.y); lineTo(vertex2.x, vertex2.y)
-            lineTo(start2.x, start2.y); lineTo(corner.x, corner.y); close()
-        },
-        back = Path().apply {
-            moveTo(vertex2.x, vertex2.y); lineTo(vertex1.x, vertex1.y); lineTo(end1.x, end1.y)
-            lineTo(touch.x, touch.y); lineTo(end2.x, end2.y); close()
-        },
-        frontShadowHorizontal = Path().apply {
-            moveTo(shadowX, shadowY); lineTo(touch.x, touch.y); lineTo(control1.x, control1.y)
-            lineTo(start1.x, start1.y); close()
-        },
-        frontShadowVertical = Path().apply {
-            moveTo(shadowX, shadowY); lineTo(touch.x, touch.y); lineTo(control2.x, control2.y)
-            lineTo(start2.x, start2.y); close()
-        },
-    )
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCurlBackShadow(frame: PageCurlFrame) {

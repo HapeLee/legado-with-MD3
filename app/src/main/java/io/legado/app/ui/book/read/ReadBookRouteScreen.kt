@@ -78,7 +78,6 @@ import io.legado.app.feature.reader.core.gesture.ReaderTapActionGrid
 import io.legado.app.feature.reader.core.model.readerBackgroundAlpha
 import io.legado.app.feature.reader.core.transition.ReaderPageTurnSpeed
 import io.legado.app.feature.reader.core.transition.ReaderTransitionMode
-import io.legado.app.feature.reader.core.transition.ReaderViewportLayerPolicy
 import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
@@ -729,14 +728,13 @@ fun ReadBookRouteScreen(
                     )
                 }
         ) {
-            // 滚动模式的背景由画布内的固定层绘制（画布还要当菜单 haze 的源），根层再画一遍
-            // 会让半透明背景图叠加两次、比设置值更浓，且与分页模式（页面自绘不透明底色挡住
-            // 根层，实际只画一次）观感不一致。画布可见时让出根层，其它状态仍由根层兜底。
+            // 背景由画布自己负责：滚动模式是画布内的固定层，分页模式是每页自绘的不透明底色
+            // 与背景图（`readerSurfaceColor` 不透明，根层这一遍会被整屏遮住）。画布可见时
+            // 一律让出根层，否则每个翻页帧都要重画一次未压缩的全屏背景位图；画布不可见
+            // （首个可读页之前、退出之后）仍由根层兜底。
             val readerCanvasVisible = hasReadablePage
             val readerTransitionMode = ReaderTransitionMode.fromPageAnim(controller.pageAnim)
-            if (!(ReaderViewportLayerPolicy.usesFixedBackground(readerTransitionMode) &&
-                        readerCanvasVisible)
-            ) {
+            if (!readerCanvasVisible) {
                 // 归因用：成对 marker 夹住子树，其间隔即该子树的组合耗时（都在
                 // `Compose:recompose` 之内）。子系统不用 tracing 时 marker 是空操作。
                 ReaderPerfTrace.marker("compose.background.begin")
