@@ -42,11 +42,12 @@ data class CastCapsuleStyle(
             (avatarScale.coerceIn(AVATAR_SCALE_MIN, AVATAR_SCALE_MAX) / FULL.toFloat())
 
     /**
-     * 头像左沿相对胶囊左沿的偏移，夹到「头像右沿不出胶囊」，免得整颗头像跑出去。
+     * 头像左沿相对胶囊左沿的偏移，夹到「头像右沿不出胶囊」。
      *
-     * 角色那颗**只有一种落点**：按整格垂直居中的那条线。头像的位置不能因为「显示角色名」
-     * 或「显示声音池」被顶开——胶囊是行内元素，左沿不动，头像就得一直在同一个地方，
-     * 关掉名字时看到的那颗同心圆，和打开名字时那颗，头像才是同一个位置。
+     * 角色那颗**只有一种落点**：按整格垂直居中的那条线，与 showName / showPool 无关——
+     * 胶囊是行内元素、左沿不动，头像必须一直在同一个位置。
+     * 共用这一口径的三处：测量侧 [CastCapsuleGeometry.widthOf]（经 textLeftPx）、
+     * 绘制侧 ReaderCanvasSurface.drawRoleCast、预览侧 CastCapsuleStyleScreen.PreviewBoard。
      */
     fun avatarLeft(height: Float): Float {
         val diameter = avatarDiameter(height)
@@ -55,8 +56,9 @@ data class CastCapsuleStyle(
     }
 
     /**
-     * 未分配占位那颗里人形图标的左沿。它永远没有文字，所以按左右内边距居中就行，
-     * 不跟 [avatarLeft] 共用——那颗胶囊比头像宽，用居中的落点会让图标偏左。
+     * 未分配占位那颗里人形图标的左沿。那颗永远没有文字，按左右内边距落点即可，
+     * 不与 [avatarLeft] 共用（那颗胶囊比头像宽，居中落点会让图标偏左）。
+     * 消费方：[CastCapsuleGeometry.placeholderWidthPx] 与 CastCapsuleStyleScreen.PreviewBoard。
      */
     fun placeholderIconLeft(height: Float): Float {
         val diameter = avatarDiameter(height)

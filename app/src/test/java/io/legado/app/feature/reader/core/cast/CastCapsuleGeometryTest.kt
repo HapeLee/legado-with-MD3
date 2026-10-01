@@ -38,8 +38,7 @@ class CastCapsuleGeometryTest {
 
     @Test
     fun `avatar does not move when the name or the pool label appears`() {
-        // 胶囊是行内元素，左沿不动；头像的落点也不能因为开关而平移，否则「同心圆」那颗
-        // 和带名字那颗的头像就是两个位置，看着就是对不上。
+        // 胶囊是行内元素、左沿不动，头像落点只由 avatarLeft 决定，与名字/池小字开关无关
         val withName = CastCapsuleStyle(showPool = false).avatarLeft(height)
         val withPool = CastCapsuleStyle(showName = false).avatarLeft(height)
         val allOn = CastCapsuleStyle().avatarLeft(height)

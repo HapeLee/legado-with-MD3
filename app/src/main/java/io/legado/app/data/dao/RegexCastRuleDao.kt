@@ -10,7 +10,8 @@ import io.legado.app.data.entities.RegexCastGroup
 import io.legado.app.data.entities.RegexCastRule
 
 /**
- * 正则角色与它的分组的读写。
+ * 正则角色与它的分组的读写。唯一入口是
+ * [io.legado.app.help.readaloud.cast.RegexCastRuleStore]（界面与朗读服务都不直连本 DAO）。
  *
  * 范围判定（特定范围 / 排除范围）与官方替换规则同一口径：`scope LIKE '%' || 书名 || '%'`，
  * 空 = 不限。分组链是否停用放在 Store 里用 Kotlin 判，不写递归 SQL——树本来就要拉平成
@@ -21,9 +22,6 @@ interface RegexCastRuleDao {
 
     @Query("SELECT * FROM regex_cast_rules ORDER BY `order` ASC, id ASC")
     suspend fun all(): List<RegexCastRule>
-
-    @Query("SELECT * FROM regex_cast_rules WHERE id = :id")
-    suspend fun findById(id: Long): RegexCastRule?
 
     @Query(
         """SELECT * FROM regex_cast_rules WHERE enabled = 1
@@ -48,12 +46,6 @@ interface RegexCastRuleDao {
 
     @Query("UPDATE regex_cast_rules SET enabled = :enabled WHERE id = :id")
     suspend fun setEnabled(id: Long, enabled: Boolean)
-
-    @Query("UPDATE regex_cast_rules SET groupId = :groupId WHERE id = :id")
-    suspend fun setRuleGroup(id: Long, groupId: String)
-
-    @Query("SELECT COUNT(*) FROM regex_cast_rules WHERE groupId = :groupId")
-    suspend fun countInGroup(groupId: String): Int
 
     // ---------- 分组（可嵌套，行为等同文件夹） ----------
 

@@ -14,8 +14,11 @@ package io.legado.app.help.readaloud.cast
 object RegexCastSplitter {
 
     /**
-     * 切出来的一块。[voiceId] 非空 = 这一块换那个音色念；
-     * [sound] 非空 = 这一块起播时并行放这些音频（多条以 \n 分隔）。
+     * 切出来的一块。[voiceId] 非空 = 这一块换那个音色念，优先级（正则角色 > 分配表角色 > 旁白）
+     * 在 [CastSpeechOverlay] 的 speechFor 里落地；[sound] 非空 = 这一块起播时并行放这些音频
+     * （多条以 [SOUND_SEPARATOR] 分隔，格式契约见文件底部），落到
+     * [io.legado.app.domain.model.readaloud.SpeechPlanItem.soundEffect]，解析端是
+     * BaseReadAloudService.takeCueSounds。
      */
     data class Part(
         val start: Int,
@@ -26,7 +29,7 @@ object RegexCastSplitter {
         val label: String = "",
     )
 
-    /** [parts] 为空时，[trailingSound] 是整段文字都被「不念」吃掉后没处挂的音频。 */
+    /** [parts] 为空时（整段文字都被「不念」吃掉），[trailingSound] 是音频串，由调用方挂到下一个朗读单元。 */
     class SplitResult(val parts: List<Part>, val trailingSound: String)
 
     private class Hit(val start: Int, val end: Int, val rank: Int, val effect: RegexCastEffect)
@@ -58,10 +61,9 @@ object RegexCastSplitter {
         /**
          * 收一块。
          *
-         * 音效命中的那几个月挂在这一块上，**不另起一块**：多一个朗读单元就是多一次
-         * 向 TTS 引擎要音频，而合成一条要三五秒、整条链路是串行的，多要一次就当场断流——
-         * 用户听到的「读到匹配处停顿一段时间」就是这个。所以音效只把那几个字从文字里抠掉，
-         * 音频按它在单元里的千分位延迟放，近似对准原来那个字的位置。
+         * 音效只把命中的那几个字从文字里抠掉、把音频挂在这一块上，**不另起一块**：
+         * 一个朗读单元对应一次向 TTS 引擎要音频的请求，整条合成链路是串行的，
+         * 多一个单元就多一次串行等待。音频按命中字符在单元内的占比（千分位）延迟起播。
          */
         fun close() {
             if (blockStart < 0 || text.isEmpty()) return
@@ -100,7 +102,7 @@ object RegexCastSplitter {
             return SplitResult(emptyList(), pending.joinToString(SOUND_SEPARATOR) { it.first })
         }
         if (pending.isNotEmpty()) {
-            // 音频落在整段末尾：没有「后面那块」可挂，就挂到前面最后一块上（早半拍响，总比不响好）
+            // 音频落在整段末尾、没有「后面那块」可挂：并到最后一块上，随它起播响
             val last = parts.lastIndex
             parts[last] = parts[last].copy(
                 sound = mergeSound(parts[last].sound, pending.joinToString(SOUND_SEPARATOR) { it.first })
@@ -109,12 +111,17 @@ object RegexCastSplitter {
         return SplitResult(parts, "")
     }
 
-    /** 多条音频在一个朗读单元上一起响。 */
+    /**
+     * 音效串的格式（本文件是唯一定义处）：多条音频挂在同一个朗读单元上以 [SOUND_SEPARATOR]
+     * 分隔，每条可带 [OFFSET_SEPARATOR] 后缀的延迟千分位——`路径#350` = 该单元播到 35% 时响。
+     * 生产方是 [split]，解析方是 BaseReadAloudService.takeCueSounds，两边必须用同一对分隔符。
+     */
     const val SOUND_SEPARATOR = "\n"
 
-    /** 一条音频的「延迟千分位」分隔符：`路径#350` = 这一单元播到 35% 时响。 */
+    /** 一条音频的「延迟千分位」分隔符；解析端按行内第一个 `#` 拆分，两边口径要一致。 */
     const val OFFSET_SEPARATOR = "#"
 
+    /** 两段音效串并成一段（去重、保持 [SOUND_SEPARATOR] 格式）。 */
     fun mergeSound(left: String, right: String): String =
         (left.split(SOUND_SEPARATOR) + right.split(SOUND_SEPARATOR))
             .filter { it.isNotBlank() }

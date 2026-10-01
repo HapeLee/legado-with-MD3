@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.update
  * 正则角色管理 ViewModel。
  *
  * DAO 访问收口在 [RegexCastRuleStore]（架构护栏：VM 不直连 DAO）。树的操作（拉平、落点归属、
- * 松手回写）全部走 [CastPoolTree]，与角色声音池 / 背景音乐池同一份规则，不抄第三遍。
+ * 松手回写）全部走 [CastPoolTree]，与角色声音池 / 背景音乐池共用同一份规则。
  *
  * 改完即生效：朗读侧每次准备新章会重取规则快照，正在播的那一条不受影响，下一条起用新规则。
  */
@@ -161,7 +161,13 @@ class RegexCastRuleViewModel(
                 if (editing == null) {
                     val created = RegexCastRuleStore.createGroup(intent.name, dialog?.parentId.orEmpty())
                     _uiState.update {
-                        it.copy(groupDialog = created?.let { _ -> null } ?: dialog?.copy(errorRes = R.string.regex_cast_group_bad_name))
+                        it.copy(
+                            groupDialog = if (created == null) {
+                                dialog?.copy(errorRes = R.string.regex_cast_group_bad_name)
+                            } else {
+                                null
+                            }
+                        )
                     }
                 } else {
                     val ok = RegexCastRuleStore.renameGroup(editing, intent.name)
@@ -226,10 +232,9 @@ class RegexCastRuleViewModel(
     }
 
     /**
-     * 拖动过程中的一次挪动：严格照搬库给的绝对下标。
-     *
-     * 以前为了把顶部「未分组」表头钉在第 0 格而夹紧下标，等于吞掉一次移动，库和模型错位后
-     * 下一帧就要求移回去——来回抽搐。现在允许它暂时让位，松手回写重算列表时会自己回到首位。
+     * 拖动过程中的一次挪动：严格照搬库给的绝对下标，**不夹紧**。
+     * 夹紧等于吞掉一次移动，模型与库会错位、下一帧又被要求移回去（来回抽搐）。
+     * 「未分组」表头允许被暂时顶下去，松手回写重算列表时它会自己回到首位。
      */
     private fun moveItem(from: Int, to: Int) {
         val state = _uiState.value

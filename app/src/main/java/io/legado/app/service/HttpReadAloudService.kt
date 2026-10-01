@@ -170,27 +170,24 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 把这一单元身上的音效排到**媒体时钟**的命中位置上。
      *
-     * 上一版是「换句回调里 `postDelayed(时长 × 千分位)`」，两秒才响就是这么来的：
-     * 换句回调说的是解码/渲染线程读到新条的那一刻，比耳朵听到的位置**提前**一整段管线缓冲，
-     * 而 `duration` 在转场那一刻还可能还是上一条的；两个偏差叠起来就飘了。
-     * `PlayerMessage` 是按真正播到的位置投递的，基准就是出声本身。
-     *
-     * 同时立刻 [io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer.prime] 把文件读完：
-     * 到点只剩 `start()`，不然 prepare 那几百毫秒又要额外往后推。
+     * 音效串来自 [takeCueSounds]（格式契约在 RegexCastSplitter 底部），落到
+     * [io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer] 的 prime + play。
+     * 起播时刻用 `PlayerMessage.setPosition` 投递——它按真正播出的位置触发；换句回调比
+     * 出声位置提前一整段管线缓冲，不能做基准。时长要等下一循环帧再读（见 [soundHandler]），
+     * 文件则现在就 [io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer.prime] 读完，
+     * 到点只剩 `start()`。
      */
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun scheduleCueSounds(index: Int) {
         val sounds = takeCueSounds(index)
         if (sounds.isEmpty()) return
         sounds.forEach { (path, permille) ->
-            // 先把文件读好，到点只剩 start()
             readAloudEffect.prime(path)
             if (permille <= 0) {
                 readAloudEffect.play(path)
                 return@forEach
             }
-            // 下一个循环帧再读时长：转场那一刻 `duration` 有可能还是上一条的，
-            // 拿它算位置就会排到下一条音频里去（就是那两秒）。
+            // 转场那一刻 `duration` 可能还是上一条的，下一帧再读时长算位置
             soundHandler.post {
                 val durationMs = exoPlayer.duration
                 if (durationMs == C.TIME_UNSET || durationMs <= 0L) {
@@ -220,15 +217,10 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 换句时把这一句的音高/语速设到播放器上。
      *
-     * 边界串音这件事**没有干净的解**，三条路都试过（详见 fix/README 第七十三、七十四轮）：
-     * - 提前 900ms 投递下一句的参数（第五十轮）：本质是猜管线缓冲深度，猜多了啃上一句尾巴、
-     *   猜少了上一句的参数压住这一句开头——用户听到的「机器人串到邻句」就是这两头；
-     * - 把参数绑到每条音频上：本仓库锁的 media3 1.11.0 没有这个 API
-     *   （`MediaItem.LocalConfiguration` 不带 `playbackParameters`，也没有 `ExoPlayer.replaceItem`）；
-     * - 换句时 `seekTo` 冲一次管线：边界是准了，但句头会播两遍，比串音更难听（已撤）。
-     * 现在维持「提前量」这一种。要真正根除只能动音频本身：要么合成时就把音高烘进文件
-     * （云端 provider 的请求里已有 pitch 字段，本地 TTS Server 只收文本+语速，做不到），
-     * 要么在换句处垫一小段静音让管线自己排空。
+     * 句边界串音没有干净的解：`playbackParameters` 在解码链当前位置生效，与出声位置隔着
+     * 管线缓冲；本仓库锁的 media3 1.11 没有「参数绑到单条 MediaItem」的 API，只能按
+     * [EFFECT_PITCH_SWITCH_LEAD_MS] 打一点提前量逼近。要根除只能把音高烘进合成文件本身
+     * （云端引擎请求里有 pitch 字段，本地 TTS Server 只收文本+语速，做不到）。
      */
     private fun applyCuePitch(index: Int) {
         exoPlayer.playbackParameters = playbackParametersFor(index)
@@ -262,9 +254,9 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 排期消息的载荷：句下标 + 队列代次 + 这一条只管哪一层。
      *
-     * 两层各一条消息，因为要的提前量不一样：混响/带通得等效果器起来（900ms 才勉强），
-     * 音高/语速只要盖过音频管线里那点还没出声的缓冲。拿 900ms 去设音高，
-     * 上一句的尾巴就被下一句的音色盖掉了——就是用户说的「上一句末尾出现短暂变声」。
+     * 两层各一条消息，因为要的提前量不一样：混响/带通得等效果器起来
+     * （[EFFECT_PITCH_LEAD_MS]），音高/语速只要盖过音频管线里还没出声的缓冲
+     * （[EFFECT_PITCH_SWITCH_LEAD_MS]）；拿前者去设音高会啃掉上一句的尾巴。
      */
     private class CuePitchTick(val index: Int, val generation: Int, val pitch: Boolean)
 
@@ -287,11 +279,10 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 把下一句的变声器（音高/语速 + 混响/带通）排在**本句结束前一点**投递。
      *
-     * `PlayerMessage` 由媒体时钟（真正播出去的位置）投递，而 `playbackParameters` 与音频会话
-     * 上的效果是在解码链当前位置生效的，两者之间隔着音频管线里那 0.5~1 秒还没出声的缓冲。
-     * 所以等 `onMediaItemTransition` 再设参数，这一句的开头一整秒仍然是上一句的音色——听感就是
-     * 「变声慢一拍、上一句的效果延续到旁白」。提前量落在合成音频自带的句尾静音里，
-     * 比推后一整秒更不易察觉；句子很短时按比例收窄，不会啃掉真正的说话内容。
+     * `PlayerMessage` 由媒体时钟（真正播出的位置）投递，而 `playbackParameters` 与音频会话
+     * 上的效果在解码链当前位置生效，两者之间隔着管线里 0.5~1 秒还没出声的缓冲——等换句回调
+     * 再设参数，这一句开头一整段都会带着上一句的音色。提前量落在合成音频自带的句尾静音里；
+     * 句子很短时按 duration 的三分之一收窄，不啃真正的说话内容。
      */
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun scheduleNextCueEffect(index: Int) {
@@ -706,10 +697,9 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 同一句的合成互斥：按目标文件名上锁。
      *
-     * 实时播放、后续章节预合成、听书下载三条路径都是「先查有没有缓存，没有就向 TTS 发请求」，
-     * 而一次合成要三五秒——这期间 `.part` 和正式文件都还没落盘，另一条路径查缓存照样查不到，
-     * 于是同一句被请求两三次（TTS Server 那边能看到连着几条一样的请求，字节数还各不相同，
-     * 因为服务端每次都真的重复合成了）。排队 + 拿到锁后再查一次缓存，就把重复请求压成一次。
+     * 实时播放、后续章节预合成、听书下载三条路径都是「先查缓存，没有就向 TTS 发请求」，
+     * 而一次合成要几秒、期间 `.part` 和正式文件都还没落盘，另一条路径查缓存必然查不到、
+     * 跟着重复请求。上锁排队 + 拿到锁后再查一次缓存，把重复请求压成一次。
      */
     private val speakFileLocks = ConcurrentHashMap<String, Mutex>()
 
@@ -1844,9 +1834,8 @@ private const val DEFAULT_TTS_SPEED = 5
 private const val EFFECT_PITCH_LEAD_MS = 900L
 
 /**
- * 音高/语速提前换句的量。这一层只是 Sonic 的变调，不需要「预热」，
- * 提前 900ms 会把上一句的尾巴一起变掉，所以单独给一个很小的值，只抵音频管线的缓冲。
- * 换角色时如果还听得出串，就调这个数（大了串到上一句，小了串到下一句）。
+ * 音高/语速提前换句的量：这一层只是 Sonic 变调、不需要预热，提前量只要抵过音频管线
+ * 的缓冲即可；再大就会把上一句的尾巴一起变掉。调参方向：大了串到上一句，小了串到下一句。
  */
 private const val EFFECT_PITCH_SWITCH_LEAD_MS = 220L
 

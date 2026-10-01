@@ -620,9 +620,9 @@ abstract class BaseReadAloudService : BaseService(),
         // 「多角色朗读」是唯一的发声开关：关掉就没有任何计划，整章回到用户在朗读设置里
         // 选的默认引擎。「多角色分配」只管正文胶囊，不参与决定用谁的声音念。
         //
-        // 但正则角色是**全局**的：它只被自己那条规则的「激活规则」管，不跟多角色朗读绑。
-        // 而它必须落在播放计划上才能「只换那几个字的声音」，所以这本书只要有还活着的
-        // 正则角色，就得照样生成计划（计划里所有段都用默认音色，与关掉多角色时一模一样）。
+        // 正则角色不跟这个开关：它只被自己那条规则的启用状态管。正则必须落在播放计划上
+        // 才能只换命中那几个字的声音，所以这本书只要有生效的正则角色就照样生成计划
+        // （所有段用默认音色）。生效判定在 RegexCastRuleStore.hasRulesFor。
         val regexOn = runCatching { RegexCastRuleStore.hasRulesFor(bookUrl) }.getOrDefault(false)
         if (!multiSpeakerOn && !regexOn) return emptyList()
         val prepareSpeechPlan: PrepareChapterSpeechPlanUseCase =
@@ -814,25 +814,34 @@ abstract class BaseReadAloudService : BaseService(),
         io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer(applicationContext)
     }
 
+    /** 同一个音效单元只响一次的判据（[takeCueSounds] 消费这里）。 */
     private var soundedCue: io.legado.app.domain.model.readaloud.ReadAloudPlaybackCue? = null
 
     /**
-     * 取出这一单元身上挂的音效：`(路径, 千分位)`。同一个单元只给一次。
+     * 解析这一朗读单元身上挂的音效串，取出 `(路径, 延迟千分位)`；同一个单元只给一次。
      *
-     * 音效**不另起朗读单元**——多一个单元就是多向 TTS 引擎要一次音频，而合成一条要三五秒、
-     * 整条链路是串行的，多要一次就当场断流（用户听到的「读到匹配处停顿一段时间」就是这个）。
-     * 所以命中的字在单元里排第几只能按字符占比估：`路径#350` = 这一单元播到 35% 时响。
+     * 串的格式契约在 [io.legado.app.help.readaloud.cast.RegexCastSplitter] 底部
+     * （SOUND_SEPARATOR / OFFSET_SEPARATOR）：生产方 RegexCastSplitter.split →
+     * SpeechPlanItem.soundEffect → ReadAloudPlaybackCue.soundEffect，本函数是唯一解析端，
+     * 分隔符必须与那边一致。
+     *
+     * 音效**不另起朗读单元**：一个单元就是一次串行的 TTS 合成请求，多一个单元多一次串行等待。
+     * 因此千分位只能按命中字符在单元内的占比估算，不是精确时长。
+     * 消费方：Http 路由子类 scheduleCueSounds（媒体时钟定位）；系统 TTS 直读走 [playCueSounds]。
      */
     protected fun takeCueSounds(index: Int): List<Pair<String, Int>> {
         val cue = playbackQueue.cues.getOrNull(index) ?: return emptyList()
         if (cue.soundEffect.isBlank() || cue === soundedCue) return emptyList()
         soundedCue = cue
-        return cue.soundEffect.split('\n').filter { it.isNotBlank() }.map { entry ->
-            val at = entry.indexOf(RegexCastSplitter.OFFSET_SEPARATOR)
-            val path = if (at > 0) entry.substring(0, at) else entry
-            val permille = if (at > 0) entry.substring(at + 1).toIntOrNull() ?: 0 else 0
-            path to permille
-        }
+        return cue.soundEffect
+            .split(RegexCastSplitter.SOUND_SEPARATOR)
+            .filter { it.isNotBlank() }
+            .map { entry ->
+                val at = entry.indexOf(RegexCastSplitter.OFFSET_SEPARATOR)
+                val path = if (at > 0) entry.substring(0, at) else entry
+                val permille = if (at > 0) entry.substring(at + 1).toIntOrNull() ?: 0 else 0
+                path to permille
+            }
     }
 
     /** 系统 TTS 直读那条路没有文件时长可依据，命中就立刻响。 */

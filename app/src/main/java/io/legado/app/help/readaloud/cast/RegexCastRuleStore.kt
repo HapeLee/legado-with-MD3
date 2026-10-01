@@ -2,6 +2,8 @@ package io.legado.app.help.readaloud.cast
 
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
+import io.legado.app.data.dao.BgmPoolDao
+import io.legado.app.data.dao.VoicePoolDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.RegexCastGroup
 import io.legado.app.data.entities.RegexCastRule
@@ -15,6 +17,9 @@ import kotlin.random.Random
  * 一条正则角色规则在朗读时真正要用的东西：编译好的正则 + 它把命中的文字变成什么。
  *
  * [voiceId] 与 [soundPath] 二选一非空：前者是「换这个音色念」，后者是「不念，放这段音频」。
+ * [soundPath] 会被 [RegexCastSplitter] 编成 `路径#千分位` 格式的音频串（见
+ * [RegexCastSplitter.SOUND_SEPARATOR] / [RegexCastSplitter.OFFSET_SEPARATOR]），
+ * 解析端在 BaseReadAloudService.takeCueSounds。
  */
 data class RegexCastEffect(
     val label: String,
@@ -35,7 +40,7 @@ data class RegexCastEffect(
  */
 object RegexCastRuleStore {
 
-    /** 分组显示路径的分隔符，与两个池库那两处一致。 */
+    /** 分组显示路径的分隔符；与角色声音池 / 背景音乐池列表里的同一条口径，三处要一致。 */
     private const val GROUP_SEPARATOR = "/"
 
     // ---------- 列表数据 ----------
@@ -43,7 +48,7 @@ object RegexCastRuleStore {
     /** 分组树（DFS 拉平，根层在前、子组紧跟其父），与声音池那套同一算法。 */
     suspend fun listGroups(): List<CastGroupRow> = withContext(Dispatchers.IO) {
         val all = appDb.regexCastRuleDao.getGroups()
-        // 父组不存在的孤儿按根层处理：不然它会整棵从页面上消失，看起来像数据丢了
+        // 父组不存在的孤儿按根层处理，避免整棵子树从列表上消失
         val ids = all.mapTo(mutableSetOf()) { it.id }
         val byParent = all.groupBy { if (it.parentId in ids) it.parentId else "" }
             .mapValues { (_, rows) -> rows.sortedWith(compareBy({ it.order }, { it.name })) }
@@ -66,7 +71,11 @@ object RegexCastRuleStore {
         rows
     }
 
-    /** 规则 → 列表行。[summaryOf] 由调用方拼那行中文摘要（Store 不认识资源串）。 */
+    /**
+     * 规则 → 列表行。一条规则就是一个 [CastPoolRow]（[subtitle] 放规则摘要，
+     * 界面按 hasMembers=false 的那条绘制分支走它，见 CastPoolWidgets 的 CastPoolRow）。
+     * [summaryOf] 由调用方拼那行中文摘要（Store 不认识资源串）。
+     */
     suspend fun poolRows(summaryOf: (RegexCastRule) -> String): List<CastPoolRow> =
         withContext(Dispatchers.IO) {
             val groups = listGroups()
@@ -88,10 +97,6 @@ object RegexCastRuleStore {
                 )
             }
         }
-
-    suspend fun rule(id: Long): RegexCastRule? = withContext(Dispatchers.IO) {
-        appDb.regexCastRuleDao.findById(id)
-    }
 
     /** 全部规则（列表按分组树渲染，这里只给原始行）。 */
     suspend fun all(): List<RegexCastRule> = withContext(Dispatchers.IO) {
@@ -116,13 +121,10 @@ object RegexCastRuleStore {
         appDb.regexCastRuleDao.setEnabled(rule.id, enabled)
     }
 
-    suspend fun setRuleGroup(id: Long, groupId: String) = withContext(Dispatchers.IO) {
-        appDb.regexCastRuleDao.setRuleGroup(id, groupId)
-    }
-
     /**
-     * 拖动结束后的整表回写：两组 slot 来自 [CastPoolTree.savePlan]，
-     * 内容是 `id to (父级 id, 顺序)`。只认这次列表里出现的行，收起的子树原样不动。
+     * 拖动结束后的整表回写。两组 slot 来自 [io.legado.app.ui.book.readaloud.cast.CastPoolTree.savePlan]
+     * （UI 侧入口是 RegexCastRuleIntent.MoveItem / SaveSortOrder），内容是 `id to (父级 id, 顺序)`。
+     * 只认这次列表里出现的行，收起的子树原样不动。
      */
     suspend fun saveSlots(
         ruleSlots: List<Pair<String, Pair<String, Int>>>,
@@ -162,7 +164,7 @@ object RegexCastRuleStore {
         val group = dao.getGroup(id) ?: return@withContext false
         val trimmed = name.trim()
         if (trimmed.isEmpty() || trimmed == group.name) return@withContext false
-        // 同级重名会撞唯一索引，先挡掉，别让一次改名崩在 SQL 上
+        // 同级重名会撞 [io.legado.app.data.entities.RegexCastGroup] 上的 (parentId, name) 唯一索引，先挡掉
         if (dao.getGroupByName(group.parentId, trimmed) != null) return@withContext false
         dao.updateGroups(listOf(group.copy(name = trimmed, updatedAt = System.currentTimeMillis())))
         true
@@ -183,9 +185,8 @@ object RegexCastRuleStore {
     }
 
     /**
-     * 删组：组内规则与直属子组一起回到被删组的父级，**规则本身不删**。
-     *
-     * 「删分组」在用户那里是整理目录，不是清数据；连带删规则会让一次误触毁掉一晚上的配置。
+     * 删组：组内规则与直属子组一起回到被删组的父级，**规则本身不删**——
+     * 删组是整理目录，不承担清数据的语义。
      */
     suspend fun deleteGroup(id: String) = withContext(Dispatchers.IO) {
         val dao = appDb.regexCastRuleDao
@@ -220,8 +221,8 @@ object RegexCastRuleStore {
     /**
      * 这本书有没有还活着的正则角色。
      *
-     * 关掉「多角色朗读」时朗读侧默认不生成播放计划，而正则角色必须落在计划上；
-     * 服务在生成计划前问这一句，答 true 就照样生成（所有段都用默认音色，与关掉多角色时一致）。
+     * 消费方是 BaseReadAloudService.buildSpeechPlan：关掉「多角色朗读」时朗读侧默认不生成
+     * 播放计划，而正则角色必须落在计划上；这一问答 true 就照样生成计划（所有段都用默认音色）。
      */
     suspend fun hasRulesFor(bookUrl: String): Boolean = withContext(Dispatchers.IO) {
         val book = appDb.bookDao.getBook(bookUrl) ?: return@withContext false
@@ -232,6 +233,9 @@ object RegexCastRuleStore {
      * 这本书现在能用的正则角色：按规则顺序编译、跳过被分组停用的、解好音色/音频。
      *
      * 分组链上任何一层停用，那一组里的规则整体不生效（与声音池候选同一口径）。
+     * 消费方：CastSpeechOverlay.apply 把它交给 [RegexCastSplitter.split]——
+     * [RegexCastRule.pattern] 在这里编一次，切分时匹配的是等长抹平版正文
+     * （口径见 [io.legado.app.feature.reader.core.cast.CastMarkers.blank]）。
      */
     suspend fun effectsFor(book: Book): List<RegexCastEffect> = withContext(Dispatchers.IO) {
         val rules = appDb.regexCastRuleDao.findEnabledForBook(book.name, book.origin)
@@ -281,18 +285,12 @@ object RegexCastRuleStore {
             .takeIf { it.pattern.isNotEmpty() }
     }
 
-    private suspend fun resolveVoice(
-        dao: io.legado.app.data.dao.VoicePoolDao,
-        rule: RegexCastRule,
-    ): String? {
+    private suspend fun resolveVoice(dao: VoicePoolDao, rule: RegexCastRule): String? {
         if (rule.itemId.isNotBlank()) return rule.itemId
         return dao.getMembers(rule.poolId).filter { it.enabled }.map { it.voiceId }.randomOrNull()
     }
 
-    private suspend fun resolveTrack(
-        dao: io.legado.app.data.dao.BgmPoolDao,
-        rule: RegexCastRule,
-    ): String? {
+    private suspend fun resolveTrack(dao: BgmPoolDao, rule: RegexCastRule): String? {
         val candidates = if (rule.itemId.isNotBlank()) {
             listOfNotNull(dao.getTrack(rule.itemId))
         } else {

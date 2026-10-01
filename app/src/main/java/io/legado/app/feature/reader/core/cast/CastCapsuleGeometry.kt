@@ -59,10 +59,8 @@ object CastCapsuleGeometry {
         (if (style.showName) nameWidthPx + heightPx * poolGapRatio else 0f)
 
     /**
-     * 配乐胶囊文案：`♪ 声音池名`。
-     *
-     * 池名就是场景（用户口径：本来声音池就是场景，不再另设场景预设），所以胶囊上必须
-     * 看得见当前段用的是哪个池，而不是只有一个孤零零的 ♪。池名为空时只留 ♪。
+     * 配乐胶囊文案：`♪ 声音池名`。池名就是场景（不另设场景预设），胶囊上必须看得见
+     * 当前段用的是哪个池；池名为空时只留 ♪。
      */
     fun bgmLabel(poolName: String): String =
         if (poolName.isBlank()) BGM_NOTE else "$BGM_NOTE $poolName"
@@ -87,8 +85,9 @@ object CastCapsuleGeometry {
 
     /**
      * 胶囊总宽 = 2×内边距 +（可选头像+间隙）+ 名字宽 +（可选池小字宽）+（可选变声器标记）+ 占位尾部。
-     * [labelWidthPx] 现在只是名字文本宽（池小字单独传），不再有括号留白。
-     * 样式里关掉的那一栏按 0 计入，量出来的宽度就是画出来的宽度。
+     * [labelWidthPx] 只算名字文本宽，池小字走 [poolWidthPx]；样式里关掉的那一栏按 0 计入——
+     * 量出来的宽度必须就是画出来的宽度（绘制侧 ReaderCanvasSurface.drawRoleCast 与预览侧
+     * CastCapsuleStyleScreen.PreviewBoard 共用 [CastCapsuleStyle.avatarLeft] 这一条落点口径）。
      */
     fun widthOf(
         fontSizePx: Float,

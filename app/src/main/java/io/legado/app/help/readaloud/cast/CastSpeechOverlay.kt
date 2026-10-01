@@ -49,8 +49,8 @@ object CastSpeechOverlay {
         plan: List<SpeechPlanItem>,
     ): List<SpeechPlanItem> {
         if (plan.isEmpty()) return plan
-        // 正则角色是独立的一套：命中文字换音色、或干脆不念改放音效。它不认引号也不依赖分配表，
-        // 所以「多角色朗读」关着的时候它照样生效。
+        // 正则角色独立于多角色分配：它不认引号、不查分配表，命中文字换音色或不念改音效，
+        // 「多角色朗读」关着时也生效（规则与生效口径见 RegexCastRuleStore.effectsFor）。
         val effects = runCatching {
             appDb.bookDao.getBook(bookUrl)?.let { RegexCastRuleStore.effectsFor(it) }
         }.getOrNull().orEmpty()
@@ -94,7 +94,8 @@ object CastSpeechOverlay {
         var carrySound = ""
 
         /**
-         * 一个切块 → 一个朗读单元。音色优先级：正则角色 > 分配表角色 > 旁白。
+         * 一个切块 → 一个朗读单元。音色优先级：正则角色 > 分配表角色 > 旁白——
+         * 这条优先级在这里落地，正则侧的选择结果由 [RegexCastSplitter.Part.voiceId] 带过来。
          *
          * [part] 带着切块自己的章内起点，所以被音效吃掉的那段文字在这里就是个空洞：
          * 前后两块各归各的坐标，区间只留缝、不重叠（播放队列不许重叠）。
@@ -182,6 +183,8 @@ object CastSpeechOverlay {
                     )
                 }
             }
+            // 音效串整条透传（格式契约在 RegexCastSplitter 底部），下游经
+            // ReadAloudPlaybackCue.soundEffect 到 BaseReadAloudService.takeCueSounds 解析
             return built.copy(soundEffect = part.sound)
         }
 
@@ -201,7 +204,7 @@ object CastSpeechOverlay {
             }
         }
         if (carrySound.isNotEmpty() && result.isNotEmpty()) {
-            // 章末只剩音效、后面没有文字可挂了：响在最后一个朗读单元起播时（早半拍，总比不响好）
+            // 章末只剩音效、后面没有单元可挂：并到最后一个朗读单元上，随它起播响
             val last = result.lastIndex
             result[last] = result[last].copy(
                 soundEffect = RegexCastSplitter.mergeSound(result[last].soundEffect, carrySound)

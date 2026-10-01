@@ -8,9 +8,9 @@ import org.junit.Test
 /**
  * 正则角色的切分。
  *
- * 朗读单元是按章内坐标排的（队列要求区间不重叠），所以这里最要紧的三件事：
- * 命中换音色的那块要能单独成块、命中放音效的那块文字必须整个消失且**不留空格**、
- * 切完的坐标必须接着往下数而不是重排。
+ * 朗读单元是按章内坐标排的（队列要求区间不重叠），这里锁死三件事：
+ * 命中换音色的那块单独成块、命中放音效的文字整个消失且**不留空格**、
+ * 切完的坐标接着原文往后数而不是重排。
  */
 class RegexCastSplitterTest {
 
@@ -55,8 +55,8 @@ class RegexCastSplitterTest {
         val result = split("前面爆炸后面", sound("/sdcard/boom.mp3", "爆炸"))
         // 「爆炸」整块消失，不留空格
         assertEquals(listOf("前面后面"), result.parts.map { it.text })
-        // 关键：**不另起一个朗读单元**。多一个单元就是多向引擎要一次音频，
-        // 合成一条要三五秒、链路串行，当场就断流（用户听到的「匹配处停顿」）
+        // 关键约束：**音效不另起朗读单元**——一个单元就是一次串行的 TTS 合成请求，
+        // 多一个单元就多一次串行等待（断流）
         assertEquals(1, result.parts.size)
         assertEquals(0, result.parts[0].start)
         // 命中的字在单元里排第 3~4 个字 / 共 4 个字 → 千分位 500，播到一半时响
@@ -117,7 +117,7 @@ class RegexCastSplitterTest {
 
     @Test
     fun `uncompilable pattern falls back to literal text`() {
-        // 用户填的是普通文本，少一个右括号不是合法正则 → 整串按字面量匹配，而不是整条规则作废
+        // 非法正则（少一个右括号的普通文本）整串按字面量匹配，规则不作废
         val broken = "(山体崩碎音效"
         val regex = RegexCastRuleStore.compile(broken) ?: error("compile returned null")
         assertTrue(regex.matches(broken))

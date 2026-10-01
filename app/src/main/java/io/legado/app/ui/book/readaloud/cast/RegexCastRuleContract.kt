@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.readaloud.cast
 
 import androidx.compose.runtime.Stable
+import io.legado.app.data.entities.RegexCastRule
 import io.legado.app.help.readaloud.cast.CastGroupRow
 import io.legado.app.help.readaloud.cast.CastPoolRow
 import io.legado.app.ui.widget.components.CastOption
@@ -12,10 +13,13 @@ import kotlinx.collections.immutable.persistentSetOf
 /**
  * 正则角色管理页状态（朗读规则 → 正则角色管理）。
  *
- * 实现 [CastPoolView]：一条规则就是一行卡片，分组是可嵌套的文件夹，两者拉平成同一条列表，
- * 于是拖动排序、折叠展开、组开关、改名/移动/删组这些交互与角色声音池、背景音乐池
- * 走的是同一套代码（[PoolTreeList] + [CastPoolTree]），不再抄第三遍。
- * 规则没有「成员」那一层，所以 wording 里 `hasMembers = false`。
+ * 实现 [CastPoolView]：一条规则就是一个 [CastPoolRow]（`subtitle` 放规则摘要，界面对
+ * hasMembers=false 的行画它），分组是可嵌套文件夹，两者拉平成同一条列表，拖动排序、折叠
+ * 展开、组开关、改名/移动/删组复用角色声音池 / 背景音乐池那套 [PoolTreeList] + [CastPoolTree]。
+ * 规则没有「成员」那一层，所以 wording 里 `hasMembers = false`（契约见 CastPoolWidgets）。
+ *
+ * 拖动落库链：RegexCastRuleIntent.MoveItem / SaveSortOrder → [CastPoolTree.savePlan] →
+ * RegexCastRuleStore.saveSlots，三段下标口径必须一致。
  */
 @Stable
 data class RegexCastRuleUiState(
@@ -45,14 +49,12 @@ data class RegexCastRuleUiState(
 ) : CastPoolView
 
 /**
- * 弹窗要编辑的那条规则。
- *
- * 包一层是为了区分「新建（还没有 id）」和「编辑某条」：直接用 RegexCastRule 时新建那条
- * 的 id 是 0，`remember(rule.id)` 会把两次新建的草稿串在一起。
+ * 弹窗要编辑的那条规则。[isNew] 区分「新建」与「编辑某条」：新建那条 [RegexCastRule.id]
+ * 恒为 0，弹窗草稿按 holder 而不是按 id remember，两次新建的草稿才不会串在一起。
  */
 @Stable
 data class RegexCastRuleHolder(
-    val rule: io.legado.app.data.entities.RegexCastRule,
+    val rule: RegexCastRule,
     val isNew: Boolean,
 )
 
@@ -61,7 +63,7 @@ sealed interface RegexCastRuleIntent {
     data object ShowCreate : RegexCastRuleIntent
     data class ShowEdit(val ruleId: Long) : RegexCastRuleIntent
     data object DismissEdit : RegexCastRuleIntent
-    data class Save(val rule: io.legado.app.data.entities.RegexCastRule) : RegexCastRuleIntent
+    data class Save(val rule: RegexCastRule) : RegexCastRuleIntent
 
     /** 弹窗里换了「声音池选择」或「声音池」：下面那栏的候选跟着换。 */
     data class PickPool(

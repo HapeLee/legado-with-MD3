@@ -8,19 +8,18 @@ import android.os.Looper
 
 /**
  * 朗读时的第三条音轨：正则角色里「命中不念、改放音频」放的那一下。
+ * 触发方：BaseReadAloudService.takeCueSounds 解出音频串后，TTS 路直接 [play]，
+ * Http 路由 HttpReadAloudService.scheduleCueSounds 按媒体时钟排 [prime] + [play]。
  *
- * 与背景音乐轨同样的硬约束：**不申请音频焦点**（朗读服务已经持有 AUDIOFOCUS_GAIN，
- * 这里再要一次会把 TTS 挤掉，见 [ReadAloudBgmPlayer] 的注释）。差别是它不循环、不渐变：
- * 一次触发响一次，同一个朗读单元上挂了几条就同时响几条，响完自己释放。
+ * 硬约束（与 [ReadAloudBgmPlayer] 同级）：
+ * 1. **不申请音频焦点**——朗读服务已持有 AUDIOFOCUS_GAIN，这里再要一次会把 TTS 挤掉；
+ * 2. **不读总音量**——背景音乐音量只管背景音乐，音效按原始响度放；
+ * 3. **不占主线程**——回调跑在朗读播放器的主线程上，同步 `prepare()` 读一个几 MB 的音效
+ *    会卡住几百毫秒并把 TTS 一起顿住，所以走 `prepareAsync`；
+ * 4. **到点即响**——[prime] 在句子起播时就把播放器建好、文件读完，[play] 命中备好的直接
+ *    `start()`，起播延迟只剩调度误差。
  *
- * 三条都是被要求的：
- * 1. **不读总音量**——背景音乐那根滑杆只管背景音乐，音效「原本的音频多大声就多大声」；
- * 2. **不占主线程**——这个回调就在朗读播放器的主线程上跑，`prepare()` 是同步读文件的，
- *    一首几 MB 的音效能把主线程按住几百毫秒，表现就是「音效和 TTS 一起顿一下才响」。
- *    所以走 `prepareAsync`，读完了再在同一个 Handler 上起播。
- * 3. **到点就响**：[prime] 在句子开始时就先把播放器建好、把文件读完，[play] 只做 `start()`。
- *    否则「按媒体时钟排到命中处」这件事会被 prepare 那几百毫秒拖掉——用户听到的
- *    「读到匹配处两秒后才响」一半是排期基准错，一半就是这里。
+ * 一次触发响一次；同一朗读单元挂几条就同时响几条，响完自释放，不循环、不渐变。
  */
 class ReadAloudEffectPlayer(private val context: Context) {
 

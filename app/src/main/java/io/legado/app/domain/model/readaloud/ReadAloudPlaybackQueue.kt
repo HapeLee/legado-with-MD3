@@ -13,8 +13,12 @@ data class ReadAloudPlaybackCue(
     /** 这一段的变声器预设名（空 = 跟随角色全局），见 [ChapterSpeechSegment.voiceEffect]。 */
     val voiceEffect: String = "",
     /**
-     * 这一单元起播时要并行放的音频路径（正则角色里「命中不念、改放音效」那一种），
-     * 多条以换行分隔。空 = 不放。第三条音轨，不抢焦点，见 ReadAloudEffectPlayer。
+     * 这一单元起播时要并行放的音效串（正则角色里「命中不念、改放音效」那一种），
+     * 由 [from] 从 SpeechPlanItem.soundEffect 原样带下，格式契约见
+     * [io.legado.app.help.readaloud.cast.RegexCastSplitter]。
+     * 解析端 BaseReadAloudService.takeCueSounds；消费方 HttpReadAloudService.scheduleCueSounds
+     * （媒体时钟定位）与 TTSReadAloudService.playCueSounds（立即响），第三条音轨不抢焦点。
+     * 空 = 不放。
      */
     val soundEffect: String = "",
     val characterPerformance: CharacterPerformanceProfile? = null,

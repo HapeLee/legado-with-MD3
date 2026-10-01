@@ -15,10 +15,18 @@ import androidx.room.PrimaryKey
  * 两种去向由 [poolKind] 决定：
  * - [POOL_ROLE]：命中的文字用 [itemId] 那个音色念（角色声音池里的一条音色）。
  * - [POOL_BGM]：命中的文字**不念**，改放 [itemId] 那段音频（背景音乐池里的一条配乐），
- *   走第三条音轨，与背景音乐和朗读并行。
+ *   走第三条音轨 [io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer]，
+ *   与朗读、背景音乐并行。
  *
  * [scope] / [excludeScope] 与官方替换规则同一口径：填书名或书源 URL 的子串，
  * 空 = 全书通用。
+ *
+ * 朗读侧的消费链：本表 → [io.legado.app.help.readaloud.cast.RegexCastRuleStore.effectsFor]
+ * 解成 [io.legado.app.help.readaloud.cast.RegexCastEffect] →
+ * [io.legado.app.help.readaloud.cast.RegexCastSplitter] 切分。改字段口径要同步看这两处。
+ *
+ * 表 `regex_cast_rules` 对应 Room version 128，建表与迁移见
+ * `DatabaseMigrations.migration_127_128`。
  */
 @Entity(
     tableName = "regex_cast_rules",
@@ -42,7 +50,7 @@ data class RegexCastRule(
     /** 音色 id / 配乐 id。空 = 只选了池，朗读时按池内启用的随机取一条。 */
     @ColumnInfo(defaultValue = "")
     var itemId: String = "",
-    /** 所属分组 id（[RegexCastGroup]），空串 = 未分组。 */
+    /** 所属分组 id，指向 [RegexCastGroup.id]，空串 = 未分组；无 Room 外键，级联口径在 RegexCastRuleStore.deleteGroup。 */
     @ColumnInfo(defaultValue = "")
     var groupId: String = "",
     @ColumnInfo(defaultValue = "1")

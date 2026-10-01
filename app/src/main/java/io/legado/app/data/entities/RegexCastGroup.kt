@@ -6,11 +6,14 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * 正则角色的分组：和角色声音池 / 背景音乐池的分组同一套形状（可嵌套的文件夹树）。
+ * 正则角色的分组：与角色声音池 / 背景音乐池的分组同一种形状（可嵌套的文件夹树），
+ * 列表交互（折叠、拖动排序、组开关）走同一套部件 [io.legado.app.ui.book.readaloud.cast.PoolTreeList]。
  *
- * 三套东西的列表交互必须一样（用户口径「该有的功能，比如拖动排序、分组啊这些的都要有，
- * 就和我们之前做的差不多」），所以字段照 [VoicePoolGroupEntity] 抄，不发明新形状：
- * [parentId] 空串 = 根层，[order] 是同一父级下的手动顺序，[enabled] 关掉等于整棵子树停用。
+ * 字段与 [VoicePoolGroupEntity] 保持一致：[parentId] 空串 = 根层，[order] 是同一父级下的手动顺序，
+ * [enabled] 关掉等于整棵子树停用（停用链的判定在 RegexCastRuleStore.listGroups 拉平时算 usable）。
+ *
+ * 被 [RegexCastRule.groupId] 引用；表 `regex_cast_groups` 对应 Room version 128，
+ * 建表与迁移见 `DatabaseMigrations.migration_127_128`。
  */
 @Entity(
     tableName = "regex_cast_groups",

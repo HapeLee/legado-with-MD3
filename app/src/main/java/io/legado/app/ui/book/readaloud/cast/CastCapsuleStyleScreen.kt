@@ -497,12 +497,12 @@ private fun PreviewBoard(
     val height = 40.dp
     val pad = height * CastCapsuleGeometry.padRatio
     val withText = nameText.isNotEmpty() || poolText.isNotEmpty()
-    // 与正文同一口径：全部关掉只剩头像时这颗胶囊是正方形（圆角拉满即圆，见 widthOf）。
-    // 未分配占位那颗在正文里走的是另一套宽度算法，不参与这条规则。
+    // 与正文同一口径：全部关掉只剩头像时这颗胶囊是正方形（圆角拉满即圆，见 widthOf）；
+    // 未分配占位那颗在正文里走 placeholderWidthPx，不参与这条规则。
     val avatarOnly = squareAvatarOnly && withAvatar && !withText
     val avatarSize = style.avatarDiameterDp(height)
-    // 与正文同一份落点：角色那颗不管开不开名字/池小字都在同一条线上（见 avatarLeft），
-    // 未分配占位那颗只有一个图标，走它自己的内边距。
+    // 落点与正文同源（见 CastCapsuleStyle.avatarLeft / placeholderIconLeft）：
+    // 角色那颗不随名字/池小字开关漂移，占位那颗走它自己的内边距。
     val avatarLeft = if (squareAvatarOnly) {
         style.avatarLeftDp(height)
     } else {
@@ -517,8 +517,7 @@ private fun PreviewBoard(
     Column(
         modifier = modifier.background(board).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        // 胶囊钉在底板左沿：正文里它也是行内从左往右排的。原先水平居中，开关一拨胶囊变宽，
-        // 整颗（连头像）就跟着往左平移，看着就是「头像位置变了、对不上」。
+        // 胶囊钉在底板左沿，与正文的行内左起一致：宽度变化不许把头像平移走
         horizontalAlignment = Alignment.Start,
     ) {
         val shape = RoundedCornerShape(percent = style.cornerRadius.coerceIn(0, CastCapsuleStyle.FULL))
@@ -615,10 +614,8 @@ private fun PreviewBoard(
 }
 
 /**
- * 预览的几何换算。
- *
- * Dp 只是 Float 的单位包装，所以这里直接套正文那三个函数——预览与正文共用同一份
- * 夹取规则（头像大小、位移上限），不再抄一遍公式抄漏。
+ * 预览的几何换算：Dp 只是 Float 的单位包装，这里直接转发 [CastCapsuleStyle] 的同名函数，
+ * 预览与正文共用同一份夹取规则（头像大小、位移上限），不再各抄一遍公式。
  */
 private fun CastCapsuleStyle.avatarLeftDp(height: Dp): Dp = avatarLeft(height.value).dp
 
