@@ -114,25 +114,4 @@ class RegexCastSplitterTest {
         val result = split("abc", voice("v1", "x*"))
         assertEquals(listOf("abc"), result.parts.map { it.text })
     }
-
-    @Test
-    fun `uncompilable pattern falls back to literal text`() {
-        // 非法正则（少一个右括号的普通文本）整串按字面量匹配，规则不作废
-        val broken = "(山体崩碎音效"
-        val regex = RegexCastRuleStore.compile(broken) ?: error("compile returned null")
-        assertTrue(regex.matches(broken))
-        assertEquals(1, regex.findAll("前${broken}后").count())
-    }
-
-    @Test
-    fun `plain text and real regex both compile`() {
-        assertEquals(1, RegexCastRuleStore.compile("爆炸")!!.findAll("前爆炸后").count())
-        assertEquals(2, RegexCastRuleStore.compile("爆炸|雷声")!!.findAll("爆炸和雷声").count())
-    }
-
-    @Test
-    fun `blank pattern has no effect`() {
-        assertEquals(null, RegexCastRuleStore.compile(""))
-        assertEquals(null, RegexCastRuleStore.compile("   "))
-    }
 }

@@ -3157,6 +3157,8 @@
     <string name="regex_cast_delete_text">「%1$s」朗读时不再生效。</string>
     <string name="regex_cast_name">角色名称</string>
     <string name="regex_cast_pattern">角色正则</string>
+    <string name="regex_cast_match_text">匹配的文字</string>
+    <string name="regex_cast_use_regex">使用正则匹配</string>
     <string name="regex_cast_pool_kind">声音池选择</string>
     <string name="regex_cast_pool">声音池</string>
     <string name="regex_cast_item">音色</string>

@@ -25,8 +25,8 @@ import androidx.room.PrimaryKey
  * 解成 [io.legado.app.help.readaloud.cast.RegexCastEffect] →
  * [io.legado.app.help.readaloud.cast.RegexCastSplitter] 切分。改字段口径要同步看这两处。
  *
- * 表 `regex_cast_rules` 对应 Room version 128，建表与迁移见
- * `DatabaseMigrations.migration_127_128`。
+ * 表 `regex_cast_rules` 建表见 `DatabaseMigrations.migration_127_128`（Room version 128），
+ * [useRegex] 这一列由 Room version 129 的 AutoMigration 追加。
  */
 @Entity(
     tableName = "regex_cast_rules",
@@ -40,8 +40,19 @@ data class RegexCastRule(
     var id: Long = 0L,
     /** 角色名称：只在列表里认得出这条规则是干什么的，不参与匹配。 */
     var name: String = "",
-    /** 匹配的地方。文本与正则同一张表：先当正则编，编不过再按字面量兜。 */
+    /**
+     * 匹配的地方。怎么解释这一串由 [useRegex] 决定，编译入口是
+     * [io.legado.app.help.readaloud.cast.RegexCastRuleStore.compile]。
+     */
     var pattern: String = "",
+    /**
+     * 是否按正则匹配。true = [pattern] 当正则编译；false = 整串按字面量匹配，
+     * 里面那些 `(`、`[`、`*` 之类都只是普通字符。
+     *
+     * 只在编译这一步分叉，命中之后换音色还是放音频、怎么切朗读单元都不看这个开关。
+     */
+    @ColumnInfo(defaultValue = "1")
+    var useRegex: Boolean = true,
     @ColumnInfo(defaultValue = "role")
     var poolKind: String = POOL_ROLE,
     /** 声音池 id（角色池或配乐池，看 [poolKind]）。 */

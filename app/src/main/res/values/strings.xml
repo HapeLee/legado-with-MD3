@@ -3161,6 +3161,8 @@
     <string name="regex_cast_delete_text">%1$s will no longer take effect while reading aloud.</string>
     <string name="regex_cast_name">Role name</string>
     <string name="regex_cast_pattern">Match text or regex</string>
+    <string name="regex_cast_match_text">Match text</string>
+    <string name="regex_cast_use_regex">Use regex matching</string>
     <string name="regex_cast_pool_kind">Pool type</string>
     <string name="regex_cast_pool">Voice pool</string>
     <string name="regex_cast_item">Voice / track</string>

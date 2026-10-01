@@ -136,7 +136,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 128,
+    version = 129,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -269,6 +269,8 @@ val appDb by lazy {
         AutoMigration(from = 126, to = 127),
         // 128 是手工迁移：正则角色的分组从「一个文本列」升级成真正的可嵌套分组树
         // （新表 regex_cast_groups + rules.groupId），要搬数据，AutoMigration 做不了。
+        // regex_cast_rules 新增 useRegex 列：一条规则自己决定按正则还是按字面量匹配
+        AutoMigration(from = 128, to = 129),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

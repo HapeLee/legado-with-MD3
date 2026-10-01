@@ -310,7 +310,14 @@ private fun RegexCastEditDialog(
                         ),
                         CastFieldSpec(
                             id = "pattern",
-                            label = stringResource(R.string.regex_cast_pattern),
+                            // 开关决定这一栏是正则还是原样文字，标题跟着走，别写着「正则」实际按字面量匹配
+                            label = stringResource(
+                                if (draft.useRegex) {
+                                    R.string.regex_cast_pattern
+                                } else {
+                                    R.string.regex_cast_match_text
+                                }
+                            ),
                             value = draft.pattern,
                             onValueChange = { draft = draft.copy(pattern = it) },
                         ),
@@ -390,6 +397,20 @@ private fun RegexCastEditDialog(
                         ),
                     ),
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.regex_cast_use_regex),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Switch(
+                        checked = draft.useRegex,
+                        onCheckedChange = { draft = draft.copy(useRegex = it) },
+                    )
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
