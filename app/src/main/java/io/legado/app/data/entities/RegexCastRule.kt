@@ -22,7 +22,10 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "regex_cast_rules",
-    indices = [Index(value = ["enabled", "order"])],
+    indices = [
+        Index(value = ["enabled", "order"]),
+        Index(value = ["groupId", "order"]),
+    ],
 )
 data class RegexCastRule(
     @PrimaryKey(autoGenerate = true)
@@ -39,9 +42,9 @@ data class RegexCastRule(
     /** 音色 id / 配乐 id。空 = 只选了池，朗读时按池内启用的随机取一条。 */
     @ColumnInfo(defaultValue = "")
     var itemId: String = "",
-    /** 列表分组，空 = 未分组。只用来把一长串规则分开看。 */
+    /** 所属分组 id（[RegexCastGroup]），空串 = 未分组。 */
     @ColumnInfo(defaultValue = "")
-    var group: String = "",
+    var groupId: String = "",
     @ColumnInfo(defaultValue = "1")
     var enabled: Boolean = true,
     @ColumnInfo(defaultValue = "0")

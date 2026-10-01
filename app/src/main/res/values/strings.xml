@@ -3174,6 +3174,12 @@
     <string name="regex_cast_summary_voice">read with %1$s (%2$s)</string>
     <string name="regex_cast_summary_sound">play %1$s (%2$s) on a third track, text not read</string>
     <string name="regex_cast_scope_hint">Scope takes book title or source URL, empty means all books.</string>
+    <string name="regex_cast_search_hint">Filter rules and groups</string>
+    <string name="regex_cast_new_group">New group</string>
+    <string name="regex_cast_delete_group_title">Delete this group?</string>
+    <string name="regex_cast_delete_group_text">Rules in %1$s move up one level; no rule is deleted.</string>
+    <string name="regex_cast_group_bad_name">Empty name</string>
+    <string name="regex_cast_group_duplicate">Another group here already has this name</string>
     <string name="regex_cast_dialog_hint">The pool list is only a filter: disabled pools are still listed, and a voice can be picked without choosing a pool. Type a new group name to create one.</string>
     <string name="regex_cast_sort_hint">Long press and drag to reorder; drop into another section to move the rule into that group.</string>
     <string name="regex_cast_pool_disabled"> (disabled)</string>

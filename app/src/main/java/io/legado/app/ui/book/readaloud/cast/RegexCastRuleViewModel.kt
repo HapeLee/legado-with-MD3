@@ -9,6 +9,7 @@ import io.legado.app.help.readaloud.cast.RegexCastRuleStore
 import io.legado.app.help.readaloud.cast.VoicePoolStore
 import io.legado.app.ui.widget.components.CastOption
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -16,8 +17,10 @@ import kotlinx.coroutines.flow.update
 /**
  * 正则角色管理 ViewModel。
  *
- * DAO 访问收口在 [RegexCastRuleStore]（架构护栏：VM 不直连 DAO）。改完即生效——朗读侧每次
- * 准备新章会重取规则快照，正在播的那一条不受影响，下一条起用新规则。
+ * DAO 访问收口在 [RegexCastRuleStore]（架构护栏：VM 不直连 DAO）。树的操作（拉平、落点归属、
+ * 松手回写）全部走 [CastPoolTree]，与角色声音池 / 背景音乐池同一份规则，不抄第三遍。
+ *
+ * 改完即生效：朗读侧每次准备新章会重取规则快照，正在播的那一条不受影响，下一条起用新规则。
  */
 class RegexCastRuleViewModel(
     application: Application,
@@ -26,9 +29,15 @@ class RegexCastRuleViewModel(
     private val _uiState = MutableStateFlow(RegexCastRuleUiState())
     val uiState = _uiState.asStateFlow()
 
-    /** 池名与条目名缓存：列表摘要与弹窗候选都从这里取，省掉逐行查库。 */
+    /** 规则原文：卡片给回来的只有 id 字符串，编辑/删除/开关都要按 id 找回那条。 */
+    private var rules: List<RegexCastRule> = emptyList()
+
+    /** 池名与条目名：列表摘要与弹窗候选都从这里取，省掉逐行查库。 */
     private var poolNames: Map<String, String> = emptyMap()
     private var itemNames: Map<String, String> = emptyMap()
+
+    /** 拖动中被拖行的 key；松手回写后要清掉。 */
+    private var draggedKey: String? = null
 
     init {
         refresh()
@@ -39,28 +48,23 @@ class RegexCastRuleViewModel(
             RegexCastRuleIntent.Refresh -> refresh()
 
             RegexCastRuleIntent.ShowCreate -> {
-                _uiState.update { it.copy(isNew = true, editTarget = RegexCastRule()) }
+                _uiState.update {
+                    it.copy(editTarget = RegexCastRuleHolder(RegexCastRule(), isNew = true))
+                }
                 launchIo { loadCandidates(RegexCastRule.POOL_ROLE, "", "") }
             }
 
             is RegexCastRuleIntent.ShowEdit -> {
-                _uiState.update { it.copy(isNew = false, editTarget = intent.rule) }
-                launchIo { loadCandidates(intent.rule.poolKind, intent.rule.poolId, intent.rule.itemId) }
+                val rule = rules.firstOrNull { it.id == intent.ruleId }
+                if (rule != null) {
+                    _uiState.update {
+                        it.copy(editTarget = RegexCastRuleHolder(rule, isNew = false))
+                    }
+                    launchIo { loadCandidates(rule.poolKind, rule.poolId, rule.itemId) }
+                }
             }
 
             RegexCastRuleIntent.DismissEdit -> _uiState.update { it.copy(editTarget = null) }
-
-            // 弹窗里换了「声音池选择」或「声音池」：下面那栏的候选跟着换。
-            // 草稿整体留在弹窗本地，这里只刷候选，别回头去改 editTarget（会把没提交的编辑冲掉）。
-            is RegexCastRuleIntent.PickPool -> launchIo {
-                val keep = _uiState.value.editTarget?.itemId.orEmpty()
-                loadCandidates(intent.kind, intent.poolId, keep)
-            }
-
-            is RegexCastRuleIntent.Move -> launchIo {
-                RegexCastRuleStore.move(intent.from, intent.to)
-                refresh()
-            }
 
             is RegexCastRuleIntent.Save -> launchIo {
                 RegexCastRuleStore.save(intent.rule)
@@ -68,57 +72,224 @@ class RegexCastRuleViewModel(
                 _uiState.update { it.copy(editTarget = null) }
             }
 
-            is RegexCastRuleIntent.Toggle -> launchIo {
-                RegexCastRuleStore.setEnabled(intent.rule, intent.enabled)
+            is RegexCastRuleIntent.PickPool -> launchIo {
+                loadCandidates(intent.kind, intent.poolId, intent.keepItemId)
+            }
+
+            is RegexCastRuleIntent.ShowDelete -> {
+                rules.firstOrNull { it.id == intent.ruleId }?.let { rule ->
+                    _uiState.update { it.copy(deleteTarget = RegexCastRuleHolder(rule, false)) }
+                }
+            }
+
+            RegexCastRuleIntent.DismissDelete -> _uiState.update { it.copy(deleteTarget = null) }
+
+            is RegexCastRuleIntent.Delete -> launchIo {
+                rules.firstOrNull { it.id == intent.ruleId }?.let { RegexCastRuleStore.delete(it) }
+                refresh()
+                _uiState.update { it.copy(deleteTarget = null) }
+            }
+
+            is RegexCastRuleIntent.RuleEnabled -> launchIo {
+                val id = intent.ruleId.toLongOrNull() ?: return@launchIo
+                rules.firstOrNull { it.id == id }?.let {
+                    RegexCastRuleStore.setEnabled(it, intent.enabled)
+                }
                 refresh()
             }
 
-            is RegexCastRuleIntent.ShowDelete -> _uiState.update { it.copy(deleteTarget = intent.rule) }
-            RegexCastRuleIntent.DismissDelete -> _uiState.update { it.copy(deleteTarget = null) }
-            is RegexCastRuleIntent.Delete -> launchIo {
-                RegexCastRuleStore.delete(intent.rule)
+            is RegexCastRuleIntent.Query -> {
+                _uiState.update { it.copy(searchQuery = intent.text) }
+                rebuildRows()
+            }
+
+            RegexCastRuleIntent.ToggleSearch -> {
+                val open = !_uiState.value.searchActive
+                _uiState.update { it.copy(searchActive = open, searchQuery = if (open) it.searchQuery else "") }
+                rebuildRows()
+            }
+
+            is RegexCastRuleIntent.MoveItem -> moveItem(intent.from, intent.to)
+
+            RegexCastRuleIntent.SaveSortOrder -> launchIo {
+                saveSortOrder()
                 refresh()
-                _uiState.update { it.copy(deleteTarget = null) }
+            }
+
+            is RegexCastRuleIntent.ToggleGroup -> {
+                _uiState.update { state ->
+                    val collapsed = state.collapsedGroups.toMutableSet()
+                    if (!collapsed.add(intent.groupId)) collapsed.remove(intent.groupId)
+                    state.copy(collapsedGroups = collapsed.toPersistentSet())
+                }
+                rebuildRows()
+            }
+
+            is RegexCastRuleIntent.GroupEnabled -> launchIo {
+                RegexCastRuleStore.setGroupEnabled(intent.groupId, intent.enabled)
+                refresh()
+            }
+
+            is RegexCastRuleIntent.RenameGroup -> {
+                val group = _uiState.value.groups.firstOrNull { it.id == intent.groupId }
+                _uiState.update {
+                    it.copy(groupDialog = GroupEditDialogState(
+                        editingId = intent.groupId,
+                        parentId = group?.parentId.orEmpty(),
+                        name = group?.name.orEmpty(),
+                    ))
+                }
+            }
+
+            is RegexCastRuleIntent.CreateGroup -> _uiState.update {
+                it.copy(groupDialog = GroupEditDialogState(parentId = intent.parentId))
+            }
+
+            is RegexCastRuleIntent.MoveGroup -> _uiState.update {
+                it.copy(moveGroupTarget = intent.groupId)
+            }
+
+            is RegexCastRuleIntent.DeleteGroup -> _uiState.update {
+                it.copy(deleteGroupTarget = intent.groupId)
+            }
+
+            RegexCastRuleIntent.DismissGroupDialog -> _uiState.update { it.copy(groupDialog = null) }
+
+            is RegexCastRuleIntent.ConfirmGroup -> launchIo {
+                val dialog = _uiState.value.groupDialog
+                val editing = intent.editingId
+                if (editing == null) {
+                    val created = RegexCastRuleStore.createGroup(intent.name, dialog?.parentId.orEmpty())
+                    _uiState.update {
+                        it.copy(groupDialog = created?.let { _ -> null } ?: dialog?.copy(errorRes = R.string.regex_cast_group_bad_name))
+                    }
+                } else {
+                    val ok = RegexCastRuleStore.renameGroup(editing, intent.name)
+                    _uiState.update {
+                        it.copy(groupDialog = if (ok) null else dialog?.copy(errorRes = R.string.regex_cast_group_duplicate))
+                    }
+                }
+                refresh()
+            }
+
+            is RegexCastRuleIntent.ConfirmMoveGroup -> launchIo {
+                RegexCastRuleStore.moveGroupToParent(intent.id, intent.parentId)
+                refresh()
+                _uiState.update { it.copy(moveGroupTarget = null) }
+            }
+
+            RegexCastRuleIntent.DismissMoveGroup -> _uiState.update { it.copy(moveGroupTarget = null) }
+            RegexCastRuleIntent.DismissDeleteGroup -> _uiState.update { it.copy(deleteGroupTarget = null) }
+
+            is RegexCastRuleIntent.ConfirmDeleteGroup -> launchIo {
+                RegexCastRuleStore.deleteGroup(intent.id)
+                refresh()
+                _uiState.update { it.copy(deleteGroupTarget = null) }
             }
         }
     }
 
     private fun refresh() = launchIo {
-        val pools = VoicePoolStore.listPools() + BgmPoolStore.listPools()
-        poolNames = pools.associate { it.id to it.name }
-        itemNames = VoicePoolStore.allVoicePairs().toMap() + BgmPoolStore.allTrackPairs().toMap()
-        val rows = ArrayList<RegexCastRow>()
-        var lastGroup: String? = null
-        RegexCastRuleStore.all().forEach { rule ->
-            // 小节名只在这个分组的第一行显示一次
-            val section = rule.group.takeIf { it != lastGroup }
-            lastGroup = rule.group
-            rows += RegexCastRow(rule, summaryOf(rule), section)
+        val (pools, items) = RegexCastRuleStore.names()
+        poolNames = pools
+        itemNames = items
+        rules = RegexCastRuleStore.all()
+        val groups = RegexCastRuleStore.listGroups()
+        val rows = RegexCastRuleStore.poolRows { rule -> summaryOf(rule) }
+        _uiState.update { state ->
+            state.copy(
+                pools = rows.toImmutableList(),
+                groups = groups.toImmutableList(),
+                rows = CastPoolTree.buildRows(
+                    groups = groups,
+                    pools = rows,
+                    collapsed = state.collapsedGroups,
+                    query = state.searchQuery,
+                ).toImmutableList(),
+                groupOptions = groups.map { CastOption(it.id, it.path) }.toImmutableList(),
+                dragTargetGroupId = null,
+                dragSourceGroupId = null,
+            )
         }
-        _uiState.update { it.copy(rows = rows.toImmutableList()) }
+    }
+
+    /** 折叠/搜索只改可见行，不用重新查库。 */
+    private fun rebuildRows() = _uiState.update { state ->
+        state.copy(
+            rows = CastPoolTree.buildRows(
+                groups = state.groups,
+                pools = state.pools,
+                collapsed = state.collapsedGroups,
+                query = state.searchQuery,
+            ).toImmutableList()
+        )
+    }
+
+    /**
+     * 拖动过程中的一次挪动：严格照搬库给的绝对下标。
+     *
+     * 以前为了把顶部「未分组」表头钉在第 0 格而夹紧下标，等于吞掉一次移动，库和模型错位后
+     * 下一帧就要求移回去——来回抽搐。现在允许它暂时让位，松手回写重算列表时会自己回到首位。
+     */
+    private fun moveItem(from: Int, to: Int) {
+        val state = _uiState.value
+        val dragged = state.rows.getOrNull(from)
+        if (dragged == null || dragged.isUngroupedHeader || from == to || to !in state.rows.indices) {
+            return
+        }
+        draggedKey = dragged.key
+        _uiState.update { current ->
+            val moved = current.rows.toMutableList()
+            moved.add(to, moved.removeAt(from))
+            current.copy(
+                rows = moved.toImmutableList(),
+                // 实时告诉界面「松手会归到哪个组」，界面据此点亮目标分组头
+                dragTargetGroupId = CastPoolTree.dropParentOf(
+                    moved,
+                    to,
+                    current.groups.associate { it.id to it.parentId },
+                ),
+                dragSourceGroupId = dragged.pool?.groupId
+                    ?: dragged.group?.parentId
+                    ?: CastPoolTree.UNGROUPED_ID,
+            )
+        }
+    }
+
+    /** 松手落库：顺序按当前可见列表整体回写，父级只重算被拖的那一行（规则在 CastPoolTree 里）。 */
+    private suspend fun saveSortOrder() {
+        val state = _uiState.value
+        val key = draggedKey
+        draggedKey = null
+        if (key == null || state.searchQuery.isNotBlank()) return
+        val plan = CastPoolTree.savePlan(
+            rows = state.rows,
+            pools = state.pools,
+            groups = state.groups,
+            draggedKey = key,
+        ) ?: return
+        RegexCastRuleStore.saveSlots(plan.first, plan.second)
     }
 
     /**
      * 弹窗的「声音池」「音色/配乐」两栏候选。
      *
-     * 声音池**不按启用状态过滤**（停用的池照样列出来，后缀标一下）——用户就是要能挑到它；
-     * 音色/配乐同理：没选池时列全部，选了池就只列池内那些。**池只是筛选**，不是前置条件。
+     * 声音池**不按启用状态过滤**（停用的也列出来，后缀标一下）——用户就是要能挑到它；
+     * 音色/配乐同理：没选池时列全部，选了池才按池内成员收窄。**池只是筛选**，不是前置条件。
      * 已经选中的那条即使不在当前筛选里也留在列表头上，否则一换池子显示就空了。
      */
     private suspend fun loadCandidates(kind: String, poolId: String, keepItemId: String) {
         val role = kind != RegexCastRule.POOL_BGM
         val pools = if (role) VoicePoolStore.listPools() else BgmPoolStore.listPools()
         val allItems = if (role) VoicePoolStore.allVoicePairs() else BgmPoolStore.allTrackPairs()
-        val members = if (poolId.isBlank()) {
-            emptySet()
-        } else if (role) {
-            VoicePoolStore.memberVoiceIds(poolId)
-        } else {
-            BgmPoolStore.memberTrackIds(poolId)
+        val members = when {
+            poolId.isBlank() -> emptySet()
+            role -> VoicePoolStore.memberVoiceIds(poolId)
+            else -> BgmPoolStore.memberTrackIds(poolId)
         }
         val disabled = context.getString(R.string.regex_cast_pool_disabled)
-        val random = CastOption("", context.getString(R.string.regex_cast_random))
-        val items = allItems.filter { it.first in members || it.first == keepItemId }
+        val items = allItems
+            .filter { it.first in members || it.first == keepItemId }
             .ifEmpty { if (poolId.isBlank()) allItems else emptyList() }
             .map { CastOption(it.first, it.second) }
         _uiState.update {
@@ -126,9 +297,11 @@ class RegexCastRuleViewModel(
                 poolOptions = (listOf(CastOption("", context.getString(R.string.regex_cast_pick_pool))) +
                     pools.map { p -> CastOption(p.id, if (p.enabled) p.name else p.name + disabled) })
                     .toImmutableList(),
-                itemOptions = (if (poolId.isBlank()) items else listOf(random) + items)
-                    .toImmutableList(),
-                groupOptions = RegexCastRuleStore.groups().map { CastOption(it, it) }.toImmutableList(),
+                itemOptions = (if (poolId.isBlank()) {
+                    items
+                } else {
+                    listOf(CastOption("", context.getString(R.string.regex_cast_random))) + items
+                }).toImmutableList(),
             )
         }
     }

@@ -21,8 +21,57 @@ object DatabaseMigrations {
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
             migration_82_83, migration_98_99, migration_99_100,
-            migration_102_103, migration_123_124, migration_124_125,
+            migration_102_103, migration_123_124, migration_124_125, migration_127_128,
         )
+    }
+
+    /**
+     * 127 → 128：正则角色的分组从文本列升级成可嵌套的分组树。
+     *
+     * 原来 `regex_cast_rules.group` 存的是组名字符串（只能一层、改名要全表改写）。
+     * 这里把已有的组名各建成一个根层分组（id 直接用组名，幂等且好认），规则改指 id，
+     * 然后把 rules 整表重建去掉旧列——minSdk 26 的 SQLite 没有 DROP COLUMN（要 3.35），
+     * 与 124→125 那轮同一手法。
+     */
+    private val migration_127_128 = object : Migration(127, 128) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `regex_cast_groups` (
+                    `id` TEXT NOT NULL, `name` TEXT NOT NULL, `parentId` TEXT NOT NULL DEFAULT '',
+                    `order` INTEGER NOT NULL DEFAULT 0, `enabled` INTEGER NOT NULL DEFAULT 1,
+                    `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`))"""
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_regex_cast_groups_parentId_name` ON `regex_cast_groups` (`parentId`, `name`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_regex_cast_groups_parentId` ON `regex_cast_groups` (`parentId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_regex_cast_groups_parentId_order` ON `regex_cast_groups` (`parentId`, `order`)")
+            db.execSQL(
+                """INSERT OR IGNORE INTO regex_cast_groups(id, name, parentId, `order`, enabled, createdAt, updatedAt)
+                SELECT DISTINCT r.`group`, r.`group`, '', 0, 1, r.createdAt, r.updatedAt
+                FROM regex_cast_rules r WHERE r.`group` IS NOT NULL AND TRIM(r.`group`) <> ''"""
+            )
+            db.execSQL("ALTER TABLE regex_cast_rules ADD COLUMN groupId TEXT NOT NULL DEFAULT ''")
+            db.execSQL("UPDATE regex_cast_rules SET groupId = IFNULL(`group`, '')")
+            db.execSQL(
+                """CREATE TABLE regex_cast_rules_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL,
+                    pattern TEXT NOT NULL, poolKind TEXT NOT NULL DEFAULT 'role',
+                    poolId TEXT NOT NULL DEFAULT '', itemId TEXT NOT NULL DEFAULT '',
+                    groupId TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1,
+                    `order` INTEGER NOT NULL DEFAULT 0, scope TEXT, excludeScope TEXT,
+                    createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL)"""
+            )
+            db.execSQL(
+                """INSERT INTO regex_cast_rules_new
+                    (id, name, pattern, poolKind, poolId, itemId, groupId, enabled, `order`, scope, excludeScope, createdAt, updatedAt)
+                SELECT id, name, pattern, poolKind, poolId, itemId, groupId, enabled, `order`, scope, excludeScope, createdAt, updatedAt
+                FROM regex_cast_rules"""
+            )
+            db.execSQL("DROP TABLE regex_cast_rules")
+            db.execSQL("ALTER TABLE regex_cast_rules_new RENAME TO regex_cast_rules")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_regex_cast_rules_enabled_order` ON `regex_cast_rules` (`enabled`, `order`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_regex_cast_rules_groupId_order` ON `regex_cast_rules` (`groupId`, `order`)")
+        }
     }
 
     private val migration_10_11 = object : Migration(10, 11) {

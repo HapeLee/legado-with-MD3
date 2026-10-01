@@ -3,10 +3,12 @@ package io.legado.app.help.readaloud.cast
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.RegexCastGroup
 import io.legado.app.data.entities.RegexCastRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.UUID
 import kotlin.random.Random
 
 /**
@@ -24,19 +26,79 @@ data class RegexCastEffect(
 /**
  * 正则角色的读写出口（界面与朗读服务都只经这里，不直连 DAO）。
  *
- * 除 CRUD 外还负责把「池 + 条目」解成朗读能用的东西：只选了池没选条目时，按池内启用的
- * 随机取一条（与背景音乐场景同一口径）；解不出来（音色被停用、音频文件被删）就丢掉这条规则
- * 并记一行日志——朗读不能因为一条坏规则整章失败。
+ * 除 CRUD 外还负责两件事：
+ * 1. 把「分组树 + 规则」拉平成界面那套 [CastPoolRow] / [CastGroupRow]，与角色声音池、
+ *    背景音乐池共用同一套树逻辑（[CastPoolTree]）和同一个列表部件；
+ * 2. 朗读侧的解析——把「池 + 条目」解成音色 id 或音频路径。只选了池没选条目时按池内启用的
+ *    随机取一条（与背景音乐场景同一口径）；解不出来（音色停用、音频文件被删）就丢掉这条规则
+ *    并记一行日志，朗读不能因为一条坏规则整章失败。
  */
 object RegexCastRuleStore {
 
+    /** 分组显示路径的分隔符，与两个池库那两处一致。 */
+    private const val GROUP_SEPARATOR = "/"
+
+    // ---------- 列表数据 ----------
+
+    /** 分组树（DFS 拉平，根层在前、子组紧跟其父），与声音池那套同一算法。 */
+    suspend fun listGroups(): List<CastGroupRow> = withContext(Dispatchers.IO) {
+        val all = appDb.regexCastRuleDao.getGroups()
+        // 父组不存在的孤儿按根层处理：不然它会整棵从页面上消失，看起来像数据丢了
+        val ids = all.mapTo(mutableSetOf()) { it.id }
+        val byParent = all.groupBy { if (it.parentId in ids) it.parentId else "" }
+            .mapValues { (_, rows) -> rows.sortedWith(compareBy({ it.order }, { it.name })) }
+        val rows = ArrayList<CastGroupRow>(all.size)
+
+        fun walk(group: RegexCastGroup, depth: Int, parentPath: String, parentUsable: Boolean) {
+            val path = if (parentPath.isEmpty()) {
+                group.name
+            } else {
+                "$parentPath$GROUP_SEPARATOR${group.name}"
+            }
+            val usable = parentUsable && group.enabled
+            rows += CastGroupRow(
+                group.id, group.name, group.parentId, path, depth,
+                group.order, group.enabled, usable,
+            )
+            byParent[group.id].orEmpty().forEach { walk(it, depth + 1, path, usable) }
+        }
+        byParent[""].orEmpty().forEach { walk(it, 0, "", true) }
+        rows
+    }
+
+    /** 规则 → 列表行。[summaryOf] 由调用方拼那行中文摘要（Store 不认识资源串）。 */
+    suspend fun poolRows(summaryOf: (RegexCastRule) -> String): List<CastPoolRow> =
+        withContext(Dispatchers.IO) {
+            val groups = listGroups()
+            val pathById = groups.associate { it.id to it.path }
+            val usableById = groups.associate { it.id to it.usable }
+            appDb.regexCastRuleDao.all().map { rule ->
+                CastPoolRow(
+                    id = rule.id.toString(),
+                    name = rule.name.ifBlank { rule.pattern },
+                    groupId = rule.groupId,
+                    groupName = pathById[rule.groupId].orEmpty(),
+                    order = rule.order,
+                    enabled = rule.enabled,
+                    groupEnabled = usableById[rule.groupId] ?: true,
+                    isDefault = false,
+                    total = 0,
+                    enabledCount = 0,
+                    subtitle = summaryOf(rule),
+                )
+            }
+        }
+
+    suspend fun rule(id: Long): RegexCastRule? = withContext(Dispatchers.IO) {
+        appDb.regexCastRuleDao.findById(id)
+    }
+
+    /** 全部规则（列表按分组树渲染，这里只给原始行）。 */
     suspend fun all(): List<RegexCastRule> = withContext(Dispatchers.IO) {
         appDb.regexCastRuleDao.all()
     }
 
-    suspend fun groups(): List<String> = withContext(Dispatchers.IO) {
-        appDb.regexCastRuleDao.allGroups()
-    }
+    // ---------- 规则增删改 ----------
 
     suspend fun save(rule: RegexCastRule) = withContext(Dispatchers.IO) {
         if (rule.id == 0L) {
@@ -44,7 +106,6 @@ object RegexCastRuleStore {
         } else {
             appDb.regexCastRuleDao.update(rule.copy(updatedAt = System.currentTimeMillis()))
         }
-        Unit
     }
 
     suspend fun delete(rule: RegexCastRule) = withContext(Dispatchers.IO) {
@@ -55,42 +116,140 @@ object RegexCastRuleStore {
         appDb.regexCastRuleDao.setEnabled(rule.id, enabled)
     }
 
-    /**
-     * 拖动排序：[from] → [to] 用的是列表下标，与 [all] 同一个顺序。
-     *
-     * 落到哪个小节就归哪个组（取落点上面那条的分组，没有就取下面那条），所以「把规则拖进
-     * 某个分组」和「组内排序」是同一个手势。order 按全局位置递增：列表按 (分组, order) 排，
-     * 同组内的相对顺序就是这样保住的。
-     */
-    suspend fun move(from: Int, to: Int) = withContext(Dispatchers.IO) {
-        val all = appDb.regexCastRuleDao.all().toMutableList()
-        if (from !in all.indices || to !in all.indices || from == to) return@withContext
-        val moved = all.removeAt(from)
-        all.add(to, moved)
-        val group = all.getOrNull(to - 1)?.group ?: all.getOrNull(to + 1)?.group ?: moved.group
-        all[to] = moved.copy(group = group)
-        appDb.regexCastRuleDao.updateAll(all.mapIndexed { index, rule ->
-            rule.copy(order = index)
-        })
+    suspend fun setRuleGroup(id: Long, groupId: String) = withContext(Dispatchers.IO) {
+        appDb.regexCastRuleDao.setRuleGroup(id, groupId)
     }
 
     /**
-     * 这本书现在能用的正则角色：按规则顺序编译并解好音色/音频。
+     * 拖动结束后的整表回写：两组 slot 来自 [CastPoolTree.savePlan]，
+     * 内容是 `id to (父级 id, 顺序)`。只认这次列表里出现的行，收起的子树原样不动。
+     */
+    suspend fun saveSlots(
+        ruleSlots: List<Pair<String, Pair<String, Int>>>,
+        groupSlots: List<Pair<String, Pair<String, Int>>>,
+    ) = withContext(Dispatchers.IO) {
+        val dao = appDb.regexCastRuleDao
+        val rules = dao.all().associateBy { it.id.toString() }
+        dao.updateRules(
+            ruleSlots.mapNotNull { (id, slot) ->
+                rules[id]?.copy(groupId = slot.first, order = slot.second)
+            }
+        )
+        val groups = dao.getGroups().associateBy { it.id }
+        dao.updateGroups(
+            groupSlots.mapNotNull { (id, slot) ->
+                groups[id]?.copy(parentId = slot.first, order = slot.second)
+            }
+        )
+    }
+
+    // ---------- 分组增删改 ----------
+
+    /** 建组：同一父级下同名不重复建，已存在就返回它的 id。 */
+    suspend fun createGroup(name: String, parentId: String): String? = withContext(Dispatchers.IO) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return@withContext null
+        val dao = appDb.regexCastRuleDao
+        dao.getGroupByName(parentId, trimmed)?.id ?: run {
+            val id = UUID.randomUUID().toString()
+            dao.insertGroup(RegexCastGroup(id = id, name = trimmed, parentId = parentId))
+            id
+        }
+    }
+
+    suspend fun renameGroup(id: String, name: String): Boolean = withContext(Dispatchers.IO) {
+        val dao = appDb.regexCastRuleDao
+        val group = dao.getGroup(id) ?: return@withContext false
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || trimmed == group.name) return@withContext false
+        // 同级重名会撞唯一索引，先挡掉，别让一次改名崩在 SQL 上
+        if (dao.getGroupByName(group.parentId, trimmed) != null) return@withContext false
+        dao.updateGroups(listOf(group.copy(name = trimmed, updatedAt = System.currentTimeMillis())))
+        true
+    }
+
+    suspend fun setGroupEnabled(id: String, enabled: Boolean) = withContext(Dispatchers.IO) {
+        appDb.regexCastRuleDao.setGroupEnabled(id, enabled)
+    }
+
+    /** 移动分组（拖进别的组 = 改父级）。拖进自己或自己的子树会成环，判非法。 */
+    suspend fun moveGroupToParent(id: String, parentId: String): Boolean = withContext(Dispatchers.IO) {
+        val dao = appDb.regexCastRuleDao
+        val group = dao.getGroup(id) ?: return@withContext false
+        if (id == parentId) return@withContext false
+        if (isDescendant(parentId, id)) return@withContext false
+        dao.updateGroups(listOf(group.copy(parentId = parentId, updatedAt = System.currentTimeMillis())))
+        true
+    }
+
+    /**
+     * 删组：组内规则与直属子组一起回到被删组的父级，**规则本身不删**。
      *
-     * 范围判定与官方替换规则同一口径（书名或书源 URL 的子串），交给 DAO 的 SQL 做。
+     * 「删分组」在用户那里是整理目录，不是清数据；连带删规则会让一次误触毁掉一晚上的配置。
+     */
+    suspend fun deleteGroup(id: String) = withContext(Dispatchers.IO) {
+        val dao = appDb.regexCastRuleDao
+        val group = dao.getGroup(id) ?: return@withContext
+        dao.moveRulesOutOfGroup(from = id, to = group.parentId)
+        dao.moveChildGroupsOutOfGroup(from = id, to = group.parentId)
+        dao.deleteGroupById(id)
+    }
+
+    private suspend fun isDescendant(candidateId: String, ancestorId: String): Boolean {
+        val dao = appDb.regexCastRuleDao
+        var cursor: String? = candidateId
+        var guard = 0
+        while (!cursor.isNullOrEmpty() && guard++ < 32) {
+            if (cursor == ancestorId) return true
+            cursor = dao.getGroup(cursor)?.parentId
+        }
+        return false
+    }
+
+    // ---------- 朗读侧解析 ----------
+
+    /** 池名与条目名（列表摘要与编辑弹窗都反查一次，一次取全比逐条查库便宜）。 */
+    suspend fun names(): Pair<Map<String, String>, Map<String, String>> = withContext(Dispatchers.IO) {
+        val pools = (appDb.voicePoolDao.getAll().map { it.id to it.name } +
+            appDb.bgmPoolDao.getPools().map { it.id to it.name }).toMap()
+        val items = appDb.readAloudVoiceDao.getVoices().associate { it.id to it.displayName } +
+            appDb.bgmPoolDao.getAll().associate { it.id to it.name }
+        pools to items
+    }
+
+    /**
+     * 这本书有没有还活着的正则角色。
+     *
+     * 关掉「多角色朗读」时朗读侧默认不生成播放计划，而正则角色必须落在计划上；
+     * 服务在生成计划前问这一句，答 true 就照样生成（所有段都用默认音色，与关掉多角色时一致）。
+     */
+    suspend fun hasRulesFor(bookUrl: String): Boolean = withContext(Dispatchers.IO) {
+        val book = appDb.bookDao.getBook(bookUrl) ?: return@withContext false
+        appDb.regexCastRuleDao.findEnabledForBook(book.name, book.origin).isNotEmpty()
+    }
+
+    /**
+     * 这本书现在能用的正则角色：按规则顺序编译、跳过被分组停用的、解好音色/音频。
+     *
+     * 分组链上任何一层停用，那一组里的规则整体不生效（与声音池候选同一口径）。
      */
     suspend fun effectsFor(book: Book): List<RegexCastEffect> = withContext(Dispatchers.IO) {
         val rules = appDb.regexCastRuleDao.findEnabledForBook(book.name, book.origin)
         if (rules.isEmpty()) return@withContext emptyList()
+        val disabledGroups = disabledGroupIds()
         val voicePoolDao = appDb.voicePoolDao
         val bgmPoolDao = appDb.bgmPoolDao
         rules.mapNotNull { rule ->
+            if (rule.groupId.isNotEmpty() && rule.groupId in disabledGroups) return@mapNotNull null
             val pattern = compile(rule.pattern) ?: return@mapNotNull null
             when (rule.poolKind) {
                 RegexCastRule.POOL_BGM -> {
                     val path = resolveTrack(bgmPoolDao, rule)
                     if (path == null) {
-                        AppLog.put("正则角色「${rule.name}」没有可用的配乐（池内没有启用的曲目或文件已删），本条跳过")
+                        AppLog.put(
+                            "正则角色「${rule.name}」没有可用的配乐" +
+                                "（池内没有启用的曲目或文件已删），本条跳过"
+                        )
                         null
                     } else {
                         RegexCastEffect(rule.name, pattern, soundPath = path)
@@ -110,7 +269,11 @@ object RegexCastRuleStore {
         }
     }
 
-    /** 文本与正则同一张表：先按正则编，编不过（用户填的是带括号的普通文本）就整串当字面量。 */
+    /** 自己停用或祖先停用的分组 id（拉平好的树里 `usable=false` 的那些）。 */
+    private suspend fun disabledGroupIds(): Set<String> =
+        listGroups().filterNot { it.usable }.map { it.id }.toSet()
+
+    /** 文本与正则同一张表：先按正则编，编不过（用户填的是带裸括号的普通文本）就整串当字面量。 */
     fun compile(pattern: String): Regex? {
         if (pattern.isBlank()) return null
         return runCatching { Regex(pattern) }
@@ -123,8 +286,7 @@ object RegexCastRuleStore {
         rule: RegexCastRule,
     ): String? {
         if (rule.itemId.isNotBlank()) return rule.itemId
-        val candidates = dao.getMembers(rule.poolId).filter { it.enabled }.map { it.voiceId }
-        return candidates.randomOrNull()
+        return dao.getMembers(rule.poolId).filter { it.enabled }.map { it.voiceId }.randomOrNull()
     }
 
     private suspend fun resolveTrack(
@@ -134,8 +296,7 @@ object RegexCastRuleStore {
         val candidates = if (rule.itemId.isNotBlank()) {
             listOfNotNull(dao.getTrack(rule.itemId))
         } else {
-            val memberIds = dao.getMembers(rule.poolId).filter { it.enabled }.map { it.trackId }
-            memberIds.mapNotNull { dao.getTrack(it) }
+            dao.getMembers(rule.poolId).filter { it.enabled }.mapNotNull { dao.getTrack(it.trackId) }
         }
         return candidates.filter { it.enabled && it.path.isNotBlank() && File(it.path).exists() }
             .randomOrNull()?.path
@@ -143,19 +304,4 @@ object RegexCastRuleStore {
 
     private fun <T> List<T>.randomOrNull(): T? =
         if (isEmpty()) null else get(Random.nextInt(size))
-
-    /** 编辑弹窗要显示的池名/条目名（找不到就显示原 id，别显示空白让人以为没存）。 */
-    suspend fun describe(rule: RegexCastRule): Pair<String, String> = withContext(Dispatchers.IO) {
-        if (rule.poolKind == RegexCastRule.POOL_BGM) {
-            val pool = appDb.bgmPoolDao.getPool(rule.poolId)?.name.orEmpty()
-            val item = appDb.bgmPoolDao.getTrack(rule.itemId)?.name.orEmpty()
-            pool to item
-        } else {
-            val pool = appDb.voicePoolDao.getAll().firstOrNull { it.id == rule.poolId }?.name.orEmpty()
-            val item = rule.itemId.takeIf { it.isNotBlank() }
-                ?.let { appDb.readAloudVoiceDao.getVoice(it)?.displayName }
-                .orEmpty()
-            pool to item
-        }
-    }
 }

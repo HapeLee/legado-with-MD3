@@ -90,6 +90,13 @@ data class CastPoolWording(
     @StringRes val deletePool: Int,
     @StringRes val deletePoolConfirm: Int,
     @StringRes val pickerTitle: Int,
+    /**
+     * 这一行的卡片有没有「成员」那一层。
+     *
+     * 角色声音池 / 背景音乐池 = true（点开看成员、加成员、计数 (4/5)）。正则角色 = false：
+     * 一条规则本身就是要表达的东西，没有下一级，所以不画展开三角、不显示计数，整行点开是编辑。
+     */
+    val hasMembers: Boolean = true,
 )
 
 /** 角色声音池（成员 = 音色）。 */
@@ -579,7 +586,7 @@ private fun CastPoolCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onExpand)
+                .clickable(onClick = if (wording.hasMembers) onExpand else onEdit)
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -589,12 +596,25 @@ private fun CastPoolCard(
                     .padding(vertical = 6.dp),
             ) {
                 Text(
-                    text = "${pool.name} (${pool.enabledCount}/${pool.total})",
+                    text = if (wording.hasMembers) {
+                        "${pool.name} (${pool.enabledCount}/${pool.total})"
+                    } else {
+                        pool.name
+                    },
                     style = MaterialTheme.typography.bodyLarge,
                     color = LegadoTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (!wording.hasMembers && pool.subtitle.isNotBlank()) {
+                    Text(
+                        text = pool.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 // 搜索态是拉平列表，得标出池所在分组
                 if (showGroup && pool.groupName.isNotBlank()) {
                     Text(
@@ -621,11 +641,17 @@ private fun CastPoolCard(
                     tint = LegadoTheme.colorScheme.error,
                 )
             }
-            Icon(
-                imageVector = if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                contentDescription = null,
-                tint = LegadoTheme.colorScheme.onSurfaceVariant,
-            )
+            if (wording.hasMembers) {
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Default.ArrowDropUp
+                    } else {
+                        Icons.Default.ArrowDropDown
+                    },
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         // 成员列表就地展开/收起，不套 expandVertically：整张池卡是 ReorderableItem 里的一行，
         // 它自带 Modifier.animateItem()。两条高度动画口径不一致——animateItem 按「上一帧量到的

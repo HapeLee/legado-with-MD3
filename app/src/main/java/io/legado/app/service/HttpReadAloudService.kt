@@ -163,10 +163,36 @@ class HttpReadAloudService : BaseReadAloudService(),
         playbackQueue.cues.getOrNull(index)
             ?.let { VoiceEffectStore.ofSpeech(it.voiceEffect, it.characterId) }
 
-    /** 只切音高/语速：这一层在解码链的**当前位置**生效，比耳朵晚一整条音频缓冲。 */
+    /** 某一句应该有的播放参数：这一句的音高/语速 × 全局语速。 */
+    private fun playbackParametersFor(index: Int) =
+        VoiceEffectAudio.parameters(cueEffect(index), globalPlaybackSpeed)
+
+    /**
+     * 立刻把某一句的播放参数设到播放器上。
+     *
+     * 每条音频建项时已经带上自己那一份（见 [playbackParametersFor] 的调用点），Media3 会在
+     * 条目边界精确切换，所以这里只用于兜底与「全局语速当场要变」：条目级参数在换句那一刻才生效，
+     * 播放器级设置是马上生效。
+     */
     private fun applyCuePitch(index: Int) {
-        exoPlayer.playbackParameters =
-            VoiceEffectAudio.parameters(cueEffect(index), globalPlaybackSpeed)
+        exoPlayer.playbackParameters = playbackParametersFor(index)
+    }
+
+    /**
+     * 换句时如果这一句的变声预设和上一句不同，就把音频管线冲一次。
+     *
+     * `playbackParameters` 是在解码链**当前位置**生效的，而解码比耳朵快半秒到一秒：
+     * 不冲的话新参数会啃到上一句的尾巴（提前设）或者上一句的参数压住这一句的开头（推迟设）。
+     * 上一轮用「提前 900ms 投递」猜边界，猜多猜少都会串到邻句去——听感就是用户说的
+     * 「机器人要么影响上一句末尾，要么影响下一句开头」。
+     *
+     * seek 会丢掉管线里那些还没出声的缓冲，让新参数正好从这一句的第一个样本开始生效。
+     * 代价是换句点可能有一次极短的重新起播，所以只在预设**真的变了**的那一句上做。
+     */
+    private fun flushPipelineIfPresetChanged(previous: String?) {
+        val next = cueEffect(nowSpeak)?.name
+        if (next == previous) return
+        runCatching { exoPlayer.seekTo(exoPlayer.currentMediaItemIndex, 0L) }
     }
 
     /** 只切会话级效果（混响 / 带通）：这一层挂在音频会话上，播出那一刻才听得到。 */
@@ -232,7 +258,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 .createMessage { _, payload ->
                     val tick = payload as? CuePitchTick
                     if (tick != null && tick.generation == pitchGeneration) {
-                        applyCuePitch(tick.index)
+                        // 音高/语速已经绑在条目上、由 Media3 在边界精确切换，这里只剩会话层。
                         // 会话层同理：等到换句回调才开，混响要一秒才起来；等到下一次换句才关，
                         // 上一句的余音又会压住这一句开头。提前在这次播出前的静音里换好。
                         applyCueSessionEffect(tick.index)
@@ -1678,9 +1704,12 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         playCueSounds(nowSpeak)
+        // 先记下上一句生效的预设，换完参数才知道这一句到底变没变
+        val previousPreset = effectLogName
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
             // 首条不走 AUTO 分支，也要在开播时套上角色的变声
             applyCueVoiceEffect(nowSpeak)
+            flushPipelineIfPresetChanged(previousPreset)
             return
         }
         val auto = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
@@ -1689,6 +1718,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
         updateNextPos(naturalCompletion = auto)
         applyCueVoiceEffect(nowSpeak)
+        flushPipelineIfPresetChanged(previousPreset)
         upPlayPos()
         upMediaMetadata(showContent = true)
     }

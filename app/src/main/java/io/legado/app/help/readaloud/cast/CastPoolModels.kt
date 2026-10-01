@@ -27,6 +27,12 @@ data class CastPoolRow(
     val isDefault: Boolean,
     val total: Int,
     val enabledCount: Int,
+    /**
+     * 卡片第二行的说明（正则角色用它显示「命中什么 → 变成什么」）。
+     *
+     * 空 = 不占行。池那两页没有这一栏，行内容还是「名字 + 所在分组」。
+     */
+    val subtitle: String = "",
 ) {
     /** 能不能作为新建分配的候选池。 */
     val usable: Boolean get() = enabled && groupEnabled

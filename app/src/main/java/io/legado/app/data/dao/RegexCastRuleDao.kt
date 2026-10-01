@@ -6,18 +6,20 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import io.legado.app.data.entities.RegexCastGroup
 import io.legado.app.data.entities.RegexCastRule
 
 /**
- * 正则角色的读写。
+ * 正则角色与它的分组的读写。
  *
- * 列表一次取全（条数量级是几十，不分页）；朗读侧按书取启用规则，范围判定与官方
- * 替换规则同一口径（`scope LIKE '%' || 书名 || '%'`，空 = 不限）。
+ * 范围判定（特定范围 / 排除范围）与官方替换规则同一口径：`scope LIKE '%' || 书名 || '%'`，
+ * 空 = 不限。分组链是否停用放在 Store 里用 Kotlin 判，不写递归 SQL——树本来就要拉平成
+ * [io.legado.app.help.readaloud.cast.CastGroupRow] 给界面用，两份口径只留一处。
  */
 @Dao
 interface RegexCastRuleDao {
 
-    @Query("SELECT * FROM regex_cast_rules ORDER BY `group` ASC, `order` ASC, id ASC")
+    @Query("SELECT * FROM regex_cast_rules ORDER BY `order` ASC, id ASC")
     suspend fun all(): List<RegexCastRule>
 
     @Query("SELECT * FROM regex_cast_rules WHERE id = :id")
@@ -32,27 +34,54 @@ interface RegexCastRuleDao {
     )
     suspend fun findEnabledForBook(name: String, origin: String): List<RegexCastRule>
 
-    @Query("SELECT DISTINCT `group` FROM regex_cast_rules WHERE TRIM(`group`) <> '' ORDER BY `group`")
-    suspend fun allGroups(): List<String>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(rule: RegexCastRule): Long
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(rules: List<RegexCastRule>)
 
     @Update
     suspend fun update(rule: RegexCastRule)
 
     @Update
-    suspend fun updateAll(rules: List<RegexCastRule>)
+    suspend fun updateRules(rules: List<RegexCastRule>)
 
     @Delete
     suspend fun delete(rule: RegexCastRule)
 
-    @Query("DELETE FROM regex_cast_rules WHERE id = :id")
-    suspend fun deleteById(id: Long)
-
     @Query("UPDATE regex_cast_rules SET enabled = :enabled WHERE id = :id")
     suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    @Query("UPDATE regex_cast_rules SET groupId = :groupId WHERE id = :id")
+    suspend fun setRuleGroup(id: Long, groupId: String)
+
+    @Query("SELECT COUNT(*) FROM regex_cast_rules WHERE groupId = :groupId")
+    suspend fun countInGroup(groupId: String): Int
+
+    // ---------- 分组（可嵌套，行为等同文件夹） ----------
+
+    @Query("SELECT * FROM regex_cast_groups ORDER BY `order` ASC, name COLLATE NOCASE")
+    suspend fun getGroups(): List<RegexCastGroup>
+
+    @Query("SELECT * FROM regex_cast_groups WHERE id = :id")
+    suspend fun getGroup(id: String): RegexCastGroup?
+
+    @Query("SELECT * FROM regex_cast_groups WHERE parentId = :parentId AND name = :name LIMIT 1")
+    suspend fun getGroupByName(parentId: String, name: String): RegexCastGroup?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertGroup(group: RegexCastGroup)
+
+    @Update
+    suspend fun updateGroups(groups: List<RegexCastGroup>)
+
+    @Query("UPDATE regex_cast_groups SET enabled = :enabled WHERE id = :id")
+    suspend fun setGroupEnabled(id: String, enabled: Boolean)
+
+    @Query("DELETE FROM regex_cast_groups WHERE id = :id")
+    suspend fun deleteGroupById(id: String)
+
+    /** 删组：组里的规则与子组一起回到父级（不连带删规则，删数据要用户单独动手）。 */
+    @Query("UPDATE regex_cast_rules SET groupId = :to WHERE groupId = :from")
+    suspend fun moveRulesOutOfGroup(from: String, to: String)
+
+    @Query("UPDATE regex_cast_groups SET parentId = :to WHERE parentId = :from")
+    suspend fun moveChildGroupsOutOfGroup(from: String, to: String)
 }

@@ -5,7 +5,6 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
-import io.legado.app.help.readaloud.cast.BgmPoolStore
 
 /**
  * 朗读时的第三条音轨：正则角色里「命中不念、改放音频」放的那一下。
@@ -14,8 +13,11 @@ import io.legado.app.help.readaloud.cast.BgmPoolStore
  * 这里再要一次会把 TTS 挤掉，见 [ReadAloudBgmPlayer] 的注释）。差别是它不循环、不渐变：
  * 一次触发响一次，同一个朗读单元上挂了几条就同时响几条，响完自己释放。
  *
- * 音量沿用「背景音乐总音量」那一栏（[BgmPoolStore.volume]），因为音效和配乐是同一批导入的
- * 文件，用户调那一栏时想要的就是「这一路都轻一点」。
+ * 两条都是被要求的：
+ * 1. **不读总音量**——背景音乐那根滑杆只管背景音乐，音效「原本的音频多大声就多大声」；
+ * 2. **不占主线程**——这个回调就在朗读播放器的主要件线程上跑，`prepare()` 是同步读文件的，
+ *    一首几 MB 的音效能把主线程按住几百毫秒，表现就是「音效和 TTS 一起顿一下才响」。
+ *    所以走 `prepareAsync`，读完了再在同一个 Handler 上起播。
  */
 class ReadAloudEffectPlayer(private val context: Context) {
 
@@ -46,19 +48,18 @@ class ReadAloudEffectPlayer(private val context: Context) {
         val done = Runnable { retire(media) }
         media.setOnCompletionListener { done.run() }
         media.setOnErrorListener { _, _, _ -> done.run(); true }
+        media.setOnPreparedListener { player ->
+            if (released || !active.contains(player)) {
+                retire(player)
+            } else {
+                runCatching { player.start() }.onFailure { retire(player) }
+            }
+        }
         val ok = runCatching {
             media.setDataSource(path)
-            media.prepare()
+            media.prepareAsync()
         }.isSuccess
-        if (!ok || released || !active.contains(media)) {
-            retire(media)
-            return
-        }
-        val volume = BgmPoolStore.volume().coerceIn(0f, 1f)
-        runCatching {
-            media.setVolume(volume, volume)
-            media.start()
-        }.onFailure { retire(media) }
+        if (!ok) retire(media)
     }
 
     private fun retire(media: MediaPlayer) {

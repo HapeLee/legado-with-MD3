@@ -70,6 +70,7 @@ import io.legado.app.data.entities.BgmPoolMember
 import io.legado.app.data.entities.BgmSceneMark
 import io.legado.app.data.entities.BgmTrackEntity
 import io.legado.app.data.entities.RegexCastRule
+import io.legado.app.data.entities.RegexCastGroup
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookCharacterEvent
@@ -135,7 +136,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 127,
+    version = 128,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -157,7 +158,7 @@ val appDb by lazy {
         BgmTrackEntity::class,
         BgmPoolEntity::class, BgmPoolMember::class, BgmPoolGroupEntity::class,
         BgmSceneMark::class, VoiceEffectPreset::class,
-        BookMarking::class, ReadAloudAudioDownload::class, RegexCastRule::class],
+        BookMarking::class, ReadAloudAudioDownload::class, RegexCastRule::class, RegexCastGroup::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -266,6 +267,8 @@ val appDb by lazy {
         AutoMigration(from = 125, to = 126),
         // 127：新表 regex_cast_rules（正则角色：命中文字换音色 / 换音效）。
         AutoMigration(from = 126, to = 127),
+        // 128 是手工迁移：正则角色的分组从「一个文本列」升级成真正的可嵌套分组树
+        // （新表 regex_cast_groups + rules.groupId），要搬数据，AutoMigration 做不了。
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

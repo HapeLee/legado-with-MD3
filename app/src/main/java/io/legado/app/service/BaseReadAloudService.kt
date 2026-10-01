@@ -55,6 +55,7 @@ import io.legado.app.domain.usecase.PrepareChapterSpeechPlanUseCase
 import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
 import io.legado.app.help.readaloud.cast.CastSpeechOverlay
+import io.legado.app.help.readaloud.cast.RegexCastRuleStore
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.coroutine.Coroutine
@@ -617,7 +618,12 @@ abstract class BaseReadAloudService : BaseService(),
         val multiSpeakerOn = ReadConfig.useMultiSpeaker
         // 「多角色朗读」是唯一的发声开关：关掉就没有任何计划，整章回到用户在朗读设置里
         // 选的默认引擎。「多角色分配」只管正文胶囊，不参与决定用谁的声音念。
-        if (!multiSpeakerOn) return emptyList()
+        //
+        // 但正则角色是**全局**的：它只被自己那条规则的「激活规则」管，不跟多角色朗读绑。
+        // 而它必须落在播放计划上才能「只换那几个字的声音」，所以这本书只要有还活着的
+        // 正则角色，就得照样生成计划（计划里所有段都用默认音色，与关掉多角色时一模一样）。
+        val regexOn = runCatching { RegexCastRuleStore.hasRulesFor(bookUrl) }.getOrDefault(false)
+        if (!multiSpeakerOn && !regexOn) return emptyList()
         val prepareSpeechPlan: PrepareChapterSpeechPlanUseCase =
             get(PrepareChapterSpeechPlanUseCase::class.java)
         val plan = runCatching {
