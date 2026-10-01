@@ -215,6 +215,31 @@ class BookMorphState(
         )
     }
 
+    /**
+     * 等待授权关闭继承的手势结算速度（进度/秒）。
+     *
+     * 返回手势结束后业务逻辑（是否真的能关）要绕一圈才知道结果，宿主先把速度寄存在这里，
+     * 授权后的收起再取走，避免收起丢掉手指的动量。
+     */
+    var pendingCollapseVelocity by mutableFloatStateOf(0f)
+        private set
+
+    fun recordCollapseVelocity(velocity: Float) {
+        pendingCollapseVelocity = velocity
+    }
+
+    /**
+     * 取出并清空待继承的手势速度，只生效一次。
+     *
+     * 只有当形变仍在收起途中（progress < 1）才继承：进度若已回到 1，
+     * 说明这次手势被业务回退过（例如弹出了「加入书架」确认框），寄存的速度已经过期。
+     */
+    fun consumeCollapseVelocity(): Float {
+        val velocity = pendingCollapseVelocity
+        pendingCollapseVelocity = 0f
+        return if (progress.value < 1f) velocity else 0f
+    }
+
     suspend fun animateTo(target: Float, initialVelocity: Float = 0f) {
         isCollapsing = target < 0.5f
         progress.animateTo(
@@ -229,20 +254,32 @@ class BookMorphState(
     }
 }
 
+/** 飞行封面开始淡出 / 开始渐显的进度点。 */
+const val BOOK_COVER_FADE_START = 0.10f
+
+/** 飞行封面完全交给内容 / 完全回到书架卡片的进度点。 */
+const val BOOK_COVER_FADE_END = 0.50f
+
 /**
- * 小说/漫画封面过渡透明度：在动画前期（0.10f..0.25f）完成封面淡出，保持卡片精致尺寸，避免展开中途封面过大。
+ * 小说/漫画封面过渡透明度：在几何飞行的中段（[BOOK_COVER_FADE_START]..[BOOK_COVER_FADE_END]）完成封面淡出，
+ * 避免封面在展开中途与内容双重叠加。
  *
- * 打开时（isCollapsing = false）：封面随卡片展开，在 0.10f..0.25f 平滑淡出交接给内容。
- * 收起时（isCollapsing = true）：内容在中后期（0.65f..0.20f）渐变消失，在末段（0.25f..0.10f）封面平滑渐显，完美回到书架卡片。
+ * 打开时（isCollapsing = false）：封面随卡片展开，在 0.10f..0.50f 平滑淡出交接给内容。
+ * 收起时（isCollapsing = true）：内容在中后期（0.65f..0.20f）渐变消失，在中段（0.50f..0.10f）封面平滑渐显，完美回到书架卡片。
+ *
+ * 窗口换算到 [BookMorphState.animateTo] 的临界阻尼弹簧（stiffness = 260）约对应 33 ms → 104 ms；
+ * 预测性返回期间进度由手指驱动，这段渐变随之被手势距离拉长。
  */
 fun computeBookCoverAlpha(progress: Float, isCollapsing: Boolean): Float {
     val t = progress.coerceIn(0f, 1f)
     return if (isCollapsing) {
-        if (t >= 0.25f) 0f
-        else ((0.25f - t) / 0.15f).coerceIn(0f, 1f)
+        if (t >= BOOK_COVER_FADE_END) 0f
+        else ((BOOK_COVER_FADE_END - t) / (BOOK_COVER_FADE_END - BOOK_COVER_FADE_START))
+            .coerceIn(0f, 1f)
     } else {
-        if (t <= 0.10f) 1f
-        else (1f - (t - 0.10f) / 0.15f).coerceIn(0f, 1f)
+        if (t <= BOOK_COVER_FADE_START) 1f
+        else (1f - (t - BOOK_COVER_FADE_START) / (BOOK_COVER_FADE_END - BOOK_COVER_FADE_START))
+            .coerceIn(0f, 1f)
     }
 }
 

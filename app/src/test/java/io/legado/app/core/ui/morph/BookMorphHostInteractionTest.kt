@@ -115,11 +115,15 @@ class BookMorphHostInteractionTest {
             frames()
             assertEquals(1, requests)
             assertEquals("A back request must wait for Finish", 3, attempts)
+            // 手势寄存的结算速度必须由授权后的收起取走，且只生效一次：
+            // 收起（animateTo(0f)）跑完后寄存位归零，不会带到下一次收起。
+            requireNotNull(morph).recordCollapseVelocity(-4f)
             requireNotNull(collapse).invoke()
             frames()
             assertEquals(4, attempts)
             assertEquals("Committing Finish must not request close again", 1, requests)
             assertEquals(0f, requireNotNull(morph).progress.value)
+            assertEquals(0f, requireNotNull(morph).pendingCollapseVelocity, 0.001f)
         } finally {
             controller.pause().stop().destroy()
         }

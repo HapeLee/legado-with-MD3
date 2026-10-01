@@ -128,7 +128,7 @@ fun BookMorphHost(
                     BookCoverMorphAnchors.setActiveMorph(anchorKey, morph)
                 }
                 BookCoverMorphAnchors.get(anchorKey)?.let(morph::updateAnchor)
-                morph.animateTo(0f)
+                morph.animateTo(0f, initialVelocity = morph.consumeCollapseVelocity())
                 if (!currentDismiss()) morph.animateTo(1f)
             }
         }
@@ -177,6 +177,9 @@ fun BookMorphHost(
             }
             if (!predictiveBackEnabled) morph.progress.stop()
             val requestBack = currentBackRequested
+            // 手势速度先寄存：业务授权后的收起由 collapse 取走，未授权（弹确认框）则由过期的
+            // 进度判断丢弃，不会把旧动量带到下一次收起。
+            morph.recordCollapseVelocity(releaseVelocity)
             if (requestBack != null) {
                 // Reader business logic authorizes the exit through Finish. It then calls
                 // collapse; the animation completion must never issue another close request.
@@ -281,7 +284,7 @@ fun BookMorphHost(
 
             // 3. 飞行封面：
             // 若页面有封面终点（如详情页），封面从起点连续飞向页面封面位置，全程保持连续；
-            // 若页面无封面终点（如小说/漫画阅读），封面随卡片展开并在前期（0.10f..0.25f）平滑淡出。
+            // 若页面无封面终点（如小说/漫画阅读），封面随卡片展开并在中段（0.10f..0.50f）平滑淡出。
             val coverAlpha by remember { derivedStateOf { morph.coverAlpha } }
             val flyingCoverVisible by remember {
                 derivedStateOf { !morph.expanded && !morph.fadeOnlyOpening && coverAlpha > 0.001f }

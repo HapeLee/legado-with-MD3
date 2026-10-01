@@ -154,19 +154,41 @@ class BookMorphTest {
 
     @Test
     fun bookCoverAlphaTransitionsEarlyInAnimation() {
-        // 打开时：在动画前期（0.10 -> 0.25）平滑淡出，避免封面在展开中途过大
+        // 打开时：在几何飞行中段（0.10 -> 0.50）平滑淡出，避免封面在展开中途与内容双重叠加
         assertEquals(1f, computeBookCoverAlpha(0f, isCollapsing = false), 0.001f)
         assertEquals(1f, computeBookCoverAlpha(0.10f, isCollapsing = false), 0.001f)
-        assertEquals(0f, computeBookCoverAlpha(0.25f, isCollapsing = false), 0.001f)
+        assertEquals(0.5f, computeBookCoverAlpha(0.30f, isCollapsing = false), 0.001f)
         assertEquals(0f, computeBookCoverAlpha(0.50f, isCollapsing = false), 0.001f)
         assertEquals(0f, computeBookCoverAlpha(1f, isCollapsing = false), 0.001f)
 
-        // 收起时：在动画末段（0.25 -> 0.10）渐显回到书架卡片
+        // 收起时：在动画中段（0.50 -> 0.10）渐显回到书架卡片
         assertEquals(0f, computeBookCoverAlpha(1f, isCollapsing = true), 0.001f)
         assertEquals(0f, computeBookCoverAlpha(0.50f, isCollapsing = true), 0.001f)
-        assertEquals(0f, computeBookCoverAlpha(0.25f, isCollapsing = true), 0.001f)
+        assertEquals(0.5f, computeBookCoverAlpha(0.30f, isCollapsing = true), 0.001f)
         assertEquals(1f, computeBookCoverAlpha(0.10f, isCollapsing = true), 0.001f)
         assertEquals(1f, computeBookCoverAlpha(0f, isCollapsing = true), 0.001f)
+    }
+
+    @Test
+    fun pendingCollapseVelocityIsInheritedOnceWhileCollapsing() = runTest {
+        val state = BookMorphState(Animatable(1f), Density(1f))
+
+        state.progress.snapTo(0.73f)
+        state.recordCollapseVelocity(-2.5f)
+        assertEquals(-2.5f, state.consumeCollapseVelocity(), 0.001f)
+        // 只生效一次：重复收起不会再吃到上一次手势的动量
+        assertEquals(0f, state.consumeCollapseVelocity(), 0.001f)
+    }
+
+    @Test
+    fun pendingCollapseVelocityExpiresWhenGestureWasRolledBack() = runTest {
+        val state = BookMorphState(Animatable(1f), Density(1f))
+
+        // 手势结束但业务未授权关闭（例：弹出加入书架确认框），进度被恢复回 1
+        state.progress.snapTo(0.73f)
+        state.recordCollapseVelocity(-2.5f)
+        state.progress.snapTo(1f)
+        assertEquals(0f, state.consumeCollapseVelocity(), 0.001f)
     }
 
     @Test
