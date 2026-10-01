@@ -56,6 +56,7 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
@@ -68,6 +69,7 @@ import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.outlined.ViewCarousel
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -649,6 +651,18 @@ fun BookshelfScreen(
                                     R.string.private_unmark_book
                                 }
                             )
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isEditMode) {
+                        TopBarActionButton(
+                            onClick = {
+                                if (selectedBookUrls.isNotEmpty()) {
+                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.DeleteBooksConfirmDialog))
+                                }
+                            },
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete_selected)
                         )
                     }
 
@@ -1493,6 +1507,41 @@ private fun BookshelfOverlays(
         dismissText = stringResource(android.R.string.cancel),
         onDismiss = { onIntent(BookshelfIntent.DismissOverlay) }
     )
+
+    if (activeOverlay == BookshelfOverlay.DeleteBooksConfirmDialog) {
+        // 勾选态只活在这次弹窗里：每次打开都从"不删源文件"起步
+        var deleteOriginal by remember { mutableStateOf(false) }
+        val hasLocalBook = remember(uiState.items, selectedBookUrls) {
+            uiState.items.any { it.book.isLocal && it.book.bookUrl in selectedBookUrls }
+        }
+        AppAlertDialog(
+            show = true,
+            onDismissRequest = { onIntent(BookshelfIntent.DismissOverlay) },
+            title = stringResource(R.string.delete_selected),
+            text = stringResource(R.string.bookshelf_selected_count, selectedBookUrls.size),
+            content = {
+                if (hasLocalBook) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = deleteOriginal,
+                            onCheckedChange = { deleteOriginal = it }
+                        )
+                        AppText(
+                            text = stringResource(R.string.delete_book_file),
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                }
+            },
+            confirmText = stringResource(R.string.delete),
+            onConfirm = {
+                onIntent(BookshelfIntent.DeleteBooks(selectedBookUrls, deleteOriginal))
+                onIntent(BookshelfIntent.DismissOverlay)
+            },
+            dismissText = stringResource(R.string.cancel),
+            onDismiss = { onIntent(BookshelfIntent.DismissOverlay) }
+        )
+    }
 
     if (uiState.isLoading) {
         val loadingDescription = uiState.loadingText ?: stringResource(R.string.loading)

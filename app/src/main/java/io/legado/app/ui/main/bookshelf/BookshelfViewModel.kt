@@ -28,6 +28,7 @@ import io.legado.app.domain.model.isPrivateBook
 import io.legado.app.domain.model.settings.PrivateAccessSettings
 import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
+import io.legado.app.domain.usecase.DeleteBooksUseCase
 import io.legado.app.domain.usecase.ExportBookshelfUseCase
 import io.legado.app.domain.usecase.ImportBookshelfUseCase
 import io.legado.app.domain.usecase.RefreshTocUseCase
@@ -93,6 +94,7 @@ class BookshelfViewModel(
     private val updateBooksGroupUseCase: UpdateBooksGroupUseCase,
     private val refreshTocUseCase: RefreshTocUseCase,
     private val addBookUseCase: AddBookUseCase,
+    private val deleteBooksUseCase: DeleteBooksUseCase,
     private val importBookshelfUseCase: ImportBookshelfUseCase,
     private val exportBookshelfUseCase: ExportBookshelfUseCase,
     private val bookshelfSettingsGateway: BookshelfSettingsGateway,
@@ -804,6 +806,7 @@ class BookshelfViewModel(
             is BookshelfIntent.SetInFolderRoot -> setInFolderRoot(intent.value)
             is BookshelfIntent.MoveBooksToGroup -> moveBooksToGroup(intent.bookUrls, intent.groupId)
             is BookshelfIntent.DownloadBooks -> downloadBooks(intent.bookUrls, intent.allChapters)
+            is BookshelfIntent.DeleteBooks -> deleteBooks(intent.bookUrls, intent.deleteOriginal)
             is BookshelfIntent.RefreshBooks -> refreshBooks(intent.books)
             is BookshelfIntent.StartDragging -> startDraggingBooks(intent.books)
             is BookshelfIntent.MoveDragging -> moveDraggingBook(intent.from, intent.to, intent.books)
@@ -1087,6 +1090,21 @@ class BookshelfViewModel(
             }
         }.onError {
             showMessage("批量缓存失败\n${it.localizedMessage}")
+        }
+    }
+
+    fun deleteBooks(bookUrls: Set<String>, deleteOriginal: Boolean) {
+        if (bookUrls.isEmpty()) return
+        execute {
+            deleteBooksUseCase.execute(bookUrls, deleteOriginal)
+        }.onSuccess { deletedBookUrls ->
+            // 已经删掉的书不能继续留在选中集合里，否则下一次批量操作会带上幽灵 url
+            val remaining = selectedBookUrlsFlow.value - deletedBookUrls.toSet()
+            if (remaining.size != selectedBookUrlsFlow.value.size) {
+                selectedBookUrlsFlow.value = remaining
+            }
+        }.onError {
+            showMessage(context.getString(R.string.delete_failed) + "\n" + it.localizedMessage)
         }
     }
 
