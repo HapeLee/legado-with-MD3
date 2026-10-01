@@ -2089,7 +2089,14 @@ private fun SimulationPageStack(
             // graphicsLayer 是隔离边界：没有它，折页 Canvas 每帧失效会带着这个 Box 重跑
             // `record{}`（正文显示列表重建 + 离屏纹理重新栅格化），上面的缓存等于白设。
             .graphicsLayer { }
-            .drawWithContent { baseLayer.record { this@drawWithContent.drawContent() } },
+            .drawWithContent {
+                // 录一份当折页的纹理，**再直接画一份垫在下面**。`record` 会把内容吸进离屏图层、
+                // 自己不上屏，所以只要有一帧图层是空的（分支刚切进来、render node 还没挂上、
+                // 显存吃紧丢掉一次记录），整屏就只剩底色 —— 用户看到的「翻页闪一下」就是这个。
+                // 垫的这份永远在，最坏情况只是折页区域露出当前页，不会再出现空白帧。
+                baseLayer.record { this@drawWithContent.drawContent() }
+                drawContent()
+            },
     ) {
         ReaderPageCanvas(
             basePage,
