@@ -2082,7 +2082,6 @@ private fun SimulationPageStack(
     val revealLayer = rememberGraphicsLayer()
     baseLayer.compositingStrategy = CompositingStrategy.Offscreen
     revealLayer.compositingStrategy = CompositingStrategy.Offscreen
-    val paths = remember { ReaderCurlRenderPaths() }
     val mirror = remember { Matrix() }
     Box(
         Modifier
@@ -2154,7 +2153,7 @@ private fun SimulationPageStack(
             withTransform({ translate(baseTranslation, 0f) }) { drawLayer(baseLayer) }
             return@Canvas
         }
-        frame.writeInto(paths, width, height)
+        val paths = frame.renderPaths(width, height)
         clipPath(paths.outsideFront) {
             drawLayer(baseLayer)
         }
@@ -2218,11 +2217,15 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCurlFrontShadow
 }
 
 /**
- * 折页的形每帧都要重写，对象留着复用：60fps 下不再一直新建 Path。
+ * 折页这一帧的裁剪轮廓。**每帧新建一份，不许跨帧复用**：
+ * `clipPath(path)` 记进显示列表的是这个 Path 的**引用**，真正生效在重放阶段；
+ * 复用同一个对象就等于让上一帧的裁剪区被这一帧的 `reset()` 改写，两帧的几何互相串——
+ * 表现就是仿真翻页每隔一帧整片画成正面纸的镜像（用户报的「翻页过程中一直闪烁」，
+ * 录屏实测 116.7 ↔ 121.0 逐帧交替）。复用 Path 省下的那点分配，抵不过这个错帧。
  *
- * `outsideFront` 与两条「折页 ∩ 面」的裁剪区同样留着复用，为的是把**差集裁剪**清零：
- * `ClipOp.Difference` 不是矩形裁剪，渲染器每碰到一次都要按整屏大小另算一份遮罩
- * （1440×3200 一屏 18 MB），原来一帧里有三处，就是仿真翻页「卡卡的」剩下的大头。
+ * 留这套预计算本身是对的：`outsideFront` 与两条「折页 ∩ 面」的裁剪区把**差集裁剪**清零
+ * （`ClipOp.Difference` 不是矩形裁剪，渲染器每碰到一次都要按整屏大小另算一份遮罩，
+ * 1440×3200 一屏 18 MB），原来一帧里有三处，就是仿真翻页「卡卡的」剩下的大头。
  * 现在「屏减折页」由整屏轮廓 + 同一条折页轮廓走 EvenOdd 填充分量得到，折页那两面
  * 预先算成交集路径，绘制期每一处只剩默认的相交裁剪，而且三处共用同一条 `outsideFront`。
  * 裁掉的像素与原来逐像素一致。
@@ -2247,11 +2250,11 @@ private fun Path.assignIntersect(a: Path, b: Path) {
     if (!native.op(b.asAndroidPath(), AndroidPathOp.INTERSECT)) reset()
 }
 
-private fun PageCurlFrame.writeInto(
-    paths: ReaderCurlRenderPaths,
+private fun PageCurlFrame.renderPaths(
     width: Float,
     height: Float,
-) {
+): ReaderCurlRenderPaths {
+    val paths = ReaderCurlRenderPaths()
     val reverse = corner.x == 0f && corner.y == height || corner.x == width && corner.y == 0f
     val angle = if (reverse) {
         PI / 4 - atan2((control1.y - touch.y).toDouble(), (touch.x - control1.x).toDouble())
@@ -2294,6 +2297,7 @@ private fun PageCurlFrame.writeInto(
     }
     paths.frontReveal.assignIntersect(paths.front, paths.reveal)
     paths.frontBack.assignIntersect(paths.front, paths.back)
+    return paths
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCurlBackShadow(frame: PageCurlFrame) {
