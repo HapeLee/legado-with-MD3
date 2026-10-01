@@ -55,14 +55,23 @@ object RegexCastRuleStore {
         appDb.regexCastRuleDao.setEnabled(rule.id, enabled)
     }
 
-    suspend fun move(rule: RegexCastRule, up: Boolean) = withContext(Dispatchers.IO) {
+    /**
+     * 拖动排序：[from] → [to] 用的是列表下标，与 [all] 同一个顺序。
+     *
+     * 落到哪个小节就归哪个组（取落点上面那条的分组，没有就取下面那条），所以「把规则拖进
+     * 某个分组」和「组内排序」是同一个手势。order 按全局位置递增：列表按 (分组, order) 排，
+     * 同组内的相对顺序就是这样保住的。
+     */
+    suspend fun move(from: Int, to: Int) = withContext(Dispatchers.IO) {
         val all = appDb.regexCastRuleDao.all().toMutableList()
-        val index = all.indexOfFirst { it.id == rule.id }
-        val target = if (up) index - 1 else index + 1
-        if (index < 0 || target < 0 || target >= all.size) return@withContext
-        val moved = all.removeAt(index)
-        all.add(target, moved)
-        appDb.regexCastRuleDao.updateAll(all.mapIndexed { i, r -> r.copy(order = i) })
+        if (from !in all.indices || to !in all.indices || from == to) return@withContext
+        val moved = all.removeAt(from)
+        all.add(to, moved)
+        val group = all.getOrNull(to - 1)?.group ?: all.getOrNull(to + 1)?.group ?: moved.group
+        all[to] = moved.copy(group = group)
+        appDb.regexCastRuleDao.updateAll(all.mapIndexed { index, rule ->
+            rule.copy(order = index)
+        })
     }
 
     /**

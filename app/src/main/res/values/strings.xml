@@ -3174,6 +3174,9 @@
     <string name="regex_cast_summary_voice">read with %1$s (%2$s)</string>
     <string name="regex_cast_summary_sound">play %1$s (%2$s) on a third track, text not read</string>
     <string name="regex_cast_scope_hint">Scope takes book title or source URL, empty means all books.</string>
+    <string name="regex_cast_dialog_hint">The pool list is only a filter: disabled pools are still listed, and a voice can be picked without choosing a pool. Type a new group name to create one.</string>
+    <string name="regex_cast_sort_hint">Long press and drag to reorder; drop into another section to move the rule into that group.</string>
+    <string name="regex_cast_pool_disabled"> (disabled)</string>
     <string name="multi_role_rule_summary">Manage voice pools, background music pools and role casting</string>
     <string name="cast_voice_pool_summary">Manage character voice pools and the voices enabled inside them</string>
     <string name="multi_role_recognition">Role recognition</string>

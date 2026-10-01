@@ -98,6 +98,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.sync.withLock
 import okhttp3.Response
 import org.koin.core.context.GlobalContext
@@ -615,6 +616,28 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
+    /**
+     * 同一句的合成互斥：按目标文件名上锁。
+     *
+     * 实时播放、后续章节预合成、听书下载三条路径都是「先查有没有缓存，没有就向 TTS 发请求」，
+     * 而一次合成要三五秒——这期间 `.part` 和正式文件都还没落盘，另一条路径查缓存照样查不到，
+     * 于是同一句被请求两三次（TTS Server 那边能看到连着几条一样的请求，字节数还各不相同，
+     * 因为服务端每次都真的重复合成了）。排队 + 拿到锁后再查一次缓存，就把重复请求压成一次。
+     */
+    private val speakFileLocks = ConcurrentHashMap<String, Mutex>()
+
+    private suspend inline fun <T> withSpeakFileLock(
+        fileName: String,
+        block: suspend () -> T,
+    ): T {
+        val mutex = speakFileLocks.getOrPut(fileName) { Mutex() }
+        return try {
+            mutex.withLock { block() }
+        } finally {
+            speakFileLocks.remove(fileName, mutex)
+        }
+    }
+
     private fun downloadAndPlayAudios() {
         exoPlayer.clearMediaItems()
         downloadTask?.cancel()
@@ -648,6 +671,9 @@ class HttpReadAloudService : BaseReadAloudService(),
                         AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$text")
                         createSilentSound(fileName)
                     } else if (!hasSpeakFile(fileName)) {
+                        withSpeakFileLock(fileName) {
+                        // 等锁期间另一条路径可能已经把这句合成好了
+                        if (!hasSpeakFile(fileName)) {
                         runCatching {
                             when (routedVoice.engineType) {
                                 ReadAloudVoice.ENGINE_SYSTEM -> {
@@ -717,6 +743,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 else -> pauseReadAloud()
                             }
                             return@execute
+                        }
+                        }
                         }
                     }
                     if (speakText.isNotEmpty() && hasSpeakFile(fileName)) {
@@ -930,7 +958,11 @@ class HttpReadAloudService : BaseReadAloudService(),
             createSilentSound(fileName)
             return true
         }
-        val success = runCatching {
+        val success = withSpeakFileLock(fileName) {
+            if (hasSpeakFile(fileName)) {
+                // 实时播放那条路径正在合成这一句：等它，别再向 TTS 发第二次请求
+                true
+            } else runCatching {
             when (routedVoice.engineType) {
                 ReadAloudVoice.ENGINE_CLOUD -> {
                     synthesizeSpeakFile(fileName) { output ->
@@ -965,6 +997,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     false
                 }
             }
+        }
         }
         if (success && speakText.isNotEmpty()) {
             writeTextIndexEntry(fileName, speakText)

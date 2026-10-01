@@ -3170,6 +3170,9 @@
     <string name="regex_cast_summary_voice">由「%1$s」念（%2$s）</string>
     <string name="regex_cast_summary_sound">播放「%1$s」（%2$s），这几个字不念，走第三条音轨</string>
     <string name="regex_cast_scope_hint">特定范围与排除范围填书名或书源 URL，留空表示所有书。</string>
+    <string name="regex_cast_dialog_hint">声音池只是筛选：停用的池照样列出来，不选池也能直接挑音色。分组那栏直接打字就是新建分组。</string>
+    <string name="regex_cast_sort_hint">长按拖动可排序；拖进别的小节就是把这条规则挪进那个分组。</string>
+    <string name="regex_cast_pool_disabled">（已停用）</string>
     <string name="multi_role_rule_summary">管理角色声音池、背景音乐池与角色配音分配</string>
     <string name="cast_voice_pool_summary">管理角色声音池以及池内启用的音色</string>
     <string name="multi_role_recognition">多角色识别</string>

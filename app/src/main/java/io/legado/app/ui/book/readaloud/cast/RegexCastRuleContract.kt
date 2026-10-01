@@ -43,6 +43,9 @@ sealed interface RegexCastRuleIntent {
     data class PickPool(val kind: String, val poolId: String) : RegexCastRuleIntent
 
     data class Save(val rule: RegexCastRule) : RegexCastRuleIntent
+
+    /** 拖动排序：列表下标；拖进别的小节就等于换组。 */
+    data class Move(val from: Int, val to: Int) : RegexCastRuleIntent
     data class Toggle(val rule: RegexCastRule, val enabled: Boolean) : RegexCastRuleIntent
     data class ShowDelete(val rule: RegexCastRule) : RegexCastRuleIntent
     data object DismissDelete : RegexCastRuleIntent

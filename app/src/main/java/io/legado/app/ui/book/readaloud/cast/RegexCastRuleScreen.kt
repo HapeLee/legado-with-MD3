@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,6 +25,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,11 +46,14 @@ import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastOption
 import io.legado.app.ui.widget.components.castCardMaxHeight
+import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import org.koin.androidx.compose.koinViewModel
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * 正则角色管理（朗读规则 → 正则角色管理）。
@@ -57,8 +63,10 @@ import org.koin.androidx.compose.koinViewModel
  * - 背景音乐池 + 某段音频：命中的那几个字**不念**，改成播那段音频，走第三条音轨，
  *   与朗读、背景音乐并行，互不打断。
  *
- * 「角色正则」既是正则也是文本：填「爆炸」就是字面命中，填 `（爆炸|雷声）` 就是正则命中。
- * 正则编不过的（比如带裸括号的普通文本）整串按字面量处理，不会因为一条写坏规则而整章读不出声。
+ * 「角色正则」既是正则也是文本：填「爆炸」就是字面命中，填 `爆炸|雷声` 就是正则命中。
+ * 正则编不过的（比如少一个右括号的普通文本）整串按字面量处理，不会因为一条写坏规则而整章读不出声。
+ *
+ * 列表长按可拖动排序；拖进别的小节就等于换组（和声音池页同一套手感）。
  */
 @Composable
 fun RegexCastRuleRouteScreen(
@@ -80,6 +88,10 @@ fun RegexCastRuleScreen(
     onBackClick: () -> Unit,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val listState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        onIntent(RegexCastRuleIntent.Move(from.index, to.index))
+    }
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         // Miuix 引擎分支不套 contentColor，隐式取色在深色下会发黑
@@ -103,78 +115,112 @@ fun RegexCastRuleScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
+        // 提示文字必须放在 LazyColumn 外面：拖动回调给的是列表的绝对下标，列表里只要多一个
+        // 前置 item，下标就整体偏移，拖起来条目会来回乱跳（声音池页踩过同一个坑）。
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = adaptiveContentPadding(top = 0.dp, bottom = 120.dp),
         ) {
-            item {
+            Text(
+                text = stringResource(R.string.regex_cast_rule_summary),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (state.rows.isNotEmpty()) {
                 Text(
-                    text = stringResource(R.string.regex_cast_rule_summary),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    text = stringResource(R.string.regex_cast_sort_hint),
+                    modifier = Modifier.padding(horizontal = 20.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (state.rows.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.regex_cast_empty),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            items(state.rows.size, key = { state.rows[it].rule.id }) { index ->
-                val row = state.rows[index]
-                Column {
-                    row.section?.let {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f),
+                contentPadding = adaptiveContentPadding(top = 0.dp, bottom = 120.dp),
+            ) {
+                if (state.rows.isEmpty()) {
+                    item {
                         Text(
-                            text = it,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = LegadoTheme.colorScheme.primary,
+                            text = stringResource(R.string.regex_cast_empty),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text = row.rule.name.ifBlank { row.rule.pattern },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
-                        supportingContent = {
-                            Text(
-                                text = row.summary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        },
-                        trailingContent = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Switch(
-                                    checked = row.rule.enabled,
-                                    onCheckedChange = {
-                                        onIntent(RegexCastRuleIntent.Toggle(row.rule, it))
-                                    },
-                                )
-                                IconButton(onClick = { onIntent(RegexCastRuleIntent.ShowDelete(row.rule)) }) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = stringResource(R.string.delete),
-                                    )
+                }
+                itemsIndexed(
+                    items = state.rows,
+                    key = { _, row -> row.rule.id },
+                ) { index, row ->
+                    ReorderableItem(reorderableState, key = row.rule.id) {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .reorderAccessibility(
+                                    index = index,
+                                    itemCount = state.rows.size,
+                                    enabled = true,
+                                    description = stringResource(
+                                        R.string.a11y_reorder_named,
+                                        row.rule.name.ifBlank { row.rule.pattern },
+                                    ),
+                                ) { from, to ->
+                                    onIntent(RegexCastRuleIntent.Move(from, to))
                                 }
+                                .longPressDraggableHandle(),
+                        ) {
+                            row.section?.let {
+                                Text(
+                                    text = it,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = LegadoTheme.colorScheme.primary,
+                                )
                             }
-                        },
-                        // 整行点开编辑，不额外摆按钮
-                        modifier = Modifier
-                            .animateItem()
-                            .clickable { onIntent(RegexCastRuleIntent.ShowEdit(row.rule)) },
-                    )
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        text = row.rule.name.ifBlank { row.rule.pattern },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                },
+                                supportingContent = {
+                                    Text(
+                                        text = row.summary,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                trailingContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Switch(
+                                            checked = row.rule.enabled,
+                                            onCheckedChange = {
+                                                onIntent(RegexCastRuleIntent.Toggle(row.rule, it))
+                                            },
+                                        )
+                                        IconButton(
+                                            onClick = { onIntent(RegexCastRuleIntent.ShowDelete(row.rule)) }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = stringResource(R.string.delete),
+                                            )
+                                        }
+                                    }
+                                },
+                                // 整行点开编辑，不额外摆按钮
+                                modifier = Modifier
+                                    .animateItem()
+                                    .clickable { onIntent(RegexCastRuleIntent.ShowEdit(row.rule)) },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -206,6 +252,10 @@ fun RegexCastRuleScreen(
  *
  * 草稿整个留在弹窗本地（[remember] 只按 id 重建）：换「声音池选择」时 ViewModel 只刷候选，
  * 不会回头覆盖还没提交的编辑。
+ *
+ * 下拉沿用 [CastFieldStack]：整屏共用一个真输入框，切行不让键盘先收再弹；
+ * 打字 = 按输入筛选，点三角 = 浏览全部。声音池不按启用状态过滤，音色也不要求先选池
+ * （池只是筛选条件）。
  */
 @Composable
 private fun RegexCastEditDialog(
@@ -221,10 +271,23 @@ private fun RegexCastEditDialog(
     var poolExpanded by remember(target.id) { mutableStateOf(false) }
     var itemExpanded by remember(target.id) { mutableStateOf(false) }
     var groupExpanded by remember(target.id) { mutableStateOf(false) }
-    val kindLabels = listOf(
-        stringResource(R.string.regex_cast_pool_role) to RegexCastRule.POOL_ROLE,
-        stringResource(R.string.regex_cast_pool_bgm) to RegexCastRule.POOL_BGM,
+    val roleLabel = stringResource(R.string.regex_cast_pool_role)
+    val bgmLabel = stringResource(R.string.regex_cast_pool_bgm)
+    // 下拉的显示值各自记一份：打字是筛选用的，不能直接写回业务字段
+    var kindQuery by remember(target.id) {
+        mutableStateOf(if (target.poolKind == RegexCastRule.POOL_BGM) bgmLabel else roleLabel)
+    }
+    var poolQuery by remember(target.id) {
+        mutableStateOf(state.poolOptions.firstOrNull { it.key == target.poolId }?.label.orEmpty())
+    }
+    var itemQuery by remember(target.id) {
+        mutableStateOf(state.itemOptions.firstOrNull { it.key == target.itemId }?.label.orEmpty())
+    }
+    val kindOptions = listOf(
+        CastOption(RegexCastRule.POOL_ROLE, roleLabel),
+        CastOption(RegexCastRule.POOL_BGM, bgmLabel),
     )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -255,12 +318,14 @@ private fun RegexCastEditDialog(
                         CastFieldSpec(
                             id = "kind",
                             label = stringResource(R.string.regex_cast_pool_kind),
-                            value = kindLabels.firstOrNull { it.second == draft.poolKind }?.first.orEmpty(),
-                            options = kindLabels.map { (label, key) -> CastOption(key, label) },
+                            value = kindQuery,
+                            options = kindOptions,
                             expanded = kindExpanded,
-                            onValueChange = { },
+                            onValueChange = { kindQuery = it },
                             onSelected = { option ->
-                                draft = draft.copy(poolKind = option.key, poolId = "", itemId = "")
+                                draft = draft.copy(poolKind = option.key, poolId = "")
+                                kindQuery = option.label
+                                poolQuery = ""
                                 onPickPool(option.key, "")
                                 kindExpanded = false
                             },
@@ -269,12 +334,13 @@ private fun RegexCastEditDialog(
                         CastFieldSpec(
                             id = "pool",
                             label = stringResource(R.string.regex_cast_pool),
-                            value = state.poolOptions.firstOrNull { it.key == draft.poolId }?.label.orEmpty(),
+                            value = poolQuery,
                             options = state.poolOptions,
                             expanded = poolExpanded,
-                            onValueChange = { },
+                            onValueChange = { poolQuery = it },
                             onSelected = { option ->
-                                draft = draft.copy(poolId = option.key, itemId = "")
+                                draft = draft.copy(poolId = option.key)
+                                poolQuery = option.label
                                 onPickPool(draft.poolKind, option.key)
                                 poolExpanded = false
                             },
@@ -283,12 +349,13 @@ private fun RegexCastEditDialog(
                         CastFieldSpec(
                             id = "item",
                             label = stringResource(R.string.regex_cast_item),
-                            value = state.itemOptions.firstOrNull { it.key == draft.itemId }?.label.orEmpty(),
+                            value = itemQuery,
                             options = state.itemOptions,
                             expanded = itemExpanded,
-                            onValueChange = { },
+                            onValueChange = { itemQuery = it },
                             onSelected = { option ->
                                 draft = draft.copy(itemId = option.key)
+                                itemQuery = option.label
                                 itemExpanded = false
                             },
                             onExpand = { itemExpanded = it },
@@ -299,6 +366,7 @@ private fun RegexCastEditDialog(
                             value = draft.group,
                             options = state.groupOptions,
                             expanded = groupExpanded,
+                            // 直接写回字段：打字就是新建一个分组，点候选就是归到已有分组
                             onValueChange = { draft = draft.copy(group = it) },
                             onSelected = { option ->
                                 draft = draft.copy(group = option.key)
@@ -337,7 +405,7 @@ private fun RegexCastEditDialog(
                     )
                 }
                 Text(
-                    text = stringResource(R.string.regex_cast_scope_hint),
+                    text = stringResource(R.string.regex_cast_dialog_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -345,7 +413,7 @@ private fun RegexCastEditDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = draft.pattern.isNotBlank() && draft.poolId.isNotBlank(),
+                enabled = draft.pattern.isNotBlank() && draft.itemId.isNotBlank(),
                 onClick = { onSave(draft) },
             ) {
                 Text(stringResource(R.string.ok))
@@ -355,4 +423,10 @@ private fun RegexCastEditDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
+
+    // 换池之后候选列表变了，把显示值对齐一次，别留着上一次筛选时打的半截字
+    LaunchedEffect(state.itemOptions) {
+        val label = state.itemOptions.firstOrNull { it.key == draft.itemId }?.label.orEmpty()
+        if (label.isNotEmpty() && itemQuery != label) itemQuery = label
+    }
 }

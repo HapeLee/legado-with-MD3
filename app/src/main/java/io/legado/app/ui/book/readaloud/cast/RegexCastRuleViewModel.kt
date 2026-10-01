@@ -8,7 +8,6 @@ import io.legado.app.help.readaloud.cast.BgmPoolStore
 import io.legado.app.help.readaloud.cast.RegexCastRuleStore
 import io.legado.app.help.readaloud.cast.VoicePoolStore
 import io.legado.app.ui.widget.components.CastOption
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,12 +40,12 @@ class RegexCastRuleViewModel(
 
             RegexCastRuleIntent.ShowCreate -> {
                 _uiState.update { it.copy(isNew = true, editTarget = RegexCastRule()) }
-                launchIo { loadCandidates(RegexCastRule.POOL_ROLE, "") }
+                launchIo { loadCandidates(RegexCastRule.POOL_ROLE, "", "") }
             }
 
             is RegexCastRuleIntent.ShowEdit -> {
                 _uiState.update { it.copy(isNew = false, editTarget = intent.rule) }
-                launchIo { loadCandidates(intent.rule.poolKind, intent.rule.poolId) }
+                launchIo { loadCandidates(intent.rule.poolKind, intent.rule.poolId, intent.rule.itemId) }
             }
 
             RegexCastRuleIntent.DismissEdit -> _uiState.update { it.copy(editTarget = null) }
@@ -54,8 +53,13 @@ class RegexCastRuleViewModel(
             // 弹窗里换了「声音池选择」或「声音池」：下面那栏的候选跟着换。
             // 草稿整体留在弹窗本地，这里只刷候选，别回头去改 editTarget（会把没提交的编辑冲掉）。
             is RegexCastRuleIntent.PickPool -> launchIo {
-                _uiState.update { it.copy(itemOptions = persistentListOf()) }
-                loadCandidates(intent.kind, intent.poolId)
+                val keep = _uiState.value.editTarget?.itemId.orEmpty()
+                loadCandidates(intent.kind, intent.poolId, keep)
+            }
+
+            is RegexCastRuleIntent.Move -> launchIo {
+                RegexCastRuleStore.move(intent.from, intent.to)
+                refresh()
             }
 
             is RegexCastRuleIntent.Save -> launchIo {
@@ -94,24 +98,35 @@ class RegexCastRuleViewModel(
         _uiState.update { it.copy(rows = rows.toImmutableList()) }
     }
 
-    /** 弹窗的「声音池」「音色/配乐」两栏候选。 */
-    private suspend fun loadCandidates(kind: String, poolId: String) {
+    /**
+     * 弹窗的「声音池」「音色/配乐」两栏候选。
+     *
+     * 声音池**不按启用状态过滤**（停用的池照样列出来，后缀标一下）——用户就是要能挑到它；
+     * 音色/配乐同理：没选池时列全部，选了池就只列池内那些。**池只是筛选**，不是前置条件。
+     * 已经选中的那条即使不在当前筛选里也留在列表头上，否则一换池子显示就空了。
+     */
+    private suspend fun loadCandidates(kind: String, poolId: String, keepItemId: String) {
         val role = kind != RegexCastRule.POOL_BGM
         val pools = if (role) VoicePoolStore.listPools() else BgmPoolStore.listPools()
+        val allItems = if (role) VoicePoolStore.allVoicePairs() else BgmPoolStore.allTrackPairs()
         val members = if (poolId.isBlank()) {
-            emptyList()
+            emptySet()
         } else if (role) {
-            runCatching { VoicePoolStore.poolDetail(poolId).members }.getOrNull().orEmpty()
+            VoicePoolStore.memberVoiceIds(poolId)
         } else {
-            runCatching { BgmPoolStore.poolDetail(poolId).members }.getOrNull().orEmpty()
+            BgmPoolStore.memberTrackIds(poolId)
         }
+        val disabled = context.getString(R.string.regex_cast_pool_disabled)
         val random = CastOption("", context.getString(R.string.regex_cast_random))
+        val items = allItems.filter { it.first in members || it.first == keepItemId }
+            .ifEmpty { if (poolId.isBlank()) allItems else emptyList() }
+            .map { CastOption(it.first, it.second) }
         _uiState.update {
             it.copy(
                 poolOptions = (listOf(CastOption("", context.getString(R.string.regex_cast_pick_pool))) +
-                    pools.filter { p -> p.enabled }.map { p -> CastOption(p.id, p.name) })
+                    pools.map { p -> CastOption(p.id, if (p.enabled) p.name else p.name + disabled) })
                     .toImmutableList(),
-                itemOptions = (listOf(random) + members.map { m -> CastOption(m.id, m.displayName) })
+                itemOptions = (if (poolId.isBlank()) items else listOf(random) + items)
                     .toImmutableList(),
                 groupOptions = RegexCastRuleStore.groups().map { CastOption(it, it) }.toImmutableList(),
             )
