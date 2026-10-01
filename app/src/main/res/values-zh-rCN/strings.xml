@@ -1942,7 +1942,6 @@
     <string name="auto_check_new_backup_s">打开软件时检查是否有新备份，有新备份时提示是否更新</string>
     <string name="replace_purify_badge">计数替换净化</string>
     <string name="page_anim_fade">渐变</string>
-    <string name="page_anim_duo">叠页</string>
     <string name="show_bookshelf_tab_menu">显示更多分组按钮</string>
     <string name="show_unread_new">显示新章节更新标志</string>
     <string name="read_change_all">换源按钮默认弹出整书换源</string>

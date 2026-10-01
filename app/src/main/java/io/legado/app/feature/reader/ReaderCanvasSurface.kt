@@ -3,7 +3,6 @@ package io.legado.app.feature.reader
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Paint
-import android.graphics.Path.Op as AndroidPathOp
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.AnimatedVisibility
@@ -21,6 +20,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -29,9 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -48,15 +46,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -64,7 +60,6 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.CompositingStrategy
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -140,7 +135,6 @@ import io.legado.app.feature.reader.core.transition.ReaderAutoPageVisualMode
 import io.legado.app.feature.reader.core.transition.ReaderCoverShadowPolicy
 import io.legado.app.feature.reader.core.transition.ReaderCurlTouchPolicy
 import io.legado.app.feature.reader.core.transition.ReaderCurlVisualPolicy
-import io.legado.app.feature.reader.core.transition.ReaderDuoVisualPolicy
 import io.legado.app.feature.reader.core.transition.ReaderHorizontalDrag
 import io.legado.app.feature.reader.core.transition.ReaderPageTransform
 import io.legado.app.feature.reader.core.transition.ReaderPageTransition
@@ -152,7 +146,6 @@ import io.legado.app.feature.reader.core.transition.ReaderScrollPolicy
 import io.legado.app.feature.reader.core.transition.ReaderScrollResult
 import io.legado.app.feature.reader.core.transition.ReaderTransitionDecision
 import io.legado.app.feature.reader.core.transition.ReaderTransitionMode
-import io.legado.app.feature.reader.core.transition.ReaderTransitionTransforms
 import io.legado.app.feature.reader.core.transition.ReaderTurnDirection
 import io.legado.app.feature.reader.core.transition.ReaderViewportLayerPolicy
 import io.legado.app.feature.reader.core.transition.transforms
@@ -262,16 +255,12 @@ fun ReaderCanvasSurface(
     val animationScope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
     val scrollDecay = rememberSplineBasedDecay<Float>()
-    // 折页的每帧输入只交给绘制阶段读（见 SimulationPageStack）：状态对象在这里命名，
-    // 委托属性只在手势与动画回调里读写，重组里一次都不读。
-    val displayOffsetState = remember { mutableFloatStateOf(0f) }
-    var displayOffset by displayOffsetState
+    var displayOffset by remember { mutableFloatStateOf(0f) }
     var transition by remember { mutableStateOf(ReaderPageTransition()) }
     var pageMotionJob by remember { mutableStateOf<Job?>(null) }
     // The first curl frame starts at a corner. Animate it into the safe fold position so
     // the entering page is revealed instead of popping in when horizontal capture begins.
-    val curlRevealProgressState = remember { mutableFloatStateOf(1f) }
-    var curlRevealProgress by curlRevealProgressState
+    var curlRevealProgress by remember { mutableFloatStateOf(1f) }
     var curlRevealJob by remember { mutableStateOf<Job?>(null) }
     var pendingTurn by remember { mutableStateOf<ReaderTurnDirection?>(null) }
     var pendingTurnOrigin by remember { mutableStateOf<ReaderPageId?>(null) }
@@ -338,12 +327,9 @@ fun ReaderCanvasSurface(
             if (!wasScrollMode) pageMotionJob?.cancel()
         }
     }
-    val curlTouchYState = remember { mutableFloatStateOf(1f) }
-    val curlTouchXState = remember { mutableFloatStateOf(0f) }
-    val curlCornerYState = remember { mutableFloatStateOf(0f) }
-    var curlTouchY by curlTouchYState
-    var curlTouchX by curlTouchXState
-    var curlCornerY by curlCornerYState
+    var curlTouchY by remember { mutableFloatStateOf(1f) }
+    var curlTouchX by remember { mutableFloatStateOf(0f) }
+    var curlCornerY by remember { mutableStateOf(0f) }
     // 滚动偏移只在 graphicsLayer 块（layer 属性期）读取：拖拽/fling 帧只更新层变换、
     // 零重组零重绘（对照 shutiao 的 contentOffset 语义）。
     val scrollOffsetState = remember { mutableFloatStateOf(0f) }
@@ -412,29 +398,7 @@ fun ReaderCanvasSurface(
                 }
         }
     }
-    // 仿真折页不用 transforms：这一行每帧拖拽都要重算，还会把整块正文的重组带起来
-    //（翻页卡顿的一半来源）。折页自己只看下面的派生方向。
-    val transforms = if (transitionMode == ReaderTransitionMode.SIMULATION) {
-        ReaderTransitionTransforms()
-    } else {
-        transition.copy(offsetPx = displayOffset).transforms(transitionMode)
-    }
-    // 拖拽方向只在「开始拖」与「换页」时变；offsetPx 每帧都变，绝不能读进重组。
-    // `transitionMode` 必须是 remember 的键：不带键时 derivedStateOf 的 lambda 会永久捕获
-    // 首次重组时的模式（那时往往还是默认动画），之后怎么改设置它都返回 null，
-    // 折页分支再也进不去——这就是「仿真翻页直接没了，直接切页」。
-    val curlDirection by remember(transitionMode) {
-        derivedStateOf {
-            val t = transition
-            if (transitionMode == ReaderTransitionMode.SIMULATION &&
-                t.dragging && t.direction != null
-            ) {
-                t.direction
-            } else {
-                null
-            }
-        }
-    }
+    val transforms = transition.copy(offsetPx = displayOffset).transforms(transitionMode)
     fun pageViewportLayout(window: ReaderPageWindow = currentPageWindow()): ReaderPageViewportLayout =
         if (transitionMode == ReaderTransitionMode.SCROLL) {
             ReaderPageViewportLayout.scroll(window, scrollOffset)
@@ -1536,15 +1500,19 @@ fun ReaderCanvasSurface(
                     loadImage = loadImage,
                 )
             }
-        } else if (curlDirection != null) {
+        } else if (transitionMode == ReaderTransitionMode.SIMULATION && transition.dragging) {
             SimulationPageStack(
                 pages,
-                curlDirection!!,
-                displayOffsetState,
-                curlTouchXState,
-                curlTouchYState,
-                curlCornerYState,
-                curlRevealProgressState,
+                transition.direction!!,
+                displayOffset,
+                ReaderCurlTouchPolicy.revealX(
+                    transition.direction!!,
+                    curlTouchX,
+                    current.widthPx.toFloat(),
+                    curlRevealProgress
+                ),
+                curlTouchY,
+                curlCornerY,
                 backgroundColor,
                 pageBackgroundImage,
                 backgroundImageAlpha,
@@ -1566,15 +1534,6 @@ fun ReaderCanvasSurface(
                             translationX = transform.translationX
                             translationY = offsetY + transform.translationY
                             alpha = transform.alpha
-                            // 叠页用 scale + 圆角把被压住的那一页推到后面去；其余模式这两个字段恒为默认值。
-                            if (transform.scale != 1f) {
-                                scaleX = transform.scale
-                                scaleY = transform.scale
-                            }
-                            if (transform.cornerRadiusPx > 0f) {
-                                clip = true
-                                shape = RoundedCornerShape((transform.cornerRadiusPx / density).dp)
-                            }
                         },
                     textSelection,
                     selectionPreviewStyle,
@@ -1604,26 +1563,6 @@ fun ReaderCanvasSurface(
                         edge + shadowWidth,
                     ),
                     Offset(edge, 0f),
-                    Size(shadowWidth, size.height),
-                )
-            }
-        }
-        if (transitionMode == ReaderTransitionMode.DUO && transition.direction != null && displayOffset != 0f) {
-            // 叠页的阴影贴在压过来的那张纸的前沿外侧，把「新页在上面」这件事画出来。
-            Canvas(Modifier.fillMaxSize()) {
-                val direction = transition.direction ?: return@Canvas
-                val edge = ReaderDuoVisualPolicy.leadingEdgePx(direction, displayOffset, size.width)
-                val shadowWidth = size.width * ReaderDuoVisualPolicy.shadowFraction
-                val dark = Color(ReaderDuoVisualPolicy.shadowColorArgb)
-                val fromEdgeOutward = direction == ReaderTurnDirection.PREVIOUS
-                val left = if (fromEdgeOutward) edge else edge - shadowWidth
-                drawRect(
-                    Brush.horizontalGradient(
-                        if (fromEdgeOutward) listOf(dark, Color.Transparent) else listOf(Color.Transparent, dark),
-                        left,
-                        left + shadowWidth,
-                    ),
-                    Offset(left, 0f),
                     Size(shadowWidth, size.height),
                 )
             }
@@ -2042,29 +1981,14 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     visibleDecorationCache.overlayRules.forEach { it.draw(native) }
 }
 
-/**
- * 仿真折页。
- *
- * 两页各录进一块 graphics layer，折页的几何、裁剪与阴影全在最后一块 Canvas 的**绘制阶段**
- * 算：手指每动一下只重画一次裁剪。原来这两页是每帧重新绘制（`baseLayer.record` 每帧重录、
- * 进入页每帧整页重画），而且触点状态读在重组里，整块正文跟着手指一起重组——翻页「卡卡的」
- * 就是这两件事。现在状态只在这里读，拖拽帧零重组、零整页重栅格。
- *
- * 剩下的一半在渲染线程：`drawLayer` 只是把子显示列表挂上去，重演时仍是**逐条 op 重放**。
- * 一帧里基础页被重演两次（未翻走的部分 + 折回来的镜像背面）、进入页一次，满屏正文约
- * 280 条文字 op 就是这么来的（atrace：`AtlasTextOp` 277/帧、`flush commands` 12.7ms，UI 线程
- * 再花 12.1ms `postAndWait` 等它）。镜像带斜切矩阵时字形还会被重新栅格化。两块层标成
- * `CompositingStrategy.Offscreen` 后页内容解成一张 GPU 纹理，三次重放变三次纹理采样。
- */
 @Composable
 private fun SimulationPageStack(
     pages: ReaderPageWindow,
     direction: ReaderTurnDirection,
-    pageOffsetPx: FloatState,
-    touchX: FloatState,
-    touchY: FloatState,
-    cornerY: FloatState,
-    revealProgress: FloatState,
+    pageOffsetPx: Float,
+    touchX: Float,
+    touchY: Float,
+    cornerY: Float,
     background: Color,
     backgroundImage: Drawable?,
     backgroundImageAlpha: Float,
@@ -2078,119 +2002,133 @@ private fun SimulationPageStack(
     val basePage = if (direction == ReaderTurnDirection.NEXT) pages.current else pages.previous
     val revealPage = if (direction == ReaderTurnDirection.NEXT) pages.next else pages.current
     if (basePage == null || revealPage == null) return
-    val baseLayer = rememberGraphicsLayer()
-    val revealLayer = rememberGraphicsLayer()
-    baseLayer.compositingStrategy = CompositingStrategy.Offscreen
-    revealLayer.compositingStrategy = CompositingStrategy.Offscreen
-    val mirror = remember { Matrix() }
-    Box(
-        Modifier
-            .fillMaxSize()
-            // graphicsLayer 是隔离边界：没有它，折页 Canvas 每帧失效会带着这个 Box 重跑
-            // `record{}`（正文显示列表重建 + 离屏纹理重新栅格化），上面的缓存等于白设。
-            .graphicsLayer { }
-            .drawWithContent {
-                // 录一份当折页的纹理，**再直接画一份垫在下面**。`record` 会把内容吸进离屏图层、
-                // 自己不上屏，所以只要有一帧图层是空的（分支刚切进来、render node 还没挂上、
-                // 显存吃紧丢掉一次记录），整屏就只剩底色 —— 用户看到的「翻页闪一下」就是这个。
-                // 垫的这份永远在，最坏情况只是折页区域露出当前页，不会再出现空白帧。
-                baseLayer.record { this@drawWithContent.drawContent() }
-                drawContent()
-            },
-    ) {
-        ReaderPageCanvas(
-            basePage,
-            background,
-            backgroundImage,
-            backgroundImageAlpha,
-            selection,
-            readAloud,
-            Modifier.fillMaxSize(),
-            activeSelection,
-            selectionPreviewStyle,
-            cachedImage,
-            loadImage
-        )
-    }
-    Box(
-        Modifier
-            .fillMaxSize()
-            .graphicsLayer { }
-            .drawWithContent { revealLayer.record { this@drawWithContent.drawContent() } },
-    ) {
-        ReaderPageCanvas(
-            revealPage,
-            background,
-            backgroundImage,
-            backgroundImageAlpha,
-            selection,
-            readAloud,
-            Modifier.fillMaxSize(),
-            activeSelection,
-            selectionPreviewStyle,
-            cachedImage,
-            loadImage
-        )
-    }
-    // 折页自身也要一块层：它每帧失效，没有层的话整块容器的显示列表跟着重建。
-    Canvas(Modifier.fillMaxSize().graphicsLayer { }) {
-        val width = size.width
-        val height = size.height
-        val frame = PageCurlGeometry.calculate(
-            width,
-            height,
-            ReaderCurlTouchPolicy.revealX(
-                direction,
-                touchX.floatValue,
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val density = LocalDensity.current
+        val width = with(density) { maxWidth.toPx() }
+        val height = with(density) { maxHeight.toPx() }
+        val frame = remember(width, height, touchX, touchY, cornerY) {
+            PageCurlGeometry.calculate(
                 width,
-                revealProgress.floatValue,
-            ),
-            touchY.floatValue.coerceIn(.1f, height - .1f),
-            lockedCorner = CurlPoint(width, cornerY.floatValue),
-        )
+                height,
+                touchX,
+                touchY.coerceIn(.1f, height - .1f),
+                lockedCorner = CurlPoint(width, cornerY),
+            )
+        }
         if (frame == null) {
             // A degenerate Bezier frame used to draw only the base page, which made the
             // entering page disappear for an entire drag frame. Keep the destination visible
             // with a cheap horizontal fallback until the next valid curl frame arrives.
-            drawLayer(revealLayer)
+            ReaderPageCanvas(
+                revealPage,
+                background,
+                backgroundImage,
+                backgroundImageAlpha,
+                selection,
+                readAloud,
+                Modifier.fillMaxSize(),
+                activeSelection,
+                selectionPreviewStyle,
+                cachedImage,
+                loadImage
+            )
             val baseTranslation = when (direction) {
-                ReaderTurnDirection.NEXT -> pageOffsetPx.floatValue
-                ReaderTurnDirection.PREVIOUS -> pageOffsetPx.floatValue - width
+                ReaderTurnDirection.NEXT -> pageOffsetPx
+                ReaderTurnDirection.PREVIOUS -> pageOffsetPx - width
             }
-            withTransform({ translate(baseTranslation, 0f) }) { drawLayer(baseLayer) }
-            return@Canvas
+            ReaderPageCanvas(
+                basePage,
+                background,
+                backgroundImage,
+                backgroundImageAlpha,
+                selection,
+                readAloud,
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = baseTranslation },
+                activeSelection,
+                selectionPreviewStyle,
+                cachedImage,
+                loadImage,
+            )
+            return@BoxWithConstraints
         }
-        val paths = frame.renderPaths(width, height)
-        clipPath(paths.outsideFront) {
-            drawLayer(baseLayer)
-        }
-        clipPath(paths.frontReveal) {
-            drawLayer(revealLayer)
-            drawCurlBackShadow(frame)
-        }
-        clipPath(paths.frontBack) {
-            drawRect(background)
-            mirror.values[Matrix.ScaleX] = frame.mirror.scaleX
-            mirror.values[Matrix.SkewX] = frame.mirror.skewX
-            mirror.values[Matrix.SkewY] = frame.mirror.skewY
-            mirror.values[Matrix.ScaleY] = frame.mirror.scaleY
-            mirror.values[Matrix.TranslateX] = frame.mirror.translateX
-            mirror.values[Matrix.TranslateY] = frame.mirror.translateY
-            // Canvas.drawBitmap() in the View implementation naturally kept sampling
-            // within the screenshot's bounds. A transformed GraphicsLayer otherwise
-            // samples beyond its recorded page surface as opaque black on some devices,
-            // producing a dark wedge between the two sides of a curl. Clip in source
-            // coordinates first so uncovered back-page pixels retain the mean background
-            // color drawn above, while the complete background image remains mirrored.
-            withTransform({
-                transform(mirror)
-                clipRect(0f, 0f, size.width, size.height)
+        val paths = remember(frame, width, height) { frame.renderPaths(width, height) }
+        val path0 = paths.front
+        val pathNext = paths.reveal
+        val pathBack = paths.back
+        val baseLayer = rememberGraphicsLayer()
+        Box(Modifier
+            .fillMaxSize()
+            .drawWithContent {
+                baseLayer.record { this@drawWithContent.drawContent() }
+                clipPath(path0, ClipOp.Difference) { drawLayer(baseLayer) }
             }) {
-                drawLayer(baseLayer)
-            }
-            drawCurlFolderShadow(frame)
+            ReaderPageCanvas(
+                basePage,
+                background,
+                backgroundImage,
+                backgroundImageAlpha,
+                selection,
+                readAloud,
+                Modifier.fillMaxSize(),
+                activeSelection,
+                selectionPreviewStyle,
+                cachedImage,
+                loadImage
+            )
         }
-        drawCurlFrontShadows(frame, paths)
+        Box(Modifier
+            .fillMaxSize()
+            .drawWithContent {
+                clipPath(path0) {
+                    clipPath(pathNext) {
+                        this@drawWithContent.drawContent()
+                        drawCurlBackShadow(frame)
+                    }
+                }
+            }) {
+            ReaderPageCanvas(
+                revealPage,
+                background,
+                backgroundImage,
+                backgroundImageAlpha,
+                selection,
+                readAloud,
+                Modifier.fillMaxSize(),
+                activeSelection,
+                selectionPreviewStyle,
+                cachedImage,
+                loadImage
+            )
+        }
+        Canvas(Modifier.fillMaxSize()) {
+            clipPath(path0) { clipPath(pathBack) {
+                drawRect(background)
+                val matrix = Matrix().apply {
+                    values[Matrix.ScaleX] = frame.mirror.scaleX
+                    values[Matrix.SkewX] = frame.mirror.skewX
+                    values[Matrix.SkewY] = frame.mirror.skewY
+                    values[Matrix.ScaleY] = frame.mirror.scaleY
+                    values[Matrix.TranslateX] = frame.mirror.translateX
+                    values[Matrix.TranslateY] = frame.mirror.translateY
+                }
+                // Canvas.drawBitmap() in the View implementation naturally kept sampling
+                // within the screenshot's bounds. A transformed GraphicsLayer otherwise
+                // samples beyond its recorded page surface as opaque black on some devices,
+                // producing a dark wedge between the two sides of a curl. Clip in source
+                // coordinates first so uncovered back-page pixels retain the mean background
+                // color drawn above, while the complete background image remains mirrored.
+                withTransform({
+                    transform(matrix)
+                    clipRect(0f, 0f, size.width, size.height)
+                }) {
+                    drawLayer(baseLayer)
+                }
+                drawCurlFolderShadow(frame)
+            } }
+            drawCurlFrontShadows(frame, paths)
+        }
     }
 }
 
@@ -2198,70 +2136,40 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCurlFrontShadow
     frame: PageCurlFrame,
     paths: ReaderCurlRenderPaths,
 ) {
+    val curlPath = paths.front
     val reverse = frame.corner.x == 0f && frame.corner.y == size.height || frame.corner.x == size.width && frame.corner.y == 0f
-    val diagonal = hypot(size.width.toDouble(), size.height.toDouble()).toFloat()
-    val dark = Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)
-    clipPath(paths.outsideFront) { clipPath(paths.frontShadowHorizontal) {
+    clipPath(curlPath, ClipOp.Difference) { clipPath(paths.frontShadowHorizontal) {
         val left = if (reverse) frame.control1.x else frame.control1.x - 25f
         val right = if (reverse) frame.control1.x + 25f else frame.control1.x + 1f
         val rotation = (atan2((frame.touch.x - frame.control1.x).toDouble(), (frame.control1.y - frame.touch.y).toDouble()) * 180.0 / PI).toFloat()
         withTransform({ rotate(rotation, Offset(frame.control1.x, frame.control1.y)) }) {
-            drawRect(Brush.horizontalGradient(if (reverse) listOf(dark, Color.Transparent) else listOf(Color.Transparent, dark), left, right), Offset(left, frame.control1.y - diagonal), Size(right - left, diagonal))
+            drawRect(Brush.horizontalGradient(if (reverse) listOf(Color(ReaderCurlVisualPolicy.frontShadowDarkArgb), Color.Transparent) else listOf(Color.Transparent, Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)), left, right), Offset(left, frame.control1.y - hypot(size.width.toDouble(), size.height.toDouble()).toFloat()), Size(right - left, hypot(size.width.toDouble(), size.height.toDouble()).toFloat()))
         }
     } }
-    clipPath(paths.outsideFront) { clipPath(paths.frontShadowVertical) {
+    clipPath(curlPath, ClipOp.Difference) { clipPath(paths.frontShadowVertical) {
         val top = if (reverse) frame.control2.y else frame.control2.y - 25f
         val bottom = if (reverse) frame.control2.y + 25f else frame.control2.y + 1f
         val rotation = (atan2((frame.control2.y - frame.touch.y).toDouble(), (frame.control2.x - frame.touch.x).toDouble()) * 180.0 / PI).toFloat()
+        val diagonal = hypot(size.width.toDouble(), size.height.toDouble()).toFloat()
         val adjustedY = if (frame.control2.y < 0f) frame.control2.y - size.height else frame.control2.y
         val hmg = hypot(frame.control2.x.toDouble(), adjustedY.toDouble()).toFloat()
         val left = if (hmg > diagonal) frame.control2.x - 25f - hmg else frame.control2.x - diagonal
         val right = if (hmg > diagonal) frame.control2.x + diagonal - hmg else frame.control2.x
         withTransform({ rotate(rotation, Offset(frame.control2.x, frame.control2.y)) }) {
-            drawRect(Brush.verticalGradient(if (reverse) listOf(dark, Color.Transparent) else listOf(Color.Transparent, dark), top, bottom), Offset(left, top), Size(right - left, bottom - top))
+            drawRect(Brush.verticalGradient(if (reverse) listOf(Color(ReaderCurlVisualPolicy.frontShadowDarkArgb), Color.Transparent) else listOf(Color.Transparent, Color(ReaderCurlVisualPolicy.frontShadowDarkArgb)), top, bottom), Offset(left, top), Size(right - left, bottom - top))
         }
     } }
 }
 
-/**
- * 折页这一帧的裁剪轮廓。**每帧新建一份，不许跨帧复用**：
- * `clipPath(path)` 记进显示列表的是这个 Path 的**引用**，真正生效在重放阶段；
- * 复用同一个对象就等于让上一帧的裁剪区被这一帧的 `reset()` 改写，两帧的几何互相串——
- * 表现就是仿真翻页每隔一帧整片画成正面纸的镜像（用户报的「翻页过程中一直闪烁」，
- * 录屏实测 116.7 ↔ 121.0 逐帧交替）。复用 Path 省下的那点分配，抵不过这个错帧。
- *
- * 留这套预计算本身是对的：`outsideFront` 与两条「折页 ∩ 面」的裁剪区把**差集裁剪**清零
- * （`ClipOp.Difference` 不是矩形裁剪，渲染器每碰到一次都要按整屏大小另算一份遮罩，
- * 1440×3200 一屏 18 MB），原来一帧里有三处，就是仿真翻页「卡卡的」剩下的大头。
- * 现在「屏减折页」由整屏轮廓 + 同一条折页轮廓走 EvenOdd 填充分量得到，折页那两面
- * 预先算成交集路径，绘制期每一处只剩默认的相交裁剪，而且三处共用同一条 `outsideFront`。
- * 裁掉的像素与原来逐像素一致。
- */
-private class ReaderCurlRenderPaths {
-    val front = Path()
-    val reveal = Path()
-    val back = Path()
-    val frontShadowHorizontal = Path()
-    val frontShadowVertical = Path()
-    val outsideFront = Path()
-    val frontReveal = Path()
-    val frontBack = Path()
-}
+private data class ReaderCurlRenderPaths(
+    val front: Path,
+    val reveal: Path,
+    val back: Path,
+    val frontShadowHorizontal: Path,
+    val frontShadowVertical: Path,
+)
 
-/** this = a ∩ b，就地改写不留新对象。 */
-private fun Path.assignIntersect(a: Path, b: Path) {
-    val native = asAndroidPath()
-    reset()
-    addPath(a)
-    // 有一边是空形时布尔运算不出结果：留一条空路径，与原来「嵌套裁剪里空那层什么都不画」一致。
-    if (!native.op(b.asAndroidPath(), AndroidPathOp.INTERSECT)) reset()
-}
-
-private fun PageCurlFrame.renderPaths(
-    width: Float,
-    height: Float,
-): ReaderCurlRenderPaths {
-    val paths = ReaderCurlRenderPaths()
+private fun PageCurlFrame.renderPaths(width: Float, height: Float): ReaderCurlRenderPaths {
     val reverse = corner.x == 0f && corner.y == height || corner.x == width && corner.y == 0f
     val angle = if (reverse) {
         PI / 4 - atan2((control1.y - touch.y).toDouble(), (touch.x - control1.x).toDouble())
@@ -2270,41 +2178,29 @@ private fun PageCurlFrame.renderPaths(
     }
     val shadowX = (touch.x + 25f * 1.414f * cos(angle)).toFloat()
     val shadowY = (touch.y + (if (reverse) 1 else -1) * 25f * 1.414f * sin(angle)).toFloat()
-    with(paths.front) {
-        reset()
-        moveTo(start1.x, start1.y); quadraticTo(control1.x, control1.y, end1.x, end1.y)
-        lineTo(touch.x, touch.y); lineTo(end2.x, end2.y)
-        quadraticTo(control2.x, control2.y, start2.x, start2.y); lineTo(corner.x, corner.y); close()
-    }
-    with(paths.reveal) {
-        reset()
-        moveTo(start1.x, start1.y); lineTo(vertex1.x, vertex1.y); lineTo(vertex2.x, vertex2.y)
-        lineTo(start2.x, start2.y); lineTo(corner.x, corner.y); close()
-    }
-    with(paths.back) {
-        reset()
-        moveTo(vertex2.x, vertex2.y); lineTo(vertex1.x, vertex1.y); lineTo(end1.x, end1.y)
-        lineTo(touch.x, touch.y); lineTo(end2.x, end2.y); close()
-    }
-    with(paths.frontShadowHorizontal) {
-        reset()
-        moveTo(shadowX, shadowY); lineTo(touch.x, touch.y); lineTo(control1.x, control1.y)
-        lineTo(start1.x, start1.y); close()
-    }
-    with(paths.frontShadowVertical) {
-        reset()
-        moveTo(shadowX, shadowY); lineTo(touch.x, touch.y); lineTo(control2.x, control2.y)
-        lineTo(start2.x, start2.y); close()
-    }
-    with(paths.outsideFront) {
-        reset()
-        addRect(Rect(0f, 0f, width, height), Path.Direction.Clockwise)
-        addPath(paths.front)
-        fillType = PathFillType.EvenOdd
-    }
-    paths.frontReveal.assignIntersect(paths.front, paths.reveal)
-    paths.frontBack.assignIntersect(paths.front, paths.back)
-    return paths
+    return ReaderCurlRenderPaths(
+        front = Path().apply {
+            moveTo(start1.x, start1.y); quadraticTo(control1.x, control1.y, end1.x, end1.y)
+            lineTo(touch.x, touch.y); lineTo(end2.x, end2.y)
+            quadraticTo(control2.x, control2.y, start2.x, start2.y); lineTo(corner.x, corner.y); close()
+        },
+        reveal = Path().apply {
+            moveTo(start1.x, start1.y); lineTo(vertex1.x, vertex1.y); lineTo(vertex2.x, vertex2.y)
+            lineTo(start2.x, start2.y); lineTo(corner.x, corner.y); close()
+        },
+        back = Path().apply {
+            moveTo(vertex2.x, vertex2.y); lineTo(vertex1.x, vertex1.y); lineTo(end1.x, end1.y)
+            lineTo(touch.x, touch.y); lineTo(end2.x, end2.y); close()
+        },
+        frontShadowHorizontal = Path().apply {
+            moveTo(shadowX, shadowY); lineTo(touch.x, touch.y); lineTo(control1.x, control1.y)
+            lineTo(start1.x, start1.y); close()
+        },
+        frontShadowVertical = Path().apply {
+            moveTo(shadowX, shadowY); lineTo(touch.x, touch.y); lineTo(control2.x, control2.y)
+            lineTo(start2.x, start2.y); close()
+        },
+    )
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCurlBackShadow(frame: PageCurlFrame) {

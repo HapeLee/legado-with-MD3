@@ -317,14 +317,13 @@ fun GlobalThemePage(
         Spacer(Modifier.height(8.dp))
 
         // 每一项带自己的 PageAnim 取值：菜单里加一项或换个顺序都不会再让「下标 == 常量值」这个
-        // 隐含约定错位（叠页就接在淡入淡出后面，而 noAnim 仍是 5）。
+        // 隐含约定错位（菜单里加一项或换个顺序都不会再让「下标 == 常量值」这个隐含约定错位）。
         val pageAnimOptions = listOf(
             R.string.page_anim_cover to PageAnim.coverPageAnim,
             R.string.page_anim_slide to PageAnim.slidePageAnim,
             R.string.page_anim_simulation to PageAnim.simulationPageAnim,
             R.string.page_anim_scroll to PageAnim.scrollPageAnim,
             R.string.page_anim_fade to PageAnim.fadePageAnim,
-            R.string.page_anim_duo to PageAnim.duoPageAnim,
             R.string.page_anim_none to PageAnim.noAnim,
         )
         var showPageAnimMenu by remember { mutableStateOf(false) }

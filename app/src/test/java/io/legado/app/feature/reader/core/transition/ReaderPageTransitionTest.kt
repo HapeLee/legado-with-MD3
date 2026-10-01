@@ -179,30 +179,8 @@ class ReaderPageTransitionTest {
         assertEquals(ReaderTransitionMode.SCROLL, ReaderTransitionMode.fromPageAnim(PageAnim.scrollPageAnim))
         assertEquals(ReaderTransitionMode.FADE, ReaderTransitionMode.fromPageAnim(PageAnim.fadePageAnim))
         assertEquals(ReaderTransitionMode.NONE, ReaderTransitionMode.fromPageAnim(PageAnim.noAnim))
-        assertEquals(ReaderTransitionMode.DUO, ReaderTransitionMode.fromPageAnim(PageAnim.duoPageAnim))
         assertEquals(ReaderTransitionMode.NONE, ReaderTransitionMode.fromPageAnim(Int.MIN_VALUE))
         assertEquals(ReaderTransitionMode.NONE, ReaderTransitionMode.fromPageAnim(Int.MAX_VALUE))
-    }
-
-    @Test
-    fun `duo stacks the incoming page above a receding current page`() {
-        val forward = ReaderPageTransitionPolicy.drag(-200f, 800f, true, true)
-            .transforms(ReaderTransitionMode.DUO)
-        // 新页从右边压进来，永远画在上面。进度 .25 → 圆角 800×.075×(1-.25)
-        assertEquals(600f, forward.next?.translationX)
-        assertEquals(45f, forward.next?.cornerRadiusPx!!, 1e-3f)
-        assertFalse(forward.currentOnTop)
-        // 旧页退到后面：让出一小截视差、缩小、变暗、起圆角（800×.075×.25）。
-        assertEquals(-56f, forward.current.translationX, 1e-3f)
-        assertEquals(.98f, forward.current.scale, 1e-3f)
-        assertEquals(.905f, forward.current.alpha, 1e-3f)
-        assertEquals(15f, forward.current.cornerRadiusPx, 1e-3f)
-
-        val backward = ReaderPageTransitionPolicy.drag(200f, 800f, true, true)
-            .transforms(ReaderTransitionMode.DUO)
-        assertEquals(-600f, backward.previous?.translationX)
-        assertEquals(56f, backward.current.translationX, 1e-3f)
-        assertFalse(backward.currentOnTop)
     }
 
     @Test

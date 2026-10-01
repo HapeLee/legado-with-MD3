@@ -1999,7 +1999,6 @@
     <string name="auto_check_new_backup_s">Check for new backups when opening the app, if new backups are found, prompt the user to update.</string>
     <string name="replace_purify_badge">Count Replacements and Purify Rules</string>
     <string name="page_anim_fade">Fade</string>
-    <string name="page_anim_duo">Duo</string>
     <string name="show_bookshelf_tab_menu">Show More Bookshelf Tab</string>
     <string name="show_unread_new">Show New Chapter Flag</string>
     <string name="read_change_all">Source Change Default Applies to Entire Book</string>

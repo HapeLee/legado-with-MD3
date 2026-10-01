@@ -2064,7 +2064,6 @@
     <string name="opt_animation">優化從書架進入閲讀介面時的動畫效果。</string>
     <string name="or">或</string>
     <string name="page_anim_fade">淡入淡出</string>
-    <string name="page_anim_duo">疊頁</string>
     <string name="page_control">翻頁控制</string>
     <string name="palette_style">調色板樣式</string>
     <string name="paragraph_typeface">段落樣式</string>

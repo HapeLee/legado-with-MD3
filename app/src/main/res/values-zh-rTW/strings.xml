@@ -2026,7 +2026,6 @@
     <string name="title_bar_mode">選單中的標題模式</string>
     <string name="replace_purify_badge">計算取代淨化規則數</string>
     <string name="page_anim_fade">淡入淡出</string>
-    <string name="page_anim_duo">疊頁</string>
     <string name="show_bookshelf_tab_menu">顯示更多書架分頁</string>
     <string name="show_unread_new">顯示新章節標記</string>
     <string name="read_change_all">換源預設套用到整本書</string>

@@ -25,7 +25,6 @@ fun PageAnimConfigSheet(
         R.string.page_anim_simulation to PageAnim.simulationPageAnim,
         R.string.page_anim_scroll to PageAnim.scrollPageAnim,
         R.string.page_anim_fade to PageAnim.fadePageAnim,
-        R.string.page_anim_duo to PageAnim.duoPageAnim,
         R.string.page_anim_none to PageAnim.noAnim,
     )
 

@@ -16,9 +16,6 @@ object PageAnim {
     const val fadePageAnim = 4
     const val noAnim = 5
 
-    /** 我们加的叠页（iPhone Duo 风格）翻页，接在官方取值后面，不复用已有编号。 */
-    const val duoPageAnim = 6
-
     @Target(AnnotationTarget.VALUE_PARAMETER)
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(
@@ -28,7 +25,6 @@ object PageAnim {
         scrollPageAnim,
         fadePageAnim,
         noAnim,
-        duoPageAnim,
     )
     annotation class Anim
 
