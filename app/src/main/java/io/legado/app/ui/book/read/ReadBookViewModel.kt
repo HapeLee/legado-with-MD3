@@ -611,6 +611,13 @@ class ReadBookViewModel(
         }
     }
 
+    /** 云端进度同步域；投影目标 isReadingProgressSyncConfigured 仍留在 UiState 供菜单读。 */
+    private val readingProgressSyncDelegate by lazy {
+        ReadingProgressSyncDelegate(viewModelScope, getReadingProgressUseCase) { configured ->
+            _uiState.update { it.copy(isReadingProgressSyncConfigured = configured) }
+        }
+    }
+
     init {
         // 订阅必须早于 attach()：会话事件用 tryEmit 投递，没有订阅者会被丢弃。
         // viewModelScope 是 Main.immediate，VM 在主线程构造，故 launch 会同步跑到
@@ -622,6 +629,7 @@ class ReadBookViewModel(
         collectEventBus()
         collectReaderSession()
         collectReadStyle()
+        readingProgressSyncDelegate.start()
         replaceRuleDelegate.start()
     }
 
@@ -744,17 +752,21 @@ class ReadBookViewModel(
                 openChapter(intent.index, intent.pos)
             }
             is ReadBookIntent.SkipToPage -> ReadBook.skipToPage(intent.pageIndex)
-            is ReadBookIntent.ToggleMenu -> _uiState.update {
-                if (it.menuVisible) {
-                    readBookStyleConfigRepository.save()
-                    it.copy(menuState = ReadBookMenuState())
+            is ReadBookIntent.ToggleMenu -> {
+                if (_uiState.value.menuVisible) {
+                    _uiState.update {
+                        readBookStyleConfigRepository.save()
+                        it.copy(menuState = ReadBookMenuState())
+                    }
                 } else {
-                    it.copy(menuState = ReadBookMenuState(visible = true))
+                    ensureReadingProgressSyncConfigured()
+                    _uiState.update { it.copy(menuState = ReadBookMenuState(visible = true)) }
                 }
             }
 
-            is ReadBookIntent.ShowMenu -> _uiState.update {
-                it.copy(menuState = ReadBookMenuState(visible = true))
+            is ReadBookIntent.ShowMenu -> {
+                ensureReadingProgressSyncConfigured()
+                _uiState.update { it.copy(menuState = ReadBookMenuState(visible = true)) }
             }
 
             is ReadBookIntent.HideMenu -> _uiState.update {
@@ -1077,13 +1089,13 @@ class ReadBookViewModel(
                 }
             }
 
-            is ReadBookIntent.MenuCoverProgress -> {
-                ReadBook.book?.let {
-                    ReadBook.uploadProgress(true) {
-                        _effects.tryEmit(
-                            ReadBookEffect.ShowToast(context.getString(R.string.upload_book_success))
-                        )
-                    }
+            is ReadBookIntent.MenuCoverProgress -> if (ReadBook.book != null) viewModelScope.launch {
+                // 覆盖云端进度直接走 AppWebDav，必须先等云端初始化结束，否则上传被静默丢弃
+                readingProgressSyncDelegate.ensureConfiguredNow()
+                ReadBook.uploadProgress(true) {
+                    _effects.tryEmit(
+                        ReadBookEffect.ShowToast(context.getString(R.string.upload_book_success))
+                    )
                 }
             }
 
@@ -2142,6 +2154,9 @@ class ReadBookViewModel(
     fun changeTo(book: Book) = loadDelegate.changeTo(book)
 
     fun isReadingProgressSyncConfigured(): Boolean = loadDelegate.isReadingProgressSyncConfigured()
+
+    /** 打开阅读菜单时补齐云端配置（上游 `onPrepareOptionsMenu` 的重算时机）。 */
+    fun ensureReadingProgressSyncConfigured() = readingProgressSyncDelegate.ensureConfigured()
 
     suspend fun uploadBookProgress(book: Book) = loadDelegate.uploadBookProgress(book)
 

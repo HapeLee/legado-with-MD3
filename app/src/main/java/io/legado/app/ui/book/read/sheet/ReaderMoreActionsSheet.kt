@@ -354,11 +354,11 @@ private fun moreActionSpecs(
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.SimulatedReading)) }),
     MoreActionSpec(
         "get_progress", stringResource(R.string.get_book_progress), Icons.Default.Sync,
-        applicable = state.isReadingProgressSyncConfigured,
+        applicable = state.inBookshelf && state.isReadingProgressSyncConfigured,
         onClick = { dispatch(ReadBookIntent.MenuGetProgress) }),
     MoreActionSpec(
         "cover_progress", stringResource(R.string.cover_book_progress), Icons.Default.Sync,
-        applicable = state.isReadingProgressSyncConfigured,
+        applicable = state.inBookshelf && state.isReadingProgressSyncConfigured,
         onClick = { dispatch(ReadBookIntent.MenuCoverProgress) }),
     MoreActionSpec(
         "bottom_button_config", stringResource(R.string.config_btn), Icons.Default.Settings,

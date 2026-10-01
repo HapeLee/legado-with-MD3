@@ -527,6 +527,18 @@ class ReadBookDomainSplitBoundaryTest {
                     "bookRepository.getChapterTitle",
                 ),
             ),
+            // 云端进度同步域无自持状态：投影目标 isReadingProgressSyncConfigured 是菜单
+            // 可见性输入，仍在 UiState；靠 stateTypes 守「订阅云端可用性流 + 开菜单补
+            // 初始化不回流 VM」——这两件事一回流，入口就会重新变成「读一次快照」。
+            DomainSplit(
+                name = "云端进度同步",
+                delegateFile = "io/legado/app/ui/book/read/ReadingProgressSyncDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "isConfiguredFlow",
+                    "useCase.ensureConfigured",
+                ),
+            ),
         )
 
         val APP_DB_DAO = Regex("""\bappDb\.[A-Za-z0-9_]*Dao\b""")

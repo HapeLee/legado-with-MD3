@@ -318,8 +318,8 @@ private fun OverflowDropdownMenu(
             PillDivider()
         }
 
-        // 进度同步
-        if (state.isReadingProgressSyncConfigured) {
+        // 进度同步（与上游一致：在书架 + 已配云端才显示）
+        if (state.inBookshelf && state.isReadingProgressSyncConfigured) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.get_book_progress),
                 leadingIcon = menuIcon(Icons.Default.Sync),

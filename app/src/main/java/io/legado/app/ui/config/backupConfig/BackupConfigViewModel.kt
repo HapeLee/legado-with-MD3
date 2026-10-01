@@ -147,6 +147,7 @@ class BackupConfigViewModel(
             settingsGateway.update {
                 it.copy(webDavAccount = dialog.account, webDavPassword = dialog.password)
             }
+            // testWebDav() 内部会调 upConfig() 重建 authorization，故这里不需要额外触发。
             testWebDav()
         }
     }
