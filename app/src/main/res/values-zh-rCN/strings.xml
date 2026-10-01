@@ -3369,6 +3369,9 @@
     <string name="cloud_tts_request_failed">TTS 请求失败</string>
     <string name="edit_menu_items">编辑菜单项</string>
     <string name="edit_select_menu">编辑选择菜单</string>
+    <string name="insert_bgm_before">插入(前)</string>
+    <string name="insert_bgm_after">插入(后)</string>
+    <string name="bgm_scene_insert_error">没定位到这段选中文字所在的段落。</string>
     <string name="primary_menu">一级菜单</string>
     <string name="collapsed_menu">折叠菜单</string>
     <string name="hidden_items">已隐藏项目</string>

@@ -40,6 +40,8 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FindReplace
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.QueueMusic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SmartToy
@@ -592,6 +594,9 @@ private fun ActionMenuItem.builtInIcon(): ImageVector? = when (id) {
     R.id.menu_edit -> Icons.Outlined.Edit
     R.id.menu_ai_clean, R.id.menu_ai_rewrite -> Icons.Outlined.SmartToy
     R.id.menu_search_content -> Icons.Outlined.Search
+    // 手动分配背景音乐场景：两个都是音乐图标，前/后靠文案区分
+    R.id.menu_insert_bgm_before -> Icons.Outlined.QueueMusic
+    R.id.menu_insert_bgm_after -> Icons.Outlined.PlaylistAdd
     else -> null
 }
 
