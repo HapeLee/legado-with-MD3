@@ -14,7 +14,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 
@@ -56,6 +55,13 @@ class ReadAloudBgmPlayer(private val context: Context) {
     private var trackVolume = 1f
     /** 播放器当前应有的音量（渐变的两端都以它为准），已含总音量。 */
     private var targetVolume = 1f
+    /**
+     * 播放器此刻**真实**的音量（[ramp] 每一步、以及直接 setVolume 的那两处都会更新）。
+     *
+     * 每一次淡出都必须从这里起跳：拿 [targetVolume] 当起点会把一条已经淡到一半的曲子
+     * 先顶响再淡，听起来就是「突然响一下」。
+     */
+    private var appliedVolume = 1f
     /** 上次读到的背景音乐总音量版本，用来发现「用户刚拖了朗读设置里的滑杆」。 */
     private var masterVersion = -1
     /** 朗读是否暂停：暂停时配乐一起停，恢复时把在播的那条接着起，不重新取库。 */
@@ -150,8 +156,12 @@ class ReadAloudBgmPlayer(private val context: Context) {
         }
         val sameScene = currentMark?.paragraphOrdinal == mark.paragraphOrdinal &&
             currentMark?.poolName == mark.poolName && currentMark?.trackName == mark.trackName
-        if (sameScene && currentPath != null && File(currentPath!!).exists() && player != null) {
-            // 同一场景：只可能改了音量，就地改播放器音量，不重新起播
+        if (sameScene) {
+            // 同一场景：只可能改了音量，就地改播放器音量，不重新起播。
+            //
+            // 这里不能再附加「播放器已经就位」的条件：换曲要 900ms 淡出 + 一次 prepare，
+            // 这期间进度回调会带着同一个场景再进来好几次，一旦放行就会 cancel 掉正在跑的
+            // switchTo —— 淡出被硬切，上一条 MediaPlayer 也没人放掉。
             currentMark = mark
             setTargetVolume(levelOf(mark))
             return
@@ -188,6 +198,7 @@ class ReadAloudBgmPlayer(private val context: Context) {
     private fun setTargetVolume(volume: Float) {
         targetVolume = volume.coerceIn(0f, 1f)
         if (fadeJob?.isActive != true) {
+            appliedVolume = targetVolume
             runCatching { player?.setVolume(targetVolume, targetVolume) }
         }
     }
@@ -195,8 +206,8 @@ class ReadAloudBgmPlayer(private val context: Context) {
     /** 换曲：按「背景音乐池 → 设置」里的缓入/缓出独立开关做音量渐变，两个都不开就硬切。 */
     private fun switchTo(path: String, target: Float) {
         fadeJob?.cancel()
-        // 上一首淡出的起点必须是它自己的音量，用新目标当起点会让小声的曲子突然变大声
-        val oldVolume = targetVolume
+        // 上一首淡出的起点是它此刻的真实音量，用新目标当起点会让小声的曲子突然变大声
+        val oldVolume = appliedVolume
         targetVolume = target.coerceIn(0f, 1f)
         val old = player
         player = null
@@ -239,7 +250,8 @@ class ReadAloudBgmPlayer(private val context: Context) {
             }
             player = next
             currentPath = path
-            next.setVolume(if (fadeIn) 0f else targetVolume, if (fadeIn) 0f else targetVolume)
+            appliedVolume = if (fadeIn) 0f else targetVolume
+            next.setVolume(appliedVolume, appliedVolume)
             // 朗读此时是暂停状态：只挂好播放器，起播交给 resume()
             if (paused) return@launch
             runCatching { next.start() }
@@ -251,27 +263,33 @@ class ReadAloudBgmPlayer(private val context: Context) {
         val steps = max(1, (durationMs / 50).toInt())
         for (step in 0..steps) {
             val value = min(1f, max(0f, from + (to - from) * step / steps))
+            appliedVolume = value
             runCatching { media.setVolume(value, value) }
             if (step < steps) delay(50)
         }
     }
 
+    /**
+     * 停：把在播的这条按缓出走完再释放。
+     *
+     * 没有音乐在播就直接返回，**不要碰 fadeJob**：朗读位置离开场景之后，每一次进度回调都会
+     * 再调一次这里，而进度回调大约 200ms 一次、淡出要 900ms——先 cancel 会让上一趟淡出
+     * 走到一半就被 `releaseQuietly` 硬切，用户听到的就是「突然停」而不是「慢慢变小」。
+     */
     private fun stop() {
-        fadeJob?.cancel()
+        val media = player ?: return
         currentPath = null
-        val media = player
         player = null
+        fadeJob?.cancel()
         pendingMedia = media
-        media?.let {
-            fadeJob = scope.launch {
-                try {
-                    if (BgmPoolStore.fadeOut() && runCatching { it.isPlaying }.getOrDefault(false)) {
-                        ramp(it, FADE_MS, targetVolume, 0f)
-                    }
-                } finally {
-                    releaseQuietly(it)
-                    if (pendingMedia === it) pendingMedia = null
+        fadeJob = scope.launch {
+            try {
+                if (BgmPoolStore.fadeOut() && runCatching { media.isPlaying }.getOrDefault(false)) {
+                    ramp(media, FADE_MS, appliedVolume, 0f)
                 }
+            } finally {
+                releaseQuietly(media)
+                if (pendingMedia === media) pendingMedia = null
             }
         }
     }
