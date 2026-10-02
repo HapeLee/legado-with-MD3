@@ -204,35 +204,28 @@ object CastSpeechOverlay {
             )
         }
 
-        // 正则的匹配范围是**一整段正文**，不是单个朗读单元：一句台词常被划分方式切成多个单元，
-        // 按单元比的话「被符号包住、中间还带句号」那一截永远凑不齐首尾，整章 0 命中
-        // （「爆炸」这种短字面量落在同一句里，所以看起来只有正则不生效）。
-        // 段落起点与朗读单元的 chapterPosition 同一套坐标，所以命中区间能按绝对下标裁回单元。
-        val paragraphMatches: Map<Int, List<RegexCastSplitter.Match>> = if (effects.isEmpty()) {
-            emptyMap()
+        // 正则的匹配范围是**整章坐标**，不是单个朗读单元：划分方式（整句/按符号）会把一句台词
+        // 再切成多个单元，而「段落列表」拿到的已经是切完的那一份，按它比等于还在按句比——
+        // 「［…］」中间带句号时首尾永远落在两个单元里，整章 0 命中。
+        // 画布把每个单元的抹平文字按它的章内绝对位置铺回去（没铺到的地方是段间分隔与被切掉的
+        // 空隙，留空格），命中按绝对下标裁回每个单元。
+        val canvas = if (effects.isEmpty()) "" else chapterCanvas(plan)
+        val absoluteMatches = if (canvas.isEmpty()) {
+            emptyList()
         } else {
-            paragraphs.associate { paragraph ->
-                paragraph.index to RegexCastSplitter.matchesIn(
-                    CastMarkers.blank(paragraph.text),
-                    effects,
-                ).map {
-                    RegexCastSplitter.Match(
-                        start = it.start + paragraph.chapterPosition,
-                        end = it.end + paragraph.chapterPosition,
-                        rank = it.rank,
-                    )
-                }
-            }
+            RegexCastSplitter.matchesIn(canvas, effects)
         }
         plan.forEach { item ->
-            val absolute = paragraphMatches[item.segment.paragraphIndex]
             piecesOf(item, spans).forEach { piece ->
                 val parts = if (effects.isEmpty()) {
                     listOf(RegexCastSplitter.Part(piece.start, piece.text, null, ""))
                 } else {
-                    // 段落序号对不上（认不出这一单元属于哪段）时退回按单元自己比，行为与改口径前一致
-                    val matches = absolute?.mapNotNull { it.ofPiece(piece.start, piece.text.length) }
-                        ?: RegexCastSplitter.matchesIn(CastMarkers.blank(piece.text), effects)
+                    // 画布空（章里一个单元都没有）时退回按单元自己比，不比旧行为更差
+                    val matches = if (absoluteMatches.isEmpty()) {
+                        RegexCastSplitter.matchesIn(CastMarkers.blank(piece.text), effects)
+                    } else {
+                        absoluteMatches.mapNotNull { it.ofPiece(piece.start, piece.text.length) }
+                    }
                     RegexCastSplitter
                         .split(piece.start, piece.text, matches, effects)
                         .let { split ->
@@ -332,6 +325,29 @@ object CastSpeechOverlay {
         val text: String,
         val span: Span?,
     )
+
+    /**
+     * 把朗读单元按章内绝对坐标铺成一张等长画布，给正则匹配用（消费方是 [apply] 里的
+     * `RegexCastSplitter.matchesIn`）。
+     *
+     * 每个单元放的是它的**抹平版**文字（角色标记等长换成空格，见 [CastMarkers.blank]），
+     * 单元之间没被覆盖的位置（段间分隔、划分时被切掉的空隙）留空格——画布下标就是章内偏移，
+     * 所以命中裁回单元时不需要知道这个单元属于哪一段、也不需要段序号两边对上。
+     */
+    internal fun chapterCanvas(plan: List<SpeechPlanItem>): String {
+        val length = plan.maxOfOrNull { it.segment.chapterPosition + it.segment.text.length } ?: 0
+        if (length <= 0) return ""
+        val canvas = CharArray(length) { ' ' }
+        plan.forEach { item ->
+            val at = item.segment.chapterPosition
+            val blanked = CastMarkers.blank(item.segment.text)
+            blanked.forEachIndexed { index, char ->
+                val position = at + index
+                if (position in 0 until length) canvas[position] = char
+            }
+        }
+        return String(canvas)
+    }
 
     /**
      * 从带标记的正文里量出每段已分配对话的范围。
