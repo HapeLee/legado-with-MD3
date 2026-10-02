@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
@@ -748,6 +749,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                         AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$text")
                         createSilentSound(fileName)
                     } else if (!hasSpeakFile(fileName)) {
+                        // 播放空白的直接证据：这一句没缓存，等锁 + 现场合成的毫秒数就是听到的停顿
+                        val synthStartedAt = SystemClock.elapsedRealtime()
                         withSpeakFileLock(fileName) {
                         // 等锁期间另一条路径可能已经把这句合成好了
                         if (!hasSpeakFile(fileName)) {
@@ -823,6 +826,9 @@ class HttpReadAloudService : BaseReadAloudService(),
                         }
                         }
                         }
+                        AppLog.putDebug(
+                            "朗读现场合成 句$index 用时${SystemClock.elapsedRealtime() - synthStartedAt}毫秒"
+                        )
                     }
                     if (speakText.isNotEmpty() && hasSpeakFile(fileName)) {
                         writeTextIndexEntry(fileName, speakText)
@@ -1775,10 +1781,10 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        scheduleCueSounds(nowSpeak)
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
             // 首条不走 AUTO 分支，也要在开播时套上角色的变声
             applyCueVoiceEffect(nowSpeak)
+            scheduleCueSounds(nowSpeak)
             return
         }
         val auto = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
@@ -1787,6 +1793,9 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
         updateNextPos(naturalCompletion = auto)
         applyCueVoiceEffect(nowSpeak)
+        // 音效按「刚开始播的这一格」排：`nowSpeak` 要等 [updateNextPos] 才是这一格。
+        // 排在它前面用的是刚播完那一格的索引 + 新一格的时间轴，听感就是音效晚了一整句。
+        scheduleCueSounds(nowSpeak)
         upPlayPos()
         upMediaMetadata(showContent = true)
     }
