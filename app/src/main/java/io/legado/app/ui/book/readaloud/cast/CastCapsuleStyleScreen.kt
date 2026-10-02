@@ -11,14 +11,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -154,12 +157,26 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
             )
         },
+        // 预览钉在底部：它原来在列表第一条里，往下调滑块就滚出屏幕，改完看不到效果
+        bottomBar = {
+            PreviewCard(
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(horizontal = 12.dp),
+                style = style,
+                dayImage = dayImage,
+                nightImage = nightImage,
+                type = type,
+            )
+        },
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
-                bottom = 120.dp,
+                // 底边交给 Scaffold：paddingValues 的 bottom 已经含上钉住的那条预览，
+                // 再加一屏呼吸空间，最后一行才不会压在预览底下。
+                bottom = paddingValues.calculateBottomPadding() + 96.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -182,12 +199,6 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
                         text = stringResource(R.string.capsule_style_summary, currentName),
                         style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
-                    )
-                    PreviewCard(
-                        style = style,
-                        dayImage = dayImage,
-                        nightImage = nightImage,
-                        type = type,
                     )
                 }
             }
@@ -425,6 +436,7 @@ private fun StyleImageRow(
 /** 深浅两块底板各画一颗胶囊：同一份数值，两种正文底色下长得什么样当场就能看到。 */
 @Composable
 private fun PreviewCard(
+    modifier: Modifier = Modifier,
     style: CastCapsuleStyle,
     dayImage: Bitmap?,
     nightImage: Bitmap?,
@@ -444,7 +456,7 @@ private fun PreviewCard(
         ""
     }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(LegadoTheme.colorScheme.surfaceContainerLow)

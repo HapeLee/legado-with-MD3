@@ -243,7 +243,9 @@ fun CloudTtsScreen(
                 AppFloatingActionButtonMenu(
                     // 组件内部自带 horizontal 16 / vertical 24 的内边距，不抵消的话这颗
                     // 会比平时那颗 FAB 往里缩，进出批量模式时位置一跳（用户说的「割裂」）。
-                    modifier = Modifier.offset(x = 16.dp, y = 24.dp),
+                    // 数值是量出来的：真机上两颗左沿都落在 1188px，纵向 24dp 会低 28px
+                    // （560dpi = 8dp），所以 x 补满 16、y 只补 16。
+                    modifier = Modifier.offset(x = 16.dp, y = 16.dp),
                     expanded = voiceBatchMenuExpanded,
                     onExpandedChange = { voiceBatchMenuExpanded = it },
                     items = listOf(
