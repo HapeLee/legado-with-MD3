@@ -11,6 +11,7 @@ import io.legado.app.data.entities.HttpTTS
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ReadAloudEngineSelection
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
+import io.legado.app.help.readaloud.cast.RegexCastRuleStore
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.service.BaseReadAloudService
@@ -101,7 +102,8 @@ object ReadAloud {
         // 回到用户在朗读设置里选的默认引擎。
         if (!settings.useMultiSpeaker) return null
         return runCatching {
-            val bookUrl = ReadBook.book?.bookUrl ?: return@runCatching null
+            val book = ReadBook.book ?: return@runCatching null
+            val bookUrl = book.bookUrl
             val (httpVoices, systemRoutes) = runBlocking {
                 val voiceIds = appDb.readAloudVoiceDao.getBindings(bookUrl)
                     .mapTo(hashSetOf()) { it.voiceId }
@@ -110,6 +112,10 @@ object ReadAloud {
                 appDb.castCharacterDao.getByBook(bookUrl).forEach {
                     if (it.voiceId.isNotBlank()) voiceIds += it.voiceId
                 }
+                // 正则角色自己选的音色同样是角色音：它只在命中那几段顶上去，但能不能发声
+                // 一样取决于引擎。漏掉它时这本书不升级文件合成，命中处被直读引擎过滤成默认音色，
+                // 表现就是「正则角色设了换音色却不生效」（候选口径见 RegexCastRuleStore.voiceIdsFor）。
+                voiceIds += RegexCastRuleStore.voiceIdsFor(book)
                 val voices = appDb.readAloudVoiceDao.getVoices().filter {
                     it.id in voiceIds && it.enabled && it.available
                 }

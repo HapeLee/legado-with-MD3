@@ -286,6 +286,48 @@ object RegexCastRuleStore {
         listGroups().filterNot { it.usable }.map { it.id }.toSet()
 
     /**
+     * 这本书的正则角色**可能**用到的全部音色 id：规则直接选的那条，以及「只选了池」时
+     * 池内启用的每一条。
+     *
+     * 引擎选型要看它，不能只看 [effectsFor]：那条路对只选池的规则是随机取一条，
+     * 随机结果不足以决定要不要升级到文件合成。漏掉 HTTP/云端那几条时，朗读留在系统直读，
+     * [io.legado.app.domain.model.readaloud.SpeechVoiceRouter] 会把非系统音色过滤成默认音色，
+     * 表现就是「正则角色设了换音色却不生效」。消费方是 `ReadAloud.findCoordinatorHttpSeed`。
+     */
+    suspend fun voiceIdsFor(book: Book): Set<String> = withContext(Dispatchers.IO) {
+        val rules = appDb.regexCastRuleDao.findEnabledForBook(book.name, book.origin)
+        val poolIds = rules
+            .filter { it.poolKind == RegexCastRule.POOL_ROLE && it.itemId.isBlank() && it.poolId.isNotBlank() }
+            .map { it.poolId }
+            .distinct()
+        val members = if (poolIds.isEmpty()) {
+            emptyMap()
+        } else {
+            poolIds.associateWith { poolId ->
+                appDb.voicePoolDao.getMembers(poolId).filter { it.enabled }.map { it.voiceId }
+            }
+        }
+        selectVoiceIds(rules, disabledGroupIds(), members)
+    }
+
+    /**
+     * [voiceIdsFor] 的纯逻辑：换音色那一支才算数（放配乐的命中处不念，没有音色可换），
+     * 分组链停用与正则编不过的规则和 [effectsFor] 一样整条跳过。
+     * [poolMembers] 是「池 id → 池内启用的音色 id」，由调用方一次取好，避免逐条查库。
+     */
+    internal fun selectVoiceIds(
+        rules: List<RegexCastRule>,
+        disabledGroups: Set<String>,
+        poolMembers: Map<String, List<String>>,
+    ): Set<String> = rules.filter {
+        it.poolKind == RegexCastRule.POOL_ROLE &&
+            (it.groupId.isEmpty() || it.groupId !in disabledGroups) &&
+            compile(it.pattern, it.useRegex) != null
+    }.flatMap { rule ->
+        if (rule.itemId.isNotBlank()) listOf(rule.itemId) else poolMembers[rule.poolId].orEmpty()
+    }.toSet()
+
+    /**
      * 按 [RegexCastRule.useRegex] 编译一条规则的匹配串。
      *
      * 关掉正则时整串走 [Regex.escape]，括号、点、星号都只是普通字符。开正则时按正则编，
