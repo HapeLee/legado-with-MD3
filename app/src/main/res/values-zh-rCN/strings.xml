@@ -3175,6 +3175,7 @@
     <string name="regex_cast_pattern">角色正则</string>
     <string name="regex_cast_match_text">匹配的文字</string>
     <string name="regex_cast_use_regex">使用正则匹配</string>
+    <string name="regex_cast_pattern_invalid">正则语法不通过，按字面量匹配</string>
     <string name="regex_cast_export">导出正则角色</string>
     <string name="regex_cast_import">导入正则角色</string>
     <string name="regex_cast_export_done">已导出正则角色</string>

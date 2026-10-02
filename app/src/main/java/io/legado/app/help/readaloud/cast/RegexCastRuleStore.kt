@@ -253,6 +253,12 @@ object RegexCastRuleStore {
         val bgmPoolDao = appDb.bgmPoolDao
         rules.mapNotNull { rule ->
             if (rule.groupId.isNotEmpty() && rule.groupId in disabledGroups) return@mapNotNull null
+            if (rule.useRegex && !isRegexSyntaxValid(rule.pattern)) {
+                // 不说清楚的话，这条规则的表现就是「设了但什么都不发生」
+                AppLog.put(
+                    "正则角色「${rule.name}」的正则语法不通过，这一条改按字面量匹配"
+                )
+            }
             val pattern = compile(rule.pattern, rule.useRegex) ?: return@mapNotNull null
             when (rule.poolKind) {
                 RegexCastRule.POOL_BGM -> {
@@ -331,9 +337,11 @@ object RegexCastRuleStore {
      * 按 [RegexCastRule.useRegex] 编译一条规则的匹配串。
      *
      * 关掉正则时整串走 [Regex.escape]，括号、点、星号都只是普通字符。开正则时按正则编，
-     * 编不过（用户填的是带裸括号的普通文本）退回字面量，不让一条写坏的正则拖垮整本书的切分。
+     * 编不过（少一个括号、`a{2,1}` 这种区间写反、重名捕获组）退回字面量，
+     * 不让一条写坏的正则拖垮整本书的切分。退回字面量会改变匹配语义，
+     * 说这件事的日志在 [effectsFor]（这里保持纯函数，界面侧用 [isRegexSyntaxValid] 提前说）。
      *
-     * 调用方只有 [effectsFor]：产物 [RegexCastEffect.pattern] 交给
+     * 调用方只有 [effectsFor] 与 [selectVoiceIds]：产物 [RegexCastEffect.pattern] 交给
      * [RegexCastSplitter.split] 在等长抹平版正文上匹配。
      */
     fun compile(pattern: String, useRegex: Boolean): Regex? {
@@ -342,6 +350,10 @@ object RegexCastRuleStore {
             .getOrElse { Regex(Regex.escape(pattern)) }
             .takeIf { it.pattern.isNotEmpty() }
     }
+
+    /** 这条串能不能按正则编译（空串算不能）。消费方是 [effectsFor] 的日志与编辑弹窗的栏目标题。 */
+    fun isRegexSyntaxValid(pattern: String): Boolean =
+        pattern.isNotBlank() && runCatching { Regex(pattern) }.isSuccess
 
     private suspend fun resolveVoice(dao: VoicePoolDao, rule: RegexCastRule): String? {
         if (rule.itemId.isNotBlank()) return rule.itemId

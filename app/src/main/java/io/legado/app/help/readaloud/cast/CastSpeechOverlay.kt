@@ -226,7 +226,11 @@ object CastSpeechOverlay {
                 if (effects.isEmpty()) {
                     ""
                 } else {
-                    "；正则角色顶音色 $regexVoiced 段、吞字放音效 $regexMuted 段"
+                    // 把每条规则实际编出来的样子打出来：按字面量编会得到 `\Q…\E` 外壳，
+                    // 「开着使用正则却什么都不命中」一眼就能分清是规则没加载、加载成了字面量，
+                    // 还是正则本身没命中。
+                    "；正则角色顶音色 $regexVoiced 段、吞字放音效 $regexMuted 段；" +
+                        effects.joinToString("、") { "「${it.label}」=/${it.pattern.pattern}/" }
                 } +
                 "；$sample"
         )
