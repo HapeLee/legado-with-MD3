@@ -826,7 +826,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                         }
                         }
                         }
-                        AppLog.putDebug(
+                        AppLog.put(
                             "朗读现场合成 句$index 用时${SystemClock.elapsedRealtime() - synthStartedAt}毫秒"
                         )
                     }
