@@ -241,9 +241,9 @@ object RegexCastRuleStore {
      * 这本书现在能用的正则角色：按规则顺序编译、跳过被分组停用的、解好音色/音频。
      *
      * 分组链上任何一层停用，那一组里的规则整体不生效（与声音池候选同一口径）。
-     * 消费方：CastSpeechOverlay.apply 把它交给 [RegexCastSplitter.matchesIn]——
-     * [RegexCastRule.pattern] 在这里编一次，匹配的是**整章原文**（不抹平，口径见
-     * [io.legado.app.help.readaloud.cast.CastSpeechOverlay.unitMatches]），命中再按朗读单元裁开。
+     * 消费方：CastSpeechOverlay.apply 把它交给 [RegexCastSplitter.split]——
+     * [RegexCastRule.pattern] 在这里编一次，切分时匹配的是等长抹平版正文
+     * （口径见 [io.legado.app.feature.reader.core.cast.CastMarkers.blank]）。
      */
     suspend fun effectsFor(book: Book): List<RegexCastEffect> = withContext(Dispatchers.IO) {
         val rules = appDb.regexCastRuleDao.findEnabledForBook(book.name, book.origin)
@@ -253,12 +253,6 @@ object RegexCastRuleStore {
         val bgmPoolDao = appDb.bgmPoolDao
         rules.mapNotNull { rule ->
             if (rule.groupId.isNotEmpty() && rule.groupId in disabledGroups) return@mapNotNull null
-            if (rule.useRegex && !isRegexSyntaxValid(rule.pattern)) {
-                // 不说清楚的话，这条规则的表现就是「设了但什么都不发生」
-                AppLog.put(
-                    "正则角色「${rule.name}」的正则语法不通过，这一条改按字面量匹配"
-                )
-            }
             val pattern = compile(rule.pattern, rule.useRegex) ?: return@mapNotNull null
             when (rule.poolKind) {
                 RegexCastRule.POOL_BGM -> {
@@ -292,72 +286,20 @@ object RegexCastRuleStore {
         listGroups().filterNot { it.usable }.map { it.id }.toSet()
 
     /**
-     * 这本书的正则角色**可能**用到的全部音色 id：规则直接选的那条，以及「只选了池」时
-     * 池内启用的每一条。
-     *
-     * 引擎选型要看它，不能只看 [effectsFor]：那条路对只选池的规则是随机取一条，
-     * 随机结果不足以决定要不要升级到文件合成。漏掉 HTTP/云端那几条时，朗读留在系统直读，
-     * [io.legado.app.domain.model.readaloud.SpeechVoiceRouter] 会把非系统音色过滤成默认音色，
-     * 表现就是「正则角色设了换音色却不生效」。消费方是 `ReadAloud.findCoordinatorHttpSeed`。
-     */
-    suspend fun voiceIdsFor(book: Book): Set<String> = withContext(Dispatchers.IO) {
-        val rules = appDb.regexCastRuleDao.findEnabledForBook(book.name, book.origin)
-        val poolIds = rules
-            .filter { it.poolKind == RegexCastRule.POOL_ROLE && it.itemId.isBlank() && it.poolId.isNotBlank() }
-            .map { it.poolId }
-            .distinct()
-        val members = if (poolIds.isEmpty()) {
-            emptyMap()
-        } else {
-            poolIds.associateWith { poolId ->
-                appDb.voicePoolDao.getMembers(poolId).filter { it.enabled }.map { it.voiceId }
-            }
-        }
-        selectVoiceIds(rules, disabledGroupIds(), members)
-    }
-
-    /**
-     * [voiceIdsFor] 的纯逻辑：换音色那一支才算数（放配乐的命中处不念，没有音色可换），
-     * 分组链停用与正则编不过的规则和 [effectsFor] 一样整条跳过。
-     * [poolMembers] 是「池 id → 池内启用的音色 id」，由调用方一次取好，避免逐条查库。
-     */
-    internal fun selectVoiceIds(
-        rules: List<RegexCastRule>,
-        disabledGroups: Set<String>,
-        poolMembers: Map<String, List<String>>,
-    ): Set<String> = rules.filter {
-        it.poolKind == RegexCastRule.POOL_ROLE &&
-            (it.groupId.isEmpty() || it.groupId !in disabledGroups) &&
-            compile(it.pattern, it.useRegex) != null
-    }.flatMap { rule ->
-        if (rule.itemId.isNotBlank()) listOf(rule.itemId) else poolMembers[rule.poolId].orEmpty()
-    }.toSet()
-
-    /**
      * 按 [RegexCastRule.useRegex] 编译一条规则的匹配串。
      *
-     * 两端空白（粘贴带进来的换行尤其致命：`［…］\n` 这种模式在朗读的整章匹配串里永远找不到，
-     * 界面上却完全看不出来）在这里统一去掉，库里已存的老规则一起受益，不改写用户存的原文。
-     *
      * 关掉正则时整串走 [Regex.escape]，括号、点、星号都只是普通字符。开正则时按正则编，
-     * 编不过（少一个括号、`a{2,1}` 这种区间写反、重名捕获组）退回字面量，
-     * 不让一条写坏的正则拖垮整本书的切分。退回字面量会改变匹配语义，
-     * 说这件事的日志在 [effectsFor]（这里保持纯函数，界面侧用 [isRegexSyntaxValid] 提前说）。
+     * 编不过（用户填的是带裸括号的普通文本）退回字面量，不让一条写坏的正则拖垮整本书的切分。
      *
-     * 调用方只有 [effectsFor] 与 [selectVoiceIds]：产物 [RegexCastEffect.pattern] 交给
-     * [RegexCastSplitter.matchesIn] 在整章原文上匹配。
+     * 调用方只有 [effectsFor]：产物 [RegexCastEffect.pattern] 交给
+     * [RegexCastSplitter.split] 在等长抹平版正文上匹配。
      */
     fun compile(pattern: String, useRegex: Boolean): Regex? {
-        val trimmed = pattern.trim()
-        if (trimmed.isEmpty()) return null
-        return runCatching { if (useRegex) Regex(trimmed) else Regex(Regex.escape(trimmed)) }
-            .getOrElse { Regex(Regex.escape(trimmed)) }
+        if (pattern.isBlank()) return null
+        return runCatching { if (useRegex) Regex(pattern) else Regex(Regex.escape(pattern)) }
+            .getOrElse { Regex(Regex.escape(pattern)) }
             .takeIf { it.pattern.isNotEmpty() }
     }
-
-    /** 这条串能不能按正则编译（空串算不能）。消费方是 [effectsFor] 的日志与编辑弹窗的栏目标题。 */
-    fun isRegexSyntaxValid(pattern: String): Boolean =
-        pattern.isNotBlank() && runCatching { Regex(pattern.trim()) }.isSuccess
 
     private suspend fun resolveVoice(dao: VoicePoolDao, rule: RegexCastRule): String? {
         if (rule.itemId.isNotBlank()) return rule.itemId

@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.RegexCastRule
-import io.legado.app.help.readaloud.cast.RegexCastRuleStore
 import io.legado.app.help.readaloud.cast.VoiceAudition
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
@@ -393,19 +392,14 @@ private fun RegexCastEditDialog(
                 )
                 val patternSpec = CastFieldSpec(
                     id = "pattern",
-                    // 开关决定这一栏是正则还是原样文字，标题跟着走，别写着「正则」实际按字面量匹配。
-                    // 语法不通过时运行时也会退回字面量（RegexCastRuleStore.compile），标题上先说明。
+                    // 开关决定这一栏是正则还是原样文字，标题跟着走，别写着「正则」实际按字面量匹配
                     label = stringResource(
                         if (draft.useRegex) {
                             R.string.regex_cast_pattern
                         } else {
                             R.string.regex_cast_match_text
                         }
-                    ) + if (draft.useRegex && draft.pattern.isNotBlank() &&
-                        !RegexCastRuleStore.isRegexSyntaxValid(draft.pattern)
-                    ) {
-                        " · " + stringResource(R.string.regex_cast_pattern_invalid)
-                    } else "", 
+                    ),
                     value = draft.pattern,
                     onValueChange = { draft = draft.copy(pattern = it) },
                 )

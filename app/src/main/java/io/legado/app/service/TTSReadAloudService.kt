@@ -401,28 +401,12 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             displayName = configured,
         )
         val cue = playbackQueue.cues.getOrNull(nowSpeak) ?: return fallback
-        val routed = SpeechVoiceRouter.route(
+        return SpeechVoiceRouter.route(
             cue = cue,
             supportedEngineTypes = setOf(ReadAloudVoice.ENGINE_SYSTEM),
             defaultRoute = SpeechEngineRoute(ReadAloudVoice.ENGINE_SYSTEM, configured),
-        )
-        val wanted = cue.voice
-        // 直读只有系统引擎能发声：分配表/正则角色挑的 HTTP、云端音色在这里会被静默换成默认音色，
-        // 表现就是「设了音色却听着没变」。升级判定的生产方是 ReadAloud.findCoordinatorHttpSeed，
-        // 没升级却仍有非系统音色时，每个音色说一次（同一个 id 不重复刷日志）。
-        if (wanted != null && routed.usedFallback && wanted.engineType != ReadAloudVoice.ENGINE_SYSTEM &&
-            filteredVoiceLogged.add(wanted.id)
-        ) {
-            AppLog.put(
-                "朗读：系统直读用不了 ${wanted.engineType} 音色 ${wanted.displayName}，" +
-                    "这一句按默认音色读（引擎升级判定见 ReadAloud.findCoordinatorHttpSeed）"
-            )
-        }
-        return routed.voice ?: fallback
+        ).voice ?: fallback
     }
-
-    /** 本服务生命周期内已经说过的「直读用不了」的音色 id，免得逐句刷满日志。 */
-    private val filteredVoiceLogged = hashSetOf<String>()
 
     /**
      * 切换系统 TTS 音色，返回本句是否真的换了声音。

@@ -3179,7 +3179,6 @@
     <string name="regex_cast_pattern">Match text or regex</string>
     <string name="regex_cast_match_text">Match text</string>
     <string name="regex_cast_use_regex">Use regex matching</string>
-    <string name="regex_cast_pattern_invalid">invalid regex, matched as literal text</string>
     <string name="regex_cast_export">Export regex roles</string>
     <string name="regex_cast_import">Import regex roles</string>
     <string name="regex_cast_export_done">Regex roles exported</string>

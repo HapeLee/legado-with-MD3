@@ -86,7 +86,7 @@ object CastSpeechOverlay {
         // 否则那句角色台词会退回旁白音。ensureVoice 幂等，选完落库并镜像绑定。
         val picked = HashMap<String, CastCharacter>()
         var voiced = 0
-        var regexHit = 0
+        var regexVoiced = 0
         var regexMuted = 0
         val sample = StringBuilder()
         val result = ArrayList<SpeechPlanItem>()
@@ -95,8 +95,7 @@ object CastSpeechOverlay {
 
         /**
          * 一个切块 → 一个朗读单元。音色优先级：正则角色 > 分配表角色 > 旁白——
-         * 这条优先级在这里落地，正则侧的命中区间由 [paragraphMatches] 在**整段**上算好后裁进来，
-         * 音色由 [RegexCastSplitter.Part.voiceId] 带过来，
+         * 这条优先级在这里落地，正则侧的选择结果由 [RegexCastSplitter.Part.voiceId] 带过来，
          * 正则侧那条规则自己选的变声器由 [RegexCastSplitter.Part.voiceEffect] 带过来（同一优先级）。
          *
          * [part] 带着切块自己的章内起点，所以被音效吃掉的那段文字在这里就是个空洞：
@@ -114,7 +113,7 @@ object CastSpeechOverlay {
                     AppLog.put("正则角色「${part.label}」的音色 $id 不在启用的音色表里，这段按原声读")
                 }
             }
-            if (part.label.isNotEmpty()) regexHit++
+            if (part.voiceId != null && voices.containsKey(part.voiceId)) regexVoiced++
             if (part.sound.isNotEmpty()) regexMuted++
             val character = span?.let { characters.match(it.name, it.pool) }
             // 播放单元里保留标记原文：偏移要按含标记的正文算，去掉标记是送进引擎前的最后一步
@@ -200,27 +199,13 @@ object CastSpeechOverlay {
             )
         }
 
-        // 正则的匹配范围是**整章**，不是单个朗读单元：划分方式（整句、按符号）会把一句台词
-        // 拆成多个单元，「［…］」中间带句号时首尾落在两个单元里，按单元比永远凑不齐 → 整章 0 命中
-        // （「爆炸」这种短字面量整块落在同一句里，所以看着像「只有正则不生效」）。
-        // 匹配串按 plan 顺序把各单元文字接起来，命中再按顺序切回各单元与切块。
-        val matchesPerUnit = unitMatches(plan, effects)
-        plan.forEachIndexed { index, item ->
-            val own = matchesPerUnit.getOrElse(index) { emptyList() }
-            val shiftBase = item.segment.chapterPosition
+        plan.forEach { item ->
             piecesOf(item, spans).forEach { piece ->
                 val parts = if (effects.isEmpty()) {
                     listOf(RegexCastSplitter.Part(piece.start, piece.text, null, ""))
                 } else {
-                    // 单元内下标 → 本块内下标：piece 起点与单元起点的差就是它在自己文字里的偏移
-                    val shift = piece.start - shiftBase
                     RegexCastSplitter
-                        .split(
-                            piece.start,
-                            piece.text,
-                            own.mapNotNull { it.ofPiece(shift, piece.text.length) },
-                            effects,
-                        )
+                        .split(piece.start, piece.text, CastMarkers.blank(piece.text), effects)
                         .let { split ->
                             carrySound = RegexCastSplitter.mergeSound(carrySound, split.trailingSound)
                             split.parts
@@ -241,14 +226,7 @@ object CastSpeechOverlay {
                 if (effects.isEmpty()) {
                     ""
                 } else {
-                    // 把每条规则实际编出来的样子打出来：按字面量编会得到 `\Q…\E` 外壳，
-                    // 「开着使用正则却什么都不命中」一眼就能分清是规则没加载、加载成了字面量，
-                    // 还是正则本身没命中。换行必须写成 `\n` 打：模式尾巴上多一个换行，
-                    // 在日志里就是把整行劈成两截，看不出规则其实根本没在比它看起来的那串。
-                    "；正则角色换音色命中 $regexHit 段、吞字放音效 $regexMuted 段；" +
-                        effects.joinToString("、") {
-                            "「${it.label}」=/${it.pattern.pattern.showInvisible()}/"
-                        }
+                    "；正则角色顶音色 $regexVoiced 段、吞字放音效 $regexMuted 段"
                 } +
                 "；$sample"
         )
@@ -306,38 +284,6 @@ object CastSpeechOverlay {
         val text: String,
         val span: Span?,
     )
-
-    /**
-     * 按整章找正则角色的命中：把每个朗读单元的文字按 plan 顺序接起来匹配，返回值是命中在
-     * **各单元自己文字里**的下标（单元内相对偏移，不是章内绝对坐标）。
-     *
-     * 生产方是 [apply]：划分方式把一句台词切成多个单元时，跨单元的首尾只有在整章这一份上
-     * 才成对；消费方按返回的下标裁到每个切块。
-     */
-    internal fun unitMatches(
-        plan: List<SpeechPlanItem>,
-        effects: List<RegexCastEffect>,
-    ): List<List<RegexCastSplitter.Match>> {
-        if (effects.isEmpty() || plan.isEmpty()) return List(plan.size) { emptyList() }
-        val canvas = StringBuilder()
-        val starts = ArrayList<Int>(plan.size)
-        val ends = ArrayList<Int>(plan.size)
-        plan.forEach { item ->
-            starts += canvas.length
-            // 匹配串就是屏幕上那一份正文：标记要等送引擎前才由 speechText() 去掉，
-            // 提前抹平会让这里比的东西跟高亮规则、替换规则看到的不是同一份。
-            canvas.append(item.segment.text)
-            ends += canvas.length
-        }
-        val hits = RegexCastSplitter.matchesIn(canvas.toString(), effects)
-        return plan.indices.map { index ->
-            hits.mapNotNull { hit ->
-                val from = maxOf(hit.start, starts[index]) - starts[index]
-                val to = minOf(hit.end, ends[index]) - starts[index]
-                if (to > from) RegexCastSplitter.Match(from, to, hit.rank) else null
-            }
-        }
-    }
 
     /**
      * 从带标记的正文里量出每段已分配对话的范围。
@@ -464,10 +410,5 @@ object CastSpeechOverlay {
             BookVoiceBinding.SUBJECT_CHARACTER
         }
         return getBinding(bookUrl, subjectType, subjectId)?.voiceId?.let(voices::get)
-    }
-
-    /** 换行/回车/制表符写成 `\n` `\r` `\t` 再进日志：模式尾巴上一个换行会把整行劈成两截。 */
-    private fun String.showInvisible(): String = buildString {
-        forEach { append(if (it == '\n') "\\n" else if (it == '\r') "\\r" else if (it == '\t') "\\t" else it) }
     }
 }
