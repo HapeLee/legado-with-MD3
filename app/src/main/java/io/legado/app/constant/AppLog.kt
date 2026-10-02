@@ -14,6 +14,11 @@ object AppLog {
 
     private val mLogs = arrayListOf<Triple<Long, String, Throwable?>>()
 
+    /**
+     * 头插、按 `System.currentTimeMillis()` 打时间戳、超上限从尾部丢：
+     * 同一毫秒内重复上报的消息会有完全相同的 `(timestamp, message)`，
+     * 消费方不能拿这两项当唯一标识（朗读日志页的 key 编号见 `ttsLogKeys`）。
+     */
     val logs get() = mLogs.toList()
 
     @Synchronized

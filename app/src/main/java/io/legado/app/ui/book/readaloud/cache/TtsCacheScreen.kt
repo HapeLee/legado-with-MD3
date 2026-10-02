@@ -3,6 +3,7 @@ package io.legado.app.ui.book.readaloud.cache
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -98,6 +99,7 @@ fun TtsCacheScreen(
             }
         },
     ) { paddingValues ->
+        val logKeys = remember(state.logs) { ttsLogKeys(state.logs) }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
@@ -156,7 +158,7 @@ fun TtsCacheScreen(
                         )
                     }
                 }
-                items(state.logs, key = { "${it.timestamp}:${it.message.hashCode()}" }) { entry ->
+                itemsIndexed(state.logs, key = { index, _ -> logKeys[index] }) { _, entry ->
                     val timeText = dateFormat.format(Date(entry.timestamp))
                     TinyClickableSettingItem(
                         title = timeText,
@@ -190,4 +192,23 @@ fun TtsCacheScreen(
         content = state.detailContent,
         onDismissRequest = { onIntent(TtsCacheIntent.DismissDetail) },
     )
+}
+
+/**
+ * 日志列表的 LazyColumn key。
+ *
+ * `AppLog` 按毫秒时间戳头插、满了只从尾部丢，所以同一毫秒内重复出现的同一条日志会让
+ * `timestamp + message` 撞成同一个 key —— LazyColumn 遇到重复 key 直接抛
+ * `IllegalArgumentException: Key … was already used`，日志页一打开就崩。
+ * 只有真撞车时才追加出现序号：正常条目保持同一身份，新日志进来不会让已有行重新创建。
+ */
+internal fun ttsLogKeys(logs: List<TtsLogEntryUi>): List<String> {
+    val occurrences = HashMap<String, Int>()
+    return logs.map { entry ->
+        val base = "${entry.timestamp}:${entry.message.hashCode()}"
+        when (val seen = occurrences.merge(base, 1) { old, _ -> old + 1 }) {
+            1 -> base
+            else -> "$base#$seen"
+        }
+    }
 }
