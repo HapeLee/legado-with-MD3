@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListLayoutInfo
 import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -84,6 +86,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.request.transformations
@@ -99,6 +102,7 @@ import io.legado.app.R
 import io.legado.app.help.coil.CoverExtras
 import io.legado.app.help.coil.MangaImageFileOwner
 import io.legado.app.help.coil.MangaPrefetchRequests
+import io.legado.app.help.coil.MangaWebtoonTiles
 import io.legado.app.help.coil.asMangaPrefetch
 import io.legado.app.help.coil.rememberMangaZoomableImageSource
 import io.legado.app.ui.book.manga.config.MangaDoublePageMode
@@ -110,6 +114,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -175,8 +180,14 @@ fun MangaReaderScreen(
     modifier: Modifier = Modifier,
     imageLoader: ImageLoader = koinInject(),
     hazeState: HazeState? = null,
+    canHandleBack: Boolean = true,
 ) {
-    BackHandler { onIntent(MangaReaderIntent.BackPressed) }
+    val canMorphBack = state.inBookshelf &&
+            state.activeDialog == null &&
+            state.activeSheet == null &&
+            state.settingsCategory == null &&
+            !state.menuVisible
+    BackHandler(enabled = canHandleBack && !canMorphBack) { onIntent(MangaReaderIntent.BackPressed) }
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
     var viewportOrigin by remember { mutableStateOf(Offset.Zero) }
     val aspectRatios = remember(state.bookUrl) { mutableStateMapOf<String, Float>() }
@@ -452,9 +463,11 @@ private fun WebtoonMangaList(
     val viewportSize = LocalReaderViewportSize.current
     val aspectRatios = LocalMangaAspectRatios.current
     val resizeQueue = remember(state.bookUrl) { MangaWebtoonResizeQueue() }
+    var zoomAnchorLayout by remember { mutableStateOf<LazyListLayoutInfo?>(null) }
     val applyResize: (() -> Unit) -> Unit = { resize ->
         val layout = listState.layoutInfo
-        val anchor = if (listState.isScrollInProgress || latestReaderState.scrollRequest != null ||
+        val anchor =
+            if (zoomAnchorLayout != null || listState.isScrollInProgress || latestReaderState.scrollRequest != null ||
             latestReaderState.bookUrl != state.bookUrl
         ) null else {
             val loadedKeys = layout.visibleItemsInfo.mapNotNull { info ->
@@ -495,6 +508,12 @@ private fun WebtoonMangaList(
             )
         }
     }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo }.collect { measured ->
+            // 高度更新不能用旧布局的像素锚点覆盖尚未生效的缩放锚点。
+            if (zoomAnchorLayout != null && measured !== zoomAnchorLayout) zoomAnchorLayout = null
+        }
+    }
     var zoom by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     val fraction = 1f - state.settings.sidePaddingPercent.coerceIn(0, 45) * 2f / 100f
@@ -523,13 +542,48 @@ private fun WebtoonMangaList(
     val latestItemWidthPx by rememberUpdatedState(itemWidthPx)
     val latestViewportSize by rememberUpdatedState(viewportSize)
 
-    fun toggleWebtoonZoom() {
-        if (zoom > 1f) {
-            zoom = 1f
-            pan = Offset.Zero
-        } else {
-            zoom = WEBTOON_DOUBLE_TAP_ZOOM
+    fun preserveWebtoonZoomPosition(targetZoom: Float, focalY: Float, panY: Float = 0f): Boolean {
+        val layout = listState.layoutInfo
+        val width = latestViewportSize.width
+        if (width <= 0 || layout.viewportSize.width <= 0) return false
+        // 手势事件可能快于重测；基于当前实际测量宽度，而非尚未布局的 zoom 状态计算倍率。
+        val pageWidthFraction = latestItemWidthPx / width
+        val measuredImageWidth =
+            (layout.viewportSize.width * pageWidthFraction).roundToInt().coerceAtLeast(1)
+        val targetImageWidth =
+            ((width * targetZoom).roundToInt() * pageWidthFraction).roundToInt().coerceAtLeast(1)
+        val ratio = targetImageWidth.toFloat() / measuredImageWidth
+        val visible = layout.visibleItemsInfo.filter {
+            latestReaderState.pages.getOrNull(it.index)?.key == it.key
         }
+        val anchor = mangaWebtoonZoomAnchor(
+            visible.map { Triple(it.key.toString(), it.offset, it.size) },
+            focalY, aspectRatios.keys, ratio, panY,
+        ) ?: return false
+        val index = visible.firstOrNull { it.key == anchor.first }?.index ?: return false
+        // 与宽度变化在同次重测中生效，不先滚旧高度、下一帧再改图片高度。
+        zoomAnchorLayout = layout
+        listState.requestScrollToItem(index, anchor.second)
+        return true
+    }
+
+    fun toggleWebtoonZoom(tap: Offset) {
+        val target = if (zoom > 1f) 1f else WEBTOON_DOUBLE_TAP_ZOOM
+        preserveWebtoonZoomPosition(target, tap.y)
+        pan = if (target <= 1f) Offset.Zero else {
+            val ratio = target / zoom
+            clampZoomPan(
+                target = Offset(
+                    pan.x * ratio + (tap.x - latestViewportSize.width / 2f) * (1f - ratio),
+                    0f
+                ),
+                zoom = target,
+                itemWidth = latestItemWidthPx,
+                contentHeight = latestNaturalContentHeight,
+                viewport = latestViewportSize,
+            )
+        }
+        zoom = target
     }
 
     // 列表使用真实的缩放后宽度测量，避免 LazyColumn 先按未缩放宽度裁掉图片两侧。
@@ -551,12 +605,14 @@ private fun WebtoonMangaList(
                         val newZoom =
                             (currentZoom * zoomChange).coerceIn(MIN_WEBTOON_ZOOM, MAX_WEBTOON_ZOOM)
                         val ratio = if (currentZoom > 0f) newZoom / currentZoom else 1f
+                        val center =
+                            Offset(latestViewportSize.width / 2f, latestViewportSize.height / 2f)
+                        val effectiveCentroid = centroid.takeIf { it.isSpecified } ?: center
+                        val anchored = if (ratio != 1f) preserveWebtoonZoomPosition(
+                            newZoom, effectiveCentroid.y, if (newZoom > 1f) panChange.y else 0f,
+                        ) else false
                         if (ratio != 1f) {
                             handled = true
-                            val width = latestViewportSize.width.coerceAtLeast(1).toFloat()
-                            val height = latestViewportSize.height.coerceAtLeast(1).toFloat()
-                            val center = Offset(width / 2f, height / 2f)
-                            val effectiveCentroid = centroid.takeIf { it.isSpecified } ?: center
                             pan = pan * ratio + (effectiveCentroid - center) * (1f - ratio)
                         }
                         if (newZoom <= 1f) {
@@ -570,7 +626,7 @@ private fun WebtoonMangaList(
                                 contentHeight = latestNaturalContentHeight,
                                 viewport = latestViewportSize,
                             )
-                            if (panChange.y != 0f) listState.dispatchRawDelta(-panChange.y)
+                            if (!anchored && panChange.y != 0f) listState.dispatchRawDelta(-panChange.y)
                         }
                         if (handled) pressed.forEach { it.consume() }
                         zoom = newZoom
@@ -781,7 +837,7 @@ private fun WebtoonMangaList(
                         pendingWebtoonTap = null
                         lastWebtoonTapAt = 0L
                         lastWebtoonTapPosition = Offset.Unspecified
-                        toggleWebtoonZoom()
+                        toggleWebtoonZoom(latest)
                     } else {
                         lastWebtoonTapAt = upAt
                         lastWebtoonTapPosition = latest
@@ -1404,6 +1460,7 @@ private fun MangaPageImage(
     }
     val fileOwner = remember(imagePipelineKey) { MangaImageFileOwner() }
     var webtoonImageDisplayed by remember(imagePipelineKey) { mutableStateOf(false) }
+    var webtoonResult by remember(imagePipelineKey) { mutableStateOf<SuccessResult?>(null) }
     val request = remember(imagePipelineKey) {
         page.imageRequest(
             settings = settings,
@@ -1521,7 +1578,10 @@ private fun MangaPageImage(
         }
         Box(imageModifier) {
             ZoomableImage(
-                image = rememberMangaZoomableImageSource(request, imageLoader, fileOwner, settings.enableEInk),
+                image = rememberMangaZoomableImageSource(
+                    request, imageLoader, fileOwner,
+                    wholeImage = settings.enableEInk,
+                ),
                 contentDescription = contentDescription,
                 state = zoomableImageState,
                 gestures = if (settings.disableScale || !interactionsEnabled) {
@@ -1557,10 +1617,8 @@ private fun MangaPageImage(
     }
 
     Box(imageModifier) {
-        // 条漫模式刻意不用 ZoomableAsyncImage：Telephoto 的 zoomable 会把每页内容渲染进
-        // 自己的图层再合成，在「长图逐页堆叠」时会在页边界丢一行像素，视觉上就是两页之间
-        // 的一条极细横线（图源本身不透明、页框几何也完全对齐，可排除数据与布局原因）。
-        // 条漫的缩放/平移由 WebtoonMangaList 在外层统一处理，单页不需要再包一层。
+        // Coil 整图作为预览，原图区域解码补充可见部分的高清细节。
+        // 缩放/平移仍由 WebtoonMangaList 统一处理。
         AsyncImage(
             model = request,
             imageLoader = imageLoader,
@@ -1568,9 +1626,32 @@ private fun MangaPageImage(
             contentScale = ContentScale.FillWidth,
             colorFilter = mangaColorFilter(settings),
             modifier = Modifier.fillMaxSize(),
-            onLoading = { webtoonImageDisplayed = it.painter != null },
-            onSuccess = { webtoonImageDisplayed = true },
-            onError = { webtoonImageDisplayed = false },
+            onLoading = {
+                webtoonImageDisplayed = it.painter != null
+                webtoonResult = null
+            },
+            onSuccess = {
+                webtoonImageDisplayed = true
+                webtoonResult = it.result
+            },
+            onError = {
+                webtoonImageDisplayed = false
+                webtoonResult = null
+            },
+        )
+        MangaWebtoonTiles(
+            result = webtoonResult,
+            owner = fileOwner,
+            layoutSize = imageViewportSize,
+            position = positionInRoot,
+            viewport = Rect(
+                viewportOrigin, androidx.compose.ui.geometry.Size(
+                    viewportSize.width.toFloat(), viewportSize.height.toFloat(),
+                )
+            ),
+            colorFilter = mangaColorFilter(settings),
+            transformations = remember(request) { request.transformations.toImmutableList() },
+            backgroundColor = settings.backgroundColor.copy(alpha = 1f),
         )
         MangaImageLoadOverlay(
             page.loadState,

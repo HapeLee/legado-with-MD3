@@ -173,6 +173,22 @@ internal fun mangaChapterPrefetchPages(
         .thenBy { if (it.pageIndex >= anchor) 0 else 1 })
 }
 
+/** 缩放后的滚动偏移保留手势下的原图坐标；未知占位和固定高度章节项不按图片缩放。 */
+internal fun mangaWebtoonZoomAnchor(
+    visible: List<Triple<String, Int, Int>>,
+    focalY: Float,
+    knownSizes: Set<String>,
+    zoomRatio: Float,
+    panY: Float = 0f,
+): Pair<String, Int>? {
+    if (!zoomRatio.isFinite() || zoomRatio <= 0f || !focalY.isFinite() || !panY.isFinite()) return null
+    val item = visible.firstOrNull {
+        it.first in knownSizes && focalY >= it.second && focalY < it.second.toLong() + it.third
+    } ?: return null
+    val offset = (focalY - item.second) * zoomRatio - focalY - panY
+    return item.first to kotlin.math.round(offset).toInt()
+}
+
 /** 高度改变前保持视口中已有图片的位置；未知占位没有可保持的图片内容。 */
 internal fun mangaWebtoonResizeAnchor(
     visible: List<Triple<String, Int, Int>>,
@@ -210,4 +226,25 @@ internal class MangaWebtoonResizeQueue {
         pending.clear()
         if (changes.isNotEmpty()) apply { changes.forEach { it() } }
     }
+}
+
+internal enum class MangaBackAction {
+    DISMISS_DIALOG,
+    DISMISS_SHEET,
+    CLOSE_SETTINGS,
+    HIDE_MENU,
+    CLOSE_READER,
+}
+
+internal fun resolveMangaBackAction(
+    hasActiveDialog: Boolean,
+    hasActiveSheet: Boolean,
+    hasSettingsCategory: Boolean,
+    menuVisible: Boolean,
+): MangaBackAction = when {
+    hasActiveDialog -> MangaBackAction.DISMISS_DIALOG
+    hasActiveSheet -> MangaBackAction.DISMISS_SHEET
+    hasSettingsCategory -> MangaBackAction.CLOSE_SETTINGS
+    menuVisible -> MangaBackAction.HIDE_MENU
+    else -> MangaBackAction.CLOSE_READER
 }

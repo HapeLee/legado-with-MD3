@@ -4,10 +4,6 @@ package io.legado.app.utils
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Picture
 import android.os.Build
 import android.text.Html
 import android.view.MotionEvent
@@ -29,9 +25,6 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.menu.MenuPopupHelper
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.record
-import androidx.core.graphics.withTranslation
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.get
@@ -40,11 +33,9 @@ import androidx.core.view.marginBottom
 import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
-import io.legado.app.help.GlideImageGetter
 import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.help.GlideImageGetter
 import io.legado.app.lib.theme.TintHelper
-import io.legado.app.utils.canvasrecorder.CanvasRecorder
-import io.legado.app.utils.canvasrecorder.record
 import org.koin.core.context.GlobalContext
 import splitties.systemservices.inputMethodManager
 import splitties.views.bottomPadding
@@ -162,47 +153,6 @@ fun View.visible(visible: Boolean) {
         visibility = VISIBLE
     } else if (!visible && isVisible) {
         visibility = INVISIBLE
-    }
-}
-
-fun View.screenshot(bitmap: Bitmap? = null, canvas: Canvas? = null): Bitmap? {
-    return if (width > 0 && height > 0) {
-        val screenshot = if (bitmap != null && bitmap.width == width && bitmap.height == height) {
-            bitmap.eraseColor(Color.TRANSPARENT)
-            bitmap
-        } else {
-            bitmap?.recycle()
-            createBitmap(width, height)
-        }
-        val c = canvas ?: Canvas()
-        c.setBitmap(screenshot)
-        c.save()
-        c.translate(-scrollX.toFloat(), -scrollY.toFloat())
-        this.draw(c)
-        c.restore()
-        c.setBitmap(null)
-        screenshot.prepareToDraw()
-        screenshot
-    } else {
-        null
-    }
-}
-
-fun View.screenshot(picture: Picture) {
-    if (width > 0 && height > 0) {
-        picture.record(width, height) {
-            withTranslation(-scrollX.toFloat(), -scrollY.toFloat()) {
-                draw(this)
-            }
-        }
-    }
-}
-
-fun View.screenshot(canvasRecorder: CanvasRecorder) {
-    if (width > 0 && height > 0) {
-        canvasRecorder.record(width, height) {
-            draw(this)
-        }
     }
 }
 

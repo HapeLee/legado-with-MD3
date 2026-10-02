@@ -10,7 +10,9 @@ import coil3.request.ImageResult
 import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.request.crossfade
+import coil3.request.maxBitmapSize
 import coil3.request.transformations
+import coil3.size.Size
 import io.legado.app.data.appDb
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.source.SourceHelp
@@ -57,7 +59,15 @@ class CoverInterceptor(
     }
 
     override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
-        val request = chain.request
+        // Telephoto 取消 Coil 的尺寸上限后，按宽度加载长图会生成无法绘制的整图。
+        // 整图仅作预览；分页和条漫的高清细节都由原图区域解码补足。
+        val incoming = chain.request
+        val boundedChain = if (incoming.extras[CoverExtras.Manga] == true ||
+            incoming.extras[CoverExtras.MangaFileOwner] != null
+        ) {
+            chain.withRequest(incoming.newBuilder().maxBitmapSize(Size(4096, 4096)).build())
+        } else chain
+        val request = boundedChain.request
         val data = request.data
 
         val fileOwner = request.extras[CoverExtras.MangaFileOwner]
@@ -93,7 +103,12 @@ class CoverInterceptor(
 
             var usedPreview = snapshot != null
             var result = try {
-                chain.withRequest(localRequest(snapshot?.data?.toFile() ?: file, usedPreview))
+                boundedChain.withRequest(
+                    localRequest(
+                        snapshot?.data?.toFile() ?: file,
+                        usedPreview
+                    )
+                )
                     .proceed()
             } finally {
                 if (snapshot != null) withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { snapshot.close() }
@@ -101,7 +116,7 @@ class CoverInterceptor(
             if (usedPreview && result is ErrorResult) {
                 withContext(Dispatchers.IO) { MangaPreviewCache.remove(previewKey) }
                 usedPreview = false
-                result = chain.withRequest(localRequest(file, false)).proceed()
+                result = boundedChain.withRequest(localRequest(file, false)).proceed()
             }
             if (webtoon && !usedPreview && result is SuccessResult && result.image is BitmapImage) {
                 MangaPreviewCache.save(previewKey, (result.image as BitmapImage).bitmap)
@@ -143,7 +158,7 @@ class CoverInterceptor(
                     val localRequest = request.newBuilder()
                         .data(file)
                         .build()
-                    return chain.withRequest(localRequest).proceed()
+                    return boundedChain.withRequest(localRequest).proceed()
                 }
             }
 
@@ -186,8 +201,8 @@ class CoverInterceptor(
                 }
                 .build()
 
-            return chain.withRequest(newRequest).proceed()
+            return boundedChain.withRequest(newRequest).proceed()
         }
-        return chain.proceed()
+        return boundedChain.proceed()
     }
 }

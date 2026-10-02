@@ -249,16 +249,18 @@ class ReadBookDomainSplitBoundaryTest {
      * 2696 → 2705：合入官方 3.26.16-beta.41。官方在本文件加了朗读浮层与整书页数校正的接线
      * （`MainRouteReadAloudPlayer` 兼容分支、`locateAfterPagination` 提交路径的快照发布等），
      * 全是官方链路自己的收口，不属于我们任一域，因此按实测值把棘轮放到 2705，不替官方摘 delegate。
+     *
+     * 2705 → 2722：合入官方 3.26.16-beta.43，同一口径 —— 官方自己加的接线不替他们摘 delegate。
      */
     @Test
-    fun `ReadBookViewModel 不超过 R2 验收的 2705 行`() {
+    fun `ReadBookViewModel 不超过 R2 验收的 2722 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2705。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过 R2 验收线 2722。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2705,
+            lineCount <= 2722,
         )
     }
 
@@ -537,6 +539,18 @@ class ReadBookDomainSplitBoundaryTest {
                 stateTypes = listOf(
                     "verifyUseCase.verify",
                     "bookRepository.getChapterTitle",
+                ),
+            ),
+            // 云端进度同步域无自持状态：投影目标 isReadingProgressSyncConfigured 是菜单
+            // 可见性输入，仍在 UiState；靠 stateTypes 守「订阅云端可用性流 + 开菜单补
+            // 初始化不回流 VM」——这两件事一回流，入口就会重新变成「读一次快照」。
+            DomainSplit(
+                name = "云端进度同步",
+                delegateFile = "io/legado/app/ui/book/read/ReadingProgressSyncDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "isConfiguredFlow",
+                    "useCase.ensureConfigured",
                 ),
             ),
         )

@@ -320,3 +320,12 @@ dependencies {
     implementation(libs.lyricViewx)
     implementation(libs.timber)
 }
+
+// 每个测试类独占一个 JVM。Robolectric + Compose 动画这一批用例靠推进主线程 shadow looper
+// 来判定长按阈值与预测式返回的时序，前一个类留下的调度队列会让后一个类推不到阈值，
+// 表现为「单独跑过、合起来挂」。隔离 JVM 是这类用例成立的前提，不是绕过某个断言。
+tasks.withType<Test>().configureEach {
+    forkEvery = 1
+    // 隔离之后顺手并行：每个 fork 一个类，互不可见，并行只影响墙钟时间不影响结果。
+    maxParallelForks = 4
+}

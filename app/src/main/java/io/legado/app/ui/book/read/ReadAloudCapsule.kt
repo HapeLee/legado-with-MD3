@@ -72,6 +72,7 @@ import io.legado.app.feature.readaloud.overlay.capsulePresentationOffsetX
 import io.legado.app.feature.readaloud.overlay.snapCapsuleOffsetX
 import io.legado.app.ui.book.readaloud.morph.CapsuleAnchorKind
 import io.legado.app.ui.book.readaloud.morph.LocalReadAloudMorph
+import io.legado.app.ui.book.readaloud.morph.computeCapsuleCoverAlpha
 import io.legado.app.ui.book.readaloud.morph.computeMorphPanelAlpha
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
@@ -388,7 +389,7 @@ private fun CapsuleContent(
                 }
                 .graphicsLayer {
                     rotationZ = coverRotation.value
-                    alpha = if ((coverMorph?.progress?.value ?: 0f) <= 0f) 1f else 0f
+                    alpha = computeCapsuleCoverAlpha(coverMorph?.progress?.value ?: 0f)
                 }
                 .clip(CircleShape)
                 .then(if (expansion < 1f) Modifier.semantics {

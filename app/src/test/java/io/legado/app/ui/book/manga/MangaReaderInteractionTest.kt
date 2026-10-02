@@ -13,6 +13,58 @@ import org.junit.Test
 
 class MangaReaderInteractionTest {
     @Test
+    fun `keeping pixel scroll offset during long image zoom moves the reading point`() {
+        val oldOffset = -10_000
+        val focalY = 700f
+        val ratio = 2.5f
+        val originalPoint = focalY - oldOffset
+        val oldBehaviorPosition = oldOffset + originalPoint * ratio
+        assertTrue(kotlin.math.abs(oldBehaviorPosition - focalY) > 10_000)
+    }
+
+    @Test
+    fun `webtoon zoom preserves the original image point under the gesture`() {
+        val visible = listOf(Triple("long", -10_000, 20_000))
+        for (ratio in listOf(0.4f, 0.8f, 1.2f, 2.5f)) {
+            val anchor = requireNotNull(mangaWebtoonZoomAnchor(visible, 700f, setOf("long"), ratio))
+            assertEquals("long", anchor.first)
+            val originalPoint = 700f + 10_000
+            assertEquals(700f, -anchor.second + originalPoint * ratio, 1f)
+        }
+    }
+
+    @Test
+    fun `zoom anchors the touched image with vertical pan across fixed chapter gaps`() {
+        val visible = listOf(
+            Triple("first", -200, 400), Triple("edge", 200, 96),
+            Triple("second", 296, 20_000)
+        )
+        val anchor =
+            requireNotNull(mangaWebtoonZoomAnchor(visible, 500f, setOf("first", "second"), 2f, 30f))
+        assertEquals("second", anchor.first)
+        assertEquals(530f, -anchor.second + (500f - 296) * 2, 1f)
+        assertNull(mangaWebtoonZoomAnchor(visible, 250f, setOf("first", "second"), 2f))
+        assertNull(mangaWebtoonZoomAnchor(visible, 500f, emptySet(), 2f))
+    }
+
+    @Test
+    fun `zoom out restores the same reading point as zoom in`() {
+        val up = requireNotNull(
+            mangaWebtoonZoomAnchor(
+                listOf(Triple("long", -10_000, 20_000)),
+                700f, setOf("long"), 2.5f
+            )
+        )
+        val down = requireNotNull(
+            mangaWebtoonZoomAnchor(
+                listOf(Triple("long", -up.second, 50_000)),
+                700f, setOf("long"), 0.4f
+            )
+        )
+        assertEquals(10_000, down.second)
+    }
+
+    @Test
     fun `dimension regrouping preserves the second half of a split wide page`() {
         val items = listOf(page(0), page(1), page(2))
         val old = buildMangaSpreads(items, false, mapOf("p0" to 2f), splitWidePages = true)
@@ -609,5 +661,54 @@ class MangaReaderInteractionTest {
     fun `landscape double page only activates for wide viewport`() {
         assertTrue(isDoublePageActive(MangaDoublePageMode.LANDSCAPE, IntSize(1000, 600)))
         assertFalse(isDoublePageActive(MangaDoublePageMode.LANDSCAPE, IntSize(600, 1000)))
+    }
+
+    @Test
+    fun `back action prioritizes dialog then sheet then settings then menu then close reader`() {
+        assertEquals(
+            MangaBackAction.DISMISS_DIALOG,
+            resolveMangaBackAction(
+                hasActiveDialog = true,
+                hasActiveSheet = true,
+                hasSettingsCategory = true,
+                menuVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaBackAction.DISMISS_SHEET,
+            resolveMangaBackAction(
+                hasActiveDialog = false,
+                hasActiveSheet = true,
+                hasSettingsCategory = true,
+                menuVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaBackAction.CLOSE_SETTINGS,
+            resolveMangaBackAction(
+                hasActiveDialog = false,
+                hasActiveSheet = false,
+                hasSettingsCategory = true,
+                menuVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaBackAction.HIDE_MENU,
+            resolveMangaBackAction(
+                hasActiveDialog = false,
+                hasActiveSheet = false,
+                hasSettingsCategory = false,
+                menuVisible = true,
+            ),
+        )
+        assertEquals(
+            MangaBackAction.CLOSE_READER,
+            resolveMangaBackAction(
+                hasActiveDialog = false,
+                hasActiveSheet = false,
+                hasSettingsCategory = false,
+                menuVisible = false,
+            ),
+        )
     }
 }

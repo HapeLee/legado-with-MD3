@@ -217,6 +217,7 @@ sealed interface MangaReaderIntent {
     data object OpenSourceEdit : MangaReaderIntent
     data class SourceCustomButton(val longClick: Boolean) : MangaReaderIntent
     data object BackPressed : MangaReaderIntent
+    data object CloseReader : MangaReaderIntent
     data object ToggleMenu : MangaReaderIntent
     data object HideMenu : MangaReaderIntent
     data object Retry : MangaReaderIntent

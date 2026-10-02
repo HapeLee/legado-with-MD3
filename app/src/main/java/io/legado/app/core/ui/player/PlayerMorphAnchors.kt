@@ -12,6 +12,8 @@ internal suspend fun awaitPlayerMorphAnchors(
     morph: ReadAloudMorphState,
     awaitCapsuleAnchor: Boolean,
 ): Boolean {
+    // 若当前已由书架封面提供精准锚点，立即就绪，无需等待胶囊
+    if (morph.isCoverAnchor && !morph.panelStartBounds.isEmpty) return true
     if (!awaitCapsuleAnchor) return false
     var previousPanel = Rect.Zero
     var previousCover = Rect.Zero
@@ -22,7 +24,7 @@ internal suspend fun awaitPlayerMorphAnchors(
         val cover = morph.coverStartBounds
         val ready = !morph.screenBounds.isEmpty &&
                 (!morph.coverPageVisible || !morph.capsuleCoverLinked || !morph.coverEndBounds.isEmpty) &&
-                morph.hasCapsuleAnchors
+                (morph.hasCapsuleAnchors || morph.isCoverAnchor)
         stableFrames =
             if (ready && panel == previousPanel && cover == previousCover) stableFrames + 1 else 0
         if (stableFrames >= 2) return true

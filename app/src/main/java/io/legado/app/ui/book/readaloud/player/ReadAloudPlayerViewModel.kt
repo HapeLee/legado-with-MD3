@@ -201,6 +201,21 @@ class ReadAloudPlayerViewModel(
         }
     }
 
+    internal fun resetCapsulePosition() {
+        viewModelScope.launch {
+            readAloudSettingsGateway.update {
+                it.copy(capsuleOffsetX = 0f, capsuleOffsetY = 0f)
+            }
+        }
+    }
+
+    internal fun clearTtsCache() {
+        viewModelScope.launch {
+            coordinator.clearTtsCache()
+            effect(ReadAloudPlayerEffect.TtsCacheCleared)
+        }
+    }
+
     private fun cycleBgMode() {
         val next = when (readBgMode()) {
             ReadAloudBgMode.Solid -> ReadAloudBgMode.Blur

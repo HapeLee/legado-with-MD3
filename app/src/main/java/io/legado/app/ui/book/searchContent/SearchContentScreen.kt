@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.searchContent
 
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -53,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.SearchContentHistory
+import io.legado.app.ui.main.LocalSearchOverlayAnimation
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
@@ -73,13 +75,19 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
+/**
+ * 搜索正文是压在阅读界面之上的叠层目的地；进出动画由导航 Scene 管理。
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SearchContentRouteScreen(
     onBack: () -> Unit,
+    isTopRoute: Boolean = true,
+    predictiveBackEnabled: Boolean = true,
     autoFocus: Boolean = true,
     viewModel: SearchContentViewModel = koinViewModel()
 ) {
@@ -93,6 +101,22 @@ fun SearchContentRouteScreen(
     }
     DisposableEffect(viewModel) {
         onDispose { viewModel.onIntent(SearchContentIntent.LeaveSearch) }
+    }
+    val overlayAnimation = LocalSearchOverlayAnimation.current
+    val backScope = rememberCoroutineScope()
+    // Nav3 场景持有进退场状态；页面只把系统手势进度送给当前场景，完成后再退栈。
+    PredictiveBackHandler(enabled = isTopRoute) { events ->
+        try {
+            events.collect { event ->
+                if (predictiveBackEnabled) overlayAnimation?.previewBack(event.progress)
+            }
+            onBack()
+        } catch (cancelled: CancellationException) {
+            if (predictiveBackEnabled && isTopRoute) {
+                backScope.launch { overlayAnimation?.cancelPreview() }
+            }
+            throw cancelled
+        }
     }
     SearchContentScreen(
         state = state,

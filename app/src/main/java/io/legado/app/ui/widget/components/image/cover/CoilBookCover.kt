@@ -25,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,22 +37,22 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import io.legado.app.core.ui.morph.BookCoverMorphAnchors
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import org.koin.compose.koinInject
@@ -155,25 +154,18 @@ fun BookCoverImage(
                 (showLoadingPlaceholder && showLoadingDefault)
         )
     Box(
-        modifier = modifier
-            .then(
-                with(sharedTransitionScope) {
-                    if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
-                        Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(sharedCoverKey),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                        )
-                    } else {
-                        Modifier
-                    }
+        modifier = modifier.then(
+            with(sharedTransitionScope) {
+                if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
+                    Modifier.sharedBounds(
+                        sharedContentState = rememberSharedContentState(sharedCoverKey),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
+                } else {
+                    Modifier
                 }
-            )
-            // 书架↔阅读页形变的起点。BookCoverImage 自己没有圆角参数（圆角由外层裁），
-            // 沿用源页面定格时缓存的那一份；外层 CoilBookCover 会在同一趟布局里用真实圆角覆盖。
-            .bookCoverMorphAnchor(
-                sharedCoverKey = sharedCoverKey,
-                cornerRadius = sharedCoverSourceRadius(sharedCoverKey) ?: 0.dp,
-            )
+            }
+        )
     ) {
         if (showCustomDefault) {
             AsyncImage(
@@ -279,6 +271,9 @@ fun CoilBookCover(
      * 放成兄弟节点的话转场时不会被 overlay 带走，会出现"装饰停在原地、只有封面在飞"。
      */
     overlayContent: (@Composable BoxScope.() -> Unit)? = null,
+    badgeText: String? = null,
+    showBadgeDot: Boolean = false,
+    leftBottomText: String? = null,
 ) {
     val coverSettings = LocalAppUiConfiguration.current.cover
     val isNight = LegadoTheme.isDark
@@ -308,20 +303,42 @@ fun CoilBookCover(
         }
     }
 
-    val shape = rememberSharedCoverTransitionShape(
+    val transitionRadius = rememberSharedCoverTransitionRadius(
         sharedCoverKey = sharedCoverKey,
         radius = radius,
         animatedVisibilityScope = animatedVisibilityScope
     )
+    val shape = remember(transitionRadius) { RoundedCornerShape(transitionRadius) }
     val contentBlurModifier = if (contentBlur > 0.dp) {
         Modifier.blur(contentBlur, BlurredEdgeTreatment.Unbounded)
     } else {
         Modifier
     }
 
+    val coilDensity = LocalDensity.current
     Box(
         modifier = modifier
             .aspectRatio(5f / 7f)
+            .graphicsLayer {
+                alpha = if (BookCoverMorphAnchors.isOriginCoverHidden(sharedCoverKey)) 0f else 1f
+            }
+            .onGloballyPositioned { coordinates ->
+                if (sharedCoverKey != null) {
+                    BookCoverMorphAnchors.report(
+                        key = sharedCoverKey,
+                        bounds = coordinates.boundsInRoot(),
+                        cornerRadiusPx = with(coilDensity) { transitionRadius.toPx() },
+                        bookName = name,
+                        author = author,
+                        coverPath = finalPath ?: path,
+                        sourceOrigin = sourceOrigin,
+                        bookUrl = bookUrl,
+                        badgeText = badgeText,
+                        showBadgeDot = showBadgeDot,
+                        leftBottomText = leftBottomText,
+                    )
+                }
+            }
             .then(
                 with(sharedTransitionScope) {
                     if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
@@ -345,8 +362,6 @@ fun CoilBookCover(
                 shape
             )
             .clip(shape)
-            // 形变的起点落在真正带圆角与阴影的这一格上。
-            .bookCoverMorphAnchor(sharedCoverKey = sharedCoverKey, cornerRadius = radius)
     ) {
         BookCoverImage(
             name = name,
@@ -405,27 +420,23 @@ fun CoilBookCover(
 
 
 /**
- * 转场两端的圆角形状：起点用源页面缓存下来的圆角，终点用本节点的 [radius]，
+ * 转场两端的圆角：起点用源页面缓存下来的圆角，终点用本节点的 [radius]，
  * 期间随转场进度插值，避免两端圆角不一致时跳变。脱敏封面复用同一实现。
- *
- * 圆角值只能在**绘制期**读。以前这个函数直接返回插值出来的 `Dp`，于是转场那几百毫秒里
- * 每一张参与共享的封面都在逐帧重组，`AsyncImage` 的请求也跟着逐帧重建——
- * 「从书架打开卡、从详情页打开丝滑」里属于书架侧的一半开销就是它。
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-internal fun rememberSharedCoverTransitionShape(
+internal fun rememberSharedCoverTransitionRadius(
     sharedCoverKey: String?,
     radius: Dp,
     animatedVisibilityScope: AnimatedVisibilityScope?
-): Shape {
+): Dp {
     if (sharedCoverKey == null || animatedVisibilityScope == null) {
-        return RoundedCornerShape(radius)
+        return radius
     }
 
     val transition = animatedVisibilityScope.transition
     val startRadius = sharedCoverRadiusCache[sharedCoverKey] ?: radius
-    val animatedRadius = transition.animateFloat(
+    val animatedRadiusValue by transition.animateFloat(
         label = "book-cover-corner-radius"
     ) { state ->
         if (state == EnterExitState.Visible) radius.value else startRadius.value
@@ -450,18 +461,7 @@ internal fun rememberSharedCoverTransitionShape(
         }
     }
 
-    return remember(animatedRadius, radius) { SharedCoverTransitionShape(animatedRadius) }
-}
-
-private class SharedCoverTransitionShape(
-    private val animatedRadius: State<Float>,
-) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline = RoundedCornerShape(animatedRadius.value.dp)
-        .createOutline(size, layoutDirection, density)
+    return animatedRadiusValue.dp
 }
 
 /**

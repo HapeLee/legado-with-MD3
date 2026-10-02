@@ -88,12 +88,14 @@ class PlaybackCapsuleGatewayAdapter(
     }
 
     private fun readAloudSnapshot(): PlaybackCapsuleState {
-        if (!availability.value.first) return PlaybackCapsuleState()
-        val book = ReadBook.book ?: return PlaybackCapsuleState()
+        // A previous service's delayed teardown can clear availability after a new service
+        // started. The actual running service owns the session; keep its capsule visible.
+        if (!BaseReadAloudService.isRun) return PlaybackCapsuleState()
+        val book = ReadBook.book
         val session = sessionStore.state.value
         return PlaybackCapsuleState(
-            PlaybackCapsuleSource.ReadAloud, book.bookUrl, book.name,
-            book.author, book.getDisplayCover(), book.origin,
+            PlaybackCapsuleSource.ReadAloud, book?.bookUrl.orEmpty(), book?.name.orEmpty(),
+            book?.author.orEmpty(), book?.getDisplayCover(), book?.origin,
             session.status != ReadAloudSessionStatus.Playing,
             (session.playback.chapterPosition.toFloat() / session.playback.chapterLength.coerceAtLeast(
                 1
@@ -156,7 +158,7 @@ class PlaybackCapsuleGatewayAdapter(
     private fun ownsSelectedSession(source: PlaybackCapsuleSource): Boolean =
         state.value.source == source &&
                 when (source) {
-                    PlaybackCapsuleSource.ReadAloud -> availability.value.first && BaseReadAloudService.isRun
+                    PlaybackCapsuleSource.ReadAloud -> BaseReadAloudService.isRun
                     PlaybackCapsuleSource.AudioBook -> (availability.value.second && AudioPlayService.isRun) ||
                             (AudioPlay.book?.bookUrl != null && preparedAudioBookUrl.value == AudioPlay.book?.bookUrl)
                 }

@@ -27,6 +27,7 @@ data class ChangeSourceMigrationOptions(
     val migrateCover: Boolean = true,
     val migrateCategory: Boolean = true,
     val migrateRemark: Boolean = true,
+    val migrateAuthor: Boolean = true,
     val migrateReadConfig: Boolean = true,
     val deleteDownloadedChapters: Boolean = false,
 )

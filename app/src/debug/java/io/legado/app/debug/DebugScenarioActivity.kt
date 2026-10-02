@@ -90,9 +90,17 @@ class DebugScenarioActivity : AppCompatActivity() {
         require(fixture.chapters.isNotEmpty()) { "fixture must contain chapters" }
         require(fixture.book.startChapter in fixture.chapters.indices) { "invalid start chapter" }
 
-        val pageAnim = when (fixture.book.pageMode) {
+        // 翻页模式可由 intent 覆写：性能/动画场景需要在同一个夹具上切换 cover/slide/fade/…，
+        // 否则只能靠阅读设置里的下拉菜单手工切，脚本无法稳定复现。
+        val pageMode = intent.getStringExtra(EXTRA_PAGE_MODE) ?: fixture.book.pageMode
+        val pageAnim = when (pageMode) {
+            "cover" -> PageAnim.coverPageAnim
+            "slide" -> PageAnim.slidePageAnim
             "simulation" -> PageAnim.simulationPageAnim
-            else -> error("unsupported page mode: ${fixture.book.pageMode}")
+            "scroll" -> PageAnim.scrollPageAnim
+            "fade" -> PageAnim.fadePageAnim
+            "none" -> PageAnim.noAnim
+            else -> error("unsupported page mode: $pageMode")
         }
         val chapters = fixture.chapters.mapIndexed { index, chapter ->
             require(chapter.repeat in 1..1000) { "invalid repeat for chapter $index" }
@@ -230,6 +238,7 @@ class DebugScenarioActivity : AppCompatActivity() {
         const val EXTRA_FIXTURE = "fixture"
         const val EXTRA_SESSION = "session"
         const val EXTRA_ENTRY = "entry"
+        const val EXTRA_PAGE_MODE = "pageMode"
         const val EXTRA_PREFERENCES_B64 = "preferencesB64"
         const val LOG_TAG = "LegadoDebug"
         const val DEBUG_ORIGIN = "legado-debug://fixture-source"

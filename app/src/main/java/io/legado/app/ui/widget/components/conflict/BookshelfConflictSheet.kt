@@ -56,20 +56,22 @@ private val ChangeSourceMigrationOptionsSaver = listSaver<ChangeSourceMigrationO
             it.migrateCover,
             it.migrateCategory,
             it.migrateRemark,
+            it.migrateAuthor,
             it.migrateReadConfig,
             it.deleteDownloadedChapters,
         )
     },
     restore = {
         ChangeSourceMigrationOptions(
-            migrateChapters = it[0],
-            migrateReadingProgress = it[1],
-            migrateGroup = it[2],
-            migrateCover = it[3],
-            migrateCategory = it[4],
-            migrateRemark = it[5],
-            migrateReadConfig = it[6],
-            deleteDownloadedChapters = it[7],
+            migrateChapters = it.getOrElse(0) { true },
+            migrateReadingProgress = it.getOrElse(1) { true },
+            migrateGroup = it.getOrElse(2) { true },
+            migrateCover = it.getOrElse(3) { true },
+            migrateCategory = it.getOrElse(4) { true },
+            migrateRemark = it.getOrElse(5) { true },
+            migrateAuthor = if (it.size > 8) it[6] else true,
+            migrateReadConfig = if (it.size > 8) it[7] else it.getOrElse(6) { true },
+            deleteDownloadedChapters = if (it.size > 8) it[8] else it.getOrElse(7) { false },
         )
     },
 )

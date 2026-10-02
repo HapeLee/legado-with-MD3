@@ -105,6 +105,7 @@ import coil3.compose.AsyncImage
 import coil3.size.Size
 import io.legado.app.R
 import io.legado.app.constant.BookType
+import io.legado.app.core.ui.morph.trackBookMorphCover
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
@@ -535,12 +536,14 @@ private fun BookInfoScreenContent(
                 onConfirm = { onIntent(BookInfoIntent.SelectGroup(it)) },
             )
         }
-        BookInfoSheet.ShelfActions -> ShelfActionsSheet(
-            show = currentSheet == BookInfoSheet.ShelfActions,
+        BookInfoSheet.ShelfDelete -> ShelfDeleteSheet(
+            show = currentSheet == BookInfoSheet.ShelfDelete,
+            book = state.book?.toConflictSummary(),
             copies = state.shelfDuplicates,
+            isLocal = state.book?.isLocal == true,
+            initialDeleteOriginal = state.deleteOriginal,
             onOpenCopy = { onIntent(BookInfoIntent.OpenShelfDuplicate(it)) },
-            onGroup = { onIntent(BookInfoIntent.ShelfActionsGroup) },
-            onDelete = { onIntent(BookInfoIntent.ShelfActionsDelete) },
+            onDelete = { onIntent(BookInfoIntent.ShelfDeleteConfirm(it)) },
             onDismissRequest = { onIntent(BookInfoIntent.DismissSheet) },
         )
         is BookInfoSheet.SourcePicker -> {
@@ -1205,7 +1208,8 @@ private fun BookInfoHeader(
                             bookUrl = book.bookUrl,
                             modifier = Modifier
                                 .width(112.dp)
-                                .aspectRatio(5f / 7f),
+                                .aspectRatio(5f / 7f)
+                                .trackBookMorphCover(4.dp),
                             // 同一个 key + 同一个 scope：共享元素动画在脱敏态下依然连续
                             sharedCoverKey = sharedCoverKey,
                             sharedTransitionScope = sharedTransitionScope,
@@ -1224,7 +1228,8 @@ private fun BookInfoHeader(
                             onError = onNetworkCoverLoadError,
                             modifier = Modifier
                                 .width(112.dp)
-                                .aspectRatio(5f / 7f),
+                                .aspectRatio(5f / 7f)
+                                .trackBookMorphCover(4.dp),
                             showLoadingPlaceholder = sharedCoverKey == null,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -1383,7 +1388,7 @@ private fun BookInfoActions(
 
     // 未入架但书架里已有同作品副本时，把书架按钮标成冲突态：点击会弹冲突 Sheet，
     // 提前告诉用户这一步要问「共存还是迁移」。
-    // 已入架时按钮不高亮：可做的事情（副本 / 分组 / 删除）改由点击后的「书架操作」Sheet 给出。
+    // 已入架时按钮不高亮：可做的事情（副本 / 分组 / 删除）改由点击后的删除 Sheet 给出。
     val conflictHighlight = !inBookshelf && hasShelfDuplicates
     val shelfLabel = when {
         showShelfRemoveHint -> stringResource(R.string.click_to_remove)
@@ -1988,37 +1993,7 @@ private fun BookInfoDialogs(
     onIntent: (BookInfoIntent) -> Unit,
 ) {
     val dialog = state.dialog
-    var deleteOriginal by remember(dialog, state.deleteOriginal) { mutableStateOf(state.deleteOriginal) }
     var remarkText by remember(dialog) { mutableStateOf((dialog as? BookInfoDialog.EditRemark)?.remark.orEmpty()) }
-
-    AppAlertDialog(
-        data = dialog as? BookInfoDialog.DeleteBook,
-        onDismissRequest = { onIntent(BookInfoIntent.DismissDialog) },
-        title = stringResource(R.string.draw),
-        text = stringResource(R.string.sure_del),
-        confirmText = stringResource(android.R.string.ok),
-        onConfirm = {
-            onIntent(BookInfoIntent.ConfirmDelete(deleteOriginal))
-        },
-        dismissText = stringResource(android.R.string.cancel),
-        onDismiss = { onIntent(BookInfoIntent.DismissDialog) },
-        content = { d ->
-            if (d.isLocal) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Checkbox(
-                        checked = deleteOriginal,
-                        onCheckedChange = { deleteOriginal = it },
-                        colors = androidx.compose.material3.CheckboxDefaults.colors(
-                            checkedColor = LegadoTheme.colorScheme.primary,
-                            checkmarkColor = LegadoTheme.colorScheme.onPrimary,
-                            uncheckedColor = LegadoTheme.colorScheme.onSurfaceVariant,
-                        )
-                    )
-                    Text(text = stringResource(R.string.delete_book_file))
-                }
-            }
-        }
-    )
 
     AppAlertDialog(
         data = dialog as? BookInfoDialog.EditRemark,

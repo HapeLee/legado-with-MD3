@@ -211,6 +211,7 @@ data class PendingBookmarkTarget(
 @Stable
 data class ReadBookUiState(
     val book: Book? = null,
+    val inBookshelf: Boolean = true,
     val bookSource: BookSource? = null,
     val bookName: String = "",
     val chapterName: String = "",

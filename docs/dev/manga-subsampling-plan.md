@@ -15,7 +15,8 @@
 - `MangaReaderScreen` 的请求保留完整原始 URL 身份，共用显式解码尺寸。
   分页预取、展示与背景提色携带 `MangaImageFileOwner`；`CoverInterceptor` 在首次解码前
   经 BookHelp 获取原图并把请求改为 File，返回结果的 request.data 也是 File。
-  条漫也复用原图 File 获取链路，继续使用 AsyncImage 整页绘制。
+  条漫也复用原图 File 获取链路，AsyncImage 绘制有界预览；长图和放大后不足显示宽度的
+  静态图由视口区域解码块补充细节，不再把整图预览作为最终高清结果。
   条漫按窗口宽度与侧边留白解码；分页适应高度按高度解码，拉伸同时满足宽高，
   原始尺寸保留原图，旋转适配保守覆盖交换后的窗口尺寸。
 - 旧 `CoverFetcher` 的网络流或内存 Buffer 无法提供区域解码所需的文件模型。
@@ -316,7 +317,8 @@ Manual/Batch 队列请求保留显式用途，ReadPreload 不降级已有用途�
 
 对照原版 Legado 的 `downloadOnly()` 预取，远端预取只准备原图，
 不生成预览位图、不执行 EInk 转换、不发送页面 Ready。分页和条漫在线页均进入共享原图文件链路，
-同图展示、预取、下载通过文件 mutex 合并成功获取；条漫继续由 AsyncImage 整页绘制，避免页边界细线。
+同图展示、预取、下载通过文件 mutex 合并成功获取；条漫预览由 AsyncImage 绘制，
+高清区域块直接绘制到 Canvas，不添加整页缩放图层，避免页边界细线。
 开启预取时，普通分页额外保留前后各两屏的真实渲染；原尺寸模式不额外保留，避免提前解码完整大图。
 条漫显示预热改用 Foundation 1.12.1 的 LazyLayoutCacheWindow：滚动方向前方四个视口、
 后方两个视口，按实际测量高度决定准备/保留哪些项，不以图片张数封顶。
@@ -393,8 +395,104 @@ MangaPrefetch*Test、MangaFileRequestTest、MangaImageDimensionsTest，共 55 �
 加载遮罩依赖实际渲染状态，尚未运行设备绘制时序测试；真机首次显示/放大清晰耗时、
 相邻屏内存、条漫长图/页边界、网络并发与加密书源峰值内存仍待测量。
 
-确认支持格式下 `subSamplingState != null` 且最终达到 full-quality 状态，
+条漫的 `MangaWebtoonTiles` 保留 Coil 默认 4096 上限的整图预览，仅为实际视口及前后一行
+准备原图区域块；每块解码约 1024 像素，额外读取一圈采样像素并用共享浮点边界裁剪，
+避免分块之间透底。透明区域先恢复阅读背景，再绘制原图块，避免与预览重复叠画改变颜色。
+缩放后的实际布局宽度决定采样，离开窗口即释放位图引用。
+预览 PNG 命中时从 `MangaImageFileOwner` 借原图与独立租约，不把预览文件当区域解码源；
+墨水屏使用原始展示请求的变换配置处理各块，灰度/通道滤镜仍在绘制时应用。
+格式或区域解码失败保留预览并记录错误，取消不降级、不发布迟到结果。
+条漫区域解码现在由项目自己的 Android 平台适配器管理，使用公开的 `BitmapRegionDecoder`；
+原先访问 Telephoto 内部参数和 painter getter 的 Java 桥接已删除。
+
+新增测试复现长图加载成功后宽度被缩小，并覆盖有界视口块、缩放采样、窗口重叠复用/释放、
+取消、分数缩放接缝、各块墨水屏变换及预览缓存命中后的原图租约。Windows Robolectric
+的文件型 `BitmapRegionDecoder` JNI 导致测试进程退出，真实文件区域解码另放在
+`MangaWebtoonRegionInstrumentedTest`；当前无连接设备，且设备测试编译受既有
+`HttpTtsTest` 的 `AppConfig.speechRatePlay` 未解析引用阻塞，不能把原生解码或页面滚动算作已验收。
+最终执行 `:app:testAppDebugUnitTest`（过滤 `io.legado.app.help.coil.*Manga*Test` 和
+`io.legado.app.ui.book.manga.*Test`），91 项全部通过；Kotlin/Java 编译、
+`:app:assembleAppDebug`、`:app:lintAppDebug`、`verifyConfigArchitecture` 与
+`git diff --check` 均通过。lint 为 115 个警告、13 个提示，未放宽 baseline。
+
+分页确认支持格式下 `subSamplingState != null` 且最终达到 full-quality 状态，
 再比较 preview 尺寸、内存、首次清晰时间及是否闪烁。不把正常瓦片解码计为多余完整请求。
+
+2026-10-01 模式切换回归：Telephoto 0.19 在分页请求中设置 `maxBitmapSize(Size.ORIGINAL)`，
+按宽度加载长图时会创建数万像素高的整图预览，解码成功不代表 Canvas 能绘制。
+`MangaFileRequestTest` 用真实 Coil/拦截器链复现 128×12000 长图切换后生成高度 12000 的预览。
+`CoverInterceptor` 统一把漫画整图预览限制在 4096×4096 内，涵盖在线、文件和 content 路径；
+原图及区域解码源不变。回归测试覆盖同图反复条漫/分页切换和原图独立租约保留。
+93 项相关单元测试、编译、打包、架构门禁与 `git diff --check` 通过；
+`:app:lintAppDebug` 通过，仍为 115 个警告、13 个提示，未修改 baseline。
+真机切换后的绘制效果仍待验证。
+
+### 区域解码平台边界（2026-10-01）
+
+本切片只替换条漫解码器，不迁移 Gradle 模块或分页渲染器。新的
+`domain/reader/MangaRegionDecoder<Tile>` 契约使用纯 Kotlin 的尺寸、矩形和采样值，
+不引用 Android、Compose、Coil、Telephoto、文件或流；实际消费者将 Tile 绑定为 Android Bitmap。
+调用以显示方向的原图坐标描述区域；关闭幂等且与原生解码互斥，已返回的块不因关闭而失效。
+格式不支持/读取失败显式抛错，取消不发布结果，条漫宿主保留已显示的预览。
+
+| 职责                                                           | 当前依赖分类            | 当前归属 / 后续方向                                              |
+|--------------------------------------------------------------|-------------------|----------------------------------------------------------|
+| 解码契约、尺寸、区域、八种 EXIF 坐标映射                                      | common-ready      | `:app` 的纯 Kotlin 候选；尚未进入 `commonMain`                    |
+| Android file/content/resource/asset、文件租约、BitmapRegionDecoder | platform-island   | `MangaAndroidRegionSource` / `MangaAndroidRegionDecoder` |
+| 视口瓦片选择、绘制、淡入、墨水屏变换                                           | renderer-specific | 现有 Android Compose；后续先分离几何模型再评估 CMP                      |
+| 分页 ZoomableImage / RecoveringRegionImageSource               | platform-island   | 保留现有 Telephoto 渲染与错误回退；仍需按库版本验证                          |
+
+Android 适配器读取 EXIF，反向映射区域后仅解码该块，再校正块方向；不生成完整长图。
+API 26–30 使用旧版公开 newInstance 重载，31+ 使用新版重载。单个原生解码器串行工作，
+符合当前瓦片串行调度；独立原图租约仍覆盖源与解码器生命周期。
+测试包含八种方向的区域映射和像素、关闭与解码竞争、取消、无效输入及租约幂等关闭。
+真实文件分块测试已切换到新适配器，但设备执行证据仍待补齐。
+
+这不是已完成的 KMP/CMP 漫画阅读器：当前没有对应共享模块、Desktop/iOS 解码实现或非 Android
+目标编译。后续按已选宿主建立真实共享模块，将纯几何与调度纳入 commonTest，平台宿主选择解码
+实现与块类型；不把 Bitmap/Painter/Uri 塞进共享领域 API，也不为其他平台提供静默空实现。
+
+Coil 3 继续承担整图预览、图片缓存和变换。它的 Decoder 扩展允许接入自定义解码器，但默认
+图片解码并不提供按矩形读取原图的瓦片能力；将区域解码注册进 Coil 也不会消除平台实现。
+本切片保留直接的区域解码契约，避免每块都走一遍整图请求链。
+
+本切片实际运行 `:app:testAppDebugUnitTest`（同上两组过滤），102 项通过；
+`:app:assembleAppDebug`、`verifyConfigArchitecture`、`git diff --check` 通过。
+`:app:lintAppDebug` 完成，115 个警告、13 个提示，baseline 不变。完整设备测试编译仍受
+既有 HttpTtsTest 引用阻塞；临时 init script 将 AndroidTest.kotlin 源目录限定为
+`src/androidTest/java/io/legado/app/help/coil` 后，`:app:assembleAppDebugAndroidTest` 通过。
+测试 APK 包含长图区域、墨水屏和 JPEG EXIF 用例，不代表整个设备测试集通过。
+按用户要求没有安装或执行真机测试；设备侧阅读效果、快速滚动和模式切换由用户复测。
+
+### 条漫缩放定位（2026-10-01）
+
+用户确认跳位发生在双击/双指缩放。条漫通过改变 LazyColumn 实际宽度缩放图片，但旧实现
+保留缩放前的像素滚动偏移；长图中同一原图坐标会因此移出手势位置。
+新增数学复现与缩放锚点测试：例如长图顶端位于 -10000、手势 Y=700，放大 2.5 倍却
+保持旧偏移时，该内容点移动至 Y=16750。
+
+现在按手势所在的已知尺寸图片计算 `新滚动偏移 = (手势Y - 原条目顶端) × 实测宽度倍率
+
+- 手势Y - 纵向平移`，与宽度变化在下一次重测中一起提交。双击使用点击位置，双指使用
+  手势中心；倍率使用实际测量宽度及取整后的图片宽度，避免连续手势和边距取整累计误差。
+  固定高度章节项/未知占位不应用图片缩放公式；缩放锚点未完成测量时，高度更新不覆盖它。
+  双击放大也修正横向平移，在允许的平移边界内保持点击处内容。
+
+`:app:testAppDebugUnitTest --tests 'io.legado.app.ui.book.manga.*Test'` 的 56 项测试通过，
+覆盖缩放定位、往返缩放、纵向平移与章节间隔；编译、打包、架构门禁和文本检查通过。
+真机双击、双指手势及边界钳制效果由用户复测，不把数学测试等同于设备验收。
+
+### Coil 整图对照版本（2026-10-01）
+
+对照试验期间，`MangaReaderScreen` 的 `MANGA_REGION_DECODING_ENABLED` 为 false：
+条漫仅使用 Coil AsyncImage；分页强制使用 Coil painter，Telephoto 只保留手势/绘制宿主，
+不启用其区域解码。条漫解码实现当时保留用于对比后恢复，不参与对照版加载路径。
+整图继续保留 4096×4096 位图尺寸上限，原图文件缓存、预览缓存及缩放定位修复保持现状。
+这用于比较无区域解码时的显示效果；超长图清晰度可能下降，放大不会补载高清瓦片。
+本切片以编译、APK 打包、架构门禁与 `git diff --check` 验证；视觉效果由用户复测。
+
+用户完成对照后要求恢复分块版本：已删除临时开关，恢复条漫高清瓦片与分页区域解码。
+分页墨水屏模式仍保留原有整图变换路径。预览尺寸上限和缩放定位修复保持现状。
 
 必须覆盖：
 

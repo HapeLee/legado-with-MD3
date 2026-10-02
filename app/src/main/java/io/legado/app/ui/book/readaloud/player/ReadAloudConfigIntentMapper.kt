@@ -2,14 +2,67 @@ package io.legado.app.ui.book.readaloud.player
 
 import io.legado.app.ui.book.read.ReadBookIntent
 
+internal enum class ReadAloudPlayerConfigHostAction {
+    OpenTtsEnginesAndVoices,
+    OpenTtsCache,
+    OpenBookVoiceCasting,
+    OpenSystemTtsSettings,
+    OpenPreDownloadNumPicker,
+    OpenPreSynthesisConcurrencyPicker,
+    OpenParagraphIntervalPicker,
+    OpenCacheCleanTimePicker,
+}
+
 /**
- * 把配置卡片的 [ReadBookIntent] 翻译成全局设置写入。
+ * 为 `ReadAloudConfigContent` 发出的每一个导航选项，返回对应的播放器宿主操作。
+ *
+ * 共享内容使用的是 [ReadBookIntent]，而播放器是一个 Activity 级别的浮层，
+ * 没有阅读器的 ViewModel。将这个桥接逻辑保持为纯函数，
+ * 可以让这些点击事件被转发出去，而不是落到设置适配器里。
+ */
+internal fun ReadBookIntent.toReadAloudPlayerConfigHostAction():
+        ReadAloudPlayerConfigHostAction? =
+    when (this) {
+        ReadBookIntent.OpenTtsEnginesAndVoices ->
+            ReadAloudPlayerConfigHostAction.OpenTtsEnginesAndVoices
+
+        ReadBookIntent.OpenTtsCache -> ReadAloudPlayerConfigHostAction.OpenTtsCache
+        ReadBookIntent.OpenBookVoiceCasting ->
+            ReadAloudPlayerConfigHostAction.OpenBookVoiceCasting
+
+        ReadBookIntent.OpenSystemTtsSettings ->
+            ReadAloudPlayerConfigHostAction.OpenSystemTtsSettings
+
+        ReadBookIntent.OpenPreDownloadNumPicker ->
+            ReadAloudPlayerConfigHostAction.OpenPreDownloadNumPicker
+
+        ReadBookIntent.OpenPreSynthesisConcurrencyPicker ->
+            ReadAloudPlayerConfigHostAction.OpenPreSynthesisConcurrencyPicker
+
+        ReadBookIntent.OpenParagraphIntervalPicker ->
+            ReadAloudPlayerConfigHostAction.OpenParagraphIntervalPicker
+
+        ReadBookIntent.OpenCacheCleanTimePicker ->
+            ReadAloudPlayerConfigHostAction.OpenCacheCleanTimePicker
+
+        else -> null
+    }
+
+/**
+ * 把配置卡片的 [ReadBookIntent] 分发为全局设置写入、播放器命令或宿主动作。
  *
  * 配置内容（`ReadAloudConfigContent`）的契约是 `ReadBookIntent`，因为它的主宿主是阅读器。
  * 听书播放弹层是全局浮层、没有阅读器 ViewModel，所以这里把同一批意图落到
- * [ReadAloudPlayerViewModel.onConfigIntent]，两个宿主的设置语义完全一致。
+ * [ReadAloudPlayerViewModel.onConfigIntent] 或播放器宿主，两个宿主的设置语义完全一致。
  */
-internal fun ReadAloudPlayerViewModel.applyReadBookConfigIntent(intent: ReadBookIntent) {
+internal fun ReadAloudPlayerViewModel.applyReadBookConfigIntent(
+    intent: ReadBookIntent,
+    onHostAction: (ReadAloudPlayerConfigHostAction) -> Unit,
+) {
+    intent.toReadAloudPlayerConfigHostAction()?.let {
+        onHostAction(it)
+        return
+    }
     when (intent) {
         is ReadBookIntent.SetDefaultReadAloudInterface ->
             onConfigIntent(ReadAloudConfigOption.DefaultInterface, value = intent.value)
@@ -74,7 +127,8 @@ internal fun ReadAloudPlayerViewModel.applyReadBookConfigIntent(intent: ReadBook
         is ReadBookIntent.ApplyAudioCacheCleanTime ->
             onConfigIntent(ReadAloudConfigOption.AudioCacheCleanTime, intValue = intent.value)
 
-        // 其余意图在播放界面没有等价动作（缓存清理、数值选择器弹层等），静默忽略
+        ReadBookIntent.ResetReadAloudCapsulePosition -> resetCapsulePosition()
+        ReadBookIntent.ClearTtsCache -> clearTtsCache()
         else -> Unit
     }
 }

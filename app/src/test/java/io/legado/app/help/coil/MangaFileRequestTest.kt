@@ -13,6 +13,10 @@ import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.request.crossfadeMillis
+import coil3.request.maxBitmapSize
+import coil3.size.Dimension
+import coil3.size.Scale
+import coil3.size.Size
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
 import kotlinx.coroutines.delay
@@ -43,6 +47,65 @@ class MangaFileRequestTest {
     fun setUp() {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
     }
+
+    @Test
+    fun `switching loaded long webtoon to paged keeps preview bounded and original leased`() =
+        runBlocking {
+            val src = "https://invalid.example/mode-switch-long.png"
+            val raw = BookHelp.getImage(book, src)
+            val bitmap = Bitmap.createBitmap(128, 12_000, Bitmap.Config.ARGB_8888)
+            try {
+                bitmap.eraseColor(android.graphics.Color.RED)
+                ByteArrayOutputStream().use {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                    BookHelp.writeImage(book, src, it.toByteArray())
+                }
+            } finally {
+                bitmap.recycle()
+            }
+            val loader = ImageLoader.Builder(RuntimeEnvironment.getApplication()).components {
+                add(BitmapFactoryDecoder.Factory())
+                add(CoverInterceptor { _, data -> BookHelp.acquireReadingImage(null, book, data) })
+            }.build()
+            try {
+                for (webtoon in listOf(true, false, true, false)) {
+                    val owner = MangaImageFileOwner()
+                    try {
+                        val request = ImageRequest.Builder(RuntimeEnvironment.getApplication())
+                            .data(src).size(Size(Dimension(128), Dimension.Undefined))
+                            .scale(Scale.FILL).allowHardware(false)
+                            .memoryCacheKey("mode-switch-long")
+                            // Telephoto overrides this on every paged request.
+                            .maxBitmapSize(if (webtoon) Size(4096, 4096) else Size.ORIGINAL)
+                            .apply {
+                                extras[CoverExtras.MangaFileOwner] = owner
+                                extras[CoverExtras.MangaWebtoon] = webtoon
+                            }.build()
+                        val result = loader.execute(request)
+                        if (result is ErrorResult) throw result.throwable
+                        require(result is SuccessResult)
+                        assertTrue(
+                            "Preview height ${result.image.height} cannot be drawn safely",
+                            result.image.height <= 4096
+                        )
+                        if (!webtoon) assertEquals(raw, result.request.data)
+                        val borrowed = requireNotNull(owner.borrowForTiles())
+                        try {
+                            assertEquals(raw, borrowed.first)
+                            owner.close()
+                            BookHelp.clearCache(book)
+                            assertTrue(raw.isFile)
+                        } finally {
+                            borrowed.second.close()
+                        }
+                    } finally {
+                        owner.close()
+                    }
+                }
+            } finally {
+                loader.shutdown(); BookHelp.clearCache(book)
+            }
+        }
 
     @Test
     fun `webtoon reuses persisted preview after memory eviction and corrupt preview falls back to original`() =
@@ -110,6 +173,22 @@ class MangaFileRequestTest {
                         delay(10)
                     }
                 }
+                // 预览文件命中后，高清层仍借原图；请求退出后瓦片租约继续阻止清理。
+                val tiles = requireNotNull(
+                    mangaWebtoonTileSource(
+                        reused as SuccessResult, owner,
+                        RuntimeEnvironment.getApplication()
+                    )
+                )
+                try {
+                    owner.close()
+                    BookHelp.clearCache(book)
+                    assertTrue(raw.isFile)
+                } finally {
+                    tiles.close()
+                }
+                BookHelp.clearCache(book)
+                assertFalse(raw.exists())
             } finally {
                 owner.close(); loader.shutdown(); BookHelp.clearCache(book)
             }

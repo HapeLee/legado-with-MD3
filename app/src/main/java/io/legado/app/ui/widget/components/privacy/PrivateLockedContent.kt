@@ -27,17 +27,19 @@ import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.request.allowHardware
 import coil3.request.transformations
 import coil3.size.Size
+import io.legado.app.core.ui.morph.BookCoverMorphAnchors
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
-import io.legado.app.ui.widget.components.image.cover.rememberSharedCoverTransitionShape
+import io.legado.app.ui.widget.components.image.cover.rememberSharedCoverTransitionRadius
 import io.legado.app.ui.widget.components.text.AppText
 
 /** 运行时模糊（`Modifier.blur`）从 API 31 起才生效，低版本是 no-op */
@@ -95,7 +97,7 @@ fun PrivateLockedCoverOverlay(
  *
  * 共享元素按 [CoilBookCover] 的写法挂在这一层：
  * 1. 带 `clipInOverlayDuringTransition`，动画期间 overlay 里也有圆角；
- * 2. 圆角用 `rememberSharedCoverTransitionShape` 与源端插值，两端衔接不跳变。
+ * 2. 圆角用 `rememberSharedCoverTransitionRadius` 与源端插值，两端衔接不跳变。
  * 叠加层（遮罩/点阵/锁标）也必须留在 sharedBounds **内部**，否则飞起来会掉队。
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -114,16 +116,20 @@ fun PrivateLockedCover(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
-    val shape = rememberSharedCoverTransitionShape(
+    val transitionRadius = rememberSharedCoverTransitionRadius(
         sharedCoverKey = sharedCoverKey,
         radius = radius,
         animatedVisibilityScope = animatedVisibilityScope
     )
+    val shape = remember(transitionRadius) { RoundedCornerShape(transitionRadius) }
     val blurEnabled = blurRadius > 0.dp
     val useRuntimeBlur = blurEnabled && RuntimeBlurSupported
     val useCoilBlur = blurEnabled && !RuntimeBlurSupported
     Box(
         modifier = modifier
+            .graphicsLayer {
+                alpha = if (BookCoverMorphAnchors.isOriginCoverHidden(sharedCoverKey)) 0f else 1f
+            }
             .then(
                 with(sharedTransitionScope) {
                     if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {

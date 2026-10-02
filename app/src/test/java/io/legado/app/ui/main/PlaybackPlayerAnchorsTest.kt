@@ -64,5 +64,6 @@ class PlaybackPlayerAnchorsTest {
         assertFalse(shouldHandleActivityBack(true, playerPresent = true))
         assertTrue(shouldHandleActivityBack(false, playerPresent = false))
         assertFalse(shouldHandleActivityBack(true, playerPresent = false))
+        assertFalse(shouldHandleActivityBack(false, playerPresent = false, isRoot = false))
     }
 }
