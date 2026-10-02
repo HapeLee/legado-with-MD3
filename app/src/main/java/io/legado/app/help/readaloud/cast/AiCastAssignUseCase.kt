@@ -4,6 +4,7 @@ import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.CastCharacter
 import io.legado.app.domain.gateway.AiProfileGateway
@@ -22,6 +23,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonArray
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -196,6 +198,8 @@ class AiCastAssignUseCase(
         // 角色档案与本书记忆跨块续用：每块各拿一份空白候选，同一个人会被重复建档
         CastAssignmentStore.migrateLegacyProfiles(book.bookUrl)
         val known = appDb.castCharacterDao.getByBook(book.bookUrl).toMutableList()
+        // 档案整本取一次给称呼归并用（别名在这里），逐句再查库会把一趟分配变成几百次查询
+        val profiles = appDb.bookKnowledgeDao.getCharacterProfiles(book.bookUrl, 500)
         var bookMemory = appDb.bookCastMemoryDao.get(book.bookUrl)?.memory.orEmpty()
         var previousSpeakers = emptyList<AiCastPayload.Speaker>()
         for (window in windows) {
@@ -235,7 +239,7 @@ class AiCastAssignUseCase(
             }
             val speakerOf = writeAssignments(
                 book.bookUrl, chapterIndex, window, parsed.assignments, pools, known,
-                thoughtOrdinals,
+                thoughtOrdinals, profiles,
             )
             // 下一块只带最后几条已定说话人：跨块时同一个人接着说不至于换个名字
             previousSpeakers = speakerOf.takeLast(PREVIOUS_SPEAKERS)
@@ -314,6 +318,7 @@ class AiCastAssignUseCase(
         pools: List<String>,
         known: MutableList<CastCharacter>,
         thoughtOrdinals: Set<Int>,
+        profiles: List<BookCharacterProfile>,
     ): List<AiCastPayload.Speaker> {
         val pending = window.pending.toSet()
         val byOrdinal = assignments
@@ -327,7 +332,7 @@ class AiCastAssignUseCase(
             val name = raw.take(24)
             // 池只给全新角色挑；已有角色一律原样复用，否则同一个人会被换出一堆音色
             val pool = resolvePool(answer.pool, pools, known)
-            var character = matchOrCreate(bookUrl, name, pool, known)
+            var character = matchOrCreate(bookUrl, name, pool, known, profiles)
             if (character.poolLabel.isBlank() && pool.isNotBlank()) {
                 // 老档案里池是空的（历史遗留），这次补上；非空一律不改，改了就等于换声音
                 character = character.copy(poolLabel = pool, updatedAt = System.currentTimeMillis())
@@ -361,14 +366,19 @@ class AiCastAssignUseCase(
      * 以前命中同名但池不同就会拿 AI 给的池去改档案，池又来自「用得最少的启用池」兜底，
      * 于是一个「李振富」能被配出男老年 / 女中年 / 女老年 / 少女四种声音 —— 听着就是乱。
      * 只有本书从没出现过的名字才新建档案，此时才需要挑池。
+     *
+     * 匹配先过 [canonicalCastName]：AI 常按书里的叫法给称呼（「小花」而不是「李小花」），
+     * 只按主名精确匹配会把同一个人拆成两条角色档案。
      */
     private suspend fun matchOrCreate(
         bookUrl: String,
         name: String,
         pool: String,
         characters: List<CastCharacter>,
+        profiles: List<BookCharacterProfile>,
     ): CastCharacter {
-        characters.firstOrNull { it.name == name }?.let { return it }
+        canonicalCastName(name, characters, profiles)
+            ?.let { main -> characters.firstOrNull { it.name == main }?.let { return it } }
         val created = CastCharacter(
             id = UUID.randomUUID().toString(),
             bookUrl = bookUrl,
@@ -576,6 +586,45 @@ internal fun castChapterPlan(
         .coerceIn(start, last)
     return (start..end).toList()
 }
+
+/**
+ * 把 AI 给的称呼归并到本书已有角色的**主名**；归不到返回 null（确实是本书没出现过的人）。
+ *
+ * 别名权威在 `book_character_profiles.aliasesJson`（与本书角色记忆双向同步，
+ * 见 [CastMemoryMirror.applyProfileToMemory]），所以这里读档案而不是读记忆文本。
+ *
+ * 不归并的代价不是「多一个名字」这么简单：[matchOrCreate] 会另起一条 cast_characters
+ * （新 UUID、`bubbleRuleJson` 空），紧接着 [CastProfileMirror.ensure] 按名字找档案时
+ * `getCharacterProfile` 连 aliasesJson 一起 LIKE，于是命中用户原来那条档案并把它改名——
+ * 档案（改了名、头像还挂着）与 cast_characters（带气泡的旧行没动）就此错配：
+ * 正文气泡按 cast_characters 的名字查 → 查不到；头像按档案的名字查 → 查得到；
+ * 配音列表按 `profile.id` 关联角色行 → 新角色关联不上整条不显示。
+ * 停用（[BookCharacterProfile.STATUS_DISABLED]）的档案不参与：那是用户从配音列表删掉的人，
+ * 不能靠别名把它长回来（`deleteCharacter` 特意置成停用而不是删除以保住官方资料）。
+ *
+ * **档案比角色行更权威**：命中档案时先按档案的 id 找回角色，而不是先用「名字完全相等」那条。
+ * 这一条同时负责修已经坏掉的数据——本函数上线前跑过一次分配的书里，多半留着一行没档案的
+ * 孤儿 cast_characters（名字就是那个别名、气泡为空），按名字优先会一直命中它，
+ * 于是「重新分配也修不回来」；按档案找回带气泡的那一条，重跑一次那一章就正了。
+ */
+internal fun canonicalCastName(
+    name: String,
+    characters: List<CastCharacter>,
+    profiles: List<BookCharacterProfile>,
+): String? {
+    val byName = characters.firstOrNull { it.name == name }
+    val anchor = profiles.firstOrNull { profile ->
+        profile.status == BookCharacterProfile.STATUS_ACTIVE &&
+            (profile.name == name || profile.aliasNames().contains(name))
+    } ?: return byName?.name
+    val resolved = characters.firstOrNull { it.id == anchor.id }
+        ?: characters.firstOrNull { it.name == anchor.name }
+    return (resolved ?: byName)?.name
+}
+
+/** 档案里记的别名（JSON 字符串数组）；读坏了当没有。 */
+private fun BookCharacterProfile.aliasNames(): List<String> =
+    GSON.fromJsonArray<String>(aliasesJson).getOrNull().orEmpty().map { it.trim() }
 
 /** 异常 → 给用户看的一句话原因（message 常为空，尤其是 IOException/超时之外的异常）。 */
 internal fun failureReason(error: Throwable): String =

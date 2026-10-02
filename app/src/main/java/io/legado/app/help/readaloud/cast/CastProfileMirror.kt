@@ -28,11 +28,14 @@ object CastProfileMirror {
         if (character.name.isBlank()) return
         val bookUrl = character.bookUrl
         // 先按 id 找：配音角色建档用的就是角色 id，那条档案一定是这个人的。
-        // 按名字找会命中别人的档案（getCharacterProfile 连别名都匹配），改完池与音色就挂错人了。
+        // 按名字兜底只认**名字完全相等**的那条：`getCharacterProfile` 连 aliasesJson 一起 LIKE，
+        // 拿它按名找会把「记着这个别名的别人」捞出来改名——用户看到的「AI 分配把我设好的人物
+        // 改名了、气泡跟着没」就是那一次 upsert。称呼归并是 [canonicalCastName] 的活，不在这里。
         val target = appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, character.id)
             ?.takeIf { it.bookUrl == bookUrl }
-            ?: appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, character.name)
-                ?.takeIf { it.bookUrl == bookUrl && it.id != character.id }
+            ?: appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500).firstOrNull {
+                it.bookUrl == bookUrl && it.name == character.name && it.id != character.id
+            }
         val now = System.currentTimeMillis()
         if (target != null) {
             val sameIdentity = target.name == character.name &&
