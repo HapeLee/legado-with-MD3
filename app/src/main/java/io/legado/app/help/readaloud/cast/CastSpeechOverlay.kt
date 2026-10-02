@@ -86,10 +86,7 @@ object CastSpeechOverlay {
         // 否则那句角色台词会退回旁白音。ensureVoice 幂等，选完落库并镜像绑定。
         val picked = HashMap<String, CastCharacter>()
         var voiced = 0
-        // 命中与顶到音色是两件事：命中了但那个音色不在启用表里时，听感上同样「没变化」，
-        // 归因却完全不同（一条是正则写法，一条是音色表）。分开数才说得清。
         var regexHit = 0
-        var regexVoiced = 0
         var regexMuted = 0
         val sample = StringBuilder()
         val result = ArrayList<SpeechPlanItem>()
@@ -118,7 +115,6 @@ object CastSpeechOverlay {
                 }
             }
             if (part.label.isNotEmpty()) regexHit++
-            if (part.voiceId != null && voices.containsKey(part.voiceId)) regexVoiced++
             if (part.sound.isNotEmpty()) regexMuted++
             val character = span?.let { characters.match(it.name, it.pool) }
             // 播放单元里保留标记原文：偏移要按含标记的正文算，去掉标记是送进引擎前的最后一步
@@ -207,12 +203,10 @@ object CastSpeechOverlay {
         // 正则的匹配范围是**整章**，不是单个朗读单元：划分方式（整句、按符号）会把一句台词
         // 拆成多个单元，「［…］」中间带句号时首尾落在两个单元里，按单元比永远凑不齐 → 整章 0 命中
         // （「爆炸」这种短字面量整块落在同一句里，所以看着像「只有正则不生效」）。
-        // 匹配串按 plan 顺序把每个单元的抹平文字**接起来**，命中再按顺序切回各单元：
-        // 全程只依赖单元的先后，不依赖 segment.chapterPosition（那一份是缓存里的绝对坐标，
-        // 与本次切分的粒度无关，错了就会把命中整批裁没）。
-        val chapterMatches = unitMatches(plan, effects)
+        // 匹配串按 plan 顺序把各单元文字接起来，命中再按顺序切回各单元与切块。
+        val matchesPerUnit = unitMatches(plan, effects)
         plan.forEachIndexed { index, item ->
-            val own = chapterMatches.perUnit.getOrElse(index) { emptyList() }
+            val own = matchesPerUnit.getOrElse(index) { emptyList() }
             val shiftBase = item.segment.chapterPosition
             piecesOf(item, spans).forEach { piece ->
                 val parts = if (effects.isEmpty()) {
@@ -242,35 +236,6 @@ object CastSpeechOverlay {
                 soundEffect = RegexCastSplitter.mergeSound(result[last].soundEffect, carrySound)
             )
         }
-        if (effects.isNotEmpty() && regexHit == 0 && regexMuted == 0) {
-            // 一条都没命中时，光看正则猜不出原因：拿**真正比的那一份**（各单元文字按顺序接起来
-            // 的那串）再数一遍字符，分清「正文里没有这个符号」和「符号在、写法对不上」。
-            // 替换净化发生在它之前（见 io.legado.app.help.book.ContentProcessor.getContent），
-            // 被替换规则改掉的符号在这一份里已经是新符号。
-            val body = chapterMatches.canvas
-            // 分两段数：matchesIn 在匹配串上找到的处数，和它们裁到各单元后剩下的处数。
-            // 前者 >0 而后者 =0 → 丢在裁剪/切块那一步；两者都 =0 → 匹配串或正则本身的问题。
-            val found = RegexCastSplitter.matchesIn(body, effects)
-            AppLog.put(
-                "正则角色: 整章找到 ${found.size} 处，裁到单元后剩 " +
-                    "${chapterMatches.perUnit.sumOf { it.size }} 处"
-            )
-            effects.forEach { effect ->
-                AppLog.put(
-                    "正则角色「${effect.label}」本章 0 命中（比的是整章 ${body.length} 字）：" +
-                        "模式=「${effect.pattern.pattern.showInvisible()}」" +
-                        explainNoHit(effect.pattern.pattern, body)
-                )
-            }
-            // 匹配串长什么样，直接给一段看得到字符的样本：符号是不是被替换净化改过、
-            // 是不是还有别的全角/半角混用，一眼就能定。
-            body.indexOf("［").takeIf { it >= 0 }?.let { at ->
-                AppLog.put(
-                    "正则角色: 匹配串样本…" +
-                        body.substring(maxOf(0, at - 12), minOf(body.length, at + 24)) + "…"
-                )
-            }
-        }
         AppLog.put(
             "多角色朗读: 本章 ${plan.size} 个朗读单元，$voiced 段用角色音" +
                 if (effects.isEmpty()) {
@@ -280,8 +245,7 @@ object CastSpeechOverlay {
                     // 「开着使用正则却什么都不命中」一眼就能分清是规则没加载、加载成了字面量，
                     // 还是正则本身没命中。换行必须写成 `\n` 打：模式尾巴上多一个换行，
                     // 在日志里就是把整行劈成两截，看不出规则其实根本没在比它看起来的那串。
-                    "；正则角色换音色命中 $regexHit 段（顶到音色 $regexVoiced 段）、" +
-                        "吞字放音效 $regexMuted 段；" +
+                    "；正则角色换音色命中 $regexHit 段、吞字放音效 $regexMuted 段；" +
                         effects.joinToString("、") {
                             "「${it.label}」=/${it.pattern.pattern.showInvisible()}/"
                         }
@@ -344,46 +308,35 @@ object CastSpeechOverlay {
     )
 
     /**
-     * 按整章找正则角色的命中：[canvas] 是把每个朗读单元的抹平文字按 plan 顺序接起来的那一份，
-     * [perUnit] 是它在每个单元里的下标（单元内相对偏移，不是章内绝对坐标）。
+     * 按整章找正则角色的命中：把每个朗读单元的文字按 plan 顺序接起来匹配，返回值是命中在
+     * **各单元自己文字里**的下标（单元内相对偏移，不是章内绝对坐标）。
      *
      * 生产方是 [apply]：划分方式把一句台词切成多个单元时，跨单元的首尾只有在整章这一份上
-     * 才成对；消费方按 [perUnit] 裁到每个切块。
+     * 才成对；消费方按返回的下标裁到每个切块。
      */
-    internal class ChapterMatches(
-        val canvas: String,
-        val perUnit: List<List<RegexCastSplitter.Match>>,
-    )
-
     internal fun unitMatches(
         plan: List<SpeechPlanItem>,
         effects: List<RegexCastEffect>,
-    ): ChapterMatches {
-        if (effects.isEmpty() || plan.isEmpty()) {
-            return ChapterMatches("", List(plan.size) { emptyList() })
-        }
+    ): List<List<RegexCastSplitter.Match>> {
+        if (effects.isEmpty() || plan.isEmpty()) return List(plan.size) { emptyList() }
         val canvas = StringBuilder()
         val starts = ArrayList<Int>(plan.size)
         val ends = ArrayList<Int>(plan.size)
         plan.forEach { item ->
             starts += canvas.length
-            // 不抹平标记：标记符号是用户可配的（CastSyntax.markStart/markEnd），配成书里本来就
-            // 有的括号时，抹平会把用户要匹配的那段整个擦掉 → 正则永远 0 命中，而高亮规则与
-            // 替换规则比的是原文，所以它们能命中。命中的那几段本来就要发声，标记由
-            // speechText() 在送引擎前统一去掉。
+            // 匹配串就是屏幕上那一份正文：标记要等送引擎前才由 speechText() 去掉，
+            // 提前抹平会让这里比的东西跟高亮规则、替换规则看到的不是同一份。
             canvas.append(item.segment.text)
             ends += canvas.length
         }
-        val text = canvas.toString()
-        val hits = RegexCastSplitter.matchesIn(text, effects)
-        val perUnit = plan.indices.map { index ->
+        val hits = RegexCastSplitter.matchesIn(canvas.toString(), effects)
+        return plan.indices.map { index ->
             hits.mapNotNull { hit ->
                 val from = maxOf(hit.start, starts[index]) - starts[index]
                 val to = minOf(hit.end, ends[index]) - starts[index]
                 if (to > from) RegexCastSplitter.Match(from, to, hit.rank) else null
             }
         }
-        return ChapterMatches(text, perUnit)
     }
 
     /**
@@ -513,43 +466,8 @@ object CastSpeechOverlay {
         return getBinding(bookUrl, subjectType, subjectId)?.voiceId?.let(voices::get)
     }
 
-    /**
-     * 「一条都没命中」的归因：拿正则里第一个普通字符在正文里数一遍，并把正文里出现过的
-     * 括号类符号连码位一起列出来。
-     *
-     * 消费方是 [apply] 里 0 命中时那行日志。同一种「方括号」在不同来源的正文里可能是
-     * U+FF3B / U+3011 / U+005B 三个不同字符，肉眼看着一样，只有码位能分辨。
-     */
-    internal fun explainNoHit(pattern: String, body: String): String {
-        // `\Q…\E` 是 Kotlin 把一整串按字面量包住的外壳：看到这层就说明这条压根没按正则编
-        // （开关关着，或正则语法不通过被 compile 退回字面量），再挑字符比对没有意义。
-        if (pattern.startsWith("\\Q")) return "整串按字面量在比（正则语法不通过或「使用正则」关着）"
-        val probe = pattern.firstOrNull { it !in REGEX_META }
-        val head = when {
-            probe == null -> "模式里没有可比对的普通字符"
-            !body.contains(probe) -> "「$probe」在本章正文一次都没出现"
-            else -> "「$probe」在本章出现 ${body.count { it == probe }} 次"
-        }
-        return "$head；本章正文里的括号类符号：${bracketInventory(body)}"
-    }
-
-    /** 正文里出现过的括号类符号：`「字符」码位×次数`，一个都没有就说「无」。 */
-    private fun bracketInventory(body: String): String = body.toList()
-        .filter { it in BRACKET_CHARS }
-        .groupingBy { it }
-        .eachCount()
-        .entries
-        .sortedByDescending { it.value }
-        .joinToString("、") { "「${it.key}」U+%04X×${it.value}".format(it.key.code) }
-        .ifBlank { "无" }
-
     /** 换行/回车/制表符写成 `\n` `\r` `\t` 再进日志：模式尾巴上一个换行会把整行劈成两截。 */
     private fun String.showInvisible(): String = buildString {
         forEach { append(if (it == '\n') "\\n" else if (it == '\r') "\\r" else if (it == '\t') "\\t" else it) }
     }
-
-    /** 正则里有特殊含义的 ASCII 字符；全角括号不在其中，它就是要比对的普通字符。 */
-    private const val REGEX_META = "*+?()[]{}^$.|\\0123456789-"
-
-    private const val BRACKET_CHARS = "［］[]【】「」『』“”‘’\"'"
 }

@@ -55,13 +55,11 @@ class CastSpeechOverlayCanvasTest {
                 RegexCastSplitter.matchesIn(CastMarkers.blank(second), effects).isEmpty(),
         )
 
-        val chapter = CastSpeechOverlay.unitMatches(plan, effects)
-        assertEquals(1, chapter.canvas.count { it == '［' })
-        assertEquals(first + second, chapter.canvas)
+        val perUnit = CastSpeechOverlay.unitMatches(plan, effects)
         // 一次命中裁进它经过的两块
-        assertEquals(2, chapter.perUnit.sumOf { it.size })
+        assertEquals(2, perUnit.sumOf { it.size })
 
-        val voiced = chapter.perUnit.mapIndexed { index, own ->
+        val voiced = perUnit.mapIndexed { index, own ->
             RegexCastSplitter.split(
                 0,
                 plan[index].segment.text,
@@ -78,8 +76,7 @@ class CastSpeechOverlayCanvasTest {
         val first = "旁白。［系统］提示"
         val plan = listOf(item(7, first))
 
-        val chapter = CastSpeechOverlay.unitMatches(plan, effects)
-        val own = chapter.perUnit.single()
+        val own = CastSpeechOverlay.unitMatches(plan, effects).single()
 
         assertEquals(1, own.size)
         assertEquals(
@@ -89,8 +86,15 @@ class CastSpeechOverlayCanvasTest {
     }
 
     @Test
-    fun `没有规则或没有单元时不产生匹配串`() {
-        assertEquals("", CastSpeechOverlay.unitMatches(listOf(item(0, "正文")), emptyList()).canvas)
-        assertEquals("", CastSpeechOverlay.unitMatches(emptyList(), effects).canvas)
+    fun `没有规则或没有单元时不产生命中`() {
+        // 每个单元一格，没有规则时那一格是空的
+        assertEquals(
+            listOf<List<RegexCastSplitter.Match>>(emptyList()),
+            CastSpeechOverlay.unitMatches(listOf(item(0, "正文")), emptyList()),
+        )
+        assertEquals(
+            listOf<List<RegexCastSplitter.Match>>(),
+            CastSpeechOverlay.unitMatches(emptyList(), effects),
+        )
     }
 }
