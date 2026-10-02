@@ -242,8 +242,8 @@ object RegexCastRuleStore {
      *
      * 分组链上任何一层停用，那一组里的规则整体不生效（与声音池候选同一口径）。
      * 消费方：CastSpeechOverlay.apply 把它交给 [RegexCastSplitter.matchesIn]——
-     * [RegexCastRule.pattern] 在这里编一次，匹配的是**一整段**等长抹平版正文
-     * （口径见 [io.legado.app.feature.reader.core.cast.CastMarkers.blank]），命中再按朗读单元裁开。
+     * [RegexCastRule.pattern] 在这里编一次，匹配的是**整章原文**（不抹平，口径见
+     * [io.legado.app.help.readaloud.cast.CastSpeechOverlay.unitMatches]），命中再按朗读单元裁开。
      */
     suspend fun effectsFor(book: Book): List<RegexCastEffect> = withContext(Dispatchers.IO) {
         val rules = appDb.regexCastRuleDao.findEnabledForBook(book.name, book.origin)

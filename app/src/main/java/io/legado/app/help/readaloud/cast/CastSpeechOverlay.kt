@@ -254,6 +254,14 @@ object CastSpeechOverlay {
                         explainNoHit(effect.pattern.pattern, body)
                 )
             }
+            // 匹配串长什么样，直接给一段看得到字符的样本：符号是不是被替换净化改过、
+            // 是不是还有别的全角/半角混用，一眼就能定。
+            body.indexOf("［").takeIf { it >= 0 }?.let { at ->
+                AppLog.put(
+                    "正则角色: 匹配串样本…" +
+                        body.substring(maxOf(0, at - 12), minOf(body.length, at + 24)) + "…"
+                )
+            }
         }
         AppLog.put(
             "多角色朗读: 本章 ${plan.size} 个朗读单元，$voiced 段用角色音" +
@@ -348,7 +356,11 @@ object CastSpeechOverlay {
         val ends = ArrayList<Int>(plan.size)
         plan.forEach { item ->
             starts += canvas.length
-            canvas.append(CastMarkers.blank(item.segment.text))
+            // 不抹平标记：标记符号是用户可配的（CastSyntax.markStart/markEnd），配成书里本来就
+            // 有的括号时，抹平会把用户要匹配的那段整个擦掉 → 正则永远 0 命中，而高亮规则与
+            // 替换规则比的是原文，所以它们能命中。命中的那几段本来就要发声，标记由
+            // speechText() 在送引擎前统一去掉。
+            canvas.append(item.segment.text)
             ends += canvas.length
         }
         val text = canvas.toString()
