@@ -1,6 +1,5 @@
 package io.legado.app.help.readaloud.cast
 
-import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
 import io.legado.app.domain.model.readaloud.ChapterSpeechSegment
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
 import io.legado.app.domain.model.readaloud.SpeechResolutionSource
@@ -13,10 +12,10 @@ import org.junit.Test
 /**
  * 正则角色的匹配范围。
  *
- * 划分方式（整句、按符号）会把一句台词切成多个朗读单元，而送进 [CastSpeechOverlay.apply] 的
- * 「段落列表」那时已经是切完的那一份：按单元或按这一份比，`［…］` 这种中间带句号的内容
- * 首尾落在两个单元里，永远凑不齐 → 整章 0 命中（短字面量不受影响，所以看着像「只有正则坏了」）。
- * 画布把单元按章内绝对坐标铺回去，命中才能跨单元裁进它经过的每一块。
+ * 划分方式（整句、按符号）会把一句台词切成多个朗读单元：按单元比的话 `［…］` 这种中间带句号
+ * 的内容首尾落在两块里，永远凑不齐 → 整章 0 命中（短字面量整块落在同一句里不受影响，
+ * 所以看着像「只有正则不生效」）。[CastSpeechOverlay.unitMatches] 按单元顺序把文字接起来比，
+ * 只依赖先后，不依赖 segment.chapterPosition 那份绝对坐标。
  */
 class CastSpeechOverlayCanvasTest {
 
@@ -24,9 +23,10 @@ class CastSpeechOverlayCanvasTest {
         RegexCastEffect("系统", Regex("［([^］]*)］"), voiceId = "v1"),
     )
 
+    /** [at] 故意全部传同一个值：单元顺序才是这套匹配的依据，绝对坐标错了也不该影响命中。 */
     private fun item(at: Int, text: String) = SpeechPlanItem(
         segment = ChapterSpeechSegment(
-            id = "seg-$at",
+            id = "seg-$text",
             analysisId = "a",
             bookUrl = "book",
             chapterIndex = 3,
@@ -43,11 +43,10 @@ class CastSpeechOverlayCanvasTest {
     )
 
     @Test
-    fun `a bracket span split over two units is found on the canvas and voiced in both`() {
+    fun `a bracket span split over two units is found and voiced in both`() {
         val first = "　　［咯咯……说不定"
         val second = "有一天又会有叫的机会。］"
-        val secondAt = first.length + 1
-        val plan = listOf(item(0, first), item(secondAt, second))
+        val plan = listOf(item(0, first), item(0, second))
 
         // 旧口径：只在本单元里比，两块都凑不齐首尾
         assertTrue(
@@ -56,16 +55,17 @@ class CastSpeechOverlayCanvasTest {
                 RegexCastSplitter.matchesIn(CastMarkers.blank(second), effects).isEmpty(),
         )
 
-        val matches = RegexCastSplitter.matchesIn(CastSpeechOverlay.chapterCanvas(plan), effects)
-        assertEquals(1, matches.size)
+        val chapter = CastSpeechOverlay.unitMatches(plan, effects)
+        assertEquals(1, chapter.canvas.count { it == '［' })
+        assertEquals(first + second, chapter.canvas)
+        // 一次命中裁进它经过的两块
+        assertEquals(2, chapter.perUnit.sumOf { it.size })
 
-        val voiced = plan.map { unit ->
+        val voiced = chapter.perUnit.mapIndexed { index, own ->
             RegexCastSplitter.split(
-                unit.segment.chapterPosition,
-                unit.segment.text,
-                matches.mapNotNull {
-                    it.ofPiece(unit.segment.chapterPosition, unit.segment.text.length)
-                },
+                0,
+                plan[index].segment.text,
+                own,
                 effects,
             ).parts.mapNotNull { it.voiceId }
         }
@@ -74,20 +74,23 @@ class CastSpeechOverlayCanvasTest {
     }
 
     @Test
-    fun `canvas keeps every unit at its own chapter position`() {
-        val first = "甲段"
-        val second = "乙段"
-        val chapter = listOf(
-            CanonicalSpeechParagraph(0, first, 0),
-            CanonicalSpeechParagraph(1, second, first.length + 1),
-        )
-        val canvas = CastSpeechOverlay.chapterCanvas(chapter.map { item(it.chapterPosition, it.text) })
+    fun `每块拿到的下标是它自己文字里的偏移`() {
+        val first = "旁白。［系统］提示"
+        val plan = listOf(item(7, first))
 
-        assertEquals("${first} ${second}", canvas)
+        val chapter = CastSpeechOverlay.unitMatches(plan, effects)
+        val own = chapter.perUnit.single()
+
+        assertEquals(1, own.size)
+        assertEquals(
+            "［系统］",
+            first.substring(own.single().start, own.single().end),
+        )
     }
 
     @Test
-    fun `an empty plan has no canvas to match on`() {
-        assertEquals("", CastSpeechOverlay.chapterCanvas(emptyList()))
+    fun `没有规则或没有单元时不产生匹配串`() {
+        assertEquals("", CastSpeechOverlay.unitMatches(listOf(item(0, "正文")), emptyList()).canvas)
+        assertEquals("", CastSpeechOverlay.unitMatches(emptyList(), effects).canvas)
     }
 }

@@ -204,30 +204,29 @@ object CastSpeechOverlay {
             )
         }
 
-        // 正则的匹配范围是**整章坐标**，不是单个朗读单元：划分方式（整句/按符号）会把一句台词
-        // 再切成多个单元，而「段落列表」拿到的已经是切完的那一份，按它比等于还在按句比——
-        // 「［…］」中间带句号时首尾永远落在两个单元里，整章 0 命中。
-        // 画布把每个单元的抹平文字按它的章内绝对位置铺回去（没铺到的地方是段间分隔与被切掉的
-        // 空隙，留空格），命中按绝对下标裁回每个单元。
-        val canvas = if (effects.isEmpty()) "" else chapterCanvas(plan)
-        val absoluteMatches = if (canvas.isEmpty()) {
-            emptyList()
-        } else {
-            RegexCastSplitter.matchesIn(canvas, effects)
-        }
-        plan.forEach { item ->
+        // 正则的匹配范围是**整章**，不是单个朗读单元：划分方式（整句、按符号）会把一句台词
+        // 拆成多个单元，「［…］」中间带句号时首尾落在两个单元里，按单元比永远凑不齐 → 整章 0 命中
+        // （「爆炸」这种短字面量整块落在同一句里，所以看着像「只有正则不生效」）。
+        // 匹配串按 plan 顺序把每个单元的抹平文字**接起来**，命中再按顺序切回各单元：
+        // 全程只依赖单元的先后，不依赖 segment.chapterPosition（那一份是缓存里的绝对坐标，
+        // 与本次切分的粒度无关，错了就会把命中整批裁没）。
+        val chapterMatches = unitMatches(plan, effects)
+        plan.forEachIndexed { index, item ->
+            val own = chapterMatches.perUnit.getOrElse(index) { emptyList() }
+            val shiftBase = item.segment.chapterPosition
             piecesOf(item, spans).forEach { piece ->
                 val parts = if (effects.isEmpty()) {
                     listOf(RegexCastSplitter.Part(piece.start, piece.text, null, ""))
                 } else {
-                    // 画布空（章里一个单元都没有）时退回按单元自己比，不比旧行为更差
-                    val matches = if (absoluteMatches.isEmpty()) {
-                        RegexCastSplitter.matchesIn(CastMarkers.blank(piece.text), effects)
-                    } else {
-                        absoluteMatches.mapNotNull { it.ofPiece(piece.start, piece.text.length) }
-                    }
+                    // 单元内下标 → 本块内下标：piece 起点与单元起点的差就是它在自己文字里的偏移
+                    val shift = piece.start - shiftBase
                     RegexCastSplitter
-                        .split(piece.start, piece.text, matches, effects)
+                        .split(
+                            piece.start,
+                            piece.text,
+                            own.mapNotNull { it.ofPiece(shift, piece.text.length) },
+                            effects,
+                        )
                         .let { split ->
                             carrySound = RegexCastSplitter.mergeSound(carrySound, split.trailingSound)
                             split.parts
@@ -244,15 +243,14 @@ object CastSpeechOverlay {
             )
         }
         if (effects.isNotEmpty() && regexHit == 0 && regexMuted == 0) {
-            // 一条都没命中时，光看正则猜不出原因：按字符再数一遍正文，
-            // 分清「正文里没有这个符号（这本书用的是别的括号）」和「符号在、正则写法对不上」。
-            // 比的这一份是替换净化之后的正文（与屏幕上看到的一致，见
-            // io.legado.app.help.book.ContentProcessor.getContent 的调用方），
-            // 被替换规则改掉的符号在这里已经换成了新符号。
-            val body = plan.joinToString(separator = "\n") { it.segment.text }
+            // 一条都没命中时，光看正则猜不出原因：拿**真正比的那一份**（各单元抹平文字按顺序
+            // 接起来的那串）再数一遍字符，分清「正文里没有这个符号」和「符号在、写法对不上」。
+            // 替换净化发生在它之前（见 io.legado.app.help.book.ContentProcessor.getContent），
+            // 被替换规则改掉的符号在这一份里已经是新符号。
+            val body = chapterMatches.canvas
             effects.forEach { effect ->
                 AppLog.put(
-                    "正则角色「${effect.label}」本章 0 命中（按替换净化之后的整段正文比）：" +
+                    "正则角色「${effect.label}」本章 0 命中（比的是整章 ${body.length} 字）：" +
                         explainNoHit(effect.pattern.pattern, body)
                 )
             }
@@ -327,26 +325,42 @@ object CastSpeechOverlay {
     )
 
     /**
-     * 把朗读单元按章内绝对坐标铺成一张等长画布，给正则匹配用（消费方是 [apply] 里的
-     * `RegexCastSplitter.matchesIn`）。
+     * 按整章找正则角色的命中：[canvas] 是把每个朗读单元的抹平文字按 plan 顺序接起来的那一份，
+     * [perUnit] 是它在每个单元里的下标（单元内相对偏移，不是章内绝对坐标）。
      *
-     * 每个单元放的是它的**抹平版**文字（角色标记等长换成空格，见 [CastMarkers.blank]），
-     * 单元之间没被覆盖的位置（段间分隔、划分时被切掉的空隙）留空格——画布下标就是章内偏移，
-     * 所以命中裁回单元时不需要知道这个单元属于哪一段、也不需要段序号两边对上。
+     * 生产方是 [apply]：划分方式把一句台词切成多个单元时，跨单元的首尾只有在整章这一份上
+     * 才成对；消费方按 [perUnit] 裁到每个切块。
      */
-    internal fun chapterCanvas(plan: List<SpeechPlanItem>): String {
-        val length = plan.maxOfOrNull { it.segment.chapterPosition + it.segment.text.length } ?: 0
-        if (length <= 0) return ""
-        val canvas = CharArray(length) { ' ' }
+    internal class ChapterMatches(
+        val canvas: String,
+        val perUnit: List<List<RegexCastSplitter.Match>>,
+    )
+
+    internal fun unitMatches(
+        plan: List<SpeechPlanItem>,
+        effects: List<RegexCastEffect>,
+    ): ChapterMatches {
+        if (effects.isEmpty() || plan.isEmpty()) {
+            return ChapterMatches("", List(plan.size) { emptyList() })
+        }
+        val canvas = StringBuilder()
+        val starts = ArrayList<Int>(plan.size)
+        val ends = ArrayList<Int>(plan.size)
         plan.forEach { item ->
-            val at = item.segment.chapterPosition
-            val blanked = CastMarkers.blank(item.segment.text)
-            blanked.forEachIndexed { index, char ->
-                val position = at + index
-                if (position in 0 until length) canvas[position] = char
+            starts += canvas.length
+            canvas.append(CastMarkers.blank(item.segment.text))
+            ends += canvas.length
+        }
+        val text = canvas.toString()
+        val hits = RegexCastSplitter.matchesIn(text, effects)
+        val perUnit = plan.indices.map { index ->
+            hits.mapNotNull { hit ->
+                val from = maxOf(hit.start, starts[index]) - starts[index]
+                val to = minOf(hit.end, ends[index]) - starts[index]
+                if (to > from) RegexCastSplitter.Match(from, to, hit.rank) else null
             }
         }
-        return String(canvas)
+        return ChapterMatches(text, perUnit)
     }
 
     /**
