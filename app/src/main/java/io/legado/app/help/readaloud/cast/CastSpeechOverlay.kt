@@ -248,6 +248,13 @@ object CastSpeechOverlay {
             // 替换净化发生在它之前（见 io.legado.app.help.book.ContentProcessor.getContent），
             // 被替换规则改掉的符号在这一份里已经是新符号。
             val body = chapterMatches.canvas
+            // 分两段数：matchesIn 在匹配串上找到的处数，和它们裁到各单元后剩下的处数。
+            // 前者 >0 而后者 =0 → 丢在裁剪/切块那一步；两者都 =0 → 匹配串或正则本身的问题。
+            val found = RegexCastSplitter.matchesIn(body, effects)
+            AppLog.put(
+                "正则角色: 整章找到 ${found.size} 处，裁到单元后剩 " +
+                    "${chapterMatches.perUnit.sumOf { it.size }} 处"
+            )
             effects.forEach { effect ->
                 AppLog.put(
                     "正则角色「${effect.label}」本章 0 命中（比的是整章 ${body.length} 字）：" +
