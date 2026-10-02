@@ -47,6 +47,20 @@ interface BgmPoolDao {
     @Query("UPDATE bgm_tracks SET volume = :volume, updatedAt = :now WHERE id = :id")
     suspend fun setVolume(id: String, volume: Float, now: Long = System.currentTimeMillis())
 
+    @Query("UPDATE bgm_tracks SET name = :name, updatedAt = :now WHERE id = :id")
+    suspend fun setName(id: String, name: String, now: Long = System.currentTimeMillis())
+
+    /**
+     * 这条配乐所在的全部池名。
+     *
+     * 场景标记 [io.legado.app.data.entities.BgmSceneMark] 记的是 `poolName` + `trackName`
+     * 两个**名字**而不是 id，所以改配乐名必须连带把引用它的场景一起改掉，
+     * 而且只能限在这些池里改——别的池可能正好也有一条同名的。
+     * 消费方：BgmPoolStore.renameTrack。
+     */
+    @Query("SELECT p.name FROM bgm_pools p JOIN bgm_pool_members m ON m.poolId = p.id WHERE m.trackId = :trackId")
+    suspend fun getPoolNamesOfTrack(trackId: String): List<String>
+
     @Delete
     suspend fun delete(track: BgmTrackEntity)
 

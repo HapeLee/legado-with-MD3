@@ -117,7 +117,7 @@ object CastCapsuleGeometry {
      * 未分配占位胶囊宽：里面只有一个人形图标，没有任何文字（点它就是给这句分配角色）。
      *
      * 与「只显头像」的角色那颗同一条规则：**宽 = 高**，所以底板圆角 0 是正方形、拉满是正圆。
-     * 图标落点由 [CastCapsuleStyle.placeholderIconLeft] 夹在 `[0, h - 图标直径]` 内，
+     * 图标落点由 [CastCapsuleStyle.avatarLeft] 夹在 `[0, h - 图标直径]` 内，
      * 头像位移拉满也不会把图标挤出这颗胶囊。
      *
      * 消费方：LegacyReaderChapterPaginator（排版）、CastCapsuleStyleScreen.PreviewBoard（预览），

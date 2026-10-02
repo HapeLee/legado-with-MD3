@@ -56,17 +56,12 @@ data class CastCapsuleStyle(
     }
 
     /**
-     * 未分配占位那颗里人形图标的左沿。那颗永远没有文字，按左右内边距落点即可，
-     * 不与 [avatarLeft] 共用（那颗胶囊比头像宽，居中落点会让图标偏左）。
-     * 消费方：[CastCapsuleGeometry.placeholderWidthPx] 与 CastCapsuleStyleScreen.PreviewBoard。
+     * 头像中心相对垂直中心的偏移。
+     *
+     * 角色那颗与未分配占位那颗共用 [avatarLeft]：两颗都是正方形底板（见
+     * [CastCapsuleGeometry.widthOf] 的只显头像分支与 `placeholderWidthPx`），
+     * 图标必须落在同一格中心，各走一套落点就会一高一低。
      */
-    fun placeholderIconLeft(height: Float): Float {
-        val diameter = avatarDiameter(height)
-        return (height * CastCapsuleGeometry.padRatio + height * avatarDx / SHIFT_FULL.toFloat())
-            .coerceIn(0f, max(0f, height - diameter))
-    }
-
-    /** 头像中心相对垂直中心的偏移。 */
     fun avatarCenterOffset(height: Float): Float {
         val room = (height - avatarDiameter(height)) / 2f
         return (height * avatarDy / SHIFT_FULL.toFloat()).coerceIn(-room, room)

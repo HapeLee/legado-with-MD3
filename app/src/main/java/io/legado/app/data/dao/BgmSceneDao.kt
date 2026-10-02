@@ -32,4 +32,20 @@ interface BgmSceneDao {
 
     @Query("DELETE FROM bgm_scene_marks WHERE bookUrl = :bookUrl")
     suspend fun deleteForBook(bookUrl: String)
+
+    /**
+     * 配乐改名时同步场景标记里的曲目名：只动这些池里的那些标记。
+     *
+     * 调用方是 BgmPoolStore.renameTrack（它先查出这条配乐所在的池名）。
+     */
+    @Query(
+        "UPDATE bgm_scene_marks SET trackName = :newName, updatedAt = :now " +
+            "WHERE trackName = :oldName AND poolName IN (:poolNames)",
+    )
+    suspend fun renameTrackInPools(
+        oldName: String,
+        newName: String,
+        poolNames: List<String>,
+        now: Long = System.currentTimeMillis(),
+    )
 }

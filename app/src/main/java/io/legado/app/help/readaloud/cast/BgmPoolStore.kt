@@ -88,6 +88,29 @@ object BgmPoolStore {
         appDb.bgmPoolDao.setVolume(id, volume.coerceIn(0f, 1f))
     }
 
+    /**
+     * 改显示名。磁盘上的副本文件不动（`path` 保持原样），只改库里那一列。
+     *
+     * 必须连带改场景标记：[BgmSceneMark] 认的是 `poolName` + `trackName` **两个名字**，
+     * 只改曲库这一行会让已分配的场景指向一条不存在的曲目（朗读时静默没有配乐）。
+     * 同名可能撞车（两个池各有一条「雨声」），所以空名、重名都判非法返回 false，
+     * 让界面提示而不是写进库里留下歧义。
+     */
+    suspend fun renameTrack(id: String, name: String): Boolean {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return false
+        val dao = appDb.bgmPoolDao
+        val track = dao.getTrack(id) ?: return false
+        if (track.name == trimmed) return true
+        if (dao.getByName(trimmed)?.takeIf { it.id != id } != null) return false
+        dao.setName(id, trimmed)
+        val pools = dao.getPoolNamesOfTrack(id)
+        if (pools.isNotEmpty()) {
+            appDb.bgmSceneDao.renameTrackInPools(track.name, trimmed, pools)
+        }
+        return true
+    }
+
     suspend fun saveOrder(ids: List<String>) {
         ids.forEachIndexed { index, id -> appDb.bgmPoolDao.setOrder(id, index) }
     }

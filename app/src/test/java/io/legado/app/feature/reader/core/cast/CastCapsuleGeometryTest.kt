@@ -45,8 +45,12 @@ class CastCapsuleGeometryTest {
         assertEquals(avatarOnlyStyle.avatarLeft(height), withName, 1e-3f)
         assertEquals(avatarOnlyStyle.avatarLeft(height), withPool, 1e-3f)
         assertEquals(avatarOnlyStyle.avatarLeft(height), allOn, 1e-3f)
-        // 未分配那颗只有一个图标，它按自己的内边距居中，不跟着角色那颗走。
-        assertEquals(height * CastCapsuleGeometry.padRatio, CastCapsuleStyle().placeholderIconLeft(height), 1e-3f)
+        // 未分配那颗现在也是正方形底板，图标落点必须与角色那颗同一个：整格居中。
+        assertEquals(
+            (height - CastCapsuleStyle().avatarDiameter(height)) / 2f,
+            CastCapsuleStyle().avatarLeft(height),
+            1e-3f,
+        )
     }
 
     @Test
@@ -104,7 +108,7 @@ class CastCapsuleGeometryTest {
             1e-3f,
         )
         val iconRight = CastCapsuleStyle(avatarDx = 100, avatarScale = 150)
-            .let { it.placeholderIconLeft(height) + it.avatarDiameter(height) }
+            .let { it.avatarLeft(height) + it.avatarDiameter(height) }
         assertTrue("图标必须留在胶囊内：$iconRight > $height", iconRight <= height + 1e-3f)
     }
 }

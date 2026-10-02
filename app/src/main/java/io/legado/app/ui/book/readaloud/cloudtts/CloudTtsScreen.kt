@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -240,6 +241,9 @@ fun CloudTtsScreen(
             if (state.selectedTab == CloudTtsTab.Voices && state.voiceBatchMode) {
                 val selectedCount = state.selectedVoiceIds.size
                 AppFloatingActionButtonMenu(
+                    // 组件内部自带 horizontal 16 / vertical 24 的内边距，不抵消的话这颗
+                    // 会比平时那颗 FAB 往里缩，进出批量模式时位置一跳（用户说的「割裂」）。
+                    modifier = Modifier.offset(x = 16.dp, y = 24.dp),
                     expanded = voiceBatchMenuExpanded,
                     onExpandedChange = { voiceBatchMenuExpanded = it },
                     items = listOf(

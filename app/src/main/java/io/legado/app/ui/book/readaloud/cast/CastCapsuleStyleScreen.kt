@@ -501,13 +501,8 @@ private fun PreviewBoard(
     // placeholderWidthPx）都是正方形，圆角拉满就是正圆。
     val square = if (squareAvatarOnly) withAvatar && !withText else true
     val avatarSize = style.avatarDiameterDp(height)
-    // 落点与正文同源（见 CastCapsuleStyle.avatarLeft / placeholderIconLeft）：
-    // 角色那颗不随名字/池小字开关漂移，占位那颗走它自己的内边距。
-    val avatarLeft = if (squareAvatarOnly) {
-        style.avatarLeftDp(height)
-    } else {
-        style.placeholderIconLeftDp(height)
-    }
+    // 落点与正文同源：两颗共用 CastCapsuleStyle.avatarLeft，都不随名字/池小字开关漂移。
+    val avatarLeft = style.avatarLeftDp(height)
     val avatarShiftY = style.avatarShiftYDp(height)
     val textLeft = if (withAvatar) {
         maxOf(pad, avatarLeft + avatarSize + height * CastCapsuleGeometry.gapRatio)
@@ -618,9 +613,6 @@ private fun PreviewBoard(
  * 预览与正文共用同一份夹取规则（头像大小、位移上限），不再各抄一遍公式。
  */
 private fun CastCapsuleStyle.avatarLeftDp(height: Dp): Dp = avatarLeft(height.value).dp
-
-private fun CastCapsuleStyle.placeholderIconLeftDp(height: Dp): Dp =
-    placeholderIconLeft(height.value).dp
 
 private fun CastCapsuleStyle.avatarShiftYDp(height: Dp): Dp =
     avatarCenterOffset(height.value).dp
