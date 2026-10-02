@@ -98,7 +98,8 @@ object CastSpeechOverlay {
 
         /**
          * 一个切块 → 一个朗读单元。音色优先级：正则角色 > 分配表角色 > 旁白——
-         * 这条优先级在这里落地，正则侧的选择结果由 [RegexCastSplitter.Part.voiceId] 带过来，
+         * 这条优先级在这里落地，正则侧的命中区间由 [paragraphMatches] 在**整段**上算好后裁进来，
+         * 音色由 [RegexCastSplitter.Part.voiceId] 带过来，
          * 正则侧那条规则自己选的变声器由 [RegexCastSplitter.Part.voiceEffect] 带过来（同一优先级）。
          *
          * [part] 带着切块自己的章内起点，所以被音效吃掉的那段文字在这里就是个空洞：
@@ -203,13 +204,37 @@ object CastSpeechOverlay {
             )
         }
 
+        // 正则的匹配范围是**一整段正文**，不是单个朗读单元：一句台词常被划分方式切成多个单元，
+        // 按单元比的话「被符号包住、中间还带句号」那一截永远凑不齐首尾，整章 0 命中
+        // （「爆炸」这种短字面量落在同一句里，所以看起来只有正则不生效）。
+        // 段落起点与朗读单元的 chapterPosition 同一套坐标，所以命中区间能按绝对下标裁回单元。
+        val paragraphMatches: Map<Int, List<RegexCastSplitter.Match>> = if (effects.isEmpty()) {
+            emptyMap()
+        } else {
+            paragraphs.associate { paragraph ->
+                paragraph.index to RegexCastSplitter.matchesIn(
+                    CastMarkers.blank(paragraph.text),
+                    effects,
+                ).map {
+                    RegexCastSplitter.Match(
+                        start = it.start + paragraph.chapterPosition,
+                        end = it.end + paragraph.chapterPosition,
+                        rank = it.rank,
+                    )
+                }
+            }
+        }
         plan.forEach { item ->
+            val absolute = paragraphMatches[item.segment.paragraphIndex]
             piecesOf(item, spans).forEach { piece ->
                 val parts = if (effects.isEmpty()) {
                     listOf(RegexCastSplitter.Part(piece.start, piece.text, null, ""))
                 } else {
+                    // 段落序号对不上（认不出这一单元属于哪段）时退回按单元自己比，行为与改口径前一致
+                    val matches = absolute?.mapNotNull { it.ofPiece(piece.start, piece.text.length) }
+                        ?: RegexCastSplitter.matchesIn(CastMarkers.blank(piece.text), effects)
                     RegexCastSplitter
-                        .split(piece.start, piece.text, CastMarkers.blank(piece.text), effects)
+                        .split(piece.start, piece.text, matches, effects)
                         .let { split ->
                             carrySound = RegexCastSplitter.mergeSound(carrySound, split.trailingSound)
                             split.parts
@@ -234,7 +259,7 @@ object CastSpeechOverlay {
             val body = plan.joinToString(separator = "\n") { it.segment.text }
             effects.forEach { effect ->
                 AppLog.put(
-                    "正则角色「${effect.label}」本章 0 命中（按替换净化之后的正文比）：" +
+                    "正则角色「${effect.label}」本章 0 命中（按替换净化之后的整段正文比）：" +
                         explainNoHit(effect.pattern.pattern, body)
                 )
             }
@@ -436,21 +461,34 @@ object CastSpeechOverlay {
     }
 
     /**
-     * 「一条都没命中」的归因：拿正则里第一个普通字符在正文里数一遍。
+     * 「一条都没命中」的归因：拿正则里第一个普通字符在正文里数一遍，并把正文里出现过的
+     * 括号类符号连码位一起列出来。
      *
-     * 消费方是 [apply] 里 0 命中时那行日志。带反斜杠转义的模式没法这样取样，直接说明不猜。
+     * 消费方是 [apply] 里 0 命中时那行日志。同一种「方括号」在不同来源的正文里可能是
+     * U+FF3B / U+3011 / U+005B 三个不同字符，肉眼看着一样，只有码位能分辨。
      */
     internal fun explainNoHit(pattern: String, body: String): String {
-        if (pattern.contains('\\')) return "模式含转义，按字符取样不可靠，请核对正则写法"
+        // `\Q…\E` 是 Kotlin 把一整串按字面量包住的外壳：看到这层就说明这条压根没按正则编
+        // （开关关着，或正则语法不通过被 compile 退回字面量），再挑字符比对没有意义。
+        if (pattern.startsWith("\\Q")) return "整串按字面量在比（正则语法不通过或「使用正则」关着）"
         val probe = pattern.firstOrNull { it !in REGEX_META }
-            ?: return "模式里没有可比对的普通字符"
-        return if (!body.contains(probe)) {
-            "「$probe」在本章正文一次都没出现；本章实际有的括号类符号：「" +
-                body.toSet().filter { it in BRACKET_CHARS }.joinToString("") + "」"
-        } else {
-            "「$probe」在本章出现 ${body.count { it == probe }} 次，是正则写法与正文对不上"
+        val head = when {
+            probe == null -> "模式里没有可比对的普通字符"
+            !body.contains(probe) -> "「$probe」在本章正文一次都没出现"
+            else -> "「$probe」在本章出现 ${body.count { it == probe }} 次"
         }
+        return "$head；本章正文里的括号类符号：${bracketInventory(body)}"
     }
+
+    /** 正文里出现过的括号类符号：`「字符」码位×次数`，一个都没有就说「无」。 */
+    private fun bracketInventory(body: String): String = body.toList()
+        .filter { it in BRACKET_CHARS }
+        .groupingBy { it }
+        .eachCount()
+        .entries
+        .sortedByDescending { it.value }
+        .joinToString("、") { "「${it.key}」U+%04X×${it.value}".format(it.key.code) }
+        .ifBlank { "无" }
 
     /** 正则里有特殊含义的 ASCII 字符；全角括号不在其中，它就是要比对的普通字符。 */
     private const val REGEX_META = "*+?()[]{}^$.|\\0123456789-"

@@ -19,7 +19,13 @@ class RegexCastPatternMatchTest {
     private fun parts(pattern: String, useRegex: Boolean, text: String): List<RegexCastSplitter.Part> {
         val regex = RegexCastRuleStore.compile(pattern, useRegex)
         assertTrue("编译不出正则：$pattern", regex != null)
-        return RegexCastSplitter.split(0, text, text, listOf(RegexCastEffect("测试规则", regex!!, voiceId = "voice-1"))).parts
+        val effects = listOf(RegexCastEffect("测试规则", regex!!, voiceId = "voice-1"))
+        return RegexCastSplitter.split(
+            0,
+            text,
+            RegexCastSplitter.matchesIn(text, effects),
+            effects,
+        ).parts
     }
 
     private fun voiced(parts: List<RegexCastSplitter.Part>) = parts.filter { it.voiceId != null }

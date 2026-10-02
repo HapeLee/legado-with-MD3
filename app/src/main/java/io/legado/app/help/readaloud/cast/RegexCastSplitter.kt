@@ -7,9 +7,9 @@ package io.legado.app.help.readaloud.cast
  * 改放这段音频」。朗读单元是按章内坐标排的，所以切出来的块必须各自带绝对起点，
  * 中间被吃掉的那段文字就地留一个空洞（后面的单元起点跟着往后挪，区间不重叠就行）。
  *
- * 匹配定位用**抹平版**文字（角色标记等长替换成空格）：只在标记之外找命中，
- * 但切片仍切原文，下标两边一致——与 [io.legado.app.feature.reader.core.cast.CastMarkers]
- * 在分配侧的用法同一口径。
+ * 匹配定位用**抹平版**文字（角色标记等长替换成空格），由 [matchesIn] 在**一整段**上找命中，
+ * 下标两边一致——与 [io.legado.app.feature.reader.core.cast.CastMarkers]
+ * 在分配侧的用法同一口径。[split] 只按送进来的区间切块，不再自己匹配文本。
  */
 object RegexCastSplitter {
 
@@ -38,19 +38,65 @@ object RegexCastSplitter {
     /** [parts] 为空时（整段文字都被「不念」吃掉），[trailingSound] 是音频串，由调用方挂到下一个朗读单元。 */
     class SplitResult(val parts: List<Part>, val trailingSound: String)
 
-    private class Hit(val start: Int, val end: Int, val rank: Int, val effect: RegexCastEffect)
+    /**
+     * 一条命中在**匹配文本**里的半开区间 `[start, end)`，`rank` 是命中它的那条规则在
+     * [RegexCastEffect] 列表里的下标（同一位置多条规则抢，排序在前的赢）。
+     *
+     * 生产方是 [matchesIn]，消费方是 [split]；[matchesIn] 用哪一份文本比，区间就按那一份算下标。
+     */
+    data class Match(val start: Int, val end: Int, val rank: Int) {
+        /**
+         * 把一条按**章内绝对下标**记的命中裁到某个朗读单元里（本块从 [pieceStart] 起、长
+         * [pieceLength]）；与本块不相交返回 null。跨句的命中会同时裁进它经过的每一块，
+         * 那些块共用同一条规则的音色。
+         */
+        fun ofPiece(pieceStart: Int, pieceLength: Int): Match? {
+            val from = (start - pieceStart).coerceIn(0, pieceLength)
+            val to = (end - pieceStart).coerceIn(0, pieceLength)
+            return if (to > from) Match(from, to, rank) else null
+        }
+    }
 
-    fun split(base: Int, raw: String, blanked: String, effects: List<RegexCastEffect>): SplitResult {
-        if (raw.isEmpty()) return SplitResult(emptyList(), "")
-        if (effects.isEmpty()) return SplitResult(listOf(Part(base, raw, null, "")), "")
-        val hits = ArrayList<Hit>()
+    /**
+     * 在一份（等长抹平版）文本里找出全部命中。
+     *
+     * 匹配范围必须是**一整段**而不是一个朗读单元：一句台词常被子标点切成多个朗读单元，
+     * 按单元比的话，`［…］` 这种跨句的括号内容永远凑不齐首尾，正则角色就整章 0 命中
+     * （短到落在同一句里的字面量则不受影响）。调用方把结果按朗读单元裁好再交给 [split]。
+     */
+    fun matchesIn(blanked: String, effects: List<RegexCastEffect>): List<Match> {
+        if (blanked.isEmpty() || effects.isEmpty()) return emptyList()
+        val matches = ArrayList<Match>()
         effects.forEachIndexed { rank, effect ->
             effect.pattern.findAll(blanked).forEach { match ->
                 val from = match.range.first
                 val to = match.range.last + 1
                 // 空命中（如 `a*` 匹配空串）会把文字切成无穷块，直接不收
-                if (to > from) hits += Hit(from, to, rank, effect)
+                if (to > from) matches += Match(from, to, rank)
             }
+        }
+        return matches
+    }
+
+    private class Hit(val start: Int, val end: Int, val rank: Int, val effect: RegexCastEffect)
+
+    /**
+     * 按 [matches]（相对于 [raw] 的下标）把一段朗读文字切开。
+     *
+     * [matches] 由 [matchesIn] 在整段文本上算好后裁到本块；[effects] 只用 `rank` 反查是哪条规则。
+     */
+    fun split(
+        base: Int,
+        raw: String,
+        matches: List<Match>,
+        effects: List<RegexCastEffect>,
+    ): SplitResult {
+        if (raw.isEmpty()) return SplitResult(emptyList(), "")
+        if (effects.isEmpty()) return SplitResult(listOf(Part(base, raw, null, "")), "")
+        val hits = ArrayList<Hit>()
+        matches.forEach { match ->
+            val effect = effects.getOrNull(match.rank) ?: return@forEach
+            if (match.end > match.start) hits += Hit(match.start, match.end, match.rank, effect)
         }
         if (hits.isEmpty()) return SplitResult(listOf(Part(base, raw, null, "")), "")
         // 同一位置只应用排序在前的那条规则；重叠的后面那些整条丢掉

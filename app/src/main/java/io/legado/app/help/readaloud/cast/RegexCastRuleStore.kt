@@ -241,9 +241,9 @@ object RegexCastRuleStore {
      * 这本书现在能用的正则角色：按规则顺序编译、跳过被分组停用的、解好音色/音频。
      *
      * 分组链上任何一层停用，那一组里的规则整体不生效（与声音池候选同一口径）。
-     * 消费方：CastSpeechOverlay.apply 把它交给 [RegexCastSplitter.split]——
-     * [RegexCastRule.pattern] 在这里编一次，切分时匹配的是等长抹平版正文
-     * （口径见 [io.legado.app.feature.reader.core.cast.CastMarkers.blank]）。
+     * 消费方：CastSpeechOverlay.apply 把它交给 [RegexCastSplitter.matchesIn]——
+     * [RegexCastRule.pattern] 在这里编一次，匹配的是**一整段**等长抹平版正文
+     * （口径见 [io.legado.app.feature.reader.core.cast.CastMarkers.blank]），命中再按朗读单元裁开。
      */
     suspend fun effectsFor(book: Book): List<RegexCastEffect> = withContext(Dispatchers.IO) {
         val rules = appDb.regexCastRuleDao.findEnabledForBook(book.name, book.origin)
@@ -342,7 +342,7 @@ object RegexCastRuleStore {
      * 说这件事的日志在 [effectsFor]（这里保持纯函数，界面侧用 [isRegexSyntaxValid] 提前说）。
      *
      * 调用方只有 [effectsFor] 与 [selectVoiceIds]：产物 [RegexCastEffect.pattern] 交给
-     * [RegexCastSplitter.split] 在等长抹平版正文上匹配。
+     * [RegexCastSplitter.matchesIn] 在等长抹平版正文上匹配。
      */
     fun compile(pattern: String, useRegex: Boolean): Regex? {
         if (pattern.isBlank()) return null

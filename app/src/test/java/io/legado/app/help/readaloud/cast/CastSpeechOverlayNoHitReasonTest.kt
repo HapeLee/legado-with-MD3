@@ -30,9 +30,18 @@ class CastSpeechOverlayNoHitReasonTest {
     }
 
     @Test
-    fun `refuses to guess when the pattern uses escapes`() {
-        val reason = CastSpeechOverlay.explainNoHit("\\d+岁", "他12岁。")
+    fun `says the whole pattern is being compared as plain text`() {
+        val reason = CastSpeechOverlay.explainNoHit(Regex.escape("爆炸"), "砰。")
 
-        assertTrue(reason, "转义" in reason)
+        assertTrue(reason, "字面量" in reason)
+    }
+
+    @Test
+    fun `still gives evidence for a pattern that contains escapes`() {
+        val reason = CastSpeechOverlay.explainNoHit("\\d+岁", "他十二岁。「走吧。」")
+
+        assertTrue(reason, "「d」" in reason)
+        // 码位一起报出来：肉眼看着一样的括号，U+ 编号骗不了人
+        assertTrue(reason, "U+300C" in reason)
     }
 }

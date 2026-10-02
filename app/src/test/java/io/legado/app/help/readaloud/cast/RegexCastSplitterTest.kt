@@ -21,7 +21,37 @@ class RegexCastSplitterTest {
         patterns.map { RegexCastEffect("s-$path", Regex(it), soundPath = path) }.toList()
 
     private fun split(raw: String, effects: List<RegexCastEffect>, base: Int = 0) =
-        RegexCastSplitter.split(base, raw, CastMarkers.blank(raw), effects)
+        RegexCastSplitter.split(
+            base,
+            raw,
+            RegexCastSplitter.matchesIn(CastMarkers.blank(raw), effects),
+            effects,
+        )
+
+    @Test
+    fun `a span that crosses a sentence boundary still voices every unit it covers`() {
+        // 「划分方式=按符号」会把一整段切成一句一个单元。括号内容里带句号时，只有按整段比
+        // 才凑得齐首尾——这就是「字面量生效、正则不生效」的真实差别。
+        val effects = voice("v1", "［([^］]*)］")
+        val paragraph = "旁白一句。［低声说。明天再来］收尾。"
+        val cut = paragraph.indexOf('明')
+        val matches = RegexCastSplitter.matchesIn(paragraph, effects)
+        assertEquals(1, matches.size)
+        val first = paragraph.substring(0, cut)
+        val rest = paragraph.substring(cut)
+        assertEquals(
+            listOf("［低声说。"),
+            matches.mapNotNull { it.ofPiece(0, first.length) }
+                .map { paragraph.subSequence(it.start, it.end).toString() },
+        )
+        assertEquals(
+            listOf("明天再来］"),
+            matches.mapNotNull { it.ofPiece(cut, rest.length) }
+                .map { rest.subSequence(it.start, it.end).toString() },
+        )
+        // 旧口径（只在本单元里比）：这半句凑不齐首尾，一块都顶不上音色
+        assertTrue(split(first, effects).parts.none { it.voiceId != null })
+    }
 
     @Test
     fun `a voice swap still splits into its own unit`() {
