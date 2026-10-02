@@ -71,9 +71,13 @@ object RegexCastSplitter {
         if (text.isEmpty() || effects.isEmpty()) return emptyList()
         val matches = ArrayList<Match>()
         effects.forEachIndexed { rank, effect ->
-            effect.pattern.findAll(text).forEach { match ->
-                val from = match.range.first
-                val to = match.range.last + 1
+            // 直接走平台正则：这里只要整段命中的首尾下标，不需要分组、也不需要 Kotlin
+            // 那层 Sequence<MatchResult>（少一层就少一处「对象里的正则与它报出的模式串不一致」
+            // 时无从下手的地方）。
+            val matcher = effect.pattern.toPattern().matcher(text)
+            while (matcher.find()) {
+                val from = matcher.start()
+                val to = matcher.end()
                 // 空命中（如 `a*` 匹配空串）会把文字切成无穷块，直接不收
                 if (to > from) matches += Match(from, to, rank)
             }

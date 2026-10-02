@@ -256,6 +256,15 @@ object CastSpeechOverlay {
                     "${chapterMatches.perUnit.sumOf { it.size }} 处"
             )
             effects.forEach { effect ->
+                // 现对象 vs 拿它自己报出的模式串重编一遍：前者 0 处、后者 >0 处 = 这个 Regex
+                // 对象与它报出的字符串不是一回事；两者都 0 处 = 匹配串里没有这一对。
+                AppLog.put(
+                    "正则角色「${effect.label}」探针：现对象 ${effect.pattern.findAll(body).count()} 处 " +
+                        "重编 ${Regex(effect.pattern.pattern).findAll(body).count()} 处 " +
+                        "flags=${effect.pattern.toPattern().flags()} options=${effect.pattern.options}"
+                )
+            }
+            effects.forEach { effect ->
                 AppLog.put(
                     "正则角色「${effect.label}」本章 0 命中（比的是整章 ${body.length} 字）：" +
                         explainNoHit(effect.pattern.pattern, body)
