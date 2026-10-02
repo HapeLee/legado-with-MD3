@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -54,8 +55,10 @@ import io.legado.app.domain.model.readaloud.profile
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
+import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -113,6 +116,11 @@ fun CloudTtsScreen(
         )
     }
     val player = remember { MediaPlayer() }
+    /** 批量操作的右下角折叠菜单：只在批量模式下有意义，退出就收起来。 */
+    var voiceBatchMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.voiceBatchMode) {
+        if (!state.voiceBatchMode) voiceBatchMenuExpanded = false
+    }
     val errorTitle = stringResource(R.string.cloud_tts_error)
     val previewPlaybackFailed = stringResource(R.string.cloud_tts_preview_playback_failed)
     DisposableEffect(player) { onDispose { player.release() } }
@@ -228,18 +236,53 @@ fun CloudTtsScreen(
             )
         },
         floatingActionButton = {
-            AppFloatingActionButton(
-                onClick = {
-                    if (state.selectedTab == CloudTtsTab.Engines) showAddEngineSheet = true
-                    else onIntent(CloudTtsIntent.AddVoice)
-                },
-                icon = if (state.selectedTab == CloudTtsTab.Engines) Icons.Default.Add
-                    else Icons.Default.RecordVoiceOver,
-                tooltipText = stringResource(
-                    if (state.selectedTab == CloudTtsTab.Engines) R.string.cloud_tts_add_engine
-                    else R.string.cloud_tts_add_voice
-                ),
-            )
+            // 批量操作放右下角折叠菜单：列表顶部那条横排按钮划到下面就够不着了
+            if (state.selectedTab == CloudTtsTab.Voices && state.voiceBatchMode) {
+                val selectedCount = state.selectedVoiceIds.size
+                AppFloatingActionButtonMenu(
+                    expanded = voiceBatchMenuExpanded,
+                    onExpandedChange = { voiceBatchMenuExpanded = it },
+                    items = listOf(
+                        FabMenuItem(
+                            icon = Icons.Default.SelectAll,
+                            label = stringResource(R.string.select_all),
+                            action = { onIntent(CloudTtsIntent.ToggleSelectAllVoices) },
+                        ),
+                        FabMenuItem(
+                            icon = Icons.Default.PlaylistAdd,
+                            label = stringResource(
+                                R.string.cloud_tts_add_selected_to_pool, selectedCount,
+                            ),
+                            action = { onIntent(CloudTtsIntent.RequestAddToPool(emptyList())) },
+                        ),
+                        FabMenuItem(
+                            icon = Icons.Default.Delete,
+                            label = stringResource(
+                                R.string.cloud_tts_delete_selected_count, selectedCount,
+                            ),
+                            action = { onIntent(CloudTtsIntent.RequestDeleteSelectedVoices) },
+                        ),
+                        FabMenuItem(
+                            icon = Icons.Default.Close,
+                            label = stringResource(R.string.cancel),
+                            action = { onIntent(CloudTtsIntent.ToggleVoiceBatchMode) },
+                        ),
+                    ),
+                )
+            } else {
+                AppFloatingActionButton(
+                    onClick = {
+                        if (state.selectedTab == CloudTtsTab.Engines) showAddEngineSheet = true
+                        else onIntent(CloudTtsIntent.AddVoice)
+                    },
+                    icon = if (state.selectedTab == CloudTtsTab.Engines) Icons.Default.Add
+                        else Icons.Default.RecordVoiceOver,
+                    tooltipText = stringResource(
+                        if (state.selectedTab == CloudTtsTab.Engines) R.string.cloud_tts_add_engine
+                        else R.string.cloud_tts_add_voice
+                    ),
+                )
+            }
         },
     ) { padding ->
         HorizontalPager(
@@ -254,17 +297,6 @@ fun CloudTtsScreen(
                 ),
             ) {
                 if (page == CloudTtsTab.Voices.ordinal) {
-                if (state.voiceBatchMode) {
-                    item(key = "voiceBatchBar") {
-                        VoiceBatchBar(
-                            selectedCount = state.selectedVoiceIds.size,
-                            onSelectAll = { onIntent(CloudTtsIntent.ToggleSelectAllVoices) },
-                            onAddToPool = { onIntent(CloudTtsIntent.RequestAddToPool(emptyList())) },
-                            onDelete = { onIntent(CloudTtsIntent.RequestDeleteSelectedVoices) },
-                            onExit = { onIntent(CloudTtsIntent.ToggleVoiceBatchMode) },
-                        )
-                    }
-                }
                 if (state.voices.isEmpty() && !state.loading) {
                     item { AppText(stringResource(R.string.cloud_tts_no_saved_voices), Modifier.padding(24.dp)) }
                 }
@@ -1288,59 +1320,4 @@ private fun VoicePreviewTextDialog(
         dismissText = stringResource(R.string.cancel),
         onDismiss = onDismiss,
     )
-}
-
-/**
- * 批量选择模式顶上的那一行操作：全选 / 退出，第二行才是两个会改数据的动作。
- *
- * 一条横排放不下「添加到声音池（n）」和「删除选中（n）」这两个长文案，所以拆两行；
- * 一个都没勾上时后两个按下去没有意义，直接禁用。
- */
-@Composable
-private fun VoiceBatchBar(
-    selectedCount: Int,
-    onSelectAll: () -> Unit,
-    onAddToPool: () -> Unit,
-    onDelete: () -> Unit,
-    onExit: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MediumTonalButton(
-                onClick = onSelectAll,
-                text = stringResource(R.string.select_all),
-                modifier = Modifier.weight(1f),
-            )
-            MediumTonalButton(
-                onClick = onExit,
-                text = stringResource(R.string.cancel),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MediumTonalButton(
-                onClick = onAddToPool,
-                enabled = selectedCount > 0,
-                text = stringResource(R.string.cloud_tts_add_selected_to_pool, selectedCount),
-                modifier = Modifier.weight(1f),
-            )
-            MediumTonalButton(
-                onClick = onDelete,
-                enabled = selectedCount > 0,
-                text = stringResource(R.string.cloud_tts_delete_selected_count, selectedCount),
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
 }

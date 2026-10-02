@@ -89,4 +89,22 @@ class CastCapsuleGeometryTest {
         val width = CastCapsuleGeometry.bgmWidthPx(fontSize, 300f)
         assertTrue(width > height)
     }
+
+    @Test
+    fun `placeholder capsule is a square too`() {
+        // 未分配那颗只有人形图标：宽=高，所以圆角 0 是正方形、拉满就是正圆，
+        // 与只显头像的角色那颗同一条规则。头像位移不许把它撑成长方。
+        assertEquals(height, CastCapsuleGeometry.placeholderWidthPx(fontSize), 1e-3f)
+        assertEquals(
+            height,
+            CastCapsuleGeometry.placeholderWidthPx(
+                fontSize,
+                CastCapsuleStyle(avatarDx = 100, avatarScale = 150),
+            ),
+            1e-3f,
+        )
+        val iconRight = CastCapsuleStyle(avatarDx = 100, avatarScale = 150)
+            .let { it.placeholderIconLeft(height) + it.avatarDiameter(height) }
+        assertTrue("图标必须留在胶囊内：$iconRight > $height", iconRight <= height + 1e-3f)
+    }
 }

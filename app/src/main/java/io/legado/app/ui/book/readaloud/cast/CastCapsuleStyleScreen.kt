@@ -497,9 +497,9 @@ private fun PreviewBoard(
     val height = 40.dp
     val pad = height * CastCapsuleGeometry.padRatio
     val withText = nameText.isNotEmpty() || poolText.isNotEmpty()
-    // 与正文同一口径：全部关掉只剩头像时这颗胶囊是正方形（圆角拉满即圆，见 widthOf）；
-    // 未分配占位那颗在正文里走 placeholderWidthPx，不参与这条规则。
-    val avatarOnly = squareAvatarOnly && withAvatar && !withText
+    // 与正文同一口径：只显头像的角色那颗（见 widthOf）、以及未分配占位那颗（见
+    // placeholderWidthPx）都是正方形，圆角拉满就是正圆。
+    val square = if (squareAvatarOnly) withAvatar && !withText else true
     val avatarSize = style.avatarDiameterDp(height)
     // 落点与正文同源（见 CastCapsuleStyle.avatarLeft / placeholderIconLeft）：
     // 角色那颗不随名字/池小字开关漂移，占位那颗走它自己的内边距。
@@ -525,7 +525,7 @@ private fun PreviewBoard(
             modifier = Modifier
                 .height(height)
                 .then(
-                    if (avatarOnly) {
+                    if (square) {
                         Modifier.width(height)
                     } else {
                         Modifier.widthIn(min = if (withText) 96.dp else avatarSize + pad * 2f)
