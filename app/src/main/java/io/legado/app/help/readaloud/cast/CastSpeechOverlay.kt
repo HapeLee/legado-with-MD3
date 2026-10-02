@@ -86,6 +86,9 @@ object CastSpeechOverlay {
         // 否则那句角色台词会退回旁白音。ensureVoice 幂等，选完落库并镜像绑定。
         val picked = HashMap<String, CastCharacter>()
         var voiced = 0
+        // 命中与顶到音色是两件事：命中了但那个音色不在启用表里时，听感上同样「没变化」，
+        // 归因却完全不同（一条是正则写法，一条是音色表）。分开数才说得清。
+        var regexHit = 0
         var regexVoiced = 0
         var regexMuted = 0
         val sample = StringBuilder()
@@ -113,6 +116,7 @@ object CastSpeechOverlay {
                     AppLog.put("正则角色「${part.label}」的音色 $id 不在启用的音色表里，这段按原声读")
                 }
             }
+            if (part.label.isNotEmpty()) regexHit++
             if (part.voiceId != null && voices.containsKey(part.voiceId)) regexVoiced++
             if (part.sound.isNotEmpty()) regexMuted++
             val character = span?.let { characters.match(it.name, it.pool) }
@@ -221,12 +225,18 @@ object CastSpeechOverlay {
                 soundEffect = RegexCastSplitter.mergeSound(result[last].soundEffect, carrySound)
             )
         }
-        if (effects.isNotEmpty() && regexVoiced == 0 && regexMuted == 0) {
+        if (effects.isNotEmpty() && regexHit == 0 && regexMuted == 0) {
             // 一条都没命中时，光看正则猜不出原因：按字符再数一遍正文，
             // 分清「正文里没有这个符号（这本书用的是别的括号）」和「符号在、正则写法对不上」。
+            // 比的这一份是替换净化之后的正文（与屏幕上看到的一致，见
+            // io.legado.app.help.book.ContentProcessor.getContent 的调用方），
+            // 被替换规则改掉的符号在这里已经换成了新符号。
             val body = plan.joinToString(separator = "\n") { it.segment.text }
             effects.forEach { effect ->
-                AppLog.put("正则角色「${effect.label}」本章 0 命中：" + explainNoHit(effect.pattern.pattern, body))
+                AppLog.put(
+                    "正则角色「${effect.label}」本章 0 命中（按替换净化之后的正文比）：" +
+                        explainNoHit(effect.pattern.pattern, body)
+                )
             }
         }
         AppLog.put(
@@ -237,7 +247,8 @@ object CastSpeechOverlay {
                     // 把每条规则实际编出来的样子打出来：按字面量编会得到 `\Q…\E` 外壳，
                     // 「开着使用正则却什么都不命中」一眼就能分清是规则没加载、加载成了字面量，
                     // 还是正则本身没命中。
-                    "；正则角色顶音色 $regexVoiced 段、吞字放音效 $regexMuted 段；" +
+                    "；正则角色换音色命中 $regexHit 段（顶到音色 $regexVoiced 段）、" +
+                        "吞字放音效 $regexMuted 段；" +
                         effects.joinToString("、") { "「${it.label}」=/${it.pattern.pattern}/" }
                 } +
                 "；$sample"
