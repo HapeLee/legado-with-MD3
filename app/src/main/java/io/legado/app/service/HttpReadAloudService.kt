@@ -49,6 +49,7 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
+import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCue
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.SpeechEngineRoute
@@ -735,85 +736,26 @@ class HttpReadAloudService : BaseReadAloudService(),
                     text = speechText(text)
                     val routedVoice = voiceForCue(playbackQueue, index, httpTts)
                     val cue = playbackQueue.cues.getOrNull(index)
-                    val cueEmotion = cue?.emotion.orEmpty()
-                    val characterPerformance = cue?.characterPerformance
-                    val cueRoleType = cue?.roleType ?: SpeechRoleType.Unknown
                     val sourceKey = sourceKeyForCue(routedVoice, cue, httpTts)
                     val itemHttpTts = routedVoice.engineId.toLongOrNull()
                         ?.let(appDb.httpTTSDao::get) ?: httpTts
                     val fileName =
                         md5SpeakFileName(text, httpTts = itemHttpTts, sourceKey = sourceKey)
                     val speakText = text.replace(AppPattern.notReadAloudRegex, "")
+                    var playFileName = fileName
                     if (speakText.isEmpty()) {
                         AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$text")
                         createSilentSound(fileName)
                     } else if (!hasSpeakFile(fileName)) {
-                        withSpeakFileLock(fileName) {
-                        // 等锁期间另一条路径可能已经把这句合成好了
-                        if (!hasSpeakFile(fileName)) {
                         runCatching {
-                            when (routedVoice.engineType) {
-                                ReadAloudVoice.ENGINE_SYSTEM -> {
-                                    val config = runCatching {
-                                        GSON.fromJson(
-                                            routedVoice.traitsJson,
-                                            SystemTtsVoiceConfig::class.java,
-                                        )
-                                    }.getOrNull() ?: SystemTtsVoiceConfig()
-                                    // 全局语速已改为播放端变速, 系统合成只使用音色自带语速, 避免叠加
-                                    val synthesized = synthesizeSpeakFile(fileName) { output ->
-                                        systemTtsFileSynthesizer.synthesize(
-                                            routedVoice.engineId,
-                                            routedVoice.speakerId,
-                                            speakText,
-                                            output,
-                                            config.speechRate ?: 1f,
-                                            config.pitch ?: 1f,
-                                        )
-                                    }
-                                    if (!synthesized) {
-                                        AppLog.put(
-                                            "朗读：系统引擎 ${routedVoice.engineId} 没把这句合成成文件" +
-                                                "（音色 ${routedVoice.speakerId}），这一句跳过" +
-                                                "\n句子：${speakText.take(30)}",
-                                        )
-                                        createSilentSound(fileName)
-                                    }
-                                }
-
-                                ReadAloudVoice.ENGINE_CLOUD -> {
-                                    val synthesized = synthesizeSpeakFile(fileName) { output ->
-                                        cloudTtsAudioSynthesizer.synthesize(
-                                            routedVoice,
-                                            speakText,
-                                            output,
-                                            styleOverride = cueEmotion,
-                                            characterPerformance = characterPerformance,
-                                            roleType = cueRoleType,
-                                        )
-                                    }
-                                    if (!synthesized) {
-                                        AppLog.put(
-                                            "朗读：云端音色 ${routedVoice.speakerId} 没合成出文件，" +
-                                                "这一句跳过\n句子：${speakText.take(30)}",
-                                        )
-                                        createSilentSound(fileName)
-                                    }
-                                }
-
-                                else -> {
-                                    val inputStream = getSpeakStream(itemHttpTts, speakText)
-                                    if (inputStream != null) {
-                                        createSpeakFile(fileName, inputStream)
-                                    } else {
-                                        AppLog.put(
-                                            "朗读：HTTP 引擎 ${itemHttpTts.name} 没回音频，这一句跳过" +
-                                                "\n句子：${speakText.take(30)}",
-                                        )
-                                        createSilentSound(fileName)
-                                    }
-                                }
-                            }
+                            playFileName = synthesizeCueForPlay(
+                                primary = routedVoice,
+                                cue = cue,
+                                text = text,
+                                speakText = speakText,
+                                primaryFileName = fileName,
+                                defaultHttpTts = httpTts,
+                            )
                         }.onFailure {
                             when (it) {
                                 is CancellationException -> Unit
@@ -821,13 +763,11 @@ class HttpReadAloudService : BaseReadAloudService(),
                             }
                             return@execute
                         }
-                        }
-                        }
                     }
-                    if (speakText.isNotEmpty() && hasSpeakFile(fileName)) {
-                        writeTextIndexEntry(fileName, speakText)
+                    if (speakText.isNotEmpty() && hasSpeakFile(playFileName)) {
+                        writeTextIndexEntry(playFileName, speakText)
                     }
-                    val file = speakFileForPlay(fileName)
+                    val file = speakFileForPlay(playFileName)
                     val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
                     launch(Main) {
                         if (readAloudSettings.ttsParagraphInterval > 0) {
@@ -1490,6 +1430,123 @@ class HttpReadAloudService : BaseReadAloudService(),
                 speakerId = ReadAloud.coordinatorDefaultSpeakerId,
             ),
         ).voice!!
+    }
+
+    /**
+     * 实时朗读这一句：首选音色拿不到音频时接着试这个朗读单元自带的备用音色，
+     * 返回真正拿去播的文件名。
+     *
+     * 一路坏掉不该让整句变成静音：[ReadAloudPlaybackCue.fallbackVoices] 是
+     * [io.legado.app.help.readaloud.cast.CastSpeechOverlay.apply] 按「正则角色 > 分配表角色 > 旁白」
+     * 优先级留在单元上的那一份（旁白）。全都试过仍然没有音频才落无声音频占位，那时这一句确实没读，
+     * 日志把试过的每一路说出来。
+     *
+     * 文件名按音色算（口径见 [sourceKeyForCue]），所以每一路各查各的缓存、各写各的文件；
+     * 调用方 [downloadAndPlayAudios] 用返回值决定播哪一个、给哪一句写文本索引。
+     */
+    private suspend fun synthesizeCueForPlay(
+        primary: ReadAloudVoice,
+        cue: ReadAloudPlaybackCue?,
+        text: String,
+        speakText: String,
+        primaryFileName: String,
+        defaultHttpTts: HttpTTS,
+    ): String {
+        val attempts = (listOf(primary) + cue?.fallbackVoices.orEmpty())
+            .filter { it.enabled && it.available }
+            .distinctBy(ReadAloudVoice::id)
+        val tried = ArrayList<String>()
+        for (voice in attempts) {
+            val itemHttpTts = voice.engineId.toLongOrNull()
+                ?.let(appDb.httpTTSDao::get) ?: defaultHttpTts
+            val fileName = if (voice.id == primary.id) {
+                primaryFileName
+            } else {
+                md5SpeakFileName(
+                    text,
+                    httpTts = itemHttpTts,
+                    sourceKey = sourceKeyForCue(voice, cue, defaultHttpTts),
+                )
+            }
+            if (synthesizeCueAudio(voice, fileName, speakText, cue, itemHttpTts)) return fileName
+            tried += voice.routeLabel()
+        }
+        AppLog.put(
+            "朗读：这一句试过 ${attempts.size} 路音色（${tried.joinToString("、")}）都没拿到音频，" +
+                "放无声音频\n句子：${speakText.take(30)}",
+        )
+        createSilentSound(primaryFileName)
+        return primaryFileName
+    }
+
+    /**
+     * 用一路音色把这句合成成文件，缓存里已经有了也算成。
+     *
+     * 与实时、预合成、听书下载三条路共用按目标文件名上锁的那一份互斥
+     * （[withSpeakFileLock]）：拿到锁再查一次缓存，把同一句的重复请求压成一次。
+     * 引擎自己为什么失败由那一路说（系统文件合成见
+     * [io.legado.app.help.readaloud.playback.SystemTtsFileSynthesizer]），这里只说结果。
+     */
+    private suspend fun synthesizeCueAudio(
+        voice: ReadAloudVoice,
+        fileName: String,
+        speakText: String,
+        cue: ReadAloudPlaybackCue?,
+        itemHttpTts: HttpTTS,
+    ): Boolean = withSpeakFileLock(fileName) {
+        if (hasSpeakFile(fileName)) return@withSpeakFileLock true
+        val synthesized = when (voice.engineType) {
+            ReadAloudVoice.ENGINE_SYSTEM -> {
+                val config = runCatching {
+                    GSON.fromJson(voice.traitsJson, SystemTtsVoiceConfig::class.java)
+                }.getOrNull() ?: SystemTtsVoiceConfig()
+                // 全局语速已改为播放端变速, 系统合成只使用音色自带语速, 避免叠加
+                synthesizeSpeakFile(fileName) { output ->
+                    systemTtsFileSynthesizer.synthesize(
+                        voice.engineId,
+                        voice.speakerId,
+                        speakText,
+                        output,
+                        config.speechRate ?: 1f,
+                        config.pitch ?: 1f,
+                    )
+                }
+            }
+
+            ReadAloudVoice.ENGINE_CLOUD -> {
+                synthesizeSpeakFile(fileName) { output ->
+                    cloudTtsAudioSynthesizer.synthesize(
+                        voice,
+                        speakText,
+                        output,
+                        styleOverride = cue?.emotion.orEmpty(),
+                        characterPerformance = cue?.characterPerformance,
+                        roleType = cue?.roleType ?: SpeechRoleType.Unknown,
+                    )
+                }
+            }
+
+            else -> {
+                val inputStream = getSpeakStream(itemHttpTts, speakText)
+                if (inputStream != null) {
+                    createSpeakFile(fileName, inputStream)
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+        if (!synthesized) {
+            AppLog.put("朗读：${voice.routeLabel()} 没合成出这一句，换下一路")
+        }
+        synthesized
+    }
+
+    /** 日志里认得出的一路音色：引擎类型 + 引擎 + 音色名。 */
+    private fun ReadAloudVoice.routeLabel(): String = when (engineType) {
+        ReadAloudVoice.ENGINE_SYSTEM -> "系统引擎 $engineId 音色 ${speakerId.ifBlank { "默认" }}"
+        ReadAloudVoice.ENGINE_CLOUD -> "云端音色 ${speakerId.ifBlank { displayName }}"
+        else -> "HTTP 引擎 ${engineId.toLongOrNull()?.let(appDb.httpTTSDao::get)?.name ?: engineId}"
     }
 
     private fun httpTtsForCue(index: Int, default: HttpTTS): HttpTTS {
