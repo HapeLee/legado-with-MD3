@@ -243,8 +243,8 @@ object CastSpeechOverlay {
             )
         }
         if (effects.isNotEmpty() && regexHit == 0 && regexMuted == 0) {
-            // 一条都没命中时，光看正则猜不出原因：拿**真正比的那一份**（各单元抹平文字按顺序
-            // 接起来的那串）再数一遍字符，分清「正文里没有这个符号」和「符号在、写法对不上」。
+            // 一条都没命中时，光看正则猜不出原因：拿**真正比的那一份**（各单元文字按顺序接起来
+            // 的那串）再数一遍字符，分清「正文里没有这个符号」和「符号在、写法对不上」。
             // 替换净化发生在它之前（见 io.legado.app.help.book.ContentProcessor.getContent），
             // 被替换规则改掉的符号在这一份里已经是新符号。
             val body = chapterMatches.canvas
@@ -256,17 +256,9 @@ object CastSpeechOverlay {
                     "${chapterMatches.perUnit.sumOf { it.size }} 处"
             )
             effects.forEach { effect ->
-                // 现对象 vs 拿它自己报出的模式串重编一遍：前者 0 处、后者 >0 处 = 这个 Regex
-                // 对象与它报出的字符串不是一回事；两者都 0 处 = 匹配串里没有这一对。
-                AppLog.put(
-                    "正则角色「${effect.label}」探针：现对象 ${effect.pattern.findAll(body).count()} 处 " +
-                        "重编 ${Regex(effect.pattern.pattern).findAll(body).count()} 处 " +
-                        "flags=${effect.pattern.toPattern().flags()} options=${effect.pattern.options}"
-                )
-            }
-            effects.forEach { effect ->
                 AppLog.put(
                     "正则角色「${effect.label}」本章 0 命中（比的是整章 ${body.length} 字）：" +
+                        "模式=「${effect.pattern.pattern.showInvisible()}」" +
                         explainNoHit(effect.pattern.pattern, body)
                 )
             }
@@ -286,10 +278,13 @@ object CastSpeechOverlay {
                 } else {
                     // 把每条规则实际编出来的样子打出来：按字面量编会得到 `\Q…\E` 外壳，
                     // 「开着使用正则却什么都不命中」一眼就能分清是规则没加载、加载成了字面量，
-                    // 还是正则本身没命中。
+                    // 还是正则本身没命中。换行必须写成 `\n` 打：模式尾巴上多一个换行，
+                    // 在日志里就是把整行劈成两截，看不出规则其实根本没在比它看起来的那串。
                     "；正则角色换音色命中 $regexHit 段（顶到音色 $regexVoiced 段）、" +
                         "吞字放音效 $regexMuted 段；" +
-                        effects.joinToString("、") { "「${it.label}」=/${it.pattern.pattern}/" }
+                        effects.joinToString("、") {
+                            "「${it.label}」=/${it.pattern.pattern.showInvisible()}/"
+                        }
                 } +
                 "；$sample"
         )
@@ -547,6 +542,11 @@ object CastSpeechOverlay {
         .sortedByDescending { it.value }
         .joinToString("、") { "「${it.key}」U+%04X×${it.value}".format(it.key.code) }
         .ifBlank { "无" }
+
+    /** 换行/回车/制表符写成 `\n` `\r` `\t` 再进日志：模式尾巴上一个换行会把整行劈成两截。 */
+    private fun String.showInvisible(): String = buildString {
+        forEach { append(if (it == '\n') "\\n" else if (it == '\r') "\\r" else if (it == '\t') "\\t" else it) }
+    }
 
     /** 正则里有特殊含义的 ASCII 字符；全角括号不在其中，它就是要比对的普通字符。 */
     private const val REGEX_META = "*+?()[]{}^$.|\\0123456789-"

@@ -53,6 +53,24 @@ class RegexCastPatternMatchTest {
         assertEquals(listOf("她(说|道)"), voiced(parts).map { it.text })
     }
 
+    /**
+     * 单行输入框粘贴进来的换行/空格会挂在模式尾巴上：`［…］\n` 在朗读的整章匹配串里
+     * 永远找不到（那里没有换行），界面上却完全看不出模式多了东西。编译入口去掉两端空白。
+     */
+    @Test
+    fun `a pasted trailing newline does not kill the pattern`() {
+        val parts = parts("［([^］]*)］\n", useRegex = true, text = "旁白　　［系统］提示　　旁白")
+
+        assertEquals(listOf("［系统］"), voiced(parts).map { it.text })
+    }
+
+    @Test
+    fun `a pasted trailing space does not kill a literal pattern`() {
+        val parts = parts("爆炸 ", useRegex = false, text = "前方爆炸，退后。")
+
+        assertEquals(listOf("爆炸"), voiced(parts).map { it.text })
+    }
+
     @Test
     fun `literal mode matches nothing when the literal is absent`() {
         val parts = parts("她(说|道)", useRegex = false, text = "她说道：我走了。")
