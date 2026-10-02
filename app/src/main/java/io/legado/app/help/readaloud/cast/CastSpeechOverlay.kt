@@ -221,6 +221,14 @@ object CastSpeechOverlay {
                 soundEffect = RegexCastSplitter.mergeSound(result[last].soundEffect, carrySound)
             )
         }
+        if (effects.isNotEmpty() && regexVoiced == 0 && regexMuted == 0) {
+            // 一条都没命中时，光看正则猜不出原因：按字符再数一遍正文，
+            // 分清「正文里没有这个符号（这本书用的是别的括号）」和「符号在、正则写法对不上」。
+            val body = plan.joinToString(separator = "\n") { it.segment.text }
+            effects.forEach { effect ->
+                AppLog.put("正则角色「${effect.label}」本章 0 命中：" + explainNoHit(effect.pattern.pattern, body))
+            }
+        }
         AppLog.put(
             "多角色朗读: 本章 ${plan.size} 个朗读单元，$voiced 段用角色音" +
                 if (effects.isEmpty()) {
@@ -415,4 +423,26 @@ object CastSpeechOverlay {
         }
         return getBinding(bookUrl, subjectType, subjectId)?.voiceId?.let(voices::get)
     }
+
+    /**
+     * 「一条都没命中」的归因：拿正则里第一个普通字符在正文里数一遍。
+     *
+     * 消费方是 [apply] 里 0 命中时那行日志。带反斜杠转义的模式没法这样取样，直接说明不猜。
+     */
+    internal fun explainNoHit(pattern: String, body: String): String {
+        if (pattern.contains('\\')) return "模式含转义，按字符取样不可靠，请核对正则写法"
+        val probe = pattern.firstOrNull { it !in REGEX_META }
+            ?: return "模式里没有可比对的普通字符"
+        return if (!body.contains(probe)) {
+            "「$probe」在本章正文一次都没出现；本章实际有的括号类符号：「" +
+                body.toSet().filter { it in BRACKET_CHARS }.joinToString("") + "」"
+        } else {
+            "「$probe」在本章出现 ${body.count { it == probe }} 次，是正则写法与正文对不上"
+        }
+    }
+
+    /** 正则里有特殊含义的 ASCII 字符；全角括号不在其中，它就是要比对的普通字符。 */
+    private const val REGEX_META = "*+?()[]{}^$.|\\0123456789-"
+
+    private const val BRACKET_CHARS = "［］[]【】「」『』“”‘’\"'"
 }
