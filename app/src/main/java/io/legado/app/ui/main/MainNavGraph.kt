@@ -1256,7 +1256,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookCharacterDetail>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteBookCharacterDetail> { route ->
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         var pendingAvatarUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1323,7 +1323,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookCharacterNetwork>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteBookCharacterNetwork> { route ->
         val viewModel = koinViewModel<BookCharacterNetworkViewModel>(
             key = "BookCharacterNetwork:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) }
@@ -1340,7 +1340,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookCharacterList>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteBookCharacterList> { route ->
         val viewModel = koinViewModel<BookCharacterListViewModel>(
             key = "CharacterList:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) }
@@ -1357,7 +1357,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookVoiceCasting>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteBookVoiceCasting> { route ->
         val viewModel = koinViewModel<BookVoiceCastingViewModel>(
             key = "BookVoiceCasting:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) },
@@ -1374,7 +1374,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteCloudTtsEngines>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteCloudTtsEngines> { route ->
         val viewModel = koinViewModel<CloudTtsViewModel>()
         LaunchedEffect(route.bookUrl) {
             viewModel.onIntent(CloudTtsIntent.SetBookContext(route.bookUrl))
@@ -1413,13 +1413,13 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteTtsCache>(metadata = modalOverlayEntryMetadata()) {
+    entry<MainRouteTtsCache> {
         TtsCacheRouteScreen(
             onBackClick = { onNavigateBack() },
         )
     }
 
-    entry<MainRouteBookKnowledgeList>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteBookKnowledgeList> { route ->
         val viewModel = koinViewModel<BookKnowledgeListViewModel>(
             key = "KnowledgeList:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) }
@@ -1436,7 +1436,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookKnowledgeDetail>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteBookKnowledgeDetail> { route ->
         val viewModel = koinViewModel<BookKnowledgeDetailViewModel>(
             key = "KnowledgeDetail:${route.bookUrl}:${route.entryId.orEmpty()}",
             parameters = { parametersOf(route.bookUrl, route.entryId) }
@@ -1449,7 +1449,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookEventList>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteBookEventList> { route ->
         val viewModel = koinViewModel<BookEventListViewModel>(
             key = "EventList:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) }
@@ -1466,7 +1466,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookEventDetail>(metadata = modalOverlayEntryMetadata()) { route ->
+    entry<MainRouteBookEventDetail> { route ->
         val viewModel = koinViewModel<BookEventDetailViewModel>(
             key = "EventDetail:${route.bookUrl}:${route.eventId.orEmpty()}",
             parameters = { parametersOf(route.bookUrl, route.eventId) }
