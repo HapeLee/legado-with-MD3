@@ -175,9 +175,10 @@ object ReadAloud {
 
     fun stop(context: Context) {
         if (BaseReadAloudService.requestStop()) {
-            val intent = Intent(context, aloudClass)
-            intent.action = IntentAction.stop
-            context.startForegroundServiceCompat(intent)
+            // Stopping an already-running service must not issue a new foreground-start request.
+            // If its last start is still pending, the stop action could otherwise finish the
+            // service without ever calling startForeground(), crashing the process on timeout.
+            context.stopService(Intent(context, aloudClass))
         }
     }
 
