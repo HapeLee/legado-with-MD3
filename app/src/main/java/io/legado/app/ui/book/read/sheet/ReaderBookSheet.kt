@@ -331,6 +331,8 @@ private fun ReaderBookSheet(
         )
         HorizontalPager(
             state = pagerState,
+            // Sheet 内到边界时，平台 stretch 过冲会在松手后反向回弹。
+            overscrollEffect = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),

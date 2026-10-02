@@ -228,13 +228,8 @@ private fun readerEntryMetadata(predictiveBackEnabled: Boolean) =
         }
     }
 
-/**
- * 以底部弹层呈现的目的地（听书播放页、有声书播放页）。
- *
- * 上一站保持组合在弹层之下（真实背景可见），目的地自身不参与转场：
- * 进出动画完全由 `AppModalBottomSheet` 负责，导航层只负责栈。
- */
-private fun sheetEntryMetadata(): Map<String, Any> =
+/** Keep parent overlays composed while NavDisplay leaves animation to the search scene or player host. */
+private fun modalOverlayEntryMetadata(): Map<String, Any> =
     ModalOverlaySceneStrategy.modalOverlay() + metadata {
         put(NavDisplay.TransitionKey) { EnterTransition.None togetherWith ExitTransition.None }
         put(NavDisplay.PopTransitionKey) { EnterTransition.None togetherWith ExitTransition.None }
@@ -955,7 +950,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteReadAloudPlayer>(metadata = sheetEntryMetadata()) {
+    entry<MainRouteReadAloudPlayer>(metadata = modalOverlayEntryMetadata()) {
         LaunchedEffect(Unit) {
             ReadAloudPlayerOverlayBus.request(PlaybackCapsuleState(source = PlaybackCapsuleSource.ReadAloud))
             if (backStack.size > 1) onNavigateBack() else backStack[0] = MainRouteHome
@@ -963,7 +958,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     // 兼容已保存的导航栈。新入口在 MainActivity 直接打开同窗口播放浮层。
-    entry<MainRouteAudioPlay>(metadata = sheetEntryMetadata()) { route ->
+    entry<MainRouteAudioPlay>(metadata = modalOverlayEntryMetadata()) { route ->
         LaunchedEffect(route) {
             ReadAloudPlayerOverlayBus.request(
                 PlaybackCapsuleState(
@@ -976,13 +971,17 @@ fun MainActivity.mainEntryProvider(
         }
     }
 
-    entry<MainRouteSearchContent> { route ->
+    entry<MainRouteSearchContent>(
+        metadata = modalOverlayEntryMetadata() + ModalOverlaySceneStrategy.searchSlide()
+    ) { route ->
         val viewModel = koinViewModel<SearchContentViewModel>(
             key = "SearchContent:${route.bookUrl}",
             parameters = { parametersOf(route) }
         )
         SearchContentRouteScreen(
             viewModel = viewModel,
+            isTopRoute = backStack.lastOrNull() == route,
+            predictiveBackEnabled = configuration.appShell.predictiveBackEnabled,
             autoFocus = route.autoFocus,
             onBack = { onNavigateBack() },
         )

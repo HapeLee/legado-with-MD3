@@ -167,6 +167,13 @@ class PlayerMorphFramesTest {
     }
 
     @Test
+    fun `capsule cover fades continuously during the final morph segment`() {
+        assertEquals(1f, computeCapsuleCoverAlpha(0f), 0f)
+        assertEquals(0.5f, computeCapsuleCoverAlpha(0.075f), 0.001f)
+        assertEquals(0f, computeCapsuleCoverAlpha(0.15f), 0f)
+    }
+
+    @Test
     fun `veil transitions smoothly in mid to late phase`() {
         assertEquals(0f, computeMorphVeil(0.20f), 0.001f)
         assertEquals(0.5f, computeMorphVeil(0.425f), 0.001f)

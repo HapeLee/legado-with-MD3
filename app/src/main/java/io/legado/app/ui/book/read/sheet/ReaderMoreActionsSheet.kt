@@ -144,6 +144,8 @@ private fun MoreActionsPager(
         val rowCount = if (actions.size > 4) 2 else 1
         HorizontalPager(
             state = pagerState,
+            // 页数很少，手势频繁停在边界；保留平台 stretch 过冲会在松手后反向回弹。
+            overscrollEffect = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(

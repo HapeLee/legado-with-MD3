@@ -239,6 +239,9 @@ fun computeMorphFaceBlend(
 /** 接近胶囊时交还原始材质，避免进度归零时才把纯色面切换成玻璃。 */
 fun computeMorphPanelAlpha(progress: Float): Float = smoothstep(progress / 0.15f)
 
+/** 胶囊封面与播放面使用同一淡入/淡出曲线，收起末段连续交接。 */
+fun computeCapsuleCoverAlpha(progress: Float): Float = 1f - computeMorphPanelAlpha(progress)
+
 /** 无封面页面返回时，封面留在胶囊端点，随末段材质交接平滑渐显。 */
 fun computeMorphFlyingCoverAlpha(progress: Float, coverPageVisible: Boolean): Float {
     if (progress <= 0f || progress >= 1f) return 0f

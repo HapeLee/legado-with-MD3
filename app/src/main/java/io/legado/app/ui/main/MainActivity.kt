@@ -619,32 +619,32 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 rememberViewModelStoreNavEntryDecorator(),
                             ),
                             sceneStrategies = listOf(
-                                ModalOverlaySceneStrategy(),
+                                remember { ModalOverlaySceneStrategy() },
                                 SinglePaneSceneStrategy(),
                             ),
                             transitionSpec = {
                                 (slideIntoContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                                     animationSpec = tween(
-                                        durationMillis = 480,
+                                        durationMillis = NAV_SLIDE_DURATION_MILLIS,
                                         easing = FastOutSlowInEasing
                                     ),
                                     initialOffset = { fullWidth -> fullWidth }
                                 ) + fadeIn(
                                     animationSpec = tween(
-                                        durationMillis = 360,
+                                        durationMillis = NAV_FADE_DURATION_MILLIS,
                                         easing = LinearOutSlowInEasing
                                     )
                                 )) togetherWith (slideOutOfContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                                     animationSpec = tween(
-                                        durationMillis = 480,
+                                        durationMillis = NAV_SLIDE_DURATION_MILLIS,
                                         easing = FastOutSlowInEasing
                                     ),
                                     targetOffset = { fullWidth -> fullWidth / 4 }
                                 ) + fadeOut(
                                     animationSpec = tween(
-                                        durationMillis = 360,
+                                        durationMillis = NAV_FADE_DURATION_MILLIS,
                                         easing = LinearOutSlowInEasing
                                     )
                                 ))
@@ -653,22 +653,22 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 (slideIntoContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                                     animationSpec = tween(
-                                        durationMillis = 480,
+                                        durationMillis = NAV_SLIDE_DURATION_MILLIS,
                                         easing = FastOutSlowInEasing
                                     ),
                                     initialOffset = { fullWidth -> -fullWidth / 4 }
                                 ) + fadeIn(
                                     animationSpec = tween(
-                                        durationMillis = 360,
+                                        durationMillis = NAV_FADE_DURATION_MILLIS,
                                         easing = LinearOutSlowInEasing
                                     )
                                 )) togetherWith (scaleOut(
                                     targetScale = 0.8f,
                                     animationSpec = tween(
-                                        durationMillis = 480,
+                                        durationMillis = NAV_SLIDE_DURATION_MILLIS,
                                         easing = FastOutSlowInEasing
                                     )
-                                ) + fadeOut(animationSpec = tween(durationMillis = 360)))
+                                ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MILLIS)))
                             },
                             predictivePopTransitionSpec = { _ ->
                                 (slideIntoContainer(
@@ -718,23 +718,26 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 capsuleAnchorPreview = capsuleAnchorPreview,
                             )
                         )
-                        // 主页开启悬浮底栏时使用圆形胶囊，其余页面使用全局可拖拽胶囊。
-                        // 隐藏的胶囊不再上报形变锚点。
-                        CompositionLocalProvider(
-                            LocalReadAloudMorph provides readAloudMorph.takeIf { !useHomeCapsule }
-                        ) {
-                            ReadAloudShellHost(
-                                showCapsule = pageShellShowCapsule,
-                                hidden = useHomeCapsule,
-                                anchorPreview = capsuleAnchorPreview,
-                                onCapsulePositionChanged = { x, y ->
-                                    pageShellCapsuleScope.launch {
-                                        readAloudSettingsRepository.putCapsulePosition(x, y)
-                                    }
-                                },
-                                onOpenPlayer = { ReadAloudPlayerOverlayBus.request(it) },
-                            )
+                    }
+                    // 全局胶囊与导航容器并列，始终画在阅读等 Nav3 叠层之上。
+                    // 主页开启悬浮底栏时仍使用主页自己的圆形胶囊。
+                    CompositionLocalProvider(
+                        // 收起完成后不再用残留进度给可点击胶囊加透明层。
+                        LocalReadAloudMorph provides readAloudMorph.takeIf {
+                            !useHomeCapsule && (playerVisible || readAloudMorph.progress.isRunning)
                         }
+                    ) {
+                        ReadAloudShellHost(
+                            showCapsule = pageShellShowCapsule,
+                            hidden = useHomeCapsule,
+                            anchorPreview = capsuleAnchorPreview,
+                            onCapsulePositionChanged = { x, y ->
+                                pageShellCapsuleScope.launch {
+                                    readAloudSettingsRepository.putCapsulePosition(x, y)
+                                }
+                            },
+                            onOpenPlayer = { ReadAloudPlayerOverlayBus.request(it) },
+                        )
                     }
                     // 听书播放页：同窗口 morph 面板，从胶囊位置长出来。
                     if (playerSource == PlaybackCapsuleSource.ReadAloud) ReadAloudPlayerMorphHost(

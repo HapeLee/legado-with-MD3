@@ -6,18 +6,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.PlaybackCapsuleGateway
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.PlaybackCapsuleState
-import io.legado.app.ui.book.readaloud.morph.LocalReadAloudMorph
 import io.legado.app.ui.book.read.ReadAloudCapsule
+import io.legado.app.ui.book.readaloud.morph.LocalReadAloudMorph
 import org.koin.compose.koinInject
 
 /** 应用内播放胶囊宿主，共用朗读和有声书状态；播放器初始化仍由各自页面负责。 */
@@ -64,7 +64,7 @@ fun ReadAloudShellHost(
                     onPositionChanged = onCapsulePositionChanged,
                     onTogglePause = { playerState.source?.let(playbackGateway::togglePause) },
                     onStop = { playerState.source?.let(playbackGateway::stop) },
-                    onOpenPlayer = { onOpenPlayer(playerState) },
+                    onOpenPlayer = { if (!previewOnly) onOpenPlayer(playerState) },
                 )
             }
         }

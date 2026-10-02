@@ -71,6 +71,8 @@ fun ReadAloudConfigContent(
         HorizontalPager(
             state = pagerState,
             verticalAlignment = Alignment.Top,
+            // 只有两页，手势频繁停在边界；保留平台 stretch 过冲会在松手后反向回弹。
+            overscrollEffect = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false),
