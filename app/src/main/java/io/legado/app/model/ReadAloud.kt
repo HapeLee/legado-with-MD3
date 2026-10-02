@@ -96,21 +96,28 @@ object ReadAloud {
 
     private fun findCoordinatorHttpSeed(): HttpTTS? {
         val settings = aloudSettingsGateway.currentSettings
-        // 「多角色朗读」开关决定用不用角色音，也就决定能不能留在系统 TTS 直读：
-        // 角色音里有 HTTP/云端音色时只有文件合成那条服务能发声，系统直读会把它们过滤掉。
-        // 「多角色分配」只是正文胶囊与手动分配的入口，不该改变引擎——关掉多角色朗读就必须
-        // 回到用户在朗读设置里选的默认引擎。
-        if (!settings.useMultiSpeaker) return null
+        // 「多角色朗读」开关决定分配表那套角色音发不发生效，也就决定能不能留在系统 TTS 直读：
+        // 关掉就必须回到用户在朗读设置里选的默认引擎。
+        //
+        // 正则角色不跟这个开关（生效口径见 BaseReadAloudService.buildSpeechPlan）：它只被自己那条
+        // 规则的启用状态管，而它选的音色和混响/金属感同样只有文件合成那条服务发得出声。所以开关
+        // 关着时，要不要升级只看这本书有没有生效的正则角色。
+        val regexOn = runCatching {
+            runBlocking { RegexCastRuleStore.hasRulesFor(ReadBook.book?.bookUrl.orEmpty()) }
+        }.getOrDefault(false)
+        if (!settings.useMultiSpeaker && !regexOn) return null
         return runCatching {
             val book = ReadBook.book ?: return@runCatching null
             val bookUrl = book.bookUrl
             val (httpVoices, systemRoutes) = runBlocking {
-                val voiceIds = appDb.readAloudVoiceDao.getBindings(bookUrl)
-                    .mapTo(hashSetOf()) { it.voiceId }
-                // 分配表里的角色音是直接记在角色身上的（没进过配音页就没有绑定行），
-                // 只看 book_voice_bindings 会漏掉它们：整章退回系统直读、角色音被过滤成旁白。
-                appDb.castCharacterDao.getByBook(bookUrl).forEach {
-                    if (it.voiceId.isNotBlank()) voiceIds += it.voiceId
+                val voiceIds = hashSetOf<String>()
+                if (settings.useMultiSpeaker) {
+                    voiceIds += appDb.readAloudVoiceDao.getBindings(bookUrl).map { it.voiceId }
+                    // 分配表里的角色音是直接记在角色身上的（没进过配音页就没有绑定行），
+                    // 只看 book_voice_bindings 会漏掉它们：整章退回系统直读、角色音被过滤成旁白。
+                    appDb.castCharacterDao.getByBook(bookUrl).forEach {
+                        if (it.voiceId.isNotBlank()) voiceIds += it.voiceId
+                    }
                 }
                 // 正则角色自己选的音色同样是角色音：它只在命中那几段顶上去，但能不能发声
                 // 一样取决于引擎。漏掉它时这本书不升级文件合成，命中处被直读引擎过滤成默认音色，
@@ -133,12 +140,20 @@ object ReadAloud {
             //    提前好几秒（实测长句是「音频写完」就报完成，缓冲里还剩两三秒没放出去），这一次
             //    调用正好把上一句的尾巴冲掉：角色长句读到一半跳下一句就是这么来的。文件合成 +
             //    自己的播放器按真实播放结束翻页，句界不再听引擎的回调。
-            val needsSessionEffect = hasSessionLayerEffect(bookUrl)
+            val needsSessionEffect = hasSessionLayerEffect(bookUrl, settings.useMultiSpeaker)
             if (httpVoices.isEmpty() && systemRoutes.size < 2 && !needsSessionEffect) {
+                if (!settings.useMultiSpeaker && regexOn) {
+                    // 正则角色开着却没有要升级的理由：它选的就是当前默认引擎里那个音色，
+                    // 直读照样换得动。不说这一句，用户只看得到「设了却没变化」。
+                    AppLog.put("正则角色: 命中的音色都在系统直读里，无需升级文件合成")
+                }
                 return@runCatching null
             }
             AppLog.put(
-                "多角色朗读: 升级文件合成 系统音色 ${systemRoutes.size} 路 " +
+                // 谁要求升级的说谁的名字：多角色朗读关着时这一句写成「多角色朗读」，
+                // 用户看到的就是一个自己没开过的功能在动。
+                (if (settings.useMultiSpeaker) "多角色朗读" else "正则角色") +
+                    ": 升级文件合成 系统音色 ${systemRoutes.size} 路 " +
                     "HTTP/云端音色 ${httpVoices.size} 个 会话级变声=$needsSessionEffect",
             )
             httpVoices.firstOrNull { it.engineType == ReadAloudVoice.ENGINE_HTTP }
@@ -148,18 +163,26 @@ object ReadAloud {
         }.getOrNull()
     }
 
-    /** 这本书里有没有哪条音色预设需要会话级效果（角色全局、正文胶囊那一段、或正则角色那条规则自己设的）。 */
-    private fun hasSessionLayerEffect(bookUrl: String): Boolean = runBlocking {
+    /**
+     * 这本书里有没有哪条音色预设需要会话级效果（角色全局、正文胶囊那一段、或正则角色那条规则自己设的）。
+     *
+     * [useMultiSpeaker] = false 时分配表与角色全局那两份声音根本不会送到引擎
+     * （消费方 [io.legado.app.help.readaloud.cast.CastSpeechOverlay.apply] 只在多角色朗读开着时才铺
+     * spans），它们的变声也就无从生效，不能拿它们当升级理由。
+     */
+    private fun hasSessionLayerEffect(bookUrl: String, useMultiSpeaker: Boolean): Boolean = runBlocking {
         val wanted = appDb.voiceEffectDao.getAll()
             .filter { it.enabled }
             .filter { VoiceEffectStore.needsSessionEffect(it) }
             .mapTo(hashSetOf()) { it.name }
         if (wanted.isEmpty()) return@runBlocking false
-        if (appDb.castCharacterDao.getByBook(bookUrl).any { it.voiceEffect in wanted }) {
-            return@runBlocking true
-        }
-        if (appDb.chapterRoleAssignmentDao.getForBook(bookUrl).any { it.voiceEffect in wanted }) {
-            return@runBlocking true
+        if (useMultiSpeaker) {
+            if (appDb.castCharacterDao.getByBook(bookUrl).any { it.voiceEffect in wanted }) {
+                return@runBlocking true
+            }
+            if (appDb.chapterRoleAssignmentDao.getForBook(bookUrl).any { it.voiceEffect in wanted }) {
+                return@runBlocking true
+            }
         }
         // 正则角色那一列（regex_cast_rules.voiceEffect）的产出方是 RegexCastRuleScreen 的变声器那行，
         // 消费方是 CastSpeechOverlay → 朗读单元；混响/金属感同样只有文件合成那条路挂得上。
