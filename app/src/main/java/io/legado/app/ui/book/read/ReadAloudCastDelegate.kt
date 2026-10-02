@@ -2,8 +2,8 @@ package io.legado.app.ui.book.read
 
 import android.content.Context
 import io.legado.app.R
-import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.help.readaloud.cast.AiCastAssignUseCase
+import io.legado.app.help.readaloud.cast.AiCastPresetStore
 import io.legado.app.help.readaloud.cast.AiCastProgress
 import io.legado.app.help.readaloud.cast.AiCastStream
 import io.legado.app.help.readaloud.cast.AiSceneAssignUseCase
@@ -11,17 +11,22 @@ import io.legado.app.data.entities.Book
 import io.legado.app.help.readaloud.cast.CastAssignmentStore
 import io.legado.app.help.readaloud.cast.CastAssignmentStore.CastResult
 import io.legado.app.help.readaloud.cast.BgmSceneStore
+import io.legado.app.help.readaloud.cast.castChapterPlan
+import io.legado.app.help.readaloud.cast.failureReason
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.service.BaseReadAloudService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
  * 多角色分配域：确认（分配 + 更新已有角色状态）/ 创建（新角色身份 = 名字+声音池）/
- * 取消分配，以及成功后的「重排当前章 + 关悬浮窗」、失败后的 toast 收尾。
+ * 取消分配，以及 AI 批量分配的成功与取消收尾（同一套「重排当前章 + 朗读队列」，见
+ * [refreshAfterCast]）与失败提示。
  *
  * DAO 访问收口在 CastAssignmentStore（架构护栏）；章节重排、关窗与 toast 三条通道
  * 由 VM 以 lambda 注入（`_effects` / `contentProcessDelegate` 只有 VM 能碰）。
@@ -92,21 +97,39 @@ class ReadAloudCastDelegate(
         }
     }
 
-    private var aiCastJob: kotlinx.coroutines.Job? = null
+    private var aiCastJob: Job? = null
 
-    /** AI 分配：从 startChapter 起 count 章；进度与流式文本写 AiCastProgress，完成重排+toast。 */
+    /** 收尾协程（等 worker 退出 → 重排 → 提示）；与 [aiCastJob] 分开存，见 [cancelAiCast]。 */
+    private var windDownJob: Job? = null
+
+    /** 最近一次分配请求：取消时要按同一份计划算出停在第几章（见 [cancelledResumeChapter]）。 */
+    private var lastCastRequest: ReadBookIntent.StartAiCast? = null
+
+    /**
+     * AI 分配：跑 [request] 指定的那些章（范围或重试清单）。
+     *
+     * 进度、流式文本与**失败明细**写 [AiCastProgress]；收尾统一走 [refreshAfterCast]，
+     * 取消走的是同一份收尾（见 [cancelAiCast]）。
+     */
     fun startAiCast(request: ReadBookIntent.StartAiCast) {
         val book = ReadBook.book ?: return
         if (aiCastJob?.isActive == true) return
-        val startChapter = request.startChapter
-        val count = request.count
+        lastCastRequest = request
+        // 界面先按请求算一个章数，真正以 use case 回调里的 total 为准（范围会被夹到目录末尾）
+        val planned = when {
+            request.onlyChapters.isNotEmpty() -> request.onlyChapters.size
+            request.endChapter >= 0 -> request.endChapter - request.startChapter + 1
+            else -> request.count
+        }
         AiCastProgress.update {
             it.copy(
                 running = true,
                 done = 0,
-                total = count,
+                total = planned,
                 lastError = null,
                 finishedMessage = null,
+                failedChapters = emptyList(),
+                failureText = "",
                 reasoning = "",
                 reasoningFolded = 0,
                 reasoningSeconds = 0,
@@ -116,13 +139,15 @@ class ReadAloudCastDelegate(
             )
         }
         aiCastJob = scope.launch(Dispatchers.IO) {
+            // 0 基章号，两趟共用一份：重试按钮只跑这些章
+            val failed = sortedSetOf<Int>()
             // 纯场景入口（背景音乐区的「AI 识别场景」）不跑角色那趟：用户没开多角色朗读时，
             // 认角色、建角色这些动作对他毫无意义，还会白烧一次 token
             val message = if (request.rolesPass) {
                 val result = aiCastUseCase.execute(
                     book = book,
-                    startChapter = startChapter,
-                    chapterCount = count,
+                    startChapter = request.startChapter,
+                    chapterCount = request.count,
                     reassign = request.reassign,
                     presetId = request.presetId,
                     temporaryInstruction = request.temporaryInstruction,
@@ -130,18 +155,19 @@ class ReadAloudCastDelegate(
                     // HIGH/OFF：开=把档位拉到最高（一章能想二十几分钟），关=OFF 在多数服务商上
                     // 根本不发参数，模型照想不误——两头都不诚实。显示与否已与它解耦。
                     reasoningLevel = request.reasoningLevel,
-                    onProgress = { title, done, total, error ->
-                        AiCastProgress.update {
-                            it.copy(chapterTitle = title, done = done, total = total, lastError = error)
-                        }
+                    endChapter = request.endChapter,
+                    onlyChapters = request.onlyChapters,
+                    onProgress = { index, title, done, total, error ->
+                        reportChapter(index, title, done, total, error, failed)
                     },
                     onStream = ::applyStreamEvent,
                 )
                 result.fold(
                     onSuccess = { context.getString(R.string.ai_cast_finished, it) },
                     onFailure = {
-                        if (it is kotlinx.coroutines.CancellationException) null
-                        else it.message ?: "AI cast failed"
+                        if (it is CancellationException) null
+                        else it.message?.takeIf { text -> text.isNotBlank() }
+                            ?: failureReason(it)
                     },
                 )
             } else {
@@ -152,36 +178,56 @@ class ReadAloudCastDelegate(
             val sceneMessage = if (request.assignScene) {
                 runScenePass(
                     book = book,
-                    startChapter = startChapter,
-                    count = count,
-                    reassign = request.reassign,
-                    reasoningLevel = request.reasoningLevel,
+                    request = request,
+                    failed = failed,
                 )
             } else {
                 null
             }
+            val finished = listOfNotNull(message, sceneMessage).joinToString("；")
             AiCastProgress.update {
                 it.copy(
                     running = false,
-                    finishedMessage = listOfNotNull(message, sceneMessage).joinToString("；")
-                        .takeIf { text -> text.isNotBlank() },
+                    finishedMessage = finished.takeIf { text -> text.isNotBlank() },
+                )
+            }
+            val toast = if (failed.isEmpty()) {
+                finished.takeIf { text -> text.isNotBlank() }
+            } else {
+                // 断网 / 连不上 AI / 回复读不出来：一条原因直接进 toast，其余在悬浮窗里逐章看
+                (
+                    context.getString(R.string.ai_cast_run_failed, failed.size) + "：" +
+                        AiCastProgress.state.value.failureText
+                            .lines().filter { line -> line.isNotBlank() }.joinToString("；")
+                    ).take(MAX_TOAST_CHARS)
+            }
+            withContext(Dispatchers.IO) {
+                // 失败清单落盘：只有角色那一趟逐章写进度，配乐那一趟的失败不在这儿补一次，
+                // 重开悬浮窗就看不到这些章（续跑起点已经由角色那趟写完，这里只当它跑干净了）
+                val stored = AiCastPresetStore.loadCastRunState(book.bookUrl)
+                AiCastPresetStore.saveCastRunState(
+                    book.bookUrl,
+                    stored.copy(
+                        resumeChapter = AiCastPresetStore.NO_RESUME_CHAPTER,
+                        failedChapters = failed.toList(),
+                    ),
                 )
             }
             withContext(Dispatchers.Main) {
-                reloadChapter()
-                refreshAloudCast()
-                message?.let { emitToast(it) }
+                refreshAfterCast()
+                toast?.let { emitToast(it) }
             }
         }
     }
 
-    /** 配乐场景那一趟：失败/取消只回一句话，不影响已经写好的角色分配。 */
+    /**
+     * 配乐那一趟：失败只记账并回一句话，不影响已经写好的角色分配。
+     * 范围/重试清单与角色那一趟同源（都读 [ReadBookIntent.StartAiCast]），否则两趟会跑不同的章。
+     */
     private suspend fun runScenePass(
         book: Book,
-        startChapter: Int,
-        count: Int,
-        reassign: Boolean,
-        reasoningLevel: AiReasoningLevel,
+        request: ReadBookIntent.StartAiCast,
+        failed: MutableSet<Int>,
     ): String? {
         // 折叠计数与正文一起清：只清正文会让配乐那一趟顶着一句「前面 N 字已折叠」
         AiCastProgress.update {
@@ -197,24 +243,62 @@ class ReadAloudCastDelegate(
         }
         val result = aiSceneUseCase.execute(
             book = book,
-            startChapter = startChapter,
-            chapterCount = count,
-            reassign = reassign,
-            reasoningLevel = reasoningLevel,
-            onProgress = { title, done, total, error ->
-                AiCastProgress.update {
-                    it.copy(chapterTitle = "配乐·$title", done = done, total = total, lastError = error)
-                }
+            startChapter = request.startChapter,
+            chapterCount = request.count,
+            reassign = request.reassign,
+            reasoningLevel = request.reasoningLevel,
+            endChapter = request.endChapter,
+            onlyChapters = request.onlyChapters,
+            onProgress = { index, title, done, total, error ->
+                reportChapter(index, title, done, total, error, failed, titlePrefix = SCENE_PREFIX)
             },
             onStream = ::applyStreamEvent,
         )
         return result.fold(
             onSuccess = { context.getString(R.string.ai_scene_finished, it) },
             onFailure = {
-                if (it is kotlinx.coroutines.CancellationException) null
-                else it.message ?: "AI scene failed"
+                if (it is CancellationException) null
+                else it.message?.takeIf { text -> text.isNotBlank() } ?: failureReason(it)
             },
         )
+    }
+
+    /**
+     * 逐章回调：进度 + 失败明细（章号、章名、原因一个都不少）。
+     *
+     * 一章失败既不中断循环也不静默吞掉：界面读 failureText、toast 读条数、
+     * 重试按钮读 [AiCastProgress.State.failedChapters]。
+     */
+    private fun reportChapter(
+        chapterIndex: Int,
+        title: String,
+        done: Int,
+        total: Int,
+        error: String?,
+        failed: MutableSet<Int>,
+        titlePrefix: String = "",
+    ) {
+        val line = error?.let {
+            context.getString(R.string.ai_cast_chapter_failed, chapterIndex + 1, "$titlePrefix$title", it)
+        }
+        if (error != null) failed += chapterIndex
+        AiCastProgress.update { state ->
+            state.copy(
+                chapterTitle = titlePrefix + title,
+                done = done,
+                total = total,
+                lastError = line,
+                failedChapters = failed.toList(),
+                failureText = if (line == null) {
+                    state.failureText
+                } else {
+                    (state.failureText.lines() + line)
+                        .filter { text -> text.isNotBlank() }
+                        .takeLast(MAX_FAILURE_LINES)
+                        .joinToString("\n")
+                },
+            )
+        }
     }
 
     /** 两趟共用的流式回显：换章清空，reasoning/answer 各自累加。 */
@@ -262,11 +346,93 @@ class ReadAloudCastDelegate(
         }
     }
 
-    /** 取消进行中的 AI 分配。 */
+    /**
+     * 取消进行中的 AI 分配。
+     *
+     * **取消必须跑完和正常结束同一套收尾**（[refreshAfterCast]）。分配行是逐章写库的，正在处理
+     * 的那一章已经写了半章；而正文里的角色胶囊是分页时从库里现取现注入的
+     * （`ReadBook.contentLoadFinish` → `CastAssignmentStore.labelsForChapter`），分页结果又按
+     * [io.legado.app.model.reader.ReaderChapterInput] 的章节身份缓存。协程被 cancel 掉以后
+     * 原先排在末尾的那句 reloadChapter() 根本不会执行，旧页就一直挂着「未分配」——退出重进也不变
+     * （同书重进走 `initBook` 的 isSameBook 分支，只 `upContent` 不重排），翻一章再翻回来才对。
+     */
     fun cancelAiCast() {
-        aiCastJob?.cancel()
+        val worker = aiCastJob
         aiCastJob = null
-        AiCastProgress.update { it.copy(running = false) }
+        if (worker == null) {
+            // 已经在收尾（或压根没在跑）：收尾协程负责重排，这里再发一次只会多排一遍
+            if (windDownJob?.isActive != true) AiCastProgress.update { it.copy(running = false) }
+            return
+        }
+        worker.cancel()
+        windDownJob?.cancel()
+        // 收尾协程单独一个字段：连点两次「取消」不会把正在跑的那次收尾也撤掉
+        windDownJob = scope.launch {
+            // 等被取消的协程真的退出：它还在写库时先重排会读到半章数据
+            worker.join()
+            val book = ReadBook.book
+            val resume = book?.let { cancelledResumeChapter(it) } ?: AiCastPresetStore.NO_RESUME_CHAPTER
+            AiCastProgress.update {
+                it.copy(
+                    running = false,
+                    finishedMessage = if (resume >= 0) {
+                        context.getString(R.string.ai_cast_cancelled, resume + 1)
+                    } else {
+                        null
+                    },
+                )
+            }
+            withContext(Dispatchers.Main) {
+                refreshAfterCast()
+                if (resume >= 0) emitToast(context.getString(R.string.ai_cast_cancelled, resume + 1))
+            }
+        }
+    }
+
+    /**
+     * 取消时停在第几章（0 基），并把这份进度写回本书 prefs 让悬浮窗关掉重开还在。
+     *
+     * 用的是**本次运行**的进度（`done` = 这一趟已经跑完几章）而不是库里那一份：配乐那一趟
+     * 不写进度（它跑的是同一份计划，但角色那趟已经跑完了），只有按本次计划取才能两趟都对。
+     */
+    private suspend fun cancelledResumeChapter(book: Book): Int {
+        val request = lastCastRequest ?: return AiCastPresetStore.NO_RESUME_CHAPTER
+        val state = AiCastProgress.state.value
+        val plan = castChapterPlan(
+            tocSize = book.totalChapterNum,
+            startChapter = request.startChapter,
+            requestedCount = request.count,
+            endChapter = request.endChapter,
+            onlyChapters = request.onlyChapters,
+        )
+        val resume = plan.getOrNull(state.done) ?: AiCastPresetStore.NO_RESUME_CHAPTER
+        val bookUrl = book.bookUrl
+        withContext(Dispatchers.IO) {
+            val stored = AiCastPresetStore.loadCastRunState(bookUrl)
+            AiCastPresetStore.saveCastRunState(
+                bookUrl,
+                stored.copy(
+                    startChapter = plan.firstOrNull() ?: stored.startChapter,
+                    endChapter = plan.lastOrNull() ?: stored.endChapter,
+                    resumeChapter = resume,
+                    // 本次跑真的失败了几个就以本次为准；一个都没有（纯取消）保留上一次那份清单
+                    failedChapters = state.failedChapters.ifEmpty { stored.failedChapters },
+                ),
+            )
+        }
+        return resume
+    }
+
+    /**
+     * 改动落库后的可见收尾：重排当前章窗口（±1），正在朗读时连带重排朗读队列。
+     *
+     * 调用方必须在主线程，且**任何**写完分配行的路径都要调一次（成功、部分成功、取消都一样）：
+     * 不调的就是「胶囊没跟着更新」那个 bug。窗口外的章不用管，翻到时 [ReadBook.loadContent]
+     * 会重新按库里的分配注入标记。
+     */
+    private fun refreshAfterCast() {
+        reloadChapter()
+        refreshAloudCast()
     }
 
     /** 删除整章分配（AI 分配悬浮窗「删除分配」），随后重排。 */
@@ -398,3 +564,12 @@ class ReadAloudCastDelegate(
         withContext(Dispatchers.Main) { emitToast(message) }
     }
 }
+
+/** 配乐那一趟的章名前缀：两趟共用一份进度，靠它区分「角色·第 N 章」还是「配乐·第 N 章」。 */
+private const val SCENE_PREFIX = "配乐·"
+
+/** 失败明细在悬浮窗里最多留几行（一章一行，再多就把卡片顶到状态栏）。 */
+private const val MAX_FAILURE_LINES = 12
+
+/** 失败汇总 toast 的字数上限：toast 太长会被系统截断，剩下的在悬浮窗里逐章看。 */
+private const val MAX_TOAST_CHARS = 400

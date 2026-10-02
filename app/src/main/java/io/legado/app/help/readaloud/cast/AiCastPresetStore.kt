@@ -502,6 +502,52 @@ object AiCastPresetStore {
         prefs().edit().putString(KEY_REASONING_LEVEL, level.storageValue).apply()
     }
 
+    /** [AiCastRunState.resumeChapter] 的「没有要续的章」取值（读取侧据此决定要不要给「继续」入口）。 */
+    const val NO_RESUME_CHAPTER = -1
+
+    /**
+     * 一次 AI 分配跑到哪儿了（按书记在 prefs，与推理强度同一个文件）。
+     *
+     * 存在的理由：分配是逐章写库的长任务，用户中途点取消、或者一路断网跑不完时，
+     * 下次打开悬浮窗要能直接看到「停在第几章 / 哪几章失败了」，而不是让他重填一遍范围。
+     * 章号一律是**落库与朗读用的 0 基下标**（`chapter_role_assignments.chapterIndex`
+     * 同一口径）；界面显示从 1 开始的章号，换算在读写两侧各做一次
+     * （写入侧 [AiCastAssignUseCase.persistRunState]，读取侧 AiCastDialogSheet）。
+     */
+    data class AiCastRunState(
+        val startChapter: Int = -1,
+        val endChapter: Int = -1,
+        /** 中断时正在处理的那一章；[NO_RESUME_CHAPTER] = 这一趟跑完了，没有要续的章。 */
+        val resumeChapter: Int = NO_RESUME_CHAPTER,
+        val failedChapters: List<Int> = emptyList(),
+    )
+
+    /** 本书上一次的分配进度（没跑过就是全默认值的 [AiCastRunState]）。 */
+    fun loadCastRunState(bookUrl: String): AiCastRunState {
+        val p = prefs()
+        return AiCastRunState(
+            startChapter = p.getInt(runKey(bookUrl, "start"), -1),
+            endChapter = p.getInt(runKey(bookUrl, "end"), -1),
+            resumeChapter = p.getInt(runKey(bookUrl, "resume"), NO_RESUME_CHAPTER),
+            failedChapters = p.getString(runKey(bookUrl, "failed"), "")
+                .orEmpty()
+                .split(',')
+                .mapNotNull { it.trim().toIntOrNull() },
+        )
+    }
+
+    /** 进度落盘（apply 异步写，不卡分配循环）。 */
+    fun saveCastRunState(bookUrl: String, state: AiCastRunState) {
+        prefs().edit()
+            .putInt(runKey(bookUrl, "start"), state.startChapter)
+            .putInt(runKey(bookUrl, "end"), state.endChapter)
+            .putInt(runKey(bookUrl, "resume"), state.resumeChapter)
+            .putString(runKey(bookUrl, "failed"), state.failedChapters.joinToString(","))
+            .apply()
+    }
+
+    private fun runKey(bookUrl: String, field: String) = "castRun_$field|$bookUrl"
+
     private fun prefs(): android.content.SharedPreferences =
         appCtx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 }

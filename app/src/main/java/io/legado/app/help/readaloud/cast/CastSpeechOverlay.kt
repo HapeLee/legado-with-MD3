@@ -95,7 +95,8 @@ object CastSpeechOverlay {
 
         /**
          * 一个切块 → 一个朗读单元。音色优先级：正则角色 > 分配表角色 > 旁白——
-         * 这条优先级在这里落地，正则侧的选择结果由 [RegexCastSplitter.Part.voiceId] 带过来。
+         * 这条优先级在这里落地，正则侧的选择结果由 [RegexCastSplitter.Part.voiceId] 带过来，
+         * 正则侧那条规则自己选的变声器由 [RegexCastSplitter.Part.voiceEffect] 带过来（同一优先级）。
          *
          * [part] 带着切块自己的章内起点，所以被音效吃掉的那段文字在这里就是个空洞：
          * 前后两块各归各的坐标，区间只留缝、不重叠（播放队列不许重叠）。
@@ -184,8 +185,18 @@ object CastSpeechOverlay {
                 }
             }
             // 音效串整条透传（格式契约在 RegexCastSplitter 底部），下游经
-            // ReadAloudPlaybackCue.soundEffect 到 BaseReadAloudService.takeCueSounds 解析
-            return built.copy(soundEffect = part.sound)
+            // ReadAloudPlaybackCue.soundEffect 到 BaseReadAloudService.takeCueSounds 解析。
+            // 变声器同理跟着这一单元走：写进 segment.voiceEffect，下游 ReadAloudPlaybackQueue.from
+            // 原样搬到 ReadAloudPlaybackCue，朗读服务两处都读它（音高/语速 + 会话混响/金属感）。
+            // 优先级与音色一致：正则角色 > 分配表那一段（span.effect）。
+            // 音色没顶上（退回原声）时连变声一起丢，否则「按原声读」的日志就成了原声加混响。
+            val regexEffect = part.voiceEffect.takeIf {
+                it.isNotBlank() && part.voiceId != null && voices.containsKey(part.voiceId)
+            }
+            return built.copy(
+                soundEffect = part.sound,
+                segment = regexEffect?.let { built.segment.copy(voiceEffect = it) } ?: built.segment,
+            )
         }
 
         plan.forEach { item ->

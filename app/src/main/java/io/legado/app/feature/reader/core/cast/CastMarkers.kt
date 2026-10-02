@@ -24,6 +24,17 @@ object CastMarkers {
         '“' to '”', '‘' to '’', '「' to '」', '『' to '』', '"' to '"', '\'' to '\'',
     )
 
+    /**
+     * [QuotePairs] 里「单引号」那一类的**开**字符（弯单引号 `‘` 与直单引号 `'`）。
+     *
+     * 中文排版用单引号包内心独白（心声），双引号/方头引号（`“ ” 「 」 『 』`）是正常台词，
+     * 所以这一档只认单引号。唯一的消费方是
+     * [io.legado.app.help.readaloud.cast.CastAssignmentStore.thoughtOrdinals] 与 AI 分配那一趟：
+     * 它们据此决定新建分配行时要不要默认给那句套上
+     * [io.legado.app.help.readaloud.effect.VoiceEffectStore.THOUGHT_EFFECT]。
+     */
+    val SingleQuoteOpens: Set<Char> = setOf('‘', '\'')
+
     /** 一个还没闭合的引号：期望的闭符号、它占用的锚点序号（非锚点为 -1）、开符号在流里的下标。 */
     private class Frame(val close: Char, val ordinal: Int, val openAt: Int)
 

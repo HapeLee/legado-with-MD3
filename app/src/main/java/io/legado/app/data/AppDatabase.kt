@@ -136,7 +136,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 129,
+    version = 130,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -271,6 +271,8 @@ val appDb by lazy {
         // （新表 regex_cast_groups + rules.groupId），要搬数据，AutoMigration 做不了。
         // regex_cast_rules 新增 useRegex 列：一条规则自己决定按正则还是按字面量匹配
         AutoMigration(from = 128, to = 129),
+        // regex_cast_rules 新增 voiceEffect 列：命中的那段文字用哪个变声器预设念，默认空 = 不变声
+        AutoMigration(from = 129, to = 130),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

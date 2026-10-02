@@ -30,13 +30,17 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -68,6 +72,8 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
+import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
@@ -128,10 +134,23 @@ fun BgmPoolScreen(
     }
 
     var showFadeDialog by remember { mutableStateOf(false) }
+    // 导入/导出弹窗只是入口，选完文件就把 uri 交回 VM，页面自己不留状态（与角色声音池页一致）
+    var showIoSheet by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
         if (uris.isNotEmpty()) onIntent(BgmPoolIntent.FilesPicked(uris))
+    }
+    // 音乐包是一个 zip（清单 + 音频），所以走单选，不像配乐库那样多选音频文件
+    val packagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { onIntent(BgmPoolIntent.ImportPackagePicked(it)) }
+    }
+    val packageExporter = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        uri?.let { onIntent(BgmPoolIntent.ExportPackageTo(it)) }
     }
     val player = remember {
         MediaPlayer().apply {
@@ -148,6 +167,10 @@ fun BgmPoolScreen(
             when (effect) {
                 is BgmPoolEffect.ShowToast -> context.toastOnUi(effect.message)
                 BgmPoolEffect.OpenFilePicker -> picker.launch(arrayOf("audio/*"))
+                BgmPoolEffect.OpenPackagePicker -> packagePicker.launch(
+                    arrayOf("application/zip", "application/octet-stream", "*/*")
+                )
+                is BgmPoolEffect.SavePackageTo -> packageExporter.launch(effect.fileName)
                 BgmPoolEffect.Stop -> runCatching {
                     if (player.isPlaying) player.stop()
                     player.reset()
@@ -178,6 +201,13 @@ fun BgmPoolScreen(
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
                 actions = {
                     TopBarActionsRow {
+                        IconButton(onClick = { showIoSheet = true }) {
+                            Icon(
+                                Icons.Default.ImportExport,
+                                contentDescription = stringResource(R.string.cast_bgm_io),
+                                tint = LegadoTheme.colorScheme.onSurface,
+                            )
+                        }
                         IconButton(onClick = { showFadeDialog = true }) {
                             Icon(
                                 Icons.Default.Settings,
@@ -342,6 +372,43 @@ fun BgmPoolScreen(
     }
     if (showFadeDialog) {
         FadeSettingsDialog(state, onIntent) { showFadeDialog = false }
+    }
+    BgmPoolIoSheet(show = showIoSheet, onDismiss = { showIoSheet = false }, onIntent = onIntent)
+}
+
+/**
+ * 导入/导出入口：一张卡导包、一张卡导出，布局与角色声音池那个弹窗一致（一行两个卡片）。
+ *
+ * 导的是整个背景音乐池连音频一起（zip：`manifest.json` + `audio/<文件>`），
+ * 包内格式与「路径重写成接收端自己的副本」都在
+ * [io.legado.app.help.readaloud.cast.BgmPoolTransfer]，这里只负责选文件。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BgmPoolIoSheet(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    onIntent: (BgmPoolIntent) -> Unit,
+) {
+    fun send(intent: BgmPoolIntent) {
+        onDismiss()
+        onIntent(intent)
+    }
+    OptionSheet(
+        show = show,
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.cast_bgm_io),
+    ) {
+        OptionCard(
+            icon = Icons.Default.FolderOpen,
+            text = stringResource(R.string.cast_bgm_import_package),
+            onClick = { send(BgmPoolIntent.AskImportPackage) },
+        )
+        OptionCard(
+            icon = Icons.Default.SaveAlt,
+            text = stringResource(R.string.cast_bgm_export_package),
+            onClick = { send(BgmPoolIntent.AskExportPackage) },
+        )
     }
 }
 

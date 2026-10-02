@@ -33,6 +33,26 @@ object VoiceEffectStore {
     /** 「无变声」选项的取值（角色表里存空串）。 */
     const val NONE = ""
 
+    /**
+     * 「心声混响」：正文里用**单引号**包起来的那句台词（心声）默认套的内置预设名，
+     * 就是 [builtins] 里那一份，用户可改名、停用或删掉。
+     *
+     * 唯一消费方是 [io.legado.app.help.readaloud.cast.CastAssignmentStore.assign]：它在**新建**
+     * 分配行的那一次把这个名字写进 `chapter_role_assignments.voiceEffect`（段级那一列），
+     * 之后不再补写——用户在胶囊里清空或改过就以他的为准。预设不在这个名字上（改名/停用/删掉）
+     * 时 [usableName] 给空串，那就是不变声，本 Store 不会凭空造一份预设出来。
+     */
+    const val THOUGHT_EFFECT = "心声混响"
+
+    /**
+     * 这个名字的预设此刻能不能用（存在且启用）：能用返回它自己，否则返回 [NONE]。
+     *
+     * 走 [list] 而不是 [byName]：那份内存快照只在每章准备时刷新，写默认值的当下可能还没灌过；
+     * [list] 顺带负责预设表为空时（全新装机、没进过变声器页）先补内置预设。
+     */
+    suspend fun usableName(name: String): String =
+        if (name in enabledNames()) name else NONE
+
     /** 内置预设：全部用平台音高/混响/带通组合出来的免费方案，不引第三方库。 */
     fun builtins(): List<VoiceEffectPreset> = listOf(
         VoiceEffectPreset(

@@ -46,13 +46,21 @@ sealed interface AiCastStream {
  * + 固定输出契约；书级记忆（[io.legado.app.data.entities.BookCastMemory]）
  * 逐章滚动更新，把同一人物的不同称呼归并为同一角色。
  * 已有角色直接复用；确属新人物才建档（身份 = 名字+池）。
+ * 跑哪几章由 [castChapterPlan] 决定：连续范围（当前章 + N，或悬浮窗直接指定的起止章）
+ * 或只跑失败的那几章（重试）。每章开跑前把进度写进本书 prefs
+ * （[AiCastPresetStore.AiCastRunState]），取消后能原地续跑。
  */
 class AiCastAssignUseCase(
     private val aiProfileGateway: AiProfileGateway,
     private val aiTextGateway: AiTextGateway,
 ) {
 
-    /** 每章进度回调：(chapterTitle, doneChapters, totalChapters, error?)。 */
+    /**
+     * 每章进度回调：(chapterIndex, chapterTitle, doneChapters, totalChapters, error?)。
+     *
+     * [chapterIndex] 是**0 基**目录下标（与 chapter_role_assignments.chapterIndex 同一口径，
+     * 显示成「第 N 章」时 +1）；执行侧据此记账哪几章失败，重试只跑这些章。
+     */
     suspend fun execute(
         book: Book,
         startChapter: Int,
@@ -61,34 +69,73 @@ class AiCastAssignUseCase(
         presetId: String = "",
         temporaryInstruction: String = "",
         reasoningLevel: AiReasoningLevel = AiReasoningLevel.OFF,
-        onProgress: suspend (String, Int, Int, String?) -> Unit,
+        /** 显式范围终点（含，0 基）；-1 = 由 [chapterCount] 推出（旧「当前章 + N」口径）。 */
+        endChapter: Int = -1,
+        /** 只重跑这些章（失败重试）；非空时忽略 [startChapter] / [chapterCount] / [endChapter]。 */
+        onlyChapters: List<Int> = emptyList(),
+        onProgress: suspend (Int, String, Int, Int, String?) -> Unit,
         onStream: suspend (AiCastStream) -> Unit = { },
     ): Result<Int> {
         val toc = withContext(Dispatchers.IO) { appDb.bookChapterDao.getChapterList(book.bookUrl) }
         if (toc.isEmpty()) return Result.failure(IllegalStateException("目录为空"))
-        val start = startChapter.coerceIn(0, toc.lastIndex)
-        val end = (start + chapterCount - 1).coerceAtMost(toc.lastIndex)
-        val total = end - start + 1
+        val plan = castChapterPlan(toc.size, startChapter, chapterCount, endChapter, onlyChapters)
+        if (plan.isEmpty()) return Result.success(0)
+        val total = plan.size
         val pools = withContext(Dispatchers.IO) { VoicePoolStore.enabledPoolNames() }
         val preset = withContext(Dispatchers.IO) { AiCastPresetStore.resolvePreset(presetId) }
         val systemPrompt = AiCastPresetStore.buildSystemPrompt(
             requirement = preset?.instruction ?: AiCastPresetStore.DEFAULT_REQUIREMENT,
             temporaryInstruction = temporaryInstruction,
         )
-        var done = 0
+        val failed = ArrayList<Int>()
         var assignedChapters = 0
-        for (index in start..end) {
+        for ((offset, index) in plan.withIndex()) {
+            // 开跑前一章先记下「跑到这儿了」：用户中途取消时这一章就是续分配的起点，
+            // 悬浮窗关掉再打开也还在（见 AiCastPresetStore.AiCastRunState）
+            persistRunState(book.bookUrl, plan, index, failed)
             val error = runCatching {
                 assignChapter(
                     book, toc, index, reassign, pools, systemPrompt, reasoningLevel, onStream,
                 )
             }.exceptionOrNull()
-            done++
-            onProgress(toc[index].title, done, total, error?.message)
-            if (error == null) assignedChapters++
+            // 取消不算失败：这一章没跑完，靠上面写下的 resumeChapter 续跑就够了
             if (error is CancellationException) throw error
+            if (error == null) assignedChapters++ else failed += index
+            onProgress(
+                index,
+                toc[index].title,
+                offset + 1,
+                total,
+                // 异常没有 message 时也要给个说法，否则界面只剩「失败」两个字没有原因
+                error?.let { failureReason(it) },
+            )
         }
+        // 整趟跑完：没有要续的章了，但失败清单要留着让重试按钮读
+        persistRunState(book.bookUrl, plan, AiCastPresetStore.NO_RESUME_CHAPTER, failed)
         return Result.success(assignedChapters)
+    }
+
+    /**
+     * 把本次范围 / 停在第几章 / 哪些章失败写进本书 prefs。
+     *
+     * 调用点在逐章循环开头（每章一次）+ 循环正常结束后一次（resume 归
+     * [AiCastPresetStore.NO_RESUME_CHAPTER]），取消协程不需要任何额外收尾就能留下正确的续跑位置。
+     */
+    private suspend fun persistRunState(
+        bookUrl: String,
+        plan: List<Int>,
+        resumeChapter: Int,
+        failed: List<Int>,
+    ) = withContext(Dispatchers.IO) {
+        AiCastPresetStore.saveCastRunState(
+            bookUrl,
+            AiCastPresetStore.AiCastRunState(
+                startChapter = plan.first(),
+                endChapter = plan.last(),
+                resumeChapter = resumeChapter,
+                failedChapters = failed.toList(),
+            ),
+        )
     }
 
     private suspend fun assignChapter(
@@ -118,10 +165,17 @@ class AiCastAssignUseCase(
         // 一段可以有多个锚点，全部逐条送出（旧实现段内只保留最后一个，前面的句子 AI 从没见过）。
         val tracker = CastMarkers.CastQuoteTracker()
         val anchors = ArrayList<List<Pair<Int, Int>>>()
+        // 单引号开口的那几个锚点 = 心声那一类台词：建行时默认给它套「心声混响」，
+        // 这里顺手记下来是为了不必让 CastAssignmentStore.assign 每句再读一遍本章正文
+        // （口径与 CastAssignmentStore.thoughtOrdinals 完全一致，判档看 CastMarkers.SingleQuoteOpens）。
+        val thoughtOrdinals = HashSet<Int>()
         for (paragraph in paragraphs) {
             val hits = ArrayList<Pair<Int, Int>>()
             for ((pos, ch) in paragraph.withIndex()) {
-                if (tracker.feed(ch)) hits += tracker.lastCastOrdinal to pos
+                if (tracker.feed(ch)) {
+                    hits += tracker.lastCastOrdinal to pos
+                    if (ch in CastMarkers.SingleQuoteOpens) thoughtOrdinals += tracker.lastCastOrdinal
+                }
             }
             anchors += hits
         }
@@ -173,7 +227,7 @@ class AiCastAssignUseCase(
                     payload = payload,
                     onStream = onStream,
                 ),
-            )
+            ) ?: error("AI 的回复里读不出 JSON（被截断或换了格式）")
             // 书级记忆滚动更新：AI 返回非空 memory 才覆盖（返回原样也安全）
             parsed.memory.takeIf { !it.isNullOrBlank() }?.let {
                 AiCastPresetStore.setMemory(book.bookUrl, it)
@@ -181,6 +235,7 @@ class AiCastAssignUseCase(
             }
             val speakerOf = writeAssignments(
                 book.bookUrl, chapterIndex, window, parsed.assignments, pools, known,
+                thoughtOrdinals,
             )
             // 下一块只带最后几条已定说话人：跨块时同一个人接着说不至于换个名字
             previousSpeakers = speakerOf.takeLast(PREVIOUS_SPEAKERS)
@@ -228,8 +283,11 @@ class AiCastAssignUseCase(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            error("AI 调用失败：${e.message}")
+            // 断网 / DNS 解不开 / 超时 / 非 2xx 全在这里冒出来：原因必须原样带上去，
+            // 上层是按「第 N 章：这句原因」直接显示给用户的
+            error("AI 调用失败：${failureReason(e)}")
         }
+        if (answer.length == 0) error("AI 没有返回任何内容（连接被中断或服务商空回）")
         return answer.toString()
     }
 
@@ -243,6 +301,10 @@ class AiCastAssignUseCase(
      * 两段引号之间没有叙述行就沿用前一句的说话人。真机一章群戏验证过，这个假设是错的——
      * 作者写一问一答时同样不加叙述行，「李振富连说五段」里有三段其实是星菲在答话。
      * 宁可让这句由默认引擎念（用户口径：只读分配到的话，其它走默认），也不能安错人。
+     *
+     * [thoughtOrdinals] 是本章里以单引号开口的锚点序号（由 [assignChapter] 数锚点时顺手记下的，
+     * 口径见 [CastMarkers.SingleQuoteOpens]），逐条传给 [CastAssignmentStore.assign]：
+     * 心声那类台词新建分配行时默认套「心声混响」，这里先算好就不用每句重读一遍正文。
      */
     private suspend fun writeAssignments(
         bookUrl: String,
@@ -251,6 +313,7 @@ class AiCastAssignUseCase(
         assignments: List<AiCastPayload.Assignment>,
         pools: List<String>,
         known: MutableList<CastCharacter>,
+        thoughtOrdinals: Set<Int>,
     ): List<AiCastPayload.Speaker> {
         val pending = window.pending.toSet()
         val byOrdinal = assignments
@@ -285,6 +348,7 @@ class AiCastAssignUseCase(
                 characterId = character.id,
                 characterName = character.name,
                 voicePoolLabel = character.poolLabel,
+                thoughtQuote = ordinal in thoughtOrdinals,
             )
             speakers += AiCastPayload.Speaker(ordinal, character.name)
         }
@@ -454,11 +518,17 @@ class AiCastAssignUseCase(
         }.getOrDefault("")
     }
 
-    /** 提取响应最外层 JSON：assignments 数组 + 可选 memory 更新；解析失败给空。 */
-    private fun parseResponse(raw: String): AiCastPayload.Response {
+    /**
+     * 提取响应最外层 JSON：assignments 数组 + 可选 memory 更新。
+     *
+     * 返回 null = 回复里根本没有 JSON 对象（模型只回了一段白话、或者被截断）；
+     * 结构在但读不出 assignments = 抛错。两者以前都被吞成「空分配」，于是断网重连后
+     * 拿到半截回复、服务商改了输出格式这类问题，界面上一个字的提示都没有。
+     */
+    private fun parseResponse(raw: String): AiCastPayload.Response? {
         val start = raw.indexOf('{')
         val end = raw.lastIndexOf('}')
-        if (start < 0 || end <= start) return AiCastPayload.Response(emptyList(), null)
+        if (start < 0 || end <= start) return null
         return runCatching {
             val root = JsonParser.parseString(raw.substring(start, end + 1)).asJsonObject
             val assignments = root.getAsJsonArray("assignments")?.map { element ->
@@ -472,13 +542,44 @@ class AiCastAssignUseCase(
             val memoryElement = root.get("memory")
             val memory = memoryElement?.takeIf { it.isJsonPrimitive }?.asString
             AiCastPayload.Response(assignments, memory)
-        }.getOrDefault(AiCastPayload.Response(emptyList(), null))
+        }.getOrElse { error("AI 返回的 JSON 读不出来：${failureReason(it)}") }
     }
 }
 
 /** 锚点标记：`⟦序号⟧` 插在开引号之后，正文里不会出现这两个括号，模型只需回序号。 */
 private const val ANCHOR_OPEN = "⟦"
 private const val ANCHOR_CLOSE = "⟧"
+
+/**
+ * 本次要处理的章（**0 基**、升序去重、夹到目录范围内）。角色与配乐两趟共用同一份计划，
+ * 免得两边走出口径不一致。
+ *
+ * [onlyChapters] 非空 = 重试：只跑失败的/被跳过的这些章，不重跑整段范围。
+ * 否则按范围跑：[endChapter] ≥ 0 时用显式终点（悬浮窗的「指定范围」），
+ * 为 -1 时回落到旧的「当前章 + [chapterCount] - 1」。
+ * 越界不报错而是夹回目录：悬浮窗已经实时显示实际章数，跑到书尾就是书尾。
+ */
+internal fun castChapterPlan(
+    tocSize: Int,
+    startChapter: Int,
+    requestedCount: Int,
+    endChapter: Int,
+    onlyChapters: List<Int>,
+): List<Int> {
+    if (tocSize <= 0) return emptyList()
+    val last = tocSize - 1
+    if (onlyChapters.isNotEmpty()) {
+        return onlyChapters.filter { it in 0..last }.distinct().sorted()
+    }
+    val start = startChapter.coerceIn(0, last)
+    val end = (if (endChapter >= 0) endChapter else start + requestedCount - 1)
+        .coerceIn(start, last)
+    return (start..end).toList()
+}
+
+/** 异常 → 给用户看的一句话原因（message 常为空，尤其是 IOException/超时之外的异常）。 */
+internal fun failureReason(error: Throwable): String =
+    error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName
 
 /** 一次请求送多少正文 / 多少个锚点；跨块时带上文最后几条已定说话人。 */
 private const val EXCERPT_CHARS = 9000

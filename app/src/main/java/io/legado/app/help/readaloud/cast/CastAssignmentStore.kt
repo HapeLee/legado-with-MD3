@@ -321,6 +321,13 @@ object CastAssignmentStore {
      *
      * [voiceEffect] 是这一句的段级变声器（空 = 跟随角色全局），朗读侧的取值规则见
      * [io.legado.app.help.readaloud.effect.VoiceEffectStore.ofSpeech]。
+     *
+     * [thoughtQuote] = 这一句是不是**单引号**台词（心声那一类）。null = 调用方没扫过正文，
+     * 由本函数现查 [thoughtOrdinals]；AI 分配那一趟整章已经数过一遍，直接传布尔值，
+     * 免得每句重读一次正文。只在**建行**那一刻起作用：单引号那句第一次被分配时默认套上
+     * [io.legado.app.help.readaloud.effect.VoiceEffectStore.THOUGHT_EFFECT]，
+     * 用户后来在胶囊里清空或改掉就永不再补——空串在读取时区分不出「没设过」和「清过」，
+     * 所以这份默认只能写一次，落点就是这个唯一的建行出口（confirm / create / AI 分配都走这里）。
      */
     suspend fun assign(
         bookUrl: String,
@@ -330,9 +337,20 @@ object CastAssignmentStore {
         characterName: String,
         voicePoolLabel: String,
         voiceEffect: String = "",
+        thoughtQuote: Boolean? = null,
     ) {
         val now = System.currentTimeMillis()
-        appDb.chapterRoleAssignmentDao.upsert(
+        val dao = appDb.chapterRoleAssignmentDao
+        val existing = dao.getOne(bookUrl, chapterIndex, quoteOrdinal)
+        val effect = voiceEffect.trim().take(24).ifBlank {
+            val isThought = thoughtQuote ?: (quoteOrdinal in thoughtOrdinals(bookUrl, chapterIndex))
+            if (existing == null && isThought) {
+                VoiceEffectStore.usableName(VoiceEffectStore.THOUGHT_EFFECT)
+            } else {
+                VoiceEffectStore.NONE
+            }
+        }
+        dao.upsert(
             ChapterRoleAssignment(
                 bookUrl = bookUrl,
                 chapterIndex = chapterIndex,
@@ -340,12 +358,42 @@ object CastAssignmentStore {
                 characterId = characterId,
                 characterName = characterName,
                 voicePoolLabel = voicePoolLabel,
-                voiceEffect = voiceEffect.trim().take(24),
-                createdAt = appDb.chapterRoleAssignmentDao
-                    .getOne(bookUrl, chapterIndex, quoteOrdinal)?.createdAt ?: now,
+                voiceEffect = effect,
+                createdAt = existing?.createdAt ?: now,
                 updatedAt = now,
             ),
         )
+    }
+
+    /**
+     * 本章以**单引号**开口的锚点序号（= 心声那一类台词）。
+     *
+     * 尺子与注入/胶囊/AI 分配完全同一个：内容处理之后、标记注入之前的段落逐字符喂
+     * [CastMarkers.CastQuoteTracker]，`feed` 返回 true 的那个字符就是该锚点的开引号
+     * （判档口径见 [CastMarkers.SingleQuoteOpens]）。
+     * 消费方只有 [assign]：新建分配行时决定要不要默认写「心声混响」。
+     */
+    suspend fun thoughtOrdinals(bookUrl: String, chapterIndex: Int): Set<Int> {
+        CastSyntaxStore.current()
+        val book = appDb.bookDao.getBook(bookUrl) ?: return emptySet()
+        val chapter = appDb.bookChapterDao.getChapter(bookUrl, chapterIndex) ?: return emptySet()
+        val content = BookHelp.getContent(book, chapter) ?: return emptySet()
+        val paragraphs = ReaderChapterSourceParser.castAnchorText(
+            paragraphs = ContentProcessor.get(book)
+                .getContent(book, chapter, content, includeTitle = false)
+                .textList,
+            adaptSpecialStyle = AppConfig.adaptSpecialStyle,
+        )
+        val tracker = CastMarkers.CastQuoteTracker()
+        val ordinals = HashSet<Int>()
+        paragraphs.forEach { paragraph ->
+            paragraph.forEach { ch ->
+                if (tracker.feed(ch) && ch in CastMarkers.SingleQuoteOpens) {
+                    ordinals += tracker.lastCastOrdinal
+                }
+            }
+        }
+        return ordinals
     }
 
     /** 订阅：这本书分配过角色的章节号（目录页那枚多角色图标用）。 */

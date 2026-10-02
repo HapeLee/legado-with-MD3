@@ -26,7 +26,7 @@ import androidx.room.PrimaryKey
  * [io.legado.app.help.readaloud.cast.RegexCastSplitter] 切分。改字段口径要同步看这两处。
  *
  * 表 `regex_cast_rules` 建表见 `DatabaseMigrations.migration_127_128`（Room version 128），
- * [useRegex] 这一列由 Room version 129 的 AutoMigration 追加。
+ * [useRegex] 这一列由 Room version 129 的 AutoMigration 追加，[voiceEffect] 由 130 追加。
  */
 @Entity(
     tableName = "regex_cast_rules",
@@ -61,6 +61,20 @@ data class RegexCastRule(
     /** 音色 id / 配乐 id。空 = 只选了池，朗读时按池内启用的随机取一条。 */
     @ColumnInfo(defaultValue = "")
     var itemId: String = "",
+    /**
+     * 变声器预设名，空 = 不变声。
+     *
+     * 只对 [POOL_ROLE] 那种有意义（[POOL_BGM] 命中处根本不念，没有声音可变）。
+     * 生产方是正则角色编辑弹窗（`RegexCastRuleScreen` 的「变声器」那一行），消费方是
+     * [io.legado.app.help.readaloud.cast.RegexCastRuleStore.effectsFor]：它把这一列抄进
+     * [io.legado.app.help.readaloud.cast.RegexCastEffect.voiceEffect]，随切分结果落到朗读单元的
+     * [io.legado.app.domain.model.readaloud.ChapterSpeechSegment.voiceEffect]，与正文胶囊那一份
+     * ([ChapterRoleAssignment.voiceEffect]) 走同一条通道——音高/语速与混响/金属感两层都由
+     * [io.legado.app.help.readaloud.effect.VoiceEffectStore] 按名字取预设后套上，
+     * 预设被停用或删除就听不到效果（不改声）。
+     */
+    @ColumnInfo(defaultValue = "")
+    var voiceEffect: String = "",
     /** 所属分组 id，指向 [RegexCastGroup.id]，空串 = 未分组；无 Room 外键，级联口径在 RegexCastRuleStore.deleteGroup。 */
     @ColumnInfo(defaultValue = "")
     var groupId: String = "",

@@ -3045,6 +3045,12 @@
     <string name="cast_bgm_missing_file">音频文件已丢失</string>
     <string name="cast_bgm_play_failed">播放失败</string>
     <string name="cast_bgm_import_result">导入 %1$d 个，跳过 %2$d 个</string>
+    <string name="cast_bgm_io">背景音乐导入/导出</string>
+    <string name="cast_bgm_import_package">导入音乐包（zip）</string>
+    <string name="cast_bgm_export_package">导出音乐包（zip）</string>
+    <string name="cast_bgm_import_package_result">导入音乐池 %1$d 个、配乐 %2$d 段，跳过 %3$d 段（包里没有音频）</string>
+    <string name="cast_bgm_import_package_invalid">这个文件不是本软件导出的音乐包</string>
+    <string name="cast_bgm_export_done">音乐包已导出</string>
     <string name="cast_search_bgm_pool_hint">搜索音乐池或分组</string>
     <string name="cast_search_track_hint">搜索配乐</string>
     <string name="cast_add_track_to_pool">添加配乐</string>
@@ -3100,6 +3106,12 @@
     <string name="ai_cast_preset_default_done">已恢复内置默认分配要求</string>
     <string name="ai_cast_extra_chapters">追加章节数</string>
     <string name="ai_cast_extra_summary">在当前章之后多分配 %1$d 章（0 = 仅本章）</string>
+    <string name="ai_cast_range_mode">指定范围</string>
+    <string name="ai_cast_chapter_failed">第 %1$d 章《%2$s》：%3$s</string>
+    <string name="ai_cast_run_failed">%1$d 章分配失败</string>
+    <string name="ai_cast_resume_from">从第 %1$d 章继续</string>
+    <string name="ai_cast_retry">重试 %1$d 章</string>
+    <string name="ai_cast_cancelled">已取消分配，停在第 %1$d 章</string>
     <string name="ai_cast_no_preset">无提示词预设，使用内置默认</string>
     <string name="ai_cast_reasoning_level">模型推理强度</string>
     <string name="ai_cast_reasoning_level_hint">「跟随模型」= 软件一个参数都不发。等得太久就往低调；智谱 GLM-5.3 这类强制思考的模型关不掉，调低也未必有变化。</string>
@@ -3163,9 +3175,19 @@
     <string name="regex_cast_pattern">角色正则</string>
     <string name="regex_cast_match_text">匹配的文字</string>
     <string name="regex_cast_use_regex">使用正则匹配</string>
+    <string name="regex_cast_export">导出正则角色</string>
+    <string name="regex_cast_import">导入正则角色</string>
+    <string name="regex_cast_export_done">已导出正则角色</string>
+    <string name="regex_cast_export_failed">导出失败</string>
+    <string name="regex_cast_import_invalid">不是本软件导出的正则角色文件</string>
+    <string name="regex_cast_import_result">新增规则 %1$d 条、分组 %2$d 个；%3$d 条的声音目标本机找不到，需要手动补；%4$d 条已存在而跳过</string>
     <string name="regex_cast_pool_kind">声音池选择</string>
     <string name="regex_cast_pool">声音池</string>
     <string name="regex_cast_item">音色</string>
+    <!-- 正则角色弹窗「变声器」那一栏的第一项：写回空串，朗读侧就不套任何预设 -->
+    <string name="regex_cast_effect_none">不变声</string>
+    <!-- 列表摘要尾部：这条规则除了换音色还套了哪个变声器预设 -->
+    <string name="regex_cast_effect_summary">·变声「%1$s」</string>
     <string name="regex_cast_group">分组</string>
     <string name="regex_cast_enabled">激活规则</string>
     <string name="regex_cast_random">池内随机</string>

@@ -147,11 +147,31 @@ sealed interface BgmPoolIntent {
 
     data class SetFadeIn(val enabled: Boolean) : BgmPoolIntent
     data class SetFadeOut(val enabled: Boolean) : BgmPoolIntent
+
+    /**
+     * 右上角「导入/导出」：整个背景音乐池（分组树 + 池 + 配乐 + 归属）连音频文件一起打包带走。
+     *
+     * zip 的格式只由 [io.legado.app.help.readaloud.cast.BgmPoolTransfer] 一处实现：
+     * [AskExportPackage] 让 VM 发一个带建议文件名的保存效果，界面用 CreateDocument 拿到 uri
+     * 交回 [ExportPackageTo]；[AskImportPackage] 同理，选回来的 uri 交给 [ImportPackagePicked] 解包。
+     * 界面全程不认识包内部结构（清单字段与「音频落进接收端自己的 bgm 目录」的口径见那个文件）。
+     */
+    data object AskImportPackage : BgmPoolIntent
+    data object AskExportPackage : BgmPoolIntent
+    data class ImportPackagePicked(val uri: Uri) : BgmPoolIntent
+    data class ExportPackageTo(val uri: Uri) : BgmPoolIntent
 }
 
 sealed interface BgmPoolEffect {
     data class ShowToast(val message: String) : BgmPoolEffect
     data object OpenFilePicker : BgmPoolEffect
+
+    /** 选一个音乐包（zip）导进来；与「导入音频」的多个文件选择是两个契约。 */
+    data object OpenPackagePicker : BgmPoolEffect
+
+    /** 让用户挑保存位置（CreateDocument），[fileName] 是建议文件名。 */
+    data class SavePackageTo(val fileName: String) : BgmPoolEffect
+
     data class Play(val id: String, val path: String, val volume: Float) : BgmPoolEffect
     data object Stop : BgmPoolEffect
 }

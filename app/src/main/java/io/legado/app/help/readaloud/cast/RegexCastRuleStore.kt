@@ -20,12 +20,17 @@ import kotlin.random.Random
  * [soundPath] 会被 [RegexCastSplitter] 编成 `路径#千分位` 格式的音频串（见
  * [RegexCastSplitter.SOUND_SEPARATOR] / [RegexCastSplitter.OFFSET_SEPARATOR]），
  * 解析端在 BaseReadAloudService.takeCueSounds。
+ * [voiceEffect] 是这条规则的变声器预设名（来自 `regex_cast_rules.voiceEffect`，空 = 不变声），
+ * 只在 [voiceId] 那一支有值：它跟着切块经 [RegexCastSplitter.Part] 落到朗读单元的
+ * `ChapterSpeechSegment.voiceEffect`，与正文胶囊那一份同一条通道，消费方是
+ * [io.legado.app.help.readaloud.effect.VoiceEffectStore.ofSpeech]。
  */
 data class RegexCastEffect(
     val label: String,
     val pattern: Regex,
     val voiceId: String? = null,
     val soundPath: String? = null,
+    val voiceEffect: String = "",
 )
 
 /**
@@ -106,10 +111,13 @@ object RegexCastRuleStore {
     // ---------- 规则增删改 ----------
 
     suspend fun save(rule: RegexCastRule) = withContext(Dispatchers.IO) {
-        if (rule.id == 0L) {
-            appDb.regexCastRuleDao.insert(rule)
+        // 变声器名按预设表的口径存：去空白、限长 24（与 chapter_role_assignments.voiceEffect 一致），
+        // 预设是精确按名字匹配的，多一个空格就查不到、听起来像「设了没生效」
+        val normalized = rule.copy(voiceEffect = rule.voiceEffect.trim().take(24))
+        if (normalized.id == 0L) {
+            appDb.regexCastRuleDao.insert(normalized)
         } else {
-            appDb.regexCastRuleDao.update(rule.copy(updatedAt = System.currentTimeMillis()))
+            appDb.regexCastRuleDao.update(normalized.copy(updatedAt = System.currentTimeMillis()))
         }
     }
 
@@ -266,7 +274,7 @@ object RegexCastRuleStore {
                         AppLog.put("正则角色「${rule.name}」没有可用的音色（池内没有启用的条目），本条跳过")
                         null
                     } else {
-                        RegexCastEffect(rule.name, pattern, voiceId = voiceId)
+                        RegexCastEffect(rule.name, pattern, voiceId = voiceId, voiceEffect = rule.voiceEffect)
                     }
                 }
             }

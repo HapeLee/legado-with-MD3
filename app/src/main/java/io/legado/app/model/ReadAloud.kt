@@ -142,7 +142,7 @@ object ReadAloud {
         }.getOrNull()
     }
 
-    /** 这本书里有没有哪条音色预设需要会话级效果（角色全局或正文胶囊那段自己设的）。 */
+    /** 这本书里有没有哪条音色预设需要会话级效果（角色全局、正文胶囊那一段、或正则角色那条规则自己设的）。 */
     private fun hasSessionLayerEffect(bookUrl: String): Boolean = runBlocking {
         val wanted = appDb.voiceEffectDao.getAll()
             .filter { it.enabled }
@@ -152,7 +152,12 @@ object ReadAloud {
         if (appDb.castCharacterDao.getByBook(bookUrl).any { it.voiceEffect in wanted }) {
             return@runBlocking true
         }
-        appDb.chapterRoleAssignmentDao.getForBook(bookUrl).any { it.voiceEffect in wanted }
+        if (appDb.chapterRoleAssignmentDao.getForBook(bookUrl).any { it.voiceEffect in wanted }) {
+            return@runBlocking true
+        }
+        // 正则角色那一列（regex_cast_rules.voiceEffect）的产出方是 RegexCastRuleScreen 的变声器那行，
+        // 消费方是 CastSpeechOverlay → 朗读单元；混响/金属感同样只有文件合成那条路挂得上。
+        appDb.regexCastRuleDao.all().any { it.enabled && it.voiceEffect in wanted }
     }
 
     fun upReadAloudClass() {

@@ -1,9 +1,11 @@
 package io.legado.app.ui.book.readaloud.cast
 
 import android.app.Application
+import android.net.Uri
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.help.readaloud.cast.BgmPoolStore
+import io.legado.app.help.readaloud.cast.BgmPoolTransfer
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
@@ -17,7 +19,8 @@ import java.io.File
 /**
  * 背景音乐池 ViewModel。
  *
- * 数据读写收口在 [BgmPoolStore]（架构护栏：VM 不直连 DAO）。池/分组/拖动这套逻辑与
+ * 数据读写收口在 [BgmPoolStore]（架构护栏：VM 不直连 DAO）；整包导出/导入走
+ * [BgmPoolTransfer]，VM 只管开流和报计数。池/分组/拖动这套逻辑与
  * 角色声音池同源，树规则走 [CastPoolTree]，所以两页行为不会各自漂移。
  * 播放本身是纯界面行为（MediaPlayer 跟着组合走），这里只记「哪条在放」并把它变成图标与 Effect。
  */
@@ -348,6 +351,15 @@ class BgmPoolViewModel(
 
             is BgmPoolIntent.FilesPicked -> import(intent)
 
+            BgmPoolIntent.AskImportPackage -> _effects.tryEmit(BgmPoolEffect.OpenPackagePicker)
+
+            BgmPoolIntent.AskExportPackage ->
+                _effects.tryEmit(BgmPoolEffect.SavePackageTo(EXPORT_FILE_NAME))
+
+            is BgmPoolIntent.ImportPackagePicked -> importPackage(intent.uri)
+
+            is BgmPoolIntent.ExportPackageTo -> exportPackage(intent.uri)
+
             is BgmPoolIntent.AskTrackVolume -> {
                 val target = _uiState.value.tracks.firstOrNull { it.id == intent.id } ?: return
                 _uiState.update { it.copy(trackVolumeTarget = target) }
@@ -449,6 +461,49 @@ class BgmPoolViewModel(
         _effects.tryEmit(BgmPoolEffect.ShowToast(message))
     }
 
+    /**
+     * 解一个音乐包（zip）：清单字段、音频落盘、按名字回解池归属全在
+     * [BgmPoolTransfer.importZip] 里，这里只负责开流和把三个计数报成 toast。
+     *
+     * 不是本软件导出的包（没有清单 / kind 对不上 / 读不出来）统一报「不是本软件导出的音乐包」，
+     * 解包一半失败则已经落库的部分保留——与角色声音池导入同一口径，导入只增不删。
+     */
+    private fun importPackage(uri: Uri) = execute {
+        val summary = runCatching {
+            context.contentResolver.openInputStream(uri)
+                ?.use { BgmPoolTransfer.importZip(it) }
+                ?: error("cannot open $uri")
+        }.getOrElse {
+            toast(context.getString(R.string.cast_bgm_import_package_invalid))
+            return@execute
+        }
+        toast(
+            context.getString(
+                R.string.cast_bgm_import_package_result,
+                summary.pools,
+                summary.tracks,
+                summary.skippedMissing,
+            )
+        )
+        refreshTracks()
+        refreshPools()
+        _uiState.value.expandedPools.forEach { refreshMembers(it.poolId) }
+    }
+
+    /** 写一个音乐包：VM 开流、[BgmPoolTransfer.exportZip] 出内容，与角色声音池导出同一分工。 */
+    private fun exportPackage(uri: Uri) = execute {
+        val written = runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { out ->
+                BgmPoolTransfer.exportZip(out)
+            } != null
+        }.getOrDefault(false)
+        toast(
+            context.getString(
+                if (written) R.string.cast_bgm_export_done else R.string.cast_export_pools_failed
+            )
+        )
+    }
+
     private fun refreshPools() {
         execute {
             val pools = BgmPoolStore.listPools()
@@ -544,5 +599,10 @@ class BgmPoolViewModel(
         bytes >= 1 shl 20 -> "%.1f MB".format(bytes / 1048576.0)
         bytes >= 1 shl 10 -> "%d KB".format(bytes / 1024)
         else -> "$bytes B"
+    }
+
+    companion object {
+        /** CreateDocument 的建议文件名；扩展名要和 Screen 里 `application/zip` 的 mime 对上。 */
+        private const val EXPORT_FILE_NAME = "bgm_pools.zip"
     }
 }

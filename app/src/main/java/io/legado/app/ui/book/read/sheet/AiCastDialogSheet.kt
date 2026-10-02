@@ -109,11 +109,13 @@ fun AiCastDialogSheet(
     if (!rememberSheetAlive(opened)) return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val bookUrl = ReadBook.book?.bookUrl ?: return
+    val book = ReadBook.book ?: return
+    val bookUrl = book.bookUrl
+    val chapterTotal = book.totalChapterNum
     val progress by AiCastProgress.state.collectAsStateWithLifecycle()
 
     var chapterIndex by remember { mutableStateOf(ReadBook.durChapterIndex) }
-    var chapterTitle by remember { mutableStateOf(ReadBook.book?.durChapterTitle.orEmpty()) }
+    var chapterTitle by remember { mutableStateOf(book.durChapterTitle.orEmpty()) }
     var assignedCount by remember(chapterIndex) { mutableStateOf(-1) }
     var dialogueCount by remember(chapterIndex) { mutableStateOf(-1) }
     var sceneCount by remember(chapterIndex) { mutableStateOf(-1) }
@@ -122,8 +124,44 @@ fun AiCastDialogSheet(
     var reasoningLevel by remember { mutableStateOf(AiReasoningLevel.AUTO) }
     var assignScene by remember { mutableStateOf(sceneOnly) }
     var extraChapters by remember { mutableIntStateOf(0) }
+    // 范围模式：起止章直接选（章号从 1 开始填，与听书下载同一套口径），关掉就是「当前章 + 追加章节数」
+    var byRange by remember { mutableStateOf(false) }
+    var rangeStartText by remember { mutableStateOf((chapterIndex + 1).toString()) }
+    var rangeEndText by remember { mutableStateOf((chapterIndex + 1).toString()) }
     var memoryOpen by remember { mutableStateOf(false) }
     var requestOpen by remember { mutableStateOf(false) }
+
+    /**
+     * 本书上一次分配跑到哪儿（停在第几章、哪些章失败、上次用的范围），存在 prefs。
+     *
+     * 每次跑完（[AiCastProgress.State.running] 由 true 变 false）都重读一次，所以取消后
+     * 「从第 N 章继续」「重试失败 N 章」这两个入口关掉重开悬浮窗照样在。
+     * 章号是 0 基（写入侧见 `AiCastAssignUseCase.persistRunState`），这里显示与填框一律 +1。
+     */
+    val storedRun by produceState(
+        initialValue = AiCastPresetStore.AiCastRunState(),
+        key1 = bookUrl,
+        key2 = progress.running,
+    ) {
+        value = withContext(Dispatchers.IO) { AiCastPresetStore.loadCastRunState(bookUrl) }
+    }
+    // 跑完/取消后停在哪儿：优先看本次运行的进度状态，其次看书里存的那一份
+    val resumeChapter = if (progress.running) AiCastPresetStore.NO_RESUME_CHAPTER else storedRun.resumeChapter
+    val retryChapters = if (progress.failedChapters.isNotEmpty()) {
+        progress.failedChapters
+    } else {
+        storedRun.failedChapters
+    }
+
+    /** 本次要分配的章区间（0 基、含两端）；null = 范围填得不合法。换算规则见 [castChapterRange]。 */
+    val castRange: Pair<Int, Int>? = castChapterRange(
+        byRange = byRange,
+        startText = rangeStartText,
+        endText = rangeEndText,
+        chapterTotal = chapterTotal,
+        currentChapter = chapterIndex,
+        extraChapters = extraChapters,
+    )
 
     // 子页：0=主面板 1=预设管理
     var page by remember { mutableStateOf(0) }
@@ -164,6 +202,37 @@ fun AiCastDialogSheet(
     }
 
     val running = progress.running
+    /**
+     * 发一次分配意图。[onlyChapters] 非空 = 重试：只跑失败的那几章（范围三兄弟由
+     * `castChapterPlan` 忽略）；空 = 按界面上选中的那种模式跑整段范围（见 [castRange]）。
+     */
+    val startCast: (List<Int>) -> Unit = { onlyChapters ->
+        val range = castRange
+        val plan = when {
+            onlyChapters.isNotEmpty() -> onlyChapters.first() to onlyChapters.last()
+            range == null -> null
+            else -> range
+        }
+        if (plan == null) {
+            // 范围填错不是「点了没反应」：必须当场说一句，否则用户以为按钮坏了
+            context.toastOnUi(R.string.read_aloud_audio_download_invalid_range)
+        } else {
+            onIntent(
+                ReadBookIntent.StartAiCast(
+                    startChapter = plan.first,
+                    count = plan.second - plan.first + 1,
+                    endChapter = plan.second,
+                    onlyChapters = onlyChapters,
+                    reassign = reassign,
+                    presetId = selectedPresetId.orEmpty(),
+                    temporaryInstruction = temporary.trim(),
+                    reasoningLevel = reasoningLevel,
+                    assignScene = assignScene || sceneOnly,
+                    rolesPass = !sceneOnly,
+                ),
+            )
+        }
+    }
     val allDone = dialogueCount >= 0 && assignedCount >= dialogueCount
     // 思考过程没有开关了：模型回了就永远显示，只是默认收起，收起时头部保留那颗秒表
     val thinkingPending = running && progress.reasoning.isBlank()
@@ -305,14 +374,54 @@ fun AiCastDialogSheet(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                progress.lastError?.let {
-                                    Text(
-                                        text = it,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                        maxLines = 3,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
+                            }
+                            // 跑完/取消后的那一句（「已取消，停在第 N 章」就在里面）
+                            progress.finishedMessage?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            // 逐章失败明细：断网、连不上 AI、回复读不出来都得留一句话在这儿。
+                            // 以前只有 lastError，且只在 running 时显示——一趟跑完提示就消失了。
+                            val failureDetail = progress.failureText
+                                .ifBlank { progress.lastError.orEmpty() }
+                            if (failureDetail.isNotBlank()) {
+                                Text(
+                                    text = failureDetail,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    maxLines = 12,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            // 中断后的两个入口，都不用重填范围：续跑起点填好起止章，重试只跑失败章
+                            if (!running && (resumeChapter >= 0 || retryChapters.isNotEmpty())) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (resumeChapter >= 0) {
+                                        SmallOutlinedButton(
+                                            onClick = {
+                                                byRange = true
+                                                // 停在哪儿就从哪儿再来一遍（填的是显示用的 1 基章号）
+                                                rangeStartText = (resumeChapter + 1).toString()
+                                                rangeEndText =
+                                                    (storedRun.endChapter.coerceAtLeast(resumeChapter) + 1)
+                                                        .toString()
+                                            },
+                                            icon = Icons.Default.Restore,
+                                            text = stringResource(R.string.ai_cast_resume_from, resumeChapter + 1),
+                                        )
+                                    }
+                                    if (retryChapters.isNotEmpty()) {
+                                        SmallOutlinedButton(
+                                            enabled = !running,
+                                            onClick = { startCast(retryChapters) },
+                                            text = stringResource(R.string.ai_cast_retry, retryChapters.size),
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -583,25 +692,88 @@ fun AiCastDialogSheet(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.ai_cast_extra_chapters),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.ai_cast_extra_summary, extraChapters),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            // 分配范围两种模式：「当前章 + 追加 N 章」或「指定起止章」。
+                            // 选中的那一种真的决定发出去的是哪些章（见 startCast / castChapterPlan）。
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = !byRange,
+                                    enabled = !running,
+                                    onClick = { byRange = false },
+                                    label = {
+                                        Text(stringResource(R.string.ai_cast_extra_chapters), maxLines = 1)
+                                    },
+                                )
+                                FilterChip(
+                                    selected = byRange,
+                                    enabled = !running,
+                                    onClick = { byRange = true },
+                                    label = {
+                                        Text(stringResource(R.string.ai_cast_range_mode), maxLines = 1)
+                                    },
+                                )
+                            }
+                            if (byRange) {
+                                // 章号从 1 开始填；控件与文案沿用听书下载那张卡片的范围那一节
+                                CastFieldStack(
+                                    specs = listOf(
+                                        CastFieldSpec(
+                                            id = "castStartChapter",
+                                            label = stringResource(
+                                                R.string.read_aloud_audio_download_start_chapter,
+                                            ),
+                                            value = rangeStartText,
+                                            onValueChange = { rangeStartText = it },
+                                        ),
+                                        CastFieldSpec(
+                                            id = "castEndChapter",
+                                            label = stringResource(
+                                                R.string.read_aloud_audio_download_end_chapter,
+                                            ),
+                                            value = rangeEndText,
+                                            onValueChange = { rangeEndText = it },
+                                        ),
+                                    ),
+                                )
+                                Text(
+                                    text = if (castRange == null) {
+                                        stringResource(R.string.read_aloud_audio_download_invalid_range)
+                                    } else {
+                                        stringResource(
+                                            R.string.read_aloud_audio_download_range_count,
+                                            castRange.second - castRange.first + 1,
+                                        )
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (castRange == null) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = stringResource(R.string.ai_cast_extra_chapters),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                        Text(
+                                            text = stringResource(
+                                                R.string.ai_cast_extra_summary,
+                                                extraChapters,
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    ValueStepper(
+                                        value = extraChapters.toFloat(),
+                                        displayValue = extraChapters.toFloat(),
+                                        valueRange = 0f..100f,
+                                        enabled = !running,
+                                        onValueChange = { extraChapters = it.toInt() },
                                     )
                                 }
-                                ValueStepper(
-                                    value = extraChapters.toFloat(),
-                                    displayValue = extraChapters.toFloat(),
-                                    valueRange = 0f..100f,
-                                    enabled = !running,
-                                    onValueChange = { extraChapters = it.toInt() },
-                                )
                             }
                         }
                     }
@@ -650,20 +822,7 @@ fun AiCastDialogSheet(
                             }
                         } else {
                             Button(
-                                onClick = {
-                                    onIntent(
-                                        ReadBookIntent.StartAiCast(
-                                            startChapter = chapterIndex,
-                                            count = extraChapters + 1,
-                                            reassign = reassign,
-                                            presetId = selectedPresetId.orEmpty(),
-                                            temporaryInstruction = temporary.trim(),
-                                            reasoningLevel = reasoningLevel,
-                                            assignScene = assignScene || sceneOnly,
-                                            rolesPass = !sceneOnly,
-                                        ),
-                                    )
-                                },
+                                onClick = { startCast(emptyList()) },
                             ) {
                                 Text(stringResource(R.string.ai_cast_start))
                             }
@@ -687,6 +846,32 @@ fun AiCastDialogSheet(
                 .let { assignedCount = it.first; dialogueCount = it.second }
         }
     }
+}
+
+/**
+ * 本次要分配的章区间（**0 基**、含两端）；null = 范围填得不合法（非数字、0、起点在终点之后）。
+ *
+ * 界面上的章号从 1 开始（与听书下载那张卡片同一口径），这里负责换算并夹到目录末尾；
+ * 消费侧是 `castChapterPlan`（AiCastAssignUseCase），它按同一份 0 基口径逐章取正文。
+ */
+private fun castChapterRange(
+    byRange: Boolean,
+    startText: String,
+    endText: String,
+    chapterTotal: Int,
+    currentChapter: Int,
+    extraChapters: Int,
+): Pair<Int, Int>? {
+    if (chapterTotal <= 0) return null
+    val last = chapterTotal - 1
+    if (!byRange) {
+        val start = currentChapter.coerceIn(0, last)
+        return start to (start + extraChapters).coerceAtMost(last)
+    }
+    val start = startText.trim().toIntOrNull()?.minus(1) ?: return null
+    val end = endText.trim().toIntOrNull()?.minus(1) ?: return null
+    if (start < 0 || end < start) return null
+    return start.coerceAtMost(last) to end.coerceAtMost(last)
 }
 
 /** 分区卡片：标题（可带右侧操作）+ 内容，统一圆角与内边距。 */

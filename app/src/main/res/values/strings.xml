@@ -3053,6 +3053,12 @@
     <string name="cast_bgm_missing_file">Audio file missing</string>
     <string name="cast_bgm_play_failed">Playback failed</string>
     <string name="cast_bgm_import_result">Imported %1$d, skipped %2$d</string>
+    <string name="cast_bgm_io">Import / export music</string>
+    <string name="cast_bgm_import_package">Import music package (.zip)</string>
+    <string name="cast_bgm_export_package">Export music package (.zip)</string>
+    <string name="cast_bgm_import_package_result">Imported %1$d pools and %2$d tracks, skipped %3$d (audio not in the package)</string>
+    <string name="cast_bgm_import_package_invalid">This file was not exported by this app as a music package</string>
+    <string name="cast_bgm_export_done">Music package exported</string>
     <string name="cast_search_bgm_pool_hint">Search music pools or groups</string>
     <string name="cast_search_track_hint">Search music</string>
     <string name="cast_add_track_to_pool">Add music</string>
@@ -3104,6 +3110,12 @@
     <string name="ai_cast_preset_default_done">Restored the built-in casting requirement</string>
     <string name="ai_cast_extra_chapters">Extra chapters</string>
     <string name="ai_cast_extra_summary">%1$d more chapters after the current one (0 = only this chapter)</string>
+    <string name="ai_cast_range_mode">Chapter range</string>
+    <string name="ai_cast_chapter_failed">Chapter %1$d %2$s: %3$s</string>
+    <string name="ai_cast_run_failed">%1$d chapter(s) failed</string>
+    <string name="ai_cast_resume_from">Continue from chapter %1$d</string>
+    <string name="ai_cast_retry">Retry %1$d chapter(s)</string>
+    <string name="ai_cast_cancelled">Casting cancelled, stopped at chapter %1$d</string>
     <string name="ai_cast_no_preset">No presets - using built-in default</string>
     <string name="ai_cast_reasoning_level">Model reasoning depth</string>
     <string name="ai_cast_reasoning_level_hint">Model default = the app sends no reasoning parameter at all. Lower it when a chapter takes too long; forced-thinking models such as GLM-5.3 cannot be switched off.</string>
@@ -3167,9 +3179,19 @@
     <string name="regex_cast_pattern">Match text or regex</string>
     <string name="regex_cast_match_text">Match text</string>
     <string name="regex_cast_use_regex">Use regex matching</string>
+    <string name="regex_cast_export">Export regex roles</string>
+    <string name="regex_cast_import">Import regex roles</string>
+    <string name="regex_cast_export_done">Regex roles exported</string>
+    <string name="regex_cast_export_failed">Export failed</string>
+    <string name="regex_cast_import_invalid">Not a regex-role file exported by this app</string>
+    <string name="regex_cast_import_result">%1$d rules and %2$d groups added; %3$d rules need a missing voice picked again; %4$d already existed and were skipped</string>
     <string name="regex_cast_pool_kind">Pool type</string>
     <string name="regex_cast_pool">Voice pool</string>
     <string name="regex_cast_item">Voice / track</string>
+    <!-- 正则角色弹窗「变声器」那一栏的第一项：写回空串，朗读侧就不套任何预设 -->
+    <string name="regex_cast_effect_none">No voice effect</string>
+    <!-- 列表摘要尾部：这条规则除了换音色还套了哪个变声器预设 -->
+    <string name="regex_cast_effect_summary">" · voice effect: %1$s"</string>
     <string name="regex_cast_group">Group</string>
     <string name="regex_cast_enabled">Enable rule</string>
     <string name="regex_cast_random">Random from pool</string>

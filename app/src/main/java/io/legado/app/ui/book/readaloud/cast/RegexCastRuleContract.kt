@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.readaloud.cast
 
 import androidx.compose.runtime.Stable
+import android.net.Uri
 import io.legado.app.data.entities.RegexCastRule
 import io.legado.app.help.readaloud.cast.CastGroupRow
 import io.legado.app.help.readaloud.cast.CastPoolRow
@@ -46,6 +47,13 @@ data class RegexCastRuleUiState(
     val poolOptions: ImmutableList<CastOption> = persistentListOf(),
     val itemOptions: ImmutableList<CastOption> = persistentListOf(),
     val groupOptions: ImmutableList<CastOption> = persistentListOf(),
+    /**
+     * 弹窗里「变声器」那一栏的候选：开头一条「不变声」（key 为空串），后面是启用的预设名。
+     * 取自 [io.legado.app.help.readaloud.effect.VoiceEffectStore.enabledNames]，随 ShowCreate /
+     * ShowEdit / PickPool 一起装载；写回落在 `regex_cast_rules.voiceEffect`，
+     * 朗读侧的消费方是 RegexCastRuleStore.effectsFor → 朗读单元的 voiceEffect。
+     */
+    val effectOptions: ImmutableList<CastOption> = persistentListOf(),
 ) : CastPoolView
 
 /**
@@ -105,4 +113,20 @@ sealed interface RegexCastRuleIntent {
     data object DismissMoveGroup : RegexCastRuleIntent
     data object DismissDeleteGroup : RegexCastRuleIntent
     data class ConfirmDeleteGroup(val id: String) : RegexCastRuleIntent
+
+    // ---- 导入 / 导出 ----
+    //
+    // 文件格式（按名字引用池与音色、分组用新 id 重建父子、合并不清空）全部在
+    // [io.legado.app.help.readaloud.cast.RegexCastTransfer]，界面只负责选文件和报计数。
+
+    /** 把当前全部规则与分组写进用户选中的 .json。 */
+    data class ExportTo(val uri: Uri) : RegexCastRuleIntent
+
+    /** 从用户选中的 .json 导入；只增不删，计数用 [RegexCastRuleEffect.ShowToast] 回报。 */
+    data class ImportFrom(val uri: Uri) : RegexCastRuleIntent
+}
+
+/** 一次性动作：文件选择结果与导入计数都不属于页面状态，不能塞进 UiState。 */
+sealed interface RegexCastRuleEffect {
+    data class ShowToast(val message: String) : RegexCastRuleEffect
 }

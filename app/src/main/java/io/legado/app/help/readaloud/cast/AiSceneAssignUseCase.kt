@@ -36,34 +36,45 @@ class AiSceneAssignUseCase(
     private val aiTextGateway: AiTextGateway,
 ) {
 
+    /**
+     * 配乐那一趟与角色那一趟跑同一份计划（[castChapterPlan]）：悬浮窗选了范围就两趟都按范围走，
+     * 点重试也只重跑失败的那几章。进度回调的 [onProgress] 第一个参数是 0 基章号，
+     * 口径与 `AiCastAssignUseCase.execute` 完全一致。
+     */
     suspend fun execute(
         book: Book,
         startChapter: Int,
         chapterCount: Int,
         reassign: Boolean,
         reasoningLevel: AiReasoningLevel = AiReasoningLevel.OFF,
-        onProgress: suspend (String, Int, Int, String?) -> Unit,
+        endChapter: Int = -1,
+        onlyChapters: List<Int> = emptyList(),
+        onProgress: suspend (Int, String, Int, Int, String?) -> Unit,
         onStream: suspend (AiCastStream) -> Unit = { },
     ): Result<Int> {
         val toc = withContext(Dispatchers.IO) { appDb.bookChapterDao.getChapterList(book.bookUrl) }
         if (toc.isEmpty()) return Result.failure(IllegalStateException("目录为空"))
-        val start = startChapter.coerceIn(0, toc.lastIndex)
-        val end = (start + chapterCount - 1).coerceAtMost(toc.lastIndex)
-        val total = end - start + 1
+        val plan = castChapterPlan(toc.size, startChapter, chapterCount, endChapter, onlyChapters)
+        if (plan.isEmpty()) return Result.success(0)
+        val total = plan.size
         val pools = withContext(Dispatchers.IO) { BgmPoolStore.enabledPoolNames() }
         if (pools.isEmpty()) {
             return Result.failure(IllegalStateException("还没有可用的背景音乐池，请先在背景音乐池里创建"))
         }
-        var done = 0
         var written = 0
-        for (index in start..end) {
+        for ((offset, index) in plan.withIndex()) {
             val error = runCatching {
                 assignChapter(book, toc, index, reassign, pools, reasoningLevel, onStream)
             }.exceptionOrNull()
-            done++
-            onProgress(toc[index].title, done, total, error?.message)
-            if (error == null) written++
             if (error is CancellationException) throw error
+            if (error == null) written++
+            onProgress(
+                index,
+                toc[index].title,
+                offset + 1,
+                total,
+                error?.let { failureReason(it) },
+            )
         }
         return Result.success(written)
     }
@@ -156,8 +167,10 @@ class AiSceneAssignUseCase(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                error("AI 调用失败：${e.message}")
+                // 断网 / 连不上 / 超时 / 非 2xx 都从这儿出去，原因原样带进「第 N 章：…」提示
+                error("AI 调用失败：${failureReason(e)}")
             }
+            if (answer.length == 0) error("AI 没有返回任何内容（连接被中断或服务商空回）")
             // 只认真正送出去的那一段段号：模型串到别块的序号一律丢
             val valid = chunk.map { it.first }.toSet()
             for (item in parseResponse(answer.toString()).filter { it.i in valid }) {

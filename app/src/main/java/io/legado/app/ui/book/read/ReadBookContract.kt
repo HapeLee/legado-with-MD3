@@ -902,7 +902,13 @@ sealed interface ReadBookIntent {
      */
     data object OpenAiSceneDialog : ReadBookIntent
 
-    /** 启动 AI 分配：从 startChapter 起 count 章，reassign=先清既有分配。 */
+    /**
+     * 启动 AI 分配。
+     *
+     * 范围三种给法，优先级从下到上：[onlyChapters]（重试，只跑这些章）>
+     * [endChapter]（悬浮窗「指定范围」的显式终点）> [startChapter] + [count]（旧的「当前章 + N」）。
+     * 章号一律是**0 基**目录下标（悬浮窗显示时 ±1 换算，见 AiCastDialogSheet）。
+     */
     data class StartAiCast(
         val startChapter: Int,
         val count: Int,
@@ -915,6 +921,10 @@ sealed interface ReadBookIntent {
         val assignScene: Boolean = false,
         /** 跑角色那一趟。纯场景入口给 false：只配乐，不动角色分配。 */
         val rolesPass: Boolean = true,
+        /** 范围终点（含，0 基）；-1 = 由 [count] 推出。 */
+        val endChapter: Int = -1,
+        /** 只重跑这些章（失败/跳过的章）；非空时忽略范围三兄弟。 */
+        val onlyChapters: List<Int> = emptyList(),
     ) : ReadBookIntent
 
     /** 取消进行中的 AI 分配。 */

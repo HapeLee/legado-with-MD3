@@ -27,6 +27,12 @@ object RegexCastSplitter {
         val sound: String,
         /** 命中它的那条规则叫什么：只进日志，认得出是哪条规则顶掉了原声。 */
         val label: String = "",
+        /**
+         * 命中它的那条规则的变声器预设名（[RegexCastEffect.voiceEffect]），空 = 不变声。
+         * 生产方是 [split]，消费方是 [CastSpeechOverlay] 的 speechFor：它把这一份写进朗读单元的
+         * `ChapterSpeechSegment.voiceEffect`，朗读服务再按名字取预设套音高/语速与混响。
+         */
+        val voiceEffect: String = "",
     )
 
     /** [parts] 为空时（整段文字都被「不念」吃掉），[trailingSound] 是音频串，由调用方挂到下一个朗读单元。 */
@@ -89,9 +95,16 @@ object RegexCastSplitter {
             cursor = hit.end
             val voiceId = hit.effect.voiceId
             if (voiceId != null) {
-                // 换音色必须单独成一块：一块只有一个音色
+                // 换音色必须单独成一块：一块只有一个音色（变声器同理，一块只套一个预设）
                 close()
-                parts += Part(base + hit.start, raw.substring(hit.start, hit.end), voiceId, "", hit.effect.label)
+                parts += Part(
+                    base + hit.start,
+                    raw.substring(hit.start, hit.end),
+                    voiceId,
+                    "",
+                    hit.effect.label,
+                    hit.effect.voiceEffect,
+                )
             } else {
                 hit.effect.soundPath?.let { pending += it to hit.start }
             }

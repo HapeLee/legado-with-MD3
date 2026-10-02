@@ -1,16 +1,21 @@
 package io.legado.app.ui.book.readaloud.cast
 
 import android.app.Application
+import android.net.Uri
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.RegexCastRule
 import io.legado.app.help.readaloud.cast.BgmPoolStore
 import io.legado.app.help.readaloud.cast.RegexCastRuleStore
+import io.legado.app.help.readaloud.cast.RegexCastTransfer
 import io.legado.app.help.readaloud.cast.VoicePoolStore
+import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.ui.widget.components.CastOption
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentSet
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -28,6 +33,10 @@ class RegexCastRuleViewModel(
 
     private val _uiState = MutableStateFlow(RegexCastRuleUiState())
     val uiState = _uiState.asStateFlow()
+
+    /** 导入/导出的一次性回报（计数、失败原因），不属于页面状态，不进 UiState。 */
+    private val _effects = MutableSharedFlow<RegexCastRuleEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
 
     /** 规则原文：卡片给回来的只有 id 字符串，编辑/删除/开关都要按 id 找回那条。 */
     private var rules: List<RegexCastRule> = emptyList()
@@ -192,6 +201,53 @@ class RegexCastRuleViewModel(
                 refresh()
                 _uiState.update { it.copy(deleteGroupTarget = null) }
             }
+
+            is RegexCastRuleIntent.ExportTo -> launchIo {
+                val written = runCatching {
+                    context.contentResolver.openOutputStream(intent.uri)?.use { out ->
+                        out.writer().use { it.write(RegexCastTransfer.exportJson()) }
+                    } != null
+                }.getOrDefault(false)
+                _effects.tryEmit(
+                    RegexCastRuleEffect.ShowToast(
+                        context.getString(
+                            if (written) R.string.regex_cast_export_done
+                            else R.string.regex_cast_export_failed
+                        )
+                    )
+                )
+            }
+
+            /**
+             * 导入只增不删：解一半失败时已经落库的部分保留，与角色声音池同一口径。
+             * 不是本软件导出的文件（读不出 / kind 对不上）统一报一句，不抛给用户看堆栈。
+             */
+            is RegexCastRuleIntent.ImportFrom -> launchIo {
+                val summary = runCatching {
+                    context.contentResolver.openInputStream(intent.uri)
+                        ?.use { RegexCastTransfer.importJson(it.reader().readText()) }
+                }.getOrNull()
+                if (summary == null) {
+                    _effects.tryEmit(
+                        RegexCastRuleEffect.ShowToast(
+                            context.getString(R.string.regex_cast_import_invalid)
+                        )
+                    )
+                } else {
+                    _effects.tryEmit(
+                        RegexCastRuleEffect.ShowToast(
+                            context.getString(
+                                R.string.regex_cast_import_result,
+                                summary.rules,
+                                summary.groups,
+                                summary.unresolvedTargets,
+                                summary.existingRules,
+                            )
+                        )
+                    )
+                    refresh()
+                }
+            }
         }
     }
 
@@ -282,6 +338,9 @@ class RegexCastRuleViewModel(
      * 声音池**不按启用状态过滤**（停用的也列出来，后缀标一下）——用户就是要能挑到它；
      * 音色/配乐同理：没选池时列全部，选了池才按池内成员收窄。**池只是筛选**，不是前置条件。
      * 已经选中的那条即使不在当前筛选里也留在列表头上，否则一换池子显示就空了。
+     *
+     * 「变声器」那一栏的候选与池无关（预设是全书共用的），开头补一条「不变声」让空串这一档可选：
+     * 它写回 `regex_cast_rules.voiceEffect`，朗读侧由 RegexCastRuleStore.effectsFor 取用。
      */
     private suspend fun loadCandidates(kind: String, poolId: String, keepItemId: String) {
         val role = kind != RegexCastRule.POOL_BGM
@@ -297,6 +356,11 @@ class RegexCastRuleViewModel(
             .filter { it.first in members || it.first == keepItemId }
             .ifEmpty { if (poolId.isBlank()) allItems else emptyList() }
             .map { CastOption(it.first, it.second) }
+        val effects = if (role) {
+            VoiceEffectStore.enabledNames().map { CastOption(it, it) }
+        } else {
+            emptyList<CastOption>()
+        }
         _uiState.update {
             it.copy(
                 poolOptions = (listOf(CastOption("", context.getString(R.string.regex_cast_pick_pool))) +
@@ -307,6 +371,9 @@ class RegexCastRuleViewModel(
                 } else {
                     listOf(CastOption("", context.getString(R.string.regex_cast_random))) + items
                 }).toImmutableList(),
+                effectOptions = (listOf(
+                    CastOption("", context.getString(R.string.regex_cast_effect_none)),
+                ) + effects).toImmutableList(),
             )
         }
     }
@@ -321,7 +388,13 @@ class RegexCastRuleViewModel(
         } else {
             context.getString(R.string.regex_cast_summary_voice, item, pool)
         }
-        return context.getString(R.string.regex_cast_summary, rule.pattern, action)
+        // 变声器是那条规则自己的一列（regex_cast_rules.voiceEffect），列表里也得看得见，
+        // 否则用户设完只听到声音变了、认不出是谁在变。配乐那一种不念文字，压根不带这一截。
+        val effect = rule.voiceEffect
+            .takeIf { it.isNotBlank() && rule.poolKind != RegexCastRule.POOL_BGM }
+            ?.let { context.getString(R.string.regex_cast_effect_summary, it) }
+            .orEmpty()
+        return context.getString(R.string.regex_cast_summary, rule.pattern, action) + effect
     }
 
     private fun launchIo(block: suspend () -> Unit) {

@@ -56,6 +56,14 @@ object AiCastProgress {
          * 到底是正文没送全、档案里带着错名字，还是模型自己判错了。
          */
         val request: String = "",
+        /**
+         * 本次跑失败的章号（**0 基**，与 chapter_role_assignments.chapterIndex 同一口径；
+         * 界面显示一律 +1，写入侧见 `AiCastAssignUseCase.execute` 的 onProgress）。
+         * 「重试」按钮只重跑这些章，不重跑整段范围。
+         */
+        val failedChapters: List<Int> = emptyList(),
+        /** 失败明细：每行「第 N 章《章名》：原因」，断网/连不上/AI 乱答都落在这里。 */
+        val failureText: String = "",
     )
 
     private val _state = MutableStateFlow(State())
