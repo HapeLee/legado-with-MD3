@@ -32,6 +32,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -85,6 +86,8 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.sheet.CastSheetVisuals
+import io.legado.app.ui.book.read.sheet.LocalCastSheetVisuals
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.ReaderBookSourceActions
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
@@ -898,19 +901,28 @@ fun ReadBookRouteScreen(
                 TranslationThinkingCapsule()
             }
             if (featureOverlaysInitialized) {
-                ReadBookOverlayRoute(
-                    viewModel = viewModel,
-                    state = state,
-                    preferences = readPreferences,
-                    onOpenTextSelectMenuConfig = {
-                        viewModel.onIntent(ReadBookIntent.DismissSheet)
-                        showSelectMenuConfigSheet = true
-                    },
-                    onPickBookmarkBadgeImage = { bookmarkBadgeImagePicker.launch("image/*") },
-                    onResetBookmarkBadge = {
-                        viewModel.onIntent(ReadBookIntent.ClearBookmarkBadgeImage)
-                    },
-                )
+                // 正文内新做的悬浮窗（分配角色 / 分配表 / AI 分配 / 背景音乐 / 听书下载）用底栏
+                // 同一份模糊与玻璃数据源；消费方是 CastSheetCard 里的 LocalCastSheetVisuals。
+                CompositionLocalProvider(
+                    LocalCastSheetVisuals provides CastSheetVisuals(
+                        backdrop = menuBackdrop,
+                        hazeState = menuHazeState.takeIf { useMenuHazeSource },
+                    ),
+                ) {
+                    ReadBookOverlayRoute(
+                        viewModel = viewModel,
+                        state = state,
+                        preferences = readPreferences,
+                        onOpenTextSelectMenuConfig = {
+                            viewModel.onIntent(ReadBookIntent.DismissSheet)
+                            showSelectMenuConfigSheet = true
+                        },
+                        onPickBookmarkBadgeImage = { bookmarkBadgeImagePicker.launch("image/*") },
+                        onResetBookmarkBadge = {
+                            viewModel.onIntent(ReadBookIntent.ClearBookmarkBadgeImage)
+                        },
+                    )
+                }
             }
             val bookNavigationSheet = state.activeSheet as? ReadBookSheet.BookNavigation
             ReaderPerfTrace.marker("compose.sheet.begin")

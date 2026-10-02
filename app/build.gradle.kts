@@ -321,11 +321,11 @@ dependencies {
     implementation(libs.timber)
 }
 
-// 每个测试类独占一个 JVM。Robolectric + Compose 动画这一批用例靠推进主线程 shadow looper
-// 来判定长按阈值与预测式返回的时序，前一个类留下的调度队列会让后一个类推不到阈值，
-// 表现为「单独跑过、合起来挂」。隔离 JVM 是这类用例成立的前提，不是绕过某个断言。
+// 每个测试类独占一个 JVM，并且不并行 fork。Robolectric + Compose 动画这一批用例靠推进主线程
+// shadow looper 判定长按阈值与预测式返回的时序：前一个类留下的调度队列会让后一个类推不到阈值；
+// 多个 fork 并发抢 CPU 时，动画协程赶不上断言（`progress` 停在起始值、`running=false`），
+// 同一套代码会在不同批次的类上随机报错。隔离与串行是这类用例成立的前提。
 tasks.withType<Test>().configureEach {
     forkEvery = 1
-    // 隔离之后顺手并行：每个 fork 一个类，互不可见，并行只影响墙钟时间不影响结果。
-    maxParallelForks = 4
+    maxParallelForks = 1
 }
