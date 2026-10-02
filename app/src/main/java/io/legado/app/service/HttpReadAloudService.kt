@@ -939,7 +939,9 @@ class HttpReadAloudService : BaseReadAloudService(),
         var consecutiveFailures = 0
 
         try {
-            for (i in 1..limit) {
+            // 第 0 项就是正在读的这一章：实时那条循环只往前赶一句，实测每句现场合成要 1~3 秒，
+            // 播放器追上就空一下。把本章也交给并行预合成，实时那条改成从缓存取。
+            for (i in 0..limit) {
                 currentCoroutineContext().ensureActive()
                 if (consecutiveFailures >= 3) {
                     AppLog.put("TTS预合成连续失败${consecutiveFailures}章，已停止预合成")
@@ -948,7 +950,12 @@ class HttpReadAloudService : BaseReadAloudService(),
                 val targetIndex = currentIdx + i
                 val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
                 val prepared = getPreDownloadChapter(book, chapter) ?: continue
-                val chapterFailed = synthesizeChapterCues(prepared, httpTts, concurrency)
+                val chapterFailed = synthesizeChapterCues(
+                    prepared,
+                    httpTts,
+                    concurrency,
+                    fromIndex = if (i == 0) nowSpeak else 0,
+                )
                 consecutiveFailures = if (chapterFailed) consecutiveFailures + 1 else 0
             }
         } catch (e: Exception) {
@@ -958,26 +965,29 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     /**
      * 并行合成一个章节的所有 cue，通过 Semaphore 控制并发。
+     * [fromIndex] 之前的 cue 已经播过，不再合成（正在读的那一章只需要往前赶）。
      * 返回 true 表示该章节合成失败（超过半数 cue 失败）。
      */
     private suspend fun synthesizeChapterCues(
         prepared: PreDownloadChapter,
         httpTts: HttpTTS,
         concurrency: Int,
+        fromIndex: Int = 0,
     ): Boolean = coroutineScope {
         val semaphore = kotlinx.coroutines.sync.Semaphore(concurrency)
         var failedCount = 0
         val totalCues = prepared.contentList.size
 
         // 预合成的文本与实时那条一致：标记不进合成，也不进文件名
-        prepared.contentList.map(::speechText).mapIndexed { index, content ->
+        prepared.contentList.map(::speechText)
+            .mapIndexedNotNull { index, content ->
+                if (index < fromIndex) null else index to content
+            }
+            .map { (index, content) ->
             async {
                 semaphore.acquire()
                 try {
                     val routedVoice = voiceForCue(prepared.queue, index, httpTts)
-                    if (routedVoice.engineType == ReadAloudVoice.ENGINE_SYSTEM) {
-                        return@async
-                    }
                     val cue = prepared.queue.cues.getOrNull(index)
                     val sourceKey = sourceKeyForCue(routedVoice, cue, httpTts)
                     val fileName = md5SpeakFileName(
@@ -985,9 +995,20 @@ class HttpReadAloudService : BaseReadAloudService(),
                     )
                     if (hasSpeakFile(fileName)) return@async
 
-                    val success = synthesizeSingleCueWithRetry(
-                        routedVoice, cue, content, prepared.chapterTitle, httpTts,
-                    )
+                    // 系统音色也要预合成：实时那条路是「轮到这句才合成」，实测一句要 1~3 秒，
+                    // 全落在播放的空白里。系统合成的那一路现成在听书下载那边（[synthesizeCueWithSystemFile]），
+                    // 复用它，不另写一份；上锁与文件名口径跟实时那条一致，同一句只向引擎要一次。
+                    val success = if (routedVoice.engineType == ReadAloudVoice.ENGINE_SYSTEM) {
+                        withSpeakFileLock(fileName) {
+                            hasSpeakFile(fileName) || synthesizeCueWithSystemFile(
+                                routedVoice, cue, content, prepared.chapterTitle, httpTts, fileName,
+                            )
+                        }
+                    } else {
+                        synthesizeSingleCueWithRetry(
+                            routedVoice, cue, content, prepared.chapterTitle, httpTts,
+                        )
+                    }
                     if (!success) {
                         createSilentSound(fileName)
                         failedCount++
@@ -996,7 +1017,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     semaphore.release()
                 }
             }
-        }.awaitAll()
+            }.awaitAll()
 
         failedCount > totalCues / 2
     }
