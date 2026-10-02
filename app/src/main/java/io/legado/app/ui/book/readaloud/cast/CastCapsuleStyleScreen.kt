@@ -45,6 +45,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -146,6 +148,13 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
         CastCapsuleStyleStore.set(type, next)
     }
 
+    /**
+     * 钉底预览条的真实高度（px）：列表要按它留底，不然最后一行「恢复默认」会被压在预览下面。
+     * Scaffold 传进来的 bottom 内边距并不含我们这条自绘的 bottomBar，所以只能自己量。
+     */
+    var previewBarPx by remember { mutableStateOf(0) }
+    val barDensity = LocalDensity.current
+
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         // 本页没有官方页可并，样式全在这三类胶囊上
@@ -162,7 +171,8 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
             PreviewCard(
                 modifier = Modifier
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 12.dp)
+                    .onSizeChanged { previewBarPx = it.height },
                 style = style,
                 dayImage = dayImage,
                 nightImage = nightImage,
@@ -174,9 +184,10 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
-                // 底边交给 Scaffold：paddingValues 的 bottom 已经含上钉住的那条预览，
-                // 再加一屏呼吸空间，最后一行才不会压在预览底下。
-                bottom = paddingValues.calculateBottomPadding() + 96.dp,
+                // 钉住的那条预览是浮在列表之上的，Scaffold 给的 bottom 内边距不含它，
+                // 所以按量到的真实高度留底，最后一行「恢复默认」才不会被压住。
+                bottom = paddingValues.calculateBottomPadding() +
+                    barDensity.run { (previewBarPx / density).dp } + 24.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

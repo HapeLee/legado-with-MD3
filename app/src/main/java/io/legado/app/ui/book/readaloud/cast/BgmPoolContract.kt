@@ -63,6 +63,8 @@ data class BgmPoolUiState(
     val trackDeleteTarget: BgmTrackUi? = null,
     /** 正在改音量的配乐（弹窗），null = 没开。 */
     val trackVolumeTarget: BgmTrackUi? = null,
+    /** 正在改名的配乐（弹窗），null = 没开。 */
+    val trackRenameTarget: BgmTrackUi? = null,
     /** 正在试听的配乐 id，null = 没在放。界面据此切播放/停止图标。 */
     val playingId: String? = null,
     /** 淡入淡出开关（切场景时用）。 */
@@ -129,6 +131,14 @@ sealed interface BgmPoolIntent {
     data class AskDeleteTrack(val id: String) : BgmPoolIntent
     data object DismissTrackDelete : BgmPoolIntent
     data class ConfirmDeleteTrack(val id: String) : BgmPoolIntent
+
+    /**
+     * 改这条导入配乐的显示名。空名与重名会被 [io.legado.app.help.readaloud.cast.BgmPoolStore.renameTrack]
+     * 判非法（场景标记按名字引用曲目，重名会指错），界面提示而不写库。
+     */
+    data class AskRenameTrack(val id: String) : BgmPoolIntent
+    data object DismissTrackRename : BgmPoolIntent
+    data class ConfirmRenameTrack(val id: String, val name: String) : BgmPoolIntent
 
     /** 行尾播放按钮：正在放这条就停，否则换它。 */
     data class PlayToggle(val id: String) : BgmPoolIntent

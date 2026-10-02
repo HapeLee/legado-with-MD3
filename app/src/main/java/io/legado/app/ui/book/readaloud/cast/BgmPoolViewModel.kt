@@ -360,6 +360,24 @@ class BgmPoolViewModel(
                 refreshTracks()
             }
 
+            is BgmPoolIntent.AskRenameTrack -> {
+                val target = _uiState.value.tracks.firstOrNull { it.id == intent.id } ?: return
+                _uiState.update { it.copy(trackRenameTarget = target) }
+            }
+
+            BgmPoolIntent.DismissTrackRename ->
+                _uiState.update { it.copy(trackRenameTarget = null) }
+
+            is BgmPoolIntent.ConfirmRenameTrack -> execute {
+                // 改名会连带同步场景标记里的曲目名，判非法时一行都不动，见 BgmPoolStore.renameTrack
+                if (BgmPoolStore.renameTrack(intent.id, intent.name)) {
+                    refreshTracks()
+                } else {
+                    toast(context.getString(R.string.cast_bgm_rename_failed))
+                }
+                _uiState.update { it.copy(trackRenameTarget = null) }
+            }
+
             is BgmPoolIntent.SetTrackEnabled -> execute {
                 BgmPoolStore.setEnabled(intent.id, intent.enabled)
                 refreshTracks()

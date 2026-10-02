@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -331,6 +333,13 @@ fun BgmPoolScreen(
             onDismiss = { onIntent(BgmPoolIntent.DismissTrackVolume) },
         )
     }
+    state.trackRenameTarget?.let { target ->
+        TrackRenameDialog(
+            track = target,
+            onConfirm = { name -> onIntent(BgmPoolIntent.ConfirmRenameTrack(target.id, name)) },
+            onDismiss = { onIntent(BgmPoolIntent.DismissTrackRename) },
+        )
+    }
     if (showFadeDialog) {
         FadeSettingsDialog(state, onIntent) { showFadeDialog = false }
     }
@@ -504,6 +513,52 @@ private fun TrackVolumeDialog(
     )
 }
 
+/**
+ * 改一条导入配乐的显示名。
+ *
+ * 只改显示名：磁盘上的副本文件不动（`path` 保持原样），所以改名不会让已分配的
+ * 场景丢失音频。场景标记是按 `poolName`+`trackName` 引用的，库里那条名字改了标记
+ * 也要跟着改，这一致性由 BgmPoolStore.renameTrack 保证；空名/重名会被判非法，
+ * 弹窗这里直接把确定按钮禁掉，不给按出歧义的机会。
+ */
+@Composable
+private fun TrackRenameDialog(
+    track: BgmTrackUi,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember(track.id) { mutableStateOf(track.name) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.cast_bgm_rename_track)) },
+        text = {
+            Column {
+                AppTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(R.string.cast_bgm_track_name),
+                    singleLine = true,
+                )
+                Text(
+                    text = stringResource(R.string.cast_bgm_rename_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && name.trim() != track.name,
+                onClick = { onConfirm(name) },
+            ) { Text(stringResource(R.string.ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
+}
+
 @Composable
 private fun BgmTrackRow(
     track: BgmTrackUi,
@@ -563,6 +618,13 @@ private fun BgmTrackRow(
                 } else {
                     LegadoTheme.colorScheme.onSurfaceVariant
                 },
+            )
+        }
+        IconButton(onClick = { onIntent(BgmPoolIntent.AskRenameTrack(track.id)) }) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = stringResource(R.string.cast_bgm_rename_track),
+                tint = LegadoTheme.colorScheme.onSurfaceVariant,
             )
         }
         IconButton(onClick = { onIntent(BgmPoolIntent.AskDeleteTrack(track.id)) }) {

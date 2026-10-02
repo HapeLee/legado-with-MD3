@@ -3016,6 +3016,10 @@
     <string name="cast_bgm_segment_volume">本段音量</string>
     <string name="cast_bgm_segment_volume_hint">与曲目自身音量相乘，只影响这一段</string>
     <string name="cast_bgm_track_volume">音量</string>
+    <string name="cast_bgm_rename_track">改名</string>
+    <string name="cast_bgm_track_name">配乐名称</string>
+    <string name="cast_bgm_rename_hint">只改显示名，音频文件不动；已经分配给这条配乐的场景会跟着用新名字。</string>
+    <string name="cast_bgm_rename_failed">名字为空，或已经有同名的配乐。</string>
     <string name="cast_bgm_track_volume_hint">对这条导入的音乐全局生效，用在哪个池都一样</string>
     <string name="cast_bgm_scene_table">本章背景音乐</string>
     <string name="cast_bgm_scene_overview">总览</string>

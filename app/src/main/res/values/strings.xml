@@ -3014,6 +3014,10 @@
     <string name="cast_bgm_segment_volume">This paragraph</string>
     <string name="cast_bgm_segment_volume_hint">Multiplies the track’s own volume; only this paragraph is affected</string>
     <string name="cast_bgm_track_volume">Volume</string>
+    <string name="cast_bgm_rename_track">Rename track</string>
+    <string name="cast_bgm_track_name">Track name</string>
+    <string name="cast_bgm_rename_hint">Only the display name changes; the audio file stays where it is, and scenes already assigned to this track follow the new name.</string>
+    <string name="cast_bgm_rename_failed">Name is empty or already used by another track.</string>
     <string name="cast_bgm_track_volume_hint">Applies to this imported track everywhere it is used</string>
     <string name="cast_bgm_scene_table">Chapter background music</string>
     <string name="cast_bgm_scene_overview">Overview</string>
