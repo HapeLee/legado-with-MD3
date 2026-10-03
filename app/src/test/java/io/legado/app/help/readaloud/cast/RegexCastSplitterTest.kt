@@ -114,4 +114,21 @@ class RegexCastSplitterTest {
         val result = split("abc", voice("v1", "x*"))
         assertEquals(listOf("abc"), result.parts.map { it.text })
     }
+
+    @Test
+    fun `段首缩进不单独成一个朗读单元`() {
+        // 正文每段开头是两个全角空格；命中在缩进之后时，那截缩进不能变成一块——
+        // 它送进引擎只会得到一段无声音频，听感就是命中前先空一下。
+        val result = split("　　［系统］你好", voice("v1", "［系统］"))
+        assertEquals(listOf("［系统］", "你好"), result.parts.map { it.text })
+        assertEquals(listOf("v1", null), result.parts.map { it.voiceId })
+        assertEquals(listOf(2, 6), result.parts.map { it.start })
+    }
+
+    @Test
+    fun `整段只剩缩进时音效挂到下一个单元而不是空音频`() {
+        val result = split("　　［系统］", sound("/boom", "［系统］"))
+        assertTrue("缩进那一截不该成块", result.parts.isEmpty())
+        assertEquals("/boom", result.trailingSound)
+    }
 }

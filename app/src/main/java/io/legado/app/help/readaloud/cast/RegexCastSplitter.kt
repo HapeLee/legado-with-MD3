@@ -70,10 +70,19 @@ object RegexCastSplitter {
          * 音效只把命中的那几个字从文字里抠掉、把音频挂在这一块上，**不另起一块**：
          * 一个朗读单元对应一次向 TTS 引擎要音频的请求，整条合成链路是串行的，
          * 多一个单元就多一次串行等待。音频按命中字符在单元内的占比（千分位）延迟起播。
+         *
+         * 只剩空白的块（正文每段开头的两个全角空格、命中正好在段首时最常见）**不成块**：
+         * 它送进引擎只会得到一段无声音频，听感就是命中前先空一下。留着的音效不丢，
+         * 跟着 [pending] 挂到后面那一块上（整段都没有实文时走 [trailingSound]）。
          */
         fun close() {
-            if (blockStart < 0 || text.isEmpty()) return
+            if (blockStart < 0) return
             val spoken = text.toString()
+            if (spoken.isBlank()) {
+                text.setLength(0)
+                blockStart = -1
+                return
+            }
             val length = spoken.length.coerceAtLeast(1)
             parts += Part(
                 start = base + blockStart,
