@@ -59,6 +59,12 @@ fun ReadAloudPlayerMorphHost(
     val settingsState by playerViewModel.readAloudSettings.collectAsStateWithLifecycle()
     var configVisible by rememberSaveable { mutableStateOf(false) }
     /**
+     * 朗读设置停在哪个 tab（0=常规，1=引擎与音色）。存在宿主而不是弹层里：
+     * 压进整屏页会拆掉弹层那层 composition，`rememberPagerState` 的初值回到 0，
+     * 用户看到的就是「从引擎与音色进去、回来落在常规」。
+     */
+    var configTab by rememberSaveable { mutableStateOf(0) }
+    /**
      * 从朗读设置跳去子页（引擎与音色 / 朗读缓存 / 人物配音）时置位：
      * 播放器是 Activity 级浮层，压在新页面上面，所以只能先收；这里只留一个"弹层在等
      * 播放器重新摊开"的标记，导航栈顶回到阅读页就把播放器重新叫出来、朗读设置跟着回来
@@ -184,6 +190,8 @@ fun ReadAloudPlayerMorphHost(
                 playerViewModel.applyReadBookConfigIntent(intent, ::handleHostAction)
             },
             onPlayerIntent = playerViewModel::onIntent,
+            selectedTab = configTab,
+            onTabSelected = { configTab = it },
         )
     }
 
