@@ -221,6 +221,8 @@ object CastSpeechOverlay {
                 soundEffect = RegexCastSplitter.mergeSound(result[last].soundEffect, carrySound)
             )
         }
+        // 只剩空白的段不进队列（见 dropSilentUnits）
+        val (kept, blankDropped) = dropSilentUnits(result)
         AppLog.put(
             "多角色朗读: 本章 ${plan.size} 个朗读单元，$voiced 段用角色音" +
                 if (effects.isEmpty()) {
@@ -228,9 +230,48 @@ object CastSpeechOverlay {
                 } else {
                     "；正则角色顶音色 $regexVoiced 段、吞字放音效 $regexMuted 段"
                 } +
+                "；丢掉 $blankDropped 个空白单元（无声占位）" +
                 "；$sample"
         )
-        return result
+        return kept
+    }
+
+    /**
+     * 丢掉「念不出东西」的朗读单元，返回（留下的单元，丢掉的个数）。
+     *
+     * 这种单元送进引擎只会得到一段无声音频——`res/raw/silent_sound.mp3` 实测 1224 毫秒
+     * （17 帧），听感就是段与段之间、以及正则命中前凭空顿一下。正文里的空行、
+     * 命中正好落在段首缩进之后，都会造出这种单元。
+     * 判空白用 [CastMarkers.strip]：只挂着角色标记的段同样念不出东西，而朗读服务那一步
+     * 还会再去掉不可念字符，所以这里丢掉的必然也是它那边的静音。
+     * 单元身上挂的音效不丢：并给下一个单元（章末则并回最后一个）。
+     */
+    internal fun dropSilentUnits(
+        items: List<SpeechPlanItem>,
+    ): Pair<List<SpeechPlanItem>, Int> {
+        val kept = ArrayList<SpeechPlanItem>(items.size)
+        var blankSound = ""
+        var dropped = 0
+        items.forEach { item ->
+            if (CastMarkers.strip(item.segment.text).isBlank()) {
+                blankSound = RegexCastSplitter.mergeSound(blankSound, item.soundEffect)
+                dropped++
+                return@forEach
+            }
+            kept += if (blankSound.isEmpty()) {
+                item
+            } else {
+                item.copy(soundEffect = RegexCastSplitter.mergeSound(blankSound, item.soundEffect))
+            }
+            blankSound = ""
+        }
+        if (blankSound.isNotEmpty() && kept.isNotEmpty()) {
+            val last = kept.lastIndex
+            kept[last] = kept[last].copy(
+                soundEffect = RegexCastSplitter.mergeSound(kept[last].soundEffect, blankSound)
+            )
+        }
+        return kept to dropped
     }
 
     /**
