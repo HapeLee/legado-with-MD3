@@ -254,9 +254,9 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 排期消息的载荷：句下标 + 队列代次 + 这一条只管哪一层。
      *
-     * 两层各一条消息，因为要的提前量不一样：混响/带通得等效果器起来
-     * （[EFFECT_PITCH_LEAD_MS]），音高/语速只要盖过音频管线里还没出声的缓冲
-     * （[EFFECT_PITCH_SWITCH_LEAD_MS]）；拿前者去设音高会啃掉上一句的尾巴。
+     * 两层各一条消息，因为它们生效的位置不同：音高/语速在解码链上生效，比出声位置早
+     * 一整段管线缓冲，要提前 [EFFECT_PITCH_SWITCH_LEAD_MS] 才落在句边界；混响/带通挂在
+     * 输出会话上，作用在正在出声的信号上，只提前 [EFFECT_SESSION_LEAD_MS]。
      */
     private class CuePitchTick(val index: Int, val generation: Int, val pitch: Boolean)
 
@@ -279,10 +279,11 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 把下一句的变声器（音高/语速 + 混响/带通）排在**本句结束前一点**投递。
      *
-     * `PlayerMessage` 由媒体时钟（真正播出的位置）投递，而 `playbackParameters` 与音频会话
-     * 上的效果在解码链当前位置生效，两者之间隔着管线里 0.5~1 秒还没出声的缓冲——等换句回调
-     * 再设参数，这一句开头一整段都会带着上一句的音色。提前量落在合成音频自带的句尾静音里；
-     * 句子很短时按 duration 的三分之一收窄，不啃真正的说话内容。
+     * `PlayerMessage` 由媒体时钟（真正播出的位置）投递，但两层的生效点不一样：
+     * `playbackParameters` 在解码链当前位置生效，比出声位置早一整段还没出声的管线缓冲，
+     * 所以要提前那么多才落在句边界——等换句回调再设，这一句开头就还带着上一句的音色。
+     * 音频会话上的效果作用在**正在出声**的信号上，只能贴边换。提前量落在合成音频自带的
+     * 句尾静音里；句子很短时按 duration 的三分之一收窄，不啃真正的说话内容。
      */
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun scheduleNextCueEffect(index: Int) {
@@ -290,12 +291,12 @@ class HttpReadAloudService : BaseReadAloudService(),
         if (next > playbackQueue.cues.lastIndex) return
         val durationMs = exoPlayer.duration
         if (durationMs == C.TIME_UNSET || durationMs <= 0) return
-        val sessionLead = minOf(EFFECT_PITCH_LEAD_MS, durationMs / 3)
+        val sessionLead = minOf(EFFECT_SESSION_LEAD_MS, durationMs / 3)
         val pitchLead = minOf(EFFECT_PITCH_SWITCH_LEAD_MS, durationMs / 3)
         pendingPitchMessage?.cancel()
         pendingSessionMessage?.cancel()
         runCatching {
-            // 会话层先换（离边界远），音高层后换（离边界近），两条都由媒体时钟投递
+            // 音高层提前得多（补解码链那段缓冲），会话层贴边换（它作用在正在出声的信号上）
             pendingSessionMessage = exoPlayer
                 .createMessage { _, payload ->
                     val tick = payload as? CuePitchTick
@@ -1754,10 +1755,10 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        scheduleCueSounds(nowSpeak)
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
             // 首条不走 AUTO 分支，也要在开播时套上角色的变声
             applyCueVoiceEffect(nowSpeak)
+            scheduleCueSounds(nowSpeak)
             return
         }
         val auto = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
@@ -1766,6 +1767,9 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
         updateNextPos(naturalCompletion = auto)
         applyCueVoiceEffect(nowSpeak)
+        // 音效按「刚开始播的这一格」排：nowSpeak 要等 updateNextPos 才是这一格。
+        // 排在它前面用的是刚播完那一格的索引 + 新一格的时间轴，听感就是音效晚了一整句。
+        scheduleCueSounds(nowSpeak)
         upPlayPos()
         upMediaMetadata(showContent = true)
     }
@@ -1828,16 +1832,18 @@ internal fun httpReadAloudParagraphOffset(
 private const val DEFAULT_TTS_SPEED = 5
 
 /**
- * 会话级效果（混响/带通）提前换句的量：效果器起来要时间，
- * 而且它的余音会拖到下一句，所以宁可提前一点。
+ * 会话级效果（混响/带通）提前换句的量：这一层挂在**输出音频会话**上，设下去就作用在
+ * 正在出声的那段信号上，所以提前量只能盖过一帧设置耗时。给大了等于把上一句尾巴上的
+ * 金属感/混响提前摘掉（听感：句尾突然变声）。
  */
-private const val EFFECT_PITCH_LEAD_MS = 900L
+private const val EFFECT_SESSION_LEAD_MS = 150L
 
 /**
- * 音高/语速提前换句的量：这一层只是 Sonic 变调、不需要预热，提前量只要抵过音频管线
- * 的缓冲即可；再大就会把上一句的尾巴一起变掉。调参方向：大了串到上一句，小了串到下一句。
+ * 音高/语速提前换句的量：这一层是 Sonic 在**解码链**上生效，比出声位置提前一整段
+ * AudioTrack 缓冲（几百毫秒到一秒），所以必须给足，否则上一句的音高会拖进下一句开头。
+ * 调参方向：大了串到上一句，小了串到下一句。
  */
-private const val EFFECT_PITCH_SWITCH_LEAD_MS = 220L
+private const val EFFECT_PITCH_SWITCH_LEAD_MS = 900L
 
 /** 只是转发给自家 Target 的标记，播放器不解释它。 */
 private const val PITCH_MESSAGE_TYPE = 0x4C470001
