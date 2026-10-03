@@ -6,7 +6,7 @@ import org.junit.Test
 /**
  * `AppLog` 是「毫秒时间戳 + 头插 + 满了丢尾巴」的环形表，同一毫秒内重复的同一条日志
  * 在朗读日志页会撞成同一个 LazyColumn key，Compose 直接抛
- * `IllegalArgumentException: Key … was already used`（真机崩溃报告实测）。
+ * `IllegalArgumentException: Key … was already used`。
  * 这里守住 key 的两个性质：唯一，而且尽量保持稳定。
  */
 class TtsCacheLogKeyTest {

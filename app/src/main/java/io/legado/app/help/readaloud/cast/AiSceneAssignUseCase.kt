@@ -112,8 +112,8 @@ class AiSceneAssignUseCase(
         )
         onStream(AiCastStream.ChapterStart(chapter.title))
         // 重分配 = 先把本章原有的段前场景清空（这些全是分配出来的，没有手工数据要保）。
-        // 清空要在「这次有没有结果」之前：模型这一章一条都没给时，旧场景也该跟着清掉，
-        // 否则勾了重新分配却什么都没变，用户看到的正是「重新分配对场景没作用」。
+        // 清空要在「这次有没有结果」之前：模型这一章一条都没给时，旧场景也要跟着清掉，
+        // 否则重新分配会表现为无作用。
         if (reassign) {
             BgmSceneStore.clearChapter(book.bookUrl, chapterIndex)
         }
@@ -121,7 +121,7 @@ class AiSceneAssignUseCase(
         // 块边界上会连着切两次。
         var lastKeptPool: String? = null
         var lastKeptOrdinal = -1
-        // 整章分块送完：装不下的部分以前是**直接丢掉**的（400 段之后的正文模型从没见过）
+        // 整章分块送完：超出单块容量（MAX_PARAGRAPHS）的正文也要送出，不落掉后半章
         for (chunk in rows.chunked(MAX_PARAGRAPHS)) {
             // 起点池：上一块末尾在用的池，没有才回头看上一章末尾在用的
             val previousPool = lastKeptPool ?: if (chapterIndex > 0) {

@@ -322,7 +322,7 @@ data class ReadBookUiState(
      * 朗读设置卡片当前停在哪个 tab（0 常规 / 1 引擎与音色）。
      *
      * 存在这里而不是卡片里：卡片是窗口级浮层，压进整屏页（引擎与音色那三行）时它会被拆掉，
-     * `rememberPagerState` 的初值回到 0 —— 用户看到的正是「从引擎与音色进去、回来落在常规」。
+     * `rememberPagerState` 的初值回到 0，回来就落在常规 tab。
      */
     val readAloudConfigTab: Int = 0,
     // Style config (reactive state for ReadBookConfig)
@@ -935,8 +935,8 @@ sealed interface ReadBookIntent {
      * 删除整章分配（AI 分配悬浮窗的「删除分配」）。
      *
      * [alsoScenes] = 连本章的背景音乐场景一起清掉：悬浮窗勾了「同时分配背景音乐场景」
-     * 或走的是纯场景入口时，删除必须把这次分配的东西全清了，否则用户看到的是
-     * 「删除分配对场景分配没作用」。
+     * 或走的是纯场景入口时，删除必须把这次分配的东西全清，否则场景会残留、
+     * 表现为「删除分配对场景分配没作用」。
      */
     data class DeleteChapterCastAssignments(
         val chapterIndex: Int,
@@ -1038,7 +1038,7 @@ sealed interface ReadBookEffect {
     data object UpAloudState : ReadBookEffect
     data object UpSeekBar : ReadBookEffect
     data object UpMenuView : ReadBookEffect
-    // R2.3：PageChanged / ContentLoadFinish / LayoutPageCompleted 已内联进
+    // PageChanged / ContentLoadFinish / LayoutPageCompleted 内联在
     // ReadBookController 的渲染回调——它们只在 controller 内部自产自销，不是 VM 的对外协议。
     data object RefreshBookContent : ReadBookEffect
 

@@ -87,7 +87,7 @@ fun BgmSceneTableSheet(
         key1 = bookUrl,
         key2 = chapterIndex,
         // 本屏自己的改动 + 别处的（AI 重新分配、悬浮窗、删除分配）：只看 refreshKey 会让
-        // 这一屏在别人改完后还是旧表，用户看到的正是「删除分配对场景没作用」
+        // 这一屏在别人改完后还是旧表，表现为「删除分配对场景没作用」
         key3 = "$refreshKey#${BgmSceneStore.version}",
     ) {
         value = withContext(Dispatchers.IO) { BgmSceneStore.overview(book, chapterIndex) }
@@ -343,7 +343,7 @@ private fun BgmSceneRowEditor(
                     onValueChange = { pool = it },
                     onSelected = {
                         pool = it.key
-                        // 换池后原来指定的那首若不在新池里，清掉避免「播不到」
+                        // 换池后已指定的那首若不在新池里，清掉避免「播不到」
                         if (track.isNotBlank() && it.key != row.poolName) track = ""
                     },
                     onExpand = { open -> expandedRow = if (open) "pool" else null },

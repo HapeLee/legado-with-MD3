@@ -70,7 +70,7 @@ import sh.calvin.reorderable.ReorderableLazyListState
 /**
  * 「分组树 + 池」这套界面的公共部件。
  *
- * 角色声音池和背景音乐池要长得一模一样（用户原话「都和角色声音池一样」），行模型也已经
+ * 角色声音池和背景音乐池要长得一模一样，行模型也已经
  * 共用 [CastPoolRow]/[CastGroupRow]，所以列表、拖动、展开成员、增删改与移动对话框都只写
  * 这一遍。这里刻意不认识任何一个页面的 Intent：两个页面各自把自己的 UiState 当作
  * [CastPoolView] 交进来、把意图翻译成 [CastPoolActions] 的回调，以后再加第三种池不用抄代码。
@@ -151,7 +151,7 @@ interface CastPoolView {
 
 /**
  * 一个展开中的池。成员列表是筛选前的全量，[memberQuery] 只影响显示——
- * 以前把筛完的结果写回状态，删空关键词后列表就永久变窄了。
+ * 若把筛完的结果写回状态，删空关键词后列表就回不到全量了。
  */
 data class ExpandedPoolUi(
     val poolId: String,
@@ -567,7 +567,7 @@ private fun CastPoolCard(
     memberTrailing: (@Composable (CastMemberUi) -> Unit)?,
 ) {
     // 筛选词只管显示：状态里留的是池的全量成员，删空关键词就能看回来。
-    // 以前是把筛完的结果写回状态，于是筛过一次再把词删掉，列表就永久变窄了。
+    // 把筛完的结果写回状态会让列表在筛过一次、删掉词之后永久变窄。
     val memberFilter = memberQuery.trim()
     val visibleMembers = if (memberFilter.isEmpty()) {
         members
@@ -656,7 +656,7 @@ private fun CastPoolCard(
         // 成员列表就地展开/收起，不套 expandVertically：整张池卡是 ReorderableItem 里的一行，
         // 它自带 Modifier.animateItem()。两条高度动画口径不一致——animateItem 按「上一帧量到的
         // 行高」摆放后面的行，expandVertically 每帧都在改这一行的真实高度，于是展开时
-        // 下面的行直接压在上面的行上（2026-09-29 实测「音色重叠了」）。
+        // 下面的行直接压在上面的行上。
         if (expanded) {
             // 展开区：添加成员 + 成员复选框列表（复选框 = 池内启用）
             Row(

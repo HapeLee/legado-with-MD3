@@ -11,7 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 「整段/整页」划分下角色音能不能落地的实测：一个朗读单元就是一整段，旁白和已分配台词混在
+ * 「整段/整页」划分下角色音的落地验证：一个朗读单元就是一整段，旁白和已分配台词混在
  * 里面，归属必须按台词边界切开。段落形状取真实章节里那种「台词—旁白—台词」同段。
  */
 class CastSpeechOverlayPieceSplitTest {
@@ -134,7 +134,7 @@ class CastSpeechOverlayPieceSplitTest {
 
     /**
      * 开「多角色朗读」时送给引擎的那一句必须是干净正文：不留 `<<…>>`，也不留等长空格
-     * （用户：「不可以“     你好我是某某某”」）。
+     * （等长空格只用于锚点对齐，送进引擎就成了正文里的怪空白）。
      */
     @Test
     fun `送进引擎前标记整段去掉`() {

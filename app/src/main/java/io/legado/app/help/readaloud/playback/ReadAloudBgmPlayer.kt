@@ -116,7 +116,7 @@ class ReadAloudBgmPlayer(private val context: Context) {
         runCatching { if (player?.isPlaying == true) player?.pause() }
     }
 
-    /** 朗读恢复：接着播原来那条；已经切出场景或已停止就没有音乐。 */
+    /** 朗读恢复：接着播暂停所在那条；已切出场景或已停止就没有音乐。 */
     fun resume() {
         paused = false
         if (released || currentPath == null) return

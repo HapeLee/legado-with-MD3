@@ -41,8 +41,8 @@ import kotlinx.coroutines.delay
  * 正文内新做的悬浮卡片（分配角色 / 分配表 / AI 分配角色）的公共外观。
  *
  * 圆角、模糊、液态玻璃、着色都取底栏那一套 [ReadMenuConfig]（和官方底栏同一个数据源），
- * 用户在「顶/底栏布局」里改的设置这里自动跟着变。没设着色也没开模糊时保持原来的
- * surfaceContainerHigh 卡片，视觉与改动前一致。
+ * 用户在「顶/底栏布局」里改的设置这里自动跟着变。没设着色也没开模糊时
+ * 保持 surfaceContainerHigh 卡片。
  *
  * 后面新加的正文内菜单要「沿用底栏布局设置」，套这个 Composable 就行。
  */
@@ -119,7 +119,7 @@ fun CastSheetCard(
     // 开合过渡抄官方对话框那一套窗口动画（正文里「离线缓存」那种 AlertDialog 就是它）：
     // 淡入 120ms、从 0.8 放大 180ms，两样都延后 40ms 起步；收起 150ms 淡出同时缩回 0.8。
     // 首帧先按关闭态挂上，下一帧再开：进场动画要有起点，否则一上来就是终值、什么都不动。
-    // 原来是 spring(StiffnessLow) 从 0.94 弹上来——官方窗口不弹，看着就不是同一种东西。
+    // 用淡入+缩放而非 spring 回弹：官方窗口动画不弹，观感要与它一致。
     var armed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { armed = true }
     val opened = armed && visible

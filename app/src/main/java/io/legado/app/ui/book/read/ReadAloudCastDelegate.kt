@@ -151,9 +151,8 @@ class ReadAloudCastDelegate(
                     reassign = request.reassign,
                     presetId = request.presetId,
                     temporaryInstruction = request.temporaryInstruction,
-                    // 推理强度由悬浮窗那一行单独选。以前这里拿「显示思考过程」开关顶成
-                    // HIGH/OFF：开=把档位拉到最高（一章能想二十几分钟），关=OFF 在多数服务商上
-                    // 根本不发参数，模型照想不误——两头都不诚实。显示与否已与它解耦。
+                    // 推理强度与「显示思考过程」各自独立：强度只由悬浮窗那一行的
+                    // reasoningLevel 决定，开关仅控制是否展示思考内容。
                     reasoningLevel = request.reasoningLevel,
                     endChapter = request.endChapter,
                     onlyChapters = request.onlyChapters,
@@ -441,7 +440,7 @@ class ReadAloudCastDelegate(
         scope.launch(Dispatchers.IO) {
             CastAssignmentStore.deleteChapter(book.bookUrl, chapterIndex)
             // 「删除分配」要连这次一起删的东西：勾了配乐场景（或纯场景入口）时，
-            // 只删角色会让用户看到「删了但场景还在」
+            // 只删角色会留下场景，表现为「删了但场景还在」
             if (alsoScenes) BgmSceneStore.clearChapter(book.bookUrl, chapterIndex)
             withContext(Dispatchers.Main) {
                 reloadChapter()

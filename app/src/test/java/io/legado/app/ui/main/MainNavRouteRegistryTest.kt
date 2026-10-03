@@ -8,9 +8,8 @@ import java.io.File
  * 路由注册表不变式：每一个 `MainRoute` 目的地都必须在 [MainNavGraph] 里有对应的 `entry<>`。
  *
  * Navigation 3 对未注册的 key 只在运行时抛 `IllegalStateException("Unknown screen …")`，
- * 编译与 lint 都不报错。合并上游时整份取对方的 `MainNavGraph.kt` 就会静默删掉我们的入口
- * （第八十六轮：朗读规则 hub 的 7 个 entry 全丢，点开即崩）。这条测试把该失效模式变成
- * 构建期失败。
+ * 编译与 lint 都不报错。合并上游时若整份取对方的 `MainNavGraph.kt`，我们的入口会被
+ * 静默删掉、点开即崩。这条测试把该失效模式变成构建期失败。
  */
 class MainNavRouteRegistryTest {
 

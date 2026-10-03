@@ -944,7 +944,7 @@ private fun HighlightRulePreview(
         sample = rule.normalizedSampleText(),
         viewportWidthPx = bodyViewportWidthPx,
         // 视口给高：示例句必须全落在第一页，不然一拉「命中行行距」就把最后一行挤到丢掉的第二页，
-        // 看着像规则失效。超出的部分由外层 clipToBounds 裁掉，跟正文一样不许装饰跑进页边距。
+        // 预览里就看不到规则生效。超出的部分由外层 clipToBounds 裁掉，跟正文一样不许装饰跑进页边距。
         viewportHeightPx = (baseTextSizePx * 60f).toInt(),
     )
     val decorations = remember(layout) { layout?.let { ReaderPageDecorationDrawCache.create(it.page) } }
@@ -957,8 +957,8 @@ private fun HighlightRulePreview(
             // 正文那一刀：裁剪框跟着背景走，气泡不会被页边距切成两截，字也超不出去。
             val clip = page.contentClipRect(runs)
             val previewScale = size.width / bodyViewportWidthPx
-            // 整页原点缩放会把正文那一圈页边距一起缩进卡片里：示例句于是掉到卡片下方偏右，
-            // 看着像字歪了。这里只把**内容外接框的左上角**平移到卡片原点（排版一项不动，
+            // 整页原点缩放会把正文那一圈页边距一起缩进卡片里：示例句会落到卡片下方偏右，
+            // 视觉上字是歪的。这里只把**内容外接框的左上角**平移到卡片原点（排版一项不动，
             // 段首缩进、命中字距、气泡与字的比例仍是正文那一份），卡片里就是干净的一页内容。
             clipRect(
                 0f, 0f,

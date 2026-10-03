@@ -62,7 +62,7 @@ fun ReadAloudPlayerMorphHost(
     /**
      * 朗读设置停在哪个 tab（0=常规，1=引擎与音色）。存在宿主而不是弹层里：
      * 压进整屏页会拆掉弹层那层 composition，`rememberPagerState` 的初值回到 0，
-     * 用户看到的就是「从引擎与音色进去、回来落在常规」。
+     * 回来就落在常规 tab。
      */
     var configTab by rememberSaveable { mutableStateOf(0) }
     /**
@@ -99,7 +99,7 @@ fun ReadAloudPlayerMorphHost(
     fun navigateFromPlayer(action: () -> Unit) {
         scope.launch {
             val keepConfig = configVisible
-            // 先推目的地再收播放器：等收完再推，中间会露出阅读页一帧（看着像先弹回去再跳）
+            // 先推目的地再收播放器：等收完再推，中间会露出阅读页一帧
             action()
             pendingSubRoute = navRouteTracker.currentRoute
             collapsePlayer(keepConfig = keepConfig)

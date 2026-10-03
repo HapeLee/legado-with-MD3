@@ -575,7 +575,7 @@ class BgmPoolViewModel(
                             volume = entity.volume,
                         )
                     }.toImmutableList(),
-                    // 列表刷新后原来放的那条可能已被删掉
+                    // 列表刷新后正在播的那条可能已被删掉
                     playingId = state.playingId?.takeIf { playing ->
                         tracks.any { it.id == playing }
                     },

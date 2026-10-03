@@ -38,7 +38,7 @@ class VoiceEffectAudio {
         if (audioSessionId == sessionId) return
         release()
         sessionId = audioSessionId
-        // 会话换了，之前那次 apply（没有会话号时）在这里补上
+        // 会话号为空时 apply 会挂进 pending，会话建立后在这里补上
         pending?.let { apply(it) }
     }
 

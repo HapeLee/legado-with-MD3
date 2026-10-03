@@ -386,7 +386,7 @@ fun AiCastDialogSheet(
                                 )
                             }
                             // 逐章失败明细：断网、连不上 AI、回复读不出来都得留一句话在这儿。
-                            // 以前只有 lastError，且只在 running 时显示——一趟跑完提示就消失了。
+                            // 失败提示在跑完之后也要继续显示，不能只在 running 时出现。
                             val failureDetail = progress.failureText
                                 .ifBlank { progress.lastError.orEmpty() }
                             if (failureDetail.isNotBlank()) {
@@ -1134,8 +1134,8 @@ private fun AiCastPresetManagePage(
 /**
  * 一行预设：名字 + 正文（可展开看全）+ 编辑按钮；[onDelete] 为 null 时不给删（固定附加那几行）。
  *
- * 正文摘要以前写死 maxLines = 2：判断规则那一大段拼在预设里时，用户只看到两行省略号，
- * 于是认定"预设里藏了一段我看不见的提示词"。长度够长就给一个展开/收起，让全文不离编辑框也能读到。
+ * 正文摘要过长时给一个展开/收起：判断规则那一大段拼在预设里时不能只露两行省略号，
+ * 全文要在不离编辑框的情况下读得到。
  */
 @Composable
 private fun AiCastPresetRow(

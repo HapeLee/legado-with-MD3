@@ -10,7 +10,7 @@ import org.junit.Test
  * AI 给的称呼归并到本书已有角色主名（[canonicalCastName]）。
  *
  * 归并不到位时「重新分配」会把同一个人拆成两条 cast_characters：新那条没有气泡，
- * 而 [CastProfileMirror.ensure] 按名字找档案又会顺着 aliasesJson 命中用户原来那条并改名，
+ * 而 [CastProfileMirror.ensure] 按名字找档案又会顺着 aliasesJson 命中已有那条并改名，
  * 于是档案与角色行错配——正文表现为气泡没了、头像还在、配音列表却不跟着变。
  */
 class AiCastIdentityTest {

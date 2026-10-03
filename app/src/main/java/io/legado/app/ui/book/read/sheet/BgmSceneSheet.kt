@@ -192,7 +192,7 @@ fun BgmSceneSheet(
                                 onValueChange = { pool = it },
                                 onSelected = {
                                     pool = it.key
-                                    // 换池后原来指定的那首若不在新池里，清掉避免「播不到」
+                                    // 换池后已指定的那首若不在新池里，清掉避免「播不到」
                                     if (track.isNotBlank() && it.key != sheet.pool) track = ""
                                 },
                                 onExpand = { open -> expandedRow = if (open) "pool" else null },

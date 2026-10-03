@@ -256,14 +256,14 @@ val appDb by lazy {
         AutoMigration(from = 120, to = 121),
         // read_aloud_audio_downloads：听书音频按章下载的记录（文件名清单 + 句数）
         AutoMigration(from = 121, to = 122),
-        // highlight_rules 新增命中排版四列 + 九宫格长度偏移：全部默认 0，老规则读回来与本轮之前逐字节等价
+        // highlight_rules 新增命中排版四列 + 九宫格长度偏移：全部默认 0，老规则各列取值不变、读回来逐字节等价
         AutoMigration(from = 122, to = 123),
-        // 123 这一版号被两个不同的列集合用过（第五十二轮那批 vs 本轮），身份哈希对不上，
-        // 覆盖安装时 Room 拒绝开库；124 用手工迁移按列名补齐，见 DatabaseMigrations。
+        // 版本号 123 对外发布过两套列定义，identityHash 对不上会让覆盖安装被 Room 拒绝开库；
+        // 124 用手工迁移按列名补齐，见 DatabaseMigrations。
         // 125：九宫格长度偏移拆成左/右两列（DROP COLUMN 要 SQLite 3.35，minSdk 26 没有），
         // 同样手工整表重建，老值按左右各一半落进新列。
         // cast_characters.bubbleRuleJson：这个角色自己的气泡（只填气泡那几栏的高亮规则 JSON），
-        // 默认空串 = 不设气泡，老角色读回来与本轮之前逐字节等价。
+        // 默认空串 = 不设气泡，老角色该字段保持默认、读回来逐字节等价。
         AutoMigration(from = 125, to = 126),
         // 127：新表 regex_cast_rules（正则角色：命中文字换音色 / 换音效）。
         AutoMigration(from = 126, to = 127),

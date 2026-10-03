@@ -184,7 +184,7 @@ class LegacyReaderStyleRangeMapperTest {
         assertEquals(18, colored.maxOf { it.endExclusive })
     }
 
-    /** 没人设气泡时一个区间都不该多出来：正文与本轮之前逐字节等价。 */
+    /** 没人设气泡时一个区间都不该多出来：正文的区间逐字节不变。 */
     @Test
     fun noBubbleLeavesTheRangesUntouched() {
         val ranges = rangesFor(HighlightRule(pattern = "我是李四", targetScope = HighlightRule.TARGET_BODY))
@@ -194,8 +194,8 @@ class LegacyReaderStyleRangeMapperTest {
 
     /**
      * 「气泡的任何设置都是优先的」：角色设过的每一栏都要盖过同一条高亮规则，
-     * 包括**数值更小**的间距。之前按较大者取，规则把字距调大后角色的设置就永远显不出来，
-     * 只有把高亮规则关掉才看得到 —— 用户报的正是这个。
+     * 包括**数值更小**的间距。若按较大者取，规则把字距调大后角色的设置就永远不生效，
+     * 只有把高亮规则关掉才看得到——所以这里以角色的值优先。
      */
     @Test
     fun characterStyleOverridesTheRuleWhereItSetItsOwnValue() {

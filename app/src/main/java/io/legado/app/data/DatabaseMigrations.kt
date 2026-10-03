@@ -28,10 +28,10 @@ object DatabaseMigrations {
     /**
      * 127 → 128：正则角色的分组从文本列升级成可嵌套的分组树。
      *
-     * 原来 `regex_cast_rules.group` 存的是组名字符串（只能一层、改名要全表改写）。
+     * 迁移前的 `regex_cast_rules.group` 存的是组名字符串（只能一层、改名要全表改写）。
      * 这里把已有的组名各建成一个根层分组（id 直接用组名，幂等且好认），规则改指 id，
      * 然后把 rules 整表重建去掉旧列——minSdk 26 的 SQLite 没有 DROP COLUMN（要 3.35），
-     * 与 124→125 那轮同一手法。
+     * 与 124→125 同一手法。
      */
     private val migration_127_128 = object : Migration(127, 128) {
         override fun migrate(db: SupportSQLiteDatabase) {
@@ -716,13 +716,13 @@ object DatabaseMigrations {
         }
     }
     /**
-     * 第五十二轮把库推到 123 时，highlightRules 加的是另一批列（bgPadXEm 与 matchSpacing 那五条）；
-     * 第五十三轮回退重做后，同一个版本号 123 换成了命中排版四列 + 九宫格长度偏移。装过上一版的机器
-     * room_master_table 里存的是旧身份哈希，Room 开库直接抛「Room cannot verify the data integrity」
-     * （2026-09-29 覆盖安装实测）。所以本轮升到 124。
+     * 版本号 123 对外发布过两套列定义：一套是 bgPadXEm 与 matchSpacing 那五条列，
+     * 另一套是命中排版四列 + 九宫格长度偏移。装过任一版的机器 room_master_table 里存的
+     * 身份哈希与现行 schema 对不上时，Room 开库直接抛「Room cannot verify the data
+     * integrity」，所以现行 schema 升到 124。
      *
      * 迁移本身要做出 124.json 的**逐列一致**：Room 会拿新 schema 校验迁移结果，
-     * 上一版多出来的那七列留着就会报「Migration didn't validate」。而
+     * 旧版多出来的那七列留着就会报「Migration didn't validate」。而
      * `ALTER TABLE ... DROP COLUMN` 要 SQLite 3.35，minSdk 26 的机器上没有，
      * 于是按本文件既有的路子整表重建（先补列，再照 124.json 建表搬数据）。
      * 起点是「只跑过 122→123 自动迁移」的库也成立：那时五列已在、七列不存在。
@@ -812,7 +812,7 @@ object DatabaseMigrations {
     }
 
     /**
-     * 第五十六轮把「九宫格长度偏移」拆成左偏移 + 右偏移两项（对称的一项调不动气泡两端）。
+     * 「九宫格长度偏移」拆成左偏移 + 右偏移两项（对称的一项调不动气泡两端）。
      * 旧的 `bgLengthOffset` 因此要从表里去掉，换成 `bgLengthOffsetLeft` / `bgLengthOffsetRight`。
      * `ALTER TABLE ... DROP COLUMN` 要 SQLite 3.35，minSdk 26 没有，照本文件既有路子整表重建。
      * 老数据按「左右各一半」落到新列上，与升级前的观感一致。

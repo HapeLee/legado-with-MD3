@@ -53,8 +53,8 @@ class BookCharacterDetailViewModel(
             is CharacterDetailIntent.SetName -> _uiState.update { it.copy(name = intent.value) }
             is CharacterDetailIntent.SetAliasesText -> _uiState.update { it.copy(aliasesText = intent.value) }
             is CharacterDetailIntent.SetAvatarUri -> {
-                // 头像不是打字：选完/填完就该定下来。以前只改界面状态，要点一下「保存」才落库，
-                // 于是看着生效了、退出重进就没了（2026-09-29 实测）。
+                // 头像不是打字：选完/填完就该定下来，当场落库；只改界面状态要等手点「保存」才生效，
+                // 退出重进即丢。
                 _uiState.update { it.copy(avatarUri = intent.value) }
                 save()
             }
@@ -215,8 +215,8 @@ class BookCharacterDetailViewModel(
                         BookCastStore.reloadReaderChapter(profile.bookUrl)
                     }
                     if (avatarChanged) {
-                        // 换掉的本地头像到这一步才真没人引用了：以前是选完新图就立刻删旧文件，
-                        // 用户随后不保存就退出，档案里留着的反而是个被删掉的地址。
+                        // 换掉的本地头像到这一步才真没人引用了：若在选完新图就立刻删旧文件，
+                        // 用户不保存退出后，档案里留着的会是已被删掉的地址。
                         currentProfile?.avatarUri?.let { deleteCharacterAvatar(appCtx, it) }
                     }
                 }

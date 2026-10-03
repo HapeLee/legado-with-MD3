@@ -103,7 +103,7 @@ class BookVoiceCastingViewModel(
     private fun publishState() {
         val voicesById = voices.associateBy(ReadAloudVoice::id)
         val bindingsBySubject = bindings.associateBy { it.subjectType to it.subjectId }
-        // 只列旁白：三个「未知男/未知女/未知」兜底行以前占一屏，用户要的只是给旁白选个音色
+        // 只列旁白：不列「未知男/未知女/未知」三条兜底行——旁白这里只需要选一个音色
         val specialItems = listOf(
             specialItem(BookVoiceBinding.SUBJECT_NARRATOR, CastingSubjectKind.Narrator),
         )

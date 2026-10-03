@@ -74,7 +74,7 @@ data class CastCapsuleStyle(
     fun backgroundImage(isNight: Boolean): String =
         if (isNight) bgImageNight.takeIf { it.isNotEmpty() } ?: bgImage else bgImage
 
-    /** 这一份跟「从没设过」完全一致：走原来的绘制路径。 */
+    /** 这一份跟「从没设过」完全一致：走默认绘制路径。 */
     fun isDefault(): Boolean = this == Default
 
     companion object {

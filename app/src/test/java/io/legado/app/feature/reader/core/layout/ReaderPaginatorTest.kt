@@ -476,8 +476,8 @@ class ReaderPaginatorTest {
 
     /**
      * 背景图（含九宫格）只是压在字后面的装饰：同一批字加上背景图，落位与断行必须和没加时
-     * 逐字一致。以前分页会给九宫格在左右各留出一截（左边条 + 半个长度偏移），字被推歪、
-     * 行被拆短，「只是加个背景」变成了「改排版」。
+     * 逐字一致——分页不许给九宫格在左右留出额外宽度（左边条 + 半个长度偏移），
+     * 否则字被推歪、行被拆短，「只是加个背景」就变成了「改排版」。
      */
     @Test
     fun backgroundImagesNeverMoveAGlyphOrChangeALineBreak() {
@@ -743,7 +743,7 @@ class ReaderPaginatorTest {
 
     /**
      * 四条边共用一个倍率：行盒只有中间带的一半时，左右边条也必须跟着缩一半。
-     * 只缩纵向就等于把图横向拉一倍——右边那块图案被压扁，正是用户报的「预览都被压扁了」。
+     * 只缩纵向就等于把图横向拉一倍——右边那块图案会被压扁。
      */
     @Test
     fun nineSliceFrameScalesAllFourEdgesByOneFactor() {

@@ -457,7 +457,7 @@ private fun VoiceCastingCard(
     }
     val isCharacter = item.kind == CastingSubjectKind.Character
     // 人物档案上那份头像（人物详情里设的）在这里也要露脸：一屏角色靠脸认比靠名字快，
-    // 取不到图（链接失效、文件被清）就退回原来的图标，不留空圈。
+    // 取不到图（链接失效、文件被清）就退回默认图标，不留空圈。
     val avatarUri = item.avatarUri?.takeIf { it.isNotBlank() }
     val avatarLoadFailed = remember(avatarUri) { mutableStateOf(false) }
     // 男女主 / 男女配 / 其余三档整卡外观不同：底色、描边、投影都是卡片这一层的，
@@ -586,7 +586,7 @@ private fun VoiceCastingCard(
         }
         // 编辑面板就地展开。这里不能再套 expandVertically：整张卡是 ReorderableItem 的一行，
         // 它自带 Modifier.animateItem()，行高变化本来就由列表按同一份时长统一补间——
-        // 再叠一条每帧改高度的动画，两条口径对不上，下面的角色行会压在上面的行上抖（2026-09-29 实测）。
+        // 再叠一条每帧改高度的动画，两条口径对不上，下面的角色行会压在上面的行上抖。
         if (editing) {
             if (isCharacter) {
                 CastRoleEditorPanel(

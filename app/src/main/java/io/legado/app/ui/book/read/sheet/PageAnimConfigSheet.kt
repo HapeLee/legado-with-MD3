@@ -16,8 +16,8 @@ fun PageAnimConfigSheet(
     onDismissRequest: () -> Unit,
     onAnimChanged: () -> Unit,
 ) {
-    // 每项自带 PageAnim 取值：原来用「下标 - 1」推，列表里少一项就会整体错位一格
-    // （最后一项写着「无动画」，落库的却是淡入淡出的 4）。
+    // 每项自带 PageAnim 取值，不按「下标 - 1」推导：列表少一项就会整体错位一格
+    // （最后一项写着「无动画」，落库的却是别的值）。
     val items = listOf(
         R.string.btn_default_s to -1,
         R.string.page_anim_cover to PageAnim.coverPageAnim,

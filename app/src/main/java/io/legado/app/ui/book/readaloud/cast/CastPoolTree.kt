@@ -7,8 +7,8 @@ import io.legado.app.help.readaloud.cast.CastPoolRow
  * 「分组树 + 池」这套列表的纯逻辑：拉平、拖动落点归属、松手回写的整表计划。
  *
  * 角色声音池（[MultiRoleRuleViewModel]）与背景音乐池（[BgmPoolViewModel]）用的是同一套
- * 交互（用户要求「都和角色声音池一样」），行模型也共用 [CastPoolRow]/[CastGroupRow]，
- * 所以这套规则只写一遍：以前它长在声音池 ViewModel 里，抄第二遍迟早和第一遍行为分叉。
+ * 交互，行模型也共用 [CastPoolRow]/[CastGroupRow]，所以这套规则只写一遍：
+ * 在各 ViewModel 里各抄一份，两份行为迟早分叉。
  */
 object CastPoolTree {
 

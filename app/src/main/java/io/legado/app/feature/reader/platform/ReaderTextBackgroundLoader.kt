@@ -19,9 +19,9 @@ object ReaderTextBackgroundLoader {
     /**
      * 气泡图缓存的上限：堆的八分之一（Android 做图片缓存的常规口径），最少 16 MB。
      *
-     * 原来写死 16 MB，而解出来的气泡图最大能到整屏那么大（`sampleSizeFor` 就按屏幕尺寸
-     * 降采样）——一张 1440×3200 的 ARGB_8888 接近 18 MB，一进缓存就因超限被立刻挤出去，
-     * 于是每一页、每一帧都是未命中：翻页首帧气泡是空的，下一帧才补上，就是「闪一下」。
+     * 下限必须容得下最大的一张气泡图：解出来的气泡图能到整屏大小（`sampleSizeFor` 就按
+     * 屏幕尺寸降采样），一张 1440×3200 的 ARGB_8888 接近 18 MB；上限小于一张图的尺寸时
+     * 条目一进缓存就被挤出去，每页每帧都是未命中，翻页首帧气泡是空的、下一帧才补上。
      */
     private val bitmaps = object : LruCache<String, Bitmap>(
         maxOf(16 * 1024 * 1024, (Runtime.getRuntime().maxMemory() / 8).toInt()),

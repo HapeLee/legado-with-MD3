@@ -38,12 +38,12 @@ object CastRenderOptions {
                 .filter { it.voiceEffect.isNotBlank() }
                 .associate { it.name to it.voiceEffect }
             // 头像也要算进来：画胶囊时用的是分页那一刻解析出来的头像地址，
-            // 不纳入身份的话在人物详情换过头像回到正文，旧页上还挂着原来那张。
+            // 不纳入身份的话换过头像回到正文，旧页仍显示分页时解析的头像。
             val avatars = appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500)
                 .map { "${it.id}|${it.avatarUri.orEmpty()}" }
                 .sorted()
             // 胶囊样式（头像位移）参与宽度，改了就得重排；签名每次写自增
-            // 角色气泡同理：换了图/切线/偏移，旧页上还挂着原来的气泡
+            // 角色气泡同理：换图/切线/偏移后不能继续用分页时解析的气泡
             val bubbles = appDb.castCharacterDao.getByBook(bookUrl)
                 .map { "${it.name}|${it.bubbleRuleJson}" }
                 .sorted()

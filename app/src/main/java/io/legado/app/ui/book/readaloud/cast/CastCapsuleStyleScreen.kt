@@ -166,7 +166,7 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
             )
         },
-        // 预览钉在底部：它原来在列表第一条里，往下调滑块就滚出屏幕，改完看不到效果
+        // 预览钉在底部：放进列表里往下调滑块就会滚出屏幕，改完看不到效果
         bottomBar = {
             PreviewCard(
                 modifier = Modifier

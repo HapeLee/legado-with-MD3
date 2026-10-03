@@ -153,8 +153,7 @@ class HighlightRuleRepository(
             }"
         }
         // 从 rule 本身 copy：新增字段只要不写进下面这张清单就不会被静默清零。
-        // 之前逐字段重建过一版，结果命中字距 / 命中行行距 / 九宫格左右偏移在保存时被抹平，
-        // 滑杆怎么调正文都不动——保存链路本身就是「不生效」的根因。
+        // 逐字段重建会丢命中字距 / 命中行行距 / 九宫格左右偏移（保存后滑杆失效），必须整体 copy。
         return rule.copy(
             id = id,
             name = name,
@@ -361,8 +360,7 @@ class HighlightRuleRepository(
      *
      * 「在用」的集合必须把**角色气泡**算进来：气泡图与规则图共用 `bg_images` 这一目录
      * （`CastCharacter.bubbleRuleJson` 里存的也是一条 HighlightRule），只查规则表的话
-     * 任何一次保存规则都会把只有角色在用的图物理删掉 —— 用户看到的就是
-     * 「编辑了和高亮规则重叠的那条规则并保存后，角色气泡失效，只能重新导入图片」。
+     * 任何一次保存规则都会把只有角色在用的图物理删掉，角色气泡随之失效、只能重新导入。
      */
     private fun cleanupUnusedBgImages() {
         val allRules = dao.getAll()

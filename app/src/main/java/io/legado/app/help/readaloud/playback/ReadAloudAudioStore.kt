@@ -82,10 +82,10 @@ object ReadAloudAudioStore {
         dir.mkdirs()
         val target = File(dir, "$fileName.mp3")
         if (isSilentPlaceholder(target)) {
-            // 早先下载失败留下的空壳：让新合成出来的那份覆盖它
+            // 下载失败留下的空壳：让新合成出来的那份覆盖它
             FileUtils.delete(target.absolutePath)
         } else if (target.isFile && target.length() > 0L) {
-            // 缓存已经清掉、下载区还是原来那份：直接认，不重复合成
+            // 合成缓存已清、下载区仍留有完整文件：视为命中，不重复合成
             return target
         }
         if (!source.isFile || source.length() <= 0L) return null

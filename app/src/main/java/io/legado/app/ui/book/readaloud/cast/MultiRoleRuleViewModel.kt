@@ -106,9 +106,9 @@ class MultiRoleRuleViewModel(
                 ) {
                     draggedKey = dragged.key
                     // 严格照搬库给的绝对下标：它内部记住「被拖项现在在下标 to」，模型里
-                    // rows[to] 必须正好是它。以前为了把顶部「未分组」表头钉在第 0 格而夹紧下标，
+                    // rows[to] 必须正好是它。若为把顶部「未分组」表头钉在第 0 格而夹紧下标，
                     // 等于吞掉一次移动，库和模型错位后下一帧就要求移回去——来回抽搐。
-                    // 现在允许该表头在拖动时暂时让位，松手回写重算列表时它会自己回到首位。
+                    // 该表头允许在拖动时暂时让位，松手回写重算列表时它会自己回到首位。
                     _uiState.update { state ->
                         val moved = state.rows.toMutableList()
                         moved.add(intent.to, moved.removeAt(intent.from))
@@ -253,8 +253,8 @@ class MultiRoleRuleViewModel(
             }
 
             is MultiRoleRuleIntent.TogglePoolExpand -> {
-                // 展开/收起只管自己那一份：以前整个页面只存一个 expandedPoolId，
-                // 点开第二个池就把第一个顶掉了（2026-09-29 实测）。
+                // 展开/收起每个池各存一份：整页只存一个 expandedPoolId 的话，
+                // 点开第二个池就会把第一个顶掉。
                 val opening = _uiState.value.expandedPools.none { it.poolId == intent.poolId }
                 _uiState.update { state ->
                     state.copy(

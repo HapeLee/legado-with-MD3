@@ -413,7 +413,7 @@ val appModule = module {
     singleOf(::ReadAloudSessionStore)
     single<PlaybackCapsuleGateway> { PlaybackCapsuleGatewayAdapter(get(), get()) }
     singleOf(::MainNavRouteTracker)
-    // R2.3：会话每个所有者一份。ReadBook.callBack 的身份是「阅读页已挂载」信号
+    // 会话每个所有者一份。ReadBook.callBack 的身份是「阅读页已挂载」信号
     // （prefetchForOpen / upData 判 callBack != null），register 还会给上一个持有者
     // 发 notifyBookChanged——单例会把两个 ReadBookViewModel 的注册身份混成一个。
     factory<ReaderSession> { LegacyReaderSession() }

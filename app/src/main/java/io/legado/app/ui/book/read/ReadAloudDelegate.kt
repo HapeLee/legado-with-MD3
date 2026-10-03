@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * 朗读域（R2.2 续批）。
+ * 朗读域。
  *
  * 管朗读设置的读写、四个数值选择弹层、播放传输控制、声音目录同步和 TTS 缓存清理。
  *
@@ -247,7 +247,7 @@ class ReadAloudDelegate(
     }
 
     fun openConfigSheet() {
-        // 从底栏重新打开算「新一次设置」，回到常规页；只有被整屏页盖住再回来才停在原来那一页
+        // 从底栏重新打开算「新一次设置」，回到常规页；被整屏页盖住再回来才停在那一 tab
         host.updateState {
             it.copy(activeSheet = ReadBookSheet.ReadAloudConfig, readAloudConfigTab = 0)
         }
@@ -260,10 +260,10 @@ class ReadAloudDelegate(
     }
 
     /*
-     * 下面三个目的地是整屏 NavKey。以前推送前先把 `activeSheet` 清空，返回后就看到裸正文，
-     * 也就是「从朗读设置的引擎与音色进去、回来落到别处」；不清空又会让窗口级浮层的朗读设置
-     * 悬在新页面上面。现在两件事分开管：`activeSheet` 保留（返回时弹层自己摊回来），
-     * 卡片停在哪个 tab 由 `readAloudConfigTab` 记住，压住时由 ReadBookScreen 按导航栈顶收起。
+     * 下面三个目的地是整屏 NavKey。`activeSheet` 与 `readAloudConfigTab` 分开管：
+     * 推送整屏页时不清空 `activeSheet`，返回时弹层自己摊回来、tab 由
+     * `readAloudConfigTab` 记住；朗读设置卡片被整屏页盖住时由 ReadBookScreen
+     * 按导航栈顶收起，避免窗口级浮层悬在新页面上面。
      */
     fun openTtsEnginesAndVoices() {
         host.emitEffect(ReadBookEffect.OpenTtsEnginesAndVoices)

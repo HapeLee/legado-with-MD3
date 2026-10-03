@@ -9,15 +9,15 @@ import io.legado.app.data.entities.CastCharacter
  *
  * 新建角色时档案 id 直接用角色 id，音色绑定（book_voice_bindings 以档案 id 为主体）、
  * 朗读覆盖层与人物页就指向同一条记录。池名写进 `voiceAgeBand` 那一列——
- * 该列现在存的就是声音池名（见 [VoicePoolStore.poolNameOrEmpty]）。
+ * 该列存的就是声音池名（见 [VoicePoolStore.poolNameOrEmpty]）。
  */
 object CastProfileMirror {
 
     /**
      * 本书所有配音角色补一遍档案。
      *
-     * 自动选音与档案镜像上线之前建的角色只有 `cast_characters` 行，官方「人物」一节会显示
-     * 「还没有人物档案」，两边看着像两批人。进配音页时补一次，之后 id 一致、双向都读得到。
+     * 只有 `cast_characters` 行、没有档案的旧角色，官方「人物」一节会显示「还没有人物档案」，
+     * 两边 id 对不上。进配音页时补一次，之后 id 一致、双向都读得到。
      */
     suspend fun backfillAll(bookUrl: String) {
         if (bookUrl.isBlank()) return
@@ -29,8 +29,8 @@ object CastProfileMirror {
         val bookUrl = character.bookUrl
         // 先按 id 找：配音角色建档用的就是角色 id，那条档案一定是这个人的。
         // 按名字兜底只认**名字完全相等**的那条：`getCharacterProfile` 连 aliasesJson 一起 LIKE，
-        // 拿它按名找会把「记着这个别名的别人」捞出来改名——用户看到的「AI 分配把我设好的人物
-        // 改名了、气泡跟着没」就是那一次 upsert。称呼归并是 [canonicalCastName] 的活，不在这里。
+        // 拿它按名找会把「记着这个别名的别人」捞出来改名，一次错误的 upsert 就同时破坏
+        // 档案与角色行的对应、气泡和配音跟着错。称呼归并是 [canonicalCastName] 的活，不在这里。
         val target = appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, character.id)
             ?.takeIf { it.bookUrl == bookUrl }
             ?: appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500).firstOrNull {
