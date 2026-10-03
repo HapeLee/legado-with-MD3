@@ -27,16 +27,15 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import io.legado.app.base.BaseService
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
+import io.legado.app.domain.gateway.PlaybackCapsuleGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.feature.readaloud.overlay.capsulePresentationOffsetX
 import io.legado.app.feature.readaloud.overlay.capsuleWindowY
 import io.legado.app.help.LifecycleHelp
-import io.legado.app.base.BaseService
-import io.legado.app.domain.gateway.PlaybackCapsuleGateway
-import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.ui.book.read.ReadAloudCapsule
-import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.main.MainIntent
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.utils.LogUtils
@@ -173,7 +172,9 @@ class ReadAloudOverlayWindow(
                                         playerState.inBookshelf
                                     )
                                 } else {
-                                    Intent(service, MainActivity::class.java).apply {
+                                    // 换图标变体会禁用 MainActivity 组件，显式 Intent 会抛
+                                    // ActivityNotFoundException；必须解析当前启用的启动器组件。
+                                    MainIntent.createLauncherIntent(service).apply {
                                         putExtra(MainIntent.EXTRA_OPEN_READ_ALOUD_PLAYER, true)
                                     }
                                 }
