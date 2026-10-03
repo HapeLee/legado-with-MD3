@@ -29,9 +29,12 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.book.readaloud.player.applyReadBookConfigIntent
 import io.legado.app.ui.book.readaloud.player.rememberPlayerThemeOverride
+import io.legado.app.ui.main.MainNavRouteTracker
+import io.legado.app.ui.main.MainRouteReadBook
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 /** 朗读特有的设置与经典控制；几何、封面和返回手势由共用宿主处理。 */
 @Composable
@@ -50,8 +53,18 @@ fun ReadAloudPlayerMorphHost(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val navRouteTracker: MainNavRouteTracker = koinInject()
+    val navBackStack by navRouteTracker.backStack.collectAsStateWithLifecycle()
+    val topRoute = navBackStack.lastOrNull()
     val settingsState by playerViewModel.readAloudSettings.collectAsStateWithLifecycle()
     var configVisible by rememberSaveable { mutableStateOf(false) }
+    /**
+     * 从朗读设置跳去子页（引擎与音色 / 朗读缓存 / 人物配音）时置位：
+     * 播放器是 Activity 级浮层，压在新页面上面，所以只能先收；这里只留一个"弹层在等
+     * 播放器重新摊开"的标记，导航栈顶回到阅读页就把播放器重新叫出来、朗读设置跟着回来
+     * ——「从哪进，出来就是哪」。不直接留着 `configVisible`：返回手势的闸门看的就是它。
+     */
+    var configWaitsForPlayer by remember { mutableStateOf(false) }
     var activeNumberConfig by rememberSaveable {
         mutableStateOf<ReadAloudPlayerConfigHostAction?>(null)
     }
@@ -62,7 +75,8 @@ fun ReadAloudPlayerMorphHost(
     val currentOpenTtsCache by rememberUpdatedState(onOpenTtsCache)
     val currentOpenBookVoiceCasting by rememberUpdatedState(onOpenBookVoiceCasting)
 
-    suspend fun collapsePlayer() {
+    suspend fun collapsePlayer(keepConfig: Boolean = false) {
+        configWaitsForPlayer = keepConfig
         configVisible = false
         activeNumberConfig = null
         morph.animateTo(0f)
@@ -71,8 +85,10 @@ fun ReadAloudPlayerMorphHost(
 
     fun navigateFromPlayer(action: () -> Unit) {
         scope.launch {
-            collapsePlayer()
+            val keepConfig = configVisible
+            // 先推目的地再收播放器：等收完再推，中间会露出阅读页一帧（看着像先弹回去再跳）
             action()
+            collapsePlayer(keepConfig = keepConfig)
         }
     }
 
@@ -106,9 +122,20 @@ fun ReadAloudPlayerMorphHost(
     }
 
     LaunchedEffect(expanded) {
-        if (!expanded) {
+        if (expanded) {
+            if (configWaitsForPlayer) {
+                configWaitsForPlayer = false
+                configVisible = true
+            }
+        } else if (!configWaitsForPlayer) {
             configVisible = false
             activeNumberConfig = null
+        }
+    }
+    // 子页返回：栈顶重新是阅读页，就把播放器叫回来，摊开的同时朗读设置自己回来
+    LaunchedEffect(topRoute) {
+        if (configWaitsForPlayer && topRoute is MainRouteReadBook) {
+            ReadAloudPlayerOverlayBus.request()
         }
     }
     LaunchedEffect(playerViewModel) {
