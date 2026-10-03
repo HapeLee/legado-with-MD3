@@ -956,12 +956,18 @@ private fun HighlightRulePreview(
             // 正文那一刀：裁剪框跟着背景走，气泡不会被页边距切成两截，字也超不出去。
             val clip = page.contentClipRect(runs)
             val previewScale = size.width / bodyViewportWidthPx
+            // 整页原点缩放会把正文那一圈页边距一起缩进卡片里：示例句于是掉到卡片下方偏右，
+            // 看着像字歪了。这里只把**内容外接框的左上角**平移到卡片原点（排版一项不动，
+            // 段首缩进、命中字距、气泡与字的比例仍是正文那一份），卡片里就是干净的一页内容。
             clipRect(
-                clip.left * previewScale, clip.top * previewScale,
-                clip.right * previewScale, clip.bottom * previewScale,
+                0f, 0f,
+                (clip.right - clip.left) * previewScale,
+                (clip.bottom - clip.top) * previewScale,
             ) {
                 scale(previewScale) {
-                    drawReaderPreviewPage(layout, runs, decorations, backgroundPaint, stylePaints)
+                    translate(-clip.left, -clip.top) {
+                        drawReaderPreviewPage(layout, runs, decorations, backgroundPaint, stylePaints)
+                    }
                 }
             }
         }
