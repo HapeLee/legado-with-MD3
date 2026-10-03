@@ -658,22 +658,19 @@ class ReadBookViewModel(
     }
 
     /**
-     * 消费 [ReadStyleGateway.state]（Track E · E2）：排版配置的唯一变更通知。
+     * 消费 [ReadStyleGateway.state]：排版配置的唯一变更通知。
      *
-     * 排版底座 `ReadBookConfig.Config` 是可变全局、无 flow，此前 UiState 里的
-     * [ReadBookStyleConfig] / [ReadSheetConfigUiState] 只能靠各写入站点手工重建——
-     * 13 处重建 `styleConfig`、**只有 1 处**重建 `sheetConfig`（`syncFromReadBook`），
-     * 于是编辑排版后重开弹层显示的是旧值。
+     * 排版底座 `ReadBookConfig.Config` 是可变全局、无 flow，UiState 里的
+     * [ReadBookStyleConfig] / [ReadSheetConfigUiState] 两份快照由 gateway 的
+     * `publishState()` 统一驱动重建：写入必经 gateway，gateway 必发 state，这里必然重建两份快照；
+     * 新增写入路径若绕过 gateway，就必须自行触发重建，否则快照是旧值。
      *
-     * 改由 gateway 的 `publishState()` 统一驱动后，「新增写入路径忘了重建快照」这个
-     * 失效类别不再存在：写入必经 gateway，gateway 必发 state，这里必然重建两份快照。
-     *
-     * R1.1 收敛后全 VM 只允许三处重建触发，删任何一处前先确认其路径已被其余覆盖：
+     * 全 VM 只允许三处重建触发，删任何一处前先确认其路径已被其余覆盖：
      * 1. 本 collector——一切经 gateway 的排版写入（编辑/预设/删除/导入，repository 必 publishState）；
      * 2. [collectEventBus] 的 [ReadConfigUpdateBus] collector——不经 gateway 的全局变更
      *    （日夜切换等，revision 不递增，gateway flow 不会发射）；
      * 3. [handleConfigUpdate] 尾部 `styleMutation == null` 分支——只写 DataStore 的更新。
-     * `syncFromReadBook` 不再重建（曾经的每翻页兜底会掩盖漏发问题）。
+     * `syncFromReadBook` 不触发重建：每翻页兜底会掩盖上面漏发通知的路径。
      */
     private fun collectReadStyle() {
         viewModelScope.launch {
@@ -689,7 +686,7 @@ class ReadBookViewModel(
     }
 
     /**
-     * 消费 [ReaderSession.state]（Track A A5）：会话快照在任意受控 mutator 完成后发射，
+     * 消费 [ReaderSession.state]：会话快照在任意受控 mutator 完成后发射，
      * 据此驱动 UiState 刷新。与遗留 CallBack 刷新路径叠加、幂等（相同结果 StateFlow 不再发），
      * 收集在 mutator 返回之后异步触发，故 syncFromReadBook 读到的 ReadBook 字段已是最终态。
      */
@@ -712,10 +709,10 @@ class ReadBookViewModel(
     }
 
     /**
-     * 消费 [ReaderSession.events]（R2.3）：遗留 [ReadBook.CallBack] 的四个回调。
+     * 消费 [ReaderSession.events]：遗留 [ReadBook.CallBack] 的四个回调。
      *
-     * VM 不再实现 `ReadBook.CallBack`——`ReadBook.callBack` 现在指向本 VM 持有的
-     * [LegacyReaderSession]。回调体原样搬过来，只是从「在 ReadBook 的调用线程上同步执行」
+     * VM 不实现 `ReadBook.CallBack`——`ReadBook.callBack` 指向本 VM 持有的
+     * [LegacyReaderSession]。回调体在本 VM 原样执行，只是时机从「在 ReadBook 的调用线程上同步执行」
      * 变成「在主线程上晚一个派发执行」。
      */
     private fun collectReaderSessionEvents() {
@@ -1728,15 +1725,15 @@ class ReadBookViewModel(
         }
     }
 
-    // --- ReadBook 回调（已全部离开本 ViewModel）---
+    // --- ReadBook 回调（归属见下）---
     //
-    // Track B2：渲染子集（upContent/upContentAwait/pageChanged/contentLoadFinish/
-    // upPageAnim/cancelSelect/onLayoutPageCompleted）下沉到 UI 层渲染控制器
+    // 渲染子集（upContent/upContentAwait/pageChanged/contentLoadFinish/
+    // upPageAnim/cancelSelect/onLayoutPageCompleted）归 UI 层渲染控制器
     // （ReadBook.renderCallBack）。
-    // R2.3：状态子集（upMenuView/loadChapterList/notifyBookChanged/sureNewProgress）
-    // 迁入 LegacyReaderSession，本 VM 改为订阅 collectReaderSessionEvents()。
+    // 状态子集（upMenuView/loadChapterList/notifyBookChanged/sureNewProgress）
+    // 归 LegacyReaderSession，本 VM 通过 collectReaderSessionEvents() 订阅。
     // 业务状态刷新另有 collectReaderSession() 反应式收集 ReadBook.snapshot 驱动。
-    // 下面两个不再是 override——除了会话事件，VM 自己也在若干处直接调用。
+    // 下面两个是私有函数而非 override——除了会话事件，VM 自己也在若干处直接调用。
 
     private fun loadChapterList(book: Book) {
         ReadBook.upMsg(context.getString(R.string.toc_updateing))
@@ -2145,20 +2142,19 @@ class ReadBookViewModel(
         }
     }
 
-    // --- Business Logic (migrated from Activity / kept from old ViewModel) ---
+    // --- Business Logic ---
 
     /**
      * 当前会话书籍的当前章节。
      *
-     * R2.1：VM 不再直连 Room DAO，书籍/目录读写一律经 [BookRepository]。
-     * 原来散在十余处的 `getChapter(book.bookUrl, ReadBook.durChapterIndex)` 收敛到这里。
+     * VM 不直连 Room DAO，书籍/目录读写一律经 [BookRepository]；取当前章统一从这里走。
      */
     private suspend fun currentChapter(): BookChapter? {
         val book = ReadBook.book ?: return null
         return bookRepository.getChapter(book.bookUrl, ReadBook.durChapterIndex)
     }
 
-    // 开书 / 目录 / 换源 / 进度同步已迁入 [ReadBookLoadDelegate]，这里只留外部入口的转发。
+    // 开书 / 目录 / 换源 / 进度同步归 [ReadBookLoadDelegate]，这里只留外部入口的转发。
 
     suspend fun initReadBookConfig(request: ReadBookInitRequest) =
         loadDelegate.initReadBookConfig(request)

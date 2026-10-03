@@ -209,9 +209,9 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         }
         super.play()
         if (!hasSpeechPlaybackQueue || !continuesCurrentSpeech) {
-            // 起播、暂停后恢复、换章这几次要保留这句 hack（服务在 onCreate 里就把 isRun 置真了，
-            // 不能按「是否已在播放」判断）；逐句接力时不再每句新建一个 MediaPlayer 抢音频轨，
-            // 停顿就加在切换边界上
+            // 起播、暂停后恢复、换章这几路要放这声无声垫音（服务在 onCreate 里就把 isRun
+            // 置真，不能按「是否已在播放」判断）；逐句接力不每句新建 MediaPlayer 抢音频轨，
+            // 免得抢轨的停顿加在切换边界上
             MediaHelp.playSilentSound(this@TTSReadAloudService)
         }
         
@@ -263,9 +263,9 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                     && continuesCurrentSpeech && paragraphStartPos == 0 && !isDelay
                 ) {
                     // 接上一句一律排队，不冲刷。引擎是「整句合成好才报 onDone」的，回调比耳朵
-                    // 听到的早好几秒（实测 5 秒），这时 QUEUE_FLUSH 会把还没播出去的尾巴直接丢掉
-                    // ——角色长句读到一半就跳下一句就是这么来的。换音色不需要冲刷：音色是送给
-                    // 引擎合成这一步的，排进来的这一句本来就用新音色。
+                    // 听到的出声早好几秒（约 5 秒），这时 QUEUE_FLUSH 会把还没播出去的尾巴直接
+                    // 丢掉，角色长句会读到一半跳下一句。换音色不需要冲刷：音色是送给引擎合成
+                    // 这一步的，排进来的这一句本来就用新音色。
                     TextToSpeech.QUEUE_ADD
                 } else {
                     // 起播、暂停后恢复、手动上下段、半句续念：这些要冲掉引擎里剩下的东西
@@ -371,9 +371,9 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
     /**
      * 等引擎把已经缓冲的音频真放完，再动音色和语速。
      *
-     * 实测 MultiTTS / TTS Server 这类转发引擎连 `isSpeaking` 一起报假：onDone 之后还有 5 秒
-     * 音频在播，它这里已经回 false，所以这一层守不住，真正的止血是接下一句不冲刷
-     * （见 [play] 里的 queueMode）。留着是给老实报 isSpeaking 的引擎用的，代价一次 binder 查询。
+     * MultiTTS / TTS Server 这类转发引擎连 `isSpeaking` 一起报假：onDone 之后还有 5 秒
+     * 音频在播，它这里已经回 false，所以这一层守不住它们，真正的兜底是接下一句不冲刷
+     * （见 [play] 里的 queueMode）。本层覆盖的是老实报 isSpeaking 的引擎，代价一次 binder 查询。
      * 引擎真放完时 isSpeaking 已经是 false，这里只多问一次。
      */
     private suspend fun awaitEngineIdle(tts: TextToSpeech, continuesCurrentSpeech: Boolean) {
@@ -411,13 +411,12 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
     /**
      * 切换系统 TTS 音色，返回本句是否真的换了声音。
      *
-     * 早先的写法是「按名字在 tts.voices 里找，找不到就 return」：引擎报不出默认音色名
-     * （`defaultVoice` 为 null 时名字是空串）或被分配的音色已被改名/删除时，这里静默
-     * 返回，上一个角色的音色就一直挂着——读完那句分配给角色的话，之后的旁白也用角色的
-     * 声音读。
+     * 只按名字在 tts.voices 里找、找不到就返回是不行的：引擎报不出默认音色名
+     * （`defaultVoice` 为 null 时名字是空串）或被分配的音色已被改名/删除时，切换会静默
+     * 失败，上一个角色的音色一直挂着，之后的旁白也用角色的声音读。所以这些情况必须
+     * 走 [restoreDefaultVoice] 退回引擎默认。
      *
-     * 音色表按 [voiceCatalog] 缓存：逐句朗读时每句都做一次全量枚举，就是「换个角色要卡一下」
-     * 的直接来源。
+     * 音色表经 [voiceCatalog] 缓存：逐句各做一次全量枚举会在换音色处产生可感知的停顿。
      */
     private fun applyVoice(voiceName: String): Boolean {
         val tts = textToSpeech ?: return false
@@ -427,8 +426,8 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         if (!voiceIsDefault && voiceName == activeVoiceName) return false
         val voice = voiceCatalog().firstOrNull { it.name == voiceName }
         if (voice == null) {
-            // 这句是「多角色朗读只有旁白在念」的直接来源之一：引擎报不出这个音色名
-            // （MultiTTS 那类 getVoices 回包超限的引擎会整表为空），换音就会静默失败
+            // 引擎报不出这个音色名（MultiTTS 那类 getVoices 回包超限的引擎会整表为空）时，
+            // 换音静默失败，之后的旁白都还是默认音色
             AppLog.put("系统 TTS 找不到音色 $voiceName，改用默认音色")
             return restoreDefaultVoice(tts)
         }
@@ -583,8 +582,8 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                     && position + 1 > it.pageStart(pageIndex + 1)
                 ) {
                     pageIndex++
-                    // This is the TTS engine advancing across a page boundary, not a user turn.
-                    // Mark it so ReadBook neither detaches the session nor restarts TTS at page two.
+                    // 这是引擎自己越过页界续读，不是用户翻页：标记后 ReadBook 既不会脱离
+                    // 会话，也不会把 TTS 在第二页重启
                     withSpeechNavigation { ReadBook.moveToNextPage() }
                 }
                 upTtsProgress(position + 1)
@@ -685,7 +684,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
          * 一句只推进一次。
          *
          * `onError(id, code)` 的默认实现会再回调一次已废弃的 `onError(id)`，两处各自推进
-         * 就是白丢一句——长句更容易被引擎中途放弃，表现就是「读到一半直接下一句」。
+         * 就是白丢一句；长句更容易被引擎中途放弃，丢句的表现更明显。
          */
         private fun advanceOnce(utteranceId: String, reason: String): Boolean {
             if (utteranceId == advancedUtteranceId) {

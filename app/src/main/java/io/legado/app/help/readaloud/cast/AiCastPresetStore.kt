@@ -28,10 +28,10 @@ data class AiCastPresetUi(
  * 背景音乐那一趟的整段提示词 [SCENE_CONTRACT_ID]（默认值即 `DEFAULT_*` 常量，只用于「恢复默认」），
  * 再加上用户自己选的分配要求预设。后四条在管理页的「固定附加的提示词」一节里直接改，改完即时生效。
  *
- * 判断规则以前是**抄在每条内置预设正文里**的：列表只显示名字加两行摘要，用户既看不到也删不净，
- * 新建一条预设反而没有那段——所以现在它单独成行，老数据由 [stripInlineJudgmentRules] 抠出来。
+ * 判断规则单独成行（[RULE_SLOT_ID]），不抄进每条内置预设正文；库里仍内联着这段原文的
+ * 行由 [stripInlineJudgmentRules] 抠出。
  *
- * 出包时不再需要为了改一句话而动代码。
+ * 提示词文本全部存在库里的可编辑预设行，改提示词不动代码。
  *
  * 书级记忆 = [BookCastMemory]（主键 bookUrl，**只属于本书**）：AI 每章收到
  * 当前档案、返回更新后的档案，用于把同一人物的不同称呼（特工化名、卧底代号、
@@ -55,7 +55,7 @@ object AiCastPresetStore {
             "（如回忆童年与现在）时，才视为不同角色。优先沿用 bookMemory 与 characters 中已有的主名，" +
             "不要为同一人物创建第二个主名。"
 
-    /** 逐条必答：沉默、咳嗽、惨叫、人群齐声都要给出说话人（以前的「不要输出」已删除）。 */
+    /** 逐条必答：沉默、咳嗽、惨叫、人群齐声都要给出说话人，不许跳过任何锚点。 */
     private const val ANSWER_EVERY_ANCHOR =
         "逐条必答：pending 里的每一个锚点都要给出一条分配，一个都不许漏。" +
             "只表示沉默的『……』、咳血/闷哼/惨叫/呜啊啊这类非语言声响、人群齐声与四周惊呼、" +
@@ -106,10 +106,10 @@ object AiCastPresetStore {
 
     const val DEFAULT_JUDGMENT_RULES = JUDGMENT_RULES_LABEL + JUDGMENT_RULES_BODY
 
-    /** 上一版：规则原文抄在每条预设正文末尾，且开头带界面说明（[stripInlineJudgmentRules] 负责搬出去）。 */
+    /** 内联在旧预设正文末尾的判断规则原文，[stripInlineJudgmentRules] 逐字匹配后从行里删掉。 */
     private const val LEGACY_JUDGMENT_RULES = "判断规则：" + JUDGMENT_RULES_BODY
 
-    /** 上一版规则行的开头标注（把界面说明写进了 prompt）；换回 [JUDGMENT_RULES_LABEL]。 */
+    /** 旧规则行的开头标注前缀，[ensureSlot] 命中后换成 [JUDGMENT_RULES_LABEL] 开头。 */
     private const val LABELLED_JUDGMENT_RULES_PREFIX =
         "判断规则（这一段在「管理 → 固定附加的提示词 → 判断规则（角色分配）」里可改；" +
             "与上面的分配要求冲突时以分配要求为准）："
@@ -118,7 +118,7 @@ object AiCastPresetStore {
      * 默认分配要求 = 归并策略 + 逐条必答。
      *
      * 只留这条预设自己的口径（怎么归并、沉默要不要分配）。说话人判断规则是另一行
-     * 可编辑预设（[DEFAULT_JUDGMENT_RULES]），不再抄进这里。
+     * 可编辑预设（[DEFAULT_JUDGMENT_RULES]），不抄进这里。
      */
     const val DEFAULT_REQUIREMENT = MERGE_IDENTITIES + ANSWER_EVERY_ANCHOR
 
@@ -160,7 +160,7 @@ object AiCastPresetStore {
             "只输出一个 JSON 对象，不要解释、不要代码块：\n" +
             """{"scenes":[{"i":0,"pool":"池名"},{"i":17,"pool":"池名"}]}"""
 
-    /** 上一版把界面说明写在这段提示词开头，[ensureSlot] 按这段前缀换回纯提示词。 */
+    /** 旧场景提示词开头的界面说明前缀，[ensureSlot] 按这段前缀匹配后删掉，只留纯提示词。 */
     private const val LABELLED_SCENE_PROMPT_PREFIX =
         "（这一整段都存在「管理 → 固定附加的提示词 → 输出格式要求（背景音乐）」里，可直接编辑，" +
             "软件底层没有另写的提示词。）\n"
@@ -168,8 +168,8 @@ object AiCastPresetStore {
     /**
      * 角色设定（system prompt 开头那一句）的默认文本，预设行 [ROLE_SLOT_ID] 的出厂值。
      *
-     * 上一版结尾带了「（这一句在…里可改。）」的界面说明，那是给用户的注释不是给模型的话，
-     * 已由 [ensureFixedSlots] 的前缀替换换掉。
+     * 只写给模型的角色设定，不含「这一句可改」那类界面说明；带这种说明的存量行由
+     * [ensureFixedSlots] 按 [LABELLED_ROLE_SETTING] 整行换掉。
      */
     const val DEFAULT_ROLE_SETTING =
         "你是小说配音导演。为每个一级对话（引号内台词）判断说话人并分配声音池。"
@@ -187,14 +187,14 @@ object AiCastPresetStore {
     /** 开头角色设定的固定附加行 id。 */
     const val ROLE_SLOT_ID = "cast_role_setting"
 
-    /** 说话人判断规则的固定附加行 id（以前抄在每条预设正文里，见 [LEGACY_JUDGMENT_RULES]）。 */
+    /** 说话人判断规则的固定附加行 id；内联在旧预设正文里的同款原文见 [LEGACY_JUDGMENT_RULES]。 */
     const val RULE_SLOT_ID = "cast_judgment_rules"
 
     /** 不可作为「分配要求」被选中的行 id：它们是固定附加的框架，不是单条预设的口径。 */
     private val FIXED_PROMPT_IDS =
         setOf(ROLE_SLOT_ID, RULE_SLOT_ID, FORMAT_CONTRACT_ID, SCENE_CONTRACT_ID)
 
-    /** 历史默认契约的开头：前两版把界面说明写进了 prompt，第三版起只留提示词。 */
+    /** 旧契约行可能带的开头前缀清单：[ensureSlot] 命中后只换这一段开头，换成 [CONTRACT_LABEL]。 */
     private val LEGACY_CONTRACT_PREFIXES = listOf(
         "输出契约（只规定格式，判定口径在上面用户可编辑的分配要求里）：",
         "输出契约（这一段在「管理 → 输出格式要求（角色）」里可改；只规定格式，判定口径在上面的分配要求里）：",
@@ -207,8 +207,8 @@ object AiCastPresetStore {
      * 组装 system prompt：角色设定 + 判断规则 + 分配要求 +（临时要求）+ 输出格式。
      *
      * 四段正文全部来自库里的可编辑预设行，代码不写提示词文本。段名只保留「分配要求：」
-     * 这种给模型看的结构词——「（这一段在管理页里可改）」那类界面说明曾经混在这里，
-     * 发出去既费 token 又是在跟模型说无关的话，一律删掉了。
+     * 这种给模型看的结构词；「（这一段在管理页里可改）」那类界面说明不进 prompt——
+     * 发出去既费 token 又是在跟模型说无关的话。
      */
     fun buildSystemPrompt(
         requirement: String,
@@ -227,7 +227,7 @@ object AiCastPresetStore {
     /** 当前生效的角色设定（system prompt 第一句，同样是库里的可编辑行）。 */
     fun roleSetting(): String = slotText(ROLE_SLOT_ID, DEFAULT_ROLE_SETTING)
 
-    /** 当前生效的说话人判断规则（独立一行预设，不再抄进每条分配要求）。 */
+    /** 当前生效的说话人判断规则（独立一行预设，不抄进分配要求）。 */
     fun judgmentRules(): String = slotText(RULE_SLOT_ID, DEFAULT_JUDGMENT_RULES)
 
     /** 当前生效的角色输出格式（用户改过的取库里的，没这行取默认）。 */
@@ -410,8 +410,8 @@ object AiCastPresetStore {
             return
         }
         stripInlineJudgmentRules()
-        // 已经播过种：只把**仍是旧内置原文**的行补写成新默认。判定规则从底层搬进预设后，
-        // 老装机用户不改预设就拿不到新口径；但用户自己编辑过的预设一个字都不能动。
+        // 已经播过种：只把**仍是旧内置原文**（[LEGACY_REQUIREMENTS]）的行补写成当前默认，
+        // 用户编辑过的预设一个字都不动。
         val updated = appDb.aiPromptPresetDao.getAllByTaskType(AiTaskType.CAST_ASSIGN)
             .filter { it.id !in FIXED_PROMPT_IDS }
             .mapNotNull { row ->
@@ -442,10 +442,8 @@ object AiCastPresetStore {
     )
 
     /**
-     * 一次性迁移：把抄在预设正文里的判断规则原文抠掉。
+     * 迁移：把内联在预设正文里的判断规则原文抠掉，那段内容由独立预设行 [RULE_SLOT_ID] 承载。
      *
-     * 上一版每条内置预设的正文末尾都拼了一整段判断规则，管理页的列表只显示两行摘要，
-     * 用户看到的是「预设里藏了一段我改不了的提示词」；抠掉后那段变成独立的 [RULE_SLOT_ID] 行。
      * 只删**逐字未改**的原文：用户在这段里改过任何一个字，就原样留着他的版本。
      */
     private fun stripInlineJudgmentRules() {
@@ -461,7 +459,7 @@ object AiCastPresetStore {
         if (updated.isNotEmpty()) appDb.aiPromptPresetDao.upsertAllSync(updated)
     }
 
-    /** 旧版内置预设原文 → 新版；只用于补写从没被用户改过的预设行。 */
+    /** 旧内置预设原文 → 当前默认文本；只用于补写从没被用户改过的预设行。 */
     private val LEGACY_REQUIREMENTS: Map<String, String> by lazy {
         mapOf(
             (

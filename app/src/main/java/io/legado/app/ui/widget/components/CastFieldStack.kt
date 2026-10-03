@@ -100,9 +100,9 @@ private fun controllerOf(view: View, window: Window?): WindowInsetsControllerCom
  *
  * 焦点在两个输入框之间转移的那一瞬间，窗口短暂地不再是文本编辑器，平台于是自己
  * `InsetsController.hide(ime())`（ImeTracker 里的 `HIDE_SOFT_INPUT_BY_INSETS_API`，不是
- * Compose 发的）。此前卡片里每个输入框的守卫各补一发，实测 50ms 内连发 3 次，后发的把
- * 前一次正在跑的 show 动画以 `onCancelled at PHASE_CLIENT_APPLY_ANIMATION` 取消掉，
- * 键盘要等 ~0.8s 才回来——这就是用户看到的「切输入框又重新弹一次输入法」。
+ * Compose 发的）。补弹并发时，后发的 show 会把前一次正在跑的 show 动画以
+ * `onCancelled at PHASE_CLIENT_APPLY_ANIMATION` 取消掉，键盘要等 ~0.8s 才回来——
+ * 这就是「切输入框又重新弹一次输入法」的表现。
  * 同一屏只有一张分配卡片，节流放全局即可。
  */
 private object CastImeThrottle {
@@ -168,8 +168,8 @@ fun rememberImeKeepShown(focused: Boolean) {
 }
 
 /**
- * 补弹前的等待。新获得焦点的文本框自己会发一发 `SHOW_SOFT_INPUT`：实测 150ms 时我们的
- * show 会跑到它前面，把它以 `onCancelled at PHASE_CLIENT_APPLY_ANIMATION` 取消掉，
+ * 补弹前的等待。新获得焦点的文本框自己会发一发 `SHOW_SOFT_INPUT`：等待不足一个动画周期时，
+ * 我们的 show 会跑到它前面，把它以 `onCancelled at PHASE_CLIENT_APPLY_ANIMATION` 取消掉，
  * 然后自己再走一遍完整的收起→弹出（约 600ms）。等满一个 IME 动画周期再补，
  * 让它先弹，我们只在它没弹回来的时候兜底。
  */
@@ -242,9 +242,9 @@ class CastFieldSpec(
  * 三行下拉共用同一个输入框。
  *
  * 为什么非共用不可：焦点从一个文本框挪到另一个时，Compose 的输入服务会自己发
- * `InsetsController.hide(ime())`。实测客户端 3ms 后补 show 也拦不住——hide 的 token
- * 虽然被 cancelled，system_server 仍走完 `onHidden`，键盘肉眼可见地掉下去约 650ms
- * 再滑回来。反应式补弹这条路是死的，只能让焦点压根不换：三行都画成"外壳"（不可聚焦，
+ * `InsetsController.hide(ime())`，客户端补 show 拦不住——hide 的 token 即使被 cancelled，
+ * system_server 仍走完 `onHidden`，键盘肉眼可见地掉下去约 650ms 再滑回来。
+ * 只能让焦点压根不换：三行都画成"外壳"（不可聚焦，
  * 点击被盖板吃掉），真正的 OutlinedTextField 只有一个、永远待在 Box 的同一个子槽位里，
  * 切行只是把它的绑定和 offset 挪过去。焦点节点自始至终没变 → 平台不发 hide →
  * 三个字段照样都能打字。
@@ -348,7 +348,7 @@ private fun CastFieldShell(
         }
         // 候选列表就地展开，不加高度动画：这几行下拉出现在 AlertDialog、配音卡片和悬浮窗里，
         // 宿主都是「按内容高 + 居中」或 LazyColumn 里的行，高度一边动宿主一边重新量自己，
-        // 结果就是整窗上下跳、行与行叠在一起（2026-09-29 实测）。
+        // 结果就是整窗上下跳、行与行叠在一起。
         if (spec.hasDropdown && spec.expanded) {
             CastOptionList(
                 options = options,

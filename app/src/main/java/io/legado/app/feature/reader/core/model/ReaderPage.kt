@@ -74,8 +74,7 @@ data class ReaderTextBackgroundImage(
  * 四条切线写回的也是**夹过并取整之后**的那一份（[ninePatchLeft] / [ninePatchRight] /
  * [ninePatchTop] / [ninePatchBottom]），绘制期切片位置读的是同一个数（见 [ReaderNineSliceLayout]）。
  * 这一步是「整张图等比、绝不形变」的前提：只要倍率与切线两处各算各的（尤其一边取整、一边不取整），
- * 那一格的 目标/源 就跟别的格差一点点，拉伸又回来了——用户报的「都说了很多遍了还在拉伸」
- * 就是这一点点。
+ * 那一格的 目标/源 就跟别的格差一点点，而这一点点就足以让拉伸重新可见。
  */
 fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): ReaderTextBackgroundImage {
     if (fit != 3 || widthPx <= 0) return this
@@ -108,8 +107,8 @@ fun ReaderTextBackgroundImage.withBitmapSize(widthPx: Int, heightPx: Int): Reade
         ninePatchTop = naturalFraction(topPx, contentHeightPx),
         ninePatchBottom = naturalFraction(bottomPx, contentHeightPx),
         // 这四个都是**源图自己**的厚度，一个像素都不乘 [scale]：图片大小是整张图的倍率，
-        // 只在 [verticalScalePx] 里乘一次。乘在这里就会被那个倍率再除回去——「图片大小调了没反应」
-        // 就是这么来的（非九宫格那三种适配在绘制侧自己乘，见 ReaderCanvasSurface 的 fit 分支）。
+        // 只在 [verticalScalePx] 里乘一次。乘在这里就会被那个倍率再除回去，「图片大小」调了没反应
+        // （非九宫格那三种适配在绘制侧自己乘，见 ReaderCanvasSurface 的 fit 分支）。
         contentInsetLeftPx = leftPx.toFloat(),
         contentInsetRightPx = rightPx.toFloat(),
         contentInsetTopPx = topPx.toFloat(),
@@ -127,8 +126,8 @@ private fun naturalFraction(px: Int, contentHeightPx: Int): Float =
  * 这么多像素，上下两条边按各自比例对称缩回。
  *
  * 带子越窄，整张图按同一个倍率放得越大；不设下限的话两条线一挤到中间，倍率就奔着无穷去
- * （气泡高到出屏）。以前的做法是「倍率先算、再单独夹住上下两条边的厚度」，那等于让中间
- * 那一格与上下两条边用不同的倍率——正是用户反复否掉的那个「纵向还是会拉伸」。
+ * （气泡高到出屏）。若在倍率算完后再单独夹住上下两条边的厚度，等于让中间那一格与上下两条边
+ * 用不同的倍率——纵向仍会拉伸。
  */
 private fun minContentBandPx(contentHeightPx: Int): Int =
     (contentHeightPx * minContentBandRatio).roundToInt().coerceIn(0, contentHeightPx)
@@ -141,10 +140,10 @@ private fun ReaderTextBackgroundImage.sizeFactor(): Float = scale.coerceIn(0.1f,
  * 「行盒高 × 图片大小」，整张图按这一个倍率变大小——四条边跟着一起长缩，任何一格都不被单独拉伸。
  *
  * 这是**唯一**一个倍率，四条边都用它（[frameTopPx] / [frameBottomPx] / [frameLeftPx] /
- * [frameRightPx]）：只把纵向缩了、横向仍按原图像素画，等于把图压扁（第六十七轮那个「预览都被压扁
- * 了」就是漏了横向这一半）。
+ * [frameRightPx]）：只把纵向缩了、横向仍按原图像素画，等于把图压扁——横向两条边漏用这个倍率
+ * 就会让预览整块被压扁。
  *
- * 只此一个倍率，不再对边条厚度另设上限：[minContentBandPx] 已经把分母夹在整图高的
+ * 只此一个倍率，对边条厚度不另设上限：[minContentBandPx] 已经把分母夹在整图高的
  * [minContentBandRatio] 以上，所以图片大小 1 倍时整张图最高不超过行盒的 `1 / minContentBandRatio`
  * 倍，再夹一次只会让中间那一格与上下两条边用不同的倍率。
  */
@@ -174,10 +173,9 @@ fun ReaderTextBackgroundImage.frameBottomPx(lineHeightPx: Float): Float =
 /**
  * 九宫格左边条画出去多宽 = 左边条也按**同一个** [verticalScalePx] 换算。
  *
- * 这一条才是「整张图等比、不形变」的另一半：纵向已经按行盒高缩放过一次（[verticalScalePx]），
+ * 这一条是「整张图等比、不形变」的另一半：纵向已经按行盒高缩放过一次（[verticalScalePx]），
  * 左右两条边若仍按原图像素宽画，同一张图就纵向缩了、横向没缩——倍率小于 1 时右边那块图案
- * 被压扁，大于 1 时被拉长。用户拖上下两条线就是在改这个倍率，于是形变跟着线走
- * （「上往下拉上半往上顶、下往上拉下半往下顶，整个图被压扁」）。
+ * 被压扁，大于 1 时被拉长；拖动上下两条切线就是在改这个倍率，形变会跟着切线显现。
  * 只有中间那一格允许被单独拉宽（那是文字宽度，见 [stretchLeftPx]）。
  */
 fun ReaderTextBackgroundImage.frameLeftPx(lineHeightPx: Float): Float =

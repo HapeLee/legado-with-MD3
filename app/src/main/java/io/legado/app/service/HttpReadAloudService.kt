@@ -142,7 +142,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     /**
      * 源级合成语速倍率, 仅当源接口支持语速参数 ({{speakSpeed}}) 时影响返回的音频。
-     * 全局语速不再参与合成, 避免与播放端变速叠加。
+     * 全局语速不参与合成, 避免与播放端变速叠加。
      */
     private fun synthesisSpeed(httpTts: HttpTTS?): Float =
         ((httpTts?.speed ?: DEFAULT_TTS_SPEED) + 5) / 10f
@@ -328,7 +328,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
-    // 改为外部存储
+    // 缓存目录优先外部存储，externalCacheDir 不可用时退回内部 cacheDir
     private val ttsFolderPath: String by lazy {
         val baseDir = externalCacheDir ?: cacheDir
         baseDir.absolutePath + File.separator + "httpTTS" + File.separator
@@ -761,7 +761,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                                             SystemTtsVoiceConfig::class.java,
                                         )
                                     }.getOrNull() ?: SystemTtsVoiceConfig()
-                                    // 全局语速已改为播放端变速, 系统合成只使用音色自带语速, 避免叠加
+                                    // 全局语速走播放端变速, 系统合成只用音色自带语速, 避免叠加
                                     val synthesized = synthesizeSpeakFile(fileName) { output ->
                                         systemTtsFileSynthesizer.synthesize(
                                             routedVoice.engineId,
@@ -1525,7 +1525,7 @@ class HttpReadAloudService : BaseReadAloudService(),
      * 缓存命中判定：正式名存在且非空，下载区里那份也算命中。
      *
      * 只判存在会认下一半截文件——预合成的并发写就在这儿和播放抢同一个名字。
-     * 也不认无声占位：那是上一次合成失败留下的空壳，认了就等于把这一句永久静音。
+     * 也不认无声占位：那是合成失败留下的空壳，认了就等于把这一句永久静音。
      */
     private fun hasSpeakFile(name: String): Boolean {
         val file = speakFileForPlay(name)
@@ -1556,7 +1556,7 @@ class HttpReadAloudService : BaseReadAloudService(),
      * 把合成好的临时文件转成正式缓存。
      *
      * 长句合成得久，正好撞上「文件已存在但只写了一半」时 ExoPlayer 认不出容器，
-     * 直接报 Source error 把整句跳过（实测日志 UnrecognizedInputFormatException）。
+     * 直接报 Source error 把整句跳过（错误类型 UnrecognizedInputFormatException）。
      */
     private fun commitSpeakPart(name: String, part: File): Boolean {
         if (part.length() <= 0L) {
@@ -1604,12 +1604,10 @@ class HttpReadAloudService : BaseReadAloudService(),
         val titleMd5 = if (protectCurrentChapter) MD5Utils.md5Encode16(readerReadAloudChapter?.title.orEmpty()) else ""
 
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
-            val isSilentSound = it.length() == 2160L
+            // 无声占位文件不算缓存，任何时候都可以删
+            val isSilentSound = ReadAloudAudioStore.isSilentPlaceholder(it)
 
-            // 判断逻辑：
-            // 1. 如果是无声文件 -> 删
-            // 2. 如果保留时间设为0 -> 删 (不管是不是当前章节)
-            // 3. 如果保留时间>0 -> 保护当前章节，且只删过期的
+            // 保留时间为 0 即听即焚；否则保护当前章节，只删过期的
             val shouldDelete = if (keepTime == 0L) {
                 // 模式：即听即焚 (保留时间0)
                 true
@@ -1679,7 +1677,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     /**
      * 更新朗读速度
-     * 全局语速已改为播放端 (ExoPlayer) 变速, 对已合成音频即时生效, 无需重新下载。
+     * 全局语速走播放端 (ExoPlayer) 变速, 对已合成音频即时生效, 无需重新下载。
      */
     override fun upSpeechRate(reset: Boolean) {
         applyCueVoiceEffect(nowSpeak)

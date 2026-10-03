@@ -438,13 +438,12 @@ abstract class BaseReadAloudService : BaseService(),
         val generation = ++prepareReadAloudGeneration
         prepareReadAloudJob?.cancel()
         prepareReadAloudJob = execute(executeContext = IO) {
-            // [FIX-AI] 原版竞态：正文输入在解析完成时同步发布，分页快照要等排版批次
-            // 提交后异步发布，刚开书/切章/改设置重排后的窗口期内快照尚未就绪，
-            // 旧实现立即放弃且无提示（表现为点朗读没反应）。改为最多等待 6 秒，
-            // 等待期间章节变化自动跟随最新输入窗。
+            // 正文输入在解析完成时同步发布，分页快照要等排版批次提交后异步发布：刚开书/
+            // 切章/改设置重排后的窗口期内快照可能尚未就绪，这里最多等待 6 秒，等待期间
+            // 章节变化自动跟随最新输入窗。
             var waitedMs = 0L
-            // [FIX-AI] 以 durChapterIndex 为准在输入窗内定位（回退已缓存章节时
-            // .current 可能仍是旧章），快照缺失由 publishReaderPagination 合并修复兜底。
+            // 以 durChapterIndex 为准在输入窗内定位（回退已缓存章节时 .current 可能仍是
+            // 旧章），快照缺失由 publishReaderPagination 合并修复兜底。
             var input = ReadBook.readerChapterInputFor(ReadBook.durChapterIndex)
                 ?: ReadBook.readerChapterInputWindow.current
             var pagination = input?.let { ReadBook.readerPagination(it.chapter.index) }
@@ -689,8 +688,8 @@ abstract class BaseReadAloudService : BaseService(),
     ): ReadAloudContentSplitMode =
         ContentSplitPolicies.resolve(
             mode,
-            // 划分方式跟着「多角色朗读」走（设置页那行原文就是这么写的）；
-            // 「多角色分配」只显示胶囊，不该改变朗读单元的粒度。
+            // 划分方式跟着「多角色朗读」走（与设置页那行文案同一口径）；
+            // 「多角色分配」只显示胶囊，不改变朗读单元的粒度。
             ReadConfig.useMultiSpeaker,
         )
 
@@ -911,9 +910,8 @@ abstract class BaseReadAloudService : BaseService(),
     /**
      * 把「读到哪儿了」换算到**改过标记的新正文**上，找回同一句话。
      *
-     * [currentProgress] 是含角色标记的那份正文里的下标，而标记的长短跟着分配变：给上一句
-     * 加了个角色，标记多出八九个字，同一个下标在新正文里就落到后面几句上去了——表现为
-     * 「更新胶囊状态后这句甚至后面几句没被读」。所以不能直接把它交给新会话。
+     * [currentProgress] 是含角色标记的那份正文里的下标，而标记的长短跟着分配变：某句新增
+     * 角色后标记多出若干字，同一个旧下标在新正文里就落到后面几句上，不能直接把它交给新会话。
      *
      * 锚点取**当前这句去掉标记的原文**：标记怎么增删都不影响它，在新正文（同样去过标记）
      * 里找到离旧下标最近的那一处，再用还原表换回含标记的下标。找不到（比如同时改了替换规则）
@@ -1251,7 +1249,7 @@ abstract class BaseReadAloudService : BaseService(),
                 if (androidMediaControlEnabled) {
                     READ_ALOUD_MEDIA_SESSION_ACTIONS
                 } else {
-                    // 老的"使用媒体通道"路径保持原有行为，避免锁屏媒体控件功能变化。
+                    // 「使用媒体通道」这一路用原有按键集合，锁屏媒体控件行为不变。
                     MediaHelp.MEDIA_SESSION_ACTIONS
                 }
             )

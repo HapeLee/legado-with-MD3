@@ -274,8 +274,8 @@ fun ReaderCanvasSurface(
         turnDirection = next.direction?.takeIf { next.dragging }
     }
     var pageMotionJob by remember { mutableStateOf<Job?>(null) }
-    // The first curl frame starts at a corner. Animate it into the safe fold position so
-    // the entering page is revealed instead of popping in when horizontal capture begins.
+    // 折页第一帧从角点起：把它补间到安全折位，让进入页随动画揭开，而不是横向捕捉
+    // 开始时突然弹入
     var curlRevealProgress by remember { mutableFloatStateOf(1f) }
     var curlRevealJob by remember { mutableStateOf<Job?>(null) }
     var pendingTurn by remember { mutableStateOf<ReaderTurnDirection?>(null) }
@@ -347,7 +347,7 @@ fun ReaderCanvasSurface(
     var curlTouchX by remember { mutableFloatStateOf(0f) }
     var curlCornerY by remember { mutableFloatStateOf(0f) }
     // 快照层与位图池都在会话级持有、跨回合复用，对照旧 View `CanvasRecorderFactory` 的对象池与
-    // `curBitmap/prevBitmap/nextBitmap`：不能再像以前那样每个回合 `rememberGraphicsLayer()` 新建。
+    // `curBitmap/prevBitmap/nextBitmap`：每个回合新建 `rememberGraphicsLayer()` 会丢掉这份复用。
     val pageSnapshots = remember { PageSnapshotBitmapPool() }
     val baseSnapshotLayer = rememberGraphicsLayer()
     val revealSnapshotLayer = rememberGraphicsLayer()
@@ -682,8 +682,8 @@ fun ReaderCanvasSurface(
         pageMotionJob = animationScope.launch {
             scrollMotionActive = true
             try {
-                // 时长随步距缩放（旧 PageDelegate.startScroll：animationSpeed * |dy| / viewHeight），
-                // 不再固定 18 帧——固定帧数会让"保留一行"的短步距走成整屏的时长。
+                // 时长随步距缩放（旧 PageDelegate.startScroll：animationSpeed * |dy| / viewHeight）；
+                // 固定帧数会让"保留一行"的短步距走成整屏的时长。
                 val durationMillis = ReaderScrollPolicy.stepDurationMillis(
                     distance,
                     page.scrollViewportExtentPx(),
@@ -1100,13 +1100,13 @@ fun ReaderCanvasSurface(
                             released = true; break
                         }
                         // 每次 MOVE 只读一次位移：`positionChange()` 会把「上次读取点」往前推一步，
-                        // 同一帧里连调第二次拿到的是 0。原来 `total` 先吃掉位移，下面记反向方向和
-                        // 滚动分支里的 `positionChange().y` 再取就都是 0。
+                        // 同一帧里连调第二次拿到的是 0——位移一旦被先算掉，后面的反向记录与滚动
+                        // 分支再取就都是 0。
                         val moveDelta = change.positionChange()
                         total += moveDelta
                         // 反向位移要达到平台 touchSlop 才算「主动往回收」：抬手那一帧手指减速时的
-                        // 一两像素回弹不是反向。原来按原始事件位移判定，已经拖过大半页也会被判成
-                        // 反向取消——这就是「有时候翻页翻不过去」。
+                        // 一两像素回弹不是反向。用原始事件位移判定的话，已经拖过大半页也会被
+                        // 误判成反向取消。
                         if (abs(moveDelta.x) >= horizontalReversalSlopPx) {
                             lastHorizontalDelta = moveDelta.x
                         }
@@ -2050,9 +2050,9 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
  * 仿真折页：两页内容各录制一次，拖拽/收尾的每一帧只做裁剪与合成。
  *
  * 旧 View 的 `SimulationPageDelegate` 在 `setDirection()` 里对两页各做一次 `screenshot`，
- * 之后每帧只 `drawBitmap` + `clipPath` + 复用成员的 GradientDrawable。迁移到 Compose 后
- * 一度变成每帧重新录制整页（`GraphicsLayer.record` 直接放在 `drawWithContent` 里），
- * 文字、行内图片、背景图每帧重画一遍并多次全屏合成，弱机必然掉帧。这里恢复旧语义。
+ * 之后每帧只 `drawBitmap` + `clipPath` + 复用成员的 GradientDrawable，这里沿用同一语义。
+ * 录制必须留在每帧路径之外：`GraphicsLayer.record` 若放进 `drawWithContent`，文字、
+ * 行内图片、背景图会每帧重画一遍并多次全屏合成，弱机必然掉帧。
  *
  * 折页触点与几何以 lambda 形式传入，只在绘制期读取：组合期读它们会让整个画布每帧重组。
  */
@@ -2166,9 +2166,8 @@ private fun SimulationPageStack(
                 lockedCorner = CurlPoint(width, cornerY()),
             )
             if (frame == null) {
-                // A degenerate Bezier frame used to draw only the base page, which made the
-                // entering page disappear for an entire drag frame. Keep the destination visible
-                // with a cheap horizontal fallback until the next valid curl frame arrives.
+                // 折页几何退化（返回 null）时只剩底页，新页会整整一帧不见：用便宜的
+                // 水平平移兜底，保持目标页可见，等下一帧有效折页几何再恢复。
                 drawPageSnapshot(revealBitmap, revealLayer, widthPx, heightPx)
                 val baseTranslation = when (direction) {
                     ReaderTurnDirection.NEXT -> pageOffsetPx()
@@ -2265,11 +2264,11 @@ private fun pageSnapshotKey(
 /**
  * 会话级页面位图快照池，对照旧 View 的 `curBitmap / prevBitmap / nextBitmap`。
  *
- * 旧实现在 `setBitmap()` 里复用同一张 Bitmap 的内存；Compose 做不到——`GraphicsLayer.toImageBitmap()`
- * 每次都新建 Bitmap，`GraphicsLayer.draw` 是 internal，`Canvas.drawRenderNode` 又只能作用于硬件画布——
- * 所以这里退一步：按页身份缓存最近几页的位图。收益有两处：
+ * 旧 View 在 `setBitmap()` 里复用同一张 Bitmap 的内存；Compose 做不到：`GraphicsLayer.toImageBitmap()`
+ * 每次都新建 Bitmap，`GraphicsLayer.draw` 是 internal，`Canvas.drawRenderNode` 又只能作用于硬件画布。
+ * 所以这里按页身份缓存最近几页的位图。收益有两处：
  * ① 命中时该回合**完全不用重录页面**（快照层都不用挂载），每帧只做 blit；
- * ② 取消后再拖、或连续翻页时，只需补拍新进入窗口的那一页（原来每回合都要重算两页）。
+ * ② 取消后再拖、或连续翻页时，只需补拍新进入窗口的那一页（否则每回合要重算两页）。
  */
 private class PageSnapshotBitmapPool {
     private val entries = LinkedHashMap<PageSnapshotKey, ImageBitmap>(4, .75f, true)
@@ -2640,9 +2639,9 @@ private fun ReaderPageCanvas(
     }
     val textBackgroundSources = textBackgrounds.map { it.image.source }.distinct()
     // 位图归 ReaderTextBackgroundLoader 的字节上限 LRU 所有，组合里只留一个「解完了没有」的
-    // 重绘信号。原来用 produceState 把「源→位图」的映射存进组合状态：换页时源列表一换键，
+    // 重绘信号。「源→位图」的映射不能存进组合状态（如 produceState）：换页时源列表一换键，
     // 映射就被重置成初始值，而初始值是组合期那一次同步查表——只要那一次没命中（LRU 被挤掉，
-    // 或这一页的气泡源首次进入窗口），正文先画出来、气泡晚一两帧才补上，就是「翻页闪一下」。
+    // 或这一页的气泡源首次进入窗口），正文先画出来、气泡晚一两帧才补上，看着就是翻页闪一下。
     // 绘制期直读缓存（与滚动模式同一口径）没有这个窗口期：命中就画，而预热保证翻页前必命中。
     var textBackgroundRevision by remember(page.id, page.revision, textBackgroundSources) {
         mutableIntStateOf(0)
@@ -2713,7 +2712,7 @@ private fun ReaderPageCanvas(
                     selectionPreviewStyle.textColor ?: page.previewBaseTextColor(e)
                 } else page.resolvedColorArgb(e, readAloud.toArgb())
                 // HTML 原生下划线（<u>）在与规则自定义下划线同时存在时只画自定义那条：
-                // 旧版从不画 HTML 原生下划线，两条线叠在一起是迁移后新增的观感问题。
+                // 旧版从不画 HTML 原生下划线，两条线叠在一起会多出旧版没有的观感。
                 // 链接下划线仍按旧版优先（`TextHtmlColumn.draw` 的 isUnderlineText）。
                 paint.isUnderlineText = (e.style.nativeUnderline && e.style.underline == null) ||
                         e.drawsLinkUnderline

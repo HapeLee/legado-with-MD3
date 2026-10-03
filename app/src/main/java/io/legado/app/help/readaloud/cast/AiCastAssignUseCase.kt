@@ -298,12 +298,11 @@ class AiCastAssignUseCase(
     /**
      * 一块的分配结果落库。
      *
-     * 只认这一块送出去的锚点序号：模型爱把上一块的 i 也顺手写进来，照单全收会把别句的
-     * 名字安到这句上（「分配得好乱」的一种）。
+     * 只认这一块送出去的锚点序号：模型常把别的块的 i 也写进来，照单全收会把别句的
+     * 名字安到这句上。
      *
-     * 模型没给的句子**一律留空**，不做任何本地推断。曾经这里有个「同一人连说组」的兜底：
-     * 两段引号之间没有叙述行就沿用前一句的说话人。真机一章群戏验证过，这个假设是错的——
-     * 作者写一问一答时同样不加叙述行，「李振富连说五段」里有三段其实是星菲在答话。
+     * 模型没给的句子**一律留空**，不做任何本地推断——「同一人连说组」这类假设不成立：
+     * 作者写一问一答时同样不加叙述行，相邻两句未必同一人。
      * 宁可让这句由默认引擎念（用户口径：只读分配到的话，其它走默认），也不能安错人。
      *
      * [thoughtOrdinals] 是本章里以单引号开口的锚点序号（由 [assignChapter] 数锚点时顺手记下的，
@@ -334,7 +333,7 @@ class AiCastAssignUseCase(
             val pool = resolvePool(answer.pool, pools, known)
             var character = matchOrCreate(bookUrl, name, pool, known, profiles)
             if (character.poolLabel.isBlank() && pool.isNotBlank()) {
-                // 老档案里池是空的（历史遗留），这次补上；非空一律不改，改了就等于换声音
+                // 档案里池为空时补上；非空一律不改，改了就等于换声音
                 character = character.copy(poolLabel = pool, updatedAt = System.currentTimeMillis())
                 appDb.castCharacterDao.update(character)
                 // 补上的池也要出现在人物详情页：档案里那一列一直空着就是「没分配过」的假象
@@ -363,8 +362,8 @@ class AiCastAssignUseCase(
     /**
      * 名字命中已有角色就**原样复用**（池与音色都不动）。
      *
-     * 以前命中同名但池不同就会拿 AI 给的池去改档案，池又来自「用得最少的启用池」兜底，
-     * 于是一个「李振富」能被配出男老年 / 女中年 / 女老年 / 少女四种声音 —— 听着就是乱。
+     * 同名命中不改池与音色：AI 给的池可能来自「用得最少的启用池」兜底，
+     * 一命中就改池会让同一个名字被配出多种声音。
      * 只有本书从没出现过的名字才新建档案，此时才需要挑池。
      *
      * 匹配先过 [canonicalCastName]：AI 常按书里的叫法给称呼（「小花」而不是「李小花」），
@@ -532,8 +531,8 @@ class AiCastAssignUseCase(
      * 提取响应最外层 JSON：assignments 数组 + 可选 memory 更新。
      *
      * 返回 null = 回复里根本没有 JSON 对象（模型只回了一段白话、或者被截断）；
-     * 结构在但读不出 assignments = 抛错。两者以前都被吞成「空分配」，于是断网重连后
-     * 拿到半截回复、服务商改了输出格式这类问题，界面上一个字的提示都没有。
+     * 结构在但读不出 assignments = 抛错。两者必须区分，否则断网重连后拿到半截回复、
+     * 服务商改了输出格式这类问题，界面上一个字的提示都没有。
      */
     private fun parseResponse(raw: String): AiCastPayload.Response? {
         val start = raw.indexOf('{')
@@ -603,9 +602,9 @@ internal fun castChapterPlan(
  * 不能靠别名把它长回来（`deleteCharacter` 特意置成停用而不是删除以保住官方资料）。
  *
  * **档案比角色行更权威**：命中档案时先按档案的 id 找回角色，而不是先用「名字完全相等」那条。
- * 这一条同时负责修已经坏掉的数据——本函数上线前跑过一次分配的书里，多半留着一行没档案的
- * 孤儿 cast_characters（名字就是那个别名、气泡为空），按名字优先会一直命中它，
- * 于是「重新分配也修不回来」；按档案找回带气泡的那一条，重跑一次那一章就正了。
+ * 这一条同时负责修已坏数据：库里可能残留没档案的孤儿 cast_characters（名字就是那个别名、
+ * 气泡为空），按名字优先会一直命中它，于是「重新分配也修不回来」；
+ * 按档案找回带气泡的那一条，重跑一次那一章就正了。
  */
 internal fun canonicalCastName(
     name: String,
