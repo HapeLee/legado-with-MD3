@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
 import io.legado.app.R
 import io.legado.app.core.ui.player.PlayerMorphAppearance
 import io.legado.app.core.ui.player.PlayerMorphHost
@@ -71,6 +72,11 @@ fun ReadAloudPlayerMorphHost(
      * ——「从哪进，出来就是哪」。不直接留着 `configVisible`：返回手势的闸门看的就是它。
      */
     var configWaitsForPlayer by remember { mutableStateOf(false) }
+    /**
+     * 跳子页时记下那个目的地：只有"从它返回阅读页"才算回来。中途去了别处（连按两次返回
+     * 落到书架）就把标记作废，否则下次点进阅读页会凭空弹出播放器 + 朗读设置。
+     */
+    var pendingSubRoute by remember { mutableStateOf<NavKey?>(null) }
     var activeNumberConfig by rememberSaveable {
         mutableStateOf<ReadAloudPlayerConfigHostAction?>(null)
     }
@@ -83,6 +89,7 @@ fun ReadAloudPlayerMorphHost(
 
     suspend fun collapsePlayer(keepConfig: Boolean = false) {
         configWaitsForPlayer = keepConfig
+        if (!keepConfig) pendingSubRoute = null
         configVisible = false
         activeNumberConfig = null
         morph.animateTo(0f)
@@ -94,6 +101,7 @@ fun ReadAloudPlayerMorphHost(
             val keepConfig = configVisible
             // 先推目的地再收播放器：等收完再推，中间会露出阅读页一帧（看着像先弹回去再跳）
             action()
+            pendingSubRoute = navRouteTracker.currentRoute
             collapsePlayer(keepConfig = keepConfig)
         }
     }
@@ -131,6 +139,7 @@ fun ReadAloudPlayerMorphHost(
         if (expanded) {
             if (configWaitsForPlayer) {
                 configWaitsForPlayer = false
+                pendingSubRoute = null
                 configVisible = true
             }
         } else if (!configWaitsForPlayer) {
@@ -138,10 +147,21 @@ fun ReadAloudPlayerMorphHost(
             activeNumberConfig = null
         }
     }
-    // 子页返回：栈顶重新是阅读页，就把播放器叫回来，摊开的同时朗读设置自己回来
+    // 只有「从我推上去的那个子页」回到阅读页才把播放器叫回来；中途去了别处（连按两次返回
+    // 落到书架）就作废，否则下次点进阅读页会凭空弹出朗读设置。
     LaunchedEffect(topRoute) {
-        if (configWaitsForPlayer && topRoute is MainRouteReadBook) {
-            ReadAloudPlayerOverlayBus.request()
+        if (!configWaitsForPlayer) return@LaunchedEffect
+        when (topRoute) {
+            pendingSubRoute -> Unit
+            is MainRouteReadBook -> {
+                pendingSubRoute = null
+                ReadAloudPlayerOverlayBus.request()
+            }
+
+            else -> {
+                configWaitsForPlayer = false
+                pendingSubRoute = null
+            }
         }
     }
     LaunchedEffect(playerViewModel) {
