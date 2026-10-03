@@ -95,6 +95,7 @@ import splitties.init.appCtx
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.platform.LocalWindowInfo
 import io.legado.app.feature.reader.core.layout.ReaderChapterBlockMeasurer
 import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureResult
