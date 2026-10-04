@@ -124,6 +124,11 @@ class ReadBookController(
     val activity: AppCompatActivity,
     val viewModel: ReadBookViewModel,
     private val readerSessionViewModel: ReaderSessionViewModel,
+    /**
+     * 本路由要打开的书，在首次组合时随构造传入（见 MainNavGraph 阅读页入口）。
+     * 空表示「最后读过的那本」（朗读通知的进入方式），此时不设闸门。
+     */
+    private val routeBookUrl: String? = null,
 ) : ReadBookRouteHost,
     ReadBookInputHandler,
     ReadBook.ReaderRenderCallback {
@@ -725,6 +730,12 @@ class ReadBookController(
         ReaderPerfTrace.marker("viewport.published")
     }
 
+    /** 会话指向的不是本路由要开的书：画布只能出加载占位页，不能把上一本书的正文排上来。 */
+    private fun isReaderSessionStale(): Boolean {
+        val expected = routeBookUrl?.takeIf { it.isNotBlank() } ?: return false
+        return ReadBook.book?.bookUrl != expected
+    }
+
     private fun publishReaderPageWindow(
         paginationStyle: ReaderAndroidPaginationStyle? = null,
         paginationEnvironmentPublished: Boolean = false,
@@ -733,6 +744,12 @@ class ReadBookController(
         val width = viewport.widthPx
         val height = viewport.heightPx
         if (width <= 0 || height <= 0) return
+        // 开书路由的首帧早于会话切换：`ReadBook` 里可能还是上一本书的章节，照它分页会把
+        // 别人的正文画进这本书的面板。装载完成后由正常发布接替这张占位窗。
+        if (isReaderSessionStale()) {
+            publishLoadingReaderWindow()
+            return
+        }
         publishDirectReaderPageWindow(
             width = width,
             height = height,

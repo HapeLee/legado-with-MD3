@@ -772,14 +772,12 @@ fun MainActivity.mainEntryProvider(
                     this@mainEntryProvider,
                     readBookViewModel,
                     readerSessionViewModel,
+                    // 画布在首次组合就会请求分页，本路由要开哪本书必须随构造就位：
+                    // 那期间 ReadBook 单例里可能还是上一本书的章节。
+                    routeBookUrl = route.bookUrl,
                 )
             }
             ReaderPerfTrace.marker("nav.controller.ready")
-            // Canvas 阅读面在首次组合时就会请求分页，必须先告诉 ViewModel 本路由要打开哪本书。
-            // 刻意用 remember 而非 LaunchedEffect：后者在组合之后才跑，赶不上首帧。
-            @Suppress("RememberReturnType")
-            remember(readBookViewModel, route) {
-            }
             val lifecycleOwner = LocalLifecycleOwner.current
             val initRequest = remember(route) {
                 ReadBookInitRequest(
