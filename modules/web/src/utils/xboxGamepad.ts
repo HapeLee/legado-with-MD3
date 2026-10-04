@@ -4,8 +4,9 @@
 
 interface GamepadConfig {
   DEBUG: boolean
-  AXIS_THRESHOLD: number
-  AXIS_COOLDOWN: number
+  AXIS_DEADZONE: number // 摇杆死区，防止漂移
+  AXIS_SCROLL_SPEED: number // 摇杆满偏时每秒滚动的像素
+  TRIGGER_THRESHOLD: number // 扳机触发阈值
 
   DPAD_INDEX: {
     UP: number
@@ -39,8 +40,7 @@ interface DPadState {
 }
 
 interface GamepadState {
-  lastAxisTime: number
-  lastAxisDirection: number
+  lastFrameTime: number
   dpadPressed: DPadState
 }
 
@@ -51,8 +51,7 @@ export interface XboxGamepadOptions {
 
 function createGamepadState(): GamepadState {
   return {
-    lastAxisTime: 0,
-    lastAxisDirection: 0,
+    lastFrameTime: 0,
     dpadPressed: {
       up: false,
       down: false,
@@ -74,8 +73,9 @@ function createGamepadState(): GamepadState {
 
 const CONFIG: GamepadConfig = {
   DEBUG: false, // 日志总开关
-  AXIS_THRESHOLD: 0.7, // 摇杆触发阈值
-  AXIS_COOLDOWN: 300, // 摇杆触发冷却时间 (ms)
+  AXIS_DEADZONE: 0.15, // 摇杆死区
+  AXIS_SCROLL_SPEED: 1800, // 摇杆满偏滚动速度 (px/s)，按手感调整
+  TRIGGER_THRESHOLD: 0.5, // 扳机按下超过 50% 视为触发
 
   DPAD_INDEX: {
     // Xbox 标准映射
@@ -221,32 +221,41 @@ function isPressedOnce(current: boolean, previous: boolean): boolean {
   return current && !previous
 }
 
+/**
+ * 扳机键判定：优先使用模拟量 value，兼容仅提供 pressed 的情况
+ */
+function isTriggerPressed(btn: GamepadButton | undefined): boolean {
+  if (!btn) return false
+
+  return btn.value > CONFIG.TRIGGER_THRESHOLD || btn.pressed
+}
+
 // =====================================================
 // 摇杆处理
 // =====================================================
 
+/**
+ * 左摇杆上下：每帧按倾斜程度连续滚动（倾斜越多滚得越快）
+ */
 function handleAxis(gp: Gamepad, now: number, gs: GamepadState): void {
   const axisY = gp.axes[1] || 0
 
-  if (Math.abs(axisY) <= CONFIG.AXIS_THRESHOLD) {
-    gs.lastAxisDirection = 0
+  // 用帧间隔换算距离，帧率不同速度也一致；限制上限避免切回标签页后跳一大段
+  const dt = gs.lastFrameTime ? Math.min(now - gs.lastFrameTime, 50) : 16
 
-    return
-  }
+  gs.lastFrameTime = now
 
-  const direction = axisY > 0 ? 1 : -1
+  const abs = Math.abs(axisY)
 
-  const cooldownPassed = now - gs.lastAxisTime > CONFIG.AXIS_COOLDOWN
+  if (abs < CONFIG.AXIS_DEADZONE) return
 
-  const directionChanged = direction !== gs.lastAxisDirection
+  // 去掉死区后重新映射到 0~1，起步更平滑
+  const strength = (abs - CONFIG.AXIS_DEADZONE) / (1 - CONFIG.AXIS_DEADZONE)
 
-  if (cooldownPassed || directionChanged) {
-    gs.lastAxisTime = now
+  const distance = Math.sign(axisY) * strength * CONFIG.AXIS_SCROLL_SPEED * (dt / 1000)
 
-    gs.lastAxisDirection = direction
-
-    scrollPage(direction)
-  }
+  // 连续滚动不能用 smooth，否则每帧都会打断上一次动画造成卡顿
+  window.scrollBy({ top: distance, behavior: 'instant' })
 }
 
 // =====================================================
@@ -275,9 +284,9 @@ function handleDPad(gp: Gamepad, gs: GamepadState): void {
 
     rb: gp.buttons[buttons.RB]?.pressed || false,
 
-    lt: gp.buttons[buttons.LT]?.pressed || false,
+    lt: isTriggerPressed(gp.buttons[buttons.LT]),
 
-    rt: gp.buttons[buttons.RT]?.pressed || false,
+    rt: isTriggerPressed(gp.buttons[buttons.RT]),
   }
 
   // 十字 ↑ 顶部
