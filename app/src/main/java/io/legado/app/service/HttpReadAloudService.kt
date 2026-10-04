@@ -329,23 +329,15 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     // 缓存目录优先外部存储，externalCacheDir 不可用时退回内部 cacheDir
-    private val cacheBaseDir: File by lazy { externalCacheDir ?: cacheDir }
-
     private val ttsFolderPath: String by lazy {
-        cacheBaseDir.absolutePath + File.separator + "httpTTS" + File.separator
+        val baseDir = externalCacheDir ?: cacheDir
+        baseDir.absolutePath + File.separator + "httpTTS" + File.separator
     }
 
-    /**
-     * 流式朗读（`streamReadAloudAudio`）那一份缓存：由 CacheDataSource/CacheDataSink 写入，
-     * 文件名是 Media3 自己编的，和 [ttsFolderPath] 里按 md5 命名的文件不同一套。
-     * 跨文件依赖：[removeCacheFile] 的保留期必须同时管到这两个目录，否则即听即焚只清一半，
-     * 占用会一直涨（手动「清理缓存」走 TTSCacheUtils.clearTtsCache，两个都删）。
-     */
-    private val streamCacheFolder: File by lazy { File(cacheBaseDir, "httpTTS_cache") }
-
     private val cache by lazy {
+        val baseDir = externalCacheDir ?: cacheDir
         SimpleCache(
-            streamCacheFolder,
+            File(baseDir, "httpTTS_cache"),
             LeastRecentlyUsedCacheEvictor(128 * 1024 * 1024),
             StandaloneDatabaseProvider(appCtx)
         )
@@ -374,8 +366,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         super.onCreate()
         exoPlayer.addListener(this)
         applyCueVoiceEffect(nowSpeak)
-        // 即听即焚下先把上一次会话的残留抹掉：[removeCacheFile] 只挂在 onDestroy 上，
-        // 进程被杀、划掉最近任务、崩溃都跳过它，那一次的音频就永远留在缓存目录里。
+        // 上一次会话没走到 onDestroy 留下的缓存音频在这里清掉，理由见 [sweepBurnAfterReadLeftovers]。
         Coroutine.async { sweepBurnAfterReadLeftovers() }
         lifecycleScope.launch {
             readAloudSettingsGateway.settings.collectLatest {
@@ -588,8 +579,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         val saved = ReadAloudAudioStore.saveFrom(
             bookUrl, fileName, getSpeakFileAsMd5(fileName)
         ) ?: return null
-        // 下载区那份已经就位，缓存这份副本没别的用途了（播放先认下载区）。即听即焚下当场删掉：
-        // 一次下载能合成整本书，等不到服务销毁的那一次清扫，占用会一路涨。
+        // 播放先认下载区（见 [speakFileForPlay]），落进下载区后缓存这份副本没有别的用途。即听即焚下
+        // 当场删：一次下载能合成整本书，等不到起手那次清扫，占用会一路涨。
         if (cacheBurnAfterRead) {
             FileUtils.delete(getSpeakFileAsMd5(fileName).absolutePath)
         }
@@ -1616,17 +1607,15 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 即听即焚的残留清扫，只在服务起手时跑。
      *
-     * 跨文件依赖：[removeCacheFile] 唯一的调用点在 [onDestroy]，进程被杀、划掉最近任务、崩溃
-     * 都到不了那里，上一次会话（含听书下载）留在 `httpTTS` 里的音频就没人管。这个语义下没有
-     * 需要保护的正文，起手删干净即可；保留一段时间的模式不在这里动手，避免把当前章的缓存
-     * 在开播前删掉、逼出整章重复合成。
+     * 跨文件依赖：[removeCacheFile] 唯一的调用点在 [onDestroy]，进程被杀、划掉最近任务、崩溃都到不了
+     * 那里，上一次会话留在 `httpTTS` 里的音频就没人管。这个语义下没有需要保护的正文，起手删干净即可；
+     * 保留一段时间的模式不在这里动手，否则当前章的缓存会在开播前删掉，逼出整章重复合成。
      */
     private fun sweepBurnAfterReadLeftovers() {
         if (!cacheBurnAfterRead) return
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
             FileUtils.delete(it.absolutePath)
         }
-        FileUtils.delete(streamCacheFolder.absolutePath)
     }
 
     /**
@@ -1656,13 +1645,6 @@ class HttpReadAloudService : BaseReadAloudService(),
             if (shouldDelete || isSilentSound) {
                 FileUtils.delete(it.absolutePath)
             }
-        }
-
-        // 流式朗读的缓存不在这套按 md5 命名的文件里，上面的遍历管不到它。保留期为 0 表示
-        // 用户要即听即焚，整目录抹掉；Media3 的 LRU 只在超过 128MB 才淘汰，兜不住这个语义。
-        // 听书下载区（filesDir/readAloudAudio）不参与：那份是用户显式下载的，从不自动清理。
-        if (keepTime == 0L) {
-            FileUtils.delete(streamCacheFolder.absolutePath)
         }
     }
 
