@@ -19,6 +19,8 @@ interface GamepadConfig {
     B: number
     LB: number
     RB: number
+    LT: number
+    RT: number
   }
 }
 
@@ -32,6 +34,8 @@ interface DPadState {
   b: boolean
   lb: boolean
   rb: boolean
+  lt: boolean
+  rt: boolean
 }
 
 interface GamepadState {
@@ -58,6 +62,8 @@ function createGamepadState(): GamepadState {
       b: false,
       lb: false,
       rb: false,
+      lt: false,
+      rt: false,
     },
   }
 }
@@ -85,6 +91,8 @@ const CONFIG: GamepadConfig = {
     B: 1,
     LB: 4,
     RB: 5,
+    LT: 6,
+    RT: 7,
   },
 }
 
@@ -266,6 +274,10 @@ function handleDPad(gp: Gamepad, gs: GamepadState): void {
     lb: gp.buttons[buttons.LB]?.pressed || false,
 
     rb: gp.buttons[buttons.RB]?.pressed || false,
+
+    lt: gp.buttons[buttons.LT]?.pressed || false,
+
+    rt: gp.buttons[buttons.RT]?.pressed || false,
   }
 
   // 十字 ↑ 顶部
@@ -314,6 +326,22 @@ function handleDPad(gp: Gamepad, gs: GamepadState): void {
 
   if (isPressedOnce(current.rb, gs.dpadPressed.rb)) {
     log('🎮 RB 向下翻页')
+
+    scrollPage(1)
+  }
+
+  // LT 向上翻页
+
+  if (isPressedOnce(current.lt, gs.dpadPressed.lt)) {
+    log('🎮 LT 向上翻页')
+
+    scrollPage(-1)
+  }
+
+  // RT 向下翻页
+
+  if (isPressedOnce(current.rt, gs.dpadPressed.rt)) {
+    log('🎮 RT 向下翻页')
 
     scrollPage(1)
   }
