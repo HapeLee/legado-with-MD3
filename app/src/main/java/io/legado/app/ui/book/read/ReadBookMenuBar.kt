@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -110,6 +111,7 @@ fun ReadBookMenuBar(
     onBrightnessPreview: (Int) -> Unit,
     backdrop: Backdrop? = null,
     hazeState: HazeState? = null,
+    seekState: StateFlow<ReadSeekUiState>,
 ) {
     val context = LocalContext.current
     val currentRoute = state.menuState.currentRoute
@@ -299,6 +301,7 @@ fun ReadBookMenuBar(
                     onReadStylePageChanged = { readStylePage = it },
                     progressBarBehavior = preferences.progressBarBehavior,
                     onBrightnessPreview = onBrightnessPreview,
+                    seekState = seekState,
                 )
             }
         }
@@ -326,6 +329,7 @@ private fun ReadBookMenuSurface(
     onReadStylePageChanged: (Int) -> Unit,
     progressBarBehavior: String,
     onBrightnessPreview: (Int) -> Unit,
+    seekState: StateFlow<ReadSeekUiState>,
 ) {
     val route = when (contentTarget) {
         ReadBookMenuContent.Search -> ReadBookMenuRoute.Main
@@ -593,6 +597,7 @@ private fun ReadBookMenuSurface(
                         labelColor = bottomBarTextColor,
                         progressBarBehavior = progressBarBehavior,
                         onBrightnessPreview = onBrightnessPreview,
+                        seekState = seekState,
                     )
                 }
 

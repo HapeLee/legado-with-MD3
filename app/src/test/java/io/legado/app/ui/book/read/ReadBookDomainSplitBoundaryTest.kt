@@ -123,7 +123,10 @@ class ReadBookDomainSplitBoundaryTest {
      *   朗读、下滑切书签、划线笔记编辑与返回原 sheet、角标选图、AI 档位、阅读锚点、
      *   `backToSpeakingPosition` / `ReadAloudFromHere` 等——意图入口只能在 VM）；
      * - Host 实现与状态投影：`_uiState` / `_effects` 只有 VM 能碰（bookKey 投影、
-     *   `markingReturnSheet` 瞬态字段、`readingAnchorAvailable`、`readAloudFollow`）；
+     *   `markingReturnSheet` 瞬态字段、`readAloudFollow`）；`_seekState` 与
+     *   `refreshFromReadBook()` / `publishSeek()` 同属这类投影——定位字段必须从
+     *   `ReadBook` 单例现算（`calculateSeekProgress` / `calculateSeekMax` 是 VM 私有），
+     *   且写入点跟着 `syncFromReadBook` 的每个发布点走，没有可摘的 delegate；
      * - delegate 构造参数、装配与 import；
      * - `buildSheetConfig()` 投影表：页眉页脚的字体/字号/`applyHeaderStyle`/
      *   `tipDividerColor`/对齐项纯派生，一个字段一行，没有逻辑可摘；
@@ -150,14 +153,14 @@ class ReadBookDomainSplitBoundaryTest {
      * （TocViewModel 自持 flow）。
      */
     @Test
-    fun `ReadBookViewModel 不超过 2722 行`() {
+    fun `ReadBookViewModel 不超过 2742 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过上限 2722。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过上限 2742。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2722,
+            lineCount <= 2742,
         )
     }
 
@@ -183,9 +186,48 @@ class ReadBookDomainSplitBoundaryTest {
         "composePagePosition" to "Compose 阅读页跨帧进度（待下沉：进度/排版域）",
         "composePageContext" to "Compose 跨帧渲染上下文（待下沉：进度/排版域）",
         "composeProgressJob" to "Compose 进度节流任务（待下沉：进度/排版域）",
+        "_seekState" to "底栏进度条与锚点胶囊的定位流，见 ReadSeekUiState",
         "justInitData" to "加载域经 Host 暴露的状态（待下沉：加载域）",
         "closeReadBookKeepReadAloud" to "关闭阅读是否保留朗读的参数（待下沉：朗读域）",
     )
+
+    /**
+     * 已从 [ReadBookUiState] 摘出的字段，一律不许挂回去。
+     *
+     * 阅读屏在屏幕作用域读整份 `ReadBookUiState`，所以任何一个字段变化都会重组正文画布
+     * 之外的全部 chrome。这些字段恰好都是高频刷新源：
+     * - `seekProgress` / `seekMax` / `readingAnchorAvailable`：翻页、拖进度条、
+     *   `upSeekBarThrottle`（200 ms）都会刷，已摘进 `ReadBookViewModel.seekState`，
+     *   只有 `MenuBottomBar` 与 `ReadBookFloatingActionBar` 各自收集；
+     * - `time` / `battery`：EventBus 每分钟广播，已摘成 VM 的 `@Volatile` 直读字段，
+     *   消费方只有 `ReadBookController` 建 decoration 时；
+     * - `durPageIndex`：只写不读（Canvas 页位置经 `composePagePosition` 同步），
+     *   留在全屏 state 里等于每次翻页白付一次整屏重组。
+     */
+    private val screenWideStateFields = setOf(
+        "seekProgress",
+        "seekMax",
+        "readingAnchorAvailable",
+        "time",
+        "battery",
+        "durPageIndex",
+    )
+
+    @Test
+    fun `高频定位与页眉字段不挂回 ReadBookUiState`() {
+        val leaked = constructorParameterNames(ReadBookUiState::class).intersect(screenWideStateFields)
+        assertTrue(
+            "这些字段又挂回了 ReadBookUiState：${leaked.joinToString()}。\n" +
+                "它们一刷新就让整个阅读屏重组，请回到各自的窄流 / 直读字段，" +
+                "理由见本测试的文档注释。",
+            leaked.isEmpty(),
+        )
+        assertEquals(
+            "ReadSeekUiState 的字段变了，请同步 screenWideStateFields 与消费方",
+            setOf("seekProgress", "seekMax", "readingAnchorAvailable"),
+            constructorParameterNames(ReadSeekUiState::class),
+        )
+    }
 
     @Test
     fun `域状态不回流进 ReadBookViewModel`() {

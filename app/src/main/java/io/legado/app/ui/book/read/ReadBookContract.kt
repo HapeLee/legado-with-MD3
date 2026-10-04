@@ -208,6 +208,19 @@ data class PendingBookmarkTarget(
     val verdict: BookmarkTargetVerdict,
 )
 
+/**
+ * 底栏进度条与阅读锚点胶囊要用的定位数据，独立成流（`ReadBookViewModel.seekState`）。
+ * 翻页、拖动翻页、`upSeekBarThrottle`（200 ms）都会刷新它；并入 [ReadBookUiState] 会让
+ * 每一次刷新重组整个阅读屏（正文画布 + chrome），消费方只有 `MenuBottomBar` 和
+ * `ReadBookFloatingActionBar`，它们各自 collect 这条流。
+ */
+@Stable
+data class ReadSeekUiState(
+    val seekProgress: Int = 0,
+    val seekMax: Int = 0,
+    val readingAnchorAvailable: Boolean = false,
+)
+
 @Stable
 data class ReadBookUiState(
     val book: Book? = null,
@@ -219,7 +232,6 @@ data class ReadBookUiState(
     val chapterSize: Int = 0,
     val durChapterIndex: Int = 0,
     val durChapterPos: Int = 0,
-    val durPageIndex: Int = 0,
     val isLocalBook: Boolean = true,
     val msg: String? = null,
     val isInitFinish: Boolean = false,
@@ -243,10 +255,6 @@ data class ReadBookUiState(
     val readAloudChapterPosition: Int = 0,
     val readAloudChapterLength: Int = 0,
     val isAutoPage: Boolean = false,
-    // Seek bar
-    val seekProgress: Int = 0,
-    val seekMax: Int = 0,
-    val readingAnchorAvailable: Boolean = false,
     // Replace rules
     val replaceRuleEnabled: Boolean = false,
     val effectiveReplaceCount: Int = 0,
@@ -257,9 +265,6 @@ data class ReadBookUiState(
     // Translation
     val translationMode: Boolean = false,
     val translationStatus: TranslationChapterStatus = TranslationChapterStatus.Idle,
-    // Time / battery (from EventBus)
-    val time: String = "",
-    val battery: Int = 0,
     val menuState: ReadBookMenuState = ReadBookMenuState(),
     // Active sheet / dialog
     val activeSheet: ReadBookSheet? = null,

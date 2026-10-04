@@ -29,6 +29,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,16 +61,19 @@ internal fun MenuBottomBar(
     labelColor: Color = LegadoTheme.colorScheme.onSurface,
     progressBarBehavior: String,
     onBrightnessPreview: (Int) -> Unit,
+    seekState: StateFlow<ReadSeekUiState>,
 ) {
-    val seekMax = state.seekMax.coerceAtLeast(0)
+    // 只在本作用域收集定位流：翻页/拖动进度条不会再把整屏拖起来重组（见 ReadSeekUiState）。
+    val seek by seekState.collectAsStateWithLifecycle()
+    val seekMax = seek.seekMax.coerceAtLeast(0)
     val sliderMax = seekMax.toFloat().coerceAtLeast(1f)
     var sliderValue by remember {
         mutableFloatStateOf(
-            state.seekProgress.coerceIn(0, seekMax).toFloat()
+            seek.seekProgress.coerceIn(0, seekMax).toFloat()
         )
     }
     var sliderDragging by remember { mutableStateOf(false) }
-    var previewPageIndex by remember { mutableIntStateOf(state.seekProgress.coerceIn(0, seekMax)) }
+    var previewPageIndex by remember { mutableIntStateOf(seek.seekProgress.coerceIn(0, seekMax)) }
     val toolButtonsBottomPadding = if (buttonGlassEnabled) 6.dp else 0.dp
     val contentBottomPadding = if (bottomPadding > toolButtonsBottomPadding) {
         bottomPadding - toolButtonsBottomPadding
@@ -112,8 +117,8 @@ internal fun MenuBottomBar(
         }
     }
 
-    LaunchedEffect(state.seekProgress, seekMax, progressBarBehavior) {
-        val progress = state.seekProgress.coerceIn(0, seekMax)
+    LaunchedEffect(seek.seekProgress, seekMax, progressBarBehavior) {
+        val progress = seek.seekProgress.coerceIn(0, seekMax)
         previewPageIndex = progress
         if (progressBarBehavior == "page" || !sliderDragging) {
             sliderValue = progress.toFloat()

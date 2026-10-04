@@ -158,6 +158,19 @@ class ReadBookViewModel(
 
     private val _uiState = MutableStateFlow(ReadBookUiState())
     val uiState = _uiState.asStateFlow()
+
+    /**
+     * 页眉页脚要烘进 `LegacyReaderPageDecorationFactory` decoration 的时钟与电量：
+     * 只有 `ReadBookController` 直读，刷新由 `ReadBookEffect.UpTime` / `UpBattery`
+     * 重发页窗驱动。不进 `uiState`——一次广播就重组整屏。
+     */
+    @Volatile
+    var pageTime: String = ""
+        private set
+    @Volatile
+    var pageBatteryPercent: Int = 0
+        private set
+
     private val _effects = MutableSharedFlow<ReadBookEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
     private var composePagePosition: ReaderChapterPagePosition? = null
@@ -607,6 +620,11 @@ class ReadBookViewModel(
     private val _readPreferences = MutableStateFlow(ReadPreferences())
     val readPreferences = _readPreferences.asStateFlow()
 
+    private val _seekState = MutableStateFlow(ReadSeekUiState())
+
+    /** 见 [ReadSeekUiState]：底栏进度条/锚点胶囊专用，翻页与拖动每刷新一次都不该重组整屏。 */
+    val seekState = _seekState.asStateFlow()
+
     private var pendingBooksDirReloadChapterList: Boolean = false
     private var deferredReaderFeaturesStarted = false
 
@@ -704,7 +722,7 @@ class ReadBookViewModel(
         readBookSyncJob?.cancel()
         readBookSyncJob = viewModelScope.launch {
             delay(READER_SYNC_MIN_INTERVAL_MS)
-            _uiState.update { syncFromReadBook(it) }
+            refreshFromReadBook()
         }
     }
 
@@ -728,7 +746,7 @@ class ReadBookViewModel(
                     is ReaderSessionEvent.ChapterListRequested -> loadChapterList(event.book)
 
                     is ReaderSessionEvent.BookChanged -> {
-                        _uiState.update { syncFromReadBook(it) }
+                        refreshFromReadBook()
                         if (!ReadBook.inBookshelf) {
                             removeFromBookshelf { _effects.tryEmit(ReadBookEffect.Finish) }
                         }
@@ -878,6 +896,7 @@ class ReadBookViewModel(
                 _uiState.update {
                     syncFromReadBook(it).copy(activeDialog = null)
                 }
+                publishSeek()
             }
 
             is ReadBookIntent.KeepCurrentBookProgress -> {
@@ -885,6 +904,7 @@ class ReadBookViewModel(
                 _uiState.update {
                     syncFromReadBook(it).copy(activeDialog = null)
                 }
+                publishSeek()
             }
 
             is ReadBookIntent.ToggleReadAloud -> {
@@ -1644,6 +1664,7 @@ class ReadBookViewModel(
 
         // Read time tracking
         ReadBook.isUiActive = false
+        // 进度在离开页面时落库；开书流程本身不落，口径见 ReadBookLoadDelegate.initData。
         ReadBook.saveRead()
         if (!BaseReadAloudService.isPlay()) {
             ReadBook.stopAutoSaveSession()
@@ -1777,13 +1798,13 @@ class ReadBookViewModel(
     private fun collectEventBus() {
         viewModelScope.launch {
             eventFlow<String>(EventBus.TIME_CHANGED).collect { time ->
-                _uiState.update { it.copy(time = time) }
+                pageTime = time
                 _effects.tryEmit(ReadBookEffect.UpTime)
             }
         }
         viewModelScope.launch {
             eventFlow<Int>(EventBus.BATTERY_CHANGED).collect { level ->
-                _uiState.update { it.copy(battery = level) }
+                pageBatteryPercent = level
                 _effects.tryEmit(ReadBookEffect.UpBattery(level))
             }
         }
@@ -1846,7 +1867,7 @@ class ReadBookViewModel(
         }
         viewModelScope.launch {
             eventFlow<Boolean>(EventBus.UP_SEEK_BAR).collect {
-                _uiState.update { syncFromReadBook(it) }
+                refreshFromReadBook()
                 _effects.tryEmit(ReadBookEffect.UpSeekBar)
             }
         }
@@ -1878,7 +1899,7 @@ class ReadBookViewModel(
                 val old = previous
                 previous = preferences
                 _readPreferences.value = preferences
-                _uiState.update { syncFromReadBook(it) }
+                refreshFromReadBook()
                 if (!preferences.hasMenuClickArea()) {
                     readSettingsRepository.setClickAction(PreferKey.clickActionMC, 0)
                 }
@@ -2032,11 +2053,28 @@ class ReadBookViewModel(
             .toImmutableList(),
     )
 
+    /**
+     * uiState 快照与 [seekState] 一起同步。定位字段独立成流（见 [ReadSeekUiState]）之后，
+     * 每个投影 `syncFromReadBook` 的发布点都必须顺带刷新它，否则进度条会停在旧位置。
+     */
+    private fun refreshFromReadBook() {
+        _uiState.update { syncFromReadBook(it) }
+        publishSeek()
+    }
+
+    private fun publishSeek() {
+        _seekState.update {
+            it.copy(
+                seekProgress = calculateSeekProgress(),
+                seekMax = calculateSeekMax(),
+                readingAnchorAvailable = ReadBook.hasReadingAnchor(),
+            )
+        }
+    }
+
     private fun syncFromReadBook(current: ReadBookUiState): ReadBookUiState {
         val book = ReadBook.book
         val chapterInput = ReadBook.readerChapterInputWindow.current
-        val canvasPage = composePagePosition
-            ?.takeIf { it.chapterIndex == ReadBook.durChapterIndex }
         val translationStatus = aiDelegate.observeChapterTranslation(book, ReadBook.durChapterIndex)
         return current.copy(
             book = book,
@@ -2047,12 +2085,8 @@ class ReadBookViewModel(
             chapterSize = ReadBook.chapterSize,
             durChapterIndex = ReadBook.durChapterIndex,
             durChapterPos = ReadBook.durChapterPos,
-            durPageIndex = canvasPage?.pageIndex ?: ReadBook.durPageIndex,
             isLocalBook = ReadBook.isLocalBook,
             msg = ReadBook.msg,
-            seekProgress = calculateSeekProgress(),
-            seekMax = calculateSeekMax(),
-            readingAnchorAvailable = ReadBook.hasReadingAnchor(),
             readAloudDetachReminderEnabled = ReadBookConfig.readAloudDetachReminderEnabled,
             replaceRuleEnabled = book?.getUseReplaceRule(
                 otherSettingsGateway.currentSettings.replaceEnableDefault
@@ -2475,18 +2509,15 @@ class ReadBookViewModel(
         }
     }
 
-    fun refreshSeekState() {
-        _uiState.update {
-            it.copy(seekProgress = calculateSeekProgress(), seekMax = calculateSeekMax())
-        }
-    }
+    fun refreshSeekState() = publishSeek()
 
     fun updateComposeReaderPage(position: ReaderChapterPagePosition?, pageContext: ReaderPageContext?) {
         composePagePosition = position
         composePageContext = pageContext
         if (position == null || position.chapterIndex != ReadBook.durChapterIndex) return
-        // 滚动热路径每次跨页都会调用；进度 UI(_uiState) 是整屏重组源，延迟到节拍
-        // 间隙发布。composePagePosition/Context 已同步更新，直读字段的路径不受影响。
+        // 滚动热路径每次跨页都会调用，所以延迟到节拍间隙再发布，不与滚动争主线程。
+        // 发布只写 [seekState]（底栏进度条与锚点胶囊各自收集，见 ReadSeekUiState）；
+        // composePagePosition/Context 已同步更新，直读字段的路径不受影响。
         composeProgressJob?.cancel()
         composeProgressJob = viewModelScope.launch {
             delay(250L)
@@ -2496,20 +2527,13 @@ class ReadBookViewModel(
 
     private fun publishComposeProgress() {
         val position = composePagePosition?.takeIf { it.chapterIndex == ReadBook.durChapterIndex } ?: return
-        _uiState.update { state ->
-            state.copy(
-                durPageIndex = position.pageIndex,
-                seekProgress = if (readSettingsRepository.currentSettings.progressBarBehavior == "page") {
-                    position.pageIndex
-                } else {
-                    state.seekProgress
-                },
-                seekMax = if (readSettingsRepository.currentSettings.progressBarBehavior == "page") {
-                    position.pageCount.coerceAtLeast(1) - 1
-                } else {
-                    state.seekMax
-                },
-            )
+        if (readSettingsRepository.currentSettings.progressBarBehavior == "page") {
+            _seekState.update {
+                it.copy(
+                    seekProgress = position.pageIndex,
+                    seekMax = position.pageCount.coerceAtLeast(1) - 1,
+                )
+            }
         }
     }
 

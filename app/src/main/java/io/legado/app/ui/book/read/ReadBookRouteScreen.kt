@@ -890,9 +890,14 @@ fun ReadBookRouteScreen(
                 onBrightnessPreview = host::previewBrightness,
                 backdrop = menuBackdrop,
                 hazeState = if (useMenuHazeSource) menuHazeState else null,
+                seekState = viewModel.seekState,
             )
             ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
-            ReadBookFloatingActionBar(state = state, onIntent = viewModel::onIntent)
+            ReadBookFloatingActionBar(
+                state = state,
+                onIntent = viewModel::onIntent,
+                seekState = viewModel.seekState,
+            )
             AnimatedVisibility(
                 visible = state.translationStatus == TranslationChapterStatus.Thinking,
                 enter = fadeIn(tween(180)) + scaleIn(tween(220), initialScale = 0.88f),

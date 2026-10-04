@@ -815,21 +815,21 @@ class ReadBookController(
         }
         fun highlight(page: io.legado.app.feature.reader.core.model.ReaderPage?, pageIndex: Int) = page?.let { source ->
             val chapterPageCount = directReaderChapterPageCounts[source.id.chapterIndex] ?: 0
-            val dynamicState = viewModel.uiState.value
             val contentPadding = layoutController.viewport.value?.contentPadding ?: ReaderPadding()
             val decorated = source.copy(
                 decoration = LegacyReaderPageDecorationFactory.create(
                     page = source,
                     chapterPageCount = chapterPageCount,
-                    time = dynamicState.time,
-                    batteryPercent = dynamicState.battery,
+                    time = viewModel.pageTime,
+                    batteryPercent = viewModel.pageBatteryPercent,
                     hasBookmark = hasBookmarkOnComposePage(pageIndex),
                     contentPaddingLeftPx = contentPadding.left,
                     contentPaddingTopPx = contentPadding.top,
                     contentPaddingRightPx = contentPadding.right,
                     contentPaddingBottomPx = contentPadding.bottom,
                 ),
-                revision = source.revision xor dynamicState.time.hashCode().toLong() xor dynamicState.battery.toLong(),
+                revision = source.revision xor viewModel.pageTime.hashCode().toLong()
+                    xor viewModel.pageBatteryPercent.toLong(),
             )
             val pageHasSearchSelection = selection?.chapterIndex == source.id.chapterIndex
             val pageHasAloudParagraph = aloudPosition?.first == source.id.chapterIndex &&
@@ -3002,13 +3002,12 @@ class ReadBookController(
         // 旧 View 里消息页/占位页就是普通 TextPage（`TextPageFactory` 直接返回），
         // `PageView.setContent` 照常 `setProgress` → 页眉页脚、页码都在。这里同样给它们
         // 生成 decoration，否则画布只画 `page.decoration`（空）→ 这些页的 chrome 整体消失。
-        val dynamicState = viewModel.uiState.value
         return page.copy(
             decoration = LegacyReaderPageDecorationFactory.create(
                 page = page,
                 chapterPageCount = directReaderChapterPageCounts[page.id.chapterIndex] ?: 0,
-                time = dynamicState.time,
-                batteryPercent = dynamicState.battery,
+                time = viewModel.pageTime,
+                batteryPercent = viewModel.pageBatteryPercent,
                 hasBookmark = false,
                 contentPaddingLeftPx = viewport.contentPadding.left,
                 contentPaddingTopPx = viewport.contentPadding.top,
