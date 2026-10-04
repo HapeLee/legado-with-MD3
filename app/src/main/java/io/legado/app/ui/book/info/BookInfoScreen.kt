@@ -19,8 +19,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -121,7 +119,6 @@ import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideColorSchemeOverride
 import io.legado.app.ui.theme.ThemeOverrideState
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.theme.animateColorSchemeAsState
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
@@ -628,22 +625,15 @@ private fun BookInfoColorTheme(
     content: @Composable () -> Unit,
 ) {
     val baseTheme = LocalLegadoThemeColors.current
-    val animationSpec = tween<Color>(
-        durationMillis = 400,
-        easing = FastOutSlowInEasing,
-    )
     val targetColorScheme = theme?.colorScheme ?: baseTheme.colorScheme
     val targetSeedColor = theme?.seedColor ?: baseTheme.seedColor
-    val animatedColorScheme = targetColorScheme.animateColorSchemeAsState(animationSpec)
-    val animatedSeedColor by animateColorAsState(
-        targetValue = targetSeedColor,
-        animationSpec = animationSpec,
-        label = "book_info_theme_seed",
-    )
 
+    // 封面取色必须是整色板一次性生效，不能逐帧插值：插值期间每帧都会产出新的
+    // ColorScheme/LegadoColorScheme/LocalLegadoThemeColors 并重建 Miuix ThemeController，
+    // 详情页整页会在转场中反复重组+强制布局。与 PlayerThemeOverride 保持同一口径。
     ProvideColorSchemeOverride(
-        colorScheme = animatedColorScheme,
-        seedColor = animatedSeedColor,
+        colorScheme = targetColorScheme,
+        seedColor = targetSeedColor,
         overrideIsDark = theme?.isDark ?: baseTheme.isDark,
         content = content,
     )
