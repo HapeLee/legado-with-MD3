@@ -68,6 +68,15 @@ object MainNavigator {
             }
         }
 
+        if (route is MainRouteReadBook &&
+            currentRoute is MainRouteReadBook &&
+            (route.bookUrl == null || route.bookUrl == currentRoute.bookUrl)
+        ) {
+            // 朗读通知的「回到正在读的书」不带 bookUrl（空即最后读过的那本），路由键和栈顶那份
+            // 必然不相等。栈顶已经是阅读页时再压一份，返回就要连点同样多次才出得了阅读页。
+            return
+        }
+
         if (route is MainRouteReadBook) ReaderPerfTrace.marker("open.request")
         // 导航动画和阅读页组合要花几百毫秒, 这段时间足够把正文读出来并排版好
         if (route is MainRouteReadBook && !route.chapterChanged) {

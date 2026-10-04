@@ -62,12 +62,17 @@ class MainNavRouteRegistryTest {
 
     /**
      * 从 `MainNavigator` 里读出「栈顶是阅读页时直接压栈」那一支的目的地名单。
+     * 锚点只在 `when (route)` 之后找：压栈之前还有若干去重闸门，它们也提阅读页，
+     * 认错了行会顺着上一条分支解析出一份假名单。
      * 锚文本没了就说明导航器结构变了，这条测试要跟着改，不能静默放过。
      */
     private fun routesPushableOverOverlay(): Set<String> {
         val lines = File(sourceRoot(), "io/legado/app/ui/main/MainNavigator.kt")
             .readText().split('\n')
-        val anchor = lines.indexOfFirst { "currentRoute is MainRouteReadBook" in it }
+        val whenLine = lines.indexOfFirst { it.trim() == "when (route) {" }
+        assertTrue("MainNavigator 里找不到 when (route) 分支，解析口径要重新对", whenLine >= 0)
+        val anchor = (whenLine + 1 until lines.size)
+            .firstOrNull { "currentRoute is MainRouteReadBook" in lines[it] } ?: -1
         assertTrue("MainNavigator 里找不到「栈顶是阅读页」那条白名单，解析口径要重新对", anchor >= 0)
         val head = ((anchor - 1) downTo 0).first { "-> {" in lines[it] }
         val routes = LinkedHashSet<String>()
