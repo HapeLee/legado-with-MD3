@@ -75,10 +75,13 @@ class MainNavigatorReadAloudTest {
     @Test
     fun `read aloud notification reuses the launcher activity`() {
         val source = mainSourceFile("io/legado/app/service/BaseReadAloudService.kt").readText()
-        val body = functionBody(source, "private fun readAloudActivityPendingIntent")
+        val body = functionBody(
+            source,
+            "private fun readAloudActivityPendingIntent",
+            endMarker = "\n    )",
+        )
 
-        // 主界面是 standard launchMode：不带这两个 flag，每次从通知点回来都会在任务栈上
-        // 再开一个 MainActivity，阅读页随之无限叠加。
+        // 主界面是 standard launchMode：缺这两个 flag，每次从通知点回来都再开一个 MainActivity。
         assertTrue(body.contains("FLAG_ACTIVITY_NEW_TASK"))
         assertTrue(body.contains("FLAG_ACTIVITY_SINGLE_TOP"))
     }
@@ -96,13 +99,13 @@ class MainNavigatorReadAloudTest {
             error("从 ${File("").absolutePath} 向上找不到 $relativePath")
         }
 
-        /** 取顶层函数/属性的源码文本，止于下一行同缩进的 `}`。 */
-        fun functionBody(source: String, signature: String): String {
+        /** 取从 `signature` 起、止于下一个 `endMarker` 的源码文本。 */
+        fun functionBody(source: String, signature: String, endMarker: String): String {
             val start = source.indexOf(signature)
             assertTrue("$signature not found", start >= 0)
             val rest = source.substring(start)
-            val end = Regex("\n    }").find(rest)?.range?.last ?: rest.length
-            return rest.substring(0, end)
+            val end = rest.indexOf(endMarker, signature.length)
+            return if (end < 0) rest else rest.substring(0, end)
         }
     }
 }

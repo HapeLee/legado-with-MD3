@@ -1696,15 +1696,10 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun readAloudActivityPendingIntent(): PendingIntent? = activityPendingIntent(
-        MainActivity.createReadBookIntent(this, readAloud = true).apply {
-            // 主界面没有 launchMode（standard）：不带这两个 flag 时，每次从通知点回来在任务栈上
-            // 都是**再开一个 MainActivity**，阅读页随之叠加，返回要按同样次数才回得到书架。
-            // 口径与 createReadMangaIntent、createReadBookMediaControlIntent 一致。
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-            )
-        },
+        // 跨文件依赖：MainActivity 在 Manifest 里没有 launchMode（即 standard）。不带这两个 flag 时，
+        // 每次从通知点回来都是再开一个 MainActivity，阅读页随之叠加，返回要按同样次数才回得到书架。
+        MainActivity.createReadBookIntent(this, readAloud = true)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
         "activity",
     )
 

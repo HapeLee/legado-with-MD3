@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -26,9 +27,9 @@ class ReaderOpenBookIsolationTest {
             "路由要把 bookUrl 随构造交给控制器，LaunchedEffect 跑在组合之后，赶不上首帧",
             construction.contains("routeBookUrl = route.bookUrl"),
         )
-        assertTrue(
+        assertFalse(
             "绑定必须写在 remember 里，不能放进 LaunchedEffect",
-            !construction.contains("LaunchedEffect"),
+            construction.contains("LaunchedEffect"),
         )
     }
 
@@ -36,13 +37,13 @@ class ReaderOpenBookIsolationTest {
     fun `pagination publish waits for the route book to become the session book`() {
         val source = mainSourceFile("io/legado/app/ui/book/read/ReadBookController.kt").readText()
         val publish = section(source, "private fun publishReaderPageWindow(")
-        val staleCheck = publish.indexOf("isReaderSessionStale()")
-        val warmPublish = publish.indexOf("publishDirectReaderPageWindow(")
+        val gateIndex = publish.indexOf("isReaderSessionStale()")
+        val directPublish = publish.indexOf("publishDirectReaderPageWindow(")
 
-        assertTrue("publishReaderPageWindow must ask the session gate", staleCheck >= 0)
+        assertTrue("publishReaderPageWindow must ask the session gate", gateIndex >= 0)
         assertTrue(
             "会话还是上一本书时只能出占位窗，正文发布必须在闸门之后",
-            warmPublish > staleCheck,
+            directPublish > gateIndex,
         )
         assertTrue(
             "闸门命中要发加载窗，不能什么都不发",
@@ -66,12 +67,13 @@ class ReaderOpenBookIsolationTest {
     }
 
     private companion object {
+        /** 取到 `startMarker` 起、止于下一个同缩进 `}` 的源码文本。 */
         fun section(source: String, startMarker: String, endMarker: String = "\n    }"): String {
             val start = source.indexOf(startMarker)
             assertTrue("$startMarker not found", start >= 0)
             val rest = source.substring(start)
-            val end = Regex(Regex.escape(endMarker)).find(rest)?.range?.last ?: rest.length
-            return rest.substring(0, end)
+            val end = rest.indexOf(endMarker, startMarker.length)
+            return if (end < 0) rest else rest.substring(0, end)
         }
 
         fun mainSourceFile(relativePath: String): File {
