@@ -88,9 +88,6 @@ android {
                 signingConfig = signingConfigs.getByName("myConfig")
             }
             manifestPlaceholders["app_name"] = "@string/app_name"
-            // 本地测试专包：与官方原版 io.legato.kazusa 并存安装、互不覆盖（noR8 由 initWith 继承）
-            applicationIdSuffix = ".mod"
-            versionNameSuffix = "-mod"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
