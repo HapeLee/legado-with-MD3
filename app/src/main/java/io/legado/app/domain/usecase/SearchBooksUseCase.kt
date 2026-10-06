@@ -186,7 +186,7 @@ class SearchBooksUseCase(
             if (page > 1 && !supportsSearchPage) {
                 return SourceSearchResult.Found(emptyList())
             }
-            val books = withTimeout(30000L) {
+            val books = withTimeout(60000L) {
                 WebBook.searchBookAwait(
                     source,
                     keyword,
@@ -202,7 +202,6 @@ class SearchBooksUseCase(
             SourceSearchResult.Found(books, supportsSearchPage)
         } catch (exception: Throwable) {
             coroutineContext.ensureActive()
-            if (exception is CancellationException) throw exception
             SourceSearchResult.Failed(exception)
         }
     }
