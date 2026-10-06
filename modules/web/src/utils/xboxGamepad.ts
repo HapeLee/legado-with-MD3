@@ -7,6 +7,7 @@ interface GamepadConfig {
   AXIS_DEADZONE: number // 摇杆死区，防止漂移
   AXIS_SCROLL_SPEED: number // 摇杆满偏时每秒滚动的像素
   TRIGGER_THRESHOLD: number // 扳机触发阈值
+  CHAPTER_COOLDOWN: number // 章节切换冷却时间 (ms)，防止十字键抖动连切多章
 
   DPAD_INDEX: {
     UP: number
@@ -76,6 +77,7 @@ const CONFIG: GamepadConfig = {
   AXIS_DEADZONE: 0.15, // 摇杆死区
   AXIS_SCROLL_SPEED: 1800, // 摇杆满偏滚动速度 (px/s)，按手感调整
   TRIGGER_THRESHOLD: 0.5, // 扳机按下超过 50% 视为触发
+  CHAPTER_COOLDOWN: 500, // 章节切换冷却 (ms)，仍误触多章就调大
 
   DPAD_INDEX: {
     // Xbox 标准映射
@@ -116,6 +118,9 @@ let onToggleCatalog: (() => void) | null = null
 
 // 每个手柄独立一份按键/摇杆边沿状态，避免多手柄互相串触发
 const gamepadStates = new Map<number, GamepadState>()
+
+// 全局共享（不按手柄区分），保证冷却期内无论多少次抖动只切一次章
+let lastChapterSwitchTime = 0
 
 // =====================================================
 // 通用工具函数
@@ -163,12 +168,25 @@ function goBottom(): void {
 }
 
 /**
- * 章节切换
+ * 章节切换（带冷却，防止十字键触点抖动导致连切多章）
  */
 function switchChapter(direction: number): void {
+  const now = performance.now()
+
+  const gap = now - lastChapterSwitchTime
+
+  if (gap < CONFIG.CHAPTER_COOLDOWN) {
+    log(`🎮 章节切换冷却中，忽略本次触发（距上次 ${Math.round(gap)}ms）`)
+
+    return
+  }
+
   const buttons = document.querySelectorAll<HTMLElement>('.read-bar .tool-icon')
 
   if (buttons.length < 2) return
+
+  // 确认真的会点击之后再记录时间
+  lastChapterSwitchTime = now
 
   if (direction === 1) {
     log('🎮 下一章')
