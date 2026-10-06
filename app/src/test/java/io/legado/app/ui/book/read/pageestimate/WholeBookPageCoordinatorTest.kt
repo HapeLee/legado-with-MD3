@@ -276,6 +276,11 @@ class WholeBookPageCoordinatorTest {
 
         assertEquals(10, coordinator.getState(0, 0)?.totalPages)
         assertFalse(coordinator.getState(0, 0)?.currentChapterExact == true)
+        // WholeBookPageCoordinator 把过期记录删除放在估算协程之外另起的 IO 任务里，
+        // 状态发布不等待它落地，所以这里必须轮询到删除完成。
+        withTimeout(2_000) {
+            while (exactStore.values.isNotEmpty()) delay(10)
+        }
         assertTrue(exactStore.values.isEmpty())
     }
 
