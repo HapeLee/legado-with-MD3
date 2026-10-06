@@ -162,6 +162,7 @@ fun BgmPoolScreen(
         }
     }
     DisposableEffect(player) { onDispose { player.release() } }
+    val playFailedMsg = stringResource(R.string.cast_bgm_play_failed)
     LaunchedEffect(effects) {
         effects.collectLatest { effect ->
             when (effect) {
@@ -185,7 +186,7 @@ fun BgmPoolScreen(
                     player.start()
                 }.onFailure {
                     onIntent(BgmPoolIntent.PlayFinished)
-                    context.toastOnUi(context.getString(R.string.cast_bgm_play_failed))
+                    context.toastOnUi(playFailedMsg)
                 }
             }
         }

@@ -397,6 +397,7 @@ private fun VoiceCastingList(
             },
             onUrl = { url -> commitAvatar(url) },
         )
+        val saveFailedMsg = stringResource(R.string.save_failed)
         CharacterAvatarCropDialog(
             sourceUri = pendingAvatarUri?.let(Uri::parse),
             onDismissRequest = { pendingAvatarUri = null },
@@ -411,7 +412,7 @@ private fun VoiceCastingList(
                         }
                     }.onSuccess { commitAvatar(it) }.onFailure {
                         avatarContext.toastOnUi(
-                            it.localizedMessage ?: avatarContext.getString(R.string.save_failed)
+                            it.localizedMessage ?: saveFailedMsg
                         )
                     }
                 }

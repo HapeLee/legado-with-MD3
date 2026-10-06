@@ -1,8 +1,8 @@
 package io.legado.app.ui.widget.components
 
-import android.app.Activity
 import android.view.View
 import android.view.Window
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -50,7 +50,6 @@ import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -82,7 +81,7 @@ data class CastOption(
 @Composable
 fun CastImeScope(content: @Composable () -> Unit) {
     val view = LocalView.current
-    val window = (LocalContext.current as? Activity)?.window
+    val window = LocalActivity.current?.window
     DisposableEffect(controllerOf(view, window)) {
         onDispose { controllerOf(view, window)?.hide(WindowInsetsCompat.Type.ime()) }
     }
@@ -113,8 +112,8 @@ private object CastImeThrottle {
 @Composable
 fun rememberImeShow(): () -> Unit {
     val view = LocalView.current
-    val window = (LocalContext.current as? Activity)?.window
-    // 对话框是另一个窗口：LocalContext 是 ContextThemeWrapper，拿不到 Activity window，
+    val window = LocalActivity.current?.window
+    // 对话框是另一个窗口：那里没有 [LocalActivity]，拿不到 Activity window，
     // 这时用 Compose 自己的控制器——它绑的就是当前 Composition 所在的那个窗口。
     val composeController = LocalSoftwareKeyboardController.current
     return remember(view, window, composeController) {

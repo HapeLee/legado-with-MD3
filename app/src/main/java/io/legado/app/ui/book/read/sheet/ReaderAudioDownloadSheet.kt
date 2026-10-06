@@ -85,6 +85,8 @@ fun ReaderAudioDownloadSheet(
     val book = ReadBook.book ?: return
     val bookUrl = book.bookUrl
     val context = LocalContext.current
+    val cancelHintMsg = stringResource(R.string.read_aloud_audio_download_cancel_hint)
+    val deletedCountMsg = stringResource(R.string.read_aloud_audio_download_deleted)
     val scope = rememberCoroutineScope()
     val chapterCount = book.totalChapterNum.coerceAtLeast(1)
     val progress by ReadAloudAudioStore.progress.collectAsState()
@@ -246,11 +248,7 @@ fun ReaderAudioDownloadSheet(
                                 MediumTonalButton(
                                     onClick = {
                                         ReadAloud.cancelDownloadAudio(context)
-                                        context.toastOnUi(
-                                            context.getString(
-                                                R.string.read_aloud_audio_download_cancel_hint,
-                                            ),
-                                        )
+                                        context.toastOnUi(cancelHintMsg)
                                     },
                                     icon = Icons.Default.Close,
                                     text = stringResource(R.string.read_aloud_audio_download_cancel),
@@ -324,12 +322,7 @@ fun ReaderAudioDownloadSheet(
                                         val deleted = ReadAloudAudioStore.delete(
                                             bookUrl, row.chapterIndex,
                                         )
-                                        context.toastOnUi(
-                                            context.getString(
-                                                R.string.read_aloud_audio_download_deleted,
-                                                deleted,
-                                            ),
-                                        )
+                                        context.toastOnUi(deletedCountMsg.format(deleted))
                                         refreshKey++
                                     }
                                 },

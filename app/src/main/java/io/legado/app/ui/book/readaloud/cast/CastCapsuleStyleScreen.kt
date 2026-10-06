@@ -112,6 +112,8 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
         nightImage = style.bgImageNight.takeIf { it.isNotEmpty() }
             ?.let { CastCapsuleImageCache.cached(it) ?: CastCapsuleImageCache.load(it) }
     }
+    val imageFailedMsg = stringResource(R.string.capsule_style_image_failed)
+    val styleSavedMsg = stringResource(R.string.capsule_style_saved)
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? ->
@@ -123,7 +125,7 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
                 withContext(Dispatchers.IO) { CastCapsuleStyleStore.saveImage(appCtx, uri) }
             }.getOrNull()
             if (saved == null) {
-                context.toastOnUi(context.getString(R.string.capsule_style_image_failed))
+                context.toastOnUi(imageFailedMsg)
                 return@launch
             }
             val next = if (nightSlot) {
@@ -139,7 +141,7 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
             ) {
                 withContext(Dispatchers.IO) { CastCapsuleStyleStore.deleteImage(replaced) }
             }
-            context.toastOnUi(context.getString(R.string.capsule_style_saved))
+            context.toastOnUi(styleSavedMsg)
         }
     }
 

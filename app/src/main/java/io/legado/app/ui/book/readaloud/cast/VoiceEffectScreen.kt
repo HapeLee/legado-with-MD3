@@ -493,7 +493,7 @@ private fun EffectSliderRow(
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = "×" + String.format(java.util.Locale.getDefault(), "%.2f", value),
+            text = "×" + String.format(java.util.Locale.ENGLISH, "%.2f", value),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.width(48.dp),
         )
