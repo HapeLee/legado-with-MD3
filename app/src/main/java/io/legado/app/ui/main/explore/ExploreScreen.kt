@@ -10,6 +10,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -95,6 +96,7 @@ fun ExploreRouteScreen(
     onOpenLogin: (sourceUrl: String) -> Unit,
     onOpenEdit: (sourceUrl: String) -> Unit,
     onOpenSearch: (scopeRaw: String) -> Unit,
+    embeddedPadding: PaddingValues? = null,
 ) {
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
@@ -135,6 +137,7 @@ fun ExploreRouteScreen(
         state = uiState,
         onIntent = viewModel::onIntent,
         onOpenExploreShow = onOpenExploreShow,
+        embeddedPadding = embeddedPadding,
     )
 }
 
@@ -144,6 +147,7 @@ fun ExploreScreen(
     state: ExploreViewModel.ExploreUiState,
     onIntent: (ExploreIntent) -> Unit,
     onOpenExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
+    embeddedPadding: PaddingValues? = null,
 ) {
     val listItems by remember(state.items, state.expandedId, state.exploreKinds) {
         derivedStateOf { buildExploreListItems(state) }
@@ -169,29 +173,7 @@ fun ExploreScreen(
 
     val composeEngine = ThemeResolver.isMiuixEngine(composeEngine)
 
-    ListScaffold(
-        title = stringResource(R.string.discovery),
-        state = state,
-        subtitle = state.selectedGroup.ifEmpty { stringResource(R.string.all) },
-        onSearchQueryChange = { onIntent(ExploreIntent.Search(it)) },
-        onSearchToggle = { onIntent(ExploreIntent.ToggleSearch(it)) },
-        searchPlaceholder = stringResource(R.string.search),
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                leadingIcon = { MenuItemIcon(Icons.Default.Group) },
-                text = stringResource(R.string.all),
-                onClick = { onIntent(ExploreIntent.SetGroup("")); dismiss() }
-            )
-            state.groups.forEach { group ->
-                RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
-                    text = group,
-                    onClick = { onIntent(ExploreIntent.SetGroup(group)); dismiss() }
-                )
-            }
-        },
-        contentWindowInsets = WindowInsets(0)
-    ) { paddingValues ->
+    val sourceContent: @Composable (PaddingValues) -> Unit = { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             if (state.items.isEmpty()) {
                 EmptyMessage(
@@ -312,6 +294,36 @@ fun ExploreScreen(
                     }
                 )
             }
+        }
+    }
+
+    if (embeddedPadding != null) {
+        sourceContent(embeddedPadding)
+    } else {
+        ListScaffold(
+            title = stringResource(R.string.discovery),
+            state = state,
+            subtitle = state.selectedGroup.ifEmpty { stringResource(R.string.all) },
+            onSearchQueryChange = { onIntent(ExploreIntent.Search(it)) },
+            onSearchToggle = { onIntent(ExploreIntent.ToggleSearch(it)) },
+            searchPlaceholder = stringResource(R.string.search),
+            dropDownMenuContent = { dismiss ->
+                RoundDropdownMenuItem(
+                    leadingIcon = { MenuItemIcon(Icons.Default.Group) },
+                    text = stringResource(R.string.all),
+                    onClick = { onIntent(ExploreIntent.SetGroup("")); dismiss() }
+                )
+                state.groups.forEach { group ->
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
+                        text = group,
+                        onClick = { onIntent(ExploreIntent.SetGroup(group)); dismiss() }
+                    )
+                }
+            },
+            contentWindowInsets = WindowInsets(0)
+        ) { paddingValues ->
+            sourceContent(paddingValues)
         }
     }
 

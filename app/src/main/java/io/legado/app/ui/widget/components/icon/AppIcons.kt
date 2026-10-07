@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationSearching
@@ -23,6 +22,7 @@ import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.RssFeed
@@ -83,7 +83,7 @@ object AppIcons {
 
     val Filter: ImageVector
         @Composable
-        get() = if (isMiuix) MiuixIcons.Filter else Icons.Default.FilterList
+        get() = if (isMiuix) MiuixIcons.Filter else Icons.Outlined.FilterAlt
 
     val Settings: ImageVector
         @Composable

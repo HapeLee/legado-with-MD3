@@ -20,11 +20,12 @@ import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsValue
 import io.legado.app.help.config.rawPrefValue
 import io.legado.app.help.config.setPrefValue
-import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "settings",
@@ -101,8 +102,12 @@ internal object ShowBrightnessViewMigration : DataMigration<Preferences> {
  */
 class SettingsRepository {
 
+    // 快照层每次写入会发射两次（pending 立即生效、落盘回灌确认），值未变化时不应让
+    // 所有订阅方重算一遍，因此按值去重。
     fun <T : Any> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> =
-        AppConfigStore.preferencesFlow.map { it.compatDsValue(key, defaultValue) }
+        AppConfigStore.preferencesFlow
+            .map { it.compatDsValue(key, defaultValue) }
+            .distinctUntilChanged()
 
     suspend fun <T : Any> updatePreference(key: Preferences.Key<T>, value: T) {
         when (value) {

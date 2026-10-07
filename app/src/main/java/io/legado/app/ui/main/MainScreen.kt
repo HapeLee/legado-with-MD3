@@ -83,6 +83,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
+import io.legado.app.feature.explore.ExploreMainRoute
 import io.legado.app.ui.book.readaloud.ReadAloudBarCapsuleEndPadding
 import io.legado.app.ui.book.readaloud.ReadAloudBarCapsuleSize
 import io.legado.app.ui.book.readaloud.ReadAloudBarCapsuleSlot
@@ -91,7 +92,6 @@ import io.legado.app.ui.book.readaloud.morph.ReadAloudMorphState
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.ui.main.bookshelf.BookshelfRouteScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
-import io.legado.app.ui.main.explore.ExploreRouteScreen
 import io.legado.app.ui.main.home.HomeRouteScreen
 import io.legado.app.ui.main.my.MyRouteScreen
 import io.legado.app.ui.main.my.PrefClickEvent
@@ -578,8 +578,18 @@ fun MainScreen(
                                 animatedVisibilityScope = animatedVisibilityScope,
                             )
 
-                            MainDestination.Explore -> ExploreRouteScreen(
+                                MainDestination.Explore -> ExploreMainRoute(
                                 onOpenExploreShow = onNavigateToExploreShow,
+                                    onBookClick = { book, sharedCoverKey ->
+                                        onNavigateToBookInfo(
+                                            book.name,
+                                            book.author,
+                                            book.bookUrl,
+                                            book.origin,
+                                            book.coverUrl,
+                                            sharedCoverKey,
+                                        )
+                                    },
                                 onOpenLogin = { sourceUrl ->
                                     onNavigateToSourceLogin(
                                         io.legado.app.ui.login.SourceLoginType.BookSource,

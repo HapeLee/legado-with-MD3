@@ -3431,4 +3431,7 @@
     <string name="home_capsule_restore_navigation">Restore navigation</string>
     <string name="home_capsule_expand_controls">Show playback controls</string>
     <string name="home_capsule_chapter">Chapter %d</string>
+    <string name="explore_main_content">Browse discovery content here</string>
+    <string name="explore_source_list">Show discovery sources</string>
+    <string name="explore_select_source">Select discovery source</string>
 </resources>

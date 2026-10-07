@@ -2989,4 +2989,7 @@
     <string name="home_capsule_restore_navigation">恢復導覽列</string>
     <string name="home_capsule_expand_controls">展開播放控制</string>
     <string name="home_capsule_chapter">第 %d 章</string>
+    <string name="explore_main_content">直接瀏覽發現內容</string>
+    <string name="explore_source_list">顯示發現書源列表</string>
+    <string name="explore_select_source">選擇發現書源</string>
 </resources>
