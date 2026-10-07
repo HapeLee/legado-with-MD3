@@ -905,18 +905,15 @@ fun BookshelfScreen(
             )
         }
     ) { paddingValues ->
-        val currentGroup by remember {
-            derivedStateOf {
-                if (uiState.isSearch) {
-                    uiState.allGroups.firstOrNull { it.groupId == currentGroupId }
-                } else {
-                    uiState.groups.getOrNull(pagerState.settledPage)
-                }
-            }
+        // uiState 是普通参数而不是快照状态：用 remember { derivedStateOf { … } } 会把首次
+        // 组合时的 uiState 永久缓存下来，之后分组开关（enableRefresh）改了也读不到，
+        // 于是"允许下拉刷新"关掉后依然能下拉。这里直接读取，随重组刷新即可。
+        val currentGroup = if (uiState.isSearch) {
+            uiState.allGroups.firstOrNull { it.groupId == currentGroupId }
+        } else {
+            uiState.groups.getOrNull(pagerState.settledPage)
         }
-        val pullToRefreshEnabled by remember {
-            derivedStateOf { (currentGroup?.enableRefresh ?: true) && !isEditMode }
-        }
+        val pullToRefreshEnabled = (currentGroup?.enableRefresh ?: true) && !isEditMode
 
         Box(Modifier.fillMaxSize()) {
             AppPullToRefresh(

@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,37 +41,45 @@ fun AppPullToRefresh(
     content: @Composable () -> Unit,
 ) {
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        // Let the miuix library handle gesture/animation, but skip the persistent
-        // Refreshing state that blocks all scroll events.
-        // localIsRefreshing is true only briefly so the indicator shows then hides,
-        // while the actual refresh runs independently.
-        var localIsRefreshing by remember { mutableStateOf(false) }
+        // Miuix 的 PullToRefresh 没有 enabled 参数，无法内部关闭手势，
+        // 因此只能在 enabled=false 时整体退化成普通容器。
+        if (enabled) {
+            // Let the miuix library handle gesture/animation, but skip the persistent
+            // Refreshing state that blocks all scroll events.
+            // localIsRefreshing is true only briefly so the indicator shows then hides,
+            // while the actual refresh runs independently.
+            var localIsRefreshing by remember { mutableStateOf(false) }
 
-        LaunchedEffect(localIsRefreshing) {
-            if (localIsRefreshing) {
-                delay(300)
-                localIsRefreshing = false
+            LaunchedEffect(localIsRefreshing) {
+                if (localIsRefreshing) {
+                    delay(300)
+                    localIsRefreshing = false
+                }
             }
-        }
 
-        MiuixPullToRefresh(
-            isRefreshing = localIsRefreshing,
-            onRefresh = {
-                localIsRefreshing = true
-                onRefresh()
-            },
-            modifier = modifier,
-            contentPadding = PaddingValues(top = topPadding + 16.dp),
-            pullToRefreshState = miuixRememberPullToRefreshState(),
-            topAppBarScrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior,
-            refreshTexts = listOf(
-                stringResource(R.string.pull_to_refresh),
-                stringResource(R.string.release_to_refresh),
-                stringResource(R.string.refreshing),
-                stringResource(R.string.refreshing)
-            )
-        ) {
-            content()
+            MiuixPullToRefresh(
+                isRefreshing = localIsRefreshing,
+                onRefresh = {
+                    localIsRefreshing = true
+                    onRefresh()
+                },
+                modifier = modifier,
+                contentPadding = PaddingValues(top = topPadding + 16.dp),
+                pullToRefreshState = miuixRememberPullToRefreshState(),
+                topAppBarScrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior,
+                refreshTexts = listOf(
+                    stringResource(R.string.pull_to_refresh),
+                    stringResource(R.string.release_to_refresh),
+                    stringResource(R.string.refreshing),
+                    stringResource(R.string.refreshing)
+                )
+            ) {
+                content()
+            }
+        } else {
+            Box(modifier) {
+                content()
+            }
         }
     } else {
         val state = rememberPullToRefreshState()
