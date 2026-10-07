@@ -56,7 +56,6 @@ import io.legado.app.ui.book.bookmark.AllBookmarkActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
-import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -174,7 +173,7 @@ fun MyScreen(
                     imageVector = Icons.Default.FindReplace,
                     onClick = {
                         onNavigate(
-                            PrefClickEvent.StartActivity(ReplaceRuleActivity::class.java)
+                            PrefClickEvent.OpenReplaceRules
                         )
                     }
                 )

@@ -1,6 +1,6 @@
 package io.legado.app.ui.main
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -15,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -29,6 +30,7 @@ import androidx.navigation3.scene.OverlayScene
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -36,7 +38,10 @@ internal const val NAV_SLIDE_DURATION_MILLIS = 480
 internal const val NAV_FADE_DURATION_MILLIS = 360
 
 /** Keeps parent destinations composed beneath a Nav3 overlay scene. */
-class ModalOverlaySceneStrategy : SceneStrategy<NavKey> {
+class ModalOverlaySceneStrategy(
+    private val isTopEntry: (Any) -> Boolean = { true },
+    private val predictiveBackEnabled: () -> Boolean = { true },
+) : SceneStrategy<NavKey> {
     private val searchAnimations = SearchOverlayAnimations()
 
     // 书内子页的滑动状态另存一份：下层用 covering() 判断要不要跟随淡出，共用会误触发搜索那套。
@@ -63,6 +68,8 @@ class ModalOverlaySceneStrategy : SceneStrategy<NavKey> {
                 previousEntries = previousEntries,
                 animations = pageSlideAnimations,
                 onBack = pageBack,
+                isTopEntry = isTopEntry,
+                predictiveBackEnabled = predictiveBackEnabled,
             )
         }
         return ModalOverlayScene(
@@ -108,6 +115,8 @@ private data class PageSlideOverlayScene(
     override val previousEntries: List<NavEntry<NavKey>>,
     private val animations: SearchOverlayAnimations,
     private val onBack: () -> Unit,
+    private val isTopEntry: (Any) -> Boolean,
+    private val predictiveBackEnabled: () -> Boolean,
 ) : OverlayScene<NavKey> {
     override val key: Any = entry.contentKey
     override val entries: List<NavEntry<NavKey>> = listOf(entry)
@@ -116,7 +125,18 @@ private data class PageSlideOverlayScene(
     private val animation = animations.state(key, previousEntries.last().contentKey)
 
     override val content: @Composable () -> Unit = {
-        BackHandler { onBack() }
+        val backScope = rememberCoroutineScope()
+        PredictiveBackHandler(enabled = isTopEntry(entry.contentKey)) { events ->
+            try {
+                events.collect { event ->
+                    if (predictiveBackEnabled()) animation.previewBack(event.progress)
+                }
+                onBack()
+            } catch (cancelled: CancellationException) {
+                backScope.launch { animation.cancelPreview() }
+                throw cancelled
+            }
+        }
         LaunchedEffect(key) {
             coroutineScope {
                 launch {
@@ -138,7 +158,10 @@ private data class PageSlideOverlayScene(
                 .fillMaxSize()
                 .zIndex(previousEntries.size.toFloat())
                 .graphicsLayer {
-                    translationX = size.width * (1f - animation.progress.value)
+                    translationX =
+                        if (animation.removing) 0f else size.width * (1f - animation.progress.value)
+                    scaleX = if (animation.removing) 0.8f + 0.2f * animation.progress.value else 1f
+                    scaleY = scaleX
                     alpha = animation.opacity.value
                 }
         ) {
@@ -148,6 +171,7 @@ private data class PageSlideOverlayScene(
 
     override suspend fun onRemove() {
         try {
+            animation.removing = true
             coroutineScope {
                 launch {
                     animation.progress.animateTo(

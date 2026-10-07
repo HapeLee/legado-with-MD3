@@ -204,34 +204,6 @@
             android:enableOnBackInvokedCallback="true"
             android:exported="false"
             android:windowSoftInputMode="adjustPan|stateHidden" />
-        <!-- 阅读漫画界面 -->
-        <activity
-            android:name=".ui.book.manga.ReadMangaActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:exported="false"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTask">
-            <intent-filter>
-                <action android:name="com.samsung.android.support.REMOTE_ACTION" />
-            </intent-filter>
-
-            <meta-data
-                android:name="com.samsung.android.support.REMOTE_ACTION"
-                android:resource="@xml/spen_remote_actions" />
-        </activity>
-        <!-- 书籍详情页 -->
-        <activity
-            android:name=".ui.book.info.BookInfoActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
-        <!-- 书籍信息编辑 -->
-        <activity
-            android:name=".ui.book.info.edit.BookInfoEditActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- 音频播放界面（nav3 路由，见 MainRouteAudioPlay） -->
         <!-- 授权界面 -->
         <activity
@@ -259,19 +231,6 @@
         <!-- txt目录规则预览(阅读界面) -->
         <activity
             android:name=".ui.book.toc.rule.preview.TxtTocRulePreviewActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
-        <!-- 替换规则界面 -->
-        <activity
-            android:name=".ui.replace.ReplaceRuleActivity"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
-            android:enableOnBackInvokedCallback="true"
-            android:windowSoftInputMode="adjustResize"
-            android:launchMode="singleTop" />
-        <!-- 目录 -->
-        <activity
-            android:name=".ui.book.toc.TocActivity"
             android:configChanges="locale|layoutDirection|uiMode|screenLayout"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />

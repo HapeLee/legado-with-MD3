@@ -33,6 +33,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -41,6 +42,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -417,6 +419,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         val orientation = resources.configuration.orientation
         val smallestWidthDp = resources.configuration.smallestScreenWidthDp
         val configuration = LocalAppUiConfiguration.current
+        val predictiveBackEnabled by rememberUpdatedState(configuration.appShell.predictiveBackEnabled)
         val tabletInterface = configuration.appShell.tabletInterface
         val defaultToReadFlow = remember(otherSettingsGateway) {
             otherSettingsGateway.settings
@@ -625,7 +628,17 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 rememberViewModelStoreNavEntryDecorator(),
                             ),
                             sceneStrategies = listOf(
-                                remember { ModalOverlaySceneStrategy() },
+                                remember {
+                                    ModalOverlaySceneStrategy(
+                                        isTopEntry = {
+                                            // Nav3's default content key also includes the route type.
+                                            backStack.lastOrNull()?.let { top ->
+                                                NavEntry(top) {}.contentKey == it
+                                            } == true
+                                        },
+                                        predictiveBackEnabled = { predictiveBackEnabled },
+                                    )
+                                },
                                 SinglePaneSceneStrategy(),
                             ),
                             transitionSpec = {

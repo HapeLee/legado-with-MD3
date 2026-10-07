@@ -87,7 +87,6 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalTxt
 import io.legado.app.ui.book.toc.DownloadState
-import io.legado.app.ui.book.toc.TocActivity
 import io.legado.app.ui.book.toc.TocBookmarkItemUi
 import io.legado.app.ui.book.toc.TocEffect
 import io.legado.app.ui.book.toc.TocIntent
@@ -137,7 +136,7 @@ fun ReaderBookSheetRoute(
     onChapterClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
     currentChapterIndex: Int? = null,
     onOpenFullBookInfo: () -> Unit,
-    onOpenFullToc: (() -> Unit)? = null,
+    onOpenFullToc: (initialPage: Int) -> Unit,
     /** 书签页跳转：携带完整书签供跳转前校验。 */
     onBookmarkNavigate: (Bookmark) -> Unit = { _ -> },
     /** 笔记页跳转：携带完整展示项供跳转前校验。 */
@@ -165,16 +164,6 @@ fun ReaderBookSheetRoute(
         if (result.resultCode == Activity.RESULT_OK) {
             viewModel.onIntent(
                 TocIntent.SaveTocRegex(result.data?.getStringExtra("tocRegex").orEmpty())
-            )
-        }
-    }
-    val fullTocLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            onChapterClick(
-                result.data?.getIntExtra("index", 0) ?: 0,
-                result.data?.getIntExtra("chapterPos", 0) ?: 0,
             )
         }
     }
@@ -210,26 +199,14 @@ fun ReaderBookSheetRoute(
             when (tab) {
                 ReaderBookSheetTab.Information -> onOpenFullBookInfo()
                 ReaderBookSheetTab.Toc -> {
-                    if (onOpenFullToc != null) {
-                        onOpenFullToc()
-                    } else {
-                        fullTocLauncher.launch(
-                            Intent(context, TocActivity::class.java)
-                                .putExtra("bookUrl", bookUrl)
-                                .putExtra("initialPage", 0)
-                        )
-                    }
+                    onOpenFullToc(0)
                 }
 
                 ReaderBookSheetTab.Bookmarks -> {
-                    fullTocLauncher.launch(
-                        Intent(context, TocActivity::class.java)
-                            .putExtra("bookUrl", bookUrl)
-                            .putExtra("initialPage", 1)
-                    )
+                    onOpenFullToc(1)
                 }
 
-                // 笔记页无全屏落地（TocActivity 暂无对应页）
+                // 笔记页暂无对应的全屏页。
                 ReaderBookSheetTab.Marks -> Unit
             }
         },

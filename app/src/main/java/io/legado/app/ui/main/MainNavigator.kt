@@ -57,6 +57,19 @@ object MainNavigator {
         val currentRoute = backStack.lastOrNull()
         if (currentRoute == route) return
 
+        // "Read" in a detail page opened by the reader returns to that existing session.
+        if (route is MainRouteReadBook && currentRoute is MainRouteBookInfo) {
+            val readerIndex = backStack.indexOfLast {
+                it is MainRouteReadBook && it.bookUrl == route.bookUrl
+            }
+            if (readerIndex >= 0) {
+                while (backStack.lastIndex > readerIndex) backStack.removeAt(backStack.lastIndex)
+                if (route.chapterChanged) backStack[readerIndex] = route
+                tracker?.onBackStackChanged(backStack)
+                return
+            }
+        }
+
         if (route is MainRouteReadManga) {
             val existingReaderIndex = backStack.indexOfLast { it is MainRouteReadManga }
             if (existingReaderIndex >= 0) {
@@ -82,6 +95,10 @@ object MainNavigator {
         }
 
         when (route) {
+            is MainRouteToc,
+            is MainRouteBookInfoEdit,
+            is MainRouteReplaceRules,
+            is MainRouteReplaceEdit -> backStack.add(route)
             is MainRouteSourceLogin -> {
                 backStack.add(route)
             }
@@ -210,6 +227,7 @@ object MainNavigator {
                     currentRoute is MainRouteExploreShow ||
                     currentRoute is MainRouteBookInfo ||
                     currentRoute is MainRouteCache ||
+                    currentRoute is MainRouteReadBook ||
                     currentRoute is MainRouteReadManga
                 ) {
                     backStack.add(route)

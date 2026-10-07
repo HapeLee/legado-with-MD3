@@ -47,6 +47,7 @@ import io.legado.app.feature.reader.core.selection.ReaderSelection
 import io.legado.app.feature.reader.core.selection.ReaderSelectionMenuAnchor
 import io.legado.app.feature.reader.core.transition.ReaderTurnDirection
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterLayoutIdentity
+import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginationResult
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginator
 import io.legado.app.feature.reader.legacy.LegacyReaderPageDecorationFactory
 import io.legado.app.feature.reader.legacy.LegacyReaderPaginationBatch
@@ -58,8 +59,8 @@ import io.legado.app.feature.reader.platform.ReaderAndroidPaginationStyle
 import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.help.TTS
 import io.legado.app.help.book.isOnLineTxt
-import io.legado.app.help.readaloud.cast.BgmSceneStore
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.readaloud.cast.BgmSceneStore
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.CacheBook
@@ -944,6 +945,7 @@ class ReadBookController(
     /** 主线程：接收一页刚成型的页，对照旧 `ReadBook.collectLayoutPages` 的按页消费。 */
     private fun onReaderPageStreamed(
         generation: Long,
+        paginationJob: Job,
         chapterIndex: Int,
         page: ReaderPage,
         traceFirstPage: Boolean = false,
@@ -951,20 +953,17 @@ class ReadBookController(
         activity.lifecycleScope.launch(Main) {
             if (traceFirstPage) ReaderPerfTrace.marker("stream.first-page-main")
             if (generation != directReaderStreamGeneration) return@launch
+            if (readerChapterPaginationJobs[chapterIndex]?.job !== paginationJob) return@launch
             if (chapterIndex !in directReaderStreamingChapters) return@launch
             val streamed = directReaderStreamedPages.getOrPut(chapterIndex) { mutableListOf() }
             if (streamed.any { it.id == page.id }) return@launch
             streamed += page
-            val currentPage =
-                directReaderPageIndex?.let { index -> directReaderPages.getOrNull(index) }
-            directReaderPages = directReaderPages
+            replaceDirectReaderPages(
+                directReaderPages
                 .filterNot { it.id.chapterIndex == chapterIndex }
                 .plus(streamed)
                 .sortedWith(compareBy({ it.id.chapterIndex }, { it.id.pageIndex }))
-            currentPage?.let { keep ->
-                val index = directReaderPages.indexOfFirst { it === keep }
-                if (index >= 0) directReaderPageIndex = index
-            }
+            )
             if (shouldPublishStreamedReaderPage(chapterIndex, page)) {
                 // 归因用：标记第一次真正发生的发布（不一定是本章第一页——发布规则要求
                 // "含 durChapterPos 的页成型"，见 shouldPublishStreamedReaderPage）。
@@ -980,22 +979,19 @@ class ReadBookController(
     }
 
     /**
-     * 主线程：重发窗口。当前页还在别的章（邻章提前流出）时只换窗、不动阅读位置，
-     * 否则会把阅读位置提前推进到邻章。
+     * 主线程：按会话目标章重发窗口。目标页就绪后替换保留的旧章页面；邻章提前流出
+     * 只能刷新已经定位的窗口，不能在当前页尚未就绪时充当首屏。
      */
     private fun publishStreamedReaderWindow(chapterIndex: Int) {
         val currentIndex = directReaderPageIndex
-        val currentChapterIndex =
-            currentIndex?.let { directReaderPages.getOrNull(it)?.id?.chapterIndex }
-        val index = if (currentIndex != null && currentChapterIndex != chapterIndex) {
-            currentIndex
-        } else {
-            ReaderPageNavigator.locateOrNull(
+        val index = if (chapterIndex == ReadBook.durChapterIndex) {
+            ReaderPageNavigator.locateReadyPage(
                 directReaderPages,
                 chapterIndex,
                 ReadBook.durChapterPos,
-            ) ?: currentIndex ?: return
-        }
+                chapterStreaming = chapterIndex in directReaderStreamingChapters,
+            ) ?: return
+        } else currentIndex ?: return
         publishDirectReaderWindow(index)
     }
 
@@ -1006,12 +1002,7 @@ class ReadBookController(
     /** 该页是否覆盖当前阅读位置（`durChapterPos`）。 */
     private fun pageCoversReadingPosition(chapterIndex: Int, page: ReaderPage): Boolean {
         if (ReadBook.durChapterIndex != chapterIndex) return false
-        val pageStart = ReaderPageNavigator.pageStart(page)
-        val pageEnd = page.elements
-            .filterIsInstance<ReaderElement.Text>()
-            .maxOfOrNull { it.chapterPosition + it.value.length.coerceAtLeast(1) }
-            ?: pageStart
-        return ReadBook.durChapterPos in pageStart..pageEnd
+        return ReaderPageNavigator.containsChapterPosition(page, ReadBook.durChapterPos)
     }
 
     private fun shouldPublishStreamedReaderPage(chapterIndex: Int, page: ReaderPage): Boolean {
@@ -1041,7 +1032,7 @@ class ReadBookController(
         val dropping = directReaderStreamedPages.filterKeys { it != keepChapterIndex }
         if (dropping.isNotEmpty()) {
             val partialIds = dropping.values.flatten().mapTo(mutableSetOf()) { it.id }
-            directReaderPages = directReaderPages.filterNot { it.id in partialIds }
+            replaceDirectReaderPages(directReaderPages.filterNot { it.id in partialIds })
         }
         directReaderStreamedPages.keys.removeAll { it != keepChapterIndex }
         directReaderStreamingChapters.removeAll { it != keepChapterIndex }
@@ -1216,7 +1207,7 @@ class ReadBookController(
             val index = candidate.chapter.index
             val previous = paginatedChapterIdentities[index]
             if (previous != null && previous != candidate.layoutIdentity()) {
-                directReaderPages = directReaderPages.filterNot { it.id.chapterIndex == index }
+                replaceDirectReaderPages(directReaderPages.filterNot { it.id.chapterIndex == index })
                 directReaderPageContexts.clear()
                 paginatedChapterIdentities.remove(index)
                 readerChapterPaginationJobs.remove(index)?.job?.cancel()
@@ -1266,7 +1257,10 @@ class ReadBookController(
             // 阅读位置跳回书首；此时不发布窗口，交给相邻章预排与后续批次补页
             // （排版失败时 updateReaderPaginationError 会给出重试入口）。
             ReaderPageNavigator
-                .locateOrNull(directReaderPages, chapter.chapter.index, ReadBook.durChapterPos)
+                .locateReadyPage(
+                    directReaderPages, chapter.chapter.index, ReadBook.durChapterPos,
+                    chapterStreaming = chapter.chapter.index in directReaderStreamingChapters,
+                )
                 ?.let { index ->
                     directReaderPageIndex = index
                     publishDirectReaderWindow(index)
@@ -1287,13 +1281,12 @@ class ReadBookController(
         directReaderPages
             .takeIf { pages -> pages.any { it.id.chapterIndex == chapter.chapter.index && !it.isPlaceholder } }
             ?.let { pages ->
-                publishDirectReaderWindow(
-                    ReaderPageNavigator.locate(
-                        pages,
-                        chapter.chapter.index,
-                        ReadBook.durChapterPos,
-                    )
-                )
+                ReaderPageNavigator.locateReadyPage(
+                    pages,
+                    chapter.chapter.index,
+                    ReadBook.durChapterPos,
+                    chapterStreaming = chapter.chapter.index in directReaderStreamingChapters,
+                )?.let(::publishDirectReaderWindow)
             }
         if (directReaderLayoutKey != key) {
             val environmentChanged = directReaderPaginationEnvironmentKey != null &&
@@ -1401,14 +1394,33 @@ class ReadBookController(
                 // （旧 View 对被顶出窗口的章同样先 `cancelLayout()`）。
                 clearStreamedReaderChapter(index)
             }
+        // Like the legacy three-chapter window, bound retained layouts as reading advances.
+        // Keep the displayed chapter during a loading handoff even if the session moved ahead.
+        val displayedChapter =
+            directReaderPageIndex?.let { directReaderPages.getOrNull(it)?.id?.chapterIndex }
+        replaceDirectReaderPages(
+            ReaderPageNavigator.retainChapterWindow(
+                directReaderPages, ReadBook.durChapterIndex, displayedChapter,
+            )
+        )
+        paginatedChapterIdentities.keys.retainAll(visible.toSet())
+        directReaderChapterPageCounts =
+            directReaderPages.groupingBy { it.id.chapterIndex }.eachCount()
+        directReaderPageContexts.clear()
     }
 
     /** 撤掉某一章"已流出但整章还没提交"的部分页与流出标记。 */
     private fun clearStreamedReaderChapter(chapterIndex: Int) {
+        directReaderStreamingChapters.remove(chapterIndex)
         val dropping = directReaderStreamedPages.remove(chapterIndex) ?: return
         val partialIds = dropping.mapTo(mutableSetOf()) { it.id }
-        directReaderPages = directReaderPages.filterNot { it.id in partialIds }
-        directReaderStreamingChapters.remove(chapterIndex)
+        replaceDirectReaderPages(directReaderPages.filterNot { it.id in partialIds })
+    }
+
+    private fun replaceDirectReaderPages(pages: List<ReaderPage>) {
+        val currentId = directReaderPageIndex?.let { directReaderPages.getOrNull(it)?.id }
+        directReaderPages = pages
+        directReaderPageIndex = ReaderPageNavigator.rebasePageIndex(pages, currentId)
     }
 
     /**
@@ -1494,6 +1506,7 @@ class ReadBookController(
         // 先登记、后启动：任务收尾要判断"表里的还是不是自己"，若先启动，快速跑完的任务会在
         // 主线程登记之前就把自己摘掉，随后又被登记回去，留下一个永不清理的残留条目。
         val job = activity.lifecycleScope.launch(IO, start = CoroutineStart.LAZY) {
+            val paginationJob = coroutineContext[Job]!!
             ReaderPerfTrace.marker("pagination.job-start")
             val highlightRules = ReaderPerfTrace.suspendSection("pagination.highlight-rules") {
                 HighlightRuleRepository().loadEnabled(ReadBookConfig.durConfig.name)
@@ -1542,7 +1555,7 @@ class ReadBookController(
                                 ReaderPerfTrace.marker("pagination.target-page")
                             }
                             onReaderPageStreamed(
-                                streamGeneration, chapterIndex, page, firstPage,
+                                streamGeneration, paginationJob, chapterIndex, page, firstPage,
                             )
                         },
                     )
@@ -1554,6 +1567,9 @@ class ReadBookController(
                 withTimeoutOrNull(900L) { readerEntranceSettled.first { it } }
             }
             withContext(Main) {
+                // Stream callbacks are queued independently on Main. A same-chapter restart
+                // must reject both queued pages and the old batch, even with unchanged geometry.
+                if (readerChapterPaginationJobs[chapterIndex]?.job !== paginationJob) return@withContext
                 applyDirectReaderPaginationBatch(
                     environmentKey = environmentKey,
                     chapter = candidate,
@@ -1563,10 +1579,14 @@ class ReadBookController(
                     ),
                     paginationGeneration = paginationGeneration,
                 )
-                if (readerChapterPaginationJobs[chapterIndex]?.job === coroutineContext[Job]) {
+                if (readerChapterPaginationJobs[chapterIndex]?.job === paginationJob) {
                     readerChapterPaginationJobs.remove(chapterIndex)
                 }
-                publishReaderPageWindow()
+                // Only a completed layout can advance the prefetch pipeline. Republishing
+                // a failed/empty batch here would immediately schedule the same missing chapter.
+                if (result is LegacyReaderChapterPaginationResult.Success && result.pages.isNotEmpty()) {
+                    publishReaderPageWindow()
+                }
             }
         }
         readerChapterPaginationJobs[chapterIndex] = ReaderChapterPaginationTask(identity, job)

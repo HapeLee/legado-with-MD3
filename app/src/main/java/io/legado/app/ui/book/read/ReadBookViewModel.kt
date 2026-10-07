@@ -983,7 +983,7 @@ class ReadBookViewModel(
             is ReadBookIntent.ReplaceRuleResult -> replaceRuleDelegate.rulesChanged()
             is ReadBookIntent.BookInfoResult -> {
                 if (intent.bookDeleted) {
-                    _effects.tryEmit(ReadBookEffect.Finish)
+                    viewModelScope.launch { emitEffectWhenSubscribed(ReadBookEffect.Finish) }
                 } else {
                     ReadBook.loadOrUpContent()
                 }

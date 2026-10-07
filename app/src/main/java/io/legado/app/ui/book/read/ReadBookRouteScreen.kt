@@ -38,13 +38,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -84,7 +84,6 @@ import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.translation.TranslationChapterStatus
-import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.sheet.CastSheetVisuals
 import io.legado.app.ui.book.read.sheet.LocalCastSheetVisuals
@@ -92,15 +91,12 @@ import io.legado.app.ui.book.read.sheet.ReaderBookSheetRoute
 import io.legado.app.ui.book.read.sheet.ReaderBookSourceActions
 import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
-import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.login.SourceLoginType
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
-import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CancellationException
@@ -158,6 +154,9 @@ fun ReadBookRouteScreen(
     isTopRoute: Boolean = true,
     onEffectsReady: () -> Unit = {},
     onOpenSearch: (word: String?, bookUrl: String, autoFocus: Boolean) -> Unit = { _, _, _ -> },
+    onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
+    onOpenToc: (bookUrl: String, initialPage: Int) -> Unit,
+    onOpenReplaceRule: (bookUrl: String?, editor: ReplaceEditRoute?) -> Unit,
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
@@ -271,20 +270,6 @@ fun ReadBookRouteScreen(
             viewModel.onIntent(ReadBookIntent.SourceEditResult)
         }
     }
-    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
-        result?.let { (index, chapterPos, _) ->
-            viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
-        }
-    }
-
-    val replaceLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            viewModel.onIntent(ReadBookIntent.ReplaceRuleResult)
-        }
-    }
-
     val fontFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -380,11 +365,7 @@ fun ReadBookRouteScreen(
         uri?.let { viewModel.onIntent(ReadBookIntent.ExportHighlightRulesToFile(it)) }
     }
 
-    val bookInfoLauncher = rememberLauncherForActivityResult(
-        StartActivityContract(BookInfoActivity::class.java)
-    ) { result ->
-        viewModel.onIntent(ReadBookIntent.BookInfoResult(result.resultCode == android.app.Activity.RESULT_OK))
-    }
+    val currentOpenBookInfo by rememberUpdatedState(onOpenBookInfo)
 
     AutoSuggestDayNightObserver(
         viewModel = viewModel,
@@ -415,14 +396,10 @@ fun ReadBookRouteScreen(
                                 )
                             }
                             is ReadBookEffect.OpenChapterList -> {
-                                tocLauncher.launch(effect.bookUrl)
+                                onOpenToc(effect.bookUrl, 0)
                             }
                             is ReadBookEffect.OpenBookInfo -> {
-                                bookInfoLauncher.launch {
-                                    putExtra("name", effect.name)
-                                    putExtra("author", effect.author)
-                                    putExtra("bookUrl", effect.bookUrl)
-                                }
+                                currentOpenBookInfo(effect.name, effect.author, effect.bookUrl)
                             }
                             is ReadBookEffect.ShowLogin -> {
                                 context.startActivity(
@@ -461,12 +438,7 @@ fun ReadBookRouteScreen(
                             ReadBookEffect.OpenTtsEnginesAndVoices -> onOpenTtsEnginesAndVoices()
                             ReadBookEffect.OpenTtsCache -> onOpenTtsCache()
                             is ReadBookEffect.MenuSettingReplace -> {
-                                replaceLauncher.launch(
-                                    ReplaceRuleActivity.startIntent(
-                                        context = context,
-                                        bookUrl = ReadBook.book?.bookUrl
-                                    )
-                                )
+                                onOpenReplaceRule(ReadBook.book?.bookUrl, null)
                             }
                             is ReadBookEffect.TextActionReplace -> {
                                 val scopes = arrayListOf<String>()
@@ -478,11 +450,11 @@ fun ReadBookRouteScreen(
                                     scope = scopes.joinToString(";"),
                                     isScopeTitle = false, isScopeContent = true,
                                 )
-                                replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
+                                onOpenReplaceRule(ReadBook.book?.bookUrl, editRoute)
                             }
                             is ReadBookEffect.OpenReplaceEditor -> {
                                 val editRoute = ReplaceEditRoute(id = effect.id, pattern = effect.pattern)
-                                replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
+                                onOpenReplaceRule(ReadBook.book?.bookUrl, editRoute)
                             }
                             is ReadBookEffect.MenuTocRegex -> {
                                 val intent = Intent(
@@ -648,19 +620,27 @@ fun ReadBookRouteScreen(
         }
     }
 
-    val fallbackReaderSurfaceColor = if (isDarkTheme) Color.Black else Color.White
-    val readerSurfaceColor = Color(
-        readerBackground.meanColorArgb.takeIf { it != 0 } ?: when {
-            // Before the route has a book, styleConfig only contains construction defaults.
-            // Keep the first opaque reader frame neutral instead of exposing an app-theme tint.
-            state.book == null -> fallbackReaderSurfaceColor.toArgb()
-            else -> runCatching {
-                android.graphics.Color.parseColor(
-                    if (isDarkTheme) state.styleConfig.bgStrNight else state.styleConfig.bgStr
-                )
-            }.getOrDefault(fallbackReaderSurfaceColor.toArgb())
-        }
-    )
+    val backgroundType = when {
+        isEInkMode -> state.styleConfig.bgTypeEInk
+        isDarkTheme -> state.styleConfig.bgTypeNight
+        else -> state.styleConfig.bgType
+    }
+    val backgroundValue = when {
+        isEInkMode -> state.styleConfig.bgStrEInk
+        isDarkTheme -> state.styleConfig.bgStrNight
+        else -> state.styleConfig.bgStr
+    }
+    val usesImageBackground = backgroundType != 0
+    // Only image backgrounds need a neutral placeholder independent of asynchronous color extraction.
+    val readerPlaceholderColor = if (usesImageBackground) {
+        LegadoTheme.colorScheme.surface
+    } else {
+        runCatching { Color(android.graphics.Color.parseColor(backgroundValue)) }
+            .getOrDefault(if (isDarkTheme && !isEInkMode) Color.Black else Color.White)
+    }
+    val readerSurfaceColor = if (usesImageBackground) {
+        readerBackground.meanColorArgb.takeIf { it != 0 }?.let(::Color) ?: readerPlaceholderColor
+    } else readerPlaceholderColor
     val readerEntranceSettled = animatedVisibilityScope?.transition?.let { transition ->
         !transition.isRunning &&
             transition.currentState == EnterExitState.Visible &&
@@ -697,7 +677,7 @@ fun ReadBookRouteScreen(
     }
     BookMorphHost(
         anchorKey = sharedCoverKey,
-        backgroundColor = readerSurfaceColor,
+        backgroundColor = readerPlaceholderColor,
         backEnabled = canMorphBack,
         predictiveBackEnabled = true,
         onDismiss = performExit,
@@ -717,7 +697,7 @@ fun ReadBookRouteScreen(
             Modifier
                 .fillMaxSize()
                 .semantics { testTagsAsResourceId = true }
-                .background(readerSurfaceColor)
+                .background(readerPlaceholderColor)
         ) {
         Box(
             Modifier
@@ -957,12 +937,12 @@ fun ReadBookRouteScreen(
                 onOpenFullBookInfo = {
                     state.book?.let { book ->
                         viewModel.onIntent(ReadBookIntent.DismissSheet)
-                        bookInfoLauncher.launch {
-                            putExtra("name", book.name)
-                            putExtra("author", book.author)
-                            putExtra("bookUrl", book.bookUrl)
-                        }
+                        onOpenBookInfo(book.name, book.author, book.bookUrl)
                     }
+                },
+                onOpenFullToc = { page ->
+                    viewModel.onIntent(ReadBookIntent.DismissSheet)
+                    state.book?.bookUrl?.let { onOpenToc(it, page) }
                 },
                 bookSource = state.bookSource,
                 onOpenChapterUrl = { viewModel.onIntent(ReadBookIntent.OpenChapterUrl) },

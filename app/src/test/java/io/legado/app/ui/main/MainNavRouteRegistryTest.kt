@@ -51,7 +51,9 @@ class MainNavRouteRegistryTest {
         val pushable = routesPushableOverOverlay()
         val graph = navGraphSource()
         val plain = pushable.filterNot { route ->
-            Regex("""entry<$route>\(metadata = ModalOverlaySceneStrategy\.\w+""").containsMatchIn(graph)
+            Regex(
+                """entry<$route>\(\s*metadata = (?:ModalOverlaySceneStrategy\.\w+|readerEntryMetadata|modalOverlayEntryMetadata)"""
+            ).containsMatchIn(graph)
         }
         assertTrue(
             "这些子页压在阅读页上会把它整页拆掉，需要 modalOverlay()/pageSlide() 元数据：\n" +
@@ -86,7 +88,9 @@ class MainNavRouteRegistryTest {
             index--
         }
         assertTrue("解析不出任何目的地，解析口径要重新对", routes.isNotEmpty())
-        return routes
+        return routes + setOf(
+            "MainRouteToc", "MainRouteBookInfoEdit", "MainRouteReplaceRules", "MainRouteReplaceEdit"
+        )
     }
 
     private fun navGraphSource(): String =

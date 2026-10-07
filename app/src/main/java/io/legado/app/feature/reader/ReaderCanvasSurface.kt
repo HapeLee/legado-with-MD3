@@ -66,7 +66,6 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.toArgb
-import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -156,6 +155,7 @@ import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
 import io.legado.app.feature.reader.platform.ReaderBookmarkBadgeRenderer
 import io.legado.app.feature.reader.platform.ReaderPageDecorationDrawCache
 import io.legado.app.feature.reader.platform.ReaderTextBackgroundLoader
+import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -234,23 +234,20 @@ fun ReaderCanvasSurface(
     externalSelections: Flow<ReaderSelection>,
     onVisibleBodyTextPositionProvider: ((() -> ReaderVisibleTextPosition?)?) -> Unit,
 ) {
-    // 滚动跨页同步换窗：跨页帧内宿主回调直接返回新窗口，先写入 pending 供绘制与
+    // 所有翻页同步换窗：宿主回调直接返回新窗口，先写入 pending 供绘制与
     // 手势立即使用；宿主 StateFlow 回声（同一实例）或外部窗口变化会将其清除。
     // 对照旧 View 版 ContentTextView.scroll 的同步折算语义。
-    var scrollPendingWindow by remember { mutableStateOf<ReaderPageWindow?>(null) }
-    var scrollPendingBase by remember { mutableStateOf<ReaderPageWindow?>(null) }
-    val pendingWindow = scrollPendingWindow
-    val pages = when {
-        pendingWindow == null -> hostPages
-        hostPages === scrollPendingBase || hostPages === pendingWindow -> pendingWindow
-        else -> hostPages
-    }
+    var pendingPageWindow by remember { mutableStateOf<ReaderPageWindow?>(null) }
+    var pendingPageBase by remember { mutableStateOf<ReaderPageWindow?>(null) }
+    val latestHostPages by rememberUpdatedState(hostPages)
+    val pages = ReaderPageNavigator.resolveWindow(hostPages, pendingPageBase, pendingPageWindow)
     // 手势协程长驻（pointerInput 只在 key 变化时重启），闭包捕获的组合期值会过期；
     // 热路径窗口必须经 rememberUpdatedState 现读。对照旧 View 版每次事件现读
     // curPage 字段、shutiao 版向长驻协程注入最新页源的语义。
     val latestPages by rememberUpdatedState(pages)
     /** 输入/绘制热路径读取的窗口：pending 未清时优先（含跨页当帧）。 */
-    fun currentPageWindow(): ReaderPageWindow = scrollPendingWindow ?: latestPages
+    fun currentPageWindow(): ReaderPageWindow =
+        ReaderPageNavigator.resolveWindow(latestHostPages, pendingPageBase, pendingPageWindow)
     val current = pages.current ?: return
     val pageBackgroundImage = remember(backgroundImage, backgroundRevision) {
         backgroundImage?.isolatedCopy()
@@ -484,14 +481,20 @@ fun ReaderCanvasSurface(
         }
     }
     fun completePendingTurn(): ReaderPageWindow? {
-        val direction = pendingTurn.takeIf { pendingTurnOrigin == latestPages.current?.id }
+        val direction = pendingTurn.takeIf { pendingTurnOrigin == currentPageWindow().current?.id }
         pendingTurn = null
         pendingTurnOrigin = null
-        return when (direction) {
+        val base = latestHostPages
+        val window = when (direction) {
             ReaderTurnDirection.PREVIOUS -> latestPreviousPage()
             ReaderTurnDirection.NEXT -> latestNextPage()
             null -> null
         }
+        if (window != null) {
+            pendingPageBase = base
+            pendingPageWindow = window
+        }
+        return window
     }
     fun settlePageTurn(decision: ReaderTransitionDecision) {
         pageMotionJob?.cancel()
@@ -508,7 +511,7 @@ fun ReaderCanvasSurface(
             curlRevealProgress = 1f
         }
         pendingTurn = transition.direction.takeIf { decision.commit }
-        pendingTurnOrigin = latestPages.current?.id
+        pendingTurnOrigin = currentPageWindow().current?.id
         if (transitionMode == ReaderTransitionMode.NONE) {
             completePendingTurn()
             displayOffset = 0f
@@ -635,8 +638,8 @@ fun ReaderCanvasSurface(
         }
         scrollOffset = result.offsetPx
         scrollOwnCrossing = true
-        scrollPendingBase = window
-        scrollPendingWindow = newWindow
+        pendingPageBase = latestHostPages
+        pendingPageWindow = newWindow
     }
 
     /**
@@ -786,9 +789,9 @@ fun ReaderCanvasSurface(
         // pending 窗口的收尾：宿主回声（与 pending 同实例）到达后解除；外部换窗
         // （其他实例，如跳转/重排）直接丢弃 pending。偏移归零由下方 current.id
         // 效应依据 scrollOwnCrossing 决定，避免两个效应间执行顺序影响结果。
-        if (scrollPendingWindow != null && hostPages !== scrollPendingBase) {
-            scrollPendingWindow = null
-            scrollPendingBase = null
+        if (pendingPageWindow != null && hostPages !== pendingPageBase) {
+            pendingPageWindow = null
+            pendingPageBase = null
         }
     }
     LaunchedEffect(current.id, current.layoutRevision, transitionMode) {

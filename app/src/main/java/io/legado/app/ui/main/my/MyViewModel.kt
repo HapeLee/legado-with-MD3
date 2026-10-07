@@ -28,6 +28,7 @@ sealed class PrefClickEvent {
     object OpenReadRecord : PrefClickEvent()
     object OpenBookCacheManage : PrefClickEvent()
     object OpenBookSourceManage : PrefClickEvent()
+    object OpenReplaceRules : PrefClickEvent()
     object OpenHighlightTagRule : PrefClickEvent()
     object OpenMultiRoleRule : PrefClickEvent()
     object OpenAbout : PrefClickEvent()

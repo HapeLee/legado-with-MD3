@@ -19,5 +19,7 @@ fun bookCoverSharedElementKey(bookUrl: String, sourceId: String? = null): String
     return "book-cover:$source:$bookUrl"
 }
 
-fun bookInfoCoverSharedElementKey(bookUrl: String): String =
-    BookCoverSharedElement.forDetail(bookUrl)
+fun bookInfoCoverSharedElementKey(bookUrl: String, openRequestId: Long = 0L): String =
+    BookCoverSharedElement.forDetail(bookUrl).let { key ->
+        if (openRequestId == 0L) key else "$key:request:$openRequestId"
+    }

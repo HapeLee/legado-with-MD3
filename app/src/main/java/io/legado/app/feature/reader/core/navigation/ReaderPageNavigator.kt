@@ -4,7 +4,6 @@ import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageId
 import io.legado.app.feature.reader.core.model.ReaderPageWindow
-import io.legado.app.feature.reader.core.navigation.ReaderPageNavigator.locate
 
 data class ReaderNavigationResult(
     val pageIndex: Int,
@@ -29,6 +28,28 @@ data class ReaderPageContext(
 )
 
 object ReaderPageNavigator {
+    /** Page-table insertions, removals and same-id replacements must not reuse an old index. */
+    fun rebasePageIndex(pages: List<ReaderPage>, previousPageId: ReaderPageId?): Int? =
+        previousPageId?.let { id -> pages.indexOfFirst { it.id == id }.takeIf { it >= 0 } }
+
+    /** Retain adjacent chapter layouts and the displayed chapter during a loading handoff. */
+    fun retainChapterWindow(
+        pages: List<ReaderPage>,
+        chapterIndex: Int,
+        displayedChapterIndex: Int?,
+    ): List<ReaderPage> = pages.filter {
+        it.id.chapterIndex in chapterIndex - 1..chapterIndex + 1 ||
+                it.id.chapterIndex == displayedChapterIndex
+    }
+
+    /** Keep a synchronous turn result visible until the host acknowledges or replaces it. */
+    fun resolveWindow(
+        host: ReaderPageWindow,
+        pendingBase: ReaderPageWindow?,
+        pending: ReaderPageWindow?,
+    ): ReaderPageWindow =
+        if (pending != null && (host === pendingBase || host === pending)) pending else host
+
     fun bodyParagraphAt(pages: List<ReaderPage>, chapterIndex: Int, chapterPosition: Int): Int? = pages
         .asSequence()
         .filter { it.id.chapterIndex == chapterIndex }
@@ -119,6 +140,31 @@ object ReaderPageNavigator {
 
     fun locate(pages: List<ReaderPage>, chapterIndex: Int, chapterPosition: Int): Int =
         locateOrNull(pages, chapterIndex, chapterPosition) ?: 0
+
+    /** A streamed last page cannot stand in for a saved position that has not been laid out yet. */
+    fun locateReadyPage(
+        pages: List<ReaderPage>,
+        chapterIndex: Int,
+        chapterPosition: Int,
+        chapterStreaming: Boolean,
+    ): Int? {
+        val index = locateOrNull(pages, chapterIndex, chapterPosition) ?: return null
+        val hasFollowingPage = pages.getOrNull(index + 1)?.id?.chapterIndex == chapterIndex
+        return index.takeIf {
+            !chapterStreaming || hasFollowingPage || containsChapterPosition(
+                pages[index],
+                chapterPosition
+            )
+        }
+    }
+
+    /** Body positions are half-open; titles use a separate coordinate space. */
+    fun containsChapterPosition(page: ReaderPage, chapterPosition: Int): Boolean {
+        val ranges = page.elements.mapNotNull(::elementRange)
+        val start = ranges.minOfOrNull { it.first } ?: return false
+        val endInclusive = ranges.maxOf { it.last }
+        return chapterPosition in start..endInclusive
+    }
 
     /**
      * Pagination may finish for a chapter that is no longer current. Follow the reading

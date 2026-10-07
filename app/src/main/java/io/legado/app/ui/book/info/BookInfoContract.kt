@@ -15,7 +15,6 @@ import io.legado.app.ui.widget.components.variable.VariableEditorUiState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
-const val READER_RESULT_DELETED = 100
 
 @Stable
 data class HighlightedTag(
