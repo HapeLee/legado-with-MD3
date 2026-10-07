@@ -252,11 +252,37 @@ object Backup {
         currentCoroutineContext().ensureActive()
         val configMap = AppConfigStore.preferences.asMap()
             .mapKeys { it.key.name }
+            .toMutableMap()
+        if (PreferKey.bookshelfSelectedGroupId !in configMap) {
+            (configMap[PreferKey.saveTabPosition] as? Long)?.let {
+                configMap[PreferKey.bookshelfSelectedGroupId] = it
+            }
+        }
+        if (PreferKey.readBrightnessMode !in configMap) {
+            when (val legacy = configMap[PreferKey.showBrightnessView]) {
+                is String -> configMap[PreferKey.readBrightnessMode] = legacy
+                is Boolean -> configMap[PreferKey.readBrightnessMode] = if (legacy) "1" else "0"
+            }
+        }
+        if (PreferKey.readBrightnessControlPosition !in configMap) {
+            when (val legacy = configMap[PreferKey.brightnessVwPos]) {
+                is String -> configMap[PreferKey.readBrightnessControlPosition] = legacy
+                is Boolean -> configMap[PreferKey.readBrightnessControlPosition] =
+                    if (legacy) "1" else "0"
+            }
+        }
         val xmlBuilder = StringBuilder()
         xmlBuilder.append("<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n")
         xmlBuilder.append("<map>\n")
         configMap.forEach { (key, value) ->
-            if (BackupConfig.keyIsNotIgnore(key, true)) {
+            // 这些旧键在其他 Legado 变体中有不同类型或含义，备份只导出独立键。
+            if (key !in setOf(
+                    PreferKey.saveTabPosition,
+                    PreferKey.showBrightnessView,
+                    PreferKey.brightnessVwPos
+                )
+                && BackupConfig.keyIsNotIgnore(key, true)
+            ) {
                 val finalValue = if (key == PreferKey.webDavPassword) {
                     aes.runCatching { encryptBase64(value.toString()) }.getOrDefault(value.toString())
                 } else value

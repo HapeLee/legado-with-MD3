@@ -7,6 +7,20 @@ import org.junit.Test
 
 class NormalizeConfigMapTest {
 
+    @Test
+    fun `旧亮度设置恢复到独立键`() {
+        val result = normalize(
+            mapOf(
+                PreferKey.showBrightnessView to "2",
+                PreferKey.brightnessVwPos to true,
+            )
+        )
+        assertEquals("2", result[PreferKey.readBrightnessMode])
+        assertEquals("1", result[PreferKey.readBrightnessControlPosition])
+        assertFalse(result.containsKey(PreferKey.showBrightnessView))
+        assertFalse(result.containsKey(PreferKey.brightnessVwPos))
+    }
+
     private fun normalize(
         map: Map<String, Any?>,
         keyIsNotIgnore: (String) -> Boolean = { true },

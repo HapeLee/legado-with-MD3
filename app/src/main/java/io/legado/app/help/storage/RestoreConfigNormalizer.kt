@@ -18,6 +18,7 @@ internal fun normalizeConfigMap(
     val finalMap = mutableMapOf<String, Any>()
     map.forEach { (key, value) ->
         if (!keyIsNotIgnore(key)) return@forEach
+        if (key == PreferKey.showBrightnessView || key == PreferKey.brightnessVwPos) return@forEach
         when (key) {
             PreferKey.webDavPassword -> {
                 val password = decryptWebDavPassword(value.toString())
@@ -28,6 +29,17 @@ internal fun normalizeConfigMap(
             else -> when (value) {
                 is Double -> finalMap[key] = value.toFloat()
                 is Int, is Boolean, is Long, is Float, is String -> finalMap[key] = value
+            }
+        }
+    }
+    mapOf(
+        PreferKey.showBrightnessView to PreferKey.readBrightnessMode,
+        PreferKey.brightnessVwPos to PreferKey.readBrightnessControlPosition,
+    ).forEach { (legacyKey, newKey) ->
+        if (newKey !in map && keyIsNotIgnore(newKey)) {
+            when (val legacy = map[legacyKey]) {
+                is String -> finalMap[newKey] = legacy
+                is Boolean -> finalMap[newKey] = if (legacy) "1" else "0"
             }
         }
     }

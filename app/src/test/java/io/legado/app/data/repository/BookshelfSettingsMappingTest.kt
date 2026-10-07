@@ -1,11 +1,26 @@
 package io.legado.app.data.repository
 
 import io.legado.app.constant.PreferKey
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.domain.model.settings.BookshelfSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BookshelfSettingsMappingTest {
+
+    @Test
+    fun `旧分组 ID 可读取但写入使用独立键`() {
+        val legacy = mapOf(PreferKey.saveTabPosition to 987654321L).toTestPreferences()
+        val settings = legacy.toBookshelfSettings()
+
+        assertEquals(987654321L, settings.saveTabPosition)
+        assertEquals(987654321L, settings.toPrefMap()[PreferKey.bookshelfSelectedGroupId])
+        assertEquals(false, settings.toPrefMap().containsKey(PreferKey.saveTabPosition))
+        assertEquals(BookGroup.IdAll,
+            mapOf(PreferKey.saveTabPosition to 2).toTestPreferences()
+                .toBookshelfSettings().saveTabPosition
+        )
+    }
 
     @Test
     fun `Bookshelf 48 键写读映射逐字段对应`() {
@@ -158,5 +173,5 @@ private fun BookshelfSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bookshelfGridCoverWidth to bookshelfGridCoverWidth,
     PreferKey.bookshelfSearchActionDirectToSearch to bookshelfSearchActionDirectToSearch,
     PreferKey.autoRefresh to autoRefreshBook,
-    PreferKey.saveTabPosition to saveTabPosition,
+    PreferKey.bookshelfSelectedGroupId to saveTabPosition,
 )

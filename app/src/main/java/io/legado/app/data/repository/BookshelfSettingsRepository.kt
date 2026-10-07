@@ -9,6 +9,7 @@ import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsBoolean
 import io.legado.app.help.config.compatDsInt
 import io.legado.app.help.config.compatDsLong
+import io.legado.app.help.config.rawPrefValue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -79,7 +80,9 @@ internal fun Preferences.toBookshelfSettings() = BookshelfSettings(
     bookshelfGridCoverWidth = compatDsInt(PreferKey.bookshelfGridCoverWidth) ?: 120,
     bookshelfSearchActionDirectToSearch = compatDsBoolean(PreferKey.bookshelfSearchActionDirectToSearch) ?: true,
     autoRefreshBook = compatDsBoolean(PreferKey.autoRefresh) ?: false,
-    saveTabPosition = compatDsLong(PreferKey.saveTabPosition) ?: BookGroup.IdAll,
+    saveTabPosition = compatDsLong(PreferKey.bookshelfSelectedGroupId)
+        ?: (rawPrefValue(PreferKey.saveTabPosition) as? Long)
+        ?: BookGroup.IdAll,
 )
 
 internal fun BookshelfSettings.toPrefMap(): Map<String, Any?> = mapOf(
@@ -130,5 +133,5 @@ internal fun BookshelfSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bookshelfGridCoverWidth to bookshelfGridCoverWidth,
     PreferKey.bookshelfSearchActionDirectToSearch to bookshelfSearchActionDirectToSearch,
     PreferKey.autoRefresh to autoRefreshBook,
-    PreferKey.saveTabPosition to saveTabPosition,
+    PreferKey.bookshelfSelectedGroupId to saveTabPosition,
 )

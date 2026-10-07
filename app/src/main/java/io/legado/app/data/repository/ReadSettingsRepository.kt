@@ -11,7 +11,9 @@ import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.compatDsString
 import io.legado.app.help.config.compatDsValue
+import io.legado.app.help.config.rawPrefValue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -81,10 +83,10 @@ class ReadSettingsRepository(
         settingsRepository.putBoolean(PreferKey.useZhLayout, value)
 
     suspend fun setShowBrightnessView(value: String) =
-        settingsRepository.putString(PreferKey.showBrightnessView, value)
+        settingsRepository.putString(PreferKey.readBrightnessMode, value)
 
     suspend fun setBrightnessVwPos(value: String) =
-        settingsRepository.putString(PreferKey.brightnessVwPos, value)
+        settingsRepository.putString(PreferKey.readBrightnessControlPosition, value)
 
     suspend fun setReadBrightness(value: Int) =
         settingsRepository.putInt(PreferKey.brightness, value)
@@ -359,8 +361,16 @@ class ReadSettingsRepository(
             textBottomJustify = compatDsValue(Keys.TextBottomJustify, true),
             adaptSpecialStyle = compatDsValue(Keys.AdaptSpecialStyle, true),
             useZhLayout = compatDsValue(Keys.UseZhLayout, false),
-            showBrightnessView = compatDsValue(Keys.ShowBrightnessView, "0"),
-            brightnessVwPos = compatDsValue(Keys.BrightnessVwPos, "1"),
+            showBrightnessView = compatDsString(PreferKey.readBrightnessMode)
+                ?: (rawPrefValue(PreferKey.showBrightnessView) as? String)
+                ?: "0",
+            brightnessVwPos = compatDsString(PreferKey.readBrightnessControlPosition)
+                ?: when (val legacy = rawPrefValue(PreferKey.brightnessVwPos)) {
+                    is String -> legacy
+                    is Boolean -> if (legacy) "1" else "0"
+                    else -> null
+                }
+                ?: "1",
             readBrightness = compatDsValue(Keys.ReadBrightness, 100),
             brightnessAuto = compatDsValue(Keys.BrightnessAuto, true),
             useUnderline = compatDsValue(Keys.UseUnderline, false),
@@ -481,8 +491,6 @@ class ReadSettingsRepository(
         val TextBottomJustify = booleanPreferencesKey(PreferKey.textBottomJustify)
         val AdaptSpecialStyle = booleanPreferencesKey(PreferKey.adaptSpecialStyle)
         val UseZhLayout = booleanPreferencesKey(PreferKey.useZhLayout)
-        val ShowBrightnessView = stringPreferencesKey(PreferKey.showBrightnessView)
-        val BrightnessVwPos = stringPreferencesKey(PreferKey.brightnessVwPos)
         val ReadBrightness = intPreferencesKey(PreferKey.brightness)
         val BrightnessAuto = booleanPreferencesKey(PreferKey.brightnessAuto)
         val UseUnderline = booleanPreferencesKey(PreferKey.useUnderline)
@@ -613,8 +621,8 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.textBottomJustify to textBottomJustify,
     PreferKey.adaptSpecialStyle to adaptSpecialStyle,
     PreferKey.useZhLayout to useZhLayout,
-    PreferKey.showBrightnessView to showBrightnessView,
-    PreferKey.brightnessVwPos to brightnessVwPos,
+    PreferKey.readBrightnessMode to showBrightnessView,
+    PreferKey.readBrightnessControlPosition to brightnessVwPos,
     PreferKey.brightness to readBrightness,
     PreferKey.brightnessAuto to brightnessAuto,
     PreferKey.useUnderline to useUnderline,
