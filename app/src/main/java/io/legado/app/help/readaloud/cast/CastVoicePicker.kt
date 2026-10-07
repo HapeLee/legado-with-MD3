@@ -36,6 +36,55 @@ object CastVoicePicker {
     }
 
     /**
+     * 用户亲自给角色挑的音色写进 book_voice_bindings。
+     *
+     * 绑定才是权威读取处：配音页显示的是它（`BookVoiceCastingViewModel`），发音链路取角色音
+     * 走的也是它（`BuildSpeechPlanUseCase`、[CastSpeechOverlay]），`cast_characters.voiceId`
+     * 只是分配表那一侧的副本。正文胶囊与配音页两条入口都必须调这里，否则各写一半就互相看不见。
+     *
+     * 主体 id 有两套并存：新建配音角色时档案 id 就是角色 id（见 [CastProfileMirror.ensure]），
+     * 但先有人物档案、后来才配音的角色档案 id 与角色 id 不同，而配音页按档案 id 读绑定、
+     * 朗读侧按角色 id 读——所以两个 id 都要写，改一次两边才都跟着变。
+     * 按「用户锁定」写入（locked=true），自动补音 [syncBinding] 之后不会再改动它。
+     * 角色这一份没有音色（[CastCharacter.voiceId] 为空）就是清掉绑定：留着旧绑定，
+     * 配音页与朗读都会继续显示/使用用户已经换掉或去掉的那一个。
+     */
+    suspend fun bindUserVoice(character: CastCharacter) {
+        val bookUrl = character.bookUrl
+        val voiceId = character.voiceId
+        if (bookUrl.isBlank() || character.id.isBlank()) return
+        val subjectIds = (
+            listOf(character.id) +
+                appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500)
+                    .filter { it.bookUrl == bookUrl && it.name == character.name }
+                    .map { it.id }
+            ).distinct()
+        val now = System.currentTimeMillis()
+        subjectIds.forEach { subjectId ->
+            val existing = appDb.readAloudVoiceDao.getBinding(
+                bookUrl,
+                BookVoiceBinding.SUBJECT_CHARACTER,
+                subjectId,
+            )
+            if (voiceId.isBlank()) {
+                existing?.let { appDb.readAloudVoiceDao.deleteBinding(it) }
+                return@forEach
+            }
+            if (existing?.voiceId == voiceId && existing.locked) return@forEach
+            appDb.readAloudVoiceDao.upsertBinding(
+                existing?.copy(voiceId = voiceId, locked = true, updatedAt = now)
+                    ?: BookVoiceBindingEntity(
+                        bookUrl = bookUrl,
+                        subjectType = BookVoiceBinding.SUBJECT_CHARACTER,
+                        subjectId = subjectId,
+                        voiceId = voiceId,
+                        locked = true,
+                    ),
+            )
+        }
+    }
+
+    /**
      * 把角色音色镜像到 book_voice_bindings（发音链路的权威读取处）。
      *
      * 只有本书角色档案里存在同名/同 id 档案时才写：绑定主体必须是发音分析产出的

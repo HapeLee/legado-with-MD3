@@ -59,6 +59,40 @@ object CastMemoryMirror {
         return lines.joinToString("\n")
     }
 
+    /**
+     * 只把记忆里 [name] 那一行的**池**那一栏换成 [pool]，别名与关系一个字都不动。
+     *
+     * 不能整行替换（[replaceLine]）：这一行是 AI 逐章滚出来的，用户在配音页或正文胶囊里
+     * 改一次池就把 AI 写下的关系抹没了。
+     * 返回 null = 这本书还没有记忆、没有这个主名的行，或者池本来就是这样。
+     */
+    fun replaceLinePool(memory: String, name: String, pool: String): String? {
+        val mainName = name.trim()
+        if (memory.isBlank() || mainName.isEmpty()) return null
+        val lines = memory.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        val at = lines.indexOfFirst { it.split('｜', '|').first().trim() == mainName }
+        if (at < 0) return null
+        val fields = lines[at].split('｜', '|').map { it.trim() }.toMutableList()
+        if (fields.getOrNull(3).orEmpty() == pool) return null
+        while (fields.size < 4) fields += ""
+        fields[3] = pool
+        if (pool.isBlank() && fields.size == 4) fields.removeAt(3)
+        val rendered = fields.joinToString("｜")
+        if (rendered == lines[at]) return null
+        lines[at] = rendered
+        return lines.joinToString("\n")
+    }
+
+    /** 角色换了声音池 → 本书记忆里那一行的池跟着换（AI 下一趟才会按新池填它）。 */
+    suspend fun syncCharacterPool(bookUrl: String, name: String, pool: String) {
+        if (bookUrl.isBlank()) return
+        val row = appDb.bookCastMemoryDao.get(bookUrl) ?: return
+        val next = replaceLinePool(row.memory, name, pool) ?: return
+        appDb.bookCastMemoryDao.upsert(
+            row.copy(memory = next, updatedAt = System.currentTimeMillis()),
+        )
+    }
+
     /** 记忆 → 档案：补空缺的简介与池，并把别名并进去（不覆盖用户已经写下的那一份）。 */
     suspend fun applyMemoryToProfiles(bookUrl: String, memory: String) {
         if (bookUrl.isBlank() || memory.isBlank()) return

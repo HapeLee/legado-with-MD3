@@ -244,6 +244,10 @@ object CastAssignmentStore {
         val updated = CastVoicePicker.ensureVoice(base)
         appDb.castCharacterDao.update(updated)
         CastProfileMirror.ensure(updated)
+        // 音色要落到 book_voice_bindings（配音页与朗读读它），池要落到本书记忆
+        // （AI 下一趟才按新池填这个人），只写 cast_characters 就成了「胶囊改了别处看不见」
+        CastVoicePicker.bindUserVoice(updated)
+        CastMemoryMirror.syncCharacterPool(bookUrl, updated.name, updated.poolLabel)
         // 角色改名/换池后同步所有引用它的分配行冗余字段（全局胶囊与标记随之更新）
         appDb.chapterRoleAssignmentDao.updateForCharacter(
             bookUrl, updated.id, updated.name, updated.poolLabel, updated.updatedAt,
@@ -289,6 +293,8 @@ object CastAssignmentStore {
         if (appDb.castCharacterDao.insertIgnore(character) <= 0L) return CastResult.EXISTS
         val withVoice = CastVoicePicker.ensureVoice(character)
         CastProfileMirror.ensure(withVoice)
+        // 与 [confirm] 同理：手工挑的音色只有写进绑定才进得了配音页与朗读链路
+        CastVoicePicker.bindUserVoice(withVoice)
         assign(
             bookUrl = bookUrl,
             chapterIndex = chapterIndex,

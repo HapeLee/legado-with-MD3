@@ -2,7 +2,6 @@ package io.legado.app.help.readaloud.cast
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookCharacterProfile
-import io.legado.app.data.entities.BookVoiceBindingEntity
 import io.legado.app.data.entities.CastCharacter
 import io.legado.app.domain.model.readaloud.BookVoiceBinding
 import io.legado.app.feature.reader.core.cast.CastMarkers
@@ -158,30 +157,12 @@ object BookCastStore {
         appDb.chapterRoleAssignmentDao.updateForCharacter(
             bookUrl, updated.id, updated.name, updated.poolLabel, updated.updatedAt,
         )
-        // 用户在这里挑的音色与配音页挑的是同一件事：写进绑定（发音链路读它），
-        // 并按「手动锁定」处理，否则自动选音会把它改掉。
-        if (voiceId.isNotBlank() && voiceId != character.voiceId) {
-            val now = System.currentTimeMillis()
-            val existing = appDb.readAloudVoiceDao.getBinding(
-                bookUrl,
-                BookVoiceBinding.SUBJECT_CHARACTER,
-                updated.id,
-            )
-            appDb.readAloudVoiceDao.upsertBinding(
-                existing?.copy(voiceId = voiceId, locked = true, updatedAt = now)
-                    ?: BookVoiceBindingEntity(
-                        bookUrl = bookUrl,
-                        subjectType = BookVoiceBinding.SUBJECT_CHARACTER,
-                        subjectId = updated.id,
-                        voiceId = voiceId,
-                        locked = true,
-                        source = BookVoiceBinding.SOURCE_USER,
-                        confidence = 1f,
-                        createdAt = now,
-                        updatedAt = now,
-                    ),
-            )
-        }
+        // 这里挑的音色与正文胶囊挑的是同一件事：写进绑定（配音页显示它、发音链路读它），
+        // 并按「手动锁定」处理，否则自动选音会把它改掉。不带条件判断——两边本来就已经
+        // 不一致时（老数据、胶囊写过一半），用户再存一次就该把绑定拉回当前这一份。
+        CastVoicePicker.bindUserVoice(updated)
+        // 池是 AI 下一趟填人的依据，只写角色行会让本书记忆停留在旧池
+        CastMemoryMirror.syncCharacterPool(bookUrl, updated.name, updated.poolLabel)
         if (updated.name != character.name ||
             updated.poolLabel != character.poolLabel ||
             updated.voiceEffect != character.voiceEffect
@@ -234,6 +215,8 @@ object BookCastStore {
         if (appDb.castCharacterDao.insertIgnore(character) <= 0L) return false
         val withVoice = CastVoicePicker.ensureVoice(character)
         CastProfileMirror.ensure(withVoice)
+        // 新建时就挑了音色的，绑定要一起写，否则这个音色既听不到也在配音页显示不出来
+        CastVoicePicker.bindUserVoice(withVoice)
         return true
     }
     /**
