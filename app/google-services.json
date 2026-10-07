@@ -42,44 +42,6 @@
           "other_platform_oauth_client": []
         }
       }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:499897677610:android:8515a1e32b7b544ec09053",
-        "android_client_info": {
-          "package_name": "io.legato.kazusa.mod"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAaA79qTqF3S67JUVnUK7pdWx3Y3-sbOZI"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:499897677610:android:8515a1e32b7b544ec09053",
-        "android_client_info": {
-          "package_name": "io.legato.kazusa.mod.debug"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAaA79qTqF3S67JUVnUK7pdWx3Y3-sbOZI"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
     }
   ],
   "configuration_version": "1"
