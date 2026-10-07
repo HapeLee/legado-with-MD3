@@ -189,7 +189,10 @@ fun BookshelfRouteScreen(
     // 离开前那一版列表；目标一旦回到可见（正常返回、预测性返回都算），立刻恢复用最新
     // 排序 —— 重排发生在书架不可见的时候，回到书架时看到的已经是排好的结果。
     val transition = animatedVisibilityScope?.transition
-    val isLeavingShelf = transition?.targetState == EnterExitState.PostExit
+    // 判据是「目标不再是可见」而不是「已经退完」：打开书会立刻落库最后阅读时间，列表 Flow
+    // 在**动画进行中**就重发一次。用 PostExit 的话整块网格正好在动画那 420ms 里跟着重排、
+    // 每张封面重建 Coil 请求——用户看到的「从书架打开卡、从详情页打开丝滑」差的就是这一条。
+    val isLeavingShelf = transition != null && transition.targetState != EnterExitState.Visible
     var leavingShelfState by remember { mutableStateOf<BookshelfUiState?>(null) }
     LaunchedEffect(isLeavingShelf) {
         if (isLeavingShelf) return@LaunchedEffect
@@ -905,18 +908,15 @@ fun BookshelfScreen(
             )
         }
     ) { paddingValues ->
-        val currentGroup by remember {
-            derivedStateOf {
-                if (uiState.isSearch) {
-                    uiState.allGroups.firstOrNull { it.groupId == currentGroupId }
-                } else {
-                    uiState.groups.getOrNull(pagerState.settledPage)
-                }
-            }
+        // uiState 是普通参数而不是快照状态：用 remember { derivedStateOf { … } } 会把首次
+        // 组合时的 uiState 永久缓存下来，之后分组开关（enableRefresh）改了也读不到，
+        // 于是"允许下拉刷新"关掉后依然能下拉。这里直接读取，随重组刷新即可。
+        val currentGroup = if (uiState.isSearch) {
+            uiState.allGroups.firstOrNull { it.groupId == currentGroupId }
+        } else {
+            uiState.groups.getOrNull(pagerState.settledPage)
         }
-        val pullToRefreshEnabled by remember {
-            derivedStateOf { (currentGroup?.enableRefresh ?: true) && !isEditMode }
-        }
+        val pullToRefreshEnabled = (currentGroup?.enableRefresh ?: true) && !isEditMode
 
         Box(Modifier.fillMaxSize()) {
             AppPullToRefresh(

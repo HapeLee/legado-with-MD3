@@ -12,6 +12,10 @@ import io.legado.app.data.dao.AiChatDao
 import io.legado.app.data.dao.AiMemoryDao
 import io.legado.app.data.dao.AiProfileDao
 import io.legado.app.data.dao.AiPromptPresetDao
+import io.legado.app.data.dao.VoiceEffectDao
+import io.legado.app.data.dao.ReadAloudAudioDownloadDao
+import io.legado.app.data.dao.BgmPoolDao
+import io.legado.app.data.dao.BgmSceneDao
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookContentProcessDao
 import io.legado.app.data.dao.BookDao
@@ -21,6 +25,10 @@ import io.legado.app.data.dao.BookMarkingDao
 import io.legado.app.data.dao.BookSourceDao
 import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.CacheDao
+import io.legado.app.data.dao.BookCastMemoryDao
+import io.legado.app.data.dao.CastCharacterDao
+import io.legado.app.data.dao.VoicePoolDao
+import io.legado.app.data.dao.ChapterRoleAssignmentDao
 import io.legado.app.data.dao.ChapterSpeechDao
 import io.legado.app.data.dao.CloudTtsEngineDao
 import io.legado.app.data.dao.CookieDao
@@ -34,6 +42,7 @@ import io.legado.app.data.dao.HttpTTSDao
 import io.legado.app.data.dao.KeyboardAssistsDao
 import io.legado.app.data.dao.ReadAloudVoiceDao
 import io.legado.app.data.dao.ReadRecordDao
+import io.legado.app.data.dao.RegexCastRuleDao
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.dao.RssArticleDao
 import io.legado.app.data.dao.RssReadRecordDao
@@ -54,6 +63,14 @@ import io.legado.app.data.entities.AiModelProfile
 import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.AiProviderProfile
 import io.legado.app.data.entities.AiTaskPreset
+import io.legado.app.data.entities.VoiceEffectPreset
+import io.legado.app.data.entities.BgmPoolEntity
+import io.legado.app.data.entities.BgmPoolGroupEntity
+import io.legado.app.data.entities.BgmPoolMember
+import io.legado.app.data.entities.BgmSceneMark
+import io.legado.app.data.entities.BgmTrackEntity
+import io.legado.app.data.entities.RegexCastRule
+import io.legado.app.data.entities.RegexCastGroup
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookCharacterEvent
@@ -63,6 +80,7 @@ import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookKnowledgeEntry
 import io.legado.app.data.entities.BookMarking
+import io.legado.app.data.entities.ReadAloudAudioDownload
 import io.legado.app.data.entities.BookOutlineNode
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
@@ -70,6 +88,12 @@ import io.legado.app.data.entities.BookVoiceBindingEntity
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.Cache
 import io.legado.app.data.entities.ChapterSpeechAnalysisEntity
+import io.legado.app.data.entities.BookCastMemory
+import io.legado.app.data.entities.CastCharacter
+import io.legado.app.data.entities.VoicePoolEntity
+import io.legado.app.data.entities.VoicePoolGroupEntity
+import io.legado.app.data.entities.VoicePoolMember
+import io.legado.app.data.entities.ChapterRoleAssignment
 import io.legado.app.data.entities.ChapterSpeechSegmentEntity
 import io.legado.app.data.entities.CloudTtsEngineEntity
 import io.legado.app.data.entities.Cookie
@@ -112,7 +136,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 107,
+    version = 130,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -128,8 +152,13 @@ val appDb by lazy {
         BookCharacterEvent::class, BookCharacterRelation::class, BookKnowledgeEntry::class,
         BookOutlineNode::class, ReadAloudVoiceEntity::class, BookVoiceBindingEntity::class,
         ChapterSpeechAnalysisEntity::class, ChapterSpeechSegmentEntity::class,
+        ChapterRoleAssignment::class, CastCharacter::class, BookCastMemory::class,
+        VoicePoolEntity::class, VoicePoolMember::class, VoicePoolGroupEntity::class,
         CloudTtsEngineEntity::class, ExactChapterPageCountEntity::class,
-        BookMarking::class],
+        BgmTrackEntity::class,
+        BgmPoolEntity::class, BgmPoolMember::class, BgmPoolGroupEntity::class,
+        BgmSceneMark::class, VoiceEffectPreset::class,
+        BookMarking::class, ReadAloudAudioDownload::class, RegexCastRule::class, RegexCastGroup::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -196,7 +225,54 @@ val appDb by lazy {
         // readRecordSession 新增 bookUrl 归属列：同名作者作品共存时按书籍副本分别计时
         AutoMigration(from = 105, to = 106),
         // books 新增 isPrivate 列：单本私密标记，与所属私密分组共同决定书籍是否私密
-        AutoMigration(from = 106, to = 107)
+        AutoMigration(from = 106, to = 107),
+        // chapter_role_assignments 新表：多角色分配（对话→角色）
+        AutoMigration(from = 107, to = 108),
+        // cast_characters 新表：配音角色档案（身份=书+名字+声音池，同名可多版本并存）
+        AutoMigration(from = 108, to = 109),
+        // voice_pools + voice_pool_members 新表：声音池可管理（建/删/分组/成员）
+        AutoMigration(from = 109, to = 110),
+        // voice_pool_members 新增 enabled 列：池内音色启用开关
+        AutoMigration(from = 110, to = 111),
+        // book_cast_memory 新表：AI 分配角色的书级人物档案
+        AutoMigration(from = 111, to = 112),
+        // voice_pool_groups 新表 + voice_pools 新增 groupId/order：分组升级为可嵌套实体
+        AutoMigration(from = 112, to = 113),
+        // voice_pool_groups 新增 enabled：分组可整体停用，停用的组不作为新建分配的候选
+        AutoMigration(from = 113, to = 114),
+        // bgm_tracks 新表：背景音乐池，导入的配乐文件副本 + 顺序/开关
+        AutoMigration(from = 114, to = 115),
+        // bgm_pools + bgm_pool_members + bgm_pool_groups 新表：背景音乐池也分组、可拖动排序，与角色声音池同构
+        AutoMigration(from = 115, to = 116),
+        // bgm_scene_marks 新表：正文段起的背景音乐场景（池/单首），只作视觉胶囊与朗读取乐
+        AutoMigration(from = 116, to = 117),
+        // voice_effect_presets 新表 + cast_characters 新增 voiceEffect：变声器预设与角色绑定
+        AutoMigration(from = 117, to = 118),
+        // bgm_tracks.volume + bgm_scene_marks.volume：配乐自身音量与段内音量，实际播放取乘积
+        AutoMigration(from = 118, to = 119),
+        // chapter_role_assignments.voiceEffect：正文胶囊那一栏的段级变声器
+        AutoMigration(from = 119, to = 120),
+        // cast_characters.sortOrder：配音页人物拖动排序，没拖过的仍按男女主/男女配置顶
+        AutoMigration(from = 120, to = 121),
+        // read_aloud_audio_downloads：听书音频按章下载的记录（文件名清单 + 句数）
+        AutoMigration(from = 121, to = 122),
+        // highlight_rules 新增命中排版四列 + 九宫格长度偏移：全部默认 0，老规则各列取值不变、读回来逐字节等价
+        AutoMigration(from = 122, to = 123),
+        // 版本号 123 对外发布过两套列定义，identityHash 对不上会让覆盖安装被 Room 拒绝开库；
+        // 124 用手工迁移按列名补齐，见 DatabaseMigrations。
+        // 125：九宫格长度偏移拆成左/右两列（DROP COLUMN 要 SQLite 3.35，minSdk 26 没有），
+        // 同样手工整表重建，老值按左右各一半落进新列。
+        // cast_characters.bubbleRuleJson：这个角色自己的气泡（只填气泡那几栏的高亮规则 JSON），
+        // 默认空串 = 不设气泡，老角色该字段保持默认、读回来逐字节等价。
+        AutoMigration(from = 125, to = 126),
+        // 127：新表 regex_cast_rules（正则角色：命中文字换音色 / 换音效）。
+        AutoMigration(from = 126, to = 127),
+        // 128 是手工迁移：正则角色的分组从「一个文本列」升级成真正的可嵌套分组树
+        // （新表 regex_cast_groups + rules.groupId），要搬数据，AutoMigration 做不了。
+        // regex_cast_rules 新增 useRegex 列：一条规则自己决定按正则还是按字面量匹配
+        AutoMigration(from = 128, to = 129),
+        // regex_cast_rules 新增 voiceEffect 列：命中的那段文字用哪个变声器预设念，默认空 = 不变声
+        AutoMigration(from = 129, to = 130),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -209,6 +285,15 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val bookKnowledgeDao: BookKnowledgeDao
     abstract val readAloudVoiceDao: ReadAloudVoiceDao
     abstract val chapterSpeechDao: ChapterSpeechDao
+    abstract val chapterRoleAssignmentDao: ChapterRoleAssignmentDao
+    abstract val castCharacterDao: CastCharacterDao
+    abstract val bookCastMemoryDao: BookCastMemoryDao
+    abstract val voicePoolDao: VoicePoolDao
+    abstract val bgmPoolDao: BgmPoolDao
+    abstract val bgmSceneDao: BgmSceneDao
+    abstract val regexCastRuleDao: RegexCastRuleDao
+    abstract val voiceEffectDao: VoiceEffectDao
+    abstract val readAloudAudioDownloadDao: ReadAloudAudioDownloadDao
     abstract val cloudTtsEngineDao: CloudTtsEngineDao
     abstract val replaceRuleDao: ReplaceRuleDao
     abstract val searchBookDao: SearchBookDao

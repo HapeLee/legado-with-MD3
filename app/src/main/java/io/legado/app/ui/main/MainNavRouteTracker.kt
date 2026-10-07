@@ -28,4 +28,15 @@ class MainNavRouteTracker {
     fun onBackStackChanged(backStack: List<NavKey>) {
         _backStack.value = backStack.toList()
     }
+
+    /**
+     * 进程内最后一次看到的阅读页路由（栈顶不是阅读页时给 null）。
+     *
+     * 用它的理由：MIUI 之类会把任务栈清掉却留着进程（朗读的前台服务还在跑），再点图标时
+     * 系统给的是一个 `savedInstanceState == null` 的全新 MainActivity。这时阅读页的活动
+     * 状态确实没了，但导航栈的进程内快照还在——不接上它，用户看到的就是
+     * 「朗读中挂后台，回来落到书架」。用户自己退回书架时栈顶已经不是阅读页，
+     * 这里返回 null，不会把阅读页硬塞回去。
+     */
+    fun lastReadBookRoute(): MainRouteReadBook? = currentRoute as? MainRouteReadBook
 }

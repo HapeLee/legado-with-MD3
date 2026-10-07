@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,8 +26,11 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -50,8 +56,10 @@ import io.legado.app.domain.model.readaloud.profile
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
+import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -94,7 +102,26 @@ fun CloudTtsScreen(
     var showAddEngineSheet by remember { mutableStateOf(false) }
     var showHttpTtsImportSheet by remember { mutableStateOf(false) }
     var showHttpTtsUrlInput by remember { mutableStateOf(false) }
+    // 行尾试听按钮长按：弹出试听文本悬浮窗（改默认文本 / 直接试听草稿）
+    var previewTextVoice by remember { mutableStateOf<CloudTtsVoiceItemUi?>(null) }
+    previewTextVoice?.let { voice ->
+        VoicePreviewTextDialog(
+            voiceTitle = voice.title,
+            initialText = state.previewText,
+            onDismiss = { previewTextVoice = null },
+            onPreview = { draft -> onIntent(CloudTtsIntent.PreviewVoice(voice.id, draft)) },
+            onConfirm = { draft ->
+                onIntent(CloudTtsIntent.SavePreviewText(draft))
+                previewTextVoice = null
+            },
+        )
+    }
     val player = remember { MediaPlayer() }
+    /** 批量操作的右下角折叠菜单：只在批量模式下有意义，退出就收起来。 */
+    var voiceBatchMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.voiceBatchMode) {
+        if (!state.voiceBatchMode) voiceBatchMenuExpanded = false
+    }
     val errorTitle = stringResource(R.string.cloud_tts_error)
     val previewPlaybackFailed = stringResource(R.string.cloud_tts_preview_playback_failed)
     DisposableEffect(player) { onDispose { player.release() } }
@@ -140,6 +167,23 @@ fun CloudTtsScreen(
                 title = stringResource(R.string.read_aloud_engines_and_voices),
                 navigationIcon = { TopBarNavigationButton(onClick = onBack) },
                 actions = {
+                    if (state.selectedTab == CloudTtsTab.Voices) {
+                        TopBarActionButton(
+                            onClick = { onIntent(CloudTtsIntent.ToggleVoiceBatchMode) },
+                            imageVector = if (state.voiceBatchMode) {
+                                Icons.Default.Check
+                            } else {
+                                Icons.Default.SelectAll
+                            },
+                            contentDescription = stringResource(
+                                if (state.voiceBatchMode) {
+                                    R.string.cloud_tts_exit_batch
+                                } else {
+                                    R.string.cloud_tts_batch_mode
+                                }
+                            ),
+                        )
+                    }
                     if (state.selectedTab == CloudTtsTab.Engines) {
                         var expanded by remember { mutableStateOf(false) }
                         Box {
@@ -193,18 +237,58 @@ fun CloudTtsScreen(
             )
         },
         floatingActionButton = {
-            AppFloatingActionButton(
-                onClick = {
-                    if (state.selectedTab == CloudTtsTab.Engines) showAddEngineSheet = true
-                    else onIntent(CloudTtsIntent.AddVoice)
-                },
-                icon = if (state.selectedTab == CloudTtsTab.Engines) Icons.Default.Add
-                    else Icons.Default.RecordVoiceOver,
-                tooltipText = stringResource(
-                    if (state.selectedTab == CloudTtsTab.Engines) R.string.cloud_tts_add_engine
-                    else R.string.cloud_tts_add_voice
-                ),
-            )
+            // 批量操作放右下角折叠菜单：列表顶部那条横排按钮划到下面就够不着了
+            if (state.selectedTab == CloudTtsTab.Voices && state.voiceBatchMode) {
+                val selectedCount = state.selectedVoiceIds.size
+                AppFloatingActionButtonMenu(
+                    // 组件内部自带 horizontal 16 / vertical 24 的内边距，不抵消的话这颗
+                    // 会比平时那颗 FAB 往里缩，进出批量模式时位置一跳（用户说的「割裂」）。
+                    // 数值是量出来的：真机上两颗左沿都落在 1188px，纵向 24dp 会低 28px
+                    // （560dpi = 8dp），所以 x 补满 16、y 只补 16。
+                    modifier = Modifier.offset(x = 16.dp, y = 16.dp),
+                    expanded = voiceBatchMenuExpanded,
+                    onExpandedChange = { voiceBatchMenuExpanded = it },
+                    items = listOf(
+                        FabMenuItem(
+                            icon = Icons.Default.SelectAll,
+                            label = stringResource(R.string.select_all),
+                            action = { onIntent(CloudTtsIntent.ToggleSelectAllVoices) },
+                        ),
+                        FabMenuItem(
+                            icon = Icons.Default.PlaylistAdd,
+                            label = stringResource(
+                                R.string.cloud_tts_add_selected_to_pool, selectedCount,
+                            ),
+                            action = { onIntent(CloudTtsIntent.RequestAddToPool(emptyList())) },
+                        ),
+                        FabMenuItem(
+                            icon = Icons.Default.Delete,
+                            label = stringResource(
+                                R.string.cloud_tts_delete_selected_count, selectedCount,
+                            ),
+                            action = { onIntent(CloudTtsIntent.RequestDeleteSelectedVoices) },
+                        ),
+                        FabMenuItem(
+                            icon = Icons.Default.Close,
+                            label = stringResource(R.string.cancel),
+                            action = { onIntent(CloudTtsIntent.ToggleVoiceBatchMode) },
+                        ),
+                    ),
+                )
+            } else {
+                AppFloatingActionButton(
+                    onClick = {
+                        if (state.selectedTab == CloudTtsTab.Engines) showAddEngineSheet = true
+                        else onIntent(CloudTtsIntent.AddVoice)
+                    },
+                    icon = if (state.selectedTab == CloudTtsTab.Engines) Icons.Default.Add
+                        else Icons.Default.RecordVoiceOver,
+                    tooltipText = stringResource(
+                        if (state.selectedTab == CloudTtsTab.Engines) R.string.cloud_tts_add_engine
+                        else R.string.cloud_tts_add_voice
+                    ),
+                )
+            }
         },
     ) { padding ->
         HorizontalPager(
@@ -226,15 +310,56 @@ fun CloudTtsScreen(
                     TinyClickableSettingItem(
                         title = voice.title,
                         description = voice.summary,
-                        trailingContent = if (voice.deletable) {{
-                            MediumTonalButton(
-                                onClick = { onIntent(CloudTtsIntent.RequestDeleteVoice(voice.id)) },
-                                icon = Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.delete),
-                            )
-                        }} else null,
+                        trailingContent = {
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                if (state.voiceBatchMode) {
+                                    if (voice.deletable) {
+                                        MediumTonalButton(
+                                            onClick = {
+                                                onIntent(CloudTtsIntent.ToggleVoiceSelection(voice.id))
+                                            },
+                                            selected = voice.id in state.selectedVoiceIds,
+                                            icon = Icons.Default.Check,
+                                            contentDescription =
+                                                stringResource(R.string.cloud_tts_batch_mode),
+                                        )
+                                    }
+                                } else {
+                                    MediumTonalButton(
+                                        onClick = { onIntent(CloudTtsIntent.PreviewVoice(voice.id)) },
+                                        onLongClick = { previewTextVoice = voice },
+                                        icon = Icons.Default.PlayArrow,
+                                        contentDescription =
+                                            stringResource(R.string.cloud_tts_preview_a11y),
+                                    )
+                                    if (voice.deletable) {
+                                        MediumTonalButton(
+                                            onClick = {
+                                                onIntent(CloudTtsIntent.RequestAddToPool(listOf(voice.id)))
+                                            },
+                                            icon = Icons.Default.PlaylistAdd,
+                                            contentDescription =
+                                                stringResource(R.string.cloud_tts_add_to_pool),
+                                        )
+                                        MediumTonalButton(
+                                            onClick = {
+                                                onIntent(CloudTtsIntent.RequestDeleteVoice(voice.id))
+                                            },
+                                            icon = Icons.Default.Delete,
+                                            contentDescription = stringResource(R.string.delete),
+                                        )
+                                    }
+                                }
+                            }
+                        },
                         onClick = {
-                            if (voice.editable) onIntent(CloudTtsIntent.EditVoice(voice.id))
+                            when {
+                                state.voiceBatchMode && voice.deletable ->
+                                    onIntent(CloudTtsIntent.ToggleVoiceSelection(voice.id))
+
+                                !state.voiceBatchMode && voice.editable ->
+                                    onIntent(CloudTtsIntent.EditVoice(voice.id))
+                            }
                         },
                     )
                 }
@@ -406,6 +531,72 @@ fun CloudTtsScreen(
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(CloudTtsIntent.DismissError) },
     )
+    val deleteVoices = state.activeDialog as? CloudTtsDialog.DeleteVoices
+    AppAlertDialog(
+        show = deleteVoices != null,
+        onDismissRequest = { onIntent(CloudTtsIntent.DismissError) },
+        title = stringResource(R.string.delete),
+        text = deleteVoices?.let {
+            stringResource(R.string.cloud_tts_delete_voices_message, it.count)
+        },
+        confirmText = stringResource(R.string.delete),
+        onConfirm = { onIntent(CloudTtsIntent.ConfirmDeleteSelectedVoices) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(CloudTtsIntent.DismissError) },
+    )
+    state.poolPicker?.let { picker ->
+        AppModalBottomSheet(
+            show = true,
+            onDismissRequest = { onIntent(CloudTtsIntent.DismissPoolPicker) },
+            title = stringResource(
+                R.string.cloud_tts_add_selected_to_pool,
+                picker.voiceIds.size,
+            ),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (picker.voiceLabel.isNotBlank()) {
+                    AppText(
+                        text = picker.voiceLabel,
+                        style = LegadoTheme.typography.bodyMedium,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (picker.pools.isEmpty()) {
+                    AppText(
+                        text = stringResource(R.string.cloud_tts_no_pools),
+                        style = LegadoTheme.typography.bodyMedium,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 24.dp),
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 480.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        items(picker.pools, key = { "pool:${it.id}" }) { pool ->
+                            TinyClickableSettingItem(
+                                title = pool.name,
+                                description = listOf(
+                                    pool.groupName,
+                                    stringResource(
+                                        R.string.cloud_tts_pool_member_count,
+                                        pool.memberCount,
+                                    ),
+                                ).filter(String::isNotBlank).joinToString(" · "),
+                                onClick = { onIntent(CloudTtsIntent.ConfirmAddToPool(pool.id)) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
     val defaultScope = state.activeDialog as? CloudTtsDialog.DefaultEngineScope
     AppAlertDialog(
         show = defaultScope != null,
@@ -898,7 +1089,9 @@ private fun TtsVoicePresetEditorContent(
                     }
                 }
                 if (editor.editingVoiceId == null) {
-                    items(filteredVoices, key = { it.id }) { voice ->
+                    // 同一引擎可以有多个同名音色（小米引擎的 Voice.name 就只有「zh」这种），
+                    // 只用 id 当 key 会让 LazyColumn 直接崩溃
+                    items(filteredVoices, key = { "${it.id}|${it.locale}" }) { voice ->
                         TinyClickableSettingItem(
                             title = voice.label.substringBefore(" · "),
                             description = buildString {
@@ -1092,4 +1285,45 @@ private fun VoiceEnginePickerSheet(
             }
         }
     }
+}
+
+/**
+ * 试听文本悬浮窗：输入框里是当前的默认试听文本，右下角「确定」保存并关闭，
+ * 「试听」直接念输入框里的内容（不保存），方便一边改一边听。
+ */
+@Composable
+private fun VoicePreviewTextDialog(
+    voiceTitle: String,
+    initialText: String,
+    onDismiss: () -> Unit,
+    onPreview: (String) -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var text by remember(voiceTitle) { mutableStateOf(initialText) }
+    AppAlertDialog(
+        show = true,
+        onDismissRequest = onDismiss,
+        title = voiceTitle,
+        text = stringResource(R.string.cloud_tts_preview_text_summary),
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AppTextField(
+                    text,
+                    { text = it },
+                    label = stringResource(R.string.cloud_tts_preview_text_title),
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                MediumTonalButton(
+                    onClick = { onPreview(text) },
+                    text = stringResource(R.string.cloud_tts_preview),
+                    icon = Icons.Default.PlayArrow,
+                )
+            }
+        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onConfirm(text) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss,
+    )
 }

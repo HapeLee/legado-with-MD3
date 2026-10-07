@@ -8,6 +8,14 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.net.Uri
 import androidx.core.net.toUri
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.toBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.koin.core.context.GlobalContext
+import splitties.init.appCtx
 import java.io.File
 import kotlin.uuid.Uuid
 import kotlin.math.ceil
@@ -20,7 +28,7 @@ data class CharacterAvatarCrop(
     val viewportSize: Float,
 )
 
-fun saveCharacterAvatar(
+suspend fun saveCharacterAvatar(
     context: Context,
     sourceUri: Uri,
     crop: CharacterAvatarCrop,
@@ -67,7 +75,8 @@ fun saveCharacterAvatar(
     if (output !== bitmap) {
         output.recycle()
     }
-    bitmap.recycle()
+    // bitmap 不回收：链接头像那一份是 Coil 缓存里的同一个对象，回收它等于把
+    // 人物详情/配音页正在显示的那张图抽走（画到就崩）。
     return file.toUri().toString()
 }
 
@@ -82,11 +91,27 @@ fun deleteCharacterAvatar(context: Context, avatarUri: String?) {
     }
 }
 
-fun decodeCharacterAvatarBitmap(
+suspend fun decodeCharacterAvatarBitmap(
     context: Context,
     uri: Uri,
     maxSideSize: Int = 2048,
 ): Bitmap {
+    // 链接头像（人物详情里填的那种）没有流可解，先按封面同一套取图拿回来再裁
+    if (uri.scheme == "http" || uri.scheme == "https") {
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                GlobalContext.get().get<ImageLoader>()
+                    .execute(
+                        ImageRequest.Builder(appCtx)
+                            .data(uri)
+                            .allowHardware(false)
+                            .size(maxSideSize, maxSideSize)
+                            .build()
+                    )
+                    .image?.toBitmap()
+            }.getOrNull() ?: error("Failed to decode avatar image")
+        }
+    }
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     context.contentResolver.openInputStream(uri)?.use {
         BitmapFactory.decodeStream(it, null, bounds)

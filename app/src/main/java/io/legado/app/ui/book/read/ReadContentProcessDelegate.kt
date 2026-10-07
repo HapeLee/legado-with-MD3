@@ -7,6 +7,7 @@ import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.model.TextProcessAction
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.model.ReadBook
+import io.legado.app.service.BaseReadAloudService
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.collections.immutable.toImmutableList
@@ -121,8 +122,18 @@ class ReadContentProcessDelegate(
         for (index in chapterIndex - 1..chapterIndex + 1) {
             ReadBook.removeLoading(index)
         }
-        ReadBook.loadContent(resetPageOffset = false)
+        ReadBook.loadContent(
+            resetPageOffset = false,
+            preserveReadAloudPosition = readsCurrentChapterAloud(chapterIndex),
+        )
     }
+
+    /**
+     * 只在朗读服务正读这一章时保位：保位后重载落进 `ReadAloud.syncLayout()` 而不是重新起播，
+     * 后者会按当前页重锚，读过的整段从头再来。别的章照旧（换章本来就要重开朗读）。
+     */
+    private fun readsCurrentChapterAloud(chapterIndex: Int): Boolean =
+        BaseReadAloudService.isRun && BaseReadAloudService.currentChapterIndex == chapterIndex
 
     /**
      * Reprocesses only the current chapter while retaining its last readable input/page snapshot.
@@ -132,7 +143,11 @@ class ReadContentProcessDelegate(
     fun reloadCurrentChapterPreservingSnapshot() {
         val chapterIndex = ReadBook.durChapterIndex
         ReadBook.removeLoading(chapterIndex)
-        ReadBook.loadContent(chapterIndex, resetPageOffset = false)
+        ReadBook.loadContent(
+            chapterIndex,
+            resetPageOffset = false,
+            preserveReadAloudPosition = readsCurrentChapterAloud(chapterIndex),
+        )
     }
 
     private fun BookContentProcess.toContentProcessItemUi(): ContentProcessItemUi? {

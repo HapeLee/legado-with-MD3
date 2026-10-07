@@ -1273,13 +1273,18 @@ class BookInfoViewModel(
 
     private fun refreshMeta(book: Book) {
         execute {
+            val kindBefore = book.kind
             book.upKind()
             val userGroupIds = bookGroupRepository.getIdsSum()
             val groupAnd = userGroupIds and book.group
             val hasCustomGroup = book.group > 0L && groupAnd != 0L
             val groupNames = bookGroupRepository.getGroupNames(book.group).joinToString(",")
             val normalizedGroupNames = groupNames.ifBlank { null }
-            bookRepository.update(book)
+            // 只有 upKind 真改写出过差异才落库：全行写会失效书架查询，让正在播形变转场的
+            // 书架整屏重组（同一口径见 ReadBookLoadDelegate.initData）。
+            if (book.kind != kindBefore) {
+                bookRepository.update(book)
+            }
             val finalKinds = book.getDisplayTagList()
             val enabledRules = highlightTagRuleRepository.getEnabled()
             val (highlighted, regular) = parseHighlightedTags(finalKinds, enabledRules)

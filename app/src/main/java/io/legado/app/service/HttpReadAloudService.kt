@@ -2,13 +2,18 @@ package io.legado.app.service
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
+import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.Timeline
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
@@ -17,6 +22,7 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.offline.DefaultDownloaderFactory
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.Downloader
@@ -26,9 +32,15 @@ import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.script.ScriptException
 import io.legado.app.R
+import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
+import io.legado.app.constant.IntentAction
+import io.legado.app.constant.NotificationId
 import io.legado.app.data.appDb
+import io.legado.app.data.entities.VoiceEffectPreset
+import io.legado.app.help.readaloud.effect.VoiceEffectAudio
+import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.HttpTTS
@@ -53,6 +65,7 @@ import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.readaloud.cast.CastAssignmentStore
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.exoplayer.InputStreamDataSource
 import io.legado.app.help.http.okHttpClient
@@ -60,6 +73,7 @@ import io.legado.app.help.readaloud.playback.CharacterPerformanceInstructionBuil
 import io.legado.app.help.readaloud.playback.CloudTtsAudioSynthesizer
 import io.legado.app.help.readaloud.playback.CloudTtsEmotionMapper
 import io.legado.app.help.readaloud.playback.CloudTtsRoleInstructionMapper
+import io.legado.app.help.readaloud.playback.ReadAloudAudioStore
 import io.legado.app.help.readaloud.playback.SystemTtsFileSynthesizer
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
@@ -71,6 +85,7 @@ import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.servicePendingIntent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -84,12 +99,14 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.sync.withLock
 import okhttp3.Response
 import org.koin.core.context.GlobalContext
 import org.koin.java.KoinJavaComponent.get
 import org.mozilla.javascript.WrappedException
 import splitties.init.appCtx
+import splitties.systemservices.notificationManager
 import java.io.File
 import java.io.InputStream
 import java.net.ConnectException
@@ -125,7 +142,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     /**
      * 源级合成语速倍率, 仅当源接口支持语速参数 ({{speakSpeed}}) 时影响返回的音频。
-     * 全局语速不再参与合成, 避免与播放端变速叠加。
+     * 全局语速不参与合成, 避免与播放端变速叠加。
      */
     private fun synthesisSpeed(httpTts: HttpTTS?): Float =
         ((httpTts?.speed ?: DEFAULT_TTS_SPEED) + 5) / 10f
@@ -140,7 +157,178 @@ class HttpReadAloudService : BaseReadAloudService(),
         ExoPlayer.Builder(this).build()
     }
 
-    // 改为外部存储
+    /** 变声器的会话级效果（混响 / 带通）挂在朗读播放器上，随当前条切换。 */
+    private val voiceEffectAudio by lazy { VoiceEffectAudio() }
+
+    /** 只是用来把「读时长排音效位置」推到下一帧，不是计时器（计时交给媒体时钟）。 */
+    private val soundHandler = Handler(Looper.getMainLooper())
+
+    private fun cueEffect(index: Int): VoiceEffectPreset? =
+        playbackQueue.cues.getOrNull(index)
+            ?.let { VoiceEffectStore.ofSpeech(it.voiceEffect, it.characterId) }
+
+    /**
+     * 把这一单元身上的音效排到**媒体时钟**的命中位置上。
+     *
+     * 音效串来自 [takeCueSounds]（格式契约在 RegexCastSplitter 底部），落到
+     * [io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer] 的 prime + play。
+     * 起播时刻用 `PlayerMessage.setPosition` 投递——它按真正播出的位置触发；换句回调比
+     * 出声位置提前一整段管线缓冲，不能做基准。时长要等下一循环帧再读（见 [soundHandler]），
+     * 文件则现在就 [io.legado.app.help.readaloud.playback.ReadAloudEffectPlayer.prime] 读完，
+     * 到点只剩 `start()`。
+     */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun scheduleCueSounds(index: Int) {
+        val sounds = takeCueSounds(index)
+        if (sounds.isEmpty()) return
+        sounds.forEach { (path, permille) ->
+            readAloudEffect.prime(path)
+            if (permille <= 0) {
+                readAloudEffect.play(path)
+                return@forEach
+            }
+            // 转场那一刻 `duration` 可能还是上一条的，下一帧再读时长算位置
+            soundHandler.post {
+                val durationMs = exoPlayer.duration
+                if (durationMs == C.TIME_UNSET || durationMs <= 0L) {
+                    readAloudEffect.play(path)
+                    return@post
+                }
+                val target = (exoPlayer.currentPosition + durationMs * permille / 1000L)
+                    .coerceAtMost(durationMs)
+                val sent = runCatching {
+                    exoPlayer.createMessage { _, _ -> readAloudEffect.play(path) }
+                        .setType(SOUND_MESSAGE_TYPE)
+                        .setLooper(Looper.getMainLooper())
+                        .setPosition(exoPlayer.currentMediaItemIndex, target)
+                        .setDeleteAfterDelivery(true)
+                        .send()
+                    true
+                }.getOrDefault(false)
+                if (!sent) readAloudEffect.play(path)
+            }
+        }
+    }
+
+    /** 某一句应该有的播放参数：这一句的音高/语速 × 全局语速。 */
+    private fun playbackParametersFor(index: Int) =
+        VoiceEffectAudio.parameters(cueEffect(index), globalPlaybackSpeed)
+
+    /**
+     * 换句时把这一句的音高/语速设到播放器上。
+     *
+     * 句边界串音没有干净的解：`playbackParameters` 在解码链当前位置生效，与出声位置隔着
+     * 管线缓冲；本仓库锁的 media3 1.11 没有「参数绑到单条 MediaItem」的 API，只能按
+     * [EFFECT_PITCH_SWITCH_LEAD_MS] 打一点提前量逼近。要根除只能把音高烘进合成文件本身
+     * （云端引擎请求里有 pitch 字段，本地 TTS Server 只收文本+语速，做不到）。
+     */
+    private fun applyCuePitch(index: Int) {
+        exoPlayer.playbackParameters = playbackParametersFor(index)
+    }
+
+    /** 只切会话级效果（混响 / 带通）：这一层挂在音频会话上，播出那一刻才听得到。 */
+    private fun applyCueSessionEffect(index: Int) {
+        voiceEffectAudio.attach(exoPlayer.audioSessionId)
+        voiceEffectAudio.apply(cueEffect(index))
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun applyCueVoiceEffect(index: Int) {
+        val preset = cueEffect(index)
+        applyCuePitch(index)
+        // 混响/金属感挂在音频会话上，是播出那一刻生效的，切在句边界正好
+        applyCueSessionEffect(index)
+        // 只在预设真的换了时留一行，逐句都写会把日志刷满
+        if (preset?.name != effectLogName) {
+            effectLogName = preset?.name
+            AppLog.putDebug(
+                "变声器→句 $index 预设=${preset?.name ?: "无"} 会话=${exoPlayer.audioSessionId}"
+            )
+        }
+        scheduleNextCueEffect(index)
+    }
+
+    /** 上一次记日志时生效的预设名。 */
+    private var effectLogName: String? = null
+
+    /**
+     * 排期消息的载荷：句下标 + 队列代次 + 这一条只管哪一层。
+     *
+     * 两层各一条消息，因为它们生效的位置不同：音高/语速在解码链上生效，比出声位置早
+     * 一整段管线缓冲，要提前 [EFFECT_PITCH_SWITCH_LEAD_MS] 才落在句边界；混响/带通挂在
+     * 输出会话上，作用在正在出声的信号上，只提前 [EFFECT_SESSION_LEAD_MS]。
+     */
+    private class CuePitchTick(val index: Int, val generation: Int, val pitch: Boolean)
+
+    /** 排下去还没投递的两条消息；换队列时要收回，不然旧句的参数会扣在新句上。 */
+    private var pendingPitchMessage: PlayerMessage? = null
+    private var pendingSessionMessage: PlayerMessage? = null
+
+    /** 队列代次：播放器一重置就 +1，之前的排期全部作废。 */
+    private var pitchGeneration = 0
+
+    /** 播放器重置（重新开播、停止、销毁）：作废所有还没投递的排期。 */
+    private fun resetPitchSchedule() {
+        pitchGeneration++
+        pendingPitchMessage?.cancel()
+        pendingPitchMessage = null
+        pendingSessionMessage?.cancel()
+        pendingSessionMessage = null
+    }
+
+    /**
+     * 把下一句的变声器（音高/语速 + 混响/带通）排在**本句结束前一点**投递。
+     *
+     * `PlayerMessage` 由媒体时钟（真正播出的位置）投递，但两层的生效点不一样：
+     * `playbackParameters` 在解码链当前位置生效，比出声位置早一整段还没出声的管线缓冲，
+     * 所以要提前那么多才落在句边界——等换句回调再设，这一句开头就还带着上一句的音色。
+     * 音频会话上的效果作用在**正在出声**的信号上，只能贴边换。提前量落在合成音频自带的
+     * 句尾静音里；句子很短时按 duration 的三分之一收窄，不啃真正的说话内容。
+     */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun scheduleNextCueEffect(index: Int) {
+        val next = index + 1
+        if (next > playbackQueue.cues.lastIndex) return
+        val durationMs = exoPlayer.duration
+        if (durationMs == C.TIME_UNSET || durationMs <= 0) return
+        val sessionLead = minOf(EFFECT_SESSION_LEAD_MS, durationMs / 3)
+        val pitchLead = minOf(EFFECT_PITCH_SWITCH_LEAD_MS, durationMs / 3)
+        pendingPitchMessage?.cancel()
+        pendingSessionMessage?.cancel()
+        runCatching {
+            // 音高层提前得多（补解码链那段缓冲），会话层贴边换（它作用在正在出声的信号上）
+            pendingSessionMessage = exoPlayer
+                .createMessage { _, payload ->
+                    val tick = payload as? CuePitchTick
+                    if (tick != null && !tick.pitch && tick.generation == pitchGeneration) {
+                        applyCueSessionEffect(tick.index)
+                    }
+                }
+                .setType(PITCH_MESSAGE_TYPE)
+                .setPayload(CuePitchTick(next, pitchGeneration, pitch = false))
+                .setLooper(Looper.getMainLooper())
+                .setPosition(exoPlayer.currentMediaItemIndex, durationMs - sessionLead)
+                .setDeleteAfterDelivery(true)
+                .send()
+            pendingPitchMessage = exoPlayer
+                .createMessage { _, payload ->
+                    val tick = payload as? CuePitchTick
+                    if (tick != null && tick.pitch && tick.generation == pitchGeneration) {
+                        applyCuePitch(tick.index)
+                    }
+                }
+                .setType(PITCH_MESSAGE_TYPE)
+                .setPayload(CuePitchTick(next, pitchGeneration, pitch = true))
+                .setLooper(Looper.getMainLooper())
+                .setPosition(exoPlayer.currentMediaItemIndex, durationMs - pitchLead)
+                .setDeleteAfterDelivery(true)
+                .send()
+        }.onFailure {
+            AppLog.putDebug("变声器提前排期失败(句 $next): ${it.message}")
+        }
+    }
+
+    // 缓存目录优先外部存储，externalCacheDir 不可用时退回内部 cacheDir
     private val ttsFolderPath: String by lazy {
         val baseDir = externalCacheDir ?: cacheDir
         baseDir.absolutePath + File.separator + "httpTTS" + File.separator
@@ -177,12 +365,14 @@ class HttpReadAloudService : BaseReadAloudService(),
     override fun onCreate() {
         super.onCreate()
         exoPlayer.addListener(this)
-        exoPlayer.setPlaybackSpeed(globalPlaybackSpeed)
+        applyCueVoiceEffect(nowSpeak)
+        // 上一次会话没走到 onDestroy 留下的缓存音频在这里清掉，理由见 [sweepBurnAfterReadLeftovers]。
+        Coroutine.async { sweepBurnAfterReadLeftovers() }
         lifecycleScope.launch {
             readAloudSettingsGateway.settings.collectLatest {
                 readAloudSettings = it
                 // 全局语速为播放端变速, 设置变化即时生效, 无需重新合成
-                exoPlayer.setPlaybackSpeed(globalPlaybackSpeed)
+                applyCueVoiceEffect(nowSpeak)
             }
         }
         lifecycleScope.launch {
@@ -197,6 +387,10 @@ class HttpReadAloudService : BaseReadAloudService(),
         super.onDestroy()
         downloadTask?.cancel()
         preDownloadJob?.cancel()
+        audioDownloadTask?.cancel()
+        resetPitchSchedule()
+        // 会话效果挂在播放器持有的音频会话上，服务销毁前不放手就留在一条死会话里
+        voiceEffectAudio.release()
         exoPlayer.release()
         cache.release()
         Coroutine.async {
@@ -208,6 +402,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     override fun play() {
         pageChanged = false
         exoPlayer.stop()
+        resetPitchSchedule()
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
             AppLog.putDebug("朗读列表为空")
@@ -229,6 +424,261 @@ class HttpReadAloudService : BaseReadAloudService(),
         paragraphIntervalJob?.cancel()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
+        resetPitchSchedule()
+    }
+
+    // ---- 听书音频下载 ----
+
+    private var audioDownloadTask: Coroutine<*>? = null
+
+    /** 句子计数：并发合成时只有这一个写入点，用原子计数免得加锁。 */
+    private val audioDownloadSentences = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /** 这一批里合成失败、没落进下载区的句子数。 */
+    private val audioDownloadFailed = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /**
+     * 把 [start]..[end] 章的朗读音频合成到下载区（含只有本章：start == end）。
+     *
+     * 完全复用实时朗读那一条链路——同一个音色路由、同一个文件名算法、同一套引擎分派，
+     * 只是不播。每句先合成进缓存目录，再把文件复制进下载区：缓存目录那套「临时名 + 改名」
+     * 已经处理过「半截文件被当成缓存」的坑，不重做一遍；而缓存会被清、下载区不会。
+     */
+    private fun startAudioDownload(bookUrl: String, start: Int, end: Int) {
+        val book = appDb.bookDao.getBook(bookUrl) ?: return
+        val httpTts = ReadAloud.httpTTS ?: run {
+            toastOnUi("听书下载要用文件合成引擎：请选 HTTP/云端引擎，或打开多角色朗读")
+            return
+        }
+        // 没有在播 = 这次开服务只为下载，下完就自己收，别留一个空转的朗读服务
+        val downloadOnly = exoPlayer.mediaItemCount == 0 && !exoPlayer.isPlaying
+        val last = end.coerceAtLeast(start)
+        audioDownloadTask?.cancel()
+        audioDownloadFailed.set(0)
+        ReadAloudAudioStore.updateProgress(
+            ReadAloudAudioStore.Progress(
+                running = true,
+                bookUrl = bookUrl,
+                chapterTotal = last - start + 1,
+            )
+        )
+        audioDownloadTask = execute(executeContext = IO) {
+            var chapterDone = 0
+            var consecutiveFailures = 0
+            for (index in start..last) {
+                ensureActive()
+                val chapter = appDb.bookChapterDao.getChapter(bookUrl, index) ?: break
+                val prepared = getPreDownloadChapter(book, chapter)
+                chapterDone++
+                if (prepared == null) {
+                    consecutiveFailures++
+                    if (consecutiveFailures >= 5) break
+                    continue
+                }
+                consecutiveFailures = 0
+                downloadChapterAudio(book, chapter.index, prepared, httpTts, chapterDone)
+            }
+            ReadAloudAudioStore.finishProgress()
+            upAudioDownloadNotification(force = true)
+            toastOnUi("听书音频下载结束")
+            stopSelfIfDownloadOnly(downloadOnly)
+        }.onError {
+            if (it !is CancellationException) {
+                AppLog.put("听书音频下载失败\n${it.localizedMessage}", it)
+            }
+            ReadAloudAudioStore.finishProgress()
+            notificationManager.cancel(NotificationId.ReadAloudAudioDownload)
+            stopSelfIfDownloadOnly(downloadOnly)
+        }
+    }
+
+    /**
+     * 只为下载而开着的服务在下完后自己关掉。
+     *
+     * 判断以**当前**播放状态为准：下载期间用户点了朗读就当他要继续听，不能把他停掉。
+     * 问播放状态必须切回主线程——ExoPlayer 只允许在创建它的线程访问，而这里的调用点
+     * 在下载协程（IO 线程）里，直接读就抛「Player is accessed on the wrong thread」。
+     */
+    private fun stopSelfIfDownloadOnly(startedAsDownloadOnly: Boolean) {
+        if (!startedAsDownloadOnly) return
+        // context 要显式给 Main：Coroutine 用 withContext(scope + context) 跑块，
+        // 不写的话它默认是 IO，会把 launch 的调度器盖掉，又回到错的线程上。
+        execute(context = Main) {
+            if (!exoPlayer.isPlaying && exoPlayer.mediaItemCount == 0) {
+                stopSelf()
+            }
+        }
+    }
+
+    private suspend fun downloadChapterAudio(
+        book: Book,
+        chapterIndex: Int,
+        prepared: PreDownloadChapter,
+        httpTts: HttpTTS,
+        chapterDone: Int,
+    ) = coroutineScope {
+        val bookUrl = book.bookUrl
+        val concurrency = readAloudSettings.ttsPreSynthesisConcurrency.coerceIn(1, 8)
+        val semaphore = kotlinx.coroutines.sync.Semaphore(concurrency)
+        audioDownloadSentences.set(0)
+        ReadAloudAudioStore.updateProgress(
+            ReadAloudAudioStore.progress.value.copy(
+                chapterDone = chapterDone - 1,
+                currentChapter = prepared.chapterTitle,
+                sentenceTotal = prepared.contentList.size,
+                sentenceDone = 0,
+            )
+        )
+        // 文件名要和朗读时算出来的一模一样，所以文本、引擎、语速全都沿用那一条路径
+        val results = prepared.contentList.mapIndexed { index, raw ->
+            async {
+                semaphore.acquire()
+                try {
+                    val content = speechText(raw)
+                    val routedVoice = voiceForCue(prepared.queue, index, httpTts)
+                    val cue = prepared.queue.cues.getOrNull(index)
+                    val fileName = md5SpeakFileName(
+                        content, prepared.chapterTitle,
+                        sourceKey = sourceKeyForCue(routedVoice, cue, httpTts),
+                    )
+                    if (ReadAloudAudioStore.downloadedFile(bookUrl, fileName) != null) {
+                        finishAudioDownloadSentence(bookUrl, fileName, prepared)
+                    } else if (synthesizeCueWithSystemFile(
+                            routedVoice, cue, content, prepared.chapterTitle, httpTts, fileName
+                        )
+                    ) {
+                        finishAudioDownloadSentence(bookUrl, fileName, prepared)
+                    } else {
+                        // 合成失败就什么都不写。落一份无声占位当「下载成功」，这一句以后永远
+                        // 播空白：朗读侧在缓存里认到同名文件就不再重新合成，下载区那份又优先
+                        // 于缓存，连清缓存都救不回来。
+                        audioDownloadFailed.incrementAndGet()
+                        null
+                    }
+                } finally {
+                    semaphore.release()
+                }
+            }
+        }.awaitAll().filterNotNull()
+        ReadAloudAudioStore.record(bookUrl, chapterIndex, prepared.chapterTitle, results)
+        ReadAloudAudioStore.updateProgress(
+            ReadAloudAudioStore.progress.value.copy(
+                chapterDone = chapterDone,
+                failed = audioDownloadFailed.get(),
+            )
+        )
+        upAudioDownloadNotification(force = true)
+    }
+
+    /** 合成好的那份从缓存目录落进下载区，顺带推进句子计数。 */
+    private suspend fun finishAudioDownloadSentence(
+        bookUrl: String,
+        fileName: String,
+        prepared: PreDownloadChapter,
+    ): String? {
+        val saved = ReadAloudAudioStore.saveFrom(
+            bookUrl, fileName, getSpeakFileAsMd5(fileName)
+        ) ?: return null
+        // 播放先认下载区（见 [speakFileForPlay]），落进下载区后缓存这份副本没有别的用途。即听即焚下
+        // 当场删：一次下载能合成整本书，等不到起手那次清扫，占用会一路涨。
+        if (cacheBurnAfterRead) {
+            FileUtils.delete(getSpeakFileAsMd5(fileName).absolutePath)
+        }
+        val done = audioDownloadSentences.incrementAndGet()
+        ReadAloudAudioStore.updateProgress(
+            ReadAloudAudioStore.progress.value.copy(
+                sentenceDone = done,
+                sentenceTotal = prepared.contentList.size,
+            )
+        )
+        if (done % 8 == 0) upAudioDownloadNotification()
+        return fileName
+    }
+
+    /**
+     * 预合成那份分派不认系统引擎（系统音色是直读的），下载必须认，否则用系统音色的书一句都下不来。
+     */
+    private suspend fun synthesizeCueWithSystemFile(
+        routedVoice: ReadAloudVoice,
+        cue: io.legado.app.domain.model.readaloud.ReadAloudPlaybackCue?,
+        content: String,
+        chapterTitle: String,
+        httpTts: HttpTTS,
+        fileName: String,
+    ): Boolean {
+        if (routedVoice.engineType != ReadAloudVoice.ENGINE_SYSTEM) {
+            return synthesizeSingleCue(routedVoice, cue, content, chapterTitle, httpTts)
+        }
+        val speakText = content.replace(AppPattern.notReadAloudRegex, "")
+        if (speakText.isEmpty()) {
+            createSilentSound(fileName)
+            return true
+        }
+        val config = runCatching {
+            GSON.fromJson(routedVoice.traitsJson, SystemTtsVoiceConfig::class.java)
+        }.getOrNull() ?: SystemTtsVoiceConfig()
+        val synthesized = synthesizeSpeakFile(fileName) { output ->
+            systemTtsFileSynthesizer.synthesize(
+                routedVoice.engineId,
+                routedVoice.speakerId,
+                speakText,
+                output,
+                config.speechRate ?: 1f,
+                config.pitch ?: 1f,
+            )
+        }
+        if (synthesized) writeTextIndexEntry(fileName, speakText)
+        return synthesized
+    }
+
+    private fun cancelAudioDownload() {
+        audioDownloadTask?.cancel()
+        audioDownloadTask = null
+        ReadAloudAudioStore.finishProgress()
+        notificationManager.cancel(NotificationId.ReadAloudAudioDownload)
+    }
+
+    /** 下载通知：章节走进度条，句子数写在正文里，两个维度都看得见。 */
+    private fun upAudioDownloadNotification(force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastAudioDownloadNotifyMs < 500L) return
+        lastAudioDownloadNotifyMs = now
+        val progress = ReadAloudAudioStore.progress.value
+        if (!progress.running) {
+            notificationManager.cancel(NotificationId.ReadAloudAudioDownload)
+            return
+        }
+        val notification = NotificationCompat.Builder(this, AppConst.channelIdDownload)
+            .setSmallIcon(R.drawable.ic_download_done)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentTitle(getString(R.string.read_aloud_audio_download))
+            .setContentText(
+                getString(
+                    R.string.read_aloud_audio_download_progress,
+                    progress.chapterDone, progress.chapterTotal,
+                    progress.sentenceDone, progress.sentenceTotal,
+                )
+            )
+            .setProgress(progress.chapterTotal, progress.chapterDone, false)
+            .build()
+        notificationManager.notify(NotificationId.ReadAloudAudioDownload, notification)
+    }
+
+    private var lastAudioDownloadNotifyMs = 0L
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            IntentAction.downloadReadAloudAudio -> startAudioDownload(
+                intent.getStringExtra("bookUrl").orEmpty(),
+                intent.getIntExtra("startChapter", ReadBook.durChapterIndex),
+                intent.getIntExtra("endChapter", ReadBook.durChapterIndex),
+            )
+
+            IntentAction.cancelDownloadReadAloudAudio -> cancelAudioDownload()
+        }
+        return super.onStartCommand(intent, flags, startId)
     }
 
     private fun updateNextPos(naturalCompletion: Boolean = false) {
@@ -252,6 +702,27 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
+    /**
+     * 同一句的合成互斥：按目标文件名上锁。
+     *
+     * 实时播放、后续章节预合成、听书下载三条路径都是「先查缓存，没有就向 TTS 发请求」，
+     * 而一次合成要几秒、期间 `.part` 和正式文件都还没落盘，另一条路径查缓存必然查不到、
+     * 跟着重复请求。上锁排队 + 拿到锁后再查一次缓存，把重复请求压成一次。
+     */
+    private val speakFileLocks = ConcurrentHashMap<String, Mutex>()
+
+    private suspend inline fun <T> withSpeakFileLock(
+        fileName: String,
+        block: suspend () -> T,
+    ): T {
+        val mutex = speakFileLocks.getOrPut(fileName) { Mutex() }
+        return try {
+            mutex.withLock { block() }
+        } finally {
+            speakFileLocks.remove(fileName, mutex)
+        }
+    }
+
     private fun downloadAndPlayAudios() {
         exoPlayer.clearMediaItems()
         downloadTask?.cancel()
@@ -268,6 +739,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                     if (paragraphStartPos > 0 && index == nowSpeak) {
                         text = text.substring(paragraphStartPos)
                     }
+                    // 偏移用完才去掉标记，合成与文件名都用这一份干净文本
+                    text = speechText(text)
                     val routedVoice = voiceForCue(playbackQueue, index, httpTts)
                     val cue = playbackQueue.cues.getOrNull(index)
                     val cueEmotion = cue?.emotion.orEmpty()
@@ -283,18 +756,21 @@ class HttpReadAloudService : BaseReadAloudService(),
                         AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$text")
                         createSilentSound(fileName)
                     } else if (!hasSpeakFile(fileName)) {
+                        withSpeakFileLock(fileName) {
+                        // 等锁期间另一条路径可能已经把这句合成好了
+                        if (!hasSpeakFile(fileName)) {
                         runCatching {
                             when (routedVoice.engineType) {
                                 ReadAloudVoice.ENGINE_SYSTEM -> {
-                                    val output = getSpeakFileAsMd5(fileName)
                                     val config = runCatching {
                                         GSON.fromJson(
                                             routedVoice.traitsJson,
                                             SystemTtsVoiceConfig::class.java,
                                         )
                                     }.getOrNull() ?: SystemTtsVoiceConfig()
-                                    // 全局语速已改为播放端变速, 系统合成只使用音色自带语速, 避免叠加
-                                    if (!systemTtsFileSynthesizer.synthesize(
+                                    // 全局语速走播放端变速, 系统合成只用音色自带语速, 避免叠加
+                                    val synthesized = synthesizeSpeakFile(fileName) { output ->
+                                        systemTtsFileSynthesizer.synthesize(
                                             routedVoice.engineId,
                                             routedVoice.speakerId,
                                             speakText,
@@ -302,14 +778,20 @@ class HttpReadAloudService : BaseReadAloudService(),
                                             config.speechRate ?: 1f,
                                             config.pitch ?: 1f,
                                         )
-                                    ) {
+                                    }
+                                    if (!synthesized) {
+                                        AppLog.put(
+                                            "朗读：系统引擎 ${routedVoice.engineId} 没把这句合成成文件" +
+                                                "（音色 ${routedVoice.speakerId}），这一句跳过" +
+                                                "\n句子：${speakText.take(30)}",
+                                        )
                                         createSilentSound(fileName)
                                     }
                                 }
 
                                 ReadAloudVoice.ENGINE_CLOUD -> {
-                                    val output = getSpeakFileAsMd5(fileName)
-                                    if (!cloudTtsAudioSynthesizer.synthesize(
+                                    val synthesized = synthesizeSpeakFile(fileName) { output ->
+                                        cloudTtsAudioSynthesizer.synthesize(
                                             routedVoice,
                                             speakText,
                                             output,
@@ -317,7 +799,12 @@ class HttpReadAloudService : BaseReadAloudService(),
                                             characterPerformance = characterPerformance,
                                             roleType = cueRoleType,
                                         )
-                                    ) {
+                                    }
+                                    if (!synthesized) {
+                                        AppLog.put(
+                                            "朗读：云端音色 ${routedVoice.speakerId} 没合成出文件，" +
+                                                "这一句跳过\n句子：${speakText.take(30)}",
+                                        )
                                         createSilentSound(fileName)
                                     }
                                 }
@@ -327,6 +814,10 @@ class HttpReadAloudService : BaseReadAloudService(),
                                     if (inputStream != null) {
                                         createSpeakFile(fileName, inputStream)
                                     } else {
+                                        AppLog.put(
+                                            "朗读：HTTP 引擎 ${itemHttpTts.name} 没回音频，这一句跳过" +
+                                                "\n句子：${speakText.take(30)}",
+                                        )
                                         createSilentSound(fileName)
                                     }
                                 }
@@ -338,11 +829,13 @@ class HttpReadAloudService : BaseReadAloudService(),
                             }
                             return@execute
                         }
+                        }
+                        }
                     }
                     if (speakText.isNotEmpty() && hasSpeakFile(fileName)) {
                         writeTextIndexEntry(fileName, speakText)
                     }
-                    val file = getSpeakFileAsMd5(fileName)
+                    val file = speakFileForPlay(fileName)
                     val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
                     launch(Main) {
                         if (readAloudSettings.ttsParagraphInterval > 0) {
@@ -409,6 +902,11 @@ class HttpReadAloudService : BaseReadAloudService(),
             includeTitle = false,
             adaptSpecialStyle = readSettings.adaptSpecialStyle,
             htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+            castLabels = if (io.legado.app.ui.config.readConfig.ReadConfig.multiRoleCast) {
+                CastAssignmentStore.labelsForChapter(book.bookUrl, chapter.index)
+            } else {
+                null
+            },
         )
         // 预合成必须与实时朗读用同一种划分方式解析，否则预合成好的音频与实际朗读单元对不上
         val contentSplitMode = resolveContentSplitMode(
@@ -436,7 +934,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         } else {
             listOf(displayTitle.trim()).filter { it.isNotEmpty() } +
                     readAloudChapter.paragraphs(splitByPage, splitPolicy)
-                        .map { it.text.replace(Regex("[袮祢꧁\uFFFC]"), " ") }
+                        .map { it.text }
         }
         return PreDownloadChapter(displayTitle, queue, contentList)
     }
@@ -479,7 +977,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         var failedCount = 0
         val totalCues = prepared.contentList.size
 
-        prepared.contentList.mapIndexed { index, content ->
+        // 预合成的文本与实时那条一致：标记不进合成，也不进文件名
+        prepared.contentList.map(::speechText).mapIndexed { index, content ->
             async {
                 semaphore.acquire()
                 try {
@@ -544,16 +1043,21 @@ class HttpReadAloudService : BaseReadAloudService(),
             createSilentSound(fileName)
             return true
         }
-        val success = runCatching {
+        val success = withSpeakFileLock(fileName) {
+            if (hasSpeakFile(fileName)) {
+                // 实时播放那条路径正在合成这一句：等它，别再向 TTS 发第二次请求
+                true
+            } else runCatching {
             when (routedVoice.engineType) {
                 ReadAloudVoice.ENGINE_CLOUD -> {
-                    val output = getSpeakFileAsMd5(fileName)
-                    cloudTtsAudioSynthesizer.synthesize(
-                        routedVoice, speakText, output,
-                        styleOverride = cue?.emotion.orEmpty(),
-                        characterPerformance = cue?.characterPerformance,
-                        roleType = cue?.roleType ?: SpeechRoleType.Unknown,
-                    )
+                    synthesizeSpeakFile(fileName) { output ->
+                        cloudTtsAudioSynthesizer.synthesize(
+                            routedVoice, speakText, output,
+                            styleOverride = cue?.emotion.orEmpty(),
+                            characterPerformance = cue?.characterPerformance,
+                            roleType = cue?.roleType ?: SpeechRoleType.Unknown,
+                        )
+                    }
                 }
 
                 ReadAloudVoice.ENGINE_HTTP -> {
@@ -578,6 +1082,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     false
                 }
             }
+        }
         }
         if (success && speakText.isNotEmpty()) {
             writeTextIndexEntry(fileName, speakText)
@@ -653,6 +1158,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     if (paragraphStartPos > 0 && index == nowSpeak) {
                         text = text.substring(paragraphStartPos)
                     }
+                    text = speechText(text)
                     val speakText = text.replace(AppPattern.notReadAloudRegex, "")
                     if (speakText.isEmpty()) {
                         AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$speakText")
@@ -747,7 +1253,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         var failedCount = 0
         val totalCues = prepared.contentList.size
 
-        prepared.contentList.mapIndexed { index, content ->
+        // 预合成的文本与实时那条一致：标记不进合成，也不进文件名
+        prepared.contentList.map(::speechText).mapIndexed { index, content ->
             async {
                 semaphore.acquire()
                 try {
@@ -826,6 +1333,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             .createDownloader(request)
     }
 
+    @androidx.annotation.OptIn(UnstableApi::class)
     private fun createMediaSource(factory: DataSource.Factory, fileName: String): MediaSource {
         return DefaultMediaSourceFactory(this)
             .setDataSourceFactory(factory)
@@ -1015,27 +1523,98 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun createSilentSound(fileName: String) {
-        val file = createSpeakFile(fileName)
-        file.writeBytes(resources.openRawResource(R.raw.silent_sound).readBytes())
+        val part = createSpeakPartFile(fileName)
+        part.outputStream().use { resources.openRawResource(R.raw.silent_sound).copyTo(it) }
+        commitSpeakPart(fileName, part)
     }
 
+    /**
+     * 缓存命中判定：正式名存在且非空，下载区里那份也算命中。
+     *
+     * 只判存在会认下一半截文件——预合成的并发写就在这儿和播放抢同一个名字。
+     * 也不认无声占位：那是合成失败留下的空壳，认了就等于把这一句永久静音。
+     */
     private fun hasSpeakFile(name: String): Boolean {
-        return FileUtils.exist("${ttsFolderPath}$name.mp3")
+        val file = speakFileForPlay(name)
+        return file.length() > 0L && !ReadAloudAudioStore.isSilentPlaceholder(file)
+    }
+
+    /**
+     * 播放取文件：下载区优先，其次缓存。
+     *
+     * 下载目录和缓存目录用**同一套文件名**，所以「播下载好的音频」只是换个查找顺序。
+     * 写入路径不走这里——清缓存、重新合成永远只落在缓存目录，下载区不会被覆盖。
+     */
+    private fun speakFileForPlay(name: String): File {
+        return ReadAloudAudioStore.downloadedFile(ReadBook.book?.bookUrl, name)
+            ?: getSpeakFileAsMd5(name)
     }
 
     private fun getSpeakFileAsMd5(name: String): File {
         return File("${ttsFolderPath}$name.mp3")
     }
 
-    private fun createSpeakFile(name: String): File {
-        return FileUtils.createFileIfNotExist("${ttsFolderPath}$name.mp3")
+    /** 合成中间名：写完改名成正式缓存，播放侧永远只会看到完整文件。 */
+    private fun createSpeakPartFile(name: String): File {
+        return FileUtils.createFileIfNotExist("${ttsFolderPath}$name.mp3.part")
+    }
+
+    /**
+     * 把合成好的临时文件转成正式缓存。
+     *
+     * 长句合成得久，正好撞上「文件已存在但只写了一半」时 ExoPlayer 认不出容器，
+     * 直接报 Source error 把整句跳过（错误类型 UnrecognizedInputFormatException）。
+     */
+    private fun commitSpeakPart(name: String, part: File): Boolean {
+        if (part.length() <= 0L) {
+            FileUtils.delete(part.absolutePath)
+            return false
+        }
+        val target = getSpeakFileAsMd5(name)
+        target.parentFile?.mkdirs()
+        val committed = part.renameTo(target) ||
+                runCatching { part.copyTo(target, overwrite = true) }.isSuccess
+        FileUtils.delete(part.absolutePath)
+        return committed && target.length() > 0L
+    }
+
+    /**
+     * 引擎直接写文件的合成（系统 TTS 文件合成、云端）走同一个临时名。
+     */
+    private suspend fun synthesizeSpeakFile(
+        fileName: String,
+        synthesize: suspend (File) -> Boolean,
+    ): Boolean {
+        val part = createSpeakPartFile(fileName)
+        val synthesized = runCatching { synthesize(part) }.getOrDefault(false)
+        return synthesized && commitSpeakPart(fileName, part)
     }
 
     private fun createSpeakFile(name: String, inputStream: InputStream) {
-        FileUtils.createFileIfNotExist("${ttsFolderPath}$name.mp3").outputStream().use { out ->
+        val part = createSpeakPartFile(name)
+        part.outputStream().use { out ->
             inputStream.use {
                 it.copyTo(out)
             }
+        }
+        commitSpeakPart(name, part)
+    }
+
+    /** 「音频缓存保留时间」= 0：用户要即听即焚，缓存目录里不该长期留下任何一份音频。 */
+    private val cacheBurnAfterRead: Boolean
+        get() = readAloudSettings.audioCacheCleanTime <= 0
+
+    /**
+     * 即听即焚的残留清扫，只在服务起手时跑。
+     *
+     * 跨文件依赖：[removeCacheFile] 唯一的调用点在 [onDestroy]，进程被杀、划掉最近任务、崩溃都到不了
+     * 那里，上一次会话留在 `httpTTS` 里的音频就没人管。这个语义下没有需要保护的正文，起手删干净即可；
+     * 保留一段时间的模式不在这里动手，否则当前章的缓存会在开播前删掉，逼出整章重复合成。
+     */
+    private fun sweepBurnAfterReadLeftovers() {
+        if (!cacheBurnAfterRead) return
+        FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
+            FileUtils.delete(it.absolutePath)
         }
     }
 
@@ -1050,12 +1629,10 @@ class HttpReadAloudService : BaseReadAloudService(),
         val titleMd5 = if (protectCurrentChapter) MD5Utils.md5Encode16(readerReadAloudChapter?.title.orEmpty()) else ""
 
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
-            val isSilentSound = it.length() == 2160L
+            // 无声占位文件不算缓存，任何时候都可以删
+            val isSilentSound = ReadAloudAudioStore.isSilentPlaceholder(it)
 
-            // 判断逻辑：
-            // 1. 如果是无声文件 -> 删
-            // 2. 如果保留时间设为0 -> 删 (不管是不是当前章节)
-            // 3. 如果保留时间>0 -> 保护当前章节，且只删过期的
+            // 保留时间为 0 即听即焚；否则保护当前章节，只删过期的
             val shouldDelete = if (keepTime == 0L) {
                 // 模式：即听即焚 (保留时间0)
                 true
@@ -1125,10 +1702,10 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     /**
      * 更新朗读速度
-     * 全局语速已改为播放端 (ExoPlayer) 变速, 对已合成音频即时生效, 无需重新下载。
+     * 全局语速走播放端 (ExoPlayer) 变速, 对已合成音频即时生效, 无需重新下载。
      */
     override fun upSpeechRate(reset: Boolean) {
-        exoPlayer.setPlaybackSpeed(globalPlaybackSpeed)
+        applyCueVoiceEffect(nowSpeak)
         upMediaMetadata()
     }
 
@@ -1145,6 +1722,11 @@ class HttpReadAloudService : BaseReadAloudService(),
 
             Player.STATE_READY -> {
                 // 准备好
+                // 会话号是 Media3 在播放线程异步生成的：切条时可能还是 0，效果会静默丢掉，
+                // 开播这一刻一定有了，所以在这里补挂一次（VoiceEffectAudio 记着当前预设）
+                voiceEffectAudio.attach(exoPlayer.audioSessionId)
+                // 这一刻才拿到本条音频的时长，提前排下一句的变声（换句回调那次可能还是未知）
+                scheduleNextCueEffect(nowSpeak)
                 if (pause) return
                 exoPlayer.play()
                 upPlayPos()
@@ -1196,11 +1778,21 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) return
-        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+            // 首条不走 AUTO 分支，也要在开播时套上角色的变声
+            applyCueVoiceEffect(nowSpeak)
+            scheduleCueSounds(nowSpeak)
+            return
+        }
+        val auto = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
+        if (auto) {
             playErrorNo = 0
         }
-        updateNextPos(naturalCompletion = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO)
+        updateNextPos(naturalCompletion = auto)
+        applyCueVoiceEffect(nowSpeak)
+        // 音效按「刚开始播的这一格」排：nowSpeak 要等 updateNextPos 才是这一格。
+        // 排在它前面用的是刚播完那一格的索引 + 新一格的时间轴，听感就是音效晚了一整句。
+        scheduleCueSounds(nowSpeak)
         upPlayPos()
         upMediaMetadata(showContent = true)
     }
@@ -1261,3 +1853,23 @@ internal fun httpReadAloudParagraphOffset(
 
 /** 源级语速默认值, 对应 1 倍速, 与全局语速共用 0..80 的刻度 */
 private const val DEFAULT_TTS_SPEED = 5
+
+/**
+ * 会话级效果（混响/带通）提前换句的量：这一层挂在**输出音频会话**上，设下去就作用在
+ * 正在出声的那段信号上，所以提前量只能盖过一帧设置耗时。给大了等于把上一句尾巴上的
+ * 金属感/混响提前摘掉（听感：句尾突然变声）。
+ */
+private const val EFFECT_SESSION_LEAD_MS = 150L
+
+/**
+ * 音高/语速提前换句的量：这一层是 Sonic 在**解码链**上生效，比出声位置提前一整段
+ * AudioTrack 缓冲（几百毫秒到一秒），所以必须给足，否则上一句的音高会拖进下一句开头。
+ * 调参方向：大了串到上一句，小了串到下一句。
+ */
+private const val EFFECT_PITCH_SWITCH_LEAD_MS = 900L
+
+/** 只是转发给自家 Target 的标记，播放器不解释它。 */
+private const val PITCH_MESSAGE_TYPE = 0x4C470001
+
+/** 音效排期消息：由媒体时钟在单元里真正播到那个位置时投递。 */
+private const val SOUND_MESSAGE_TYPE = 0x4C470002

@@ -52,8 +52,9 @@ data class ContentSplitPolicy(
 /**
  * 把使用者选择的划分方式与标点集合解析成实际切分策略。
  *
- * [ReadAloudContentSplitMode.Default] 的语义是多角色朗读开启时按句末标点切分，
- * 关闭时按整段切分，因此调用方应先用 [resolve] 把「默认」定下来再取策略。
+ * [ReadAloudContentSplitMode.Default] 就是「整段」：划分方式与多角色朗读是两个独立设置，
+ * 开了多角色不该偷偷把句子切碎（用户口径：默认就是整段）。段内的台词边界由
+ * `CastSpeechOverlay` 在整段之上切开，音色照样逐句换，但不制造句末停顿。
  */
 object ContentSplitPolicies {
 
@@ -61,7 +62,7 @@ object ContentSplitPolicies {
     val Paragraph = forMode(ReadAloudContentSplitMode.Paragraph)
 
     /**
-     * 把「默认」按多角色朗读开关定成具体划分方式。
+     * 把「默认」定成具体划分方式。
      *
      * 建章节（`ReaderReadAloudChapter.create`）与取播放单元（`paragraphs(policy)`）必须用
      * 同一个结果：只在一侧解析会让章节切分与播放单元粒度不一致。
@@ -70,7 +71,7 @@ object ContentSplitPolicies {
         mode: ReadAloudContentSplitMode,
         useMultiSpeaker: Boolean,
     ): ReadAloudContentSplitMode =
-        if (mode == ReadAloudContentSplitMode.Default && !useMultiSpeaker) {
+        if (mode == ReadAloudContentSplitMode.Default) {
             ReadAloudContentSplitMode.Paragraph
         } else {
             mode
@@ -81,9 +82,9 @@ object ContentSplitPolicies {
         storedSymbols: Collection<String> = emptySet(),
     ): ContentSplitPolicy = when (mode) {
         ReadAloudContentSplitMode.Default -> ContentSplitPolicy(
-            mode = mode,
-            symbols = ReadAloudSplitSymbol.sentenceEnds,
-            allowRoleSplits = true,
+            mode = ReadAloudContentSplitMode.Paragraph,
+            symbols = emptySet(),
+            allowRoleSplits = false,
         )
 
         ReadAloudContentSplitMode.Symbols -> ContentSplitPolicy(

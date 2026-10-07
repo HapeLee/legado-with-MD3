@@ -83,6 +83,7 @@ import io.legado.app.ui.book.knowledge.BookKnowledgeDetailViewModel
 import io.legado.app.ui.book.knowledge.BookKnowledgeListScreen
 import io.legado.app.ui.book.knowledge.BookKnowledgeListViewModel
 import io.legado.app.ui.book.knowledge.CharacterAvatarCropDialog
+import io.legado.app.ui.book.knowledge.CharacterAvatarSourceSheet
 import io.legado.app.ui.book.knowledge.CharacterDetailIntent
 import io.legado.app.ui.book.knowledge.deleteCharacterAvatar
 import io.legado.app.ui.book.knowledge.saveCharacterAvatar
@@ -170,6 +171,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import io.legado.app.ui.book.readaloud.cast.BgmPoolRouteScreen
+import io.legado.app.ui.book.readaloud.cast.CastCapsuleStyleRouteScreen
+import io.legado.app.ui.book.readaloud.cast.MultiRoleRecognitionRouteScreen
+import io.legado.app.ui.book.readaloud.cast.MultiRoleRuleRouteScreen
+import io.legado.app.ui.book.readaloud.cast.RegexCastRuleRouteScreen
+import io.legado.app.ui.book.readaloud.cast.VoiceEffectRouteScreen
+import io.legado.app.ui.book.readaloud.cast.VoicePoolRouteScreen
 
 /**
  * WebView 类页面（内置浏览器、订阅阅读）只做位移转场。
@@ -462,6 +470,9 @@ fun MainActivity.mainEntryProvider(
                         )
                     )
                 }
+            },
+            onNavigateToMultiRoleRule = {
+                onNavigateToRoute(MainRouteMultiRoleRule)
             },
             onNavigateToBackupSettings = {
                 onNavigateToRoute(MainRouteSettingsBackup)
@@ -761,14 +772,12 @@ fun MainActivity.mainEntryProvider(
                     this@mainEntryProvider,
                     readBookViewModel,
                     readerSessionViewModel,
+                    // 画布在首次组合就会请求分页，本路由要开哪本书必须随构造就位：
+                    // 那期间 ReadBook 单例里可能还是上一本书的章节。
+                    routeBookUrl = route.bookUrl,
                 )
             }
             ReaderPerfTrace.marker("nav.controller.ready")
-            // Canvas 阅读面在首次组合时就会请求分页，必须先告诉 ViewModel 本路由要打开哪本书。
-            // 刻意用 remember 而非 LaunchedEffect：后者在组合之后才跑，赶不上首帧。
-            @Suppress("RememberReturnType")
-            remember(readBookViewModel, route) {
-            }
             val lifecycleOwner = LocalLifecycleOwner.current
             val initRequest = remember(route) {
                 ReadBookInitRequest(
@@ -1245,7 +1254,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookCharacterDetail> { route ->
+    entry<MainRouteBookCharacterDetail>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         var pendingAvatarUri by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1259,12 +1268,33 @@ fun MainActivity.mainEntryProvider(
         ) { uri ->
             pendingAvatarUri = uri?.toString()
         }
+        var showAvatarSource by remember { mutableStateOf(false) }
         BookCharacterDetailScreen(
             state = state,
             onIntent = viewModel::onIntent,
             effects = viewModel.effects,
             onBack = { onNavigateBack() },
-            onPickAvatar = { imagePicker.launch(arrayOf("image/*")) },
+            onPickAvatar = { showAvatarSource = true },
+        )
+        // 头像有两种来源（本地文件 / 图片链接），选择器同时提供「编辑当前头像」重进裁剪。
+        CharacterAvatarSourceSheet(
+            show = showAvatarSource,
+            onDismissRequest = { showAvatarSource = false },
+            onPickLocal = {
+                showAvatarSource = false
+                imagePicker.launch(arrayOf("image/*"))
+            },
+            onUrl = { url ->
+                showAvatarSource = false
+                // 旧头像文件由 ViewModel 在落库成功后再删（见 save 的 avatarChanged 分支）：
+                // 在这里删的话，用户不保存就退出，档案里留的是个已被删掉的地址。
+                viewModel.onIntent(CharacterDetailIntent.SetAvatarUri(url))
+            },
+            hasAvatar = state.avatarUri.isNotBlank(),
+            onEditAvatar = {
+                showAvatarSource = false
+                pendingAvatarUri = state.avatarUri
+            },
         )
         CharacterAvatarCropDialog(
             sourceUri = pendingAvatarUri?.let(Uri::parse),
@@ -1291,7 +1321,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookCharacterNetwork> { route ->
+    entry<MainRouteBookCharacterNetwork>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val viewModel = koinViewModel<BookCharacterNetworkViewModel>(
             key = "BookCharacterNetwork:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) }
@@ -1308,7 +1338,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookCharacterList> { route ->
+    entry<MainRouteBookCharacterList>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val viewModel = koinViewModel<BookCharacterListViewModel>(
             key = "CharacterList:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) }
@@ -1325,7 +1355,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookVoiceCasting> { route ->
+    entry<MainRouteBookVoiceCasting>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val viewModel = koinViewModel<BookVoiceCastingViewModel>(
             key = "BookVoiceCasting:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) },
@@ -1336,10 +1366,13 @@ fun MainActivity.mainEntryProvider(
             effects = viewModel.effects,
             onBack = { onNavigateBack() },
             onManageCloudTts = { onNavigateToRoute(MainRouteCloudTtsEngines(route.bookUrl)) },
+            onOpenCharacterDetail = { characterId ->
+                onNavigateToRoute(MainRouteBookCharacterDetail(route.bookUrl, characterId))
+            },
         )
     }
 
-    entry<MainRouteCloudTtsEngines> { route ->
+    entry<MainRouteCloudTtsEngines>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val viewModel = koinViewModel<CloudTtsViewModel>()
         LaunchedEffect(route.bookUrl) {
             viewModel.onIntent(CloudTtsIntent.SetBookContext(route.bookUrl))
@@ -1378,13 +1411,13 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteTtsCache> {
+    entry<MainRouteTtsCache>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) {
         TtsCacheRouteScreen(
             onBackClick = { onNavigateBack() },
         )
     }
 
-    entry<MainRouteBookKnowledgeList> { route ->
+    entry<MainRouteBookKnowledgeList>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val viewModel = koinViewModel<BookKnowledgeListViewModel>(
             key = "KnowledgeList:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) }
@@ -1401,7 +1434,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookKnowledgeDetail> { route ->
+    entry<MainRouteBookKnowledgeDetail>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val viewModel = koinViewModel<BookKnowledgeDetailViewModel>(
             key = "KnowledgeDetail:${route.bookUrl}:${route.entryId.orEmpty()}",
             parameters = { parametersOf(route.bookUrl, route.entryId) }
@@ -1414,7 +1447,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookEventList> { route ->
+    entry<MainRouteBookEventList>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val viewModel = koinViewModel<BookEventListViewModel>(
             key = "EventList:${route.bookUrl}",
             parameters = { parametersOf(route.bookUrl) }
@@ -1431,7 +1464,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookEventDetail> { route ->
+    entry<MainRouteBookEventDetail>(metadata = ModalOverlaySceneStrategy.pageSlide(onNavigateBack)) { route ->
         val viewModel = koinViewModel<BookEventDetailViewModel>(
             key = "EventDetail:${route.bookUrl}:${route.eventId.orEmpty()}",
             parameters = { parametersOf(route.bookUrl, route.eventId) }
@@ -1477,6 +1510,55 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteHighlightTagRule> {
         HighlightTagRuleRouteScreen(
             onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteMultiRoleRule> {
+        MultiRoleRuleRouteScreen(
+            onBackClick = { onNavigateBack() },
+            onNavigateToVoicePool = { backStack.add(MainRouteVoicePool) },
+            onNavigateToBgmPool = { backStack.add(MainRouteBgmPool) },
+            onNavigateToVoiceEffect = { backStack.add(MainRouteVoiceEffect) },
+            onNavigateToCapsuleStyle = { backStack.add(MainRouteCastCapsuleStyle) },
+            onNavigateToEngines = { backStack.add(MainRouteCloudTtsEngines()) },
+            onNavigateToRecognition = { backStack.add(MainRouteMultiRoleRecognition) },
+            onNavigateToRegexCast = { backStack.add(MainRouteRegexCastRule) },
+        )
+    }
+
+    entry<MainRouteCastCapsuleStyle> {
+        CastCapsuleStyleRouteScreen(
+            onBackClick = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteVoicePool> {
+        VoicePoolRouteScreen(
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteBgmPool> {
+        BgmPoolRouteScreen(
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteVoiceEffect> {
+        VoiceEffectRouteScreen(
+            onBackClick = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteMultiRoleRecognition> {
+        MultiRoleRecognitionRouteScreen(
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteRegexCastRule> {
+        RegexCastRuleRouteScreen(
+            onBackClick = { onNavigateBack() },
         )
     }
 

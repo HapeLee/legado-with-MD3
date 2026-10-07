@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
 import io.legado.app.R
 import io.legado.app.core.ui.player.PlayerMorphAppearance
 import io.legado.app.core.ui.player.PlayerMorphHost
@@ -29,9 +30,12 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.book.readaloud.player.applyReadBookConfigIntent
 import io.legado.app.ui.book.readaloud.player.rememberPlayerThemeOverride
+import io.legado.app.ui.main.MainNavRouteTracker
+import io.legado.app.ui.main.MainRouteReadBook
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 /** 朗读特有的设置与经典控制；几何、封面和返回手势由共用宿主处理。 */
 @Composable
@@ -50,8 +54,29 @@ fun ReadAloudPlayerMorphHost(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val navRouteTracker: MainNavRouteTracker = koinInject()
+    val navBackStack by navRouteTracker.backStack.collectAsStateWithLifecycle()
+    val topRoute = navBackStack.lastOrNull()
     val settingsState by playerViewModel.readAloudSettings.collectAsStateWithLifecycle()
     var configVisible by rememberSaveable { mutableStateOf(false) }
+    /**
+     * 朗读设置停在哪个 tab（0=常规，1=引擎与音色）。存在宿主而不是弹层里：
+     * 压进整屏页会拆掉弹层那层 composition，`rememberPagerState` 的初值回到 0，
+     * 回来就落在常规 tab。
+     */
+    var configTab by rememberSaveable { mutableStateOf(0) }
+    /**
+     * 从朗读设置跳去子页（引擎与音色 / 朗读缓存 / 人物配音）时置位：
+     * 播放器是 Activity 级浮层，压在新页面上面，所以只能先收；这里只留一个"弹层在等
+     * 播放器重新摊开"的标记，导航栈顶回到阅读页就把播放器重新叫出来、朗读设置跟着回来
+     * ——「从哪进，出来就是哪」。不直接留着 `configVisible`：返回手势的闸门看的就是它。
+     */
+    var configWaitsForPlayer by remember { mutableStateOf(false) }
+    /**
+     * 跳子页时记下那个目的地：只有"从它返回阅读页"才算回来。中途去了别处（连按两次返回
+     * 落到书架）就把标记作废，否则下次点进阅读页会凭空弹出播放器 + 朗读设置。
+     */
+    var pendingSubRoute by remember { mutableStateOf<NavKey?>(null) }
     var activeNumberConfig by rememberSaveable {
         mutableStateOf<ReadAloudPlayerConfigHostAction?>(null)
     }
@@ -62,7 +87,9 @@ fun ReadAloudPlayerMorphHost(
     val currentOpenTtsCache by rememberUpdatedState(onOpenTtsCache)
     val currentOpenBookVoiceCasting by rememberUpdatedState(onOpenBookVoiceCasting)
 
-    suspend fun collapsePlayer() {
+    suspend fun collapsePlayer(keepConfig: Boolean = false) {
+        configWaitsForPlayer = keepConfig
+        if (!keepConfig) pendingSubRoute = null
         configVisible = false
         activeNumberConfig = null
         morph.animateTo(0f)
@@ -71,8 +98,11 @@ fun ReadAloudPlayerMorphHost(
 
     fun navigateFromPlayer(action: () -> Unit) {
         scope.launch {
-            collapsePlayer()
+            val keepConfig = configVisible
+            // 先推目的地再收播放器：等收完再推，中间会露出阅读页一帧
             action()
+            pendingSubRoute = navRouteTracker.currentRoute
+            collapsePlayer(keepConfig = keepConfig)
         }
     }
 
@@ -106,9 +136,32 @@ fun ReadAloudPlayerMorphHost(
     }
 
     LaunchedEffect(expanded) {
-        if (!expanded) {
+        if (expanded) {
+            if (configWaitsForPlayer) {
+                configWaitsForPlayer = false
+                pendingSubRoute = null
+                configVisible = true
+            }
+        } else if (!configWaitsForPlayer) {
             configVisible = false
             activeNumberConfig = null
+        }
+    }
+    // 只有「从我推上去的那个子页」回到阅读页才把播放器叫回来；中途去了别处（连按两次返回
+    // 落到书架）就作废，否则下次点进阅读页会凭空弹出朗读设置。
+    LaunchedEffect(topRoute) {
+        if (!configWaitsForPlayer) return@LaunchedEffect
+        when (topRoute) {
+            pendingSubRoute -> Unit
+            is MainRouteReadBook -> {
+                pendingSubRoute = null
+                ReadAloudPlayerOverlayBus.request()
+            }
+
+            else -> {
+                configWaitsForPlayer = false
+                pendingSubRoute = null
+            }
         }
     }
     LaunchedEffect(playerViewModel) {
@@ -157,6 +210,8 @@ fun ReadAloudPlayerMorphHost(
                 playerViewModel.applyReadBookConfigIntent(intent, ::handleHostAction)
             },
             onPlayerIntent = playerViewModel::onIntent,
+            selectedTab = configTab,
+            onTabSelected = { configTab = it },
         )
     }
 

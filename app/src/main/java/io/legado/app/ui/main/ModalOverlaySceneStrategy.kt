@@ -1,5 +1,6 @@
 package io.legado.app.ui.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -38,6 +39,9 @@ internal const val NAV_FADE_DURATION_MILLIS = 360
 class ModalOverlaySceneStrategy : SceneStrategy<NavKey> {
     private val searchAnimations = SearchOverlayAnimations()
 
+    // 书内子页的滑动状态另存一份：下层用 covering() 判断要不要跟随淡出，共用会误触发搜索那套。
+    private val pageSlideAnimations = SearchOverlayAnimations()
+
     override fun SceneStrategyScope<NavKey>.calculateScene(
         entries: List<NavEntry<NavKey>>,
     ): Scene<NavKey>? {
@@ -52,6 +56,15 @@ class ModalOverlaySceneStrategy : SceneStrategy<NavKey> {
                 animations = searchAnimations,
             )
         }
+        val pageBack = entry.metadata[PageSlideKey] as? () -> Unit
+        if (pageBack != null) {
+            return PageSlideOverlayScene(
+                entry = entry,
+                previousEntries = previousEntries,
+                animations = pageSlideAnimations,
+                onBack = pageBack,
+            )
+        }
         return ModalOverlayScene(
             entry = entry,
             previousEntries = previousEntries,
@@ -62,9 +75,91 @@ class ModalOverlaySceneStrategy : SceneStrategy<NavKey> {
     companion object {
         private object MetadataKey : NavMetadataKey<Unit>
         private object SearchSlideKey : NavMetadataKey<Unit>
+        private object PageSlideKey : NavMetadataKey<() -> Unit>
 
         fun modalOverlay(): Map<String, Any> = metadata { put(MetadataKey, Unit) }
         fun searchSlide(): Map<String, Any> = metadata { put(SearchSlideKey, Unit) }
+
+        /**
+         * 书内子页（人物配音 / 朗读引擎与音色 / 朗读缓存 / 人物与知识库列表…）压在
+         * 阅读页或详情页上面时用：下层保持组合，本层自己负责位移动画与返回键。
+         *
+         * 必须两样都自带，不能指望 NavDisplay：
+         * 1. 覆盖层场景画在 `AnimatedContent` 之外，场景转场（`transitionSpec` 等）到不了这一层；
+         * 2. 它内置的 `NavigationBackHandler` 只在**根场景**的 `previousEntries` 非空时启用，
+         *    而一旦本层成为覆盖层，根场景就只剩 `SinglePane(Home)`，返回事件没人接 →
+         *    直接落到 Activity 默认行为（退出应用）。
+         */
+        fun pageSlide(onBack: () -> Unit): Map<String, Any> =
+            modalOverlay() + metadata { put(PageSlideKey, onBack) }
+    }
+}
+
+/**
+ * 书内子页的覆盖层：从右侧滑入盖住下层，滑出时退回下层。
+ *
+ * 动画状态放在 [pageSlideAnimations] 那份缓存里而不是本对象里 —— NavDisplay 每次重算场景都会
+ * 新建场景对象，状态放在对象上会让已经停稳的页面突然跳回屏幕外。
+ * 这份缓存与搜索那份是**两个实例**：下层用 `covering()` 判断要不要跟随淡出，
+ * 混在一起会让阅读页在子页盖上来时误按搜索那套淡出。
+ */
+private data class PageSlideOverlayScene(
+    private val entry: NavEntry<NavKey>,
+    override val previousEntries: List<NavEntry<NavKey>>,
+    private val animations: SearchOverlayAnimations,
+    private val onBack: () -> Unit,
+) : OverlayScene<NavKey> {
+    override val key: Any = entry.contentKey
+    override val entries: List<NavEntry<NavKey>> = listOf(entry)
+    override val overlaidEntries: List<NavEntry<NavKey>> = previousEntries
+    override val metadata: Map<String, Any> = entry.metadata
+    private val animation = animations.state(key, previousEntries.last().contentKey)
+
+    override val content: @Composable () -> Unit = {
+        BackHandler { onBack() }
+        LaunchedEffect(key) {
+            coroutineScope {
+                launch {
+                    animation.progress.animateTo(
+                        1f,
+                        tween(NAV_SLIDE_DURATION_MILLIS, easing = FastOutSlowInEasing)
+                    )
+                }
+                launch {
+                    animation.opacity.animateTo(
+                        1f,
+                        tween(NAV_FADE_DURATION_MILLIS, easing = LinearOutSlowInEasing)
+                    )
+                }
+            }
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .zIndex(previousEntries.size.toFloat())
+                .graphicsLayer {
+                    translationX = size.width * (1f - animation.progress.value)
+                    alpha = animation.opacity.value
+                }
+        ) {
+            entry.Content()
+        }
+    }
+
+    override suspend fun onRemove() {
+        try {
+            coroutineScope {
+                launch {
+                    animation.progress.animateTo(
+                        0f,
+                        tween(NAV_SLIDE_DURATION_MILLIS, easing = FastOutSlowInEasing)
+                    )
+                }
+                launch { animation.opacity.animateTo(0f, tween(NAV_FADE_DURATION_MILLIS)) }
+            }
+        } finally {
+            animations.release(key, animation)
+        }
     }
 }
 

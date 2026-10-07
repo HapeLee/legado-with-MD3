@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CleanHands
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DisplaySettings
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
@@ -309,6 +310,10 @@ private fun moreActionSpecs(
         "download", stringResource(R.string.offline_cache), Icons.Default.CloudDownload,
         applicable = !state.isLocalBook,
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download)) }),
+    MoreActionSpec(
+        "audio_download",
+        stringResource(R.string.read_aloud_audio_download_entry), Icons.Default.Download,
+        onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AudioDownload)) }),
     MoreActionSpec(
         "toc_rule", stringResource(R.string.txt_toc_rule), Icons.AutoMirrored.Filled.Toc,
         applicable = state.isLocalTxt, onClick = { dispatch(ReadBookIntent.MenuTocRegex) }),

@@ -18,6 +18,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -37,8 +40,11 @@ import kotlin.time.Duration.Companion.seconds
 fun ReadBookFloatingActionBar(
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
+    seekState: StateFlow<ReadSeekUiState>,
 ) {
-    val anchorVisible = state.readingAnchorAvailable &&
+    // 锚点可用性只随定位流刷新：见 ReadSeekUiState 为何单独成流。
+    val seek by seekState.collectAsStateWithLifecycle()
+    val anchorVisible = seek.readingAnchorAvailable &&
         !state.menuVisible && !state.isShowingSearchResult
     val reminder = state.activeReminder?.takeIf { !state.menuVisible }
     val readAloudDetached = state.isReadAloudRunning && !state.readAloudFollow &&

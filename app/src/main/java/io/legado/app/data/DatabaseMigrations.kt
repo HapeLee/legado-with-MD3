@@ -21,8 +21,57 @@ object DatabaseMigrations {
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
             migration_82_83, migration_98_99, migration_99_100,
-            migration_102_103,
+            migration_102_103, migration_123_124, migration_124_125, migration_127_128,
         )
+    }
+
+    /**
+     * 127 → 128：正则角色的分组从文本列升级成可嵌套的分组树。
+     *
+     * 迁移前的 `regex_cast_rules.group` 存的是组名字符串（只能一层、改名要全表改写）。
+     * 这里把已有的组名各建成一个根层分组（id 直接用组名，幂等且好认），规则改指 id，
+     * 然后把 rules 整表重建去掉旧列——minSdk 26 的 SQLite 没有 DROP COLUMN（要 3.35），
+     * 与 124→125 同一手法。
+     */
+    private val migration_127_128 = object : Migration(127, 128) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `regex_cast_groups` (
+                    `id` TEXT NOT NULL, `name` TEXT NOT NULL, `parentId` TEXT NOT NULL DEFAULT '',
+                    `order` INTEGER NOT NULL DEFAULT 0, `enabled` INTEGER NOT NULL DEFAULT 1,
+                    `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`))"""
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_regex_cast_groups_parentId_name` ON `regex_cast_groups` (`parentId`, `name`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_regex_cast_groups_parentId` ON `regex_cast_groups` (`parentId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_regex_cast_groups_parentId_order` ON `regex_cast_groups` (`parentId`, `order`)")
+            db.execSQL(
+                """INSERT OR IGNORE INTO regex_cast_groups(id, name, parentId, `order`, enabled, createdAt, updatedAt)
+                SELECT DISTINCT r.`group`, r.`group`, '', 0, 1, r.createdAt, r.updatedAt
+                FROM regex_cast_rules r WHERE r.`group` IS NOT NULL AND TRIM(r.`group`) <> ''"""
+            )
+            db.execSQL("ALTER TABLE regex_cast_rules ADD COLUMN groupId TEXT NOT NULL DEFAULT ''")
+            db.execSQL("UPDATE regex_cast_rules SET groupId = IFNULL(`group`, '')")
+            db.execSQL(
+                """CREATE TABLE regex_cast_rules_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL,
+                    pattern TEXT NOT NULL, poolKind TEXT NOT NULL DEFAULT 'role',
+                    poolId TEXT NOT NULL DEFAULT '', itemId TEXT NOT NULL DEFAULT '',
+                    groupId TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1,
+                    `order` INTEGER NOT NULL DEFAULT 0, scope TEXT, excludeScope TEXT,
+                    createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL)"""
+            )
+            db.execSQL(
+                """INSERT INTO regex_cast_rules_new
+                    (id, name, pattern, poolKind, poolId, itemId, groupId, enabled, `order`, scope, excludeScope, createdAt, updatedAt)
+                SELECT id, name, pattern, poolKind, poolId, itemId, groupId, enabled, `order`, scope, excludeScope, createdAt, updatedAt
+                FROM regex_cast_rules"""
+            )
+            db.execSQL("DROP TABLE regex_cast_rules")
+            db.execSQL("ALTER TABLE regex_cast_rules_new RENAME TO regex_cast_rules")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_regex_cast_rules_enabled_order` ON `regex_cast_rules` (`enabled`, `order`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_regex_cast_rules_groupId_order` ON `regex_cast_rules` (`groupId`, `order`)")
+        }
     }
 
     private val migration_10_11 = object : Migration(10, 11) {
@@ -664,6 +713,189 @@ object DatabaseMigrations {
             )
             db.execSQL("DROP TABLE readRecordSession")
             db.execSQL("ALTER TABLE readRecordSession_migrated RENAME TO readRecordSession")
+        }
+    }
+    /**
+     * 版本号 123 对外发布过两套列定义：一套是 bgPadXEm 与 matchSpacing 那五条列，
+     * 另一套是命中排版四列 + 九宫格长度偏移。装过任一版的机器 room_master_table 里存的
+     * 身份哈希与现行 schema 对不上时，Room 开库直接抛「Room cannot verify the data
+     * integrity」，所以现行 schema 升到 124。
+     *
+     * 迁移本身要做出 124.json 的**逐列一致**：Room 会拿新 schema 校验迁移结果，
+     * 旧版多出来的那七列留着就会报「Migration didn't validate」。而
+     * `ALTER TABLE ... DROP COLUMN` 要 SQLite 3.35，minSdk 26 的机器上没有，
+     * 于是按本文件既有的路子整表重建（先补列，再照 124.json 建表搬数据）。
+     * 起点是「只跑过 122→123 自动迁移」的库也成立：那时五列已在、七列不存在。
+     */
+    private val migration_123_124 = object : Migration(123, 124) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            val columns = db.query("PRAGMA table_info(highlightRules)").use { cursor ->
+                val nameAt = cursor.getColumnIndexOrThrow("name")
+                buildSet {
+                    while (cursor.moveToNext()) add(cursor.getString(nameAt))
+                }
+            }
+            listOf(
+                "letterSpacingBefore", "letterSpacingAfter",
+                "lineSpacingTop", "lineSpacingBottom", "bgLengthOffset",
+            ).forEach { name ->
+                if (name !in columns) {
+                    db.execSQL("ALTER TABLE highlightRules ADD COLUMN `$name` REAL NOT NULL DEFAULT 0")
+                }
+            }
+            db.execSQL(
+                """
+                CREATE TABLE highlightRules_r53 (
+                    `id` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `pattern` TEXT NOT NULL,
+                    `sampleText` TEXT NOT NULL,
+                    `targetScope` INTEGER NOT NULL,
+                    `enabled` INTEGER NOT NULL,
+                    `position` INTEGER NOT NULL,
+                    `textColor` INTEGER,
+                    `bgColor` INTEGER,
+                    `underlineMode` INTEGER NOT NULL,
+                    `underlineColor` INTEGER,
+                    `underlineWidth` REAL NOT NULL,
+                    `underlineOffset` REAL NOT NULL,
+                    `underlineSvgPath` TEXT,
+                    `bgImage` TEXT,
+                    `bgImageFit` INTEGER NOT NULL,
+                    `bgImageScale` REAL NOT NULL,
+                    `configName` TEXT,
+                    `fontPath` TEXT,
+                    `fontWeight` INTEGER NOT NULL,
+                    `isItalic` INTEGER NOT NULL,
+                    `fontSizeOffset` INTEGER NOT NULL,
+                    `npLeft` REAL NOT NULL,
+                    `npRight` REAL NOT NULL,
+                    `npTop` REAL NOT NULL,
+                    `npBottom` REAL NOT NULL,
+                    `manualNineSlice` INTEGER NOT NULL DEFAULT 1,
+                    `letterSpacingBefore` REAL NOT NULL DEFAULT 0,
+                    `letterSpacingAfter` REAL NOT NULL DEFAULT 0,
+                    `lineSpacingTop` REAL NOT NULL DEFAULT 0,
+                    `lineSpacingBottom` REAL NOT NULL DEFAULT 0,
+                    `bgLengthOffset` REAL NOT NULL DEFAULT 0,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                INSERT INTO highlightRules_r53(
+                    `id`, `name`, `pattern`, `sampleText`,
+                    `targetScope`, `enabled`, `position`, `textColor`,
+                    `bgColor`, `underlineMode`, `underlineColor`, `underlineWidth`,
+                    `underlineOffset`, `underlineSvgPath`, `bgImage`, `bgImageFit`,
+                    `bgImageScale`, `configName`, `fontPath`, `fontWeight`,
+                    `isItalic`, `fontSizeOffset`, `npLeft`, `npRight`,
+                    `npTop`, `npBottom`, `manualNineSlice`, `letterSpacingBefore`,
+                    `letterSpacingAfter`, `lineSpacingTop`, `lineSpacingBottom`, `bgLengthOffset`
+                )
+                SELECT
+                    `id`, `name`, `pattern`, `sampleText`,
+                    `targetScope`, `enabled`, `position`, `textColor`,
+                    `bgColor`, `underlineMode`, `underlineColor`, `underlineWidth`,
+                    `underlineOffset`, `underlineSvgPath`, `bgImage`, `bgImageFit`,
+                    `bgImageScale`, `configName`, `fontPath`, `fontWeight`,
+                    `isItalic`, `fontSizeOffset`, `npLeft`, `npRight`,
+                    `npTop`, `npBottom`, `manualNineSlice`, `letterSpacingBefore`,
+                    `letterSpacingAfter`, `lineSpacingTop`, `lineSpacingBottom`, `bgLengthOffset`
+                FROM highlightRules
+                """.trimIndent()
+            )
+            db.execSQL("DROP TABLE highlightRules")
+            db.execSQL("ALTER TABLE highlightRules_r53 RENAME TO highlightRules")
+        }
+    }
+
+    /**
+     * 「九宫格长度偏移」拆成左偏移 + 右偏移两项（对称的一项调不动气泡两端）。
+     * 旧的 `bgLengthOffset` 因此要从表里去掉，换成 `bgLengthOffsetLeft` / `bgLengthOffsetRight`。
+     * `ALTER TABLE ... DROP COLUMN` 要 SQLite 3.35，minSdk 26 没有，照本文件既有路子整表重建。
+     * 老数据按「左右各一半」落到新列上，与升级前的观感一致。
+     */
+    private val migration_124_125 = object : Migration(124, 125) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            val columns = db.query("PRAGMA table_info(highlightRules)").use { cursor ->
+                val nameAt = cursor.getColumnIndexOrThrow("name")
+                buildSet {
+                    while (cursor.moveToNext()) add(cursor.getString(nameAt))
+                }
+            }
+            if ("bgLengthOffset" !in columns) {
+                db.execSQL("ALTER TABLE highlightRules ADD COLUMN `bgLengthOffset` REAL NOT NULL DEFAULT 0")
+            }
+            db.execSQL(
+                """
+                CREATE TABLE highlightRules_r56 (
+                    `id` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `pattern` TEXT NOT NULL,
+                    `sampleText` TEXT NOT NULL,
+                    `targetScope` INTEGER NOT NULL,
+                    `enabled` INTEGER NOT NULL,
+                    `position` INTEGER NOT NULL,
+                    `textColor` INTEGER,
+                    `bgColor` INTEGER,
+                    `underlineMode` INTEGER NOT NULL,
+                    `underlineColor` INTEGER,
+                    `underlineWidth` REAL NOT NULL,
+                    `underlineOffset` REAL NOT NULL,
+                    `underlineSvgPath` TEXT,
+                    `bgImage` TEXT,
+                    `bgImageFit` INTEGER NOT NULL,
+                    `bgImageScale` REAL NOT NULL,
+                    `configName` TEXT,
+                    `fontPath` TEXT,
+                    `fontWeight` INTEGER NOT NULL,
+                    `isItalic` INTEGER NOT NULL,
+                    `fontSizeOffset` INTEGER NOT NULL,
+                    `npLeft` REAL NOT NULL,
+                    `npRight` REAL NOT NULL,
+                    `npTop` REAL NOT NULL,
+                    `npBottom` REAL NOT NULL,
+                    `manualNineSlice` INTEGER NOT NULL DEFAULT 1,
+                    `letterSpacingBefore` REAL NOT NULL DEFAULT 0,
+                    `letterSpacingAfter` REAL NOT NULL DEFAULT 0,
+                    `lineSpacingTop` REAL NOT NULL DEFAULT 0,
+                    `lineSpacingBottom` REAL NOT NULL DEFAULT 0,
+                    `bgLengthOffsetLeft` REAL NOT NULL DEFAULT 0,
+                    `bgLengthOffsetRight` REAL NOT NULL DEFAULT 0,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                INSERT INTO highlightRules_r56(
+                    `id`, `name`, `pattern`, `sampleText`,
+                    `targetScope`, `enabled`, `position`, `textColor`,
+                    `bgColor`, `underlineMode`, `underlineColor`, `underlineWidth`,
+                    `underlineOffset`, `underlineSvgPath`, `bgImage`, `bgImageFit`,
+                    `bgImageScale`, `configName`, `fontPath`, `fontWeight`,
+                    `isItalic`, `fontSizeOffset`, `npLeft`, `npRight`,
+                    `npTop`, `npBottom`, `manualNineSlice`, `letterSpacingBefore`,
+                    `letterSpacingAfter`, `lineSpacingTop`, `lineSpacingBottom`,
+                    `bgLengthOffsetLeft`, `bgLengthOffsetRight`
+                )
+                SELECT
+                    `id`, `name`, `pattern`, `sampleText`,
+                    `targetScope`, `enabled`, `position`, `textColor`,
+                    `bgColor`, `underlineMode`, `underlineColor`, `underlineWidth`,
+                    `underlineOffset`, `underlineSvgPath`, `bgImage`, `bgImageFit`,
+                    `bgImageScale`, `configName`, `fontPath`, `fontWeight`,
+                    `isItalic`, `fontSizeOffset`, `npLeft`, `npRight`,
+                    `npTop`, `npBottom`, `manualNineSlice`, `letterSpacingBefore`,
+                    `letterSpacingAfter`, `lineSpacingTop`, `lineSpacingBottom`,
+                    `bgLengthOffset` / 2.0, `bgLengthOffset` / 2.0
+                FROM highlightRules
+                """.trimIndent()
+            )
+            db.execSQL("DROP TABLE highlightRules")
+            db.execSQL("ALTER TABLE highlightRules_r56 RENAME TO highlightRules")
         }
     }
 }

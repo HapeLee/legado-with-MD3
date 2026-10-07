@@ -9,11 +9,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TableRows
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
@@ -32,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -58,6 +64,10 @@ fun ReadAloudContent(
 ) {
     val ttsSpeechRate = state.readAloudTtsSpeechRate
     var speechRatePreview by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
+    // 总音量同样只在松手时提交：拖动中每像素写 prefs 并回灌会让滑块来回跳
+    var bgmVolumePreview by remember(state.bgmVolume) {
+        mutableFloatStateOf(state.bgmVolume * 100f)
+    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -126,6 +136,83 @@ fun ReadAloudContent(
 
         Spacer(Modifier.height(12.dp))
 
+        // 多角色两开关并排成一行（selected 高亮 = 开），下面再一行两个入口按钮
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.SetUseMultiSpeaker(!state.useMultiSpeaker)) },
+                selected = state.useMultiSpeaker,
+                icon = Icons.Default.RecordVoiceOver,
+                text = stringResource(R.string.use_multi_speaker),
+                modifier = Modifier.weight(1f),
+            )
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.SetMultiRoleCast(!state.multiRoleCast)) },
+                selected = state.multiRoleCast,
+                icon = Icons.Default.Face,
+                text = stringResource(R.string.multi_role_cast),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+
+        // 背景音乐：开关 + 分配表同一行（都是「这一章的配乐怎么安排」的入口），
+        // 总音量单独一行滑块；本章配乐一览与 AI 识别场景再一行。
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.SetBgmAssign(!state.bgmAssign)) },
+                selected = state.bgmAssign,
+                icon = Icons.Default.MusicNote,
+                text = stringResource(R.string.bgm_assign),
+                modifier = Modifier.weight(1f),
+            )
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.OpenBookVoiceCasting) },
+                icon = Icons.Default.TableRows,
+                text = stringResource(R.string.book_voice_casting),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // 本章配乐区间一览：不用一段一段点胶囊才能看全
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BgmSceneTable)) },
+                icon = Icons.Default.TableRows,
+                text = stringResource(R.string.cast_bgm_scene_table),
+                modifier = Modifier.weight(1f),
+            )
+            // 场景识别只依赖「背景音乐分配」这个副开关，与开不开多角色朗读无关
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.OpenAiSceneDialog) },
+                icon = Icons.Default.AutoAwesome,
+                text = stringResource(R.string.ai_scene_assign_entry),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        // 总音量：朗读设置里的这一根是「背景音乐相对人声整体多响」，
+        // 与配乐库每条曲子的音量、段内音量相乘
+        TinySliderSettingItem(
+            title = stringResource(R.string.cast_bgm_master_volume),
+            value = state.bgmVolume * 100f,
+            valueRange = 0f..100f,
+            steps = 19,
+            valueFormat = { "${it.toInt()}%" },
+            onValueChange = { bgmVolumePreview = it },
+            onValueChangeFinished = {
+                onIntent(ReadBookIntent.SetBgmVolume(bgmVolumePreview / 100f))
+            },
+        )
+        Spacer(Modifier.height(12.dp))
         TinySwitchSettingItem(
             title = stringResource(R.string.flow_sys),
             checked = state.readAloudTtsFollowSys,

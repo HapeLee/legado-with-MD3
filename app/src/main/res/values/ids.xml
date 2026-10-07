@@ -31,4 +31,6 @@
     <item name="menu_mark" type="id" />
     <item name="menu_browser" type="id" />
     <item name="menu_share_str" type="id" />
+    <item name="menu_insert_bgm_before" type="id" />
+    <item name="menu_insert_bgm_after" type="id" />
 </resources>

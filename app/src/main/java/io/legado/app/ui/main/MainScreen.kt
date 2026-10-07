@@ -168,6 +168,7 @@ fun MainScreen(
     onNavigateToReadRecord: () -> Unit,
     onNavigateToReadRecordOverview: () -> Unit,
     onNavigateToHighlightTagRule: () -> Unit,
+    onNavigateToMultiRoleRule: () -> Unit,
     onNavigateToAbout: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -194,6 +195,7 @@ fun MainScreen(
                 MainEffect.ExitApp -> (context as? ComponentActivity)?.finish()
                 MainEffect.NavigateToReadRecord -> onNavigateToReadRecord()
                 MainEffect.NavigateToHighlightTagRule -> onNavigateToHighlightTagRule()
+                MainEffect.NavigateToMultiRoleRule -> onNavigateToMultiRoleRule()
                 MainEffect.NavigateToAbout -> onNavigateToAbout()
             }
         }
