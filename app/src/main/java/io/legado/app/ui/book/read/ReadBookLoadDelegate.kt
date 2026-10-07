@@ -105,6 +105,11 @@ class ReadBookLoadDelegate(
         book
     }
 
+    /**
+     * 开书流程。这里不写 `books` 行：`saveRead()` 会更新书架查询的投影列兼排序键
+     * `durChapterTime`，开页时再落一次会让整个书架重组。进度另有两处落库——翻页走
+     * `ReadBook.saveRead(pageChanged)`，离开页面走 `ReadBookViewModel.handleOnPause`。
+     */
     fun initData(
         request: ReadBookInitRequest,
         initialBook: Book? = null,
@@ -140,8 +145,6 @@ class ReadBookLoadDelegate(
             val msg = "初始化数据失败\n${it.localizedMessage}"
             ReadBook.upMsg(msg)
             AppLog.put(msg, it)
-        }.onFinally {
-            ReadBook.saveRead()
         }
     }
 

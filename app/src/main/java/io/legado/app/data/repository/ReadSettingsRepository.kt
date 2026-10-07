@@ -343,7 +343,23 @@ class ReadSettingsRepository(
         }
     }
 
+    /**
+     * 快照不可变，且写入必经 `AppConfigStore.rebuild()` 换新实例，因此按实例缓存映射结果。
+     * 读侧每个 `ReadBookConfig` 属性都取 [currentSettings]，不缓存则每属性重建整份记录。
+     */
+    @Volatile
+    private var settingsMemo: SettingsMemo? = null
+
+    private class SettingsMemo(val preferences: Preferences, val settings: ReadSettings)
+
     internal fun Preferences.toReadSettings(): ReadSettings {
+        settingsMemo?.let {
+            if (it.preferences === this) return it.settings
+        }
+        return buildReadSettings().also { settingsMemo = SettingsMemo(this, it) }
+    }
+
+    private fun Preferences.buildReadSettings(): ReadSettings {
         val readStyleSelect = compatDsValue(Keys.ReadStyleSelect, 0)
         return ReadSettings(
             screenOrientation = compatDsValue(Keys.ScreenOrientation, "0"),

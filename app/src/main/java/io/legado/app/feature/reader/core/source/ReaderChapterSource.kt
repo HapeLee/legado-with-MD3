@@ -1,5 +1,7 @@
 package io.legado.app.feature.reader.core.source
 
+import io.legado.app.feature.reader.core.cast.CastMarkers
+
 sealed interface ReaderChapterSourceBlock {
     val chapterPosition: Int
 
@@ -49,6 +51,18 @@ sealed interface ReaderChapterInlineSource {
         val htmlSpanExtent: ReaderHtmlImageSpanExtent? = null,
     ) : ReaderChapterInlineSource
     data class BlankLine(override val chapterPosition: Int) : ReaderChapterInlineSource
+
+    /**
+     * 段首背景音乐胶囊：只占行内宽度，不占任何语义字符（[semanticContent] 逐字节不变），
+     * 所以朗读链路读不到它，正文文字也与不开时完全一致。锚点是段落序号，
+     * 与 BgmSceneStore.ordinals 同一套计数。
+     */
+    data class BgmScene(
+        override val chapterPosition: Int,
+        val paragraphIndex: Int,
+        val poolName: String,
+        val trackName: String,
+    ) : ReaderChapterInlineSource
 }
 
 /**
@@ -116,18 +130,32 @@ object ReaderChapterSourceParser {
         includeTitle: Boolean,
         adaptSpecialStyle: Boolean,
         htmlSemanticTextResolver: ReaderHtmlSemanticTextResolver = ReaderHtmlSemanticTextResolver(::htmlSemanticText),
+        /**
+         * 多角色分配：null = 关闭（行为与原版逐字节一致）。非 null = 开启：锚点开引号后
+         * 插入命中的 `<<名字（池）>>` 标记（占语义坐标，朗读链路当普通文本读，
+         * 渲染层展开成胶囊）；未命中的锚点不插文本，由测量侧同规则跟踪器就地
+         * 合成「未分配」占位胶囊。
+         */
+        castLabels: Map<Int, String>? = null,
+        /**
+         * 背景音乐分配：段落序号 → (音乐池名, 指定曲目名)。空 = 关闭。
+         * 只在段首挂一个视觉胶囊，不向正文注入任何字符。
+         */
+        bgmScenes: Map<Int, Pair<String, String>> = emptyMap(),
     ): ReaderChapterSource {
         val result = mutableListOf<ReaderChapterSourceBlock>()
         val semanticContent = StringBuilder()
         var position = 0
+        // 多角色分配锚点跟踪器：与测量侧 CastQuoteTracker 同规则，保证 ordinal 一致
+        val castTracker = CastMarkers.CastQuoteTracker()
         if (includeTitle && title.isNotBlank()) {
             result += ReaderTitleSegmentation().blocks(title)
         }
-        paragraphs.forEach { rawParagraph ->
+        paragraphs.forEachIndexed { paragraphIndex, rawParagraph ->
             val trimmed = rawParagraph.trim()
             if (adaptSpecialStyle && trimmed == "[newpage]") {
                 result += ReaderChapterSourceBlock.PageBreak(position)
-                return@forEach
+                return@forEachIndexed
             }
             if (adaptSpecialStyle && trimmed.startsWith("<usehtml>") && trimmed.endsWith("</usehtml>")) {
                 val html = trimmed.removePrefix("<usehtml>").removeSuffix("</usehtml>")
@@ -136,18 +164,24 @@ object ReaderChapterSourceParser {
                 result += ReaderChapterSourceBlock.Html(html, position, semanticLength)
                 semanticContent.append(semanticText).append('\n')
                 position += semanticLength + 1
-                return@forEach
+                return@forEachIndexed
             }
             val inlineItems = mutableListOf<ReaderChapterInlineSource>()
             val paragraphPosition = position
             var cursor = 0
+            // 多角色分配：在 Text 片段内把标记插到对应开引号后，并推进全局引号计数
+            fun injectCast(text: String): String {
+                val labels = castLabels ?: return text
+                return CastMarkers.injectParagraph(text, castTracker, labels)
+            }
             imagePattern.findAll(rawParagraph).forEach { match ->
                 if (cursor < match.range.first) {
                     val text = rawParagraph.substring(cursor, match.range.first)
                     if (text.isNotEmpty()) {
-                        inlineItems += ReaderChapterInlineSource.Text(text, position)
-                        semanticContent.append(text)
-                        position += text.length
+                        val castText = injectCast(text)
+                        inlineItems += ReaderChapterInlineSource.Text(castText, position)
+                        semanticContent.append(castText)
+                        position += castText.length
                     }
                 }
                 inlineItems += ReaderChapterInlineSource.Image(match.groupValues[1], position)
@@ -158,10 +192,26 @@ object ReaderChapterSourceParser {
             if (cursor < rawParagraph.length) {
                 val text = rawParagraph.substring(cursor)
                 if (text.isNotEmpty()) {
-                    inlineItems += ReaderChapterInlineSource.Text(text, position)
-                    semanticContent.append(text)
-                    position += text.length
+                    val castText = injectCast(text)
+                    inlineItems += ReaderChapterInlineSource.Text(castText, position)
+                    semanticContent.append(castText)
+                    position += castText.length
                 }
+            }
+            bgmScenes[paragraphIndex]?.takeIf { inlineItems.isNotEmpty() }?.let { (pool, track) ->
+                // 配乐胶囊自己成一段（排在正文段之前）：与首句同行会被行首缩进挤到字里，
+                // 单占一行才看得清「这一段换什么场景」。它零语义字符，所以不影响章节偏移。
+                result += ReaderChapterSourceBlock.Paragraph(
+                    listOf(
+                        ReaderChapterInlineSource.BgmScene(
+                            chapterPosition = paragraphPosition,
+                            paragraphIndex = paragraphIndex,
+                            poolName = pool,
+                            trackName = track,
+                        ),
+                    ),
+                    paragraphPosition,
+                )
             }
             if (inlineItems.isNotEmpty()) {
                 result += ReaderChapterSourceBlock.Paragraph(inlineItems, paragraphPosition)
@@ -171,6 +221,30 @@ object ReaderChapterSourceParser {
         }
         return ReaderChapterSource(chapterIndex, title, result, position, semanticContent.toString())
     }
+
+    /**
+     * 锚点计数用的「与 [parse] 逐字同源」正文视图。
+     *
+     * [parse] 只对普通段落里的 Text 片段喂引号跟踪器（[CastMarkers.CastQuoteTracker]）：
+     * `[newpage]` 与 `<usehtml>…</usehtml>` 整段提前 return，一个字都不喂；
+     * `<img …>` 被切成 Image 片段，标签里那对成对直引号同样不喂。
+     * 所以 AI 分配、试听取句这类**离线数锚点**的代码如果直接喂原始段落，
+     * 在含图或含 HTML 的章里会多出序号，从第一个图片段开始整章错位——
+     * 错位后分配的名字就挂到别的句子上。
+     *
+     * 本函数就在 [parse] 旁边、共用它的 [imagePattern]，规则漂移了会在同一处看见。
+     * 图片位置换成 U+FFFC（不含引号，计数与不喂等价）。
+     */
+    fun castAnchorText(paragraphs: List<String>, adaptSpecialStyle: Boolean): List<String> =
+        paragraphs.map { raw ->
+            val trimmed = raw.trim()
+            when {
+                adaptSpecialStyle && trimmed == "[newpage]" -> ""
+                adaptSpecialStyle &&
+                    trimmed.startsWith("<usehtml>") && trimmed.endsWith("</usehtml>") -> ""
+                else -> imagePattern.replace(raw, "\uFFFC")
+            }
+        }
 
     private fun htmlSemanticText(html: String): String = html
         .replace(imagePattern, "\uFFFC")

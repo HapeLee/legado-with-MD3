@@ -339,6 +339,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         installSplashScreen()
         shouldApplyDefaultToRead = savedInstanceState == null
         restoredReadBookRoute = savedInstanceState?.restoreReadBookRoute()
+            ?: navRouteTracker.lastReadBookRoute()
         super.onCreate(savedInstanceState)
 
         if (checkStartupRoute()) return
@@ -614,6 +615,11 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                     ) {
                         NavDisplay(
                             backStack = backStack,
+                            // 交给 nav3 装上 SharedEntryInSceneNavEntryDecorator：这是跨 scene 保持
+                            // 共享元素登记的官方机制。少了它，书架 scene 一被销毁封面的登记就没了——
+                            // 打开书后「马上返回」还有封面转场、'待一会儿再返回'会退化成
+                            // 普通淡入淡出。
+                            sharedTransitionScope = this@SharedTransitionLayout,
                             entryDecorators = listOf(
                                 rememberSaveableStateHolderNavEntryDecorator(),
                                 rememberViewModelStoreNavEntryDecorator(),

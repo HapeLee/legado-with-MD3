@@ -15,16 +15,26 @@ data class ReaderBackgroundBand(
  * 书源 HTML 与替换规则可能逐字声明背景色（BackgroundColorSpan），排版按样式段切分元素后
  * 逐元素绘制会出现字间缝隙；合并按元素顺序进行，几何判定（同行重叠 + 间隙容差）与
  * mergeSelectionBounds 一致，仅多一个颜色键。
+ *
+ * 带背景图的那一列只画图、不铺色（对照旧 `TextLine.drawBgColorSegments` 里
+ * 「只有在没有背景图片时才绘制背景颜色」那一条）：色块是按行盒画的直边矩形，压在九宫格气泡
+ * 上面就会把气泡切出一截直边。它同时也是一道隔断——两侧同色的色块不许跨过它并成一条。
  */
 fun List<ReaderElement.Text>.mergeBackgroundBounds(
     minimumLineOverlap: Float = 0.5f,
 ): List<ReaderBackgroundBand> {
     if (isEmpty()) return emptyList()
     val bands = ArrayList<ReaderBackgroundBand>(size)
+    var brokenByImage = false
     forEach { element ->
+        if (element.style.backgroundImage != null) {
+            brokenByImage = true
+            return@forEach
+        }
         val colorArgb = element.style.backgroundArgb ?: return@forEach
         val rect = element.bounds
-        val previous = bands.lastOrNull()
+        val previous = bands.lastOrNull()?.takeUnless { brokenByImage }
+        brokenByImage = false
         val verticalOverlap = previous?.let {
             (minOf(it.bounds.bottom, rect.bottom) - maxOf(it.bounds.top, rect.top)).coerceAtLeast(0f)
         } ?: 0f

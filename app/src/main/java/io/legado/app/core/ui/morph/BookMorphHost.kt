@@ -242,10 +242,12 @@ fun BookMorphHost(
                     .background(backgroundColor)
             )
 
-            // 2. 内容层：无几何缩放，只吃透明度与轮廓裁剪，未完全展开前清空语义和屏蔽点击
-            val expanded by remember { derivedStateOf { morph.expanded } }
-            val contentSemantics = if (expanded) Modifier else Modifier.clearAndSetSemantics {}
-            val inputGate = if (expanded || morph.progress.value <= 0.001f) {
+            // 2. 内容层：无几何缩放，只吃透明度与轮廓裁剪，内容还没完全显形前清空语义和屏蔽点击
+            val contentSettled by remember {
+                derivedStateOf { morphContentSettled(morph.veil, morph.progress.value) }
+            }
+            val contentSemantics = if (contentSettled) Modifier else Modifier.clearAndSetSemantics {}
+            val inputGate = if (contentSettled) {
                 Modifier
             } else {
                 Modifier.pointerInput(Unit) {
@@ -400,3 +402,14 @@ private data class MorphPanelClipShape(
         ),
     )
 }
+
+/**
+ * 内容层什么时候该放行触点与读屏。
+ *
+ * 判据与内容透明度同源（[BookMorphState.veil]，即本文件内容层 `graphicsLayer` 里的那个 alpha）：
+ * 透明度在 `MORPH_VEIL_END` 就已经满格，而 `progress` 要等弹簧收敛才正好等于 1f。
+ * 拿 `progress` 当闸门会留出一段「画面看着早停稳了、手指底下还是死的」的窗口，
+ * 动画被取消或重播时这段窗口还会永久化。
+ */
+internal fun morphContentSettled(veil: Float, progress: Float): Boolean =
+    veil >= 1f || progress <= 0.001f

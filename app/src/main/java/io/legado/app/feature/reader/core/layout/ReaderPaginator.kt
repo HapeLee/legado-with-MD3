@@ -8,42 +8,12 @@ import io.legado.app.feature.reader.core.model.ReaderPageId
 import io.legado.app.feature.reader.core.model.ReaderRect
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import io.legado.app.feature.reader.core.model.frameBottomPx
+import io.legado.app.feature.reader.core.model.frameLeftPx
+import io.legado.app.feature.reader.core.model.frameRightPx
+import io.legado.app.feature.reader.core.model.frameTopPx
+import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import kotlin.math.max
-
-/**
- * 按这一行上下真正能借到的留白，把九宫格**四边等比**收紧。
- *
- * [topBudgetPx] / [bottomBudgetPx] 由调用方按邻行情况给出：邻行没有高亮框时是**整个行距**
- * （那段留白反正空着），邻行也有框时才各让**半个行距**——两个框正好相接、不重叠。
- *
- * 四边共用一个因子是这里的要点：旧 View `TextLine.drawNineSliceFrames` 只把
- * `overflowScale = halfGap / max(上厚, 下厚)` 用在上下边，左右边永远按原图厚度画，于是行距
- * 一紧就变成「左右两条宽竖边 + 上下两条发丝横线、四角被纵向抹平」的各向异性；而只做各向
- * 同性的等比例收紧时，框又会整体被钉死在半个行距上（默认行距 1.2、行高 60px 只有 6px）。
- * 放宽纵向预算 + 等比收紧，两个毛病一起解掉。
- *
- * 上下边为 0 的色带型图片纵向没有约束，左右按 图片 × scale 原样画；行距为 0 时上下边归零，
- * [ReaderNineSliceLayout] 会跳过高度为 0 的上下两行，自然回落成旧 View 的「中心 + 左右两条边」。
- */
-private fun ReaderTextBackgroundImage.fitIntoLineBudget(
-    topBudgetPx: Float,
-    bottomBudgetPx: Float,
-): ReaderTextBackgroundImage {
-    if (maxOf(contentInsetTopPx, contentInsetBottomPx) <= 0f) return this
-    val frameScale = minOf(
-        1f,
-        if (contentInsetTopPx > 0f) topBudgetPx / contentInsetTopPx else 1f,
-        if (contentInsetBottomPx > 0f) bottomBudgetPx / contentInsetBottomPx else 1f,
-    ).coerceIn(0f, 1f)
-    if (frameScale >= 1f) return this
-    if (frameScale <= 0f) return copy(contentInsetTopPx = 0f, contentInsetBottomPx = 0f)
-    return copy(
-        contentInsetLeftPx = contentInsetLeftPx * frameScale,
-        contentInsetRightPx = contentInsetRightPx * frameScale,
-        contentInsetTopPx = contentInsetTopPx * frameScale,
-        contentInsetBottomPx = contentInsetBottomPx * frameScale,
-    )
-}
 
 enum class ReaderTextAlignment { START, CENTER, END, JUSTIFY }
 enum class ReaderImageScaleMode { CONTAIN_NO_UPSCALE, FIT_WIDTH, FIT_PAGE }
@@ -106,6 +76,8 @@ data class ReaderPaginationConfig(
     val pageUnderline: ReaderPageUnderline? = null,
     val inlineImagesPreserveScrollLine: Boolean = true,
     val emphasisUnderlineStyle: ReaderEmphasisUnderline? = null,
+    /** 多角色分配渲染选项（默认关闭：不产生胶囊、零额外开销）。 */
+    val castOptions: ReaderCastOptions = ReaderCastOptions.Disabled,
 ) {
     init {
         require(columnCount in 1..2)
@@ -125,6 +97,42 @@ private data class ReaderLayoutRow(
 )
 
 /** A shaped paragraph. Android supplies glyph-cluster widths using the same font used by Canvas. */
+/** 角色配音档案快照（分页期用，平台层从 DB 预取，core 层不触 DB）。 */
+data class ReaderCastProfile(
+    val characterId: String,
+    val avatarUri: String,
+)
+
+/**
+ * 多角色分配的分页选项：开关 + 角色档案 + 变声器状态（段级优先，其次角色全局）。
+ *
+ * 胶囊上的变声器标记看的是这一句**最终**用不用变声器，与朗读侧
+ * `VoiceEffectStore.ofSpeech` 的取值顺序一致。
+ */
+data class ReaderCastOptions(
+    val enabled: Boolean,
+    val profiles: Map<String, ReaderCastProfile>,
+    /** 段级：本章开引号锚点序号 → 变声器预设名（空值不收录）。 */
+    val chapterEffects: Map<Int, String> = emptyMap(),
+    /** 角色级（全局）：角色名 → 变声器预设名（空值不收录）。 */
+    val characterEffects: Map<String, String> = emptyMap(),
+    /**
+     * 角色自己设的气泡：角色名 → 样式（只带背景图与背景色那两栏，见 `CastCharacter.bubbleRuleJson`）。
+     *
+     * 由平台层换算好再送进来（dp→px 与位图尺寸都在那边），core 层不碰 DB 也不碰配置。
+     * 命中哪一句由分配表给定，样式在 `LegacyReaderStyleRangeMapper` 里盖到高亮规则之上。
+     */
+    val bubbles: Map<String, ReaderCharacterStyle> = emptyMap(),
+) {
+    fun hasVoiceEffect(characterName: String, quoteOrdinal: Int): Boolean =
+        chapterEffects[quoteOrdinal]?.isNotBlank() == true ||
+            (characterName.isNotBlank() && characterEffects[characterName]?.isNotBlank() == true)
+
+    companion object {
+        val Disabled = ReaderCastOptions(enabled = false, profiles = emptyMap())
+    }
+}
+
 data class ReaderMeasuredParagraph(
     val text: String,
     val clusters: List<String>,
@@ -227,6 +235,42 @@ sealed interface ReaderMeasuredInlineItem {
          */
         val lineFinalWidthPx: Float? = null,
     ) : ReaderMeasuredInlineItem
+
+    /**
+     * 多角色分配胶囊（已测量）。raw 为标记原文（占语义坐标；未分配占位胶囊为空串）。
+     * [voiceEffectMark] = 这一句最终带变声器，胶囊右端画标记图标（宽度已含）。
+     */
+    data class RoleCast(
+        override val widthPx: Float,
+        val heightPx: Float,
+        override val chapterPosition: Int,
+        val raw: String,
+        val name: String,
+        val voicePoolLabel: String,
+        val quoteOrdinal: Int,
+        val voiceEffectMark: Boolean = false,
+    ) : ReaderMeasuredInlineItem
+
+    /** 段首背景音乐胶囊（纯视觉）：不占语义坐标。 */
+    data class BgmScene(
+        override val widthPx: Float,
+        val heightPx: Float,
+        override val chapterPosition: Int,
+        val paragraphIndex: Int,
+        val poolName: String,
+        val trackName: String,
+    ) : ReaderMeasuredInlineItem
+}
+
+/**
+ * 行内项里能自己撑起行高的那几种的像素高：行内图、角色胶囊、配乐胶囊（单独成行的胶囊
+ * 一个文字都没有，行高只能由它自己给）。文字不算，它走段落的基线/ descent 那套。
+ */
+private fun ReaderMeasuredInlineItem.tallItemHeightPx(): Float = when (this) {
+    is ReaderMeasuredInlineItem.Image -> heightPx
+    is ReaderMeasuredInlineItem.RoleCast -> heightPx
+    is ReaderMeasuredInlineItem.BgmScene -> heightPx
+    else -> 0f
 }
 
 /** Platform-free page assembler. It never creates or mutates legacy TextPage/TextLine objects. */
@@ -285,13 +329,6 @@ internal class ReaderPaginationSession(
     private var columnElementStart = 0
     private var columnRows = mutableListOf<ReaderLayoutRow>()
     private var centeredPageShiftPx = 0f
-
-    /**
-     * 上一个视觉行是否画了九宫格框。九宫格上下边要借用邻行的留白：邻行没有框时可以
-     * 用满整个行距，邻行也有框时只能各让半个。空行 / 图片 / 分隔线 / 分页本身就带空隙，
-     * 在这些位置复位。
-     */
-    private var previousLineHadFrame = false
 
     /** 1-block 前瞻：标题间距要读下一个 block，与旧 `blocks.getOrNull(index + 1)` 同义。 */
     private var pendingBlock: ReaderMeasuredBlock? = null
@@ -383,10 +420,7 @@ internal class ReaderPaginationSession(
 
             is ReaderMeasuredBlock.BlankLine -> addBlankLine(block, index, hasFollowingBlock)
             is ReaderMeasuredBlock.Rule -> addRule(block)
-            ReaderMeasuredBlock.PageBreak -> {
-                previousLineHadFrame = false
-                advanceColumn()
-            }
+            ReaderMeasuredBlock.PageBreak -> advanceColumn()
         }
         if (isTitle) {
             y += if (nextIsTitle) {
@@ -433,6 +467,8 @@ internal class ReaderPaginationSession(
             )
 
             is ReaderElement.Action -> element.copy(bounds = element.bounds.offsetY(deltaY))
+        is ReaderElement.RoleCast -> element.copy(bounds = element.bounds.offsetY(deltaY))
+            is ReaderElement.BgmScene -> element.copy(bounds = element.bounds.offsetY(deltaY))
             is ReaderElement.Spacer -> element.copy(bounds = element.bounds.offsetY(deltaY))
             is ReaderElement.Rule -> element.copy(bounds = element.bounds.offsetY(deltaY))
             is ReaderElement.ParagraphMarker -> element.copy(bounds = element.bounds.offsetY(deltaY))
@@ -490,8 +526,6 @@ internal class ReaderPaginationSession(
 
     private fun advanceColumn() {
         if (!columnHasContent()) return
-        // 换栏/换页后上一行已经不在同一屏，页边距本身就是空隙。
-        previousLineHadFrame = false
         if (columnIndex + 1 < config.columnCount) {
             justifyColumnBottom()
             columnIndex++
@@ -569,8 +603,6 @@ internal class ReaderPaginationSession(
             columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + lineHeight)
             y += lineHeight * (paragraph.lineSpacingMultiplier ?: config.lineSpacingMultiplier)
         }
-        // 这条路径（整段共用一个 style）不参与九宫格预算，但下一行仍要知道本段带框。
-        previousLineHadFrame = paragraph.style.backgroundImage?.fit == 3
         if (appendSeparator) {
             pageText.append('\n')
             y += if (paragraph.isTitle) config.titleParagraphSpacingPx ?: config.paragraphSpacingPx
@@ -579,7 +611,6 @@ internal class ReaderPaginationSession(
     }
 
     private fun addImage(image: ReaderMeasuredBlock.Image) {
-        previousLineHadFrame = false
         if (image.pageBreakBefore) advanceColumn()
         val sourceWidth = image.intrinsicWidthPx.coerceAtLeast(1f)
         val sourceHeight = image.intrinsicHeightPx.coerceAtLeast(1f)
@@ -651,86 +682,37 @@ internal class ReaderPaginationSession(
         // 约 6 次这样的调用，是 `line-placement` 里最大的一块纯开销。
         // 顺带在建 `clusters` 那一趟里判定，不额外再扫一遍段落。
         var hasBackgroundImages = false
-        val clusters = paragraph.items.map {
-            when (it) {
+        val clusters = ArrayList<String>(paragraph.items.size)
+        /**
+         * 每个字要在左右两侧让出的命中字距（段内恒为 0，只有命中段首字/末字带值，见
+         * [io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper]）。断行、自然宽度
+         * 与落笔推进都要用它，否则一行的实际占宽会比算出来的宽，两端对齐会算错间隙。
+         */
+        val matchSpacingPx = FloatArray(paragraph.items.size)
+        paragraph.items.forEachIndexed { index, item ->
+            when (item) {
                 is ReaderMeasuredInlineItem.Text -> {
-                    if (it.style.backgroundImage != null) hasBackgroundImages = true
-                    it.value
+                    if (item.style.backgroundImage != null) hasBackgroundImages = true
+                    matchSpacingPx[index] =
+                        item.style.matchSpacingBeforePx + item.style.matchSpacingAfterPx
+                    clusters += item.value
                 }
 
-                is ReaderMeasuredInlineItem.Image -> "\uFFFC"
+                is ReaderMeasuredInlineItem.Image -> clusters += "\uFFFC"
+                is ReaderMeasuredInlineItem.RoleCast -> clusters += "\uFFFC"
+                is ReaderMeasuredInlineItem.BgmScene -> clusters += ""
             }
         }
-        // 纵向预算取「本段行距」与「正文行距」的较大者：旧 View
-        // `TextLine.drawNineSliceFrames` 的 `gap` 用的是全局（正文）的
-        // `ChapterProvider.lineSpacingExtra`，标题与正文共用一份。只按本段行距算时，
-        // 标题行距被设成 1.0（设置值 10，"标题不加行距"）就会得到 0 预算，九宫格上下两条边
-        // 随之被压成 0 高度整条消失——只剩中心格和左右两条边在上下切分线之间的那一段。
-        val lineGapPx = (
-                maxOf(paragraph.lineSpacingMultiplier, config.lineSpacingMultiplier) - 1f
-                ).coerceAtLeast(0f) * paragraph.lineHeightPx
-        val halfLineGapPx = lineGapPx / 2f
 
-        fun itemFrame(index: Int) =
-            (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)
-                ?.style?.backgroundImage?.takeIf { it.fit == 3 }
-
-        fun lineHasFrame(from: Int, until: Int): Boolean =
-            hasBackgroundImages &&
-                    (from until until.coerceAtMost(paragraph.items.size)).any { itemFrame(it) != null }
-
-        fun frameOf(index: Int, topBudgetPx: Float, bottomBudgetPx: Float) =
-            if (hasBackgroundImages) {
-                itemFrame(index)?.fitIntoLineBudget(topBudgetPx, bottomBudgetPx)
-            } else null
-
-        /**
-         * 元素绘制时真正使用的背景图：九宫格按行预算收紧，拉伸/裁剪/平铺按原样。
-         *
-         * 行内连续放行标记必须用「绘制用实例」比较，不能只看 [frameOf]（它只认 `fit == 3`）。
-         * 旧 View `TextLine.drawStyledBackgrounds` 对行内连续的同图段无条件合并，新实现多了
-         * 「几何相邻 < 1px」这条，靠分页期放行标记兜住字间距（默认 0.1em，远大于 1px）。
-         * 放行标记若只发给九宫格，fit≠3 的背景图就会逐字绘制成一条条断开的气泡。
-         */
-        fun drawnBackgroundOf(index: Int, topBudgetPx: Float, bottomBudgetPx: Float) =
-            if (!hasBackgroundImages) null else
-                (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)
-                    ?.style?.backgroundImage?.let { image ->
-                        if (image.fit == 3) image.fitIntoLineBudget(
-                            topBudgetPx,
-                            bottomBudgetPx
-                        ) else image
-                    }
-
-        fun backgroundInsetBefore(
-            index: Int,
-            lineStart: Int,
-            topBudgetPx: Float,
-            bottomBudgetPx: Float,
-        ): Float {
-            val image = frameOf(index, topBudgetPx, bottomBudgetPx) ?: return 0f
-            return if (
-                index == lineStart ||
-                frameOf(index - 1, topBudgetPx, bottomBudgetPx) != image
-            ) image.contentInsetLeftPx else 0f
-        }
-
-        fun backgroundInsetAfter(
-            index: Int,
-            lineEnd: Int,
-            topBudgetPx: Float,
-            bottomBudgetPx: Float,
-        ): Float {
-            val image = frameOf(index, topBudgetPx, bottomBudgetPx) ?: return 0f
-            return if (
-                index + 1 == lineEnd ||
-                frameOf(index + 1, topBudgetPx, bottomBudgetPx) != image
-            ) image.contentInsetRightPx else 0f
-        }
+        fun backgroundOf(index: Int) = if (hasBackgroundImages) {
+            (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)?.style?.backgroundImage
+        } else null
 
         val breaker = ChineseLineBreaker(
             clusters = clusters,
-            widthsPx = paragraph.items.map { it.widthPx + letterSpacing },
+            widthsPx = paragraph.items.mapIndexed { index, item ->
+                item.widthPx + letterSpacing + matchSpacingPx[index]
+            },
             indentCharacters = 0,
             widthPx = (config.contentWidthPx - paragraph.restLineIndentWidthPx)
                 .coerceAtLeast(0f).toInt(),
@@ -742,54 +724,28 @@ internal class ReaderPaginationSession(
         val originalEnds = breaker.lineClusterStarts.drop(1)
         val refineStartNs = if (metrics != null) System.nanoTime() else 0L
         val starts = mutableListOf(0)
-        // 每行的纵向预算在断行阶段就定死，绘制阶段直接复用——排版预留与绘制的外框必须
-        // 用同一份 inset，否则框会压到相邻文字上或者留出多余的空档。
-        val lineTopBudgets = mutableListOf<Float>()
-        val lineBottomBudgets = mutableListOf<Float>()
-        // The View reader reserves the left/right pieces around every visual-line run.
-        // Refine the shaped line ends so those pieces cannot overlap adjacent text or
-        // escape the column. Keep a forbidden Chinese break intact even if its frame has
-        // to consume the remaining slack, matching the legacy punctuation priority.
+        // 背景图（含九宫格）不参与排版：它只是压在字后面的装饰，超出边距也只超出图本身。
+        // 这里只按字形宽 + 命中字距收紧行尾，让断行结果与不开任何背景图时逐字一致。
+        // Keep a forbidden Chinese break intact even if its row has to consume the
+        // remaining slack, matching the legacy punctuation priority.
         while (starts.last() < paragraph.items.size) {
             val from = starts.last()
             val lineIndent =
                 if (starts.size == 1) indentWidth else paragraph.restLineIndentWidthPx
             val available = config.contentWidthPx - lineIndent
-            val topBudgetPx = if (previousLineHadFrame) halfLineGapPx else lineGapPx
-            // 下一行的范围在断行阶段还没最终定下来（本行可能被九宫格宽度挤短，把尾巴
-            // 让给下一行），用原始断行结果近似探测那一行有没有框。
-            val breakerEnd = originalEnds.getOrElse(starts.lastIndex) { paragraph.items.size }
-                .coerceAtLeast(from + 1)
-            val nextBreakerEnd =
-                originalEnds.getOrElse(starts.lastIndex + 1) { paragraph.items.size }
-            val bottomBudgetPx =
-                if (lineHasFrame(breakerEnd, nextBreakerEnd)) halfLineGapPx else lineGapPx
             // Advance the original visual-line cursor even when a frame forces the
             // preceding row shorter. Reusing the first end after `from` would strand the
             // remainder of that row as an unnecessary one-character line.
-            var until = breakerEnd
+            var until = originalEnds.getOrElse(starts.lastIndex) { paragraph.items.size }
+                .coerceAtLeast(from + 1)
 
             fun occupiedWidth(endExclusive: Int): Float {
-                // 无背景图时内缩恒为 0，宽度单独累加即可；带背景图时保持原来「宽度+内缩」
-                // 同序累加的写法，避免断行比较出现浮点差异。
-                if (!hasBackgroundImages) {
-                    var widthSum = 0.0
-                    for (index in from until endExclusive) {
-                        widthSum += paragraph.items[index].widthPx.toDouble()
-                    }
-                    return widthSum.toFloat() +
-                            letterSpacing * (endExclusive - from - 1).coerceAtLeast(0)
+                var widthSum = 0.0
+                for (index in from until endExclusive) {
+                    widthSum += (paragraph.items[index].widthPx + matchSpacingPx[index]).toDouble()
                 }
-                return (from until endExclusive).sumOf { index ->
-                    (paragraph.items[index].widthPx +
-                            backgroundInsetBefore(index, from, topBudgetPx, bottomBudgetPx) +
-                            backgroundInsetAfter(
-                                index,
-                                endExclusive,
-                                topBudgetPx,
-                                bottomBudgetPx
-                            )).toDouble()
-                }.toFloat() + letterSpacing * (endExclusive - from - 1).coerceAtLeast(0)
+                return widthSum.toFloat() +
+                        letterSpacing * (endExclusive - from - 1).coerceAtLeast(0)
             }
             while (until - from > 1 && occupiedWidth(until) > available) {
                 val candidate = until - 1
@@ -801,9 +757,6 @@ internal class ReaderPaginationSession(
                 until = candidate
             }
             starts += until
-            lineTopBudgets += topBudgetPx
-            lineBottomBudgets += bottomBudgetPx
-            previousLineHadFrame = lineHasFrame(from, until)
         }
         val placementStartNs = if (metrics != null) System.nanoTime() else 0L
         for (lineIndex in 0 until starts.lastIndex) {
@@ -811,29 +764,22 @@ internal class ReaderPaginationSession(
             val until = starts[lineIndex + 1]
             val lineItems = paragraph.items.subList(from, until)
             val itemCount = until - from
-            val topBudgetPx = lineTopBudgets[lineIndex]
-            val bottomBudgetPx = lineBottomBudgets[lineIndex]
-            fun backgroundInsetBefore(index: Int) =
-                backgroundInsetBefore(from + index, from, topBudgetPx, bottomBudgetPx)
-
-            fun backgroundInsetAfter(index: Int) =
-                backgroundInsetAfter(from + index, until, topBudgetPx, bottomBudgetPx)
 
             // 行内项每多一趟遍历，开销就乘上整章字形数：这里把字号缩放、首字颜色、
-            // 行内图高、自然宽度、内缩和空格数并为一次遍历，去掉原先各自产生的临时列表。
+            // 行内图高、自然宽度、命中留白和空格数并为一次遍历，去掉原先各自产生的临时列表。
             var maxTextScale = 1f
             var maxImageHeightPx = 0f
             var markerColorArgb: Int? = null
             var widthSum = 0.0
-            var insetSum = 0.0
+            var matchSum = 0.0
             var wordSpaceCount = 0
+            // 命中行行距是行级属性：一行里被多条规则命中时按留得最多的那条算，不逐字累加。
+            var linePadTopPx = 0f
+            var linePadBottomPx = 0f
             for (itemIndex in 0 until itemCount) {
                 val item = lineItems[itemIndex]
                 widthSum += item.widthPx.toDouble()
-                if (hasBackgroundImages) {
-                    insetSum += (backgroundInsetBefore(itemIndex) +
-                            backgroundInsetAfter(itemIndex)).toDouble()
-                }
+                matchSum += matchSpacingPx[from + itemIndex].toDouble()
                 if (item is ReaderMeasuredInlineItem.Text) {
                     // Inline HTML may shrink every glyph in a row (<small>, font-size, etc.).
                     // It changes glyph drawing but not the paragraph's base line box; otherwise
@@ -843,10 +789,13 @@ internal class ReaderPaginationSession(
                     if (scale > maxTextScale) maxTextScale = scale
                     if (markerColorArgb == null) markerColorArgb = item.style.colorArgb
                     if (item.value == " ") wordSpaceCount++
-                } else if (item is ReaderMeasuredInlineItem.Image &&
-                    item.heightPx > maxImageHeightPx
-                ) {
-                    maxImageHeightPx = item.heightPx
+                    val topPad = item.style.linePadTopPx
+                    if (topPad > linePadTopPx) linePadTopPx = topPad
+                    val bottomPad = item.style.linePadBottomPx
+                    if (bottomPad > linePadBottomPx) linePadBottomPx = bottomPad
+                } else {
+                    val tallHeightPx = item.tallItemHeightPx()
+                    if (tallHeightPx > maxImageHeightPx) maxImageHeightPx = tallHeightPx
                 }
             }
             val fallbackLineHeight = paragraph.lineHeightPx * maxTextScale
@@ -871,12 +820,16 @@ internal class ReaderPaginationSession(
             val textLineHeight = lineAscent + lineDescent
             val actualLineHeight = maxOf(textLineHeight, maxImageHeightPx)
             val lineBaselineOffset = lineAscent + (actualLineHeight - textLineHeight) / 2f
-            if (y + actualLineHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
+            // 命中行行距算进页底判定（对照 Legado_Max：上下两截都要落得下），否则下一行会
+            // 压到上一行的九宫格上边。抬完再画，行盒本身高度不变。
+            if (y + linePadTopPx + actualLineHeight + linePadBottomPx > config.contentBottomPx &&
+                columnHasContent()
+            ) advanceColumn()
+            y += linePadTopPx
             val indent = if (lineIndex == 0) indentWidth else paragraph.restLineIndentWidthPx
             val available = (config.contentWidthPx - indent).coerceAtLeast(0f)
             val naturalWidth = widthSum.toFloat() +
-                    letterSpacing * (itemCount - 1).coerceAtLeast(0) +
-                    insetSum.toFloat()
+                    letterSpacing * (itemCount - 1).coerceAtLeast(0) + matchSum.toFloat()
             val indentItems = (paragraph.leadingIndentItems - from).coerceIn(0, itemCount)
             val stretchableGaps = (itemCount - indentItems - 1).coerceAtLeast(0)
             val shouldJustify =
@@ -931,23 +884,22 @@ internal class ReaderPaginationSession(
             // The View reader started a non-extended underline after those glyphs.
             val underlineElementStart = elements.size + indentItems
             var previousItemBackground: ReaderTextBackgroundImage? = null
+            var previousMatchSpacingAfterPx = 0f
             lineItems.forEachIndexed { itemIndex, item ->
-                x += backgroundInsetBefore(itemIndex)
-                val itemBackground =
-                    drawnBackgroundOf(from + itemIndex, topBudgetPx, bottomBudgetPx)
+                val matchStyle = (item as? ReaderMeasuredInlineItem.Text)?.style
+                val spacingBefore = matchStyle?.matchSpacingBeforePx ?: 0f
+                x += spacingBefore
+                val itemBackground = backgroundOf(from + itemIndex)
                 when (item) {
                     is ReaderMeasuredInlineItem.Text -> {
                         val expandedWordSpace = if (item.value == " ") wordSpaceExtra else 0f
-                        val itemStyle = if (itemBackground == null) item.style else {
-                            item.style.copy(backgroundImage = itemBackground)
-                        }
                         elements += ReaderElement.Text(
                             bounds = ReaderRect(
                                 x, y, x + item.widthPx + expandedWordSpace, y + actualLineHeight,
                             ),
                             baselinePx = y + lineBaselineOffset + item.baselineShiftPx,
                             value = item.value,
-                            style = itemStyle,
+                            style = item.style,
                             selected = false,
                             emphasized = paragraph.emphasized,
                             link = item.link,
@@ -957,12 +909,24 @@ internal class ReaderPaginationSession(
                             // 富文本逐项样式：与前一项同背景图才视作同一 run 的延续。
                             // 比较「绘制用实例」，非九宫格背景图同样要拿到放行标记，
                             // 否则字间距会把它切成逐字绘制。
+                            // 前一项是角色/配乐胶囊时放行标记要跨过去（见 previousItemBackground
+                            // 的更新条件），否则一句对白会被中间的胶囊切成两个半截气泡。
+                            // 命中字距留出的那截空隙在命中段**外面**（正文里空隙前后都不属于
+                            // 任何字），所以它必须把 run 断掉：吞进气泡就等于内容没变、
+                            // 图却被拉长了。
                             continuesBackgroundRun = itemBackground != null &&
                                     itemIndex > 0 &&
-                                    previousItemBackground == itemBackground,
-                            backgroundFrameTopPx = itemBackground?.contentInsetTopPx ?: 0f,
-                            backgroundFrameBottomPx = itemBackground?.contentInsetBottomPx
-                                ?: 0f,
+                                    previousItemBackground == itemBackground &&
+                                    spacingBefore <= 0f &&
+                                    previousMatchSpacingAfterPx <= 0f,
+                            // 九宫格等比缩放：上下两条切线之间是字的显示区域，所以按行盒高与
+                            // 「图片大小」算出一个倍率，四条边让出去的都是各自边条按这**同一个**
+                            // 倍率换算后的厚度（上下两条还要再加上带子比行盒多出来、按上下对称分的
+                            // 那一截）。左右若仍按原图像素宽画，图就只缩了纵向——右边那块图案会被压扁。
+                            backgroundFrameTopPx = itemBackground?.frameTopPx(actualLineHeight) ?: 0f,
+                            backgroundFrameBottomPx = itemBackground?.frameBottomPx(actualLineHeight) ?: 0f,
+                            backgroundFrameLeftPx = itemBackground?.frameLeftPx(actualLineHeight) ?: 0f,
+                            backgroundFrameRightPx = itemBackground?.frameRightPx(actualLineHeight) ?: 0f,
                         )
                     }
 
@@ -987,22 +951,78 @@ internal class ReaderPaginationSession(
                             inline = true,
                         )
                     }
+
+                    is ReaderMeasuredInlineItem.RoleCast -> {
+                        // 胶囊垂直居中于行盒；头像/角色 id 由平台预取的档案补全
+                        val capTop = y + (actualLineHeight - item.heightPx) / 2f
+                        val profile = config.castOptions.profiles[item.name]
+                        elements += ReaderElement.RoleCast(
+                            bounds = ReaderRect(
+                                x,
+                                capTop,
+                                x + item.widthPx,
+                                capTop + item.heightPx,
+                            ),
+                            name = item.name,
+                            voicePoolLabel = item.voicePoolLabel,
+                            avatarUri = profile?.avatarUri.orEmpty(),
+                            assigned = item.name.isNotEmpty(),
+                            voiceEffectMark = item.voiceEffectMark,
+                            quoteOrdinal = item.quoteOrdinal,
+                            characterId = profile?.characterId.orEmpty(),
+                            chapterPosition = item.chapterPosition,
+                        )
+                    }
+
+                    is ReaderMeasuredInlineItem.BgmScene -> {
+                        // 垂直居中于行盒，与角色胶囊同一套算法
+                        val capTop = y + (actualLineHeight - item.heightPx) / 2f
+                        elements += ReaderElement.BgmScene(
+                            bounds = ReaderRect(
+                                x,
+                                capTop,
+                                x + item.widthPx,
+                                capTop + item.heightPx,
+                            ),
+                            paragraphIndex = item.paragraphIndex,
+                            poolName = item.poolName,
+                            trackName = item.trackName,
+                            chapterPosition = item.chapterPosition,
+                        )
+                    }
                 }
-                pageText.append(if (item is ReaderMeasuredInlineItem.Text) item.value else '\uFFFC')
-                x += item.widthPx + backgroundInsetAfter(itemIndex) + letterSpacing +
+                pageText.append(
+                    when (item) {
+                        is ReaderMeasuredInlineItem.Text -> item.value
+                        is ReaderMeasuredInlineItem.RoleCast -> item.raw
+                        // 配乐胶囊零字符：正文语义坐标与不开时逐字节一致
+                        is ReaderMeasuredInlineItem.BgmScene -> ""
+                        else -> "\uFFFC"
+                    },
+                )
+                x += item.widthPx + letterSpacing +
+                        (matchStyle?.matchSpacingAfterPx ?: 0f) +
                         if (item is ReaderMeasuredInlineItem.Text && item.value == " ") wordSpaceExtra else 0f
                 x += if (itemIndex >= indentItems) justifyGap else 0f
-                previousItemBackground = itemBackground
+                // 胶囊是我们自己插进去的按钮，原文里没有它，所以它对背景 run 完全透明：
+                // 不把它的 null 覆盖上去，run 才会跨过胶囊连成同一个气泡。不带背景的正文
+                // 与行内图照旧打断 run。
+                if (item !is ReaderMeasuredInlineItem.RoleCast &&
+                    item !is ReaderMeasuredInlineItem.BgmScene
+                ) {
+                    previousItemBackground = itemBackground
+                    previousMatchSpacingAfterPx = matchStyle?.matchSpacingAfterPx ?: 0f
+                }
             }
             addPageUnderline(underlineElementStart, y + actualLineHeight)
             columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + actualLineHeight)
-            // 按实际落笔顺序（含换页）记录，供下一段第一行判断上方有没有框。
-            previousLineHadFrame = lineHasFrame(from, until)
             // 旧 `setTypeHtml` 的行推进：行盒含 spacingAdd，且行距乘数被算两次；
             // 纯文本段落只算一次（`setTypeText`）。HTML 块由测量期标记。
+            // 命中行行距不进行盒、也不乘行距：它是这一行之后额外留出的空白，
+            // 九宫格的下边条就画在这截里。
             val htmlSpacingAddPx =
                 if (paragraph.justifyAtWordBoundaries) config.htmlLineSpacingAddPx else 0f
-            y += if (htmlSpacingAddPx > 0f) {
+            y += linePadBottomPx + if (htmlSpacingAddPx > 0f) {
                 (actualLineHeight * paragraph.lineSpacingMultiplier + htmlSpacingAddPx) *
                         paragraph.lineSpacingMultiplier
             } else {
@@ -1025,7 +1045,6 @@ internal class ReaderPaginationSession(
     }
 
     private fun addRule(rule: ReaderMeasuredBlock.Rule) {
-        previousLineHadFrame = false
         val requiredHeight = rule.verticalPaddingPx * 2f + rule.widthPx
         if (y + requiredHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
         val lineY = y + rule.verticalPaddingPx
@@ -1051,7 +1070,6 @@ internal class ReaderPaginationSession(
         appendSeparator: Boolean,
     ) {
         val height = blank.lineHeightPx
-        previousLineHadFrame = false
         if (y + height > config.contentBottomPx && columnHasContent()) advanceColumn()
         val rowElementStart = elements.size
         elements += ReaderElement.Spacer(

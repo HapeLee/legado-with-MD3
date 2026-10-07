@@ -13,6 +13,8 @@ object NotificationId {
     const val WebService = 105
     const val DownloadService = 106
     const val BookSourceCheckService = 107
+    /** 听书音频下载：章节 + 句子两条进度都发在这条通知上 */
+    const val ReadAloudAudioDownload = 108
     const val Download = 10000
     const val ExportBook = 201
 

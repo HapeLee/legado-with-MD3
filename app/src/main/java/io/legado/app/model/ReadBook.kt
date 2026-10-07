@@ -26,6 +26,10 @@ import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.readaloud.cast.CastAssignmentStore
+import io.legado.app.help.readaloud.cast.BgmSceneStore
+import io.legado.app.help.readaloud.cast.CastRenderOptions
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalModified
@@ -129,8 +133,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     var callBack: CallBack? = null
 
     /**
-     * 渲染回调槽位（Track B2）：由 UI 层渲染控制器实现，承接指令式渲染协议。
-     * 与状态槽位 [callBack] 分离，使指令式渲染不再穿过 ViewModel。
+     * 渲染回调槽位：由 UI 层渲染控制器实现，承接指令式渲染协议。
+     * 与状态槽位 [callBack] 分离，指令式渲染不穿过 ViewModel。
      */
     var renderCallBack: ReaderRenderCallback? = null
     var inBookshelf = false
@@ -509,6 +513,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 includeTitle = ReadBookConfig.titleMode != 2 || chapter.isVolume || processed.textList.isEmpty(),
                 adaptSpecialStyle = readSettingsGateway.currentSettings.adaptSpecialStyle,
                 htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+                castLabels = if (ReadConfig.multiRoleCast) CastAssignmentStore.labelsForChapter(book.bookUrl, chapter.index) else emptyMap(),
+                bgmScenes = if (ReadConfig.bgmAssign) BgmSceneStore.labelsForChapter(book.bookUrl, chapter.index) else emptyMap(),
             )
             val environment = readerPaginationEnvironment ?: return
             when (val result = LegacyReaderChapterPaginator.paginate(
@@ -527,6 +533,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 contentPaddingBottomPx = environment.contentPaddingBottomPx,
                 paginationStyle = environment.style,
                 highlightRules = highlightRules,
+                castOptions = CastRenderOptions.load(book.bookUrl, chapter.index),
             )) {
                 is LegacyReaderChapterPaginationResult.Success -> {
                 wholeBookPageCoordinator.correctChapter(
@@ -593,7 +600,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     fun publishReaderPagination(snapshots: List<ReaderChapterPaginationSnapshot>) {
-        readerPaginationSnapshots = snapshots.associateBy { it.chapterIndex }
+        // 合并而非整表替换：批次只发布当前窗口 {dur-1, dur, dur+1} 的章，
+        // 整表替换会丢掉窗口外章节的快照；若该章内容仍被缓存（identity 守卫
+        // 不会重排），朗读服务按章号取快照就永远为 null（表现为「启动朗读失败：章节分页未完成」）。
+        // 快照体积很小，保留最近发布值。
+        readerPaginationSnapshots = readerPaginationSnapshots + snapshots.associateBy { it.chapterIndex }
         snapshots.forEach { snapshot ->
             wholeBookPageCoordinator.correctChapter(
                 chapterIndex = snapshot.chapterIndex,
@@ -643,6 +654,16 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun readerPagination(chapterIndex: Int = durChapterIndex): ReaderChapterPaginationSnapshot? =
         readerPaginationSnapshots[chapterIndex]
+
+    /** 诊断：当前持有分页快照的章号集合。 */
+    fun readerPaginationKeys(): Set<Int> = readerPaginationSnapshots.keys
+
+    /** 按章号在输入窗（prev/cur/next）中定位正文输入；章号不在窗内返回 null。 */
+    fun readerChapterInputFor(chapterIndex: Int): ReaderChapterInput? =
+        readerChapterInputWindow.let { w ->
+            sequenceOf(w.current, w.previous, w.next)
+                .firstOrNull { it?.chapter?.index == chapterIndex }
+        }
 
     val readerPaginationGeneration: Long get() = wholeBookPageCoordinator.generation
 
@@ -1691,6 +1712,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             },
             layoutGeneration = pageEstimateGeneration,
         )
+        val castLabels =
+            if (ReadConfig.multiRoleCast) CastAssignmentStore.labelsForChapter(book.bookUrl, chapter.index) else emptyMap()
+        val bgmScenes = if (ReadConfig.bgmAssign) {
+            BgmSceneStore.labelsForChapter(book.bookUrl, chapter.index)
+        } else {
+            emptyMap()
+        }
+        val castRenderHash = CastRenderOptions.signatureFor(book.bookUrl, chapter.index)
         val readerSource = ReaderPerfTrace.section("content.source-parse") {
             ReaderChapterSourceParser.parse(
                 chapterIndex = chapter.index,
@@ -1699,6 +1728,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 includeTitle = ReadBookConfig.titleMode != 2 || chapter.isVolume || contents.textList.isEmpty(),
                 adaptSpecialStyle = readSettingsGateway.currentSettings.adaptSpecialStyle,
                 htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+                castLabels = castLabels,
+                bgmScenes = bgmScenes,
             )
         }
         val readerChapterInput = ReaderChapterInput(
@@ -1713,6 +1744,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             sourceHash = readerSource.hashCode(),
             bookSourceHash = bookSource.hashCode(),
             pageEstimateGeneration = pageEstimateGeneration,
+            castRenderHash = castRenderHash,
         )
         ensureActive()
         if (!isCurrentLocalChapter(chapter) || !publishReaderChapterInput(readerChapterInput)) return
@@ -2037,7 +2069,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     /**
-     * 渲染子集回调（Track B）：指令式渲染协议——重绘、分页、动画、选择取消、
+     * 渲染子集回调：指令式渲染协议——重绘、分页、动画、选择取消、
      * 排版进度。**只应由 UI 层的渲染控制器实现**，不得穿过 ViewModel/业务层。
      */
     interface ReaderRenderCallback {
@@ -2067,7 +2099,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     /**
      * 业务/UI 状态回调子集：菜单刷新、目录加载、换书通知、进度确认。
      *
-     * Track B2 起本接口已与渲染子集解耦——不再穿过任何指令式渲染方法。
+     * 本接口与渲染子集解耦，不穿过任何指令式渲染方法。
      * 渲染走独立的 [renderCallBack]（由 UI 层渲染控制器实现），业务状态刷新
      * 走 [snapshot] → ViewModel 的反应式收集。由 ReadBookViewModel 实现。
      */

@@ -298,6 +298,13 @@ import io.legado.app.ui.config.themeManage.ThemeManageViewModel
 import io.legado.app.ui.config.translation.TranslationConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
+import io.legado.app.help.readaloud.cast.AiCastAssignUseCase
+import io.legado.app.help.readaloud.cast.AiSceneAssignUseCase
+import io.legado.app.ui.book.readaloud.cast.VoiceEffectViewModel
+import io.legado.app.ui.book.readaloud.cast.BgmPoolViewModel
+import io.legado.app.ui.book.readaloud.cast.RegexCastRuleViewModel
+import io.legado.app.ui.book.readaloud.cast.MultiRoleRuleViewModel
+import io.legado.app.ui.book.readaloud.cast.MultiRoleRecognitionViewModel
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleViewModel
 import io.legado.app.ui.login.SourceLoginViewModel
 import io.legado.app.ui.main.MainNavRouteTracker
@@ -406,7 +413,7 @@ val appModule = module {
     singleOf(::ReadAloudSessionStore)
     single<PlaybackCapsuleGateway> { PlaybackCapsuleGatewayAdapter(get(), get()) }
     singleOf(::MainNavRouteTracker)
-    // R2.3：会话每个所有者一份。ReadBook.callBack 的身份是「阅读页已挂载」信号
+    // 会话每个所有者一份。ReadBook.callBack 的身份是「阅读页已挂载」信号
     // （prefetchForOpen / upData 判 callBack != null），register 还会给上一个持有者
     // 发 notifyBookChanged——单例会把两个 ReadBookViewModel 的注册身份混成一个。
     factory<ReaderSession> { LegacyReaderSession() }
@@ -569,6 +576,13 @@ val appModule = module {
     viewModelOf(::ImportRssSourceViewModel)
     viewModelOf(::ImportTxtTocRuleViewModel)
     viewModelOf(::HighlightTagRuleViewModel)
+    viewModelOf(::MultiRoleRuleViewModel)
+    viewModelOf(::BgmPoolViewModel)
+    viewModelOf(::RegexCastRuleViewModel)
+    viewModelOf(::VoiceEffectViewModel)
+    viewModelOf(::MultiRoleRecognitionViewModel)
+    singleOf(::AiCastAssignUseCase)
+    singleOf(::AiSceneAssignUseCase)
     viewModelOf(::TagGroupRuleViewModel)
     viewModelOf(::DictViewModel)
     viewModelOf(::RssSourceViewModel)
@@ -717,6 +731,7 @@ val appModule = module {
             bookUrl = bookUrl,
             bookKnowledgeGateway = get(),
             voiceGateway = get(),
+            styleGateway = get(),
         )
     }
     viewModelOf(::CloudTtsViewModel)
@@ -761,6 +776,8 @@ val appModule = module {
             readSettingsRepository = get(),
             readBookStyleConfigRepository = get(),
             readAloudSettingsRepository = get(),
+            aiCastAssignUseCase = get(),
+            aiSceneAssignUseCase = get(),
             localPreferencesRepository = get(),
             highlightRuleRepository = get(),
             uploadRepository = get(),

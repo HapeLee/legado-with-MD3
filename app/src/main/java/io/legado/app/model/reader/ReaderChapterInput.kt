@@ -20,6 +20,13 @@ data class ReaderChapterInput(
     val sourceHash: Int,
     val bookSourceHash: Int,
     val pageEstimateGeneration: Long,
+    /**
+     * 多角色分配 / 变声器的渲染签名（见 `CastRenderOptions.signatureFor`）。
+     *
+     * 它不改正文一个字，却决定这一章要不要重排：没有它，开开关、加变声器都撞不上分页身份，
+     * 旧页被当成有效结果继续用，胶囊与徽记就要等退出重进阅读器才更新。
+     */
+    val castRenderHash: Int = 0,
 )
 
 data class ReaderChapterInputWindow(

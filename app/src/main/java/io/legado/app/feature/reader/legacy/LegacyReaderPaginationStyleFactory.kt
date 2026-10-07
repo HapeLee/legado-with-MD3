@@ -109,7 +109,8 @@ object LegacyReaderPaginationStyleFactory : KoinComponent {
         )
     }
 
-    private fun resolveWeight(configured: Int): Int = when (configured) {
+    /** 字重配置的口径（0=常规 / 1=加粗 / 2=细 / 100..900=直接值）：预览与正文共用这一份。 */
+    fun resolveWeight(configured: Int): Int = when (configured) {
         1 -> 900
         2 -> 300
         in 100..900 -> configured

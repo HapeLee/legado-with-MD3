@@ -1,5 +1,6 @@
 package io.legado.app.feature.reader.core.layout
 
+import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
@@ -167,6 +168,24 @@ class ReaderChapterBlockMeasurer(
     private val imageOptionsResolver: ReaderImageOptionsResolver =
         ReaderImageOptionsResolver { _, _ -> null },
     private val metrics: ReaderChapterMeasureMetrics? = null,
+    /**
+     * 多角色分配：castTracker 非 null 时开启。Text 段按 <<名字（池）>> 标记切分，
+     * 标记展开为胶囊测量项；锚点引号未跟标记时就地合成「未分配」占位胶囊。
+     * 跟踪器与注入侧（ReaderChapterSourceParser）喂同一字符流、同规则，ordinal 一致。
+     */
+    private val castTracker: CastMarkers.CastQuoteTracker? = null,
+    /** 胶囊宽度：(名字, 池标签, 是否带头像, 是否带变声器标记)。 */
+    private val castCapsuleWidthPx: (
+        name: String, poolLabel: String, withAvatar: Boolean, withEffect: Boolean,
+    ) -> Float = { _, _, _, _ -> 0f },
+    private val castCapsuleHeightPx: Float = 0f,
+    /** 未分配占位胶囊宽度：只有一个人形图标。 */
+    private val castPlaceholderWidthPx: () -> Float = { 0f },
+    /** 这一句最终带不带变声器（段级优先，其次角色全局）。 */
+    private val castHasVoiceEffect: (name: String, quoteOrdinal: Int) -> Boolean = { _, _ -> false },
+    /** 背景音乐胶囊宽度/高度：(池名, 指定曲目)；宽度含 ♪ 前缀。 */
+    private val bgmCapsuleWidthPx: (pool: String, track: String) -> Float = { _, _ -> 0f },
+    private val bgmCapsuleHeightPx: Float = 0f,
 ) {
     /**
      * 测量整章。给出 [onBlock] 时每产出一个 block 就立即回调——旧 View
@@ -227,6 +246,8 @@ class ReaderChapterBlockMeasurer(
              * 的图片规则（见 [resolveImageLayout]）。
              */
             fromHtmlBlock: Boolean = false,
+            /** HTML 段测量文本与注入侧不一致（标签剥离），不参与锚点计数。 */
+            castFeed: Boolean = true,
         ) {
             val baseStyle = if (isTitle) style.titleStyle.copy(
                 fontSizePx = style.titleStyle.fontSizePx * titleScale,
@@ -298,19 +319,24 @@ class ReaderChapterBlockMeasurer(
                 when (item) {
                     is ReaderChapterInlineSource.Text -> {
                         val htmlStyle = baseStyle.merge(item.style)
+                        // 多角色分配：按标记切段；无标记时单段，行为与原版一致
+                        val castActive = castTracker != null && !isTitle && castFeed
+                        val castPieces: List<Pair<String, CastMarkers.Match?>> =
+                            if (castActive) splitCastPieces(item.value) else listOf(item.value to null)
+                        var offset = 0
+                        for ((pieceText, pieceMarker) in castPieces) {
+                        val pieceEnd = offset + pieceText.length
                         val initialShaper = shaper(htmlStyle)
-                        val initiallyShaped = metrics?.shape(initialShaper, item.value)
-                            ?: initialShaper.shape(item.value)
-                        // 同一区间内相邻字形的解析结果是同一个实例：合并后的样式和它的
-                        // shaper 只算一次即可。否则每个字形都要分配一个 ReaderTextStyle，
-                        // 还要对 12 字段的 data class 做一次 getOrPut 哈希。
+                        val initiallyShaped = if (pieceText.isEmpty()) null
+                            else metrics?.shape(initialShaper, pieceText) ?: initialShaper.shape(pieceText)
+                        // 同一区间内相邻字形的解析结果是同一个实例：合并后的样式和它的 shaper
+                        // 只算一次即可。切成多段配音后，每一段各带一套缓存。
                         var cachedRangeStyle: ReaderCharacterStyle? = null
                         var cachedTextStyle = htmlStyle
                         var cachedTextStyleIsPlain = true
                         var cachedShaper = initialShaper
                         var hasCachedStyle = false
-                        var offset = 0
-                        initiallyShaped.text.forEachIndexed { clusterIndex, cluster ->
+                        initiallyShaped?.text?.forEachIndexed { clusterIndex, cluster ->
                             val position = item.chapterPosition + offset
                             val rangeStyle = compiledStyleRanges
                                 ?.let {
@@ -363,7 +389,51 @@ class ReaderChapterBlockMeasurer(
                                 baselineShiftPx = baselineShift,
                             )
                             offset += cluster.length
+                            if (castActive) {
+                                var anchorHere = false
+                                for (ch in cluster) if (castTracker!!.feed(ch)) anchorHere = true
+                                // 锚点恰在段尾且后面是标记 → 交给标记的已分配胶囊
+                                if (anchorHere && !(offset == pieceEnd && pieceMarker != null)) {
+                                    inline += ReaderMeasuredInlineItem.RoleCast(
+                                        widthPx = castPlaceholderWidthPx(),
+                                        heightPx = castCapsuleHeightPx,
+                                        chapterPosition = item.chapterPosition + offset,
+                                        raw = "",
+                                        name = "",
+                                        voicePoolLabel = "",
+                                        quoteOrdinal = castTracker.lastCastOrdinal,
+                                    )
+                                }
+                            }
                         }
+                        if (pieceMarker != null) {
+                            val markerOrdinal = castTracker!!.lastCastOrdinal
+                            val withEffect = castHasVoiceEffect(pieceMarker.name, markerOrdinal)
+                            inline += ReaderMeasuredInlineItem.RoleCast(
+                                widthPx = castCapsuleWidthPx(
+                                    pieceMarker.name, pieceMarker.voicePoolLabel, true, withEffect
+                                ),
+                                heightPx = castCapsuleHeightPx,
+                                chapterPosition = item.chapterPosition + offset,
+                                raw = pieceMarker.raw,
+                                name = pieceMarker.name,
+                                voicePoolLabel = pieceMarker.voicePoolLabel,
+                                quoteOrdinal = markerOrdinal,
+                                voiceEffectMark = withEffect,
+                            )
+                            offset += pieceMarker.raw.length
+                        }
+                        }
+                    }
+                    is ReaderChapterInlineSource.BgmScene -> {
+                        inline += ReaderMeasuredInlineItem.BgmScene(
+                            widthPx = bgmCapsuleWidthPx(item.poolName, item.trackName),
+                            heightPx = bgmCapsuleHeightPx,
+                            chapterPosition = item.chapterPosition,
+                            paragraphIndex = item.paragraphIndex,
+                            poolName = item.poolName,
+                            trackName = item.trackName,
+                        )
                     }
                     is ReaderChapterInlineSource.Image -> {
                         // excludeActionImages 开启时：带动作脚本的行内图（段评气泡）整体
@@ -523,6 +593,7 @@ class ReaderChapterBlockMeasurer(
                             alignmentOverride = paragraph.alignment,
                             decorations = paragraph.decorations,
                             fromHtmlBlock = true,
+                            castFeed = false,
                         )
                     }
                 }
@@ -531,6 +602,20 @@ class ReaderChapterBlockMeasurer(
         }
         return ReaderChapterMeasureResult.Success(blocks)
     }
+}
+
+/** 按 <<名字（池）>> 标记把文本切成 (前段文本, 后随标记?) 序列；无标记时单元素。 */
+private fun splitCastPieces(text: String): List<Pair<String, CastMarkers.Match?>> {
+    val markers = CastMarkers.findMarkers(text)
+    if (markers.isEmpty()) return listOf(text to null)
+    val out = ArrayList<Pair<String, CastMarkers.Match?>>(markers.size + 1)
+    var cursor = 0
+    for (m in markers) {
+        out += text.substring(cursor, m.start) to m
+        cursor = m.end
+    }
+    out += text.substring(cursor) to null
+    return out
 }
 
 /**
@@ -669,5 +754,11 @@ private fun ReaderTextStyle.merge(override: ReaderCharacterStyle?): ReaderTextSt
         italic = override.italic ?: italic,
         fontSizePx = (fontSizePx + override.fontSizeOffsetPx).coerceAtLeast(1f),
         backgroundImage = override.backgroundImage ?: backgroundImage,
+        // 命中排版取较大者：两条规则在同一处命中时，留白要按「留得最多的那条」算，
+        // 后一条把前一条抹成 0 会让已生效的间距凭空消失。
+        matchSpacingBeforePx = maxOf(matchSpacingBeforePx, override.matchSpacingBeforePx),
+        matchSpacingAfterPx = maxOf(matchSpacingAfterPx, override.matchSpacingAfterPx),
+        linePadTopPx = maxOf(linePadTopPx, override.linePadTopPx),
+        linePadBottomPx = maxOf(linePadBottomPx, override.linePadBottomPx),
     )
 }

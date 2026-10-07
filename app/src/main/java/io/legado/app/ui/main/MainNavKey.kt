@@ -248,6 +248,34 @@ data class MainRouteSearchContent(
 @Serializable
 data object MainRouteHighlightTagRule : MainRoute
 
+/** 多角色规则 hub：声音池 / 多角色识别。 */
+@Serializable
+data object MainRouteMultiRoleRule : MainRoute
+
+/** 多角色规则 → 声音池：池与池内音色管理。 */
+@Serializable
+data object MainRouteVoicePool : MainRoute
+
+/** 多角色规则 → 背景音乐池：导入的配乐文件管理，朗读时可作背景音。 */
+@Serializable
+data object MainRouteBgmPool : MainRoute
+
+/** 多角色规则 → 多角色识别：标记包裹符号与声音池分隔符号配置。 */
+@Serializable
+data object MainRouteMultiRoleRecognition : MainRoute
+
+/** 朗读规则 → 变声器：音高/混响预设管理，角色配音时可选。 */
+@Serializable
+data object MainRouteVoiceEffect : MainRoute
+
+/** 朗读规则 → 朗读胶囊设置：三类胶囊的圆角、背景与头像形状位置。 */
+@Serializable
+data object MainRouteCastCapsuleStyle : MainRoute
+
+/** 朗读规则 → 正则角色管理：命中正文文字换音色 / 不念改放音效。 */
+@Serializable
+data object MainRouteRegexCastRule : MainRoute
+
 @Serializable
 data object MainRouteAbout : MainRoute
 

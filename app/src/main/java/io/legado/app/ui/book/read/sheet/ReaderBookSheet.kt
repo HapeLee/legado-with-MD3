@@ -39,9 +39,11 @@ import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
@@ -96,6 +98,7 @@ import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
+import io.legado.app.ui.widget.components.ChapterStatusIcons
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
@@ -750,6 +753,8 @@ private fun ReaderBookTocPage(
         action.selectedIds.size,
     )
     val cancelText = stringResource(R.string.cancel)
+    val deleteAssignmentText = stringResource(R.string.cast_assignment_delete)
+    val deleteAudioText = stringResource(R.string.read_aloud_audio_download_delete)
     val fabItems = remember(
         selected,
         action.selectedIds,
@@ -757,6 +762,8 @@ private fun ReaderBookTocPage(
         invertText,
         bookmarkText,
         downloadSelectedText,
+        deleteAssignmentText,
+        deleteAudioText,
         cancelText,
     ) {
         listOf(
@@ -771,6 +778,12 @@ private fun ReaderBookTocPage(
             },
             FabMenuItem(Icons.Default.Download, downloadSelectedText) {
                 onIntent(TocIntent.DownloadSelected)
+            },
+            FabMenuItem(Icons.Default.Groups, deleteAssignmentText) {
+                onIntent(TocIntent.DeleteAssignmentsForSelected)
+            },
+            FabMenuItem(Icons.Default.DownloadForOffline, deleteAudioText) {
+                onIntent(TocIntent.DeleteAudioDownloadsForSelected)
             },
             FabMenuItem(Icons.Default.Clear, cancelText) {
                 onIntent(TocIntent.ClearSelection)
@@ -1021,6 +1034,12 @@ private fun ReaderSheetChapterItem(
                     )
                 }
             }
+            ChapterStatusIcons(
+                item = item,
+                iconSize = 14.dp,
+                spacing = 3.dp,
+                modifier = Modifier.padding(start = 4.dp),
+            )
             ReaderSheetChapterStatus(
                 item = item,
                 showWordCount = showWordCount,

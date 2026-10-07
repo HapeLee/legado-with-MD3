@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,13 +66,15 @@ fun SplicedColumnGroup(
     } else {
         null
     }
-    val currentIndex = remember { mutableIntStateOf(0) }
+    // 组内序号只在同一轮组合里被读写，所以用普通持有者：换成 mutableStateOf 会让每轮组合都
+    // 重新失效别的作用域，画面不变却持续重组。
+    val currentIndex = remember { IntArray(1) }
 
     val groupState = remember(enableItemDivider) {
         SplicedColumnGroupState(
             enableItemDivider = enableItemDivider,
-            currentIndex = { currentIndex.intValue },
-            incrementIndex = { currentIndex.intValue++ }
+            currentIndex = { currentIndex[0] },
+            incrementIndex = { currentIndex[0]++ }
         )
     }
 
@@ -106,7 +107,7 @@ fun SplicedColumnGroup(
                                 .appContainerBackground(AppContainerBackgroundType.Large)
                         )
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            currentIndex.intValue = 0
+                            currentIndex[0] = 0
                             items()
                         }
                     }
@@ -127,7 +128,7 @@ fun SplicedColumnGroup(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        currentIndex.intValue = 0
+                        currentIndex[0] = 0
                         items()
                     }
                 }

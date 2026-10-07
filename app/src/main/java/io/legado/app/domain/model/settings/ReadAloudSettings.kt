@@ -46,6 +46,8 @@ enum class ReadAloudTimerMode(val storageValue: String) {
 
 data class ReadAloudSettings(
     val ttsEngine: String? = null,
+    /** 试听用的文本；null = 用内置默认。音色行长按试听按钮可改。 */
+    val voicePreviewText: String? = null,
     val ttsParagraphInterval: Int = 0,
     val audioCacheCleanTime: Int = 10,
     val ignoreAudioFocus: Boolean = false,
@@ -89,6 +91,16 @@ data class ReadAloudSettings(
      */
     val speechAnalysisReasoningLevel: String = AiReasoningLevel.OFF.storageValue,
     val useMultiSpeaker: Boolean = true,
+    /**
+     * 多角色分配：与 [useMultiSpeaker] 独立。开启后阅读器在对话开引号后渲染角色胶囊，
+     * 点击可手动分配角色；分配结果以 `<<角色名（声音池）>>` 标记写回章节正文。
+     */
+    val multiRoleCast: Boolean = false,
+    /**
+     * 背景音乐分配：阅读器在正文段首渲染配乐胶囊，朗读时按场景换 BGM。
+     * 胶囊只是视觉 span——不向 semanticContent 注入任何字符，所以 TTS 念不到它。
+     */
+    val bgmAssign: Boolean = false,
     val defaultInterface: String = "classic",
     val contentSelectSpeakMode: Int = 0,
     val audioPreDownloadNum: Int = 10,

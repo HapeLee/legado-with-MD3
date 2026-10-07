@@ -14,8 +14,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+// 「默认」在 fork 口径里就是整段，段内不切角色；要检验规则切分与缓存复用得用真正会切的策略
 private val roleSplitPolicy =
-    ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Default)
+    ContentSplitPolicies.forMode(ReadAloudContentSplitMode.Symbols, listOf("。"))
 
 class AnalyzeChapterSpeechUseCaseTest {
 

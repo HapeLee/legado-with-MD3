@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * path to the first readable page, not to trace every Canvas draw or Compose recomposition.
  */
 internal object ReaderPerfTrace {
+    private const val MAX_NAME = 100
     private val nextAsyncCookie = AtomicInteger()
     inline fun <T> section(name: String, block: () -> T): T {
         Trace.beginSection("reader.$name")
@@ -34,10 +35,13 @@ internal object ReaderPerfTrace {
      * 归因打点。`marker` 会被放在 composable 体内，每次重组都执行；未开 tracing 时必须尽早
      * 返回，否则每条 marker 都是两次 `Trace` 静态调用乘以重组次数。
      * 注意：API < 29 没有 `Trace.isEnabled()`，这里随之整体跳过（与 suspendSection 一致）。
+     * 段名必须截断：`Trace.beginSection` 对超过 127 字符的名字直接抛 IllegalArgumentException，
+     * 而 marker 常在组合期调用，抛出即整个应用崩溃。
      */
     fun marker(name: String) {
         if (!isEnabled()) return
-        Trace.beginSection("reader.$name")
+        val section = if (name.length <= MAX_NAME) "reader.$name" else "reader." + name.substring(0, MAX_NAME)
+        Trace.beginSection(section)
         Trace.endSection()
     }
 

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.MoreVert
@@ -253,6 +254,12 @@ internal fun MenuTitleBar(
                         }
                         if (!compact) {
                             SourceActionButton(
+                                state = state,
+                                colors = colors,
+                                onIntent = onIntent,
+                                backdrop = backdrop,
+                            )
+                            AudioDownloadActionButton(
                                 state = state,
                                 colors = colors,
                                 onIntent = onIntent,
@@ -824,6 +831,15 @@ private fun MenuTitleBarMergedGlassButton(
                 )
                 MergedGlassDivider(tint)
 
+                // 听书音频下载
+                MergedGlassIconButton(
+                    icon = Icons.Default.Download,
+                    tint = tint,
+                    contentDescription = stringResource(R.string.read_aloud_audio_download_entry),
+                    onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AudioDownload)) },
+                )
+                MergedGlassDivider(tint)
+
                 // Refresh
                 MergedGlassIconButton(
                     icon = Icons.Default.Refresh,
@@ -996,6 +1012,23 @@ private fun DownloadActionButton(
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download)) },
         icon = Icons.Default.CloudDownload,
         contentDescription = stringResource(R.string.offline_cache),
+        state = state,
+        colors = colors,
+        backdrop = backdrop,
+    )
+}
+
+@Composable
+private fun AudioDownloadActionButton(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
+) {
+    MenuTitleGlassButton(
+        onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AudioDownload)) },
+        icon = Icons.Default.Download,
+        contentDescription = stringResource(R.string.read_aloud_audio_download_entry),
         state = state,
         colors = colors,
         backdrop = backdrop,

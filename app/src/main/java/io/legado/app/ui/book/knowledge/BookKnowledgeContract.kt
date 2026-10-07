@@ -17,7 +17,9 @@ data class CharacterDetailUiState(
     val tagInput: String = "",
     val role: String = "",
     val voiceGender: String = "unknown",
-    val voiceAgeBand: String = "unknown",
+    /** 声音池名，存放在人物档案的 voiceAgeBand 列里；空 = 未分配。 */
+    val voicePool: String = "",
+    val poolNames: ImmutableList<String> = persistentListOf(),
     val personality: String = "",
     val summary: String = "",
     val events: ImmutableList<CharacterEventUi> = persistentListOf(),
@@ -50,7 +52,7 @@ sealed interface CharacterDetailIntent {
     data class RemoveTag(val index: Int) : CharacterDetailIntent
     data class SetRole(val value: String) : CharacterDetailIntent
     data class SetVoiceGender(val value: String) : CharacterDetailIntent
-    data class SetVoiceAgeBand(val value: String) : CharacterDetailIntent
+    data class SetVoicePool(val value: String) : CharacterDetailIntent
     data class SetPersonality(val value: String) : CharacterDetailIntent
     data class SetSummary(val value: String) : CharacterDetailIntent
     data object Save : CharacterDetailIntent

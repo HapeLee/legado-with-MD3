@@ -512,6 +512,22 @@ internal fun loadToolButtons(
         infoMap.getValue("ai_rewrite").toButton {
             onIntent(ReadBookIntent.OpenAiCurrentChapterRewrite)
         },
+        infoMap.getValue("multi_role_read").toButton(
+            isActive = state.useMultiSpeaker,
+        ) {
+            onIntent(ReadBookIntent.SetUseMultiSpeaker(!state.useMultiSpeaker))
+        },
+        infoMap.getValue("multi_role_cast").toButton(
+            isActive = state.multiRoleCast,
+        ) {
+            onIntent(ReadBookIntent.SetMultiRoleCast(!state.multiRoleCast))
+        },
+        infoMap.getValue("cast_table").toButton {
+            onIntent(ReadBookIntent.OpenBookVoiceCasting)
+        },
+        infoMap.getValue("ai_cast").toButton {
+            onIntent(ReadBookIntent.OpenAiCastDialog)
+        },
         infoMap.getValue("more_actions").toButton {
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.MoreActions))
         },

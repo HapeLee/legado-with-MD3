@@ -12,6 +12,7 @@ import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiToolContext
+import io.legado.app.help.readaloud.cast.VoicePoolStore
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.fromJsonArray
@@ -75,7 +76,7 @@ class IdentifyBookCharactersUseCase(
         val preset = identifyPreset
             ?: aiProfileGateway.getTaskPreset(AiTaskType.CHAT)
             ?: error("No AI model configured for character identification")
-        val prompt = identifyPreset?.promptTemplate?.takeIf(String::isNotBlank) ?: DEFAULT_PROMPT
+        val prompt = identifyPreset?.promptTemplate?.takeIf(String::isNotBlank) ?: defaultPrompt(VoicePoolStore.enabledPoolNames())
         val now = System.currentTimeMillis()
         val contentHash = MD5Utils.md5Encode(bookUrl)
         val promptHash =
@@ -114,7 +115,7 @@ class IdentifyBookCharactersUseCase(
         val preset = identifyPreset
             ?: aiProfileGateway.getTaskPreset(AiTaskType.CHAT)
             ?: error("No AI model configured for character identification")
-        val prompt = identifyPreset?.promptTemplate?.takeIf(String::isNotBlank) ?: DEFAULT_PROMPT
+        val prompt = identifyPreset?.promptTemplate?.takeIf(String::isNotBlank) ?: defaultPrompt(VoicePoolStore.enabledPoolNames())
         val response = StringBuilder()
         aiToolAwareGenerationUseCase.generateStream(
             AiGenerateRequest(
@@ -159,7 +160,7 @@ class IdentifyBookCharactersUseCase(
                 name = item.get("name")?.asString?.trim().orEmpty(),
                 aliases = item.getAsJsonArray("aliases")?.map { it.asString.trim() }.orEmpty(),
                 voiceGender = item.get("voiceGender")?.asString ?: "unknown",
-                voiceAgeBand = item.get("voiceAgeBand")?.asString ?: "unknown",
+                voiceAgeBand = VoicePoolStore.poolNameOrEmpty(item.get("voiceAgeBand")?.asString),
                 role = item.get("role")?.asString.orEmpty(),
                 personality = item.get("personality")?.asString.orEmpty(),
                 summary = item.get("summary")?.asString.orEmpty(),
@@ -221,7 +222,15 @@ class IdentifyBookCharactersUseCase(
 
     companion object {
         private const val MIN_CONFIDENCE = 0.65f
-        const val DEFAULT_PROMPT =
-            """You identify stable fictional characters from downloaded local chapters. Use read-only tools to list and read cached chapters and inspect existing characters. Return JSON only: {\"characters\":[{\"name\":string,\"aliases\":[string],\"voiceGender\":\"male|female|unknown\",\"voiceAgeBand\":\"child|teen|young_adult|adult|elderly|unknown\",\"role\":\"male_lead|female_lead|male_supporting|female_supporting|\",\"personality\":string,\"summary\":string,\"evidence\":string,\"confidence\":number}]}. Do not include pronouns, generic titles, or one-off passers-by. Use unknown instead of guessing age or gender. Do not create duplicates of existing names or aliases."""
+
+        /**
+         * 内置默认提示词。`voiceAgeBand` 一栏列的是用户的声音池名，
+         * 人物档案里那一列存的就是池名，模型只能从这里选。
+         */
+        fun defaultPrompt(poolNames: List<String>): String {
+            val pools = poolNames.filter(String::isNotBlank).distinct().joinToString("|")
+                .ifEmpty { "unknown" }
+            return "You identify stable fictional characters from downloaded local chapters. Use read-only tools to list and read cached chapters and inspect existing characters. Return JSON only: {\"characters\":[{\"name\":string,\"aliases\":[string],\"voiceGender\":\"male|female|unknown\",\"voiceAgeBand\":\"$pools\",\"role\":\"male_lead|female_lead|male_supporting|female_supporting|\",\"personality\":string,\"summary\":string,\"evidence\":string,\"confidence\":number}]}. voiceAgeBand is the character's voice pool: copy one of the listed names exactly. Do not include pronouns, generic titles, or one-off passers-by. Use unknown instead of guessing gender. Do not create duplicates of existing names or aliases."
+        }
     }
 }

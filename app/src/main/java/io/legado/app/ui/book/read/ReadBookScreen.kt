@@ -281,6 +281,47 @@ fun ReadBookScreen(
     // for proper enter/exit animations
     val dismissSheet = { onIntent(ReadBookIntent.DismissSheet) }
 
+    // 多角色分配弹层（点击正文角色胶囊打开）
+    io.legado.app.ui.book.read.sheet.ReadAloudCastSheet(
+        show = state.activeSheet is ReadBookSheet.RoleCast,
+        ordinal = (state.activeSheet as? ReadBookSheet.RoleCast)?.ordinal ?: -1,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        menuConfig = state.menuConfig,
+    )
+
+    // 段首配乐弹层（点击正文 ♪ 胶囊打开）
+    io.legado.app.ui.book.read.sheet.BgmSceneSheet(
+        show = state.activeSheet is ReadBookSheet.BgmScene,
+        paragraphIndex = (state.activeSheet as? ReadBookSheet.BgmScene)?.paragraphIndex ?: -1,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        menuConfig = state.menuConfig,
+    )
+
+    // 本章背景音乐总览（配乐弹层/朗读面板打开，一屏改完本章所有区间）
+    io.legado.app.ui.book.read.sheet.BgmSceneTableSheet(
+        show = state.activeSheet is ReadBookSheet.BgmSceneTable,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        menuConfig = state.menuConfig,
+    )
+
+    // AI 分配角色悬浮窗
+    io.legado.app.ui.book.read.sheet.AiCastDialogSheet(
+        show = state.activeSheet is ReadBookSheet.AiCastDialog,
+        sceneOnly = (state.activeSheet as? ReadBookSheet.AiCastDialog)?.sceneOnly == true,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        menuConfig = state.menuConfig,
+    )
+    // 听书下载悬浮窗：和其余卡片一样常挂，show 由 sheet 类型驱动，退场动画才有地方播
+    io.legado.app.ui.book.read.sheet.ReaderAudioDownloadSheet(
+        show = state.activeSheet is ReadBookSheet.AudioDownload,
+        onDismissRequest = dismissSheet,
+        menuConfig = state.menuConfig,
+    )
+
     ShadowSetSheet(
         show = state.activeSheet is ReadBookSheet.ShadowSet,
         config = state.sheetConfig,
@@ -369,6 +410,7 @@ fun ReadBookScreen(
         show = state.activeSheet is ReadBookSheet.HighlightRuleConfig,
         state = highlightRuleState,
         allConfigNames = state.sheetConfig.configNames,
+        config = state.sheetConfig,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
@@ -503,10 +545,19 @@ fun ReadBookScreen(
     val aloudPlayerViewModel: ReadAloudPlayerViewModel =
         org.koin.compose.koinInject()
     val aloudPlayerShellState by aloudPlayerViewModel.uiState.collectAsStateWithLifecycle()
+    /*
+     * 朗读设置是窗口级浮层（AppModalBottomSheet 在 miuix 引擎下走独立窗口），压上整屏页时它
+     * 不会跟着下沉，于是从「引擎与音色」那三行进新页面，朗读设置还悬在新页面上面。
+     * 导航栈顶不是阅读页就把它收起来；返回后栈顶回到阅读页，弹层自己摊回来，
+     * 停在哪个 tab 由 readAloudConfigTab 记着（见 ReadBookContract 里的注释）。
+     */
+    val navRouteTracker: io.legado.app.ui.main.MainNavRouteTracker = org.koin.compose.koinInject()
+    val readerIsTop = navRouteTracker.backStack.collectAsStateWithLifecycle()
+        .value.lastOrNull() is io.legado.app.ui.main.MainRouteReadBook
     // 听书播放页是 Activity 级 morph 浮层（见 ReadAloudPlayerMorphHost），阅读器内
     // 只保留经典控制面板自己的朗读配置卡片；两者共用同一份配置内容。
     AppModalBottomSheet(
-        show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
+        show = state.activeSheet is ReadBookSheet.ReadAloudConfig && readerIsTop,
         onDismissRequest = dismissSheet,
         title = stringResource(R.string.aloud_config),
     ) {
@@ -515,6 +566,8 @@ fun ReadBookScreen(
             playerState = aloudPlayerShellState,
             onIntent = onIntent,
             onPlayerIntent = aloudPlayerViewModel::onIntent,
+            selectedTab = state.readAloudConfigTab,
+            onTabSelected = { onIntent(ReadBookIntent.SetReadAloudConfigTab(it)) },
         )
     }
 
@@ -577,6 +630,8 @@ fun ReadBookScreen(
                 },
             )
         }
+
+        is ReadBookSheet.AudioDownload -> Unit
 
         is ReadBookSheet.Charset -> {
             CharsetConfigSheet(

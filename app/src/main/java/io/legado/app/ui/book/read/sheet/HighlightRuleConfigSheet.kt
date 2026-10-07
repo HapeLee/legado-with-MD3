@@ -32,6 +32,7 @@ import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.configNames
 import io.legado.app.ui.book.read.HighlightRuleConfigUiState
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -52,6 +53,7 @@ fun HighlightRuleConfigSheet(
     show: Boolean,
     state: HighlightRuleConfigUiState,
     allConfigNames: List<String>,
+    config: ReadSheetConfigUiState,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -224,6 +226,7 @@ fun HighlightRuleConfigSheet(
         show = show && editingRuleValue != null,
         rule = editingRuleValue,
         allConfigNames = allConfigNames,
+        config = config,
         onDismissRequest = { onIntent(ReadBookIntent.DismissHighlightRuleEdit) },
         onSave = { updated ->
             onIntent(ReadBookIntent.SaveHighlightRule(updated))
@@ -234,6 +237,7 @@ fun HighlightRuleConfigSheet(
         show = show && state.showNewRule,
         rule = null,
         allConfigNames = allConfigNames,
+        config = config,
         onDismissRequest = { onIntent(ReadBookIntent.DismissHighlightRuleEdit) },
         onSave = { newRule ->
             onIntent(ReadBookIntent.SaveHighlightRule(newRule))

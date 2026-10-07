@@ -23,13 +23,17 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.TableRows
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Translate
@@ -931,6 +935,26 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
         "ai_rewrite",
         Icons.Default.Edit,
         context.getString(R.string.ai_text_rewrite)
+    ),
+    ReadMenuButtonInfo(
+        "multi_role_read",
+        Icons.Default.Groups,
+        context.getString(R.string.use_multi_speaker)
+    ),
+    ReadMenuButtonInfo(
+        "multi_role_cast",
+        Icons.Default.Face,
+        context.getString(R.string.multi_role_cast)
+    ),
+    ReadMenuButtonInfo(
+        "cast_table",
+        Icons.Default.TableRows,
+        context.getString(R.string.book_voice_casting)
+    ),
+    ReadMenuButtonInfo(
+        "ai_cast",
+        Icons.Default.SmartToy,
+        context.getString(R.string.ai_cast_roles)
     ),
     ReadMenuButtonInfo(
         "more_actions",

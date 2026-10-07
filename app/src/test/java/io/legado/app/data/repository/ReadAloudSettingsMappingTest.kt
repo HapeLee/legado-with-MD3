@@ -130,6 +130,7 @@ private fun readAloudMappingSamples(): List<ReadAloudSettings> {
 
 private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.ttsEngine to ttsEngine,
+    PreferKey.voicePreviewText to voicePreviewText,
     PreferKey.ttsParagraphInterval to ttsParagraphInterval,
     PreferKey.audioCacheCleanTime to audioCacheCleanTime,
     PreferKey.ignoreAudioFocus to ignoreAudioFocus,
@@ -158,6 +159,8 @@ private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.speechAnalysisMode to speechAnalysisMode,
     PreferKey.speechAnalysisReasoningLevel to speechAnalysisReasoningLevel,
     PreferKey.useMultiSpeaker to useMultiSpeaker,
+    PreferKey.multiRoleCast to multiRoleCast,
+    PreferKey.bgmAssign to bgmAssign,
     PreferKey.defaultReadAloudInterface to defaultInterface,
     PreferKey.contentSelectSpeakMod to contentSelectSpeakMode,
     PreferKey.audioPreDownloadNum to audioPreDownloadNum,

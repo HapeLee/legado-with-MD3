@@ -8,11 +8,13 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -37,6 +39,7 @@ import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 @Composable
@@ -51,9 +54,25 @@ fun ReadAloudConfigContent(
      * false（默认）表示宿主是卡片弹层，数值项继续打开选择器弹层。
      */
     asPage: Boolean = false,
+    /**
+     * 卡片停在哪个 tab。宿主是窗口级浮层时这份状态必须存在浮层外面：压进整屏页
+     * （引擎与音色那三行）会把这层 composition 拆掉，`rememberPagerState` 的初值回到 0，
+     * 用户看到的就是「从引擎与音色进去、回来落在常规」。
+     */
+    selectedTab: Int = 0,
+    onTabSelected: (Int) -> Unit = {},
 ) {
-    val pagerState = rememberPagerState(pageCount = { 2 })
+    val pagerState = rememberPagerState(initialPage = selectedTab, pageCount = { 2 })
     val scope = rememberCoroutineScope()
+    // 双向：宿主给的 tab 推着 pager 走（弹层重建后停在原页），滑页/点 tab 再写回宿主
+    LaunchedEffect(selectedTab) {
+        if (pagerState.currentPage != selectedTab) pagerState.scrollToPage(selectedTab)
+    }
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged()
+            .collect(onTabSelected)
+    }
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -326,6 +345,22 @@ fun ReadAloudConfigContent(
                         checked = state.useMultiSpeaker,
                         onCheckedChange = {
                             onIntent(ReadBookIntent.SetUseMultiSpeaker(it))
+                        },
+                    )
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.multi_role_cast),
+                        description = stringResource(R.string.multi_role_cast_summary),
+                        checked = state.multiRoleCast,
+                        onCheckedChange = {
+                            onIntent(ReadBookIntent.SetMultiRoleCast(it))
+                        },
+                    )
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.bgm_assign),
+                        description = stringResource(R.string.bgm_assign_summary),
+                        checked = state.bgmAssign,
+                        onCheckedChange = {
+                            onIntent(ReadBookIntent.SetBgmAssign(it))
                         },
                     )
                     TinyClickableSettingItem(
