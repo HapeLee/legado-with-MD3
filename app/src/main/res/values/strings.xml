@@ -2318,6 +2318,13 @@
     <string name="ai_save_model">Save Model</string>
     <string name="ai_advanced">Advanced</string>
     <string name="ai_models_url_summary">Optional. Leave blank to use the protocol default models endpoint.</string>
+    <string name="ai_custom_headers">Request Headers</string>
+    <string name="ai_custom_headers_summary">Optional. Extra HTTP headers sent with every request; same-name entries override built-in headers.</string>
+    <string name="ai_custom_headers_count">%1$d configured</string>
+    <string name="ai_add_header">Add header</string>
+    <string name="ai_header_name">Header name</string>
+    <string name="ai_header_value">Header value</string>
+    <string name="ai_delete_header">Delete header</string>
     <string name="ai_delete_provider">Delete Provider</string>
     <string name="ai_delete_provider_confirm">Are you sure you want to delete this provider and all its models?</string>
     <string name="ai_delete_model">Delete Model</string>

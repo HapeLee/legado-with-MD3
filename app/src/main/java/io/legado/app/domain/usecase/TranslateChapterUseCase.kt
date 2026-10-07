@@ -11,6 +11,7 @@ import io.legado.app.domain.gateway.DictionaryGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.model.AiGenerateRequest
+import io.legado.app.domain.model.AiHttpException
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiTaskPresetConfig
@@ -578,6 +579,16 @@ $terms
     }
 
     private fun parseRetryReason(error: Exception?): RetryReason? {
+        // Provider HTTP failures carry a structured status; their message embeds the raw response
+        // body, so it must not be scanned for status digits.
+        if (error is AiHttpException) {
+            return when (error.statusCode) {
+                429 -> RetryReason.RATE_LIMIT
+                500, 502, 503, 504 -> RetryReason.SERVER_ERROR
+                401, 403 -> RetryReason.AUTH_ERROR
+                else -> RetryReason.UNKNOWN
+            }
+        }
         val message = error?.message ?: return null
         return when {
             message.contains("429") -> RetryReason.RATE_LIMIT

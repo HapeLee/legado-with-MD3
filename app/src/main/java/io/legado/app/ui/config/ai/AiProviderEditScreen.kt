@@ -1,13 +1,18 @@
 package io.legado.app.ui.config.ai
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -16,12 +21,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -43,9 +50,11 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
@@ -93,6 +102,8 @@ fun AiProviderEditScreen(
     var apiKeyVisible by remember { mutableStateOf(false) }
     var showDeleteProviderDialog by remember { mutableStateOf(false) }
     var showDeleteModelDialog by remember { mutableStateOf<String?>(null) }
+    var showHeadersDialog by remember { mutableStateOf(false) }
+    var headerRows by remember { mutableStateOf<List<AiProviderHeaderUi>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
@@ -209,6 +220,21 @@ fun AiProviderEditScreen(
                         value = state.modelsUrl,
                         description = stringResource(R.string.ai_models_url_summary),
                         onConfirm = { onIntent(AiProviderEditIntent.UpdateModelsUrl(it)) }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.ai_custom_headers),
+                        description = if (state.customHeaders.none { it.name.isNotBlank() }) {
+                            stringResource(R.string.ai_custom_headers_summary)
+                        } else {
+                            stringResource(
+                                R.string.ai_custom_headers_count,
+                                state.customHeaders.count { it.name.isNotBlank() }
+                            )
+                        },
+                        onClick = {
+                            headerRows = state.customHeaders
+                            showHeadersDialog = true
+                        }
                     )
                 }
             }
@@ -372,6 +398,77 @@ fun AiProviderEditScreen(
         dismissText = stringResource(R.string.cancel),
         onDismiss = { showDeleteModelDialog = null }
     )
+
+    AppAlertDialog(
+        show = showHeadersDialog,
+        onDismissRequest = { showHeadersDialog = false },
+        title = stringResource(R.string.ai_custom_headers),
+        content = {
+            HeaderRowsEditor(
+                rows = headerRows,
+                onRowsChange = { headerRows = it }
+            )
+        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            onIntent(AiProviderEditIntent.UpdateCustomHeaders(headerRows.toImmutableList()))
+            showHeadersDialog = false
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showHeadersDialog = false }
+    )
+}
+
+@Composable
+private fun HeaderRowsEditor(
+    rows: List<AiProviderHeaderUi>,
+    onRowsChange: (List<AiProviderHeaderUi>) -> Unit
+) {
+    Column {
+        rows.forEachIndexed { index, row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AppTextField(
+                    value = row.name,
+                    onValueChange = { value ->
+                        onRowsChange(rows.toMutableList().also { it[index] = row.copy(name = value) })
+                    },
+                    modifier = Modifier.weight(1f),
+                    backgroundColor = LegadoTheme.colorScheme.surface,
+                    label = stringResource(R.string.ai_header_name),
+                    singleLine = true
+                )
+                AppTextField(
+                    value = row.value,
+                    onValueChange = { value ->
+                        onRowsChange(rows.toMutableList().also { it[index] = row.copy(value = value) })
+                    },
+                    modifier = Modifier.weight(1f),
+                    backgroundColor = LegadoTheme.colorScheme.surface,
+                    label = stringResource(R.string.ai_header_value),
+                    singleLine = true
+                )
+                IconButton(onClick = { onRowsChange(rows.filterIndexed { i, _ -> i != index }) }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.ai_delete_header)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        TextButton(
+            onClick = { onRowsChange(rows + AiProviderHeaderUi()) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(imageVector = Icons.Default.Add, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            AppText(text = stringResource(R.string.ai_add_header))
+        }
+    }
 }
 
 private fun formatFetchedLimit(contextWindow: Int, maxOutputTokens: Int): String? {

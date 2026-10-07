@@ -17,6 +17,7 @@ data class AiProviderEditUiState(
     val baseUrl: String = "",
     val modelsUrl: String = "",
     val apiKey: String = "",
+    val customHeaders: ImmutableList<AiProviderHeaderUi> = persistentListOf(),
     val providerModels: ImmutableList<AiProviderModelUi> = persistentListOf(),
     val editingModel: AiProviderModelEditorUi? = null,
     val isTesting: Boolean = false,
@@ -34,6 +35,12 @@ data class AiProviderPresetUi(
     val modelsUrl: String,
     val modelName: String,
     val modelId: String
+)
+
+@Stable
+data class AiProviderHeaderUi(
+    val name: String = "",
+    val value: String = ""
 )
 
 @Stable
@@ -74,6 +81,7 @@ sealed interface AiProviderEditIntent {
     data class UpdateBaseUrl(val value: String) : AiProviderEditIntent
     data class UpdateModelsUrl(val value: String) : AiProviderEditIntent
     data class UpdateApiKey(val value: String) : AiProviderEditIntent
+    data class UpdateCustomHeaders(val headers: ImmutableList<AiProviderHeaderUi>) : AiProviderEditIntent
     data object AddModel : AiProviderEditIntent
     data class EditModel(val modelProfileId: String) : AiProviderEditIntent
     data object DismissModelEditor : AiProviderEditIntent

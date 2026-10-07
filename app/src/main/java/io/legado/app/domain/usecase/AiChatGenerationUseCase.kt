@@ -47,7 +47,8 @@ class AiChatGenerationUseCase(
             params = preset.params.copy(
                 reasoningLevel = reasoningLevel.resolveModelDefault(preset.params.reasoningLevel)
             ),
-            tools = aiToolGateway.availableTools()
+            tools = aiToolGateway.availableTools(),
+            sessionId = conversationId
         )
     }
 
@@ -121,7 +122,8 @@ class AiChatGenerationUseCase(
     suspend fun generateTitle(
         userContent: String,
         assistantContent: String,
-        reasoningLevel: AiReasoningLevel
+        reasoningLevel: AiReasoningLevel,
+        conversationId: String? = null
     ): String {
         val preset = aiProfileGateway.getTaskPreset(AiTaskType.CHAT)
             ?: error("No AI model configured")
@@ -137,7 +139,8 @@ class AiChatGenerationUseCase(
             messages = listOf(AiMessage(AiMessageRole.USER, prompt)),
             params = preset.params.copy(
                 reasoningLevel = reasoningLevel.resolveModelDefault(preset.params.reasoningLevel)
-            )
+            ),
+            sessionId = conversationId
         )
         val result = aiTextGateway.generate(request)
         return result.getOrNull()?.text?.trim()?.take(30) ?: userContent.take(20)

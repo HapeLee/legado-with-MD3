@@ -7,6 +7,7 @@ import io.legado.app.domain.model.AiAvailableModel
 import io.legado.app.domain.model.AiCapability
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiGenerateResponse
+import io.legado.app.domain.model.AiHttpException
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiProtocol
@@ -88,15 +89,18 @@ class AnthropicHandler : AiProtocolHandler {
                 url(provider.baseUrl + provider.messagesPath)
                 postJson(GSON.toJson(body))
                 addHeaders(
-                    provider.headers + provider.customHeaders + mapOf(
-                        "x-api-key" to keyRotator.currentKey,
-                        "anthropic-version" to "2023-06-01",
-                        "Content-Type" to "application/json"
+                    provider.aiRequestHeaders(
+                        sessionId = request.sessionId,
+                        protocolHeaders = mapOf(
+                            "x-api-key" to keyRotator.currentKey,
+                            "anthropic-version" to "2023-06-01",
+                            "Content-Type" to "application/json"
+                        )
                     )
                 )
             }
             if (!response.isSuccessful()) {
-                throw Exception("HTTP ${response.code()}: ${response.message()}")
+                throw AiHttpException(response.code(), response.httpErrorMessage())
             }
             val json = GSON.fromJson(response.body, AnthropicMessageResponse::class.java)
             val text = json?.content
@@ -157,15 +161,18 @@ class AnthropicHandler : AiProtocolHandler {
                 url(provider.baseUrl + provider.messagesPath)
                 postJson(GSON.toJson(body))
                 addHeaders(
-                    provider.headers + provider.customHeaders + mapOf(
-                        "x-api-key" to keyRotator.currentKey,
-                        "anthropic-version" to "2023-06-01",
-                        "Content-Type" to "application/json"
+                    provider.aiRequestHeaders(
+                        sessionId = request.sessionId,
+                        protocolHeaders = mapOf(
+                            "x-api-key" to keyRotator.currentKey,
+                            "anthropic-version" to "2023-06-01",
+                            "Content-Type" to "application/json"
+                        )
                     )
                 )
             }.also {
                 if (!it.isSuccessful) {
-                    throw Exception("HTTP ${it.code}: ${it.message}")
+                    throw AiHttpException(it.code, it.httpErrorMessage())
                 }
             }
         }
@@ -266,15 +273,18 @@ class AnthropicHandler : AiProtocolHandler {
             val response = okHttpClient.newCallStrResponse {
                 url(modelsUrl)
                 addHeaders(
-                    provider.headers + provider.customHeaders + mapOf(
-                        "x-api-key" to keyRotator.currentKey,
-                        "anthropic-version" to "2023-06-01",
-                        "Content-Type" to "application/json"
+                    provider.aiRequestHeaders(
+                        sessionId = null,
+                        protocolHeaders = mapOf(
+                            "x-api-key" to keyRotator.currentKey,
+                            "anthropic-version" to "2023-06-01",
+                            "Content-Type" to "application/json"
+                        )
                     )
                 )
             }
             if (!response.isSuccessful()) {
-                throw Exception("HTTP ${response.code()}: ${response.message()}")
+                throw AiHttpException(response.code(), response.httpErrorMessage())
             }
             val json = GSON.fromJson(response.body, AnthropicModelsResponse::class.java)
             json?.data.toAvailableModels()

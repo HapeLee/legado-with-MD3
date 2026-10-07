@@ -112,6 +112,15 @@ object AiProviderPresets {
             modelsUrl = "https://api.anthropic.com/v1/models",
             modelName = "Claude Sonnet",
             modelId = "claude-sonnet-4-20250514"
+        ),
+        AiProviderPreset(
+            id = "opencode_go",
+            name = "OpenCode Go",
+            protocol = AiProtocol.OPENAI_CHAT_COMPLETIONS,
+            baseUrl = "https://opencode.ai/zen/go/v1",
+            modelsUrl = "https://opencode.ai/zen/go/v1/models",
+            modelName = "DeepSeek V4.1 Flash",
+            modelId = "deepseek-v4-flash"
         )
     )
 }
@@ -192,7 +201,12 @@ data class AiProviderDraft(
     val protocol: String,
     val baseUrl: String,
     val modelsUrl: String? = null,
-    val apiKey: String
+    val apiKey: String,
+    /**
+     * User-defined request headers. Sent as-is on every chat/models request and override the
+     * protocol handler's built-in headers with the same name (e.g. `x-opencode-session`).
+     */
+    val customHeaders: Map<String, String> = emptyMap()
 )
 
 @Keep
@@ -360,6 +374,12 @@ data class AiGenerateRequest(
     val params: AiGenerationParams = AiGenerationParams(),
     val tools: List<AiToolDefinition> = emptyList(),
     val toolContext: AiToolContext? = null,
+    /**
+     * Stable identifier of the conversation this request belongs to. Providers that route/cache by
+     * a session header (e.g. OpenCode Go) send it as `x-opencode-session`; `null` for one-shot
+     * background tasks.
+     */
+    val sessionId: String? = null,
 )
 
 @Keep
@@ -375,6 +395,17 @@ data class AiGenerateResponse(
     val text: String,
     val rawBody: String? = null
 )
+
+/**
+ * HTTP failure returned by an AI provider endpoint.
+ *
+ * [statusCode] stays structured so retry and failure-classification logic never has to parse
+ * [message], which carries the raw response body for diagnosability.
+ */
+class AiHttpException(
+    val statusCode: Int,
+    message: String
+) : Exception(message)
 
 @Keep
 data class AiAvailableModel(

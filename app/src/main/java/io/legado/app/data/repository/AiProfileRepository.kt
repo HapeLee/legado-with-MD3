@@ -78,7 +78,7 @@ class AiProfileRepository(
             responsesPath = existingProvider?.responsesPath,
             messagesPath = existingProvider?.messagesPath,
             modelsPath = existingProvider?.modelsPath,
-            customHeadersJson = existingProvider?.customHeadersJson,
+            customHeadersJson = draft.customHeaders.toHeadersJson(),
             enabled = existingProvider?.enabled ?: true,
             createdAt = existingProvider?.createdAt ?: now,
             updatedAt = now
@@ -412,6 +412,10 @@ class AiProfileRepository(
                 .mapValues { it.value.toString() }
         }.getOrDefault(emptyMap())
     }
+
+    /** Serializes custom headers to the `customHeadersJson` column; `null` when there are none. */
+    private fun Map<String, String>.toHeadersJson(): String? =
+        takeIf { it.isNotEmpty() }?.let { GSON.toJson(it) }
 
     private fun mergeCapabilities(existing: String?, modelId: String): String {
         return (existing.orEmpty().split(',') + AiModelRegistry.inferCapabilities(modelId))

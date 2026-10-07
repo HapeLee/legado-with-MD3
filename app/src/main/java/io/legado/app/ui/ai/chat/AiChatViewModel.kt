@@ -292,7 +292,8 @@ class AiChatViewModel(
                 val shortTitle = generationUseCase.generateTitle(
                     userContent = userContent,
                     assistantContent = assistantContent,
-                    reasoningLevel = state.reasoningLevel
+                    reasoningLevel = state.reasoningLevel,
+                    conversationId = conversationId
                 )
                 if (shortTitle.isNotBlank()) {
                     aiChatGateway.updateConversationTitle(conversationId, shortTitle)

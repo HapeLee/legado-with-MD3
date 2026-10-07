@@ -2378,6 +2378,13 @@
     <string name="ai_delete_model">删除模型</string>
     <string name="ai_delete_model_confirm">确定要删除此模型吗？</string>
     <string name="ai_models_url_summary">可选。留空时使用该协议默认的模型列表端点。</string>
+    <string name="ai_custom_headers">自定义请求头</string>
+    <string name="ai_custom_headers_summary">可选。随每次请求发送的额外 HTTP 请求头；同名时覆盖内置请求头。</string>
+    <string name="ai_custom_headers_count">已配置 %1$d 项</string>
+    <string name="ai_add_header">添加请求头</string>
+    <string name="ai_header_name">请求头名称</string>
+    <string name="ai_header_value">请求头值</string>
+    <string name="ai_delete_header">删除请求头</string>
     <string name="ai_translation_task">翻译任务</string>
     <string name="ai_translation_target_language">目标语言</string>
     <string name="ai_max_input_chars">最大输入字符数</string>

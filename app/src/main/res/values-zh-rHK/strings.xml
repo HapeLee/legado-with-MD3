@@ -1615,6 +1615,13 @@
     <string name="ai_model_not_configured">未設定模型</string>
     <string name="ai_models_url">Models URL</string>
     <string name="ai_models_url_summary">選填。留空則使用協議預設的模型端點。</string>
+    <string name="ai_custom_headers">自訂請求標頭</string>
+    <string name="ai_custom_headers_summary">選填。隨每次請求傳送的額外 HTTP 標頭；同名時會覆寫內建標頭。</string>
+    <string name="ai_custom_headers_count">已設定 %1$d 項</string>
+    <string name="ai_add_header">新增標頭</string>
+    <string name="ai_header_name">標頭名稱</string>
+    <string name="ai_header_value">標頭值</string>
+    <string name="ai_delete_header">刪除標頭</string>
     <string name="ai_new_chat">新對話</string>
     <string name="ai_new_model">新模型</string>
     <string name="ai_new_profile">新設定檔</string>

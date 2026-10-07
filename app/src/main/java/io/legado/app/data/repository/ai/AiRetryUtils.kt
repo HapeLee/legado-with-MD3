@@ -1,5 +1,6 @@
 package io.legado.app.data.repository.ai
 
+import io.legado.app.domain.model.AiHttpException
 import kotlinx.coroutines.delay
 import kotlin.math.min
 import kotlin.random.Random
@@ -79,6 +80,9 @@ internal suspend fun <T> retryWithBackoff(
 }
 
 private fun isRetryable(e: Exception, retryableStatusCodes: Set<Int>): Boolean {
+    // Prefer the structured status code: messages may embed the raw response body, so scanning
+    // the text for a retryable status would misclassify permanent errors.
+    if (e is AiHttpException) return e.statusCode in retryableStatusCodes
     val message = e.message ?: return false
     return retryableStatusCodes.any { code ->
         message.contains("HTTP $code") || message.contains("$code:")

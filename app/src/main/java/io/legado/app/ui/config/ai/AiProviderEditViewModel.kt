@@ -14,6 +14,8 @@ import io.legado.app.domain.model.AiProviderPresets
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.utils.GSON
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -89,6 +91,7 @@ class AiProviderEditViewModel(
                             baseUrl = provider?.baseUrl.orEmpty(),
                             modelsUrl = provider?.modelsUrl.orEmpty(),
                             apiKey = provider?.apiKey.orEmpty(),
+                            customHeaders = parseHeaderList(provider?.customHeadersJson),
                             providerModels = providerModels,
                             initialized = true
                         )
@@ -108,6 +111,7 @@ class AiProviderEditViewModel(
             is AiProviderEditIntent.UpdateBaseUrl -> _uiState.update { it.copy(baseUrl = intent.value, selectedProviderPresetId = "") }
             is AiProviderEditIntent.UpdateModelsUrl -> _uiState.update { it.copy(modelsUrl = intent.value, selectedProviderPresetId = "") }
             is AiProviderEditIntent.UpdateApiKey -> _uiState.update { it.copy(apiKey = intent.value) }
+            is AiProviderEditIntent.UpdateCustomHeaders -> _uiState.update { it.copy(customHeaders = intent.headers) }
             AiProviderEditIntent.AddModel -> _uiState.update {
                 it.copy(editingModel = AiProviderModelEditorUi(temperature = TranslationConstants.DEFAULT_TEMPERATURE.toString()))
             }
@@ -324,7 +328,8 @@ class AiProviderEditViewModel(
             protocol = protocol,
             baseUrl = baseUrl,
             modelsUrl = modelsUrl,
-            apiKey = apiKey
+            apiKey = apiKey,
+            customHeaders = customHeaders.toCustomHeaderMap()
         )
     }
 
@@ -335,8 +340,25 @@ class AiProviderEditViewModel(
             protocol = protocol,
             baseUrl = baseUrl,
             apiKey = apiKey,
-            modelsUrl = modelsUrl.ifBlank { null }
+            modelsUrl = modelsUrl.ifBlank { null },
+            customHeaders = customHeaders.toCustomHeaderMap()
         )
+    }
+
+    private fun List<AiProviderHeaderUi>.toCustomHeaderMap(): Map<String, String> =
+        filter { it.name.isNotBlank() }
+            .associate { it.name.trim() to it.value }
+
+    private fun parseHeaderList(json: String?): ImmutableList<AiProviderHeaderUi> {
+        if (json.isNullOrBlank()) return persistentListOf()
+        return runCatching {
+            @Suppress("UNCHECKED_CAST")
+            GSON.fromJson(json, Map::class.java)
+                .mapKeys { it.key.toString() }
+                .mapValues { it.value.toString() }
+                .map { (name, value) -> AiProviderHeaderUi(name = name, value = value) }
+                .toImmutableList()
+        }.getOrDefault(persistentListOf())
     }
 
     private fun parseParams(json: String?): AiGenerationParams {
