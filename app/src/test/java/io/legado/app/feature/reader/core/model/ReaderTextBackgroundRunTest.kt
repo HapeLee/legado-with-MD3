@@ -356,6 +356,23 @@ class ReaderTextBackgroundRunTest {
         assertEquals(ReaderRect(0f, 0f, 100f, 100f), page.contentClipRect(emptyList()))
     }
 
+    @Test
+    fun `scroll window clip includes the next page bubble`() {
+        val current = page(text(0f, 0f, 10f, 20f, plainStyle))
+        val framed = image.copy(contentInsetLeftPx = 3f, contentInsetRightPx = 4f)
+        val next = page(
+            text(
+                90f, 80f, 100f, 100f, style.copy(backgroundImage = framed),
+                frameTop = 5f, frameBottom = 6f, frameLeft = 3f, frameRight = 4f,
+            )
+        )
+
+        assertEquals(
+            ReaderRect(0f, 0f, 104f, 106f),
+            ReaderPageWindow(current = current, next = next).contentClipRect(),
+        )
+    }
+
     private fun capsule(left: Float, top: Float, right: Float, bottom: Float) =
         ReaderElement.RoleCast(
             bounds = ReaderRect(left, top, right, bottom),

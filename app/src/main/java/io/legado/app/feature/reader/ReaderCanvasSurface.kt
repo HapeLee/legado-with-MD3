@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -1502,12 +1503,13 @@ fun ReaderCanvasSurface(
             )
         }
         if (transitionMode == ReaderTransitionMode.SCROLL) {
-            val contentClip = remember(current) {
-                current.contentClipRect(current.textBackgroundRuns())
-            }
             Box(Modifier
                 .fillMaxSize()
                 .drawWithContent {
+                    // 跨页当帧 ScrollPageStack 已读取 pending 窗口；裁剪必须读同一个窗口，
+                    // 否则相邻页气泡滑入时仍按上一窗的外沿截断。
+                    val contentClip = currentPageWindow().contentClipRect()
+                        ?: return@drawWithContent
                     // 外扩阴影/斜体溢出，对照旧 View 的 ChapterProvider.visibleRect；
                     // 但九宫格气泡与放大过的背景图本来就要画到内容框之外，裁剪必须跟着它们走，
                     // 否则气泡会在滚动模式的视口边沿被切掉。
@@ -1598,15 +1600,29 @@ fun ReaderCanvasSurface(
             val currentOnTop = turnPreview.currentOnTop
             val drawsNext = turnPreview.next != null
             val drawsPrevious = turnPreview.previous != null
-            if (currentOnTop && drawsNext) {
-                pages.next?.let { page -> PageLayer(page, PagedLayerRole.NEXT) { 0f } }
+            val orderedPages = buildList {
+                if (currentOnTop && drawsNext) {
+                    pages.next?.let { add(it to PagedLayerRole.NEXT) }
+                }
+                add(current to PagedLayerRole.CURRENT)
+                if (drawsPrevious) {
+                    pages.previous?.let { add(it to PagedLayerRole.PREVIOUS) }
+                }
+                if (!currentOnTop && drawsNext) {
+                    pages.next?.let { add(it to PagedLayerRole.NEXT) }
+                }
             }
-            PageLayer(current, PagedLayerRole.CURRENT) { bookmarkOffset }
-            if (drawsPrevious) {
-                pages.previous?.let { page -> PageLayer(page, PagedLayerRole.PREVIOUS) { 0f } }
-            }
-            if (!currentOnTop && drawsNext) {
-                pages.next?.let { page -> PageLayer(page, PagedLayerRole.NEXT) { 0f } }
+            // 翻页开始/结束会改变绘制顺序。同一页必须带着自己的 RenderNode 换位；
+            // 按槽位复用会先画出上一次留在该槽位的页，再重录新页，形成旧页闪帧。
+            // 全局消息窗的多个槽位共享同一个页 ID，仅这种情况才按角色区分。
+            val repeatedPageIds = orderedPages.groupingBy { it.first.id }
+                .eachCount().filterValues { it > 1 }.keys
+            orderedPages.forEach { (page, role) ->
+                key(page.id, role.takeIf { page.id in repeatedPageIds }) {
+                    PageLayer(page, role) {
+                        if (role == PagedLayerRole.CURRENT) bookmarkOffset else 0f
+                    }
+                }
             }
         }
         if (transitionMode == ReaderTransitionMode.COVER && turnDirection != null) {
@@ -1991,7 +2007,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
             paint.color = if (previewing && activeSelection.contains(e, page.id.chapterIndex)) {
                 selectionPreviewStyle.textColor ?: page.previewBaseTextColor(e)
             } else page.resolvedColorArgb(e, readAloud.toArgb())
-            paint.isUnderlineText = e.style.nativeUnderline || e.drawsLinkUnderline
+            // 与分页绘制和旧 TextHtmlColumn 一致：规则自定义线替代 HTML 原生线，
+            // 链接下划线仍由原生 Paint 绘制。
+            paint.isUnderlineText = (e.style.nativeUnderline && e.style.underline == null) ||
+                    e.drawsLinkUnderline
             native.drawText(e.value, e.bounds.left, e.baselinePx, paint)
         }
 

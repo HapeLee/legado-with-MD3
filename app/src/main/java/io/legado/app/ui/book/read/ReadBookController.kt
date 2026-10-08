@@ -824,8 +824,21 @@ class ReadBookController(
         }
         val window = ReaderPageNavigator.window(directReaderPages, index)
         // 当前章是否还在逐页流出：决定尾部要不要接"加载中"页。
-        val streamingChapter = window.current?.id?.chapterIndex
+        val currentChapterIndex = window.current?.id?.chapterIndex
+        val streamingChapter = currentChapterIndex
             ?.takeIf { it in directReaderStreamingChapters }
+
+        fun preview(page: ReaderPage?): ReaderPage? = page?.takeIf {
+            currentChapterIndex == null || ReaderPartialPagePolicy.canPreviewPage(
+                currentChapterIndex = currentChapterIndex,
+                candidateChapterIndex = it.id.chapterIndex,
+                currentChapterStreaming = streamingChapter != null,
+            )
+        }
+
+        val previousPage = preview(window.previous)
+        val nextPage = preview(window.next)
+        val nextPlusPage = preview(window.nextPlus)
         val selection = searchSelection
         val aloudPosition = readAloudPosition
         val aloudParagraphIndex = aloudPosition?.let { (chapterIndex, chapterPosition) ->
@@ -864,12 +877,12 @@ class ReadBookController(
                         (aloudPosition?.hashCode()?.toLong() ?: 0L),
             )
         }
-        val nextPlus = if (streamingChapter != null && window.nextPlus == null) {
+        val nextPlus = if (streamingChapter != null && nextPlusPage == null) {
             // 本章还有没成型的页：第三槽按旧 `TextPageFactory.nextPlusPage` 的 `!isCompleted`
             // 分支给"加载中"页，而不是"继续滑动以加载下一章…"（那是下一章内容之后才出现的提示）。
-            tailLoadingPage(streamingChapter)
+            tailLoadingPage(streamingChapter, if (nextPage == null) 1 else 0)
         } else {
-            highlight(window.nextPlus, index + 2)
+            highlight(nextPlusPage, index + 2)
                 ?: if (ReadBook.isScroll &&
                     ReaderPageNavigator.needsSwipeTipNextPlus(window, hasNextComposeChapter())
                 ) {
@@ -884,10 +897,17 @@ class ReadBookController(
                 }
         }
         return ReaderPageWindow(
-            previous = highlight(window.previous, index - 1),
+            previous = highlight(previousPage, index - 1)
+                ?: if (streamingChapter != null && window.previous != null) {
+                    centeredReaderMessagePage(
+                        ReaderPageId(streamingChapter, -1),
+                        activity.getString(R.string.data_loading),
+                        readerChapterTitle(streamingChapter),
+                    )
+                } else null,
             current = highlight(window.current, index),
             // 本章还没排完时，最后一个成型页之后按旧 `nextPage` 给"加载中"页。
-            next = highlight(window.next, index + 1)
+            next = highlight(nextPage, index + 1)
                 ?: streamingChapter?.let { tailLoadingPage(it) },
             nextPlus = nextPlus,
         )
@@ -897,8 +917,12 @@ class ReadBookController(
      * 部分排版章节的尾部承接页，对照旧 `TextPageFactory.nextPage/nextPlusPage` 在
      * `currentChapter.isCompleted == false` 时返回的 `R.string.data_loading` 页。
      */
-    private fun tailLoadingPage(chapterIndex: Int): ReaderPage? = centeredReaderMessagePage(
-        id = ReaderPageId(chapterIndex, directReaderStreamedPages[chapterIndex]?.size ?: 0),
+    private fun tailLoadingPage(chapterIndex: Int, offset: Int = 0): ReaderPage? =
+        centeredReaderMessagePage(
+            id = ReaderPageId(
+                chapterIndex,
+                (directReaderStreamedPages[chapterIndex]?.size ?: 0) + offset
+            ),
         text = activity.getString(R.string.data_loading),
         chapterTitle = readerChapterTitle(chapterIndex),
     )
@@ -1364,22 +1388,19 @@ class ReadBookController(
         if (ReadBook.readerPagination(currentIndex) == null) {
             publishWindowReaderPaginationSnapshots(paginationGeneration)
         }
-        // 该章已经有任务在跑（很可能正是此前作为邻章启动的那个）：不打断，等它收尾。
-        // 内容换了一份时身份不同，会落到下面按新内容重排。
-        if (isReaderChapterPaginationRunning(current)) return
         val hasShapedPages = directReaderPages.any {
             it.id.chapterIndex == currentIndex && !it.isPlaceholder
         }
         // 页表里还挂着"排了一半"的残留（任务已被取消、部分页却没清干净）时同样要重排，
         // 否则这一章会停在半成品上、尾部一直挂着"加载中"。
         val stalledPartialPages = currentIndex in directReaderStreamingChapters
-        if (!hasShapedPages || stalledPartialPages) {
+        // 当前章优先启动，已有同身份任务则继续运行。随后独立预排邻章，不能因为
+        // 当前章仍在逐页流出就延迟到整章完成；旧 View 也分别装载窗口里的各章。
+        if (!isReaderChapterPaginationRunning(current) && (!hasShapedPages || stalledPartialPages)) {
             startReaderChapterPagination(
                 paginationGeneration, current, width, height, padding, style,
             )
-            return
         }
-        // 当前章已经有整批页（例如刚翻回来）：直接补窗口里的邻章。
         scheduleAdjacentReaderChapterPagination(chapters, current, width, height, padding, style)
     }
 
@@ -1468,7 +1489,8 @@ class ReadBookController(
             val index = candidate.chapter.index
             index != current.chapter.index &&
                     index in visible &&
-                    directReaderPages.none { it.id.chapterIndex == index && !it.isPlaceholder } &&
+                    (directReaderPages.none { it.id.chapterIndex == index && !it.isPlaceholder } ||
+                            index in directReaderStreamingChapters) &&
                     !isReaderChapterPaginationRunning(candidate)
         }
         if (missing.isEmpty()) return
@@ -1646,7 +1668,11 @@ class ReadBookController(
             batch.unsupportedChapters.forEach { (index, reason) ->
                 AppLog.putDebug("Compose reader pagination unsupported: chapter=$index reason=$reason")
             }
-            updateReaderPaginationError(batch.failureReasonFor(chapterIndex))
+            // 邻章只是后台预排：它的失败不能盖住仍可阅读的当前章。
+            // 真正切到该章后会按当前章重新调度，届时再显示重试入口。
+            if (chapterIndex == ReadBook.durChapterIndex) {
+                updateReaderPaginationError(batch.failureReasonFor(chapterIndex))
+            }
             val previousPageId = directReaderPageIndex
                 ?.let { directReaderPages.getOrNull(it)?.id }
             val previousPages = directReaderPages.associateBy { it.id }

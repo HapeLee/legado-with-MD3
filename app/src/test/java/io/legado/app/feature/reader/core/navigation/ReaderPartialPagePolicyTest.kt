@@ -8,6 +8,14 @@ import org.junit.Test
 class ReaderPartialPagePolicyTest {
 
     @Test
+    fun streamedChapterPreviewsOnlyItsOwnPages() {
+        assertTrue(ReaderPartialPagePolicy.canPreviewPage(4, 4, true))
+        assertTrue(!ReaderPartialPagePolicy.canPreviewPage(4, 5, true))
+        assertTrue(!ReaderPartialPagePolicy.canPreviewPage(4, 3, true))
+        assertTrue(ReaderPartialPagePolicy.canPreviewPage(4, 5, false))
+    }
+
+    @Test
     fun nextChapterPublishesOnlyItsFirstTwoPagesLikeTheViewReader() {
         // offset = 1：旧 loadContent 在 `page.index > 1` 时停止提前重绘。
         assertTrue(ReaderPartialPagePolicy.shouldPublishPage(1, 0, 0, false, false))
@@ -24,7 +32,9 @@ class ReaderPartialPagePolicyTest {
     @Test
     fun currentChapterPublishesThePageThatHoldsTheReadingPosition() {
         assertTrue(ReaderPartialPagePolicy.shouldPublishPage(0, 7, 0, true, false))
-        // 分页模式没有别的触发条件：不是当前阅读页就不重绘。
+        // View 的页表可原地读取新页；Canvas 必须把刚成型的相邻页发布进窗口。
+        assertTrue(ReaderPartialPagePolicy.shouldPublishPage(0, 6, 5, false, false))
+        assertTrue(!ReaderPartialPagePolicy.shouldPublishPage(0, 7, 5, false, false))
         assertTrue(!ReaderPartialPagePolicy.shouldPublishPage(0, 1, 5, false, false))
     }
 

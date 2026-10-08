@@ -16,6 +16,13 @@ package io.legado.app.feature.reader.core.navigation
  */
 object ReaderPartialPagePolicy {
 
+    /** 未排完的当前章不能在翻页预览里提前露出已预排的邻章正文。 */
+    fun canPreviewPage(
+        currentChapterIndex: Int,
+        candidateChapterIndex: Int,
+        currentChapterStreaming: Boolean,
+    ): Boolean = !currentChapterStreaming || currentChapterIndex == candidateChapterIndex
+
     /** 一页成型后是否立刻换窗（旧 View 三条 `upContent(offset)` 触发条件）。 */
     fun shouldPublishPage(
         chapterOffset: Int,
@@ -28,6 +35,9 @@ object ReaderPartialPagePolicy {
         chapterOffset < 0 -> false
         chapterOffset > 0 -> pageIndex <= NEXT_CHAPTER_EARLY_PAGE_LIMIT
         containsReadingPosition -> true
+        // View 的 TextChapter.textPages 原地追加，nextPage 会直接看到新页；Canvas 的
+        // ReaderPageWindow 是不可变快照，紧邻当前页成型后必须主动重发窗口。
+        pageIndex == currentPageIndex + 1 -> true
         continuousScroll -> maxOf(pageIndex - SCROLL_LOOKAHEAD_PAGES, 0) < currentPageIndex
         else -> false
     }

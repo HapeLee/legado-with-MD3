@@ -60,5 +60,18 @@ fun ReaderPage.contentClipRect(backgroundRuns: List<ReaderTextBackgroundRun>): R
     return ReaderRect(left, top, right, bottom)
 }
 
+/** 滚动四页共用一个裁剪层，邻页滑入时也必须容纳它自己的气泡与字形外沿。 */
+fun ReaderPageWindow.contentClipRect(): ReaderRect? {
+    val clips = listOfNotNull(previous, current, next, nextPlus)
+        .map { page -> page.contentClipRect(page.textBackgroundRuns()) }
+    if (clips.isEmpty()) return null
+    return ReaderRect(
+        left = clips.minOf { it.left },
+        top = clips.minOf { it.top },
+        right = clips.maxOf { it.right },
+        bottom = clips.maxOf { it.bottom },
+    )
+}
+
 private const val SHADOW_RADIUS_PADDING_PX = 2f
 private const val ITALIC_PAD_RATIO = 0.25f
