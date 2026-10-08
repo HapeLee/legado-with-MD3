@@ -14,13 +14,13 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.domain.gateway.ImportBookSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.exception.EmptyFileException
 import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.exception.TocEmptyException
-import io.legado.app.domain.gateway.ImportBookSettingsGateway
-import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
@@ -55,6 +55,7 @@ import io.legado.app.utils.inputStream
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isDataUrl
+import io.legado.app.utils.parseToUri
 import io.legado.app.utils.printOnDebug
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
@@ -257,6 +258,12 @@ object LocalBook {
         }
         var book = appDb.bookDao.getBook(bookUrl)
         if (book == null) {
+            // 源文件被删掉后重新导入同名文件时，书架里那条记录只是文件位置失效；
+            // 直接 insert 会再裂出一条同名书，应先把它接回这次导入的文件。
+            val reusableBook = findReusableStaleLocalBook(bookUrl, fileName)
+            if (reusableBook != null) {
+                return rebindLocalBook(reusableBook, bookUrl, fileName)
+            }
             val nameAuthor = analyzeNameAuthor(fileName)
             book = Book(
                 type = BookType.text or BookType.local,
@@ -281,6 +288,55 @@ object LocalBook {
             appDb.bookDao.update(book)
         }
         return book
+    }
+
+    /**
+     * 找出"同名、但文件已经读不到"的旧记录，用于把重新导入的同名文件接回这条记录。
+     * 判据见 [planLocalBookImportReuse]。
+     */
+    private fun findReusableStaleLocalBook(importedBookUrl: String, fileName: String): Book? {
+        if (fileName.isBlank()) return null
+        val existingBook = appDb.bookDao.getBookByFileName(fileName) ?: return null
+        return planLocalBookImportReuse(
+            existingBook = existingBook,
+            existingFileReadable = isBookFileReadable(existingBook),
+            importedFileName = fileName,
+            importedBookUrl = importedBookUrl,
+        )
+    }
+
+    /**
+     * 记录的文件是否还读得到。
+     *
+     * 这里刻意不做 [io.legado.app.help.book.getLocalUri] 那样的兜底搜索：那条路径会顺手
+     * 迁移主键，探测本身不应该有副作用；只按 `bookUrl` 直接开一次流。
+     */
+    private fun isBookFileReadable(book: Book): Boolean {
+        val stream = book.bookUrl.parseToUri().inputStream(appCtx).getOrNull() ?: return false
+        stream.use { }
+        return true
+    }
+
+    /**
+     * 把失效记录迁到新文件上：保留分组、阅读进度等用户数据，清掉旧目录、缓存与封面。
+     */
+    private fun rebindLocalBook(staleBook: Book, newBookUrl: String, fileName: String): Book {
+        val oldBook = staleBook.copy()
+        deleteBook(oldBook, false)
+        val reboundBook = oldBook.copy(bookUrl = newBookUrl, originName = fileName)
+        // 触发 isLocalModified：旧目录的正文偏移对新文件没有意义，必须重新解析
+        reboundBook.latestChapterTime = 0
+        upBookInfo(reboundBook)
+        reboundBook.upKind()
+        appDb.runInTransaction {
+            // 旧主键下的章节随记录一起废弃，避免留下查不到的脏行
+            appDb.bookChapterDao.delByBook(oldBook.bookUrl)
+            appDb.bookDao.replace(oldBook, reboundBook)
+            BookHelp.updateCacheFolder(oldBook, reboundBook)
+        }
+        oldBook.removeLocalUriCache()
+        reboundBook.removeLocalUriCache()
+        return reboundBook
     }
 
     fun importMangaDirectory(directory: FileDoc): Book {

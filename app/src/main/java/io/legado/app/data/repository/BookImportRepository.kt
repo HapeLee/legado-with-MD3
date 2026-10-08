@@ -26,8 +26,11 @@ class BookImportRepository(
                 return@withContext book
             }
 
-            val reboundBook = book.copy(bookUrl = filePath)
+            // 迁主键后旧目录的正文偏移对新文件没有意义：清掉解析时间让 isLocalModified()
+            // 为真，打开这本书时会按新文件重新解析目录，而不是拿旧偏移读取。
+            val reboundBook = book.copy(bookUrl = filePath, latestChapterTime = 0)
             appDb.runInTransaction {
+                appDb.bookChapterDao.delByBook(book.bookUrl)
                 appDb.bookDao.replace(book, reboundBook)
                 BookHelp.updateCacheFolder(book, reboundBook)
             }

@@ -252,6 +252,11 @@ class ReadBookLoadDelegate(
             }.onFailure {
                 when (it) {
                     is SecurityException, is FileNotFoundException -> {
+                        // 只弹目录选择时阅读页会一直停在占位页、看不出原因；把失败原因也写成
+                        // 消息，用户重选目录并重载成功后由 initBook 的 upMsg(null) 清掉。
+                        ReadBook.upMsg(
+                            context.getString(R.string.error_load_msg, it.localizedMessage)
+                        )
                         host.requestBooksDirPicker(reloadChapterList = true)
                     }
                     else -> {

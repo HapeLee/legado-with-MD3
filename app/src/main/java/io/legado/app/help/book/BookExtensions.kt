@@ -215,14 +215,18 @@ fun Book.getLocalUri(): Uri {
                     return fileDoc.uri
                 }
                 appDb.runInTransaction {
-
                     if (oldBook.bookUrl == newBookUrl) {
                         save()
                     } else {
-                        val newBook = oldBook.copy(bookUrl = newBookUrl)
+                        // 主键迁移后旧目录的正文偏移对新文件没有意义：清掉解析时间让
+                        // isLocalModified() 为真，本次会话内就会按新文件重新解析目录，
+                        // 否则阅读器会拿旧章节偏移读新文件，一直停在加载占位页。
+                        val newBook = oldBook.copy(bookUrl = newBookUrl, latestChapterTime = 0)
+                        appDb.bookChapterDao.delByBook(oldBook.bookUrl)
                         appDb.bookDao.replace(oldBook, newBook)
                         BookHelp.updateCacheFolder(oldBook, newBook)
                         this.bookUrl = newBookUrl
+                        this.latestChapterTime = 0
                     }
                 }
                 localUriCache[newBookUrl] = fileDoc.uri
@@ -251,10 +255,13 @@ fun Book.getLocalUri(): Uri {
                 if (oldBook.bookUrl == newBookUrl) {
                     save()
                 } else {
-                    val newBook = oldBook.copy(bookUrl = newBookUrl)
+                    // 同保存目录分支：迁主键后必须按新文件重新解析目录
+                    val newBook = oldBook.copy(bookUrl = newBookUrl, latestChapterTime = 0)
+                    appDb.bookChapterDao.delByBook(oldBook.bookUrl)
                     appDb.bookDao.replace(oldBook, newBook)
                     BookHelp.updateCacheFolder(oldBook, newBook)
                     this.bookUrl = newBookUrl
+                    this.latestChapterTime = 0
                 }
             }
             localUriCache[newBookUrl] = fileDoc.uri

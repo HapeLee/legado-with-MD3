@@ -14,11 +14,11 @@ import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.Utf8BomUtils
+import org.koin.core.context.GlobalContext
 import java.io.FileNotFoundException
 import java.nio.charset.Charset
 import java.util.regex.PatternSyntaxException
 import kotlin.math.min
-import org.koin.core.context.GlobalContext
 
 class TextFile(private var book: Book) {
 
@@ -206,19 +206,18 @@ class TextFile(private var book: Book) {
                     val chapterLength = chapterContent.toByteArray(charset).size.toLong()
                     val lastStart = toc.lastOrNull()?.start ?: curOffset
                     if (book.getSplitLongChapter() && curOffset + chapterLength - lastStart > maxLengthWithToc) {
-                        toc.lastOrNull()?.let {
-                            it.end = it.start
-                            it.tag = null
-                        }
-                        //章节字数太多进行拆分
+                        // 章节太长：整段（含标题行）交给子章，并把原章从目录里去掉。
+                        // 不能保留 end == start 的空壳原章——读它既拿不到正文（会被当成“无内容”），
+                        // 又把标题行排除在所有子章之外；整本书只识别出一章时，这个空壳正好是第 0 章，
+                        // 打开书就直接读不出内容。
                         val lastTitle = toc.lastOrNull()?.title
-                        val lastTitleLength = lastTitle?.toByteArray(charset)?.size ?: 0
-                        val (chapters, wordCount) = analyze(
-                            lastStart + lastTitleLength, curOffset + chapterLength
-                        )
-                        lastTitle?.let {
+                        if (toc.isNotEmpty()) {
+                            toc.removeAt(toc.lastIndex)
+                        }
+                        val (chapters, wordCount) = analyze(lastStart, curOffset + chapterLength)
+                        lastTitle?.let { title ->
                             chapters.forEachIndexed { index, bookChapter ->
-                                bookChapter.title = "$lastTitle(${index + 1})"
+                                bookChapter.title = "$title(${index + 1})"
                             }
                         }
                         toc.addAll(chapters)
@@ -333,14 +332,14 @@ class TextFile(private var book: Book) {
                 }
                 //章节字数太多进行拆分
                 if (book.getSplitLongChapter() && chapter.end!! - chapter.start!! > maxLengthWithToc) {
+                    // 同上：整段（含标题行）交给子章，不留零长度空壳原章
+                    val start = chapter.start!!
                     val end = chapter.end!!
-                    chapter.end = chapter.start
-                    chapter.tag = null
                     val lastTitle = chapter.title
-                    val lastTitleLength = lastTitle.toByteArray(charset).size
-                    val (chapters, _) = analyze(
-                        chapter.start!! + lastTitleLength, end
-                    )
+                    if (toc.isNotEmpty()) {
+                        toc.removeAt(toc.lastIndex)
+                    }
+                    val (chapters, _) = analyze(start, end)
                     chapters.forEachIndexed { index, bookChapter ->
                         bookChapter.title = "$lastTitle(${index + 1})"
                     }
@@ -477,30 +476,13 @@ class TextFile(private var book: Book) {
      * 获取合适的目录规则
      */
     private fun getTocRule(content: String): TxtTocRule? {
-        val rules = getTocRules().reversed()
-        var maxNum = 1
-        var bestRule: TxtTocRule? = null
-        for (tocRule in rules) {
-            val pattern = try {
-                Regex(tocRule.chapterRule, RegexOption.MULTILINE)
-            } catch (e: PatternSyntaxException) {
-                AppLog.put("TXT目录规则正则语法错误:${tocRule.name}\n$e", e)
-                continue
-            }
-            var start = 0
-            var num = 0
-            for (m in pattern.findAll(content)) {
-                if (start == 0 || m.range.first - start > 1000) {
-                    num++
-                    start = m.range.last + 1
-                }
-            }
-            if (num >= maxNum) {
-                maxNum = num
-                bestRule = tocRule
-            }
-        }
-        return bestRule
+        return selectTxtTocRule(
+            rules = getTocRules(),
+            sample = content,
+            onInvalidPattern = { tocRule, error ->
+                AppLog.put("TXT目录规则正则语法错误:${tocRule.name}\n$error", error)
+            },
+        )
     }
 
     /**

@@ -768,8 +768,20 @@ class ReadBookController(
         // reader's `TextPageFactory.curPage` always yields a fallback page
         // (`currentChapter.getPage(pageIndex) ?: TextPage(title = it.title).format()`), so rapid
         // chapter turns should show a loading page rather than a blank surface.
-        if (!currentInputIsReady &&
-            _readerPageWindow.value.current?.id?.chapterIndex != ReadBook.durChapterIndex
+        // 判据还要认“文案变了”和“msg 优先”：占位页只按章节号判重时，ReadBook.msg 里的
+        // 失败原因（打开本地书籍出错 / LoadTocError）刷不出来；而旧 View 的 msg 是最高优先
+        // 级（见 ReaderPartialPagePolicy.shouldPublishLoadingPlaceholder），正文已排好时
+        // 也会整页换成消息页，“目录更新中”“换源中”因此不会被正文盖住。
+        val visiblePage = _readerPageWindow.value.current
+        if (ReaderPartialPagePolicy.shouldPublishLoadingPlaceholder(
+                targetChapterIndex = ReadBook.durChapterIndex,
+                currentInputReady = currentInputIsReady,
+                visibleChapterIndex = visiblePage?.id?.chapterIndex,
+                visibleIsPlaceholder = visiblePage?.isPlaceholder == true,
+                visibleText = visiblePage?.text,
+                messageText = ReadBook.msg,
+                placeholderText = activity.getString(R.string.data_loading),
+            )
         ) {
             publishLoadingReaderWindow()
         }
