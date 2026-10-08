@@ -601,6 +601,9 @@ fun AiCastDialogSheet(
                         }
                         if (!sceneOnly && memoryOpen) {
                             AiCastSection {
+                                // 组合期读好文案：在点击回调里 context.getString 不是配置感知的，
+                                // Compose lint 会以 LocalContextGetResourceValueCall 报错。
+                                val clashHint = stringResource(R.string.ai_cast_memory_rename_clash)
                                 Text(
                                     text = stringResource(R.string.ai_cast_memory_hint),
                                     style = MaterialTheme.typography.bodySmall,
@@ -636,12 +639,7 @@ fun AiCastDialogSheet(
                                                 if (refused == 0) {
                                                     context.toastOnUi(R.string.ai_cast_memory_saved)
                                                 } else {
-                                                    context.toastOnUi(
-                                                        context.getString(
-                                                            R.string.ai_cast_memory_rename_clash,
-                                                            refused,
-                                                        )
-                                                    )
+                                                    context.toastOnUi(clashHint.format(refused))
                                                 }
                                             }
                                         },
