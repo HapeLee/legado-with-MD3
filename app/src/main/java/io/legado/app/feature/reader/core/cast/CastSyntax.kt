@@ -26,7 +26,10 @@ class CastSyntax(
         addAll(poolEnd.map { it.toString() })
         ALT_SEPARATORS.forEach { add(it.toString()) }
         // & 是 HTML 语义文本的转义起点，任何符号配置下都不允许进名字
-        addAll(listOf("“", "”", "‘", "’", "「", "」", "『", "』", "\"", "'", "\n", "&"))
+        // ｜ | ， 是「本书角色记忆」一行的字段与别名分隔符（CastMemoryMirror.parseLine 就是按它们切的）：
+        // 名字里带上任何一个会把记忆那一行劈成两截，之后按名字找回本行会找回另一行，
+        // 表现为「改了记忆却多出个同名角色」。两套语法必须共用同一份禁列。
+        addAll(listOf("“", "”", "‘", "’", "「", "」", "『", "』", "\"", "'", "\n", "&", "｜", "|", "，"))
     }.map { it.escapeForCharacterClass() }.distinct().joinToString("")
 
     /** 已分配标记：配置形式 `<<名（池）>>`/`<<名>>`，以及 `.`/`·` 等等价分隔形式。 */
