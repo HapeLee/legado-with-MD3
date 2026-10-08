@@ -5,6 +5,9 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -475,6 +478,7 @@ private fun EffectSliderRow(
     steps: Int,
     onValueChange: (Float) -> Unit,
 ) {
+    var typing by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -492,10 +496,62 @@ private fun EffectSliderRow(
             steps = steps,
             modifier = Modifier.weight(1f),
         )
+        // 滑块按档跳（0.1 一档），要点到 0.01 这种小数只能直接填：这一栏就是输入口。
+        // 走独立小弹窗而不是就地放一个输入框——本窗口的文本框共用同一个键盘保活框，
+        // 再塞一个可聚焦的真输入框会把对齐与键盘闪烁的账全搅乱。
         Text(
             text = "×" + String.format(java.util.Locale.ENGLISH, "%.2f", value),
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(48.dp),
+            modifier = Modifier
+                .width(48.dp)
+                .clickable { typing = true },
+        )
+    }
+    if (typing) {
+        var text by remember(typing) {
+            mutableStateOf(String.format(java.util.Locale.ENGLISH, "%.2f", value))
+        }
+        AlertDialog(
+            onDismissRequest = { typing = false },
+            title = { Text(label) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it },
+                        singleLine = true,
+                        label = { Text(label) },
+                        supportingText = {
+                            Text(
+                                String.format(
+                                    java.util.Locale.ENGLISH,
+                                    "%.2f ~ %.2f",
+                                    valueRange.start,
+                                    valueRange.endInclusive,
+                                )
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        text.trim().removePrefix("×").toFloatOrNull()?.let {
+                            onValueChange(it.coerceIn(valueRange.start, valueRange.endInclusive))
+                        }
+                        typing = false
+                    }
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { typing = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
         )
     }
 }
