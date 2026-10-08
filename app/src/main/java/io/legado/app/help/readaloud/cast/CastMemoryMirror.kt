@@ -2,6 +2,7 @@ package io.legado.app.help.readaloud.cast
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookCharacterProfile
+import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 
@@ -113,6 +114,97 @@ object CastMemoryMirror {
             if (next != profile) appDb.bookKnowledgeDao.upsertCharacterProfile(next)
         }
     }
+
+    /** 用户在记忆编辑器里改出来的差异：换主名 = 改名，主名没动而池栏动了 = 改池。 */
+    data class UserEdits(
+        val renames: List<Pair<String, String>> = emptyList(),
+        val poolChanges: List<Pair<String, String>> = emptyList(),
+    ) {
+        val isEmpty: Boolean get() = renames.isEmpty() && poolChanges.isEmpty()
+    }
+
+    /**
+     * 比对用户这一次编辑前后的两份记忆。
+     *
+     * 位置式比对只在**用户自己改的这一次**有意义：整段记忆是 AI 每章重写的，行数与顺序都可能变，
+     * 所以 AI 回写那条路（[applyMemoryToProfiles]）不走这里，这里也只在行数一致、且这一行除主名
+     * 或池栏以外一个字没动时才认作改名/改池，其余一律当作没改。
+     */
+    fun diffUserEdits(before: String, after: String): UserEdits {
+        val old = parse(before)
+        val next = parse(after)
+        if (old.size != next.size) return UserEdits()
+        val renames = ArrayList<Pair<String, String>>()
+        val pools = ArrayList<Pair<String, String>>()
+        old.zip(next).forEach { (from, to) ->
+            when {
+                from.name != to.name && from.aliases == to.aliases && from.relation == to.relation ->
+                    renames += from.name to to.name
+
+                from.name == to.name && from.pool != to.pool ->
+                    pools += from.name to to.pool
+            }
+        }
+        return UserEdits(renames, pools)
+    }
+
+    /**
+     * 把记忆里改过的主名与池写回配音角色与官方档案：走 [BookCastStore.updateCharacter]
+     * 那一个漏斗（分配表、两套 id 的音色绑定、正文胶囊重排、池回记忆都在里面），
+     * 不在这里另写一份，否则又是一处「接不上」。
+     *
+     * 目标名字已被别人占着时**拒绝**这一条并计数返回：档案按 (bookUrl, name) 唯一，
+     * 硬写会把占着那个名字的人整条替换成新 id，旧 id 的角色行与音色绑定全成孤儿
+     * ——表现为「删了两次才删掉，另一个人的状态和详情都没了」。
+     */
+    suspend fun applyUserEdits(bookUrl: String, edits: UserEdits): Int {
+        if (bookUrl.isBlank() || edits.isEmpty) return 0
+        var refused = 0
+        for ((from, to) in edits.renames) {
+            val target = to.trim()
+            val rows = castRowsNamed(bookUrl, from)
+            val profile = profileNamed(bookUrl, from)
+            if (target.isEmpty() || !CastMarkers.isValidName(target) ||
+                (target != from && (castRowsNamed(bookUrl, target).isNotEmpty() ||
+                        profileNamed(bookUrl, target) != null))
+            ) {
+                refused++
+                continue
+            }
+            if (rows.isEmpty()) {
+                // 只有档案、还没导成配音角色的人：改名直接落在档案上
+                profile?.takeIf { it.name != target }?.let {
+                    appDb.bookKnowledgeDao.upsertCharacterProfile(
+                        it.copy(name = target, updatedAt = System.currentTimeMillis()),
+                    )
+                }
+                continue
+            }
+            rows.forEach { row ->
+                BookCastStore.updateCharacter(
+                    bookUrl, row.id, target, row.poolLabel, row.voiceId, row.voiceEffect,
+                )
+            }
+        }
+        for ((name, pool) in edits.poolChanges) {
+            castRowsNamed(bookUrl, name).forEach { row ->
+                if (row.poolLabel != pool.trim().take(12)) {
+                    BookCastStore.updateCharacter(
+                        bookUrl, row.id, row.name, pool, row.voiceId, row.voiceEffect,
+                    )
+                }
+            }
+        }
+        return refused
+    }
+
+    private suspend fun castRowsNamed(bookUrl: String, name: String) =
+        appDb.castCharacterDao.getByBook(bookUrl).filter { it.name == name }
+
+    /** 只认名字完全相等的那条：`getCharacterProfile` 连 aliasesJson 一起 LIKE，会把「记着这个别名的别人」捞出来。 */
+    private suspend fun profileNamed(bookUrl: String, name: String) =
+        appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500)
+            .firstOrNull { it.bookUrl == bookUrl && it.name == name }
 
     /** 档案 → 记忆：用户在人物详情页存过的内容就是这一行的最终口径，整行替换。 */
     suspend fun applyProfileToMemory(bookUrl: String, profile: BookCharacterProfile) {

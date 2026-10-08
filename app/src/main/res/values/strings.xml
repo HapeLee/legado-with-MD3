@@ -3104,6 +3104,7 @@
     <string name="ai_cast_memory">Book cast memory</string>
     <string name="ai_cast_memory_hint">Cross-chapter character dossier shared by AI (main name|aliases/roles|relations|pool). Editable.</string>
     <string name="ai_cast_memory_saved">Memory saved</string>
+    <string name="ai_cast_memory_rename_clash">Memory saved, %1$d name(s) not applied: another character in this book already uses that name</string>
     <string name="ai_cast_preset_name">Preset name</string>
     <string name="ai_cast_preset_instruction">Casting requirement</string>
     <string name="ai_cast_fixed_slots_title">Always-appended prompt rows</string>

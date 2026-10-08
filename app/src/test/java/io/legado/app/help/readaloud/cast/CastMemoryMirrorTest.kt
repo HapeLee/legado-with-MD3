@@ -124,4 +124,55 @@ class CastMemoryMirrorTest {
         assertNull(CastMemoryMirror.replaceLinePool(memory, "李星菲", "女少女"))
         assertNull(CastMemoryMirror.replaceLinePool("", "李星菲", "女少女"))
     }
+
+    /** 用户在记忆里把主名改了：这一条必须当成改名交给配音角色与人物档案。 */
+    @Test
+    fun detectsARenameWhenOnlyTheMainNameChanged() {
+        val edits = CastMemoryMirror.diffUserEdits(
+            "星菲｜小菲｜妹妹｜女少女\n雷奥尔｜｜主持审判",
+            "李星菲｜小菲｜妹妹｜女少女\n雷奥尔｜｜主持审判",
+        )
+
+        assertEquals(listOf("星菲" to "李星菲"), edits.renames)
+        assertEquals(emptyList<Pair<String, String>>(), edits.poolChanges)
+    }
+
+    /** 只动池栏 = 改池，不能顺手算成改名（名字没变）。 */
+    @Test
+    fun detectsAPoolChangeSeparatelyFromARename() {
+        val edits = CastMemoryMirror.diffUserEdits(
+            "李星菲｜小菲｜妹妹｜女少女",
+            "李星菲｜小菲｜妹妹｜男老年",
+        )
+
+        assertEquals(emptyList<Pair<String, String>>(), edits.renames)
+        assertEquals(listOf("李星菲" to "男老年"), edits.poolChanges)
+    }
+
+    /**
+     * 行数不一样就不是用户逐行改：整段记忆是 AI 每章重写的，
+     * 这时按位置配对会把「另一个人」认成改名，一次保存能毁掉整本角色表。
+     */
+    @Test
+    fun ignoresAnythingThatChangesTheLineCount() {
+        val edits = CastMemoryMirror.diffUserEdits(
+            "李星菲｜小菲｜妹妹｜女少女",
+            "李星菲｜小菲｜妹妹｜女少女\n梅林｜｜灰发少女",
+        )
+
+        assertEquals(emptyList<Pair<String, String>>(), edits.renames)
+        assertEquals(emptyList<Pair<String, String>>(), edits.poolChanges)
+    }
+
+    /** 同一行既改了名字又改了关系：不是「改名」这个动作，什么都不推断。 */
+    @Test
+    fun doesNotInferARenameWhenOtherFieldsMovedToo() {
+        val edits = CastMemoryMirror.diffUserEdits(
+            "星菲｜小菲｜妹妹｜女少女",
+            "李星菲｜小菲｜商会主｜女少女",
+        )
+
+        assertEquals(emptyList<Pair<String, String>>(), edits.renames)
+        assertEquals(emptyList<Pair<String, String>>(), edits.poolChanges)
+    }
 }

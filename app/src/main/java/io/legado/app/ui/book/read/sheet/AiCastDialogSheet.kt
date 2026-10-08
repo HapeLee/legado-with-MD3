@@ -59,6 +59,7 @@ import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.help.readaloud.cast.AiCastPresetStore
 import io.legado.app.help.readaloud.cast.AiCastPresetUi
 import io.legado.app.help.readaloud.cast.AiCastProgress
+import io.legado.app.help.readaloud.cast.CastMemoryMirror
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.ai.chat.AiThinkingCard
 import io.legado.app.ui.book.read.ReadMenuConfig
@@ -192,10 +193,12 @@ fun AiCastDialogSheet(
     }
     var temporary by remember { mutableStateOf("") }
     var memoryText by remember { mutableStateOf<String?>(null) }
+    /** 打开这个窗口时的那份记忆：保存时按它算「用户到底改了哪一行」。 */
+    var memoryBaseline by remember { mutableStateOf("") }
     LaunchedEffect(bookUrl) {
         if (memoryText == null) {
             withContext(Dispatchers.IO) {
-                memoryText = AiCastPresetStore.memory(bookUrl)
+                memoryText = AiCastPresetStore.memory(bookUrl).also { memoryBaseline = it }
                 reasoningLevel = AiCastPresetStore.savedReasoningLevel()
             }
         }
@@ -618,11 +621,28 @@ fun AiCastDialogSheet(
                                         enabled = !running,
                                         onClick = {
                                             val text = memoryText.orEmpty()
+                                            val before = memoryBaseline
                                             scope.launch {
-                                                withContext(Dispatchers.IO) {
+                                                val refused = withContext(Dispatchers.IO) {
                                                     AiCastPresetStore.setMemory(bookUrl, text)
+                                                    // 用户在记忆里改的主名与池要回写到配音角色与人物档案，
+                                                    // 否则两边从这一刻起就是两个人（AI 下一趟按新名再建一个）
+                                                    CastMemoryMirror.applyUserEdits(
+                                                        bookUrl,
+                                                        CastMemoryMirror.diffUserEdits(before, text),
+                                                    )
                                                 }
-                                                context.toastOnUi(R.string.ai_cast_memory_saved)
+                                                memoryBaseline = text
+                                                if (refused == 0) {
+                                                    context.toastOnUi(R.string.ai_cast_memory_saved)
+                                                } else {
+                                                    context.toastOnUi(
+                                                        context.getString(
+                                                            R.string.ai_cast_memory_rename_clash,
+                                                            refused,
+                                                        )
+                                                    )
+                                                }
                                             }
                                         },
                                     ) {

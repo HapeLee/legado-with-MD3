@@ -1,7 +1,6 @@
 package io.legado.app.help.readaloud.cast
 
 import io.legado.app.data.appDb
-import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.data.entities.CastCharacter
 import io.legado.app.domain.model.readaloud.BookVoiceBinding
 import io.legado.app.feature.reader.core.cast.CastMarkers
@@ -220,47 +219,40 @@ object BookCastStore {
         return true
     }
     /**
-     * 删除书内角色：把它在别处的痕迹一起清掉，否则下次识别会原样长回来。
+     * 删除书内角色：把它在别处的痕迹一次清干净，两个入口（我们的人物配音、官方的人物详情）
+     * 删同一个人必须得到同一个结果，不能要用户去另一页再删一遍。
      *
-     * 光删 cast_characters + chapter_role_assignments 不够，残留有三处会伪装成「没删掉」：
-     * ① 由分配弹层创建的用户档案（book_character_profiles，source=user）会被
-     * [CastAssignmentStore.migrateLegacyProfiles] 按原 id 再导回来，音色顺着
-     * ② 的绑定重新读出来；② book_voice_bindings 里以角色/档案 id 挂着的 character 绑定；
-     * ③ book_cast_memory 里那行人物档案——提示词要求「已有池的角色原样填它的池」，
-     * 于是同名同池必然复现。④ 朗读侧的变声快照也按 id 记着，一并忘掉。
+     * 残留会伪装成「没删掉」的有四处长在一套 id 之外：
+     * ① `book_character_profiles` 里那条档案（官方 AI 识别建的也一并删掉——它归人物页，
+     * 但用户在配音页删人就是要把这个人从这本书里去掉，只停用会让官方人物页继续列着他）；
+     * ② `book_voice_bindings` 里分别以角色行 id 与档案 id 挂着的 character 绑定；
+     * ③ `book_cast_memory` 里那一行人物档案——提示词要求「已有池的角色原样填它的池」，
+     * 于是同名同池必然复现；④ 朗读侧按 id 记着的变声快照。
      *
-     * [name] 只由官方人物页传入：档案按 (bookUrl, name) 唯一，删的是一条
-     * 名字，而配音表按 id 存行；老角色的行 id 与档案 id 可能不同，不按名字一起删掉，
-     * 进页面时的档案补建会照着这条行把刚删的人物长回来。
+     * [name] 只由官方人物页传入：档案按 (bookUrl, name) 唯一，删的是一条名字，而配音表按 id 存行；
+     * 老角色的行 id 与档案 id 可能不同，不按名字一起删掉，进页面时的档案补建会照着这条行
+     * 把刚删的人物长回来。
      */
     suspend fun deleteCharacter(bookUrl: String, characterId: String, name: String? = null) {
         val character = appDb.castCharacterDao.getById(characterId)
         appDb.chapterRoleAssignmentDao.deleteForCharacter(bookUrl, characterId)
-        if (character != null) {
-            forgetVoiceBinding(bookUrl, characterId)
-            val profile = appDb.bookKnowledgeDao
-                .getCharacterProfile(bookUrl, character.name)
-                ?.takeIf { it.bookUrl == bookUrl }
-            if (profile != null) {
-                forgetVoiceBinding(bookUrl, profile.id)
-                if (profile.source == BookCharacterProfile.SOURCE_USER) {
-                    // 我们这条流程建的用户档案只为配音存在：连档案一起删掉。
-                    appDb.bookKnowledgeDao.deleteCharacterProfile(bookUrl, profile.id)
-                } else if (profile.status == BookCharacterProfile.STATUS_ACTIVE) {
-                    // AI 识别出的人物资料归人物页，不能顺手抹掉；但必须停用它，
-                    // 否则下次进配音页 migrateLegacyProfiles 会按原 id 把角色长回来，
-                    // 表现为「删了又出现」。重新建同名角色时 CastProfileMirror 会解冻。
-                    appDb.bookKnowledgeDao.upsertCharacterProfile(
-                        profile.copy(
-                            status = BookCharacterProfile.STATUS_DISABLED,
-                            updatedAt = System.currentTimeMillis(),
-                        ),
-                    )
-                }
-            }
-            dropMemoryLine(bookUrl, character.name)
+        // 传进来的 id 有两套来源：配音角色行 id，或官方档案 id（CastRoleEditing 交的是行上记的
+        // subjectId）。所以先按 id 找档案，再靠名字把两侧都认出来——清理不能只挂在
+        // 「查到角色行」上，否则传档案 id 的那一次只动了分配表，表现为要删两次。
+        val profileById = appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, characterId)
+        val doomedName = character?.name ?: profileById?.name ?: name?.trim()?.takeIf { it.isNotEmpty() }
+        forgetVoiceBinding(bookUrl, characterId)
+        profileById?.let { forgetVoiceBinding(bookUrl, it.id) }
+        val profile = doomedName?.let {
+            appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, it)?.takeIf { p -> p.bookUrl == bookUrl }
         }
+        if (profile != null) {
+            forgetVoiceBinding(bookUrl, profile.id)
+            appDb.bookKnowledgeDao.deleteCharacterProfile(bookUrl, profile.id)
+        }
+        if (doomedName != null) dropMemoryLine(bookUrl, doomedName)
         VoiceEffectStore.forgetCharacter(characterId)
+        profileById?.let { VoiceEffectStore.forgetCharacter(it.id) }
         appDb.castCharacterDao.delete(characterId)
         if (name != null) {
             appDb.castCharacterDao.getByName(bookUrl, name)

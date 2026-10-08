@@ -3100,6 +3100,7 @@
     <string name="ai_cast_memory">本书角色记忆</string>
     <string name="ai_cast_memory_hint">AI 跨章节共享的人物档案（主名｜别名/身份｜关系｜池），可手动编辑。</string>
     <string name="ai_cast_memory_saved">记忆已保存</string>
+    <string name="ai_cast_memory_rename_clash">记忆已保存，%1$d 个名字没改过去：本书已经有同名的角色，请先把它改名或删掉再来</string>
     <string name="ai_cast_preset_name">预设名称</string>
     <string name="ai_cast_preset_instruction">分配要求</string>
     <string name="ai_cast_preset_expand">展开全文</string>
