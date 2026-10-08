@@ -126,24 +126,25 @@ object CastMemoryMirror {
     /**
      * 比对用户这一次编辑前后的两份记忆。
      *
-     * 位置式比对只在**用户自己改的这一次**有意义：整段记忆是 AI 每章重写的，行数与顺序都可能变，
-     * 所以 AI 回写那条路（[applyMemoryToProfiles]）不走这里，这里也只在行数一致、且这一行除主名
-     * 或池栏以外一个字没动时才认作改名/改池，其余一律当作没改。
+     * 按**身份指纹**（别名栏 + 关系栏）配对，不按行号：用户在表里加一行、删一行，
+     * 或 AI 在中间补了行，行号配对就会把「另一个人」认成改名，一次保存毁掉整本角色表。
+     * 只有某条新行的指纹在旧表里**唯一命中**一条时才认作同一个人，再各自独立地判断
+     * 改名与改池（用户经常在同一行里两件一起改）。指纹本身被改动（动了别名或关系）就不推断。
      */
     fun diffUserEdits(before: String, after: String): UserEdits {
         val old = parse(before)
         val next = parse(after)
-        if (old.size != next.size) return UserEdits()
+        val byFingerprint = old.groupBy { it.aliases to it.relation }
+        val used = HashSet<String>()
         val renames = ArrayList<Pair<String, String>>()
         val pools = ArrayList<Pair<String, String>>()
-        old.zip(next).forEach { (from, to) ->
-            when {
-                from.name != to.name && from.aliases == to.aliases && from.relation == to.relation ->
-                    renames += from.name to to.name
-
-                from.name == to.name && from.pool != to.pool ->
-                    pools += from.name to to.pool
-            }
+        for (to in next) {
+            val matches = byFingerprint[to.aliases to to.relation].orEmpty()
+                .filter { it.name !in used }
+            val from = matches.singleOrNull() ?: continue
+            used += from.name
+            if (from.name != to.name) renames += from.name to to.name
+            if (from.pool != to.pool) pools += to.name to to.pool
         }
         return UserEdits(renames, pools)
     }
@@ -187,7 +188,20 @@ object CastMemoryMirror {
             }
         }
         for ((name, pool) in edits.poolChanges) {
-            castRowsNamed(bookUrl, name).forEach { row ->
+            val rows = castRowsNamed(bookUrl, name)
+            if (rows.isEmpty()) {
+                // 只有档案、还没导成配音角色的人：池直接落在档案那一栏（voiceAgeBand 存的就是池名）
+                val target = pool.trim().take(12)
+                profileNamed(bookUrl, name)?.takeIf {
+                    VoicePoolStore.poolNameOrEmpty(it.voiceAgeBand) != target
+                }?.let {
+                    appDb.bookKnowledgeDao.upsertCharacterProfile(
+                        it.copy(voiceAgeBand = target, updatedAt = System.currentTimeMillis()),
+                    )
+                }
+                continue
+            }
+            rows.forEach { row ->
                 if (row.poolLabel != pool.trim().take(12)) {
                     BookCastStore.updateCharacter(
                         bookUrl, row.id, row.name, pool, row.voiceId, row.voiceEffect,

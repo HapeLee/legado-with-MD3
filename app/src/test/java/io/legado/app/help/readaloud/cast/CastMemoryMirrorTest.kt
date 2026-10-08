@@ -164,6 +164,42 @@ class CastMemoryMirrorTest {
         assertEquals(emptyList<Pair<String, String>>(), edits.poolChanges)
     }
 
+    /** 同一行里既改主名又改池：两件都要认出来，池挂到新名字上（改名先落库，那时行已经叫新名）。 */
+    @Test
+    fun infersARenameAndAPoolChangeTogether() {
+        val edits = CastMemoryMirror.diffUserEdits(
+            "星菲｜小菲｜妹妹｜女少女",
+            "李星菲｜小菲｜妹妹｜男老年",
+        )
+
+        assertEquals(listOf("星菲" to "李星菲"), edits.renames)
+        assertEquals(listOf("李星菲" to "男老年"), edits.poolChanges)
+    }
+
+    /** 中间插入一行不影响别人的判断：配对靠身份指纹，不靠行号。 */
+    @Test
+    fun stillDetectsARenameWhenAnotherLineWasInserted() {
+        val edits = CastMemoryMirror.diffUserEdits(
+            "星菲｜小菲｜妹妹｜女少女\n雷奥尔｜｜主持审判",
+            "梅林｜｜灰发少女\n李星菲｜小菲｜妹妹｜女少女\n雷奥尔｜｜主持审判",
+        )
+
+        assertEquals(listOf("星菲" to "李星菲"), edits.renames)
+        assertEquals(emptyList<Pair<String, String>>(), edits.poolChanges)
+    }
+
+    /** 两行的别名栏与关系栏完全一样时认不出谁是谁，什么都不推断。 */
+    @Test
+    fun refusesToGuessBetweenTwoLinesWithTheSameIdentity() {
+        val edits = CastMemoryMirror.diffUserEdits(
+            "甲｜｜路人\n乙｜｜路人",
+            "丙｜｜路人",
+        )
+
+        assertEquals(emptyList<Pair<String, String>>(), edits.renames)
+        assertEquals(emptyList<Pair<String, String>>(), edits.poolChanges)
+    }
+
     /** 同一行既改了名字又改了关系：不是「改名」这个动作，什么都不推断。 */
     @Test
     fun doesNotInferARenameWhenOtherFieldsMovedToo() {
