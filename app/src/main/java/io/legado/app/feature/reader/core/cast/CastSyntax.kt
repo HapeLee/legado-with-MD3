@@ -77,8 +77,14 @@ class CastSyntax(
         const val DEFAULT_POOL_START = "（"
         const val DEFAULT_POOL_END = "）"
 
-        /** 声音池的单字符等价分隔（解析侧接受，生成侧不用）。 */
-        const val ALT_SEPARATORS = ".,·、"
+        /**
+         * 声音池的单字符等价分隔（解析侧接受，生成侧不用）。
+         *
+         * `·` 以前在这里，于是它同时进不了名字 —— 可 AI 自己就产出 `弗朗茨·罗库斯`、
+         * `伊安·罗德布雷克` 这类音译名，这些角色因此永远建不成配音行（用户看到的「有些符号不给用」）。
+         * 生成侧从来只输出 `名（池）` 括号形式，去掉这一个等价分隔不影响我们自己写的标记。
+         */
+        const val ALT_SEPARATORS = ".,、"
 
         val DEFAULT = CastSyntax()
     }
