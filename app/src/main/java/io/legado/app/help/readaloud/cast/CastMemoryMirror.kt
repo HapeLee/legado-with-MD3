@@ -84,14 +84,75 @@ object CastMemoryMirror {
         return lines.joinToString("\n")
     }
 
-    /** 角色换了声音池 → 本书记忆里那一行的池跟着换（AI 下一趟才会按新池填它）。 */
-    suspend fun syncCharacterPool(bookUrl: String, name: String, pool: String) {
+    /**
+     * 把记忆里 [from] 那一行的主名换成 [to]、池换成 [pool]，别名与关系照旧。
+     *
+     * 两个入口共用：配音页/正文胶囊改了角色行（那里主名是用户填的，[from] 是改前的名字），
+     * 以及本类 [applyUserEdits] 之外的一切反向同步。
+     *
+     * - 已经有 [to] 那一行（改名前就分裂过，或根本没改名）：只动它的池，别去改别的行。
+     * - 两边都查不到：这本书还没有这一行，返回 null，让 AI 下一趟自己写。
+     * - 别名栏里恰好等于新名的那一个要摘掉：AI 常把全名挂在别名上
+     *   （`星菲｜李星菲、…`），用户把主名改成 `李星菲` 后留着它就是同一个人两种写法，
+     *   下一趟分配又会照别名建出第二个角色。
+     */
+    fun renameLinePool(memory: String, from: String, to: String, pool: String): String? {
+        val target = to.trim()
+        if (memory.isBlank() || target.isEmpty()) return null
+        val lines = memory.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        fun mainNameOf(line: String) = line.split('｜', '|').first().trim()
+        var at = lines.indexOfFirst { mainNameOf(it) == target }
+        val origin = from.trim()
+        if (at < 0 && origin.isNotEmpty() && origin != target) {
+            at = lines.indexOfFirst { mainNameOf(it) == origin }
+        }
+        if (at < 0) return null
+        val fields = lines[at].split('｜', '|').map { it.trim() }.toMutableList()
+        while (fields.size < 4) fields += ""
+        fields[0] = target
+        fields[1] = fields[1].split('、', '，', ',')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && it != target }
+            .joinToString("、")
+        fields[3] = pool
+        if (pool.isBlank() && fields.size == 4) fields.removeAt(3)
+        val rendered = fields.joinToString("｜")
+        if (rendered == lines[at]) return null
+        lines[at] = rendered
+        return lines.joinToString("\n")
+    }
+
+    /**
+     * 角色行改了主名或声音池 → 本书记忆里那一行跟着改（AI 下一趟才会按新名新池填这个人）。
+     *
+     * 只按新名去找那一行是找不到的：记忆按主名认人，于是它停留在旧名上，
+     * 下一趟 AI 照旧名再建一个角色（用户看到的「同名角色分裂」「要删两次」）。
+     */
+    suspend fun syncCharacterRow(bookUrl: String, previousName: String, name: String, pool: String) {
         if (bookUrl.isBlank()) return
         val row = appDb.bookCastMemoryDao.get(bookUrl) ?: return
-        val next = replaceLinePool(row.memory, name, pool) ?: return
+        val next = renameLinePool(row.memory, previousName, name, pool) ?: return
         appDb.bookCastMemoryDao.upsert(
             row.copy(memory = next, updatedAt = System.currentTimeMillis()),
         )
+    }
+
+    /**
+     * 把记忆里每一行的池栏按**配音行的当前值**重刷一遍。
+     *
+     * 整段记忆是 AI 每章重写的，它对池的猜测（主角写成女青年之类）会盖掉用户实际选的那一份，
+     * 于是「记忆显示 A、配音与详情显示 B」长期不一致。池的权威来源是配音行 —— 用户在那里
+     * 选过、也是发音链路读的那一个；记忆里查不到对应行的名字（还没导成角色）保持 AI 写的原样。
+     */
+    suspend fun reconcilePoolsWithCast(bookUrl: String, memory: String): String {
+        if (bookUrl.isBlank() || memory.isBlank()) return memory
+        val poolByName = appDb.castCharacterDao.getByBook(bookUrl).associate { it.name to it.poolLabel }
+        if (poolByName.isEmpty()) return memory
+        return memory.lineSequence().joinToString("\n") { line ->
+            val name = line.split('｜', '|').firstOrNull()?.trim().orEmpty()
+            val pool = poolByName[name] ?: return@joinToString line
+            replaceLinePool(line, name, pool) ?: line
+        }
     }
 
     /** 记忆 → 档案：补空缺的简介与池，并把别名并进去（不覆盖用户已经写下的那一份）。 */

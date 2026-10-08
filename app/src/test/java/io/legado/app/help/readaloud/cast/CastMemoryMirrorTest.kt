@@ -211,4 +211,72 @@ class CastMemoryMirrorTest {
         assertEquals(emptyList<Pair<String, String>>(), edits.renames)
         assertEquals(emptyList<Pair<String, String>>(), edits.poolChanges)
     }
+
+    /** 配音页改了主名与池 → 记忆那一行跟着换，别名与关系一个字不动。 */
+    @Test
+    fun renamesTheMemoryLineWhenTheCastRowWasRenamed() {
+        val next = CastMemoryMirror.renameLinePool(
+            "星菲｜小菲、卧底｜男主的女儿｜女少女\n旁人｜｜路人｜男中年",
+            from = "星菲",
+            to = "李星菲",
+            pool = "女青年",
+        )
+
+        assertEquals(
+            "李星菲｜小菲、卧底｜男主的女儿｜女青年\n旁人｜｜路人｜男中年",
+            next,
+        )
+    }
+
+    /** AI 常把全名挂在别名栏：主名换成它之后，别名里那一个要摘掉，否则同一个人两种写法并存。 */
+    @Test
+    fun dropsTheAliasThatBecameTheMainName() {
+        val next = CastMemoryMirror.renameLinePool(
+            "星菲｜李星菲、卧底｜妹妹｜女少女",
+            from = "星菲",
+            to = "李星菲",
+            pool = "女少女",
+        )
+
+        assertEquals("李星菲｜卧底｜妹妹｜女少女", next)
+    }
+
+    /** 新旧两个主名都已经有行（分裂已经发生）：只认新名那一行，不去动旧名那一行。 */
+    @Test
+    fun editsTheNewNameLineOnlyWhenBothNamesAlreadyExist() {
+        val next = CastMemoryMirror.renameLinePool(
+            "星菲｜小菲｜妹妹｜女少女\n李星菲｜｜会长｜女中年",
+            from = "星菲",
+            to = "李星菲",
+            pool = "女青年",
+        )
+
+        assertEquals("星菲｜小菲｜妹妹｜女少女\n李星菲｜｜会长｜女青年", next)
+    }
+
+    /** 两边都查不到这一行：这本书的记忆里没有这个人，什么都不写。 */
+    @Test
+    fun leavesMemoryAloneWhenNoLineMatchesEitherName() {
+        assertNull(
+            CastMemoryMirror.renameLinePool(
+                "旁人｜｜路人｜男中年",
+                from = "星菲",
+                to = "李星菲",
+                pool = "女青年",
+            )
+        )
+    }
+
+    /** 没改名、只改池时行为与原来一致；池清空时不留尾栏。 */
+    @Test
+    fun keepsThreeFieldsWhenThePoolIsCleared() {
+        assertEquals(
+            "星菲｜小菲｜妹妹｜女青年",
+            CastMemoryMirror.renameLinePool("星菲｜小菲｜妹妹｜女少女", "星菲", "星菲", "女青年"),
+        )
+        assertEquals(
+            "星菲｜小菲｜妹妹",
+            CastMemoryMirror.renameLinePool("星菲｜小菲｜妹妹｜女少女", "星菲", "星菲", ""),
+        )
+    }
 }

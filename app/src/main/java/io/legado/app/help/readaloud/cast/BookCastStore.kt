@@ -160,8 +160,14 @@ object BookCastStore {
         // 并按「手动锁定」处理，否则自动选音会把它改掉。不带条件判断——两边本来就已经
         // 不一致时（老数据、胶囊写过一半），用户再存一次就该把绑定拉回当前这一份。
         CastVoicePicker.bindUserVoice(updated)
-        // 池是 AI 下一趟填人的依据，只写角色行会让本书记忆停留在旧池
-        CastMemoryMirror.syncCharacterPool(bookUrl, updated.name, updated.poolLabel)
+        // 池是 AI 下一趟填人的依据，只写角色行会让本书记忆停留在旧池；
+        // 名字同理：记忆按主名认人，不带着旧名去改那一行，下一趟 AI 就照旧名再建一个角色。
+        CastMemoryMirror.syncCharacterRow(
+            bookUrl,
+            character.name,
+            updated.name,
+            updated.poolLabel,
+        )
         if (updated.name != character.name ||
             updated.poolLabel != character.poolLabel ||
             updated.voiceEffect != character.voiceEffect

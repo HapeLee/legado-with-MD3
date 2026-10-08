@@ -379,9 +379,20 @@ object AiCastPresetStore {
     suspend fun memory(bookUrl: String): String =
         appDb.bookCastMemoryDao.get(bookUrl)?.memory.orEmpty()
 
-    /** 写记忆（AI 回写与手动编辑共用；超长截断保护）。 */
-    suspend fun setMemory(bookUrl: String, text: String) {
-        val memory = text.trim().take(4000)
+    /**
+     * 写记忆（AI 回写与手动编辑共用；超长截断保护）。
+     *
+     * [reconcilePools] = 把池栏按配音行的当前值重刷：AI 每章重写时它给的池只是猜测，
+     * 不刷就会长期与配音/详情不一致。用户在记忆编辑器里自己改的那一次要传 false ——
+     * 那一次是他把权威值写进来的来源，刷了就把他刚改的抹掉了。
+     */
+    suspend fun setMemory(bookUrl: String, text: String, reconcilePools: Boolean = true) {
+        val trimmed = text.trim().take(4000)
+        val memory = if (reconcilePools) {
+            CastMemoryMirror.reconcilePoolsWithCast(bookUrl, trimmed)
+        } else {
+            trimmed
+        }
         appDb.bookCastMemoryDao.upsert(
             BookCastMemory(bookUrl = bookUrl, memory = memory),
         )

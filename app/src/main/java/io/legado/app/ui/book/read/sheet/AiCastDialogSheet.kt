@@ -627,7 +627,8 @@ fun AiCastDialogSheet(
                                             val before = memoryBaseline
                                             scope.launch {
                                                 val refused = withContext(Dispatchers.IO) {
-                                                    AiCastPresetStore.setMemory(bookUrl, text)
+                                                    // 这一次是他把权威值写进来的来源，不能先按配音行刷回去
+                                                    AiCastPresetStore.setMemory(bookUrl, text, reconcilePools = false)
                                                     // 用户在记忆里改的主名与池要回写到配音角色与人物档案，
                                                     // 否则两边从这一刻起就是两个人（AI 下一趟按新名再建一个）
                                                     CastMemoryMirror.applyUserEdits(
