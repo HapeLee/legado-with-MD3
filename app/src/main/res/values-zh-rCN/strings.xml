@@ -3168,6 +3168,7 @@
     <string name="cast_import_tts_server_result">导入 %1$d 个声音池、%2$d 个音色</string>
     <string name="cast_import_confirm">导入</string>
     <string name="cast_import_pools_invalid">这个文件不是本软件导出的声音池</string>
+    <string name="cast_import_pools_nothing_new">文件没问题，但里面 %1$d 个声音池本机都已经有了，没有新增</string>
     <string name="cast_export_pools_done">声音池已导出</string>
     <string name="cast_export_pools_failed">导出失败</string>
     <string name="cast_list_separator">、</string>

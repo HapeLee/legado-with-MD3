@@ -3172,6 +3172,7 @@
     <string name="cast_import_tts_server_result">Imported %1$d pools, %2$d voices</string>
     <string name="cast_import_confirm">Import</string>
     <string name="cast_import_pools_invalid">This file was not exported by this app</string>
+    <string name="cast_import_pools_nothing_new">The file is valid, but its %1$d pool(s) already exist here — nothing was added</string>
     <string name="cast_export_pools_done">Pools exported</string>
     <string name="cast_export_pools_failed">Export failed</string>
     <string name="cast_list_separator">, </string>
