@@ -49,7 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.domain.gateway.OtherSettingsGateway
-import io.legado.app.help.loadFontFiles
+import io.legado.app.help.FontFolderRead
+import io.legado.app.help.scanFontFiles
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.utils.FileDoc
@@ -92,6 +93,7 @@ sealed interface FontFolderState {
  * @param selectedFontName currently selected font name (for check mark), null to hide
  * @param onSelectFont called when a font file is selected
  * @param emptyText text to show when no fonts found
+ * @param reloadKey 变化时重新扫描字体（导入字体后由宿主递增）
  */
 @Composable
 fun FontSelectGrid(
@@ -99,12 +101,14 @@ fun FontSelectGrid(
     selectedFontName: String?,
     onSelectFont: (FileDoc) -> Unit,
     emptyText: String? = null,
+    reloadKey: Int = 0,
     otherSettings: OtherSettingsGateway = koinInject(),
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var fontItems by remember { mutableStateOf<List<FileDoc>>(emptyList()) }
     var filesLoading by remember { mutableStateOf(false) }
+    var folderRead by remember { mutableStateOf<FontFolderRead?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     val fontSortFlow = remember(otherSettings) {
         otherSettings.settings.map { it.fontSort }.distinctUntilChanged()
@@ -113,13 +117,15 @@ fun FontSelectGrid(
         initialValue = otherSettings.currentSettings.fontSort
     )
 
-    LaunchedEffect(folderState) {
+    LaunchedEffect(folderState, reloadKey) {
         if (folderState is FontFolderState.Loaded) {
             filesLoading = true
             try {
-                fontItems = withContext(Dispatchers.IO) {
-                    loadFontFiles(context, folderState.uri)
+                val result = withContext(Dispatchers.IO) {
+                    scanFontFiles(context, folderState.uri)
                 }
+                fontItems = result.fontFiles
+                folderRead = result.folder
             } finally {
                 filesLoading = false
             }
@@ -196,6 +202,20 @@ fun FontSelectGrid(
 
         Spacer(Modifier.height(4.dp))
 
+        // 字体文件夹读不出来时给出明确原因，否则用户只会看到一个空列表
+        fontFolderMessage(folderRead)?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+            )
+            Spacer(Modifier.height(4.dp))
+        }
+
         // Font grid
         if (showLoading) {
             Box(
@@ -237,6 +257,16 @@ fun FontSelectGrid(
             }
         }
     }
+}
+
+@Composable
+private fun fontFolderMessage(folder: FontFolderRead?): String? = when (folder) {
+    null, FontFolderRead.NotConfigured -> null
+    FontFolderRead.Unreadable -> stringResource(R.string.font_folder_not_accessible)
+    FontFolderRead.Empty -> stringResource(R.string.font_folder_empty_hint)
+    is FontFolderRead.Loaded -> if (folder.fonts.isEmpty()) {
+        stringResource(R.string.font_folder_no_fonts)
+    } else null
 }
 
 @Composable
