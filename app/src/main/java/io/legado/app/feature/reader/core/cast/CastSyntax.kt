@@ -26,7 +26,10 @@ class CastSyntax(
         addAll(poolEnd.map { it.toString() })
         ALT_SEPARATORS.forEach { add(it.toString()) }
         // & 是 HTML 语义文本的转义起点，任何符号配置下都不允许进名字
-        addAll(listOf("“", "”", "‘", "’", "「", "」", "『", "』", "\"", "'", "\n", "&"))
+        // ｜ | ， 是「本书角色记忆」一行的字段与别名分隔符（CastMemoryMirror.parseLine 就是按它们切的）：
+        // 名字里带上任何一个会把记忆那一行劈成两截，之后按名字找回本行会找回另一行，
+        // 表现为「改了记忆却多出个同名角色」。两套语法必须共用同一份禁列。
+        addAll(listOf("“", "”", "‘", "’", "「", "」", "『", "』", "\"", "'", "\n", "&", "｜", "|", "，"))
     }.map { it.escapeForCharacterClass() }.distinct().joinToString("")
 
     /** 已分配标记：配置形式 `<<名（池）>>`/`<<名>>`，以及 `.`/`·` 等等价分隔形式。 */
@@ -74,8 +77,14 @@ class CastSyntax(
         const val DEFAULT_POOL_START = "（"
         const val DEFAULT_POOL_END = "）"
 
-        /** 声音池的单字符等价分隔（解析侧接受，生成侧不用）。 */
-        const val ALT_SEPARATORS = ".,·、"
+        /**
+         * 声音池的单字符等价分隔（解析侧接受，生成侧不用）。
+         *
+         * `·` 以前在这里，于是它同时进不了名字 —— 可 AI 自己就产出 `弗朗茨·罗库斯`、
+         * `伊安·罗德布雷克` 这类音译名，这些角色因此永远建不成配音行（用户看到的「有些符号不给用」）。
+         * 生成侧从来只输出 `名（池）` 括号形式，去掉这一个等价分隔不影响我们自己写的标记。
+         */
+        const val ALT_SEPARATORS = ".,、"
 
         val DEFAULT = CastSyntax()
     }

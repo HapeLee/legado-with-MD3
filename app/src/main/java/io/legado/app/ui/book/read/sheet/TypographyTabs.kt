@@ -1,6 +1,9 @@
 package io.legado.app.ui.book.read.sheet
 
 import android.content.Context
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +51,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -82,6 +86,8 @@ import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.getCompatColor
+import io.legado.app.utils.takePersistablePermissionSafely
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
@@ -1141,6 +1147,20 @@ private fun TypographyFontSelectSheet(
     onDismiss: () -> Unit,
 ) {
     val readSettingsRepository: ReadSettingsRepository = koinInject()
+    val fontFolderContext = LocalContext.current
+    val fontFolderScope = rememberCoroutineScope()
+    val fontFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            // 少数 ROM 的文件选择器不给可持久化授权，则本次选择只在本次进程内有效
+            it.takePersistablePermissionSafely(
+                fontFolderContext,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+            fontFolderScope.launch { readSettingsRepository.setFontFolder(it.toString()) }
+        }
+    }
     val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
         initialValue = null
     )
@@ -1162,7 +1182,7 @@ private fun TypographyFontSelectSheet(
         onDismissRequest = onDismiss,
         onSelectFont = onSelectFont,
         onSelectSystemTypeface = onSelectSystemTypeface,
-        onOpenFolderPicker = { /* handled by FontSelectSheet internally */ },
+        onOpenFolderPicker = { fontFolderLauncher.launch(null) },
         systemTypefaces = systemTypefaces,
     )
 }

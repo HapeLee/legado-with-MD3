@@ -47,7 +47,24 @@ class AiProfileRepository(
     }
 
     override suspend fun getTaskPreset(taskType: String): AiTaskPresetConfig? = withContext(Dispatchers.IO) {
-        aiProfileDao.getDefaultPreset(taskType)?.toConfig()
+        aiProfileDao.getDefaultPreset(taskType)?.followCurrentDefaultModel()?.toConfig()
+    }
+
+    /**
+     * 「我选的 AI」是一个全局选择：只有翻译 / 摘要 / 对话这三行有界面会写模型，
+     * 其余任务类型（分配角色、场景分配、人物识别、语音精炼、选中清洗、书架自动分组、文本工厂…）
+     * 的行是第一次落库时快照的模型，之后没人再改 —— 用户换了默认 AI 却还在调旧的。
+     * 读的时候顺手跟当前默认对齐并写回去，老数据不用重新设一次默认才生效。
+     */
+    private suspend fun AiTaskPreset.followCurrentDefaultModel(): AiTaskPreset {
+        if (id == DEFAULT_TRANSLATE_PRESET_ID || id == DEFAULT_SUMMARY_PRESET_ID || id == DEFAULT_CHAT_PRESET_ID) {
+            return this
+        }
+        val current = aiProfileDao.getPreset(DEFAULT_TRANSLATE_PRESET_ID)?.modelProfileId.orEmpty()
+        if (current.isEmpty() || modelProfileId == current) return this
+        val updated = copy(modelProfileId = current, updatedAt = System.currentTimeMillis())
+        aiProfileDao.insertPreset(updated)
+        return updated
     }
 
     override suspend fun getProviderApiKey(providerId: String): String = withContext(Dispatchers.IO) {
@@ -337,6 +354,18 @@ class AiProfileRepository(
                 updatedAt = now
             )
         )
+        // 「我选的 AI」是一个全局选择：其余任务类型的预设行没有任何各自的模型选择界面，
+        // 只写这三行的话，分配角色 / 场景分配 / 人物识别 / 语音精炼 / 选中清洗 /
+        // 书架自动分组 / 文本工厂 会永远停在第一次落库时快照的那个旧模型上。
+        val canonicalIds = setOf(
+            DEFAULT_TRANSLATE_PRESET_ID,
+            DEFAULT_SUMMARY_PRESET_ID,
+            DEFAULT_CHAT_PRESET_ID,
+        )
+        aiProfileDao.observePresets().firstOrNull().orEmpty().forEach { preset ->
+            if (preset.id in canonicalIds || preset.modelProfileId == modelProfileId) return@forEach
+            aiProfileDao.insertPreset(preset.copy(modelProfileId = modelProfileId, updatedAt = now))
+        }
     }
 
     private suspend fun AiTaskPreset.toConfig(): AiTaskPresetConfig? {

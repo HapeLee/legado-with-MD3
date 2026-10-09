@@ -2,6 +2,7 @@ package io.legado.app.help.readaloud.cast
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.annotations.SerializedName
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReadAloudVoiceEntity
 import io.legado.app.data.entities.VoicePoolEntity
@@ -79,14 +80,21 @@ object VoicePoolTransfer {
 
     // ---- 自有格式 ----
 
+    /**
+     * 自有格式的落盘结构。
+     *
+     * 每个字段都要写死 [SerializedName]：release 开 R8，类里没被代码读到的字段会被改名甚至整条删掉
+     * （[version] 就只参与序列化），键名跟着构建变，用户拿上一个版本导出的文件来导入会被判成
+     * 「不是本软件导出的声音池」。debug 包和 JVM 侧模拟都看不出这个差别。
+     */
     private data class ExportPayload(
-        val kind: String = KIND,
-        val version: Int = VERSION,
-        val exportedAt: Long = System.currentTimeMillis(),
-        val groups: List<VoicePoolGroupEntity> = emptyList(),
-        val pools: List<VoicePoolEntity> = emptyList(),
-        val voices: List<ReadAloudVoiceEntity> = emptyList(),
-        val members: List<VoicePoolMember> = emptyList(),
+        @SerializedName("kind") val kind: String = KIND,
+        @SerializedName("version") val version: Int = VERSION,
+        @SerializedName("exportedAt") val exportedAt: Long = System.currentTimeMillis(),
+        @SerializedName("groups") val groups: List<VoicePoolGroupEntity> = emptyList(),
+        @SerializedName("pools") val pools: List<VoicePoolEntity> = emptyList(),
+        @SerializedName("voices") val voices: List<ReadAloudVoiceEntity> = emptyList(),
+        @SerializedName("members") val members: List<VoicePoolMember> = emptyList(),
     )
 
     suspend fun exportJson(): String {

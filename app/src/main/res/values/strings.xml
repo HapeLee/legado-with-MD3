@@ -488,6 +488,12 @@
     <string name="nb_file_add_shelves">Add to Bookshelf(%1$d)</string>
     <string name="nb_file_add_succeed">%1$d books added successfully</string>
     <string name="fonts_folder">Please put the font files in the Fonts folder of the storage root directory and reselect</string>
+    <string name="font_import">Import font files</string>
+    <string name="font_import_done">Fonts imported. Pick one from the list below.</string>
+    <string name="font_import_none">No .ttf/.otf font file was imported</string>
+    <string name="font_folder_not_accessible">The selected font folder cannot be read (the system picker may have lost the grant). Fonts inside the app are shown instead; please select the folder again or import font files.</string>
+    <string name="font_folder_empty_hint">No file could be read from the selected font folder. If your fonts are already there, the system file picker of some ROMs cannot expose it; please use “Import font files”.</string>
+    <string name="font_folder_no_fonts">No .ttf/.otf font in the selected font folder</string>
     <string name="default_font">Default font</string>
     <string name="select_font">Select fonts</string>
     <string name="text_size">Text size</string>
@@ -3110,6 +3116,7 @@
     <string name="ai_cast_memory">Book cast memory</string>
     <string name="ai_cast_memory_hint">Cross-chapter character dossier shared by AI (main name|aliases/roles|relations|pool). Editable.</string>
     <string name="ai_cast_memory_saved">Memory saved</string>
+    <string name="ai_cast_memory_rename_clash">Memory saved, %1$d name(s) not applied: another character in this book already uses that name</string>
     <string name="ai_cast_preset_name">Preset name</string>
     <string name="ai_cast_preset_instruction">Casting requirement</string>
     <string name="ai_cast_fixed_slots_title">Always-appended prompt rows</string>
@@ -3177,6 +3184,7 @@
     <string name="cast_import_tts_server_result">Imported %1$d pools, %2$d voices</string>
     <string name="cast_import_confirm">Import</string>
     <string name="cast_import_pools_invalid">This file was not exported by this app</string>
+    <string name="cast_import_pools_nothing_new">The file is valid, but its %1$d pool(s) already exist here — nothing was added</string>
     <string name="cast_export_pools_done">Pools exported</string>
     <string name="cast_export_pools_failed">Export failed</string>
     <string name="cast_list_separator">, </string>

@@ -439,10 +439,16 @@ class MultiRoleRuleViewModel(
                 refreshPools()
                 _effects.tryEmit(
                     MultiRoleRuleEffect.ShowToast(
-                        if (summary == null || summary.isEmpty) {
-                            context.getString(R.string.cast_import_pools_invalid)
-                        } else {
-                            context.getString(
+                        // 「一个都没新增」不等于「文件不对」：同一台机器上导出再导回来，
+                        // 每个池都按 id 命中库里已有的一行，全被跳过是正确结果。
+                        when {
+                            summary == null -> context.getString(R.string.cast_import_pools_invalid)
+                            summary.isEmpty -> context.getString(
+                                R.string.cast_import_pools_nothing_new,
+                                summary.skippedPools,
+                            )
+
+                            else -> context.getString(
                                 R.string.cast_import_tts_server_result,
                                 summary.pools,
                                 summary.voices,

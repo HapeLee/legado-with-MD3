@@ -399,6 +399,12 @@
     <string name="nb_file_add_shelves">加入書架(%1$d)</string>
     <string name="nb_file_add_succeed">成功新增%1$d本書</string>
     <string name="fonts_folder">請將字體檔案放到SD根目錄Fonts資料夾下重新選擇</string>
+    <string name="font_import">匯入字型檔案</string>
+    <string name="font_import_done">已匯入字型，可在下方列表中選擇</string>
+    <string name="font_import_none">沒有匯入字型檔案（僅支援 .ttf/.otf）</string>
+    <string name="font_folder_not_accessible">無法讀取已選的字型資料夾（系統檔案選擇器可能已失效授權），已改為顯示應用內字型；請重新選擇資料夾或直接匯入字型檔案</string>
+    <string name="font_folder_empty_hint">已選的字型資料夾內讀不到任何檔案。若字型確實放在裏面仍未顯示，是部分國產 ROM 的系統檔案選擇器不支援，請改用「匯入字型檔案」</string>
+    <string name="font_folder_no_fonts">已選的字型資料夾內沒有 .ttf/.otf 字型</string>
     <string name="default_font">預設字體</string>
     <string name="select_font">選擇字體</string>
     <string name="text_size">字號</string>

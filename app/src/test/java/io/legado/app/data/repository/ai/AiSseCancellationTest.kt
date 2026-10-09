@@ -86,6 +86,8 @@ class AiSseCancellationTest {
      * 收的一边必须一直读：客户端的 POST 有几百字节堆在接收队列里没人取，
      * 这时 `close()` 会发 RST 而不是 FIN，已经写出去的响应头会跟着整条被丢掉，
      * 测试就会在「还没进入正文读取」那一步先炸（`readResponseHeaders` 报连接中止）。
+     * 清队列要放在**关之前同步做**：丢给后台线程去 `readBytes()` 等于挂在等 EOF 上，
+     * 连接是客户端读完响应才关的，那一队字节在关的那一刻照样没人取过。
      */
     private class SseServer {
 
@@ -101,9 +103,7 @@ class AiSseCancellationTest {
                 runCatching {
                     server.use { listening ->
                         listening.accept().use { socket ->
-                            thread(isDaemon = true, name = "sse-test-drain") {
-                                runCatching { socket.getInputStream().use { it.readBytes() } }
-                            }
+                            val input = socket.getInputStream()
                             val out = socket.getOutputStream()
                             out.write(SSE_HEADERS.toByteArray())
                             out.flush()
@@ -116,6 +116,10 @@ class AiSseCancellationTest {
                                 }
                                 out.write(chunk.toByteArray())
                                 out.flush()
+                            }
+                            runCatching {
+                                socket.soTimeout = DRAIN_QUIET_MS
+                                while (true) input.read()
                             }
                         }
                     }
@@ -181,6 +185,9 @@ class AiSseCancellationTest {
 
         /** 沉默服务端的轮询间隔。 */
         const val POLL_MS = 20L
+
+        /** 关连接前「读到多久没动静就算收干净了」。 */
+        const val DRAIN_QUIET_MS = 60
 
         /** 取消到协程退出的容忍时间：真正生效的关闭是毫秒级，这里全是给 CI 的余量。 */
         const val CANCEL_GRACE_MS = 5_000L
