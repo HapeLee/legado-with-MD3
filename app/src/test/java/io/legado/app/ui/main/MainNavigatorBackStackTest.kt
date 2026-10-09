@@ -27,7 +27,7 @@ class MainNavigatorBackStackTest {
     fun `opening book info from reader preserves its parent and reader session`() {
         val parent = MainRouteBookInfo("Book", "Author", "book-url")
         val reader = MainRouteReadBook(bookUrl = "book-url", sharedCoverKey = "detail-cover")
-        val detail = parent.copy(useCoverMorph = false, openRequestId = 1L)
+        val detail = parent.copy(openRequestId = 1L)
         val backStack = mutableListOf<NavKey>(MainRouteHome, parent, reader)
 
         MainNavigator.navigateToRoute(backStack, detail)
@@ -38,7 +38,7 @@ class MainNavigatorBackStackTest {
     @Test
     fun `read action from detail returns to existing text reader`() {
         val reader = MainRouteReadBook(bookUrl = "book-url", sharedCoverKey = "shelf-cover")
-        val detail = MainRouteBookInfo("Book", "Author", "book-url", useCoverMorph = false)
+        val detail = MainRouteBookInfo("Book", "Author", "book-url")
         val backStack = mutableListOf<NavKey>(MainRouteHome, reader, detail)
 
         MainNavigator.navigateToRoute(
@@ -72,7 +72,7 @@ class MainNavigatorBackStackTest {
     fun `chapter selection in detail replaces existing text reader request`() {
         val parent = MainRouteBookInfo("Book", "Author", "book-url")
         val reader = MainRouteReadBook(bookUrl = "book-url")
-        val detail = parent.copy(useCoverMorph = false, openRequestId = 1L)
+        val detail = parent.copy(openRequestId = 1L)
         val backStack = mutableListOf<NavKey>(MainRouteHome, parent, reader, detail)
         val changedReader = reader.copy(chapterChanged = true)
 

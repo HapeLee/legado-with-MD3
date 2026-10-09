@@ -59,6 +59,7 @@ class MangaReaderViewModel(
     private var pendingExplicitChapterIndex: Int? = null
     private var pagerScrollInProgress = false
     private var deferredReadySession: MangaSessionState? = null
+    private var initializationRequest: MangaReaderIntent.Initialize? = null
 
     private val _uiState = MutableStateFlow(MangaReaderUiState())
     val uiState = _uiState.asStateFlow()
@@ -336,6 +337,10 @@ class MangaReaderViewModel(
     }
 
     private fun initialize(intent: MangaReaderIntent.Initialize) {
+        // Nav3 can recreate the route composition after a child page. This entry's VM
+        // already owns the session, including a pending chapter result or open command.
+        if (initializationRequest == intent) return
+        initializationRequest = intent
         showLoading()
         viewModelScope.launch {
             readerSession.execute(

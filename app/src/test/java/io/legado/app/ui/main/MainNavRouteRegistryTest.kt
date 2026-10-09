@@ -42,23 +42,33 @@ class MainNavRouteRegistryTest {
     }
 
     /**
-     * 阅读页/详情页这类覆盖层页面还能再往上架子页。子页若不带覆盖层元数据，
-     * `ModalOverlaySceneStrategy` 就整体退成 SinglePane：下层阅读页被拆掉组合
-     * （先露书架、返回再从书架重开封面形变）。这条守住「白名单里的子页必须也是覆盖层」。
+     * 可压在书籍页之上的子页必须是普通 `entry<>`：走 NavDisplay 全局转场，与项目其余页面一致。
+     *
+     * 这些子页曾用 `pageSlide()` 覆盖层实现（那是书籍页自身也是覆盖层的时期）：好处是下层保持
+     * 组合，代价是它们自行接管场景与返回 —— 动画与其余页面不一致、返回所有权分裂成两套。
+     * 现在书籍页本身是普通 nav3 目的地、封面飞行交给共享元素，子页用普通入口才是一致的。
      */
     @Test
-    fun `routes pushable on top of an overlay page carry overlay metadata`() {
-        val pushable = routesPushableOverOverlay()
+    fun `routes pushable on top of a book page stay plain entries`() {
+        // 白名单里同时含书籍页自身（详情页可压在阅读页上），那不是子页，要单独校验。
+        val pushable = routesPushableOverBookPage() - bookPageRoutes
         val graph = navGraphSource()
-        val plain = pushable.filterNot { route ->
-            Regex(
-                """entry<$route>\(\s*metadata = (?:ModalOverlaySceneStrategy\.\w+|readerEntryMetadata|modalOverlayEntryMetadata)"""
-            ).containsMatchIn(graph)
+        val decorated = pushable.filter { route ->
+            Regex("""entry<$route>\(\s*$overlayMetadataPattern""").containsMatchIn(graph)
         }
         assertTrue(
-            "这些子页压在阅读页上会把它整页拆掉，需要 modalOverlay()/pageSlide() 元数据：\n" +
-                plain.joinToString("\n") { "  $it" },
-            plain.isEmpty()
+            "这些子页必须走全局转场（不要覆盖层场景元数据），否则会自行接管动画与返回：\n" +
+                    decorated.joinToString("\n") { "  $it" },
+            decorated.isEmpty()
+        )
+        // 书籍页同样必须是普通目的地：带上覆盖层场景会让下层常驻、转场与其余页面分裂。
+        val decoratedBookPages = bookPageRoutes.filter { route ->
+            Regex("""entry<$route>\(\s*$overlayMetadataPattern""").containsMatchIn(graph)
+        }
+        assertTrue(
+            "书籍页也必须是普通 nav3 目的地（不要覆盖层场景元数据）：\n" +
+                    decoratedBookPages.joinToString("\n") { "  $it" },
+            decoratedBookPages.isEmpty()
         )
     }
 
@@ -68,7 +78,7 @@ class MainNavRouteRegistryTest {
      * 认错了行会顺着上一条分支解析出一份假名单。
      * 锚文本没了就说明导航器结构变了，这条测试要跟着改，不能静默放过。
      */
-    private fun routesPushableOverOverlay(): Set<String> {
+    private fun routesPushableOverBookPage(): Set<String> {
         val lines = File(sourceRoot(), "io/legado/app/ui/main/MainNavigator.kt")
             .readText().split('\n')
         val whenLine = lines.indexOfFirst { it.trim() == "when (route) {" }
@@ -89,7 +99,21 @@ class MainNavRouteRegistryTest {
         }
         assertTrue("解析不出任何目的地，解析口径要重新对", routes.isNotEmpty())
         return routes + setOf(
-            "MainRouteToc", "MainRouteBookInfoEdit", "MainRouteReplaceRules", "MainRouteReplaceEdit"
+            "MainRouteToc",
+            "MainRouteBookInfoEdit",
+            "MainRouteReplaceRules",
+            "MainRouteReplaceEdit",
+            // 从详情页压上来的书内子页：同样必须自带覆盖层场景。
+            "MainRouteBookCharacterDetail",
+            "MainRouteBookCharacterNetwork",
+            "MainRouteBookCharacterList",
+            "MainRouteBookVoiceCasting",
+            "MainRouteCloudTtsEngines",
+            "MainRouteTtsCache",
+            "MainRouteBookKnowledgeList",
+            "MainRouteBookKnowledgeDetail",
+            "MainRouteBookEventList",
+            "MainRouteBookEventDetail",
         )
     }
 
@@ -113,5 +137,17 @@ class MainNavRouteRegistryTest {
 
     private companion object {
         val entryRegex = Regex("""\bentry<(\w+)>""")
+
+        /** 书籍页本身：它们是普通目的地，不参与子页名单。 */
+        val bookPageRoutes = setOf(
+            "MainRouteReadBook", "MainRouteReadManga", "MainRouteBookInfo"
+        )
+
+        /**
+         * 覆盖层场景元数据（会自行接管场景与返回）。只匹配这一类，避免把无关的
+         * `metadata { put(...) }`（例如 ViewModel key 或纯转场元数据）误判成覆盖层。
+         */
+        const val overlayMetadataPattern =
+            """metadata\s*=\s*(?:ModalOverlaySceneStrategy\.\w+|modalOverlayEntryMetadata)"""
     }
 }

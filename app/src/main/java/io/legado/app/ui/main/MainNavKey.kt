@@ -186,7 +186,6 @@ data class MainRouteBookInfo(
     val origin: String? = null,
     val coverPath: String? = null,
     val sharedCoverKey: String? = null,
-    val useCoverMorph: Boolean = true,
     val openRequestId: Long = 0L,
 ) : MainRoute
 
