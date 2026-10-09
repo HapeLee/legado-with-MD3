@@ -23,6 +23,7 @@ fun ConfigNavScreen(
     onBackClick: () -> Unit,
     onNavigateToOther: () -> Unit,
     onNavigateToRead: () -> Unit,
+    onNavigateToReadAloud: () -> Unit,
     onNavigateToCover: () -> Unit,
     onNavigateToTheme: () -> Unit,
     onNavigateToBackup: () -> Unit,
@@ -66,6 +67,11 @@ fun ConfigNavScreen(
                     ClickableSettingItem(
                         title = stringResource(R.string.read_config),
                         onClick = onNavigateToRead
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.aloud_config),
+                        description = stringResource(R.string.multi_role_rule_summary),
+                        onClick = onNavigateToReadAloud
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.cover_config),

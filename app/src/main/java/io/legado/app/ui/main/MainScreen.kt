@@ -40,9 +40,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailValue
@@ -102,6 +99,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
 import io.legado.app.ui.widget.components.GlassDefaults
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -169,7 +167,6 @@ fun MainScreen(
     onNavigateToReadRecord: () -> Unit,
     onNavigateToReadRecordOverview: () -> Unit,
     onNavigateToHighlightTagRule: () -> Unit,
-    onNavigateToMultiRoleRule: () -> Unit,
     onNavigateToAbout: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -196,7 +193,6 @@ fun MainScreen(
                 MainEffect.ExitApp -> (context as? ComponentActivity)?.finish()
                 MainEffect.NavigateToReadRecord -> onNavigateToReadRecord()
                 MainEffect.NavigateToHighlightTagRule -> onNavigateToHighlightTagRule()
-                MainEffect.NavigateToMultiRoleRule -> onNavigateToMultiRoleRule()
                 MainEffect.NavigateToAbout -> onNavigateToAbout()
             }
         }
@@ -358,7 +354,7 @@ fun MainScreen(
                     val expanded = navState.targetValue == WideNavigationRailValue.Expanded
 
                     Column {
-                        IconButton(
+                        MediumTonalButton(
                             modifier = Modifier.padding(start = 24.dp),
                             onClick = {
                                 coroutineScope.launch {
@@ -367,18 +363,16 @@ fun MainScreen(
                                     else navState.collapse()
                                     onIntent(MainUiIntent.SetNavigationRailExpanded(targetExpanded))
                                 }
-                            }
-                        ) {
-                            Icon(
-                                if (expanded)
-                                    Icons.AutoMirrored.Filled.MenuOpen
-                                else
-                                    Icons.Default.Menu,
-                                contentDescription = stringResource(
-                                    if (expanded) R.string.collapse else R.string.expand
-                                )
-                            )
-                        }
+                            },
+                            icon = if (expanded) {
+                                Icons.AutoMirrored.Filled.MenuOpen
+                            } else {
+                                Icons.Default.Menu
+                            },
+                            contentDescription = stringResource(
+                                if (expanded) R.string.collapse else R.string.expand
+                            ),
+                        )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -742,7 +736,7 @@ fun MainScreen(
                                     ) {
                                         AppText(
                                             text = stringResource(destination.labelId),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = LegadoTheme.typography.labelSmall,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -865,9 +859,9 @@ private fun BookshelfRailGroupMenu(
                 },
                 trailingIcon = {
                     if (state.selectedGroupIndex == groupIndex) {
-                        Icon(
+                        AppIcon(
                             Icons.Default.Check,
-                            null,
+                            contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
                     }

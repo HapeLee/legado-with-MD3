@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.BookmarkAdd
@@ -54,8 +55,6 @@ import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,6 +111,7 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -930,7 +930,7 @@ fun ChapterItem(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (item.isVip && !item.isPay) {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
                             tint = LegadoTheme.colorScheme.error,
@@ -981,7 +981,7 @@ fun ChapterItem(
                     modifier = Modifier
                         .padding(start = 8.dp)
                         .wrapContentSize()
-                        .clip(MaterialTheme.shapes.medium)
+                        .clip(RoundedCornerShape(12.dp))
                         .then(
                             if (canDownload) {
                                 Modifier
@@ -1207,7 +1207,7 @@ private fun StatusIcon(
             }
 
             "DUR" -> {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Rounded.LocationOn,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
@@ -1239,7 +1239,7 @@ private fun StatusIcon(
             }
 
             "SUCCESS_ICON" -> {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
@@ -1248,7 +1248,7 @@ private fun StatusIcon(
             }
 
             "ERROR" -> {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
@@ -1257,7 +1257,7 @@ private fun StatusIcon(
             }
 
             else -> {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Outlined.DownloadForOffline,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),

@@ -256,7 +256,7 @@ class ReadAloudDelegate(
 
     /** 卡片里滑页/点 tab：tab 住在状态里，弹层被拆掉重建才不会退回常规。 */
     fun setConfigTab(tab: Int) {
-        host.updateState { it.copy(readAloudConfigTab = tab.coerceIn(0, 1)) }
+        host.updateState { it.copy(readAloudConfigTab = tab.coerceIn(0, 2)) }
     }
 
     /*
@@ -277,6 +277,11 @@ class ReadAloudDelegate(
         ReadBook.book?.bookUrl?.let { bookUrl ->
             host.emitEffect(ReadBookEffect.OpenBookVoiceCasting(bookUrl))
         }
+    }
+
+    /** 朗读设置里的整屏子页（角色声音池 / 背景音乐池 / 朗读胶囊外观）：只负责把意图发出去。 */
+    fun openReadAloudSubPage(page: ReadAloudSubPage) {
+        host.emitEffect(ReadBookEffect.OpenReadAloudSubPage(page))
     }
 
     fun openSystemTtsSettings() {

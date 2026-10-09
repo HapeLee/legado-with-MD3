@@ -3,8 +3,6 @@ package io.legado.app.ui.book.readaloud.cast
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -20,6 +18,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -148,9 +147,9 @@ private fun symbolItem(
 
 @Composable
 private fun SymbolHint(text: String, error: Boolean = false) {
-    Text(
+    AppText(
         text = text,
-        style = MaterialTheme.typography.bodySmall,
+        style = LegadoTheme.typography.bodySmall,
         color = if (error) LegadoTheme.colorScheme.error
         else LegadoTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),

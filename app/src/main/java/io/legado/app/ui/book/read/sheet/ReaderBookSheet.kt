@@ -54,8 +54,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.outlined.DownloadForOffline
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -101,8 +99,10 @@ import io.legado.app.ui.widget.components.ChapterStatusIcons
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
@@ -648,7 +648,7 @@ private fun CompactSearchField(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Icon(
+                AppIcon(
                     imageVector = Icons.Default.Search,
                     contentDescription = null,
                     tint = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -699,7 +699,7 @@ private fun CompactToolIconBox(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        AppIcon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = contentColor,
@@ -925,7 +925,7 @@ private fun ReaderSheetVolumeItem(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
+            AppIcon(
                 imageVector = Icons.Default.ExpandMore,
                 contentDescription = null,
                 modifier = Modifier
@@ -984,7 +984,7 @@ private fun ReaderSheetChapterItem(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (item.isVip && !item.isPay) {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = stringResource(R.string.a11y_vip_locked),
                             tint = LegadoTheme.colorScheme.error,
@@ -1067,30 +1067,19 @@ private fun ReaderSheetChapterStatus(
         item.downloadState == DownloadState.SUCCESS -> ReaderSheetStatusIcon(
             imageVector = Icons.Default.CheckCircle,
         )
-        item.downloadState == DownloadState.ERROR -> IconButton(
+        item.downloadState == DownloadState.ERROR -> SmallPlainButton(
             onClick = onDownloadClick,
             enabled = enabled,
-            modifier = Modifier.size(32.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = stringResource(R.string.a11y_retry_chapter, item.title),
-                tint = LegadoTheme.colorScheme.error,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-        item.downloadState == DownloadState.NONE -> IconButton(
+            icon = Icons.Default.Refresh,
+            contentDescription = stringResource(R.string.a11y_retry_chapter, item.title),
+        )
+
+        item.downloadState == DownloadState.NONE -> SmallPlainButton(
             onClick = onDownloadClick,
             enabled = enabled,
-            modifier = Modifier.size(32.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.DownloadForOffline,
-                contentDescription = stringResource(R.string.download_chapter, item.title),
-                tint = LegadoTheme.colorScheme.outline,
-                modifier = Modifier.size(16.dp),
-            )
-        }
+            icon = Icons.Outlined.DownloadForOffline,
+            contentDescription = stringResource(R.string.download_chapter, item.title),
+        )
     }
 }
 
@@ -1098,7 +1087,7 @@ private fun ReaderSheetChapterStatus(
 private fun ReaderSheetStatusIcon(
     imageVector: ImageVector,
 ) {
-    Icon(
+    AppIcon(
         imageVector = imageVector,
         contentDescription = null,
         tint = LegadoTheme.colorScheme.secondary,
@@ -1309,7 +1298,7 @@ private fun ReaderSheetBookmarkItem(
                     modifier = Modifier.weight(1f),
                 )
                 if (item.isDur) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
                         tint = contentColor,
@@ -1446,7 +1435,7 @@ private fun ReaderSheetMarkingItem(
                     )
                 }
                 if (item.isDur) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
                         tint = contentColor,

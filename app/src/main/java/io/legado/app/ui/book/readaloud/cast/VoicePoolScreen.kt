@@ -8,11 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
@@ -22,15 +19,8 @@ import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -50,14 +40,18 @@ import io.legado.app.R
 import io.legado.app.help.readaloud.cast.VoiceAudition
 import io.legado.app.help.readaloud.cast.VoicePoolTransfer
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.VoiceAuditionIconButton
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.ui.widget.components.VoiceAuditionButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
@@ -166,38 +160,32 @@ fun VoicePoolScreen(
                 title = stringResource(R.string.cast_voice_pool),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
+                // 顶栏已经用 TopBarActionsRow 包好了，这里只放按钮本身
                 actions = {
-                    TopBarActionsRow {
-                        IconButton(onClick = { showIoSheet = true }) {
-                            Icon(
-                                Icons.Default.ImportExport,
-                                contentDescription = stringResource(R.string.cast_pool_io),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                        IconButton(onClick = { onIntent(MultiRoleRuleIntent.SetSearch(!state.searchActive)) }) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = stringResource(R.string.search),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                        IconButton(onClick = { onIntent(MultiRoleRuleIntent.ShowCreateGroup("")) }) {
-                            Icon(
-                                Icons.Default.CreateNewFolder,
-                                contentDescription = stringResource(R.string.cast_group_create),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                        IconButton(onClick = { onIntent(MultiRoleRuleIntent.ShowCreateDialog) }) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = stringResource(R.string.add),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
+                    TopBarActionButton(
+                        onClick = { showIoSheet = true },
+                        imageVector = Icons.Default.ImportExport,
+                        contentDescription = stringResource(R.string.cast_pool_io),
+                    )
+                    TopBarActionButton(
+                        onClick = { onIntent(MultiRoleRuleIntent.SetSearch(!state.searchActive)) },
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(R.string.search),
+                    )
+                    TopBarActionButton(
+                        onClick = { onIntent(MultiRoleRuleIntent.ShowCreateGroup("")) },
+                        imageVector = Icons.Default.CreateNewFolder,
+                        contentDescription = stringResource(R.string.cast_group_create),
+                    )
                 },
+            )
+        },
+        floatingActionButton = {
+            // 新建池是这一页的主动作，放右下角比顶栏那颗加号好按（配乐库页同理）
+            AppFloatingActionButton(
+                onClick = { onIntent(MultiRoleRuleIntent.ShowCreateDialog) },
+                icon = Icons.Default.Add,
+                tooltipText = stringResource(R.string.cast_create_pool),
             )
         },
     ) { paddingValues ->
@@ -213,19 +201,19 @@ fun VoicePoolScreen(
                     .padding(paddingValues),
                 // 展开池后每条音色行尾一个试听按钮：不点进去就得先分配角色才听得到
                 memberTrailing = { member ->
-                    VoiceAuditionButton(
+                    VoiceAuditionIconButton(
                         voiceId = member.voiceId,
                         text = auditionText,
-                        label = "",
                     )
                 },
             )
         }
     }
 
-    state.editDialog?.let {
+    // 下面这批弹窗一律「常驻组合 + show/data」：miuix 的窗口靠 show 驱动退场动画，
+    // 用 `?.let` / `if` 条件组合会在关闭那一刻把子树摘掉，动画直接丢失
         PoolEditDialog(
-            dialog = it,
+            dialog = state.editDialog,
             groups = state.groups,
             wording = VoicePoolWording,
             onSave = { editingId, name, groupId ->
@@ -233,45 +221,53 @@ fun VoicePoolScreen(
             },
             onDismiss = { onIntent(MultiRoleRuleIntent.DismissDialog) },
         )
-    }
-    state.deleteTarget?.let { pool ->
         PoolConfirmDialog(
+            show = state.deleteTarget != null,
             title = stringResource(R.string.cast_delete_pool),
-            text = stringResource(R.string.cast_delete_pool_confirm, pool.name),
-            onConfirm = { onIntent(MultiRoleRuleIntent.ConfirmDeletePool(pool.id)) },
+            text = state.deleteTarget?.let {
+                stringResource(R.string.cast_delete_pool_confirm, it.name)
+            }.orEmpty(),
+            onConfirm = {
+                onIntent(MultiRoleRuleIntent.ConfirmDeletePool(state.deleteTarget?.id.orEmpty()))
+            },
             onDismiss = { onIntent(MultiRoleRuleIntent.DismissDelete) },
         )
-    }
-    state.groupDialog?.let {
         GroupEditDialog(
-            dialog = it,
+            dialog = state.groupDialog,
             onConfirm = { editingId, parentId, name ->
                 onIntent(MultiRoleRuleIntent.ConfirmGroupDialog(editingId, parentId, name))
             },
             onDismiss = { onIntent(MultiRoleRuleIntent.DismissGroupDialog) },
         )
-    }
-    state.moveGroupTarget?.let { groupId ->
         MoveGroupDialog(
-            target = state.groups.firstOrNull { it.id == groupId },
+            target = state.moveGroupTarget?.let { id -> state.groups.firstOrNull { it.id == id } },
             groups = state.groups,
-            onConfirm = { parent -> onIntent(MultiRoleRuleIntent.ConfirmMoveGroup(groupId, parent)) },
+            onConfirm = { parent ->
+                onIntent(
+                    MultiRoleRuleIntent.ConfirmMoveGroup(
+                        state.moveGroupTarget.orEmpty(),
+                        parent
+                    )
+                )
+            },
             onDismiss = { onIntent(MultiRoleRuleIntent.DismissMoveGroup) },
         )
-    }
-    state.deleteGroupTarget?.let { groupId ->
         PoolConfirmDialog(
+            show = state.deleteGroupTarget != null,
             title = stringResource(R.string.cast_delete_group),
-            text = stringResource(
-                R.string.cast_delete_group_confirm,
-                state.groups.firstOrNull { it.id == groupId }?.name.orEmpty(),
-            ),
-            onConfirm = { onIntent(MultiRoleRuleIntent.ConfirmDeleteGroup(groupId)) },
+            text = state.deleteGroupTarget?.let { id ->
+                stringResource(
+                    R.string.cast_delete_group_confirm,
+                    state.groups.firstOrNull { it.id == id }?.name.orEmpty(),
+                )
+            }.orEmpty(),
+            onConfirm = {
+                onIntent(MultiRoleRuleIntent.ConfirmDeleteGroup(state.deleteGroupTarget.orEmpty()))
+            },
             onDismiss = { onIntent(MultiRoleRuleIntent.DismissDeleteGroup) },
         )
-    }
-    if (state.pickerPoolId != null) {
         MemberPickerDialog(
+            show = state.pickerPoolId != null,
             pickerQuery = state.pickerQuery,
             candidates = state.pickerCandidates,
             wording = VoicePoolWording,
@@ -282,11 +278,12 @@ fun VoicePoolScreen(
             onSave = { onIntent(MultiRoleRuleIntent.SaveMemberPicker) },
             onDismiss = { onIntent(MultiRoleRuleIntent.DismissMemberPicker) },
         )
-    }
     VoicePoolIoSheet(show = showIoSheet, onDismiss = { showIoSheet = false }, onIntent = onIntent)
-    state.ttsServerPreview?.let { preview ->
-        TtsServerImportDialog(preview, state.ttsServerEngine, onIntent)
-    }
+    TtsServerImportDialog(
+        preview = state.ttsServerPreview,
+        engine = state.ttsServerEngine,
+        onIntent = onIntent,
+    )
 }
 
 /** 公共部件的动作 → 本页意图。部件本身不认识 MultiRoleRuleIntent。 */
@@ -363,51 +360,56 @@ private fun VoicePoolIoSheet(
 /** 外部格式导入确认：先把「导什么、排除了什么」摆出来，落库要点确认。 */
 @Composable
 private fun TtsServerImportDialog(
-    preview: TtsServerPreviewUi,
+    preview: TtsServerPreviewUi?,
     engine: String,
     onIntent: (MultiRoleRuleIntent) -> Unit,
 ) {
-    var engineText by remember(preview) { mutableStateOf(engine) }
-    val multiTts = preview.source == CastImportSource.MultiTts
-    AlertDialog(
+    // 常驻组合（见本文件下方那批弹窗）：关掉时 miuix 才有退场动画
+    var cached by remember { mutableStateOf(preview) }
+    if (preview != null) cached = preview
+    val current = cached ?: return
+    var engineText by remember(current) { mutableStateOf(engine) }
+    val multiTts = current.source == CastImportSource.MultiTts
+    AppAlertDialog(
+        show = preview != null,
         onDismissRequest = { onIntent(MultiRoleRuleIntent.DismissTtsServerImport) },
-        title = {
-            Text(
-                stringResource(
-                    if (multiTts) R.string.cast_import_multitts else R.string.cast_import_tts_server
-                )
-            )
-        },
-        text = {
+        title = stringResource(
+            if (multiTts) R.string.cast_import_multitts else R.string.cast_import_tts_server
+        ),
+        content = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 420.dp)
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
+                AppText(
                     text = stringResource(
                         R.string.cast_import_tts_server_counts,
-                        preview.voiceCount,
-                        preview.skippedEffects,
-                        preview.skippedDisabled,
+                        current.voiceCount,
+                        current.skippedEffects,
+                        current.skippedDisabled,
                     ),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = LegadoTheme.typography.bodyMedium,
                     color = LegadoTheme.colorScheme.onSurface,
                 )
-                Text(
-                    text = preview.poolNames.joinToString(stringResource(R.string.cast_list_separator)),
-                    style = MaterialTheme.typography.bodySmall,
+                AppText(
+                    text = current.poolNames.joinToString(
+                        stringResource(R.string.cast_list_separator)
+                    ),
+                    style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedTextField(
+                AppTextField(
                     value = engineText,
-                    onValueChange = { onIntent(MultiRoleRuleIntent.UpdateTtsServerEngine(it)) },
+                    onValueChange = {
+                        engineText = it
+                        onIntent(MultiRoleRuleIntent.UpdateTtsServerEngine(it))
+                    },
                     singleLine = true,
-                    label = { Text(stringResource(R.string.cast_import_tts_server_engine)) },
+                    label = stringResource(R.string.cast_import_tts_server_engine),
+                    // 弹层里的输入框用 onSheetContent 底色（半透明），与弹层底色分层
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                     supportingText = {
-                        Text(
+                        AppText(
                             text = stringResource(
                                 if (multiTts) {
                                     R.string.cast_import_multitts_engine_hint
@@ -422,16 +424,10 @@ private fun TtsServerImportDialog(
                 )
             }
         },
-        confirmButton = {
-            TextButton(onClick = { onIntent(MultiRoleRuleIntent.ConfirmTtsServerImport) }) {
-                Text(stringResource(R.string.cast_import_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = { onIntent(MultiRoleRuleIntent.DismissTtsServerImport) }) {
-                Text(stringResource(R.string.cancel))
-            }
-        },
+        confirmText = stringResource(R.string.cast_import_confirm),
+        onConfirm = { onIntent(MultiRoleRuleIntent.ConfirmTtsServerImport) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(MultiRoleRuleIntent.DismissTtsServerImport) },
     )
 }
 

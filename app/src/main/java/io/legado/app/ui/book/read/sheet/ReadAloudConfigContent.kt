@@ -26,10 +26,13 @@ import io.legado.app.domain.model.readaloud.ReadAloudContentSplitSetting
 import io.legado.app.domain.model.readaloud.ReadAloudSplitSymbol
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.feature.readaloud.overlay.ReadAloudOverlayPermissionRoute
+import io.legado.app.ui.book.read.ReadAloudSubPage
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerIntent
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerUiState
+import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -55,14 +58,22 @@ fun ReadAloudConfigContent(
      */
     asPage: Boolean = false,
     /**
-     * 卡片停在哪个 tab。宿主是窗口级浮层时这份状态必须存在浮层外面：压进整屏页
-     * （引擎与音色那三行）会把这层 composition 拆掉，`rememberPagerState` 的初值回到 0，
-     * 用户看到的就是「从引擎与音色进去、回来落在常规」。
+     * 卡片停在哪个 tab（0=常规，1=引擎与音色，2=角色与配乐）。宿主是窗口级浮层时这份状态
+     * 必须存在浮层外面：压进整屏页（引擎与音色 / 角色与配乐里那几个跳转项）会把这层
+     * composition 拆掉，`rememberPagerState` 的初值回到 0，用户看到的就是「从子项进去、
+     * 回来落在常规」。
      */
     selectedTab: Int = 0,
     onTabSelected: (Int) -> Unit = {},
+    /**
+     * 是否展示「本章背景音乐 / AI 识别背景音乐」这两个正文内浮层入口。
+     *
+     * 它们发出的意图由阅读器 ViewModel 的分配域处理，听书播放页是 Activity 级浮层、
+     * 没有这套宿主，传 false 以免留下点了没反应的死入口。
+     */
+    bgmSceneActionsEnabled: Boolean = true,
 ) {
-    val pagerState = rememberPagerState(initialPage = selectedTab, pageCount = { 2 })
+    val pagerState = rememberPagerState(initialPage = selectedTab, pageCount = { 3 })
     val scope = rememberCoroutineScope()
     // 双向：宿主给的 tab 推着 pager 走（弹层重建后停在原页），滑页/点 tab 再写回宿主
     LaunchedEffect(selectedTab) {
@@ -81,6 +92,7 @@ fun ReadAloudConfigContent(
             tabTitles = listOf(
                 stringResource(R.string.read_aloud_settings_general_tab),
                 stringResource(R.string.read_aloud_settings_voice_tab),
+                stringResource(R.string.read_aloud_settings_casting_tab),
             ),
             selectedTabIndex = pagerState.currentPage,
             onTabSelected = { page ->
@@ -90,7 +102,7 @@ fun ReadAloudConfigContent(
         HorizontalPager(
             state = pagerState,
             verticalAlignment = Alignment.Top,
-            // 只有两页，手势频繁停在边界；保留平台 stretch 过冲会在松手后反向回弹。
+            // 页数不多，手势频繁停在边界；保留平台 stretch 过冲会在松手后反向回弹。
             overscrollEffect = null,
             modifier = Modifier
                 .fillMaxWidth()
@@ -147,6 +159,16 @@ fun ReadAloudConfigContent(
                             checked = state.capsuleAutoCollapse,
                             onCheckedChange = {
                                 onIntent(ReadBookIntent.SetCapsuleAutoCollapse(it))
+                            },
+                        )
+                        // 胶囊的圆角/背景/头像形状：只在胶囊开着时才有意义，跟着上面的开关一起出现
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.capsule_style_title),
+                            description = stringResource(R.string.capsule_style_hub_summary),
+                            onClick = {
+                                onIntent(
+                                    ReadBookIntent.OpenReadAloudSubPage(ReadAloudSubPage.CapsuleStyle)
+                                )
                             },
                         )
                     }
@@ -220,22 +242,99 @@ fun ReadAloudConfigContent(
                         description = stringResource(R.string.reset_read_aloud_capsule_position_summary),
                         onClick = { onIntent(ReadBookIntent.ResetReadAloudCapsulePosition) },
                     )
-                } else {
+                } else if (page == 1) {
+                    // 引擎与音色：语音从哪来、正文怎么切分。控制面板里原有的多角色、人物配音、
+                    // 配乐入口都已收进朗读设置，这里留在「引擎与音色」「角色与配乐」两个 tab，
+                    // 用户不必在正文和朗读设置之间来回找同一个开关。
+                    SectionTitle(stringResource(R.string.read_aloud_section_engine))
                     TinyClickableSettingItem(
                         title = stringResource(R.string.read_aloud_engines_and_voices),
                         description = stringResource(R.string.read_aloud_engines_and_voices_summary),
                         onClick = { onIntent(ReadBookIntent.OpenTtsEnginesAndVoices) },
                     )
                     TinyClickableSettingItem(
+                        title = stringResource(R.string.sys_tts_config),
+                        onClick = { onIntent(ReadBookIntent.OpenSystemTtsSettings) },
+                    )
+                    TinyClickableSettingItem(
                         title = stringResource(R.string.tts_cache_manage),
                         description = stringResource(R.string.tts_cache_manage_summary),
                         onClick = { onIntent(ReadBookIntent.OpenTtsCache) },
                     )
+                    if (asPage) {
+                        // 整页宿主自己就是一层，数值项直接铺开成滑块：
+                        // 再叠一层选择器 sheet 会重新引入「sheet 套 sheet」的层级问题。
+                        ReadAloudNumberSliderItem(
+                            title = stringResource(R.string.read_aloud_preload),
+                            description = stringResource(
+                                R.string.read_aloud_preload_summary, state.preDownloadNum,
+                            ),
+                            value = state.preDownloadNum,
+                            defaultValue = 10,
+                            valueRange = 0f..100f,
+                            onValueChange = { onIntent(ReadBookIntent.ApplyPreDownloadNum(it)) },
+                        )
+                        ReadAloudNumberSliderItem(
+                            title = stringResource(R.string.tts_pre_synthesis_concurrency),
+                            description = stringResource(
+                                R.string.tts_pre_synthesis_concurrency_summary,
+                                state.preSynthesisConcurrency,
+                            ),
+                            value = state.preSynthesisConcurrency,
+                            defaultValue = 3,
+                            valueRange = 1f..8f,
+                            onValueChange = {
+                                onIntent(ReadBookIntent.ApplyPreSynthesisConcurrency(it))
+                            },
+                        )
+                        ReadAloudNumberSliderItem(
+                            title = stringResource(R.string.tts_paragraph_interval),
+                            description = stringResource(
+                                R.string.tts_paragraph_interval_summary,
+                                state.readAloudParagraphInterval,
+                            ),
+                            value = state.readAloudParagraphInterval,
+                            defaultValue = 0,
+                            valueRange = 0f..5000f,
+                            onValueChange = { onIntent(ReadBookIntent.ApplyParagraphInterval(it)) },
+                        )
+                        ReadAloudNumberSliderItem(
+                            title = stringResource(R.string.audio_cache_clean_time),
+                            description = stringResource(
+                                R.string.audio_cache_clean_time_summary,
+                                state.audioCacheCleanTime,
+                            ),
+                            value = state.audioCacheCleanTime,
+                            defaultValue = 10,
+                            valueRange = 0f..10080f,
+                            onValueChange = { onIntent(ReadBookIntent.ApplyAudioCacheCleanTime(it)) },
+                        )
+                    } else {
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.read_aloud_preload),
+                            onClick = { onIntent(ReadBookIntent.OpenPreDownloadNumPicker) },
+                        )
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.tts_pre_synthesis_concurrency),
+                            onClick = {
+                                onIntent(ReadBookIntent.OpenPreSynthesisConcurrencyPicker)
+                            },
+                        )
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.tts_paragraph_interval),
+                            onClick = { onIntent(ReadBookIntent.OpenParagraphIntervalPicker) },
+                        )
+                        TinyClickableSettingItem(
+                            title = stringResource(R.string.audio_cache_clean_time),
+                            onClick = { onIntent(ReadBookIntent.OpenCacheCleanTimePicker) },
+                        )
+                    }
                     TinyClickableSettingItem(
-                        title = stringResource(R.string.read_aloud_character_casting),
-                        description = stringResource(R.string.book_voice_casting_entry_summary),
-                        onClick = { onIntent(ReadBookIntent.OpenBookVoiceCasting) },
+                        title = stringResource(R.string.clear_cache),
+                        onClick = { onIntent(ReadBookIntent.ClearTtsCache) },
                     )
+
+                    SectionTitle(stringResource(R.string.read_aloud_section_analysis))
                     TinyDropdownSettingItem(
                         title = stringResource(R.string.speech_analysis_mode),
                         selectedValue = state.speechAnalysisMode,
@@ -339,6 +438,11 @@ fun ReadAloudConfigContent(
                             },
                         )
                     }
+
+                } else {
+                    // 角色与配乐：谁在读、配什么乐。分片/推理这些决定「谁在说话」的分析项
+                    // 留在引擎与音色侧（属合成管线），这里只放多角色与背景音乐本身。
+                    SectionTitle(stringResource(R.string.read_aloud_section_casting))
                     TinySwitchSettingItem(
                         title = stringResource(R.string.use_multi_speaker),
                         description = stringResource(R.string.use_multi_speaker_summary),
@@ -355,6 +459,22 @@ fun ReadAloudConfigContent(
                             onIntent(ReadBookIntent.SetMultiRoleCast(it))
                         },
                     )
+                    TinyClickableSettingItem(
+                        title = stringResource(R.string.read_aloud_character_casting),
+                        description = stringResource(R.string.book_voice_casting_entry_summary),
+                        onClick = { onIntent(ReadBookIntent.OpenBookVoiceCasting) },
+                    )
+                    TinyClickableSettingItem(
+                        title = stringResource(R.string.cast_voice_pool),
+                        description = stringResource(R.string.cast_voice_pool_summary),
+                        onClick = {
+                            onIntent(
+                                ReadBookIntent.OpenReadAloudSubPage(ReadAloudSubPage.VoicePool)
+                            )
+                        },
+                    )
+
+                    SectionTitle(stringResource(R.string.read_aloud_section_bgm))
                     TinySwitchSettingItem(
                         title = stringResource(R.string.bgm_assign),
                         description = stringResource(R.string.bgm_assign_summary),
@@ -364,81 +484,31 @@ fun ReadAloudConfigContent(
                         },
                     )
                     TinyClickableSettingItem(
-                        title = stringResource(R.string.sys_tts_config),
-                        onClick = { onIntent(ReadBookIntent.OpenSystemTtsSettings) },
+                        title = stringResource(R.string.cast_bgm_pool),
+                        description = stringResource(R.string.cast_bgm_pool_summary),
+                        onClick = {
+                            onIntent(
+                                ReadBookIntent.OpenReadAloudSubPage(ReadAloudSubPage.BgmPool)
+                            )
+                        },
                     )
-                    if (asPage) {
-                        // 整页宿主自己就是一层，数值项直接铺开成滑块：
-                        // 再叠一层选择器 sheet 会重新引入「sheet 套 sheet」的层级问题。
-                        ReadAloudNumberSliderItem(
-                            title = stringResource(R.string.read_aloud_preload),
-                            description = stringResource(
-                                R.string.read_aloud_preload_summary, state.preDownloadNum,
-                            ),
-                            value = state.preDownloadNum,
-                            defaultValue = 10,
-                            valueRange = 0f..100f,
-                            onValueChange = { onIntent(ReadBookIntent.ApplyPreDownloadNum(it)) },
-                        )
-                        ReadAloudNumberSliderItem(
-                            title = stringResource(R.string.tts_pre_synthesis_concurrency),
-                            description = stringResource(
-                                R.string.tts_pre_synthesis_concurrency_summary,
-                                state.preSynthesisConcurrency,
-                            ),
-                            value = state.preSynthesisConcurrency,
-                            defaultValue = 3,
-                            valueRange = 1f..8f,
-                            onValueChange = {
-                                onIntent(ReadBookIntent.ApplyPreSynthesisConcurrency(it))
-                            },
-                        )
-                        ReadAloudNumberSliderItem(
-                            title = stringResource(R.string.tts_paragraph_interval),
-                            description = stringResource(
-                                R.string.tts_paragraph_interval_summary,
-                                state.readAloudParagraphInterval,
-                            ),
-                            value = state.readAloudParagraphInterval,
-                            defaultValue = 0,
-                            valueRange = 0f..5000f,
-                            onValueChange = { onIntent(ReadBookIntent.ApplyParagraphInterval(it)) },
-                        )
-                        ReadAloudNumberSliderItem(
-                            title = stringResource(R.string.audio_cache_clean_time),
-                            description = stringResource(
-                                R.string.audio_cache_clean_time_summary,
-                                state.audioCacheCleanTime,
-                            ),
-                            value = state.audioCacheCleanTime,
-                            defaultValue = 10,
-                            valueRange = 0f..10080f,
-                            onValueChange = { onIntent(ReadBookIntent.ApplyAudioCacheCleanTime(it)) },
-                        )
-                    } else {
+                    if (bgmSceneActionsEnabled) {
+                        // 本章配乐总览 / AI 识别配乐场景都是正文内浮层，需要阅读器 ViewModel
+                        // 处理意图；听书播放页没有这套宿主，入口由宿主决定是否展示。
                         TinyClickableSettingItem(
-                            title = stringResource(R.string.read_aloud_preload),
-                            onClick = { onIntent(ReadBookIntent.OpenPreDownloadNumPicker) },
-                        )
-                        TinyClickableSettingItem(
-                            title = stringResource(R.string.tts_pre_synthesis_concurrency),
+                            title = stringResource(R.string.cast_bgm_scene_table),
+                            description = stringResource(R.string.cast_bgm_scene_table_summary),
                             onClick = {
-                                onIntent(ReadBookIntent.OpenPreSynthesisConcurrencyPicker)
+                                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BgmSceneTable))
                             },
                         )
+                        // 场景识别只依赖「背景音乐分配」这个副开关，与开不开多角色朗读无关
                         TinyClickableSettingItem(
-                            title = stringResource(R.string.tts_paragraph_interval),
-                            onClick = { onIntent(ReadBookIntent.OpenParagraphIntervalPicker) },
-                        )
-                        TinyClickableSettingItem(
-                            title = stringResource(R.string.audio_cache_clean_time),
-                            onClick = { onIntent(ReadBookIntent.OpenCacheCleanTimePicker) },
+                            title = stringResource(R.string.ai_scene_assign_entry),
+                            description = stringResource(R.string.ai_cast_scene_only_hint),
+                            onClick = { onIntent(ReadBookIntent.OpenAiSceneDialog) },
                         )
                     }
-                    TinyClickableSettingItem(
-                        title = stringResource(R.string.clear_cache),
-                        onClick = { onIntent(ReadBookIntent.ClearTtsCache) },
-                    )
                 }
             }
         }

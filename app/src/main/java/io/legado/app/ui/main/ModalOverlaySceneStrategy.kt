@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +29,7 @@ import androidx.navigation3.scene.OverlayScene
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
+import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -213,7 +213,7 @@ private data class ModalOverlayScene(
                     if (search != null) {
                         Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
+                            .background(LegadoTheme.colorScheme.background)
                     } else Modifier
                 )
         ) {

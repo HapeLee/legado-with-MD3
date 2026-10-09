@@ -1,8 +1,9 @@
 package io.legado.app.ui.book.readaloud.cast
 
-import androidx.compose.foundation.layout.Column
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -11,26 +12,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -45,11 +36,16 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastOption
-import io.legado.app.ui.widget.components.VoiceAuditionButton
+import io.legado.app.ui.widget.components.VoiceAuditionAction
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.castCardMaxHeight
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
@@ -148,37 +144,36 @@ fun RegexCastRuleScreen(
                 title = stringResource(R.string.regex_cast_rule),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
+                // 顶栏已经用 TopBarActionsRow 包好了，这里只放按钮本身
                 actions = {
-                    TopBarActionsRow {
-                        IconButton(onClick = { importer.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
-                            Icon(
-                                Icons.Default.Download,
-                                contentDescription = stringResource(R.string.regex_cast_import),
-                                tint = LegadoTheme.colorScheme.onSurface,
+                    TopBarActionButton(
+                        onClick = {
+                            importer.launch(
+                                arrayOf(
+                                    "application/json",
+                                    "text/plain",
+                                    "*/*"
+                                )
                             )
-                        }
-                        IconButton(onClick = { exporter.launch("regex_cast_rules.json") }) {
-                            Icon(
-                                Icons.Default.Upload,
-                                contentDescription = stringResource(R.string.regex_cast_export),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                        IconButton(onClick = { onIntent(RegexCastRuleIntent.CreateGroup("")) }) {
-                            Icon(
-                                Icons.Default.CreateNewFolder,
-                                contentDescription = stringResource(R.string.regex_cast_new_group),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                        IconButton(onClick = { onIntent(RegexCastRuleIntent.ShowCreate) }) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = stringResource(R.string.regex_cast_create),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
+                        },
+                        imageVector = Icons.Default.Download,
+                        contentDescription = stringResource(R.string.regex_cast_import),
+                    )
+                    TopBarActionButton(
+                        onClick = { exporter.launch("regex_cast_rules.json") },
+                        imageVector = Icons.Default.Upload,
+                        contentDescription = stringResource(R.string.regex_cast_export),
+                    )
+                    TopBarActionButton(
+                        onClick = { onIntent(RegexCastRuleIntent.CreateGroup("")) },
+                        imageVector = Icons.Default.CreateNewFolder,
+                        contentDescription = stringResource(R.string.regex_cast_new_group),
+                    )
+                    TopBarActionButton(
+                        onClick = { onIntent(RegexCastRuleIntent.ShowCreate) },
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.regex_cast_create),
+                    )
                 },
             )
         },
@@ -188,11 +183,11 @@ fun RegexCastRuleScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.regex_cast_rule_summary),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
             )
             PoolTreeList(
                 view = state,
@@ -227,9 +222,10 @@ fun RegexCastRuleScreen(
         }
     }
 
-    state.editTarget?.let { holder ->
+    // 下面这批弹窗一律「常驻组合 + show/data」：miuix 的窗口靠 show 驱动退场动画，
+    // 条件组合会在关闭那一刻把子树摘掉，动画与草稿一起丢
         RegexCastEditDialog(
-            holder = holder,
+            holder = state.editTarget,
             state = state,
             onSave = { rule -> onIntent(RegexCastRuleIntent.Save(rule)) },
             onPickPool = { kind, poolId, keep ->
@@ -237,51 +233,63 @@ fun RegexCastRuleScreen(
             },
             onDismiss = { onIntent(RegexCastRuleIntent.DismissEdit) },
         )
-    }
 
-    state.deleteTarget?.let { holder ->
         PoolConfirmDialog(
+            show = state.deleteTarget != null,
             title = stringResource(R.string.regex_cast_delete_title),
-            text = stringResource(
-                R.string.regex_cast_delete_text,
-                holder.rule.name.ifBlank { holder.rule.pattern },
-            ),
-            onConfirm = { onIntent(RegexCastRuleIntent.Delete(holder.rule.id)) },
+            text = state.deleteTarget?.let {
+                stringResource(
+                    R.string.regex_cast_delete_text,
+                    it.rule.name.ifBlank { it.rule.pattern },
+                )
+            }.orEmpty(),
+            onConfirm = {
+                onIntent(
+                    RegexCastRuleIntent.Delete(
+                        state.deleteTarget?.rule?.id ?: 0L
+                    )
+                )
+            },
             onDismiss = { onIntent(RegexCastRuleIntent.DismissDelete) },
         )
-    }
 
-    state.groupDialog?.let { dialog ->
         GroupEditDialog(
-            dialog = dialog,
+            dialog = state.groupDialog,
             onConfirm = { editingId, parentId, name ->
                 onIntent(RegexCastRuleIntent.ConfirmGroup(editingId, parentId, name))
             },
             onDismiss = { onIntent(RegexCastRuleIntent.DismissGroupDialog) },
         )
-    }
 
-    state.moveGroupTarget?.let { groupId ->
         MoveGroupDialog(
-            target = state.groups.firstOrNull { it.id == groupId },
+            target = state.moveGroupTarget?.let { id -> state.groups.firstOrNull { it.id == id } },
             groups = state.groups,
-            onConfirm = { parent -> onIntent(RegexCastRuleIntent.ConfirmMoveGroup(groupId, parent)) },
+            onConfirm = { parent ->
+                onIntent(
+                    RegexCastRuleIntent.ConfirmMoveGroup(
+                        state.moveGroupTarget.orEmpty(),
+                        parent
+                    )
+                )
+            },
             onDismiss = { onIntent(RegexCastRuleIntent.DismissMoveGroup) },
         )
-    }
 
-    state.deleteGroupTarget?.let { groupId ->
         PoolConfirmDialog(
+            show = state.deleteGroupTarget != null,
             title = stringResource(R.string.regex_cast_delete_group_title),
-            text = stringResource(
-                R.string.regex_cast_delete_group_text,
-                state.groups.firstOrNull { it.id == groupId }?.name.orEmpty(),
-            ),
-            onConfirm = { onIntent(RegexCastRuleIntent.ConfirmDeleteGroup(groupId)) },
+            text = state.deleteGroupTarget?.let { id ->
+                stringResource(
+                    R.string.regex_cast_delete_group_text,
+                    state.groups.firstOrNull { it.id == id }?.name.orEmpty(),
+                )
+            }.orEmpty(),
+            onConfirm = {
+                onIntent(RegexCastRuleIntent.ConfirmDeleteGroup(state.deleteGroupTarget.orEmpty()))
+            },
             onDismiss = { onIntent(RegexCastRuleIntent.DismissDeleteGroup) },
         )
     }
-}
 
 /**
  * 新建/编辑一条正则角色。
@@ -302,35 +310,40 @@ fun RegexCastRuleScreen(
  */
 @Composable
 private fun RegexCastEditDialog(
-    holder: RegexCastRuleHolder,
+    holder: RegexCastRuleHolder?,
     state: RegexCastRuleUiState,
     onSave: (RegexCastRule) -> Unit,
     onPickPool: (String, String, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val target = holder.rule
-    var draft by remember(holder) { mutableStateOf(target) }
-    var kindExpanded by remember(holder) { mutableStateOf(false) }
-    var poolExpanded by remember(holder) { mutableStateOf(false) }
-    var itemExpanded by remember(holder) { mutableStateOf(false) }
-    var groupExpanded by remember(holder) { mutableStateOf(false) }
-    var effectExpanded by remember(holder) { mutableStateOf(false) }
+    // 常驻组合（调用方只把 holder 置 null）：miuix 的窗口靠 show 驱动退场动画，
+    // 条件组合会让整棵子树在关闭那刻被摘掉，动画与草稿一起丢
+    var cached by remember { mutableStateOf(holder) }
+    if (holder != null) cached = holder
+    val current = cached ?: return
+    val target = current.rule
+    var draft by remember(current) { mutableStateOf(target) }
+    var kindExpanded by remember(current) { mutableStateOf(false) }
+    var poolExpanded by remember(current) { mutableStateOf(false) }
+    var itemExpanded by remember(current) { mutableStateOf(false) }
+    var groupExpanded by remember(current) { mutableStateOf(false) }
+    var effectExpanded by remember(current) { mutableStateOf(false) }
     val roleLabel = stringResource(R.string.regex_cast_pool_role)
     val bgmLabel = stringResource(R.string.regex_cast_pool_bgm)
     /** 换音色念（可选变声器与试听）还是放配乐（两者都不适用）。 */
     val isRole = draft.poolKind != RegexCastRule.POOL_BGM
     // 下拉的显示值各自记一份：打字是筛选用的，不能直接写回业务字段
-    var kindQuery by remember(holder) {
+    var kindQuery by remember(current) {
         mutableStateOf(if (target.poolKind == RegexCastRule.POOL_BGM) bgmLabel else roleLabel)
     }
-    var poolQuery by remember(holder) {
+    var poolQuery by remember(current) {
         mutableStateOf(state.poolOptions.firstOrNull { it.key == target.poolId }?.label.orEmpty())
     }
-    var itemQuery by remember(holder) {
+    var itemQuery by remember(current) {
         mutableStateOf(state.itemOptions.firstOrNull { it.key == target.itemId }?.label.orEmpty())
     }
-    var groupQuery by remember(holder) {
+    var groupQuery by remember(current) {
         mutableStateOf(state.groupOptions.firstOrNull { it.key == target.groupId }?.label.orEmpty())
     }
     val kindOptions = listOf(
@@ -338,204 +351,182 @@ private fun RegexCastEditDialog(
         CastOption(RegexCastRule.POOL_BGM, bgmLabel),
     )
 
-    AlertDialog(
+    AppModalBottomSheet(
+        show = holder != null,
         onDismissRequest = onDismiss,
-        title = {
-            Text(stringResource(if (holder.isNew) R.string.regex_cast_create else R.string.regex_cast_edit))
+        title = stringResource(
+            if (current.isNew) R.string.regex_cast_create else R.string.regex_cast_edit
+        ),
+        // 试听与保存都是「对这份草稿做的事」，钉在头部：草稿在下面的表单里，
+        // 滚到哪儿都能一键试听/保存，不必先滚回顶部
+        startAction = {
+            if (isRole) {
+                VoiceAuditionAction(
+                    voiceId = draft.itemId,
+                    text = remember(context) { VoiceAudition.defaultPreviewText(context) },
+                    effect = draft.voiceEffect,
+                )
+            }
         },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = castCardMaxHeight(0.72f))
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // 两个开关排在输入栏之前：整屏字段变多后列表会滚，开关压在末尾就等于没了
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.regex_cast_use_regex),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Switch(
-                            checked = draft.useRegex,
-                            onCheckedChange = { draft = draft.copy(useRegex = it) },
-                        )
+        endAction = {
+            MediumTonalButton(
+                onClick = { onSave(draft) },
+                // 匹配内容和音色都没定的规则存进去也只会什么都不响，直接不给按
+                enabled = draft.pattern.isNotBlank() && draft.itemId.isNotBlank(),
+                icon = AppIcons.Check,
+                contentDescription = stringResource(R.string.ok),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = castCardMaxHeight(0.72f))
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // 两个开关排在输入栏之前：整屏字段变多后列表会滚，开关压在末尾就等于没了
+            TinySwitchSettingItem(
+                title = stringResource(R.string.regex_cast_use_regex),
+                checked = draft.useRegex,
+                onCheckedChange = { draft = draft.copy(useRegex = it) },
+            )
+            TinySwitchSettingItem(
+                title = stringResource(R.string.regex_cast_enabled),
+                checked = draft.enabled,
+                onCheckedChange = { draft = draft.copy(enabled = it) },
+            )
+            val nameSpec = CastFieldSpec(
+                id = "name",
+                label = stringResource(R.string.regex_cast_name),
+                value = draft.name,
+                onValueChange = { draft = draft.copy(name = it) },
+            )
+            val patternSpec = CastFieldSpec(
+                id = "pattern",
+                // 开关决定这一栏是正则还是原样文字，标题跟着走，别写着「正则」实际按字面量匹配
+                label = stringResource(
+                    if (draft.useRegex) {
+                        R.string.regex_cast_pattern
+                    } else {
+                        R.string.regex_cast_match_text
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.regex_cast_enabled),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Switch(
-                            checked = draft.enabled,
-                            onCheckedChange = { draft = draft.copy(enabled = it) },
-                        )
-                    }
-                }
-                val nameSpec = CastFieldSpec(
-                    id = "name",
-                    label = stringResource(R.string.regex_cast_name),
-                    value = draft.name,
-                    onValueChange = { draft = draft.copy(name = it) },
-                )
-                val patternSpec = CastFieldSpec(
-                    id = "pattern",
-                    // 开关决定这一栏是正则还是原样文字，标题跟着走，别写着「正则」实际按字面量匹配
-                    label = stringResource(
-                        if (draft.useRegex) {
-                            R.string.regex_cast_pattern
-                        } else {
-                            R.string.regex_cast_match_text
-                        }
-                    ),
-                    value = draft.pattern,
-                    onValueChange = { draft = draft.copy(pattern = it) },
-                )
-                val kindSpec = CastFieldSpec(
-                    id = "kind",
-                    label = stringResource(R.string.regex_cast_pool_kind),
-                    value = kindQuery,
-                    options = kindOptions,
-                    expanded = kindExpanded,
-                    onValueChange = { kindQuery = it },
+                ),
+                value = draft.pattern,
+                onValueChange = { draft = draft.copy(pattern = it) },
+            )
+            val kindSpec = CastFieldSpec(
+                id = "kind",
+                label = stringResource(R.string.regex_cast_pool_kind),
+                value = kindQuery,
+                options = kindOptions,
+                expanded = kindExpanded,
+                onValueChange = { kindQuery = it },
+                onSelected = { option ->
+                    // 换成配乐就没有「念」这件事了：变声器草稿一起清掉，
+                    // 免得留一个界面上看不见、却还会影响朗读的旧值
+                    draft = draft.copy(poolKind = option.key, poolId = "", voiceEffect = "")
+                    kindQuery = option.label
+                    poolQuery = ""
+                    itemQuery = ""
+                    effectExpanded = false
+                    onPickPool(option.key, "", "")
+                    kindExpanded = false
+                },
+                onExpand = { kindExpanded = it },
+            )
+            val poolSpec = CastFieldSpec(
+                id = "pool",
+                label = stringResource(R.string.regex_cast_pool),
+                value = poolQuery,
+                options = state.poolOptions,
+                expanded = poolExpanded,
+                onValueChange = { poolQuery = it },
+                onSelected = { option ->
+                    draft = draft.copy(poolId = option.key)
+                    poolQuery = option.label
+                    onPickPool(draft.poolKind, option.key, draft.itemId)
+                    poolExpanded = false
+                },
+                onExpand = { poolExpanded = it },
+            )
+            val itemSpec = CastFieldSpec(
+                id = "item",
+                label = stringResource(R.string.regex_cast_item),
+                value = itemQuery,
+                options = state.itemOptions,
+                expanded = itemExpanded,
+                onValueChange = { itemQuery = it },
+                onSelected = { option ->
+                    draft = draft.copy(itemId = option.key)
+                    itemQuery = option.label
+                    itemExpanded = false
+                },
+                onExpand = { itemExpanded = it },
+            )
+            // 变声器那一行排在「音色」正下方：它改的就是那个音色怎么念
+            val effectSpec = if (isRole) {
+                CastFieldSpec(
+                    id = "effect",
+                    label = stringResource(R.string.cast_voice_effect),
+                    // 存的就是预设名本身（key = label），空串 = 不变声
+                    value = draft.voiceEffect,
+                    options = state.effectOptions,
+                    expanded = effectExpanded,
+                    onValueChange = { draft = draft.copy(voiceEffect = it) },
                     onSelected = { option ->
-                        // 换成配乐就没有「念」这件事了：变声器草稿一起清掉，
-                        // 免得留一个界面上看不见、却还会影响朗读的旧值
-                        draft = draft.copy(poolKind = option.key, poolId = "", voiceEffect = "")
-                        kindQuery = option.label
-                        poolQuery = ""
-                        itemQuery = ""
+                        draft = draft.copy(voiceEffect = option.key)
                         effectExpanded = false
-                        onPickPool(option.key, "", "")
-                        kindExpanded = false
                     },
-                    onExpand = { kindExpanded = it },
+                    onExpand = { effectExpanded = it },
                 )
-                val poolSpec = CastFieldSpec(
-                    id = "pool",
-                    label = stringResource(R.string.regex_cast_pool),
-                    value = poolQuery,
-                    options = state.poolOptions,
-                    expanded = poolExpanded,
-                    onValueChange = { poolQuery = it },
-                    onSelected = { option ->
-                        draft = draft.copy(poolId = option.key)
-                        poolQuery = option.label
-                        onPickPool(draft.poolKind, option.key, draft.itemId)
-                        poolExpanded = false
-                    },
-                    onExpand = { poolExpanded = it },
-                )
-                val itemSpec = CastFieldSpec(
-                    id = "item",
-                    label = stringResource(R.string.regex_cast_item),
-                    value = itemQuery,
-                    options = state.itemOptions,
-                    expanded = itemExpanded,
-                    onValueChange = { itemQuery = it },
-                    onSelected = { option ->
-                        draft = draft.copy(itemId = option.key)
-                        itemQuery = option.label
-                        itemExpanded = false
-                    },
-                    onExpand = { itemExpanded = it },
-                )
-                // 变声器那一行排在「音色」正下方：它改的就是那个音色怎么念
-                val effectSpec = if (isRole) {
-                    CastFieldSpec(
-                        id = "effect",
-                        label = stringResource(R.string.cast_voice_effect),
-                        // 存的就是预设名本身（key = label），空串 = 不变声
-                        value = draft.voiceEffect,
-                        options = state.effectOptions,
-                        expanded = effectExpanded,
-                        onValueChange = { draft = draft.copy(voiceEffect = it) },
-                        onSelected = { option ->
-                            draft = draft.copy(voiceEffect = option.key)
-                            effectExpanded = false
-                        },
-                        onExpand = { effectExpanded = it },
-                    )
-                } else {
-                    null
-                }
-                val groupSpec = CastFieldSpec(
-                    id = "group",
-                    label = stringResource(R.string.regex_cast_group),
-                    value = groupQuery,
-                    options = state.groupOptions,
-                    expanded = groupExpanded,
-                    onValueChange = { groupQuery = it },
-                    onSelected = { option ->
-                        draft = draft.copy(groupId = option.key)
-                        groupQuery = option.label
-                        groupExpanded = false
-                    },
-                    onExpand = { groupExpanded = it },
-                )
-                val scopeSpec = CastFieldSpec(
-                    id = "scope",
-                    label = stringResource(R.string.specific_scope),
-                    value = draft.scope.orEmpty(),
-                    onValueChange = { draft = draft.copy(scope = it.takeIf { v -> v.isNotBlank() }) },
-                )
-                val excludeSpec = CastFieldSpec(
-                    id = "exclude",
-                    label = stringResource(R.string.exclude_scope),
-                    value = draft.excludeScope.orEmpty(),
-                    onValueChange = {
-                        draft = draft.copy(excludeScope = it.takeIf { v -> v.isNotBlank() })
-                    },
-                )
-                CastFieldStack(
-                    specs = listOf(nameSpec, patternSpec, kindSpec, poolSpec, itemSpec) +
+            } else {
+                null
+            }
+            val groupSpec = CastFieldSpec(
+                id = "group",
+                label = stringResource(R.string.regex_cast_group),
+                value = groupQuery,
+                options = state.groupOptions,
+                expanded = groupExpanded,
+                onValueChange = { groupQuery = it },
+                onSelected = { option ->
+                    draft = draft.copy(groupId = option.key)
+                    groupQuery = option.label
+                    groupExpanded = false
+                },
+                onExpand = { groupExpanded = it },
+            )
+            val scopeSpec = CastFieldSpec(
+                id = "scope",
+                label = stringResource(R.string.specific_scope),
+                value = draft.scope.orEmpty(),
+                onValueChange = { draft = draft.copy(scope = it.takeIf { v -> v.isNotBlank() }) },
+            )
+            val excludeSpec = CastFieldSpec(
+                id = "exclude",
+                label = stringResource(R.string.exclude_scope),
+                value = draft.excludeScope.orEmpty(),
+                onValueChange = {
+                    draft = draft.copy(excludeScope = it.takeIf { v -> v.isNotBlank() })
+                },
+            )
+            CastFieldStack(
+                specs = listOf(nameSpec, patternSpec, kindSpec, poolSpec, itemSpec) +
                         listOfNotNull(effectSpec) +
                         listOf(groupSpec, scopeSpec, excludeSpec),
-                )
-                if (isRole) {
-                    // 试听：自己合成一句直接播，不进朗读队列、不打断正在朗读的内容。
-                    // 只选了池没定下具体音色（itemId 空 = 朗读时随机）时没有可试的声音，按钮点不动
-                    //（VoiceAuditionButton 内部按 voiceId 空白禁用）。
-                    VoiceAuditionButton(
-                        voiceId = draft.itemId,
-                        text = remember(context) { VoiceAudition.defaultPreviewText(context) },
-                        effect = draft.voiceEffect,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.regex_cast_dialog_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = draft.pattern.isNotBlank() && draft.itemId.isNotBlank(),
-                onClick = { onSave(draft) },
-            ) {
-                Text(stringResource(R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
+            )
+            // 试听在头部 startAction（Medium 系列）：只选了池没定下具体音色（itemId 空 = 朗读时随机）
+            // 时没有可试的声音，那颗按钮会自动置灰
+            AppText(
+                text = stringResource(R.string.regex_cast_dialog_hint),
+                style = LegadoTheme.typography.labelMedium,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+        }
+    }
 
-    // 换池之后候选列表变了，把显示值对齐一次，别留着上一次筛选时打的半截字
     LaunchedEffect(state.itemOptions) {
         val label = state.itemOptions.firstOrNull { it.key == draft.itemId }?.label.orEmpty()
         if (label.isNotEmpty() && itemQuery != label) itemQuery = label

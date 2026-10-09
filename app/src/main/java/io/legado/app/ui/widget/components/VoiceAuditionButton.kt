@@ -6,13 +6,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,13 +31,36 @@ import io.legado.app.data.entities.VoiceEffectPreset
 import io.legado.app.help.readaloud.cast.VoiceAudition
 import io.legado.app.help.readaloud.effect.VoiceEffectAudio
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.AppIconButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * 音色试听按钮：用这一条音色合成 [text] 并播放，再点一次停止。
+ * 试听按钮的运行态：[rememberVoiceAuditionController] 造，[VoiceAuditionButton]（行内文字+图标）
+ * 与 [VoiceAuditionAction]（弹层头部槽位）共用同一份。
+ *
+ * 拆开是因为两处形态差别很大：行内要带标签占位，弹层头部只有一个图标位，
+ * 但合成、播放、释放这套逻辑只有一份，不能各写一遍。
+ */
+@Immutable
+class VoiceAuditionController internal constructor(
+    /** 合成中：这一轮点不动，免得连点叠出好几个播放器。 */
+    val busy: Boolean,
+    val playing: Boolean,
+    /** 音色或试听文本没定下来时为false，调用方据此把按钮置灰。 */
+    val enabled: Boolean,
+    val toggle: () -> Unit,
+)
+
+/**
+ * 音色试听：用这一条音色合成 [text] 并播放，再点一次停止。
  *
  * 播放器跟着组合走（组合销毁即释放），不占用朗读服务与朗读队列，所以在正文内的悬浮窗里
  * 点它不会打断正在进行的朗读。用 ExoPlayer 而不是 MediaPlayer，是因为要在这里就能听到
@@ -50,11 +69,9 @@ import kotlinx.coroutines.withContext
  */
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
-fun VoiceAuditionButton(
+fun rememberVoiceAuditionController(
     voiceId: String,
     text: String,
-    modifier: Modifier = Modifier,
-    label: String = stringResource(R.string.cloud_tts_preview),
     /** 变声器预设名，空 = 不变声。 */
     effect: String = "",
     /**
@@ -63,7 +80,7 @@ fun VoiceAuditionButton(
      * 正在编辑的这份可能还没启用。
      */
     draft: VoiceEffectPreset? = null,
-) {
+): VoiceAuditionController {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
@@ -78,24 +95,16 @@ fun VoiceAuditionButton(
             effects.release()
         }
     }
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        IconButton(
-            enabled = voiceId.isNotBlank() && text.isNotBlank() && !busy,
-            onClick = {
-                if (playing) {
-                    runCatching { player?.stop() }
-                    playing = false
-                    return@IconButton
-                }
+    val enabled = voiceId.isNotBlank() && text.isNotBlank() && !busy
+    return VoiceAuditionController(
+        busy = busy,
+        playing = playing,
+        enabled = enabled,
+        toggle = {
+            if (playing) {
+                runCatching { player?.stop() }
+                playing = false
+            } else {
                 scope.launch {
                     busy = true
                     val preset = draft ?: withContext(Dispatchers.IO) {
@@ -151,19 +160,139 @@ fun VoiceAuditionButton(
                         context.toastOnUi(failedText)
                     }
                 }
-            },
-        ) {
-            when {
-                busy -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                playing -> Icon(
-                    Icons.Default.Pause,
-                    contentDescription = stringResource(R.string.cast_bgm_stop),
-                )
-                else -> Icon(
-                    Icons.Default.PlayArrow,
-                    contentDescription = stringResource(R.string.cast_bgm_play),
-                )
             }
+        },
+    )
+}
+
+/**
+ * 行内试听：标签 + 图标按钮。合成中用进度圈占位，播放中换成停止。
+ *
+ * 合成/播放/释放都在 [rememberVoiceAuditionController] 里，这里只负责长什么样。
+ */
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+fun VoiceAuditionButton(
+    voiceId: String,
+    text: String,
+    modifier: Modifier = Modifier,
+    label: String = stringResource(R.string.cloud_tts_preview),
+    effect: String = "",
+    draft: VoiceEffectPreset? = null,
+) {
+    val audition = rememberVoiceAuditionController(
+        voiceId = voiceId,
+        text = text,
+        effect = effect,
+        draft = draft,
+    )
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        if (label.isNotBlank()) {
+            AppText(
+                text = label,
+                style = LegadoTheme.typography.bodyMedium,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        VoiceAuditionIconButton(
+            voiceId = voiceId,
+            text = text,
+            effect = effect,
+            draft = draft,
+        )
+    }
+}
+
+/**
+ * 只有一颗图标的试听按钮：列表行尾这类窄位置用这个。
+ *
+ * 之前那些地方是靠 `label = ""` 把标签藏掉，标签位仍占着一段空隙；这里干脆不留标签。
+ */
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+fun VoiceAuditionIconButton(
+    voiceId: String,
+    text: String,
+    modifier: Modifier = Modifier,
+    effect: String = "",
+    draft: VoiceEffectPreset? = null,
+) {
+    val audition = rememberVoiceAuditionController(
+        voiceId = voiceId,
+        text = text,
+        effect = effect,
+        draft = draft,
+    )
+    AuditionIcon(
+        audition = audition,
+        onClick = audition.toggle,
+        modifier = modifier,
+    )
+}
+
+/**
+ * 弹层头部槽位用的试听动作（Medium 系列）：头部只有一个图标位，放不下一行标签，
+ * 合成/播放状态仍然靠图标与进度圈表达。
+ */
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+fun VoiceAuditionAction(
+    voiceId: String,
+    text: String,
+    modifier: Modifier = Modifier,
+    effect: String = "",
+    draft: VoiceEffectPreset? = null,
+) {
+    val audition = rememberVoiceAuditionController(
+        voiceId = voiceId,
+        text = text,
+        effect = effect,
+        draft = draft,
+    )
+    MediumTonalButton(
+        onClick = audition.toggle,
+        enabled = audition.enabled,
+        modifier = modifier,
+        // 合成中不给图标（进度圈不是图标按钮的槽），用同一颗「停止/播放」图标表达状态
+        icon = if (audition.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+        contentDescription = stringResource(
+            when {
+                audition.busy -> R.string.cast_audition_failed
+                audition.playing -> R.string.cast_bgm_stop
+                else -> R.string.cloud_tts_preview
+            },
+        ),
+    )
+}
+
+/** 试听按钮里那颗会变的状态图标：合成中进度圈 / 播放中停止 / 待命播放。 */
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+private fun AuditionIcon(
+    audition: VoiceAuditionController,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppIconButton(onClick = onClick, enabled = audition.enabled, modifier = modifier) {
+        when {
+            audition.busy -> AppCircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+            )
+
+            audition.playing -> AppIcon(
+                imageVector = Icons.Default.Pause,
+                contentDescription = stringResource(R.string.cast_bgm_stop),
+            )
+
+            else -> AppIcon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = stringResource(R.string.cast_bgm_play),
+            )
         }
     }
 }

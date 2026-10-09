@@ -2993,6 +2993,11 @@
     <string name="switch_to_classic_read_aloud">经典控制</string>
     <string name="read_aloud_settings_general_tab">常规</string>
     <string name="read_aloud_settings_voice_tab">引擎与音色</string>
+    <string name="read_aloud_settings_casting_tab">角色与配乐</string>
+    <string name="read_aloud_section_engine">语音引擎</string>
+    <string name="read_aloud_section_analysis">章节分析</string>
+    <string name="read_aloud_section_casting">多角色与配音</string>
+    <string name="read_aloud_section_bgm">背景音乐</string>
     <string name="speech_analysis_mode">章节分片方式</string>
     <string name="speech_analysis_rule">规则分片</string>
     <string name="speech_analysis_rule_ai">规则分片与 AI 补全（推荐）</string>
@@ -3014,11 +3019,11 @@
     <string name="cast_bgm_pool">背景音乐池</string>
     <string name="bgm_assign">背景音乐分配</string>
     <string name="bgm_assign_summary">在正文段首显示配乐胶囊，朗读时按场景播放背景音乐；胶囊只作视觉提示，朗读不会念出</string>
-    <string name="cast_bgm_track">背景音乐</string>
+    <string name="cast_bgm_track">曲目</string>
     <string name="cast_bgm_scene_title">场景配乐</string>
     <string name="cast_bgm_scene_follow">跟随池随机播放</string>
     <string name="cast_bgm_scene_follow_hint">选了就固定播这一首，留空则从池里随机取</string>
-    <string name="cast_bgm_scene_clear">清除本段分配</string>
+    <string name="cast_bgm_scene_clear">清除这段配乐</string>
     <string name="cast_bgm_scene_saved">已应用</string>
     <string name="cast_bgm_segment_volume">本段音量</string>
     <string name="cast_bgm_segment_volume_hint">与曲目自身音量相乘，只影响这一段</string>
@@ -3030,7 +3035,7 @@
     <string name="cast_bgm_track_volume_hint">对这条导入的音乐全局生效，用在哪个池都一样</string>
     <string name="cast_bgm_scene_table">本章背景音乐</string>
     <string name="cast_bgm_scene_overview">总览</string>
-    <string name="cast_bgm_scene_table_summary">本章每一段的池、曲目与音量，可直接改</string>
+    <string name="cast_bgm_scene_table_summary">本章每一段的配乐与音量，可直接修改</string>
     <string name="cast_bgm_scene_table_empty">本章还没有分配背景音乐</string>
     <string name="cast_bgm_scene_row">第 %1$d 段</string>
     <string name="cast_bgm_scene_range">第 %1$d–%2$d 段</string>
@@ -3044,7 +3049,7 @@
     <string name="cast_bgm_pool_summary">导入配乐文件，朗读时作为背景音乐播放</string>
     <string name="cast_tts_engines_summary">配置朗读引擎、导入音色，音色行可长按试听</string>
     <string name="cast_bgm_import">导入音频</string>
-    <string name="cast_bgm_empty">还没有背景音乐，点右上角导入音频文件</string>
+    <string name="cast_bgm_empty">还没有背景音乐，导入音频文件后会出现在这里</string>
     <string name="cast_bgm_delete">删除背景音乐</string>
     <string name="cast_bgm_delete_confirm">确定删除「%1$s」？应用内复制的音频文件会一并删除。</string>
     <string name="cast_bgm_play">播放</string>
@@ -3080,10 +3085,11 @@
     <string name="cast_no_match">无匹配项</string>
     <string name="read_aloud_pagination_pending">章节排版尚未完成，请稍候再试</string>
     <string name="ai_cast_roles">AI 分配角色</string>
-    <string name="ai_cast_status">本章 %2$d 句对话，已分配 %1$d 句</string>
+    <string name="ai_cast_status">本章共 %2$d 句对话，已分配 %1$d 句</string>
     <string name="ai_cast_status_loading">正在统计本章…</string>
     <string name="ai_cast_all_done">本章已全部分配</string>
-    <string name="ai_cast_reassign">重新分配（先清除既有）</string>
+    <string name="ai_cast_reassign">重新分配</string>
+    <string name="ai_cast_reassign_summary">先清除本章已有分配，再重新识别一遍</string>
     <string name="ai_cast_chapter_count">分配章节数（自本章起）</string>
     <string name="ai_cast_progress">已处理 %1$d/%2$d 章</string>
     <string name="ai_cast_start">开始分配</string>
@@ -3093,8 +3099,8 @@
     <string name="ai_scene_assign_entry">AI 场景分配</string>
     <string name="ai_cast_assign_scene_hint">角色那趟跑完后再跑一遍：按段落场景从你启用的背景音乐池里挑配乐，只填池，具体曲目朗读时随机取。</string>
     <string name="ai_scene_finished">配乐场景已分配：%1$d 章</string>
-    <string name="ai_cast_presets">配音提示词</string>
-    <string name="ai_cast_presets_summary">管理 AI 分配角色使用的提示词预设，可自由新建、编辑、删除。每条都能就地展开查看全文。</string>
+    <string name="ai_cast_presets">分配提示词</string>
+    <string name="ai_cast_presets_summary">管理 AI 分配角色用的提示词预设：可新建、编辑、删除，每条都能展开看全文。</string>
     <string name="ai_cast_manage">管理</string>
     <string name="ai_cast_temporary">临时要求（仅本次）</string>
     <string name="ai_cast_memory">本书角色记忆</string>
@@ -3112,14 +3118,14 @@
     <string name="ai_cast_preset_default">默认</string>
     <string name="ai_cast_preset_default_done">已恢复内置默认分配要求</string>
     <string name="ai_cast_extra_chapters">追加章节数</string>
-    <string name="ai_cast_extra_summary">在当前章之后多分配 %1$d 章（0 = 仅本章）</string>
+    <string name="ai_cast_extra_summary">本章之后接着分配（0 = 仅本章）</string>
     <string name="ai_cast_range_mode">指定范围</string>
     <string name="ai_cast_chapter_failed">第 %1$d 章《%2$s》：%3$s</string>
     <string name="ai_cast_run_failed">%1$d 章分配失败</string>
     <string name="ai_cast_resume_from">从第 %1$d 章继续</string>
     <string name="ai_cast_retry">重试 %1$d 章</string>
     <string name="ai_cast_cancelled">已取消分配，停在第 %1$d 章</string>
-    <string name="ai_cast_no_preset">无提示词预设，使用内置默认</string>
+    <string name="ai_cast_no_preset">还没有自定义预设，将使用内置默认</string>
     <string name="ai_cast_reasoning_level">模型推理强度</string>
     <string name="ai_cast_reasoning_level_hint">「跟随模型」= 软件一个参数都不发。等得太久就往低调；智谱 GLM-5.3 这类强制思考的模型关不掉，调低也未必有变化。</string>
     <string name="ai_cast_reasoning_follow">跟随模型</string>
@@ -3170,7 +3176,6 @@
     <string name="cast_export_pools_done">声音池已导出</string>
     <string name="cast_export_pools_failed">导出失败</string>
     <string name="cast_list_separator">、</string>
-    <string name="multi_role_rule">朗读规则</string>
     <string name="regex_cast_rule">正则角色管理</string>
     <string name="regex_cast_rule_summary">正文命中指定文字时，换成别的音色念，或者不念改成放音效</string>
     <string name="regex_cast_create">新建正则角色</string>

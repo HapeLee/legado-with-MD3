@@ -1,34 +1,20 @@
 package io.legado.app.ui.book.read.sheet
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,14 +31,19 @@ import io.legado.app.R
 import io.legado.app.help.readaloud.cast.BgmSceneStore
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.book.read.ReadBookSheet
-import io.legado.app.ui.book.read.ReadMenuConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastImeScope
 import io.legado.app.ui.widget.components.CastOption
-import io.legado.app.ui.widget.components.castCardMaxHeight
+import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.button.AppIconButton
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -72,14 +62,9 @@ fun BgmSceneTableSheet(
     show: Boolean,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
-    menuConfig: ReadMenuConfig? = null,
 ) {
-    // show 一撤整棵树就没了，退场动画没有地方播：多留 180ms 让淡出跑完
-    val opened = show
-    if (!rememberSheetAlive(opened)) return
-    val scrimAlpha = rememberSheetScrimAlpha(opened)
-    val book = ReadBook.book ?: return
-    val bookUrl = book.bookUrl
+    val book = ReadBook.book
+    val bookUrl = book?.bookUrl
     val chapterIndex = ReadBook.durChapterIndex
     var refreshKey by remember { mutableStateOf(0) }
     val rows by produceState(
@@ -90,93 +75,66 @@ fun BgmSceneTableSheet(
         // 这一屏在别人改完后还是旧表，表现为「删除分配对场景没作用」
         key3 = "$refreshKey#${BgmSceneStore.version}",
     ) {
-        value = withContext(Dispatchers.IO) { BgmSceneStore.overview(book, chapterIndex) }
+        value = if (book == null) {
+            emptyList()
+        } else {
+            withContext(Dispatchers.IO) { BgmSceneStore.overview(book, chapterIndex) }
+        }
     }
     var editingOrdinal by remember { mutableStateOf<Int?>(null) }
 
+    // 正在展开某一段的编辑器时，返回键先收起编辑器而不是关掉整个弹层
     BackHandler(enabled = show && editingOrdinal != null) { editingOrdinal = null }
 
-    CastImeScope {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
-                .safeDrawingPadding()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
-                    if (editingOrdinal != null) editingOrdinal = null else onDismissRequest()
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            CastSheetCard(
-                menuConfig = menuConfig,
-                visible = opened,
+    AppModalBottomSheet(
+        show = show && book != null,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.cast_bgm_scene_table),
+    ) {
+        CastImeScope {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // 只吞点击、不抢焦点：clickable 会让正在输入的框失焦→键盘先收再弹
-                    .pointerInput(Unit) { detectTapGestures(onTap = {}) }
-                    .padding(horizontal = 24.dp),
+                    .verticalScroll(rememberScrollState())
+                    // 弹层内容边距统一 16.dp：与其它听书弹层同一档，底部留白够最后一行离开拖拽条
+                    .padding(bottom = 16.dp),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = castCardMaxHeight(0.78f))
-                        .verticalScroll(rememberScrollState())
-                        .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onDismissRequest) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back),
-                            )
-                        }
-                        Text(
-                            text = stringResource(R.string.cast_bgm_scene_table),
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 48.dp),
-                            style = LegadoTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                        )
+                AppText(
+                    text = stringResource(R.string.cast_bgm_scene_table_summary),
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                if (rows.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        EmptyMessage(messageResId = R.string.cast_bgm_scene_table_empty)
                     }
-                    Text(
-                        text = stringResource(R.string.cast_bgm_scene_table_summary),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
-                    )
-                    if (rows.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.cast_bgm_scene_table_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-                        )
-                    }
-                    rows.forEach { row ->
-                        BgmSceneTableRow(
-                            bookUrl = bookUrl,
-                            chapterIndex = chapterIndex,
-                            row = row,
-                            editing = editingOrdinal == row.ordinal,
-                            onToggleEdit = {
-                                editingOrdinal = if (editingOrdinal == row.ordinal) null else row.ordinal
-                            },
-                            onIntent = onIntent,
-                            onSaved = {
-                                editingOrdinal = null
-                                refreshKey++
-                            },
-                            onChanged = { refreshKey++ },
-                        )
-                        Spacer(Modifier.height(6.dp))
-                    }
-                    Spacer(Modifier.height(4.dp))
                 }
+                rows.forEach { row ->
+                    BgmSceneTableRow(
+                        bookUrl = bookUrl.orEmpty(),
+                        chapterIndex = chapterIndex,
+                        row = row,
+                        editing = editingOrdinal == row.ordinal,
+                        onToggleEdit = {
+                            editingOrdinal =
+                                if (editingOrdinal == row.ordinal) null else row.ordinal
+                        },
+                        onIntent = onIntent,
+                        onSaved = {
+                            editingOrdinal = null
+                            refreshKey++
+                        },
+                        onChanged = { refreshKey++ },
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
+                Spacer(Modifier.height(4.dp))
             }
         }
     }
@@ -209,56 +167,57 @@ private fun BgmSceneTableRow(
                 .clickable(onClick = onToggleEdit),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            AppText(
                 text = if (row.endOrdinal > row.ordinal + 1) {
                     stringResource(R.string.cast_bgm_scene_range, row.ordinal + 1, row.endOrdinal)
                 } else {
                     stringResource(R.string.cast_bgm_scene_row, row.ordinal + 1)
                 },
-                style = MaterialTheme.typography.bodyMedium,
+                style = LegadoTheme.typography.bodyMedium,
             )
-            Icon(
-                Icons.Default.ExpandMore,
+            AppIcon(
+                imageVector = Icons.Default.ExpandMore,
                 contentDescription = null,
                 modifier = Modifier
                     .padding(start = 2.dp)
-                    .width(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    .size(16.dp),
+                tint = LegadoTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
+            AppText(
                 text = row.musicLabel.ifBlank { stringResource(R.string.cast_bgm_scene_none) },
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 8.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = LegadoTheme.typography.bodyMedium,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.End,
             )
-            IconButton(onClick = {
+            AppIconButton(onClick = {
                 onIntent(ReadBookIntent.DeleteBgmScene(row.ordinal))
                 onChanged()
             }) {
-                Icon(
-                    Icons.Default.Delete,
+                AppIcon(
+                    imageVector = AppIcons.Delete,
                     contentDescription = stringResource(R.string.cast_bgm_scene_clear),
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
         if (row.preview.isNotBlank()) {
-            Text(
+            AppText(
                 text = row.preview,
                 modifier = Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         if (!editing) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
+                AppSlider(
                     value = volumeDraft,
                     onValueChange = { volumeDraft = it },
                     onValueChangeFinished = {
@@ -276,10 +235,10 @@ private fun BgmSceneTableRow(
                     steps = 19,
                     modifier = Modifier.weight(1f),
                 )
-                Text(
+                AppText(
                     text = "${(volumeDraft * 100).toInt()}%",
                     modifier = Modifier.padding(start = 8.dp),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = LegadoTheme.typography.bodySmall,
                 )
             }
         } else {
@@ -361,11 +320,11 @@ private fun BgmSceneRowEditor(
             ),
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            AppText(
                 text = stringResource(R.string.cast_bgm_segment_volume),
-                style = MaterialTheme.typography.bodyMedium,
+                style = LegadoTheme.typography.bodyMedium,
             )
-            Slider(
+            AppSlider(
                 value = volume,
                 onValueChange = { volume = it },
                 valueRange = 0f..1f,
@@ -374,28 +333,23 @@ private fun BgmSceneRowEditor(
                     .weight(1f)
                     .padding(start = 8.dp),
             )
-            Text(
+            AppText(
                 text = "${(volume * 100).toInt()}%",
                 modifier = Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.bodyMedium,
+                style = LegadoTheme.typography.bodyMedium,
             )
         }
-        Text(
+        AppText(
             text = stringResource(R.string.cast_bgm_segment_volume_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = LegadoTheme.typography.bodySmall,
+            color = LegadoTheme.colorScheme.onSurfaceVariant,
         )
-        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onCancel) {
-                Text(stringResource(R.string.cancel))
-            }
-            Spacer(Modifier.width(4.dp))
-            TextButton(
-                enabled = pool.isNotBlank() || track.isNotBlank(),
-                onClick = { onSave(pool.trim(), track.trim(), volume) },
-            ) {
-                Text(stringResource(R.string.ok))
-            }
-        }
+        ConfirmDismissButtonsRow(
+            onDismiss = onCancel,
+            onConfirm = { onSave(pool.trim(), track.trim(), volume) },
+            dismissText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.ok),
+            confirmEnabled = pool.isNotBlank() || track.isNotBlank(),
+        )
     }
 }

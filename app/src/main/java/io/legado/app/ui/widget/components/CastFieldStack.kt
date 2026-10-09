@@ -3,7 +3,14 @@ package io.legado.app.ui.widget.components
 import android.view.View
 import android.view.Window
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -18,19 +25,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -42,9 +42,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -65,6 +67,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.AppIconButton
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -197,6 +202,8 @@ fun CastImeTextField(
         onValueChange = onValueChange,
         modifier = modifier.onFocusEvent { focused = it.isFocused },
         label = label,
+        // 弹层里的输入框统一 onSheetContent 底色（半透明），与弹层底色分层
+        backgroundColor = LegadoTheme.colorScheme.onSheetContent,
         singleLine = singleLine,
         minLines = minLines,
         maxLines = maxLines,
@@ -319,10 +326,16 @@ private fun CastFieldShell(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
+            // 外壳与下面那个共享输入框必须长得一模一样（同一个 AppTextField、同一套参数），
+            // 否则切行时两行高度/边框对不上，会看见一层重影。
+            // readOnly 只防误改，点击由下面的盖板吃掉（见注释）。
+            AppTextField(
                 value = spec.value,
                 onValueChange = {},
-                label = { Text(spec.label) },
+                label = spec.label,
+                readOnly = true,
+                // 弹层里的输入框用 onSheetContent 底色（半透明），与弹层底色分层
+                backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                 singleLine = spec.singleLine,
                 minLines = spec.minLines,
                 maxLines = spec.maxLines,
@@ -345,10 +358,26 @@ private fun CastFieldShell(
                     },
             )
         }
-        // 候选列表就地展开，不加高度动画：这几行下拉出现在 AlertDialog、配音卡片和悬浮窗里，
-        // 宿主都是「按内容高 + 居中」或 LazyColumn 里的行，高度一边动宿主一边重新量自己，
-        // 结果就是整窗上下跳、行与行叠在一起。
-        if (spec.hasDropdown && spec.expanded) {
+        // 候选列表就地展开。
+        //
+        // 进出动画只做「透明度 + 从顶部轻推/微缩」，不做高度补间：这几行下拉出现在
+        // AlertDialog、配音卡片和悬浮窗里，宿主都是「按内容高 + 居中」或 LazyColumn 里的行，
+        // 高度每帧都变会让宿主跟着重新量自己，整窗上下跳、行与行还会叠在一起。
+        // 这里高度仍然是一次性落位（与不加动画时完全一样），观感由淡入淡出和位移提供。
+        AnimatedVisibility(
+            visible = spec.hasDropdown && spec.expanded,
+            enter = fadeIn(tween(CANDIDATE_FADE_IN_MS)) +
+                    slideInVertically(
+                        animationSpec = tween(CANDIDATE_FADE_IN_MS),
+                        initialOffsetY = { -it / 8 },
+                    ) +
+                    scaleIn(
+                        animationSpec = tween(CANDIDATE_FADE_IN_MS),
+                        initialScale = 0.96f,
+                        transformOrigin = TransformOrigin(0.5f, 0f),
+                    ),
+            exit = fadeOut(tween(CANDIDATE_FADE_OUT_MS)),
+        ) {
             CastOptionList(
                 options = options,
                 onSelected = {
@@ -360,6 +389,14 @@ private fun CastFieldShell(
     }
 }
 
+/** 候选列表的进出时长：进比出略慢，收得不拖沓。 */
+private const val CANDIDATE_FADE_IN_MS = 160
+private const val CANDIDATE_FADE_OUT_MS = 110
+
+/** 候选列表的圆角与最大高度（与圆角下拉菜单同一档圆角）。 */
+private val CANDIDATE_CORNER_RADIUS = 16.dp
+private val CANDIDATE_MAX_HEIGHT = 200.dp
+
 /** 整屏唯一的那个真输入框。 */
 @Composable
 private fun CastFieldEditor(
@@ -370,7 +407,7 @@ private fun CastFieldEditor(
     var focused by remember { mutableStateOf(false) }
     val showIme = rememberImeShow()
     rememberImeKeepShown(focused)
-    OutlinedTextField(
+    AppTextField(
         value = spec.value,
         onValueChange = {
             onBrowseAll(false)
@@ -378,10 +415,12 @@ private fun CastFieldEditor(
             // 输入即筛选并自动弹出列表；纯文本框没有列表可弹
             if (spec.hasDropdown) spec.onExpand(true)
         },
-        label = { Text(spec.label) },
+        label = spec.label,
         singleLine = spec.singleLine,
         minLines = spec.minLines,
         maxLines = spec.maxLines,
+        // 与外壳同一底色：切行时两层输入框必须完全同色，否则会看见一层颜色突变
+        backgroundColor = LegadoTheme.colorScheme.onSheetContent,
         trailingIcon = if (spec.hasDropdown) {
             {
                 CastArrow(expanded = spec.expanded) {
@@ -392,9 +431,6 @@ private fun CastFieldEditor(
         } else {
             null
         },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-        ),
         modifier = modifier
             .fillMaxWidth()
             .onPointerUpObserved { showIme() }
@@ -404,12 +440,12 @@ private fun CastFieldEditor(
 
 @Composable
 private fun CastArrow(expanded: Boolean, onClick: () -> Unit) {
-    IconButton(
+    AppIconButton(
         // 三角必须不可聚焦：点到它会把焦点从输入框抢走，于是平台收键盘 → 「点一下就弹一次键盘」
         modifier = Modifier.focusProperties { canFocus = false },
         onClick = onClick,
     ) {
-        Icon(
+        AppIcon(
             imageVector = if (expanded) {
                 Icons.Default.ArrowDropUp
             } else {
@@ -426,30 +462,32 @@ private fun CastOptionList(
     options: List<CastOption>,
     onSelected: (CastOption) -> Unit,
 ) {
+    val shape = RoundedCornerShape(CANDIDATE_CORNER_RADIUS)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
-            .background(
-                MaterialTheme.colorScheme.surfaceContainer,
-                RoundedCornerShape(16.dp),
-            )
-            .heightIn(max = 200.dp)
+            // 圆角容器：clip 要在 background/子项之前，滚动到边上的选项也按圆角裁掉，
+            // 底色再叠一层细描边，跟项目的圆角下拉菜单是同一套外观
+            .clip(shape)
+            .background(LegadoTheme.colorScheme.surfaceContainer)
+            .border(1.dp, LegadoTheme.colorScheme.outlineVariant, shape)
+            .heightIn(max = CANDIDATE_MAX_HEIGHT)
             .verticalScroll(rememberScrollState())
             .padding(vertical = 4.dp),
     ) {
         if (options.isEmpty()) {
-            Text(
+            AppText(
                 text = stringResource(R.string.cast_no_match),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                style = LegadoTheme.typography.bodyMedium,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
         options.forEach { option ->
-            Text(
+            AppText(
                 text = option.label,
-                style = MaterialTheme.typography.bodyLarge,
+                style = LegadoTheme.typography.bodyLarge,
                 color = LegadoTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -458,7 +496,7 @@ private fun CastOptionList(
                     // 同三角：选项可点击但绝不可聚焦，否则点中项就抢走输入框焦点→键盘收起
                     .focusProperties { canFocus = false }
                     .clickable { onSelected(option) }
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
     }

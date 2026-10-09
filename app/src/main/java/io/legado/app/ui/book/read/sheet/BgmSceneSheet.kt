@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read.sheet
 
+import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,12 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -51,17 +46,20 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadMenuConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastImeScope
 import io.legado.app.ui.widget.components.CastOption
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.castCardMaxHeight
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import android.media.MediaPlayer
 
 /**
  * 段首配乐悬浮窗：点击正文 ♪ 胶囊后设定「这一段起播哪个背景音乐池 / 哪一首」。
@@ -118,7 +116,7 @@ fun BgmSceneSheet(
             modifier = Modifier
                 .fillMaxSize()
                 // 遮罩跟着卡片一起淡入淡出，否则黑底是硬蹦出来的
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
+                .background(LegadoTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
                 .safeDrawingPadding()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -146,13 +144,12 @@ fun BgmSceneSheet(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onDismissRequest) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back),
-                            )
-                        }
-                        Text(
+                        MediumTonalButton(
+                            onClick = onDismissRequest,
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                        )
+                        AppText(
                             text = stringResource(R.string.cast_bgm_scene_title),
                             modifier = Modifier.weight(1f),
                             style = LegadoTheme.typography.titleMedium,
@@ -160,24 +157,24 @@ fun BgmSceneSheet(
                             maxLines = 1,
                         )
                         // 改完这一段通常想接着看本章还有哪几段配了乐
-                        TextButton(
+                        MediumPlainButton(
                             onClick = {
                                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BgmSceneTable))
                             },
-                        ) {
-                            Text(stringResource(R.string.cast_bgm_scene_overview))
-                        }
+                            text = stringResource(R.string.cast_bgm_scene_overview),
+                            tint = LegadoTheme.colorScheme.primary,
+                        )
                     }
-                    Text(
+                    AppText(
                         text = stringResource(R.string.cast_bgm_scene_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                     if (sheet.pools.isEmpty()) {
-                        Text(
+                        AppText(
                             text = stringResource(R.string.cast_bgm_scene_no_pool),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
+                            style = LegadoTheme.typography.bodyMedium,
+                            color = LegadoTheme.colorScheme.error,
                         )
                     }
 
@@ -210,18 +207,18 @@ fun BgmSceneSheet(
                         ),
                     )
                     // 留空 = 朗读时从池里随机取，这句必须在界面上说明，否则用户会以为没生效
-                    Text(
+                    AppText(
                         text = stringResource(R.string.cast_bgm_scene_follow_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                     // 本段音量：与配乐自身音量相乘，只压这一段，不动整条曲子
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
+                        AppText(
                             text = stringResource(R.string.cast_bgm_segment_volume),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = LegadoTheme.typography.bodyMedium,
                         )
-                        Slider(
+                        AppSlider(
                             value = volume,
                             onValueChange = { volume = it },
                             valueRange = 0f..1f,
@@ -230,25 +227,25 @@ fun BgmSceneSheet(
                                 .weight(1f)
                                 .padding(start = 8.dp),
                         )
-                        Text(
+                        AppText(
                             text = "${(volume * 100).toInt()}%",
                             modifier = Modifier.padding(start = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = LegadoTheme.typography.bodyMedium,
                         )
                     }
-                    Text(
+                    AppText(
                         text = stringResource(R.string.cast_bgm_segment_volume_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
+                        MediumTonalButton(
                             enabled = pool.isNotBlank() || track.isNotBlank(),
                             onClick = {
                                 if (playing) {
                                     playing = false
                                     runCatching { runCatching { player.stop() }.getOrNull(); player.reset() }
-                                    return@IconButton
+                                    return@MediumTonalButton
                                 }
                                 val wantPool = pool
                                 val wantTrack = track
@@ -281,17 +278,14 @@ fun BgmSceneSheet(
                                     }
                                 }
                             },
-                        ) {
-                            Icon(
-                                if (playing) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                contentDescription = stringResource(
-                                    if (playing) R.string.cast_bgm_stop else R.string.cast_bgm_play,
-                                ),
-                            )
-                        }
-                        Text(
+                            icon = if (playing) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = stringResource(
+                                if (playing) R.string.cast_bgm_stop else R.string.cast_bgm_play,
+                            ),
+                        )
+                        AppText(
                             text = stringResource(R.string.cast_bgm_scene_follow),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = LegadoTheme.typography.bodyMedium,
                         )
                     }
 
@@ -301,22 +295,23 @@ fun BgmSceneSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (sheet.assigned) {
-                            TextButton(
+                            MediumPlainButton(
                                 onClick = {
                                     playing = false
                                     runCatching { runCatching { player.stop() }.getOrNull(); player.reset() }
                                     onIntent(ReadBookIntent.ClearBgmScene(paragraphIndex))
                                 },
-                            ) {
-                                Text(stringResource(R.string.cast_bgm_scene_clear))
-                            }
+                                text = stringResource(R.string.cast_bgm_scene_clear),
+                                tint = LegadoTheme.colorScheme.primary,
+                            )
                             Spacer(Modifier.width(4.dp))
                         }
-                        TextButton(onClick = onDismissRequest) {
-                            Text(stringResource(R.string.cancel))
-                        }
+                        MediumPlainButton(
+                            onClick = onDismissRequest,
+                            text = stringResource(R.string.cancel),
+                        )
                         Spacer(Modifier.width(4.dp))
-                        TextButton(
+                        MediumTonalButton(
                             enabled = pool.isNotBlank() || track.isNotBlank(),
                             onClick = {
                                 playing = false
@@ -330,9 +325,8 @@ fun BgmSceneSheet(
                                     ),
                                 )
                             },
-                        ) {
-                            Text(stringResource(R.string.ok))
-                        }
+                            text = stringResource(R.string.ok),
+                        )
                     }
                     Spacer(Modifier.height(4.dp))
                 }

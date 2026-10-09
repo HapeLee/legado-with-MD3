@@ -337,7 +337,8 @@ object MainNavigator {
                 }
             }
 
-            // 多角色规则的子页只由 hub 用 backStack.add 压栈；这里保底直推，不清栈
+            // 朗读设置的子页（设置 hub 与阅读界面朗读设置卡片两处入口）都只压栈、不清栈：
+            // 从阅读界面进来要能直接返回阅读界面。
             MainRouteVoicePool,
             MainRouteBgmPool,
             MainRouteVoiceEffect,

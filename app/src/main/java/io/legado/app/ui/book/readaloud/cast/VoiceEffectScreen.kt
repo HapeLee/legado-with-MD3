@@ -4,35 +4,21 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SaveAlt
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -40,12 +26,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -53,20 +37,30 @@ import io.legado.app.data.entities.VoiceEffectPreset
 import io.legado.app.help.readaloud.cast.VoiceAudition
 import io.legado.app.help.readaloud.cast.VoicePoolStore
 import io.legado.app.help.readaloud.effect.VoiceEffectAudio
-import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastOption
-import io.legado.app.ui.widget.components.VoiceAuditionButton
+import io.legado.app.ui.widget.components.TinySwitch
+import io.legado.app.ui.widget.components.VoiceAuditionAction
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.castCardMaxHeight
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
+import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +68,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import java.util.Locale
 
 /**
  * 变声器管理页（朗读规则 → 变声器）。
@@ -139,23 +134,18 @@ fun VoiceEffectScreen(
                 title = stringResource(R.string.voice_effect),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
+                // 顶栏已经用 TopBarActionsRow 包好了，这里只放按钮本身
                 actions = {
-                    TopBarActionsRow {
-                        IconButton(onClick = { onIntent(VoiceEffectIntent.ShowIoSheet) }) {
-                            Icon(
-                                Icons.Default.ImportExport,
-                                contentDescription = stringResource(R.string.cast_pool_io),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                        IconButton(onClick = { onIntent(VoiceEffectIntent.ShowCreate) }) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = stringResource(R.string.voice_effect_create),
-                                tint = LegadoTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
+                    TopBarActionButton(
+                        onClick = { onIntent(VoiceEffectIntent.ShowIoSheet) },
+                        imageVector = Icons.Default.ImportExport,
+                        contentDescription = stringResource(R.string.cast_pool_io),
+                    )
+                    TopBarActionButton(
+                        onClick = { onIntent(VoiceEffectIntent.ShowCreate) },
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.voice_effect_create),
+                    )
                 },
             )
         },
@@ -167,59 +157,50 @@ fun VoiceEffectScreen(
             contentPadding = adaptiveContentPadding(top = 0.dp, bottom = 120.dp),
         ) {
             item {
-                Text(
+                AppText(
                     text = stringResource(R.string.voice_effect_summary),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (state.rows.any { it.sessionLayerDropped }) {
                 item {
-                    Text(
+                    AppText(
                         text = stringResource(R.string.voice_effect_session_dropped_hint),
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .padding(bottom = 8.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.tertiary,
                     )
                 }
             }
             items(state.rows.size, key = { state.rows[it].preset.name }) { index ->
                 val row = state.rows[index]
-                ListItem(
-                    headlineContent = { Text(row.preset.name) },
-                    supportingContent = {
-                        Text(
-                            text = row.summary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // tiny 系列：标题/副标题/开关的排布与朗读设置里那些开关项完全一致；
+                // 行点击仍是「打开编辑」，开关与删除各自占尾部一格（小系列按钮）
+                TinySettingItem(
+                    title = row.preset.name,
+                    description = row.summary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .animateItem(),
+                    trailingContent = {
+                        TinySwitch(
+                            checked = row.preset.enabled,
+                            onCheckedChange = {
+                                onIntent(VoiceEffectIntent.Toggle(row.preset.name, it))
+                            },
+                        )
+                        SmallPlainButton(
+                            onClick = { onIntent(VoiceEffectIntent.ShowDelete(row.preset)) },
+                            icon = AppIcons.Delete,
+                            contentDescription = stringResource(R.string.delete),
                         )
                     },
-                    trailingContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Switch(
-                                checked = row.preset.enabled,
-                                onCheckedChange = {
-                                    onIntent(VoiceEffectIntent.Toggle(row.preset.name, it))
-                                },
-                            )
-                            IconButton(onClick = { onIntent(VoiceEffectIntent.ShowDelete(row.preset)) }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = stringResource(R.string.delete),
-                                )
-                            }
-                        }
-                    },
-                    // 整行点开编辑，不需要额外的按钮
-                    modifier = Modifier
-                        .animateItem()
-                        .clickable {
-                            onIntent(VoiceEffectIntent.ShowEdit(row.preset))
-                        },
+                    onClick = { onIntent(VoiceEffectIntent.ShowEdit(row.preset)) },
                 )
             }
         }
@@ -256,35 +237,25 @@ fun VoiceEffectScreen(
         )
     }
 
-    state.editTarget?.let { target ->
-        VoiceEffectEditDialog(
-            initial = target,
-            isNew = state.isNew,
-            audition = audition,
-            onSave = { onIntent(VoiceEffectIntent.Save(it)) },
-            onDismiss = { onIntent(VoiceEffectIntent.DismissEdit) },
-        )
-    }
+    // 常驻组合 + show/data：miuix 的窗口靠 show 驱动退场动画，条件组合会直接丢动画
+    VoiceEffectEditDialog(
+        initial = state.editTarget,
+        isNew = state.isNew,
+        audition = audition,
+        onSave = { onIntent(VoiceEffectIntent.Save(it)) },
+        onDismiss = { onIntent(VoiceEffectIntent.DismissEdit) },
+    )
 
-    state.deleteTarget?.let { target ->
-        AlertDialog(
-            onDismissRequest = { onIntent(VoiceEffectIntent.DismissDelete) },
-            title = { Text(stringResource(R.string.voice_effect_delete)) },
-            text = { Text(stringResource(R.string.voice_effect_delete_tip)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onIntent(VoiceEffectIntent.Delete(target.name))
-                }) {
-                    Text(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onIntent(VoiceEffectIntent.DismissDelete) }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
+    AppAlertDialog(
+        show = state.deleteTarget != null,
+        onDismissRequest = { onIntent(VoiceEffectIntent.DismissDelete) },
+        title = stringResource(R.string.voice_effect_delete),
+        text = stringResource(R.string.voice_effect_delete_tip),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onIntent(VoiceEffectIntent.Delete(state.deleteTarget?.name.orEmpty())) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(VoiceEffectIntent.DismissDelete) },
+    )
 }
 
 /**
@@ -293,19 +264,25 @@ fun VoiceEffectScreen(
  * 音高与语速各自有上下限（见 [VoiceEffectAudio]），滑过头只会到边界，不会把声音推成噪音。
  *
  * 名字 / 声音池 / 音色三行走 [CastFieldStack]：同屏只有一个真输入框，切行不闪键盘，
- * 与配音角色编辑页同一套交互。试听按钮直接吃**还没保存的草稿**，改一下滑杆当场听得见。
+ * 与配音角色编辑页同一套交互（候选列表带圆角容器与淡入淡出）。试听按钮直接吃
+ * **还没保存的草稿**，改一下滑杆当场听得见。
  * 池与音色只服务试听，不写进预设——音色归角色所有，预设只描述「怎么变形」。
  */
 @Composable
 private fun VoiceEffectEditDialog(
-    initial: VoiceEffectPreset,
+    initial: VoiceEffectPreset?,
     isNew: Boolean,
     audition: EffectAuditionState,
     onSave: (VoiceEffectPreset) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    var draft by remember(initial) { mutableStateOf(initial) }
+    // 常驻组合（调用方只把 initial 置 null）：miuix 的窗口靠 show 驱动退场动画，
+    // 条件组合会让整棵子树在关闭那刻被摘掉，动画与草稿一起丢
+    var cached by remember { mutableStateOf(initial) }
+    if (initial != null) cached = initial
+    val current = cached ?: return
+    var draft by remember(current) { mutableStateOf(current) }
     var data by remember { mutableStateOf<EffectVoiceData?>(null) }
     LaunchedEffect(Unit) {
         data = withContext(Dispatchers.IO) {
@@ -343,160 +320,129 @@ private fun VoiceEffectEditDialog(
         stringResource(R.string.voice_effect_reverb_large_hall),
         stringResource(R.string.voice_effect_reverb_plate),
     )
-    AlertDialog(
+    AppModalBottomSheet(
+        show = initial != null,
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(
-                    if (isNew) R.string.voice_effect_create else R.string.voice_effect_edit,
-                ),
+        title = stringResource(
+            if (isNew) R.string.voice_effect_create else R.string.voice_effect_edit,
+        ),
+        // 试听与保存都作用于下面这份草稿，钉在头部：参数区可以滚，不必滚回顶部才听得见/存得了
+        startAction = {
+            VoiceAuditionAction(
+                voiceId = audition.voiceId,
+                text = remember(context) { VoiceAudition.defaultPreviewText(context) },
+                draft = draft,
             )
         },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                CastFieldStack(
-                    specs = listOf(
-                        CastFieldSpec(
-                            id = "name",
-                            label = stringResource(R.string.voice_effect_name),
-                            value = draft.name,
-                            onValueChange = { draft = draft.copy(name = it) },
-                        ),
-                        CastFieldSpec(
-                            id = "pool",
-                            label = stringResource(R.string.cast_voice_pool),
-                            value = audition.pool,
-                            options = data?.pools?.map { CastOption(it, it) }.orEmpty(),
-                            expanded = expandedRow == "pool",
-                            onValueChange = { audition.pool = it },
-                            onSelected = { option ->
-                                audition.pool = option.key
-                                if (audition.voiceId.isNotBlank() &&
-                                    voices.firstOrNull { it.id == audition.voiceId }
-                                        ?.pools?.contains(option.key) != true
-                                ) {
-                                    audition.voiceId = ""
-                                    audition.voiceQuery = ""
-                                }
-                            },
-                            onExpand = { open -> expandedRow = if (open) "pool" else null },
-                        ),
-                        CastFieldSpec(
-                            id = "voice",
-                            label = stringResource(R.string.cast_voice),
-                            value = audition.voiceQuery,
-                            options = voiceOptions,
-                            expanded = expandedRow == "voice",
-                            onValueChange = { audition.voiceQuery = it },
-                            onSelected = { option ->
-                                audition.voiceId = option.key
-                                audition.voiceQuery = option.label
-                            },
-                            onExpand = { open -> expandedRow = if (open) "voice" else null },
-                        ),
+        // 不给取消按钮：草稿全在本弹层里，点保存才落库，关掉就是丢弃，没有需要反悔的中间态
+        endAction = {
+            MediumTonalButton(
+                onClick = { onSave(draft) },
+                enabled = draft.name.isNotBlank(),
+                icon = AppIcons.Check,
+                contentDescription = stringResource(R.string.save),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CastFieldStack(
+                specs = listOf(
+                    CastFieldSpec(
+                        id = "name",
+                        label = stringResource(R.string.voice_effect_name),
+                        value = draft.name,
+                        onValueChange = { draft = draft.copy(name = it) },
                     ),
-                )
-                VoiceAuditionButton(
-                    voiceId = audition.voiceId,
-                    text = remember(context) { VoiceAudition.defaultPreviewText(context) },
-                    draft = draft,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                // 滑杆单独一块可滚：输入框外壳按根坐标对齐共享框，塞进滚动列里会跟不上。
-                // 候选列表一展开就把它撤掉——弹层高度是硬约束，两组同时铺开必然顶到键盘。
-                // 这里不能套 expandVertically/shrinkVertically：AlertDialog 是居中且按内容高的窗口，
-                // 撤滑杆和开下拉两条高度动画同时在跑，净高度先涨后落，整窗就会上下抽动。
-                // 共享输入框还靠外壳的实时坐标对齐，
-                // 高度一边动它一边追，慢一帧就是看得见的错位。
-                if (expandedRow == null) {
-                    Column(
-                        modifier = Modifier
-                            .heightIn(max = castCardMaxHeight(0.4f))
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        EffectSliderRow(
-                            label = stringResource(R.string.voice_effect_pitch),
-                            value = draft.pitch,
-                            valueRange = VoiceEffectAudio.MIN_PITCH..VoiceEffectAudio.MAX_PITCH,
-                            steps = 20,
-                            onValueChange = { draft = draft.copy(pitch = it) },
-                        )
-                        EffectSliderRow(
-                            label = stringResource(R.string.voice_effect_speed),
-                            value = draft.speed,
-                            valueRange = VoiceEffectAudio.MIN_SPEED..VoiceEffectAudio.MAX_SPEED,
-                            steps = 15,
-                            onValueChange = { draft = draft.copy(speed = it) },
-                        )
-                        Text(
-                            text = reverbNames.getOrElse(draft.reverbPreset) {
-                                reverbNames[VoiceEffectStore.REVERB_NONE]
-                            }.let { stringResource(R.string.voice_effect_reverb) + " · " + it },
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Slider(
-                            value = draft.reverbPreset.toFloat(),
-                            onValueChange = {
-                                draft = draft.copy(reverbPreset = it.toInt().coerceIn(0, 6))
-                            },
-                            valueRange = 0f..6f,
-                            steps = 5,
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = draft.metal,
-                                onCheckedChange = { draft = draft.copy(metal = it) },
-                            )
-                            Text(stringResource(R.string.voice_effect_metal))
-                        }
-                    }
+                    CastFieldSpec(
+                        id = "pool",
+                        label = stringResource(R.string.cast_voice_pool),
+                        value = audition.pool,
+                        options = data?.pools?.map { CastOption(it, it) }.orEmpty(),
+                        expanded = expandedRow == "pool",
+                        onValueChange = { audition.pool = it },
+                        onSelected = { option ->
+                            audition.pool = option.key
+                            if (audition.voiceId.isNotBlank() &&
+                                voices.firstOrNull { it.id == audition.voiceId }
+                                    ?.pools?.contains(option.key) != true
+                            ) {
+                                audition.voiceId = ""
+                                audition.voiceQuery = ""
+                            }
+                        },
+                        onExpand = { open -> expandedRow = if (open) "pool" else null },
+                    ),
+                    CastFieldSpec(
+                        id = "voice",
+                        label = stringResource(R.string.cast_voice),
+                        value = audition.voiceQuery,
+                        options = voiceOptions,
+                        expanded = expandedRow == "voice",
+                        onValueChange = { audition.voiceQuery = it },
+                        onSelected = { option ->
+                            audition.voiceId = option.key
+                            audition.voiceQuery = option.label
+                        },
+                        onExpand = { open -> expandedRow = if (open) "voice" else null },
+                    ),
+                ),
+            )
+            // 参数区单独一块可滚：任一候选列表一展开就把它整块撤掉——弹层高度是硬约束，
+            // 两组同时铺开必然顶到键盘。这里不套 expandVertically/shrinkVertically：
+            // 撤参数与开候选两条高度动画同时在跑，净高度先涨后落，整块会上下抽动，
+            // 而共享输入框靠外壳的实时坐标对齐，慢一帧就是看得见的错位。
+            if (expandedRow == null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = castCardMaxHeight(0.4f))
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TinySliderSettingItem(
+                        title = stringResource(R.string.voice_effect_pitch),
+                        value = draft.pitch,
+                        valueRange = VoiceEffectAudio.MIN_PITCH..VoiceEffectAudio.MAX_PITCH,
+                        steps = 20,
+                        showDecimal = true,
+                        stepSize = 0.01f,
+                        valueFormat = { "×" + String.format(Locale.ENGLISH, "%.2f", it) },
+                        onValueChange = { draft = draft.copy(pitch = it) },
+                    )
+                    TinySliderSettingItem(
+                        title = stringResource(R.string.voice_effect_speed),
+                        value = draft.speed,
+                        valueRange = VoiceEffectAudio.MIN_SPEED..VoiceEffectAudio.MAX_SPEED,
+                        steps = 15,
+                        showDecimal = true,
+                        stepSize = 0.01f,
+                        valueFormat = { "×" + String.format(Locale.ENGLISH, "%.2f", it) },
+                        onValueChange = { draft = draft.copy(speed = it) },
+                    )
+                    // 混响是 7 个平台预设号，不是连续量：给下拉而不是滑杆，
+                    // 免得拖出一个「介于小房间和大房间之间」的无效值
+                    TinyDropdownSettingItem(
+                        title = stringResource(R.string.voice_effect_reverb),
+                        selectedValue = draft.reverbPreset.toString(),
+                        displayEntries = reverbNames.toTypedArray(),
+                        entryValues = reverbNames.indices.map { it.toString() }.toTypedArray(),
+                        onValueChange = {
+                            draft = draft.copy(reverbPreset = it.toIntOrNull() ?: 0)
+                        },
+                    )
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.voice_effect_metal),
+                        checked = draft.metal,
+                        onCheckedChange = { draft = draft.copy(metal = it) },
+                    )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(draft) }) {
-                Text(stringResource(R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun EffectSliderRow(
-    label: String,
-    value: Float,
-    valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int,
-    onValueChange: (Float) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(56.dp),
-        )
-        Slider(
-            value = value.coerceIn(valueRange.start, valueRange.endInclusive),
-            onValueChange = onValueChange,
-            valueRange = valueRange,
-            steps = steps,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = "×" + String.format(java.util.Locale.ENGLISH, "%.2f", value),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(48.dp),
-        )
+        }
     }
 }
 

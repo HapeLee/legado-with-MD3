@@ -2997,6 +2997,11 @@
     <string name="switch_to_classic_read_aloud">Classic controls</string>
     <string name="read_aloud_settings_general_tab">General</string>
     <string name="read_aloud_settings_voice_tab">Engine &amp; voices</string>
+    <string name="read_aloud_settings_casting_tab">Roles &amp; music</string>
+    <string name="read_aloud_section_engine">Engines</string>
+    <string name="read_aloud_section_analysis">Chapter analysis</string>
+    <string name="read_aloud_section_casting">Roles &amp; voices</string>
+    <string name="read_aloud_section_bgm">Background music</string>
     <string name="speech_analysis_mode">Chapter segmentation</string>
     <string name="speech_analysis_rule">Rule segmentation</string>
     <string name="speech_analysis_rule_ai">Rules with AI completion (recommended)</string>
@@ -3016,7 +3021,7 @@
     <string name="cast_bgm_track">Music track</string>
     <string name="cast_bgm_scene_follow">Random from pool</string>
     <string name="cast_bgm_scene_follow_hint">Pick a track to pin it, leave empty to choose randomly from the pool</string>
-    <string name="cast_bgm_scene_clear">Clear this paragraph</string>
+    <string name="cast_bgm_scene_clear">Clear this segment’s music</string>
     <string name="cast_bgm_scene_saved">Applied</string>
     <string name="cast_bgm_segment_volume">This paragraph</string>
     <string name="cast_bgm_segment_volume_hint">Multiplies the track’s own volume; only this paragraph is affected</string>
@@ -3028,7 +3033,7 @@
     <string name="cast_bgm_track_volume_hint">Applies to this imported track everywhere it is used</string>
     <string name="cast_bgm_scene_table">Chapter background music</string>
     <string name="cast_bgm_scene_overview">Overview</string>
-    <string name="cast_bgm_scene_table_summary">All paragraphs of this chapter with their pool, track and volume</string>
+    <string name="cast_bgm_scene_table_summary">Music and volume for each segment of this chapter, editable in place</string>
     <string name="cast_bgm_scene_table_empty">No background music assigned in this chapter yet</string>
     <string name="cast_bgm_scene_row">Paragraph %1$d</string>
     <string name="cast_bgm_scene_range">Paragraphs %1$d–%2$d</string>
@@ -3052,7 +3057,7 @@
     <string name="cast_bgm_pool_summary">Import music files to play as background audio while reading</string>
     <string name="cast_tts_engines_summary">Configure reading engines and import voices; long-press a voice to audition it</string>
     <string name="cast_bgm_import">Import audio</string>
-    <string name="cast_bgm_empty">No background music yet. Use Import audio in the top right.</string>
+    <string name="cast_bgm_empty">No background music yet. Imported audio files show up here.</string>
     <string name="cast_bgm_delete">Delete music</string>
     <string name="cast_bgm_delete_confirm">Delete \"%1$s\"? The copied audio file will be removed too.</string>
     <string name="cast_bgm_play">Play</string>
@@ -3088,10 +3093,11 @@
     <string name="cast_no_match">No match</string>
     <string name="read_aloud_pagination_pending">Chapter layout is still in progress, please try again</string>
     <string name="ai_cast_roles">AI casting</string>
-    <string name="ai_cast_status">%1$d of %2$d dialogues assigned</string>
+    <string name="ai_cast_status">%2$d dialogue lines in this chapter, %1$d assigned</string>
     <string name="ai_cast_status_loading">Loading chapter status…</string>
     <string name="ai_cast_all_done">All dialogues in this chapter are assigned</string>
-    <string name="ai_cast_reassign">Reassign (clear existing first)</string>
+    <string name="ai_cast_reassign">Reassign</string>
+    <string name="ai_cast_reassign_summary">Clear this chapter’s existing assignments, then identify again</string>
     <string name="ai_cast_chapter_count">Chapters to cast (from current)</string>
     <string name="ai_cast_progress">%1$d/%2$d chapters</string>
     <string name="ai_cast_start">Start</string>
@@ -3116,14 +3122,14 @@
     <string name="ai_cast_preset_default">Default</string>
     <string name="ai_cast_preset_default_done">Restored the built-in casting requirement</string>
     <string name="ai_cast_extra_chapters">Extra chapters</string>
-    <string name="ai_cast_extra_summary">%1$d more chapters after the current one (0 = only this chapter)</string>
+    <string name="ai_cast_extra_summary">Assign after this chapter (0 = this chapter only)</string>
     <string name="ai_cast_range_mode">Chapter range</string>
     <string name="ai_cast_chapter_failed">Chapter %1$d %2$s: %3$s</string>
     <string name="ai_cast_run_failed">%1$d chapter(s) failed</string>
     <string name="ai_cast_resume_from">Continue from chapter %1$d</string>
     <string name="ai_cast_retry">Retry %1$d chapter(s)</string>
     <string name="ai_cast_cancelled">Casting cancelled, stopped at chapter %1$d</string>
-    <string name="ai_cast_no_preset">No presets - using built-in default</string>
+    <string name="ai_cast_no_preset">No custom preset yet, using the built-in default</string>
     <string name="ai_cast_reasoning_level">Model reasoning depth</string>
     <string name="ai_cast_reasoning_level_hint">Model default = the app sends no reasoning parameter at all. Lower it when a chapter takes too long; forced-thinking models such as GLM-5.3 cannot be switched off.</string>
     <string name="ai_cast_reasoning_follow">Model default</string>
@@ -3174,7 +3180,6 @@
     <string name="cast_export_pools_done">Pools exported</string>
     <string name="cast_export_pools_failed">Export failed</string>
     <string name="cast_list_separator">, </string>
-    <string name="multi_role_rule">Read-aloud rules</string>
     <string name="regex_cast_rule">Regex roles</string>
     <string name="regex_cast_rule_summary">When matched text appears, read it with another voice or replace it with a sound effect</string>
     <string name="regex_cast_create">New regex role</string>

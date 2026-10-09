@@ -580,9 +580,6 @@ fun MainActivity.mainEntryProvider(
                     )
                 }
             },
-            onNavigateToMultiRoleRule = {
-                onNavigateToRoute(MainRouteMultiRoleRule)
-            },
             onNavigateToBackupSettings = {
                 onNavigateToRoute(MainRouteSettingsBackup)
             },
@@ -671,6 +668,8 @@ fun MainActivity.mainEntryProvider(
             onBackClick = { onNavigateBack() },
             onNavigateToOther = { backStack.add(MainRouteSettingsOther) },
             onNavigateToRead = { backStack.add(MainRouteSettingsRead) },
+            // 朗读规则 hub：入口从「我的」移到设置，页面标题与这里统一叫「朗读设置」
+            onNavigateToReadAloud = { backStack.add(MainRouteMultiRoleRule) },
             onNavigateToCover = { backStack.add(MainRouteSettingsCover) },
             onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
             onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) },
@@ -989,6 +988,9 @@ fun MainActivity.mainEntryProvider(
                 },
                 onOpenVoiceCasting = { bookUrl ->
                     onNavigateToRoute(MainRouteBookVoiceCasting(bookUrl))
+                },
+                onOpenReadAloudSubPage = { page ->
+                    onNavigateToRoute(page.toMainRoute())
                 },
                 onOpenTtsEnginesAndVoices = {
                     onNavigateToRoute(MainRouteCloudTtsEngines(route.bookUrl))

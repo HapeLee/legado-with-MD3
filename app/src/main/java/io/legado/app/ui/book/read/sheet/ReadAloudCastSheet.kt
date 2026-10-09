@@ -14,24 +14,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -45,16 +40,18 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadMenuConfig
 import io.legado.app.ui.theme.LegadoTheme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastImeScope
 import io.legado.app.ui.widget.components.CastOption
 import io.legado.app.ui.widget.components.VoiceAuditionButton
+import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.castCardMaxHeight
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 /**
@@ -132,7 +129,7 @@ fun ReadAloudCastSheet(
             modifier = Modifier
                 .fillMaxSize()
                 // 遮罩跟着卡片一起淡入淡出：只让卡片动、黑底硬蹦的话，看起来还是「突然一响」
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
+                .background(LegadoTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
                 // 键盘弹出时整个 overlay 可用区缩小 → 居中的卡片自然上移
                 .safeDrawingPadding()
                 .clickable(
@@ -162,13 +159,12 @@ fun ReadAloudCastSheet(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onDismissRequest) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back),
-                            )
-                        }
-                        Text(
+                        MediumTonalButton(
+                            onClick = onDismissRequest,
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                        )
+                        AppText(
                             text = stringResource(R.string.cast_sheet_title),
                             modifier = Modifier
                                 .weight(1f)
@@ -274,18 +270,20 @@ fun ReadAloudCastSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (data.assigned) {
-                            TextButton(onClick = {
-                                onIntent(ReadBookIntent.UnassignRoleCast(ordinalAt))
-                            }) {
-                                Text(stringResource(R.string.cast_unassign))
-                            }
+                            MediumPlainButton(
+                                onClick = {
+                                    onIntent(ReadBookIntent.UnassignRoleCast(ordinalAt))
+                                },
+                                text = stringResource(R.string.cast_unassign),
+                            )
                             Spacer(Modifier.width(4.dp))
                         }
-                        TextButton(onClick = onDismissRequest) {
-                            Text(stringResource(R.string.cancel))
-                        }
+                        MediumPlainButton(
+                            onClick = onDismissRequest,
+                            text = stringResource(R.string.cancel),
+                        )
                         Spacer(Modifier.width(4.dp))
-                        TextButton(
+                        MediumOutlinedButton(
                             enabled = CastMarkers.isValidName(name),
                             onClick = {
                                 onIntent(
@@ -298,11 +296,10 @@ fun ReadAloudCastSheet(
                                     ),
                                 )
                             },
-                        ) {
-                            Text(stringResource(R.string.cast_create))
-                        }
+                            text = stringResource(R.string.cast_create),
+                        )
                         Spacer(Modifier.width(4.dp))
-                        TextButton(
+                        MediumTonalButton(
                             enabled = CastMarkers.isValidName(name),
                             onClick = {
                                 onIntent(
@@ -316,9 +313,8 @@ fun ReadAloudCastSheet(
                                     ),
                                 )
                             },
-                        ) {
-                            Text(stringResource(R.string.ok))
-                        }
+                            text = stringResource(R.string.ok),
+                        )
                     }
                     Spacer(Modifier.height(4.dp))
                 }

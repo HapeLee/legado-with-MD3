@@ -7,12 +7,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -23,14 +26,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,14 +42,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,6 +73,8 @@ import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.tabRow.rememberTabPagerState
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -72,7 +83,6 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import splitties.init.appCtx
 
 /**
@@ -84,13 +94,23 @@ import splitties.init.appCtx
  *
  * 数值全部按百分比存（100 = 现在这颗胶囊），落到绘制侧再乘正文字号，字号变了比例不变。
  */
+
 @Composable
 fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val types = CastCapsuleStyleStore.TYPES
     var type by rememberSaveable { mutableStateOf(CastCapsuleStyleStore.ROLE) }
-    var style by remember { mutableStateOf(CastCapsuleStyleStore.raw(type)) }
+    // 三类胶囊各留一份草稿：pager 会把相邻页一起挂着，共用一份 style 的话「滑到一半顺手拖个
+    // 滑杆」就改到别的类型头上了。底部预览、取色与选图都按各自的目标类型取这里的草稿。
+    val drafts = remember {
+        mutableStateMapOf<String, CastCapsuleStyle>().apply {
+            types.forEach { put(it, CastCapsuleStyleStore.raw(it)) }
+        }
+    }
+    // 取色/选图作用于哪一类：点的是哪一页就改哪一类，而不是「当前选中」那一类
+    var pickerType by remember { mutableStateOf(type) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var colorNightSlot by rememberSaveable { mutableStateOf(false) }
     var imageNightSlot by rememberSaveable { mutableStateOf(false) }
@@ -99,11 +119,21 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
         CastCapsuleStyleStore.PLACEHOLDER to stringResource(R.string.capsule_style_placeholder),
         CastCapsuleStyleStore.BGM to stringResource(R.string.capsule_style_bgm),
     )
-    val currentName = typeNames.getValue(type)
+    val style = drafts.getValue(type)
+    val pagerState = rememberTabPagerState(
+        selectedIndex = types.indexOf(type).coerceAtLeast(0),
+        pageCount = types.size,
+        onPageSelected = { page -> types.getOrNull(page)?.let { type = it } },
+    )
+
+    fun applyStyle(target: String, next: CastCapsuleStyle) {
+        drafts[target] = next
+        CastCapsuleStyleStore.set(target, next)
+    }
+
     // 底图换掉或清空后，旧文件由 store 删除；这里只负责把新文件读成位图给预览用
     var dayImage by remember { mutableStateOf<Bitmap?>(null) }
     var nightImage by remember { mutableStateOf<Bitmap?>(null) }
-    LaunchedEffect(type) { style = CastCapsuleStyleStore.raw(type) }
     LaunchedEffect(style.bgImage) {
         dayImage = style.bgImage.takeIf { it.isNotEmpty() }
             ?.let { CastCapsuleImageCache.cached(it) ?: CastCapsuleImageCache.load(it) }
@@ -118,8 +148,10 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
+        val target = pickerType
         val nightSlot = imageNightSlot
-        val replaced = if (nightSlot) style.bgImageNight else style.bgImage
+        val current = drafts[target] ?: return@rememberLauncherForActivityResult
+        val replaced = if (nightSlot) current.bgImageNight else current.bgImage
         scope.launch {
             val saved = runCatching {
                 withContext(Dispatchers.IO) { CastCapsuleStyleStore.saveImage(appCtx, uri) }
@@ -129,12 +161,11 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
                 return@launch
             }
             val next = if (nightSlot) {
-                style.copy(bgImageNight = saved)
+                current.copy(bgImageNight = saved)
             } else {
-                style.copy(bgImage = saved)
+                current.copy(bgImage = saved)
             }
-            style = next
-            CastCapsuleStyleStore.set(type, next)
+            applyStyle(target, next)
             if (replaced.isNotEmpty() &&
                 replaced != next.bgImage &&
                 replaced != next.bgImageNight
@@ -143,11 +174,6 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
             }
             context.toastOnUi(styleSavedMsg)
         }
-    }
-
-    fun update(next: CastCapsuleStyle) {
-        style = next
-        CastCapsuleStyleStore.set(type, next)
     }
 
     /**
@@ -166,6 +192,15 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
                 title = stringResource(R.string.capsule_style_title),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
+                bottomContent = {
+                    AppTabRow(
+                        tabTitles = types.map { typeNames.getValue(it) },
+                        selectedTabIndex = types.indexOf(type).coerceAtLeast(0),
+                        // 只派发选中项；滚页交给 rememberTabPagerState，保持一条同步路径
+                        onTabSelected = { type = types[it] },
+                        isScrollable = false,
+                    )
+                },
             )
         },
         // 预览钉在底部：放进列表里往下调滑块就会滚出屏幕，改完看不到效果
@@ -182,197 +217,216 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = adaptiveContentPadding(
-                top = paddingValues.calculateTopPadding(),
-                // 钉住的那条预览是浮在列表之上的，Scaffold 给的 bottom 内边距不含它，
-                // 所以按量到的真实高度留底，最后一行「恢复默认」才不会被压住。
-                bottom = paddingValues.calculateBottomPadding() +
-                    barDensity.run { (previewBarPx / density).dp } + 24.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        typeNames.forEach { (key, name) ->
-                            MediumTonalButton(
-                                onClick = { type = key },
-                                modifier = Modifier.weight(1f),
-                                selected = key == type,
-                                text = name,
-                            )
-                        }
+        // 三页各自一个编辑列表（各自保留滚动位置）；页内容按该页自己的草稿画
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            val pageType = types[page]
+            val draft = drafts.getValue(pageType)
+            CapsuleStyleEditor(
+                type = pageType,
+                typeName = typeNames.getValue(pageType),
+                style = draft,
+                contentPadding = adaptiveContentPadding(
+                    top = paddingValues.calculateTopPadding(),
+                    // 钉住的那条预览是浮在列表之上的，Scaffold 给的 bottom 内边距不含它，
+                    // 所以按量到的真实高度留底，最后一行「恢复默认」才不会被压住。
+                    bottom = paddingValues.calculateBottomPadding() +
+                            barDensity.run { (previewBarPx / density).dp } + 24.dp,
+                ),
+                onStyleChange = { applyStyle(pageType, it) },
+                onPickColor = { night ->
+                    pickerType = pageType
+                    colorNightSlot = night
+                    showColorPicker = true
+                },
+                onPickImage = { night ->
+                    pickerType = pageType
+                    imageNightSlot = night
+                    imagePicker.launch(arrayOf("image/*"))
+                },
+                onClearImage = { night ->
+                    val old = if (night) draft.bgImageNight else draft.bgImage
+                    applyStyle(
+                        pageType,
+                        if (night) draft.copy(bgImageNight = "") else draft.copy(bgImage = ""),
+                    )
+                    scope.launch(Dispatchers.IO) { CastCapsuleStyleStore.deleteImage(old) }
+                },
+                onReset = {
+                    drafts[pageType] = CastCapsuleStyle.Default
+                    CastCapsuleStyleStore.reset(pageType)
+                    scope.launch(Dispatchers.IO) {
+                        listOf(draft.bgImage, draft.bgImageNight)
+                            .filter { it.isNotEmpty() }
+                            .forEach { CastCapsuleStyleStore.deleteImage(it) }
                     }
-                    AppText(
-                        text = stringResource(R.string.capsule_style_summary, currentName),
-                        style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            item {
-                SplicedColumnGroup {
-                    SliderSettingItem(
-                        title = stringResource(R.string.capsule_style_corner),
-                        description = stringResource(R.string.capsule_style_corner_summary),
-                        value = style.cornerRadius.toFloat(),
-                        defaultValue = CastCapsuleStyle.FULL.toFloat(),
-                        valueRange = 0f..CastCapsuleStyle.FULL.toFloat(),
-                        valueLabel = { "${it.toInt()}%" },
-                        onValueChange = { update(style.copy(cornerRadius = it.toInt())) },
-                    )
-                    StyleColorRow(
-                        title = stringResource(R.string.capsule_style_bg_color_day),
-                        color = style.bgColor,
-                        onClick = {
-                            colorNightSlot = false
-                            showColorPicker = true
-                        },
-                        onClear = { update(style.copy(bgColor = 0)) },
-                    )
-                    StyleColorRow(
-                        title = stringResource(R.string.capsule_style_bg_color_night),
-                        color = style.bgColorNight,
-                        onClick = {
-                            colorNightSlot = true
-                            showColorPicker = true
-                        },
-                        onClear = { update(style.copy(bgColorNight = 0)) },
-                    )
-                    StyleImageRow(
-                        title = stringResource(R.string.capsule_style_bg_image_day),
-                        path = style.bgImage,
-                        onPick = {
-                            imageNightSlot = false
-                            imagePicker.launch(arrayOf("image/*"))
-                        },
-                        onClear = {
-                            val old = style.bgImage
-                            val next = style.copy(bgImage = "")
-                            update(next)
-                            scope.launch(Dispatchers.IO) {
-                                CastCapsuleStyleStore.deleteImage(old)
-                            }
-                        },
-                    )
-                    StyleImageRow(
-                        title = stringResource(R.string.capsule_style_bg_image_night),
-                        path = style.bgImageNight,
-                        onPick = {
-                            imageNightSlot = true
-                            imagePicker.launch(arrayOf("image/*"))
-                        },
-                        onClear = {
-                            val old = style.bgImageNight
-                            val next = style.copy(bgImageNight = "")
-                            update(next)
-                            scope.launch(Dispatchers.IO) {
-                                CastCapsuleStyleStore.deleteImage(old)
-                            }
-                        },
-                    )
-                    if (type == CastCapsuleStyleStore.ROLE) {
-                        SwitchSettingItem(
-                            title = stringResource(R.string.capsule_style_show_avatar),
-                            description = stringResource(R.string.capsule_style_show_avatar_summary),
-                            checked = style.showAvatar,
-                            onCheckedChange = { update(style.copy(showAvatar = it)) },
-                        )
-                        SwitchSettingItem(
-                            title = stringResource(R.string.capsule_style_show_name),
-                            description = stringResource(R.string.capsule_style_show_name_summary),
-                            checked = style.showName,
-                            onCheckedChange = { update(style.copy(showName = it)) },
-                        )
-                        SwitchSettingItem(
-                            title = stringResource(R.string.capsule_style_show_pool),
-                            description = stringResource(R.string.capsule_style_show_pool_summary),
-                            checked = style.showPool,
-                            onCheckedChange = { update(style.copy(showPool = it)) },
-                        )
-                    }
-                    if (type != CastCapsuleStyleStore.BGM && style.showAvatar) {
-                        SliderSettingItem(
-                            title = stringResource(R.string.capsule_style_avatar_size),
-                            description = stringResource(R.string.capsule_style_avatar_size_summary),
-                            value = style.avatarScale.toFloat(),
-                            defaultValue = CastCapsuleStyle.FULL.toFloat(),
-                            valueRange = CastCapsuleStyle.AVATAR_SCALE_MIN.toFloat()..CastCapsuleStyle.AVATAR_SCALE_MAX.toFloat(),
-                            valueLabel = { "${it.toInt()}%" },
-                            onValueChange = { update(style.copy(avatarScale = it.toInt())) },
-                        )
-                        SliderSettingItem(
-                            title = stringResource(R.string.capsule_style_avatar_corner),
-                            description = stringResource(R.string.capsule_style_avatar_corner_summary),
-                            value = style.avatarRadius.toFloat(),
-                            defaultValue = CastCapsuleStyle.FULL.toFloat(),
-                            valueRange = 0f..CastCapsuleStyle.FULL.toFloat(),
-                            valueLabel = { "${it.toInt()}%" },
-                            onValueChange = { update(style.copy(avatarRadius = it.toInt())) },
-                        )
-                        SliderSettingItem(
-                            title = stringResource(R.string.capsule_style_avatar_left_right),
-                            value = style.avatarDx.toFloat(),
-                            defaultValue = 0f,
-                            valueRange = (-CastCapsuleStyle.SHIFT_FULL).toFloat()..CastCapsuleStyle.SHIFT_FULL.toFloat(),
-                            valueLabel = { "${it.toInt()}%" },
-                            onValueChange = { update(style.copy(avatarDx = it.toInt())) },
-                        )
-                        SliderSettingItem(
-                            title = stringResource(R.string.capsule_style_avatar_up_down),
-                            value = style.avatarDy.toFloat(),
-                            defaultValue = 0f,
-                            valueRange = (-CastCapsuleStyle.SHIFT_FULL).toFloat()..CastCapsuleStyle.SHIFT_FULL.toFloat(),
-                            valueLabel = { "${it.toInt()}%" },
-                            onValueChange = { update(style.copy(avatarDy = it.toInt())) },
-                        )
-                    }
-                }
-            }
-
-            item {
-                SplicedColumnGroup {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.capsule_style_reset),
-                        description = stringResource(R.string.capsule_style_reset_summary),
-                        onClick = {
-                            val old = style
-                            style = CastCapsuleStyle.Default
-                            CastCapsuleStyleStore.reset(type)
-                            scope.launch(Dispatchers.IO) {
-                                listOf(old.bgImage, old.bgImageNight)
-                                    .filter { it.isNotEmpty() }
-                                    .forEach { CastCapsuleStyleStore.deleteImage(it) }
-                            }
-                        },
-                    )
-                }
-            }
+                },
+            )
         }
     }
 
     ColorPickerSheet(
         show = showColorPicker,
-        initialColor = (if (colorNightSlot) style.bgColorNight else style.bgColor)
+        // 一直读「点它的那一类」的草稿：pager 滑到一半点时也不会串到另一种胶囊上
+        initialColor = (if (colorNightSlot) drafts.getValue(pickerType).bgColorNight
+        else drafts.getValue(pickerType).bgColor)
             .takeIf { it != 0 }
             ?: LegadoTheme.colorScheme.secondaryContainer.toArgb(),
         onDismissRequest = { showColorPicker = false },
         onColorSelected = { color ->
-            update(
+            val current = drafts.getValue(pickerType)
+            applyStyle(
+                pickerType,
                 if (colorNightSlot) {
-                    style.copy(bgColorNight = color)
+                    current.copy(bgColorNight = color)
                 } else {
-                    style.copy(bgColor = color)
+                    current.copy(bgColor = color)
                 },
             )
         },
     )
+}
+
+/**
+ * 一类胶囊的编辑列表（pager 的一页）。
+ *
+ * 三类共享同一套表单，只有「角色专属开关」和「头像滑杆」两段按类型出现；
+ * 读哪一份草稿、写回哪一类，以及取色/选图/复位怎么落地，全部由调用方决定——
+ * 这样一页只管把它自己那份草稿画出来、改回去。
+ */
+@Composable
+private fun CapsuleStyleEditor(
+    type: String,
+    typeName: String,
+    style: CastCapsuleStyle,
+    contentPadding: PaddingValues,
+    onStyleChange: (CastCapsuleStyle) -> Unit,
+    onPickColor: (night: Boolean) -> Unit,
+    onPickImage: (night: Boolean) -> Unit,
+    onClearImage: (night: Boolean) -> Unit,
+    onReset: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            AppText(
+                text = stringResource(R.string.capsule_style_summary, typeName),
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
+        item {
+            SplicedColumnGroup {
+                SliderSettingItem(
+                    title = stringResource(R.string.capsule_style_corner),
+                    description = stringResource(R.string.capsule_style_corner_summary),
+                    value = style.cornerRadius.toFloat(),
+                    defaultValue = CastCapsuleStyle.FULL.toFloat(),
+                    valueRange = 0f..CastCapsuleStyle.FULL.toFloat(),
+                    valueLabel = { "${it.toInt()}%" },
+                    onValueChange = { onStyleChange(style.copy(cornerRadius = it.toInt())) },
+                )
+                StyleColorRow(
+                    title = stringResource(R.string.capsule_style_bg_color_day),
+                    color = style.bgColor,
+                    onClick = { onPickColor(false) },
+                    onClear = { onStyleChange(style.copy(bgColor = 0)) },
+                )
+                StyleColorRow(
+                    title = stringResource(R.string.capsule_style_bg_color_night),
+                    color = style.bgColorNight,
+                    onClick = { onPickColor(true) },
+                    onClear = { onStyleChange(style.copy(bgColorNight = 0)) },
+                )
+                StyleImageRow(
+                    title = stringResource(R.string.capsule_style_bg_image_day),
+                    path = style.bgImage,
+                    onPick = { onPickImage(false) },
+                    onClear = { onClearImage(false) },
+                )
+                StyleImageRow(
+                    title = stringResource(R.string.capsule_style_bg_image_night),
+                    path = style.bgImageNight,
+                    onPick = { onPickImage(true) },
+                    onClear = { onClearImage(true) },
+                )
+                if (type == CastCapsuleStyleStore.ROLE) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.capsule_style_show_avatar),
+                        description = stringResource(R.string.capsule_style_show_avatar_summary),
+                        checked = style.showAvatar,
+                        onCheckedChange = { onStyleChange(style.copy(showAvatar = it)) },
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.capsule_style_show_name),
+                        description = stringResource(R.string.capsule_style_show_name_summary),
+                        checked = style.showName,
+                        onCheckedChange = { onStyleChange(style.copy(showName = it)) },
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.capsule_style_show_pool),
+                        description = stringResource(R.string.capsule_style_show_pool_summary),
+                        checked = style.showPool,
+                        onCheckedChange = { onStyleChange(style.copy(showPool = it)) },
+                    )
+                }
+                if (type != CastCapsuleStyleStore.BGM && style.showAvatar) {
+                    SliderSettingItem(
+                        title = stringResource(R.string.capsule_style_avatar_size),
+                        description = stringResource(R.string.capsule_style_avatar_size_summary),
+                        value = style.avatarScale.toFloat(),
+                        defaultValue = CastCapsuleStyle.FULL.toFloat(),
+                        valueRange = CastCapsuleStyle.AVATAR_SCALE_MIN.toFloat()..CastCapsuleStyle.AVATAR_SCALE_MAX.toFloat(),
+                        valueLabel = { "${it.toInt()}%" },
+                        onValueChange = { onStyleChange(style.copy(avatarScale = it.toInt())) },
+                    )
+                    SliderSettingItem(
+                        title = stringResource(R.string.capsule_style_avatar_corner),
+                        description = stringResource(R.string.capsule_style_avatar_corner_summary),
+                        value = style.avatarRadius.toFloat(),
+                        defaultValue = CastCapsuleStyle.FULL.toFloat(),
+                        valueRange = 0f..CastCapsuleStyle.FULL.toFloat(),
+                        valueLabel = { "${it.toInt()}%" },
+                        onValueChange = { onStyleChange(style.copy(avatarRadius = it.toInt())) },
+                    )
+                    SliderSettingItem(
+                        title = stringResource(R.string.capsule_style_avatar_left_right),
+                        value = style.avatarDx.toFloat(),
+                        defaultValue = 0f,
+                        valueRange = (-CastCapsuleStyle.SHIFT_FULL).toFloat()..CastCapsuleStyle.SHIFT_FULL.toFloat(),
+                        valueLabel = { "${it.toInt()}%" },
+                        onValueChange = { onStyleChange(style.copy(avatarDx = it.toInt())) },
+                    )
+                    SliderSettingItem(
+                        title = stringResource(R.string.capsule_style_avatar_up_down),
+                        value = style.avatarDy.toFloat(),
+                        defaultValue = 0f,
+                        valueRange = (-CastCapsuleStyle.SHIFT_FULL).toFloat()..CastCapsuleStyle.SHIFT_FULL.toFloat(),
+                        valueLabel = { "${it.toInt()}%" },
+                        onValueChange = { onStyleChange(style.copy(avatarDy = it.toInt())) },
+                    )
+                }
+            }
+        }
+
+        item {
+            SplicedColumnGroup {
+                ClickableSettingItem(
+                    title = stringResource(R.string.capsule_style_reset),
+                    description = stringResource(R.string.capsule_style_reset_summary),
+                    onClick = onReset,
+                )
+            }
+        }
+    }
 }
 
 /** 一行底色设置：色块直接当说明看，未设置时描述写「跟随主题」。 */
@@ -405,12 +459,11 @@ private fun StyleColorRow(
                         .background(if (color == 0) Color.Transparent else Color(color)),
                 )
                 if (color != 0) {
-                    IconButton(onClick = onClear) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.reset),
-                        )
-                    }
+                    MediumTonalButton(
+                        onClick = onClear,
+                        icon = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.reset),
+                    )
                 }
             }
         },
@@ -435,18 +488,86 @@ private fun StyleImageRow(
         onClick = onPick,
         trailingContent = {
             if (path.isNotEmpty()) {
-                IconButton(onClick = onClear) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.reset),
-                    )
-                }
+                MediumTonalButton(
+                    onClick = onClear,
+                    icon = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.reset),
+                )
             }
         },
     )
 }
 
-/** 深浅两块底板各画一颗胶囊：同一份数值，两种正文底色下长得什么样当场就能看到。 */
+/**
+ * 大胶囊的投影：自己画，不用平台的 elevation 阴影——在这么小的圆头形状上、投影色又淡，
+ * 平台阴影几乎看不出模糊（越淡越像一条边）。这里把轮廓均匀往外放大若干层、逐层淡出，
+ * 等效出一圈柔和光晕：[PREVIEW_SHADOW_BLUR] 是扩散半径，[PREVIEW_SHADOW_ALPHA] 是
+ * 贴着轮廓处的浓度，这两个值就能调软硬。
+ */
+private val PREVIEW_SHADOW_BLUR = 10.dp
+private val PREVIEW_SHADOW_ALPHA = 0.06f
+private val PREVIEW_SHADOW_OFFSET_Y = 3.dp
+private const val PREVIEW_SHADOW_LAYERS = 12
+
+/** 投影要往外扩，给底下留点余量，不然会被屏幕边裁掉。 */
+private val PREVIEW_SHADOW_ROOM = 10.dp
+
+/** 外层那颗「大胶囊」的形状：整颗圆头，与里面两颗按样式自己算出来的圆角互不牵连。 */
+private val PREVIEW_PILL = RoundedCornerShape(percent = 100)
+
+/**
+ * 大胶囊与小胶囊之间的留白：四个方向同一个值，左右和上下才不会一边松一边紧。
+ * 两颗小胶囊之间也用同一个值。
+ */
+private val PREVIEW_PILL_PADDING = 8.dp
+
+/** 预览用的浅/深页面底色：与正文里那两种底色同一组值。 */
+private val PREVIEW_PAGE_DAY = Color(0xFFFAFAFA)
+private val PREVIEW_PAGE_NIGHT = Color(0xFF17181A)
+
+/**
+ * 大胶囊的底：左半浅色页面、右半深色页面，中间是硬边界。
+ *
+ * 上面两颗胶囊 + 间距是对称的，边界正好落在两颗中间那道 8dp 间隙上，
+ * 于是两种页面底色各占一半，又不会从中间切开任何一颗胶囊。
+ */
+private val PREVIEW_PAGE_SPLIT = Brush.horizontalGradient(
+    0f to PREVIEW_PAGE_DAY,
+    0.5f to PREVIEW_PAGE_DAY,
+    0.5f to PREVIEW_PAGE_NIGHT,
+    1f to PREVIEW_PAGE_NIGHT,
+)
+
+/**
+ * 沿轮廓往外叠出一圈柔和投影。
+ *
+ * 每一层都是「把圆角矩形整体放大一点」的圆头矩形（圆角半径同步加上同样的量，所以
+ * 每一层仍然是正圆头），由外向内画：外圈先铺、里圈再叠上去，于是贴着轮廓处层数最多、
+ * 浓度最高，越往外越淡，直到 [PREVIEW_SHADOW_BLUR] 处归零——比平台阴影可控，
+ * 也真的看得出模糊。
+ */
+private fun Modifier.previewShadow(): Modifier = drawBehind {
+    val blur = PREVIEW_SHADOW_BLUR.toPx()
+    val dy = PREVIEW_SHADOW_OFFSET_Y.toPx()
+    val radius = size.height / 2f
+    val layerAlpha = PREVIEW_SHADOW_ALPHA / PREVIEW_SHADOW_LAYERS
+    for (i in PREVIEW_SHADOW_LAYERS downTo 1) {
+        val grow = blur * i / PREVIEW_SHADOW_LAYERS
+        drawRoundRect(
+            color = Color.Black.copy(alpha = layerAlpha),
+            topLeft = Offset(-grow, -grow + dy),
+            size = Size(size.width + grow * 2f, size.height + grow * 2f),
+            cornerRadius = CornerRadius(radius + grow, radius + grow),
+        )
+    }
+}
+
+/**
+ * 预览：外面一颗大胶囊，里面套着两颗完整的胶囊——浅色页面一颗、深色页面一颗。
+ *
+ * 大胶囊的底就是那两种页面底色（左半浅、右半深），所以两颗胶囊各自压在自己那种底色上；
+ * 里层两颗只有胶囊本身，不再各带一块黑白底板。整条宽度由两颗胶囊撑出来，不铺屏宽。
+ */
 @Composable
 private fun PreviewCard(
     modifier: Modifier = Modifier,
@@ -468,48 +589,59 @@ private fun PreviewCard(
     } else {
         ""
     }
-    Row(
+    Box(
+        // 撑满宽度只为把大胶囊摆在中间：看得见的只有它，宽高都由里面两颗决定
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(LegadoTheme.colorScheme.surfaceContainerLow)
-            .padding(vertical = 14.dp, horizontal = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(vertical = PREVIEW_SHADOW_ROOM),
+        contentAlignment = Alignment.Center,
     ) {
-        PreviewBoard(
-            modifier = Modifier.weight(1f),
-            board = Color(0xFFFAFAFA),
-            label = stringResource(R.string.capsule_style_preview_day),
-            textColor = Color.Black,
-            style = style,
-            bgColor = style.bgColor,
-            image = dayImage ?: nightImage,
-            withAvatar = withAvatar,
-            nameText = nameText,
-            poolText = poolText,
-            squareAvatarOnly = type == CastCapsuleStyleStore.ROLE,
-        )
-        PreviewBoard(
-            modifier = Modifier.weight(1f),
-            board = Color(0xFF17181A),
-            label = stringResource(R.string.capsule_style_preview_night),
-            textColor = Color.White,
-            style = style,
-            bgColor = style.bgColorNight,
-            image = nightImage ?: dayImage,
-            withAvatar = withAvatar,
-            nameText = nameText,
-            poolText = poolText,
-            squareAvatarOnly = type == CastCapsuleStyleStore.ROLE,
-        )
+        Row(
+            modifier = Modifier
+                // 整颗连着投影一起浮在列表之上；点击也整颗吃掉，正从它下面滑过的设置项
+                // 才不会被点到——和 FloatingBottomBar 同一个做法。
+                .previewShadow()
+                .clip(PREVIEW_PILL)
+                // 大胶囊的底：左半浅色页面、右半深色页面（硬边界落在两颗中间的空隙上）
+                .background(PREVIEW_PAGE_SPLIT)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                )
+                .padding(PREVIEW_PILL_PADDING),
+            horizontalArrangement = Arrangement.spacedBy(PREVIEW_PILL_PADDING),
+        ) {
+            PreviewCapsule(
+                textColor = Color.Black,
+                style = style,
+                bgColor = style.bgColor,
+                image = dayImage ?: nightImage,
+                withAvatar = withAvatar,
+                nameText = nameText,
+                poolText = poolText,
+                squareAvatarOnly = type == CastCapsuleStyleStore.ROLE,
+            )
+            PreviewCapsule(
+                textColor = Color.White,
+                style = style,
+                bgColor = style.bgColorNight,
+                image = nightImage ?: dayImage,
+                withAvatar = withAvatar,
+                nameText = nameText,
+                poolText = poolText,
+                squareAvatarOnly = type == CastCapsuleStyleStore.ROLE,
+            )
+        }
     }
 }
 
+/**
+ * 里层那颗胶囊：只有胶囊本身（底色、头像、名字/池名），不带页面底色——
+ * 页面底色由外面的大胶囊给，左半浅、右半深。
+ */
 @Composable
-private fun PreviewBoard(
-    modifier: Modifier,
-    board: Color,
-    label: String,
+private fun PreviewCapsule(
     textColor: Color,
     style: CastCapsuleStyle,
     bgColor: Int,
@@ -534,102 +666,90 @@ private fun PreviewBoard(
     } else {
         pad
     }
-    Column(
-        modifier = modifier.background(board).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        // 胶囊钉在底板左沿，与正文的行内左起一致：宽度变化不许把头像平移走
-        horizontalAlignment = Alignment.Start,
+    val shape = RoundedCornerShape(percent = style.cornerRadius.coerceIn(0, CastCapsuleStyle.FULL))
+    Box(
+        modifier = Modifier
+            .height(height)
+            .then(
+                if (square) {
+                    Modifier.width(height)
+                } else {
+                    Modifier.widthIn(min = if (withText) 96.dp else avatarSize + pad * 2f)
+                },
+            )
+            .clip(shape)
+            .background(
+                if (bgColor == 0) {
+                    textColor.copy(alpha = 0.13f)
+                } else {
+                    Color(bgColor)
+                },
+            ),
     ) {
-        val shape = RoundedCornerShape(percent = style.cornerRadius.coerceIn(0, CastCapsuleStyle.FULL))
-        Box(
-            modifier = Modifier
-                .height(height)
-                .then(
-                    if (square) {
-                        Modifier.width(height)
-                    } else {
-                        Modifier.widthIn(min = if (withText) 96.dp else avatarSize + pad * 2f)
-                    },
-                )
-                .clip(shape)
-                .background(
-                    if (bgColor == 0) {
-                        textColor.copy(alpha = 0.13f)
-                    } else {
-                        Color(bgColor)
-                    },
-                ),
-        ) {
-            if (image != null && !image.isRecycled) {
-                Image(
-                    bitmap = image.asImageBitmap(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.matchParentSize(),
-                )
-            }
-            val onColor = if (bgColor == 0) {
-                textColor
-            } else {
-                contrastColor(bgColor)
-            }
-            if (withText) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .padding(start = textLeft, end = pad),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    if (nameText.isNotEmpty()) {
-                        AppText(
-                            text = nameText,
-                            fontSize = 13.sp,
-                            color = onColor,
-                            maxLines = 1,
-                        )
-                    }
-                    if (poolText.isNotEmpty()) {
-                        AppText(
-                            text = poolText,
-                            fontSize = 10.sp,
-                            color = onColor.copy(alpha = 0.72f),
-                            maxLines = 1,
-                        )
-                    }
+        if (image != null && !image.isRecycled) {
+            Image(
+                bitmap = image.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+        }
+        val onColor = if (bgColor == 0) {
+            textColor
+        } else {
+            contrastColor(bgColor)
+        }
+        if (withText) {
+            Row(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(start = textLeft, end = pad),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (nameText.isNotEmpty()) {
+                    AppText(
+                        text = nameText,
+                        fontSize = 13.sp,
+                        color = onColor,
+                        maxLines = 1,
+                    )
                 }
-            }
-            if (withAvatar) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .offset(x = avatarLeft, y = avatarShiftY)
-                        .size(avatarSize)
-                        .clip(
-                            RoundedCornerShape(
-                                percent = style.avatarRadius.coerceIn(0, CastCapsuleStyle.FULL),
-                            ),
-                        )
-                        .background(onColor.copy(alpha = 0.35f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (nameText.isNotEmpty()) {
-                        // 角色那颗画的是头像，占位那颗只有人形图标 → 这里用名字首字代表头像
-                        AppText(
-                            text = nameText.take(1),
-                            fontSize = 11.sp,
-                            color = onColor,
-                            maxLines = 1,
-                        )
-                    }
+                if (poolText.isNotEmpty()) {
+                    AppText(
+                        text = poolText,
+                        fontSize = 10.sp,
+                        color = onColor.copy(alpha = 0.72f),
+                        maxLines = 1,
+                    )
                 }
             }
         }
-        AppText(
-            text = label,
-            style = LegadoTheme.typography.labelMedium,
-            color = LegadoTheme.colorScheme.onSurfaceVariant,
-        )
+        if (withAvatar) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = avatarLeft, y = avatarShiftY)
+                    .size(avatarSize)
+                    .clip(
+                        RoundedCornerShape(
+                            percent = style.avatarRadius.coerceIn(0, CastCapsuleStyle.FULL),
+                        ),
+                    )
+                    .background(onColor.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (nameText.isNotEmpty()) {
+                    // 角色那颗画的是头像，占位那颗只有人形图标 → 这里用名字首字代表头像
+                    AppText(
+                        text = nameText.take(1),
+                        fontSize = 11.sp,
+                        color = onColor,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 }
 

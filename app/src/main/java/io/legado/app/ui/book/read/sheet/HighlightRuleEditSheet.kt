@@ -30,7 +30,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,9 +47,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -62,9 +66,30 @@ import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.configNames
 import io.legado.app.data.repository.toJsonArray
+import io.legado.app.feature.reader.core.layout.ReaderChapterBlockMeasurer
+import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureResult
+import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureStyle
+import io.legado.app.feature.reader.core.layout.ReaderImageDimensionsResolver
+import io.legado.app.feature.reader.core.layout.ReaderPaginationConfig
+import io.legado.app.feature.reader.core.layout.ReaderPaginator
+import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
+import io.legado.app.feature.reader.core.layout.ReaderTextShaperFactory
+import io.legado.app.feature.reader.core.model.ReaderElement
+import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundRun
+import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.model.contentClipRect
+import io.legado.app.feature.reader.core.model.textBackgroundRuns
+import io.legado.app.feature.reader.core.source.ReaderChapterSource
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
+import io.legado.app.feature.reader.core.style.ReaderStyleTarget
+import io.legado.app.feature.reader.core.style.mergeBackgroundBounds
 import io.legado.app.feature.reader.drawTextBackground
+import io.legado.app.feature.reader.legacy.LegacyReaderPaginationStyleFactory
+import io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper
+import io.legado.app.feature.reader.platform.AndroidReaderTextShaper
+import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
+import io.legado.app.feature.reader.platform.ReaderPageDecorationDrawCache
 import io.legado.app.feature.reader.platform.ReaderTextBackgroundLoader
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.theme.LegadoTheme
@@ -85,39 +110,13 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.spToPx
 import io.legado.app.utils.toastOnUi
-import java.io.File
-import kotlin.math.abs
-import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.platform.LocalWindowInfo
-import io.legado.app.feature.reader.core.layout.ReaderChapterBlockMeasurer
-import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureResult
-import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureStyle
-import io.legado.app.feature.reader.core.layout.ReaderImageDimensionsResolver
-import io.legado.app.feature.reader.core.layout.ReaderPaginationConfig
-import io.legado.app.feature.reader.core.layout.ReaderPaginator
-import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
-import io.legado.app.feature.reader.core.layout.ReaderTextShaperFactory
-import io.legado.app.feature.reader.core.model.ReaderElement
-import io.legado.app.feature.reader.core.model.ReaderPage
-import io.legado.app.feature.reader.core.model.ReaderTextStyle
-import io.legado.app.feature.reader.core.model.textBackgroundRuns
-import io.legado.app.feature.reader.core.source.ReaderChapterSource
-import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
-import io.legado.app.feature.reader.core.style.ReaderStyleTarget
-import io.legado.app.feature.reader.core.style.mergeBackgroundBounds
-import io.legado.app.feature.reader.legacy.LegacyReaderPaginationStyleFactory
-import io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper
-import io.legado.app.feature.reader.platform.AndroidReaderTextShaper
-import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
-import io.legado.app.feature.reader.platform.ReaderPageDecorationDrawCache
+import java.io.File
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun HighlightRuleEditSheet(
@@ -373,7 +372,7 @@ fun HighlightRuleEditSheet(
                             .onFocusEvent { typingFocused = it.hasFocus },
                         isError = patternError != null,
                         supportingText = patternError?.let {
-                            { AppText(it, color = MaterialTheme.colorScheme.error) }
+                            { AppText(it, color = LegadoTheme.colorScheme.error) }
                         },
                     )
 
@@ -1191,7 +1190,7 @@ internal fun NinePatchEditorDialog(
                     .fillMaxWidth()
                     .height(250.dp)
                     .padding(8.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                    .background(LegadoTheme.colorScheme.surfaceContainerLow),
             ) {
                 if (bitmap != null) {
                     Canvas(

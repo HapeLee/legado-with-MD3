@@ -159,6 +159,7 @@ fun ReadBookRouteScreen(
     onOpenToc: (bookUrl: String, initialPage: Int) -> Unit,
     onOpenReplaceRule: (bookUrl: String?, editor: ReplaceEditRoute?) -> Unit,
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
+    onOpenReadAloudSubPage: (ReadAloudSubPage) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
     onNavigateBack: () -> Boolean = { true },
@@ -426,6 +427,9 @@ fun ReadBookRouteScreen(
                             }
                             is ReadBookEffect.OpenBookVoiceCasting -> {
                                 onOpenVoiceCasting(effect.bookUrl)
+                            }
+                            is ReadBookEffect.OpenReadAloudSubPage -> {
+                                onOpenReadAloudSubPage(effect.page)
                             }
                             ReadBookEffect.OpenTtsEnginesAndVoices -> onOpenTtsEnginesAndVoices()
                             ReadBookEffect.OpenTtsCache -> onOpenTtsCache()

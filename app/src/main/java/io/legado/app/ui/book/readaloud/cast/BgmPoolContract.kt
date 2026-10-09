@@ -28,6 +28,9 @@ data class BgmTrackUi(
     val volume: Float = 1f,
 )
 
+/** 背景音乐池页的两页：音乐池（分组树 + 池）与配乐库（导入进来的音频）。 */
+enum class BgmPoolTab { Pools, Library }
+
 /**
  * 背景音乐池页状态。
  *
@@ -58,8 +61,8 @@ data class BgmPoolUiState(
     val pickerCandidates: ImmutableList<CastMemberUi> = persistentListOf(),
     /** 配乐库（导入进来的音频副本）。 */
     val tracks: ImmutableList<BgmTrackUi> = persistentListOf(),
-    /** 配乐库展开区是否打开。 */
-    val libraryExpanded: Boolean = false,
+    /** 当前显示哪一页：音乐池 / 配乐库。 */
+    val selectedTab: BgmPoolTab = BgmPoolTab.Pools,
     val trackDeleteTarget: BgmTrackUi? = null,
     /** 正在改音量的配乐（弹窗），null = 没开。 */
     val trackVolumeTarget: BgmTrackUi? = null,
@@ -77,6 +80,8 @@ data class BgmPoolUiState(
  * 后面才是背景音乐特有的：配乐库、试听、淡入淡出。
  */
 sealed interface BgmPoolIntent {
+    /** 顶部两页切换：音乐池 / 配乐库。 */
+    data class SelectTab(val tab: BgmPoolTab) : BgmPoolIntent
     data object Refresh : BgmPoolIntent
     data class ToggleGroup(val group: String) : BgmPoolIntent
     data class SetGroupEnabled(val groupId: String, val enabled: Boolean) : BgmPoolIntent
@@ -119,8 +124,7 @@ sealed interface BgmPoolIntent {
     data class TogglePickerSelection(val trackId: String, val checked: Boolean) : BgmPoolIntent
     data object SaveMemberPicker : BgmPoolIntent
 
-    /** 配乐库：展开/收起、导入、开关、删除。 */
-    data object ToggleLibrary : BgmPoolIntent
+    /** 配乐库：导入、开关、删除。 */
     data object AskImport : BgmPoolIntent
     data class FilesPicked(val uris: List<Uri>) : BgmPoolIntent
     data class SetTrackEnabled(val id: String, val enabled: Boolean) : BgmPoolIntent

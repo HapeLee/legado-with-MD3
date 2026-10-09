@@ -2,7 +2,6 @@ package io.legado.app.ui.book.read
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,11 +49,11 @@ import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
@@ -168,14 +167,13 @@ fun ReadBookScreen(
                     checked = rememberAliasChoice,
                     onCheckedChange = { rememberAliasChoice = it },
                 )
-                TextButton(
+                MediumPlainButton(
                     onClick = {
                         onIntent(ReadBookIntent.ClearReadRecordAliasDecisions)
                     },
                     modifier = Modifier.align(Alignment.End),
-                ) {
-                    AppText(stringResource(R.string.read_record_alias_revoke))
-                }
+                    text = stringResource(R.string.read_record_alias_revoke),
+                )
             }
         },
     )
@@ -304,16 +302,14 @@ fun ReadBookScreen(
         show = state.activeSheet is ReadBookSheet.BgmSceneTable,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
-        menuConfig = state.menuConfig,
     )
 
-    // AI 分配角色悬浮窗
+    // AI 分配角色弹层
     io.legado.app.ui.book.read.sheet.AiCastDialogSheet(
         show = state.activeSheet is ReadBookSheet.AiCastDialog,
         sceneOnly = (state.activeSheet as? ReadBookSheet.AiCastDialog)?.sceneOnly == true,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
-        menuConfig = state.menuConfig,
     )
     // 听书下载悬浮窗：和其余卡片一样常挂，show 由 sheet 类型驱动，退场动画才有地方播
     io.legado.app.ui.book.read.sheet.ReaderAudioDownloadSheet(
@@ -547,8 +543,8 @@ fun ReadBookScreen(
     val aloudPlayerShellState by aloudPlayerViewModel.uiState.collectAsStateWithLifecycle()
     /*
      * 朗读设置是窗口级浮层（AppModalBottomSheet 在 miuix 引擎下走独立窗口），压上整屏页时它
-     * 不会跟着下沉，于是从「引擎与音色」那三行进新页面，朗读设置还悬在新页面上面。
-     * 导航栈顶不是阅读页就把它收起来；返回后栈顶回到阅读页，弹层自己摊回来，
+     * 不会跟着下沉，于是从「引擎与音色」「角色与配乐」里那几个跳转项进新页面时，朗读设置
+     * 还悬在新页面上面。导航栈顶不是阅读页就把它收起来；返回后栈顶回到阅读页，弹层自己摊回来，
      * 停在哪个 tab 由 readAloudConfigTab 记着（见 ReadBookContract 里的注释）。
      */
     val navRouteTracker: io.legado.app.ui.main.MainNavRouteTracker = org.koin.compose.koinInject()

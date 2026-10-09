@@ -48,6 +48,8 @@ class BgmPoolViewModel(
 
     fun onIntent(intent: BgmPoolIntent) {
         when (intent) {
+            is BgmPoolIntent.SelectTab -> _uiState.update { it.copy(selectedTab = intent.tab) }
+
             BgmPoolIntent.Refresh -> {
                 refreshPools()
                 refreshTracks()
@@ -341,10 +343,6 @@ class BgmPoolViewModel(
                     refreshMembers(poolId)
                     refreshPools()
                 }
-            }
-
-            BgmPoolIntent.ToggleLibrary -> _uiState.update {
-                it.copy(libraryExpanded = !it.libraryExpanded)
             }
 
             BgmPoolIntent.AskImport -> _effects.tryEmit(BgmPoolEffect.OpenFilePicker)

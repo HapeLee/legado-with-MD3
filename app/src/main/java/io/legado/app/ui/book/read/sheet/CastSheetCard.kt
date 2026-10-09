@@ -4,9 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -15,8 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import dev.chrisbanes.haze.HazeState
@@ -29,6 +28,7 @@ import io.legado.app.ui.book.read.readMenuTextColor
 import io.legado.app.ui.book.read.readMenuTintColor
 import io.legado.app.ui.book.read.toReaderMenuTintStyle
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.reader.ReaderMenuEffect
 import io.legado.app.ui.widget.components.reader.ReaderMenuPlacement
 import io.legado.app.ui.widget.components.reader.ReaderMenuVisualState
@@ -139,7 +139,9 @@ fun CastSheetCard(
         ),
         label = "castSheetScale",
     )
-    Surface(
+    // 卡片外壳走项目的 NormalCard（弹层里用不带 Item 底色的那种）；
+    // 有模糊/玻璃/着色时容器透明，效果由上面的 effectModifier 画，卡片本身不遮住它。
+    NormalCard(
         modifier = modifier
             .then(effectModifier)
             .graphicsLayer {
@@ -147,12 +149,19 @@ fun CastSheetCard(
                 scaleX = pop.value
                 scaleY = pop.value
             },
-        shape = shape,
-        color = if (painted) Color.Transparent else LegadoTheme.colorScheme.surfaceContainerHigh,
-        contentColor = contentColor,
-        tonalElevation = if (painted) 0.dp else 3.dp,
-        content = content,
-    )
+        cornerRadius = corner,
+        containerColor = if (painted) Color.Transparent else LegadoTheme.colorScheme.surfaceContainerHigh,
+        // Unspecified 会被 NormalCard 当成显式值透传给子级，这里补成 onSurface，
+        // 否则没有着色配置时子级隐式取色会拿到 Unspecified（深色模式下画成黑）
+        contentColor = if (contentColor == Color.Unspecified) {
+            LegadoTheme.colorScheme.onSurface
+        } else {
+            contentColor
+        },
+        elevation = if (painted) 0.dp else 3.dp,
+    ) {
+        content()
+    }
 }
 
 /**

@@ -18,6 +18,7 @@ import io.legado.app.R
 import io.legado.app.core.ui.player.PlayerMorphAppearance
 import io.legado.app.core.ui.player.PlayerMorphHost
 import io.legado.app.help.IntentHelp
+import io.legado.app.ui.book.read.ReadAloudSubPage
 import io.legado.app.ui.book.read.sheet.ReadAloudConfigContent
 import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
 import io.legado.app.ui.book.read.sheet.asReadBookUiState
@@ -51,6 +52,7 @@ fun ReadAloudPlayerMorphHost(
     onOpenTtsEnginesAndVoices: (bookUrl: String) -> Unit,
     onOpenTtsCache: () -> Unit,
     onOpenBookVoiceCasting: (bookUrl: String) -> Unit,
+    onOpenReadAloudSubPage: (ReadAloudSubPage) -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -60,7 +62,7 @@ fun ReadAloudPlayerMorphHost(
     val settingsState by playerViewModel.readAloudSettings.collectAsStateWithLifecycle()
     var configVisible by rememberSaveable { mutableStateOf(false) }
     /**
-     * 朗读设置停在哪个 tab（0=常规，1=引擎与音色）。存在宿主而不是弹层里：
+     * 朗读设置停在哪个 tab（0=常规，1=引擎与音色，2=角色与配乐）。存在宿主而不是弹层里：
      * 压进整屏页会拆掉弹层那层 composition，`rememberPagerState` 的初值回到 0，
      * 回来就落在常规 tab。
      */
@@ -86,6 +88,7 @@ fun ReadAloudPlayerMorphHost(
     val currentOpenTtsEnginesAndVoices by rememberUpdatedState(onOpenTtsEnginesAndVoices)
     val currentOpenTtsCache by rememberUpdatedState(onOpenTtsCache)
     val currentOpenBookVoiceCasting by rememberUpdatedState(onOpenBookVoiceCasting)
+    val currentOpenReadAloudSubPage by rememberUpdatedState(onOpenReadAloudSubPage)
 
     suspend fun collapsePlayer(keepConfig: Boolean = false) {
         configWaitsForPlayer = keepConfig
@@ -123,6 +126,18 @@ fun ReadAloudPlayerMorphHost(
 
             ReadAloudPlayerConfigHostAction.OpenBookVoiceCasting -> navigateFromPlayer {
                 currentOpenBookVoiceCasting(playerViewModel.uiState.value.bookUrl)
+            }
+
+            ReadAloudPlayerConfigHostAction.OpenVoicePool -> navigateFromPlayer {
+                currentOpenReadAloudSubPage(ReadAloudSubPage.VoicePool)
+            }
+
+            ReadAloudPlayerConfigHostAction.OpenBgmPool -> navigateFromPlayer {
+                currentOpenReadAloudSubPage(ReadAloudSubPage.BgmPool)
+            }
+
+            ReadAloudPlayerConfigHostAction.OpenCapsuleStyle -> navigateFromPlayer {
+                currentOpenReadAloudSubPage(ReadAloudSubPage.CapsuleStyle)
             }
 
             ReadAloudPlayerConfigHostAction.OpenSystemTtsSettings ->
@@ -212,6 +227,8 @@ fun ReadAloudPlayerMorphHost(
             onPlayerIntent = playerViewModel::onIntent,
             selectedTab = configTab,
             onTabSelected = { configTab = it },
+            // 正文内配乐浮层由阅读器宿主承载，播放页没有这套 ViewModel
+            bgmSceneActionsEnabled = false,
         )
     }
 

@@ -2572,6 +2572,7 @@ class ReadBookController(
             ReadBookEffect.OpenTtsEnginesAndVoices,
             ReadBookEffect.OpenTtsCache,
             is ReadBookEffect.OpenBookVoiceCasting,
+            is ReadBookEffect.OpenReadAloudSubPage,
             is ReadBookEffect.OpenHighlightRuleImportPicker,
             is ReadBookEffect.OpenHighlightRuleExportPicker,
             is ReadBookEffect.TtsCacheCleared,

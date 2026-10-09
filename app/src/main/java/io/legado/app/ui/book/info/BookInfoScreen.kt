@@ -61,12 +61,10 @@ import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -337,8 +335,8 @@ private fun BookInfoScreenContent(
                     onClick = { onIntent(BookInfoIntent.ReadClick) },
                     containerColor = LegadoTheme.colorScheme.primaryContainer,
                     contentColor = LegadoTheme.colorScheme.onPrimaryContainer,
-                    icon = { Icon(Icons.Default.Book, null) },
-                    text = { Text(stringResource(R.string.reading)) },
+                    icon = { AppIcon(Icons.Default.Book, null) },
+                    text = { AppText(stringResource(R.string.reading)) },
                 )
             }
         },
@@ -781,7 +779,7 @@ private fun BookInfoTransparentTopAppBar(
     } else {
         MediumFlexibleTopAppBar(
             modifier = hazeState?.let { Modifier.responsiveHazeEffectFixedStyle(it) } ?: Modifier,
-            title = { Text(text = "", maxLines = 1) },
+            title = { AppText(text = "", maxLines = 1) },
             navigationIcon = {
                 TopBarNavigationButton(onClick = onBackPressed)
             },

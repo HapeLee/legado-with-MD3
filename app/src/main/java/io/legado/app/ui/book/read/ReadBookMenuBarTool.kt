@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -59,8 +57,10 @@ import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
 import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.reader.ReaderMenuSlider as BaseReaderMenuSlider
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.text.AppText
 import kotlin.math.roundToInt
+import io.legado.app.ui.widget.components.reader.ReaderMenuSlider as BaseReaderMenuSlider
 
 @Composable
 internal fun ReadMenuSlider(
@@ -358,7 +358,7 @@ internal fun ToolButtonItem(
         }
         if (state.menuConfig.readMenuIconShowText) {
             Spacer(Modifier.height(2.dp))
-            Text(
+            AppText(
                 text = button.description,
                 style = LegadoTheme.typography.labelSmall.copy(
                     shadow = menuTextShadow
@@ -385,7 +385,7 @@ private fun ToolButtonContent(
         modifier = Modifier.fillMaxSize(),
     ) {
         if (button.customIconPath.isNullOrBlank()) {
-            Icon(
+            AppIcon(
                 imageVector = button.icon,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
@@ -402,7 +402,7 @@ private fun ToolButtonContent(
             )
         }
         if (badgeCount > 0) {
-            Text(
+            AppText(
                 text = badgeCount.toString(),
                 modifier = Modifier
                     .align(Alignment.TopEnd)

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmark
@@ -30,10 +31,8 @@ import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +54,7 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -131,7 +131,7 @@ internal fun FloatingIconRow(
                             .clip(CircleShape),
                     )
                 } else {
-                    Icon(
+                    AppIcon(
                         imageVector = iconDef.icon,
                         contentDescription = null,
                         tint = if (iconDef.isActive) LegadoTheme.colorScheme.primary else colors.content,

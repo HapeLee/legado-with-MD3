@@ -1,7 +1,12 @@
 package io.legado.app.ui.book.readaloud.cast
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,8 +16,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -23,20 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -56,14 +50,24 @@ import io.legado.app.help.readaloud.cast.CastGroupRow
 import io.legado.app.help.readaloud.cast.CastPoolRow
 import io.legado.app.help.readaloud.cast.VoicePoolStore
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastOption
+import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.SearchBar
+import io.legado.app.ui.widget.components.TinySwitch
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.checkBox.AppCheckbox
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.reorderAccessibility
+import io.legado.app.ui.widget.components.text.AppText
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
 
@@ -222,33 +226,27 @@ fun PoolTreeList(
     // 搜索框和提示必须放在 LazyColumn 外面：reorderable 回调给的是 LazyColumn 的
     // 绝对下标，列表里只要多一个前置 item，下标就会整体偏移，拖动时条目会来回乱跳。
     Column(modifier = modifier) {
-        if (view.searchActive) {
-            OutlinedTextField(
-                value = view.searchQuery,
-                onValueChange = actions.onQuery,
-                placeholder = {
-                    Text(
-                        stringResource(wording.searchPoolHint),
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
+        // 显隐走高度+淡入淡出（与书签/阅读记录等界面同一套）：搜索框是「临时加一层筛选」，
+        // 直接 if 进出会让整列表瞬间跳一屏，手指还悬在刚才那条上。
+        AnimatedVisibility(
+            visible = view.searchActive,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut(),
+        ) {
+            SearchBar(
+                query = view.searchQuery,
+                onQueryChange = actions.onQuery,
+                placeholder = stringResource(wording.searchPoolHint),
+                autoFocus = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
         if (canReorder) {
-            Text(
+            AppText(
                 text = stringResource(R.string.cast_pool_sort_hint),
-                style = MaterialTheme.typography.bodySmall,
+                style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
             )
@@ -397,9 +395,9 @@ private fun DragOutcomeBar(view: CastPoolView) {
         cornerRadius = 14.dp,
         elevation = 3.dp,
     ) {
-        Text(
+        AppText(
             text = outcome,
-            style = MaterialTheme.typography.labelLarge,
+            style = LegadoTheme.typography.labelLarge,
             color = LegadoTheme.colorScheme.onSurface,
             modifier = Modifier
                 .fillMaxWidth()
@@ -453,49 +451,50 @@ private fun GroupHeader(
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Default.Folder,
+            AppIcon(
+                imageVector = Icons.Default.Folder,
                 contentDescription = null,
                 tint = LegadoTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = 8.dp),
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .size(20.dp),
             )
-            Text(
+            AppText(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = LegadoTheme.typography.titleSmall,
                 color = LegadoTheme.colorScheme.primary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
             if (dropTarget) {
-                Text(
+                AppText(
                     text = stringResource(R.string.cast_group_drop_here),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = LegadoTheme.typography.labelMedium,
                     color = LegadoTheme.colorScheme.primary,
                     maxLines = 1,
                     modifier = Modifier.padding(end = 8.dp),
                 )
             }
             onEnabledChange?.let { change ->
-                Switch(checked = enabled, onCheckedChange = change)
+                // tiny 系列开关：与 TinySwitchSettingItem 里那颗完全同一颗，
+                // 分组头这层卡片还要留着描边高亮与拖拽抬升，所以外壳不用 TinySettingItem
+                TinySwitch(checked = enabled, onCheckedChange = change)
             }
-            Text(
+            AppText(
                 text = "($enabledCount/$total)",
-                style = MaterialTheme.typography.labelMedium,
+                style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 modifier = Modifier.padding(horizontal = 10.dp),
             )
             if (onRename != null || onDelete != null) {
                 Box {
-                    IconButton(onClick = { showMenu = true }, modifier = Modifier.width(40.dp)) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.more),
-                            tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(4.dp),
-                        )
-                    }
+                    SmallPlainButton(
+                        onClick = { showMenu = true },
+                        icon = AppIcons.MoreVert,
+                        contentDescription = stringResource(R.string.more),
+                    )
                     RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) { dismiss ->
                         onRename?.let { action ->
                             RoundDropdownMenuItem(
@@ -536,7 +535,7 @@ private fun GroupHeader(
                     }
                 }
             }
-            Icon(
+            AppIcon(
                 imageVector = if (collapsed) Icons.Default.ArrowDropDown else Icons.Default.ArrowDropUp,
                 contentDescription = null,
                 tint = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -595,21 +594,28 @@ private fun CastPoolCard(
                     .weight(1f)
                     .padding(vertical = 6.dp),
             ) {
-                Text(
-                    text = if (wording.hasMembers) {
-                        "${pool.name} (${pool.enabledCount}/${pool.total})"
-                    } else {
-                        pool.name
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
+                AppText(
+                    text = pool.name,
+                    style = LegadoTheme.typography.bodyLarge,
                     color = LegadoTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                // 成员数另起一行：名称太长时不会被省略号连计数一起吃掉。
+                // 自己一行就不用括号了；取色用 primary，跟 onSurface 的名称区分开
+                if (wording.hasMembers) {
+                    AppText(
+                        text = "${pool.enabledCount}/${pool.total}",
+                        style = LegadoTheme.typography.labelMedium,
+                        color = LegadoTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (!wording.hasMembers && pool.subtitle.isNotBlank()) {
-                    Text(
+                    AppText(
                         text = pool.subtitle,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -617,32 +623,31 @@ private fun CastPoolCard(
                 }
                 // 搜索态是拉平列表，得标出池所在分组
                 if (showGroup && pool.groupName.isNotBlank()) {
-                    Text(
+                    AppText(
                         text = pool.groupName,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-            Switch(checked = pool.enabled, onCheckedChange = onToggle)
-            IconButton(onClick = onEdit) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = stringResource(R.string.edit),
-                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete),
-                    tint = LegadoTheme.colorScheme.error,
-                )
-            }
+            // 与分组头同一颗 tiny 系列开关：这两层卡片带描边高亮与拖拽抬升，
+            // 外壳不能换成 TinySettingItem，开关本身仍走 tiny 那一颗
+            TinySwitch(checked = pool.enabled, onCheckedChange = onToggle)
+            // 行内动作一律 small 系列：整行已经是一张卡，按钮再占一格高度就把它压扁了
+            SmallPlainButton(
+                onClick = onEdit,
+                icon = AppIcons.Edit,
+                contentDescription = stringResource(R.string.edit),
+            )
+            SmallPlainButton(
+                onClick = onDelete,
+                icon = AppIcons.Delete,
+                contentDescription = stringResource(R.string.delete),
+            )
             if (wording.hasMembers) {
-                Icon(
+                AppIcon(
                     imageVector = if (expanded) {
                         Icons.Default.ArrowDropUp
                     } else {
@@ -665,41 +670,27 @@ private fun CastPoolCard(
                     .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                OutlinedTextField(
-                    value = memberQuery,
-                    onValueChange = onQuery,
-                    placeholder = {
-                        Text(
-                            stringResource(wording.searchMemberHint),
-                            color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    singleLine = true,
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
+                SearchBar(
+                    query = memberQuery,
+                    onQueryChange = onQuery,
+                    placeholder = stringResource(wording.searchMemberHint),
+                    autoFocus = false,
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 4.dp),
                 )
-                IconButton(onClick = onAddMembers) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = stringResource(wording.addMember),
-                        tint = LegadoTheme.colorScheme.onSurface,
-                    )
-                }
+                SmallPlainButton(
+                    onClick = onAddMembers,
+                    icon = Icons.Default.Add,
+                    contentDescription = stringResource(wording.addMember),
+                )
             }
             if (visibleMembers.isEmpty()) {
-                Text(
-                    text = stringResource(wording.noMembers),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                EmptyMessage(
+                    messageResId = wording.noMembers,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
                 )
             }
             visibleMembers.forEach { member ->
@@ -710,21 +701,24 @@ private fun CastPoolCard(
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Checkbox(checked = member.checked, onCheckedChange = { onMemberToggle(member.voiceId, it) })
+                    AppCheckbox(
+                        checked = member.checked,
+                        onCheckedChange = { onMemberToggle(member.voiceId, it) },
+                    )
                     Spacer(Modifier.width(4.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        AppText(
                             text = member.displayName,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = LegadoTheme.typography.bodyMedium,
                             color = LegadoTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         // 池里能混着不同引擎的音色，得看清这一条是谁家的（同「朗读引擎与音色」页）
                         if (member.engineName.isNotBlank()) {
-                            Text(
+                            AppText(
                                 text = member.engineName,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = LegadoTheme.typography.bodySmall,
                                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -732,17 +726,14 @@ private fun CastPoolCard(
                         }
                     }
                     memberTrailing?.invoke(member)
-                    IconButton(onClick = { onMemberRemove(member.voiceId) }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = stringResource(wording.removeMember),
-                            tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(2.dp),
-                        )
-                    }
+                    SmallPlainButton(
+                        onClick = { onMemberRemove(member.voiceId) },
+                        icon = AppIcons.Delete,
+                        contentDescription = stringResource(wording.removeMember),
+                    )
                 }
             }
-            Spacer(Modifier.width(1.dp).padding(bottom = 6.dp))
+            Spacer(Modifier.height(6.dp))
         }
     }
 }
@@ -762,28 +753,33 @@ fun castGroupOptions(groups: List<CastGroupRow>): List<CastOption> = buildList {
  */
 @Composable
 fun PoolEditDialog(
-    dialog: PoolEditDialogState,
+    dialog: PoolEditDialogState?,
     groups: List<CastGroupRow>,
     wording: CastPoolWording,
     onSave: (editingId: String?, name: String, groupId: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // 调用方必须常驻组合本弹窗、只把 dialog 置 null：miuix 的窗口靠 show 驱动退场动画，
+    // 用 `?.let` 条件组合会让整棵子树在关闭那一刻被摘掉，动画（和草稿）一起没了。
+    // 这里缓存最后一份数据只为让退场期间仍有内容可画。
+    var cached by remember { mutableStateOf(dialog) }
+    if (dialog != null) cached = dialog
+    val current = cached ?: return
     val options = castGroupOptions(groups)
-    var name by remember(dialog) { mutableStateOf(dialog.name) }
-    var groupId by remember(dialog) { mutableStateOf(dialog.groupId) }
+    var name by remember(current) { mutableStateOf(current.name) }
+    var groupId by remember(current) { mutableStateOf(current.groupId) }
     // 选中项的显示名。打字是按它筛选，所以不能拿 groupId 反推。
-    var groupQuery by remember(dialog) {
-        mutableStateOf(options.firstOrNull { it.key == dialog.groupId }?.label.orEmpty())
+    var groupQuery by remember(current) {
+        mutableStateOf(options.firstOrNull { it.key == current.groupId }?.label.orEmpty())
     }
-    var groupExpanded by remember(dialog) { mutableStateOf(false) }
-    AlertDialog(
+    var groupExpanded by remember(current) { mutableStateOf(false) }
+    AppAlertDialog(
+        show = dialog != null,
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(if (dialog.editingId == null) wording.createPool else wording.editPool),
-            )
-        },
-        text = {
+        title = stringResource(
+            if (current.editingId == null) wording.createPool else wording.editPool
+        ),
+        content = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CastFieldStack(
                     specs = listOf(
@@ -808,68 +804,63 @@ fun PoolEditDialog(
                         ),
                     ),
                 )
-                dialog.errorRes?.let {
-                    Text(
+                current.errorRes?.let {
+                    AppText(
                         text = stringResource(it),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.error,
                     )
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = { onSave(dialog.editingId, name, groupId) }) {
-                Text(stringResource(R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onSave(current.editingId, name, groupId) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss,
     )
 }
 
 @Composable
 fun GroupEditDialog(
-    dialog: GroupEditDialogState,
+    dialog: GroupEditDialogState?,
     onConfirm: (editingId: String?, parentId: String, name: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var name by remember(dialog) { mutableStateOf(dialog.name) }
-    AlertDialog(
+    // 同 PoolEditDialog：常驻组合 + show，关闭时miuix 才有退场动画可播
+    var cached by remember { mutableStateOf(dialog) }
+    if (dialog != null) cached = dialog
+    val current = cached ?: return
+    var name by remember(current) { mutableStateOf(current.name) }
+    AppAlertDialog(
+        show = dialog != null,
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(
-                    if (dialog.editingId == null) R.string.cast_group_create else R.string.cast_group_rename,
-                ),
-            )
-        },
-        text = {
+        title = stringResource(
+            if (current.editingId == null) R.string.cast_group_create else R.string.cast_group_rename,
+        ),
+        content = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
+                AppTextField(
                     value = name,
                     onValueChange = { name = it },
                     singleLine = true,
-                    label = { Text(stringResource(R.string.cast_group)) },
+                    label = stringResource(R.string.cast_group),
+                    // 弹层里的输入框用 onSheetContent 底色（半透明），与弹层底色分层
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                dialog.errorRes?.let {
-                    Text(
+                current.errorRes?.let {
+                    AppText(
                         text = stringResource(it),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.error,
                     )
                 }
             }
         },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(dialog.editingId, dialog.parentId, name) },
-            ) { Text(stringResource(R.string.ok)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onConfirm(current.editingId, current.parentId, name) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss,
     )
 }
 
@@ -881,17 +872,22 @@ fun MoveGroupDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // 常驻组合（见 PoolEditDialog）：关掉时 miuix 才有退场动画
+    var cached by remember { mutableStateOf(target) }
+    if (target != null) cached = target
+    val current = cached ?: return
     // 不能挂到自己或自己的子孙下面：整棵子树从候选里剔掉
-    val options = remember(target, groups) {
-        val self = target?.path ?: return@remember groups
+    val options = remember(current, groups) {
+        val self = current.path
         groups.filterNot {
-            it.id == target.id || it.path.startsWith("$self${VoicePoolStore.GROUP_SEPARATOR}")
+            it.id == current.id || it.path.startsWith("$self${VoicePoolStore.GROUP_SEPARATOR}")
         }
     }
-    AlertDialog(
+    AppAlertDialog(
+        show = target != null,
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.cast_group_move_title, target?.name.orEmpty())) },
-        text = {
+        title = stringResource(R.string.cast_group_move_title, current.name),
+        content = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -900,7 +896,7 @@ fun MoveGroupDialog(
             ) {
                 MoveRow(
                     label = stringResource(R.string.cast_group_root),
-                    selected = target?.parentId == UNGROUPED,
+                    selected = current.parentId == UNGROUPED,
                 ) { onConfirm(UNGROUPED) }
                 options.forEach { group ->
                     MoveRow(label = INDENT.repeat(group.depth) + group.name, selected = false) {
@@ -909,16 +905,16 @@ fun MoveGroupDialog(
                 }
             }
         },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss,
     )
 }
 
 @Composable
 private fun MoveRow(label: String, selected: Boolean, onClick: () -> Unit) {
-    Text(
+    AppText(
         text = label,
-        style = MaterialTheme.typography.bodyLarge,
+        style = LegadoTheme.typography.bodyLarge,
         color = if (selected) {
             LegadoTheme.colorScheme.primary
         } else {
@@ -935,23 +931,28 @@ private fun MoveRow(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 fun PoolConfirmDialog(
+    show: Boolean,
     title: String,
     text: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    AppAlertDialog(
+        show = show,
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(text) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.delete)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        title = title,
+        text = text,
+        confirmText = stringResource(R.string.delete),
+        onConfirm = onConfirm,
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss,
     )
 }
 
 /** 「添加成员」对话框：勾选候选，保存才并入池。 */
 @Composable
 fun MemberPickerDialog(
+    show: Boolean,
     pickerQuery: String,
     candidates: List<CastMemberUi>,
     wording: CastPoolWording,
@@ -960,16 +961,19 @@ fun MemberPickerDialog(
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    AppAlertDialog(
+        show = show,
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(wording.pickerTitle)) },
-        text = {
+        title = stringResource(wording.pickerTitle),
+        content = {
             Column {
-                OutlinedTextField(
-                    value = pickerQuery,
-                    onValueChange = onQuery,
-                    placeholder = { Text(stringResource(wording.searchMemberHint)) },
-                    singleLine = true,
+                SearchBar(
+                    query = pickerQuery,
+                    onQueryChange = onQuery,
+                    placeholder = stringResource(wording.searchMemberHint),
+                    autoFocus = false,
+                    // 弹层里的搜索框同输入框：底色用 onSheetContent，与弹层底色分层
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Box(
@@ -984,9 +988,9 @@ fun MemberPickerDialog(
                             .verticalScroll(rememberScrollState()),
                     ) {
                         if (candidates.isEmpty()) {
-                            Text(
-                                text = stringResource(R.string.cast_no_match),
-                                modifier = Modifier.padding(vertical = 12.dp),
+                            EmptyMessage(
+                                messageResId = R.string.cast_no_match,
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                         candidates.forEach { cand ->
@@ -997,21 +1001,21 @@ fun MemberPickerDialog(
                                     .padding(vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Checkbox(
+                                AppCheckbox(
                                     checked = cand.checked,
                                     onCheckedChange = { onToggle(cand.voiceId, it) },
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
+                                    AppText(
                                         text = cand.displayName,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                     if (cand.engineName.isNotBlank()) {
-                                        Text(
+                                        AppText(
                                             text = cand.engineName,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = LegadoTheme.typography.bodySmall,
                                             color = LegadoTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
@@ -1024,12 +1028,10 @@ fun MemberPickerDialog(
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = onSave) { Text(stringResource(R.string.ok)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = onSave,
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss,
     )
 }
 

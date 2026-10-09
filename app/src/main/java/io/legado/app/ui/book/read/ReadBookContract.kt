@@ -324,10 +324,10 @@ data class ReadBookUiState(
     val defaultReadAloudInterface: String = ReadAloudSettingsRepository.DEFAULT_INTERFACE_CLASSIC,
     val readAloudParagraphInterval: Int = 0,
     /**
-     * 朗读设置卡片当前停在哪个 tab（0 常规 / 1 引擎与音色）。
+     * 朗读设置卡片当前停在哪个 tab（0 常规 / 1 引擎与音色 / 2 角色与配乐）。
      *
-     * 存在这里而不是卡片里：卡片是窗口级浮层，压进整屏页（引擎与音色那三行）时它会被拆掉，
-     * `rememberPagerState` 的初值回到 0，回来就落在常规 tab。
+     * 存在这里而不是卡片里：卡片是窗口级浮层，压进整屏页（引擎与音色 / 角色与配乐里
+     * 那几个跳转项）时它会被拆掉，`rememberPagerState` 的初值回到 0，回来就落在常规 tab。
      */
     val readAloudConfigTab: Int = 0,
     // Style config (reactive state for ReadBookConfig)
@@ -482,6 +482,23 @@ data class ReadBookInitRequest(
     val chapterIndex: Int = -1,
     val chapterPos: Int = -1,
 )
+
+/**
+ * 朗读设置卡片里可跳转的整屏子页。
+ *
+ * 这些都是全局设置、不需要书籍上下文，所以共用一条跳转通道（[ReadBookIntent.OpenReadAloudSubPage]）：
+ * 阅读界面走 `ReadBookEffect`，听书播放页走 `ReadAloudPlayerConfigHostAction`，两边映射到同一批路由。
+ */
+enum class ReadAloudSubPage {
+    /** 角色声音池。 */
+    VoicePool,
+
+    /** 背景音乐池。 */
+    BgmPool,
+
+    /** 朗读胶囊外观。 */
+    CapsuleStyle,
+}
 
 sealed interface ReadBookIntent {
     // Initialization
@@ -990,6 +1007,9 @@ sealed interface ReadBookIntent {
     data object OpenTtsEnginesAndVoices : ReadBookIntent
     data object OpenTtsCache : ReadBookIntent
     data object OpenBookVoiceCasting : ReadBookIntent
+
+    /** 朗读设置里跳到某个整屏子页（角色声音池 / 背景音乐池 / 朗读胶囊外观）。 */
+    data class OpenReadAloudSubPage(val page: ReadAloudSubPage) : ReadBookIntent
     /** 朗读设置卡片停在哪个 tab（滑页和点 tab 都走这里）。 */
     data class SetReadAloudConfigTab(val tab: Int) : ReadBookIntent
     data object OpenReadAloudPlayer : ReadBookIntent
@@ -1131,6 +1151,7 @@ sealed interface ReadBookEffect {
     data object OpenTtsEnginesAndVoices : ReadBookEffect
     data object OpenTtsCache : ReadBookEffect
     data class OpenBookVoiceCasting(val bookUrl: String) : ReadBookEffect
+    data class OpenReadAloudSubPage(val page: ReadAloudSubPage) : ReadBookEffect
     data object OpenHighlightRuleImportPicker : ReadBookEffect
     data object OpenHighlightRuleExportPicker : ReadBookEffect
 

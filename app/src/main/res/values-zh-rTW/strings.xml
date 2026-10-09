@@ -2714,6 +2714,11 @@
     <string name="switch_to_classic_read_aloud">經典控制</string>
     <string name="read_aloud_settings_general_tab">一般</string>
     <string name="read_aloud_settings_voice_tab">引擎與音色</string>
+    <string name="read_aloud_settings_casting_tab">角色與配樂</string>
+    <string name="read_aloud_section_engine">語音引擎</string>
+    <string name="read_aloud_section_analysis">章節分析</string>
+    <string name="read_aloud_section_casting">多角色與配音</string>
+    <string name="read_aloud_section_bgm">背景音樂</string>
     <string name="speech_analysis_mode">章節分片方式</string>
     <string name="speech_analysis_rule">規則分片</string>
     <string name="speech_analysis_rule_ai">規則分片與 AI 補全（建議）</string>

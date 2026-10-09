@@ -18,9 +18,11 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 
 /**
- * 多角色规则 hub（「我的」→ 规则组 → 多角色规则）。
+ * 朗读设置 hub（设置 → 朗读设置）。
  *
- * 只做菜单跳转：声音池、多角色识别各自是独立页面，后续新增条目往这里加一行。
+ * 只做菜单跳转：声音池、背景音乐池、变声器、胶囊外观、引擎、角色识别各自是独立页面。
+ * 角色声音池 / 背景音乐池 / 朗读胶囊外观在阅读界面的「朗读设置」卡片里也各有一个入口
+ * （角色与配乐 / 常规 tab）；这里是设置侧的完整入口，两处指向同一批页面。
  */
 @Composable
 fun MultiRoleRuleRouteScreen(
@@ -40,7 +42,7 @@ fun MultiRoleRuleRouteScreen(
         contentColor = LegadoTheme.colorScheme.onSurface,
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.multi_role_rule),
+                title = stringResource(R.string.aloud_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = { TopBarNavigationButton(onClick = onBackClick) },
             )

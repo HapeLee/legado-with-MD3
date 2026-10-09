@@ -803,6 +803,13 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 )
                             }
                         },
+                        onOpenReadAloudSubPage = { page ->
+                            MainNavigator.navigateToRoute(
+                                backStack,
+                                page.toMainRoute(),
+                                navRouteTracker,
+                            )
+                        },
                     )
                     if (playerSource == PlaybackCapsuleSource.AudioBook &&
                         (audioPlayerVisible || morphPresent)

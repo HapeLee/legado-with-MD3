@@ -1430,6 +1430,8 @@ class ReadBookViewModel(
             ReadBookIntent.OpenTtsEnginesAndVoices -> readAloudDelegate.openTtsEnginesAndVoices()
             ReadBookIntent.OpenTtsCache -> readAloudDelegate.openTtsCache()
             ReadBookIntent.OpenBookVoiceCasting -> readAloudDelegate.openBookVoiceCasting()
+            is ReadBookIntent.OpenReadAloudSubPage ->
+                readAloudDelegate.openReadAloudSubPage(intent.page)
             ReadBookIntent.OpenReadAloudPlayer -> readAloudDelegate.openPlayer()
             ReadBookIntent.OpenClassicReadAloudControls -> readAloudDelegate.openClassicControls()
 

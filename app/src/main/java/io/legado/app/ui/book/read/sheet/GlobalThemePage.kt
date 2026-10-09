@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -67,6 +66,7 @@ import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
@@ -131,7 +131,7 @@ fun GlobalThemePage(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.TextFields,
                         contentDescription = stringResource(R.string.compose_type),
                         tint = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -240,7 +240,7 @@ fun GlobalThemePage(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
+                            AppIcon(
                                 Icons.Default.GridView,
                                 contentDescription = stringResource(R.string.share_layout),
                                 modifier = Modifier.size(20.dp),
@@ -302,7 +302,7 @@ fun GlobalThemePage(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
+                                AppIcon(
                                     Icons.Default.Add,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp),
@@ -386,7 +386,7 @@ fun GlobalThemePage(
                     cornerRadius = 12.dp,
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Speed,
                             contentDescription = stringResource(R.string.page_anim_speed),
                             tint = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -420,7 +420,7 @@ fun GlobalThemePage(
                 cornerRadius = 12.dp,
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.SpaceBar,
                         contentDescription = stringResource(R.string.padding),
                         tint = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -510,7 +510,7 @@ fun StyleCard(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
                         modifier = Modifier.size(10.dp),

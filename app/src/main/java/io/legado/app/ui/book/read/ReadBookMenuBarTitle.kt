@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Download
@@ -40,9 +41,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +66,7 @@ import dev.chrisbanes.haze.HazeState
 import io.legado.app.R
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -478,7 +478,7 @@ internal fun ReadMenuGlassIconButton(
         menuBorderEnabled = menuBorderEnabled,
         contentDescription = contentDescription,
     ) { tint ->
-        Icon(
+        AppIcon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
@@ -693,7 +693,7 @@ private fun MergedGlassIconButton(
             )
             .semantics { contentDescription?.let { this.contentDescription = it } },
     ) {
-        Icon(
+        AppIcon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,

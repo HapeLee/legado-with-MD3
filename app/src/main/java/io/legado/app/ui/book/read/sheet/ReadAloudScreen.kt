@@ -9,22 +9,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.TableRows
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -33,16 +26,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 
 /**
  * 经典朗读控制面板的内容。
@@ -136,69 +132,10 @@ fun ReadAloudContent(
 
         Spacer(Modifier.height(12.dp))
 
-        // 多角色两开关并排成一行（selected 高亮 = 开），下面再一行两个入口按钮
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.SetUseMultiSpeaker(!state.useMultiSpeaker)) },
-                selected = state.useMultiSpeaker,
-                icon = Icons.Default.RecordVoiceOver,
-                text = stringResource(R.string.use_multi_speaker),
-                modifier = Modifier.weight(1f),
-            )
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.SetMultiRoleCast(!state.multiRoleCast)) },
-                selected = state.multiRoleCast,
-                icon = Icons.Default.Face,
-                text = stringResource(R.string.multi_role_cast),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-
-        // 背景音乐：开关 + 分配表同一行（都是「这一章的配乐怎么安排」的入口），
-        // 总音量单独一行滑块；本章配乐一览与 AI 识别场景再一行。
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.SetBgmAssign(!state.bgmAssign)) },
-                selected = state.bgmAssign,
-                icon = Icons.Default.MusicNote,
-                text = stringResource(R.string.bgm_assign),
-                modifier = Modifier.weight(1f),
-            )
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.OpenBookVoiceCasting) },
-                icon = Icons.Default.TableRows,
-                text = stringResource(R.string.book_voice_casting),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // 本章配乐区间一览：不用一段一段点胶囊才能看全
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BgmSceneTable)) },
-                icon = Icons.Default.TableRows,
-                text = stringResource(R.string.cast_bgm_scene_table),
-                modifier = Modifier.weight(1f),
-            )
-            // 场景识别只依赖「背景音乐分配」这个副开关，与开不开多角色朗读无关
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.OpenAiSceneDialog) },
-                icon = Icons.Default.AutoAwesome,
-                text = stringResource(R.string.ai_scene_assign_entry),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(8.dp))
+        // 多角色朗读 / 多角色分配 / 背景音乐分配 / 人物配音 / 本章背景音乐 / AI 场景分配
+        // 都是「一次性设定」的入口，统一收进朗读设置卡片「引擎与音色」，控制面板只留
+        // 播放中随时要拧的总音量，避免这里堆一排半用不上的开关。
+        //
         // 总音量：朗读设置里的这一根是「背景音乐相对人声整体多响」，
         // 与配乐库每条曲子的音量、段内音量相乘
         TinySliderSettingItem(
@@ -301,9 +238,13 @@ private fun ActionButton(
             contentDescription = label,
         )
         Spacer(Modifier.height(4.dp))
-        Text(
+        AppText(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = LegadoTheme.typography.labelSmall,
+            // 底栏有五个入口，标签在窄屏上会换行；单行 + 省略号保证按钮行高一致
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }
