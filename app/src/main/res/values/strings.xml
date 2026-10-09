@@ -3104,6 +3104,7 @@
     <string name="ai_cast_memory">Book cast memory</string>
     <string name="ai_cast_memory_hint">Cross-chapter character dossier shared by AI (main name|aliases/roles|relations|pool). Editable.</string>
     <string name="ai_cast_memory_saved">Memory saved</string>
+    <string name="ai_cast_memory_rename_clash">Memory saved, %1$d name(s) not applied: another character in this book already uses that name</string>
     <string name="ai_cast_preset_name">Preset name</string>
     <string name="ai_cast_preset_instruction">Casting requirement</string>
     <string name="ai_cast_fixed_slots_title">Always-appended prompt rows</string>
@@ -3171,6 +3172,7 @@
     <string name="cast_import_tts_server_result">Imported %1$d pools, %2$d voices</string>
     <string name="cast_import_confirm">Import</string>
     <string name="cast_import_pools_invalid">This file was not exported by this app</string>
+    <string name="cast_import_pools_nothing_new">The file is valid, but its %1$d pool(s) already exist here — nothing was added</string>
     <string name="cast_export_pools_done">Pools exported</string>
     <string name="cast_export_pools_failed">Export failed</string>
     <string name="cast_list_separator">, </string>
