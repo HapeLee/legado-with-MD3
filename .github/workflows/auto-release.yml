@@ -371,17 +371,34 @@ jobs:
 
       # 4. 创建 Release 并上传
       - name: 创建 GitHub Release 并上传文件
-        uses: softprops/action-gh-release@v2
+        # v2 跑在 Node 20（已弃用），v3 起为 Node 24
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare.outputs.versionL }}
           name: ${{ needs.prepare.outputs.is_release == 'true' && format('Release {0}', needs.prepare.outputs.versionL) || format('Pre-release {0}', needs.prepare.outputs.versionL) }}
+          # 给了 body 时不会覆盖自动生成的 notes，而是前置拼在它前面：
+          # 保留上面的「更新内容」commit 列表，后面接 GitHub 生成的 What's Changed /
+          # New Contributors / Full Changelog（本区间内已合并的 PR 与首次贡献者）
           body: ${{ steps.get_commits.outputs.release_body }}
+          generate_release_notes: true
+          # 生成的比较基线：上一个 tag，与 prepare 里算 COMMIT_LOG 用的是同一个
+          previous_tag: ${{ needs.prepare.outputs.latest_tag }}
           prerelease: ${{ needs.prepare.outputs.is_release != 'true' }}
           files: |
             artifacts/legado-${{ needs.prepare.outputs.versionL }}*.apk
             artifacts/mapping.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 该 action 不输出 body，只能发布后回查；供 Telegram 复用同一份文案。
+      # 失败不阻断发布（continue-on-error），下游没读到文件就回落到 commit 列表。
+      - name: 取回最终 Release Notes
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${{ needs.prepare.outputs.versionL }}" --json body --jq .body > release-notes.md
+          echo "已取回 Release Notes: $(wc -c < release-notes.md) 字节"
 
       - name: 发布静态更新清单
         env:
@@ -403,12 +420,15 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.versionL }}
           IS_RELEASE: ${{ needs.prepare.outputs.is_release }}
           RELEASE_BODY: ${{ steps.get_commits.outputs.release_body }}
+          # 上一步取回的最终 body（手写更新内容 + PR / 贡献者列表）；读不到就回落 RELEASE_BODY
+          RELEASE_NOTES_FILE: release-notes.md
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
           python3 <<'PY'
           import glob
           import json
           import os
+          import re
           import subprocess
           import sys
 
@@ -422,6 +442,12 @@ jobs:
           is_release = os.environ["IS_RELEASE"] == "true"
           repo_url = os.environ["REPO_URL"]
           release_body = os.environ.get("RELEASE_BODY", "").strip()
+          release_notes_file = os.environ.get("RELEASE_NOTES_FILE", "")
+          if release_notes_file and os.path.isfile(release_notes_file):
+              with open(release_notes_file, encoding="utf-8") as f:
+                  final_body = f.read().strip()
+              if final_body:
+                  release_body = final_body
           release_link = f"{repo_url}/releases/tag/{version}"
 
           missing = [name for name, value in {
@@ -435,8 +461,9 @@ jobs:
           def to_plain_text(text):
               lines = []
               for line in text.splitlines():
-                  if line.startswith("### "):
-                      line = line[4:]
+                  # 手写的小节是 "### 更新内容"，GitHub 生成的是 "## What's Changed"：
+                  # 统一剥掉 1~6 级标题标记，否则 Telegram 里会原样显示井号
+                  line = re.sub(r"^#{1,6}\s+", "", line)
                   lines.append(line.replace("**", ""))
               return "\n".join(lines).strip()
 
