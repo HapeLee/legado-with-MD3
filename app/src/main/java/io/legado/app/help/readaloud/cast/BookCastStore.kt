@@ -228,12 +228,13 @@ object BookCastStore {
      * 删除书内角色：把它在别处的痕迹一次清干净，两个入口（我们的人物配音、官方的人物详情）
      * 删同一个人必须得到同一个结果，不能要用户去另一页再删一遍。
      *
-     * 残留会伪装成「没删掉」的有四处长在一套 id 之外：
+     * 残留会伪装成「没删掉」的有五处长在一套 id 之外：
      * ① `book_character_profiles` 里那条档案（官方 AI 识别建的也一并删掉——它归人物页，
      * 但用户在配音页删人就是要把这个人从这本书里去掉，只停用会让官方人物页继续列着他）；
      * ② `book_voice_bindings` 里分别以角色行 id 与档案 id 挂着的 character 绑定；
      * ③ `book_cast_memory` 里那一行人物档案——提示词要求「已有池的角色原样填它的池」，
-     * 于是同名同池必然复现；④ 朗读侧按 id 记着的变声快照。
+     * 于是同名同池必然复现；④ 朗读侧按 id 记着的变声快照；⑤ 档案的关系与事件——
+     * 档案是硬删，不一起清就成了指向不存在人物的孤儿行。
      *
      * [name] 只由官方人物页传入：档案按 (bookUrl, name) 唯一，删的是一条名字，而配音表按 id 存行；
      * 老角色的行 id 与档案 id 可能不同，不按名字一起删掉，进页面时的档案补建会照着这条行
@@ -255,6 +256,12 @@ object BookCastStore {
         if (profile != null) {
             forgetVoiceBinding(bookUrl, profile.id)
             appDb.bookKnowledgeDao.deleteCharacterProfile(bookUrl, profile.id)
+            // 档案是硬删，它的关系与事件不能留成指向不存在人物的孤儿行：
+            // 官方人物页那条路会清，配音侧这条不清就成了「两个入口删同一个人结果不同」。
+            // 只在档案此刻仍然存在时清 —— 官方入口是先删档案再调这里，那时读到的 profile
+            // 是 null，所以这里不会覆盖用户在人物页选的「保留关系 / 保留事件」。
+            appDb.bookKnowledgeDao.deleteRelationsForCharacter(profile.id)
+            appDb.bookKnowledgeDao.deleteEventsForCharacter(bookUrl, profile.id)
         }
         if (doomedName != null) dropMemoryLine(bookUrl, doomedName)
         VoiceEffectStore.forgetCharacter(characterId)
