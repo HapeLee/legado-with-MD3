@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.45",
-  "name": "Pre-release 3.26.16-beta.45",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 阅读优化\n* feat: AI 供应商支持自定义请求头\n* feat: 发现优化\n* feat: 优化了和阅读兄弟姐妹的备份兼容性\n* build: google-services.json 回到官方那一份\n* fix(readaloud): 胶囊与配音页挑的音色要写进绑定，池要写进本书记忆\n* fix(ai): 流式回包停在半路时取消要真能取消\n* Bump web v3.26.100623\n* feat: 添加章节切换冷却时间，防止十字键抖动导致连切多章\n* fix(search): 修复书源人机验证后搜索中断未继续搜索的问题\n* test(整本书翻页估算): 等过期精确页数删除落地后再断言\n* fix(lint): 把 9 条 Compose lint error 改成配置感知写法\n* build: 去掉本地专包的 applicationIdSuffix，回到官方包名\n* fix: 关闭分组的\"允许下拉刷新\"后仍可下拉刷新\n* refactor: 收敛 R125 三处改动的写法与守卫口径\n* revert(tts): 撤回对 httpTTS_cache 的额外清理\n* fix(nav): 朗读通知回到阅读页不再叠出第二个阅读页\n* fix(read): 开书首帧不再把上一本书的正文排进这本书的面板\n* fix(tts): 即听即焚补上起手与逐句两个触发点\n* perf(read): 定位流从阅读屏整屏状态里摘出去\n* perf(book): 开书与详情页转场期间不再逐帧重建整页状态\n* Bump web v3.26.100422\n* feat: 优化手柄配置，添加摇杆死区和扳机判定，改进滚动体验\n* feat: 添加LT和RT按钮支持，增强手柄翻页功能\n* fix: 设置类页面静止时每帧空转重组\n* style: 我们自己的 49 个文件里注释只写作用与依赖\n* style(readaloud): 注释只写当前作用与依赖，去掉轮次与事故叙述\n* fix(player): 朗读设置的\"回来\"只认自己推上去的那个子页\n* fix(player): 朗读设置的 tab 记在宿主上，从「引擎与音色」进去回来仍停在引擎与音色\n* fix(player): 从朗读设置进子页不再先露阅读页，返回也回到朗读设置\n* fix(readaloud): 念不出东西的朗读单元不进队列，命中处不再垫一段 1.2 秒静音\n* fix(readaloud): 变声器两层的提前量按各自生效点重排\n* fix(readstyle): 补 translate 的 import（上一条提交编译不过）\n* fix(readstyle): 规则预览按内容外接框贴左上，示例句不再掉到卡片下方偏右\n* fix(readaloud): 命中前的缩进空格不再单独成块，命中处不再先播一段空音频\n* Revert \"第一百零六、一百零七轮：预合成覆盖本章 + 音效排期与耗时日志\"\n* fix(readaloud): 现场合成耗时这行归因日志不依赖「记录日志」开关\n* fix(readaloud): 音效按刚开始播的这一格排，不再晚一整句\n* perf(readaloud): 预合成覆盖正在读的这一章，系统音色也参与\n* Revert \"正则角色：R89 起的整条排查改动\"\n* refactor(readaloud): 撤掉正则角色这几轮加的诊断日志\n* fix(readaloud): 正则角色编译入口去掉两端空白，粘贴带进来的换行不再让规则永远不命中\n* fix(readaloud): 正则角色匹配直接走平台正则，并探针现对象与重编结果\n* chore(readaloud): 正则角色 0 命中时分段计数，定位丢在匹配还是裁切\n* fix(readaloud): 正则角色改在原文上匹配，不再被标记抹平擦掉命中\n* fix(readaloud): 正则角色的整章匹配不再依赖朗读单元的绝对坐标\n* fix(readaloud): 正则角色改按整章坐标匹配，跨句括号内容终于能命中\n* fix(readaloud): 正则角色按整段匹配，跨句的括号内容不再整章 0 命中\n* feat(readaloud): 正则角色的命中数与顶到音色数分开计\n* fix(readaloud): 一句合成失败先试备用音色，都不行才落无声音频\n* fix(readaloud): 正则角色的引擎升级不再被「多角色朗读」开关拦住\n* feat(readaloud): 正则角色 0 命中时按字符给出归因\n* feat(readaloud): 正则角色不生效时给出可归因证据\n* feat(nav): 书内子页改用自带位移与返回处理的覆盖层场景\n* fix(morph): 内容层的点击闸门改按透明度放行，不再等弹簧正好收敛\n* Revert \"fix(nav): 从阅读页打开的 10 个书籍子页把阅读页整页销毁\"\n* fix(nav): 从阅读页打开的 10 个书籍子页把阅读页整页销毁\n* fix(readaloud): 正则角色选的音色没算进引擎选型，命中处被直读过滤成默认音色\n* fix(readaloud): 朗读日志页同一毫秒的重复日志把 LazyColumn key 撞崩\n* fix(nav): 补回合并上游时丢掉的三处接线，并守住路由注册表\n* R85: AI 分配按别名拆身份，把角色的气泡弄没了\n* R84: 正则角色变声器+试听、心声默认变声、AI 分配范围与中断续跑、两套导入导出\n* R83: 钉底预览按实测高度给列表留底，配乐改名接上界面\n* R82: 批量 FAB 按实测坐标归位，胶囊设置预览改成钉底不滚走\n* R81: 占位胶囊图标与角色那颗共用居中落点，批量 FAB 归位\n* R80: 音色批量操作改右下角折叠菜单，未分配胶囊改正方形\n* R79: 长按菜单加「插入(前)/插入(后)」手动分配背景音乐场景\n* R78: 背景音乐的淡出不再被进度回调自己掐断\n* R77: 正则角色加「使用正则匹配」开关\n* R76: 新代码整理——注释只留作用与跨文件依赖，删掉死方法\n* R75: 音效改由媒体时钟排到命中处，并提前备好播放器\n* R74: 音效不再拆朗读单元；变声提前量按层拆开；撤掉冲管线\n* R72-R73: 正则角色的分组树与全局生效、音效轨不占主线程、变声器边界改冲管线\n* R71: 正则角色的池只是筛选 + 列表拖动排序 + 同一句不再重复请求 TTS\n* R70: 胶囊头像只有一条落点 + 新增「正则角色管理」\n* R69: 撤回 R63-E 折页性能优化与 R63-F 叠页动画，仿真翻页画法回 R62\n* R68 补: 折页分支在离屏图层之外再直接垫画一份当前页\n* R68: 仿真翻页隔帧闪烁——折页 Path 退回每帧新建\n* R67 追加: 图片大小对九宫格真正生效（整张图放大，带子上下对称分那一截）\n* R67: 九宫格四条边共用一个倍率，预览里被压扁的图案恢复等比\n* R64-R66: 封面 morph 跑完 420ms、九宫格纵向零拉伸、翻页与书架卡顿量化\n* R63: 九宫格纵向改等比缩放、转场与仿真翻页的每帧代价、胶囊三开关、新增叠页\n* R62: 九宫格切线放开 + 气泡任何设置都优先 + 预览沿用正文排版\n* R61: 角色气泡补齐成高亮规则那一整套，背景图不再被垃圾回收删掉\n* R60: 刷新正文不再删缓存、预览钉死示例段、角色气泡、记忆双向同步\n* R59: 胶囊回到气泡上面，九宫格拼缝改用 0.5px 叠压 + 关抗锯齿\n* R58: 预览改走正文同一套排版与绘制，气泡不再被后画的层切出直边\n* R57: 命中字距的空隙不许被背景框吞掉\n* fix: 高亮背景图只做装饰（不参与排版）、胶囊不再裁断气泡、长度偏移拆左右\n* test: 把朗读划分与设置映射的单测对齐 fork 口径\n* fork snapshot r49m: multi-role cast pipeline (voice pool / BGM / capsule / download / avatar) before upstream merge",
+  "tag_name": "3.26.16-beta.46",
+  "name": "Pre-release 3.26.16-beta.46",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* ci(release): Release 页自动附带 PR/贡献者列表，Telegram 复用同一份文案\n* fix(cast): 从配音侧删除角色时一并清理档案的关系与事件\n* feat: 界面优化\n* feat: 一些导航问题\n* Bump web v3.26.100902\n* refactor: 重构 Xbox 手柄配置和状态管理，优化代码结构\n* fix(cast): 中点不再是声音池分隔符，音译名可以做角色名\n* fix(cast): 配音页与正文胶囊改的主名也回写本书记忆\n* fix(ai): 换默认模型时把所有任务类型的预设一起带上\n* fix(lint): 记忆保存的重名提示改在组合期读文案\n* fix(cast): 记忆里的改名与改池按身份配对，两件各自成立\n* fix(cast): 声音池导入「本机都有了」不再报成「不是本软件导出的」\n* test(ai): 假 SSE 服务端在关连接前同步清接收队列\n* feat(cast): 变声器音高与语速可以直接填数值\n* fix(cast): 本书记忆的分隔符进名字禁列，两套语法共用同一份\n* fix(cast): 记忆里改的名字与池回写配音与档案，删除一次清两边\n* fix(cast): 声音池导出的键名钉死，换版本也认得自己的文件\n* feat: 本地书导入\n* feat: 阅读优化\n* fix(font): 字体文件夹读不出来时说明原因，并支持直接导入字体文件\n* fix(reader): 支持 file:// 字体路径，修复选中应用内字体静默回落默认字体\n\n## What's Changed\n* refactor: 重构 Xbox 手柄配置和状态管理，优化代码结构 by @mobeicanyue in https://github.com/HapeLee/legado-with-MD3/pull/2387\n* fix(cast): 角色记忆与配音双向同步、声音池导入自识别、AI 默认模型传播 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2384\n* fix(font): 修复应用内字体不生效与国产 ROM 字体文件夹读不出内容，新增「导入字体文件」 by @clevebitr in https://github.com/HapeLee/legado-with-MD3/pull/2379\n\n## New Contributors\n* @clevebitr made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2379\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.45...3.26.16-beta.46",
   "prerelease": true,
-  "created_at": "2026-10-07T21:02:42Z",
+  "created_at": "2026-10-09T22:37:00Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.45/legado-3.26.16-beta.45-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.46/legado-3.26.16-beta.46-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-07T21:25:42Z",
+      "created_at": "2026-10-09T22:54:48Z",
       "download_count": 0,
-      "id": 619856111,
-      "name": "legado-3.26.16-beta.45-arm64-v8a.apk",
+      "id": 626398520,
+      "name": "legado-3.26.16-beta.46-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/619856111"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/626398520"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.45/legado-3.26.16-beta.45-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.46/legado-3.26.16-beta.46-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-07T21:25:42Z",
+      "created_at": "2026-10-09T22:54:48Z",
       "download_count": 0,
-      "id": 619856115,
-      "name": "legado-3.26.16-beta.45-armeabi-v7a.apk",
+      "id": 626398521,
+      "name": "legado-3.26.16-beta.46-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/619856115"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/626398521"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.45/legado-3.26.16-beta.45.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.46/legado-3.26.16-beta.46.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-07T21:25:42Z",
+      "created_at": "2026-10-09T22:54:48Z",
       "download_count": 0,
-      "id": 619856113,
-      "name": "legado-3.26.16-beta.45.apk",
+      "id": 626398518,
+      "name": "legado-3.26.16-beta.46.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/619856113"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/626398518"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.45/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.46/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-10-07T21:25:42Z",
+      "created_at": "2026-10-09T22:54:48Z",
       "download_count": 0,
-      "id": 619856116,
+      "id": 626398517,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/619856116"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/626398517"
     }
   ]
 }
