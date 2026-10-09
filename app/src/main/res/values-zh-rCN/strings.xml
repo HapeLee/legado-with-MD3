@@ -458,6 +458,12 @@
     <string name="nb_file_add_shelves">加入书架（%1$d）</string>
     <string name="nb_file_add_succeed">成功添加 %1$d 本书</string>
     <string name="fonts_folder">请将字体文件放到存储根目录 Fonts 文件夹下后重新选择</string>
+    <string name="font_import">导入字体文件</string>
+    <string name="font_import_done">已导入字体，可在下方列表中选择</string>
+    <string name="font_import_none">没有导入字体文件（仅支持 .ttf/.otf）</string>
+    <string name="font_folder_not_accessible">无法读取已选的字体文件夹（系统文件选择器可能已失效授权），已改为显示应用内字体；请重新选择文件夹或直接导入字体文件</string>
+    <string name="font_folder_empty_hint">已选的字体文件夹里读不到任何文件。若字体确实放在里面仍不显示，是部分国产 ROM 的系统文件选择器不支持，请改用「导入字体文件」</string>
+    <string name="font_folder_no_fonts">已选的字体文件夹里没有 .ttf/.otf 字体</string>
     <string name="default_font">默认字体</string>
     <string name="select_font">选择字体</string>
     <string name="text_size">字号</string>

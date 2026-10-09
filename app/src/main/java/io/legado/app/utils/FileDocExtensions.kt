@@ -4,7 +4,6 @@ package io.legado.app.utils
 
 import android.app.DownloadManager
 import android.content.Context
-import android.database.Cursor
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
@@ -149,55 +148,63 @@ private val projection by lazy {
 }
 
 /**
+ * 查询 tree URI 下指定文档的子文档。
+ *
+ * 与 [FileDoc.list] 的区别是可以换 documentId 再查一次：部分国产 ROM 的文件选择器
+ * 返回的 tree URI 形如 `tree/{rootId}/document/{docId}`，用 `getDocumentId` 和
+ * `getTreeDocumentId` 查出来的结果并不一样（见 [io.legado.app.help.scanFontFiles]）。
+ *
+ * @throws Exception provider 不支持查询时抛出（由调用方决定是否换一种取法）
+ */
+fun treeChildren(
+    context: Context,
+    treeUri: Uri,
+    documentId: String,
+): List<FileDoc> {
+    /**
+     * DocumentFile 的 listFiles() 非常的慢,所以这里直接从数据库查询
+     */
+    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
+    val docList = arrayListOf<FileDoc>()
+    context.contentResolver.query(
+        childrenUri,
+        projection,
+        null,
+        null,
+        DocumentsContract.Document.COLUMN_DISPLAY_NAME
+    )?.use { cursor ->
+        val ici = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+        val nci = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+        val sci = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
+        val mci = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
+        val dci = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+        while (cursor.moveToNext()) {
+            docList.add(
+                FileDoc(
+                    name = cursor.getString(nci),
+                    isDir = cursor.getString(mci) ==
+                            DocumentsContract.Document.MIME_TYPE_DIR,
+                    size = cursor.getLong(sci),
+                    lastModified = cursor.getLong(dci),
+                    uri = DocumentsContract.buildDocumentUriUsingTree(
+                        treeUri,
+                        cursor.getString(ici)
+                    )
+                )
+            )
+        }
+    }
+    return docList
+}
+
+/**
  * 返回子文件列表,如果不是文件夹则返回null
  */
 fun FileDoc.list(filter: FileDocFilter? = null): ArrayList<FileDoc>? {
     if (isDir) {
         if (uri.isContentScheme()) {
-            /**
-             * DocumentFile 的 listFiles() 非常的慢,所以这里直接从数据库查询
-             */
-            val childrenUri = DocumentsContract
-                .buildChildDocumentsUriUsingTree(uri, DocumentsContract.getDocumentId(uri))
-            val docList = arrayListOf<FileDoc>()
-            var cursor: Cursor? = null
-            try {
-                cursor = appCtx.contentResolver.query(
-                    childrenUri,
-                    projection,
-                    null,
-                    null,
-                    DocumentsContract.Document.COLUMN_DISPLAY_NAME
-                )
-                cursor?.let {
-                    val ici = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-                    val nci = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                    val sci = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
-                    val mci = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
-                    val dci = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-                    if (cursor.moveToFirst()) {
-                        do {
-                            val item = FileDoc(
-                                name = cursor.getString(nci),
-                                isDir = cursor.getString(mci) ==
-                                        DocumentsContract.Document.MIME_TYPE_DIR,
-                                size = cursor.getLong(sci),
-                                lastModified = cursor.getLong(dci),
-                                uri = DocumentsContract.buildDocumentUriUsingTree(
-                                    uri,
-                                    cursor.getString(ici)
-                                )
-                            )
-                            if (filter == null || filter.invoke(item)) {
-                                docList.add(item)
-                            }
-                        } while (cursor.moveToNext())
-                    }
-                }
-            } finally {
-                cursor?.close()
-            }
-            return docList
+            val children = treeChildren(appCtx, uri, DocumentsContract.getDocumentId(uri))
+            return ArrayList(if (filter == null) children else children.filter(filter))
         } else {
             return File(uri.path!!).listFileDocs(filter)
         }

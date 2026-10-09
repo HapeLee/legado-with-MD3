@@ -488,6 +488,12 @@
     <string name="nb_file_add_shelves">Add to Bookshelf(%1$d)</string>
     <string name="nb_file_add_succeed">%1$d books added successfully</string>
     <string name="fonts_folder">Please put the font files in the Fonts folder of the storage root directory and reselect</string>
+    <string name="font_import">Import font files</string>
+    <string name="font_import_done">Fonts imported. Pick one from the list below.</string>
+    <string name="font_import_none">No .ttf/.otf font file was imported</string>
+    <string name="font_folder_not_accessible">The selected font folder cannot be read (the system picker may have lost the grant). Fonts inside the app are shown instead; please select the folder again or import font files.</string>
+    <string name="font_folder_empty_hint">No file could be read from the selected font folder. If your fonts are already there, the system file picker of some ROMs cannot expose it; please use “Import font files”.</string>
+    <string name="font_folder_no_fonts">No .ttf/.otf font in the selected font folder</string>
     <string name="default_font">Default font</string>
     <string name="select_font">Select fonts</string>
     <string name="text_size">Text size</string>
