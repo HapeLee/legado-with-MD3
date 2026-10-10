@@ -1,11 +1,17 @@
 package io.legado.app.ui.widget.components
 
+import androidx.annotation.StringRes
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -16,6 +22,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -32,10 +40,8 @@ import io.legado.app.help.readaloud.cast.VoiceAudition
 import io.legado.app.help.readaloud.effect.VoiceEffectAudio
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -166,7 +172,7 @@ fun rememberVoiceAuditionController(
 }
 
 /**
- * 行内试听：标签 + 图标按钮。合成中用进度圈占位，播放中换成停止。
+ * 行内试听：标签 + 图标按钮。合成中图标自转，播放中换成停止。
  *
  * 合成/播放/释放都在 [rememberVoiceAuditionController] 里，这里只负责长什么样。
  */
@@ -236,7 +242,7 @@ fun VoiceAuditionIconButton(
 
 /**
  * 弹层头部槽位用的试听动作（Medium 系列）：头部只有一个图标位，放不下一行标签，
- * 合成/播放状态仍然靠图标与进度圈表达。
+ * 三态与 [AuditionIcon] 同一套——合成中自转的刷新图标 / 播放中停止 / 待命试听。
  */
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -256,20 +262,20 @@ fun VoiceAuditionAction(
     MediumTonalButton(
         onClick = audition.toggle,
         enabled = audition.enabled,
-        modifier = modifier,
-        // 合成中不给图标（进度圈不是图标按钮的槽），用同一颗「停止/播放」图标表达状态
-        icon = if (audition.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-        contentDescription = stringResource(
-            when {
-                audition.busy -> R.string.cast_audition_failed
-                audition.playing -> R.string.cast_bgm_stop
-                else -> R.string.cloud_tts_preview
-            },
-        ),
+        modifier = modifier.rotate(if (audition.busy) auditionSpinAngle() else 0f),
+        selected = audition.playing,
+        icon = auditionIconOf(audition),
+        contentDescription = auditionDescriptionOf(audition, R.string.cloud_tts_preview),
     )
 }
 
-/** 试听按钮里那颗会变的状态图标：合成中进度圈 / 播放中停止 / 待命播放。 */
+/**
+ * 试听按钮里那颗会变的状态图标：合成中自转的刷新图标 / 播放中停止 / 待命播放。
+ *
+ * 用 [SmallPlainButton] 是为了跟列表行尾其余动作（编辑、删除）同一套尺寸与外观；它只收
+ * [ImageVector]，塞不进进度圈，所以合成中的加载态改成「图标自转」——容器是圆的，转起来
+ * 看到的只有图标本身在动。
+ */
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 private fun AuditionIcon(
@@ -277,22 +283,55 @@ private fun AuditionIcon(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppIconButton(onClick = onClick, enabled = audition.enabled, modifier = modifier) {
-        when {
-            audition.busy -> AppCircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                strokeWidth = 2.dp,
-            )
+    SmallPlainButton(
+        onClick = onClick,
+        modifier = modifier.rotate(if (audition.busy) auditionSpinAngle() else 0f),
+        // 控制器给的 enabled 已经算进了合成中，这里直接透传：合成期间按钮既不可点也变灰
+        enabled = audition.enabled,
+        selected = audition.playing,
+        icon = auditionIconOf(audition),
+        contentDescription = auditionDescriptionOf(audition, R.string.cast_bgm_play),
+    )
+}
 
-            audition.playing -> AppIcon(
-                imageVector = Icons.Default.Pause,
-                contentDescription = stringResource(R.string.cast_bgm_stop),
-            )
+/** 试听三态的图标：合成中自转的刷新图标 / 播放中停止 / 待命播放。 */
+private fun auditionIconOf(audition: VoiceAuditionController): ImageVector = when {
+    audition.busy -> Icons.Default.Refresh
+    audition.playing -> Icons.Default.Pause
+    else -> Icons.Default.PlayArrow
+}
 
-            else -> AppIcon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = stringResource(R.string.cast_bgm_play),
-            )
-        }
-    }
+/**
+ * 试听三态的描述。[idle] 由调用方给：列表行尾那颗是「播放」，弹层头部那颗是「试听」。
+ *
+ * 合成中一律念「加载中」：这一刻按钮点不动，念「播放/试听」会被当成点了没反应。
+ */
+@Composable
+private fun auditionDescriptionOf(
+    audition: VoiceAuditionController,
+    @StringRes idle: Int,
+): String = stringResource(
+    when {
+        audition.busy -> R.string.loading
+        audition.playing -> R.string.cast_bgm_stop
+        else -> idle
+    },
+)
+
+/**
+ * 合成中的自转角度。
+ *
+ * 只在合成这一小会儿才组合进来：声音池展开后同屏十几行按钮，静置的行不该各自挂一条无限动画。
+ */
+@Composable
+private fun auditionSpinAngle(): Float {
+    val transition = rememberInfiniteTransition(label = "auditionSpin")
+    return transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+        ),
+        label = "auditionSpinAngle",
+    ).value
 }

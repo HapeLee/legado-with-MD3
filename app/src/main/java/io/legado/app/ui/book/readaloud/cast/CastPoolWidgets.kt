@@ -58,10 +58,12 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
+import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -586,18 +588,17 @@ private fun CastPoolCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = if (wording.hasMembers) onExpand else onEdit)
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = 8.dp),
             ) {
                 AppText(
                     text = pool.name,
-                    style = LegadoTheme.typography.bodyLarge,
-                    color = LegadoTheme.colorScheme.onSurface,
+                    style = LegadoTheme.typography.labelLargeEmphasized,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -606,7 +607,7 @@ private fun CastPoolCard(
                 if (wording.hasMembers) {
                     AppText(
                         text = "${pool.enabledCount}/${pool.total}",
-                        style = LegadoTheme.typography.labelMedium,
+                        style = LegadoTheme.typography.labelSmall,
                         color = LegadoTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -615,7 +616,7 @@ private fun CastPoolCard(
                 if (!wording.hasMembers && pool.subtitle.isNotBlank()) {
                     AppText(
                         text = pool.subtitle,
-                        style = LegadoTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.labelSmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -625,7 +626,7 @@ private fun CastPoolCard(
                 if (showGroup && pool.groupName.isNotBlank()) {
                     AppText(
                         text = pool.groupName,
-                        style = LegadoTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.labelSmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -658,82 +659,92 @@ private fun CastPoolCard(
                 )
             }
         }
-        // 成员列表就地展开/收起，不套 expandVertically：整张池卡是 ReorderableItem 里的一行，
-        // 它自带 Modifier.animateItem()。两条高度动画口径不一致——animateItem 按「上一帧量到的
-        // 行高」摆放后面的行，expandVertically 每帧都在改这一行的真实高度，于是展开时
-        // 下面的行直接压在上面的行上。
-        if (expanded) {
-            // 展开区：添加成员 + 成员复选框列表（复选框 = 池内启用）
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SearchBar(
-                    query = memberQuery,
-                    onQueryChange = onQuery,
-                    placeholder = stringResource(wording.searchMemberHint),
-                    autoFocus = false,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 4.dp),
-                )
-                SmallPlainButton(
-                    onClick = onAddMembers,
-                    icon = Icons.Default.Add,
-                    contentDescription = stringResource(wording.addMember),
-                )
-            }
-            if (visibleMembers.isEmpty()) {
-                EmptyMessage(
-                    messageResId = wording.noMembers,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                )
-            }
-            visibleMembers.forEach { member ->
+        // 展开区只做淡入淡出，不做高度补间：池卡是 ReorderableItem 里的一行，行高变化已经由列表
+        // 的 animateItem() 统一补间（同配音页的角色编辑面板）。再叠一条每帧改高度的动画，两条
+        // 口径对不上——列表按「上一帧量到的行高」摆放后面的行，于是展开时下面的行会压上来。
+        AnimatedVisibility(
+            visible = expanded
+        ) {
+            Column {
+                // 添加成员 + 成员复选框列表（复选框 = 池内启用）
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onMemberToggle(member.voiceId, !member.checked) }
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AppCheckbox(
-                        checked = member.checked,
-                        onCheckedChange = { onMemberToggle(member.voiceId, it) },
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        AppText(
-                            text = member.displayName,
-                            style = LegadoTheme.typography.bodyMedium,
-                            color = LegadoTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                    // 权重只能挂在 Row 的直接子节点上：SearchBar 在 Material 引擎下把调用方的
+                    // modifier 交给内层输入框，直接传 weight 会被 Row 忽略，Surface 用 fillMaxWidth
+                    // 吃掉整行宽度，右边的「+」被挤成 0 宽，展开池后就只剩搜索框。
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 4.dp),
+                    ) {
+                        SearchBar(
+                            query = memberQuery,
+                            onQueryChange = onQuery,
+                            placeholder = stringResource(wording.searchMemberHint),
+                            autoFocus = false,
+                            modifier = Modifier.fillMaxWidth(),
                         )
-                        // 池里能混着不同引擎的音色，得看清这一条是谁家的（同「朗读引擎与音色」页）
-                        if (member.engineName.isNotBlank()) {
+                    }
+                    MediumOutlinedButton(
+                        onClick = onAddMembers,
+                        icon = Icons.Default.Add,
+                        contentDescription = stringResource(wording.addMember),
+                    )
+                }
+                if (visibleMembers.isEmpty()) {
+                    EmptyMessage(
+                        messageResId = wording.noMembers,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    )
+                }
+                visibleMembers.forEach { member ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onMemberToggle(member.voiceId, !member.checked) }
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AppCheckbox(
+                            checked = member.checked,
+                            onCheckedChange = { onMemberToggle(member.voiceId, it) },
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             AppText(
-                                text = member.engineName,
-                                style = LegadoTheme.typography.bodySmall,
-                                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                text = member.displayName,
+                                style = LegadoTheme.typography.labelMediumEmphasized,
+                                color = LegadoTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            // 池里能混着不同引擎的音色，得看清这一条是谁家的（同「朗读引擎与音色」页）
+                            if (member.engineName.isNotBlank()) {
+                                AppText(
+                                    text = member.engineName,
+                                    style = LegadoTheme.typography.labelSmall,
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
+                        memberTrailing?.invoke(member)
+                        SmallPlainButton(
+                            onClick = { onMemberRemove(member.voiceId) },
+                            icon = AppIcons.Delete,
+                            contentDescription = stringResource(wording.removeMember),
+                        )
                     }
-                    memberTrailing?.invoke(member)
-                    SmallPlainButton(
-                        onClick = { onMemberRemove(member.voiceId) },
-                        icon = AppIcons.Delete,
-                        contentDescription = stringResource(wording.removeMember),
-                    )
                 }
+                Spacer(Modifier.height(6.dp))
             }
-            Spacer(Modifier.height(6.dp))
         }
     }
 }
@@ -986,6 +997,8 @@ fun MemberPickerDialog(
                             .fillMaxWidth()
                             .heightIn(max = 320.dp)
                             .verticalScroll(rememberScrollState()),
+                        // 与「分组管理」等弹窗同一套勾选卡：选中态自带底色，比裸复选框好认
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         if (candidates.isEmpty()) {
                             EmptyMessage(
@@ -994,35 +1007,12 @@ fun MemberPickerDialog(
                             )
                         }
                         candidates.forEach { cand ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onToggle(cand.voiceId, !cand.checked) }
-                                    .padding(vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                AppCheckbox(
-                                    checked = cand.checked,
-                                    onCheckedChange = { onToggle(cand.voiceId, it) },
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    AppText(
-                                        text = cand.displayName,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    if (cand.engineName.isNotBlank()) {
-                                        AppText(
-                                            text = cand.engineName,
-                                            style = LegadoTheme.typography.bodySmall,
-                                            color = LegadoTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    }
-                                }
-                            }
+                            CheckboxItem(
+                                title = cand.displayName,
+                                description = cand.engineName.ifBlank { null },
+                                checked = cand.checked,
+                                onCheckedChange = { onToggle(cand.voiceId, it) },
+                            )
                         }
                     }
                 }
