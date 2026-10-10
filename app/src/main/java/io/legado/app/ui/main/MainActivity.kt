@@ -39,8 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -52,6 +54,7 @@ import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppConst.appInfo
+import io.legado.app.constant.EventBus
 import io.legado.app.core.ui.player.playerUnderlaySemantics
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.domain.gateway.BackupSettingsGateway
@@ -60,9 +63,11 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.PlaybackCapsuleGateway
 import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.domain.model.PlaybackCapsuleState
+import io.legado.app.help.LocalNetworkAccess
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.http.LocalNetworkBlockedNotifier
 import io.legado.app.help.storage.Backup
 import io.legado.app.help.update.AppUpdateGitHub
 import io.legado.app.lib.dialogs.alert
@@ -87,6 +92,7 @@ import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.components.privacy.PrivateAppStartGate
 import io.legado.app.utils.LogUtils
+import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
@@ -322,13 +328,27 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     private val readAloudSettingsRepository by inject<ReadAloudSettingsRepository>()
     internal val navRouteTracker by inject<MainNavRouteTracker>()
     private val routeEvents = MutableSharedFlow<RouteEvent>(extraBufferCapacity = 1)
+    /** 本次本地网络权限申请的目的，决定授权后是否续跑 Web 服务。 */
+    private enum class LocalNetworkPermissionPurpose { WebService, NetworkRequest }
+
+    private var localNetworkPermissionPurpose = LocalNetworkPermissionPurpose.WebService
     private val localNetworkPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        val purpose = localNetworkPermissionPurpose
+        localNetworkPermissionPurpose = LocalNetworkPermissionPurpose.WebService
         if (granted) {
-            WebService.startForeground(this)
+            if (purpose == LocalNetworkPermissionPurpose.WebService) {
+                WebService.startForeground(this)
+            }
         } else {
-            toastOnUi(R.string.web_service_local_network_permission_denied)
+            when (purpose) {
+                LocalNetworkPermissionPurpose.WebService ->
+                    toastOnUi(R.string.web_service_local_network_permission_denied)
+
+                LocalNetworkPermissionPurpose.NetworkRequest ->
+                    toastOnUi(R.string.local_network_permission_required)
+            }
         }
     }
     private var shouldApplyDefaultToRead = true
@@ -355,6 +375,15 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                 intent?.getBooleanExtra(MainIntent.EXTRA_WEB_SERVICE_LOCAL_NETWORK, false) == true
         if (requestWebService) {
             startWebServiceWithLocalNetworkPermission()
+        }
+
+        // 局域网请求（书源 / 图源 / WebDAV）被系统拦下时，前台立即补一次本地网络权限申请。
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                FlowEventBus.with<Unit>(EventBus.LOCAL_NETWORK_PERMISSION_REQUIRED).collect {
+                    requestLocalNetworkPermissionIfBlocked()
+                }
+            }
         }
 
         lifecycleScope.launch {
@@ -386,11 +415,28 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
      * 已授予直接启动；未授予先申请，授予后由 launcher 回调补启。
      */
     private fun startWebServiceWithLocalNetworkPermission() {
-        if (WebService.hasLocalNetworkPermission(this)) {
+        localNetworkPermissionPurpose = LocalNetworkPermissionPurpose.WebService
+        if (LocalNetworkAccess.isGranted(this)) {
             WebService.startForeground(this)
         } else {
             localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        requestLocalNetworkPermissionIfBlocked()
+    }
+
+    /**
+     * 书源 / 图源 / WebDAV 等局域网请求被系统拦掉后，网络层会留下标记（见
+     * [LocalNetworkBlockedNotifier]）；回到前台时补一次权限申请，用户重试原操作即可。
+     */
+    private fun requestLocalNetworkPermissionIfBlocked() {
+        if (!LocalNetworkBlockedNotifier.consumePermissionRequest()) return
+        if (LocalNetworkAccess.isGranted(this)) return
+        localNetworkPermissionPurpose = LocalNetworkPermissionPurpose.NetworkRequest
+        localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
     }
 
     override fun onNewIntent(intent: Intent) {

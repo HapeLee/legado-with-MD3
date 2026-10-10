@@ -13,6 +13,8 @@ import io.legado.app.domain.model.AiProviderDraft
 import io.legado.app.domain.model.AiProviderPresets
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.TranslationConstants
+import io.legado.app.help.LocalNetworkAccess
+import io.legado.app.help.targetsLocalNetwork
 import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -221,10 +223,12 @@ class AiProviderEditViewModel(
 
     private fun testConnection() {
         if (_uiState.value.isTesting || _uiState.value.isSaving || _uiState.value.isFetchingModels) return
+        val providerConfig = _uiState.value.toProviderConfig()
+        if (requestLocalNetworkPermissionIfNeeded(providerConfig, AiProviderEditIntent.TestConnection)) return
         viewModelScope.launch {
             _uiState.update { it.copy(isTesting = true) }
             try {
-                val models = aiTextGateway.fetchModels(_uiState.value.toProviderConfig()).getOrThrow()
+                val models = aiTextGateway.fetchModels(providerConfig).getOrThrow()
                 val count = models.size
                 val message = if (count == 0) {
                     appCtx.getString(R.string.ai_test_success_no_models)
@@ -245,6 +249,8 @@ class AiProviderEditViewModel(
     }
 
     private fun syncModels() {
+        val providerConfig = _uiState.value.toProviderConfig()
+        if (requestLocalNetworkPermissionIfNeeded(providerConfig, AiProviderEditIntent.SyncModels)) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, isFetchingModels = true) }
             runCatching {
@@ -331,6 +337,23 @@ class AiProviderEditViewModel(
             apiKey = apiKey,
             customHeaders = customHeaders.toCustomHeaderMap()
         )
+    }
+
+    /**
+     * 局域网里的 AI 服务（本地推理服务等）在 Android 17+ 需要本地网络权限：未授予时系统会
+     * 静默丢弃出站包，用户只看到 15 秒连接超时而不是权限错误。这里提前拦一次，让宿主申请
+     * 权限并按 [retryAction] 重试；返回 true 表示已发出权限请求，本次流程应停止。
+     */
+    private fun requestLocalNetworkPermissionIfNeeded(
+        provider: AiProviderConfig,
+        retryAction: AiProviderEditIntent
+    ): Boolean {
+        if (LocalNetworkAccess.isGranted(appCtx)) return false
+        val reachesLocalNetwork = provider.baseUrl.targetsLocalNetwork() ||
+            provider.modelsUrl?.targetsLocalNetwork() == true
+        if (!reachesLocalNetwork) return false
+        _effects.tryEmit(AiProviderEditEffect.RequestLocalNetworkPermission(retryAction))
+        return true
     }
 
     private fun AiProviderEditUiState.toProviderConfig(id: String = providerId ?: "test_connection_id"): AiProviderConfig {

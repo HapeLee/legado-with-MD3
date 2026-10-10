@@ -1,16 +1,13 @@
 package io.legado.app.service
 
 // ——————【新增引用】——————
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.BaseService
@@ -45,27 +42,8 @@ class WebService : BaseService() {
     private val otherSettingsGateway by inject<OtherSettingsGateway>()
 
     companion object {
-        /**
-         * Android 17 (API 37) 起本地网络默认屏蔽（入站连接同样受限），
-         * SDK 尚未提供对应的 Build.VERSION_CODES 常量，这里用字面量。
-         */
-        private const val LOCAL_NETWORK_PERMISSION_SDK_INT = 37
-
         var isRun = false
         var hostAddress = ""
-
-        private val isLocalNetworkPermissionRequired: Boolean
-            get() = Build.VERSION.SDK_INT >= LOCAL_NETWORK_PERMISSION_SDK_INT
-
-        /**
-         * 未授予时系统会静默丢弃局域网入站连接，Web 服务在其它设备上不可达。
-         * 需要本地网络访问前必须先检查；低于 API 37 的设备隐式授予，无需申请。
-         */
-        fun hasLocalNetworkPermission(context: Context): Boolean =
-            !isLocalNetworkPermissionRequired || ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_LOCAL_NETWORK
-            ) == PackageManager.PERMISSION_GRANTED
 
         fun start(context: Context) {
             context.startService<WebService>()

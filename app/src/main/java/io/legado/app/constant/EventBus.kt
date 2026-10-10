@@ -38,4 +38,7 @@ object EventBus {
     const val UP_TOC = "upToc"
 
     const val UP_ALL_BOOK_TOC = "upAllBookToc"
+
+    /** 局域网请求被本地网络保护拦下，宿主应申请本地网络权限。 */
+    const val LOCAL_NETWORK_PERMISSION_REQUIRED = "localNetworkPermissionRequired"
 }

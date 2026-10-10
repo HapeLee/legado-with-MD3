@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
+import io.legado.app.help.LocalNetworkAccess
 import io.legado.app.service.WebService
 import io.legado.app.utils.eventBus.FlowEventBus
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -81,7 +82,7 @@ class MyViewModel(
                 if (_uiState.value.isWebServiceRun) {
                     WebService.stop(context)
                     _uiState.update { it.copy(isWebServiceRun = false, webServiceAddress = "") }
-                } else if (WebService.hasLocalNetworkPermission(context)) {
+                } else if (LocalNetworkAccess.isGranted(context)) {
                     WebService.start(context)
                 } else {
                     _effects.tryEmit(MyEffect.RequestLocalNetworkPermission)

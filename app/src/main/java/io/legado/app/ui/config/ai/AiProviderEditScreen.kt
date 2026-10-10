@@ -1,5 +1,8 @@
 package io.legado.app.ui.config.ai
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +61,7 @@ import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -104,6 +109,21 @@ fun AiProviderEditScreen(
     var showDeleteModelDialog by remember { mutableStateOf<String?>(null) }
     var showHeadersDialog by remember { mutableStateOf(false) }
     var headerRows by remember { mutableStateOf<List<AiProviderHeaderUi>>(emptyList()) }
+    val scope = rememberCoroutineScope()
+    val localNetworkDeniedMessage = stringResource(R.string.ai_local_network_permission_denied)
+    // Android 17+ 访问局域网内的 AI 服务需要本地网络权限，授权后按原动作重试。
+    var retryAfterLocalNetworkPermission by remember { mutableStateOf<AiProviderEditIntent?>(null) }
+    val localNetworkPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val retryAction = retryAfterLocalNetworkPermission
+        retryAfterLocalNetworkPermission = null
+        if (granted && retryAction != null) {
+            onIntent(retryAction)
+        } else if (!granted) {
+            scope.launch { snackbarHostState.showSnackbar(localNetworkDeniedMessage) }
+        }
+    }
 
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
@@ -111,6 +131,10 @@ fun AiProviderEditScreen(
                 is AiProviderEditEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 AiProviderEditEffect.NavigateBack -> onBackClick()
                 AiProviderEditEffect.NavigateBackAfterDelete -> onBackClick()
+                is AiProviderEditEffect.RequestLocalNetworkPermission -> {
+                    retryAfterLocalNetworkPermission = effect.retryAction
+                    localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                }
             }
         }
     }
