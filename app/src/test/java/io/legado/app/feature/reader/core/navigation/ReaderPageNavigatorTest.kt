@@ -107,8 +107,10 @@ class ReaderPageNavigatorTest {
         val base = ReaderPageWindow(current = page(0, 0))
         val next = ReaderPageWindow(current = page(1, 20))
         val jumped = ReaderPageWindow(current = page(0, 0, 9))
+        val rewrappedBase = ReaderPageWindow(current = page(0, 0))
         assertEquals(next, ReaderPageNavigator.resolveWindow(base, base, next))
         assertEquals(next, ReaderPageNavigator.resolveWindow(next, base, next))
+        assertEquals(next, ReaderPageNavigator.resolveWindow(rewrappedBase, base, next))
         assertEquals(jumped, ReaderPageNavigator.resolveWindow(jumped, base, next))
     }
 

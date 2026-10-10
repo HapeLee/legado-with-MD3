@@ -498,6 +498,9 @@ fun ReaderCanvasSurface(
         return window
     }
     fun settlePageTurn(decision: ReaderTransitionDecision) {
+        if (pageMotionJob?.isActive == true && pendingTurn != null) {
+            completePendingTurn()
+        }
         pageMotionJob?.cancel()
         curlRevealJob?.cancel()
         if (transitionMode == ReaderTransitionMode.SIMULATION) {
@@ -577,6 +580,9 @@ fun ReaderCanvasSurface(
         }
     }
     fun tapPageTurn(direction: ReaderTurnDirection) {
+        if (pageMotionJob?.isActive == true && pendingTurn != null) {
+            completePendingTurn()
+        }
         val window = latestPages
         // 放行以"书中是否还有邻章"为准（对照旧 View TextPageFactory.hasNext/hasPrev）：
         // 邻章排版滞后于阅读进度时窗口里还没有邻页，但仍必须把翻页交给宿主，
@@ -1570,18 +1576,52 @@ fun ReaderCanvasSurface(
             ).transforms(transitionMode)
             @Composable
             fun PageLayer(page: ReaderPage, role: PagedLayerRole, offsetY: () -> Float) {
+                val coverClipModifier = if (
+                    transitionMode == ReaderTransitionMode.COVER &&
+                    role == PagedLayerRole.NEXT &&
+                    turnDirection == ReaderTurnDirection.NEXT
+                ) {
+                    Modifier.drawWithContent {
+                        val revealLeft = (size.width + displayOffset).coerceIn(0f, size.width)
+                        clipRect(
+                            left = revealLeft,
+                            top = 0f,
+                            right = size.width,
+                            bottom = size.height
+                        ) {
+                            this@drawWithContent.drawContent()
+                        }
+                    }
+                } else Modifier
+
                 ReaderPageCanvas(
                     page, backgroundColor, pageBackgroundImage, backgroundImageAlpha, selectionColor, textAccentColor,
                     Modifier
                         .fillMaxSize()
+                        .then(coverClipModifier)
                         .graphicsLayer {
+                            val activeCurrentId = currentPageWindow().current?.id
                             val transform = transition
                                 .copy(offsetPx = displayOffset)
                                 .transforms(transitionMode)
                                 .forRole(role)
                             if (transform == null) {
+                                if (page.id == activeCurrentId) {
+                                    // 翻页交接瞬间（动画结束帧已复位转场，但重组中该节点的角色仍为 NEXT/PREVIOUS）：
+                                    // 该页已经是当前视口的真实当前页，必须无缝显示在屏幕中央，绝不设为 0f 隐形闪烁。
+                                    translationX = 0f
+                                    translationY = offsetY()
+                                    alpha = 1f
+                                    return@graphicsLayer
+                                }
                                 // 与本回合方向不一致（理论上被上面的预览挡住）：显式隐藏，
                                 // 避免残留上一次的位移把邻页留在屏幕上。
+                                alpha = 0f
+                                return@graphicsLayer
+                            }
+                            if (role == PagedLayerRole.CURRENT && page.id != activeCurrentId && transition.direction == null) {
+                                // 翻页完成已切换到新页，但旧当前页尚未完成重组退场：
+                                // 此时旧页绝不能以位移 0f 瞬移回屏幕中央，显式隐藏避免闪现旧页。
                                 alpha = 0f
                                 return@graphicsLayer
                             }

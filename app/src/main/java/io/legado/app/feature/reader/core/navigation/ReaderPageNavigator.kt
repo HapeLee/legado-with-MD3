@@ -48,7 +48,7 @@ object ReaderPageNavigator {
         pendingBase: ReaderPageWindow?,
         pending: ReaderPageWindow?,
     ): ReaderPageWindow =
-        if (pending != null && (host === pendingBase || host === pending)) pending else host
+        if (pending != null && (host === pendingBase || host === pending || (pendingBase?.current != null && host.current?.id == pendingBase.current.id))) pending else host
 
     fun bodyParagraphAt(pages: List<ReaderPage>, chapterIndex: Int, chapterPosition: Int): Int? = pages
         .asSequence()
