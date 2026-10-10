@@ -7,9 +7,13 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 
 /**
- * Android 17 (API 37) 起本地网络保护强制生效：系统在 eBPF 层静默丢弃未授权应用的局域网流量，
- * 入站（Web 服务被其它设备访问）与出站（连接本地 AI、局域网书源）同样受限。
- * 漏掉权限检查时用户只会看到连接超时，因此访问局域网地址前必须先走这里。
+ * Android 17 (API 37, targetSdk >= 37) 起本地网络保护强制生效：系统在网络栈层阻断未授权应用的
+ * 局域网流量，入站（Web 服务被其它设备访问）与出站（连接本地 AI、局域网书源）同样受限。
+ * 漏掉权限检查时用户只看到连接超时，因此访问局域网地址前必须先走这里。
+ *
+ * 地址范围以官方 "Local network definition" 为准：RFC1918 私有段、169.254/16、100.64/10、
+ * IPv6 链路本地/唯一本地地址，以及 .local（mDNS）主机名。回环（localhost / 127.0.0.0/8 / ::1）
+ * 不在该定义内——回环接口不具备广播能力、流量不出设备，因此不视为需要授权。
  */
 object LocalNetworkAccess {
 
@@ -20,17 +24,20 @@ object LocalNetworkAccess {
 
     fun isRequired(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= PERMISSION_SDK_INT
 
-    /** 低于 API 37 的设备隐式授予，调用方无需再自行判断系统版本。 */
-    fun isGranted(context: Context): Boolean =
-        !isRequired() || ContextCompat.checkSelfPermission(
+    /**
+     * 低于 API 37 的设备隐式授予，调用方无需再自行判断系统版本。
+     * [sdkInt] 可注入，便于对版本分支做纯 JVM 单元测试。
+     */
+    fun isGranted(context: Context, sdkInt: Int = Build.VERSION.SDK_INT): Boolean =
+        !isRequired(sdkInt) || ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_LOCAL_NETWORK
         ) == PackageManager.PERMISSION_GRANTED
 }
 
 /**
- * URL（允许不带 scheme）是否指向局域网或本机地址。只有这类地址受本地网络保护约束，
- * 访问公网 API 不需要该权限，不能无条件打扰用户。
+ * URL（允许不带 scheme）是否指向需要本地网络权限的地址。只有这类地址受本地网络保护约束，
+ * 访问公网 API、回环地址都不需要该权限，不能无条件打扰用户。
  */
 internal fun String.targetsLocalNetwork(): Boolean =
     extractHost()?.isLocalNetworkHost() == true
@@ -52,33 +59,31 @@ private fun String.extractHost(): String? {
     return authority.substringBefore(':').trim().lowercase().ifEmpty { null }
 }
 
+/** host（不含端口）是否属于本地网络保护范围，即访问它需要本地网络权限。 */
 internal fun String.isLocalNetworkHost(): Boolean {
     val host = lowercase()
-    return host == "localhost" ||
-        host.endsWith(".localhost") ||
-        host == "::1" ||
+    return host.endsWith(".local") ||
         host.isPrivateIpv4() ||
         host.isUniqueLocalIpv6() ||
         host.isLinkLocalIpv6()
 }
 
-/** 10/8、172.16/12、192.168/16、127/8、169.254/16 与 0.0.0.0。 */
+/** 10/8、172.16/12、192.168/16、169.254/16 与 100.64/10（运营商级 NAT）。 */
 private fun String.isPrivateIpv4(): Boolean {
     val octets = split('.')
     if (octets.size != 4) return false
     val nums = octets.map { it.toIntOrNull()?.takeIf { value -> value in 0..255 } ?: return false }
     return when {
         nums[0] == 10 -> true
-        nums[0] == 127 -> true
-        nums[0] == 0 -> true
         nums[0] == 192 && nums[1] == 168 -> true
         nums[0] == 172 && nums[1] in 16..31 -> true
         nums[0] == 169 && nums[1] == 254 -> true
+        nums[0] == 100 && nums[1] in 64..127 -> true
         else -> false
     }
 }
 
-/** fc00::/7 唯一本地地址。 */
+/** fc00::/7 唯一本地地址（官方定义未逐条列出，但同属不可路由的私有地址）。 */
 private fun String.isUniqueLocalIpv6(): Boolean {
     if (':' !in this) return false
     val first = substringBefore(':')

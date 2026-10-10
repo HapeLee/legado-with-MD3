@@ -53,6 +53,11 @@ class AiProviderEditViewModel(
     )
     val uiState = _uiState.asStateFlow()
 
+    /**
+     * 权限被拦期间暂存被打断的动作。放在 ViewModel 而不是界面 state 里，配置变更/重建后仍能重试。
+     */
+    private var pendingLocalNetworkAction: AiProviderEditIntent? = null
+
     private val _effects = MutableSharedFlow<AiProviderEditEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
@@ -131,7 +136,14 @@ class AiProviderEditViewModel(
             AiProviderEditIntent.SyncModels -> syncModels()
             AiProviderEditIntent.DeleteProvider -> deleteProvider()
             is AiProviderEditIntent.DeleteModel -> deleteModel(intent.modelProfileId)
+            AiProviderEditIntent.RetryAfterLocalNetworkPermission -> retryAfterLocalNetworkPermission()
         }
+    }
+
+    private fun retryAfterLocalNetworkPermission() {
+        val action = pendingLocalNetworkAction ?: return
+        pendingLocalNetworkAction = null
+        onIntent(action)
     }
 
     private fun applyProviderPreset(id: String) {
@@ -341,8 +353,8 @@ class AiProviderEditViewModel(
 
     /**
      * 局域网里的 AI 服务（本地推理服务等）在 Android 17+ 需要本地网络权限：未授予时系统会
-     * 静默丢弃出站包，用户只看到 15 秒连接超时而不是权限错误。这里提前拦一次，让宿主申请
-     * 权限并按 [retryAction] 重试；返回 true 表示已发出权限请求，本次流程应停止。
+     * 阻断出站流量，用户只看到 15 秒连接超时而不是权限错误。这里提前拦一次，让宿主申请
+     * 权限，授权后重试 [retryAction]；返回 true 表示已发出权限请求，本次流程应停止。
      */
     private fun requestLocalNetworkPermissionIfNeeded(
         provider: AiProviderConfig,
@@ -352,7 +364,8 @@ class AiProviderEditViewModel(
         val reachesLocalNetwork = provider.baseUrl.targetsLocalNetwork() ||
             provider.modelsUrl?.targetsLocalNetwork() == true
         if (!reachesLocalNetwork) return false
-        _effects.tryEmit(AiProviderEditEffect.RequestLocalNetworkPermission(retryAction))
+        pendingLocalNetworkAction = retryAction
+        _effects.tryEmit(AiProviderEditEffect.RequestLocalNetworkPermission)
         return true
     }
 

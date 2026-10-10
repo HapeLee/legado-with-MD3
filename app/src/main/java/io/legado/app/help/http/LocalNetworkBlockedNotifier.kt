@@ -2,6 +2,7 @@ package io.legado.app.help.http
 
 import io.legado.app.R
 import io.legado.app.constant.EventBus
+import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.LocalNetworkAccess
 import io.legado.app.help.isLocalNetworkHost
 import io.legado.app.utils.eventBus.FlowEventBus
@@ -14,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong
 import splitties.init.appCtx
 
 /**
- * Android 17+ 未授予本地网络权限时，系统会在 eBPF 层静默丢弃发往局域网地址的包，
+ * Android 17+ 未授予本地网络权限时，系统会在网络栈层阻断发往局域网地址的包，
  * 书源、图源、WebDAV 这类请求只会莫名其妙地超时或连接被拒。这里在网络层兜底：
  * 识别这种情况，提示一次，并留一个标记让宿主 Activity 回来补授权
  * （宿主通过 [consumePermissionRequest] 领取）。
@@ -38,6 +39,9 @@ object LocalNetworkBlockedNotifier {
         permissionRequested.set(true)
         // 宿主在前台时立刻补授权；不在前台则由 onResume 再消费一次标记。
         FlowEventBus.post(EventBus.LOCAL_NETWORK_PERMISSION_REQUIRED, Unit)
+        // 后台失败不打扰用户（也无法保证 Toast 可见），留给下次前台失败或 onResume 补授权时再提示，
+        // 因此只有真正弹出提示才占用节流窗口。
+        if (!LifecycleHelp.appVisible.value) return
         val now = System.currentTimeMillis()
         val last = lastNotifyAt.get()
         if (now - last < REPEAT_INTERVAL_MS || !lastNotifyAt.compareAndSet(last, now)) return

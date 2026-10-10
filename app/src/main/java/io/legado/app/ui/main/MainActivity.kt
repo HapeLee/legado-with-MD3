@@ -328,27 +328,26 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     private val readAloudSettingsRepository by inject<ReadAloudSettingsRepository>()
     internal val navRouteTracker by inject<MainNavRouteTracker>()
     private val routeEvents = MutableSharedFlow<RouteEvent>(extraBufferCapacity = 1)
-    /** 本次本地网络权限申请的目的，决定授权后是否续跑 Web 服务。 */
-    private enum class LocalNetworkPermissionPurpose { WebService, NetworkRequest }
-
-    private var localNetworkPermissionPurpose = LocalNetworkPermissionPurpose.WebService
-    private val localNetworkPermissionLauncher = registerForActivityResult(
+    /**
+     * Web 服务与「局域网请求」各自持有独立的 launcher：授权结果互不影响，也不需要用一个可变字段
+     * 记录「本次申请的目的」——那种写法在配置变更/进程重建后会丢失，导致结果被误判为 Web 服务申请。
+     */
+    private val webServiceLocalNetworkPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        val purpose = localNetworkPermissionPurpose
-        localNetworkPermissionPurpose = LocalNetworkPermissionPurpose.WebService
         if (granted) {
-            if (purpose == LocalNetworkPermissionPurpose.WebService) {
-                WebService.startForeground(this)
-            }
+            WebService.startForeground(this)
         } else {
-            when (purpose) {
-                LocalNetworkPermissionPurpose.WebService ->
-                    toastOnUi(R.string.web_service_local_network_permission_denied)
+            toastOnUi(R.string.web_service_local_network_permission_denied)
+        }
+    }
 
-                LocalNetworkPermissionPurpose.NetworkRequest ->
-                    toastOnUi(R.string.local_network_permission_required)
-            }
+    private val localNetworkRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        // 授权后由用户重试原操作；未授权时提示授予方式。
+        if (!granted) {
+            toastOnUi(R.string.local_network_permission_required)
         }
     }
     private var shouldApplyDefaultToRead = true
@@ -415,11 +414,10 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
      * 已授予直接启动；未授予先申请，授予后由 launcher 回调补启。
      */
     private fun startWebServiceWithLocalNetworkPermission() {
-        localNetworkPermissionPurpose = LocalNetworkPermissionPurpose.WebService
         if (LocalNetworkAccess.isGranted(this)) {
             WebService.startForeground(this)
         } else {
-            localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+            webServiceLocalNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
         }
     }
 
@@ -435,8 +433,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     private fun requestLocalNetworkPermissionIfBlocked() {
         if (!LocalNetworkBlockedNotifier.consumePermissionRequest()) return
         if (LocalNetworkAccess.isGranted(this)) return
-        localNetworkPermissionPurpose = LocalNetworkPermissionPurpose.NetworkRequest
-        localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+        localNetworkRequestPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
     }
 
     override fun onNewIntent(intent: Intent) {

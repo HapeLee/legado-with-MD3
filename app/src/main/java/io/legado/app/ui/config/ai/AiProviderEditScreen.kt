@@ -111,16 +111,14 @@ fun AiProviderEditScreen(
     var headerRows by remember { mutableStateOf<List<AiProviderHeaderUi>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val localNetworkDeniedMessage = stringResource(R.string.ai_local_network_permission_denied)
-    // Android 17+ 访问局域网内的 AI 服务需要本地网络权限，授权后按原动作重试。
-    var retryAfterLocalNetworkPermission by remember { mutableStateOf<AiProviderEditIntent?>(null) }
+    // Android 17+ 访问局域网内的 AI 服务需要本地网络权限；待重试的动作由 ViewModel 持有，
+    // 授权后回发 intent，这样配置变更/重建也不会丢失重试。
     val localNetworkPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        val retryAction = retryAfterLocalNetworkPermission
-        retryAfterLocalNetworkPermission = null
-        if (granted && retryAction != null) {
-            onIntent(retryAction)
-        } else if (!granted) {
+        if (granted) {
+            onIntent(AiProviderEditIntent.RetryAfterLocalNetworkPermission)
+        } else {
             scope.launch { snackbarHostState.showSnackbar(localNetworkDeniedMessage) }
         }
     }
@@ -131,10 +129,8 @@ fun AiProviderEditScreen(
                 is AiProviderEditEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 AiProviderEditEffect.NavigateBack -> onBackClick()
                 AiProviderEditEffect.NavigateBackAfterDelete -> onBackClick()
-                is AiProviderEditEffect.RequestLocalNetworkPermission -> {
-                    retryAfterLocalNetworkPermission = effect.retryAction
+                AiProviderEditEffect.RequestLocalNetworkPermission ->
                     localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
-                }
             }
         }
     }

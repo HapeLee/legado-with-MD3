@@ -97,6 +97,9 @@ sealed interface AiProviderEditIntent {
     data object SyncModels : AiProviderEditIntent
     data object DeleteProvider : AiProviderEditIntent
     data class DeleteModel(val modelProfileId: String) : AiProviderEditIntent
+
+    /** 本地网络权限授予后由界面触发，重跑因缺权限被打断的动作，避免再次进入申请分支。 */
+    data object RetryAfterLocalNetworkPermission : AiProviderEditIntent
 }
 
 sealed interface AiProviderEditEffect {
@@ -106,7 +109,7 @@ sealed interface AiProviderEditEffect {
 
     /**
      * 供应商地址在局域网内，但系统尚未授予本地网络权限（Android 17+）。
-     * 宿主申请到权限后按 [retryAction] 重试，这不是失败，不提示。
+     * 宿主申请权限，授权后回发 [AiProviderEditIntent.RetryAfterLocalNetworkPermission]；这不是失败，不提示。
      */
-    data class RequestLocalNetworkPermission(val retryAction: AiProviderEditIntent) : AiProviderEditEffect
+    data object RequestLocalNetworkPermission : AiProviderEditEffect
 }

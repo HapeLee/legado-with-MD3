@@ -20,11 +20,31 @@ class LocalNetworkBlockedNotifierTest {
         )
         assertTrue(
             LocalNetworkBlockedNotifier.shouldReport(
-                host = "localhost",
+                host = "nas.local",
                 error = ConnectException("Connection refused"),
                 permissionGranted = false
             )
         )
+        assertTrue(
+            LocalNetworkBlockedNotifier.shouldReport(
+                host = "100.64.0.1",
+                error = SocketTimeoutException("timeout"),
+                permissionGranted = false
+            )
+        )
+    }
+
+    @Test
+    fun `never reports loopback hosts`() {
+        listOf("127.0.0.1", "localhost", "::1").forEach { host ->
+            assertFalse(
+                LocalNetworkBlockedNotifier.shouldReport(
+                    host = host,
+                    error = ConnectException("Connection refused"),
+                    permissionGranted = false
+                )
+            )
+        }
     }
 
     @Test
