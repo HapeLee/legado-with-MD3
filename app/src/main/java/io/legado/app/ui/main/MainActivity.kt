@@ -870,11 +870,12 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                         }
                     }
                 }
+                // 关闭预见性返回时由宿主在导航层之前接管返回：手势不跟手预览，
+                // 松手后走普通出栈，popTransitionSpec 的返回动画照常播放。
                 BackHandler(
                     enabled = shouldHandleActivityBack(
                         predictiveBackEnabled = configuration.appShell.predictiveBackEnabled,
                         playerPresent = playerVisible || morphPresent,
-                        isRoot = backStack.size <= 1,
                     )
                 ) {
                     MainNavigator.navigateBack(this@MainActivity, backStack)
