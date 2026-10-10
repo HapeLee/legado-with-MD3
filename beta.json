@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.46",
-  "name": "Pre-release 3.26.16-beta.46",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* ci(release): Release 页自动附带 PR/贡献者列表，Telegram 复用同一份文案\n* fix(cast): 从配音侧删除角色时一并清理档案的关系与事件\n* feat: 界面优化\n* feat: 一些导航问题\n* Bump web v3.26.100902\n* refactor: 重构 Xbox 手柄配置和状态管理，优化代码结构\n* fix(cast): 中点不再是声音池分隔符，音译名可以做角色名\n* fix(cast): 配音页与正文胶囊改的主名也回写本书记忆\n* fix(ai): 换默认模型时把所有任务类型的预设一起带上\n* fix(lint): 记忆保存的重名提示改在组合期读文案\n* fix(cast): 记忆里的改名与改池按身份配对，两件各自成立\n* fix(cast): 声音池导入「本机都有了」不再报成「不是本软件导出的」\n* test(ai): 假 SSE 服务端在关连接前同步清接收队列\n* feat(cast): 变声器音高与语速可以直接填数值\n* fix(cast): 本书记忆的分隔符进名字禁列，两套语法共用同一份\n* fix(cast): 记忆里改的名字与池回写配音与档案，删除一次清两边\n* fix(cast): 声音池导出的键名钉死，换版本也认得自己的文件\n* feat: 本地书导入\n* feat: 阅读优化\n* fix(font): 字体文件夹读不出来时说明原因，并支持直接导入字体文件\n* fix(reader): 支持 file:// 字体路径，修复选中应用内字体静默回落默认字体\n\n## What's Changed\n* refactor: 重构 Xbox 手柄配置和状态管理，优化代码结构 by @mobeicanyue in https://github.com/HapeLee/legado-with-MD3/pull/2387\n* fix(cast): 角色记忆与配音双向同步、声音池导入自识别、AI 默认模型传播 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2384\n* fix(font): 修复应用内字体不生效与国产 ROM 字体文件夹读不出内容，新增「导入字体文件」 by @clevebitr in https://github.com/HapeLee/legado-with-MD3/pull/2379\n\n## New Contributors\n* @clevebitr made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2379\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.45...3.26.16-beta.46",
+  "tag_name": "3.26.16-beta.47",
+  "name": "Pre-release 3.26.16-beta.47",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 界面优化\n* feat: 阅读闪烁问题？\n* fix(network): 收紧局域网判定并修复本地网络权限申请可靠性\n* fix(network): 适配 Android 17 本地网络保护，补齐局域网访问权限\n\n## What's Changed\n* fix(network): 适配 Android 17 本地网络保护，补齐局域网访问权限 by @THERentropy in https://github.com/HapeLee/legado-with-MD3/pull/2391\n\n## New Contributors\n* @THERentropy made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2391\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.46...3.26.16-beta.47",
   "prerelease": true,
-  "created_at": "2026-10-09T22:37:00Z",
+  "created_at": "2026-10-10T20:30:29Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.46/legado-3.26.16-beta.46-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.47/legado-3.26.16-beta.47-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-09T22:54:48Z",
+      "created_at": "2026-10-10T20:50:22Z",
       "download_count": 0,
-      "id": 626398520,
-      "name": "legado-3.26.16-beta.46-arm64-v8a.apk",
+      "id": 628962701,
+      "name": "legado-3.26.16-beta.47-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/626398520"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/628962701"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.46/legado-3.26.16-beta.46-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.47/legado-3.26.16-beta.47-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-09T22:54:48Z",
+      "created_at": "2026-10-10T20:50:22Z",
       "download_count": 0,
-      "id": 626398521,
-      "name": "legado-3.26.16-beta.46-armeabi-v7a.apk",
+      "id": 628962699,
+      "name": "legado-3.26.16-beta.47-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/626398521"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/628962699"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.46/legado-3.26.16-beta.46.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.47/legado-3.26.16-beta.47.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-09T22:54:48Z",
+      "created_at": "2026-10-10T20:50:22Z",
       "download_count": 0,
-      "id": 626398518,
-      "name": "legado-3.26.16-beta.46.apk",
+      "id": 628962703,
+      "name": "legado-3.26.16-beta.47.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/626398518"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/628962703"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.46/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.47/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-10-09T22:54:48Z",
+      "created_at": "2026-10-10T20:50:22Z",
       "download_count": 0,
-      "id": 626398517,
+      "id": 628962702,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/626398517"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/628962702"
     }
   ]
 }
