@@ -45,4 +45,10 @@ sealed interface AiModelEditIntent {
 sealed interface AiModelEditEffect {
     data class ShowMessage(val message: String) : AiModelEditEffect
     data object NavigateBack : AiModelEditEffect
+
+    /**
+     * 供应商地址在局域网内，但系统尚未授予本地网络权限（Android 17+）。
+     * 宿主申请到权限后重试测试连接，这不是失败，不提示。
+     */
+    data object RequestLocalNetworkPermission : AiModelEditEffect
 }

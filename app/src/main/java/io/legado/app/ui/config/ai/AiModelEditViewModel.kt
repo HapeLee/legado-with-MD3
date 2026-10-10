@@ -10,6 +10,8 @@ import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiModelDraft
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.help.LocalNetworkAccess
+import io.legado.app.help.targetsLocalNetwork
 import io.legado.app.utils.GSON
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import splitties.init.appCtx
 
 class AiModelEditViewModel(
     private val initialProviderId: String?,
@@ -117,6 +120,15 @@ class AiModelEditViewModel(
     }
 
     private fun testConnection() {
+        // 局域网里的 AI 服务在 Android 17+ 需要本地网络权限，未授予时系统静默丢包、只报连接超时。
+        val baseUrl = _uiState.value.providers
+            .firstOrNull { it.id == _uiState.value.providerId }
+            ?.baseUrl
+            .orEmpty()
+        if (!LocalNetworkAccess.isGranted(appCtx) && baseUrl.targetsLocalNetwork()) {
+            _effects.tryEmit(AiModelEditEffect.RequestLocalNetworkPermission)
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isTesting = true) }
             runCatching {

@@ -2359,6 +2359,8 @@
     <string name="ai_test_success_no_models">AI connection test succeeded, but no models found</string>
     <string name="ai_test_success_with_models">AI connection test succeeded (%1$d models found)</string>
     <string name="ai_test_failed">AI connection test failed</string>
+    <string name="ai_local_network_permission_denied">Local network permission is required to reach this AI service</string>
+    <string name="local_network_permission_required">Can\'t reach the local network. Grant the \"Nearby devices\" permission to this app in system settings</string>
     <string name="ai_profile_counts">Providers: %1$d, models: %2$d, presets: %3$d</string>
     <string name="homepage_load_more_failed">Failed to load more: %1$s</string>
     <string name="homepage_module_duplicate_infinite">This group already has an infinite loading module</string>

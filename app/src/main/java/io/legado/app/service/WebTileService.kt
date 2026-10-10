@@ -11,6 +11,7 @@ import android.view.WindowManager.BadTokenException
 import androidx.annotation.RequiresApi
 import io.legado.app.R
 import io.legado.app.constant.IntentAction
+import io.legado.app.help.LocalNetworkAccess
 import io.legado.app.ui.main.MainIntent
 import io.legado.app.utils.printOnDebug
 
@@ -56,7 +57,7 @@ class WebTileService : TileService() {
         super.onClick()
         if (WebService.isRun) {
             WebService.stop(this)
-        } else if (!WebService.hasLocalNetworkPermission(this)) {
+        } else if (!LocalNetworkAccess.isGranted(this)) {
             // TileService 无法发起运行时权限申请，转到宿主 Activity 申请并补启服务
             openInApp()
         } else {

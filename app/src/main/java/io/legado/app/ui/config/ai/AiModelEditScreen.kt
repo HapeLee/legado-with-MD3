@@ -1,5 +1,8 @@
 package io.legado.app.ui.config.ai
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -10,6 +13,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -31,6 +35,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -95,11 +100,26 @@ fun AiModelEditScreen(
         currentLabel = stringResource(R.string.ai_current_value, formatTokenLimit(state.maxOutputTokens))
     )
 
+    val scope = rememberCoroutineScope()
+    val localNetworkDeniedMessage = stringResource(R.string.ai_local_network_permission_denied)
+    // Android 17+ 访问局域网内的 AI 服务需要本地网络权限，授权后重试测试连接。
+    val localNetworkPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            onIntent(AiModelEditIntent.TestConnection)
+        } else {
+            scope.launch { snackbarHostState.showSnackbar(localNetworkDeniedMessage) }
+        }
+    }
+
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
                 is AiModelEditEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 AiModelEditEffect.NavigateBack -> onBackClick()
+                AiModelEditEffect.RequestLocalNetworkPermission ->
+                    localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
             }
         }
     }
