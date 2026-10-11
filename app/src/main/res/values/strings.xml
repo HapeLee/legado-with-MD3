@@ -1199,6 +1199,9 @@
     <string name="content_src">Content source code</string>
     <string name="list_src">List source code</string>
     <string name="font_size">Font Size</string>
+    <string name="title_size_relative">Relative to body text size</string>
+    <string name="title_size_relative_desc">Compatible with other versions</string>
+    <string name="title_size_offset">Font size offset</string>
     <string name="color">Color</string>
     <string name="reset_to_body_color">Reset to body text color</string>
     <string name="title_margin_top">Margin Top</string>

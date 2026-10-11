@@ -87,6 +87,11 @@ class LegacyConfigUpdateActionsTest {
             setOf(UCS, RC)
         ),
         Case("TipConfigDialog 标题字号 8,5", ConfigUpdate.TitleSize(24), setOf(UCS, RC)),
+        Case(
+            "标题字号相对正文(Compose 追加)",
+            ConfigUpdate.TitleSizeRelative(false),
+            setOf(UCS, RC)
+        ),
         Case("TipConfigDialog 标题上距 8,5", ConfigUpdate.TitleTopSpacing(1), setOf(UCS, RC)),
         Case("TipConfigDialog 标题下距 8,5", ConfigUpdate.TitleBottomSpacing(1), setOf(UCS, RC)),
         Case("TITLE_COLOR 8,5", ConfigUpdate.TitleColor(0x112233), setOf(UCS, RC)),

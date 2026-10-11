@@ -115,7 +115,7 @@ data class ReadBookStyleConfig(
 
 @Stable
 data class ReadSheetConfigUiState(
-    /** 标题字号 <8 时按「正文字号 + 偏移」解释，故正文字号也要进弹层快照。 */
+    /** 正文字号（sp）。正文排版与高亮预览用它。 */
     val textSize: Int = 20,
     val letterSpacing: Float = 0f,
     val lineSpacing: Int = 0,
@@ -135,6 +135,7 @@ data class ReadSheetConfigUiState(
     val titleLineSpacingExtra: Int = 0,
     val titleLineSpacingSub: Int = 0,
     val titleSize: Int = 0,
+    val titleSizeRelative: Boolean = true,
     val titleTopSpacing: Int = 0,
     val titleBottomSpacing: Int = 0,
     val titleColor: Int = 0,
@@ -1381,6 +1382,11 @@ sealed interface ConfigUpdate {
     }
     data class TitleSize(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+
+    data class TitleSizeRelative(val value: Boolean) : ConfigUpdate {
+        override val actions =
+            setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
     }
     data class TitleTopSpacing(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)

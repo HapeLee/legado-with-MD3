@@ -208,7 +208,11 @@ class ReadBookStyleConfigRepository(
                 mutateEffective { it.copy(titleLineSpacingExtra = value) }
             ReadStyleIntKey.TitleLineSpacingSub ->
                 mutateEffective { it.copy(titleLineSpacingSub = value) }
-            ReadStyleIntKey.TitleSize -> mutateEffective { it.copy(titleSize = value) }
+            ReadStyleIntKey.TitleSize -> mutateEffective {
+                // 顺带把当前的相对/绝对状态固化为显式值：否则旧的「值 < 8 即相对」推断会在
+                // 相对模式偏移调到 ≥8 时把模式悄悄翻成绝对。
+                it.copy(titleSize = value, titleSizeRelative = it.isTitleSizeRelative())
+            }
             ReadStyleIntKey.TitleTopSpacing -> mutateEffective { it.copy(titleTopSpacing = value) }
             ReadStyleIntKey.TitleBottomSpacing ->
                 mutateEffective { it.copy(titleBottomSpacing = value) }
@@ -269,6 +273,9 @@ class ReadBookStyleConfigRepository(
         when (key) {
             ReadStyleBooleanKey.TextItalic -> mutateEffective { it.copy(textItalic = value) }
             ReadStyleBooleanKey.TextShadow -> mutateEffective { it.copy(textShadow = value) }
+            // 只改解释方式，不动数值：同一数值在相对/绝对下含义不同，切换后标题立即随之变化。
+            ReadStyleBooleanKey.TitleSizeRelative ->
+                mutateEffective { it.copy(titleSizeRelative = value) }
             ReadStyleBooleanKey.Underline -> mutateEffective { it.copy(underline = value) }
             ReadStyleBooleanKey.DottedLine -> mutateEffective { it.copy(dottedLine = value) }
             ReadStyleBooleanKey.UnderlineExtend -> mutateEffective { it.copy(underlineExtend = value) }

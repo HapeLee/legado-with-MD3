@@ -268,6 +268,14 @@ object ReadBookConfig {
     val titleSize: Int
         get() = config.titleSize
 
+    /** 是否相对正文。未显式设置（null）时按旧值自动识别，见 [Config.isTitleSizeRelative]。 */
+    val resolvedTitleSizeRelative: Boolean
+        get() = config.isTitleSizeRelative()
+
+    /** 实际渲染用的标题字号（sp）。相对模式 = 正文字号 + 偏移。 */
+    val resolvedTitleSize: Int
+        get() = config.resolvedTitleSizeSp()
+
     val titleSegType: Int
         get() = config.titleSegType
 
@@ -468,6 +476,7 @@ object ReadBookConfig {
             paragraphSpacing = shareConfig.paragraphSpacing,
             titleMode = shareConfig.titleMode,
             titleSize = shareConfig.titleSize,
+            titleSizeRelative = shareConfig.titleSizeRelative,
             titleTopSpacing = shareConfig.titleTopSpacing,
             titleBottomSpacing = shareConfig.titleBottomSpacing,
             titleColor = shareConfig.titleColor,
@@ -573,7 +582,8 @@ object ReadBookConfig {
         val lineSpacingExtra: Int = 12,//行间距
         val paragraphSpacing: Int = 2,//段距
         val titleMode: Int = 0,//标题位置 0:居左 1:居中 2:隐藏
-        val titleSize: Int = 20,
+        val titleSize: Int = 4,//标题字号：相对模式为相对正文的偏移，绝对模式为绝对 sp
+        val titleSizeRelative: Boolean? = null,//是否相对正文：null 表示按旧值自动识别
         val titleTopSpacing: Int = 0,
         val titleBottomSpacing: Int = 0,
         val titleColor: Int = 0,
@@ -644,6 +654,22 @@ object ReadBookConfig {
         val menuBottomBottomMargin: Int = 0,
         val highlightRules: ArrayList<HighlightRule> = arrayListOf()
     ) {
+
+        /**
+         * 标题字号是否相对正文（标题 = 正文字号 + 偏移）。
+         *
+         * 早期版本用「值是否小于 8」区分相对偏移与绝对字号，后来统一改成了绝对值。为兼容历史
+         * 配置，[titleSizeRelative] 未显式设置（null）时沿用旧约定：`< 8` 视为相对偏移，
+         * `>= 8` 视为绝对字号；用户在标题设置里切换后会写入显式值。
+         */
+        fun isTitleSizeRelative(): Boolean = titleSizeRelative ?: (titleSize < 8)
+
+        /**
+         * 实际渲染用的标题字号（sp）。相对模式 = 正文字号 + 偏移（与旧 View 版
+         * `textSize + titleSize` 完全一致），绝对模式直接用自身。
+         */
+        fun resolvedTitleSizeSp(): Int =
+            (if (isTitleSizeRelative()) textSize + titleSize else titleSize).coerceAtLeast(1)
 
         @Transient
         private var textColorIntEInk = -1
@@ -734,6 +760,7 @@ object ReadBookConfig {
             "paragraphSpacing" to paragraphSpacing,
             "titleMode" to titleMode,
             "titleSize" to titleSize,
+            "titleSizeRelative" to isTitleSizeRelative(),
             "titleTopSpacing" to titleTopSpacing,
             "titleBottomSpacing" to titleBottomSpacing,
             "titleColor" to titleColor,

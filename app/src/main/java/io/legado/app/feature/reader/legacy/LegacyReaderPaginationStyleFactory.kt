@@ -1,25 +1,25 @@
 package io.legado.app.feature.reader.legacy
 
 import android.os.Build
-import io.legado.app.feature.reader.core.model.ReaderTextStyle
-import io.legado.app.feature.reader.core.model.ReaderTextShadow
-import io.legado.app.feature.reader.core.model.ReaderEmphasisUnderline
-import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
-import io.legado.app.feature.reader.platform.ReaderAndroidPaginationStyle
-import io.legado.app.feature.reader.core.source.ReaderTitleSegmentation
-import io.legado.app.feature.reader.core.layout.ReaderColumnMode
-import io.legado.app.feature.reader.core.layout.ReaderPageUnderline
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.feature.reader.core.layout.ReaderColumnMode
+import io.legado.app.feature.reader.core.layout.ReaderPageUnderline
+import io.legado.app.feature.reader.core.model.ReaderEmphasisUnderline
+import io.legado.app.feature.reader.core.model.ReaderTextShadow
+import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import io.legado.app.feature.reader.core.source.ReaderTitleSegmentation
+import io.legado.app.feature.reader.platform.ReaderAndroidPaginationStyle
+import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
 import io.legado.app.help.book.isImage
-import io.legado.app.model.ReadBook
-import io.legado.app.utils.isPad
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.model.ReadBook
 import io.legado.app.utils.dpToPx
+import io.legado.app.utils.isPad
 import io.legado.app.utils.spToPx
 import io.legado.app.utils.textHeight
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import splitties.init.appCtx
 
 /** Builds the direct renderer's shaping snapshot from persisted reader settings. */
@@ -50,7 +50,7 @@ object LegacyReaderPaginationStyleFactory : KoinComponent {
         )
         val titleStyle = bodyStyle.copy(
             colorArgb = ReadBookConfig.resolvedTitleColor.takeIf { it != 0 } ?: bodyStyle.colorArgb,
-            fontSizePx = ReadBookConfig.titleSize.toFloat().spToPx(),
+            fontSizePx = ReadBookConfig.resolvedTitleSize.toFloat().spToPx(),
             fontPath = ReadBookConfig.titleFont.takeIf(String::isNotBlank) ?: bodyStyle.fontPath,
             fontWeight = resolveWeight(ReadBookConfig.titleBold),
         )

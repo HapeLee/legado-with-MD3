@@ -15,17 +15,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AlignHorizontalCenter
 import androidx.compose.material.icons.automirrored.filled.AlignHorizontalLeft
 import androidx.compose.material.icons.automirrored.filled.AlignHorizontalRight
-import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.automirrored.filled.CallSplit
+import androidx.compose.material.icons.automirrored.filled.FormatIndentIncrease
+import androidx.compose.material.icons.automirrored.filled.Segment
+import androidx.compose.material.icons.filled.AlignHorizontalCenter
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.CleanHands
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material.icons.filled.FormatAlignJustify
 import androidx.compose.material.icons.filled.FormatColorText
-import androidx.compose.material.icons.automirrored.filled.FormatIndentIncrease
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatLineSpacing
 import androidx.compose.material.icons.filled.FormatSize
@@ -33,9 +34,9 @@ import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Height
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LineWeight
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Minimize
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.automirrored.filled.Segment
 import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Title
@@ -447,9 +448,8 @@ internal fun TypographyTitleTab(
     var titleTopSpacing by remember(config.titleTopSpacing) { mutableIntStateOf(config.titleTopSpacing) }
     var titleBottomSpacing by remember(config.titleBottomSpacing) { mutableIntStateOf(config.titleBottomSpacing) }
 
-    var titleSize by remember(config.titleSize) {
-        mutableIntStateOf(config.titleSize)
-    }
+    var titleSize by remember(config.titleSize) { mutableIntStateOf(config.titleSize) }
+    var titleSizeRelative by remember(config.titleSizeRelative) { mutableStateOf(config.titleSizeRelative) }
 
     var showFlagDialog by remember { mutableStateOf(false) }
     var flagText by remember { mutableStateOf(titleSegFlag) }
@@ -487,15 +487,31 @@ internal fun TypographyTitleTab(
             },
         )
         TinySliderSettingItem(
-            title = stringResource(R.string.font_size),
+            // 相对模式直接编辑相对正文的偏移量（与旧 View 的计数器一致），绝对模式编辑绝对字号。
+            title = stringResource(
+                if (titleSizeRelative) R.string.title_size_offset else R.string.font_size,
+            ),
             value = titleSize.toFloat(),
-            valueRange = 8f..60f,
-            steps = 51,
+            valueRange = if (titleSizeRelative) 0f..60f else 1f..60f,
+            steps = if (titleSizeRelative) 59 else 58,
             imageVector = Icons.Default.FormatSize,
-            valueFormat = { "${it.toInt()}sp" },
+            valueFormat = { value ->
+                val size = value.toInt()
+                if (titleSizeRelative && size > 0) "+${size}sp" else "${size}sp"
+            },
             onValueChange = { value ->
                 titleSize = value.toInt()
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSize(titleSize)))
+            },
+        )
+        TinySwitchSettingItem(
+            title = stringResource(R.string.title_size_relative),
+            description = stringResource(R.string.title_size_relative_desc),
+            checked = titleSizeRelative,
+            imageVector = Icons.Default.Link,
+            onCheckedChange = { value ->
+                titleSizeRelative = value
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSizeRelative(value)))
             },
         )
 

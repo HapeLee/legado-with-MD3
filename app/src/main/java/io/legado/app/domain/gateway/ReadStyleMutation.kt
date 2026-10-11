@@ -68,6 +68,7 @@ enum class ReadStyleFloatKey {
 enum class ReadStyleBooleanKey {
     TextItalic,
     TextShadow,
+    TitleSizeRelative,
     Underline,
     DottedLine,
     UnderlineExtend,

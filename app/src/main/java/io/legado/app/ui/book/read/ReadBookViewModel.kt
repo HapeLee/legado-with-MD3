@@ -1991,6 +1991,7 @@ class ReadBookViewModel(
         titleLineSpacingExtra = ReadBookConfig.titleLineSpacingExtra,
         titleLineSpacingSub = ReadBookConfig.titleLineSpacingSub,
         titleSize = ReadBookConfig.titleSize,
+        titleSizeRelative = ReadBookConfig.resolvedTitleSizeRelative,
         titleTopSpacing = ReadBookConfig.titleTopSpacing,
         titleBottomSpacing = ReadBookConfig.titleBottomSpacing,
         titleColor = ReadBookConfig.titleColor,

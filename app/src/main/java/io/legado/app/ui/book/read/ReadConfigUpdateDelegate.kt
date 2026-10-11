@@ -76,6 +76,7 @@ class ReadConfigUpdateDelegate(
             is ConfigUpdate.TitleLineSpacingExtra,
             is ConfigUpdate.TitleLineSpacingSub,
             is ConfigUpdate.TitleSize,
+            is ConfigUpdate.TitleSizeRelative,
             is ConfigUpdate.TitleTopSpacing,
             is ConfigUpdate.TitleBottomSpacing,
             is ConfigUpdate.TitleColor,
@@ -786,6 +787,8 @@ class ReadConfigUpdateDelegate(
         is ConfigUpdate.TitleLineSpacingSub ->
             intMutation(ReadStyleIntKey.TitleLineSpacingSub, value)
         is ConfigUpdate.TitleSize -> intMutation(ReadStyleIntKey.TitleSize, value)
+        is ConfigUpdate.TitleSizeRelative ->
+            booleanMutation(ReadStyleBooleanKey.TitleSizeRelative, value)
         is ConfigUpdate.TitleTopSpacing -> intMutation(ReadStyleIntKey.TitleTopSpacing, value)
         is ConfigUpdate.TitleBottomSpacing ->
             intMutation(ReadStyleIntKey.TitleBottomSpacing, value)
