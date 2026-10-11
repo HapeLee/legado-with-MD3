@@ -69,6 +69,7 @@ import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -281,31 +282,46 @@ class TocViewModel(
                 ""
             )
 
+    // 按需阅读写的图片/正文不经过 CacheBook，不会有 cacheSuccessFlow，只能在目录打开时重扫补齐。
+    private val cachedChapterRescan = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
     private val _cachedChapterIndices: StateFlow<Set<Int>> = bookState.filterNotNull()
-        .flatMapLatest { book ->
+        .map { it.bookUrl }
+        .distinctUntilChanged()
+        .flatMapLatest { bookUrl ->
             flow {
-                var cached: Set<Int> = bookRepository.getChapters(book.bookUrl)
+                val book = bookRepository.getBook(bookUrl) ?: return@flow
+                suspend fun scanCached(): Set<Int> = bookRepository.getChapters(bookUrl)
                     .filter { chapter ->
+                        // 显示用宽松判定：有正文即算已缓存（缺图不再判为未缓存）；
+                        // 下载是否需要补图仍用严格的 isChapterCacheComplete。
                         chapter.isVolume || withContext(Dispatchers.IO) {
-                            BookHelp.isChapterCacheComplete(book, chapter)
+                            BookHelp.hasContent(book, chapter)
                         }
                     }
                     .mapTo(mutableSetOf()) { it.index }
+
+                var cached = scanCached()
                 emit(cached)
-                CacheBook.cacheSuccessFlow
-                    .filter { it.bookUrl == book.bookUrl }
-                    .collect { chapter ->
-                        cached = if (chapter.isVolume ||
-                            withContext(Dispatchers.IO) {
-                                BookHelp.isChapterCacheComplete(book, chapter)
-                            }
-                        ) {
-                            cached + chapter.index
-                        } else {
-                            cached - chapter.index
+                merge(
+                    CacheBook.cacheSuccessFlow
+                        .filter { it.bookUrl == bookUrl }
+                        .map { chapter -> chapter },
+                    cachedChapterRescan.map { null },
+                ).collect { chapter ->
+                    cached = if (chapter == null) {
+                        scanCached()
+                    } else if (chapter.isVolume ||
+                        withContext(Dispatchers.IO) {
+                            BookHelp.hasContent(book, chapter)
                         }
-                        emit(cached)
+                    ) {
+                        cached + chapter.index
+                    } else {
+                        cached - chapter.index
                     }
+                    emit(cached)
+                }
             }
         }
         .flowOn(Dispatchers.IO)
@@ -647,6 +663,7 @@ class TocViewModel(
                     _collapsedVolumes.value = emptySet()
                     bookUrlFlow.value = intent.bookUrl
                 }
+                cachedChapterRescan.tryEmit(Unit)
             }
             is TocIntent.SetSearchMode -> setSearchMode(intent.enabled)
             is TocIntent.SetSearchQuery -> setSearchKey(intent.query)
