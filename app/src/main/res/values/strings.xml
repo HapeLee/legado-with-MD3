@@ -2635,6 +2635,8 @@
     <string name="no_logs">No logs</string>
     <string name="no_crash_logs">No crash logs</string>
     <string name="select_or_search_category">Select or search category</string>
+    <string name="explore_jump_page">Jump to page</string>
+    <string name="explore_jump_page_hint">Page number</string>
     <string name="multi_select_items">Multi-select Items</string>
     <string name="recently_read">Recently Read: </string>
     <string name="no_favorites_rss">No favorite subscriptions yet!</string>

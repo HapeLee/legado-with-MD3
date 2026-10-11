@@ -2612,6 +2612,8 @@
     <string name="no_logs">暂无日志</string>
     <string name="no_crash_logs">暂无崩溃日志</string>
     <string name="select_or_search_category">选择或搜索分类</string>
+    <string name="explore_jump_page">跳转页码</string>
+    <string name="explore_jump_page_hint">页码</string>
     <string name="multi_select_items">多选项目</string>
     <string name="recently_read">最近阅读：</string>
     <string name="no_favorites_rss">还没有收藏订阅！</string>
