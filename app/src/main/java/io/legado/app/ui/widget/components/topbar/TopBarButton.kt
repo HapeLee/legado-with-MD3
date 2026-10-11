@@ -213,6 +213,7 @@ private fun TopBarButton(
     modifier: Modifier = Modifier,
     imageVector: ImageVector = Icons.AutoMirrored.Filled.ArrowBack,
     contentDescription: String? = null,
+    text: String? = null,
     style: TopBarButtonStyle = currentTopBarButtonStyle()
 ) {
     val isMerged = LocalTopBarMergeState.current
@@ -231,12 +232,21 @@ private fun TopBarButton(
                     onClick = onClick
                 )
         ) {
-            AppIcon(
-                imageVector = imageVector,
-                contentDescription = contentDescription,
-                tint = LegadoTheme.colorScheme.onSurface,
-                modifier = Modifier.size(style.iconSize)
-            )
+            if (text != null) {
+                Text(
+                    text = text,
+                    color = LegadoTheme.colorScheme.onSurface,
+                    style = LegadoTheme.typography.labelLarge,
+                    maxLines = 1,
+                )
+            } else {
+                AppIcon(
+                    imageVector = imageVector,
+                    contentDescription = contentDescription,
+                    tint = LegadoTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(style.iconSize)
+                )
+            }
         }
     } else {
         val containerColor = when {
@@ -262,12 +272,21 @@ private fun TopBarButton(
             containerColor = containerColor,
             indication = if (liquidGlassEnabled) null else ripple(bounded = true)
         ) { resolvedContentColor ->
-            AppIcon(
-                imageVector = imageVector,
-                contentDescription = contentDescription,
-                tint = resolvedContentColor,
-                modifier = Modifier.size(style.iconSize)
-            )
+            if (text != null) {
+                Text(
+                    text = text,
+                    color = resolvedContentColor,
+                    style = LegadoTheme.typography.labelLarge,
+                    maxLines = 1,
+                )
+            } else {
+                AppIcon(
+                    imageVector = imageVector,
+                    contentDescription = contentDescription,
+                    tint = resolvedContentColor,
+                    modifier = Modifier.size(style.iconSize)
+                )
+            }
         }
     }
 }
@@ -328,6 +347,21 @@ fun TopBarActionButton(
             modifier = modifier
         )
     }
+}
+
+@Composable
+fun TopBarTextActionButton(
+    onClick: () -> Unit,
+    text: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier
+) {
+    TopBarButton(
+        onClick = onClick,
+        text = text,
+        contentDescription = contentDescription,
+        modifier = modifier
+    )
 }
 
 @Composable

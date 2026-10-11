@@ -62,6 +62,7 @@ class ExploreShowViewModel(
     private val _bookshelf = MutableStateFlow<Set<BookShelfKey>>(emptySet())
     private val _loadState = MutableStateFlow(ExploreShowLoadState())
     private val _kindState = MutableStateFlow(ExploreShowKindState())
+    private val _pageState = MutableStateFlow(ExplorePageState())
     private val _displayState = MutableStateFlow(
         ExploreShowDisplayState(
             layoutState = 0,
@@ -112,6 +113,7 @@ class ExploreShowViewModel(
         when (intent) {
             is ExploreShowIntent.InitData -> initData(intent.sourceUrl, intent.exploreUrl)
             ExploreShowIntent.LoadMore -> loadMore()
+            is ExploreShowIntent.JumpToPage -> jumpToPage(intent.page)
             ExploreShowIntent.ForceLoadNext -> loadMore(forceLoad = true)
             ExploreShowIntent.Refresh -> loadMore(isRefresh = true)
             is ExploreShowIntent.SwitchKind -> switchKind(intent.kind)
@@ -215,7 +217,10 @@ class ExploreShowViewModel(
             val displayAndCoverSettings = combine(
                 _displayState,
                 coverSettingsGateway.settings,
-            ) { displayState, coverSettings -> displayState to coverSettings }
+                _pageState,
+            ) { displayState, coverSettings, pageState ->
+                Triple(displayState, coverSettings, pageState)
+            }
             val loadAndKind = combine(
                 _loadState,
                 _kindState,
@@ -226,7 +231,7 @@ class ExploreShowViewModel(
                 displayAndCoverSettings,
             ) { books, loadAndKindState, displayAndCover ->
                 val (loadState, kindState) = loadAndKindState
-                val (displayState, coverSettings) = displayAndCover
+                val (displayState, coverSettings, pageState) = displayAndCover
 
                 ExploreShowUiState(
                     sourceUrl = displayState.sourceUrl,
@@ -241,6 +246,8 @@ class ExploreShowViewModel(
                     errorMsg = loadState.errorMsg,
                     sheet = displayState.sheet,
                     filterStateId = coverSettings.exploreFilterState,
+                    currentPage = pageState.currentPage,
+                    canJumpPage = pageState.canJumpPage,
                 )
             }.collect { newState ->
                 _uiState.value = newState
@@ -258,6 +265,10 @@ class ExploreShowViewModel(
         sourceUrl = incomingSourceUrl
         initialExploreUrl = incomingExploreUrl
         exploreUrl = incomingExploreUrl
+        _pageState.value = ExplorePageState(
+            currentPage = 1,
+            canJumpPage = incomingExploreUrl?.contains("{{page}}") == true,
+        )
         page = 1
         autoPageCount = 0
         _rawBooks.value = emptyList()
@@ -288,6 +299,10 @@ class ExploreShowViewModel(
         loadJob?.cancel()
         _kindState.update { it.copy(selectedKindTitle = kind.title) }
         exploreUrl = kind.url
+        _pageState.value = ExplorePageState(
+            currentPage = 1,
+            canJumpPage = kind.url?.contains("{{page}}") == true,
+        )
         _loadState.value = ExploreShowLoadState()
         autoPageCount = 0
         loadMore(isRefresh = true)
@@ -341,6 +356,21 @@ class ExploreShowViewModel(
         _displayState.update { it.copy(gridCount = count) }
     }
 
+    private fun jumpToPage(targetPage: Int) {
+        val source = sourceUrl ?: return
+        val url = exploreUrl
+        if (!_pageState.value.canJumpPage) return
+        loadJob?.cancel()
+        val generation = ++loadGeneration
+        autoPageCount = 0
+        page = targetPage.coerceAtLeast(1)
+        _rawBooks.value = emptyList()
+        _loadState.update {
+            it.copy(isLoading = true, isRefreshing = false, isEnd = false, errorMsg = null)
+        }
+        loadJob = viewModelScope.launch { fetchPage(source, url, generation) }
+    }
+
     private fun loadMore(isRefresh: Boolean = false, forceLoad: Boolean = false) {
         val source = sourceUrl
         val url = exploreUrl
@@ -391,6 +421,7 @@ class ExploreShowViewModel(
                 fetchNextAutoPageOrFinish(sourceUrl, url, generation)
             } else {
                 _rawBooks.value = currentList + uniqueNewBooks
+                _pageState.update { it.copy(currentPage = page) }
                 page++
                 autoPageCount = 0
                 _loadState.update { it.copy(isEnd = false) }
@@ -432,3 +463,9 @@ class ExploreShowViewModel(
         _effects.tryEmit(effect)
     }
 }
+
+/** 发现页分页状态：[canJumpPage] 表示当前书源的分页地址支持直接指定页码。 */
+data class ExplorePageState(
+    val currentPage: Int = 1,
+    val canJumpPage: Boolean = false,
+)
