@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.47",
-  "name": "Pre-release 3.26.16-beta.47",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 界面优化\n* feat: 阅读闪烁问题？\n* fix(network): 收紧局域网判定并修复本地网络权限申请可靠性\n* fix(network): 适配 Android 17 本地网络保护，补齐局域网访问权限\n\n## What's Changed\n* fix(network): 适配 Android 17 本地网络保护，补齐局域网访问权限 by @THERentropy in https://github.com/HapeLee/legado-with-MD3/pull/2391\n\n## New Contributors\n* @THERentropy made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2391\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.46...3.26.16-beta.47",
+  "tag_name": "3.26.16-beta.48",
+  "name": "Pre-release 3.26.16-beta.48",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 更新依赖版本\n* feat: 为Miuix补充合适的文字行高\n* feat: 自定义顶栏按钮，顶栏、底栏、悬浮按钮共用按钮池\n* feat(tts): 兼容外部 httpTTS 源的发言人目录与并发声明\n* feat: 阅读时OOM问题\n* feat: 字号兼容\n* fix(gson): 给外部契约与落盘 JSON 的字段写死 @SerializedName\n* fix(deps): Compose 整条线钉到 1.13.0-beta01，修复 RectList 崩溃\n* feat: 朗读问题\n* feat: 预见性返回手势开关失效\n\n## What's Changed\n* fix(deps): Compose 整条线钉到 1.13.0-beta01，修复 \"LayoutNode not found in RectList\" 崩溃 by @kungunier in https://github.com/HapeLee/legado-with-MD3/pull/2400\n* fix(gson): 给外部契约与落盘 JSON 的字段写死 @SerializedName（修 #2398 关联书籍整组消失） by @kungunier in https://github.com/HapeLee/legado-with-MD3/pull/2401\n\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.47...3.26.16-beta.48",
   "prerelease": true,
-  "created_at": "2026-10-10T20:30:29Z",
+  "created_at": "2026-10-11T19:54:07Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.47/legado-3.26.16-beta.47-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.48/legado-3.26.16-beta.48-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-10T20:50:22Z",
+      "created_at": "2026-10-11T20:15:08Z",
       "download_count": 0,
-      "id": 628962701,
-      "name": "legado-3.26.16-beta.47-arm64-v8a.apk",
+      "id": 631705883,
+      "name": "legado-3.26.16-beta.48-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/628962701"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/631705883"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.47/legado-3.26.16-beta.47-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.48/legado-3.26.16-beta.48-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-10T20:50:22Z",
+      "created_at": "2026-10-11T20:15:08Z",
       "download_count": 0,
-      "id": 628962699,
-      "name": "legado-3.26.16-beta.47-armeabi-v7a.apk",
+      "id": 631705891,
+      "name": "legado-3.26.16-beta.48-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/628962699"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/631705891"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.47/legado-3.26.16-beta.47.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.48/legado-3.26.16-beta.48.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-10T20:50:22Z",
+      "created_at": "2026-10-11T20:15:08Z",
       "download_count": 0,
-      "id": 628962703,
-      "name": "legado-3.26.16-beta.47.apk",
+      "id": 631705882,
+      "name": "legado-3.26.16-beta.48.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/628962703"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/631705882"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.47/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.48/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-10-10T20:50:22Z",
+      "created_at": "2026-10-11T20:15:08Z",
       "download_count": 0,
-      "id": 628962702,
+      "id": 631705884,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/628962702"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/631705884"
     }
   ]
 }
