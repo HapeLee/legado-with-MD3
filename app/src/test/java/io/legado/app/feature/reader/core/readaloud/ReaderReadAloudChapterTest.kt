@@ -68,6 +68,47 @@ class ReaderReadAloudChapterTest {
     }
 
     @Test
+    fun unspeakableUnitsAreNotCursorLandings() {
+        // `——` 这类纯符号分隔行念不出东西：单元列表里仍留着（正文要完整），但不能当游标落点
+        val chapter = ReaderReadAloudChapter.create(
+            chapterIndex = 0,
+            title = "",
+            semanticContent = "第一段。\n——\n第二段。\n",
+            pageStarts = listOf(0),
+        )
+
+        assertEquals(
+            listOf("第一段。", "——", "第二段。"),
+            chapter.paragraphs(splitByPage = false).map { it.text },
+        )
+        assertEquals(
+            listOf("第一段。", "第二段。"),
+            chapter.readAloudParagraphs(splitByPage = false).map { it.text },
+        )
+        assertEquals(0, chapter.paragraphIndexAtOrAfter(4, splitByPage = false))
+        // 落在纯符号段（章内位置 5..6）上时，定位交给它后面第一个可发声单元
+        assertEquals(1, chapter.paragraphIndexAtOrAfter(6, splitByPage = false))
+        assertEquals(1, chapter.paragraphIndexAtOrAfter(8, splitByPage = false))
+    }
+
+    @Test
+    fun chapterWithoutSpeakableUnitFallsBackToRawUnits() {
+        // 纯符号页/图片页整章都念不出东西：单元集合退回原始列表，
+        // 游标落在第一个单元，由朗读服务的「读完本章」收尾（而不是定位不到段落就放弃）
+        val chapter = ReaderReadAloudChapter.create(
+            chapterIndex = 0,
+            title = "",
+            semanticContent = "——\n……\n",
+            pageStarts = listOf(0),
+        )
+
+        assertEquals(
+            listOf("——", "……"),
+            chapter.readAloudParagraphs(splitByPage = false).map { it.text })
+        assertEquals(0, chapter.paragraphIndexAtOrAfter(1, splitByPage = false))
+    }
+
+    @Test
     fun explicitSymbolPolicyResplitsUnitsAtAbsolutePositions() {
         val chapter = ReaderReadAloudChapter.create(
             chapterIndex = 0,

@@ -1,5 +1,6 @@
 package io.legado.app.help.readaloud.cast
 
+import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.CastCharacter
 import io.legado.app.domain.gateway.ReadAloudVoiceGateway
@@ -9,7 +10,7 @@ import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.feature.reader.core.cast.CastMarkers
-import io.legado.app.constant.AppLog
+import io.legado.app.feature.reader.core.readaloud.isUnspeakableReadAloudUnit
 import io.legado.app.ui.config.readConfig.ReadConfig
 import org.koin.core.context.GlobalContext
 
@@ -55,7 +56,8 @@ object CastSpeechOverlay {
             appDb.bookDao.getBook(bookUrl)?.let { RegexCastRuleStore.effectsFor(it) }
         }.getOrNull().orEmpty()
         val multiRole = ReadConfig.useMultiSpeaker
-        if (!multiRole && effects.isEmpty()) return plan
+        // 提前返回的这几路整章按旁白读，计划会直接当播放队列用：不发声段仍要按同一口径丢掉
+        if (!multiRole && effects.isEmpty()) return dropSilentUnits(plan).first
         // 段级变声器按引号序号存在分配表里（正文胶囊那一栏设的，只管那一句）
         val effectsOfQuote = if (paragraphs.isEmpty() || !multiRole) {
             emptyMap()
@@ -67,14 +69,15 @@ object CastSpeechOverlay {
         val spans = if (multiRole) spansOf(paragraphs, effectsOfQuote) else emptyList()
         if (spans.isEmpty() && effects.isEmpty()) {
             // 正文里没有角色标记：要么没开「多角色分配」（标记由它注入），要么这一章还没分配过角色
+            val (kept, dropped) = dropSilentUnits(plan)
             AppLog.put(
                 "多角色朗读: 第${chapterIndex + 1}章正文里没有角色标记（未开「多角色分配」或本章未分配），" +
-                    "整章按旁白读"
+                        "整章按旁白读；丢掉 $dropped 个不发声单元"
             )
-            return plan
+            return kept
         }
         val gateway = runCatching { GlobalContext.get().get<ReadAloudVoiceGateway>() }
-            .getOrNull() ?: return plan
+            .getOrNull() ?: return dropSilentUnits(plan).first
         val characters = appDb.castCharacterDao.getByBook(bookUrl)
         val voices = gateway.getEnabledVoices().associateBy { it.id }
         val narrator = gateway.bindingVoice(
@@ -230,7 +233,7 @@ object CastSpeechOverlay {
                 } else {
                     "；正则角色顶音色 $regexVoiced 段、吞字放音效 $regexMuted 段"
                 } +
-                "；丢掉 $blankDropped 个空白单元（无声占位）" +
+                    "；丢掉 $blankDropped 个不发声单元（空白/纯符号，无声占位）" +
                 "；$sample"
         )
         return kept
@@ -242,8 +245,8 @@ object CastSpeechOverlay {
      * 这种单元送进引擎只会得到一段无声音频——`res/raw/silent_sound.mp3` 长 1224 毫秒
      * （17 帧），听感就是段与段之间、以及正则命中前凭空顿一下。正文里的空行、
      * 命中正好落在段首缩进之后，都会造出这种单元。
-     * 判空白用 [CastMarkers.strip]：只挂着角色标记的段同样念不出东西，而朗读服务那一步
-     * 还会再去掉不可念字符，所以这里丢掉的必然也是它那边的静音。
+     * 判据是 [isUnspeakableReadAloudUnit]（只挂着角色标记的段同样念不出东西），与朗读服务
+     * 跳过不发声段的口径同源：留在队列里会让「上一段/下一段」选中一个不会出声的单元。
      * 单元身上挂的音效不丢：并给下一个单元（章末则并回最后一个）。
      */
     internal fun dropSilentUnits(
@@ -253,7 +256,7 @@ object CastSpeechOverlay {
         var blankSound = ""
         var dropped = 0
         items.forEach { item ->
-            if (CastMarkers.strip(item.segment.text).isBlank()) {
+            if (item.segment.text.isUnspeakableReadAloudUnit()) {
                 blankSound = RegexCastSplitter.mergeSound(blankSound, item.soundEffect)
                 dropped++
                 return@forEach

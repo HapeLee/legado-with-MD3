@@ -13,8 +13,8 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.Timeline
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.CacheDataSink
@@ -38,12 +38,10 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.data.appDb
-import io.legado.app.data.entities.VoiceEffectPreset
-import io.legado.app.help.readaloud.effect.VoiceEffectAudio
-import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.entities.VoiceEffectPreset
 import io.legado.app.domain.gateway.CloudTtsEngineGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
@@ -65,10 +63,12 @@ import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
-import io.legado.app.help.readaloud.cast.CastAssignmentStore
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.exoplayer.InputStreamDataSource
 import io.legado.app.help.http.okHttpClient
+import io.legado.app.help.readaloud.cast.CastAssignmentStore
+import io.legado.app.help.readaloud.effect.VoiceEffectAudio
+import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.help.readaloud.playback.CharacterPerformanceInstructionBuilder
 import io.legado.app.help.readaloud.playback.CloudTtsAudioSynthesizer
 import io.legado.app.help.readaloud.playback.CloudTtsEmotionMapper
@@ -99,7 +99,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.sync.withLock
 import okhttp3.Response
 import org.koin.core.context.GlobalContext
@@ -111,6 +110,7 @@ import java.io.File
 import java.io.InputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 在线朗读
@@ -932,8 +932,9 @@ class HttpReadAloudService : BaseReadAloudService(),
         val contentList = if (!queue.isEmpty) {
             queue.cues.map { it.text }
         } else {
+            // 与实时朗读同一份单元集合：不发声段不进列表，预合成文件名才会与播放时对上
             listOf(displayTitle.trim()).filter { it.isNotEmpty() } +
-                    readAloudChapter.paragraphs(splitByPage, splitPolicy)
+                    readAloudChapter.readAloudParagraphs(splitByPage, splitPolicy)
                         .map { it.text }
         }
         return PreDownloadChapter(displayTitle, queue, contentList)

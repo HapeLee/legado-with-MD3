@@ -46,6 +46,17 @@ class CastSilentUnitDropTest {
     }
 
     @Test
+    fun `纯符号单元按不发声丢掉`() {
+        // `——` / `……` 这类分隔行送进引擎念不出东西，留在队列里会让「上一段/下一段」选中它们
+        val (kept, dropped) = CastSpeechOverlay.dropSilentUnits(
+            listOf(item("正文一句"), item("——"), item("……", "/boom.mp3"), item("下一句"))
+        )
+        assertEquals(2, dropped)
+        assertEquals(listOf("正文一句", "下一句"), kept.map { it.segment.text })
+        assertEquals("/boom.mp3", kept.last().soundEffect)
+    }
+
+    @Test
     fun `空白单元身上的音效并给下一个单元`() {
         val (kept, dropped) = CastSpeechOverlay.dropSilentUnits(
             listOf(item("　　", "/boom.mp3"), item("正文一句"))

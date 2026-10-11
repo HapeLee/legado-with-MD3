@@ -37,7 +37,9 @@ import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Status
+import io.legado.app.domain.gateway.PlaybackCapsuleGateway
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
 import io.legado.app.domain.model.readaloud.ContentSplitPolicies
@@ -54,22 +56,19 @@ import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.domain.usecase.PrepareChapterSpeechPlanUseCase
 import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
-import io.legado.app.help.readaloud.cast.CastSpeechOverlay
-import io.legado.app.help.readaloud.cast.RegexCastSplitter
-import io.legado.app.help.readaloud.cast.RegexCastRuleStore
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.glide.ImageLoader
+import io.legado.app.help.readaloud.cast.CastSpeechOverlay
+import io.legado.app.help.readaloud.cast.RegexCastRuleStore
+import io.legado.app.help.readaloud.cast.RegexCastSplitter
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
 import io.legado.app.receiver.MediaButtonReceiver
-import io.legado.app.service.BaseReadAloudService.Companion.speechDrivingNavigation
-import io.legado.app.domain.gateway.PlaybackCapsuleGateway
-import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.service.readaloud.ReadAloudOverlayWindow
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.main.MainActivity
@@ -489,7 +488,9 @@ abstract class BaseReadAloudService : BaseService(),
                 contentSplitMode == ReadAloudContentSplitMode.Page
             var preparedReadAloudNumber = preparedChapter.pageStart(pageIndex) + startPos
             val startsAtChapterBeginning = preparedReadAloudNumber == 0
-            val preparedParagraphs = preparedChapter.paragraphs(
+            // 不发声的段（空白/纯符号）不进朗读单元集合：游标落在这种段上时高亮停住不动，
+            // 而引擎入队又跳过它，回调下标与 nowSpeak 就整条错开（见 readAloudParagraphs）
+            val preparedParagraphs = preparedChapter.readAloudParagraphs(
                 splitByPage = preparedReadAloudByPage,
                 policy = splitPolicy,
             )
