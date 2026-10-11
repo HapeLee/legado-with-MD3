@@ -2302,6 +2302,9 @@
     <string name="read_menu_custom_icons_none">使用預設圖示</string>
     <string name="read_menu_custom_icons_count">%1$d 個自訂圖示</string>
     <string name="title_bar_icons">頂部工具列圖示</string>
+    <string name="title_bar_action_buttons">設定頂部按鈕</string>
+    <string name="only_online_books">僅線上書籍</string>
+    <string name="only_local_books">僅本機書籍</string>
     <string name="title_bar_layout">頂部工具列佈局</string>
     <string name="show_title_bar_icons">顯示懸浮圖示</string>
     <string name="title_bar_icon_position">頂部工具列圖示位置</string>

@@ -31,17 +31,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Login
-import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Payment
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +46,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -61,13 +55,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.kyant.backdrop.Backdrop
 import dev.chrisbanes.haze.HazeState
 import io.legado.app.R
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -90,6 +84,7 @@ internal fun MenuTitleBar(
     backdrop: Backdrop?,
     hazeState: HazeState?,
     titleBarMode: String,
+    eyeProtectionActive: Boolean,
 ) {
 
     val topBarBorderWidth = state.menuConfig.readMenuBorderWidth
@@ -225,88 +220,15 @@ internal fun MenuTitleBar(
                 }
             }
 
-            // Right group: actions
-            if (state.menuConfig.readMenuTopBarMergeButtons) {
-                MenuTitleBarMergedGlassButton(
-                    state = state,
-                    colors = colors,
-                    onIntent = onIntent,
-                    backdrop = backdrop,
-                    glassEnabled = readMenuTopBarButtonLiquidGlassEnabled(
-                        backdrop,
-                        state.menuConfig
-                    ),
-                )
-            } else {
-                val compact = state.menuConfig.titleBarCompact
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (!state.isLocalBook) {
-                        if (!compact && state.bookSource?.customButton == true) {
-                            SourceCustomActionButton(
-                                state = state,
-                                colors = colors,
-                                onIntent = onIntent,
-                                backdrop = backdrop,
-                            )
-                        }
-                        if (!compact) {
-                            SourceActionButton(
-                                state = state,
-                                colors = colors,
-                                onIntent = onIntent,
-                                backdrop = backdrop,
-                            )
-                            AudioDownloadActionButton(
-                                state = state,
-                                colors = colors,
-                                onIntent = onIntent,
-                                backdrop = backdrop,
-                            )
-                            RefreshActionButton(
-                                state = state,
-                                colors = colors,
-                                onIntent = onIntent,
-                                backdrop = backdrop,
-                            )
-                            DownloadActionButton(
-                                state = state,
-                                colors = colors,
-                                onIntent = onIntent,
-                                backdrop = backdrop,
-                            )
-                        }
-                    } else if (state.isLocalBook && !compact) {
-                        if (state.isLocalTxt) {
-                            TxtTocRuleActionButton(
-                                state = state,
-                                colors = colors,
-                                onIntent = onIntent,
-                                backdrop = backdrop,
-                            )
-                        }
-                        CharsetActionButton(
-                            state = state,
-                            colors = colors,
-                            onIntent = onIntent,
-                            backdrop = backdrop,
-                        )
-                    }
-
-                    MenuTitleGlassButton(
-                        onClick = {
-                            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.MoreActions))
-                        },
-                        icon = Icons.Default.MoreVert,
-                        contentDescription = stringResource(R.string.more_actions),
-                        state = state,
-                        colors = colors,
-                        backdrop = backdrop,
-                    )
-                }
-            }
+            // Right group: actions — 按钮由配置决定，见 ReadBookSheet.TitleBarActionConfig
+            TitleBarActionButtons(
+                state = state,
+                colors = colors,
+                onIntent = onIntent,
+                backdrop = backdrop,
+                eyeProtectionActive = eyeProtectionActive,
+                merged = state.menuConfig.readMenuTopBarMergeButtons,
+            )
         }
 
         // Book name on its own line (mode "1") — hidden when capsule is active
@@ -432,10 +354,11 @@ private fun MenuTitleGlassButton(
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     contentDescription: String? = null,
+    customIconPath: String? = null,
+    selected: Boolean = false,
 ) {
-    ReadMenuGlassIconButton(
+    ReadMenuGlassButtonSurface(
         onClick = onClick,
-        icon = icon,
         colors = colors,
         backdrop = backdrop,
         menuConfig = state.menuConfig,
@@ -443,10 +366,29 @@ private fun MenuTitleGlassButton(
         iconStyle = state.menuConfig.titleBarIconStyle,
         modifier = modifier,
         onLongClick = onLongClick,
+        selected = selected,
         menuBorderEnabled = state.menuConfig.readMenuBorderWidth > 0 &&
                 state.menuConfig.readMenuTopBarTitleCapsule,
         contentDescription = contentDescription,
-    )
+    ) { tint ->
+        if (customIconPath.isNullOrBlank()) {
+            AppIcon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(20.dp),
+            )
+        } else {
+            AsyncImage(
+                model = customIconPath,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape),
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -668,7 +610,10 @@ private fun MergedGlassIconButton(
     contentDescription: String?,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    selected: Boolean = false,
+    customIconPath: String? = null,
 ) {
+    val iconTint = if (selected) LegadoTheme.colorScheme.primary else tint
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -693,12 +638,23 @@ private fun MergedGlassIconButton(
             )
             .semantics { contentDescription?.let { this.contentDescription = it } },
     ) {
-        AppIcon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(20.dp),
-        )
+        if (customIconPath.isNullOrBlank()) {
+            AppIcon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp),
+            )
+        } else {
+            AsyncImage(
+                model = customIconPath,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape),
+            )
+        }
     }
 }
 
@@ -745,21 +701,50 @@ private fun RefreshMenuItems(
     )
 }
 
+/**
+ * 「刷新章节」「换源」这类按钮的长按二级菜单。
+ * 顶栏、底栏、浮动图标三处共用，保证同一个按钮在哪个位置长按行为都一致。
+ */
+@Composable
+internal fun ReadMenuLongPressDropdown(
+    menu: ReadMenuLongPressMenu?,
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    onIntent: (ReadBookIntent) -> Unit,
+) {
+    if (menu == null) return
+    RoundDropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+    ) { dismiss ->
+        when (menu) {
+            ReadMenuLongPressMenu.ChangeSource -> ChangeSourceMenuItems(
+                dismiss = dismiss,
+                onBookChange = { onIntent(ReadBookIntent.MenuBookChangeSource) },
+                onChapterChange = { onIntent(ReadBookIntent.MenuChapterChangeSource) },
+            )
+
+            ReadMenuLongPressMenu.Refresh -> RefreshMenuItems(
+                dismiss = dismiss,
+                onRefreshDur = { onIntent(ReadBookIntent.MenuRefreshDur) },
+                onRefreshAfter = { onIntent(ReadBookIntent.MenuRefreshAfter) },
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MenuTitleBarMergedGlassButton(
     state: ReadBookUiState,
     colors: ReadMenuColors,
-    onIntent: (ReadBookIntent) -> Unit,
     backdrop: Backdrop?,
     glassEnabled: Boolean,
+    actions: List<ReadMenuActionDef>,
+    itemContent: @Composable (ReadMenuActionDef) -> Unit,
 ) {
-    var sourceExpanded by remember { mutableStateOf(false) }
-    var refreshExpanded by remember { mutableStateOf(false) }
-
     val pillShape = RoundedCornerShape(50)
     val tint = LegadoTheme.colorScheme.onSurfaceVariant
-    val compact = state.menuConfig.titleBarCompact
     val iconStyle = state.menuConfig.titleBarIconStyle
 
     Box {
@@ -809,264 +794,112 @@ private fun MenuTitleBarMergedGlassButton(
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // SwapHoriz - change source
-            if (!state.isLocalBook && !compact) {
-                if (state.bookSource?.customButton == true) {
-                    MergedGlassIconButton(
-                        icon = Icons.Default.Extension,
-                        tint = tint,
-                        contentDescription = stringResource(R.string.custom_button),
-                        onClick = { onIntent(ReadBookIntent.SourceCustomButton(false)) },
-                        onLongClick = { onIntent(ReadBookIntent.SourceCustomButton(true)) },
-                    )
+            actions.forEachIndexed { index, def ->
+                if (index > 0) {
                     MergedGlassDivider(tint)
                 }
-
-                MergedGlassIconButton(
-                    icon = Icons.Default.SwapHoriz,
-                    tint = tint,
-                    contentDescription = stringResource(R.string.change_origin),
-                    onClick = { onIntent(ReadBookIntent.MenuChangeSource) },
-                    onLongClick = { sourceExpanded = true },
-                )
-                MergedGlassDivider(tint)
-
-                // 听书音频下载
-                MergedGlassIconButton(
-                    icon = Icons.Default.Download,
-                    tint = tint,
-                    contentDescription = stringResource(R.string.read_aloud_audio_download_entry),
-                    onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AudioDownload)) },
-                )
-                MergedGlassDivider(tint)
-
-                // Refresh
-                MergedGlassIconButton(
-                    icon = Icons.Default.Refresh,
-                    tint = tint,
-                    contentDescription = stringResource(R.string.menu_refresh_dur),
-                    onClick = { onIntent(ReadBookIntent.MenuRefreshDur) },
-                    onLongClick = { refreshExpanded = true },
-                )
-                MergedGlassDivider(tint)
-
-                // Download
-                MergedGlassIconButton(
-                    icon = Icons.Default.CloudDownload,
-                    tint = tint,
-                    contentDescription = stringResource(R.string.offline_cache),
-                    onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download)) },
-                )
-                MergedGlassDivider(tint)
-            } else if (state.isLocalBook && !compact) {
-                // TXT directory rule
-                if (state.isLocalTxt) {
-                    MergedGlassIconButton(
-                        icon = Icons.AutoMirrored.Filled.Toc,
-                        tint = tint,
-                        contentDescription = stringResource(R.string.txt_toc_rule),
-                        onClick = { onIntent(ReadBookIntent.MenuTocRegex) },
-                    )
-                    MergedGlassDivider(tint)
-                }
-
-                // Text encoding
-                MergedGlassIconButton(
-                    icon = Icons.Default.Translate,
-                    tint = tint,
-                    contentDescription = stringResource(R.string.set_charset),
-                    onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset)) },
-                )
-                MergedGlassDivider(tint)
-            }
-
-            // MoreVert - overflow menu
-            MergedGlassIconButton(
-                icon = AppIcons.MoreVert,
-                tint = tint,
-                contentDescription = stringResource(R.string.more_actions),
-                onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.MoreActions)) },
-            )
-        }
-
-        // Dropdown menus
-        if (!state.isLocalBook) {
-            RoundDropdownMenu(
-                expanded = sourceExpanded,
-                onDismissRequest = { sourceExpanded = false },
-            ) { dismiss ->
-                ChangeSourceMenuItems(
-                    dismiss = dismiss,
-                    onBookChange = { onIntent(ReadBookIntent.MenuBookChangeSource) },
-                    onChapterChange = { onIntent(ReadBookIntent.MenuChapterChangeSource) },
-                )
-            }
-
-            RoundDropdownMenu(
-                expanded = refreshExpanded,
-                onDismissRequest = { refreshExpanded = false },
-            ) { dismiss ->
-                RefreshMenuItems(
-                    dismiss = dismiss,
-                    onRefreshDur = { onIntent(ReadBookIntent.MenuRefreshDur) },
-                    onRefreshAfter = { onIntent(ReadBookIntent.MenuRefreshAfter) },
-                )
+                itemContent(def)
             }
         }
-
     }
 }
 
+/**
+ * 顶栏右侧动作区。按钮来自 [loadTitleBarActions]：顶栏专属按钮 + 浮动图标/底栏的共享图标池，
+ * 顺序与开关由「顶栏按钮」配置页决定，最多 [MAX_TITLE_BAR_ACTIONS] 个。
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SourceCustomActionButton(
+private fun RowScope.TitleBarActionButtons(
     state: ReadBookUiState,
     colors: ReadMenuColors,
     onIntent: (ReadBookIntent) -> Unit,
     backdrop: Backdrop?,
+    eyeProtectionActive: Boolean,
+    merged: Boolean,
 ) {
-    MenuTitleGlassButton(
-        onClick = { onIntent(ReadBookIntent.SourceCustomButton(false)) },
-        onLongClick = { onIntent(ReadBookIntent.SourceCustomButton(true)) },
-        icon = Icons.Default.Extension,
-        contentDescription = stringResource(R.string.custom_button),
-        state = state,
-        colors = colors,
-        backdrop = backdrop,
-    )
-}
+    val context = LocalContext.current
+    val customIcons = state.menuConfig.titleBarCustomIcons
+    val actions = remember(
+        context,
+        state.menuConfig.titleBarActions,
+        state.menuConfig.titleBarCompact,
+        state.isLocalBook,
+        state.isLocalTxt,
+        state.bookSource,
+        state.isReadAloudRunning,
+        state.isAutoPage,
+        state.translationMode,
+        state.useMultiSpeaker,
+        state.multiRoleCast,
+        eyeProtectionActive,
+    ) {
+        loadTitleBarActions(
+            context = context,
+            state = state,
+            eyeProtectionActive = eyeProtectionActive,
+            onIntent = onIntent,
+        )
+    }
+    var expandedMenuId by remember { mutableStateOf<String?>(null) }
 
-@Composable
-private fun SourceActionButton(
-    state: ReadBookUiState,
-    colors: ReadMenuColors,
-    onIntent: (ReadBookIntent) -> Unit,
-    backdrop: Backdrop?,
-) {
-    var expanded by remember { mutableStateOf(false) }
+    val itemContent: @Composable (ReadMenuActionDef) -> Unit = { def ->
+        val longPressMenu = def.longPressMenu
+        val onLongClick = when {
+            longPressMenu != null -> ({ expandedMenuId = def.id })
+            def.onLongClick != null -> def.onLongClick
+            else -> null
+        }
+        Box {
+            if (merged) {
+                MergedGlassIconButton(
+                    icon = def.icon,
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                    contentDescription = def.label,
+                    onClick = def.onClick,
+                    onLongClick = onLongClick,
+                    selected = def.isActive,
+                    customIconPath = customIcons[def.id],
+                )
+            } else {
+                MenuTitleGlassButton(
+                    onClick = def.onClick,
+                    icon = def.icon,
+                    state = state,
+                    colors = colors,
+                    backdrop = backdrop,
+                    onLongClick = onLongClick,
+                    contentDescription = def.label,
+                    customIconPath = customIcons[def.id],
+                    selected = def.isActive,
+                )
+            }
+            ReadMenuLongPressDropdown(
+                menu = longPressMenu,
+                expanded = expandedMenuId == def.id,
+                onDismissRequest = { expandedMenuId = null },
+                onIntent = onIntent,
+            )
+        }
+    }
 
-    Box {
-        MenuTitleGlassButton(
-            onClick = { onIntent(ReadBookIntent.MenuChangeSource) },
-            onLongClick = { expanded = true },
-            icon = Icons.Default.SwapHoriz,
-            contentDescription = stringResource(R.string.change_origin),
+    if (merged) {
+        MenuTitleBarMergedGlassButton(
             state = state,
             colors = colors,
             backdrop = backdrop,
+            glassEnabled = readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig),
+            actions = actions,
+            itemContent = itemContent,
         )
-
-        RoundDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) { dismiss ->
-            ChangeSourceMenuItems(
-                dismiss = dismiss,
-                onBookChange = { onIntent(ReadBookIntent.MenuBookChangeSource) },
-                onChapterChange = { onIntent(ReadBookIntent.MenuChapterChangeSource) },
-            )
+    } else {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            actions.forEach { def -> itemContent(def) }
         }
     }
-}
-
-@Composable
-private fun RefreshActionButton(
-    state: ReadBookUiState,
-    colors: ReadMenuColors,
-    onIntent: (ReadBookIntent) -> Unit,
-    backdrop: Backdrop?,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        MenuTitleGlassButton(
-            onClick = { onIntent(ReadBookIntent.MenuRefreshDur) },
-            onLongClick = { expanded = true },
-            icon = Icons.Default.Refresh,
-            contentDescription = stringResource(R.string.menu_refresh_dur),
-            state = state,
-            colors = colors,
-            backdrop = backdrop,
-        )
-
-        RoundDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) { dismiss ->
-            RefreshMenuItems(
-                dismiss = dismiss,
-                onRefreshDur = { onIntent(ReadBookIntent.MenuRefreshDur) },
-                onRefreshAfter = { onIntent(ReadBookIntent.MenuRefreshAfter) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun DownloadActionButton(
-    state: ReadBookUiState,
-    colors: ReadMenuColors,
-    onIntent: (ReadBookIntent) -> Unit,
-    backdrop: Backdrop?,
-) {
-    MenuTitleGlassButton(
-        onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download)) },
-        icon = Icons.Default.CloudDownload,
-        contentDescription = stringResource(R.string.offline_cache),
-        state = state,
-        colors = colors,
-        backdrop = backdrop,
-    )
-}
-
-@Composable
-private fun AudioDownloadActionButton(
-    state: ReadBookUiState,
-    colors: ReadMenuColors,
-    onIntent: (ReadBookIntent) -> Unit,
-    backdrop: Backdrop?,
-) {
-    MenuTitleGlassButton(
-        onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AudioDownload)) },
-        icon = Icons.Default.Download,
-        contentDescription = stringResource(R.string.read_aloud_audio_download_entry),
-        state = state,
-        colors = colors,
-        backdrop = backdrop,
-    )
-}
-
-@Composable
-private fun TxtTocRuleActionButton(
-    state: ReadBookUiState,
-    colors: ReadMenuColors,
-    onIntent: (ReadBookIntent) -> Unit,
-    backdrop: Backdrop?,
-) {
-    MenuTitleGlassButton(
-        onClick = { onIntent(ReadBookIntent.MenuTocRegex) },
-        icon = Icons.AutoMirrored.Filled.Toc,
-        contentDescription = stringResource(R.string.txt_toc_rule),
-        state = state,
-        colors = colors,
-        backdrop = backdrop,
-    )
-}
-
-@Composable
-private fun CharsetActionButton(
-    state: ReadBookUiState,
-    colors: ReadMenuColors,
-    onIntent: (ReadBookIntent) -> Unit,
-    backdrop: Backdrop?,
-) {
-    MenuTitleGlassButton(
-        onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset)) },
-        icon = Icons.Default.Translate,
-        contentDescription = stringResource(R.string.set_charset),
-        state = state,
-        colors = colors,
-        backdrop = backdrop,
-    )
 }
 
 private fun readMenuTopBarButtonLiquidGlassEnabled(

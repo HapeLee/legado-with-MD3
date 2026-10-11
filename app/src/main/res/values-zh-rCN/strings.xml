@@ -2444,6 +2444,9 @@
     <string name="title_bar_layout">顶栏布局</string>
     <string name="show_title_bar_icons">显示浮动图标</string>
     <string name="title_bar_compact">精简顶部按钮</string>
+    <string name="title_bar_action_buttons">配置顶部按钮</string>
+    <string name="only_online_books">仅在线书籍</string>
+    <string name="only_local_books">仅本地书籍</string>
     <string name="title_bar_icon_position">浮动图标位置</string>
     <string name="position_top_start">左上</string>
     <string name="position_top_end">右上</string>

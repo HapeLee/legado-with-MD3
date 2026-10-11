@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,8 +51,6 @@ import coil3.compose.AsyncImage
 import com.kyant.backdrop.Backdrop
 import io.legado.app.R
 import io.legado.app.data.entities.Book
-import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -63,7 +62,6 @@ import io.legado.app.ui.widget.components.reader.readerMenuLiquidGlassAvailable
 @Composable
 internal fun FloatingIconRow(
     state: ReadBookUiState,
-    preferences: ReadPreferences,
     eyeProtectionActive: Boolean,
     colors: ReadMenuColors,
     alignment: Alignment.Horizontal = Alignment.CenterHorizontally,
@@ -73,16 +71,20 @@ internal fun FloatingIconRow(
     val context = LocalContext.current
     val floatingIcons = remember(
         state.menuConfig.titleBarButtons,
+        state.isLocalBook,
+        state.isLocalTxt,
+        state.bookSource,
         state.isReadAloudRunning,
         state.isAutoPage,
         state.translationMode,
         state.useReplaceRule,
+        state.useMultiSpeaker,
+        state.multiRoleCast,
         eyeProtectionActive,
     ) {
         loadFloatingIcons(
             context = context,
             state = state,
-            preferences = preferences,
             eyeProtectionActive = eyeProtectionActive,
             onIntent = onIntent,
         )
@@ -103,39 +105,58 @@ internal fun FloatingIconRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         floatingIcons.forEach { iconDef ->
-            val customPath = remember(state.menuConfig.titleBarCustomIcons, iconDef.id) {
-                state.menuConfig.titleBarCustomIcons[iconDef.id]
-            }
-            val isCustom = !customPath.isNullOrBlank()
-            val glassEnabled = !isCustom && state.menuConfig.readMenuFloatingIconLiquidGlass &&
-                    readerMenuLiquidGlassAvailable(backdrop)
-            ReadMenuGlassButtonSurface(
-                onClick = iconDef.onClick,
-                colors = colors,
-                backdrop = backdrop,
-                menuConfig = state.menuConfig,
-                glassEnabled = glassEnabled,
-                iconStyle = 1,
-                selected = iconDef.isActive,
-                modifier = Modifier.padding(horizontal = 4.dp),
-                onLongClick = iconDef.onLongClick,
-                contentDescription = iconDef.label,
-            ) {
-                if (isCustom) {
-                    AsyncImage(
-                        model = customPath,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape),
-                    )
-                } else {
-                    AppIcon(
-                        imageVector = iconDef.icon,
-                        contentDescription = null,
-                        tint = if (iconDef.isActive) LegadoTheme.colorScheme.primary else colors.content,
-                        modifier = Modifier.size(20.dp),
+            // 按 id 记槽位：按钮列表随配置重排时，展开态不会被错配到别的按钮上
+            key(iconDef.id) {
+                val customPath = remember(state.menuConfig.titleBarCustomIcons, iconDef.id) {
+                    state.menuConfig.titleBarCustomIcons[iconDef.id]
+                }
+                val isCustom = !customPath.isNullOrBlank()
+                val glassEnabled = !isCustom && state.menuConfig.readMenuFloatingIconLiquidGlass &&
+                        readerMenuLiquidGlassAvailable(backdrop)
+                var expandedMenu by remember { mutableStateOf(false) }
+                Box {
+                    ReadMenuGlassButtonSurface(
+                        onClick = iconDef.onClick,
+                        colors = colors,
+                        backdrop = backdrop,
+                        menuConfig = state.menuConfig,
+                        glassEnabled = glassEnabled,
+                        iconStyle = 1,
+                        selected = iconDef.isActive,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        onLongClick = when {
+                            iconDef.longPressMenu != null -> ({ expandedMenu = true })
+                            else -> iconDef.onLongClick
+                        },
+                        contentDescription = iconDef.label,
+                    ) {
+                        if (isCustom) {
+                            AsyncImage(
+                                model = customPath,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape),
+                            )
+                        } else {
+                            AppIcon(
+                                imageVector = iconDef.icon,
+                                contentDescription = null,
+                                tint = if (iconDef.isActive) {
+                                    LegadoTheme.colorScheme.primary
+                                } else {
+                                    colors.content
+                                },
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                    ReadMenuLongPressDropdown(
+                        menu = iconDef.longPressMenu,
+                        expanded = expandedMenu,
+                        onDismissRequest = { expandedMenu = false },
+                        onIntent = onIntent,
                     )
                 }
             }
@@ -371,77 +392,36 @@ private data class FloatingIconDef(
     val isActive: Boolean = false,
     val onClick: () -> Unit,
     val onLongClick: (() -> Unit)? = null,
+    /** 与顶栏同一按钮保持一致的长按二级菜单。 */
+    val longPressMenu: ReadMenuLongPressMenu? = null,
 )
 
 private fun loadFloatingIcons(
     context: Context,
     state: ReadBookUiState,
-    preferences: ReadPreferences,
     eyeProtectionActive: Boolean,
     onIntent: (ReadBookIntent) -> Unit,
 ): List<FloatingIconDef> {
-    val infoMap = readMenuButtonInfos(context).associateBy { it.id }
-
-    val actionMap: Map<String, () -> Unit> = mapOf(
-        "search" to { onIntent(ReadBookIntent.OpenSearch(null)) },
-        "catalog" to { onIntent(ReadBookIntent.OpenChapterList) },
-        "read_aloud" to {
-            if (state.isReadAloudRunning) {
-                onIntent(ReadBookIntent.ReadAloudAction)
-            } else {
-                onIntent(ReadBookIntent.ToggleReadAloud)
-                onIntent(ReadBookIntent.HideMenu)
-            }
-        },
-        "setting" to { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle)) },
-        "addBookmark" to { onIntent(ReadBookIntent.AddBookmark) },
-        "theme" to { onIntent(ReadBookIntent.ToggleDayNight) },
-        "eye_protection" to { onIntent(ReadBookIntent.ToggleEyeProtection) },
-        "prev_chapter" to { onIntent(ReadBookIntent.PrevChapter) },
-        "next_chapter" to { onIntent(ReadBookIntent.NextChapter) },
-        "replace" to { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextProcessing)) },
-        "replace_badge" to { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextProcessing)) },
-        "auto_page" to {
-            if (state.isAutoPage) {
-                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
-            } else {
-                onIntent(ReadBookIntent.ToggleAutoPage)
-                onIntent(ReadBookIntent.HideMenu)
-            }
-        },
-        "translate" to { onIntent(ReadBookIntent.ToggleTranslation) },
-        "refresh_current" to { onIntent(ReadBookIntent.RefreshCurrentChapter) },
-        "ai_summary" to { onIntent(ReadBookIntent.OpenChapterSummary) },
-        "ai_rewrite" to { onIntent(ReadBookIntent.OpenAiCurrentChapterRewrite) },
-        "more_actions" to { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.MoreActions)) },
+    val defs = buildAllReadMenuActionDefs(
+        context = context,
+        state = state,
+        eyeProtectionActive = eyeProtectionActive,
+        onIntent = onIntent,
     )
-
-    val activeIds = buildSet {
-        if (state.isReadAloudRunning) add("read_aloud")
-        if (state.isAutoPage) add("auto_page")
-        if (state.translationMode) add("translate")
-        if (eyeProtectionActive) add("eye_protection")
-    }
-
     return state.menuConfig.titleBarButtons
         .asSequence()
         .filter { it.enabled }
-        .mapNotNull { item ->
-            val id = item.id
-            val info = infoMap[id] ?: return@mapNotNull null
+        .mapNotNull { defs[it.id] }
+        .filter { it.applicable }
+        .map { def ->
             FloatingIconDef(
-                id = id,
-                icon = info.icon,
-                label = info.label,
-                isActive = id in activeIds,
-                onClick = actionMap[id] ?: {},
-                onLongClick = when (id) {
-                    "read_aloud" -> {
-                        { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)) }
-                    }
-
-                    else -> null
-                },
+                id = def.id,
+                icon = def.icon,
+                label = def.label,
+                isActive = def.isActive,
+                onClick = def.onClick,
+                onLongClick = def.onLongClick,
+                longPressMenu = def.longPressMenu,
             )
         }
         .toList()

@@ -31,14 +31,20 @@ class ReadButtonConfigDelegate(
         fun applyConfigUpdate(update: ConfigUpdate)
     }
 
-    /** 从 SharedPreferences 读回两条按钮配置，刷进 menuConfig。VM 构造时调一次。 */
+    /** 从 SharedPreferences 读回按钮配置，刷进 menuConfig。VM 构造时调一次。 */
     fun refresh() {
         val titleBarButtons = loadButtonConfig(TITLE_BAR_ICON_PREFS, TITLE_BAR_ICON_KEY)
         val bottomBarButtons = loadButtonConfig(TOOL_BUTTON_PREFS, TOOL_BUTTON_KEY)
+        val titleBarActions = loadButtonConfig(
+            preferenceName = TITLE_BAR_ACTION_PREFS,
+            key = TITLE_BAR_ACTION_KEY,
+            defaultEnabled = DEFAULT_TITLE_BAR_ACTION_IDS,
+        )
         host.updateMenuConfig {
             it.copy(
                 titleBarButtons = titleBarButtons.toImmutableList(),
                 bottomBarButtons = bottomBarButtons.toImmutableList(),
+                titleBarActions = titleBarActions.toImmutableList(),
             )
         }
     }
@@ -53,6 +59,13 @@ class ReadButtonConfigDelegate(
         val normalized = normalizeButtonConfig(items)
         saveButtonConfig(TOOL_BUTTON_PREFS, TOOL_BUTTON_KEY, normalized)
         host.updateMenuConfig { it.copy(bottomBarButtons = normalized.toImmutableList()) }
+    }
+
+    /** 保存顶栏按钮的顺序与开关。 */
+    fun saveTitleBarActions(items: List<ReadBookButtonConfigItem>) {
+        val normalized = normalizeButtonConfig(items)
+        saveButtonConfig(TITLE_BAR_ACTION_PREFS, TITLE_BAR_ACTION_KEY, normalized)
+        host.updateMenuConfig { it.copy(titleBarActions = normalized.toImmutableList()) }
     }
 
     /**
@@ -129,13 +142,15 @@ class ReadButtonConfigDelegate(
     private fun loadButtonConfig(
         preferenceName: String,
         key: String,
+        ids: List<String> = ReadMenuActionIds,
+        defaultEnabled: Set<String> = DEFAULT_ENABLED_BUTTON_IDS,
     ): List<ReadBookButtonConfigItem> {
         val prefs = context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
         val raw = prefs.getString(key, null)
             ?.split(";")
             ?.mapNotNull { token ->
                 val parts = token.split(",")
-                val id = parts.getOrNull(0)?.takeIf { it in ReadBookButtonIds }
+                val id = parts.getOrNull(0)?.takeIf { it in ids }
                 val enabled = parts.getOrNull(1)?.toBooleanStrictOrNull()
                 if (id != null && enabled != null) {
                     ReadBookButtonConfigItem(id, enabled)
@@ -146,14 +161,9 @@ class ReadButtonConfigDelegate(
             ?: emptyList()
 
         return if (raw.isEmpty()) {
-            ReadBookButtonIds.map { id ->
-                ReadBookButtonConfigItem(
-                    id = id,
-                    enabled = id in DEFAULT_ENABLED_BUTTON_IDS,
-                )
-            }
+            ids.map { id -> ReadBookButtonConfigItem(id = id, enabled = id in defaultEnabled) }
         } else {
-            normalizeButtonConfig(raw)
+            normalizeButtonConfig(raw, ids)
         }
     }
 
@@ -171,17 +181,18 @@ class ReadButtonConfigDelegate(
 
     private fun normalizeButtonConfig(
         items: List<ReadBookButtonConfigItem>,
+        ids: List<String> = ReadMenuActionIds,
     ): List<ReadBookButtonConfigItem> {
         val seen = mutableSetOf<String>()
         val normalized = items.mapNotNull { item ->
             val id = item.id
-            if (id in ReadBookButtonIds && seen.add(id)) {
+            if (id in ids && seen.add(id)) {
                 ReadBookButtonConfigItem(id, item.enabled)
             } else {
                 null
             }
         }.toMutableList()
-        ReadBookButtonIds.forEach { id ->
+        ids.forEach { id ->
             if (seen.add(id)) {
                 normalized.add(ReadBookButtonConfigItem(id, false))
             }
@@ -194,12 +205,27 @@ class ReadButtonConfigDelegate(
         const val TITLE_BAR_ICON_KEY = "icons"
         const val TOOL_BUTTON_PREFS = "tool_button_config"
         const val TOOL_BUTTON_KEY = "tool_buttons"
+        const val TITLE_BAR_ACTION_PREFS = "title_bar_actions"
+        const val TITLE_BAR_ACTION_KEY = "actions"
         val DEFAULT_ENABLED_BUTTON_IDS = setOf(
             "search",
             "auto_page",
             "catalog",
             "read_aloud",
             "setting",
+        )
+
+        /**
+         * 顶栏默认：下载、刷新、换源、更多菜单；
+         * 目录规则（仅 TXT）与字符编码只对本地书生效，所以本地书默认仍是旧版那套。
+         */
+        val DEFAULT_TITLE_BAR_ACTION_IDS = setOf(
+            "download",
+            "refresh",
+            "change_source",
+            "toc_rule",
+            "charset",
+            "more_actions",
         )
     }
 }

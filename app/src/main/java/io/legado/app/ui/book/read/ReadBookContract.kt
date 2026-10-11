@@ -427,6 +427,11 @@ data class ReadMenuConfig(
     val readMenuCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
     val titleBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
     val bottomBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
+    /**
+     * 顶栏按钮配置。可选 id 见 [ReadBookTopBarActionIds]。
+     * 与 [titleBarButtons]（浮动图标行，同属一个图标池）分开存。
+     */
+    val titleBarActions: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
     val moreActionItems: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
     val showBrightnessView: String = "0",
     val brightnessVwPos: String = "1",
@@ -442,6 +447,7 @@ data class ReadBookButtonConfigItem(
     val enabled: Boolean,
 )
 
+/** 共享图标池：顶栏、浮动图标、底栏共用的那批通用按钮。完整池见 `ReadMenuActionIds`。 */
 internal val ReadBookButtonIds = listOf(
     "ai_summary",
     "ai_rewrite",
@@ -740,6 +746,9 @@ sealed interface ReadBookIntent {
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookIntent
     data class SaveMenuButtonConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
     data class SaveTitleBarButtonConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
+
+    /** 保存顶栏按钮顺序与开关。 */
+    data class SaveTitleBarActionConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
     data class SaveMoreActionsConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
 
     // BgTextConfig (needs Activity for DialogFragment)
@@ -1190,6 +1199,9 @@ sealed interface ReadBookSheet {
     data object ToolButtonConfig : ReadBookSheet
     data object EyeProtection : ReadBookSheet
     data object FloatingBarIconConfig : ReadBookSheet
+
+    /** 顶栏按钮配置（共用浮动图标/底栏的图标池）。 */
+    data object TitleBarActionConfig : ReadBookSheet
     data object EffectiveReplaces : ReadBookSheet
     data object ContentProcesses : ReadBookSheet
     data object TextProcessing : ReadBookSheet

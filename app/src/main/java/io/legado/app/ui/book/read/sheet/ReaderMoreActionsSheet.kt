@@ -19,8 +19,8 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CleanHands
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DisplaySettings
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FindReplace
@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
@@ -51,6 +52,8 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookMenuRoute
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.ui.book.read.isReadMenuActionApplicable
+import io.legado.app.ui.book.read.readMenuActionScopeLabelRes
 import io.legado.app.ui.widget.components.ConfigListEntry
 import io.legado.app.ui.widget.components.ReorderableConfigList
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -272,10 +275,17 @@ private fun MoreActionsConfigContent(
     onCancel: () -> Unit,
     onSave: (List<ReadBookButtonConfigItem>) -> Unit,
 ) {
+    val context = LocalContext.current
     val meta = specs.associateBy { it.id }
     val entries = items.mapNotNull { item ->
         meta[item.id]?.let { spec ->
-            ConfigListEntry(item.id, item.enabled, spec.icon, spec.label)
+            ConfigListEntry(
+                id = item.id,
+                enabled = item.enabled,
+                icon = spec.icon,
+                label = spec.label,
+                subtitle = readMenuActionScopeLabelRes(item.id)?.let(context::getString),
+            )
         }
     }
 
@@ -295,20 +305,24 @@ private fun moreActionSpecs(
     onIntent: (ReadBookIntent) -> Unit,
     dispatch: (ReadBookIntent) -> Unit,
 ): List<MoreActionSpec> = listOf(
+    // 换源/刷新/下载/目录规则/编码这类的适用条件统一走按钮注册表，
+    // 免得同一本书在这里能看见、在底栏却被过滤掉（反之亦然）。
     MoreActionSpec(
         "source_custom_button", stringResource(R.string.custom_button), Icons.Default.Extension,
-        applicable = state.bookSource?.customButton == true,
+        applicable = isReadMenuActionApplicable("source_custom_button", state),
         onClick = { dispatch(ReadBookIntent.SourceCustomButton(false)) },
     ),
     MoreActionSpec(
         "change_source", stringResource(R.string.change_origin), Icons.Default.SwapHoriz,
-        applicable = !state.isLocalBook, onClick = { dispatch(ReadBookIntent.MenuChangeSource) }),
+        applicable = isReadMenuActionApplicable("change_source", state),
+        onClick = { dispatch(ReadBookIntent.MenuChangeSource) }),
     MoreActionSpec(
         "refresh", stringResource(R.string.menu_refresh), Icons.Default.Refresh,
-        applicable = !state.isLocalBook, onClick = { dispatch(ReadBookIntent.MenuRefreshDur) }),
+        applicable = isReadMenuActionApplicable("refresh", state),
+        onClick = { dispatch(ReadBookIntent.MenuRefreshDur) }),
     MoreActionSpec(
         "download", stringResource(R.string.offline_cache), Icons.Default.CloudDownload,
-        applicable = !state.isLocalBook,
+        applicable = isReadMenuActionApplicable("download", state),
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download)) }),
     MoreActionSpec(
         "audio_download",
@@ -316,10 +330,11 @@ private fun moreActionSpecs(
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AudioDownload)) }),
     MoreActionSpec(
         "toc_rule", stringResource(R.string.txt_toc_rule), Icons.AutoMirrored.Filled.Toc,
-        applicable = state.isLocalTxt, onClick = { dispatch(ReadBookIntent.MenuTocRegex) }),
+        applicable = isReadMenuActionApplicable("toc_rule", state),
+        onClick = { dispatch(ReadBookIntent.MenuTocRegex) }),
     MoreActionSpec(
         "charset", stringResource(R.string.set_charset), Icons.Default.Translate,
-        applicable = state.isLocalBook,
+        applicable = isReadMenuActionApplicable("charset", state),
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset)) }),
     MoreActionSpec(
         "edit_content", stringResource(R.string.edit_content), Icons.Default.Edit,

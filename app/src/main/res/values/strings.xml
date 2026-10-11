@@ -2467,6 +2467,9 @@
     <string name="title_bar_layout">Title Bar Layout</string>
     <string name="show_title_bar_icons">Show floating icons</string>
     <string name="title_bar_compact">Compact top bar buttons</string>
+    <string name="title_bar_action_buttons">Configure Top Buttons</string>
+    <string name="only_online_books">Online books only</string>
+    <string name="only_local_books">Local books only</string>
     <string name="title_bar_icon_position">Floating icon position</string>
     <string name="position_top_start">Top left</string>
     <string name="position_top_end">Top right</string>

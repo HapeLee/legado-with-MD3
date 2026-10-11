@@ -160,11 +160,11 @@ fun ReadBookMenuBar(
                     backdrop = backdrop,
                     hazeState = hazeState,
                     titleBarMode = preferences.titleBarMode,
+                    eyeProtectionActive = eyeProtectionActive,
                 )
                 if (state.menuConfig.showTitleBarIcons && state.menuConfig.titleBarIconPosition <= 1) {
                     FloatingIconRow(
                         state = state,
-                        preferences = preferences,
                         eyeProtectionActive = eyeProtectionActive,
                         colors = menuColors,
                         alignment = if (state.menuConfig.titleBarIconPosition == 0) {
@@ -275,7 +275,6 @@ fun ReadBookMenuBar(
                 ) {
                     FloatingIconRow(
                         state = state,
-                        preferences = preferences,
                         eyeProtectionActive = eyeProtectionActive,
                         colors = menuColors,
                         alignment = if (state.menuConfig.titleBarIconPosition == 2) {

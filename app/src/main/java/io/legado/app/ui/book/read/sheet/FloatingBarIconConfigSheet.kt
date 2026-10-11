@@ -14,6 +14,9 @@ import io.legado.app.R
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.readMenuActionScopeLabelRes
+import io.legado.app.ui.book.read.readMenuButtonInfos
+import io.legado.app.ui.book.read.topBarActionButtonInfos
 import io.legado.app.ui.widget.components.ConfigListEntry
 import io.legado.app.ui.widget.components.ReorderableConfigList
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -33,6 +36,28 @@ fun FloatingBarIconConfigSheet(
         customIcons = customIcons,
         onDismissRequest = onDismissRequest,
         onSaved = { onIntent(ReadBookIntent.SaveTitleBarButtonConfig(it)) },
+        onSelectIcon = { id -> onIntent(ReadBookIntent.OpenTitleBarCustomIconPicker(id)) },
+        onClearIcon = { id ->
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarCustomIcon(id, "")))
+        },
+    )
+}
+
+@Composable
+fun TitleBarActionConfigSheet(
+    show: Boolean,
+    items: List<ReadBookButtonConfigItem>,
+    customIcons: Map<String, String>,
+    onDismissRequest: () -> Unit,
+    onIntent: (ReadBookIntent) -> Unit,
+) {
+    ButtonIconConfigSheet(
+        show = show,
+        title = stringResource(R.string.title_bar_action_buttons),
+        items = items,
+        customIcons = customIcons,
+        onDismissRequest = onDismissRequest,
+        onSaved = { onIntent(ReadBookIntent.SaveTitleBarActionConfig(it)) },
         onSelectIcon = { id -> onIntent(ReadBookIntent.OpenTitleBarCustomIconPicker(id)) },
         onClearIcon = { id ->
             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarCustomIcon(id, "")))
@@ -102,15 +127,24 @@ private fun ButtonIconConfigSheet(
     }
 }
 
+/**
+ * 顶栏、浮动图标、底栏三处配置页共用：列出整个按钮池，
+ * 并用副标题标注只对某类书生效的按钮（配置只存一份，实际显隐由适用性决定）。
+ */
 private fun buildButtonIconEntries(
     items: List<ReadBookButtonConfigItem>,
     context: Context,
 ): List<ConfigListEntry> {
-    val infoMap = readMenuButtonInfos(context).associateBy { it.id }
+    val infoMap = (topBarActionButtonInfos(context) + readMenuButtonInfos(context))
+        .associateBy { it.id }
     return items.mapNotNull { item ->
-        val id = item.id
-        infoMap[id]?.let { info ->
-            ConfigListEntry(id, item.enabled, info.icon, info.label)
-        }
+        val info = infoMap[item.id] ?: return@mapNotNull null
+        ConfigListEntry(
+            id = item.id,
+            enabled = item.enabled,
+            icon = info.icon,
+            label = info.label,
+            subtitle = readMenuActionScopeLabelRes(item.id)?.let(context::getString),
+        )
     }
 }

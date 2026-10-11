@@ -27,10 +27,9 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,10 +40,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.backdrop.Backdrop
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppVerticalSlider
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -215,6 +216,9 @@ internal fun MenuBottomBar(
             context,
             state.menuConfig.bottomBarButtons,
             state.menuConfig.readMenuCustomIcons,
+            state.isLocalBook,
+            state.isLocalTxt,
+            state.bookSource,
             state.isReadAloudRunning,
             state.isAutoPage,
             state.translationMode,
@@ -236,6 +240,13 @@ internal fun MenuBottomBar(
         val pageCount = ceil(toolButtons.size / pageSize.toFloat()).roundToInt().coerceAtLeast(1)
         val pagerState = rememberPagerState(pageCount = { pageCount })
 
+        // 按钮会随书变化（换源/下载等只对在线书显示），页数可能变少，把停留页收进合法范围
+        LaunchedEffect(pageCount) {
+            if (pagerState.currentPage > pageCount - 1) {
+                pagerState.scrollToPage(pageCount - 1)
+            }
+        }
+
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
@@ -256,15 +267,21 @@ internal fun MenuBottomBar(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         rowButtons.forEach { button ->
-                            ToolButtonItem(
-                                button = button,
-                                state = state,
-                                colors = colors,
-                                backdrop = backdrop,
-                                glassEnabled = buttonGlassEnabled,
-                                labelColor = labelColor,
-                                modifier = Modifier.width(if (buttonGlassEnabled) 48.dp else 40.dp),
-                            )
+                            // 按 id 记槽位：按钮列表随书/配置变化时，长按展开态不会错配
+                            key(button.id) {
+                                ToolButtonItem(
+                                    button = button,
+                                    state = state,
+                                    colors = colors,
+                                    backdrop = backdrop,
+                                    glassEnabled = buttonGlassEnabled,
+                                    labelColor = labelColor,
+                                    onIntent = onIntent,
+                                    modifier = Modifier.width(
+                                        if (buttonGlassEnabled) 48.dp else 40.dp
+                                    ),
+                                )
+                            }
                         }
                     }
                 }

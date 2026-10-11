@@ -41,6 +41,7 @@ import io.legado.app.ui.book.read.sheet.ReaderMoreActionsSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
 import io.legado.app.ui.book.read.sheet.TextProcessingSheet
+import io.legado.app.ui.book.read.sheet.TitleBarActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
@@ -398,6 +399,13 @@ fun ReadBookScreen(
     FloatingBarIconConfigSheet(
         show = state.activeSheet is ReadBookSheet.FloatingBarIconConfig,
         items = state.menuConfig.titleBarButtons,
+        customIcons = state.menuConfig.titleBarCustomIcons,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+    )
+    TitleBarActionConfigSheet(
+        show = state.activeSheet is ReadBookSheet.TitleBarActionConfig,
+        items = state.menuConfig.titleBarActions,
         customIcons = state.menuConfig.titleBarCustomIcons,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,

@@ -2433,6 +2433,9 @@
     <string name="tip_compose_set">這些選項僅影響以 Compose 重寫的介面。已停用的選項為佔位符，將在實作後啟用。</string>
     <string name="tip_custom_mode">主題引擎依賴 Monet。動態顏色和自訂主題在 Android 12 以下的裝置上不生效。</string>
     <string name="title_bar_icon_position">標題欄圖標位置</string>
+    <string name="title_bar_action_buttons">配置頂部按鈕</string>
+    <string name="only_online_books">僅線上書籍</string>
+    <string name="only_local_books">僅本機書籍</string>
     <string name="title_bar_icons">標題欄圖標</string>
     <string name="title_bar_layout">標題欄佈局</string>
     <string name="title_bar_mode">選單中的標題模式</string>
