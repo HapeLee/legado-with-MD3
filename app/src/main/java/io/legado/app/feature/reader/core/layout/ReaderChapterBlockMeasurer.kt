@@ -10,6 +10,8 @@ import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyleResolver
 import io.legado.app.feature.reader.core.style.ReaderCompiledStyleRanges
 import io.legado.app.feature.reader.core.style.ReaderStyleRange
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.cancellation.CancellationException
 
 fun interface ReaderTextShaperFactory {
@@ -249,6 +251,10 @@ class ReaderChapterBlockMeasurer(
             /** HTML 段测量文本与注入侧不一致（标签剥离），不参与锚点计数。 */
             castFeed: Boolean = true,
         ) {
+            // 旧 `TextChapterLayout` 在每段排版前 `currentCoroutineContext().ensureActive()`。
+            // 排版是不可中断的长循环：取消 / 重启时必须在段落边界停下，否则旧任务会把整章算完
+            // 并一直持有整章对象图（见议题 #2396 的 OOM）。
+            currentCoroutineContext().ensureActive()
             val baseStyle = if (isTitle) style.titleStyle.copy(
                 fontSizePx = style.titleStyle.fontSizePx * titleScale,
             ) else style.bodyStyle
@@ -513,6 +519,8 @@ class ReaderChapterBlockMeasurer(
             flushInline(skipBlank = hasStandaloneImage || droppedActionImage)
         }
         source.blocks.forEachIndexed { index, block ->
+            // 非段落块（独立图块 / 分页块）也要在块边界响应取消，与旧实现同粒度。
+            currentCoroutineContext().ensureActive()
             when (block) {
                 is ReaderChapterSourceBlock.Text -> {
                     addStyledParagraph(

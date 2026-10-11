@@ -11,10 +11,13 @@ import io.legado.app.feature.reader.core.source.ReaderTitleSegmentation
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import io.legado.app.feature.reader.core.style.ReaderStyleRange
 import io.legado.app.feature.reader.core.style.ReaderStyleTarget
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.coroutines.cancellation.CancellationException
 
 class ReaderChapterBlockMeasurerTest {
     @Test
@@ -37,6 +40,45 @@ class ReaderChapterBlockMeasurerTest {
         assertEquals(regular.blocks, profiled.blocks)
         assertTrue(metrics.shapingCalls > 0)
         assertTrue(metrics.styleLookups > 0)
+    }
+
+    /**
+     * 旧 `TextChapterLayout` 每段排版前 `currentCoroutineContext().ensureActive()`。取消分页任务后
+     * 必须在段落边界立刻停下：否则任务会把整章算完并一直持有整章对象图（议题 #2396 的 OOM）。
+     */
+    @Test
+    fun cancellingDuringMeasurementStopsAtTheNextParagraphBoundary() = runBlocking {
+        val source = ReaderChapterSource(
+            1, "",
+            listOf(
+                ReaderChapterSourceBlock.Text("甲", 0),
+                ReaderChapterSourceBlock.Text("乙", 2),
+                ReaderChapterSourceBlock.Text("丙", 4),
+            ),
+            6,
+        )
+        val cancelled = Job()
+        val shapedTexts = mutableListOf<String>()
+        val cancellingShaper = ReaderTextShaper { text ->
+            shapedTexts += text
+            // 第一段一量完就取消：后续段落不得再被排版。
+            cancelled.cancel()
+            GlyphClusters(text.map(Char::toString), List(text.length) { 10f })
+        }
+
+        val failure = runCatching {
+            withContext(cancelled) {
+                ReaderChapterBlockMeasurer(
+                    bodyShaper = cancellingShaper,
+                    titleShaper = cancellingShaper,
+                    imageDimensionsResolver = { null },
+                ).measure(source, style)
+            }
+        }.exceptionOrNull()
+
+        assertTrue("测量应在取消后抛 CancellationException", failure is CancellationException)
+        assertTrue("第一段应已完成排版", shapedTexts.contains("甲"))
+        assertTrue("取消后不应再排版后续段落", "丙" !in shapedTexts)
     }
 
     @Test
