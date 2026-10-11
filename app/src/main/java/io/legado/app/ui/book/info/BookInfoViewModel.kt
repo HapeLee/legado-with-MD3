@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import coil3.ImageLoader
 import coil3.request.SuccessResult
 import coil3.toBitmap
+import com.google.gson.annotations.SerializedName
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
@@ -2135,8 +2136,12 @@ private val BookInfoWebFile.isSupported: Boolean
 private val BookInfoWebFile.isSupportDecompress: Boolean
     get() = AppPattern.archiveFileRegex.matches(name)
 
+/**
+ * 书源 `ruleBookInfo.relatedBooks` 的 JSON 结构。键名由书源约定、代码外生成，
+ * 必须写死在 [SerializedName]：否则 R8 改名后三个字段全反序列化为 null，关联书籍整组消失。
+ */
 private data class RelatedBooksDef(
-    val key: String? = null,
-    val title: String? = null,
-    val url: String? = null,
+    @SerializedName("key") val key: String? = null,
+    @SerializedName("title") val title: String? = null,
+    @SerializedName("url") val url: String? = null,
 )
