@@ -4,14 +4,18 @@ accompanistWebview = "0.36.0"
 adaptive = "1.3.0"
 adaptiveLayout = "1.3.0"
 adaptiveNavigation = "1.3.0"
-animation = "1.12.1"
+# Compose 整条线必须同版本。material3 1.5.0-alpha29 传递要求 foundation 1.13.0-alpha01，
+# 而 platform(compose-bom) 不是 enforcedPlatform：BOM 的 1.12.1 与显式 pin 都会被
+# "最高版本获胜"静默覆盖，整线落到缺少修复的 1.13.0-alpha01。
+# 1.13.0-beta01 才包含 "LayoutNode not found in RectList"（b/549552303）的完整修复，
+# 升级时请把 composeTrain 下的全部构件一起升。
+composeTrain = "1.13.0-beta01"
 biometric = "1.4.0-alpha07"
 coilCompose = "3.6.3"
 composeBom = "2026.09.00"
 constraintlayoutCompose = "1.1.2"
 coreSplashscreen = "1.2.0"
 datastorePreferences = "1.2.1"
-foundation = "1.12.1"
 kotlin = "2.4.20"
 kotlinxSerialization = "1.11.0"
 kotlinxCoroutinesAndroid = "1.11.0"
@@ -111,19 +115,25 @@ androidx-collection = { module = "androidx.collection:collection", version.ref =
 androidx-compose-adaptive = { module = "androidx.compose.material3.adaptive:adaptive", version.ref = "adaptive" }
 androidx-compose-adaptive-layout = { module = "androidx.compose.material3.adaptive:adaptive-layout", version.ref = "adaptiveLayout" }
 androidx-compose-adaptive-navigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation", version.ref = "adaptiveNavigation" }
-androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
+androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "composeTrain" }
+# BOM 只约束未列入 composeTrain 的 compose 构件；composeTrain 的显式版本更高，按"最高版本获胜"生效。
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
-androidx-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }
-androidx-compose-material = { module = "androidx.compose.material:material" }
+androidx-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "composeTrain" }
+androidx-compose-foundation-layout = { module = "androidx.compose.foundation:foundation-layout", version.ref = "composeTrain" }
+androidx-compose-material = { module = "androidx.compose.material:material", version.ref = "composeTrain" }
+androidx-compose-material-ripple = { module = "androidx.compose.material:material-ripple", version.ref = "composeTrain" }
+androidx-compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "composeTrain" }
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 androidx-navigationevent = { module = "androidx.navigationevent:navigationevent", version.ref = "navigationevent" }
 androidx-navigationevent-compose = { module = "androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 compose-materialIcons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material3IconsExtended" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
-androidx-compose-ui = { module = "androidx.compose.ui:ui" }
-androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
-androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "composeTrain" }
+androidx-compose-ui-text = { module = "androidx.compose.ui:ui-text", version.ref = "composeTrain" }
+androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "composeTrain" }
+androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "composeTrain" }
+androidx-compose-ui-util = { module = "androidx.compose.ui:ui-util", version.ref = "composeTrain" }
 androidx-compose-ui-viewbinding = { module = "androidx.compose.ui:ui-viewbinding", version.ref = "uiViewbinding" }
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayoutCompose" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
