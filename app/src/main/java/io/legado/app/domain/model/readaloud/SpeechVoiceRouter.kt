@@ -23,7 +23,10 @@ object SpeechVoiceRouter {
             add(cue.voice)
             addAll(cue.fallbackVoices)
         }.filterNotNull()
-            .filter { it.enabled && it.available && it.engineType in supportedEngineTypes }
+            .filter {
+                it.enabled && it.available && !it.excluded &&
+                    it.engineType in supportedEngineTypes
+            }
             .distinctBy(ReadAloudVoice::id)
 
         val selected = candidates.firstOrNull()

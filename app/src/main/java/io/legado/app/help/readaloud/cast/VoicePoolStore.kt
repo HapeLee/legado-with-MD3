@@ -135,7 +135,9 @@ object VoicePoolStore {
         val usableByGroup = groups.associate { it.id to it.usable }
         // 音色在「朗读引擎与音色」里被删掉后，成员行会留在表里；计数只按还在的音色算，
         // 否则会出现 (4/4) 却一个成员都列不出来的情况。
-        val alive = appDb.readAloudVoiceDao.getVoices().mapTo(mutableSetOf()) { it.id }
+        val alive = appDb.readAloudVoiceDao.getVoices()
+            .filter { !it.excluded }
+            .mapTo(mutableSetOf()) { it.id }
         val members = appDb.voicePoolDao.getAllMembers().filter { it.voiceId in alive }
         val totalByPool = members.groupingBy { it.poolId }.eachCount()
         val enabledByPool = members
@@ -161,7 +163,7 @@ object VoicePoolStore {
     /** 展开池：全部音色列表 + 归属/启用状态（分组头展开用）。 */
     suspend fun poolDetail(poolId: String): CastPoolDetail {
         ensureSeeded()
-        val voices = appDb.readAloudVoiceDao.getVoices()
+        val voices = appDb.readAloudVoiceDao.getVoices().filter { !it.excluded }
         val engineNames = engineNames(voices)
         val members = appDb.voicePoolDao.getMembers(poolId).associateBy { it.voiceId }
         val pools = listPools()
@@ -241,7 +243,9 @@ object VoicePoolStore {
         ensureSeeded()
         val pools = listPools().filter { it.usable }.associate { it.id to it.name }
         if (pools.isEmpty()) return emptyMap()
-        val alive = appDb.readAloudVoiceDao.getVoices().mapTo(mutableSetOf()) { it.id }
+        val alive = appDb.readAloudVoiceDao.getVoices()
+            .filter { !it.excluded }
+            .mapTo(mutableSetOf()) { it.id }
         return appDb.voicePoolDao.getAllMembers()
             .filter { it.enabled && it.voiceId in alive }
             .mapNotNull { m -> pools[m.poolId]?.let { m.voiceId to it } }
@@ -475,9 +479,9 @@ object VoicePoolStore {
 
     // ---- 多角色规则页专用出口（ViewModel 禁直连 DAO，全部经本 Store） ----
 
-    /** 成员页候选：全部音色 (id → displayName)。 */
+    /** 成员页候选：全部音色 (id → displayName)，用户排除的不在候选里。 */
     suspend fun allVoicePairs(): List<Pair<String, String>> =
-        appDb.readAloudVoiceDao.getVoices().map { it.id to it.displayName }
+        appDb.readAloudVoiceDao.getVoices().filter { !it.excluded }.map { it.id to it.displayName }
 
     /** 分配表行数据（角色 → 音色/书名/句数）。 */
     data class AssignmentRowData(

@@ -136,7 +136,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 130,
+    version = 131,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -273,6 +273,9 @@ val appDb by lazy {
         AutoMigration(from = 128, to = 129),
         // regex_cast_rules 新增 voiceEffect 列：命中的那段文字用哪个变声器预设念，默认空 = 不变声
         AutoMigration(from = 129, to = 130),
+        // httpTTS 新增 synthesisThreadCount：源自带合成并发上限，导入外部源时保留。
+        // read_aloud_voices 新增 excluded：用户排除源自带目录里的音色，行保留不删。
+        AutoMigration(from = 130, to = 131),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

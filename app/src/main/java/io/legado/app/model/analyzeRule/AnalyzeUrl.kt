@@ -82,6 +82,13 @@ class AnalyzeUrl(
     private val page: Int? = null,
     private val speakText: String? = null,
     private val speakSpeed: Int? = null,
+    /**
+     * 当前片段使用的音色，供支持原生发言人目录的朗读源在 URL 里拼参数，
+     * 例如 `?v={{currentToneID}}`。默认空串，不带目录的源不受影响。
+     */
+    private val currentToneID: String = "",
+    private val currentSpeakerName: String = "",
+    private val currentEmotionTag: String = "",
     private var baseUrl: String = "",
     private val source: BaseSource? = null,
     private val ruleData: RuleDataInterface? = null,
@@ -370,6 +377,9 @@ class AnalyzeUrl(
             bindings["key"] = key
             bindings["speakText"] = speakText
             bindings["speakSpeed"] = speakSpeed
+            bindings["currentToneID"] = currentToneID
+            bindings["currentSpeakerName"] = currentSpeakerName
+            bindings["currentEmotionTag"] = currentEmotionTag
             bindings["book"] = ruleData as? Book
             bindings["source"] = source
             bindings["result"] = result

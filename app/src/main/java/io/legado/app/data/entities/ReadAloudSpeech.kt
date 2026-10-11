@@ -30,6 +30,14 @@ data class ReadAloudVoiceEntity(
     val enabled: Boolean = true,
     @ColumnInfo(defaultValue = "1")
     val available: Boolean = true,
+    /**
+     * 用户主动排除：源自带的目录里不想用的那些音色。
+     *
+     * 不是删除——行必须留着，否则下次导入同一个源，[io.legado.app.domain.usecase
+     * .SyncReadAloudVoicesUseCase] 会把它当成新音色重新插回来。
+     */
+    @ColumnInfo(defaultValue = "0")
+    val excluded: Boolean = false,
     @ColumnInfo(defaultValue = "0")
     val revision: Long = 0L,
     val createdAt: Long = System.currentTimeMillis(),

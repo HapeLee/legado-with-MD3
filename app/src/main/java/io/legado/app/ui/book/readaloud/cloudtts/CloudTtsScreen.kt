@@ -355,6 +355,17 @@ fun CloudTtsScreen(
                         },
                     )
                 }
+                if (state.excludedVoiceCount > 0) {
+                    item {
+                        TinyClickableSettingItem(
+                            title = stringResource(
+                                R.string.cloud_tts_restore_excluded_voices,
+                                state.excludedVoiceCount,
+                            ),
+                            onClick = { onIntent(CloudTtsIntent.RestoreExcludedVoices) },
+                        )
+                    }
+                }
             } else {
                     item { EngineSectionTitle(R.string.cloud_tts_cloud_engines) }
                 items(state.engines, key = { "engine:${it.id}" }) { engine ->

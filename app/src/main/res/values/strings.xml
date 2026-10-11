@@ -3402,6 +3402,9 @@
     <string name="cloud_tts_no_available_engine">Install a system TTS, add a cloud TTS engine, or import an HTTP TTS first</string>
     <string name="cloud_tts_voice_engine_unavailable">The engine used by this voice is currently unavailable</string>
     <string name="cloud_tts_cannot_change_engine">The engine cannot be changed while editing. Create a new voice preset instead.</string>
+    <string name="cloud_tts_restore_excluded_voices">Restore excluded voices (%1$d)</string>
+    <string name="cloud_tts_no_excluded_voices">No excluded voices</string>
+    <string name="cloud_tts_restored_voices">Restored %1$d voices</string>
     <string name="cloud_tts_engine_default_voice">Engine default voice</string>
     <string name="cloud_tts_voice_count">Loaded %1$d voices</string>
     <string name="cloud_tts_cannot_change_native_voice">The native voice cannot be changed while editing. Create a new voice preset instead.</string>

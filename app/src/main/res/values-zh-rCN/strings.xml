@@ -3398,6 +3398,9 @@
     <string name="cloud_tts_no_available_engine">请先安装系统 TTS、添加云 TTS 引擎或导入 HTTP TTS</string>
     <string name="cloud_tts_voice_engine_unavailable">该音色使用的引擎当前不可用</string>
     <string name="cloud_tts_cannot_change_engine">编辑预设时不能更换引擎，请新建音色预设</string>
+    <string name="cloud_tts_restore_excluded_voices">恢复已排除的音色（%1$d）</string>
+    <string name="cloud_tts_no_excluded_voices">没有已排除的音色</string>
+    <string name="cloud_tts_restored_voices">已恢复 %1$d 个音色</string>
     <string name="cloud_tts_engine_default_voice">引擎默认音色</string>
     <string name="cloud_tts_voice_count">已获取 %1$d 个音色</string>
     <string name="cloud_tts_cannot_change_native_voice">编辑预设时不能更换原生音色，请新建音色预设</string>
