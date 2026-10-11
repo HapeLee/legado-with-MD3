@@ -1370,8 +1370,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         ) {
             success?.invoke()
         }
-        loadContent(durChapterIndex + 1, resetPageOffset = resetPageOffset)
-        loadContent(durChapterIndex - 1, resetPageOffset = resetPageOffset)
+        if (prefetchNextChapterEnabled) loadContent(durChapterIndex + 1, resetPageOffset = resetPageOffset)
+        if (prefetchPrevChapterEnabled) loadContent(durChapterIndex - 1, resetPageOffset = resetPageOffset)
     }
 
     /**
@@ -1388,8 +1388,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         val currentIndex = durChapterIndex
         loadContent(currentIndex, resetPageOffset = resetPageOffset) {
             success?.invoke()
-            loadContent(currentIndex + 1, resetPageOffset = resetPageOffset)
-            loadContent(currentIndex - 1, resetPageOffset = resetPageOffset)
+            if (prefetchNextChapterEnabled) loadContent(currentIndex + 1, resetPageOffset = resetPageOffset)
+            if (prefetchPrevChapterEnabled) loadContent(currentIndex - 1, resetPageOffset = resetPageOffset)
         }
     }
 
@@ -1414,10 +1414,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             renderCallBack?.upContent()
             publishSnapshot()
         }
-        if (readerChapterInputWindow.next == null) {
+        if (readerChapterInputWindow.next == null && prefetchNextChapterEnabled) {
             loadContent(durChapterIndex + 1)
         }
-        if (readerChapterInputWindow.previous == null) {
+        if (readerChapterInputWindow.previous == null && prefetchPrevChapterEnabled) {
             loadContent(durChapterIndex - 1)
         }
     }
@@ -1811,7 +1811,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chapterSize = cList.size
                 simulatedChapterSize = book.simulatedTotalChapterNum()
                 publishSnapshot()
-                if (readerChapterInputWindow.next == null) loadContent(durChapterIndex + 1)
+                if (readerChapterInputWindow.next == null && prefetchNextChapterEnabled) loadContent(durChapterIndex + 1)
             }
         }
     }
@@ -1901,31 +1901,39 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
     }
 
+    /** 相邻章预取跟随「向后 / 向前预下载」设置：该方向为 0 就不预取相邻章。 */
+    private val prefetchNextChapterEnabled
+        get() = readSettingsGateway.currentSettings.preDownloadNum > 0
+    private val prefetchPrevChapterEnabled
+        get() = readSettingsGateway.currentSettings.preDownloadNumPrev > 0
+
     /**
-     * 预下载
+     * 预下载：按设置分别向前/向后预取；0 视为关闭，N≥1 预取 N 章。
      */
     private fun preDownload() {
         if (book?.isLocal == true) return
         executor.execute {
             val settings = readSettingsGateway.currentSettings
-            if (settings.preDownloadNum < 2 && settings.preDownloadNumPrev < 2) {
+            val forward = settings.preDownloadNumPrev
+            val backward = settings.preDownloadNum
+            if (forward <= 0 && backward <= 0) {
                 return@execute
             }
             preDownloadTask?.cancel()
             preDownloadTask = launch(IO) {
-                //向后预下载
-                launch {
-                    val maxChapterIndex = min(durChapterIndex + settings.preDownloadNum, chapterSize)
-                    for (i in durChapterIndex.plus(2)..maxChapterIndex) {
+                //向后预下载（当前章之后的章节）
+                if (backward > 0) launch {
+                    val maxChapterIndex = min(durChapterIndex + backward, chapterSize)
+                    for (i in durChapterIndex + 1..maxChapterIndex) {
                         if (downloadedChapters.contains(i)) continue
                         if ((downloadFailChapters[i] ?: 0) >= 3) continue
                         downloadIndex(i)
                     }
                 }
-                //向前预下载
-                launch {
-                    val minChapterIndex = durChapterIndex - settings.preDownloadNumPrev
-                    for (i in durChapterIndex.minus(2) downTo minChapterIndex) {
+                //向前预下载（当前章之前的章节）
+                if (forward > 0) launch {
+                    val minChapterIndex = maxOf(durChapterIndex - forward, 0)
+                    for (i in durChapterIndex - 1 downTo minChapterIndex) {
                         if (downloadedChapters.contains(i)) continue
                         if ((downloadFailChapters[i] ?: 0) >= 3) continue
                         downloadIndex(i)
