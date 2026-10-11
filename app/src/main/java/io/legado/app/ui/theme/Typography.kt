@@ -2,8 +2,10 @@ package io.legado.app.ui.theme
 
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.theme.TextStyles
 
@@ -56,6 +58,39 @@ fun TextStyles.withFont(fontFamily: FontFamily?): TextStyles {
         title4 = title4.copy(fontFamily = fontFamily),
     )
 }
+
+/**
+ * 保留 Miuix 的字号、字重和字距，借用 M3 对应角色的行高比例和留白策略。
+ * Miuix 0.9.4 仅 paragraph 定义了 1.2.em，其余角色没有显式行高。
+ * 使用 em，使自定义字体、字体缩放和下游字号调整仍沿用同一比例。
+ * 同时用于 Miuix 原生组件和 LegadoTypography，避免两者排版分叉。
+ */
+internal fun TextStyles.withMaterialLineHeights(): TextStyles {
+    val material = Typography()
+    return copy(
+        main = main.withLineHeightRatio(material.bodyLarge),
+        paragraph = paragraph.withLineHeightRatio(material.bodyLarge),
+        body1 = body1.withLineHeightRatio(material.bodyMedium),
+        body2 = body2.withLineHeightRatio(material.bodySmall),
+        button = button.withLineHeightRatio(material.labelLarge),
+        footnote1 = footnote1.withLineHeightRatio(material.labelMedium),
+        footnote2 = footnote2.withLineHeightRatio(material.labelSmall),
+        headline1 = headline1.withLineHeightRatio(material.titleMedium),
+        headline2 = headline2.withLineHeightRatio(material.titleMedium),
+        subtitle = subtitle.withLineHeightRatio(material.titleSmall),
+        title1 = title1.withLineHeightRatio(material.headlineLarge),
+        title2 = title2.withLineHeightRatio(material.headlineMedium),
+        title3 = title3.withLineHeightRatio(material.headlineSmall),
+        title4 = title4.withLineHeightRatio(material.titleLarge),
+    )
+}
+
+private fun TextStyle.withLineHeightRatio(reference: TextStyle): TextStyle =
+    copy(
+        lineHeight = (reference.lineHeight.value / reference.fontSize.value).em,
+        lineHeightStyle = reference.lineHeightStyle,
+        platformStyle = reference.platformStyle,
+    )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 fun Typography.toLegadoTypography(): LegadoTypography {

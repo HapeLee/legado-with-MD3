@@ -127,7 +127,9 @@ fun MiuixThemeWrapper(
     }
 
     val miuixTextStyles = remember(customFontFamily) {
-        defaultTextStyles().withFont(customFontFamily)
+        defaultTextStyles()
+            .withFont(customFontFamily)
+            .withMaterialLineHeights()
     }
 
     MiuixTheme(
