@@ -95,6 +95,8 @@
     <string name="book_source">Book sources</string>
     <string name="book_source_manage">Sources Management</string>
     <string name="book_source_manage_desc">Create/Import/Edit/Manage Book Sources</string>
+    <string name="book_source_edit">Book source edit</string>
+    <string name="book_source_login">Book source login</string>
     <string name="setting">Settings</string>
     <string name="theme_setting">Theme Settings</string>
     <string name="theme_setting_s">Some settings related to interface or color</string>
@@ -875,6 +877,7 @@
     <string name="add_to_text_context_menu_t">Show Search in Text Actions</string>
     <string name="record_log">Record Log</string>
     <string name="log">Log</string>
+    <string name="read_log">Read log</string>
     <string name="chinese_converter">Simplified conversion</string>
     <string name="change_icon_error">The icon is a vector icon, which was not supported before Android 8.0</string>
     <string name="aloud_config">Speech settings</string>
@@ -1102,6 +1105,7 @@
     <string name="donate_summary">Your donation makes this app better</string>
     <string name="about_summary">WeChat official account [Open Source Reading]</string>
     <string name="read_record">Read Record</string>
+    <string name="book_disable_read_record">Disable record for this book</string>
     <string name="del_read_record">Delete Read record</string>
     <string name="read_record_summary">Read record summary</string>
     <string name="local_tts">Local TTS</string>
