@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -129,6 +128,7 @@ import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import org.koin.compose.koinInject
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
 private val LocalReaderViewportSize = staticCompositionLocalOf { IntSize.Zero }
@@ -1403,6 +1403,21 @@ private fun MangaReaderItem(
     }
 }
 
+/**
+ * 条漫每页的占位高度向下取整，内容则多画 1px。
+ * 相邻页的整数槽位之间会累积出亚像素缝、露出阅读背景形成白线；让本页向下溢出 1px 被下一页盖住即可无缝。
+ */
+private fun Modifier.webtoonPageSlot(aspectRatio: Float): Modifier = layout { measurable, constraints ->
+    val width = constraints.maxWidth
+    if (width <= 0 || !aspectRatio.isFinite() || aspectRatio <= 0f) {
+        val placeable = measurable.measure(constraints)
+        return@layout layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
+    val slotHeight = floor(width / aspectRatio).toInt().coerceAtLeast(1)
+    val placeable = measurable.measure(Constraints.fixed(width, slotHeight + 1))
+    layout(width, slotHeight) { placeable.place(0, 0) }
+}
+
 @Composable
 private fun MangaPageImage(
     page: MangaReaderItemUi.Page,
@@ -1430,7 +1445,7 @@ private fun MangaPageImage(
         widePageMode = settings.widePageMode,
     )
     val webtoonSizeModifier = if (paged) Modifier else {
-        aspectRatios[page.key]?.takeIf { it > 0f }?.let { Modifier.aspectRatio(it) }
+        aspectRatios[page.key]?.takeIf { it > 0f }?.let { Modifier.webtoonPageSlot(it) }
             ?: Modifier.height(fallbackHeight)
     }
     val imagePipelineKey = remember(
@@ -1624,6 +1639,7 @@ private fun MangaPageImage(
             imageLoader = imageLoader,
             contentDescription = contentDescription,
             contentScale = ContentScale.FillWidth,
+            alignment = Alignment.TopCenter,
             colorFilter = mangaColorFilter(settings),
             modifier = Modifier.fillMaxSize(),
             onLoading = {
