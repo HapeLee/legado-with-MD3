@@ -51,10 +51,10 @@ liveeventbus = "1.8.14"
 navigation3 = "1.2.0"
 # NavigationEvent 1.2 修复了预测式返回事件发往已分离输入时的崩溃；
 # 显式保持 1.2 系列，避免回退到尚未包含该修复的稳定版 1.1.2。
-navigationevent = "1.2.0-rc01"
+navigationevent = "1.2.0"
 markwon = "4.6.2"
 material = "1.14.0"
-material3 = "1.5.0-alpha29"
+material3 = "1.5.0-beta01"
 material3IconsExtended = "1.7.8"
 materialKolor = "5.0.1"
 media = "1.8.0"
@@ -92,7 +92,7 @@ koin-bom = "4.2.2"
 biometricKtx = "1.1.0"
 
 reorderable = "3.1.0"
-haze = "1.7.3"
+haze = "2.0.1"
 timber = "5.0.1"
 telephoto = "0.19.0"
 miuix = "0.9.4"
@@ -148,7 +148,7 @@ appcompat-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
 
 haze-core = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
-haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
+haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
 hutool-crypto = { module = "cn.hutool:hutool-crypto", version.ref = "hutool" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }

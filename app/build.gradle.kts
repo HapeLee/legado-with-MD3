@@ -316,7 +316,7 @@ dependencies {
     implementation(libs.reorderable)
     implementation(libs.material.kolor)
     implementation(libs.haze.core)
-    implementation(libs.haze.materials)
+    implementation(libs.haze.blur)
     implementation(libs.miuix.ui.android)
     implementation(libs.miuix.preference.android)
     implementation(libs.miuix.icons.android)
