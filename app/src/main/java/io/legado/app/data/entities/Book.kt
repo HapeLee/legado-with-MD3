@@ -117,6 +117,9 @@ data class Book(
     // 刷新书架时更新书籍信息
     @ColumnInfo(defaultValue = "1")
     var canUpdate: Boolean = true,
+    // 单独为本书关闭阅读记录：为 true 时只有这本书不写入阅读会话（全局开关见 LocalPreferences.ENABLE_READ_RECORD）
+    @ColumnInfo(defaultValue = "0")
+    var disableReadRecord: Boolean = false,
     // 手动排序
     @ColumnInfo(defaultValue = "0")
     var order: Int = 0,
@@ -423,6 +426,7 @@ data class Book(
         newBook.customIntro = customIntro
         newBook.customTag = customTag
         newBook.canUpdate = canUpdate
+        newBook.disableReadRecord = disableReadRecord
         if (config.fixedType) {
             newBook.type = type
         }
