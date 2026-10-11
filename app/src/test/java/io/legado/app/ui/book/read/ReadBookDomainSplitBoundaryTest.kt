@@ -151,16 +151,21 @@ class ReadBookDomainSplitBoundaryTest {
      * 主线既有、尚未清偿的约 58 行接线仍须按各域单独瘦身，不视为已豁免。划线笔记用
      * 独立 `book_marks` 表（与书签、AI 正文处理解耦），查看在目录 Sheet 的「笔记」页
      * （TocViewModel 自持 flow）。
+     *
+     * 上限由 2742 上调到 2744：官方 `ba128d4c5`（feat: 界面优化）为朗读域新增意图入口
+     * `ReadBookIntent.OpenReadAloudSubPage`——`when` 分支 + 一行
+     * `readAloudDelegate.openReadAloudSubPage()` 转发，属上列「意图入口」一类，
+     * 本体在 `ReadAloudDelegate`，无可摘内容。官方链路再给 VM 加接线时同步调整本上限。
      */
     @Test
-    fun `ReadBookViewModel 不超过 2742 行`() {
+    fun `ReadBookViewModel 不超过 2744 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过上限 2742。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过上限 2744。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2742,
+            lineCount <= 2744,
         )
     }
 
