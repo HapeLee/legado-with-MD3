@@ -16,6 +16,11 @@ class ResolveBookShelfStateUseCase {
         url: String?,
         shelf: Set<BookShelfKey>
     ): BookShelfState {
+        // 同源同地址即视为已在书架（书名可能在书架里被改过，不能作为唯一依据）
+        if (url != null && shelf.any { it.url == url }) {
+            return BookShelfState.IN_SHELF
+        }
+
         val exactMatch = shelf.any {
             it.name == name && it.author == author && it.url == url
         }
