@@ -113,11 +113,32 @@ class DefaultMangaReaderSessionTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
 
-        session.execute(MangaSessionCommand.PrefetchCountChanged(2))
+        session.execute(MangaSessionCommand.PrefetchCountChanged(nextCount = 2, prevCount = 0))
         session.execute(MangaSessionCommand.Open("book-a", true, false))
         advanceUntilIdle()
 
         assertEquals(listOf("book-a" to 1, "book-a" to 2), gateway.prefetched)
+        session.close()
+    }
+
+    @Test
+    fun `prefetch covers the previous direction within bounds`() = runTest {
+        val gateway = FakeGateway()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
+
+        session.execute(MangaSessionCommand.Open("book-a", true, false))
+        advanceUntilIdle()
+        gateway.complete("book-a", 0)
+        advanceUntilIdle()
+        session.execute(MangaSessionCommand.OpenChapter(3, 0))
+        advanceUntilIdle()
+        gateway.prefetched.clear()
+
+        session.execute(MangaSessionCommand.PrefetchCountChanged(nextCount = 0, prevCount = 2))
+        advanceUntilIdle()
+
+        assertEquals(listOf("book-a" to 2, "book-a" to 1), gateway.prefetched)
         session.close()
     }
 
@@ -289,6 +310,7 @@ class DefaultMangaReaderSessionTest {
             chapterUrl = null,
             pages = listOf(MangaPageContent("$bookUrl/$chapterIndex", 0, 1)),
             isVolume = false,
+            chapterSubject = "chapter-$chapterIndex",
         )
 
         override suspend fun persistProgress(bookUrl: String, chapterIndex: Int, pageIndex: Int) {

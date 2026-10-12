@@ -41,6 +41,7 @@ internal class LocalMangaLoader(private val cacheRoot: File) : AutoCloseable {
             chapter.url,
             urls.mapIndexed { index, url -> MangaPageContent(url, index, urls.size) },
             false,
+            chapter.getFileName().substringBeforeLast('.'),
         )
     }
 

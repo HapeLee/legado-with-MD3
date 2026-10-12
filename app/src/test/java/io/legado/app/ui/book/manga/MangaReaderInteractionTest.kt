@@ -172,6 +172,7 @@ class MangaReaderInteractionTest {
         pageIndex = index,
         pageCount = 10,
         chapterName = "chapter",
+        chapterSubject = "chapter",
     )
 
     @Test

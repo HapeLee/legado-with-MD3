@@ -65,6 +65,7 @@ sealed interface MangaReaderItemUi {
         val pageIndex: Int,
         val pageCount: Int,
         val chapterName: String,
+        val chapterSubject: String,
         val loadState: MangaPageLoadState = MangaPageLoadState.Queued,
         val retryRevision: Int = 0,
     ) : MangaReaderItemUi
