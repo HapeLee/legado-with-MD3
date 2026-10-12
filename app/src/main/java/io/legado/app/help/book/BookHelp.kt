@@ -196,31 +196,29 @@ object BookHelp {
         //向前保留设定数量，向后保留预下载数量
         val startIndex = book.durChapterIndex - cacheGateway.currentSettings.imageRetainNum
         val endIndex = book.durChapterIndex + readGateway.currentSettings.preDownloadNum
-        val chapterList = appDb.bookChapterDao.getChapterList(book.bookUrl, startIndex, endIndex)
-        val imgNames = hashSetOf<String>()
-        //获取需要保留章节的图片信息
-        chapterList.forEach {
-                val content = getContent(book, it)
-                if (content != null) {
-                    for (m in AppPattern.imgPattern.findAll(content)) {
-                        val src = m.groupValues[1].takeIf { it.isNotEmpty() } ?: continue
-                        val mSrc = NetworkUtils.getAbsoluteURL(it.url, src)
-                        imgNames.add("${MD5Utils.md5Encode16(mSrc)}.${getImageSuffix(mSrc)}")
-                    }
-                }
+        // 章节图片按章存在 <章节主体>/images；窗口外章节的图片整目录清理。
+        val keepSubjects = appDb.bookChapterDao.getChapterList(book.bookUrl, startIndex, endIndex)
+            .mapTo(hashSetOf()) { it.getFileName().substringBeforeLast('.') }
+        val bookDir = downloadDir.getFile(cacheFolderName, book.getFolderName())
+        bookDir.listFiles()?.forEach { entry ->
+            if (entry.isDirectory && entry.name != cacheImageFolderName &&
+                entry.name !in keepSubjects
+            ) {
+                clearChapterImageCache(File(entry, cacheImageFolderName))
+            }
         }
-        downloadDir.getFile(
-            cacheFolderName,
-            book.getFolderName(),
-            cacheImageFolderName
-        ).listFiles()?.forEach { imgFile ->
+    }
+
+    private fun clearChapterImageCache(imageDir: File) {
+        imageDir.listFiles()?.forEach { imgFile ->
             // 临时文件的所有权属于写入者；清理不能在校验/发布前删除它。
-            if (!imgNames.contains(imgFile.name) && !imgFile.name.endsWith(".tmp")) {
+            if (!imgFile.name.endsWith(".tmp")) {
                 imageFiles.deleteIfIdle(imgFile) {
                     // 普通在线缓存由字节预算淘汰，不能被章节窗口清理绕过。
                     if (it.name == BookImageFileStore.ONLINE_MARKER_DIRECTORY ||
                         it.name == BookImageFileStore.DOWNLOAD_INDEX_DIRECTORY ||
-                        imageFiles.isOnline(it) || imageFiles.isExplicitDownload(it)) false else it.delete()
+                        imageFiles.isOnline(it) || imageFiles.isExplicitDownload(it)
+                    ) false else it.delete()
                 }
             }
         }
@@ -258,12 +256,7 @@ object BookHelp {
             }
         }
         // 保存阅读缓存文本(.nb)
-        FileUtils.createFileIfNotExist(
-            downloadDir,
-            cacheFolderName,
-            book.getFolderName(),
-            bookChapter.getFileName(),
-        ).writeText(content)
+        getChapterContentFile(book, bookChapter).apply { parentFile?.mkdirs() }.writeText(content)
         if (book.isOnLineTxt && readGateway.currentSettings.tocCountWords) {
             // 正文里携带的 <img src="data:base64">、内联 SVG 等富文本源码会把章节字数虚抬
             // 几倍（3 页正文显示 3000+ 字）。这里剔除标签/Base64 后按可读纯文本计数，
@@ -373,7 +366,7 @@ object BookHelp {
         if (!hasContent(book, chapter)) return false
         var complete = true
         forEachImageSrc(book, chapter) { src ->
-            val image = getImage(book, src)
+            val image = getImage(book, chapter, src)
             if (!imageFiles.hasDownloadChapter(image, "${chapter.index}.${MD5Utils.md5Encode16(chapter.url)}") ||
                 !imageFiles.isValid(image)) complete = false
         }
@@ -423,10 +416,31 @@ object BookHelp {
         loadOnlyWifi: Boolean = false,
         onDownload: () -> Unit = {},
         explicitDownloadChapter: String? = null,
+    ): Boolean = saveImageFile(
+        bookSource = bookSource,
+        book = book,
+        src = src,
+        image = if (chapter != null) getImage(book, chapter, src) else getImage(book, src),
+        chapterTitle = chapter?.title,
+        onlineOnly = onlineOnly,
+        loadOnlyWifi = loadOnlyWifi,
+        onDownload = onDownload,
+        explicitDownloadChapter = explicitDownloadChapter,
+    )
+
+    private suspend fun saveImageFile(
+        bookSource: BookSource?,
+        book: Book,
+        src: String,
+        image: File,
+        chapterTitle: String?,
+        onlineOnly: Boolean,
+        loadOnlyWifi: Boolean,
+        onDownload: () -> Unit,
+        explicitDownloadChapter: String? = null,
     ): Boolean = withContext(IO) {
         try {
             // 按实际书籍文件串行获取；等待者重新检查有效性，成功时不重复联网。
-            val image = getImage(book, src)
             imageFiles.withFileLock(image) {
                 explicitDownloadChapter?.let { imageFiles.retainDownload(image, it) }
                 if (imageFiles.isValid(image)) {
@@ -455,7 +469,7 @@ object BookHelp {
                         ImageUtils.decode(src, bytes, isCover = false, bookSource, book)
                     }
                     if (decoded == null) {
-                        AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载失败 解码为空")
+                        AppLog.put("${book.name} ${chapterTitle} 图片 $src 下载失败 解码为空")
                         false
                     } else {
                         decoded.inputStream().use { input ->
@@ -467,7 +481,7 @@ object BookHelp {
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
-            val msg = "${book.name} ${chapter?.title} 图片 $src 下载失败\n${e.localizedMessage}"
+            val msg = "${book.name} ${chapterTitle} 图片 $src 下载失败\n${e.localizedMessage}"
             AppLog.put(msg, e)
             false
         }
@@ -489,11 +503,21 @@ object BookHelp {
     suspend fun acquireReadingImage(
         bookSource: BookSource?, book: Book, src: String, loadOnlyWifi: Boolean = false,
         onDownload: () -> Unit = {},
+        chapterSubject: String? = null,
     ): Pair<File, Closeable> {
-        val file = getImage(book, src)
+        val file = if (chapterSubject == null) {
+            getImage(book, src)
+        } else {
+            getImageFile(chapterImageDir(book, chapterSubject), src)
+        }
         val lease = pinImageFile(file)
         try {
-            if (!saveImage(bookSource, book, src, onlineOnly = true, loadOnlyWifi = loadOnlyWifi, onDownload = onDownload)) {
+            if (!saveImageFile(
+                    bookSource = bookSource, book = book, src = src, image = file,
+                    chapterTitle = null, onlineOnly = true, loadOnlyWifi = loadOnlyWifi,
+                    onDownload = onDownload,
+                )
+            ) {
                 throw IOException("图片获取失败")
             }
             imageCleanupRequests.trySend(Unit)
@@ -533,14 +557,40 @@ object BookHelp {
         )
     }
 
-    fun getImage(book: Book, src: String): File {
-        return downloadDir.getFile(
+    /** 章节缓存目录：book_cache/<书>/<章节名主体>。 */
+    private fun getChapterContentDir(book: Book, bookChapter: BookChapter): File =
+        downloadDir.getFile(
             cacheFolderName,
             book.getFolderName(),
-            cacheImageFolderName,
-            "${MD5Utils.md5Encode16(src)}.${getImageSuffix(src)}"
+            bookChapter.getFileName().substringBeforeLast('.')
         )
-    }
+
+    /** 章节正文文件：book_cache/<书>/<章节名主体>/<章节文件名>。 */
+    fun getChapterContentFile(
+        book: Book,
+        bookChapter: BookChapter,
+        suffix: String = "nb",
+    ): File = File(getChapterContentDir(book, bookChapter), bookChapter.getFileName(suffix))
+
+    fun getImage(book: Book, src: String): File = getImageFile(bookImageDir(book), src)
+
+    fun getImage(book: Book, bookChapter: BookChapter, src: String): File =
+        getImageFile(chapterImageDir(book, bookChapter), src)
+
+    private fun getImageFile(dir: File, src: String): File =
+        File(dir, "${MD5Utils.md5Encode16(src)}.${getImageSuffix(src)}")
+
+    private fun bookImageDir(book: Book): File =
+        downloadDir.getFile(cacheFolderName, book.getFolderName(), cacheImageFolderName)
+
+    private fun chapterImageDir(book: Book, bookChapter: BookChapter): File =
+        File(getChapterContentDir(book, bookChapter), cacheImageFolderName)
+
+    private fun chapterImageDir(book: Book, chapterSubject: String): File =
+        File(
+            downloadDir.getFile(cacheFolderName, book.getFolderName(), chapterSubject),
+            cacheImageFolderName,
+        )
 
     @Synchronized
     fun writeImage(book: Book, src: String, bytes: ByteArray) {
@@ -548,9 +598,16 @@ object BookHelp {
     }
 
     @Synchronized
-    fun isImageExist(book: Book, src: String): Boolean {
-        return getImage(book, src).exists()
+    fun writeImage(book: Book, bookChapter: BookChapter, src: String, bytes: ByteArray) {
+        bytes.inputStream().use { imageFiles.write(getImage(book, bookChapter, src), it) }
     }
+
+    @Synchronized
+    fun isImageExist(book: Book, src: String): Boolean = getImage(book, src).exists()
+
+    @Synchronized
+    fun isImageExist(book: Book, bookChapter: BookChapter, src: String): Boolean =
+        getImage(book, bookChapter, src).exists()
 
     fun getImageSuffix(src: String): String {
         return UrlUtil.getSuffix(src, "jpg")
@@ -598,11 +655,18 @@ object BookHelp {
         if (book.isLocalTxt) {
             return fileNames
         }
-        FileUtils.createFolderIfNotExist(
+        val bookDir = FileUtils.createFolderIfNotExist(
             downloadDir,
             subDirs = arrayOf(cacheFolderName, book.getFolderName())
-        ).list()?.let {
-            fileNames.addAll(it)
+        )
+        bookDir.list()?.forEach { name ->
+            val entry = File(bookDir, name)
+            if (entry.isDirectory) {
+                // 正文按章分子目录存放：子目录名是章节主体，文件在目录里。
+                entry.list()?.let { fileNames.addAll(it) }
+            } else {
+                fileNames.add(name)
+            }
         }
         return fileNames
     }
@@ -612,7 +676,7 @@ object BookHelp {
      */
     fun countCachedChapters(book: Book): Int {
         return appDb.bookChapterDao.getChapterList(book.bookUrl).count { chapter ->
-            chapter.isVolume || isChapterCacheComplete(book, chapter)
+            chapter.isVolume || hasContent(book, chapter)
         }
     }
 
@@ -630,11 +694,7 @@ object BookHelp {
         ) {
             true
         } else {
-            downloadDir.exists(
-                cacheFolderName,
-                book.getFolderName(),
-                bookChapter.getFileName()
-            )
+            getChapterContentFile(book, bookChapter).exists()
         }
     }
 
@@ -647,7 +707,7 @@ object BookHelp {
         }
         var ret = true
         forEachImageSrc(book, bookChapter) { src ->
-            if (!isImageExist(book, src)) {
+            if (!isImageExist(book, bookChapter, src)) {
                 ret = false
                 return@forEachImageSrc
             }
@@ -664,7 +724,7 @@ object BookHelp {
         }
         var ret = true
         forEachImageSrc(book, bookChapter) { src ->
-            if (!imageFiles.isValid(getImage(book, src))) ret = false
+            if (!imageFiles.isValid(getImage(book, bookChapter, src))) ret = false
         }
         return ret
     }
@@ -674,11 +734,7 @@ object BookHelp {
         bookChapter: BookChapter,
         action: (String) -> Unit
     ) {
-        val file = downloadDir.getFile(
-            cacheFolderName,
-            book.getFolderName(),
-            bookChapter.getFileName()
-        )
+        val file = getChapterContentFile(book, bookChapter)
         if (file.exists()) {
             forEachImageSrc(file) { src ->
                 action(NetworkUtils.getAbsoluteURL(bookChapter.url, src))
@@ -748,11 +804,7 @@ object BookHelp {
      * 读取章节内容
      */
     fun getContent(book: Book, bookChapter: BookChapter): String? {
-        val file = downloadDir.getFile(
-            cacheFolderName,
-            book.getFolderName(),
-            bookChapter.getFileName()
-        )
+        val file = getChapterContentFile(book, bookChapter)
         if (file.exists()) {
             val string = file.readText()
             if (string.isEmpty()) {
@@ -781,11 +833,7 @@ object BookHelp {
      * 流式读取已落盘正文，只保留用于页数缓存校验的短前缀，不加载本地书源或网络正文。
      */
     fun getCachedContentInfo(book: Book, bookChapter: BookChapter): CachedContentInfo? {
-        val file = downloadDir.getFile(
-            cacheFolderName,
-            book.getFolderName(),
-            bookChapter.getFileName()
-        )
+        val file = getChapterContentFile(book, bookChapter)
         if (!file.isFile) return null
 
         return try {
@@ -826,12 +874,10 @@ object BookHelp {
      * 删除章节内容
      */
     fun delContent(book: Book, bookChapter: BookChapter) {
-        FileUtils.createFileIfNotExist(
-            downloadDir,
-            cacheFolderName,
-            book.getFolderName(),
-            bookChapter.getFileName()
-        ).delete()
+        val file = getChapterContentFile(book, bookChapter)
+        file.delete()
+        // 章节目录里可能还有图片，非空时 delete 会失败，不会误删。
+        file.parentFile?.delete()
     }
 
     /**
@@ -841,21 +887,10 @@ object BookHelp {
         val fileName = bookChapter.getFileName("nr")
         val contentProcessor = ContentProcessor.get(book)
         if (removeSameTitle) {
-            val path = FileUtils.getPath(
-                downloadDir,
-                cacheFolderName,
-                book.getFolderName(),
-                fileName
-            )
             contentProcessor.removeSameTitleCache.remove(fileName)
-            File(path).delete()
+            getChapterContentFile(book, bookChapter, "nr").delete()
         } else {
-            FileUtils.createFileIfNotExist(
-                downloadDir,
-                cacheFolderName,
-                book.getFolderName(),
-                fileName
-            )
+            getChapterContentFile(book, bookChapter, "nr").apply { parentFile?.mkdirs() }
             contentProcessor.removeSameTitleCache.add(fileName)
         }
     }
@@ -864,13 +899,7 @@ object BookHelp {
      * 获取是否去除重复标题
      */
     fun removeSameTitle(book: Book, bookChapter: BookChapter): Boolean {
-        val path = FileUtils.getPath(
-            downloadDir,
-            cacheFolderName,
-            book.getFolderName(),
-            bookChapter.getFileName("nr")
-        )
-        return !File(path).exists()
+        return !getChapterContentFile(book, bookChapter, "nr").exists()
     }
 
     /**

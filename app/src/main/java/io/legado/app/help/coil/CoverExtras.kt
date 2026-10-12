@@ -27,6 +27,9 @@ object CoverExtras {
     /** 漫画图片所属书籍。图片解密必须显式携带，不能读取全局阅读会话。 */
     val MangaBookUrl = Extras.Key<String?>(null)
 
+    /** 漫画原图所属章节主体（`BookChapter.getFileName()` 去后缀），决定缓存的章节目录。 */
+    val MangaChapterSubject = Extras.Key<String?>(null)
+
     /** 分页原图请求的生命周期；存在时先获取 BookHelp 文件，再交给 Coil 解码。 */
     val MangaFileOwner = Extras.Key<MangaImageFileOwner?>(null)
     val MangaFileTransferStarted = Extras.Key<(() -> Unit)?>(null)
