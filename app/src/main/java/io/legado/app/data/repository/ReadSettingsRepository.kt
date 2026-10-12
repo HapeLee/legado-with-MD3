@@ -422,6 +422,7 @@ class ReadSettingsRepository(
             autoReadSpeed = compatDsValue(Keys.AutoReadSpeed, 10),
             systemTypefaces = compatDsValue(Keys.SystemTypefaces, 0),
             preDownloadNum = compatDsValue(Keys.PreDownloadNum, 10),
+            preDownloadNumPrev = compatDsValue(Keys.PreDownloadNumPrev, 0),
             prevKeys = compatDsValue(Keys.PrevKeys, ""),
             nextKeys = compatDsValue(Keys.NextKeys, ""),
             tocUiUseReplace = compatDsValue(Keys.TocUiUseReplace, false),
@@ -542,6 +543,7 @@ class ReadSettingsRepository(
         val AutoReadSpeed = intPreferencesKey(PreferKey.autoReadSpeed)
         val SystemTypefaces = intPreferencesKey(PreferKey.systemTypefaces)
         val PreDownloadNum = intPreferencesKey(PreferKey.preDownloadNum)
+        val PreDownloadNumPrev = intPreferencesKey(PreferKey.preDownloadNumPrev)
         val PrevKeys = stringPreferencesKey(PreferKey.prevKeys)
         val NextKeys = stringPreferencesKey(PreferKey.nextKeys)
         val TocUiUseReplace = booleanPreferencesKey(PreferKey.tocUiUseReplace)
@@ -674,6 +676,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.autoReadSpeed to autoReadSpeed,
     PreferKey.systemTypefaces to systemTypefaces,
     PreferKey.preDownloadNum to preDownloadNum,
+    PreferKey.preDownloadNumPrev to preDownloadNumPrev,
     PreferKey.prevKeys to prevKeys,
     PreferKey.nextKeys to nextKeys,
     PreferKey.tocUiUseReplace to tocUiUseReplace,

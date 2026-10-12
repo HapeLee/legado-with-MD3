@@ -1907,23 +1907,24 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private fun preDownload() {
         if (book?.isLocal == true) return
         executor.execute {
-            if (readSettingsGateway.currentSettings.preDownloadNum < 2) {
+            val settings = readSettingsGateway.currentSettings
+            if (settings.preDownloadNum < 2 && settings.preDownloadNumPrev < 2) {
                 return@execute
             }
             preDownloadTask?.cancel()
             preDownloadTask = launch(IO) {
-                //预下载
+                //向后预下载
                 launch {
-                    val maxChapterIndex =
-                        min(durChapterIndex + readSettingsGateway.currentSettings.preDownloadNum, chapterSize)
+                    val maxChapterIndex = min(durChapterIndex + settings.preDownloadNum, chapterSize)
                     for (i in durChapterIndex.plus(2)..maxChapterIndex) {
                         if (downloadedChapters.contains(i)) continue
                         if ((downloadFailChapters[i] ?: 0) >= 3) continue
                         downloadIndex(i)
                     }
                 }
+                //向前预下载
                 launch {
-                    val minChapterIndex = durChapterIndex - min(5, readSettingsGateway.currentSettings.preDownloadNum)
+                    val minChapterIndex = durChapterIndex - settings.preDownloadNumPrev
                     for (i in durChapterIndex.minus(2) downTo minChapterIndex) {
                         if (downloadedChapters.contains(i)) continue
                         if ((downloadFailChapters[i] ?: 0) >= 3) continue
