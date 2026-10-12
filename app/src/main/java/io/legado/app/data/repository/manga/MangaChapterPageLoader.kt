@@ -44,6 +44,7 @@ internal class MangaChapterPageLoader(
                 MangaPageContent(url, index, imageUrls.size)
             },
             isVolume = chapter.isVolume,
+            chapterSubject = chapter.getFileName().substringBeforeLast('.'),
         ).also { if (retain) retainedChapters[key] = LoadedChapter(it) }
     }
 

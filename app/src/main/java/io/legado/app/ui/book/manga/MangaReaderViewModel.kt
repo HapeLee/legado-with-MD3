@@ -89,15 +89,14 @@ class MangaReaderViewModel(
         viewModelScope.launch {
             mangaSettingsGateway.settings.collect { settings ->
                 latestMangaSettings = settings
-                readerSession.execute(
-                    MangaSessionCommand.PrefetchCountChanged(
-                        if (settings.autoOfflineCache) settings.chapterPrefetchCount else 0,
-                    )
-                )
+                syncPrefetchCounts()
                 _uiState.update { state ->
                     state.copy(settings = readSettings(settings))
                 }
             }
+        }
+        viewModelScope.launch {
+            readSettingsGateway.settings.collect { syncPrefetchCounts() }
         }
         viewModelScope.launch {
             otherSettingsGateway.settings.collect { settings ->
@@ -111,6 +110,30 @@ class MangaReaderViewModel(
                 applyPageProgress(event.url, event.percentage)
             }
         }
+    }
+
+    /**
+     * 预取章节数：优先用共享阅读设置的两个方向（向后/向前）；两者都为 0 时回落到
+     * 旧的漫画独立设置（autoOfflineCache 打开时取 chapterPrefetchCount 作为向后值）。
+     */
+    private suspend fun syncPrefetchCounts() {
+        val read = readSettingsGateway.currentSettings
+        val nextCount: Int
+        val prevCount: Int
+        if (read.preDownloadNum > 0 || read.preDownloadNumPrev > 0) {
+            nextCount = read.preDownloadNum
+            prevCount = read.preDownloadNumPrev
+        } else {
+            nextCount = if (latestMangaSettings.autoOfflineCache) {
+                latestMangaSettings.chapterPrefetchCount
+            } else {
+                0
+            }
+            prevCount = 0
+        }
+        readerSession.execute(
+            MangaSessionCommand.PrefetchCountChanged(nextCount = nextCount, prevCount = prevCount)
+        )
     }
 
     fun onIntent(intent: MangaReaderIntent) {
@@ -477,6 +500,7 @@ class MangaReaderViewModel(
                         pageIndex = page.pageIndex,
                         pageCount = page.pageCount,
                         chapterName = chapter.chapterTitle,
+                        chapterSubject = chapter.chapterSubject,
                         loadState = existing?.loadState ?: MangaPageLoadState.Queued,
                         retryRevision = existing?.retryRevision ?: 0,
                     )

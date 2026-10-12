@@ -7,7 +7,7 @@ import org.junit.Test
 class MangaPageLoadStateTest {
     private val page = MangaReaderItemUi.Page(
         key = "page", imageUrl = "url", bookUrl = "book", chapterIndex = 0, chapterCount = 1,
-        pageIndex = 0, pageCount = 1, chapterName = "chapter",
+        pageIndex = 0, pageCount = 1, chapterName = "chapter", chapterSubject = "chapter",
     )
 
     @Test

@@ -96,7 +96,7 @@ sealed interface MangaSessionCommand {
     data class VisiblePageChanged(val chapterIndex: Int, val pageIndex: Int) : MangaSessionCommand
     data object PersistVisibleProgress : MangaSessionCommand
     data class RetryChapter(val chapterIndex: Int) : MangaSessionCommand
-    data class PrefetchCountChanged(val count: Int) : MangaSessionCommand
+    data class PrefetchCountChanged(val nextCount: Int, val prevCount: Int) : MangaSessionCommand
     data class BookPresentationObserved(
         val bookUrl: String,
         val presentation: MangaBookPresentation,
@@ -138,6 +138,8 @@ data class MangaChapterContent(
     val chapterUrl: String?,
     val pages: List<MangaPageContent>,
     val isVolume: Boolean,
+    /** 章节主体（`BookChapter.getFileName()` 去后缀）；在线原图据此落到 `book_cache/<书>/<主体>/images`。 */
+    val chapterSubject: String,
 )
 
 data class MangaPageContent(

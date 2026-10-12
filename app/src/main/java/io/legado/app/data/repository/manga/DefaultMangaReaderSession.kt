@@ -47,7 +47,8 @@ class DefaultMangaReaderSession(
     override val state = _state.asStateFlow()
     private val _events = MutableSharedFlow<MangaSessionEvent>(extraBufferCapacity = 16)
     override val events = _events.asSharedFlow()
-    private var prefetchCount = 0
+    private var prefetchNextCount = 0
+    private var prefetchPrevCount = 0
 
     init {
         sessionScope.launch {
@@ -99,7 +100,8 @@ class DefaultMangaReaderSession(
             }
             is MangaSessionCommand.RetryChapter -> retryChapter(command.chapterIndex)
             is MangaSessionCommand.PrefetchCountChanged -> {
-                prefetchCount = command.count.coerceAtLeast(0)
+                prefetchNextCount = command.nextCount.coerceAtLeast(0)
+                prefetchPrevCount = command.prevCount.coerceAtLeast(0)
                 prefetch(_state.value.chapterIndex)
             }
             is MangaSessionCommand.BookPresentationObserved -> {
@@ -223,7 +225,11 @@ class DefaultMangaReaderSession(
         ) return
         val movingForward = command.chapterIndex > state.chapterIndex
         val target = if (movingForward) state.nextChapter else state.previousChapter
-        if (target !is MangaChapterState.Ready) return
+        if (target !is MangaChapterState.Ready) {
+            // 该方向预下载关闭时相邻章未预加载，用户真滑到时按需补加载，避免卡在过渡页。
+            if (target is MangaChapterState.Empty) loadChapter(command.chapterIndex)
+            return
+        }
         _state.value = state.copy(
             revision = state.revision + 1,
             chapterIndex = command.chapterIndex,
@@ -241,7 +247,8 @@ class DefaultMangaReaderSession(
     private fun prefetch(chapterIndex: Int) {
         val state = _state.value
         val book = state.book ?: return
-        val indexes = (chapterIndex + 1..chapterIndex + prefetchCount)
+        val indexes = (chapterIndex + 1..chapterIndex + prefetchNextCount)
+            .plus(chapterIndex - 1 downTo chapterIndex - prefetchPrevCount)
             .filter { it in 0 until state.chapterCount }
         loadScope.launch {
             indexes.forEach { index ->
@@ -324,8 +331,11 @@ class DefaultMangaReaderSession(
         _state.value = state.copy(pageIndex = pageIndex)
         val chapter = state.currentChapter as? MangaChapterState.Ready ?: return
         val lastPageIndex = chapter.chapter.pages.lastIndex
-        if (pageIndex < ADJACENT_LOAD_DISTANCE) loadChapter(state.chapterIndex - 1)
-        if (pageIndex >= lastPageIndex - ADJACENT_LOAD_DISTANCE + 1) {
+        // 相邻章跟随「向前/向后预下载」设置：对应方向为 0 就不预加载该方向。
+        if (prefetchPrevCount > 0 && pageIndex < ADJACENT_LOAD_DISTANCE) {
+            loadChapter(state.chapterIndex - 1)
+        }
+        if (prefetchNextCount > 0 && pageIndex >= lastPageIndex - ADJACENT_LOAD_DISTANCE + 1) {
             loadChapter(state.chapterIndex + 1)
         }
         scheduleProgressPersist()
