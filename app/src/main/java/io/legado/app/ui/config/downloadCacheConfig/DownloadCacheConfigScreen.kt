@@ -137,6 +137,20 @@ fun DownloadCacheConfigScreen(
                             onIntent(DownloadCacheConfigIntent.SetPreDownloadNum(it.toInt()))
                         }
                     )
+
+                    SliderSettingItem(
+                        title = stringResource(R.string.pre_download_prev),
+                        description = stringResource(
+                            R.string.pre_download_prev_s,
+                            settings.preDownloadNumPrev
+                        ),
+                        value = settings.preDownloadNumPrev.toFloat(),
+                        defaultValue = 0f,
+                        valueRange = 0f..100f,
+                        onValueChange = {
+                            onIntent(DownloadCacheConfigIntent.SetPreDownloadNumPrev(it.toInt()))
+                        }
+                    )
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.image_cache)) {

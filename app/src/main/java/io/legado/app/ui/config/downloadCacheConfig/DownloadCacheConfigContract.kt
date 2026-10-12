@@ -22,6 +22,7 @@ sealed interface DownloadCacheConfigIntent {
     data class SetThreadCount(val value: Int) : DownloadCacheConfigIntent
     data class SetCacheBookThreadCount(val value: Int) : DownloadCacheConfigIntent
     data class SetPreDownloadNum(val value: Int) : DownloadCacheConfigIntent
+    data class SetPreDownloadNumPrev(val value: Int) : DownloadCacheConfigIntent
     data class SetBitmapCacheSize(val value: Int) : DownloadCacheConfigIntent
     data class SetImageRetainNum(val value: Int) : DownloadCacheConfigIntent
     data class SetUserAgent(val value: String) : DownloadCacheConfigIntent

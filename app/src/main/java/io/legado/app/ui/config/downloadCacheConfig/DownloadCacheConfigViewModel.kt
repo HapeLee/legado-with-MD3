@@ -49,6 +49,8 @@ class DownloadCacheConfigViewModel(
             }
             is DownloadCacheConfigIntent.SetPreDownloadNum ->
                 update { it.copy(preDownloadNum = intent.value) }
+            is DownloadCacheConfigIntent.SetPreDownloadNumPrev ->
+                update { it.copy(preDownloadNumPrev = intent.value) }
             is DownloadCacheConfigIntent.SetBitmapCacheSize -> {
                 viewModelScope.launch {
                     settingsGateway.update { it.copy(bitmapCacheSize = intent.value) }
