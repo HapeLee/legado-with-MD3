@@ -43,6 +43,27 @@ class ReadRecordRepositoryTest {
     fun tearDown() = database.close()
 
     @Test
+    fun `per book recording switch persists without changing progress or affecting another copy`() = runBlocking {
+        repository.setReadRecordEnabled(true)
+        val first = Book(bookUrl = "https://first.example/book", name = targetName, author = author,
+            durChapterIndex = 7, durChapterPos = 43)
+        val second = first.copy(bookUrl = "https://second.example/book")
+        database.bookDao.insert(first, second)
+        val books = BookRepository(database.bookDao, database.bookChapterDao, database)
+        val disabled = books.setReadRecordDisabled(first.bookUrl, true)!!
+        assertEquals(true, disabled.disableReadRecord)
+        assertEquals(7, disabled.durChapterIndex)
+        assertEquals(43, disabled.durChapterPos)
+        repository.saveReadSession(session(first.bookUrl, 1_000, 1_200))
+        repository.saveReadSession(session(second.bookUrl, 2_000, 2_300))
+        assertEquals(listOf(second.bookUrl), database.readRecordDao.allSession.map { it.bookUrl })
+        assertEquals(false, books.setReadRecordDisabled(first.bookUrl, false)!!.disableReadRecord)
+        repository.saveReadSession(session(first.bookUrl, 3_000, 3_200))
+        assertEquals(2, database.readRecordDao.allSession.size)
+        assertEquals(500L, repository.getBookReadTime(targetName, author).first())
+    }
+
+    @Test
     fun `merge accumulates target and source sessions`() = runBlocking {
         mergeAndAssert(targetSessionDuration = 100, sourceSessionDuration = 200)
     }
