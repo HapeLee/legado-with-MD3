@@ -15,6 +15,7 @@ import io.legado.app.domain.usecase.ExploreBooksUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.domain.usecase.ResolveBookshelfConflictUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
+import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.ui.book.conflict.BookshelfConflictController
 import io.legado.app.utils.stackTraceStr
 import kotlinx.collections.immutable.toImmutableList
@@ -267,7 +268,7 @@ class ExploreShowViewModel(
         exploreUrl = incomingExploreUrl
         _pageState.value = ExplorePageState(
             currentPage = 1,
-            canJumpPage = incomingExploreUrl?.contains("{{page}}") == true,
+            canJumpPage = AnalyzeUrl.supportsPageSelection(incomingExploreUrl),
         )
         page = 1
         autoPageCount = 0
@@ -301,7 +302,7 @@ class ExploreShowViewModel(
         exploreUrl = kind.url
         _pageState.value = ExplorePageState(
             currentPage = 1,
-            canJumpPage = kind.url?.contains("{{page}}") == true,
+            canJumpPage = AnalyzeUrl.supportsPageSelection(kind.url),
         )
         _loadState.value = ExploreShowLoadState()
         autoPageCount = 0
