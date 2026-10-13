@@ -1803,6 +1803,7 @@ class ReadBookController(
         registerTimeBatteryReceiver()
         networkChangedListener.onNetworkChanged = viewModel::onNetworkChanged
         networkChangedListener.register()
+        readerSessionViewModel.requestRedraw()
     }
 
     /** Release listeners even if the route's effect collector has already stopped. */

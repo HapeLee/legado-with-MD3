@@ -632,12 +632,10 @@ fun ReadBookRouteScreen(
     // swaps a simulated-page turn to its cached/placeholder successor. Keeping the last complete
     // window for that gap prevents the root reader background from becoming a visible fallback.
     var lastReadablePageWindow by remember {
-        mutableStateOf<io.legado.app.feature.reader.core.model.ReaderPageWindow?>(
-            null
-        )
+        mutableStateOf(readerPageWindow.takeIf { it.current != null })
     }
-    LaunchedEffect(readerPageWindow.current?.id, readerPageWindow.current?.layoutRevision) {
-        if (readerPageWindow.current != null) lastReadablePageWindow = readerPageWindow
+    if (readerPageWindow.current != null && lastReadablePageWindow !== readerPageWindow) {
+        lastReadablePageWindow = readerPageWindow
     }
     val displayedReaderPageWindow =
         readerPageWindow.takeIf { it.current != null } ?: lastReadablePageWindow
@@ -713,6 +711,7 @@ fun ReadBookRouteScreen(
                 ReaderPerfTrace.marker("compose.canvas.begin")
                 ReaderCanvasSurface(
                     hostPages = displayedReaderPageWindow ?: readerPageWindow,
+                    redrawRevision = readerRenderState.redrawRevision,
                     transitionMode = readerTransitionMode,
                     pageTurnSpeed = ReaderPageTurnSpeed.fromValue(state.styleConfig.pageAnimSpeed),
                 backgroundColor = readerSurfaceColor,

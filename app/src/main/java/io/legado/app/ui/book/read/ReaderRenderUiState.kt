@@ -12,6 +12,8 @@ data class ReaderRenderUiState(
     val pageWindow: ReaderPageWindow = ReaderPageWindow(),
     val paginationError: String? = null,
     val background: ReaderBackgroundState = ReaderBackgroundState(),
+    /** Explicit draw invalidation, independent of page identity and pagination geometry. */
+    val redrawRevision: Long = 0L,
 )
 
 /** Lightweight state owner for the hot Canvas path only. */
@@ -22,8 +24,15 @@ class ReaderSessionViewModel : ViewModel() {
     private var entranceSettled = false
 
     fun submit(state: ReaderRenderUiState) {
-        pendingState = state
-        if (entranceSettled) _uiState.value = state
+        pendingState = state.copy(redrawRevision = _uiState.value.redrawRevision)
+        if (entranceSettled) _uiState.value = pendingState
+    }
+
+    /** Re-record retained drawing layers on resume, even when their page state is unchanged. */
+    fun requestRedraw() {
+        val revision = _uiState.value.redrawRevision + 1L
+        pendingState = pendingState.copy(redrawRevision = revision)
+        _uiState.value = _uiState.value.copy(redrawRevision = revision)
     }
 
     /** Background participates in shared-bounds rendering and must not wait for page commit. */

@@ -1,5 +1,6 @@
 package io.legado.app.feature.reader.core.transition
 
+import io.legado.app.feature.reader.core.model.ReaderPageId
 import kotlin.math.abs
 
 enum class ReaderTransitionMode {
@@ -85,6 +86,15 @@ data class ReaderHorizontalDrag(
 }
 
 object ReaderPageTransitionPolicy {
+    /** Keep the final animation frame until the committed page owns the composed window. */
+    fun forComposedWindow(
+        transition: ReaderPageTransition,
+        composedCurrentPageId: ReaderPageId,
+        committedPageId: ReaderPageId?,
+    ): ReaderPageTransition = if (composedCurrentPageId == committedPageId) {
+        ReaderPageTransition()
+    } else transition
+
     /**
      * 翻页收尾动画的基准时长，取全动画共用的 [ReaderPageTurnSpeed.BASE_DURATION_MILLIS]。
      *
@@ -157,7 +167,7 @@ object ReaderPageTransitionPolicy {
             ReaderTurnDirection.PREVIOUS -> velocityPxPerSecond >= flingVelocityPxPerSecond
             ReaderTurnDirection.NEXT -> velocityPxPerSecond <= -flingVelocityPxPerSecond
         }
-        // Horizontal View delegates cancel on the final reversal, regardless of distance.
+        // Horizontal View delegates decide from the final non-zero drag direction.
         val movingForward = lastDragDeltaPx?.takeIf { it != 0f }?.let {
             if (direction == ReaderTurnDirection.NEXT) it < 0f else it > 0f
         }
