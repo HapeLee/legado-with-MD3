@@ -243,6 +243,7 @@ sealed interface MangaReaderIntent {
     data class UpdateMenuPaletteStyle(val value: String) : MangaReaderIntent
     data class UpdateClickAction(val index: Int, val action: Int) : MangaReaderIntent
     data class RetryChapter(val chapterIndex: Int) : MangaReaderIntent
+    data class RequestAdjacentChapter(val chapterIndex: Int) : MangaReaderIntent
     data class PageLoadStarted(val requestId: MangaPageRequestId, val force: Boolean = false) :
         MangaReaderIntent
 

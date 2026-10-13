@@ -13,6 +13,16 @@ import org.junit.Test
 
 class MangaReaderInteractionTest {
     @Test
+    fun `hidden chapter boundary respects vertical and horizontal reading direction`() {
+        assertEquals(1, mangaBoundaryChapterDirection(MangaScrollMode.WEBTOON, 0f, -2f))
+        assertEquals(-1, mangaBoundaryChapterDirection(MangaScrollMode.WEBTOON, 0f, 2f))
+        assertEquals(1, mangaBoundaryChapterDirection(MangaScrollMode.PAGE_LEFT_TO_RIGHT, -2f, 0f))
+        assertEquals(1, mangaBoundaryChapterDirection(MangaScrollMode.PAGE_RIGHT_TO_LEFT, 2f, 0f))
+        assertEquals(-1, mangaBoundaryChapterDirection(MangaScrollMode.PAGE_RIGHT_TO_LEFT, -2f, 0f))
+        assertEquals(0, mangaBoundaryChapterDirection(MangaScrollMode.PAGE_TOP_TO_BOTTOM, 2f, 0f))
+    }
+
+    @Test
     fun `keeping pixel scroll offset during long image zoom moves the reading point`() {
         val oldOffset = -10_000
         val focalY = 700f
