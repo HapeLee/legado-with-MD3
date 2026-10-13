@@ -440,12 +440,13 @@ object BookHelp {
         loadOnlyWifi: Boolean,
         onDownload: () -> Unit,
         explicitDownloadChapter: String? = null,
+        forceRefresh: Boolean = false,
     ): Boolean = withContext(IO) {
         try {
             // 按实际书籍文件串行获取；等待者重新检查有效性，成功时不重复联网。
             imageFiles.withFileLock(image) {
                 explicitDownloadChapter?.let { imageFiles.retainDownload(image, it) }
-                if (imageFiles.isValid(image)) {
+                if (!forceRefresh && imageFiles.isValid(image)) {
                     if (!onlineOnly) imageFiles.setOnline(image, false)
                     imageFiles.touch(image)
                     return@withFileLock true
@@ -486,6 +487,41 @@ object BookHelp {
             val msg = "${book.name} ${chapterTitle} 图片 $src 下载失败\n${e.localizedMessage}"
             AppLog.put(msg, e)
             false
+        }
+    }
+
+    /** 强制重取同 URL 的原图，原子更新各章节副本并保留各自的用途索引。 */
+    suspend fun refreshImageCopies(bookSource: BookSource?, book: Book, src: String): Set<File> = withContext(IO) {
+        val target = getImage(book, src)
+        pinImageFile(target).use {
+            if (!saveImageFile(
+                    bookSource, book, src, target, chapterTitle = null,
+                    onlineOnly = false, loadOnlyWifi = false, onDownload = {}, forceRefresh = true,
+                )
+            ) return@withContext emptySet()
+            val legacy = getImageFile(bookImageDir(book), src)
+            val copies = legacy.parentFile?.parentFile?.listFiles().orEmpty()
+                .filter { it.isDirectory && it.name != cacheImageFolderName }
+                .map { File(File(it, cacheImageFolderName), target.name) }
+                .plus(legacy)
+                .filter { it.isFile && it != target }
+            val refreshed = linkedSetOf(target)
+            val context = currentCoroutineContext()
+            for (copy in copies) {
+                try {
+                    imageFiles.withFileLock(copy) {
+                        target.inputStream().use { input ->
+                            imageFiles.write(copy, input) { context.ensureActive() }
+                        }
+                        imageFiles.touch(copy)
+                    }
+                    refreshed.add(copy)
+                } catch (error: Exception) {
+                    currentCoroutineContext().ensureActive()
+                    AppLog.put("刷新图片副本失败 ${copy.name}", error)
+                }
+            }
+            refreshed
         }
     }
 

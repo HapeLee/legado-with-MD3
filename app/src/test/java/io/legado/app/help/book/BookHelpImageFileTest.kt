@@ -3,6 +3,7 @@ package io.legado.app.help.book
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.util.Base64
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
@@ -67,8 +68,9 @@ class BookHelpImageFileTest {
     @After
     fun tearDown() = stopKoin()
 
-    private fun png(): ByteArray {
+    private fun png(color: Int = Color.TRANSPARENT): ByteArray {
         val bitmap = Bitmap.createBitmap(4, 6, Bitmap.Config.ARGB_8888)
+        bitmap.eraseColor(color)
         return try {
             ByteArrayOutputStream().use { output ->
                 assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
@@ -76,6 +78,51 @@ class BookHelpImageFileTest {
             }
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    @Test
+    fun `forced refresh updates duplicate chapter images and preserves explicit download references`() = runBlocking {
+        val fresh = png(Color.BLUE)
+        val src = "data:image/png;base64,${Base64.encodeToString(fresh, Base64.NO_WRAP)}"
+        val first = BookChapter(bookUrl = book.bookUrl, title = "First", index = 0)
+        val second = BookChapter(bookUrl = book.bookUrl, title = "Second", index = 1)
+        try {
+            for (chapter in listOf(first, second)) {
+                BookHelp.writeImage(book, chapter, src, png(Color.RED))
+                assertTrue(BookHelp.saveImage(null, book, src, chapter, explicitDownloadChapter = "${chapter.index}.audit"))
+                val copy = BookHelp.getImage(book, chapter, src)
+                val bitmap = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
+                ImageProvider.bitmapLruCache.put(copy.absolutePath, bitmap)
+                assertTrue(ImageProvider.bitmapLruCache[copy.absolutePath] != null)
+            }
+            val selected = BookHelp.getImage(book, src)
+            assertTrue(ImageProvider.refreshImage(book, src, null))
+            assertTrue(selected.isFile)
+            for (chapter in listOf(first, second)) {
+                val copy = BookHelp.getImage(book, chapter, src)
+                assertArrayEquals(fresh, copy.readBytes())
+                val index = java.io.File(java.io.File(copy.parentFile, ".downloads"), copy.name)
+                val properties = java.util.Properties().apply { index.inputStream().use { load(it) } }
+                assertEquals("explicit", properties.getProperty("chapter.${chapter.index}.audit"))
+                assertEquals(null, ImageProvider.bitmapLruCache[copy.absolutePath])
+            }
+        } finally {
+            ImageProvider.bitmapLruCache.evictAll()
+            BookHelp.clearCache(book)
+        }
+    }
+
+    @Test
+    fun `failed forced refresh keeps the last valid original`() = runBlocking {
+        val src = "data:image/png;base64,bm90IGFuIGltYWdl"
+        val original = png(Color.RED)
+        try {
+            BookHelp.writeImage(book, src, original)
+            assertFalse(ImageProvider.refreshImage(book, src, null))
+            assertArrayEquals(original, BookHelp.getImage(book, src).readBytes())
+        } finally {
+            BookHelp.clearCache(book)
         }
     }
 
