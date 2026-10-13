@@ -7,6 +7,16 @@ import android.util.Base64
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.model.ImageProvider
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.model.settings.DownloadCacheSettings
+import io.legado.app.domain.model.settings.OtherSettings
+import kotlinx.coroutines.flow.flowOf
+import org.junit.After
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.dsl.module
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
@@ -34,7 +44,28 @@ class BookHelpImageFileTest {
     @Before
     fun setUp() {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
+        startKoin {
+            modules(module {
+                single<DownloadCacheSettingsGateway> {
+                    object : DownloadCacheSettingsGateway {
+                        override val currentSettings = DownloadCacheSettings()
+                        override val settings = flowOf(currentSettings)
+                        override suspend fun update(transform: (DownloadCacheSettings) -> DownloadCacheSettings) = Unit
+                    }
+                }
+                single<OtherSettingsGateway> {
+                    object : OtherSettingsGateway {
+                        override val currentSettings = OtherSettings()
+                        override val settings = flowOf(currentSettings)
+                        override suspend fun update(transform: (OtherSettings) -> OtherSettings) = Unit
+                    }
+                }
+            })
+        }
     }
+
+    @After
+    fun tearDown() = stopKoin()
 
     private fun png(): ByteArray {
         val bitmap = Bitmap.createBitmap(4, 6, Bitmap.Config.ARGB_8888)
@@ -45,6 +76,29 @@ class BookHelpImageFileTest {
             }
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    @Test
+    fun `text reader finds chapter downloaded images offline and refresh keeps the same path`() = runBlocking {
+        val src = "https://invalid.example/chapter-image.jpg"
+        val chapter = BookChapter(bookUrl = book.bookUrl, title = "Downloaded")
+        val bytes = png()
+        try {
+            BookHelp.writeImage(book, chapter, src, bytes)
+            val downloaded = BookHelp.getImage(book, chapter, src)
+            assertEquals(downloaded, ImageProvider.cacheImage(book, src, null))
+            val bitmap = ImageProvider.getImage(book, src, 4)
+            assertFalse(ImageProvider.isErrorBitmap(bitmap))
+            assertEquals(4, bitmap.width)
+            assertArrayEquals(bytes, BookHelp.getImage(book, src).readBytes())
+            downloaded.delete()
+            assertEquals(downloaded, BookHelp.getImage(book, src))
+            BookHelp.writeImage(book, src, bytes)
+            assertTrue(downloaded.isFile)
+        } finally {
+            ImageProvider.bitmapLruCache.evictAll()
+            BookHelp.clearCache(book)
         }
     }
 

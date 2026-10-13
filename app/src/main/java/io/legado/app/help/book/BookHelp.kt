@@ -3,6 +3,7 @@ package io.legado.app.help.book
 import android.graphics.BitmapFactory
 import android.os.ParcelFileDescriptor
 import android.system.Os
+import androidx.collection.LruCache
 import androidx.documentfile.provider.DocumentFile
 import com.script.rhino.runScriptWithContext
 import io.legado.app.constant.AppLog
@@ -84,6 +85,7 @@ object BookHelp {
     private val imageCleanupScope = CoroutineScope(SupervisorJob() + IO)
     private val imageCleanupRequests = Channel<Unit>(Channel.CONFLATED)
     private val pendingImageCacheMoves = ConcurrentHashMap<File, File>()
+    private val locatedChapterImages = LruCache<String, File>(256)
 
     val cachePath = FileUtils.getPath(downloadDir, cacheFolderName)
 
@@ -581,7 +583,26 @@ object BookHelp {
             if (current.isFile) current else legacyChapterContentFile(book, chapter, suffix)
         }
 
-    fun getImage(book: Book, src: String): File = getImageFile(bookImageDir(book), src)
+    /** 文本渲染/图片查看/Web 等旧调用方只有 URL，也必须能复用章节下载的原图。 */
+    fun getImage(book: Book, src: String): File {
+        val legacy = getImageFile(bookImageDir(book), src)
+        if (legacy.isFile) return legacy
+        val cached = locatedChapterImages[legacy.absolutePath]
+        if (cached?.isFile == true) return cached
+        val bookDir = legacy.parentFile?.parentFile
+        val located = bookDir?.listFiles()?.asSequence()
+            ?.filter { it.isDirectory && it.name != cacheImageFolderName }
+            ?.map { File(File(it, cacheImageFolderName), legacy.name) }
+            ?.firstOrNull { it.isFile }
+        if (located != null) {
+            locatedChapterImages.put(legacy.absolutePath, located)
+            return located
+        }
+        // 刷新仅删除原图时沿用原目的地，调用方持有的路径与重下载后的路径保持一致。
+        if (cached?.parentFile?.isDirectory == true) return cached
+        locatedChapterImages.remove(legacy.absolutePath)
+        return legacy
+    }
 
     fun getImage(book: Book, bookChapter: BookChapter, src: String): File =
         chapterImageFile(book, chapterImageDir(book, bookChapter), src)
