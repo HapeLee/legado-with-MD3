@@ -286,20 +286,22 @@ class TocViewModel(
     private val cachedChapterRescan = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     private val _cachedChapterIndices: StateFlow<Set<Int>> = bookState.filterNotNull()
-        .map { it.bookUrl }
+        .map { it.bookUrl to it.getFolderName() }
         .distinctUntilChanged()
-        .flatMapLatest { bookUrl ->
+        .flatMapLatest { (bookUrl, _) ->
             flow {
-                val book = bookRepository.getBook(bookUrl) ?: return@flow
-                suspend fun scanCached(): Set<Int> = bookRepository.getChapters(bookUrl)
-                    .filter { chapter ->
-                        // 显示用宽松判定：有正文即算已缓存（缺图不再判为未缓存）；
-                        // 下载是否需要补图仍用严格的 isChapterCacheComplete。
-                        chapter.isVolume || withContext(Dispatchers.IO) {
-                            BookHelp.hasContent(book, chapter)
+                suspend fun scanCached(): Set<Int> {
+                    val book = bookRepository.getBook(bookUrl) ?: return emptySet()
+                    return bookRepository.getChapters(bookUrl)
+                        .filter { chapter ->
+                            // 显示用宽松判定：有正文即算已缓存（缺图不再判为未缓存）；
+                            // 下载是否需要补图仍用严格的 isChapterCacheComplete。
+                            chapter.isVolume || withContext(Dispatchers.IO) {
+                                BookHelp.hasContent(book, chapter)
+                            }
                         }
-                    }
-                    .mapTo(mutableSetOf()) { it.index }
+                        .mapTo(mutableSetOf()) { it.index }
+                }
 
                 var cached = scanCached()
                 emit(cached)
@@ -313,7 +315,9 @@ class TocViewModel(
                         scanCached()
                     } else if (chapter.isVolume ||
                         withContext(Dispatchers.IO) {
-                            BookHelp.hasContent(book, chapter)
+                            bookRepository.getBook(bookUrl)?.let {
+                                BookHelp.hasContent(it, chapter)
+                            } == true
                         }
                     ) {
                         cached + chapter.index
