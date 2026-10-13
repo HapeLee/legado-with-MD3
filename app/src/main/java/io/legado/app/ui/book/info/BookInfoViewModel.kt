@@ -672,6 +672,24 @@ class BookInfoViewModel(
         }
     }
 
+    private fun toggleReadRecordDisabled() {
+        val book = currentBook?.takeIf { inBookshelf } ?: return
+        val disabled = !book.disableReadRecord
+        execute {
+            bookRepository.setReadRecordDisabled(book.bookUrl, disabled)
+        }.onSuccess { updated ->
+            if (updated != null) {
+                applyBookOnShelf(updated)
+                if (currentBook?.bookUrl == updated.bookUrl) {
+                    currentBook = updated
+                    syncUiState()
+                }
+            }
+        }.onError {
+            showMessage(it.localizedMessage ?: context.getString(R.string.error))
+        }
+    }
+
     fun toggleSplitLongChapter() {
         currentBook?.takeIf { it.isLocal && it.type and BookType.text > 0 }?.let { book ->
             book.setSplitLongChapter(!book.getSplitLongChapter())
@@ -1598,6 +1616,7 @@ class BookInfoViewModel(
             )
 
             BookInfoMenuAction.ToggleCanUpdate -> toggleCanUpdate()
+            BookInfoMenuAction.ToggleReadRecordDisabled -> toggleReadRecordDisabled()
             BookInfoMenuAction.ToggleSplitLongChapter -> toggleSplitLongChapter()
             BookInfoMenuAction.ToggleDeleteAlert -> toggleDeleteAlert()
             BookInfoMenuAction.ClearCache -> emitEffect(
@@ -2081,6 +2100,7 @@ class BookInfoViewModel(
             isLocal = isLocal,
             type = type,
             canUpdate = canUpdate,
+            disableReadRecord = disableReadRecord,
             splitLongChapter = getSplitLongChapter(),
             durChapterTitle = durChapterTitle,
             latestChapterTitle = latestChapterTitle,

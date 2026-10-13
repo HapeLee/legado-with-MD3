@@ -1,6 +1,7 @@
 package io.legado.app.data.repository
 
 import io.legado.app.data.AppDatabase
+import androidx.room.withTransaction
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.GroupBookCount
@@ -137,6 +138,15 @@ class BookRepository(
             bookDao.update(*book)
         }
     }
+
+    /** 只改本书的记录开关，保留阅读器并发保存的进度和其他字段。 */
+    suspend fun setReadRecordDisabled(bookUrl: String, disabled: Boolean): Book? =
+        withContext(Dispatchers.IO) {
+            appDb.withTransaction {
+                bookDao.setReadRecordDisabled(bookUrl, disabled)
+                bookDao.getBook(bookUrl)
+            }
+        }
 
     suspend fun getMinOrder(): Int {
         return withContext(Dispatchers.IO) {
