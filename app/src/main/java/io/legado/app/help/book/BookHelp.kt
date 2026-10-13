@@ -508,7 +508,7 @@ object BookHelp {
         val file = if (chapterSubject == null) {
             getImage(book, src)
         } else {
-            getImageFile(chapterImageDir(book, chapterSubject), src)
+            chapterImageFile(book, chapterImageDir(book, chapterSubject), src)
         }
         val lease = pinImageFile(file)
         try {
@@ -572,10 +572,26 @@ object BookHelp {
         suffix: String = "nb",
     ): File = File(getChapterContentDir(book, bookChapter), bookChapter.getFileName(suffix))
 
+    private fun legacyChapterContentFile(book: Book, chapter: BookChapter, suffix: String = "nb") =
+        File(downloadDir.getFile(cacheFolderName, book.getFolderName()), chapter.getFileName(suffix))
+
+    /** 新缓存优先；历史缓存保留原位，避免升级时搬动仍在读取的文件。 */
+    private fun cachedChapterContentFile(book: Book, chapter: BookChapter, suffix: String = "nb"): File =
+        getChapterContentFile(book, chapter, suffix).let { current ->
+            if (current.isFile) current else legacyChapterContentFile(book, chapter, suffix)
+        }
+
     fun getImage(book: Book, src: String): File = getImageFile(bookImageDir(book), src)
 
     fun getImage(book: Book, bookChapter: BookChapter, src: String): File =
-        getImageFile(chapterImageDir(book, bookChapter), src)
+        chapterImageFile(book, chapterImageDir(book, bookChapter), src)
+
+    private fun chapterImageFile(book: Book, dir: File, src: String): File {
+        val current = getImageFile(dir, src)
+        val legacy = getImageFile(bookImageDir(book), src)
+        // 历史原图及其 .online/.downloads 索引一起保留，不能搬走共享章或活动租约的文件。
+        return if (!current.isFile && legacy.isFile) legacy else current
+    }
 
     private fun getImageFile(dir: File, src: String): File =
         File(dir, "${MD5Utils.md5Encode16(src)}.${getImageSuffix(src)}")
@@ -694,7 +710,7 @@ object BookHelp {
         ) {
             true
         } else {
-            getChapterContentFile(book, bookChapter).exists()
+            cachedChapterContentFile(book, bookChapter).isFile
         }
     }
 
@@ -734,7 +750,7 @@ object BookHelp {
         bookChapter: BookChapter,
         action: (String) -> Unit
     ) {
-        val file = getChapterContentFile(book, bookChapter)
+        val file = cachedChapterContentFile(book, bookChapter)
         if (file.exists()) {
             forEachImageSrc(file) { src ->
                 action(NetworkUtils.getAbsoluteURL(bookChapter.url, src))
@@ -804,7 +820,7 @@ object BookHelp {
      * 读取章节内容
      */
     fun getContent(book: Book, bookChapter: BookChapter): String? {
-        val file = getChapterContentFile(book, bookChapter)
+        val file = cachedChapterContentFile(book, bookChapter)
         if (file.exists()) {
             val string = file.readText()
             if (string.isEmpty()) {
@@ -833,7 +849,7 @@ object BookHelp {
      * 流式读取已落盘正文，只保留用于页数缓存校验的短前缀，不加载本地书源或网络正文。
      */
     fun getCachedContentInfo(book: Book, bookChapter: BookChapter): CachedContentInfo? {
-        val file = getChapterContentFile(book, bookChapter)
+        val file = cachedChapterContentFile(book, bookChapter)
         if (!file.isFile) return null
 
         return try {
@@ -876,6 +892,7 @@ object BookHelp {
     fun delContent(book: Book, bookChapter: BookChapter) {
         val file = getChapterContentFile(book, bookChapter)
         file.delete()
+        legacyChapterContentFile(book, bookChapter).delete()
         // 章节目录里可能还有图片，非空时 delete 会失败，不会误删。
         file.parentFile?.delete()
     }
@@ -889,6 +906,7 @@ object BookHelp {
         if (removeSameTitle) {
             contentProcessor.removeSameTitleCache.remove(fileName)
             getChapterContentFile(book, bookChapter, "nr").delete()
+            legacyChapterContentFile(book, bookChapter, "nr").delete()
         } else {
             getChapterContentFile(book, bookChapter, "nr").apply { parentFile?.mkdirs() }
             contentProcessor.removeSameTitleCache.add(fileName)
@@ -899,7 +917,7 @@ object BookHelp {
      * 获取是否去除重复标题
      */
     fun removeSameTitle(book: Book, bookChapter: BookChapter): Boolean {
-        return !getChapterContentFile(book, bookChapter, "nr").exists()
+        return !cachedChapterContentFile(book, bookChapter, "nr").isFile
     }
 
     /**
