@@ -3,6 +3,7 @@ package io.legado.app.help.book
 import android.app.Application
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.support.InMemoryAppDatabaseFixture
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -50,6 +51,21 @@ class BookHelpChapterCacheTest {
         assertFalse(current.exists())
         assertFalse(old.exists())
         assertNull(BookHelp.getContent(book, chapter))
+    }
+
+    @Test
+    fun `keep duplicate title creates a durable marker and enabling removal clears both formats`() {
+        InMemoryAppDatabaseFixture(RuntimeEnvironment.getApplication()).use { fixture ->
+            fixture.database.bookDao.insert(book)
+            BookHelp.setRemoveSameTitle(book, chapter, false)
+            assertTrue(BookHelp.getChapterContentFile(book, chapter, "nr").isFile)
+            assertTrue(BookHelp.getChapterFiles(book).contains(chapter.getFileName("nr")))
+            assertFalse(BookHelp.removeSameTitle(book, chapter))
+            File(bookDir, chapter.getFileName("nr")).createNewFile()
+            BookHelp.setRemoveSameTitle(book, chapter, true)
+            assertTrue(BookHelp.removeSameTitle(book, chapter))
+            assertFalse(BookHelp.getChapterFiles(book).contains(chapter.getFileName("nr")))
+        }
     }
 
     @Test
