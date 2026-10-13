@@ -14,6 +14,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -49,6 +51,8 @@ class DefaultMangaReaderSession(
     override val events = _events.asSharedFlow()
     private var prefetchNextCount = 0
     private var prefetchPrevCount = 0
+    private var autoOfflineCache = false
+    private var prefetchJob: Job? = null
 
     init {
         sessionScope.launch {
@@ -108,6 +112,7 @@ class DefaultMangaReaderSession(
             is MangaSessionCommand.PrefetchCountChanged -> {
                 prefetchNextCount = command.nextCount.coerceAtLeast(0)
                 prefetchPrevCount = command.prevCount.coerceAtLeast(0)
+                autoOfflineCache = command.autoOfflineCache
                 prefetch(_state.value.chapterIndex)
             }
             is MangaSessionCommand.BookPresentationObserved -> {
@@ -251,13 +256,17 @@ class DefaultMangaReaderSession(
     }
 
     private fun prefetch(chapterIndex: Int) {
+        prefetchJob?.cancel()
+        prefetchJob = null
+        if (!autoOfflineCache) return
         val state = _state.value
         val book = state.book ?: return
         val indexes = (chapterIndex + 1..chapterIndex + prefetchNextCount)
             .plus(chapterIndex - 1 downTo chapterIndex - prefetchPrevCount)
             .filter { it in 0 until state.chapterCount }
-        loadScope.launch {
+        prefetchJob = loadScope.launch {
             indexes.forEach { index ->
+                currentCoroutineContext().ensureActive()
                 val token = state.tokenFor(index) ?: return@forEach
                 if (_state.value.accepts(token)) {
                     runCatching { dataGateway.prefetchChapter(book.bookUrl, index) }

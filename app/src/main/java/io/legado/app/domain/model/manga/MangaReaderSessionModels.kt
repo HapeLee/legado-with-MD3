@@ -97,7 +97,11 @@ sealed interface MangaSessionCommand {
     data object PersistVisibleProgress : MangaSessionCommand
     data class RetryChapter(val chapterIndex: Int) : MangaSessionCommand
     data class RequestAdjacentChapter(val chapterIndex: Int) : MangaSessionCommand
-    data class PrefetchCountChanged(val nextCount: Int, val prevCount: Int) : MangaSessionCommand
+    data class PrefetchCountChanged(
+        val nextCount: Int,
+        val prevCount: Int,
+        val autoOfflineCache: Boolean = true,
+    ) : MangaSessionCommand
     data class BookPresentationObserved(
         val bookUrl: String,
         val presentation: MangaBookPresentation,
