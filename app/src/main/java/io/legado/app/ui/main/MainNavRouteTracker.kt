@@ -15,6 +15,16 @@ sealed interface BookPageResult {
     data object InfoEdited : BookPageResult
     data object RulesClosed : BookPageResult
     data object BookDeleted : BookPageResult
+
+    /**
+     * 选好了一条 TXT 目录规则。
+     *
+     * 父页面决定怎么用：[MainRouteToc] 拿它保存并重新解析目录，[MainRouteReadBook] 拿它直接
+     * 套到正在读的本地书上。两个入口（规则列表的选择模式、规则预览页的应用）产出同一种结果，
+     * 由父页面的类型区分语义。
+     */
+    @Stable
+    data class TxtTocRuleChosen(val rule: String) : BookPageResult
 }
 
 /**

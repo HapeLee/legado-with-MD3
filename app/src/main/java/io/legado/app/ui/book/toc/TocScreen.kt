@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.toc
 
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -90,7 +89,6 @@ import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
-import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
@@ -140,6 +138,11 @@ fun TocRouteScreen(
     onChapterClick: (Int) -> Unit,
     onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
     onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
+    /**
+     * 「本地目录规则」入口：宿主导航到规则列表的选择模式，选好后由宿主的
+     * `ConsumeBookPageResult` 回灌 `TocIntent.SaveTocRegex`。
+     */
+    onPickLocalTocRule: (String?) -> Unit,
 ) {
     val state by viewModel.screenState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -148,15 +151,6 @@ fun TocRouteScreen(
         contract = ActivityResultContracts.CreateDocument("*/*")
     ) { uri: Uri? ->
         uri?.let { viewModel.onIntent(TocIntent.ExportBookmarks(it, pendingExportMarkdown)) }
-    }
-    val tocRegexLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            viewModel.onIntent(
-                TocIntent.SaveTocRegex(result.data?.getStringExtra("tocRegex").orEmpty())
-            )
-        }
     }
     LaunchedEffect(bookUrl) {
         bookUrl?.let { viewModel.onIntent(TocIntent.LoadBook(it)) }
@@ -176,11 +170,7 @@ fun TocRouteScreen(
         onChapterClick = onChapterClick,
         onOpenReplaceRule = onOpenReplaceRule,
         onBookmarkClick = onBookmarkClick,
-        onEditLocalTocRule = { regex ->
-            tocRegexLauncher.launch(
-                Intent(context, TxtTocRuleActivity::class.java).putExtra("tocRegex", regex)
-            )
-        },
+        onEditLocalTocRule = onPickLocalTocRule,
         onExportBookmarks = { isMarkdown, fileName ->
             pendingExportMarkdown = isMarkdown
             exportLauncher.launch(fileName)

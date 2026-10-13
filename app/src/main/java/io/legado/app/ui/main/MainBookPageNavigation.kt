@@ -22,7 +22,12 @@ internal fun MainActivity.closeBookPage(
     val parent = backStack.getOrNull(backStack.lastIndex - 1)
     val popped = MainNavigator.navigateBack(this, backStack, navRouteTracker, fromRoute)
     if (popped && resolvedResult != null &&
-        (parent is MainRouteReadBook || parent is MainRouteReadManga || parent is MainRouteBookInfo)
+        (
+                parent is MainRouteReadBook || parent is MainRouteReadManga ||
+                        parent is MainRouteBookInfo ||
+                        // 目录页也会从子页拿结果：TXT 规则列表的选择模式把选中的规则回传给它。
+                        parent is MainRouteToc
+                )
     ) {
         navRouteTracker.reportBookPageResult(parent, resolvedResult)
     }

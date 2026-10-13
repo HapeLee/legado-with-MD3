@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="multi_pane_layout">多栏布局</string>
+    <string name="multi_pane_auto">自动（宽窗口）</string>
+    <string name="multi_pane_landscape">横屏开启（宽窗口）</string>
+    <string name="multi_pane_always">始终开启（空间足够时）</string>
+    <string name="multi_pane_off">关闭</string>
+</resources>

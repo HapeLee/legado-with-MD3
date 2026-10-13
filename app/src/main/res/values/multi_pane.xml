@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="multi_pane_layout">Multi-pane layout</string>
+    <string name="multi_pane_auto">Auto (wide windows)</string>
+    <string name="multi_pane_landscape">Landscape only (wide windows)</string>
+    <string name="multi_pane_always">Always (when both panes fit)</string>
+    <string name="multi_pane_off">Off</string>
+    <string-array name="multi_pane_layout_entries">
+        <item>@string/multi_pane_auto</item>
+        <item>@string/multi_pane_landscape</item>
+        <item>@string/multi_pane_always</item>
+        <item>@string/multi_pane_off</item>
+    </string-array>
+    <string-array name="multi_pane_layout_values" translatable="false">
+        <item>auto</item>
+        <item>landscape</item>
+        <item>always</item>
+        <item>off</item>
+    </string-array>
+</resources>

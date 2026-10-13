@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="multi_pane_layout">多欄佈局</string>
+    <string name="multi_pane_auto">自動（寬視窗）</string>
+    <string name="multi_pane_landscape">橫向開啟（寬視窗）</string>
+    <string name="multi_pane_always">始終開啟（空間足夠時）</string>
+    <string name="multi_pane_off">關閉</string>
+</resources>

@@ -2326,7 +2326,7 @@
     <string name="read_aloud_android_media_control_summary">啟用後，以 Android 系統媒體控制取代預設朗讀通知</string>
     <string name="system_media_control_compatibility_change">系統媒體控制相容性</string>
     <string name="system_media_control_compatibility_change_summary">若鎖定螢幕缺少系統媒體控制項時啟用（例如 OneUI 7.0、OriginOS）</string>
-    <string name="tabletInterface">平板介面</string>
+    <string name="tabletInterface">導覽佈局</string>
     <string name="tag">標籤</string>
     <string name="tag_group_add_rule">新建標籤分組</string>
     <string name="tag_group_edit_rule">編輯分組規則</string>

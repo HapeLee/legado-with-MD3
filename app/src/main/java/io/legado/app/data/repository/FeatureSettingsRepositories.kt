@@ -292,6 +292,7 @@ internal fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettin
     useFloatingBottomBarLiquidGlass =
         compatDsBoolean(PreferKey.useFloatingBottomBarLiquidGlass) ?: false,
     tabletInterface = compatDsString(PreferKey.tabletInterface) ?: "auto",
+    multiPaneMode = compatDsString(PreferKey.multiPaneMode) ?: "auto",
     labelVisibilityMode = compatDsString(PreferKey.labelVisibilityMode) ?: "auto",
     defaultHomePage = compatDsString(PreferKey.defaultHomePage) ?: "bookshelf",
     mainNavigationOrder = compatDsString(PreferKey.mainNavigationOrder)
@@ -324,6 +325,7 @@ internal fun AppShellSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.useFloatingBottomBar to useFloatingBottomBar,
     PreferKey.useFloatingBottomBarLiquidGlass to useFloatingBottomBarLiquidGlass,
     PreferKey.tabletInterface to tabletInterface,
+    PreferKey.multiPaneMode to multiPaneMode,
     PreferKey.labelVisibilityMode to labelVisibilityMode,
     PreferKey.defaultHomePage to defaultHomePage,
     PreferKey.mainNavigationOrder to mainNavigationOrder,

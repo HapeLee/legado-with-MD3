@@ -326,6 +326,8 @@ object MainNavigator {
             }
 
             MainRouteHighlightTagRule,
+            MainRouteDictRule,
+            MainRouteAllBookmark,
             MainRouteMultiRoleRule,
             MainRouteReadRecord -> {
                 if (currentRoute == MainRouteHome) {
@@ -348,6 +350,26 @@ object MainNavigator {
 
             MainRouteAbout -> {
                 if (currentRoute == MainRouteHome) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
+            }
+
+            // TXT 目录规则列表与它的预览页既可以从首页进（管理模式），也可以是压在目录页 /
+            // 阅读页之上的子页（选择 / 应用模式）。后者必须压栈，否则返回时下层页面被清掉，
+            // 选中的规则也就没有父页面可以回传。
+            is MainRouteTxtTocRule,
+            is MainRouteTxtTocRulePreview -> {
+                if (
+                    currentRoute == MainRouteHome ||
+                    currentRoute is MainRouteToc ||
+                    currentRoute is MainRouteTxtTocRulePreview ||
+                    currentRoute is MainRouteReadBook ||
+                    currentRoute is MainRouteReadManga
+                ) {
                     backStack.add(route)
                 } else {
                     backStack.clear()

@@ -1,7 +1,5 @@
 package io.legado.app.ui.book.read.sheet
 
-import android.app.Activity
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -92,7 +90,6 @@ import io.legado.app.ui.book.toc.TocItemUi
 import io.legado.app.ui.book.toc.TocMarkingItemUi
 import io.legado.app.ui.book.toc.TocUiState
 import io.legado.app.ui.book.toc.TocViewModel
-import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.ChapterStatusIcons
@@ -147,6 +144,11 @@ fun ReaderBookSheetRoute(
     onOpenChapterUrl: () -> Unit = {},
     onToggleReadUrlInBrowser: () -> Unit = {},
     sourceActions: ReaderBookSourceActions? = null,
+    /**
+     * 「本地目录规则」：只对本地 txt 书出现，由宿主导航到规则预览页；应用结果走书页结果通道
+     * 回灌阅读页，规则保存后本面板会随 `bookRepository.flowBook` 自动刷新。
+     */
+    onEditLocalTocRule: (String?) -> Unit = {},
     viewModel: TocViewModel = koinViewModel(key = "reader-book-sheet-$bookUrl"),
 ) {
     val state by viewModel.screenState.collectAsStateWithLifecycle()
@@ -157,15 +159,6 @@ fun ReaderBookSheetRoute(
         ActivityResultContracts.CreateDocument("*/*")
     ) { uri: Uri? ->
         uri?.let { viewModel.onIntent(TocIntent.ExportBookmarks(it, pendingExportMarkdown)) }
-    }
-    val tocRegexLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.onIntent(
-                TocIntent.SaveTocRegex(result.data?.getStringExtra("tocRegex").orEmpty())
-            )
-        }
     }
 
     LaunchedEffect(bookUrl) {
@@ -210,13 +203,7 @@ fun ReaderBookSheetRoute(
                 ReaderBookSheetTab.Marks -> Unit
             }
         },
-        onEditLocalTocRule = { regex ->
-            tocRegexLauncher.launch(
-                Intent(context, TxtTocRulePreviewActivity::class.java)
-                    .putExtra("bookUrl", bookUrl)
-                    .putExtra("tocRegex", regex)
-            )
-        },
+        onEditLocalTocRule = onEditLocalTocRule,
         onExportBookmarks = { isMarkdown, fileName ->
             pendingExportMarkdown = isMarkdown
             exportLauncher.launch(fileName)

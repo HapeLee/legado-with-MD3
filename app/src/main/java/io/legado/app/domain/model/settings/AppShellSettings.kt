@@ -14,6 +14,7 @@ data class AppShellSettings(
     val useFloatingBottomBar: Boolean = false,
     val useFloatingBottomBarLiquidGlass: Boolean = false,
     val tabletInterface: String = "auto",
+    val multiPaneMode: String = "auto",
     val labelVisibilityMode: String = "auto",
     val defaultHomePage: String = "bookshelf",
     val mainNavigationOrder: String = "home,bookshelf,explore,rss,my",

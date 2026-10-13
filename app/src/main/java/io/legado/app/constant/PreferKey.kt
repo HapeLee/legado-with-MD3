@@ -357,6 +357,7 @@ object PreferKey {
 
 
     const val tabletInterface = "tabletInterface"
+    const val multiPaneMode = "multiPaneMode"
     const val pureBlack = "pure_black"
     const val labelVisibilityMode = "labelVisibilityMode"
     const val menuAlpha = "menuAlpha"
