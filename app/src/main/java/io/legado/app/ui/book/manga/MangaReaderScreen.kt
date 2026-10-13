@@ -129,6 +129,9 @@ import me.saket.telephoto.zoomable.zoomable
 import org.koin.compose.koinInject
 import kotlin.math.ceil
 import kotlin.math.floor
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import kotlin.math.roundToInt
 
 private val LocalReaderViewportSize = staticCompositionLocalOf { IntSize.Zero }
@@ -207,6 +210,24 @@ fun MangaReaderScreen(
     val currentPageKey = state.pages.getOrNull(state.currentItemIndex)?.key
     val readerBackground = state.settings.backgroundColor.copy(alpha = 1f)
     val currentPageColor = automaticBackgrounds[currentPageKey]?.top
+    val latestBoundaryState by rememberUpdatedState(state)
+    val latestBoundaryIntent by rememberUpdatedState(onIntent)
+    val chapterBoundaryScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                val reader = latestBoundaryState
+                if (source == NestedScrollSource.UserInput && reader.settings.hideMangaTitle &&
+                    reader.scrollRequest == null && !reader.isLoading
+                ) {
+                    val direction = mangaBoundaryChapterDirection(reader.settings.scrollMode, available.x, available.y)
+                    if (direction != 0) latestBoundaryIntent(
+                        MangaReaderIntent.RequestAdjacentChapter(reader.chapterIndex + direction)
+                    )
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
     LaunchedEffect(
         state.autoReadEnabled,
@@ -270,6 +291,7 @@ fun MangaReaderScreen(
                     )
                     .layerBackdrop(menuBackdrop)
                     .background(readerBackground)
+                    .nestedScroll(chapterBoundaryScroll)
             ) {
                 when (state.settings.scrollMode) {
                     MangaScrollMode.PAGE_LEFT_TO_RIGHT,
@@ -728,6 +750,16 @@ private fun WebtoonMangaList(
             recordViewportAnchor()
             if (!scrolling) return@collect
             val currentState = latestReaderState
+            visibleIndices.forEach { index ->
+                val info = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                val transition = currentState.pages.getOrNull(index)
+                    ?.takeIf { it.key == info?.key } as? MangaReaderItemUi.ChapterTransition
+                if (transition?.targetStatus == MangaChapterTransitionStatus.WAITING) {
+                    transition.targetChapterIndex?.let {
+                        onIntent(MangaReaderIntent.RequestAdjacentChapter(it))
+                    }
+                }
+            }
             mangaWebtoonFocusedPageIndex(
                 items = currentState.pages,
                 visibleItemIndices = visibleIndices,
@@ -1013,7 +1045,13 @@ private fun HorizontalMangaPager(
                                 )
                             )
                         }
-                        is MangaReaderItemUi.ChapterTransition -> Unit
+                        is MangaReaderItemUi.ChapterTransition -> {
+                            if (item.targetStatus == MangaChapterTransitionStatus.WAITING) {
+                                item.targetChapterIndex?.let {
+                                    onIntent(MangaReaderIntent.RequestAdjacentChapter(it))
+                                }
+                            }
+                        }
                         is MangaReaderItemUi.ChapterEdge, null -> Unit
                     }
                 }
@@ -1279,7 +1317,13 @@ private fun VerticalMangaPager(
                             )
                         )
                     }
-                    is MangaReaderItemUi.ChapterTransition -> Unit
+                    is MangaReaderItemUi.ChapterTransition -> {
+                            if (item.targetStatus == MangaChapterTransitionStatus.WAITING) {
+                                item.targetChapterIndex?.let {
+                                    onIntent(MangaReaderIntent.RequestAdjacentChapter(it))
+                                }
+                            }
+                        }
                     is MangaReaderItemUi.ChapterEdge, null -> Unit
                 }
             }

@@ -138,6 +138,9 @@ class MangaReaderViewModel(
 
     fun onIntent(intent: MangaReaderIntent) {
         when (intent) {
+            is MangaReaderIntent.RequestAdjacentChapter -> executeSession(
+                MangaSessionCommand.RequestAdjacentChapter(intent.chapterIndex)
+            )
             is MangaReaderIntent.Initialize -> initialize(intent)
             MangaReaderIntent.ResumeSession -> executeSession(MangaSessionCommand.Resume)
             MangaReaderIntent.PauseSession -> executeSession(MangaSessionCommand.Pause)

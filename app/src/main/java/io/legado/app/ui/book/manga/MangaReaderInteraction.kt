@@ -1,5 +1,7 @@
 package io.legado.app.ui.book.manga
 
+import io.legado.app.ui.book.manga.config.MangaScrollMode
+
 internal fun mangaChapterLoadingItem(
     chapterIndex: Int,
     message: String,
@@ -171,6 +173,13 @@ internal fun mangaNeedsPositionScroll(
     anchorFound: Boolean,
     keyPreserved: Boolean,
 ): Boolean = forcePosition || !anchorFound || !keyPreserved
+
+/** 用户在隐藏提示的列表/Pager 边界继续拖动时，按阅读方向请求下一或上一章。 */
+internal fun mangaBoundaryChapterDirection(scrollMode: Int, x: Float, y: Float): Int = when (scrollMode) {
+    MangaScrollMode.PAGE_LEFT_TO_RIGHT -> when { x < 0f -> 1; x > 0f -> -1; else -> 0 }
+    MangaScrollMode.PAGE_RIGHT_TO_LEFT -> when { x > 0f -> 1; x < 0f -> -1; else -> 0 }
+    else -> when { y < 0f -> 1; y > 0f -> -1; else -> 0 }
+}
 
 /** 相邻章只准备紧贴边界的这些页：跨章瞬间它们会立刻进入视口。 */
 private const val ADJACENT_CHAPTER_RATIO_PAGES = 8
