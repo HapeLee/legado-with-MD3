@@ -929,7 +929,7 @@ object BookHelp {
             getChapterContentFile(book, bookChapter, "nr").delete()
             legacyChapterContentFile(book, bookChapter, "nr").delete()
         } else {
-            getChapterContentFile(book, bookChapter, "nr").apply { parentFile?.mkdirs() }
+            FileUtils.createFileIfNotExist(getChapterContentFile(book, bookChapter, "nr").absolutePath)
             contentProcessor.removeSameTitleCache.add(fileName)
         }
     }
