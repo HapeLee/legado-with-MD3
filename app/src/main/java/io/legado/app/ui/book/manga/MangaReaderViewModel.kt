@@ -639,8 +639,9 @@ class MangaReaderViewModel(
             val keyPreserved =
                 oldCurrentItem?.let { old -> items.any { it.key == old.key } } == true
             val targetIndex = anchoredIndex ?: safePosition
-            val positionChanged = shouldPosition || anchoredIndex == null || !keyPreserved ||
-                    oldState.currentItemIndex != targetIndex
+            val needsPositionScroll =
+                mangaNeedsPositionScroll(shouldPosition, anchoredIndex != null, keyPreserved)
+            val positionChanged = needsPositionScroll || oldState.currentItemIndex != targetIndex
             _uiState.update { old ->
                 old.copy(
                     bookName = book.name,
@@ -671,7 +672,7 @@ class MangaReaderViewModel(
                     pendingChapterIndex = null,
                     errorMessage = null,
                     settings = readSettings(latestMangaSettings),
-                    scrollRequest = if (positionChanged) {
+                    scrollRequest = if (needsPositionScroll) {
                         MangaScrollRequest(
                             id = System.nanoTime(),
                             itemIndex = targetIndex,

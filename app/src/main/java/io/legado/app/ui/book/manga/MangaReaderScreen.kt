@@ -431,6 +431,21 @@ private fun MangaChapterImagePrefetch(
     }
 }
 
+/**
+ * 视口首可见项的锚点（key + 项内偏移）。
+ *
+ * 章节提升会丢弃前一章整段前缀，可见页下标一次前移上百项；LazyColumn 的 key→下标映射
+ * （`LazyLayoutNearestRangeState`，仅覆盖视口附近约 ±100 项）查不到该 key 时会回退保留
+ * 旧下标，画面因此落到约一章之后（本章末尾／下一章首）。记下锚点后就能自己按 key 还原，
+ * 且与列表重建在同一个 remeasure 里生效，不产生可见跳动。
+ *
+ * 用普通字段而非 Compose 状态：只在内容变化时读取，不参与重组。
+ */
+private class MangaWebtoonViewportAnchor {
+    var key: Any? = null
+    var offset: Int = 0
+}
+
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun WebtoonMangaList(
@@ -452,6 +467,7 @@ private fun WebtoonMangaList(
     }
     val listState =
         rememberLazyListState(cacheWindow, initialFirstVisibleItemIndex = state.currentItemIndex)
+    val viewportAnchor = remember(state.bookUrl) { MangaWebtoonViewportAnchor() }
     // 单张图片的加载状态会更新整个 UiState.pages。可见页监听不能因此重启：重启会
     // 丢失 distinctUntilChanged 的上一条记录，并把 LazyColumn 尚未完成重测时保留的
     // 旧视口重新上报为当前页，进而使章节/页码跳回去。
@@ -466,8 +482,14 @@ private fun WebtoonMangaList(
     var zoomAnchorLayout by remember { mutableStateOf<LazyListLayoutInfo?>(null) }
     val applyResize: (() -> Unit) -> Unit = { resize ->
         val layout = listState.layoutInfo
+        // 布局与当前条目集合不一致（列表刚重建）时不做像素锚点补偿：那会把旧布局里的
+        // 项内偏移用到新集合的下标上。
+        val layoutConsistent = layout.visibleItemsInfo.firstOrNull()?.let { info ->
+            latestReaderState.pages.getOrNull(info.index)?.key == info.key
+        } != false
         val anchor =
-            if (zoomAnchorLayout != null || listState.isScrollInProgress || latestReaderState.scrollRequest != null ||
+            if (zoomAnchorLayout != null || listState.isScrollInProgress ||
+            latestReaderState.scrollRequest != null || !layoutConsistent ||
             latestReaderState.bookUrl != state.bookUrl
         ) null else {
             val loadedKeys = layout.visibleItemsInfo.mapNotNull { info ->
@@ -491,11 +513,10 @@ private fun WebtoonMangaList(
     DisposableEffect(listState, state.bookUrl, resizeQueue) {
         onResizeHandlerChanged { key, resize ->
             val visible = listState.layoutInfo.visibleItemsInfo.any { it.key == key }
-            val index = latestReaderState.pages.indexOfFirst { it.key == key }
             val apply =
-                if (visible || index in 0 until listState.firstVisibleItemIndex) latestApplyResize
+                if (visible) latestApplyResize
                 else { change: () -> Unit -> change() }
-            // 整章远端页的尺寸不会移动当前图片，不为它们反复发起滚动位置请求。
+            // 视口上方条目的高度变化不会移动当前图片，不为它们发起滚动位置请求。
             resizeQueue.update(key, listState.isScrollInProgress, visible, resize, apply)
         }
         onDispose { onResizeHandlerChanged(null) }
@@ -637,6 +658,12 @@ private fun WebtoonMangaList(
             }
         }
 
+    fun recordViewportAnchor() {
+        val first = listState.layoutInfo.visibleItemsInfo.firstOrNull() ?: return
+        viewportAnchor.key = first.key
+        viewportAnchor.offset = -first.offset
+    }
+
     fun reportWebtoonVisibleItem(forcedItemIndex: Int? = null) {
         val currentState = latestReaderState
         // Programmatic scrolling also emits a scroll-idle event. That event must not clear the
@@ -687,6 +714,7 @@ private fun WebtoonMangaList(
                 } else if (wasScrolling) {
                     wasScrolling = false
                     onIntent(MangaReaderIntent.PagerScrollChanged(false))
+                    recordViewportAnchor()
                     reportWebtoonVisibleItem()
                 }
             }
@@ -697,6 +725,7 @@ private fun WebtoonMangaList(
             listState.isScrollInProgress to
                     listState.layoutInfo.visibleItemsInfo.map { it.index }
         }.distinctUntilChanged().collect { (scrolling, visibleIndices) ->
+            recordViewportAnchor()
             if (!scrolling) return@collect
             val currentState = latestReaderState
             mangaWebtoonFocusedPageIndex(
@@ -712,6 +741,16 @@ private fun WebtoonMangaList(
                 )
             }
         }
+    }
+
+    // 条目集合（navigationId 表示 key 集合变化）重建后，按记录的锚点自己在同一次重测里还原：
+    // 前缀整段前移超过 key→下标映射窗口时，LazyColumn 会保留旧下标，画面落到约一章之后。
+    LaunchedEffect(state.navigationId) {
+        val anchorKey = viewportAnchor.key ?: return@LaunchedEffect
+        // 显式跳章/内容恢复会自己下发 scrollRequest，此处不与它抢定位。
+        if (state.scrollRequest != null || listState.isScrollInProgress) return@LaunchedEffect
+        val index = latestReaderState.pages.indexOfFirst { it.key == anchorKey }
+        if (index >= 0) listState.requestScrollToItem(index, viewportAnchor.offset)
     }
 
     LaunchedEffect(state.scrollRequest?.id) {

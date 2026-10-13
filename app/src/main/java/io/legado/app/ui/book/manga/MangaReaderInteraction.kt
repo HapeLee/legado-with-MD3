@@ -160,17 +160,48 @@ internal fun mangaImagePrefetchIndex(scrollMode: Int, current: Int, visible: Int
     ) visible ?: current
     else current
 
-/** 列表可同时含前后章节；只准备实际当前章，当前页及附近页先执行，剩余页持续排队。 */
+/**
+ * 内容刷新后是否需要程序化滚动复位。
+ *
+ * 兼容的 key 还在集合里时不需要：LazyColumn/Pager 自己按 key 保位，按新下标复位只会把
+ * 正在阅读的那一页顶部对齐到视口顶部。只有锚点丢失或显式跳章才主动复位。
+ */
+internal fun mangaNeedsPositionScroll(
+    forcePosition: Boolean,
+    anchorFound: Boolean,
+    keyPreserved: Boolean,
+): Boolean = forcePosition || !anchorFound || !keyPreserved
+
+/** 相邻章只准备紧贴边界的这些页：跨章瞬间它们会立刻进入视口。 */
+private const val ADJACENT_CHAPTER_RATIO_PAGES = 8
+
+/** 当前章视口附近的页先准备，其后插入相邻章边界页。 */
+private const val VIEWPORT_RATIO_PAGES = 12
+
+/**
+ * 列表可同时含前后章节；当前章全部页持续排队。
+ *
+ * 相邻章只额外准备紧贴章节边界的这些页：跨章瞬间它们会立刻进入视口，宽高比若此时才到，
+ * 条目高度会从兜底高度切成真实高度，把下方内容整体推一次（跨章时表现为画面抖一下）。
+ */
 internal fun mangaChapterPrefetchPages(
     items: List<MangaReaderItemUi>, current: Int, fallbackChapter: Int,
 ): List<MangaReaderItemUi.Page> {
     val visible = items.getOrNull(current) as? MangaReaderItemUi.Page
     val chapter = visible?.chapterIndex ?: fallbackChapter
-    val pages =
-        items.filterIsInstance<MangaReaderItemUi.Page>().filter { it.chapterIndex == chapter }
+    val allPages = items.filterIsInstance<MangaReaderItemUi.Page>()
+    val pages = allPages.filter { it.chapterIndex == chapter }
     val anchor = visible?.pageIndex ?: pages.firstOrNull()?.pageIndex ?: return emptyList()
-    return pages.sortedWith(compareBy<MangaReaderItemUi.Page> { kotlin.math.abs(it.pageIndex - anchor) }
-        .thenBy { if (it.pageIndex >= anchor) 0 else 1 })
+    val ordered = pages
+        .sortedWith(compareBy<MangaReaderItemUi.Page> { kotlin.math.abs(it.pageIndex - anchor) }
+            .thenBy { if (it.pageIndex >= anchor) 0 else 1 })
+    val boundary = allPages.filter { page ->
+        page.chapterIndex == chapter + 1 && page.pageIndex < ADJACENT_CHAPTER_RATIO_PAGES ||
+                page.chapterIndex == chapter - 1 &&
+                page.pageIndex >= page.pageCount - ADJACENT_CHAPTER_RATIO_PAGES
+    }
+    return ordered.take(VIEWPORT_RATIO_PAGES) + boundary +
+            ordered.drop(VIEWPORT_RATIO_PAGES)
 }
 
 /** 缩放后的滚动偏移保留手势下的原图坐标；未知占位和固定高度章节项不按图片缩放。 */
