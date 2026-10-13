@@ -277,6 +277,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         publishSnapshot()
     }
 
+    /** 记录开关属于书籍副本；同步字段时不能替换阅读器正在持有的进度/源实例。 */
+    fun setReadRecordDisabled(bookUrl: String, disabled: Boolean) {
+        book?.takeIf { it.bookUrl == bookUrl }?.let {
+            it.disableReadRecord = disabled
+            publishSnapshot()
+        }
+    }
+
     /** 清空当前会话持有的 Book（仅置空引用，不动章节/进度状态）。 */
     fun clearCurrentBook() {
         book = null

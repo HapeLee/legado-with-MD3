@@ -679,9 +679,11 @@ class BookInfoViewModel(
             bookRepository.setReadRecordDisabled(book.bookUrl, disabled)
         }.onSuccess { updated ->
             if (updated != null) {
-                applyBookOnShelf(updated)
-                if (currentBook?.bookUrl == updated.bookUrl) {
-                    currentBook = updated
+                ReadBook.setReadRecordDisabled(updated.bookUrl, updated.disableReadRecord)
+                AudioPlay.book?.takeIf { it.bookUrl == updated.bookUrl }
+                    ?.disableReadRecord = updated.disableReadRecord
+                currentBook?.takeIf { it.bookUrl == updated.bookUrl }?.let {
+                    it.disableReadRecord = updated.disableReadRecord
                     syncUiState()
                 }
             }
