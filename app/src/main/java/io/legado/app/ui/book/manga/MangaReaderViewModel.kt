@@ -96,7 +96,10 @@ class MangaReaderViewModel(
             }
         }
         viewModelScope.launch {
-            readSettingsGateway.settings.collect { syncPrefetchCounts() }
+            readSettingsGateway.settings.collect {
+                syncPrefetchCounts()
+                _uiState.update { it.copy(settings = readSettings(latestMangaSettings)) }
+            }
         }
         viewModelScope.launch {
             otherSettingsGateway.settings.collect { settings ->
@@ -112,27 +115,15 @@ class MangaReaderViewModel(
         }
     }
 
-    /**
-     * 预取章节数：优先用共享阅读设置的两个方向（向后/向前）；两者都为 0 时回落到
-     * 旧的漫画独立设置（autoOfflineCache 打开时取 chapterPrefetchCount 作为向后值）。
-     */
+    /** 方向/数量只有共享阅读设置一个 owner；自动离线开关只控制整章下载。 */
     private suspend fun syncPrefetchCounts() {
         val read = readSettingsGateway.currentSettings
-        val nextCount: Int
-        val prevCount: Int
-        if (read.preDownloadNum > 0 || read.preDownloadNumPrev > 0) {
-            nextCount = read.preDownloadNum
-            prevCount = read.preDownloadNumPrev
-        } else {
-            nextCount = if (latestMangaSettings.autoOfflineCache) {
-                latestMangaSettings.chapterPrefetchCount
-            } else {
-                0
-            }
-            prevCount = 0
-        }
         readerSession.execute(
-            MangaSessionCommand.PrefetchCountChanged(nextCount = nextCount, prevCount = prevCount)
+            MangaSessionCommand.PrefetchCountChanged(
+                nextCount = read.preDownloadNum,
+                prevCount = read.preDownloadNumPrev,
+                autoOfflineCache = latestMangaSettings.autoOfflineCache,
+            )
         )
     }
 
@@ -900,8 +891,11 @@ class MangaReaderViewModel(
             MangaReaderSettingKey.DISABLE_CLICK_SCROLL -> updateMangaPreference { it.copy(disableClickScroll = enabled) }
             MangaReaderSettingKey.LONG_PRESS -> updateMangaPreference { it.copy(longClick = enabled) }
             MangaReaderSettingKey.PRE_DOWNLOAD -> updateMangaPreference { it.copy(preDownloadNum = value) }
-            MangaReaderSettingKey.CHAPTER_PREFETCH -> updateMangaPreference {
-                it.copy(chapterPrefetchCount = value)
+            MangaReaderSettingKey.CHAPTER_PREFETCH -> viewModelScope.launch {
+                readSettingsGateway.update { it.copy(preDownloadNum = value.coerceIn(0, 100)) }
+            }
+            MangaReaderSettingKey.CHAPTER_PREFETCH_PREV -> viewModelScope.launch {
+                readSettingsGateway.update { it.copy(preDownloadNumPrev = value.coerceIn(0, 100)) }
             }
             MangaReaderSettingKey.AUTO_OFFLINE_CACHE -> updateMangaPreference {
                 it.copy(autoOfflineCache = enabled)
@@ -1408,7 +1402,8 @@ class MangaReaderViewModel(
         disableClickScroll = settings.disableClickScroll,
             longPressEnabled = settings.longClick,
             preDownloadCount = settings.preDownloadNum,
-            chapterPrefetchCount = settings.chapterPrefetchCount,
+            chapterPrefetchCount = readSettingsGateway.currentSettings.preDownloadNum,
+            previousChapterPrefetchCount = readSettingsGateway.currentSettings.preDownloadNumPrev,
             autoOfflineCache = settings.autoOfflineCache,
             autoReadSpeed = settings.autoPageSpeed,
         volumeKeyPage = settings.volumeKeyPage,

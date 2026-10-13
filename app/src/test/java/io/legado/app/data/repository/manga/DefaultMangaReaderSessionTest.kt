@@ -122,6 +122,29 @@ class DefaultMangaReaderSessionTest {
     }
 
     @Test
+    fun `automatic offline switch gates downloads without disabling adjacent metadata or manual navigation`() = runTest {
+        val gateway = FakeGateway()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
+        session.execute(MangaSessionCommand.PrefetchCountChanged(2, 1, autoOfflineCache = false))
+        session.execute(MangaSessionCommand.Open("book-a", true, false))
+        advanceUntilIdle()
+        gateway.complete("book-a", 0)
+        advanceUntilIdle()
+        session.execute(MangaSessionCommand.VisiblePageChanged(0, 0))
+        advanceUntilIdle()
+        assertTrue(gateway.prefetched.isEmpty())
+        assertTrue(session.state.value.nextChapter is MangaChapterState.Loading)
+        session.execute(MangaSessionCommand.PrefetchCountChanged(0, 0, autoOfflineCache = true))
+        advanceUntilIdle()
+        assertTrue(gateway.prefetched.isEmpty())
+        session.execute(MangaSessionCommand.PrefetchCountChanged(2, 0, autoOfflineCache = true))
+        advanceUntilIdle()
+        assertEquals(listOf("book-a" to 1, "book-a" to 2), gateway.prefetched)
+        session.close()
+    }
+
+    @Test
     fun `prefetch covers the previous direction within bounds`() = runTest {
         val gateway = FakeGateway()
         val dispatcher = StandardTestDispatcher(testScheduler)
