@@ -13,6 +13,22 @@ import org.junit.Test
 
 class MangaReaderInteractionTest {
     @Test
+    fun `zoomed offset survives a chapter prefix rebuild at the same visible page`() {
+        val first = page(0, 0)
+        val visible = page(1, 0)
+        val items = listOf(first, visible)
+        val anchor = MangaWebtoonViewportAnchor()
+        anchor.record(items, 1, visible.key, 80)
+        // 缩放后下标与 key 不变，但项内偏移已改变。
+        anchor.record(items, 1, visible.key, 240)
+        assertEquals(0 to 240, anchor.positionIn(listOf(visible)))
+        // 新集合尚未重测时，不得用旧下标上的另一个 key 污染锚点。
+        anchor.record(listOf(visible), 1, first.key, 10)
+        assertEquals(0 to 240, anchor.positionIn(listOf(visible)))
+        assertEquals(null, anchor.positionIn(listOf(first)))
+    }
+
+    @Test
     fun `hidden chapter boundary respects vertical and horizontal reading direction`() {
         assertEquals(1, mangaBoundaryChapterDirection(MangaScrollMode.WEBTOON, 0f, -2f))
         assertEquals(-1, mangaBoundaryChapterDirection(MangaScrollMode.WEBTOON, 0f, 2f))
