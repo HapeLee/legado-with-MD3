@@ -2,6 +2,24 @@ package io.legado.app.ui.book.manga
 
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 
+/** 条漫视口锚点保存 key 与项内偏移；旧布局与新条目索引不一致时不能覆盖它。 */
+internal class MangaWebtoonViewportAnchor {
+    private var key: Any? = null
+    private var offset: Int = 0
+
+    fun record(items: List<MangaReaderItemUi>, index: Int, key: Any, offset: Int) {
+        if (items.getOrNull(index)?.key != key) return
+        this.key = key
+        this.offset = offset
+    }
+
+    fun positionIn(items: List<MangaReaderItemUi>): Pair<Int, Int>? {
+        val anchor = key ?: return null
+        val index = items.indexOfFirst { it.key == anchor }
+        return index.takeIf { it >= 0 }?.let { it to offset }
+    }
+}
+
 internal fun mangaChapterLoadingItem(
     chapterIndex: Int,
     message: String,

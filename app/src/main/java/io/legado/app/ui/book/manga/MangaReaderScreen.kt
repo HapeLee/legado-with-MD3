@@ -453,21 +453,6 @@ private fun MangaChapterImagePrefetch(
     }
 }
 
-/**
- * 视口首可见项的锚点（key + 项内偏移）。
- *
- * 章节提升会丢弃前一章整段前缀，可见页下标一次前移上百项；LazyColumn 的 key→下标映射
- * （`LazyLayoutNearestRangeState`，仅覆盖视口附近约 ±100 项）查不到该 key 时会回退保留
- * 旧下标，画面因此落到约一章之后（本章末尾／下一章首）。记下锚点后就能自己按 key 还原，
- * 且与列表重建在同一个 remeasure 里生效，不产生可见跳动。
- *
- * 用普通字段而非 Compose 状态：只在内容变化时读取，不参与重组。
- */
-private class MangaWebtoonViewportAnchor {
-    var key: Any? = null
-    var offset: Int = 0
-}
-
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun WebtoonMangaList(
@@ -551,10 +536,15 @@ private fun WebtoonMangaList(
             )
         }
     }
-    LaunchedEffect(listState) {
+    LaunchedEffect(listState, state.bookUrl) {
         snapshotFlow { listState.layoutInfo }.collect { measured ->
             // 高度更新不能用旧布局的像素锚点覆盖尚未生效的缩放锚点。
             if (zoomAnchorLayout != null && measured !== zoomAnchorLayout) zoomAnchorLayout = null
+            // 缩放/图片高度补偿可只改变项内偏移，不改变下标或 isScrollInProgress。
+            // 跟随每次实际布局更新锚点，不能依赖可见下标流去采样它。
+            measured.visibleItemsInfo.firstOrNull()?.let {
+                viewportAnchor.record(latestReaderState.pages, it.index, it.key, -it.offset)
+            }
         }
     }
     var zoom by remember { mutableFloatStateOf(1f) }
@@ -682,8 +672,7 @@ private fun WebtoonMangaList(
 
     fun recordViewportAnchor() {
         val first = listState.layoutInfo.visibleItemsInfo.firstOrNull() ?: return
-        viewportAnchor.key = first.key
-        viewportAnchor.offset = -first.offset
+        viewportAnchor.record(latestReaderState.pages, first.index, first.key, -first.offset)
     }
 
     fun reportWebtoonVisibleItem(forcedItemIndex: Int? = null) {
@@ -725,7 +714,7 @@ private fun WebtoonMangaList(
     // 只在真实滚动结束后上报可见页。图片加载/失败会改变条目的 fallback 高度，如果
     // 依赖 layoutInfo 持续上报，布局收缩或撑开本身就会伪装成“翻过了章节边界”，
     // 从而把已跳转的章节又切回去。程序化跳转另由 scrollRequest 完成后直接上报目标页。
-    LaunchedEffect(listState) {
+    LaunchedEffect(listState, state.bookUrl) {
         var wasScrolling = false
         snapshotFlow { listState.isScrollInProgress }
             .distinctUntilChanged()
@@ -747,7 +736,6 @@ private fun WebtoonMangaList(
             listState.isScrollInProgress to
                     listState.layoutInfo.visibleItemsInfo.map { it.index }
         }.distinctUntilChanged().collect { (scrolling, visibleIndices) ->
-            recordViewportAnchor()
             if (!scrolling) return@collect
             val currentState = latestReaderState
             visibleIndices.forEach { index ->
@@ -778,11 +766,11 @@ private fun WebtoonMangaList(
     // 条目集合（navigationId 表示 key 集合变化）重建后，按记录的锚点自己在同一次重测里还原：
     // 前缀整段前移超过 key→下标映射窗口时，LazyColumn 会保留旧下标，画面落到约一章之后。
     LaunchedEffect(state.navigationId) {
-        val anchorKey = viewportAnchor.key ?: return@LaunchedEffect
         // 显式跳章/内容恢复会自己下发 scrollRequest，此处不与它抢定位。
         if (state.scrollRequest != null || listState.isScrollInProgress) return@LaunchedEffect
-        val index = latestReaderState.pages.indexOfFirst { it.key == anchorKey }
-        if (index >= 0) listState.requestScrollToItem(index, viewportAnchor.offset)
+        viewportAnchor.positionIn(latestReaderState.pages)?.let { (index, offset) ->
+            listState.requestScrollToItem(index, offset)
+        }
     }
 
     LaunchedEffect(state.scrollRequest?.id) {
