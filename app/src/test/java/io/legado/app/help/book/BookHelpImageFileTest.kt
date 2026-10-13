@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
@@ -44,6 +45,28 @@ class BookHelpImageFileTest {
             }
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    @Test
+    fun `chapter reads reuse legacy images and their explicit download references`() = runBlocking {
+        val src = "https://invalid.example/legacy.jpg"
+        val chapter = BookChapter(bookUrl = book.bookUrl, url = "https://invalid.example/chapter", title = "Legacy")
+        val bytes = png()
+        try {
+            BookHelp.writeImage(book, src, bytes)
+            assertTrue(BookHelp.saveImage(null, book, src, explicitDownloadChapter = "legacy-reference"))
+            val legacy = BookHelp.getImage(book, src)
+            assertEquals(legacy, BookHelp.getImage(book, chapter, src))
+            val (image, lease) = BookHelp.acquireReadingImage(
+                null, book, src, chapterSubject = chapter.getFileName().substringBeforeLast('.'),
+            )
+            lease.use { assertArrayEquals(bytes, image.readBytes()) }
+            val index = java.io.File(java.io.File(image.parentFile, ".downloads"), image.name)
+            val properties = java.util.Properties().apply { index.inputStream().use { load(it) } }
+            assertEquals("explicit", properties.getProperty("chapter.legacy-reference"))
+        } finally {
+            BookHelp.clearCache(book)
         }
     }
 
