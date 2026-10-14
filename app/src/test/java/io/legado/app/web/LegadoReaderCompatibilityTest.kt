@@ -6,9 +6,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.support.InMemoryAppDatabaseFixture
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,7 +23,6 @@ import splitties.init.injectAsAppCtx
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.ServerSocket
-import java.net.Socket
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [35])
@@ -71,6 +68,8 @@ class LegadoReaderCompatibilityTest {
         headers: Map<String, String> = emptyMap()
     ): Triple<Int, String, String?> {
         val conn = URL(urlStr).openConnection() as HttpURLConnection
+        conn.connectTimeout = 5000
+        conn.readTimeout = 5000
         conn.requestMethod = method
         headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
         if (body != null) {
@@ -89,6 +88,42 @@ class LegadoReaderCompatibilityTest {
     }
 
     @Test
+    fun routesAcceptTrailingSlashesAndReturnJsonErrors() = runBlocking {
+        val port = ServerSocket(0).use { it.localPort }
+        val server = KtorServer(port)
+        server.start()
+        try {
+            val (code, body) = request("http://127.0.0.1:$port/getBookshelf/?source=legado-reader")
+            assertEquals(200, code)
+            assertTrue(JsonParser.parseString(body).asJsonObject["isSuccess"].asBoolean)
+
+            val (_, errorBody, errorType) = request("http://127.0.0.1:$port/getBookContent?index=invalid")
+            assertTrue(errorType.orEmpty().startsWith("application/json"))
+            assertTrue(!JsonParser.parseString(errorBody).asJsonObject["isSuccess"].asBoolean)
+
+            val (_, postBody, postType) = request(
+                "http://127.0.0.1:$port/saveBookProgress", "POST",
+                """{"url":[],"name":"Test Book","author":"Test Author","durChapterIndex":1,"durChapterPos":0,"durChapterTime":1}""",
+                mapOf("Content-Type" to "application/json"),
+            )
+            assertTrue(postType.orEmpty().startsWith("application/json"))
+            assertTrue(!JsonParser.parseString(postBody).asJsonObject["isSuccess"].asBoolean)
+
+            val (_, legacyBody) = request(
+                "http://127.0.0.1:$port/saveBookProgress", "POST",
+                """{"name":"Test Book","author":"Test Author","durChapterIndex":1,"durChapterPos":0,"durChapterTime":1}""",
+                mapOf("Content-Type" to "application/json"),
+            )
+            assertTrue(JsonParser.parseString(legacyBody).asJsonObject["isSuccess"].asBoolean)
+            assertEquals(1, appDb.bookDao.getBook("http://example.com/test_book")!!.durChapterIndex)
+
+            assertEquals(404, request("http://127.0.0.1:$port/nonExistentEndpoint").first)
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
     fun pluginBookshelfSupportsDuplicateBooksAndSavesTheSelectedBook() = runBlocking {
         val original = appDb.bookDao.getBook("http://example.com/test_book")!!
         val recent = original.copy(
@@ -100,9 +135,6 @@ class LegadoReaderCompatibilityTest {
         val server = KtorServer(port)
         server.start()
         try {
-            withTimeout(5000) {
-                while (runCatching { Socket("127.0.0.1", port).use {} }.isFailure) delay(25)
-            }
             val (webCode, webBody) = request("http://127.0.0.1:$port/getBookshelf")
             assertEquals(200, webCode)
             assertEquals(2, JsonParser.parseString(webBody).asJsonObject.getAsJsonArray("data").size())

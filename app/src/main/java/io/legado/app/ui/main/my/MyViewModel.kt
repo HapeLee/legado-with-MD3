@@ -55,7 +55,7 @@ class MyViewModel(
     private val _uiState = MutableStateFlow(
         MyUiState(
             isWebServiceRun = WebService.isRun,
-            webServiceAddress = WebService.hostAddress
+            webServiceAddress = if (WebService.isRun) WebService.hostAddress else ""
         )
     )
     val uiState: StateFlow<MyUiState> = _uiState.asStateFlow()
@@ -65,11 +65,13 @@ class MyViewModel(
     init {
         viewModelScope.launch {
             FlowEventBus.with<String>(EventBus.WEB_SERVICE)
-                .collect { address ->
+                .collect {
+                    // 回放的旧事件只触发刷新，不能覆盖服务的当前状态和地址。
+                    val running = WebService.isRun
                     _uiState.update { state ->
                         state.copy(
-                            isWebServiceRun = address.isNotEmpty(),
-                            webServiceAddress = address
+                            isWebServiceRun = running,
+                            webServiceAddress = if (running) WebService.hostAddress else ""
                         )
                     }
                 }
