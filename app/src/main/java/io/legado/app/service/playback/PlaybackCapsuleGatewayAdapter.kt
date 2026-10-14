@@ -13,7 +13,6 @@ import io.legado.app.domain.model.selectPlaybackCapsule
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
-import io.legado.app.model.ReadBook
 import io.legado.app.service.AudioPlayService
 import io.legado.app.service.BaseReadAloudService
 import kotlinx.coroutines.CoroutineScope
@@ -91,7 +90,7 @@ class PlaybackCapsuleGatewayAdapter(
         // A previous service's delayed teardown can clear availability after a new service
         // started. The actual running service owns the session; keep its capsule visible.
         if (!BaseReadAloudService.isRun) return PlaybackCapsuleState()
-        val book = ReadBook.book
+        val book = ReadAloud.bookSession.book
         val session = sessionStore.state.value
         return PlaybackCapsuleState(
             PlaybackCapsuleSource.ReadAloud, book?.bookUrl.orEmpty(), book?.name.orEmpty(),

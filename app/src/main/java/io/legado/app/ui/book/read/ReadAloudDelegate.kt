@@ -31,6 +31,9 @@ import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -55,6 +58,13 @@ class ReadAloudDelegate(
     private val aiProfileGateway: AiProfileGateway,
     private val syncReadAloudVoicesUseCase: SyncReadAloudVoicesUseCase,
 ) {
+
+    val readerSessions = combine(
+        readAloudSessionStore.state, ReadBook.snapshot,
+        ReadAloud.bookSession.state.map { it.book?.bookUrl }.distinctUntilChanged(),
+    ) { session, reader, playingBookUrl ->
+        session to (reader.bookUrl != null && reader.bookUrl == playingBookUrl)
+    }
 
     interface Host {
         val uiState: ReadBookUiState
@@ -170,7 +180,7 @@ class ReadAloudDelegate(
     // --- 播放控制 ---
 
     fun updateProgress(chapterStart: Int) {
-        if (BaseReadAloudService.isPlay() && chapterStart > 0) {
+        if (ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay() && chapterStart > 0) {
             host.publishReadAloudProgress(chapterStart)
         }
     }
@@ -185,16 +195,13 @@ class ReadAloudDelegate(
     fun nextParagraph() = ReadAloud.nextParagraph(context)
 
     /** 朗读面板换章：朗读驱动的章节移动，页面跟随朗读，不视为手动脱离。 */
-    fun prevChapter() = BaseReadAloudService.withSpeechNavigation {
-        ReadBook.moveToPrevChapter(upContent = true, toLast = false)
-    }
+    fun prevChapter() = ReadAloud.previousChapter(context)
 
-    fun nextChapter() = BaseReadAloudService.withSpeechNavigation {
-        ReadBook.moveToNextChapter(true)
-    }
+    fun nextChapter() = ReadAloud.nextChapter(context)
 
     /** 回到朗读位置：恢复页面跟随朗读，并跳到朗读所在章节/字符位置。全程不打断当前朗读。 */
     fun backToSpeakingPosition() {
+        if (!ReadBook.isCurrentBookReadAloud) return
         readAloudSessionStore.restoreReadAloudFollow()
         val speakingChapterIndex = BaseReadAloudService.currentChapterIndex
         val speakingChapterStart = BaseReadAloudService.currentProgress
@@ -571,7 +578,7 @@ class ReadAloudDelegate(
      */
     fun setMultiRoleCast(value: Boolean) {
         scope.launch {
-            val shouldRestart = BaseReadAloudService.isRun
+            val shouldRestart = ReadBook.isCurrentBookReadAloud
             val resumePlaying = shouldRestart && !BaseReadAloudService.pause
             val chapterPosition = readAloudSessionStore.state.value.playback.chapterPosition
             readAloudSettingsRepository.update { it.copy(multiRoleCast = value) }
@@ -609,7 +616,7 @@ class ReadAloudDelegate(
      * 而不是让它按当前页重新起播（不保位的重载会把读过半章的朗读拽回章首）。
      */
     private fun readsDurChapterAloud(): Boolean =
-        BaseReadAloudService.isRun &&
+        ReadBook.isCurrentBookReadAloud &&
             BaseReadAloudService.currentChapterIndex == ReadBook.durChapterIndex
 
     /**
@@ -629,7 +636,7 @@ class ReadAloudDelegate(
      */
     fun setUseMultiSpeaker(value: Boolean) {
         scope.launch {
-            val shouldRestart = BaseReadAloudService.isRun
+            val shouldRestart = ReadBook.isCurrentBookReadAloud
             val resumePlaying = shouldRestart && !BaseReadAloudService.pause
             val chapterPosition = readAloudSessionStore.state.value.playback.chapterPosition
             readAloudSettingsRepository.update { it.copy(useMultiSpeaker = value) }

@@ -226,7 +226,8 @@ object MainIntent {
     }
 
     fun createReadBookMediaControlIntent(context: Context): Intent =
-        createReadBookIntent(context, readAloud = true).apply {
+        createReadBookIntent(context, bookUrl = io.legado.app.model.ReadAloud.bookSession.book?.bookUrl,
+            readAloud = true).apply {
             // 复用 launcher Activity 并移除其上层的旧 Activity；Nav3 父栈另行重建，
             // 让阅读页返回时始终落到主页。
             addFlags(

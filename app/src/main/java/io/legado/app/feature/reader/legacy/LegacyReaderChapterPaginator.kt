@@ -129,6 +129,11 @@ object LegacyReaderChapterPaginator {
         castOptions: ReaderCastOptions = ReaderCastOptions.Disabled,
         /** 每页成型即回调（对照旧 View `TextChapterLayout` 的 `channel.trySend`）；为空表示只要整章批次。 */
         onPage: ((ReaderPage) -> Unit)? = null,
+        titleMode: Int = ReadBookConfig.titleMode,
+        paragraphIndent: String = ReadBookConfig.paragraphIndent,
+        textFullJustify: Boolean = ReadBookConfig.textFullJustify,
+        headerExtentPx: Float = LegacyReaderPageDecorationFactory.headerExtentPx(),
+        footerExtentPx: Float = LegacyReaderPageDecorationFactory.footerExtentPx(),
     ): LegacyReaderChapterPaginationResult {
         if (viewportWidthPx <= 0 || viewportHeightPx <= 0) {
             return LegacyReaderChapterPaginationResult.Unsupported("viewport")
@@ -151,7 +156,7 @@ object LegacyReaderChapterPaginator {
         }
         val singleImage = imageLayoutMode == ReaderImageLayoutMode.SINGLE_PAGE
         val layoutSource = source.withTitleVisibility(
-            ReadBookConfig.titleMode != 2 || chapter.isVolume || content.textList.isEmpty(),
+            titleMode != 2 || chapter.isVolume || content.textList.isEmpty(),
             paginationStyle.titleSegmentation,
         )
         val styleRanges = LegacyReaderStyleRangeMapper.map(
@@ -257,10 +262,10 @@ object LegacyReaderChapterPaginator {
             viewportHeightPx = viewportHeightPx,
             paddingLeftPx = (paginationStyle.paddingLeftPx + contentPaddingLeftPx).toFloat(),
             paddingTopPx = (paginationStyle.paddingTopPx + contentPaddingTopPx).toFloat() +
-                    LegacyReaderPageDecorationFactory.headerExtentPx(),
+                    headerExtentPx,
             paddingRightPx = (paginationStyle.paddingRightPx + contentPaddingRightPx).toFloat(),
             paddingBottomPx = (paginationStyle.paddingBottomPx + contentPaddingBottomPx).toFloat() +
-                    LegacyReaderPageDecorationFactory.footerExtentPx(),
+                    footerExtentPx,
             lineHeightPx = paginationStyle.bodyTextHeightPx,
             baselineOffsetPx = paginationStyle.bodyBaselineOffsetPx,
             lineSpacingMultiplier = paginationStyle.lineSpacingExtra,
@@ -305,12 +310,12 @@ object LegacyReaderChapterPaginator {
             ReaderChapterMeasureStyle(
                 bodyStyle = bodyStyle,
                 titleStyle = titleStyle,
-                bodyIndentCharacters = ReadBookConfig.paragraphIndent.length,
-                bodyIndentText = ReadBookConfig.paragraphIndent,
-                bodyAlignment = if (ReadBookConfig.textFullJustify) ReaderTextAlignment.JUSTIFY else ReaderTextAlignment.START,
+                bodyIndentCharacters = paragraphIndent.length,
+                bodyIndentText = paragraphIndent,
+                bodyAlignment = if (textFullJustify) ReaderTextAlignment.JUSTIFY else ReaderTextAlignment.START,
                 // 旧 TextChapterLayout 让 `imgStyleSingle` 的章标题同样居中（水平，见
                 // `addCharsToLineNatural` 的 startX；垂直见 setTypeText 的 durY 分支）。
-                titleAlignment = if (ReadBookConfig.isMiddleTitle || chapter.isVolume ||
+                titleAlignment = if (titleMode == 1 || chapter.isVolume ||
                     content.textList.isEmpty() || singleImage
                 ) ReaderTextAlignment.CENTER else ReaderTextAlignment.START,
                 imagePageBreakBefore = singleImage,

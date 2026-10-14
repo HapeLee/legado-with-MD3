@@ -24,7 +24,6 @@ import io.legado.app.help.MediaHelp
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.ReadAloud
-import io.legado.app.model.ReadBook
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.LogUtils
@@ -204,7 +203,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
             AppLog.putDebug("朗读列表为空")
-            ReadBook.readAloud()
+            preparePlayback()
             return
         }
         super.play()
@@ -584,7 +583,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                     pageIndex++
                     // 这是引擎自己越过页界续读，不是用户翻页：标记后 ReadBook 既不会脱离
                     // 会话，也不会把 TTS 在第二页重启
-                    withSpeechNavigation { ReadBook.moveToNextPage() }
+                    syncReaderToPlaybackPage()
                 }
                 upTtsProgress(position + 1)
                 upMediaMetadata(showContent = true)

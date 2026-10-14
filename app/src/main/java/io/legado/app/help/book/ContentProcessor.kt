@@ -107,7 +107,19 @@ class ContentProcessor private constructor(
         includeTitle: Boolean = true,
         useReplace: Boolean = true,
         chineseConvert: Boolean = true,
-        reSegment: Boolean = true
+        reSegment: Boolean = true,
+    ): BookContent = getContent(book, chapter, content, includeTitle, useReplace, chineseConvert,
+        reSegment, paragraphIndent = null)
+
+    fun getContent(
+        book: Book,
+        chapter: BookChapter,
+        content: String,
+        includeTitle: Boolean = true,
+        useReplace: Boolean = true,
+        chineseConvert: Boolean = true,
+        reSegment: Boolean = true,
+        paragraphIndent: String?,
     ): BookContent {
         var mContent = content
         var sameTitleRemoved = false
@@ -241,7 +253,7 @@ class ContentProcessor private constructor(
                 if (contents.isEmpty() && includeTitle) {
                     contents.add(paragraph)
                 } else {
-                    contents.add("${ReadBookConfig.paragraphIndent}$paragraph")
+                    contents.add("${paragraphIndent ?: ReadBookConfig.paragraphIndent}$paragraph")
                 }
             }
         }

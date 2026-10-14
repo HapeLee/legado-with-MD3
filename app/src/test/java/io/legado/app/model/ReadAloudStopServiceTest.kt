@@ -26,7 +26,7 @@ import splitties.init.injectAsAppCtx
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [35])
 class ReadAloudStopServiceTest {
-    private lateinit var previousServiceClass: Class<*>
+    private var previousServiceClass: Class<*>? = null
 
     @Before
     fun setUp() {
@@ -37,10 +37,10 @@ class ReadAloudStopServiceTest {
                 single<ReadAloudSettingsGateway> { TestReadAloudSettingsGateway() }
             })
         }
-        val serviceClassField = ReadAloud::class.java.getDeclaredField("aloudClass").apply {
+        val serviceClassField = ReadAloud::class.java.getDeclaredField("selectedAloudClass").apply {
             isAccessible = true
         }
-        previousServiceClass = serviceClassField.get(ReadAloud) as Class<*>
+        previousServiceClass = serviceClassField.get(ReadAloud) as Class<*>?
         serviceClassField.set(ReadAloud, TTSReadAloudService::class.java)
         setServiceFlag("isRun", true)
         setServiceFlag("stopRequested", false)
@@ -48,7 +48,7 @@ class ReadAloudStopServiceTest {
 
     @After
     fun tearDown() {
-        ReadAloud::class.java.getDeclaredField("aloudClass").apply {
+        ReadAloud::class.java.getDeclaredField("selectedAloudClass").apply {
             isAccessible = true
             set(ReadAloud, previousServiceClass)
         }

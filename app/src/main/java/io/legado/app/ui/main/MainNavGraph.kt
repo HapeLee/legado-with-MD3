@@ -1,4 +1,5 @@
 package io.legado.app.ui.main
+import io.legado.app.model.ReadBook
 
 import android.app.Activity
 import android.content.Intent
@@ -983,7 +984,7 @@ fun MainActivity.mainEntryProvider(
                 // 回到阅读界面时把可见页对齐到当前朗读位置：朗读期间用户可能进听书页跳段/跳章，
                 // 服务驱动的是内部页游标，可见页需要显式回位，否则停在离开时那一页。
                 // 只在跟随状态下做（用户手动翻页脱离后不回拉），语义与「回到朗读位置」一致。
-                if (BaseReadAloudService.isRun && readAloudFollow[0]) {
+                if (ReadBook.isCurrentBookReadAloud && readAloudFollow[0]) {
                     readBookViewModel.onIntent(ReadBookIntent.BackToSpeakingPosition)
                 }
             }

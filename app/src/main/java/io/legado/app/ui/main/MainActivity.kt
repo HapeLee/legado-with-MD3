@@ -897,7 +897,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                         onSwitchToClassic = { bookUrl ->
                             // 栈顶是阅读界面：让它直接落在经典朗读控制页；
                             // 否则没有可用的阅读界面，打开一个新的。
-                            if (isReaderOnTop(backStack)) {
+                            if (isReaderOnTop(backStack) &&
+                                io.legado.app.model.ReadBook.book?.bookUrl == bookUrl
+                            ) {
                                 ReadAloudControlsRequestBus.request()
                             } else {
                                 MainNavigator.navigateToRoute(

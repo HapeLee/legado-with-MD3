@@ -417,7 +417,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
             AppLog.putDebug("朗读列表为空")
-            ReadBook.readAloud()
+            preparePlayback()
         } else {
             super.play()
             if (readAloudSettings.streamReadAloudAudio && !hasFileSynthesisCue()) {
@@ -929,7 +929,9 @@ class HttpReadAloudService : BaseReadAloudService(),
             chapterIndex = chapter.index,
             title = displayTitle,
             semanticContent = source.semanticContent,
-            pageStarts = ReadBook.readerPagination(chapter.index)?.pageStarts.orEmpty(),
+            pageStarts = bookSession.pagination?.takeIf {
+                bookSession.owns(book.bookUrl) && it.chapterIndex == chapter.index
+            }?.pageStarts.orEmpty(),
             contentSplitMode = contentSplitMode,
         )
         val splitPolicy = contentSplitPolicy(contentSplitMode)
@@ -954,8 +956,8 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private suspend fun preDownloadAudios(httpTts: HttpTTS) {
-        val book = ReadBook.book ?: return
-        val currentIdx = ReadBook.durChapterIndex
+        val book = bookSession.book ?: return
+        val currentIdx = bookSession.chapterIndex
         val limit = readAloudSettings.audioPreDownloadNum
         val concurrency = synthesisConcurrency(httpTts)
         var consecutiveFailures = 0
@@ -1238,8 +1240,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         httpTts: HttpTTS,
         downloaderChannel: Channel<Downloader>
     ) {
-        val book = ReadBook.book ?: return
-        val currentIdx = ReadBook.durChapterIndex
+        val book = bookSession.book ?: return
+        val currentIdx = bookSession.chapterIndex
         val limit = readAloudSettings.audioPreDownloadNum
         val concurrency = synthesisConcurrency(httpTts)
         var consecutiveFailures = 0
@@ -1611,7 +1613,7 @@ class HttpReadAloudService : BaseReadAloudService(),
      * 写入路径不走这里——清缓存、重新合成永远只落在缓存目录，下载区不会被覆盖。
      */
     private fun speakFileForPlay(name: String): File {
-        return ReadAloudAudioStore.downloadedFile(ReadBook.book?.bookUrl, name)
+        return ReadAloudAudioStore.downloadedFile(bookSession.book?.bookUrl, name)
             ?: getSpeakFileAsMd5(name)
     }
 
