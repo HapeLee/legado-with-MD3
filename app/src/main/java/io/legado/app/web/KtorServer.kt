@@ -120,7 +120,7 @@ class KtorServer(private val port: Int) {
 
                 get("/getBookSource") { handleGet { BookSourceController.getSource(it) } }
                 get("/getBookSources") { handleGet { BookSourceController.sources } }
-                get("/getBookshelf") { handleGet { BookController.bookshelf } }
+                get("/getBookshelf") { handleGet { BookController.getBookshelf(it) } }
                 get("/getChapterList") { handleGet { BookController.getChapterList(it) } }
                 get("/refreshToc") { handleGet { BookController.refreshToc(it) } }
                 get("/getBookContent") { handleGet { BookController.getBookContent(it) } }

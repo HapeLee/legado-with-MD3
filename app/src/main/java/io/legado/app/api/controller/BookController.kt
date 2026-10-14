@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import androidx.core.graphics.drawable.toBitmap
 import com.bumptech.glide.Glide
+import com.google.gson.JsonParser
 import io.legado.app.api.ReturnData
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -46,25 +47,31 @@ object BookController {
     /**
      * 书架所有书籍
      */
-    val bookshelf: ReturnData
-        get() {
-            val books = appDb.bookDao.all
-            val returnData = ReturnData()
-            return if (books.isEmpty()) {
-                returnData.setErrorMsg("还没有添加小说")
-            } else {
-                val data = when (bookshelfGateway.currentSettings.bookshelfSort) {
-                    1 -> books.sortedByDescending { it.latestChapterTime }
-                    2 -> books.sortedWith { o1, o2 ->
-                        o1.name.cnCompare(o2.name)
-                    }
-
-                    3 -> books.sortedBy { it.order }
-                    else -> books.sortedByDescending { it.durChapterTime }
-                }
-                returnData.setData(data)
-            }
+    fun getBookshelf(parameters: Map<String, List<String>>): ReturnData {
+        val allBooks = appDb.bookDao.all
+        val books = if (parameters["source"]?.firstOrNull() == "legado-reader") {
+            // 插件 1.5.1 用 author#name 构建 Map，重复键会使整个书架加载失败。
+            allBooks.sortedByDescending { it.durChapterTime }
+                .distinctBy { "${it.author}#${it.name}" }
+        } else {
+            allBooks
         }
+        val returnData = ReturnData()
+        return if (books.isEmpty()) {
+            returnData.setErrorMsg("还没有添加小说")
+        } else {
+            val data = when (bookshelfGateway.currentSettings.bookshelfSort) {
+                1 -> books.sortedByDescending { it.latestChapterTime }
+                2 -> books.sortedWith { o1, o2 ->
+                    o1.name.cnCompare(o2.name)
+                }
+
+                3 -> books.sortedBy { it.order }
+                else -> books.sortedByDescending { it.durChapterTime }
+            }
+            returnData.setData(data)
+        }
+    }
 
     /**
      * 获取封面
@@ -258,7 +265,16 @@ object BookController {
         GSON.fromJsonObject<BookProgress>(postData)
             .onFailure { it.printOnDebug() }
             .getOrNull()?.let { bookProgress ->
-                appDb.bookDao.getBook(bookProgress.name, bookProgress.author)?.let { book ->
+                val url = JsonParser.parseString(postData).asJsonObject["url"]
+                    ?.takeUnless { it.isJsonNull }?.asString
+                val targetBook = if (url.isNullOrEmpty()) {
+                    appDb.bookDao.getBook(bookProgress.name, bookProgress.author)
+                } else {
+                    appDb.bookDao.getBook(url)
+                }
+                targetBook?.takeIf {
+                    it.name == bookProgress.name && it.author == bookProgress.author
+                }?.let { book ->
                     book.durChapterIndex = bookProgress.durChapterIndex
                     book.durChapterPos = bookProgress.durChapterPos
                     book.durChapterTitle = bookProgress.durChapterTitle
@@ -268,9 +284,7 @@ object BookController {
                     }
                     appDb.bookDao.update(book)
                     ReadBook.book?.let {
-                        if (it.name == bookProgress.name &&
-                            it.author == bookProgress.author
-                        ) {
+                        if (it.bookUrl == book.bookUrl) {
                             ReadBook.webBookProgress = bookProgress
                         }
                     }
