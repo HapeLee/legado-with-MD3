@@ -72,7 +72,7 @@ object DirectLinkUpload {
 
     val defaultRules: List<Rule> by lazy {
         val json = String(
-            appCtx.assets.open("defaultData${File.separator}directLinkUpload.json")
+            appCtx.assets.open("defaultData/directLinkUpload.json")
                 .readBytes()
         )
         GSON.fromJsonArray<Rule>(json).getOrThrow()
