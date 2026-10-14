@@ -65,6 +65,7 @@ sealed interface MangaReaderItemUi {
         val pageIndex: Int,
         val pageCount: Int,
         val chapterName: String,
+        val chapterSubject: String,
         val loadState: MangaPageLoadState = MangaPageLoadState.Queued,
         val retryRevision: Int = 0,
     ) : MangaReaderItemUi
@@ -132,6 +133,7 @@ data class MangaReaderSettings(
     val longPressEnabled: Boolean = true,
     val preDownloadCount: Int = 10,
     val chapterPrefetchCount: Int = 0,
+    val previousChapterPrefetchCount: Int = 0,
     val autoOfflineCache: Boolean = false,
     val autoReadSpeed: Int = 3,
     val volumeKeyPage: Boolean = false,
@@ -242,6 +244,7 @@ sealed interface MangaReaderIntent {
     data class UpdateMenuPaletteStyle(val value: String) : MangaReaderIntent
     data class UpdateClickAction(val index: Int, val action: Int) : MangaReaderIntent
     data class RetryChapter(val chapterIndex: Int) : MangaReaderIntent
+    data class RequestAdjacentChapter(val chapterIndex: Int) : MangaReaderIntent
     data class PageLoadStarted(val requestId: MangaPageRequestId, val force: Boolean = false) :
         MangaReaderIntent
 
@@ -321,6 +324,7 @@ enum class MangaReaderSettingKey {
     LONG_PRESS,
     PRE_DOWNLOAD,
     CHAPTER_PREFETCH,
+    CHAPTER_PREFETCH_PREV,
     AUTO_OFFLINE_CACHE,
     AUTO_READ_SPEED,
     VOLUME_KEY_PAGE,

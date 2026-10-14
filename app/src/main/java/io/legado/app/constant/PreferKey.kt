@@ -129,6 +129,7 @@ object PreferKey {
     const val bitmapCacheSize = "bitmapCacheSize"
     const val imageRetainNum = "imageRetainNum"
     const val preDownloadNum = "preDownloadNum"
+    const val preDownloadNumPrev = "preDownloadNumPrev"
     const val mangaPreDownloadNum = "mangaPreDownloadNum"
     const val mangaChapterPrefetchCount = "mangaChapterPrefetchCount"
     const val mangaAutoOfflineCache = "mangaAutoOfflineCache"

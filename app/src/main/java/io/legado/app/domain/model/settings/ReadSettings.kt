@@ -54,6 +54,7 @@ data class ReadSettings(
     val autoReadSpeed: Int = 10,
     val systemTypefaces: Int = 0,
     val preDownloadNum: Int = 10,
+    val preDownloadNumPrev: Int = 0,
     val prevKeys: String = "",
     val nextKeys: String = "",
     val tocUiUseReplace: Boolean = false,

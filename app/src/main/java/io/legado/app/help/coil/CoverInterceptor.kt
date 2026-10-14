@@ -33,6 +33,7 @@ class CoverInterceptor(
         BookHelp.acquireReadingImage(
             source, book, data, request.extras[CoverExtras.LoadOnlyWifi] == true,
             request.extras[CoverExtras.MangaFileTransferStarted] ?: {},
+            request.extras[CoverExtras.MangaChapterSubject],
         )
     },
 ) : Interceptor {

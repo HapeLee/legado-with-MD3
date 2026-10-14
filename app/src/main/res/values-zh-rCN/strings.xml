@@ -94,6 +94,8 @@
     <string name="book_source">书源</string>
     <string name="book_source_manage">书源管理</string>
     <string name="book_source_manage_desc">新建 • 导入 • 编辑或管理书源</string>
+    <string name="book_source_edit">书源编辑</string>
+    <string name="book_source_login">书源登录</string>
     <string name="setting">设置</string>
     <string name="theme_setting">外观</string>
     <string name="theme_setting_s">主题 • 深色模式 • 界面设置</string>
@@ -844,6 +846,7 @@
     <string name="add_to_text_context_menu_t">文字操作显示搜索</string>
     <string name="record_log">记录日志</string>
     <string name="log">日志</string>
+    <string name="read_log">阅读日志</string>
     <string name="chinese_converter">中文简繁体转换</string>
     <string name="change_icon_error">图标为矢量图标，Android 8.0 以前不支持</string>
     <string name="aloud_config">朗读设置</string>
@@ -1071,6 +1074,7 @@
     <string name="donate_summary">您的支持是我更新的动力</string>
     <string name="about_summary">公众号【开源阅读软件】</string>
     <string name="read_record">阅读记录</string>
+    <string name="book_disable_read_record">独立关闭阅读记录</string>
     <string name="del_read_record">删除阅读记录</string>
     <string name="read_record_summary">阅读时间记录</string>
     <string name="local_tts">本地 TTS</string>
@@ -1126,9 +1130,11 @@
     <string name="single_url">单 URL</string>
     <string name="export_bookshelf">导出书单</string>
     <string name="import_bookshelf">导入书单</string>
-    <string name="pre_download">预下载</string>
+    <string name="pre_download">向后预下载</string>
     <string name="pre_download_m">预下载%s页</string>
-    <string name="pre_download_s">预先下载 %s 章正文</string>
+    <string name="pre_download_s">预先下载向后 %s 章正文</string>
+    <string name="pre_download_prev">向前预下载</string>
+    <string name="pre_download_prev_s">预先下载向前 %s 章正文</string>
     <string name="is_enabled">是否启用</string>
     <string name="background_image">背景图片</string>
     <string name="background_image_blurring">背景图片虚化</string>
@@ -2610,6 +2616,8 @@
     <string name="no_logs">暂无日志</string>
     <string name="no_crash_logs">暂无崩溃日志</string>
     <string name="select_or_search_category">选择或搜索分类</string>
+    <string name="explore_jump_page">跳转页码</string>
+    <string name="explore_jump_page_hint">页码</string>
     <string name="multi_select_items">多选项目</string>
     <string name="recently_read">最近阅读：</string>
     <string name="no_favorites_rss">还没有收藏订阅！</string>

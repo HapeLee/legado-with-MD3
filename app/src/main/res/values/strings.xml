@@ -95,6 +95,8 @@
     <string name="book_source">Book sources</string>
     <string name="book_source_manage">Sources Management</string>
     <string name="book_source_manage_desc">Create/Import/Edit/Manage Book Sources</string>
+    <string name="book_source_edit">Book source edit</string>
+    <string name="book_source_login">Book source login</string>
     <string name="setting">Settings</string>
     <string name="theme_setting">Theme Settings</string>
     <string name="theme_setting_s">Some settings related to interface or color</string>
@@ -875,6 +877,7 @@
     <string name="add_to_text_context_menu_t">Show Search in Text Actions</string>
     <string name="record_log">Record Log</string>
     <string name="log">Log</string>
+    <string name="read_log">Read log</string>
     <string name="chinese_converter">Simplified conversion</string>
     <string name="change_icon_error">The icon is a vector icon, which was not supported before Android 8.0</string>
     <string name="aloud_config">Speech settings</string>
@@ -1102,6 +1105,7 @@
     <string name="donate_summary">Your donation makes this app better</string>
     <string name="about_summary">WeChat official account [Open Source Reading]</string>
     <string name="read_record">Read Record</string>
+    <string name="book_disable_read_record">Disable record for this book</string>
     <string name="del_read_record">Delete Read record</string>
     <string name="read_record_summary">Read record summary</string>
     <string name="local_tts">Local TTS</string>
@@ -1161,9 +1165,11 @@
     <string name="single_url">Single URL</string>
     <string name="export_bookshelf">Export Book List</string>
     <string name="import_bookshelf">Import Book List</string>
-    <string name="pre_download">Download in Advance</string>
+    <string name="pre_download">Pre-download (following)</string>
     <string name="pre_download_m">Pre-download %s pages</string>
-    <string name="pre_download_s">Download %s chapters in advance</string>
+    <string name="pre_download_s">Pre-download %s following chapters</string>
+    <string name="pre_download_prev">Pre-download (previous)</string>
+    <string name="pre_download_prev_s">Pre-download %s previous chapters</string>
     <string name="is_enabled">Is enabled</string>
     <string name="background_image">Background Image</string>
     <string name="background_image_blurring">Background image blurring</string>
@@ -2633,6 +2639,8 @@
     <string name="no_logs">No logs</string>
     <string name="no_crash_logs">No crash logs</string>
     <string name="select_or_search_category">Select or search category</string>
+    <string name="explore_jump_page">Jump to page</string>
+    <string name="explore_jump_page_hint">Page number</string>
     <string name="multi_select_items">Multi-select Items</string>
     <string name="recently_read">Recently Read: </string>
     <string name="no_favorites_rss">No favorite subscriptions yet!</string>

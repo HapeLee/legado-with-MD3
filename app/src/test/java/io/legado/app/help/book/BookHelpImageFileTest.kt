@@ -3,9 +3,21 @@ package io.legado.app.help.book
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.util.Base64
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
+import io.legado.app.model.ImageProvider
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.domain.model.settings.DownloadCacheSettings
+import io.legado.app.domain.model.settings.OtherSettings
+import kotlinx.coroutines.flow.flowOf
+import org.junit.After
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.dsl.module
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
@@ -33,10 +45,32 @@ class BookHelpImageFileTest {
     @Before
     fun setUp() {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
+        startKoin {
+            modules(module {
+                single<DownloadCacheSettingsGateway> {
+                    object : DownloadCacheSettingsGateway {
+                        override val currentSettings = DownloadCacheSettings()
+                        override val settings = flowOf(currentSettings)
+                        override suspend fun update(transform: (DownloadCacheSettings) -> DownloadCacheSettings) = Unit
+                    }
+                }
+                single<OtherSettingsGateway> {
+                    object : OtherSettingsGateway {
+                        override val currentSettings = OtherSettings()
+                        override val settings = flowOf(currentSettings)
+                        override suspend fun update(transform: (OtherSettings) -> OtherSettings) = Unit
+                    }
+                }
+            })
+        }
     }
 
-    private fun png(): ByteArray {
+    @After
+    fun tearDown() = stopKoin()
+
+    private fun png(color: Int = Color.TRANSPARENT): ByteArray {
         val bitmap = Bitmap.createBitmap(4, 6, Bitmap.Config.ARGB_8888)
+        bitmap.eraseColor(color)
         return try {
             ByteArrayOutputStream().use { output ->
                 assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
@@ -44,6 +78,96 @@ class BookHelpImageFileTest {
             }
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    @Test
+    fun `forced refresh updates duplicate chapter images and preserves explicit download references`() = runBlocking {
+        val fresh = png(Color.BLUE)
+        val src = "data:image/png;base64,${Base64.encodeToString(fresh, Base64.NO_WRAP)}"
+        val first = BookChapter(bookUrl = book.bookUrl, title = "First", index = 0)
+        val second = BookChapter(bookUrl = book.bookUrl, title = "Second", index = 1)
+        try {
+            for (chapter in listOf(first, second)) {
+                BookHelp.writeImage(book, chapter, src, png(Color.RED))
+                assertTrue(BookHelp.saveImage(null, book, src, chapter, explicitDownloadChapter = "${chapter.index}.audit"))
+                val copy = BookHelp.getImage(book, chapter, src)
+                val bitmap = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
+                ImageProvider.bitmapLruCache.put(copy.absolutePath, bitmap)
+                assertTrue(ImageProvider.bitmapLruCache[copy.absolutePath] != null)
+            }
+            val selected = BookHelp.getImage(book, src)
+            assertTrue(ImageProvider.refreshImage(book, src, null))
+            assertTrue(selected.isFile)
+            for (chapter in listOf(first, second)) {
+                val copy = BookHelp.getImage(book, chapter, src)
+                assertArrayEquals(fresh, copy.readBytes())
+                val index = java.io.File(java.io.File(copy.parentFile, ".downloads"), copy.name)
+                val properties = java.util.Properties().apply { index.inputStream().use { load(it) } }
+                assertEquals("explicit", properties.getProperty("chapter.${chapter.index}.audit"))
+                assertEquals(null, ImageProvider.bitmapLruCache[copy.absolutePath])
+            }
+        } finally {
+            ImageProvider.bitmapLruCache.evictAll()
+            BookHelp.clearCache(book)
+        }
+    }
+
+    @Test
+    fun `failed forced refresh keeps the last valid original`() = runBlocking {
+        val src = "data:image/png;base64,bm90IGFuIGltYWdl"
+        val original = png(Color.RED)
+        try {
+            BookHelp.writeImage(book, src, original)
+            assertFalse(ImageProvider.refreshImage(book, src, null))
+            assertArrayEquals(original, BookHelp.getImage(book, src).readBytes())
+        } finally {
+            BookHelp.clearCache(book)
+        }
+    }
+
+    @Test
+    fun `text reader finds chapter downloaded images offline and refresh keeps the same path`() = runBlocking {
+        val src = "https://invalid.example/chapter-image.jpg"
+        val chapter = BookChapter(bookUrl = book.bookUrl, title = "Downloaded")
+        val bytes = png()
+        try {
+            BookHelp.writeImage(book, chapter, src, bytes)
+            val downloaded = BookHelp.getImage(book, chapter, src)
+            assertEquals(downloaded, ImageProvider.cacheImage(book, src, null))
+            val bitmap = ImageProvider.getImage(book, src, 4)
+            assertFalse(ImageProvider.isErrorBitmap(bitmap))
+            assertEquals(4, bitmap.width)
+            assertArrayEquals(bytes, BookHelp.getImage(book, src).readBytes())
+            downloaded.delete()
+            assertEquals(downloaded, BookHelp.getImage(book, src))
+            BookHelp.writeImage(book, src, bytes)
+            assertTrue(downloaded.isFile)
+        } finally {
+            ImageProvider.bitmapLruCache.evictAll()
+            BookHelp.clearCache(book)
+        }
+    }
+
+    @Test
+    fun `chapter reads reuse legacy images and their explicit download references`() = runBlocking {
+        val src = "https://invalid.example/legacy.jpg"
+        val chapter = BookChapter(bookUrl = book.bookUrl, url = "https://invalid.example/chapter", title = "Legacy")
+        val bytes = png()
+        try {
+            BookHelp.writeImage(book, src, bytes)
+            assertTrue(BookHelp.saveImage(null, book, src, explicitDownloadChapter = "legacy-reference"))
+            val legacy = BookHelp.getImage(book, src)
+            assertEquals(legacy, BookHelp.getImage(book, chapter, src))
+            val (image, lease) = BookHelp.acquireReadingImage(
+                null, book, src, chapterSubject = chapter.getFileName().substringBeforeLast('.'),
+            )
+            lease.use { assertArrayEquals(bytes, image.readBytes()) }
+            val index = java.io.File(java.io.File(image.parentFile, ".downloads"), image.name)
+            val properties = java.util.Properties().apply { index.inputStream().use { load(it) } }
+            assertEquals("explicit", properties.getProperty("chapter.legacy-reference"))
+        } finally {
+            BookHelp.clearCache(book)
         }
     }
 

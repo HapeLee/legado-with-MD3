@@ -2431,11 +2431,7 @@ class ReadBookViewModel(
         buildSet {
             sources.forEach { source ->
                 val refreshed = runCatching {
-                    val vFile = BookHelp.getImage(book, source)
-                    ImageProvider.bitmapLruCache.remove(vFile.absolutePath)
-                    vFile.delete()
-                    ImageProvider.cacheImage(book, source, ReadBook.bookSource)
-                    vFile.isFile && vFile.length() > 0L
+                    ImageProvider.refreshImage(book, source, ReadBook.bookSource)
                 }.getOrDefault(false)
                 if (refreshed) add(source)
             }

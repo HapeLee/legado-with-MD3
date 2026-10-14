@@ -113,11 +113,55 @@ class DefaultMangaReaderSessionTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
 
-        session.execute(MangaSessionCommand.PrefetchCountChanged(2))
+        session.execute(MangaSessionCommand.PrefetchCountChanged(nextCount = 2, prevCount = 0))
         session.execute(MangaSessionCommand.Open("book-a", true, false))
         advanceUntilIdle()
 
         assertEquals(listOf("book-a" to 1, "book-a" to 2), gateway.prefetched)
+        session.close()
+    }
+
+    @Test
+    fun `automatic offline switch gates downloads without disabling adjacent metadata or manual navigation`() = runTest {
+        val gateway = FakeGateway()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
+        session.execute(MangaSessionCommand.PrefetchCountChanged(2, 1, autoOfflineCache = false))
+        session.execute(MangaSessionCommand.Open("book-a", true, false))
+        advanceUntilIdle()
+        gateway.complete("book-a", 0)
+        advanceUntilIdle()
+        session.execute(MangaSessionCommand.VisiblePageChanged(0, 0))
+        advanceUntilIdle()
+        assertTrue(gateway.prefetched.isEmpty())
+        assertTrue(session.state.value.nextChapter is MangaChapterState.Loading)
+        session.execute(MangaSessionCommand.PrefetchCountChanged(0, 0, autoOfflineCache = true))
+        advanceUntilIdle()
+        assertTrue(gateway.prefetched.isEmpty())
+        session.execute(MangaSessionCommand.PrefetchCountChanged(2, 0, autoOfflineCache = true))
+        advanceUntilIdle()
+        assertEquals(listOf("book-a" to 1, "book-a" to 2), gateway.prefetched)
+        session.close()
+    }
+
+    @Test
+    fun `prefetch covers the previous direction within bounds`() = runTest {
+        val gateway = FakeGateway()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
+
+        session.execute(MangaSessionCommand.Open("book-a", true, false))
+        advanceUntilIdle()
+        gateway.complete("book-a", 0)
+        advanceUntilIdle()
+        session.execute(MangaSessionCommand.OpenChapter(3, 0))
+        advanceUntilIdle()
+        gateway.prefetched.clear()
+
+        session.execute(MangaSessionCommand.PrefetchCountChanged(nextCount = 0, prevCount = 2))
+        advanceUntilIdle()
+
+        assertEquals(listOf("book-a" to 2, "book-a" to 1), gateway.prefetched)
         session.close()
     }
 
@@ -142,6 +186,8 @@ class DefaultMangaReaderSessionTest {
         val gateway = FakeGateway()
         val dispatcher = StandardTestDispatcher(testScheduler)
         val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
+
+        session.execute(MangaSessionCommand.PrefetchCountChanged(nextCount = 1, prevCount = 0))
 
         session.execute(MangaSessionCommand.Open("book-a", true, false))
         advanceUntilIdle()
@@ -176,6 +222,8 @@ class DefaultMangaReaderSessionTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
 
+        session.execute(MangaSessionCommand.PrefetchCountChanged(nextCount = 0, prevCount = 1))
+
         session.execute(MangaSessionCommand.Open("book-a", true, false))
         advanceUntilIdle()
         session.execute(MangaSessionCommand.OpenChapter(2, 0))
@@ -198,6 +246,38 @@ class DefaultMangaReaderSessionTest {
         assertEquals(1, (state.currentChapter as MangaChapterState.Ready).chapter.chapterIndex)
         assertEquals(2, (state.nextChapter as MangaChapterState.Ready).chapter.chapterIndex)
         assertEquals("book-a" to 0, gateway.loadedRequests.lastOrNull())
+        session.close()
+    }
+
+    @Test
+    fun `zero prefetch loads adjacent chapters only when requested and does not fetch beyond promotion`() = runTest {
+        val gateway = FakeGateway()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
+        session.execute(MangaSessionCommand.Open("book-a", true, false))
+        session.execute(MangaSessionCommand.OpenChapter(2, 0))
+        advanceUntilIdle()
+        gateway.complete("book-a", 2)
+        advanceUntilIdle()
+        session.execute(MangaSessionCommand.VisiblePageChanged(2, 0))
+        advanceUntilIdle()
+        assertTrue(session.state.value.previousChapter is MangaChapterState.Empty)
+        assertTrue(session.state.value.nextChapter is MangaChapterState.Empty)
+        val initialLoads = gateway.loadedRequests.size
+        session.execute(MangaSessionCommand.RequestAdjacentChapter(1))
+        session.execute(MangaSessionCommand.RequestAdjacentChapter(1))
+        session.execute(MangaSessionCommand.RequestAdjacentChapter(4))
+        advanceUntilIdle()
+        assertEquals(initialLoads + 1, gateway.loadedRequests.size)
+        gateway.complete("book-a", 1)
+        advanceUntilIdle()
+        session.execute(MangaSessionCommand.PromoteVisibleChapter(1, 0))
+        advanceUntilIdle()
+        assertEquals(1, session.state.value.chapterIndex)
+        assertEquals(initialLoads + 1, gateway.loadedRequests.size)
+        session.execute(MangaSessionCommand.RequestAdjacentChapter(0))
+        advanceUntilIdle()
+        assertEquals("book-a" to 0, gateway.loadedRequests.last())
         session.close()
     }
 
@@ -289,6 +369,7 @@ class DefaultMangaReaderSessionTest {
             chapterUrl = null,
             pages = listOf(MangaPageContent("$bookUrl/$chapterIndex", 0, 1)),
             isVolume = false,
+            chapterSubject = "chapter-$chapterIndex",
         )
 
         override suspend fun persistProgress(bookUrl: String, chapterIndex: Int, pageIndex: Int) {

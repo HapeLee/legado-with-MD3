@@ -3,7 +3,6 @@ package io.legado.app.web.utils
 import android.content.res.AssetManager
 import android.text.TextUtils
 import splitties.init.appCtx
-import java.io.File
 import java.io.InputStream
 
 
@@ -18,7 +17,7 @@ class AssetsWeb(rootPath: String) {
     }
 
     fun getInputStream(path: String): InputStream? {
-        val path1 = (rootPath + path).replace("/+".toRegex(), File.separator)
+        val path1 = (rootPath + "/" + path).replace("/+".toRegex(), "/").trimStart('/')
         return try {
             assetManager.open(path1)
         } catch (e: Exception) {

@@ -359,6 +359,12 @@ class ReadRecordRepository(
     suspend fun saveReadSession(newSession: ReadRecordSession) {
         if (!readRecordEnabled.first()) return
         if (newSession.endTime <= newSession.startTime) return
+        // 单独为某本书关掉记录时，只跳过这本书的写入，其他书照常。
+        if (newSession.bookUrl.isNotBlank() &&
+            withContext(Dispatchers.IO) {
+                database.bookDao.getBook(newSession.bookUrl)?.disableReadRecord == true
+            }
+        ) return
         val normalizedSession = newSession.copy(
             bookName = ReadRecordIdentity.bookName(newSession.bookName),
             bookAuthor = ReadRecordIdentity.author(newSession.bookAuthor),

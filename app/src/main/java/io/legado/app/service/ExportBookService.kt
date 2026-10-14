@@ -284,7 +284,7 @@ class ExportBookService : BaseService(), KoinComponent {
     }
 
     private data class SrcData(
-        val chapterTitle: String,
+        val chapter: BookChapter,
         val index: Int,
         val src: String
     )
@@ -315,14 +315,14 @@ class ExportBookService : BaseService(), KoinComponent {
                 // Only export images for original source
                 if (source == ContentSource.Original) {
                     srcList?.forEach {
-                        val vFile = BookHelp.getImage(book, it.src)
+                        val vFile = BookHelp.getImage(book, it.chapter, it.src)
                         if (vFile.exists()) {
                             fileDoc.createFileIfNotExist(
                                 "${it.index}-${MD5Utils.md5Encode16(it.src)}.jpg",
                                 subDirs = arrayOf(
                                     "${book.name}_${book.author}",
                                     "images",
-                                    it.chapterTitle
+                                    it.chapter.title
                                 )
                             ).writeFile(vFile)
                         }
@@ -430,7 +430,7 @@ class ExportBookService : BaseService(), KoinComponent {
                 for (m in AppPattern.imgPattern.findAll(text)) {
                     m.groupValues[1].takeIf { it.isNotEmpty() }?.let {
                         val src = NetworkUtils.getAbsoluteURL(chapter.url, it)
-                        srcList.add(SrcData(chapter.title, index, src))
+                        srcList.add(SrcData(chapter, index, src))
                     }
                 }
             }
@@ -733,7 +733,7 @@ class ExportBookService : BaseService(), KoinComponent {
                         "${MD5Utils.md5Encode16(src)}.${BookHelp.getImageSuffix(src)}"
                     val href =
                         "Images/${MD5Utils.md5Encode16(src)}.${BookHelp.getImageSuffix(src)}"
-                    val vFile = BookHelp.getImage(book, src)
+                    val vFile = BookHelp.getImage(book, chapter, src)
                     val fp = FileResourceProvider(vFile.parent)
                     if (vFile.exists()) {
                         val img = LazyResource(fp, href, originalHref)

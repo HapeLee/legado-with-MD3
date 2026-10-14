@@ -58,6 +58,21 @@ class ReadBookProgressUploadTest {
     }
 
     @Test
+    fun readRecordToggleForAnotherCopyDoesNotReplaceOrChangeTheActiveBook() {
+        val anotherCopy = currentBook.copy(bookUrl = "https://example.test/another-copy")
+        ReadBook.setReadRecordDisabled(anotherCopy.bookUrl, true)
+        assertSame(currentBook, ReadBook.book)
+        assertEquals(false, currentBook.disableReadRecord)
+
+        ReadBook.setReadRecordDisabled(currentBook.bookUrl, true)
+        assertSame(currentBook, ReadBook.book)
+        assertEquals(true, currentBook.disableReadRecord)
+        assertEquals(8, currentBook.durChapterIndex)
+        assertEquals(850, currentBook.durChapterPos)
+        assertEquals(2_000L, currentBook.durChapterTime)
+    }
+
+    @Test
     fun lateUploadOfOldChapterOnlySavesItsSyncTime() {
         // The network completes after the reader has replaced the original Book instance.
         uploadingBook.syncTime = 3_000

@@ -26,6 +26,8 @@ data class ExploreShowUiState(
     val filterStateId: Int = 0,
     val bookshelfConflict: BookshelfConflict? = null,
     val isResolvingBookshelfConflict: Boolean = false,
+    val currentPage: Int = 1,
+    val canJumpPage: Boolean = false,
 )
 
 @Stable
@@ -47,6 +49,7 @@ sealed interface ExploreShowIntent {
     ) : ExploreShowIntent
 
     data object LoadMore : ExploreShowIntent
+    data class JumpToPage(val page: Int) : ExploreShowIntent
     data object ForceLoadNext : ExploreShowIntent
     data object Refresh : ExploreShowIntent
     data class SwitchKind(val kind: ExploreKind) : ExploreShowIntent

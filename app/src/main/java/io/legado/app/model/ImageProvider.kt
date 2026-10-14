@@ -158,6 +158,20 @@ object ImageProvider {
         }
     }
 
+    /** 显式刷新必须绕过 URL 查找复用；每份已更新原图的位图都需要重新解码。 */
+    suspend fun refreshImage(book: Book, src: String, bookSource: BookSource?): Boolean = withContext(IO) {
+        if (book.isEpub || book.isPdf || book.isMobi) {
+            val file = BookHelp.getImage(book, src)
+            bitmapLruCache.remove(file.absolutePath)
+            file.delete()
+            cacheImage(book, src, bookSource).isFile
+        } else {
+            val refreshed = BookHelp.refreshImageCopies(bookSource, book, src)
+            refreshed.forEach { bitmapLruCache.remove(it.absolutePath) }
+            refreshed.isNotEmpty()
+        }
+    }
+
     /**
      *获取图片宽度高度信息
      */

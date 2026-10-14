@@ -13,6 +13,32 @@ import org.junit.Test
 
 class MangaReaderInteractionTest {
     @Test
+    fun `zoomed offset survives a chapter prefix rebuild at the same visible page`() {
+        val first = page(0, 0)
+        val visible = page(1, 0)
+        val items = listOf(first, visible)
+        val anchor = MangaWebtoonViewportAnchor()
+        anchor.record(items, 1, visible.key, 80)
+        // 缩放后下标与 key 不变，但项内偏移已改变。
+        anchor.record(items, 1, visible.key, 240)
+        assertEquals(0 to 240, anchor.positionIn(listOf(visible)))
+        // 新集合尚未重测时，不得用旧下标上的另一个 key 污染锚点。
+        anchor.record(listOf(visible), 1, first.key, 10)
+        assertEquals(0 to 240, anchor.positionIn(listOf(visible)))
+        assertEquals(null, anchor.positionIn(listOf(first)))
+    }
+
+    @Test
+    fun `hidden chapter boundary respects vertical and horizontal reading direction`() {
+        assertEquals(1, mangaBoundaryChapterDirection(MangaScrollMode.WEBTOON, 0f, -2f))
+        assertEquals(-1, mangaBoundaryChapterDirection(MangaScrollMode.WEBTOON, 0f, 2f))
+        assertEquals(1, mangaBoundaryChapterDirection(MangaScrollMode.PAGE_LEFT_TO_RIGHT, -2f, 0f))
+        assertEquals(1, mangaBoundaryChapterDirection(MangaScrollMode.PAGE_RIGHT_TO_LEFT, 2f, 0f))
+        assertEquals(-1, mangaBoundaryChapterDirection(MangaScrollMode.PAGE_RIGHT_TO_LEFT, -2f, 0f))
+        assertEquals(0, mangaBoundaryChapterDirection(MangaScrollMode.PAGE_TOP_TO_BOTTOM, 2f, 0f))
+    }
+
+    @Test
     fun `keeping pixel scroll offset during long image zoom moves the reading point`() {
         val oldOffset = -10_000
         val focalY = 700f
@@ -87,17 +113,26 @@ class MangaReaderInteractionTest {
     }
 
     @Test
-    fun `chapter prefetch includes distant pages but excludes adjoining chapters and prioritizes viewport`() {
-        val pages = listOf(page(0, 0)) + (0..24).map { page(it, 1) } + page(0, 2)
-        val ordered = mangaChapterPrefetchPages(pages, 13, 0)
-        assertEquals(25, ordered.size)
-        assertTrue(ordered.all { it.chapterIndex == 1 })
+    fun `chapter prefetch prioritizes the viewport and covers the boundary pages of adjacent chapters`() {
+        val pages = listOf(page(0, 0), page(7, 0)) +
+                (0..24).map { page(it, 1) } + page(0, 2)
+        // 可见页是第 1 章的 pageIndex 12（列表下标 2 + 12）。
+        val ordered = mangaChapterPrefetchPages(pages, 14, 0)
+
+        // 当前章当前页附近先执行。
         assertEquals(listOf(12, 13, 11, 14, 10), ordered.take(5).map { it.pageIndex })
-        assertEquals((0..24).toSet(), ordered.map { it.pageIndex }.toSet())
+        assertEquals(12, ordered.take(12).count { it.chapterIndex == 1 })
+        // 紧接着是相邻章紧贴边界的页：上一章末 8 页、下一章首 8 页（此数据下各有一页入选）。
+        assertEquals(
+            listOf(7 to 0, 0 to 2),
+            ordered.drop(12).take(2).map { it.pageIndex to it.chapterIndex },
+        )
+        // 当前章远端页仍全部排队。
+        assertEquals((0..24).toSet(), ordered.filter { it.chapterIndex == 1 }.map { it.pageIndex }.toSet())
     }
 
     @Test
-    fun `chapter boundary falls back to committed chapter without preloading another chapter`() {
+    fun `chapter prefetch falls back to the committed chapter without another chapter to prepare`() {
         val items = listOf(MangaReaderItemUi.ChapterEdge("edge", "loading"), page(0, 0), page(0, 1))
         assertEquals(listOf(1), mangaChapterPrefetchPages(items, 0, 1).map { it.chapterIndex })
         assertEquals(emptyList<MangaReaderItemUi.Page>(), mangaChapterPrefetchPages(items, 0, 2))
@@ -172,6 +207,7 @@ class MangaReaderInteractionTest {
         pageIndex = index,
         pageCount = 10,
         chapterName = "chapter",
+        chapterSubject = "chapter",
     )
 
     @Test
@@ -465,6 +501,24 @@ class MangaReaderInteractionTest {
                 pendingExplicitChapterIndex = null,
                 sessionChapterIndex = 3,
             )
+        )
+    }
+
+    @Test
+    fun `chapter promotion keeps the reading position instead of scrolling to the page top`() {
+        // 章节提升只让可见页的下标前移，key 未丢失：条漫不得按新下标复位，否则画面跳回页首。
+        assertFalse(
+            mangaNeedsPositionScroll(forcePosition = false, anchorFound = true, keyPreserved = true)
+        )
+        // 锚点丢失、key 失效或显式跳章时才需要复位。
+        assertTrue(
+            mangaNeedsPositionScroll(forcePosition = false, anchorFound = false, keyPreserved = false)
+        )
+        assertTrue(
+            mangaNeedsPositionScroll(forcePosition = false, anchorFound = true, keyPreserved = false)
+        )
+        assertTrue(
+            mangaNeedsPositionScroll(forcePosition = true, anchorFound = true, keyPreserved = true)
         )
     }
 

@@ -63,6 +63,7 @@ internal fun Book.migrateInto(
         target.author = author
     }
     target.canUpdate = canUpdate
+    target.disableReadRecord = disableReadRecord
     if (config.fixedType) {
         target.type = type
     }

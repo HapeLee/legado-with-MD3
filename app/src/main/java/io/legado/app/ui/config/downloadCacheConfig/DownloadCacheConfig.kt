@@ -9,6 +9,7 @@ object DownloadCacheConfig {
     val bitmapCacheSize get() = settings.bitmapCacheSize
     val imageRetainNum get() = settings.imageRetainNum
     val preDownloadNum get() = settings.preDownloadNum
+    val preDownloadNumPrev get() = settings.preDownloadNumPrev
     val threadCount get() = settings.threadCount
     val cacheBookThreadCount get() = settings.cacheBookThreadCount
     val userAgent get() = settings.userAgent

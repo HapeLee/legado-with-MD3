@@ -36,6 +36,9 @@ private const val PUBLIC_BOOK_FILTER =
 @Dao
 interface BookDao {
 
+    @Query("UPDATE books SET disableReadRecord = :disabled WHERE bookUrl = :bookUrl")
+    fun setReadRecordDisabled(bookUrl: String, disabled: Boolean)
+
     fun flowByGroup(groupId: Long): Flow<List<Book>> {
         return when (groupId) {
             BookGroup.IdRoot -> flowRoot()
