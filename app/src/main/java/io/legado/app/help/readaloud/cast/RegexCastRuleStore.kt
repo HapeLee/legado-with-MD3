@@ -11,7 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
-import kotlin.random.Random
 
 /**
  * 一条正则角色规则在朗读时真正要用的东西：编译好的正则 + 它把命中的文字变成什么。
@@ -315,7 +314,4 @@ object RegexCastRuleStore {
         return candidates.filter { it.enabled && it.path.isNotBlank() && File(it.path).exists() }
             .randomOrNull()?.path
     }
-
-    private fun <T> List<T>.randomOrNull(): T? =
-        if (isEmpty()) null else get(Random.nextInt(size))
 }
