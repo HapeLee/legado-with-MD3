@@ -893,7 +893,10 @@ abstract class BaseReadAloudService : BaseService(),
             } else {
                 bookSession.updateProgress(currentProgress, forceSave = true, expectedChapterIndex = currentChapterIndex)
                 bookSession.selectChapter(index)
-                newReadAloud(play, 0, 0, 0)
+                // 这段回调就跑在 prepareReadAloudJob 里，而 newReadAloud 开头第一件事是
+                // `prepareReadAloudJob?.cancel()`：直接调用等于把自己脚下这份作业取消掉，
+                // 后面的准备协程一帧都不会跑（表现为切到下一章后彻底没声、也不报错）。
+                launch(Main) { newReadAloud(play, 0, 0, 0) }
             }
         }.onError {
             AppLog.put("加载朗读章节失败", it, true)
