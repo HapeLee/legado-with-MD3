@@ -508,7 +508,10 @@ class MultiRoleRuleViewModel(
                 it.copy(
                     ttsServerEngine = guessEnginePackage(source, installed),
                     ttsServerPreview = TtsServerPreviewUi(
-                        poolNames = preview.pools.map { p -> p.name }.toImmutableList(),
+                        // 源文件带两层时写成「分组/池」：确认页要提前看到落库后的层级
+                        poolNames = preview.pools.map { pool ->
+                            if (pool.groupName.isBlank()) pool.name else "${pool.groupName}/${pool.name}"
+                        }.toImmutableList(),
                         voiceCount = preview.voiceCount,
                         skippedEffects = preview.skippedEffects,
                         skippedDisabled = preview.skippedDisabled,
