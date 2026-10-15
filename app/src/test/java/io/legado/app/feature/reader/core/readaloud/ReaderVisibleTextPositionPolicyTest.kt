@@ -61,6 +61,42 @@ class ReaderVisibleTextPositionPolicyTest {
         )
     }
 
+    @Test
+    fun pageModeAnchorsAtTheFirstBodyLineOfTheCurrentPage() {
+        val previous = page(1, 5, listOf(text("上一页", 40, 10f)))
+        val current = page(
+            chapter = 2,
+            index = 3,
+            elements = listOf(
+                text("标题", 0, 0f, emphasized = true),
+                text("甲", 2, 20f),
+                text("乙", 3, 50f),
+            ),
+        )
+
+        // 翻页模式没有滚动偏移：可见内容就是当前页整页。标题不算正文起点，邻页也不许串进来。
+        assertEquals(
+            ReaderVisibleTextPosition(chapterIndex = 2, chapterPosition = 2),
+            ReaderVisibleTextPositionPolicy.firstBodyTextOfCurrentPage(
+                ReaderPageWindow(previous = previous, current = current),
+            ),
+        )
+        assertNull(
+            ReaderVisibleTextPositionPolicy.firstBodyTextOfCurrentPage(
+                ReaderPageWindow(
+                    current = page(2, 0, listOf(text("标题", 0, 0f, emphasized = true))),
+                ),
+            ),
+        )
+        assertNull(
+            ReaderVisibleTextPositionPolicy.firstBodyTextOfCurrentPage(
+                ReaderPageWindow(
+                    current = page(2, 0, listOf(text("加载中", 0, 0f)), placeholder = true),
+                ),
+            ),
+        )
+    }
+
     private fun page(
         chapter: Int,
         index: Int,
