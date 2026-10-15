@@ -131,6 +131,8 @@ compose-materialIcons = { group = "androidx.compose.material", name = "material-
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "composeTrain" }
 androidx-compose-ui-text = { module = "androidx.compose.ui:ui-text", version.ref = "composeTrain" }
+androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "composeTrain" }
+androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "composeTrain" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "composeTrain" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "composeTrain" }
 androidx-compose-ui-util = { module = "androidx.compose.ui:ui-util", version.ref = "composeTrain" }

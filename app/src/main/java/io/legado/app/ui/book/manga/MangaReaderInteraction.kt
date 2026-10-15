@@ -1,22 +1,52 @@
 package io.legado.app.ui.book.manga
 
+import androidx.compose.runtime.saveable.listSaver
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 
 /** 条漫视口锚点保存 key 与项内偏移；旧布局与新条目索引不一致时不能覆盖它。 */
 internal class MangaWebtoonViewportAnchor {
-    private var key: Any? = null
+    private var key: String? = null
     private var offset: Int = 0
+    private var aspectRatio: Float? = null
 
-    fun record(items: List<MangaReaderItemUi>, index: Int, key: Any, offset: Int) {
-        if (items.getOrNull(index)?.key != key) return
+    fun record(
+        items: List<MangaReaderItemUi>,
+        index: Int,
+        key: Any,
+        offset: Int,
+        ratio: Float? = null
+    ) {
+        if (key !is String || items.getOrNull(index)?.key != key) return
+        aspectRatio = ratio?.takeIf { it.isFinite() && it > 0f }
+            ?: aspectRatio.takeIf { this.key == key }
         this.key = key
         this.offset = offset
     }
+
+    fun savedAspectRatio(): Pair<String, Float>? =
+        key?.let { key -> aspectRatio?.let { key to it } }
 
     fun positionIn(items: List<MangaReaderItemUi>): Pair<Int, Int>? {
         val anchor = key ?: return null
         val index = items.indexOfFirst { it.key == anchor }
         return index.takeIf { it >= 0 }?.let { it to offset }
+    }
+
+    companion object {
+        // 只保存锚点图片尺寸，不把整章 URL/尺寸表写入 Activity 的保存状态。
+        fun saver(bookUrl: String) = listSaver<MangaWebtoonViewportAnchor, Any>(
+            save = { listOf(bookUrl, it.key.orEmpty(), it.offset, it.aspectRatio ?: 0f) },
+            restore = { saved ->
+                MangaWebtoonViewportAnchor().apply {
+                    if (saved.getOrNull(0) == bookUrl) {
+                        key = (saved.getOrNull(1) as? String)?.takeIf { it.isNotEmpty() }
+                        offset = saved.getOrNull(2) as? Int ?: 0
+                        aspectRatio =
+                            (saved.getOrNull(3) as? Float)?.takeIf { it.isFinite() && it > 0f }
+                    }
+                }
+            },
+        )
     }
 }
 

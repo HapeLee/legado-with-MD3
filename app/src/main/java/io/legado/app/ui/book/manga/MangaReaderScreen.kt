@@ -43,12 +43,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -195,7 +196,15 @@ fun MangaReaderScreen(
     BackHandler(enabled = canHandleBack && !canMorphBack) { onIntent(MangaReaderIntent.BackPressed) }
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
     var viewportOrigin by remember { mutableStateOf(Offset.Zero) }
-    val aspectRatios = remember(state.bookUrl) { mutableStateMapOf<String, Float>() }
+    val viewportAnchor =
+        rememberSaveable(state.bookUrl, saver = MangaWebtoonViewportAnchor.saver(state.bookUrl)) {
+            MangaWebtoonViewportAnchor()
+        }
+    val aspectRatios = remember(state.bookUrl) {
+        mutableStateMapOf<String, Float>().apply {
+            viewportAnchor.savedAspectRatio()?.let { (key, ratio) -> put(key, ratio) }
+        }
+    }
     var applyPageResize by remember(state.bookUrl) {
         mutableStateOf<((String, () -> Unit) -> Unit)?>(
             null
@@ -299,7 +308,16 @@ fun MangaReaderScreen(
                     MangaScrollMode.PAGE_LEFT_TO_RIGHT,
                     MangaScrollMode.PAGE_RIGHT_TO_LEFT -> HorizontalMangaPager(state, onIntent, imageLoader)
                     MangaScrollMode.PAGE_TOP_TO_BOTTOM -> VerticalMangaPager(state, onIntent, imageLoader)
-                    else -> WebtoonMangaList(state, onIntent, imageLoader) { applyPageResize = it }
+                    // 恢复像素偏移前先取得真实视口宽度；1 px 临时宽度会把长图缩成几像素，
+                    // LazyColumn 随即把保存的偏移钳制到下一张图，后续宽度恢复也无法还原。
+                    else -> if (viewportSize.width > 0 && viewportSize.height > 0) {
+                        WebtoonMangaList(
+                            state,
+                            onIntent,
+                            imageLoader,
+                            viewportAnchor
+                        ) { applyPageResize = it }
+                    }
                 }
             }
 
@@ -461,6 +479,7 @@ private fun WebtoonMangaList(
     state: MangaReaderUiState,
     onIntent: (MangaReaderIntent) -> Unit,
     imageLoader: ImageLoader,
+    viewportAnchor: MangaWebtoonViewportAnchor,
     onResizeHandlerChanged: (((String, () -> Unit) -> Unit)?) -> Unit,
 ) {
     val prefetchEnabled by rememberUpdatedState(state.settings.preDownloadCount > 0)
@@ -476,8 +495,7 @@ private fun WebtoonMangaList(
     }
     val listState =
         rememberLazyListState(cacheWindow, initialFirstVisibleItemIndex = state.currentItemIndex)
-    val viewportAnchor = remember(state.bookUrl) { MangaWebtoonViewportAnchor() }
-    var appliedNavigationId by remember(state.bookUrl) { mutableLongStateOf(state.navigationId) }
+    var appliedNavigationId by remember(state.bookUrl) { mutableStateOf<Long?>(null) }
     var pendingViewportLayout by remember(state.bookUrl) { mutableStateOf<LazyListLayoutInfo?>(null) }
     // 单张图片的加载状态会更新整个 UiState.pages。可见页监听不能因此重启：重启会
     // 丢失 distinctUntilChanged 的上一条记录，并把 LazyColumn 尚未完成重测时保留的
@@ -491,6 +509,22 @@ private fun WebtoonMangaList(
     val aspectRatios = LocalMangaAspectRatios.current
     val resizeQueue = remember(state.bookUrl) { MangaWebtoonResizeQueue() }
     var zoomAnchorLayout by remember { mutableStateOf<LazyListLayoutInfo?>(null) }
+    fun recordViewportAnchor(layout: LazyListLayoutInfo = listState.layoutInfo) {
+        if (pendingViewportLayout != null) return
+        val reader = latestReaderState
+        val matching =
+            layout.visibleItemsInfo.filter { reader.pages.getOrNull(it.index)?.key == it.key }
+        // 过渡卡片的身份会随 Loading/Ready 变化，优先保存视口里的真实图片。
+        val anchor = matching.firstOrNull { reader.pages[it.index] is MangaReaderItemUi.Page }
+            ?: matching.firstOrNull() ?: return
+        viewportAnchor.record(
+            reader.pages,
+            anchor.index,
+            anchor.key,
+            -anchor.offset,
+            aspectRatios[anchor.key]
+        )
+    }
     val applyResize: (() -> Unit) -> Unit = { resize ->
         val layout = listState.layoutInfo
         // 布局与当前条目集合不一致（列表刚重建）时不做像素锚点补偿：那会把旧布局里的
@@ -530,7 +564,10 @@ private fun WebtoonMangaList(
             // 视口上方条目的高度变化不会移动当前图片，不为它们发起滚动位置请求。
             resizeQueue.update(key, listState.isScrollInProgress, visible, resize, apply)
         }
-        onDispose { onResizeHandlerChanged(null) }
+        onDispose {
+            onResizeHandlerChanged(null)
+            onIntent(MangaReaderIntent.PagerScrollChanged(false))
+        }
     }
     LaunchedEffect(listState, state.bookUrl, resizeQueue) {
         snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
@@ -551,14 +588,17 @@ private fun WebtoonMangaList(
                     measured.visibleItemsInfo.all { reader.pages.getOrNull(it.index)?.key == it.key }
             if (measured !== pendingViewportLayout && consistent) {
                 pendingViewportLayout = null
-                measured.visibleItemsInfo.firstOrNull()?.let {
-                    viewportAnchor.record(reader.pages, it.index, it.key, -it.offset)
-                }
+                recordViewportAnchor(measured)
             }
         }
     }
-    var zoom by remember { mutableFloatStateOf(1f) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
+    var zoom by rememberSaveable(state.bookUrl) { mutableFloatStateOf(1f) }
+    var pan by rememberSaveable(
+        state.bookUrl, stateSaver = listSaver(
+            save = { value: Offset -> listOf(value.x, value.y) },
+            restore = { Offset(it[0], it[1]) },
+        )
+    ) { mutableStateOf(Offset.Zero) }
     val fraction = 1f - state.settings.sidePaddingPercent.coerceIn(0, 45) * 2f / 100f
 
     // 估算自然内容高度（放大后用于限制平移范围）；未加载的图片用整屏高度兜底
@@ -680,12 +720,6 @@ private fun WebtoonMangaList(
             }
         }
 
-    fun recordViewportAnchor() {
-        if (pendingViewportLayout != null) return
-        val first = listState.layoutInfo.visibleItemsInfo.firstOrNull() ?: return
-        viewportAnchor.record(latestReaderState.pages, first.index, first.key, -first.offset)
-    }
-
     fun reportWebtoonVisibleItem(forcedItemIndex: Int? = null) {
         val currentState = latestReaderState
         if (pendingViewportLayout != null) return
@@ -733,12 +767,12 @@ private fun WebtoonMangaList(
         snapshotFlow { listState.isScrollInProgress }
             .distinctUntilChanged()
             .collect { scrolling ->
+                // 新组合的 idle 也要清除旧组合可能遗留的滚动标志。
+                onIntent(MangaReaderIntent.PagerScrollChanged(scrolling))
                 if (scrolling) {
                     wasScrolling = true
-                    onIntent(MangaReaderIntent.PagerScrollChanged(true))
                 } else if (wasScrolling) {
                     wasScrolling = false
-                    onIntent(MangaReaderIntent.PagerScrollChanged(false))
                     recordViewportAnchor()
                     reportWebtoonVisibleItem()
                 }
