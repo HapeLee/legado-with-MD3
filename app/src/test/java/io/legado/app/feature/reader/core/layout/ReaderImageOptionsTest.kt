@@ -173,13 +173,13 @@ class ReaderImageOptionsTest {
         )
         val block = result.blocks.single() as ReaderMeasuredBlock.Image
         assertEquals(ReaderImageScaleMode.FIT_WIDTH, block.scaleMode)
-        // 整图在旧 `setTypeImage` 里根本没传 click。
-        assertNull(block.action)
+        // 整图解析到了 JSON，就要把里面的 click 带到朗读元素上（点图唤起书源写的动作）。
+        assertEquals("run()", block.action)
         val image = ReaderPaginator.paginateBlocks(result.blocks, config)
             .single().elements.single() as ReaderElement.Image
         assertEquals(100f, image.bounds.width, 0f)
         assertEquals(50f, image.bounds.height, 0f)
-        assertNull(image.action)
+        assertEquals("run()", image.action)
         assertFalse(image.inline)
     }
 
