@@ -558,20 +558,24 @@ fun BookshelfScreen(
 
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showTopBarMenu by remember { mutableStateOf(false) }
+    val toggleShelfFilter = {
+        toggleBookshelfFilter(
+            isSearch = uiState.isSearch,
+            selectedGroupId = uiState.selectedGroupId,
+            currentTabGroupId = currentTabGroupId,
+            onIntent = onIntent,
+        )
+    }
     val onSearchClick = {
         if (uiState.settings.bookshelfSearchActionDirectToSearch) {
             onNavigateToSearch(uiState.searchKey.trim())
         } else {
-            val active = !uiState.isSearch
-            onIntent(BookshelfIntent.SetSearchMode(active))
-            if (!active && uiState.selectedGroupId != currentTabGroupId) {
-                onIntent(BookshelfIntent.ChangeGroup(currentTabGroupId))
-            }
+            toggleShelfFilter()
         }
     }
     val onSearchLongClick = {
         if (uiState.settings.bookshelfSearchActionDirectToSearch) {
-            onIntent(BookshelfIntent.SetSearchMode(true))
+            toggleShelfFilter()
         } else {
             onNavigateToSearch(uiState.searchKey.trim())
         }
@@ -1306,6 +1310,19 @@ fun BookshelfScreen(
         exportLauncher = exportLauncher,
         clearSelection = clearSelection
     )
+}
+
+internal fun toggleBookshelfFilter(
+    isSearch: Boolean,
+    selectedGroupId: Long,
+    currentTabGroupId: Long,
+    onIntent: (BookshelfIntent) -> Unit,
+) {
+    val active = !isSearch
+    onIntent(BookshelfIntent.SetSearchMode(active))
+    if (!active && selectedGroupId != currentTabGroupId) {
+        onIntent(BookshelfIntent.ChangeGroup(currentTabGroupId))
+    }
 }
 
 @Composable
