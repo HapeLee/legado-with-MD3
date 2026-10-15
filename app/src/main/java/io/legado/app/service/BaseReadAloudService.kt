@@ -635,7 +635,14 @@ abstract class BaseReadAloudService : BaseService(),
         }.onFailure {
             AppLog.put("生成多角色朗读计划失败，使用原朗读方式\n${it.localizedMessage}", it)
         }.getOrDefault(emptyList())
-        return CastSpeechOverlay.apply(bookUrl, chapterIndex, paragraphs, plan)
+        // 覆盖层要读分配表、角色库、声音池，任何一次查询出错都不能把整章的朗读准备带走：
+        // 这里的调用方是 `newReadAloud`，它外层是 `execute{}.onError{ pauseReadAloud() }`，
+        // 抛出会停在章末（切下一章时最明显），所以降级成「这一章不做多角色覆盖」继续念。
+        return runCatching {
+            CastSpeechOverlay.apply(bookUrl, chapterIndex, paragraphs, plan)
+        }.onFailure {
+            AppLog.put("多角色分配覆盖失败，本章按原计划朗读\n${it.localizedMessage}", it)
+        }.getOrDefault(plan)
     }
 
     /**
