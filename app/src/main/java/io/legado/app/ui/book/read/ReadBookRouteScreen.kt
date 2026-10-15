@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.read
 
 import android.content.Context
-import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -157,6 +156,8 @@ fun ReadBookRouteScreen(
     onOpenSearch: (word: String?, bookUrl: String, autoFocus: Boolean) -> Unit = { _, _, _ -> },
     onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
     onOpenToc: (bookUrl: String, initialPage: Int) -> Unit,
+    /** 「本地目录规则」：菜单入口打开规则预览页；应用结果由宿主的书页结果通道回灌。 */
+    onOpenTocRulePreview: (bookUrl: String, tocRegex: String?) -> Unit = { _, _ -> },
     onOpenReplaceRule: (bookUrl: String?, editor: ReplaceEditRoute?) -> Unit,
     onOpenVoiceCasting: (bookUrl: String) -> Unit = {},
     onOpenReadAloudSubPage: (ReadAloudSubPage) -> Unit = {},
@@ -336,16 +337,6 @@ fun ReadBookRouteScreen(
         uri?.let { viewModel.onIntent(ReadBookIntent.BookmarkBadgeImageSelected(it)) }
     }
 
-    val txtTocRuleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            result.data?.getStringExtra("tocRegex")?.let { rule ->
-                viewModel.onIntent(ReadBookIntent.TocRegexResult(rule))
-            }
-        }
-    }
-
     val importHighlightRulePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -453,13 +444,7 @@ fun ReadBookRouteScreen(
                                 onOpenReplaceRule(ReadBook.book?.bookUrl, editRoute)
                             }
                             is ReadBookEffect.MenuTocRegex -> {
-                                val intent = Intent(
-                                    context,
-                                    io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity::class.java
-                                )
-                                intent.putExtra("bookUrl", effect.bookUrl)
-                                intent.putExtra("tocRegex", effect.tocRegex)
-                                txtTocRuleLauncher.launch(intent)
+                                onOpenTocRulePreview(effect.bookUrl, effect.tocRegex)
                             }
                             is ReadBookEffect.OpenFontFolderPicker -> {
                                 fontFolderPicker.launch(null)
@@ -647,12 +632,10 @@ fun ReadBookRouteScreen(
     // swaps a simulated-page turn to its cached/placeholder successor. Keeping the last complete
     // window for that gap prevents the root reader background from becoming a visible fallback.
     var lastReadablePageWindow by remember {
-        mutableStateOf<io.legado.app.feature.reader.core.model.ReaderPageWindow?>(
-            null
-        )
+        mutableStateOf(readerPageWindow.takeIf { it.current != null })
     }
-    LaunchedEffect(readerPageWindow.current?.id, readerPageWindow.current?.layoutRevision) {
-        if (readerPageWindow.current != null) lastReadablePageWindow = readerPageWindow
+    if (readerPageWindow.current != null && lastReadablePageWindow !== readerPageWindow) {
+        lastReadablePageWindow = readerPageWindow
     }
     val displayedReaderPageWindow =
         readerPageWindow.takeIf { it.current != null } ?: lastReadablePageWindow
@@ -728,6 +711,7 @@ fun ReadBookRouteScreen(
                 ReaderPerfTrace.marker("compose.canvas.begin")
                 ReaderCanvasSurface(
                     hostPages = displayedReaderPageWindow ?: readerPageWindow,
+                    redrawRevision = readerRenderState.redrawRevision,
                     transitionMode = readerTransitionMode,
                     pageTurnSpeed = ReaderPageTurnSpeed.fromValue(state.styleConfig.pageAnimSpeed),
                 backgroundColor = readerSurfaceColor,
@@ -907,6 +891,9 @@ fun ReadBookRouteScreen(
                 bookUrl = state.book?.bookUrl.orEmpty(),
                 initialTab = bookNavigationSheet?.initialTab
                     ?: io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Information,
+                onEditLocalTocRule = { regex ->
+                    state.book?.bookUrl?.let { onOpenTocRulePreview(it, regex) }
+                },
                 onDismissRequest = { viewModel.onIntent(ReadBookIntent.DismissSheet) },
                 onChapterClick = { index, chapterPos ->
                     viewModel.onIntent(ReadBookIntent.DismissSheet)

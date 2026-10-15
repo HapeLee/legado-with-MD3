@@ -129,11 +129,8 @@ fun AppScaffold(
                         containerColor = miuixContainerColor,
                         contentWindowInsets = contentWindowInsets
                     ) { paddingValues ->
-                        val scaffoldPadding = if (configuration.appShell.useFloatingBottomBar) {
-                            PaddingValues(top = paddingValues.calculateTopPadding())
-                        } else {
-                            paddingValues
-                        }
+                        // Insets belong to this scaffold's actual bars, not a global navigation preference.
+                        val scaffoldPadding = paddingValues
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -194,11 +191,7 @@ fun AppScaffold(
                         contentColor = contentColor,
                         contentWindowInsets = contentWindowInsets
                     ) { paddingValues ->
-                        val scaffoldPadding = if (configuration.appShell.useFloatingBottomBar) {
-                            PaddingValues(top = paddingValues.calculateTopPadding())
-                        } else {
-                            paddingValues
-                        }
+                        val scaffoldPadding = paddingValues
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()

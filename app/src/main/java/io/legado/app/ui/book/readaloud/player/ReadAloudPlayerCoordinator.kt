@@ -60,7 +60,8 @@ class ReadAloudPlayerCoordinator(
      * 改变快照内容。这里去重，避免每次进度事件都让下游 `flatMapLatest` 重新订阅 Room 章节流、
      * 重建目录列表实例（对照 `AudioPlayCoordinator.chapters` 的同名处理）。
      */
-    private val bookState = merge(bookChanges, refreshRequests, configChanges)
+    private val bookState = merge(bookChanges, refreshRequests, configChanges,
+        ReadAloud.bookSession.state.map { })
         .map { snapshotBook() }
         .distinctUntilChanged()
 
@@ -152,8 +153,9 @@ class ReadAloudPlayerCoordinator(
     private var chapterSnapshotCache: ChapterSnapshot? = null
 
     private fun snapshotBook(): BookState {
-        val book = ReadBook.book
-        val input = ReadBook.readerChapterInputWindow.current
+        val book = ReadAloud.bookSession.book ?: ReadBook.book
+        val input = if (ReadAloud.bookSession.book != null) ReadAloud.bookSession.input
+            else ReadBook.readerChapterInputWindow.current
         val chapter = input?.let(::chapterSnapshot)
         return BookState(
             bookUrl = book?.bookUrl.orEmpty(),
@@ -181,7 +183,9 @@ class ReadAloudPlayerCoordinator(
             chapterIndex = input.chapter.index,
             title = input.displayTitle,
             semanticContent = input.source.semanticContent,
-            pageStarts = ReadBook.readerPagination(input.chapter.index)?.pageStarts.orEmpty(),
+            pageStarts = if (ReadAloud.bookSession.owns(input.book.bookUrl)) {
+                ReadAloud.bookSession.pagination?.pageStarts.orEmpty()
+            } else ReadBook.readerPagination(input.chapter.index)?.pageStarts.orEmpty(),
             // 与朗读服务同口径：「默认」在多角色关闭时落到整段，否则听书页展示的
             // 文本行会与服务实际播放的单元粒度不一致。划分只认「多角色朗读」这一个开关，
             // 「多角色分配」是正文胶囊的显示开关，不改朗读单元粒度。
@@ -216,7 +220,10 @@ class ReadAloudPlayerCoordinator(
 
     fun togglePause() {
         when {
-            !BaseReadAloudService.isRun -> ReadBook.readAloud()
+            !BaseReadAloudService.isRun -> if (ReadAloud.bookSession.book != null) {
+                ReadAloud.play(application, chapterPosition = ReadAloud.bookSession.state.value.chapterPosition,
+                    fromReader = false)
+            } else ReadBook.readAloud()
             BaseReadAloudService.pause -> ReadAloud.resume(application)
             else -> ReadAloud.pause(application)
         }
@@ -227,9 +234,9 @@ class ReadAloudPlayerCoordinator(
 
     fun previousParagraph() = ReadAloud.prevParagraph(application)
     fun nextParagraph() = ReadAloud.nextParagraph(application)
-    fun previousChapter() = ReadBook.moveToPrevChapter(true, false)
-    fun nextChapter() = ReadBook.moveToNextChapter(true)
-    fun selectChapter(index: Int) = ReadBook.openChapter(index, durChapterPos = 0)
+    fun previousChapter() = ReadAloud.previousChapter(application)
+    fun nextChapter() = ReadAloud.nextChapter(application)
+    fun selectChapter(index: Int) = ReadAloud.selectChapter(application, index)
 
     suspend fun clearTtsCache() = withContext(Dispatchers.IO) {
         TTSCacheUtils.clearTtsCache()
@@ -293,7 +300,7 @@ class ReadAloudPlayerCoordinator(
 
     fun seekTo(chapterPosition: Int, chapterLength: Int) {
         val position = chapterPosition.coerceIn(0, chapterLength)
-        ReadAloud.play(application, play = true, chapterPosition = position)
+        ReadAloud.play(application, play = true, chapterPosition = position, fromReader = false)
     }
 
     private companion object {

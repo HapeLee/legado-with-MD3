@@ -1834,7 +1834,7 @@
     <string name="system_media_control_compatibility_change_summary">Enable if system media controls are missing on lock screen (e.g. OneUI 7.0, OriginOS)</string>
     <string name="read_aloud_pause_resume">Pause/Resume Reading Aloud</string>
     <string name="play_mode">Play Mode</string>
-    <string name="tabletInterface">Tablet Interface</string>
+    <string name="tabletInterface">Navigation layout</string>
     <string name="progress">Progress</string>
     <string name="clear_all">Clear All</string>
     <string name="welcome_title">Welcome!</string>

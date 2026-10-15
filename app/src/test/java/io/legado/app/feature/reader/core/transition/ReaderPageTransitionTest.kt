@@ -1,12 +1,59 @@
 package io.legado.app.feature.reader.core.transition
 
 import io.legado.app.constant.PageAnim
+import io.legado.app.feature.reader.core.model.ReaderPageId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderPageTransitionTest {
+    @Test
+    fun `committed previous page stays at the final frame until its window is composed`() {
+        val oldCurrent = ReaderPageId(1, 2)
+        val committed = ReaderPageId(1, 1)
+        val terminal = ReaderPageTransitionPolicy.drag(800f, 800f, true, true)
+        for (mode in listOf(
+            ReaderTransitionMode.COVER,
+            ReaderTransitionMode.SLIDE,
+            ReaderTransitionMode.FADE
+        )) {
+            val before =
+                ReaderPageTransitionPolicy.forComposedWindow(terminal, oldCurrent, committed)
+                    .transforms(mode)
+            assertEquals(0f, before.previous!!.translationX)
+            assertEquals(1f, before.previous.alpha)
+            val after = ReaderPageTransitionPolicy.forComposedWindow(terminal, committed, committed)
+                .transforms(mode)
+            assertEquals(0f, after.current.translationX)
+            assertEquals(1f, after.current.alpha)
+            assertEquals(null, after.previous)
+        }
+    }
+
+    @Test
+    fun `committed next page is not clipped or translated after its window is composed`() {
+        val oldCurrent = ReaderPageId(1, 1)
+        val committed = ReaderPageId(1, 2)
+        val terminal = ReaderPageTransitionPolicy.drag(-800f, 800f, true, true)
+        for (mode in listOf(
+            ReaderTransitionMode.COVER,
+            ReaderTransitionMode.SLIDE,
+            ReaderTransitionMode.FADE
+        )) {
+            val before =
+                ReaderPageTransitionPolicy.forComposedWindow(terminal, oldCurrent, committed)
+                    .transforms(mode)
+            assertEquals(0f, before.next!!.translationX)
+            assertEquals(1f, before.next.alpha)
+            val after = ReaderPageTransitionPolicy.forComposedWindow(terminal, committed, committed)
+                .transforms(mode)
+            assertEquals(0f, after.current.translationX)
+            assertEquals(1f, after.current.alpha)
+            assertEquals(null, after.next)
+        }
+    }
+
     @Test
     fun `programmatic turn does not preempt a running page animation`() {
         assertFalse(ReaderProgrammaticTurnPolicy.shouldAccept(animationRunning = true))
@@ -207,5 +254,28 @@ class ReaderPageTransitionTest {
         assertFalse(ReaderPageTransitionPolicy.release(drag, 0f, commitProgress = 0.1f).commit)
         val fadeDrag = ReaderPageTransitionPolicy.drag(-80f, 800f, true, true)
         assertTrue(ReaderPageTransitionPolicy.release(fadeDrag, 0f, commitProgress = 0.1f).commit)
+    }
+
+    @Test
+    fun `slow short horizontal drags commit in both directions like the View reader`() {
+        for (delta in listOf(160f, -160f)) {
+            val drag = ReaderPageTransitionPolicy.drag(delta, 800f, true, true)
+            val decision =
+                ReaderPageTransitionPolicy.release(drag, 0f, lastDragDeltaPx = delta / 8f)
+            assertTrue(decision.commit)
+            assertEquals(if (delta > 0) 800f else -800f, decision.targetOffsetPx)
+        }
+    }
+
+    @Test
+    fun `slow deliberate reversals cancel in both directions beyond distance threshold`() {
+        for (delta in listOf(400f, -400f)) {
+            val drag = ReaderPageTransitionPolicy.drag(delta, 800f, true, true)
+            val decision = ReaderPageTransitionPolicy.release(
+                drag, velocityPxPerSecond = -delta / 2f, lastDragDeltaPx = -delta / 8f,
+            )
+            assertFalse(decision.commit)
+            assertEquals(0f, decision.targetOffsetPx)
+        }
     }
 }

@@ -179,7 +179,7 @@ class ReadBookViewModel(
     private var readBookSyncJob: Job? = null
     private val _readAloudProgress = MutableStateFlow(
         activeReadAloudProgress(
-            isPlaying = BaseReadAloudService.isPlay(),
+            isPlaying = ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay(),
             currentProgress = BaseReadAloudService.currentProgress,
         )
     )
@@ -908,7 +908,7 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ToggleReadAloud -> {
-                if (!BaseReadAloudService.isRun) {
+                if (!ReadBook.isCurrentBookReadAloud) {
                     readAloudDelegate.openDefaultInterface()
                 }
                 _effects.tryEmit(ReadBookEffect.ToggleReadAloud)
@@ -1670,10 +1670,8 @@ class ReadBookViewModel(
         ReadBook.isUiActive = false
         // 进度在离开页面时落库；开书流程本身不落，口径见 ReadBookLoadDelegate.initData。
         ReadBook.saveRead()
-        if (!BaseReadAloudService.isPlay()) {
-            ReadBook.stopAutoSaveSession()
-            ReadBook.commitReadSession()
-        }
+        ReadBook.stopAutoSaveSession()
+        ReadBook.commitReadSession()
         ReadBook.cancelPreDownloadTask()
 
         if (!BuildConfig.DEBUG) {
@@ -1832,14 +1830,14 @@ class ReadBookViewModel(
         }
         viewModelScope.launch {
             var previousStatus: ReadAloudSessionStatus? = null
-            readAloudSessionStore.state.collect { session ->
+            readAloudDelegate.readerSessions.collect { (session, ownsReader) ->
                 val status = session.status
                 val info = session.playback
                 _uiState.update { state ->
                     state.copy(
-                        isReadAloudRunning = status != ReadAloudSessionStatus.Idle,
-                        isReadAloudPaused = status == ReadAloudSessionStatus.Paused,
-                        readAloudFollow = session.followReadAloudPosition,
+                        isReadAloudRunning = ownsReader && status != ReadAloudSessionStatus.Idle,
+                        isReadAloudPaused = ownsReader && status == ReadAloudSessionStatus.Paused,
+                        readAloudFollow = !ownsReader || session.followReadAloudPosition,
                         readAloudEngineName = info.engineName,
                         readAloudCharacterName = info.characterName,
                         readAloudRoleType = info.roleType,
@@ -2254,7 +2252,7 @@ class ReadBookViewModel(
     }
 
     private fun stopReadAloudForClose() {
-        if (closeReadBookKeepReadAloud || !BaseReadAloudService.isRun) {
+        if (closeReadBookKeepReadAloud || !ReadBook.isCurrentBookReadAloud) {
             return
         }
         // 「退出阅读时继续后台朗读」：读的是持久设置，不依赖本次退出来源
@@ -2699,7 +2697,7 @@ class ReadBookViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        if (BaseReadAloudService.isRun && BaseReadAloudService.pause) {
+        if (ReadBook.isCurrentBookReadAloud && BaseReadAloudService.pause) {
             ReadAloud.stop(context)
         }
         readerSession.detach()

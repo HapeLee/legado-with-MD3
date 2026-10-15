@@ -160,6 +160,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private var readerPaginationSnapshots = emptyMap<Int, ReaderChapterPaginationSnapshot>()
     @Volatile
     private var readerPaginationEnvironment: ReaderPaginationEnvironment? = null
+    val paginationEnvironment: ReaderPaginationEnvironment? get() = readerPaginationEnvironment
+
+    /** Only the playing book may drive/highlight this reader. */
+    val isCurrentBookReadAloud: Boolean
+        get() = BaseReadAloudService.isRun && ReadAloud.bookSession.owns(book?.bookUrl)
     var bookSource: BookSource? = null
     var msg: String? = null
     private val readRecordRepository: ReadRecordRepository by inject()
@@ -251,7 +256,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      * 悬浮条随之消失；同时重绘朗读高亮（翻页时旧页高亮已被移除）。朗读服务自身驱动的页面移动不参与。
      */
     private fun restoreReadAloudFollowIfBackOnPosition() {
-        if (!BaseReadAloudService.isRun || BaseReadAloudService.speechDrivingNavigation) return
+        if (!isCurrentBookReadAloud || BaseReadAloudService.speechDrivingNavigation) return
         val speakingChapterIndex = BaseReadAloudService.currentChapterIndex
         if (speakingChapterIndex < 0 || speakingChapterIndex != durChapterIndex) return
         val speakingPage = readerPagination()?.pageIndex(
@@ -632,7 +637,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      * 服务章节与当前章节一致的同章重排不受影响。
      */
     private fun resumeReadAloudWaitingForChapter(snapshots: List<ReaderChapterPaginationSnapshot>) {
-        if (!BaseReadAloudService.isRun) return
+        if (!isCurrentBookReadAloud) return
         // 脱离后朗读位置归用户：分页批次落地不代表朗读要跟到页面所在章节
         if (!readAloudSessionStore.state.value.followReadAloudPosition) return
         if (snapshots.none { it.chapterIndex == durChapterIndex }) return
@@ -1032,7 +1037,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      * 朗读服务自身驱动的页面移动（[BaseReadAloudService.speechDrivingNavigation]）不参与。
      */
     private fun prepareManualNavigation() {
-        if (!BaseReadAloudService.isRun || BaseReadAloudService.speechDrivingNavigation) return
+        if (!isCurrentBookReadAloud || BaseReadAloudService.speechDrivingNavigation) return
         if (ReadBookConfig.readAloudDetachReminderEnabled) {
             readAloudSessionStore.detachReadAloudFollow()
         } else {
@@ -1045,7 +1050,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      * 开启时保持脱离状态，不重启朗读，返回 false。
      */
     private fun followReadAloudAfterManualNavigation(): Boolean {
-        if (!BaseReadAloudService.isRun || BaseReadAloudService.speechDrivingNavigation) return false
+        if (!isCurrentBookReadAloud || BaseReadAloudService.speechDrivingNavigation) return false
         if (ReadBookConfig.readAloudDetachReminderEnabled) return false
         readAloud(play = !BaseReadAloudService.pause)
         return true
@@ -1226,6 +1231,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         index: Int,
         durChapterPos: Int = 0,
         upContent: Boolean = true,
+        preserveReadAloudPosition: Boolean = false,
         success: (() -> Unit)? = null
     ) {
         prepareManualNavigation()
@@ -1240,7 +1246,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             ReadBook.durChapterPos = durChapterPos
             publishSnapshot()
             saveRead()
-            loadContent(resetPageOffset = true) {
+            loadContent(resetPageOffset = true, preserveReadAloudPosition = preserveReadAloudPosition) {
                 success?.invoke()
             }
         }
@@ -1255,7 +1261,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     ) {
         renderCallBack?.pageChanged()
         readerChapterInputWindow.current?.let { input ->
-            if (BaseReadAloudService.isRun) {
+            if (isCurrentBookReadAloud) {
                 // 页面已脱离朗读位置（用户手动导航）：既不重启朗读到当前页，也不把页面拉回朗读位置
                 if (readAloudSessionStore.state.value.followReadAloudPosition) {
                     if (shouldRestartReadAloudAfterContentLoad(
@@ -1391,10 +1397,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      */
     fun loadInitialContent(
         resetPageOffset: Boolean,
+        preserveReadAloudPosition: Boolean = false,
         success: (() -> Unit)? = null,
     ) {
         val currentIndex = durChapterIndex
-        loadContent(currentIndex, resetPageOffset = resetPageOffset) {
+        loadContent(currentIndex, resetPageOffset = resetPageOffset,
+            preserveReadAloudPosition = preserveReadAloudPosition) {
             success?.invoke()
             if (prefetchNextChapterEnabled) loadContent(currentIndex + 1, resetPageOffset = resetPageOffset)
             if (prefetchPrevChapterEnabled) loadContent(currentIndex - 1, resetPageOffset = resetPageOffset)
@@ -1410,7 +1418,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun loadOrUpContent(success: (() -> Unit)? = null) {
         if (readerChapterInputWindow.current == null) {
-            val preserveReadAloudPosition = BaseReadAloudService.isRun &&
+            val preserveReadAloudPosition = isCurrentBookReadAloud &&
                     BaseReadAloudService.currentChapterIndex == durChapterIndex
             loadContent(
                 durChapterIndex,

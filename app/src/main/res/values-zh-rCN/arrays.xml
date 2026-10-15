@@ -176,9 +176,9 @@
 
     <string-array name="tabletInterface">
         <item>自动</item>
-        <item>总是</item>
-        <item>横屏时</item>
-        <item>关闭</item>
+        <item>侧栏导航（空间足够时）</item>
+        <item>横向窗口使用侧栏</item>
+        <item>底部导航</item>
     </string-array>
 
     <string-array name="paletteStyle">

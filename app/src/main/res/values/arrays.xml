@@ -221,9 +221,9 @@
 
 	<string-array name="tabletInterface">
 		<item>Auto</item>
-		<item>Always</item>
-		<item>Landscape Mode</item>
-		<item>Off</item>
+        <item>Sidebar when space permits</item>
+        <item>Sidebar in landscape windows</item>
+        <item>Bottom navigation</item>
 	</string-array>
 
     <string-array name="top_bar_button_style">

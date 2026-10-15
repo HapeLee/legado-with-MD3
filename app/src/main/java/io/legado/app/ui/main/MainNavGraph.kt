@@ -1,4 +1,5 @@
 package io.legado.app.ui.main
+import io.legado.app.model.ReadBook
 
 import android.app.Activity
 import android.content.Intent
@@ -34,7 +35,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.metadata
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
@@ -63,6 +63,7 @@ import io.legado.app.ui.book.audio.AudioPlayEffect
 import io.legado.app.ui.book.audio.AudioPlayIntent
 import io.legado.app.ui.book.audio.AudioPlayScreenContent
 import io.legado.app.ui.book.audio.AudioPlayViewModel
+import io.legado.app.ui.book.bookmark.AllBookmarkRouteScreen
 import io.legado.app.ui.book.cache.manage.BookCacheManageRouteScreen
 import io.legado.app.ui.book.explore.ExploreShowIntent
 import io.legado.app.ui.book.explore.ExploreShowRouteScreen
@@ -131,7 +132,11 @@ import io.legado.app.ui.book.source.debug.BookSourceDebugViewModel
 import io.legado.app.ui.book.source.edit.BookSourceEditRoute
 import io.legado.app.ui.book.source.edit.BookSourceEditViewModel
 import io.legado.app.ui.book.source.manage.BookSourceRouteScreen
+import io.legado.app.ui.book.toc.TocIntent
 import io.legado.app.ui.book.toc.TocRouteScreen
+import io.legado.app.ui.book.toc.TocViewModel
+import io.legado.app.ui.book.toc.rule.TxtRuleRouteScreen
+import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewRouteScreen
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
@@ -152,6 +157,7 @@ import io.legado.app.ui.config.readConfig.ReadConfigRouteScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigRouteScreen
 import io.legado.app.ui.config.themeManage.ThemeManageRouteScreen
 import io.legado.app.ui.config.translation.TranslationConfigRouteScreen
+import io.legado.app.ui.dict.rule.DictRuleRouteScreen
 import io.legado.app.ui.highlightTagRule.HighlightTagRuleRouteScreen
 import io.legado.app.ui.login.SourceLoginIntent
 import io.legado.app.ui.login.SourceLoginRoute
@@ -314,7 +320,9 @@ fun MainActivity.mainEntryProvider(
     showMangaUi: Boolean,
     useRail: Boolean,
     sharedTransitionScope: SharedTransitionScope,
-    onNavigateToRoute: (NavKey) -> Unit,
+    navigateToRoute: (NavKey) -> Unit,
+    panesEnabled: Boolean,
+    onNavigationRailWidthChanged: (androidx.compose.ui.unit.Dp) -> Unit,
     onNavigateBack: () -> Unit,
     /**
      * 「胶囊 ↔ 听书播放页」的形变状态。
@@ -325,9 +333,21 @@ fun MainActivity.mainEntryProvider(
     readAloudMorph: ReadAloudMorphState?,
     homePlaybackCapsuleEnabled: Boolean,
     capsuleAnchorPreview: io.legado.app.domain.model.PlaybackCapsuleState?,
-) = entryProvider {
+) = mainPaneEntryProvider(backStack, panesEnabled, navRouteTracker, navigateToRoute) {
     entry<MainRouteToc> { route ->
+        // VM 提到 entry 里，是为了让「规则列表选好的规则」能从这里回灌（SaveTocRegex）。
+        val tocViewModel = koinViewModel<TocViewModel>()
+        ConsumeBookPageResult(route, backStack.lastOrNull() == route, navRouteTracker) { result ->
+            when (result) {
+                is BookPageResult.TxtTocRuleChosen -> {
+                    tocViewModel.onIntent(TocIntent.SaveTocRegex(result.rule))
+                }
+
+                else -> Unit
+            }
+        }
         TocRouteScreen(
+            viewModel = tocViewModel,
             bookUrl = route.bookUrl,
             initialPage = route.initialPage,
             onBackClick = { closeBookPage(backStack, route) },
@@ -341,6 +361,14 @@ fun MainActivity.mainEntryProvider(
                 onNavigateToRoute(editor?.let { MainRouteReplaceEdit(it) } ?: MainRouteReplaceRules(
                     route.bookUrl
                 ))
+            },
+            onPickLocalTocRule = { regex ->
+                onNavigateToRoute(
+                    MainRouteTxtTocRule(
+                        initialRule = regex,
+                        pickForBookUrl = route.bookUrl,
+                    )
+                )
             },
         )
     }
@@ -528,6 +556,10 @@ fun MainActivity.mainEntryProvider(
             readAloudMorph = readAloudMorph,
             homePlaybackCapsuleEnabled = homePlaybackCapsuleEnabled,
             capsuleAnchorPreview = capsuleAnchorPreview,
+            onNavigationRailWidthChanged = onNavigationRailWidthChanged,
+            onMainDestinationChanged = {
+                if (panesEnabled) onNavigateToRoute(MainRouteHome)
+            },
             onOpenSettings = {
                 onNavigateToRoute(MainRouteSettings)
             },
@@ -655,6 +687,15 @@ fun MainActivity.mainEntryProvider(
             onNavigateToHighlightTagRule = {
                 onNavigateToRoute(MainRouteHighlightTagRule)
             },
+            onNavigateToDictRule = {
+                onNavigateToRoute(MainRouteDictRule)
+            },
+            onNavigateToTxtTocRule = {
+                onNavigateToRoute(MainRouteTxtTocRule())
+            },
+            onNavigateToAllBookmark = {
+                onNavigateToRoute(MainRouteAllBookmark)
+            },
             onNavigateToAbout = {
                 onNavigateToRoute(MainRouteAbout)
             },
@@ -666,18 +707,18 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteSettings> {
         ConfigNavScreen(
             onBackClick = { onNavigateBack() },
-            onNavigateToOther = { backStack.add(MainRouteSettingsOther) },
-            onNavigateToRead = { backStack.add(MainRouteSettingsRead) },
+            onNavigateToOther = { pushRoute(MainRouteSettingsOther) },
+            onNavigateToRead = { pushRoute(MainRouteSettingsRead) },
             // 朗读规则 hub：入口从「我的」移到设置，页面标题与这里统一叫「朗读设置」
-            onNavigateToReadAloud = { backStack.add(MainRouteMultiRoleRule) },
-            onNavigateToCover = { backStack.add(MainRouteSettingsCover) },
-            onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
-            onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) },
-            onNavigateToAi = { backStack.add(MainRouteSettingsAi) },
-            onNavigateToDownloadCache = { backStack.add(MainRouteSettingsDownloadCache) },
-            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) },
-            onNavigateToLab = { backStack.add(MainRouteSettingsLabConfig) },
-            onNavigateToPrivate = { backStack.add(MainRouteSettingsPrivate) }
+            onNavigateToReadAloud = { pushRoute(MainRouteMultiRoleRule) },
+            onNavigateToCover = { pushRoute(MainRouteSettingsCover) },
+            onNavigateToTheme = { pushRoute(MainRouteSettingsTheme) },
+            onNavigateToBackup = { pushRoute(MainRouteSettingsBackup) },
+            onNavigateToAi = { pushRoute(MainRouteSettingsAi) },
+            onNavigateToDownloadCache = { pushRoute(MainRouteSettingsDownloadCache) },
+            onNavigateToTranslation = { pushRoute(MainRouteSettingsTranslation) },
+            onNavigateToLab = { pushRoute(MainRouteSettingsLabConfig) },
+            onNavigateToPrivate = { pushRoute(MainRouteSettingsPrivate) }
         )
     }
 
@@ -693,7 +734,7 @@ fun MainActivity.mainEntryProvider(
         CoverConfigRouteScreen(
             onBackClick = { onNavigateBack() },
             onNavigateToCoverAlbums = {
-                backStack.add(MainRouteSettingsCoverAlbums)
+                pushRoute(MainRouteSettingsCoverAlbums)
             },
         )
     }
@@ -705,8 +746,8 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteSettingsTheme> {
         ThemeConfigRouteScreen(
             onBackClick = { onNavigateBack() },
-            onNavigateToCustomTheme = { backStack.add(MainRouteSettingsCustomTheme) },
-            onNavigateToThemeManage = { backStack.add(MainRouteSettingsThemeManage) }
+            onNavigateToCustomTheme = { pushRoute(MainRouteSettingsCustomTheme) },
+            onNavigateToThemeManage = { pushRoute(MainRouteSettingsThemeManage) }
         )
     }
 
@@ -718,19 +759,19 @@ fun MainActivity.mainEntryProvider(
         AiConfigRouteScreen(
             onBackClick = { onNavigateBack() },
             onNavigateToProviderEdit = { providerId ->
-                backStack.add(MainRouteSettingsAiProviderEdit(providerId = providerId))
+                pushRoute(MainRouteSettingsAiProviderEdit(providerId = providerId))
             },
             onNavigateToModelEdit = { providerId, modelProfileId ->
-                backStack.add(
+                pushRoute(
                     MainRouteSettingsAiModelEdit(
                         providerId = providerId,
                         modelProfileId = modelProfileId
                     )
                 )
             },
-            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) },
-            onNavigateToAiSummary = { backStack.add(MainRouteSettingsAiSummary) },
-            onNavigateToAiPrompt = { backStack.add(MainRouteSettingsAiPrompt) }
+            onNavigateToTranslation = { pushRoute(MainRouteSettingsTranslation) },
+            onNavigateToAiSummary = { pushRoute(MainRouteSettingsAiSummary) },
+            onNavigateToAiPrompt = { pushRoute(MainRouteSettingsAiPrompt) }
         )
     }
 
@@ -781,7 +822,7 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteSettingsTranslation> {
         TranslationConfigRouteScreen(
             onBackClick = { onNavigateBack() },
-            onNavigateToAi = { backStack.add(MainRouteSettingsAi) }
+            onNavigateToAi = { pushRoute(MainRouteSettingsAi) }
         )
     }
 
@@ -907,6 +948,10 @@ fun MainActivity.mainEntryProvider(
                         ReadBookIntent.OpenChapterResult(result.index, result.position)
                     )
 
+                    is BookPageResult.TxtTocRuleChosen -> readBookViewModel.onIntent(
+                        ReadBookIntent.TocRegexResult(result.rule)
+                    )
+
                     BookPageResult.RulesClosed -> readBookViewModel.onIntent(ReadBookIntent.ReplaceRuleResult)
                     else -> Unit
                 }
@@ -939,7 +984,7 @@ fun MainActivity.mainEntryProvider(
                 // 回到阅读界面时把可见页对齐到当前朗读位置：朗读期间用户可能进听书页跳段/跳章，
                 // 服务驱动的是内部页游标，可见页需要显式回位，否则停在离开时那一页。
                 // 只在跟随状态下做（用户手动翻页脱离后不回拉），语义与「回到朗读位置」一致。
-                if (BaseReadAloudService.isRun && readAloudFollow[0]) {
+                if (ReadBook.isCurrentBookReadAloud && readAloudFollow[0]) {
                     readBookViewModel.onIntent(ReadBookIntent.BackToSpeakingPosition)
                 }
             }
@@ -964,6 +1009,11 @@ fun MainActivity.mainEntryProvider(
                 } ?: false,
                 onEffectsReady = { effectsReady.complete(Unit) },
                 onOpenToc = { bookUrl, page -> onNavigateToRoute(MainRouteToc(bookUrl, page)) },
+                onOpenTocRulePreview = { bookUrl, tocRegex ->
+                    onNavigateToRoute(
+                        MainRouteTxtTocRulePreview(bookUrl = bookUrl, currentTocRegex = tocRegex)
+                    )
+                },
                 onOpenReplaceRule = { bookUrl, editor ->
                     onNavigateToRoute(editor?.let { MainRouteReplaceEdit(it) }
                         ?: MainRouteReplaceRules(bookUrl))
@@ -1711,16 +1761,52 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
+    // 以下三个原先各自是一个薄壳 Activity（只为 setContent 而存在）。改成普通目的地后，
+    // 宽窗口下能与首页并排成右栏，也回到 NavDisplay 的统一转场里。
+
+    entry<MainRouteDictRule> {
+        DictRuleRouteScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteTxtTocRule> { route ->
+        TxtRuleRouteScreen(
+            initialRule = route.initialRule,
+            // 选择模式：为打开它的目录页挑一条规则，选中即回传并退出。
+            onPickRule = route.pickForBookUrl?.let {
+                { rule ->
+                    closeBookPage(backStack, route, BookPageResult.TxtTocRuleChosen(rule))
+                }
+            },
+            onBackClick = { onNavigateBack() },
+        )
+    }
+
+    entry<MainRouteTxtTocRulePreview> { route ->
+        TxtTocRulePreviewRouteScreen(
+            bookUrl = route.bookUrl,
+            currentTocRegex = route.currentTocRegex,
+            onBack = { onNavigateBack() },
+            onApplyRule = { rule ->
+                closeBookPage(backStack, route, BookPageResult.TxtTocRuleChosen(rule))
+            },
+            onOpenManagePage = { onNavigateToRoute(MainRouteTxtTocRule()) },
+        )
+    }
+
+    entry<MainRouteAllBookmark> {
+        AllBookmarkRouteScreen(onBack = { onNavigateBack() })
+    }
+
     entry<MainRouteMultiRoleRule> {
         MultiRoleRuleRouteScreen(
             onBackClick = { onNavigateBack() },
-            onNavigateToVoicePool = { backStack.add(MainRouteVoicePool) },
-            onNavigateToBgmPool = { backStack.add(MainRouteBgmPool) },
-            onNavigateToVoiceEffect = { backStack.add(MainRouteVoiceEffect) },
-            onNavigateToCapsuleStyle = { backStack.add(MainRouteCastCapsuleStyle) },
-            onNavigateToEngines = { backStack.add(MainRouteCloudTtsEngines()) },
-            onNavigateToRecognition = { backStack.add(MainRouteMultiRoleRecognition) },
-            onNavigateToRegexCast = { backStack.add(MainRouteRegexCastRule) },
+            onNavigateToVoicePool = { pushRoute(MainRouteVoicePool) },
+            onNavigateToBgmPool = { pushRoute(MainRouteBgmPool) },
+            onNavigateToVoiceEffect = { pushRoute(MainRouteVoiceEffect) },
+            onNavigateToCapsuleStyle = { pushRoute(MainRouteCastCapsuleStyle) },
+            onNavigateToEngines = { pushRoute(MainRouteCloudTtsEngines()) },
+            onNavigateToRecognition = { pushRoute(MainRouteMultiRoleRecognition) },
+            onNavigateToRegexCast = { pushRoute(MainRouteRegexCastRule) },
         )
     }
 

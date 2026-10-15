@@ -3,7 +3,6 @@ package io.legado.app.ui.main
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.InputDevice
@@ -12,6 +11,8 @@ import android.view.MotionEvent
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -22,7 +23,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +42,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +57,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
+import androidx.window.core.layout.WindowSizeClass
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
@@ -90,6 +98,7 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfCoverPreloader
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.welcome.WelcomeActivity
+import io.legado.app.ui.widget.components.navigation.shouldUseRail
 import io.legado.app.ui.widget.components.privacy.PrivateAppStartGate
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.eventBus.FlowEventBus
@@ -459,8 +468,6 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     @OptIn(ExperimentalSharedTransitionApi::class)
     @Composable
     override fun Content() {
-        val orientation = resources.configuration.orientation
-        val smallestWidthDp = resources.configuration.smallestScreenWidthDp
         val configuration = LocalAppUiConfiguration.current
         val predictiveBackEnabled by rememberUpdatedState(configuration.appShell.predictiveBackEnabled)
         val tabletInterface = configuration.appShell.tabletInterface
@@ -476,13 +483,31 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
             mangaSettingsGateway.currentSettings,
         )
 
-        val useRail = when (tabletInterface) {
-            "always" -> true
-            "landscape" -> orientation == Configuration.ORIENTATION_LANDSCAPE
-            "off" -> false
-            "auto" -> smallestWidthDp >= 600
-            else -> false
+        // 判据来自当前窗口，旋转 / 折叠展开 / 自由窗口改尺寸都会重组，见 AppAdaptiveNavigation。
+        val baseAdaptiveEnvironment = currentMainAdaptiveLayoutEnvironment(
+            configuration.appShell.multiPaneMode, 0.dp,
+        )
+        val navigationRegion = baseAdaptiveEnvironment.singlePaneBounds()
+        val requestedUseRail = shouldUseRail(
+            tabletInterface,
+            WindowSizeClass(navigationRegion.width, navigationRegion.height),
+            IntSize(
+                baseAdaptiveEnvironment.windowSize.width.value.toInt(),
+                baseAdaptiveEnvironment.windowSize.height.value.toInt()
+            ),
+        )
+        var navigationRailWidth by remember(
+            requestedUseRail,
+            configuration.appShell.composeEngine,
+            configuration.appShell.navExtended,
+        ) {
+            mutableStateOf(if (!requestedUseRail) 0.dp else if (configuration.appShell.navExtended) 220.dp else 96.dp)
         }
+        val useRail =
+            requestedUseRail && navigationRegion.width >= MainPaneMinWidth + navigationRailWidth.value
+        val adaptiveEnvironment =
+            baseAdaptiveEnvironment.copy(navigationRailWidth = if (useRail) navigationRailWidth else 0.dp)
+        val currentAdaptiveEnvironment by rememberUpdatedState(adaptiveEnvironment)
 
         val startRoutes = remember(defaultToRead) {
             val resolved = MainNavigator.resolveStartRoute(intent)
@@ -513,7 +538,37 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
             }
         }
         val backStack = rememberNavBackStack(*startRoutes)
+        val paneStack = backStack.dropLastWhile {
+            it is MainRouteSourceLogin || it is MainRouteSearchContent ||
+                    it is MainRouteAudioPlay || it == MainRouteReadAloudPlayer
+        }
+        val paneParentIsHome = paneStack.getOrNull(paneStack.lastIndex - 1) == MainRouteHome ||
+                paneStack.size == 1 && paneStack.firstOrNull() == MainRouteHome
+        val listDetailEnabled = adaptiveEnvironment.paneLayout(paneParentIsHome) != null
+        val hasAdaptivePair = listDetailEnabled && paneStack.size >= 2 &&
+                paneStack.takeLast(2).all { supportsMainPanes(it::class) }
+        val currentHasAdaptivePair by rememberUpdatedState(hasAdaptivePair)
+        val activeRoute = backStack.lastOrNull()
+        val fullScreenContent =
+            activeRoute is MainRouteReadBook || activeRoute is MainRouteReadManga ||
+                    activeRoute is MainRouteWebView || activeRoute is io.legado.app.ui.rss.read.MainRouteRssRead ||
+                    activeRoute is MainRouteAudioPlay || activeRoute == MainRouteReadAloudPlayer
+        val singleRegion = if (!hasAdaptivePair && !fullScreenContent &&
+            adaptiveEnvironment.safeRegions().size > 1
+        ) adaptiveEnvironment.singlePaneBounds() else null
+        val adaptiveDisplayModifier = singleRegion?.let { bounds ->
+            Modifier
+                .absoluteOffset(bounds.left.dp, bounds.top.dp)
+                .requiredSize(bounds.width.dp, bounds.height.dp)
+                .clipToBounds()
+                .consumeWindowInsets(mainAdaptiveInsets)
+        } ?: Modifier.fillMaxSize()
         SideEffect { navRouteTracker.onBackStackChanged(backStack) }
+        // Nav3 的默认 contentKey 还带路由类型，所以按同一规则重建一个 NavEntry 来比对栈顶。
+        // 覆盖层场景用它决定「是不是最上面那层」，双栏场景用它决定左栏是展开还是收拢。
+        val isTopEntry: (Any) -> Boolean = { contentKey ->
+            backStack.lastOrNull()?.let { top -> NavEntry(top) {}.contentKey == contentKey } == true
+        }
 
         // 悬浮胶囊是全局叠层：数据来自全局朗读会话与设置，不依赖阅读器是否在栈上。
         val pageShellPlayerViewModel: ReadAloudPlayerViewModel =
@@ -660,6 +715,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                             .playerUnderlaySemantics(playerVisible || morphPresent)
                     ) {
                         NavDisplay(
+                            modifier = adaptiveDisplayModifier,
                             backStack = backStack,
                             // 交给 nav3 装上 SharedEntryInSceneNavEntryDecorator：这是跨 scene 保持
                             // 共享元素登记的官方机制。少了它，书架 scene 一被销毁封面的登记就没了——
@@ -673,64 +729,90 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                             sceneStrategies = listOf(
                                 remember {
                                     ModalOverlaySceneStrategy(
-                                        isTopEntry = {
-                                            // Nav3's default content key also includes the route type.
-                                            backStack.lastOrNull()?.let { top ->
-                                                NavEntry(top) {}.contentKey == it
-                                            } == true
-                                        },
+                                        isTopEntry = isTopEntry,
                                         predictiveBackEnabled = { predictiveBackEnabled },
+                                    )
+                                },
+                                // 必须在 SinglePane 之前：宽窗口下把「列表/首页 → 详情」
+                                // 合成一个双栏场景，窄窗口自己 return null 退回单栏。
+                                remember(listDetailEnabled) {
+                                    ListDetailSceneStrategy(
+                                        isEnabled = { listDetailEnabled },
+                                        isEntryRetained = { contentKey ->
+                                            backStack.any { NavEntry(it) {}.contentKey == contentKey }
+                                        },
+                                        stackSize = { backStack.size },
+                                        environment = { currentAdaptiveEnvironment },
+                                        canCollapse = { !currentHasAdaptivePair },
                                     )
                                 },
                                 SinglePaneSceneStrategy(),
                             ),
                             transitionSpec = {
-                                (slideIntoContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                    animationSpec = tween(
-                                        durationMillis = NAV_SLIDE_DURATION_MILLIS,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    initialOffset = { fullWidth -> fullWidth }
-                                ) + fadeIn(
-                                    animationSpec = tween(
-                                        durationMillis = NAV_FADE_DURATION_MILLIS,
-                                        easing = LinearOutSlowInEasing
-                                    )
-                                )) togetherWith (slideOutOfContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                    animationSpec = tween(
-                                        durationMillis = NAV_SLIDE_DURATION_MILLIS,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    targetOffset = { fullWidth -> fullWidth / 4 }
-                                ) + fadeOut(
-                                    animationSpec = tween(
-                                        durationMillis = NAV_FADE_DURATION_MILLIS,
-                                        easing = LinearOutSlowInEasing
-                                    )
-                                ))
+                                if (targetState is ListDetailScene) {
+                                    // 双栏自己演形变：左栏从占满窗口收到窗格宽度、右栏从右侧滑进来。
+                                    // 场景级再滑一次会让左栏里的首页跟着从头滑入，看起来像换了页面。
+                                    EnterTransition.None togetherWith ExitTransition.None
+                                } else {
+                                    (slideIntoContainer(
+                                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                        animationSpec = tween(
+                                            durationMillis = NAV_SLIDE_DURATION_MILLIS,
+                                            easing = FastOutSlowInEasing
+                                        ),
+                                        initialOffset = { fullWidth -> fullWidth }
+                                    ) + fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = NAV_FADE_DURATION_MILLIS,
+                                            easing = LinearOutSlowInEasing
+                                        )
+                                    )) togetherWith (slideOutOfContainer(
+                                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                        animationSpec = tween(
+                                            durationMillis = NAV_SLIDE_DURATION_MILLIS,
+                                            easing = FastOutSlowInEasing
+                                        ),
+                                        targetOffset = { fullWidth -> fullWidth / 4 }
+                                    ) + fadeOut(
+                                        animationSpec = tween(
+                                            durationMillis = NAV_FADE_DURATION_MILLIS,
+                                            easing = LinearOutSlowInEasing
+                                        )
+                                    ))
+                                }
                             },
                             popTransitionSpec = {
-                                (slideIntoContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                    animationSpec = tween(
-                                        durationMillis = NAV_SLIDE_DURATION_MILLIS,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    initialOffset = { fullWidth -> -fullWidth / 4 }
-                                ) + fadeIn(
-                                    animationSpec = tween(
-                                        durationMillis = NAV_FADE_DURATION_MILLIS,
-                                        easing = LinearOutSlowInEasing
-                                    )
-                                )) togetherWith (scaleOut(
-                                    targetScale = 0.8f,
-                                    animationSpec = tween(
-                                        durationMillis = NAV_SLIDE_DURATION_MILLIS,
-                                        easing = FastOutSlowInEasing
-                                    )
-                                ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MILLIS)))
+                                if (initialState is ListDetailScene) {
+                                    // 返回时双栏要做「右栏滑出、左栏回满」的收拢动画，所以离场场景
+                                    // 必须活到动画结束；淡出叠加在收拢之上，下方已经恢复成单栏的同一页面。
+                                    EnterTransition.None togetherWith
+                                            fadeOut(
+                                                animationSpec = tween(
+                                                    durationMillis = NAV_SLIDE_DURATION_MILLIS,
+                                                    easing = LinearOutSlowInEasing
+                                                )
+                                            )
+                                } else {
+                                    (slideIntoContainer(
+                                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                        animationSpec = tween(
+                                            durationMillis = NAV_SLIDE_DURATION_MILLIS,
+                                            easing = FastOutSlowInEasing
+                                        ),
+                                        initialOffset = { fullWidth -> -fullWidth / 4 }
+                                    ) + fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = NAV_FADE_DURATION_MILLIS,
+                                            easing = LinearOutSlowInEasing
+                                        )
+                                    )) togetherWith (scaleOut(
+                                        targetScale = 0.8f,
+                                        animationSpec = tween(
+                                            durationMillis = NAV_SLIDE_DURATION_MILLIS,
+                                            easing = FastOutSlowInEasing
+                                        )
+                                    ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MILLIS)))
+                                }
                             },
                             predictivePopTransitionSpec = { _ ->
                                 (slideIntoContainer(
@@ -749,7 +831,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 showMangaUi = mangaSettings.showMangaUi,
                                 useRail = useRail,
                                 sharedTransitionScope = this@SharedTransitionLayout,
-                                onNavigateToRoute = { route ->
+                                panesEnabled = listDetailEnabled,
+                                onNavigationRailWidthChanged = { navigationRailWidth = it },
+                                navigateToRoute = { route ->
                                     if (route is MainRouteAudioPlay) {
                                         pageShellCapsuleScope.launch {
                                             openPlayer(
@@ -813,7 +897,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                         onSwitchToClassic = { bookUrl ->
                             // 栈顶是阅读界面：让它直接落在经典朗读控制页；
                             // 否则没有可用的阅读界面，打开一个新的。
-                            if (isReaderOnTop(backStack)) {
+                            if (isReaderOnTop(backStack) &&
+                                io.legado.app.model.ReadBook.book?.bookUrl == bookUrl
+                            ) {
                                 ReadAloudControlsRequestBus.request()
                             } else {
                                 MainNavigator.navigateToRoute(

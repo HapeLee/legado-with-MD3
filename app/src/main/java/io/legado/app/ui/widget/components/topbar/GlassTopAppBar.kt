@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -53,11 +51,9 @@ fun GlassTopAppBar(
 
     Column(modifier = finalModifier) {
         if (isMiuix) {
-            // Reserve constant status-bar space (ignoring visibility) like
-            // Material3's TopAppBar, so content doesn't reflow when the status
-            // bar is re-shown (e.g. returning from a reader that hid it).
+            // Match M3's visible system bars and cutout insets, including parent consumption.
             MiuixTopAppBar(
-                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility),
+                modifier = Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets),
                 title = title,
                 navigationIcon = navigationIcon,
                 actions = {

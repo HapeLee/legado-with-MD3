@@ -130,7 +130,7 @@ class ReaderProvider : ContentProvider() {
             RequestCode.GetBookSources -> SimpleCursor(BookSourceController.sources)
             RequestCode.GetRssSource -> SimpleCursor(RssSourceController.getSource(map))
             RequestCode.GetRssSources -> SimpleCursor(RssSourceController.sources)
-            RequestCode.GetBookshelf -> SimpleCursor(BookController.bookshelf)
+            RequestCode.GetBookshelf -> SimpleCursor(BookController.getBookshelf(map))
             RequestCode.GetBookContent -> SimpleCursor(BookController.getBookContent(map))
             RequestCode.RefreshToc -> SimpleCursor(BookController.refreshToc(map))
             RequestCode.GetChapterList -> SimpleCursor(BookController.getChapterList(map))

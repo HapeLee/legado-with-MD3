@@ -623,7 +623,7 @@ class ReadBookController(
     fun showComposeActionMenu() {
         val state = viewModel.uiState.value
         when {
-            BaseReadAloudService.isRun -> viewModel.onIntent(ReadBookIntent.ReadAloudAction)
+            ReadBook.isCurrentBookReadAloud -> viewModel.onIntent(ReadBookIntent.ReadAloudAction)
             isAutoPage -> viewModel.onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
             state.isShowingSearchResult -> viewModel.onIntent(ReadBookIntent.ShowSearchMenu)
             else -> viewModel.onIntent(ReadBookIntent.ShowMenu)
@@ -1803,6 +1803,7 @@ class ReadBookController(
         registerTimeBatteryReceiver()
         networkChangedListener.onNetworkChanged = viewModel::onNetworkChanged
         networkChangedListener.register()
+        readerSessionViewModel.requestRedraw()
     }
 
     /** Release listeners even if the route's effect collector has already stopped. */
@@ -2590,7 +2591,7 @@ class ReadBookController(
     }
 
     fun updateReadAloudProgress(chapterStart: Int) {
-        if (!BaseReadAloudService.isPlay()) return
+        if (!ReadBook.isCurrentBookReadAloud || !BaseReadAloudService.isPlay()) return
         // 只更新朗读高亮锚点。可见页的移动由朗读服务驱动（moveToReadAloudPage →
         // moveToNextPage → upContent）与用户导航负责；这里若再按朗读位置 locate
         // 回迁可见页，进入阅读器时会把页面先拉回朗读所在的上一段（跨页段落的
@@ -2625,8 +2626,7 @@ class ReadBookController(
     private fun toggleReadAloud() {
         viewModel.onIntent(ReadBookIntent.StopAutoPage)
         when {
-            !BaseReadAloudService.isRun -> {
-                ReadAloud.upReadAloudClass()
+            !ReadBook.isCurrentBookReadAloud -> {
                 if (!readAloudFromComposeVisibleStart()) ReadBook.readAloud()
             }
 
@@ -2641,7 +2641,7 @@ class ReadBookController(
     }
 
     private fun toggleAutoPage() {
-        ReadAloud.stop(activity)
+        if (ReadBook.isCurrentBookReadAloud) ReadAloud.stop(activity)
         if (isAutoPage) {
             stopAutoPage()
         } else {

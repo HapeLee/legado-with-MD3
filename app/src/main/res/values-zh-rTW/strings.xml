@@ -1887,7 +1887,7 @@
     <string name="system_media_control_compatibility_change_summary">如果鎖定畫面上缺少系統媒體控制項，請啟用此選項（例如 OneUI 7.0、OriginOS）</string>
     <string name="read_aloud_pause_resume">暫停/繼續朗讀</string>
     <string name="play_mode">播放模式</string>
-    <string name="tabletInterface">平板介面</string>
+    <string name="tabletInterface">導覽佈局</string>
     <string name="progress">進度</string>
     <string name="clear_all">全部清除</string>
     <string name="welcome_title">歡迎！</string>

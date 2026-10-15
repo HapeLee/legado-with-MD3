@@ -63,6 +63,7 @@ sealed interface ThemeConfigIntent {
     data class SetUseFloatingBottomBar(val enabled: Boolean) : ThemeConfigIntent
     data class SetUseFloatingBottomBarLiquidGlass(val enabled: Boolean) : ThemeConfigIntent
     data class SetTabletInterface(val value: String) : ThemeConfigIntent
+    data class SetMultiPaneMode(val value: String) : ThemeConfigIntent
     data class SetLabelVisibilityMode(val value: String) : ThemeConfigIntent
     data class SetMiuixMonet(val enabled: Boolean) : ThemeConfigIntent
     data class SetDynamicColors(val enabled: Boolean) : ThemeConfigIntent

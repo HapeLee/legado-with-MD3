@@ -9,6 +9,7 @@ import io.legado.app.help.config.AppConfigStore
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReadAloud
 import io.legado.app.service.AudioPlayService
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.playback.PlaybackCapsuleGatewayAdapter
@@ -86,6 +87,7 @@ class PlaybackCapsuleGatewayAdapterTest {
     @Test
     fun runningReadAloudServiceKeepsCapsuleWhenAvailabilitySignalIsStale() = runTest(dispatcher) {
         setReadBook(Book(bookUrl = "read-a", name = "正在朗读"))
+        ReadAloud.bookSession.adopt(ReadAloudBookSession.Snapshot(book = ReadBook.book, chapterIndex = 0))
         BaseReadAloudService::class.java.getDeclaredField("isRun").apply {
             isAccessible = true
             setBoolean(null, true)
@@ -96,6 +98,21 @@ class PlaybackCapsuleGatewayAdapterTest {
         runCurrent()
         assertEquals(PlaybackCapsuleSource.ReadAloud, gateway.state.value.source)
         assertEquals("read-a", gateway.state.value.bookUrl)
+    }
+
+    @Test
+    fun readingAnotherBookKeepsThePlayingBooksCapsule() = runTest(dispatcher) {
+        ReadAloud.bookSession.adopt(ReadAloudBookSession.Snapshot(
+            book = Book(bookUrl = "read-a", name = "正在听 A"), chapterIndex = 5,
+        ))
+        setReadBook(Book(bookUrl = "read-b", name = "正在看 B"))
+        BaseReadAloudService::class.java.getDeclaredField("isRun").apply {
+            isAccessible = true
+            setBoolean(null, true)
+        }
+        val gateway = gateway()
+        assertEquals("read-a", gateway.state.value.bookUrl)
+        assertEquals("正在听 A", gateway.state.value.bookName)
     }
 
     @Test

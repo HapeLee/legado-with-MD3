@@ -29,6 +29,7 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
+import io.legado.app.model.ReadAloud
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.postEvent
 import kotlinx.coroutines.CoroutineScope
@@ -154,7 +155,11 @@ class ReadBookLoadDelegate(
         if (isSameBook) {
             ReadBook.upData(book)
         } else {
-            ReadBook.resetData(book)
+            val playing = ReadAloud.bookSession.state.value
+            val readerBook = if (BaseReadAloudService.isRun && ReadAloud.bookSession.owns(book.bookUrl)) {
+                book.copy(durChapterIndex = playing.chapterIndex, durChapterPos = playing.chapterPosition)
+            } else book
+            ReadBook.resetData(readerBook)
         }
         host.setInitFinish()
         if (!book.isLocal && book.tocUrl.isEmpty() && !loadBookInfo(book)) {
@@ -170,7 +175,8 @@ class ReadBookLoadDelegate(
         host.checkReadRecordAlias(book)
 
         if (!isSameBook) {
-            ReadBook.loadInitialContent(resetPageOffset = true) {
+            ReadBook.loadInitialContent(resetPageOffset = true,
+                preserveReadAloudPosition = ReadBook.isCurrentBookReadAloud) {
                 ReadBook.bookSource?.let {
                     SourceCallBack.callBackBook(
                         SourceCallBack.START_READ,
@@ -194,7 +200,7 @@ class ReadBookLoadDelegate(
         }
         if (ReadBook.chapterChanged) {
             ReadBook.chapterChanged = false
-        } else if (!(isSameBook && BaseReadAloudService.isRun) && ReadBook.inBookshelf) {
+        } else if (!ReadBook.isCurrentBookReadAloud && ReadBook.inBookshelf) {
             if (backupSettingsGateway.currentSettings.syncBookProgressPlus) {
                 ReadBook.syncProgress({ progress -> host.sureNewProgress(progress) })
             } else {

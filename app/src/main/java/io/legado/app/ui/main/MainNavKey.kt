@@ -263,6 +263,31 @@ data class MainRouteSearchContent(
 @Serializable
 data object MainRouteHighlightTagRule : MainRoute
 
+@Serializable
+data object MainRouteDictRule : MainRoute
+
+/**
+ * TXT 目录规则列表。
+ *
+ * [pickForBookUrl] 非空表示**选择模式**：这是为 [MainRouteToc] 挑一条规则而打开的，
+ * 选中后把结果回传给那个目录页（见 `BookPageResult.TxtTocRuleChosen`），而不是切换选中态。
+ */
+@Serializable
+data class MainRouteTxtTocRule(
+    val initialRule: String? = null,
+    val pickForBookUrl: String? = null,
+) : MainRoute
+
+/** TXT 目录规则预览：把一条规则套到 [bookUrl] 这本书上，可应用，也可跳到规则列表。 */
+@Serializable
+data class MainRouteTxtTocRulePreview(
+    val bookUrl: String,
+    val currentTocRegex: String? = null,
+) : MainRoute
+
+@Serializable
+data object MainRouteAllBookmark : MainRoute
+
 /** 朗读设置 hub（设置 → 朗读设置）：变声器 / 引擎 / 识别 / 正则角色。 */
 @Serializable
 data object MainRouteMultiRoleRule : MainRoute

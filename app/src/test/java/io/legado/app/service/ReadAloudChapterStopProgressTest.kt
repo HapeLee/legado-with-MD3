@@ -9,6 +9,8 @@ import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
+import io.legado.app.model.ReadAloud
+import io.legado.app.service.readaloud.ReadAloudBookSession
 import io.legado.app.support.InMemoryAppDatabaseFixture
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -64,6 +66,8 @@ class ReadAloudChapterStopProgressTest {
         appDb.bookDao.insert(book)
         ReadBook.replaceCurrentBook(book)
         ReadBook.updateReadingPosition(20)
+        ReadBook.isUiActive = true
+        ReadAloud.bookSession.adopt(ReadAloudBookSession.Snapshot(book = book, chapterIndex = 5))
         ReadBook.clearReaderPagination()
         service = Robolectric.buildService(CompletionService::class.java).get()
         service.readerReadAloudChapter = ReaderReadAloudChapter.create(
@@ -100,6 +104,7 @@ class ReadAloudChapterStopProgressTest {
 
     @After
     fun tearDown() {
+        ReadBook.isUiActive = false
         try {
             BaseReadAloudService.requestStop()
             awaitProgressSave()

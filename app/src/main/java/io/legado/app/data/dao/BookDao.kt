@@ -842,6 +842,12 @@ interface BookDao {
     )
     fun upReadProgress(bookUrl: String, durChapterIndex: Int, durChapterPos: Int, durChapterTime: Long)
 
+    @Query("""UPDATE books SET lastCheckCount = 0, durChapterIndex = :chapterIndex,
+        durChapterPos = :chapterPosition, durChapterTitle = :chapterTitle, durChapterTime = :updatedAt
+        WHERE bookUrl = :bookUrl""")
+    fun upReadAloudProgress(bookUrl: String, chapterIndex: Int, chapterPosition: Int,
+        chapterTitle: String?, updatedAt: Long)
+
     @Query("UPDATE books SET syncTime = :syncTime WHERE bookUrl = :bookUrl AND syncTime < :syncTime")
     fun upSyncTime(bookUrl: String, syncTime: Long)
 

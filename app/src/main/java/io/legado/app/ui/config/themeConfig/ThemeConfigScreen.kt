@@ -378,6 +378,13 @@ fun ThemeConfigScreen(
                             )
                         }
                     )
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.multi_pane_layout),
+                        selectedValue = appShell.multiPaneMode,
+                        displayEntries = stringArrayResource(R.array.multi_pane_layout_entries),
+                        entryValues = stringArrayResource(R.array.multi_pane_layout_values),
+                        onValueChange = { onIntent(ThemeConfigIntent.SetMultiPaneMode(it)) },
+                    )
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.book_info_page)) {
