@@ -37,6 +37,13 @@ class MultiRoleRuleViewModel(
 
     /** 全量音色缓存（voiceId → displayName），picker/成员列表刷新时更新。 */
     private var allVoices: List<Pair<String, String>> = emptyList()
+    /**
+     * 「添加音色」打开时那一份未过滤候选：搜索框只改视图、不缩池子，
+     * 所以删空输入框能回到全量，输入过程中也不会把已勾的项挤掉。
+     */
+    private var pickerUniverse: List<CastMemberUi> = emptyList()
+    /** 勾选按 voiceId 记在查询之外：换关键字之后再保存，之前勾的还在。 */
+    private val pickerChecked = linkedSetOf<String>()
 
     /** 本次待确认的外部格式解析结果（只活在确认对话框这一趟里，不落库）。 */
     private var pendingImport: VoicePoolTransfer.TtsServerPreview? = null
@@ -316,51 +323,49 @@ class MultiRoleRuleViewModel(
                 allVoices = VoicePoolStore.allVoicePairs()
                 val engineNames = VoicePoolStore.voiceEngineNames()
                 val inPool = VoicePoolStore.memberVoiceIds(poolId)
+                pickerUniverse = allVoices
+                    .filterNot { (id, _) -> inPool.contains(id) }
+                    .map { (id, display) ->
+                        CastMemberUi(
+                            voiceId = id,
+                            displayName = display,
+                            engineName = engineNames[id].orEmpty(),
+                            checked = false,
+                        )
+                    }
+                pickerChecked.clear()
                 _uiState.update {
                     it.copy(
                         pickerPoolId = poolId,
                         pickerQuery = "",
-                        pickerCandidates = allVoices
-                            .filterNot { (id, _) -> inPool.contains(id) }
-                            .map { (id, display) ->
-                                CastMemberUi(
-                                    voiceId = id,
-                                    displayName = display,
-                                    engineName = engineNames[id].orEmpty(),
-                                    checked = false,
-                                )
-                            }
-                            .toImmutableList(),
+                        pickerCandidates = pickerView(""),
                     )
                 }
             }
 
-            MultiRoleRuleIntent.DismissMemberPicker -> _uiState.update {
-                it.copy(pickerPoolId = null, pickerCandidates = persistentListOf())
+            MultiRoleRuleIntent.DismissMemberPicker -> {
+                pickerUniverse = emptyList()
+                pickerChecked.clear()
+                _uiState.update {
+                    it.copy(pickerPoolId = null, pickerCandidates = persistentListOf())
+                }
             }
 
             is MultiRoleRuleIntent.UpdatePickerQuery -> _uiState.update { state ->
-                val query = intent.query.trim()
                 state.copy(
                     pickerQuery = intent.query,
-                    pickerCandidates = filterMembers(state.pickerCandidates, allVoices, query),
+                    pickerCandidates = pickerView(intent.query),
                 )
             }
 
             is MultiRoleRuleIntent.TogglePickerSelection -> _uiState.update { state ->
-                state.copy(
-                    pickerCandidates = state.pickerCandidates.map { c ->
-                        if (c.voiceId == intent.voiceId) c.copy(checked = intent.checked) else c
-                    }.toImmutableList(),
-                )
+                if (intent.checked) pickerChecked.add(intent.voiceId) else pickerChecked.remove(intent.voiceId)
+                state.copy(pickerCandidates = pickerView(state.pickerQuery))
             }
 
             MultiRoleRuleIntent.SaveMemberPicker -> {
                 val poolId = _uiState.value.pickerPoolId ?: return
-                val picked = _uiState.value.pickerCandidates
-                    .filter { it.checked }
-                    .map { it.voiceId }
-                    .toSet()
+                val picked = pickerChecked.toSet()
                 execute {
                     val merged = VoicePoolStore.memberVoiceIds(poolId) + picked
                     VoicePoolStore.setMembers(poolId, merged)
@@ -540,16 +545,19 @@ class MultiRoleRuleViewModel(
     }
 
     /** 添加对话框的候选筛选（成员列表的筛选在界面里做，见 CastPoolCard）。 */
-    private fun filterMembers(
-        list: kotlinx.collections.immutable.ImmutableList<CastMemberUi>,
-        voices: List<Pair<String, String>>,
+    /** 按关键字裁出要显示的那一份，并把库外的勾选状态贴回去。 */
+    private fun pickerView(
         query: String,
     ): kotlinx.collections.immutable.ImmutableList<CastMemberUi> {
-        if (query.isEmpty()) return list
-        val nameById = voices.toMap()
-        return list.filter {
-            (nameById[it.voiceId] ?: it.displayName).contains(query, ignoreCase = true)
-        }.toImmutableList()
+        val text = query.trim()
+        return pickerUniverse
+            .filter {
+                text.isEmpty() ||
+                    it.displayName.contains(text, ignoreCase = true) ||
+                    it.engineName.contains(text, ignoreCase = true)
+            }
+            .map { if (pickerChecked.contains(it.voiceId)) it.copy(checked = true) else it }
+            .toImmutableList()
     }
 
     private fun refreshPools() {
