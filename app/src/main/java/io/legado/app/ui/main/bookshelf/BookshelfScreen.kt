@@ -29,6 +29,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,12 +42,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -99,6 +102,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -466,6 +470,10 @@ fun BookshelfScreen(
     }
     val isShowingFolderRoot =
         bookGroupStyle == 2 && isInFolderRoot && !isUsingStandaloneSearchGroup
+    // 私密分组锁定中时不提供定位入口：定位列表展示的是书名，锁定态下不能明文露出来
+    val currentGroupLocked = uiState.groups
+        .firstOrNull { it.groupId == currentGroupId }
+        ?.let { uiState.isGroupLocked(it) } == true
     LaunchedEffect(scrollToTopRequest) {
         if (scrollToTopRequest > 0L) {
             val targetGridState = when {
@@ -558,6 +566,7 @@ fun BookshelfScreen(
 
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showTopBarMenu by remember { mutableStateOf(false) }
+    var showLocateDialog by remember { mutableStateOf(false) }
     val onSearchClick = {
         if (uiState.settings.bookshelfSearchActionDirectToSearch) {
             onNavigateToSearch(uiState.searchKey.trim())
@@ -669,6 +678,13 @@ fun BookshelfScreen(
                     }
 
                     if (!isEditMode) {
+                        if (!isShowingFolderRoot && !currentGroupLocked) {
+                            TopBarActionButton(
+                                onClick = { showLocateDialog = true },
+                                imageVector = AppIcons.PrecisionSearch,
+                                contentDescription = stringResource(R.string.locate_book)
+                            )
+                        }
                         Box {
                             TopBarActionButton(
                                 onClick = { showTopBarMenu = true },
@@ -1288,6 +1304,22 @@ fun BookshelfScreen(
         }
     }
 
+    if (showLocateDialog) {
+        BookLocateDialog(
+            books = uiState.items.filterNot { uiState.isBookLocked(it) },
+            onDismissRequest = { showLocateDialog = false },
+            onSelect = { index ->
+                showLocateDialog = false
+                val targetGridState = if (isUsingStandaloneSearchGroup) {
+                    standaloneSearchGridState
+                } else {
+                    groupGridStates[currentGroupId]
+                }
+                scope.launch { targetGridState?.animateScrollToItem(index) }
+            }
+        )
+    }
+
     BookshelfOverlays(
         activeOverlay = activeOverlay,
         uiState = uiState,
@@ -1839,4 +1871,69 @@ fun BookshelfPage(
             }
         }
     }
+}
+
+/** 书籍快速定位：输入书名/作者，直接滚到列表里那本书，不用一路下滑。 */
+@Composable
+private fun BookLocateDialog(
+    books: List<BookUiItem>,
+    onDismissRequest: () -> Unit,
+    onSelect: (Int) -> Unit
+) {
+    var key by remember { mutableStateOf("") }
+    val matched = remember(books, key) {
+        books.withIndex().filter { (_, item) ->
+            key.isBlank() || item.matches(key.trim())
+        }
+    }
+    AppAlertDialog(
+        show = true,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.locate_book),
+        content = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                AppTextField(
+                    value = key,
+                    onValueChange = { key = it },
+                    label = stringResource(R.string.search_book_key),
+                    backgroundColor = LegadoTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(320.dp)
+                ) {
+                    items(matched.size) { index ->
+                        val entry = matched[index]
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(entry.index) }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            AppText(
+                                text = entry.value.book.name,
+                                style = LegadoTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            val originName = entry.value.book.originName
+                            if (originName.isNotBlank()) {
+                                AppText(
+                                    text = originName,
+                                    style = LegadoTheme.typography.bodySmall,
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismissRequest
+    )
 }

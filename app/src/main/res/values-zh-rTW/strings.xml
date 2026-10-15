@@ -441,6 +441,7 @@
     <string name="need_more_time_load_content">正文長度過長時，載入正文可能會花費更多時間</string>
     <string name="revert_selection">反選</string>
     <string name="search_book_key">搜尋書名、作者</string>
+    <string name="locate_book">定位書籍</string>
     <string name="debug_hint">書名、作者、URL</string>
     <string name="faq">常見問題</string>
     <string name="pt_show_all_find">顯示所有發現</string>

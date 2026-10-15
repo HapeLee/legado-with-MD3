@@ -532,6 +532,7 @@
     <string name="need_more_time_load_content">When the body length is too long, it may take more time to load the text.</string>
     <string name="revert_selection">Inverse</string>
     <string name="search_book_key">Search book name/author</string>
+    <string name="locate_book">Locate book</string>
     <string name="debug_hint">Book name,Author,URL</string>
     <string name="faq">FAQ</string>
     <string name="pt_show_all_find">Display all Discovery</string>
