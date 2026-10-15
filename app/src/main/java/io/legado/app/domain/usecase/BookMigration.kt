@@ -54,6 +54,7 @@ internal fun Book.migrateInto(
     }
     if (options.migrateCategory) {
         target.customTag = customTag
+        target.subTag = subTag
     }
     if (options.migrateRemark) {
         target.customIntro = customIntro
@@ -94,6 +95,7 @@ internal fun Book.copyMigratableFieldsTo(
     }
     if (options.migrateCategory) {
         target.customTag = customTag
+        target.subTag = subTag
     }
     if (options.migrateRemark) {
         target.customIntro = customIntro

@@ -3443,7 +3443,8 @@
     <string name="merged_in_multiline">多行模式下将合并展示</string>
     <string name="apply">应用</string>
     <string name="source_categories">书源分类</string>
-    <string name="my_tags">我的标签</string>
+    <string name="my_tags">我的主标签</string>
+    <string name="my_sub_tags">我的子标签</string>
     <string name="tts_cache_manage">朗读缓存</string>
     <string name="tts_cache_total">缓存总量</string>
     <string name="tts_cache_file_count">%d 个文件</string>

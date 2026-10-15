@@ -2888,7 +2888,8 @@
     <string name="hidden_items">已隱藏項目</string>
     <string name="merged_in_multiline">多行模式下將合併顯示</string>
     <string name="source_categories">書源分類</string>
-    <string name="my_tags">我的標籤</string>
+    <string name="my_tags">我的主標籤</string>
+    <string name="my_sub_tags">我的子標籤</string>
     <string name="character_voice_gender">聲音性別</string>
     <string name="character_voice_age_band">聲音池</string>
     <string name="voice_gender_male">男性</string>

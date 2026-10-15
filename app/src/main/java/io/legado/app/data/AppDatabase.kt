@@ -136,7 +136,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 132,
+    version = 133,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -278,6 +278,8 @@ val appDb by lazy {
         AutoMigration(from = 130, to = 131),
         // books 新增 disableReadRecord 列：单独为本书关闭阅读记录，默认 0 = 照常记录
         AutoMigration(from = 131, to = 132),
+        // books 新增 subTag 列：用户维护的子标签，只在详情页标签里展示，默认 NULL = 无子标签。
+        AutoMigration(from = 132, to = 133),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

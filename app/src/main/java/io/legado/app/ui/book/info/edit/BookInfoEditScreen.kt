@@ -269,9 +269,17 @@ fun BookInfoEditContent(
         )
         Spacer(modifier = Modifier.height(8.dp))
         KindEditor(
+            title = stringResource(R.string.my_tags),
             kindList = uiState.kindList,
             onKindListChange = { viewModel.onKindListChange(it) },
             onReset = { viewModel.resetKinds() },
+            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
+        )
+        KindEditor(
+            title = stringResource(R.string.my_sub_tags),
+            kindList = uiState.subKindList,
+            onKindListChange = { viewModel.onSubKindListChange(it) },
+            onReset = { viewModel.resetSubKinds() },
             backgroundColor = LegadoTheme.colorScheme.surfaceInput,
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -408,6 +416,7 @@ fun BookTypeDropdown(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun KindEditor(
+    title: String,
     kindList: List<String>,
     onKindListChange: (List<String>) -> Unit,
     onReset: () -> Unit,
@@ -432,7 +441,7 @@ fun KindEditor(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         AppText(
-            text = stringResource(R.string.my_tags)
+            text = title
         )
         Row(
             modifier = Modifier.fillMaxWidth(),

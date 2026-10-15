@@ -43,6 +43,8 @@ data class BookInfoEditUiState(
     val sourceKindList: List<String> = emptyList(),
     val kindList: List<String> = emptyList(),
     val originalKindList: List<String> = emptyList(),
+    val subKindList: List<String> = emptyList(),
+    val originalSubKindList: List<String> = emptyList(),
     val selectedType: BookInfoEditType = BookInfoEditType.TEXT,
     val fixedType: Boolean = false,
     val book: Book? = null,
@@ -67,6 +69,7 @@ class BookInfoEditViewModel(
                 }
                 val sourceKinds = it.kind?.splitNotBlank(",", "\n").orEmpty().distinct()
                 val customTags = it.customTag?.splitNotBlank(",", "\n").orEmpty().distinct()
+                val subTags = it.subTag?.splitNotBlank(",", "\n").orEmpty().distinct()
                 _uiState.value = BookInfoEditUiState(
                     name = it.name,
                     author = it.author,
@@ -76,6 +79,8 @@ class BookInfoEditViewModel(
                     sourceKindList = sourceKinds,
                     kindList = customTags,
                     originalKindList = customTags,
+                    subKindList = subTags,
+                    originalSubKindList = subTags,
                     selectedType = selectedType,
                     fixedType = it.config.fixedType,
                     book = it
@@ -112,6 +117,15 @@ class BookInfoEditViewModel(
         _uiState.value = _uiState.value.copy(kindList = kindList.distinct())
     }
 
+    fun resetSubKinds() {
+        _uiState.value =
+            _uiState.value.copy(subKindList = _uiState.value.originalSubKindList.toList())
+    }
+
+    fun onSubKindListChange(subKindList: List<String>) {
+        _uiState.value = _uiState.value.copy(subKindList = subKindList.distinct())
+    }
+
     fun onBookTypeChange(bookType: BookInfoEditType) {
         _uiState.value = _uiState.value.copy(selectedType = bookType)
     }
@@ -144,6 +158,7 @@ class BookInfoEditViewModel(
                 book.customCoverUrl = if (currentState.coverUrl == book.coverUrl) null else currentState.coverUrl
                 book.customIntro = if (currentState.intro == book.intro) null else currentState.intro
                 book.customTag = currentState.kindList.joinToString(",").ifBlank { null }
+                book.subTag = currentState.subKindList.joinToString(",").ifBlank { null }
                 applyTagGroupRulesForBook(book)
                 BookHelp.updateCacheFolder(oldBook, book)
 

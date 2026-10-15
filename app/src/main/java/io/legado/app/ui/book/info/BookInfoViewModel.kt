@@ -55,6 +55,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
 import io.legado.app.help.book.getDisplayTagList
 import io.legado.app.help.book.getExportFileName
+import io.legado.app.help.book.getSubTagList
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.book.isSameNameAuthor
@@ -1306,7 +1307,8 @@ class BookInfoViewModel(
             if (book.kind != kindBefore) {
                 bookRepository.update(book)
             }
-            val finalKinds = book.getDisplayTagList()
+            // 子标签只在详情页标签里出现，不参与自动分组（applyTagGroupRules 仍只看主标签 + 书源分类）
+            val finalKinds = (book.getDisplayTagList() + book.getSubTagList()).distinct()
             val enabledRules = highlightTagRuleRepository.getEnabled()
             val (highlighted, regular) = parseHighlightedTags(finalKinds, enabledRules)
             HighlightMeta(highlighted, regular, normalizedGroupNames, hasCustomGroup)

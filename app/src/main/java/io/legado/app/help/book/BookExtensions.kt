@@ -146,6 +146,9 @@ fun Book.getSourceTagList(): List<String> =
 fun Book.getCustomTagList(): List<String> =
     customTag?.splitNotBlank(",", "\n").orEmpty().distinct()
 
+fun Book.getSubTagList(): List<String> =
+    subTag?.splitNotBlank(",", "\n").orEmpty().distinct()
+
 fun Book.getDisplayTagList(): List<String> =
     (getCustomTagList() + getSourceTagList()).distinct()
 

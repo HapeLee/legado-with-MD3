@@ -3447,7 +3447,8 @@
     <string name="merged_in_multiline">Merged in multiline mode</string>
     <string name="apply">Apply</string>
     <string name="source_categories">Source categories</string>
-    <string name="my_tags">My tags</string>
+    <string name="my_tags">My main tags</string>
+    <string name="my_sub_tags">My sub tags</string>
     <string name="tts_cache_manage">TTS Cache</string>
     <string name="tts_cache_total">Total Cache</string>
     <string name="tts_cache_file_count">%d files</string>

@@ -62,6 +62,8 @@ data class Book(
     override var kind: String? = null,
     // 分类信息(用户修改)
     var customTag: String? = null,
+    // 子标签(用户维护,只在详情页标签里展示,不进书架标签)
+    var subTag: String? = null,
     // 封面Url(书源获取)
     var coverUrl: String? = null,
     // 封面Url(用户修改)
@@ -143,6 +145,7 @@ data class Book(
         intro = intro?.take(5000)
         listIntro = listIntro?.take(5000)
         customTag = customTag?.take(1000)
+        subTag = subTag?.take(1000)
         customIntro = customIntro?.take(5000)
         remark = remark?.take(1000)
         latestChapterTitle = latestChapterTitle?.take(200)
@@ -425,6 +428,7 @@ data class Book(
         newBook.customCoverUrl = customCoverUrl
         newBook.customIntro = customIntro
         newBook.customTag = customTag
+        newBook.subTag = subTag
         newBook.canUpdate = canUpdate
         newBook.disableReadRecord = disableReadRecord
         if (config.fixedType) {
