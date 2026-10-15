@@ -101,8 +101,11 @@ fun AiCastDialogSheet(
     val chapterTotal = book?.totalChapterNum ?: 0
     val progress by AiCastProgress.state.collectAsStateWithLifecycle()
 
-    var chapterIndex by remember { mutableStateOf(ReadBook.durChapterIndex) }
-    var chapterTitle by remember { mutableStateOf(book?.durChapterTitle.orEmpty()) }
+    // 当前章一律每次重组重读（与 `BgmSceneSheet`/`ReadAloudCastSheet` 同一口径）：
+    // 这个弹层常挂在阅读界面上，`show` 只是开关，用 remember 存快照就会把章号钉在进阅读器
+    // 那一章，切章后「删除分配」和发给 AI 的 currentChapter 都会打到错的章。
+    val chapterIndex = ReadBook.durChapterIndex
+    val chapterTitle = book?.durChapterTitle.orEmpty()
     var assignedCount by remember(chapterIndex) { mutableStateOf(-1) }
     var dialogueCount by remember(chapterIndex) { mutableStateOf(-1) }
     var sceneCount by remember(chapterIndex) { mutableStateOf(-1) }
@@ -113,8 +116,9 @@ fun AiCastDialogSheet(
     var extraChapters by remember { mutableIntStateOf(0) }
     // 范围模式：起止章直接选（章号从 1 开始填，与听书下载同一套口径），关掉就是「当前章 + 追加章节数」
     var byRange by remember { mutableStateOf(false) }
-    var rangeStartText by remember { mutableStateOf((chapterIndex + 1).toString()) }
-    var rangeEndText by remember { mutableStateOf((chapterIndex + 1).toString()) }
+    // 起止章默认跟着当前章走；同章内用户手填的值要留住，所以只以 chapterIndex 为 key
+    var rangeStartText by remember(chapterIndex) { mutableStateOf((chapterIndex + 1).toString()) }
+    var rangeEndText by remember(chapterIndex) { mutableStateOf((chapterIndex + 1).toString()) }
     var memoryOpen by remember { mutableStateOf(false) }
     var requestOpen by remember { mutableStateOf(false) }
 

@@ -98,10 +98,12 @@ fun ReaderAudioDownloadSheet(
         value = withContext(Dispatchers.IO) { ReadAloudAudioStore.list(bookUrl) }
     }
     val downloaded = rows.orEmpty()
-    val currentChapterRow = rows?.firstOrNull { it.chapterIndex == ReadBook.durChapterIndex }
+    // 当前章每次重组重读：这张卡片常挂在阅读界面上，show 只是开关，存快照会把章号钉在进阅读器那一章
+    val currentChapterIndex = ReadBook.durChapterIndex
+    val currentChapterRow = rows?.firstOrNull { it.chapterIndex == currentChapterIndex }
     var byRange by remember { mutableStateOf(false) }
-    var startText by remember { mutableStateOf((ReadBook.durChapterIndex + 1).toString()) }
-    var endText by remember { mutableStateOf((ReadBook.durChapterIndex + 1).toString()) }
+    var startText by remember(currentChapterIndex) { mutableStateOf((currentChapterIndex + 1).toString()) }
+    var endText by remember(currentChapterIndex) { mutableStateOf((currentChapterIndex + 1).toString()) }
     val range = downloadRange(byRange, startText, endText, chapterCount)
 
     CastImeScope {
