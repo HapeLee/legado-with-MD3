@@ -20,6 +20,36 @@ internal class MangaWebtoonViewportAnchor {
     }
 }
 
+/** 整章前插/移除必须等手势结束；加载进度等不改变身份的更新可以立即显示。 */
+internal fun shouldDeferMangaPageReplacement(
+    scrolling: Boolean,
+    displayed: List<MangaReaderItemUi>,
+    replacement: List<MangaReaderItemUi>,
+): Boolean = scrolling && displayed.isNotEmpty() &&
+        mangaPageKeysChanged(displayed, replacement)
+
+internal fun mangaPageKeysChanged(
+    displayed: List<MangaReaderItemUi>,
+    replacement: List<MangaReaderItemUi>,
+): Boolean = displayed.size != replacement.size || displayed.indices.any {
+    displayed[it].key != replacement[it].key
+}
+
+/** 列表重建后重新定位尚未完成的跳页；新代次让 UI 取消旧集合的布局等待。 */
+internal fun MangaScrollRequest.rebase(
+    displayed: List<MangaReaderItemUi>,
+    replacement: List<MangaReaderItemUi>,
+): MangaScrollRequest? {
+    if (!mangaPageKeysChanged(displayed, replacement)) return this
+    val target = displayed.getOrNull(itemIndex) ?: return null
+    val exact = replacement.indexOfFirst { it.key == target.key }
+    val index = if (exact >= 0) exact else replacement.indexOfFirst {
+        target is MangaReaderItemUi.Page && it is MangaReaderItemUi.Page &&
+                it.chapterIndex == target.chapterIndex && it.pageIndex == target.pageIndex
+    }
+    return index.takeIf { it >= 0 }?.let { copy(id = System.nanoTime(), itemIndex = it) }
+}
+
 internal fun mangaChapterLoadingItem(
     chapterIndex: Int,
     message: String,

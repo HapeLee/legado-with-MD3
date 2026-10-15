@@ -19,6 +19,11 @@ import coil3.size.Scale
 import coil3.size.Size
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
+import io.legado.app.ui.book.manga.MangaPageLoadState
+import io.legado.app.ui.book.manga.MangaReaderItemUi
+import io.legado.app.ui.book.manga.MangaReaderSettings
+import io.legado.app.ui.book.manga.config.MangaScrollMode
+import io.legado.app.ui.book.manga.imageRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -46,6 +51,60 @@ class MangaFileRequestTest {
     @Before
     fun setUp() {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
+    }
+
+    @Test
+    fun `returning to a displayed page after memory eviction does not fade again`() = runBlocking {
+        val src = "https://invalid.example/return-to-displayed-page.png"
+        val bitmap = Bitmap.createBitmap(40, 60, Bitmap.Config.ARGB_8888)
+        try {
+            ByteArrayOutputStream().use {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                BookHelp.writeImage(book, src, it.toByteArray())
+            }
+        } finally {
+            bitmap.recycle()
+        }
+        val loader = ImageLoader.Builder(RuntimeEnvironment.getApplication()).components {
+            add(BitmapFactoryDecoder.Factory())
+            add(CoverInterceptor { _, data -> BookHelp.acquireReadingImage(null, book, data) })
+        }.build()
+        val page = MangaReaderItemUi.Page(
+            key = "page:0:0:$src", imageUrl = src, bookUrl = book.bookUrl,
+            chapterIndex = 0, chapterCount = 1, pageIndex = 0, pageCount = 1,
+            chapterName = "chapter", chapterSubject = "chapter",
+        )
+        try {
+            for (webtoon in listOf(true, false)) {
+                val settings = MangaReaderSettings(
+                    scrollMode = if (webtoon) MangaScrollMode.WEBTOON else MangaScrollMode.PAGE_LEFT_TO_RIGHT,
+                )
+                for (displayed in listOf(false, true)) {
+                    loader.memoryCache!!.clear()
+                    val owner = MangaImageFileOwner()
+                    try {
+                        val request = page.copy(
+                            loadState = if (displayed) MangaPageLoadState.Ready else MangaPageLoadState.Queued,
+                        ).imageRequest(
+                            settings,
+                            RuntimeEnvironment.getApplication(),
+                            Size(20, 30),
+                            owner
+                        )
+                        val result = loader.execute(request)
+                        if (result is ErrorResult) throw result.throwable
+                        assertEquals(DataSource.DISK, (result as SuccessResult).dataSource)
+                        if (displayed) assertEquals(0, result.request.crossfadeMillis)
+                        else assertTrue(result.request.crossfadeMillis > 0)
+                    } finally {
+                        owner.close()
+                    }
+                }
+            }
+        } finally {
+            loader.shutdown()
+            BookHelp.clearCache(book)
+        }
     }
 
     @Test

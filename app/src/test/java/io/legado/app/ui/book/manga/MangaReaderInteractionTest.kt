@@ -13,6 +13,39 @@ import org.junit.Test
 
 class MangaReaderInteractionTest {
     @Test
+    fun `loading a 300 page previous chapter defers the prepend until scrolling stops`() {
+        val displayed = (0 until 57).map {
+            page(it, 1).copy(key = "page:1:$it", pageCount = 57)
+        }
+        val replacement = (0 until 300).map {
+            page(it, 0).copy(key = "page:0:$it", pageCount = 300)
+        } + displayed
+        val anchor = MangaWebtoonViewportAnchor()
+        anchor.record(displayed, 0, displayed.first().key, 240)
+        assertTrue(shouldDeferMangaPageReplacement(true, displayed, replacement))
+        assertFalse(shouldDeferMangaPageReplacement(false, displayed, replacement))
+        assertEquals(300 to 240, anchor.positionIn(replacement))
+        // 尚未重测的旧下标不能覆盖已保存的图片锚点。
+        anchor.record(replacement, 0, displayed.first().key, 0)
+        assertEquals(300 to 240, anchor.positionIn(replacement))
+        anchor.record(replacement, 300, displayed.first().key, 240)
+        assertEquals(0 to 240, anchor.positionIn(displayed))
+    }
+
+    @Test
+    fun `structural refresh waits for idle but page load state updates do not`() {
+        val displayed = listOf(page(0, 1), page(1, 1))
+        assertFalse(
+            shouldDeferMangaPageReplacement(
+                true, displayed, displayed.map { it.copy(loadState = MangaPageLoadState.Ready) },
+            )
+        )
+        assertTrue(shouldDeferMangaPageReplacement(true, displayed, displayed.reversed()))
+        assertTrue(shouldDeferMangaPageReplacement(true, displayed, displayed.drop(1)))
+        assertFalse(shouldDeferMangaPageReplacement(true, emptyList(), displayed))
+    }
+
+    @Test
     fun `zoomed offset survives a chapter prefix rebuild at the same visible page`() {
         val first = page(0, 0)
         val visible = page(1, 0)

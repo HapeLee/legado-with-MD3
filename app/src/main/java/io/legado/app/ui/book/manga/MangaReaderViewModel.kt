@@ -601,12 +601,20 @@ class MangaReaderViewModel(
             val sourceCustomButtonAvailable = actionRepository
                 .refreshSource(book.sourceOrigin)
                 ?.customButton == true
+            // 数据查询期间会话可能已推进；旧快照不能再次发布为当前章节窗口。
+            if (readerSession.state.value != session) return@launch
             val previousItems = makePreviousItems(session.previousChapter)
             val nextItems = makeNextItems(session.nextChapter)
             val items = (previousItems + chapterItems(current.chapter) + nextItems).toImmutableList()
             val safePosition = (previousItems.size + session.pageIndex)
                 .coerceIn(0, (items.size - 1).coerceAtLeast(0))
             val oldState = _uiState.value
+            // 相邻章 Ready 不会改变 session.chapterIndex，不能只依赖上面的切章门闩。
+            // 在异步 refreshSource 返回后复核手势状态，避免拖动中整章前插使 LazyColumn 丢锚点。
+            if (shouldDeferMangaPageReplacement(pagerScrollInProgress, oldState.pages, items)) {
+                deferredReadySession = session
+                return@launch
+            }
             val shouldPosition = shouldForceMangaChapterPosition(
                 hasPages = oldState.pages.isNotEmpty(),
                 isLoading = oldState.isLoading,
@@ -636,6 +644,7 @@ class MangaReaderViewModel(
             val needsPositionScroll =
                 mangaNeedsPositionScroll(shouldPosition, anchoredIndex != null, keyPreserved)
             val positionChanged = needsPositionScroll || oldState.currentItemIndex != targetIndex
+            val pendingScroll = oldState.scrollRequest?.rebase(oldState.pages, items)
             _uiState.update { old ->
                 old.copy(
                     bookName = book.name,
@@ -651,7 +660,7 @@ class MangaReaderViewModel(
                     sourceCustomButtonAvailable = sourceCustomButtonAvailable,
                     inBookshelf = book.inBookshelf,
                     pages = items,
-                    navigationId = if (old.pages.map { it.key } != items.map { it.key }) {
+                    navigationId = if (mangaPageKeysChanged(old.pages, items)) {
                         System.nanoTime()
                     } else old.navigationId,
                     currentItemIndex = targetIndex,
@@ -666,13 +675,14 @@ class MangaReaderViewModel(
                     pendingChapterIndex = null,
                     errorMessage = null,
                     settings = readSettings(latestMangaSettings),
-                    scrollRequest = if (needsPositionScroll) {
+                    scrollRequest = pendingScroll
+                        ?: if (needsPositionScroll || oldState.scrollRequest != null) {
                         MangaScrollRequest(
                             id = System.nanoTime(),
                             itemIndex = targetIndex,
                             animated = false,
                         )
-                    } else old.scrollRequest,
+                        } else null,
                 )
             }
             if (positionChanged && pendingExplicitChapterIndex != session.chapterIndex) {
