@@ -1258,7 +1258,7 @@ fun ReaderCanvasSurface(
                             scrollDrag = transitionMode == ReaderTransitionMode.SCROLL &&
                                     ReaderMainAxisPolicy.isVerticalDominant(total.x, total.y)
                             horizontalTurn = !bookmarkDrag && !scrollDrag &&
-                                    ReaderMainAxisPolicy.isHorizontalDominant(total.x, total.y)
+                                    ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode)
                             if (horizontalTurn) {
                                 horizontalDrag = ReaderHorizontalDrag.capture(total.x)
                                 horizontalCapturedY = change.position.y
@@ -1287,7 +1287,7 @@ fun ReaderCanvasSurface(
                                 bookmarkArmed = false
                                 bookmarkOffset = 0f
                                 horizontalTurn =
-                                    ReaderMainAxisPolicy.isHorizontalDominant(total.x, total.y)
+                                    ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode)
                                 if (horizontalTurn) {
                                     horizontalDrag = ReaderHorizontalDrag.capture(total.x)
                                     horizontalCapturedY = change.position.y
