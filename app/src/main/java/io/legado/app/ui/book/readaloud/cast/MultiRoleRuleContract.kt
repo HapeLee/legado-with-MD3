@@ -116,7 +116,20 @@ data class MultiRoleRuleUiState(
     val ttsServerPreview: TtsServerPreviewUi? = null,
     /** 导入的音色挂到哪个系统 TTS 引擎包名下（两种导出文件里都不带来源包名，只能让用户确认）。 */
     val ttsServerEngine: String = "",
+    /**
+     * 手机上装着的系统 TTS 引擎，给导入确认页当候选：
+     * 同一个作者有好几个分支（I·TTS Server / U·TTS Server），导出文件里都不带包名，
+     * 猜错就会把音色挂到没装的那个引擎上，整池都不发声。
+     */
+    val ttsServerEngineChoices: ImmutableList<TtsEngineChoiceUi> = persistentListOf(),
 ) : CastPoolView
+
+/** 导入确认页上的一个引擎候选：[packageName] 落库用，[label] 给人看。 */
+@Stable
+data class TtsEngineChoiceUi(
+    val packageName: String,
+    val label: String,
+)
 
 /**
  * TTS Server / multitts 导入确认页要显示的数量（解析结果的去敏视图）。

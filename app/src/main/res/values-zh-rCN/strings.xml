@@ -3198,6 +3198,7 @@
     <string name="cast_import_tts_server_empty">这个文件里没有可导入的角色音色（音效已按要求排除）</string>
     <string name="cast_import_tts_server_counts">角色音色 %1$d 个 · 排除音效 %2$d 个 · 跳过已停用 %3$d 个</string>
     <string name="cast_import_tts_server_engine">引擎包名</string>
+    <string name="cast_import_engine_pick">从已装引擎里选</string>
     <string name="cast_import_tts_server_engine_hint">音色按这个引擎暴露的「显示名_编号」去匹配；没装这个引擎，导进来的音色不会发声，只能在列表里当占位。</string>
     <string name="cast_import_tts_server_result">导入 %1$d 个声音池、%2$d 个音色</string>
     <string name="cast_import_confirm">导入</string>

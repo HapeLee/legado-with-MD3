@@ -3202,6 +3202,7 @@
     <string name="cast_import_tts_server_empty">No character voices found in this file (sound effects are excluded on purpose)</string>
     <string name="cast_import_tts_server_counts">%1$d voices · %2$d sound effects skipped · %3$d disabled skipped</string>
     <string name="cast_import_tts_server_engine">Engine package</string>
+    <string name="cast_import_engine_pick">Select installed engine</string>
     <string name="cast_import_tts_server_engine_hint">Voices are matched by the "display name_id" name this engine exposes. If that package is not installed, the imported voices stay silent.</string>
     <string name="cast_import_tts_server_result">Imported %1$d pools, %2$d voices</string>
     <string name="cast_import_confirm">Import</string>

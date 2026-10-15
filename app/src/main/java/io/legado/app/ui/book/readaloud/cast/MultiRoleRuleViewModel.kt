@@ -501,12 +501,15 @@ class MultiRoleRuleViewModel(
             }
             pendingImport = preview
             pendingImportSource = source
-            val installed = runCatching { SystemTtsVoiceCatalog(context).getEngines() }
+            val engines = runCatching { SystemTtsVoiceCatalog(context).getEngines() }
                 .getOrDefault(emptyList())
-                .map { it.sourceId }
+            val installed = engines.map { it.sourceId }
             _uiState.update {
                 it.copy(
                     ttsServerEngine = guessEnginePackage(source, installed),
+                    ttsServerEngineChoices = engines.map { engine ->
+                        TtsEngineChoiceUi(engine.sourceId, engine.displayName)
+                    }.toImmutableList(),
                     ttsServerPreview = TtsServerPreviewUi(
                         // 源文件带两层时写成「分组/池」：确认页要提前看到落库后的层级
                         poolNames = preview.pools.map { pool ->
