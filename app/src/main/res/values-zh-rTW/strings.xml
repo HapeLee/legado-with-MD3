@@ -2423,9 +2423,15 @@
     <string name="show_all_synopsis">顯示全部簡介</string>
     <string name="show_lines_synopsis">顯示 %1$d 行簡介</string>
     <string name="show_tags">顯示標籤</string>
+    <string name="bookshelf_tag_content">標籤顯示內容</string>
+    <string name="bookshelf_tag_custom">使用者標籤</string>
+    <string name="bookshelf_tag_word_count">字數</string>
+    <string name="bookshelf_tag_none">未選擇顯示內容</string>
     <string name="custom_tag_colors">自訂標籤顏色</string>
     <string name="manage_tag_colors">管理標籤顏色</string>
     <string name="search_filter_first">搜尋按鈕優先開啟搜尋頁面</string>
+    <string name="bookshelf_filter">篩選書架</string>
+    <string name="bookshelf_search_button_hint">開啟：點擊搜尋，長按篩選；關閉：點擊篩選，長按搜尋。</string>
     <string name="import_from_network">從網路匯入</string>
     <string name="input_url_or_json_hint">輸入 URL 或 JSON</string>
     <string name="history_label">歷史記錄：</string>

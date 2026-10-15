@@ -49,27 +49,34 @@ data class BookShelfItem(
 
     fun getUnreadChapterNum() = max(totalChapterNum - durChapterIndex - 1, 0)
 
-    /**
-     * 将 DTO 转换为专为 Compose 设计的 UI 状态
-     *
-     * [isPrivate] 由书架在内存侧算出并集（单本标记 ∪ 所属私密分组），
-     * 这里只负责带上结果，不做判定。
-     */
-    fun toUiItem(isPrivate: Boolean = false): BookUiItem {
+    /** 仅筛选展示内容；搜索仍使用包含全部来源的 [BookUiItem.displayTags]。 */
+    fun getDisplayTags(
+        showCustomTags: Boolean = true,
+        showSourceTags: Boolean = true,
+        showWordCount: Boolean = true,
+    ): ImmutableList<String> {
         val tagList = mutableListOf<String>()
-        customTag?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }?.let {
-            tagList.addAll(it)
+        if (showCustomTags) {
+            customTag?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }?.let {
+                tagList.addAll(it)
+            }
         }
-        kind?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }?.let {
-            tagList.addAll(it.filterNot(tagList::contains))
+        if (showSourceTags) {
+            kind?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }?.let {
+                tagList.addAll(it.filterNot(tagList::contains))
+            }
         }
-        if (!wordCount.isNullOrBlank() && !tagList.contains(wordCount)) {
+        if (showWordCount && !wordCount.isNullOrBlank() && !tagList.contains(wordCount)) {
             tagList.add(wordCount)
         }
+        return tagList.toImmutableList()
+    }
 
+    /** [isPrivate] 由书架计算单本标记与私密分组的并集，这里只携带结果。 */
+    fun toUiItem(isPrivate: Boolean = false): BookUiItem {
         return BookUiItem(
             book = this,
-            displayTags = tagList.toImmutableList(),
+            displayTags = getDisplayTags(),
             isPrivate = isPrivate
         )
     }

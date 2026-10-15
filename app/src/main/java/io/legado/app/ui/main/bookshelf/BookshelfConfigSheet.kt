@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,8 @@ import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.ui.config.themeConfig.LabelColorManageSheet
 import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
@@ -62,6 +65,7 @@ fun BookshelfConfigSheet(
     var showLabelColorManage by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showColorPickerDark by remember { mutableStateOf(false) }
+    var showTagContentDialog by rememberSaveable { mutableStateOf(false) }
 
     AppModalBottomSheet(
         title = stringResource(R.string.bookshelf_layout),
@@ -495,6 +499,21 @@ fun BookshelfConfigSheet(
                                 Column(
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
+                                    val selectedTagSources = listOfNotNull(
+                                        stringResource(R.string.bookshelf_tag_custom)
+                                            .takeIf { settings.bookshelfShowCustomTags },
+                                        stringResource(R.string.source_categories)
+                                            .takeIf { settings.bookshelfShowSourceTags },
+                                        stringResource(R.string.bookshelf_tag_word_count)
+                                            .takeIf { settings.bookshelfShowWordCount },
+                                    )
+                                    CompactClickableSettingItem(
+                                        title = stringResource(R.string.bookshelf_tag_content),
+                                        description = selectedTagSources.joinToString(" · ")
+                                            .ifEmpty { stringResource(R.string.bookshelf_tag_none) },
+                                        color = LegadoTheme.colorScheme.surface,
+                                        onClick = { showTagContentDialog = true },
+                                    )
                                     CompactSwitchSettingItem(
                                         title = stringResource(R.string.custom_tag_colors),
                                         checked = enableCustomTagColors,
@@ -596,6 +615,7 @@ fun BookshelfConfigSheet(
 
             CompactSwitchSettingItem(
                 title = stringResource(R.string.search_filter_first),
+                description = stringResource(R.string.bookshelf_search_button_hint),
                 checked = settings.bookshelfSearchActionDirectToSearch,
                 color = LegadoTheme.colorScheme.surface,
                 onCheckedChange = { value ->
@@ -636,6 +656,14 @@ fun BookshelfConfigSheet(
 
         }
 
+        if (showTagContentDialog) {
+            BookshelfTagContentDialog(
+                settings = settings,
+                onUpdate = onUpdate,
+                onDismissRequest = { showTagContentDialog = false },
+            )
+        }
+
         LabelColorManageSheet(
             show = showLabelColorManage,
             themeColor = themeColor,
@@ -662,4 +690,53 @@ fun BookshelfConfigSheet(
             }
         )
     }
+}
+
+@Composable
+private fun BookshelfTagContentDialog(
+    settings: BookshelfSettings,
+    onUpdate: ((BookshelfSettings) -> BookshelfSettings) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    var showCustomTags by rememberSaveable { mutableStateOf(settings.bookshelfShowCustomTags) }
+    var showSourceTags by rememberSaveable { mutableStateOf(settings.bookshelfShowSourceTags) }
+    var showWordCount by rememberSaveable { mutableStateOf(settings.bookshelfShowWordCount) }
+
+    AppAlertDialog(
+        show = true,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.bookshelf_tag_content),
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CheckboxItem(
+                    title = stringResource(R.string.bookshelf_tag_custom),
+                    checked = showCustomTags,
+                    onCheckedChange = { showCustomTags = it },
+                )
+                CheckboxItem(
+                    title = stringResource(R.string.source_categories),
+                    checked = showSourceTags,
+                    onCheckedChange = { showSourceTags = it },
+                )
+                CheckboxItem(
+                    title = stringResource(R.string.bookshelf_tag_word_count),
+                    checked = showWordCount,
+                    onCheckedChange = { showWordCount = it },
+                )
+            }
+        },
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            onUpdate {
+                it.copy(
+                    bookshelfShowCustomTags = showCustomTags,
+                    bookshelfShowSourceTags = showSourceTags,
+                    bookshelfShowWordCount = showWordCount,
+                )
+            }
+            onDismissRequest()
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismissRequest,
+    )
 }

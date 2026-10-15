@@ -2242,6 +2242,8 @@
     <string name="search_empty_scope_disable_precision">%1$s 分組搜索無結果。是否關閉精準搜索？</string>
     <string name="search_empty_scope_switch_all">%1$s 分組搜索無結果。是否切換到全部分組？</string>
     <string name="search_filter_first">搜索按鈕優先打開搜索頁面</string>
+    <string name="bookshelf_filter">篩選書架</string>
+    <string name="bookshelf_search_button_hint">開啟：點擊搜索，長按篩選；關閉：點擊篩選，長按搜索。</string>
     <string name="search_has_more">上拉或點擊按鈕載入更多</string>
     <string name="search_layout_list">列表佈局</string>
     <string name="search_layout_source_grouped">按源分組</string>
@@ -2281,6 +2283,10 @@
     <string name="show_swipe_animation">滑動時啟用動畫</string>
     <string name="show_synopsis">顯示簡介</string>
     <string name="show_tags">顯示標籤</string>
+    <string name="bookshelf_tag_content">標籤顯示內容</string>
+    <string name="bookshelf_tag_custom">用戶標籤</string>
+    <string name="bookshelf_tag_word_count">字數</string>
+    <string name="bookshelf_tag_none">未選擇顯示內容</string>
     <string name="show_tip">顯示書籍類型</string>
     <string name="show_title_bar_icons">顯示浮動圖標</string>
     <string name="show_unread_new">顯示新章節標記</string>

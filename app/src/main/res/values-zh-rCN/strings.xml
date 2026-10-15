@@ -2584,9 +2584,15 @@
     <string name="show_all_synopsis">显示全部简介</string>
     <string name="show_lines_synopsis">显示 %1$d 行简介</string>
     <string name="show_tags">显示标签</string>
+    <string name="bookshelf_tag_content">标签显示内容</string>
+    <string name="bookshelf_tag_custom">用户标签</string>
+    <string name="bookshelf_tag_word_count">字数</string>
+    <string name="bookshelf_tag_none">未选择显示内容</string>
     <string name="custom_tag_colors">自定义标签颜色</string>
     <string name="manage_tag_colors">管理标签颜色</string>
     <string name="search_filter_first">搜索按钮优先打开搜索页面</string>
+    <string name="bookshelf_filter">筛选书架</string>
+    <string name="bookshelf_search_button_hint">开启：点击搜索，长按筛选；关闭：点击筛选，长按搜索。</string>
     <string name="import_from_network">网络导入</string>
     <string name="input_url_or_json_hint">请输入 URL 或 JSON</string>
     <string name="history_label">历史记录:</string>

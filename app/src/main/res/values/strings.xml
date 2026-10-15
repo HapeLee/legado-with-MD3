@@ -2607,9 +2607,15 @@
     <string name="show_all_synopsis">Show all synopsis</string>
     <string name="show_lines_synopsis">Show %1$d lines of synopsis</string>
     <string name="show_tags">Show Tags</string>
+    <string name="bookshelf_tag_content">Tag display content</string>
+    <string name="bookshelf_tag_custom">User tags</string>
+    <string name="bookshelf_tag_word_count">Word count</string>
+    <string name="bookshelf_tag_none">None selected</string>
     <string name="custom_tag_colors">Custom Tag Colors</string>
     <string name="manage_tag_colors">Manage Tag Colors</string>
     <string name="search_filter_first">Search button opens the search page directly</string>
+    <string name="bookshelf_filter">Filter bookshelf</string>
+    <string name="bookshelf_search_button_hint">On: tap to search, hold to filter. Off: tap to filter, hold to search.</string>
     <string name="import_from_network">Import from Network</string>
     <string name="input_url_or_json_hint">Enter URL or JSON</string>
     <string name="history_label">History:</string>

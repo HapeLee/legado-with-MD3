@@ -80,6 +80,7 @@ internal fun SeriesButton(
     selectedContainerColor: Color = LegadoTheme.colorScheme.primaryContainer,
     selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
     selectedBorderColor: Color? = null,
+    onLongClickLabel: String? = null,
     content: @Composable (Color) -> Unit
 ) {
     var lastEnabled by remember { mutableStateOf(enabled) }
@@ -132,6 +133,7 @@ internal fun SeriesButton(
                 indication = indication,
                 enabled = enabled,
                 role = Role.Button,
+                onLongClickLabel = onLongClickLabel,
                 onLongClick = onLongClick,
                 onClick = onClick
             )

@@ -873,7 +873,18 @@ fun BookItem(
             null
         } else if (showListDetails) {
             {
-                val kindList = bookUi.displayTags
+                val kindList = remember(
+                    book,
+                    settings.bookshelfShowCustomTags,
+                    settings.bookshelfShowSourceTags,
+                    settings.bookshelfShowWordCount,
+                ) {
+                    book.getDisplayTags(
+                        showCustomTags = settings.bookshelfShowCustomTags,
+                        showSourceTags = settings.bookshelfShowSourceTags,
+                        showWordCount = settings.bookshelfShowWordCount,
+                    )
+                }
                 if (settings.bookshelfShowTag && kindList.isNotEmpty()) {
                     Row(
                         modifier = Modifier

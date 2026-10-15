@@ -3,9 +3,11 @@ package io.legado.app.ui.widget.components.topbar
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -207,6 +209,7 @@ internal fun TopBarActionsRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TopBarButton(
     onClick: () -> Unit,
@@ -214,6 +217,8 @@ private fun TopBarButton(
     imageVector: ImageVector = Icons.AutoMirrored.Filled.ArrowBack,
     contentDescription: String? = null,
     text: String? = null,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
     style: TopBarButtonStyle = currentTopBarButtonStyle()
 ) {
     val isMerged = LocalTopBarMergeState.current
@@ -225,10 +230,12 @@ private fun TopBarButton(
             modifier = modifier
                 .size(style.buttonSize)
                 .mergedDivider()
-                .clickable(
+                .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = if (liquidGlassEnabled) null else ripple(bounded = true),
                     role = Role.Button,
+                    onLongClick = onLongClick,
+                    onLongClickLabel = onLongClickLabel,
                     onClick = onClick
                 )
         ) {
@@ -259,6 +266,8 @@ private fun TopBarButton(
         }
         SeriesButton(
             onClick = onClick,
+            onLongClick = onLongClick,
+            onLongClickLabel = onLongClickLabel,
             modifier = if (liquidGlassEnabled) {
                 modifier.topBarLiquidGlass(RoundedCornerShape(50))
             } else {
@@ -325,10 +334,13 @@ fun TopBarActionButton(
     onClick: () -> Unit,
     imageVector: ImageVector,
     contentDescription: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
 ) {
+    // Miuix 的原生 IconButton 只有点击入口；长按动作使用同尺寸的统一按钮实现。
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine) &&
-        currentTopBarButtonStyle() == TopBarButtonStyle.Plain
+        currentTopBarButtonStyle() == TopBarButtonStyle.Plain && onLongClick == null
     ) {
         MiuixIconButton(
             onClick = onClick,
@@ -342,6 +354,8 @@ fun TopBarActionButton(
     } else {
         TopBarButton(
             onClick = onClick,
+            onLongClick = onLongClick,
+            onLongClickLabel = onLongClickLabel,
             imageVector = imageVector,
             contentDescription = contentDescription,
             modifier = modifier
