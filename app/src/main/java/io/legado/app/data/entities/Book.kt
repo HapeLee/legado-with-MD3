@@ -493,7 +493,7 @@ data class Book(
         var webtoonSidePaddingDp: Int? = null,
         var mangaBackground: String? = null,
 
-        var fixedType: Boolean = false, // 固定书籍类型,不随书源更新
+        var fixedType: Boolean = true, // 固定书籍类型,不随书源更新
 
         var translationMode: Boolean = false, // 是否启用翻译阅读模式
 
