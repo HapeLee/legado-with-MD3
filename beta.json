@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.49",
-  "name": "Pre-release 3.26.16-beta.49",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 支持听书与阅读不同书籍\n* fix(web): preserve current service state and JSON error responses\n* fix(assets): use APK paths for bundled defaults and web assets\n* fix(web): handle duplicate books for Legado Reader plugin\n* test(settings): cover previous chapter predownload mapping\n* fix(explore): detect paging expressions supported by URL rules\n* fix(toc): rescan cache with current book folder metadata\n* fix(manga): capture viewport offsets on every measured layout\n* fix(reader): force refresh all cached copies of an image URL\n* fix(book): synchronize recording preference by copy URL\n* feat(book): add persistent per-book reading record switch\n* fix(manga): honor offline switch and share directional prefetch settings\n* fix(manga): load adjacent chapters on boundary gestures with prefetch disabled\n* fix(reader): persist per-chapter duplicate-title preference\n* fix(reader): resolve chapter images for URL-only consumers\n* fix(cache): preserve legacy chapter text and image caches\n* fix: 条漫跨章不再抖动与落章错位（相邻章边界页提前取宽高比；内容重建时按 key 还原滚动位置）\n* fix: 修复漫画预取方向与章节主体透传（相邻章加载跟随向前/向后设置，向前=0 不再抓上一章；章节图片落到章节子目录）\n* fix: 修复缓存目录组织（章节正文与图片都按 <章节主体> 子目录存放，封面等无章节场景保持书级 images/）\n* feat: 支持按书独立关闭阅读记录（Book 新增 disableReadRecord，DB 131→132 自动迁移）\n* fix: 修复漫画目录已缓存章节不显示已缓存图标（缓存集合按 bookUrl 订阅 + 打开目录时重扫；显示判定放宽为\"有正文即算已缓存\"，下载判定仍保持严格）\n* fix: 条漫无缝模式下消除相邻页之间的 1px 白缝（占位高度向下取整、内容溢出 1px 由下一页盖住）\n* feat: 发现页支持跳转页码（顶栏显示当前页码，源支持分页时可跳页）\n* feat: 发现页按书源地址判定是否在书架（改名后仍识别）\n* feat: 预下载按设置生效，相邻章预取交还设置（向前=0 不抓上一章）\n* feat: 预下载拆分为「向前 / 向后」两项\n* feat: 阅读时闪烁\n* feat: 平板、折叠屏设备上的分屏。外观设置控制之\n\n## What's Changed\n* feat: 预下载拆分为向前/向后并跟随设置，发现页页码与书架识别，修复条漫无缝白缝、漫画缓存目录与目录缓存图标，新增按书关闭阅读记录，漫画正文跨章节首图片跳动问题 by @ZYO122 in https://github.com/HapeLee/legado-with-MD3/pull/2416\n* fix(web): 修复插件兼容、资源路径与服务状态显示 by @berial in https://github.com/HapeLee/legado-with-MD3/pull/2421\n\n## New Contributors\n* @ZYO122 made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2416\n* @berial made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2421\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.48...3.26.16-beta.49",
+  "tag_name": "3.26.16-beta.50",
+  "name": "Pre-release 3.26.16-beta.50",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* chore(read-aloud): 删掉 12 条无人引用的角色配音文案\n* fix(read-aloud): 角色补音改成随机，音色被删也自动重挑\n* fix(read-aloud): 准备还在跑时 play() 不再重起一次，起点不被冲成章首\n* fix(read-aloud): 切下一章时不再把脚下的准备作业取消掉\n* fix(voice-pool): 添加音色的搜索框不再把自己越筛越小\n* fix(read): 翻页模式下点朗读也从当前页开始\n* feat(voice-pool): 导入确认页给出已装引擎下拉，让人自己挑来源包名\n* feat(voice-pool): 认 TTS Server 导出的第二种层级（引擎分组 + categoryPath 池）\n* fix(read): 常挂弹层的当前章一律每次重组重读\n* fix(read-aloud): 分配覆盖层出错不再把整章的朗读准备带走\n* fix(read): 整图也带上 src 尾随 JSON 里的 click\n* feat: 漫画稳定性\n* feat: 漫画乱跳\n* fix(bookshelf): 再次长按搜索按钮时收起筛选\n* feat(bookshelf): 支持标签来源设置和搜索按钮长按\n* fix(reader): 恢复滑动翻页对斜划的响应\n\n## What's Changed\n* fix(read-aloud): 朗读切章与起点、角色随机补音、TTS Server 导入层级等 11 项 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2427\n\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.49...3.26.16-beta.50",
   "prerelease": true,
-  "created_at": "2026-10-14T19:14:35Z",
+  "created_at": "2026-10-15T19:17:02Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.49/legado-3.26.16-beta.49-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.50/legado-3.26.16-beta.50-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-14T19:33:02Z",
+      "created_at": "2026-10-15T19:34:26Z",
       "download_count": 0,
-      "id": 641430800,
-      "name": "legado-3.26.16-beta.49-arm64-v8a.apk",
+      "id": 644942004,
+      "name": "legado-3.26.16-beta.50-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/641430800"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/644942004"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.49/legado-3.26.16-beta.49-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.50/legado-3.26.16-beta.50-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-14T19:33:02Z",
+      "created_at": "2026-10-15T19:34:26Z",
       "download_count": 0,
-      "id": 641430801,
-      "name": "legado-3.26.16-beta.49-armeabi-v7a.apk",
+      "id": 644942003,
+      "name": "legado-3.26.16-beta.50-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/641430801"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/644942003"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.49/legado-3.26.16-beta.49.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.50/legado-3.26.16-beta.50.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-14T19:33:02Z",
+      "created_at": "2026-10-15T19:34:26Z",
       "download_count": 0,
-      "id": 641430805,
-      "name": "legado-3.26.16-beta.49.apk",
+      "id": 644941999,
+      "name": "legado-3.26.16-beta.50.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/641430805"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/644941999"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.49/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.50/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-10-14T19:33:02Z",
+      "created_at": "2026-10-15T19:34:26Z",
       "download_count": 0,
-      "id": 641430802,
+      "id": 644941997,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/641430802"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/644941997"
     }
   ]
 }
