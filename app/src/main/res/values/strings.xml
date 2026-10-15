@@ -3119,14 +3119,12 @@
     <string name="cast_voice">Voice</string>
     <string name="cast_unassign">Unassign</string>
     <string name="cast_no_match">No match</string>
-    <string name="read_aloud_pagination_pending">Chapter layout is still in progress, please try again</string>
     <string name="ai_cast_roles">AI casting</string>
     <string name="ai_cast_status">%2$d dialogue lines in this chapter, %1$d assigned</string>
     <string name="ai_cast_status_loading">Loading chapter status…</string>
     <string name="ai_cast_all_done">All dialogues in this chapter are assigned</string>
     <string name="ai_cast_reassign">Reassign</string>
     <string name="ai_cast_reassign_summary">Clear this chapter’s existing assignments, then identify again</string>
-    <string name="ai_cast_chapter_count">Chapters to cast (from current)</string>
     <string name="ai_cast_progress">%1$d/%2$d chapters</string>
     <string name="ai_cast_start">Start</string>
     <string name="ai_cast_delete">Delete chapter assignments</string>
@@ -3167,8 +3165,6 @@
     <string name="ai_cast_request_hint">System prompt plus the user JSON of the last request, exactly as the model received it. Open this when the result looks wrong: it shows which dialogue lines and which character names the model actually saw.</string>
     <string name="ai_cast_transcript_folded">%1$d earlier characters folded, only the latest part is shown</string>
     <string name="ai_cast_thinking_pending">No reasoning text from the model yet. If the chapter finishes with nothing here, this model does not return its thinking; casting continues either way.</string>
-    <string name="cast_table_empty">No characters yet for this book.</string>
-    <string name="book_cast_roles">Book cast roles</string>
     <string name="cast_table_row_count">%1$d chapters · %2$d lines</string>
     <string name="cast_delete_character">Delete character</string>
     <string name="cast_delete_character_confirm">Delete "%1$s" and all its assignments?</string>
@@ -3244,7 +3240,6 @@
     <string name="regex_cast_summary">Match %1$s -> %2$s</string>
     <string name="regex_cast_summary_voice">read with %1$s (%2$s)</string>
     <string name="regex_cast_summary_sound">play %1$s (%2$s) on a third track, text not read</string>
-    <string name="regex_cast_scope_hint">Scope takes book title or source URL, empty means all books.</string>
     <string name="regex_cast_search_hint">Filter rules and groups</string>
     <string name="regex_cast_new_group">New group</string>
     <string name="regex_cast_delete_group_title">Delete this group?</string>
@@ -3252,7 +3247,6 @@
     <string name="regex_cast_group_bad_name">Empty name</string>
     <string name="regex_cast_group_duplicate">Another group here already has this name</string>
     <string name="regex_cast_dialog_hint">The pool list is only a filter: disabled pools are still listed, and a voice can be picked without choosing a pool. Type a new group name to create one.</string>
-    <string name="regex_cast_sort_hint">Long press and drag to reorder; drop into another section to move the rule into that group.</string>
     <string name="regex_cast_pool_disabled"> (disabled)</string>
     <string name="multi_role_rule_summary">Manage voice pools, background music pools and role casting</string>
     <string name="cast_voice_pool_summary">Manage character voice pools and the voices enabled inside them</string>
@@ -3268,11 +3262,8 @@
     <string name="cast_symbol_duplicated">Symbols must differ from each other</string>
     <string name="cast_syntax_preview">Preview: %1$s</string>
     <string name="cast_syntax_applies_next_chapter">Name and pool may also be separated by . · 、 (e.g. 张三.男青年). Changes apply to chapters opened afterwards.</string>
-    <string name="voice_pool_tab">Voice pools</string>
-    <string name="cast_assign_tab">Assignments</string>
     <string name="cast_group">Group</string>
     <string name="cast_group_none">Ungrouped</string>
-    <string name="cast_group_hint">Pick a group from the list; groups are created and nested on the voice pool page</string>
     <string name="cast_create_pool">New voice pool</string>
     <string name="cast_edit_pool">Edit voice pool</string>
     <string name="cast_delete_pool">Delete voice pool</string>
@@ -3280,9 +3271,6 @@
     <string name="cast_pool_name_invalid">Empty or duplicate name</string>
     <string name="cast_search_pool_hint">Search pools or groups</string>
     <string name="cast_search_voice_hint">Search voices</string>
-    <string name="cast_pool_members">Pool voices</string>
-    <string name="cast_assign_empty">No characters yet. Assign one from a role capsule in the reader.</string>
-    <string name="cast_no_voice">No voice</string>
     <string name="cast_create">Create</string>
     <string name="cast_invalid_name">Invalid character name</string>
     <string name="cast_confirm_not_found">Character not found, tap Create to add one</string>
