@@ -893,9 +893,8 @@ abstract class BaseReadAloudService : BaseService(),
             } else {
                 bookSession.updateProgress(currentProgress, forceSave = true, expectedChapterIndex = currentChapterIndex)
                 bookSession.selectChapter(index)
-                // 这段回调就跑在 prepareReadAloudJob 里，而 newReadAloud 开头第一件事是
-                // `prepareReadAloudJob?.cancel()`：直接调用等于把自己脚下这份作业取消掉，
-                // 后面的准备协程一帧都不会跑（表现为切到下一章后彻底没声、也不报错）。
+                // newReadAloud 开头会 cancel 这个 prepareReadAloudJob，而这段回调正跑在它里面：
+                // 直接调用等于取消掉自己脚下这份作业，下一章一帧都不准备（切章后没声也不报错）。
                 launch(Main) { newReadAloud(play, 0, 0, 0) }
             }
         }.onError {
@@ -904,8 +903,16 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
-    /** Retry the playback book, never whichever book is currently visible. */
-    protected fun preparePlayback() = newReadAloud(!pause, pageIndex, 0, currentProgress)
+    /**
+     * 重跑本章准备（朗读列表还空着时的兜底），只重跑本会话这本书。
+     *
+     * 已经在准备中就不能再起一次：`play()` 会在 contentList 填好之前被调到，那时
+     * pageIndex 与 currentProgress 都还是 0，重起会把「从当前页开始」冲成章首。
+     */
+    protected fun preparePlayback() {
+        if (prepareReadAloudJob?.isActive == true) return
+        newReadAloud(!pause, pageIndex, 0, currentProgress)
+    }
 
     protected fun moveToReadAloudPage(chapterPosition: Int): Boolean {
         val chapter = readerReadAloudChapter ?: return false
