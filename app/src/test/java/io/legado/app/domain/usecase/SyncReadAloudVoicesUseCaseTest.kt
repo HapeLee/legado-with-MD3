@@ -95,6 +95,9 @@ class SyncReadAloudVoicesUseCaseTest {
 private class MutableVoiceGateway(
     val voices: MutableList<ReadAloudVoice> = mutableListOf(),
 ) : ReadAloudVoiceGateway {
+    override suspend fun <T> withTransaction(block: suspend () -> T): T = block()
+    override suspend fun countExcludedVoices(): Int = getVoices().count { it.excluded }
+
     override fun observeVoices(): Flow<List<ReadAloudVoice>> = flowOf(voices)
     override suspend fun getVoices(): List<ReadAloudVoice> = voices.toList()
     override suspend fun getEnabledVoices(): List<ReadAloudVoice> =

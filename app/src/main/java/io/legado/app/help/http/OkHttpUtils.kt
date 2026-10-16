@@ -28,13 +28,17 @@ import kotlin.coroutines.resumeWithException
 
 suspend fun OkHttpClient.newCallResponse(
     retry: Int = 0,
+    onCall: ((Call) -> Unit)? = null,
     builder: Request.Builder.() -> Unit
 ): Response {
     val requestBuilder = Request.Builder()
     requestBuilder.apply(builder)
     var response: Response? = null
     for (i in 0..retry) {
-        response = newCall(requestBuilder.build()).await()
+        response?.close()
+        val call = newCall(requestBuilder.build())
+        onCall?.invoke(call)
+        response = call.await()
         if (response.isSuccessful) {
             return response
         }
@@ -46,14 +50,14 @@ suspend fun OkHttpClient.newCallResponseBody(
     retry: Int = 0,
     builder: Request.Builder.() -> Unit
 ): ResponseBody {
-    return newCallResponse(retry, builder).body
+    return newCallResponse(retry, builder = builder).body
 }
 
 suspend fun OkHttpClient.newCallStrResponse(
     retry: Int = 0,
     builder: Request.Builder.() -> Unit
 ): StrResponse {
-    return newCallResponse(retry, builder).let {
+    return newCallResponse(retry, builder = builder).let {
         StrResponse(it, it.body.text())
     }
 }

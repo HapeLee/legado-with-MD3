@@ -107,6 +107,9 @@ class SyncHttpTtsCatalogUseCaseTest {
     )
 
     private class FakeVoiceGateway : ReadAloudVoiceGateway {
+        override suspend fun <T> withTransaction(block: suspend () -> T): T = block()
+        override suspend fun countExcludedVoices(): Int = getVoices().count { it.excluded }
+
 
         val voices = mutableListOf<ReadAloudVoice>()
 

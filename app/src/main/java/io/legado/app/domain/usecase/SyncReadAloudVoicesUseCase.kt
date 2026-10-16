@@ -4,8 +4,6 @@ import io.legado.app.domain.gateway.ReadAloudVoiceGateway
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.SpeechIdentity
 import io.legado.app.domain.model.readaloud.VoiceCatalogEntry
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 data class SyncReadAloudVoicesResult(
     val inserted: Int,
@@ -16,8 +14,6 @@ data class SyncReadAloudVoicesResult(
 class SyncReadAloudVoicesUseCase(
     private val voiceGateway: ReadAloudVoiceGateway,
 ) {
-
-    private val syncMutex = Mutex()
 
     /**
      * @param managedScope 回收阶段的额外范围限定。默认不限，即凡 [managedSources] 里
@@ -30,7 +26,7 @@ class SyncReadAloudVoicesUseCase(
         removeMissingEngineTypes: Set<String> = emptySet(),
         managedScope: (ReadAloudVoice) -> Boolean = { true },
         now: Long = System.currentTimeMillis(),
-    ): SyncReadAloudVoicesResult = syncMutex.withLock {
+    ): SyncReadAloudVoicesResult = voiceGateway.withTransaction {
         val existing = voiceGateway.getVoices()
         val existingById = existing.associateBy(ReadAloudVoice::id)
         val incoming = entries

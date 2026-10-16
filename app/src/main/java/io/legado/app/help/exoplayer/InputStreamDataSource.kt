@@ -16,16 +16,20 @@ class InputStreamDataSource(private val supplier: () -> InputStream) : BaseDataS
     private var dataSpec: DataSpec? = null
     private var bytesRemaining: Long = 0
     private var opened = false
-    private val inputStream by lazy {
-        supplier.invoke()
-    }
+    private var inputStream: InputStream? = null
 
     @Throws(IOException::class)
     override fun open(dataSpec: DataSpec): Long {
         this.dataSpec = dataSpec
         transferInitializing(dataSpec)
 
-        inputStream.skip(dataSpec.position)
+        try {
+            inputStream = supplier.invoke()
+            inputStream!!.skip(dataSpec.position)
+        } catch (error: Throwable) {
+            try { inputStream?.close() } finally { inputStream = null }
+            throw error
+        }
 
         bytesRemaining = dataSpec.length
 
@@ -48,7 +52,7 @@ class InputStreamDataSource(private val supplier: () -> InputStream) : BaseDataS
             if (bytesRemaining == C.LENGTH_UNSET.toLong()) readLength
             else min(bytesRemaining, readLength.toLong()).toInt()
 
-        val bytesRead = inputStream.read(buffer, offset, bytesToRead)
+        val bytesRead = inputStream!!.read(buffer, offset, bytesToRead)
 
         if (bytesRead == -1) {
             if (bytesRemaining != C.LENGTH_UNSET.toLong()) {
@@ -72,8 +76,9 @@ class InputStreamDataSource(private val supplier: () -> InputStream) : BaseDataS
             return
         }
         try {
-            inputStream.close()
+            inputStream?.close()
         } finally {
+            inputStream = null
             opened = false
             transferEnded()
         }

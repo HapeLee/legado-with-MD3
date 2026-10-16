@@ -6,6 +6,7 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
+import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.data.appDb
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
@@ -80,6 +81,7 @@ object Backup {
             "sourceSub.json",
             "txtTocRule.json",
             "httpTTS.json",
+            "httpTtsVoices.json",
             "keyboardAssists.json",
             "dictRule.json",
             "homepageModules.json",
@@ -185,7 +187,10 @@ object Backup {
             writeListToJson(appDb.txtTocRuleDao.all, "txtTocRule.json", backupPath)
         }
         if (BackupConfig.dbIsNotIgnored("httpTTS", true)) {
-            writeListToJson(appDb.httpTTSDao.all, "httpTTS.json", backupPath)
+            val snapshot = GlobalContext.get().get<HttpTtsRepository>().backupSnapshot()
+            writeListToJson(snapshot.sources, "httpTTS.json", backupPath)
+            // 空数组也要写出，用来区分旧备份未保存音色与确实没有音色。
+            File(backupPath, "httpTtsVoices.json").writeText(GSON.toJson(snapshot.voices))
         }
         if (BackupConfig.dbIsNotIgnored("keyboardAssists", true)) {
             writeListToJson(appDb.keyboardAssistsDao.all, "keyboardAssists.json", backupPath)

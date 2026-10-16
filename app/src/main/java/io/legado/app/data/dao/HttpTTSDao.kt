@@ -7,11 +7,19 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface HttpTTSDao {
 
-    @get:Query("select * from httpTTS order by name")
-    val all: List<HttpTTS>
+    val all: List<HttpTTS> get() = getAllSources()
 
+    @Transaction
+    @Query("select * from httpTTS order by name")
+    fun getAllSources(): List<HttpTTS>
+
+    @Transaction
     @Query("select * from httpTTS order by name")
     fun flowAll(): Flow<List<HttpTTS>>
+
+    @Transaction
+    @Query("select id from httpTTS")
+    fun getIds(): List<Long>
 
     @get:Query("select count(*) from httpTTS")
     val count: Int

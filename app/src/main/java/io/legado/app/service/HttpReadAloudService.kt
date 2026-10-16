@@ -40,6 +40,7 @@ import io.legado.app.constant.NotificationId
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.VoiceEffectPreset
 import io.legado.app.domain.gateway.CloudTtsEngineGateway
@@ -70,6 +71,9 @@ import io.legado.app.help.readaloud.cast.CastAssignmentStore
 import io.legado.app.help.readaloud.effect.VoiceEffectAudio
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.help.readaloud.playback.CharacterPerformanceInstructionBuilder
+import io.legado.app.help.readaloud.playback.HttpTtsAudioSynthesizer
+import io.legado.app.help.readaloud.playback.HttpTtsEmotionMapper
+import io.legado.app.help.readaloud.playback.httpTtsAudioCacheSourceKey
 import io.legado.app.help.readaloud.playback.CloudTtsAudioSynthesizer
 import io.legado.app.help.readaloud.playback.CloudTtsEmotionMapper
 import io.legado.app.help.readaloud.playback.CloudTtsRoleInstructionMapper
@@ -77,7 +81,6 @@ import io.legado.app.help.readaloud.playback.ReadAloudAudioStore
 import io.legado.app.help.readaloud.playback.SystemTtsFileSynthesizer
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
-import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
@@ -100,7 +103,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import okhttp3.Response
 import org.koin.core.context.GlobalContext
 import org.koin.java.KoinJavaComponent.get
 import org.mozilla.javascript.WrappedException
@@ -123,6 +125,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     protected override val currentSpeechRate: Float
         get() = synthesisSpeed(ReadAloud.httpTTS) * globalPlaybackSpeed
 
+    private val httpAudioSynthesizer = HttpTtsAudioSynthesizer(GlobalContext.get().get<HttpTtsRepository>())
     private val readAloudSettingsGateway = GlobalContext.get().get<ReadAloudSettingsGateway>()
     private val readSettingsGateway = GlobalContext.get().get<ReadSettingsGateway>()
     private val otherSettingsGateway = GlobalContext.get().get<OtherSettingsGateway>()
@@ -147,16 +150,9 @@ class HttpReadAloudService : BaseReadAloudService(),
     private fun synthesisSpeed(httpTts: HttpTTS?): Float =
         ((httpTts?.speed ?: DEFAULT_TTS_SPEED) + 5) / 10f
 
-    /**
-     * 预合成并发：全局设置与源自带上限取小。
-     *
-     * 多角色混播时一句一个源，这里按默认引擎取值是近似值；源自带上限是该源自己
-     * 声明能扛的并发，取小不会把它压过头。
-     */
-    private fun synthesisConcurrency(httpTts: HttpTTS): Int = minOf(
-        readAloudSettings.ttsPreSynthesisConcurrency,
-        httpTts.synthesisThreadCount,
-    ).coerceIn(1, HttpTTS.MAX_SYNTHESIS_THREAD_COUNT)
+    /** 全局任务上限；实际源的配额在共用合成器中约束。 */
+    private fun synthesisConcurrency(): Int = readAloudSettings.ttsPreSynthesisConcurrency
+        .coerceIn(1, HttpTTS.MAX_SYNTHESIS_THREAD_COUNT)
 
     private data class PreDownloadChapter(
         val chapterTitle: String,
@@ -529,7 +525,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         chapterDone: Int,
     ) = coroutineScope {
         val bookUrl = book.bookUrl
-        val concurrency = synthesisConcurrency(httpTts)
+        val concurrency = synthesisConcurrency()
         val semaphore = kotlinx.coroutines.sync.Semaphore(concurrency)
         audioDownloadSentences.set(0)
         ReadAloudAudioStore.updateProgress(
@@ -758,8 +754,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     val characterPerformance = cue?.characterPerformance
                     val cueRoleType = cue?.roleType ?: SpeechRoleType.Unknown
                     val sourceKey = sourceKeyForCue(routedVoice, cue, httpTts)
-                    val itemHttpTts = routedVoice.engineId.toLongOrNull()
-                        ?.let(appDb.httpTTSDao::get) ?: httpTts
+                    val itemHttpTts = httpSourceForVoice(routedVoice, httpTts)
                     val fileName =
                         md5SpeakFileName(text, httpTts = itemHttpTts, sourceKey = sourceKey)
                     val speakText = text.replace(AppPattern.notReadAloudRegex, "")
@@ -959,7 +954,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         val book = bookSession.book ?: return
         val currentIdx = bookSession.chapterIndex
         val limit = readAloudSettings.audioPreDownloadNum
-        val concurrency = synthesisConcurrency(httpTts)
+        val concurrency = synthesisConcurrency()
         var consecutiveFailures = 0
 
         try {
@@ -1077,8 +1072,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 }
 
                 ReadAloudVoice.ENGINE_HTTP -> {
-                    val itemHttpTts = routedVoice.engineId.toLongOrNull()
-                        ?.let(appDb.httpTTSDao::get) ?: httpTts
+                    val itemHttpTts = httpSourceForVoice(routedVoice, httpTts)
                     val inputStream = getSpeakStream(
                         itemHttpTts, speakText, routedVoice, cue?.emotion.orEmpty()
                     )
@@ -1182,8 +1176,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                         AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$speakText")
                     }
                     val itemVoice = httpVoiceForCue(index, httpTts)
-                    val itemHttpTts = itemVoice.engineId.toLongOrNull()
-                        ?.let(appDb.httpTTSDao::get) ?: httpTts
+                    val itemHttpTts = httpSourceForVoice(itemVoice, httpTts)
                     val itemEmotion = playbackQueue.cues.getOrNull(index)?.emotion.orEmpty()
                     val fileName = md5SpeakFileName(
                         text,
@@ -1243,7 +1236,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         val book = bookSession.book ?: return
         val currentIdx = bookSession.chapterIndex
         val limit = readAloudSettings.audioPreDownloadNum
-        val concurrency = synthesisConcurrency(httpTts)
+        val concurrency = synthesisConcurrency()
         var consecutiveFailures = 0
 
         try {
@@ -1310,8 +1303,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                         )
                         // 路由出来的引擎才是这句该用的源，直接用 httpTts 会拿默认源
                         // 去配这条路由的音色 id
-                        val itemHttpTts = routedVoice.engineId.toLongOrNull()
-                            ?.let(appDb.httpTTSDao::get) ?: httpTts
+                        val itemHttpTts = httpSourceForVoice(routedVoice, httpTts)
                         val dataSourceFactory = createDataSourceFactory(
                             itemHttpTts, speakText, routedVoice, cue?.emotion.orEmpty()
                         )
@@ -1340,7 +1332,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 } else {
                     kotlin.runCatching {
                         runBlocking(lifecycleScope.coroutineContext[Job]!!) {
-                            getSpeakStream(httpTts, speakText, voice, emotionTag)
+                            getSpeakStream(httpTts, speakText, voice, emotionTag, lifecycleScope.coroutineContext[Job])
                         }
                     }.onFailure {
                         when (it) {
@@ -1379,50 +1371,18 @@ class HttpReadAloudService : BaseReadAloudService(),
         httpTts: HttpTTS,
         speakText: String,
         voice: ReadAloudVoice? = null,
-        emotionTag: String = ""
+        emotionTag: String = "",
+        streamOwner: Job? = null
     ): InputStream? {
-        // 没走角色路由时 toneID 是空的，此时连名字一起留空：默认行的 displayName
-        // 是引擎名（比如「1.百度」），把它当音色名传给源脚本没有意义
-        val toneId = voice?.speakerId.orEmpty()
-        val speakerName = if (toneId.isBlank()) "" else voice?.displayName.orEmpty()
         while (true) {
             try {
-                val analyzeUrl = AnalyzeUrl(
-                    httpTts.url,
-                    speakText = speakText,
-                    speakSpeed = (httpTts.speed ?: DEFAULT_TTS_SPEED) + 5,
-                    currentToneID = toneId,
-                    currentSpeakerName = speakerName,
-                    currentEmotionTag = emotionTag,
-                    source = httpTts,
-                    readTimeout = 300 * 1000L,
-                    coroutineContext = currentCoroutineContext()
-                )
-                var response = analyzeUrl.getResponseAwait()
-                currentCoroutineContext().ensureActive()
-                val checkJs = httpTts.loginCheckJs
-                if (checkJs?.isNotBlank() == true) {
-                    response = analyzeUrl.evalJS(checkJs, response) as Response
-                }
-                response.headers["Content-Type"]?.let { contentType ->
-                    val contentType = contentType.substringBefore(";")
-                    val ct = httpTts.contentType
-                    if (contentType == "application/json" || contentType.startsWith("text/")) {
-                        throw NoStackTraceException(response.body.string())
-                    } else if (ct?.isNotBlank() == true) {
-                        if (!contentType.matches(ct.toRegex())) {
-                            throw NoStackTraceException(
-                                "TTS服务器返回错误：" + response.body.string()
-                            )
-                        }
-                    }
-                }
-                currentCoroutineContext().ensureActive()
-                response.body.byteStream().let { stream ->
+                return httpAudioSynthesizer.openStream(
+                    httpTts, speakText, voice, emotionTag, streamOwner ?: currentCoroutineContext()[Job]
+                ).also {
                     downloadErrorNo = 0
-                    return stream
                 }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 when (e) {
                     is CancellationException -> throw e
                     is ScriptException, is WrappedException -> {
@@ -1475,12 +1435,16 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     private fun Long?.orZero(): Long = this ?: 0L
 
-    private fun hasFileSynthesisCue(): Boolean = playbackQueue.cues.indices.any { index ->
-        voiceForCue(playbackQueue, index, ReadAloud.httpTTS ?: return@any false).engineType in
-            setOf(
+    private fun hasFileSynthesisCue(): Boolean {
+        val default = ReadAloud.httpTTS ?: return false
+        // play() 在主线程决定播放模式，只读取一次引擎 ID，避免每个 cue 都查整行源。
+        val engineIds = appDb.httpTTSDao.getIds().mapTo(mutableSetOf()) { it.toString() }
+        return playbackQueue.cues.indices.any { index ->
+            voiceForCue(playbackQueue, index, default, engineIds).engineType in setOf(
                 ReadAloudVoice.ENGINE_SYSTEM,
                 ReadAloudVoice.ENGINE_CLOUD,
             )
+        }
     }
 
     /**
@@ -1522,21 +1486,41 @@ class HttpReadAloudService : BaseReadAloudService(),
         cueEmotion: String,
         httpTts: HttpTTS,
     ): String {
-        val itemHttpTts = routedVoice.engineId.toLongOrNull()
-            ?.let(appDb.httpTTSDao::get) ?: httpTts
-        // 没走角色路由时保持原来的键：否则升级后所有单音色缓存/下载都对不上，
-        // 用户会白白重合成一遍整本书。
-        if (routedVoice.speakerId.isBlank() && cueEmotion.isBlank()) {
-            return itemHttpTts.url
+        val itemHttpTts = httpSourceForVoice(routedVoice, httpTts)
+        val effectiveVoice = if (HttpTtsEmotionMapper.parseCatalog(routedVoice.emotionCatalogJson).isEmpty()) {
+            routedVoice.copy(
+                emotionCatalogJson = appDb.readAloudVoiceDao.getHttpEmotionCatalog(routedVoice.engineId) ?: "[]"
+            )
+        } else routedVoice
+        return httpTtsAudioCacheSourceKey(itemHttpTts, effectiveVoice, cueEmotion)
+    }
+
+    private fun httpSourceForVoice(voice: ReadAloudVoice, default: HttpTTS): HttpTTS {
+        if (voice.engineType != ReadAloudVoice.ENGINE_HTTP) return default
+        return voice.engineId.toLongOrNull()?.let(appDb.httpTTSDao::get)
+            ?: throw NoStackTraceException("HTTP TTS 引擎不存在：${voice.engineId}")
+    }
+
+    private fun isVoiceExecutable(voice: ReadAloudVoice): Boolean =
+        voice.engineType != ReadAloudVoice.ENGINE_HTTP ||
+            voice.engineId.toLongOrNull()?.let(appDb.httpTTSDao::get) != null
+
+    private fun coordinatorDefaultRoute(default: HttpTTS, engineIds: Set<String>? = null): SpeechEngineRoute {
+        val type = ReadAloud.coordinatorDefaultEngineType
+        val id = ReadAloud.coordinatorDefaultEngineId
+        val httpExists = engineIds?.contains(id) ?: (id.toLongOrNull()?.let(appDb.httpTTSDao::get) != null)
+        if (type == ReadAloudVoice.ENGINE_HTTP && !httpExists) {
+            // 整体回落，不能携带已删除引擎的 toneID。
+            return SpeechEngineRoute(ReadAloudVoice.ENGINE_HTTP, default.id.toString())
         }
-        return "http:${routedVoice.id}:${routedVoice.revision}:" +
-                "${routedVoice.speakerId}:$cueEmotion:${itemHttpTts.url}"
+        return SpeechEngineRoute(type, id, ReadAloud.coordinatorDefaultSpeakerId)
     }
 
     private fun voiceForCue(
         queue: ReadAloudPlaybackQueue,
         index: Int,
         default: HttpTTS,
+        engineIds: Set<String>? = null,
     ): ReadAloudVoice {
         val cue = queue.cues.getOrNull(index)
             ?: return ReadAloudVoice(
@@ -1548,16 +1532,16 @@ class HttpReadAloudService : BaseReadAloudService(),
             )
         return SpeechVoiceRouter.route(
             cue = cue,
+            isExecutable = { voice ->
+                voice.engineType != ReadAloudVoice.ENGINE_HTTP ||
+                    (engineIds?.contains(voice.engineId) ?: isVoiceExecutable(voice))
+            },
             supportedEngineTypes = setOf(
                 ReadAloudVoice.ENGINE_HTTP,
                 ReadAloudVoice.ENGINE_SYSTEM,
                 ReadAloudVoice.ENGINE_CLOUD,
             ),
-            defaultRoute = SpeechEngineRoute(
-                engineType = ReadAloud.coordinatorDefaultEngineType,
-                engineId = ReadAloud.coordinatorDefaultEngineId,
-                speakerId = ReadAloud.coordinatorDefaultSpeakerId,
-            ),
+            defaultRoute = coordinatorDefaultRoute(default, engineIds),
         ).voice!!
     }
 
@@ -1581,6 +1565,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         val cue = queue.cues.getOrNull(index) ?: return fallback
         return SpeechVoiceRouter.route(
             cue = cue,
+            isExecutable = ::isVoiceExecutable,
             supportedEngineTypes = setOf(ReadAloudVoice.ENGINE_HTTP),
             defaultRoute = SpeechEngineRoute(
                 engineType = ReadAloudVoice.ENGINE_HTTP,
@@ -1653,18 +1638,37 @@ class HttpReadAloudService : BaseReadAloudService(),
         synthesize: suspend (File) -> Boolean,
     ): Boolean {
         val part = createSpeakPartFile(fileName)
-        val synthesized = runCatching { synthesize(part) }.getOrDefault(false)
-        return synthesized && commitSpeakPart(fileName, part)
+        return try {
+            val synthesized = runCatching { synthesize(part) }.getOrElse {
+                if (it is CancellationException) throw it
+                false
+            }
+            currentCoroutineContext().ensureActive()
+            synthesized && commitSpeakPart(fileName, part)
+        } finally {
+            part.delete()
+        }
     }
 
-    private fun createSpeakFile(name: String, inputStream: InputStream) {
-        val part = createSpeakPartFile(name)
-        part.outputStream().use { out ->
-            inputStream.use {
-                it.copyTo(out)
+    private suspend fun createSpeakFile(name: String, inputStream: InputStream) {
+        inputStream.use { input ->
+            val part = createSpeakPartFile(name)
+            try {
+                part.outputStream().use { out ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    while (true) {
+                        currentCoroutineContext().ensureActive()
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        out.write(buffer, 0, count)
+                    }
+                }
+                currentCoroutineContext().ensureActive()
+                commitSpeakPart(name, part)
+            } finally {
+                part.delete()
             }
         }
-        commitSpeakPart(name, part)
     }
 
     /** 「音频缓存保留时间」= 0：用户要即听即焚，缓存目录里不该长期留下任何一份音频。 */

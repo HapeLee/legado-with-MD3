@@ -18,6 +18,7 @@ object SpeechVoiceRouter {
         cue: ReadAloudPlaybackCue,
         supportedEngineTypes: Set<String>,
         defaultRoute: SpeechEngineRoute,
+        isExecutable: (ReadAloudVoice) -> Boolean = { true },
     ): RoutedSpeechVoice {
         val candidates = buildList {
             add(cue.voice)
@@ -29,7 +30,7 @@ object SpeechVoiceRouter {
             }
             .distinctBy(ReadAloudVoice::id)
 
-        val selected = candidates.firstOrNull()
+        val selected = candidates.firstOrNull(isExecutable)
         if (selected != null) {
             return RoutedSpeechVoice(
                 voice = selected,

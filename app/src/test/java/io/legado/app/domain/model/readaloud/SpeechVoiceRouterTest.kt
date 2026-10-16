@@ -7,6 +7,20 @@ import org.junit.Test
 class SpeechVoiceRouterTest {
 
     @Test
+    fun `missing source skips entire voice and chooses executable fallback`() {
+        val missing = voice("missing-source", ReadAloudVoice.ENGINE_HTTP).copy(speakerId = "tone-A")
+        val fallback = voice("existing-source", ReadAloudVoice.ENGINE_HTTP).copy(speakerId = "tone-B")
+        val routed = SpeechVoiceRouter.route(
+            cue = cue(missing, listOf(fallback)),
+            supportedEngineTypes = setOf(ReadAloudVoice.ENGINE_HTTP),
+            defaultRoute = SpeechEngineRoute(ReadAloudVoice.ENGINE_HTTP, "default"),
+            isExecutable = { it.engineId != missing.engineId },
+        )
+        assertEquals(fallback, routed.voice)
+        assertTrue(routed.usedFallback)
+    }
+
+    @Test
     fun `uses primary voice supported by backend`() {
         val primary = voice("http-primary", ReadAloudVoice.ENGINE_HTTP)
         val routed = SpeechVoiceRouter.route(

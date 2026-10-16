@@ -39,7 +39,7 @@ data class HttpTTS(
      * 源自己声明的合成并发上限, 1..8。
      *
      * 外部源（含参考实现导出的 httpTTS.json）会带这个字段，导入时保留，
-     * 预合成并发取它与全局设置里较小的那个。
+     * 实时、试听、预合成及流式读取共用此源的配额；预合成另受全局任务上限约束。
      */
     @ColumnInfo(defaultValue = "1")
     var synthesisThreadCount: Int = 1,

@@ -118,10 +118,16 @@ fun rememberVoiceAuditionController(
                         VoiceEffectStore.enabledNames()
                         VoiceEffectStore.byName(effect)
                     }
-                    val file = withContext(Dispatchers.IO) {
-                        VoiceAudition.synthesize(context, voiceId, text)
+                    val file = try {
+                        withContext(Dispatchers.IO) { VoiceAudition.synthesize(context, voiceId, text) }
+                    } catch (error: kotlinx.coroutines.CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        context.toastOnUi(error.localizedMessage ?: failedText)
+                        return@launch
+                    } finally {
+                        busy = false
                     }
-                    busy = false
                     if (file == null) {
                         context.toastOnUi(failedText)
                         return@launch

@@ -1,5 +1,7 @@
 package io.legado.app.data.repository
 
+import androidx.room.withTransaction
+import io.legado.app.data.AppDatabase
 import io.legado.app.data.dao.ReadAloudVoiceDao
 import io.legado.app.data.entities.BookVoiceBindingEntity
 import io.legado.app.data.entities.ReadAloudVoiceEntity
@@ -13,7 +15,12 @@ import kotlinx.coroutines.withContext
 
 class ReadAloudVoiceRepository(
     private val dao: ReadAloudVoiceDao,
+    private val database: AppDatabase,
 ) : ReadAloudVoiceGateway {
+
+    override suspend fun <T> withTransaction(block: suspend () -> T): T = database.withTransaction(block)
+
+    override suspend fun countExcludedVoices(): Int = dao.countExcludedVoices()
 
     override fun observeVoices(): Flow<List<ReadAloudVoice>> =
         dao.observeVoices().map { voices -> voices.map(ReadAloudVoiceEntity::toDomain) }
@@ -31,7 +38,14 @@ class ReadAloudVoiceRepository(
     }
 
     override suspend fun upsertVoice(voice: ReadAloudVoice) = withContext(Dispatchers.IO) {
-        dao.upsertVoice(voice.toEntity())
+        database.withTransaction {
+            // 目录可能在删除引擎之前已生成草稿；删除之后的迟到同步不能重建孤儿。
+            if (voice.engineType == ReadAloudVoice.ENGINE_HTTP &&
+                voice.engineId.toLongOrNull()?.let(database.httpTTSDao::get) == null) {
+                return@withTransaction
+            }
+            dao.upsertVoice(voice.toEntity())
+        }
     }
 
     override suspend fun deleteVoice(voice: ReadAloudVoice) = withContext(Dispatchers.IO) {
@@ -65,7 +79,7 @@ class ReadAloudVoiceRepository(
     }
 }
 
-private fun ReadAloudVoiceEntity.toDomain() = ReadAloudVoice(
+internal fun ReadAloudVoiceEntity.toDomain() = ReadAloudVoice(
     id = id,
     engineType = engineType,
     engineId = engineId,
@@ -82,7 +96,7 @@ private fun ReadAloudVoiceEntity.toDomain() = ReadAloudVoice(
     updatedAt = updatedAt,
 )
 
-private fun ReadAloudVoice.toEntity() = ReadAloudVoiceEntity(
+internal fun ReadAloudVoice.toEntity() = ReadAloudVoiceEntity(
     id = id,
     engineType = engineType,
     engineId = engineId,

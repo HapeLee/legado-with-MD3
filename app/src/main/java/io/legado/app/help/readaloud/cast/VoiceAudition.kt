@@ -2,6 +2,8 @@ package io.legado.app.help.readaloud.cast
 
 import android.content.Context
 import io.legado.app.R
+import io.legado.app.data.repository.HttpTtsRepository
+import io.legado.app.help.readaloud.playback.HttpTtsAudioSynthesizer
 import io.legado.app.domain.gateway.CloudTtsEngineGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudVoiceGateway
@@ -19,7 +21,7 @@ import java.io.File
  *
  * 合成链路与朗读服务一致（云 TTS 用 [CloudTtsAudioSynthesizer] 的音色重载，系统 TTS 用
  * [SystemTtsFileSynthesizer] 文件合成），只是输出到缓存的试听目录，不进朗读队列、
- * 不影响正在播放的内容。http 音色由朗读服务负责，这里不支持。
+ * 不影响正在播放的内容。HTTP 与朗读服务共用源脚本与并发配额。
  */
 object VoiceAudition {
 
@@ -28,29 +30,30 @@ object VoiceAudition {
         val koin = GlobalContext.get()
         val voice = koin.get<ReadAloudVoiceGateway>().getVoice(voiceId) ?: return null
         val output = File(File(context.cacheDir, "voice_audition"), "${voice.id.hashCode()}.audio")
-        val success = runCatching {
-            when (voice.engineType) {
-                ReadAloudVoice.ENGINE_CLOUD ->
-                    CloudTtsAudioSynthesizer(koin.get<CloudTtsEngineGateway>())
-                        .synthesize(voice, text, output)
+        val success = when (voice.engineType) {
+            ReadAloudVoice.ENGINE_CLOUD ->
+                CloudTtsAudioSynthesizer(koin.get<CloudTtsEngineGateway>())
+                    .synthesize(voice, text, output)
 
-                ReadAloudVoice.ENGINE_SYSTEM -> {
-                    val config = runCatching {
-                        GSON.fromJson(voice.traitsJson, SystemTtsVoiceConfig::class.java)
-                    }.getOrNull() ?: SystemTtsVoiceConfig()
-                    SystemTtsFileSynthesizer(context).synthesize(
-                        engine = voice.engineId,
-                        voiceName = voice.speakerId,
-                        text = text,
-                        output = output,
-                        speechRate = config.speechRate ?: globalSpeechRate(),
-                        pitch = config.pitch ?: 1f,
-                    )
-                }
-
-                else -> false
+            ReadAloudVoice.ENGINE_SYSTEM -> {
+                val config = runCatching {
+                    GSON.fromJson(voice.traitsJson, SystemTtsVoiceConfig::class.java)
+                }.getOrNull() ?: SystemTtsVoiceConfig()
+                SystemTtsFileSynthesizer(context).synthesize(
+                    engine = voice.engineId,
+                    voiceName = voice.speakerId,
+                    text = text,
+                    output = output,
+                    speechRate = config.speechRate ?: globalSpeechRate(),
+                    pitch = config.pitch ?: 1f,
+                )
             }
-        }.getOrDefault(false)
+
+            ReadAloudVoice.ENGINE_HTTP ->
+                HttpTtsAudioSynthesizer(koin.get<HttpTtsRepository>()).synthesize(voice, text, output)
+
+            else -> false
+        }
         return output.takeIf { success && it.length() > 0 }
     }
 

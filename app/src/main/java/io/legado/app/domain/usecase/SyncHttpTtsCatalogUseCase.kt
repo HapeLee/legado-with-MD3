@@ -22,9 +22,9 @@ class SyncHttpTtsCatalogUseCase(
     /**
      * 源没带目录时什么都不做。
      *
-     * 不能顺势清空：备份里没有 `speakersJson` 字段（我们自己的备份就不写它），
+     * 不能顺势清空：旧备份及不带目录的源更新没有 `speakersJson` 字段，
      * 恢复时会把每个源都当成「新版去掉了目录」，把用户已有的目录整批删掉。
-     * 清理只在引擎真的没了的时候做，见 [clear]。
+     * 标准备份通过独立音色快照恢复用户状态；引擎删除由数据层事务统一清理。
      */
     suspend operator fun invoke(
         engineId: String,

@@ -39,8 +39,8 @@ import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
-import io.legado.app.domain.model.readaloud.HttpTtsCatalogDraft
-import io.legado.app.domain.usecase.SyncHttpTtsCatalogUseCase
+import io.legado.app.data.repository.HttpTtsRepository
+import io.legado.app.data.entities.ReadAloudVoiceEntity
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
@@ -236,10 +236,6 @@ object Restore : KoinComponent {
         }
         if (BackupConfig.dbIsNotIgnored("httpTTS")) {
             fileToListT<HttpTTS>(path, "httpTTS.json")?.let {
-                try {
-                    appDb.httpTTSDao.insert(*it.toTypedArray())
-                } catch (_: SQLiteConstraintException) {
-                }
                 restoreHttpTtsCatalogs(path, "httpTTS.json", it)
             }
         }
@@ -578,28 +574,16 @@ object Restore : KoinComponent {
         fileName: String,
         sources: List<HttpTTS>,
     ) {
-        if (sources.isEmpty()) return
-        runCatching {
-            val file = File(path, fileName)
-            if (!file.exists()) return@runCatching
-            val drafts = HttpTtsCatalogParser.parseList(file.readText())
-            // 目录按下标配对实体。GSON 反序列化会滤掉数组里的空元素，长度对不上说明
-            // 有条目没解析出来，此时配对必然错位，宁可不恢复也不要张冠李戴。
-            if (drafts.size != sources.size) {
-                LogUtils.d(TAG, "httpTTS 目录条数与源条数不一致，跳过目录恢复")
-                return@runCatching
-            }
-            val sync = get<SyncHttpTtsCatalogUseCase>()
-            sources.forEachIndexed { index, source ->
-                sync(
-                    engineId = source.id.toString(),
-                    draft = drafts.getOrElse(index) { HttpTtsCatalogDraft() },
-                    sourceRevision = source.lastUpdateTime,
-                )
-            }
-        }.onFailure {
-            LogUtils.d(TAG, "恢复 httpTTS 自带目录失败: ${it.localizedMessage}")
-        }
+        val file = File(path, fileName)
+        if (!file.exists()) return
+        val drafts = HttpTtsCatalogParser.parseList(file.readText())
+        require(drafts.size == sources.size) { "httpTTS 目录条数与源条数不一致" }
+        val voicesFile = File(path, "httpTtsVoices.json")
+        val voices = if (voicesFile.exists()) {
+            // 不能把损坏的新备份当成旧备份忽略，否则会静默丢失排除状态。
+            GSON.fromJsonArray<ReadAloudVoiceEntity>(voicesFile.readText()).getOrThrow()
+        } else null
+        get<HttpTtsRepository>().restore(sources.zip(drafts), voices)
     }
 
     private inline fun <reified T> fileToListT(path: String, fileName: String): List<T>? {
