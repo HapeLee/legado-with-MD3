@@ -396,9 +396,10 @@ object AiCastPresetStore {
         } else {
             trimmed
         }
+        val prefs = prefs()
+        // 兜底那份必须在写库之前读：写完之后库里这份就已经是这一趟的了
         val ledger = if (fromAi) {
-            prefs().getString(ledgerKey(bookUrl), null).orEmpty()
-                .ifBlank { appDb.bookCastMemoryDao.get(bookUrl)?.memory.orEmpty() }
+            prefs.getString(ledgerKey(bookUrl), null).orEmpty().ifBlank { memory(bookUrl) }
         } else {
             ""
         }
@@ -407,9 +408,7 @@ object AiCastPresetStore {
         )
         // 记忆里归并好的别名、关系与池要落到官方人物档案，否则人物页看到的还是改动前的那份
         CastMemoryMirror.applyMemoryToProfiles(bookUrl, memory, ledger)
-        if (fromAi) {
-            prefs().edit().putString(ledgerKey(bookUrl), memory).apply()
-        }
+        if (fromAi) prefs.edit().putString(ledgerKey(bookUrl), memory).apply()
     }
 
     private fun ensureSeeded() {

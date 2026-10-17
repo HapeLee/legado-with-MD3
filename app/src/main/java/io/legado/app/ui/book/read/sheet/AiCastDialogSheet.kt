@@ -142,6 +142,8 @@ fun AiCastDialogSheet(
     val aiProfiles: AiProfileGateway = koinInject()
     val aiModels by produceState(initialValue = CastModelOptions(), key1 = show) {
         combine(
+            // 预设这一路只当「预设变了就重算」的触发器：当前模型要按 AiCastAssignUseCase
+            // 那一条回退链现取（getTaskPreset 顺带补齐缺失的预设行），不能直接读列表里那一条
             aiProfiles.observePresets(),
             aiProfiles.observeProviders(),
             aiProfiles.observeModels(),
@@ -149,10 +151,12 @@ fun AiCastDialogSheet(
             val current = aiProfiles.getTaskPreset(AiTaskType.IDENTIFY_CHARACTERS)?.model
                 ?: aiProfiles.getTaskPreset(AiTaskType.CHAT)?.model
             CastModelOptions(
+                loaded = true,
                 currentId = current?.id.orEmpty(),
                 currentLabel = current?.displayName.orEmpty(),
                 groups = providers.map { provider ->
                     CastModelGroup(
+                        providerId = provider.id,
                         providerName = provider.name,
                         models = models.filter { it.providerId == provider.id }
                             .map {
@@ -712,12 +716,16 @@ fun AiCastDialogSheet(
                         color = Color.Transparent,
                         onCheckedChange = { reassign = it },
                     )
-                    // 当前模型：官方 AI 设置里那一条搬进来，换模型不用退出阅读器。
-                    // 显示与写入都走同一份预设（见上面 aiModels 的注释），所以这里换完下一趟就生效。
+                    // 显示与写入都走同一份预设（见上面 aiModels 的注释）：这里换完，下一趟分配就是新模型
                     ClickableSettingItem(
                         title = stringResource(R.string.ai_current_model),
-                        description = aiModels.currentLabel.ifBlank {
-                            stringResource(R.string.ai_model_not_configured)
+                        // 订阅还没回来时这一栏留空：「未配置模型」要等真的读过预设才说得出
+                        description = if (aiModels.loaded) {
+                            aiModels.currentLabel.ifBlank {
+                                stringResource(R.string.ai_model_not_configured)
+                            }
+                        } else {
+                            null
                         },
                         onClick = { modelSheetOpen = true },
                     )
@@ -848,7 +856,8 @@ fun AiCastDialogSheet(
     ) {
         LazyColumn {
             aiModels.groups.forEach { group ->
-                item(key = group.providerName) {
+                // key 用 id：供应商的显示名没有唯一约束，两个同名就把 LazyColumn 的 key 撞崩
+                item(key = group.providerId) {
                     SplicedColumnGroup(title = group.providerName) {
                         group.models.forEach { model ->
                             ClickableSettingItem(
@@ -895,12 +904,14 @@ fun AiCastDialogSheet(
 
 /** 分配弹层里「当前模型」那一行的数据：这一趟真正会用的那一个 + 按供应商分组的候选。 */
 private class CastModelOptions(
+    val loaded: Boolean = false,
     val currentId: String = "",
     val currentLabel: String = "",
     val groups: List<CastModelGroup> = emptyList(),
 )
 
 private class CastModelGroup(
+    val providerId: String,
     val providerName: String,
     val models: List<CastModelChoice>,
 )

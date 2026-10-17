@@ -5,7 +5,6 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonArray
 
 /**
  * 本书角色记忆 ↔ 官方人物档案 的两个方向。
@@ -17,8 +16,9 @@ import io.legado.app.utils.fromJsonArray
  *
  * 方向一（记忆 → 档案）跟着这一趟的记忆走，但**只动 AI 自己写过的那部分**：
  * 凭上一次 AI 抄出去的那一份（[applyMemoryToProfiles] 的 `aiLedger`）认出哪些别名、哪一句简介
- * 是我们填的，那些才跟着更新或摘除；用户在人物页写下的一个字不动 —— 否则他写的东西每读一章
- * 就被模型改一遍。池那一栏永远只填空缺：改了就是换声音。
+ * 是模型填的，那些才跟着更新或摘除；凭据里没有的（用户在人物页自己写的）留到最后，
+ * 记忆那一侧的条数封顶 [MAX_ALIAS_COUNT]，这一栏才不会随章数无界地涨。池那一栏永远只填空缺：
+ * 改了就是换声音。
  * 方向二（档案 → 记忆）整行替换：那一行本来就代表这个人，用户在人物页改的就是最终口径。
  */
 object CastMemoryMirror {
@@ -52,9 +52,8 @@ object CastMemoryMirror {
     /**
      * 别名拆到「一个叫得出口的称呼」：`、，,/；` 都算分隔，重复的合掉。
      *
-     * 模型爱把身份用 `/` 串成一串（真机读到过 `男主/埃诺克/埃诺克小哥`），下一趟整串抄回来
-     * 再接一截，这一栏就每章长一点；而称呼归并靠逐字相等（[canonicalCastName]），
-     * 整串谁都匹配不上。拆平之后同一批称呼就是同一批条目，条数不再随章数涨。
+     * 模型把身份用 `/` 串成一串（`男主/埃诺克/埃诺克小哥`），而称呼归并靠逐字相等
+     * （[canonicalCastName]），整串谁都匹配不上：拆平后每一截才都是可用的钥匙。
      * 四种不是称呼的一并丢掉：只在这一章成立的（`本章…`）、模型自己标不确定的（带问号）、
      * 回显输入键名的（`已有角色`、`别名…`）与空串。
      */
@@ -185,12 +184,13 @@ object CastMemoryMirror {
     suspend fun applyMemoryToProfiles(bookUrl: String, memory: String, aiLedger: String = "") {
         if (bookUrl.isBlank() || memory.isBlank()) return
         val ledger = parse(aiLedger).associateBy { it.name }
+        // 整本取一次按主名索引：一表二十几行、每行现查一次库的话，写一次记忆就是二十几次读
+        val byName = appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500)
+            .filter { it.bookUrl == bookUrl }
+            .associateBy { it.name }
         parse(memory).forEach { line ->
-            val profile = appDb.bookKnowledgeDao.getCharacterProfile(bookUrl, line.name)
-                ?.takeIf { it.bookUrl == bookUrl && it.name == line.name }
-                ?: return@forEach
-            val aliases = GSON.fromJsonArray<String>(profile.aliasesJson).getOrNull().orEmpty()
-            val merged = mergeIdentity(line, aliases, profile.summary, ledger[line.name])
+            val profile = byName[line.name] ?: return@forEach
+            val merged = mergeIdentity(line, profile.aliasNames(), profile.summary, ledger[line.name])
             val next = profile.copy(
                 aliasesJson = GSON.toJson(merged.aliases),
                 summary = merged.summary,
@@ -217,19 +217,18 @@ object CastMemoryMirror {
     /**
      * 一趟记忆的某一行落到档案上时，别名与简介各自该怎么并。
      *
-     * 别名：上一次 AI 写进去、这一趟记忆没再列的那些要**摘掉** —— 这就是「一直在追加」那条：
-     * 模型每章把身份串成新的一截抄回来（`男主/埃诺克/埃诺克小哥`），旧的一截从来没人删。
-     * 用户在人物详情页自己补的（[ledger] 里从来没有的那些）与记忆这一趟重新列出的都留下，
-     * 排在记忆当前列的那些之后，超出 [MAX_ALIAS_COUNT] 的尾巴才丢掉 —— 那些称谓是称呼归并的
-     * 匹配钥匙（[canonicalCastName] 逐字相等），一次砍光会让同一个人被重新建档。
+     * 别名两半：**记忆这一趟列出的**（模型每章能一直往里加的那一半，封顶 [MAX_ALIAS_COUNT]）
+     * 排在前面，**凭据 [ledger] 里从来没有的**（用户在人物详情页自己补的）全留、跟在后面。
+     * 上一次是 AI 写的、这一趟记忆没再列的那些摘掉。两半都先过 [aliasWords]：库里存着 `/`
+     * 串起来的旧写法时，不归到同一层就永远对不上凭据，也就永远摘不掉。
+     * 这些称谓是称呼归并的匹配钥匙（[canonicalCastName] 逐字相等），砍干净了同一个人会被另建档。
      * 简介：档案里空着，或者那一栏就是上一次 AI 写的那一句 → 跟着这一趟的记忆走；
      * 其余情况那是用户自己写的，留着（记忆没给新句子时也不动）。
      */
     fun mergeIdentity(line: Line, stored: List<String>, storedSummary: String, ledger: Line?): MergedIdentity {
         val ledgerAliases = aliasWords(ledger?.aliases.orEmpty()).toSet()
-        val aliases = (aliasWords(line.aliases) + stored.filterNot { it in ledgerAliases })
-            .distinct()
-            .take(MAX_ALIAS_COUNT)
+        val aliases = (aliasWords(line.aliases).take(MAX_ALIAS_COUNT) +
+            aliasWords(stored).filterNot { it in ledgerAliases }).distinct()
         val summary = if (storedSummary.isBlank() || storedSummary == ledger?.relation) {
             line.relation.ifBlank { storedSummary }
         } else {
@@ -347,7 +346,7 @@ object CastMemoryMirror {
     suspend fun applyProfileToMemory(bookUrl: String, profile: BookCharacterProfile) {
         if (bookUrl.isBlank() || profile.name.isBlank()) return
         val row = appDb.bookCastMemoryDao.get(bookUrl) ?: return
-        val aliases = GSON.fromJsonArray<String>(profile.aliasesJson).getOrNull().orEmpty()
+        val aliases = profile.aliasNames()
         val pool = VoicePoolStore.poolNameOrEmpty(profile.voiceAgeBand)
         val next = replaceLine(
             row.memory,
@@ -381,28 +380,28 @@ object CastMemoryMirror {
      * 那种行留着（合并身份靠的就是它）。
      */
     fun dropThrowawayExtras(memory: String): String {
-        val lines = memory.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
-        val mainNames = lines.map { it.split('｜', '|').first().trim() }
-        val aliasFields = lines.map { it.split('｜', '|').getOrNull(1).orEmpty() }
-        return lines.filterIndexed { index, line ->
-            val name = mainNames[index]
-            !isThrowawayExtra(name) || aliasFields.withIndex().any { (other, field) ->
-                other != index && name in field
-            }
-        }.joinToString("\n")
+        val rows = memory.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.map { line ->
+            val fields = line.split('｜', '|').map { it.trim() }
+            Triple(line, fields.first(), fields.getOrElse(1) { "" })
+        }.toList()
+        // 只有留得下来的那些行才算数：群杂行里提到某个编号，不代表那是有名字的人的另一种写法
+        val keepers = rows.filterNot { isThrowawayExtra(it.second) }
+        return rows.filter { (_, name, _) ->
+            !isThrowawayExtra(name) || keepers.any { name in it.third }
+        }.joinToString("\n") { it.first }
     }
 
     /**
      * 一趟 AI 分配跑完，把人物列表收回「这一趟的记忆里有 + 真分配过台词」那一批人。
      *
-     * 档案只增不减（每一趟新认的人都留下一条，改过主名的旧主名也留着），记忆是模型每次
-     * 重写的快照，两边越走越远，用户看到的「人物列表一直在叠加」就是这个差。
-     * 三条同时满足才动：本趟记忆的主名与别名都查不到、本书从没分配到一句台词、
-     * 档案上没有用户手过的痕迹（头像、角色档次、性格、标签）。
+     * 动一条要三条同时成立：本趟记忆的主名与别名都查不到、本书从没分配到一句台词、
+     * 档案上没有用户手过的痕迹（[untouchedProfile]）。说过话的人一个都不动 ——
+     * 他的胶囊与音色还挂在配音链路上。
      *
      * 停用而不是删档案：官方人物页的简介、关系与事记要留着，[CastProfileMirror.ensure]
      * 之后照名字把他放回配音链路。但 `cast_characters` 那一行必须一起删——
      * [CastProfileMirror.backfillAll] 会照着角色行把档案的状态改回启用，只改状态等于没改。
+     * 他的音色绑定与变声记录也留着（同「资料留着」一条）：重新出场时不用重挑一遍。
      */
     suspend fun pruneStaleProfiles(bookUrl: String, memory: String): Int {
         if (bookUrl.isBlank() || memory.isBlank()) return 0
@@ -418,12 +417,7 @@ object CastMemoryMirror {
         appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500).forEach { profile ->
             if (profile.status != BookCharacterProfile.STATUS_ACTIVE) return@forEach
             if (profile.id in spokenIds || profile.name in spokenNames) return@forEach
-            if (profile.name in known) return@forEach
-            if (GSON.fromJsonArray<String>(profile.aliasesJson).getOrNull().orEmpty()
-                    .any { it.trim() in known }
-            ) {
-                return@forEach
-            }
+            if (profile.name in known || profile.aliasNames().any { it in known }) return@forEach
             if (!untouchedProfile(profile)) return@forEach
             stale += profile
         }
@@ -452,5 +446,5 @@ object CastMemoryMirror {
 /** 天干：编号路人的写法（甲/乙/丙/丁…），模型每章重新发一遍号。 */
 private val HEAVENLY_STEMS = setOf('甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸')
 
-/** 一个人最多记几个别名：记忆当前列的排前面，超出的从最旧的尾巴上掉。 */
+/** 记忆那一侧每人的别名上限（用户在人物页自己补的那些不受这一条约束，见 [mergeIdentity]）。 */
 private const val MAX_ALIAS_COUNT = 12

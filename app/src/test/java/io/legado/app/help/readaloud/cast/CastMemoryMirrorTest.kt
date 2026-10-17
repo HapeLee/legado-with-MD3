@@ -345,7 +345,8 @@ class CastMemoryMirrorTest {
 
     /**
      * 真机那本书的形状：上一次 AI 抄出去的是 `男主/埃诺克/埃诺克小哥`，这一趟它换了写法
-     * （`男主/埃诺克/贝尔大人`）。旧那几截要跟着掉，用户自己补的一条不动 —— 这就是「别名一直叠加」的出口。
+     * （`男主/埃诺克/贝尔大人`）。旧那几截要跟着掉，用户自己补的一条不动。
+     * 库里存的是 `/` 串起来的旧写法（`男主/埃诺克`）时也要认得出那是 AI 抄的，否则永远摘不掉。
      */
     @Test
     fun dropsAliasesTheMemoryNoLongerListsAndKeepsUserOnes() {
@@ -354,7 +355,7 @@ class CastMemoryMirrorTest {
 
         val merged = CastMemoryMirror.mergeIdentity(
             line = line,
-            stored = listOf("男主", "埃诺克", "埃诺克小哥", "用户自己补的称呼"),
+            stored = listOf("男主/埃诺克", "埃诺克小哥", "用户自己补的称呼"),
             storedSummary = "潜入精灵王国",
             ledger = ledger,
         )
@@ -362,21 +363,35 @@ class CastMemoryMirrorTest {
         assertEquals(listOf("男主", "埃诺克", "贝尔大人", "用户自己补的称呼"), merged.aliases)
     }
 
-    /** 上限十二条：记忆这一趟列出的排前面，多出来的从最旧的尾巴上掉（那些称谓是归并的匹配钥匙）。 */
+    /** 上限只压记忆那一侧（模型每章能一直往里加的那一半）；凭据里没有的（用户自己补的）全留。 */
     @Test
-    fun capsTheAliasListKeepingWhatTheMemoryJustListed() {
-        val memoryAliases = (1..12).map { "称呼$it" }
-        val ledger = CastMemoryMirror.Line("埃诺克·巴拉尔", memoryAliases.dropLast(1), "男主", "男青年")
+    fun capsOnlyTheMemorySideOfTheAliasList() {
+        val memoryAliases = (1..14).map { "称呼$it" }
+        val ledger = CastMemoryMirror.Line("埃诺克·巴拉尔", listOf("称呼1"), "男主", "男青年")
         val line = CastMemoryMirror.Line("埃诺克·巴拉尔", memoryAliases, "男主", "男青年")
 
         val merged = CastMemoryMirror.mergeIdentity(
             line = line,
-            stored = memoryAliases.dropLast(1) + listOf("更旧的一条"),
+            stored = listOf("称呼1", "用户自己补的称呼"),
             storedSummary = "男主",
             ledger = ledger,
         )
 
-        assertEquals(memoryAliases, merged.aliases)
+        assertEquals(memoryAliases.take(12) + "用户自己补的称呼", merged.aliases)
+    }
+
+    /** 只有留得下来的那些行才算「有人记着这个编号」：群杂行互相提到对方，一起掉。 */
+    @Test
+    fun onlyNamedLinesCanRescueAnExtraName() {
+        val kept = CastMemoryMirror.dropThrowawayExtras(
+            listOf(
+                "金振宇｜新生甲的同学｜男主｜男青年",
+                "新生甲｜围观学生｜嘲讽金振宇｜少年",
+                "路人己｜新生甲的同伙｜起哄｜少年",
+            ).joinToString("\n"),
+        ).lines()
+
+        assertEquals(listOf("金振宇｜新生甲的同学｜男主｜男青年", "新生甲｜围观学生｜嘲讽金振宇｜少年"), kept)
     }
 
     /** 简介跟着记忆走，前提是那一句本来就是 AI 写的；用户自己写的那一份、以及没有凭据时都不改写。 */

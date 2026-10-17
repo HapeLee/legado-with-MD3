@@ -115,8 +115,7 @@ class AiCastAssignUseCase(
         // 整趟跑完：没有要续的章了，但失败清单要留着让重试按钮读
         persistRunState(book.bookUrl, plan, AiCastPresetStore.NO_RESUME_CHAPTER, failed)
         if (assignedChapters > 0) {
-            // 人物列表跟着这一趟的最终记忆收敛一次，否则每趟新认的人与改掉的旧主名
-            // 会一直留在配音列表里（记忆与人物页越走越远的另一半）
+            // 人物列表跟着这一趟的最终记忆对一次账（口径见 CastMemoryMirror.pruneStaleProfiles）
             withContext(Dispatchers.IO) {
                 CastMemoryMirror.pruneStaleProfiles(
                     book.bookUrl, AiCastPresetStore.memory(book.bookUrl),
@@ -244,11 +243,11 @@ class AiCastAssignUseCase(
             // 书级记忆滚动更新：AI 返回非空 memory 才覆盖（返回原样也安全）。
             // 一次性群杂（新生甲/工作人员们）在存之前去掉：它们每章换个编号，
             // 留着会让这张表一直长，把有名有姓的角色挤出模型的输出预算。
-            parsed.memory?.let { CastMemoryMirror.dropThrowawayExtras(it) }
-                ?.takeIf { it.isNotBlank() }?.let {
-                    AiCastPresetStore.setMemory(book.bookUrl, it, fromAi = true)
-                    bookMemory = it
-                }
+            val nextMemory = parsed.memory?.let(CastMemoryMirror::dropThrowawayExtras).orEmpty()
+            if (nextMemory.isNotBlank()) {
+                AiCastPresetStore.setMemory(book.bookUrl, nextMemory, fromAi = true)
+                bookMemory = nextMemory
+            }
             val speakerOf = writeAssignments(
                 book.bookUrl, chapterIndex, window, parsed.assignments, pools, known,
                 thoughtOrdinals, profiles,
@@ -633,8 +632,11 @@ internal fun canonicalCastName(
     return (resolved ?: byName)?.name
 }
 
-/** 档案里记的别名（JSON 字符串数组）；读坏了当没有。 */
-private fun BookCharacterProfile.aliasNames(): List<String> =
+/**
+ * 档案里记的别名（JSON 字符串数组）；读坏了当没有。
+ * 称呼归并（[canonicalCastName]）与记忆并档（[CastMemoryMirror]）读同一份，别各自再解析一遍。
+ */
+internal fun BookCharacterProfile.aliasNames(): List<String> =
     GSON.fromJsonArray<String>(aliasesJson).getOrNull().orEmpty().map { it.trim() }
 
 /** 异常 → 给用户看的一句话原因（message 常为空，尤其是 IOException/超时之外的异常）。 */
