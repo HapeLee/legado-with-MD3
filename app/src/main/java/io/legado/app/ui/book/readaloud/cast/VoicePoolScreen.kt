@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +48,7 @@ import io.legado.app.ui.widget.components.VoiceAuditionIconButton
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
+import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -282,6 +284,7 @@ fun VoicePoolScreen(
     TtsServerImportDialog(
         preview = state.ttsServerPreview,
         engine = state.ttsServerEngine,
+        engineChoices = state.ttsServerEngineChoices,
         onIntent = onIntent,
     )
 }
@@ -362,6 +365,7 @@ private fun VoicePoolIoSheet(
 private fun TtsServerImportDialog(
     preview: TtsServerPreviewUi?,
     engine: String,
+    engineChoices: List<TtsEngineChoiceUi>,
     onIntent: (MultiRoleRuleIntent) -> Unit,
 ) {
     // 常驻组合（见本文件下方那批弹窗）：关掉时 miuix 才有退场动画
@@ -398,6 +402,23 @@ private fun TtsServerImportDialog(
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
+                // 同一个作者有好几个分支（I·TTS Server / U·TTS Server），导出文件都不带来源包名，
+                // 装了几个就先让人从里面挑：挑错了整池音色都不发声。下面那个框留着手动填别的包名。
+                if (engineChoices.isNotEmpty()) {
+                    TinyDropdownSettingItem(
+                        title = stringResource(R.string.cast_import_engine_pick),
+                        selectedValue = engineText,
+                        selectedDisplay = engineChoices
+                            .firstOrNull { it.packageName == engineText }?.label,
+                        displayEntries = engineChoices.map { it.label }.toTypedArray(),
+                        entryValues = engineChoices.map { it.packageName }.toTypedArray(),
+                        color = Color.Transparent,
+                        onValueChange = {
+                            engineText = it
+                            onIntent(MultiRoleRuleIntent.UpdateTtsServerEngine(it))
+                        },
+                    )
+                }
                 AppTextField(
                     value = engineText,
                     onValueChange = {

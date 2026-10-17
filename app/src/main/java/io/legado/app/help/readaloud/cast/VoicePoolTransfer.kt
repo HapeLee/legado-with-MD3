@@ -56,7 +56,8 @@ object VoicePoolTransfer {
      * 外部格式解析后的预览：只含角色池，音效已在解析阶段剔除。
      *
      * TTS Server 与 multitts 共用这一份，因为两者落库要做的事完全一样
-     * （一个根分组 + 每组一个池 + 池里挂音色），差别只在解析器与根分组名。
+     * （根分组下面挂池、池里挂音色，源文件带两层时中间那层落成子分组），
+     * 差别只在解析器与根分组名。
      */
     data class TtsServerPreview(
         val pools: List<TtsServerPool>,
@@ -68,7 +69,17 @@ object VoicePoolTransfer {
         val voiceCount: Int get() = pools.sumOf { it.voices.size }
     }
 
-    data class TtsServerPool(val name: String, val voices: List<TtsServerVoice>)
+    /**
+     * 一个待落库的池。
+     *
+     * [groupName] 非空 = 这个池要挂到源文件里那一层分组下面（见 [parseTtsServer] 的第二种层级）；
+     * 空 = 池直接挂在本次导入的根分组下，与 multitts 的「一个分组一个池」同形。
+     */
+    data class TtsServerPool(
+        val name: String,
+        val voices: List<TtsServerVoice>,
+        val groupName: String = "",
+    )
 
     /**
      * [voiceName] 要写进音色的 speakerId，必须是引擎在 Android TTS 里暴露的
@@ -228,7 +239,13 @@ object VoicePoolTransfer {
     /**
      * 解析 I·TTS Server 的音色列表导出。
      *
-     * 文件结构是 `[{group:{id,name}, list:[{id,displayName,isEnabled,config:{...}}]}]`。
+     * 文件结构是 `[{group:{id,name}, list:[{id,displayName,isEnabled,categoryPath,config:{...}}]}]`，
+     * 真机上有两种层级，判定**按分组各自算**（同一份文件可以一半一半）：
+     * - 条目不带 `categoryPath`：`group` 本身就是声音池（「男童」「女童」那种）。
+     * - 条目带 `categoryPath`：`group` 是来源软件/引擎（「微讯火」「猫箱豆包」），池在它下面，
+     *   每个不同的 `categoryPath`（「🤝女青年」「🐱男青年」）一个池；没带路径的条目落进以该
+     *   `group` 命名的池，不丢。池的先后按路径在文件里首次出现的顺序。
+     *
      * 角色与音效在这份导出里混在同一个字段里，只能靠 `config.source.pluginId`
      * （本地音效是 `bendiyinxiao`、智能音效是 `zhinengyinxiao*`）和
      * `config.speechRule.tag`（`localSound<N>`）区分，见 [isNotRoleEntry]。
@@ -252,7 +269,9 @@ object VoicePoolTransfer {
             val entries = item.getAsJsonArray("list")
                 ?.mapNotNull { it as? JsonObject }
                 .orEmpty()
-            val voices = ArrayList<TtsServerVoice>()
+            // LinkedHashMap：桶的顺序 = 池在文件里首次出现的顺序
+            val buckets = LinkedHashMap<String, MutableList<TtsServerVoice>>()
+            var categorized = false
             for (entry in entries) {
                 if (isNotRoleEntry(entry)) {
                     effects++
@@ -265,10 +284,17 @@ object VoicePoolTransfer {
                 val displayName = entry.str("displayName")?.trim().orEmpty()
                 if (displayName.isEmpty()) continue
                 val id = entry.str("id").orEmpty()
-                voices += TtsServerVoice(displayName, "${displayName}_$id")
+                val category = entry.str("categoryPath")?.trim().orEmpty()
+                if (category.isNotEmpty()) categorized = true
+                buckets.getOrPut(category.ifEmpty { groupName }) { ArrayList() } +=
+                    TtsServerVoice(displayName, "${displayName}_$id")
             }
-            if (voices.isNotEmpty()) {
-                pools += TtsServerPool(groupName.take(VOICE_POOL_NAME_MAX), voices)
+            buckets.forEach { (poolName, voices) ->
+                pools += TtsServerPool(
+                    name = poolName.take(VOICE_POOL_NAME_MAX),
+                    voices = voices,
+                    groupName = if (categorized) groupName.take(MAX_GROUP_NAME) else "",
+                )
             }
         }
         return TtsServerPreview(pools, effects, disabled)
@@ -292,8 +318,10 @@ object VoicePoolTransfer {
     }
 
     /**
-     * 落库：一个根分组（[rootGroup]，按来源软件分开放），下面每个源分组一个池，池里是本次导入的音色。
+     * 落库：一个根分组（[rootGroup]，按来源软件分开放），下面每个 [TtsServerPool] 一个池，池里是本次导入的音色。
      *
+     * 池带 [TtsServerPool.groupName]（源文件里那一层引擎分组）时，先在同一根分组下按名字建/复用
+     * 一个子分组，池挂子分组下面；不带就照旧直接挂根分组。
      * 池名撞上已有池（比如默认池「男童」）时并入已有池，不改它的分组归属；
      * 音色按 engineType/engineId/speakerId 推出的固定 id 判重，重复导入不会翻倍。
      */
@@ -305,9 +333,14 @@ object VoicePoolTransfer {
         if (preview.pools.isEmpty() || enginePackage.isBlank()) return Summary()
         VoicePoolStore.ensureGroups()
         val dao = appDb.voicePoolDao
-        val groupId = importRootGroupId(dao, rootGroup)
+        val rootGroupId = importRootGroupId(dao, rootGroup)
         var summary = Summary()
         for (pool in preview.pools) {
+            val groupId = if (pool.groupName.isBlank()) {
+                rootGroupId
+            } else {
+                importChildGroupId(dao, rootGroupId, pool.groupName)
+            }
             val existing = dao.getByName(pool.name)
             val target = existing ?: VoicePoolEntity(
                 id = UUID.randomUUID().toString(),
@@ -359,6 +392,30 @@ object VoicePoolTransfer {
                 name = rootGroup.take(MAX_GROUP_NAME),
                 parentId = "",
                 order = nextGroupOrder(dao, ""),
+            ),
+        )
+        return id
+    }
+
+    /**
+     * 源文件里那一层引擎分组（「微讯火」「猫箱豆包」）：同一父级下同名就复用，
+     * 所以同一份文件导两次不会多出第二个分组。
+     */
+    private suspend fun importChildGroupId(
+        dao: io.legado.app.data.dao.VoicePoolDao,
+        parentId: String,
+        name: String,
+    ): String {
+        val trimmed = name.take(MAX_GROUP_NAME)
+        dao.getGroups().firstOrNull { it.parentId == parentId && it.name == trimmed }
+            ?.let { return it.id }
+        val id = UUID.randomUUID().toString()
+        dao.insertGroup(
+            VoicePoolGroupEntity(
+                id = id,
+                name = trimmed,
+                parentId = parentId,
+                order = nextGroupOrder(dao, parentId),
             ),
         )
         return id

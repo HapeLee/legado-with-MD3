@@ -56,6 +56,22 @@ object ReaderVisibleTextPositionPolicy {
             ?.let { ReaderVisibleTextPosition(it.chapterIndex, it.chapterPosition) }
     }
 
+    /**
+     * 翻页模式（覆盖 / 仿真 / 无动画）下的可见正文起点：整页就是可见内容，
+     * 取当前页里最靠上、最靠左的第一条正文。标题是 emphasized 文本，与滚动模式同一套排除。
+     */
+    fun firstBodyTextOfCurrentPage(window: ReaderPageWindow): ReaderVisibleTextPosition? {
+        val current = window.current ?: return null
+        if (current.isPlaceholder) return null
+        return current.elements
+            .filterIsInstance<ReaderElement.Text>()
+            .filterNot { it.emphasized }
+            .minWithOrNull(
+                compareBy<ReaderElement.Text> { it.bounds.top }.thenBy { it.bounds.left },
+            )
+            ?.let { ReaderVisibleTextPosition(current.id.chapterIndex, it.chapterPosition) }
+    }
+
     private data class VisibleText(
         val chapterIndex: Int,
         val chapterPosition: Int,

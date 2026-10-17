@@ -639,7 +639,14 @@ abstract class BaseReadAloudService : BaseService(),
         }.onFailure {
             AppLog.put("生成多角色朗读计划失败，使用原朗读方式\n${it.localizedMessage}", it)
         }.getOrDefault(emptyList())
-        return CastSpeechOverlay.apply(bookUrl, chapterIndex, paragraphs, plan)
+        // 覆盖层要读分配表、角色库、声音池，任何一次查询出错都不能把整章的朗读准备带走：
+        // 这里的调用方是 `newReadAloud`，它外层是 `execute{}.onError{ pauseReadAloud() }`，
+        // 抛出会停在章末（切下一章时最明显），所以降级成「这一章不做多角色覆盖」继续念。
+        return runCatching {
+            CastSpeechOverlay.apply(bookUrl, chapterIndex, paragraphs, plan)
+        }.onFailure {
+            AppLog.put("多角色分配覆盖失败，本章按原计划朗读\n${it.localizedMessage}", it)
+        }.getOrDefault(plan)
     }
 
     /**
@@ -890,7 +897,9 @@ abstract class BaseReadAloudService : BaseService(),
             } else {
                 bookSession.updateProgress(currentProgress, forceSave = true, expectedChapterIndex = currentChapterIndex)
                 bookSession.selectChapter(index)
-                newReadAloud(play, 0, 0, 0)
+                // newReadAloud 开头会 cancel 这个 prepareReadAloudJob，而这段回调正跑在它里面：
+                // 直接调用等于取消掉自己脚下这份作业，下一章一帧都不准备（切章后没声也不报错）。
+                launch(Main) { newReadAloud(play, 0, 0, 0) }
             }
         }.onError {
             AppLog.put("加载朗读章节失败", it, true)
@@ -898,8 +907,16 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
-    /** Retry the playback book, never whichever book is currently visible. */
-    protected fun preparePlayback() = newReadAloud(!pause, pageIndex, 0, currentProgress)
+    /**
+     * 重跑本章准备（朗读列表还空着时的兜底），只重跑本会话这本书。
+     *
+     * 已经在准备中就不能再起一次：`play()` 会在 contentList 填好之前被调到，那时
+     * pageIndex 与 currentProgress 都还是 0，重起会把「从当前页开始」冲成章首。
+     */
+    protected fun preparePlayback() {
+        if (prepareReadAloudJob?.isActive == true) return
+        newReadAloud(!pause, pageIndex, 0, currentProgress)
+    }
 
     protected fun moveToReadAloudPage(chapterPosition: Int): Boolean {
         val chapter = readerReadAloudChapter ?: return false

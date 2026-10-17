@@ -475,8 +475,9 @@ class ReaderChapterBlockMeasurer(
                                 intrinsicWidthPx = size.widthPx,
                                 intrinsicHeightPx = size.heightPx,
                                 chapterPosition = item.chapterPosition,
-                                // 旧 `setTypeImage` 建 ImageColumn 时根本没传 click：整图不带动作。
-                                action = null,
+                                // 整图也要带动作：书源写在 src 尾随 JSON 里的 click（例如唤起章评）
+                                // 只有解析成功时才有值，消费侧是 `ReadBookController.handleComposeImageClick`。
+                                action = if (layout.preservesAction) options?.action else null,
                                 horizontalAlignment = layout.alignment,
                                 scaleMode = mode.toScaleMode(),
                                 pageBreakBefore = mode == ReaderImageLayoutMode.SINGLE_PAGE,
@@ -571,8 +572,7 @@ class ReaderChapterBlockMeasurer(
                         intrinsicWidthPx = size.widthPx,
                         intrinsicHeightPx = size.heightPx,
                         chapterPosition = block.chapterPosition,
-                        // 独立图块按纯文本路径走的是整图分支，旧 `setTypeImage` 不带 click。
-                        action = null,
+                        action = if (layout.preservesAction) options?.action else null,
                         horizontalAlignment = layout.alignment,
                         scaleMode = mode.toScaleMode(),
                         pageBreakBefore = mode == ReaderImageLayoutMode.SINGLE_PAGE,
@@ -671,8 +671,10 @@ private data class ReaderResolvedImageLayout(
     val placeholder: ReaderInlineImagePlaceholder,
     val alignment: ReaderTextAlignment,
     /**
-     * 旧版只有行内（文字嵌入）图带 click；整图走 `setTypeImage`，那里压根没用 click 参数。
-     * 另外纯文本的书级文字嵌入分支自己就没解析 JSON，连行内图也不带 click。
+     * 这一张图能否带上 src 尾随 JSON 解析出来的 click。
+     *
+     * false 只出现在根本没解析 JSON 的短路分支（书级文字嵌入、HTML 段落无 `,{...}`）：
+     * 那里没有动作可带。行内与整图两个分支都用它做闸门。
      */
     val preservesAction: Boolean,
 )
@@ -691,8 +693,8 @@ private data class ReaderResolvedImageLayout(
  * - src 里没有 `,{...}` 时直接 `setTypeImage(imageStyle)`：**不做 <80px 自动行内**，书级 TEXT
  *   也会落到 `setTypeImage` 的 `else`（夹小整图）。
  *
- * `click` 也按旧版分支走：纯文本短路分支没有解析 JSON，连行内图都不带动作；整图在旧
- * `setTypeImage` 里也没有 click 参数。HTML 段落里带 `,{...}` 的行内图才有动作。
+ * `click` 只取决于那一支有没有解析 JSON：解析到了（`preservesAction`）行内图和整图都带动作，
+ * 书级文字嵌入的短路分支连 JSON 都没读，所以任何图都不带动作。
  */
 private fun ReaderChapterMeasureStyle.resolveImageLayout(
     options: ReaderImageOptions?,

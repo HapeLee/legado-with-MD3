@@ -3112,14 +3112,12 @@
     <string name="cast_voice">音色</string>
     <string name="cast_unassign">取消分配</string>
     <string name="cast_no_match">无匹配项</string>
-    <string name="read_aloud_pagination_pending">章节排版尚未完成，请稍候再试</string>
     <string name="ai_cast_roles">AI 分配角色</string>
     <string name="ai_cast_status">本章共 %2$d 句对话，已分配 %1$d 句</string>
     <string name="ai_cast_status_loading">正在统计本章…</string>
     <string name="ai_cast_all_done">本章已全部分配</string>
     <string name="ai_cast_reassign">重新分配</string>
     <string name="ai_cast_reassign_summary">先清除本章已有分配，再重新识别一遍</string>
-    <string name="ai_cast_chapter_count">分配章节数（自本章起）</string>
     <string name="ai_cast_progress">已处理 %1$d/%2$d 章</string>
     <string name="ai_cast_start">开始分配</string>
     <string name="ai_cast_delete">删除分配</string>
@@ -3164,8 +3162,6 @@
     <string name="ai_cast_request_hint">最近一次请求的系统提示词与用户 JSON，与模型收到的逐字一致。分配不准时展开这里，可以看到送给模型的正文与角色名。</string>
     <string name="ai_cast_transcript_folded">前面 %1$d 字已折叠，只显示最新部分</string>
     <string name="ai_cast_thinking_pending">模型还没有回传思考内容。若整章结束仍为空，说明这个模型不回思考过程（或只回思考不给正文），分配照常进行。</string>
-    <string name="cast_table_empty">本书还没有配音角色。</string>
-    <string name="book_cast_roles">本书配音角色</string>
     <string name="cast_table_row_count">%1$d 章 · %2$d 句</string>
     <string name="cast_delete_character">删除角色</string>
     <string name="cast_delete_character_confirm">删除「%1$s」及其全部分配？</string>
@@ -3199,6 +3195,7 @@
     <string name="cast_import_tts_server_empty">这个文件里没有可导入的角色音色（音效已按要求排除）</string>
     <string name="cast_import_tts_server_counts">角色音色 %1$d 个 · 排除音效 %2$d 个 · 跳过已停用 %3$d 个</string>
     <string name="cast_import_tts_server_engine">引擎包名</string>
+    <string name="cast_import_engine_pick">从已装引擎里选</string>
     <string name="cast_import_tts_server_engine_hint">音色按这个引擎暴露的「显示名_编号」去匹配；没装这个引擎，导进来的音色不会发声，只能在列表里当占位。</string>
     <string name="cast_import_tts_server_result">导入 %1$d 个声音池、%2$d 个音色</string>
     <string name="cast_import_confirm">导入</string>
@@ -3240,7 +3237,6 @@
     <string name="regex_cast_summary">命中「%1$s」→ %2$s</string>
     <string name="regex_cast_summary_voice">由「%1$s」念（%2$s）</string>
     <string name="regex_cast_summary_sound">播放「%1$s」（%2$s），这几个字不念，走第三条音轨</string>
-    <string name="regex_cast_scope_hint">特定范围与排除范围填书名或书源 URL，留空表示所有书。</string>
     <string name="regex_cast_search_hint">筛选规则与分组</string>
     <string name="regex_cast_new_group">新建分组</string>
     <string name="regex_cast_delete_group_title">删除这个分组？</string>
@@ -3248,7 +3244,6 @@
     <string name="regex_cast_group_bad_name">分组名不能为空</string>
     <string name="regex_cast_group_duplicate">同一层已经有这个名字的分组</string>
     <string name="regex_cast_dialog_hint">声音池只是筛选：停用的池照样列出来，不选池也能直接挑音色。分组那栏直接打字就是新建分组。</string>
-    <string name="regex_cast_sort_hint">长按拖动可排序；拖进别的小节就是把这条规则挪进那个分组。</string>
     <string name="regex_cast_pool_disabled">（已停用）</string>
     <string name="multi_role_rule_summary">管理角色声音池、背景音乐池与角色配音分配</string>
     <string name="cast_voice_pool_summary">管理角色声音池以及池内启用的音色</string>
@@ -3264,11 +3259,8 @@
     <string name="cast_symbol_duplicated">四个符号彼此不能重复</string>
     <string name="cast_syntax_preview">预览：%1$s</string>
     <string name="cast_syntax_applies_next_chapter">名字与声音池之间也接受 . · 、 等分隔（如 张三.男青年）。改动在此之后打开的章节生效。</string>
-    <string name="voice_pool_tab">声音池</string>
-    <string name="cast_assign_tab">分配表</string>
     <string name="cast_group">分组</string>
     <string name="cast_group_none">未分组</string>
-    <string name="cast_group_hint">分组在这里从列表里选；要新建或嵌套分组请到声音池页拖动/新建</string>
     <string name="cast_create_pool">新建声音池</string>
     <string name="cast_edit_pool">编辑声音池</string>
     <string name="cast_delete_pool">删除声音池</string>
@@ -3276,9 +3268,6 @@
     <string name="cast_pool_name_invalid">名称为空或重复</string>
     <string name="cast_search_pool_hint">搜索声音池或分组</string>
     <string name="cast_search_voice_hint">搜索音色</string>
-    <string name="cast_pool_members">池内音色</string>
-    <string name="cast_assign_empty">还没有配音角色。在阅读器里点击角色胶囊即可分配。</string>
-    <string name="cast_no_voice">未选音色</string>
     <string name="cast_create">创建</string>
     <string name="cast_invalid_name">角色名不合法</string>
     <string name="cast_confirm_not_found">角色不存在，请点击「创建」新建</string>
