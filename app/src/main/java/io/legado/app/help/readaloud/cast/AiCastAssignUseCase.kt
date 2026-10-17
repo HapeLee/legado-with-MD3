@@ -246,7 +246,7 @@ class AiCastAssignUseCase(
             // 留着会让这张表一直长，把有名有姓的角色挤出模型的输出预算。
             parsed.memory?.let { CastMemoryMirror.dropThrowawayExtras(it) }
                 ?.takeIf { it.isNotBlank() }?.let {
-                    AiCastPresetStore.setMemory(book.bookUrl, it)
+                    AiCastPresetStore.setMemory(book.bookUrl, it, fromAi = true)
                     bookMemory = it
                 }
             val speakerOf = writeAssignments(

@@ -343,6 +343,66 @@ class CastMemoryMirrorTest {
         )
     }
 
+    /**
+     * 真机那本书的形状：上一次 AI 抄出去的是 `男主/埃诺克/埃诺克小哥`，这一趟它换了写法
+     * （`男主/埃诺克/贝尔大人`）。旧那几截要跟着掉，用户自己补的一条不动 —— 这就是「别名一直叠加」的出口。
+     */
+    @Test
+    fun dropsAliasesTheMemoryNoLongerListsAndKeepsUserOnes() {
+        val ledger = CastMemoryMirror.Line("埃诺克·巴拉尔", listOf("男主/埃诺克/埃诺克小哥"), "潜入精灵王国", "男青年")
+        val line = CastMemoryMirror.Line("埃诺克·巴拉尔", listOf("男主/埃诺克/贝尔大人"), "潜入精灵王国", "男青年")
+
+        val merged = CastMemoryMirror.mergeIdentity(
+            line = line,
+            stored = listOf("男主", "埃诺克", "埃诺克小哥", "用户自己补的称呼"),
+            storedSummary = "潜入精灵王国",
+            ledger = ledger,
+        )
+
+        assertEquals(listOf("男主", "埃诺克", "贝尔大人", "用户自己补的称呼"), merged.aliases)
+    }
+
+    /** 上限十二条：记忆这一趟列出的排前面，多出来的从最旧的尾巴上掉（那些称谓是归并的匹配钥匙）。 */
+    @Test
+    fun capsTheAliasListKeepingWhatTheMemoryJustListed() {
+        val memoryAliases = (1..12).map { "称呼$it" }
+        val ledger = CastMemoryMirror.Line("埃诺克·巴拉尔", memoryAliases.dropLast(1), "男主", "男青年")
+        val line = CastMemoryMirror.Line("埃诺克·巴拉尔", memoryAliases, "男主", "男青年")
+
+        val merged = CastMemoryMirror.mergeIdentity(
+            line = line,
+            stored = memoryAliases.dropLast(1) + listOf("更旧的一条"),
+            storedSummary = "男主",
+            ledger = ledger,
+        )
+
+        assertEquals(memoryAliases, merged.aliases)
+    }
+
+    /** 简介跟着记忆走，前提是那一句本来就是 AI 写的；用户自己写的那一份、以及没有凭据时都不改写。 */
+    @Test
+    fun updatesTheSummaryOnlyWhenMemoryIsTheOneThatWroteIt() {
+        val line = CastMemoryMirror.Line("玛丽·艾尔", listOf("宿舍管理员"), "情报局内应", "女老年")
+        val ledger = CastMemoryMirror.Line("玛丽·艾尔", listOf("宿舍管理员"), "宿舍管理员/拿拖把女士", "女老年")
+
+        assertEquals(
+            "情报局内应",
+            CastMemoryMirror.mergeIdentity(line, emptyList(), "宿舍管理员/拿拖把女士", ledger).summary,
+        )
+        assertEquals(
+            "情报局内应",
+            CastMemoryMirror.mergeIdentity(line, emptyList(), "", ledger).summary,
+        )
+        assertEquals(
+            "用户自己写的简介",
+            CastMemoryMirror.mergeIdentity(line, emptyList(), "用户自己写的简介", ledger).summary,
+        )
+        assertEquals(
+            "用户自己写的简介",
+            CastMemoryMirror.mergeIdentity(line, emptyList(), "用户自己写的简介", null).summary,
+        )
+    }
+
     private companion object {
         val REAL_MEMORY = """
             金振宇｜主角/作家/附身施卢斯·海因克尔｜施卢斯为其别名；本章与路德维希交易｜男青年

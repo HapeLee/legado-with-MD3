@@ -385,19 +385,31 @@ object AiCastPresetStore {
      * [reconcilePools] = 把池栏按配音行的当前值重刷：AI 每章重写时它给的池只是猜测，
      * 不刷就会长期与配音/详情不一致。用户在记忆编辑器里自己改的那一次要传 false ——
      * 那一次是他把权威值写进来的来源，刷了就把他刚改的抹掉了。
+     * [fromAi] = 这一笔是模型回写的。档案那边要照着「上一次 AI 抄出去的那一份」才认得出
+     * 哪些别名与简介是自己写的（见 [CastMemoryMirror.applyMemoryToProfiles]），那一份另存本书 prefs：
+     * 库里的当前记忆会被用户在人物页改一遍就盖掉，拿它当凭据会把他的字当成 AI 的来重写。
      */
-    suspend fun setMemory(bookUrl: String, text: String, reconcilePools: Boolean = true) {
+    suspend fun setMemory(bookUrl: String, text: String, reconcilePools: Boolean = true, fromAi: Boolean = false) {
         val trimmed = text.trim().take(4000)
         val memory = if (reconcilePools) {
             CastMemoryMirror.reconcilePoolsWithCast(bookUrl, trimmed)
         } else {
             trimmed
         }
+        val ledger = if (fromAi) {
+            prefs().getString(ledgerKey(bookUrl), null).orEmpty()
+                .ifBlank { appDb.bookCastMemoryDao.get(bookUrl)?.memory.orEmpty() }
+        } else {
+            ""
+        }
         appDb.bookCastMemoryDao.upsert(
             BookCastMemory(bookUrl = bookUrl, memory = memory),
         )
         // 记忆里归并好的别名、关系与池要落到官方人物档案，否则人物页看到的还是改动前的那份
-        CastMemoryMirror.applyMemoryToProfiles(bookUrl, memory)
+        CastMemoryMirror.applyMemoryToProfiles(bookUrl, memory, ledger)
+        if (fromAi) {
+            prefs().edit().putString(ledgerKey(bookUrl), memory).apply()
+        }
     }
 
     private fun ensureSeeded() {
@@ -556,6 +568,9 @@ object AiCastPresetStore {
     }
 
     private fun runKey(bookUrl: String, field: String) = "castRun_$field|$bookUrl"
+
+    /** 上一次 AI 抄给人物档案的那一份记忆（别名与简介的出处凭据，用户改不动它）。 */
+    private fun ledgerKey(bookUrl: String) = "aiMemory|$bookUrl"
 
     private fun prefs(): android.content.SharedPreferences =
         appCtx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
