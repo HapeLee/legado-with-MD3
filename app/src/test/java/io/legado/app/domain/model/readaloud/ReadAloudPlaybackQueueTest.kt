@@ -54,11 +54,32 @@ class ReadAloudPlaybackQueueTest {
         assertEquals(true, ReadAloudPlaybackQueue.Empty.withChapterTitle("标题").isEmpty)
     }
 
+    /** 开多角色朗读时标题要跟旁白同一个人念（备用音色一起带上）；没给旁白音就还是引擎默认发音人。 */
+    @Test
+    fun `chapter title is voiced by the narrator voice taken from the plan`() {
+        val narrator = ReadAloudVoice(
+            id = "narrator",
+            engineType = "http",
+            engineId = "narrator",
+            speakerId = "",
+            displayName = "旁白",
+        )
+        val titled = ReadAloudPlaybackQueue
+            .from(listOf(item("旁白", 10, 0, voice = narrator, fallback = listOf(narrator))))
+            .withChapterTitle("第 1 章")
+
+        assertEquals(narrator, titled.cues.first().voice)
+        assertEquals(listOf(narrator), titled.cues.first().fallbackVoices)
+        assertNull(queue.withChapterTitle("第 1 章").cues.first().voice)
+    }
+
     private fun item(
         text: String,
         start: Int,
         paragraph: Int,
         role: SpeechRoleType = SpeechRoleType.Narrator,
+        voice: ReadAloudVoice? = null,
+        fallback: List<ReadAloudVoice> = emptyList(),
     ): SpeechPlanItem = SpeechPlanItem(
         segment = ChapterSpeechSegment(
             id = "$start",
@@ -73,7 +94,7 @@ class ReadAloudPlaybackQueueTest {
             roleType = role,
             source = SpeechResolutionSource.Rule,
         ),
-        voice = null,
-        fallbackVoices = emptyList(),
+        voice = voice,
+        fallbackVoices = fallback,
     )
 }
