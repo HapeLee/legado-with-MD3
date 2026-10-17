@@ -102,6 +102,7 @@ sealed interface ReplaceRuleIntent {
     data class BottomSelectByIds(val ids: Set<Long>) : ReplaceRuleIntent
     data class AddGroup(val group: String) : ReplaceRuleIntent
     data class DeleteGroup(val group: String) : ReplaceRuleIntent
+    data class DeleteGroups(val groups: List<String>) : ReplaceRuleIntent
     data class UpGroup(val oldGroup: String, val newGroup: String?) : ReplaceRuleIntent
     // Book-specific intents (only when bookUrl is provided)
     data class InitBookData(val bookUrl: String) : ReplaceRuleIntent

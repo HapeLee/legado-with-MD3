@@ -290,6 +290,7 @@ class BookSourceViewModel(
             is BookSourceIntent.RemoveFromGroup -> updateGroups(intent.ids, intent.group, false)
             is BookSourceIntent.UpdateGroup -> updateGroup(intent.old, intent.new)
             is BookSourceIntent.DeleteGroup -> updateGroup(intent.group, "")
+            is BookSourceIntent.DeleteGroups -> deleteGroups(intent.groups)
             is BookSourceIntent.CheckSelectedInterval -> checkInterval(intent.ids)
             is BookSourceIntent.StartCheck -> {
                 if (checkGateway.state.value.isRunning) {
@@ -392,6 +393,23 @@ class BookSourceViewModel(
                 ?.let { source.bookSourceGroup = TextUtils.join(",", it) }
         }
         repository.updateSources(*sources.toTypedArray())
+    }
+
+    private fun deleteGroups(groups: List<String>) = launch {
+        val toRemove = groups.toSet()
+        val allSources = mutableMapOf<String, io.legado.app.data.entities.BookSource>()
+        groups.forEach { group ->
+            repository.getByGroup(group).forEach { source ->
+                val current = allSources.getOrPut(source.bookSourceUrl) { source }
+                current.bookSourceGroup?.splitNotBlank(",")?.toHashSet()?.let { set ->
+                    set.removeAll(toRemove)
+                    current.bookSourceGroup = TextUtils.join(",", set)
+                }
+            }
+        }
+        if (allSources.isNotEmpty()) {
+            repository.updateSources(*allSources.values.toTypedArray())
+        }
     }
 
     private fun moveToEdge(ids: Set<String>, toTop: Boolean) = launch {

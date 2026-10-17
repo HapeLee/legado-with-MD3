@@ -6,8 +6,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
-import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.base.BaseRuleEvent
+import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.UploadRepository
@@ -31,12 +31,12 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -89,6 +89,7 @@ sealed interface RssSourceIntent {
     data class RemoveSelectionFromGroup(val ids: Set<String>, val group: String) : RssSourceIntent
     data class UpdateGroup(val old: String, val new: String) : RssSourceIntent
     data class DeleteGroup(val group: String) : RssSourceIntent
+    data class DeleteGroups(val groups: List<String>) : RssSourceIntent
     data class CheckSelectedInterval(val ids: Set<String>, val items: List<RssSourceItemUi>) : RssSourceIntent
     data object CancelImport : RssSourceIntent
     data object SaveImportedRules : RssSourceIntent
@@ -291,6 +292,7 @@ class RssSourceViewModel(
             is RssSourceIntent.RemoveSelectionFromGroup -> selectionRemoveFromGroups(intent.ids, intent.group)
             is RssSourceIntent.UpdateGroup -> upGroup(intent.old, intent.new)
             is RssSourceIntent.DeleteGroup -> delGroup(intent.group)
+            is RssSourceIntent.DeleteGroups -> delGroups(intent.groups)
             is RssSourceIntent.CheckSelectedInterval -> checkSelectedInterval(intent.ids, intent.items)
             RssSourceIntent.CancelImport -> cancelImport()
             RssSourceIntent.SaveImportedRules -> saveImportedRules()
@@ -391,6 +393,12 @@ class RssSourceViewModel(
     fun delGroup(group: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.deleteGroup(group)
+        }
+    }
+
+    fun delGroups(groups: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteGroups(groups)
         }
     }
 

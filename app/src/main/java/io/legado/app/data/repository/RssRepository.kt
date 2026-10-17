@@ -137,6 +137,23 @@ class RssRepository(
         dao.update(*sources.toTypedArray())
     }
 
+    suspend fun deleteGroups(groups: List<String>) = withContext(Dispatchers.IO) {
+        val toRemove = groups.toSet()
+        val allSources = mutableMapOf<String, io.legado.app.data.entities.RssSource>()
+        groups.forEach { group ->
+            dao.getByGroup(group).forEach { source ->
+                val current = allSources.getOrPut(source.sourceUrl) { source }
+                current.sourceGroup?.split(",")?.toHashSet()?.let { set ->
+                    set.removeAll(toRemove)
+                    current.sourceGroup = set.joinToString(",")
+                }
+            }
+        }
+        if (allSources.isNotEmpty()) {
+            dao.update(*allSources.values.toTypedArray())
+        }
+    }
+
     fun getMinOrder(): Int = dao.minOrder
 
     fun getMaxOrder(): Int = dao.maxOrder

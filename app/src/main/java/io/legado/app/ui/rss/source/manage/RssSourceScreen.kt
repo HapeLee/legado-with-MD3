@@ -191,7 +191,8 @@ fun RssSourceScreen(
         groups = groups,
         onDismissRequest = { showGroupManageSheet = false },
         onUpdateGroup = { old, new -> onIntent(RssSourceIntent.UpdateGroup(old, new)) },
-        onDeleteGroup = { onIntent(RssSourceIntent.DeleteGroup(it)) }
+        onDeleteGroup = { onIntent(RssSourceIntent.DeleteGroup(it)) },
+        onDeleteGroups = { onIntent(RssSourceIntent.DeleteGroups(it)) }
     )
 
 

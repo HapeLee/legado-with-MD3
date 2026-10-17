@@ -3,7 +3,6 @@ package io.legado.app.ui.replace
 import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -272,7 +271,8 @@ fun ReplaceRuleScreen(
         groups = groups,
         onDismissRequest = { showGroupManageSheet = false },
         onUpdateGroup = { old, new -> onIntent(ReplaceRuleIntent.UpGroup(old, new)) },
-        onDeleteGroup = { onIntent(ReplaceRuleIntent.DeleteGroup(it)) }
+        onDeleteGroup = { onIntent(ReplaceRuleIntent.DeleteGroup(it)) },
+        onDeleteGroups = { onIntent(ReplaceRuleIntent.DeleteGroups(it)) }
     )
 
 

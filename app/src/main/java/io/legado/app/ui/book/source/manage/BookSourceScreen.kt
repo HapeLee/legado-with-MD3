@@ -410,9 +410,12 @@ fun BookSourceScreen(
             onIntent(BookSourceIntent.RemoveFromGroup(selectedIds, it)); removeGroup = false
         })
     GroupManageBottomSheet(
-        groupManage, state.groups, { groupManage = false },
+        show = groupManage,
+        groups = state.groups,
+        onDismissRequest = { groupManage = false },
         onUpdateGroup = { old, new -> onIntent(BookSourceIntent.UpdateGroup(old, new)) },
-        onDeleteGroup = { onIntent(BookSourceIntent.DeleteGroup(it)) }
+        onDeleteGroup = { onIntent(BookSourceIntent.DeleteGroup(it)) },
+        onDeleteGroups = { onIntent(BookSourceIntent.DeleteGroups(it)) }
     )
     AppAlertDialog(
         deleteIds,

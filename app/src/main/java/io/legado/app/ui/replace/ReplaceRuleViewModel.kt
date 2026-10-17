@@ -162,6 +162,7 @@ class ReplaceRuleViewModel(
             is ReplaceRuleIntent.BottomSelectByIds -> bottomSelectByIds(intent.ids)
             is ReplaceRuleIntent.AddGroup -> addGroup(intent.group)
             is ReplaceRuleIntent.DeleteGroup -> delGroup(intent.group)
+            is ReplaceRuleIntent.DeleteGroups -> delGroups(intent.groups)
             is ReplaceRuleIntent.UpGroup -> upGroup(intent.oldGroup, intent.newGroup)
             // Book-specific
             is ReplaceRuleIntent.InitBookData -> initBookData(intent.bookUrl)
@@ -393,6 +394,8 @@ class ReplaceRuleViewModel(
 
     private fun addGroup(group: String) = viewModelScope.launch { repository.addGroup(group) }
     private fun delGroup(group: String) = viewModelScope.launch { repository.delGroup(group) }
+    private fun delGroups(groups: List<String>) =
+        viewModelScope.launch { repository.clearGroups(groups) }
 
     private fun toTop(rule: ReplaceRule) =
         viewModelScope.launch { repository.toTop(rule, _sortMode.value == "desc") }

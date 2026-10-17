@@ -84,6 +84,7 @@ sealed interface BookSourceIntent {
     data class RemoveFromGroup(val ids: Set<String>, val group: String) : BookSourceIntent
     data class UpdateGroup(val old: String, val new: String) : BookSourceIntent
     data class DeleteGroup(val group: String) : BookSourceIntent
+    data class DeleteGroups(val groups: List<String>) : BookSourceIntent
     data class CheckSelectedInterval(val ids: Set<String>) : BookSourceIntent
     data class StartCheck(
         val ids: Set<String>,
