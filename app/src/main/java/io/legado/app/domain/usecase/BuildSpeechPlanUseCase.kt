@@ -33,8 +33,9 @@ class BuildSpeechPlanUseCase(
             BookVoiceBinding.SUBJECT_UNKNOWN,
             voicesById,
         )
+        // 默认音色只认「朗读引擎与音色」里选的那一个：配音页的旁白绑定属于多角色那一层，
+        // 绝不能在这种时候顶替它，否则关掉多角色朗读旁白还是配音页那个人。
         val defaultVoice = preferredDefaultVoiceId?.let(voicesById::get)
-            ?: narrator
 
         return segments.map { segment ->
             val performance = segment.characterId?.let(characterPerformances::get)
@@ -43,7 +44,7 @@ class BuildSpeechPlanUseCase(
                 bindings.voice(subject, subject, voicesById)
             }
             val primary = if (!useMultiSpeaker) {
-                // Multi-speaker disabled — every segment uses the default voice
+                // 多角色朗读关闭：整章不接管音色，defaultVoice 为空时由 SpeechVoiceRouter 落到引擎默认
                 defaultVoice
             } else {
                 val characterVoice = segment.characterId?.let { characterId ->
