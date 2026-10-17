@@ -3022,10 +3022,17 @@ class ReadBookController(
     ): ReaderPage? {
         val viewport = layoutController.viewport.value ?: return null
         val paginationStyle = LegacyReaderPaginationStyleFactory.create()
-        val contentTop = viewport.contentPadding.top.toFloat()
-        val contentBottom = (viewport.heightPx - viewport.contentPadding.bottom).toFloat()
-        if (contentBottom - contentTop <= 0f) return null
-        val contentWidth = viewport.contentWidthPx.toFloat()
+        // 旧 TextPage.format 与正文共用 ChapterProvider 的内容区。系统栏、阅读边距、
+        // 页眉页脚都要计入，避免当前页切到提示页时滚动视口突然变大。
+        val contentLeft = (viewport.contentPadding.left + paginationStyle.paddingLeftPx).toFloat()
+        val contentRight = (viewport.widthPx - viewport.contentPadding.right -
+                paginationStyle.paddingRightPx).toFloat()
+        val contentTop = viewport.contentPadding.top + paginationStyle.paddingTopPx +
+                LegacyReaderPageDecorationFactory.headerExtentPx()
+        val contentBottom = viewport.heightPx - viewport.contentPadding.bottom -
+                paginationStyle.paddingBottomPx - LegacyReaderPageDecorationFactory.footerExtentPx()
+        val contentWidth = contentRight - contentLeft
+        if (contentBottom <= contentTop || contentWidth < 1f) return null
         val lineHeight = paginationStyle.bodyTextHeightPx
         val layout = StaticLayout.Builder
             .obtain(
@@ -3033,7 +3040,7 @@ class ReadBookController(
                 0,
                 text.length,
                 paginationStyle.bodyPaint,
-                viewport.contentWidthPx.coerceAtLeast(1)
+                contentWidth.toInt()
             )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setLineSpacing(0f, 1f)
@@ -3044,7 +3051,7 @@ class ReadBookController(
         val elements = (0 until layout.lineCount).map { lineIndex ->
             val lineTop = blockTop + layout.getLineTop(lineIndex)
             val lineWidth = layout.getLineMax(lineIndex)
-            val x = viewport.contentPadding.left.toFloat() +
+            val x = contentLeft +
                     ((contentWidth - lineWidth) / 2f).coerceAtLeast(0f)
             ReaderElement.Text(
                 bounds = ReaderRect(x, lineTop, x + lineWidth, lineTop + lineHeight),
@@ -3068,8 +3075,8 @@ class ReadBookController(
             heightPx = viewport.heightPx,
             contentTopPx = contentTop,
             contentBottomPx = contentBottom,
-            contentLeftPx = viewport.contentPadding.left.toFloat(),
-            contentRightPx = (viewport.widthPx - viewport.contentPadding.right).toFloat(),
+            contentLeftPx = contentLeft,
+            contentRightPx = contentRight,
             elements = elements,
             revision = 1L,
             scrollExtentPx = contentBottom - contentTop,

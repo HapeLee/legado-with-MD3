@@ -357,7 +357,7 @@ class ReaderTextBackgroundRunTest {
     }
 
     @Test
-    fun `scroll window clip includes the next page bubble`() {
+    fun `scroll window allows bubble sides without expanding the vertical viewport`() {
         val current = page(text(0f, 0f, 10f, 20f, plainStyle))
         val framed = image.copy(contentInsetLeftPx = 3f, contentInsetRightPx = 4f)
         val next = page(
@@ -368,8 +368,73 @@ class ReaderTextBackgroundRunTest {
         )
 
         assertEquals(
-            ReaderRect(0f, 0f, 104f, 106f),
+            ReaderRect(0f, 0f, 104f, 100f),
             ReaderPageWindow(current = current, next = next).contentClipRect(),
+        )
+    }
+
+    @Test
+    fun `offscreen placeholders cannot remove the current page margins`() {
+        val current = page(text(20f, 20f, 30f, 40f, plainStyle)).copy(
+            contentLeftPx = 10f, contentRightPx = 90f,
+            contentTopPx = 20f, contentBottomPx = 80f,
+        )
+        val placeholder = current.copy(
+            contentLeftPx = 0f, contentRightPx = 100f,
+            contentTopPx = 0f, contentBottomPx = 100f,
+            elements = emptyList(), isPlaceholder = true,
+        )
+        val windows = listOf(
+            ReaderPageWindow(previous = placeholder, current = current),
+            ReaderPageWindow(current = current, next = placeholder),
+            ReaderPageWindow(current = current, nextPlus = placeholder),
+            ReaderPageWindow(previous = current, current = current, next = current),
+        )
+
+        windows.forEach { window ->
+            assertEquals(ReaderRect(10f, 20f, 90f, 80f), window.contentClipRect())
+        }
+    }
+
+    @Test
+    fun `offscreen bubble coordinates cannot expand the vertical viewport`() {
+        val current = page(text(20f, 20f, 30f, 40f, plainStyle)).copy(
+            contentTopPx = 20f, contentBottomPx = 80f,
+        )
+        // A tall page can have styled rows far outside the viewport. Its page-local
+        // coordinates must not become the fixed screen's clipping bounds.
+        val tallPage = current.copy(
+            scrollExtentPx = 400f,
+            elements = listOf(
+                text(0f, 300f, 100f, 320f, style, frameTop = 5f, frameBottom = 6f),
+            ),
+        )
+
+        assertEquals(
+            ReaderRect(0f, 20f, 100f, 80f),
+            ReaderPageWindow(current = current, nextPlus = tallPage).contentClipRect(),
+        )
+    }
+
+    @Test
+    fun `scroll viewport keeps glyph overhang when a styled neighbor enters`() {
+        val current = page(text(20f, 20f, 30f, 40f, plainStyle)).copy(
+            contentLeftPx = 10f, contentRightPx = 90f,
+            contentTopPx = 20f, contentBottomPx = 80f,
+        )
+        val neighbor = current.copy(
+            elements = listOf(
+                text(
+                    20f, 20f, 30f, 40f, plainStyle.copy(
+                        italic = true, shadow = ReaderTextShadow(0, 6f, 0f, 0f),
+                    )
+                ),
+            )
+        )
+
+        assertEquals(
+            ReaderRect(2f, 12f, 98f, 88f),
+            ReaderPageWindow(current = current, next = neighbor).contentClipRect(),
         )
     }
 

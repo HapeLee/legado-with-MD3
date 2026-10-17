@@ -1520,9 +1520,8 @@ fun ReaderCanvasSurface(
                     // 否则相邻页气泡滑入时仍按上一窗的外沿截断。
                     val contentClip = currentPageWindow().contentClipRect()
                         ?: return@drawWithContent
-                    // 外扩阴影/斜体溢出，对照旧 View 的 ChapterProvider.visibleRect；
-                    // 但九宫格气泡与放大过的背景图本来就要画到内容框之外，裁剪必须跟着它们走，
-                    // 否则气泡会在滚动模式的视口边沿被切掉。
+                    // 对照旧 View 的固定 visibleRect：上下只留字形余量，防止邻页/气泡
+                    // 撑开正文边距；左右仍容纳九宫格气泡，避免把两侧边条裁成平口。
                     clipRect(
                         left = contentClip.left,
                         top = contentClip.top,
