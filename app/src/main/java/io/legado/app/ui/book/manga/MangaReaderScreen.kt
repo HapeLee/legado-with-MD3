@@ -212,8 +212,17 @@ fun MangaReaderScreen(
     }
     val updateAspectRatio: (String, Float) -> Unit = { key, ratio ->
         if (ratio.isFinite() && ratio > 0 && aspectRatios[key] != ratio) {
-            val resize = { aspectRatios[key] = ratio; Unit }
-            applyPageResize?.invoke(key, resize) ?: resize()
+            val apply = {
+                if (aspectRatios[key] != ratio) {
+                    val resize = { aspectRatios[key] = ratio; Unit }
+                    applyPageResize?.invoke(key, resize) ?: resize()
+                }
+            }
+            if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+                apply()
+            } else {
+                android.os.Handler(android.os.Looper.getMainLooper()).post(apply)
+            }
         }
     }
     val automaticBackgrounds =
@@ -514,9 +523,12 @@ private fun WebtoonMangaList(
         val reader = latestReaderState
         val matching =
             layout.visibleItemsInfo.filter { reader.pages.getOrNull(it.index)?.key == it.key }
-        // 过渡卡片的身份会随 Loading/Ready 变化，优先保存视口里的真实图片。
-        val anchor = matching.firstOrNull { reader.pages[it.index] is MangaReaderItemUi.Page }
-            ?: matching.firstOrNull() ?: return
+        // 优先保存当前章内的真实图片（防止在跨章边界被视口顶端仅露出一两像素的旧章节末尾页抢占锚点）；
+        // 其次保存视口内的其他真实图片，最后回退过渡卡片
+        val matchingPages = matching.filter { reader.pages[it.index] is MangaReaderItemUi.Page }
+        val anchor = matchingPages.firstOrNull {
+            (reader.pages[it.index] as MangaReaderItemUi.Page).chapterIndex == reader.chapterIndex
+        } ?: matchingPages.firstOrNull() ?: matching.firstOrNull() ?: return
         viewportAnchor.record(
             reader.pages,
             anchor.index,
@@ -537,15 +549,15 @@ private fun WebtoonMangaList(
             latestReaderState.scrollRequest != null || !layoutConsistent ||
             latestReaderState.bookUrl != state.bookUrl
         ) null else {
-            val loadedKeys = layout.visibleItemsInfo.mapNotNull { info ->
+                val candidateKeys = layout.visibleItemsInfo.mapNotNull { info ->
                 (latestReaderState.pages.getOrNull(info.index) as? MangaReaderItemUi.Page)
-                    ?.takeIf { it.key == info.key && it.loadState == MangaPageLoadState.Ready && it.key in aspectRatios }
+                    ?.takeIf { it.key == info.key }
                     ?.key
             }.toSet()
             mangaWebtoonResizeAnchor(
                 layout.visibleItemsInfo.map { Triple(it.key.toString(), it.offset, it.size) },
                 (layout.viewportStartOffset + layout.viewportEndOffset) / 2,
-                loadedKeys,
+                candidateKeys,
             )
         }
         resize()

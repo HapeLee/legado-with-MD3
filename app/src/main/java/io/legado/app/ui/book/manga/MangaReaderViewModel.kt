@@ -643,8 +643,21 @@ class MangaReaderViewModel(
             val targetIndex = anchoredIndex ?: safePosition
             val needsPositionScroll =
                 mangaNeedsPositionScroll(shouldPosition, anchoredIndex != null, keyPreserved)
-            val positionChanged = needsPositionScroll || oldState.currentItemIndex != targetIndex
+            val chapterChanged = oldState.chapterIndex != session.chapterIndex
+            val positionChanged =
+                needsPositionScroll || oldState.currentItemIndex != targetIndex || chapterChanged
             val pendingScroll = oldState.scrollRequest?.rebase(oldState.pages, items)
+            val targetPage = items.getOrNull(targetIndex) as? MangaReaderItemUi.Page
+            val resolvedCurrentPage = when {
+                positionChanged -> session.pageIndex
+                targetPage != null -> targetPage.pageIndex
+                else -> oldState.currentPage
+            }
+            val resolvedPageCount = when {
+                positionChanged -> current.chapter.pages.size
+                targetPage != null -> targetPage.pageCount
+                else -> oldState.pageCount
+            }
             _uiState.update { old ->
                 old.copy(
                     bookName = book.name,
@@ -665,8 +678,8 @@ class MangaReaderViewModel(
                     } else old.navigationId,
                     currentItemIndex = targetIndex,
                     footerItemIndex = null,
-                    currentPage = if (positionChanged) session.pageIndex else old.currentPage,
-                    pageCount = if (positionChanged) current.chapter.pages.size else old.pageCount,
+                    currentPage = resolvedCurrentPage,
+                    pageCount = resolvedPageCount,
                     chapterIndex = session.chapterIndex,
                     chapterCount = session.chapterCount,
                     cacheAvailable = !book.isLocal,
@@ -1166,7 +1179,7 @@ class MangaReaderViewModel(
             state.copy(
                 chapterName = title,
                 chapterIndex = chapterIndex,
-                currentPage = pageIndex.coerceAtLeast(0),
+                currentPage = if (pageIndex == Int.MAX_VALUE) 0 else pageIndex.coerceAtLeast(0),
                 pageCount = 0,
                 pages = persistentListOf(
                     mangaChapterLoadingItem(
@@ -1187,7 +1200,14 @@ class MangaReaderViewModel(
     }
 
     private fun openRelativeChapter(direction: Int) {
-        openChapter(readerSession.state.value.chapterIndex + direction, pageIndex = 0)
+        val targetChapter = readerSession.state.value.chapterIndex + direction
+        val targetPage = if (direction < 0) {
+            (readerSession.state.value.previousChapter as? MangaChapterState.Ready)?.chapter?.pages?.lastIndex
+                ?: Int.MAX_VALUE
+        } else {
+            0
+        }
+        openChapter(targetChapter, pageIndex = targetPage)
     }
 
     private fun requestPageStep(direction: Int) {

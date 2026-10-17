@@ -237,6 +237,24 @@ class MangaReaderViewModelNavigationTest {
             assertFalse(reader.uiState.value.isChapterLoading)
         }
 
+    @Test
+    fun `open relative previous chapter lands on the last page of the chapter`() =
+        runTest(dispatcher) {
+            val reader = createReader()
+            runCurrent()
+            completeScroll(reader)
+            runCurrent()
+            session.state.value = session.state.value.copy(previousChapter = ready(0, 300))
+            runCurrent()
+            reader.onIntent(MangaReaderIntent.PreviousChapter)
+            runCurrent()
+            val openCmd =
+                session.commands.filterIsInstance<MangaSessionCommand.OpenChapter>().lastOrNull()
+            org.junit.Assert.assertNotNull(openCmd)
+            assertEquals(0, openCmd?.chapterIndex)
+            assertEquals(299, openCmd?.pageIndex)
+        }
+
     private fun completeScroll(reader: MangaReaderViewModel) {
         val state = reader.uiState.value
         val index = requireNotNull(state.scrollRequest).itemIndex
