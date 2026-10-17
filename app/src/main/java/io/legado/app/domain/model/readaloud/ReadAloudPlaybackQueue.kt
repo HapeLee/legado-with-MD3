@@ -94,24 +94,25 @@ class ReadAloudPlaybackQueue private constructor(
             ?.let { ReadAloudPlaybackCursor(it, 0) }
 
     /**
-     * 计划里旁白那一句的音色：正文旁白用它，章标题也由同一个人念，所以两处都从这里取。
-     * 关掉多角色朗读时这里要么是「朗读引擎与音色」选的那一个、要么是 null，
-     * 两种都正是引擎默认发音人该有的行为。
+     * 正文旁白那一条 cue：它念的是「朗读引擎与音色」选的那一个（关掉多角色朗读时也可能是 null，
+     * 那正是引擎默认发音人该有的行为）。章标题由同一个人念，音色与备用音色都从这里取，
+     * 标题才有和正文旁白一样的备用音色可退，不会在旁白失败时整条静音。
      */
-    fun narratorVoice(): ReadAloudVoice? = cues.firstOrNull {
+    private fun narratorCue(): ReadAloudPlaybackCue? = cues.firstOrNull {
         !it.isChapterTitle && it.roleType == SpeechRoleType.Narrator && it.voice != null
-    }?.voice
+    }
 
     fun withChapterTitle(title: String): ReadAloudPlaybackQueue {
         val normalizedTitle = title.trim()
         if (normalizedTitle.isEmpty() || isEmpty || cues.first().isChapterTitle) return this
+        val source = narratorCue()
         val titleCue = ReadAloudPlaybackCue(
             text = normalizedTitle,
             chapterStart = 0,
             chapterEnd = 0,
             paragraphIndex = -1,
-            voice = narratorVoice(),
-            fallbackVoices = emptyList(),
+            voice = source?.voice,
+            fallbackVoices = source?.fallbackVoices.orEmpty(),
             roleType = SpeechRoleType.Narrator,
             characterId = null,
             isChapterTitle = true,
