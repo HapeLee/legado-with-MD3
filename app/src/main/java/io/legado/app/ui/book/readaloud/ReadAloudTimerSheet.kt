@@ -16,6 +16,7 @@ import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
@@ -75,6 +76,30 @@ fun ReadAloudTimerSheet(
         )
         Spacer(modifier = Modifier.padding(top = 12.dp))
         if (config.mode == ReadAloudTimerMode.Chapter) {
+            val chapterPresets = listOf(0, 1, 2, 3, 5, 8, 10, 15, 20)
+            val chapterDisplayEntries = chapterPresets.map { ch ->
+                if (ch == 0) closeLabel
+                else resources.getString(R.string.timer_chapters, ch)
+            }.toTypedArray()
+            val chapterEntryValues = chapterPresets.map { it.toString() }.toTypedArray()
+            val currentChapters = chaptersPreview.roundToInt()
+            val currentChaptersDisplay = if (currentChapters == 0) closeLabel
+            else resources.getString(R.string.timer_chapters, currentChapters)
+
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.timer_preset_duration),
+                selectedValue = currentChapters.toString(),
+                selectedDisplay = currentChaptersDisplay,
+                displayEntries = chapterDisplayEntries,
+                entryValues = chapterEntryValues,
+                modifier = Modifier.padding(bottom = 4.dp),
+                color = LegadoTheme.colorScheme.surfaceContainerHigh,
+                onValueChange = { valueStr ->
+                    val chapters = valueStr.toIntOrNull() ?: 0
+                    chaptersPreview = chapters.toFloat()
+                    onSetChapters(chapters)
+                },
+            )
             TinySliderSettingItem(
                 title = stringResource(R.string.read_aloud_timer_by_chapter),
                 description = stringResource(R.string.read_aloud_timer_chapter_summary),
@@ -92,6 +117,30 @@ fun ReadAloudTimerSheet(
                 onValueChangeFinished = { onSetChapters(chaptersPreview.roundToInt()) },
             )
         } else {
+            val minutePresets = listOf(0, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180)
+            val minuteDisplayEntries = minutePresets.map { min ->
+                if (min == 0) closeLabel
+                else resources.getString(R.string.timer_m, min)
+            }.toTypedArray()
+            val minuteEntryValues = minutePresets.map { it.toString() }.toTypedArray()
+            val currentMinutes = minutesPreview.roundToInt()
+            val currentMinutesDisplay = if (currentMinutes == 0) closeLabel
+            else resources.getString(R.string.timer_m, currentMinutes)
+
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.timer_preset_duration),
+                selectedValue = currentMinutes.toString(),
+                selectedDisplay = currentMinutesDisplay,
+                displayEntries = minuteDisplayEntries,
+                entryValues = minuteEntryValues,
+                modifier = Modifier.padding(bottom = 4.dp),
+                color = LegadoTheme.colorScheme.surfaceContainerHigh,
+                onValueChange = { valueStr ->
+                    val minutes = valueStr.toIntOrNull() ?: 0
+                    minutesPreview = minutes.toFloat()
+                    onSetMinutes(minutes)
+                },
+            )
             TinySliderSettingItem(
                 title = stringResource(R.string.set_timer),
                 description = stringResource(R.string.timer_m, PlaybackTimer.MAX_MINUTES),

@@ -15,6 +15,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -36,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -83,6 +85,7 @@ import io.legado.app.core.ui.player.TrackPlayerMorphCoverPage
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.ui.book.readaloud.ReadAloudTimerConfig
 import io.legado.app.ui.book.readaloud.ReadAloudTimerSheet
+import io.legado.app.ui.book.readaloud.ReadAloudVoiceSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
 import io.legado.app.ui.util.rememberBlurBackdrop
@@ -265,7 +268,8 @@ fun ReadAloudPlayerScreenContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 24.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         AppText(
                             formatPosition(state.chapterPosition),
@@ -319,7 +323,7 @@ fun ReadAloudPlayerScreenContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp, horizontal = 24.dp),
+                            .padding(vertical = 16.dp, horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         SmallAnimatedButton(
@@ -337,6 +341,16 @@ fun ReadAloudPlayerScreenContent(
                             text = playerBgModeLabel(state.bgMode),
                             contentDescription = playerBgModeLabel(state.bgMode),
                             onCheckedChange = { onIntent(ReadAloudPlayerIntent.CycleBgMode) },
+                        )
+                        SmallAnimatedButton(
+                            containerColor = Color.Transparent,
+                            checked = false,
+                            icon = Icons.Default.RecordVoiceOver,
+                            text = stringResource(R.string.cloud_tts_step_voice),
+                            contentDescription = stringResource(R.string.cloud_tts_step_voice),
+                            onCheckedChange = {
+                                onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Voice))
+                            },
                         )
                         SmallAnimatedButton(
                             containerColor = Color.Transparent,
@@ -393,7 +407,12 @@ fun ReadAloudPlayerScreenContent(
                         contentPadding = pageContentPadding,
                     )
 
-                    1 -> CoverPage(state, pageContentPadding, flowingTextModifier)
+                    1 -> CoverPage(
+                        state = state,
+                        contentPadding = pageContentPadding,
+                        flowingTextModifier = flowingTextModifier,
+                        onIntent = onIntent,
+                    )
                     else -> ChapterTextPage(
                         state = state,
                         contentPadding = pageContentPadding,
@@ -411,6 +430,12 @@ fun ReadAloudPlayerScreenContent(
         state = state,
         onDismissRequest = { onIntent(ReadAloudPlayerIntent.DismissSheet) },
         onIntent = onIntent,
+    )
+    ReadAloudVoiceSheet(
+        show = state.activeSheet == ReadAloudPlayerSheet.Voice,
+        voices = state.voices,
+        onDismissRequest = { onIntent(ReadAloudPlayerIntent.DismissSheet) },
+        onSelectVoice = { onIntent(ReadAloudPlayerIntent.SelectVoice(it)) },
     )
     ReadAloudTimerSheet(
         show = state.activeSheet == ReadAloudPlayerSheet.Timer,
@@ -439,6 +464,7 @@ private fun CoverPage(
     state: ReadAloudPlayerUiState,
     contentPadding: PaddingValues,
     flowingTextModifier: Modifier,
+    onIntent: (ReadAloudPlayerIntent) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -515,14 +541,45 @@ private fun CoverPage(
                 }
             }
         }
-        TextCard(
-            text = stringResource(
-                R.string.read_aloud_speaker_engine,
-                state.speakerName.ifBlank { stringResource(R.string.voice_role_narrator) },
-                state.engineName.ifBlank { stringResource(R.string.read_aloud_default_tts) },
-            ),
-            modifier = Modifier.padding(top = 12.dp)
-        )
+        FlowRow(
+            modifier = Modifier.padding(top = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TextCard(
+                text = stringResource(
+                    R.string.read_aloud_speaker_engine,
+                    state.speakerName.ifBlank { stringResource(R.string.voice_role_narrator) },
+                    state.engineName.ifBlank { stringResource(R.string.read_aloud_default_tts) },
+                ),
+                onClick = { onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Voice)) },
+            )
+            if (state.speed != 5) {
+                TextCard(
+                    text = "${formatReadAloudSpeedLabel(state.speed)}x",
+                    icon = Icons.Default.Speed,
+                    onClick = { onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Speed)) },
+                )
+            }
+            val timerRemainingText = when {
+                state.timerMode == ReadAloudTimerMode.Chapter.storageValue && state.timerChapters > 0 ->
+                    stringResource(R.string.timer_chapters, state.timerChapters)
+
+                state.timerMode == ReadAloudTimerMode.Minute.storageValue && state.timerMinutes > 0 ->
+                    stringResource(R.string.timer_m, state.timerMinutes)
+
+                else -> null
+            }
+            timerRemainingText?.let { timerText ->
+                TextCard(
+                    text = timerText,
+                    icon = Icons.Default.Timer,
+                    onClick = {
+                        onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Timer))
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -669,7 +726,7 @@ private fun ReadAloudSpeedSheet(
                 READ_ALOUD_SPEED_MIN.toFloat(),
                 READ_ALOUD_SPEED_MAX.toFloat(),
             ),
-            valueLabel = formatReadAloudSpeedLabel(speedPreview.roundToInt()),
+            valueLabel = "${formatReadAloudSpeedLabel(speedPreview.roundToInt())}x",
             startLabel = stringResource(R.string.fast_rewind),
             endLabel = stringResource(R.string.fast_forward),
             onValueChange = { speedPreview = it },

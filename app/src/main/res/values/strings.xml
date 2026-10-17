@@ -258,6 +258,7 @@
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>
     <string name="set_timer">Timer</string>
+    <string name="timer_preset_duration">Quick presets</string>
     <string name="read_aloud_pause">Speak Paused</string>
     <string name="read_aloud_timer">Speaking(%d min left)</string>
     <string name="playing_timer">Playing(%d min left)</string>

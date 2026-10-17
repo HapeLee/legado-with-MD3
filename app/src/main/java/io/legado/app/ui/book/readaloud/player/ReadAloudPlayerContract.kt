@@ -49,11 +49,22 @@ data class ReadAloudPlayerUiState(
     val timerChapters: Int = 0,
     val bgMode: Int = 0,
     val activeSheet: ReadAloudPlayerSheet? = null,
+    val voices: ImmutableList<ReadAloudVoiceItemUi> = persistentListOf(),
+)
+
+@Stable
+data class ReadAloudVoiceItemUi(
+    val id: String,
+    val name: String,
+    val engineType: String,
+    val engineName: String,
+    val isSelected: Boolean = false,
 )
 
 sealed interface ReadAloudPlayerSheet {
     data object Speed : ReadAloudPlayerSheet
     data object Timer : ReadAloudPlayerSheet
+    data object Voice : ReadAloudPlayerSheet
 }
 
 sealed interface ReadAloudPlayerIntent {
@@ -84,6 +95,7 @@ sealed interface ReadAloudPlayerIntent {
     data class OpenSheet(val sheet: ReadAloudPlayerSheet) : ReadAloudPlayerIntent
     data object DismissSheet : ReadAloudPlayerIntent
     data class SeekTo(val chapterPosition: Int) : ReadAloudPlayerIntent
+    data class SelectVoice(val voiceId: String) : ReadAloudPlayerIntent
 }
 
 sealed interface ReadAloudPlayerEffect {

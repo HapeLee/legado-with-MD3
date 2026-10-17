@@ -59,4 +59,16 @@ class ReadAloudSessionStoreTest {
         store.restoreReadAloudFollow()
         assertTrue(store.state.value.followReadAloudPosition)
     }
+
+    @Test
+    fun `updates timer chapters correctly`() {
+        val store = ReadAloudSessionStore()
+        assertEquals(0, store.state.value.timerChapters)
+
+        store.updateTimerChapters(3)
+        assertEquals(3, store.state.value.timerChapters)
+
+        store.updateTimerChapters(0)
+        assertEquals(0, store.state.value.timerChapters)
+    }
 }

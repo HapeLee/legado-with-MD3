@@ -25,6 +25,10 @@ class ReadAloudSessionStore {
         _state.update { it.copy(timerMinutes = minutes) }
     }
 
+    fun updateTimerChapters(chapters: Int) {
+        _state.update { it.copy(timerChapters = chapters) }
+    }
+
     /** 用户手动导航（翻页/跳章/拖动进度）导致页面脱离朗读位置。 */
     fun detachReadAloudFollow() {
         _state.update { it.copy(followReadAloudPosition = false) }
