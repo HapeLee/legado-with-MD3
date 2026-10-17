@@ -165,6 +165,15 @@ fun OtherConfigScreen(
 
                 SplicedColumnGroup(title = stringResource(R.string.other_setting)) {
 
+                    ClickableSettingItem(
+                        title = stringResource(R.string.background_battery_optimization_title),
+                        description = stringResource(
+                            if (state.isBatteryIgnored) R.string.battery_optimization_status_ignored
+                            else R.string.battery_optimization_status_not_ignored
+                        ),
+                        onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.BatteryOptimizationGuide)) }
+                    )
+
                 SwitchSettingItem(
                     title = stringResource(R.string.web_service_wake_lock),
                     description = stringResource(R.string.web_service_wake_lock_summary),

@@ -3855,4 +3855,9 @@
     <string name="explore_main_content">Browse discovery content here</string>
     <string name="explore_source_list">Show discovery sources</string>
     <string name="explore_select_source">Select discovery source</string>
+    <string name="background_battery_optimization_title">Background Running &amp; Battery Optimization</string>
+    <string name="background_battery_optimization_summary">Configure unrestricted background activity and autostart to prevent reader services from being killed</string>
+    <string name="battery_optimization_dialog_title">Background Optimization Settings Guide</string>
+    <string name="battery_optimization_status_ignored">Unrestricted (Tap to check OEM background policy)</string>
+    <string name="battery_optimization_status_not_ignored">Restricted or not configured; service may be killed in background</string>
 </resources>

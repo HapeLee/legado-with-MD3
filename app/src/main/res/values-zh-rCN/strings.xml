@@ -3851,4 +3851,9 @@
     <string name="explore_main_content">直接浏览发现内容</string>
     <string name="explore_source_list">显示发现书源列表</string>
     <string name="explore_select_source">选择发现书源</string>
+    <string name="background_battery_optimization_title">后台保活与电池优化</string>
+    <string name="background_battery_optimization_summary">配置无限制后台运行与自启动，避免切后台或锁屏时朗读/服务被系统终止</string>
+    <string name="battery_optimization_dialog_title">后台保活与省电策略设置指引</string>
+    <string name="battery_optimization_status_ignored">已开启无限制（点击可检查厂商后台策略）</string>
+    <string name="battery_optimization_status_not_ignored">未开启无限制，后台可能被系统终止</string>
 </resources>

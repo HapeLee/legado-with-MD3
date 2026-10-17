@@ -78,6 +78,9 @@ class OtherConfigViewModel(
 
     fun onIntent(intent: OtherConfigIntent) {
         when (intent) {
+            OtherConfigIntent.RefreshBatteryStatus -> _uiState.update {
+                it.copy(isBatteryIgnored = io.legado.app.utils.BatteryOptimizationUtils.isIgnoringBatteryOptimizations())
+            }
             is OtherConfigIntent.LanguageChanged -> appLocaleGateway.setLanguage(intent.value)
             is OtherConfigIntent.UpdateToVariantChanged ->
                 updateOtherSetting { it.copy(updateToVariant = intent.value) }
@@ -356,4 +359,5 @@ private fun OtherSettings.toUiState(current: OtherConfigUiState): OtherConfigUiS
         processText = processText,
         recordLog = recordLog,
         recordHeapDump = recordHeapDump,
+        isBatteryIgnored = io.legado.app.utils.BatteryOptimizationUtils.isIgnoringBatteryOptimizations(),
     )

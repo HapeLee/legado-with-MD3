@@ -2,6 +2,7 @@
 package io.legado.app.service
 
 import android.app.PendingIntent
+import android.content.Intent
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
@@ -10,6 +11,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
+import io.legado.app.constant.IntentAction
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
@@ -18,10 +20,10 @@ import io.legado.app.domain.model.readaloud.SpeechVoiceRouter
 import io.legado.app.domain.model.readaloud.SystemTtsVoiceConfig
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.reader.core.cast.CastMarkers
-import io.legado.app.help.readaloud.effect.VoiceEffectAudio
-import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.readaloud.effect.VoiceEffectAudio
+import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.ReadAloud
 import io.legado.app.ui.config.readConfig.ReadConfig
@@ -137,7 +139,6 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         } else {
             TextToSpeech(this, { status -> onTtsInitialized(status, generation) }, engine)
         }
-        upSpeechRate()
     }
 
     @Synchronized
@@ -170,6 +171,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 appliedSpeechRate = -1f
                 appliedPitch = -1f
                 ttsInitFinish = true
+                upSpeechRate(reset = false)
                 // 先把音色表取回来：否则第一处「旁白→角色」的边界要现场等一次全量枚举
                 execute { voiceCatalog() }
                 play()
@@ -239,7 +241,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                     awaitEngineIdle(tts, continuesCurrentSpeech)
                     voiceChanged = applyVoice(it.speakerId)
                     applyPreset(it)
-                }
+                } ?: applyDefaultPreset()
                 val storedStart = paragraphStartPos
                 val storedTail = if (storedStart > 0) {
                     contentList[nowSpeak].substring(storedStart)
@@ -290,6 +292,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 LogUtils.d(TAG, "朗读页数 ${readerReadAloudChapter?.pageCount}")
                 val session = ++speakSession
                 val tts = textToSpeech ?: throw NoStackTraceException("tts is null")
+                applyDefaultPreset()
                 val contentList = contentList
                 var isAddedText = false
                 for (i in nowSpeak until contentList.size) {
@@ -468,7 +471,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         val globalRate = if (ReadConfig.ttsFollowSys) {
             1f
         } else {
-            (ReadConfig.ttsSpeechRate + 5) / 10f
+            (speechRateSetting + 5) / 10f
         }
         // 角色的变声器：直读路径没有自己的播放器，只能用引擎的音高/语速这一层
         val cue = playbackQueue.cues.getOrNull(nowSpeak)
@@ -495,6 +498,19 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         }
     }
 
+    private fun applyDefaultPreset() {
+        val tts = textToSpeech ?: return
+        val rate = if (ReadConfig.ttsFollowSys) 1f else (speechRateSetting + 5) / 10f
+        if (rate != appliedSpeechRate) {
+            appliedSpeechRate = rate
+            tts.setSpeechRate(rate)
+        }
+        if (appliedPitch != 1f) {
+            appliedPitch = 1f
+            tts.setPitch(1f)
+        }
+    }
+
     override fun playStop() {
         speakSession++
         speakJob?.cancel()
@@ -516,6 +532,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             }
         } else {
             val speechRate = (speechRateSetting + 5) / 10f
+            appliedSpeechRate = speechRate
             textToSpeech?.setSpeechRate(speechRate)
             upMediaMetadata()
             if (reset && !pause) {
@@ -738,6 +755,13 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             utteranceId != null &&
                 utteranceId == ttsUtteranceId(AppConst.APP_TAG, speakSession, nowSpeak)
 
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == IntentAction.play) {
+            speechRateSetting = readAloudSettingsGateway.currentSettings.ttsSpeechRate
+        }
+        return super.onStartCommand(intent, flags, startId)
     }
 
     override fun aloudServicePendingIntent(actionStr: String): PendingIntent? {

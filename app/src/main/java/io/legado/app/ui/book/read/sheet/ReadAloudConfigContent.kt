@@ -25,6 +25,7 @@ import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.readaloud.ReadAloudContentSplitSetting
 import io.legado.app.domain.model.readaloud.ReadAloudSplitSymbol
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
+import io.legado.app.feature.readaloud.battery.ReadAloudBatteryOptimizationRoute
 import io.legado.app.feature.readaloud.overlay.ReadAloudOverlayPermissionRoute
 import io.legado.app.ui.book.read.ReadAloudSubPage
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -205,6 +206,7 @@ fun ReadAloudConfigContent(
                             onIntent(ReadBookIntent.SetReadAloudKeepOnExit(it))
                         },
                     )
+                    ReadAloudBatteryOptimizationRoute()
                     TinySwitchSettingItem(
                         title = stringResource(R.string.pref_media_button_per_next),
                         description = stringResource(R.string.pref_media_button_per_next_summary),

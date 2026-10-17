@@ -35,6 +35,7 @@ data class OtherConfigUiState(
     val directCompress: Boolean = false,
     val directRulePresets: ImmutableList<DirectLinkRuleUi> = persistentListOf(),
     val directTestResult: String? = null,
+    val isBatteryIgnored: Boolean = false,
     val activeOverlay: OtherConfigOverlay? = null,
     val pendingMessages: ImmutableList<OtherConfigMessage> = persistentListOf(),
 )
@@ -72,9 +73,11 @@ sealed interface OtherConfigOverlay {
     data object FilePicker : OtherConfigOverlay
     data object DirectLinkUpload : OtherConfigOverlay
     data object ClearWebViewConfirmation : OtherConfigOverlay
+    data object BatteryOptimizationGuide : OtherConfigOverlay
 }
 
 sealed interface OtherConfigIntent {
+    data object RefreshBatteryStatus : OtherConfigIntent
     data class LanguageChanged(val value: String) : OtherConfigIntent
     data class UpdateToVariantChanged(val value: String) : OtherConfigIntent
     data class AutoCheckUpdateOnStartChanged(val value: Boolean) : OtherConfigIntent

@@ -187,7 +187,10 @@ fun PrivateConfigScreen(
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.background_permission),
-                        description = stringResource(R.string.ignore_battery_permission_rationale),
+                        description = stringResource(
+                            if (state.isBatteryIgnored) R.string.battery_optimization_status_ignored
+                            else R.string.ignore_battery_permission_rationale
+                        ),
                         onClick = { onIntent(PrivateConfigIntent.RequestBatteryPermission) }
                     )
                     SwitchSettingItem(

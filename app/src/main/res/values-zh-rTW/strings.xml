@@ -3052,4 +3052,9 @@
     <string name="explore_select_source">選擇發現書源</string>
     <string name="cast_bubble_menu">設定氣泡</string>
     <string name="cast_bubble_clear">不設氣泡</string>
+    <string name="background_battery_optimization_title">背景保活與電池最佳化</string>
+    <string name="background_battery_optimization_summary">設定無限制背景執行與自啟動，避免切背景或鎖定螢幕時朗讀/服務被系統終止</string>
+    <string name="battery_optimization_dialog_title">背景保活與省電策略設定指引</string>
+    <string name="battery_optimization_status_ignored">已開啟無限制（點擊可檢查廠商背景策略）</string>
+    <string name="battery_optimization_status_not_ignored">未開啟無限制，背景可能被系統終止</string>
 </resources>

@@ -52,10 +52,17 @@ class PrivateConfigViewModel(
             }
         }
         privateAccessGateway.refreshBiometricStatus()
+        _uiState.update {
+            it.copy(isBatteryIgnored = io.legado.app.utils.BatteryOptimizationUtils.isIgnoringBatteryOptimizations())
+        }
     }
 
     fun onIntent(intent: PrivateConfigIntent) {
         when (intent) {
+            PrivateConfigIntent.RefreshBatteryStatus -> _uiState.update {
+                it.copy(isBatteryIgnored = io.legado.app.utils.BatteryOptimizationUtils.isIgnoringBatteryOptimizations())
+            }
+
             PrivateConfigIntent.ShowPasswordDialog ->
                 _uiState.update { it.copy(showPasswordDialog = true) }
 

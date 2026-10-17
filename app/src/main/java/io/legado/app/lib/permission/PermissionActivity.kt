@@ -41,6 +41,11 @@ class PermissionActivity : AppCompatActivity() {
                 when (requestType) {
                     Request.TYPE_MANAGE_ALL_FILES_ACCESS -> openManageAllFilesAccessSettings()
                     Request.TYPE_REQUEST_SETTING -> openSettingsActivity()
+                    Request.TYPE_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS ->
+                        io.legado.app.utils.BatteryOptimizationUtils.openBatteryOptimizationSettings(
+                            this,
+                            settingActivityResult
+                        )
                     else -> requestPermissionsResult.launch(permissions)
                 }
             } catch (e: Exception) {

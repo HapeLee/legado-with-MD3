@@ -13,6 +13,7 @@ data class PrivateConfigUiState(
     val settings: PrivateAccessSettings = PrivateAccessSettings(),
     val firebaseEnable: Boolean = true,
     val showPasswordDialog: Boolean = false,
+    val isBatteryIgnored: Boolean = false,
 ) {
     /** 设备具备加密绑定的生物识别能力时才允许开启快捷解锁 */
     val biometricSupported: Boolean
@@ -20,6 +21,7 @@ data class PrivateConfigUiState(
 }
 
 sealed interface PrivateConfigIntent {
+    data object RefreshBatteryStatus : PrivateConfigIntent
     data object ShowPasswordDialog : PrivateConfigIntent
     data object DismissPasswordDialog : PrivateConfigIntent
 

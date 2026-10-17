@@ -1,17 +1,23 @@
 package io.legado.app.ui.config.otherConfig
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.service.WebService
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.utils.BatteryOptimizationUtils
 import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
 import kotlinx.coroutines.delay
@@ -24,7 +30,18 @@ fun OtherConfigRouteScreen(
     viewModel: OtherConfigViewModel = koinViewModel(),
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onIntent(OtherConfigIntent.RefreshBatteryStatus)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val selectDocTree = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -92,6 +109,21 @@ fun OtherConfigRouteScreen(
         title = stringResource(R.string.clear_webview_data),
         text = stringResource(R.string.sure_del),
         onConfirm = { viewModel.onIntent(OtherConfigIntent.ConfirmClearWebViewData) },
+        onDismiss = { viewModel.onIntent(OtherConfigIntent.DismissOverlay) },
+    )
+
+    AppAlertDialog(
+        show = state.activeOverlay == OtherConfigOverlay.BatteryOptimizationGuide,
+        onDismissRequest = { viewModel.onIntent(OtherConfigIntent.DismissOverlay) },
+        title = stringResource(R.string.battery_optimization_dialog_title),
+        text = BatteryOptimizationUtils.getBatteryOptimizationGuideText(),
+        confirmText = stringResource(R.string.dialog_setting),
+        onConfirm = {
+            viewModel.onIntent(OtherConfigIntent.DismissOverlay)
+            (context as? Activity)?.let(BatteryOptimizationUtils::openBatteryOptimizationSettings)
+                ?: BatteryOptimizationUtils.openBatteryOptimizationSettings(context)
+        },
+        dismissText = stringResource(R.string.cancel),
         onDismiss = { viewModel.onIntent(OtherConfigIntent.DismissOverlay) },
     )
 

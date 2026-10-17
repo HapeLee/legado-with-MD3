@@ -7,15 +7,23 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.help.security.BiometricEnvelopeWriter
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.privacy.findFragmentActivity
-import io.legado.app.utils.SystemUtils
+import io.legado.app.utils.BatteryOptimizationUtils
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
@@ -27,6 +35,19 @@ fun PrivateConfigRouteScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var showBatteryGuideDialog by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onIntent(PrivateConfigIntent.RefreshBatteryStatus)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     // 资源串在 composable 作用域内解析：LocalContext.current.getString 不感知配置变化
     val envelopeTitle = stringResource(R.string.private_biometric_enable_title)
     val envelopeSubtitle = stringResource(R.string.private_biometric_enable_subtitle)
@@ -54,7 +75,7 @@ fun PrivateConfigRouteScreen(
                 }
 
                 PrivateConfigEffect.RequestBatteryPermission -> {
-                    (context as? Activity)?.let(SystemUtils::ignoreBatteryOptimization)
+                    showBatteryGuideDialog = true
                 }
 
                 PrivateConfigEffect.RequestBiometricEnvelope -> {
@@ -97,4 +118,21 @@ fun PrivateConfigRouteScreen(
         onIntent = viewModel::onIntent,
         onBackClick = onBackClick,
     )
+
+    if (showBatteryGuideDialog) {
+        AppAlertDialog(
+            show = true,
+            onDismissRequest = { showBatteryGuideDialog = false },
+            title = stringResource(R.string.battery_optimization_dialog_title),
+            text = BatteryOptimizationUtils.getBatteryOptimizationGuideText(),
+            confirmText = stringResource(R.string.dialog_setting),
+            onConfirm = {
+                showBatteryGuideDialog = false
+                (context as? Activity)?.let(BatteryOptimizationUtils::openBatteryOptimizationSettings)
+                    ?: BatteryOptimizationUtils.openBatteryOptimizationSettings(context)
+            },
+            dismissText = stringResource(R.string.cancel),
+            onDismiss = { showBatteryGuideDialog = false },
+        )
+    }
 }
