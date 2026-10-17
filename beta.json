@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.16-beta.50",
-  "name": "Pre-release 3.26.16-beta.50",
-  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* chore(read-aloud): 删掉 12 条无人引用的角色配音文案\n* fix(read-aloud): 角色补音改成随机，音色被删也自动重挑\n* fix(read-aloud): 准备还在跑时 play() 不再重起一次，起点不被冲成章首\n* fix(read-aloud): 切下一章时不再把脚下的准备作业取消掉\n* fix(voice-pool): 添加音色的搜索框不再把自己越筛越小\n* fix(read): 翻页模式下点朗读也从当前页开始\n* feat(voice-pool): 导入确认页给出已装引擎下拉，让人自己挑来源包名\n* feat(voice-pool): 认 TTS Server 导出的第二种层级（引擎分组 + categoryPath 池）\n* fix(read): 常挂弹层的当前章一律每次重组重读\n* fix(read-aloud): 分配覆盖层出错不再把整章的朗读准备带走\n* fix(read): 整图也带上 src 尾随 JSON 里的 click\n* feat: 漫画稳定性\n* feat: 漫画乱跳\n* fix(bookshelf): 再次长按搜索按钮时收起筛选\n* feat(bookshelf): 支持标签来源设置和搜索按钮长按\n* fix(reader): 恢复滑动翻页对斜划的响应\n\n## What's Changed\n* fix(read-aloud): 朗读切章与起点、角色随机补音、TTS Server 导入层级等 11 项 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2427\n\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.49...3.26.16-beta.50",
+  "tag_name": "3.26.16-beta.51",
+  "name": "Pre-release 3.26.16-beta.51",
+  "body": "**此版本为测试版，会存在不稳定问题。**\n### [发布页](https://t.me/materado)\n### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)\n\n### 更新内容\n\n* feat: 朗读快捷设置定时\n* feat: 滚动翻页时上下边距不对\n* feat: 优化分组管理\n* feat: 条漫优化\n* feat: 朗读系列优化\n* fix(read-aloud): 修复运行中控制指令重复请求前台启动导致的超时崩溃\n* fix(tts): 修复外部 HTTP 音色兼容与数据一致性\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16-beta.50...3.26.16-beta.51",
   "prerelease": true,
-  "created_at": "2026-10-15T19:17:02Z",
+  "created_at": "2026-10-17T17:47:08Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.50/legado-3.26.16-beta.50-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.51/legado-3.26.16-beta.51-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-15T19:34:26Z",
+      "created_at": "2026-10-17T18:08:44Z",
       "download_count": 0,
-      "id": 644942004,
-      "name": "legado-3.26.16-beta.50-arm64-v8a.apk",
+      "id": 651198685,
+      "name": "legado-3.26.16-beta.51-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/644942004"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/651198685"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.50/legado-3.26.16-beta.50-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.51/legado-3.26.16-beta.51-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-15T19:34:26Z",
+      "created_at": "2026-10-17T18:08:44Z",
       "download_count": 0,
-      "id": 644942003,
-      "name": "legado-3.26.16-beta.50-armeabi-v7a.apk",
+      "id": 651198678,
+      "name": "legado-3.26.16-beta.51-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/644942003"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/651198678"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.50/legado-3.26.16-beta.50.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.51/legado-3.26.16-beta.51.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-15T19:34:26Z",
+      "created_at": "2026-10-17T18:08:44Z",
       "download_count": 0,
-      "id": 644941999,
-      "name": "legado-3.26.16-beta.50.apk",
+      "id": 651198676,
+      "name": "legado-3.26.16-beta.51.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/644941999"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/651198676"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.50/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.16-beta.51/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-10-15T19:34:26Z",
+      "created_at": "2026-10-17T18:08:44Z",
       "download_count": 0,
-      "id": 644941997,
+      "id": 651198677,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/644941997"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/651198677"
     }
   ]
 }
