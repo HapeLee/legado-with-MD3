@@ -1,7 +1,9 @@
 package io.legado.app.help.readaloud.cast
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -278,5 +280,79 @@ class CastMemoryMirrorTest {
             "星菲｜小菲｜妹妹",
             CastMemoryMirror.renameLinePool("星菲｜小菲｜妹妹｜女少女", "星菲", "星菲", ""),
         )
+    }
+
+    /**
+     * 真机数据：官方包里《转生于没有主角的学院》第 16 章的记忆原文。
+     * 编号路人（新生甲/乙）、复数集体（…们）不进这张表，有名有姓的与「施卢斯父亲」这类
+     * 真实称谓一个字都不能少。
+     */
+    @Test
+    fun dropsNumberedExtrasFromARealMemoryTable() {
+        val kept = CastMemoryMirror.dropThrowawayExtras(REAL_MEMORY).lines().filter { it.isNotBlank() }
+
+        assertEquals(
+            listOf("金振宇", "路德维希教授", "施卢斯父亲", "玛丽·艾尔"),
+            kept.map { it.split('｜').first() },
+        )
+    }
+
+    /** 编号写法被别人的别名/身份栏原样记着 = 某个有名字的人的另一种写法，这种行留下。 */
+    @Test
+    fun keepsAnExtraNameThatAnotherLineUsesAsAnAlias() {
+        val memory = listOf(
+            "金振宇｜新生甲的同学｜本章被嘲讽｜男青年",
+            "新生甲｜围观学生｜嘲讽金振宇｜少年",
+        ).joinToString("\n")
+
+        assertEquals(memory, CastMemoryMirror.dropThrowawayExtras(memory))
+    }
+
+    @Test
+    fun recognisesTheThreeWritingsOfAThrowawayExtra() {
+        listOf("新生甲", "工作人员丙", "新生们", "旁边新生").forEach {
+            assertTrue(it, CastMemoryMirror.isThrowawayExtra(it))
+        }
+        listOf("金振宇", "施卢斯父亲", "玛丽·艾尔", "乌鸦", "尤利娅", "路德维希教授").forEach {
+            assertFalse(it, CastMemoryMirror.isThrowawayExtra(it))
+        }
+    }
+
+    /**
+     * 真机数据（《成为浪漫小说中的反派角色》埃诺克·巴拉尔 的别名栏原文）：
+     * 模型把身份用 `/` 串成一串，下一趟整串抄回来再接一截，这一栏就每章长一点。
+     * 拆平后同一批称呼是同一批条目，逐字相等的归并这才匹配得上。
+     */
+    @Test
+    fun splitsSlashChainedAliasesIntoOneAppellationEach() {
+        val merged = CastMemoryMirror.aliasWords(
+            listOf("男主", "埃诺克", "男主/埃诺克/埃诺克大人", "男主/埃诺克/埃诺克大人/埃诺克小哥"),
+        )
+
+        assertEquals(listOf("男主", "埃诺克", "埃诺克大人", "埃诺克小哥"), merged)
+    }
+
+    /** 不是称呼的一并丢掉：只在这章成立的、模型自己标不确定的、回显输入键名的、空的。 */
+    @Test
+    fun dropsAliasesThatAreNotAppellations() {
+        assertEquals(
+            listOf("宿舍管理员"),
+            CastMemoryMirror.aliasWords(
+                listOf("宿舍管理员", "本章惊愕", "情报局内应？", "已有角色", "别名金振宇", ""),
+            ),
+        )
+    }
+
+    private companion object {
+        val REAL_MEMORY = """
+            金振宇｜主角/作家/附身施卢斯·海因克尔｜施卢斯为其别名；本章与路德维希交易｜男青年
+            路德维希教授｜首席教授｜本章接受功劳交易｜男老年
+            施卢斯父亲｜剑术记忆投影｜指导握剑｜男中年
+            新生们｜教室学生｜围观恐慌｜少年
+            新生甲｜围观学生｜嘲讽金振宇｜少年
+            新生乙｜围观学生｜嘲讽金振宇｜少年
+            考官们｜考试官｜递交成绩｜男中年
+            玛丽·艾尔｜宿舍管理员｜被杀｜女老年
+        """.trimIndent()
     }
 }

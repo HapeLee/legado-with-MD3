@@ -105,10 +105,31 @@ interface ChapterRoleAssignmentDao {
         """
     )
     suspend fun countByCharacter(): List<CharacterAssignmentCount>
+
+    /**
+     * 本书真正被分配过台词的角色：主名 id 与当时写下的名字各算一份。
+     *
+     * 这一列存过配音角色行 id，也存过官方档案 id（两套 id），只按 id 认会把说过话的人
+     * 判成「从没被分配过」；名字那一份是把档案与角色行认成同一个人的兜底。
+     */
+    @Query(
+        """
+        SELECT DISTINCT characterId AS characterId, characterName AS characterName
+        FROM chapter_role_assignments
+        WHERE bookUrl = :bookUrl
+        """
+    )
+    suspend fun getCastRefsForBook(bookUrl: String): List<CastRef>
 }
 
 /** countByCharacter 投影行。 */
 data class CharacterAssignmentCount(
     val characterId: String,
     val count: Int,
+)
+
+/** getCastRefsForBook 投影行。 */
+data class CastRef(
+    val characterId: String,
+    val characterName: String,
 )
