@@ -241,7 +241,11 @@ object ReadAloud {
         chapterPosition?.let { intent.putExtra("chapterPosition", it) }
         LogUtils.d("ReadAloud", intent.toString())
         try {
-            context.startForegroundServiceCompat(intent)
+            if (BaseReadAloudService.isRun) {
+                context.startService(intent)
+            } else {
+                context.startForegroundServiceCompat(intent)
+            }
         } catch (e: Exception) {
             val msg = "启动朗读服务出错\n${e.localizedMessage}"
             AppLog.put(msg, e)
@@ -268,7 +272,7 @@ object ReadAloud {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.pause
-            context.startForegroundServiceCompat(intent)
+            startServiceIntent(context, intent, "暂停朗读")
         }
     }
 
@@ -276,7 +280,7 @@ object ReadAloud {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.resume
-            context.startForegroundServiceCompat(intent)
+            startServiceIntent(context, intent, "恢复朗读")
         }
     }
 
@@ -298,7 +302,7 @@ object ReadAloud {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.prevParagraph
-            context.startForegroundServiceCompat(intent)
+            startServiceIntent(context, intent, "上一段")
         }
     }
 
@@ -306,7 +310,7 @@ object ReadAloud {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.nextParagraph
-            context.startForegroundServiceCompat(intent)
+            startServiceIntent(context, intent, "下一段")
         }
     }
 
@@ -314,7 +318,7 @@ object ReadAloud {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.upTtsSpeechRate
-            context.startForegroundServiceCompat(intent)
+            startServiceIntent(context, intent, "更新语速")
         }
     }
 
@@ -322,7 +326,7 @@ object ReadAloud {
         if (ReadBook.isCurrentBookReadAloud) {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.syncReadAloudLayout
-            context.startForegroundServiceCompat(intent)
+            startServiceIntent(context, intent, "同步朗读排版")
         }
     }
 
@@ -337,7 +341,7 @@ object ReadAloud {
         if (!ReadBook.isCurrentBookReadAloud) return
         val intent = Intent(context, aloudClass)
         intent.action = IntentAction.refreshReadAloudCast
-        context.startForegroundServiceCompat(intent)
+        startServiceIntent(context, intent, "刷新角色队列")
     }
 
     fun selectChapter(context: Context, index: Int) {
@@ -348,7 +352,7 @@ object ReadAloud {
             putExtra("play", !BaseReadAloudService.pause)
             putExtra("chapterPosition", 0)
         }
-        context.startForegroundServiceCompat(intent)
+        startServiceIntent(context, intent, "切换朗读章节")
     }
 
     fun previousChapter(context: Context) = selectChapter(context, bookSession.chapterIndex - 1)
@@ -382,7 +386,11 @@ object ReadAloud {
 
     private fun startServiceIntent(context: Context, intent: Intent, label: String) {
         try {
-            context.startForegroundServiceCompat(intent)
+            if (BaseReadAloudService.isRun) {
+                context.startService(intent)
+            } else {
+                context.startForegroundServiceCompat(intent)
+            }
         } catch (e: Exception) {
             val msg = "${label}出错\n${e.localizedMessage}"
             AppLog.put(msg, e)
@@ -395,7 +403,7 @@ object ReadAloud {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.setTimer
             intent.putExtra("minute", PlaybackTimer.normalize(minute))
-            context.startForegroundServiceCompat(intent)
+            startServiceIntent(context, intent, "设置朗读定时")
         }
     }
 
@@ -405,7 +413,7 @@ object ReadAloud {
             val intent = Intent(context, aloudClass)
             intent.action = IntentAction.setTimerChapters
             intent.putExtra("chapters", PlaybackTimer.normalizeChapters(chapters))
-            context.startForegroundServiceCompat(intent)
+            startServiceIntent(context, intent, "设置章节定时")
         }
     }
 

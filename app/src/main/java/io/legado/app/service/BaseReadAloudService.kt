@@ -8,12 +8,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.media.AudioManager
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.os.SystemClock
@@ -24,6 +26,7 @@ import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import androidx.annotation.CallSuper
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
@@ -396,6 +399,7 @@ abstract class BaseReadAloudService : BaseService(),
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             IntentAction.play -> {
+                startForegroundNotification()
                 if (intent.hasExtra("sessionGeneration") &&
                     intent.getLongExtra("sessionGeneration", -1) != bookSession.state.value.generation
                 ) return super.onStartCommand(intent, flags, startId)
@@ -1742,7 +1746,16 @@ abstract class BaseReadAloudService : BaseService(),
     override fun startForegroundNotification() {
         try {
             val notification = createForegroundNotification()
-            startForeground(NotificationId.ReadAloudService, notification.build())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(
+                    this,
+                    NotificationId.ReadAloudService,
+                    notification.build(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+                )
+            } else {
+                startForeground(NotificationId.ReadAloudService, notification.build())
+            }
         } catch (e: Exception) {
             AppLog.put("创建朗读通知出错,${e.localizedMessage}", e, true)
             //创建通知出错不结束服务就会崩溃,服务必须绑定通知

@@ -72,6 +72,22 @@ class ReadAloudStopServiceTest {
         assertFalse(BaseReadAloudService.requestStop())
     }
 
+    @Test
+    fun controlCommandsWhileRunningDoNotStartForegroundService() {
+        val context = RecordingContext(RuntimeEnvironment.getApplication())
+
+        ReadAloud.pause(context)
+        ReadAloud.resume(context)
+        ReadAloud.prevParagraph(context)
+        ReadAloud.nextParagraph(context)
+        ReadAloud.upTtsSpeechRate(context)
+        ReadAloud.setTimer(context, 15)
+        ReadAloud.setTimerChapters(context, 3)
+
+        assertEquals(0, context.foregroundStartCount)
+        assertEquals(7, context.startedServices.size)
+    }
+
     private fun setServiceFlag(name: String, value: Boolean) {
         BaseReadAloudService::class.java.getDeclaredField(name).apply {
             isAccessible = true
@@ -82,10 +98,16 @@ class ReadAloudStopServiceTest {
     private class RecordingContext(base: Application) : ContextWrapper(base) {
         var stoppedService: Intent? = null
         var foregroundStartCount = 0
+        val startedServices = mutableListOf<Intent>()
 
         override fun stopService(name: Intent): Boolean {
             stoppedService = name
             return true
+        }
+
+        override fun startService(service: Intent): ComponentName? {
+            startedServices.add(service)
+            return service.component
         }
 
         override fun startForegroundService(service: Intent): ComponentName? {

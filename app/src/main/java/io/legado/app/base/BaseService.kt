@@ -65,6 +65,10 @@ abstract class BaseService : LifecycleService() {
         LogUtils.d(simpleName) {
             "onStartCommand $intent ${intent?.toUri(0)}"
         }
+        if (!isForeground) {
+            startForegroundNotification()
+            isForeground = true
+        }
         return super.onStartCommand(intent, flags, startId)
     }
 
@@ -83,6 +87,7 @@ abstract class BaseService : LifecycleService() {
     @CallSuper
     override fun onDestroy() {
         super.onDestroy()
+        isForeground = false
         LifecycleHelp.onServiceDestroy(this)
     }
 
