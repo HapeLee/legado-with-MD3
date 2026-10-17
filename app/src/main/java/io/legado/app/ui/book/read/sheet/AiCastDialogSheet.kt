@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -39,7 +40,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.domain.model.AiTaskType
 import io.legado.app.help.readaloud.cast.AiCastPresetStore
 import io.legado.app.help.readaloud.cast.AiCastPresetUi
 import io.legado.app.help.readaloud.cast.AiCastProgress
@@ -54,6 +57,7 @@ import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastImeTextField
 import io.legado.app.ui.widget.components.CollapsibleHeader
 import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -61,10 +65,12 @@ import io.legado.app.ui.widget.components.button.ToggleChip
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
+import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -73,8 +79,10 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 
 /**
  * AI 分配角色弹层（朗读面板「AI 分配角色」按钮或底栏 ai_cast 按钮打开）。
@@ -121,6 +129,44 @@ fun AiCastDialogSheet(
     var rangeEndText by remember(chapterIndex) { mutableStateOf((chapterIndex + 1).toString()) }
     var memoryOpen by remember { mutableStateOf(false) }
     var requestOpen by remember { mutableStateOf(false) }
+    var modelSheetOpen by remember { mutableStateOf(false) }
+
+    /**
+     * 这一趟分配真正会用的模型与可选清单。
+     *
+     * 取法与 `AiCastAssignUseCase` 完全一致（识别角色预设，没有就退回聊天预设），
+     * 所以这一行显示的就是实际发出去的那个；写入走官方 AI 设置同一个
+     * [AiProfileGateway.setDefaultModel]（它会把所有任务预设一起带上，见 `saveDefaultPresets`），
+     * 换完下一趟分配立刻生效。每次打开弹层重新订阅，在 AI 设置页改过也能看到新值。
+     */
+    val aiProfiles: AiProfileGateway = koinInject()
+    val aiModels by produceState(initialValue = CastModelOptions(), key1 = show) {
+        combine(
+            aiProfiles.observePresets(),
+            aiProfiles.observeProviders(),
+            aiProfiles.observeModels(),
+        ) { _, providers, models ->
+            val current = aiProfiles.getTaskPreset(AiTaskType.IDENTIFY_CHARACTERS)?.model
+                ?: aiProfiles.getTaskPreset(AiTaskType.CHAT)?.model
+            CastModelOptions(
+                currentId = current?.id.orEmpty(),
+                currentLabel = current?.displayName.orEmpty(),
+                groups = providers.map { provider ->
+                    CastModelGroup(
+                        providerName = provider.name,
+                        models = models.filter { it.providerId == provider.id }
+                            .map {
+                                CastModelChoice(
+                                    profileId = it.id,
+                                    label = it.displayName,
+                                    modelId = it.modelId,
+                                )
+                            },
+                    )
+                }.filter { it.models.isNotEmpty() },
+            )
+        }.collect { value = it }
+    }
 
     /**
      * 本书上一次分配跑到哪儿（停在第几章、哪些章失败、上次用的范围），存在 prefs。
@@ -666,6 +712,15 @@ fun AiCastDialogSheet(
                         color = Color.Transparent,
                         onCheckedChange = { reassign = it },
                     )
+                    // 当前模型：官方 AI 设置里那一条搬进来，换模型不用退出阅读器。
+                    // 显示与写入都走同一份预设（见上面 aiModels 的注释），所以这里换完下一趟就生效。
+                    ClickableSettingItem(
+                        title = stringResource(R.string.ai_current_model),
+                        description = aiModels.currentLabel.ifBlank {
+                            stringResource(R.string.ai_model_not_configured)
+                        },
+                        onClick = { modelSheetOpen = true },
+                    )
                     // 模型思考多久：这一行真的影响等待时间，思考回不回显都照它跑
                     Column(modifier = Modifier.fillMaxWidth()) {
                         AppText(
@@ -785,6 +840,43 @@ fun AiCastDialogSheet(
         }
     }
 
+    // 选模型：分组与「当前」徽记的排布照官方 AI 设置那一页，写入口也是同一个 setDefaultModel
+    AppModalBottomSheet(
+        show = modelSheetOpen,
+        onDismissRequest = { modelSheetOpen = false },
+        title = stringResource(R.string.ai_select_model),
+    ) {
+        LazyColumn {
+            aiModels.groups.forEach { group ->
+                item(key = group.providerName) {
+                    SplicedColumnGroup(title = group.providerName) {
+                        group.models.forEach { model ->
+                            ClickableSettingItem(
+                                title = model.label,
+                                description = model.modelId,
+                                trailingContent = if (model.profileId == aiModels.currentId) {
+                                    { TextCard(text = stringResource(R.string.ai_current)) }
+                                } else {
+                                    null
+                                },
+                                onClick = {
+                                    modelSheetOpen = false
+                                    scope.launch(Dispatchers.IO) {
+                                        runCatching {
+                                            aiProfiles.setDefaultModel(model.profileId)
+                                        }.onFailure {
+                                            context.toastOnUi(it.localizedMessage.orEmpty())
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // 本章分配状态：已分配行数 vs 一级对话锚点数（与渲染同一套计数）；纯场景入口数配乐段
     LaunchedEffect(chapterIndex) {
         val currentBook = ReadBook.book ?: return@LaunchedEffect
@@ -800,6 +892,24 @@ fun AiCastDialogSheet(
         }
     }
 }
+
+/** 分配弹层里「当前模型」那一行的数据：这一趟真正会用的那一个 + 按供应商分组的候选。 */
+private class CastModelOptions(
+    val currentId: String = "",
+    val currentLabel: String = "",
+    val groups: List<CastModelGroup> = emptyList(),
+)
+
+private class CastModelGroup(
+    val providerName: String,
+    val models: List<CastModelChoice>,
+)
+
+private class CastModelChoice(
+    val profileId: String,
+    val label: String,
+    val modelId: String,
+)
 
 /**
  * 本次要分配的章区间（**0 基**、含两端）；null = 范围填得不合法（非数字、0、起点在终点之后）。
