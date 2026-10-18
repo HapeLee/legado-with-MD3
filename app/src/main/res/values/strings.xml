@@ -35,6 +35,8 @@
     <string name="manual_contrast_value_label">Manual value [-1, 1]</string>
     <string name="manual_contrast_invalid">Enter a valid number between -1 and 1</string>
     <string name="predictive_back">Predictive Back Gestures</string>
+    <string name="reader_shared_element">Reader shared element transition</string>
+    <string name="reader_shared_element_summary">Expand the cover when opening the reader. Use a fade transition when disabled.</string>
     <string name="predictive_back_summary">Enable system predictive back gestures</string>
     <string name="restart_to_apply">Restart to apply</string>
     <string name="custom_theme">Custom Theme</string>

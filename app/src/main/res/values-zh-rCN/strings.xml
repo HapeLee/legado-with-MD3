@@ -34,6 +34,8 @@
     <string name="manual_contrast_value_label">手动值 [-1, 1]</string>
     <string name="manual_contrast_invalid">请输入 -1 到 1 之间的有效数字</string>
     <string name="predictive_back">预见性返回手势</string>
+    <string name="reader_shared_element">阅读界面共享元素动画</string>
+    <string name="reader_shared_element_summary">进入阅读界面时从封面展开，关闭后使用渐变过渡</string>
     <string name="predictive_back_summary">启用系统预见性返回手势</string>
     <string name="restart_to_apply">重启以应用</string>
     <string name="custom_theme">自定义主题</string>

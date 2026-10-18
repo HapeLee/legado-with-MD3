@@ -10,6 +10,7 @@ data class AppShellSettings(
     val showStatusBar: Boolean = true,
     val swipeAnimation: Boolean = true,
     val predictiveBackEnabled: Boolean = true,
+    val readerSharedElementEnabled: Boolean = true,
     val showBottomView: Boolean = true,
     val useFloatingBottomBar: Boolean = false,
     val useFloatingBottomBarLiquidGlass: Boolean = false,

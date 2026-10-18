@@ -1,5 +1,4 @@
 package io.legado.app.ui.main
-import io.legado.app.model.ReadBook
 
 import android.app.Activity
 import android.content.Intent
@@ -52,9 +51,9 @@ import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.Download
 import io.legado.app.model.ReadAloudSessionStore
+import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.service.AudioPlayService
-import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.about.AboutEffect
 import io.legado.app.ui.about.AboutScreen
 import io.legado.app.ui.about.AboutViewModel
@@ -1001,7 +1000,9 @@ fun MainActivity.mainEntryProvider(
                 readerSessionViewModel = readerSessionViewModel,
                 host = controller,
                 controller = controller,
-                sharedTransitionScope = sharedTransitionScope,
+                sharedTransitionScope = sharedTransitionScope.takeIf {
+                    configuration.appShell.readerSharedElementEnabled
+                },
                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                 sharedCoverKey = route.sharedCoverKey,
                 isTopRoute = (backStack.lastOrNull() as? MainRouteReadBook)?.let {
@@ -1145,7 +1146,9 @@ fun MainActivity.mainEntryProvider(
             viewModel = mangaViewModel,
             onOpenToc = { bookUrl, page -> onNavigateToRoute(MainRouteToc(bookUrl, page)) },
             restoreSystemBarsVisible = configuration.appShell.showStatusBar,
-            sharedTransitionScope = sharedTransitionScope,
+            sharedTransitionScope = sharedTransitionScope.takeIf {
+                configuration.appShell.readerSharedElementEnabled
+            },
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
             sharedCoverKey = route.sharedCoverKey,
             isTopRoute = backStack.lastOrNull() == route,

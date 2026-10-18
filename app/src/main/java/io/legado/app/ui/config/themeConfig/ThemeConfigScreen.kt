@@ -298,6 +298,14 @@ fun ThemeConfigScreen(
                             )
                         }
                     )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.reader_shared_element),
+                        description = stringResource(R.string.reader_shared_element_summary),
+                        checked = appShell.readerSharedElementEnabled,
+                        onCheckedChange = {
+                            onIntent(ThemeConfigIntent.SetReaderSharedElementEnabled(it))
+                        }
+                    )
                     SliderSettingItem(
                         title = stringResource(R.string.font_scale),
                         valueLabel = {

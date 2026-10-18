@@ -106,6 +106,9 @@ class ThemeConfigViewModel(
             is ThemeConfigIntent.SetPredictiveBackEnabled -> updateAppShell {
                 it.copy(predictiveBackEnabled = intent.enabled)
             }
+            is ThemeConfigIntent.SetReaderSharedElementEnabled -> updateAppShell {
+                it.copy(readerSharedElementEnabled = intent.enabled)
+            }
             is ThemeConfigIntent.SetFontScale -> updateAppShell {
                 it.copy(fontScale = intent.value)
             }

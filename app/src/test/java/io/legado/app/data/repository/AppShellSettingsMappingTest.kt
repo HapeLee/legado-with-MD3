@@ -8,6 +8,28 @@ import org.junit.Test
 class AppShellSettingsMappingTest {
 
     @Test
+    fun `阅读共享元素旧配置默认开启且开关可独立持久化`() {
+        assertEquals(
+            true,
+            emptyMap<String, Any?>().toTestPreferences()
+                .toAppShellSettings().readerSharedElementEnabled,
+        )
+        listOf(false, true).forEach { enabled ->
+            val values = captureAtomicUpdateValues(
+                current = AppShellSettings(readerSharedElementEnabled = !enabled),
+                read = { it.toAppShellSettings() },
+                toPrefMap = AppShellSettings::toPrefMap,
+                transform = { it.copy(readerSharedElementEnabled = enabled) },
+            )
+            assertEquals(mapOf(PreferKey.readerSharedElementEnabled to enabled), values)
+            assertEquals(
+                enabled,
+                values.toTestPreferences().toAppShellSettings().readerSharedElementEnabled,
+            )
+        }
+    }
+
+    @Test
     fun `AppShell 写读映射逐字段对应`() {
         appShellMappingSamples().forEach { expected ->
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
@@ -94,6 +116,7 @@ private fun appShellMappingSamples(): List<AppShellSettings> {
         base.copy(showStatusBar = false),
         base.copy(swipeAnimation = false),
         base.copy(predictiveBackEnabled = false),
+        base.copy(readerSharedElementEnabled = false),
         base.copy(showBottomView = false),
         base.copy(useFloatingBottomBar = true),
         base.copy(useFloatingBottomBarLiquidGlass = true),
@@ -111,6 +134,7 @@ private fun AppShellSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.showStatusBar to showStatusBar,
     PreferKey.swipeAnimation to swipeAnimation,
     PreferKey.isPredictiveBackEnabled to predictiveBackEnabled,
+    PreferKey.readerSharedElementEnabled to readerSharedElementEnabled,
     PreferKey.showBottomView to showBottomView,
     PreferKey.useFloatingBottomBar to useFloatingBottomBar,
     PreferKey.useFloatingBottomBarLiquidGlass to useFloatingBottomBarLiquidGlass,
