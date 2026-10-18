@@ -126,13 +126,15 @@ class ReadBookController(
     val viewModel: ReadBookViewModel,
     private val readerSessionViewModel: ReaderSessionViewModel,
     /**
-     * 本路由要打开的书，在首次组合时随构造传入（见 MainNavGraph 阅读页入口）。
+     * 本路由初次要打开的书，在首次组合时随构造传入（见 MainNavGraph 阅读页入口）。
      * 空表示「最后读过的那本」（朗读通知的进入方式），此时不设闸门。
      */
     private val routeBookUrl: String? = null,
 ) : ReadBookRouteHost,
     ReadBookInputHandler,
     ReadBook.ReaderRenderCallback {
+
+    private var routeInitialized = false
 
     private val readSettingsGateway get() = org.koin.core.context.GlobalContext.get().get<io.legado.app.domain.gateway.ReadSettingsGateway>()
     private val aloudSettingsGateway get() = org.koin.core.context.GlobalContext.get().get<io.legado.app.domain.gateway.ReadAloudSettingsGateway>()
@@ -731,11 +733,12 @@ class ReadBookController(
         ReaderPerfTrace.marker("viewport.published")
     }
 
-    /** 会话指向的不是本路由要开的书：画布只能出加载占位页，不能把上一本书的正文排上来。 */
-    private fun isReaderSessionStale(): Boolean {
-        val expected = routeBookUrl?.takeIf { it.isNotBlank() } ?: return false
-        return ReadBook.book?.bookUrl != expected
-    }
+    /** 开书初始化前隔离上一会话；初始化后当前会话可以因换源而改变 URL。 */
+    private fun isReaderSessionStale(): Boolean = isReaderOpeningSessionStale(
+        routeBookUrl = routeBookUrl,
+        currentBookUrl = ReadBook.book?.bookUrl,
+        isRouteInitialized = routeInitialized,
+    )
 
     private fun publishReaderPageWindow(
         paginationStyle: ReaderAndroidPaginationStyle? = null,
@@ -1790,6 +1793,10 @@ class ReadBookController(
     }
 
     fun onRouteInitialized() {
+        // 开书完成后由当前会话驱动正文，换源不再受初始路由 URL 限制。
+        // 用本路由的完成回调，避免上一会话的 contentLoadFinish 提前解除首帧隔离。
+        routeInitialized = true
+        publishReaderPageWindow()
         applyReadBrightness()
         upScreenTimeOut()
     }
@@ -3232,6 +3239,16 @@ class ReadBookController(
         }
     }
 
+}
+
+internal fun isReaderOpeningSessionStale(
+    routeBookUrl: String?,
+    currentBookUrl: String?,
+    isRouteInitialized: Boolean,
+): Boolean {
+    if (isRouteInitialized) return false
+    val expected = routeBookUrl?.takeIf { it.isNotBlank() } ?: return false
+    return currentBookUrl != expected
 }
 
 private fun ConfigUpdateAction.invalidatesDirectReaderPages(): Boolean = when (this) {

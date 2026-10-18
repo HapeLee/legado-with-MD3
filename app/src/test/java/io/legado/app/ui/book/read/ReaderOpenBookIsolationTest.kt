@@ -52,18 +52,101 @@ class ReaderOpenBookIsolationTest {
     }
 
     @Test
-    fun `the session gate only applies once the route has named a book`() {
+    fun `session gate uses its route initialization state`() {
         val source = mainSourceFile("io/legado/app/ui/book/read/ReadBookController.kt").readText()
         val gate = section(source, "private fun isReaderSessionStale()")
 
         assertTrue(
-            "没有 bookUrl 的路由（如从朗读通知回来）不设限，否则阅读页会一直停在占位窗",
-            gate.contains("?: return false"),
+            "开书隔离必须读取本次阅读初始化状态，不能永久绑定路由的旧 URL",
+            gate.contains("isRouteInitialized = routeInitialized"),
         )
         assertTrue(
-            "比对的是会话当前书与路由要开的书",
-            gate.contains("ReadBook.book?.bookUrl != expected"),
+            gate.contains("isReaderOpeningSessionStale(") &&
+                    gate.contains("routeBookUrl = routeBookUrl") &&
+                    gate.contains("currentBookUrl = ReadBook.book?.bookUrl"),
         )
+    }
+
+    @Test
+    fun `route completion releases isolation and republishes content`() {
+        val controller =
+            mainSourceFile("io/legado/app/ui/book/read/ReadBookController.kt").readText()
+        val completion = section(controller, "fun onRouteInitialized()")
+        val release = completion.indexOf("routeInitialized = true")
+        assertTrue("路由初始化完成必须先解除隔离", release >= 0)
+        assertTrue(
+            "解除隔离后主动重发，自动换源的正文可能已在此前到达",
+            completion.indexOf("publishReaderPageWindow()") > release,
+        )
+        val graph = mainSourceFile("io/legado/app/ui/main/MainNavGraph.kt").readText()
+        val initialization =
+            section(graph, "readBookViewModel.initData(initRequest, initialBook) {")
+        assertTrue(initialization.contains("controller.onRouteInitialized()"))
+    }
+
+    @Test
+    fun `opening another book waits instead of showing the previous session`() {
+        assertTrue(
+            isReaderOpeningSessionStale(
+                "book-a",
+                "previous-book",
+                isRouteInitialized = false
+            )
+        )
+        assertTrue(isReaderOpeningSessionStale("book-a", null, isRouteInitialized = false))
+        assertFalse(isReaderOpeningSessionStale("book-a", "book-a", isRouteInitialized = false))
+    }
+
+    @Test
+    fun `changing source after opening does not wait for the old book url`() {
+        assertFalse(
+            isReaderOpeningSessionStale(
+                "source-a/book",
+                "source-a/book",
+                isRouteInitialized = true
+            )
+        )
+        assertFalse(
+            isReaderOpeningSessionStale(
+                "source-a/book",
+                "source-b/book",
+                isRouteInitialized = true
+            )
+        )
+        assertFalse(
+            isReaderOpeningSessionStale(
+                "source-a/book",
+                "source-c/book",
+                isRouteInitialized = true
+            )
+        )
+    }
+
+    @Test
+    fun `automatic source change before the first rendered page also releases the gate`() {
+        // 初始化先接管会话，再自动换源；首个有效视口可能在两步都完成之后才到达。
+        // 因此不能依靠“曾渲染过初始 URL”来解除隔离。
+        assertFalse(
+            isReaderOpeningSessionStale(
+                "source-a/book",
+                "source-b/book",
+                isRouteInitialized = true
+            )
+        )
+    }
+
+    @Test
+    fun `notification and last read routes do not require a book url`() {
+        for (routeBookUrl in listOf(null, "", "  ")) {
+            assertFalse(
+                isReaderOpeningSessionStale(
+                    routeBookUrl,
+                    "current-book",
+                    isRouteInitialized = false
+                )
+            )
+            assertFalse(isReaderOpeningSessionStale(routeBookUrl, null, isRouteInitialized = false))
+        }
     }
 
     private companion object {
