@@ -3083,8 +3083,8 @@ internal fun shouldDrawReaderBookmarkBadge(
  * 高亮规则编辑页的预览共用这一份，预览才会和正文一模一样。
  *
  * 背景用的画笔不许开抗锯齿：九宫格九条边落在半像素上时，相邻两格各画一条半覆盖的边，
- * source-over 合成不出满覆盖，气泡上就留下一条透出页面背景的笔直「切割线」。关掉之后每
- * 个像素只被一格完整盖住。四周边缘的形状由图自身的 alpha 决定，与这条边的抗锯齿无关。
+ * source-over 合成不出满覆盖，气泡上就留下一条透出页面背景的笔直「切割线」。九宫格还要按
+ * 每格的目标范围裁剪，避免补缝用的外扩区域重复叠加半透明像素。四周形状由图自身的 alpha 决定。
  */
 internal fun drawTextBackground(
     canvas: android.graphics.Canvas,
@@ -3167,17 +3167,26 @@ private fun drawNineSliceBackground(
         ReaderRect(frame.left, frame.top, frame.right, frame.bottom),
         image,
     ).forEach { cell ->
-        canvas.drawBitmap(
-            bitmap,
-            android.graphics.Rect(cell.source.left, cell.source.top, cell.source.right, cell.source.bottom),
-            android.graphics.RectF(
-                cell.painted.left,
-                cell.painted.top,
-                cell.painted.right,
-                cell.painted.bottom,
-            ),
-            paint,
-        )
+        val saveCount = canvas.save()
+        try {
+            // 外扩只负责盖到切分边界，最终每个像素仍归一格所有；否则半透明图的接缝会叠深。
+            canvas.clipRect(
+                cell.destination.left, cell.destination.top, cell.destination.right, cell.destination.bottom,
+            )
+            canvas.drawBitmap(
+                bitmap,
+                android.graphics.Rect(cell.source.left, cell.source.top, cell.source.right, cell.source.bottom),
+                android.graphics.RectF(
+                    cell.painted.left,
+                    cell.painted.top,
+                    cell.painted.right,
+                    cell.painted.bottom,
+                ),
+                paint,
+            )
+        } finally {
+            canvas.restoreToCount(saveCount)
+        }
     }
 }
 

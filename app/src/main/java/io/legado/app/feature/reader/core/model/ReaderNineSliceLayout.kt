@@ -8,8 +8,8 @@ data class ReaderNineSliceCell(
     val source: ReaderIntRect,
     val destination: ReaderRect,
     /**
-     * 真正画出去的那一块：[destination] 的四条边里，只跟相邻格共享的那两条各让出半像素，
-     * 外框那两条保持原位。相邻格因此在拼缝上互相叠压，谁也不会留下一条半透明的切线。
+     * 绘制覆盖范围：内部边界外扩半像素，外框边缘保持原位。
+     * 绘制时必须裁剪到 [destination]，既覆盖拼缝，也避免相邻格重复叠加图片自身的 alpha。
      */
     val painted: ReaderRect,
 )
@@ -109,10 +109,8 @@ object ReaderNineSliceLayout {
     }
 
     /**
-     * 切片只是恰好贴合时，两侧各自抗锯齿会在拼缝上留下两条半覆盖的边：source-over 不是相加，
-     * 两条半覆盖合不成满覆盖，底下的页面背景就从缝里透出来，气泡上是一道笔直「切割线」。
-     * 内部边界各向外让半像素，相邻格互相叠压，缝永远被完整盖住（对照参考实现
-     * `TextLine.drawNineSlice` 的 `seamOverlap`）。外框边缘保持原位不动。
+     * 内部边界外扩半像素保证切片覆盖到拼缝；绘制侧关闭边缘抗锯齿并裁剪到各格的 destination，
+     * 外扩部分不参与相邻格的重复合成。外框边缘保持原位。
      */
     private const val seamOverlapPx = 0.5f
 }
