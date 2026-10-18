@@ -395,8 +395,11 @@ class AiCastAssignUseCase(
             name = name,
             poolLabel = pool,
         )
-        appDb.castCharacterDao.insertIgnore(created)
+        val inserted = appDb.castCharacterDao.insertIgnore(created)
         CastProfileMirror.ensure(created)
+        if (inserted > 0 && profiles.none { it.name == name }) {
+            AiCastPresetStore.recordAiCreatedProfile(bookUrl, created.id)
+        }
         return created
     }
 

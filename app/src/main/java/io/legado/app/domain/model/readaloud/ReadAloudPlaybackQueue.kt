@@ -53,6 +53,7 @@ data class ReadAloudPlaybackInfo(
 /** Position-based playback queue independent from reader pagination. */
 class ReadAloudPlaybackQueue private constructor(
     val cues: List<ReadAloudPlaybackCue>,
+    private val narration: SpeechVoiceSelection = SpeechVoiceSelection(),
 ) {
 
     val isEmpty: Boolean get() = cues.isEmpty()
@@ -93,37 +94,30 @@ class ReadAloudPlaybackQueue private constructor(
         (cursor.cueIndex + 1).takeIf { it in cues.indices }
             ?.let { ReadAloudPlaybackCursor(it, 0) }
 
-    /**
-     * 正文旁白那一条 cue：它念的是「朗读引擎与音色」选的那一个（关掉多角色朗读时也可能是 null，
-     * 那正是引擎默认发音人该有的行为）。章标题由同一个人念，音色与备用音色都从这里取，
-     * 标题才有和正文旁白一样的备用音色可退，不会在旁白失败时整条静音。
-     */
-    private fun narratorCue(): ReadAloudPlaybackCue? = cues.firstOrNull {
-        !it.isChapterTitle && it.roleType == SpeechRoleType.Narrator && it.voice != null
-    }
-
     fun withChapterTitle(title: String): ReadAloudPlaybackQueue {
         val normalizedTitle = title.trim()
         if (normalizedTitle.isEmpty() || isEmpty || cues.first().isChapterTitle) return this
-        val source = narratorCue()
         val titleCue = ReadAloudPlaybackCue(
             text = normalizedTitle,
             chapterStart = 0,
             chapterEnd = 0,
             paragraphIndex = -1,
-            voice = source?.voice,
-            fallbackVoices = source?.fallbackVoices.orEmpty(),
+            voice = narration.voice,
+            fallbackVoices = narration.fallbackVoices,
             roleType = SpeechRoleType.Narrator,
             characterId = null,
             isChapterTitle = true,
         )
-        return ReadAloudPlaybackQueue(listOf(titleCue) + cues)
+        return ReadAloudPlaybackQueue(listOf(titleCue) + cues, narration)
     }
 
     companion object {
         val Empty = ReadAloudPlaybackQueue(emptyList())
 
-        fun from(plan: List<SpeechPlanItem>): ReadAloudPlaybackQueue {
+        fun from(
+            plan: List<SpeechPlanItem>,
+            narration: SpeechVoiceSelection = SpeechVoiceSelection(),
+        ): ReadAloudPlaybackQueue {
             if (plan.isEmpty()) return Empty
             val cues = plan.map { item ->
                 val segment = item.segment
@@ -145,7 +139,7 @@ class ReadAloudPlaybackQueue private constructor(
             require(cues.zipWithNext().none { (left, right) -> left.chapterEnd > right.chapterStart }) {
                 "Playback cues must not overlap"
             }
-            return ReadAloudPlaybackQueue(cues)
+            return ReadAloudPlaybackQueue(cues, narration)
         }
     }
 }

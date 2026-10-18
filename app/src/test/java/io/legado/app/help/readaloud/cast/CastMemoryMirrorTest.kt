@@ -318,6 +318,14 @@ class CastMemoryMirrorTest {
         }
     }
 
+    @Test
+    fun keepsRealNamesThatEndWithAHeavenlyStem() {
+        val names = listOf("孔乙己", "陈长庚", "帝辛", "武丁")
+        names.forEach { assertFalse(it, CastMemoryMirror.isThrowawayExtra(it)) }
+        val memory = (names + "张三").joinToString("\n") { "$it｜｜人物" }
+        assertEquals(memory, CastMemoryMirror.dropThrowawayExtras(memory))
+    }
+
     /**
      * 真机数据（《成为浪漫小说中的反派角色》埃诺克·巴拉尔 的别名栏原文）：
      * 模型把身份用 `/` 串成一串，下一趟整串抄回来再接一截，这一栏就每章长一点。
@@ -416,6 +424,36 @@ class CastMemoryMirrorTest {
             "用户自己写的简介",
             CastMemoryMirror.mergeIdentity(line, emptyList(), "用户自己写的简介", null).summary,
         )
+    }
+
+    @Test
+    fun echoingUserFieldsDoesNotTransferTheirOwnershipToAi() {
+        val previous = CastMemoryMirror.Line("张三", listOf("小张"), "AI 简介", "")
+        val echo = CastMemoryMirror.Line("张三", listOf("小张", "用户称呼"), "用户简介", "")
+        val first = CastMemoryMirror.mergeIdentity(
+            echo, listOf("小张", "用户称呼"), "用户简介", previous,
+        )
+        val nextLedger = CastMemoryMirror.Line("张三", first.aiAliases, first.aiSummary, "")
+        val next = CastMemoryMirror.mergeIdentity(
+            CastMemoryMirror.Line("张三", listOf("新称呼"), "新 AI 简介", ""),
+            first.aliases, first.summary, nextLedger,
+        )
+
+        assertEquals(listOf("新称呼", "用户称呼"), next.aliases)
+        assertEquals("用户简介", next.summary)
+        assertEquals(listOf("新称呼"), next.aiAliases)
+        assertEquals("", next.aiSummary)
+    }
+
+    @Test
+    fun userAliasesAreNotFilteredAsAiPlaceholders() {
+        val merged = CastMemoryMirror.mergeIdentity(
+            CastMemoryMirror.Line("张三", listOf("新称呼"), "", ""),
+            listOf("情报员？", "别名先生"), "", null,
+        )
+
+        assertEquals(listOf("新称呼", "情报员？", "别名先生"), merged.aliases)
+        assertEquals(listOf("新称呼"), merged.aiAliases)
     }
 
     private companion object {

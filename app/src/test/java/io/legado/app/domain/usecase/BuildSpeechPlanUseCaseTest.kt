@@ -239,6 +239,25 @@ class BuildSpeechPlanUseCaseTest {
     }
 
 
+    @Test
+    fun `title narration resolves configured voices without any body narration`() = runBlocking {
+        val narrator = voice("narrator")
+        val engine = voice("engine")
+        val gateway = FakeVoiceGateway(
+            listOf(narrator, engine),
+            listOf(binding(BookVoiceBinding.SUBJECT_NARRATOR, BookVoiceBinding.SUBJECT_NARRATOR, narrator.id)),
+        )
+        val useCase = BuildSpeechPlanUseCase(gateway)
+
+        val enabled = useCase.narrationVoice("book", engine.id, useMultiSpeaker = true)
+        assertEquals(narrator, enabled.voice)
+        assertEquals(listOf(engine), enabled.fallbackVoices)
+        val disabled = useCase.narrationVoice("book", engine.id, useMultiSpeaker = false)
+        assertEquals(engine, disabled.voice)
+        assertTrue(disabled.fallbackVoices.isEmpty())
+        assertEquals(null, useCase.narrationVoice("book", useMultiSpeaker = false).voice)
+    }
+
     private fun voice(id: String) = ReadAloudVoice(
         id = id,
         engineType = "http",

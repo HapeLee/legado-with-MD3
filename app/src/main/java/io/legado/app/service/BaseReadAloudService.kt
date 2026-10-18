@@ -53,9 +53,11 @@ import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
+import io.legado.app.domain.model.readaloud.SpeechVoiceSelection
 import io.legado.app.domain.model.readaloud.resolveReadAloudStartPosition
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
+import io.legado.app.domain.usecase.BuildSpeechPlanUseCase
 import io.legado.app.domain.usecase.PrepareChapterSpeechPlanUseCase
 import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
@@ -82,6 +84,7 @@ import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -499,11 +502,9 @@ abstract class BaseReadAloudService : BaseService(),
                 splitPolicy = splitPolicy,
             )
             if (generation != prepareReadAloudGeneration) return@execute
-            var preparedPlaybackQueue = runCatching {
-                ReadAloudPlaybackQueue.from(preparedSpeechPlan)
-            }.onFailure {
-                AppLog.put("创建多角色播放队列失败，使用原朗读方式\n${it.localizedMessage}", it)
-            }.getOrDefault(ReadAloudPlaybackQueue.Empty)
+            var preparedPlaybackQueue = buildPlaybackQueue(
+                prepared.book?.bookUrl.orEmpty(), preparedSpeechPlan,
+            )
             var preparedPlaybackCursor = preparedPlaybackQueue.cursorAt(preparedReadAloudNumber)
             var pos = startPos
             val usePreparedPlaybackQueue = useSpeechPlaybackQueue && !preparedPlaybackQueue.isEmpty
@@ -599,6 +600,25 @@ abstract class BaseReadAloudService : BaseService(),
             AppLog.put("启动朗读出错\n${it.localizedMessage}", it, true)
             launch(Main) { if (generation == prepareReadAloudGeneration) pauseReadAloud() }
         }
+    }
+
+    /** 实时朗读与预下载共用：标题声线直接取配置，正文仍保留各自的正则覆盖。 */
+    protected suspend fun buildPlaybackQueue(bookUrl: String, plan: List<SpeechPlanItem>): ReadAloudPlaybackQueue {
+        if (plan.isEmpty()) return ReadAloudPlaybackQueue.Empty
+        val narration = try {
+            val buildSpeechPlan: BuildSpeechPlanUseCase = get(BuildSpeechPlanUseCase::class.java)
+            buildSpeechPlan.narrationVoice(bookUrl, useMultiSpeaker = ReadConfig.useMultiSpeaker)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLog.put("读取章标题音色失败，标题使用默认引擎\n${e.localizedMessage}", e)
+            SpeechVoiceSelection()
+        }
+        return runCatching {
+            ReadAloudPlaybackQueue.from(plan, narration)
+        }.onFailure {
+            AppLog.put("创建多角色播放队列失败，使用原朗读方式\n${it.localizedMessage}", it)
+        }.getOrDefault(ReadAloudPlaybackQueue.Empty)
     }
 
     protected suspend fun buildSpeechPlan(
