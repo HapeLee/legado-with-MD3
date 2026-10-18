@@ -1,6 +1,9 @@
 package io.legado.app.ui.book.read
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,10 +14,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -41,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,11 +55,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import io.legado.app.R
 import io.legado.app.data.entities.HighlightRule
@@ -84,15 +97,27 @@ fun MarkingSelectionMenu(
     val density = LocalDensity.current
     val windowSize = LocalWindowInfo.current.containerSize
     val width = with(density) { windowSize.width.toDp() } - 32.dp
-    val maxHeight = with(density) { windowSize.height.toDp() } - 32.dp
-    // 与 TextMenuPositionProvider 同一套落位规则：默认在选区下方展开，只有选区贴近窗口底部、
-    // 下方放不下卡片时才上翻。卡片真实高度要等测量，而缩放原点必须在入场动画前确定，这里用
-    // 标记卡的常规高度估算；它只影响缩放动画的原点，落位始终由 positionProvider 决定。
-    val opensBelow = windowSize.height - menuState.endBottomY >
+    val safeInsets = WindowInsets.safeDrawing
+    val layoutDirection = LocalLayoutDirection.current
+    // 使用宿主窗口的原始 Insets；Popup 自身的局部窗口不能作为 IME 高度的基准。
+    // 在测量和定位阶段读取，让约束与位置跟随同一帧的键盘动画，且不重复扣减可见窗口高度。
+    val availableBounds = {
+        IntRect(
+            left = safeInsets.getLeft(density, layoutDirection),
+            top = safeInsets.getTop(density),
+            right = windowSize.width - safeInsets.getRight(density, layoutDirection),
+            bottom = windowSize.height - safeInsets.getBottom(density),
+        )
+    }
+    // 同一次选区的展开方向固定，输入增长/键盘显隐只做边界夹取，不重新上下翻转。
+    val opensBelow = remember(menuState, density.density) {
+        windowSize.height - menuState.endBottomY >
             with(density) { MARKING_MENU_ESTIMATED_HEIGHT.toPx() }
+    }
     val transformOrigin = TransformOrigin(0.5f, if (opensBelow) 0f else 1f)
     val shadowPadding = 12.dp
-    val positionProvider = remember(menuState, density.density) {
+    val positionProvider =
+        remember(menuState, density.density, windowSize, safeInsets, layoutDirection) {
         TextMenuPositionProvider(
             density = density.density,
             startX = menuState.startX,
@@ -101,7 +126,41 @@ fun MarkingSelectionMenu(
             endX = menuState.endX,
             endBottomY = menuState.endBottomY,
             shadowPadding = with(density) { shadowPadding.roundToPx() },
+            preferBelow = opensBelow,
+            availableBounds = availableBounds,
         )
+        }
+    var targetY by remember(menuState) { mutableStateOf<Int?>(null) }
+    // 首次测量直接落位，保留原有缩放入场；只有后续位置变化才做纵向动画。
+    val animatedY = targetY?.let { target ->
+        animateIntAsState(
+            targetValue = target,
+            animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+            label = "MarkingMenuPositionY",
+        )
+    }
+    val currentAnimatedY by rememberUpdatedState(animatedY)
+    val shadowPaddingPx = with(density) { shadowPadding.roundToPx() }
+    val animatedPositionProvider = remember(positionProvider, shadowPaddingPx) {
+        object : PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: IntRect,
+                windowSize: IntSize,
+                layoutDirection: LayoutDirection,
+                popupContentSize: IntSize,
+            ): IntOffset {
+                val target = positionProvider.calculatePosition(
+                    anchorBounds, windowSize, layoutDirection, popupContentSize,
+                )
+                // AnimatedVisibility 初始可能只测得阴影留白，不能用它初始化位移动画。
+                if (popupContentSize.height <= shadowPaddingPx * 2) return target
+                targetY = target.y
+                // 在定位阶段读动画值，逐帧移动整个 Popup，绘制与点击区域保持一致。
+                val y = currentAnimatedY?.value ?: target.y
+                // 只约束最终目标；IME 收紧可用空间时也完整播放位移动画。
+                return target.copy(y = y)
+            }
+        }
     }
 
     val storedStyle = remember(state.editing?.styleJson, lastMarkingStyle) {
@@ -176,7 +235,7 @@ fun MarkingSelectionMenu(
     }
 
     Popup(
-        popupPositionProvider = positionProvider,
+        popupPositionProvider = animatedPositionProvider,
         onDismissRequest = {
             if (!showColorPicker) requestDismiss()
         },
@@ -187,7 +246,25 @@ fun MarkingSelectionMenu(
         ),
     ) {
         ProvideAppDensity {
-            Box(Modifier.padding(shadowPadding)) {
+            Box(
+                Modifier
+                    .layout { measurable, constraints ->
+                        val bounds = availableBounds()
+                        val shadow = shadowPadding.roundToPx() * 2
+                        val placeable = measurable.measure(
+                            constraints.copy(
+                                minWidth = 0,
+                                minHeight = 0,
+                                maxWidth = (bounds.width - 32.dp.roundToPx() + shadow)
+                                    .coerceIn(0, constraints.maxWidth),
+                                maxHeight = (bounds.height - 24.dp.roundToPx() + shadow)
+                                    .coerceIn(0, constraints.maxHeight),
+                            )
+                        )
+                        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                    }
+                    .padding(shadowPadding)
+            ) {
                 AnimatedVisibility(
                     visible = menuVisible,
                     enter = SelectionMenuMotion.enter(transformOrigin),
@@ -201,7 +278,6 @@ fun MarkingSelectionMenu(
                     ) {
                         Column(
                             modifier = Modifier
-                                .heightIn(max = maxHeight)
                                 .verticalScroll(rememberScrollState())
                                 .padding(horizontal = 10.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -511,6 +587,6 @@ private fun HighlightRule.toProcessStyle() = TextProcessStyle(
 
 /**
  * 标记卡（颜色行 + 效果格 + 备注框）的常规高度估算，含选择柄与间距余量。
- * 仅用于推断缩放动画的展开方向，不参与实际落位。
+ * 用于固定本次展开方向；卡片实际位置仍按当前可见区域夹取。
  */
 private val MARKING_MENU_ESTIMATED_HEIGHT = 240.dp
