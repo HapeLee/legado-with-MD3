@@ -3850,4 +3850,5 @@
     <string name="battery_optimization_dialog_title">Background Optimization Settings Guide</string>
     <string name="battery_optimization_status_ignored">Unrestricted (Tap to check OEM background policy)</string>
     <string name="battery_optimization_status_not_ignored">Restricted or not configured; service may be killed in background</string>
+    <string name="reader_paragraph_image_action_unsupported">This image uses a paragraph-rule action that this version does not support.</string>
 </resources>

@@ -3846,4 +3846,5 @@
     <string name="battery_optimization_dialog_title">后台保活与省电策略设置指引</string>
     <string name="battery_optimization_status_ignored">已开启无限制（点击可检查厂商后台策略）</string>
     <string name="battery_optimization_status_not_ignored">未开启无限制，后台可能被系统终止</string>
+    <string name="reader_paragraph_image_action_unsupported">此图片使用段落规则动作，当前版本尚不支持。</string>
 </resources>

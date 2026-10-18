@@ -5,9 +5,37 @@ import io.legado.app.feature.reader.core.layout.ReaderInlineImagePlaceholder
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class LegacyReaderImageOptionsResolverTest {
+    @Test
+    fun keepsLegacyJsFallbackAndIdentifiesActionsThatRequireTheParagraphRuleHost() {
+        assertEquals("legacy()", LegacyReaderImageOptionsResolver.legacyScript("image,{\"JS\":\"legacy()\"}"))
+        assertNull(LegacyReaderImageOptionsResolver.legacyScript("image,{\"js\":\"\"}"))
+        assertTrue(LegacyReaderImageOptionsResolver.isParagraphRuleAction("paragraphRule:rule:123\nrun()"))
+        assertTrue(LegacyReaderImageOptionsResolver.isParagraphRuleAction("rule:123:run()"))
+        assertFalse(LegacyReaderImageOptionsResolver.isParagraphRuleAction("java.showBrowser('https://example')"))
+    }
+
+    @Test
+    fun recognizesCaseInsensitiveKeysAndPrioritizesPclickLikeTheReferenceReader() {
+        val options = LegacyReaderImageOptionsResolver.resolve(
+            "image,{\"STYLE\":\"full\",\"Width\":\"50%\",\"Click\":\"ordinary()\",\"PCliCk\":\"paragraph()\"}",
+            htmlParagraph = false,
+        )!!
+        assertEquals(ReaderImageLayoutMode.FULL_WIDTH, options.layoutMode)
+        assertEquals(0.5f, options.requestedWidthFraction!!, 0f)
+        assertEquals("paragraph()", options.action)
+        assertEquals(
+            "ordinary()",
+            LegacyReaderImageOptionsResolver.resolve(
+                "image,{\"pclick\":\"\",\"CLICK\":\"ordinary()\"}", false,
+            )!!.action,
+        )
+    }
+
     @Test
     fun parsesTypedImageUrlOptions() {
         val options = LegacyReaderImageOptionsResolver.resolve(

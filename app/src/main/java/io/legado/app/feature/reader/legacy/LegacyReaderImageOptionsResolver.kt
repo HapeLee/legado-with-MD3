@@ -16,13 +16,10 @@ object LegacyReaderImageOptionsResolver : ReaderImageOptionsResolver {
     private const val imgStyleTextLowercase = "text"
 
     override fun resolve(source: String, htmlParagraph: Boolean): ReaderImageOptions? {
-        val separator = paramPattern.find(source) ?: return null
-        val values = GSON.fromJsonObject<Map<String, String>>(
-            source.substring(separator.range.last + 1),
-        ).getOrNull() ?: return null
-        val rawStyle = values["style"]
+        val values = sourceOptions(source) ?: return null
+        val rawStyle = values.valueIgnoreCase("style")
         val style = rawStyle?.uppercase()
-        val width = values["width"]
+        val width = values.valueIgnoreCase("width")
         return ReaderImageOptions(
             layoutMode = when {
                 rawStyle == null -> null
@@ -47,7 +44,8 @@ object LegacyReaderImageOptionsResolver : ReaderImageOptionsResolver {
                 "RIGHT" -> ReaderTextAlignment.END
                 else -> if (rawStyle == null) null else ReaderTextAlignment.CENTER
             },
-            action = values["click"]?.takeIf(String::isNotBlank),
+            action = values.valueIgnoreCase("pclick")?.takeIf(String::isNotBlank)
+                ?: values.valueIgnoreCase("click")?.takeIf(String::isNotBlank),
             // 占位字只是**纯文本**路径的概念：`"text"` 用 `srcReplaceChar`（袮）、`"TEXT"` 用
             // `reviewChar`（꧁）。旧 HTML 路径的行内图宽来自 ImageSpan 的 advance（没有占位字），
             // 这里取纯文本默认的袮。
@@ -58,6 +56,24 @@ object LegacyReaderImageOptionsResolver : ReaderImageOptionsResolver {
             },
         )
     }
+
+    fun legacyScript(source: String): String? =
+        sourceOptions(source)?.valueIgnoreCase("js")?.takeIf(String::isNotBlank)
+
+    /** 该协议需要 ParagraphRule 的规则和变量宿主，不能作为书源 JS 执行。 */
+    fun isParagraphRuleAction(action: String): Boolean = action.trimStart().let {
+        it.startsWith("paragraphRule:") || it.startsWith("rule:")
+    }
+
+    private fun sourceOptions(source: String): Map<String, String>? {
+        val separator = paramPattern.find(source) ?: return null
+        return GSON.fromJsonObject<Map<String, String>>(
+            source.substring(separator.range.last + 1),
+        ).getOrNull()
+    }
+
+    private fun Map<String, String>.valueIgnoreCase(name: String): String? =
+        get(name) ?: entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
 
     private fun textIsInline(rawStyle: String, htmlParagraph: Boolean): Boolean =
         if (htmlParagraph) rawStyle.uppercase() == imgStyleText

@@ -460,7 +460,10 @@ internal class ReaderPaginationSession(
                 baselinePx = element.baselinePx + deltaY,
             )
 
-            is ReaderElement.Image -> element.copy(bounds = element.bounds.offsetY(deltaY))
+            is ReaderElement.Image -> element.copy(
+                bounds = element.bounds.offsetY(deltaY),
+                touchBounds = element.touchBounds.offsetY(deltaY),
+            )
             is ReaderElement.Review -> element.copy(
                 bounds = element.bounds.offsetY(deltaY),
                 baselinePx = element.baselinePx + deltaY,
@@ -949,6 +952,7 @@ internal class ReaderPaginationSession(
                             chapterPosition = item.chapterPosition,
                             // 行内图必须带标记：绘制期按位图长宽比重新算几何（旧 ImageColumn）。
                             inline = true,
+                            touchBounds = ReaderRect(x, y, x + drawnWidthPx, y + actualLineHeight),
                         )
                     }
 

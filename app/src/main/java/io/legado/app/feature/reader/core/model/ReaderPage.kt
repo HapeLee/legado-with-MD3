@@ -273,6 +273,8 @@ sealed interface ReaderElement {
          * 位图不一致时 `fitCenter` 会在格内留白、把图片画小。
          */
         val inline: Boolean = false,
+        /** 行内图按整行高度命中，绘制仍使用 [bounds]；独立图默认命中自身。 */
+        val touchBounds: ReaderRect = bounds,
     ) : ReaderElement
 
     data class Review(
@@ -379,7 +381,9 @@ data class ReaderPage(
     val contentRightPx: Float = widthPx.toFloat(),
 ) {
     fun elementAt(x: Float, y: Float): ReaderElement? =
-        elements.firstOrNull { it.bounds.contains(x, y) }
+        elements.firstOrNull {
+            (if (it is ReaderElement.Image) it.touchBounds else it.bounds).contains(x, y)
+        }
 
     fun hasSameGeometryAs(other: ReaderPage): Boolean =
         id == other.id &&

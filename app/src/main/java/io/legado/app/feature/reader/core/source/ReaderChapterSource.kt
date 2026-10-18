@@ -49,6 +49,8 @@ sealed interface ReaderChapterInlineSource {
          * 占位字 advance；纯文本路径（`getTextChapter`）为 `null`，走占位字规则。
          */
         val htmlSpanExtent: ReaderHtmlImageSpanExtent? = null,
+        /** Explicit HTML image action; source-URL options remain at the legacy boundary. */
+        val action: String? = null,
     ) : ReaderChapterInlineSource
     data class BlankLine(override val chapterPosition: Int) : ReaderChapterInlineSource
 

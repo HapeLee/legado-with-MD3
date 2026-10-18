@@ -3,12 +3,25 @@ package io.legado.app.feature.reader.platform
 import android.app.Application
 import android.graphics.Color
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
+import io.legado.app.feature.reader.core.layout.GlyphClusters
+import io.legado.app.feature.reader.core.layout.ReaderChapterBlockMeasurer
+import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureResult
+import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureStyle
+import io.legado.app.feature.reader.core.layout.ReaderImageDimensions
+import io.legado.app.feature.reader.core.layout.ReaderPaginationConfig
+import io.legado.app.feature.reader.core.layout.ReaderPaginator
+import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
+import io.legado.app.feature.reader.core.layout.ReaderTextShaper
+import io.legado.app.feature.reader.core.model.ReaderElement
+import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import io.legado.app.feature.reader.legacy.LegacyReaderImageOptionsResolver
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -18,6 +31,45 @@ import org.robolectric.annotation.GraphicsMode
 @Config(application = Application::class, sdk = [35])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class AndroidReaderHtmlSourceResolverTest {
+    @Test
+    fun explicitAndUrlActionsReachRenderedImagesAndAreBothExcludedWhenRequested() = runBlocking {
+        val html = """<p>A<img src='pic,{"click":"url()"}' data-legado-click='explicit()'>B<img src='pic,{"click":"url()"}'>C</p>"""
+        val source = ReaderChapterSourceParser.parse(
+            0, "", listOf("<usehtml>$html</usehtml>"), false, true,
+            AndroidReaderHtmlSemanticTextResolver,
+        )
+        val shaper = ReaderTextShaper { text ->
+            GlyphClusters(text.map(Char::toString), List(text.length) { 10f })
+        }
+        val measurer = ReaderChapterBlockMeasurer(
+            shaper, shaper, { ReaderImageDimensions(12f, 12f) },
+            htmlSourceResolver = AndroidReaderHtmlSourceResolver(10f, 1f),
+            imageOptionsResolver = LegacyReaderImageOptionsResolver,
+        )
+        val style = ReaderChapterMeasureStyle(
+            ReaderTextStyle(0, 10f), ReaderTextStyle(0, 10f), 0,
+            ReaderTextAlignment.START, ReaderTextAlignment.START,
+        )
+        val config = ReaderPaginationConfig(0, "", 200, 200, 0f, 0f, 0f, 0f, 10f, 8f)
+        fun images(result: ReaderChapterMeasureResult) = ReaderPaginator.paginateBlocks(
+            (result as ReaderChapterMeasureResult.Success).blocks, config,
+        ).flatMap { it.elements }.filterIsInstance<ReaderElement.Image>()
+
+        assertEquals(listOf("explicit()", "url()"), images(measurer.measure(source, style)).map { it.action })
+        assertTrue(images(measurer.measure(source, style.copy(excludeActionImages = true))).isEmpty())
+    }
+
+    @Test
+    fun keepsExplicitImageActionsWithoutMixingUpRepeatedSourcesOrTextOffsets() {
+        val html = """<p>A<img src="pic" data-legado-click="first(&quot;x&quot;)">B<img src="pic" data-legado-pclick="second()" data-legado-click="ignored()">C</p>"""
+        val items = AndroidReaderHtmlSourceResolver(20f, 2f).resolve(html, 4).flatMap { it.items }
+        val images = items.filterIsInstance<ReaderChapterInlineSource.Image>()
+
+        assertEquals(listOf("first(\"x\")", "second()"), images.map { it.action })
+        assertEquals(listOf("pic", "pic"), images.map { it.source })
+        assertEquals(listOf(5, 7), images.map { it.chapterPosition })
+    }
+
     private val html = """
         <h2>甲&amp;&#x4E59;</h2>
         <p><a href="https://example">链接</a><br><big><font color="#123456">大</font></big><img src="pic"></p>

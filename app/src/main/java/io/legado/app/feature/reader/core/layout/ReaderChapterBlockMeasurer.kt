@@ -445,7 +445,8 @@ class ReaderChapterBlockMeasurer(
                         // excludeActionImages 开启时：带动作脚本的行内图（段评气泡）整体
                         // 不参与排版，且在图片尺寸解析之前跳过（不触发任何取图请求）
                         val options = imageOptionsResolver.resolve(item.source, fromHtmlBlock)
-                        if (style.excludeActionImages && options?.action != null) {
+                        val action = item.action?.takeIf(String::isNotBlank) ?: options?.action
+                        if (style.excludeActionImages && action != null) {
                             droppedActionImage = true
                             return@forEach
                         }
@@ -477,7 +478,7 @@ class ReaderChapterBlockMeasurer(
                                 chapterPosition = item.chapterPosition,
                                 // 整图也要带动作：书源写在 src 尾随 JSON 里的 click（例如唤起章评）
                                 // 只有解析成功时才有值，消费侧是 `ReadBookController.handleComposeImageClick`。
-                                action = if (layout.preservesAction) options?.action else null,
+                                action = action,
                                 horizontalAlignment = layout.alignment,
                                 scaleMode = mode.toScaleMode(),
                                 pageBreakBefore = mode == ReaderImageLayoutMode.SINGLE_PAGE,
@@ -501,7 +502,7 @@ class ReaderChapterBlockMeasurer(
                                 widthPx = cellWidthPx,
                                 heightPx = cellHeightPx,
                                 chapterPosition = item.chapterPosition,
-                                action = if (layout.preservesAction) options?.action else null,
+                                action = action,
                                 // 旧 `setTypeHtml` 行末图宽 = `measureText("\uFFFC")`。
                                 lineFinalWidthPx = span?.let {
                                     inlinePlaceholderWidth(
@@ -572,7 +573,7 @@ class ReaderChapterBlockMeasurer(
                         intrinsicWidthPx = size.widthPx,
                         intrinsicHeightPx = size.heightPx,
                         chapterPosition = block.chapterPosition,
-                        action = if (layout.preservesAction) options?.action else null,
+                        action = options?.action,
                         horizontalAlignment = layout.alignment,
                         scaleMode = mode.toScaleMode(),
                         pageBreakBefore = mode == ReaderImageLayoutMode.SINGLE_PAGE,
@@ -670,21 +671,14 @@ private data class ReaderResolvedImageLayout(
     val mode: ReaderImageLayoutMode,
     val placeholder: ReaderInlineImagePlaceholder,
     val alignment: ReaderTextAlignment,
-    /**
-     * 这一张图能否带上 src 尾随 JSON 解析出来的 click。
-     *
-     * false 只出现在根本没解析 JSON 的短路分支（书级文字嵌入、HTML 段落无 `,{...}`）：
-     * 那里没有动作可带。行内与整图两个分支都用它做闸门。
-     */
-    val preservesAction: Boolean,
 )
 
 /**
  * 复刻旧 `TextChapterLayout` 的两条图片路径，它们的规则并不一致：
  *
  * **纯文本（`getTextChapter` 的 `else` 分支）**
- * - 书级 `imgStyleText`（[ReaderImageLayoutMode.INLINE]）先整体短路：不解析单图 JSON，所有
- *   `<img>` 一律用一个 `srcReplaceChar`（`袮`）占位行内排版。
+ * - 书级 `imgStyleText`（[ReaderImageLayoutMode.INLINE]）固定用 `srcReplaceChar`（`袮`）占位，
+ *   单图 JSON 的布局参数不覆盖书级，但按参考项目保留其点击动作。
  * - 否则单图 style 才能覆盖书级；TEXT 只认字面量 `"text"`/`"TEXT"`，`"Text"` 走整图。
  *
  * **HTML 段落（`setTypeHtml`）**
@@ -693,8 +687,7 @@ private data class ReaderResolvedImageLayout(
  * - src 里没有 `,{...}` 时直接 `setTypeImage(imageStyle)`：**不做 <80px 自动行内**，书级 TEXT
  *   也会落到 `setTypeImage` 的 `else`（夹小整图）。
  *
- * `click` 只取决于那一支有没有解析 JSON：解析到了（`preservesAction`）行内图和整图都带动作，
- * 书级文字嵌入的短路分支连 JSON 都没读，所以任何图都不带动作。
+ * 此处只决定布局；点击动作独立于布局模式，从 HTML 属性或 src 参数传递。
  */
 private fun ReaderChapterMeasureStyle.resolveImageLayout(
     options: ReaderImageOptions?,
@@ -705,7 +698,6 @@ private fun ReaderChapterMeasureStyle.resolveImageLayout(
             mode = ReaderImageLayoutMode.INLINE,
             placeholder = ReaderInlineImagePlaceholder.SRC_REPLACE,
             alignment = ReaderTextAlignment.CENTER,
-            preservesAction = false,
         )
     }
     if (htmlParagraph && options == null) {
@@ -714,7 +706,6 @@ private fun ReaderChapterMeasureStyle.resolveImageLayout(
             placeholder = ReaderInlineImagePlaceholder.SRC_REPLACE,
             // 旧 `setTypeImage(imageStyle)`：对齐只认书级样式，默认居中。
             alignment = imageAlignment ?: ReaderTextAlignment.CENTER,
-            preservesAction = false,
         )
     }
     val mode = options?.layoutMode ?: if (imagePageBreakBefore && imagePageBreakAfter) {
@@ -727,7 +718,6 @@ private fun ReaderChapterMeasureStyle.resolveImageLayout(
         placeholder = options?.inlinePlaceholder ?: ReaderInlineImagePlaceholder.SRC_REPLACE,
         // 旧版对齐取自"有效样式"（单图 style 优先，缺失才回落到书级），不是链式兜底。
         alignment = options?.horizontalAlignment ?: imageAlignment ?: ReaderTextAlignment.CENTER,
-        preservesAction = true,
     )
 }
 

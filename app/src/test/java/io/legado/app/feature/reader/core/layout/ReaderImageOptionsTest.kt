@@ -7,6 +7,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -55,8 +56,8 @@ class ReaderImageOptionsTest {
         // 给所有字 10f；高按原图比例换算（100×50 → 5f）。
         assertEquals(10f, image.widthPx, 0f)
         assertEquals(5f, image.heightPx, 0f)
-        // 书级文字嵌入分支旧版不解析 JSON，连行内图的 click 也没有。
-        assertNull(image.action)
+        // 参考项目的文字嵌入保留动作，但不改变一个字符格的绘制几何。
+        assertEquals("run()", image.action)
 
         val element = ReaderPaginator.paginateBlocks(result.blocks, config)
             .single().elements.single() as ReaderElement.Image
@@ -64,6 +65,38 @@ class ReaderImageOptionsTest {
         assertTrue(element.inline)
         assertEquals(10f, element.bounds.width, 0f)
         assertEquals(5f, element.bounds.height, 0f)
+    }
+
+    @Test
+    fun shortInlineImageIsClickableAcrossItsLineHeightWithoutChangingItsDrawingBounds() = runBlocking {
+        val result = measure(ReaderImageOptions(ReaderImageLayoutMode.INLINE, action = "run()"))
+        val page = ReaderPaginator.paginateBlocks(result.blocks, config).single()
+        val image = page.elements.single() as ReaderElement.Image
+        val x = (image.bounds.left + image.bounds.right) / 2f
+
+        assertEquals(5f, image.bounds.height, 0f)
+        assertSame(image, page.elementAt(x, image.bounds.top - 1f))
+        assertSame(image, page.elementAt(x, image.bounds.bottom + 1f))
+        assertNull(page.elementAt(image.bounds.right + 1f, image.bounds.top))
+        assertNull(page.elementAt(x, 100f))
+    }
+
+    @Test
+    fun bottomJustificationMovesInlineImageTouchBoundsWithItsRow() = runBlocking {
+        val result = measure(ReaderImageOptions(ReaderImageLayoutMode.INLINE))
+        val blocks = result.blocks + result.blocks
+        val smallPage = config.copy(viewportHeightPx = 23)
+        val original = ReaderPaginator.paginateBlocks(blocks, smallPage).single()
+            .elements.filterIsInstance<ReaderElement.Image>().last()
+        val page = ReaderPaginator.paginateBlocks(blocks, smallPage.copy(textBottomJustify = true)).single()
+        val image = page.elements.filterIsInstance<ReaderElement.Image>().last()
+        val shift = image.bounds.top - original.bounds.top
+        val x = (image.bounds.left + image.bounds.right) / 2f
+
+        assertTrue(shift > 0f)
+        assertEquals(original.touchBounds.offsetY(shift), image.touchBounds)
+        assertSame(image, page.elementAt(x, image.touchBounds.bottom - 0.5f))
+        assertNull(page.elementAt(x, original.touchBounds.top + 0.5f))
     }
 
     @Test
@@ -124,8 +157,7 @@ class ReaderImageOptionsTest {
     }
 
     /**
-     * 旧 `TextChapterLayout` 的书级文字嵌入分支**完全不解析单图 JSON**：单图 FULL/对齐/宽度都不
-     * 覆盖书级设置，占位字也固定是 `袮`（`"style":"TEXT"` 的 `꧁` 不生效）。
+     * 文字嵌入保持书级几何（FULL/对齐/宽度不覆盖），但按参考项目保留单图动作。
      */
     @Test
     fun bookLevelTextModeShortCircuitsPerImageOverrides() = runBlocking {
@@ -156,8 +188,7 @@ class ReaderImageOptionsTest {
             .items.single() as ReaderMeasuredInlineItem.Image
         assertEquals(14f, image.widthPx, 0f)
         assertEquals(7f, image.heightPx, 0f)
-        // 旧分支连 click 也没解析：书级文字嵌入下段评气泡不可点。
-        assertNull(image.action)
+        assertEquals("run()", image.action)
     }
 
     /**

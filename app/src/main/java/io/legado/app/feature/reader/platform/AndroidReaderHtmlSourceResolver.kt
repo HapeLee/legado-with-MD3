@@ -30,6 +30,7 @@ import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderHtmlImageSpanExtent
 import io.legado.app.feature.reader.core.source.ReaderHtmlSemanticTextResolver
 import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
+import org.jsoup.Jsoup
 
 object AndroidReaderHtmlSemanticTextResolver : ReaderHtmlSemanticTextResolver {
     override fun resolve(html: String): String = parseReaderHtml(html).toString()
@@ -44,18 +45,27 @@ class AndroidReaderHtmlSourceResolver(
         chapterPosition: Int,
     ): List<ReaderHtmlParagraph> {
         val spanned = parseReaderHtml(html)
-        return splitParagraphs(spanned, chapterPosition)
+        // 不重写 HTML，以免改变正文空白和字符偏移。按出现顺序配对，重复 src 也有独立动作。
+        val imageActions = if (html.contains("data-legado-", ignoreCase = true)) {
+            Jsoup.parseBodyFragment(html).select("img").map { image ->
+                image.attr("data-legado-pclick").takeIf(String::isNotBlank)
+                    ?: image.attr("data-legado-click").takeIf(String::isNotBlank)
+            }
+        } else emptyList()
+        return splitParagraphs(spanned, chapterPosition, imageActions)
     }
 
     private fun splitParagraphs(
         text: Spanned,
         chapterPosition: Int,
+        imageActions: List<String?>,
     ): List<ReaderHtmlParagraph> {
         val paragraphs = mutableListOf<ReaderHtmlParagraph>()
         var paragraph = mutableListOf<ReaderChapterInlineSource>()
         var paragraphStart = 0
         var index = 0
         var position = chapterPosition
+        var imageIndex = 0
         fun finishParagraph(end: Int, preserveEmpty: Boolean = false) {
             val probeEnd = (end + 1).coerceAtMost(text.length).coerceAtLeast(paragraphStart)
             val margins = text.getSpans(paragraphStart, probeEnd, LeadingMarginSpan::class.java)
@@ -111,11 +121,13 @@ class AndroidReaderHtmlSourceResolver(
             }
             val image = text.getSpans(index, index + 1, ImageSpan::class.java).firstOrNull()
             if (image != null) {
+                val action = imageActions.getOrNull(imageIndex++)
                 image.source?.let {
                     paragraph += ReaderChapterInlineSource.Image(
                         source = it,
                         chapterPosition = position,
                         htmlSpanExtent = image.htmlSpanExtent(),
+                        action = action,
                     )
                 }
                 index++
