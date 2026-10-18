@@ -112,7 +112,9 @@ object CastSpeechOverlay {
             val delta = part.start - item.segment.chapterPosition
             val spoken = part.text
             val regexVoice = part.voiceId?.let { id ->
-                voices[id] ?: narrator.also {
+                // 规则指定的音色没了：只有多角色朗读开着才退回旁白，
+                // 关着的时候连旁白都不该顶上来，这段就该按引擎默认读
+                voices[id] ?: narrator.takeIf { multiRole }.also {
                     AppLog.put("正则角色「${part.label}」的音色 $id 不在启用的音色表里，这段按原声读")
                 }
             }

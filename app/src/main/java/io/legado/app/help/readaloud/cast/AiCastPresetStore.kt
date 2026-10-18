@@ -1,11 +1,16 @@
 package io.legado.app.help.readaloud.cast
 
 import android.content.Context
+import androidx.room.withTransaction
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.BookCastMemory
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonArray
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 import splitties.init.appCtx
 
@@ -40,6 +45,8 @@ data class AiCastPresetUi(
  * 架构护栏：DAO 访问只出现在本 Store，UI/VM 一律经此读写。
  */
 object AiCastPresetStore {
+
+    internal val memoryMutex = Mutex()
 
     private const val PREFS = "ai_cast"
     /** 播种标记带版本号：内置预设的默认文本升级时按版本号补写一次（见 [ensureSeeded]）。 */
@@ -385,19 +392,57 @@ object AiCastPresetStore {
      * [reconcilePools] = 把池栏按配音行的当前值重刷：AI 每章重写时它给的池只是猜测，
      * 不刷就会长期与配音/详情不一致。用户在记忆编辑器里自己改的那一次要传 false ——
      * 那一次是他把权威值写进来的来源，刷了就把他刚改的抹掉了。
+     * [fromAi] = 模型回写。只登记实际由 AI 新增/更新的字段；回显用户文字不转移所有权。
+     * 旧的整段记忆不能证明字段来源，缺少新版凭据时保守保留已有资料。
      */
-    suspend fun setMemory(bookUrl: String, text: String, reconcilePools: Boolean = true) {
+    suspend fun setMemory(
+        bookUrl: String,
+        text: String,
+        reconcilePools: Boolean = true,
+        fromAi: Boolean = false,
+    ) = memoryMutex.withLock {
         val trimmed = text.trim().take(4000)
         val memory = if (reconcilePools) {
             CastMemoryMirror.reconcilePoolsWithCast(bookUrl, trimmed)
         } else {
             trimmed
         }
-        appDb.bookCastMemoryDao.upsert(
-            BookCastMemory(bookUrl = bookUrl, memory = memory),
+        val ledger = identityOwnership(bookUrl)
+        val nextLedger = appDb.withTransaction {
+            appDb.bookCastMemoryDao.upsert(
+                BookCastMemory(bookUrl = bookUrl, memory = memory),
+            )
+            CastMemoryMirror.applyMemoryToProfiles(bookUrl, memory, ledger, fromAi)
+        }
+        saveIdentityOwnership(bookUrl, nextLedger)
+    }
+
+    /** 与记忆写入共用 [memoryMutex]；按稳定档案 id 记来源，改名不会丢掉用户编辑记录。 */
+    internal fun identityOwnership(bookUrl: String): Map<String, CastMemoryMirror.IdentityOwnership> =
+        GSON.fromJsonArray<CastMemoryMirror.IdentityOwnership>(prefs().getString(ledgerKey(bookUrl), null))
+            .getOrNull().orEmpty().associateBy { it.profileId }
+
+    internal fun saveIdentityOwnership(bookUrl: String, ledger: Map<String, CastMemoryMirror.IdentityOwnership>) {
+        prefs().edit().putString(ledgerKey(bookUrl), GSON.toJson(ledger.values.toList())).apply()
+    }
+
+    internal fun markProfileEdited(bookUrl: String, profileId: String, identityEdited: Boolean) {
+        val ledger = identityOwnership(bookUrl).toMutableMap()
+        val previous = ledger[profileId] ?: CastMemoryMirror.IdentityOwnership(profileId)
+        ledger[profileId] = previous.copy(
+            aliases = if (identityEdited) emptyList() else previous.aliases,
+            summary = if (identityEdited) "" else previous.summary,
+            userEdited = true,
         )
-        // 记忆里归并好的别名、关系与池要落到官方人物档案，否则人物页看到的还是改动前的那份
-        CastMemoryMirror.applyMemoryToProfiles(bookUrl, memory)
+        saveIdentityOwnership(bookUrl, ledger)
+    }
+
+    /** AI 回显已有档案不代表档案由 AI 创建；只有创建入口才能授予自动清理资格。 */
+    internal suspend fun recordAiCreatedProfile(bookUrl: String, profileId: String) = memoryMutex.withLock {
+        val ledger = identityOwnership(bookUrl).toMutableMap()
+        val previous = ledger[profileId] ?: CastMemoryMirror.IdentityOwnership(profileId)
+        ledger[profileId] = previous.copy(aiCreated = true)
+        saveIdentityOwnership(bookUrl, ledger)
     }
 
     private fun ensureSeeded() {
@@ -556,6 +601,9 @@ object AiCastPresetStore {
     }
 
     private fun runKey(bookUrl: String, field: String) = "castRun_$field|$bookUrl"
+
+    /** v2 只存实际 AI 所有的字段；不能沿用整段 AI 回复构成的旧凭据。 */
+    private fun ledgerKey(bookUrl: String) = "aiIdentityOwnershipV2|$bookUrl"
 
     private fun prefs(): android.content.SharedPreferences =
         appCtx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

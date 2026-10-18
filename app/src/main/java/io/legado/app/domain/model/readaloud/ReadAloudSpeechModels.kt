@@ -139,6 +139,12 @@ data class SpeechSegmentDraft(
     val source: SpeechResolutionSource = SpeechResolutionSource.Rule,
 )
 
+/** 配置解析出的声线；不从正文正则覆盖后的片段反推旁白配置。 */
+data class SpeechVoiceSelection(
+    val voice: ReadAloudVoice? = null,
+    val fallbackVoices: List<ReadAloudVoice> = emptyList(),
+)
+
 data class SpeechPlanItem(
     val segment: ChapterSpeechSegment,
     val voice: ReadAloudVoice?,

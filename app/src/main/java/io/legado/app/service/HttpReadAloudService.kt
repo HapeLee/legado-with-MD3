@@ -937,7 +937,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             paragraphs = readAloudChapter.canonicalSpeechParagraphs(splitByPage, splitPolicy),
             splitPolicy = splitPolicy,
         )
-        val queue = runCatching { ReadAloudPlaybackQueue.from(plan).withChapterTitle(displayTitle) }
+        val queue = runCatching { buildPlaybackQueue(book.bookUrl, plan).withChapterTitle(displayTitle) }
             .getOrDefault(ReadAloudPlaybackQueue.Empty)
         val contentList = if (!queue.isEmpty) {
             queue.cues.map { it.text }

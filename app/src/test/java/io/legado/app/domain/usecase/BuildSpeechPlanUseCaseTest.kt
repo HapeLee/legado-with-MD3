@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BuildSpeechPlanUseCaseTest {
@@ -159,6 +160,103 @@ class BuildSpeechPlanUseCaseTest {
         assertEquals(characterVoice, plan.voice)
     }
 
+
+    /**
+     * 「多角色朗读」关掉就是彻底不接管音色：旁白绑定属于配音那一层，
+     * 这时也必须回到朗读设置里选的引擎默认发音人（voice 为空 = 交给 SpeechVoiceRouter 的默认路由）。
+     */
+    @Test
+    fun `multi-speaker off leaves every segment to the engine default`() = runBlocking {
+        val narratorVoice = voice("narrator")
+        val characterVoice = voice("character")
+        val gateway = FakeVoiceGateway(
+            voices = listOf(narratorVoice, characterVoice),
+            bindings = listOf(
+                binding(BookVoiceBinding.SUBJECT_NARRATOR, BookVoiceBinding.SUBJECT_NARRATOR, narratorVoice.id),
+                binding(BookVoiceBinding.SUBJECT_CHARACTER, "character-1", characterVoice.id),
+            ),
+        )
+
+        val plan = BuildSpeechPlanUseCase(gateway)(
+            bookUrl = "book",
+            segments = listOf(
+                segment(SpeechRoleType.Narrator, null),
+                segment(SpeechRoleType.Character, "character-1"),
+            ),
+            useMultiSpeaker = false,
+        )
+
+        assertEquals(listOf(null, null), plan.map { it.voice })
+        assertTrue(plan.all { it.fallbackVoices.isEmpty() })
+    }
+
+    @Test
+    fun `multi-speaker off still ignores the narrator binding when an engine voice is given`() =
+        runBlocking {
+            val narratorVoice = voice("narrator")
+            val engineVoice = voice("engine-default")
+            val gateway = FakeVoiceGateway(
+                voices = listOf(narratorVoice, engineVoice),
+                bindings = listOf(
+                    binding(
+                        BookVoiceBinding.SUBJECT_NARRATOR,
+                        BookVoiceBinding.SUBJECT_NARRATOR,
+                        narratorVoice.id,
+                    ),
+                ),
+            )
+
+            val plan = BuildSpeechPlanUseCase(gateway)(
+                bookUrl = "book",
+                segments = listOf(segment(SpeechRoleType.Narrator, null)),
+                preferredDefaultVoiceId = engineVoice.id,
+                useMultiSpeaker = false,
+            ).single()
+
+            assertEquals(engineVoice, plan.voice)
+        }
+
+    @Test
+    fun `multi-speaker on still reads narration with the casting narrator voice`() = runBlocking {
+        val narratorVoice = voice("narrator")
+        val gateway = FakeVoiceGateway(
+            voices = listOf(narratorVoice),
+            bindings = listOf(
+                binding(
+                    BookVoiceBinding.SUBJECT_NARRATOR,
+                    BookVoiceBinding.SUBJECT_NARRATOR,
+                    narratorVoice.id,
+                ),
+            ),
+        )
+
+        val plan = BuildSpeechPlanUseCase(gateway)(
+            bookUrl = "book",
+            segments = listOf(segment(SpeechRoleType.Narrator, null)),
+        ).single()
+
+        assertEquals(narratorVoice, plan.voice)
+    }
+
+
+    @Test
+    fun `title narration resolves configured voices without any body narration`() = runBlocking {
+        val narrator = voice("narrator")
+        val engine = voice("engine")
+        val gateway = FakeVoiceGateway(
+            listOf(narrator, engine),
+            listOf(binding(BookVoiceBinding.SUBJECT_NARRATOR, BookVoiceBinding.SUBJECT_NARRATOR, narrator.id)),
+        )
+        val useCase = BuildSpeechPlanUseCase(gateway)
+
+        val enabled = useCase.narrationVoice("book", engine.id, useMultiSpeaker = true)
+        assertEquals(narrator, enabled.voice)
+        assertEquals(listOf(engine), enabled.fallbackVoices)
+        val disabled = useCase.narrationVoice("book", engine.id, useMultiSpeaker = false)
+        assertEquals(engine, disabled.voice)
+        assertTrue(disabled.fallbackVoices.isEmpty())
+        assertEquals(null, useCase.narrationVoice("book", useMultiSpeaker = false).voice)
+    }
 
     private fun voice(id: String) = ReadAloudVoice(
         id = id,

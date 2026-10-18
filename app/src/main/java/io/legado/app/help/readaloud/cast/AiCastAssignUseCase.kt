@@ -114,6 +114,14 @@ class AiCastAssignUseCase(
         }
         // 整趟跑完：没有要续的章了，但失败清单要留着让重试按钮读
         persistRunState(book.bookUrl, plan, AiCastPresetStore.NO_RESUME_CHAPTER, failed)
+        if (assignedChapters > 0) {
+            // 人物列表跟着这一趟的最终记忆对一次账（口径见 CastMemoryMirror.pruneStaleProfiles）
+            withContext(Dispatchers.IO) {
+                CastMemoryMirror.pruneStaleProfiles(
+                    book.bookUrl, AiCastPresetStore.memory(book.bookUrl),
+                )
+            }
+        }
         return Result.success(assignedChapters)
     }
 
@@ -232,10 +240,13 @@ class AiCastAssignUseCase(
                     onStream = onStream,
                 ),
             ) ?: error("AI 的回复里读不出 JSON（被截断或换了格式）")
-            // 书级记忆滚动更新：AI 返回非空 memory 才覆盖（返回原样也安全）
-            parsed.memory.takeIf { !it.isNullOrBlank() }?.let {
-                AiCastPresetStore.setMemory(book.bookUrl, it)
-                bookMemory = it
+            // 书级记忆滚动更新：AI 返回非空 memory 才覆盖（返回原样也安全）。
+            // 一次性群杂（新生甲/工作人员们）在存之前去掉：它们每章换个编号，
+            // 留着会让这张表一直长，把有名有姓的角色挤出模型的输出预算。
+            val nextMemory = parsed.memory?.let(CastMemoryMirror::dropThrowawayExtras).orEmpty()
+            if (nextMemory.isNotBlank()) {
+                AiCastPresetStore.setMemory(book.bookUrl, nextMemory, fromAi = true)
+                bookMemory = nextMemory
             }
             val speakerOf = writeAssignments(
                 book.bookUrl, chapterIndex, window, parsed.assignments, pools, known,
@@ -384,8 +395,11 @@ class AiCastAssignUseCase(
             name = name,
             poolLabel = pool,
         )
-        appDb.castCharacterDao.insertIgnore(created)
+        val inserted = appDb.castCharacterDao.insertIgnore(created)
         CastProfileMirror.ensure(created)
+        if (inserted > 0 && profiles.none { it.name == name }) {
+            AiCastPresetStore.recordAiCreatedProfile(bookUrl, created.id)
+        }
         return created
     }
 
@@ -621,8 +635,11 @@ internal fun canonicalCastName(
     return (resolved ?: byName)?.name
 }
 
-/** 档案里记的别名（JSON 字符串数组）；读坏了当没有。 */
-private fun BookCharacterProfile.aliasNames(): List<String> =
+/**
+ * 档案里记的别名（JSON 字符串数组）；读坏了当没有。
+ * 称呼归并（[canonicalCastName]）与记忆并档（[CastMemoryMirror]）读同一份，别各自再解析一遍。
+ */
+internal fun BookCharacterProfile.aliasNames(): List<String> =
     GSON.fromJsonArray<String>(aliasesJson).getOrNull().orEmpty().map { it.trim() }
 
 /** 异常 → 给用户看的一句话原因（message 常为空，尤其是 IOException/超时之外的异常）。 */
