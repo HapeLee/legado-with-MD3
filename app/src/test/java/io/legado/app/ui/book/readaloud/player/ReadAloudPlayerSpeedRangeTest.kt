@@ -46,22 +46,25 @@ class ReadAloudPlayerSpeedRangeTest {
 
     @Test
     fun `format label shows one decimal place`() {
-        assertEquals("2.0", formatReadAloudSpeedLabel(20))
-        assertEquals("8.0", formatReadAloudSpeedLabel(80))
-        assertEquals("0.0", formatReadAloudSpeedLabel(0))
+        // 与 TTS 播放倍率 (speed + 5) / 10 一致，刻度 5 表示正常语速。
+        assertEquals("1.0", formatReadAloudSpeedLabel(5))
+        assertEquals("2.0", formatReadAloudSpeedLabel(15))
+        assertEquals("8.0", formatReadAloudSpeedLabel(75))
     }
 
     @Test
     fun `format label keeps fractional display`() {
-        assertEquals("0.5", formatReadAloudSpeedLabel(5))
-        assertEquals("1.5", formatReadAloudSpeedLabel(15))
-        assertEquals("0.7", formatReadAloudSpeedLabel(7))
+        assertEquals("0.5", formatReadAloudSpeedLabel(READ_ALOUD_SPEED_MIN))
+        assertEquals("1.5", formatReadAloudSpeedLabel(10))
+        assertEquals("2.5", formatReadAloudSpeedLabel(20))
+        assertEquals("1.2", formatReadAloudSpeedLabel(7))
+        assertEquals("8.5", formatReadAloudSpeedLabel(READ_ALOUD_SPEED_MAX))
     }
 
     @Test
     fun `player slider value beyond old 20 cap is now supported`() {
         // 回归：旧播放器上限 20，修复后 0..80 内任意值都应可用
         assertEquals(40, coerceReadAloudSpeed(40))
-        assertEquals("4.0", formatReadAloudSpeedLabel(40))
+        assertEquals("4.5", formatReadAloudSpeedLabel(40))
     }
 }
