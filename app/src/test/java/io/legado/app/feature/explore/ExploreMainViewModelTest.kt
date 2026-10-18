@@ -196,6 +196,8 @@ class ExploreMainViewModelTest {
         )
 
         override fun getExploreSources(query: String, selectedGroup: String) = sources
+        override suspend fun refreshSourceExploreKinds(sourceUrl: String) =
+            getSourceExploreKinds(sourceUrl)
         override suspend fun getSourceExploreKinds(sourceUrl: String): List<ExploreKind> {
             requests += sourceUrl
             // Simulate a rule engine operation which cannot stop immediately on cancellation.

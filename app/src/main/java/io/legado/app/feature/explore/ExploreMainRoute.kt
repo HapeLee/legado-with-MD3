@@ -305,6 +305,7 @@ fun ExploreMainRoute(
                 sourceUrl = state.selectedSourceUrl,
                 initialSelectedTitles = listOfNotNull(currentKind?.title),
                 onDismissRequest = { kindSheetVisible = false },
+                onKindsChanged = { viewModel.onIntent(ExploreMainIntent.RetryKinds) },
                 onSelected = { selected ->
                     val index = kinds.indexOfFirst { it.url == selected.firstOrNull()?.url }
                     if (index >= 0) scope.launch { pagerState.animateScrollToPage(index) }

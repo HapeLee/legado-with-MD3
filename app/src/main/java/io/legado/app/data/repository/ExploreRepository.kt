@@ -7,6 +7,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.gateway.ExploreBooksGateway
 import io.legado.app.help.source.SourceHelp
+import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.Dispatchers.IO
@@ -20,6 +21,7 @@ interface ExploreRepository {
     fun getExploreSources(query: String, selectedGroup: String): Flow<List<BookSourcePart>>
     suspend fun getBookSource(sourceUrl: String): BookSource?
     suspend fun getSourceExploreKinds(sourceUrl: String): List<ExploreKind>
+    suspend fun refreshSourceExploreKinds(sourceUrl: String): List<ExploreKind>
     suspend fun topSource(bookSource: BookSourcePart)
     suspend fun deleteSource(sourceUrl: String)
 }
@@ -95,6 +97,14 @@ class ExploreRepositoryImpl(
         val source = appDb.bookSourceDao.getBookSource(sourceUrl)
         return@withContext source?.exploreKinds() ?: emptyList()
     }
+
+    override suspend fun refreshSourceExploreKinds(sourceUrl: String): List<ExploreKind> =
+        withContext(IO) {
+            val source =
+                appDb.bookSourceDao.getBookSource(sourceUrl) ?: return@withContext emptyList()
+            source.clearExploreKindsCache()
+            source.exploreKinds()
+        }
 
     override suspend fun topSource(bookSource: BookSourcePart) {
         val minOrder = appDb.bookSourceDao.minOrder

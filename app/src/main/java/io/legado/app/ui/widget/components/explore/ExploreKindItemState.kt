@@ -8,12 +8,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.source.getExploreInfoMap
-import io.legado.app.utils.InfoMap
 import io.legado.app.ui.main.MainActivity
+import io.legado.app.utils.InfoMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
@@ -84,7 +85,8 @@ fun rememberExploreKindItemState(
     onRefreshKinds: () -> Unit
 ): ExploreKindItemState {
     val scope = rememberCoroutineScope()
+    val currentOnRefreshKinds by rememberUpdatedState(onRefreshKinds)
     return remember(kind, sourceUrl, useCase, activity) {
-        ExploreKindItemState(kind, sourceUrl, useCase, scope, activity, onRefreshKinds)
+        ExploreKindItemState(kind, sourceUrl, useCase, scope, activity) { currentOnRefreshKinds() }
     }
 }
