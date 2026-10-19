@@ -10,7 +10,6 @@ import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.AppPattern
 import io.legado.app.constant.IntentAction
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
@@ -20,6 +19,7 @@ import io.legado.app.domain.model.readaloud.SpeechVoiceRouter
 import io.legado.app.domain.model.readaloud.SystemTtsVoiceConfig
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.reader.core.cast.CastMarkers
+import io.legado.app.feature.reader.core.readaloud.isBlankReadAloudUnit
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.readaloud.effect.VoiceEffectAudio
@@ -251,7 +251,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 // 偏移用完才去掉标记：这一句要么干净正文，要么带着 <<角色（池）>> 交给认标签的引擎
                 val utteranceId = ttsUtteranceId(AppConst.APP_TAG, session, nowSpeak)
                 val spoken = speakable(storedTail, utteranceId, storedStart)
-                if (spoken.text.isEmpty() || spoken.text.matches(AppPattern.notReadAloudRegex)) {
+                if (spoken.text.isBlank()) {
                     AppLog.putDebug("TTS段落全标点跳过: nowSpeak=$nowSpeak")
                     pendingUtterances.remove(utteranceId)
                     ttsUtteranceListener.onDone(utteranceId)
@@ -305,7 +305,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                     }
                     val utteranceId = ttsUtteranceId(AppConst.APP_TAG, session, i)
                     val text = speakable(storedTail, utteranceId, storedStart).text
-                    if (text.isEmpty() || text.matches(AppPattern.notReadAloudRegex)) {
+                    if (text.isBlank()) {
                         pendingUtterances.remove(utteranceId)
                         continue
                     }
@@ -589,7 +589,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 val position = currentRangePosition(
                     utteranceStartReadAloudNumber, 0, utteranceStartPos
                 )
-                if (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex)) {
+                if (contentList[nowSpeak].isBlankReadAloudUnit()) {
                     nextParagraph(naturalCompletion = true)
                     // 游标已经挪到下一句了，再拿这一句算页码和进度就是把两句的位置混在一起
                     return@let
@@ -738,7 +738,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                     if (naturalCompletion) completeCurrentChapter() else nextChapter()
                     return false
                 }
-            } while (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex))
+            } while (contentList[nowSpeak].isBlankReadAloudUnit())
             // 页内切段不引入换行符，累加会漂移，用段落绝对位置重算
             readAloudNumber = paragraphChapterPositionAt(nowSpeak) ?: 0
             return true

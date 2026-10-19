@@ -10,7 +10,7 @@ import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.feature.reader.core.cast.CastMarkers
-import io.legado.app.feature.reader.core.readaloud.isUnspeakableReadAloudUnit
+import io.legado.app.feature.reader.core.readaloud.isBlankReadAloudUnit
 import io.legado.app.ui.config.readConfig.ReadConfig
 import org.koin.core.context.GlobalContext
 
@@ -235,20 +235,21 @@ object CastSpeechOverlay {
                 } else {
                     "；正则角色顶音色 $regexVoiced 段、吞字放音效 $regexMuted 段"
                 } +
-                    "；丢掉 $blankDropped 个不发声单元（空白/纯符号，无声占位）" +
+                    "；丢掉 $blankDropped 个不发声单元（整段只剩空白，无声占位）" +
                 "；$sample"
         )
         return kept
     }
 
     /**
-     * 丢掉「念不出东西」的朗读单元，返回（留下的单元，丢掉的个数）。
+     * 丢掉「一个字符都没有」的朗读单元，返回（留下的单元，丢掉的个数）。
      *
      * 这种单元送进引擎只会得到一段无声音频——`res/raw/silent_sound.mp3` 长 1224 毫秒
      * （17 帧），听感就是段与段之间、以及正则命中前凭空顿一下。正文里的空行、
      * 命中正好落在段首缩进之后，都会造出这种单元。
-     * 判据是 [isUnspeakableReadAloudUnit]（只挂着角色标记的段同样念不出东西），与朗读服务
-     * 跳过不发声段的口径同源：留在队列里会让「上一段/下一段」选中一个不会出声的单元。
+     * `——`、`……` 这类整段纯符号**不丢**：那是正文，原样交给引擎决定念法。
+     * 判据是 [isBlankReadAloudUnit]（只挂着角色标记的段同样没字符可念），与朗读单元集合同源；
+     * 留在队列里会让「上一段/下一段」选中一个不会出声的单元。
      * 单元身上挂的音效不丢：并给下一个单元（章末则并回最后一个）。
      */
     internal fun dropSilentUnits(
@@ -258,7 +259,7 @@ object CastSpeechOverlay {
         var blankSound = ""
         var dropped = 0
         items.forEach { item ->
-            if (item.segment.text.isUnspeakableReadAloudUnit()) {
+            if (item.segment.text.isBlankReadAloudUnit()) {
                 blankSound = RegexCastSplitter.mergeSound(blankSound, item.soundEffect)
                 dropped++
                 return@forEach
