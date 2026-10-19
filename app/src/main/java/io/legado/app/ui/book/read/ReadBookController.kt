@@ -49,10 +49,10 @@ import io.legado.app.feature.reader.core.transition.ReaderTurnDirection
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterLayoutIdentity
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginationResult
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginator
+import io.legado.app.feature.reader.legacy.LegacyReaderImageOptionsResolver
 import io.legado.app.feature.reader.legacy.LegacyReaderPageDecorationFactory
 import io.legado.app.feature.reader.legacy.LegacyReaderPaginationBatch
 import io.legado.app.feature.reader.legacy.LegacyReaderPaginationStyleFactory
-import io.legado.app.feature.reader.legacy.LegacyReaderImageOptionsResolver
 import io.legado.app.feature.reader.legacy.collectLegacyReaderPaginationBatch
 import io.legado.app.feature.reader.legacy.failureReasonFor
 import io.legado.app.feature.reader.legacy.paginateLegacyReaderChapterSafely
@@ -1140,6 +1140,18 @@ class ReadBookController(
 
     override fun readerChapterInputChanged() {
         ReaderPerfTrace.marker("input.changed")
+        // 全文搜索定位必须在章节输入发布的这一刻消费：openChapter 的 success 回调会清掉
+        // pendingSearchNavigation，而下面的页面测量是 80ms 合并的，等到那时再读就只剩 null，
+        // 表现为"跳到目标章首、不高亮搜索词"。
+        // 排版任务跑在 IO 上，而定位要碰页面窗口/选区流，所以切回主线程（Main.immediate 在
+        // 主线程调用时同步执行，行为与同章命中的 effect 分支一致）。
+        activity.lifecycleScope.launch {
+            pendingSearchNavigation?.let { navigation ->
+                ReadBook.readerChapterInputWindow.current
+                    ?.takeIf { it.chapter.index == navigation.result.chapterIndex }
+                    ?.let { resolveSearchNavigation(navigation, it) }
+            }
+        }
         // Current/previous/next chapter inputs are published independently during opening.
         // Coalesce that short burst so an arriving adjacent chapter does not repeatedly cancel
         // the expensive current-chapter measurement before its first page can be committed.
@@ -1147,11 +1159,6 @@ class ReadBookController(
         readerChapterInputPublishJob = activity.lifecycleScope.launch {
             delay(80)
             ReaderPerfTrace.marker("input.coalesced")
-            pendingSearchNavigation?.let { navigation ->
-                ReadBook.readerChapterInputWindow.current
-                    ?.takeIf { it.chapter.index == navigation.result.chapterIndex }
-                    ?.let { resolveSearchNavigation(navigation, it) }
-            }
             publishReaderPageWindow()
         }
     }
@@ -2493,14 +2500,22 @@ class ReadBookController(
                     publishReaderPageWindow()
                 } else {
                     // 定位只对本次跳章有效；openChapter 成功仍未消费时放弃，
-                    // 避免挂起导航在用户之后主动进入同一章时劫持阅读位置
+                    // 避免挂起导航在用户之后主动进入同一章时劫持阅读位置。
+                    // 与老 View 实现一致，章节就绪后在这里兜底定位一次：即便本次章节输入
+                    // 早于 pendingSearchNavigation 发布（readerChapterInputChanged 已经错过），
+                    // 也能落在搜索词上。
                     ReadBook.openChapter(
                         result.chapterIndex,
                         // Search offsets may include a title prefix. The body offset is resolved
                         // after the cached chapter input has been published.
                         0,
                     ) {
-                        pendingSearchNavigation = null
+                        pendingSearchNavigation?.let { navigation ->
+                            pendingSearchNavigation = null
+                            ReadBook.readerChapterInputWindow.current
+                                ?.takeIf { it.chapter.index == navigation.result.chapterIndex }
+                                ?.let { resolveSearchNavigation(navigation, it) }
+                        }
                     }
                 }
             }

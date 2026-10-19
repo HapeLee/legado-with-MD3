@@ -182,7 +182,9 @@ fun SearchContentScreen(
 
     val contentState = when {
         error != null -> SearchContentState.Error(error)
-        isSearching -> SearchContentState.Loading
+        // 仓库逐章 emit 增量结果：只有还没有任何结果时才让加载态占住列表区，
+        // 否则边搜边出的结果会被 Loading 一直挡住，直到整本扫完才显示。
+        isSearching && searchResults.isEmpty() -> SearchContentState.Loading
         searchQuery.isBlank() -> SearchContentState.History
         searchResults.isEmpty() -> SearchContentState.EmptyResult
         else -> null

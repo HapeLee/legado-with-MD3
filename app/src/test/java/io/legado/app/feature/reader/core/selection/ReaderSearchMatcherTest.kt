@@ -18,11 +18,29 @@ class ReaderSearchMatcherTest {
     )
 
     @Test
-    fun `直达下标命中时直接采用`() {
+    fun `按出现序号定位章节内第 N 条命中`() {
         val content = "海边有座灯塔，灯塔很亮。"
         assertEquals(
             ReaderSearchMatch(7, 2),
-            ReaderSearchMatcher.find(content, "灯塔", request(directIndex = 7, directLength = 2)),
+            ReaderSearchMatcher.find(
+                content,
+                "灯塔",
+                request(directIndex = 7, occurrence = 1, directLength = 2),
+            ),
+        )
+    }
+
+    @Test
+    fun `序号越界时退回文本已核对的直达下标`() {
+        // 章节在搜索后被改短（序号不够用），但该偏移处确实是关键词。
+        val content = "海边有座灯塔，灯塔很亮。"
+        assertEquals(
+            ReaderSearchMatch(7, 2),
+            ReaderSearchMatcher.find(
+                content,
+                "灯塔",
+                request(directIndex = 7, occurrence = 5, directLength = 2),
+            ),
         )
     }
 
@@ -36,11 +54,26 @@ class ReaderSearchMatcherTest {
     }
 
     @Test
-    fun `直达下标指向其他文字时回退扫描`() {
+    fun `直达下标指向其他文字时不影响按出现次数定位`() {
         val content = "海边有座灯塔，灯塔很亮。"
         assertEquals(
             ReaderSearchMatch(4, 2),
             ReaderSearchMatcher.find(content, "灯塔", request(directIndex = 0, directLength = 2)),
+        )
+    }
+
+    @Test
+    fun `位移后的直达下标落到另一个同词时按出现序号定位`() {
+        // 检索文档与渲染文档不同源（替换净化、图片占位）时偏移会整体位移，
+        // 位移后的下标可能正好压在另一个同词上；出现序号才是稳定锚点。
+        val content = "灯塔在前，灯塔在后。"
+        assertEquals(
+            ReaderSearchMatch(0, 2),
+            ReaderSearchMatcher.find(
+                content,
+                "灯塔",
+                request(directIndex = 5, occurrence = 0, directLength = 2),
+            ),
         )
     }
 
@@ -56,7 +89,7 @@ class ReaderSearchMatcherTest {
                 "灯塔",
                 request(
                     directIndex = 3,
-                    occurrence = 1,
+                    occurrence = 0,
                 ),
                 title = "标题",
             ),
@@ -64,7 +97,7 @@ class ReaderSearchMatcherTest {
     }
 
     @Test
-    fun `按出现次数回退时保留检索标题中的匹配`() {
+    fun `按出现次数定位时保留检索标题中的匹配`() {
         val content = "灯塔在前，灯塔在后。"
         assertEquals(
             ReaderSearchMatch(5, 2),
@@ -97,6 +130,22 @@ class ReaderSearchMatcherTest {
     }
 
     @Test
+    fun `大小写不同的同词不算命中`() {
+        // 检索层是大小写敏感的 indexOf，定位与回退都必须一致。
+        assertEquals(
+            ReaderSearchMatch(4, 3),
+            ReaderSearchMatcher.find("Foo foo", "foo", request(occurrence = 0, directLength = 3)),
+        )
+        assertNull(
+            ReaderSearchMatcher.find(
+                "Foo foo",
+                "foo",
+                request(directIndex = 0, occurrence = 5, directLength = 3),
+            )
+        )
+    }
+
+    @Test
     fun `正则回退返回实际匹配长度`() {
         assertEquals(
             ReaderSearchMatch(7, 4),
@@ -111,6 +160,15 @@ class ReaderSearchMatcherTest {
     @Test
     fun `非法正则不抛异常`() {
         assertNull(ReaderSearchMatcher.find("海边有座灯塔。", "[未闭合", request(isRegex = true)))
+    }
+
+    @Test
+    fun `零宽正则不会产生空选区`() {
+        assertNull(ReaderSearchMatcher.find("abc", "(?=b)", request(isRegex = true)))
+        assertEquals(
+            ReaderSearchMatch(0, 1),
+            ReaderSearchMatcher.find("abc", "a*", request(isRegex = true)),
+        )
     }
 
     @Test

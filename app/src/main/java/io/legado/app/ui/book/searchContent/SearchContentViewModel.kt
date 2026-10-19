@@ -101,6 +101,12 @@ class SearchContentViewModel(
     private var historyJob: Job? = null
     private var resultOpened = false
 
+    /**
+     * 每次发起/停止搜索自增。被取消的旧任务仍会执行 `onCompletion` / `catch`，
+     * 没有代次校验时它会把新搜索刚置上的 `isSearching` 又改回 false（进度条提前消失）。
+     */
+    private var searchGeneration = 0
+
     init {
         initBook()
         viewModelScope.launch {
@@ -152,7 +158,7 @@ class SearchContentViewModel(
             val state = _uiState.value
             val book = bookRepository.getBook(bookUrl)
             val cachedResults = searchContentRepository.getCache(
-                bookUrl,
+                book,
                 state.searchQuery,
                 state.replaceEnabled,
                 state.regexReplace,
@@ -192,6 +198,7 @@ class SearchContentViewModel(
         searchJob?.cancel()
         val state = _uiState.value
         if (state.searchQuery.isBlank()) {
+            searchGeneration += 1
             searchContentRepository.clearSession(bookUrl)
             SearchContentResult.clearResults(bookUrl)
             _uiState.update {
@@ -200,38 +207,63 @@ class SearchContentViewModel(
             return
         }
         searchContentRepository.beginSearch(
-            bookUrl,
+            state.book,
             state.searchQuery,
             state.replaceEnabled,
             state.regexReplace,
         )
+        val book = state.book
+        if (book == null) {
+            // 书还没就位：initBook 拿到书之后会重新发起，别留下结束不了的搜索态。
+            _uiState.update { it.copy(isSearching = false) }
+            return
+        }
+        val generation = ++searchGeneration
+        // 新查询/新参数下旧结果是过期数据：先清空，随后由仓库逐章 emit 的增量结果填回。
+        _uiState.update {
+            it.copy(isSearching = true, searchResults = persistentListOf(), error = null)
+        }
         searchJob = viewModelScope.launch {
-            state.book?.let { book ->
-                if (recordHistory) {
-                    searchContentRepository.saveHistory(book, state.searchQuery)
+            if (recordHistory) {
+                searchContentRepository.saveHistory(book, state.searchQuery)
+            }
+            searchContentRepository.search(
+                book,
+                state.searchQuery,
+                state.replaceEnabled,
+                state.regexReplace,
+            )
+                .onStart {
+                    if (generation == searchGeneration) {
+                        _uiState.update { it.copy(isSearching = true, error = null) }
+                    }
                 }
-                searchContentRepository.search(
-                    book,
-                    state.searchQuery,
-                    state.replaceEnabled,
-                    state.regexReplace,
-                )
-                    .onStart { _uiState.update { it.copy(isSearching = true, error = null) } }
-                    .onCompletion { _uiState.update { it.copy(isSearching = false) } }
-                    .catch { error -> _uiState.update { it.copy(isSearching = false, error = error) } }
-                    .collect { results ->
+                .onCompletion {
+                    if (generation == searchGeneration) {
+                        _uiState.update { it.copy(isSearching = false) }
+                    }
+                }
+                .catch { error ->
+                    if (generation == searchGeneration) {
+                        _uiState.update { it.copy(isSearching = false, error = error) }
+                    }
+                }
+                .collect { results ->
+                    if (generation == searchGeneration) {
                         _uiState.update { it.copy(searchResults = results.toImmutableList()) }
                     }
-            }
+                }
         }
     }
 
     private fun stopSearch() {
+        searchGeneration += 1
         searchJob?.cancel()
         _uiState.update { it.copy(isSearching = false) }
     }
 
     private fun leaveSearch() {
+        searchGeneration += 1
         searchJob?.cancel()
         if (!resultOpened) SearchContentResult.clearResults(bookUrl)
         _uiState.update {

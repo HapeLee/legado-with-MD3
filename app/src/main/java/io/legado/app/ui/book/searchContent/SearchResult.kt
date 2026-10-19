@@ -1,13 +1,5 @@
 package io.legado.app.ui.book.searchContent
 
-import android.graphics.Typeface
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.SpannableStringBuilder
-import android.text.style.BackgroundColorSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.StyleSpan
-import android.text.style.UnderlineSpan
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -18,14 +10,12 @@ import androidx.compose.ui.text.withStyle
 
 data class SearchResult(
     val bookUrl: String = "",
-    val resultCount: Int = 0,
+    /** 本章内的第几条命中，阅读页定位用它做"出现序号"回退锚点。 */
     val resultCountWithinChapter: Int = 0,
     val resultText: String = "",
     val chapterTitle: String = "",
     val query: String = "",
-    val pageSize: Int = 0,
     val chapterIndex: Int = 0,
-    val pageIndex: Int = 0,
     val queryIndexInResult: Int = 0,
     val queryIndexInChapter: Int = 0,
     val matchLength: Int = query.length,
@@ -81,50 +71,22 @@ data class SearchResult(
         }
     }
 
-    fun getTitleSpannable(accentColor: Int, isEInkMode: Boolean): SpannableString =
-        SpannableString(chapterTitle).apply {
-            if (isEInkMode) {
-                setSpan(UnderlineSpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else {
-                setSpan(ForegroundColorSpan(accentColor), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-        }
+    private fun getHighlightRanges(): List<Pair<Int, Int>> = when {
+        isRegex -> listOf(queryIndexInResult to matchLength)
+            .filter { (start, length) -> start >= 0 && length > 0 }
 
-    fun getContentSpannable(
-        textColor: Int,
-        accentColor: Int,
-        backgroundColor: Int,
-        isEInkMode: Boolean,
-    ): SpannableStringBuilder = SpannableStringBuilder(resultText).apply {
-        if (!isEInkMode && isNotEmpty()) {
-            setSpan(ForegroundColorSpan(textColor), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-        getHighlightRanges().forEach { (start, matchLength) ->
-            val end = (start + matchLength).coerceAtMost(resultText.length)
-            if (start !in 0 until end) return@forEach
-            if (isEInkMode) {
-                setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else {
-                setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                setSpan(ForegroundColorSpan(accentColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                setSpan(BackgroundColorSpan(backgroundColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        // 检索本身用大小写敏感的 indexOf；高亮如果忽略大小写，会把不同大小写的同词
+        // 也标成命中，看起来像"搜到了没搜到的东西"。
+        query.isEmpty() || resultText.isEmpty() -> emptyList()
+
+        else -> buildList {
+            var searchStart = 0
+            while (searchStart <= resultText.length - query.length) {
+                val start = resultText.indexOf(query, searchStart)
+                if (start == -1) break
+                add(start to query.length)
+                searchStart = start + query.length
             }
         }
     }
-
-    private fun getHighlightRanges(): List<Pair<Int, Int>> = if (isRegex) {
-            listOf(queryIndexInResult to matchLength)
-        } else if (query.isNotBlank()) {
-            buildList {
-                var searchStart = 0
-                while (searchStart < resultText.length) {
-                    val start = resultText.indexOf(query, searchStart, ignoreCase = true)
-                    if (start == -1) break
-                    add(start to query.length)
-                    searchStart = start + query.length.coerceAtLeast(1)
-                }
-            }
-        } else {
-            emptyList()
-        }
 }
