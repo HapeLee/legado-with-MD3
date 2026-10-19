@@ -758,6 +758,9 @@ internal class ReaderPaginationSession(
                         clusters[candidate]
                     )
                 ) break
+                // 收窄行尾同样不能把词间空格推到行首：把空格留在上一行末尾，
+                // 与段内的主断行（[ChineseLineBreaker]）保持同一口径。
+                if (ChineseLineBreaker.isWordSpace(clusters[candidate])) break
                 until = candidate
             }
             starts += until

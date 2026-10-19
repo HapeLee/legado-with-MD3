@@ -38,7 +38,11 @@ class ChineseLineBreaker(
             var carriedClusters = 0
             var hungLine = false
             val currentWidthLimit = if (widths.isEmpty()) firstWidthLimit else widthLimit
-            if (lineWidth > currentWidthLimit) {
+            // 行首不留词间空格：本行已经放下内容时，溢出到这里的空格留在本行行尾（尾随空格
+            // 不可见），由紧随其后的词首字符触发正常的整词回退断行。若在这里直接断行，
+            // 空格会被整块携带到下一行，英文正文每次断在词间都会在行首多出一个空格。
+            val keepSpaceAtLineEnd = isWordSpace(cluster) && index > clusterStarts.last()
+            if (lineWidth > currentWidthLimit && !keepSpaceAtLineEnd) {
                 val lineStart = clusterStarts.last()
                 fun carryFrom(candidate: Int) {
                     val start = safeBreakStart(candidate, lineStart)
@@ -207,6 +211,10 @@ class ChineseLineBreaker(
          */
         internal fun isForbiddenBreak(previous: String, next: String): Boolean =
             (next in closing && previous != next) || previous in opening
+
+        /** 词间空格（含不换行空格、全角空格等）：断行时只能留在行尾，不能出现在行首。 */
+        internal fun isWordSpace(cluster: String): Boolean =
+            cluster.isNotEmpty() && cluster.all { it.isWhitespace() || Character.isSpaceChar(it) }
 
         private val closing = setOf(
             "！", "，", "。", "、", "；", "：", "？", "”", "’", "）", "］", "｝", "》",

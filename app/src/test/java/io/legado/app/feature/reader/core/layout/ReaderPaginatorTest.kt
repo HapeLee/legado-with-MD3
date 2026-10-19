@@ -97,6 +97,36 @@ class ReaderPaginatorTest {
         assertTrue(lines.flatten().all { it.bounds.right <= 40f })
     }
 
+    /**
+     * 英文按词换行时行首不能出现空格：宽度恰好落在词间空格上时，空格必须留在上一行
+     * 行尾，下一行仍从词首开始（否则每换行一次，第一个词前就多出一个空格）。
+     */
+    @Test fun englishWordWrapNeverStartsWithAWordSpace() {
+        val text = "It is a truth universally acknowledged, that a single man in possession"
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(ReaderMeasuredBlock.InlineParagraph(
+                items = text.mapIndexed { index, char ->
+                    ReaderMeasuredInlineItem.Text(char.toString(), 10f, style, index)
+                },
+                indentCharacters = 0,
+                alignment = ReaderTextAlignment.START,
+                lineHeightPx = 20f,
+                baselineOffsetPx = 15f,
+                baseTextSizePx = 10f,
+            )),
+            config.copy(viewportWidthPx = 200, viewportHeightPx = 400, paddingBottomPx = 0f),
+        ).single()
+        val lines = page.elements.filterIsInstance<ReaderElement.Text>()
+            .groupBy { it.bounds.top }
+            .toSortedMap()
+            .values
+            .map { row -> row.minBy { it.bounds.left } }
+
+        assertTrue(lines.size >= 4)
+        lines.forEach { line -> assertFalse("行首多出空格：${line.value}", line.value.isBlank()) }
+        assertEquals(text, page.text)
+    }
+
     @Test fun htmlQuoteContinuesAcrossVisualLinesWhileBulletOnlyMarksTheFirstLine() {
         val items = List(7) { index ->
             ReaderMeasuredInlineItem.Text("字", 10f, style, index)
