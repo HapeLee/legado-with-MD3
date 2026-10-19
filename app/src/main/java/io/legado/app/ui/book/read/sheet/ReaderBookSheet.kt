@@ -96,7 +96,6 @@ import io.legado.app.ui.widget.components.ChapterStatusIcons
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -961,55 +960,53 @@ private fun ReaderSheetChapterItem(
             .fillMaxWidth()
             .padding(start = (item.tocLevel.coerceIn(0, 6) * 10).dp),
     ) {
-        Row(
-            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (item.isVip && !item.isPay) {
-                        AppIcon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = stringResource(R.string.a11y_vip_locked),
-                            tint = LegadoTheme.colorScheme.error,
-                            modifier = Modifier
-                                .size(14.dp)
-                                .padding(end = 4.dp),
-                        )
-                    }
-                    AppText(
-                        text = item.title,
-                        style = LegadoTheme.typography.labelMediumEmphasized,
-                        color = contentColor,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+            // 尾部状态图标跟随标题行居中，而不是跟随「标题 + 附加信息」整列居中，
+            // 否则有 tag 时图标会落在两行之间，且没有 tag 时还会被标题行的底部留白顶偏。
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (item.isVip && !item.isPay) {
+                    AppIcon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = stringResource(R.string.a11y_vip_locked),
+                        tint = LegadoTheme.colorScheme.error,
+                        modifier = Modifier
+                            .size(14.dp)
+                            .padding(end = 4.dp),
                     )
                 }
-                if (!item.tag.isNullOrBlank()) {
-                    AppText(
-                        text = item.tag,
-                        style = LegadoTheme.typography.labelSmall,
-                        color = contentColor.copy(alpha = 0.72f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                AppText(
+                    text = item.title,
+                    modifier = Modifier.weight(1f),
+                    style = LegadoTheme.typography.labelMediumEmphasized,
+                    color = contentColor,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                ChapterStatusIcons(
+                    item = item,
+                    iconSize = 14.dp,
+                    spacing = 3.dp,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+                ReaderSheetChapterStatus(
+                    item = item,
+                    showWordCount = showWordCount,
+                    enabled = !selectionMode,
+                    onDownloadClick = onDownloadClick,
+                )
             }
-            ChapterStatusIcons(
-                item = item,
-                iconSize = 14.dp,
-                spacing = 3.dp,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-            ReaderSheetChapterStatus(
-                item = item,
-                showWordCount = showWordCount,
-                enabled = !selectionMode,
-                onDownloadClick = onDownloadClick,
-            )
+            if (!item.tag.isNullOrBlank()) {
+                AppText(
+                    text = item.tag,
+                    modifier = Modifier.padding(top = 2.dp),
+                    style = LegadoTheme.typography.labelSmall,
+                    color = contentColor.copy(alpha = 0.72f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -1054,18 +1051,46 @@ private fun ReaderSheetChapterStatus(
         item.downloadState == DownloadState.SUCCESS -> ReaderSheetStatusIcon(
             imageVector = Icons.Default.CheckCircle,
         )
-        item.downloadState == DownloadState.ERROR -> SmallPlainButton(
-            onClick = onDownloadClick,
+        item.downloadState == DownloadState.ERROR -> ReaderSheetStatusIconButton(
+            imageVector = Icons.Default.Refresh,
             enabled = enabled,
-            icon = Icons.Default.Refresh,
             contentDescription = stringResource(R.string.a11y_retry_chapter, item.title),
+            onClick = onDownloadClick,
         )
 
-        item.downloadState == DownloadState.NONE -> SmallPlainButton(
-            onClick = onDownloadClick,
+        item.downloadState == DownloadState.NONE -> ReaderSheetStatusIconButton(
+            imageVector = Icons.Outlined.DownloadForOffline,
             enabled = enabled,
-            icon = Icons.Outlined.DownloadForOffline,
             contentDescription = stringResource(R.string.download_chapter, item.title),
+            onClick = onDownloadClick,
+        )
+    }
+}
+
+/**
+ * 可点击的状态图标：与 [ReaderSheetStatusIcon] 占同一槽位（32dp 宽 × 16dp 高），
+ * 不再用 32dp 见方的按钮，避免下载/重试态把整行撑高、让上下留白看起来比别的大。
+ */
+@Composable
+private fun ReaderSheetStatusIconButton(
+    imageVector: ImageVector,
+    enabled: Boolean,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(width = 32.dp, height = 16.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        AppIcon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = LegadoTheme.colorScheme.onSurfaceVariant
+                .copy(alpha = if (enabled) 1f else 0.38f),
+            modifier = Modifier.size(16.dp),
         )
     }
 }
