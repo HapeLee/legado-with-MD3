@@ -411,6 +411,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         pageChanged = false
         exoPlayer.stop()
         resetPitchSchedule()
+        paragraphIntervalJob?.cancel()
         paragraphResumeJob?.cancel()
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
@@ -457,7 +458,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         paragraphResumeJob = execute(executeContext = IO) {
             if (!stream && !awaitSpeakFile(synthesis.fileName)) {
                 // 合成任务已经不在这句话上了（本章循环跑完或出错）：退回完整重播，不能让朗读停死
-                launch(Main) { if (index == nowSpeak) play() }
+                launch(Main) { if (index == nowSpeak && !pause) play() }
                 return@execute
             }
             launch(Main) {
@@ -1834,6 +1835,8 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun pauseReadAloud(abandonFocus: Boolean) {
         super.pauseReadAloud(abandonFocus)
+        paragraphIntervalJob?.cancel()
+        paragraphResumeJob?.cancel()
         kotlin.runCatching {
             playIndexJob?.cancel()
             exoPlayer.pause()
@@ -1845,6 +1848,10 @@ class HttpReadAloudService : BaseReadAloudService(),
         kotlin.runCatching {
             if (pageChanged) {
                 play()
+            } else if (exoPlayer.mediaItemCount == 0) {
+                // 段间停顿或等文件时暂停过：没有媒体可供 ExoPlayer.play() 恢复。
+                // 重新接续当前格，保留仍在进行的本章合成。
+                playNextParagraph()
             } else {
                 exoPlayer.play()
                 upPlayPos()
