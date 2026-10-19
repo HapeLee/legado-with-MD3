@@ -192,4 +192,21 @@ class ChineseLineBreakerTest {
         assertArrayEquals(intArrayOf(0, 2, 10, 11), result.lineStarts)
         assertArrayEquals(floatArrayOf(20f, 80f, 10f), result.lineWidthsPx, 0f)
     }
+
+    /**
+     * 一整串连续收尾标点（`Yes！！！！！！！ ”`）比行尾剩余空间宽时，不许整块掉到下一行
+     * 留下空洞：标点与标点之间允许断开，本行填满。
+     * 单个收尾标点（`。”` 这类不同标点之间）归悬挂与回退分支管，这条只放开同一标点连打。
+     */
+    @Test
+    fun consecutiveClosingPunctuationSplitsToFillTheLine() {
+        val result = ChineseLineBreaker(
+            listOf("“", "￼", "Y", "e", "s", "！", "！", "！",
+                "！", "！", "！", "！", "”"),
+            listOf(10f, 40f, 6f, 6f, 6f, 10f, 10f, 10f, 10f, 10f, 10f, 10f, 10f),
+            0, 100, 10f, 0f,
+        )
+        assertArrayEquals(intArrayOf(0, 8, 13), result.lineClusterStarts)
+        assertArrayEquals(floatArrayOf(98f, 50f), result.lineWidthsPx, 0f)
+    }
 }

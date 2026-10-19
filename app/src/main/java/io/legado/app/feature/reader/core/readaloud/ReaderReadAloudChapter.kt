@@ -1,6 +1,5 @@
 package io.legado.app.feature.reader.core.readaloud
 
-import io.legado.app.constant.AppPattern
 import io.legado.app.domain.model.readaloud.CanonicalSpeechParagraph
 import io.legado.app.domain.model.readaloud.ContentSplitPolicies
 import io.legado.app.domain.model.readaloud.ContentSplitPolicy
@@ -51,22 +50,23 @@ data class ReaderReadAloudChapter(
     }
 
     /**
-     * 朗读单元的**可读**视图：空白与纯符号段念不出东西，不进朗读单元集合。
+     * 朗读单元的**可读**视图：一个字符都没有的段（空行、只剩角色标记的段）不进朗读单元集合。
      *
      * 把它们留在集合里，游标会落在不会出声的段上：高亮停在那儿不动，而引擎入队时又跳过它，
-     * 回调下标与游标整条错开（见 [isUnspeakableReadAloudUnit]）。
-     * 整章都没有可发声单元（纯符号页、图片页）时退回原始列表：由「读完本章」那一套收尾，
+     * 回调下标与游标整条错开（见 [isBlankReadAloudUnit]）。
+     * 整章都没有可念单元（空页、图片页）时退回原始列表：由「读完本章」那一套收尾，
      * 而不是卡在定位不到段落上。
+     * `——`、`……` 这类整段纯符号是可念单元，照常进集合、原样交给引擎。
      */
     fun readAloudParagraphs(
         splitByPage: Boolean,
         policy: ContentSplitPolicy? = null,
     ): List<ReaderReadAloudParagraph> {
         val source = paragraphs(splitByPage, policy)
-        return source.filterNot { it.text.isUnspeakableReadAloudUnit() }.ifEmpty { source }
+        return source.filterNot { it.text.isBlankReadAloudUnit() }.ifEmpty { source }
     }
 
-    /** 定位朗读游标：落在不发声段上时交给它后面的第一个可发声单元。 */
+    /** 定位朗读游标：落在不发声段（一个字符都没有）上时交给它后面的第一个可念单元。 */
     fun paragraphIndexAtOrAfter(
         position: Int,
         splitByPage: Boolean,
@@ -172,11 +172,19 @@ private fun ReadAloudSplitUnit.toParagraph(isParagraphEnd: Boolean): ReaderReadA
 private fun String.sanitizeForSpeech(): String = replace(Regex("[袮祢꧁\uFFFC]"), " ")
 
 /**
- * 朗读单元是否**念不出东西**：去掉角色标记后只剩空白/控制/分隔/标点/符号。
+ * 朗读单元是否**一个字符都没有**：去掉角色标记后只剩空白、控制符或分隔符。
  *
- * 判据与朗读服务的跳过口径同源（[AppPattern.notReadAloudRegex]），服务侧送进引擎前还会
- * 去掉不可念的标记与字符，所以这里判为不发声的段在那边必然也发不出声。章内常见的 `——`、
- * `……` 分隔行与空行都落在这条判据里；「①②③」这类序号字符不属于标点/符号类，照旧朗读。
+ * 只有这种单元会被剔出朗读集合。`——`、`……` 这类整段纯符号**不在剔除之列**：
+ * 它们是正文的一部分，原样交给引擎，念成停顿还是念成声音由引擎决定。
+ * 跨文件依赖：服务侧送引擎前用 [readAloudSpeechText] 判空（见 `HttpReadAloudService.cueSynthesisFor`），
+ * 两处必须同一个判据，否则「朗读单元留着、引擎却不发声」会把游标与回调错开。
  */
-fun String.isUnspeakableReadAloudUnit(): Boolean =
-    CastMarkers.strip(this).matches(AppPattern.notReadAloudRegex)
+fun String.isBlankReadAloudUnit(): Boolean = CastMarkers.strip(this).isBlank()
+
+/**
+ * 送进引擎的文本：整段一个字符都没有时送空（由调用方换成无声占位），其余原样送。
+ *
+ * 跨文件依赖：调用方是 `HttpReadAloudService`（合成与流式两条循环、预合成）与 `TTSReadAloudService`；
+ * 判空口径与本文件的 [isBlankReadAloudUnit] 同源，也就是与朗读单元集合的剔除口径同源。
+ */
+fun String.readAloudSpeechText(): String = if (isBlankReadAloudUnit()) "" else this

@@ -34,7 +34,6 @@ import com.script.ScriptException
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.AppPattern
 import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.data.appDb
@@ -60,6 +59,7 @@ import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
+import io.legado.app.feature.reader.core.readaloud.readAloudSpeechText
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.book.BookHelp
@@ -361,6 +361,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private var preDownloadJob: Job? = null
     private var playIndexJob: Job? = null
     private var paragraphIntervalJob: Coroutine<*>? = null
+    private var paragraphResumeJob: Coroutine<*>? = null
     private var downloadErrorNo: Int = 0
     private var playErrorNo = 0
     private val downloadTaskActiveLock = Mutex()
@@ -410,13 +411,15 @@ class HttpReadAloudService : BaseReadAloudService(),
         pageChanged = false
         exoPlayer.stop()
         resetPitchSchedule()
+        paragraphIntervalJob?.cancel()
+        paragraphResumeJob?.cancel()
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
             AppLog.putDebug("朗读列表为空")
             preparePlayback()
         } else {
             super.play()
-            if (readAloudSettings.streamReadAloudAudio && !hasFileSynthesisCue()) {
+            if (useStreamPlayback()) {
                 downloadAndPlayAudiosStream()
             } else {
                 downloadAndPlayAudios()
@@ -424,11 +427,93 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
+    /**
+     * 直读（流式）还是文件合成由这一个判断决定；段落间隔续播 [playNextParagraph] 必须走同一支，
+     * 否则两条路算出的缓存文件名不是同一个。
+     */
+    private fun useStreamPlayback(): Boolean =
+        readAloudSettings.streamReadAloudAudio && !hasFileSynthesisCue()
+
+    /**
+     * 段落间隔到点后的续播：只把「现在该播的这一格」交给播放器，不重建本章的合成任务。
+     *
+     * 约束：不能改用 [play]。它会 cancel 本章的合成循环，而 [createSpeakFile] 每读一块就 ensureActive，
+     * 于是正在途的那一句连同服务端已回全的响应一起被丢掉，下一轮再向 TTS 请求同一句，
+     * 段间静音就成了「一次完整重合成的耗时」，与 [ReadAloudSettings.ttsParagraphInterval] 无关。
+     * 这一格的音频正由 [downloadAndPlayAudios] 那条还在跑的循环写进缓存，这里等它出现即可。
+     */
+    private fun playNextParagraph() {
+        pageChanged = false
+        resetPitchSchedule()
+        if (!requestFocus()) return
+        if (contentList.isEmpty()) return
+        super.play()
+        val httpTts = ReadAloud.httpTTS ?: return
+        val index = nowSpeak
+        val stream = useStreamPlayback()
+        paragraphResumeJob?.cancel()
+        // 在本线程（这里是主线程）算这一格的输入：contentList / nowSpeak / playbackQueue 都归主线程，
+        // 挪进 IO 协程里读就是跨线程读一份会变的列表。
+        val synthesis = cueSynthesisFor(index, httpTts, stream) ?: return
+        paragraphResumeJob = execute(executeContext = IO) {
+            if (!stream && !awaitSpeakFile(synthesis.fileName)) {
+                // 合成任务已经不在这句话上了（本章循环跑完或出错）：退回完整重播，不能让朗读停死
+                launch(Main) { if (index == nowSpeak && !pause) play() }
+                return@execute
+            }
+            launch(Main) {
+                if (index != nowSpeak || pause || exoPlayer.mediaItemCount != 0) return@launch
+                if (stream) {
+                    val factory = createDataSourceFactory(
+                        synthesis.httpTts, synthesis.speakText, synthesis.voice, synthesis.emotion
+                    )
+                    exoPlayer.setMediaSource(createMediaSource(factory, synthesis.fileName))
+                } else {
+                    exoPlayer.setMediaItem(
+                        MediaItem.fromUri(Uri.fromFile(speakFileForPlay(synthesis.fileName)))
+                    )
+                }
+                exoPlayer.prepare()
+            }
+        }
+    }
+
+    /**
+     * 等到这一格**有音频可播**。就绪只看正式名非空，不看 [hasSpeakFile]：引擎拒掉的那一格
+     * （纯符号段只回 `TTS Generation Failed`）合成不出人声，循环给它的只有 [createSilentSound]
+     * 那份占位，而 [hasSpeakFile] 有意不把占位算成命中（占位是失败留下的空壳，认了等于把真失败的
+     * 句子永久静音）。两边共用 hasSpeakFile 的话这一格永远不就绪，续播要白等满
+     * [SPEAK_FILE_WAIT_MILLIS] 才退回 [play]，那段时间播放停死、引擎侧一个请求也没有，
+     * 退回后整章重新请求一遍。
+     *
+     * 只看正式名非空不会认下半截文件：占位与真人声都由 [commitSpeakPart] 改名落成正式名，
+     * 写完之前挂的是 `.part` 那个名字。
+     */
+    private suspend fun awaitSpeakFile(fileName: String): Boolean {
+        var waitedMillis = 0L
+        while (speakFileForPlay(fileName).length() <= 0L) {
+            if (downloadTask?.isActive != true) break
+            if (waitedMillis >= SPEAK_FILE_WAIT_MILLIS) break
+            delay(SPEAK_FILE_POLL_MILLIS)
+            waitedMillis += SPEAK_FILE_POLL_MILLIS
+        }
+        return speakFileForPlay(fileName).length() > 0L
+    }
+
+    /**
+     * 段落之间的停顿还没走完。合成循环自己也会给「现在该播的这一格」上条目
+     * （见 [downloadAndPlayAudios] 的 ttsParagraphInterval 分支），停顿期间不能让那一条抢先起播，
+     * 否则间隔被吃掉；这一格的起播统一交给 [playNextParagraph]。
+     */
+    private val paragraphGapPending: Boolean
+        get() = paragraphIntervalJob?.isActive == true || paragraphResumeJob?.isActive == true
+
     override fun playStop() {
         downloadTask?.cancel()
         playIndexJob?.cancel()
         preDownloadJob?.cancel()
         paragraphIntervalJob?.cancel()
+        paragraphResumeJob?.cancel()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
         resetPitchSchedule()
@@ -616,7 +701,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         if (routedVoice.engineType != ReadAloudVoice.ENGINE_SYSTEM) {
             return synthesizeSingleCue(routedVoice, cue, content, chapterTitle, httpTts)
         }
-        val speakText = content.replace(AppPattern.notReadAloudRegex, "")
+        val speakText = content.readAloudSpeechText()
         if (speakText.isEmpty()) {
             createSilentSound(fileName)
             return true
@@ -739,27 +824,21 @@ class HttpReadAloudService : BaseReadAloudService(),
                 ensureActive()
                 val httpTts = ReadAloud.httpTTS ?: throw NoStackTraceException("tts is null")
 
-                contentList.forEachIndexed { index, content ->
+                contentList.forEachIndexed { index, _ ->
                     ensureActive()
                     if (index < nowSpeak) return@forEachIndexed
-                    var text = content
-                    if (paragraphStartPos > 0 && index == nowSpeak) {
-                        text = text.substring(paragraphStartPos)
-                    }
-                    // 偏移用完才去掉标记，合成与文件名都用这一份干净文本
-                    text = speechText(text)
-                    val routedVoice = voiceForCue(playbackQueue, index, httpTts)
-                    val cue = playbackQueue.cues.getOrNull(index)
-                    val cueEmotion = cue?.emotion.orEmpty()
+                    val synthesis = cueSynthesisFor(index, httpTts, stream = false)
+                        ?: return@forEachIndexed
+                    val routedVoice = synthesis.voice
+                    val cue = synthesis.cue
+                    val cueEmotion = synthesis.emotion
                     val characterPerformance = cue?.characterPerformance
                     val cueRoleType = cue?.roleType ?: SpeechRoleType.Unknown
-                    val sourceKey = sourceKeyForCue(routedVoice, cue, httpTts)
-                    val itemHttpTts = httpSourceForVoice(routedVoice, httpTts)
-                    val fileName =
-                        md5SpeakFileName(text, httpTts = itemHttpTts, sourceKey = sourceKey)
-                    val speakText = text.replace(AppPattern.notReadAloudRegex, "")
+                    val itemHttpTts = synthesis.httpTts
+                    val fileName = synthesis.fileName
+                    val speakText = synthesis.speakText
                     if (speakText.isEmpty()) {
-                        AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$text")
+                        AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：${synthesis.text}")
                         createSilentSound(fileName)
                     } else if (!hasSpeakFile(fileName)) {
                         withSpeakFileLock(fileName) {
@@ -847,7 +926,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
                     launch(Main) {
                         if (readAloudSettings.ttsParagraphInterval > 0) {
-                            if (index == nowSpeak && exoPlayer.mediaItemCount == 0) {
+                            if (index == nowSpeak && exoPlayer.mediaItemCount == 0 && !paragraphGapPending) {
                                 exoPlayer.setMediaItem(mediaItem)
                                 if (!pause) {
                                     exoPlayer.prepare()
@@ -1049,7 +1128,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     ): Boolean {
         val sourceKey = sourceKeyForCue(routedVoice, cue, httpTts)
         val fileName = md5SpeakFileName(content, chapterTitle, sourceKey = sourceKey)
-        val speakText = content.replace(AppPattern.notReadAloudRegex, "")
+        val speakText = content.readAloudSpeechText()
         if (speakText.isEmpty()) {
             createSilentSound(fileName)
             return true
@@ -1163,34 +1242,25 @@ class HttpReadAloudService : BaseReadAloudService(),
                     }
                 }
                 var preDownloadLaunched = false
-                contentList.forEachIndexed { index, content ->
+                contentList.forEachIndexed { index, _ ->
                     ensureActive()
                     if (index < nowSpeak) return@forEachIndexed
-                    var text = content
-                    if (paragraphStartPos > 0 && index == nowSpeak) {
-                        text = text.substring(paragraphStartPos)
-                    }
-                    text = speechText(text)
-                    val speakText = text.replace(AppPattern.notReadAloudRegex, "")
+                    val synthesis = cueSynthesisFor(index, httpTts, stream = true)
+                        ?: return@forEachIndexed
+                    val speakText = synthesis.speakText
                     if (speakText.isEmpty()) {
-                        AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$speakText")
+                        AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：${synthesis.text}")
                     }
-                    val itemVoice = httpVoiceForCue(index, httpTts)
-                    val itemHttpTts = httpSourceForVoice(itemVoice, httpTts)
-                    val itemEmotion = playbackQueue.cues.getOrNull(index)?.emotion.orEmpty()
-                    val fileName = md5SpeakFileName(
-                        text,
-                        httpTts = itemHttpTts,
-                        sourceKey = httpSourceKey(itemVoice, itemEmotion, httpTts),
+                    val fileName = synthesis.fileName
+                    val dataSourceFactory = createDataSourceFactory(
+                        synthesis.httpTts, speakText, synthesis.voice, synthesis.emotion
                     )
-                    val dataSourceFactory =
-                        createDataSourceFactory(itemHttpTts, speakText, itemVoice, itemEmotion)
                     val downloader = createDownloader(dataSourceFactory, fileName)
                     downloaderChannel.send(downloader)
                     val mediaSource = createMediaSource(dataSourceFactory, fileName)
                     launch(Main) {
                         if (readAloudSettings.ttsParagraphInterval > 0) {
-                            if (index == nowSpeak && exoPlayer.mediaItemCount == 0) {
+                            if (index == nowSpeak && exoPlayer.mediaItemCount == 0 && !paragraphGapPending) {
                                 exoPlayer.setMediaSource(mediaSource)
                                 if (!pause) {
                                     exoPlayer.prepare()
@@ -1296,7 +1366,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                             failedCount++
                         }
                     } else {
-                        val speakText = content.replace(AppPattern.notReadAloudRegex, "")
+                        val speakText = content.readAloudSpeechText()
                         val sourceKey = sourceKeyForCue(routedVoice, cue, httpTts)
                         val fileName = md5SpeakFileName(
                             content, prepared.chapterTitle, sourceKey = sourceKey,
@@ -1445,6 +1515,49 @@ class HttpReadAloudService : BaseReadAloudService(),
                 ReadAloudVoice.ENGINE_CLOUD,
             )
         }
+    }
+
+    /**
+     * 当前正在朗读的某一格里，送去合成的文本、用的引擎音色与缓存文件名。
+     *
+     * 同一份输入的三个消费者：[downloadAndPlayAudios]、[downloadAndPlayAudiosStream] 与 [playNextParagraph]
+     * 都从这里取同一份输入——缓存文件名必须与写进缓存时算出的完全一致，
+     * 否则段落间隔续播会认不出循环刚合成好的那一句，只能再向 TTS 请求一遍。
+     */
+    private class CueSynthesis(
+        val text: String,
+        val speakText: String,
+        val fileName: String,
+        val httpTts: HttpTTS,
+        val voice: ReadAloudVoice,
+        val emotion: String,
+        val cue: io.legado.app.domain.model.readaloud.ReadAloudPlaybackCue?,
+    )
+
+    private fun cueSynthesisFor(index: Int, default: HttpTTS, stream: Boolean): CueSynthesis? {
+        val content = contentList.getOrNull(index) ?: return null
+        var text = content
+        if (paragraphStartPos > 0 && index == nowSpeak) {
+            text = text.substring(paragraphStartPos)
+        }
+        // 偏移用完才去掉标记，合成与文件名都用这一份干净文本
+        text = speechText(text)
+        val cue = playbackQueue.cues.getOrNull(index)
+        val voice =
+            if (stream) httpVoiceForCue(index, default) else voiceForCue(playbackQueue, index, default)
+        val itemHttpTts = httpSourceForVoice(voice, default)
+        val emotion = cue?.emotion.orEmpty()
+        val sourceKey =
+            if (stream) httpSourceKey(voice, emotion, default) else sourceKeyForCue(voice, cue, default)
+        return CueSynthesis(
+            text = text,
+            speakText = text.readAloudSpeechText(),
+            fileName = md5SpeakFileName(text, httpTts = itemHttpTts, sourceKey = sourceKey),
+            httpTts = itemHttpTts,
+            voice = voice,
+            emotion = emotion,
+            cue = cue,
+        )
     }
 
     /**
@@ -1722,6 +1835,8 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun pauseReadAloud(abandonFocus: Boolean) {
         super.pauseReadAloud(abandonFocus)
+        paragraphIntervalJob?.cancel()
+        paragraphResumeJob?.cancel()
         kotlin.runCatching {
             playIndexJob?.cancel()
             exoPlayer.pause()
@@ -1733,6 +1848,10 @@ class HttpReadAloudService : BaseReadAloudService(),
         kotlin.runCatching {
             if (pageChanged) {
                 play()
+            } else if (exoPlayer.mediaItemCount == 0) {
+                // 段间停顿或等文件时暂停过：没有媒体可供 ExoPlayer.play() 恢复。
+                // 重新接续当前格，保留仍在进行的本章合成。
+                playNextParagraph()
             } else {
                 exoPlayer.play()
                 upPlayPos()
@@ -1815,15 +1934,13 @@ class HttpReadAloudService : BaseReadAloudService(),
                     if (!pause && !isLastParagraph) {
                         AppLog.putDebug("HttpTTS段落开始停顿: $interval 毫秒")
                         paragraphIntervalJob?.cancel()
-                        paragraphIntervalJob = execute {
+                        // 定时器直接挂在主线程：这一格只有 delay 一次，
+                        // 绕到别的线程再起播要多付一次线程派发，而那正是被算进「段落间隔」里的
+                        paragraphIntervalJob = execute(context = Main) {
                             delay(interval)
                             if (!pause) {
-                                launch(Main) {
-                                    if (!pause) {
-                                        play()
-                                        AppLog.putDebug("HttpTTS段落停顿结束，恢复播放")
-                                    }
-                                }
+                                playNextParagraph()
+                                AppLog.putDebug("HttpTTS段落停顿结束，恢复播放")
                             }
                         }
                     }
@@ -1944,3 +2061,12 @@ private const val PITCH_MESSAGE_TYPE = 0x4C470001
 
 /** 音效排期消息：由媒体时钟在单元里真正播到那个位置时投递。 */
 private const val SOUND_MESSAGE_TYPE = 0x4C470002
+
+/** 段落间隔续播时查一次缓存文件的间隔。 */
+private const val SPEAK_FILE_POLL_MILLIS = 20L
+
+/**
+ * 段落间隔续播最多等这一句合成完。超过它就是合成任务已经不在这一句上了，
+ * 回退到 [HttpReadAloudService.play] 完整重播，不能让朗读停死在这里。
+ */
+private const val SPEAK_FILE_WAIT_MILLIS = 60_000L
