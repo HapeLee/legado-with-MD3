@@ -13,6 +13,9 @@ sealed interface BookPageResult {
     data class ChapterSelected(val index: Int, val position: Int) : BookPageResult
     data object TocCancelled : BookPageResult
     data object InfoEdited : BookPageResult
+
+    @Stable
+    data class SourceEdited(val sourceUrl: String) : BookPageResult
     data object RulesClosed : BookPageResult
     data object BookDeleted : BookPageResult
 

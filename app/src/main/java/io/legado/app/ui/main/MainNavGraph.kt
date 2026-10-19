@@ -195,7 +195,7 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * WebView 类页面（内置浏览器、订阅阅读）只做位移转场。
+ * 订阅阅读页只做位移转场；内置浏览器使用宿主的通用 Nav3 转场。
  *
  * WebView 是 AndroidView interop view：所在子树一旦被加上 graphicsLayer（fade 的 alpha、
  * scaleOut 的缩放），Compose 会把网页一并画进离屏 RenderNode
@@ -410,9 +410,7 @@ fun MainActivity.mainEntryProvider(
             onSaveSuccess = { closeBookPage(backStack, route) },
         )
     }
-    entry<MainRouteWebView>(
-        metadata = webViewEntryMetadata(configuration.appShell.predictiveBackEnabled)
-    ) { route ->
+    entry<MainRouteWebView> { route ->
         val viewModel = koinViewModel<WebViewModel>(
             key = "WebView:${route.url}:${route.sourceOrigin}:${route.sourceVerificationEnable}",
         )
@@ -492,7 +490,11 @@ fun MainActivity.mainEntryProvider(
                         )
                     }
                     this@mainEntryProvider.finish()
-                } else onNavigateBack()
+                } else closeBookPage(
+                    backStack,
+                    route,
+                    savedSourceUrl?.let { BookPageResult.SourceEdited(it) },
+                )
             },
             onLogin = {
                 onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, it))
@@ -951,6 +953,9 @@ fun MainActivity.mainEntryProvider(
                         ReadBookIntent.TocRegexResult(result.rule)
                     )
 
+                    is BookPageResult.SourceEdited -> readBookViewModel.onIntent(
+                        ReadBookIntent.SourceEditResult(result.sourceUrl)
+                    )
                     BookPageResult.RulesClosed -> readBookViewModel.onIntent(ReadBookIntent.ReplaceRuleResult)
                     else -> Unit
                 }
@@ -1048,6 +1053,9 @@ fun MainActivity.mainEntryProvider(
                 },
                 onOpenTtsCache = {
                     onNavigateToRoute(MainRouteTtsCache)
+                },
+                onOpenSourceEdit = { sourceUrl ->
+                    onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
                 },
                 onNavigateBack = {
                     MainNavigator.navigateBack(

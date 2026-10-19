@@ -39,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -163,6 +162,7 @@ fun ReadBookRouteScreen(
     onOpenReadAloudSubPage: (ReadAloudSubPage) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
+    onOpenSourceEdit: (sourceUrl: String) -> Unit,
     onNavigateBack: () -> Boolean = { true },
 ) {
     // 归因定界：与末尾 compose.screen.end 成对。若首帧 `Compose:recompose` 里出现
@@ -257,13 +257,6 @@ fun ReadBookRouteScreen(
 
     // ── ActivityResult Launchers ──────────────────────────────────────
 
-    val sourceEditLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            viewModel.onIntent(ReadBookIntent.SourceEditResult)
-        }
-    }
     val fontFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -350,6 +343,7 @@ fun ReadBookRouteScreen(
     }
 
     val currentOpenBookInfo by rememberUpdatedState(onOpenBookInfo)
+    val currentOpenSourceEdit by rememberUpdatedState(onOpenSourceEdit)
 
     AutoSuggestDayNightObserver(
         viewModel = viewModel,
@@ -372,12 +366,7 @@ fun ReadBookRouteScreen(
                         when (effect) {
                             // Launcher-dependent effects — handled directly by route
                             is ReadBookEffect.OpenSourceEdit -> {
-                                sourceEditLauncher.launch(
-                                    MainActivity.createBookSourceEditIntent(
-                                        context,
-                                        effect.sourceUrl
-                                    )
-                                )
+                                currentOpenSourceEdit(effect.sourceUrl)
                             }
                             is ReadBookEffect.OpenChapterList -> {
                                 onOpenToc(effect.bookUrl, 0)
@@ -552,7 +541,6 @@ fun ReadBookRouteScreen(
 
     // ── View layer + Compose UI ───────────────────────────────────────
 
-    var showSelectMenuConfigSheet by rememberSaveable { mutableStateOf(false) }
     var featureOverlaysInitialized by remember { mutableStateOf(false) }
     val featureOverlayRequested = state.activeSheet != null ||
         state.activeDialog != null ||
@@ -873,9 +861,116 @@ fun ReadBookRouteScreen(
                         viewModel = viewModel,
                         state = state,
                         preferences = readPreferences,
+                        sheetsVisible = isTopRoute,
+                        additionalSheetContent = { sheet, visible, dismissSheet ->
+                            when (sheet) {
+                                is ReadBookSheet.BookNavigation -> {
+                                    ReaderBookSheetRoute(
+                                        show = visible,
+                                        bookUrl = state.book?.bookUrl.orEmpty(),
+                                        initialTab = sheet.initialTab,
+                                        onEditLocalTocRule = { regex ->
+                                            state.book?.bookUrl?.let {
+                                                onOpenTocRulePreview(
+                                                    it,
+                                                    regex
+                                                )
+                                            }
+                                        },
+                                        onDismissRequest = dismissSheet,
+                                        onChapterClick = { index, chapterPos ->
+                                            dismissSheet()
+                                            viewModel.onIntent(
+                                                ReadBookIntent.OpenChapterResult(
+                                                    index,
+                                                    chapterPos
+                                                )
+                                            )
+                                        },
+                                        onBookmarkNavigate = { bookmark ->
+                                            viewModel.onIntent(
+                                                ReadBookIntent.NavigateToBookmark(
+                                                    bookmark
+                                                )
+                                            )
+                                        },
+                                        onMarkingNavigate = { item ->
+                                            viewModel.onIntent(
+                                                ReadBookIntent.NavigateToMarking(
+                                                    marking = item.raw,
+                                                )
+                                            )
+                                        },
+                                        onMarkingEdit = { markingId ->
+                                            viewModel.onIntent(ReadBookIntent.EditMarking(markingId))
+                                        },
+                                        onOpenFullBookInfo = {
+                                            state.book?.let { book ->
+                                                dismissSheet()
+                                                onOpenBookInfo(book.name, book.author, book.bookUrl)
+                                            }
+                                        },
+                                        onOpenFullToc = { page ->
+                                            dismissSheet()
+                                            state.book?.bookUrl?.let { onOpenToc(it, page) }
+                                        },
+                                        bookSource = state.bookSource,
+                                        onOpenChapterUrl = { viewModel.onIntent(ReadBookIntent.OpenChapterUrl) },
+                                        onToggleReadUrlInBrowser = {
+                                            viewModel.onIntent(ReadBookIntent.ToggleReadUrlInBrowser)
+                                        },
+                                        sourceActions = ReaderBookSourceActions(
+                                            onLogin = { viewModel.onIntent(ReadBookIntent.ShowLogin) },
+                                            onPay = { viewModel.onIntent(ReadBookIntent.PayAction) },
+                                            onEdit = { viewModel.onIntent(ReadBookIntent.OpenSourceEdit) },
+                                            onDisable = { viewModel.onIntent(ReadBookIntent.DisableSource) },
+                                        ),
+                                    )
+                                }
+
+                                ReadBookSheet.TextSelectMenuConfig -> {
+                                    var configItems by remember {
+                                        mutableStateOf<List<ActionMenuItem>>(
+                                            emptyList()
+                                        )
+                                    }
+                                    LaunchedEffect(visible) {
+                                        if (visible) {
+                                            configItems = controller.getActionMenuItems()
+                                        } else {
+                                            configItems = emptyList()
+                                        }
+                                    }
+                                    TextSelectMenuConfigSheet(
+                                        show = visible,
+                                        items = configItems,
+                                        expandTextMenu = readPreferences.expandTextMenu,
+                                        showSelectMenuIcon = readPreferences.showSelectMenuIcon,
+                                        onExpandTextMenuChange = {
+                                            viewModel.onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.ExpandTextMenu(it)
+                                                )
+                                            )
+                                        },
+                                        onShowSelectMenuIconChange = {
+                                            viewModel.onIntent(
+                                                ReadBookIntent.UpdateConfig(
+                                                    ConfigUpdate.ShowSelectMenuIcon(it)
+                                                )
+                                            )
+                                            controller.refreshActionMenuItems()
+                                        },
+                                        onDismissRequest = dismissSheet,
+                                        onSaved = { items -> controller.saveMenuConfig(items) }
+                                    )
+                                }
+
+                                else -> Unit
+                            }
+                        },
                         onOpenTextSelectMenuConfig = {
-                            viewModel.onIntent(ReadBookIntent.DismissSheet)
-                            showSelectMenuConfigSheet = true
+                            viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextSelectMenuConfig))
                         },
                         onPickBookmarkBadgeImage = { bookmarkBadgeImagePicker.launch("image/*") },
                         onResetBookmarkBadge = {
@@ -884,57 +979,6 @@ fun ReadBookRouteScreen(
                     )
                 }
             }
-            val bookNavigationSheet = state.activeSheet as? ReadBookSheet.BookNavigation
-            ReaderPerfTrace.marker("compose.sheet.begin")
-            ReaderBookSheetRoute(
-                show = bookNavigationSheet != null,
-                bookUrl = state.book?.bookUrl.orEmpty(),
-                initialTab = bookNavigationSheet?.initialTab
-                    ?: io.legado.app.ui.book.read.sheet.ReaderBookSheetTab.Information,
-                onEditLocalTocRule = { regex ->
-                    state.book?.bookUrl?.let { onOpenTocRulePreview(it, regex) }
-                },
-                onDismissRequest = { viewModel.onIntent(ReadBookIntent.DismissSheet) },
-                onChapterClick = { index, chapterPos ->
-                    viewModel.onIntent(ReadBookIntent.DismissSheet)
-                    viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
-                },
-                onBookmarkNavigate = { bookmark ->
-                    viewModel.onIntent(ReadBookIntent.NavigateToBookmark(bookmark))
-                },
-                onMarkingNavigate = { item ->
-                    viewModel.onIntent(
-                        ReadBookIntent.NavigateToMarking(
-                            marking = item.raw,
-                        )
-                    )
-                },
-                onMarkingEdit = { markingId ->
-                    viewModel.onIntent(ReadBookIntent.EditMarking(markingId))
-                },
-                onOpenFullBookInfo = {
-                    state.book?.let { book ->
-                        viewModel.onIntent(ReadBookIntent.DismissSheet)
-                        onOpenBookInfo(book.name, book.author, book.bookUrl)
-                    }
-                },
-                onOpenFullToc = { page ->
-                    viewModel.onIntent(ReadBookIntent.DismissSheet)
-                    state.book?.bookUrl?.let { onOpenToc(it, page) }
-                },
-                bookSource = state.bookSource,
-                onOpenChapterUrl = { viewModel.onIntent(ReadBookIntent.OpenChapterUrl) },
-                onToggleReadUrlInBrowser = {
-                    viewModel.onIntent(ReadBookIntent.ToggleReadUrlInBrowser)
-                },
-                sourceActions = ReaderBookSourceActions(
-                    onLogin = { viewModel.onIntent(ReadBookIntent.ShowLogin) },
-                    onPay = { viewModel.onIntent(ReadBookIntent.PayAction) },
-                    onEdit = { viewModel.onIntent(ReadBookIntent.OpenSourceEdit) },
-                    onDisable = { viewModel.onIntent(ReadBookIntent.DisableSource) },
-                ),
-            )
-            ReaderPerfTrace.marker("compose.sheet.end")
             ReaderPerfTrace.marker("compose.selection.begin")
             ReaderTextSelectionOverlay(
                 controller = controller,
@@ -942,32 +986,11 @@ fun ReadBookRouteScreen(
                 expandTextMenu = readPreferences.expandTextMenu,
                 showSelectMenuIcon = readPreferences.showSelectMenuIcon,
                 lastMarkingStyle = readPreferences.lastMarkingStyle,
-                onOpenManage = { showSelectMenuConfigSheet = true },
+                onOpenManage = {
+                    viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextSelectMenuConfig))
+                },
             )
-            var configItems by remember { mutableStateOf<List<ActionMenuItem>>(emptyList()) }
-            LaunchedEffect(showSelectMenuConfigSheet) {
-                if (showSelectMenuConfigSheet) {
-                    configItems = controller.getActionMenuItems()
-                } else {
-                    configItems = emptyList()
-                }
-            }
             ReaderPerfTrace.marker("compose.selection.end")
-            TextSelectMenuConfigSheet(
-                show = showSelectMenuConfigSheet,
-                items = configItems,
-                expandTextMenu = readPreferences.expandTextMenu,
-                showSelectMenuIcon = readPreferences.showSelectMenuIcon,
-                onExpandTextMenuChange = {
-                    viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ExpandTextMenu(it)))
-                },
-                onShowSelectMenuIconChange = {
-                    viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowSelectMenuIcon(it)))
-                    controller.refreshActionMenuItems()
-                },
-                onDismissRequest = { showSelectMenuConfigSheet = false },
-                onSaved = { items -> controller.saveMenuConfig(items) }
-            )
         }
         ReaderPerfTrace.marker("compose.chrome.end")
     }

@@ -8,7 +8,7 @@ import kotlinx.collections.immutable.persistentListOf
 
 /**
  * 高亮规则域的状态契约，由 [ReadHighlightRuleDelegate] 独立持有，
- * 不再挂在 [ReadBookUiState] 上。sheet 的开合仍由 [ReadBookUiState.activeSheet] 单一持有。
+ * 不再挂在 [ReadBookUiState] 上。sheet 的开合仍由 [ReadBookUiState.sheetStack] 统一持有。
  */
 @Stable
 data class HighlightRuleConfigUiState(

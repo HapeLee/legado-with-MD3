@@ -1,46 +1,33 @@
 package io.legado.app.ui.book.read.sheet
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
@@ -48,18 +35,22 @@ import io.legado.app.data.entities.ReadAloudAudioDownload
 import io.legado.app.help.readaloud.playback.ReadAloudAudioStore
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
-import io.legado.app.ui.book.read.ReadMenuConfig
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.CastFieldSpec
-import io.legado.app.ui.widget.components.CastFieldStack
-import io.legado.app.ui.widget.components.CastImeScope
+import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.SectionTitle
+import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.castCardMaxHeight
+import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
+import io.legado.app.ui.widget.components.settingItem.TinySettingItem
+import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /**
  * 听书下载：把选定章节的朗读音频整章合成到本地，之后点朗读直接播本地文件、不联网。
@@ -67,262 +58,222 @@ import kotlinx.coroutines.withContext
  * 音频是**按朗读那一条链路**合成的（同一套音色路由、同一个文件名算法），所以下载过的章节
  * 朗读时能找到同名文件；章内每句一个文件，文件名清单记在库里，删除才能精确到章。
  *
- * 排版按「范围 → 进度 → 已下载」三节走，每节一个圆角容器；节里只放该节的东西，
- * 不再靠一串 start=8dp 的边距去对齐。
+ * 弹层用项目通用的 [AppModalBottomSheet]，内容用通用的设置项组件：
+ * 范围用页签 + 步进器（不再有输入框抢焦点的 IME 问题），进度和已下载各一段。
  */
 @Composable
 fun ReaderAudioDownloadSheet(
     show: Boolean,
     onDismissRequest: () -> Unit,
-    menuConfig: ReadMenuConfig? = null,
 ) {
-    // show 一撤整棵树就没了，退场动画没有地方播：多留 180ms 让淡出跑完
-    val opened = show
-    if (!rememberSheetAlive(opened)) return
-    val scrimAlpha = rememberSheetScrimAlpha(opened)
-    val book = ReadBook.book ?: return
-    val bookUrl = book.bookUrl
+    val book = ReadBook.book
+    val bookUrl = book?.bookUrl
+    val chapterCount = (book?.totalChapterNum ?: 0).coerceAtLeast(1)
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val progress by ReadAloudAudioStore.progress.collectAsState()
+    val running = progress.running
+    // 当前章每次重组重读：弹层常挂在阅读界面上，存快照会把章号钉在进阅读器那一章
+    val currentChapterIndex = ReadBook.durChapterIndex
     val cancelHintMsg = stringResource(R.string.read_aloud_audio_download_cancel_hint)
     val deletedCountMsg = stringResource(R.string.read_aloud_audio_download_deleted)
-    val scope = rememberCoroutineScope()
-    val chapterCount = book.totalChapterNum.coerceAtLeast(1)
-    val progress by ReadAloudAudioStore.progress.collectAsState()
-    var refreshKey by remember { mutableStateOf(0) }
-    // null = 还没查完库。第一帧就断言「本章没下载过」会闪一句假话。
-    val rows by produceState(
-        initialValue = null as List<ReadAloudAudioDownload>?,
-        key1 = bookUrl,
-        key2 = refreshKey,
-    ) {
-        value = withContext(Dispatchers.IO) { ReadAloudAudioStore.list(bookUrl) }
-    }
-    val downloaded = rows.orEmpty()
-    // 当前章每次重组重读：这张卡片常挂在阅读界面上，show 只是开关，存快照会把章号钉在进阅读器那一章
-    val currentChapterIndex = ReadBook.durChapterIndex
-    val currentChapterRow = rows?.firstOrNull { it.chapterIndex == currentChapterIndex }
+
     var byRange by remember { mutableStateOf(false) }
-    var startText by remember(currentChapterIndex) { mutableStateOf((currentChapterIndex + 1).toString()) }
-    var endText by remember(currentChapterIndex) { mutableStateOf((currentChapterIndex + 1).toString()) }
-    val range = downloadRange(byRange, startText, endText, chapterCount)
+    var startChapter by remember(currentChapterIndex) { mutableIntStateOf(currentChapterIndex + 1) }
+    var endChapter by remember(currentChapterIndex) { mutableIntStateOf(currentChapterIndex + 1) }
 
-    CastImeScope {
-        Box(
+    // 已下载列表是库里的事实：打开弹层、每完成一章、下载收尾都重查一次，
+    // 只靠 bookUrl 做 key 的话，下载完了列表还停在打开那一刻。
+    var rows by remember { mutableStateOf<List<ReadAloudAudioDownload>?>(null) }
+    var listVersion by remember { mutableIntStateOf(0) }
+    LaunchedEffect(show, running, progress.chapterDone) {
+        if (show) listVersion++
+    }
+    LaunchedEffect(bookUrl, listVersion) {
+        val url = bookUrl ?: return@LaunchedEffect
+        rows = withContext(Dispatchers.IO) { ReadAloudAudioStore.list(url) }
+    }
+
+    val downloaded = rows.orEmpty()
+    val currentChapterRow = rows?.firstOrNull { it.chapterIndex == currentChapterIndex }
+    // 起止章按目录里的章号填（从 1 开始），换成朗读用的 0 基下标。
+    // totalChapterNum 可能还没加载完，按目录末尾收一下，别把越界的章号递给服务。
+    val lastChapterIndex = chapterCount - 1
+    val range: Pair<Int, Int>? = if (byRange) {
+        if (endChapter < startChapter) {
+            null
+        } else {
+            (startChapter - 1).coerceIn(0, lastChapterIndex) to
+                    (endChapter - 1).coerceIn(0, lastChapterIndex)
+        }
+    } else {
+        currentChapterIndex to currentChapterIndex
+    }
+
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.read_aloud_audio_download_entry),
+        startAction = {
+            MediumTonalButton(
+                onClick = onDismissRequest,
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(R.string.close),
+            )
+        },
+    ) {
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .background(LegadoTheme.colorScheme.scrim.copy(alpha = 0.42f * scrimAlpha))
-                .safeDrawingPadding()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { onDismissRequest() },
-            contentAlignment = Alignment.Center,
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            CastSheetCard(
-                menuConfig = menuConfig,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pointerInput(Unit) { detectTapGestures(onTap = {}) }
-                    .padding(horizontal = 20.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = castCardMaxHeight(0.8f))
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 8.dp, bottom = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        MediumTonalButton(
-                            onClick = onDismissRequest,
-                            icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                        AppText(
-                            text = stringResource(R.string.read_aloud_audio_download_entry),
-                            modifier = Modifier.padding(start = 4.dp),
-                            style = LegadoTheme.typography.titleMedium,
-                            maxLines = 1,
-                        )
-                    }
-                    AppText(
-                        text = stringResource(R.string.read_aloud_audio_download_summary),
-                        style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+            AppText(
+                text = stringResource(R.string.read_aloud_audio_download_summary),
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+
+            if (bookUrl == null) {
+                AppText(
+                    text = stringResource(R.string.book_not_found),
+                    style = LegadoTheme.typography.bodyMedium,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                CardTabRow(
+                    tabTitles = listOf(
+                        stringResource(R.string.read_aloud_audio_download_this_chapter),
+                        stringResource(R.string.read_aloud_audio_download_by_range),
+                    ),
+                    selectedTabIndex = if (byRange) 1 else 0,
+                    onTabSelected = { byRange = it == 1 },
+                )
+
+                if (byRange) {
+                    RangeRow(
+                        title = stringResource(R.string.read_aloud_audio_download_start_chapter),
+                        value = startChapter,
+                        chapterCount = chapterCount,
+                        onValueChange = { startChapter = it },
                     )
+                    RangeRow(
+                        title = stringResource(R.string.read_aloud_audio_download_end_chapter),
+                        value = endChapter,
+                        chapterCount = chapterCount,
+                        onValueChange = { endChapter = it },
+                    )
+                    AppText(
+                        text = if (range == null) {
+                            stringResource(R.string.read_aloud_audio_download_invalid_range)
+                        } else {
+                            stringResource(
+                                R.string.read_aloud_audio_download_range_count,
+                                range.second - range.first + 1,
+                            )
+                        },
+                        style = LegadoTheme.typography.labelSmall,
+                        color = if (range == null) {
+                            LegadoTheme.colorScheme.error
+                        } else {
+                            LegadoTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                    )
+                } else {
+                    // 本章状态：选「只下本章」时先看得到这句，再决定按不按下载
+                    TinySettingItem(
+                        title = currentChapterRow?.title
+                            ?: stringResource(R.string.read_aloud_audio_download_this_chapter),
+                        description = when {
+                            rows == null -> null
+                            currentChapterRow == null ->
+                                stringResource(R.string.read_aloud_audio_download_chapter_none)
 
-                    SheetSection(stringResource(R.string.read_aloud_audio_download_section_range)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            MediumTonalButton(
-                                onClick = { byRange = false },
-                                modifier = Modifier.weight(1f),
-                                selected = !byRange,
-                                text = stringResource(
-                                    R.string.read_aloud_audio_download_this_chapter,
-                                ),
+                            else -> stringResource(
+                                R.string.read_aloud_audio_download_chapter_hint,
+                                currentChapterRow.sentenceCount,
                             )
-                            MediumTonalButton(
-                                onClick = { byRange = true },
-                                modifier = Modifier.weight(1f),
-                                selected = byRange,
-                                text = stringResource(
-                                    R.string.read_aloud_audio_download_by_range,
-                                ),
-                            )
-                        }
-                        // 本章状态放在两个按钮下面：选「只下本章」时先看得到这句，再决定按不按下载
-                        if (rows != null) {
-                            AppText(
-                                text = if (currentChapterRow == null) {
-                                    stringResource(R.string.read_aloud_audio_download_chapter_none)
-                                } else {
-                                    stringResource(
-                                        R.string.read_aloud_audio_download_chapter_hint,
-                                        currentChapterRow.sentenceCount,
-                                    )
-                                },
-                                style = LegadoTheme.typography.labelSmall,
-                                color = if (currentChapterRow == null) {
-                                    LegadoTheme.colorScheme.onSurfaceVariant
-                                } else {
-                                    LegadoTheme.colorScheme.primary
-                                },
-                            )
-                        }
-                        if (byRange) {
-                            CastFieldStack(
-                                specs = listOf(
-                                    CastFieldSpec(
-                                        id = "startChapter",
-                                        label = stringResource(
-                                            R.string.read_aloud_audio_download_start_chapter,
-                                        ),
-                                        value = startText,
-                                        onValueChange = { startText = it },
-                                    ),
-                                    CastFieldSpec(
-                                        id = "endChapter",
-                                        label = stringResource(
-                                            R.string.read_aloud_audio_download_end_chapter,
-                                        ),
-                                        value = endText,
-                                        onValueChange = { endText = it },
-                                    ),
-                                ),
-                            )
-                            AppText(
-                                text = if (range == null) {
-                                    stringResource(R.string.read_aloud_audio_download_invalid_range)
-                                } else {
-                                    stringResource(
-                                        R.string.read_aloud_audio_download_range_count,
-                                        range.second - range.first + 1,
-                                    )
-                                },
-                                style = LegadoTheme.typography.labelSmall,
-                                color = if (range == null) {
-                                    LegadoTheme.colorScheme.error
-                                } else {
-                                    LegadoTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            MediumTonalButton(
-                                onClick = {
-                                    if (range != null) {
-                                        ReadAloud.downloadAudio(
-                                            context, bookUrl, range.first, range.second,
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                enabled = range != null && !progress.running,
-                                icon = Icons.Default.Download,
-                                text = stringResource(R.string.read_aloud_audio_download_start),
-                            )
-                            if (progress.running) {
-                                MediumTonalButton(
-                                    onClick = {
-                                        ReadAloud.cancelDownloadAudio(context)
-                                        context.toastOnUi(cancelHintMsg)
-                                    },
-                                    icon = Icons.Default.Close,
-                                    text = stringResource(R.string.read_aloud_audio_download_cancel),
+                        },
+                        color = if (currentChapterRow != null) {
+                            LegadoTheme.colorScheme.primaryContainer
+                        } else {
+                            LegadoTheme.colorScheme.surfaceContainerLow
+                        },
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MediumTonalButton(
+                        onClick = {
+                            if (range != null) {
+                                ReadAloud.downloadAudio(
+                                    context, bookUrl, range.first, range.second,
                                 )
                             }
-                        }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = range != null && !running,
+                        icon = Icons.Default.Download,
+                        text = stringResource(R.string.read_aloud_audio_download_start),
+                    )
+                    if (running) {
+                        MediumTonalButton(
+                            onClick = {
+                                ReadAloud.cancelDownloadAudio(context)
+                                context.toastOnUi(cancelHintMsg)
+                            },
+                            icon = Icons.Default.Close,
+                            text = stringResource(R.string.read_aloud_audio_download_cancel),
+                        )
                     }
+                }
 
-                    if (progress.running || progress.chapterTotal > 0) {
-                        SheetSection(
-                            stringResource(R.string.read_aloud_audio_download_section_progress),
-                        ) {
-                            if (progress.currentChapter.isNotBlank()) {
-                                AppText(
-                                    text = progress.currentChapter,
-                                    style = LegadoTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            ProgressLine(
-                                label = stringResource(
-                                    R.string.read_aloud_audio_download_chapter_bar,
-                                ),
-                                text = "${progress.chapterDone}/${progress.chapterTotal}",
-                                fraction = progress.chapterFraction,
-                                running = progress.running,
-                            )
-                            ProgressLine(
-                                label = stringResource(
-                                    R.string.read_aloud_audio_download_sentence_bar,
-                                ),
-                                text = "${progress.sentenceDone}/${progress.sentenceTotal}",
-                                fraction = progress.sentenceFraction,
-                                running = progress.running,
-                            )
-                            if (progress.failed > 0) {
-                                // 失败的那几句不落进下载区：宁可少下，也不能下一句永远播空白的占位
-                                AppText(
-                                    text = stringResource(
-                                        R.string.read_aloud_audio_download_failed_count,
-                                        progress.failed,
-                                    ),
-                                    style = LegadoTheme.typography.bodySmall,
-                                    color = LegadoTheme.colorScheme.error,
-                                )
-                            }
-                        }
-                    }
+                if (running || progress.chapterTotal > 0) {
+                    SectionTitle(
+                        stringResource(R.string.read_aloud_audio_download_section_progress),
+                    )
+                    DownloadProgressCard(progress = progress, running = running)
+                }
 
-                    SheetSection(
-                        stringResource(
-                            R.string.read_aloud_audio_download_downloaded_count,
-                            downloaded.size,
-                            downloaded.sumOf { it.sentenceCount },
-                        ),
-                    ) {
-                        if (downloaded.isEmpty()) {
-                            AppText(
-                                text = stringResource(R.string.read_aloud_audio_download_empty),
-                                style = LegadoTheme.typography.bodyMedium,
-                                color = LegadoTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                // rows == null 表示还没查完库：这时整段都不画，
+                // 否则会先闪一句「0 章 · 0 句 / 还没下载过」这种假话
+                if (rows != null) {
+                    if (downloaded.isEmpty()) {
+                        // 空列表不摆「0 章 · 0 句」的表头，按通用空态提示
+                        EmptyMessage(
+                            message = stringResource(R.string.read_aloud_audio_download_empty),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                        )
+                    } else {
+                        SectionTitle(
+                            stringResource(
+                                R.string.read_aloud_audio_download_downloaded_count,
+                                downloaded.size,
+                                downloaded.sumOf { it.sentenceCount },
+                            ),
+                        )
                         downloaded.forEach { row ->
                             DownloadedRow(
                                 row = row,
-                                isCurrent = row.chapterIndex == ReadBook.durChapterIndex,
+                                isCurrent = row.chapterIndex == currentChapterIndex,
                                 onDelete = {
                                     scope.launch {
-                                        val deleted = ReadAloudAudioStore.delete(
-                                            bookUrl, row.chapterIndex,
-                                        )
+                                        // 删文件 + 删记录都是阻塞 IO，不能占着主线程查库
+                                        val deleted = withContext(Dispatchers.IO) {
+                                            ReadAloudAudioStore.delete(bookUrl, row.chapterIndex)
+                                        }
                                         context.toastOnUi(deletedCountMsg.format(deleted))
-                                        refreshKey++
+                                        listVersion++
                                     }
                                 },
                             )
@@ -334,48 +285,82 @@ fun ReaderAudioDownloadSheet(
     }
 }
 
-/** 起止章按目录里的章号填（从 1 开始），返回朗读用的章节下标区间。 */
-private fun downloadRange(
-    byRange: Boolean,
-    startText: String,
-    endText: String,
+/** 起止章一行：标题 + 步进器。章数上千也不必滚键盘，输入框在这个弹层里只会抢焦点。 */
+@Composable
+private fun RangeRow(
+    title: String,
+    value: Int,
     chapterCount: Int,
-): Pair<Int, Int>? {
-    if (!byRange) {
-        return ReadBook.durChapterIndex to ReadBook.durChapterIndex
-    }
-    val start = startText.trim().toIntOrNull() ?: return null
-    val end = endText.trim().toIntOrNull() ?: return null
-    if (start <= 0 || end <= 0 || end < start) return null
-    val last = (chapterCount - 1).coerceAtLeast(0)
-    return (start - 1).coerceAtMost(last) to (end - 1).coerceAtMost(last)
+    onValueChange: (Int) -> Unit,
+) {
+    TinySettingItem(
+        title = title,
+        color = LegadoTheme.colorScheme.surfaceContainerLow,
+        trailingContent = {
+            ValueStepper(
+                value = value.toFloat(),
+                displayValue = value.toFloat(),
+                valueRange = 1f..chapterCount.toFloat(),
+                onValueChange = { onValueChange(it.roundToInt().coerceIn(1, chapterCount)) },
+            )
+        },
+    )
 }
 
-/** 一节：小标题 + 一个圆角容器，容器里纵向排开。三节同一套间距，不再各写各的边距。 */
+/** 进度卡片：章名一行，章 / 句两条进度各自一行，失败句数只在有时才出现。 */
 @Composable
-private fun SheetSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        AppText(
-            text = title,
-            style = LegadoTheme.typography.labelLarge,
-            color = LegadoTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
-        )
+private fun DownloadProgressCard(
+    progress: ReadAloudAudioStore.Progress,
+    running: Boolean,
+) {
+    NormalCard(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 12.dp,
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+        contentColor = LegadoTheme.colorScheme.onSurface,
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(LegadoTheme.colorScheme.surfaceContainerHigh)
-                .padding(14.dp)
-                // 开关范围输入、进度出现、删掉一行——这一节的长短每次都变，让它长出来缩回去都是平滑的
-                .animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = content,
-        )
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (progress.currentChapter.isNotBlank()) {
+                AppText(
+                    text = progress.currentChapter,
+                    style = LegadoTheme.typography.titleSmallEmphasized,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            ProgressLine(
+                label = stringResource(R.string.read_aloud_audio_download_chapter_bar),
+                text = "${progress.chapterDone}/${progress.chapterTotal}",
+                fraction = progress.chapterFraction,
+                running = running,
+            )
+            ProgressLine(
+                label = stringResource(R.string.read_aloud_audio_download_sentence_bar),
+                text = "${progress.sentenceDone}/${progress.sentenceTotal}",
+                fraction = progress.sentenceFraction,
+                running = running,
+            )
+            if (progress.failed > 0) {
+                // 失败的那几句不落进下载区：宁可少下，也不能下一句永远播空白的占位
+                AppText(
+                    text = stringResource(
+                        R.string.read_aloud_audio_download_failed_count,
+                        progress.failed,
+                    ),
+                    style = LegadoTheme.typography.labelSmall,
+                    color = LegadoTheme.colorScheme.error,
+                )
+            }
+        }
     }
 }
 
-/** 一行进度：标签 + 计数在上，圆角进度条在下，长章名不会把数字挤走。 */
+/** 一行进度：标签 + 计数在上，进度条在下，长章名不会把数字挤走。 */
 @Composable
 private fun ProgressLine(
     label: String,
@@ -394,85 +379,46 @@ private fun ProgressLine(
             AppText(
                 text = text,
                 style = LegadoTheme.typography.labelMedium,
-                textAlign = TextAlign.End,
             )
         }
-        if (running && fraction <= 0f) {
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-            )
-        } else {
-            LinearProgressIndicator(
-                progress = { fraction },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-            )
-        }
+        AppLinearProgressIndicator(
+            // 一句都还没合成完时给不确定进度：有进度条在动，用户才知道不是卡住了
+            progress = if (running && fraction <= 0f) null else fraction,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
+        )
     }
 }
 
-/** 已下载的一章：章号徽标 + 标题 + 句数 + 删除。当前章的徽标点亮，长列表里一眼找到自己在读的那章。 */
+/** 已下载的一章：标题 + 章号/句数 + 删除。当前章点亮，长列表里一眼找到自己在读的那章。 */
 @Composable
 private fun DownloadedRow(
     row: ReadAloudAudioDownload,
     isCurrent: Boolean,
     onDelete: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(
-                    if (isCurrent) {
-                        LegadoTheme.colorScheme.primaryContainer
-                    } else {
-                        LegadoTheme.colorScheme.surfaceContainerHighest
-                    },
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppText(
-                text = (row.chapterIndex + 1).toString(),
-                style = LegadoTheme.typography.labelSmall,
-                color = if (isCurrent) {
-                    LegadoTheme.colorScheme.onPrimaryContainer
-                } else {
-                    LegadoTheme.colorScheme.onSurfaceVariant
-                },
+    val resources = LocalResources.current
+    TinySettingItem(
+        title = row.title,
+        description = resources.getString(R.string.chapter_index_format, row.chapterIndex + 1) +
+                " · " + resources.getString(
+            R.string.read_aloud_audio_download_sentences_count,
+            row.sentenceCount,
+        ),
+        color = if (isCurrent) {
+            LegadoTheme.colorScheme.primaryContainer
+        } else {
+            LegadoTheme.colorScheme.surfaceContainerLow
+        },
+        trailingContent = {
+            MediumTonalButton(
+                onClick = onDelete,
+                icon = Icons.Default.Delete,
+                contentDescription = stringResource(R.string.read_aloud_audio_download_delete),
             )
-        }
-        AppText(
-            text = row.title,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 10.dp),
-            style = LegadoTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        AppText(
-            text = stringResource(
-                R.string.read_aloud_audio_download_sentences_count,
-                row.sentenceCount,
-            ),
-            style = LegadoTheme.typography.labelSmall,
-            color = LegadoTheme.colorScheme.onSurfaceVariant,
-        )
-        MediumTonalButton(
-            onClick = onDelete,
-            icon = Icons.Default.Delete,
-            contentDescription = stringResource(R.string.read_aloud_audio_download_delete),
-        )
-    }
+        },
+    )
 }

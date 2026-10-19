@@ -135,7 +135,7 @@ class ReadAiDelegate(
 
     /**
      * 关闭 sheet 时的收尾：取消在途任务并清空对应子状态。
-     * `activeSheet` 本身由 `ReadBookViewModel` 统一置空。
+     * 当前层由 `ReadBookViewModel` 统一出栈，保留下面的父 Sheet。
      */
     fun onSheetDismissed(sheet: ReadBookSheet?) {
         when (sheet) {

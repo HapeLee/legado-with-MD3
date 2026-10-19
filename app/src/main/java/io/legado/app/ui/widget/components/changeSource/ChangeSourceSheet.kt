@@ -102,6 +102,9 @@ fun ChangeSourceSheet(
         List<BookChapter>,
         ChangeSourceMigrationOptions,
     ) -> Unit)? = null,
+    onEditSource: ((String) -> Unit)? = null,
+    editedSourceUrl: String? = null,
+    onSourceEditHandled: (String) -> Unit = {},
     viewModel: ChangeBookSourceComposeViewModel = koinViewModel(key = "source-${oldBook.bookUrl}"),
 ) {
     val context = LocalContext.current
@@ -137,7 +140,18 @@ fun ChangeSourceSheet(
     }
 
     LaunchedEffect(oldBook.bookUrl, fromReadBookActivity) {
-        viewModel.initData(oldBook.name, oldBook.author, oldBook, fromReadBookActivity)
+        // A returned editor result targets the retained search session. Reinitializing it here
+        // would race the single-source retry with an asynchronous database reload.
+        if (editedSourceUrl == null) {
+            viewModel.initData(oldBook.name, oldBook.author, oldBook, fromReadBookActivity)
+        }
+    }
+
+    LaunchedEffect(editedSourceUrl) {
+        editedSourceUrl?.let {
+            viewModel.startSearch(it)
+            onSourceEditHandled(it)
+        }
     }
 
     LaunchedEffect(viewModel) {
@@ -412,12 +426,16 @@ fun ChangeSourceSheet(
                                 text = stringResource(R.string.edit),
                                 onClick = {
                                     onDismiss()
-                                    editSourceResult.launch(
-                                        MainActivity.createBookSourceEditIntent(
-                                            context,
-                                            item.origin
+                                    if (onEditSource != null) {
+                                        onEditSource(item.origin)
+                                    } else {
+                                        editSourceResult.launch(
+                                            MainActivity.createBookSourceEditIntent(
+                                                context,
+                                                item.origin
+                                            )
                                         )
-                                    )
+                                    }
                                 }
                             )
                             RoundDropdownMenuItem(

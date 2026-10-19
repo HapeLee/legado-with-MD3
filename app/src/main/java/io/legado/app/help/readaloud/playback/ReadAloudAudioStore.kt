@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import splitties.init.appCtx
 import java.io.File
 
@@ -56,12 +57,27 @@ object ReadAloudAudioStore {
     private val _progress = MutableStateFlow(Progress())
     val progress: StateFlow<Progress> = _progress
 
-    fun updateProgress(value: Progress) {
-        _progress.value = value
+    /** 开一批下载：只写内存状态，界面点下按钮立刻就能看到「进行中」。 */
+    fun beginDownload(bookUrl: String, chapterTotal: Int) {
+        _progress.value = Progress(
+            running = true,
+            bookUrl = bookUrl,
+            chapterTotal = chapterTotal.coerceAtLeast(1),
+        )
+    }
+
+    /**
+     * 进度一律走原子改写。
+     *
+     * 章级（一章开始/结束）和句级（每合成完一句）更新来自不同协程，
+     * 「读 value 再 copy 回去」会互相覆盖：章数回退、失败数被旧快照抹掉。
+     */
+    fun updateProgress(transform: (Progress) -> Progress) {
+        _progress.update(transform)
     }
 
     fun finishProgress() {
-        _progress.value = _progress.value.copy(running = false)
+        _progress.update { it.copy(running = false) }
     }
 
     private fun dirOf(bookUrl: String): File = File(

@@ -15,6 +15,7 @@ class MainBookPageRoutesTest {
         val destinations = listOf(
             MainRouteToc("book", initialPage = 1),
             MainRouteReplaceRules("book"),
+            MainRouteBookSourceEdit("source"),
             MainRouteReplaceEdit(ReplaceEditRoute(id = 1, sessionId = "test")),
         )
         destinations.forEach { destination ->
@@ -79,5 +80,18 @@ class MainBookPageRoutesTest {
         assertNull(tracker.takeBookPageResult(reader))
         assertEquals(BookPageResult.BookDeleted, tracker.takeBookPageResult(manga))
         assertNull(tracker.takeBookPageResult(manga))
+    }
+
+    @Test
+    fun `source editor result belongs to the retained reader until it resumes`() {
+        val tracker = MainNavRouteTracker()
+        val reader = MainRouteReadBook("book")
+        val editor = MainRouteBookSourceEdit("source")
+        tracker.onBackStackChanged(listOf(MainRouteHome, reader, editor))
+        tracker.reportBookPageResult(reader, BookPageResult.SourceEdited("source"))
+        tracker.onBackStackChanged(listOf(MainRouteHome, reader))
+
+        assertEquals(BookPageResult.SourceEdited("source"), tracker.takeBookPageResult(reader))
+        assertNull(tracker.takeBookPageResult(reader))
     }
 }

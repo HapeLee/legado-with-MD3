@@ -5,7 +5,7 @@ import androidx.compose.runtime.Stable
 /**
  * 正文编辑域的状态契约，由 [ReadContentEditDelegate] 独立持有，
  * 不再以 6 个平铺字段挂在 [ReadBookUiState] 上。
- * sheet 的开合仍由 [ReadBookUiState.activeSheet] 单一持有。
+ * sheet 的开合仍由 [ReadBookUiState.sheetStack] 统一持有。
  */
 @Stable
 data class ContentEditUiState(

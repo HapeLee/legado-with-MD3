@@ -30,6 +30,7 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlin.uuid.Uuid
 
 @Stable
@@ -267,8 +268,10 @@ data class ReadBookUiState(
     val translationMode: Boolean = false,
     val translationStatus: TranslationChapterStatus = TranslationChapterStatus.Idle,
     val menuState: ReadBookMenuState = ReadBookMenuState(),
-    // Active sheet / dialog
-    val activeSheet: ReadBookSheet? = null,
+    // Ordered modal layers; opening a child retains its parent.
+    val sheetStack: ImmutableList<ReadBookSheet> = persistentListOf(),
+    /** Saved source waiting for the retained change-source sheet to repeat its search. */
+    val pendingEditedSource: String? = null,
     val activeDialog: ReadBookDialog? = null,
     /** 书签/笔记跳转前校验不通过时的待确认目标（弹确认框）。 */
     val pendingBookmarkTarget: PendingBookmarkTarget? = null,
@@ -339,12 +342,37 @@ data class ReadBookUiState(
     // AI 域状态见 ReadAiUiState —— 由 ReadAiDelegate 独立持有
     val eyeProtection: EyeProtectionUiState = EyeProtectionUiState(),
 ) {
+    val activeSheet: ReadBookSheet?
+        get() = sheetStack.lastOrNull()
+
+    /** Reuse an existing layer of the same kind rather than opening duplicate modal windows. */
+    fun withSheet(sheet: ReadBookSheet?): ReadBookUiState {
+        val next = if (sheet == null) {
+            sheetStack.dropLast(1)
+        } else {
+            val existing = sheetStack.indexOfLast { it::class == sheet::class }
+            val parents = if (existing >= 0) sheetStack.take(existing) else sheetStack
+            parents + sheet
+        }
+        return copy(
+            sheetStack = next.toImmutableList(),
+            pendingEditedSource = pendingEditedSource.takeIf {
+                next.any { it is ReadBookSheet.ChangeBookSource }
+            },
+        )
+    }
+
+    fun clearSheets(): ReadBookUiState =
+        copy(sheetStack = persistentListOf(), pendingEditedSource = null)
+
+    inline fun <reified T : ReadBookSheet> findSheet(): T? = sheetStack.lastOrNull { it is T } as? T
+
     val menuVisible: Boolean
         get() = menuState.visible
 
     /** 朗读设置卡片是否打开；经典控制面板与听书播放界面共用同一份设置内容。 */
     val isReadAloudConfigOpen: Boolean
-        get() = activeSheet is ReadBookSheet.ReadAloudConfig
+        get() = findSheet<ReadBookSheet.ReadAloudConfig>() != null
 }
 
 /** 护眼模式设置，来源是 ThemeSettings，与外观设置共用同一份值。 */
@@ -578,7 +606,8 @@ sealed interface ReadBookIntent {
 
     // Activity result intents
     data class OpenChapterResult(val index: Int, val chapterPos: Int) : ReadBookIntent
-    data object SourceEditResult : ReadBookIntent
+    data class SourceEditResult(val sourceUrl: String) : ReadBookIntent
+    data class SourceEditHandled(val sourceUrl: String) : ReadBookIntent
     data object ReplaceRuleResult : ReadBookIntent
     data class BookInfoResult(val bookDeleted: Boolean) : ReadBookIntent
     data class FontFolderSelected(val uri: Uri) : ReadBookIntent
@@ -612,6 +641,7 @@ sealed interface ReadBookIntent {
     // Sheet / Dialog
     data class ShowSheet(val sheet: ReadBookSheet) : ReadBookIntent
     data object DismissSheet : ReadBookIntent
+    data class DismissSheetIfTop(val sheet: ReadBookSheet) : ReadBookIntent
     data class SetActiveSheet(val sheet: ReadBookSheet?) : ReadBookIntent
     data class ShowDialog(val dialog: ReadBookDialog) : ReadBookIntent
     data class ResolveReadRecordAlias(val merge: Boolean, val rememberChoice: Boolean = false) : ReadBookIntent
@@ -1238,6 +1268,7 @@ sealed interface ReadBookSheet {
     data object HighlightRuleConfig : ReadBookSheet
     data object Marking : ReadBookSheet
     data object MoreConfig : ReadBookSheet
+    data object TextSelectMenuConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
     data object PreDownloadConfig : ReadBookSheet

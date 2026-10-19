@@ -30,10 +30,10 @@ import io.legado.app.utils.postEvent
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -243,20 +243,20 @@ class ReadAloudDelegate(
      * 关闭播放弹层时不会停在半开的菜单上。
      */
     fun openPlayer() {
-        host.updateState { it.copy(menuState = ReadBookMenuState(), activeSheet = null) }
+        host.updateState { it.copy(menuState = ReadBookMenuState()).clearSheets() }
         ReadAloudPlayerOverlayBus.request()
     }
 
     /** 经典朗读控制面板：阅读菜单里的一页，不遮挡正文区域之外的交互。 */
     fun openClassicControls() {
-        host.updateState { it.copy(activeSheet = null) }
+        host.updateState { it.clearSheets() }
         host.openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
     }
 
     fun openConfigSheet() {
         // 从底栏重新打开算「新一次设置」，回到常规页；被整屏页盖住再回来才停在那一 tab
         host.updateState {
-            it.copy(activeSheet = ReadBookSheet.ReadAloudConfig, readAloudConfigTab = 0)
+            it.copy(readAloudConfigTab = 0).withSheet(ReadBookSheet.ReadAloudConfig)
         }
         scope.launch { syncConfiguredTtsVoices() }
     }
@@ -308,8 +308,7 @@ class ReadAloudDelegate(
         host.updateState {
             it.copy(
                 preDownloadNum = host.preDownloadNum,
-                activeSheet = ReadBookSheet.PreDownloadConfig,
-            )
+            ).withSheet(ReadBookSheet.PreDownloadConfig)
         }
     }
 
@@ -318,8 +317,7 @@ class ReadAloudDelegate(
             it.copy(
                 preSynthesisConcurrency =
                     readAloudSettingsRepository.currentSettings.ttsPreSynthesisConcurrency,
-                activeSheet = ReadBookSheet.PreSynthesisConcurrencyConfig,
-            )
+            ).withSheet(ReadBookSheet.PreSynthesisConcurrencyConfig)
         }
     }
 
@@ -328,8 +326,7 @@ class ReadAloudDelegate(
             it.copy(
                 readAloudParagraphInterval =
                     readAloudSettingsRepository.currentSettings.ttsParagraphInterval,
-                activeSheet = ReadBookSheet.ParagraphIntervalConfig,
-            )
+            ).withSheet(ReadBookSheet.ParagraphIntervalConfig)
         }
     }
 
@@ -337,8 +334,7 @@ class ReadAloudDelegate(
         host.updateState {
             it.copy(
                 audioCacheCleanTime = readAloudSettingsRepository.currentSettings.audioCacheCleanTime,
-                activeSheet = ReadBookSheet.AudioCacheCleanConfig,
-            )
+            ).withSheet(ReadBookSheet.AudioCacheCleanConfig)
         }
     }
 
@@ -347,7 +343,7 @@ class ReadAloudDelegate(
             readSettingsRepository.setPreDownloadNum(value)
         }
         host.updateState {
-            it.copy(preDownloadNum = value, activeSheet = ReadBookSheet.ReadAloudConfig)
+            it.copy(preDownloadNum = value).withSheet(ReadBookSheet.ReadAloudConfig)
         }
     }
 
@@ -358,7 +354,7 @@ class ReadAloudDelegate(
             }
         }
         host.updateState {
-            it.copy(preSynthesisConcurrency = value, activeSheet = ReadBookSheet.ReadAloudConfig)
+            it.copy(preSynthesisConcurrency = value).withSheet(ReadBookSheet.ReadAloudConfig)
         }
     }
 
@@ -367,7 +363,7 @@ class ReadAloudDelegate(
             readAloudSettingsRepository.update { it.copy(audioCacheCleanTime = value) }
         }
         host.updateState {
-            it.copy(audioCacheCleanTime = value, activeSheet = ReadBookSheet.ReadAloudConfig)
+            it.copy(audioCacheCleanTime = value).withSheet(ReadBookSheet.ReadAloudConfig)
         }
     }
 

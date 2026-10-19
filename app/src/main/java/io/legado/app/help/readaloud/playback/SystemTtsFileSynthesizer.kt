@@ -12,11 +12,21 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
-import kotlin.uuid.Uuid
 import kotlin.coroutines.resume
+import kotlin.uuid.Uuid
 
 /** 单次整句合成文件的等待上限：引擎不按约定回调时用它兜底。 */
 private const val SYNTHESIZE_TIMEOUT_MS = 45_000L
+
+/**
+ * 引擎初始化的等待上限。
+ *
+ * `TextToSpeech.OnInitListener` 不保证一定回调：引擎没装、被系统杀掉、初始化崩溃时
+ * 回调永远不来。这一段原来没有上限，于是它会一直握着 [SystemTtsFileSynthesizer] 的串行锁，
+ * 后面每一句都堵在 `mutex.withLock` 上——听书下载的 `awaitAll` 永远不返回，
+ * 进度停在第一句、界面表现为整章卡死。
+ */
+private const val ENGINE_INIT_TIMEOUT_MS = 10_000L
 
 /** Serializes Android TTS file synthesis and reuses the active engine between adjacent cues. */
 class SystemTtsFileSynthesizer(
@@ -141,28 +151,36 @@ class SystemTtsFileSynthesizer(
     private suspend fun ensureEngine(engine: String): TextToSpeech? {
         if (tts != null && activeEngine == engine) return tts
         close()
-        return withContext(Dispatchers.Main.immediate) {
-            suspendCancellableCoroutine { continuation ->
-                lateinit var instance: TextToSpeech
-                val listener = TextToSpeech.OnInitListener { status ->
-                    if (!continuation.isActive) return@OnInitListener
-                    if (status == TextToSpeech.SUCCESS) {
-                        tts = instance
-                        activeEngine = engine
-                        voiceCatalog = null
-                        continuation.resume(instance)
-                    } else {
-                        instance.shutdown()
-                        continuation.resume(null)
+        // 超时按「引擎起不来」处理：这一句记失败，下一句还会再试一次，
+        // 但不能因为一次没有回调就把整章（乃至整个下载任务）挂在这里。
+        val instance = withTimeoutOrNull(ENGINE_INIT_TIMEOUT_MS) {
+            withContext(Dispatchers.Main.immediate) {
+                suspendCancellableCoroutine { continuation ->
+                    lateinit var creating: TextToSpeech
+                    val listener = TextToSpeech.OnInitListener { status ->
+                        if (!continuation.isActive) return@OnInitListener
+                        if (status == TextToSpeech.SUCCESS) {
+                            tts = creating
+                            activeEngine = engine
+                            voiceCatalog = null
+                            continuation.resume(creating)
+                        } else {
+                            creating.shutdown()
+                            continuation.resume(null)
+                        }
                     }
+                    creating = if (engine.isBlank()) {
+                        TextToSpeech(appContext, listener)
+                    } else {
+                        TextToSpeech(appContext, listener, engine)
+                    }
+                    continuation.invokeOnCancellation { creating.shutdown() }
                 }
-                instance = if (engine.isBlank()) {
-                    TextToSpeech(appContext, listener)
-                } else {
-                    TextToSpeech(appContext, listener, engine)
-                }
-                continuation.invokeOnCancellation { instance.shutdown() }
             }
         }
+        if (instance == null) {
+            fail(engine, "", "引擎 ${ENGINE_INIT_TIMEOUT_MS / 1000} 秒没有初始化回调")
+        }
+        return instance
     }
 }

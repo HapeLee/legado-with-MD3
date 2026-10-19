@@ -113,7 +113,7 @@ class ReadStyleDelegate(
 
     fun deleteCurrentStyle() {
         if (!readStyleGateway.deleteCurrentStyle()) return
-        host.updateState { it.copy(activeSheet = null) }
+        host.updateState { it.withSheet(null) }
         // 旧 View deleteDur = [1, 2, 5]。
         emitConfigUpdate(
             ConfigUpdateAction.UpdateBackground,
@@ -139,7 +139,7 @@ class ReadStyleDelegate(
         scope.launch {
             readSettingsRepository.setStyleSelect(ReadSessionState.isComic, index)
         }
-        host.updateState { it.copy(activeSheet = ReadBookSheet.BgTextConfig) }
+        host.updateState { it.withSheet(ReadBookSheet.BgTextConfig) }
     }
 
     // --- 背景图与导入导出 ---

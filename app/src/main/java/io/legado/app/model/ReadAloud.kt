@@ -12,7 +12,9 @@ import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ReadAloudEngineSelection
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
+import io.legado.app.help.readaloud.playback.ReadAloudAudioStore
 import io.legado.app.lib.dialogs.SelectItem
+import io.legado.app.model.ReadAloud.getReadAloudClass
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.HttpReadAloudService
 import io.legado.app.service.TTSReadAloudService
@@ -24,12 +26,12 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.startForegroundServiceCompat
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import splitties.init.appCtx
 
@@ -377,8 +379,26 @@ object ReadAloud {
         startServiceIntent(context, intent, "启动听书下载")
     }
 
+    /**
+     * 下载前解析当前设置对应的合成源。
+     *
+     * [httpTTS] 只是 [getReadAloudClass] 的副产物：进程刚起、还没进过朗读时它是 null，
+     * 直接读会把「第一次就点下载」判成没有可用引擎，于是下载既不开始、也不收尾。
+     * 解析里带数据库查询，必须在后台线程调用。
+     */
+    fun resolveHttpTts(): HttpTTS? {
+        httpTTS?.let { return it }
+        getReadAloudClass()
+        return httpTTS
+    }
+
     fun cancelDownloadAudio(context: Context) {
-        if (!BaseReadAloudService.isRun) return
+        // 服务已经不在（被杀、任务被划掉、下载协程随服务销毁）时意图发不出去，
+        // 但界面上的「下载中」必须收尾，否则按钮永远禁用、取消也没反应。
+        if (!BaseReadAloudService.isRun) {
+            ReadAloudAudioStore.finishProgress()
+            return
+        }
         val intent = Intent(context, HttpReadAloudService::class.java)
         intent.action = IntentAction.cancelDownloadReadAloudAudio
         startServiceIntent(context, intent, "取消听书下载")
