@@ -897,6 +897,42 @@ class ReaderPaginatorTest {
     }
 
     /**
+     * 角色胶囊是行内项，正文整段可能被它顶到下一行。这时这一行只剩「一个字 + 胶囊」两个项、
+     * 唯一一道缝，两端对齐不许把整行剩余空隙砸在这道缝上——否则字贴行首、胶囊贴行尾。
+     * 字与字之间的缝照常拉伸，那一行的观感不变。
+     */
+    @Test
+    fun justifyNeverStretchesTheGapBesideACapsule() {
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(ReaderMeasuredBlock.InlineParagraph(
+                items = listOf(
+                    ReaderMeasuredInlineItem.Text("甲", 10f, style, 0),
+                    ReaderMeasuredInlineItem.RoleCast(
+                        widthPx = 20f,
+                        heightPx = 20f,
+                        chapterPosition = 1,
+                        raw = "<<福>>",
+                        name = "福",
+                        voicePoolLabel = "",
+                        quoteOrdinal = 0,
+                    ),
+                    // 这一字宽到放不下，整项掉到下一行，第一行因此只剩两项
+                    ReaderMeasuredInlineItem.Text("乙", 80f, style, 2),
+                ),
+                indentCharacters = 0,
+                alignment = ReaderTextAlignment.JUSTIFY,
+                lineHeightPx = 20f,
+                baselineOffsetPx = 15f,
+                baseTextSizePx = 10f,
+            )),
+            config.copy(viewportWidthPx = 100, viewportHeightPx = 100, letterSpacingPx = 0f),
+        ).single()
+
+        val capsule = page.elements.filterIsInstance<ReaderElement.RoleCast>().single()
+        assertEquals(10f, capsule.bounds.left, 0.01f)
+    }
+
+    /**
      * 命中字距留出的那截空隙在命中段**外面**：内容没变，图就不许被拉长。
      * 两个共用同一张背景图的命中段之间隔着这截空隙时，run 必须在空隙处断成两个气泡，
      * 而不是把空隙吞进中间那一格。
