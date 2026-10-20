@@ -2256,10 +2256,13 @@ private fun SimulationPageStack(
             val path0 = paths.front
             val pathNext = paths.reveal
             val pathBack = paths.back
-            // 翻起页正面（挖掉折起的角）
-            clipPath(path0, ClipOp.Difference) {
-                drawPageSnapshot(baseBitmap, baseLayer, widthPx, heightPx)
-            }
+            // 旧 View 的 `ReadView.dispatchDraw` 先由子 View 画完一整页当前页，
+            // `pageDelegate.onDraw` 再在其上覆盖各个裁剪区域。折页路径由曲线和它的内接
+            // 折线（reveal/back 多边形）围成，两者之间有一圈数像素宽的月牙既不属于
+            // reveal 也不属于 back——旧 View 里它露出的是底下的当前页，所以看不出来。
+            // Compose 画布没有这层底，那块月牙会直接露出画布底色；有背景图时就是
+            // 折页中间一条对不上的异色带（"这页纸没粘住、漏了"）。
+            drawPageSnapshot(baseBitmap, baseLayer, widthPx, heightPx)
             // 折页下方露出的下一页
             clipPath(path0) {
                 clipPath(pathNext) {
@@ -2269,13 +2272,15 @@ private fun SimulationPageStack(
             }
             // 翻起页背面（镜像的当前页）+ 折缝阴影
             clipPath(path0) { clipPath(pathBack) {
+                // 纸背底色：对照旧 View `drawColor(背景图平均色)`，遮住下面的当前页，
+                // 让翻起的纸片是一张不透明的纸而不是透出正面内容。
                 drawRect(background)
                 // Canvas.drawBitmap() in the View implementation naturally kept sampling
                 // within the screenshot's bounds. A transformed GraphicsLayer otherwise
                 // samples beyond its recorded page surface as opaque black on some devices,
                 // producing a dark wedge between the two sides of a curl. Clip in source
-                // coordinates first so uncovered back-page pixels retain the mean background
-                // color drawn above, while the complete background image remains mirrored.
+                // coordinates first so uncovered back-page pixels keep the page background
+                // drawn above, while the complete page content remains mirrored.
                 withTransform({
                     transform(paths.mirror)
                     clipRect(0f, 0f, size.width, size.height)
@@ -2399,6 +2404,20 @@ private fun ReaderPage.isSnapshotSettled(
     }
     val badge = decoration.bookmarkBadge ?: return true
     return ReaderBookmarkBadgeRenderer.cachedResult(badge) != null
+}
+
+/**
+ * 把整页背景图铺满当前绘制区域。页面本体与仿真折页的纸背共用这一份绘制，
+ * 保证两处的铺满方式与透明度完全一致。
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageBackgroundImage(
+    image: Drawable?,
+    alpha: Float,
+) {
+    image ?: return
+    image.bounds = android.graphics.Rect(0, 0, size.width.roundToInt(), size.height.roundToInt())
+    image.alpha = (alpha.coerceIn(0f, 1f) * 255).roundToInt()
+    image.draw(drawContext.canvas.nativeCanvas)
 }
 
 /** 有位图就用位图（一次 blit），否则退回快照层（display list 重放）。 */
@@ -2749,10 +2768,8 @@ private fun ReaderPageCanvas(
         // Read inside the page's RenderNode, so a resume invalidates the cached body itself.
         redrawSignal.value
         val native = drawContext.canvas.nativeCanvas
-        isolatedBackgroundImage?.takeIf { drawBackground }?.let { drawable ->
-            drawable.bounds = android.graphics.Rect(0, 0, size.width.roundToInt(), size.height.roundToInt())
-            drawable.alpha = (backgroundImageAlpha.coerceIn(0f, 1f) * 255).roundToInt()
-            drawable.draw(native)
+        isolatedBackgroundImage?.takeIf { drawBackground }?.let {
+            drawPageBackgroundImage(it, backgroundImageAlpha)
         }
         // 内容按旧 `ChapterProvider.visibleRect` 裁：背景色/背景图不裁（旧 View 里它们在
         // ContentTextView 之外）。但九宫格左右外扩与放大后的背景图天生超出内容框，裁剪框必须
