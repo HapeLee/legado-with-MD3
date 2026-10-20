@@ -1,7 +1,9 @@
 package io.legado.app.help.source
 
+import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.BaseSource
+import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.IntentData
@@ -9,6 +11,8 @@ import io.legado.app.ui.association.VerificationCodeActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.isMainThread
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.toastOnUi
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.util.concurrent.locks.LockSupport
 import kotlin.time.Duration.Companion.minutes
@@ -19,6 +23,18 @@ import kotlin.time.Duration.Companion.minutes
 object SourceVerificationHelp {
 
     private val waitTime = 1.minutes.inWholeNanoseconds
+
+    private val otherSettingsGateway by lazy {
+        GlobalContext.get().get<OtherSettingsGateway>()
+    }
+
+    private val isBrowserBlocked: Boolean
+        get() = otherSettingsGateway.currentSettings.blockSourceBrowser
+
+    private fun notifyBrowserBlocked(source: BaseSource) {
+        AppLog.putDebug("已阻止书源「${source.getTag()}」打开内置浏览器")
+        appCtx.toastOnUi(R.string.block_source_browser_error)
+    }
 
     private fun getVerificationResultKey(source: BaseSource) =
         getVerificationResultKey(source.getKey())
@@ -42,6 +58,10 @@ object SourceVerificationHelp {
             ?: throw NoStackTraceException("getVerificationResult parameter source cannot be null")
         require(url.length < 64 * 1024) { "getVerificationResult parameter url too long" }
         check(!isMainThread) { "getVerificationResult must be called on a background thread" }
+        if (useBrowser && isBrowserBlocked) {
+            notifyBrowserBlocked(source)
+            throw NoStackTraceException(appCtx.getString(R.string.block_source_browser_error))
+        }
 
         clearResult(source.getKey())
 
@@ -85,6 +105,10 @@ object SourceVerificationHelp {
     ) {
         source ?: throw NoStackTraceException("startBrowser parameter source cannot be null")
         require(url.length < 64 * 1024) { "startBrowser parameter url too long" }
+        if (isBrowserBlocked) {
+            notifyBrowserBlocked(source)
+            return
+        }
         IntentData.put(getVerificationResultKey(source), Thread.currentThread())
         appCtx.startActivity(
             MainActivity.createWebViewIntent(

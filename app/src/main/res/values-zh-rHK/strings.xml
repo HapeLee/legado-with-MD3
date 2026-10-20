@@ -1253,6 +1253,9 @@
     <string name="jump_to_another_app">跳转其它应用</string>
     <string name="clear_webview_data">清除 WebView 数据</string>
     <string name="clear_webview_data_summary">清除内置浏览器所有数据</string>
+    <string name="block_source_browser">阻止书源打开内置浏览器</string>
+    <string name="block_source_browser_summary">开启后，书源无法通过 java.startBrowser 等接口弹出内置浏览器，等待网页结果的调用会直接报错</string>
+    <string name="block_source_browser_error">已阻止书源打开内置浏览器</string>
     <string name="source_tab_list">列表</string>
     <string name="source_tab_web_view">網頁</string>
     <string name="layout_type">布局</string>

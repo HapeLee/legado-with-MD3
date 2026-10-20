@@ -128,6 +128,19 @@ class OtherConfigViewModelTest {
         assertTrue(systemGateway.enabled)
     }
 
+    @Test
+    fun blockSourceBrowser_writeThroughGateway() = runBlocking {
+        val otherSettingsGateway = FakeOtherSettingsGateway()
+        val viewModel = createViewModel(otherSettingsGateway = otherSettingsGateway)
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        viewModel.onIntent(OtherConfigIntent.BlockSourceBrowserChanged(true))
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertTrue(otherSettingsGateway.currentSettings.blockSourceBrowser)
+        assertTrue(viewModel.uiState.value.blockSourceBrowser)
+    }
+
     private fun createViewModel(
         otherSettingsGateway: FakeOtherSettingsGateway = FakeOtherSettingsGateway(),
         directLinkSettingsGateway: FakeDirectLinkSettingsGateway =

@@ -1501,6 +1501,9 @@
     <string name="jump_to_another_app">Jump to another app</string>
     <string name="clear_webview_data">Clear WebView Data</string>
     <string name="clear_webview_data_summary">Clear all data in WebView</string>
+    <string name="block_source_browser">Block Sources from Opening the Built-in Browser</string>
+    <string name="block_source_browser_summary">When enabled, sources cannot open the built-in browser through java.startBrowser, and calls that wait for the page result will fail</string>
+    <string name="block_source_browser_error">Blocked: sources are not allowed to open the built-in browser</string>
     <string name="source_tab_list">List</string>
     <string name="source_tab_web_view">Web view</string>
     <string name="source_tab_start">Startup</string>

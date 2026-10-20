@@ -206,6 +206,13 @@ fun OtherConfigScreen(
                     onClick = { onIntent(OtherConfigIntent.ShowOverlay(OtherConfigOverlay.ClearWebViewConfirmation)) }
                 )
 
+                    SwitchSettingItem(
+                        title = stringResource(R.string.block_source_browser),
+                        description = stringResource(R.string.block_source_browser_summary),
+                        checked = state.blockSourceBrowser,
+                        onCheckedChange = { onIntent(OtherConfigIntent.BlockSourceBrowserChanged(it)) }
+                    )
+
                 SwitchSettingItem(
                     title = stringResource(R.string.add_to_text_context_menu_t),
                     description = stringResource(R.string.add_to_text_context_menu_s),
