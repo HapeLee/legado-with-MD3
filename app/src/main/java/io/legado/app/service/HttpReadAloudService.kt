@@ -998,8 +998,6 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 if (!pause) {
                                     exoPlayer.prepare()
                                 }
-                                // 当前章开始播放后，立即异步启动后续章节预合成
-                                launchPreDownload(httpTts)
                             }
                         } else {
                             if (exoPlayer.mediaItemCount == 0) {
@@ -1007,13 +1005,16 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 if (!pause) {
                                     exoPlayer.prepare()
                                 }
-                                // 当前章开始播放后，立即异步启动后续章节预合成
-                                launchPreDownload(httpTts)
                             } else {
                                 exoPlayer.addMediaItem(mediaItem)
                             }
                         }
                     }
+                }
+                // 当前章所有段落均已合成完成（间隔模式仅当前段入队），才启动后续章节的预合成，避免抢占当前章的 TTS 配额与带宽
+                ensureActive()
+                launch(Main) {
+                    launchPreDownload(httpTts)
                 }
             }
         }.onError {
@@ -1116,6 +1117,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                 val chapterFailed = synthesizeChapterCues(prepared, httpTts, concurrency)
                 consecutiveFailures = if (chapterFailed) consecutiveFailures + 1 else 0
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLog.put("听书预下载异常: ${e.localizedMessage}", e)
         }
@@ -1305,10 +1308,9 @@ class HttpReadAloudService : BaseReadAloudService(),
                 val downloaderChannel = Channel<Downloader>()
                 launch {
                     for (downloader in downloaderChannel) {
-                        downloader.download(null)
+                        runCatching { downloader.download(null) }
                     }
                 }
-                var preDownloadLaunched = false
                 contentList.forEachIndexed { index, _ ->
                     ensureActive()
                     if (index < nowSpeak) return@forEachIndexed
@@ -1332,10 +1334,6 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 if (!pause) {
                                     exoPlayer.prepare()
                                 }
-                                if (!preDownloadLaunched) {
-                                    preDownloadLaunched = true
-                                    launchPreDownloadStream(httpTts, downloaderChannel)
-                                }
                             }
                         } else {
                             if (exoPlayer.mediaItemCount == 0) {
@@ -1343,15 +1341,16 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 if (!pause) {
                                     exoPlayer.prepare()
                                 }
-                                if (!preDownloadLaunched) {
-                                    preDownloadLaunched = true
-                                    launchPreDownloadStream(httpTts, downloaderChannel)
-                                }
                             } else {
                                 exoPlayer.addMediaSource(mediaSource)
                             }
                         }
                     }
+                }
+                // 当前章所有段落均已送入下载/媒体通道后，才启动后续章节的流式预合成
+                ensureActive()
+                launch(Main) {
+                    launchPreDownloadStream(httpTts, downloaderChannel)
                 }
             }
         }.onError {
@@ -1391,6 +1390,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                 )
                 consecutiveFailures = if (chapterFailed) consecutiveFailures + 1 else 0
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLog.put("听书流式预下载异常: ${e.localizedMessage}", e)
         }
