@@ -984,7 +984,6 @@ class ReadBookViewModel(
                     })
                 }
             }
-
             is ReadBookIntent.SourceEditHandled -> _uiState.update {
                 if (it.pendingEditedSource == intent.sourceUrl) it.copy(pendingEditedSource = null) else it
             }
