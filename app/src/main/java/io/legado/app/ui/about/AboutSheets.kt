@@ -78,10 +78,13 @@ fun UpdateSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
+        animateContentSize = false,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .weight(1f, fill = false)
+                .heightIn(max = 560.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             if (mode == UpdateMode.UPDATE) {
@@ -155,22 +158,23 @@ fun UpdateSheet(
 
             val updateLog = updateInfo.updateLog
             if (updateLog.isNotBlank()) {
-                MarkdownBlock(
-                    content = updateLog,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                SelectionContainer {
+                    MarkdownBlock(
+                        content = updateLog,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
-            if (mode == UpdateMode.UPDATE) {
-                Spacer(modifier = Modifier.height(16.dp))
-                PrimaryButton(
-                    onClick = onStartDownload,
-                    text = stringResource(R.string.about_update_action),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
+        if (mode == UpdateMode.UPDATE) {
             Spacer(modifier = Modifier.height(16.dp))
+            PrimaryButton(
+                onClick = onStartDownload,
+                text = stringResource(R.string.about_update_action),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
