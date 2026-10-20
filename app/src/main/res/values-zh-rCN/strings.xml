@@ -3370,6 +3370,7 @@
     <string name="cloud_tts_loading_voices">正在获取音色…</string>
     <string name="cloud_tts_no_matching_voice">没有匹配的音色</string>
     <string name="cloud_tts_selected">已选择</string>
+    <string name="cloud_tts_default_voice">使用该引擎的默认音色</string>
     <string name="cloud_tts_current_voice">当前音色</string>
     <string name="cloud_tts_refresh_catalog">刷新在线音色目录</string>
     <string name="cloud_tts_hide_manual_voice">隐藏手动输入</string>

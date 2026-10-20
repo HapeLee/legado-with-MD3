@@ -2835,6 +2835,7 @@
     <string name="cloud_tts_loading_voices">正在取得音色…</string>
     <string name="cloud_tts_no_matching_voice">沒有符合的音色</string>
     <string name="cloud_tts_selected">已選擇</string>
+    <string name="cloud_tts_default_voice">使用該引擎的預設音色</string>
     <string name="cloud_tts_current_voice">目前音色</string>
     <string name="cloud_tts_refresh_catalog">重新整理線上音色目錄</string>
     <string name="cloud_tts_hide_manual_voice">隱藏手動輸入</string>

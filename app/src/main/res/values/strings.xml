@@ -3374,6 +3374,7 @@
     <string name="cloud_tts_loading_voices">Loading voices…</string>
     <string name="cloud_tts_no_matching_voice">No matching voice</string>
     <string name="cloud_tts_selected">Selected</string>
+    <string name="cloud_tts_default_voice">Default voice of this engine</string>
     <string name="cloud_tts_current_voice">Current voice</string>
     <string name="cloud_tts_refresh_catalog">Refresh online voice catalog</string>
     <string name="cloud_tts_hide_manual_voice">Hide manual input</string>

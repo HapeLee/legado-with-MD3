@@ -274,9 +274,13 @@ fun ExploreMainRoute(
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize(),
-                            key = { exploreKindKey(kinds[it]) },
+                            // 分类列表缩短的那一帧，pager 仍可能按旧的页数请求 key。
+                            key = { index ->
+                                kinds.getOrNull(index)?.let(::exploreKindKey)
+                                    ?: "missing-kind:$index"
+                            },
                         ) { page ->
-                            val kind = kinds[page]
+                            val kind = kinds.getOrNull(page) ?: return@HorizontalPager
                             val pageViewModel: ExploreShowViewModel =
                                 koinViewModel(key = exploreKindKey(kind))
                             LaunchedEffect(pageViewModel, selectedSource.url, kind.url) {

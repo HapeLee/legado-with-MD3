@@ -447,37 +447,34 @@ class ReadAloudPlayerCoordinator(
             it.subjectType == BookVoiceBinding.SUBJECT_NARRATOR &&
                     it.subjectId == BookVoiceBinding.SUBJECT_NARRATOR
         }
+        // 引擎级条目（speakerId 为空）保存了引擎自己的显示名：HTTP 源导入的音色行只有
+        // 类型标签，用它才能在音色列表和引擎分组里显示源名称。
+        val engineDisplayNames = voicesList
+            .filter { it.speakerId.isBlank() && it.displayName.isNotBlank() }
+            .associate { voice -> (voice.engineType to voice.engineId) to voice.displayName }
         return voicesList.filter { it.enabled && it.available && !it.excluded }.map { voice ->
-            val isSelected = when {
-                narratorBinding != null -> narratorBinding.voiceId == voice.id
-                voice.engineType == ReadAloudVoice.ENGINE_HTTP -> currentEngine == voice.engineId
-                voice.engineType == ReadAloudVoice.ENGINE_CLOUD ->
-                    GSON.fromJsonObject<ReadAloudEngineSelection>(currentEngine).getOrNull()?.let {
-                        it.engineType == voice.engineType && it.engineId == voice.engineId &&
-                                (it.speakerId.isBlank() || it.speakerId == voice.speakerId)
-                    } == true
-
-                voice.engineType == ReadAloudVoice.ENGINE_SYSTEM ->
-                    if (voice.engineId.isBlank()) currentEngine == null
-                    else GSON.fromJsonObject<SelectItem<String>>(currentEngine)
-                        .getOrNull()?.value == voice.engineId
-
-                else -> false
-            }
-            val engineLabel = when (voice.engineType) {
-                ReadAloudVoice.ENGINE_SYSTEM -> application.getString(R.string.system_tts)
-                ReadAloudVoice.ENGINE_HTTP -> "HTTP TTS"
-                ReadAloudVoice.ENGINE_CLOUD -> "云端 TTS"
-                else -> voice.engineType
-            }
             ReadAloudVoiceItemUi(
                 id = voice.id,
                 name = voice.displayName.ifBlank { voice.speakerId },
                 engineType = voice.engineType,
-                engineName = engineLabel,
-                isSelected = isSelected,
+                engineId = voice.engineId,
+                engineName = engineDisplayNames[voice.engineType to voice.engineId]
+                    ?: engineTypeLabel(voice.engineType),
+                isSelected = isReadAloudVoiceSelected(
+                    voice = voice,
+                    narratorVoiceId = narratorBinding?.voiceId,
+                    currentEngine = currentEngine,
+                ),
+                isEngineDefault = voice.speakerId.isBlank(),
             )
         }.toImmutableList()
+    }
+
+    private fun engineTypeLabel(engineType: String): String = when (engineType) {
+        ReadAloudVoice.ENGINE_SYSTEM -> application.getString(R.string.system_tts)
+        ReadAloudVoice.ENGINE_HTTP -> "HTTP TTS"
+        ReadAloudVoice.ENGINE_CLOUD -> "云端 TTS"
+        else -> engineType
     }
 
     private companion object {
@@ -565,4 +562,35 @@ internal fun formatReadAloudSpeedLabel(speed: Int): String {
     } else {
         String.format(java.util.Locale.ROOT, "%.1f", display)
     }
+}
+
+/**
+ * 一条音色是否代表当前选择。
+ *
+ * - [narratorVoiceId] 非空时以人物绑定为准，这是唯一能精确到 speaker 的信息。
+ * - HTTP TTS 的 `ttsEngine` 只保存引擎 id，无法区分引擎内的具体 speaker。没有绑定时
+ *   只让引擎级条目命中，否则同引擎下的所有音色会一起显示为已选。
+ * - 云端音色按 speaker 精确匹配；引擎级条目（speaker 为空）不再连带命中全部音色。
+ */
+internal fun isReadAloudVoiceSelected(
+    voice: ReadAloudVoice,
+    narratorVoiceId: String?,
+    currentEngine: String?,
+): Boolean = when {
+    narratorVoiceId != null -> narratorVoiceId == voice.id
+    voice.engineType == ReadAloudVoice.ENGINE_HTTP ->
+        voice.speakerId.isBlank() && currentEngine == voice.engineId
+
+    voice.engineType == ReadAloudVoice.ENGINE_CLOUD ->
+        GSON.fromJsonObject<ReadAloudEngineSelection>(currentEngine).getOrNull()?.let {
+            it.engineType == voice.engineType && it.engineId == voice.engineId &&
+                    it.speakerId == voice.speakerId
+        } == true
+
+    voice.engineType == ReadAloudVoice.ENGINE_SYSTEM ->
+        if (voice.engineId.isBlank()) currentEngine == null
+        else GSON.fromJsonObject<SelectItem<String>>(currentEngine).getOrNull()?.value ==
+                voice.engineId
+
+    else -> false
 }

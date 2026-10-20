@@ -46,6 +46,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -105,8 +107,10 @@ import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.toggleSystemBar
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -147,6 +151,10 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         private const val KEY_RESTORE_READ_ALOUD = "restoreReadAloud"
         private const val KEY_RESTORE_READ_IN_BOOKSHELF = "restoreReadInBookshelf"
         private const val KEY_RESTORE_READ_CHAPTER_CHANGED = "restoreReadChapterChanged"
+
+        /** 播放页收起后等待的时长：期间若重新展开（听书 ⇄ 朗读切换）就不还原本地系统栏状态。 */
+        private const val SYSTEM_BARS_RESTORE_DELAY_MILLIS = 200L
+
         private val startupUpdateCheckGate = ProcessStartupUpdateCheckGate()
 
         @Volatile
@@ -365,6 +373,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     internal var activeReadBookRoute: MainRouteReadBook? = null
     internal var activeMangaKeyHandler: ((Int) -> Boolean)? = null
 
+    /** 听书/朗读播放浮层是否可见：可见期间由浮层接管系统栏，覆盖阅读器的隐藏策略。 */
+    private var isPlaybackOverlayVisible = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         shouldApplyDefaultToRead = savedInstanceState == null
@@ -433,6 +444,13 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     override fun onResume() {
         super.onResume()
         requestLocalNetworkPermissionIfBlocked()
+        if (isPlaybackOverlayVisible) {
+            // 阅读器在 ON_RESUME 里会按自己的菜单状态重设系统栏（可能重新隐藏），
+            // 播放浮层盖在它上面，晚一帧再把系统栏抢回来。
+            window.decorView.post {
+                if (isPlaybackOverlayVisible) toggleSystemBar(true)
+            }
+        }
     }
 
     /**
@@ -643,6 +661,38 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
             ReadAloudPlayerOverlayBus.events.collect { openPlayer(it) }
         }
         val playerVisible = readAloudPlayerVisible || audioPlayerVisible
+
+        /**
+         * 听书/朗读播放页是全屏浮层而不是导航栈上的页面：从阅读器进来时系统栏可能已被
+         * 阅读器按设置收起（见 ReadBookController.upSystemUiVisibility），浮层不会触发
+         * Activity 重建或阅读器重新布局，必须自己把系统栏叫回来；收起时再还原进入前的
+         * 可见性，否则阅读器不会因为浮层消失重新执行自己的系统栏逻辑。
+         */
+        var systemBarsBeforePlayer by remember { mutableStateOf<Boolean?>(null) }
+        LaunchedEffect(playerVisible, morphPresent) {
+            if (playerVisible) {
+                if (systemBarsBeforePlayer == null) {
+                    systemBarsBeforePlayer = ViewCompat.getRootWindowInsets(window.decorView)
+                        ?.isVisible(WindowInsetsCompat.Type.systemBars()) ?: true
+                }
+                toggleSystemBar(true)
+                return@LaunchedEffect
+            }
+            if (morphPresent) return@LaunchedEffect
+            val restoreVisible = systemBarsBeforePlayer ?: return@LaunchedEffect
+            // 收起动画也可能是「听书 ⇄ 朗读」切换的中转（先收起再展开），
+            // 短暂不可见时先缓一缓，交由随后的展开取消这次还原。
+            delay(SYSTEM_BARS_RESTORE_DELAY_MILLIS)
+            systemBarsBeforePlayer = null
+            if (playerVisible) return@LaunchedEffect
+            // 阅读页能按当前菜单状态算出权威结果，交给它；其他页面按进入前的可见性还原。
+            val readBookHost = activeReadBookInputHandler as? ReadBookRouteHost
+            if (readBookHost != null) {
+                readBookHost.upSystemUiVisibility()
+            } else {
+                toggleSystemBar(restoreVisible)
+            }
+        }
         val matchingCapsule = !playerVisible || capsuleMatchesPlayer(
             playbackCapsuleState, playerSource, audioPlayerBookUrl,
         )
@@ -651,6 +701,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                 playbackCapsuleState.source == null || matchingCapsule,
             )
             if (!pageShellShowCapsule) readAloudMorph.clearStartAnchors()
+            isPlaybackOverlayVisible = playerVisible
         }
         // 只用于首帧锚点布局，不把尚未启动的朗读伪装成正在播放。
         val capsuleAnchorPreview = if (playerVisible && pageShellShowCapsule) {
@@ -1140,6 +1191,12 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     }
 
     override fun setupSystemBar() {
+        if (isPlaybackOverlayVisible) {
+            // 配置变化重建窗口后阅读器会重新按自己的策略藏栏，播放浮层要保持在最上面。
+            super.setupSystemBar()
+            toggleSystemBar(true)
+            return
+        }
         val host = activeReadBookInputHandler as? ReadBookRouteHost
         if (host != null) {
             host.upSystemUiVisibility()
