@@ -124,7 +124,20 @@ object DefaultData {
         appDb.rssSourceDao.insert(*rssSources.toTypedArray())
     }
 
+    /**
+     * 历史上内置过、但源站已不可解析的词典规则（规则名 -> 旧 urlRule）。
+     * 只在 urlRule 与旧内置值完全一致时删除，避免误删用户自建的同名规则。
+     */
+    private val obsoleteDictRules = mapOf(
+        "百度汉语" to "https://dict.baidu.com/s?wd={{key}}"
+    )
+
     fun importDefaultDictRules() {
+        // 清理已失效的内置词典规则（源站改为前端渲染，规则无法解析出内容）
+        obsoleteDictRules.forEach { (name, urlRule) ->
+            val existing = appDb.dictRuleDao.getByName(name) ?: return@forEach
+            if (existing.urlRule == urlRule) appDb.dictRuleDao.deleteByName(name)
+        }
         appDb.dictRuleDao.insert(*dictRules.toTypedArray())
     }
 
