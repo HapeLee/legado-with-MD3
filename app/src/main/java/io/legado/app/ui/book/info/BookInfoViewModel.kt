@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import coil3.ImageLoader
 import coil3.request.SuccessResult
 import coil3.toBitmap
-import com.google.gson.annotations.SerializedName
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
@@ -72,6 +71,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.webBook.RelatedBooks
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.main.MainIntent
 import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
@@ -86,10 +86,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -1999,16 +1996,17 @@ class BookInfoViewModel(
             delay(delayMillis)
             if (!isCurrentBookSource(book, source)) return@launch
 
-            val modules = parseRelatedBookModules(source)
-            if (modules.isEmpty()) {
-                currentRelatedBooks = emptyList()
-                syncUiState()
-                return@launch
-            }
-
             try {
                 val result = withContext(IO) {
-                    loadRelatedBooks(book, source, modules)
+                    RelatedBooks.load(book, source).map { module ->
+                        RelatedBooksUi(
+                            key = module.key,
+                            title = module.title,
+                            url = module.url,
+                            resolvedUrl = module.resolvedUrl,
+                            books = module.books.toImmutableList(),
+                        )
+                    }
                 }
                 if (!isCurrentBookSource(book, source)) return@launch
                 currentRelatedBooks = result
@@ -2016,6 +2014,7 @@ class BookInfoViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
+                AppLog.put("关联书籍 relatedBooks 加载失败", e)
                 if (!isCurrentBookSource(book, source)) return@launch
                 currentRelatedBooks = emptyList()
                 syncUiState()
@@ -2025,58 +2024,6 @@ class BookInfoViewModel(
 
     private fun isCurrentBookSource(book: Book, source: BookSource): Boolean {
         return currentBook?.bookUrl == book.bookUrl && bookSource?.bookSourceUrl == source.bookSourceUrl
-    }
-
-    private fun parseRelatedBookModules(source: BookSource): List<RelatedBooksDef> {
-        val modulesJson = source.ruleBookInfo?.relatedBooks
-        if (modulesJson.isNullOrBlank()) {
-            return emptyList()
-        }
-        return try {
-            GSON.fromJsonArray<RelatedBooksDef>(modulesJson)
-                .getOrNull()
-                ?.filter { !it.url.isNullOrBlank() }
-                ?.map { it.copy(url = it.url!!.replace(Regex("\\s"), "")) }
-                ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    private suspend fun loadRelatedBooks(
-        book: Book,
-        source: BookSource,
-        modules: List<RelatedBooksDef>,
-    ): List<RelatedBooksUi> {
-        return coroutineScope {
-            modules.map { def ->
-                async {
-                    val url = def.url.orEmpty()
-                    val (resolvedUrl, books) = try {
-                        resolveAndExplore(source, url, book)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        url to emptyList()
-                    }
-                    RelatedBooksUi(
-                        key = def.key ?: def.title.orEmpty(),
-                        title = def.title.orEmpty(),
-                        url = url,
-                        resolvedUrl = resolvedUrl,
-                        books = books.filter { it.bookUrl != book.bookUrl }.toImmutableList(),
-                    )
-                }
-            }.awaitAll().filter { it.books.isNotEmpty() }
-        }
-    }
-
-    private suspend fun resolveAndExplore(
-        source: BookSource,
-        url: String,
-        book: Book,
-    ): Pair<String, List<SearchBook>> {
-        return WebBook.exploreBookWithResolvedUrl(source, url, 1, book)
     }
 
     private fun showMessage(resId: Int) = showMessage(context.getString(resId))
@@ -2157,13 +2104,3 @@ private val BookInfoWebFile.isSupported: Boolean
 
 private val BookInfoWebFile.isSupportDecompress: Boolean
     get() = AppPattern.archiveFileRegex.matches(name)
-
-/**
- * 书源 `ruleBookInfo.relatedBooks` 的 JSON 结构。键名由书源约定、代码外生成，
- * 必须写死在 [SerializedName]：否则 R8 改名后三个字段全反序列化为 null，关联书籍整组消失。
- */
-private data class RelatedBooksDef(
-    @SerializedName("key") val key: String? = null,
-    @SerializedName("title") val title: String? = null,
-    @SerializedName("url") val url: String? = null,
-)

@@ -2138,7 +2138,7 @@ private fun RelatedBooksBanner(
             onClick = onBookClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 16.dp),
         )
     }
 }

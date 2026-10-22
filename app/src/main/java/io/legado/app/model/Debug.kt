@@ -10,13 +10,16 @@ import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.coroutine.CompositeCoroutine
+import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.sortUrls
 import io.legado.app.model.rss.Rss
+import io.legado.app.model.webBook.RelatedBooks
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -318,7 +321,7 @@ object Debug {
         if (book.tocUrl.isNotBlank()) {
             log(debugSource, "≡已获取目录链接,跳过详情页")
             log(debugSource, showTime = false)
-            tocDebug(scope, bookSource, book)
+            relatedBooksDebug(scope, bookSource, book)
             return
         }
         log(debugSource, "︾开始解析详情页")
@@ -326,16 +329,28 @@ object Debug {
             .onSuccess {
                 log(debugSource, "︽详情页解析完成")
                 log(debugSource, showTime = false)
-                if (!book.isWebFile) {
-                    tocDebug(scope, bookSource, book)
-                } else {
-                    log(debugSource, "≡文件类书源跳过解析目录", state = 1000)
-                }
+                relatedBooksDebug(scope, bookSource, book)
             }
             .onError {
                 log(debugSource, it.stackTraceStr, state = -1)
             }
         tasks.add(info)
+    }
+
+    private fun relatedBooksDebug(scope: CoroutineScope, bookSource: BookSource, book: Book) {
+        val related = Coroutine.async(scope, start = CoroutineStart.LAZY) {
+            RelatedBooks.load(book, bookSource)
+        }.onSuccess {
+            if (!book.isWebFile) {
+                tocDebug(scope, bookSource, book)
+            } else {
+                log(bookSource.bookSourceUrl, "≡文件类书源跳过解析目录", state = 1000)
+            }
+        }.onError {
+            log(bookSource.bookSourceUrl, it.stackTraceStr, state = -1)
+        }
+        tasks.add(related)
+        related.start()
     }
 
     private fun tocDebug(scope: CoroutineScope, bookSource: BookSource, book: Book) {
