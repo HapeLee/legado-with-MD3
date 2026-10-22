@@ -29,10 +29,10 @@ class LegacyReaderPaginationBatchTest {
             error("broken chapter")
         }
 
-        assertEquals(
-            LegacyReaderChapterPaginationResult.Unsupported("exception:IllegalStateException"),
-            result,
-        )
+        // 越界类异常的 message 就是 `begin/end/length`，只留类名等于把唯一的定位信息丢掉
+        val reason = (result as LegacyReaderChapterPaginationResult.Unsupported).reason
+        assertTrue(reason.startsWith("exception:IllegalStateException: broken chapter"))
+        assertTrue(reason.contains("LegacyReaderPaginationBatchTest"))
     }
 
     @Test
