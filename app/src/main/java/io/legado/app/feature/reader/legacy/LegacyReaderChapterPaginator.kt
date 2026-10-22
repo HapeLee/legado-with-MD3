@@ -74,7 +74,10 @@ suspend fun paginateLegacyReaderChapterSafely(
     throw error
 } catch (error: Exception) {
     LegacyReaderChapterPaginationResult.Unsupported(
-        "exception:${error::class.simpleName ?: "unknown"}",
+        // 把 message 与栈顶带进 reason：越界类异常的 message 就是
+        // `begin/end/length`，只留类名等于把唯一的定位信息丢掉。
+        "exception:${error::class.simpleName ?: "unknown"}: ${error.message}\n" +
+            error.stackTrace.take(8).joinToString("\n") { it.toString() },
     )
 }
 

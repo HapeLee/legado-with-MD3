@@ -108,6 +108,9 @@ object LegacyReaderStyleRangeMapper {
                 tracker.feed(text[index])
                 val closed = tracker.lastClosedSpan ?: continue
                 val start = closed.start - origin
+                // 开引号落在上一段（跨段引号）时减回来是负数：本段只剩台词尾巴，
+                // 归属也查不到标记，跳过这一段，不能让 substring 把整章排版打挂。
+                if (start < 0) continue
                 val endExclusive = closed.endExclusive - origin
                 val quoted = text.substring(start, endExclusive)
                 val owner = CastMarkers.findMarkers(quoted).firstOrNull() ?: continue
