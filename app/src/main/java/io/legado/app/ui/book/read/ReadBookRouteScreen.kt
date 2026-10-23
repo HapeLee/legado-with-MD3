@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -290,17 +291,7 @@ fun ReadBookRouteScreen(
         }
     }
 
-    val readStyleImportPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleConfigImportSelected(it)) }
-    }
-
-    val readStyleExportPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/zip")
-    ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleConfigExportSelected(it)) }
-    }
+    val launchReadStyleFilePicker = rememberReadStyleFilePickers(viewModel::onIntent)
 
     var pendingMenuCustomIconId by remember { mutableStateOf<String?>(null) }
     val menuCustomIconPicker = rememberLauncherForActivityResult(
@@ -448,14 +439,11 @@ fun ReadBookRouteScreen(
                                 pendingReadStyleImageIsNight = effect.isNight
                                 readStyleImagePickerForMode.launch("image/*")
                             }
-                            is ReadBookEffect.OpenReadStyleImport -> {
-                                readStyleImportPicker.launch(
-                                    arrayOf("application/zip", "application/octet-stream", "*/*")
-                                )
-                            }
-                            is ReadBookEffect.OpenReadStyleExport -> {
-                                readStyleExportPicker.launch(effect.fileName)
-                            }
+                            is ReadBookEffect.OpenReadStyleImport,
+                            is ReadBookEffect.OpenReadStyleImportAsNew,
+                            is ReadBookEffect.OpenReadStyleExport,
+                            is ReadBookEffect.OpenReadStyleConfigsExport ->
+                                launchReadStyleFilePicker(effect)
                             is ReadBookEffect.OpenMenuCustomIconPicker -> {
                                 pendingMenuCustomIconId = effect.id
                                 menuCustomIconPicker.launch("image/*")
@@ -1129,6 +1117,48 @@ private fun AutoSuggestDayNightObserver(
                     delay(15.minutes)
                 }
             }
+        }
+    }
+}
+
+/** 文件操作分别注册结果通道，避免取消或重建后把新增当成替换。 */
+@Composable
+internal fun rememberReadStyleFilePickers(
+    onIntent: (ReadBookIntent) -> Unit,
+): (ReadBookEffect) -> Unit {
+    val importCurrent = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { onIntent(ReadBookIntent.ReadStyleConfigImportSelected(it)) }
+    }
+    val importAsNew = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { onIntent(ReadBookIntent.ReadStyleConfigImportAsNewSelected(it)) }
+    }
+    val exportCurrent = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        uri?.let { onIntent(ReadBookIntent.ReadStyleConfigExportSelected(it)) }
+    }
+    var pendingExportIndices by rememberSaveable { mutableStateOf<IntArray?>(null) }
+    val exportSelected = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        val indices = pendingExportIndices
+        pendingExportIndices = null
+        if (uri != null && indices != null) {
+            onIntent(ReadBookIntent.ReadStyleConfigsExportSelected(uri, indices.toList()))
+        }
+    }
+    return { effect ->
+        when (effect) {
+            ReadBookEffect.OpenReadStyleImport ->
+                importCurrent.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+            ReadBookEffect.OpenReadStyleImportAsNew ->
+                importAsNew.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+            is ReadBookEffect.OpenReadStyleExport -> exportCurrent.launch(effect.fileName)
+            is ReadBookEffect.OpenReadStyleConfigsExport -> {
+                pendingExportIndices = effect.indices.toIntArray()
+                exportSelected.launch(effect.fileName)
+            }
+            else -> error("Unsupported read style file picker: $effect")
         }
     }
 }

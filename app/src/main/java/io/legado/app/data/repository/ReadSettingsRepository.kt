@@ -404,6 +404,7 @@ class ReadSettingsRepository(
             sliderVibrator = compatDsValue(Keys.SliderVibrator, false),
             useNewTocSheet = compatDsValue(Keys.UseNewTocSheet, true),
             maxLengthWithNoToc = compatDsValue(Keys.MaxLengthWithNoToc, 3000),
+            themeGridColumns = compatDsValue(Keys.ThemeGridColumns, 4),
             selectVibrator = compatDsValue(Keys.SelectVibrator, false),
             autoChangeSource = compatDsValue(Keys.AutoChangeSource, true),
             autoSuggestDayNight = compatDsValue(Keys.AutoSuggestDayNight, false),
@@ -508,6 +509,7 @@ class ReadSettingsRepository(
         val TextBottomJustify = booleanPreferencesKey(PreferKey.textBottomJustify)
         val AdaptSpecialStyle = booleanPreferencesKey(PreferKey.adaptSpecialStyle)
         val UseZhLayout = booleanPreferencesKey(PreferKey.useZhLayout)
+        val ThemeGridColumns = intPreferencesKey(PreferKey.themeGridColumns)
         val ReadBrightness = intPreferencesKey(PreferKey.brightness)
         val BrightnessAuto = booleanPreferencesKey(PreferKey.brightnessAuto)
         val UseUnderline = booleanPreferencesKey(PreferKey.useUnderline)
@@ -639,6 +641,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.textBottomJustify to textBottomJustify,
     PreferKey.adaptSpecialStyle to adaptSpecialStyle,
     PreferKey.useZhLayout to useZhLayout,
+    PreferKey.themeGridColumns to themeGridColumns,
     PreferKey.readBrightnessMode to showBrightnessView,
     PreferKey.readBrightnessControlPosition to brightnessVwPos,
     PreferKey.brightness to readBrightness,

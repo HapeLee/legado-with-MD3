@@ -1,8 +1,11 @@
 package io.legado.app.data.repository
 
+import io.legado.app.domain.model.settings.READ_STYLE_PRESET_COUNT
 import io.legado.app.help.DefaultData
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.utils.move
+import java.util.UUID
 
 /**
  * 排版配置列表的**唯一所有者**。
@@ -36,14 +39,14 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     }
 
     fun initShareConfig() {
-        val fallback = synchronized(lock) { configList.getOrNull(5) } ?: ReadBookConfig.Config()
+        val fallback = synchronized(lock) { configList.getOrNull(READ_STYLE_PRESET_COUNT) } ?: ReadBookConfig.Config()
         val config = readStyleRepository.readShareConfig(fallback)
         synchronized(lock) { shareConfigRef = config }
     }
 
     /** 按下标取用。配置文件缺斤少两时先恢复默认，保证 5 份预设始终在。 */
     fun configAt(index: Int): ReadBookConfig.Config = synchronized(lock) {
-        if (configList.size < 5) {
+        if (configList.size < READ_STYLE_PRESET_COUNT) {
             resetAllLocked()
         }
         configList.getOrNull(index) ?: configList[0]
@@ -52,9 +55,10 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     /** 整份替换（应用预设 / 导入）。共享排版开着时，共享那份跟着换。 */
     fun replaceConfigAt(index: Int, config: ReadBookConfig.Config, alsoShare: Boolean) {
         synchronized(lock) {
-            configList[index] = config
+            val replacement = config.copy(id = configList[index].id)
+            configList[index] = replacement
             if (alsoShare) {
-                shareConfigRef = config
+                shareConfigRef = replacement
             }
         }
     }
@@ -68,7 +72,7 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
      */
     fun updateStyleAt(index: Int, transform: (ReadBookConfig.Config) -> ReadBookConfig.Config) {
         synchronized(lock) {
-            if (configList.size < 5) {
+            if (configList.size < READ_STYLE_PRESET_COUNT) {
                 resetAllLocked()
             }
             val target = if (index in configList.indices) index else 0
@@ -97,26 +101,72 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     fun shareConfigSnapshot(): ReadBookConfig.Config = synchronized(lock) { shareConfigRef }
 
     fun addConfig(config: ReadBookConfig.Config): Int = synchronized(lock) {
-        configList.add(config)
+        configList.add(config.copy(id = UUID.randomUUID().toString()))
         configList.lastIndex
     }
 
     fun importOrReplaceConfig(config: ReadBookConfig.Config): String = synchronized(lock) {
         val index = configList.indexOfFirst { it.name == config.name }
         if (index >= 0) {
-            configList[index] = config
+            configList[index] = config.copy(id = configList[index].id)
         } else {
-            configList.add(config)
+            configList.add(config.copy(id = UUID.randomUUID().toString()))
         }
         config.name
     }
 
     /** 5 份预设不允许删。 */
     fun deleteConfigAt(index: Int): Boolean = synchronized(lock) {
-        if (configList.size <= 5) return@synchronized false
+        if (configList.size <= READ_STYLE_PRESET_COUNT) return@synchronized false
         configList.removeAt(index)
         true
     }
+
+    /**
+     * 把 [from] 处的一份样式移到 [to]（都是列表绝对下标，语义同 [io.legado.app.utils.move]：
+     * 先移除，再插入到 [to]）。
+     *
+     * 只允许在自建样式区（下标 ≥ [READ_STYLE_PRESET_COUNT]）内移动：前 [READ_STYLE_PRESET_COUNT] 份是内置预设，
+     * 既是 `applyPreset(index)` 的取值依据，也是配置缺斤少两时的补齐来源，位置不能变。
+     */
+    fun moveStyle(from: Int, to: Int): Boolean = synchronized(lock) {
+        if (!isCustomIndex(from) || !isCustomIndex(to) || from == to) return@synchronized false
+        configList.move(from, to)
+        true
+    }
+
+    /**
+     * 批量删除自建样式（下标按删除前的列表算），返回是否真删了。
+     * 选中下标修正与高亮规则解绑由上层负责——本类不知道当前选中哪一份。
+     */
+    fun deleteStylesAt(indices: List<Int>): Boolean = synchronized(lock) {
+        val targets = indices.filter { isCustomIndex(it) }.distinct().sortedDescending()
+        if (targets.isEmpty()) return@synchronized false
+        targets.forEach { configList.removeAt(it) }
+        true
+    }
+
+    /**
+     * 把 [indices] 里那些样式**整块**搬到边缘（[toTop] = 紧跟预设之后，否则列表末尾），
+     * 块内保持它们原来的相对次序。返回是否真的动了。
+     */
+    fun moveStylesToEdge(indices: List<Int>, toTop: Boolean): Boolean = synchronized(lock) {
+        val targets = indices.filter { isCustomIndex(it) }.distinct().sorted()
+        if (targets.isEmpty()) return@synchronized false
+        val moving = targets.map { configList[it] }
+        // 从后往前删，避免下标漂移
+        targets.sortedDescending().forEach { configList.removeAt(it) }
+        if (toTop) {
+            configList.addAll(READ_STYLE_PRESET_COUNT, moving)
+        } else {
+            configList.addAll(moving)
+        }
+        true
+    }
+
+    /** 自建样式区：预设那 [READ_STYLE_PRESET_COUNT] 份钉死，不可拖、不可删。 */
+    private fun isCustomIndex(index: Int): Boolean =
+        index >= READ_STYLE_PRESET_COUNT && index < configList.size
 
     /** 备份要把排版引用到的背景图一起带走。 */
     fun allPicBgStr(): List<String> = readStyleRepository.getAllPicBgStr(configsSnapshot())

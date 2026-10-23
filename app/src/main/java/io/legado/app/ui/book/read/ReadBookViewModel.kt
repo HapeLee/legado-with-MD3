@@ -800,30 +800,17 @@ class ReadBookViewModel(
                 it.copy(menuState = ReadBookMenuState())
             }
 
-            is ReadBookIntent.OpenReadMenuRoute -> _uiState.update {
-                val currentStack = it.menuState.routeStack
-                val nextStack = if (currentStack.lastOrNull() == intent.route) {
-                    currentStack
-                } else {
-                    (currentStack + intent.route).toImmutableList()
-                }
-                it.copy(
-                    menuState = it.menuState.copy(
-                        visible = true,
-                        routeStack = nextStack,
-                    ),
-                )
+            is ReadBookIntent.SwitchReadMenuRoute -> _uiState.update {
+                it.withMenuRoute(intent.route, replaceTop = true)
             }
 
-            is ReadBookIntent.ReadMenuBack -> _uiState.update {
-                if (it.menuState.canNavigateBack) {
-                    readBookStyleConfigRepository.save()
-                    val nextStack = it.menuState.routeStack.dropLast(1).toImmutableList()
-                    it.copy(menuState = it.menuState.copy(routeStack = nextStack))
-                } else {
-                    readBookStyleConfigRepository.save()
-                    it.copy(menuState = ReadBookMenuState())
-                }
+            is ReadBookIntent.OpenReadMenuRoute -> _uiState.update {
+                it.withMenuRoute(intent.route)
+            }
+
+            is ReadBookIntent.ReadMenuBack -> {
+                readBookStyleConfigRepository.save()
+                _uiState.update { it.withMenuBack() }
             }
 
             is ReadBookIntent.OpenSearch -> {
@@ -1016,6 +1003,8 @@ class ReadBookViewModel(
                 _effects.tryEmit(ReadBookEffect.SetBrightness(intent.value))
             }
 
+            is ReadBookIntent.SetThemeGridColumns -> styleDelegate.setThemeGridColumns(intent.columns)
+
             is ReadBookIntent.ToggleBrightnessAuto -> {
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(brightnessAuto = intent.auto)) }
                 viewModelScope.launch {
@@ -1053,18 +1042,7 @@ class ReadBookViewModel(
             is ReadBookIntent.DismissSheetIfTop -> {
                 if (_uiState.value.activeSheet == intent.sheet) onIntent(ReadBookIntent.DismissSheet)
             }
-            is ReadBookIntent.DismissSheet -> {
-                aiDelegate.onSheetDismissed(_uiState.value.activeSheet)
-                when (_uiState.value.activeSheet) {
-                    is ReadBookSheet.HighlightRuleConfig -> highlightRuleDelegate.onSheetDismissed()
-                    is ReadBookSheet.Marking -> markingDelegate.onSheetDismissed()
-                    is ReadBookSheet.ContentEdit -> contentEditDelegate.onSheetDismissed()
-                    is ReadBookSheet.ContentProcesses,
-                    is ReadBookSheet.TextProcessing -> contentProcessDelegate.onSheetDismissed()
-                    else -> Unit
-                }
-                _uiState.update { it.withSheet(null) }
-            }
+            is ReadBookIntent.DismissSheet -> dismissActiveSheet()
             is ReadBookIntent.SetActiveSheet -> _uiState.update {
                 it.withSheet(intent.sheet)
             }
@@ -1477,6 +1455,9 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenReadStyleImport -> {
                 _effects.tryEmit(ReadBookEffect.OpenReadStyleImport)
             }
+            is ReadBookIntent.OpenReadStyleImportAsNew -> {
+                _effects.tryEmit(ReadBookEffect.OpenReadStyleImportAsNew)
+            }
             is ReadBookIntent.OpenReadStyleExport -> {
                 _effects.tryEmit(
                     ReadBookEffect.OpenReadStyleExport(
@@ -1494,11 +1475,20 @@ class ReadBookViewModel(
             is ReadBookIntent.ClearBookmarkBadgeImage ->
                 bookmarkBadgeDelegate.clearBadgeImage()
             is ReadBookIntent.ReadStyleConfigImportSelected -> styleDelegate.importConfig(intent.uri)
+            is ReadBookIntent.ReadStyleConfigImportAsNewSelected -> styleDelegate.importStylesAsNew(intent.uri)
             is ReadBookIntent.ReadStyleConfigExportSelected -> styleDelegate.exportConfig(intent.uri)
+            is ReadBookIntent.ReadStyleConfigsExportSelected ->
+                styleDelegate.exportStylesAt(intent.uri, intent.indices)
+            is ReadBookIntent.ExportReadStyleConfigs -> styleDelegate.requestExportStyles(intent.indices)
+            is ReadBookIntent.ShareReadStyleConfigs -> styleDelegate.shareStyles(intent.indices)
             is ReadBookIntent.SaveReadStyleConfig -> styleDelegate.saveCurrentStyle()
             is ReadBookIntent.AddReadStyleConfig -> styleDelegate.addStyle()
-            is ReadBookIntent.DeleteCurrentReadStyleConfig -> styleDelegate.deleteCurrentStyle()
+            is ReadBookIntent.DeleteCurrentReadStyleConfig ->
+                if (styleDelegate.deleteCurrentStyle()) dismissActiveSheet()
             is ReadBookIntent.ApplyPresetTheme -> styleDelegate.applyPresetTheme(intent.presetIndex)
+            is ReadBookIntent.MoveReadStyleConfig -> styleDelegate.moveStyle(intent.from, intent.to)
+            is ReadBookIntent.DeleteReadStyleConfigs -> styleDelegate.deleteStylesAt(intent.indices)
+            is ReadBookIntent.MoveReadStylesToEdge -> styleDelegate.moveStylesToEdge(intent.indices, intent.toTop)
             is ReadBookIntent.OpenBgTextConfig -> styleDelegate.openBgTextConfig(intent.index)
 
             is ReadBookIntent.ToggleDayNight -> styleDelegate.toggleDayNight()
@@ -1908,6 +1898,8 @@ class ReadBookViewModel(
                 previous = preferences
                 _readPreferences.value = preferences
                 refreshFromReadBook()
+                // 网格列数等阅读设置变化也须同步样式投影。
+                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
                 if (!preferences.hasMenuClickArea()) {
                     readSettingsRepository.setClickAction(PreferKey.clickActionMC, 0)
                 }
@@ -1968,6 +1960,7 @@ class ReadBookViewModel(
             pageAnimEInk = actualConfig.getPageAnimEInk(),
             pageAnimSpeed = actualConfig.getPageAnimSpeed(),
             shareLayout = config.shareLayout,
+            gridColumns = readSettingsRepository.currentSettings.themeGridColumns,
             menuBgColorDay = dur.menuBgColor(isNight = false),
             menuBgColorNight = dur.menuBgColor(isNight = true),
             menuAccentColorDay = dur.menuAccentColor(isNight = false),
@@ -2466,14 +2459,7 @@ class ReadBookViewModel(
 
     private fun openReadMenuRoute(route: ReadBookMenuRoute) {
         _uiState.update {
-            it.copy(
-                menuState = ReadBookMenuState(
-                    visible = true,
-                    routeStack = kotlinx.collections.immutable.persistentListOf(
-                        ReadBookMenuRoute.Main,
-                        route,
-                    ),
-                ),
+            it.withMenuRoute(route, resetStack = true).copy(
                 readAloudTtsTimer = if (
                     route == ReadBookMenuRoute.ReadAloud && BaseReadAloudService.isRun
                 ) {
@@ -2672,6 +2658,20 @@ class ReadBookViewModel(
         } else {
             execute { loadDelegate.initBook(book) }
         }
+    }
+
+    /** 关闭浮层前通知各业务域，再恢复被编辑面板收起的菜单。 */
+    private fun dismissActiveSheet() {
+        aiDelegate.onSheetDismissed(_uiState.value.activeSheet)
+        when (_uiState.value.activeSheet) {
+            is ReadBookSheet.HighlightRuleConfig -> highlightRuleDelegate.onSheetDismissed()
+            is ReadBookSheet.Marking -> markingDelegate.onSheetDismissed()
+            is ReadBookSheet.ContentEdit -> contentEditDelegate.onSheetDismissed()
+            is ReadBookSheet.ContentProcesses,
+            is ReadBookSheet.TextProcessing -> contentProcessDelegate.onSheetDismissed()
+            else -> Unit
+        }
+        _uiState.update { it.withDismissedSheet() }
     }
 
     private fun exitSearch() {

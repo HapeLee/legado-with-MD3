@@ -1,5 +1,7 @@
 package io.legado.app.data.repository
 
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import io.legado.app.constant.AppLog
@@ -20,6 +22,9 @@ import io.legado.app.utils.printOnDebug
 import splitties.init.appCtx
 import java.io.File
 import java.io.InputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 class ReadStyleRepository(
     private val highlightRuleRepository: HighlightRuleRepository,
@@ -148,7 +153,70 @@ class ReadStyleRepository(
         return zipFile.readBytes()
     }
 
-    fun import(byteArray: ByteArray): ReadBookConfig.Config {
+    /**
+     * 批量导出：外层 zip 的每个条目就是一份「单样式包」（[export] 的产物，格式完全一致），
+     * 条目名 = 样式名清洗 + .zip，重名追加序号。
+     * [export] 的临时目录/zip 路径是固定的，所以这里必须串行逐份导出。
+     */
+    fun exportStyles(configs: List<ReadBookConfig.Config>): ByteArray {
+        val outerZipPath = FileUtils.getPath(appCtx.externalCache, "readConfigs.zip")
+        FileUtils.delete(outerZipPath)
+        val outerZipFile = FileUtils.createFileIfNotExist(outerZipPath)
+        ZipOutputStream(outerZipFile.outputStream().buffered()).use { output ->
+            val usedNames = hashSetOf<String>()
+            configs.forEach { config ->
+                output.putNextEntry(ZipEntry(styleZipEntryName(config.name, usedNames)))
+                output.write(export(config))
+                output.closeEntry()
+            }
+        }
+        return outerZipFile.readBytes()
+    }
+
+    /** 单样式包在外层 zip 里的条目名：样式名清洗 + .zip，重名追加序号。 */
+    private fun styleZipEntryName(styleName: String, usedNames: MutableSet<String>): String {
+        val safeName = styleName
+            .trim()
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .trim('.')
+            .ifBlank { "style" }
+        var name = "$safeName.zip"
+        var sequence = 1
+        while (!usedNames.add(name)) {
+            sequence += 1
+            name = "$safeName-$sequence.zip"
+        }
+        return name
+    }
+
+    /**
+     * 是「批量包」（外层 zip、条目全是单样式包）就逐份导入并返回，否则返回 null
+     * （调用方回落到单份 [import]）。判定：顶层没有 config.json、条目全是 .zip。
+     */
+    fun importStylesIfBundle(
+        byteArray: ByteArray,
+        prepareConfig: (ReadBookConfig.Config) -> ReadBookConfig.Config = { it },
+    ): List<ReadBookConfig.Config>? {
+        val outerZipPath = FileUtils.getPath(appCtx.externalCache, "readConfigs.zip")
+        FileUtils.delete(outerZipPath)
+        val outerZipFile = FileUtils.createFileIfNotExist(outerZipPath)
+        outerZipFile.writeBytes(byteArray)
+        val innerZips = linkedMapOf<String, ByteArray>()
+        ZipInputStream(outerZipFile.inputStream().buffered()).use { input ->
+            generateSequence { input.nextEntry }.forEach { entry ->
+                if (!entry.isDirectory && entry.name.endsWith(".zip", ignoreCase = true)) {
+                    innerZips[entry.name] = input.readBytes()
+                }
+            }
+        }
+        if (innerZips.isEmpty()) return null
+        return innerZips.values.map { import(it, prepareConfig) }
+    }
+
+    fun import(
+        byteArray: ByteArray,
+        prepareConfig: (ReadBookConfig.Config) -> ReadBookConfig.Config = { it },
+    ): ReadBookConfig.Config {
         val configZipPath = FileUtils.getPath(appCtx.externalCache, "readConfig.zip")
         FileUtils.delete(configZipPath)
         val zipFile = FileUtils.createFileIfNotExist(configZipPath)
@@ -158,7 +226,7 @@ class ReadStyleRepository(
         ZipUtils.unZipToPath(zipFile, configDir)
         val configFile = configDir.getFile(ReadBookConfig.configFileName)
         var config: ReadBookConfig.Config =
-            GSON.fromJsonObject<ReadBookConfig.Config>(configFile.readText()).getOrThrow()
+            prepareConfig(GSON.fromJsonObject<ReadBookConfig.Config>(configFile.readText()).getOrThrow())
 
         config = config.copy(
             textFont = importFont(configDir, config.textFont),
@@ -245,16 +313,52 @@ class ReadStyleRepository(
         if (sourcePath.isBlank()) {
             return ""
         }
-        val source = File(sourcePath)
-        if (!source.exists() || !source.isFile) {
+        val fileName = assetFileName(sourcePath) ?: return ""
+        val target = exportDir.getFile(fileName)
+        // 三种来源都要能读：相册选的图是 content://（必须走 ContentResolver）、
+        // 老主题包里可能是相对路径（先归一化）、正常情况是绝对路径。
+        // 读不到就跳过这一张（原来的写法在这里会抛 FileNotFoundException/EACCES，
+        // 被上层捕获后整个导出/分享都失败）。
+        val copied = runCatching {
+            if (sourcePath.isContentScheme()) {
+                appCtx.contentResolver.openInputStream(sourcePath.toUri())?.use { input ->
+                    target.outputStream().use { output -> input.copyTo(output) }
+                } != null
+            } else {
+                val source = FileUtils.resolveAssetFile(sourcePath)
+                if (source?.isFile != true) return@runCatching false
+                source.copyTo(target, overwrite = true)
+                true
+            }
+        }.getOrDefault(false)
+        if (!copied) {
             return ""
         }
-        val target = exportDir.getFile(source.name)
-        source.copyTo(target, overwrite = true)
         if (exportFiles.none { it.absolutePath == target.absolutePath }) {
             exportFiles.add(target)
         }
         return target.name
+    }
+
+    /** 导出用的文件名：content:// 优先用相册里的原始文件名（拿不到就兜底），其它取路径里的文件名；统一做安全化。 */
+    private fun assetFileName(sourcePath: String): String? {
+        val raw = if (sourcePath.isContentScheme()) {
+            queryDisplayName(sourcePath.toUri()) ?: "bg_${System.currentTimeMillis()}.jpg"
+        } else {
+            File(sourcePath).name
+        }
+        val safe = raw.trim()
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .trim('.')
+        return safe.ifBlank { null }
+    }
+
+    private fun queryDisplayName(uri: Uri): String? {
+        return runCatching {
+            appCtx.contentResolver
+                .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+        }.getOrNull()
     }
 
     private fun copyRuleAsset(sourcePath: String, target: File): Boolean {

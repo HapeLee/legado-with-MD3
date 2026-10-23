@@ -1,5 +1,7 @@
 package io.legado.app.domain.model.settings
 
+import androidx.compose.runtime.Stable
+
 data class ReadStyleState(
     val items: List<ReadStyleItem> = emptyList(),
     val selectedIndex: Int = 0,
@@ -15,7 +17,9 @@ data class ReadStyleState(
     val revision: Long = 0L,
 )
 
+@Stable
 data class ReadStyleItem(
+    val id: String,
     val name: String,
     val bgType: Int,
     val bgValue: String,
@@ -27,3 +31,12 @@ data class ReadStyleItem(
     val textColorNight: Int,
     val textColorEInk: Int,
 )
+
+/**
+ * 列表前这么多份是内置预设：不可删、不可拖、不可插到它们前面
+ * （`applyPreset(index)` 按这些下标取数据，配置缺斤少两时也靠它们补齐）。
+ *
+ * 放在领域模型而不是 data 层的 store：UI（主题列表的管理模式）也要用它判断"预设钉死"，
+ * 而架构守卫只允许网关实现提到那个 store。
+ */
+const val READ_STYLE_PRESET_COUNT = 5

@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.ReadStyleBooleanKey
@@ -9,6 +10,7 @@ import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ReadStyleIntKey
 import io.legado.app.domain.gateway.ReadStyleMutation
 import io.legado.app.domain.gateway.ReadStyleStringKey
+import io.legado.app.domain.model.settings.READ_STYLE_PRESET_COUNT
 import io.legado.app.domain.model.settings.ReadStyleItem
 import io.legado.app.domain.model.settings.ReadStyleState
 import io.legado.app.help.DefaultData
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import splitties.init.appCtx
 import java.io.InputStream
 import java.util.concurrent.atomic.AtomicLong
 
@@ -96,7 +99,9 @@ class ReadBookStyleConfigRepository(
     }
 
     override fun addStyle(): Int {
-        val index = configStore.addConfig(ReadBookConfig.Config())
+        // 新主题 = 复刻"正在使用"那份的**排版**（共享排版开着时取共享那份的排版 —— 与"导出当前样式"
+        // 同一个口径，见 ReadBookConfig.getExportConfig），但**不继承背景图**：背景整组回默认纯色。
+        val index = configStore.addConfig(ReadBookConfig.getExportConfig().asNewStyle())
         save()
         return index
     }
@@ -124,12 +129,131 @@ class ReadBookStyleConfigRepository(
         return removedIndex != null
     }
 
+    override fun moveStyle(from: Int, to: Int): Boolean {
+        if (!configStore.moveStyle(from, to)) return false
+        // 选中下标跟着移动，否则重排后"当前样式"会跳到别人身上
+        val readIndex = AppConfigStore.getInt(PreferKey.readStyleSelect) ?: 0
+        val comicIndex = AppConfigStore.getInt(PreferKey.comicStyleSelect) ?: readIndex
+        AppConfigStore.putAll(
+            mapOf(
+                PreferKey.readStyleSelect to shiftIndexAfterMove(readIndex, from, to),
+                PreferKey.comicStyleSelect to shiftIndexAfterMove(comicIndex, from, to),
+            )
+        )
+        save()
+        return true
+    }
+
+    override fun deleteStylesAt(indices: List<Int>): Boolean {
+        val snapshot = configStore.configsSnapshot()
+        val targets = indices
+            .filter { it >= READ_STYLE_PRESET_COUNT && it in snapshot.indices }
+            .distinct()
+            .sorted()
+        if (targets.isEmpty()) return false
+        // 名字要在删之前取——删完就查不到了，而高亮规则按名字解绑
+        val removedNames = targets.map { snapshot[it].name }
+        if (!configStore.deleteStylesAt(targets)) return false
+
+        // 每删掉一份、且它不晚于当前选中项，选中下标就左移一位
+        fun shift(index: Int) = (index - targets.count { it <= index }).coerceAtLeast(0)
+        val readIndex = AppConfigStore.getInt(PreferKey.readStyleSelect) ?: 0
+        val comicIndex = AppConfigStore.getInt(PreferKey.comicStyleSelect) ?: readIndex
+        AppConfigStore.putAll(
+            mapOf(
+                PreferKey.readStyleSelect to shift(readIndex),
+                PreferKey.comicStyleSelect to shift(comicIndex),
+            )
+        )
+        removedNames.forEach { highlightRuleRepository.removeConfigBinding(it) }
+        save()
+        return true
+    }
+
+    override fun moveStylesToEdge(indices: List<Int>, toTop: Boolean): Boolean {
+        val before = configStore.configsSnapshot()
+        val readIndex = AppConfigStore.getInt(PreferKey.readStyleSelect) ?: 0
+        val comicIndex = AppConfigStore.getInt(PreferKey.comicStyleSelect) ?: readIndex
+        // 记下"选中那份"的实例：搬完按实例找新位置，同名样式也不会认错
+        val selectedRead = before.getOrNull(readIndex)
+        val selectedComic = before.getOrNull(comicIndex)
+        if (!configStore.moveStylesToEdge(indices, toTop)) return false
+        val after = configStore.configsSnapshot()
+        AppConfigStore.putAll(
+            mapOf(
+                PreferKey.readStyleSelect to after.newIndexOf(selectedRead, readIndex),
+                PreferKey.comicStyleSelect to after.newIndexOf(selectedComic, comicIndex),
+            )
+        )
+        save()
+        return true
+    }
+
+    /** 按实例找新位置；实例为空或已不在列表里就保持原下标。 */
+    private fun List<ReadBookConfig.Config>.newIndexOf(
+        instance: ReadBookConfig.Config?,
+        fallback: Int,
+    ): Int {
+        if (instance == null) return fallback
+        val index = indexOfFirst { it === instance }
+        return if (index >= 0) index else fallback
+    }
+
+    /**
+     * 重排后的新下标（[io.legado.app.utils.move] 语义：先移除、再插入到 [to]）：
+     * 被移动的项自己落到 [to]，被跨过的那些项各让一位。
+     */
+    private fun shiftIndexAfterMove(index: Int, from: Int, to: Int): Int = when {
+        index == from -> to
+        from < index && index <= to -> index - 1
+        to <= index && index < from -> index + 1
+        else -> index
+    }
+
     override fun importCurrentStyle(bytes: ByteArray) {
-        ReadBookConfig.durConfig = readStyleRepository.import(bytes)
+        val bundle = readStyleRepository.importStylesIfBundle(bytes)
+        if (bundle != null) {
+            // 批量包：逐份进列表（同名覆盖），不动当前选中
+            bundle.forEach { configStore.importOrReplaceConfig(it) }
+        } else {
+            ReadBookConfig.durConfig = readStyleRepository.import(bytes)
+        }
         save()
     }
 
+    override fun importStylesAsNew(bytes: ByteArray): Int? {
+        val usedNames = configStore.configsSnapshot().mapTo(hashSetOf()) { it.name }
+        // import() 同时保存按名称绑定的高亮规则，必须在它写库前分配新名称。
+        // 批量导入共用这一组名称，避免包内同名主题互相覆盖规则。
+        fun prepareNewConfig(config: ReadBookConfig.Config): ReadBookConfig.Config {
+            val baseName = config.name.ifBlank { appCtx.getString(R.string.text_bg_style) }
+            var name = baseName
+            var suffix = 2
+            while (!usedNames.add(name)) {
+                name = "$baseName (${suffix++})"
+            }
+            return config.copy(name = name)
+        }
+        val bundle = readStyleRepository.importStylesIfBundle(bytes, ::prepareNewConfig)
+        if (bundle != null) {
+            // 批量包：逐份追加到末尾（一律新增，不再同名覆盖），不动任何已有主题
+            bundle.forEach { configStore.addConfig(it) }
+            save()
+            return null
+        }
+        // 单份也先分配新名称，再追加到列表最后。
+        val index = configStore.addConfig(readStyleRepository.import(bytes, ::prepareNewConfig))
+        save()
+        return index
+    }
+
     override fun importOrReplaceStyle(bytes: ByteArray): String {
+        val bundle = readStyleRepository.importStylesIfBundle(bytes)
+        if (bundle != null) {
+            val names = bundle.map { configStore.importOrReplaceConfig(it) }
+            save()
+            return names.joinToString("、")
+        }
         val name = configStore.importOrReplaceConfig(readStyleRepository.import(bytes))
         save()
         return name
@@ -141,6 +265,23 @@ class ReadBookStyleConfigRepository(
         )
         return readStyleRepository.export(config)
     }
+
+    override fun exportStyles(indices: List<Int>): ByteArray {
+        val snapshot = configStore.configsSnapshot()
+        return readStyleRepository.exportStyles(
+            indices.filter { it in snapshot.indices }.distinct().map { snapshot[it].withExportRules() }
+        )
+    }
+
+    override fun exportStyleAt(index: Int): ByteArray? {
+        // 与"批量包"里那一个小包走同一条 export(config) ⇒ 产物格式完全一致
+        val config = configStore.configsSnapshot().getOrNull(index) ?: return null
+        return readStyleRepository.export(config.withExportRules())
+    }
+
+    private fun ReadBookConfig.Config.withExportRules(): ReadBookConfig.Config = copy(
+        highlightRules = ArrayList(highlightRuleRepository.load(name)),
+    )
 
     override fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String =
         readStyleRepository.saveBackgroundImage(inputStream, displayName)
@@ -337,6 +478,7 @@ class ReadBookStyleConfigRepository(
         revision = stateRevision.incrementAndGet(),
         items = configStore.configsSnapshot().map { config ->
             ReadStyleItem(
+                id = config.id,
                 name = config.name,
                 bgType = config.bgType,
                 bgValue = config.bgStr,

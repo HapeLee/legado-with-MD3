@@ -442,6 +442,8 @@ object PreferKey {
     const val sliderVibrator = "sliderVibrator"
     const val useNewTocSheet = "useNewTocSheet"
     const val maxLengthWithNoToc = "maxLengthWithNoToc"
+    /** 阅读主题弹窗（背景网格）的列数。 */
+    const val themeGridColumns = "themeGridColumns"
     const val selectVibrator = "selectVibrator"
     const val audioCacheCleanTime = "audioCacheCleanTime"
     const val audioPreDownloadNum = "audioPreDownloadNum"

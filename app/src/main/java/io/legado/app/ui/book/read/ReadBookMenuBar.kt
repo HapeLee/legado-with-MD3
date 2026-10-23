@@ -5,8 +5,10 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -29,7 +32,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -57,6 +61,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -77,6 +82,7 @@ import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.ui.book.read.sheet.AutoReadContent
 import io.legado.app.ui.book.read.sheet.ReadAloudContent
 import io.legado.app.ui.book.read.sheet.ReadStyleContent
+import io.legado.app.ui.book.read.sheet.ThemeListContent
 import io.legado.app.ui.book.read.sheet.TypographyPage
 import io.legado.app.ui.book.read.sheet.TypographySection
 import io.legado.app.ui.book.readaloud.ReadAloudTimerConfig
@@ -124,7 +130,8 @@ fun ReadBookMenuBar(
         ReadBookMenuContent.Route(currentRoute)
     }
     val dialogLikeRoute = currentRoute == ReadBookMenuRoute.InformationConfig ||
-            currentRoute == ReadBookMenuRoute.PaddingConfig
+            currentRoute == ReadBookMenuRoute.PaddingConfig ||
+            currentRoute == ReadBookMenuRoute.ThemeList
     var readStylePage by remember { mutableIntStateOf(0) }
     val sliderDragState = remember { SliderDragState() }
     LaunchedEffect(currentRoute) {
@@ -266,9 +273,39 @@ fun ReadBookMenuBar(
             }
         }
 
+        // 编辑面板期间（menuHiddenBySheet）**不销毁面板**：面板挂在 AnimatedVisibility 里，
+        // 退场动画一结束内容就被销毁、恢复时重建，而重建那一瞬绘制跟不上 ⇒ 顶部一条带子晚出。
+        // 撑住 visible 就没有这一瞬。收起/弹出改在**绘制层**做位移（graphicsLayer.translationY，
+        // 只改绘制、不占布局）⇒ 面板既不重建、尺寸与位置也一字节不动；手感照原版滑入滑出（同一个 spring）。
+        val panelVisible = state.menuVisible || searchMenuVisible
+        val keepPanelAlive = state.menuHiddenBySheet
+        val editSlideProgress by animateFloatAsState(
+            targetValue = if (keepPanelAlive) 1f else 0f,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+            label = "ReadMenuEditSlide",
+        )
+        // 位移距离取"整屏高"，不是"面板自身高度"：居中面板被 offset 抬升过，它的布局盒本已贴在
+        // 屏幕底部，只滑自身高度会让面板上面一截还留在屏幕里；一整屏高 ⇒ 抬升多少都必定完全离场。
+        val editSlideDistancePx = LocalWindowInfo.current.containerSize.height.toFloat()
+
         // Bottom menu + floating icon row (bottom positions)
-        ReaderMenuAnimatedBottom(visible = state.menuVisible || searchMenuVisible) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        ReaderMenuAnimatedBottom(
+            visible = panelVisible || keepPanelAlive,
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                // 只有"背景弹窗（ThemeList 路由）长按编辑期间"会动：进编辑 0→1 滑出屏幕，
+                // 返回 1→0 滑回来。其它路由/其它界面 keepPanelAlive 恒 false ⇒ 位移恒 0，动画不受影响。
+                // 只在 dialog-like 路由挂这层（主菜单连修饰符链都不变 —— 别碰其它界面的动画）；
+                // 编辑这段 dialogLikeRoute 稳定不变 ⇒ 不会中途换链、也就不存在"动画开始时才分配 layer"。
+                modifier = if (dialogLikeRoute) {
+                    Modifier.graphicsLayer {
+                        translationY = editSlideProgress * editSlideDistancePx
+                    }
+                } else {
+                    Modifier
+                },
+            ) {
                 if (state.menuVisible &&
                     state.menuConfig.showTitleBarIcons &&
                     state.menuConfig.titleBarIconPosition >= 2
@@ -336,7 +373,8 @@ private fun ReadBookMenuSurface(
     }
     val expanded = route != ReadBookMenuRoute.Main
     val dialogLikeRoute = route == ReadBookMenuRoute.InformationConfig ||
-            route == ReadBookMenuRoute.PaddingConfig
+            route == ReadBookMenuRoute.PaddingConfig ||
+            route == ReadBookMenuRoute.ThemeList
     val density = LocalDensity.current
     val windowSize = LocalWindowInfo.current.containerSize
     var surfaceHeightPx by remember { mutableIntStateOf(0) }
@@ -366,6 +404,12 @@ private fun ReadBookMenuSurface(
         lastValidNavBarHeightValue = currentNavBarHeight.value
     }
     val navBarHeight = if (currentNavBarHeight.value > 0f) currentNavBarHeight else lastValidNavBarHeightValue.dp
+    // 阅读主题弹窗"非网格开销"的实测值。**放在这里（路由分支外）而不是分支内**：
+    // 面板挂在 AnimatedVisibility 上，隐藏后子树会被销毁、分支内的 remember 归零 ⇒ 恢复时会先退回
+    // 首帧兜底值再长高（面板居中 ⇒ 顶边最后才到位，看着像"上半截延后出现"）。
+    // key 用 navBarHeight：导航栏高度变了（旋转/三键↔手势）开销也跟着变，旧的实测值要作废重测。
+    var themeListOverheadPx by remember(navBarHeight) { mutableIntStateOf(0) }
+    var themeListGridHeightPx by remember(navBarHeight) { mutableIntStateOf(0) }
     val floatingHorizontalMargin = if (isFloating) 16.dp else 0.dp
     val floatingBottomMargin = if (isFloating) 16.dp + navBarHeight else 0.dp
     val mainHorizontalMargin =
@@ -457,6 +501,10 @@ private fun ReadBookMenuSurface(
         isFloating || extendSurfaceToNavigationBar -> WindowInsetsSides.Horizontal
         else -> WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
     }
+    // 面板的窗口内边距**不能用 safeDrawing**（它含 IME）：键盘弹起时底部内边距会变成键盘高度，
+    // 而面板高度又被 maxHeight 钉住 ⇒ 内容整体被顶上去（表现为"弹窗飞顶"，且 surfaceH/lift 都不变）。
+    // 用 systemBars + displayCutout（= safeDrawing 去掉 IME）：面板永远不因键盘避让。
+    val surfaceWindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
 
     Surface(
         modifier = Modifier
@@ -470,7 +518,7 @@ private fun ReadBookMenuSurface(
                     Modifier
                 } else {
                     Modifier.windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(surfaceWindowInsetSides)
+                        surfaceWindowInsets.only(surfaceWindowInsetSides)
                     )
                 }
             )
@@ -719,6 +767,59 @@ private fun ReadBookMenuSurface(
                                 onOpenUnderlineConfig = {},
                                 onOpenHighlightRule = {},
                                 section = TypographySection.Padding,
+                            )
+                        }
+                    }
+
+                    ReadBookMenuRoute.ThemeList -> {
+                        val routeBottomPadding =
+                            if (extendSurfaceToNavigationBar) navBarHeight else 0.dp
+                        // 面板高度"实测法"：网格高 = 面板上限 − 非网格部分实测开销（两个实测值在菜单栏顶层，
+                        // 不随面板重建丢失，见 navBarHeight 附近的声明）。
+                        // 开销 = 面板实测高 − 网格实测高（与网格高无关、是常数 ⇒ 一次校正即收敛）；
+                        // 首帧兜底 —— 只在还没测到值时用。
+                        // ⚠️ 约束：它必须 **≥ 真实开销**，否则首帧网格比可用空间高 ⇒ 面板顶到上限 ⇒
+                        // 上面那句"没被夹住才接受测量"永远不成立 ⇒ 一次都收敛不了，网格底部还会被裁。
+                        // （加了"主题/排版"分段行后真实开销 ≈112+44≈156dp，故从 116 抬到 164，留几 dp 余量。）
+                        val maxHeightPx = with(density) { maxHeight.roundToPx() }
+                        val fallbackOverheadPx = with(density) {
+                            (164.dp + routeBottomPadding).roundToPx()
+                        }
+                        val themeListOverheadPxValue =
+                            if (themeListOverheadPx > 0) themeListOverheadPx else fallbackOverheadPx
+                        // 只在面板没被上限夹住时接受测量：顶满之后数值不再变，不会越算越小或来回抖
+                        if (themeListGridHeightPx > 0 && surfaceHeightPx in 1 until maxHeightPx) {
+                            val measuredOverheadPx = surfaceHeightPx - themeListGridHeightPx
+                            if (measuredOverheadPx > 0 && measuredOverheadPx != themeListOverheadPx) {
+                                themeListOverheadPx = measuredOverheadPx
+                            }
+                        }
+                        val themeListGridMaxHeight = with(density) {
+                            (maxHeightPx - themeListOverheadPxValue)
+                                .coerceAtLeast(200.dp.roundToPx())
+                                .toDp()
+                        }
+                        ReadBookMenuRoutePage(
+                            title = stringResource(R.string.theme_list_title),
+                            maxHeight = maxHeight,
+                            scrollContent = false,
+                            animateSize = false,
+                            bottomPadding = routeBottomPadding,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            ThemeListContent(
+                                onIntent = onIntent,
+                                onToggleDayNight = { onIntent(ReadBookIntent.ToggleDayNight) },
+                                onOpenBgTextConfig = { index ->
+                                    onIntent(
+                                        ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index))
+                                    )
+                                    onIntent(ReadBookIntent.OpenBgTextConfig(index))
+                                },
+                                gridMaxHeight = themeListGridMaxHeight,
+                                onGridMeasured = { themeListGridHeightPx = it },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                styleConfig = state.styleConfig,
                             )
                         }
                     }

@@ -112,11 +112,13 @@ object ReadStyleResolver {
         if (bgType != 2) {
             return null
         }
-        return if (bgStr.contains(File.separator)) {
-            bgStr
-        } else {
-            FileUtils.getPath(appCtx.externalFiles, "bg", bgStr)
+        if (!bgStr.contains(File.separator)) {
+            // 裸文件名 ⇒ 按当前约定：<externalFiles>/bg/<name>
+            return FileUtils.getPath(appCtx.externalFiles, "bg", bgStr)
         }
+        // 含分隔符：绝对路径 / content:// 原样可用；**历史相对路径**（老主题包里的
+        // `files/xxx.png`）先归一化到真实文件，找不到就保持原样（交回原来的读取方）
+        return FileUtils.resolveAssetFile(bgStr)?.absolutePath ?: bgStr
     }
 
     fun currentBackgroundDrawable(

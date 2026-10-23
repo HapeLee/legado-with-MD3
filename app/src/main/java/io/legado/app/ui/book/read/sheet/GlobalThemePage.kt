@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.LightMode
@@ -58,6 +59,7 @@ import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookMenuRoute
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -277,6 +279,8 @@ fun GlobalThemePage(
                             config = config,
                             isSelected = styleSelect == index,
                             isNightTheme = isNightTheme,
+                            // 与展开弹窗同一律：完整显示背景图（不裁切）
+                            imageContentScale = ContentScale.FillBounds,
                             onClick = {
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index)))
                                 onStyleSelect(index)
@@ -309,6 +313,34 @@ fun GlobalThemePage(
                                 )
                             }
                         }
+                    }
+                }
+                // 打开阅读主题列表弹窗（固定在最右，不随卡片滑动）
+                NormalCard(
+                    onClick = {
+                        onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ThemeList))
+                    },
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(56.dp)
+                        .padding(start = 4.dp),
+                    cornerRadius = 8.dp,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    // 与左边"共用布局"按钮同款：同底色 + 同一条柔和描边（不然没开全局线框时这个 `>` 会光秃秃的）
+                    border = BorderStroke(
+                        1.dp,
+                        LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                    ),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AppIcon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = stringResource(R.string.text_bg_style),
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                 }
             }
@@ -438,8 +470,14 @@ fun StyleCard(
     config: ReadStyleItem,
     isSelected: Boolean,
     isNightTheme: Boolean,
+    // 默认尺寸 = 原横排卡 44×56；弹窗网格传自己的 modifier 铺满格子
+    modifier: Modifier = Modifier
+        .width(44.dp)
+        .height(56.dp),
+    imageContentScale: ContentScale = ContentScale.Crop,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    // 传 null 才不装内层长按监听（管理模式的长按要留给外层拖动）
+    onLongClick: (() -> Unit)? = null,
 ) {
     val mode = ReadStyleResolver.currentMode(isNightTheme)
     val bgType = when (mode) {
@@ -472,9 +510,7 @@ fun StyleCard(
     val bgPath = ReadStyleResolver.backgroundPath(bgType, bgValue)
 
     NormalCard(
-        modifier = Modifier
-            .width(44.dp)
-            .height(56.dp),
+        modifier = modifier,
         cornerRadius = 8.dp,
         containerColor = bgColor,
         onClick = onClick,
@@ -485,7 +521,7 @@ fun StyleCard(
                 AsyncImage(
                     model = bgPath,
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    contentScale = imageContentScale,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -505,8 +541,11 @@ fun StyleCard(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .height(12.dp)
+                        // 柔和容器色横条 + 反色勾（与阅读菜单"全局"Tab 选中态同色）；
+                        // 对比由 secondaryContainer/onSecondaryContainer 这对配色保证（日=淡底深勾 / 夜=深底淡勾），
+                        // 且不依赖卡片边框 ⇒ 全局"覆盖卡片边框"开着也照样一眼认出"正在使用"
                         .background(
-                            color = LegadoTheme.colorScheme.surfaceContainerHigh
+                            color = LegadoTheme.colorScheme.secondaryContainer
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -514,7 +553,7 @@ fun StyleCard(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
                         modifier = Modifier.size(10.dp),
-                        tint = LegadoTheme.colorScheme.primary,
+                        tint = LegadoTheme.colorScheme.onSecondaryContainer,
                     )
                 }
             }

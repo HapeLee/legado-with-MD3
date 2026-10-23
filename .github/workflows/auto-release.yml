@@ -158,7 +158,9 @@ jobs:
           echo "清空18PlusList.txt"
           echo "">$GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
       - name: Release Apk Sign
-        if: ${{ github.actor == 'HapeLee' }}
+        # fork PR 不提供签名 secrets；维护者推送 PR 时 actor 仍可能是 HapeLee。
+        # 外部 PR 只验证 Release/R8；同仓 PR 和受信任的原有构建保持签名行为。
+        if: ${{ github.actor == 'HapeLee' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         shell: bash
         run: |
           echo "${{ secrets.SIGNING_KEY }}" | base64 -d >"$GITHUB_WORKSPACE/app/my-release-key.jks"

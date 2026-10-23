@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -68,21 +69,33 @@ data class ActionItem(
 @Composable
 fun SelectionBottomBar(
     modifier: Modifier = Modifier,
+    /**
+     * 紧凑模式：整体等比缩到 0.85（用于阅读主题弹窗这类"小面板"里；默认 false ⇒ 其他界面零变化）。
+     * 用 scale 而不是逐项改尺寸：M3 浮动工具栏的容器高度/内边距不开放，只改按钮宽度会宽变高不变。
+     */
+    compact: Boolean = false,
     onSelectAll: () -> Unit,
     onSelectInvert: () -> Unit,
     primaryAction: ActionItem,
-    secondaryActions: List<ActionItem>
+    secondaryActions: List<ActionItem>,
+    /**
+     * 前导动作（可选）：渲染在"全选/反选"之后、[primaryAction] 之前。
+     * 默认 null ⇒ 现有调用点（书架/目录/搜索等）逐字不变。
+     */
+    leadingAction: ActionItem? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val selectAllDescription = stringResource(R.string.select_all)
     val invertSelectionDescription = stringResource(R.string.invert_selection)
     val moreActionsDescription = stringResource(R.string.more_menu)
-    val safeModifier = modifier.windowInsetsPadding(
-        WindowInsets.navigationBars
-            .union(WindowInsets.tappableElement)
-            .union(WindowInsets.ime)
-    )
+    val safeModifier = modifier
+        .windowInsetsPadding(
+            WindowInsets.navigationBars
+                .union(WindowInsets.tappableElement)
+                .union(WindowInsets.ime)
+        )
+        .scale(if (compact) 0.85f else 1f)
 
     if (isMiuix) {
         MiuixFloatingToolbar(
@@ -104,6 +117,16 @@ fun SelectionBottomBar(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = invertSelectionDescription
                     )
+                }
+
+                // 前导动作（可选）：反选之后、主操作之前
+                leadingAction?.let { action ->
+                    MiuixIconButton(onClick = action.onClick) {
+                        MiuixIcon(
+                            imageVector = action.icon,
+                            contentDescription = action.text
+                        )
+                    }
                 }
 
                 MiuixIconButton(
@@ -160,6 +183,15 @@ fun SelectionBottomBar(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = invertSelectionDescription
                     )
+                }
+                // 前导动作（可选）：反选之后、主操作之前
+                leadingAction?.let { action ->
+                    IconButton(onClick = action.onClick) {
+                        AppIcon(
+                            imageVector = action.icon,
+                            contentDescription = action.text
+                        )
+                    }
                 }
             },
             trailingContent = {

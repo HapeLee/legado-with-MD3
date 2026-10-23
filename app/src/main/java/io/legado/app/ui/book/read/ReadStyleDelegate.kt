@@ -19,11 +19,13 @@ import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.model.ReadSessionState
 import io.legado.app.utils.hexString
 import io.legado.app.utils.postEvent
+import io.legado.app.utils.share
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 import java.io.FileNotFoundException
 import kotlin.time.Duration.Companion.milliseconds
 import androidx.core.graphics.ColorUtils as AndroidColorUtils
@@ -103,6 +105,12 @@ class ReadStyleDelegate(
 
     // --- 样式方案 ---
 
+    fun setThemeGridColumns(columns: Int) {
+        scope.launch {
+            readSettingsRepository.update { it.copy(themeGridColumns = columns) }
+        }
+    }
+
     fun saveCurrentStyle() {
         readStyleGateway.save()
     }
@@ -111,15 +119,108 @@ class ReadStyleDelegate(
         host.applyConfigUpdate(ConfigUpdate.StyleSelect(readStyleGateway.addStyle()))
     }
 
-    fun deleteCurrentStyle() {
-        if (!readStyleGateway.deleteCurrentStyle()) return
-        host.updateState { it.withSheet(null) }
+    /**
+     * 删除"当前正在编辑/正在使用"的那份样式。返回是否真的删了。
+     *
+     * **不在这里关编辑面板**：关面板 + 复位菜单统一由调用方走
+     * [ReadBookViewModel.dismissActiveSheet]（浮层全关那条路）。之前这里直接
+     * `activeSheet = null`，绕过了 `menuHiddenBySheet` 的复位 ⇒ 主题列表面板会留在
+     * "滑出屏幕"的位移上再也回不来（点"展开背景"出不来）。
+     */
+    fun deleteCurrentStyle(): Boolean {
+        if (!readStyleGateway.deleteCurrentStyle()) return false
         // 旧 View deleteDur = [1, 2, 5]。
         emitConfigUpdate(
             ConfigUpdateAction.UpdateBackground,
             ConfigUpdateAction.UpdateStyle,
             ConfigUpdateAction.ReloadContent,
+            ConfigUpdateAction.UpdatePageAnim,
         )
+        return true
+    }
+
+    fun moveStyle(from: Int, to: Int) {
+        if (!readStyleGateway.moveStyle(from, to)) return
+        emitConfigUpdate(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+
+    fun deleteStylesAt(indices: List<Int>) {
+        if (!readStyleGateway.deleteStylesAt(indices)) return
+        emitConfigUpdate(
+            ConfigUpdateAction.UpdateBackground,
+            ConfigUpdateAction.UpdateStyle,
+            ConfigUpdateAction.ReloadContent,
+            ConfigUpdateAction.UpdatePageAnim,
+        )
+    }
+
+    /** 指定下标样式的名字（空名回落"阅读主题"）—— 单份分享/导出的文件名用。 */
+    private fun styleNameAt(index: Int): String =
+        host.uiState.styleConfig.styleItems.getOrNull(index)?.name
+            ?.takeIf { it.isNotBlank() } ?: "阅读主题"
+
+    fun requestExportStyles(indices: List<Int>) {
+        if (indices.isEmpty()) return
+        val singleIndex = indices.singleOrNull()
+        host.emitEffect(
+            ReadBookEffect.OpenReadStyleConfigsExport(
+                // 单选 ⇒ 默认文件名就是 <样式名>.zip；多选维持 阅读主题.zip
+                fileName = readStyleExportFileName(
+                    singleIndex?.let(::styleNameAt) ?: "阅读主题"
+                ),
+                indices = indices,
+            )
+        )
+    }
+
+    fun exportStylesAt(uri: Uri, indices: List<Int>) {
+        withStyleFileOperation("导出阅读样式失败") {
+            // 与分享同构：单选直接导出单份（不套外层大包），多选才打批量包
+            val singleIndex = indices.singleOrNull()
+            val bytes = if (singleIndex != null) {
+                readStyleGateway.exportStyleAt(singleIndex)
+                    ?: error("style index out of range: $singleIndex")
+            } else {
+                readStyleGateway.exportStyles(indices)
+            }
+            context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                ?: throw FileNotFoundException(uri.toString())
+            context.getString(R.string.export_success)
+        }
+    }
+
+    /**
+     * 分享选中的主题：复用导出的打包结果，写进 cache 让 FileProvider 可读，
+     * 再直接调系统分享面板（[io.legado.app.utils.share]，authority 与 manifest 里的一致）。
+     * 不弹文件选择器、不改数据，因此也不清空选中。
+     *
+     * 只选中 1 个 ⇒ 直接分享**单份**（文件名 = `<样式名>.zip`），不套"阅读主题.zip"外层大包；
+     * 多选 ⇒ 保持原来的批量包。
+     */
+    fun shareStyles(indices: List<Int>) {
+        if (indices.isEmpty()) return
+        withStyleFileOperation("分享阅读主题失败") {
+            val singleIndex = indices.singleOrNull()
+            val bytes: ByteArray
+            val fileName: String
+            if (singleIndex != null) {
+                bytes = readStyleGateway.exportStyleAt(singleIndex)
+                    ?: error("style index out of range: $singleIndex")
+                fileName = readStyleExportFileName(styleNameAt(singleIndex))
+            } else {
+                bytes = readStyleGateway.exportStyles(indices)
+                fileName = readStyleExportFileName("阅读主题")
+            }
+            val file = File(context.cacheDir, fileName)
+            file.writeBytes(bytes)
+            context.share(file, "application/zip", context.getString(R.string.share))
+            null
+        }
+    }
+
+    fun moveStylesToEdge(indices: List<Int>, toTop: Boolean) {
+        if (!readStyleGateway.moveStylesToEdge(indices, toTop)) return
+        emitConfigUpdate(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
     }
 
     fun applyPresetTheme(presetIndex: Int) {
@@ -139,7 +240,14 @@ class ReadStyleDelegate(
         scope.launch {
             readSettingsRepository.setStyleSelect(ReadSessionState.isComic, index)
         }
-        host.updateState { it.withSheet(ReadBookSheet.BgTextConfig) }
+        host.updateState {
+            val next = it.withSheet(ReadBookSheet.BgTextConfig)
+            if (it.menuState.currentRoute == ReadBookMenuRoute.ThemeList) {
+                next.copy(menuState = it.menuState.copy(visible = false), menuHiddenBySheet = true)
+            } else {
+                next
+            }
+        }
     }
 
     // --- 背景图与导入导出 ---
@@ -173,7 +281,29 @@ class ReadStyleDelegate(
                 ConfigUpdateAction.UpdateStyle,
                 ConfigUpdateAction.ReloadContent,
             )
-            context.getString(R.string.success)
+            context.getString(R.string.import_success)
+        }
+    }
+
+    /**
+     * ⋮ 菜单"新增导入"：纯新增（追加到列表末尾，绝不碰任何已有主题）。
+     *
+     * 单份 ⇒ 立刻应用这个新主题（与"＋新建主题"同一条 `ConfigUpdate.StyleSelect` 路径，阅读背景马上变）；
+     * 批量 ⇒ 保持静默，只刷新列表、绝不切换正在使用的主题。
+     */
+    fun importStylesAsNew(uri: Uri) {
+        withStyleFileOperation("导入阅读样式失败") {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: throw FileNotFoundException(uri.toString())
+            val newIndex = readStyleGateway.importStylesAsNew(bytes)
+            if (newIndex != null) {
+                // 单份：立刻应用新主题
+                host.applyConfigUpdate(ConfigUpdate.StyleSelect(newIndex))
+            } else {
+                // 批量：只刷新列表，不动选中
+                emitConfigUpdate(ConfigUpdateAction.UpdateStyle)
+            }
+            context.getString(R.string.import_success)
         }
     }
 
@@ -195,11 +325,14 @@ class ReadStyleDelegate(
 
     private inline fun withStyleFileOperation(
         logTag: String,
-        crossinline block: () -> String,
+        // 返回 null = 不弹成功提示（如"分享"：系统分享面板本身就是反馈）
+        crossinline block: () -> String?,
     ) {
         scope.launch(IO) {
             runCatching { block() }
-                .onSuccess { message -> host.emitEffect(ReadBookEffect.ShowToast(message)) }
+                .onSuccess { message ->
+                    if (message != null) host.emitEffect(ReadBookEffect.ShowToast(message))
+                }
                 .onFailure { throwable ->
                     AppLog.put(logTag, throwable)
                     host.emitEffect(

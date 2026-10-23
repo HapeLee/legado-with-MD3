@@ -27,9 +27,38 @@ interface ReadStyleGateway {
     fun applyPreset(index: Int): Boolean
     fun addStyle(): Int
     fun deleteCurrentStyle(): Boolean
+
+    /** 在自建样式区（内置预设那几份之外）内重排；返回是否真的移动了。 */
+    fun moveStyle(from: Int, to: Int): Boolean
+
+    /** 批量删除自建样式（下标按删除前算）；返回是否真的删了。 */
+    fun deleteStylesAt(indices: List<Int>): Boolean
+
+    /** 把选中样式整块搬到边缘：置顶 = 紧跟预设之后，置底 = 列表末尾；块内保持原相对次序。 */
+    fun moveStylesToEdge(indices: List<Int>, toTop: Boolean): Boolean
     fun importCurrentStyle(bytes: ByteArray)
     fun importOrReplaceStyle(bytes: ByteArray): String
+
+    /**
+     * 导入为**新增**样式：全部追加到列表末尾，绝不碰任何已有主题（也不改当前选中）。
+     *
+     * @return 单份导入时返回新样式的下标（调用方据此"立刻应用"）；
+     *         批量包返回 null —— 批量必须保持静默，不切换正在使用的主题。
+     */
+    fun importStylesAsNew(bytes: ByteArray): Int?
     fun exportCurrentStyle(): ByteArray
+
+    /**
+     * 批量导出：外层 zip 套若干「单样式包」。按各样式本来的样子导
+     * （不混入共享排版的字体项——那套合并语义只属于单份 [exportCurrentStyle]）。
+     */
+    fun exportStyles(indices: List<Int>): ByteArray
+
+    /**
+     * 单份导出指定下标的那份样式（产物 = 批量包里对应那一个小包，格式完全一致）。
+     * 下标无效返回 null。用于"只选中 1 个时直接分享单份"。
+     */
+    fun exportStyleAt(index: Int): ByteArray?
     fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String
     fun setCurrentBackgroundImage(path: String)
     fun setCurrentBackgroundImageForMode(path: String, isNight: Boolean)
