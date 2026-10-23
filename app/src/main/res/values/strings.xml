@@ -1801,6 +1801,9 @@
     <string name="book_info_follow_cover_color_summary">Applied only while a background cover is visible</string>
     <string name="book_info_network_cover_background">Network cover background</string>
     <string name="book_info_default_cover_background">Default cover background</string>
+    <string name="book_info_author_search_fallback">Search by author when no related-books rule</string>
+    <string name="book_info_author_search_fallback_summary">When the book source has no relatedBooks rule, search the author name on the current source and show other works by the same author as related books</string>
+    <string name="book_other_works">Other works by the author</string>
     <string name="book_info_background_blur_off">Show cover without blur</string>
     <string name="book_info_background_blur_on">Show blurred cover</string>
     <string name="book_info_background_blur_off_for_default">Hide background cover</string>

@@ -422,6 +422,14 @@ fun ThemeConfigScreen(
                             updateTheme { it.copy(bookInfoDefaultCoverBackground = value) }
                         }
                     )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.book_info_author_search_fallback),
+                        description = stringResource(R.string.book_info_author_search_fallback_summary),
+                        checked = theme.bookInfoAuthorSearchFallback,
+                        onCheckedChange = { value ->
+                            updateTheme { it.copy(bookInfoAuthorSearchFallback = value) }
+                        }
+                    )
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.eye_protection)) {

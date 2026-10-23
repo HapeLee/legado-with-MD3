@@ -47,6 +47,7 @@ data class ThemeSettings(
     val bookInfoFollowCoverColor: Boolean = true,
     val bookInfoNetworkCoverBackground: String = "on",
     val bookInfoDefaultCoverBackground: String = "on",
+    val bookInfoAuthorSearchFallback: Boolean = false,
     val bookInfoInputColor: Int = 0,
     val backgroundImageLight: String? = null,
     val backgroundImageDark: String? = null,

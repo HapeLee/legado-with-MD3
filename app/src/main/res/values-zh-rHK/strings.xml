@@ -2429,6 +2429,9 @@
     <string name="book_info_follow_cover_color_summary">僅在顯示背景封面時生效</string>
     <string name="book_info_network_cover_background">網路封面背景設定</string>
     <string name="book_info_default_cover_background">預設封面背景設定</string>
+    <string name="book_info_author_search_fallback">無關聯規則時按作者搜尋</string>
+    <string name="book_info_author_search_fallback_summary">書源未設定關聯書籍（relatedBooks）規則時，用目前書源搜尋作者名，把作者的其它作品顯示為關聯書籍</string>
+    <string name="book_other_works">作者其它作品</string>
     <string name="book_info_background_blur_off">關閉模糊封面</string>
     <string name="book_info_background_blur_on">開啟模糊封面</string>
     <string name="book_info_background_blur_off_for_default">不顯示背景封面</string>

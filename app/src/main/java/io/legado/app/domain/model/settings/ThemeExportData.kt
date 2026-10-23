@@ -35,6 +35,7 @@ data class ThemeExportData(
     val bookInfoBackgroundBlur: String = "on",
     val bookInfoNetworkCoverBackground: String? = null,
     val bookInfoDefaultCoverBackground: String? = null,
+    val bookInfoAuthorSearchFallback: Boolean = false,
     val containerOpacity: Int = 100,
     val overrideBaseCardCornerRadius: Boolean = false,
     val baseCardCornerRadius: Float = 16f,

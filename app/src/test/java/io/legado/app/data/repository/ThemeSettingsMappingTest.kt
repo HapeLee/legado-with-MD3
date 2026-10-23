@@ -27,18 +27,18 @@ class ThemeSettingsMappingTest {
     }
 
     @Test
-    fun `Theme gateway 持久化边界固定为 69 键`() {
+    fun `Theme gateway 持久化边界固定为 70 键`() {
         val actualKeys = ThemeSettings().toGatewayPrefMap().keys
         val expectedKeys = ThemeSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(69, actualKeys.size)
+        assertEquals(70, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
         assertFalse(PreferKey.customMode in actualKeys)
         assertFalse(PreferKey.bookInfoInputColor in actualKeys)
     }
 
     @Test
-    fun `Theme gateway 69 键写读映射逐字段对应`() {
+    fun `Theme gateway 70 键写读映射逐字段对应`() {
         themeMappingSamples().forEach { expected ->
             assertEquals(expected.expectedGatewayPrefMap(), expected.toGatewayPrefMap())
             assertEquals(
@@ -191,6 +191,7 @@ private fun themeMappingSamples(): List<ThemeSettings> {
         bookInfoFollowCoverColor = false,
         bookInfoNetworkCoverBackground = "network-background",
         bookInfoDefaultCoverBackground = "default-background",
+        bookInfoAuthorSearchFallback = true,
         bookInfoInputColor = 0,
         backgroundImageLight = "light-background",
         backgroundImageDark = "dark-background",
@@ -284,6 +285,7 @@ private fun ThemeSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bookInfoFollowCoverColor to bookInfoFollowCoverColor,
     PreferKey.bookInfoNetworkCoverBackground to bookInfoNetworkCoverBackground,
     PreferKey.bookInfoDefaultCoverBackground to bookInfoDefaultCoverBackground,
+    PreferKey.bookInfoAuthorSearchFallback to bookInfoAuthorSearchFallback,
     PreferKey.bgImage to backgroundImageLight,
     PreferKey.bgImageN to backgroundImageDark,
     PreferKey.bgImageBlurring to backgroundImageBlurring,
