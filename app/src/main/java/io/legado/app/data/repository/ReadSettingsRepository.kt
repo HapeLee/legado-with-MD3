@@ -49,10 +49,6 @@ class ReadSettingsRepository(
     suspend fun setKeepLight(value: String) =
         settingsRepository.putString(PreferKey.keepLight, value)
 
-    /** 阅读主题弹窗（背景网格）的列数。写完后 DataStore 流会触发 VM 重建 state ⇒ 网格自动重排。 */
-    suspend fun setThemeGridColumns(value: Int) =
-        settingsRepository.putInt(PreferKey.themeGridColumns, value)
-
     suspend fun setHideStatusBar(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.hideStatusBar, value)
 

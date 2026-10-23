@@ -105,6 +105,12 @@ class ReadStyleDelegate(
 
     // --- 样式方案 ---
 
+    fun setThemeGridColumns(columns: Int) {
+        scope.launch {
+            readSettingsRepository.update { it.copy(themeGridColumns = columns) }
+        }
+    }
+
     fun saveCurrentStyle() {
         readStyleGateway.save()
     }
@@ -234,7 +240,14 @@ class ReadStyleDelegate(
         scope.launch {
             readSettingsRepository.setStyleSelect(ReadSessionState.isComic, index)
         }
-        host.updateState { it.withSheet(ReadBookSheet.BgTextConfig) }
+        host.updateState {
+            val next = it.withSheet(ReadBookSheet.BgTextConfig)
+            if (it.menuState.currentRoute == ReadBookMenuRoute.ThemeList) {
+                next.copy(menuState = it.menuState.copy(visible = false), menuHiddenBySheet = true)
+            } else {
+                next
+            }
+        }
     }
 
     // --- 背景图与导入导出 ---

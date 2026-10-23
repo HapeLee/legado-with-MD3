@@ -2,6 +2,8 @@ package io.legado.app.help.config
 
 import com.google.gson.Gson
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -41,9 +43,12 @@ class ReadConfigJsonRoundTripTest {
             bgAlpha = 66,
         )
 
-        val restored = gson.fromJson(gson.toJson(original), ReadBookConfig.Config::class.java)
+        val json = gson.toJsonTree(original)
+        val restored = gson.fromJson(json, ReadBookConfig.Config::class.java)
 
-        assertEquals("data class 相等性只看构造参数，正好是要持久化的那批", original, restored)
+        assertFalse("运行时标识不写入配置", json.asJsonObject.has("id"))
+        assertNotEquals("重新导入的主题获得独立身份", original.id, restored.id)
+        assertEquals("除运行时标识外的值字段必须完整往返", original.copy(id = restored.id), restored)
         assertEquals(33, restored.textSize)
         assertEquals(0.42f, restored.letterSpacing, 0f)
         assertTrue(restored.textItalic)

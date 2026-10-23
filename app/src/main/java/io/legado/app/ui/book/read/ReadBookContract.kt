@@ -350,6 +350,40 @@ data class ReadBookUiState(
     val activeSheet: ReadBookSheet?
         get() = sheetStack.lastOrNull()
 
+    /** 分段切换替换栈顶；普通跳转保留返回路径，重复打开栈顶不会叠加。 */
+    internal fun withMenuRoute(
+        route: ReadBookMenuRoute,
+        replaceTop: Boolean = false,
+        resetStack: Boolean = false,
+    ): ReadBookUiState {
+        val stack = menuState.routeStack
+        val next = when {
+            resetStack -> persistentListOf(ReadBookMenuRoute.Main, route)
+            replaceTop && stack.size <= 1 -> persistentListOf(ReadBookMenuRoute.Main, route)
+            replaceTop -> (stack.dropLast(1) + route).toImmutableList()
+            stack.lastOrNull() == route -> stack
+            else -> (stack + route).toImmutableList()
+        }
+        return copy(
+            menuState = menuState.copy(visible = true, routeStack = next),
+            menuHiddenBySheet = false,
+        )
+    }
+
+    internal fun withMenuBack(): ReadBookUiState = copy(
+        menuState = if (menuState.canNavigateBack) {
+            menuState.copy(routeStack = menuState.routeStack.dropLast(1).toImmutableList())
+        } else {
+            ReadBookMenuState()
+        },
+    )
+
+    /** 关闭编辑浮层后，恢复长按主题时收起的菜单。 */
+    internal fun withDismissedSheet(): ReadBookUiState = withSheet(null).copy(
+        menuState = if (menuHiddenBySheet) menuState.copy(visible = true) else menuState,
+        menuHiddenBySheet = false,
+    )
+
     /** Reuse an existing layer of the same kind rather than opening duplicate modal windows. */
     fun withSheet(sheet: ReadBookSheet?): ReadBookUiState {
         val next = if (sheet == null) {

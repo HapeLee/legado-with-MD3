@@ -801,52 +801,16 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.SwitchReadMenuRoute -> _uiState.update {
-                // Tab 分段切换：**替换栈顶**（不是 push）⇒ 在里面按返回是回主菜单，不会回到上一个 Tab
-                val stack = it.menuState.routeStack
-                val nextStack = if (stack.size <= 1) {
-                    kotlinx.collections.immutable.persistentListOf(
-                        ReadBookMenuRoute.Main,
-                        intent.route,
-                    )
-                } else {
-                    (stack.dropLast(1) + intent.route).toImmutableList()
-                }
-                it.copy(
-                    menuState = it.menuState.copy(
-                        visible = true,
-                        routeStack = nextStack,
-                    ),
-                    // 与 OpenReadMenuRoute 同样的兜底：编辑记账一律归零
-                    menuHiddenBySheet = false,
-                )
+                it.withMenuRoute(intent.route, replaceTop = true)
             }
 
             is ReadBookIntent.OpenReadMenuRoute -> _uiState.update {
-                val currentStack = it.menuState.routeStack
-                val nextStack = if (currentStack.lastOrNull() == intent.route) {
-                    currentStack
-                } else {
-                    (currentStack + intent.route).toImmutableList()
-                }
-                it.copy(
-                    menuState = it.menuState.copy(
-                        visible = true,
-                        routeStack = nextStack,
-                    ),
-                    // 兜底：开菜单 = 编辑记账一定归零（宁可多清一次，也不让面板卡在屏幕外）
-                    menuHiddenBySheet = false,
-                )
+                it.withMenuRoute(intent.route)
             }
 
-            is ReadBookIntent.ReadMenuBack -> _uiState.update {
-                if (it.menuState.canNavigateBack) {
-                    readBookStyleConfigRepository.save()
-                    val nextStack = it.menuState.routeStack.dropLast(1).toImmutableList()
-                    it.copy(menuState = it.menuState.copy(routeStack = nextStack))
-                } else {
-                    readBookStyleConfigRepository.save()
-                    it.copy(menuState = ReadBookMenuState())
-                }
+            is ReadBookIntent.ReadMenuBack -> {
+                readBookStyleConfigRepository.save()
+                _uiState.update { it.withMenuBack() }
             }
 
             is ReadBookIntent.OpenSearch -> {
@@ -1039,11 +1003,7 @@ class ReadBookViewModel(
                 _effects.tryEmit(ReadBookEffect.SetBrightness(intent.value))
             }
 
-            // 主题弹窗网格列数：写进阅读设置即可 —— DataStore 流会触发 collectReadPreferences
-            // ⇒ refreshFromReadBook ⇒ buildStyleConfig，网格自动按新列数重排
-            is ReadBookIntent.SetThemeGridColumns -> viewModelScope.launch {
-                readSettingsRepository.setThemeGridColumns(intent.columns)
-            }
+            is ReadBookIntent.SetThemeGridColumns -> styleDelegate.setThemeGridColumns(intent.columns)
 
             is ReadBookIntent.ToggleBrightnessAuto -> {
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(brightnessAuto = intent.auto)) }
@@ -1515,40 +1475,21 @@ class ReadBookViewModel(
             is ReadBookIntent.ClearBookmarkBadgeImage ->
                 bookmarkBadgeDelegate.clearBadgeImage()
             is ReadBookIntent.ReadStyleConfigImportSelected -> styleDelegate.importConfig(intent.uri)
-            is ReadBookIntent.ReadStyleConfigImportAsNewSelected ->
-                styleDelegate.importStylesAsNew(intent.uri)
+            is ReadBookIntent.ReadStyleConfigImportAsNewSelected -> styleDelegate.importStylesAsNew(intent.uri)
             is ReadBookIntent.ReadStyleConfigExportSelected -> styleDelegate.exportConfig(intent.uri)
             is ReadBookIntent.ReadStyleConfigsExportSelected ->
                 styleDelegate.exportStylesAt(intent.uri, intent.indices)
-            is ReadBookIntent.ExportReadStyleConfigs ->
-                styleDelegate.requestExportStyles(intent.indices)
-            is ReadBookIntent.ShareReadStyleConfigs ->
-                styleDelegate.shareStyles(intent.indices)
+            is ReadBookIntent.ExportReadStyleConfigs -> styleDelegate.requestExportStyles(intent.indices)
+            is ReadBookIntent.ShareReadStyleConfigs -> styleDelegate.shareStyles(intent.indices)
             is ReadBookIntent.SaveReadStyleConfig -> styleDelegate.saveCurrentStyle()
             is ReadBookIntent.AddReadStyleConfig -> styleDelegate.addStyle()
             is ReadBookIntent.DeleteCurrentReadStyleConfig ->
-                // 删掉"正在编辑/正在使用"的主题 = 编辑到此结束：必须走统一的"浮层全关 + 菜单复位"，
-                // 否则 menuHiddenBySheet 残留 ⇒ 面板卡在"滑出屏幕"的位移上，点"展开背景"再也出不来
                 if (styleDelegate.deleteCurrentStyle()) dismissActiveSheet()
             is ReadBookIntent.ApplyPresetTheme -> styleDelegate.applyPresetTheme(intent.presetIndex)
-            is ReadBookIntent.MoveReadStyleConfig ->
-                styleDelegate.moveStyle(intent.from, intent.to)
-            is ReadBookIntent.DeleteReadStyleConfigs ->
-                styleDelegate.deleteStylesAt(intent.indices)
-            is ReadBookIntent.MoveReadStylesToEdge ->
-                styleDelegate.moveStylesToEdge(intent.indices, intent.toTop)
-            is ReadBookIntent.OpenBgTextConfig -> {
-                styleDelegate.openBgTextConfig(intent.index)
-                // 主题列表（dialog-like 路由）长按进编辑面板：菜单先收起来，别两层叠着
-                if (_uiState.value.menuState.currentRoute == ReadBookMenuRoute.ThemeList) {
-                    _uiState.update {
-                        it.copy(
-                            menuState = it.menuState.copy(visible = false),
-                            menuHiddenBySheet = true,
-                        )
-                    }
-                }
-            }
+            is ReadBookIntent.MoveReadStyleConfig -> styleDelegate.moveStyle(intent.from, intent.to)
+            is ReadBookIntent.DeleteReadStyleConfigs -> styleDelegate.deleteStylesAt(intent.indices)
+            is ReadBookIntent.MoveReadStylesToEdge -> styleDelegate.moveStylesToEdge(intent.indices, intent.toTop)
+            is ReadBookIntent.OpenBgTextConfig -> styleDelegate.openBgTextConfig(intent.index)
 
             is ReadBookIntent.ToggleDayNight -> styleDelegate.toggleDayNight()
             // Text action menu
@@ -1957,8 +1898,7 @@ class ReadBookViewModel(
                 previous = preferences
                 _readPreferences.value = preferences
                 refreshFromReadBook()
-                // 阅读设置变化也可能影响 styleConfig（如主题弹窗的网格列数）—— 不重建就会出现
-                // "值存进去了、但界面要等重启才生效"。设置变化很少，这里重建一次不心疼。
+                // 网格列数等阅读设置变化也须同步样式投影。
                 _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
                 if (!preferences.hasMenuClickArea()) {
                     readSettingsRepository.setClickAction(PreferKey.clickActionMC, 0)
@@ -2519,16 +2459,7 @@ class ReadBookViewModel(
 
     private fun openReadMenuRoute(route: ReadBookMenuRoute) {
         _uiState.update {
-            it.copy(
-                menuState = ReadBookMenuState(
-                    visible = true,
-                    routeStack = kotlinx.collections.immutable.persistentListOf(
-                        ReadBookMenuRoute.Main,
-                        route,
-                    ),
-                ),
-                // 兜底：同 OpenReadMenuRoute —— 开菜单时编辑记账一律归零
-                menuHiddenBySheet = false,
+            it.withMenuRoute(route, resetStack = true).copy(
                 readAloudTtsTimer = if (
                     route == ReadBookMenuRoute.ReadAloud && BaseReadAloudService.isRun
                 ) {
@@ -2729,13 +2660,7 @@ class ReadBookViewModel(
         }
     }
 
-    /**
-     * "浮层全关 + 菜单复位"：所有关闭编辑浮层的路径都走这里。
-     *
-     * 菜单曾被主题列表的长按编辑收起（[ReadBookUiState.menuHiddenBySheet]）时，这里必须把记账清零、
-     * 并让菜单重新可见 —— 那条面板是 keep-alive + 绘制层位移"滑出屏幕"的，记账一旦残留为 true，
-     * 面板就永远停在屏幕外（看不见却还在原地吃触摸），之后点"展开背景"也再也收不回来。
-     */
+    /** 关闭浮层前通知各业务域，再恢复被编辑面板收起的菜单。 */
     private fun dismissActiveSheet() {
         aiDelegate.onSheetDismissed(_uiState.value.activeSheet)
         when (_uiState.value.activeSheet) {
@@ -2746,17 +2671,7 @@ class ReadBookViewModel(
             is ReadBookSheet.TextProcessing -> contentProcessDelegate.onSheetDismissed()
             else -> Unit
         }
-        _uiState.update {
-            it.withSheet(null).copy(
-                // 菜单曾被长按编辑收起：浮层全关后恢复，回到主题列表页
-                menuState = if (it.menuHiddenBySheet) {
-                    it.menuState.copy(visible = true)
-                } else {
-                    it.menuState
-                },
-                menuHiddenBySheet = false,
-            )
-        }
+        _uiState.update { it.withDismissedSheet() }
     }
 
     private fun exitSearch() {
