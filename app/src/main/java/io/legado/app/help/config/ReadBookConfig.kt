@@ -952,6 +952,31 @@ object ReadBookConfig {
         fun withCurBg(bgType: Int, bg: String): Config =
             ReadStyleResolver.withCurrentBackground(this, bgType, bg)
 
+        /**
+         * 复刻排版做"新样式"：把**背景整组**清回默认（背景图/背景色/背景透明度/状态栏明暗
+         * ⇒ 纯色、默认底色），名字清空留给用户起；其余（字体、字号、间距、标题、页眉页脚、
+         * 配色、翻页动画…）原样保留。
+         *
+         * 默认值直接取自 [Config] 的构造默认值（不写死字符串），构造默认值将来变了也不会漂移。
+         * 注意：`darkStatusIcon*` 跟着背景明暗走，所以必须和背景一起回默认。
+         */
+        fun asNewStyle(): Config {
+            val defaults = Config()
+            return copy(
+                name = "",
+                bgType = defaults.bgType,
+                bgStr = defaults.bgStr,
+                bgTypeNight = defaults.bgTypeNight,
+                bgStrNight = defaults.bgStrNight,
+                bgTypeEInk = defaults.bgTypeEInk,
+                bgStrEInk = defaults.bgStrEInk,
+                bgAlpha = defaults.bgAlpha,
+                darkStatusIcon = defaults.darkStatusIcon,
+                darkStatusIconNight = defaults.darkStatusIconNight,
+                darkStatusIconEInk = defaults.darkStatusIconEInk,
+            )
+        }
+
         fun curBgStr(): String {
             return ReadStyleResolver.currentBackground(this).value
         }

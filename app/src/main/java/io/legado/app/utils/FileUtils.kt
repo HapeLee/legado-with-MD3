@@ -767,6 +767,33 @@ object FileUtils {
 
     }
 
+    /**
+     * 解析"资源文件路径"（阅读样式里的背景图/字体共用）：
+     * - 绝对路径：原样返回；
+     * - **历史相对路径**（老主题包里的 `files/xxx.png`）：按若干个可能的根依次探测，返回第一个真实文件，全找不到返回 null；
+     * - `content://` 不是本地文件，返回 null（调用方自己走 ContentResolver）。
+     *
+     * 只有相对路径才会做多次探测（少见），绝对路径没有额外开销。
+     */
+    fun resolveAssetFile(path: String): File? {
+        if (path.isBlank()) return null
+        val direct = File(path)
+        if (direct.isAbsolute) return direct
+        val name = direct.name
+        if (name.isBlank()) return null
+        val external = appCtx.externalFiles
+        val candidates = listOfNotNull(
+            File(appCtx.filesDir, path),
+            appCtx.filesDir.parentFile?.let { File(it, path) },
+            File(external, path),
+            external.parentFile?.let { File(it, path) },
+            // 老路径也可能指的是"按现在的新约定存放的那一份"：<externalFiles>/bg/<name>
+            File(external, "bg/$name"),
+            File(appCtx.filesDir, "bg/$name"),
+        )
+        return candidates.firstOrNull { it.isFile }
+    }
+
     class SortByTime : Comparator<File> {
 
         override fun compare(f1: File?, f2: File?): Int {

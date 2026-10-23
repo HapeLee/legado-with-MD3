@@ -290,16 +290,33 @@ fun ReadBookRouteScreen(
         }
     }
 
+    var pendingReadStyleImportAsNew by remember { mutableStateOf(false) }
     val readStyleImportPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleConfigImportSelected(it)) }
+        uri?.let {
+            if (pendingReadStyleImportAsNew) {
+                pendingReadStyleImportAsNew = false
+                viewModel.onIntent(ReadBookIntent.ReadStyleConfigImportAsNewSelected(it))
+            } else {
+                viewModel.onIntent(ReadBookIntent.ReadStyleConfigImportSelected(it))
+            }
+        }
     }
 
+    var pendingReadStyleConfigsExport by remember { mutableStateOf<List<Int>>(emptyList()) }
     val readStyleExportPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleConfigExportSelected(it)) }
+        uri?.let {
+            val indices = pendingReadStyleConfigsExport
+            if (indices.isEmpty()) {
+                viewModel.onIntent(ReadBookIntent.ReadStyleConfigExportSelected(it))
+            } else {
+                pendingReadStyleConfigsExport = emptyList()
+                viewModel.onIntent(ReadBookIntent.ReadStyleConfigsExportSelected(it, indices))
+            }
+        }
     }
 
     var pendingMenuCustomIconId by remember { mutableStateOf<String?>(null) }
@@ -453,7 +470,17 @@ fun ReadBookRouteScreen(
                                     arrayOf("application/zip", "application/octet-stream", "*/*")
                                 )
                             }
+                            is ReadBookEffect.OpenReadStyleImportAsNew -> {
+                                pendingReadStyleImportAsNew = true
+                                readStyleImportPicker.launch(
+                                    arrayOf("application/zip", "application/octet-stream", "*/*")
+                                )
+                            }
                             is ReadBookEffect.OpenReadStyleExport -> {
+                                readStyleExportPicker.launch(effect.fileName)
+                            }
+                            is ReadBookEffect.OpenReadStyleConfigsExport -> {
+                                pendingReadStyleConfigsExport = effect.indices
                                 readStyleExportPicker.launch(effect.fileName)
                             }
                             is ReadBookEffect.OpenMenuCustomIconPicker -> {

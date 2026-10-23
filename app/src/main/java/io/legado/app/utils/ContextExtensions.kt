@@ -307,19 +307,24 @@ fun Context.share(text: String, title: String = getString(R.string.share)) {
     }
 }
 
-fun Context.share(file: File, type: String = "text/*") {
+fun Context.share(
+    file: File,
+    type: String = "text/*",
+    // 选择器标题：默认保持原样（分享书源），其它调用点零变化；分享别的内容可传自己的标题
+    title: String = getString(R.string.share_selected_source),
+) {
     val fileUri = FileProvider.getUriForFile(this, AppConst.authority, file)
     val intent = Intent(Intent.ACTION_SEND)
     intent.type = type
     intent.putExtra(Intent.EXTRA_STREAM, fileUri)
     intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    startActivity(
-        Intent.createChooser(
-            intent,
-            getString(R.string.share_selected_source)
-        )
-    )
+    // NEW_TASK 必须落在**真正 startActivity 的那个 intent**（chooser）上：
+    // 只加在内层 ACTION_SEND 上时，用 Application context 调用会抛
+    // "Calling startActivity from outside of an Activity context requires the FLAG_ACTIVITY_NEW_TASK flag."
+    val chooser = Intent.createChooser(intent, title)
+        .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+    startActivity(chooser)
 }
 
 @SuppressLint("SetWorldReadable")

@@ -67,6 +67,7 @@ sealed interface ReadBookMenuRoute {
     data object TypographyConfig : ReadBookMenuRoute
     data object InformationConfig : ReadBookMenuRoute
     data object PaddingConfig : ReadBookMenuRoute
+    data object ThemeList : ReadBookMenuRoute
 }
 
 @Stable
@@ -100,6 +101,8 @@ data class ReadBookStyleConfig(
     val pageAnimSpeed: Int = 2,
     // Layout
     val shareLayout: Boolean = false,
+    /** 阅读主题弹窗（背景网格）的列数，来自阅读设置 DataStore（2..6）。 */
+    val gridColumns: Int = 4,
     // 排版自带的阅读菜单配色，作为 DataStore 里 readMenu*Color 为 0（未自定义）时的回退
     val menuBgColorDay: Int = 0,
     val menuBgColorNight: Int = 0,
@@ -272,6 +275,8 @@ data class ReadBookUiState(
     val sheetStack: ImmutableList<ReadBookSheet> = persistentListOf(),
     /** Saved source waiting for the retained change-source sheet to repeat its search. */
     val pendingEditedSource: String? = null,
+    // 主题列表长按进"背景文字配置"时暂时收起菜单面板，浮层全关后凭此恢复（规则见 ReadBookViewModel）
+    val menuHiddenBySheet: Boolean = false,
     val activeDialog: ReadBookDialog? = null,
     /** 书签/笔记跳转前校验不通过时的待确认目标（弹确认框）。 */
     val pendingBookmarkTarget: PendingBookmarkTarget? = null,
@@ -555,6 +560,11 @@ sealed interface ReadBookIntent {
     data object ShowMenu : ReadBookIntent
     data object HideMenu : ReadBookIntent
     data class OpenReadMenuRoute(val route: ReadBookMenuRoute) : ReadBookIntent
+    /**
+     * Tab 切换用：**替换栈顶**而不是 push —— 主题弹窗顶部"主题/排版"分段切换走这条，
+     * 这样在排版面板按返回是回主菜单，而不是回到上一个 Tab。
+     */
+    data class SwitchReadMenuRoute(val route: ReadBookMenuRoute) : ReadBookIntent
     data object ReadMenuBack : ReadBookIntent
 
     // Search
@@ -722,16 +732,27 @@ sealed interface ReadBookIntent {
     data object OpenReadStyleImagePicker : ReadBookIntent
     data class OpenReadStyleImagePickerForMode(val isNight: Boolean) : ReadBookIntent
     data object OpenReadStyleImport : ReadBookIntent
+    data object OpenReadStyleImportAsNew : ReadBookIntent
     data object OpenReadStyleExport : ReadBookIntent
     data class ReadStyleImageSelected(val uri: Uri) : ReadBookIntent
     data class ReadStyleImageSelectedForMode(val uri: Uri, val isNight: Boolean) : ReadBookIntent
     data class BookmarkBadgeImageSelected(val uri: Uri) : ReadBookIntent
     data object ClearBookmarkBadgeImage : ReadBookIntent
     data class ReadStyleConfigImportSelected(val uri: Uri) : ReadBookIntent
+    data class ReadStyleConfigImportAsNewSelected(val uri: Uri) : ReadBookIntent
     data class ReadStyleConfigExportSelected(val uri: Uri) : ReadBookIntent
+    data class ReadStyleConfigsExportSelected(val uri: Uri, val indices: List<Int>) : ReadBookIntent
+    data class ExportReadStyleConfigs(val indices: List<Int>) : ReadBookIntent
+    /** 打包选中的主题并直接调系统分享面板（与"导出"同一份打包逻辑，只是投放方式不同）。 */
+    data class ShareReadStyleConfigs(val indices: List<Int>) : ReadBookIntent
     data object SaveReadStyleConfig : ReadBookIntent
     data object AddReadStyleConfig : ReadBookIntent
+    /** 阅读主题弹窗（背景网格）的列数，2..6；持久化到阅读设置 DataStore。 */
+    data class SetThemeGridColumns(val columns: Int) : ReadBookIntent
     data object DeleteCurrentReadStyleConfig : ReadBookIntent
+    data class MoveReadStyleConfig(val from: Int, val to: Int) : ReadBookIntent
+    data class DeleteReadStyleConfigs(val indices: List<Int>) : ReadBookIntent
+    data class MoveReadStylesToEdge(val indices: List<Int>, val toTop: Boolean) : ReadBookIntent
     data class ApplyPresetTheme(val presetIndex: Int) : ReadBookIntent
 
     // Bookshelf
@@ -1184,7 +1205,9 @@ sealed interface ReadBookEffect {
     data object OpenReadStyleImagePicker : ReadBookEffect
     data class OpenReadStyleImagePickerForMode(val isNight: Boolean) : ReadBookEffect
     data object OpenReadStyleImport : ReadBookEffect
+    data object OpenReadStyleImportAsNew : ReadBookEffect
     data class OpenReadStyleExport(val fileName: String) : ReadBookEffect
+    data class OpenReadStyleConfigsExport(val fileName: String, val indices: List<Int>) : ReadBookEffect
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookEffect
     data object OpenSystemTtsSettings : ReadBookEffect

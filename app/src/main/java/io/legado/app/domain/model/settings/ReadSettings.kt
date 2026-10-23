@@ -36,6 +36,8 @@ data class ReadSettings(
     val sliderVibrator: Boolean = false,
     val useNewTocSheet: Boolean = true,
     val maxLengthWithNoToc: Int = 3000,
+    /** 阅读主题弹窗（背景网格）的列数。 */
+    val themeGridColumns: Int = 4,
     val selectVibrator: Boolean = false,
     val autoChangeSource: Boolean = true,
     val autoSuggestDayNight: Boolean = false,

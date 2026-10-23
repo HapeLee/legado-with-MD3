@@ -49,6 +49,10 @@ class ReadSettingsRepository(
     suspend fun setKeepLight(value: String) =
         settingsRepository.putString(PreferKey.keepLight, value)
 
+    /** 阅读主题弹窗（背景网格）的列数。写完后 DataStore 流会触发 VM 重建 state ⇒ 网格自动重排。 */
+    suspend fun setThemeGridColumns(value: Int) =
+        settingsRepository.putInt(PreferKey.themeGridColumns, value)
+
     suspend fun setHideStatusBar(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.hideStatusBar, value)
 
@@ -404,6 +408,7 @@ class ReadSettingsRepository(
             sliderVibrator = compatDsValue(Keys.SliderVibrator, false),
             useNewTocSheet = compatDsValue(Keys.UseNewTocSheet, true),
             maxLengthWithNoToc = compatDsValue(Keys.MaxLengthWithNoToc, 3000),
+            themeGridColumns = compatDsValue(Keys.ThemeGridColumns, 4),
             selectVibrator = compatDsValue(Keys.SelectVibrator, false),
             autoChangeSource = compatDsValue(Keys.AutoChangeSource, true),
             autoSuggestDayNight = compatDsValue(Keys.AutoSuggestDayNight, false),
@@ -508,6 +513,7 @@ class ReadSettingsRepository(
         val TextBottomJustify = booleanPreferencesKey(PreferKey.textBottomJustify)
         val AdaptSpecialStyle = booleanPreferencesKey(PreferKey.adaptSpecialStyle)
         val UseZhLayout = booleanPreferencesKey(PreferKey.useZhLayout)
+        val ThemeGridColumns = intPreferencesKey(PreferKey.themeGridColumns)
         val ReadBrightness = intPreferencesKey(PreferKey.brightness)
         val BrightnessAuto = booleanPreferencesKey(PreferKey.brightnessAuto)
         val UseUnderline = booleanPreferencesKey(PreferKey.useUnderline)
@@ -639,6 +645,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.textBottomJustify to textBottomJustify,
     PreferKey.adaptSpecialStyle to adaptSpecialStyle,
     PreferKey.useZhLayout to useZhLayout,
+    PreferKey.themeGridColumns to themeGridColumns,
     PreferKey.readBrightnessMode to showBrightnessView,
     PreferKey.readBrightnessControlPosition to brightnessVwPos,
     PreferKey.brightness to readBrightness,
