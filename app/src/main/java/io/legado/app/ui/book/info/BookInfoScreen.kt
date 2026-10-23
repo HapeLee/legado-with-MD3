@@ -458,23 +458,6 @@ private fun BookInfoScreenContent(
                                                 },
                                             )
                                         }
-                                        state.relatedBooks.forEach { module ->
-                                            RelatedBooksBanner(
-                                                title = module.title,
-                                                books = module.books,
-                                                onBookClick = { book, _ ->
-                                                    onIntent(BookInfoIntent.RelatedBookClick(book))
-                                                },
-                                                onMoreClick = {
-                                                    onIntent(
-                                                        BookInfoIntent.RelatedBooksMore(
-                                                            module.title,
-                                                            module.resolvedUrl
-                                                        )
-                                                    )
-                                                },
-                                            )
-                                        }
                                         BookInfoSummary(
                                             book = book,
                                             tocLoadFailed = state.tocLoadFailed,
@@ -496,6 +479,23 @@ private fun BookInfoScreenContent(
                                                 onIntent(BookInfoIntent.IntroImageLongClick(source))
                                             },
                                         )
+                                        state.relatedBooks.forEach { module ->
+                                            RelatedBooksBanner(
+                                                title = module.title,
+                                                books = module.books,
+                                                onBookClick = { book, _ ->
+                                                    onIntent(BookInfoIntent.RelatedBookClick(book))
+                                                },
+                                                onMoreClick = {
+                                                    onIntent(
+                                                        BookInfoIntent.RelatedBooksMore(
+                                                            module.title,
+                                                            module.resolvedUrl
+                                                        )
+                                                    )
+                                                },
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1544,7 +1544,7 @@ private fun BookInfoSummary(
         modifier = Modifier
             .fillMaxWidth()
             .background(LegadoTheme.colorScheme.surface)
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         AnimatedTextLine(

@@ -929,6 +929,7 @@ fun ReadBookRouteScreen(
                                             onEdit = { viewModel.onIntent(ReadBookIntent.OpenSourceEdit) },
                                             onDisable = { viewModel.onIntent(ReadBookIntent.DisableSource) },
                                         ),
+                                        chapterPayable = state.chapterPayable,
                                     )
                                 }
 

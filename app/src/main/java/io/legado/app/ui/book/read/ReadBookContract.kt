@@ -235,6 +235,11 @@ data class ReadBookUiState(
     val chapterName: String = "",
     val chapterUrl: String = "",
     val chapterSize: Int = 0,
+    /**
+     * 当前章是否可以走书源付费：书源配了 payAction，且本章是 VIP 未购买章。
+     * 顶栏胶囊、顶栏「章名 + 书源」行、书籍抽屉三处共用这一个判定。
+     */
+    val chapterPayable: Boolean = false,
     val durChapterIndex: Int = 0,
     val durChapterPos: Int = 0,
     val isLocalBook: Boolean = true,
@@ -541,7 +546,8 @@ internal val ReadBookButtonIds = listOf(
 )
 
 internal val MoreActionIds = listOf(
-    "source_custom_button", "change_source", "refresh", "download", "audio_download",
+    "source_custom_button", "source_login", "source_pay", "edit_source", "disable_source",
+    "change_source", "refresh", "download", "audio_download",
     "ai_chat", "edit_content", "add_bookmark",
     "text_processing", "reverse_content", "re_segment",
     "del_ruby", "del_h", "toc_rule", "charset", "image_style", "page_anim",

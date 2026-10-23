@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
@@ -60,6 +61,7 @@ import com.kyant.backdrop.Backdrop
 import dev.chrisbanes.haze.HazeState
 import io.legado.app.R
 import io.legado.app.constant.ReadMenuBlurMode
+import io.legado.app.data.entities.BookSource
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
@@ -168,8 +170,6 @@ internal fun MenuTitleBar(
                 )
             )
     ) {
-        val capsuleIconColor = LegadoTheme.colorScheme.onSurfaceVariant
-
         // Title row: left group (back + capsule/title) + right group (actions)
         Row(
             modifier = Modifier
@@ -192,14 +192,18 @@ internal fun MenuTitleBar(
                     backdrop = backdrop,
                 )
 
-                if (useTitleCapsule && titleBarMode != "1" && titleBarMode != "3") {
-                    TitleCapsuleGlassLayout(
-                        state = state,
-                        colors = colors,
-                        onIntent = onIntent,
-                        backdrop = backdrop,
-                        titleTextColor = capsuleIconColor,
-                    )
+                if (useTitleCapsule) {
+                    // 胶囊自己就装了书名 + 章名，不再受「标题栏模式」的换行控制；
+                    // 只有 mode "3"（不显示）才整体隐藏，否则默认 mode "1" 会让标题整个消失。
+                    if (titleBarMode != "3") {
+                        TitleCapsuleGlassLayout(
+                            state = state,
+                            colors = colors,
+                            onIntent = onIntent,
+                            backdrop = backdrop,
+                            titleTextColor = titleTextColor,
+                        )
+                    }
                 } else if (titleBarMode != "1" && titleBarMode != "3") {
                     AppText(
                         text = state.bookName,
@@ -293,47 +297,16 @@ internal fun MenuTitleBar(
                             color = titleTextColor,
                             maxLines = 1,
                         )
-                        RoundDropdownMenu(
+                        ReadMenuSourceDropdown(
                             expanded = sourceMenuExpanded,
                             onDismissRequest = { sourceMenuExpanded = false },
-                        ) {
-                            if (!state.bookSource.loginUrl.isNullOrBlank()) {
-                                RoundDropdownMenuItem(
-                                    leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                                    text = stringResource(R.string.login),
-                                    onClick = {
-                                        sourceMenuExpanded = false
-                                        onIntent(ReadBookIntent.ShowLogin)
-                                    },
-                                )
-                            }
-                            if (!state.bookSource.getContentRule().payAction.isNullOrBlank()) {
-                                RoundDropdownMenuItem(
-                                    leadingIcon = { MenuItemIcon(Icons.Default.Payment) },
-                                    text = stringResource(R.string.chapter_pay),
-                                    onClick = {
-                                        sourceMenuExpanded = false
-                                        onIntent(ReadBookIntent.PayAction)
-                                    },
-                                )
-                            }
-                            RoundDropdownMenuItem(
-                                leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                                text = stringResource(R.string.edit_source),
-                                onClick = {
-                                    sourceMenuExpanded = false
-                                    onIntent(ReadBookIntent.OpenSourceEdit)
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                leadingIcon = { MenuItemIcon(Icons.Default.Block) },
-                                text = stringResource(R.string.disable_source),
-                                onClick = {
-                                    sourceMenuExpanded = false
-                                    onIntent(ReadBookIntent.DisableSource)
-                                },
-                            )
-                        }
+                            bookSource = state.bookSource,
+                            payVisible = state.chapterPayable,
+                            onLogin = { onIntent(ReadBookIntent.ShowLogin) },
+                            onPay = { onIntent(ReadBookIntent.PayAction) },
+                            onEdit = { onIntent(ReadBookIntent.OpenSourceEdit) },
+                            onDisable = { onIntent(ReadBookIntent.DisableSource) },
+                        )
                     }
                 }
             }
@@ -592,6 +565,24 @@ private fun RowScope.TitleCapsuleGlassLayout(
             if (state.chapterName.isNotBlank()) {
                 AppText(
                     text = state.chapterName,
+                    // 章名独占一层点击：与胶囊整体（进书籍详情）区分开，
+                    // 沿用非胶囊顶栏那套「点击开章节网页 / 长按切浏览器」。
+                    // indication 置空，避免与外层胶囊的 ripple 叠加。
+                    modifier = Modifier
+                        .then(
+                            if (!state.isLocalBook) {
+                                Modifier.combinedClickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    onClick = { onIntent(ReadBookIntent.OpenChapterUrl) },
+                                    onLongClick = {
+                                        onIntent(ReadBookIntent.ToggleReadUrlInBrowser)
+                                    },
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
                     style = LegadoTheme.typography.labelSmall,
                     color = titleTextColor.copy(alpha = 0.7f),
                     maxLines = 1,
@@ -599,6 +590,102 @@ private fun RowScope.TitleCapsuleGlassLayout(
                 )
             }
         }
+        // 书源入口：胶囊把整行标题压成一行后，登录/付费/编辑/禁用书源
+        // 在原「章名 + 书源」行里已经不可达，这里补一个小圆点入口兜底。
+        // 圆点只有 8dp，热区撑到 24dp × 满高才点得中；不给 ripple，免得看起来像按钮。
+        if (!state.isLocalBook && state.bookSource != null) {
+            var sourceMenuExpanded by remember { mutableStateOf(false) }
+            val bookSourceLabel = stringResource(R.string.book_source)
+            Spacer(Modifier.width(4.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(24.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = { sourceMenuExpanded = true },
+                    )
+                    .semantics { contentDescription = bookSourceLabel },
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(titleTextColor, CircleShape),
+                )
+                ReadMenuSourceDropdown(
+                    expanded = sourceMenuExpanded,
+                    onDismissRequest = { sourceMenuExpanded = false },
+                    bookSource = state.bookSource,
+                    payVisible = state.chapterPayable,
+                    onLogin = { onIntent(ReadBookIntent.ShowLogin) },
+                    onPay = { onIntent(ReadBookIntent.PayAction) },
+                    onEdit = { onIntent(ReadBookIntent.OpenSourceEdit) },
+                    onDisable = { onIntent(ReadBookIntent.DisableSource) },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 书源操作菜单：登录 / 章节付费 / 编辑书源 / 禁用书源。
+ *
+ * 顶栏胶囊尾部、顶栏「章名 + 书源」行、书籍抽屉三处共用这一份，
+ * 保证条目与显隐判定不会各写一遍后分叉。
+ */
+@Composable
+internal fun ReadMenuSourceDropdown(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    bookSource: BookSource?,
+    payVisible: Boolean,
+    onLogin: () -> Unit,
+    onPay: () -> Unit,
+    onEdit: () -> Unit,
+    onDisable: () -> Unit,
+) {
+    RoundDropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+    ) {
+        if (!bookSource?.loginUrl.isNullOrBlank()) {
+            RoundDropdownMenuItem(
+                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                text = stringResource(R.string.login),
+                onClick = {
+                    onDismissRequest()
+                    onLogin()
+                },
+            )
+        }
+        if (payVisible) {
+            RoundDropdownMenuItem(
+                leadingIcon = { MenuItemIcon(Icons.Default.Payment) },
+                text = stringResource(R.string.chapter_pay),
+                onClick = {
+                    onDismissRequest()
+                    onPay()
+                },
+            )
+        }
+        RoundDropdownMenuItem(
+            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+            text = stringResource(R.string.edit_source),
+            onClick = {
+                onDismissRequest()
+                onEdit()
+            },
+        )
+        RoundDropdownMenuItem(
+            leadingIcon = { MenuItemIcon(Icons.Default.Block) },
+            text = stringResource(R.string.disable_source),
+            onClick = {
+                onDismissRequest()
+                onDisable()
+            },
+        )
     }
 }
 

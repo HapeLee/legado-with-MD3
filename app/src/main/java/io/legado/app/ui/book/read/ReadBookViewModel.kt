@@ -75,6 +75,7 @@ import io.legado.app.model.activeReadAloudProgress
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
+import io.legado.app.model.reader.isPayable
 import io.legado.app.model.translation.TranslationChapterStatus
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
@@ -2084,6 +2085,7 @@ class ReadBookViewModel(
             chapterName = chapterInput?.displayTitle ?: "",
             chapterUrl = chapterInput?.chapter?.url ?: "",
             chapterSize = ReadBook.chapterSize,
+            chapterPayable = chapterInput?.isPayable == true,
             durChapterIndex = ReadBook.durChapterIndex,
             durChapterPos = ReadBook.durChapterPos,
             isLocalBook = ReadBook.isLocalBook,
