@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.ReadStyleBooleanKey
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import splitties.init.appCtx
 import java.io.InputStream
 import java.util.concurrent.atomic.AtomicLong
 
@@ -220,15 +222,27 @@ class ReadBookStyleConfigRepository(
     }
 
     override fun importStylesAsNew(bytes: ByteArray): Int? {
-        val bundle = readStyleRepository.importStylesIfBundle(bytes)
+        val usedNames = configStore.configsSnapshot().mapTo(hashSetOf()) { it.name }
+        // import() 同时保存按名称绑定的高亮规则，必须在它写库前分配新名称。
+        // 批量导入共用这一组名称，避免包内同名主题互相覆盖规则。
+        fun prepareNewConfig(config: ReadBookConfig.Config): ReadBookConfig.Config {
+            val baseName = config.name.ifBlank { appCtx.getString(R.string.text_bg_style) }
+            var name = baseName
+            var suffix = 2
+            while (!usedNames.add(name)) {
+                name = "$baseName (${suffix++})"
+            }
+            return config.copy(name = name)
+        }
+        val bundle = readStyleRepository.importStylesIfBundle(bytes, ::prepareNewConfig)
         if (bundle != null) {
             // 批量包：逐份追加到末尾（一律新增，不再同名覆盖），不动任何已有主题
             bundle.forEach { configStore.addConfig(it) }
             save()
             return null
         }
-        // 单份：不管名字，直接排在列表最后
-        val index = configStore.addConfig(readStyleRepository.import(bytes))
+        // 单份也先分配新名称，再追加到列表最后。
+        val index = configStore.addConfig(readStyleRepository.import(bytes, ::prepareNewConfig))
         save()
         return index
     }
@@ -255,15 +269,19 @@ class ReadBookStyleConfigRepository(
     override fun exportStyles(indices: List<Int>): ByteArray {
         val snapshot = configStore.configsSnapshot()
         return readStyleRepository.exportStyles(
-            indices.filter { it in snapshot.indices }.distinct().map { snapshot[it] }
+            indices.filter { it in snapshot.indices }.distinct().map { snapshot[it].withExportRules() }
         )
     }
 
     override fun exportStyleAt(index: Int): ByteArray? {
         // 与"批量包"里那一个小包走同一条 export(config) ⇒ 产物格式完全一致
         val config = configStore.configsSnapshot().getOrNull(index) ?: return null
-        return readStyleRepository.export(config)
+        return readStyleRepository.export(config.withExportRules())
     }
+
+    private fun ReadBookConfig.Config.withExportRules(): ReadBookConfig.Config = copy(
+        highlightRules = ArrayList(highlightRuleRepository.load(name)),
+    )
 
     override fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String =
         readStyleRepository.saveBackgroundImage(inputStream, displayName)
@@ -460,6 +478,7 @@ class ReadBookStyleConfigRepository(
         revision = stateRevision.incrementAndGet(),
         items = configStore.configsSnapshot().map { config ->
             ReadStyleItem(
+                id = config.id,
                 name = config.name,
                 bgType = config.bgType,
                 bgValue = config.bgStr,

@@ -193,7 +193,10 @@ class ReadStyleRepository(
      * 是「批量包」（外层 zip、条目全是单样式包）就逐份导入并返回，否则返回 null
      * （调用方回落到单份 [import]）。判定：顶层没有 config.json、条目全是 .zip。
      */
-    fun importStylesIfBundle(byteArray: ByteArray): List<ReadBookConfig.Config>? {
+    fun importStylesIfBundle(
+        byteArray: ByteArray,
+        prepareConfig: (ReadBookConfig.Config) -> ReadBookConfig.Config = { it },
+    ): List<ReadBookConfig.Config>? {
         val outerZipPath = FileUtils.getPath(appCtx.externalCache, "readConfigs.zip")
         FileUtils.delete(outerZipPath)
         val outerZipFile = FileUtils.createFileIfNotExist(outerZipPath)
@@ -207,10 +210,13 @@ class ReadStyleRepository(
             }
         }
         if (innerZips.isEmpty()) return null
-        return innerZips.values.map { import(it) }
+        return innerZips.values.map { import(it, prepareConfig) }
     }
 
-    fun import(byteArray: ByteArray): ReadBookConfig.Config {
+    fun import(
+        byteArray: ByteArray,
+        prepareConfig: (ReadBookConfig.Config) -> ReadBookConfig.Config = { it },
+    ): ReadBookConfig.Config {
         val configZipPath = FileUtils.getPath(appCtx.externalCache, "readConfig.zip")
         FileUtils.delete(configZipPath)
         val zipFile = FileUtils.createFileIfNotExist(configZipPath)
@@ -220,7 +226,7 @@ class ReadStyleRepository(
         ZipUtils.unZipToPath(zipFile, configDir)
         val configFile = configDir.getFile(ReadBookConfig.configFileName)
         var config: ReadBookConfig.Config =
-            GSON.fromJsonObject<ReadBookConfig.Config>(configFile.readText()).getOrThrow()
+            prepareConfig(GSON.fromJsonObject<ReadBookConfig.Config>(configFile.readText()).getOrThrow())
 
         config = config.copy(
             textFont = importFont(configDir, config.textFont),

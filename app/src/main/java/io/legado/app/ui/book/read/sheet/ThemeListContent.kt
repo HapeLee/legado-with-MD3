@@ -158,13 +158,14 @@ fun ThemeListContent(
     var manageMode by remember { mutableStateOf(false) }
     // 布局切换：本次打开有效（不持久化 —— 新加偏好会碰架构守卫的基线）
     var flowMode by remember { mutableStateOf(false) }
-    val selectedIndices = remember { mutableStateListOf<Int>() }
+    val selectedIds = remember { mutableStateListOf<String>() }
     /** 删除二次确认：非 null = 待确认的选中项（点确认才真删、才清空选中）。 */
     var pendingDeleteIndices by remember { mutableStateOf<List<Int>?>(null) }
     /** 管理底栏实测高度（px）：给右下角悬浮箭头做抬升用，0 = 还没量到（用兜底值）。 */
     var manageBarHeightPx by remember { mutableStateOf(0) }
 
     val themes = styleConfig.styleItems
+    val selectedIndices = themes.indices.filter { themes[it].id in selectedIds }
     val themeKeys = remember(themes) { buildThemeKeys(themes) }
     val customIndices = themes.indices.filter { it >= READ_STYLE_PRESET_COUNT }
     // 管理态必须全显示（筛选后拖动会让下标映射错乱）；其余情况搜索框有词就过滤
@@ -212,28 +213,18 @@ fun ThemeListContent(
     }
 
     fun toggleSelection(index: Int) {
-        if (selectedIndices.contains(index)) {
-            selectedIndices.remove(index)
+        val id = themes[index].id
+        if (id in selectedIds) {
+            selectedIds.remove(id)
         } else {
-            selectedIndices.add(index)
+            selectedIds.add(id)
         }
     }
 
-    /** 选中项整块搬到边缘（置顶 = 紧跟预设之后 / 置底 = 列表末尾），搬完选中状态跟着落到新位置。 */
+    /** 选择按主题身份保存，拖动或置顶/置底后仍指向同一份主题。 */
     fun moveSelectionToEdge(toTop: Boolean) {
-        val moving = selectedIndices.sorted()
-        if (moving.isEmpty()) return
-        onIntent(ReadBookIntent.MoveReadStylesToEdge(moving, toTop))
-        selectedIndices.clear()
-        selectedIndices.addAll(
-            moving.indices.map { offset ->
-                if (toTop) {
-                    READ_STYLE_PRESET_COUNT + offset
-                } else {
-                    themes.size - moving.size + offset
-                }
-            }
-        )
+        if (selectedIndices.isEmpty()) return
+        onIntent(ReadBookIntent.MoveReadStylesToEdge(selectedIndices, toTop))
     }
 
     Box(modifier = modifier.fillMaxWidth()) {
@@ -264,7 +255,7 @@ fun ThemeListContent(
                     // 管理态：搜索框/日夜/布局切换/三点整排隐去，只留「✕ 已选中 N」
                     SmallTonalButton(
                         onClick = {
-                            selectedIndices.clear()
+                            selectedIds.clear()
                             manageMode = false
                         },
                         icon = AppIcons.Close,
@@ -715,13 +706,13 @@ fun ThemeListContent(
                     onIntent(ReadBookIntent.ShareReadStyleConfigs(selectedIndices.toList()))
                 },
                 onSelectAll = {
-                    selectedIndices.clear()
-                    selectedIndices.addAll(customIndices)
+                    selectedIds.clear()
+                    selectedIds.addAll(customIndices.map { themes[it].id })
                 },
                 onSelectInvert = {
                     val inverted = customIndices.filterNot { selectedIndices.contains(it) }
-                    selectedIndices.clear()
-                    selectedIndices.addAll(inverted)
+                    selectedIds.clear()
+                    selectedIds.addAll(inverted.map { themes[it].id })
                 },
                 primaryAction = ActionItem(
                     text = stringResource(R.string.delete),
@@ -761,7 +752,7 @@ fun ThemeListContent(
             dismissText = stringResource(R.string.cancel),
             onConfirm = {
                 pendingDelete?.let { onIntent(ReadBookIntent.DeleteReadStyleConfigs(it)) }
-                selectedIndices.clear()
+                selectedIds.clear()
                 pendingDeleteIndices = null
             },
             // 取消：什么都不做，选中保留
@@ -886,16 +877,6 @@ private fun readStyleTextColor(config: ReadStyleItem, isNightTheme: Boolean): Co
     )
 }
 
-/**
- * 网格 key：`ReadStyleItem` 只有 name 一个身份字段，而新建样式的默认名是空串、可以重复，
- * 直接拿 name 当 key 会让 LazyGrid 抛"key 重复"。按同名出现次序加后缀去重；
- * 同名项之间相对次序不变时（拖动不同名项）key 在拖动过程中就是稳定的。
- */
-private fun buildThemeKeys(themes: List<ReadStyleItem>): List<String> {
-    val seen = HashMap<String, Int>()
-    return themes.map { theme ->
-        val sequence = seen.getOrDefault(theme.name, 0)
-        seen[theme.name] = sequence + 1
-        if (sequence == 0) theme.name else "${theme.name}#$sequence"
-    }
-}
+/** 名称可以重复或重命名；主题身份与新增按钮使用不同的 key 空间。 */
+internal fun buildThemeKeys(themes: List<ReadStyleItem>): List<String> =
+    themes.map { "theme:${it.id}" }

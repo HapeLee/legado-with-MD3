@@ -15,6 +15,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.hexString
 import splitties.init.appCtx
+import java.util.UUID
 
 /**
  * 阅读界面配置
@@ -652,7 +653,10 @@ object ReadBookConfig {
         val menuBottomHorizontalMargin: Int = 0,
         @Transient
         val menuBottomBottomMargin: Int = 0,
-        val highlightRules: ArrayList<HighlightRule> = arrayListOf()
+        val highlightRules: ArrayList<HighlightRule> = arrayListOf(),
+        /** 进程内列表身份；不写入主题包，旧配置无需迁移，字段编辑时由 copy 保留。 */
+        @Transient
+        val id: String = UUID.randomUUID().toString(),
     ) {
 
         /**

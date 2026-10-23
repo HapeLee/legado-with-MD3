@@ -1,5 +1,7 @@
 package io.legado.app.domain.model.settings
 
+import androidx.compose.runtime.Stable
+
 data class ReadStyleState(
     val items: List<ReadStyleItem> = emptyList(),
     val selectedIndex: Int = 0,
@@ -15,7 +17,9 @@ data class ReadStyleState(
     val revision: Long = 0L,
 )
 
+@Stable
 data class ReadStyleItem(
+    val id: String,
     val name: String,
     val bgType: Int,
     val bgValue: String,

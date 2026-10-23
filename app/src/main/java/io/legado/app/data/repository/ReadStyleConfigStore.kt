@@ -5,6 +5,7 @@ import io.legado.app.help.DefaultData
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.utils.move
+import java.util.UUID
 
 /**
  * 排版配置列表的**唯一所有者**。
@@ -54,9 +55,10 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     /** 整份替换（应用预设 / 导入）。共享排版开着时，共享那份跟着换。 */
     fun replaceConfigAt(index: Int, config: ReadBookConfig.Config, alsoShare: Boolean) {
         synchronized(lock) {
-            configList[index] = config
+            val replacement = config.copy(id = configList[index].id)
+            configList[index] = replacement
             if (alsoShare) {
-                shareConfigRef = config
+                shareConfigRef = replacement
             }
         }
     }
@@ -99,16 +101,16 @@ class ReadStyleConfigStore(private val readStyleRepository: ReadStyleRepository)
     fun shareConfigSnapshot(): ReadBookConfig.Config = synchronized(lock) { shareConfigRef }
 
     fun addConfig(config: ReadBookConfig.Config): Int = synchronized(lock) {
-        configList.add(config)
+        configList.add(config.copy(id = UUID.randomUUID().toString()))
         configList.lastIndex
     }
 
     fun importOrReplaceConfig(config: ReadBookConfig.Config): String = synchronized(lock) {
         val index = configList.indexOfFirst { it.name == config.name }
         if (index >= 0) {
-            configList[index] = config
+            configList[index] = config.copy(id = configList[index].id)
         } else {
-            configList.add(config)
+            configList.add(config.copy(id = UUID.randomUUID().toString()))
         }
         config.name
     }
