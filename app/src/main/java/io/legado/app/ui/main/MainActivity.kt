@@ -570,7 +570,8 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         val fullScreenContent =
             activeRoute is MainRouteReadBook || activeRoute is MainRouteReadManga ||
                     activeRoute is MainRouteWebView || activeRoute is io.legado.app.ui.rss.read.MainRouteRssRead ||
-                    activeRoute is MainRouteAudioPlay || activeRoute == MainRouteReadAloudPlayer
+                    activeRoute is MainRouteAudioPlay || activeRoute is MainRouteVideoPlay ||
+                    activeRoute == MainRouteReadAloudPlayer
         val singleRegion = if (!hasAdaptivePair && !fullScreenContent &&
             adaptiveEnvironment.safeRegions().size > 1
         ) adaptiveEnvironment.singlePaneBounds() else null
