@@ -382,6 +382,13 @@ abstract class AppDatabase : RoomDatabase() {
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdAudio})
                 """.trimIndent()
                 db.execSQL(insertBookGroupMusicSql)
+                @Language("sql")
+                val insertBookGroupVideoSql = """
+                    insert into book_groups(groupId, groupName, 'order', show)
+                    select ${BookGroup.IdVideo}, '视频', -24, 0
+                    where not exists (select * from book_groups where groupId = ${BookGroup.IdVideo})
+                """.trimIndent()
+                db.execSQL(insertBookGroupVideoSql)
                 Language("sql")
                 val insertGroupReading = """
                     insert into book_groups(groupId, groupName, 'order', show) 
