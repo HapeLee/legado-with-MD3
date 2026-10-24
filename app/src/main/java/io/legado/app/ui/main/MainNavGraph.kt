@@ -1151,10 +1151,31 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteVideoPlay> { route ->
         val bookUrl = route.bookUrl
-        if (bookUrl != null) {
-            VideoPlayerScreen(bookUrl = bookUrl, onBack = onNavigateBack)
-        } else {
+        if (bookUrl == null) {
             LaunchedEffect(Unit) { onNavigateBack() }
+        } else {
+            // 与阅读器入口一致：未授权时播放器不会被组合，也就不会初始化或显示书名/章节名
+            PrivateReadGate(
+                bookUrl = bookUrl,
+                onExit = {
+                    if (backStack.size > 1) {
+                        MainNavigator.navigateBack(
+                            this@mainEntryProvider,
+                            backStack,
+                            navRouteTracker,
+                            fromRoute = route,
+                        )
+                    } else {
+                        backStack.clear()
+                        backStack.add(MainRouteHome)
+                    }
+                },
+                onOpenLocalPasswordSettings = {
+                    onNavigateToRoute(MainRouteSettingsPrivate)
+                },
+            ) {
+                VideoPlayerScreen(bookUrl = bookUrl, onBack = onNavigateBack)
+            }
         }
     }
 
