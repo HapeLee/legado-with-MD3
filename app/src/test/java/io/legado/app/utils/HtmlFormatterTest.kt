@@ -56,6 +56,34 @@ class HtmlFormatterTest {
     }
 
     @Test
+    fun formatDisplayText_doesNotDoubleEscapePlainText() {
+        assertEquals(
+            "　　【头部大厂&连续创业者写的书】",
+            HtmlFormatter.formatDisplayText("【头部大厂&连续创业者写的书】")
+        )
+    }
+
+    @Test
+    fun formatDisplayText_unescapesEntitiesFromSource() {
+        assertEquals("　　A&B", HtmlFormatter.formatDisplayText("A&amp;B"))
+        assertEquals("　　版权©所有", HtmlFormatter.formatDisplayText("版权&copy;所有"))
+    }
+
+    @Test
+    fun formatDisplayText_keepsStrayAngleBracketsAsText() {
+        assertEquals(
+            "　　战力 1<2 且 3>2",
+            HtmlFormatter.formatDisplayText("战力 1<2 且 3>2")
+        )
+    }
+
+    @Test
+    fun formatReadableText_doesNotDoubleEscapeEntities() {
+        assertEquals("A&B", HtmlFormatter.formatReadableText("A&B"))
+        assertEquals("A&B", HtmlFormatter.formatReadableText("<useweb>A&B</useweb>"))
+    }
+
+    @Test
     fun textForWordCount_excludesImageMarkupAndNonReadableElements() {
         val result = HtmlFormatter.textForWordCount(
             "<p>正文</p><img src=\"https://example.com/cover.jpg\" alt=\"封面\"><script>ignored()</script><style>.hidden {}</style>"

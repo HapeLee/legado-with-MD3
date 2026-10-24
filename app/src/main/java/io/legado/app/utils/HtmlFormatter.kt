@@ -1,6 +1,7 @@
 package io.legado.app.utils
 
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
 import java.net.URL
 
@@ -105,6 +106,8 @@ object HtmlFormatter {
             .map { it.replaceFirst(introLabelRegex, "").trim(*blankChars) }
             .filterNot { it.isEmpty() }
             .joinToString("\n") { PARAGRAPH_INDENT + it }
+            //body.html() 输出时会把文本节点的 &<> 与命名实体重新转义, 此时已是纯文本, 补一次反转义
+            .let { StringEscapeUtils.unescapeHtml4(it) }
     }
 
     /**
@@ -207,7 +210,9 @@ object HtmlFormatter {
         val document = Jsoup.parseBodyFragment(body)
         document.outputSettings().prettyPrint(false)
         document.select("script, style, noscript").remove()
+        //同 formatDisplayText: body.html() 的再转义需反转, 否则 &amp; 等字面量露出
         return format(document.body().html(), otherHtmlRegex, "")
+            .let { StringEscapeUtils.unescapeHtml4(it) }
     }
 
     /**
