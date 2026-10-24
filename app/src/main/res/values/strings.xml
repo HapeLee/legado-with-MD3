@@ -2051,6 +2051,8 @@
     <string name="cover_show_shadow">Show Font Shadow</string>
     <string name="cover_show_stroke">Show Font Stroke</string>
     <string name="default_color">Use Default Font Color</string>
+    <string name="cover_restrict_ratio">Restrict Cover Ratio</string>
+    <string name="cover_restrict_ratio_summary">When on, covers are fixed to 5:7; turn off to let search, explore and book info covers follow the original image aspect ratio</string>
     <string name="enable_slider_vibrator">Vibrate While Sliding Progress Bar</string>
     <string name="use_new_toc_sheet">Use New TOC Sheet</string>
     <string name="no_toc_split_length_title">Chapter Split Length (No Rule Match)</string>

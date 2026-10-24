@@ -56,6 +56,8 @@ class CoverConfigViewModel(
                 updateSettings { it.copy(loadOnlyOnWifi = intent.value) }
             is CoverConfigIntent.SetUseDefaultCover ->
                 updateSettings { it.copy(useDefaultCover = intent.value) }
+            is CoverConfigIntent.SetRestrictCoverRatio ->
+                updateSettings { it.copy(restrictCoverRatio = intent.value) }
             is CoverConfigIntent.SetShowShadow ->
                 updateSettings { it.copy(showShadow = intent.value) }
             is CoverConfigIntent.SetShowStroke ->

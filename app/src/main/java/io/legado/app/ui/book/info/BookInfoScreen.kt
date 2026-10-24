@@ -114,6 +114,7 @@ import io.legado.app.help.webView.WebJsExtensions
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideColorSchemeOverride
@@ -1162,17 +1163,27 @@ private fun BookInfoHeader(
     val coverDescription = stringResource(R.string.a11y_book_cover_actions, book.name)
     val hiddenDescription = stringResource(R.string.private_hidden_label)
     val coverPath = if (usesDefaultCover) null else book.coverPath
+    // “限制封面比例”设置开启（默认）时固定 5:7，与旧版一致；关闭后按原图比例自适应
+    val allowCoverRatioAdapt =
+        !LocalAppUiConfiguration.current.cover.restrictCoverRatio
     // 初始值优先取该封面已加载过的比例缓存，重进详情页不必先回弹 5:7 再等图重载
-    val coverAspectRatioState = remember(book.bookUrl, coverPath) {
+    val coverAspectRatioState = remember(allowCoverRatioAdapt, book.bookUrl, coverPath) {
         mutableFloatStateOf(
-            cachedCoverAspectRatio(coverPath) ?: BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+            if (allowCoverRatioAdapt) {
+                cachedCoverAspectRatio(coverPath) ?: BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+            } else {
+                BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+            }
         )
     }
-    val coverHeightDp = bookInfoCoverHeightDp(coverAspectRatioState.floatValue)
+    val coverHeightDp = bookInfoCoverHeightDp(
+        if (allowCoverRatioAdapt) coverAspectRatioState.floatValue
+        else BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+    )
     // 比例合法性已在 BookCoverImage 上报前校验，这里直接写入
-    val onCoverImageAspectRatio: (Float) -> Unit = { aspectRatio ->
-        coverAspectRatioState.floatValue = aspectRatio
-    }
+    val onCoverImageAspectRatio: ((Float) -> Unit)? = if (allowCoverRatioAdapt) {
+        { aspectRatio -> coverAspectRatioState.floatValue = aspectRatio }
+    } else null
     Column(
         modifier = Modifier
             .fillMaxWidth()

@@ -14,6 +14,7 @@ object PreferKey {
     const val hideEmptyGroups = "hideEmptyGroups"
     const val useDefaultCover = "useDefaultCover"
     const val loadCoverOnlyWifi = "loadCoverOnlyWifi"
+    const val coverRestrictRatio = "coverRestrictRatio"
     const val coverShowName = "coverShowName"
     const val coverShowAuthor = "coverShowAuthor"
     const val coverShowShadow = "coverShowShadow"

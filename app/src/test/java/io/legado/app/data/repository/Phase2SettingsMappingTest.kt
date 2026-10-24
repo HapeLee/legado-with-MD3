@@ -140,6 +140,7 @@ class Phase2SettingsMappingTest {
                 base,
                 base.copy(loadOnlyOnWifi = true),
                 base.copy(useDefaultCover = true),
+                base.copy(restrictCoverRatio = false),
                 base.copy(showShadow = true),
                 base.copy(showStroke = false),
                 base.copy(useDefaultColor = false),

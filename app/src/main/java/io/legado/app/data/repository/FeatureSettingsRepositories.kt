@@ -178,6 +178,7 @@ internal fun DownloadCacheSettings.toPrefMap(): Map<String, Any?> = mapOf(
 internal fun Preferences.toCoverSettings(): CoverSettings = CoverSettings(
     loadOnlyOnWifi = compatDsBoolean(PreferKey.loadCoverOnlyWifi) ?: false,
     useDefaultCover = compatDsBoolean(PreferKey.useDefaultCover) ?: false,
+    restrictCoverRatio = compatDsBoolean(PreferKey.coverRestrictRatio) ?: true,
     showShadow = compatDsBoolean(PreferKey.coverShowShadow) ?: false,
     showStroke = compatDsBoolean(PreferKey.coverShowStroke) ?: true,
     useDefaultColor = compatDsBoolean(PreferKey.coverDefaultColor) ?: true,
@@ -198,6 +199,7 @@ internal fun Preferences.toCoverSettings(): CoverSettings = CoverSettings(
 internal fun CoverSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.loadCoverOnlyWifi to loadOnlyOnWifi,
     PreferKey.useDefaultCover to useDefaultCover,
+    PreferKey.coverRestrictRatio to restrictCoverRatio,
     PreferKey.coverShowShadow to showShadow,
     PreferKey.coverShowStroke to showStroke,
     PreferKey.coverDefaultColor to useDefaultColor,
