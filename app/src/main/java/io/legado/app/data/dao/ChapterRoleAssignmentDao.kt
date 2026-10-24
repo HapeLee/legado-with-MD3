@@ -36,7 +36,24 @@ interface ChapterRoleAssignmentDao {
     )
     suspend fun getAssignedChapters(bookUrl: String): List<Int>
 
-    /** 同上，但订阅式：目录页的状态图标要在分配完当场亮起来。 */
+    /**
+     * 每个角色在 [chapterIndex] **之前**最后一次说话的章号。
+     *
+     * AI 分配要靠它认出「主角熟悉但一时想不起名字」的旧人物：久未出场 + 性别吻合的那个人就是答案。
+     * `characterId` 存的是两套 id（角色行 id 或档案 id），所以按 id、按名字各分组一次，消费侧兜底。
+     */
+    @Query(
+        """
+        SELECT characterId AS characterId, characterName AS characterName,
+          max(chapterIndex) AS lastChapterIndex
+        FROM chapter_role_assignments
+        WHERE bookUrl = :bookUrl AND chapterIndex < :chapterIndex
+        GROUP BY characterId, characterName
+        """
+    )
+    suspend fun getLastSeenBefore(bookUrl: String, chapterIndex: Int): List<CastLastSeen>
+
+    /** 订阅式：目录页的状态图标要在分配完当场亮起来。 */
     @Query(
         """
         SELECT DISTINCT chapterIndex FROM chapter_role_assignments
@@ -132,4 +149,11 @@ data class CharacterAssignmentCount(
 data class CastRef(
     val characterId: String,
     val characterName: String,
+)
+
+/** getLastSeenBefore 投影行。 */
+data class CastLastSeen(
+    val characterId: String,
+    val characterName: String,
+    val lastChapterIndex: Int,
 )

@@ -199,6 +199,16 @@ class AiCastAssignUseCase(
         val scene = paragraphs.asSequence().filter { it.isNotBlank() }.take(SCENE_PARAGRAPHS)
             .joinToString("\n") { it.trim() }.take(SCENE_CHARS)
         val contextBefore = chapterExcerpt(toc, book, chapterIndex - 1)
+        // 下一章开头：本章末尾那句常常悬着（作者到下一章才点名），后文是唯一的追认证据。
+        // 与上一章同一预算但取法相反——这里要的是开头。只读已落盘的正文，没下载就是空串，绝不为了参考去触发下载。
+        val contextAfter = chapterExcerpt(toc, book, chapterIndex + 1, leading = true)
+        // 每个角色距上次说话过了多少章：叙述写「熟悉的面孔」「想不起是谁」时，那个人几乎就是
+        // 久未出场的那位；模型手上没有这条就只能凭空造一个身份词（「客人」）。两套 id 都建索引，先按 id 再按名字兜底。
+        val lastSeen = appDb.chapterRoleAssignmentDao.getLastSeenBefore(book.bookUrl, chapterIndex)
+        val lastSeenById = lastSeen.groupBy { it.characterId }
+            .mapValues { (_, rows) -> rows.maxOf { it.lastChapterIndex } }
+        val lastSeenByName = lastSeen.filter { it.characterName.isNotBlank() }.groupBy { it.characterName }
+            .mapValues { (_, rows) -> rows.maxOf { it.lastChapterIndex } }
         // 重新分配在发第一个请求之前就清干净：某一块失败也不该留下半新半旧的分配
         if (reassign) {
             appDb.chapterRoleAssignmentDao.deleteChapter(book.bookUrl, chapterIndex)
@@ -216,10 +226,22 @@ class AiCastAssignUseCase(
                 // 代词/「旁白」这类占位主名不送：契约要求「优先沿用已有主名」，
                 // 送出「我」就等于把每一个没依据的句子都推向它
                 characters = known.filterNot { isPlaceholderName(it.name) }
-                    .map { AiCastPayload.Character(it.name, it.poolLabel) },
+                    .map { row ->
+                        val profile = profiles.firstOrNull { it.id == row.id }
+                            ?: profiles.firstOrNull { it.name == row.name }
+                        AiCastPayload.Character(
+                            name = row.name,
+                            pool = row.poolLabel,
+                            aliases = profile?.aliasNames().orEmpty()
+                                .filter { it != row.name }.take(MAX_PAYLOAD_ALIASES),
+                            last = (lastSeenById[row.id] ?: lastSeenByName[row.name])
+                                ?.let { chapterIndex - it },
+                        )
+                    },
                 scene = scene,
                 chapterTitle = chapter.title,
                 contextBefore = contextBefore,
+                contextAfter = contextAfter,
                 excerpt = window.excerpt,
                 pending = window.pending,
                 previousSpeakers = previousSpeakers,
@@ -524,20 +546,22 @@ class AiCastAssignUseCase(
         pending = (from until to).flatMap { lineOrdinals[it] },
     )
 
-    /** 上一章末尾节选（800 字），只用于跨章语气延续；失败给空串不阻塞。 */
+    /** 相邻章节选（800 字）：上一章截末尾、下一章（leading）截开头；读不到给空串，不阻塞分配。 */
     private fun chapterExcerpt(
         toc: List<BookChapter>,
         book: Book,
         index: Int,
+        leading: Boolean = false,
     ): String {
         if (index < 0 || index > toc.lastIndex) return ""
         return runCatching {
             // 与本章正文同一视图：上一章末尾若是 <img> 标签，几百字 base64 会挤掉真正的语气线索
             val raw = BookHelp.getContent(book, toc[index]) ?: return ""
-            ReaderChapterSourceParser.castAnchorText(
+            val text = ReaderChapterSourceParser.castAnchorText(
                 paragraphs = raw.split('\n'),
                 adaptSpecialStyle = AppConfig.adaptSpecialStyle,
-            ).joinToString("\n").takeLast(800)
+            ).joinToString("\n")
+            if (leading) text.take(CONTEXT_CHAPTER_CHARS) else text.takeLast(CONTEXT_CHAPTER_CHARS)
         }.getOrDefault("")
     }
 
@@ -652,6 +676,10 @@ private const val MAX_PENDING = 120
 private const val PREVIOUS_SPEAKERS = 12
 private const val SCENE_CHARS = 200
 private const val SCENE_PARAGRAPHS = 4
+/** 相邻章参考的字数预算：上一章取末尾、下一章取开头，同一预算。 */
+private const val CONTEXT_CHAPTER_CHARS = 800
+/** 送 AI 的每个角色最多带几个别名：认人够用，又不至于让 187 个角色的名单先撑爆窗口。 */
+private const val MAX_PAYLOAD_ALIASES = 4
 
 /** 正文窗口：带 `⟦i⟧` 标记的连续正文 + 本窗口需要回答的锚点序号。 */
 private class CastWindow(val excerpt: String, val pending: List<Int>)
@@ -679,6 +707,19 @@ private object AiCastPayload {
     data class Character(
         @SerializedName("name") val name: String,
         @SerializedName("pool") val pool: String,
+        /**
+         * 档案里记过的别名/称呼。
+         *
+         * 只送 name+pool 时，「同伴」「养女」这类关系称谓在已有名单里找不到落点，模型只能
+         * 另立一个「同伴甲」；别名是它唯一能用来认人的线索。
+         */
+        @SerializedName("aliases") val aliases: List<String> = emptyList(),
+        /**
+         * 这个人距上次说话过了多少章（1 = 上一章还在说话）；缺省表示本章之前从没说过话，即新面孔。
+         *
+         * 给了章数差才比得上叙述里的「熟悉」「好久不见」：模型不知道本章是第几章，光给章号算不出久不久。
+         */
+        @SerializedName("last") val last: Int? = null,
     )
 
     /** 上一窗口末尾已确定的说话人，用于跨窗口接续同一个人。 */
@@ -697,6 +738,8 @@ private object AiCastPayload {
         @SerializedName("scene") val scene: String,
         @SerializedName("chapterTitle") val chapterTitle: String,
         @SerializedName("contextBefore") val contextBefore: String,
+        /** 下一章正文的开头（与 contextBefore 同一预算、同一取法：没下载就是空串，不触发下载）。 */
+        @SerializedName("contextAfter") val contextAfter: String,
         @SerializedName("excerpt") val excerpt: String,
         @SerializedName("pending") val pending: List<Int>,
         @SerializedName("previousSpeakers") val previousSpeakers: List<Speaker>,
