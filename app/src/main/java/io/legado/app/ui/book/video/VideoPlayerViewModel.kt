@@ -13,6 +13,10 @@ import io.legado.app.help.exoplayer.ExoPlayerHelper
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.getMediaItem
 import io.legado.app.model.webBook.WebBook
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -31,6 +35,11 @@ internal fun nextChapterIndex(index: Int, chapterCount: Int): Int {
     return if (chapterCount <= 0) index else (index + 1).coerceAtMost(chapterCount - 1)
 }
 
+internal fun shouldSaveProgress(mediaItemCount: Int): Boolean = mediaItemCount > 0
+
+/** 进程级作用域：ViewModel 清除后仍需落库，不能使用 viewModelScope。 */
+private val videoProgressScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
 class VideoPlayerViewModel(
     private val bookRepository: BookRepository,
     private val bookSourceRepository: BookSourceRepository,
@@ -42,7 +51,7 @@ class VideoPlayerViewModel(
     private val _effects = MutableSharedFlow<VideoPlayerEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
-    val exoPlayer: ExoPlayer by lazy {
+    private val exoPlayerLazy = lazy {
         ExoPlayerHelper.createHttpExoPlayer(appCtx).apply {
             addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -65,6 +74,8 @@ class VideoPlayerViewModel(
             })
         }
     }
+
+    val exoPlayer: ExoPlayer by exoPlayerLazy
 
     private var book: Book? = null
     private var bookSourceUrl: String? = null
@@ -121,7 +132,6 @@ class VideoPlayerViewModel(
                 _effects.tryEmit(VideoPlayerEffect.ShowToast("章节不存在"))
                 return@launch
             }
-            _uiState.update { it.copy(chapterTitle = chapter.title, chapterIndex = index) }
             val source = bookSourceRepository.getBookSource(sourceUrl) ?: run {
                 _uiState.update { it.copy(isLoading = false) }
                 _effects.tryEmit(VideoPlayerEffect.ShowToast("书源不存在"))
@@ -134,6 +144,7 @@ class VideoPlayerViewModel(
                     _effects.tryEmit(VideoPlayerEffect.ShowToast("未获取到视频链接"))
                 } else {
                     chapterIndex = index
+                    _uiState.update { it.copy(chapterTitle = chapter.title, chapterIndex = index) }
                     val mediaItem: MediaItem = AnalyzeUrl(
                         content,
                         source = source,
@@ -145,6 +156,8 @@ class VideoPlayerViewModel(
                     exoPlayer.prepare()
                     exoPlayer.play()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
                 _effects.tryEmit(VideoPlayerEffect.ShowToast(e.message ?: "加载失败"))
@@ -153,15 +166,18 @@ class VideoPlayerViewModel(
     }
 
     private fun saveProgress() {
+        val mediaItemCount = if (exoPlayerLazy.isInitialized()) exoPlayer.mediaItemCount else 0
+        if (!shouldSaveProgress(mediaItemCount)) return
         val currentBook = book ?: return
-        if (chapterIndex < 0) return
+        val index = chapterIndex
+        if (index < 0) return
         val position = exoPlayer.currentPosition.coerceAtLeast(0L)
-        viewModelScope.launch {
-            bookRepository.update(
-                currentBook.copy(
-                    durChapterIndex = chapterIndex,
-                    durChapterPos = position.toInt(),
-                )
+        videoProgressScope.launch {
+            bookRepository.upVideoPlayProgress(
+                bookUrl = currentBook.bookUrl,
+                index = index,
+                position = position.toInt(),
+                time = System.currentTimeMillis(),
             )
         }
     }

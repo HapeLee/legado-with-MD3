@@ -29,4 +29,14 @@ class VideoPlayerProgressTest {
     fun nextChapterStopsAtLastIndex() {
         assertEquals(9, nextChapterIndex(9, 10))
     }
+
+    @Test
+    fun doesNotSaveBeforeMediaItemIsLoaded() {
+        assertEquals(false, shouldSaveProgress(0))
+    }
+
+    @Test
+    fun savesAfterMediaItemIsLoaded() {
+        assertEquals(true, shouldSaveProgress(1))
+    }
 }

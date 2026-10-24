@@ -139,6 +139,12 @@ class BookRepository(
         }
     }
 
+    suspend fun upVideoPlayProgress(bookUrl: String, index: Int, position: Int, time: Long) {
+        withContext(Dispatchers.IO) {
+            bookDao.upVideoPlayProgress(bookUrl, index, position, time)
+        }
+    }
+
     /** 只改本书的记录开关，保留阅读器并发保存的进度和其他字段。 */
     suspend fun setReadRecordDisabled(bookUrl: String, disabled: Boolean): Book? =
         withContext(Dispatchers.IO) {

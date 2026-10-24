@@ -886,6 +886,10 @@ interface BookDao {
     fun upReadAloudProgress(bookUrl: String, chapterIndex: Int, chapterPosition: Int,
         chapterTitle: String?, updatedAt: Long)
 
+    @Query("""UPDATE books SET durChapterIndex = :index, durChapterPos = :pos, durChapterTime = :time
+        WHERE bookUrl = :bookUrl""")
+    suspend fun upVideoPlayProgress(bookUrl: String, index: Int, pos: Int, time: Long)
+
     @Query("UPDATE books SET syncTime = :syncTime WHERE bookUrl = :bookUrl AND syncTime < :syncTime")
     fun upSyncTime(bookUrl: String, syncTime: Long)
 
