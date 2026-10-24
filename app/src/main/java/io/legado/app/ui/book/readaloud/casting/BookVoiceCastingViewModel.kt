@@ -76,9 +76,8 @@ class BookVoiceCastingViewModel(
                     // 否则老角色会在这页显示成「还没有人物档案」。
                     val rows = BookCastStore.rowsForBook(bookUrl).associateBy { it.id }
                     engineNames = VoicePoolStore.voiceEngineNames()
-                    // 取满 500：这一页只列读回来的档案，DAO 是 `order by updatedAt desc limit :limit`，
-                    // 上限小了就把最久没动过的角色从列表里静默截掉（本书档案 187 条、另一本已 229 条，
-                    // 而 AI 每分配一章就可能多建几条）。与 prune/ensure 那两处用同一个 500。
+                    // 取满 500（与 prune/ensure 那几处同一口径）：DAO 是 `order by updatedAt desc
+                    // limit :limit`，要的少了就把最久没动过的角色静默截掉，而每分配一章都可能多建几条。
                     bookKnowledgeGateway.getCharacterProfiles(bookUrl, 500)
                         .filter { it.status == BookCharacterProfile.STATUS_ACTIVE } to rows
                 }
