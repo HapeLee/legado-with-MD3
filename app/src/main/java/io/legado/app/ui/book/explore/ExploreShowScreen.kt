@@ -534,7 +534,8 @@ fun ExploreBookItem(
         modifier = modifier,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = sharedCoverKey
+        sharedCoverKey = sharedCoverKey,
+        adaptCoverAspectRatio = true,
     )
 }
 

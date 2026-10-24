@@ -107,6 +107,7 @@ fun BookCoverImage(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     requestBuilder: ImageRequest.Builder.() -> Unit = {},
+    onImageAspectRatio: ((Float) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val isNight = LegadoTheme.isDark
@@ -180,7 +181,14 @@ fun BookCoverImage(
                 contentDescription = null,
                 imageLoader = koinInject(),
                 contentScale = contentScale,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                onSuccess = { state ->
+                    val intrinsicSize = state.painter.intrinsicSize
+                    val aspectRatio = intrinsicSize.width / intrinsicSize.height
+                    if (aspectRatio.isFinite() && aspectRatio > 0f) {
+                        onImageAspectRatio?.invoke(aspectRatio)
+                    }
+                }
             )
         }
 
@@ -216,7 +224,12 @@ fun BookCoverImage(
                 imageLoader = koinInject(),
                 contentScale = contentScale,
                 modifier = Modifier.fillMaxSize(),
-                onSuccess = {
+                onSuccess = { state ->
+                    val intrinsicSize = state.painter.intrinsicSize
+                    val aspectRatio = intrinsicSize.width / intrinsicSize.height
+                    if (aspectRatio.isFinite() && aspectRatio > 0f) {
+                        onImageAspectRatio?.invoke(aspectRatio)
+                    }
                     isOnlineCoverLoaded = true
                     onlineCoverLoadFailed = false
                     onSuccess?.invoke()
@@ -274,6 +287,7 @@ fun CoilBookCover(
     badgeText: String? = null,
     showBadgeDot: Boolean = false,
     leftBottomText: String? = null,
+    onImageAspectRatio: ((Float) -> Unit)? = null,
 ) {
     val coverSettings = LocalAppUiConfiguration.current.cover
     val isNight = LegadoTheme.isDark
@@ -375,6 +389,7 @@ fun CoilBookCover(
             preferCache = preferCache,
             ignoreUseDefaultCover = ignoreUseDefaultCover,
             showLoadingPlaceholder = showLoadingPlaceholder,
+            onImageAspectRatio = onImageAspectRatio,
             onSuccess = {
                 isOnlineCoverLoaded = true
                 onlineCoverLoadFailed = false
