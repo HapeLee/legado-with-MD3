@@ -3180,6 +3180,7 @@
     <string name="ai_cast_answer">AI 返回内容</string>
     <string name="ai_cast_request">发给 AI 的内容</string>
     <string name="ai_cast_request_hint">最近一次请求的系统提示词与用户 JSON，与模型收到的逐字一致。分配不准时展开这里，可以看到送给模型的正文与角色名。</string>
+    <string name="ai_cast_copy_request">复制</string>
     <string name="ai_cast_transcript_folded">前面 %1$d 字已折叠，只显示最新部分</string>
     <string name="ai_cast_thinking_pending">模型还没有回传思考内容。若整章结束仍为空，说明这个模型不回思考过程（或只回思考不给正文），分配照常进行。</string>
     <string name="cast_table_row_count">%1$d 章 · %2$d 句</string>

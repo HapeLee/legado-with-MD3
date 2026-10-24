@@ -74,6 +74,7 @@ import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -568,7 +569,15 @@ fun AiCastDialogSheet(
                         subtitle = stringResource(R.string.ai_cast_request_hint),
                     )
                     if (requestOpen) {
-                        AiCastSection {
+                        AiCastSection(
+                            // 整段原样复制：分配错了要拿去喂别的 AI 改提示词，手抄不现实
+                            trailing = {
+                                SmallOutlinedButton(
+                                    onClick = { context.sendToClip(progress.request) },
+                                    text = stringResource(R.string.ai_cast_copy_request),
+                                )
+                            },
+                        ) {
                             val requestScroll = rememberScrollState()
                             Box(
                                 modifier = Modifier

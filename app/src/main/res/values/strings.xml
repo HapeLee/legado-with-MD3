@@ -3184,6 +3184,7 @@
     <string name="ai_cast_answer">AI answer</string>
     <string name="ai_cast_request">What was sent to the AI</string>
     <string name="ai_cast_request_hint">System prompt plus the user JSON of the last request, exactly as the model received it. Open this when the result looks wrong: it shows which dialogue lines and which character names the model actually saw.</string>
+    <string name="ai_cast_copy_request">Copy</string>
     <string name="ai_cast_transcript_folded">%1$d earlier characters folded, only the latest part is shown</string>
     <string name="ai_cast_thinking_pending">No reasoning text from the model yet. If the chapter finishes with nothing here, this model does not return its thinking; casting continues either way.</string>
     <string name="cast_table_row_count">%1$d chapters · %2$d lines</string>
