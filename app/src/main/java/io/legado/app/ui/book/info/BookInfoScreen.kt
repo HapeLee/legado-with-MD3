@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Message
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -67,13 +66,14 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -98,7 +98,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.size.Size
@@ -128,6 +127,7 @@ import io.legado.app.ui.theme.responsiveHazeEffectFixedStyle
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.WebViewContainerCompose
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -1745,6 +1745,10 @@ private fun parseBookInfoIntro(intro: String?): BookInfoIntroContent? {
  * `<useweb>` 简介：用 WebView 渲染，注入与上游一致的 JS 桥接
  * （WebCacheManager 缓存、书源对象、WebJsExtensions），
  * 并处理 legado/yuedu scheme（导入）与其他 scheme（确认后跳转）。
+ *
+ * WebView 经 [WebViewContainerCompose] 的 FrameLayout 间接挂载：直接作为
+ * AndroidView 子 View 时，加载后改高度会触发 Vulkan functor 重绘路径，
+ * 在 Android 16 HWUI Vulkan 后端上引发 drawVk SIGTRAP 原生崩溃（issue #2468）。
  */
 @Composable
 @SuppressLint("SetJavaScriptEnabled")
@@ -1768,84 +1772,100 @@ private fun BookInfoWebIntro(
     val contentHeightState = remember(loadKey) { mutableStateOf<Dp?>(null) }
     val loadedKeyState = remember { mutableStateOf<String?>(null) }
     val isCurrentLoad = { loadedKeyState.value == loadKey }
+    val jumpToAnotherApp by rememberUpdatedState(onJumpToAnotherApp)
+    // 首次测量立即收起整屏占位；后续内容变化（图片加载等）防抖后一次性提交，
+    // 减少加载后的 resize 次数
+    val pendingCssHeightState = remember(loadKey) { mutableStateOf<Float?>(null) }
     // evaluateJavascript 返回的是 CSS px，与 Compose dp 等值，不能再乘/除 density
     val onCssHeight: (Float) -> Unit = { cssHeight ->
+        if (contentHeightState.value == null) {
+            contentHeightState.value = cssHeight.dp
+        } else {
+            pendingCssHeightState.value = cssHeight
+        }
+    }
+    LaunchedEffect(pendingCssHeightState.value) {
+        val cssHeight = pendingCssHeightState.value ?: return@LaunchedEffect
+        delay(400)
         val next = cssHeight.dp
         val current = contentHeightState.value
         if (current == null || abs(current.value - next.value) > 8f) {
             contentHeightState.value = next
         }
     }
-    val webView = remember(bookSource?.bookSourceUrl) {
-        WebView(context).apply {
-            setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                loadsImagesAutomatically = true
-                blockNetworkImage = false
-                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                mediaPlaybackRequiresUserGesture = false
-                builtInZoomControls = false
-                displayZoomControls = false
-                textZoom = 100
-            }
-            // useweb 简介可能是整页 HTML：禁用 overscroll 与滚动条，滚动交给外层 LazyColumn
-            overScrollMode = View.OVER_SCROLL_NEVER
-            isVerticalScrollBarEnabled = false
-            webChromeClient = buildBookInfoWebChromeClient()
-            addJavascriptInterface(WebCacheManager, WebJsExtensions.nameCache)
-            bookSource?.let { source ->
-                addJavascriptInterface(source as BaseSource, WebJsExtensions.nameSource)
-                addJavascriptInterface(
-                    WebJsExtensions(source, null, this),
-                    WebJsExtensions.nameJava
-                )
-            }
-        }
-    }
-    DisposableEffect(webView) {
-        webView.onResume()
-        onDispose {
-            webView.stopLoading()
-            (webView.parent as? ViewGroup)?.removeView(webView)
-            webView.destroy()
-        }
-    }
-    AndroidView(
-        factory = { webView },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(contentHeightState.value ?: pageHeight),
-        update = { view ->
-            view.webViewClient = buildBookInfoWebIntroClient(
-                context = context,
-                isCurrentLoad = isCurrentLoad,
-                onCssHeight = onCssHeight,
-                onJumpToAnotherApp = onJumpToAnotherApp,
-            )
-            view.setOnTouchListener { _, event ->
-                if (
-                    event.action == MotionEvent.ACTION_UP ||
-                    event.action == MotionEvent.ACTION_CANCEL
-                ) {
-                    scheduleBookInfoWebIntroHeightMeasure(
-                        webView = view,
+    // 书源变化（关联书籍换源等）时整体重建：JavascriptInterface 绑定了源对象
+    key(bookSource?.bookSourceUrl) {
+        WebViewContainerCompose(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(contentHeightState.value ?: pageHeight),
+            createWebView = { context ->
+                createBookInfoWebIntroWebView(context, bookSource)
+            },
+            update = { webView ->
+                if (loadedKeyState.value != loadKey) {
+                    loadedKeyState.value = loadKey
+                    // client 与触摸监听持有本次加载的状态闭包，只在换载时重建，
+                    // 不随每次重组重复创建
+                    webView.webViewClient = buildBookInfoWebIntroClient(
+                        context = context,
                         isCurrentLoad = isCurrentLoad,
                         onCssHeight = onCssHeight,
-                        delays = bookInfoWebIntroTouchMeasureDelays,
+                        onJumpToAnotherApp = { jumpToAnotherApp(it) },
                     )
+                    webView.setOnTouchListener { _, event ->
+                        if (
+                            event.action == MotionEvent.ACTION_UP ||
+                            event.action == MotionEvent.ACTION_CANCEL
+                        ) {
+                            scheduleBookInfoWebIntroHeightMeasure(
+                                webView = webView,
+                                isCurrentLoad = isCurrentLoad,
+                                onCssHeight = onCssHeight,
+                                delays = bookInfoWebIntroTouchMeasureDelays,
+                            )
+                        }
+                        false
+                    }
+                    webView.stopLoading()
+                    webView.loadDataWithBaseURL(baseUrl, wrappedHtml, "text/html", "utf-8", baseUrl)
                 }
-                false
-            }
-            if (loadedKeyState.value != loadKey) {
-                loadedKeyState.value = loadKey
-                view.stopLoading()
-                view.loadDataWithBaseURL(baseUrl, wrappedHtml, "text/html", "utf-8", baseUrl)
-            }
-        },
-    )
+            },
+        )
+    }
 }
+
+/**
+ * 详情页 `<useweb>` 简介的 WebView：实例级配置（settings、JS 桥接、ChromeClient），
+ * 随 [WebViewContainerCompose] 的 factory 创建。
+ */
+private fun createBookInfoWebIntroWebView(context: Context, bookSource: BookSource?): WebView =
+    WebView(context).apply {
+        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            loadsImagesAutomatically = true
+            blockNetworkImage = false
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            mediaPlaybackRequiresUserGesture = false
+            builtInZoomControls = false
+            displayZoomControls = false
+            textZoom = 100
+        }
+        // useweb 简介可能是整页 HTML：禁用 overscroll 与滚动条，滚动交给外层 LazyColumn
+        overScrollMode = View.OVER_SCROLL_NEVER
+        isVerticalScrollBarEnabled = false
+        webChromeClient = buildBookInfoWebChromeClient()
+        addJavascriptInterface(WebCacheManager, WebJsExtensions.nameCache)
+        bookSource?.let { source ->
+            addJavascriptInterface(source as BaseSource, WebJsExtensions.nameSource)
+            addJavascriptInterface(
+                WebJsExtensions(source, null, this),
+                WebJsExtensions.nameJava
+            )
+        }
+    }
 
 /**
  * `<useweb>` 简介的 HTML 外壳：透明背景 + viewport + 主题文字色。

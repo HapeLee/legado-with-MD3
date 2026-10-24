@@ -6,17 +6,13 @@ import android.util.AttributeSet
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
-import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.R
 import io.legado.app.ui.dict.DictActivity
+import io.legado.app.ui.widget.components.WebViewContainerCompose
 import io.legado.app.utils.toastOnUi
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -138,40 +134,9 @@ fun VisibleWebViewCompose(
     onCreated: (VisibleWebView) -> Unit,
     onDestroyed: (() -> Unit)? = null
 ) {
-    val webViewHolder = remember { WebViewHolder() }
-    AndroidView(
+    WebViewContainerCompose(
         modifier = modifier,
-        factory = { context ->
-            FrameLayout(context).apply {
-                clipChildren = false
-                clipToPadding = false
-                val webView = VisibleWebView(context).apply {
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
-                addView(webView)
-                webViewHolder.webView = webView
-                onCreated(webView)
-            }
-        },
-        update = { container ->
-            webViewHolder.webView = container.getChildAt(0) as? VisibleWebView
-        }
+        createWebView = { context -> VisibleWebView(context).also(onCreated) },
+        onDestroyed = onDestroyed
     )
-    DisposableEffect(Unit) {
-        onDispose {
-            onDestroyed?.invoke()
-            webViewHolder.webView?.let { webView ->
-                (webView.parent as? ViewGroup)?.removeView(webView)
-                webView.destroy()
-            }
-            webViewHolder.webView = null
-        }
-    }
-}
-
-private class WebViewHolder {
-    var webView: VisibleWebView? = null
 }
