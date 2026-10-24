@@ -42,6 +42,8 @@ class BookVoiceCastingViewModel(
 
     private var profiles: List<BookCharacterProfile> = emptyList()
     private var castRows: Map<String, BookCastStore.BookCharacterRow> = emptyMap()
+    /** 只有角色行、没有可用档案的那批：见 [castingSources]。 */
+    private var orphanRows: List<BookCastStore.BookCharacterRow> = emptyList()
     private var voices: List<ReadAloudVoice> = emptyList()
     private var bindings: List<BookVoiceBinding> = emptyList()
 
@@ -73,11 +75,14 @@ class BookVoiceCastingViewModel(
                     // 否则老角色会在这页显示成「还没有人物档案」。
                     val rows = BookCastStore.rowsForBook(bookUrl).associateBy { it.id }
                     engineNames = VoicePoolStore.voiceEngineNames()
-                    bookKnowledgeGateway.getCharacterProfiles(bookUrl, 200)
+                    // 取满 500（与 prune/ensure 那几处同一口径）：DAO 是 `order by updatedAt desc
+                    // limit :limit`，要的少了就把最久没动过的角色静默截掉，而每分配一章都可能多建几条。
+                    bookKnowledgeGateway.getCharacterProfiles(bookUrl, 500)
                         .filter { it.status == BookCharacterProfile.STATUS_ACTIVE } to rows
                 }
                 profiles = liveProfiles
                 castRows = castRowsById
+                orphanRows = castingSources(liveProfiles, castRowsById).second
                 combine(
                     voiceGateway.observeVoices(),
                     voiceGateway.observeBindings(bookUrl),
@@ -107,28 +112,10 @@ class BookVoiceCastingViewModel(
         val specialItems = listOf(
             specialItem(BookVoiceBinding.SUBJECT_NARRATOR, CastingSubjectKind.Narrator),
         )
-        val characterItems = profiles.map { profile ->
-            val row = castRows[profile.id]
-            VoiceCastingItemUi(
-                subjectType = BookVoiceBinding.SUBJECT_CHARACTER,
-                subjectId = profile.id,
-                kind = CastingSubjectKind.Character,
-                name = row?.name ?: profile.name,
-                // 档案的 role 存的是 male_lead 这类英文键，直接显示就成了英文；
-                // 这里翻成中文名，未知值原样保留以便暴露新增取值
-                description = castRoleLabelRes(profile.role)?.let(appCtx::getString)
-                    ?: profile.role,
-                role = profile.role,
-                avatarUri = profile.avatarUri,
-                poolLabel = row?.poolLabel
-                    ?: VoicePoolStore.poolNameOrEmpty(profile.voiceAgeBand),
-                voiceEffect = row?.voiceEffect.orEmpty(),
-                chapterCount = row?.chapterCount ?: 0,
-                lineCount = row?.lineCount ?: 0,
-                sortOrder = row?.sortOrder ?: 0,
-                bubbleRuleJson = row?.bubbleRuleJson.orEmpty(),
-            )
-        }.sortedWith(
+        val characterItems = (
+            profiles.map { profile -> castingItem(profile, castRows[profile.id]) } +
+                orphanRows.map { row -> castingItem(null, row) }
+            ).sortedWith(
             // 拖过排序的（sortOrder > 0）就按用户排的那份走；没排过的排在后面，
             // 其中男女主 / 男女配默认置顶（角色档次 ordinal 小的在前），再按台词数、名字。
             compareBy<VoiceCastingItemUi> { if (it.sortOrder > 0) it.sortOrder else Int.MAX_VALUE }
@@ -178,6 +165,34 @@ class BookVoiceCastingViewModel(
         kind = kind,
         name = "",
     )
+
+    /**
+     * 一张角色卡。[profile] 为空 = 这个人只有配音角色行（档案被停用/删掉，或两套 id 对不上），
+     * 池、音色、变声、气泡都以角色行为准——那本来就是配音侧的权威值。
+     */
+    private fun castingItem(
+        profile: BookCharacterProfile?,
+        row: BookCastStore.BookCharacterRow?,
+    ): VoiceCastingItemUi {
+        val role = profile?.role.orEmpty()
+        return VoiceCastingItemUi(
+            subjectType = BookVoiceBinding.SUBJECT_CHARACTER,
+            subjectId = profile?.id ?: row?.id.orEmpty(),
+            kind = CastingSubjectKind.Character,
+            name = row?.name ?: profile?.name.orEmpty(),
+            // 档案的 role 存的是 male_lead 这类英文键，直接显示就成了英文；
+            // 这里翻成中文名，未知值原样保留以便暴露新增取值
+            description = castRoleLabelRes(role)?.let(appCtx::getString) ?: role,
+            role = role,
+            avatarUri = profile?.avatarUri,
+            poolLabel = row?.poolLabel ?: VoicePoolStore.poolNameOrEmpty(profile?.voiceAgeBand),
+            voiceEffect = row?.voiceEffect.orEmpty(),
+            chapterCount = row?.chapterCount ?: 0,
+            lineCount = row?.lineCount ?: 0,
+            sortOrder = row?.sortOrder ?: 0,
+            bubbleRuleJson = row?.bubbleRuleJson.orEmpty(),
+        )
+    }
 
     /**
      * 旁白的音色绑定。旁白不是角色，没有名字/声音池/变声器可存，只有这一条绑定：
@@ -274,4 +289,18 @@ class BookVoiceCastingViewModel(
             )
         )
     }
+}
+
+/**
+ * 这一页列的是谁：档案与配音角色是同一批人，但列表**只按档案**长出来的话，
+ * 角色行还活着、档案却不在（被自动清理停用、被删、两套 id 对不上、读档案被条数截断）
+ * 就会让人从配音页凭空消失，而正文胶囊列表照旧找他得到。
+ * 所以补一遍只有角色行的那批：以角色行为准列出来，池与音色本来就存在那一侧。
+ */
+internal fun castingSources(
+    activeProfiles: List<BookCharacterProfile>,
+    rowsById: Map<String, BookCastStore.BookCharacterRow>,
+): Pair<List<BookCharacterProfile>, List<BookCastStore.BookCharacterRow>> {
+    val profileIds = activeProfiles.mapTo(HashSet()) { it.id }
+    return activeProfiles to rowsById.values.filterNot { it.id in profileIds }
 }

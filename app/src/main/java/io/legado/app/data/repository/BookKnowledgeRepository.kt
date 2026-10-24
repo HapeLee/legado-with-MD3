@@ -26,7 +26,9 @@ class BookKnowledgeRepository(
         bookUrl: String,
         limit: Int,
     ): List<BookCharacterProfile> = withContext(Dispatchers.IO) {
-        dao.getCharacterProfiles(bookUrl, limit.coerceIn(1, 80))
+        // 上限只用来兜住「调用方传了个没边界的数」：夹到 80 会把调用方明确要的量悄悄砍掉
+        // （本书人物配音、人物列表、事记与关系图都按 120~500 要人），列出来的人比库里实际少。
+        dao.getCharacterProfiles(bookUrl, limit.coerceIn(1, MAX_CHARACTER_PROFILES))
     }
 
     override suspend fun getCharacterProfile(
@@ -131,5 +133,10 @@ class BookKnowledgeRepository(
 
     override suspend fun deleteKnowledgeEntry(entryId: String) = withContext(Dispatchers.IO) {
         dao.deleteKnowledgeEntry(entryId)
+    }
+
+    companion object {
+        /** 一本书的人物档案读取上限：与 `appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500)` 那批调用方同一口径。 */
+        const val MAX_CHARACTER_PROFILES = 500
     }
 }
