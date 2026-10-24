@@ -150,15 +150,18 @@ class ChineseLineBreaker(
     /**
      * Keeps a candidate line start from splitting a Latin word that fits on a fresh line.
      *
-     * 回退到词首不得制造新的避头尾违规：词首前一个 cluster 若是开引号/开括号（`opening`），
-     * 回退会让它留在行尾——正是 [isForbiddenBreak] 判定的非法断点。此时退回原有断点，
-     * 宁可保留中文字符级断行，也不制造违规。
+     * 词首（或断点本身）前紧贴开引号/开括号时，只回退到词首会把开标点留在行尾——正是
+     * [isForbiddenBreak] 判定的非法断点。此时连开标点（含连续多个，如 `“(`）一起回退：
+     * 开标点落在下一行行首合法，单词也得以整词保留（#2449：`[Energy]` 被拆成
+     * `[E|nergy`）。开标点串一直贴到本行行首时无处再退——再退本行就空了且断点非法——
+     * 保留原断点，按字符回退（同超长词）。
      */
     private fun safeBreakStart(candidate: Int, lineStart: Int): Int {
-        val wordStart = latinWordStartBefore(candidate) ?: return candidate
-        if (wordStart <= lineStart) return candidate
-        if (clusters[wordStart - 1] in opening) return candidate
-        return wordStart
+        val start = latinWordStartBefore(candidate) ?: candidate
+        if (start <= lineStart) return candidate
+        var breakStart = start
+        while (breakStart > lineStart + 1 && clusters[breakStart - 1] in opening) breakStart--
+        return if (clusters[breakStart - 1] in opening) candidate else breakStart
     }
 
     /**

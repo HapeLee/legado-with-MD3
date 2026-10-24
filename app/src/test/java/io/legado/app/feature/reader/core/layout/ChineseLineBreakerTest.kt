@@ -178,6 +178,48 @@ class ChineseLineBreakerTest {
     }
 
     /**
+     * 词首前是开括号时，开括号连同单词一起移到下一行行首（开括号在行首合法），
+     * 单词不再被拆开。#2449：`...the [Energy` 在行尾被拆成 `[E|nergy`。
+     */
+    @Test
+    fun latinWordAfterOpeningBracketMovesIntactToNextLine() {
+        val result = breakText("aa [Energy]".map(Char::toString), 90)
+
+        assertArrayEquals(intArrayOf(0, 3, 11), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 80f), result.lineWidthsPx, 0f)
+    }
+
+    /** 开引号与开括号同样连词带回下一行：`aa “word”` → `aa ` / `“word”`。 */
+    @Test
+    fun latinWordAfterOpeningQuoteMovesIntactToNextLine() {
+        val result = breakText("aa “word”".map(Char::toString), 60)
+
+        assertArrayEquals(intArrayOf(0, 3, 9), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 60f), result.lineWidthsPx, 0f)
+    }
+
+    /** 连续开标点（`“(`）整串连同单词回退，不把前一个开标点留在行尾。 */
+    @Test
+    fun consecutiveOpeningMarksCarryWithTheWord() {
+        val result = breakText("aa “(word”".map(Char::toString), 80)
+
+        assertArrayEquals(intArrayOf(0, 3, 10), result.lineStarts)
+        assertArrayEquals(floatArrayOf(30f, 70f), result.lineWidthsPx, 0f)
+    }
+
+    /**
+     * 开标点串一直贴到本行行首时（本行从 `“(Energy` 开始），无处可退：再退本行就空了，
+     * 且会把开标点留在行尾。保留原断点按字符回退，同超长词。
+     */
+    @Test
+    fun openingMarkRunAtLineStartKeepsCharacterFallback() {
+        val result = breakText("“(Energy".map(Char::toString), 50)
+
+        assertArrayEquals(intArrayOf(0, 5, 8), result.lineStarts)
+        assertArrayEquals(floatArrayOf(50f, 30f), result.lineWidthsPx, 0f)
+    }
+
+    /**
      * Latin 词边界回退不得制造避头尾违规：词首前是开引号/开括号时（`isForbiddenBreak` 判定
      * 非法），必须退回原有断点，否则开标点会落到行尾。
      */
@@ -193,6 +235,11 @@ class ChineseLineBreakerTest {
             "请阅读“README.md”文件中的说明。",
             "他打开“Settings”面板，然后点击“About”。",
             "这本书引用了《The Great Gatsby》里的一句话。",
+            "aa [Energy] bb",
+            "the [Energy Contraction] technique",
+            "中文[English]中文",
+            "aa “(word”",
+            "状态[HP 100/100]恢复",
         )
         texts.forEach { text ->
             val clusters = text.map(Char::toString)
