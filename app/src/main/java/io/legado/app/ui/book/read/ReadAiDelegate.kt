@@ -160,6 +160,20 @@ class ReadAiDelegate(
 
     // --- 章节摘要 ---
 
+    fun openAiChat(emitEffect: (ReadBookEffect) -> Unit) {
+        val book = ReadBook.book
+        host.closeReadMenu()
+        emitEffect(
+            ReadBookEffect.OpenAiChat(
+                bookUrl = book?.bookUrl,
+                bookName = book?.name,
+                bookAuthor = book?.author,
+                chapterIndex = ReadBook.durChapterIndex.takeIf { book != null },
+                chapterTitle = host.chapterName,
+            )
+        )
+    }
+
     fun openChapterSummary() {
         val book = ReadBook.book ?: return
         val chapterIndex = ReadBook.durChapterIndex

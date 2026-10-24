@@ -35,14 +35,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHost
@@ -103,10 +107,14 @@ import java.util.concurrent.TimeUnit
 
 @Composable
 fun AiChatRouteScreen(
+    readingContext: AiReadingContext? = null,
     onBackClick: () -> Unit,
     onOpenBookInfo: (AiChatBookResultUi) -> Unit,
     viewModel: AiChatViewModel = koinViewModel()
 ) {
+    LaunchedEffect(readingContext) {
+        viewModel.onIntent(AiChatIntent.SetReadingContext(readingContext))
+    }
     AiChatScreen(
         state = viewModel.uiState.collectAsStateWithLifecycle().value,
         effects = viewModel.effects,
@@ -463,6 +471,12 @@ fun AiChatScreen(
                                     onReject = {
                                         onIntent(AiChatIntent.RejectPendingTool)
                                     }
+                                )
+                            }
+                            state.readingContext?.let { ctx ->
+                                ReadingContextBar(
+                                    context = ctx,
+                                    onClear = { onIntent(AiChatIntent.SetReadingContext(null)) }
                                 )
                             }
                             ChatInputBar(
@@ -830,6 +844,74 @@ private fun ChatMessageItem(
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 2.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun ReadingContextBar(
+    context: AiReadingContext,
+    onClear: () -> Unit
+) {
+    val isKeyboardVisible =
+        WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
+    val horizontalPadding by animateDpAsState(
+        targetValue = if (isKeyboardVisible) 16.dp else 46.dp,
+        animationSpec = tween(durationMillis = 250),
+        label = "AiChatContextHorizontalPadding"
+    )
+    val label = remember(context) {
+        buildString {
+            append(context.bookName)
+            if (context.chapterTitle.isNotBlank()) {
+                append(" · ")
+                append(context.chapterTitle)
+            }
+        }
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = horizontalPadding,
+                end = horizontalPadding,
+                bottom = 6.dp
+            ),
+        shape = RoundedCornerShape(16.dp),
+        color = LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = LegadoTheme.colorScheme.onSecondaryContainer
+            )
+            AppText(
+                text = label,
+                style = LegadoTheme.typography.labelMedium,
+                color = LegadoTheme.colorScheme.onSecondaryContainer,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = onClear,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.cancel),
+                    modifier = Modifier.size(14.dp),
+                    tint = LegadoTheme.colorScheme.onSecondaryContainer
+                )
+            }
         }
     }
 }

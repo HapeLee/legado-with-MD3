@@ -3,6 +3,7 @@ package io.legado.app.base
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -66,6 +67,9 @@ abstract class BaseComposeActivity(
 
         super.onCreate(savedInstanceState)
         lastUiConfiguration = appUiConfigurationGateway.currentConfiguration
+        // Prevent ViewRootImpl from falling back to SOFT_INPUT_ADJUST_PAN on top of Compose IME insets.
+        @Suppress("DEPRECATION")
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         enableEdgeToEdge()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
