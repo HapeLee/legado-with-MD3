@@ -171,6 +171,50 @@ class MangaWebtoonTilesTest {
     }
 
     @Test
+    fun `segment canvas draws the matching region of the virtual full page`() {
+        val source = IntSize(80, 8_000)
+        val content = IntSize(120, 12_000)
+        val offset = 7_200
+        val plans = mangaWebtoonTiles(
+            source, content, Offset(0f, -offset.toFloat()), Rect(0f, 0f, 120f, 600f),
+        )
+        val bitmaps = plans.associateWith { tile ->
+            val bounds = tile.decodeBounds
+            Bitmap.createBitmap(bounds.width, bounds.height, Bitmap.Config.ARGB_8888).apply {
+                val pixels = IntArray(width * height) { pixel ->
+                    if (bounds.top + pixel / width < 5_000) android.graphics.Color.RED
+                    else android.graphics.Color.BLUE
+                }
+                setPixels(pixels, 0, width, 0, 0, width, height)
+            }
+        }
+        val output = Bitmap.createBitmap(120, 600, Bitmap.Config.ARGB_8888)
+        try {
+            output.eraseColor(android.graphics.Color.GREEN)
+            val painters =
+                bitmaps.mapValues { BitmapPainter(it.value.asImageBitmap()) }.toImmutableMap()
+            CanvasDrawScope().draw(
+                Density(1f),
+                LayoutDirection.Ltr,
+                Canvas(output.asImageBitmap()),
+                ComposeSize(120f, 600f),
+            ) {
+                drawMangaWebtoonTiles(
+                    source,
+                    painters,
+                    contentOffsetY = offset,
+                    contentSize = content
+                )
+            }
+            assertEquals(android.graphics.Color.RED, output.getPixel(60, 100))
+            assertEquals(android.graphics.Color.BLUE, output.getPixel(60, 500))
+        } finally {
+            output.recycle()
+            bitmaps.values.forEach { it.recycle() }
+        }
+    }
+
+    @Test
     fun `transparent regions replace the preview instead of blending the same image twice`() {
         val bitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
         val output = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)

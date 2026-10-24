@@ -141,6 +141,9 @@ internal suspend fun loadMangaWebtoonTiles(
 /**
  * 条漫的高清绘制层。Coil 整图仅作为有界预览；直接画原图分块，不创建整页缩放图层。
  * 外部 LazyColumn 继续拥有滚动/缩放，原图租约覆盖解码器的整个使用期。
+ *
+ * [layoutSize] 与 [position] 描述内容整体（整页）的几何；超高页拆成多段行后，
+ * 每段传入虚拟整页尺寸、整页顶部位置与该段的 [contentOffsetY]，视口相交与源图映射保持不变。
  */
 @Composable
 internal fun MangaWebtoonTiles(
@@ -152,6 +155,7 @@ internal fun MangaWebtoonTiles(
     colorFilter: ColorFilter?,
     backgroundColor: Color,
     transformations: ImmutableList<Transformation>,
+    contentOffsetY: Int = 0,
 ) {
     val bitmap = (result?.image as? BitmapImage)?.bitmap ?: return
     // 原尺寸已满足显示的短图沿用 AsyncImage；长图和放大后的低分辨率预览补区域细节。
@@ -219,7 +223,10 @@ internal fun MangaWebtoonTiles(
         }
     }
     Canvas(Modifier.fillMaxSize()) {
-        drawMangaWebtoonTiles(sourceSize, tiles, tileAlpha, colorFilter, backgroundColor)
+        drawMangaWebtoonTiles(
+            sourceSize, tiles, tileAlpha, colorFilter, backgroundColor,
+            contentOffsetY, layoutSize,
+        )
     }
 }
 
@@ -230,23 +237,29 @@ internal fun DrawScope.drawMangaWebtoonTiles(
     alpha: Float = 1f,
     colorFilter: ColorFilter? = null,
     backgroundColor: Color = Color.Transparent,
+    contentOffsetY: Int = 0,
+    contentSize: IntSize? = null,
 ) {
     if (sourceSize.width <= 0 || sourceSize.height <= 0) return
-    val scaleX = size.width / sourceSize.width
-    val scaleY = size.height / sourceSize.height
+    // 分段行的画布只是整页的一个窗口：缩放比例按整页内容尺寸计算，再平移到本段起点。
+    val content = contentSize ?: IntSize(size.width.toInt(), size.height.toInt())
+    if (content.width <= 0 || content.height <= 0) return
+    val scaleX = content.width.toFloat() / sourceSize.width
+    val scaleY = content.height.toFloat() / sourceSize.height
+    val offsetY = contentOffsetY.toFloat()
     tiles.forEach { (tile, painter) ->
         val bounds = tile.bounds
         val decoded = tile.decodeBounds
         // 相邻逻辑边界共用浮点坐标；额外边缘像素防止采样时透出底色。
         clipRect(
             bounds.left * scaleX,
-            bounds.top * scaleY,
+            bounds.top * scaleY - offsetY,
             bounds.right * scaleX,
-            bounds.bottom * scaleY
+            bounds.bottom * scaleY - offsetY
         ) {
             // 透明 PNG 不能在同一幅预览上叠画两遍；先用阅读背景替换该区域。
             drawRect(backgroundColor, alpha = alpha)
-            translate(decoded.left * scaleX, decoded.top * scaleY) {
+            translate(decoded.left * scaleX, decoded.top * scaleY - offsetY) {
                 with(painter) {
                     draw(
                         Size(decoded.width * scaleX, decoded.height * scaleY),
