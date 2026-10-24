@@ -64,7 +64,7 @@ object BookType {
      */
     const val allBookType = text or image or audio or video or webFile
 
-    const val allBookTypeLocal = text or image or audio or webFile or local
+    const val allBookTypeLocal = text or image or audio or video or webFile or local
 
     /**
      * 本地书籍书源标志

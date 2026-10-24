@@ -2,8 +2,11 @@ package io.legado.app.help.source
 
 import io.legado.app.constant.BookSourceType
 import io.legado.app.constant.BookType
+import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
+import io.legado.app.help.book.upType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BookSourceGetBookTypeTest {
@@ -24,5 +27,20 @@ class BookSourceGetBookTypeTest {
             bookSourceType = BookSourceType.audio,
         )
         assertEquals(BookType.audio, source.getBookType())
+    }
+
+    @Test
+    fun videoConstantsAreStable() {
+        assertEquals(4, BookSourceType.video)
+        assertEquals(0b100, BookType.video)
+        assertTrue(BookType.allBookType and BookType.video != 0)
+        assertTrue(BookType.allBookTypeLocal and BookType.video != 0)
+    }
+
+    @Test
+    fun upTypeKeepsVideoBookType() {
+        val book = Book(type = BookType.video)
+        book.upType()
+        assertTrue(book.type and BookType.video != 0)
     }
 }
