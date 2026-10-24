@@ -39,4 +39,19 @@ class VideoPlayerProgressTest {
     fun savesAfterMediaItemIsLoaded() {
         assertEquals(true, shouldSaveProgress(1))
     }
+
+    @Test
+    fun initializesWhenBookNotLoadedYet() {
+        assertEquals(true, shouldInitialize(null, "x"))
+    }
+
+    @Test
+    fun skipsRepeatedInitForSameBook() {
+        assertEquals(false, shouldInitialize("x", "x"))
+    }
+
+    @Test
+    fun reinitializesForDifferentBook() {
+        assertEquals(true, shouldInitialize("x", "y"))
+    }
 }

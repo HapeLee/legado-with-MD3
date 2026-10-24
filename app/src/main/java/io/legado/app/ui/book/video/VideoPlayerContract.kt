@@ -19,6 +19,7 @@ data class VideoPlayerUiState(
 
 sealed interface VideoPlayerIntent {
     data object PlayPause : VideoPlayerIntent
+    data object Pause : VideoPlayerIntent
     data class SeekTo(val positionMs: Long) : VideoPlayerIntent
     data object PreviousChapter : VideoPlayerIntent
     data object NextChapter : VideoPlayerIntent

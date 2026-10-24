@@ -37,6 +37,9 @@ internal fun nextChapterIndex(index: Int, chapterCount: Int): Int {
 
 internal fun shouldSaveProgress(mediaItemCount: Int): Boolean = mediaItemCount > 0
 
+internal fun shouldInitialize(loadedBookUrl: String?, requestedBookUrl: String): Boolean =
+    loadedBookUrl != requestedBookUrl
+
 /** 进程级作用域：ViewModel 清除后仍需落库，不能使用 viewModelScope。 */
 private val videoProgressScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -80,8 +83,11 @@ class VideoPlayerViewModel(
     private var book: Book? = null
     private var bookSourceUrl: String? = null
     private var chapterIndex: Int = 0
+    private var initializedBookUrl: String? = null
 
     fun init(bookUrl: String) {
+        if (!shouldInitialize(initializedBookUrl, bookUrl)) return
+        initializedBookUrl = bookUrl
         viewModelScope.launch {
             val loaded = bookRepository.getBook(bookUrl) ?: run {
                 _effects.tryEmit(VideoPlayerEffect.ShowToast("书籍不存在"))
@@ -105,6 +111,9 @@ class VideoPlayerViewModel(
         when (intent) {
             is VideoPlayerIntent.PlayPause -> {
                 if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+            }
+            is VideoPlayerIntent.Pause -> {
+                if (exoPlayer.isPlaying) exoPlayer.pause()
             }
             is VideoPlayerIntent.SeekTo -> {
                 exoPlayer.seekTo(clampSeekPosition(intent.positionMs, exoPlayer.duration))

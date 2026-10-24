@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import io.legado.app.utils.toastOnUi
@@ -37,6 +39,10 @@ fun VideoPlayerScreen(
                 is VideoPlayerEffect.ShowToast -> context.toastOnUi(effect.message)
             }
         }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        viewModel.onIntent(VideoPlayerIntent.Pause)
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
