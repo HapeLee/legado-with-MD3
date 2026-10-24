@@ -174,6 +174,13 @@ data class MainRouteAudioPlay(
 ) : MainRoute
 
 @Serializable
+data class MainRouteVideoPlay(
+    val bookUrl: String? = null,
+    val inBookshelf: Boolean = true,
+    val sharedCoverKey: String? = null,
+) : MainRoute
+
+@Serializable
 data class MainRouteSearch(
     val key: String?,
     val scopeRaw: String? = null
