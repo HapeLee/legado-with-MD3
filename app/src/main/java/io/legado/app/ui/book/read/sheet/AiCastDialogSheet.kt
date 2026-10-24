@@ -973,16 +973,21 @@ private fun AiCastSection(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (title != null) {
+            // 只有 trailing 没有标题时也要出来：否则挂上去的按钮（如「复制」）会被静默丢掉
+            if (title != null || trailing != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    AppText(
-                        text = title,
-                        modifier = Modifier.weight(1f),
-                        style = LegadoTheme.typography.titleSmall,
-                        color = LegadoTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (title == null) {
+                        Box(modifier = Modifier.weight(1f))
+                    } else {
+                        AppText(
+                            text = title,
+                            modifier = Modifier.weight(1f),
+                            style = LegadoTheme.typography.titleSmall,
+                            color = LegadoTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     trailing?.invoke(this)
                 }
             }
