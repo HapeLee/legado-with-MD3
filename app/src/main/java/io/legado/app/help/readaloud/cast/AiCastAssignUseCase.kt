@@ -216,7 +216,16 @@ class AiCastAssignUseCase(
                 // 代词/「旁白」这类占位主名不送：契约要求「优先沿用已有主名」，
                 // 送出「我」就等于把每一个没依据的句子都推向它
                 characters = known.filterNot { isPlaceholderName(it.name) }
-                    .map { AiCastPayload.Character(it.name, it.poolLabel) },
+                    .map { row ->
+                        val profile = profiles.firstOrNull { it.id == row.id }
+                            ?: profiles.firstOrNull { it.name == row.name }
+                        AiCastPayload.Character(
+                            name = row.name,
+                            pool = row.poolLabel,
+                            aliases = profile?.aliasNames().orEmpty()
+                                .filter { it != row.name }.take(MAX_PAYLOAD_ALIASES),
+                        )
+                    },
                 scene = scene,
                 chapterTitle = chapter.title,
                 contextBefore = contextBefore,
@@ -652,6 +661,8 @@ private const val MAX_PENDING = 120
 private const val PREVIOUS_SPEAKERS = 12
 private const val SCENE_CHARS = 200
 private const val SCENE_PARAGRAPHS = 4
+/** 送 AI 的每个角色最多带几个别名：认人够用，又不至于让 187 个角色的名单先撑爆窗口。 */
+private const val MAX_PAYLOAD_ALIASES = 4
 
 /** 正文窗口：带 `⟦i⟧` 标记的连续正文 + 本窗口需要回答的锚点序号。 */
 private class CastWindow(val excerpt: String, val pending: List<Int>)
@@ -679,6 +690,13 @@ private object AiCastPayload {
     data class Character(
         @SerializedName("name") val name: String,
         @SerializedName("pool") val pool: String,
+        /**
+         * 档案里记过的别名/称呼。
+         *
+         * 只送 name+pool 时，「同伴」「养女」这类关系称谓在已有名单里找不到落点，模型只能
+         * 另立一个「同伴甲」；别名是它唯一能用来认人的线索。
+         */
+        @SerializedName("aliases") val aliases: List<String> = emptyList(),
     )
 
     /** 上一窗口末尾已确定的说话人，用于跨窗口接续同一个人。 */
