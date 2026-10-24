@@ -1,22 +1,36 @@
 package io.legado.app.ui.book.video
 
+import android.content.pm.ActivityInfo
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
+import io.legado.app.R
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
@@ -30,6 +44,7 @@ fun VideoPlayerScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = LocalActivity.current
+    val view = LocalView.current
 
     LaunchedEffect(bookUrl) {
         viewModel.init(bookUrl)
@@ -50,6 +65,33 @@ fun VideoPlayerScreen(
         }
     }
 
+    DisposableEffect(Unit) {
+        val previousKeepScreenOn = view.keepScreenOn
+        view.keepScreenOn = true
+        onDispose {
+            view.keepScreenOn = previousKeepScreenOn
+            activity?.window?.let { window ->
+                WindowCompat.getInsetsController(window, window.decorView)
+                    .show(WindowInsetsCompat.Type.systemBars())
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+    }
+
+    LaunchedEffect(state.isFullscreen, activity) {
+        val window = activity?.window ?: return@LaunchedEffect
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        if (state.isFullscreen) {
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
         Box(modifier = Modifier.fillMaxSize()) {
             AndroidView(
@@ -58,6 +100,9 @@ fun VideoPlayerScreen(
                     PlayerView(context).apply {
                         useController = true
                         player = viewModel.exoPlayer
+                        setFullscreenButtonClickListener {
+                            viewModel.onIntent(VideoPlayerIntent.ToggleFullscreen)
+                        }
                     }
                 },
                 onRelease = {
@@ -68,15 +113,43 @@ fun VideoPlayerScreen(
                 Text(
                     text = "${state.bookName} · ${state.chapterTitle}",
                     color = Color.White,
-                    modifier = Modifier.align(Alignment.TopCenter),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp),
                 )
             }
             if (state.error != null) {
-                Text(
-                    text = state.error ?: "",
-                    color = Color.White,
+                Column(
                     modifier = Modifier.align(Alignment.Center),
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(text = state.error ?: "", color = Color.White)
+                    Button(
+                        onClick = { viewModel.onIntent(VideoPlayerIntent.Retry) },
+                        modifier = Modifier.padding(top = 8.dp),
+                    ) {
+                        Text(text = stringResource(R.string.retry))
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 88.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Button(
+                    onClick = { viewModel.onIntent(VideoPlayerIntent.PreviousChapter) },
+                    enabled = state.chapterIndex > 0,
+                ) {
+                    Text(text = stringResource(R.string.previous_chapter))
+                }
+                Button(
+                    onClick = { viewModel.onIntent(VideoPlayerIntent.NextChapter) },
+                    enabled = state.chapterCount > 0 && state.chapterIndex < state.chapterCount - 1,
+                ) {
+                    Text(text = stringResource(R.string.next_chapter))
+                }
             }
         }
     }

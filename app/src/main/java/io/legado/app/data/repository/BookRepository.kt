@@ -139,9 +139,15 @@ class BookRepository(
         }
     }
 
-    suspend fun upVideoPlayProgress(bookUrl: String, index: Int, position: Int, time: Long) {
+    suspend fun upVideoPlayProgress(
+        bookUrl: String,
+        index: Int,
+        position: Int,
+        chapterTitle: String?,
+        time: Long,
+    ) {
         withContext(Dispatchers.IO) {
-            bookDao.upVideoPlayProgress(bookUrl, index, position, time)
+            bookDao.upVideoPlayProgress(bookUrl, index, position, chapterTitle, time)
         }
     }
 

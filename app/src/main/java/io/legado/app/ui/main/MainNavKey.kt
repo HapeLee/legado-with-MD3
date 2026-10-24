@@ -366,6 +366,7 @@ object MainRouteConst {
     const val ROUTE_READ_BOOK = "book/read"
     const val ROUTE_READ_MANGA = "book/read/manga"
     const val ROUTE_AUDIO_PLAY = "book/read/audio"
+    const val ROUTE_VIDEO_PLAY = "book/read/video"
     const val ROUTE_SEARCH = "search"
     const val ROUTE_SEARCH_CONTENT = "book/searchContent"
     const val ROUTE_BOOK_INFO = "book/info"

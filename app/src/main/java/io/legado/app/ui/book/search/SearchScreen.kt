@@ -748,6 +748,7 @@ fun SearchScreen(
                     0 to stringResource(R.string.noval),
                     2 to stringResource(R.string.manga),
                     1 to stringResource(R.string.audio),
+                    4 to stringResource(R.string.video),
                 ).forEach { (type, label) ->
                     SelectionItemCard(
                         title = label,

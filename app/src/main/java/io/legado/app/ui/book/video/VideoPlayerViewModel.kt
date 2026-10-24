@@ -16,6 +16,7 @@ import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +52,10 @@ class VideoPlayerViewModel(
     private val _uiState = MutableStateFlow(VideoPlayerUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _effects = MutableSharedFlow<VideoPlayerEffect>(extraBufferCapacity = 16)
+    private val _effects = MutableSharedFlow<VideoPlayerEffect>(
+        extraBufferCapacity = 16,
+        replay = 1,
+    )
     val effects = _effects.asSharedFlow()
 
     private val exoPlayerLazy = lazy {
@@ -63,7 +67,9 @@ class VideoPlayerViewModel(
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
+                    saveProgress()
                     _uiState.update { it.copy(error = error.message, isLoading = false) }
+                    _effects.tryEmit(VideoPlayerEffect.ShowToast(error.message ?: "播放失败"))
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
@@ -86,6 +92,7 @@ class VideoPlayerViewModel(
     private var chapterIndex: Int = 0
     private var initializedBookUrl: String? = null
     private var pausedByLifecycle = false
+    private var loadJob: Job? = null
 
     fun init(bookUrl: String) {
         if (!shouldInitialize(initializedBookUrl, bookUrl)) return
@@ -95,16 +102,55 @@ class VideoPlayerViewModel(
                 _effects.tryEmit(VideoPlayerEffect.ShowToast("书籍不存在"))
                 return@launch
             }
+            val source = bookSourceRepository.getBookSource(loaded.origin) ?: run {
+                _effects.tryEmit(VideoPlayerEffect.ShowToast("书源不存在"))
+                return@launch
+            }
             book = loaded
             bookSourceUrl = loaded.origin
-            chapterIndex = loaded.durChapterIndex
             _uiState.update {
                 it.copy(
                     bookName = loaded.name,
                     bookAuthor = loaded.author,
-                    chapterCount = bookRepository.getChapterCount(bookUrl),
                 )
             }
+            // AddToBookshelfUseCase 只插书，书架直开视频书时没有详情和目录，需在这里补齐。
+            if (loaded.tocUrl.isEmpty()) {
+                try {
+                    WebBook.getBookInfoAwait(source, loaded)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    _effects.tryEmit(VideoPlayerEffect.ShowToast(e.message ?: "获取详情失败"))
+                    return@launch
+                }
+            }
+            var chapterCount = bookRepository.getChapterCount(loaded.bookUrl)
+            if (chapterCount == 0) {
+                try {
+                    val oldBook = loaded.copy()
+                    val chapters = WebBook.getChapterListAwait(source, loaded).getOrThrow()
+                    if (oldBook.bookUrl == loaded.bookUrl) {
+                        bookRepository.update(loaded)
+                    } else {
+                        bookRepository.replace(oldBook, loaded)
+                    }
+                    bookRepository.deleteChaptersByBook(loaded.bookUrl)
+                    bookRepository.insertChapters(*chapters.toTypedArray())
+                    chapterCount = chapters.size
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    _effects.tryEmit(VideoPlayerEffect.ShowToast(e.message ?: "获取目录失败"))
+                    return@launch
+                }
+            }
+            chapterIndex = if (chapterCount > 0) {
+                loaded.durChapterIndex.coerceIn(0, chapterCount - 1)
+            } else {
+                0
+            }
+            _uiState.update { it.copy(chapterCount = chapterCount) }
             loadChapter(chapterIndex, loaded.durChapterPos.toLong())
         }
     }
@@ -129,14 +175,20 @@ class VideoPlayerViewModel(
                 val target = nextChapterIndex(chapterIndex, _uiState.value.chapterCount)
                 if (target != chapterIndex) loadChapter(target, 0L)
             }
-            is VideoPlayerIntent.Retry -> loadChapter(chapterIndex, 0L)
+            is VideoPlayerIntent.ToggleFullscreen -> {
+                _uiState.update { it.copy(isFullscreen = !it.isFullscreen) }
+            }
+            is VideoPlayerIntent.Retry -> {
+                loadChapter(chapterIndex, book?.durChapterPos?.toLong() ?: 0L)
+            }
         }
     }
 
     private fun loadChapter(index: Int, positionMs: Long) {
         val currentBook = book ?: return
         val sourceUrl = bookSourceUrl ?: return
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             saveProgress()
             _uiState.update { it.copy(isLoading = true, error = null) }
             val chapter = bookRepository.getChapter(currentBook.bookUrl, index) ?: run {
@@ -184,11 +236,14 @@ class VideoPlayerViewModel(
         val index = chapterIndex
         if (index < 0) return
         val position = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val chapterTitle = _uiState.value.chapterTitle.takeIf { it.isNotBlank() }
+        currentBook.durChapterPos = position.toInt()
         videoProgressScope.launch {
             bookRepository.upVideoPlayProgress(
                 bookUrl = currentBook.bookUrl,
                 index = index,
                 position = position.toInt(),
+                chapterTitle = chapterTitle,
                 time = System.currentTimeMillis(),
             )
         }
@@ -196,7 +251,7 @@ class VideoPlayerViewModel(
 
     override fun onCleared() {
         saveProgress()
-        exoPlayer.release()
+        if (exoPlayerLazy.isInitialized()) exoPlayer.release()
         super.onCleared()
     }
 }

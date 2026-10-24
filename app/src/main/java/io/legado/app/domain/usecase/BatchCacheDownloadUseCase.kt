@@ -31,6 +31,7 @@ class BatchCacheDownloadUseCase(
         skipAudioBooks: Boolean
     ): CacheDownloadRequest? {
         if (book.isLocal) return null
+        if (book.isVideo) return null
         if (skipAudioBooks && book.isAudio) return null
         val startIndex = if (downloadAllChapters) 0 else book.durChapterIndex
         val endIndex = book.lastChapterIndex

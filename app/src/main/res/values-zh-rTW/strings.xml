@@ -676,6 +676,7 @@
     <string name="skip_next">下一個</string>
     <string name="music">音樂</string>
     <string name="audio">音訊</string>
+    <string name="video">影片</string>
     <string name="is_enable">啟用</string>
     <string name="enable_js">啟用JS</string>
     <string name="load_with_base_url">載入BaseUrl</string>

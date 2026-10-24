@@ -275,6 +275,16 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
             inBookshelf = inBookshelf,
         )
 
+        fun createVideoPlayIntent(
+            context: Context,
+            bookUrl: String? = null,
+            inBookshelf: Boolean = true,
+        ): Intent = MainIntent.createVideoPlayIntent(
+            context = context,
+            bookUrl = bookUrl,
+            inBookshelf = inBookshelf,
+        )
+
         fun createSearchIntent(
             context: Context,
             key: String? = null,

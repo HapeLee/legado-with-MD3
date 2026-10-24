@@ -756,6 +756,7 @@ interface BookDao {
             bookUrl,
             type & ${BookType.local} > 0 AS isLocal,
             type & ${BookType.audio} > 0 AS isAudio,
+            type & ${BookType.video} > 0 AS isVideo,
             durChapterIndex,
             totalChapterNum - 1 AS lastChapterIndex
         FROM books
@@ -886,9 +887,16 @@ interface BookDao {
     fun upReadAloudProgress(bookUrl: String, chapterIndex: Int, chapterPosition: Int,
         chapterTitle: String?, updatedAt: Long)
 
-    @Query("""UPDATE books SET durChapterIndex = :index, durChapterPos = :pos, durChapterTime = :time
+    @Query("""UPDATE books SET lastCheckCount = 0, durChapterIndex = :index, durChapterPos = :pos,
+        durChapterTitle = :chapterTitle, durChapterTime = :time
         WHERE bookUrl = :bookUrl""")
-    suspend fun upVideoPlayProgress(bookUrl: String, index: Int, pos: Int, time: Long)
+    suspend fun upVideoPlayProgress(
+        bookUrl: String,
+        index: Int,
+        pos: Int,
+        chapterTitle: String?,
+        time: Long,
+    )
 
     @Query("UPDATE books SET syncTime = :syncTime WHERE bookUrl = :bookUrl AND syncTime < :syncTime")
     fun upSyncTime(bookUrl: String, syncTime: Long)

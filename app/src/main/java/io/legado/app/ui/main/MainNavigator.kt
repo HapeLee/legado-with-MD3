@@ -583,6 +583,10 @@ object MainNavigator {
                 bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL),
                 inBookshelf = intent?.getBooleanExtra(MainIntent.EXTRA_IN_BOOKSHELF, true) != false,
             )
+            MainRouteConst.ROUTE_VIDEO_PLAY -> MainRouteVideoPlay(
+                bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL),
+                inBookshelf = intent?.getBooleanExtra(MainIntent.EXTRA_IN_BOOKSHELF, true) != false,
+            )
             MainRouteConst.ROUTE_SEARCH -> MainRouteSearch(
                 key = intent?.getStringExtra(MainIntent.EXTRA_SEARCH_KEY),
                 scopeRaw = intent?.getStringExtra(MainIntent.EXTRA_SEARCH_SCOPE)

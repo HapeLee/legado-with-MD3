@@ -11,6 +11,7 @@ data class VideoPlayerUiState(
     val chapterCount: Int = 0,
     val isPlaying: Boolean = false,
     val isLoading: Boolean = false,
+    val isFullscreen: Boolean = false,
     val error: String? = null,
     val position: Long = 0L,
     val duration: Long = 0L,
@@ -23,6 +24,7 @@ sealed interface VideoPlayerIntent {
     data class SeekTo(val positionMs: Long) : VideoPlayerIntent
     data object PreviousChapter : VideoPlayerIntent
     data object NextChapter : VideoPlayerIntent
+    data object ToggleFullscreen : VideoPlayerIntent
     data object Retry : VideoPlayerIntent
 }
 
