@@ -58,6 +58,7 @@ class VideoPlayerViewModel(
         ExoPlayerHelper.createHttpExoPlayer(appCtx).apply {
             addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    if (isPlaying) pausedByLifecycle = false
                     _uiState.update { it.copy(isPlaying = isPlaying) }
                 }
 
@@ -84,6 +85,7 @@ class VideoPlayerViewModel(
     private var bookSourceUrl: String? = null
     private var chapterIndex: Int = 0
     private var initializedBookUrl: String? = null
+    private var pausedByLifecycle = false
 
     fun init(bookUrl: String) {
         if (!shouldInitialize(initializedBookUrl, bookUrl)) return
@@ -113,6 +115,7 @@ class VideoPlayerViewModel(
                 if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
             }
             is VideoPlayerIntent.Pause -> {
+                pausedByLifecycle = true
                 if (exoPlayer.isPlaying) exoPlayer.pause()
             }
             is VideoPlayerIntent.SeekTo -> {
@@ -163,7 +166,7 @@ class VideoPlayerViewModel(
                     ).getMediaItem()
                     exoPlayer.setMediaItem(mediaItem, positionMs)
                     exoPlayer.prepare()
-                    exoPlayer.play()
+                    if (!pausedByLifecycle) exoPlayer.play()
                 }
             } catch (e: CancellationException) {
                 throw e

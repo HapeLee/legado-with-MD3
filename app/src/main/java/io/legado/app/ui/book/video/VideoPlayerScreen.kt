@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.video
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -28,6 +29,7 @@ fun VideoPlayerScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val activity = LocalActivity.current
 
     LaunchedEffect(bookUrl) {
         viewModel.init(bookUrl)
@@ -42,7 +44,10 @@ fun VideoPlayerScreen(
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-        viewModel.onIntent(VideoPlayerIntent.Pause)
+        // 配置变化（旋转/分屏）重建时 ON_STOP 也会派发，此时不应暂停
+        if (activity?.isChangingConfigurations != true) {
+            viewModel.onIntent(VideoPlayerIntent.Pause)
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
