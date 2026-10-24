@@ -45,6 +45,7 @@ import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
+import io.legado.app.ui.widget.components.image.cover.cachedCoverAspectRatio
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.HtmlFormatter
 
@@ -77,8 +78,12 @@ fun SearchBookListItem(
     qualityMasked: Boolean = false,
     adaptCoverAspectRatio: Boolean = false,
 ) {
+    // 初始值优先取该封面已加载过的比例缓存：列表项滚出视口销毁再回来时
+    // 直接落在最终高度，不先回弹 5:7 再等内存缓存命中
     val coverAspectRatioState = remember(book.coverUrl) {
-        mutableFloatStateOf(DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO)
+        mutableFloatStateOf(
+            cachedCoverAspectRatio(book.coverUrl) ?: DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+        )
     }
 
     Row(
@@ -116,11 +121,8 @@ fun SearchBookListItem(
                 sharedCoverKey = sharedCoverKey,
                 showLoadingPlaceholder = sharedCoverKey == null,
                 onImageAspectRatio = if (adaptCoverAspectRatio) {
-                    { imageAspectRatio ->
-                        if (imageAspectRatio.isFinite() && imageAspectRatio > 0f) {
-                            coverAspectRatioState.floatValue = imageAspectRatio
-                        }
-                    }
+                    // 比例合法性已在 BookCoverImage 上报前校验，这里直接写入
+                    { imageAspectRatio -> coverAspectRatioState.floatValue = imageAspectRatio }
                 } else null
             )
 

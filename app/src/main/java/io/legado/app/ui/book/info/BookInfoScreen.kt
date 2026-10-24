@@ -139,6 +139,7 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
+import io.legado.app.ui.widget.components.image.cover.cachedCoverAspectRatio
 import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -1161,14 +1162,16 @@ private fun BookInfoHeader(
     val coverDescription = stringResource(R.string.a11y_book_cover_actions, book.name)
     val hiddenDescription = stringResource(R.string.private_hidden_label)
     val coverPath = if (usesDefaultCover) null else book.coverPath
+    // 初始值优先取该封面已加载过的比例缓存，重进详情页不必先回弹 5:7 再等图重载
     val coverAspectRatioState = remember(book.bookUrl, coverPath) {
-        mutableFloatStateOf(BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO)
+        mutableFloatStateOf(
+            cachedCoverAspectRatio(coverPath) ?: BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+        )
     }
     val coverHeightDp = bookInfoCoverHeightDp(coverAspectRatioState.floatValue)
+    // 比例合法性已在 BookCoverImage 上报前校验，这里直接写入
     val onCoverImageAspectRatio: (Float) -> Unit = { aspectRatio ->
-        if (aspectRatio.isFinite() && aspectRatio > 0f) {
-            coverAspectRatioState.floatValue = aspectRatio
-        }
+        coverAspectRatioState.floatValue = aspectRatio
     }
     Column(
         modifier = Modifier
