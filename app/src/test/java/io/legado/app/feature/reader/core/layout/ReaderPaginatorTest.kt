@@ -28,13 +28,13 @@ class ReaderPaginatorTest {
 
     /** 单行段落：内容区宽 40f、每字 20f，必定排成一行、占 20f 行高。 */
     private fun paragraph(text: String, position: Int = 0) = ReaderMeasuredParagraph(
-        text, text.map(Char::toString), List(text.length) { 20f }, style, position,
+        text, text.map(Char::toString), FloatArray(text.length) { 20f }, style, position,
     )
 
     @Test fun emphasisUnderlineStyleIsCarriedByEveryPublishedPage() {
         val emphasis = ReaderEmphasisUnderline(0xff123456.toInt(), 2f, 1f)
         val pages = ReaderPaginator.paginate(
-            listOf(ReaderMeasuredParagraph("字".repeat(6), List(6) { "字" }, List(6) { 20f }, style, 0)),
+            listOf(ReaderMeasuredParagraph("字".repeat(6), List(6) { "字" }, FloatArray(6) { 20f }, style, 0)),
             config.copy(emphasisUnderlineStyle = emphasis),
         )
 
@@ -179,7 +179,7 @@ class ReaderPaginatorTest {
         )
         val page = ReaderPaginator.paginateBlocks(
             listOf(title("主", 1f), title("副", 0.5f), title("末", 0.5f),
-                ReaderMeasuredBlock.Paragraph(ReaderMeasuredParagraph("文", listOf("文"), listOf(10f), style, 0))),
+                ReaderMeasuredBlock.Paragraph(ReaderMeasuredParagraph("文", listOf("文"), floatArrayOf(10f), style, 0))),
             config.copy(
                 viewportHeightPx = 200,
                 titleParagraphSpacingPx = 4f,
@@ -222,8 +222,8 @@ class ReaderPaginatorTest {
     fun titleBottomSpacingCanMoveBodyToNextPageWithoutRepeatingTopSpacing() {
         val pages = ReaderPaginator.paginate(
             listOf(
-                ReaderMeasuredParagraph("题", listOf("题"), listOf(10f), style, 0, isTitle = true),
-                ReaderMeasuredParagraph("文", listOf("文"), listOf(10f), style, 0),
+                ReaderMeasuredParagraph("题", listOf("题"), floatArrayOf(10f), style, 0, isTitle = true),
+                ReaderMeasuredParagraph("文", listOf("文"), floatArrayOf(10f), style, 0),
             ),
             config.copy(titleTopSpacingPx = 5f, titleBottomSpacingPx = 10f),
         )
@@ -235,7 +235,7 @@ class ReaderPaginatorTest {
     @Test
     fun hiddenTitleDoesNotLeaveTitleSpacingBehind() {
         val page = ReaderPaginator.paginate(
-            listOf(ReaderMeasuredParagraph("文", listOf("文"), listOf(10f), style, 0)),
+            listOf(ReaderMeasuredParagraph("文", listOf("文"), floatArrayOf(10f), style, 0)),
             config.copy(titleTopSpacingPx = 50f, titleBottomSpacingPx = 50f),
         ).single()
         assertEquals(0f, page.elements.single().bounds.top, 0f)
@@ -245,7 +245,7 @@ class ReaderPaginatorTest {
     fun paginatesWithoutLosingChapterPositions() {
         val text = "甲乙丙丁戊己庚辛壬癸"
         val pages = ReaderPaginator.paginate(
-            listOf(ReaderMeasuredParagraph(text, text.map(Char::toString), List(text.length) { 10f }, style, 100)),
+            listOf(ReaderMeasuredParagraph(text, text.map(Char::toString), FloatArray(text.length) { 10f }, style, 100)),
             config,
         )
         val glyphs = pages.flatMap { it.elements }.filterIsInstance<ReaderElement.Text>()
@@ -261,8 +261,8 @@ class ReaderPaginatorTest {
         val second = "子丑寅卯"
         val pages = ReaderPaginator.paginate(
             listOf(
-                ReaderMeasuredParagraph(first, first.map(Char::toString), List(first.length) { 10f }, style, 0),
-                ReaderMeasuredParagraph(second, second.map(Char::toString), List(second.length) { 10f }, style, first.length + 1),
+                ReaderMeasuredParagraph(first, first.map(Char::toString), FloatArray(first.length) { 10f }, style, 0),
+                ReaderMeasuredParagraph(second, second.map(Char::toString), FloatArray(second.length) { 10f }, style, first.length + 1),
             ),
             config,
         )
@@ -276,7 +276,7 @@ class ReaderPaginatorTest {
     fun appliesIndentAndJustifiesNonFinalLine() {
         val text = "甲乙丙丁戊己"
         val page = ReaderPaginator.paginate(
-            listOf(ReaderMeasuredParagraph(text, text.map(Char::toString), List(text.length) { 10f }, style, 0, indentCharacters = 1, alignment = ReaderTextAlignment.JUSTIFY)),
+            listOf(ReaderMeasuredParagraph(text, text.map(Char::toString), FloatArray(text.length) { 10f }, style, 0, indentCharacters = 1, alignment = ReaderTextAlignment.JUSTIFY)),
             config.copy(viewportWidthPx = 45, viewportHeightPx = 100),
         ).single()
         val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
@@ -288,7 +288,7 @@ class ReaderPaginatorTest {
     fun keepsClosingPunctuationOffNextLineWhenPossible() {
         val text = "甲乙丙，丁"
         val page = ReaderPaginator.paginate(
-            listOf(ReaderMeasuredParagraph(text, text.map(Char::toString), List(text.length) { 10f }, style, 0)),
+            listOf(ReaderMeasuredParagraph(text, text.map(Char::toString), FloatArray(text.length) { 10f }, style, 0)),
             config.copy(viewportWidthPx = 30, viewportHeightPx = 100),
         ).single()
         val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
@@ -303,7 +303,7 @@ class ReaderPaginatorTest {
             listOf(
                 ReaderMeasuredBlock.Image("cover", 80f, 80f, chapterPosition = 0, pageBreakAfter = true),
                 ReaderMeasuredBlock.Paragraph(
-                    ReaderMeasuredParagraph("正文", listOf("正", "文"), listOf(10f, 10f), style, 1),
+                    ReaderMeasuredParagraph("正文", listOf("正", "文"), floatArrayOf(10f, 10f), style, 1),
                 ),
             ),
             config.copy(viewportWidthPx = 40, viewportHeightPx = 45),
@@ -320,7 +320,7 @@ class ReaderPaginatorTest {
         val pages = ReaderPaginator.paginateBlocks(
             listOf(
                 ReaderMeasuredBlock.Paragraph(
-                    ReaderMeasuredParagraph("甲乙丙丁", listOf("甲", "乙", "丙", "丁"), List(4) { 10f }, style, 0),
+                    ReaderMeasuredParagraph("甲乙丙丁", listOf("甲", "乙", "丙", "丁"), FloatArray(4) { 10f }, style, 0),
                 ),
                 ReaderMeasuredBlock.Rule(0xff000000.toInt(), widthPx = 2f, verticalPaddingPx = 10f),
             ),
@@ -742,7 +742,7 @@ class ReaderPaginatorTest {
         )
         val framedStyle = style.copy(backgroundImage = framed)
 
-        listOf(1f, 1.5f, 2.5f).forEach { multiplier ->
+        floatArrayOf(1f, 1.5f, 2.5f).forEach { multiplier ->
             val page = ReaderPaginator.paginateBlocks(
                 listOf(ReaderMeasuredBlock.InlineParagraph(
                     items = listOf(ReaderMeasuredInlineItem.Text("字", 10f, framedStyle, 0)),
@@ -1095,7 +1095,7 @@ class ReaderPaginatorTest {
             ReaderMeasuredParagraph(
                 index.toString(),
                 listOf(index.toString()),
-                listOf(20f),
+                floatArrayOf(20f),
                 style,
                 index
             )
@@ -1142,7 +1142,7 @@ class ReaderPaginatorTest {
     fun letterSpacedBackgroundRowStaysOneRunInsteadOfPerGlyph() {
         val bgStyle = style.copy(backgroundImage = ReaderTextBackgroundImage("bg.png", 1, 1f))
         val paragraph = ReaderMeasuredParagraph(
-            "甲乙丙", listOf("甲", "乙", "丙"), List(3) { 10f }, bgStyle, 0,
+            "甲乙丙", listOf("甲", "乙", "丙"), FloatArray(3) { 10f }, bgStyle, 0,
             letterSpacingPx = 2f,
         )
         val page = ReaderPaginator.paginate(listOf(paragraph), config).single()

@@ -39,7 +39,7 @@ class AndroidReaderHtmlSourceResolverTest {
             AndroidReaderHtmlSemanticTextResolver,
         )
         val shaper = ReaderTextShaper { text ->
-            GlyphClusters(text.map(Char::toString), List(text.length) { 10f })
+            GlyphClusters(text.map(Char::toString), FloatArray(text.length) { 10f })
         }
         val measurer = ReaderChapterBlockMeasurer(
             shaper, shaper, { ReaderImageDimensions(12f, 12f) },

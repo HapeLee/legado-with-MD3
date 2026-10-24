@@ -17,7 +17,7 @@ class ReaderLineSpacingTest {
 
     @Test fun paragraphUsesGlyphHeightForFitAndLineSpacingForAdvance() {
         val text = "甲乙丙"
-        val paragraph = ReaderMeasuredParagraph(text, text.map(Char::toString), List(3) { 20f }, style, 0)
+        val paragraph = ReaderMeasuredParagraph(text, text.map(Char::toString), FloatArray(3) { 20f }, style, 0)
         val pages = ReaderPaginator.paginate(listOf(paragraph), config)
         assertEquals(listOf("甲乙", "丙"), pages.map { it.text })
         val glyphs = pages.first().elements.filterIsInstance<ReaderElement.Text>()

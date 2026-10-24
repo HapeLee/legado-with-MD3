@@ -63,7 +63,7 @@ class ReaderChapterBlockMeasurerTest {
             shapedTexts += text
             // 第一段一量完就取消：后续段落不得再被排版。
             cancelled.cancel()
-            GlyphClusters(text.map(Char::toString), List(text.length) { 10f })
+            GlyphClusters(text.map(Char::toString), FloatArray(text.length) { 10f })
         }
 
         val failure = runCatching {
@@ -111,7 +111,7 @@ class ReaderChapterBlockMeasurerTest {
             titleShaper = shaper,
             imageDimensionsResolver = { null },
             textShaperFactory = ReaderTextShaperFactory { textStyle ->
-                ReaderTextShaper { text -> GlyphClusters(text.map(Char::toString), List(text.length) { textStyle.fontSizePx }) }
+                ReaderTextShaper { text -> GlyphClusters(text.map(Char::toString), FloatArray(text.length) { textStyle.fontSizePx }) }
             },
         ).measure(source, style.copy(
             titleLineHeightPx = 24f,
@@ -138,7 +138,7 @@ class ReaderChapterBlockMeasurerTest {
         assertEquals(listOf(0, 1), paragraphs.last().items.map { it.chapterPosition })
     }
 
-    private val shaper = ReaderTextShaper { text -> GlyphClusters(text.map(Char::toString), List(text.length) { 10f }) }
+    private val shaper = ReaderTextShaper { text -> GlyphClusters(text.map(Char::toString), FloatArray(text.length) { 10f }) }
     private val style = ReaderChapterMeasureStyle(
         bodyStyle = ReaderTextStyle(1, 10f),
         titleStyle = ReaderTextStyle(2, 20f),
@@ -398,7 +398,7 @@ class ReaderChapterBlockMeasurerTest {
             titleShaper = shaper,
             imageDimensionsResolver = { null },
             textShaperFactory = ReaderTextShaperFactory { textStyle ->
-                ReaderTextShaper { text -> GlyphClusters(listOf(text), listOf(textStyle.fontSizePx)) }
+                ReaderTextShaper { text -> GlyphClusters(listOf(text), floatArrayOf(textStyle.fontSizePx)) }
             },
             htmlSourceResolver = ReaderHtmlSourceResolver { _, position -> listOf(ReaderHtmlParagraph(listOf(
                 ReaderChapterInlineSource.Text(
@@ -495,7 +495,7 @@ class ReaderChapterBlockMeasurerTest {
     @Test
     fun carriesPerFontLineMetricsIntoInlineGlyphs() = runBlocking {
         val metricShaper = object : ReaderTextShaper {
-            override fun shape(text: String) = GlyphClusters(listOf(text), listOf(10f))
+            override fun shape(text: String) = GlyphClusters(listOf(text), floatArrayOf(10f))
             override val fontLineMetrics = ReaderFontLineMetrics(26f, 17f)
         }
         val source = ReaderChapterSource(
@@ -523,7 +523,7 @@ class ReaderChapterBlockMeasurerTest {
     @Test
     fun convertsHtmlBaselineSpansUsingActualFontAscentAndDescent() = runBlocking {
         val metricShaper = object : ReaderTextShaper {
-            override fun shape(text: String) = GlyphClusters(listOf(text), listOf(10f))
+            override fun shape(text: String) = GlyphClusters(listOf(text), floatArrayOf(10f))
             override val fontLineMetrics = ReaderFontLineMetrics(
                 heightPx = 20f,
                 baselineOffsetPx = 16f,

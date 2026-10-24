@@ -9,7 +9,7 @@ import org.junit.Test
 class ReaderLetterSpacingTest {
     private val style = ReaderTextStyle(0, 10f)
     private val config = ReaderPaginationConfig(0, "", 20, 100, 0f, 0f, 0f, 0f, 10f, 8f)
-    private val paragraph = ReaderMeasuredParagraph("甲乙", listOf("甲", "乙"), listOf(10f, 10f), style, 0)
+    private val paragraph = ReaderMeasuredParagraph("甲乙", listOf("甲", "乙"), floatArrayOf(10f, 10f), style, 0)
     private val inline = ReaderMeasuredBlock.InlineParagraph(listOf(
         ReaderMeasuredInlineItem.Text("甲", 10f, style, 0),
         ReaderMeasuredInlineItem.Text("乙", 10f, style, 1),

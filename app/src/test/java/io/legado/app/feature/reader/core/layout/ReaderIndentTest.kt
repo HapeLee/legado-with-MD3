@@ -8,8 +8,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ReaderIndentTest {
-    private val shaper = ReaderTextShaper { text -> GlyphClusters(text.map(Char::toString), text.map {
-        when (it) { 'A' -> 5f; ',' -> 3f; else -> 10f }
+    private val shaper = ReaderTextShaper { text -> GlyphClusters(text.map(Char::toString), FloatArray(text.length) { index ->
+        when (text[index]) { 'A' -> 5f; ',' -> 3f; else -> 10f }
     }) }
     private val style = ReaderChapterMeasureStyle(ReaderTextStyle(0, 10f), ReaderTextStyle(0, 10f),
         2, ReaderTextAlignment.START, ReaderTextAlignment.START)

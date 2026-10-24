@@ -11,7 +11,7 @@ class ReaderVolumeTitlePageTest {
     private val style = ReaderTextStyle(0, 10f)
 
     private fun titleParagraph(value: String, position: Int = 0) = ReaderMeasuredParagraph(
-        value, value.map(Char::toString), List(value.length) { 10f }, style, position,
+        value, value.map(Char::toString), FloatArray(value.length) { 10f }, style, position,
         isTitle = true,
     )
 

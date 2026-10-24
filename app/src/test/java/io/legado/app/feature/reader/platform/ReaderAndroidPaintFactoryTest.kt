@@ -3,6 +3,7 @@ package io.legado.app.feature.reader.platform
 import android.app.Application
 import io.legado.app.feature.reader.core.model.ReaderTextShadow
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,7 +30,9 @@ class ReaderAndroidPaintFactoryTest {
         val paint = ReaderAndroidPaintFactory.createTextPaint(ReaderTextStyle(0, 24f))
         val expected = AndroidReaderTextShaper(paint).shape("甲乙")
         paint.letterSpacing = 0.2f
-        assertEquals(expected, AndroidReaderTextShaper(paint).shape("甲乙"))
+        val reshaped = AndroidReaderTextShaper(paint).shape("甲乙")
+        assertEquals(expected.text, reshaped.text)
+        assertArrayEquals(expected.widthsPx, reshaped.widthsPx, 0f)
         assertEquals(0.2f, paint.letterSpacing, 0f)
     }
 

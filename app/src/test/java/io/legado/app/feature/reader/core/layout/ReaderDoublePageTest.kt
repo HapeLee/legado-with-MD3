@@ -18,7 +18,7 @@ class ReaderDoublePageTest {
     )
     private val text = "甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉"
     private fun paragraph(value: String, position: Int = 0) = ReaderMeasuredParagraph(
-        value, value.map(Char::toString), List(value.length) { 10f }, style, position,
+        value, value.map(Char::toString), FloatArray(value.length) { 10f }, style, position,
     )
 
     @Test

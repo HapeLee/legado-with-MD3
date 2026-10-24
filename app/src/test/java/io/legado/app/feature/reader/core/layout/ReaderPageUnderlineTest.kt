@@ -14,7 +14,7 @@ class ReaderPageUnderlineTest {
         ReaderMeasuredParagraph(
             text,
             text.map(Char::toString),
-            List(text.length) { 10f },
+            FloatArray(text.length) { 10f },
             style,
             0,
             indentCharacters = indent,
