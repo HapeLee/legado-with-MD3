@@ -160,9 +160,15 @@ object ReaderPageNavigator {
 
     /** Body positions are half-open; titles use a separate coordinate space. */
     fun containsChapterPosition(page: ReaderPage, chapterPosition: Int): Boolean {
-        val ranges = page.elements.mapNotNull(::elementRange)
-        val start = ranges.minOfOrNull { it.first } ?: return false
-        val endInclusive = ranges.maxOf { it.last }
+        // Allocation-free scan: same min/max semantics as the previous mapNotNull version.
+        var start = Int.MAX_VALUE
+        var endInclusive = Int.MIN_VALUE
+        for (element in page.elements) {
+            val range = elementRange(element) ?: continue
+            if (range.first < start) start = range.first
+            if (range.last > endInclusive) endInclusive = range.last
+        }
+        if (endInclusive == Int.MIN_VALUE) return false
         return chapterPosition in start..endInclusive
     }
 
@@ -202,16 +208,34 @@ object ReaderPageNavigator {
 
     fun pageContext(pages: List<ReaderPage>, pageIndex: Int): ReaderPageContext? {
         val page = pages.getOrNull(pageIndex) ?: return null
-        val positions = page.elements.mapNotNull(::elementRange)
-        if (positions.isEmpty() && page.elements.none { it is ReaderElement.Text && it.emphasized }) return null
-        val start = positions.minOfOrNull { it.first } ?: 0
-        val contentEnd = positions.maxOfOrNull { it.last + 1 } ?: 0
-        val nextPageStart = pages.getOrNull(pageIndex + 1)
+        // Allocation-free scan: same min/max semantics as the previous mapNotNull version.
+        var hasPosition = false
+        var start = 0
+        var contentEnd = 0
+        for (element in page.elements) {
+            val range = elementRange(element) ?: continue
+            if (!hasPosition) {
+                hasPosition = true
+                start = range.first
+                contentEnd = range.last + 1
+            } else {
+                if (range.first < start) start = range.first
+                if (range.last + 1 > contentEnd) contentEnd = range.last + 1
+            }
+        }
+        if (!hasPosition && page.elements.none { it is ReaderElement.Text && it.emphasized }) return null
+        var nextPageStart: Int? = null
+        pages.getOrNull(pageIndex + 1)
             ?.takeIf { it.id.chapterIndex == page.id.chapterIndex }
-            ?.elements
-            ?.mapNotNull(::elementRange)
-            ?.minOfOrNull { it.first }
-            ?.takeIf { it > start }
+            ?.let { nextPage ->
+                for (element in nextPage.elements) {
+                    val range = elementRange(element) ?: continue
+                    if (nextPageStart == null || range.first < nextPageStart!!) {
+                        nextPageStart = range.first
+                    }
+                }
+            }
+        nextPageStart = nextPageStart?.takeIf { it > start }
         val firstBodyParagraph = page.elements.asSequence()
             .filterIsInstance<ReaderElement.Text>()
             .filterNot { it.emphasized }
@@ -240,8 +264,15 @@ object ReaderPageNavigator {
      * 旧 View 的 `TextPage.chapterPosition = textLines.first().chapterPosition` 建立在两者同空间的
      * 前提上，迁移后不再等价。
      */
-    fun pageStart(page: ReaderPage): Int = page.elements.mapNotNull(::elementRange)
-        .minOfOrNull { it.first } ?: 0
+    fun pageStart(page: ReaderPage): Int {
+        // Allocation-free scan: same min semantics as the previous mapNotNull version.
+        var start = Int.MAX_VALUE
+        for (element in page.elements) {
+            val range = elementRange(element) ?: continue
+            if (range.first < start) start = range.first
+        }
+        return if (start == Int.MAX_VALUE) 0 else start
+    }
 
     private fun elementRange(element: ReaderElement): IntRange? = when (element) {
         is ReaderElement.Text -> if (element.emphasized) null else element.chapterPosition until

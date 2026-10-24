@@ -524,7 +524,8 @@ internal class ReaderPaginationSession(
             y = config.paddingTopPx
             columnIndex = 0
             columnElementStart = 0
-            columnRows = mutableListOf()
+            // Reuse the row list; rows were consumed by justifyColumnBottom above.
+            columnRows.clear()
         }
 
     private fun advanceColumn() {
@@ -533,7 +534,7 @@ internal class ReaderPaginationSession(
             justifyColumnBottom()
             columnIndex++
             columnElementStart = elements.size
-            columnRows = mutableListOf()
+            columnRows.clear()
             y = config.paddingTopPx
         } else finishPage()
     }
@@ -1113,6 +1114,8 @@ internal class ReaderPaginationSession(
     /** 页成型即沉淀成 [ReaderPage] 并流出；非章末页在下一张页成型时流出（延迟一页）。 */
     private fun emitPage(pageIndex: Int, isLastPage: Boolean) {
         val page = buildPage(pageIndex, isLastPage)
+        // Text already copied into the page; release the builder buffer.
+        pageTexts[pageIndex].apply { setLength(0); trimToSize() }
         resultPages += page
         onPage?.invoke(page)
     }

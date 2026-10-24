@@ -998,12 +998,10 @@ class ReadBookController(
             val streamed = directReaderStreamedPages.getOrPut(chapterIndex) { mutableListOf() }
             if (streamed.any { it.id == page.id }) return@launch
             streamed += page
-            replaceDirectReaderPages(
-                directReaderPages
-                .filterNot { it.id.chapterIndex == chapterIndex }
-                .plus(streamed)
-                .sortedWith(compareBy({ it.id.chapterIndex }, { it.id.pageIndex }))
-            )
+            // Both lists are sorted by (chapterIndex, pageIndex); linear merge
+            // produces the same order as filterNot().plus().sortedWith() with one
+            // allocation and no sort.
+            replaceDirectReaderPages(mergeStreamedReaderPages(directReaderPages, streamed, chapterIndex))
             if (shouldPublishStreamedReaderPage(chapterIndex, page)) {
                 // 归因用：标记第一次真正发生的发布（不一定是本章第一页——发布规则要求
                 // "含 durChapterPos 的页成型"，见 shouldPublishStreamedReaderPage）。
@@ -1417,12 +1415,14 @@ class ReadBookController(
         // 页表里还挂着"排了一半"的残留（任务已被取消、部分页却没清干净）时同样要重排，
         // 否则这一章会停在半成品上、尾部一直挂着"加载中"。
         val stalledPartialPages = currentIndex in directReaderStreamingChapters
-        // 当前章优先启动，已有同身份任务则继续运行。随后独立预排邻章，不能因为
-        // 当前章仍在逐页流出就延迟到整章完成；旧 View 也分别装载窗口里的各章。
+        // Current chapter first: defer adjacent prefetch until its batch lands, avoiding
+        // 3-chapter concurrent pagination. The batch commit republishes the window,
+        // which schedules the missing neighbors.
         if (!isReaderChapterPaginationRunning(current) && (!hasShapedPages || stalledPartialPages)) {
             startReaderChapterPagination(
                 paginationGeneration, current, width, height, padding, style,
             )
+            return
         }
         scheduleAdjacentReaderChapterPagination(chapters, current, width, height, padding, style)
     }
@@ -1465,6 +1465,31 @@ class ReadBookController(
         val currentId = directReaderPageIndex?.let { directReaderPages.getOrNull(it)?.id }
         directReaderPages = pages
         directReaderPageIndex = ReaderPageNavigator.rebasePageIndex(pages, currentId)
+    }
+
+    // Linear merge of two (chapterIndex, pageIndex)-sorted lists. Same result as
+    // filterNot().plus().sortedWith(), without extra copies or a sort.
+    private fun mergeStreamedReaderPages(
+        current: List<ReaderPage>,
+        streamed: List<ReaderPage>,
+        chapterIndex: Int,
+    ): List<ReaderPage> {
+        val merged = ArrayList<ReaderPage>(current.size + streamed.size)
+        var j = 0
+        for (page in current) {
+            if (page.id.chapterIndex == chapterIndex) continue
+            while (j < streamed.size && compareReaderPageId(streamed[j], page) < 0) {
+                merged += streamed[j++]
+            }
+            merged += page
+        }
+        while (j < streamed.size) merged += streamed[j++]
+        return merged
+    }
+
+    private fun compareReaderPageId(a: ReaderPage, b: ReaderPage): Int {
+        val chapterDiff = a.id.chapterIndex - b.id.chapterIndex
+        return if (chapterDiff != 0) chapterDiff else a.id.pageIndex - b.id.pageIndex
     }
 
     /**
