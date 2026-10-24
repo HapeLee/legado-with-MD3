@@ -12,7 +12,7 @@ import org.junit.Test
 
 class ReaderSingleImageTest {
     private val shaper = ReaderTextShaper { text ->
-        GlyphClusters(text.map(Char::toString), List(text.length) { 10f })
+        GlyphClusters(text.map(Char::toString), FloatArray(text.length) { 10f })
     }
     private val style = ReaderChapterMeasureStyle(
         ReaderTextStyle(0, 10f), ReaderTextStyle(0, 10f), 2,

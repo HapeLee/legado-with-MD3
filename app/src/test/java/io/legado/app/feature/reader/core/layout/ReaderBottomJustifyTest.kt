@@ -13,7 +13,7 @@ class ReaderBottomJustifyTest {
         ReaderMeasuredParagraph(
             text = text,
             clusters = text.map(Char::toString),
-            clusterWidthsPx = List(text.length) { 10f },
+            clusterWidthsPx = FloatArray(text.length) { 10f },
             style = style,
             chapterPosition = 0,
         ),

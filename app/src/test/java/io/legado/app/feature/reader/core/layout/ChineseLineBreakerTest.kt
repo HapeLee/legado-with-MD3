@@ -7,7 +7,7 @@ import org.junit.Test
 
 class ChineseLineBreakerTest {
     private fun breakText(words: List<String>, widthPx: Int) = ChineseLineBreaker(
-        words, List(words.size) { 10f }, 0, widthPx, 10f, 0f,
+        words, FloatArray(words.size) { 10f }, 0, widthPx, 10f, 0f,
     )
 
     @Test fun normalBreak() {
@@ -32,7 +32,7 @@ class ChineseLineBreakerTest {
     fun fullWidthClosingPunctuationHangsAtTheLineEnd() {
         val result = ChineseLineBreaker(
             listOf("我", "是", "一", "。", "”"),
-            List(5) { 10f }, 0, 25, 10f, 0f,
+            FloatArray(5) { 10f }, 0, 25, 10f, 0f,
         )
         assertEquals(2, result.lineCount)
         assertArrayEquals(intArrayOf(0, 2, 5), result.lineStarts)
@@ -44,7 +44,7 @@ class ChineseLineBreakerTest {
     fun narrowClosingPunctuationStillRewindsInsteadOfHanging() {
         val result = ChineseLineBreaker(
             listOf("我", "是", "一", "二", "。", "”"),
-            listOf(10f, 10f, 10f, 10f, 4f, 4f), 0, 45, 10f, 0f,
+            floatArrayOf(10f, 10f, 10f, 10f, 4f, 4f), 0, 45, 10f, 0f,
         )
         assertEquals(2, result.lineCount)
         assertArrayEquals(intArrayOf(0, 3, 6), result.lineStarts)
@@ -134,7 +134,7 @@ class ChineseLineBreakerTest {
     fun rewindDoesNotSplitLatinWordBeforeClosingPunctuation() {
         val words = "aa word。”".map(Char::toString)
         val result = ChineseLineBreaker(
-            words, List(7) { 10f } + listOf(4f, 4f), 0, 75, 10f, 0f,
+            words, FloatArray(7) { 10f } + floatArrayOf(4f, 4f), 0, 75, 10f, 0f,
         )
 
         assertArrayEquals(intArrayOf(0, 3, 9), result.lineStarts)
@@ -231,7 +231,7 @@ class ChineseLineBreakerTest {
         val result = ChineseLineBreaker(
             listOf("“", "￼", "Y", "e", "s", "！", "！", "！",
                 "！", "！", "！", "！", "”"),
-            listOf(10f, 40f, 6f, 6f, 6f, 10f, 10f, 10f, 10f, 10f, 10f, 10f, 10f),
+            floatArrayOf(10f, 40f, 6f, 6f, 6f, 10f, 10f, 10f, 10f, 10f, 10f, 10f, 10f),
             0, 100, 10f, 0f,
         )
         assertArrayEquals(intArrayOf(0, 8, 13), result.lineClusterStarts)

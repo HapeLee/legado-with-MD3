@@ -97,7 +97,7 @@ class AndroidReaderTextShaper(paint: TextPaint) : ReaderTextShaper {
     }
 
     override fun shape(text: String): GlyphClusters {
-        if (text.isEmpty()) return GlyphClusters(emptyList(), emptyList())
+        if (text.isEmpty()) return GlyphClusters(emptyList(), FloatArray(0))
         val widths = FloatArray(text.length)
         paint.getTextWidths(text, widths)
         return clusterGlyphs(text, widths)

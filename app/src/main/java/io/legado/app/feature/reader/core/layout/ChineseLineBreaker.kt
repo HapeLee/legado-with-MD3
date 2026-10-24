@@ -3,7 +3,7 @@ package io.legado.app.feature.reader.core.layout
 /** Platform-free Chinese line breaking. Widths are supplied by a platform text measurer. */
 class ChineseLineBreaker(
     private val clusters: List<String>,
-    private val widthsPx: List<Float>,
+    private val widthsPx: FloatArray,
     private val indentCharacters: Int,
     widthPx: Int,
     private val ideographWidthPx: Float,

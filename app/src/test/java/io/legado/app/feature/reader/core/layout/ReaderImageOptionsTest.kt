@@ -13,7 +13,7 @@ import org.junit.Test
 
 class ReaderImageOptionsTest {
     private val shaper = ReaderTextShaper { text ->
-        GlyphClusters(text.map(Char::toString), List(text.length) { 10f })
+        GlyphClusters(text.map(Char::toString), FloatArray(text.length) { 10f })
     }
     private val baseStyle = ReaderChapterMeasureStyle(
         ReaderTextStyle(0, 10f), ReaderTextStyle(0, 10f), 0,
@@ -125,7 +125,7 @@ class ReaderImageOptionsTest {
         val reviewChar = ReaderInlineImagePlaceholder.REVIEW.placeholderChar
         val placeholderShaper = ReaderTextShaper { text ->
             val advance = if (text == reviewChar) 5f else 14f
-            GlyphClusters(text.map(Char::toString), List(text.length) { advance })
+            GlyphClusters(text.map(Char::toString), FloatArray(text.length) { advance })
         }
         val source = ReaderChapterSourceParser.parse(
             0, "", listOf("<img src=\"image\">"), false, false,
@@ -164,7 +164,7 @@ class ReaderImageOptionsTest {
         val reviewChar = ReaderInlineImagePlaceholder.REVIEW.placeholderChar
         val placeholderShaper = ReaderTextShaper { text ->
             val advance = if (text == reviewChar) 5f else 14f
-            GlyphClusters(text.map(Char::toString), List(text.length) { advance })
+            GlyphClusters(text.map(Char::toString), FloatArray(text.length) { advance })
         }
         val source = ReaderChapterSourceParser.parse(
             0, "", listOf("<img src=\"image\">"), false, false,
