@@ -116,7 +116,7 @@ class VideoPlayerViewModel(
             }
             is VideoPlayerIntent.Pause -> {
                 pausedByLifecycle = true
-                if (exoPlayer.isPlaying) exoPlayer.pause()
+                exoPlayer.pause()
             }
             is VideoPlayerIntent.SeekTo -> {
                 exoPlayer.seekTo(clampSeekPosition(intent.positionMs, exoPlayer.duration))
