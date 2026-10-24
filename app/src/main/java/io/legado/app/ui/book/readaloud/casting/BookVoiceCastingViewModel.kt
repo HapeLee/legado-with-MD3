@@ -47,7 +47,6 @@ class BookVoiceCastingViewModel(
     private var voices: List<ReadAloudVoice> = emptyList()
     private var bindings: List<BookVoiceBinding> = emptyList()
 
-
     /** 音色 → 引擎显示名，进页面/刷新时取一次，给旁白的音色候选当副标题。 */
     private var engineNames: Map<String, String> = emptyMap()
     private var loadJob: Job? = null

@@ -139,5 +139,4 @@ class BookKnowledgeRepository(
         /** 一本书的人物档案读取上限：与 `appDb.bookKnowledgeDao.getCharacterProfiles(bookUrl, 500)` 那批调用方同一口径。 */
         const val MAX_CHARACTER_PROFILES = 500
     }
-
 }
