@@ -56,13 +56,35 @@ import io.legado.app.core.ui.morph.BookCoverMorphAnchors
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import org.koin.compose.koinInject
+import java.util.concurrent.ConcurrentHashMap
 import io.legado.app.model.BookCover as BookCoverModel
 
 private const val SharedCoverRadiusCacheMaxSize = 256
+private const val CoverAspectRatioCacheMaxSize = 256
 
 /** 用户在换封面页选的“默认封面”，与空地址一样表示这本书没有真实封面。 */
 internal const val DefaultCoverPath = "use_default_cover"
 private val sharedCoverRadiusCache = mutableStateMapOf<String, Dp>()
+
+/**
+ * 封面地址 → 已成功加载过的宽高比。调用方（搜索/详情页自适应高度）用它做
+ * `remember` 初始值：列表项滚出视口销毁再回来时不必先回弹到 5:7 等图重载。
+ *
+ * 故意用普通 Map 而不是 [mutableStateMapOf]：这里只在 remember 初始化时读一次，
+ * 更新一律通过 onImageAspectRatio 回调驱动，不需要缓存本身触发重组；
+ * 用快照 Map 反而会让任一封面加载成功都失效所有正在读它的组合。
+ */
+private val coverAspectRatioCache = ConcurrentHashMap<String, Float>()
+
+/** 已记忆的封面宽高比；无真实封面地址（null/默认占位）时恒为 null，回落 5:7。 */
+internal fun cachedCoverAspectRatio(path: String?): Float? = path?.let { coverAspectRatioCache[it] }
+
+private fun cacheCoverAspectRatio(path: String, aspectRatio: Float) {
+    coverAspectRatioCache[path] = aspectRatio
+    if (coverAspectRatioCache.size > CoverAspectRatioCacheMaxSize) {
+        coverAspectRatioCache.keys.firstOrNull { it != path }?.let(coverAspectRatioCache::remove)
+    }
+}
 
 /**
  * 这本书是否有真实封面地址可加载。
@@ -107,6 +129,7 @@ fun BookCoverImage(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     requestBuilder: ImageRequest.Builder.() -> Unit = {},
+    onImageAspectRatio: ((Float) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val isNight = LegadoTheme.isDark
@@ -216,7 +239,16 @@ fun BookCoverImage(
                 imageLoader = koinInject(),
                 contentScale = contentScale,
                 modifier = Modifier.fillMaxSize(),
-                onSuccess = {
+                onSuccess = { state ->
+                    val intrinsicSize = state.painter.intrinsicSize
+                    val aspectRatio = intrinsicSize.width / intrinsicSize.height
+                    if (aspectRatio.isFinite() && aspectRatio > 0f) {
+                        // 只有真实封面按原图比例上报；默认封面/加载中/失败一律回落
+                        // 调用方的 5:7。若默认封面也上报，它与真实封面并发加载时
+                        // 后完成的一方会覆盖先到的正确比例。
+                        finalPath?.let { cacheCoverAspectRatio(it, aspectRatio) }
+                        onImageAspectRatio?.invoke(aspectRatio)
+                    }
                     isOnlineCoverLoaded = true
                     onlineCoverLoadFailed = false
                     onSuccess?.invoke()
@@ -274,6 +306,7 @@ fun CoilBookCover(
     badgeText: String? = null,
     showBadgeDot: Boolean = false,
     leftBottomText: String? = null,
+    onImageAspectRatio: ((Float) -> Unit)? = null,
 ) {
     val coverSettings = LocalAppUiConfiguration.current.cover
     val isNight = LegadoTheme.isDark
@@ -375,6 +408,7 @@ fun CoilBookCover(
             preferCache = preferCache,
             ignoreUseDefaultCover = ignoreUseDefaultCover,
             showLoadingPlaceholder = showLoadingPlaceholder,
+            onImageAspectRatio = onImageAspectRatio,
             onSuccess = {
                 isOnlineCoverLoaded = true
                 onlineCoverLoadFailed = false

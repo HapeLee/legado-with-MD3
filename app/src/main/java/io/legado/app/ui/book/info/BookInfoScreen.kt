@@ -70,6 +70,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -113,6 +114,7 @@ import io.legado.app.help.webView.WebJsExtensions
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideColorSchemeOverride
@@ -138,6 +140,7 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
+import io.legado.app.ui.widget.components.image.cover.cachedCoverAspectRatio
 import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -1159,6 +1162,28 @@ private fun BookInfoHeader(
 ) {
     val coverDescription = stringResource(R.string.a11y_book_cover_actions, book.name)
     val hiddenDescription = stringResource(R.string.private_hidden_label)
+    val coverPath = if (usesDefaultCover) null else book.coverPath
+    // “限制封面比例”设置开启（默认）时固定 5:7，与旧版一致；关闭后按原图比例自适应
+    val allowCoverRatioAdapt =
+        !LocalAppUiConfiguration.current.cover.restrictCoverRatio
+    // 初始值优先取该封面已加载过的比例缓存，重进详情页不必先回弹 5:7 再等图重载
+    val coverAspectRatioState = remember(allowCoverRatioAdapt, book.bookUrl, coverPath) {
+        mutableFloatStateOf(
+            if (allowCoverRatioAdapt) {
+                cachedCoverAspectRatio(coverPath) ?: BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+            } else {
+                BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+            }
+        )
+    }
+    val coverHeightDp = bookInfoCoverHeightDp(
+        if (allowCoverRatioAdapt) coverAspectRatioState.floatValue
+        else BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+    )
+    // 比例合法性已在 BookCoverImage 上报前校验，这里直接写入
+    val onCoverImageAspectRatio: ((Float) -> Unit)? = if (allowCoverRatioAdapt) {
+        { aspectRatio -> coverAspectRatioState.floatValue = aspectRatio }
+    } else null
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1190,7 +1215,8 @@ private fun BookInfoHeader(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(112.dp)
+                        .width(BOOK_INFO_COVER_WIDTH_DP.dp)
+                        .height(coverHeightDp.dp)
                         .then(
                             // 脱敏时封面不可点：点开大图等于直接泄漏
                             if (locked) {
@@ -1211,35 +1237,33 @@ private fun BookInfoHeader(
                         PrivateLockedCover(
                             name = null,
                             author = null,
-                            path = if (usesDefaultCover) null else book.coverPath,
+                            path = coverPath,
                             sourceOrigin = if (usesDefaultCover) null else book.origin,
                             bookUrl = book.bookUrl,
-                            modifier = Modifier
-                                .width(112.dp)
-                                .aspectRatio(5f / 7f),
+                            modifier = Modifier.fillMaxSize(),
                             // 同一个 key + 同一个 scope：共享元素动画在脱敏态下依然连续
                             sharedCoverKey = sharedCoverKey,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
+                            onImageAspectRatio = onCoverImageAspectRatio,
                         )
                     } else {
                         CoilBookCover(
                             name = book.name,
                             author = book.author,
-                            path = if (usesDefaultCover) null else book.coverPath,
+                            path = coverPath,
                             sourceOrigin = if (usesDefaultCover) null else book.origin,
                             // 传 bookUrl 供别名缓存键。详情页故意不设 preferCache：
                             // 在线时仍走完整链路拉新链接并刷新别名，保证封面换图后书架也能更新；
                             // 精确命中时同样不跑脚本。
                             bookUrl = book.bookUrl,
                             onError = onNetworkCoverLoadError,
-                            modifier = Modifier
-                                .width(112.dp)
-                                .aspectRatio(5f / 7f),
+                            modifier = Modifier.fillMaxSize(),
                             showLoadingPlaceholder = sharedCoverKey == null,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
-                            sharedCoverKey = sharedCoverKey
+                            sharedCoverKey = sharedCoverKey,
+                            onImageAspectRatio = onCoverImageAspectRatio,
                         )
                     }
                 }

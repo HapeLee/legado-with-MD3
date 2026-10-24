@@ -1856,6 +1856,8 @@
     <string name="day_night_switch">日/夜模式切換</string>
     <string name="debug_finished">調試完成</string>
     <string name="default_color">使用預設字體顏色</string>
+    <string name="cover_restrict_ratio">限制封面比例</string>
+    <string name="cover_restrict_ratio_summary">開啟時封面固定 5:7 顯示；關閉後搜尋、發現與書籍詳情頁封面按原圖寬高比自適應</string>
     <string name="delay_book_load">延遲書籍載入</string>
     <string name="delete_selected">刪除所選</string>
     <string name="delete_translation_cache">刪除翻譯緩存</string>

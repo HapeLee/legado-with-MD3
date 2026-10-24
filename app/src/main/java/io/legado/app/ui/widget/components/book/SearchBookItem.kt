@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,13 +40,28 @@ import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
+import io.legado.app.ui.widget.components.image.cover.cachedCoverAspectRatio
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.HtmlFormatter
+
+private const val DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO = 5f / 7f
+private const val SEARCH_BOOK_COVER_WIDTH_DP = 72f
+private const val MIN_SEARCH_BOOK_COVER_HEIGHT_DP = 80f
+private const val MAX_SEARCH_BOOK_COVER_HEIGHT_DP = 140f
+
+internal fun searchBookCoverHeightDp(aspectRatio: Float): Float {
+    val safeAspectRatio =
+        if (aspectRatio.isFinite() && aspectRatio > 0f) aspectRatio
+        else DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+    return (SEARCH_BOOK_COVER_WIDTH_DP / safeAspectRatio)
+        .coerceIn(MIN_SEARCH_BOOK_COVER_HEIGHT_DP, MAX_SEARCH_BOOK_COVER_HEIGHT_DP)
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -61,7 +77,24 @@ fun SearchBookListItem(
     sharedCoverKey: String? = null,
     sourceCount: Int? = null,
     qualityMasked: Boolean = false,
+    adaptCoverAspectRatio: Boolean = false,
 ) {
+    // 调用点开启自适应且“限制封面比例”设置关闭时才按原图比例计算高度；
+    // 限制态回到固定 5:7，与旧版行为完全一致
+    val allowCoverRatioAdapt = adaptCoverAspectRatio &&
+        !LocalAppUiConfiguration.current.cover.restrictCoverRatio
+    // 初始值优先取该封面已加载过的比例缓存：列表项滚出视口销毁再回来时
+    // 直接落在最终高度，不先回弹 5:7 再等内存缓存命中
+    val coverAspectRatioState = remember(allowCoverRatioAdapt, book.coverUrl) {
+        mutableFloatStateOf(
+            if (allowCoverRatioAdapt) {
+                cachedCoverAspectRatio(book.coverUrl) ?: DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+            } else {
+                DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+            }
+        )
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -73,9 +106,17 @@ fun SearchBookListItem(
             )
             .then(if (showPadding) Modifier.adaptiveHorizontalPadding(vertical = 8.dp) else Modifier)
     ) {
-        Box(modifier = Modifier
-            .width(72.dp)
-            .aspectRatio(5f / 7f)) {
+        Box(
+            modifier = Modifier
+                .width(SEARCH_BOOK_COVER_WIDTH_DP.dp)
+                .then(
+                    if (allowCoverRatioAdapt) {
+                        Modifier.height(searchBookCoverHeightDp(coverAspectRatioState.floatValue).dp)
+                    } else {
+                        Modifier.aspectRatio(DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO)
+                    }
+                )
+        ) {
             CoilBookCover(
                 name = book.name,
                 author = book.author,
@@ -87,7 +128,11 @@ fun SearchBookListItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null
+                showLoadingPlaceholder = sharedCoverKey == null,
+                onImageAspectRatio = if (allowCoverRatioAdapt) {
+                    // 比例合法性已在 BookCoverImage 上报前校验，这里直接写入
+                    { imageAspectRatio -> coverAspectRatioState.floatValue = imageAspectRatio }
+                } else null
             )
 
             if (qualityMasked) {
