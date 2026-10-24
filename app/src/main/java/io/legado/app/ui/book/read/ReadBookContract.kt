@@ -516,6 +516,7 @@ data class ReadBookButtonConfigItem(
 
 /** 共享图标池：顶栏、浮动图标、底栏共用的那批通用按钮。完整池见 `ReadMenuActionIds`。 */
 internal val ReadBookButtonIds = listOf(
+    "ai_chat",
     "ai_summary",
     "ai_rewrite",
     "more_actions",
@@ -541,7 +542,7 @@ internal val ReadBookButtonIds = listOf(
 
 internal val MoreActionIds = listOf(
     "source_custom_button", "change_source", "refresh", "download", "audio_download",
-    "edit_content", "add_bookmark",
+    "ai_chat", "edit_content", "add_bookmark",
     "text_processing", "reverse_content", "re_segment",
     "del_ruby", "del_h", "toc_rule", "charset", "image_style", "page_anim",
     "simulated_reading", "get_progress", "cover_progress", "highlight_rule", "read_style",
@@ -633,6 +634,7 @@ sealed interface ReadBookIntent {
     data class MoveReplaceRule(val draggedId: Long, val anchorId: Long, val afterAnchor: Boolean) :
         ReadBookIntent
     data object ToggleTranslation : ReadBookIntent
+    data object OpenAiChat : ReadBookIntent
     data object OpenChapterSummary : ReadBookIntent
     data object OpenAiCurrentChapterRewrite : ReadBookIntent
     data object RetryChapterSummary : ReadBookIntent
@@ -1248,6 +1250,13 @@ sealed interface ReadBookEffect {
     data object OpenTtsEnginesAndVoices : ReadBookEffect
     data object OpenTtsCache : ReadBookEffect
     data class OpenBookVoiceCasting(val bookUrl: String) : ReadBookEffect
+    data class OpenAiChat(
+        val bookUrl: String?,
+        val bookName: String?,
+        val bookAuthor: String?,
+        val chapterIndex: Int?,
+        val chapterTitle: String?,
+    ) : ReadBookEffect
     data class OpenReadAloudSubPage(val page: ReadAloudSubPage) : ReadBookEffect
     data object OpenHighlightRuleImportPicker : ReadBookEffect
     data object OpenHighlightRuleExportPicker : ReadBookEffect

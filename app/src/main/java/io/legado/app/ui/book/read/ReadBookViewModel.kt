@@ -910,15 +910,14 @@ class ReadBookViewModel(
             is ReadBookIntent.MoveReplaceRule ->
                 replaceRuleDelegate.move(intent.draggedId, intent.anchorId, intent.afterAnchor)
             is ReadBookIntent.DisableEffectiveReplace -> replaceRuleDelegate.disable(intent.rule)
-            ReadBookIntent.DisableChineseConverter -> {
-                configUpdateDelegate.handle(ConfigUpdate.ChineseConverterType(0))
-            }
+            ReadBookIntent.DisableChineseConverter -> configUpdateDelegate.handle(ConfigUpdate.ChineseConverterType(0))
             ReadBookIntent.DisableReSegment -> {
                 ReadBook.book?.setReSegment(false)
                 ReadBook.loadContent(false)
                 _uiState.update { it.copy(reSegment = false) }
             }
             is ReadBookIntent.ToggleTranslation -> toggleTranslation()
+            ReadBookIntent.OpenAiChat -> aiDelegate.openAiChat(_effects::tryEmit)
             is ReadBookIntent.OpenChapterSummary -> aiDelegate.openChapterSummary()
             is ReadBookIntent.OpenAiCurrentChapterRewrite -> aiDelegate.openAiCurrentChapterRewrite()
             is ReadBookIntent.RetryChapterSummary -> aiDelegate.retryChapterSummary()

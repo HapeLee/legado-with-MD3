@@ -14,7 +14,17 @@ data class AiChatUiState(
     val reasoningLevel: AiReasoningLevel = AiReasoningLevel.AUTO,
     val isSending: Boolean = false,
     val streamingMessage: AiChatMessageUi? = null,
-    val pendingToolConfirmation: AiToolConfirmationUi? = null
+    val pendingToolConfirmation: AiToolConfirmationUi? = null,
+    val readingContext: AiReadingContext? = null
+)
+
+@Stable
+data class AiReadingContext(
+    val bookUrl: String,
+    val bookName: String,
+    val bookAuthor: String = "",
+    val chapterIndex: Int? = null,
+    val chapterTitle: String = ""
 )
 
 @Stable
@@ -73,6 +83,7 @@ sealed interface AiChatIntent {
     data class SwitchBranch(val messageId: String) : AiChatIntent
     data class DeleteConversation(val id: String) : AiChatIntent
     data class RenameConversation(val id: String, val title: String) : AiChatIntent
+    data class SetReadingContext(val context: AiReadingContext?) : AiChatIntent
 }
 
 sealed interface AiChatEffect {

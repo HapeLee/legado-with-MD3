@@ -92,7 +92,13 @@ data object MainRouteSettingsBackup : MainRoute
 data object MainRouteSettingsAi : MainRoute
 
 @Serializable
-data object MainRouteAiChat : MainRoute
+data class MainRouteAiChat(
+    val bookUrl: String? = null,
+    val bookName: String? = null,
+    val bookAuthor: String? = null,
+    val chapterIndex: Int? = null,
+    val chapterTitle: String? = null,
+) : MainRoute
 
 @Serializable
 data class MainRouteSettingsAiProviderEdit(

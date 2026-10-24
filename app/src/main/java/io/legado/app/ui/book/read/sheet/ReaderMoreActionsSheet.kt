@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.AutoStories
@@ -336,6 +337,9 @@ private fun moreActionSpecs(
         "charset", stringResource(R.string.set_charset), Icons.Default.Translate,
         applicable = isReadMenuActionApplicable("charset", state),
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset)) }),
+    MoreActionSpec(
+        "ai_chat", stringResource(R.string.ai_chat), Icons.AutoMirrored.Filled.Chat,
+        onClick = { dispatch(ReadBookIntent.OpenAiChat) }),
     MoreActionSpec(
         "edit_content", stringResource(R.string.edit_content), Icons.Default.Edit,
         onClick = { dispatch(ReadBookIntent.OpenContentEdit) }),

@@ -2,6 +2,7 @@ package io.legado.app.ui.book.read
 
 import android.content.Context
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Toc
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -210,6 +211,11 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
         context.getString(R.string.menu_refresh_dur),
     ),
     ReadMenuButtonInfo(
+        "ai_chat",
+        Icons.AutoMirrored.Filled.Chat,
+        context.getString(R.string.ai_chat),
+    ),
+    ReadMenuButtonInfo(
         "ai_summary",
         Icons.Default.AutoAwesome,
         context.getString(R.string.ai_chapter_summary),
@@ -406,6 +412,9 @@ internal fun buildReadMenuActionDefs(
         },
         def("refresh_current") {
             onIntent(ReadBookIntent.RefreshCurrentChapter)
+        },
+        def("ai_chat") {
+            onIntent(ReadBookIntent.OpenAiChat)
         },
         def("ai_summary") {
             onIntent(ReadBookIntent.OpenChapterSummary)
