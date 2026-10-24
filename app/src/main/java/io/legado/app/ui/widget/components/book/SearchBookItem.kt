@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,19 @@ import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.HtmlFormatter
 
+private const val DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO = 5f / 7f
+private const val SEARCH_BOOK_COVER_WIDTH_DP = 72f
+private const val MIN_SEARCH_BOOK_COVER_HEIGHT_DP = 80f
+private const val MAX_SEARCH_BOOK_COVER_HEIGHT_DP = 140f
+
+internal fun searchBookCoverHeightDp(aspectRatio: Float): Float {
+    val safeAspectRatio =
+        if (aspectRatio.isFinite() && aspectRatio > 0f) aspectRatio
+        else DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+    return (SEARCH_BOOK_COVER_WIDTH_DP / safeAspectRatio)
+        .coerceIn(MIN_SEARCH_BOOK_COVER_HEIGHT_DP, MAX_SEARCH_BOOK_COVER_HEIGHT_DP)
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun SearchBookListItem(
@@ -61,7 +75,12 @@ fun SearchBookListItem(
     sharedCoverKey: String? = null,
     sourceCount: Int? = null,
     qualityMasked: Boolean = false,
+    adaptCoverAspectRatio: Boolean = false,
 ) {
+    val coverAspectRatioState = remember(book.coverUrl) {
+        mutableFloatStateOf(DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO)
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -73,9 +92,17 @@ fun SearchBookListItem(
             )
             .then(if (showPadding) Modifier.adaptiveHorizontalPadding(vertical = 8.dp) else Modifier)
     ) {
-        Box(modifier = Modifier
-            .width(72.dp)
-            .aspectRatio(5f / 7f)) {
+        Box(
+            modifier = Modifier
+                .width(SEARCH_BOOK_COVER_WIDTH_DP.dp)
+                .then(
+                    if (adaptCoverAspectRatio) {
+                        Modifier.height(searchBookCoverHeightDp(coverAspectRatioState.floatValue).dp)
+                    } else {
+                        Modifier.aspectRatio(DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO)
+                    }
+                )
+        ) {
             CoilBookCover(
                 name = book.name,
                 author = book.author,
@@ -87,7 +114,14 @@ fun SearchBookListItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null
+                showLoadingPlaceholder = sharedCoverKey == null,
+                onImageAspectRatio = if (adaptCoverAspectRatio) {
+                    { imageAspectRatio ->
+                        if (imageAspectRatio.isFinite() && imageAspectRatio > 0f) {
+                            coverAspectRatioState.floatValue = imageAspectRatio
+                        }
+                    }
+                } else null
             )
 
             if (qualityMasked) {

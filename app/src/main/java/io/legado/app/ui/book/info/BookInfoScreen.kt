@@ -70,6 +70,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -1159,6 +1160,16 @@ private fun BookInfoHeader(
 ) {
     val coverDescription = stringResource(R.string.a11y_book_cover_actions, book.name)
     val hiddenDescription = stringResource(R.string.private_hidden_label)
+    val coverPath = if (usesDefaultCover) null else book.coverPath
+    val coverAspectRatioState = remember(book.bookUrl, coverPath) {
+        mutableFloatStateOf(BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO)
+    }
+    val coverHeightDp = bookInfoCoverHeightDp(coverAspectRatioState.floatValue)
+    val onCoverImageAspectRatio: (Float) -> Unit = { aspectRatio ->
+        if (aspectRatio.isFinite() && aspectRatio > 0f) {
+            coverAspectRatioState.floatValue = aspectRatio
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1190,7 +1201,8 @@ private fun BookInfoHeader(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(112.dp)
+                        .width(BOOK_INFO_COVER_WIDTH_DP.dp)
+                        .height(coverHeightDp.dp)
                         .then(
                             // 脱敏时封面不可点：点开大图等于直接泄漏
                             if (locked) {
@@ -1211,35 +1223,33 @@ private fun BookInfoHeader(
                         PrivateLockedCover(
                             name = null,
                             author = null,
-                            path = if (usesDefaultCover) null else book.coverPath,
+                            path = coverPath,
                             sourceOrigin = if (usesDefaultCover) null else book.origin,
                             bookUrl = book.bookUrl,
-                            modifier = Modifier
-                                .width(112.dp)
-                                .aspectRatio(5f / 7f),
+                            modifier = Modifier.fillMaxSize(),
                             // 同一个 key + 同一个 scope：共享元素动画在脱敏态下依然连续
                             sharedCoverKey = sharedCoverKey,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
+                            onImageAspectRatio = onCoverImageAspectRatio,
                         )
                     } else {
                         CoilBookCover(
                             name = book.name,
                             author = book.author,
-                            path = if (usesDefaultCover) null else book.coverPath,
+                            path = coverPath,
                             sourceOrigin = if (usesDefaultCover) null else book.origin,
                             // 传 bookUrl 供别名缓存键。详情页故意不设 preferCache：
                             // 在线时仍走完整链路拉新链接并刷新别名，保证封面换图后书架也能更新；
                             // 精确命中时同样不跑脚本。
                             bookUrl = book.bookUrl,
                             onError = onNetworkCoverLoadError,
-                            modifier = Modifier
-                                .width(112.dp)
-                                .aspectRatio(5f / 7f),
+                            modifier = Modifier.fillMaxSize(),
                             showLoadingPlaceholder = sharedCoverKey == null,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
-                            sharedCoverKey = sharedCoverKey
+                            sharedCoverKey = sharedCoverKey,
+                            onImageAspectRatio = onCoverImageAspectRatio,
                         )
                     }
                 }
