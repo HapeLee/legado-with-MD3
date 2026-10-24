@@ -14,7 +14,11 @@ class HighlightRuleSampleTextTest {
 
     @Test
     fun `the sample sentence is the fixed one`() {
-        assertEquals("张三：我是李四。他惊了！", HighlightRule.DEFAULT_SAMPLE_TEXT)
+        assertEquals(
+            "张三：我是李四。他惊了！他从没想过会在这里碰上老同学，一时竟不知道说什么好，" +
+                "旁边的王五看得直乐，这一幕他可等了很久了。",
+            HighlightRule.DEFAULT_SAMPLE_TEXT,
+        )
         assertEquals(
             HighlightRule.DEFAULT_SAMPLE_TEXT,
             HighlightRule(sampleText = "   ").normalizedSampleText(),

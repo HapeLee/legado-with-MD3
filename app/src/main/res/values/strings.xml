@@ -944,6 +944,9 @@
     <string name="nine_slice_mode_vertical">Vertical</string>
     <string name="preview_effect">Preview</string>
     <string name="sample_text">Sample Text</string>
+    <string name="highlight_border">Border</string>
+    <string name="highlight_border_width">Border Width</string>
+    <string name="highlight_border_radius">Corner Radius</string>
     <string name="highlight_match_typography">Match Typography</string>
     <string name="highlight_match_typography_hint">Everything below applies to the text your regex matches, and to nothing else.</string>
     <string name="highlight_spacing_before">Spacing Before Match</string>

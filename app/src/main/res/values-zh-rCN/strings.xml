@@ -913,6 +913,9 @@
     <string name="nine_slice_mode_vertical">垂直</string>
     <string name="preview_effect">预览效果</string>
     <string name="sample_text">示例文本</string>
+    <string name="highlight_border">边框</string>
+    <string name="highlight_border_width">边框粗细</string>
+    <string name="highlight_border_radius">边框圆角</string>
     <string name="highlight_match_typography">命中排版</string>
     <string name="highlight_match_typography_hint">下面这些调整只作用在正则命中的那一段文字上，命中之外的一个字都不动。</string>
     <string name="highlight_spacing_before">命中字距（前）</string>

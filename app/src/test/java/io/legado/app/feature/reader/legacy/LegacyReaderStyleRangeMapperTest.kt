@@ -8,6 +8,7 @@ import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import io.legado.app.feature.reader.core.style.ReaderStyleTarget
+import io.legado.app.utils.dpToPx
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -135,6 +136,34 @@ class LegacyReaderStyleRangeMapperTest {
                 .rangesForLiteralRange(rule, 5, 5, ReaderStyleTarget.BODY, 0)
                 .isEmpty(),
         )
+    }
+
+    /** 边框三件套按 dp→px 原样进样式；没设颜色时粗细与圆角不许单独跑出来。 */
+    @Test
+    fun borderTripletMapsToTheStyleInPixels() {
+        val ranges = rangesFor(
+            HighlightRule(
+                pattern = "我是李四",
+                targetScope = HighlightRule.TARGET_BODY,
+                borderColor = 0xFF63C37D.toInt(),
+                borderWidth = 2f,
+                borderRadius = 6f,
+            )
+        )
+        ranges.forEach {
+            assertEquals(0xFF63C37D.toInt(), it.style.borderColorArgb)
+            assertEquals(2f.dpToPx(), it.style.borderWidthPx)
+            assertEquals(6f.dpToPx(), it.style.borderRadiusPx)
+        }
+
+        val unset = rangesFor(
+            HighlightRule(pattern = "我是李四", targetScope = HighlightRule.TARGET_BODY)
+        )
+        unset.forEach {
+            assertEquals(null, it.style.borderColorArgb)
+            assertEquals(0f, it.style.borderWidthPx)
+            assertEquals(0f, it.style.borderRadiusPx)
+        }
     }
 
     /**

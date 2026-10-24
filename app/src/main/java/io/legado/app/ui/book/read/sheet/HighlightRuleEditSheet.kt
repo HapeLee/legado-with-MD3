@@ -85,6 +85,7 @@ import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.style.ReaderStyleTarget
 import io.legado.app.feature.reader.core.style.mergeBackgroundBounds
 import io.legado.app.feature.reader.drawTextBackground
+import io.legado.app.feature.reader.drawBackgroundBand
 import io.legado.app.feature.reader.legacy.LegacyReaderPaginationStyleFactory
 import io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper
 import io.legado.app.feature.reader.platform.AndroidReaderTextShaper
@@ -174,6 +175,14 @@ fun HighlightRuleEditSheet(
     var bgImageScale by remember(show, rule) { mutableFloatStateOf(initial.bgImageScale) }
     var hasBgImage by remember(show, rule) { mutableStateOf(initial.bgImage?.isNotBlank() == true) }
 
+    // Border state — 颜色为 null 就当没开；粗细与圆角只在颜色非空时参与绘制与保存。
+    var hasBorder by remember(show, rule) { mutableStateOf(initial.borderColor != null) }
+    var borderColor by remember(show, rule) {
+        mutableIntStateOf(initial.borderColor ?: 0xFF63C37D.toInt())
+    }
+    var borderWidth by remember(show, rule) { mutableFloatStateOf(initial.borderWidth) }
+    var borderRadius by remember(show, rule) { mutableFloatStateOf(initial.borderRadius) }
+
     // Font weight state
     var fontWeight by remember(show, rule) { mutableIntStateOf(initial.fontWeight) }
     var isItalic by remember(show, rule) { mutableStateOf(initial.isItalic) }
@@ -216,6 +225,7 @@ fun HighlightRuleEditSheet(
     var showTextColorPicker by remember(show, rule) { mutableStateOf(false) }
     var showBgColorPicker by remember(show, rule) { mutableStateOf(false) }
     var showUnderlineColorPicker by remember(show, rule) { mutableStateOf(false) }
+    var showBorderColorPicker by remember(show, rule) { mutableStateOf(false) }
     var showFontSelect by remember(show, rule) { mutableStateOf(false) }
 
     // Validation
@@ -283,6 +293,9 @@ fun HighlightRuleEditSheet(
         position = initial.position,
         textColor = if (hasTextColor) textColor else null,
         bgColor = if (hasBgColor) bgColor else null,
+        borderColor = if (hasBorder) borderColor else null,
+        borderWidth = borderWidth,
+        borderRadius = borderRadius,
         underlineMode = if (hasUnderline) underlineMode else 0,
         underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
         underlineWidth = underlineWidth,
@@ -629,6 +642,36 @@ fun HighlightRuleEditSheet(
                     }
                 }
 
+                // Border
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.highlight_border),
+                    checked = hasBorder,
+                    onCheckedChange = { hasBorder = it },
+                )
+                AnimatedVisibility(visible = hasBorder) {
+                    Column {
+                        TinyColorSettingItem(
+                            title = stringResource(R.string.select_color),
+                            colorValue = borderColor,
+                            onClick = { showBorderColorPicker = true },
+                        )
+                        TinySliderSettingItem(
+                            title = stringResource(R.string.highlight_border_width),
+                            value = borderWidth,
+                            valueRange = 0.5f..10f,
+                            description = String.format("%.1f dp", borderWidth),
+                            onValueChange = { borderWidth = (it * 10).toInt() / 10f },
+                        )
+                        TinySliderSettingItem(
+                            title = stringResource(R.string.highlight_border_radius),
+                            value = borderRadius,
+                            valueRange = 0f..24f,
+                            description = String.format("%.1f dp", borderRadius),
+                            onValueChange = { borderRadius = it },
+                        )
+                    }
+                }
+
                 // === Section 2b: Match typography ===
                 SectionTitle(stringResource(R.string.highlight_match_typography))
                 AppText(
@@ -817,6 +860,15 @@ fun HighlightRuleEditSheet(
             showUnderlineColorPicker = false
         },
     )
+    ColorPickerSheet(
+        show = showBorderColorPicker,
+        initialColor = borderColor,
+        onDismissRequest = { showBorderColorPicker = false },
+        onColorSelected = { color ->
+            borderColor = color
+            showBorderColorPicker = false
+        },
+    )
 
     // Nine-patch editor
     NinePatchEditorDialog(
@@ -910,7 +962,7 @@ internal fun HighlightPreviewCard(
             config = config,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (floating) 128.dp else 168.dp)
+                .height(if (floating) 144.dp else 168.dp)
                 .clipToBounds()
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         )
@@ -925,8 +977,10 @@ internal fun HighlightPreviewCard(
  * [drawTextBackground] 与 [ReaderPageDecorationDrawCache]。正文怎么断行、气泡多大、字落在哪，
  * 预览就是那个结果——包括「命中字距只在段外留白，不许把图拉长」这一条。
  *
- * 卡片只有屏宽大分之一，硬画装不下，所以缩放只放在最后一步：字号、字距、行距、段首缩进、页边距、
- * 断行位置、气泡与字的比例全部是正文那一份，整页一起缩。改正文字号时预览跟着一起变。
+ * 缩放只放在最后一步：整页视口（含左右页边距）等比映射到卡片宽，预览里文字两侧留的边就是
+ * 正文那一圈页边距按比例缩小的结果——调页边距参数时预览跟着变，边距不再是「贴边的一栏」。
+ * 顶部只裁掉内容以上的空白，留一小圈余量，描边与圆角色带的四角不贴边；底边的裁切线吸附到
+ * 放得下的最后一整行的行盒底，落在行与行之间，不会把一行字拦腰截成上下两半。
  */
 @Composable
 private fun HighlightRulePreview(
@@ -943,7 +997,7 @@ private fun HighlightRulePreview(
         sample = rule.normalizedSampleText(),
         viewportWidthPx = bodyViewportWidthPx,
         // 视口给高：示例句必须全落在第一页，不然一拉「命中行行距」就把最后一行挤到丢掉的第二页，
-        // 预览里就看不到规则生效。超出的部分由外层 clipToBounds 裁掉，跟正文一样不许装饰跑进页边距。
+        // 预览里就看不到规则生效。超出的部分由裁切线吸行底处理。
         viewportHeightPx = (baseTextSizePx * 60f).toInt(),
     )
     val decorations = remember(layout) { layout?.let { ReaderPageDecorationDrawCache.create(it.page) } }
@@ -951,21 +1005,35 @@ private fun HighlightRulePreview(
     val stylePaints = remember { mutableMapOf<ReaderTextStyle, Paint>() }
     Canvas(modifier) {
         val page = layout?.page
-        if (page != null && decorations != null && bodyViewportWidthPx > 0) {
+        if (page != null && decorations != null && bodyViewportWidthPx > 0 && size.width > 0f) {
             val runs = page.textBackgroundRuns()
-            // 正文那一刀：裁剪框跟着背景走，气泡不会被页边距切成两截，字也超不出去。
+            // 顶部裁切基准：内容外接框（含阴影/斜体/气泡外扩），从这里往下展示。
             val clip = page.contentClipRect(runs)
             val previewScale = size.width / bodyViewportWidthPx
-            // 整页原点缩放会把正文那一圈页边距一起缩进卡片里：示例句会落到卡片下方偏右，
-            // 视觉上字是歪的。这里只把**内容外接框的左上角**平移到卡片原点（排版一项不动，
-            // 段首缩进、命中字距、气泡与字的比例仍是正文那一份），卡片里就是干净的一页内容。
-            clipRect(
-                0f, 0f,
-                (clip.right - clip.left) * previewScale,
-                (clip.bottom - clip.top) * previewScale,
-            ) {
-                scale(previewScale) {
-                    translate(-clip.left, -clip.top) {
+            // 顶部余量（页面坐标系）：描边、圆角色带越出行盒的部分不贴边。
+            val topBleedPagePx = PreviewTopBleedDp.toPx() / previewScale
+            // 底边吸行：比可见底边再高一个小余量之内结束的行不算「放得下」，
+            // 免得行盒底正好压在画布边上时描边还是被削掉半根。
+            val lineSnapPadPagePx = PreviewLineSnapDp.toPx() / previewScale
+            val visibleBottomPagePx = clip.top - topBleedPagePx + size.height / previewScale
+            val lastFullBottom = page.elements
+                .filterIsInstance<ReaderElement.Text>()
+                .map { it.bounds.bottom }
+                .filter { it <= visibleBottomPagePx - lineSnapPadPagePx }
+                .maxOrNull()
+            val clipBottomPx = if (lastFullBottom != null) {
+                (lastFullBottom - clip.top + topBleedPagePx + lineSnapPadPagePx) * previewScale
+            } else {
+                // 一整行都放不下（画布过矮）：退回画满画布高，切在哪儿都比空白强。
+                size.height
+            }
+            clipRect(0f, 0f, size.width, clipBottomPx) {
+                // pivot 必须钉在原点：scale 默认拿画布中心当原点，坐标映射会整体偏移
+                // 画布尺寸的 (1-scale)/2，裁切线跟着错位约一个行高，最后一行整行被裁、
+                // 上一行被拦腰切开。钉在原点后页面坐标才严格按上面的推导落位。
+                scale(previewScale, pivot = Offset.Zero) {
+                    // 只平移掉内容以上的部分：左右页边距原样留在卡片里，就是正文的边距。
+                    translate(0f, topBleedPagePx - clip.top) {
                         drawReaderPreviewPage(layout, runs, decorations, backgroundPaint, stylePaints)
                     }
                 }
@@ -973,6 +1041,12 @@ private fun HighlightRulePreview(
         }
     }
 }
+
+/** 预览内容顶部与卡片边缘之间留的余量：给描边、圆角色带这些越出行盒的装饰让位。 */
+private val PreviewTopBleedDp = 4.dp
+
+/** 底边吸行的安全余量：行盒底离裁切边不足这个数就整行下移到下一屏。 */
+private val PreviewLineSnapDp = 2.dp
 
 /** 排版好的一页 + 背景图位图：几何全部已经在 [ReaderPage] 里按正文口径算完。 */
 private data class ReaderPreviewLayout(val page: ReaderPage, val background: Bitmap?)
@@ -1107,11 +1181,7 @@ private fun DrawScope.drawReaderPreviewPage(
     val native = drawContext.canvas.nativeCanvas
     val textElements = layout.page.elements.filterIsInstance<ReaderElement.Text>()
     textElements.mergeBackgroundBounds().forEach { band ->
-        drawRect(
-            Color(band.colorArgb),
-            Offset(band.bounds.left, band.bounds.top),
-            Size(band.bounds.width, band.bounds.height),
-        )
+        drawBackgroundBand(band)
     }
     layout.background?.let { bitmap ->
         backgroundRuns.forEach { run ->

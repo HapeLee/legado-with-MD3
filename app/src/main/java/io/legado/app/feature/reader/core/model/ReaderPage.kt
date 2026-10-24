@@ -18,6 +18,10 @@ data class ReaderTextStyle(
     val fontWeight: Int = 400,
     val italic: Boolean = false,
     val backgroundArgb: Int? = null,
+    /** 边框颜色：null = 不描边；粗细与圆角只在颜色非空时参与绘制。 */
+    val borderColorArgb: Int? = null,
+    val borderWidthPx: Float = 0f,
+    val borderRadiusPx: Float = 0f,
     val underline: ReaderUnderline? = null,
     val shadow: ReaderTextShadow? = null,
     val backgroundImage: ReaderTextBackgroundImage? = null,

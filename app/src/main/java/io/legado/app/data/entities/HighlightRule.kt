@@ -57,6 +57,14 @@ data class HighlightRule(
     /** 九宫格右偏移（dp）：见 [bgLengthOffsetLeft]，方向相反。 */
     @ColumnInfo(defaultValue = "0")
     var bgLengthOffsetRight: Float = 0f,
+    /** 边框颜色：null = 不描边。粗细与圆角只在颜色非空时参与绘制。 */
+    var borderColor: Int? = null,
+    /** 边框粗细（dp）。 */
+    @ColumnInfo(defaultValue = "1")
+    var borderWidth: Float = 1f,
+    /** 边框圆角（dp）：0 = 直角。色块填充跟随同一个圆角，色块与描边才对得上。 */
+    @ColumnInfo(defaultValue = "4")
+    var borderRadius: Float = 4f,
 ) {
 
     fun styleSummary(): String {
@@ -67,6 +75,9 @@ data class HighlightRule(
         }
         bgColor?.let {
             parts.add("背景色 ${it.toHexColor()}")
+        }
+        borderColor?.let {
+            parts.add("边框 ${it.toHexColor()}")
         }
         if (underlineMode != 0) {
             parts.add(
@@ -149,9 +160,12 @@ data class HighlightRule(
         /**
          * 预览示例句：固定这一句，不再按正则换着迁就。引号外留着「张三：」和「他惊了！」，
          * 命中字距、命中行行距、背景图四周一圈都有相邻的字可以参照，调一个参数就能看出它
-         * 到底只作用在中间那一段上。
+         * 到底只作用在中间那一段上。后面再补两小句，让示例句在预览里能折成多行：
+         * 边框、命中行行距这类跨行才看得全的参数，一行字看不出它们各管哪一行。
          */
-        const val DEFAULT_SAMPLE_TEXT = "张三：我是李四。他惊了！"
+        const val DEFAULT_SAMPLE_TEXT =
+            "张三：我是李四。他惊了！他从没想过会在这里碰上老同学，一时竟不知道说什么好，" +
+                "旁边的王五看得直乐，这一幕他可等了很久了。"
 
         /**
          * [DEFAULT_SAMPLE_TEXT] 里被上样的那一段。规则编辑的每一项改动都保证落在它上面，

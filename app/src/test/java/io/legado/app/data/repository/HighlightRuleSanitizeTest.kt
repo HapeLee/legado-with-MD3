@@ -82,6 +82,9 @@ class HighlightRuleSanitizeTest {
                 position = 3,
                 textColor = 0xFF2495FF.toInt(),
                 bgColor = 0xFF00FF00.toInt(),
+                borderColor = 0xFFFF6D00.toInt(),
+                borderWidth = 2.5f,
+                borderRadius = 6.5f,
                 underlineMode = 5,
                 underlineColor = 0xFFFF0000.toInt(),
                 underlineWidth = 1.5f,
@@ -108,6 +111,23 @@ class HighlightRuleSanitizeTest {
                 bgLengthOffsetRight = 7.5f,
             )
             assertEquals(rule, repository.sanitizeRule(rule))
+        }
+    }
+
+    @Test
+    fun sanitizeClampsBorderWidthAndRadius() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        InMemoryAppDatabaseFixture(RuntimeEnvironment.getApplication()).use { fixture ->
+            val repository = HighlightRuleRepository(
+                dao = fixture.database.highlightRuleDao,
+                context = RuntimeEnvironment.getApplication(),
+            )
+            val input = HighlightRule(borderWidth = 0f, borderRadius = 99f)
+            // sanitize 保留原 id，期望值从输入 copy 出来
+            assertEquals(
+                input.copy(borderWidth = 0.5f, borderRadius = 24f),
+                repository.sanitizeRule(input),
+            )
         }
     }
 }

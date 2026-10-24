@@ -8,6 +8,10 @@ enum class ReaderStyleTarget { ALL, TITLE, BODY }
 data class ReaderCharacterStyle(
     val colorArgb: Int? = null,
     val backgroundArgb: Int? = null,
+    /** 边框颜色：null = 不描边；粗细与圆角只在颜色非空时参与绘制。 */
+    val borderColorArgb: Int? = null,
+    val borderWidthPx: Float = 0f,
+    val borderRadiusPx: Float = 0f,
     val underline: ReaderUnderline? = null,
     val fontPath: String? = null,
     val fontWeight: Int? = null,
