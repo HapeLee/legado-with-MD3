@@ -37,6 +37,7 @@ sealed interface CoverConfigIntent {
     data class SetShowShadow(val value: Boolean) : CoverConfigIntent
     data class SetShowStroke(val value: Boolean) : CoverConfigIntent
     data class SetUseDefaultColor(val value: Boolean) : CoverConfigIntent
+    data class SetRestrictCoverRatio(val value: Boolean) : CoverConfigIntent
     data class SetInfoOrientation(val value: String) : CoverConfigIntent
     data class SetExploreFilterState(val value: Int) : CoverConfigIntent
     data class SetShowName(val value: Boolean) : CoverConfigIntent

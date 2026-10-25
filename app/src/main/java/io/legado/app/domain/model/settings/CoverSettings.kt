@@ -3,6 +3,8 @@ package io.legado.app.domain.model.settings
 data class CoverSettings(
     val loadOnlyOnWifi: Boolean = false,
     val useDefaultCover: Boolean = false,
+    /** 开启时封面固定 5:7；关闭后按原图比例自适应（列表/详情/网格） */
+    val restrictCoverRatio: Boolean = true,
     val showShadow: Boolean = false,
     val showStroke: Boolean = true,
     val useDefaultColor: Boolean = true,

@@ -29,6 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -50,7 +52,7 @@ import io.legado.app.utils.HtmlFormatter
 
 private const val DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO = 5f / 7f
 private const val SEARCH_BOOK_COVER_WIDTH_DP = 72f
-private const val MIN_SEARCH_BOOK_COVER_HEIGHT_DP = 80f
+private const val MIN_SEARCH_BOOK_COVER_HEIGHT_DP = 1f
 private const val MAX_SEARCH_BOOK_COVER_HEIGHT_DP = 140f
 
 internal fun searchBookCoverHeightDp(aspectRatio: Float): Float {
@@ -77,6 +79,8 @@ fun SearchBookListItem(
     qualityMasked: Boolean = false,
     adaptCoverAspectRatio: Boolean = false,
 ) {
+    val allowCoverRatioAdapt = adaptCoverAspectRatio &&
+        !LocalAppUiConfiguration.current.cover.restrictCoverRatio
     val coverAspectRatioState = remember(book.coverUrl) {
         mutableFloatStateOf(DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO)
     }
@@ -96,7 +100,7 @@ fun SearchBookListItem(
             modifier = Modifier
                 .width(SEARCH_BOOK_COVER_WIDTH_DP.dp)
                 .then(
-                    if (adaptCoverAspectRatio) {
+                    if (allowCoverRatioAdapt) {
                         Modifier.height(searchBookCoverHeightDp(coverAspectRatioState.floatValue).dp)
                     } else {
                         Modifier.aspectRatio(DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO)
@@ -111,11 +115,12 @@ fun SearchBookListItem(
                     .fillMaxSize()
                     .then(if (qualityMasked) Modifier.blur(8.dp) else Modifier),
                 sourceOrigin = book.origin,
+                contentScale = if (allowCoverRatioAdapt) ContentScale.Fit else ContentScale.Crop,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
                 showLoadingPlaceholder = sharedCoverKey == null,
-                onImageAspectRatio = if (adaptCoverAspectRatio) {
+                onImageAspectRatio = if (allowCoverRatioAdapt) {
                     { imageAspectRatio ->
                         if (imageAspectRatio.isFinite() && imageAspectRatio > 0f) {
                             coverAspectRatioState.floatValue = imageAspectRatio
@@ -261,7 +266,13 @@ fun SearchBookGridItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
     qualityMasked: Boolean = false,
+    adaptCoverAspectRatio: Boolean = false,
 ) {
+    val allowCoverRatioAdapt = adaptCoverAspectRatio &&
+        !LocalAppUiConfiguration.current.cover.restrictCoverRatio
+    val coverAspectRatioState = remember(book.coverUrl) {
+        mutableFloatStateOf(DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO)
+    }
     Column(
         modifier = modifier
             .width(IntrinsicSize.Min)
@@ -274,7 +285,10 @@ fun SearchBookGridItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(5f / 7f)
+                .aspectRatio(
+                    if (allowCoverRatioAdapt) coverAspectRatioState.floatValue
+                    else DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+                )
         ) {
             CoilBookCover(
                 name = book.name,
@@ -284,10 +298,18 @@ fun SearchBookGridItem(
                     .fillMaxSize()
                     .then(if (qualityMasked) Modifier.blur(8.dp) else Modifier),
                 sourceOrigin = book.origin,
+                contentScale = if (allowCoverRatioAdapt) ContentScale.Fit else ContentScale.Crop,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null
+                showLoadingPlaceholder = sharedCoverKey == null,
+                onImageAspectRatio = if (allowCoverRatioAdapt) {
+                    { imageAspectRatio ->
+                        if (imageAspectRatio.isFinite() && imageAspectRatio > 0f) {
+                            coverAspectRatioState.floatValue = imageAspectRatio
+                        }
+                    }
+                } else null
             )
 
             if (qualityMasked) {

@@ -11,8 +11,8 @@ class SearchBookCoverSizingTest {
     }
 
     @Test
-    fun wideCoversClampToMinimumHeight() {
-        assertEquals(80f, searchBookCoverHeightDp(1f), 0f)
+    fun wideCoversKeepOriginalRatio() {
+        assertEquals(24f, searchBookCoverHeightDp(3f), 0.01f)
     }
 
     @Test

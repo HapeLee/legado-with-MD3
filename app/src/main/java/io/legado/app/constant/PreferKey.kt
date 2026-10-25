@@ -13,6 +13,7 @@ object PreferKey {
     const val bookGroupStyle = "bookGroupStyle"
     const val hideEmptyGroups = "hideEmptyGroups"
     const val useDefaultCover = "useDefaultCover"
+    const val coverRestrictRatio = "coverRestrictRatio"
     const val loadCoverOnlyWifi = "loadCoverOnlyWifi"
     const val coverShowName = "coverShowName"
     const val coverShowAuthor = "coverShowAuthor"

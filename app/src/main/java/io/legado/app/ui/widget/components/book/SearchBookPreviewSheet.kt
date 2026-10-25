@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -17,9 +18,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,6 +31,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
@@ -52,6 +56,10 @@ fun SearchBookPreviewSheet(
         onDismissRequest = onDismissRequest,
     ) { book ->
         val isInShelf = shelfState == BookShelfState.IN_SHELF
+        val allowCoverRatioAdapt = !LocalAppUiConfiguration.current.cover.restrictCoverRatio
+        val coverAspectRatioState = remember(book.coverUrl) {
+            mutableFloatStateOf(5f / 7f)
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -66,16 +74,25 @@ fun SearchBookPreviewSheet(
                 Box(
                     modifier = Modifier
                         .width(120.dp)
-                        .aspectRatio(5f / 7f)
+                        .aspectRatio(
+                            if (allowCoverRatioAdapt) coverAspectRatioState.floatValue
+                            else 5f / 7f
+                        )
                 ) {
                     CoilBookCover(
                         name = book.name,
                         author = book.author,
                         path = book.coverUrl,
                         sourceOrigin = book.origin,
-                        modifier = Modifier
-                            .width(120.dp)
-                            .aspectRatio(5f / 7f),
+                        contentScale = if (allowCoverRatioAdapt) ContentScale.Fit else ContentScale.Crop,
+                        onImageAspectRatio = if (allowCoverRatioAdapt) {
+                            { ratio ->
+                                if (ratio.isFinite() && ratio > 0f) {
+                                    coverAspectRatioState.floatValue = ratio
+                                }
+                            }
+                        } else null,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 

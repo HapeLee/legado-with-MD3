@@ -28,6 +28,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -114,6 +116,7 @@ import io.legado.app.help.webView.WebJsExtensions
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideColorSchemeOverride
@@ -181,6 +184,7 @@ fun BookInfoScreen(
     groups: ImmutableList<BookGroup>,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
+    onSearch: (String) -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -1138,6 +1142,7 @@ private fun BookInfoOverflowMenu(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BookInfoHeader(
     book: BookInfoBookUi,
@@ -1161,15 +1166,21 @@ private fun BookInfoHeader(
     val coverDescription = stringResource(R.string.a11y_book_cover_actions, book.name)
     val hiddenDescription = stringResource(R.string.private_hidden_label)
     val coverPath = if (usesDefaultCover) null else book.coverPath
-    val coverAspectRatioState = remember(book.bookUrl, coverPath) {
+    val allowCoverRatioAdapt = !LocalAppUiConfiguration.current.cover.restrictCoverRatio
+    val coverAspectRatioState = remember(allowCoverRatioAdapt, book.bookUrl, coverPath) {
         mutableFloatStateOf(BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO)
     }
-    val coverHeightDp = bookInfoCoverHeightDp(coverAspectRatioState.floatValue)
-    val onCoverImageAspectRatio: (Float) -> Unit = { aspectRatio ->
-        if (aspectRatio.isFinite() && aspectRatio > 0f) {
-            coverAspectRatioState.floatValue = aspectRatio
+    val coverHeightDp = bookInfoCoverHeightDp(
+        if (allowCoverRatioAdapt) coverAspectRatioState.floatValue
+        else BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+    )
+    val onCoverImageAspectRatio: ((Float) -> Unit)? = if (allowCoverRatioAdapt) {
+        { aspectRatio ->
+            if (aspectRatio.isFinite() && aspectRatio > 0f) {
+                coverAspectRatioState.floatValue = aspectRatio
+            }
         }
-    }
+    } else null
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1245,6 +1256,7 @@ private fun BookInfoHeader(
                             bookUrl = book.bookUrl,
                             onError = onNetworkCoverLoadError,
                             modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
                             showLoadingPlaceholder = sharedCoverKey == null,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -1307,15 +1319,38 @@ private fun BookInfoHeader(
                                 )
                             }
                         }
-                        AnimatedTextLine(
-                            text = stringResource(R.string.author_show, book.realAuthor),
-                            style = LegadoTheme.typography.bodyLarge,
-                            color = LegadoTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.combinedClickable(
-                                onClick = { onAuthorClick(false) },
-                                onLongClick = { onAuthorClick(true) }
+                        val authorLabels = remember(book.realAuthor) {
+                            book.realAuthor.split(",", "，")
+                                .map { it.trim() }
+                                .filter { it.isNotBlank() }
+                        }
+                        if (authorLabels.size > 1) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                authorLabels.forEach { author ->
+                                    AnimatedTextLine(
+                                        text = author,
+                                        style = LegadoTheme.typography.bodyLarge,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.combinedClickable(
+                                            onClick = { onAuthorClick(false) },
+                                            onLongClick = { onAuthorClick(true) }
+                                        )
+                                    )
+                                }
+                            }
+                        } else {
+                            AnimatedTextLine(
+                                text = stringResource(R.string.author_show, book.realAuthor),
+                                style = LegadoTheme.typography.bodyLarge,
+                                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.combinedClickable(
+                                    onClick = { onAuthorClick(false) },
+                                    onLongClick = { onAuthorClick(true) }
+                                )
                             )
-                        )
+                        }
                         AnimatedTextLine(
                             text = stringResource(R.string.origin_show, book.originName),
                             style = LegadoTheme.typography.labelMedium,
@@ -2059,15 +2094,25 @@ private fun BookInfoDialogs(
         onDismiss = { onIntent(BookInfoIntent.DismissDialog) },
         content = { d ->
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val previewAspectRatio = remember(d.path) {
+                    mutableFloatStateOf(5f / 7f)
+                }
                 CoilBookCover(
                     name = state.book?.name,
                     author = state.book?.author,
                     path = d.path,
                     sourceOrigin = state.book?.origin,
                     ignoreUseDefaultCover = true,
+                    contentScale = ContentScale.Fit,
+                    onImageAspectRatio = { ratio ->
+                        if (ratio.isFinite() && ratio > 0f) {
+                            previewAspectRatio.floatValue = ratio
+                        }
+                    },
                     modifier = Modifier
-                        .heightIn(max = 420.dp)
                         .fillMaxWidth(0.6f)
+                        .heightIn(max = 420.dp)
+                        .aspectRatio(previewAspectRatio.floatValue)
                 )
             }
         }

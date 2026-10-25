@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed as staggeredItemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -168,7 +168,7 @@ fun ExploreShowScreen(
         }
     }
     val listState = rememberLazyListState()
-    val gridState = rememberLazyGridState()
+    val gridState = rememberLazyStaggeredGridState()
     val defaultScrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val scrollBehavior = embeddedScrollBehavior ?: defaultScrollBehavior
     val isGridMode = state.layoutState == 1
@@ -293,7 +293,7 @@ fun ExploreShowScreen(
                 label = "LayoutCrossfade"
             ) { isGrid ->
                 if (isGrid) {
-                    LazyVerticalGrid(
+                    LazyVerticalStaggeredGrid(
                         state = gridState,
                         modifier = Modifier
                             .fillMaxSize()
@@ -302,7 +302,7 @@ fun ExploreShowScreen(
                                     hazeState
                                 )
                             ),
-                        columns = GridCells.Fixed(state.gridCount),
+                        columns = StaggeredGridCells.Fixed(state.gridCount),
                         contentPadding = PaddingValues(
                             top = paddingValues.calculateTopPadding() + 12.dp,
                             bottom = paddingValues.calculateBottomPadding() + if (embeddedInMain) 108.dp else 12.dp,
@@ -310,9 +310,9 @@ fun ExploreShowScreen(
                             end = 12.dp
                         ),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalItemSpacing = 8.dp
                     ) {
-                        itemsIndexed(
+                        staggeredItemsIndexed(
                             items = books,
                             key = { index, item -> "${item.book.bookUrl}:$index" }
                         ) { index, item ->
@@ -343,7 +343,7 @@ fun ExploreShowScreen(
                         }
 
                         if (showLoadMoreFooter) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
+                            item(span = StaggeredGridItemSpan.FullLine) {
                                 ExploreShowLoadMoreFooter(
                                     state = state,
                                     onRetry = { onIntent(ExploreShowIntent.LoadMore) },
@@ -559,6 +559,7 @@ fun ExploreBookGridItem(
         modifier = modifier.padding(4.dp),
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = sharedCoverKey
+        sharedCoverKey = sharedCoverKey,
+        adaptCoverAspectRatio = true,
     )
 }

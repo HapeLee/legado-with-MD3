@@ -62,6 +62,8 @@ class CoverConfigViewModel(
                 updateSettings { it.copy(showStroke = intent.value) }
             is CoverConfigIntent.SetUseDefaultColor ->
                 updateSettings { it.copy(useDefaultColor = intent.value) }
+            is CoverConfigIntent.SetRestrictCoverRatio ->
+                updateSettings { it.copy(restrictCoverRatio = intent.value) }
             is CoverConfigIntent.SetInfoOrientation ->
                 updateSettings { it.copy(infoOrientation = intent.value) }
             is CoverConfigIntent.SetExploreFilterState ->

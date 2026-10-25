@@ -593,6 +593,8 @@
     <string name="r_author">作者规则（author）</string>
     <string name="rule_book_kind">分类规则（kind）</string>
     <string name="rule_book_intro">简介规则（intro）</string>
+    <string name="cover_restrict_ratio">限制封面比例</string>
+    <string name="cover_restrict_ratio_summary">开启时封面固定 5:7；关闭后按原图比例缩放且不裁剪</string>
     <string name="rule_cover_url">封面规则（coverUrl）</string>
     <string name="rule_last_chapter">最新章节规则（lastChapter）</string>
     <string name="rule_word_count">字数规则（wordCount）</string>

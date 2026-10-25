@@ -623,6 +623,8 @@
     <string name="r_author">Author(author)</string>
     <string name="rule_book_kind">Classification(kind)</string>
     <string name="rule_book_intro">Intro(intro)</string>
+    <string name="cover_restrict_ratio">Restrict cover ratio</string>
+    <string name="cover_restrict_ratio_summary">Keep covers at 5:7; when off, covers scale by their original aspect ratio without cropping</string>
     <string name="rule_cover_url">CoverUrl(coverUrl)</string>
     <string name="rule_last_chapter">Last chapter(lastChapter)</string>
     <string name="rule_word_count">Word count(wordCount)</string>

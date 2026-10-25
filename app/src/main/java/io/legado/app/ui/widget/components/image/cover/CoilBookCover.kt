@@ -260,6 +260,7 @@ fun CoilBookCover(
     radius: Dp = 4.dp,
     modifier: Modifier = Modifier.width(64.dp),
     sourceOrigin: String? = null,
+    contentScale: ContentScale = ContentScale.Crop,
     // 本书 bookUrl + 书架本地优先标志，透传给 BookCoverImage
     bookUrl: String? = null,
     preferCache: Boolean = false,
@@ -385,6 +386,7 @@ fun CoilBookCover(
                 .fillMaxSize()
                 .then(contentBlurModifier),
             sourceOrigin = sourceOrigin,
+            contentScale = contentScale,
             bookUrl = bookUrl,
             preferCache = preferCache,
             ignoreUseDefaultCover = ignoreUseDefaultCover,
