@@ -1,19 +1,16 @@
 package io.legado.app.feature.explore
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.Label
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.runtime.Composable
@@ -34,11 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import io.legado.app.R
+import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.ui.book.explore.ExploreShowIntent
 import io.legado.app.ui.book.explore.ExploreShowRouteScreen
-import io.legado.app.ui.book.explore.ExploreShowSheet
 import io.legado.app.ui.book.explore.ExploreShowViewModel
+import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.main.explore.ExploreIntent
 import io.legado.app.ui.main.explore.ExploreRouteScreen
 import io.legado.app.ui.main.explore.ExploreViewModel
@@ -49,13 +47,14 @@ import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuLazy
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -97,11 +96,30 @@ fun ExploreMainRoute(
                         }
                     }
             }
-            // 只保留能下发意图的实例，不再订阅它的 uiState：列表/网格状态由 sheet 自己呈现。
             val activeViewModel: ExploreShowViewModel? = currentKind?.let {
                 koinViewModel(key = exploreKindKey(it))
             }
-            var sourceMenuExpanded by remember { mutableStateOf(false) }
+            // 只订阅列表/网格布局字段供书源 sheet 呈现，其余状态仍由各分类界面自己持有。
+            val showViewModel = activeViewModel
+            val showLayoutMode = if (showViewModel != null) {
+                showViewModel.uiState
+                    .map { it.layoutState }
+                    .distinctUntilChanged()
+                    .collectAsStateWithLifecycle(showViewModel.uiState.value.layoutState)
+                    .value
+            } else {
+                null
+            }
+            val showGridCount = if (showViewModel != null) {
+                showViewModel.uiState
+                    .map { it.gridCount }
+                    .distinctUntilChanged()
+                    .collectAsStateWithLifecycle(showViewModel.uiState.value.gridCount)
+                    .value
+            } else {
+                3
+            }
+            var sourceSheetVisible by remember { mutableStateOf(false) }
             var kindSheetVisible by remember { mutableStateOf(false) }
 
             AppScaffold(
@@ -114,21 +132,23 @@ fun ExploreMainRoute(
                             subtitle = selectedSource?.name,
                             scrollBehavior = scrollBehavior,
                             actions = {
-                                val contentViewModel = activeViewModel
-                                if (contentViewModel != null) {
-                                    // 列表 / 网格切换与列数都收进同一个 sheet，顶栏只留一个入口。
-                                    TopBarActionButton(
-                                        onClick = {
-                                            contentViewModel.onIntent(
-                                                ExploreShowIntent.ShowSheet(
-                                                    ExploreShowSheet.GridCount
-                                                )
+                                // 等价旧版长按书源的「搜索」：打开搜索界面并只使用当前书源搜索。
+                                TopBarActionButton(
+                                    onClick = {
+                                        selectedSource?.let { source ->
+                                            onOpenSearch(
+                                                SearchScope(
+                                                    BookSourcePart(
+                                                        bookSourceUrl = source.url,
+                                                        bookSourceName = source.name
+                                                    )
+                                                ).toString()
                                             )
-                                        },
-                                        imageVector = Icons.Default.GridView,
-                                        contentDescription = stringResource(R.string.a11y_switch_layout),
-                                    )
-                                }
+                                        }
+                                    },
+                                    imageVector = AppIcons.Search,
+                                    contentDescription = stringResource(R.string.search),
+                                )
                                 // 模式切换放在右侧第二个，最右是书源 / 分组入口。
                                 TopBarActionButton(
                                     onClick = {
@@ -141,32 +161,11 @@ fun ExploreMainRoute(
                                     imageVector = Icons.Filled.SwapHoriz,
                                     contentDescription = stringResource(R.string.explore_source_list),
                                 )
-                                Box {
-                                    TopBarActionButton(
-                                        onClick = { sourceMenuExpanded = true },
-                                        imageVector = AppIcons.MoreVert,
-                                        contentDescription = stringResource(R.string.explore_select_source),
-                                    )
-                                    RoundDropdownMenuLazy(
-                                        expanded = sourceMenuExpanded,
-                                        onDismissRequest = { sourceMenuExpanded = false },
-                                    ) { dismiss ->
-                                        items(state.sources, key = { it.url }) { source ->
-                                            RoundDropdownMenuItem(
-                                                text = source.name,
-                                                isSelected = source.url == state.selectedSourceUrl,
-                                                onClick = {
-                                                    dismiss()
-                                                    viewModel.onIntent(
-                                                        ExploreMainIntent.SelectSource(
-                                                            source.url
-                                                        )
-                                                    )
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
+                                TopBarActionButton(
+                                    onClick = { sourceSheetVisible = true },
+                                    imageVector = AppIcons.MoreVert,
+                                    contentDescription = stringResource(R.string.explore_select_source),
+                                )
                             },
                             bottomContent = {
                                 if (kinds.isNotEmpty()) {
@@ -304,6 +303,23 @@ fun ExploreMainRoute(
                     }
                 }
             }
+            ExploreSourceSelectSheet(
+                show = sourceSheetVisible,
+                sources = state.sources,
+                selectedSourceUrl = state.selectedSourceUrl,
+                layoutMode = showLayoutMode,
+                gridCount = showGridCount,
+                onDismissRequest = { sourceSheetVisible = false },
+                onSelectSource = { source ->
+                    viewModel.onIntent(ExploreMainIntent.SelectSource(source.url))
+                },
+                onToggleLayout = {
+                    showViewModel?.onIntent(ExploreShowIntent.ToggleLayout)
+                },
+                onSaveGridCount = { count ->
+                    showViewModel?.onIntent(ExploreShowIntent.SaveGridCount(count))
+                },
+            )
             ExploreKindSelectSheet(
                 show = kindSheetVisible,
                 sourceUrl = state.selectedSourceUrl,
