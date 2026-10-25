@@ -74,6 +74,7 @@ import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -568,7 +569,15 @@ fun AiCastDialogSheet(
                         subtitle = stringResource(R.string.ai_cast_request_hint),
                     )
                     if (requestOpen) {
-                        AiCastSection {
+                        AiCastSection(
+                            // 整段原样复制：分配错了要拿去喂别的 AI 改提示词，手抄不现实
+                            trailing = {
+                                SmallOutlinedButton(
+                                    onClick = { context.sendToClip(progress.request) },
+                                    text = stringResource(R.string.ai_cast_copy_request),
+                                )
+                            },
+                        ) {
                             val requestScroll = rememberScrollState()
                             Box(
                                 modifier = Modifier
@@ -964,16 +973,21 @@ private fun AiCastSection(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (title != null) {
+            // 只有 trailing 没有标题时也要出来：否则挂上去的按钮（如「复制」）会被静默丢掉
+            if (title != null || trailing != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    AppText(
-                        text = title,
-                        modifier = Modifier.weight(1f),
-                        style = LegadoTheme.typography.titleSmall,
-                        color = LegadoTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (title == null) {
+                        Box(modifier = Modifier.weight(1f))
+                    } else {
+                        AppText(
+                            text = title,
+                            modifier = Modifier.weight(1f),
+                            style = LegadoTheme.typography.titleSmall,
+                            color = LegadoTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     trailing?.invoke(this)
                 }
             }
