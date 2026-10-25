@@ -132,23 +132,25 @@ fun VideoPlayerScreen(
                     }
                 }
             }
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 88.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Button(
-                    onClick = { viewModel.onIntent(VideoPlayerIntent.PreviousChapter) },
-                    enabled = state.chapterIndex > 0,
+            if (state.chapterCount > 1) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 88.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Text(text = stringResource(R.string.previous_chapter))
-                }
-                Button(
-                    onClick = { viewModel.onIntent(VideoPlayerIntent.NextChapter) },
-                    enabled = state.chapterCount > 0 && state.chapterIndex < state.chapterCount - 1,
-                ) {
-                    Text(text = stringResource(R.string.next_chapter))
+                    Button(
+                        onClick = { viewModel.onIntent(VideoPlayerIntent.PreviousChapter) },
+                        enabled = state.chapterIndex > 0,
+                    ) {
+                        Text(text = stringResource(R.string.previous_chapter))
+                    }
+                    Button(
+                        onClick = { viewModel.onIntent(VideoPlayerIntent.NextChapter) },
+                        enabled = state.chapterIndex < state.chapterCount - 1,
+                    ) {
+                        Text(text = stringResource(R.string.next_chapter))
+                    }
                 }
             }
         }
