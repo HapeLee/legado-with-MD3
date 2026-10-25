@@ -180,6 +180,8 @@ fun BookInfoScreen(
     groups: ImmutableList<BookGroup>,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
+    onSearch: (String) -> Unit = {},
+    onOpenExplore: (title: String, url: String) -> Unit = { _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -243,6 +245,7 @@ fun BookInfoScreen(
             sharedCoverKey = sharedCoverKey,
             backdropStyle = backdropStyle,
             usesDefaultCover = usesDefaultCover,
+            onOpenExplore = onOpenExplore,
             onNetworkCoverLoadError = { failedCoverPath ->
                 if (failedCoverPath == state.book?.coverPath) {
                     usesDefaultCover = true
@@ -288,6 +291,7 @@ private fun BookInfoScreenContent(
     backdropStyle: BookInfoBackdropStyle?,
     usesDefaultCover: Boolean,
     onNetworkCoverLoadError: (String?) -> Unit,
+    onOpenExplore: (title: String, url: String) -> Unit,
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val scrollBehavior = if (isMiuix) {
@@ -398,6 +402,7 @@ private fun BookInfoScreenContent(
                                         highlightedTags = state.highlightedTags,
                                         kindLabels = state.kindLabels,
                                         groupNames = state.groupNames,
+                                        onKindClick = onOpenExplore,
                                         onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
                                         onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
                                         onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
@@ -683,6 +688,7 @@ private fun BookInfoLockedContent(
                 highlightedTags = emptyList(),
                 kindLabels = emptyList(),
                 groupNames = null,
+                onKindClick = { _, _ -> },
                 onCoverClick = {},
                 onCoverLongClick = {},
                 onAuthorClick = {},
@@ -1143,6 +1149,7 @@ private fun BookInfoHeader(
     highlightedTags: List<HighlightedTag>,
     kindLabels: List<String>,
     groupNames: String?,
+    onKindClick: (String, String) -> Unit,
     onCoverClick: () -> Unit,
     onCoverLongClick: () -> Unit,
     onAuthorClick: (Boolean) -> Unit,
@@ -1349,11 +1356,15 @@ private fun BookInfoHeader(
                         items = kindLabels,
                         key = { index, label -> "kind-$index-$label" }
                     ) { _, label ->
+                        val parts = label.split("|", limit = 2)
+                        val labelText = parts[0]
+                        val labelUrl = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
                         TextCard(
-                            text = label,
+                            text = labelText,
                             textStyle = LegadoTheme.typography.labelLargeEmphasized,
                             backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
                             contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                            onClick = labelUrl?.let { url -> { onKindClick(labelText, url) } },
                         )
                     }
                 }

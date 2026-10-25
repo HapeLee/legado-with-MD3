@@ -263,6 +263,12 @@ fun BookInfoRouteScreen(
             .collectAsStateWithLifecycle(persistentListOf<BookGroup>()).value,
         onIntent = viewModel::onIntent,
         onBack = { onBack() },
+        onOpenExplore = { title, url ->
+            val origin = uiState.book?.origin
+            if (!origin.isNullOrBlank()) {
+                onNavigateToExploreShow(title, origin, url)
+            }
+        },
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         sharedCoverKey = sharedCoverKey,
