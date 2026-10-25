@@ -28,8 +28,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -1142,7 +1140,6 @@ private fun BookInfoOverflowMenu(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BookInfoHeader(
     book: BookInfoBookUi,
@@ -1319,38 +1316,15 @@ private fun BookInfoHeader(
                                 )
                             }
                         }
-                        val authorLabels = remember(book.realAuthor) {
-                            book.realAuthor.split(",", "，")
-                                .map { it.trim() }
-                                .filter { it.isNotBlank() }
-                        }
-                        if (authorLabels.size > 1) {
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                authorLabels.forEach { author ->
-                                    AnimatedTextLine(
-                                        text = author,
-                                        style = LegadoTheme.typography.bodyLarge,
-                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.combinedClickable(
-                                            onClick = { onAuthorClick(false) },
-                                            onLongClick = { onAuthorClick(true) }
-                                        )
-                                    )
-                                }
-                            }
-                        } else {
-                            AnimatedTextLine(
-                                text = stringResource(R.string.author_show, book.realAuthor),
-                                style = LegadoTheme.typography.bodyLarge,
-                                color = LegadoTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.combinedClickable(
-                                    onClick = { onAuthorClick(false) },
-                                    onLongClick = { onAuthorClick(true) }
-                                )
+                        AnimatedTextLine(
+                            text = stringResource(R.string.author_show, book.realAuthor),
+                            style = LegadoTheme.typography.bodyLarge,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.combinedClickable(
+                                onClick = { onAuthorClick(false) },
+                                onLongClick = { onAuthorClick(true) }
                             )
-                        }
+                        )
                         AnimatedTextLine(
                             text = stringResource(R.string.origin_show, book.originName),
                             style = LegadoTheme.typography.labelMedium,
