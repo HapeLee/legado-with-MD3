@@ -596,6 +596,7 @@
     <string name="rule_cover_url">封面规则（coverUrl）</string>
     <string name="rule_last_chapter">最新章节规则（lastChapter）</string>
     <string name="rule_word_count">字数规则（wordCount）</string>
+    <string name="rule_explore_page_param">翻页参数（pageParam）</string>
     <string name="book_url_pattern">书籍 URL 正则（bookUrlPattern）</string>
     <string name="rule_book_info_init">预处理规则（bookInfoInit）</string>
     <string name="rule_toc_url">目录 URL 规则（tocUrl）</string>
@@ -743,6 +744,7 @@
     <string name="skip_next">下一个</string>
     <string name="music">音乐</string>
     <string name="audio">音频</string>
+    <string name="video">视频</string>
     <string name="web_file">网页文件</string>
     <string name="is_enable">启用</string>
     <string name="enable_js">启用 JavaScript</string>

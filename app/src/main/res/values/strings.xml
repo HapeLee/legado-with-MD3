@@ -626,6 +626,7 @@
     <string name="rule_cover_url">CoverUrl(coverUrl)</string>
     <string name="rule_last_chapter">Last chapter(lastChapter)</string>
     <string name="rule_word_count">Word count(wordCount)</string>
+    <string name="rule_explore_page_param">Page param(pageParam)</string>
     <string name="book_url_pattern">Book URL pattern(bookUrlPattern)</string>
     <string name="rule_book_info_init">Book info init(bookInfoInit)</string>
     <string name="rule_toc_url">TOC URL(tocUrl)</string>
@@ -773,6 +774,7 @@
     <string name="skip_next">Next</string>
     <string name="music">Music</string>
     <string name="audio">Audio</string>
+    <string name="video">Video</string>
     <string name="web_file">Web file</string>
     <string name="is_enable">Enable</string>
     <string name="enable_js">Enable js</string>

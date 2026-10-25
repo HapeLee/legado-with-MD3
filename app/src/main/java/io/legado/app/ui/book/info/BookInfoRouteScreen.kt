@@ -29,6 +29,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isVideo
 import io.legado.app.help.security.BiometricUnlockLauncher
 import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.login.SourceLoginJsExtensions
@@ -65,6 +66,7 @@ fun BookInfoRouteScreen(
     onOpenReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
     onOpenMangaReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
     onOpenAudioPlay: (bookUrl: String, inBookshelf: Boolean) -> Unit = { _, _ -> },
+    onOpenVideoPlayer: (bookUrl: String, inBookshelf: Boolean) -> Unit = { _, _ -> },
     onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
     onOpenCharacterDetail: (bookUrl: String, characterId: String?) -> Unit = { _, _ -> },
@@ -139,6 +141,11 @@ fun BookInfoRouteScreen(
 
                 is BookInfoEffect.OpenReader -> {
                     when {
+                        effect.book.isVideo -> onOpenVideoPlayer(
+                            effect.book.bookUrl,
+                            effect.inBookshelf
+                        )
+
                         effect.book.isAudio -> onOpenAudioPlay(
                             effect.book.bookUrl,
                             effect.inBookshelf
@@ -256,6 +263,12 @@ fun BookInfoRouteScreen(
             .collectAsStateWithLifecycle(persistentListOf<BookGroup>()).value,
         onIntent = viewModel::onIntent,
         onBack = { onBack() },
+        onOpenExplore = { title, url ->
+            val origin = uiState.book?.origin
+            if (!origin.isNullOrBlank()) {
+                onNavigateToExploreShow(title, origin, url)
+            }
+        },
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         sharedCoverKey = sharedCoverKey,

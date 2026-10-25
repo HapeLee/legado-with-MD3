@@ -180,6 +180,13 @@ data class MainRouteAudioPlay(
 ) : MainRoute
 
 @Serializable
+data class MainRouteVideoPlay(
+    val bookUrl: String? = null,
+    val inBookshelf: Boolean = true,
+    val sharedCoverKey: String? = null,
+) : MainRoute
+
+@Serializable
 data class MainRouteSearch(
     val key: String?,
     val scopeRaw: String? = null
@@ -365,6 +372,7 @@ object MainRouteConst {
     const val ROUTE_READ_BOOK = "book/read"
     const val ROUTE_READ_MANGA = "book/read/manga"
     const val ROUTE_AUDIO_PLAY = "book/read/audio"
+    const val ROUTE_VIDEO_PLAY = "book/read/video"
     const val ROUTE_SEARCH = "search"
     const val ROUTE_SEARCH_CONTENT = "book/searchContent"
     const val ROUTE_BOOK_INFO = "book/info"

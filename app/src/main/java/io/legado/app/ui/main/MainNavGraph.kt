@@ -135,6 +135,7 @@ import io.legado.app.ui.book.toc.TocRouteScreen
 import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.TxtRuleRouteScreen
 import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewRouteScreen
+import io.legado.app.ui.book.video.VideoPlayerScreen
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
@@ -542,7 +543,14 @@ fun MainActivity.mainEntryProvider(
                 onNavigateToRoute(MainRouteBookCacheManage)
             },
             onOpenBookshelfBook = { book, sharedCoverKey ->
-                if (book.isAudio) {
+                if (book.isVideo) {
+                    onNavigateToRoute(
+                        MainRouteVideoPlay(
+                            bookUrl = book.bookUrl,
+                            sharedCoverKey = sharedCoverKey
+                        )
+                    )
+                } else if (book.isAudio) {
                     onNavigateToRoute(
                         MainRouteAudioPlay(
                             bookUrl = book.bookUrl,
@@ -1165,6 +1173,36 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
+    entry<MainRouteVideoPlay> { route ->
+        val bookUrl = route.bookUrl
+        if (bookUrl == null) {
+            LaunchedEffect(Unit) { onNavigateBack() }
+        } else {
+            // 与阅读器入口一致：未授权时播放器不会被组合，也就不会初始化或显示书名/章节名
+            PrivateReadGate(
+                bookUrl = bookUrl,
+                onExit = {
+                    if (backStack.size > 1) {
+                        MainNavigator.navigateBack(
+                            this@mainEntryProvider,
+                            backStack,
+                            navRouteTracker,
+                            fromRoute = route,
+                        )
+                    } else {
+                        backStack.clear()
+                        backStack.add(MainRouteHome)
+                    }
+                },
+                onOpenLocalPasswordSettings = {
+                    onNavigateToRoute(MainRouteSettingsPrivate)
+                },
+            ) {
+                VideoPlayerScreen(bookUrl = bookUrl, onBack = onNavigateBack)
+            }
+        }
+    }
+
     entry<MainRouteReadAloudPlayer>(metadata = modalOverlayEntryMetadata()) {
         LaunchedEffect(Unit) {
             ReadAloudPlayerOverlayBus.request(PlaybackCapsuleState(source = PlaybackCapsuleSource.ReadAloud))
@@ -1457,6 +1495,14 @@ fun MainActivity.mainEntryProvider(
                             bookUrl,
                             route.openRequestId
                         ),
+                    )
+                )
+            },
+            onOpenVideoPlayer = { bookUrl, inBookshelf ->
+                onNavigateToRoute(
+                    MainRouteVideoPlay(
+                        bookUrl = bookUrl,
+                        inBookshelf = inBookshelf,
                     )
                 )
             },

@@ -27,6 +27,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -183,6 +185,8 @@ fun BookInfoScreen(
     groups: ImmutableList<BookGroup>,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
+    onSearch: (String) -> Unit = {},
+    onOpenExplore: (title: String, url: String) -> Unit = { _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -246,6 +250,7 @@ fun BookInfoScreen(
             sharedCoverKey = sharedCoverKey,
             backdropStyle = backdropStyle,
             usesDefaultCover = usesDefaultCover,
+            onOpenExplore = onOpenExplore,
             onNetworkCoverLoadError = { failedCoverPath ->
                 if (failedCoverPath == state.book?.coverPath) {
                     usesDefaultCover = true
@@ -291,6 +296,7 @@ private fun BookInfoScreenContent(
     backdropStyle: BookInfoBackdropStyle?,
     usesDefaultCover: Boolean,
     onNetworkCoverLoadError: (String?) -> Unit,
+    onOpenExplore: (title: String, url: String) -> Unit,
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val scrollBehavior = if (isMiuix) {
@@ -401,9 +407,10 @@ private fun BookInfoScreenContent(
                                         highlightedTags = state.highlightedTags,
                                         kindLabels = state.kindLabels,
                                         groupNames = state.groupNames,
+                                        onKindClick = onOpenExplore,
                                         onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
                                         onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
-                                        onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
+                                        onAuthorClick = { longClick, author -> onIntent(BookInfoIntent.AuthorClick(longClick, author)) },
                                         onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
                                         onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
                                         onNetworkCoverLoadError = {
@@ -687,9 +694,10 @@ private fun BookInfoLockedContent(
                 highlightedTags = emptyList(),
                 kindLabels = emptyList(),
                 groupNames = null,
+                onKindClick = { _, _ -> },
                 onCoverClick = {},
                 onCoverLongClick = {},
-                onAuthorClick = {},
+                onAuthorClick = { _, _ -> },
                 onBookNameClick = {},
                 onOriginClick = {},
                 onNetworkCoverLoadError = {},
@@ -1141,15 +1149,17 @@ private fun BookInfoOverflowMenu(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BookInfoHeader(
     book: BookInfoBookUi,
     highlightedTags: List<HighlightedTag>,
     kindLabels: List<String>,
     groupNames: String?,
+    onKindClick: (String, String) -> Unit,
     onCoverClick: () -> Unit,
     onCoverLongClick: () -> Unit,
-    onAuthorClick: (Boolean) -> Unit,
+    onAuthorClick: (Boolean, String?) -> Unit,
     onBookNameClick: (Boolean) -> Unit,
     onOriginClick: () -> Unit,
     onNetworkCoverLoadError: () -> Unit,
@@ -1322,15 +1332,38 @@ private fun BookInfoHeader(
                                 )
                             }
                         }
-                        AnimatedTextLine(
-                            text = stringResource(R.string.author_show, book.realAuthor),
-                            style = LegadoTheme.typography.bodyLarge,
-                            color = LegadoTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.combinedClickable(
-                                onClick = { onAuthorClick(false) },
-                                onLongClick = { onAuthorClick(true) }
+                        val authorLabels = remember(book.realAuthor) {
+                            book.realAuthor.split(",", "，")
+                                .map { it.trim() }
+                                .filter { it.isNotBlank() }
+                        }
+                        if (authorLabels.size > 1) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                authorLabels.forEach { author ->
+                                    AnimatedTextLine(
+                                        text = author,
+                                        style = LegadoTheme.typography.bodyLarge,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.combinedClickable(
+                                            onClick = { onAuthorClick(false, author) },
+                                            onLongClick = { onAuthorClick(true, author) }
+                                        )
+                                    )
+                                }
+                            }
+                        } else {
+                            AnimatedTextLine(
+                                text = stringResource(R.string.author_show, book.realAuthor),
+                                style = LegadoTheme.typography.bodyLarge,
+                                color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.combinedClickable(
+                                    onClick = { onAuthorClick(false, null) },
+                                    onLongClick = { onAuthorClick(true, null) }
+                                )
                             )
-                        )
+                        }
                         AnimatedTextLine(
                             text = stringResource(R.string.origin_show, book.originName),
                             style = LegadoTheme.typography.labelMedium,
@@ -1374,11 +1407,15 @@ private fun BookInfoHeader(
                         items = kindLabels,
                         key = { index, label -> "kind-$index-$label" }
                     ) { _, label ->
+                        val parts = label.split("|", limit = 2)
+                        val labelText = parts[0]
+                        val labelUrl = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
                         TextCard(
-                            text = label,
+                            text = labelText,
                             textStyle = LegadoTheme.typography.labelLargeEmphasized,
                             backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
                             contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                            onClick = labelUrl?.let { url -> { onKindClick(labelText, url) } },
                         )
                     }
                 }
