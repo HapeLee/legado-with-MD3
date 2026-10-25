@@ -1,49 +1,49 @@
 {
-  "tag_name": "3.26.18",
-  "name": "Release 3.26.18",
-  "body": "### 更新内容\n\n* 咕噜噜\n* feat: 阅读界面优化\n* feat: 添加阻止书源打开选项 在搞基里\n* feat:优化听书界面\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻 (#2447)\n* fix(test): 移除ReadBookViewModel多余空行以满足2748行架构测试上限\n* fix(readaloud): 修复HTTP朗读在当前章未完成时抢占预合成导致的断流卡顿\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻\n* fix(reader): keep word spaces at line end when wrapping English text\n* feat: 呱\n* feat: 呱\n* feat: 优化\n* feat: 优化\n* fix(read-aloud): preserve pause across paragraph resume\n* fix(reader): 角色胶囊与整串标点不再把一行顶出空洞\n* fix(read-aloud): 段落间隔不再重建本章合成任务，纯符号段不再被跳过\n\n## What's Changed\n* fix(read-aloud): 段落间隔不再重建本章合成任务；reader: 胶囊与标点串不再顶出空洞 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2443\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻 by @ISuuuu in https://github.com/HapeLee/legado-with-MD3/pull/2447\n* fix(readaloud): 修复HTTP朗读在当前章未完成时抢占预合成导致的断流卡顿 by @ISuuuu in https://github.com/HapeLee/legado-with-MD3/pull/2448\n\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.16...3.26.18",
+  "tag_name": "3.26.19",
+  "name": "Release 3.26.19",
+  "body": "### 更新内容\n\n* feat(explore): 发现顶栏改为单书源搜索入口，书源选择改为可筛选底部 sheet\n* fix(manga): 整章拼接超长条漫图拆段渲染，修复 Constraints 尺寸溢出崩溃 (#2475)\n* fix(book-info): 简介纯文本分支二次转义，& < > 显示为 HTML 实体 (#2466)\n* fix(reader): 开标点连同 Latin 单词整体换行，不再拆词\n* fix(book-info): useweb 简介经 FrameLayout 容器承载，规避 Vulkan drawVk 原生崩溃 (#2468)\n* feat(highlight): 高亮规则新增边框样式，预览渲染修复与示例句加长\n* feat(book-info): 关联书籍移至简介下方，支持无规则时按作者搜索兜底\n* fix(reader): 关联书籍位置\n* fix: 关联书籍调试之\n* opt: memory usage (#2478)\n* perf(reader): 排版宽度链路去装箱，字形级宽度改 FloatArray\n* feat(cast): AI 分配角色带上「过了几章没开口」与下一章开头 (#2476)\n* fix(cast): 人物档案读取被夹到 80 个，配音页与人物列表少列人 (#2474)\n* feat(ui): 搜索/发现/详情页封面按原图宽高比自适应（默认固定 5:7，设置可关） (#2473)\n* reader: cut pagination peak memory (streaming, merge, buffer release)\n* feat(reader): 可配置 AI 对话入口携带阅读上下文 & 修复换图标入口 IME 双重避让 (#2472)\n* feat(reader): add configurable AI chat entry with reading context\n* fix(ui): prevent double IME avoidance on alternate launcher activities\n* feat(reader): 阅读主题列表弹窗（网格/流式/管理/导入导出） (#2465)\n* feat(reader): 分页失败原因带上异常 message 与栈顶\n* fix(reader): 引号跨段时角色气泡不再把整章排版打挂\n* feat: 内置词典规则更新为汉典并清理失效的百度汉语规则 (#2450)\n* 咕噜噜\n* feat: 阅读界面优化\n* feat: 添加阻止书源打开选项 在搞基里\n* feat:优化听书界面\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻 (#2447)\n* fix(test): 移除ReadBookViewModel多余空行以满足2748行架构测试上限\n* fix(readaloud): 修复HTTP朗读在当前章未完成时抢占预合成导致的断流卡顿\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻\n\n## What's Changed\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻 by @ISuuuu in https://github.com/HapeLee/legado-with-MD3/pull/2447\n* fix(readaloud): 修复HTTP朗读在当前章未完成时抢占预合成导致的断流卡顿 by @ISuuuu in https://github.com/HapeLee/legado-with-MD3/pull/2448\n* feat: 内置词典规则更新为汉典并清理失效的百度汉语规则 by @xuezhi123go in https://github.com/HapeLee/legado-with-MD3/pull/2450\n* fix(reader): 引号跨段时角色气泡不再把整章排版打挂 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2461\n* feat(reader): 阅读主题列表弹窗（网格/流式/管理/导入导出） by @qmzd111 in https://github.com/HapeLee/legado-with-MD3/pull/2465\n* fix&feat: add configurable AI chat entry with reading context & fix IME double avoidance by @izumisagirii in https://github.com/HapeLee/legado-with-MD3/pull/2472\n* feat(ui): 搜索/发现/详情页封面按原图宽高比自适应（默认固定 5:7，设置可关） by @shaoyangz1 in https://github.com/HapeLee/legado-with-MD3/pull/2473\n* fix(cast): 人物档案读取被夹到 80 个，配音页与人物列表少列人 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2474\n* feat(cast): AI 分配角色带上「过了几章没开口」与下一章开头 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2476\n* opt: memory usage by @izumisagirii in https://github.com/HapeLee/legado-with-MD3/pull/2478\n\n## New Contributors\n* @xuezhi123go made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2450\n* @qmzd111 made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2465\n* @izumisagirii made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2472\n* @shaoyangz1 made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2473\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.17...3.26.19",
   "prerelease": false,
-  "created_at": "2026-10-20T17:33:24Z",
+  "created_at": "2026-10-25T05:40:58Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.18/legado-3.26.18-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.19/legado-3.26.19-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-20T17:47:42Z",
+      "created_at": "2026-10-25T05:56:45Z",
       "download_count": 0,
-      "id": 660036961,
-      "name": "legado-3.26.18-arm64-v8a.apk",
+      "id": 674236717,
+      "name": "legado-3.26.19-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/660036961"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/674236717"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.18/legado-3.26.18-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.19/legado-3.26.19-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-20T17:47:42Z",
+      "created_at": "2026-10-25T05:56:45Z",
       "download_count": 0,
-      "id": 660036958,
-      "name": "legado-3.26.18-armeabi-v7a.apk",
+      "id": 674236716,
+      "name": "legado-3.26.19-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/660036958"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/674236716"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.18/legado-3.26.18.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.19/legado-3.26.19.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-20T17:47:42Z",
+      "created_at": "2026-10-25T05:56:45Z",
       "download_count": 0,
-      "id": 660036957,
-      "name": "legado-3.26.18.apk",
+      "id": 674236718,
+      "name": "legado-3.26.19.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/660036957"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/674236718"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.18/mapping.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.19/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-10-20T17:47:42Z",
+      "created_at": "2026-10-25T05:56:45Z",
       "download_count": 0,
-      "id": 660036959,
+      "id": 674236719,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/660036959"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/674236719"
     }
   ]
 }
