@@ -367,23 +367,33 @@ object CastSpeechOverlay {
             val own = markers[paragraphIndex]
             for ((offset, ch) in text.withIndex()) {
                 val isAnchor = tracker.feed(ch)
+                // 收口判据与 CastMarkers.CastQuoteTracker.feed 同规则：栈顶等这个闭号就收，
+                // 只作闭符号的字符在更下面那层等着也要一路弹过去。内层引号等不到自己的闭号
+                // （台词里混进的英文撇号）时不弹，这份镜像栈会永久卡住，之后的台词只能靠章末
+                // 兜底收口，范围就错了。
                 val top = stack.lastOrNull()
-                if (top != null && ch == top.close) {
-                    stack.removeAt(stack.size - 1)
-                    val located = top.marker
+                val closingAt = when {
+                    top != null && ch == top.close -> stack.size - 1
+                    ch in CastMarkers.CloseOnlyQuotes -> stack.indexOfLast { it.close == ch }
+                    else -> -1
+                }
+                if (closingAt >= 0) {
+                    while (stack.size - 1 > closingAt) stack.removeAt(stack.size - 1)
+                    val closing = stack.removeAt(stack.size - 1)
+                    val located = closing.marker
                     if (located != null) {
                         val (markerParagraph, markerIndex) = located
                         claimed[markerParagraph][markerIndex] = true
                         val marker = markers[markerParagraph][markerIndex]
                         spans += Span(
-                            start = top.at,
+                            start = closing.at,
                             // 闭引号算进台词里：整段划分会正好在闭引号处切开范围，
                             // 不含它就等于把句尾那个引号丢给下一个说话人
                             end = base + offset + 1,
                             name = marker.name,
                             pool = marker.voicePoolLabel,
-                            ordinal = top.ordinal,
-                            effect = effectsOfQuote[top.ordinal].orEmpty(),
+                            ordinal = closing.ordinal,
+                            effect = effectsOfQuote[closing.ordinal].orEmpty(),
                         )
                     }
                     continue
