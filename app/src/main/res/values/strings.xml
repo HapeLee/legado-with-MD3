@@ -775,6 +775,10 @@
     <string name="music">Music</string>
     <string name="audio">Audio</string>
     <string name="video">Video</string>
+    <string name="source_not_found">Book source not found</string>
+    <string name="chapter_not_found">Chapter not found</string>
+    <string name="video_link_not_found">No video URL resolved</string>
+    <string name="video_play_failed">Playback failed</string>
     <string name="web_file">Web file</string>
     <string name="is_enable">Enable</string>
     <string name="enable_js">Enable js</string>

@@ -3,7 +3,10 @@ package io.legado.app.ui.book.video
 import android.content.pm.ActivityInfo
 import android.view.View
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -149,23 +152,28 @@ fun VideoPlayerScreen(
                 }
             }
             if (state.chapterCount > 1) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 88.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                AnimatedVisibility(
+                    visible = controlsVisible.value,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 ) {
-                    Button(
-                        onClick = { viewModel.onIntent(VideoPlayerIntent.PreviousChapter) },
-                        enabled = state.chapterIndex > 0,
+                    Row(
+                        modifier = Modifier.padding(bottom = 88.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Text(text = stringResource(R.string.previous_chapter))
-                    }
-                    Button(
-                        onClick = { viewModel.onIntent(VideoPlayerIntent.NextChapter) },
-                        enabled = state.chapterIndex < state.chapterCount - 1,
-                    ) {
-                        Text(text = stringResource(R.string.next_chapter))
+                        Button(
+                            onClick = { viewModel.onIntent(VideoPlayerIntent.PreviousChapter) },
+                            enabled = state.chapterIndex > 0,
+                        ) {
+                            Text(text = stringResource(R.string.previous_chapter))
+                        }
+                        Button(
+                            onClick = { viewModel.onIntent(VideoPlayerIntent.NextChapter) },
+                            enabled = state.chapterIndex < state.chapterCount - 1,
+                        ) {
+                            Text(text = stringResource(R.string.next_chapter))
+                        }
                     }
                 }
             }

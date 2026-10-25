@@ -668,6 +668,10 @@
     <string name="music">音樂</string>
     <string name="audio">音頻</string>
     <string name="video">影片</string>
+    <string name="source_not_found">書源不存在</string>
+    <string name="chapter_not_found">章節不存在</string>
+    <string name="video_link_not_found">未取得影片連結</string>
+    <string name="video_play_failed">播放失敗</string>
     <string name="is_enable">啟用</string>
     <string name="enable_js">啟用 JS</string>
     <string name="load_with_base_url">加載 BaseUrl</string>

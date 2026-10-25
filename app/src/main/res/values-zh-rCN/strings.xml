@@ -745,6 +745,10 @@
     <string name="music">音乐</string>
     <string name="audio">音频</string>
     <string name="video">视频</string>
+    <string name="source_not_found">书源不存在</string>
+    <string name="chapter_not_found">章节不存在</string>
+    <string name="video_link_not_found">未获取到视频链接</string>
+    <string name="video_play_failed">播放失败</string>
     <string name="web_file">网页文件</string>
     <string name="is_enable">启用</string>
     <string name="enable_js">启用 JavaScript</string>

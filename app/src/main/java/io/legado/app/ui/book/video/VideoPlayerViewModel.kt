@@ -6,6 +6,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
@@ -54,7 +55,6 @@ class VideoPlayerViewModel(
 
     private val _effects = MutableSharedFlow<VideoPlayerEffect>(
         extraBufferCapacity = 16,
-        replay = 1,
     )
     val effects = _effects.asSharedFlow()
 
@@ -69,7 +69,11 @@ class VideoPlayerViewModel(
                 override fun onPlayerError(error: PlaybackException) {
                     saveProgress()
                     _uiState.update { it.copy(error = error.message, isLoading = false) }
-                    _effects.tryEmit(VideoPlayerEffect.ShowToast(error.message ?: "播放失败"))
+                    _effects.tryEmit(
+                        VideoPlayerEffect.ShowToast(
+                            error.message ?: appCtx.getString(R.string.video_play_failed)
+                        )
+                    )
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
@@ -98,12 +102,13 @@ class VideoPlayerViewModel(
         if (!shouldInitialize(initializedBookUrl, bookUrl)) return
         initializedBookUrl = bookUrl
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
             val loaded = bookRepository.getBook(bookUrl) ?: run {
-                _effects.tryEmit(VideoPlayerEffect.ShowToast("书籍不存在"))
+                failLoad(appCtx.getString(R.string.book_not_found))
                 return@launch
             }
             val source = bookSourceRepository.getBookSource(loaded.origin) ?: run {
-                _effects.tryEmit(VideoPlayerEffect.ShowToast("书源不存在"))
+                failLoad(appCtx.getString(R.string.source_not_found))
                 return@launch
             }
             book = loaded
@@ -121,7 +126,7 @@ class VideoPlayerViewModel(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    _effects.tryEmit(VideoPlayerEffect.ShowToast(e.message ?: "获取详情失败"))
+                    failLoad(e.message ?: appCtx.getString(R.string.error_get_book_info))
                     return@launch
                 }
             }
@@ -141,7 +146,7 @@ class VideoPlayerViewModel(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    _effects.tryEmit(VideoPlayerEffect.ShowToast(e.message ?: "获取目录失败"))
+                    failLoad(e.message ?: appCtx.getString(R.string.error_load_toc))
                     return@launch
                 }
             }
@@ -179,7 +184,15 @@ class VideoPlayerViewModel(
                 _uiState.update { it.copy(isFullscreen = !it.isFullscreen) }
             }
             is VideoPlayerIntent.Retry -> {
-                loadChapter(chapterIndex, book?.durChapterPos?.toLong() ?: 0L)
+                // init 中途失败（详情/目录没拿到、章节计数为 0）时重跑 init；
+                // 正文加载失败只重试当前章节。
+                val url = initializedBookUrl
+                if (url != null && _uiState.value.chapterCount == 0) {
+                    initializedBookUrl = null
+                    init(url)
+                } else {
+                    loadChapter(chapterIndex, book?.durChapterPos?.toLong() ?: 0L)
+                }
             }
         }
     }
@@ -192,20 +205,17 @@ class VideoPlayerViewModel(
             saveProgress()
             _uiState.update { it.copy(isLoading = true, error = null) }
             val chapter = bookRepository.getChapter(currentBook.bookUrl, index) ?: run {
-                _uiState.update { it.copy(isLoading = false) }
-                _effects.tryEmit(VideoPlayerEffect.ShowToast("章节不存在"))
+                failLoad(appCtx.getString(R.string.chapter_not_found))
                 return@launch
             }
             val source = bookSourceRepository.getBookSource(sourceUrl) ?: run {
-                _uiState.update { it.copy(isLoading = false) }
-                _effects.tryEmit(VideoPlayerEffect.ShowToast("书源不存在"))
+                failLoad(appCtx.getString(R.string.source_not_found))
                 return@launch
             }
             try {
                 val content = WebBook.getContentAwait(source, currentBook, chapter)
                 if (content.isBlank()) {
-                    _uiState.update { it.copy(isLoading = false) }
-                    _effects.tryEmit(VideoPlayerEffect.ShowToast("未获取到视频链接"))
+                    failLoad(appCtx.getString(R.string.video_link_not_found))
                 } else {
                     chapterIndex = index
                     _uiState.update { it.copy(chapterTitle = chapter.title, chapterIndex = index) }
@@ -223,10 +233,14 @@ class VideoPlayerViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
-                _effects.tryEmit(VideoPlayerEffect.ShowToast(e.message ?: "加载失败"))
+                failLoad(e.message ?: appCtx.getString(R.string.load_failed))
             }
         }
+    }
+
+    private fun failLoad(message: String) {
+        _uiState.update { it.copy(isLoading = false, error = message) }
+        _effects.tryEmit(VideoPlayerEffect.ShowToast(message))
     }
 
     private fun saveProgress() {
