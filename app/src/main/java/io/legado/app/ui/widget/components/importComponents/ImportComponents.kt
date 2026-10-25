@@ -237,7 +237,7 @@ fun <T> BatchImportDialog(
                 ) {
                     itemsIndexed(
                         currentState.items,
-                        key = { _, item -> item.data.hashCode() }
+                        key = { _, item -> item.entryId }
                     ) { index, itemWrapper ->
                         ImportItemRow(
                             title = itemTitle(itemWrapper.data),
