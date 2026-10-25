@@ -76,6 +76,12 @@ class ExploreShowViewModel(
     private var sourceUrl: String? = null
     private var exploreUrl: String? = null
     private var initialExploreUrl: String? = null
+
+    /**
+     * 非空表示当前地址是标签/分类跳转传入的运行时地址，用该参数名兜底翻页；
+     * 书源规则地址（含 `{{}}`、`<...>`、`,{}` 语法）不适用，保持原样交给 AnalyzeUrl。
+     */
+    private var pageParamName: String? = null
     private var initialized = false
     private var loadJob: kotlinx.coroutines.Job? = null
     private var loadGeneration = 0L
@@ -268,6 +274,7 @@ class ExploreShowViewModel(
         sourceUrl = incomingSourceUrl
         initialExploreUrl = incomingExploreUrl
         exploreUrl = incomingExploreUrl
+        pageParamName = null
         _pageState.value = ExplorePageState(
             currentPage = 1,
             canJumpPage = AnalyzeUrl.supportsPageSelection(incomingExploreUrl),
@@ -288,9 +295,26 @@ class ExploreShowViewModel(
             viewModelScope.launch {
                 loadKinds(incomingSourceUrl)
             }
+        } else {
+            resolvePageParamFallback(incomingSourceUrl, incomingExploreUrl)
         }
 
         loadMore(isRefresh = true)
+    }
+
+    /**
+     * 标签/分类跳转传入的是运行时地址，没有页码规则；地址不含规则语法时，
+     * 用书源配置的翻页参数名（[ExploreRule.pageParam]，缺省 page）兜底翻页并放开跳页。
+     * 翻页能力在跳转进来时解析一次，翻页过程不再逐页查库。
+     */
+    private fun resolvePageParamFallback(sourceUrl: String, url: String) {
+        if (!url.supportsParamPagination()) return
+        viewModelScope.launch {
+            val param = bookSourceRepository.getBookSource(sourceUrl)
+                ?.getExploreRule()?.pageParam?.takeIf { it.isNotBlank() } ?: "page"
+            pageParamName = param
+            _pageState.update { it.copy(canJumpPage = true) }
+        }
     }
 
     private suspend fun loadKinds(sourceUrl: String) {
@@ -302,6 +326,8 @@ class ExploreShowViewModel(
         loadJob?.cancel()
         _kindState.update { it.copy(selectedKindTitle = kind.title) }
         exploreUrl = kind.url
+        // kind.url 是书源规则地址，页码由规则语法处理，参数兜底不适用
+        pageParamName = null
         _pageState.value = ExplorePageState(
             currentPage = 1,
             canJumpPage = AnalyzeUrl.supportsPageSelection(kind.url),
@@ -406,12 +432,11 @@ class ExploreShowViewModel(
     }
 
     private suspend fun fetchPage(sourceUrl: String, url: String?, generation: Long) {
+        val pageParam = pageParamName
         kotlin.runCatching {
-            val pageParam = bookSourceRepository.getBookSourceSync(sourceUrl)
-                ?.getExploreRule()?.pageParam?.takeIf { it.isNotBlank() } ?: "page"
             exploreBooksUseCase.execute(
                 sourceUrl,
-                url.withPageParam(page, pageParam),
+                if (pageParam != null) url.withPageParam(page, pageParam) else url,
                 args = null,
                 page
             )
@@ -475,11 +500,12 @@ class ExploreShowViewModel(
 }
 
 /**
- * 书源分页地址通常带 `{{page}}` 占位符；从标签/分类跳转过来的运行时地址没有占位符，
- * 这里兜底成 `page=N` 查询参数，让这类地址也能翻页。已含占位符的地址原样返回。
+ * 运行时地址的参数兜底翻页：替换已有的同名查询参数，否则追加 `param=page`，fragment 保持原位。
+ * 只对不带页码规则的运行时地址生效，见 [supportsParamPagination]；第一页按原地址请求，
+ * 不改变书源直入时的首次请求。
  */
-private fun String?.withPageParam(page: Int, param: String): String? {
-    if (this.isNullOrBlank() || contains("{{page}}")) return this
+internal fun String?.withPageParam(page: Int, param: String): String? {
+    if (this == null || page <= 1 || !supportsParamPagination()) return this
     val hashIndex = indexOf('#')
     val base = if (hashIndex >= 0) substring(0, hashIndex) else this
     val fragment = if (hashIndex >= 0) substring(hashIndex) else ""
@@ -490,6 +516,19 @@ private fun String?.withPageParam(page: Int, param: String): String? {
         base + (if (base.contains('?')) "&" else "?") + "$param=$page"
     }
     return withPage + fragment
+}
+
+/**
+ * 判断地址是否为不携带页码规则的运行时地址。含 `{{...}}` 内嵌规则、`<...>` 页码规则或
+ * `,{...}` URL 选项的字符串都是书源规则，改写会破坏 AnalyzeUrl 的解析（如把 POST 选项
+ * 追加成非法 JSON 导致 method/body/charset 全部丢弃），必须原样放行。
+ */
+internal fun String?.supportsParamPagination(): Boolean {
+    if (this.isNullOrBlank()) return false
+    if (contains("{{") || contains("}}")) return false
+    if (contains('<')) return false
+    if (contains(",{")) return false
+    return true
 }
 
 /** 发现页分页状态：[canJumpPage] 表示当前书源的分页地址支持直接指定页码。 */
