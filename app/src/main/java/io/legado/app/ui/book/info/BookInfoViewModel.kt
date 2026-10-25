@@ -413,7 +413,7 @@ class BookInfoViewModel(
             BookInfoIntent.SaveVariable -> saveVariableDraft()
             BookInfoIntent.DismissDialog -> dismissDialog()
             is BookInfoIntent.MenuAction -> handleMenuAction(intent.action)
-            is BookInfoIntent.AuthorClick -> onAuthorClick(intent.longClick)
+            is BookInfoIntent.AuthorClick -> onAuthorClick(intent.longClick, intent.author)
             is BookInfoIntent.BookNameClick -> onBookNameClick(intent.longClick)
             BookInfoIntent.OriginClick -> onOriginClick()
             BookInfoIntent.DismissAppLogSheet -> {
@@ -1635,14 +1635,14 @@ class BookInfoViewModel(
         }
     }
 
-    private fun onAuthorClick(longClick: Boolean) {
+    private fun onAuthorClick(longClick: Boolean, author: String? = null) {
         val book = currentBook ?: return
         emitEffect(
             BookInfoEffect.RunSourceCallback(
                 event = if (longClick) SourceCallBack.LONG_CLICK_AUTHOR else SourceCallBack.CLICK_AUTHOR,
                 source = bookSource,
                 book = book.uiCopy(),
-                action = BookInfoCallbackAction.Search(book.author),
+                action = BookInfoCallbackAction.Search(author ?: book.author),
             )
         )
     }

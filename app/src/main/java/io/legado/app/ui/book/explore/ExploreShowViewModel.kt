@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.domain.gateway.CoverSettingsGateway
@@ -57,6 +58,7 @@ class ExploreShowViewModel(
     private val resolveBookshelfConflictUseCase: ResolveBookshelfConflictUseCase,
     private val localPreferencesRepository: SettingsRepository,
     private val coverSettingsGateway: CoverSettingsGateway,
+    private val bookSourceRepository: BookSourceRepository,
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
@@ -405,7 +407,14 @@ class ExploreShowViewModel(
 
     private suspend fun fetchPage(sourceUrl: String, url: String?, generation: Long) {
         kotlin.runCatching {
-            exploreBooksUseCase.execute(sourceUrl, url, args = null, page)
+            val pageParam = bookSourceRepository.getBookSourceSync(sourceUrl)
+                ?.getExploreRule()?.pageParam?.takeIf { it.isNotBlank() } ?: "page"
+            exploreBooksUseCase.execute(
+                sourceUrl,
+                url.withPageParam(page, pageParam),
+                args = null,
+                page
+            )
         }.onSuccess { result ->
             if (generation != loadGeneration) return@onSuccess
             val currentList = _rawBooks.value
@@ -463,6 +472,24 @@ class ExploreShowViewModel(
     private fun emitEffect(effect: ExploreShowEffect) {
         _effects.tryEmit(effect)
     }
+}
+
+/**
+ * 书源分页地址通常带 `{{page}}` 占位符；从标签/分类跳转过来的运行时地址没有占位符，
+ * 这里兜底成 `page=N` 查询参数，让这类地址也能翻页。已含占位符的地址原样返回。
+ */
+private fun String?.withPageParam(page: Int, param: String): String? {
+    if (this.isNullOrBlank() || contains("{{page}}")) return this
+    val hashIndex = indexOf('#')
+    val base = if (hashIndex >= 0) substring(0, hashIndex) else this
+    val fragment = if (hashIndex >= 0) substring(hashIndex) else ""
+    val pattern = Regex("([?&])${Regex.escape(param)}=\\d+")
+    val withPage = if (pattern.containsMatchIn(base)) {
+        pattern.replace(base) { "${it.groupValues[1]}$param=$page" }
+    } else {
+        base + (if (base.contains('?')) "&" else "?") + "$param=$page"
+    }
+    return withPage + fragment
 }
 
 /** 发现页分页状态：[canJumpPage] 表示当前书源的分页地址支持直接指定页码。 */
