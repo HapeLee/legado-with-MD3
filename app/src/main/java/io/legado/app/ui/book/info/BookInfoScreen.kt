@@ -1270,6 +1270,7 @@ private fun BookInfoHeader(
                             bookUrl = book.bookUrl,
                             onError = onNetworkCoverLoadError,
                             modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
                             showLoadingPlaceholder = sharedCoverKey == null,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -2131,15 +2132,25 @@ private fun BookInfoDialogs(
         onDismiss = { onIntent(BookInfoIntent.DismissDialog) },
         content = { d ->
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val previewAspectRatio = remember(d.path) {
+                    mutableFloatStateOf(5f / 7f)
+                }
                 CoilBookCover(
                     name = state.book?.name,
                     author = state.book?.author,
                     path = d.path,
                     sourceOrigin = state.book?.origin,
                     ignoreUseDefaultCover = true,
+                    contentScale = ContentScale.Fit,
+                    onImageAspectRatio = { ratio ->
+                        if (ratio.isFinite() && ratio > 0f) {
+                            previewAspectRatio.floatValue = ratio
+                        }
+                    },
                     modifier = Modifier
-                        .heightIn(max = 420.dp)
                         .fillMaxWidth(0.6f)
+                        .heightIn(max = 420.dp)
+                        .aspectRatio(previewAspectRatio.floatValue)
                 )
             }
         }
