@@ -182,7 +182,6 @@ fun BookInfoScreen(
     groups: ImmutableList<BookGroup>,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
-    onSearch: (String) -> Unit = {},
     onOpenExplore: (title: String, url: String) -> Unit = { _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -1382,9 +1381,7 @@ private fun BookInfoHeader(
                         items = kindLabels,
                         key = { index, label -> "kind-$index-$label" }
                     ) { _, label ->
-                        val parts = label.split("|", limit = 2)
-                        val labelText = parts[0]
-                        val labelUrl = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
+                        val (labelText, labelUrl) = parseKindTagLabel(label)
                         TextCard(
                             text = labelText,
                             textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -2465,4 +2462,19 @@ private fun EventInfoCard(
             )
         }
     }
+}
+
+/**
+ * kind 标签支持「显示名|链接」编码，链接必须是 http(s) 绝对地址或根相对路径；
+ * 后半段不像链接时整段按普通文本展示，避免存量 kind 里合法的 `|` 被误拆或误跳转。
+ */
+internal fun parseKindTagLabel(label: String): Pair<String, String?> {
+    val separator = label.indexOf('|')
+    if (separator <= 0 || separator == label.lastIndex) return label to null
+    val text = label.substring(0, separator)
+    val url = label.substring(separator + 1).trim()
+    val isLink = url.startsWith("http://", ignoreCase = true) ||
+        url.startsWith("https://", ignoreCase = true) ||
+        url.startsWith("/")
+    return if (isLink) text to url else label to null
 }
