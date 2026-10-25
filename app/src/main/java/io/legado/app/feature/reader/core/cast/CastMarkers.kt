@@ -25,6 +25,15 @@ object CastMarkers {
     )
 
     /**
+     * 只当闭符号、从不作开符号的那几个引号（`” ’ 」 』`）。开闭同字的那两个不在此列。
+     *
+     * 用场见 [CastQuoteTracker.feed]：栈顶等的是别的闭符号时，只有这一列的字符才允许把栈弹到
+     * 真正等它的那层；开闭同字的仍先按「闭合栈顶」处理，语义不变。
+     */
+    val CloseOnlyQuotes: Set<Char> =
+        QuotePairs.map { it.second }.toSet() - QuotePairs.map { it.first }.toSet()
+
+    /**
      * [QuotePairs] 里「单引号」那一类的**开**字符（弯单引号 `‘` 与直单引号 `'`）。
      *
      * 中文排版用单引号包内心独白（心声），双引号/方头引号（`“ ” 「 」 『 』`）是正常台词，
@@ -45,10 +54,16 @@ object CastMarkers {
      * 章级「分配锚点引号」跟踪器：注入侧与测量侧各持一个实例、喂同一字符流、同规则，
      * 保证 ordinal 一致。规则：
      * - 收到与栈顶期望闭引号相同的字符 → 出栈（嵌套引号优先按闭合处理）；
-     * - 收到某对引号的开字符 → 入栈；栈深 < [maxDepth] 时该引号为「分配锚点」，
-     *   占用下一个 ordinal（深度 0 = 一级对话；更深的嵌套引号不加胶囊）。
+     * - 收到 [CloseOnlyQuotes] 的闭字符、但栈顶等的是别的闭号 → 一路弹到真正等它的那层。
+     *   内层那个引号本来就没有自己的闭符号（台词里混进的英文撇号、源文漏了半边引号），
+     *   不弹就等于让栈永久满着：本章之后每个开引号都进不了锚点，整章只剩下第一条胶囊；
+     * - 收到引号对的开字符：只有栈空（深度 0）才算「分配锚点」、才占用下一个 ordinal；更深的嵌套引号
+     *   （『我是「处刑人」』『让我「心潮澎湃」』这类）说的还是同一个人，既不发胶囊也不排号。
+     *   入栈仍然要做，否则嵌套那句的闭引号会去关外层那句，收口就错了。
+     *
+     * 认领台词范围的那份镜像栈在 [io.legado.app.help.readaloud.cast.CastSpeechOverlay.spansOf]，改这里要同改。
      */
-    class CastQuoteTracker(private val maxDepth: Int = 2) {
+    class CastQuoteTracker() {
         private val stack = ArrayDeque<Frame>()
         private var nextOrdinal = 0
         private var position = 0
@@ -84,12 +99,26 @@ object CastMarkers {
                 }
                 return false
             }
+            if (ch in CloseOnlyQuotes) {
+                val depth = stack.indexOfLast { it.close == ch }
+                if (depth >= 0) {
+                    while (stack.size > depth + 1) stack.removeLast()
+                    val frame = stack.removeLast()
+                    if (frame.ordinal >= 0) {
+                        lastClosedSpan = ClosedSpan(frame.ordinal, frame.openAt, at + 1)
+                    }
+                }
+                return false
+            }
             for ((open, close) in QuotePairs) {
                 if (ch == open) {
-                    val cast = stack.size < maxDepth
-                    stack.addLast(Frame(close, if (cast) nextOrdinal else -1, at))
-                    if (cast) lastCastOrdinal = nextOrdinal++
-                    return cast
+                    val numbered = stack.isEmpty()
+                    stack.addLast(Frame(close, if (numbered) nextOrdinal else -1, at))
+                    if (numbered) {
+                        lastCastOrdinal = nextOrdinal++
+                        return true
+                    }
+                    return false
                 }
             }
             return false
