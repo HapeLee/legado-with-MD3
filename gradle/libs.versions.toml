@@ -9,7 +9,7 @@ adaptiveNavigation = "1.3.0"
 # "最高版本获胜"静默覆盖，整线落到缺少修复的 1.13.0-alpha01。
 # 1.13.0-beta01 才包含 "LayoutNode not found in RectList"（b/549552303）的完整修复，
 # 升级时请把 composeTrain 下的全部构件一起升。
-composeTrain = "1.13.0-beta01"
+composeTrain = "1.13.0-beta02"
 biometric = "1.4.0-alpha07"
 coilCompose = "3.6.3"
 composeBom = "2026.09.00"
