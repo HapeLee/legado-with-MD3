@@ -1,5 +1,7 @@
 package io.legado.app.ui.book.explore
 
+import io.legado.app.ui.main.MainRouteExploreShow
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -7,6 +9,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExploreShowPageParamTest {
+
+    @Test
+    fun legacySavedRoutesKeepSourceRulePagination() {
+        val route = Json.decodeFromString<MainRouteExploreShow>(
+            """{"title":"List","sourceUrl":"source","exploreUrl":"https://example.com/list"}""",
+        )
+        assertFalse(route.usePageParamFallback)
+    }
+
+    @Test
+    fun tagRoutesKeepTheirPaginationModeAfterRestoration() {
+        val route = MainRouteExploreShow("Tag", "source", "/tag", usePageParamFallback = true)
+        assertEquals(route, Json.decodeFromString<MainRouteExploreShow>(Json.encodeToString(route)))
+    }
 
     // withPageParam
 
@@ -70,6 +86,26 @@ class ExploreShowPageParamTest {
     fun skipsUrlWithOptions() {
         val url = """https://example.com/list,{"method":"POST","body":"type=1&page=2"}"""
         assertEquals(url, url.withPageParam(3, "page"))
+    }
+
+    @Test
+    fun skipsJavascriptRules() {
+        val url = "@js: 'https://example.com/list?page=' + page"
+        assertFalse(url.supportsParamPagination())
+        assertEquals(url, url.withPageParam(2, "page"))
+    }
+
+    @Test
+    fun skipsOptionsWithWhitespaceAfterComma() {
+        val url = """https://example.com/list, {"method":"POST","body":"type=1"}"""
+        assertFalse(url.supportsParamPagination())
+        assertEquals(url, url.withPageParam(2, "page"))
+    }
+
+    @Test
+    fun skipsOptionsWithNewlineAfterComma() {
+        val url = "https://example.com/list,\n{\"headers\":{\"Referer\":\"https://example.com\"}}"
+        assertEquals(url, url.withPageParam(2, "page"))
     }
 
     @Test

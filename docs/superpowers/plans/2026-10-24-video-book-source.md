@@ -264,7 +264,7 @@ IdVideo -> GroupNameInfo(groupName, context.getString(R.string.video))
 ```kotlin
 @Language("sql")
 val insertBookGroupVideoSql = """
-    insert into book_groups(groupId, groupName, 'order', show) 
+    insert into book_groups(groupId, groupName, 'order', show)
     select ${BookGroup.IdVideo}, '视频', -24, 0
     where not exists (select * from book_groups where groupId = ${BookGroup.IdVideo})
 """.trimIndent()
@@ -285,7 +285,7 @@ fun flowVideo(): Flow<List<Book>>
 ```kotlin
 @Query(
     """
-    SELECT 
+    SELECT
         bookUrl,
         name,
         author,
@@ -309,7 +309,7 @@ fun flowVideo(): Flow<List<Book>>
         kind,
         customTag,
         wordCount
-    FROM books 
+    FROM books
     WHERE type & ${BookType.video} > 0
     AND $PUBLIC_BOOK_FILTER
     """

@@ -68,7 +68,7 @@ fun BookInfoRouteScreen(
     onOpenAudioPlay: (bookUrl: String, inBookshelf: Boolean) -> Unit = { _, _ -> },
     onOpenVideoPlayer: (bookUrl: String, inBookshelf: Boolean) -> Unit = { _, _ -> },
     onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
-    onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
+    onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?, usePageParamFallback: Boolean) -> Unit = { _, _, _, _ -> },
     onOpenCharacterDetail: (bookUrl: String, characterId: String?) -> Unit = { _, _ -> },
     onOpenCharacterNetwork: (bookUrl: String) -> Unit = {},
     onOpenCharacterList: (bookUrl: String) -> Unit = {},
@@ -196,7 +196,7 @@ fun BookInfoRouteScreen(
                 }
 
                 is BookInfoEffect.NavigateToExploreShow -> {
-                    onNavigateToExploreShow(effect.title, effect.sourceUrl, effect.exploreUrl)
+                    onNavigateToExploreShow(effect.title, effect.sourceUrl, effect.exploreUrl, false)
                 }
 
                 is BookInfoEffect.OpenCharacterDetail -> {
@@ -266,7 +266,7 @@ fun BookInfoRouteScreen(
         onOpenExplore = { title, url ->
             val origin = uiState.book?.origin
             if (!origin.isNullOrBlank()) {
-                onNavigateToExploreShow(title, origin, url)
+                onNavigateToExploreShow(title, origin, url, true)
             }
         },
         sharedTransitionScope = sharedTransitionScope,

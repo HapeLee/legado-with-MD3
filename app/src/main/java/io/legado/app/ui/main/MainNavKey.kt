@@ -257,6 +257,8 @@ data class MainRouteExploreShow(
     val title: String?,
     val sourceUrl: String,
     val exploreUrl: String?,
+    /** 仅详情页标签跳转的运行时地址启用；书源规则入口保持原有解析。 */
+    val usePageParamFallback: Boolean = false,
 ) : MainRoute
 
 @Serializable

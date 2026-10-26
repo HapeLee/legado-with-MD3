@@ -2,18 +2,14 @@ package io.legado.app.ui.book.video
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.VideoContentRepository
 import io.legado.app.help.exoplayer.ExoPlayerHelper
-import io.legado.app.model.analyzeRule.AnalyzeUrl
-import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.getMediaItem
-import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +44,9 @@ private val videoProgressScope = CoroutineScope(SupervisorJob() + Dispatchers.IO
 class VideoPlayerViewModel(
     private val bookRepository: BookRepository,
     private val bookSourceRepository: BookSourceRepository,
+    private val videoContentRepository: VideoContentRepository,
+    private val playerFactory: () -> Player = { ExoPlayerHelper.createHttpExoPlayer(appCtx) },
+    private val progressScope: CoroutineScope = videoProgressScope,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VideoPlayerUiState())
@@ -59,7 +58,7 @@ class VideoPlayerViewModel(
     val effects = _effects.asSharedFlow()
 
     private val exoPlayerLazy = lazy {
-        ExoPlayerHelper.createHttpExoPlayer(appCtx).apply {
+        playerFactory().apply {
             addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     if (isPlaying) pausedByLifecycle = false
@@ -89,7 +88,7 @@ class VideoPlayerViewModel(
         }
     }
 
-    val exoPlayer: ExoPlayer by exoPlayerLazy
+    val exoPlayer: Player by exoPlayerLazy
 
     private var book: Book? = null
     private var bookSourceUrl: String? = null
@@ -97,6 +96,7 @@ class VideoPlayerViewModel(
     private var initializedBookUrl: String? = null
     private var pausedByLifecycle = false
     private var loadJob: Job? = null
+    private var progressJob: Job? = null
 
     fun init(bookUrl: String) {
         if (!shouldInitialize(initializedBookUrl, bookUrl)) return
@@ -122,7 +122,7 @@ class VideoPlayerViewModel(
             // AddToBookshelfUseCase 只插书，书架直开视频书时没有详情和目录，需在这里补齐。
             if (loaded.tocUrl.isEmpty()) {
                 try {
-                    WebBook.getBookInfoAwait(source, loaded)
+                    videoContentRepository.loadBookInfo(source, loaded)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -134,7 +134,7 @@ class VideoPlayerViewModel(
             if (chapterCount == 0) {
                 try {
                     val oldBook = loaded.copy()
-                    val chapters = WebBook.getChapterListAwait(source, loaded).getOrThrow()
+                    val chapters = videoContentRepository.loadChapters(source, loaded)
                     if (oldBook.bookUrl == loaded.bookUrl) {
                         bookRepository.update(loaded)
                     } else {
@@ -167,7 +167,10 @@ class VideoPlayerViewModel(
             }
             is VideoPlayerIntent.Pause -> {
                 pausedByLifecycle = true
-                exoPlayer.pause()
+                if (exoPlayerLazy.isInitialized()) {
+                    exoPlayer.pause()
+                    saveProgress()
+                }
             }
             is VideoPlayerIntent.SeekTo -> {
                 exoPlayer.seekTo(clampSeekPosition(intent.positionMs, exoPlayer.duration))
@@ -213,19 +216,12 @@ class VideoPlayerViewModel(
                 return@launch
             }
             try {
-                val content = WebBook.getContentAwait(source, currentBook, chapter)
-                if (content.isBlank()) {
+                val mediaItem = videoContentRepository.loadMedia(source, currentBook, chapter)
+                if (mediaItem == null) {
                     failLoad(appCtx.getString(R.string.video_link_not_found))
                 } else {
                     chapterIndex = index
                     _uiState.update { it.copy(chapterTitle = chapter.title, chapterIndex = index) }
-                    val mediaItem: MediaItem = AnalyzeUrl(
-                        content,
-                        source = source,
-                        ruleData = currentBook,
-                        chapter = chapter,
-                        coroutineContext = kotlin.coroutines.EmptyCoroutineContext,
-                    ).getMediaItem()
                     exoPlayer.setMediaItem(mediaItem, positionMs)
                     exoPlayer.prepare()
                     if (!pausedByLifecycle) exoPlayer.play()
@@ -252,9 +248,12 @@ class VideoPlayerViewModel(
         val position = exoPlayer.currentPosition.coerceAtLeast(0L)
         val chapterTitle = _uiState.value.chapterTitle.takeIf { it.isNotBlank() }
         currentBook.durChapterPos = position.toInt()
-        videoProgressScope.launch {
+        val bookUrl = currentBook.bookUrl
+        val previousSave = progressJob
+        progressJob = progressScope.launch {
+            previousSave?.join()
             bookRepository.upVideoPlayProgress(
-                bookUrl = currentBook.bookUrl,
+                bookUrl = bookUrl,
                 index = index,
                 position = position.toInt(),
                 chapterTitle = chapterTitle,

@@ -34,6 +34,7 @@ import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
 import io.legado.app.data.repository.BookSourceCheckRepository
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.VideoContentRepository
 import io.legado.app.data.repository.BookmarkRepository
 import io.legado.app.data.repository.BookshelfAutoGroupPromptRepository
 import io.legado.app.data.repository.BookshelfAutoGroupRepository
@@ -358,6 +359,7 @@ val appModule = module {
     singleOf(::ReadRecordRepository)
     single<HomeDashboardGateway> { HomeDashboardRepository(get(), get()) }
     singleOf(::BookRepository)
+    singleOf(::VideoContentRepository)
     singleOf(::BookImportRepository)
     singleOf(::BookGroupRepository)
     singleOf(::BookmarkRepository)
@@ -770,7 +772,7 @@ val appModule = module {
         )
     }
     viewModelOf(::MangaReaderViewModel)
-    viewModelOf(::VideoPlayerViewModel)
+    viewModel { VideoPlayerViewModel(get(), get(), get()) }
     viewModelOf(::ReaderSessionViewModel)
     viewModel {
         ReadBookViewModel(
