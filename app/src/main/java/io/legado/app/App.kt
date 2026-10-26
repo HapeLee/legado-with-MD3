@@ -183,6 +183,12 @@ class App : Application(), SingletonImageLoader.Factory {
         // 普通 Context，强转 RhinoContext 会直接崩溃并把该线程永久污染。
         // 这里改为在 onCreate 中同步执行；RhinoWrapFactory 注册同理要早于任何脚本执行。
         initRhino()
+        // 必须同步执行且早于任何 Activity：MainActivity.upVersion() 会把
+        // LocalConfig.versionCode 直接写成当前包版本号，一旦它先跑，
+        // DefaultData.upVersion() 里的「versionCode < appInfo.versionCode」就永远不成立，
+        // 默认数据迁移（词典/TTS/RSS/TXT目录规则）会被整体跳过。
+        // 这里只做版本比较与标记，真正的数据导入仍在内部异步执行。
+        DefaultData.upVersion()
         Coroutine.async {
             get<BackupSettingsGateway>().settings
                 .map {
@@ -214,7 +220,6 @@ class App : Application(), SingletonImageLoader.Factory {
                 .autoClear(false)
                 .enableLogger(BuildConfig.DEBUG || otherGateway.currentSettings.recordLog)
                 .setLogger(EventLogger())
-            DefaultData.upVersion()
             AppFreezeMonitor.init(this@App)
             DispatchersMonitor.init()
             URL.setURLStreamHandlerFactory(ObsoleteUrlFactory(okHttpClient))
