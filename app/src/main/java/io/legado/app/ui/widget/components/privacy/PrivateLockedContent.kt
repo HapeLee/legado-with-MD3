@@ -116,6 +116,7 @@ fun PrivateLockedCover(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     onImageAspectRatio: ((Float) -> Unit)? = null,
+    onImageSize: ((Int, Int) -> Unit)? = null,
 ) {
     val transitionRadius = rememberSharedCoverTransitionRadius(
         sharedCoverKey = sharedCoverKey,
@@ -174,6 +175,7 @@ fun PrivateLockedCover(
             showLoadingPlaceholder = false,
             sharedCoverKey = sharedCoverKey,
             onImageAspectRatio = onImageAspectRatio,
+            onImageSize = onImageSize,
             requestBuilder = {
                 allowHardware(false)
                 size(coverSize)

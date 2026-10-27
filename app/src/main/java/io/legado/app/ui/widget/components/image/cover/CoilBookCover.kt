@@ -130,6 +130,7 @@ fun BookCoverImage(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     requestBuilder: ImageRequest.Builder.() -> Unit = {},
     onImageAspectRatio: ((Float) -> Unit)? = null,
+    onImageSize: ((Int, Int) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val isNight = LegadoTheme.isDark
@@ -248,6 +249,10 @@ fun BookCoverImage(
                         // 后完成的一方会覆盖先到的正确比例。
                         finalPath?.let { cacheCoverAspectRatio(it, aspectRatio) }
                         onImageAspectRatio?.invoke(aspectRatio)
+                        onImageSize?.invoke(
+                            intrinsicSize.width.toInt(),
+                            intrinsicSize.height.toInt(),
+                        )
                     }
                     isOnlineCoverLoaded = true
                     onlineCoverLoadFailed = false
@@ -308,6 +313,7 @@ fun CoilBookCover(
     showBadgeDot: Boolean = false,
     leftBottomText: String? = null,
     onImageAspectRatio: ((Float) -> Unit)? = null,
+    onImageSize: ((Int, Int) -> Unit)? = null,
 ) {
     val coverSettings = LocalAppUiConfiguration.current.cover
     val isNight = LegadoTheme.isDark
@@ -411,6 +417,7 @@ fun CoilBookCover(
             ignoreUseDefaultCover = ignoreUseDefaultCover,
             showLoadingPlaceholder = showLoadingPlaceholder,
             onImageAspectRatio = onImageAspectRatio,
+            onImageSize = onImageSize,
             onSuccess = {
                 isOnlineCoverLoaded = true
                 onlineCoverLoadFailed = false

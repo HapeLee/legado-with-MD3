@@ -17,7 +17,7 @@ class BookInfoCoverSizingTest {
 
     @Test
     fun tallCoversUseWidthScaledMaximumHeight() {
-        assertEquals(140f * 240f / 72f, bookInfoCoverHeightDp(0.4f), 0.01f)
+        assertEquals(600f, bookInfoCoverHeightDp(0.4f), 0.01f)
     }
 
     @Test

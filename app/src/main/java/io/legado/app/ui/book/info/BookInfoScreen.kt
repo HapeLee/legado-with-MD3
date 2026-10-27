@@ -72,6 +72,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -90,6 +91,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -99,6 +101,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -1187,14 +1190,34 @@ private fun BookInfoHeader(
             }
         )
     }
-    val coverHeightDp = bookInfoCoverHeightDp(
-        if (allowCoverRatioAdapt) coverAspectRatioState.floatValue
-        else BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
-    )
+    // 按原图尺寸显示：横图按宽度限制、竖图按高度限制，范围均为 360~480dp
+    var coverSize by remember(book.bookUrl, coverPath) { mutableStateOf(IntSize.Zero) }
+    val density = LocalDensity.current.density
+    val maxCoverWidthDp = LocalConfiguration.current.screenWidthDp - 32f
+    val coverRatio = if (allowCoverRatioAdapt) {
+        coverAspectRatioState.floatValue
+    } else {
+        BOOK_INFO_COVER_DEFAULT_ASPECT_RATIO
+    }
+    val coverWidthDp = if (coverSize != IntSize.Zero) {
+        val wDp = coverSize.width / density
+        val hDp = coverSize.height / density
+        if (coverSize.width > coverSize.height) {
+            wDp.coerceIn(360f, 480f).coerceAtMost(maxCoverWidthDp)
+        } else {
+            (hDp.coerceIn(360f, 480f) * coverRatio).coerceAtMost(maxCoverWidthDp)
+        }
+    } else {
+        360f.coerceAtMost(maxCoverWidthDp)
+    }
+    val coverHeightDp = bookInfoCoverHeightDp(coverRatio, coverWidthDp)
     // 比例合法性已在 BookCoverImage 上报前校验，这里直接写入
     val onCoverImageAspectRatio: ((Float) -> Unit)? = if (allowCoverRatioAdapt) {
         { aspectRatio -> coverAspectRatioState.floatValue = aspectRatio }
     } else null
+    val onCoverImageSize: (Int, Int) -> Unit = { width, height ->
+        if (width > 0 && height > 0) coverSize = IntSize(width, height)
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1221,12 +1244,12 @@ private fun BookInfoHeader(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.Top,
             ) {
                 Box(
                     modifier = Modifier
-                        .width(BOOK_INFO_COVER_WIDTH_DP.dp)
+                        .width(coverWidthDp.dp)
                         .height(coverHeightDp.dp)
                         .then(
                             // 脱敏时封面不可点：点开大图等于直接泄漏
@@ -1257,6 +1280,7 @@ private fun BookInfoHeader(
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onImageAspectRatio = onCoverImageAspectRatio,
+                            onImageSize = onCoverImageSize,
                         )
                     } else {
                         CoilBookCover(
@@ -1264,10 +1288,10 @@ private fun BookInfoHeader(
                             author = book.author,
                             path = coverPath,
                             sourceOrigin = if (usesDefaultCover) null else book.origin,
-                            // 传 bookUrl 供别名缓存键。详情页故意不设 preferCache：
-                            // 在线时仍走完整链路拉新链接并刷新别名，保证封面换图后书架也能更新；
-                            // 精确命中时同样不跑脚本。
+                            // 优先用缓存地址，避免每次进详情页都重新解析封面链接；
+                            // 封面换图后由书架那条链路更新别名。
                             bookUrl = book.bookUrl,
+                            preferCache = true,
                             onError = onNetworkCoverLoadError,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Fit,
@@ -1276,14 +1300,15 @@ private fun BookInfoHeader(
                             animatedVisibilityScope = animatedVisibilityScope,
                             sharedCoverKey = sharedCoverKey,
                             onImageAspectRatio = onCoverImageAspectRatio,
+                            onImageSize = onCoverImageSize,
                         )
                     }
                 }
+            }
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .align(Alignment.CenterVertically)
-                        .padding(top = 8.dp, bottom = 8.dp),
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (locked) {
@@ -1333,38 +1358,43 @@ private fun BookInfoHeader(
                                 )
                             }
                         }
-                        val authorLabels = remember(book.realAuthor) {
-                            book.realAuthor.split(",", "，")
-                                .map { it.trim() }
-                                .filter { it.isNotBlank() }
-                        }
-                        if (authorLabels.size > 1) {
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                authorLabels.forEach { author ->
-                                    AnimatedTextLine(
-                                        text = author,
-                                        style = LegadoTheme.typography.bodyLarge,
-                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.combinedClickable(
-                                            onClick = { onAuthorClick(false, author) },
-                                            onLongClick = { onAuthorClick(true, author) }
-                                        )
-                                    )
-                                }
-                            }
-                        } else {
+            if (!locked) {
+                val authorLabels = remember(book.realAuthor) {
+                    book.realAuthor.split(",", "，")
+                        .map { it.trim() }
+                        .filter { it.isNotBlank() }
+                }
+                if (authorLabels.size > 1) {
+                    FlowRow(
+                        modifier = Modifier.padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        authorLabels.forEach { author ->
                             AnimatedTextLine(
-                                text = stringResource(R.string.author_show, book.realAuthor),
+                                text = author,
                                 style = LegadoTheme.typography.bodyLarge,
                                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.combinedClickable(
-                                    onClick = { onAuthorClick(false, null) },
-                                    onLongClick = { onAuthorClick(true, null) }
+                                    onClick = { onAuthorClick(false, author) },
+                                    onLongClick = { onAuthorClick(true, author) }
                                 )
                             )
                         }
+                    }
+                } else {
+                    AnimatedTextLine(
+                        text = stringResource(R.string.author_show, book.realAuthor),
+                        style = LegadoTheme.typography.bodyLarge,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .combinedClickable(
+                                onClick = { onAuthorClick(false, null) },
+                                onLongClick = { onAuthorClick(true, null) }
+                            )
+                    )
+                }
+            }
                         AnimatedTextLine(
                             text = stringResource(R.string.origin_show, book.originName),
                             style = LegadoTheme.typography.labelMedium,
@@ -1373,7 +1403,6 @@ private fun BookInfoHeader(
                         )
                     }
                 }
-            }
             if (locked) {
                 PrivateMaskLine(widthFraction = 0.5f, thickness = 24.dp)
             } else if (highlightedTags.isNotEmpty()) {

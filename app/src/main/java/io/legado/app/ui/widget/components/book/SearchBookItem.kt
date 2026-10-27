@@ -52,9 +52,9 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.HtmlFormatter
 
 private const val DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO = 5f / 7f
-private const val SEARCH_BOOK_COVER_WIDTH_DP = 72f
+private const val SEARCH_BOOK_COVER_WIDTH_DP = 120f
 private const val MIN_SEARCH_BOOK_COVER_HEIGHT_DP = 1f
-private const val MAX_SEARCH_BOOK_COVER_HEIGHT_DP = 140f
+private const val MAX_SEARCH_BOOK_COVER_HEIGHT_DP = 233f
 
 internal fun searchBookCoverHeightDp(aspectRatio: Float): Float {
     val safeAspectRatio =
