@@ -270,7 +270,7 @@ class ExploreShowViewModel(
         exploreUrl = incomingExploreUrl
         _pageState.value = ExplorePageState(
             currentPage = 1,
-            canJumpPage = AnalyzeUrl.supportsPageSelection(incomingExploreUrl),
+            canJumpPage = supportsJumpPage(bookSourceRepository, incomingSourceUrl, incomingExploreUrl),
         )
         page = 1
         autoPageCount = 0
@@ -304,7 +304,7 @@ class ExploreShowViewModel(
         exploreUrl = kind.url
         _pageState.value = ExplorePageState(
             currentPage = 1,
-            canJumpPage = AnalyzeUrl.supportsPageSelection(kind.url),
+            canJumpPage = supportsJumpPage(bookSourceRepository, sourceUrl, kind.url),
         )
         _loadState.value = ExploreShowLoadState()
         autoPageCount = 0
@@ -478,11 +478,26 @@ class ExploreShowViewModel(
  * 书源分页地址通常带 `{{page}}` 占位符；从标签/分类跳转过来的运行时地址没有占位符，
  * 这里兜底成 `page=N` 查询参数，让这类地址也能翻页。已含占位符的地址原样返回。
  */
+/** URL 自带分页模板，或书源配置了 pageParam（运行时会追加页码）时都允许跳页。 */
+private fun supportsJumpPage(
+    repository: BookSourceRepository,
+    sourceUrl: String?,
+    url: String?,
+): Boolean {
+    if (AnalyzeUrl.supportsPageSelection(url)) return true
+    val src = sourceUrl ?: return false
+    return !repository.getBookSourceSync(src)?.getExploreRule()?.pageParam.isNullOrBlank()
+}
+
 private fun String?.withPageParam(page: Int, param: String): String? {
     if (this.isNullOrBlank() || contains("{{page}}")) return this
     val hashIndex = indexOf('#')
     val base = if (hashIndex >= 0) substring(0, hashIndex) else this
     val fragment = if (hashIndex >= 0) substring(hashIndex) else ""
+    // 路径式分页：pageParam 形如 "/page/{page}/"
+    if (param.startsWith("/") && param.contains("{page}")) {
+        return base.trimEnd('/') + param.replace("{page}", page.toString()) + fragment
+    }
     val pattern = Regex("([?&])${Regex.escape(param)}=\\d+")
     val withPage = if (pattern.containsMatchIn(base)) {
         pattern.replace(base) { "${it.groupValues[1]}$param=$page" }
