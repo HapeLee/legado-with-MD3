@@ -146,6 +146,7 @@ import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageRouteScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigRouteScreen
+import io.legado.app.ui.config.bubble.BubbleConfigRouteScreen
 import io.legado.app.ui.config.customTheme.CustomThemeRouteScreen
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigRouteScreen
 import io.legado.app.ui.config.labConfig.LabConfigRouteScreen
@@ -671,7 +672,8 @@ fun MainActivity.mainEntryProvider(
             onNavigateToDownloadCache = { pushRoute(MainRouteSettingsDownloadCache) },
             onNavigateToTranslation = { pushRoute(MainRouteSettingsTranslation) },
             onNavigateToLab = { pushRoute(MainRouteSettingsLabConfig) },
-            onNavigateToPrivate = { pushRoute(MainRouteSettingsPrivate) }
+            onNavigateToPrivate = { pushRoute(MainRouteSettingsPrivate) },
+            onNavigateToBubble = { pushRoute(MainRouteSettingsBubble) }
         )
     }
 
@@ -811,6 +813,10 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteSettingsThemeManage> {
         ThemeManageRouteScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteSettingsBubble> {
+        BubbleConfigRouteScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteImportLocal> {
