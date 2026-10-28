@@ -3878,6 +3878,7 @@
     <string name="battery_optimization_status_not_ignored">未开启无限制，后台可能被系统终止</string>
     <string name="reader_paragraph_image_action_unsupported">此图片使用段落规则动作，当前版本尚不支持。</string>
 
+
     <string name="bubble_config">段评气泡</string>
     <string name="bubble_config_entry_summary">段评入口使用的气泡样式</string>
     <string name="bubble_config_summary">段评气泡把书源里的段评数字转成原生 SVG 气泡。点一下某个样式即可应用。</string>
@@ -3914,4 +3915,5 @@
     <string name="bubble_help_title">模板占位符</string>
     <string name="bubble_help_summary">${num} 与 ${color} 怎么用</string>
     <string name="bubble_help_body">书源把段评入口写成 &lt;img src=“dp:12,{...}”&gt;，其中的 12 会替换模板里的 ${num}；${color} 会被替换成上面配置的颜色（status=emphasis 时用强调色）。气泡包还可以把图片、字体放在 assets/ 下，用 asset://名称 引用。</string>
+    <string name="page_anim_ios_curl">iOS仿真</string>
 </resources>
