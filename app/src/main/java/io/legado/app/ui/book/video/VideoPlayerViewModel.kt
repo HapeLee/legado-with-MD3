@@ -59,6 +59,7 @@ class VideoPlayerViewModel : ViewModel() {
                 startFull = VideoPlay.startFull,
                 longPressSpeed = VideoPlay.longPressSpeed,
                 showDanmaku = VideoPlay.danmakuShow,
+                floatingEnabled = VideoPlay.floatingEnabled,
             )
         }
     }
@@ -132,6 +133,16 @@ class VideoPlayerViewModel : ViewModel() {
                 val show = !VideoPlay.danmakuShow
                 VideoPlay.danmakuShow = show
                 _uiState.update { it.copy(showDanmaku = show) }
+            }
+
+            VideoPlayerIntent.ToggleFloating ->
+                appCtx.startService<VideoPlayService> {
+                    action = IntentAction.toggleVideoFloating
+                }
+
+            is VideoPlayerIntent.SetFloatingEnabled -> {
+                VideoPlay.floatingEnabled = intent.enabled
+                _uiState.update { it.copy(floatingEnabled = intent.enabled) }
             }
 
             VideoPlayerIntent.CopyPlayUrl -> copyPlayUrl()

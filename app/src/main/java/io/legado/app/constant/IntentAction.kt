@@ -37,4 +37,7 @@ object IntentAction {
 
     /** 取消正在跑的听书音频下载。 */
     const val cancelDownloadReadAloudAudio = "cancelDownloadReadAloudAudio"
+
+    /** 视频悬浮小窗：显示/隐藏切换。 */
+    const val toggleVideoFloating = "toggleVideoFloating"
 }

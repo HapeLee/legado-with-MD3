@@ -676,6 +676,7 @@
     <string name="video_auto_play">自動播放</string>
     <string name="video_start_full">進入後全屏</string>
     <string name="video_danmaku">彈幕</string>
+    <string name="video_floating">懸浮小窗</string>
     <string name="source_not_found">書源不存在</string>
     <string name="chapter_not_found">章節不存在</string>
     <string name="video_link_not_found">未取得影片連結</string>

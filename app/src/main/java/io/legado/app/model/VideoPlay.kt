@@ -158,6 +158,11 @@ object VideoPlay : CoroutineScope by MainScope() {
         get() = AppConfigStore.getInt(PreferKey.videoDanmakuShow) != 0
         set(value) = AppConfigStore.putInt(PreferKey.videoDanmakuShow, if (value) 1 else 0)
 
+    /** 离开应用后用悬浮小窗继续播放。 */
+    var floatingEnabled: Boolean
+        get() = AppConfigStore.getInt(PreferKey.videoFloatingEnabled) != 0
+        set(value) = AppConfigStore.putInt(PreferKey.videoFloatingEnabled, if (value) 1 else 0)
+
     // ——————————————————————————— 会话入口 ———————————————————————————
 
     /** 打开书架中的视频书：补齐详情/目录，恢复上次进度并开始播放。 */

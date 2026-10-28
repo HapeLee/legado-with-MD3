@@ -30,6 +30,7 @@ data class VideoPlayerUiState(
     val startFull: Boolean = false,
     /** 长按倍速，单位 0.1 倍。 */
     val longPressSpeed: Int = 30,
+    val floatingEnabled: Boolean = false,
     val sheet: VideoPlayerSheet? = null,
 ) {
     val hasEpisodeList: Boolean get() = episodes.size > 1 || volumes.size > 1
@@ -69,6 +70,11 @@ sealed interface VideoPlayerIntent {
     data class SetLongPressSpeed(val value: Int) : VideoPlayerIntent
 
     data object ToggleDanmaku : VideoPlayerIntent
+
+    /** 手动切换悬浮小窗。 */
+    data object ToggleFloating : VideoPlayerIntent
+
+    data class SetFloatingEnabled(val enabled: Boolean) : VideoPlayerIntent
 
     /** 复制当前集的真实地址；走书源回调，与阅读/音频一致。 */
     data object CopyPlayUrl : VideoPlayerIntent

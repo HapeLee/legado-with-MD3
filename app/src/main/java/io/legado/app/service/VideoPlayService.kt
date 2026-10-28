@@ -14,6 +14,7 @@ import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.activityPendingIntent
 import io.legado.app.utils.servicePendingIntent
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -28,6 +29,8 @@ class VideoPlayService : BaseService() {
     private var mediaSessionCompat: android.support.v4.media.session.MediaSessionCompat? = null
 
     private val serviceScope = kotlinx.coroutines.MainScope()
+
+    private var floatingWindow: VideoFloatingWindow? = null
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -47,11 +50,27 @@ class VideoPlayService : BaseService() {
         VideoPlay.player.addListener(playerListener)
         initMediaSession()
         // 章节/加载状态变化也要刷新通知文案
+        floatingWindow = VideoFloatingWindow(this)
         serviceScope.launch {
             VideoPlay.state
                 .map { listOf(it.bookName, it.chapterTitle, it.error) }
                 .distinctUntilChanged()
                 .collect { upNotification() }
+        }
+        // 离开应用后把画面搬到悬浮小窗，回到应用内再交还给播放页
+        serviceScope.launch {
+            combine(
+                io.legado.app.help.LifecycleHelp.appVisible,
+                VideoPlay.state.map { it.isPlaying },
+            ) { appVisible, playing -> !appVisible && playing }
+                .distinctUntilChanged()
+                .collect { shouldFloat ->
+                    if (shouldFloat && VideoPlay.floatingEnabled) {
+                        floatingWindow?.show()
+                    } else {
+                        floatingWindow?.close()
+                    }
+                }
         }
     }
 
@@ -71,6 +90,7 @@ class VideoPlayService : BaseService() {
                 )
 
                 IntentAction.stop -> stopSelf()
+                IntentAction.toggleVideoFloating -> floatingWindow?.toggle()
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -202,6 +222,8 @@ class VideoPlayService : BaseService() {
 
     override fun onDestroy() {
         serviceScope.coroutineContext.cancel()
+        floatingWindow?.close()
+        floatingWindow = null
         runCatching { VideoPlay.player.removeListener(playerListener) }
         VideoPlay.stop()
         VideoPlay.release()

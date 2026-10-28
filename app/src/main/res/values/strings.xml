@@ -783,6 +783,7 @@
     <string name="video_auto_play">Auto play</string>
     <string name="video_start_full">Start in fullscreen</string>
     <string name="video_danmaku">Danmaku</string>
+<string name="video_floating">Floating window</string>
     <string name="source_not_found">Book source not found</string>
     <string name="chapter_not_found">Chapter not found</string>
     <string name="video_link_not_found">No video URL resolved</string>

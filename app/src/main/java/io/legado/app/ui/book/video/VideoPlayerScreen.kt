@@ -93,11 +93,19 @@ fun VideoPlayerScreen(
         }
     }
 
+    var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         // 配置变化（旋转/分屏）重建时 ON_STOP 也会派发，此时不应暂停
         if (activity?.isChangingConfigurations != true) {
             viewModel.onIntent(VideoPlayerIntent.Pause)
+            // 离开应用后画面交给悬浮小窗，避免两个 PlayerView 同时抢同一个 player 的渲染
+            playerViewRef?.player = null
         }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        playerViewRef?.player = VideoPlay.player
     }
 
     DisposableEffect(Unit) {
@@ -144,9 +152,12 @@ fun VideoPlayerScreen(
                             viewModel.onIntent(VideoPlayerIntent.ToggleFullscreen)
                         }
                         setupLongPressSpeed(viewModel)
-                    }
+                    }.also { playerViewRef = it }
                 },
-                onRelease = { it.player = null },
+                onRelease = {
+                    it.player = null
+                    playerViewRef = null
+                },
             )
 
             VideoTopBar(
@@ -193,9 +204,11 @@ fun VideoPlayerScreen(
                     onOpenSpeed = {
                         viewModel.onIntent(VideoPlayerIntent.OpenSheet(VideoPlayerSheet.SPEED))
                     },
+
                     onOpenSettings = {
                         viewModel.onIntent(VideoPlayerIntent.OpenSheet(VideoPlayerSheet.SETTINGS))
                     },
+                    onToggleFloating = { viewModel.onIntent(VideoPlayerIntent.ToggleFloating) },
                 )
             }
         }
@@ -233,6 +246,10 @@ fun VideoPlayerScreen(
                 viewModel.onIntent(VideoPlayerIntent.SetLongPressSpeed(it))
             },
             onDanmakuChange = { viewModel.onIntent(VideoPlayerIntent.ToggleDanmaku) },
+            floatingEnabled = state.floatingEnabled,
+            onFloatingChange = {
+                viewModel.onIntent(VideoPlayerIntent.SetFloatingEnabled(it))
+            },
             onDismiss = { viewModel.onIntent(VideoPlayerIntent.CloseSheet) },
         )
 
@@ -363,6 +380,7 @@ private fun VideoEpisodeBar(
     onOpenEpisodes: () -> Unit,
     onOpenSpeed: () -> Unit,
     onOpenSettings: () -> Unit,
+    onToggleFloating: () -> Unit,
 ) {
     if (!visible) return
     Row(
@@ -383,6 +401,9 @@ private fun VideoEpisodeBar(
         }
         TextButton(onClick = onOpenSettings) {
             Text(text = stringResource(R.string.config_settings), color = Color.White)
+        }
+        TextButton(onClick = onToggleFloating) {
+            Text(text = stringResource(R.string.video_floating), color = Color.White)
         }
         TextButton(onClick = onNext, enabled = hasNext) {
             Text(text = stringResource(R.string.next_chapter), color = Color.White)
@@ -492,10 +513,12 @@ private fun VideoSettingsSheet(
     startFull: Boolean,
     longPressSpeed: Int,
     showDanmaku: Boolean,
+    floatingEnabled: Boolean,
     onAutoPlayChange: (Boolean) -> Unit,
     onStartFullChange: (Boolean) -> Unit,
     onLongPressSpeedChange: (Int) -> Unit,
     onDanmakuChange: (Boolean) -> Unit,
+    onFloatingChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(
@@ -522,6 +545,11 @@ private fun VideoSettingsSheet(
                 title = stringResource(R.string.video_danmaku),
                 checked = showDanmaku,
                 onCheckedChange = onDanmakuChange,
+            )
+            SettingsSwitch(
+                title = stringResource(R.string.video_floating),
+                checked = floatingEnabled,
+                onCheckedChange = onFloatingChange,
             )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
