@@ -837,7 +837,7 @@ fun ReaderCanvasSurface(
         }
     }
     LaunchedEffect(current.id, current.layoutRevision, transitionMode) {
-        if (committedTurnPageId != null) {
+        if (committedTurnPageId == current.id) {
             displayOffset = 0f
             applyTransition(ReaderPageTransition())
             committedTurnPageId = null
@@ -1013,9 +1013,12 @@ fun ReaderCanvasSurface(
                 // 翻页收尾被打断时在此同步提交；宿主当帧返回新窗口，但组合要等下一帧，
                 // 手势必须改用返回的窗口命中，否则长按会选中已不在屏幕上的旧页。
                 val turnedWindow = completePendingTurn()
-                committedTurnPageId = null
-                displayOffset = 0f
-                applyTransition(ReaderPageTransition())
+                // 已提交但尚未组合的新页，继续保留上一帧；此时归零会把旧页闪回原位。
+                committedTurnPageId = turnedWindow?.current?.id ?: committedTurnPageId
+                if (committedTurnPageId == null) {
+                    displayOffset = 0f
+                    applyTransition(ReaderPageTransition())
+                }
                 if (transitionMode == ReaderTransitionMode.IOS_CURL) {
                     iosCurl.reset()
                     iosCurl.down(size.width, size.height, density, down.position.x, down.position.y,
