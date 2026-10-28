@@ -128,6 +128,10 @@ data class ReaderPaginationEnvironment(
 
 @Suppress("MemberVisibilityCanBePrivate")
 object ReadBook : CoroutineScope by MainScope(), KoinComponent {
+    // 主线程写（打开/关闭书籍），IO 线程读——缓存维护在 Dispatchers.IO 上用它判断
+    // "这本书正在被读"，从而不把它的缓存判成孤儿。没有 @Volatile 时 IO 侧可能读到
+    // 陈旧值，表现为正在阅读的书的缓存被删掉（删除不可逆）。
+    @Volatile
     var book: Book? = null
         private set
     var callBack: CallBack? = null

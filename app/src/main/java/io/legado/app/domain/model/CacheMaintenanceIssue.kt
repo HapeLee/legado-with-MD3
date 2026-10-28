@@ -19,11 +19,17 @@ data class OrphanedChapterGroup(
     val containsImages: Boolean,
 )
 
-/** 一次删除孤立章节缓存的结果。 */
+/**
+ * 一次删除孤立章节缓存的结果。
+ *
+ * [skippedBooks] 因正在下载/正在阅读、或读不到章节列表而整本跳过的书数。
+ * 这些书并没有被删，调用方要把它们留在列表里，否则会显示成"已删除"。
+ */
 @Stable
 data class DeletedChapterCache(
     val deletedEntries: Int,
     val freedBytes: Long,
+    val skippedBooks: Int = 0,
 )
 
 /**

@@ -3477,6 +3477,8 @@
     <string name="cache_maintenance_tab_wordcount">字数重算</string>
     <string name="cache_maintenance_action_scan">立即扫描</string>
     <string name="cache_maintenance_action_scanning">正在扫描 %1$d / %2$d，点击取消</string>
+    <string name="cache_maintenance_action_deleting">正在删除，点击取消</string>
+    <string name="cache_maintenance_action_recounting">正在重算 %1$d / %2$d，点击取消</string>
     <string name="cache_maintenance_action_select_all">全选 / 全不选</string>
     <string name="cache_maintenance_action_delete">删除选中</string>
     <string name="cache_maintenance_action_recount">重算选中</string>
@@ -3486,6 +3488,7 @@
     <string name="cache_maintenance_recount_desc">%1$d 章待重算</string>
     <string name="cache_maintenance_recount_blocked">%1$d 章既无缓存也无字数，整书字数保持为空</string>
     <string name="cache_maintenance_result_delete">已删除 %1$d 项，释放 %2$s</string>
+    <string name="cache_maintenance_result_delete_skipped">%1$d 本因正在下载或阅读被跳过</string>
     <string name="cache_maintenance_result_recount">已更新 %1$d 章、%2$d 本书字数</string>
     <string name="cache_maintenance_confirm_delete_title">删除孤立章节缓存</string>
     <string name="cache_maintenance_confirm_delete_text">仅删除在书籍章节列表中查不到对应章节的缓存条目，删除后无法恢复。</string>

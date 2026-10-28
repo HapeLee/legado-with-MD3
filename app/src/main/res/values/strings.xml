@@ -3481,6 +3481,8 @@
     <string name="cache_maintenance_tab_wordcount">Word Count</string>
     <string name="cache_maintenance_action_scan">Scan now</string>
     <string name="cache_maintenance_action_scanning">Scanning %1$d / %2$d, tap to cancel</string>
+    <string name="cache_maintenance_action_deleting">Deleting, tap to cancel</string>
+    <string name="cache_maintenance_action_recounting">Recounting %1$d / %2$d, tap to cancel</string>
     <string name="cache_maintenance_action_select_all">Select all / none</string>
     <string name="cache_maintenance_action_delete">Delete selected</string>
     <string name="cache_maintenance_action_recount">Recount selected</string>
@@ -3490,6 +3492,7 @@
     <string name="cache_maintenance_recount_desc">%1$d chapters pending recount</string>
     <string name="cache_maintenance_recount_blocked">%1$d chapters have neither cache nor word count, book total stays empty</string>
     <string name="cache_maintenance_result_delete">Deleted %1$d entries, freed %2$s</string>
+    <string name="cache_maintenance_result_delete_skipped">%1$d books skipped: downloading or reading</string>
     <string name="cache_maintenance_result_recount">Updated %1$d chapters, %2$d books</string>
     <string name="cache_maintenance_confirm_delete_title">Delete orphaned chapter cache</string>
     <string name="cache_maintenance_confirm_delete_text">Only entries that match no chapter in the book table of contents are deleted. This cannot be undone.</string>

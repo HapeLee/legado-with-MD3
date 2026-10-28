@@ -64,11 +64,20 @@ class BookCacheMaintenanceRepository(
         entryNames: Set<String>,
     ): DeletedChapterCache = withContext(Dispatchers.IO) {
         val book = bookDao.getBook(bookUrl) ?: return@withContext DeletedChapterCache(0, 0L)
-        if (book.bookUrl in busyBookUrls()) return@withContext DeletedChapterCache(0, 0L)
+        if (book.bookUrl in busyBookUrls()) {
+            // 缓存目录可能正在被下载/阅读并发写入，这本书这次不删。
+            return@withContext DeletedChapterCache(0, 0L, skippedBooks = 1)
+        }
+        // 扫描与执行之间可能隔很久，章节列表随时会变；删除不可逆，
+        // 所以按当前目录重新判定一次，只删此刻仍然是孤儿的条目。
+        val currentOrphans = collectOrphanEntries(book)
+            ?: return@withContext DeletedChapterCache(0, 0L, skippedBooks = 1)
+        val safeNames = entryNames.intersect(currentOrphans.mapTo(hashSetOf()) { it.name })
+        if (safeNames.isEmpty()) return@withContext DeletedChapterCache(0, 0L)
         val bookDir = bookDir(book)
         var deleted = 0
         var freed = 0L
-        entryNames.forEach { name ->
+        safeNames.forEach { name ->
             coroutineContext.ensureActive()
             val entry = File(bookDir, name)
             if (!entry.exists()) return@forEach
@@ -103,15 +112,20 @@ class BookCacheMaintenanceRepository(
         targets
     }
 
-    override suspend fun recountWordCounts(bookUrls: Set<String>): RecountOutcome =
+    override suspend fun recountWordCounts(
+        bookUrls: Set<String>,
+        onProgress: (scanned: Int, total: Int) -> Unit,
+    ): RecountOutcome =
         withContext(Dispatchers.IO) {
             var updatedChapters = 0
             var updatedBooks = 0
             var skippedChapters = 0
-            bookUrls.forEach { bookUrl ->
+            val total = bookUrls.size
+            bookUrls.forEachIndexed { index, bookUrl ->
                 coroutineContext.ensureActive()
-                val book = bookDao.getBook(bookUrl) ?: return@forEach
-                if (!book.isOnLineTxt) return@forEach
+                onProgress(index + 1, total)
+                val book = bookDao.getBook(bookUrl) ?: return@forEachIndexed
+                if (!book.isOnLineTxt) return@forEachIndexed
                 val result = recountBook(book)
                 updatedChapters += result.recounted
                 skippedChapters += result.unsolved

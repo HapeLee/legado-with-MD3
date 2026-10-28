@@ -128,6 +128,8 @@ private fun CacheMaintenanceScreen(
                             },
                             onClick = { onIntent(CacheMaintenanceIntent.ToggleOrphanBook(group.bookUrl)) },
                             semanticRole = androidx.compose.ui.semantics.Role.Checkbox,
+                            // 执行期间结果会整体替换，此时改选中项没有意义。
+                            enabled = !state.isBusy,
                         )
                     }
                 }
@@ -165,6 +167,7 @@ private fun CacheMaintenanceScreen(
                             },
                             onClick = { onIntent(CacheMaintenanceIntent.ToggleRecountBook(target.bookUrl)) },
                             semanticRole = androidx.compose.ui.semantics.Role.Checkbox,
+                            enabled = !state.isBusy,
                         )
                     }
                 }
@@ -187,13 +190,26 @@ private fun ActionRow(
     state: CacheMaintenanceUiState,
     onIntent: (CacheMaintenanceIntent) -> Unit,
 ) {
+    val busyKind = state.busyKind
     when {
-        state.isBusy -> SettingItem(
-            title = stringResource(
-                R.string.cache_maintenance_action_scanning,
-                state.scannedBooks,
-                state.totalBooks,
-            ),
+        busyKind != null -> SettingItem(
+            title = when (busyKind) {
+                CacheMaintenanceBusyKind.Scan -> stringResource(
+                    R.string.cache_maintenance_action_scanning,
+                    state.scannedBooks,
+                    state.totalBooks,
+                )
+
+                CacheMaintenanceBusyKind.Delete -> stringResource(
+                    R.string.cache_maintenance_action_deleting,
+                )
+
+                CacheMaintenanceBusyKind.Recount -> stringResource(
+                    R.string.cache_maintenance_action_recounting,
+                    state.scannedBooks,
+                    state.totalBooks,
+                )
+            },
             onClick = { onIntent(CacheMaintenanceIntent.Cancel) },
         )
 
@@ -248,6 +264,15 @@ private fun ResultRow(state: CacheMaintenanceUiState) {
             ),
             onClick = null,
         )
+        if (deleted.skippedBooks > 0) {
+            SettingItem(
+                title = stringResource(
+                    R.string.cache_maintenance_result_delete_skipped,
+                    deleted.skippedBooks,
+                ),
+                onClick = null,
+            )
+        }
     }
     state.lastRecount?.let { recount ->
         SettingItem(

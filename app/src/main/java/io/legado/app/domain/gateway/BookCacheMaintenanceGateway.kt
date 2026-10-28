@@ -15,6 +15,13 @@ interface BookCacheMaintenanceGateway {
         onProgress: (scanned: Int, total: Int) -> Unit = { _, _ -> Unit },
     ): List<OrphanedChapterGroup>
 
+    /**
+     * 删除指定的孤立缓存条目。
+     *
+     * 执行前会按**当前**章节列表重新判定一次，只删此刻仍然是孤儿的条目；
+     * 扫描与执行之间可能隔很久，目录随时可能变，而删除不可逆。
+     * 正在下载/阅读的书整本跳过，体现在 [DeletedChapterCache.skippedBooks] 上。
+     */
     suspend fun deleteOrphanedChapters(
         bookUrl: String,
         entryNames: Set<String>,
@@ -25,5 +32,8 @@ interface BookCacheMaintenanceGateway {
         onProgress: (scanned: Int, total: Int) -> Unit = { _, _ -> Unit },
     ): List<WordCountRecountTarget>
 
-    suspend fun recountWordCounts(bookUrls: Set<String>): RecountOutcome
+    suspend fun recountWordCounts(
+        bookUrls: Set<String>,
+        onProgress: (scanned: Int, total: Int) -> Unit = { _, _ -> Unit },
+    ): RecountOutcome
 }
