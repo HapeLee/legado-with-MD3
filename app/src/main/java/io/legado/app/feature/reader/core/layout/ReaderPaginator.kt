@@ -260,6 +260,18 @@ sealed interface ReaderMeasuredInlineItem {
         val poolName: String,
         val trackName: String,
     ) : ReaderMeasuredInlineItem
+
+    /** 段评气泡：显示文本来自书源（`count`/`displayText`/内嵌 SVG/脚本参数），占位由应用自绘。 */
+    data class Review(
+        override val widthPx: Float,
+        val heightPx: Float,
+        override val chapterPosition: Int,
+        val count: Int,
+        val text: String = "",
+        val status: String = "normal",
+        val color: String? = null,
+        val action: String? = null,
+    ) : ReaderMeasuredInlineItem
 }
 
 /**
@@ -270,6 +282,7 @@ private fun ReaderMeasuredInlineItem.tallItemHeightPx(): Float = when (this) {
     is ReaderMeasuredInlineItem.Image -> heightPx
     is ReaderMeasuredInlineItem.RoleCast -> heightPx
     is ReaderMeasuredInlineItem.BgmScene -> heightPx
+    is ReaderMeasuredInlineItem.Review -> heightPx
     else -> 0f
 }
 
@@ -707,6 +720,7 @@ internal class ReaderPaginationSession(
 
                 is ReaderMeasuredInlineItem.Image -> clusters += "\uFFFC"
                 is ReaderMeasuredInlineItem.RoleCast -> clusters += "\uFFFC"
+                is ReaderMeasuredInlineItem.Review -> clusters += "\uFFFC"
                 is ReaderMeasuredInlineItem.BgmScene -> clusters += ""
             }
         }
@@ -973,6 +987,27 @@ internal class ReaderPaginationSession(
                             // 行内图必须带标记：绘制期按位图长宽比重新算几何（旧 ImageColumn）。
                             inline = true,
                             touchBounds = ReaderRect(x, y, x + drawnWidthPx, y + actualLineHeight),
+                        )
+                    }
+
+                    is ReaderMeasuredInlineItem.Review -> {
+                        // 段评气泡垂直居中于行盒，与胶囊同一套算法；文本与颜色由书源给出。
+                        val bubbleTop = y + (actualLineHeight - item.heightPx) / 2f
+                        elements += ReaderElement.Review(
+                            bounds = ReaderRect(
+                                x,
+                                bubbleTop,
+                                x + item.widthPx,
+                                bubbleTop + item.heightPx,
+                            ),
+                            count = item.count,
+                            text = item.text,
+                            status = item.status,
+                            color = item.color,
+                            paragraphIndex = paragraphIndex,
+                            baselinePx = bubbleTop + item.heightPx,
+                            textSizePx = item.heightPx,
+                            action = item.action,
                         )
                     }
 

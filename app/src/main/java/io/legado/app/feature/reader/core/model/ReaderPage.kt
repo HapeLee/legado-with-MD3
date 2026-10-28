@@ -284,9 +284,17 @@ sealed interface ReaderElement {
     data class Review(
         override val bounds: ReaderRect,
         val count: Int,
+        /** 气泡里显示的文本；书源可能给 `99+` 这类非纯数字。 */
+        val text: String = "",
+        /** `normal` / `emphasis`：决定用普通色还是强调色。 */
+        val status: String = "normal",
+        /** 书源指定的气泡颜色。 */
+        val color: String? = null,
         val paragraphIndex: Int,
         val baselinePx: Float = bounds.bottom,
         val textSizePx: Float = bounds.height,
+        /** 书源写在 img JSON 里的 click 脚本，点击气泡时执行（打开半屏段评页）。 */
+        val action: String? = null,
     ) : ReaderElement
 
     data class Action(

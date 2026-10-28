@@ -686,4 +686,92 @@ class ReaderChapterBlockMeasurerTest {
         assertEquals("　　正文", items.filterIsInstance<ReaderMeasuredInlineItem.Text>()
             .joinToString("") { it.value })
     }
+
+    @Test
+    fun reviewBubblesReplaceCountedImagesAndSkipImageDimensionLookup() = runBlocking {
+        var dimensionResolves = 0
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Paragraph(listOf(
+                ReaderChapterInlineSource.Text("甲", 0),
+                ReaderChapterInlineSource.Image("badge.png,{\"count\":\"12\"}", 1),
+            ), 0),
+        ), 3)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = {
+                dimensionResolves++; ReaderImageDimensions(12f, 12f)
+            },
+            imageOptionsResolver = { _, _ ->
+                ReaderImageOptions(
+                    layoutMode = ReaderImageLayoutMode.INLINE,
+                    inlinePlaceholder = ReaderInlineImagePlaceholder.REVIEW,
+                    reviewCount = 12,
+                )
+            },
+        ).measure(source, style.copy(reviewBubbles = true)) as ReaderChapterMeasureResult.Success
+
+        val items = (result.blocks.single() as ReaderMeasuredBlock.InlineParagraph).items
+        val review = items.filterIsInstance<ReaderMeasuredInlineItem.Review>().single()
+        assertEquals(12, review.count)
+        assertEquals(1, review.chapterPosition)
+        assertEquals(ReaderReviewBubbleMetrics.heightPx(10f), review.heightPx, 0.01f)
+        assertTrue(review.widthPx > review.heightPx)
+        assertTrue(items.none { it is ReaderMeasuredInlineItem.Image })
+        assertEquals(0, dimensionResolves)
+    }
+
+    @Test
+    fun reviewBubblesFlagOffKeepsCountedImageAsSourceImage() = runBlocking {
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Paragraph(listOf(
+                ReaderChapterInlineSource.Image("badge.png,{\"count\":\"12\"}", 0),
+            ), 0),
+        ), 2)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = { ReaderImageDimensions(12f, 12f) },
+            imageOptionsResolver = { _, _ ->
+                ReaderImageOptions(
+                    layoutMode = ReaderImageLayoutMode.INLINE,
+                    inlinePlaceholder = ReaderInlineImagePlaceholder.REVIEW,
+                    reviewCount = 12,
+                )
+            },
+        ).measure(source, style) as ReaderChapterMeasureResult.Success
+
+        val items = (result.blocks.single() as ReaderMeasuredBlock.InlineParagraph).items
+        assertTrue(items.none { it is ReaderMeasuredInlineItem.Review })
+        assertEquals(1, items.filterIsInstance<ReaderMeasuredInlineItem.Image>().size)
+    }
+
+    @Test
+    fun reviewBubbleWithoutCountStillTakesOverAndKeepsNumberlessBubble() = runBlocking {
+        val source = ReaderChapterSource(1, "", listOf(
+            ReaderChapterSourceBlock.Paragraph(listOf(
+                ReaderChapterInlineSource.Image("badge.png,{\"style\":\"TEXT\"}", 0),
+            ), 0),
+        ), 2)
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = { ReaderImageDimensions(12f, 12f) },
+            imageOptionsResolver = { _, _ ->
+                ReaderImageOptions(
+                    layoutMode = ReaderImageLayoutMode.INLINE,
+                    inlinePlaceholder = ReaderInlineImagePlaceholder.REVIEW,
+                )
+            },
+        ).measure(source, style.copy(reviewBubbles = true)) as ReaderChapterMeasureResult.Success
+
+        val review = (result.blocks.single() as ReaderMeasuredBlock.InlineParagraph).items
+            .filterIsInstance<ReaderMeasuredInlineItem.Review>().single()
+        assertEquals(0, review.count)
+        assertEquals(
+            ReaderReviewBubbleMetrics.widthPx(0f, ReaderReviewBubbleMetrics.heightPx(10f)),
+            review.widthPx,
+            0.01f,
+        )
+    }
 }

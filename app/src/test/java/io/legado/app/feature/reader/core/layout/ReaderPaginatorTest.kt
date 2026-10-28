@@ -1248,4 +1248,38 @@ class ReaderPaginatorTest {
         assertEquals(emptyList<Any>(), session.finish())
         assertEquals(emptyList<Int>(), emitted)
     }
+
+    @Test
+    fun reviewInlineItemBecomesReviewElementCenteredInTheLine() {
+        val page = ReaderPaginator.paginateBlocks(
+            listOf(
+                ReaderMeasuredBlock.InlineParagraph(
+                    items = listOf(
+                        ReaderMeasuredInlineItem.Text("甲", 10f, style, 0),
+                        ReaderMeasuredInlineItem.Review(
+                            widthPx = 30f,
+                            heightPx = 14f,
+                            chapterPosition = 1,
+                            count = 12,
+                            action = "open()",
+                        ),
+                    ),
+                    indentCharacters = 0,
+                    alignment = ReaderTextAlignment.START,
+                    lineHeightPx = 20f,
+                    baselineOffsetPx = 15f,
+                    baseTextSizePx = 10f,
+                ),
+            ),
+            config.copy(viewportHeightPx = 200),
+        ).single()
+
+        val review = page.elements.filterIsInstance<ReaderElement.Review>().single()
+        assertEquals(12, review.count)
+        assertEquals("open()", review.action)
+        assertEquals(14f, review.bounds.height, 0f)
+        // 行高 20f、气泡 14f：垂直居中后上边距 3f，紧接在 10f 宽的字之后。
+        assertEquals(3f, review.bounds.top, 0f)
+        assertEquals(10f, review.bounds.left, 0f)
+    }
 }

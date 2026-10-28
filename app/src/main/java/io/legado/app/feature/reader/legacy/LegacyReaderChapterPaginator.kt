@@ -27,6 +27,8 @@ import io.legado.app.feature.reader.platform.AndroidReaderTextShaper
 import io.legado.app.feature.reader.platform.ReaderAndroidPaginationStyle
 import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
 import io.legado.app.feature.reader.platform.ReaderPerfTrace
+import io.legado.app.feature.reader.platform.ReaderReviewCountLoader
+import io.legado.app.feature.reader.platform.ReviewBubbleAppearances
 import io.legado.app.help.book.BookContent
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ImageProvider
@@ -254,6 +256,9 @@ object LegacyReaderChapterPaginator {
             bgmCapsuleWidthPx = ::bgmWidthOf,
             bgmCapsuleHeightPx =
                 if (bgmEnabled) CastCapsuleGeometry.heightPx(bodyPaint.textSize) else 0f,
+            reviewCountResolver = { source ->
+                ReaderReviewCountLoader.resolve(source, book, bookSource, chapter)
+            },
         )
         // 分页会话先于测量建立：块一到就推进排版游标，页成型即经 [onPage] 流出
         // （旧 View `TextChapterLayout` 也是边排版边 `channel.trySend`）。
@@ -294,6 +299,7 @@ object LegacyReaderChapterPaginator {
             letterSpacingPx = bodyPaint.letterSpacing * bodyPaint.textSize,
             revision = revision,
         )
+        val (reviewBubbleScale, reviewBubbleAspect) = ReviewBubbleAppearances.layoutMetrics()
         val paginationMetrics = if (tracing) ReaderPaginationMetrics() else null
         val paginationSession = ReaderPaginationSession(paginationConfig, paginationMetrics)
         paginationSession.onPage = onPage
@@ -327,6 +333,9 @@ object LegacyReaderChapterPaginator {
                 imageLayoutMode = imageLayoutMode,
                 imageAlignment = imageAlignment,
                 excludeActionImages = paginationStyle.excludeActionImages,
+                reviewBubbles = ReadBookConfig.reviewBubbleStyle != "source",
+                reviewBubbleSizeScale = reviewBubbleScale,
+                reviewBubbleAspectRatio = reviewBubbleAspect,
                 imageAvailableWidthPx = (
                     viewportWidthPx / paginationStyle.columnCount(viewportWidthPx, viewportHeightPx) -
                         paginationStyle.paddingLeftPx - paginationStyle.paddingRightPx -

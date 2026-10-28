@@ -37,6 +37,25 @@ class LegacyReaderImageOptionsResolverTest {
     }
 
     @Test
+    fun parsesReviewCountCaseInsensitivelyAndRejectsNonPositiveValues() {
+        val options = LegacyReaderImageOptionsResolver.resolve(
+            "icon,{\"COUNT\":\"12\",\"click\":\"open()\"}",
+            htmlParagraph = false,
+        )!!
+        assertEquals(12, options.reviewCount)
+        assertEquals("open()", options.action)
+        assertNull(
+            LegacyReaderImageOptionsResolver
+                .resolve("icon,{\"count\":\"0\"}", false)!!.reviewCount
+        )
+        assertNull(
+            LegacyReaderImageOptionsResolver
+                .resolve("icon,{\"count\":\"many\"}", false)!!.reviewCount
+        )
+        assertNull(LegacyReaderImageOptionsResolver.resolve("icon", false))
+    }
+
+    @Test
     fun parsesTypedImageUrlOptions() {
         val options = LegacyReaderImageOptionsResolver.resolve(
             "https://example/image, {\"style\":\"right\",\"width\":\"37.5%\",\"click\":\"open(\\\"x\\\")\"}",

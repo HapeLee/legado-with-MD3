@@ -71,6 +71,14 @@ data class ReaderImageOptions(
     val requestedWidthFraction: Float? = null,
     val horizontalAlignment: ReaderTextAlignment? = null,
     val action: String? = null,
+    /** 段评评论数：书源在 img 的 JSON 里显式给出 `count` 时才非空。 */
+    val reviewCount: Int? = null,
+    /** 段评显示文本；书源可能给 `99+` 这类非纯数字文本。 */
+    val reviewText: String? = null,
+    /** 段评状态：`normal` / `emphasis`，决定用普通色还是强调色。 */
+    val reviewStatus: String? = null,
+    /** 书源指定的气泡颜色（`#RRGGBB`）。 */
+    val reviewColor: String? = null,
     /** 只在 [ReaderImageLayoutMode.INLINE] 下参与排版：用哪个占位字量行内图的宽。 */
     val inlinePlaceholder: ReaderInlineImagePlaceholder = ReaderInlineImagePlaceholder.SRC_REPLACE,
 )
@@ -118,6 +126,15 @@ data class ReaderChapterMeasureStyle(
     val imageAvailableWidthPx: Float? = null,
     /** true = 带 click 动作脚本的图片（段评气泡）不参与排版：不产出测量项，也不解析图片尺寸。 */
     val excludeActionImages: Boolean = false,
+    /**
+     * true = 只在字模式（非 `source`）下接管段评图：书源给了显示文本、评论数或段评语义时，
+     * 不再请求气泡图，改由应用按当前气泡包自绘。
+     */
+    val reviewBubbles: Boolean = false,
+    /** 当前气泡包的尺寸缩放；测量与绘制共用，占位与实际大小一致。 */
+    val reviewBubbleSizeScale: Float = 1f,
+    /** 当前气泡模板的宽高比（`viewBox` 宽/高）；排版层不解析 SVG。 */
+    val reviewBubbleAspectRatio: Float = ReaderReviewBubbleMetrics.DEFAULT_ASPECT_RATIO,
 )
 
 sealed interface ReaderChapterMeasureResult {
@@ -188,6 +205,8 @@ class ReaderChapterBlockMeasurer(
     /** 背景音乐胶囊宽度/高度：(池名, 指定曲目)；宽度含 ♪ 前缀。 */
     private val bgmCapsuleWidthPx: (pool: String, track: String) -> Float = { _, _ -> 0f },
     private val bgmCapsuleHeightPx: Float = 0f,
+    /** 服务端段评图的数字：只在明确接口命中时调用，返回 null 表示不接管。 */
+    private val reviewCountResolver: (suspend (String) -> Int?)? = null,
 ) {
     /**
      * 测量整章。给出 [onBlock] 时每产出一个 block 就立即回调——旧 View
@@ -452,6 +471,45 @@ class ReaderChapterBlockMeasurer(
                             droppedActionImage = true
                             return@forEach
                         }
+                        // 段评图：显示文本来自书源选项（`count`/`displayText`/`num`/`text`/`label`）、
+                        // `createSvg2(...)` 脚本参数或内嵌 SVG；只给 `type`/`showcmt()` 语义时也算段评。
+                        // `style:'TEXT'` 保持旧约定；服务端接口只在本地完全没有文本时请求一次。
+                        val reviewMarked = options != null &&
+                            options.layoutMode == ReaderImageLayoutMode.INLINE &&
+                            options.inlinePlaceholder == ReaderInlineImagePlaceholder.REVIEW
+                        val declaredText = options?.reviewText
+                        val localCount = options?.reviewCount
+                            ?: ReviewCountParser.fromDataUri(item.source)
+                        val serverCount = if (declaredText == null && localCount == null && action != null &&
+                            ReviewCountParser.serverReviewUrl(item.source) != null
+                        ) {
+                            reviewCountResolver?.invoke(item.source)
+                        } else null
+                        val reviewCount = localCount ?: serverCount
+                        if (style.reviewBubbles &&
+                            (reviewMarked || declaredText != null || reviewCount != null)
+                        ) {
+                            val bubbleHeight = ReaderReviewBubbleMetrics.heightPx(
+                                baseStyle.fontSizePx,
+                                style.reviewBubbleSizeScale,
+                            )
+                            inline += ReaderMeasuredInlineItem.Review(
+                                widthPx = ReaderReviewBubbleMetrics.widthPx(
+                                    bubbleHeight,
+                                    style.reviewBubbleAspectRatio,
+                                ),
+                                heightPx = bubbleHeight,
+                                chapterPosition = item.chapterPosition,
+                                count = reviewCount ?: 0,
+                                text = declaredText
+                                    ?: reviewCount?.let { it.coerceAtMost(999).toString() }
+                                        .orEmpty(),
+                                status = options?.reviewStatus ?: "normal",
+                                color = options?.reviewColor,
+                                action = action,
+                            )
+                            return@forEach
+                        }
                         // A broken image must not make the entire chapter disappear. The bitmap
                         // loader already supplies an error image; reserve stable line geometry
                         // until real dimensions are available.
@@ -546,6 +604,29 @@ class ReaderChapterBlockMeasurer(
                     // 独立图块是新 core 的概念，没有对应的旧分支，按纯文本路径规则处理。
                     val options = imageOptionsResolver.resolve(block.source, htmlParagraph = false)
                     if (style.excludeActionImages && options?.action != null) return@forEachIndexed
+                    // 段评图粗筛：`style:'TEXT'`、书源给的显示文本、内嵌 SVG 或明确的服务端段评接口，
+                    // 一律先转成行内段落；能不能拿到文本由行内分支再确认。
+                    if (style.reviewBubbles && (
+                        (options != null &&
+                            options.layoutMode == ReaderImageLayoutMode.INLINE &&
+                            options.inlinePlaceholder == ReaderInlineImagePlaceholder.REVIEW) ||
+                            options?.reviewText != null ||
+                            ReviewCountParser.isReviewSvg(block.source) ||
+                            ReviewCountParser.serverReviewUrl(block.source) != null
+                        )
+                    ) {
+                        addStyledParagraph(
+                            items = listOf(
+                                ReaderChapterInlineSource.Image(
+                                    block.source,
+                                    block.chapterPosition
+                                ),
+                            ),
+                            isTitle = false,
+                            applyBodyIndent = false,
+                        )
+                        return@forEachIndexed
+                    }
                     val layout = style.resolveImageLayout(options, htmlParagraph = false)
                     if (layout.mode == ReaderImageLayoutMode.INLINE) {
                         // 书级文字嵌入：独立图块同样按占位字行内排版（旧版所有 <img> 一律行内）。
