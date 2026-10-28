@@ -413,6 +413,7 @@ fun TinyClickableSettingItem(
     modifier: Modifier = Modifier,
     color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     trailingContent: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
 ) {
@@ -420,6 +421,7 @@ fun TinyClickableSettingItem(
         title = title,
         description = description,
         imageVector = imageVector,
+        enabled = enabled,
         modifier = modifier,
         color = color,
         trailingContent = trailingContent ?: {

@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.feature.mangatranslation.MangaTranslationContent
 import io.legado.app.ui.book.manga.config.MangaDoublePageMode
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import io.legado.app.ui.theme.LegadoTheme
@@ -48,6 +49,7 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
@@ -88,6 +90,50 @@ internal fun MangaSettingsPanel(
     state: MangaReaderUiState,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
+    if (state.translationSettingsVisible) {
+        Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MediumTonalButton(
+                    onClick = { onIntent(MangaReaderIntent.CloseTranslationSettings) },
+                    icon = AppIcons.Back,
+                    contentDescription = stringResource(R.string.back),
+                )
+                Text(
+                    stringResource(R.string.manga_translation_title),
+                    style = LegadoTheme.typography.titleMedium,
+                    color = LegadoTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            val page = state.pages.filterIsInstance<MangaReaderItemUi.Page>()
+                .firstOrNull { it.key == state.translation.pageKey }
+            MangaTranslationContent(
+                state = state.translation,
+                hasPage = page != null,
+                hasTranslation = page?.translatedImagePath != null,
+                showingOriginal = page?.showingOriginal != false,
+                onLanguages = { source, target ->
+                    onIntent(MangaReaderIntent.TranslationLanguages(source, target))
+                },
+                onAutoTranslation = { onIntent(MangaReaderIntent.SetAutoTranslation(it)) },
+                onEngine = { onIntent(MangaReaderIntent.SetTranslationEngine(it)) },
+                onTranslate = { onIntent(MangaReaderIntent.TranslatePage) },
+                onToggleOriginal = { onIntent(MangaReaderIntent.ToggleTranslation) },
+                onCancel = { onIntent(MangaReaderIntent.CancelTranslation) },
+                onClearCache = { onIntent(MangaReaderIntent.ClearTranslationCache) },
+                modifier = Modifier.fillMaxWidth()
+                    .heightIn(max = MangaSettingsPanelContentMaxHeight)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        return
+    }
     val current = state.settingsCategory ?: MangaReaderSettingsCategory.READER
     if (current == MangaReaderSettingsCategory.AUTO_READ) {
         AutoReadSettingsPage(state, onIntent)
@@ -182,7 +228,7 @@ internal fun MangaSettingsPanel(
                 ) {
                     when (MangaSettingsTabs[page]) {
                         MangaReaderSettingsCategory.READER -> ReaderSettingsContent(
-                            state.settings,
+                            state,
                             onIntent
                         )
 
@@ -333,9 +379,15 @@ private fun AutoReadSettingsPage(
 
 @Composable
 private fun ReaderSettingsContent(
-    settings: MangaReaderSettings,
+    state: MangaReaderUiState,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
+    val settings = state.settings
+    TinyClickableSettingItem(
+        title = stringResource(R.string.manga_translation_title),
+        enabled = state.pages.getOrNull(state.currentItemIndex) is MangaReaderItemUi.Page,
+        onClick = { onIntent(MangaReaderIntent.OpenTranslation) },
+    )
     val isWebtoon = settings.scrollMode == MangaScrollMode.WEBTOON ||
         settings.scrollMode == MangaScrollMode.WEBTOON_WITH_GAP
     val isHorizontalPaged = settings.scrollMode == MangaScrollMode.PAGE_LEFT_TO_RIGHT ||

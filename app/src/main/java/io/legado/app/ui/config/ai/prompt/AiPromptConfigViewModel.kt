@@ -35,6 +35,12 @@ class AiPromptConfigViewModel(
 
     private val taskPromptMetas = listOf(
         TaskPromptMeta(
+            taskType = AiTaskType.TRANSLATE_MANGA,
+            nameResId = R.string.manga_translation_ai_task,
+            descResId = R.string.manga_translation_ai_notice,
+            defaultPromptResId = R.string.manga_translation_ai_prompt,
+        ),
+        TaskPromptMeta(
             taskType = AiTaskType.CHAT,
             nameResId = R.string.ai_prompt_task_chat,
             descResId = R.string.ai_prompt_task_chat_desc,

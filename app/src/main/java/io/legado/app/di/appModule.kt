@@ -213,6 +213,7 @@ import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
 import io.legado.app.domain.usecase.StartBookSourceCheckUseCase
 import io.legado.app.domain.usecase.SyncHttpTtsCatalogUseCase
 import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
+import io.legado.app.domain.usecase.TranslateMangaTextUseCase
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
@@ -551,6 +552,7 @@ val appModule = module {
     singleOf(::RelocateMarkingTargetUseCase)
     singleOf(::ReplaceRuleRepository)
     single<DictionaryGateway> { DictionaryRepositoryImpl() }
+    singleOf(::TranslateMangaTextUseCase)
     singleOf(::TranslateChapterUseCase)
     singleOf(::AiChatGenerationUseCase)
 
@@ -770,7 +772,7 @@ val appModule = module {
     }
     viewModelOf(::MangaReaderViewModel)
     single<io.legado.app.domain.gateway.MangaTranslationGateway> {
-        io.legado.app.data.repository.manga.MangaTranslationRepository(get(), get())
+        io.legado.app.data.repository.manga.MangaTranslationRepository(get(), get(), get())
     }
     viewModelOf(::ReaderSessionViewModel)
     viewModel {

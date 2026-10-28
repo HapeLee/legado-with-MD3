@@ -46,6 +46,7 @@ data class MangaReaderUiState(
     val activeSheet: MangaReaderSheet? = null,
     val activeDialog: MangaReaderDialog? = null,
     val settingsCategory: MangaReaderSettingsCategory? = null,
+    val translationSettingsVisible: Boolean = false,
     val inBookshelf: Boolean = true,
     val confirmAddToShelf: Boolean = true,
     val scrollRequest: MangaScrollRequest? = null,
@@ -194,7 +195,10 @@ sealed interface MangaReaderText {
 }
 
 sealed interface MangaReaderIntent {
+    data class SetAutoTranslation(val enabled: Boolean) : MangaReaderIntent
+    data class SetTranslationEngine(val engine: io.legado.app.domain.model.MangaTranslationEngine) : MangaReaderIntent
     data object OpenTranslation : MangaReaderIntent
+    data object CloseTranslationSettings : MangaReaderIntent
     data object TranslatePage : MangaReaderIntent
     data object CancelTranslation : MangaReaderIntent
     data object ClearTranslationCache : MangaReaderIntent
@@ -291,7 +295,6 @@ sealed interface MangaReaderIntent {
 }
 
 sealed interface MangaReaderSheet {
-    data object Translation : MangaReaderSheet
     data object Catalog : MangaReaderSheet
     data object ChangeSource : MangaReaderSheet
     data object SourceActions : MangaReaderSheet

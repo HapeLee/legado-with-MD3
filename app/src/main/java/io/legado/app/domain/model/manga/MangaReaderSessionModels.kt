@@ -24,11 +24,13 @@ data class MangaBookState(
     val isLocal: Boolean,
     /** TOC titles are retained so a chapter transition stays informative before pages load. */
     val chapterTitles: List<String>,
+    val autoTranslation: Boolean = false,
 )
 
 data class MangaBookPresentation(
     val scrollMode: Int?,
     val sidePaddingDp: Int?,
+    val autoTranslation: Boolean = false,
 )
 
 data class OpenedMangaBook(

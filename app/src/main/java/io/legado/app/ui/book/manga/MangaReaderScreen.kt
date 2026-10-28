@@ -359,21 +359,6 @@ fun MangaReaderScreen(
     (state.activeSheet as? MangaReaderSheet.PageActions)?.let { sheet ->
         MangaReaderPageActionsSheet(sheet.companionPageKey != null, onIntent)
     }
-    if (state.activeSheet == MangaReaderSheet.Translation) {
-        val page = state.pages.filterIsInstance<MangaReaderItemUi.Page>()
-            .firstOrNull { it.key == state.translation.pageKey }
-        io.legado.app.feature.mangatranslation.MangaTranslationSheet(
-            state = state.translation,
-            hasTranslation = page?.translatedImagePath != null,
-            showingOriginal = page?.showingOriginal != false,
-            onLanguages = { source, target -> onIntent(MangaReaderIntent.TranslationLanguages(source, target)) },
-            onTranslate = { onIntent(MangaReaderIntent.TranslatePage) },
-            onToggleOriginal = { onIntent(MangaReaderIntent.ToggleTranslation) },
-            onCancel = { onIntent(MangaReaderIntent.CancelTranslation) },
-            onClearCache = { onIntent(MangaReaderIntent.ClearTranslationCache) },
-            onDismiss = { onIntent(MangaReaderIntent.DismissSheet) },
-        )
-    }
     if (state.activeSheet == MangaReaderSheet.ChangeSource) {
         val oldBook = remember(state.changeSourceBook) {
             state.changeSourceBook?.toBook()

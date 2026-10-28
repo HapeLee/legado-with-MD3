@@ -31,6 +31,7 @@ class MangaSettingsRepository : MangaSettingsGateway {
 }
 
 internal fun MangaSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    "mangaTranslationEngine" to translationEngine,
     "mangaTranslationSourceLanguage" to translationSourceLanguage,
     "mangaTranslationTargetLanguage" to translationTargetLanguage,
     PreferKey.showMangaUi to showMangaUi,
@@ -82,6 +83,7 @@ internal fun MangaSettings.toPrefMap(): Map<String, Any?> = mapOf(
 )
 
 internal fun Preferences.toMangaSettings(): MangaSettings = MangaSettings(
+    translationEngine = compatDsString("mangaTranslationEngine")?.takeIf { it in setOf("OFFLINE", "AI") } ?: "OFFLINE",
     translationSourceLanguage = compatDsString("mangaTranslationSourceLanguage") ?: "ja",
     translationTargetLanguage = compatDsString("mangaTranslationTargetLanguage") ?: "zh",
     showMangaUi = compatDsBoolean(PreferKey.showMangaUi) ?: true,

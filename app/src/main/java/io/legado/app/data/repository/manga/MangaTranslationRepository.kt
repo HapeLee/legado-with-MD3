@@ -31,6 +31,8 @@ import io.legado.app.domain.gateway.MangaTranslationGateway
 import io.legado.app.domain.gateway.MangaTranslationRequest
 import io.legado.app.domain.gateway.MangaTranslationResult
 import io.legado.app.domain.gateway.MangaTranslationStage
+import io.legado.app.domain.model.MangaTranslationEngine
+import io.legado.app.domain.usecase.TranslateMangaTextUseCase
 import io.legado.app.domain.reader.MangaImageRegion
 import io.legado.app.domain.reader.MangaRegionDecoder
 import io.legado.app.help.coil.CoverExtras
@@ -57,10 +59,13 @@ import kotlin.coroutines.suspendCoroutine
 class MangaTranslationRepository(
     private val application: Application,
     private val imageLoader: ImageLoader,
+    private val aiTranslator: TranslateMangaTextUseCase,
 ) : MangaTranslationGateway {
     private val mutex = Mutex()
     private val cacheLimit = 128L * 1024 * 1024
     private fun directory() = File(application.cacheDir, "manga-translation-v2").apply { mkdirs() }
+
+    override fun observeAiConfiguration() = aiTranslator.configurations()
 
     override suspend fun clearCache() = mutex.withLock {
         withContext(Dispatchers.IO) {
@@ -113,6 +118,7 @@ class MangaTranslationRepository(
                         val digest = MessageDigest.getInstance("SHA-256")
                         digest.update(source.contentDigest())
                         digest.update("mlkit-ja-ko16.0.1-t17.0.3-strip2-mask1:$sample:${request.sourceLanguage}:${request.targetLanguage}".toByteArray())
+                        digest.update(request.config.cacheIdentity().toByteArray())
                         val key = digest.digest().joinToString("") { "%02x".format(it) }
                         val directory = directory()
                         val output = File(directory, "$key.png")
@@ -158,17 +164,23 @@ class MangaTranslationRepository(
                         val mergeContext = currentCoroutineContext()
                         val regions = mergeMangaOcrRegions(candidates) { mergeContext.ensureActive() }
                         if (regions.isEmpty()) return@withContext MangaTranslationResult(null, 0)
-                        stage(MangaTranslationStage.DOWNLOADING)
-                        val translator = Translation.getClient(TranslatorOptions.Builder()
-                            .setSourceLanguage(request.sourceLanguage).setTargetLanguage(request.targetLanguage).build())
-                        val translations = try {
-                            translator.downloadModelIfNeeded(DownloadConditions.Builder().requireWifi().build()).awaitDownload()
+                        val translations = if (request.config.engine == MangaTranslationEngine.AI) {
                             stage(MangaTranslationStage.TRANSLATING)
-                            regions.map { region ->
-                                currentCoroutineContext().ensureActive()
-                                translator.translate(region.text(request.sourceLanguage)).finishSafely()
-                            }
-                        } finally { translator.close() }
+                            aiTranslator.translate(regions.map { it.text(request.sourceLanguage) },
+                                request.sourceLanguage, request.targetLanguage, request.config)
+                        } else {
+                            stage(MangaTranslationStage.DOWNLOADING)
+                            val translator = Translation.getClient(TranslatorOptions.Builder()
+                                .setSourceLanguage(request.sourceLanguage).setTargetLanguage(request.targetLanguage).build())
+                            try {
+                                translator.downloadModelIfNeeded(DownloadConditions.Builder().requireWifi().build()).awaitDownload()
+                                stage(MangaTranslationStage.TRANSLATING)
+                                regions.map { region ->
+                                    currentCoroutineContext().ensureActive()
+                                    translator.translate(region.text(request.sourceLanguage)).finishSafely()
+                                }
+                            } finally { translator.close() }
+                        }
                         stage(MangaTranslationStage.RENDERING)
                         val renderRegions = regions.zip(translations).map { (region, text) ->
                             Triple(region, text, patchBounds(region, width, height))

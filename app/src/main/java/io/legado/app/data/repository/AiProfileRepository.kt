@@ -219,6 +219,7 @@ class AiProfileRepository(
                 modelProfileId = modelProfileId,
                 promptTemplate = promptTemplate.ifBlank {
                     when (taskType) {
+                        AiTaskType.TRANSLATE_MANGA -> io.legado.app.domain.usecase.TranslateMangaTextUseCase.DEFAULT_PROMPT
                         AiTaskType.TRANSLATE_CHAPTER -> TranslationConstants.DEFAULT_PROMPT
                         AiTaskType.SUMMARIZE_CHAPTER -> AiPromptTemplate.DEFAULT_CHAPTER_SUMMARY
                         else -> "You are a helpful AI assistant."

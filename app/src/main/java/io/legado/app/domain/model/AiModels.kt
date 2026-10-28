@@ -19,6 +19,7 @@ object AiProtocol {
 object AiTaskType {
     const val CHAT = "chat"
     const val TRANSLATE_CHAPTER = "translate_chapter"
+    const val TRANSLATE_MANGA = "translate_manga"
     const val SUMMARIZE_CHAPTER = "summarize_chapter"
     const val SUMMARIZE_BOOK = "summarize_book"
     const val EXPLAIN_SELECTION = "explain_selection"
@@ -381,6 +382,8 @@ data class AiGenerateRequest(
      * background tasks.
      */
     val sessionId: String? = null,
+    /** Total provider attempts. One prevents automatic retry for metered background translation. */
+    val maxAttempts: Int = 3,
 )
 
 @Keep

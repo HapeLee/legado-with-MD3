@@ -224,6 +224,7 @@ private fun mangaMappingSamples(): List<MangaSettings> {
 }
 
 private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
+    "mangaTranslationEngine" to translationEngine,
     "mangaTranslationSourceLanguage" to translationSourceLanguage,
     "mangaTranslationTargetLanguage" to translationTargetLanguage,
     PreferKey.showMangaUi to showMangaUi,

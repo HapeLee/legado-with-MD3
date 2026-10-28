@@ -312,6 +312,10 @@ class MangaReaderViewModelNavigationTest {
             CacheBookChaptersUseCase(downloads), MangaReaderSessionFactory { session },
             translationGateway = io.legado.app.data.repository.manga.MangaTranslationRepository(
                 RuntimeEnvironment.getApplication(), imageLoader,
+                io.legado.app.domain.usecase.TranslateMangaTextUseCase(
+                    io.legado.app.data.repository.AiProfileRepository(database.aiProfileDao),
+                    io.legado.app.data.repository.AiTextRepositoryImpl(),
+                ),
             ),
         ).also { store.put("reader", it) }
     }

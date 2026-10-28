@@ -31,6 +31,11 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import io.legado.app.domain.model.MangaTranslationConfig
+import io.legado.app.domain.model.MangaTranslationEngine
+import io.legado.app.domain.model.MangaTranslationException
+import io.legado.app.domain.model.MangaTranslationFailure
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -61,6 +66,18 @@ class MangaReaderViewModel(
     private var refreshContentJob: Job? = null
     private var translationJob: Job? = null
     @Volatile private var translationGeneration = 0L
+    private var translationDebounceJob: Job? = null
+    private var activeTranslation: TranslationTask? = null
+    private var activeTranslationStage: MangaTranslationStage? = null
+    private var aiTranslationConfig = MangaTranslationConfig(MangaTranslationEngine.AI)
+    private var readerActive = false
+    private var translationBookUrl: String? = null
+    private val translationAttempts = mutableMapOf<TranslationId, TranslationOutcome>()
+    private data class TranslationId(val book: String, val request: MangaPageRequestId,
+        val source: String, val target: String, val config: MangaTranslationConfig)
+    private data class TranslationTask(val id: TranslationId, val page: MangaReaderItemUi.Page,
+        val sourceOrigin: String?, val manual: Boolean = false)
+    private data class TranslationOutcome(val path: String?, val message: Int, val showingOriginal: Boolean = false)
     private var latestMangaSettings = mangaSettingsGateway.currentSettings
     private val bookConfigWriteMutex = Mutex()
     private var pendingExplicitChapterIndex: Int? = null
@@ -75,6 +92,15 @@ class MangaReaderViewModel(
     val effects = _effects.asSharedFlow()
 
     init {
+        viewModelScope.launch {
+            translationGateway.observeAiConfiguration().collect { config ->
+                if (aiTranslationConfig != config) {
+                    aiTranslationConfig = config
+                    if (latestMangaSettings.translationEngine == "AI") invalidateTranslationConfiguration()
+                    updateTranslationSettingsState()
+                }
+            }
+        }
         viewModelScope.launch {
             readerSession.events.collect { event ->
                 when (event) {
@@ -95,7 +121,12 @@ class MangaReaderViewModel(
         }
         viewModelScope.launch {
             mangaSettingsGateway.settings.collect { settings ->
+                val changed = latestMangaSettings.translationEngine != settings.translationEngine ||
+                    latestMangaSettings.translationSourceLanguage != settings.translationSourceLanguage ||
+                    latestMangaSettings.translationTargetLanguage != settings.translationTargetLanguage
                 latestMangaSettings = settings
+                if (changed) invalidateTranslationConfiguration()
+                updateTranslationSettingsState()
                 syncPrefetchCounts()
                 _uiState.update { state ->
                     state.copy(settings = readSettings(settings))
@@ -136,47 +167,62 @@ class MangaReaderViewModel(
 
     fun onIntent(intent: MangaReaderIntent) {
         when (intent) {
-            MangaReaderIntent.OpenTranslation -> {
-                val state = _uiState.value
-                val key = (state.activeSheet as? MangaReaderSheet.PageActions)?.pageKey
-                    ?: (state.pages.getOrNull(state.currentItemIndex) as? MangaReaderItemUi.Page)?.key
-                if (key != null) {
-                    cancelTranslation()
-                    _uiState.update { it.copy(activeSheet = MangaReaderSheet.Translation,
-                        translation = MangaTranslationUiState(
-                            pageKey = key,
-                            sourceLanguage = latestMangaSettings.translationSourceLanguage,
-                            targetLanguage = latestMangaSettings.translationTargetLanguage,
-                        )) }
+            is MangaReaderIntent.SetAutoTranslation -> {
+                val bookUrl = _uiState.value.bookUrl
+                if (bookUrl.isNotEmpty()) launchAction {
+                    bookConfigWriteMutex.withLock {
+                        actionRepository.updateReadConfig(bookUrl) { mangaAutoTranslation = intent.enabled }
+                    }
                 }
             }
+            is MangaReaderIntent.SetTranslationEngine -> viewModelScope.launch {
+                mangaSettingsGateway.update { it.copy(translationEngine = intent.engine.name) }
+            }
+            MangaReaderIntent.OpenTranslation -> {
+                val state = _uiState.value
+                if (state.translationSettingsVisible) return
+                val key = (state.activeSheet as? MangaReaderSheet.PageActions)?.pageKey
+                    ?: (state.pages.getOrNull(state.currentItemIndex) as? MangaReaderItemUi.Page)?.key
+                if (key != null && state.pages.any { it is MangaReaderItemUi.Page && it.key == key }) {
+                    openSettings(MangaReaderSettingsCategory.READER)
+                    _uiState.update { it.copy(translationSettingsVisible = true,
+                        translation = it.translation.copy(pageKey = key, messageRes = null,
+                            stage = activeTranslationStage.takeIf { activeTranslation?.page?.key == key })
+                    ) }
+                }
+            }
+            MangaReaderIntent.CloseTranslationSettings -> closeTranslationSettings()
             MangaReaderIntent.TranslatePage -> translatePage()
-            MangaReaderIntent.CancelTranslation -> cancelTranslation()
+            MangaReaderIntent.CancelTranslation -> {
+                activeTranslation?.let { translationAttempts[it.id] = TranslationOutcome(null, R.string.manga_translation_cancelled) }
+                cancelTranslation()
+            }
             MangaReaderIntent.ClearTranslationCache -> {
                 cancelTranslation()
+                translationTasks().forEach { translationAttempts[it.id] = TranslationOutcome(null, R.string.manga_translation_cancelled) }
                 _uiState.update { state -> state.copy(pages = state.pages.map { page ->
                     if (page is MangaReaderItemUi.Page) page.copy(translatedImagePath = null, showingOriginal = true)
                     else page
                 }.toImmutableList()) }
+                // Suppress every previous result so a later scroll cannot restore a deleted path.
+                translationAttempts.replaceAll { _, value -> value.copy(path = null) }
                 launchAction { translationGateway.clearCache() }
             }
-            MangaReaderIntent.ToggleTranslation -> _uiState.update { state ->
-                state.copy(pages = state.pages.map { page ->
+            MangaReaderIntent.ToggleTranslation -> {
+                _uiState.update { state -> state.copy(pages = state.pages.map { page ->
                     if (page is MangaReaderItemUi.Page && page.key == state.translation.pageKey &&
                         page.translatedImagePath != null) page.copy(showingOriginal = !page.showingOriginal)
                     else page
-                }.toImmutableList())
+                }.toImmutableList()) }
+                val state = _uiState.value
+                state.pages.filterIsInstance<MangaReaderItemUi.Page>().firstOrNull { it.key == state.translation.pageKey }?.let { page ->
+                    val id = translationTask(page).id
+                    translationAttempts[id]?.let { translationAttempts[id] = it.copy(showingOriginal = page.showingOriginal) }
+                }
             }
             is MangaReaderIntent.TranslationLanguages -> {
-                if (_uiState.value.translation.stage == null && intent.source in setOf("ja", "en", "ko") &&
+                if (intent.source in setOf("ja", "en", "ko") &&
                     intent.target in setOf("zh", "en", "ja", "ko") && intent.source != intent.target) {
-                    _uiState.update { state -> state.copy(
-                        pages = state.pages.map { page ->
-                            if (page is MangaReaderItemUi.Page) page.copy(translatedImagePath = null, showingOriginal = true)
-                            else page
-                        }.toImmutableList(),
-                        translation = state.translation.copy(
-                            sourceLanguage = intent.source, targetLanguage = intent.target, messageRes = null)) }
                     viewModelScope.launch { mangaSettingsGateway.update { it.copy(
                         translationSourceLanguage = intent.source, translationTargetLanguage = intent.target) } }
                 }
@@ -185,8 +231,13 @@ class MangaReaderViewModel(
                 MangaSessionCommand.RequestAdjacentChapter(intent.chapterIndex)
             )
             is MangaReaderIntent.Initialize -> initialize(intent)
-            MangaReaderIntent.ResumeSession -> executeSession(MangaSessionCommand.Resume)
+            MangaReaderIntent.ResumeSession -> {
+                readerActive = true
+                executeSession(MangaSessionCommand.Resume)
+                scheduleTranslation()
+            }
             MangaReaderIntent.PauseSession -> {
+                readerActive = false
                 cancelTranslation()
                 executeSession(MangaSessionCommand.Pause)
             }
@@ -195,6 +246,7 @@ class MangaReaderViewModel(
                 actionRepository.refreshSource(readerSession.state.value.book?.sourceOrigin)
                 refreshContent()
             }
+            // Also used by lifecycle resume: retain per-session failures and original-image choices.
             MangaReaderIntent.ReloadContent -> executeSession(
                 MangaSessionCommand.RetryChapter(readerSession.state.value.chapterIndex)
             )
@@ -270,6 +322,11 @@ class MangaReaderViewModel(
                 )
             }
             MangaReaderIntent.BackPressed -> {
+                if (_uiState.value.translationSettingsVisible &&
+                    _uiState.value.activeDialog == null && _uiState.value.activeSheet == null) {
+                    closeTranslationSettings()
+                    return
+                }
                 when (
                     resolveMangaBackAction(
                         hasActiveDialog = _uiState.value.activeDialog != null,
@@ -341,7 +398,8 @@ class MangaReaderViewModel(
             }
             MangaReaderIntent.DismissSheet -> {
                 cancelTranslation()
-                _uiState.update { it.copy(activeSheet = null, changeSourceBook = null, settingsCategory = null) }
+                _uiState.update { it.copy(activeSheet = null, changeSourceBook = null, settingsCategory = null,
+                    translationSettingsVisible = false) }
             }
             is MangaReaderIntent.UpdateSetting -> updateSetting(intent.key, intent.value)
             is MangaReaderIntent.UpdateMenuPaletteStyle -> updateMangaPreference {
@@ -380,9 +438,11 @@ class MangaReaderViewModel(
             )
             is MangaReaderIntent.PagerScrollChanged -> {
                 pagerScrollInProgress = intent.inProgress
+                if (intent.inProgress) translationDebounceJob?.cancel()
                 if (!intent.inProgress) {
                     deferredReadySession?.let(::refreshContent)
                     deferredReadySession = null
+                    scheduleTranslation()
                 }
             }
             is MangaReaderIntent.LongPressPage -> {
@@ -428,61 +488,172 @@ class MangaReaderViewModel(
         }
     }
 
+    private fun updateTranslationSettingsState() {
+        val engine = if (latestMangaSettings.translationEngine == "AI") MangaTranslationEngine.AI else MangaTranslationEngine.OFFLINE
+        val model = aiTranslationConfig.preset?.model
+        _uiState.update { it.copy(translation = it.translation.copy(
+            engine = engine, sourceLanguage = latestMangaSettings.translationSourceLanguage,
+            targetLanguage = latestMangaSettings.translationTargetLanguage,
+            aiDescription = model?.let { "${it.displayName} · ${it.provider.baseUrl.substringBefore('?')}" }.orEmpty(),
+        )) }
+    }
+
+    private fun invalidateTranslationConfiguration() {
+        cancelTranslation()
+        translationAttempts.clear()
+        _uiState.update { state -> state.copy(
+            pages = state.pages.map { if (it is MangaReaderItemUi.Page)
+                it.copy(translatedImagePath = null, showingOriginal = true) else it }.toImmutableList(),
+            translation = state.translation.copy(messageRes = null),
+        ) }
+        scheduleTranslation()
+    }
+
+    private fun translationTask(page: MangaReaderItemUi.Page, manual: Boolean = false): TranslationTask {
+        val settings = latestMangaSettings
+        val config = if (settings.translationEngine == "AI") aiTranslationConfig else MangaTranslationConfig()
+        return TranslationTask(TranslationId(page.bookUrl, page.requestId,
+            settings.translationSourceLanguage, settings.translationTargetLanguage, config),
+            page, _uiState.value.settings.sourceOrigin, manual)
+    }
+
+    private fun translationTasks(): List<TranslationTask> {
+        val state = _uiState.value
+        if (!readerActive || !state.translation.autoTranslation || state.isLoading || state.scrollRequest != null ||
+            state.bookUrl != readerSession.state.value.book?.bookUrl) return emptyList()
+        val range = visibleItemRange?.takeIf { state.currentItemIndex in it }
+            ?: (state.currentItemIndex..state.currentItemIndex)
+        val visible = range.mapNotNull { state.pages.getOrNull(it) as? MangaReaderItemUi.Page }
+            .filter { it.bookUrl == state.bookUrl }
+        val last = visible.lastOrNull() ?: return emptyList()
+        val next = state.pages.drop(range.last + 1).firstOrNull { it is MangaReaderItemUi.Page }
+            ?.let { it as MangaReaderItemUi.Page }?.takeIf { it.chapterIndex == last.chapterIndex }
+        return (visible + listOfNotNull(next)).distinctBy { it.requestId }.map { translationTask(it) }
+    }
+
+    private fun scheduleTranslation() {
+        translationDebounceJob?.cancel()
+        val candidates = translationTasks()
+        val active = activeTranslation
+        if (active != null && !active.manual && candidates.none { it.id == active.id }) cancelTranslation()
+        if (pagerScrollInProgress) return
+        translationDebounceJob = viewModelScope.launch {
+            delay(300)
+            drainTranslationQueue()
+        }
+    }
+
+    private fun drainTranslationQueue() {
+        if (!readerActive) return
+        val tasks = translationTasks()
+        val active = activeTranslation
+        if (active != null) {
+            if (!_uiState.value.translationSettingsVisible) {
+                val current = tasks.firstOrNull()
+                val outcome = current?.let { translationAttempts[it.id] }
+                _uiState.update { it.copy(translation = it.translation.copy(pageKey = current?.page?.key.orEmpty(),
+                    stage = activeTranslationStage.takeIf { current?.id == active.id },
+                    messageRes = outcome?.message)) }
+            }
+            return
+        }
+        _uiState.update { state -> state.copy(pages = state.pages.map { item ->
+            if (item !is MangaReaderItemUi.Page || item.translatedImagePath != null) item
+            else translationAttempts[translationTask(item).id]?.let { outcome ->
+                outcome.path?.let { item.copy(translatedImagePath = it, showingOriginal = outcome.showingOriginal) }
+            } ?: item
+        }.toImmutableList()) }
+        val focus = tasks.firstOrNull()
+        if (!_uiState.value.translationSettingsVisible && focus != null) {
+            val outcome = translationAttempts[focus.id]
+            _uiState.update { it.copy(translation = it.translation.copy(pageKey = focus.page.key,
+                messageRes = outcome?.message, stage = null)) }
+        }
+        tasks.firstOrNull { it.id !in translationAttempts }?.let(::startTranslation)
+    }
+
     private fun cancelTranslation() {
+        translationDebounceJob?.cancel()
         translationGeneration++
         translationJob?.cancel()
         translationJob = null
+        activeTranslation = null
+        activeTranslationStage = null
         _uiState.update { it.copy(translation = it.translation.copy(stage = null)) }
     }
 
     private fun translatePage() {
-        if (translationJob?.isActive == true) return
         val state = _uiState.value
-        val config = state.translation
         val page = state.pages.filterIsInstance<MangaReaderItemUi.Page>()
-            .firstOrNull { it.key == config.pageKey } ?: return
+            .firstOrNull { it.key == state.translation.pageKey } ?: return
+        activeTranslation?.takeIf { it.id == translationTask(page).id }?.let {
+            activeTranslation = it.copy(manual = true)
+            _uiState.update { state -> state.copy(translation = state.translation.copy(stage = activeTranslationStage)) }
+            return
+        }
+        cancelTranslation()
+        val task = translationTask(page, manual = true)
+        translationAttempts.remove(task.id)
+        startTranslation(task)
+    }
+
+    private fun startTranslation(task: TranslationTask) {
+        activeTranslation = task
+        val page = task.page
         val generation = ++translationGeneration
-        _uiState.update { it.copy(translation = config.copy(
-            stage = MangaTranslationStage.PREPARING, messageRes = null)) }
+        fun report(stage: MangaTranslationStage? = null, message: Int? = null) {
+            if (generation != translationGeneration) return
+            activeTranslationStage = stage
+            val state = _uiState.value
+            val focused = if (state.translationSettingsVisible) state.translation.pageKey == page.key
+                else state.pages.getOrNull(state.currentItemIndex)?.key == page.key
+            if (focused) _uiState.update { it.copy(translation = it.translation.copy(
+                pageKey = page.key, stage = stage, messageRes = message)) }
+        }
+        report(MangaTranslationStage.PREPARING)
         translationJob = viewModelScope.launch {
             try {
                 val result = translationGateway.translate(MangaTranslationRequest(
-                    page.imageUrl, page.bookUrl, state.settings.sourceOrigin, page.chapterSubject,
-                    config.sourceLanguage, config.targetLanguage,
-                )) { stage ->
-                    if (generation == translationGeneration) _uiState.update {
-                        it.copy(translation = it.translation.copy(stage = stage))
-                    }
-                }
+                    page.imageUrl, page.bookUrl, task.sourceOrigin, page.chapterSubject,
+                    task.id.source, task.id.target, task.id.config,
+                )) { report(it) }
                 if (generation != translationGeneration) return@launch
-                _uiState.update { current ->
-                    current.copy(
-                        pages = current.pages.map { item ->
-                            if (item is MangaReaderItemUi.Page && item.requestId == page.requestId &&
-                                item.imageUrl == page.imageUrl) item.copy(
-                                translatedImagePath = result.imagePath, showingOriginal = result.imagePath == null)
-                            else item
-                        }.toImmutableList(),
-                        translation = current.translation.copy(stage = null,
-                            messageRes = if (result.regionCount == 0) R.string.manga_translation_no_text
-                            else R.string.manga_translation_done),
-                    )
-                }
+                val message = if (result.regionCount == 0) R.string.manga_translation_no_text else R.string.manga_translation_done
+                translationAttempts[task.id] = TranslationOutcome(result.imagePath, message)
+                _uiState.update { current -> current.copy(pages = current.pages.map { item ->
+                    if (item is MangaReaderItemUi.Page && item.bookUrl == page.bookUrl &&
+                        item.requestId == page.requestId) item.copy(translatedImagePath = result.imagePath,
+                        showingOriginal = result.imagePath == null) else item
+                }.toImmutableList()) }
+                report(message = message)
             } catch (error: kotlinx.coroutines.CancellationException) {
                 if (error is kotlinx.coroutines.TimeoutCancellationException && generation == translationGeneration) {
-                    _uiState.update { it.copy(translation = it.translation.copy(
-                        stage = null, messageRes = R.string.manga_translation_failed)) }
+                    translationAttempts[task.id] = TranslationOutcome(null, R.string.manga_translation_ai_timeout)
+                    report(message = R.string.manga_translation_ai_timeout)
                 }
                 throw error
             } catch (error: Exception) {
                 if (generation == translationGeneration) {
-                    val known = listOf(R.string.manga_translation_gms, R.string.manga_translation_ocr_download,
+                    val known = if (error is MangaTranslationException) when (error.failure) {
+                        MangaTranslationFailure.CONFIGURATION -> R.string.manga_translation_ai_configuration
+                        MangaTranslationFailure.AUTH -> R.string.manga_translation_ai_auth
+                        MangaTranslationFailure.RATE_LIMIT -> R.string.manga_translation_ai_rate_limit
+                        MangaTranslationFailure.TIMEOUT -> R.string.manga_translation_ai_timeout
+                        MangaTranslationFailure.FORMAT -> R.string.manga_translation_ai_format
+                        MangaTranslationFailure.TOO_LARGE -> R.string.manga_translation_ai_too_large
+                        MangaTranslationFailure.NETWORK -> R.string.manga_translation_ai_network
+                    } else listOf(R.string.manga_translation_gms, R.string.manga_translation_ocr_download,
                         R.string.manga_translation_decode_failed, R.string.manga_translation_layout_failed,
-                        R.string.manga_translation_repair_failed,
-                        R.string.manga_translation_cache_full)
-                        .firstOrNull { appCtx.getString(it) == error.message }
-                    _uiState.update { it.copy(translation = it.translation.copy(
-                        stage = null, messageRes = known ?: R.string.manga_translation_failed)) }
+                        R.string.manga_translation_repair_failed, R.string.manga_translation_cache_full)
+                        .firstOrNull { appCtx.getString(it) == error.message } ?: R.string.manga_translation_failed
+                    translationAttempts[task.id] = TranslationOutcome(null, known)
+                    report(message = known)
+                }
+            } finally {
+                if (generation == translationGeneration) {
+                    activeTranslation = null
+                    translationJob = null
+                    scheduleTranslation()
                 }
             }
         }
@@ -563,6 +734,17 @@ class MangaReaderViewModel(
                 showError(it, fallbackRes = R.string.manga_reader_init_failed)
             }
             return
+        }
+        if (translationBookUrl != book.bookUrl) {
+            cancelTranslation()
+            translationAttempts.clear()
+            visibleItemRange = null
+            translationBookUrl = book.bookUrl
+        }
+        if (_uiState.value.translation.autoTranslation != book.autoTranslation) {
+            if (!book.autoTranslation) cancelTranslation()
+            _uiState.update { it.copy(translation = it.translation.copy(autoTranslation = book.autoTranslation)) }
+            scheduleTranslation()
         }
         val current = session.currentChapter
         if (current !is MangaChapterState.Ready) {
@@ -818,6 +1000,7 @@ class MangaReaderViewModel(
                         } else null,
                 )
             }
+            scheduleTranslation()
             if (positionChanged && pendingExplicitChapterIndex != session.chapterIndex) {
                 // The session already owns this restored page. Notify it for adjacent-chapter
                 // loading without pretending the LazyColumn has reached the target: doing the
@@ -834,6 +1017,7 @@ class MangaReaderViewModel(
     }
 
     fun showLoading() {
+        cancelTranslation()
         _uiState.update {
             it.copy(
                 isLoading = true,
@@ -846,6 +1030,7 @@ class MangaReaderViewModel(
     }
 
     fun showError(message: String) {
+        cancelTranslation()
         _uiState.update {
             it.copy(isLoading = false, errorMessage = MangaReaderText.Dynamic(message))
         }
@@ -900,6 +1085,7 @@ class MangaReaderViewModel(
     }
 
     private suspend fun invalidateCurrentChapter() {
+        translationAttempts.clear()
         val state = readerSession.state.value
         actionRepository.invalidateChapter(
             requireNotNull(state.book?.bookUrl),
@@ -908,22 +1094,33 @@ class MangaReaderViewModel(
     }
 
     private fun setMenuVisible(visible: Boolean) {
+        if (!visible && activeTranslation?.manual == true) cancelTranslation()
         _uiState.update {
             it.copy(
                 menuVisible = visible,
                 settingsCategory = if (visible) it.settingsCategory else null,
+                translationSettingsVisible = visible && it.translationSettingsVisible,
             )
         }
         _effects.tryEmit(MangaReaderEffect.SetSystemBarsVisible(visible))
     }
 
     private fun openSettings(category: MangaReaderSettingsCategory) {
+        if (activeTranslation?.manual == true) cancelTranslation()
         setMenuVisible(true)
-        _uiState.update { it.copy(settingsCategory = category, activeSheet = null) }
+        _uiState.update { it.copy(settingsCategory = category, activeSheet = null,
+            translationSettingsVisible = false) }
+    }
+
+    private fun closeTranslationSettings() {
+        if (activeTranslation?.manual == true) cancelTranslation()
+        _uiState.update { it.copy(translationSettingsVisible = false,
+            settingsCategory = MangaReaderSettingsCategory.READER) }
     }
 
     private fun closeSettings() {
-        _uiState.update { it.copy(settingsCategory = null) }
+        if (activeTranslation?.manual == true) cancelTranslation()
+        _uiState.update { it.copy(settingsCategory = null, translationSettingsVisible = false) }
     }
 
     private fun emitAndHide(effect: MangaReaderEffect) {
@@ -932,6 +1129,7 @@ class MangaReaderViewModel(
     }
 
     private fun closeReader() {
+        readerActive = false
         cancelTranslation()
         when {
             readerSession.state.value.book != null &&
@@ -1389,12 +1587,10 @@ class MangaReaderViewModel(
         // commonly page 0, and accepting it overwrites the persisted target before scrollToItem
         // reaches it. Only the requested item may complete a pending programmatic navigation.
         if (!acceptsMangaVisibleItem(requestedItemIndex, itemIndex)) return
-        if (_uiState.value.translation.stage != null && item.key != _uiState.value.translation.pageKey) {
-            cancelTranslation()
-        }
         if (pendingExplicitChapterIndex != null &&
             item.chapterIndex != readerSession.state.value.chapterIndex
         ) return
+        if (activeTranslation?.manual == true && itemIndex != state.currentItemIndex) cancelTranslation()
         visibleItemRange = firstItemIndex.coerceAtMost(lastItemIndex)..
             lastItemIndex.coerceAtLeast(firstItemIndex)
         when (mangaChapterSwitchDecision(
@@ -1425,6 +1621,7 @@ class MangaReaderViewModel(
         if (completedExplicitNavigation) {
             pendingExplicitChapterIndex = null
         }
+        scheduleTranslation()
     }
 
     private fun updateFooterItem(itemIndex: Int, navigationId: Long) {

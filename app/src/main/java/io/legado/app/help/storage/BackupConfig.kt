@@ -359,6 +359,9 @@ object BackupConfig {
     )
 
     private val mangaPrefKeys = arrayOf(
+        "mangaTranslationEngine",
+        "mangaTranslationSourceLanguage",
+        "mangaTranslationTargetLanguage",
         PreferKey.showMangaUi,
         PreferKey.mangaScrollMode,
         PreferKey.webtoonSidePaddingDp,

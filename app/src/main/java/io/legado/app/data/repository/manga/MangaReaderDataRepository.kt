@@ -52,6 +52,7 @@ class MangaReaderDataRepository(
         database.bookDao.flowGetBook(bookUrl)
             .map { book ->
                 MangaBookPresentation(
+                    autoTranslation = book?.readConfig?.mangaAutoTranslation ?: false,
                     scrollMode = book?.readConfig?.mangaScrollMode,
                     sidePaddingDp = book?.readConfig?.webtoonSidePaddingDp,
                 )
@@ -120,6 +121,7 @@ class MangaReaderDataRepository(
         val newerProgress = if (!chapterChanged) findNewerProgress(book) else null
         return OpenedMangaBook(
             book = MangaBookState(
+                autoTranslation = book.readConfig?.mangaAutoTranslation ?: false,
                 bookUrl = book.bookUrl,
                 name = book.name,
                 author = book.author,

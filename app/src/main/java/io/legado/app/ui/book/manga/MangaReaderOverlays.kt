@@ -746,6 +746,25 @@ internal fun ReaderStatusOverlay(
     state: MangaReaderUiState,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
+    val translation = state.translation
+    val translationMessage = translation.messageRes?.takeUnless {
+        it == R.string.manga_translation_done || it == R.string.manga_translation_no_text ||
+            it == R.string.manga_translation_cancelled
+    }
+    if (!state.menuVisible && !state.isLoading && state.errorMessage == null &&
+        (translation.stage != null || translationMessage != null)) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            Surface(
+                modifier = Modifier.navigationBarsPadding().padding(12.dp)
+                    .clickable { onIntent(MangaReaderIntent.OpenTranslation) },
+                shape = RoundedCornerShape(12.dp),
+                color = LegadoTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Text(stringResource(translationMessage ?: R.string.manga_translation_working),
+                    modifier = Modifier.padding(12.dp), style = LegadoTheme.typography.bodySmall)
+            }
+        }
+    }
     if (state.isLoading) {
         Surface(
             modifier = Modifier.fillMaxSize(),

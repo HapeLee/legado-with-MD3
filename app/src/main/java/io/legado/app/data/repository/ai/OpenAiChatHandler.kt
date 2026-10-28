@@ -64,7 +64,7 @@ class OpenAiChatHandler : AiProtocolHandler {
         }
         body.applyZhipuThinking(provider, request.model.modelId, params.reasoningLevel)
 
-        return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
+        return retryWithBackoff(maxAttempts = request.maxAttempts.coerceAtLeast(1), keyRotator = keyRotator) {
             val response = aiOkHttpClient.newCallStrResponse {
                 url(provider.baseUrl + provider.chatPath)
                 postJson(GSON.toJson(body))
@@ -123,7 +123,7 @@ class OpenAiChatHandler : AiProtocolHandler {
 
         // For streaming, we retry before establishing the SSE connection.
         // Once streaming starts, errors are not retried (partial output would be confusing).
-        val response = retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
+        val response = retryWithBackoff(maxAttempts = request.maxAttempts.coerceAtLeast(1), keyRotator = keyRotator) {
             aiOkHttpClient.newCallResponse {
                 url(provider.baseUrl + provider.chatPath)
                 postJson(GSON.toJson(body))

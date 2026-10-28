@@ -490,6 +490,7 @@ data class Book(
 
         val mangaColorFilter: String? = null,
         var mangaScrollMode: Int? = null,
+        var mangaAutoTranslation: Boolean = false,
         var webtoonSidePaddingDp: Int? = null,
         var mangaBackground: String? = null,
 

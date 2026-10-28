@@ -1,6 +1,7 @@
 package io.legado.app.domain.model.settings
 
 data class MangaSettings(
+    val translationEngine: String = "OFFLINE",
     val translationSourceLanguage: String = "ja",
     val translationTargetLanguage: String = "zh",
     val showMangaUi: Boolean = true,
