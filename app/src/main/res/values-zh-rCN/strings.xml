@@ -3916,4 +3916,6 @@
     <string name="bubble_help_summary">${num} 与 ${color} 怎么用</string>
     <string name="bubble_help_body">书源把段评入口写成 &lt;img src=“dp:12,{...}”&gt;，其中的 12 会替换模板里的 ${num}；${color} 会被替换成上面配置的颜色（status=emphasis 时用强调色）。气泡包还可以把图片、字体放在 assets/ 下，用 asset://名称 引用。</string>
     <string name="page_anim_ios_curl">iOS仿真</string>
+    <string name="page_anim_google_curl">Google仿真</string>
+    <string name="page_anim_parallax">视差</string>
 </resources>

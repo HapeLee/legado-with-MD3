@@ -3919,4 +3919,6 @@
     <string name="bubble_help_summary">How ${num} and ${color} work</string>
     <string name="bubble_help_body">A book source writes a comment entry as &lt;img src=“dp:12,{...}”&gt;; 12 replaces ${num} in the template. ${color} is replaced with the color configured above (status=emphasis uses the emphasis color). Packages may also ship images and fonts in assets/ and reference them as asset://name.</string>
     <string name="page_anim_ios_curl">iOS Curl</string>
+    <string name="page_anim_google_curl">Google Curl</string>
+    <string name="page_anim_parallax">Parallax</string>
 </resources>

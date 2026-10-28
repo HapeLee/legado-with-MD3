@@ -3063,4 +3063,6 @@
     <string name="battery_optimization_status_ignored">已開啟無限制（點擊可檢查廠商背景策略）</string>
     <string name="battery_optimization_status_not_ignored">未開啟無限制，背景可能被系統終止</string>
     <string name="page_anim_ios_curl">iOS仿真</string>
+    <string name="page_anim_google_curl">Google仿真</string>
+    <string name="page_anim_parallax">視差</string>
 </resources>

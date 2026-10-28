@@ -458,6 +458,8 @@ private fun PageAnimDropdown(
         R.string.page_anim_slide to PageAnim.slidePageAnim,
         R.string.page_anim_simulation to PageAnim.simulationPageAnim,
         R.string.page_anim_ios_curl to PageAnim.iosCurlPageAnim,
+        R.string.page_anim_google_curl to PageAnim.googleCurlPageAnim,
+        R.string.page_anim_parallax to PageAnim.parallaxPageAnim,
         R.string.page_anim_scroll to PageAnim.scrollPageAnim,
         R.string.page_anim_fade to PageAnim.fadePageAnim,
         R.string.page_anim_none to PageAnim.noAnim,
