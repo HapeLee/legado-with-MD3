@@ -11,6 +11,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.RssArticle
+import io.legado.app.data.entities.RssStar
 import io.legado.app.data.repository.VideoContentRepository
 import io.legado.app.data.repository.VideoMedia
 import io.legado.app.help.CacheManager
@@ -18,6 +20,8 @@ import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.book.update
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.exoplayer.ExoPlayerHelper
+import io.legado.app.model.rss.Rss
+import io.legado.app.utils.NetworkUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -96,6 +100,7 @@ object VideoPlay : CoroutineScope by MainScope() {
         private set
     var singleUrl: Boolean = false
         private set
+    private var rssStar: RssStar? = null
 
     private val _state = MutableStateFlow(VideoPlayState())
     val state: StateFlow<VideoPlayState> = _state.asStateFlow()
@@ -240,6 +245,72 @@ object VideoPlay : CoroutineScope by MainScope() {
         player.setMediaItem(MediaItem.fromUri(url), durChapterPos.toLong())
         player.prepare()
         if (autoPlay) player.play()
+    }
+
+    /**
+     * 播放 RSS 文章里的视频（与上游一致）：地址来自 RSS 源的正文规则，
+     * 进度优先记在该文章的收藏上，未收藏时按链接记缓存。
+     */
+    suspend fun openRssArticle(article: RssArticle) {
+        // 路由只带 origin/link/sort/title，正文与变量从库里补全
+        val target = withContext(Dispatchers.IO) {
+            appDb.rssArticleDao.get(article.origin, article.link, article.sort)
+        } ?: article
+        singleUrl = true
+        book = null
+        bookSource = null
+        toc = emptyList()
+        volumes = emptyList()
+        episodes = emptyList()
+        chapter = null
+        danmaku = null
+        val starred = withContext(Dispatchers.IO) {
+            appDb.rssStarDao.get(target.origin, target.link)
+        }
+        rssStar = starred
+        videoTitle = target.title
+        durChapterPos = starred?.durPos?.takeIf { it > 0 }
+            ?: (CacheManager.getInt(VIDEO_POS_PREFIX + target.link) ?: 0)
+        _state.update {
+            it.copy(
+                bookName = target.title,
+                chapterTitle = "",
+                volumes = emptyList(),
+                episodes = emptyList(),
+                episodeIndex = 0,
+                isLoading = true,
+                error = null,
+                playUrl = null,
+                danmaku = null,
+            )
+        }
+        val url = withContext(Dispatchers.IO) {
+            runCatching {
+                val source = appDb.rssSourceDao.getByKey(target.origin)
+                val raw = if (target.content.isNullOrBlank() || target.content == target.link) {
+                    val rule = source?.ruleContent
+                    if (source != null && !rule.isNullOrBlank()) {
+                        Rss.getContentAwait(target, rule, source)
+                    } else {
+                        target.content
+                    }
+                } else {
+                    target.content
+                }
+                raw?.trim()?.takeIf { it.isNotEmpty() }
+                    ?.let { NetworkUtils.getAbsoluteURL(target.link, it) }
+            }.getOrNull()
+        }
+        if (url.isNullOrBlank()) {
+            fail(IllegalStateException(appCtx.getString(R.string.video_link_not_found)))
+            return
+        }
+        playUrl = url
+        player.setMediaItem(MediaItem.fromUri(url), durChapterPos.coerceAtLeast(0).toLong())
+        player.playbackParameters = player.playbackParameters.withSpeed(playSpeed)
+        player.prepare()
+        if (autoPlay) player.play()
+        _state.update { it.copy(isLoading = false, playUrl = url) }
     }
 
     private fun applyBook(book: Book, source: BookSource, chapters: List<BookChapter>) {
@@ -428,8 +499,15 @@ object VideoPlay : CoroutineScope by MainScope() {
             ?.coerceAtLeast(0)?.toInt() ?: durChapterPos
         durChapterPos = currentPos
         if (book == null) {
-            playUrl?.let { url ->
-                CacheManager.put(VIDEO_POS_PREFIX + url, currentPos, VIDEO_POS_SAVE_TIME)
+            val starred = rssStar
+            if (starred != null) {
+                // RSS 收藏本身带阅读进度，与「听书/RSS 阅读」是同一份数据
+                starred.durPos = currentPos
+                launch(Dispatchers.IO) { appDb.rssStarDao.update(starred) }
+            } else {
+                playUrl?.let { url ->
+                    CacheManager.put(VIDEO_POS_PREFIX + url, currentPos, VIDEO_POS_SAVE_TIME)
+                }
             }
             return
         }
@@ -468,6 +546,7 @@ object VideoPlay : CoroutineScope by MainScope() {
         player.clearMediaItems()
         linkCache.clear()
         preloadingKeys.clear()
+        rssStar = null
         launch(Dispatchers.IO) { contentRepository.clearTempFiles() }
         _state.update { VideoPlayState() }
         isReleasing = false

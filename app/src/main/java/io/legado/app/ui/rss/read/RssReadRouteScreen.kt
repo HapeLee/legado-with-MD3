@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -71,6 +72,7 @@ import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.applyDayNight
+import io.legado.app.data.entities.RssArticle
 import io.legado.app.utils.keepScreenOn
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.share
@@ -91,6 +93,7 @@ fun RssReadRouteScreen(
     startPage: Boolean,
     onBackClick: () -> Unit,
     onOpenArticles: (sortUrl: String?, targetOrigin: String?) -> Unit,
+    onOpenVideoPlayer: (RssArticle) -> Unit,
     viewModel: ReadRssViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
@@ -343,6 +346,16 @@ fun RssReadRouteScreen(
                                         } ?: context.toastOnUi(R.string.null_url)
                                     }
                             )
+                                if (viewModel.rssArticle?.type == 2) {
+                                    RoundDropdownMenuItem(
+                                        text = stringResource(R.string.play_video),
+                                        leadingIcon = { MenuItemIcon(Icons.Default.PlayArrow) },
+                                        onClick = {
+                                            dismiss()
+                                            viewModel.rssArticle?.let(onOpenVideoPlayer)
+                                        }
+                                    )
+                                }
                                 RoundDropdownMenuItem(
                                     text = if (isSpeaking) stringResource(R.string.aloud_stop) else stringResource(
                                         R.string.read_aloud

@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.constant.IntentAction
-import io.legado.app.model.SourceCallBack
+import io.legado.app.data.entities.RssArticle
 import io.legado.app.model.VideoPlay
 import io.legado.app.service.VideoPlayService
 import io.legado.app.utils.startService
@@ -71,6 +71,17 @@ class VideoPlayerViewModel : ViewModel() {
         appCtx.startService<VideoPlayService> { action = IntentAction.play }
         viewModelScope.launch {
             VideoPlay.openBook(bookUrl)
+        }
+    }
+
+    /** RSS 文章里的视频：定位信息足够，正文由 [VideoPlay] 按源规则重新解析。 */
+    fun initRss(article: RssArticle) {
+        val key = "rss:${article.origin}|${article.link}|${article.sort}"
+        if (initializedBookUrl == key) return
+        initializedBookUrl = key
+        appCtx.startService<VideoPlayService> { action = IntentAction.play }
+        viewModelScope.launch {
+            VideoPlay.openRssArticle(article)
         }
     }
 

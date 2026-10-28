@@ -11,6 +11,7 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.rule.BookInfoRule
 import io.legado.app.data.entities.rule.ContentRule
 import io.legado.app.data.entities.rule.TocRule
@@ -287,6 +288,60 @@ class VideoPlaySessionTest {
         awaitWrites()
 
         assertEquals(12_000, CacheManager.getInt("video_pos_https://video.test/once.mp4"))
+    }
+
+    // ——————————————————— RSS 视频 ———————————————————
+
+    @Test
+    fun rssArticlePlaysContentAndSavesStarProgress() = runBlocking {
+        val article = RssArticle(
+            origin = "https://rss.test",
+            sort = "sort",
+            title = "RSS Video",
+            link = "https://rss.test/article",
+            content = "https://rss.test/article.mp4",
+            type = 2,
+        )
+        fixture.database.rssStarDao.insert(article.toStar())
+        VideoPlay.attachPlayer(player.instance)
+
+        VideoPlay.openRssArticle(article)
+        awaitState("RSS Video") { it.bookName == "RSS Video" }
+
+        assertEquals("https://rss.test/article.mp4", VideoPlay.playUrl)
+        player.position = 9_000L
+        VideoPlay.saveRead()
+        awaitWrites()
+
+        assertEquals(
+            9_000,
+            fixture.database.rssStarDao.get(article.origin, article.link)?.durPos,
+        )
+        assertTrue(VideoPlay.singleUrl)
+    }
+
+    @Test
+    fun rssArticleWithoutStarFallsBackToCachedProgress() = runBlocking {
+        val article = RssArticle(
+            origin = "https://rss.test",
+            sort = "sort",
+            title = "RSS Video",
+            link = "https://rss.test/uncached",
+            content = "https://rss.test/uncached.mp4",
+            type = 2,
+        )
+        VideoPlay.attachPlayer(player.instance)
+
+        VideoPlay.openRssArticle(article)
+        awaitState("RSS Video") { it.bookName == "RSS Video" }
+        player.position = 4_500L
+        VideoPlay.saveRead()
+        awaitWrites()
+
+        assertEquals(
+            4_500,
+            CacheManager.getInt("video_pos_https://rss.test/uncached.mp4"),
+        )
     }
 
     // ——————————————————— 卷与集 ———————————————————

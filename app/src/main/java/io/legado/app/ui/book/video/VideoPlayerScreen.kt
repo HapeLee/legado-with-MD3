@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import io.legado.app.R
 import io.legado.app.constant.BookType
+import io.legado.app.data.entities.RssArticle
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.VideoPlay
 import io.legado.app.utils.sendToClip
@@ -66,7 +67,8 @@ private val speedOptions = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f, 2.5f, 3f)
 
 @Composable
 fun VideoPlayerScreen(
-    bookUrl: String,
+    bookUrl: String? = null,
+    rssArticle: RssArticle? = null,
     onBack: () -> Unit,
     viewModel: VideoPlayerViewModel = koinViewModel(),
 ) {
@@ -77,8 +79,11 @@ fun VideoPlayerScreen(
     val controlsVisible = remember { mutableStateOf(true) }
     var menuExpanded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(bookUrl) {
-        viewModel.init(bookUrl)
+    LaunchedEffect(bookUrl, rssArticle) {
+        when {
+            rssArticle != null -> viewModel.initRss(rssArticle)
+            bookUrl != null -> viewModel.init(bookUrl)
+        }
     }
 
     LaunchedEffect(Unit) {

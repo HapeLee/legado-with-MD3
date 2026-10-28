@@ -167,6 +167,7 @@ import io.legado.app.ui.replace.edit.ReplaceEditViewModel
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
 import io.legado.app.ui.rss.favorites.RssFavoritesRouteScreen
+import io.legado.app.data.entities.RssArticle
 import io.legado.app.ui.rss.read.MainRouteRssRead
 import io.legado.app.ui.rss.read.RssReadRouteScreen
 import io.legado.app.ui.rss.source.debug.RssSourceDebugRoute
@@ -1153,12 +1154,21 @@ fun MainActivity.mainEntryProvider(
         metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
     ) { route ->
         val bookUrl = route.bookUrl
-        if (bookUrl == null) {
+        val rssArticle = route.rssLink?.let { link ->
+            RssArticle(
+                origin = route.rssOrigin.orEmpty(),
+                sort = route.rssSort.orEmpty(),
+                title = route.rssTitle.orEmpty(),
+                link = link,
+                type = 2,
+            )
+        }
+        if (bookUrl == null && rssArticle == null) {
             LaunchedEffect(Unit) { onNavigateBack() }
         } else {
             // 与阅读器入口一致：未授权时播放器不会被组合，也就不会初始化或显示书名/章节名
             PrivateReadGate(
-                bookUrl = bookUrl,
+                bookUrl = bookUrl ?: rssArticle!!.link,
                 onExit = {
                     if (backStack.size > 1) {
                         MainNavigator.navigateBack(
@@ -1176,7 +1186,11 @@ fun MainActivity.mainEntryProvider(
                     onNavigateToRoute(MainRouteSettingsPrivate)
                 },
             ) {
-                VideoPlayerScreen(bookUrl = bookUrl, onBack = onNavigateBack)
+                VideoPlayerScreen(
+                    bookUrl = bookUrl,
+                    rssArticle = rssArticle,
+                    onBack = onNavigateBack,
+                )
             }
         }
     }
@@ -1311,7 +1325,17 @@ fun MainActivity.mainEntryProvider(
                         sortUrl = sortUrl
                     )
                 )
-            }
+            },
+            onOpenVideoPlayer = { article ->
+                onNavigateToRoute(
+                    MainRouteVideoPlay(
+                        rssOrigin = article.origin,
+                        rssLink = article.link,
+                        rssSort = article.sort,
+                        rssTitle = article.title,
+                    )
+                )
+            },
         )
     }
 
