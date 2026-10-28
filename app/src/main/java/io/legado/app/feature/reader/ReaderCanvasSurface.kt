@@ -139,6 +139,7 @@ import io.legado.app.feature.reader.core.transition.PageCurlFrame
 import io.legado.app.feature.reader.core.transition.PageCurlGeometry
 import io.legado.app.feature.reader.core.transition.ReaderAutoPagePolicy
 import io.legado.app.feature.reader.core.transition.ReaderAutoPageVisualMode
+import io.legado.app.feature.reader.core.transition.ReaderCommittedTurnPolicy
 import io.legado.app.feature.reader.core.transition.ReaderCoverShadowPolicy
 import io.legado.app.feature.reader.core.transition.ReaderCurlTouchPolicy
 import io.legado.app.feature.reader.core.transition.ReaderCurlVisualPolicy
@@ -187,6 +188,13 @@ private val SelectionHandleRadius = 7.dp
 private val SelectionHandleStrokeWidth = 2.dp
 private const val SelectionHandleFadeOutMillis = 90
 private const val SelectionHandleFadeInMillis = 140
+
+/**
+ * 等待 Google 仿真翻页栈"冷捕获完成"的帧数上限（约 0.5s @60Hz）。
+ * 就绪信号由翻页栈的捕获协程发出，可能因组合层重启或翻页栈未进入组合而丢失；
+ * 无上限等待会让本次翻页的偏移动画永远不开始。
+ */
+private const val MAX_GOOGLE_CURL_READY_WAIT_FRAMES = 30
 
 @Composable
 fun ReaderCanvasSurface(
@@ -274,6 +282,8 @@ fun ReaderCanvasSurface(
     // 时改变；位移、透明度、折页几何一律在绘制期/layer 期读取。
     var turnDirection by remember { mutableStateOf<ReaderTurnDirection?>(null) }
     var committedTurnPageId by remember { mutableStateOf<ReaderPageId?>(null) }
+    // 提交翻页那一刻组合中的页，用来判断后续组合出来的窗口是不是本次翻页的结果。
+    var committedTurnOriginId by remember { mutableStateOf<ReaderPageId?>(null) }
     val composedTurnDirection = turnDirection.takeUnless { current.id == committedTurnPageId }
 
     /**
@@ -282,7 +292,10 @@ fun ReaderCanvasSurface(
      */
     fun applyTransition(next: ReaderPageTransition) {
         if (!next.dragging || next.direction != transition.direction) googleCurlReady = false
-        if (next.direction != null && next.dragging) committedTurnPageId = null
+        if (next.direction != null && next.dragging) {
+            committedTurnPageId = null
+            committedTurnOriginId = null
+        }
         transition = next
         turnDirection = next.direction?.takeIf { next.dragging }
     }
@@ -518,8 +531,10 @@ fun ReaderCanvasSurface(
     }
     fun finishPageTurn() {
         val originId = currentPageWindow().current?.id
-        committedTurnPageId = completePendingTurn()?.current?.id?.takeIf { it != originId }
-        if (committedTurnPageId == null) {
+        val committedId = completePendingTurn()?.current?.id?.takeIf { it != originId }
+        committedTurnPageId = committedId
+        committedTurnOriginId = originId.takeIf { committedId != null }
+        if (committedId == null) {
             displayOffset = 0f
             applyTransition(ReaderPageTransition())
         }
@@ -593,8 +608,14 @@ fun ReaderCanvasSurface(
         }
         pageMotionJob = animationScope.launch {
             // Cold page capture must finish before a tap/keyboard turn consumes its duration.
+            // 等待必须有上限：就绪信号由翻页栈发出，一旦丢失（组合层重启 / 翻页栈未进入
+            // 组合 / 捕获被取消），无上限等待会让本次翻页的偏移动画永远不开始。
             if (transitionMode == ReaderTransitionMode.GOOGLE_CURL) {
-                while (!googleCurlReady) withFrameNanos { }
+                var frames = 0
+                while (!googleCurlReady && frames < MAX_GOOGLE_CURL_READY_WAIT_FRAMES) {
+                    withFrameNanos { }
+                    frames++
+                }
             }
             Animatable(startOffset).animateTo(
                 decision.targetOffsetPx,
@@ -837,10 +858,11 @@ fun ReaderCanvasSurface(
         }
     }
     LaunchedEffect(current.id, current.layoutRevision, transitionMode) {
-        if (committedTurnPageId == current.id) {
+        if (ReaderCommittedTurnPolicy.shouldRelease(current.id, committedTurnPageId, committedTurnOriginId)) {
             displayOffset = 0f
             applyTransition(ReaderPageTransition())
             committedTurnPageId = null
+            committedTurnOriginId = null
         }
         val ownCrossing = scrollOwnCrossing
         scrollOwnCrossing = false
@@ -1012,9 +1034,14 @@ fun ReaderCanvasSurface(
                 curlRevealProgress = 1f
                 // 翻页收尾被打断时在此同步提交；宿主当帧返回新窗口，但组合要等下一帧，
                 // 手势必须改用返回的窗口命中，否则长按会选中已不在屏幕上的旧页。
+                val turnOriginId = pendingTurnOrigin
                 val turnedWindow = completePendingTurn()
                 // 已提交但尚未组合的新页，继续保留上一帧；此时归零会把旧页闪回原位。
-                committedTurnPageId = turnedWindow?.current?.id ?: committedTurnPageId
+                val turnedId = turnedWindow?.current?.id
+                if (turnedId != null) {
+                    committedTurnPageId = turnedId
+                    committedTurnOriginId = turnOriginId
+                }
                 if (committedTurnPageId == null) {
                     displayOffset = 0f
                     applyTransition(ReaderPageTransition())

@@ -71,8 +71,8 @@ internal fun GoogleCurlPageStack(
         var prepared by remember(currentKey, targetKey, revision) { mutableStateOf(false) }
         DisposableEffect(renderer) { onDispose { renderer.close() } }
         LaunchedEffect(currentKey, targetKey, revision, currentSettled, targetSettled) {
-            renderer.close()
-            prepared = false
+            // 换页或图片加载完成都会重启本 effect。旧的网格状态必须等新的两页捕获完成后再清：
+            // 否则动画进行中会先掉回静态快照（闪烁），等重新捕获完才恢复波浪。
             try {
                 withFrameNanos { }
                 if (currentBitmap == null) currentBitmap = snapshots.capture(baseLayer, currentKey, currentSettled)
@@ -82,6 +82,8 @@ internal fun GoogleCurlPageStack(
                     ?: revealLayer.toImageBitmap()
                 val first = currentBitmap
                 val second = targetBitmap
+                renderer.close()
+                prepared = false
                 if (first != null && second != null) {
                     renderer.prepare(first.asAndroidBitmap(), second.asAndroidBitmap())
                     prepared = true

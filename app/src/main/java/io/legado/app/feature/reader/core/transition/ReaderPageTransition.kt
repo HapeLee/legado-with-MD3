@@ -61,6 +61,31 @@ object ReaderProgrammaticTurnPolicy {
     fun shouldAccept(animationRunning: Boolean): Boolean = !animationRunning
 }
 
+/**
+ * 已提交翻页的"保留帧"何时释放。
+ *
+ * 翻页提交后宿主当帧就返回新窗口，但组合要等下一帧，因此在这之间必须保留上一帧的位移与
+ * 过渡状态，否则旧页会闪回原位（快速连翻时尤其明显）。
+ *
+ * 只在两种情况下释放：
+ * ① 组合出来的正是已提交的新页（正常路径）；
+ * ② 组合出来的窗口既不是已提交页、也不是提交前那一页（重新排版 / 外部跳转 / 边界情况
+ *    导致换窗结果与本次翻页不一致）。少了 ②，[committedPageId] 会永远等不到命中，
+ *    画布就永久停在提交后的偏移状态，之后任何手势都复位不了。
+ */
+object ReaderCommittedTurnPolicy {
+    fun shouldRelease(
+        composedPageId: ReaderPageId,
+        committedPageId: ReaderPageId?,
+        committedOriginPageId: ReaderPageId?,
+    ): Boolean {
+        if (committedPageId == null) return false
+        if (composedPageId == committedPageId) return true
+        // 没有 origin（提交时拿不到当前页）时不做猜测，只按命中释放，避免丢掉保留帧。
+        return committedOriginPageId != null && composedPageId != committedOriginPageId
+    }
+}
+
 data class ReaderPageTransition(
     val direction: ReaderTurnDirection? = null,
     val offsetPx: Float = 0f,
