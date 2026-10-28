@@ -160,6 +160,13 @@ object ImageProvider {
 
     /** 显式刷新必须绕过 URL 查找复用；每份已更新原图的位图都需要重新解码。 */
     suspend fun refreshImage(book: Book, src: String, bookSource: BookSource?): Boolean = withContext(IO) {
+        // 段评气泡是现算的位图，没有磁盘副本可刷新；丢掉 LRU 即视为刷新完成
+        if (ParagraphBubbleRenderer.isBubbleSrc(src)) {
+            bitmapLruCache.snapshot().keys
+                .filter { it.startsWith("${src}#") }
+                .forEach { bitmapLruCache.remove(it) }
+            return@withContext true
+        }
         if (book.isEpub || book.isPdf || book.isMobi) {
             val file = BookHelp.getImage(book, src)
             bitmapLruCache.remove(file.absolutePath)
@@ -180,6 +187,10 @@ object ImageProvider {
         src: String,
         bookSource: BookSource?
     ): Size {
+        // 段评气泡是现算的位图，没有磁盘文件，不能走下载/解码路径
+        if (ParagraphBubbleRenderer.isBubbleSrc(src)) {
+            return ParagraphBubbleRenderer.getSize(src)
+        }
         val file = cacheImage(book, src, bookSource)
         val op = BitmapFactory.Options()
         // inJustDecodeBounds如果设置为true,仅仅返回图片实际的宽和高,宽和高是赋值给opts.outWidth,opts.outHeight;
@@ -209,6 +220,15 @@ object ImageProvider {
         if (book.getUseReplaceRule(otherSettingsGateway.currentSettings.replaceEnableDefault) && src.isBlank()) {
             book.setUseReplaceRule(false)
             appCtx.toastOnUi(R.string.error_image_url_empty)
+        }
+        if (ParagraphBubbleRenderer.isBubbleSrc(src)) {
+            val bubbleKey = ParagraphBubbleRenderer.cacheKey(src, width, height)
+            getNotRecycled(bubbleKey)?.let { return it }
+            val bubbleBitmap = runCatching {
+                ParagraphBubbleRenderer.render(src, width, height)
+            }.getOrNull() ?: return errorBitmap
+            put(bubbleKey, bubbleBitmap)
+            return bubbleBitmap
         }
         val vFile = BookHelp.getImage(book, src)
         if (!vFile.exists()) return errorBitmap
