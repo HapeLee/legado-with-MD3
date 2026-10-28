@@ -6,6 +6,7 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.feature.reader.core.transition.ioscurl.control.CurlControl
 import io.legado.app.feature.reader.core.transition.ioscurl.gesture.CurlTouchKind
 import io.legado.app.feature.reader.core.transition.ReaderTransitionMode
+import io.legado.app.feature.reader.core.transition.ReaderPageTurnSpeed
 import io.legado.app.feature.reader.core.transition.ReaderTurnDirection
 import io.legado.app.help.config.ReadBookConfig
 import kotlinx.coroutines.delay
@@ -21,6 +22,83 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IosCurlTurnTest {
+    @Test fun automaticTurnUsesTheSelectedFullPageDurationInBothDirections() = runTest {
+        for (speed in ReaderPageTurnSpeed.entries) {
+            for (direction in ReaderTurnDirection.entries) {
+                val turn = IosCurlTurn()
+                val clock = TestFrameClock()
+                turn.begin(direction, 320, 480, 1f, this, automatic = true, speed = speed)
+                val expected = CurlControl.begin(requireNotNull(turn.config)).to
+                turn.rendererReady()
+                withContext(clock) { turn.settle(true, 0.0, speed) }
+                // One frame establishes the origin; completion rounds up to the next frame.
+                assertTrue("$speed: ${clock.elapsedMillis}ms",
+                    clock.elapsedMillis in (speed.baseDurationMillis + 16L)..(speed.baseDurationMillis + 32L))
+                assertEquals(expected.time, turn.values.time, .00001)
+                turn.reset()
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test fun releaseSpeedScalesCommitAndCancellationWithoutChangingTheEndpoint() = runTest {
+        for (speed in ReaderPageTurnSpeed.entries) {
+            for (commit in listOf(false, true)) {
+                for (velocity in listOf(0.0, 3000.0)) {
+                    val turn = IosCurlTurn()
+                    val clock = TestFrameClock()
+                    turn.down(320, 480, 1f, 300f, 150f, 0, true, true, 10f)
+                    turn.event(CurlTouchKind.Move, 160f, 170f, 100)
+                    turn.begin(ReaderTurnDirection.NEXT, 320, 480, 1f,
+                        CoroutineScope(coroutineContext + clock), automatic = false, speed = speed)
+                    turn.rendererReady()
+                    advanceTimeBy(600)
+                    runCurrent()
+                    val config = requireNotNull(turn.config)
+                    val expectedMillis = CurlControl.duration(config, velocity, commit, turn.values.time) *
+                        speed.baseDurationMillis / 400.0 * 1000.0
+                    val start = clock.elapsedMillis
+                    withContext(clock) { turn.settle(commit, velocity, speed) }
+                    val actual = clock.elapsedMillis - start
+                    assertTrue("$speed / $commit / $velocity: $actual vs $expectedMillis",
+                        actual >= expectedMillis + 16 && actual < expectedMillis + 32.01)
+                    val endpoints = CurlControl.endpoints(config)
+                    val expected = if (commit) endpoints.to else endpoints.from
+                    assertEquals(expected.time, turn.values.time, .00001)
+                    assertEquals(expected.radius, turn.values.radius, .00001)
+                    assertEquals(expected.angle, turn.values.angle, .00001)
+                    turn.reset()
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test fun warmUpUsesTheSpeedSettingBeforeFollowingTheFinger() = runTest {
+        for (speed in listOf(ReaderPageTurnSpeed.FASTEST, ReaderPageTurnSpeed.ELEGANT)) {
+            val turn = IosCurlTurn()
+            val clock = TestFrameClock()
+            turn.down(320, 480, 1f, 300f, 150f, 0, true, true, 10f)
+            turn.event(CurlTouchKind.Move, 160f, 170f, 100)
+            turn.begin(ReaderTurnDirection.NEXT, 320, 480, 1f,
+                CoroutineScope(coroutineContext + clock), automatic = false, speed = speed)
+            val config = requireNotNull(turn.config)
+            val target = CurlControl.update(config, config.initial).renderValues()
+            turn.rendererReady()
+            advanceTimeBy(200)
+            runCurrent()
+            if (speed == ReaderPageTurnSpeed.FASTEST) {
+                assertEquals(target, turn.values)
+            } else {
+                assertTrue(target != turn.values)
+            }
+            advanceTimeBy(200)
+            runCurrent()
+            assertEquals(target, turn.values)
+            turn.reset()
+        }
+    }
+
     @Test fun styleExportAndImportPreserveTheNewAnimationValue() {
         val gson = Gson()
         val style = ReadBookConfig.Config(pageAnim = PageAnim.iosCurlPageAnim)
@@ -107,6 +185,7 @@ class IosCurlTurnTest {
 
     private class TestFrameClock : MonotonicFrameClock {
         private var nanos = 0L
+        val elapsedMillis: Long get() = nanos / 1_000_000
         override suspend fun <R> withFrameNanos(onFrame: (Long) -> R): R {
             delay(16)
             nanos += 16_000_000L

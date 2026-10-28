@@ -538,7 +538,7 @@ fun ReaderCanvasSurface(
         pendingTurnOrigin = currentPageWindow().current?.id
         if (transitionMode == ReaderTransitionMode.IOS_CURL) {
             pageMotionJob = animationScope.launch {
-                iosCurl.settle(decision.commit, iosVelocity)
+                iosCurl.settle(decision.commit, iosVelocity, latestPageTurnSpeed)
                 displayOffset = decision.targetOffsetPx
                 finishPageTurn()
             }
@@ -617,7 +617,7 @@ fun ReaderCanvasSurface(
         val width = window.current?.widthPx?.toFloat() ?: return
         if (transitionMode == ReaderTransitionMode.IOS_CURL) {
             iosCurl.begin(direction, window.current.widthPx, window.current.heightPx,
-                curlDensity, animationScope, automatic = true)
+                curlDensity, animationScope, automatic = true, speed = latestPageTurnSpeed)
         }
         if (transitionMode == ReaderTransitionMode.SIMULATION) {
             curlRevealProgress = 1f
@@ -1372,7 +1372,7 @@ fun ReaderCanvasSurface(
                             if (transitionMode == ReaderTransitionMode.IOS_CURL && transition.dragging) {
                                 if (iosCurl.config == null) {
                                     iosCurl.begin(requireNotNull(transition.direction), size.width, size.height,
-                                        density, animationScope, automatic = false)
+                                        density, animationScope, automatic = false, speed = latestPageTurnSpeed)
                                 }
                                 iosCurl.drag()
                             }

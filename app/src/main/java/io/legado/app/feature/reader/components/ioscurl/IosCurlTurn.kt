@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import io.legado.app.feature.reader.core.transition.ReaderPageTurnSpeed
 import io.legado.app.feature.reader.core.transition.ioscurl.control.CurlControl
 import io.legado.app.feature.reader.core.transition.ioscurl.control.CurlTiming
 import io.legado.app.feature.reader.core.transition.ioscurl.gesture.CurlPan
@@ -38,6 +39,7 @@ internal class IosCurlTurn {
     private var automatic = false
     private var target = values
     private var elapsed = 0.0
+    private var beginDurationSeconds = 0.0
     private var renderReady = false
 
     val recognizedDirection: ReaderTurnDirection?
@@ -78,6 +80,7 @@ internal class IosCurlTurn {
         density: Float,
         scope: CoroutineScope,
         automatic: Boolean,
+        speed: ReaderPageTurnSpeed = ReaderPageTurnSpeed.Default,
     ) {
         reset()
         this.density = density.toDouble()
@@ -90,6 +93,7 @@ internal class IosCurlTurn {
             if (automatic) CurlKind.Automatic else CurlKind.Manual)
         config = c
         val begin = CurlControl.begin(c)
+        beginDurationSeconds = scaledDuration(begin.durationSeconds, speed)
         values = begin.from
         target = if (automatic) begin.to else CurlControl.update(c, c.initial).renderValues()
         elapsed = 0.0
@@ -100,10 +104,11 @@ internal class IosCurlTurn {
                 val start = withFrameNanos { it }
                 do {
                     elapsed = (withFrameNanos { it } - start) / 1_000_000_000.0
-                    values = if (elapsed < .25) CurlTiming.interpolate(
-                        begin.from, target, CurlControl.type(c), false, elapsed / .25, .25
+                    values = if (elapsed < beginDurationSeconds) CurlTiming.interpolate(
+                        begin.from, target, CurlControl.type(c), false,
+                        elapsed / beginDurationSeconds, beginDurationSeconds
                     ) else target
-                } while (elapsed < .25)
+                } while (elapsed < beginDurationSeconds)
             }
         }
     }
@@ -112,7 +117,7 @@ internal class IosCurlTurn {
         val c = config ?: return
         if (automatic) return
         target = CurlControl.update(c, sample?.location ?: c.initial).renderValues()
-        if (elapsed >= .25) values = target
+        if (elapsed >= beginDurationSeconds) values = target
     }
 
     fun release(direction: ReaderTurnDirection, cancelled: Boolean): Pair<Boolean, Double> {
@@ -122,7 +127,11 @@ internal class IosCurlTurn {
             s.end.suggestedVelocity
     }
 
-    suspend fun settle(commit: Boolean, velocity: Double) {
+    suspend fun settle(
+        commit: Boolean,
+        velocity: Double,
+        speed: ReaderPageTurnSpeed = ReaderPageTurnSpeed.Default,
+    ) {
         beginJob?.cancel()
         val c = config ?: return
         awaitRenderer()
@@ -130,8 +139,11 @@ internal class IosCurlTurn {
         val from = if (automatic) begin.from else values.renderValues()
         val endpoints = CurlControl.endpoints(c)
         val to = if (automatic) begin.to else if (commit) endpoints.to else endpoints.from
-        val duration = if (automatic) begin.durationSeconds else
-            CurlControl.duration(c, velocity, commit, from.time)
+        val duration = scaledDuration(
+            if (automatic) begin.durationSeconds else
+                CurlControl.duration(c, velocity, commit, from.time),
+            speed,
+        )
         if (duration <= 0.0) {
             values = to
             return
@@ -157,4 +169,9 @@ internal class IosCurlTurn {
     private suspend fun awaitRenderer() {
         while (!renderReady) withFrameNanos { }
     }
+
+    // Normalize the native 400ms full turn to the shared speed setting. Keep the
+    // relative warm-up/release timing and velocity-dependent settling intact.
+    private fun scaledDuration(seconds: Double, speed: ReaderPageTurnSpeed): Double =
+        seconds * speed.baseDurationMillis / 400.0
 }
