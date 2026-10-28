@@ -55,6 +55,10 @@ data class ReadSettings(
     val showReadTitleAddition: Boolean = true,
     val autoReadSpeed: Int = 10,
     val systemTypefaces: Int = 0,
+    /** 当前生效的段评气泡包目录名（`bubblePackages/<dirName>`）。 */
+    val paragraphBubblePackage: String = "builtin_default",
+    /** 正文里图片形式的段评入口是否强制改用软件气泡渲染。 */
+    val forceSoftwareParagraphBubble: Boolean = false,
     val preDownloadNum: Int = 10,
     val preDownloadNumPrev: Int = 0,
     val prevKeys: String = "",
