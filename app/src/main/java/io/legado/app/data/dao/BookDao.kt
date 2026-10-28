@@ -814,6 +814,15 @@ interface BookDao {
     @Update
     fun update(vararg book: Book)
 
+    /**
+     * 只回写字数列。
+     *
+     * 不能用 [update]：它是 Room 的 @Update，按主键做**全字段**写入，
+     * 会用这里的内存快照盖掉 `ReadBook` 并发写回的阅读进度（`durChapterIndex` / `durChapterPos`。
+     */
+    @Query("update books set wordCount = :wordCount where bookUrl = :bookUrl")
+    fun upWordCount(bookUrl: String, wordCount: String)
+
     @Delete
     fun delete(vararg book: Book)
 
