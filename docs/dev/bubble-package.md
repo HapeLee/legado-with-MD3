@@ -58,7 +58,7 @@ bubblePackages/<dirName>/
 | `formatVersion` | 1；引用包内资源时为 2 |
 | `resources` | `[{alias, path, type}]`，`type` 为 image/font |
 
-`bubble_default`（内置）不落盘，由 `BubblePackageManager.builtinConfig()` 提供。
+`builtin_default`（内置）不落盘，由 `BubblePackageManager.builtinConfig()` 提供。
 
 ## 设置
 
