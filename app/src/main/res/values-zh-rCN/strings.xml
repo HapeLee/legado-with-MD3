@@ -745,6 +745,14 @@
     <string name="music">音乐</string>
     <string name="audio">音频</string>
     <string name="video">视频</string>
+    <string name="open_other_video_player">用其它播放器打开</string>
+    <string name="select_episode">选集</string>
+    <string name="config_settings">播放设置</string>
+    <string name="play_speed">播放倍速</string>
+    <string name="press_speed">长按倍速</string>
+    <string name="video_auto_play">自动播放</string>
+    <string name="video_start_full">进入后全屏</string>
+    <string name="video_danmaku">弹幕</string>
     <string name="source_not_found">书源不存在</string>
     <string name="chapter_not_found">章节不存在</string>
     <string name="video_link_not_found">未获取到视频链接</string>

@@ -406,6 +406,9 @@
             android:name=".service.AudioPlayService"
             android:foregroundServiceType="mediaPlayback" />
         <service
+            android:name=".service.VideoPlayService"
+            android:foregroundServiceType="mediaPlayback" />
+        <service
             android:name=".service.DownloadService"
             android:foregroundServiceType="dataSync" />
 

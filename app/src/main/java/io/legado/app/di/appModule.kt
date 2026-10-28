@@ -772,7 +772,7 @@ val appModule = module {
         )
     }
     viewModelOf(::MangaReaderViewModel)
-    viewModel { VideoPlayerViewModel(get(), get(), get()) }
+    viewModelOf(::VideoPlayerViewModel)
     viewModelOf(::ReaderSessionViewModel)
     viewModel {
         ReadBookViewModel(

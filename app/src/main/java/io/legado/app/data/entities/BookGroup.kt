@@ -35,7 +35,8 @@ data class BookGroup(
         const val IdNetNone = -4L
         const val IdLocalNone = -5L
         const val IdManga = -7L
-        const val IdVideo = -9L
+        // 与上游（legado-E / Archive）保持一致：视频分组是 -6，避免备份互导时分组对不上
+        const val IdVideo = -6L
         const val IdText = -8L
         const val IdError = -11L
         const val IdReading = -20L

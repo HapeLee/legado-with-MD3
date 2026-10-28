@@ -4,7 +4,8 @@ import androidx.annotation.IntDef
 
 /**
  * 以二进制位来区分,可能一本书籍包含多个类型,每一位代表一个类型,数值为2的n次方
- * 以二进制位来区分,数据库查询更高效, 数值>=8和老版本类型区分开
+ * 以二进制位来区分,数据库查询更高效。
+ * 注：video=4 是上游（legado-E）已占用的保留位，与上游保持一致，其余类型位从 8 起。
  */
 @Suppress("ConstPropertyName")
 object BookType {
@@ -56,7 +57,10 @@ object BookType {
 
     @Target(AnnotationTarget.VALUE_PARAMETER)
     @Retention(AnnotationRetention.SOURCE)
-    @IntDef(text, updateError, audio, image, video, webFile, local, archive, notShelf)
+    @IntDef(
+        flag = true,
+        value = [text, updateError, audio, image, video, webFile, local, archive, notShelf],
+    )
     annotation class Type
 
     /**
