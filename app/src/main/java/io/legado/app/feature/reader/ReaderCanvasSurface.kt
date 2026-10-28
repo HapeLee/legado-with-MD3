@@ -92,6 +92,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.domain.model.TextProcessStyle
+import io.legado.app.feature.reader.components.ioscurl.IosCurlPageStack
+import io.legado.app.feature.reader.components.ioscurl.IosCurlTurn
 import io.legado.app.feature.reader.core.accessibility.ReaderAccessibilityPolicy
 import io.legado.app.feature.reader.core.gesture.PullBookmarkDefaults
 import io.legado.app.feature.reader.core.gesture.PullBookmarkGesture
@@ -152,6 +154,7 @@ import io.legado.app.feature.reader.core.transition.ReaderTransitionMode
 import io.legado.app.feature.reader.core.transition.ReaderTransitionTransforms
 import io.legado.app.feature.reader.core.transition.ReaderTurnDirection
 import io.legado.app.feature.reader.core.transition.ReaderViewportLayerPolicy
+import io.legado.app.feature.reader.core.transition.ioscurl.gesture.CurlTouchKind
 import io.legado.app.feature.reader.core.transition.transforms
 import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
 import io.legado.app.feature.reader.platform.ReaderBookmarkBadgeRenderer
@@ -257,6 +260,8 @@ fun ReaderCanvasSurface(
         backgroundImage?.isolatedCopy()
     }
     val animationScope = rememberCoroutineScope()
+    val iosCurl = remember { IosCurlTurn() }
+    val curlDensity = LocalDensity.current.density
     val hapticFeedback = LocalHapticFeedback.current
     val scrollDecay = rememberSplineBasedDecay<Float>()
     var displayOffset by remember { mutableFloatStateOf(0f) }
@@ -326,6 +331,7 @@ fun ReaderCanvasSurface(
     val latestToggleBookmark by rememberUpdatedState(onToggleBookmark)
     DisposableEffect(transitionMode) {
         onDispose {
+            iosCurl.reset()
             // 模式切换时滚动惯性对换页模式已无意义，必须中止所有页运动动画并复位。
             pageMotionJob?.cancel()
             pendingTurn = null
@@ -345,6 +351,7 @@ fun ReaderCanvasSurface(
             // fling/点击步进动画每帧重读窗口尺寸，必须跨页延续。只有换页类动画
             // 才在换页/视口变化时中止。
             if (!wasScrollMode) pageMotionJob?.cancel()
+            if (!wasScrollMode) iosCurl.reset()
         }
     }
     var curlTouchY by remember { mutableFloatStateOf(1f) }
@@ -513,7 +520,7 @@ fun ReaderCanvasSurface(
             applyTransition(ReaderPageTransition())
         }
     }
-    fun settlePageTurn(decision: ReaderTransitionDecision) {
+    fun settlePageTurn(decision: ReaderTransitionDecision, iosVelocity: Double = 0.0) {
         pageMotionJob?.cancel()
         curlRevealJob?.cancel()
         if (transitionMode == ReaderTransitionMode.SIMULATION) {
@@ -529,6 +536,14 @@ fun ReaderCanvasSurface(
         }
         pendingTurn = transition.direction.takeIf { decision.commit }
         pendingTurnOrigin = currentPageWindow().current?.id
+        if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+            pageMotionJob = animationScope.launch {
+                iosCurl.settle(decision.commit, iosVelocity)
+                displayOffset = decision.targetOffsetPx
+                finishPageTurn()
+            }
+            return
+        }
         if (transitionMode == ReaderTransitionMode.NONE) {
             completePendingTurn()
             displayOffset = 0f
@@ -600,6 +615,10 @@ fun ReaderCanvasSurface(
             return
         }
         val width = window.current?.widthPx?.toFloat() ?: return
+        if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+            iosCurl.begin(direction, window.current.widthPx, window.current.heightPx,
+                curlDensity, animationScope, automatic = true)
+        }
         if (transitionMode == ReaderTransitionMode.SIMULATION) {
             curlRevealProgress = 1f
             curlTouchX = ReaderCurlTouchPolicy.programmaticX(direction, width)
@@ -989,6 +1008,12 @@ fun ReaderCanvasSurface(
                 committedTurnPageId = null
                 displayOffset = 0f
                 applyTransition(ReaderPageTransition())
+                if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+                    iosCurl.reset()
+                    iosCurl.down(size.width, size.height, density, down.position.x, down.position.y,
+                        down.uptimeMillis, canTurn(ReaderTurnDirection.PREVIOUS, currentPageWindow()),
+                        canTurn(ReaderTurnDirection.NEXT, currentPageWindow()), pageTouchSlop)
+                }
                 bookmarkReturnJob?.cancel()
                 bookmarkOffset = 0f
                 bookmarkArmed = false
@@ -1116,6 +1141,13 @@ fun ReaderCanvasSurface(
                         val event = awaitPointerEvent(PointerEventPass.Main)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (change.isConsumed) break
+                        if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+                            event.changes.filter { it.id != down.id && it.pressed && !it.previousPressed }
+                                .forEach { iosCurl.event(CurlTouchKind.Down, it.position.x,
+                                    it.position.y, it.uptimeMillis, pointer = 1) }
+                            iosCurl.event(if (change.pressed) CurlTouchKind.Move else CurlTouchKind.Up,
+                                change.position.x, change.position.y, change.uptimeMillis)
+                        }
                         pointerPosition = change.position
                         if (!change.pressed) {
                             released = true; break
@@ -1260,9 +1292,13 @@ fun ReaderCanvasSurface(
                             scrollDrag = transitionMode == ReaderTransitionMode.SCROLL &&
                                     ReaderMainAxisPolicy.isVerticalDominant(total.x, total.y)
                             horizontalTurn = !bookmarkDrag && !scrollDrag &&
-                                    ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode)
+                                    (if (transitionMode == ReaderTransitionMode.IOS_CURL)
+                                        iosCurl.recognizedDirection != null
+                                    else ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode))
                             if (horizontalTurn) {
-                                horizontalDrag = ReaderHorizontalDrag.capture(total.x)
+                                horizontalDrag = if (transitionMode == ReaderTransitionMode.IOS_CURL)
+                                    iosCurl.recognizedDirection?.let { ReaderHorizontalDrag(total.x, it) }
+                                else ReaderHorizontalDrag.capture(total.x)
                                 horizontalCapturedY = change.position.y
                                 if (transitionMode == ReaderTransitionMode.SIMULATION) startCurlRevealSnap()
                             }
@@ -1289,9 +1325,13 @@ fun ReaderCanvasSurface(
                                 bookmarkArmed = false
                                 bookmarkOffset = 0f
                                 horizontalTurn =
-                                    ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode)
+                                    (if (transitionMode == ReaderTransitionMode.IOS_CURL)
+                                        iosCurl.recognizedDirection != null
+                                    else ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode))
                                 if (horizontalTurn) {
-                                    horizontalDrag = ReaderHorizontalDrag.capture(total.x)
+                                    horizontalDrag = if (transitionMode == ReaderTransitionMode.IOS_CURL)
+                                        iosCurl.recognizedDirection?.let { ReaderHorizontalDrag(total.x, it) }
+                                    else ReaderHorizontalDrag.capture(total.x)
                                     horizontalCapturedY = change.position.y
                                     if (transitionMode == ReaderTransitionMode.SIMULATION) startCurlRevealSnap()
                                 }
@@ -1329,6 +1369,13 @@ fun ReaderCanvasSurface(
                                     )
                                 }
                             displayOffset = transition.offsetPx
+                            if (transitionMode == ReaderTransitionMode.IOS_CURL && transition.dragging) {
+                                if (iosCurl.config == null) {
+                                    iosCurl.begin(requireNotNull(transition.direction), size.width, size.height,
+                                        density, animationScope, automatic = false)
+                                }
+                                iosCurl.drag()
+                            }
                             change.consume()
                         } else if (scrollDrag) {
                             val window = currentPageWindow()
@@ -1453,7 +1500,13 @@ fun ReaderCanvasSurface(
                     }
                 } else if (horizontalTurn && transition.dragging) {
                     val fade = transitionMode == ReaderTransitionMode.FADE
-                    settlePageTurn(
+                    if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+                        val direction = requireNotNull(transition.direction)
+                        val (commit, velocity) = iosCurl.release(direction, cancelled = !released)
+                        val target = if (!commit) 0f else if (direction == ReaderTurnDirection.NEXT)
+                            -transition.pageExtentPx else transition.pageExtentPx
+                        settlePageTurn(ReaderTransitionDecision(target, commit), velocity)
+                    } else settlePageTurn(
                         ReaderPageTransitionPolicy.release(
                             transition,
                             velocityPxPerSecond = if (fade) 0f else velocityTracker.calculateVelocity().x,
@@ -1544,6 +1597,26 @@ fun ReaderCanvasSurface(
                     cachedImage = cachedImage,
                     loadImage = loadImage,
                 )
+            }
+        } else if (transitionMode == ReaderTransitionMode.IOS_CURL && composedTurnDirection != null) {
+            IosCurlPageStack(
+                pages = pages,
+                direction = composedTurnDirection,
+                turn = iosCurl,
+                redrawSignal = redrawSignal,
+                snapshots = pageSnapshots,
+                baseLayer = baseSnapshotLayer,
+                revealLayer = revealSnapshotLayer,
+                background = backgroundColor,
+                snapshotKey = { page, width, height ->
+                    pageSnapshotKey(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha,
+                        selectionColor, textAccentColor, textSelection, selectionPreviewStyle, width, height)
+                },
+                settled = { it.isSnapshotSettled(cachedImage) },
+            ) { page ->
+                ReaderPageCanvas(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha,
+                    selectionColor, textAccentColor, Modifier.fillMaxSize(), textSelection,
+                    selectionPreviewStyle, cachedImage, loadImage, redrawSignal = redrawSignal)
             }
         } else if (transitionMode == ReaderTransitionMode.SIMULATION && composedTurnDirection != null) {
             SimulationPageStack(
@@ -2295,7 +2368,7 @@ private fun SimulationPageStack(
  * 页 id/revision/layoutRevision（图片刷新会改 revision）、背景色/背景图及其透明度、
  * 选区与朗读高亮色、活动选区、选区预览样式、视口尺寸。
  */
-private data class PageSnapshotKey(
+internal data class PageSnapshotKey(
     val pageId: ReaderPageId,
     val revision: Long,
     val layoutRevision: Long,
@@ -2345,7 +2418,7 @@ private fun pageSnapshotKey(
  * ① 命中时该回合**完全不用重录页面**（快照层都不用挂载），每帧只做 blit；
  * ② 取消后再拖、或连续翻页时，只需补拍新进入窗口的那一页（否则每回合要重算两页）。
  */
-private class PageSnapshotBitmapPool {
+internal class PageSnapshotBitmapPool {
     private val entries = LinkedHashMap<PageSnapshotKey, ImageBitmap>(4, .75f, true)
 
     fun get(key: PageSnapshotKey): ImageBitmap? = entries[key]
@@ -2417,7 +2490,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageBackgroundI
 }
 
 /** 有位图就用位图（一次 blit），否则退回快照层（display list 重放）。 */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageSnapshot(
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageSnapshot(
     image: ImageBitmap?,
     layer: GraphicsLayer,
     widthPx: Int,
@@ -2442,7 +2515,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageSnapshot(
  * 选区变化……）时发生——等价于旧 View 的 `setBitmap()` 每次手势只截一次图。
  */
 @Composable
-private fun PageSnapshotLayer(
+internal fun PageSnapshotLayer(
     layer: GraphicsLayer,
     redrawSignal: State<Long>,
     content: @Composable () -> Unit,

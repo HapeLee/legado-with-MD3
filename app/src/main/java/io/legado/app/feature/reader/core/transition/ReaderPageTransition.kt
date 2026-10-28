@@ -7,6 +7,7 @@ enum class ReaderTransitionMode {
     COVER,
     SLIDE,
     SIMULATION,
+    IOS_CURL,
     SCROLL,
     FADE,
     NONE;
@@ -18,6 +19,7 @@ enum class ReaderTransitionMode {
             2 -> SIMULATION
             3 -> SCROLL
             4 -> FADE
+            6 -> IOS_CURL
             else -> NONE
         }
     }
