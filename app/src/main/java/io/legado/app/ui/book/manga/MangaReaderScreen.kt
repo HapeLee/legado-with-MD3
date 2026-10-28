@@ -359,6 +359,21 @@ fun MangaReaderScreen(
     (state.activeSheet as? MangaReaderSheet.PageActions)?.let { sheet ->
         MangaReaderPageActionsSheet(sheet.companionPageKey != null, onIntent)
     }
+    if (state.activeSheet == MangaReaderSheet.Translation) {
+        val page = state.pages.filterIsInstance<MangaReaderItemUi.Page>()
+            .firstOrNull { it.key == state.translation.pageKey }
+        io.legado.app.feature.mangatranslation.MangaTranslationSheet(
+            state = state.translation,
+            hasTranslation = page?.translatedImagePath != null,
+            showingOriginal = page?.showingOriginal != false,
+            onLanguages = { source, target -> onIntent(MangaReaderIntent.TranslationLanguages(source, target)) },
+            onTranslate = { onIntent(MangaReaderIntent.TranslatePage) },
+            onToggleOriginal = { onIntent(MangaReaderIntent.ToggleTranslation) },
+            onCancel = { onIntent(MangaReaderIntent.CancelTranslation) },
+            onClearCache = { onIntent(MangaReaderIntent.ClearTranslationCache) },
+            onDismiss = { onIntent(MangaReaderIntent.DismissSheet) },
+        )
+    }
     if (state.activeSheet == MangaReaderSheet.ChangeSource) {
         val oldBook = remember(state.changeSourceBook) {
             state.changeSourceBook?.toBook()
@@ -1740,6 +1755,8 @@ private fun MangaPageImage(
             ?: Modifier.height(fallbackHeight)
     }
     val imagePipelineKey = remember(
+        page.translatedImagePath,
+        page.showingOriginal,
         page.key,
         page.bookUrl,
         paged,
@@ -1752,6 +1769,8 @@ private fun MangaPageImage(
         decodeSize,
     ) {
         listOf(
+            page.translatedImagePath,
+            page.showingOriginal,
             page.key,
             page.bookUrl,
             paged,
@@ -2157,10 +2176,11 @@ internal fun MangaReaderItemUi.Page.imageRequest(
     onSuccess: () -> Unit = {},
     onError: (String?) -> Unit = {},
 ): ImageRequest {
-    val memoryCacheKey = "manga-page-v2:$bookUrl:$imageUrl:${settings.sourceOrigin}:" +
+    val translatedFile = translatedImagePath?.takeUnless { showingOriginal }?.let { java.io.File(it) }
+    val memoryCacheKey = "manga-page-v2:$bookUrl:${translatedFile ?: imageUrl}:${settings.sourceOrigin}:" +
         "${settings.enableEInk}:${settings.eInkThreshold}:${settings.enableGray}:${fileOwner != null}:$retryRevision"
     return ImageRequest.Builder(context)
-        .data(imageUrl)
+        .data(translatedFile ?: imageUrl)
         .allowHardware(true)
         // 稳定解码目标避免条漫首次占位高度参与降采样。
         // Coil 检查缓存预览是否满足目标尺寸；分页放大清晰度由原图区域解码补足。

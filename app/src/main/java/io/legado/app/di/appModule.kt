@@ -769,6 +769,9 @@ val appModule = module {
         )
     }
     viewModelOf(::MangaReaderViewModel)
+    single<io.legado.app.domain.gateway.MangaTranslationGateway> {
+        io.legado.app.data.repository.manga.MangaTranslationRepository(get(), get())
+    }
     viewModelOf(::ReaderSessionViewModel)
     viewModel {
         ReadBookViewModel(

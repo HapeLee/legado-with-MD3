@@ -1,6 +1,8 @@
 package io.legado.app.domain.model.settings
 
 data class MangaSettings(
+    val translationSourceLanguage: String = "ja",
+    val translationTargetLanguage: String = "zh",
     val showMangaUi: Boolean = true,
     val disableMangaScale: Boolean = true,
     val disableMangaScrollAnimation: Boolean = false,

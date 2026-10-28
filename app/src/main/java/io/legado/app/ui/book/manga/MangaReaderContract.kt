@@ -8,6 +8,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
+import io.legado.app.feature.mangatranslation.MangaTranslationUiState
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -49,6 +50,8 @@ data class MangaReaderUiState(
     val confirmAddToShelf: Boolean = true,
     val scrollRequest: MangaScrollRequest? = null,
     val settings: MangaReaderSettings = MangaReaderSettings(),
+    val translation: MangaTranslationUiState =
+        MangaTranslationUiState(),
 )
 
 @Stable
@@ -68,6 +71,8 @@ sealed interface MangaReaderItemUi {
         val chapterSubject: String,
         val loadState: MangaPageLoadState = MangaPageLoadState.Queued,
         val retryRevision: Int = 0,
+        val translatedImagePath: String? = null,
+        val showingOriginal: Boolean = true,
     ) : MangaReaderItemUi
 
     @Stable
@@ -189,6 +194,12 @@ sealed interface MangaReaderText {
 }
 
 sealed interface MangaReaderIntent {
+    data object OpenTranslation : MangaReaderIntent
+    data object TranslatePage : MangaReaderIntent
+    data object CancelTranslation : MangaReaderIntent
+    data object ClearTranslationCache : MangaReaderIntent
+    data object ToggleTranslation : MangaReaderIntent
+    data class TranslationLanguages(val source: String, val target: String) : MangaReaderIntent
     data class Initialize(
         val bookUrl: String?,
         val inBookshelf: Boolean,
@@ -280,6 +291,7 @@ sealed interface MangaReaderIntent {
 }
 
 sealed interface MangaReaderSheet {
+    data object Translation : MangaReaderSheet
     data object Catalog : MangaReaderSheet
     data object ChangeSource : MangaReaderSheet
     data object SourceActions : MangaReaderSheet

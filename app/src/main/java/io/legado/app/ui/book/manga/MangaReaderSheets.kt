@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,8 @@ internal fun MangaReaderSourceActionsSheet(
         }
         Spacer(Modifier.height(16.dp))
         val actions = buildList {
+            add(MangaMoreAction(stringResource(R.string.manga_translation_title),
+                Icons.Default.Translate, MangaReaderIntent.OpenTranslation))
             if (state.sourceCustomButtonAvailable) add(
                 MangaMoreAction(
                     stringResource(R.string.custom_button),
@@ -192,6 +195,8 @@ internal fun MangaReaderPageActionsSheet(
                     MangaReaderIntent.ExecutePageAction(MangaPageAction.SAVE)
                 )
             )
+            add(MangaMoreAction(stringResource(R.string.manga_translation_title),
+                Icons.Default.Translate, MangaReaderIntent.OpenTranslation))
             add(
                 MangaMoreAction(
                     stringResource(R.string.share), Icons.Default.Share,

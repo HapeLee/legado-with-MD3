@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="manga_translation_title">翻译当前页</string>
+    <string name="manga_translation_notice">离线翻译：识别和翻译均在本机进行，需要 Google Play 服务，首次使用下载模型。长图按重叠区域分块处理；只对文字掩膜进行局部背景修复。复杂纹理与线稿可能失真，可随时切回原图。</string>
+    <string name="manga_translation_source">原文语言</string>
+    <string name="manga_translation_target">目标语言</string>
+    <string name="manga_translation_japanese">日语</string>
+    <string name="manga_translation_english">英语</string>
+    <string name="manga_translation_chinese">中文</string>
+    <string name="manga_translation_start">下载模型／翻译／重试</string>
+    <string name="manga_translation_show_original">显示原图</string>
+    <string name="manga_translation_show_result">显示译图</string>
+    <string name="manga_translation_preparing">正在准备图片…</string>
+    <string name="manga_translation_recognizing">正在本地识别文字…</string>
+    <string name="manga_translation_downloading">正在准备翻译语言包（下载需要 Wi-Fi）…</string>
+    <string name="manga_translation_translating">正在本地翻译…</string>
+    <string name="manga_translation_rendering">正在去字、修复背景并分条排版…</string>
+    <string name="manga_translation_failed">翻译失败，请检查模型下载、Wi-Fi 与 Google Play 服务后重试。原图仍可正常阅读。</string>
+    <string name="manga_translation_done">译图已就绪。关闭面板即可阅读，重新打开可切换原图。</string>
+    <string name="manga_translation_no_text">未检测到文字，继续显示原图。</string>
+    <string name="manga_translation_gms">Google Play 服务不可用，此版本的 OCR 无法在该设备运行。</string>
+    <string name="manga_translation_ocr_download">已请求下载 OCR 模型，请等待 Google Play 服务完成下载后重试。</string>
+    <string name="manga_translation_layout_failed">部分译文无法完整放入文字区域，为避免裁切译文，请继续阅读原图。</string>
+    <string name="manga_translation_cache_full">译图缓存已满，请清除译图缓存后重试。</string>
+    <string name="manga_translation_clear_cache">清除译图缓存</string>
+    <string name="manga_translation_korean">韩语</string>
+    <string name="manga_translation_decode_failed">该图片无法进行区域解码或超出处理上限，请继续阅读原图。</string>
+    <string name="manga_translation_repair_failed">当前文字区域无法生成安全的精细掩膜，已保留原图，避免破坏画面。</string>
+</resources>

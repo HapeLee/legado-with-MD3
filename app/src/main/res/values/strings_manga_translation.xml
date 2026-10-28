@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="manga_translation_title">Translate page</string>
+    <string name="manga_translation_notice">Offline translation with on-device OCR, overlapping strips and text-mask background repair. Google Play services and initial model downloads are required. Complex textures and line art may lose detail; the original remains available.</string>
+    <string name="manga_translation_source">Source language</string>
+    <string name="manga_translation_target">Target language</string>
+    <string name="manga_translation_japanese">Japanese</string>
+    <string name="manga_translation_english">English</string>
+    <string name="manga_translation_chinese">Chinese</string>
+    <string name="manga_translation_start">Download models / translate / retry</string>
+    <string name="manga_translation_show_original">Show original</string>
+    <string name="manga_translation_show_result">Show translation</string>
+    <string name="manga_translation_preparing">Loading image…</string>
+    <string name="manga_translation_recognizing">Recognizing text locally…</string>
+    <string name="manga_translation_downloading">Preparing translation models (Wi-Fi required for download)…</string>
+    <string name="manga_translation_translating">Translating locally…</string>
+    <string name="manga_translation_rendering">Repairing text masks and rendering strips…</string>
+    <string name="manga_translation_failed">Translation failed. Check model downloads, Wi-Fi and Google Play services, then retry. The original is still available.</string>
+    <string name="manga_translation_done">Translation ready. Close this panel to read; reopen to compare with the original.</string>
+    <string name="manga_translation_no_text">No text detected. Showing the original.</string>
+    <string name="manga_translation_gms">Google Play services are unavailable. This OCR prototype cannot run on this device.</string>
+    <string name="manga_translation_ocr_download">OCR model download requested. Wait for Google Play services to finish downloading, then retry.</string>
+    <string name="manga_translation_layout_failed">Some translation does not fit its text region. Showing the original to avoid cropping text.</string>
+    <string name="manga_translation_cache_full">Translation cache is full. Clear translated images before retrying.</string>
+    <string name="manga_translation_clear_cache">Clear translated image cache</string>
+    <string name="manga_translation_korean">Korean</string>
+    <string name="manga_translation_decode_failed">This image cannot be region-decoded or exceeds processing limits. Please use the original.</string>
+    <string name="manga_translation_repair_failed">A safe text mask could not be generated. The original was preserved to avoid damaging the artwork.</string>
+</resources>

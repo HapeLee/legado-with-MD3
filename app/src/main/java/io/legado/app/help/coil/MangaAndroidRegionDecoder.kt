@@ -13,6 +13,7 @@ import io.legado.app.domain.reader.MangaImageOrientation
 import io.legado.app.domain.reader.MangaImageRegion
 import io.legado.app.domain.reader.MangaImageSize
 import io.legado.app.domain.reader.MangaRegionDecoder
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.Closeable
@@ -27,6 +28,20 @@ internal class MangaAndroidRegionSource private constructor(
     private val lease: Closeable,
 ) : Closeable {
     private val closed = AtomicBoolean()
+
+    internal suspend fun contentDigest(): ByteArray = withContext(Dispatchers.IO) {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        input().use { stream ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                val count = stream.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        digest.digest()
+    }
 
     // The caller acquires this resource in NonCancellable and closes it in finally.
     suspend fun open(): MangaRegionDecoder<Bitmap> = withContext(Dispatchers.IO) {
