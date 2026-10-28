@@ -294,6 +294,7 @@ import io.legado.app.ui.config.labConfig.LabConfigViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.config.privateConfig.PrivateConfigViewModel
 import io.legado.app.ui.config.readConfig.ApplyReadSettingUseCase
+import io.legado.app.feature.bubble.BubblePackageManageViewModel
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
 import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel
 import io.legado.app.ui.config.themeManage.ThemeManageViewModel
@@ -635,6 +636,7 @@ val appModule = module {
     viewModelOf(::PrivateReadGateViewModel)
     viewModelOf(::CustomThemeViewModel)
     viewModelOf(::ReadConfigViewModel)
+    viewModelOf(::BubblePackageManageViewModel)
     viewModelOf(::CoverConfigViewModel)
     viewModelOf(::CoverAlbumManageViewModel)
     viewModelOf(::DownloadCacheConfigViewModel)

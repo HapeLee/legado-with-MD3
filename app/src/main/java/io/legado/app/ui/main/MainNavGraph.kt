@@ -45,6 +45,7 @@ import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.domain.model.PlaybackCapsuleState
 import io.legado.app.domain.model.settings.AppUiConfiguration
+import io.legado.app.feature.bubble.BubblePackageManageRoute
 import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.Download
@@ -680,7 +681,14 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsRead> {
-        ReadConfigRouteScreen(onBackClick = { onNavigateBack() })
+        ReadConfigRouteScreen(
+            onBackClick = { onNavigateBack() },
+            onNavigateToBubblePackages = { pushRoute(MainRouteSettingsBubblePackages) },
+        )
+    }
+
+    entry<MainRouteSettingsBubblePackages> {
+        BubblePackageManageRoute(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsCover> {
