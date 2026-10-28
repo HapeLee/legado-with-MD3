@@ -156,6 +156,7 @@ import io.legado.app.feature.reader.core.transition.transforms
 import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
 import io.legado.app.feature.reader.platform.ReaderBookmarkBadgeRenderer
 import io.legado.app.feature.reader.platform.ReaderPageDecorationDrawCache
+import io.legado.app.feature.reader.platform.ReaderReviewBubbleRenderer
 import io.legado.app.feature.reader.platform.ReaderTextBackgroundLoader
 import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.CancellationException
@@ -2061,7 +2062,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
                 )
             }
         } ?: drawRect(Color.Gray.copy(alpha = .18f), Offset(e.bounds.left, e.bounds.top), Size(e.bounds.width, e.bounds.height))
-        is ReaderElement.Review -> if (e.count > 0) drawReview(native, e, data.paints.values.firstOrNull()?.color ?: android.graphics.Color.GRAY)
+        is ReaderElement.Review -> drawReviewElement(native, e, data.paints.values.firstOrNull())
         is ReaderElement.RoleCast -> drawRoleCast(
             native, e,
             castColorArgb,
@@ -2818,7 +2819,7 @@ private fun ReaderPageCanvas(
                     )
                 }
             } ?: drawRect(Color.Gray.copy(alpha = .18f), Offset(e.bounds.left, e.bounds.top), Size(e.bounds.width, e.bounds.height))
-            is ReaderElement.Review -> if (e.count > 0) drawReview(native, e, paints.values.firstOrNull()?.color ?: android.graphics.Color.GRAY)
+            is ReaderElement.Review -> drawReviewElement(native, e, paints.values.firstOrNull())
             is ReaderElement.RoleCast -> drawRoleCast(
                 native, e,
                 castColorArgb,
@@ -3443,30 +3444,33 @@ private fun drawCastEffectMark(
         val half = w * ratio / 2f
         native.drawLine(x, cy - half, x, cy + half, paint)
     }
-}fun drawReview(canvas: android.graphics.Canvas, review: ReaderElement.Review, colorArgb: Int) {
-    val start = review.bounds.left
-    val end = review.bounds.right
-    val baseline = review.baselinePx
-    val height = review.textSizePx
-    val path = android.graphics.Path().apply {
-        moveTo(start + 1f, baseline - height * 2f / 5f)
-        lineTo(start + height / 6f, baseline - height * .55f)
-        lineTo(start + height / 6f, baseline - height * .8f)
-        lineTo(end - 1f, baseline - height * .8f)
-        lineTo(end - 1f, baseline)
-        lineTo(start + height / 6f, baseline)
-        lineTo(start + height / 6f, baseline - height / 4f)
-        close()
-    }
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = colorArgb
-        textSize = height * .55f
-        textAlign = Paint.Align.CENTER
-    }
-    paint.style = Paint.Style.STROKE
-    canvas.drawPath(path, paint)
-    paint.style = Paint.Style.FILL
-    canvas.drawText(review.count.coerceAtMost(999).toString(), (start + height / 9f + end) / 2f, baseline - height * .23f, paint)
+}
+
+/**
+ * 分页与滚动两条绘制路径共用：字体沿用当前页正文 paint，颜色与模板由气泡包决定。
+ */
+private fun drawReviewElement(
+    canvas: android.graphics.Canvas,
+    review: ReaderElement.Review,
+    textPaint: android.graphics.Paint?,
+) {
+    ReaderReviewBubbleRenderer.draw(
+        canvas = canvas,
+        bounds = android.graphics.RectF(
+            review.bounds.left,
+            review.bounds.top,
+            review.bounds.right,
+            review.bounds.bottom,
+        ),
+        text = review.text.ifBlank {
+            review.count.takeIf { it > 0 }?.coerceAtMost(999)?.toString().orEmpty()
+        },
+        status = review.status,
+        colorOverride = review.color,
+        textColorArgb = textPaint?.color ?: android.graphics.Color.GRAY,
+        isNight = io.legado.app.help.config.ReadStyleResolver.isNightTheme(),
+        typeface = textPaint?.typeface,
+    )
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawReaderTipDivider(
