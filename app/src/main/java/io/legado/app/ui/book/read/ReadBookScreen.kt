@@ -28,7 +28,9 @@ import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
+import io.legado.app.ui.book.read.sheet.BubbleStyleSheet
 import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
+import io.legado.app.ui.book.read.sheet.ParagraphReviewSheet
 import io.legado.app.ui.book.read.sheet.FloatingBarIconConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.MarkingSheet
@@ -504,6 +506,20 @@ private fun ReadBookSheetContent(
             customIcons = state.menuConfig.readMenuCustomIcons,
             onDismissRequest = dismissSheet(visibleState.findSheet<ReadBookSheet.ToolButtonConfig>()),
             onIntent = onIntent,
+        )
+    }
+    if (state.activeSheet is ReadBookSheet.BubbleStyle) {
+        BubbleStyleSheet(
+            show = visibleState.findSheet<ReadBookSheet.BubbleStyle>() != null,
+            onDismissRequest = dismissSheet(visibleState.findSheet<ReadBookSheet.BubbleStyle>()),
+        )
+    }
+    if (state.activeSheet is ReadBookSheet.ParagraphReview) {
+        ParagraphReviewSheet(
+            show = visibleState.findSheet<ReadBookSheet.ParagraphReview>() != null,
+            request = visibleState.findSheet<ReadBookSheet.ParagraphReview>(),
+            onDismissRequest =
+                dismissSheet(visibleState.findSheet<ReadBookSheet.ParagraphReview>()),
         )
     }
     if (state.activeSheet is ReadBookSheet.EyeProtection) {

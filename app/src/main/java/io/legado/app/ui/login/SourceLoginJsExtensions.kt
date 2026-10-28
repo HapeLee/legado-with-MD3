@@ -87,6 +87,12 @@ class SourceLoginJsExtensions(
         }
     }
 
+    /**
+     * 由宿主决定的半屏 WebView 承载方式：返回 true 表示已经接管，不再弹通用的
+     * [BottomWebViewDialog]。阅读页用它把段评接进自己的 Compose 弹层。
+     */
+    var browserPresenter: ((url: String, html: String?, preloadJs: String?) -> Boolean)? = null
+
     @JvmOverloads
     fun showBrowser(
         url: String,
@@ -94,6 +100,7 @@ class SourceLoginJsExtensions(
         preloadJs: String? = null,
         config: String? = null
     ) {
+        if (browserPresenter?.invoke(url, html, preloadJs) == true) return
         val activity = activityRef.get() ?: return
         val source = getSource() ?: return
         activity.showDialogFragment(
