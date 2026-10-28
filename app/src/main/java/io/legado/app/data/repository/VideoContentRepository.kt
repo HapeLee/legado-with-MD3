@@ -30,20 +30,24 @@ data class VideoMedia(
 )
 
 /** 视频书源的规则、网络与缓存操作；WebBook 的 Await API 本身不会切换线程。 */
-class VideoContentRepository {
+open class VideoContentRepository {
 
-    suspend fun loadBookInfo(source: BookSource, book: Book) {
+    open suspend fun loadBookInfo(source: BookSource, book: Book) {
         withContext(Dispatchers.IO) {
             WebBook.getBookInfoAwait(source, book)
         }
     }
 
-    suspend fun loadChapters(source: BookSource, book: Book): List<BookChapter> =
+    open suspend fun loadChapters(source: BookSource, book: Book): List<BookChapter> =
         withContext(Dispatchers.IO) {
             WebBook.getChapterListAwait(source, book).getOrThrow()
         }
 
-    suspend fun loadMedia(source: BookSource, book: Book, chapter: BookChapter): VideoMedia? =
+    open suspend fun loadMedia(
+        source: BookSource,
+        book: Book,
+        chapter: BookChapter,
+    ): VideoMedia? =
         withContext(Dispatchers.IO) {
             val mediaUrl = resolveMediaUrl(WebBook.getContentAwait(source, book, chapter))
                 ?: return@withContext null

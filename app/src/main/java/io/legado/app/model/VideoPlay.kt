@@ -1,6 +1,7 @@
 package io.legado.app.model
 
 import android.annotation.SuppressLint
+import androidx.annotation.VisibleForTesting
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -64,6 +65,7 @@ object VideoPlay : CoroutineScope by MainScope() {
     private const val CHAPTER_LINK_TTL = 30 * 60 * 1000L
 
     private val contentRepository get() = GlobalContext.get().get<VideoContentRepository>()
+    private val bookRepository get() = GlobalContext.get().get<io.legado.app.data.repository.BookRepository>()
 
     private data class CachedMedia(val media: VideoMedia, val createdAt: Long)
 
@@ -110,6 +112,14 @@ object VideoPlay : CoroutineScope by MainScope() {
                 created.addListener(playerListener)
                 playerInstance = created
             }
+
+    /** 测试与宿主替换播放器实例时使用；会话内只应有一个实例。 */
+    @VisibleForTesting
+    internal fun attachPlayer(player: ExoPlayer) {
+        runCatching { playerInstance?.release() }
+        playerInstance = player
+        player.addListener(playerListener)
+    }
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -182,6 +192,8 @@ object VideoPlay : CoroutineScope by MainScope() {
                 var chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
                 if (chapters.isEmpty()) {
                     chapters = contentRepository.loadChapters(source, book)
+                    // 目录主键带 index，规则返回的顺序即最终顺序
+                    chapters.forEachIndexed { index, chapter -> chapter.index = index }
                     appDb.bookChapterDao.delByBook(book.bookUrl)
                     appDb.bookChapterDao.insert(*chapters.toTypedArray())
                     book.update()
@@ -430,7 +442,14 @@ object VideoPlay : CoroutineScope by MainScope() {
         book.durChapterPos = currentPos
         book.durChapterTitle = chapter?.title
         launch(Dispatchers.IO) {
-            appDb.bookDao.update(book)
+            // 只改进度列：整行 update 会把用户/其它页面并发改的封面、分组等字段覆盖回旧值
+            bookRepository.upVideoPlayProgress(
+                bookUrl = book.bookUrl,
+                index = index,
+                position = currentPos,
+                chapterTitle = chapter?.title,
+                time = time,
+            )
             SourceCallBack.callBackBook(
                 SourceCallBack.SAVE_READ, bookSource, book, chapter, time.toString()
             )
