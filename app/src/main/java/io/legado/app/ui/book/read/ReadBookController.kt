@@ -66,6 +66,7 @@ import io.legado.app.help.storage.Backup
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ImageProvider
+import io.legado.app.model.ParagraphBubbleRenderer
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadSessionState
@@ -677,7 +678,14 @@ class ReadBookController(
         composeImageClickAt = now
         composeImageDoubleClick = if (debounce) !composeImageDoubleClick else false
         return when (readSettingsGateway.currentSettings.clickImgWay) {
-            "1" -> { viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Photo(image.source))); true }
+            // 气泡没有磁盘文件，放进大图预览只会是一张错误占位图：有动作就执行动作，否则吞掉点击
+            "1" -> if (ParagraphBubbleRenderer.isBubbleSrc(image.source)) {
+                image.action?.takeIf(String::isNotBlank)?.let { clickImg(it, image.source) }
+                true
+            } else {
+                viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Photo(image.source)))
+                true
+            }
             "2" -> if (!debounce && ReadBook.book?.isOnLineTxt == true) {
                 image.action?.takeIf(String::isNotBlank)?.let { clickImg(it, image.source); true }
                     ?: oldClickImg(image.source)
@@ -1981,6 +1989,20 @@ class ReadBookController(
         return false
     }
 
+    /**
+     * 段评弹层：书源 click 里 `java.showBrowser(url, html)` 的落点。
+     *
+     * url 为空说明书源既没给内容也没给地址，退回旧的通用弹窗（返回 false）。
+     */
+    private fun showParagraphReview(url: String, html: String?, preloadJs: String?): Boolean {
+        if (url.isBlank() && html.isNullOrBlank()) return false
+        val sheet = ReadBookSheet.ParagraphReview(url, html, preloadJs)
+        activity.runOnUiThread {
+            viewModel.onIntent(ReadBookIntent.ShowSheet(sheet))
+        }
+        return true
+    }
+
     fun clickImg(click: String, src: String) {
         if (LegacyReaderImageOptionsResolver.isParagraphRuleAction(click)) {
             activity.toastOnUi(R.string.reader_paragraph_image_action_unsupported)
@@ -1989,7 +2011,12 @@ class ReadBookController(
         activity.lifecycleScope.launch(IO) {
             try {
                 val source = ReadBook.bookSource ?: return@launch
-                val java = SourceLoginJsExtensions(activity, source, BookType.text)
+                val java = SourceLoginJsExtensions(activity, source, BookType.text).apply {
+                    // 段评：书源 click 里的 java.showBrowser(url, html) 走阅读页自己的弹层
+                    browserPresenter = { url, html, preloadJs ->
+                        showParagraphReview(url, html, preloadJs)
+                    }
+                }
                 val book = ReadBook.book ?: return@launch
                 val chapter =
                     appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)

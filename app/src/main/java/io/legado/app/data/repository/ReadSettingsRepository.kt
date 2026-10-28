@@ -422,6 +422,9 @@ class ReadSettingsRepository(
             showReadTitleAddition = compatDsValue(Keys.ShowReadTitleAddition, true),
             autoReadSpeed = compatDsValue(Keys.AutoReadSpeed, 10),
             systemTypefaces = compatDsValue(Keys.SystemTypefaces, 0),
+            paragraphBubblePackage = compatDsValue(Keys.ParagraphBubblePackage, "builtin_default"),
+            forceSoftwareParagraphBubble =
+                compatDsValue(Keys.ForceSoftwareParagraphBubble, false),
             preDownloadNum = compatDsValue(Keys.PreDownloadNum, 10),
             preDownloadNumPrev = compatDsValue(Keys.PreDownloadNumPrev, 0),
             prevKeys = compatDsValue(Keys.PrevKeys, ""),
@@ -544,6 +547,9 @@ class ReadSettingsRepository(
         val ShowReadTitleAddition = booleanPreferencesKey(PreferKey.showReadTitleAddition)
         val AutoReadSpeed = intPreferencesKey(PreferKey.autoReadSpeed)
         val SystemTypefaces = intPreferencesKey(PreferKey.systemTypefaces)
+        val ParagraphBubblePackage = stringPreferencesKey(PreferKey.paragraphBubblePackage)
+        val ForceSoftwareParagraphBubble =
+            booleanPreferencesKey(PreferKey.forceSoftwareParagraphBubble)
         val PreDownloadNum = intPreferencesKey(PreferKey.preDownloadNum)
         val PreDownloadNumPrev = intPreferencesKey(PreferKey.preDownloadNumPrev)
         val PrevKeys = stringPreferencesKey(PreferKey.prevKeys)
@@ -678,6 +684,8 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.showReadTitleAddition to showReadTitleAddition,
     PreferKey.autoReadSpeed to autoReadSpeed,
     PreferKey.systemTypefaces to systemTypefaces,
+    PreferKey.paragraphBubblePackage to paragraphBubblePackage,
+    PreferKey.forceSoftwareParagraphBubble to forceSoftwareParagraphBubble,
     PreferKey.preDownloadNum to preDownloadNum,
     PreferKey.preDownloadNumPrev to preDownloadNumPrev,
     PreferKey.prevKeys to prevKeys,

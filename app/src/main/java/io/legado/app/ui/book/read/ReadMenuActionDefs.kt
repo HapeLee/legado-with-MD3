@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
@@ -245,6 +246,11 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
         context.getString(R.string.menu_refresh_dur),
     ),
     ReadMenuButtonInfo(
+        "bubble_style",
+        Icons.Default.Comment,
+        context.getString(R.string.bubble_config),
+    ),
+    ReadMenuButtonInfo(
         "ai_chat",
         Icons.AutoMirrored.Filled.Chat,
         context.getString(R.string.ai_chat),
@@ -458,6 +464,9 @@ internal fun buildReadMenuActionDefs(
         },
         def("refresh_current") {
             onIntent(ReadBookIntent.RefreshCurrentChapter)
+        },
+        def("bubble_style") {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BubbleStyle))
         },
         def("ai_chat") {
             onIntent(ReadBookIntent.OpenAiChat)
