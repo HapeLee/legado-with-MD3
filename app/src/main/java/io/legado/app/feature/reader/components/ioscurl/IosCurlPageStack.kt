@@ -77,8 +77,8 @@ internal fun IosCurlPageStack(
         var prepared by remember(currentKey, targetKey, revision) { mutableStateOf(false) }
         DisposableEffect(graphics) { onDispose { graphics.close() } }
         LaunchedEffect(currentKey, targetKey, revision, currentSettled, targetSettled) {
-            graphics.close()
-            prepared = false
+            // 换页或图片加载完成都会重启本 effect。旧渲染器必须等新的两页捕获完成后再关：
+            // 否则动画进行中会先掉回静态快照（闪烁），等重新捕获完才恢复卷曲。
             try {
                 withFrameNanos { }
                 if (currentBitmap == null) currentBitmap = snapshots.capture(baseLayer, currentKey, currentSettled)
@@ -88,6 +88,8 @@ internal fun IosCurlPageStack(
                     ?: revealLayer.toImageBitmap()
                 val first = currentBitmap
                 val second = targetBitmap
+                graphics.close()
+                prepared = false
                 if (first != null && second != null) {
                     graphics.prepare(first.asAndroidBitmap(), second.asAndroidBitmap())
                     prepared = true

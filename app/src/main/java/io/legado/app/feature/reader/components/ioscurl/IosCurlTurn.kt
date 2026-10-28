@@ -166,12 +166,27 @@ internal class IosCurlTurn {
         renderReady = true
     }
 
+    /**
+     * 就绪信号由翻页栈在两页捕获完成后发出。该信号可能因组合层重启、翻页栈未进入组合或
+     * 捕获被取消而丢失，无上限等待会让本轮翻页永久停在半途（`settle()` 不返回 →
+     * `finishPageTurn()` 不执行 → 本次翻页根本不提交）。这里改为最多等待
+     * [MAX_RENDERER_WAIT_FRAMES] 帧，超时后照常走降级绘制并把翻页事务走完。
+     */
     private suspend fun awaitRenderer() {
-        while (!renderReady) withFrameNanos { }
+        var frames = 0
+        while (!renderReady && frames < MAX_RENDERER_WAIT_FRAMES) {
+            withFrameNanos { }
+            frames++
+        }
     }
 
     // Normalize the native 400ms full turn to the shared speed setting. Keep the
     // relative warm-up/release timing and velocity-dependent settling intact.
     private fun scaledDuration(seconds: Double, speed: ReaderPageTurnSpeed): Double =
         seconds * speed.baseDurationMillis / 400.0
+
+    private companion object {
+        /** 约 0.5s @60Hz；足够覆盖一次冷捕获，又不会把翻页挂死。 */
+        const val MAX_RENDERER_WAIT_FRAMES = 30
+    }
 }
