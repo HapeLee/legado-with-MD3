@@ -94,6 +94,8 @@ import io.legado.app.R
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.feature.reader.components.ioscurl.IosCurlPageStack
 import io.legado.app.feature.reader.components.ioscurl.IosCurlTurn
+import io.legado.app.feature.reader.components.googlecurl.GoogleCurlPageStack
+import io.legado.app.feature.reader.core.transition.ReaderParallaxPolicy
 import io.legado.app.feature.reader.core.accessibility.ReaderAccessibilityPolicy
 import io.legado.app.feature.reader.core.gesture.PullBookmarkDefaults
 import io.legado.app.feature.reader.core.gesture.PullBookmarkGesture
@@ -261,6 +263,7 @@ fun ReaderCanvasSurface(
     }
     val animationScope = rememberCoroutineScope()
     val iosCurl = remember { IosCurlTurn() }
+    var googleCurlReady by remember { mutableStateOf(false) }
     val curlDensity = LocalDensity.current.density
     val hapticFeedback = LocalHapticFeedback.current
     val scrollDecay = rememberSplineBasedDecay<Float>()
@@ -278,6 +281,7 @@ fun ReaderCanvasSurface(
      * 不要把 `transition` 读到组合期，否则拖拽的每一帧都会重组整个画布。
      */
     fun applyTransition(next: ReaderPageTransition) {
+        if (!next.dragging || next.direction != transition.direction) googleCurlReady = false
         if (next.direction != null && next.dragging) committedTurnPageId = null
         transition = next
         turnDirection = next.direction?.takeIf { next.dragging }
@@ -588,6 +592,10 @@ fun ReaderCanvasSurface(
             FastOutSlowInEasing
         }
         pageMotionJob = animationScope.launch {
+            // Cold page capture must finish before a tap/keyboard turn consumes its duration.
+            if (transitionMode == ReaderTransitionMode.GOOGLE_CURL) {
+                while (!googleCurlReady) withFrameNanos { }
+            }
             Animatable(startOffset).animateTo(
                 decision.targetOffsetPx,
                 tween(durationMillis, easing = settleEasing),
@@ -1618,6 +1626,26 @@ fun ReaderCanvasSurface(
                     selectionColor, textAccentColor, Modifier.fillMaxSize(), textSelection,
                     selectionPreviewStyle, cachedImage, loadImage, redrawSignal = redrawSignal)
             }
+        } else if (transitionMode == ReaderTransitionMode.GOOGLE_CURL && composedTurnDirection != null) {
+            GoogleCurlPageStack(
+                pages = pages,
+                direction = composedTurnDirection,
+                progress = { (abs(displayOffset) / current.widthPx.coerceAtLeast(1)).coerceIn(0f, 1f) },
+                redrawSignal = redrawSignal,
+                snapshots = pageSnapshots,
+                baseLayer = baseSnapshotLayer,
+                revealLayer = revealSnapshotLayer,
+                snapshotKey = { page, width, height ->
+                    pageSnapshotKey(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha,
+                        selectionColor, textAccentColor, textSelection, selectionPreviewStyle, width, height)
+                },
+                settled = { it.isSnapshotSettled(cachedImage) },
+                onReady = { googleCurlReady = true },
+            ) { page ->
+                ReaderPageCanvas(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha,
+                    selectionColor, textAccentColor, Modifier.fillMaxSize(), textSelection,
+                    selectionPreviewStyle, cachedImage, loadImage, redrawSignal = redrawSignal)
+            }
         } else if (transitionMode == ReaderTransitionMode.SIMULATION && composedTurnDirection != null) {
             SimulationPageStack(
                 redrawSignal = redrawSignal,
@@ -1657,7 +1685,7 @@ fun ReaderCanvasSurface(
             @Composable
             fun PageLayer(page: ReaderPage, role: PagedLayerRole, offsetY: () -> Float) {
                 val coverClipModifier = if (
-                    transitionMode == ReaderTransitionMode.COVER &&
+                    (transitionMode == ReaderTransitionMode.COVER || transitionMode == ReaderTransitionMode.PARALLAX) &&
                     role == PagedLayerRole.NEXT &&
                     composedTurnDirection == ReaderTurnDirection.NEXT
                 ) {
@@ -1734,14 +1762,19 @@ fun ReaderCanvasSurface(
                 }
             }
         }
-        if (transitionMode == ReaderTransitionMode.COVER && composedTurnDirection != null) {
+        if ((transitionMode == ReaderTransitionMode.COVER || transitionMode == ReaderTransitionMode.PARALLAX) &&
+            composedTurnDirection != null) {
             Canvas(Modifier.fillMaxSize()) {
                 val direction = transition.direction ?: return@Canvas
                 val offsetPx = displayOffset
                 if (offsetPx == 0f) return@Canvas
                 val edge = ReaderCoverShadowPolicy.edgePx(direction, offsetPx, size.width)
-                val shadowWidth = ReaderCoverShadowPolicy.widthDp * density
-                val dark = Color(ReaderCoverShadowPolicy.colorArgb)
+                val parallax = transitionMode == ReaderTransitionMode.PARALLAX
+                val shadowWidth = (if (parallax) ReaderParallaxPolicy.shadowWidthDp else ReaderCoverShadowPolicy.widthDp) * density
+                val dark = if (parallax) Color(ReaderParallaxPolicy.shadowColorArgb).let {
+                    it.copy(alpha = it.alpha * ReaderParallaxPolicy.shadowFade(
+                        direction, (abs(offsetPx) / size.width).coerceIn(0f, 1f), size.width, shadowWidth))
+                } else Color(ReaderCoverShadowPolicy.colorArgb)
                 drawRect(
                     Brush.horizontalGradient(
                         listOf(dark, Color.Transparent),

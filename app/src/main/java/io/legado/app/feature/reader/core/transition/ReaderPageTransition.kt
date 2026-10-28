@@ -10,7 +10,9 @@ enum class ReaderTransitionMode {
     IOS_CURL,
     SCROLL,
     FADE,
-    NONE;
+    NONE,
+    GOOGLE_CURL,
+    PARALLAX;
 
     companion object {
         fun fromPageAnim(value: Int): ReaderTransitionMode = when (value) {
@@ -20,6 +22,8 @@ enum class ReaderTransitionMode {
             3 -> SCROLL
             4 -> FADE
             6 -> IOS_CURL
+            7 -> GOOGLE_CURL
+            8 -> PARALLAX
             else -> NONE
         }
     }
@@ -37,6 +41,19 @@ object ReaderCoverShadowPolicy {
             ReaderTurnDirection.PREVIOUS -> displayOffsetPx
             ReaderTurnDirection.NEXT -> pageWidthPx + displayOffsetPx
         }
+}
+
+/** The lower sheet travels at 22% of the upper sheet's distance. */
+object ReaderParallaxPolicy {
+    const val movementFraction: Float = .22f
+    const val shadowWidthDp: Float = 18f
+    const val shadowColorArgb: Int = 0x55000000
+
+    fun shadowFade(direction: ReaderTurnDirection, progress: Float, pageWidthPx: Float, shadowWidthPx: Float): Float {
+        if (progress <= 0f || progress >= 1f || shadowWidthPx <= 0f) return 0f
+        val movingFraction = if (direction == ReaderTurnDirection.NEXT) 1f - progress else progress
+        return (pageWidthPx * movingFraction / shadowWidthPx).coerceIn(0f, 1f)
+    }
 }
 
 object ReaderProgrammaticTurnPolicy {
@@ -203,8 +220,10 @@ fun ReaderPageTransition.transforms(mode: ReaderTransitionMode): ReaderTransitio
             ReaderTransitionMode.FADE -> ReaderTransitionTransforms(
                 previous = ReaderPageTransform(alpha = progress),
             )
-            ReaderTransitionMode.COVER -> ReaderTransitionTransforms(
+            ReaderTransitionMode.COVER, ReaderTransitionMode.PARALLAX -> ReaderTransitionTransforms(
                 previous = ReaderPageTransform(translationX = -width + offsetPx),
+                current = ReaderPageTransform(translationX =
+                    if (mode == ReaderTransitionMode.PARALLAX) offsetPx * ReaderParallaxPolicy.movementFraction else 0f),
             )
             ReaderTransitionMode.SLIDE -> ReaderTransitionTransforms(
                 previous = ReaderPageTransform(translationX = -width + offsetPx),
@@ -216,9 +235,10 @@ fun ReaderPageTransition.transforms(mode: ReaderTransitionMode): ReaderTransitio
             ReaderTransitionMode.FADE -> ReaderTransitionTransforms(
                 next = ReaderPageTransform(alpha = progress),
             )
-            ReaderTransitionMode.COVER -> ReaderTransitionTransforms(
+            ReaderTransitionMode.COVER, ReaderTransitionMode.PARALLAX -> ReaderTransitionTransforms(
                 current = ReaderPageTransform(translationX = offsetPx),
-                next = ReaderPageTransform(),
+                next = ReaderPageTransform(translationX = if (mode == ReaderTransitionMode.PARALLAX)
+                    (width + offsetPx) * ReaderParallaxPolicy.movementFraction else 0f),
                 currentOnTop = true,
             )
             ReaderTransitionMode.SLIDE -> ReaderTransitionTransforms(
