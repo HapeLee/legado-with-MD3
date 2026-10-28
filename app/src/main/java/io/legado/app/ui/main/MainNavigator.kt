@@ -158,7 +158,6 @@ object MainNavigator {
             MainRouteSettingsAiPrompt,
             MainRouteSettingsCustomTheme,
             MainRouteSettingsThemeManage,
-            MainRouteSettingsBubble,
             MainRouteSettingsDownloadCache,
             MainRouteSettingsTranslation,
             MainRouteSettingsPrivate -> {
@@ -348,12 +347,14 @@ object MainNavigator {
 
             // 朗读设置的子页（设置 hub 与阅读界面朗读设置卡片两处入口）都只压栈、不清栈：
             // 从阅读界面进来要能直接返回阅读界面。
+            // 段评气泡管理同理：阅读页「排版 → 正文」「气泡样式」面板里都能进来。
             MainRouteVoicePool,
             MainRouteBgmPool,
             MainRouteVoiceEffect,
             MainRouteCastCapsuleStyle,
             MainRouteRegexCastRule,
-            MainRouteMultiRoleRecognition -> backStack.add(route)
+            MainRouteMultiRoleRecognition,
+            MainRouteSettingsBubble -> backStack.add(route)
 
             MainRouteAbout -> {
                 if (currentRoute == MainRouteHome) {

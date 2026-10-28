@@ -553,7 +553,7 @@ internal val MoreActionIds = listOf(
     "text_processing", "reverse_content", "re_segment",
     "del_ruby", "del_h", "toc_rule", "charset", "image_style", "page_anim",
     "simulated_reading", "get_progress", "cover_progress", "highlight_rule", "read_style",
-    "bottom_button_config", "log",
+    "bubble_style", "bottom_button_config", "log",
 )
 
 @Immutable

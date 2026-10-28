@@ -1038,6 +1038,10 @@ fun MainActivity.mainEntryProvider(
                 onOpenSourceEdit = { sourceUrl ->
                     onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
                 },
+                // 阅读页里的「气泡管理」：push 设置子页，返回回到阅读界面（不要用 startActivity）
+                onOpenBubbleManage = {
+                    onNavigateToRoute(MainRouteSettingsBubble)
+                },
                 onNavigateBack = {
                     MainNavigator.navigateBack(
                         this@mainEntryProvider,

@@ -73,6 +73,7 @@ fun ReadBookOverlayRoute(
     onOpenTextSelectMenuConfig: () -> Unit,
     onPickBookmarkBadgeImage: () -> Unit,
     onResetBookmarkBadge: () -> Unit,
+    onOpenBubbleManage: () -> Unit = {},
     sheetsVisible: Boolean = true,
     additionalSheetContent: @Composable (ReadBookSheet, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
 ) {
@@ -120,6 +121,7 @@ fun ReadBookOverlayRoute(
         onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
         onPickBookmarkBadgeImage = onPickBookmarkBadgeImage,
         onResetBookmarkBadge = onResetBookmarkBadge,
+        onOpenBubbleManage = onOpenBubbleManage,
     )
 }
 
@@ -147,6 +149,7 @@ fun ReadBookScreen(
     onOpenTextSelectMenuConfig: () -> Unit,
     onPickBookmarkBadgeImage: () -> Unit,
     onResetBookmarkBadge: () -> Unit,
+    onOpenBubbleManage: () -> Unit = {},
 ) {
     // Dialogs driven by activeDialog state
     val restoreDialog = state.activeDialog as? ReadBookDialog.ConfirmRestoreProgress
@@ -334,6 +337,7 @@ fun ReadBookScreen(
                         )
                     ),
                     sheetsVisible = visible,
+                    onOpenBubbleManage = onOpenBubbleManage,
                     aiState = aiState,
                     highlightRuleState = highlightRuleState,
                     markingState = markingState,
@@ -376,6 +380,7 @@ private fun ReadBookSheetContent(
     onOpenTextSelectMenuConfig: () -> Unit,
     onPickBookmarkBadgeImage: () -> Unit,
     onResetBookmarkBadge: () -> Unit,
+    onOpenBubbleManage: () -> Unit = {},
 ) {
     val visibleState =
         if (sheetsVisible) state else state.copy(sheetStack = kotlinx.collections.immutable.persistentListOf())
@@ -512,6 +517,10 @@ private fun ReadBookSheetContent(
         BubbleStyleSheet(
             show = visibleState.findSheet<ReadBookSheet.BubbleStyle>() != null,
             onDismissRequest = dismissSheet(visibleState.findSheet<ReadBookSheet.BubbleStyle>()),
+            onOpenManage = {
+                onIntent(ReadBookIntent.HideMenu)
+                onOpenBubbleManage()
+            },
         )
     }
     if (state.activeSheet is ReadBookSheet.ParagraphReview) {

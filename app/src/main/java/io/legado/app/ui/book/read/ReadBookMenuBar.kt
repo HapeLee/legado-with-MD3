@@ -118,6 +118,8 @@ fun ReadBookMenuBar(
     backdrop: Backdrop? = null,
     hazeState: HazeState? = null,
     seekState: StateFlow<ReadSeekUiState>,
+    /** 排版 → 正文 里的「段评气泡」入口。 */
+    onOpenBubbleManage: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val currentRoute = state.menuState.currentRoute
@@ -338,6 +340,7 @@ fun ReadBookMenuBar(
                     progressBarBehavior = preferences.progressBarBehavior,
                     onBrightnessPreview = onBrightnessPreview,
                     seekState = seekState,
+                    onOpenBubbleManage = onOpenBubbleManage,
                 )
             }
         }
@@ -366,6 +369,7 @@ private fun ReadBookMenuSurface(
     progressBarBehavior: String,
     onBrightnessPreview: (Int) -> Unit,
     seekState: StateFlow<ReadSeekUiState>,
+    onOpenBubbleManage: () -> Unit = {},
 ) {
     val route = when (contentTarget) {
         ReadBookMenuContent.Search -> ReadBookMenuRoute.Main
@@ -720,6 +724,7 @@ private fun ReadBookMenuSurface(
                                 onOpenPaddingConfig = {
                                     onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.PaddingConfig))
                                 },
+                                onOpenBubbleManage = onOpenBubbleManage,
                             )
                         }
                     }

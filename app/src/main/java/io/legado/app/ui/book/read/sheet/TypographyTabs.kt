@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.Segment
 import androidx.compose.material.icons.filled.AlignHorizontalCenter
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.CleanHands
+import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material.icons.filled.FormatAlignJustify
@@ -270,6 +271,7 @@ internal fun TypographyBodyTab(
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
     onOpenColorPicker: (TypographyColorTarget) -> Unit,
+    onOpenBubbleManage: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var textItalic by remember(config.textItalic) { mutableStateOf(config.textItalic) }
@@ -425,6 +427,20 @@ internal fun TypographyBodyTab(
             },
         )
 
+        if (onOpenBubbleManage != null) {
+            // 段评组：正文里的段评气泡样式与入口开关
+            SectionTitle(title = stringResource(R.string.bubble_config))
+            TinyClickableSettingItem(
+                title = stringResource(R.string.bubble_config),
+                description = stringResource(R.string.bubble_config_entry_summary),
+                imageVector = Icons.Default.Comment,
+                onClick = {
+                    // 先收起阅读菜单，再 push 气泡管理页；返回时阅读页仍在栈上
+                    onIntent(ReadBookIntent.HideMenu)
+                    onOpenBubbleManage()
+                },
+            )
+        }
     }
 }
 
