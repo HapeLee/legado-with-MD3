@@ -73,6 +73,11 @@ data class ReaderImageOptions(
     val action: String? = null,
     /** 只在 [ReaderImageLayoutMode.INLINE] 下参与排版：用哪个占位字量行内图的宽。 */
     val inlinePlaceholder: ReaderInlineImagePlaceholder = ReaderInlineImagePlaceholder.SRC_REPLACE,
+    /**
+     * 行内槽宽倍数：占位字 advance 再乘这个值。段评气泡靠它让包内 `sizeScale` 真正影响排版
+     * （对齐旧 `TextChapterLayout.applyInlineImageWidths` 的 `inlineWidth`）。
+     */
+    val inlineWidthScale: Float = 1f,
 )
 
 fun interface ReaderImageDimensionsResolver {
@@ -493,8 +498,13 @@ class ReaderChapterBlockMeasurer(
                             // 因此立图可以高于当前行；扁平宽图只占一格宽、很矮。
                             // HTML 段落例外：旧 `setTypeHtml` 的占位宽/行盒高来自 ImageSpan 本身。
                             val span = item.htmlSpanExtent
-                            val cellWidthPx = span?.widthPx
-                                ?: inlinePlaceholderWidth(layout.placeholder, baseStyle)
+                            // 段评气泡的包内缩放只作用于槽宽：占位字 advance 是密度无关的 em 量，
+                            // 位图再按最终槽宽栅格化，所以渲染分辨率与排版宽度始终同口径。
+                            val inlineWidthScale =
+                                options?.inlineWidthScale?.takeIf { it > 0f } ?: 1f
+                            val cellWidthPx = (span?.widthPx
+                                ?: inlinePlaceholderWidth(layout.placeholder, baseStyle)) *
+                                    inlineWidthScale
                             val cellHeightPx = span?.heightPx ?: (
                                     cellWidthPx * (size.heightPx.coerceAtLeast(1f) /
                                             size.widthPx.coerceAtLeast(1f))

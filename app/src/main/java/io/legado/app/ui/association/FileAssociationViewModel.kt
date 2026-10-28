@@ -7,6 +7,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.bookFileRegex
 import io.legado.app.data.entities.Book
+import io.legado.app.help.config.BubblePackageManager
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.*
 
@@ -23,6 +24,15 @@ class FileAssociationViewModel(application: Application) : BaseAssociationViewMo
                 val fileDoc = FileDoc.fromUri(uri, false)
                 val fileName = fileDoc.name
                 if (fileName.matches(AppPattern.archiveFileRegex)) {
+                    // 气泡包也是 zip，但解压产物会被 bookFileRegex 过滤掉，
+                    // 得在解压之前按条目名认出来，整包交给气泡包管理器
+                    val isBubblePack = fileDoc.openInputStream().getOrNull()?.use {
+                        BubblePackageManager.isBubblePackageZip(it)
+                    } == true
+                    if (isBubblePack) {
+                        successLive.postValue("bubblePack" to fileDoc.uri.toString())
+                        return@execute
+                    }
                     ArchiveUtils.deCompress(fileDoc, ArchiveUtils.TEMP_PATH) {
                         it.matches(bookFileRegex)
                     }.forEach {

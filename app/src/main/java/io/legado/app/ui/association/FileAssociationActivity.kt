@@ -20,6 +20,8 @@ import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppLog
 import io.legado.app.domain.gateway.OtherSettingsGateway
+import io.legado.app.help.config.BubblePackageManager
+import io.legado.app.ui.main.MainIntent
 import io.legado.app.exception.InvalidBooksDirException
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.permission.Permissions
@@ -115,6 +117,7 @@ class FileAssociationActivity : BaseComposeActivity(transparent = true) {
                 "theme" -> showDialogFragment(ImportThemeDialog(it.second, true))
                 "txtRule" -> showDialogFragment(ImportTxtTocRuleDialog(it.second, true))
                 "dictRule" -> showDialogFragment(ImportDictRuleDialog(it.second, true))
+                "bubblePack" -> importBubblePack(Uri.parse(it.second))
             }
         }
         viewModel.errorLive.observe(this) {
@@ -186,6 +189,31 @@ class FileAssociationActivity : BaseComposeActivity(transparent = true) {
                 openTreeLauncher.launch(null)
             },
         )
+    }
+
+    /**
+     * 气泡包：URI 读写权限只在本 activity 手里（跨 activity 传 Uri 会丢授权），
+     * 所以这里就地装好，再跳到段评气泡页让用户看到结果。
+     */
+    private fun importBubblePack(uri: Uri) {
+        lifecycleScope.launch {
+            runCatching {
+                withContext(IO) {
+                    BubblePackageManager.importZipUri(uri)
+                }
+            }.onSuccess { entry ->
+                toastOnUi("已导入段评气泡「${entry.config.name}」")
+                startActivity(MainIntent.createBubbleManageIntent(this@FileAssociationActivity))
+                finish()
+            }.onFailure {
+                val msg = "导入段评气泡失败\n${it.localizedMessage}"
+                AppLog.put(msg, it)
+                toastOnUi(msg)
+                handler.postDelayed(2000) {
+                    finish()
+                }
+            }
+        }
     }
 
     private fun toastStorageHelp() {

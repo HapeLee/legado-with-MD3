@@ -31,7 +31,8 @@ fun ConfigNavScreen(
     onNavigateToDownloadCache: () -> Unit,
     onNavigateToTranslation: () -> Unit,
     onNavigateToLab: () -> Unit,
-    onNavigateToPrivate: () -> Unit
+    onNavigateToPrivate: () -> Unit,
+    onNavigateToBubble: () -> Unit
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
@@ -76,6 +77,11 @@ fun ConfigNavScreen(
                     ClickableSettingItem(
                         title = stringResource(R.string.cover_config),
                         onClick = onNavigateToCover
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.bubble_config),
+                        description = stringResource(R.string.bubble_config_entry_summary),
+                        onClick = onNavigateToBubble
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.download_cache_config),

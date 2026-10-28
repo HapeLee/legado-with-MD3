@@ -129,6 +129,13 @@ object MainIntent {
             putExtra(EXTRA_SOURCE_URL, sourceUrl)
         }
 
+    /** 段评气泡管理页（系统文件关联导入完气泡包后跳过去看结果）。 */
+    fun createBubbleManageIntent(context: Context): Intent =
+        createLauncherIntent(context).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_SETTINGS_BUBBLE)
+        }
+
     fun createRssSourceManageIntent(context: Context): Intent =
         createLauncherIntent(context).apply {
             putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_RSS_SOURCE_MANAGE)

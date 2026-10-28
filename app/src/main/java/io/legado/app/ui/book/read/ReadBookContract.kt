@@ -543,6 +543,7 @@ internal val ReadBookButtonIds = listOf(
     "multi_role_cast",
     "cast_table",
     "ai_cast",
+    "bubble_style",
 )
 
 internal val MoreActionIds = listOf(
@@ -552,7 +553,7 @@ internal val MoreActionIds = listOf(
     "text_processing", "reverse_content", "re_segment",
     "del_ruby", "del_h", "toc_rule", "charset", "image_style", "page_anim",
     "simulated_reading", "get_progress", "cover_progress", "highlight_rule", "read_style",
-    "bottom_button_config", "log",
+    "bubble_style", "bottom_button_config", "log",
 )
 
 @Immutable
@@ -1340,6 +1341,21 @@ sealed interface ReadBookSheet {
     data object HighlightRuleConfig : ReadBookSheet
     data object Marking : ReadBookSheet
     data object MoreConfig : ReadBookSheet
+
+    /** 段评气泡快速切换。 */
+    data object BubbleStyle : ReadBookSheet
+
+    /**
+     * 段评弹层。
+     *
+     * 书源在图片 click 里调 `java.showBrowser(url, html)` 时打开：
+     * html 为空表示还要按 url 再请求一次段评内容。
+     */
+    data class ParagraphReview(
+        val url: String,
+        val html: String? = null,
+        val preloadJs: String? = null,
+    ) : ReadBookSheet
     data object TextSelectMenuConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet

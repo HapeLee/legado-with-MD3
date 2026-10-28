@@ -3881,5 +3881,42 @@
     <string name="battery_optimization_status_ignored">Unrestricted (Tap to check OEM background policy)</string>
     <string name="battery_optimization_status_not_ignored">Restricted or not configured; service may be killed in background</string>
     <string name="reader_paragraph_image_action_unsupported">This image uses a paragraph-rule action that this version does not support.</string>
+
+    <string name="bubble_config">Paragraph bubbles</string>
+    <string name="bubble_config_entry_summary">Bubble styles used by paragraph comments</string>
+    <string name="bubble_config_summary">Paragraph bubbles turn the comment counters in a book source into native SVG bubbles. Tap a style to apply it.</string>
+    <string name="bubble_force_software">Always draw software bubbles</string>
+    <string name="bubble_force_software_desc">Detect comment entries that a book source draws as images and render them with the current bubble style</string>
+    <string name="bubble_apply">Apply</string>
+    <string name="bubble_applied">In use</string>
+    <string name="bubble_edit">Edit</string>
+    <string name="bubble_export_zip">Export as zip</string>
+    <string name="bubble_delete">Delete</string>
+    <string name="bubble_delete_message">Delete the bubble style “%1$s”?</string>
+    <string name="bubble_add">Add</string>
+    <string name="bubble_add_manual">Create manually</string>
+    <string name="bubble_add_manual_desc">Start from the built-in bubble and edit its SVG template</string>
+    <string name="bubble_import">Import bubble</string>
+    <string name="bubble_import_zip">Import zip</string>
+    <string name="bubble_import_url_title">Import from URL</string>
+    <string name="bubble_import_url_hint">URL of a bubble package zip</string>
+    <string name="bubble_empty">No bubble styles yet</string>
+    <string name="bubble_name">Name</string>
+    <string name="bubble_size_scale">Size scale</string>
+    <string name="bubble_color_day_normal">Day · normal</string>
+    <string name="bubble_color_day_emphasis">Day · emphasis</string>
+    <string name="bubble_color_night_normal">Night · normal</string>
+    <string name="bubble_color_night_emphasis">Night · emphasis</string>
+    <string name="bubble_color_follow_theme">Follow theme</string>
+    <string name="bubble_svg_template">SVG template</string>
+    <string name="bubble_save">Save</string>
+    <string name="bubble_more">More</string>
+    <string name="bubble_manage_entry">Manage bubbles</string>
+    <string name="bubble_source_builtin">Built-in</string>
+    <string name="bubble_source_local">Local</string>
+    <string name="bubble_thumb_placeholder">Bubble</string>
+    <string name="bubble_help_title">Template placeholders</string>
+    <string name="bubble_help_summary">How ${num} and ${color} work</string>
+    <string name="bubble_help_body">A book source writes a comment entry as &lt;img src=“dp:12,{...}”&gt;; 12 replaces ${num} in the template. ${color} is replaced with the color configured above (status=emphasis uses the emphasis color). Packages may also ship images and fonts in assets/ and reference them as asset://name.</string>
     <string name="page_anim_ios_curl">iOS Curl</string>
 </resources>

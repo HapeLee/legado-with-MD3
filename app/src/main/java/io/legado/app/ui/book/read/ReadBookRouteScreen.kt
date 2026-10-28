@@ -172,6 +172,8 @@ fun ReadBookRouteScreen(
     onOpenTtsCache: () -> Unit = {},
     onOpenSourceEdit: (sourceUrl: String) -> Unit,
     onNavigateBack: () -> Boolean = { true },
+    /** 打开气泡管理页：由导航宿主 push，返回时回到阅读界面。 */
+    onOpenBubbleManage: () -> Unit = {},
 ) {
     // 归因定界：与末尾 compose.screen.end 成对。若首帧 `Compose:recompose` 里出现
     // begin 之前的空档，说明那部分耗时在本屏之外（导航宿主 / 共享转场层）。
@@ -866,6 +868,7 @@ fun ReadBookRouteScreen(
                         state = state,
                         preferences = readPreferences,
                         sheetsVisible = isTopRoute,
+                        onOpenBubbleManage = onOpenBubbleManage,
                         additionalSheetContent = { sheet, visible, dismissSheet ->
                             when (sheet) {
                                 is ReadBookSheet.BookNavigation -> {
