@@ -115,6 +115,11 @@ class FileAssociationActivity : BaseComposeActivity(transparent = true) {
                 "theme" -> showDialogFragment(ImportThemeDialog(it.second, true))
                 "txtRule" -> showDialogFragment(ImportTxtTocRuleDialog(it.second, true))
                 "dictRule" -> showDialogFragment(ImportDictRuleDialog(it.second, true))
+                "bubblePackage" -> {
+                    loadingFlow.value = false
+                    toastOnUi(R.string.bubble_package_imported)
+                    finish()
+                }
             }
         }
         viewModel.errorLive.observe(this) {

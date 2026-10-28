@@ -47,6 +47,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.help.readaloud.speech.HttpTtsCatalogParser
 import io.legado.app.help.book.upType
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.BubblePackageManager
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.SettingsWriter
@@ -385,6 +386,8 @@ object Restore : KoinComponent {
                 AppLog.put("恢复配置 XML 出错\n${e.localizedMessage}", e)
             }
         }
+
+        BubblePackageManager.restoreFromBackup(File(path, "bubblePackages"))
 
         appCtx.toastOnUi(R.string.restore_success)
         withContext(Main) {

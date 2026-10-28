@@ -15,6 +15,7 @@ import io.legado.app.help.AppWebDav
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfigStore
+import io.legado.app.help.config.BubblePackageManager
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfigStore
@@ -237,6 +238,8 @@ object Backup {
                 FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.shareConfigFileName)
                     .writeText(it)
             }
+            // 段评气泡包跟着阅读样式一起备份：bubble.json + 包内的字体/图片。
+            BubblePackageManager.copyToBackup(File(backupPath, "bubblePackages"))
         }
         if (!BackupConfig.backupIgnoreThemeConfig) {
             GSON.toJson(ThemeConfigStore.configList).let {
@@ -307,10 +310,11 @@ object Backup {
 
         currentCoroutineContext().ensureActive()
         val zipFileName = getNowZipFileName()
-        val paths = backupFileNames
-            .map { File(backupPath, it) }
-            .filter(File::isFile)
-            .map(File::getAbsolutePath)
+        val paths = (
+            backupFileNames.map { File(backupPath, it) }.filter(File::isFile) +
+                listOfNotNull(File(backupPath, "bubblePackages").takeIf { it.isDirectory })
+            )
+            .map { it.absolutePath }
         FileUtils.delete(zipFilePath)
         FileUtils.delete(zipFilePath.replace("tmp_", ""))
         val backupFileName = if (backupSettingsGateway.currentSettings.onlyLatestBackup) {

@@ -9,6 +9,8 @@ import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
+import io.legado.app.help.config.BubblePackageArchive
+import io.legado.app.help.config.BubblePackageManager
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.externalCache
 import okhttp3.MediaType.Companion.toMediaType
@@ -83,7 +85,22 @@ class OnLineImportViewModel(app: Application) : BaseAssociationViewModel(app) {
             when (rs.contentType()) {
                 "application/zip".toMediaType(),
                 "application/octet-stream".toMediaType() -> {
-                    importReadConfig(rs.bytes(), finally)
+                    val bytes = rs.bytes()
+                    // 气泡包也是 zip：先认 bubble.json，否则仍按排版包导入。
+                    val zip = FileUtils.createFileIfNotExist(
+                        appCtx.externalCache,
+                        "download",
+                        "import_${System.currentTimeMillis()}.zip"
+                    ).apply { writeBytes(bytes) }
+                    if (BubblePackageArchive.isBubblePackage(zip)) {
+                        BubblePackageManager.importZip(zip)
+                        finally.invoke(
+                            context.getString(R.string.success),
+                            context.getString(R.string.bubble_package_imported)
+                        )
+                    } else {
+                        importReadConfig(bytes, finally)
+                    }
                 }
                 else -> {
                     val inputStream = rs.byteStream()
