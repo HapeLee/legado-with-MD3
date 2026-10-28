@@ -21,6 +21,7 @@ import io.legado.app.data.repository.AppUiConfigurationRepository
 import io.legado.app.data.repository.BackupRestoreRepository
 import io.legado.app.data.repository.BackupSettingsRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
+import io.legado.app.data.repository.BookCacheMaintenanceRepository
 import io.legado.app.data.repository.BookCacheManageRepository
 import io.legado.app.data.repository.BookContentProcessRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
@@ -117,6 +118,7 @@ import io.legado.app.domain.gateway.BackupRestoreGateway
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.BookCacheCleanupGateway
 import io.legado.app.domain.gateway.BookCacheDownloadGateway
+import io.legado.app.domain.gateway.BookCacheMaintenanceGateway
 import io.legado.app.domain.gateway.BookContentProcessGateway
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.BookGroupMutationGateway
@@ -241,6 +243,7 @@ import io.legado.app.ui.book.audio.AudioPlayCoordinator
 import io.legado.app.ui.book.audio.AudioPlayViewModel
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.cache.manage.BookCacheManageViewModel
+import io.legado.app.ui.book.cache.manage.CacheMaintenanceViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
 import io.legado.app.ui.book.changesource.ChangeChapterSourceViewModel
@@ -503,6 +506,7 @@ val appModule = module {
     single<BackupRestoreGateway> { BackupRestoreRepository() }
     single<BookCacheDownloadGateway> { CacheBookDownloadRepository(get()) }
     single<BookCacheCleanupGateway> { BookCacheCleanupRepository(get()) }
+    single<BookCacheMaintenanceGateway> { BookCacheMaintenanceRepository(get(), get()) }
     single<BookExportSettingsGateway> { BookExportSettingsRepository() }
     single<HomepageSettingsGateway> { HomepageSettingsRepository() }
     single<CoverAlbumGateway> { CoverAlbumRepository(get(), get()) }
@@ -824,6 +828,7 @@ val appModule = module {
     viewModelOf(::RssViewModel)
     viewModelOf(::SearchViewModel)
     viewModelOf(::BookCacheManageViewModel)
+    viewModelOf(::CacheMaintenanceViewModel)
     viewModel {
         BookshelfManageScreenViewModel(
             application = get(),

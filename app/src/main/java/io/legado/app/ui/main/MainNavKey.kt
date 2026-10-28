@@ -157,6 +157,9 @@ data class MainRouteCache(val groupId: Long) : MainRoute
 data object MainRouteBookCacheManage : MainRoute
 
 @Serializable
+data object MainRouteCacheMaintenance : MainRoute
+
+@Serializable
 data class MainRouteReadBook(
     val bookUrl: String? = null,
     val readAloud: Boolean = false,
