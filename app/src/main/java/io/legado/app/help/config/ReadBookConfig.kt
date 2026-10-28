@@ -10,6 +10,7 @@ import io.legado.app.constant.ReadTipType
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadStyleConfigStore
 import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.model.ReadSessionState
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -25,7 +26,14 @@ import java.util.UUID
 object ReadBookConfig {
     private lateinit var configStore: ReadStyleConfigStore
     private lateinit var readSettingsGateway: ReadSettingsGateway
-    private val readSettings get() = readSettingsGateway.currentSettings
+
+    /** 初始化前（单测或极早调用）回退默认值，不抛 lateinit 异常。 */
+    private val readSettings: ReadSettings
+        get() = if (::readSettingsGateway.isInitialized) {
+            readSettingsGateway.currentSettings
+        } else {
+            ReadSettings()
+        }
 
     internal fun initialize(
         configStore: ReadStyleConfigStore,
@@ -230,6 +238,10 @@ object ReadBookConfig {
 
     val textItalic: Boolean
         get() = config.textItalic
+
+    /** 系统字族（0=默认 / 1=衬线 / 2=等宽）；正文排版与气泡兜底字体共用这一口径。 */
+    val systemTypefaces: Int
+        get() = readSettings.systemTypefaces
 
     val textShadow: Boolean
         get() = config.textShadow

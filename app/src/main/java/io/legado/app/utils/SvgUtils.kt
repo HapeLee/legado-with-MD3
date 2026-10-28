@@ -7,10 +7,13 @@ import android.util.Size
 import java.io.FileInputStream
 import java.io.InputStream
 import com.caverock.androidsvg.SVG
+import com.caverock.androidsvg.SVGExternalFileResolver
 import kotlin.math.max
 
 @Suppress("WeakerAccess", "MemberVisibilityCanBePrivate")
 object SvgUtils {
+
+    private val externalResolverLock = Any()
 
     /**
      * 从Svg中解码bitmap
@@ -28,6 +31,46 @@ object SvgUtils {
             val svg = SVG.getFromInputStream(inputStream)
             createBitmap(svg, width, height)
         }.getOrNull()
+    }
+
+    /**
+     * 带外部资源解析器（气泡包内的图片/字体）的渲染入口。
+     *
+     * 与无解析器版本的差别：这里把 [width]/[height] 当成位图上限等比缩放（不做放大），
+     * 并且整个过程串行化 —— androidsvg 的解析器注册是进程级静态状态。
+     */
+    fun createBitmap(
+        inputStream: InputStream,
+        width: Int,
+        height: Int? = null,
+        resolver: SVGExternalFileResolver
+    ): Bitmap? {
+        return kotlin.runCatching {
+            synchronized(externalResolverLock) {
+                SVG.registerExternalFileResolver(resolver)
+                try {
+                    val svg = SVG.getFromInputStream(inputStream)
+                    createBitmapFitWithin(svg, width, height)
+                } finally {
+                    SVG.deregisterExternalFileResolver()
+                }
+            }
+        }.getOrNull()
+    }
+
+    private fun createBitmapFitWithin(svg: SVG, width: Int?, height: Int?): Bitmap {
+        val size = getSize(svg)
+        val bitmapSize = requireNotNull(
+            SvgBitmapSizePolicy.fitWithin(size.width, size.height, width, height)
+        ) { "invalid SVG dimensions" }
+        if (svg.documentViewBox == null && size.width > 0 && size.height > 0) {
+            svg.setDocumentViewBox(0f, 0f, svg.documentWidth, svg.documentHeight)
+        }
+        svg.setDocumentWidth("100%")
+        svg.setDocumentHeight("100%")
+        val bitmap = Bitmap.createBitmap(bitmapSize.width, bitmapSize.height, Bitmap.Config.ARGB_8888)
+        svg.renderToCanvas(Canvas(bitmap))
+        return bitmap
     }
 
     //获取svg图片大小

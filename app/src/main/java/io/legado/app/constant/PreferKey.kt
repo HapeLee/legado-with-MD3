@@ -419,6 +419,10 @@ object PreferKey {
     const val moreActionsConfig = "moreActionsConfig"
     const val disableReturnKey = "disableReturnKey"
     const val selectText = "selectText"
+    /** 当前生效的段评气泡包目录名（bubblePackages/<dirName>）。 */
+    const val paragraphBubblePackage = "paragraphBubblePackage"
+    /** 正文里图片形式的段评入口是否强制用软件气泡渲染。 */
+    const val forceSoftwareParagraphBubble = "forceSoftwareParagraphBubble"
     //我在干什么
 
     const val disableMangaScrollAnimation = "disableMangaScrollAnimation"

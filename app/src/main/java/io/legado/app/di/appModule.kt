@@ -288,6 +288,7 @@ import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageViewModel
 import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
+import io.legado.app.ui.config.bubble.BubbleConfigViewModel
 import io.legado.app.ui.config.customTheme.CustomThemeViewModel
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigViewModel
 import io.legado.app.ui.config.labConfig.LabConfigViewModel
@@ -634,6 +635,7 @@ val appModule = module {
     // 阅读器入口的私密闸门：阅读记录 / 通知栏 / 深链等直开阅读器的路径都收在这里
     viewModelOf(::PrivateReadGateViewModel)
     viewModelOf(::CustomThemeViewModel)
+    viewModelOf(::BubbleConfigViewModel)
     viewModelOf(::ReadConfigViewModel)
     viewModelOf(::CoverConfigViewModel)
     viewModelOf(::CoverAlbumManageViewModel)
