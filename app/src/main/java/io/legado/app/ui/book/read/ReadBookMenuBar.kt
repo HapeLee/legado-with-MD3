@@ -82,6 +82,7 @@ import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.ui.book.read.sheet.AutoReadContent
 import io.legado.app.ui.book.read.sheet.ReadAloudContent
 import io.legado.app.ui.book.read.sheet.ReadStyleContent
+import io.legado.app.ui.book.read.sheet.ReviewBubblePickerContent
 import io.legado.app.ui.book.read.sheet.ThemeListContent
 import io.legado.app.ui.book.read.sheet.TypographyPage
 import io.legado.app.ui.book.read.sheet.TypographySection
@@ -663,6 +664,9 @@ private fun ReadBookMenuSurface(
                                 onOpenPaddingConfig = {
                                     onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.PaddingConfig))
                                 },
+                                onOpenReviewBubble = {
+                                    onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReviewBubble))
+                                },
                                 onOpenMoreConfig = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.MoreConfig))
                                 },
@@ -821,6 +825,18 @@ private fun ReadBookMenuSurface(
                                 modifier = Modifier.padding(horizontal = 16.dp),
                                 styleConfig = state.styleConfig,
                             )
+                        }
+                    }
+
+                    ReadBookMenuRoute.ReviewBubble -> {
+                        ReadBookMenuRoutePage(
+                            title = stringResource(R.string.review_bubble),
+                            maxHeight = maxHeight,
+                            animateSize = false,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            ReviewBubblePickerContent()
                         }
                     }
 

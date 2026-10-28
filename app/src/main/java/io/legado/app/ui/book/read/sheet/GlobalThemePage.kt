@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
@@ -87,6 +88,7 @@ fun GlobalThemePage(
     onOpenPaddingConfig: () -> Unit,
     onShareLayoutChange: (Boolean) -> Unit,
     onStyleSelect: (Int) -> Unit,
+    onOpenReviewBubble: () -> Unit,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
     styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
@@ -339,6 +341,31 @@ fun GlobalThemePage(
                         AppIcon(
                             Icons.Default.ChevronRight,
                             contentDescription = stringResource(R.string.text_bg_style),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+                // 段评气泡的快速切换：只换当前气泡包，不动主题。
+                NormalCard(
+                    onClick = onOpenReviewBubble,
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(56.dp)
+                        .padding(start = 4.dp),
+                    cornerRadius = 8.dp,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    border = BorderStroke(
+                        1.dp,
+                        LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                    ),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AppIcon(
+                            Icons.Default.ChatBubbleOutline,
+                            contentDescription = stringResource(R.string.review_bubble),
                             modifier = Modifier.size(20.dp),
                         )
                     }

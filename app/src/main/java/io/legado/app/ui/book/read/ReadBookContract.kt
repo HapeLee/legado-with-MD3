@@ -68,6 +68,7 @@ sealed interface ReadBookMenuRoute {
     data object InformationConfig : ReadBookMenuRoute
     data object PaddingConfig : ReadBookMenuRoute
     data object ThemeList : ReadBookMenuRoute
+    data object ReviewBubble : ReadBookMenuRoute
 }
 
 @Stable

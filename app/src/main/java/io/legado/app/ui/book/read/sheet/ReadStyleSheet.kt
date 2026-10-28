@@ -41,6 +41,7 @@ fun ReadStyleContent(
     onOpenTypographyConfig: () -> Unit,
     onOpenInformationConfig: () -> Unit,
     onOpenPaddingConfig: () -> Unit,
+    onOpenReviewBubble: () -> Unit,
     onOpenMoreConfig: () -> Unit,
     onOpenBgTextConfig: (Int) -> Unit,
     onOpenFontSelect: () -> Unit,
@@ -99,6 +100,7 @@ fun ReadStyleContent(
                         onOpenBgTextConfig = onOpenBgTextConfig,
                         onOpenTypographyConfig = onOpenTypographyConfig,
                         onOpenPaddingConfig = onOpenPaddingConfig,
+                        onOpenReviewBubble = onOpenReviewBubble,
                         onShareLayoutChange = { shareLayout ->
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(shareLayout)))
                         },
