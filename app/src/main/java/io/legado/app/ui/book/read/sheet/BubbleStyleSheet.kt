@@ -18,8 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +44,7 @@ import io.legado.app.ui.book.read.ConfigUpdateAction
 import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.config.bubble.BubblePreviewCache
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
@@ -77,6 +79,16 @@ fun BubbleStyleSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.bubble_config),
+        endAction = {
+            MediumTonalButton(
+                onClick = {
+                    onDismissRequest()
+                    onOpenManage()
+                },
+                icon = Icons.Default.Settings,
+                contentDescription = stringResource(R.string.bubble_manage_entry),
+            )
+        },
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             SwitchSettingItem(
@@ -111,25 +123,6 @@ fun BubbleStyleSheet(
                                 onDismissRequest()
                             }
                         },
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(
-                    onClick = {
-                        onDismissRequest()
-                        onOpenManage()
-                    },
-                ) {
-                    AppText(
-                        text = stringResource(R.string.bubble_manage_entry),
-                        color = LegadoTheme.colorScheme.primary,
-                        style = LegadoTheme.typography.titleMediumEmphasized,
                     )
                 }
             }

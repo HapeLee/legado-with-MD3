@@ -840,7 +840,6 @@ fun ReadBookRouteScreen(
                 backdrop = menuBackdrop,
                 hazeState = if (useMenuHazeSource) menuHazeState else null,
                 seekState = viewModel.seekState,
-                onOpenBubbleManage = onOpenBubbleManage,
             )
             ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
             ReadBookFloatingActionBar(

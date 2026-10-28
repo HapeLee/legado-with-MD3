@@ -64,8 +64,6 @@ fun TypographyPage(
     sameTitleRemoved: Boolean = false,
     section: TypographySection = TypographySection.Typography,
     onOpenPaddingConfig: (() -> Unit)? = null,
-    /** 正文页的「段评气泡」入口；null 表示不展示。 */
-    onOpenBubbleManage: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -233,7 +231,6 @@ fun TypographyPage(
                         onOpenUnderlineConfig = onOpenUnderlineConfig,
                         onOpenHighlightRule = onOpenHighlightRule,
                         onOpenColorPicker = { activeColorPicker = it },
-                        onOpenBubbleManage = onOpenBubbleManage,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
 

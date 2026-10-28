@@ -68,6 +68,7 @@ import io.legado.app.constant.ReadTipType
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
@@ -271,7 +272,6 @@ internal fun TypographyBodyTab(
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
     onOpenColorPicker: (TypographyColorTarget) -> Unit,
-    onOpenBubbleManage: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var textItalic by remember(config.textItalic) { mutableStateOf(config.textItalic) }
@@ -427,20 +427,16 @@ internal fun TypographyBodyTab(
             },
         )
 
-        if (onOpenBubbleManage != null) {
-            // 段评组：正文里的段评气泡样式与入口开关
-            SectionTitle(title = stringResource(R.string.bubble_config))
-            TinyClickableSettingItem(
-                title = stringResource(R.string.bubble_config),
-                description = stringResource(R.string.bubble_config_entry_summary),
-                imageVector = Icons.Default.Comment,
-                onClick = {
-                    // 先收起阅读菜单，再 push 气泡管理页；返回时阅读页仍在栈上
-                    onIntent(ReadBookIntent.HideMenu)
-                    onOpenBubbleManage()
-                },
-            )
-        }
+        // 段评组：打开阅读页自己的气泡切换面板（样式、强制开关、管理入口都在里面）
+        SectionTitle(title = stringResource(R.string.bubble_config))
+        TinyClickableSettingItem(
+            title = stringResource(R.string.bubble_config),
+            description = stringResource(R.string.bubble_config_entry_summary),
+            imageVector = Icons.Default.Comment,
+            onClick = {
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BubbleStyle))
+            },
+        )
     }
 }
 
