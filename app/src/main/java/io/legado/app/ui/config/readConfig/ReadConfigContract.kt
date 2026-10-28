@@ -1,5 +1,6 @@
 package io.legado.app.ui.config.readConfig
 
+import android.net.Uri
 import androidx.compose.runtime.Stable
 import io.legado.app.ui.book.read.EyeProtectionUiState
 
@@ -51,13 +52,25 @@ data class ReadConfigUiState(
     val prevKeys: String = "",
     val nextKeys: String = "",
     val showMenuIcon: Boolean = false,
+    val reviewBubbleStyle: String = "source",
+    val reviewBubbleSvg: String = "",
+    val reviewBubblePackage: String = "",
+    val reviewBubblePackages: List<ReviewBubblePackageUi> = emptyList(),
     val activeSheet: ReadConfigSheet? = null,
+)
+
+@Stable
+data class ReviewBubblePackageUi(
+    val dirName: String,
+    val name: String,
+    val builtin: Boolean,
 )
 
 sealed interface ReadConfigSheet {
     data object PageKeys : ReadConfigSheet
     data object ClickActions : ReadConfigSheet
     data object EyeProtection : ReadConfigSheet
+    data object ReviewBubble : ReadConfigSheet
 }
 
 sealed interface ReadConfigIntent {
@@ -107,6 +120,11 @@ sealed interface ReadConfigIntent {
     data class DisableReturnKeyChanged(val value: Boolean) : ReadConfigIntent
     data class ShowReadTitleAdditionChanged(val value: Boolean) : ReadConfigIntent
     data class ShowMenuIconChanged(val value: Boolean) : ReadConfigIntent
+    data object OpenReviewBubble : ReadConfigIntent
+    data class ReviewBubbleStyleChanged(val value: String) : ReadConfigIntent
+    data class ReviewBubblePackageSelected(val dirName: String) : ReadConfigIntent
+    data class ReviewBubbleSvgSelected(val uri: Uri) : ReadConfigIntent
+    data object ClearReviewBubbleSvg : ReadConfigIntent
     data class AutoSuggestDayNightChanged(val value: Boolean) : ReadConfigIntent
     data class ReadingAnchorChanged(val value: Boolean) : ReadConfigIntent
     data class ReadAloudDetachReminderChanged(val value: Boolean) : ReadConfigIntent

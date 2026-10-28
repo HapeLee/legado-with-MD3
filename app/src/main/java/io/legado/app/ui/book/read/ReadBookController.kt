@@ -610,7 +610,13 @@ class ReadBookController(
             true
         }
         is ReaderElement.Image -> handleComposeImageClick(element)
-        is ReaderElement.Review -> { activity.toastOnUi("Button Pressed!"); true }
+        is ReaderElement.Review -> {
+            val action = element.action?.takeIf(String::isNotBlank)
+            if (action != null) {
+                clickImg(action, "")
+                true
+            } else false
+        }
         is ReaderElement.Action -> { activity.toastOnUi("Button Pressed!"); true }
         is ReaderElement.Spacer -> false
         is ReaderElement.ParagraphMarker -> false
@@ -1277,6 +1283,9 @@ class ReadBookController(
             append('|').append(ReadBookConfig.textFont)
             append('|').append(ReadBookConfig.titleFont)
             append('|').append(ReadBookConfig.paragraphIndent)
+            append('|').append(ReadBookConfig.reviewBubbleStyle)
+            append('|').append(ReadBookConfig.reviewBubbleSvg)
+            append('|').append(ReadBookConfig.reviewBubblePackage)
             append('|').append(ReadBookConfig.textFullJustify)
             append('|').append(ReadBookConfig.titleMode)
             append('|').append(ReadBook.book?.getImageStyle())

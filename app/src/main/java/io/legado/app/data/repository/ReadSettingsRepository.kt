@@ -492,7 +492,17 @@ class ReadSettingsRepository(
             showMenuIcon = compatDsValue(Keys.ShowMenuIcon, false),
             titleBarCompact = compatDsValue(Keys.TitleBarCompact, false),
             moreActionsConfig = compatDsValue(Keys.MoreActionsConfig, ""),
+            reviewBubbleStyle = compatReviewBubbleStyle(compatDsValue(Keys.ReviewBubbleStyle, "source")),
+            reviewBubbleSvg = compatDsValue(Keys.ReviewBubbleSvg, ""),
+            reviewBubblePackage = compatDsValue(Keys.ReviewBubblePackage, ""),
         )
+    }
+
+    /** 旧版 `builtin:0..2` 统一并入气泡包模式：模板改由当前包提供。 */
+    private fun compatReviewBubbleStyle(value: String): String = when (value) {
+        "custom" -> "custom"
+        "source" -> "source"
+        else -> "package"
     }
 
     private object Keys {
@@ -613,6 +623,9 @@ class ReadSettingsRepository(
         val ShowMenuIcon = booleanPreferencesKey(PreferKey.showMenuIcon)
         val TitleBarCompact = booleanPreferencesKey(PreferKey.titleBarCompact)
         val MoreActionsConfig = stringPreferencesKey(PreferKey.moreActionsConfig)
+        val ReviewBubbleStyle = stringPreferencesKey(PreferKey.reviewBubbleStyle)
+        val ReviewBubbleSvg = stringPreferencesKey(PreferKey.reviewBubbleSvg)
+        val ReviewBubblePackage = stringPreferencesKey(PreferKey.paragraphBubblePackage)
     }
 }
 
@@ -742,4 +755,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.showMenuIcon to showMenuIcon,
     PreferKey.titleBarCompact to titleBarCompact,
     PreferKey.moreActionsConfig to moreActionsConfig,
+    PreferKey.reviewBubbleStyle to reviewBubbleStyle,
+    PreferKey.reviewBubbleSvg to reviewBubbleSvg,
+    PreferKey.paragraphBubblePackage to reviewBubblePackage,
 )

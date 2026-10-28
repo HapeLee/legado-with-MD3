@@ -119,4 +119,10 @@ data class ReadSettings(
     val showMenuIcon: Boolean = false,
     val titleBarCompact: Boolean = false,
     val moreActionsConfig: String = "",
+    /** 段评气泡样式：`source` 跟随书源图，`package` 用当前气泡包（`bubblePackages`），`custom` 用 [reviewBubbleSvg]。 */
+    val reviewBubbleStyle: String = "source",
+    /** 旧版自定义段评气泡 SVG 在应用私有目录内的路径；[reviewBubbleStyle] 为 `custom` 时生效。 */
+    val reviewBubbleSvg: String = "",
+    /** 当前段评气泡包目录名（`bubblePackages/<dirName>`）；空值用内置包。 */
+    val reviewBubblePackage: String = "",
 )

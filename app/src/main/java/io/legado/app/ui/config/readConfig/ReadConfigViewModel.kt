@@ -1,18 +1,24 @@
 package io.legado.app.ui.config.readConfig
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.help.config.BubblePackageManager
 import io.legado.app.ui.book.read.EyeProtectionUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import splitties.init.appCtx
+import java.io.File
+import java.io.FileNotFoundException
 
 class ReadConfigViewModel(
     private val settingsGateway: ReadSettingsGateway,
@@ -24,6 +30,7 @@ class ReadConfigViewModel(
         settingsGateway.currentSettings.toUiState(
             activeSheet = null,
             eyeProtection = themeSettingsGateway.currentSettings.toEyeProtectionUiState(),
+            reviewBubblePackages = emptyList(),
         )
     )
     val uiState = _uiState.asStateFlow()
@@ -38,6 +45,7 @@ class ReadConfigViewModel(
                     settings.toUiState(
                         activeSheet = it.activeSheet,
                         eyeProtection = it.eyeProtection,
+                        reviewBubblePackages = it.reviewBubblePackages,
                     )
                 }
             }
@@ -47,6 +55,7 @@ class ReadConfigViewModel(
                 _uiState.update { it.copy(eyeProtection = settings.toEyeProtectionUiState()) }
             }
         }
+        refreshReviewBubblePackages()
     }
 
     fun onIntent(intent: ReadConfigIntent) {
@@ -54,6 +63,13 @@ class ReadConfigViewModel(
             ReadConfigIntent.OpenPageKeys -> setSheet(ReadConfigSheet.PageKeys)
             ReadConfigIntent.OpenClickActions -> setSheet(ReadConfigSheet.ClickActions)
             ReadConfigIntent.OpenEyeProtection -> setSheet(ReadConfigSheet.EyeProtection)
+            ReadConfigIntent.OpenReviewBubble -> {
+                setSheet(ReadConfigSheet.ReviewBubble)
+                refreshReviewBubblePackages()
+            }
+            is ReadConfigIntent.ReviewBubblePackageSelected -> selectReviewBubblePackage(intent.dirName)
+            is ReadConfigIntent.ReviewBubbleSvgSelected -> importReviewBubbleSvg(intent.uri)
+            ReadConfigIntent.ClearReviewBubbleSvg -> clearReviewBubbleSvg()
             ReadConfigIntent.DismissSheet -> setSheet(null)
             is ReadConfigIntent.EyeProtectionEnabledChanged -> updateEyeProtection {
                 it.copy(eyeProtectionEnabled = intent.value)
@@ -83,6 +99,88 @@ class ReadConfigViewModel(
 
     private fun setSheet(sheet: ReadConfigSheet?) {
         _uiState.update { it.copy(activeSheet = sheet) }
+    }
+
+    private fun refreshReviewBubblePackages() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val packages = runCatching { BubblePackageManager.loadEntries() }.getOrDefault(emptyList())
+                .map {
+                    ReviewBubblePackageUi(
+                        dirName = it.dirName,
+                        name = it.config.name,
+                        builtin = it.source == BubblePackageManager.Source.BUILTIN,
+                    )
+                }
+            _uiState.update { it.copy(reviewBubblePackages = packages) }
+        }
+    }
+
+    private fun selectReviewBubblePackage(dirName: String) {
+        viewModelScope.launch {
+            runCatching {
+                settingsGateway.update {
+                    it.copy(reviewBubbleStyle = "package", reviewBubblePackage = dirName)
+                }
+            }.onSuccess {
+                BubblePackageManager.invalidateCurrentEntry()
+                applyReadSetting(ReadConfigIntent.ReviewBubblePackageSelected(dirName))
+            }.onFailure { error ->
+                _effects.tryEmit(
+                    ReadConfigEffect.SettingsUpdateFailed(
+                        error.message ?: error.javaClass.simpleName
+                    )
+                )
+            }
+        }
+    }
+
+    private fun importReviewBubbleSvg(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val path = copySvgToAppStorage(uri)
+                settingsGateway.update {
+                    it.copy(reviewBubbleStyle = "custom", reviewBubbleSvg = path)
+                }
+            }.onSuccess {
+                applyReadSetting(ReadConfigIntent.ReviewBubbleStyleChanged("custom"))
+            }.onFailure { error ->
+                _effects.tryEmit(
+                    ReadConfigEffect.SettingsUpdateFailed(
+                        error.localizedMessage ?: error.javaClass.simpleName
+                    )
+                )
+            }
+        }
+    }
+
+    private fun clearReviewBubbleSvg() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val oldPath = settingsGateway.currentSettings.reviewBubbleSvg
+                if (oldPath.isNotBlank()) File(oldPath).delete()
+                settingsGateway.update {
+                    it.copy(reviewBubbleStyle = "source", reviewBubbleSvg = "")
+                }
+            }.onSuccess {
+                applyReadSetting(ReadConfigIntent.ReviewBubbleStyleChanged("source"))
+                setSheet(null)
+            }.onFailure { error ->
+                _effects.tryEmit(
+                    ReadConfigEffect.SettingsUpdateFailed(
+                        error.localizedMessage ?: error.javaClass.simpleName
+                    )
+                )
+            }
+        }
+    }
+
+    /** 自定义 SVG 拷进私有目录：SAF 授权与外部文件删除都不会让设置失效。 */
+    private fun copySvgToAppStorage(uri: Uri): String {
+        val target = File(appCtx.filesDir, "review_bubble.svg")
+        appCtx.contentResolver.openInputStream(uri)?.use { input ->
+            target.outputStream().use { output -> input.copyTo(output) }
+        } ?: throw FileNotFoundException(uri.toString())
+        return target.absolutePath
     }
 
     private fun updateSetting(intent: ReadConfigIntent) {
@@ -145,6 +243,10 @@ private fun ReadConfigIntent.toSettingsTransform(): (ReadSettings) -> ReadSettin
     is ReadConfigIntent.DisableReturnKeyChanged -> { settings -> settings.copy(disableReturnKey = value) }
     is ReadConfigIntent.ShowReadTitleAdditionChanged -> { settings -> settings.copy(showReadTitleAddition = value) }
     is ReadConfigIntent.ShowMenuIconChanged -> { settings -> settings.copy(showMenuIcon = value) }
+    is ReadConfigIntent.ReviewBubbleStyleChanged -> { settings -> settings.copy(reviewBubbleStyle = value) }
+    is ReadConfigIntent.ReviewBubblePackageSelected -> { settings ->
+        settings.copy(reviewBubbleStyle = "package", reviewBubblePackage = dirName)
+    }
     is ReadConfigIntent.PageKeysChanged -> { settings ->
         settings.copy(prevKeys = prevKeys, nextKeys = nextKeys)
     }
@@ -158,7 +260,10 @@ private fun ReadConfigIntent.toSettingsTransform(): (ReadSettings) -> ReadSettin
     ReadConfigIntent.OpenPageKeys,
     ReadConfigIntent.OpenClickActions,
     ReadConfigIntent.OpenEyeProtection,
-    ReadConfigIntent.DismissSheet -> error("Sheet intents do not update settings")
+    ReadConfigIntent.OpenReviewBubble,
+    ReadConfigIntent.ClearReviewBubbleSvg,
+    ReadConfigIntent.DismissSheet,
+    is ReadConfigIntent.ReviewBubbleSvgSelected -> error("Sheet intents do not update settings")
 }
 
 private fun ThemeSettings.toEyeProtectionUiState(): EyeProtectionUiState = EyeProtectionUiState(
@@ -173,6 +278,7 @@ private fun ThemeSettings.toEyeProtectionUiState(): EyeProtectionUiState = EyePr
 private fun ReadSettings.toUiState(
     activeSheet: ReadConfigSheet?,
     eyeProtection: EyeProtectionUiState,
+    reviewBubblePackages: List<ReviewBubblePackageUi>,
 ): ReadConfigUiState =
     ReadConfigUiState(
         screenOrientation = screenOrientation,
@@ -221,5 +327,9 @@ private fun ReadSettings.toUiState(
         prevKeys = prevKeys,
         nextKeys = nextKeys,
         showMenuIcon = showMenuIcon,
+        reviewBubbleStyle = reviewBubbleStyle,
+        reviewBubbleSvg = reviewBubbleSvg,
+        reviewBubblePackage = reviewBubblePackage,
+        reviewBubblePackages = reviewBubblePackages,
         activeSheet = activeSheet,
     )

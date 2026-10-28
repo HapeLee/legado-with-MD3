@@ -46,6 +46,9 @@ class ApplyReadSettingUseCase {
             is ReadConfigIntent.UseUnderlineChanged -> {
                 ReadConfigUpdateBus.post(setOf(ConfigUpdateAction.InvalidateTextPage))
             }
+            // 气泡尺寸参与排版（行内占位宽），改样式或换包必须重新分页。
+            is ReadConfigIntent.ReviewBubbleStyleChanged,
+            is ReadConfigIntent.ReviewBubblePackageSelected -> updateLayout()
             else -> Unit
         }
     }

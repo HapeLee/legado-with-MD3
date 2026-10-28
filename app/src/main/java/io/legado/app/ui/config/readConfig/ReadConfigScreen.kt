@@ -29,6 +29,8 @@ fun ReadConfigScreen(
     state: ReadConfigUiState,
     onIntent: (ReadConfigIntent) -> Unit,
     onBackClick: () -> Unit,
+    onPickReviewBubbleSvg: () -> Unit,
+    onNavigateToBubblePackages: () -> Unit,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val settings = state
@@ -206,6 +208,18 @@ fun ReadConfigScreen(
                     onCheckedChange = {
                         onIntent(ReadConfigIntent.UseUnderlineChanged(it))
                     }
+                )
+
+                ClickableSettingItem(
+                    title = stringResource(R.string.review_bubble),
+                    description = stringResource(R.string.review_bubble_summary),
+                    option = reviewBubbleStyleLabel(
+                        style = settings.reviewBubbleStyle,
+                        packageName = state.reviewBubblePackages
+                            .firstOrNull { it.dirName == settings.reviewBubblePackage }
+                            ?.name.orEmpty(),
+                    ),
+                    onClick = { onIntent(ReadConfigIntent.OpenReviewBubble) },
                 )
             }
 
@@ -448,6 +462,20 @@ fun ReadConfigScreen(
             onDismissRequest = { onIntent(ReadConfigIntent.DismissSheet) },
         )
     }
+
+    ReviewBubbleSheet(
+        show = state.activeSheet == ReadConfigSheet.ReviewBubble,
+        style = settings.reviewBubbleStyle,
+        svgPath = settings.reviewBubbleSvg,
+        packages = state.reviewBubblePackages,
+        activePackage = settings.reviewBubblePackage,
+        onDismissRequest = { onIntent(ReadConfigIntent.DismissSheet) },
+        onStyleChange = { onIntent(ReadConfigIntent.ReviewBubbleStyleChanged(it)) },
+        onSelectPackage = { onIntent(ReadConfigIntent.ReviewBubblePackageSelected(it)) },
+        onPickSvg = onPickReviewBubbleSvg,
+        onClearSvg = { onIntent(ReadConfigIntent.ClearReviewBubbleSvg) },
+        onManagePackages = onNavigateToBubblePackages,
+    )
 
     EyeProtectionConfigSheet(
         show = state.activeSheet == ReadConfigSheet.EyeProtection,
