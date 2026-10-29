@@ -103,8 +103,8 @@ fun VideoPlayerScreen(
 
                 is VideoPlayerEffect.OpenSourceLogin -> onOpenSourceLogin(effect.sourceUrl)
                 is VideoPlayerEffect.OpenSourceEdit -> onOpenSourceEdit(effect.sourceUrl)
-                VideoPlayerEffect.RunCustomButton ->
-                    runSourceCustomButton(context, activity as? AppCompatActivity)
+                is VideoPlayerEffect.RunSourceCallback ->
+                    runSourceCustomButton(context, activity as? AppCompatActivity, effect)
             }
         }
     }
@@ -185,8 +185,10 @@ fun VideoPlayerScreen(
                 menuExpanded = menuExpanded,
                 onMenuExpand = { menuExpanded = true },
                 onMenuDismiss = { menuExpanded = false },
-                // RSS/直链没有书源，书源相关菜单项不出现
-                hasSource = VideoPlay.bookSource != null,
+                // 书源相关菜单项按会话能力出现：RSS/直链没有书源，未配登录/按钮的源也不给死入口
+                hasSource = state.hasSource,
+                hasSourceLogin = state.hasSourceLogin,
+                hasCustomButton = state.hasCustomButton,
                 onIntent = viewModel::onIntent,
             )
 
@@ -315,23 +317,22 @@ private fun copyPlayUrl(context: android.content.Context, url: String) {
     context.sendToClip(url)
 }
 
-/** 书源自定义按钮：回调未消费时提示书源没配按钮。 */
+/** 书源自定义按钮：回调未消费（没有按钮/JS 报错）时提示，不做静默失败。 */
 private fun runSourceCustomButton(
     context: android.content.Context,
     activity: AppCompatActivity?,
+    effect: VideoPlayerEffect.RunSourceCallback,
 ) {
-    val source = VideoPlay.bookSource
-    val book = VideoPlay.book
-    if (source == null || book == null || activity == null) {
+    if (activity == null) {
         context.toastOnUi(context.getString(R.string.source_no_custom_button))
         return
     }
     SourceCallBack.callBackBtn(
         activity = activity,
-        event = SourceCallBack.CLICK_CUSTOM_BUTTON,
-        source = source,
-        book = book,
-        chapter = VideoPlay.chapter,
+        event = effect.event,
+        source = effect.source,
+        book = effect.book,
+        chapter = effect.chapter,
         bookType = BookType.video,
     ) {
         context.toastOnUi(context.getString(R.string.source_no_custom_button))
@@ -364,6 +365,8 @@ private fun VideoTopBar(
     onMenuExpand: () -> Unit,
     onMenuDismiss: () -> Unit,
     hasSource: Boolean,
+    hasSourceLogin: Boolean,
+    hasCustomButton: Boolean,
     onIntent: (VideoPlayerIntent) -> Unit,
 ) {
     Row(
@@ -404,7 +407,7 @@ private fun VideoTopBar(
                         onIntent(VideoPlayerIntent.OpenInExternalPlayer)
                     },
                 )
-                if (hasSource) {
+                if (hasCustomButton) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.custom_button)) },
                         onClick = {
@@ -412,6 +415,8 @@ private fun VideoTopBar(
                             onIntent(VideoPlayerIntent.RunCustomButton)
                         },
                     )
+                }
+                if (hasSourceLogin) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.book_source_login)) },
                         onClick = {
@@ -419,6 +424,8 @@ private fun VideoTopBar(
                             onIntent(VideoPlayerIntent.OpenSourceLogin)
                         },
                     )
+                }
+                if (hasSource) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.edit_book_source)) },
                         onClick = {

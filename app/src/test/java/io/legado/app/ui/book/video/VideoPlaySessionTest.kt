@@ -398,6 +398,64 @@ class VideoPlaySessionTest {
         awaitWrites()
     }
 
+    // ——————————————————— 播放页菜单能力 ———————————————————
+
+    @Test
+    fun uiStateCarriesSourceCapabilitiesForMenu() = runBlocking {
+        source.loginUrl = "https://video.test/login"
+        source.customButton = true
+        val book = insertVideoBook()
+        VideoPlay.attachPlayer(player.instance)
+        val viewModel = VideoPlayerViewModel()
+
+        viewModel.init(book.bookUrl)
+        val state = awaitUiState(viewModel) { it.chapterTitle == "Episode 1" }
+
+        assertEquals(source.bookSourceUrl, state.bookSourceUrl)
+        assertTrue(state.hasSource)
+        assertTrue(state.hasSourceLogin)
+        assertTrue(state.hasCustomButton)
+        awaitWrites()
+    }
+
+    @Test
+    fun uiStateHidesSourceCapabilitiesTheSourceDoesNotOffer() = runBlocking {
+        // 默认书源既没有登录地址，也没有声明自定义按钮
+        val book = insertVideoBook()
+        VideoPlay.attachPlayer(player.instance)
+        val viewModel = VideoPlayerViewModel()
+
+        viewModel.init(book.bookUrl)
+        val state = awaitUiState(viewModel) { it.chapterTitle == "Episode 1" }
+
+        assertTrue(state.hasSource)
+        assertFalse(state.hasSourceLogin)
+        assertFalse(state.hasCustomButton)
+        awaitWrites()
+    }
+
+    @Test
+    fun uiStateHasNoSourceCapabilitiesForRssArticle() = runBlocking {
+        val article = RssArticle(
+            origin = "https://rss.test",
+            sort = "sort",
+            title = "RSS Video",
+            link = "https://rss.test/menu",
+            content = "https://rss.test/menu.mp4",
+            type = 2,
+        )
+        VideoPlay.attachPlayer(player.instance)
+        val viewModel = VideoPlayerViewModel()
+
+        viewModel.initRss(article)
+        val state = awaitUiState(viewModel) { it.bookName == "RSS Video" }
+
+        assertFalse(state.hasSource)
+        assertFalse(state.hasSourceLogin)
+        assertFalse(state.hasCustomButton)
+        awaitWrites()
+    }
+
     // ——————————————————— helpers ———————————————————
 
     private fun videoBook() = Book(
@@ -452,6 +510,12 @@ class VideoPlaySessionTest {
         title = title,
         isVolume = isVolume,
     )
+
+    /** 等播放页 UiState 出现期望的快照。 */
+    private suspend fun awaitUiState(
+        viewModel: VideoPlayerViewModel,
+        predicate: (VideoPlayerUiState) -> Boolean,
+    ): VideoPlayerUiState = withTimeout(5_000) { viewModel.uiState.first(predicate) }
 
     /** 等会话里所有后台写库/预解析协程跑完，避免 runTest 报未完成协程。 */
     /** 等会话进入期望状态；超时直接带着当前 error 失败，避免测试无限挂起。 */

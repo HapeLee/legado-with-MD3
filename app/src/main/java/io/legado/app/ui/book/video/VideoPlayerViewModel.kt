@@ -3,8 +3,10 @@ package io.legado.app.ui.book.video
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
+import io.legado.app.constant.BookType
 import io.legado.app.constant.IntentAction
 import io.legado.app.data.entities.RssArticle
+import io.legado.app.model.SourceCallBack
 import io.legado.app.model.VideoPlay
 import io.legado.app.service.VideoPlayService
 import io.legado.app.utils.startService
@@ -36,6 +38,9 @@ class VideoPlayerViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             VideoPlay.state.collect { state ->
+                // 书源能力（登录/自定义按钮）不在 VideoPlayState 里，随会话快照一起派生，
+                // 免得 Screen 组合期去读全局模型
+                val source = VideoPlay.bookSource
                 _uiState.update { current ->
                     current.copy(
                         bookName = state.bookName,
@@ -48,6 +53,9 @@ class VideoPlayerViewModel : ViewModel() {
                         isPlaying = state.isPlaying,
                         error = state.error,
                         showDanmaku = VideoPlay.danmakuShow,
+                        bookSourceUrl = source?.bookSourceUrl.orEmpty(),
+                        hasSourceLogin = !source?.loginUrl.isNullOrBlank(),
+                        hasCustomButton = source?.customButton == true,
                     )
                 }
             }
@@ -166,8 +174,7 @@ class VideoPlayerViewModel : ViewModel() {
                 { VideoPlayerEffect.OpenSourceEdit(it) }
             )
 
-            VideoPlayerIntent.RunCustomButton ->
-                _effects.tryEmit(VideoPlayerEffect.RunCustomButton)
+            VideoPlayerIntent.RunCustomButton -> runCustomButton()
             is VideoPlayerIntent.LongPressSpeed -> {
                 val speed = if (intent.active) {
                     VideoPlay.longPressSpeed / 10f
@@ -182,14 +189,34 @@ class VideoPlayerViewModel : ViewModel() {
 
     /** 书源相关动作都要求当前会话有书源（RSS/直链没有）。 */
     private fun emitSource(effect: (String) -> VideoPlayerEffect) {
-        val sourceUrl = VideoPlay.bookSource?.bookSourceUrl
-        if (sourceUrl.isNullOrBlank()) {
+        val sourceUrl = _uiState.value.bookSourceUrl
+        if (sourceUrl.isBlank()) {
             _effects.tryEmit(
                 VideoPlayerEffect.ShowToast(appCtx.getString(R.string.source_not_found))
             )
         } else {
             _effects.tryEmit(effect(sourceUrl))
         }
+    }
+
+    /** 自定义按钮：书源没声明按钮（或会话没有书源）时不做无意义回调。 */
+    private fun runCustomButton() {
+        val source = VideoPlay.bookSource
+        val book = VideoPlay.book
+        if (source == null || book == null || !source.customButton) {
+            _effects.tryEmit(
+                VideoPlayerEffect.ShowToast(appCtx.getString(R.string.source_no_custom_button))
+            )
+            return
+        }
+        _effects.tryEmit(
+            VideoPlayerEffect.RunSourceCallback(
+                event = SourceCallBack.CLICK_CUSTOM_BUTTON,
+                source = source,
+                book = book,
+                chapter = VideoPlay.chapter,
+            )
+        )
     }
 
     private fun copyPlayUrl() {

@@ -1,6 +1,9 @@
 package io.legado.app.ui.book.video
 
 import androidx.compose.runtime.Stable
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.BookSource
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -32,7 +35,16 @@ data class VideoPlayerUiState(
     val longPressSpeed: Int = 30,
     val floatingEnabled: Boolean = false,
     val sheet: VideoPlayerSheet? = null,
+    /** 当前会话的书源地址；RSS 文章与直链播放为空。 */
+    val bookSourceUrl: String = "",
+    /** 书源配了登录地址，播放页才给出「书源登录」入口。 */
+    val hasSourceLogin: Boolean = false,
+    /** 书源声明了自定义按钮，播放页才给出「自定义按钮」入口。 */
+    val hasCustomButton: Boolean = false,
 ) {
+    /** 有书源才谈得上登录/编辑/自定义按钮；RSS 与直链没有。 */
+    val hasSource: Boolean get() = bookSourceUrl.isNotBlank()
+
     val hasEpisodeList: Boolean get() = episodes.size > 1 || volumes.size > 1
 }
 
@@ -111,5 +123,14 @@ sealed interface VideoPlayerEffect {
 
     data class OpenSourceEdit(val sourceUrl: String) : VideoPlayerEffect
 
-    data object RunCustomButton : VideoPlayerEffect
+    /**
+     * 书源自定义按钮回调：书源 JS 会弹 HTML/Toast，需要 Activity，所以交给宿主执行。
+     * 回调入参随 effect 带出，宿主不需要回读 [io.legado.app.model.VideoPlay]。
+     */
+    data class RunSourceCallback(
+        val event: String,
+        val source: BookSource,
+        val book: Book,
+        val chapter: BookChapter?,
+    ) : VideoPlayerEffect
 }
