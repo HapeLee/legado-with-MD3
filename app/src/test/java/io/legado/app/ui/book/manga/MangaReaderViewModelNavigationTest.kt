@@ -310,6 +310,17 @@ class MangaReaderViewModelNavigationTest {
                 read
             ),
             CacheBookChaptersUseCase(downloads), MangaReaderSessionFactory { session },
+            object : io.legado.app.domain.gateway.MangaTranslationGateway {
+                override fun observeBook(bookUrl: String) = emptyFlow<io.legado.app.domain.gateway.MangaTranslationBookState>()
+                override suspend fun enqueueChapter(bookUrl: String, pages: List<io.legado.app.domain.gateway.MangaTranslationPage>, preferredKey: String?) = Unit
+                override suspend fun resume(bookUrl: String) = Unit
+                override suspend fun pause(bookUrl: String) = Unit
+                override suspend fun prioritize(bookUrl: String, pageKey: String) = Unit
+                override suspend fun setShowTranslation(bookUrl: String, show: Boolean) = Unit
+                override suspend fun clearBook(bookUrl: String) = Unit
+                override suspend fun validateLoadedPages(bookUrl: String, pages: List<io.legado.app.domain.gateway.MangaTranslationPage>) = Unit
+                override fun detach(bookUrl: String) = Unit
+            },
         ).also { store.put("reader", it) }
     }
 

@@ -348,6 +348,22 @@ fun MangaReaderScreen(
                 },
             )
             ReaderStatusOverlay(state, onIntent)
+            if (state.settings.translationEnabled && state.bookUrl.isNotEmpty() &&
+                !state.menuVisible && state.settingsCategory == null &&
+                state.activeSheet == null && state.activeDialog == null) {
+                io.legado.app.feature.manga.MangaTranslationBubble(
+                    controls = state.translationControls,
+                    right = state.settings.translationBubbleRight,
+                    relativeHeight = state.settings.translationBubbleHeight,
+                    eInk = state.settings.enableEInk,
+                    hazeState = hazeState,
+                    canHandleBack = canHandleBack,
+                    onMove = { right, height -> onIntent(MangaReaderIntent.MoveTranslationBubble(right, height)) },
+                    onAutomatic = { onIntent(MangaReaderIntent.ToggleAutomaticTranslation) },
+                    onDisplay = { onIntent(MangaReaderIntent.ToggleTranslationDisplay) },
+                    onClear = { onIntent(MangaReaderIntent.RequestClearTranslation) },
+                )
+            }
         }
     }
     if (state.activeSheet == MangaReaderSheet.SourceActions) {
@@ -390,6 +406,15 @@ fun MangaReaderScreen(
         onConfirm = { onIntent(MangaReaderIntent.AddCurrentBookToShelf) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(MangaReaderIntent.DiscardCurrentBookAndExit) },
+    )
+    AppAlertDialog(
+        show = state.activeDialog == MangaReaderDialog.ClearTranslation,
+        onDismissRequest = { onIntent(MangaReaderIntent.DismissDialog) },
+        title = stringResource(R.string.feature_manga_translation_clear_confirm),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onIntent(MangaReaderIntent.ConfirmClearTranslation) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(MangaReaderIntent.DismissDialog) },
     )
     val payDialog = state.activeDialog as? MangaReaderDialog.ConfirmPay
     AppAlertDialog(
@@ -1740,6 +1765,8 @@ private fun MangaPageImage(
             ?: Modifier.height(fallbackHeight)
     }
     val imagePipelineKey = remember(
+        page.translation.resultUri,
+        page.translation.showTranslation,
         page.key,
         page.bookUrl,
         paged,
@@ -1752,6 +1779,8 @@ private fun MangaPageImage(
         decodeSize,
     ) {
         listOf(
+            page.translation.resultUri,
+            page.translation.showTranslation,
             page.key,
             page.bookUrl,
             paged,
@@ -2157,7 +2186,8 @@ internal fun MangaReaderItemUi.Page.imageRequest(
     onSuccess: () -> Unit = {},
     onError: (String?) -> Unit = {},
 ): ImageRequest {
-    val memoryCacheKey = "manga-page-v2:$bookUrl:$imageUrl:${settings.sourceOrigin}:" +
+    val translatedUri = translation.resultUri?.takeIf { translation.showTranslation }
+    val memoryCacheKey = "manga-page-v3:$bookUrl:${translatedUri ?: imageUrl}:${settings.sourceOrigin}:" +
         "${settings.enableEInk}:${settings.eInkThreshold}:${settings.enableGray}:${fileOwner != null}:$retryRevision"
     return ImageRequest.Builder(context)
         .data(imageUrl)
@@ -2172,6 +2202,7 @@ internal fun MangaReaderItemUi.Page.imageRequest(
         .memoryCacheKey(memoryCacheKey)
         .placeholderMemoryCacheKey(memoryCacheKey)
         .apply {
+            extras[CoverExtras.MangaTranslatedUri] = translatedUri
             extras[CoverExtras.Manga] = true
             extras[CoverExtras.SourceOrigin] = settings.sourceOrigin
             extras[CoverExtras.MangaBookUrl] = bookUrl
@@ -2216,6 +2247,7 @@ private fun MangaReaderItemUi.Page.backgroundColorRequest(
     }
     .allowHardware(false)
     .apply {
+        extras[CoverExtras.MangaTranslatedUri] = translation.resultUri?.takeIf { translation.showTranslation }
         extras[CoverExtras.Manga] = true
         extras[CoverExtras.SourceOrigin] = sourceOrigin
         extras[CoverExtras.MangaBookUrl] = bookUrl

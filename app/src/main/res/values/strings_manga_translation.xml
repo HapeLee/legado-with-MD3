@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_manga_translation_title">漫画翻译</string>
+    <string name="feature_manga_translation_bubble">译</string>
+    <string name="feature_manga_translation_auto">自动翻译</string>
+    <string name="feature_manga_translation_switch">译文/原图</string>
+    <string name="feature_manga_translation_clear">清除</string>
+    <string name="feature_manga_translation_clear_confirm">清除当前漫画翻译缓存？</string>
+    <string name="feature_manga_translation_cleared">当前漫画翻译缓存已清除</string>
+    <string name="feature_manga_translation_progress">%1$d/%2$d</string>
+    <string name="feature_manga_translation_move_left">移到左侧</string>
+    <string name="feature_manga_translation_move_right">移到右侧</string>
+    <string name="feature_manga_translation_arm64">漫画翻译需要 arm64 设备和 64 位应用</string>
+    <string name="feature_manga_translation_configure_ai">请先在 AI 设置中配置翻译模型</string>
+    <string name="feature_manga_translation_loading">正在读取原图…</string>
+    <string name="feature_manga_translation_too_large">暂不支持翻译超长或超大图片（最大 4096 × 8192，1200 万像素）</string>
+    <string name="feature_manga_translation_running">正在识别、翻译和排版…</string>
+    <string name="feature_manga_translation_model">正在准备模型：%1$s</string>
+    <string name="feature_manga_translation_settings_changed">翻译设置已更改，当前页将在下次开启时重试</string>
+</resources>

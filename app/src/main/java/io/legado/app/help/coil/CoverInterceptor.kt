@@ -14,6 +14,7 @@ import coil3.request.maxBitmapSize
 import coil3.request.transformations
 import coil3.size.Size
 import io.legado.app.data.appDb
+import io.legado.app.data.repository.manga.MangaTranslationFiles
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.analyzeRule.AnalyzeUrl
@@ -72,6 +73,21 @@ class CoverInterceptor(
         val data = request.data
 
         val fileOwner = request.extras[CoverExtras.MangaFileOwner]
+        val translatedUri = request.extras[CoverExtras.MangaTranslatedUri]
+        if (fileOwner != null && translatedUri != null) {
+            val file = withContext(Dispatchers.IO) {
+                fileOwner.acquire(translatedUri, pin = MangaTranslationFiles::pin) {
+                    val translated = File(java.net.URI(translatedUri))
+                    check(translated.isFile) { "Translated image missing" }
+                    translated to MangaTranslationFiles.pin(translated)
+                }
+            }
+            val ratio = withContext(Dispatchers.IO) { MangaImageDimensions.read(file) }
+            fileOwner.setAspectRatio(ratio)
+            ratio?.let { request.extras[CoverExtras.MangaAspectRatio]?.invoke(it) }
+            return boundedChain.withRequest(request.newBuilder().data(file)
+                .diskCachePolicy(CachePolicy.DISABLED).build()).proceed()
+        }
         // 分页与条漫在线页复用同一原图；本地漫画与 content/file URI 保持平台加载器。
         if (fileOwner != null && data is String &&
             (data.isAbsUrl() || data.startsWith("data:", true)) &&

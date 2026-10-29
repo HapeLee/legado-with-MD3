@@ -336,6 +336,11 @@ private fun ReaderSettingsContent(
     settings: MangaReaderSettings,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
+    TinySwitchSettingItem(
+        title = stringResource(R.string.feature_manga_translation_title),
+        checked = settings.translationEnabled,
+        onCheckedChange = { updateBoolean(onIntent, MangaReaderSettingKey.TRANSLATION_ENABLED, it) },
+    )
     val isWebtoon = settings.scrollMode == MangaScrollMode.WEBTOON ||
         settings.scrollMode == MangaScrollMode.WEBTOON_WITH_GAP
     val isHorizontalPaged = settings.scrollMode == MangaScrollMode.PAGE_LEFT_TO_RIGHT ||

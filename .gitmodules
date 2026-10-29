@@ -1,0 +1,3 @@
+[submodule "third_party/yakuyomi-engine"]
+	path = third_party/yakuyomi-engine
+	url = https://github.com/joyeli/yakuyomi-engine.git

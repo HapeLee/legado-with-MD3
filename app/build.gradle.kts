@@ -32,6 +32,7 @@ val enableAbiSplits = providers.gradleProperty("enableAbiSplits")
     .getOrElse(true)
 
 android {
+    ndkVersion = "28.2.13676358"
     // Compose 1.13.0-beta01 的 AAR 元数据要求 compileSdk >= 37.1（android-37.0 会被 checkAarMetadata 拒绝）。
     compileSdk = 37
     compileSdkMinor = 1
@@ -189,6 +190,7 @@ ksp {
 }
 
 dependencies {
+    implementation(project(":yakuyomi-engine"))
     implementation(libs.androidx.profileinstaller)
     "baselineProfile"(project(":baselineprofile"))
     coreLibraryDesugaring(libs.desugar)

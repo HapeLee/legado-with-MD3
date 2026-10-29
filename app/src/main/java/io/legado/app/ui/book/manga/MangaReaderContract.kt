@@ -42,6 +42,7 @@ data class MangaReaderUiState(
     val pendingMessages: ImmutableList<MangaReaderMessage> = persistentListOf(),
     val menuVisible: Boolean = false,
     val autoReadEnabled: Boolean = false,
+    val translationControls: io.legado.app.feature.manga.MangaTranslationControls = io.legado.app.feature.manga.MangaTranslationControls(),
     val activeSheet: MangaReaderSheet? = null,
     val activeDialog: MangaReaderDialog? = null,
     val settingsCategory: MangaReaderSettingsCategory? = null,
@@ -66,8 +67,10 @@ sealed interface MangaReaderItemUi {
         val pageCount: Int,
         val chapterName: String,
         val chapterSubject: String,
+        val chapterUrl: String? = null,
         val loadState: MangaPageLoadState = MangaPageLoadState.Queued,
         val retryRevision: Int = 0,
+        val translation: io.legado.app.feature.manga.MangaTranslationState = io.legado.app.feature.manga.MangaTranslationState(),
     ) : MangaReaderItemUi
 
     @Stable
@@ -115,6 +118,9 @@ enum class MangaChapterTransitionStatus { WAITING, LOADING, READY, FAILED, UNAVA
 
 @Stable
 data class MangaReaderSettings(
+    val translationEnabled: Boolean = false,
+    val translationBubbleRight: Boolean = false,
+    val translationBubbleHeight: Int = 500,
     val scrollMode: Int = MangaScrollMode.WEBTOON,
     val sidePaddingPercent: Int = 0,
     val backgroundColor: Color = Color.Black,
@@ -236,6 +242,12 @@ sealed interface MangaReaderIntent {
     data object OpenCacheActions : MangaReaderIntent
     data class CacheChapters(val selection: MangaCacheSelection) : MangaReaderIntent
     data object ToggleAutoRead : MangaReaderIntent
+    data object ToggleAutomaticTranslation : MangaReaderIntent
+    data object TranslationReaderExited : MangaReaderIntent
+    data object ToggleTranslationDisplay : MangaReaderIntent
+    data object RequestClearTranslation : MangaReaderIntent
+    data object ConfirmClearTranslation : MangaReaderIntent
+    data class MoveTranslationBubble(val right: Boolean, val height: Int) : MangaReaderIntent
     data object DismissSheet : MangaReaderIntent
     data class UpdateSetting(
         val key: MangaReaderSettingKey,
@@ -298,12 +310,14 @@ enum class MangaCacheSelection { CURRENT, FOLLOWING, ALL }
 enum class MangaReaderSettingsCategory { READER, FOOTER, MENU, FILTER, CLICK_ACTIONS, AUTO_READ }
 
 sealed interface MangaReaderDialog {
+    data object ClearTranslation : MangaReaderDialog
     data object AddToShelf : MangaReaderDialog
     data class ConfirmPay(val chapterName: String) : MangaReaderDialog
     data class ConfirmProgress(val progress: BookProgress) : MangaReaderDialog
 }
 
 enum class MangaReaderSettingKey {
+    TRANSLATION_ENABLED,
     SCROLL_MODE,
     SIDE_PADDING,
     BACKGROUND_RED,
@@ -383,10 +397,16 @@ sealed interface MangaReaderEffect {
 
 /** 加载回调必须同时匹配书籍、页面与重试代次。 */
 @Stable
-data class MangaPageRequestId(val bookUrl: String, val key: String, val retryRevision: Int)
+data class MangaPageRequestId(
+    val bookUrl: String,
+    val key: String,
+    val retryRevision: Int,
+    val renderSource: String? = null,
+)
 
 internal val MangaReaderItemUi.Page.requestId: MangaPageRequestId
-    get() = MangaPageRequestId(bookUrl, key, retryRevision)
+    get() = MangaPageRequestId(bookUrl, key, retryRevision,
+        translation.resultUri?.takeIf { translation.showTranslation })
 
 internal fun MangaReaderItemUi.Page.reduceImageLoad(
     requestId: MangaPageRequestId,

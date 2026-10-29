@@ -40,6 +40,10 @@ dependencyResolutionManagement {
 rootProject.name = 'legado'
 
 include ':app'
+// Fixed submodule revision; only translation, without upstream night-reading builds.
+include ':inference-core', ':yakuyomi-engine'
+project(':inference-core').projectDir = file('third_party/yakuyomi-engine/inference-core')
+project(':yakuyomi-engine').projectDir = file('third_party/yakuyomi-engine/engine')
 include ':modules:book'
 include ':modules:rhino'
 include ':baselineprofile'
