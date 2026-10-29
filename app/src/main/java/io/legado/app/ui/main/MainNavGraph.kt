@@ -209,6 +209,7 @@ private fun readerEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
     }
 }
 
+
 /** 详情页更快一档：它是「打开一本书」的第二段，下面还压着阅读页。 */
 private fun bookInfoEntryMetadata(predictiveBackEnabled: Boolean) = metadata {
     put(NavDisplay.TransitionKey) {
@@ -1148,9 +1149,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteVideoPlay>(
-        metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
-    ) { route ->
+    entry<MainRouteVideoPlay> { route ->
         val bookUrl = route.bookUrl
         val rssArticle = route.rssLink?.let { link ->
             RssArticle(
@@ -1164,22 +1163,25 @@ fun MainActivity.mainEntryProvider(
         if (bookUrl == null && rssArticle == null) {
             LaunchedEffect(Unit) { onNavigateBack() }
         } else {
+            // 播放页是栈底时（深链、恢复的栈）不能落到 navigateBack 的 finish() 分支：
+            // 那会让「按返回」直接退出应用回到桌面。与朗读播放页入口保持一致，回落到主页。
+            val exitVideoRoute: () -> Unit = {
+                if (backStack.size > 1) {
+                    MainNavigator.navigateBack(
+                        this@mainEntryProvider,
+                        backStack,
+                        navRouteTracker,
+                        fromRoute = route,
+                    )
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                }
+            }
             // 与阅读器入口一致：未授权时播放器不会被组合，也就不会初始化或显示书名/章节名
             PrivateReadGate(
                 bookUrl = bookUrl ?: rssArticle!!.link,
-                onExit = {
-                    if (backStack.size > 1) {
-                        MainNavigator.navigateBack(
-                            this@mainEntryProvider,
-                            backStack,
-                            navRouteTracker,
-                            fromRoute = route,
-                        )
-                    } else {
-                        backStack.clear()
-                        backStack.add(MainRouteHome)
-                    }
-                },
+                onExit = exitVideoRoute,
                 onOpenLocalPasswordSettings = {
                     onNavigateToRoute(MainRouteSettingsPrivate)
                 },
@@ -1187,7 +1189,7 @@ fun MainActivity.mainEntryProvider(
                 VideoPlayerScreen(
                     bookUrl = bookUrl,
                     rssArticle = rssArticle,
-                    onBack = onNavigateBack,
+                    onBack = exitVideoRoute,
                     onOpenSourceLogin = { sourceUrl ->
                         onNavigateToRoute(
                             MainRouteSourceLogin(SourceLoginType.BookSource, sourceUrl)

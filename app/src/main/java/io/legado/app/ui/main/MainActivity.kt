@@ -3,6 +3,8 @@ package io.legado.app.ui.main
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.InputDevice
@@ -82,10 +84,12 @@ import io.legado.app.help.storage.Backup
 import io.legado.app.help.update.AppUpdateGitHub
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.AudioPlay
+import io.legado.app.model.VideoPlay
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.MarkdownSheet
 import io.legado.app.ui.about.UpdateDialog
 import io.legado.app.ui.book.audio.AudioPlayViewModel
+import io.legado.app.ui.book.video.enterVideoPip
 import io.legado.app.ui.book.read.ReadAloudControlsRequestBus
 import io.legado.app.ui.book.read.ReadBookInputHandler
 import io.legado.app.ui.book.read.ReadBookRouteHost
@@ -165,6 +169,14 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
 
         @Volatile
         var hasActiveSourceLoginRoute: Boolean = false
+
+        /** 画中画状态；可被 Compose 观测，视频播放页据此只保留画面。 */
+        var isInPip by mutableStateOf(false)
+            private set
+
+        /** 栈顶是否为视频播放页：onUserLeaveHint 自动进画中画的前置条件。 */
+        @Volatile
+        var isVideoRouteOnTop: Boolean = false
 
         fun createLauncherIntent(context: Context): Intent =
             MainIntent.createLauncherIntent(context)
@@ -386,6 +398,25 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     /** 听书/朗读播放浮层是否可见：可见期间由浮层接管系统栏，覆盖阅读器的隐藏策略。 */
     private var isPlaybackOverlayVisible = false
 
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        isInPip = isInPictureInPictureMode
+    }
+
+    /**
+     * 播放中离开应用时自动进画中画（Android 12+ 也可用 setAutoEnterEnabled，
+     * 这里统一走手动入口，行为在各版本一致）。
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (!isVideoRouteOnTop) return
+        if (!VideoPlay.state.value.isPlaying) return
+        enterVideoPip()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         shouldApplyDefaultToRead = savedInstanceState == null
@@ -549,6 +580,10 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                         arrayOf(MainRouteHome, resolved)
                     }
                 }
+                // 播放页必须压在主页之上。通知栏 / 悬浮小窗 / 桌面快捷方式冷启动时 intent
+                // 只带 ROUTE_VIDEO_PLAY，栈里仅有播放页，返回会落到 MainNavigator.navigateBack
+                // 的 size == 1 分支直接 finish 宿主（表现为「按返回退到桌面」）。
+                resolved is MainRouteVideoPlay -> arrayOf(MainRouteHome, resolved)
                 !hasExplicitStartRoute && restoredReadBookRoute != null -> {
                     arrayOf(MainRouteHome, restoredReadBookRoute!!)
                 }
@@ -734,6 +769,20 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
 
         SideEffect {
             shouldApplyDefaultToRead = false
+            isVideoRouteOnTop = activeRoute is MainRouteVideoPlay
+        }
+
+        LaunchedEffect(activeRoute) {
+            // 播放页是唯一会请求 SENSOR_LANDSCAPE 的页面。它被移出栈后窗口可能还挂着这个
+            // 方向（页面 onDispose 晚于上一页首帧，或退出全屏的旋转尚未落地），上一页就会
+            // 按横屏布局渲染。阅读页的固定方向是 PORTRAIT / LANDSCAPE / SENSOR，不命中此值。
+            if (activeRoute !is MainRouteVideoPlay &&
+                this@MainActivity.requestedOrientation ==
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            ) {
+                this@MainActivity.requestedOrientation =
+                    ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
         }
 
         LaunchedEffect(backStack) {

@@ -67,6 +67,20 @@ object VideoPlay : CoroutineScope by MainScope() {
     private const val VIDEO_POS_SAVE_TIME = 60 * 60 * 24 * 20 // 临时直链进度保留 20 天
     private const val CHAPTER_LINK_TTL = 30 * 60 * 1000L
 
+    /**
+     * 落库专用串行调度器：Dispatchers.IO 是可伸缩线程池，两次保存各起一个协程时
+     * 「谁先写完」没有保证，后一次保存可能先落、被前一次覆盖，表现为进度回退。
+     * limitedParallelism(1) 是同一线程池上的串行视图，保住「先提交先开始」。
+     * 必须存成单例字段——每次现调会拿到不同的视图，各串各的等于没串。
+     */
+    private val saveDispatcher = Dispatchers.IO.limitedParallelism(1)
+
+    /**
+     * 光有串行调度器不够：协程在数据库调用处挂起会把线程让出去，后提交的保存照样能插进来。
+     * 这里再叠一把锁，保证前一次保存整段（写库 + 回调书源）跑完才轮到后一次。
+     */
+    private val saveMutex = Mutex()
+
     private val contentRepository get() = GlobalContext.get().get<VideoContentRepository>()
     private val bookRepository get() = GlobalContext.get().get<io.legado.app.data.repository.BookRepository>()
 
@@ -504,7 +518,9 @@ object VideoPlay : CoroutineScope by MainScope() {
             if (starred != null) {
                 // RSS 收藏本身带阅读进度，与「听书/RSS 阅读」是同一份数据
                 starred.durPos = currentPos
-                launch(Dispatchers.IO) { appDb.rssStarDao.update(starred) }
+                launch(saveDispatcher) {
+                    saveMutex.withLock { appDb.rssStarDao.update(starred) }
+                }
             } else {
                 playUrl?.let { url ->
                     CacheManager.put(VIDEO_POS_PREFIX + url, currentPos, VIDEO_POS_SAVE_TIME)
@@ -520,18 +536,20 @@ object VideoPlay : CoroutineScope by MainScope() {
         book.durChapterIndex = index
         book.durChapterPos = currentPos
         book.durChapterTitle = chapter?.title
-        launch(Dispatchers.IO) {
-            // 只改进度列：整行 update 会把用户/其它页面并发改的封面、分组等字段覆盖回旧值
-            bookRepository.upVideoPlayProgress(
-                bookUrl = book.bookUrl,
-                index = index,
-                position = currentPos,
-                chapterTitle = chapter?.title,
-                time = time,
-            )
-            SourceCallBack.callBackBook(
-                SourceCallBack.SAVE_READ, bookSource, book, chapter, time.toString()
-            )
+        launch(saveDispatcher) {
+            saveMutex.withLock {
+                // 只改进度列：整行 update 会把用户/其它页面并发改的封面、分组等字段覆盖回旧值
+                bookRepository.upVideoPlayProgress(
+                    bookUrl = book.bookUrl,
+                    index = index,
+                    position = currentPos,
+                    chapterTitle = chapter?.title,
+                    time = time,
+                )
+                SourceCallBack.callBackBook(
+                    SourceCallBack.SAVE_READ, bookSource, book, chapter, time.toString()
+                )
+            }
         }
     }
 

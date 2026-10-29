@@ -11,11 +11,16 @@ import io.legado.app.model.VideoPlay
 import io.legado.app.service.VideoPlayService
 import io.legado.app.utils.startService
 import kotlinx.collections.immutable.toPersistentList
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
 
@@ -35,12 +40,33 @@ class VideoPlayerViewModel : ViewModel() {
 
     private var initializedBookUrl: String? = null
 
+    /**
+     * 播放进度：冷流，只有播放页在收集时才跑，离开页面自动停。
+     *
+     * 不写进 [_uiState]：500ms 一拍会让整页状态快照变化，信息区跟着重组。
+     */
+    val progress: Flow<VideoPlaybackProgress> = flow {
+        while (currentCoroutineContext().isActive) {
+            val player = VideoPlay.player
+            emit(
+                VideoPlaybackProgress(
+                    positionMs = runCatching { player.currentPosition }
+                        .getOrDefault(0L).coerceAtLeast(0L),
+                    durationMs = runCatching { player.duration }
+                        .getOrDefault(0L).coerceAtLeast(0L),
+                )
+            )
+            delay(PROGRESS_INTERVAL_MS)
+        }
+    }
+
     init {
         viewModelScope.launch {
             VideoPlay.state.collect { state ->
-                // 书源能力（登录/自定义按钮）不在 VideoPlayState 里，随会话快照一起派生，
+                // 书源能力与书籍信息不在 VideoPlayState 里，随会话快照一起派生，
                 // 免得 Screen 组合期去读全局模型
                 val source = VideoPlay.bookSource
+                val book = VideoPlay.book
                 _uiState.update { current ->
                     current.copy(
                         bookName = state.bookName,
@@ -54,8 +80,13 @@ class VideoPlayerViewModel : ViewModel() {
                         error = state.error,
                         showDanmaku = VideoPlay.danmakuShow,
                         bookSourceUrl = source?.bookSourceUrl.orEmpty(),
+                        bookSourceName = source?.bookSourceName.orEmpty(),
                         hasSourceLogin = !source?.loginUrl.isNullOrBlank(),
                         hasCustomButton = source?.customButton == true,
+                        author = book?.author.orEmpty(),
+                        intro = book?.intro.orEmpty(),
+                        coverUrl = book?.coverUrl.orEmpty(),
+                        bookUrl = book?.bookUrl.orEmpty(),
                     )
                 }
             }
@@ -114,13 +145,14 @@ class VideoPlayerViewModel : ViewModel() {
                 _uiState.update { it.copy(sheet = null) }
             }
 
+            // 不关面板：倍速是拖滑块选的，松手就关会让用户没法接着微调或反悔
             is VideoPlayerIntent.SetSpeed -> {
                 VideoPlay.setSpeed(intent.speed)
-                _uiState.update { it.copy(speed = intent.speed, sheet = null) }
+                _uiState.update { it.copy(speed = intent.speed) }
             }
 
-            VideoPlayerIntent.ToggleFullscreen ->
-                _uiState.update { it.copy(isFullscreen = !it.isFullscreen) }
+            is VideoPlayerIntent.SetFullscreen ->
+                _uiState.update { it.copy(isFullscreen = intent.enabled) }
 
             VideoPlayerIntent.Retry -> {
                 val url = initializedBookUrl
@@ -248,5 +280,9 @@ class VideoPlayerViewModel : ViewModel() {
         // 离开播放页不等于停止播放：只把进度落库，播放交给服务继续
         VideoPlay.saveRead()
         super.onCleared()
+    }
+
+    private companion object {
+        const val PROGRESS_INTERVAL_MS = 500L
     }
 }

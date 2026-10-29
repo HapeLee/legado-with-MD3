@@ -754,6 +754,7 @@
     <string name="video_start_full">进入后全屏</string>
     <string name="video_danmaku">弹幕</string>
     <string name="video_floating">悬浮小窗</string>
+    <string name="video_picture_in_picture">画中画</string>
     <string name="play_video">播放视频</string>
     <string name="source_no_custom_button">该书源没有设置自定义按钮</string>
     <string name="source_not_found">书源不存在</string>

@@ -37,15 +37,40 @@ data class VideoPlayerUiState(
     val sheet: VideoPlayerSheet? = null,
     /** 当前会话的书源地址；RSS 文章与直链播放为空。 */
     val bookSourceUrl: String = "",
+    /** 书源名，播放页信息区展示用。 */
+    val bookSourceName: String = "",
     /** 书源配了登录地址，播放页才给出「书源登录」入口。 */
     val hasSourceLogin: Boolean = false,
     /** 书源声明了自定义按钮，播放页才给出「自定义按钮」入口。 */
     val hasCustomButton: Boolean = false,
+    /** 书籍信息页展示用；RSS 文章与直链没有作者/简介。 */
+    val author: String = "",
+    val intro: String = "",
+    val coverUrl: String = "",
+    val bookUrl: String = "",
 ) {
     /** 有书源才谈得上登录/编辑/自定义按钮；RSS 与直链没有。 */
     val hasSource: Boolean get() = bookSourceUrl.isNotBlank()
 
     val hasEpisodeList: Boolean get() = episodes.size > 1 || volumes.size > 1
+}
+
+/**
+ * 播放进度心跳，只驱动进度条与时间文案。
+ *
+ * 不进 [VideoPlayerUiState]：每 500ms 变一次，塞进整页状态会让信息区一起重组。
+ */
+@Stable
+data class VideoPlaybackProgress(
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
+) {
+    val fraction: Float
+        get() = if (durationMs > 0) {
+            (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
 }
 
 sealed interface VideoPlayerIntent {
@@ -67,7 +92,8 @@ sealed interface VideoPlayerIntent {
 
     data class SetSpeed(val speed: Float) : VideoPlayerIntent
 
-    data object ToggleFullscreen : VideoPlayerIntent
+    /** 全屏目标态而不是 toggle：退出时要先还原窗口再改状态，避免重复请求互相打架。 */
+    data class SetFullscreen(val enabled: Boolean) : VideoPlayerIntent
 
     data object Retry : VideoPlayerIntent
 

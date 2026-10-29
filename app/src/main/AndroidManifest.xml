@@ -184,8 +184,9 @@
         <activity
             android:name=".ui.main.MainActivity"
             android:alwaysRetainTaskState="true"
-            android:configChanges="locale|layoutDirection|uiMode|screenLayout"
+            android:configChanges="locale|layoutDirection|uiMode|orientation|screenSize|smallestScreenSize|screenLayout"
             android:enableOnBackInvokedCallback="true"
+            android:supportsPictureInPicture="true"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
