@@ -1188,6 +1188,14 @@ fun MainActivity.mainEntryProvider(
                     bookUrl = bookUrl,
                     rssArticle = rssArticle,
                     onBack = onNavigateBack,
+                    onOpenSourceLogin = { sourceUrl ->
+                        onNavigateToRoute(
+                            MainRouteSourceLogin(SourceLoginType.BookSource, sourceUrl)
+                        )
+                    },
+                    onOpenSourceEdit = { sourceUrl ->
+                        onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
+                    },
                 )
             }
         }

@@ -74,6 +74,8 @@ fun VideoPlayerScreen(
     bookUrl: String? = null,
     rssArticle: RssArticle? = null,
     onBack: () -> Unit,
+    onOpenSourceLogin: (String) -> Unit = {},
+    onOpenSourceEdit: (String) -> Unit = {},
     viewModel: VideoPlayerViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,6 +100,11 @@ fun VideoPlayerScreen(
                 is VideoPlayerEffect.OpenExternalPlayer -> openExternalPlayer(
                     context, effect.url, effect.title
                 )
+
+                is VideoPlayerEffect.OpenSourceLogin -> onOpenSourceLogin(effect.sourceUrl)
+                is VideoPlayerEffect.OpenSourceEdit -> onOpenSourceEdit(effect.sourceUrl)
+                VideoPlayerEffect.RunCustomButton ->
+                    runSourceCustomButton(context, activity as? AppCompatActivity)
             }
         }
     }
@@ -178,8 +185,9 @@ fun VideoPlayerScreen(
                 menuExpanded = menuExpanded,
                 onMenuExpand = { menuExpanded = true },
                 onMenuDismiss = { menuExpanded = false },
-                onCopyUrl = { viewModel.onIntent(VideoPlayerIntent.CopyPlayUrl) },
-                onOpenExternal = { viewModel.onIntent(VideoPlayerIntent.OpenInExternalPlayer) },
+                // RSS/直链没有书源，书源相关菜单项不出现
+                hasSource = VideoPlay.bookSource != null,
+                onIntent = viewModel::onIntent,
             )
 
             if (state.error != null) {
@@ -307,6 +315,29 @@ private fun copyPlayUrl(context: android.content.Context, url: String) {
     context.sendToClip(url)
 }
 
+/** 书源自定义按钮：回调未消费时提示书源没配按钮。 */
+private fun runSourceCustomButton(
+    context: android.content.Context,
+    activity: AppCompatActivity?,
+) {
+    val source = VideoPlay.bookSource
+    val book = VideoPlay.book
+    if (source == null || book == null || activity == null) {
+        context.toastOnUi(context.getString(R.string.source_no_custom_button))
+        return
+    }
+    SourceCallBack.callBackBtn(
+        activity = activity,
+        event = SourceCallBack.CLICK_CUSTOM_BUTTON,
+        source = source,
+        book = book,
+        chapter = VideoPlay.chapter,
+        bookType = BookType.video,
+    ) {
+        context.toastOnUi(context.getString(R.string.source_no_custom_button))
+    }
+}
+
 private fun openExternalPlayer(
     context: android.content.Context,
     url: String,
@@ -332,8 +363,8 @@ private fun VideoTopBar(
     menuExpanded: Boolean,
     onMenuExpand: () -> Unit,
     onMenuDismiss: () -> Unit,
-    onCopyUrl: () -> Unit,
-    onOpenExternal: () -> Unit,
+    hasSource: Boolean,
+    onIntent: (VideoPlayerIntent) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -363,16 +394,39 @@ private fun VideoTopBar(
                     text = { Text(stringResource(R.string.copy_play_url)) },
                     onClick = {
                         onMenuDismiss()
-                        onCopyUrl()
+                        onIntent(VideoPlayerIntent.CopyPlayUrl)
                     },
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.open_other_video_player)) },
                     onClick = {
                         onMenuDismiss()
-                        onOpenExternal()
+                        onIntent(VideoPlayerIntent.OpenInExternalPlayer)
                     },
                 )
+                if (hasSource) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.custom_button)) },
+                        onClick = {
+                            onMenuDismiss()
+                            onIntent(VideoPlayerIntent.RunCustomButton)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.book_source_login)) },
+                        onClick = {
+                            onMenuDismiss()
+                            onIntent(VideoPlayerIntent.OpenSourceLogin)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.edit_book_source)) },
+                        onClick = {
+                            onMenuDismiss()
+                            onIntent(VideoPlayerIntent.OpenSourceEdit)
+                        },
+                    )
+                }
             }
         }
     }

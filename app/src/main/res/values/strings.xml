@@ -785,6 +785,7 @@
     <string name="video_danmaku">Danmaku</string>
 <string name="video_floating">Floating window</string>
     <string name="play_video">Play video</string>
+    <string name="source_no_custom_button">This source has no custom button</string>
     <string name="source_not_found">Book source not found</string>
     <string name="chapter_not_found">Chapter not found</string>
     <string name="video_link_not_found">No video URL resolved</string>

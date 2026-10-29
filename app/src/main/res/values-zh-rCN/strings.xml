@@ -755,6 +755,7 @@
     <string name="video_danmaku">弹幕</string>
     <string name="video_floating">悬浮小窗</string>
     <string name="play_video">播放视频</string>
+    <string name="source_no_custom_button">该书源没有设置自定义按钮</string>
     <string name="source_not_found">书源不存在</string>
     <string name="chapter_not_found">章节不存在</string>
     <string name="video_link_not_found">未获取到视频链接</string>

@@ -82,6 +82,15 @@ sealed interface VideoPlayerIntent {
     /** 交给系统播放器播放当前地址。 */
     data object OpenInExternalPlayer : VideoPlayerIntent
 
+    /** 打开当前书源的登录页（与阅读器/详情页同一入口）。 */
+    data object OpenSourceLogin : VideoPlayerIntent
+
+    /** 编辑当前书源。 */
+    data object OpenSourceEdit : VideoPlayerIntent
+
+    /** 触发书源的自定义按钮回调，回调里可以弹 HTML/Toast。 */
+    data object RunCustomButton : VideoPlayerIntent
+
     /** 长按加速期间临时提速，松手恢复常驻倍速。 */
     data class LongPressSpeed(val active: Boolean) : VideoPlayerIntent
 }
@@ -97,4 +106,10 @@ sealed interface VideoPlayerEffect {
     data class CopyPlayUrl(val url: String) : VideoPlayerEffect
 
     data class OpenExternalPlayer(val url: String, val title: String?) : VideoPlayerEffect
+
+    data class OpenSourceLogin(val sourceUrl: String) : VideoPlayerEffect
+
+    data class OpenSourceEdit(val sourceUrl: String) : VideoPlayerEffect
+
+    data object RunCustomButton : VideoPlayerEffect
 }

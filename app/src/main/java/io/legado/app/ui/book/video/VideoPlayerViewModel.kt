@@ -158,6 +158,16 @@ class VideoPlayerViewModel : ViewModel() {
 
             VideoPlayerIntent.CopyPlayUrl -> copyPlayUrl()
             VideoPlayerIntent.OpenInExternalPlayer -> openExternal()
+            VideoPlayerIntent.OpenSourceLogin -> emitSource(
+                { VideoPlayerEffect.OpenSourceLogin(it) }
+            )
+
+            VideoPlayerIntent.OpenSourceEdit -> emitSource(
+                { VideoPlayerEffect.OpenSourceEdit(it) }
+            )
+
+            VideoPlayerIntent.RunCustomButton ->
+                _effects.tryEmit(VideoPlayerEffect.RunCustomButton)
             is VideoPlayerIntent.LongPressSpeed -> {
                 val speed = if (intent.active) {
                     VideoPlay.longPressSpeed / 10f
@@ -167,6 +177,18 @@ class VideoPlayerViewModel : ViewModel() {
                 VideoPlay.player.playbackParameters =
                     VideoPlay.player.playbackParameters.withSpeed(speed)
             }
+        }
+    }
+
+    /** 书源相关动作都要求当前会话有书源（RSS/直链没有）。 */
+    private fun emitSource(effect: (String) -> VideoPlayerEffect) {
+        val sourceUrl = VideoPlay.bookSource?.bookSourceUrl
+        if (sourceUrl.isNullOrBlank()) {
+            _effects.tryEmit(
+                VideoPlayerEffect.ShowToast(appCtx.getString(R.string.source_not_found))
+            )
+        } else {
+            _effects.tryEmit(effect(sourceUrl))
         }
     }
 

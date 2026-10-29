@@ -687,6 +687,7 @@
     <string name="video_danmaku">彈幕</string>
     <string name="video_floating">懸浮小窗</string>
     <string name="play_video">播放影片</string>
+    <string name="source_no_custom_button">該書源沒有設定自訂按鈕</string>
     <string name="source_not_found">書源不存在</string>
     <string name="chapter_not_found">章節不存在</string>
     <string name="video_link_not_found">未取得影片連結</string>
