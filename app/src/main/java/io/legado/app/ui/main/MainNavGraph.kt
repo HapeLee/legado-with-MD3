@@ -545,10 +545,8 @@ fun MainActivity.mainEntryProvider(
             onOpenBookshelfBook = { book, sharedCoverKey ->
                 if (book.isVideo) {
                     onNavigateToRoute(
-                        MainRouteVideoPlay(
-                            bookUrl = book.bookUrl,
-                            sharedCoverKey = sharedCoverKey
-                        )
+                        // 播放页是全屏画面，没有可共享的封面元素
+                        MainRouteVideoPlay(bookUrl = book.bookUrl)
                     )
                 } else if (book.isAudio) {
                     onNavigateToRoute(

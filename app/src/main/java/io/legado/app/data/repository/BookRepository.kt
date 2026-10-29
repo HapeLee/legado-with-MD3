@@ -214,9 +214,22 @@ class BookRepository(
         }
     }
 
-    suspend fun replaceChaptersAndUpdateBook(book: Book, chapters: List<BookChapter>) {
+    /**
+     * 原子替换整本书的目录并落库书籍信息。
+     *
+     * @param oldBookUrl 书籍详情刷新后 bookUrl 可能变化，此时要顺带清掉旧 URL 的章节，
+     * 否则它们会成为没有书籍行的孤儿数据。
+     */
+    suspend fun replaceChaptersAndUpdateBook(
+        book: Book,
+        chapters: List<BookChapter>,
+        oldBookUrl: String = book.bookUrl,
+    ) {
         withContext(Dispatchers.IO) {
             appDb.runInTransaction {
+                if (oldBookUrl != book.bookUrl) {
+                    bookChapterDao.delByBook(oldBookUrl)
+                }
                 bookChapterDao.delByBook(book.bookUrl)
                 bookChapterDao.insert(*chapters.toTypedArray())
                 bookDao.update(book)

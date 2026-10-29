@@ -1,6 +1,7 @@
 package io.legado.app.help.book
 
 import io.legado.app.data.appDb
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.VideoContentRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ object VideoBookPreloader {
     private val runningKeys = ConcurrentHashMap.newKeySet<String>()
 
     private val contentRepository get() = GlobalContext.get().get<VideoContentRepository>()
+    private val bookRepository get() = GlobalContext.get().get<BookRepository>()
 
     /** 幂等：同一本书在预取完成前重复调用只会跑一次。 */
     fun preload(bookUrl: String) {
@@ -38,15 +40,15 @@ object VideoBookPreloader {
                     // 已有目录说明不必再拉，避免覆盖用户正在用的目录
                     if (appDb.bookChapterDao.getChapterList(bookUrl).isNotEmpty()) return@withPermit
                     val source = appDb.bookSourceDao.getBookSource(book.origin) ?: return@withPermit
+                    val oldBookUrl = book.bookUrl
                     if (book.tocUrl.isEmpty()) {
                         contentRepository.loadBookInfo(source, book)
                     }
                     val chapters = contentRepository.loadChapters(source, book)
                     if (chapters.isEmpty()) return@withPermit
                     chapters.forEachIndexed { index, chapter -> chapter.index = index }
-                    appDb.bookChapterDao.delByBook(book.bookUrl)
-                    appDb.bookChapterDao.insert(*chapters.toTypedArray())
-                    book.update()
+                    // 目录与书籍信息一次事务落库，避免中途失败留下空目录
+                    bookRepository.replaceChaptersAndUpdateBook(book, chapters, oldBookUrl)
                 }
             } catch (_: Throwable) {
                 // 预取是尽力而为，失败留给播放页自己重试

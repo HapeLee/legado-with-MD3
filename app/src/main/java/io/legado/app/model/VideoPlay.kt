@@ -17,7 +17,6 @@ import io.legado.app.data.repository.VideoContentRepository
 import io.legado.app.data.repository.VideoMedia
 import io.legado.app.help.CacheManager
 import io.legado.app.help.book.isNotShelf
-import io.legado.app.help.book.update
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.exoplayer.ExoPlayerHelper
 import io.legado.app.model.rss.Rss
@@ -190,6 +189,8 @@ object VideoPlay : CoroutineScope by MainScope() {
                     ?: error(appCtx.getString(R.string.book_not_found))
                 val source = appDb.bookSourceDao.getBookSource(book.origin)
                     ?: error(appCtx.getString(R.string.source_not_found))
+                // 详情规则可能改写 bookUrl，换 URL 时要连带迁移旧章节
+                val oldBookUrl = book.bookUrl
                 // 书架直开视频书时可能还没有详情和目录（AddToBookshelfUseCase 只插书）
                 if (book.tocUrl.isEmpty()) {
                     contentRepository.loadBookInfo(source, book)
@@ -199,9 +200,9 @@ object VideoPlay : CoroutineScope by MainScope() {
                     chapters = contentRepository.loadChapters(source, book)
                     // 目录主键带 index，规则返回的顺序即最终顺序
                     chapters.forEachIndexed { index, chapter -> chapter.index = index }
-                    appDb.bookChapterDao.delByBook(book.bookUrl)
-                    appDb.bookChapterDao.insert(*chapters.toTypedArray())
-                    book.update()
+                    bookRepository.replaceChaptersAndUpdateBook(book, chapters, oldBookUrl)
+                } else if (oldBookUrl != book.bookUrl) {
+                    bookRepository.replaceChaptersAndUpdateBook(book, chapters, oldBookUrl)
                 }
                 Triple(book, source, chapters)
             }

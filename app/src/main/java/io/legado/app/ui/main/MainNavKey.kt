@@ -177,7 +177,6 @@ data class MainRouteAudioPlay(
 data class MainRouteVideoPlay(
     val bookUrl: String? = null,
     val inBookshelf: Boolean = true,
-    val sharedCoverKey: String? = null,
     /** RSS 文章里的视频：从阅读页进入时只带定位信息，正文由会话按规则重新解析。 */
     val rssOrigin: String? = null,
     val rssLink: String? = null,

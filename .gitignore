@@ -29,4 +29,4 @@ replay_pid*.log
 .gstack/
 
 # 本地测试书源，不入库
-resource/
+/resource/
