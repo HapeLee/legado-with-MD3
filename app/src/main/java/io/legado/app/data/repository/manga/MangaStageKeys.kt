@@ -8,7 +8,7 @@ import kotlinx.serialization.json.Json
 /** Dependencies are explicit here: layout edits must not invalidate OCR, translation or repair. */
 internal class MangaStageKeys(val source: String, private val ctd: String, private val bubble: String,
     private val aot: String, private val request: MangaTranslationRequest) {
-    fun rendered(modelIdentity: String) = MangaStageCache.key(source, modelIdentity, "ocr3-min32-mask3-paragraph1", MangaTextLayout.VERSION,
+    fun rendered(modelIdentity: String) = MangaStageCache.key(source, modelIdentity, "ocr3-min32-mask5-paragraph1", MangaTextLayout.VERSION,
         request.sourceLanguage, request.targetLanguage, request.config.cacheIdentity(),
         // Keep canonical ordering, but select the supported Map serializer rather than SortedMap.
         request.layoutDirection.name, request.fontScale.toString(), Json.encodeToString<Map<String, String>>(request.translationOverrides.toSortedMap()))
@@ -21,7 +21,7 @@ internal class MangaStageKeys(val source: String, private val ctd: String, priva
     fun translation(texts: List<String>) = MangaStageCache.key("mlkit-translate17.0.3-ai-context1", request.sourceLanguage,
         request.targetLanguage, request.config.cacheIdentity(), Json.encodeToString(texts))
     fun mask(bounds: Rect) = MangaStageCache.key(source, ctd, "ctd-mask1", Json.encodeToString(bounds.saved()))
-    fun repair(region: MangaOcrRegion, bounds: Rect) = MangaStageCache.key(source, ctd, aot, "mask-refine4-repair2",
+    fun repair(region: MangaOcrRegion, bounds: Rect) = MangaStageCache.key(source, ctd, aot, "mask-refine6-repair3",
         Json.encodeToString(geometry(region)), Json.encodeToString(bounds.saved()))
     fun layout(text: String, geometry: String, sourceSize: Float, pageWidth: Int, fontIdentity: String) =
         MangaStageCache.key(MangaTextLayout.VERSION, text, geometry, sourceSize.toString(), pageWidth.toString(),

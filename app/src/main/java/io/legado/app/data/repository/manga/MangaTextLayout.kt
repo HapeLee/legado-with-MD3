@@ -23,7 +23,7 @@ internal data class MangaLayoutPlan(val fontSize: Float, val vertical: Boolean, 
 
 /** Measured, serializable placements. Geometry and drawing share the same fallback-aware shaper. */
 internal object MangaTextLayout {
-    const val VERSION = "contour-vertical-3"
+    const val VERSION = "contour-vertical-4"
     private const val MAX_UNITS = 1024
     private const val MAX_WORK = 120_000
     fun paint(size: Float = 16f) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -40,7 +40,9 @@ internal object MangaTextLayout {
         if (text.isBlank() || text.length > 8192 || area.bounds.isEmpty) return null
         require(fontScale.isFinite() && fontScale in .5f..2f)
         area.prepare(checkCancellation)
-        val min = maxOf(10f, pageWidth * 10f / 384f) * fontScale
+        // Page-resolution scaling alone can demand 40px type for a 16px source line.
+        // Keep the lower bound relative to the source while retaining a pixel floor.
+        val min = maxOf(6f, minOf(maxOf(10f, pageWidth * 10f / 384f), sourceSize * .65f)) * fontScale
         val max = minOf(256f, maxOf(min, sourceSize * 1.5f * fontScale), maxOf(area.bounds.width(), area.bounds.height()).toFloat())
         if (max < min) return null
         val canVertical = direction == MangaLayoutDirection.VERTICAL ||

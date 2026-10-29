@@ -32,10 +32,7 @@ internal class MangaImageInference(private val models: MangaImageModelRepository
             val scaledWidth = (width * ratio).roundToInt().coerceIn(1, size)
             val scaledHeight = (height * ratio).roundToInt().coerceIn(1, size)
             val image = FloatArray(3 * size * size)
-            val erase = FloatArray(size * size)
-            mask.indices.forEach { i -> if (mask[i]) {
-                erase[(i / width * ratio).toInt().coerceIn(0, size - 1) * size + (i % width * ratio).toInt().coerceIn(0, size - 1)] = 1f
-            } }
+            val erase = mangaInpaintMask(mask, width, height, size, checkCancellation)
             for (y in 0 until scaledHeight) {
                 checkCancellation()
                 for (x in 0 until scaledWidth) {

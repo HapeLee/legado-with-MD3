@@ -21,7 +21,7 @@
     <string name="manga_models_bytes">%1$d KiB</string>
     <string name="manga_models_download">Download / update</string>
     <string name="manga_models_import">Import ONNX</string>
-    <string name="manga_translation_title">Translate page</string>
+    <string name="manga_translation_title">Manga translation</string>
     <string name="manga_translation_notice">OCR models are bundled with the app. OCR and image repair run locally. Offline translation still requires an initial Wi-Fi download of language packs; image models do not replace these packs. Translation uses the selected engine. The original remains available.</string>
     <string name="manga_translation_ocr_failed">Local text recognition failed. The original is preserved. Please include the error identifier below when reporting this issue.</string>
     <string name="manga_translation_ctd_failed">CTD text detection failed before translation. Remove CTD in Image models to retry with basic recognition.</string>

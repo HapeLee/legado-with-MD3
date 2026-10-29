@@ -21,7 +21,7 @@
     <string name="manga_models_bytes">%1$d KiB</string>
     <string name="manga_models_download">下载／更新</string>
     <string name="manga_models_import">导入 ONNX</string>
-    <string name="manga_translation_title">翻译当前页</string>
+    <string name="manga_translation_title">漫画翻译</string>
     <string name="manga_translation_notice">文字识别模型随应用提供，识别与图片修复在本机进行。离线翻译首次使用仍需通过 Wi-Fi 下载翻译语言包；图像模型不能替代语言包。文字使用所选引擎翻译，复杂画面可随时切回原图。</string>
     <string name="manga_translation_ocr_failed">本地文字识别失败，原图已保留。请反馈下方错误编号。</string>
     <string name="manga_translation_ctd_failed">CTD 文字检测模型推理失败，尚未进入文字翻译。可在图像模型管理中移除 CTD 后使用基础识别重试。</string>
