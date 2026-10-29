@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components.icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
@@ -10,17 +11,25 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.Home
@@ -121,7 +130,43 @@ object AppIcons {
         @Composable
         get() = if (isMiuix) MiuixIcons.Filter else Icons.Outlined.Sell
 
+    // ————————————— 播放器专用：Miuix 没有对应图标，两个引擎共用 Material 图标 —————————————
 
+    val Previous: ImageVector
+        @Composable
+        get() = Icons.Default.SkipPrevious
+
+    val Next: ImageVector
+        @Composable
+        get() = Icons.Default.SkipNext
+
+    val Speed: ImageVector
+        @Composable
+        get() = Icons.Default.Speed
+
+    val Episodes: ImageVector
+        @Composable
+        get() = Icons.AutoMirrored.Filled.List
+
+    val Fullscreen: ImageVector
+        @Composable
+        get() = Icons.Default.Fullscreen
+
+    val FullscreenExit: ImageVector
+        @Composable
+        get() = Icons.Default.FullscreenExit
+
+    val PictureInPicture: ImageVector
+        @Composable
+        get() = Icons.Default.PictureInPictureAlt
+
+    val MiniWindow: ImageVector
+        @Composable
+        get() = Icons.Default.OpenInNew
+
+    val ExpandMore: ImageVector
+        @Composable
+        get() = Icons.Default.KeyboardArrowDown
 
     @Composable
     fun mainDestination(destination: MainDestination, selected: Boolean): ImageVector {

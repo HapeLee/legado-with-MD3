@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.semantics.Role
@@ -40,6 +41,13 @@ fun AnimatedPlayPauseButton(
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
     onLongClick: (() -> Unit)? = null,
+    /**
+     * 是否画容器色块。压在视频画面上的浮层关掉它，只留形变图标，
+     * 免得一块实色圆挡住画面；独立占位（如听书面板）保留容器。
+     */
+    showContainer: Boolean = true,
+    /** 图标/加载圈取色；不给就按主题容器色推。浮层上通常传白色。 */
+    tint: Color = Color.Unspecified,
 ) {
     val transition = updateTransition(targetState = isPlaying, label = "PlayerPlayPause")
     val morphProgress by transition.animateFloat(
@@ -61,12 +69,19 @@ fun AnimatedPlayPauseButton(
         else LegadoTheme.colorScheme.onSecondaryContainer
     }
     val interactionSource = remember { MutableInteractionSource() }
+    val iconColor = if (tint != Color.Unspecified) tint else contentColor
 
     Box(
         modifier = modifier
             .size(72.dp)
             .semantics { this.contentDescription = contentDescription }
-            .clip(playerButtonContainerShape(morphProgress))
+            .then(
+                if (showContainer) {
+                    Modifier.clip(playerButtonContainerShape(morphProgress))
+                } else {
+                    Modifier
+                }
+            )
             .combinedClickable(
                 interactionSource = interactionSource,
                 role = Role.Button,
@@ -75,20 +90,22 @@ fun AnimatedPlayPauseButton(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val radius = min(size.width, size.height) / 2f
-            drawPath(playerButtonContainerPath(radius, morphProgress), containerColor)
+        if (showContainer) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val radius = min(size.width, size.height) / 2f
+                drawPath(playerButtonContainerPath(radius, morphProgress), containerColor)
+            }
         }
         Canvas(modifier = Modifier.size(36.dp)) {
             rotate(degrees = 90f * morphProgress) {
-                drawPath(playPauseIconPath(size.minDimension / 24f, morphProgress), contentColor)
+                drawPath(playPauseIconPath(size.minDimension / 24f, morphProgress), iconColor)
             }
         }
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(56.dp),
                 strokeWidth = 3.dp,
-                color = contentColor,
+                color = iconColor,
             )
         }
     }

@@ -186,6 +186,17 @@ data class MainRouteAudioPlay(
 ) : MainRoute
 
 @Serializable
+data class MainRouteVideoPlay(
+    val bookUrl: String? = null,
+    val inBookshelf: Boolean = true,
+    /** RSS 文章里的视频：从阅读页进入时只带定位信息，正文由会话按规则重新解析。 */
+    val rssOrigin: String? = null,
+    val rssLink: String? = null,
+    val rssSort: String? = null,
+    val rssTitle: String? = null,
+) : MainRoute
+
+@Serializable
 data class MainRouteSearch(
     val key: String?,
     val scopeRaw: String? = null
@@ -262,6 +273,8 @@ data class MainRouteExploreShow(
     val title: String?,
     val sourceUrl: String,
     val exploreUrl: String?,
+    /** 仅详情页标签跳转的运行时地址启用；书源规则入口保持原有解析。 */
+    val usePageParamFallback: Boolean = false,
 ) : MainRoute
 
 @Serializable
@@ -372,6 +385,7 @@ object MainRouteConst {
     const val ROUTE_READ_BOOK = "book/read"
     const val ROUTE_READ_MANGA = "book/read/manga"
     const val ROUTE_AUDIO_PLAY = "book/read/audio"
+    const val ROUTE_VIDEO_PLAY = "book/read/video"
     const val ROUTE_SEARCH = "search"
     const val ROUTE_SEARCH_CONTENT = "book/searchContent"
     const val ROUTE_BOOK_INFO = "book/info"

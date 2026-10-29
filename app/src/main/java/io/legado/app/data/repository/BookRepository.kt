@@ -139,6 +139,18 @@ class BookRepository(
         }
     }
 
+    suspend fun upVideoPlayProgress(
+        bookUrl: String,
+        index: Int,
+        position: Int,
+        chapterTitle: String?,
+        time: Long,
+    ) {
+        withContext(Dispatchers.IO) {
+            bookDao.upVideoPlayProgress(bookUrl, index, position, chapterTitle, time)
+        }
+    }
+
     /** 只改本书的记录开关，保留阅读器并发保存的进度和其他字段。 */
     suspend fun setReadRecordDisabled(bookUrl: String, disabled: Boolean): Book? =
         withContext(Dispatchers.IO) {
@@ -202,9 +214,22 @@ class BookRepository(
         }
     }
 
-    suspend fun replaceChaptersAndUpdateBook(book: Book, chapters: List<BookChapter>) {
+    /**
+     * 原子替换整本书的目录并落库书籍信息。
+     *
+     * @param oldBookUrl 书籍详情刷新后 bookUrl 可能变化，此时要顺带清掉旧 URL 的章节，
+     * 否则它们会成为没有书籍行的孤儿数据。
+     */
+    suspend fun replaceChaptersAndUpdateBook(
+        book: Book,
+        chapters: List<BookChapter>,
+        oldBookUrl: String = book.bookUrl,
+    ) {
         withContext(Dispatchers.IO) {
             appDb.runInTransaction {
+                if (oldBookUrl != book.bookUrl) {
+                    bookChapterDao.delByBook(oldBookUrl)
+                }
                 bookChapterDao.delByBook(book.bookUrl)
                 bookChapterDao.insert(*chapters.toTypedArray())
                 bookDao.update(book)

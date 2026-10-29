@@ -46,6 +46,7 @@ sealed interface ExploreShowIntent {
     data class InitData(
         val sourceUrl: String,
         val exploreUrl: String?,
+        val usePageParamFallback: Boolean = false,
     ) : ExploreShowIntent
 
     data object LoadMore : ExploreShowIntent

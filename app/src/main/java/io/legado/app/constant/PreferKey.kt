@@ -189,6 +189,14 @@ object PreferKey {
     const val clearWebViewData = "clearWebViewData"
     const val blockSourceBrowser = "blockSourceBrowser"
     const val onlyLatestBackup = "onlyLatestBackup"
+
+    // —— 视频播放设置 ——
+    const val videoAutoPlay = "videoAutoPlay"
+    const val videoStartFull = "videoStartFull"
+    const val videoLongPressSpeed = "videoLongPressSpeed"
+    const val videoPlaySpeed = "videoPlaySpeed"
+    const val videoDanmakuShow = "videoDanmakuShow"
+    const val videoFloatingEnabled = "videoFloatingEnabled"
     const val brightnessVwPos = "brightnessVwPos"
     const val readBrightnessControlPosition = "readBrightnessControlPosition"
     const val brightnessAuto = "brightnessAuto"

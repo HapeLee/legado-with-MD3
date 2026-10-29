@@ -48,6 +48,7 @@ interface BookDao {
             BookGroup.IdNetNone -> flowNetNoGroup()
             BookGroup.IdLocalNone -> flowLocalNoGroup()
             BookGroup.IdManga -> flowManga()
+            BookGroup.IdVideo -> flowVideo()
             BookGroup.IdText -> flowText()
             BookGroup.IdError -> flowUpdateError()
             BookGroup.IdUnread -> flowUnread()
@@ -70,6 +71,7 @@ interface BookDao {
             BookGroup.IdNetNone -> flowBookShelfNetNoGroup()
             BookGroup.IdLocalNone -> flowBookShelfLocalNoGroup()
             BookGroup.IdManga -> flowBookShelfManga()
+            BookGroup.IdVideo -> flowBookShelfVideo()
             BookGroup.IdText -> flowBookShelfText()
             BookGroup.IdError -> flowBookShelfUpdateError()
             BookGroup.IdUnread -> flowBookShelfUnread()
@@ -243,7 +245,7 @@ interface BookDao {
 
     @Query(
         """
-        select * from books where type & ${BookType.audio} = 0 and type & ${BookType.local} = 0
+        select * from books where type & ${BookType.audio} = 0 and type & ${BookType.video} = 0 and type & ${BookType.local} = 0
         and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
         """
     )
@@ -276,7 +278,7 @@ interface BookDao {
             customTag,
             wordCount
         FROM books 
-        where type & ${BookType.audio} = 0 and type & ${BookType.local} = 0
+        where type & ${BookType.audio} = 0 and type & ${BookType.video} = 0 and type & ${BookType.local} = 0
         and ($PUBLIC_GROUP_MASK & `group`) = 0
         and $PUBLIC_BOOK_FILTER
         """
@@ -624,6 +626,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE type & ${BookType.image} > 0")
     fun flowManga(): Flow<List<Book>>
 
+    @Query("SELECT * FROM books WHERE type & ${BookType.video} > 0")
+    fun flowVideo(): Flow<List<Book>>
+
     @Query(
         """
         SELECT 
@@ -656,6 +661,39 @@ interface BookDao {
         """
     )
     fun flowBookShelfManga(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT
+            bookUrl,
+            name,
+            author,
+            origin,
+            originName,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            lastCheckCount,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate,
+            ifnull(customIntro, ifnull(listIntro, intro)) as intro,
+            kind,
+            customTag,
+            wordCount
+        FROM books
+        WHERE type & ${BookType.video} > 0
+        AND $PUBLIC_BOOK_FILTER
+        """
+    )
+    fun flowBookShelfVideo(): Flow<List<BookShelfItem>>
 
     @Query("SELECT * FROM books WHERE type & ${BookType.text} > 0")
     fun flowText(): Flow<List<Book>>
@@ -718,6 +756,7 @@ interface BookDao {
             bookUrl,
             type & ${BookType.local} > 0 AS isLocal,
             type & ${BookType.audio} > 0 AS isAudio,
+            type & ${BookType.video} > 0 AS isVideo,
             durChapterIndex,
             totalChapterNum - 1 AS lastChapterIndex
         FROM books
@@ -857,6 +896,17 @@ interface BookDao {
     fun upReadAloudProgress(bookUrl: String, chapterIndex: Int, chapterPosition: Int,
         chapterTitle: String?, updatedAt: Long)
 
+    @Query("""UPDATE books SET lastCheckCount = 0, durChapterIndex = :index, durChapterPos = :pos,
+        durChapterTitle = :chapterTitle, durChapterTime = :time
+        WHERE bookUrl = :bookUrl""")
+    suspend fun upVideoPlayProgress(
+        bookUrl: String,
+        index: Int,
+        pos: Int,
+        chapterTitle: String?,
+        time: Long,
+    )
+
     @Query("UPDATE books SET syncTime = :syncTime WHERE bookUrl = :bookUrl AND syncTime < :syncTime")
     fun upSyncTime(bookUrl: String, syncTime: Long)
 
@@ -884,8 +934,9 @@ interface BookDao {
             AND (SELECT show FROM book_groups WHERE groupId = ${BookGroup.IdNetNone}) != 1
         UNION ALL SELECT ${BookGroup.IdLocal}, COUNT(*) FROM books WHERE type & ${BookType.local} > 0 AND $PUBLIC_BOOK_FILTER
         UNION ALL SELECT ${BookGroup.IdAudio}, COUNT(*) FROM books WHERE type & ${BookType.audio} > 0 AND $PUBLIC_BOOK_FILTER
+        UNION ALL SELECT ${BookGroup.IdVideo}, COUNT(*) FROM books WHERE type & ${BookType.video} > 0 AND $PUBLIC_BOOK_FILTER
         UNION ALL SELECT ${BookGroup.IdNetNone}, COUNT(*) FROM books
-            WHERE type & ${BookType.audio} = 0 AND type & ${BookType.local} = 0
+            WHERE type & ${BookType.audio} = 0 AND type & ${BookType.video} = 0 AND type & ${BookType.local} = 0
             AND ($PUBLIC_GROUP_MASK & `group`) = 0
             AND $PUBLIC_BOOK_FILTER
         UNION ALL SELECT ${BookGroup.IdLocalNone}, COUNT(*) FROM books
@@ -922,6 +973,7 @@ interface BookDao {
             BookGroup.IdNetNone -> flowBookShelfNetNoGroupPreview()
             BookGroup.IdLocalNone -> flowBookShelfLocalNoGroupPreview()
             BookGroup.IdManga -> flowBookShelfMangaPreview()
+            BookGroup.IdVideo -> flowBookShelfVideoPreview()
             BookGroup.IdText -> flowBookShelfTextPreview()
             BookGroup.IdError -> flowBookShelfUpdateErrorPreview()
             BookGroup.IdUnread -> flowBookShelfUnreadPreview()
@@ -1013,7 +1065,7 @@ interface BookDao {
             type, `group`, `order`, canUpdate,
             ifnull(customIntro, ifnull(listIntro, intro)) as intro, kind, customTag, wordCount
         FROM books
-        WHERE type & ${BookType.audio} = 0 AND type & ${BookType.local} = 0
+        WHERE type & ${BookType.audio} = 0 AND type & ${BookType.video} = 0 AND type & ${BookType.local} = 0
             AND ($PUBLIC_GROUP_MASK & `group`) = 0
             AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
@@ -1056,6 +1108,23 @@ interface BookDao {
         """
     )
     fun flowBookShelfMangaPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, ifnull(listIntro, intro)) as intro, kind, customTag, wordCount
+        FROM books
+        WHERE type & ${BookType.video} > 0
+            AND $PUBLIC_BOOK_FILTER
+        ORDER BY durChapterTime DESC
+        LIMIT 10
+        """
+    )
+    fun flowBookShelfVideoPreview(): Flow<List<BookShelfItem>>
 
     @Query(
         """

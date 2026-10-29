@@ -3,9 +3,11 @@ package io.legado.app.ui.book.explore
 import android.content.res.Configuration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.domain.gateway.CoverSettingsGateway
@@ -57,6 +59,7 @@ class ExploreShowViewModel(
     private val resolveBookshelfConflictUseCase: ResolveBookshelfConflictUseCase,
     private val localPreferencesRepository: SettingsRepository,
     private val coverSettingsGateway: CoverSettingsGateway,
+    private val bookSourceRepository: BookSourceRepository,
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
@@ -74,6 +77,14 @@ class ExploreShowViewModel(
     private var sourceUrl: String? = null
     private var exploreUrl: String? = null
     private var initialExploreUrl: String? = null
+    private var initialUsePageParamFallback = false
+    private var usePageParamFallback = false
+
+    /**
+     * 非空表示当前地址是标签/分类跳转传入的运行时地址，用该参数名兜底翻页；
+     * 普通发现入口不启用兜底；书源规则地址始终原样交给 AnalyzeUrl。
+     */
+    private var pageParamName: String? = null
     private var initialized = false
     private var loadJob: kotlinx.coroutines.Job? = null
     private var loadGeneration = 0L
@@ -112,7 +123,9 @@ class ExploreShowViewModel(
 
     fun onIntent(intent: ExploreShowIntent) {
         when (intent) {
-            is ExploreShowIntent.InitData -> initData(intent.sourceUrl, intent.exploreUrl)
+            is ExploreShowIntent.InitData -> initData(
+                intent.sourceUrl, intent.exploreUrl, intent.usePageParamFallback,
+            )
             ExploreShowIntent.LoadMore -> loadMore()
             is ExploreShowIntent.JumpToPage -> jumpToPage(intent.page)
             ExploreShowIntent.ForceLoadNext -> loadMore(forceLoad = true)
@@ -256,8 +269,14 @@ class ExploreShowViewModel(
         }
     }
 
-    private fun initData(incomingSourceUrl: String, incomingExploreUrl: String?) {
-        if (initialized && sourceUrl == incomingSourceUrl && initialExploreUrl == incomingExploreUrl) {
+    private fun initData(
+        incomingSourceUrl: String,
+        incomingExploreUrl: String?,
+        incomingUsePageParamFallback: Boolean,
+    ) {
+        if (initialized && sourceUrl == incomingSourceUrl && initialExploreUrl == incomingExploreUrl &&
+            initialUsePageParamFallback == incomingUsePageParamFallback
+        ) {
             return
         }
         initialized = true
@@ -265,10 +284,13 @@ class ExploreShowViewModel(
         loadJob?.cancel()
         sourceUrl = incomingSourceUrl
         initialExploreUrl = incomingExploreUrl
+        initialUsePageParamFallback = incomingUsePageParamFallback
         exploreUrl = incomingExploreUrl
+        pageParamName = null
+        usePageParamFallback = incomingUsePageParamFallback && incomingExploreUrl.supportsParamPagination()
         _pageState.value = ExplorePageState(
             currentPage = 1,
-            canJumpPage = AnalyzeUrl.supportsPageSelection(incomingExploreUrl),
+            canJumpPage = usePageParamFallback || AnalyzeUrl.supportsPageSelection(incomingExploreUrl),
         )
         page = 1
         autoPageCount = 0
@@ -300,6 +322,9 @@ class ExploreShowViewModel(
         loadJob?.cancel()
         _kindState.update { it.copy(selectedKindTitle = kind.title) }
         exploreUrl = kind.url
+        // kind.url 是书源规则地址，页码由规则语法处理，参数兜底不适用
+        usePageParamFallback = false
+        pageParamName = null
         _pageState.value = ExplorePageState(
             currentPage = 1,
             canJumpPage = AnalyzeUrl.supportsPageSelection(kind.url),
@@ -405,7 +430,20 @@ class ExploreShowViewModel(
 
     private suspend fun fetchPage(sourceUrl: String, url: String?, generation: Long) {
         kotlin.runCatching {
-            exploreBooksUseCase.execute(sourceUrl, url, args = null, page)
+            // 在同一加载任务内解析一次，避免异步配置结果覆盖切换后的分类。
+            if (usePageParamFallback && pageParamName == null) {
+                val param = bookSourceRepository.getBookSource(sourceUrl)
+                    ?.getExploreRule()?.pageParam?.takeIf { it.isNotBlank() } ?: "page"
+                if (generation != loadGeneration) return
+                pageParamName = param
+            }
+            val pageParam = pageParamName
+            exploreBooksUseCase.execute(
+                sourceUrl,
+                if (pageParam != null) url.withPageParam(page, pageParam) else url,
+                args = null,
+                page
+            )
         }.onSuccess { result ->
             if (generation != loadGeneration) return@onSuccess
             val currentList = _rawBooks.value
@@ -463,6 +501,36 @@ class ExploreShowViewModel(
     private fun emitEffect(effect: ExploreShowEffect) {
         _effects.tryEmit(effect)
     }
+}
+
+/**
+ * 运行时地址的参数兜底翻页：替换已有的同名查询参数，否则追加 `param=page`，fragment 保持原位。
+ * 只对不带页码规则的运行时地址生效，见 [supportsParamPagination]；第一页按原地址请求，
+ * 不改变书源直入时的首次请求。
+ */
+internal fun String?.withPageParam(page: Int, param: String): String? {
+    if (this == null || page <= 1 || !supportsParamPagination()) return this
+    val hashIndex = indexOf('#')
+    val base = if (hashIndex >= 0) substring(0, hashIndex) else this
+    val fragment = if (hashIndex >= 0) substring(hashIndex) else ""
+    val pattern = Regex("([?&])${Regex.escape(param)}=\\d+")
+    val withPage = if (pattern.containsMatchIn(base)) {
+        pattern.replace(base) { "${it.groupValues[1]}$param=$page" }
+    } else {
+        base + (if (base.contains('?')) "&" else "?") + "$param=$page"
+    }
+    return withPage + fragment
+}
+
+/**
+ * 标签地址也不能改写书源规则。复用 AnalyzeUrl 的 JS/选项语法检测，包含大小写与逗号后的空白。
+ */
+internal fun String?.supportsParamPagination(): Boolean {
+    if (this.isNullOrBlank()) return false
+    if (contains("{{") || contains("}}")) return false
+    if (contains('<') || AppPattern.JS_PATTERN.containsMatchIn(this)) return false
+    if (AnalyzeUrl.paramPattern.containsMatchIn(this)) return false
+    return true
 }
 
 /** 发现页分页状态：[canJumpPage] 表示当前书源的分页地址支持直接指定页码。 */
