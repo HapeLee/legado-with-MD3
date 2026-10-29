@@ -122,6 +122,7 @@ internal fun MangaSettingsPanel(
                 },
                 onAutoTranslation = { onIntent(MangaReaderIntent.SetAutoTranslation(it)) },
                 onEngine = { onIntent(MangaReaderIntent.SetTranslationEngine(it)) },
+                onLayoutDirection = { onIntent(MangaReaderIntent.SetTranslationLayoutDirection(it)) },
                 onTranslate = { onIntent(MangaReaderIntent.TranslatePage) },
                 onToggleOriginal = { onIntent(MangaReaderIntent.ToggleTranslation) },
                 onCancel = { onIntent(MangaReaderIntent.CancelTranslation) },

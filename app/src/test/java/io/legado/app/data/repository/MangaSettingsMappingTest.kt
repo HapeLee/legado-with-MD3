@@ -227,6 +227,7 @@ private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     "mangaTranslationEngine" to translationEngine,
     "mangaTranslationSourceLanguage" to translationSourceLanguage,
     "mangaTranslationTargetLanguage" to translationTargetLanguage,
+    "mangaTranslationLayoutDirection" to translationLayoutDirection,
     PreferKey.showMangaUi to showMangaUi,
     PreferKey.disableMangaScale to disableMangaScale,
     PreferKey.disableMangaScrollAnimation to disableMangaScrollAnimation,

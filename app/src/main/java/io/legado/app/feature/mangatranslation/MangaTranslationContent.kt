@@ -14,6 +14,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -21,6 +23,7 @@ import io.legado.app.domain.model.MangaTranslationEngine
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.R
 import io.legado.app.domain.gateway.MangaTranslationStage
+import io.legado.app.domain.gateway.MangaLayoutDirection
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -36,6 +39,8 @@ data class MangaTranslationUiState(
     val sourceLanguage: String = "ja",
     val targetLanguage: String = "zh",
     val messageRes: Int? = null,
+    val regionDetails: String = "",
+    val layoutDirection: MangaLayoutDirection = MangaLayoutDirection.AUTO,
 )
 
 /** Translation controls embedded in the reader menu, inheriting its theme and scroll owner. */
@@ -53,8 +58,27 @@ fun MangaTranslationContent(
     onAutoTranslation: (Boolean) -> Unit,
     onEngine: (MangaTranslationEngine) -> Unit,
     modifier: Modifier = Modifier,
+    onLayoutDirection: (MangaLayoutDirection) -> Unit = {},
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        var modelsVisible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+        TinyClickableSettingItem(title = stringResource(R.string.manga_models_title), onClick = { modelsVisible = !modelsVisible })
+        if (modelsVisible) MangaModelsRoute()
+        TranslationCard {
+            Text(stringResource(R.string.manga_translation_layout_direction), style = LegadoTheme.typography.bodyLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MangaLayoutDirection.entries.forEach { direction ->
+                    LanguageChip(stringResource(when (direction) {
+                        MangaLayoutDirection.AUTO -> R.string.manga_translation_layout_auto
+                        MangaLayoutDirection.HORIZONTAL -> R.string.manga_translation_layout_horizontal
+                        MangaLayoutDirection.VERTICAL -> R.string.manga_translation_layout_vertical
+                    }), state.layoutDirection == direction, state.stage == null) { onLayoutDirection(direction) }
+                }
+            }
+        }
+        if (state.regionDetails.isNotBlank()) TranslationCard {
+            androidx.compose.foundation.text.selection.SelectionContainer { Text(state.regionDetails) }
+        }
         TranslationCard {
             Text(
                 stringResource(R.string.manga_translation_notice),

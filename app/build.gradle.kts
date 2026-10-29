@@ -189,6 +189,7 @@ ksp {
 }
 
 dependencies {
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.24.3")
     implementation(libs.androidx.profileinstaller)
     "baselineProfile"(project(":baselineprofile"))
     coreLibraryDesugaring(libs.desugar)
@@ -199,8 +200,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     androidTestImplementation(libs.bundles.androidTest)
     implementation(libs.kotlin.stdlib)
-    implementation("com.google.android.gms:play-services-mlkit-text-recognition-japanese:16.0.1")
-    implementation("com.google.android.gms:play-services-mlkit-text-recognition-korean:16.0.1")
+    // Bundle OCR weights so recognition does not wait for Play services module downloads.
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
     implementation("com.google.mlkit:translate:17.0.3")
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.kotlinx.serialization.json)

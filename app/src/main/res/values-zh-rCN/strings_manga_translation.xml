@@ -1,7 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="manga_translation_layout_direction">译文方向</string>
+    <string name="manga_translation_layout_auto">自动</string>
+    <string name="manga_translation_layout_horizontal">横排</string>
+    <string name="manga_translation_layout_vertical">竖排</string>
+    <string name="manga_translation_model_failed">本地模型推理失败，该区域保留原文。</string>
+    <string name="manga_translation_partial">部分翻译已完成。待处理区域保留原文，完整译文可在下方查看。</string>
+    <string name="manga_models_title">图像模型管理</string>
+    <string name="manga_models_notice">按需启用本地图像处理；仅主动下载，与译图缓存分别存储。删除模型保留既有译图。</string>
+    <string name="manga_models_ctd">CTD · 文字掩膜 · 上游 beta-0.3 · 最多 110 MiB</string>
+    <string name="manga_models_bubble">MangaLens · 气泡排版 · ONNX 1024 · 最多 16 MiB</string>
+    <string name="manga_models_aot">漫画版 AOT · 背景修复</string>
+    <string name="manga_models_aot_pending">支持导入部署工具生成的漫画版 AOT ONNX；尚无可下载的已发布部署制品。</string>
+    <string name="manga_models_missing">未安装 · 使用基础处理</string>
+    <string name="manga_models_installing">正在安装…</string>
+    <string name="manga_models_verifying">正在校验…</string>
+    <string name="manga_models_ready">可用 · 本地处理</string>
+    <string name="manga_models_deleting">正在删除…</string>
+    <string name="manga_models_failed">操作失败</string>
+    <string name="manga_models_bytes">%1$d KiB</string>
+    <string name="manga_models_download">下载／更新</string>
+    <string name="manga_models_import">导入 ONNX</string>
     <string name="manga_translation_title">翻译当前页</string>
-    <string name="manga_translation_notice">识别与图片修复在本机进行，需要 Google Play 服务及首次下载 OCR 模型。文字使用所选引擎翻译。复杂纹理与线稿可能失真，可随时切回原图。</string>
+    <string name="manga_translation_notice">文字识别模型随应用提供，识别与图片修复在本机进行。离线翻译首次使用仍需通过 Wi-Fi 下载翻译语言包；图像模型不能替代语言包。文字使用所选引擎翻译，复杂画面可随时切回原图。</string>
+    <string name="manga_translation_ocr_failed">本地文字识别失败，原图已保留。请反馈下方错误编号。</string>
+    <string name="manga_translation_ctd_failed">CTD 文字检测模型推理失败，尚未进入文字翻译。可在图像模型管理中移除 CTD 后使用基础识别重试。</string>
+    <string name="manga_translation_bubble_failed">气泡检测模型推理失败，尚未进入文字翻译。可在图像模型管理中移除气泡模型后重试。</string>
+    <string name="manga_translation_diagnostic">错误编号（反馈时请附上）：%1$s</string>
     <string name="manga_translation_source">原文语言</string>
     <string name="manga_translation_target">目标语言</string>
     <string name="manga_translation_japanese">日语</string>
@@ -15,7 +40,7 @@
     <string name="manga_translation_downloading">正在准备翻译语言包（下载需要 Wi-Fi）…</string>
     <string name="manga_translation_translating">正在本地翻译…</string>
     <string name="manga_translation_rendering">正在去字、修复背景并分条排版…</string>
-    <string name="manga_translation_failed">翻译失败，请检查模型下载、Wi-Fi 与 Google Play 服务后重试。原图仍可正常阅读。</string>
+    <string name="manga_translation_failed">翻译未完成，请重试。若持续失败，请反馈下方错误编号。原图仍可正常阅读。</string>
     <string name="manga_translation_done">译图已就绪。关闭面板即可阅读，重新打开可切换原图。</string>
     <string name="manga_translation_no_text">未检测到文字，继续显示原图。</string>
     <string name="manga_translation_gms">Google Play 服务不可用，此版本的 OCR 无法在该设备运行。</string>

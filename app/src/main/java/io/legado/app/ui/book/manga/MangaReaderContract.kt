@@ -197,6 +197,7 @@ sealed interface MangaReaderText {
 sealed interface MangaReaderIntent {
     data class SetAutoTranslation(val enabled: Boolean) : MangaReaderIntent
     data class SetTranslationEngine(val engine: io.legado.app.domain.model.MangaTranslationEngine) : MangaReaderIntent
+    data class SetTranslationLayoutDirection(val direction: io.legado.app.domain.gateway.MangaLayoutDirection) : MangaReaderIntent
     data object OpenTranslation : MangaReaderIntent
     data object CloseTranslationSettings : MangaReaderIntent
     data object TranslatePage : MangaReaderIntent

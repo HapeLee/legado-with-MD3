@@ -4,6 +4,7 @@ data class MangaSettings(
     val translationEngine: String = "OFFLINE",
     val translationSourceLanguage: String = "ja",
     val translationTargetLanguage: String = "zh",
+    val translationLayoutDirection: String = "AUTO",
     val showMangaUi: Boolean = true,
     val disableMangaScale: Boolean = true,
     val disableMangaScrollAnimation: Boolean = false,

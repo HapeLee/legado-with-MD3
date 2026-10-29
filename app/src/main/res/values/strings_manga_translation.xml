@@ -1,7 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="manga_translation_layout_direction">Text direction</string>
+    <string name="manga_translation_layout_auto">Automatic</string>
+    <string name="manga_translation_layout_horizontal">Horizontal</string>
+    <string name="manga_translation_layout_vertical">Vertical</string>
+    <string name="manga_translation_model_failed">Local model inference failed. The region retains its original text.</string>
+    <string name="manga_translation_partial">Partial translation ready. Pending regions retain the original; full translations are listed below.</string>
+    <string name="manga_models_title">Image models</string>
+    <string name="manga_models_notice">Optional local processing. Weights are downloaded only on request and stored separately from translated images. Deleting a model preserves existing translations.</string>
+    <string name="manga_models_ctd">CTD · text masks · upstream beta-0.3 · up to 110 MiB</string>
+    <string name="manga_models_bubble">MangaLens · bubble layout · ONNX 1024 · up to 16 MiB</string>
+    <string name="manga_models_aot">Manga AOT · background repair</string>
+    <string name="manga_models_aot_pending">Import a manga-aot-512-v1 ONNX from the deployment exporter. A download artifact has not been published.</string>
+    <string name="manga_models_missing">Not installed · basic processing</string>
+    <string name="manga_models_installing">Installing…</string>
+    <string name="manga_models_verifying">Verifying…</string>
+    <string name="manga_models_ready">Ready · local processing</string>
+    <string name="manga_models_deleting">Deleting…</string>
+    <string name="manga_models_failed">Operation failed</string>
+    <string name="manga_models_bytes">%1$d KiB</string>
+    <string name="manga_models_download">Download / update</string>
+    <string name="manga_models_import">Import ONNX</string>
     <string name="manga_translation_title">Translate page</string>
-    <string name="manga_translation_notice">OCR and image repair run on this device. Google Play services and initial OCR model downloads are required. Translation uses the selected engine. Complex textures and line art may lose detail; the original remains available.</string>
+    <string name="manga_translation_notice">OCR models are bundled with the app. OCR and image repair run locally. Offline translation still requires an initial Wi-Fi download of language packs; image models do not replace these packs. Translation uses the selected engine. The original remains available.</string>
+    <string name="manga_translation_ocr_failed">Local text recognition failed. The original is preserved. Please include the error identifier below when reporting this issue.</string>
+    <string name="manga_translation_ctd_failed">CTD text detection failed before translation. Remove CTD in Image models to retry with basic recognition.</string>
+    <string name="manga_translation_bubble_failed">Bubble detection failed before translation. Remove the bubble model in Image models to retry.</string>
+    <string name="manga_translation_diagnostic">Error identifier (include when reporting): %1$s</string>
     <string name="manga_translation_source">Source language</string>
     <string name="manga_translation_target">Target language</string>
     <string name="manga_translation_japanese">Japanese</string>
@@ -15,7 +40,7 @@
     <string name="manga_translation_downloading">Preparing translation models (Wi-Fi required for download)…</string>
     <string name="manga_translation_translating">Translating locally…</string>
     <string name="manga_translation_rendering">Repairing text masks and rendering strips…</string>
-    <string name="manga_translation_failed">Translation failed. Check model downloads, Wi-Fi and Google Play services, then retry. The original is still available.</string>
+    <string name="manga_translation_failed">Translation did not complete. Retry and include the error identifier below if this persists. The original is still available.</string>
     <string name="manga_translation_done">Translation ready. Close this panel to read; reopen to compare with the original.</string>
     <string name="manga_translation_no_text">No text detected. Showing the original.</string>
     <string name="manga_translation_gms">Google Play services are unavailable. This OCR prototype cannot run on this device.</string>

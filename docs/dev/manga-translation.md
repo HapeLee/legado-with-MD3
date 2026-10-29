@@ -1,6 +1,6 @@
 # 漫画翻译：本地预览切片
 
-已接入离线／AI 文字翻译、按书自动翻译、长图分块和文字掩膜局部修复；独立 OCR 与增强修复模型仍待后续实施。
+已接入离线／AI 文字翻译、按书自动翻译、长图分块和文字掩膜局部修复；新增图像模型管理与初版适配，真实权重及真机验收尚未完成。详见 [模型与排版方案的实施记录](manga-translation-models-and-layout-plan.md#11-初版实施记录2026-10-28)。以下此前切片说明属于原有基线，新增状态以末节为准。
 
 ## 当前可用路径
 
@@ -9,11 +9,13 @@
 选择原文（日语、英语、韩语）与目标语言（中文、英语、日语、韩语）→ 下载模型／翻译。
 子页返回按钮或系统返回先回到全局列表；退出翻译子页或关闭菜单会取消手动任务，自动任务继续执行。
 译图在阅读器原位置显示，重新打开面板可切换原图、译图或清除译图缓存。
-语言选择通过 MangaSettingsGateway 原子持久化。
+语言与自动／横排／竖排方向通过 MangaSettingsGateway 原子持久化。
 
 图像获取沿用 Coil 和书源图片处理。OCR 与图片修复均在本机执行，不上传漫画图片。离线引擎不上传识别文字；AI 引擎仅向配置的服务发送 OCR 文字，并在翻译面板展示模型、服务地址及用量说明。
 译图通过文字像素掩膜去字与局部插值修复，不再整块涂白。掩膜外原图像素保持不变，译文绘制在透明补丁上。
-使用系统字体测量和缩小字号；区域无法容纳完整译文时失败，不静默裁切。
+使用系统字体测量与有限字号候选搜索；区域无法在参考可读下限内容纳完整译文时保留该区域原文，不静默裁切，其他区域可以继续生成。
+气泡按掩膜轮廓逐行／逐列计算可用空间；横竖候选比较、标点禁则和字素边界共同决定换行。竖排支持从右到左分列、标点方向、连续拉丁词旋转与短数字横排。
+OCR、气泡、翻译、文字掩膜、背景修复及布局计划分别持久缓存。改变方向只重算布局与合成；含失败区域的结果可复用成功阶段后重试。中间缓存上限 64 MiB，与最终译图的 128 MiB 配额分开；清理译图缓存同时清理两者。
 
 ## 自动翻译与 AI 配置
 
@@ -29,11 +31,11 @@
 
 ## 模型与运行限制
 
-- OCR 暂用 Google Play 服务动态下载的日文识别器（也处理拉丁字符）和韩文识别器，按原文语言选择。
-  固定依赖 `play-services-mlkit-text-recognition-japanese:16.0.1` 与
-  `play-services-mlkit-text-recognition-korean:16.0.1`。
+- OCR 使用随应用打包的日文识别器（也处理拉丁字符）和韩文识别器，按原文语言选择。
+  固定依赖 `com.google.mlkit:text-recognition-japanese:16.0.1` 与
+  `com.google.mlkit:text-recognition-korean:16.0.1`。
   这与原方案中的 CTD / PP-OCR 候选不同，目的是先验证最小阅读闭环。
-  没有可用 Google Play 服务时显式提示不可用，不声称支持所有国产系统。
+  OCR 不再调用 Google Play 的模块检查和动态安装；离线翻译语言包仍独立下载。目标设备兼容性仍需真机验证。
 - 离线翻译使用 `com.google.mlkit:translate:17.0.3`。首次使用下载所需语言包，下载限定 Wi-Fi；
   已下载后本地推理。日译中经过英语中转，漫画语境质量须实测。
 - 模型下载由 Google SDK 管理。取消页面处理不能保证停止已交给 SDK 的模型下载；
@@ -62,7 +64,7 @@
   小幅膨胀覆盖字形抗锯齿边缘，不把整个气泡或矩形当作去字掩膜。
 - 从掩膜边界向内逐层按邻域距离加权插值，重建白底、黑底、彩色与平滑渐变背景。
   修复像素和新字形之外的补丁透明，因此多个补丁不会把未修改的原图重新盖住。
-- 任一识别元素无法获得安全掩膜时，明确报告失败并保留原图，不静默退回整块涂白。
+- 任一识别元素无法获得安全掩膜时，保留所在区域原文、记录待处理原因；不静默退回整块涂白，也不拖垮其他可用区域。
 - 这是传统局部修复，不是 LaMa/扩散模型。复杂纹理和被文字遮住的线稿没有可靠还原保证；
   可能因为保护边界而拒绝处理，也可能丢失局部纹理。仍需真实漫画质量对照。
 - 没有增加图像推理运行时、修复权重或原生库，保持当前安装包依赖范围。
@@ -118,3 +120,61 @@
 - 清理本轮新增 AI 翻译用例、自动调度用例与辅助模拟代码，仅保留原有测试的字段映射及构造参数适配；实现前已存在的界面测试改动保留在工作区，不进入本次提交。
 - 清理后重新运行 `:app:assembleAppDebug verifyConfigArchitecture :app:testAppDebugUnitTest`，选取 `MangaReaderViewModelNavigationTest`、`MangaSettingsMappingTest`、`MangaBookSnapshotTest`、`DefaultMangaReaderSessionTest`，共 29 项原有回归全部通过；暂存差异检查通过。
 - 构建参数与上节相同。真机、真实服务与性能验证限制仍适用。
+
+## 图像模型与排版初版验证（2026-10-28）
+
+- 接入 CTD 与 MangaLens 的模型管理、CPU 推理适配、同泡文本归并和保守内部矩形布局；
+  AOT 提供专用导出脚本、本地导入契约与局部合成路径。完整范围及待办见方案第 11 节。
+- 区域修复／布局失败保留原文，并在译文面板提供待处理原因；结果元数据随译图保存，缓存命中仍保留诊断。
+  补丁生成一次后以临时 PNG 跨输出条带复用，最后释放；清缓存覆盖异常退出留下的补丁目录。
+- 最终运行 `:app:assembleAppDebug verifyConfigArchitecture :app:testAppDebugUnitTest` 成功。
+  使用 JDK 21，参数 `-Pksp.incremental=false --no-configuration-cache --no-daemon --no-watch-fs`。
+  通过工作区外的临时 init 脚本，将 Test 类文件 include 限定为下面三类，避免 `forkEvery=1` 的全量扫描开销；
+  没有修改通用 Gradle 参数。
+- `MangaTranslationLayoutTest` 5 项、`MangaReaderViewModelNavigationTest` 14 项、
+  `MangaTranslationSettingsPanelTest` 5 项，共 24 项通过，0 失败／错误。
+  覆盖字号上下搜索、拒绝极小字、布局取消、椭圆气泡内部矩形、损坏导入保护旧模型与源文件，以及现有阅读器和面板回归。
+  用户原有的两份界面测试改动保留，未被本轮覆盖。
+- 检查 arm64 Debug APK：包含 ONNX Runtime 原生库，没有 `.onnx`、`.ckpt`、`.pt`、SafeTensors 权重。
+  `git diff --check` 通过；AOT 导出脚本通过 Python 语法和 `--help` 入口检查。
+- 模型权重及 Python CPU 推理环境下载出现连接超时／EOF，未完成真实制品推理、AOT 实际导出及数值对照。
+  尚未验证目标真机、漫画视觉质量、模型成功安装／推理中删除、长图峰值内存、发热或 Release/R8。
+  上述自动化结果不能证明这些路径已通过，也不能视为整个 A–E 方案完成。
+
+## 轮廓横竖排与分阶段缓存验证（2026-10-28）
+
+- 已实现按气泡掩膜逐行／逐列约束、动态规划换行、实际字形越界检查，以及自动／横排／竖排持久设置。自动模式在同字号下比较横竖候选代价；完整译文无法满足可读下限时保留原文。
+- 竖排支持 Unicode 字形方向、标点变体、连续拉丁词塑形旋转、短数字横排、字素簇与行首／行尾禁则。Android 26–28 的 Unicode 17 回退表通过锁定 SHA-256 的生成器重新生成，并与提交源码逐字比对一致；Unicode 许可随应用保留。
+- OCR、气泡、翻译、掩膜、修复和布局分别持久缓存；依赖键防止字体／轮廓／模型变化时误复用。校验失败或 JSON 损坏删除重算，原子写入、取消保护与 LRU 配额均有回归覆盖。中间结果上限 64 MiB，与最终译图 128 MiB 配额独立。
+- 最终串行执行 `:app:assembleAppDebug verifyConfigArchitecture :app:testAppDebugUnitTest` 成功；JDK 21，参数与上节一致，通过工作区外临时 init 脚本仅选择本节七类测试，没有修改通用 Gradle 参数。
+- 测试报告：`MangaContourLayoutTest` 16 项（Android 26／35）、`MangaStageCacheTest` 5 项、`MangaStageKeysTest` 3 项、`MangaTranslationLayoutTest` 5 项、`MangaSettingsMappingTest` 9 项、`MangaReaderViewModelNavigationTest` 14 项、`MangaTranslationSettingsPanelTest` 5 项，共 57 项，0 失败／错误。`git diff --check` 通过。
+- 本次完成代码与合成样本／Robolectric 验证；真实模型制品、漫画视觉效果、字体缺字、目标设备内存／耗时／温升和 Release/R8 仍未验收。尚未提供区域编辑器或独立区域重试按钮。完整实施范围见方案第 12 节。
+
+## 翻译准备阶段失败修复（2026-10-29）
+
+- 最终译图缓存键直接序列化 `translationOverrides.toSortedMap()`，触发 `TreeMap` 在 `SortedMap` 范围内没有序列化器的异常。空映射也触发，因此未进入 OCR 就失败，与是否安装图像模型无关；通用错误文案会误导为模型／网络问题。
+- 将最终译图键集中到 `MangaStageKeys.rendered`，显式使用 `Map<String, String>` 序列化器，保留区域键排序及原有缓存依赖。没有更换 OCR 或翻译引擎。
+- 新增回归先复现上述异常，修复后缓存键 4 项、阶段缓存 5 项、阅读器状态与重试 14 项共 23 项通过；Debug APK 构建通过。使用 JDK 21、`--no-configuration-cache -Pksp.incremental=false`，`git diff --check` 通过。
+- 没有连接目标手机，尚未进行真机模型调用和漫画译图效果验证。
+
+## 识别阶段排障（2026-10-29）
+
+- 用户反馈修复准备阶段后，仍在“正在本地识别文字”失败；没有连接设备或取得 SDK 错误，不能据此断言是翻译语言包问题。
+- 日／韩 OCR 改为随 APK 打包的 ML Kit 16.0.1，去除 Google Play 模块可用性检查及动态安装。OCR 阶段缓存键区分 bundled 版本；离线翻译仍由 ML Kit 独立下载语言包。
+- OCR 初始化／识别、CTD 与气泡检测分别反馈失败原因和可复制错误编号。编号仅包含组件、SDK 数值码／异常类型及应用源码位置，不展示异常原文、图片路径或识别文本。普通未知错误也保留失败阶段和异常类型；重开面板保留编号，重试清除旧编号。
+- 22 项回归通过：识别错误与取消 3 项、缓存键 4 项、阅读器失败／重试／状态 15 项。`:app:assembleAppDebug` 及关联架构门禁通过；JDK 21，`--no-configuration-cache --no-daemon --no-watch-fs -Pksp.incremental=false`。常驻 Gradle daemon 曾错误缓存 SDK 目录状态，使用新进程后恢复，没有修改 SDK 配置。
+- 未进行真机漫画识别、实际模型推理和翻译质量验证；本轮移除动态 OCR 下载依赖并完善诊断，设备上的具体故障需通过新版错误编号确认。
+
+## OCR 小裁剪输入修复（2026-10-29）
+
+- 设备返回 `OCR: MLKIT-3@MangaTranslationRepository.kt:178`，对应 `recognizer.process(InputImage.fromBitmap(...))`。官方定义 3 为 `INVALID_ARGUMENT`；核对当前 `vision-common:17.3.0` 的 `MobileVisionBase.processBase(InputImage)` 字节码，宽或高不足 32 时直接返回此码，错误文案为 `InputImage width and height should be at least 32!`。
+- 原实现把 CTD 文字框直接裁剪交给 OCR，未满足 SDK 最小尺寸。新增统一输入准备：在原图块内扩大过小裁剪，图块本身不足 32 时右侧／下侧白色补边，不缩放原始像素；同时规范为软件 ARGB_8888 输入。返回实际裁剪原点，文字框和字形统一使用此原点回填全页坐标。
+- OCR 输入位图独立持有，在 SDK 调用结束后释放，不回收原图块。OCR 阶段和最终译图缓存键均升级，避免复用旧输入规则的结果。
+- 设备错误码符合该输入约束缺陷；尚未读取设备裁剪尺寸或完成真机重测，不能将合成测试等同于真实漫画翻译成功。
+- 新增原生图形输入测试 4 项覆盖细框／页边缘、原像素与全页坐标、极小图片补边和普通裁剪；加识别错误 3 项、缓存键 4 项、阅读器 15 项，共 26 项通过。`:app:assembleAppDebug` 与关联架构门禁通过，`git diff --check` 通过；JDK 21 与构建参数同上节。
+
+## 提交前清理与复核（2026-10-29）
+
+- 按提交约定删除本轮新增的 7 个测试文件，移除原有测试文件中新增的 8 个测试用例及配套模拟／注入代码。保留仓库原有测试，仅为设置映射基线补充新增方向字段的必要适配；本轮没有新增测试专用依赖。清理测试报告及对应编译任务缓存文件，保留正式模型导出、Unicode 数据生成和运行时错误反馈。
+- 清理后重新运行 `:app:assembleAppDebug verifyConfigArchitecture :app:testAppDebugUnitTest`，仅选择原有 `MangaSettingsMappingTest` 与 `MangaReaderViewModelNavigationTest`，共 16 项通过，0 失败／错误；`git diff --check` 通过。构建参数同上节。
+- 本次提交涵盖图像模型管理、轮廓横竖排、分阶段缓存与后续缓存序列化／OCR 修复。尚未完成目标设备实际漫画译图和 Release/R8 验证。

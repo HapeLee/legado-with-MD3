@@ -771,8 +771,13 @@ val appModule = module {
         )
     }
     viewModelOf(::MangaReaderViewModel)
+    single { io.legado.app.data.repository.manga.MangaImageModelRepository(get()) }
+    single<io.legado.app.domain.gateway.MangaImageModelGateway> {
+        get<io.legado.app.data.repository.manga.MangaImageModelRepository>()
+    }
+    viewModel { io.legado.app.feature.mangatranslation.MangaModelsViewModel(get()) }
     single<io.legado.app.domain.gateway.MangaTranslationGateway> {
-        io.legado.app.data.repository.manga.MangaTranslationRepository(get(), get(), get())
+        io.legado.app.data.repository.manga.MangaTranslationRepository(get(), get(), get(), get())
     }
     viewModelOf(::ReaderSessionViewModel)
     viewModel {

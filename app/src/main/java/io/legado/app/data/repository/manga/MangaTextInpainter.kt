@@ -11,9 +11,10 @@ internal data class MangaTextRepair(val mask: BooleanArray, val background: Int,
 internal object MangaTextInpainter {
     fun repair(
         pixels: IntArray, width: Int, height: Int, polygons: List<List<Point>>,
-        checkCancellation: () -> Unit = {},
+        checkCancellation: () -> Unit = {}, textMask: BooleanArray? = null,
     ): MangaTextRepair {
         require(width > 0 && height > 0 && pixels.size == width * height)
+        require(textMask == null || textMask.size == pixels.size)
         val mask = BooleanArray(pixels.size)
         var background = -1
         var unrepairedGlyphs = 0
@@ -47,7 +48,10 @@ internal object MangaTextInpainter {
             val candidate = BooleanArray(localWidth * localHeight)
             for (y in top until bottom) for (x in left until right) {
                 val c = pixels[y * width + x]
-                candidate[(y - top) * localWidth + x - left] = distance(c, bg) > 36
+                candidate[(y - top) * localWidth + x - left] = distance(c, bg) > 36 &&
+                    (textMask == null || (-2..2).any { dy -> (-2..2).any { dx ->
+                        textMask[(y + dy).coerceIn(0, height - 1) * width + (x + dx).coerceIn(0, width - 1)]
+                    } })
             }
             // Reject components connected to the exterior halo (panel/bubble borders, line art).
             val visited = BooleanArray(candidate.size)

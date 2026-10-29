@@ -8,9 +8,19 @@ internal data class MangaOcrRegion(val lines: List<MangaOcrLine>) {
     val bounds: Rect get() = Rect(lines.first().bounds).apply { lines.drop(1).forEach { union(it.bounds) } }
     fun text(source: String): String {
         val vertical = source == "ja" && lines.count { it.bounds.height() > it.bounds.width() } > lines.size / 2
-        val sorted = if (vertical) lines.sortedByDescending { it.bounds.right }
+        val sorted = if (vertical) lines.sortedWith(compareByDescending<MangaOcrLine> { it.bounds.right }.thenBy { it.bounds.top })
         else lines.sortedWith(compareBy({ it.bounds.top }, { it.bounds.left }))
-        return sorted.joinToString("\n") { it.text }
+        val typical = lines.map { if (vertical) it.bounds.width() else it.bounds.height() }.sorted().let { it[it.size / 2] }
+        return buildString {
+            sorted.forEachIndexed { index, line ->
+                if (index > 0) {
+                    val previous = sorted[index - 1].bounds
+                    val gap = if (vertical) previous.left - line.bounds.right else line.bounds.top - previous.bottom
+                    append(if (gap > typical) "\n\n" else if (source == "ja") "" else " ")
+                }
+                append(line.text.trim())
+            }
+        }
     }
 }
 
