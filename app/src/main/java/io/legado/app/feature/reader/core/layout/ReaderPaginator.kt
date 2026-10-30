@@ -197,12 +197,6 @@ sealed interface ReaderMeasuredInlineItem {
         val heightPx: Float,
         override val chapterPosition: Int,
         val action: String? = null,
-        /**
-         * 旧 `setTypeHtml` 的**行末**特例：`charRight` 取不到下一字的横向位置时改用
-         * `measureText("\uFFFC")`，于是落在行末的行内图比行中更窄（旧版同时留下空档）。
-         * 非 `null` 时只影响绘制宽度，断行推进仍用 [widthPx]（旧版布局推进用的是 span advance）。
-         */
-        val lineFinalWidthPx: Float? = null,
     ) : ReaderMeasuredInlineItem
 
     /**
@@ -840,16 +834,11 @@ internal class ReaderPaginationSession(
 
                     is ReaderMeasuredInlineItem.Image -> {
                         val imageTop = y + (actualLineHeight - item.heightPx) / 2f
-                        // 旧 `setTypeHtml` 行末图用 `measureText("\uFFFC")` 当宽度（行中才用 span
-                        // advance）；断行推进仍按 item.widthPx，因此行末会像旧版一样留出空档。
-                        val drawnWidthPx = item.lineFinalWidthPx
-                            ?.takeIf { itemIndex == itemCount - 1 }
-                            ?: item.widthPx
                         elements += ReaderElement.Image(
                             bounds = ReaderRect(
                                 x,
                                 imageTop,
-                                x + drawnWidthPx,
+                                x + item.widthPx,
                                 imageTop + item.heightPx
                             ),
                             source = item.source,
@@ -857,7 +846,7 @@ internal class ReaderPaginationSession(
                             chapterPosition = item.chapterPosition,
                             // 行内图必须带标记：绘制期按位图长宽比重新算几何（旧 ImageColumn）。
                             inline = true,
-                            touchBounds = ReaderRect(x, y, x + drawnWidthPx, y + actualLineHeight),
+                            touchBounds = ReaderRect(x, y, x + item.widthPx, y + actualLineHeight),
                         )
                     }
 

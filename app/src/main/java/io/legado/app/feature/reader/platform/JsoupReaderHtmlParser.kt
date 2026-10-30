@@ -12,10 +12,9 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
 /**
- * Jsoup-based HTML parser (replacing HtmlCompat.fromHtml)
+ * Jsoup-based HTML parser shared by measurement and semantic text projection.
  *
- * Single source of truth for both semantic text and measured paragraphs:
- * [parse] builds them in one pass with a shared cursor, so every inline item's
+ * [parse] builds both in one pass with a shared cursor, so every inline item's
  * chapterPosition stays aligned with the semantic string by construction.
  */
 object JsoupReaderHtmlParser {
@@ -191,7 +190,6 @@ object JsoupReaderHtmlParser {
                         cursor.current += ReaderChapterInlineSource.Image(
                             source = src,
                             chapterPosition = cursor.pos,
-                            htmlSpanExtent = null,
                             action = node.attr("data-legado-pclick").takeIf { it.isNotBlank() }
                                 ?: node.attr("data-legado-click").takeIf { it.isNotBlank() }
                         )

@@ -5,7 +5,6 @@ import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
-import io.legado.app.feature.reader.core.source.ReaderHtmlImageSpanExtent
 import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
 import io.legado.app.feature.reader.core.source.ReaderTitleSegmentation
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
@@ -364,34 +363,6 @@ class ReaderChapterBlockMeasurerTest {
         val image = result.blocks.single() as ReaderMeasuredBlock.Image
         assertEquals(ReaderImageScaleMode.FIT_WIDTH, image.scaleMode)
         assertEquals(100f, image.intrinsicWidthPx, 0f)
-    }
-
-    /**
-     * 旧 `setTypeHtml` 的行内图占位宽/行盒高取自 ImageSpan 本身（`getPrimaryHorizontal` 差值与
-     * span 的 ascent），不是占位字 advance；带 `"，{...}"` 且 style 为 text 时按它排版。
-     */
-    @Test
-    fun `html block inline image uses the image span extent`() = runBlocking {
-        val result = measureHtml(
-            items = listOf(
-                ReaderChapterInlineSource.Image(
-                    source = "icon,{\"style\":\"text\"}",
-                    chapterPosition = 5,
-                    htmlSpanExtent = ReaderHtmlImageSpanExtent(widthPx = 40f, heightPx = 24f),
-                ),
-            ),
-            style = style,
-            options = ReaderImageOptions(ReaderImageLayoutMode.INLINE),
-            dimensions = ReaderImageDimensions(100f, 50f),
-        )
-
-        val image = (result.blocks.single() as ReaderMeasuredBlock.InlineParagraph)
-            .items.single() as ReaderMeasuredInlineItem.Image
-        // 宽 = span advance（40f，不是占位字 10f）；高 = span 撑开的行盒高（24f）。
-        assertEquals(40f, image.widthPx, 0f)
-        assertEquals(24f, image.heightPx, 0f)
-        // 旧 `setTypeHtml` 行末图宽 = `measureText("\uFFFC")`（本测试 shaper 统一给 10f）。
-        assertEquals(10f, image.lineFinalWidthPx!!, 0f)
     }
 
     /**

@@ -148,9 +148,6 @@ class AndroidReaderHtmlSourceResolverTest {
 
         assertEquals(source, image.source)
         assertEquals(3, image.chapterPosition)
-        // Jsoup 通道舍弃了框架层面的“回退占位图”（fallback-drawable）机制：
-        // 对于内嵌图像，转而采用核心层面的“占位字符”（placeholder-char）规则作为回退方案。
-        assertEquals(null, image.htmlSpanExtent)
     }
 
     @Test fun consecutiveBreaksPreserveANewlineOnlyVisualParagraphWithoutATrailingPhantomLine() {

@@ -12,12 +12,8 @@ object AndroidReaderHtmlSemanticTextResolver : ReaderHtmlSemanticTextResolver {
 }
 
 /**
- * NEW: HTML source resolver based on Jsoup DOM traversal.
- *
- * Replaces HtmlCompat.fromHtml so semantic text and measured paragraphs share
- * one cursor by construction. Image placeholder geometry now falls back to the
- * core placeholder-char rule (htmlSpanExtent is null); the old framework
- * fallback-drawable extent is intentionally dropped.
+ * HTML source resolver backed by the shared Jsoup cursor: measured paragraphs
+ * and semantic text come from the same traversal.
  */
 class AndroidReaderHtmlSourceResolver(
     private val baseTextSizePx: Float,

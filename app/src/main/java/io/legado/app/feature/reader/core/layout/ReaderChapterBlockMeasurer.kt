@@ -53,8 +53,7 @@ enum class ReaderImageLayoutMode { AUTO, INLINE, STANDALONE, FULL_WIDTH, SINGLE_
 
 /**
  * 决定行内图**宽**的那一个字符：旧 View 的行内图占位宽不是字号，而是该字符在**本段 paint**
- * 下的实际 advance。前两项是旧 `ChapterProvider` 插进正文的替换字；第三项是框架给 `ImageSpan`
- * 插入的 `\uFFFC`，只用于旧 `setTypeHtml` 的行末特例。
+ * 下的实际 advance。两项分别对应旧 `ChapterProvider` 插进正文的替换字。
  */
 enum class ReaderInlineImagePlaceholder(val placeholderChar: String) {
     /**
@@ -65,12 +64,6 @@ enum class ReaderInlineImagePlaceholder(val placeholderChar: String) {
 
     /** 旧 `reviewChar`（`꧁`）：仅单图 style 精确为 `"TEXT"`（段评图标）。 */
     REVIEW("꧁"),
-
-    /**
-     * 框架给 `ImageSpan` 插入的对象替换字符 `\uFFFC`。旧 `setTypeHtml` 在**行末**取不到下一字
-     * 横向位置时改用 `measureText("\uFFFC")`，因此它也是旧版行末行内图的绘制宽。
-     */
-    OBJECT_REPLACEMENT("\uFFFC"),
 }
 
 data class ReaderImageOptions(
@@ -504,32 +497,22 @@ class ReaderChapterBlockMeasurer(
                             // 取占位字（书级文字嵌入固定 `袮`；单图 style 精确为 `"TEXT"` 时是 `꧁`）
                             // 在**本段 paint** 下的实际 advance（不是字号），高按原图比例从该宽度换算，
                             // 因此立图可以高于当前行；扁平宽图只占一格宽、很矮。
-                            // HTML 段落例外：旧 `setTypeHtml` 的占位宽/行盒高来自 ImageSpan 本身。
-                            val span = item.htmlSpanExtent
                             // 段评气泡的包内缩放只作用于槽宽：占位字 advance 是密度无关的 em 量，
                             // 位图再按最终槽宽栅格化，所以渲染分辨率与排版宽度始终同口径。
                             val inlineWidthScale =
                                 options?.inlineWidthScale?.takeIf { it > 0f } ?: 1f
-                            val cellWidthPx = (span?.widthPx
-                                ?: inlinePlaceholderWidth(layout.placeholder, baseStyle)) *
+                            val cellWidthPx =
+                                inlinePlaceholderWidth(layout.placeholder, baseStyle) *
                                     inlineWidthScale
-                            val cellHeightPx = span?.heightPx ?: (
-                                    cellWidthPx * (size.heightPx.coerceAtLeast(1f) /
-                                            size.widthPx.coerceAtLeast(1f))
-                                    )
+                            val cellHeightPx =
+                                cellWidthPx * (size.heightPx.coerceAtLeast(1f) /
+                                        size.widthPx.coerceAtLeast(1f))
                             inline += ReaderMeasuredInlineItem.Image(
                                 source = item.source,
                                 widthPx = cellWidthPx,
                                 heightPx = cellHeightPx,
                                 chapterPosition = item.chapterPosition,
                                 action = action,
-                                // 旧 `setTypeHtml` 行末图宽 = `measureText("\uFFFC")`。
-                                lineFinalWidthPx = span?.let {
-                                    inlinePlaceholderWidth(
-                                        ReaderInlineImagePlaceholder.OBJECT_REPLACEMENT,
-                                        baseStyle,
-                                    )
-                                },
                             )
                         }
                     }
