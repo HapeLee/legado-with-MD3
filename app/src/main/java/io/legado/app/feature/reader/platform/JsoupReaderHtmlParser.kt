@@ -95,15 +95,23 @@ object JsoupReaderHtmlParser {
                 }
                 val raw = if (block.inPre) node.wholeText else node.text()
                 if (raw.isEmpty()) return
-                val normalized = if (block.inPre) {
+                var normalized = if (block.inPre) {
                     raw.replace("\r\n", "\n").replace("\r", "\n")
                 } else {
                     // Collapse whitespace like COMPACT mode, but keep single spaces.
                     raw.replace("[\\s\\u00a0]+".toRegex(), " ")
                 }
+                if (!block.inPre) {
+                    if (cursor.current.isEmpty()) {
+                        normalized = normalized.trimStart(' ')
+                    } else {
+                        val prevText = (cursor.current.lastOrNull() as? ReaderChapterInlineSource.Text)?.value
+                        if (prevText != null && prevText.endsWith(" ") && normalized.startsWith(" ")) {
+                            normalized = normalized.trimStart(' ')
+                        }
+                    }
+                }
                 if (normalized.isEmpty()) return
-                //移除多余的空白换行
-                if (normalized == " " && cursor.current.isEmpty()) return
                 cursor.current += ReaderChapterInlineSource.Text(
                     value = normalized,
                     chapterPosition = cursor.pos,
@@ -182,6 +190,20 @@ object JsoupReaderHtmlParser {
                         cursor.currentFirstMargin = parentGeo.firstMargin
                         cursor.currentRestMargin = parentGeo.restMargin
                     }
+                    "td", "th" -> {
+                        if (cursor.current.isNotEmpty()) {
+                            val prev = (cursor.current.lastOrNull() as? ReaderChapterInlineSource.Text)?.value
+                            if (prev == null || !prev.endsWith(" ")) {
+                                cursor.current += ReaderChapterInlineSource.Text(" ", cursor.pos)
+                                cursor.semantic.append(' ')
+                                cursor.pos += 1
+                            }
+                        }
+                        val childInline = descendInline(node, tag, inline)
+                        for (child in node.childNodes().toList()) {
+                            walk(child, childInline, block, cursor, baseTextSizePx, density)
+                        }
+                    }
                     else -> {
                         val childInline = descendInline(node, tag, inline)
                         for (child in node.childNodes().toList()) {
@@ -206,8 +228,6 @@ object JsoupReaderHtmlParser {
         density: Float
     ): BlockGeo {
         val decorations = mutableListOf<ReaderParagraphDecoration>()
-        var firstMargin = 0f
-        var restMargin = 0f
         val step = baseTextSizePx * 1.2f
         if (block.quoteDepth > 0) {
             repeat(block.quoteDepth) { level ->
@@ -218,8 +238,6 @@ object JsoupReaderHtmlParser {
                     level * step
                 )
             }
-            firstMargin += block.quoteDepth * step
-            restMargin += block.quoteDepth * step
         }
         block.listStack.forEachIndexed { index, _ ->
             decorations += ReaderParagraphDecoration(
@@ -229,12 +247,9 @@ object JsoupReaderHtmlParser {
                 (block.quoteDepth + index) * step
             )
         }
-        if (block.listStack.isNotEmpty()) {
-            val indent = (block.quoteDepth + block.listStack.size) * step
-            firstMargin += indent
-            restMargin += indent
-        }
-        return BlockGeo(block.alignment, decorations, firstMargin, restMargin)
+        val totalLevels = block.quoteDepth + block.listStack.size
+        val margin = totalLevels * step
+        return BlockGeo(block.alignment, decorations, margin, margin)
     }
 
     private fun descendBlock(
@@ -248,8 +263,8 @@ object JsoupReaderHtmlParser {
         var quoteDepth = parent.quoteDepth
         var listStack = parent.listStack
         var inPre = parent.inPre
-        var headingScale = 1f
-        var headingBold = false
+        var headingScale = parent.headingScale
+        var headingBold = parent.headingBold
         when (tag) {
             "blockquote" -> quoteDepth += 1
             "ul" -> listStack = listStack + false

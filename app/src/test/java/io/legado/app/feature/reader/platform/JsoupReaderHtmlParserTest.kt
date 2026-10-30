@@ -83,4 +83,14 @@ class JsoupReaderHtmlParserTest {
         val parsed = JsoupReaderHtmlParser.parse("<p><ruby>漢<rt>かん</rt></ruby>字</p>", 0, 20f, 2f)
         assertEquals("漢字\n", parsed.semantic)
     }
+
+    @Test
+    fun trimsLeadingParagraphIndentationAndPreservesNestedHeadingScale() {
+        val parsed = JsoupReaderHtmlParser.parse("<h2>\n  <center>标题</center>\n</h2>", 0, 20f, 2f)
+        assertEquals("标题\n", parsed.semantic)
+        val textItem = parsed.paragraphs.single().items.single() as ReaderChapterInlineSource.Text
+        assertEquals("标题", textItem.value)
+        assertEquals(1.25f, textItem.style.fontSizeScale, 0.001f)
+        assertEquals(700, textItem.style.fontWeight)
+    }
 }

@@ -7,6 +7,8 @@ import kotlin.math.abs
 
 object BookContentProcessEngine {
 
+    private val htmlTagRegex = Regex("<[^>]+>")
+
     data class ApplyResult(
         val text: String,
         val effectiveProcesses: List<BookContentProcess>,
@@ -36,7 +38,9 @@ object BookContentProcessEngine {
                     val anchor = GSON.fromJsonObject<TextProcessAnchor>(process.anchorJson)
                         .getOrNull()
                         ?: return@forEach
-                    if (findTargetRange(output, anchor) != null) {
+                    if (findTargetRange(output, anchor) != null ||
+                        (output.contains("<usehtml>") && findTargetRange(output.replace(htmlTagRegex, ""), anchor) != null)
+                    ) {
                         effectiveProcesses.add(process)
                     }
                     return@forEach

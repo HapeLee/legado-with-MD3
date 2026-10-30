@@ -1,6 +1,7 @@
 package io.legado.app.model.localBook
 
 import io.legado.app.utils.HtmlFormatter
+import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
@@ -22,12 +23,34 @@ object LocalBookSemanticHtml {
         "figcaption", "aside", "dl", "dt", "dd"
     )
 
+    private val blockTags = setOf(
+        "p", "div", "section", "article", "main", "header", "footer",
+        "h1", "h2", "h3", "h4", "h5", "h6", "li", "ul", "ol", "pre",
+        "blockquote", "table", "tr", "td", "th", "figure", "figcaption",
+        "center", "aside", "dl", "dt", "dd", "hr"
+    )
+
+    private val containerTags = setOf(
+        "div", "section", "article", "main", "header", "footer"
+    )
+
+    private const val inlineSemanticSelector =
+        "a[href], ruby, b, strong, i, em, cite, dfn, u, ins, s, del, strike, " +
+            "code, kbd, samp, tt, sup, sub, big, small, br, " +
+            "[style*=font-weight], [style*=font-style], [style*=text-decoration]"
+
+    private const val blockSemanticSelector =
+        "blockquote, ul, ol, h1, h2, h3, h4, h5, h6, pre, hr, table, figure, figcaption, aside, dl"
+
     private val allowedCssProps = setOf(
         "text-align", "text-indent",
         "margin", "margin-top", "margin-bottom", "margin-left", "margin-right",
         "border", "border-left", "border-right", "border-top", "border-bottom",
         "font-weight", "font-style", "font-size", "display"
     )
+
+    private val displayNoneRegex = Regex("(^|;)\\s*display\\s*:\\s*none\\b", RegexOption.IGNORE_CASE)
+    private val textAlignRegex = Regex("text-align\\s*:\\s*([a-z]+)", RegexOption.IGNORE_CASE)
 
     data class CssRule(
         val tag: String?,
@@ -52,13 +75,11 @@ object LocalBookSemanticHtml {
         } else null
         if (startEl != null) {
             trimBefore(startEl, body)
-            dropTopLevelBefore(body, startEl)
         }
         if (endEl != null) {
             val attached = if (endEl.parent() == null) findByIdOrName(body, endFragmentId!!) else endEl
             if (attached != null) {
                 trimAfter(attached, body)
-                dropTopLevelAfter(body, attached)
             }
         }
     }
@@ -68,70 +89,15 @@ object LocalBookSemanticHtml {
         return body.getElementsByAttributeValue("name", fragmentId).firstOrNull()
     }
 
-    private fun topLevelChild(body: Element, node: Element): Element? {
-        var current: Element? = node
-        while (current != null && current.parent() != body) {
-            val parent = current.parent() ?: return null
-            current = parent
-        }
-        return current
-    }
-
-    private fun dropTopLevelBefore(body: Element, startEl: Element) {
-        val top = topLevelChild(body, startEl) ?: return
-        val children = body.children().toList()
-        val index = children.indexOf(top)
-        if (index <= 0) return
-        for (i in 0 until index) {
-            children[i].remove()
-        }
-    }
-
-    private fun dropTopLevelAfter(body: Element, endEl: Element) {
-        val top = topLevelChild(body, endEl) ?: return
-        val children = body.children().toList()
-        val index = children.indexOf(top)
-        if (index < 0) return
-        for (i in children.size - 1 downTo index + 1) {
-            children[i].remove()
-        }
-        if (top != endEl) {
-            val ownText = top.ownText().trim()
-            val hasContentBefore = top.childNodes().any { node ->
-                node != endEl && node is TextNode && node.text().isNotBlank()
-            }
-            if (ownText.isEmpty() && !hasContentBefore && top.text().trim() == endEl.text().trim()) {
-                top.remove()
-            }
-        } else {
-            top.remove()
-        }
-    }
-
     private fun trimBefore(startEl: Element, body: Element) {
         var current: Element? = startEl
         while (current != null && current != body) {
-            var sibling = current.previousElementSibling()
-            while (sibling != null) {
-                val prev = sibling.previousElementSibling()
-                sibling.remove()
-                sibling = prev
-            }
-            val parent = current.parent()
-            if (parent is Element) {
-                val idx = parent.childNodes().indexOf(current)
-                if (idx > 0) {
-                    for (i in idx - 1 downTo 0) {
-                        val node = parent.childNodes()[i]
-                        if (node is TextNode && node.text().isBlank()) {
-                            node.remove()
-                        } else if (node is TextNode) {
-                            node.remove()
-                            break
-                        } else {
-                            break
-                        }
-                    }
+            val parent = current.parent() ?: break
+            val idx = current.siblingIndex()
+            if (idx > 0) {
+                val nodes = parent.childNodes()
+                for (i in idx - 1 downTo 0) {
+                    nodes[i].remove()
                 }
             }
             current = parent
@@ -141,27 +107,22 @@ object LocalBookSemanticHtml {
     private fun trimAfter(endEl: Element, body: Element) {
         var current: Element? = endEl
         while (current != null && current != body) {
-            var sibling = current.nextElementSibling()
-            while (sibling != null) {
-                val next = sibling.nextElementSibling()
-                sibling.remove()
-                sibling = next
+            val parent = current.parent() ?: break
+            val nodes = parent.childNodes()
+            val idx = current.siblingIndex()
+            for (i in nodes.size - 1 downTo idx + 1) {
+                nodes[i].remove()
             }
-            val parent = current.parent()
-            if (parent is Element) {
-                val nodes = parent.childNodes()
-                val idx = nodes.indexOf(current)
-                if (idx >= 0) {
-                    for (i in nodes.size - 1 downTo idx + 1) {
-                        nodes[i].remove()
-                    }
-                }
-            }
-            if (current == endEl) {
-                current.remove()
-            }
-            current = if (parent is Element && parent != body) parent else null
-            if (current == body) break
+            current = parent
+        }
+        var ancestor: Element? = endEl.parent()
+        endEl.remove()
+        while (ancestor != null && ancestor != body &&
+            ancestor.text().isBlank() && ancestor.select("img, image, hr").isEmpty()
+        ) {
+            val up = ancestor.parent()
+            ancestor.remove()
+            ancestor = up
         }
     }
 
@@ -177,6 +138,19 @@ object LocalBookSemanticHtml {
                 if (k != "src") img.attr(k, v)
             }
         }
+    }
+
+    /** Remove elements hidden via inline or CSS-inlined `display: none` (with or without spaces). */
+    fun removeHiddenElements(root: Element) {
+        root.select("[style]").forEach { el ->
+            if (displayNoneRegex.containsMatchIn(el.attr("style"))) {
+                el.remove()
+            }
+        }
+    }
+
+    fun removeHiddenElements(elements: Elements) {
+        elements.forEach(::removeHiddenElements)
     }
 
     /** Parse simple selectors (tag, #id, .class, tag.class) with whitelisted props. */
@@ -207,7 +181,7 @@ object LocalBookSemanticHtml {
                     rules += CssRule(tag, id, classes, declarations, specificity, order++)
                 }
             }
-            return rules
+            rules
         }.getOrDefault(emptyList())
     }
 
@@ -265,6 +239,7 @@ object LocalBookSemanticHtml {
     fun inlineCssSemantics(docBody: Element, cssRules: List<CssRule>) {
         if (cssRules.isEmpty()) {
             normalizeLegacyAlignment(docBody)
+            removeHiddenElements(docBody)
             return
         }
         val all = docBody.allElements
@@ -288,7 +263,7 @@ object LocalBookSemanticHtml {
             el.attr("style", merged.entries.joinToString("; ") { "${it.key}: ${it.value}" })
         }
         normalizeLegacyAlignment(docBody)
-        docBody.select("[style*=display:none]").remove()
+        removeHiddenElements(docBody)
     }
 
     private fun normalizeLegacyAlignment(body: Element) {
@@ -322,13 +297,34 @@ object LocalBookSemanticHtml {
         val tag = el.tagName().lowercase()
         if (tag in complexTags) return true
         val style = el.attr("style").lowercase()
-        if (style.contains("text-align") || style.contains("text-indent")) {
+        if (style.contains("text-align") || style.contains("text-indent") ||
+            style.contains("font-weight") || style.contains("font-style") ||
+            style.contains("text-decoration")
+        ) {
             return true
         }
-        if (el.select("blockquote, ul, ol, h1, h2, h3, h4, h5, h6, pre, hr, table, figure, aside, dl").isNotEmpty()) {
+        if (el.select(blockSemanticSelector).isNotEmpty()) {
+            return true
+        }
+        if (el.select(inlineSemanticSelector).isNotEmpty()) {
             return true
         }
         return false
+    }
+
+    private fun isUnwrappableContainer(el: Element): Boolean {
+        val tag = el.tagName().lowercase()
+        if (tag !in containerTags) return false
+        return el.children().any { it.tagName().lowercase() in blockTags }
+    }
+
+    private fun propagateContainerAlignment(container: Element, child: Element) {
+        val alignMatch = textAlignRegex.find(container.attr("style")) ?: return
+        val existing = child.attr("style")
+        if (!existing.contains("text-align", ignoreCase = true)) {
+            val alignDecl = "text-align: ${alignMatch.groupValues[1].lowercase()}"
+            child.attr("style", (existing.trimEnd(';') + "; $alignDecl").trimStart(';', ' '))
+        }
     }
 
     /**
@@ -338,8 +334,12 @@ object LocalBookSemanticHtml {
     fun emitMixedChannel(body: Element, chapterTitle: String? = null): String {
         dropLeadingTitle(body, chapterTitle)
         val lines = mutableListOf<String>()
-        val nodes = body.childNodes().toList()
-        for (node in nodes) {
+        emitNodes(body, lines)
+        return lines.joinToString("\n")
+    }
+
+    private fun emitNodes(container: Element, lines: MutableList<String>) {
+        for (node in container.childNodes().toList()) {
             if (node is TextNode) {
                 val text = node.text().trim()
                 if (text.isNotEmpty()) {
@@ -349,12 +349,14 @@ object LocalBookSemanticHtml {
             }
             if (node !is Element) continue
             val el = node
-            if (el.tagName().equals("script", ignoreCase = true) ||
-                el.tagName().equals("style", ignoreCase = true)
-            ) {
+            val tag = el.tagName().lowercase()
+            if (tag == "script" || tag == "style") continue
+            if (el.text().isBlank() && el.select("img").isEmpty() && tag != "hr") {
                 continue
             }
-            if (el.text().isBlank() && el.select("img").isEmpty() && !el.tagName().equals("hr", ignoreCase = true)) {
+            if (isUnwrappableContainer(el)) {
+                el.children().forEach { child -> propagateContainerAlignment(el, child) }
+                emitNodes(el, lines)
                 continue
             }
             if (hasSemanticSignal(el)) {
@@ -363,7 +365,13 @@ object LocalBookSemanticHtml {
                     lines += "<usehtml>$singleLine</usehtml>"
                 }
             } else {
-                val plain = HtmlFormatter.formatKeepImg(el.outerHtml()).trim()
+                val rawPlain = HtmlFormatter.formatKeepImg(el.outerHtml())
+                    .replace("&lt;img", "&lt; img", ignoreCase = true)
+                val plain = if (rawPlain.indexOf('&') > -1) {
+                    StringEscapeUtils.unescapeHtml4(rawPlain).trim()
+                } else {
+                    rawPlain.trim()
+                }
                 if (plain.isEmpty()) continue
                 for (part in plain.split("\n")) {
                     val t = part.trim()
@@ -371,129 +379,78 @@ object LocalBookSemanticHtml {
                 }
             }
         }
-        return lines.joinToString("\n")
     }
 
+    /**
+     * Drop leading leaf blocks whose normalized text repeats [chapterTitle].
+     *
+     * Unwraps structural containers (`div`/`section`/...) to inspect up to 3 leading leaf
+     * blocks. Jsoup's `Element.text()` already normalizes `<br/>` and inline tags into spaces,
+     * so multi-line headings (`<h2>CHAPTER I.<br/>The Period</h2>`), split headings across
+     * consecutive blocks (`<h1>CHAPTER I.</h1><h2>The Period</h2>`), and headings sharing a
+     * wrapper `<div class="chapter">` with story paragraphs are matched without touching
+     * inline words inside normal paragraphs.
+     */
     fun dropLeadingTitle(body: Element, chapterTitle: String?): Boolean {
         if (chapterTitle.isNullOrBlank()) return false
         val normTitle = normalizeTitleText(chapterTitle)
         if (normTitle.isEmpty()) return false
-        data class Seg(val node: TextNode, val norm: String, val raw: String)
-        val segs = mutableListOf<Seg>()
+        val candidates = mutableListOf<Element>()
+        collectLeadingLeafBlocks(body, candidates, limit = 3)
+        if (candidates.isEmpty()) return false
+
         var spaced = ""
         var flat = ""
-        var matched = false
-        val stack = ArrayDeque<Node>()
-        val roots = body.childNodes()
-        for (i in roots.size - 1 downTo 0) stack.addFirst(roots[i])
-        while (stack.isNotEmpty() && !matched) {
-            var stop = false
-            when (val node = stack.removeFirst()) {
-                is TextNode -> {
-                    val norm = normalizeTitleText(node.wholeText)
-                    if (norm.isEmpty()) continue
-                    segs += Seg(node, norm, node.wholeText)
-                    spaced = normalizeTitleText("$spaced $norm")
-                    flat = normalizeTitleText(flat + norm)
-                    if (spaced == normTitle || flat == normTitle) {
-                        matched = hasTitleBoundary(body, node)
-                    } else if (!normTitle.startsWith(spaced) && !normTitle.startsWith(flat)) {
-                        stop = true
+        for (i in candidates.indices) {
+            val part = normalizeTitleText(candidates[i].text())
+            if (part.isEmpty()) continue
+            spaced = if (spaced.isEmpty()) part else "$spaced $part"
+            flat = normalizeTitleText(flat + part)
+            if (spaced == normTitle || flat == normTitle) {
+                for (j in 0..i) {
+                    var parent: Element? = candidates[j].parent()
+                    candidates[j].remove()
+                    while (parent != null && parent != body &&
+                        parent.text().isBlank() && parent.select("img, image, hr").isEmpty()
+                    ) {
+                        val up = parent.parent()
+                        parent.remove()
+                        parent = up
                     }
                 }
-                is Element -> {
-                    when (node.tagName().lowercase()) {
-                        "script", "style" -> Unit
-                        "img", "image" -> stop = true
-                        else -> {
-                            val kids = node.childNodes()
-                            for (i in kids.size - 1 downTo 0) stack.addFirst(kids[i])
-                        }
-                    }
-                }
+                return true
             }
-            if (stop) return false
+            if (!normTitle.startsWith(spaced) && !normTitle.startsWith(flat)) break
         }
-        if (!matched) return false
-        segs.forEach { it.node.remove() }
-        pruneBlankAncestors(body, segs.map { it.node })
+        return false
+    }
+
+    private fun collectLeadingLeafBlocks(
+        root: Element,
+        out: MutableList<Element>,
+        limit: Int
+    ): Boolean {
+        for (node in root.childNodes()) {
+            if (node is TextNode) {
+                if (node.text().isNotBlank()) return false
+                continue
+            }
+            if (node !is Element) continue
+            val tag = node.tagName().lowercase()
+            if (tag == "script" || tag == "style") continue
+            if (tag == "img" || tag == "image" || node.select("img, image").isNotEmpty()) {
+                return false
+            }
+            if (isUnwrappableContainer(node) && node.ownText().isBlank()) {
+                if (!collectLeadingLeafBlocks(node, out, limit)) return false
+            } else if (node.text().isNotBlank()) {
+                out += node
+            }
+            if (out.size >= limit) return false
+        }
         return true
     }
 
-    private fun hasTitleBoundary(body: Element, lastNode: TextNode): Boolean {
-        val next = nextTextNode(body, lastNode) ?: return true
-        if (blockAncestorOf(body, lastNode) != blockAncestorOf(body, next)) return true
-        if (isBoundarySpace(lastNode.wholeText.lastOrNull() ?: ' ')) return true
-        return isBoundarySpace(next.wholeText.firstOrNull() ?: ' ')
-    }
-
-    private fun isBoundarySpace(c: Char): Boolean =
-        c.isWhitespace() || c == '\u00a0' || c == '\u3000'
-
-    private val blockTags = setOf(
-        "p", "div", "section", "article", "header", "footer",
-        "h1", "h2", "h3", "h4", "h5", "h6", "li", "ul", "ol", "pre",
-        "blockquote", "table", "tr", "td", "th", "figure", "center",
-        "aside", "dl", "dt", "dd", "hr"
-    )
-
-    private fun blockAncestorOf(body: Element, node: Node): Element {
-        var cur: Node? = node
-        while (cur != null && cur != body) {
-            if (cur is Element && cur.tagName().lowercase() in blockTags) return cur
-            cur = cur.parent()
-        }
-        return body
-    }
-
-    private fun nextTextNode(body: Element, from: Node): TextNode? {
-        var cursor: Node? = from
-        while (cursor != null && cursor != body) {
-            var sibling = cursor.nextSibling()
-            while (sibling != null) {
-                val found = firstTextNode(sibling)
-                if (found != null) return found
-                sibling = sibling.nextSibling()
-            }
-            cursor = cursor.parent()
-        }
-        return null
-    }
-
-    private fun firstTextNode(node: Node): TextNode? {
-        if (node is TextNode) return node
-        if (node is Element) {
-            val tag = node.tagName().lowercase()
-            if (tag == "script" || tag == "style") return null
-            for (child in node.childNodes()) {
-                val found = firstTextNode(child)
-                if (found != null) return found
-            }
-        }
-        return null
-    }
-
-    private val prunableTags = setOf(
-        "a", "span", "font", "b", "i", "em", "strong", "h1", "h2", "h3",
-        "h4", "h5", "h6", "center", "small", "big", "sub", "sup", "u",
-        "s", "del", "strike", "mark", "code", "kbd", "samp", "tt",
-        "abbr", "cite", "dfn", "q", "ruby", "rt", "rp"
-    )
-
-    private fun pruneBlankAncestors(body: Element, removed: List<TextNode>) {
-        for (node in removed) {
-            var ancestor: Node? = node.parent()
-            while (ancestor is Element && ancestor != body &&
-                ancestor.tagName().lowercase() in prunableTags &&
-                ancestor.text().isBlank() && ancestor.select("img").isEmpty()
-            ) {
-                val up = ancestor.parent()
-                ancestor.remove()
-                ancestor = up
-            }
-        }
-    }
-
     private fun normalizeTitleText(text: String): String =
-        text.replace("[\\s\\u3000]+".toRegex(), " ").trim()
+        text.replace("[\\s\\u00a0\\u3000]+".toRegex(), " ").trim()
 }

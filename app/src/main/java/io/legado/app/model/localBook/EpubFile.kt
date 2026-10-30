@@ -163,7 +163,7 @@ class EpubFile(var book: Book) {
         }
         //title标签中的内容不需要显示在正文中，去除
         elements.select("title").remove()
-        elements.select("[style*=display:none]").remove()
+        LocalBookSemanticHtml.removeHiddenElements(elements)
         elements.select("img[src=\"cover.jpeg\"]").forEachIndexed { i, it ->
             if (i > 0) it.remove()
         }
@@ -174,11 +174,8 @@ class EpubFile(var book: Book) {
         }
         // Inline high-frequency CSS rules (tag/#id/.class) into whitelisted style attributes.
         val cssRules = collectCssRules()
-        if (cssRules.isNotEmpty()) {
-            elements.forEach { body ->
-                LocalBookSemanticHtml.inlineCssSemantics(body, cssRules)
-            }
-            elements.select("[style*=display:none]").remove()
+        elements.forEach { body ->
+            LocalBookSemanticHtml.inlineCssSemantics(body, cssRules)
         }
         // Mixed channel: plain text/image lines stay replace-friendly,
         // semantic blocks go through single-line <usehtml> wrappers.

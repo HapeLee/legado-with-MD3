@@ -16,10 +16,20 @@ class LocalBookSemanticHtmlTest {
 
     @Test
     fun cutFragmentHandlesEmptyAnchor() {
-        val body = Jsoup.parse("<body><p>one<a id=\"next\"></a>two</p></body>").body()
+        val body = Jsoup.parse("<body><p>one<a id=\"next\"></a>two</p><p>three</p></body>").body()
         LocalBookSemanticHtml.cutFragment(body, null, "next")
-        // Text before the empty anchor stays in the previous chapter.
-        assertTrue(body.text().contains("one"))
+        // Text before the empty anchor stays in the previous chapter; trailing siblings are dropped.
+        assertEquals("one", body.text().trim())
+    }
+
+    @Test
+    fun cutFragmentRemovesEmptyWrapperWhenEndAnchorStartsNextHeading() {
+        val body = Jsoup.parse(
+            "<body><p>one</p><div class=\"ch\"><h2><a id=\"next\"></a>Chapter 2</h2><p>two</p></div></body>"
+        ).body()
+        LocalBookSemanticHtml.cutFragment(body, null, "next")
+        assertEquals("one", body.text().trim())
+        assertTrue(body.select("div, h2").isEmpty())
     }
 
     @Test
@@ -43,9 +53,22 @@ class LocalBookSemanticHtmlTest {
         assertEquals(3, rules.size)
         val body = Jsoup.parseBodyFragment("<p class=\"note\">hi</p><p id=\"t\">gone</p>").body()
         LocalBookSemanticHtml.inlineCssSemantics(body, rules)
-        val first = body.select("p").first()!!
+        val paragraphs = body.select("p")
+        assertEquals(1, paragraphs.size)
+        val first = paragraphs.first()!!
         assertTrue(first.attr("style").contains("text-align: center"))
         assertTrue(first.attr("style").contains("font-weight: bold"))
+    }
+
+    @Test
+    fun emitMixedChannelUnwrapsContainerDivAndPreservesInlineSemantics() {
+        val body = Jsoup.parseBodyFragment(
+            "<div class=\"chapter\"><p>plain paragraph</p><p><ruby>漢<rt>かん</rt></ruby>字</p><blockquote>quote</blockquote></div>"
+        ).body()
+        val lines = LocalBookSemanticHtml.emitMixedChannel(body, null).split("\n")
+        assertEquals("plain paragraph", lines[0])
+        assertTrue(lines[1].startsWith("<usehtml>") && lines[1].contains("<ruby>"))
+        assertTrue(lines[2].startsWith("<usehtml>") && lines[2].contains("<blockquote>"))
     }
 
     @Test

@@ -76,9 +76,26 @@ class KF8Book(
     }
 
     fun getResourceByHref(href: String): ByteArray? {
+        if (href.startsWith("recindex:")) {
+            val recindex = href.substringAfter("recindex:").toIntOrNull() ?: return null
+            return getResource(recindex - 1).array()
+        }
         val resource = parseResourceURI(href) ?: return null
         if (resource.resourceType == "flow") return null
         return getResource(resource.id - 1).array()
+    }
+
+    fun getFlowText(href: String): String? {
+        val resource = parseResourceURI(href) ?: return null
+        if (resource.resourceType != "flow") return null
+        val starts = fdstTableStarts ?: return null
+        val ends = fdstTableEnds ?: return null
+        val index = resource.id
+        if (index !in starts.indices || index !in ends.indices) return null
+        val start = starts[index]
+        val len = ends[index] - start
+        if (start < 0 || len <= 0) return null
+        return runCatching { String(getRaw(start, len), charset) }.getOrNull()
     }
 
     fun getSectionByHref(href: String): KF8Section? {

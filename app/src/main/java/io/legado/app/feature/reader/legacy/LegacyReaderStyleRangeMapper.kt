@@ -41,7 +41,7 @@ object LegacyReaderStyleRangeMapper {
         castBubbles: Map<String, ReaderCharacterStyle> = emptyMap(),
     ): List<ReaderStyleRange> {
         val result = mutableListOf<ReaderStyleRange>()
-        val bodyText = semanticBodyText(source)
+        val bodyText = source.semanticContent.ifEmpty { semanticBodyText(source) }
         val titleText = source.semanticTitle
         rules.filter(HighlightRule::enabled).forEachIndexed { index, rule ->
             val regex = runCatching { Regex(rule.pattern) }.getOrNull() ?: return@forEachIndexed
