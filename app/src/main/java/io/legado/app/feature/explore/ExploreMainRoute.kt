@@ -101,24 +101,12 @@ fun ExploreMainRoute(
             }
             // 只订阅列表/网格布局字段供书源 sheet 呈现，其余状态仍由各分类界面自己持有。
             val showViewModel = activeViewModel
-            val showLayoutMode = if (showViewModel != null) {
-                showViewModel.uiState
-                    .map { it.layoutState }
-                    .distinctUntilChanged()
-                    .collectAsStateWithLifecycle(showViewModel.uiState.value.layoutState)
-                    .value
-            } else {
-                null
+            val showLayoutMode = showViewModel?.let { vm ->
+                vm.layoutState.collectAsStateWithLifecycle().value
             }
-            val showGridCount = if (showViewModel != null) {
-                showViewModel.uiState
-                    .map { it.gridCount }
-                    .distinctUntilChanged()
-                    .collectAsStateWithLifecycle(showViewModel.uiState.value.gridCount)
-                    .value
-            } else {
-                3
-            }
+            val showGridCount = showViewModel?.let { vm ->
+                vm.gridCount.collectAsStateWithLifecycle().value
+            } ?: 3
             var sourceSheetVisible by remember { mutableStateOf(false) }
             var kindSheetVisible by remember { mutableStateOf(false) }
 
