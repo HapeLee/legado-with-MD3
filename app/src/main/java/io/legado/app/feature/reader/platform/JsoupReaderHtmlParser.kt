@@ -62,7 +62,15 @@ object JsoupReaderHtmlParser {
         var currentFirstMargin: Float = 0f,
         var currentRestMargin: Float = 0f,
         var currentPreserveBodyIndent: Boolean = true
-    )
+    ) {
+        fun apply(geo: BlockGeo) {
+            currentAlignment = geo.alignment
+            currentDecorations = geo.decorations
+            currentFirstMargin = geo.firstMargin
+            currentRestMargin = geo.restMargin
+            currentPreserveBodyIndent = geo.preserveBodyIndent
+        }
+    }
 
     fun parse(
         html: String,
@@ -204,23 +212,13 @@ object JsoupReaderHtmlParser {
                         checkAnchor(node, cursor)
                         val childBlock = descendBlock(node, tag, block, baseTextSizePx, density)
                         // Establish geometry for the upcoming paragraph run.
-                        val geo = blockGeometry(childBlock, baseTextSizePx, density)
-                        cursor.currentAlignment = geo.alignment
-                        cursor.currentDecorations = geo.decorations
-                        cursor.currentFirstMargin = geo.firstMargin
-                        cursor.currentRestMargin = geo.restMargin
-                        cursor.currentPreserveBodyIndent = geo.preserveBodyIndent
+                        cursor.apply(blockGeometry(childBlock, baseTextSizePx, density))
                         for (child in node.childNodes().toList()) {
                             walk(child, inline, childBlock, cursor, baseTextSizePx, density)
                         }
                         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
                         // Reset to parent geometry for following siblings.
-                        val parentGeo = blockGeometry(block, baseTextSizePx, density)
-                        cursor.currentAlignment = parentGeo.alignment
-                        cursor.currentDecorations = parentGeo.decorations
-                        cursor.currentFirstMargin = parentGeo.firstMargin
-                        cursor.currentRestMargin = parentGeo.restMargin
-                        cursor.currentPreserveBodyIndent = parentGeo.preserveBodyIndent
+                        cursor.apply(blockGeometry(block, baseTextSizePx, density))
                     }
                     "td", "th" -> {
                         checkAnchor(node, cursor)

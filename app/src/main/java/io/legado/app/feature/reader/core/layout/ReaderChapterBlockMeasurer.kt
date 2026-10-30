@@ -597,11 +597,9 @@ class ReaderChapterBlockMeasurer(
                         ?: fallbackHtmlParagraphs(source, block)
                     paragraphs.forEach { paragraph ->
                         // 普通 HTML 正文段与纯文本段落共用阅读器段首缩进；标题、pre、引用、
-                        // 列表、居中/右对齐等由 HTML 语义自己决定的段保持原样。
+                        // 列表、表格等已由 parser 标记 preserveBodyIndent = false，
+                        // 居中/右对齐段也保持自己的对齐。
                         val applyBodyIndent = paragraph.preserveBodyIndent &&
-                            paragraph.firstLineMarginPx == 0f &&
-                            paragraph.restLineMarginPx == 0f &&
-                            paragraph.decorations.isEmpty() &&
                             paragraph.alignment != ReaderTextAlignment.CENTER &&
                             paragraph.alignment != ReaderTextAlignment.END
                         addStyledParagraph(

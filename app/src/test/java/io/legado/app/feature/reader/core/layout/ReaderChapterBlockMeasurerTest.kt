@@ -482,6 +482,7 @@ class ReaderChapterBlockMeasurerTest {
                     decorations = listOf(ReaderParagraphDecoration(
                         ReaderParagraphDecorationKind.QUOTE, null, 2f,
                     )),
+                    preserveBodyIndent = false,
                 ),
             ) },
         ).measure(source, style.copy(bodyIndentCharacters = 2)) as ReaderChapterMeasureResult.Success
