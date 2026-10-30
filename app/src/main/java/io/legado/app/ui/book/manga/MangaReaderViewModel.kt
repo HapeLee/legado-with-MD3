@@ -173,15 +173,41 @@ class MangaReaderViewModel(
                 executeSession(MangaSessionCommand.Pause)
                 translationAction { mangaTranslationGateway.pause(it) }
             }
-            MangaReaderIntent.OpenTranslationSettings -> _uiState.update {
-                it.copy(translationPage = io.legado.app.feature.manga.MangaTranslationSettingsPage.SETTINGS)
+            MangaReaderIntent.OpenTranslationSettings -> {
+                openSettings(MangaReaderSettingsCategory.READER)
+                _uiState.update { it.copy(translationPage = io.legado.app.feature.manga.MangaTranslationSettingsPage.SETTINGS) }
+            }
+            is MangaReaderIntent.SelectTranslationBackend -> {
+                if (_uiState.value.translationBackendChanging || intent.backend == latestMangaSettings.translationBackend) return
+                _uiState.update { it.copy(translationBackendChanging = true) }
+                stopTranslation()
+                viewModelScope.launch {
+                    translationCommands.withLock {
+                        try {
+                            mangaTranslationGateway.withModelsPaused {
+                                // Once saved, invalidation must finish even if the reader closes.
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                    mangaSettingsGateway.update { it.copy(translationBackend = intent.backend) }
+                                    mangaTranslationGateway.invalidateConfiguration()
+                                    validatedTranslationPages = null
+                                }
+                            }
+                            val pages = _uiState.value.pages.filterIsInstance<MangaReaderItemUi.Page>().map { page ->
+                                io.legado.app.domain.gateway.MangaTranslationPage(page.key, page.imageUrl,
+                                    page.chapterUrl ?: page.chapterIndex.toString(), page.chapterIndex, page.pageIndex, page.chapterSubject)
+                            }
+                            translationBook?.let { mangaTranslationGateway.validateLoadedPages(it, pages) }
+                        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                        catch (error: Exception) { enqueueMessage(text = error.localizedMessage.orEmpty()) }
+                        finally { _uiState.update { it.copy(translationBackendChanging = false) } }
+                    }
+                }
             }
             MangaReaderIntent.OpenTranslationModels -> {
                 mangaModelGateway.refresh()
                 _uiState.update { it.copy(settingsCategory = MangaReaderSettingsCategory.READER,
                     menuVisible = true, translationPage = io.legado.app.feature.manga.MangaTranslationSettingsPage.MODELS) }
             }
-            MangaReaderIntent.OpenTranslationAi -> _effects.tryEmit(MangaReaderEffect.OpenTranslationAi)
             MangaReaderIntent.ImportTranslationModels -> _effects.tryEmit(MangaReaderEffect.ImportTranslationModels)
             is MangaReaderIntent.TranslationModelsSelected -> mangaModelGateway.importModels(intent.sources)
             is MangaReaderIntent.DownloadTranslationModel -> mangaModelGateway.download(intent.name)
@@ -981,6 +1007,9 @@ class MangaReaderViewModel(
     private fun updateSetting(key: MangaReaderSettingKey, value: Int) {
         val enabled = value != 0
         when (key) {
+            MangaReaderSettingKey.TRANSLATION_MEMBRANE_TRANSPARENCY -> updateMangaPreference {
+                it.copy(translationMembraneTransparency = value.coerceIn(0, 100))
+            }
             MangaReaderSettingKey.TRANSLATION_BUBBLE_VISIBLE -> updateMangaPreference { it.copy(translationBubbleVisible = enabled) }
             MangaReaderSettingKey.TRANSLATION_ENABLED -> updateMangaPreference { it.copy(translationEnabled = enabled) }
             MangaReaderSettingKey.SCROLL_MODE -> {
@@ -1337,8 +1366,12 @@ class MangaReaderViewModel(
     }
 
     private fun toggleAutomaticTranslation() {
+        if (_uiState.value.translationBackendChanging) return
         if (!latestMangaSettings.translationEnabled) return
-        if (!automaticTranslation && (mangaModelGateway.busy.value || mangaModelGateway.models.value.any { !it.installed })) {
+        if (!automaticTranslation && (mangaModelGateway.busy.value || mangaModelGateway.models.value.any {
+                !it.installed && (it.role != "translator" || latestMangaSettings.translationBackend ==
+                    io.legado.app.domain.model.settings.MangaTranslationBackend.LOCAL_SMALL100)
+            })) {
             onIntent(MangaReaderIntent.OpenTranslationModels)
             enqueueMessage(resId = R.string.feature_manga_translation_missing_models)
             return
@@ -1641,6 +1674,8 @@ class MangaReaderViewModel(
             translationBubbleVisible = settings.translationBubbleVisible,
             translationBubbleRight = settings.translationBubbleRight,
             translationBubbleHeight = settings.translationBubbleHeight,
+            translationMembraneTransparency = settings.translationMembraneTransparency,
+            translationBackend = settings.translationBackend,
         scrollMode = readerSession.state.value.book?.scrollMode ?: settings.scrollMode,
         sidePaddingPercent = readerSession.state.value.book?.sidePaddingDp
             ?: settings.webtoonSidePaddingDp,

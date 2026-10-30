@@ -1,10 +1,14 @@
 package io.legado.app.domain.model.settings
 
+enum class MangaTranslationBackend { AI, LOCAL_SMALL100 }
+
 data class MangaSettings(
+    val translationBackend: MangaTranslationBackend = MangaTranslationBackend.AI,
     val translationEnabled: Boolean = false,
     val translationBubbleVisible: Boolean = true,
     val translationBubbleRight: Boolean = false,
     val translationBubbleHeight: Int = 500,
+    val translationMembraneTransparency: Int = 0,
     val showMangaUi: Boolean = true,
     val disableMangaScale: Boolean = true,
     val disableMangaScrollAnimation: Boolean = false,

@@ -63,6 +63,7 @@ class OpenAiChatHandler : AiProtocolHandler {
             }
         }
         body.applyZhipuThinking(provider, request.model.modelId, params.reasoningLevel)
+        body.applyDeepSeekThinking(provider, params.reasoningLevel)
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
             val response = aiOkHttpClient.newCallStrResponse {
@@ -120,6 +121,7 @@ class OpenAiChatHandler : AiProtocolHandler {
             }
         }
         body.applyZhipuThinking(provider, request.model.modelId, params.reasoningLevel)
+        body.applyDeepSeekThinking(provider, params.reasoningLevel)
 
         // For streaming, we retry before establishing the SSE connection.
         // Once streaming starts, errors are not retried (partial output would be confusing).
@@ -205,6 +207,19 @@ class OpenAiChatHandler : AiProtocolHandler {
             json?.data.toAvailableModels()
         }
     }
+}
+
+/** DeepSeek requires an explicit thinking toggle; reasoning_effort alone cannot turn it off. */
+internal fun MutableMap<String, Any?>.applyDeepSeekThinking(
+    provider: AiProviderConfig,
+    reasoningLevel: AiReasoningLevel
+) {
+    // Only the official endpoint guarantees this extension. Do not send it to arbitrary proxies.
+    if (runCatching { java.net.URI(provider.baseUrl).host }.getOrNull()
+            ?.equals("api.deepseek.com", ignoreCase = true) != true) return
+    if (reasoningLevel == AiReasoningLevel.AUTO) return
+    this["thinking"] = mapOf("type" to if (reasoningLevel == AiReasoningLevel.OFF) "disabled" else "enabled")
+    if (reasoningLevel == AiReasoningLevel.OFF) remove("reasoning_effort")
 }
 
 /**

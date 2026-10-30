@@ -112,6 +112,21 @@ internal class MangaTranslationStore(private val root: File) {
 
     /** Same lock as generation invalidation; no old task can recreate a cleared output. */
     @Synchronized
+    fun writeText(record: Record, output: File, value: String): Boolean {
+        if (generations[record.bookUrl] != record.generation) return false
+        output.parentFile?.mkdirs()
+        val temporary = File.createTempFile("batch-", ".pending", output.parentFile)
+        try {
+            temporary.outputStream().use { stream ->
+                stream.write(value.toByteArray(Charsets.UTF_8))
+                stream.fd.sync()
+            }
+            return commit(record, temporary, output)
+        } finally { temporary.delete() }
+    }
+
+    /** Same lock as generation invalidation; no old task can recreate a cleared output. */
+    @Synchronized
     fun commit(record: Record, temporary: File, output: File): Boolean {
         if (generations[record.bookUrl] != record.generation) return false
         Files.move(temporary.toPath(), output.toPath(), StandardCopyOption.ATOMIC_MOVE,

@@ -45,6 +45,7 @@ data class MangaReaderUiState(
     val translationPage: io.legado.app.feature.manga.MangaTranslationSettingsPage? = null,
     val translationModels: ImmutableList<io.legado.app.feature.manga.MangaModelUi> = persistentListOf(),
     val translationModelBusy: Boolean = false,
+    val translationBackendChanging: Boolean = false,
     val translationImportErrors: ImmutableList<String> = persistentListOf(),
     val translationControls: io.legado.app.feature.manga.MangaTranslationControls = io.legado.app.feature.manga.MangaTranslationControls(),
     val activeSheet: MangaReaderSheet? = null,
@@ -124,8 +125,10 @@ enum class MangaChapterTransitionStatus { WAITING, LOADING, READY, FAILED, UNAVA
 data class MangaReaderSettings(
     val translationEnabled: Boolean = false,
     val translationBubbleVisible: Boolean = true,
+    val translationBackend: io.legado.app.domain.model.settings.MangaTranslationBackend = io.legado.app.domain.model.settings.MangaTranslationBackend.AI,
     val translationBubbleRight: Boolean = false,
     val translationBubbleHeight: Int = 500,
+    val translationMembraneTransparency: Int = 0,
     val scrollMode: Int = MangaScrollMode.WEBTOON,
     val sidePaddingPercent: Int = 0,
     val backgroundColor: Color = Color.Black,
@@ -249,7 +252,7 @@ sealed interface MangaReaderIntent {
     data object ToggleAutoRead : MangaReaderIntent
     data object OpenTranslationSettings : MangaReaderIntent
     data object OpenTranslationModels : MangaReaderIntent
-    data object OpenTranslationAi : MangaReaderIntent
+    data class SelectTranslationBackend(val backend: io.legado.app.domain.model.settings.MangaTranslationBackend) : MangaReaderIntent
     data object ImportTranslationModels : MangaReaderIntent
     data class TranslationModelsSelected(val sources: List<io.legado.app.domain.gateway.MangaModelSource>) : MangaReaderIntent
     data class DownloadTranslationModel(val name: String? = null) : MangaReaderIntent
@@ -337,6 +340,7 @@ sealed interface MangaReaderDialog {
 enum class MangaReaderSettingKey {
     TRANSLATION_ENABLED,
     TRANSLATION_BUBBLE_VISIBLE,
+    TRANSLATION_MEMBRANE_TRANSPARENCY,
     SCROLL_MODE,
     SIDE_PADDING,
     BACKGROUND_RED,
@@ -391,7 +395,6 @@ enum class MangaReaderSettingKey {
 }
 
 sealed interface MangaReaderEffect {
-    data object OpenTranslationAi : MangaReaderEffect
     data object ImportTranslationModels : MangaReaderEffect
     data class Finish(val bookshelfChanged: Boolean = false) : MangaReaderEffect
     data object OpenBookInfo : MangaReaderEffect

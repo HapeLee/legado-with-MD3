@@ -14,6 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -25,8 +31,13 @@ import io.legado.app.ui.book.manga.MangaReaderIntent
 import io.legado.app.ui.book.manga.MangaReaderSettingKey
 import io.legado.app.ui.book.manga.MangaReaderUiState
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import java.util.Locale
+import kotlin.math.roundToInt
+import io.legado.app.domain.model.settings.MangaTranslationBackend
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.AppRadioButton
 
 enum class MangaTranslationSettingsPage { SETTINGS, MODELS }
 
@@ -35,6 +46,24 @@ data class MangaModelUi(val model: MangaModelItem)
 
 @Composable
 fun MangaTranslationSettingsContent(state: MangaReaderUiState, onIntent: (MangaReaderIntent) -> Unit) {
+    var chooseBackend by rememberSaveable { mutableStateOf(false) }
+    val backendLabel = stringResource(if (state.settings.translationBackend == MangaTranslationBackend.AI)
+        R.string.feature_manga_translation_backend_ai else R.string.feature_manga_translation_backend_local)
+    AppAlertDialog(show = chooseBackend, onDismissRequest = { chooseBackend = false },
+        title = stringResource(R.string.feature_manga_translation_ai), content = {
+            MangaTranslationBackend.entries.forEach { backend ->
+                Row(Modifier.fillMaxWidth().selectable(
+                    selected = backend == state.settings.translationBackend, role = Role.RadioButton,
+                    onClick = {
+                        chooseBackend = false
+                        onIntent(MangaReaderIntent.SelectTranslationBackend(backend))
+                    }).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    AppRadioButton(selected = backend == state.settings.translationBackend, onClick = null)
+                    Text(stringResource(if (backend == MangaTranslationBackend.AI)
+                        R.string.feature_manga_translation_backend_ai else R.string.feature_manga_translation_backend_local))
+                }
+            }
+        }, onConfirm = { chooseBackend = false })
     val modelsPage = state.translationPage == MangaTranslationSettingsPage.MODELS
     Column(Modifier.fillMaxWidth().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -52,8 +81,16 @@ fun MangaTranslationSettingsContent(state: MangaReaderUiState, onIntent: (MangaR
                     onCheckedChange = { onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.TRANSLATION_BUBBLE_VISIBLE, if (it) 1 else 0)) })
                 TinySwitchSettingItem(title = stringResource(R.string.feature_manga_translation_auto),
                     checked = state.translationControls.automatic,
-                    enabled = state.settings.translationEnabled && !state.translationModelBusy,
+                    enabled = state.settings.translationEnabled && !state.translationModelBusy && !state.translationBackendChanging,
                     onCheckedChange = { onIntent(MangaReaderIntent.ToggleAutomaticTranslation) })
+                TinySliderSettingItem(
+                    title = stringResource(R.string.feature_manga_translation_membrane_transparency),
+                    value = state.settings.translationMembraneTransparency.toFloat(),
+                    valueRange = 0f..100f,
+                    valueFormat = { "${it.roundToInt()}%" },
+                    onValueChange = { onIntent(MangaReaderIntent.UpdateSetting(
+                        MangaReaderSettingKey.TRANSLATION_MEMBRANE_TRANSPARENCY, it.roundToInt())) },
+                )
                 TinySwitchSettingItem(title = stringResource(R.string.feature_manga_translation_show_result),
                     checked = state.translationControls.showTranslation,
                     enabled = state.settings.translationEnabled,
@@ -64,7 +101,8 @@ fun MangaTranslationSettingsContent(state: MangaReaderUiState, onIntent: (MangaR
                 TinySettingItem(title = stringResource(R.string.feature_manga_translation_models),
                     trailingContent = { Text("›") }, onClick = { onIntent(MangaReaderIntent.OpenTranslationModels) })
                 TinySettingItem(title = stringResource(R.string.feature_manga_translation_ai),
-                    trailingContent = { Text("›") }, onClick = { onIntent(MangaReaderIntent.OpenTranslationAi) })
+                    description = if (state.translationBackendChanging) stringResource(R.string.feature_manga_translation_switching) else backendLabel,
+                    trailingContent = { Text("›") }, onClick = { if (!state.translationBackendChanging) chooseBackend = true })
                 TinySettingItem(title = stringResource(R.string.feature_manga_translation_clear_current),
                     onClick = { onIntent(MangaReaderIntent.RequestClearTranslation) })
                 TinySettingItem(title = stringResource(R.string.feature_manga_translation_clear_all),
@@ -81,13 +119,28 @@ fun MangaTranslationSettingsContent(state: MangaReaderUiState, onIntent: (MangaR
                 }
                 state.translationImportErrors.forEach { Text(it, color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp)) }
-                listOf("detector", "ocr", "inpainter").forEach { role ->
+                listOf("detector", "ocr", "inpainter", "translator").forEach { role ->
                     Text(stringResource(when (role) {
                         "detector" -> R.string.feature_manga_translation_detector
                         "ocr" -> R.string.feature_manga_translation_ocr
+                        "translator" -> R.string.feature_manga_translation_local_models
                         else -> R.string.feature_manga_translation_inpainter
                     }), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 12.dp))
-                    state.translationModels.filter { it.model.role == role }.forEach { item ->
+                    val items = state.translationModels.filter { it.model.role == role }
+                    val displayed = if (role != "translator" || items.isEmpty()) items else {
+                        val models = items.map { it.model }
+                        val active = models.firstOrNull { it.status in setOf(MangaModelStatus.DOWNLOADING,
+                            MangaModelStatus.IMPORTING, MangaModelStatus.VERIFYING, MangaModelStatus.DELETING) }
+                        listOf(MangaModelUi(MangaModelItem("SMaLL-100", role, models.sumOf { it.size },
+                            installed = models.all { it.installed },
+                            progress = if (active == null) null else (models.sumOf {
+                                it.size * (if (it.installed) 100 else it.progress ?: 0)
+                            } / models.sumOf { it.size }).toInt(),
+                            status = active?.status ?: if (models.all { it.installed }) MangaModelStatus.READY
+                                else if (models.any { it.error != null }) MangaModelStatus.FAILED else MangaModelStatus.MISSING,
+                            error = models.mapNotNull { it.error }.distinct().joinToString("\n").takeIf { it.isNotBlank() })))
+                    }
+                    displayed.forEach { item ->
                         val model = item.model
                         val status = stringResource(when (model.status) {
                             MangaModelStatus.READY -> R.string.feature_manga_translation_installed
@@ -106,6 +159,11 @@ fun MangaTranslationSettingsContent(state: MangaReaderUiState, onIntent: (MangaR
                                     onIntent(if (model.installed) MangaReaderIntent.RequestDeleteTranslationModel(model.name)
                                         else MangaReaderIntent.DownloadTranslationModel(model.name))
                                 }) { Text(stringResource(if (model.installed) R.string.feature_manga_translation_delete else R.string.feature_manga_translation_download)) }
+                                if (role == "translator" && !model.installed && items.any { it.model.installed }) {
+                                    TextButton(enabled = !state.translationModelBusy, onClick = {
+                                        onIntent(MangaReaderIntent.RequestDeleteTranslationModel(model.name))
+                                    }) { Text(stringResource(R.string.feature_manga_translation_delete)) }
+                                }
                             })
                         model.progress?.let { progress -> LinearProgressIndicator(
                             progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) }

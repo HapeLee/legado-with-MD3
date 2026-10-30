@@ -6,6 +6,8 @@ import io.legado.app.domain.gateway.MangaModelItem
 import io.legado.app.domain.gateway.MangaModelSource
 import io.legado.app.domain.gateway.MangaModelStatus
 import io.legado.app.domain.gateway.MangaTranslationGateway
+import io.legado.app.domain.gateway.MangaSettingsGateway
+import io.legado.app.domain.model.settings.MangaTranslationBackend
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,13 +42,16 @@ internal class MangaModelFiles(application: Application) {
     val directory = File(application.filesDir, "manga_translation/models")
     val lock = locks.getOrPut(directory.absolutePath) { Mutex() }
     val catalog: List<MangaModelSpec> by lazy {
-        val array = application.assets.open("models/manga-models.json").bufferedReader().use {
-            JSONObject(it.readText()).getJSONArray("models")
+        fun read(asset: String): List<MangaModelSpec> {
+            val array = application.assets.open(asset).bufferedReader().use {
+                JSONObject(it.readText()).getJSONArray("models")
+            }
+            return List(array.length()) { index -> array.getJSONObject(index).let {
+                MangaModelSpec(it.getString("role"), it.getString("name"), it.getString("url"),
+                    it.getLong("size"), it.getString("sha256"))
+            } }
         }
-        List(array.length()) { index -> array.getJSONObject(index).let {
-            MangaModelSpec(it.getString("role"), it.getString("name"), it.getString("url"),
-                it.getLong("size"), it.getString("sha256"))
-        } }.also { check(it.size == 7) }
+        read("models/manga-models.json") + read("models/small100-models.json")
     }
     fun valid(spec: MangaModelSpec): Boolean {
         val file = File(directory, spec.name)
@@ -54,7 +59,9 @@ internal class MangaModelFiles(application: Application) {
         val key = "${file.absolutePath}:${file.lastModified()}:${file.length()}:${spec.sha256}"
         return verified.getOrPut(key) { modelDigest(file) == spec.sha256 }
     }
-    fun missing() = catalog.filterNot(::valid)
+    fun missing(backend: MangaTranslationBackend = MangaTranslationBackend.AI) = catalog.filter {
+        (it.role != "translator" || backend == MangaTranslationBackend.LOCAL_SMALL100) && !valid(it)
+    }
     companion object {
         private val locks = ConcurrentHashMap<String, Mutex>()
         private val verified = ConcurrentHashMap<String, Boolean>()
@@ -100,7 +107,8 @@ internal suspend fun installMangaModel(directory: File, spec: MangaModelSpec,
     } finally { temporary.delete() }
 }
 
-class MangaModelRepository(application: Application, private val translation: MangaTranslationGateway) : MangaModelGateway {
+class MangaModelRepository(application: Application, private val translation: MangaTranslationGateway,
+                           private val settings: MangaSettingsGateway) : MangaModelGateway {
     private val files = MangaModelFiles(application)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client = OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS)
@@ -160,7 +168,14 @@ class MangaModelRepository(application: Application, private val translation: Ma
     override fun download(name: String?) = launchOperation {
         translation.withModelsPaused {
             files.lock.withLock {
-                files.catalog.filter { (name == null || it.name == name) && !files.valid(it) }.forEach { spec ->
+                files.catalog.filter { spec ->
+                    val selected = when (name) {
+                        SMALL100_GROUP -> spec.role == "translator"
+                        null -> spec.role != "translator" || settings.currentSettings.translationBackend == MangaTranslationBackend.LOCAL_SMALL100
+                        else -> spec.name == name
+                    }
+                    selected && !files.valid(spec)
+                }.forEach { spec ->
                     install(spec, object : MangaModelSource {
                         override val name = spec.name
                         override suspend fun transfer(write: (ByteArray, Int) -> Unit) {
@@ -203,14 +218,17 @@ class MangaModelRepository(application: Application, private val translation: Ma
         }
     }
     override fun delete(name: String) = launchOperation {
-        val spec = files.catalog.firstOrNull { it.name == name } ?: return@launchOperation
-        update(name) { it.copy(status = MangaModelStatus.DELETING, error = null) }
+        val specs = files.catalog.filter { it.name == name || (name == SMALL100_GROUP && it.role == "translator") }
+        specs.forEach { spec -> update(spec.name) { it.copy(status = MangaModelStatus.DELETING, error = null) } }
         translation.withModelsPaused {
             files.lock.withLock {
-                val target = File(files.directory, spec.name)
-                check(!target.exists() || target.delete()) { "无法删除模型：$name" }
+                specs.forEach { spec ->
+                    val target = File(files.directory, spec.name)
+                    check(!target.exists() || target.delete()) { "无法删除模型：${spec.name}" }
+                }
             }
         }
     }
     override fun cancel() { operation?.cancel() }
+    companion object { const val SMALL100_GROUP = "SMaLL-100" }
 }

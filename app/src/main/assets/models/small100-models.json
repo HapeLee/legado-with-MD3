@@ -1,0 +1,28 @@
+{
+  "version": "small100-int8-d66e226-v1",
+  "source": "https://huggingface.co/alirezamsh/small100",
+  "license": "MIT",
+  "conversion": "https://huggingface.co/R4kSo1997/small100-onnx-int8_v2/tree/d66e2265495ad8062e7289f7b484bebc7c4e9510",
+  "models": [
+    {
+      "role": "translator", "name": "encoder_model_quantized.onnx",
+      "url": "https://huggingface.co/R4kSo1997/small100-onnx-int8_v2/resolve/d66e2265495ad8062e7289f7b484bebc7c4e9510/encoder_model_quantized.onnx",
+      "size": 287901223, "sha256": "9baf2bd8ec0b8a132637c592b83efa445d88ea1a3292e0648bb179c3378bc2e9"
+    },
+    {
+      "role": "translator", "name": "decoder_model_merged_quantized.onnx",
+      "url": "https://huggingface.co/R4kSo1997/small100-onnx-int8_v2/resolve/d66e2265495ad8062e7289f7b484bebc7c4e9510/decoder_model_merged_quantized.onnx",
+      "size": 322618029, "sha256": "29cf9bed76b2e17c6567812b0b32d8d1d313aa165d4b8657f1d026584ceb1ece"
+    },
+    {
+      "role": "translator", "name": "sentencepiece.bpe.model",
+      "url": "https://huggingface.co/R4kSo1997/small100-onnx-int8_v2/resolve/d66e2265495ad8062e7289f7b484bebc7c4e9510/sentencepiece.bpe.model",
+      "size": 2423393, "sha256": "d8f7c76ed2a5e0822be39f0a4f95a55eb19c78f4593ce609e2edbc2aea4d380a"
+    },
+    {
+      "role": "translator", "name": "vocab.json",
+      "url": "https://huggingface.co/R4kSo1997/small100-onnx-int8_v2/resolve/d66e2265495ad8062e7289f7b484bebc7c4e9510/vocab.json",
+      "size": 3708092, "sha256": "b6e77e474aeea8f441363aca7614317c06381f3eacfe10fb9856d5081d1074cc"
+    }
+  ]
+}

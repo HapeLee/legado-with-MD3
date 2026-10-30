@@ -40,6 +40,8 @@ interface MangaTranslationGateway {
     suspend fun withModelsPaused(action: suspend () -> Unit)
     suspend fun clearBook(bookUrl: String)
     suspend fun validateLoadedPages(bookUrl: String, pages: List<MangaTranslationPage>)
+    /** Call while models are paused, after changing the translation configuration. */
+    suspend fun invalidateConfiguration()
     /** Synchronous lifetime handoff; implementations finish the current native page in their own scope. */
     fun detach(bookUrl: String)
 }

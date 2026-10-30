@@ -432,10 +432,10 @@ val appModule = module {
     factoryOf(::MangaReaderDataRepository)
     factoryOf(::MangaReaderActionRepository)
     single<io.legado.app.domain.gateway.MangaModelGateway> {
-        io.legado.app.data.repository.manga.MangaModelRepository(get(), get())
+        io.legado.app.data.repository.manga.MangaModelRepository(get(), get(), get())
     }
     single<io.legado.app.domain.gateway.MangaTranslationGateway> {
-        io.legado.app.data.repository.manga.MangaTranslationRepository(get(), get(), get(), get(), get())
+        io.legado.app.data.repository.manga.MangaTranslationRepository(get(), get(), get(), get(), get(), get())
     }
     factory<MangaReaderDataGateway> { get<MangaReaderDataRepository>() }
     factory<MangaReaderSessionFactory> {

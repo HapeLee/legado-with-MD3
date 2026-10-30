@@ -46,5 +46,3 @@ project(':inference-core').projectDir = file('third_party/yakuyomi-engine/infere
 project(':yakuyomi-engine').projectDir = file('third_party/yakuyomi-engine/engine')
 include ':modules:book'
 include ':modules:rhino'
-include ':baselineprofile'
-project(':baselineprofile').projectDir = file('baselineProfile')

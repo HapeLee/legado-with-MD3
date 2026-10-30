@@ -1,0 +1,31 @@
+{
+  "version": "1.31.1",
+  "source": "https://github.com/microsoft/onnxruntime",
+  "commit": "6af1a932e2286d5c58166085d24c68783033edee",
+  "onnx_commit": "2bb50465112feca9003e1ed654d77f01ff1415ca",
+  "abi": "arm64-v8a",
+  "api": 26,
+  "configuration": "MinSizeRel",
+  "cpu_only": true,
+  "onnx_format": true,
+  "lto": true,
+  "disabled": [
+    "unused operator kernels",
+    "traditional ML",
+    "generation operators",
+    "RTTI",
+    "telemetry"
+  ],
+  "base_aar_sha256": "d4d50660300ed2c4f38ffdfd5ab5bfa3a22f995f282dda24f42ea3ea55467b49",
+  "runtime_sha256": "b7f690f0b3318e4994f0fde1d73436ed361cb0d7e7929f259962be313839dac4",
+  "runtime_bytes": 9908168,
+  "aar_sha256": "7b247deb54e9662672b2d31f6b17c58a9903014100f46ff1460a1509d634026a",
+  "jni_sha256": "75d3d5ab34211d24454feac7c2c58980380336f96fd669dc3b30af41d7ca7688",
+  "jni_bytes": 82448,
+  "verified_jni_methods": 179,
+  "jni_runtime_imports": [
+    "OrtGetApiBase",
+    "OrtSessionOptionsAppendExecutionProvider_CPU"
+  ],
+  "operators_sha256": "495fef9bce0ffa93e8d71705cbca7e84de9043e4e6028791f6d841e5b8f8674e"
+}

@@ -6,6 +6,7 @@ local.properties
 build/
 /captures
 .externalNativeBuild
+.cxx/
 /release
 /tmp
 node_modules/

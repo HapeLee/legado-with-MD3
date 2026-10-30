@@ -49,7 +49,6 @@ fun MangaReaderRouteScreen(
     sharedCoverKey: String? = null,
     isTopRoute: Boolean = true,
     onFinish: (bookshelfChanged: Boolean) -> Boolean,
-    onOpenTranslationAi: () -> Unit,
     onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
     onOpenToc: (bookUrl: String, initialPage: Int) -> Unit,
     onOpenSourceLogin: (sourceUrl: String) -> Unit,
@@ -105,7 +104,6 @@ fun MangaReaderRouteScreen(
         viewModel.effects.collectLatest { effect ->
             val currentState = viewModel.uiState.value
             when (effect) {
-                MangaReaderEffect.OpenTranslationAi -> onOpenTranslationAi()
                 MangaReaderEffect.ImportTranslationModels -> modelPicker.launch(arrayOf("*/*"))
                 is MangaReaderEffect.Finish -> {
                     bookshelfChangedResult = effect.bookshelfChanged

@@ -10,6 +10,7 @@ import io.legado.app.domain.gateway.MangaTranslationPage
 import io.legado.app.domain.gateway.MangaTranslationStatus
 import io.legado.app.domain.gateway.MangaTranslationTask
 import io.legado.app.domain.gateway.TranslationSettingsGateway
+import io.legado.app.domain.gateway.MangaSettingsGateway
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,14 +34,15 @@ class MangaTranslationRepository internal constructor(
     private val scope: CoroutineScope,
 ) : MangaTranslationGateway {
     constructor(application: Application, database: AppDatabase, profiles: AiProfileGateway,
-                ai: AiTextGateway, settings: TranslationSettingsGateway) : this(
+                ai: AiTextGateway, settings: TranslationSettingsGateway, mangaSettings: MangaSettingsGateway) : this(
         MangaTranslationStore(File(application.filesDir, "manga_translation")),
-        application, database, profiles, ai, settings,
+        application, database, profiles, ai, settings, mangaSettings,
     )
 
     private constructor(store: MangaTranslationStore, application: Application, database: AppDatabase,
-                        profiles: AiProfileGateway, ai: AiTextGateway, settings: TranslationSettingsGateway) : this(
-        store, MangaPageTranslator(application, database, profiles, ai, settings, store),
+                        profiles: AiProfileGateway, ai: AiTextGateway, settings: TranslationSettingsGateway,
+                        mangaSettings: MangaSettingsGateway) : this(
+        store, MangaPageTranslator(application, database, profiles, ai, settings, store, mangaSettings),
         CoroutineScope(SupervisorJob() + Dispatchers.IO),
     )
 
@@ -61,6 +63,7 @@ class MangaTranslationRepository internal constructor(
     private var activeBook: String? = null
     private var worker: Job? = null
     private var modelMaintenance = false
+    private var configurationEpoch = 0L
     private val maintenanceMutex = Mutex()
 
     private fun book(url: String) = books.getOrPut(url) { Book(store.load(url)) }
@@ -197,8 +200,22 @@ class MangaTranslationRepository internal constructor(
         }
     }
 
+    override suspend fun invalidateConfiguration() = mutex.withLock {
+        check(modelMaintenance) { "翻译配置只能在队列暂停后更新" }
+        configurationEpoch++
+        books.values.forEach { book ->
+            book.validated.clear()
+            book.record = book.record.copy(tasks = book.record.tasks.map {
+                // Retain the checkpoint URI only as a trigger for cached() revalidation.
+                // publish() hides it until validated against the new configuration.
+                it.copy(status = MangaTranslationStatus.PENDING)
+            })
+            save(book)
+        }
+    }
+
     private suspend fun inspectLoadedPages(bookUrl: String, pages: List<MangaTranslationPage>) {
-        val snapshot = mutex.withLock { book(bookUrl).record }
+        val (snapshot, epoch) = mutex.withLock { book(bookUrl).record to configurationEpoch }
         val loaded = pages.associateBy { it.chapterId to it.pageIndex }
         snapshot.tasks.filter { task -> task.resultUri != null &&
             (task.page.chapterId to task.page.pageIndex) in loaded }.forEach { task ->
@@ -208,7 +225,7 @@ class MangaTranslationRepository internal constructor(
             catch (_: Exception) { null }
             mutex.withLock {
                 val book = book(bookUrl)
-                if (book.record.generation == snapshot.generation && task in book.record.tasks) {
+                if (configurationEpoch == epoch && book.record.generation == snapshot.generation && task in book.record.tasks) {
                     book.validated.add(page.key)
                     book.record = book.record.copy(tasks = book.record.tasks.map {
                         if (it == task) it.copy(page = page, resultUri = uri,

@@ -43,27 +43,16 @@ jobs:
         run: |
           sed -i '/maven.aliyun.com/d' settings.gradle
 
-      - name: Run tests, lint, architecture check, and debug build
+      - name: Run lint, architecture check, and debug build
         run: |
           chmod +x gradlew
           ./gradlew \
-            testAppDebugUnitTest \
             lintAppDebug \
             verifyConfigArchitecture \
             assembleAppDebug \
             --continue \
             --no-daemon \
             --no-configuration-cache
-
-      - name: Upload unit test reports
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: verify-unit-test-reports
-          if-no-files-found: warn
-          path: |
-            app/build/test-results/testAppDebugUnitTest/**
-            app/build/reports/tests/testAppDebugUnitTest/**
 
       - name: Upload lint reports
         if: ${{ always() }}

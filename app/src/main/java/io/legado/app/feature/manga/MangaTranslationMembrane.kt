@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -123,22 +122,25 @@ internal fun MangaTranslationMembrane(
     children: ImmutableList<Offset>,
     size: Size,
     reveal: Float,
+    transparency: Int,
     solid: Boolean,
     blurEnabled: Boolean,
     surface: Color,
     haze: HazeState?,
 ) {
     val shape = remember(root, children) { MembraneShape(root, children) }
-    val alpha = reveal.coerceIn(0f, 1f)
+    // Absolute transparency: 0% gives an opaque fill, 100% reveals the page completely.
+    val wrapperAlpha = reveal.coerceIn(0f, 1f) * (1f - transparency.coerceIn(0, 100) / 100f)
     // The backdrop must remain transparent. A zero tint does not clear an opaque backgroundColor.
     val blur = if (!solid && blurEnabled && haze != null) Modifier.hazeBlur(input = HazeInput.Sources(haze),
         style = HazeBlurStyle {
+            alpha(wrapperAlpha)
             backgroundColor(Color.Transparent)
             blurRadius(16.dp)
             noiseFactor(0f)
             colorEffects(emptyList())
         }) else Modifier
-    Box(modifier.size(size.width.dp, size.height.dp).graphicsLayer { this.alpha = alpha }
+    Box(modifier.size(size.width.dp, size.height.dp)
         .drawWithCache {
             val path = (shape.createOutline(this.size, layoutDirection, this) as Outline.Generic).path
             // Approximate a Gaussian falloff with 0.5dp radial steps on all supported APIs.
@@ -146,7 +148,7 @@ internal fun MangaTranslationMembrane(
             val halo = (24 downTo 1).map { index ->
                 val distance = index * .5f
                 val opacity = (exp(-distance * distance / 32f) - exp(-(distance + .5f).pow(2) / 32f)) * .12f
-                Stroke(index.dp.toPx()) to Color(0xFFD7EFFF).copy(alpha = opacity)
+                Stroke(index.dp.toPx()) to Color(0xFFD7EFFF).copy(alpha = opacity * wrapperAlpha)
             }
             onDrawBehind {
                 if (!solid) halo.forEach { (stroke, color) ->
@@ -155,8 +157,9 @@ internal fun MangaTranslationMembrane(
             }
         }
         .clip(shape).then(blur)
-        .background(if (solid) Brush.linearGradient(listOf(surface, surface)) else Brush.linearGradient(
-            listOf(Color.White.copy(alpha = .36f), surface.copy(alpha = .30f), Color(0xFFD4EBFA).copy(alpha = .34f))))
-        .border(.5.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = .30f),
-            Color(0xFFD5EDFF).copy(alpha = .06f), Color.White.copy(alpha = .18f))), shape))
+        .background(if (solid) Brush.linearGradient(List(2) { surface.copy(alpha = wrapperAlpha) }) else Brush.linearGradient(
+            listOf(Color.White.copy(alpha = wrapperAlpha), surface.copy(alpha = wrapperAlpha),
+                Color(0xFFD4EBFA).copy(alpha = wrapperAlpha))))
+        .border(.5.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = .30f * wrapperAlpha),
+            Color(0xFFD5EDFF).copy(alpha = .06f * wrapperAlpha), Color.White.copy(alpha = .18f * wrapperAlpha))), shape))
 }

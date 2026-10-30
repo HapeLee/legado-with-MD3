@@ -13,6 +13,8 @@ import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
 import io.legado.app.domain.gateway.MangaTranslationPage
 import io.legado.app.domain.gateway.TranslationSettingsGateway
+import io.legado.app.domain.gateway.MangaSettingsGateway
+import io.legado.app.domain.model.settings.MangaTranslationBackend
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.help.book.BookHelp
@@ -55,17 +57,21 @@ internal class MangaPageTranslator(
     private val ai: AiTextGateway,
     private val settings: TranslationSettingsGateway,
     private val store: MangaTranslationStore,
+    private val mangaSettings: MangaSettingsGateway,
 ) : MangaPageProcessor {
     private val modelFiles = MangaModelFiles(application)
     private val inference = Mutex()
     private var pipeline: Pipeline? = null
     private var pipelineConfiguration: String? = null
+    private var translator: Translator? = null
 
     override fun close() {
         val previous = pipeline
         pipeline = null
         pipelineConfiguration = null
-        previous?.close()
+        val previousTranslator = translator
+        translator = null
+        try { previous?.close() } finally { (previousTranslator as? Closeable)?.close() }
     }
 
     override suspend fun translate(
@@ -82,11 +88,16 @@ internal class MangaPageTranslator(
             modelFiles.lock.withLock models@{
             if (!Process.is64Bit() || !Build.SUPPORTED_ABIS.contains("arm64-v8a"))
                 throw MangaTranslationPreparationException(application.getString(R.string.feature_manga_translation_arm64))
-            val preset = profiles.getTaskPreset(AiTaskType.TRANSLATE_CHAPTER)
-                ?: throw MangaTranslationPreparationException(application.getString(R.string.feature_manga_translation_configure_ai))
-            if (preset.model.provider.protocol == AiProtocol.GOOGLE_TRANSLATE)
+            val backend = mangaSettings.currentSettings.translationBackend
+            val preset = if (backend == MangaTranslationBackend.AI) profiles.getTaskPreset(AiTaskType.TRANSLATE_CHAPTER)
+                ?: throw MangaTranslationPreparationException(application.getString(R.string.feature_manga_translation_configure_ai)) else null
+            if (preset?.model?.provider?.protocol == AiProtocol.GOOGLE_TRANSLATE)
                 throw MangaTranslationPreparationException(application.getString(R.string.feature_manga_translation_configure_ai))
             val language = settings.currentSettings.targetLanguage
+            if (backend == MangaTranslationBackend.LOCAL_SMALL100) {
+                try { Small100Protocol.languageId(language) }
+                catch (error: IllegalArgumentException) { throw MangaTranslationPreparationException(error.localizedMessage, error) }
+            }
             val book = requireNotNull(database.bookDao.getBook(record.bookUrl))
             val imageUrl = page.imageUrl
             val chapterSubject = page.chapterSubject
@@ -110,9 +121,11 @@ internal class MangaPageTranslator(
                     application.getString(R.string.feature_manga_translation_too_large)
                 }
                 // Exclude credentials, but include all generation parameters affecting the result.
-                val model = preset.model.copy(provider = preset.model.provider.copy(apiKey = "", headers = emptyMap(), customHeaders = emptyMap()))
-                val signature = ModelDownloader.sha256(original) + "|8837370:boxfill:v3|$language|" +
-                    GSON.toJson(model) + GSON.toJson(preset.params)
+                val model = preset?.model?.let { it.copy(provider = it.provider.copy(apiKey = "", headers = emptyMap(), customHeaders = emptyMap())) }
+                val backendSignature = if (preset != null) "${LegadoMangaTranslator.PROMPT_VERSION}|" +
+                    GSON.toJson(model) + GSON.toJson(preset.params) + "|${preset.runtimeOptions.maxInputChars}"
+                else Small100Protocol.VERSION + modelFiles.catalog.filter { it.role == "translator" }.joinToString { it.sha256 }
+                val signature = ModelDownloader.sha256(original) + "|8837370:boxfill:v3|$backend|$language|$backendSignature"
                 val key = MangaTranslationStore.digest(signature)
                 val cache = store.pages(record).apply { mkdirs() }
                 val output = File(cache, "$key.png")
@@ -128,17 +141,23 @@ internal class MangaPageTranslator(
                     } finally { temporary.delete() }
                 }
                 if (cacheOnly) return@models null
-                val configuration = "$language|${GSON.toJson(preset)}"
+                val configuration = "$backend|$language|$backendSignature|${GSON.toJson(preset)}"
                 if (pipelineConfiguration != configuration) {
                     try {
                         close()
-                        ensureModels()
-                        pipeline = createPipeline(LegadoMangaTranslator(ai, preset, language), language)
+                        ensureModels(backend)
+                        val nextTranslator = if (preset != null) LegadoMangaTranslator(ai, preset, language)
+                            else Small100MangaTranslator(modelDirectory, language)
+                        try {
+                            pipeline = createPipeline(nextTranslator, language)
+                            translator = nextTranslator
+                        } catch (error: Throwable) { (nextTranslator as? Closeable)?.close(); throw error }
                         pipelineConfiguration = configuration
                     } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                     catch (error: Throwable) { throw MangaTranslationPreparationException(error.localizedMessage, error) }
                 }
                 currentCoroutineContext().ensureActive()
+                (translator as? LegadoMangaTranslator)?.textCache = MangaTranslationTextCache(store, record, page.key)
                 onProgress(application.getString(R.string.feature_manga_translation_running))
                 val bitmap = decodeOriginal(original)
                 try {
@@ -146,8 +165,9 @@ internal class MangaPageTranslator(
                         val result = engine.translatePage(bitmap)
                         try {
                             currentCoroutineContext().ensureActive()
-                            val latestPreset = profiles.getTaskPreset(AiTaskType.TRANSLATE_CHAPTER)
-                            check(settings.currentSettings.targetLanguage == language && latestPreset == preset) {
+                            val latestPreset = if (backend == MangaTranslationBackend.AI) profiles.getTaskPreset(AiTaskType.TRANSLATE_CHAPTER) else null
+                            check(settings.currentSettings.targetLanguage == language && latestPreset == preset &&
+                                mangaSettings.currentSettings.translationBackend == backend) {
                                 application.getString(R.string.feature_manga_translation_settings_changed)
                             }
                             when (result) {
@@ -206,8 +226,8 @@ internal class MangaPageTranslator(
         } catch (error: Throwable) { decoded.recycle(); throw error }
     }
 
-    private suspend fun ensureModels() {
-        check(modelFiles.missing().isEmpty()) {
+    private suspend fun ensureModels(backend: MangaTranslationBackend) {
+        check(modelFiles.missing(backend).isEmpty()) {
             application.getString(R.string.feature_manga_translation_missing_models)
         }
     }

@@ -355,6 +355,7 @@ fun MangaReaderScreen(
                     controls = state.translationControls,
                     right = state.settings.translationBubbleRight,
                     relativeHeight = state.settings.translationBubbleHeight,
+                    membraneTransparency = state.settings.translationMembraneTransparency,
                     eInk = state.settings.enableEInk,
                     hazeState = hazeState,
                     canHandleBack = canHandleBack,
@@ -362,6 +363,7 @@ fun MangaReaderScreen(
                     onAutomatic = { onIntent(MangaReaderIntent.ToggleAutomaticTranslation) },
                     onDisplay = { onIntent(MangaReaderIntent.ToggleTranslationDisplay) },
                     onClear = { onIntent(MangaReaderIntent.RequestClearTranslation) },
+                    onSettings = { onIntent(MangaReaderIntent.OpenTranslationSettings) },
                 )
             }
         }

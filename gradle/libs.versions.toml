@@ -69,7 +69,6 @@ quickChineseTransfer = "0.2.17"
 # 应用代码不直接依赖它；加密走 JCA / help/crypto/CryptoUtils.kt。版本固定，勿升级（参考上游基线）。
 hutool = "5.8.22"
 room = "2.8.5"
-robolectric = "4.17"
 splitties = "3.0.0"
 rhino = "1.8.1"
 desugar = "2.1.5"
@@ -99,9 +98,6 @@ miuix = "0.9.4"
 backdrop = "2.0.1"
 capsule = "2.1.3"
 lyricViewx = "1.3.2"
-uiautomator = "2.4.0"
-benchmarkMacroJunit4 = "1.4.1"
-baselineprofile = "1.5.0"
 profileinstaller = "1.4.1"
 [libraries]
 
@@ -131,8 +127,6 @@ compose-materialIcons = { group = "androidx.compose.material", name = "material-
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "composeTrain" }
 androidx-compose-ui-text = { module = "androidx.compose.ui:ui-text", version.ref = "composeTrain" }
-androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "composeTrain" }
-androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "composeTrain" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "composeTrain" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "composeTrain" }
 androidx-compose-ui-util = { module = "androidx.compose.ui:ui-util", version.ref = "composeTrain" }
@@ -165,7 +159,6 @@ coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version
 telephoto-zoomable-image-coil3 = { module = "me.saket.telephoto:zoomable-image-coil3", version.ref = "telephoto" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core" }
 
-androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version = "3.7.0" }
 
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
@@ -174,7 +167,6 @@ firebase-perf = { module = "com.google.firebase:firebase-perf" }
 
 fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
 
-androidx-junit = { module = "androidx.test.ext:junit", version = "1.3.0" }
 
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
@@ -209,8 +201,6 @@ quick-chinese-transfer-core = { module = "com.github.liuyueyi.quick-chinese-tran
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
-robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 glide-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 glide-okhttp= { module = "com.github.bumptech.glide:okhttp3-integration", version.ref ="glide" }
@@ -223,7 +213,6 @@ splitties-appctx = { module = "com.louiscad.splitties:splitties-appctx", version
 splitties-systemservices = { module = "com.louiscad.splitties:splitties-systemservices", version.ref = "splitties" }
 splitties-views = { module = "com.louiscad.splitties:splitties-views", version.ref = "splitties" }
 
-androidx-runner = { module = "androidx.test:runner", version = "1.7.0" }
 androidx-swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayout" }
 androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
 androidx-viewpager2 = { module = "androidx.viewpager2:viewpager2", version.ref = "viewpager2" }
@@ -239,10 +228,8 @@ json-path = { module = "com.jayway.jsonpath:json-path", version.ref = "jsonPath"
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 jsoupxpath = { module = "cn.wanghaomiao:JsoupXpath", version.ref = "jsoupxpath" }
 intellij-markdown = { module = "org.jetbrains:markdown-jvm", version.ref = "intellijMarkdown" }
-junit = { module = "junit:junit", version = "4.13.2" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 
@@ -267,19 +254,15 @@ miuix-ui-android = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.
 capsule = { module = "io.github.kyant0:capsule", version.ref = "capsule" }
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 lyricViewx = { module = "com.github.Moriafly:LyricViewX", version.ref = "lyricViewx" }
-androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
-androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacroJunit4" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 
 [bundles]
 coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]
-androidTest = ["androidx-espresso-core", "androidx-junit", "androidx-runner"]
 
 [plugins]
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-android-test = { id = "com.android.test", version.ref = "agp" }
 
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
@@ -290,4 +273,3 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
 
 download = { id = "de.undercouch.download", version = "5.7.0" }
-baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }

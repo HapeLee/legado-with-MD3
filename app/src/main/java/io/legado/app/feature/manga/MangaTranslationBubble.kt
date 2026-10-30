@@ -10,6 +10,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.text.BasicText
@@ -101,6 +102,8 @@ fun MangaTranslationBubble(
     onAutomatic: () -> Unit,
     onDisplay: () -> Unit,
     onClear: () -> Unit,
+    membraneTransparency: Int = 0,
+    onSettings: () -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
     var dragging by remember { mutableStateOf(false) }
@@ -190,6 +193,7 @@ fun MangaTranslationBubble(
                 children = centers.dropLast(1).map { it - Offset(left, top) }.toImmutableList(),
                 size = Size(centers.maxOf { it.x } + 44f - left, centers.maxOf { it.y } + 44f - top),
                 reveal = reveal, solid = solid, blurEnabled = blurEnabled, surface = colors.surfaceContainer, haze = hazeState,
+                transparency = membraneTransparency,
             )
             if (!solid && !exploring && glimmer.value < 1f) {
                 Canvas(Modifier.fillMaxSize()) {
@@ -283,7 +287,10 @@ fun MangaTranslationBubble(
                     change.consume()
                     position = translationBubbleLayout(width, height, position + amount / density.density, right, false).main
                 }
-            }.clickable(role = Role.Button) { interaction++; expanded = !expanded },
+            }.combinedClickable(role = Role.Button,
+                onLongClickLabel = stringResource(R.string.feature_manga_translation_title),
+                onLongClick = { interaction++; expanded = false; onSettings() },
+                onClick = { interaction++; expanded = !expanded }),
             contentAlignment = Alignment.Center) {
             GlassBubble(Modifier.size(44.dp), solid, eInk, false, openness.coerceIn(0f, 1f)) {
                 TranslationEntryIcon(main = true, modifier = Modifier.size(28.dp), solid = solid)

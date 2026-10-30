@@ -205,8 +205,6 @@ plugins {
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.room) apply false
     alias(libs.plugins.download) apply false
-    alias(libs.plugins.android.test) apply false
-    alias(libs.plugins.baselineprofile) apply false
 }
 
 tasks.register<Delete>("clean") {

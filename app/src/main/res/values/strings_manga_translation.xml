@@ -19,9 +19,14 @@
     <string name="feature_manga_translation_enabled">启用漫画翻译</string>
     <string name="feature_manga_translation_disabled">未启用</string>
     <string name="feature_manga_translation_show_bubble">显示悬浮气泡</string>
-    <string name="feature_manga_translation_show_result">显示译文（关闭显示原图）</string>
+    <string name="feature_manga_translation_membrane_transparency">气泡透明度</string>
+    <string name="feature_manga_translation_show_result">显示译文</string>
     <string name="feature_manga_translation_models">模型管理</string>
-    <string name="feature_manga_translation_ai">AI 服务与翻译设置</string>
+    <string name="feature_manga_translation_ai">翻译设置</string>
+    <string name="feature_manga_translation_backend_ai">AI 翻译</string>
+    <string name="feature_manga_translation_backend_local">本地翻译（SMaLL-100）</string>
+    <string name="feature_manga_translation_local_models">本地翻译模型</string>
+    <string name="feature_manga_translation_switching">正在切换翻译方式…</string>
     <string name="feature_manga_translation_clear_current">清除当前漫画翻译缓存</string>
     <string name="feature_manga_translation_clear_all">清除全部翻译缓存</string>
     <string name="feature_manga_translation_clear_all_confirm">清除全部漫画的翻译缓存？原图和模型将保留。</string>
