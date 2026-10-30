@@ -5,6 +5,7 @@ import androidx.core.net.toUri
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.domain.gateway.ReadStyleGateway
+import io.legado.app.help.config.BubblePackageManager
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
@@ -62,6 +63,29 @@ class OnLineImportViewModel(app: Application) : BaseAssociationViewModel(app) {
             readStyleGateway.importOrReplaceStyle(bytes)
         }.onSuccess {
             finally.invoke(context.getString(R.string.success), "导入排版成功")
+        }.onError {
+            finally.invoke(
+                context.getString(R.string.error),
+                it.localizedMessage ?: context.getString(R.string.unknown_error)
+            )
+        }
+    }
+
+    /** 段评气泡包：`legado://import/bubblePack?src=<zip url>`，下载下来直接装。 */
+    fun importBubblePack(bytes: ByteArray, finally: (title: String, msg: String) -> Unit) {
+        execute {
+            val file = FileUtils.createFileIfNotExist(
+                appCtx.externalCache,
+                "download",
+                "bubble_import_${System.currentTimeMillis()}.zip"
+            )
+            file.outputStream().use { it.write(bytes) }
+            BubblePackageManager.importZip(file).also { file.delete() }
+        }.onSuccess { entry ->
+            finally.invoke(
+                context.getString(R.string.success),
+                "导入段评气泡「${entry.config.name}」成功"
+            )
         }.onError {
             finally.invoke(
                 context.getString(R.string.error),

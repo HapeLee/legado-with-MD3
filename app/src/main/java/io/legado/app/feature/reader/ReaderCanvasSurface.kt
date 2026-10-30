@@ -92,6 +92,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.domain.model.TextProcessStyle
+import io.legado.app.feature.reader.components.ioscurl.IosCurlPageStack
+import io.legado.app.feature.reader.components.ioscurl.IosCurlTurn
+import io.legado.app.feature.reader.components.googlecurl.GoogleCurlPageStack
+import io.legado.app.feature.reader.core.transition.ReaderParallaxPolicy
 import io.legado.app.feature.reader.core.accessibility.ReaderAccessibilityPolicy
 import io.legado.app.feature.reader.core.gesture.PullBookmarkDefaults
 import io.legado.app.feature.reader.core.gesture.PullBookmarkGesture
@@ -135,6 +139,7 @@ import io.legado.app.feature.reader.core.transition.PageCurlFrame
 import io.legado.app.feature.reader.core.transition.PageCurlGeometry
 import io.legado.app.feature.reader.core.transition.ReaderAutoPagePolicy
 import io.legado.app.feature.reader.core.transition.ReaderAutoPageVisualMode
+import io.legado.app.feature.reader.core.transition.ReaderCommittedTurnPolicy
 import io.legado.app.feature.reader.core.transition.ReaderCoverShadowPolicy
 import io.legado.app.feature.reader.core.transition.ReaderCurlTouchPolicy
 import io.legado.app.feature.reader.core.transition.ReaderCurlVisualPolicy
@@ -152,6 +157,7 @@ import io.legado.app.feature.reader.core.transition.ReaderTransitionMode
 import io.legado.app.feature.reader.core.transition.ReaderTransitionTransforms
 import io.legado.app.feature.reader.core.transition.ReaderTurnDirection
 import io.legado.app.feature.reader.core.transition.ReaderViewportLayerPolicy
+import io.legado.app.feature.reader.core.transition.ioscurl.gesture.CurlTouchKind
 import io.legado.app.feature.reader.core.transition.transforms
 import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
 import io.legado.app.feature.reader.platform.ReaderBookmarkBadgeRenderer
@@ -182,6 +188,13 @@ private val SelectionHandleRadius = 7.dp
 private val SelectionHandleStrokeWidth = 2.dp
 private const val SelectionHandleFadeOutMillis = 90
 private const val SelectionHandleFadeInMillis = 140
+
+/**
+ * 等待 Google 仿真翻页栈"冷捕获完成"的帧数上限（约 0.5s @60Hz）。
+ * 就绪信号由翻页栈的捕获协程发出，可能因组合层重启或翻页栈未进入组合而丢失；
+ * 无上限等待会让本次翻页的偏移动画永远不开始。
+ */
+private const val MAX_GOOGLE_CURL_READY_WAIT_FRAMES = 30
 
 @Composable
 fun ReaderCanvasSurface(
@@ -257,6 +270,9 @@ fun ReaderCanvasSurface(
         backgroundImage?.isolatedCopy()
     }
     val animationScope = rememberCoroutineScope()
+    val iosCurl = remember { IosCurlTurn() }
+    var googleCurlReady by remember { mutableStateOf(false) }
+    val curlDensity = LocalDensity.current.density
     val hapticFeedback = LocalHapticFeedback.current
     val scrollDecay = rememberSplineBasedDecay<Float>()
     var displayOffset by remember { mutableFloatStateOf(0f) }
@@ -266,6 +282,8 @@ fun ReaderCanvasSurface(
     // 时改变；位移、透明度、折页几何一律在绘制期/layer 期读取。
     var turnDirection by remember { mutableStateOf<ReaderTurnDirection?>(null) }
     var committedTurnPageId by remember { mutableStateOf<ReaderPageId?>(null) }
+    // 提交翻页那一刻组合中的页，用来判断后续组合出来的窗口是不是本次翻页的结果。
+    var committedTurnOriginId by remember { mutableStateOf<ReaderPageId?>(null) }
     val composedTurnDirection = turnDirection.takeUnless { current.id == committedTurnPageId }
 
     /**
@@ -273,7 +291,11 @@ fun ReaderCanvasSurface(
      * 不要把 `transition` 读到组合期，否则拖拽的每一帧都会重组整个画布。
      */
     fun applyTransition(next: ReaderPageTransition) {
-        if (next.direction != null && next.dragging) committedTurnPageId = null
+        if (!next.dragging || next.direction != transition.direction) googleCurlReady = false
+        if (next.direction != null && next.dragging) {
+            committedTurnPageId = null
+            committedTurnOriginId = null
+        }
         transition = next
         turnDirection = next.direction?.takeIf { next.dragging }
     }
@@ -326,6 +348,7 @@ fun ReaderCanvasSurface(
     val latestToggleBookmark by rememberUpdatedState(onToggleBookmark)
     DisposableEffect(transitionMode) {
         onDispose {
+            iosCurl.reset()
             // 模式切换时滚动惯性对换页模式已无意义，必须中止所有页运动动画并复位。
             pageMotionJob?.cancel()
             pendingTurn = null
@@ -345,6 +368,7 @@ fun ReaderCanvasSurface(
             // fling/点击步进动画每帧重读窗口尺寸，必须跨页延续。只有换页类动画
             // 才在换页/视口变化时中止。
             if (!wasScrollMode) pageMotionJob?.cancel()
+            if (!wasScrollMode) iosCurl.reset()
         }
     }
     var curlTouchY by remember { mutableFloatStateOf(1f) }
@@ -507,13 +531,15 @@ fun ReaderCanvasSurface(
     }
     fun finishPageTurn() {
         val originId = currentPageWindow().current?.id
-        committedTurnPageId = completePendingTurn()?.current?.id?.takeIf { it != originId }
-        if (committedTurnPageId == null) {
+        val committedId = completePendingTurn()?.current?.id?.takeIf { it != originId }
+        committedTurnPageId = committedId
+        committedTurnOriginId = originId.takeIf { committedId != null }
+        if (committedId == null) {
             displayOffset = 0f
             applyTransition(ReaderPageTransition())
         }
     }
-    fun settlePageTurn(decision: ReaderTransitionDecision) {
+    fun settlePageTurn(decision: ReaderTransitionDecision, iosVelocity: Double = 0.0) {
         pageMotionJob?.cancel()
         curlRevealJob?.cancel()
         if (transitionMode == ReaderTransitionMode.SIMULATION) {
@@ -529,6 +555,14 @@ fun ReaderCanvasSurface(
         }
         pendingTurn = transition.direction.takeIf { decision.commit }
         pendingTurnOrigin = currentPageWindow().current?.id
+        if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+            pageMotionJob = animationScope.launch {
+                iosCurl.settle(decision.commit, iosVelocity, latestPageTurnSpeed)
+                displayOffset = decision.targetOffsetPx
+                finishPageTurn()
+            }
+            return
+        }
         if (transitionMode == ReaderTransitionMode.NONE) {
             completePendingTurn()
             displayOffset = 0f
@@ -573,6 +607,16 @@ fun ReaderCanvasSurface(
             FastOutSlowInEasing
         }
         pageMotionJob = animationScope.launch {
+            // Cold page capture must finish before a tap/keyboard turn consumes its duration.
+            // 等待必须有上限：就绪信号由翻页栈发出，一旦丢失（组合层重启 / 翻页栈未进入
+            // 组合 / 捕获被取消），无上限等待会让本次翻页的偏移动画永远不开始。
+            if (transitionMode == ReaderTransitionMode.GOOGLE_CURL) {
+                var frames = 0
+                while (!googleCurlReady && frames < MAX_GOOGLE_CURL_READY_WAIT_FRAMES) {
+                    withFrameNanos { }
+                    frames++
+                }
+            }
             Animatable(startOffset).animateTo(
                 decision.targetOffsetPx,
                 tween(durationMillis, easing = settleEasing),
@@ -600,6 +644,10 @@ fun ReaderCanvasSurface(
             return
         }
         val width = window.current?.widthPx?.toFloat() ?: return
+        if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+            iosCurl.begin(direction, window.current.widthPx, window.current.heightPx,
+                curlDensity, animationScope, automatic = true, speed = latestPageTurnSpeed)
+        }
         if (transitionMode == ReaderTransitionMode.SIMULATION) {
             curlRevealProgress = 1f
             curlTouchX = ReaderCurlTouchPolicy.programmaticX(direction, width)
@@ -810,10 +858,11 @@ fun ReaderCanvasSurface(
         }
     }
     LaunchedEffect(current.id, current.layoutRevision, transitionMode) {
-        if (committedTurnPageId != null) {
+        if (ReaderCommittedTurnPolicy.shouldRelease(current.id, committedTurnPageId, committedTurnOriginId)) {
             displayOffset = 0f
             applyTransition(ReaderPageTransition())
             committedTurnPageId = null
+            committedTurnOriginId = null
         }
         val ownCrossing = scrollOwnCrossing
         scrollOwnCrossing = false
@@ -985,10 +1034,24 @@ fun ReaderCanvasSurface(
                 curlRevealProgress = 1f
                 // 翻页收尾被打断时在此同步提交；宿主当帧返回新窗口，但组合要等下一帧，
                 // 手势必须改用返回的窗口命中，否则长按会选中已不在屏幕上的旧页。
+                val turnOriginId = pendingTurnOrigin
                 val turnedWindow = completePendingTurn()
-                committedTurnPageId = null
-                displayOffset = 0f
-                applyTransition(ReaderPageTransition())
+                // 已提交但尚未组合的新页，继续保留上一帧；此时归零会把旧页闪回原位。
+                val turnedId = turnedWindow?.current?.id
+                if (turnedId != null) {
+                    committedTurnPageId = turnedId
+                    committedTurnOriginId = turnOriginId
+                }
+                if (committedTurnPageId == null) {
+                    displayOffset = 0f
+                    applyTransition(ReaderPageTransition())
+                }
+                if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+                    iosCurl.reset()
+                    iosCurl.down(size.width, size.height, density, down.position.x, down.position.y,
+                        down.uptimeMillis, canTurn(ReaderTurnDirection.PREVIOUS, currentPageWindow()),
+                        canTurn(ReaderTurnDirection.NEXT, currentPageWindow()), pageTouchSlop)
+                }
                 bookmarkReturnJob?.cancel()
                 bookmarkOffset = 0f
                 bookmarkArmed = false
@@ -1116,6 +1179,13 @@ fun ReaderCanvasSurface(
                         val event = awaitPointerEvent(PointerEventPass.Main)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (change.isConsumed) break
+                        if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+                            event.changes.filter { it.id != down.id && it.pressed && !it.previousPressed }
+                                .forEach { iosCurl.event(CurlTouchKind.Down, it.position.x,
+                                    it.position.y, it.uptimeMillis, pointer = 1) }
+                            iosCurl.event(if (change.pressed) CurlTouchKind.Move else CurlTouchKind.Up,
+                                change.position.x, change.position.y, change.uptimeMillis)
+                        }
                         pointerPosition = change.position
                         if (!change.pressed) {
                             released = true; break
@@ -1260,9 +1330,13 @@ fun ReaderCanvasSurface(
                             scrollDrag = transitionMode == ReaderTransitionMode.SCROLL &&
                                     ReaderMainAxisPolicy.isVerticalDominant(total.x, total.y)
                             horizontalTurn = !bookmarkDrag && !scrollDrag &&
-                                    ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode)
+                                    (if (transitionMode == ReaderTransitionMode.IOS_CURL)
+                                        iosCurl.recognizedDirection != null
+                                    else ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode))
                             if (horizontalTurn) {
-                                horizontalDrag = ReaderHorizontalDrag.capture(total.x)
+                                horizontalDrag = if (transitionMode == ReaderTransitionMode.IOS_CURL)
+                                    iosCurl.recognizedDirection?.let { ReaderHorizontalDrag(total.x, it) }
+                                else ReaderHorizontalDrag.capture(total.x)
                                 horizontalCapturedY = change.position.y
                                 if (transitionMode == ReaderTransitionMode.SIMULATION) startCurlRevealSnap()
                             }
@@ -1289,9 +1363,13 @@ fun ReaderCanvasSurface(
                                 bookmarkArmed = false
                                 bookmarkOffset = 0f
                                 horizontalTurn =
-                                    ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode)
+                                    (if (transitionMode == ReaderTransitionMode.IOS_CURL)
+                                        iosCurl.recognizedDirection != null
+                                    else ReaderMainAxisPolicy.canStartPageTurn(total.x, transitionMode))
                                 if (horizontalTurn) {
-                                    horizontalDrag = ReaderHorizontalDrag.capture(total.x)
+                                    horizontalDrag = if (transitionMode == ReaderTransitionMode.IOS_CURL)
+                                        iosCurl.recognizedDirection?.let { ReaderHorizontalDrag(total.x, it) }
+                                    else ReaderHorizontalDrag.capture(total.x)
                                     horizontalCapturedY = change.position.y
                                     if (transitionMode == ReaderTransitionMode.SIMULATION) startCurlRevealSnap()
                                 }
@@ -1329,6 +1407,13 @@ fun ReaderCanvasSurface(
                                     )
                                 }
                             displayOffset = transition.offsetPx
+                            if (transitionMode == ReaderTransitionMode.IOS_CURL && transition.dragging) {
+                                if (iosCurl.config == null) {
+                                    iosCurl.begin(requireNotNull(transition.direction), size.width, size.height,
+                                        density, animationScope, automatic = false, speed = latestPageTurnSpeed)
+                                }
+                                iosCurl.drag()
+                            }
                             change.consume()
                         } else if (scrollDrag) {
                             val window = currentPageWindow()
@@ -1453,7 +1538,13 @@ fun ReaderCanvasSurface(
                     }
                 } else if (horizontalTurn && transition.dragging) {
                     val fade = transitionMode == ReaderTransitionMode.FADE
-                    settlePageTurn(
+                    if (transitionMode == ReaderTransitionMode.IOS_CURL) {
+                        val direction = requireNotNull(transition.direction)
+                        val (commit, velocity) = iosCurl.release(direction, cancelled = !released)
+                        val target = if (!commit) 0f else if (direction == ReaderTurnDirection.NEXT)
+                            -transition.pageExtentPx else transition.pageExtentPx
+                        settlePageTurn(ReaderTransitionDecision(target, commit), velocity)
+                    } else settlePageTurn(
                         ReaderPageTransitionPolicy.release(
                             transition,
                             velocityPxPerSecond = if (fade) 0f else velocityTracker.calculateVelocity().x,
@@ -1545,6 +1636,46 @@ fun ReaderCanvasSurface(
                     loadImage = loadImage,
                 )
             }
+        } else if (transitionMode == ReaderTransitionMode.IOS_CURL && composedTurnDirection != null) {
+            IosCurlPageStack(
+                pages = pages,
+                direction = composedTurnDirection,
+                turn = iosCurl,
+                redrawSignal = redrawSignal,
+                snapshots = pageSnapshots,
+                baseLayer = baseSnapshotLayer,
+                revealLayer = revealSnapshotLayer,
+                background = backgroundColor,
+                snapshotKey = { page, width, height ->
+                    pageSnapshotKey(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha,
+                        selectionColor, textAccentColor, textSelection, selectionPreviewStyle, width, height)
+                },
+                settled = { it.isSnapshotSettled(cachedImage) },
+            ) { page ->
+                ReaderPageCanvas(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha,
+                    selectionColor, textAccentColor, Modifier.fillMaxSize(), textSelection,
+                    selectionPreviewStyle, cachedImage, loadImage, redrawSignal = redrawSignal)
+            }
+        } else if (transitionMode == ReaderTransitionMode.GOOGLE_CURL && composedTurnDirection != null) {
+            GoogleCurlPageStack(
+                pages = pages,
+                direction = composedTurnDirection,
+                progress = { (abs(displayOffset) / current.widthPx.coerceAtLeast(1)).coerceIn(0f, 1f) },
+                redrawSignal = redrawSignal,
+                snapshots = pageSnapshots,
+                baseLayer = baseSnapshotLayer,
+                revealLayer = revealSnapshotLayer,
+                snapshotKey = { page, width, height ->
+                    pageSnapshotKey(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha,
+                        selectionColor, textAccentColor, textSelection, selectionPreviewStyle, width, height)
+                },
+                settled = { it.isSnapshotSettled(cachedImage) },
+                onReady = { googleCurlReady = true },
+            ) { page ->
+                ReaderPageCanvas(page, backgroundColor, pageBackgroundImage, backgroundImageAlpha,
+                    selectionColor, textAccentColor, Modifier.fillMaxSize(), textSelection,
+                    selectionPreviewStyle, cachedImage, loadImage, redrawSignal = redrawSignal)
+            }
         } else if (transitionMode == ReaderTransitionMode.SIMULATION && composedTurnDirection != null) {
             SimulationPageStack(
                 redrawSignal = redrawSignal,
@@ -1584,7 +1715,7 @@ fun ReaderCanvasSurface(
             @Composable
             fun PageLayer(page: ReaderPage, role: PagedLayerRole, offsetY: () -> Float) {
                 val coverClipModifier = if (
-                    transitionMode == ReaderTransitionMode.COVER &&
+                    (transitionMode == ReaderTransitionMode.COVER || transitionMode == ReaderTransitionMode.PARALLAX) &&
                     role == PagedLayerRole.NEXT &&
                     composedTurnDirection == ReaderTurnDirection.NEXT
                 ) {
@@ -1661,14 +1792,19 @@ fun ReaderCanvasSurface(
                 }
             }
         }
-        if (transitionMode == ReaderTransitionMode.COVER && composedTurnDirection != null) {
+        if ((transitionMode == ReaderTransitionMode.COVER || transitionMode == ReaderTransitionMode.PARALLAX) &&
+            composedTurnDirection != null) {
             Canvas(Modifier.fillMaxSize()) {
                 val direction = transition.direction ?: return@Canvas
                 val offsetPx = displayOffset
                 if (offsetPx == 0f) return@Canvas
                 val edge = ReaderCoverShadowPolicy.edgePx(direction, offsetPx, size.width)
-                val shadowWidth = ReaderCoverShadowPolicy.widthDp * density
-                val dark = Color(ReaderCoverShadowPolicy.colorArgb)
+                val parallax = transitionMode == ReaderTransitionMode.PARALLAX
+                val shadowWidth = (if (parallax) ReaderParallaxPolicy.shadowWidthDp else ReaderCoverShadowPolicy.widthDp) * density
+                val dark = if (parallax) Color(ReaderParallaxPolicy.shadowColorArgb).let {
+                    it.copy(alpha = it.alpha * ReaderParallaxPolicy.shadowFade(
+                        direction, (abs(offsetPx) / size.width).coerceIn(0f, 1f), size.width, shadowWidth))
+                } else Color(ReaderCoverShadowPolicy.colorArgb)
                 drawRect(
                     Brush.horizontalGradient(
                         listOf(dark, Color.Transparent),
@@ -2295,7 +2431,7 @@ private fun SimulationPageStack(
  * 页 id/revision/layoutRevision（图片刷新会改 revision）、背景色/背景图及其透明度、
  * 选区与朗读高亮色、活动选区、选区预览样式、视口尺寸。
  */
-private data class PageSnapshotKey(
+internal data class PageSnapshotKey(
     val pageId: ReaderPageId,
     val revision: Long,
     val layoutRevision: Long,
@@ -2345,7 +2481,7 @@ private fun pageSnapshotKey(
  * ① 命中时该回合**完全不用重录页面**（快照层都不用挂载），每帧只做 blit；
  * ② 取消后再拖、或连续翻页时，只需补拍新进入窗口的那一页（否则每回合要重算两页）。
  */
-private class PageSnapshotBitmapPool {
+internal class PageSnapshotBitmapPool {
     private val entries = LinkedHashMap<PageSnapshotKey, ImageBitmap>(4, .75f, true)
 
     fun get(key: PageSnapshotKey): ImageBitmap? = entries[key]
@@ -2417,7 +2553,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageBackgroundI
 }
 
 /** 有位图就用位图（一次 blit），否则退回快照层（display list 重放）。 */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageSnapshot(
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageSnapshot(
     image: ImageBitmap?,
     layer: GraphicsLayer,
     widthPx: Int,
@@ -2442,7 +2578,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageSnapshot(
  * 选区变化……）时发生——等价于旧 View 的 `setBitmap()` 每次手势只截一次图。
  */
 @Composable
-private fun PageSnapshotLayer(
+internal fun PageSnapshotLayer(
     layer: GraphicsLayer,
     redrawSignal: State<Long>,
     content: @Composable () -> Unit,

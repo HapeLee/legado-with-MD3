@@ -15,6 +15,9 @@ object PageAnim {
 
     const val fadePageAnim = 4
     const val noAnim = 5
+    const val iosCurlPageAnim = 6
+    const val googleCurlPageAnim = 7
+    const val parallaxPageAnim = 8
 
     @Target(AnnotationTarget.VALUE_PARAMETER)
     @Retention(AnnotationRetention.SOURCE)
@@ -25,6 +28,9 @@ object PageAnim {
         scrollPageAnim,
         fadePageAnim,
         noAnim,
+        iosCurlPageAnim,
+        googleCurlPageAnim,
+        parallaxPageAnim,
     )
     annotation class Anim
 

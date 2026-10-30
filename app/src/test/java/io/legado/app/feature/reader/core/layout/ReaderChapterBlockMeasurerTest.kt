@@ -165,6 +165,28 @@ class ReaderChapterBlockMeasurerTest {
     ) as ReaderChapterMeasureResult.Success
 
     @Test
+    fun scalesReviewBubbleInlineSlotByPackageScale() = runBlocking {
+        val items = listOf(ReaderChapterInlineSource.Image("bubble://paragraph?num=12", 0))
+        suspend fun inlineWidth(scale: Float): Float {
+            val options = ReaderImageOptions(
+                layoutMode = ReaderImageLayoutMode.INLINE,
+                horizontalAlignment = ReaderTextAlignment.CENTER,
+                inlinePlaceholder = ReaderInlineImagePlaceholder.REVIEW,
+                inlineWidthScale = scale,
+            )
+            return measureHtml(items, style, options, ReaderImageDimensions(10f, 10f))
+                .blocks.filterIsInstance<ReaderMeasuredBlock.InlineParagraph>()
+                .flatMap { it.items }
+                .filterIsInstance<ReaderMeasuredInlineItem.Image>()
+                .single()
+                .widthPx
+        }
+        // 占位字 advance 是 10f（见 shaper）；包内 sizeScale 必须真正改变槽宽。
+        assertEquals(10f, inlineWidth(1f), 0f)
+        assertEquals(20f, inlineWidth(2f), 0f)
+    }
+
+    @Test
     fun measuresTextAndImagesWithoutLegacyLayoutModels() = runBlocking {
         val source = ReaderChapterSource(1, "章", listOf(
             ReaderChapterSourceBlock.Text("章", 0, true),

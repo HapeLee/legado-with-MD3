@@ -76,6 +76,10 @@ class OnLineImportActivity :
                 "/theme" -> showDialogFragment(
                     ImportThemeDialog(url, true)
                 )
+                "/bubblePack" -> viewModel.getBytes(url) { bytes ->
+                    viewModel.importBubblePack(bytes, this::finallyDialog)
+                }
+
                 "/readConfig" -> viewModel.getBytes(url) { bytes ->
                     viewModel.importReadConfig(bytes, this::finallyDialog)
                 }
@@ -90,6 +94,9 @@ class OnLineImportActivity :
                     "replace" -> showDialogFragment(
                         ImportReplaceRuleDialog(url, true)
                     )
+                    "bubble", "bubblepack" -> viewModel.getBytes(url) { bytes ->
+                        viewModel.importBubblePack(bytes, this::finallyDialog)
+                    }
                     else -> {
                         viewModel.determineType(url, this::finallyDialog)
                     }

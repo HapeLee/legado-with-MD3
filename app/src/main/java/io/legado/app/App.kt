@@ -183,6 +183,11 @@ class App : Application(), SingletonImageLoader.Factory {
         // 普通 Context，强转 RhinoContext 会直接崩溃并把该线程永久污染。
         // 这里改为在 onCreate 中同步执行；RhinoWrapFactory 注册同理要早于任何脚本执行。
         initRhino()
+        // 内置默认数据迁移放在 onCreate 同步区发起，早于任何 Activity。
+        // 它原先排在下面那个 Coroutine.async 的末尾，与 MainActivity.upVersion()
+        // 并发、先后不确定；现在 DefaultData 自己判断是否有待迁移项，不再依赖
+        // LocalConfig.versionCode，这里只做只读判断，数据导入仍在内部异步执行。
+        DefaultData.upVersion()
         Coroutine.async {
             get<BackupSettingsGateway>().settings
                 .map {
@@ -214,7 +219,6 @@ class App : Application(), SingletonImageLoader.Factory {
                 .autoClear(false)
                 .enableLogger(BuildConfig.DEBUG || otherGateway.currentSettings.recordLog)
                 .setLogger(EventLogger())
-            DefaultData.upVersion()
             AppFreezeMonitor.init(this@App)
             DispatchersMonitor.init()
             URL.setURLStreamHandlerFactory(ObsoleteUrlFactory(okHttpClient))

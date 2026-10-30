@@ -19,7 +19,9 @@ data class ExploreRule(
     override var updateTime: String? = null,
     override var bookUrl: String? = null,
     override var coverUrl: String? = null,
-    override var wordCount: String? = null
+    override var wordCount: String? = null,
+    /** 发现页翻页参数名，留空按 page 处理；用于标签/分类跳转的地址自动追加页码。 */
+    var pageParam: String? = null
 ) : BookListRule, Parcelable {
 
     companion object {
