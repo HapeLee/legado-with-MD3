@@ -7,8 +7,10 @@ import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.domain.usecase.RelocateMarkingTargetUseCase
 import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
+import io.legado.app.feature.reader.platform.JsoupReaderHtmlParser
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.model.ReadBook
@@ -16,7 +18,9 @@ import io.legado.app.model.localBook.LocalBookSemanticHtml
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 书签/笔记跳转校验域（无自持渲染状态）。
@@ -123,11 +127,43 @@ class ReadBookmarkNavigateDelegate(
     fun navigateToInternalLink(link: String) {
         val book = ReadBook.book ?: return
         val currentIndex = ReadBook.durChapterIndex
+        val fragment = link.substringAfter("#", "").trim()
         scope.launch {
-            val chapters = bookRepository.getChapters(book.bookUrl)
-            val targetIndex = LocalBookSemanticHtml.resolveInternalLinkTarget(link, chapters, currentIndex)
-            if (targetIndex != null && targetIndex != currentIndex) {
-                host.jumpToChapter(targetIndex, 0)
+            val (targetIndex, targetPos) = withContext(Dispatchers.IO) {
+                val chapters = bookRepository.getChapters(book.bookUrl)
+                val resolvedIndex = LocalBookSemanticHtml.resolveInternalLinkTarget(link, chapters, currentIndex)
+                    ?: return@withContext null to null
+                val targetChapter = chapters.getOrNull(resolvedIndex)
+                val pos = if (fragment.isNotEmpty() && targetChapter != null) {
+                    if (targetChapter.startFragmentId.equals(fragment, ignoreCase = true)) {
+                        0
+                    } else {
+                        BookHelp.getContent(book, targetChapter)?.let { rawContent ->
+                            val processed = ContentProcessor.get(book)
+                                .getContent(book, targetChapter, rawContent, includeTitle = false)
+                            val source = ReaderChapterSourceParser.parse(
+                                chapterIndex = targetChapter.index,
+                                title = "",
+                                paragraphs = processed.textList,
+                                includeTitle = false,
+                                adaptSpecialStyle = true,
+                                htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+                            )
+                            source.blocks.filterIsInstance<ReaderChapterSourceBlock.Html>()
+                                .firstNotNullOfOrNull { block ->
+                                    JsoupReaderHtmlParser.findAnchorPosition(
+                                        block.value,
+                                        fragment,
+                                        block.chapterPosition,
+                                    )
+                                }
+                        }
+                    }
+                } else null
+                resolvedIndex to pos
+            }
+            if (targetIndex != null && (targetIndex != currentIndex || targetPos != null)) {
+                host.jumpToChapter(targetIndex, targetPos ?: 0)
             }
         }
     }
@@ -140,7 +176,7 @@ class ReadBookmarkNavigateDelegate(
         book: io.legado.app.data.entities.Book,
         chapterName: String,
         anchor: TextProcessAnchor,
-    ): RelocateMarkingTargetUseCase.Target? {
+    ): RelocateMarkingTargetUseCase.Target? = withContext(Dispatchers.IO) {
         val processor = ContentProcessor.get(book)
         val candidates = bookRepository.getChapters(book.bookUrl)
             .asSequence()
@@ -166,7 +202,7 @@ class ReadBookmarkNavigateDelegate(
                 )
             }
             .toList()
-        return relocateMarkingTargetUseCase.locate(anchor, candidates)
+        relocateMarkingTargetUseCase.locate(anchor, candidates)
     }
 
     private fun BookMarking.anchor(): TextProcessAnchor? =

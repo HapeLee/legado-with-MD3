@@ -1,8 +1,13 @@
 package io.legado.app.model.localBook
 
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
+import io.legado.app.feature.reader.platform.JsoupReaderHtmlParser
 import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -212,5 +217,42 @@ class LocalBookSemanticHtmlTest {
         assertEquals(2, LocalBookSemanticHtml.resolveInternalLinkTarget("OEBPS/Text/part01.xhtml#ch2", chapters, 0))
         assertEquals(2, LocalBookSemanticHtml.resolveInternalLinkTarget("part01.xhtml#ch2", chapters, 0))
         assertEquals(3, LocalBookSemanticHtml.resolveInternalLinkTarget("filepos:0000001000", chapters, 0))
+    }
+
+    @Test
+    fun resolvesBidirectionalFootnoteAndEmptyPageAnchorsThroughMixedChannel() {
+        val rawHtml = """
+            <body>
+              <p><span>First paragraph with a footnote call.</span><sup><a href="#note_6" id="ref_6">6</a></sup><span> Following sentence with an inline <a id="page_13"/>page marker.</span></p>
+              <p>Plain middle paragraph.</p>
+              <p><span><strong><a href="#ref_6" id="note_6">6</a></strong></span><span> Endnote explanation text at the end of the chapter.</span></p>
+            </body>
+        """.trimIndent()
+        val body = Jsoup.parse(rawHtml).body()
+        val channel = LocalBookSemanticHtml.emitMixedChannel(body, null)
+        val source = ReaderChapterSourceParser.parse(
+            chapterIndex = 0,
+            title = "",
+            paragraphs = channel.split("\n").filter { it.isNotBlank() },
+            includeTitle = false,
+            adaptSpecialStyle = true,
+            htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+        )
+        fun anchorPos(id: String): Int? =
+            source.blocks.filterIsInstance<ReaderChapterSourceBlock.Html>()
+                .firstNotNullOfOrNull { block ->
+                    JsoupReaderHtmlParser.findAnchorPosition(block.value, id, block.chapterPosition)
+                }
+
+        val refPos = anchorPos("ref_6")
+        val notePos = anchorPos("note_6")
+        val pagePos = anchorPos("page_13")
+        assertNotNull(refPos)
+        assertNotNull(notePos)
+        assertNotNull(pagePos)
+        assertTrue(notePos!! > refPos!!)
+        assertTrue(source.semanticContent.substring(refPos).startsWith("6 Following"))
+        assertTrue(source.semanticContent.substring(notePos).startsWith("6 Endnote"))
+        assertTrue(source.semanticContent.substring(pagePos!!).startsWith("page marker."))
     }
 }

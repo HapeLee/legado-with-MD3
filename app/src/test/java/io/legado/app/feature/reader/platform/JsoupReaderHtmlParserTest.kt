@@ -93,4 +93,18 @@ class JsoupReaderHtmlParserTest {
         assertEquals(1.25f, textItem.style.fontSizeScale, 0.001f)
         assertEquals(700, textItem.style.fontWeight)
     }
+
+    @Test
+    fun findsBidirectionalFootnoteAndEmptyPageAnchorPositions() {
+        val bodyHtml = "<p>Sentence end.<sup><a href=\"#note_1\" id=\"ref_1\">1</a></sup> Next <a id=\"page_13\"/>word</p>"
+        val noteHtml = "<p><span><strong><a href=\"#ref_1\" id=\"note_1\">1</a></strong></span> Footnote body text</p>"
+        val bodyParsed = JsoupReaderHtmlParser.parse(bodyHtml, 100, 20f, 2f)
+        val refPos = JsoupReaderHtmlParser.findAnchorPosition(bodyHtml, "ref_1", 100)!!
+        val pagePos = JsoupReaderHtmlParser.findAnchorPosition(bodyHtml, "page_13", 100)!!
+        val notePos = JsoupReaderHtmlParser.findAnchorPosition(noteHtml, "note_1", 500)!!
+
+        assertEquals('1', bodyParsed.semantic[refPos - 100])
+        assertTrue(bodyParsed.semantic.substring(pagePos - 100).startsWith("word"))
+        assertEquals(500, notePos)
+    }
 }

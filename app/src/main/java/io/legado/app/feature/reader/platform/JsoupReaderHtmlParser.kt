@@ -22,7 +22,8 @@ object JsoupReaderHtmlParser {
 
     data class ParsedHtml(
         val semantic: String,
-        val paragraphs: List<ReaderHtmlParagraph>
+        val paragraphs: List<ReaderHtmlParagraph>,
+        val anchorPosition: Int? = null
     )
 
     private data class InlineCtx(
@@ -50,6 +51,8 @@ object JsoupReaderHtmlParser {
 
     private class Cursor(
         var pos: Int,
+        val targetAnchorId: String? = null,
+        var anchorPosition: Int? = null,
         val semantic: StringBuilder = StringBuilder(),
         val paragraphs: MutableList<ReaderHtmlParagraph> = mutableListOf(),
         var current: MutableList<ReaderChapterInlineSource> = mutableListOf(),
@@ -59,22 +62,44 @@ object JsoupReaderHtmlParser {
         var currentRestMargin: Float = 0f
     )
 
-    fun parse(html: String, startPosition: Int, baseTextSizePx: Float, density: Float): ParsedHtml {
+    fun parse(
+        html: String,
+        startPosition: Int,
+        baseTextSizePx: Float,
+        density: Float,
+        targetAnchorId: String? = null
+    ): ParsedHtml {
         val doc = Jsoup.parseBodyFragment(html)
         val body = doc.body()
-        val cursor = Cursor(startPosition)
+        val cursor = Cursor(startPosition, targetAnchorId?.takeIf(String::isNotEmpty))
         // Seed block context from body-level alignment if present.
         val bodyCtx = BlockCtx(alignment = parseAlignment(body))
         for (child in body.childNodes().toList()) {
             walk(child, InlineCtx(), bodyCtx, cursor, baseTextSizePx, density)
         }
         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
-        return ParsedHtml(cursor.semantic.toString(), cursor.paragraphs)
+        return ParsedHtml(cursor.semantic.toString(), cursor.paragraphs, cursor.anchorPosition)
     }
 
     fun semanticText(html: String): String {
         // Geometry does not affect offsets; use neutral metrics for the fast path.
         return parse(html, 0, 10f, 1f).semantic
+    }
+
+    fun findAnchorPosition(html: String, anchorId: String, startPosition: Int = 0): Int? {
+        val target = anchorId.trim().removePrefix("#")
+        if (target.isEmpty() || !html.contains(target, ignoreCase = true)) return null
+        return parse(html, startPosition, 10f, 1f, target).anchorPosition
+    }
+
+    private fun checkAnchor(node: Element, cursor: Cursor) {
+        val target = cursor.targetAnchorId ?: return
+        if (cursor.anchorPosition != null) return
+        if (node.id().equals(target, ignoreCase = true) ||
+            node.attr("name").equals(target, ignoreCase = true)
+        ) {
+            cursor.anchorPosition = cursor.pos
+        }
     }
 
     private fun walk(
@@ -172,6 +197,7 @@ object JsoupReaderHtmlParser {
                     "blockquote", "ul", "ol", "li", "pre", "figure",
                     "figcaption", "aside", "dl", "dt", "dd", "tr", "center" -> {
                         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
+                        checkAnchor(node, cursor)
                         val childBlock = descendBlock(node, tag, block, baseTextSizePx, density)
                         // Establish geometry for the upcoming paragraph run.
                         val geo = blockGeometry(childBlock, baseTextSizePx, density)
@@ -191,6 +217,7 @@ object JsoupReaderHtmlParser {
                         cursor.currentRestMargin = parentGeo.restMargin
                     }
                     "td", "th" -> {
+                        checkAnchor(node, cursor)
                         if (cursor.current.isNotEmpty()) {
                             val prev = (cursor.current.lastOrNull() as? ReaderChapterInlineSource.Text)?.value
                             if (prev == null || !prev.endsWith(" ")) {
@@ -205,6 +232,7 @@ object JsoupReaderHtmlParser {
                         }
                     }
                     else -> {
+                        checkAnchor(node, cursor)
                         val childInline = descendInline(node, tag, inline)
                         for (child in node.childNodes().toList()) {
                             walk(child, childInline, block, cursor, baseTextSizePx, density)

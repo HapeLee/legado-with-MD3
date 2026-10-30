@@ -39,7 +39,7 @@ object LocalBookSemanticHtml {
     )
 
     private const val inlineSemanticSelector =
-        "a[href], ruby, b, strong, i, em, cite, dfn, u, ins, s, del, strike, " +
+        "a[href], [id], a[name], ruby, b, strong, i, em, cite, dfn, u, ins, s, del, strike, " +
             "code, kbd, samp, tt, sup, sub, big, small, br, " +
             "[style*=font-weight], [style*=font-style], [style*=text-decoration]"
 
@@ -300,6 +300,7 @@ object LocalBookSemanticHtml {
     private fun hasSemanticSignal(el: Element): Boolean {
         val tag = el.tagName().lowercase()
         if (tag in complexTags) return true
+        if (el.id().isNotEmpty() || el.attr("name").isNotEmpty()) return true
         val style = el.attr("style").lowercase()
         if (style.contains("text-align") || style.contains("text-indent") ||
             style.contains("font-weight") || style.contains("font-style") ||
@@ -319,6 +320,7 @@ object LocalBookSemanticHtml {
     private fun isUnwrappableContainer(el: Element): Boolean {
         val tag = el.tagName().lowercase()
         if (tag !in containerTags) return false
+        if (el.id().isNotEmpty() || el.attr("name").isNotEmpty()) return false
         return el.children().any { it.tagName().lowercase() in blockTags }
     }
 
