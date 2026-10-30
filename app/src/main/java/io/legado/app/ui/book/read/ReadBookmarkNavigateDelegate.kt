@@ -7,9 +7,12 @@ import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.domain.usecase.RelocateMarkingTargetUseCase
 import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.model.ReadBook
+import io.legado.app.model.localBook.LocalBookSemanticHtml
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.CoroutineScope
@@ -53,9 +56,25 @@ class ReadBookmarkNavigateDelegate(
             if (verdict is BookmarkTargetVerdict.Match) {
                 host.jumpToChapter(bookmark.chapterIndex, bookmark.chapterPos)
             } else {
-                host.setPendingTarget(
-                    PendingBookmarkTarget(bookmark.chapterIndex, bookmark.chapterPos, verdict)
-                )
+                val relocated = bookmark.bookText.takeIf { it.isNotBlank() }?.let { text ->
+                    relocateMarking(
+                        book = book,
+                        chapterName = bookmark.chapterName,
+                        anchor = TextProcessAnchor(
+                            chapterIndex = bookmark.chapterIndex,
+                            chapterPosition = bookmark.chapterPos,
+                            selectedText = text,
+                            normalizedTextHash = "",
+                        ),
+                    )
+                }
+                if (relocated != null) {
+                    host.jumpToChapter(relocated.chapterIndex, relocated.chapterPosition)
+                } else {
+                    host.setPendingTarget(
+                        PendingBookmarkTarget(bookmark.chapterIndex, bookmark.chapterPos, verdict)
+                    )
+                }
             }
         }
     }
@@ -101,6 +120,18 @@ class ReadBookmarkNavigateDelegate(
         host.setPendingTarget(null)
     }
 
+    fun navigateToInternalLink(link: String) {
+        val book = ReadBook.book ?: return
+        val currentIndex = ReadBook.durChapterIndex
+        scope.launch {
+            val chapters = bookRepository.getChapters(book.bookUrl)
+            val targetIndex = LocalBookSemanticHtml.resolveInternalLinkTarget(link, chapters, currentIndex)
+            if (targetIndex != null && targetIndex != currentIndex) {
+                host.jumpToChapter(targetIndex, 0)
+            }
+        }
+    }
+
     /**
      * Only inspect locally available chapter content. A missing or ambiguous match keeps the
      * existing confirmation flow, rather than fetching network content while the sheet is open.
@@ -120,10 +151,18 @@ class ReadBookmarkNavigateDelegate(
             .distinctBy { it.index }
             .mapNotNull { chapter ->
                 val rawContent = BookHelp.getContent(book, chapter) ?: return@mapNotNull null
+                val processed = processor.getContent(book, chapter, rawContent, includeTitle = false)
+                val semanticBody = ReaderChapterSourceParser.parse(
+                    chapterIndex = chapter.index,
+                    title = "",
+                    paragraphs = processed.textList,
+                    includeTitle = false,
+                    adaptSpecialStyle = true,
+                    htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+                ).semanticContent
                 RelocateMarkingTargetUseCase.Candidate(
                     chapterIndex = chapter.index,
-                    content = processor.getContent(book, chapter, rawContent, includeTitle = false)
-                        .toString(),
+                    content = semanticBody,
                 )
             }
             .toList()

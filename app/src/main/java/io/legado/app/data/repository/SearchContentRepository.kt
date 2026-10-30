@@ -7,6 +7,8 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
@@ -233,6 +235,15 @@ class SearchContentRepository(
         val includeTitle = titleModeProvider() != 2 ||
                 chapter.isVolume ||
                 bodyContent.textList.isEmpty()
+        val adaptSpecialStyle = readSettingsGateway?.currentSettings?.adaptSpecialStyle ?: true
+        val semanticBody = ReaderChapterSourceParser.parse(
+            chapterIndex = chapter.index,
+            title = "",
+            paragraphs = bodyContent.textList,
+            includeTitle = false,
+            adaptSpecialStyle = adaptSpecialStyle,
+            htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+        ).semanticContent.trimEnd('\n')
         val mContent = if (includeTitle) {
             // 标题净化必须与阅读页一致（阅读页不看"搜索替换"开关）。若这里受开关影响，
             // 标题长度不同会让本章所有正文命中整体位移，直达下标就会落到另一个同词上。
@@ -241,9 +252,9 @@ class SearchContentRepository(
                 useReplace = book.getUseReplaceRule(defaultReplaceEnabled),
                 chineseConverterType = chineseConverterType,
             )
-            listOf(title).plus(bodyContent.textList).joinToString("\n")
+            if (semanticBody.isEmpty()) title else "$title\n$semanticBody"
         } else {
-            bodyContent.toString()
+            semanticBody
         }
 
         val matches = searchPosition(mContent, query, regexReplace)

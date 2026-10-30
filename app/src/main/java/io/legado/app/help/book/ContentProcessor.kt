@@ -38,6 +38,24 @@ class ContentProcessor private constructor(
     companion object {
         private val processors = hashMapOf<String, WeakReference<ContentProcessor>>()
         private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
+        private val htmlTagBoundaryRegex = Regex("(<[^>]+>)")
+
+        private fun convertTextOutsideHtmlTags(text: String, convert: (String) -> String): String {
+            if (!text.contains('<')) return convert(text)
+            val sb = StringBuilder(text.length)
+            var last = 0
+            for (match in htmlTagBoundaryRegex.findAll(text)) {
+                if (match.range.first > last) {
+                    sb.append(convert(text.substring(last, match.range.first)))
+                }
+                sb.append(match.value)
+                last = match.range.last + 1
+            }
+            if (last < text.length) {
+                sb.append(convert(text.substring(last)))
+            }
+            return sb.toString()
+        }
 
         fun get(book: Book) = get(book.name, book.origin)
 
@@ -162,11 +180,11 @@ class ContentProcessor private constructor(
                 }
             }
             if (chineseConvert) {
-                //简繁转换
+                //简繁转换（跳过 HTML 标签属性，防止改坏 <img src> / <a href> 中的繁体资源路径）
                 try {
                     when (readGateway.currentSettings.chineseConverterType) {
-                        1 -> mContent = ChineseUtils.t2s(mContent)
-                        2 -> mContent = ChineseUtils.s2t(mContent)
+                        1 -> mContent = convertTextOutsideHtmlTags(mContent, ChineseUtils::t2s)
+                        2 -> mContent = convertTextOutsideHtmlTags(mContent, ChineseUtils::s2t)
                     }
                 } catch (_: Exception) {
                     appCtx.toastOnUi("简繁转换出错")
