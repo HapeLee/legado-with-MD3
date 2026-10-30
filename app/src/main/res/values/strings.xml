@@ -3666,7 +3666,7 @@
     <string name="manga_reader_menu">Menu</string>
     <string name="manga_reader_next_page">Next page</string>
     <string name="manga_reader_previous_page">Previous page</string>
-    <string name="manga_reader_click_cycle_hint">Tap an area to cycle its action</string>
+    <string name="manga_reader_click_area_hint">Tap an area to pick its action</string>
     <string name="manga_reader_loading_prev">Loading previous chapter…</string>
     <string name="manga_reader_loading_next">Loading next chapter…</string>
     <string name="manga_reader_loading_selected_chapter">Loading “%1$s”…</string>

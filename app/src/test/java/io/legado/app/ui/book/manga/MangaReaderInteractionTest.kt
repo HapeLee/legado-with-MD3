@@ -280,16 +280,6 @@ class MangaReaderInteractionTest {
     }
 
     @Test
-    fun `click action cycles through chapter menu and page actions`() {
-        assertEquals(0, nextMangaClickAction(-1))
-        assertEquals(1, nextMangaClickAction(0))
-        assertEquals(2, nextMangaClickAction(1))
-        assertEquals(3, nextMangaClickAction(2))
-        assertEquals(4, nextMangaClickAction(3))
-        assertEquals(-1, nextMangaClickAction(4))
-    }
-
-    @Test
     fun `page step returns next real page target`() {
         val items = listOf(page(0), page(1), page(2))
         assertEquals(1, nextPageItemIndex(items, 0, 1))

@@ -38,6 +38,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -271,6 +272,28 @@ class MangaReaderViewModelNavigationTest {
             org.junit.Assert.assertNotNull(openCmd)
             assertEquals(0, openCmd?.chapterIndex)
             assertEquals(299, openCmd?.pageIndex)
+        }
+
+    @Test
+    fun `tap area sheet keeps the settings panel open after it is dismissed`() =
+        runTest(dispatcher) {
+            val reader = createReader()
+            runCurrent()
+            reader.onIntent(MangaReaderIntent.OpenSettings(MangaReaderSettingsCategory.READER))
+            reader.onIntent(MangaReaderIntent.OpenClickActions)
+            runCurrent()
+            assertEquals(MangaReaderSheet.ClickActions, reader.uiState.value.activeSheet)
+            assertEquals(
+                MangaReaderSettingsCategory.READER,
+                reader.uiState.value.settingsCategory,
+            )
+            reader.onIntent(MangaReaderIntent.DismissSheet)
+            runCurrent()
+            assertNull(reader.uiState.value.activeSheet)
+            assertEquals(
+                MangaReaderSettingsCategory.READER,
+                reader.uiState.value.settingsCategory,
+            )
         }
 
     private fun completeScroll(reader: MangaReaderViewModel) {

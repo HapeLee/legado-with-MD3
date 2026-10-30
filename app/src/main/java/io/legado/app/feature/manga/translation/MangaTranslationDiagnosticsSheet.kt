@@ -1,10 +1,18 @@
 package io.legado.app.feature.manga.translation
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -15,7 +23,9 @@ import io.legado.app.domain.model.manga.MangaTranslationStage
 import io.legado.app.ui.ai.chat.AiThinkingCard
 import io.legado.app.ui.ai.chat.AiThinkingStep
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.persistentListOf
@@ -30,14 +40,13 @@ internal fun MangaTranslationDiagnosticsSheet(
         show = show,
         title = stringResource(R.string.feature_manga_translation_diagnostics),
         onDismissRequest = onDismiss,
-        startAction = { SmallPlainButton(onClick = onDismiss, text = stringResource(R.string.back)) },
+        startAction = { MediumTonalButton(onClick = onDismiss, icon = AppIcons.Back) },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 640.dp)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (state.ai == null && state.diagnosticPath == null && !state.busy && state.error == null) {

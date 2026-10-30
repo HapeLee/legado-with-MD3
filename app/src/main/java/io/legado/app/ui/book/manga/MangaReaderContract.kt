@@ -238,6 +238,10 @@ sealed interface MangaReaderIntent {
     data object CloseSettings : MangaReaderIntent
     data object OpenSourceActions : MangaReaderIntent
     data object OpenCacheActions : MangaReaderIntent
+
+    /** 从设置面板「全局」页打开九宫格点击区域 sheet，不关闭设置面板。 */
+    data object OpenClickActions : MangaReaderIntent
+
     data class CacheChapters(val selection: MangaCacheSelection) : MangaReaderIntent
     data object ToggleAutoRead : MangaReaderIntent
     data object DismissSheet : MangaReaderIntent
@@ -290,6 +294,10 @@ sealed interface MangaReaderSheet {
     data object ChangeSource : MangaReaderSheet
     data object SourceActions : MangaReaderSheet
     data object CacheActions : MangaReaderSheet
+
+    /** 九宫格点击区域：入口在设置面板「全局」页，不再占用设置分类 tab。 */
+    data object ClickActions : MangaReaderSheet
+
     data class PageActions(
         val pageKey: String,
         val companionPageKey: String? = null,
@@ -301,7 +309,7 @@ enum class MangaPageAction { SAVE, SAVE_SPREAD, SHARE, SHARE_SPREAD, COPY, COPY_
 
 enum class MangaCacheSelection { CURRENT, FOLLOWING, ALL }
 
-enum class MangaReaderSettingsCategory { READER, FOOTER, MENU, FILTER, CLICK_ACTIONS, AUTO_READ }
+enum class MangaReaderSettingsCategory { READER, FOOTER, MENU, FILTER, AUTO_READ }
 
 sealed interface MangaReaderDialog {
     data object AddToShelf : MangaReaderDialog

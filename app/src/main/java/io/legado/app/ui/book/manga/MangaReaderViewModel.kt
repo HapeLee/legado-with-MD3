@@ -275,6 +275,10 @@ class MangaReaderViewModel(
             MangaReaderIntent.CloseSettings -> closeSettings()
             MangaReaderIntent.OpenSourceActions -> showSheet(MangaReaderSheet.SourceActions)
             MangaReaderIntent.OpenCacheActions -> showSheet(MangaReaderSheet.CacheActions)
+            // 点击区域从设置面板「全局」页进入：保留菜单与当前分类，关闭 sheet 后回到同一页
+            MangaReaderIntent.OpenClickActions -> _uiState.update {
+                it.copy(activeSheet = MangaReaderSheet.ClickActions)
+            }
             is MangaReaderIntent.CacheChapters -> cacheChapters(intent.selection)
             MangaReaderIntent.ToggleAutoRead -> _uiState.update {
                 it.copy(
@@ -283,8 +287,9 @@ class MangaReaderViewModel(
                     menuVisible = it.settingsCategory == MangaReaderSettingsCategory.AUTO_READ,
                 )
             }
+            // 只关闭 sheet：从设置面板内打开的 sheet 关闭后应回到原分类，而不是收起整个面板
             MangaReaderIntent.DismissSheet -> _uiState.update {
-                it.copy(activeSheet = null, changeSourceBook = null, settingsCategory = null)
+                it.copy(activeSheet = null, changeSourceBook = null)
             }
             is MangaReaderIntent.UpdateSetting -> updateSetting(intent.key, intent.value)
             is MangaReaderIntent.UpdateMenuPaletteStyle -> updateMangaPreference {

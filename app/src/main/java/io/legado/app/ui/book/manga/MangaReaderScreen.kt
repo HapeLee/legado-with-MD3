@@ -364,6 +364,9 @@ fun MangaReaderScreen(
     if (state.activeSheet == MangaReaderSheet.CacheActions) {
         MangaReaderCacheActionsSheet(state, onIntent)
     }
+    if (state.activeSheet == MangaReaderSheet.ClickActions) {
+        MangaReaderClickActionsSheet(state, onIntent)
+    }
     (state.activeSheet as? MangaReaderSheet.PageActions)?.let { sheet ->
         MangaReaderPageActionsSheet(sheet.companionPageKey != null, onIntent,
             hasTranslation = hasTranslatedPage(sheet.pageKey),

@@ -111,15 +111,6 @@ internal fun mangaClickActionAt(
     height: Int,
 ): Int = clickActions.getOrNull(mangaClickRegionIndex(x, y, width, height)) ?: 0
 
-internal fun nextMangaClickAction(action: Int): Int = when (action) {
-    -1 -> 0
-    0 -> 1
-    1 -> 2
-    2 -> 3
-    3 -> 4
-    else -> -1
-}
-
 /**
  * 找 [direction] 方向上的下一个「真实页」：跳过 ChapterTransition/ChapterEdge 等非页项。
  *
