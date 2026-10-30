@@ -102,20 +102,18 @@ fun ExploreMainRoute(
             // 只订阅列表/网格布局字段供书源 sheet 呈现，其余状态仍由各分类界面自己持有。
             val showViewModel = activeViewModel
             val showLayoutMode = if (showViewModel != null) {
-                showViewModel.uiState
-                    .map { it.layoutState }
-                    .distinctUntilChanged()
-                    .collectAsStateWithLifecycle(showViewModel.uiState.value.layoutState)
-                    .value
+                val initial = remember(showViewModel) { showViewModel.uiState.value.layoutState }
+                remember(showViewModel) {
+                    showViewModel.uiState.map { it.layoutState }.distinctUntilChanged()
+                }.collectAsStateWithLifecycle(initial).value
             } else {
                 null
             }
             val showGridCount = if (showViewModel != null) {
-                showViewModel.uiState
-                    .map { it.gridCount }
-                    .distinctUntilChanged()
-                    .collectAsStateWithLifecycle(showViewModel.uiState.value.gridCount)
-                    .value
+                val initial = remember(showViewModel) { showViewModel.uiState.value.gridCount }
+                remember(showViewModel) {
+                    showViewModel.uiState.map { it.gridCount }.distinctUntilChanged()
+                }.collectAsStateWithLifecycle(initial).value
             } else {
                 3
             }
