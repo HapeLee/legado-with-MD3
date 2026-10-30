@@ -1,5 +1,7 @@
 package io.legado.app.ui.book.read
 
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.repository.BookRepository
@@ -7,6 +9,7 @@ import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.domain.usecase.RelocateMarkingTargetUseCase
 import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
+import io.legado.app.feature.reader.core.source.ReaderChapterSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
@@ -138,26 +141,16 @@ class ReadBookmarkNavigateDelegate(
                     if (targetChapter.startFragmentId.equals(fragment, ignoreCase = true)) {
                         0
                     } else {
-                        BookHelp.getContent(book, targetChapter)?.let { rawContent ->
-                            val processed = ContentProcessor.get(book)
-                                .getContent(book, targetChapter, rawContent, includeTitle = false)
-                            val source = ReaderChapterSourceParser.parse(
-                                chapterIndex = targetChapter.index,
-                                title = "",
-                                paragraphs = processed.textList,
-                                includeTitle = false,
-                                adaptSpecialStyle = true,
-                                htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
-                            )
-                            source.blocks.filterIsInstance<ReaderChapterSourceBlock.Html>()
-                                .firstNotNullOfOrNull { block ->
-                                    JsoupReaderHtmlParser.findAnchorPosition(
-                                        block.value,
-                                        fragment,
-                                        block.chapterPosition,
-                                    )
-                                }
-                        }
+                        parseChapterSource(book, targetChapter)
+                            ?.blocks
+                            ?.filterIsInstance<ReaderChapterSourceBlock.Html>()
+                            ?.firstNotNullOfOrNull { block ->
+                                JsoupReaderHtmlParser.findAnchorPosition(
+                                    block.value,
+                                    fragment,
+                                    block.chapterPosition,
+                                )
+                            }
                     }
                 } else null
                 resolvedIndex to pos
@@ -173,11 +166,10 @@ class ReadBookmarkNavigateDelegate(
      * existing confirmation flow, rather than fetching network content while the sheet is open.
      */
     private suspend fun relocateMarking(
-        book: io.legado.app.data.entities.Book,
+        book: Book,
         chapterName: String,
         anchor: TextProcessAnchor,
     ): RelocateMarkingTargetUseCase.Target? = withContext(Dispatchers.IO) {
-        val processor = ContentProcessor.get(book)
         val candidates = bookRepository.getChapters(book.bookUrl)
             .asSequence()
             .filter {
@@ -186,23 +178,28 @@ class ReadBookmarkNavigateDelegate(
             }
             .distinctBy { it.index }
             .mapNotNull { chapter ->
-                val rawContent = BookHelp.getContent(book, chapter) ?: return@mapNotNull null
-                val processed = processor.getContent(book, chapter, rawContent, includeTitle = false)
-                val semanticBody = ReaderChapterSourceParser.parse(
-                    chapterIndex = chapter.index,
-                    title = "",
-                    paragraphs = processed.textList,
-                    includeTitle = false,
-                    adaptSpecialStyle = true,
-                    htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
-                ).semanticContent
+                val source = parseChapterSource(book, chapter) ?: return@mapNotNull null
                 RelocateMarkingTargetUseCase.Candidate(
                     chapterIndex = chapter.index,
-                    content = semanticBody,
+                    content = source.semanticContent,
                 )
             }
             .toList()
         relocateMarkingTargetUseCase.locate(anchor, candidates)
+    }
+
+    private fun parseChapterSource(book: Book, chapter: BookChapter): ReaderChapterSource? {
+        val rawContent = BookHelp.getContent(book, chapter) ?: return null
+        val processed = ContentProcessor.get(book)
+            .getContent(book, chapter, rawContent, includeTitle = false)
+        return ReaderChapterSourceParser.parse(
+            chapterIndex = chapter.index,
+            title = "",
+            paragraphs = processed.textList,
+            includeTitle = false,
+            adaptSpecialStyle = true,
+            htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+        )
     }
 
     private fun BookMarking.anchor(): TextProcessAnchor? =

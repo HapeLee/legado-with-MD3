@@ -487,14 +487,16 @@ object LocalBookSemanticHtml {
         val link = runCatching { URLDecoder.decode(rawLink.trim(), "UTF-8") }
             .getOrDefault(rawLink.trim()).removePrefix("/").removePrefix("./")
         if (link.isEmpty() || chapters.isEmpty() || isExternalLink(link)) return null
+        fun canonicalUrl(ch: BookChapter): String =
+            ch.url.replace(mobiChapterPrefixRegex, "").removePrefix("/")
+
         val resolvedLink = if (link.startsWith("#")) {
-            val curBase = chapters.getOrNull(currentChapterIndex)?.url?.substringBefore("#").orEmpty()
+            val curBase = chapters.getOrNull(currentChapterIndex)
+                ?.let { canonicalUrl(it).substringBefore("#") }
+                .orEmpty()
             "$curBase$link".removePrefix("/")
         } else link
         val linkBase = resolvedLink.substringBefore("#")
-
-        fun canonicalUrl(ch: BookChapter): String =
-            ch.url.replace(mobiChapterPrefixRegex, "").removePrefix("/")
 
         fun matches(candidate: String, target: String): Boolean =
             candidate.equals(target, ignoreCase = true) ||

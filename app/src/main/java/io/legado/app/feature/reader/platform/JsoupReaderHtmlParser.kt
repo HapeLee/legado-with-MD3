@@ -162,11 +162,13 @@ object JsoupReaderHtmlParser {
                     "script", "style", "noscript", "template" -> return
                     "rt", "rp" -> return // handled via parent check; skip subtree
                     "br" -> {
+                        checkAnchor(node, cursor)
                         flushParagraph(cursor, preserveEmpty = true, baseTextSizePx, density)
                     }
                     "hr" -> {
                         // preserve as a blank separator; TODO：upgrades to Rule.
                         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
+                        checkAnchor(node, cursor)
                         cursor.paragraphs += ReaderHtmlParagraph(
                             listOf(ReaderChapterInlineSource.BlankLine(cursor.pos)),
                             0f, 0f, null, emptyList()
@@ -175,6 +177,7 @@ object JsoupReaderHtmlParser {
                         cursor.pos += 1
                     }
                     "img", "image" -> {
+                        checkAnchor(node, cursor)
                         val src = if (tag == "image") {
                             node.attr("xlink:href").takeIf { it.isNotEmpty() }
                                 ?: node.attr("src")
@@ -375,75 +378,6 @@ object JsoupReaderHtmlParser {
             "justify" -> return ReaderTextAlignment.START
         }
         return null
-    }
-
-    /** Reserved for the original-typography switch; Currently default ignores CSS font-size. */
-    @Suppress("unused")
-    private fun fontScaleFactor(value: String): Float? {
-        val v = value.trim().lowercase()
-        return when {
-            v.endsWith("em") -> v.dropLast(2).toFloatOrNull()
-            v.endsWith("%") -> v.dropLast(1).toFloatOrNull()?.div(100f)
-            v == "larger" || v == "large" -> 1.2f
-            v == "smaller" || v == "small" -> 0.8f
-            v == "x-large" -> 1.4f
-            v == "x-small" -> 0.7f
-            else -> null
-        }
-    }
-
-    /** Minimal CSS color parser (hex + a few named colors), no Android dependency. */
-
-    @Suppress("unused")
-    // Currently drop color
-    fun parseColor(raw: String): Int? {
-        val v = raw.trim().lowercase()
-        if (v.isEmpty()) return null
-        if (v.startsWith("#")) {
-            val hex = v.drop(1)
-            return when (hex.length) {
-                3 -> {
-                    val r = hex[0].toString().repeat(2).toIntOrNull(16) ?: return null
-                    val g = hex[1].toString().repeat(2).toIntOrNull(16) ?: return null
-                    val b = hex[2].toString().repeat(2).toIntOrNull(16) ?: return null
-                    (0xFF shl 24) or (r shl 16) or (g shl 8) or b
-                }
-                6 -> {
-                    val r = hex.substring(0, 2).toIntOrNull(16) ?: return null
-                    val g = hex.substring(2, 4).toIntOrNull(16) ?: return null
-                    val b = hex.substring(4, 6).toIntOrNull(16) ?: return null
-                    (0xFF shl 24) or (r shl 16) or (g shl 8) or b
-                }
-                8 -> {
-                    // #AARRGGBB
-                    val a = hex.substring(0, 2).toIntOrNull(16) ?: return null
-                    val r = hex.substring(2, 4).toIntOrNull(16) ?: return null
-                    val g = hex.substring(4, 6).toIntOrNull(16) ?: return null
-                    val b = hex.substring(6, 8).toIntOrNull(16) ?: return null
-                    (a shl 24) or (r shl 16) or (g shl 8) or b
-                }
-                else -> null
-            }
-        }
-        val rgb = Regex("rgba?\\(([^)]+)\\)").find(v)?.groupValues?.get(1)
-        if (rgb != null) {
-            val parts = rgb.split(",").map { it.trim() }
-            if (parts.size >= 3) {
-                val r = parts[0].toIntOrNull() ?: return null
-                val g = parts[1].toIntOrNull() ?: return null
-                val b = parts[2].toIntOrNull() ?: return null
-                return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
-            }
-        }
-        return when (v) {
-            "black" -> 0xFF000000.toInt()
-            "white" -> 0xFFFFFFFF.toInt()
-            "red" -> 0xFFFF0000.toInt()
-            "green" -> 0xFF008000.toInt()
-            "blue" -> 0xFF0000FF.toInt()
-            "gray", "grey" -> 0xFF808080.toInt()
-            else -> null
-        }
     }
 
     private fun flushParagraph(
