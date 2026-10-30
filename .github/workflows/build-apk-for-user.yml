@@ -20,6 +20,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch }}
           fetch-depth: 0
+          submodules: true
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5

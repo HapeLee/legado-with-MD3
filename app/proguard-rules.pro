@@ -140,6 +140,10 @@
 }
 
 # Throwable
+# ORT JNI uses FindClass/GetMethodID for result metadata and constructors.
+# Keeping native method owners alone does not preserve TensorInfo/NodeInfo etc.
+-keep class ai.onnxruntime.** { *; }
+
 -keepnames class * extends java.lang.Throwable
 -keepclassmembernames,allowobfuscation class * extends java.lang.Throwable{*;}
 # 忽略 Ktor 在 Android 上对 Java SE 管理类的引用

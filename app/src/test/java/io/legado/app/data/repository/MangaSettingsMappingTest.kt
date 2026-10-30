@@ -159,6 +159,15 @@ class MangaSettingsMappingTest {
         assertFalse(settings.enableGray)
     }
 
+    @Test
+    fun `隐藏气泡独立持久化且不关闭翻译`() {
+        val settings = MangaSettings(translationEnabled = true, translationBubbleVisible = false)
+        val restored = settings.toPrefMap().toTestPreferences().toMangaSettings()
+        assertTrue(restored.translationEnabled)
+        assertFalse(restored.translationBubbleVisible)
+        assertTrue(mutablePreferencesOf().toMangaSettings().translationBubbleVisible)
+    }
+
     private class FakeMangaSettingsGateway(initial: MangaSettings) : MangaSettingsGateway {
         private val state = MutableStateFlow(initial)
 
@@ -224,6 +233,10 @@ private fun mangaMappingSamples(): List<MangaSettings> {
 }
 
 private fun MangaSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.mangaTranslationEnabled to translationEnabled,
+    PreferKey.mangaTranslationBubbleVisible to translationBubbleVisible,
+    PreferKey.mangaTranslationBubbleRight to translationBubbleRight,
+    PreferKey.mangaTranslationBubbleHeight to translationBubbleHeight,
     PreferKey.showMangaUi to showMangaUi,
     PreferKey.disableMangaScale to disableMangaScale,
     PreferKey.disableMangaScrollAnimation to disableMangaScrollAnimation,

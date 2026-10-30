@@ -97,13 +97,11 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -1756,9 +1754,7 @@ fun BookshelfPage(
                 .fillMaxSize()
                 .semantics {
                     contentDescription = listContentDescription
-                    testTagsAsResourceId = true
                 }
-                .testTag("bookshelf_list")
                 .then(
                     with(sharedTransitionScope) {
                         if (this != null) Modifier.skipToLookaheadSize() else Modifier

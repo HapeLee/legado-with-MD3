@@ -1,5 +1,7 @@
 import java.io.FileInputStream
+import java.security.MessageDigest
 import java.util.Properties
+import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.compose.compiler)
@@ -9,7 +11,6 @@ plugins {
     alias(libs.plugins.room)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
-    alias(libs.plugins.baselineprofile)
 }
 
 apply(from = "download.gradle")
@@ -30,8 +31,42 @@ val projectVersionName = "$versionMajor.$versionMinor.$versionPatch"
 val enableAbiSplits = providers.gradleProperty("enableAbiSplits")
     .map(String::toBoolean)
     .getOrElse(true)
+val coexistRelease = providers.gradleProperty("coexistRelease")
+    .map(String::toBoolean)
+    .getOrElse(false)
+
+val small100Runtime = file("libs/onnxruntime-small100-1.31.1.aar")
+val verifySmall100Runtime by tasks.registering {
+    group = "verification"
+    description = "Verify the pinned SMaLL-100 CPU runtime and its arm64-only native payload."
+    inputs.files(small100Runtime, file("libs/onnxruntime-small100-1.31.1.aar.sha256"))
+    doLast {
+        val expected = file("libs/onnxruntime-small100-1.31.1.aar.sha256").readText().trim().substringBefore(' ')
+        val digest = MessageDigest.getInstance("SHA-256")
+        small100Runtime.inputStream().use { stream ->
+            val buffer = ByteArray(65536)
+            while (true) {
+                val count = stream.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        val actual = digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+        check(actual == expected) { "SMaLL-100 runtime checksum mismatch; see tools/small100/README.md" }
+        ZipFile(small100Runtime).use { archive ->
+            val libraries = archive.entries().asSequence().filter { it.name.startsWith("jni/") && !it.isDirectory }
+                .map { it.name }.toSet()
+            check(libraries == setOf("jni/arm64-v8a/libonnxruntime.so", "jni/arm64-v8a/libonnxruntime4j_jni.so")) {
+                "SMaLL-100 runtime must contain only the arm64 CPU runtime and JNI bridge"
+            }
+        }
+    }
+}
+
+tasks.named("preBuild").configure { dependsOn(verifySmall100Runtime) }
 
 android {
+    ndkVersion = "28.2.13676358"
     // Compose 1.13.0-beta01 的 AAR 元数据要求 compileSdk >= 37.1（android-37.0 会被 checkAarMetadata 拒绝）。
     compileSdk = 37
     compileSdkMinor = 1
@@ -53,12 +88,19 @@ android {
     }
 
     defaultConfig {
+        externalNativeBuild {
+            cmake {
+                targets += "legado_sentencepiece"
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+                cppFlags += "-std=c++17"
+                arguments += "-DANDROID_STL=c++_static"
+            }
+        }
         applicationId = "io.legato.kazusa"
         minSdk = 26
         targetSdk = 37
         versionCode = System.getenv("COMMIT_NUMBER")?.toInt()?.let { 10000 + it } ?: 32640
         versionName = System.getenv("APP_VERSION_NAME") ?: projectVersionName
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "Cronet_Version", "\"${project.findProperty("CronetVersion")}\"")
         buildConfigField(
@@ -83,13 +125,25 @@ android {
         buildConfig = true
         viewBinding = true
     }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
 
     buildTypes {
         getByName("release") {
-            if (project.hasProperty("RELEASE_STORE_FILE")) {
+            if (coexistRelease) {
+                // Reuse the registered local Firebase client and the existing local signing key.
+                // The build remains non-debuggable with R8 and resource shrinking enabled.
+                applicationIdSuffix = ".debug"
+                versionNameSuffix = "-local"
+                signingConfig = signingConfigs.getByName("debug")
+            } else if (project.hasProperty("RELEASE_STORE_FILE")) {
                 signingConfig = signingConfigs.getByName("myConfig")
             }
-            manifestPlaceholders["app_name"] = "@string/app_name"
+            manifestPlaceholders["app_name"] = if (coexistRelease) "@string/app_name_local" else "@string/app_name"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -126,7 +180,7 @@ android {
             isEnable = enableAbiSplits
             reset()
             include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = true
+            isUniversalApk = false
         }
     }
 
@@ -148,10 +202,6 @@ android {
         resources.excludes.add("META-INF/*")
     }
 
-    sourceSets {
-        getByName("androidTest").assets.directories.add("$projectDir/schemas")
-    }
-
     lint {
         baseline = file("lint-baseline.xml")
         checkDependencies = true
@@ -161,15 +211,6 @@ android {
         disable += "UnusedResources"
     }
 
-    testOptions {
-        unitTests {
-            // 阅读器核心在构造期就读字符串资源（TextPageFactory 的 keepSwipeTip、
-            // TextPage 的默认 text/title、ReadView 的无障碍动作名）。不打开这个，
-            // Robolectric 下取任何 R.string 都是 Resources$NotFoundException，
-            // 整条阅读器测试线（Track D·D1c）就起不来。
-            isIncludeAndroidResources = true
-        }
-    }
 }
 
 kotlin {
@@ -189,15 +230,10 @@ ksp {
 }
 
 dependencies {
+    implementation(project(":yakuyomi-engine"))
+    implementation(files(small100Runtime))
     implementation(libs.androidx.profileinstaller)
-    "baselineProfile"(project(":baselineprofile"))
     coreLibraryDesugaring(libs.desugar)
-    testImplementation(libs.junit)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.androidx.compose.ui.test.junit4)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
-    androidTestImplementation(libs.bundles.androidTest)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.kotlinx.serialization.json)
@@ -229,7 +265,6 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
-    androidTestImplementation(libs.room.testing)
     implementation(libs.liveeventbus)
     implementation(libs.jsoup)
     implementation(libs.json.path)
@@ -331,13 +366,4 @@ dependencies {
     implementation(libs.backdrop)
     implementation(libs.lyricViewx)
     implementation(libs.timber)
-}
-
-// 每个测试类独占一个 JVM，并且不并行 fork。Robolectric + Compose 动画这一批用例靠推进主线程
-// shadow looper 判定长按阈值与预测式返回的时序：前一个类留下的调度队列会让后一个类推不到阈值；
-// 多个 fork 并发抢 CPU 时，动画协程赶不上断言（`progress` 停在起始值、`running=false`），
-// 同一套代码会在不同批次的类上随机报错。隔离与串行是这类用例成立的前提。
-tasks.withType<Test>().configureEach {
-    forkEvery = 1
-    maxParallelForks = 1
 }

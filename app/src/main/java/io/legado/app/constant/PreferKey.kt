@@ -2,6 +2,12 @@ package io.legado.app.constant
 
 @Suppress("ConstPropertyName")
 object PreferKey {
+    const val mangaTranslationBubbleVisible = "mangaTranslationBubbleVisible"
+    const val mangaTranslationEnabled = "mangaTranslationEnabled"
+    const val mangaTranslationBackend = "mangaTranslationBackend"
+    const val mangaTranslationBubbleRight = "mangaTranslationBubbleRight"
+    const val mangaTranslationBubbleHeight = "mangaTranslationBubbleHeight"
+    const val mangaTranslationMembraneTransparency = "mangaTranslationMembraneTransparency"
     const val language = "language"
     const val fontScale = "fontScale"
     const val appFontPath = "appFontPath"

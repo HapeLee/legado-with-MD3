@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.Preferences
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.model.settings.MangaSettings
+import io.legado.app.domain.model.settings.MangaTranslationBackend
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsBoolean
 import io.legado.app.help.config.compatDsInt
@@ -31,6 +32,12 @@ class MangaSettingsRepository : MangaSettingsGateway {
 }
 
 internal fun MangaSettings.toPrefMap(): Map<String, Any?> = mapOf(
+    PreferKey.mangaTranslationBackend to translationBackend.name,
+    PreferKey.mangaTranslationEnabled to translationEnabled,
+    PreferKey.mangaTranslationBubbleVisible to translationBubbleVisible,
+    PreferKey.mangaTranslationBubbleRight to translationBubbleRight,
+    PreferKey.mangaTranslationBubbleHeight to translationBubbleHeight,
+    PreferKey.mangaTranslationMembraneTransparency to translationMembraneTransparency,
     PreferKey.showMangaUi to showMangaUi,
     PreferKey.disableMangaScale to disableMangaScale,
     PreferKey.disableMangaScrollAnimation to disableMangaScrollAnimation,
@@ -80,6 +87,14 @@ internal fun MangaSettings.toPrefMap(): Map<String, Any?> = mapOf(
 )
 
 internal fun Preferences.toMangaSettings(): MangaSettings = MangaSettings(
+    translationBackend = MangaTranslationBackend.entries.firstOrNull {
+        it.name == compatDsString(PreferKey.mangaTranslationBackend)
+    } ?: MangaTranslationBackend.AI,
+    translationBubbleVisible = compatDsBoolean(PreferKey.mangaTranslationBubbleVisible) ?: true,
+    translationEnabled = compatDsBoolean(PreferKey.mangaTranslationEnabled) ?: false,
+    translationBubbleRight = compatDsBoolean(PreferKey.mangaTranslationBubbleRight) ?: false,
+    translationBubbleHeight = (compatDsInt(PreferKey.mangaTranslationBubbleHeight) ?: 500).coerceIn(0, 1000),
+    translationMembraneTransparency = (compatDsInt(PreferKey.mangaTranslationMembraneTransparency) ?: 0).coerceIn(0, 100),
     showMangaUi = compatDsBoolean(PreferKey.showMangaUi) ?: true,
     disableMangaScale = compatDsBoolean(PreferKey.disableMangaScale) ?: true,
     disableMangaScrollAnimation = compatDsBoolean(PreferKey.disableMangaScrollAnimation) ?: false,

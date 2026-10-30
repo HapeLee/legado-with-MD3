@@ -5,7 +5,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewTreeObserver
@@ -41,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,11 +48,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -555,23 +550,6 @@ fun ReadBookRouteScreen(
         if (featureOverlayRequested) featureOverlaysInitialized = true
     }
 
-    val firstFrameStartedAtNanos = remember(controller) {
-        val requestedStart = controller.activity.intent.getLongExtra(
-            EXTRA_FIRST_FRAME_STARTED_AT_NANOS,
-            0L,
-        )
-        requestedStart.takeIf { it > 0L } ?: SystemClock.elapsedRealtimeNanos()
-    }
-    val loadingFrameTracker = remember(controller) {
-        ReaderFirstFrameTracker(firstFrameStartedAtNanos)
-    }
-    val contentFrameTracker = remember(controller) {
-        ReaderFirstFrameTracker(firstFrameStartedAtNanos)
-    }
-    LaunchedEffect(Unit) {
-        withFrameNanos { }
-        loadingFrameTracker.report(ReaderStartupFramePhase.LOADING)
-    }
     LaunchedEffect(isDarkTheme) {
         controller.onAppThemeChanged(isDarkTheme)
     }
@@ -583,12 +561,6 @@ fun ReadBookRouteScreen(
     LaunchedEffect(controller) {
         controller.composeBoundaryMessages.collect { message ->
             readerSnackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
-        }
-    }
-    LaunchedEffect(readerPageWindow.current?.id, readerPageWindow.current?.layoutRevision) {
-        if (readerPageWindow.current != null) {
-            withFrameNanos { }
-            contentFrameTracker.report(ReaderStartupFramePhase.CONTENT)
         }
     }
 
@@ -657,7 +629,6 @@ fun ReadBookRouteScreen(
     Box(
         Modifier
             .fillMaxSize()
-            .semantics { testTagsAsResourceId = true }
             .readerSharedBounds(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
@@ -720,7 +691,7 @@ fun ReadBookRouteScreen(
                     .fillMaxSize()
                     .then(
                         if (displayedReaderPageWindow?.current?.isPlaceholder == false) {
-                            Modifier.testTag("reader_content")
+                            Modifier
                         } else Modifier
                     )
                     .then(

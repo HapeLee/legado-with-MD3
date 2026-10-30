@@ -18,6 +18,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,7 +86,16 @@ private enum class MangaColorPickerTarget { BACKGROUND, FILTER, MENU_SEED }
  * [HorizontalPager] 左右滑动切换；自动阅读分类不在 tab 里，由长按菜单按钮进入。
  */
 @Composable
-internal fun MangaSettingsPanel(
+internal fun MangaSettingsPanel(state: MangaReaderUiState, onIntent: (MangaReaderIntent) -> Unit) {
+    val holder = rememberSaveableStateHolder()
+    val page = state.translationPage
+    if (page != null) {
+        io.legado.app.feature.manga.MangaTranslationSettingsContent(state, onIntent)
+    } else holder.SaveableStateProvider("reader-settings") { MangaSettingsPanelPrimary(state, onIntent) }
+}
+
+@Composable
+private fun MangaSettingsPanelPrimary(
     state: MangaReaderUiState,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
@@ -336,6 +347,12 @@ private fun ReaderSettingsContent(
     settings: MangaReaderSettings,
     onIntent: (MangaReaderIntent) -> Unit,
 ) {
+    TinySettingItem(
+        title = stringResource(R.string.feature_manga_translation_title),
+        description = stringResource(if (settings.translationEnabled) R.string.feature_manga_translation_enabled_status else R.string.feature_manga_translation_disabled),
+        trailingContent = { Text("›", style = MaterialTheme.typography.titleLarge) },
+        onClick = { onIntent(MangaReaderIntent.OpenTranslationSettings) },
+    )
     val isWebtoon = settings.scrollMode == MangaScrollMode.WEBTOON ||
         settings.scrollMode == MangaScrollMode.WEBTOON_WITH_GAP
     val isHorizontalPaged = settings.scrollMode == MangaScrollMode.PAGE_LEFT_TO_RIGHT ||

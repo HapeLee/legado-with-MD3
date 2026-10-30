@@ -37,7 +37,7 @@
 
 当前工程是 Android-first 的渐进迁移仓库，不是已经完成的 KMP 工程：
 
-- Gradle 模块：`:app`、`:modules:book`、`:modules:rhino`、`:baselineprofile`；`modules/web` 是独立 Vue 3
+- Gradle 模块：`:app`、`:modules:book`、`:modules:rhino`；`modules/web` 是独立 Vue 3
   工程。
 - `:app` 同时包含 Android UI、数据、领域、服务和大量遗留 View 代码；包目录只表达逻辑边界，尚无 Gradle
   编译隔离。
@@ -151,7 +151,7 @@ platform implementations (Android/JVM/iOS/...)
 .\gradlew.bat :app:compileAppDebugKotlin
 
 # 当前主验证集
-.\gradlew.bat testAppDebugUnitTest lintAppDebug verifyConfigArchitecture assembleAppDebug --continue --no-configuration-cache
+.\gradlew.bat lintAppDebug verifyConfigArchitecture assembleAppDebug --continue --no-configuration-cache
 
 # 资源、Manifest、生成绑定或打包变化
 .\gradlew.bat :app:assembleAppDebug

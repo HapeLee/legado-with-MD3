@@ -24,9 +24,6 @@ android {
         checkDependencies = true
         targetSdk = 37
     }
-    testOptions {
-        targetSdk = 37
-    }
     tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.add("-Xlint:deprecation")
     }

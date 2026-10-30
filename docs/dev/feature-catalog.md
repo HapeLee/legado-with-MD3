@@ -21,7 +21,7 @@
 | `ui/book/readaloud`                      | `feature/read-aloud`        | Feature + platform adapter    | 控制 UI 可 Feature 化，TTS/service/media 生命周期留 platform                           |
 | `ui/book/audio`                          | `feature/audio-playback`    | Feature + platform adapter    | 播放服务、媒体会话和通知留 Android platform                                               |
 | `ui/book/read`                           | `platform/android/reader`   | platform island               | 当前不作为普通 Feature 搬迁；共享状态/模型另行立项                                               |
-| `ui/book/manga`                          | `feature/manga`             | Feature + renderer capability | 图片渲染、缓存和手势需专项边界审计                                                            |
+| `ui/book/manga`                          | `feature/manga`             | Feature + renderer capability | 翻译气泡与呈现状态位于 feature/manga，阅读器通过 Gateway 接入持久队列；图片渲染保留平台边界            |
 | `ui/config/*`                            | `feature/settings`          | Feature domain                | 先保留 settings 下的 `appearance`、`reading`、`backup`、`advanced` 等 section，不为每页建模块 |
 | `ui/theme`                               | `core/designsystem`         | core candidate                | theme engine、token 与基础主题；Feature 专属样式不进入 core                                |
 | `ui/widget/components`                   | owner audit                 | core/ui candidate             | 有至少两个 Feature 调用且职责稳定的组件才进入 `core/ui` 或 `core/designsystem`                  |

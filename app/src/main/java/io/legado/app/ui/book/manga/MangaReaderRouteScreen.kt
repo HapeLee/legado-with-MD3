@@ -66,7 +66,18 @@ fun MangaReaderRouteScreen(
     val platformCapabilities = remember(activity) { AndroidPlatformCapabilities(activity) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val modelPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        val sources = uris.map { uri ->
+            io.legado.app.data.repository.manga.AndroidMangaModelSource(activity.application, uri)
+        }
+        if (sources.isNotEmpty()) viewModel.onIntent(MangaReaderIntent.TranslationModelsSelected(sources))
+    }
     val currentIsTopRoute by rememberUpdatedState(isTopRoute)
+    LaunchedEffect(isTopRoute, viewModel) {
+        if (!isTopRoute) viewModel.onIntent(MangaReaderIntent.TranslationReaderExited)
+    }
     val networkChangedListener = remember(activity) { NetworkChangedListener(activity) }
 
     LaunchedEffect(viewModel, bookUrl, inBookshelf, chapterChanged, openRequestId) {
@@ -93,6 +104,7 @@ fun MangaReaderRouteScreen(
         viewModel.effects.collectLatest { effect ->
             val currentState = viewModel.uiState.value
             when (effect) {
+                MangaReaderEffect.ImportTranslationModels -> modelPicker.launch(arrayOf("*/*"))
                 is MangaReaderEffect.Finish -> {
                     bookshelfChangedResult = effect.bookshelfChanged
                     dismissManga()
@@ -230,7 +242,7 @@ fun MangaReaderRouteScreen(
     // 漫画页同样是普通 nav3 目的地：转场是 `readerEntryMetadata` 的交叉淡入淡出，
     // 封面飞行交给共享元素 —— 整页被当成一块「只裁剪、不缩放」的面，从封面那一格长到满屏。
     val menuHazeState = remember { HazeState() }
-    val useMenuHaze = state.settings.menuBottomBarBlur ||
+    val useMenuHaze = (state.settings.translationEnabled && !state.settings.enableEInk) || state.settings.menuBottomBarBlur ||
             (!state.settings.menuBottomBarFloating &&
                     state.settings.menuBottomBarLiquidGlass &&
                     state.settingsCategory != null)

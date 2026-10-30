@@ -1,0 +1,6 @@
+onnx==1.23.2
+onnxruntime==1.31.1
+numpy==2.5.4
+flatbuffers==25.12.19
+cmake==3.31.6
+ninja==1.11.1.4

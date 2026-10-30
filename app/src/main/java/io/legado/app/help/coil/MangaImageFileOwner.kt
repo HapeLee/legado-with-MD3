@@ -28,6 +28,7 @@ class MangaImageFileOwner : Closeable, RememberObserver {
     private var closed = false
     private var file: File? = null
     private var lease: Closeable? = null
+    private var pinFile: (File) -> Closeable = { BookHelp.pinImageFile(it) }
     private val acquisition = Mutex()
     private var requestData: String? = null
     private var fileLength = 0L
@@ -41,6 +42,10 @@ class MangaImageFileOwner : Closeable, RememberObserver {
 
     /** 同一显示请求的预览、背景取色与回退共享已校验的文件，避免反复查库和获取。 */
     internal suspend fun acquire(data: String, fetch: suspend () -> Pair<File, Closeable>): File =
+        acquire(data, { BookHelp.pinImageFile(it) }, fetch)
+
+    internal suspend fun acquire(data: String, pin: (File) -> Closeable,
+                                 fetch: suspend () -> Pair<File, Closeable>): File =
         acquisition.withLock {
             val cached = synchronized(this) {
                 if (closed) throw CancellationException("Image request disposed")
@@ -50,14 +55,14 @@ class MangaImageFileOwner : Closeable, RememberObserver {
                 }
             }
             cached ?: fetch().let { (file, lease) ->
-                attach(file, lease)
+                attach(file, lease, pin)
                 synchronized(this) { requestData = data }
                 file
             }
         }
 
     @Synchronized
-    fun attach(file: File, lease: Closeable) {
+    fun attach(file: File, lease: Closeable, pin: (File) -> Closeable = { BookHelp.pinImageFile(it) }) {
         if (closed) {
             lease.close()
             throw CancellationException("Image request disposed")
@@ -70,6 +75,7 @@ class MangaImageFileOwner : Closeable, RememberObserver {
         else {
             this.file = file
             this.lease = lease
+            this.pinFile = pin
         }
         fileLength = file.length()
         fileModified = file.lastModified()
@@ -78,7 +84,7 @@ class MangaImageFileOwner : Closeable, RememberObserver {
     /** 瓦片具有独立租约；释放 Compose 请求不提前释放解码器正在使用的文件。 */
     @Synchronized
     fun borrowForTiles(): Pair<File, Closeable>? =
-        file?.takeUnless { closed }?.let { it to BookHelp.pinImageFile(it) }
+        file?.takeUnless { closed }?.let { file -> runCatching { file to pinFile(file) }.getOrNull() }
 
     @Synchronized
     override fun close() {
