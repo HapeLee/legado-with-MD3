@@ -79,7 +79,6 @@ import io.legado.app.model.reader.ReaderChapterInput
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.receiver.TimeBatteryReceiver
 import io.legado.app.service.BaseReadAloudService
-import io.legado.app.ui.association.OpenUrlConfirmActivity
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.PopupAction
@@ -622,14 +621,9 @@ class ReadBookController(
     private fun handleComposeLinkClick(rawLink: String) {
         val link = rawLink.trim()
         if (link.isEmpty()) return
-        val book = ReadBook.book
         if (LocalBookSemanticHtml.isExternalLink(link)) {
-            activity.startActivity(
-                Intent(activity, OpenUrlConfirmActivity::class.java)
-                    .putExtra("uri", link)
-                    .putExtra("sourceOrigin", book?.bookUrl)
-                    .putExtra("sourceName", book?.name)
-                    .putExtra("sourceType", BookType.local)
+            viewModel.onIntent(
+                ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmOpenExternalUrl(link))
             )
             return
         }
