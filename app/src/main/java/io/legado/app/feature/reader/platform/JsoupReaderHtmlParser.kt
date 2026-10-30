@@ -46,7 +46,9 @@ object JsoupReaderHtmlParser {
         val listStack: List<Boolean> = emptyList(), // true = ordered
         val inPre: Boolean = false,
         val headingScale: Float = 1f,
-        val headingBold: Boolean = false
+        val headingBold: Boolean = false,
+        /** 表格、图注、定义列表等结构化块：排版由 HTML 语义决定，不套阅读器正文缩进。 */
+        val structural: Boolean = false
     )
 
     private class Cursor(
@@ -59,7 +61,8 @@ object JsoupReaderHtmlParser {
         var currentAlignment: ReaderTextAlignment? = null,
         var currentDecorations: List<ReaderParagraphDecoration> = emptyList(),
         var currentFirstMargin: Float = 0f,
-        var currentRestMargin: Float = 0f
+        var currentRestMargin: Float = 0f,
+        var currentPreserveBodyIndent: Boolean = true
     )
 
     fun parse(
@@ -208,6 +211,7 @@ object JsoupReaderHtmlParser {
                         cursor.currentDecorations = geo.decorations
                         cursor.currentFirstMargin = geo.firstMargin
                         cursor.currentRestMargin = geo.restMargin
+                        cursor.currentPreserveBodyIndent = geo.preserveBodyIndent
                         for (child in node.childNodes().toList()) {
                             walk(child, inline, childBlock, cursor, baseTextSizePx, density)
                         }
@@ -218,6 +222,7 @@ object JsoupReaderHtmlParser {
                         cursor.currentDecorations = parentGeo.decorations
                         cursor.currentFirstMargin = parentGeo.firstMargin
                         cursor.currentRestMargin = parentGeo.restMargin
+                        cursor.currentPreserveBodyIndent = parentGeo.preserveBodyIndent
                     }
                     "td", "th" -> {
                         checkAnchor(node, cursor)
@@ -250,7 +255,8 @@ object JsoupReaderHtmlParser {
         val alignment: ReaderTextAlignment?,
         val decorations: List<ReaderParagraphDecoration>,
         val firstMargin: Float,
-        val restMargin: Float
+        val restMargin: Float,
+        val preserveBodyIndent: Boolean
     )
 
     private fun blockGeometry(
@@ -280,7 +286,19 @@ object JsoupReaderHtmlParser {
         }
         val totalLevels = block.quoteDepth + block.listStack.size
         val margin = totalLevels * step
-        return BlockGeo(block.alignment, decorations, margin, margin)
+        return BlockGeo(
+            alignment = block.alignment,
+            decorations = decorations,
+            firstMargin = margin,
+            restMargin = margin,
+            // 只有普通正文段落沿用阅读器段首缩进。标题/引用/列表/pre/表格等由 HTML 语义自己排版。
+            preserveBodyIndent = block.quoteDepth == 0 &&
+                block.listStack.isEmpty() &&
+                !block.inPre &&
+                !block.structural &&
+                block.headingScale <= 1f &&
+                !block.headingBold,
+        )
     }
 
     private fun descendBlock(
@@ -296,6 +314,7 @@ object JsoupReaderHtmlParser {
         var inPre = parent.inPre
         var headingScale = parent.headingScale
         var headingBold = parent.headingBold
+        var structural = parent.structural
         when (tag) {
             "blockquote" -> quoteDepth += 1
             "ul" -> listStack = listStack + false
@@ -307,9 +326,11 @@ object JsoupReaderHtmlParser {
             "h3" -> { headingScale = 1.15f; headingBold = true }
             "h4" -> { headingScale = 1.05f; headingBold = true }
             "h5", "h6" -> { headingScale = 1f; headingBold = true }
+            "tr", "td", "th", "figure", "figcaption",
+            "aside", "dl", "dt", "dd" -> structural = true
         }
         // li does not push a new level; its parent ul/ol already did.
-        return BlockCtx(alignment, quoteDepth, listStack, inPre, headingScale, headingBold)
+        return BlockCtx(alignment, quoteDepth, listStack, inPre, headingScale, headingBold, structural)
     }
 
     private fun descendInline(el: Element, tag: String, parent: InlineCtx): InlineCtx {
@@ -392,7 +413,8 @@ object JsoupReaderHtmlParser {
                 cursor.currentFirstMargin,
                 cursor.currentRestMargin,
                 cursor.currentAlignment,
-                cursor.currentDecorations
+                cursor.currentDecorations,
+                cursor.currentPreserveBodyIndent
             )
             cursor.semantic.append('\n')
             cursor.pos += 1
@@ -404,7 +426,8 @@ object JsoupReaderHtmlParser {
                 cursor.currentFirstMargin,
                 cursor.currentRestMargin,
                 cursor.currentAlignment,
-                cursor.currentDecorations
+                cursor.currentDecorations,
+                cursor.currentPreserveBodyIndent
             )
             cursor.semantic.append('\n')
             cursor.pos += 1

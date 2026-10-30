@@ -28,6 +28,14 @@ data class ReaderHtmlParagraph(
     val restLineMarginPx: Float = 0f,
     val alignment: ReaderTextAlignment? = null,
     val decorations: List<ReaderParagraphDecoration> = emptyList(),
+    /**
+     * 该 HTML 段是否属于普通正文，可以套用阅读器的段首缩进。
+     *
+     * 标题、`pre`、引用、列表等块由 HTML 语义自己决定排版，测量时保持原样；
+     * 普通 `<p>`/`<div>` 正文段则与纯文本段落共用 [ReaderChapterMeasureStyle.bodyIndentText]。
+     * 作者显式写在正文里的缩进字符仍优先（测量时会识别并跳过虚拟缩进）。
+     */
+    val preserveBodyIndent: Boolean = true,
 )
 
 enum class ReaderParagraphDecorationKind { QUOTE, BULLET }
@@ -250,7 +258,7 @@ class ReaderChapterBlockMeasurer(
             alignmentOverride: ReaderTextAlignment? = null,
             decorations: List<ReaderParagraphDecoration> = emptyList(),
             /**
-             * 该段来自旧 `setTypeHtml` 的 HTML 块。它同时决定旧的整行补空格/附加行距
+             * 该段来自旧 `setTypeHtml` 的 HTML 块。它同时决定旧的整行补空格/两端对齐策略
              * （[ReaderMeasuredBlock.InlineParagraph.justifyAtWordBoundaries]）与旧 HTML 路径
              * 的图片规则（见 [resolveImageLayout]）。
              */
@@ -314,7 +322,7 @@ class ReaderChapterBlockMeasurer(
                     restLineIndentWidthPx = restLineMarginPx,
                     leadingIndentItems = leadingIndentItems,
                     decorations = decorations,
-                    // 旧 HTML 块才有整行补空格与附加行距。
+                    // 旧 HTML 块才有整行补空格、按词间空格两端对齐的行为。
                     justifyAtWordBoundaries = fromHtmlBlock,
                     alignment = alignmentOverride ?: if (isTitle) style.titleAlignment else style.bodyAlignment,
                     lineHeightPx = lineHeight ?: baseStyle.fontSizePx,
@@ -605,10 +613,18 @@ class ReaderChapterBlockMeasurer(
                     }
                         ?: fallbackHtmlParagraphs(source, block)
                     paragraphs.forEach { paragraph ->
+                        // 普通 HTML 正文段与纯文本段落共用阅读器段首缩进；标题、pre、引用、
+                        // 列表、居中/右对齐等由 HTML 语义自己决定的段保持原样。
+                        val applyBodyIndent = paragraph.preserveBodyIndent &&
+                            paragraph.firstLineMarginPx == 0f &&
+                            paragraph.restLineMarginPx == 0f &&
+                            paragraph.decorations.isEmpty() &&
+                            paragraph.alignment != ReaderTextAlignment.CENTER &&
+                            paragraph.alignment != ReaderTextAlignment.END
                         addStyledParagraph(
                             items = paragraph.items,
                             isTitle = false,
-                            applyBodyIndent = false,
+                            applyBodyIndent = applyBodyIndent,
                             firstLineMarginPx = paragraph.firstLineMarginPx,
                             restLineMarginPx = paragraph.restLineMarginPx,
                             alignmentOverride = paragraph.alignment,

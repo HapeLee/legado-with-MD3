@@ -95,6 +95,28 @@ class JsoupReaderHtmlParserTest {
     }
 
     @Test
+    fun onlyNormalBodyBlocksKeepReaderIndent() {
+        val parsed = JsoupReaderHtmlParser.parse(
+            "<p>正文</p><h2>标题</h2><pre>代码</pre><blockquote>引文</blockquote>" +
+                "<ul><li>列表</li></ul><table><tr><td>表格</td></tr></table><figure><figcaption>图注</figcaption></figure>",
+            0, 20f, 2f,
+        )
+
+        fun preserveOf(text: String) = parsed.paragraphs.first { paragraph ->
+            paragraph.items.filterIsInstance<ReaderChapterInlineSource.Text>()
+                .any { it.value.contains(text) }
+        }.preserveBodyIndent
+
+        assertTrue(preserveOf("正文"))
+        assertEquals(false, preserveOf("标题"))
+        assertEquals(false, preserveOf("代码"))
+        assertEquals(false, preserveOf("引文"))
+        assertEquals(false, preserveOf("列表"))
+        assertEquals(false, preserveOf("表格"))
+        assertEquals(false, preserveOf("图注"))
+    }
+
+    @Test
     fun findsBidirectionalFootnoteAndEmptyPageAnchorPositions() {
         val bodyHtml = "<p>Sentence end.<sup><a href=\"#note_1\" id=\"ref_1\">1</a></sup> Next <a id=\"page_13\"/>word</p>"
         val noteHtml = "<p><span><strong><a href=\"#ref_1\" id=\"note_1\">1</a></strong></span> Footnote body text</p>"

@@ -475,7 +475,7 @@ class ReaderChapterBlockMeasurerTest {
         assertEquals(1.5f, blank.lineSpacingMultiplier, 0f)
     }
 
-    @Test fun htmlParagraphDoesNotInheritPlainBodyFirstLineIndent() = runBlocking {
+    @Test fun htmlBodyParagraphUsesReaderIndent() = runBlocking {
         val source = ReaderChapterSource(1, "", listOf(ReaderChapterSourceBlock.Html("x", 0)), 1)
         val result = ReaderChapterBlockMeasurer(
             bodyShaper = shaper,
@@ -487,8 +487,40 @@ class ReaderChapterBlockMeasurerTest {
         ).measure(source, style.copy(bodyIndentCharacters = 2)) as ReaderChapterMeasureResult.Success
 
         val html = result.blocks.single() as ReaderMeasuredBlock.InlineParagraph
-        assertEquals(0, html.indentCharacters)
-        assertEquals(0f, html.indentWidthPx!!, 0f)
+        assertEquals(2, html.indentCharacters)
+        assertEquals(20f, html.indentWidthPx!!, 0f)
+    }
+
+    @Test fun htmlHeadingAndQuoteKeepTheirOwnIndent() = runBlocking {
+        val source = ReaderChapterSource(
+            1, "", listOf(ReaderChapterSourceBlock.Html("x", 0)), 1,
+        )
+        val result = ReaderChapterBlockMeasurer(
+            bodyShaper = shaper,
+            titleShaper = shaper,
+            imageDimensionsResolver = { null },
+            htmlSourceResolver = ReaderHtmlSourceResolver { _, position -> listOf(
+                ReaderHtmlParagraph(
+                    items = listOf(ReaderChapterInlineSource.Text("标题", position)),
+                    preserveBodyIndent = false,
+                ),
+                ReaderHtmlParagraph(
+                    items = listOf(ReaderChapterInlineSource.Text("引文", position + 3)),
+                    firstLineMarginPx = 24f,
+                    restLineMarginPx = 24f,
+                    decorations = listOf(ReaderParagraphDecoration(
+                        ReaderParagraphDecorationKind.QUOTE, null, 2f,
+                    )),
+                ),
+            ) },
+        ).measure(source, style.copy(bodyIndentCharacters = 2)) as ReaderChapterMeasureResult.Success
+
+        val paragraphs = result.blocks.filterIsInstance<ReaderMeasuredBlock.InlineParagraph>()
+        assertEquals(2, paragraphs.size)
+        assertEquals(0, paragraphs[0].indentCharacters)
+        assertEquals(0f, paragraphs[0].indentWidthPx!!, 0f)
+        assertEquals(0, paragraphs[1].indentCharacters)
+        assertEquals(24f, paragraphs[1].indentWidthPx!!, 0f)
     }
 
     @Test fun htmlParagraphCarriesBlockMarginsAndAlignmentIntoCanvasLayout() = runBlocking {

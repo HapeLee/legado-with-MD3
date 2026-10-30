@@ -66,13 +66,6 @@ data class ReaderPaginationConfig(
      */
     val chapterEndPaddingPx: Float = 0f,
     val textBottomJustify: Boolean = false,
-    /**
-     * HTML 段落的行盒附加间距，对照旧 `TextChapterLayout.setTypeHtml` 的
-     * `setLineSpacing(paragraphSpacing.toFloat(), lineSpacingExtra)`：行距之外每行再加一次
-     * `paragraphSpacing`（原始设置值），并随后由行距乘数再放大一次（旧 `durY += lineHeight *
-     * lineSpacingExtra`，乘数被算两次）。只作用于 HTML 块（测量期以 `justifyAtWordBoundaries` 标记）。
-     */
-    val htmlLineSpacingAddPx: Float = 0f,
     val pageUnderline: ReaderPageUnderline? = null,
     val inlineImagesPreserveScrollLine: Boolean = true,
     val emphasisUnderlineStyle: ReaderEmphasisUnderline? = null,
@@ -1040,18 +1033,12 @@ internal class ReaderPaginationSession(
             }
             addPageUnderline(underlineElementStart, y + actualLineHeight)
             columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + actualLineHeight)
-            // 旧 `setTypeHtml` 的行推进：行盒含 spacingAdd，且行距乘数被算两次；
-            // 纯文本段落只算一次（`setTypeText`）。HTML 块由测量期标记。
+            // 正文所有段落（纯文本与 HTML）共用同一套行推进：行盒 × 行距倍率。
+            // 旧 View 的 HTML 路径把行距倍率算两次并额外加 paragraphSpacing，
+            // 会让同一页里的 HTML 段落和普通段落行距不一致。
             // 命中行行距不进行盒、也不乘行距：它是这一行之后额外留出的空白，
             // 九宫格的下边条就画在这截里。
-            val htmlSpacingAddPx =
-                if (paragraph.justifyAtWordBoundaries) config.htmlLineSpacingAddPx else 0f
-            y += linePadBottomPx + if (htmlSpacingAddPx > 0f) {
-                (actualLineHeight * paragraph.lineSpacingMultiplier + htmlSpacingAddPx) *
-                        paragraph.lineSpacingMultiplier
-            } else {
-                actualLineHeight * paragraph.lineSpacingMultiplier
-            }
+            y += linePadBottomPx + actualLineHeight * paragraph.lineSpacingMultiplier
         }
         if (appendSeparator) {
             pageText.append('\n')
