@@ -214,9 +214,8 @@ object LocalBook {
                 return StringEscapeUtils.unescapeHtml4(content)
             }
         }
-        if (content.isNullOrEmpty() && !chapter.isVolume) {
-            return null
-        }
+        // An empty chapter body ("") is a valid blank page and renders through the
+        // title pipeline; only null means the content is genuinely unavailable.
         return content
     }
 

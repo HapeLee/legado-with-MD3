@@ -213,7 +213,7 @@ class MobiFile(var book: Book) {
             it.attr("src", "recindex:$recindex")
         }
 
-        return format(soup.outerHtml())
+        return format(soup, chapter.title)
     }
 
     private fun getContentKF8(kf8Book: KF8Book, chapter: BookChapter): String? {
@@ -245,14 +245,36 @@ class MobiFile(var book: Book) {
 
         soup.select("title").remove()
         soup.select("[style*=display:none]").remove()
+        // Parity with KF6: convert recindex images instead of dropping them.
+        soup.select("img[recindex]").forEach {
+            val recindex = it.attr("recindex")
+            it.clearAttributes()
+            it.attr("src", "recindex:$recindex")
+        }
 
-        return format(soup.outerHtml())
+        return format(soup, chapter.title)
     }
 
-    private fun format(html: String): String {
-        return HtmlFormatter.formatKeepImg(html)
+    private fun format(soup: org.jsoup.nodes.Document, chapterTitle: String? = null): String {
+        val body = soup.body() ?: return ""
+        // Collect inline <style> blocks before stripping them.
+        val cssTexts = soup.select("style").mapNotNull { it.html().takeIf(String::isNotBlank) }
+        body.select("script, style").remove()
+        body.select("[style*=display:none]").remove()
+        LocalBookSemanticHtml.sanitizeImages(body.select("img"))
+        if (cssTexts.isNotEmpty()) {
+            val rules = cssTexts.flatMap { LocalBookSemanticHtml.parseCssRules(it) }
+            if (rules.isNotEmpty()) {
+                LocalBookSemanticHtml.inlineCssSemantics(body, rules)
+                body.select("[style*=display:none]").remove()
+            }
+        }
+        val channel = LocalBookSemanticHtml.emitMixedChannel(body, chapterTitle)
+        return channel
             .replace(xmlDeclarationRegex, "")
             .replace(doctypeDeclarationRegex, "")
+            .takeIf { it.isNotBlank() }
+            ?: ""
     }
 
     private fun getImage(href: String): InputStream? {

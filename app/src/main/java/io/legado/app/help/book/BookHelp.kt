@@ -880,10 +880,14 @@ object BookHelp {
         val file = cachedChapterContentFile(book, bookChapter)
         if (file.exists()) {
             val string = file.readText()
-            if (string.isEmpty()) {
-                return null
+            if (string.isNotEmpty()) {
+                return string
             }
-            return string
+            // A stale empty cache (e.g. a title-only chapter cached before blank
+            // pages were supported) must not read as a load failure: drop it and
+            // reload. Local books reparse to a blank page; online books fall
+            // through to null so the caller still triggers a download.
+            file.delete()
         }
         if (book.isLocal) {
             val string = LocalBook.getContent(book, bookChapter)

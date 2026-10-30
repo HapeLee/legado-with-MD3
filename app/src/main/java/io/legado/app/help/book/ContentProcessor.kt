@@ -155,8 +155,11 @@ class ContentProcessor private constructor(
                 AppLog.put("去除重复标题出错\n${e.localizedMessage}", e)
             }
             if (reSegment && book.getReSegment()) {
-                //重新分段
-                mContent = ContentHelp.reSegment(mContent, chapter.title)
+                // 跳过重新分段处理：默认内容为纯文本，避免导致标签或属性受损。
+                if (!mContent.contains("<usehtml>")) {
+                    //重新分段
+                    mContent = ContentHelp.reSegment(mContent, chapter.title)
+                }
             }
             if (chineseConvert) {
                 //简繁转换
