@@ -19,6 +19,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -39,11 +41,13 @@ fun ReaderMenuActionSquare(
     hasMore: Boolean = false,
     onClick: () -> Unit,
     onMoreClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .alpha(if (enabled) 1f else 0.38f)
             .clip(RoundedCornerShape(16.dp))
             .background(
                 if (selected) LegadoTheme.colorScheme.secondaryContainer
@@ -54,7 +58,7 @@ fun ReaderMenuActionSquare(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .clickable(onClick = onClick),
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -72,7 +76,7 @@ fun ReaderMenuActionSquare(
         if (hasMore && onMoreClick != null) {
             HorizontalDivider(color = LegadoTheme.colorScheme.surfaceContainer)
             Box(
-                modifier = Modifier.fillMaxWidth().height(16.dp).clickable(onClick = onMoreClick),
+                modifier = Modifier.fillMaxWidth().height(16.dp).clickable(enabled = enabled, role = Role.Button, onClick = onMoreClick),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="manga_inpaint_engine">擦字引擎</string>
+    <string name="manga_inpaint_local">本地快速处理</string>
+    <string name="manga_inpaint_engine_hint">独立于 OCR 和翻译引擎，模型需手动下载。覆盖模式使用本地底色遮盖；使用在线图片模型请在上方选择「AI 修复背景后本地排版」。</string>
+    <string name="manga_inpaint_migan_hint">约 27 MiB，速度较快。</string>
+    <string name="manga_inpaint_lama_hint">约 198 MiB，内存占用较高。</string>
+    <string name="manga_inpaint_checking">正在检查擦字模型…</string>
+    <string name="manga_inpaint_missing">擦字模型未下载</string>
+    <string name="manga_inpaint_downloading">正在下载擦字模型…</string>
+    <string name="manga_inpaint_ready">已下载</string>
+    <string name="manga_inpaint_failed">擦字模型下载失败</string>
+    <string name="manga_inpaint_download_size">%1$.1f / %2$.1f MiB</string>
+    <string name="manga_inpaint_download">下载擦字模型</string>
+    <string name="manga_inpaint_delete">删除擦字模型</string>
+    <string name="manga_inpaint_download_required">请先下载所选擦字模型，不会在翻译时自动下载。</string>
+    <string name="manga_inpaint_integrity_failed">擦字模型大小或 SHA-256 校验失败。</string>
+    <string name="manga_inpaint_runtime_unavailable">所选擦字引擎运行失败，请选择其他引擎。</string>
+    <string name="manga_inpaint_area_too_large">该擦字区域超出端侧内存预算，请改用本地快速处理。</string>
+</resources>

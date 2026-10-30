@@ -3,12 +3,19 @@ package io.legado.app.ui.book.manga
 import android.app.Application
 import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import io.legado.app.ui.theme.AppTheme
+import io.legado.app.domain.model.settings.AppUiConfiguration
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -69,6 +76,10 @@ class MangaReaderScreenLayoutTest {
     private val visible = mutableStateOf(true)
     private val reports = mutableListOf<MangaReaderIntent.VisibleItemChanged>()
     private val intents = mutableListOf<MangaReaderIntent>()
+    private val translatedPages = mutableListOf<Pair<String, Boolean>>()
+    private val hasTranslation = mutableStateOf(false)
+    private val recomposedPages = mutableListOf<String>()
+    private val prefetchOutcomes = java.util.Collections.synchronizedList(mutableListOf<String>())
 
     /** 按 imageUrl 覆盖原图尺寸，预览可以使用不同的采样比例。 */
     private val imageSizes = mutableMapOf<String, Pair<Int, Int>>()
@@ -86,7 +97,10 @@ class MangaReaderScreenLayoutTest {
                     chain.request.extras[CoverExtras.MangaFileOwner]?.setAspectRatio(ratio)
                     chain.request.extras[CoverExtras.MangaAspectRatio]?.invoke(ratio)
                 }
-                chain.proceed()
+                chain.proceed().also { result ->
+                    if (chain.request.extras[CoverExtras.MangaDataPrefetch] == true) prefetchOutcomes +=
+                        if (result is coil3.request.ErrorResult) result.throwable.toString() else result.javaClass.simpleName
+                }
             })
             // Render the actual reader without source rules, storage or network variability.
             add(Fetcher.Factory<Any> { data, _, _ ->
@@ -109,12 +123,21 @@ class MangaReaderScreenLayoutTest {
             val savedState = rememberSaveableStateHolder()
             MaterialTheme {
                 if (visible.value) savedState.SaveableStateProvider("reader") {
+                    val content: @Composable () -> Unit = {
                     MangaReaderScreen(
                         reader.value,
                         ::onIntent,
                         imageLoader = imageLoader,
-                        canHandleBack = false
+                        canHandleBack = false,
+                        onTranslatePage = { key, force -> translatedPages += key to force },
+                        onRecomposePage = { key -> recomposedPages += key },
+                        canRecomposePage = { it == "page:2:0" },
+                        hasTranslatedPage = { it == "page:2:0" && hasTranslation.value },
                     )
+                    }
+                    if (reader.value.activeSheet is MangaReaderSheet.PageActions) AppTheme(AppUiConfiguration()) { content() }
+                    else content()
+
                 }
             }
         }
@@ -139,6 +162,36 @@ class MangaReaderScreenLayoutTest {
     fun tearDown() {
         imageLoader.shutdown()
         images.values.filterIsInstance<BitmapImage>().forEach { it.bitmap.recycle() }
+    }
+
+    @Test fun `data prefetch reports source readiness for pages outside the viewport`() {
+        compose.runOnIdle { reader.value = reader.value.copy(settings = reader.value.settings.copy(preDownloadCount = 10)) }
+        compose.waitForIdle()
+        try { compose.waitUntil(10_000) {
+            intents.filterIsInstance<MangaReaderIntent.PageSourceLoaded>().map { it.requestId.key }.toSet().size == currentPages.size
+        } } catch (failure: Throwable) {
+            throw AssertionError("Source callbacks: ${intents.filterIsInstance<MangaReaderIntent.PageSourceLoaded>()}; prefetch results: $prefetchOutcomes", failure)
+        }
+        assertTrue(intents.filterIsInstance<MangaReaderIntent.PageSourceLoaded>().any { it.requestId.key == "page:1:56" })
+        assertEquals(0, reader.value.currentPage)
+    }
+
+    @Test fun `image menu routes translation and retypesetting to the held adjacent page`() {
+        val app = RuntimeEnvironment.getApplication()
+        val sheet = MangaReaderSheet.PageActions("page:2:0")
+        reader.value = reader.value.copy(pages = (currentPages + pages(2, 1)).toImmutableList(), activeSheet = sheet)
+        compose.onNodeWithText(app.getString(R.string.feature_manga_retranslate_short)).assertDoesNotExist()
+        compose.onNodeWithText(app.getString(R.string.feature_manga_translate_short)).performScrollTo().performClick()
+        assertEquals(listOf("page:2:0" to false), translatedPages)
+        assertTrue(intents.contains(MangaReaderIntent.DismissSheet))
+        compose.runOnIdle { hasTranslation.value = true }
+        compose.onNodeWithText(app.getString(R.string.feature_manga_translate_short)).assertDoesNotExist()
+        compose.onNodeWithText(app.getString(R.string.feature_manga_retranslate_short)).performScrollTo().performClick()
+        assertEquals("page:2:0" to true, translatedPages.last())
+        compose.onNodeWithText(app.getString(R.string.feature_manga_recompose_short)).performScrollTo().performClick()
+        assertEquals(listOf("page:2:0"), recomposedPages)
+        reader.value = reader.value.copy(activeSheet = MangaReaderSheet.PageActions("untranslated"))
+        compose.onNodeWithText(app.getString(R.string.feature_manga_recompose_short)).assertIsNotEnabled()
     }
 
     @Test

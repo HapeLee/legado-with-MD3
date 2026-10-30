@@ -30,6 +30,34 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Config(application = Application::class, sdk = [26, 35])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class MangaAndroidRegionDecoderTest {
+    @Test fun `odd WebP subset expansion is cropped before every EXIF orientation`() = runBlocking {
+        for (orientation in 1..8) {
+            val full = Bitmap.createBitmap(IntArray(7 * 9) { i -> 0xff000000.toInt() or ((i % 7 + 1) shl 16) or ((i / 7 + 1) shl 8) },
+                7, 9, Bitmap.Config.ARGB_8888)
+            val decoder = MangaAndroidRegionDecoder(object : MangaAndroidRegionBackend {
+                override val size = MangaImageSize(7, 9)
+                override fun decode(region: MangaImageRegion, sampleSize: Int): Bitmap {
+                    assertEquals(1, sampleSize)
+                    // Emulate the native WebP codec's implicit even-origin expansion.
+                    val left = region.left and -2; val top = region.top and -2
+                    return Bitmap.createBitmap(full, left, top, region.right - left, region.bottom - top)
+                }
+                override fun close() = Unit
+            }, orientation)
+            val requested = MangaImageRegion(1, 1, 4, 6)
+            val actual = decoder.decodeRegion(requested, 1)
+            val oriented = orientMangaRegion(full.copy(Bitmap.Config.ARGB_8888, false), orientation)
+            try {
+                assertEquals(requested.width, actual.width); assertEquals(requested.height, actual.height)
+                val expectedPixels = IntArray(requested.width * requested.height)
+                oriented.getPixels(expectedPixels, 0, requested.width, requested.left, requested.top, requested.width, requested.height)
+                val actualPixels = IntArray(expectedPixels.size)
+                actual.getPixels(actualPixels, 0, actual.width, 0, 0, actual.width, actual.height)
+                assertArrayEquals("EXIF $orientation must preserve the exact requested pixels", expectedPixels, actualPixels)
+            } finally { actual.recycle(); oriented.recycle(); full.recycle(); decoder.close() }
+        }
+    }
+
     @Test
     fun `all EXIF orientations preserve exact tile pixels`() = runBlocking {
         val expected = listOf(

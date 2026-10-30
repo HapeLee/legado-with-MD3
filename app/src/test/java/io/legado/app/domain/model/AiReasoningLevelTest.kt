@@ -6,7 +6,7 @@ import org.junit.Test
 class AiReasoningLevelTest {
 
     @Test
-    fun deepSeekUsesTheStandardMediumEffort() {
+    fun providerOnlyFallbackKeepsItsStandardMediumEffort() {
         val provider = AiProviderConfig(
             id = "deepseek",
             name = "DeepSeek",

@@ -77,6 +77,9 @@ data object MainRouteSettingsOther : MainRoute
 data object MainRouteSettingsRead : MainRoute
 
 @Serializable
+data class MainRouteSettingsManga(val openTranslation: Boolean = false) : MainRoute
+
+@Serializable
 data object MainRouteSettingsCover : MainRoute
 
 @Serializable
@@ -345,6 +348,7 @@ object MainRouteConst {
     const val ROUTE_SETTINGS = "settings"
     const val ROUTE_SETTINGS_OTHER = "settings/other"
     const val ROUTE_SETTINGS_READ = "settings/read"
+    const val ROUTE_SETTINGS_MANGA = "settings/manga"
     const val ROUTE_SETTINGS_COVER = "settings/cover"
     const val ROUTE_SETTINGS_COVER_ALBUMS = "settings/cover/albums"
     const val ROUTE_SETTINGS_THEME = "settings/theme"

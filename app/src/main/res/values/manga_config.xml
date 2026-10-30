@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="manga_config_reading">Reading layout</string>
+    <string name="manga_config_interaction">Reading controls</string>
+    <string name="manga_config_images">Image display</string>
+    <string name="manga_config_cache">Preloading and cache</string>
+    <string name="manga_config_default_mode">Default reading mode</string>
+    <string name="manga_config_default_padding">Default webtoon side padding</string>
+    <string name="manga_config_defaults_hint">Applies to comics without an individual setting.</string>
+    <string name="manga_config_cache_shared">Chapter counts are shared with text reading.</string>
+    <string name="manga_config_translation_hint">Also enable auto-translation for each comic in its reader.</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_service_type">服务类型</string>
+    <string name="ai_service_text">文字与图片理解</string>
+    <string name="ai_service_image">图片生成与编辑</string>
+    <string name="ai_capability_vision">支持图片输入／理解</string>
+    <string name="ai_capability_image_generation">支持生成图片输出</string>
+    <string name="ai_capability_image_editing">支持编辑图片输出</string>
+    <string name="ai_image_provider_hint">图片模型使用原生图像协议，与默认文字模型分别选择。请添加账号已开通的模型，预填模型 ID 可修改。通义各地域的密钥与地址不能混用。测试连接只获取元数据，不会生成收费图片。</string>
+    <string name="ai_image_manual_models">此图像协议未配置模型列表测试，请手动添加模型；本次未发出图片请求。</string>
+</resources>

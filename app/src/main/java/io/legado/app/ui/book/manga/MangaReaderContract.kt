@@ -68,6 +68,10 @@ sealed interface MangaReaderItemUi {
         val chapterSubject: String,
         val loadState: MangaPageLoadState = MangaPageLoadState.Queued,
         val retryRevision: Int = 0,
+        /** Derived raster, leaving source identity and load callbacks unchanged. */
+        val translatedImageUrl: String? = null,
+        /** Original data is available, including data-only prefetch before display. */
+        val sourceReady: Boolean = false,
     ) : MangaReaderItemUi
 
     @Stable
@@ -249,6 +253,7 @@ sealed interface MangaReaderIntent {
         MangaReaderIntent
 
     data class PageLoadSucceeded(val requestId: MangaPageRequestId) : MangaReaderIntent
+    data class PageSourceLoaded(val requestId: MangaPageRequestId) : MangaReaderIntent
     data class PageLoadFailed(val requestId: MangaPageRequestId, val message: String?) :
         MangaReaderIntent
     data class RetryPage(val key: String) : MangaReaderIntent
@@ -275,6 +280,7 @@ sealed interface MangaReaderIntent {
         val companionBeforePage: Boolean = false,
     ) : MangaReaderIntent
 
+    data class SaveTranslatedImage(val url: String) : MangaReaderIntent
     data class ExecutePageAction(val action: MangaPageAction) : MangaReaderIntent
     data class MessageShown(val id: Long) : MangaReaderIntent
 }
@@ -398,5 +404,9 @@ internal fun MangaReaderItemUi.Page.reduceImageLoad(
     val reduced = if (next is MangaPageLoadState.Loading) {
         next.copy(progress = (loadState as? MangaPageLoadState.Loading)?.progress ?: next.progress)
     } else next
-    return if (loadState == reduced) this else copy(loadState = reduced)
+    val ready = sourceReady || next == MangaPageLoadState.Ready
+    return if (loadState == reduced && ready == sourceReady) this else copy(loadState = reduced, sourceReady = ready)
 }
+
+internal fun MangaReaderItemUi.Page.reduceSourceLoaded(requestId: MangaPageRequestId): MangaReaderItemUi.Page =
+    if (this.requestId == requestId && !sourceReady) copy(sourceReady = true) else this

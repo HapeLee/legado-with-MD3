@@ -10,6 +10,8 @@ import io.legado.app.domain.model.AiAvailableModel
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiGenerateResponse
 import io.legado.app.domain.model.AiProviderConfig
+import io.legado.app.domain.model.AiImageModels
+import io.legado.app.domain.model.AiProtocol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -29,11 +31,13 @@ class AiTextRepositoryImpl : AiTextGateway {
     override suspend fun generate(request: AiGenerateRequest): Result<AiGenerateResponse> =
         withContext(Dispatchers.IO) {
             runCatching {
+                require(request.model.provider.protocol !in AiProtocol.imageProtocols && request.model.capabilities.none { it in AiImageModels.outputCapabilities }) { "Use the image service for image output models" }
                 registry.handlerFor(request.model.provider.protocol).generate(request)
             }.mapCatching { it.getOrThrow() }
         }
 
     override fun generateStream(request: AiGenerateRequest): Flow<AiStreamEvent> = flow {
+        require(request.model.provider.protocol !in AiProtocol.imageProtocols && request.model.capabilities.none { it in AiImageModels.outputCapabilities }) { "Use the image service for image output models" }
         registry.handlerFor(request.model.provider.protocol).stream(request) { emit(it) }
     }.flowOn(Dispatchers.IO)
 

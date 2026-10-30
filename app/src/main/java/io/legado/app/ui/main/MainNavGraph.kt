@@ -138,6 +138,10 @@ import io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewRouteScreen
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
+import io.legado.app.feature.settings.manga.MangaConfigRouteScreen
+import io.legado.app.feature.manga.translation.MangaTranslationGlobalSettingsContent
+import io.legado.app.feature.manga.translation.MangaTranslationIntent
+import io.legado.app.feature.manga.translation.MangaTranslationViewModel
 import io.legado.app.ui.config.ai.AiConfigRouteScreen
 import io.legado.app.ui.config.ai.AiModelEditRouteScreen
 import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
@@ -662,6 +666,7 @@ fun MainActivity.mainEntryProvider(
             onBackClick = { onNavigateBack() },
             onNavigateToOther = { pushRoute(MainRouteSettingsOther) },
             onNavigateToRead = { pushRoute(MainRouteSettingsRead) },
+            onNavigateToManga = { pushRoute(MainRouteSettingsManga()) },
             // 朗读规则 hub：入口从「我的」移到设置，页面标题与这里统一叫「朗读设置」
             onNavigateToReadAloud = { pushRoute(MainRouteMultiRoleRule) },
             onNavigateToCover = { pushRoute(MainRouteSettingsCover) },
@@ -681,6 +686,17 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteSettingsRead> {
         ReadConfigRouteScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteSettingsManga> { route ->
+        val translationViewModel: MangaTranslationViewModel = koinViewModel(key = "manga-settings-translation")
+        val translation by translationViewModel.uiState.collectAsStateWithLifecycle()
+        LaunchedEffect(translationViewModel) { translationViewModel.onIntent(MangaTranslationIntent.BindGlobal) }
+        MangaConfigRouteScreen(onBackClick = { onNavigateBack() },
+            onOpenAiSettings = { pushRoute(MainRouteSettingsAi) },
+            translationContent = { MangaTranslationGlobalSettingsContent(translation, translationViewModel::onIntent) },
+            startAtTranslation = route.openTranslation, translationReady = translation.loaded,
+            onOpenCacheSettings = { pushRoute(MainRouteSettingsDownloadCache) })
     }
 
     entry<MainRouteSettingsCover> {
@@ -1127,6 +1143,7 @@ fun MainActivity.mainEntryProvider(
             chapterChanged = route.chapterChanged,
             openRequestId = route.openRequestId,
             viewModel = mangaViewModel,
+            onOpenMangaTranslationSettings = { pushRoute(MainRouteSettingsManga(openTranslation = true)) },
             onOpenToc = { bookUrl, page -> onNavigateToRoute(MainRouteToc(bookUrl, page)) },
             restoreSystemBarsVisible = configuration.appShell.showStatusBar,
             sharedTransitionScope = sharedTransitionScope.takeIf {

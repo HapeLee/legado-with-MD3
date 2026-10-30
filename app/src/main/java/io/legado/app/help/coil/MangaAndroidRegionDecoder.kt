@@ -108,12 +108,26 @@ internal class MangaAndroidRegionDecoder(
             // Cancellation cannot release the native decoder while decodeRegion is running.
             synchronized(lock) {
                 check(!closed) { "Image decoder is closed" }
-                require(sampleSize > 0 && sampleSize.countOneBits() == 1)
+                require(sampleSize > 0 && sampleSize.countOneBits() == 1) { "Invalid image sample size: $sampleSize" }
                 require(
                     region.left >= 0 && region.top >= 0 && region.right <= imageSize.width &&
                             region.bottom <= imageSize.height && region.width > 0 && region.height > 0
-                )
-                val raw = backend.decode(orientation.rawRegion(region, backend.size), sampleSize)
+                ) { "Image region $region is outside ${imageSize.width}x${imageSize.height}" }
+                val requested = orientation.rawRegion(region, backend.size)
+                // WebP expands odd subset origins down to an even pixel and returns that extra
+                // row/column. At full resolution explicitly align the native request, then crop
+                // back in raw coordinates before EXIF rotation. Do not resize or shift pixels.
+                // Sampled reader/analysis requests retain their existing sampling behavior.
+                val aligned = if (sampleSize == 1) requested.copy(left = requested.left and -2, top = requested.top and -2) else requested
+                val decoded = backend.decode(aligned, sampleSize)
+                val raw = if (sampleSize != 1) decoded else try {
+                    check(decoded.width == aligned.width && decoded.height == aligned.height) {
+                        "Image decoder returned ${decoded.width}x${decoded.height} for ${aligned.width}x${aligned.height} region"
+                    }
+                    if (aligned == requested) decoded else Bitmap.createBitmap(decoded,
+                        requested.left - aligned.left, requested.top - aligned.top, requested.width, requested.height)
+                        .also { if (it !== decoded) decoded.recycle() }
+                } catch (failure: Throwable) { decoded.recycle(); throw failure }
                 orientMangaRegion(raw, orientationValue).also { it.prepareToDraw() }
             }
         }

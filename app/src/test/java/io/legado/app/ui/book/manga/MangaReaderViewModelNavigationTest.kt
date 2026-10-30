@@ -75,6 +75,24 @@ class MangaReaderViewModelNavigationTest {
         Dispatchers.resetMain()
     }
 
+    @Test fun `prefetch readiness survives session updates and retry rejects its old callback`() = runTest(dispatcher) {
+        val reader = createReader()
+        runCurrent()
+        val page = reader.uiState.value.pages.filterIsInstance<MangaReaderItemUi.Page>().last()
+        reader.onIntent(MangaReaderIntent.PageSourceLoaded(page.requestId)); runCurrent()
+        fun current() = reader.uiState.value.pages.filterIsInstance<MangaReaderItemUi.Page>().first { it.key == page.key }
+        assertTrue(current().sourceReady)
+        assertEquals(MangaPageLoadState.Queued, current().loadState)
+        session.state.value = session.state.value.copy(nextChapter = ready(2, 3)); runCurrent()
+        assertTrue(current().sourceReady)
+        reader.onIntent(MangaReaderIntent.RetryPage(page.key)); runCurrent()
+        assertFalse(current().sourceReady)
+        reader.onIntent(MangaReaderIntent.PageSourceLoaded(page.requestId)); runCurrent()
+        assertFalse(current().sourceReady)
+        reader.onIntent(MangaReaderIntent.PageSourceLoaded(current().requestId)); runCurrent()
+        assertTrue(current().sourceReady)
+    }
+
     @Test
     fun `pending seek still targets the same page after 300 pages are prepended`() =
         runTest(dispatcher) {

@@ -4,7 +4,6 @@ import androidx.annotation.Keep
 import com.google.gson.JsonObject
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.model.AiAvailableModel
-import io.legado.app.domain.model.AiCapability
 import io.legado.app.domain.model.AiGenerateRequest
 import io.legado.app.domain.model.AiGenerateResponse
 import io.legado.app.domain.model.AiHttpException
@@ -12,7 +11,6 @@ import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiProviderConfig
-import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiToolCall
 import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.help.http.addHeaders
@@ -66,26 +64,11 @@ class AnthropicHandler : AiProtocolHandler {
         )
         request.tools.takeIf { it.isNotEmpty() }?.let { body["tools"] = it.toAnthropicTools() }
         systemPrompt?.let { body["system"] = it }
-        // Reasoning config — suppress temperature when thinking is enabled
-        val reasoningLevel = request.params.reasoningLevel
-        if (hasReasoningCapability(request.model.capabilities)) {
-            val thinking = buildMap<String, Any> {
-                put("type", if (reasoningLevel == AiReasoningLevel.OFF) "disabled" else "adaptive")
-                if (reasoningLevel != AiReasoningLevel.OFF) {
-                    put("display", "summarized")
-                }
-            }
-            body["thinking"] = thinking
-            reasoningLevel.effortFor(provider)?.let {
-                body["output_config"] = mapOf("effort" to it)
-            }
-        } else {
-            request.params.temperature?.let { body["temperature"] = it }
-        }
+        body.applyAnthropicReasoning(request)
         request.params.topP?.let { body["top_p"] = it }
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
-            val response = aiOkHttpClient.newCallStrResponse {
+            val response = request.httpClient().newCallStrResponse {
                 url(provider.baseUrl + provider.messagesPath)
                 postJson(GSON.toJson(body))
                 addHeaders(
@@ -137,27 +120,12 @@ class AnthropicHandler : AiProtocolHandler {
         )
         request.tools.takeIf { it.isNotEmpty() }?.let { body["tools"] = it.toAnthropicTools() }
         systemPrompt?.let { body["system"] = it }
-        // Reasoning config — suppress temperature when thinking is enabled
-        val reasoningLevel = request.params.reasoningLevel
-        if (hasReasoningCapability(request.model.capabilities)) {
-            val thinking = buildMap<String, Any> {
-                put("type", if (reasoningLevel == AiReasoningLevel.OFF) "disabled" else "adaptive")
-                if (reasoningLevel != AiReasoningLevel.OFF) {
-                    put("display", "summarized")
-                }
-            }
-            body["thinking"] = thinking
-            reasoningLevel.effortFor(provider)?.let {
-                body["output_config"] = mapOf("effort" to it)
-            }
-        } else {
-            request.params.temperature?.let { body["temperature"] = it }
-        }
+        body.applyAnthropicReasoning(request)
         request.params.topP?.let { body["top_p"] = it }
 
         val keyRotator = KeyRotator(provider.apiKey)
         val response = retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
-            aiOkHttpClient.newCallResponse {
+            request.httpClient().newCallResponse {
                 url(provider.baseUrl + provider.messagesPath)
                 postJson(GSON.toJson(body))
                 addHeaders(
@@ -327,7 +295,14 @@ internal fun List<AiMessage>.toAnthropicMessages(): List<Map<String, Any?>> {
             }
             else -> mapOf(
                 "role" to if (message.role == AiMessageRole.ASSISTANT) "assistant" else "user",
-                "content" to message.content
+                "content" to if (message.images.isEmpty()) message.content else buildList {
+                    add(mapOf("type" to "text", "text" to message.content))
+                    message.images.forEach { image ->
+                        add(mapOf("type" to "image", "source" to mapOf(
+                            "type" to "base64", "media_type" to image.mimeType, "data" to image.base64Data,
+                        )))
+                    }
+                }
             )
         }
     }

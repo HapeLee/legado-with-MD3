@@ -1,5 +1,7 @@
 package io.legado.app.ui.book.manga
 
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.text.AppText
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -16,8 +18,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -314,7 +315,7 @@ private fun AutoReadSettingsPage(
                 icon = AppIcons.Back,
                 contentDescription = stringResource(R.string.back),
             )
-            Text(
+            AppText(
                 text = stringResource(MangaReaderSettingsCategory.AUTO_READ.titleRes),
                 style = LegadoTheme.typography.titleMedium,
                 maxLines = 1,
@@ -793,14 +794,14 @@ private fun ClickActionsSettingsContent(
             repeat(3) { column ->
                 val index = row * 3 + column
                 val action = settings.clickActions.getOrElse(index) { 0 }
-                TextButton(onClick = {
+                SmallPlainButton(onClick = {
                     val next = nextMangaClickAction(action)
                     onIntent(MangaReaderIntent.UpdateClickAction(index, next))
-                }) { Text(labels[action].orEmpty()) }
+                }, text = labels[action].orEmpty())
             }
         }
     }
-    Text(
+    AppText(
         stringResource(R.string.manga_reader_click_cycle_hint),
         style = MaterialTheme.typography.bodySmall
     )

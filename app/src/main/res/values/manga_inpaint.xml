@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="manga_inpaint_engine">Text removal engine</string>
+    <string name="manga_inpaint_local">Local quick cleanup</string>
+    <string name="manga_inpaint_engine_hint">Independent of OCR and translation. Models are downloaded explicitly. Overlay mode uses a local color patch; for an online image model choose AI background repair and local typesetting above.</string>
+    <string name="manga_inpaint_migan_hint">About 27 MiB. Faster processing.</string>
+    <string name="manga_inpaint_lama_hint">About 198 MiB. Higher memory usage.</string>
+    <string name="manga_inpaint_checking">Checking text removal model…</string>
+    <string name="manga_inpaint_missing">Text removal model not downloaded</string>
+    <string name="manga_inpaint_downloading">Downloading text removal model…</string>
+    <string name="manga_inpaint_ready">Downloaded</string>
+    <string name="manga_inpaint_failed">Text removal model download failed</string>
+    <string name="manga_inpaint_download_size">%1$.1f / %2$.1f MiB</string>
+    <string name="manga_inpaint_download">Download text removal model</string>
+    <string name="manga_inpaint_delete">Delete text removal model</string>
+    <string name="manga_inpaint_download_required">Download the selected text removal model first. No model is downloaded automatically.</string>
+    <string name="manga_inpaint_integrity_failed">Text removal model size or SHA-256 verification failed.</string>
+    <string name="manga_inpaint_runtime_unavailable">The selected text removal engine could not run. Choose another engine.</string>
+    <string name="manga_inpaint_area_too_large">This text removal area exceeds the on-device memory budget. Choose local quick cleanup.</string>
+</resources>

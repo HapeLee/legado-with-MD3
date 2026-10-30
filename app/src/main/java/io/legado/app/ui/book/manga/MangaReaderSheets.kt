@@ -1,5 +1,10 @@
 package io.legado.app.ui.book.manga
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -179,6 +184,11 @@ private fun MangaSourceActionSquare(
 internal fun MangaReaderPageActionsSheet(
     hasSpread: Boolean,
     onIntent: (MangaReaderIntent) -> Unit,
+    onTranslate: ((Boolean) -> Unit)? = null,
+    onSaveTranslation: (() -> Unit)? = null,
+    onClearTranslation: (() -> Unit)? = null,
+    onRecompose: (() -> Unit)? = null,
+    hasTranslation: Boolean = false,
 ) {
     AppModalBottomSheet(
         show = true,
@@ -234,8 +244,9 @@ internal fun MangaReaderPageActionsSheet(
         }
         Column(Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)) {
-            actions.chunked(4).forEach { rowActions ->
+            actions.chunked(4).forEachIndexed { rowIndex, rowActions ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     rowActions.forEach { action ->
                         ReaderMenuActionSquare(
@@ -248,6 +259,39 @@ internal fun MangaReaderPageActionsSheet(
                     repeat(4 - rowActions.size) { Spacer(Modifier.weight(1f)) }
                 }
                 Spacer(Modifier.height(8.dp))
+                if (rowIndex == 0) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ReaderMenuActionSquare(
+                            icon = Icons.Default.Translate,
+                            text = stringResource(if (hasTranslation) R.string.feature_manga_retranslate_short else R.string.feature_manga_translate_short),
+                            modifier = Modifier.weight(1f),
+                            enabled = onTranslate != null,
+                            onClick = { onTranslate?.invoke(hasTranslation) },
+                        )
+                        ReaderMenuActionSquare(
+                            icon = Icons.Default.Layers,
+                            text = stringResource(R.string.feature_manga_recompose_short),
+                            modifier = Modifier.weight(1f),
+                            enabled = onRecompose != null,
+                            onClick = { onRecompose?.invoke() },
+                        )
+                        ReaderMenuActionSquare(
+                            icon = Icons.Default.Save,
+                            text = stringResource(R.string.feature_manga_save_translation),
+                            modifier = Modifier.weight(1f),
+                            enabled = onSaveTranslation != null,
+                            onClick = { onSaveTranslation?.invoke() },
+                        )
+                        ReaderMenuActionSquare(
+                            icon = Icons.Default.Delete,
+                            text = stringResource(R.string.feature_manga_translation_clear_page),
+                            modifier = Modifier.weight(1f),
+                            enabled = onClearTranslation != null,
+                            onClick = { onClearTranslation?.invoke() },
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
             }
         }
     }

@@ -1,6 +1,13 @@
 package io.legado.app.di
 
 import android.os.Build
+import io.legado.app.data.repository.manga.translation.MangaTranslationRepository
+import io.legado.app.domain.gateway.MangaTranslationGateway
+import io.legado.app.feature.manga.translation.MangaTranslationViewModel
+import io.legado.app.feature.settings.manga.MangaConfigViewModel
+import io.legado.app.domain.gateway.AiImageGateway
+import io.legado.app.data.repository.ai.AiImageRepository
+import io.legado.app.data.repository.manga.translation.MangaImageEditor
 import coil3.ImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
@@ -405,6 +412,23 @@ val appModule = module {
     single<BackupSettingsGateway> { BackupSettingsRepository() }
     single<LabSettingsGateway> { LabSettingsRepository() }
     single<MangaSettingsGateway> { MangaSettingsRepository() }
+    single<AiImageGateway> { AiImageRepository() }
+    single { io.legado.app.data.repository.manga.translation.MangaOcrModelRepository(get()) }
+    single<io.legado.app.domain.gateway.MangaOcrModelGateway> { get<io.legado.app.data.repository.manga.translation.MangaOcrModelRepository>() }
+    single { io.legado.app.data.repository.manga.translation.MangaInpaintModelRepository(get()) }
+    single<io.legado.app.domain.gateway.MangaInpaintModelGateway> { get<io.legado.app.data.repository.manga.translation.MangaInpaintModelRepository>() }
+    single { io.legado.app.data.repository.manga.translation.MangaLocalInpainter(get(), get()) }
+    single { io.legado.app.data.repository.manga.translation.MangaPaddleOcr(get()) }
+    single<io.legado.app.domain.gateway.MangaCloudOcrGateway> { io.legado.app.data.repository.manga.translation.MangaCloudOcrConfigRepository(get()) }
+    single { io.legado.app.data.repository.manga.translation.MangaCloudOcr(get(), get()) }
+    single<MangaTranslationGateway> { MangaTranslationRepository(get(), get(), get(), get(), imageEditor = MangaImageEditor(get())::edit,
+        paddleDetector = get<io.legado.app.data.repository.manga.translation.MangaPaddleOcr>()::detect,
+        cloudDetector = get<io.legado.app.data.repository.manga.translation.MangaCloudOcr>()::detect,
+        inpaintReady = get<io.legado.app.data.repository.manga.translation.MangaLocalInpainter>()::requireReady,
+        inpaint = get<io.legado.app.data.repository.manga.translation.MangaLocalInpainter>()::erase,
+        cloudIdentity = get<io.legado.app.data.repository.manga.translation.MangaCloudOcr>()::identity) }
+    viewModelOf(::MangaTranslationViewModel)
+    viewModelOf(::MangaConfigViewModel)
     single<ChangeSourceSettingsGateway> { ChangeSourceSettingsRepository() }
     single<ImportBookSettingsGateway> { ImportBookSettingsRepository() }
     single<TranslationSettingsGateway> { TranslationSettingsRepository() }

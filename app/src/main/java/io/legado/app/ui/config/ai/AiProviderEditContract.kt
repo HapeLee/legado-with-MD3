@@ -60,7 +60,8 @@ data class AiProviderModelUi(
     val contextWindow: Int = 0,
     val maxOutputTokens: Int = 0,
     val temperature: Float = 0.3f,
-    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.MEDIUM
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.MEDIUM,
+    val capabilities: String = ""
 )
 
 @Stable
@@ -71,7 +72,11 @@ data class AiProviderModelEditorUi(
     val contextWindow: String = "",
     val maxOutputTokens: String = "",
     val temperature: String = "0.3",
-    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.MEDIUM
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.MEDIUM,
+    val capabilities: String = "",
+    val vision: Boolean = false,
+    val imageGeneration: Boolean = false,
+    val imageEditing: Boolean = false,
 )
 
 sealed interface AiProviderEditIntent {
@@ -91,6 +96,9 @@ sealed interface AiProviderEditIntent {
     data class UpdateEditingMaxOutputTokens(val value: String) : AiProviderEditIntent
     data class UpdateEditingTemperature(val value: String) : AiProviderEditIntent
     data class UpdateEditingReasoningLevel(val value: AiReasoningLevel) : AiProviderEditIntent
+    data class UpdateEditingVision(val value: Boolean) : AiProviderEditIntent
+    data class UpdateEditingImageGeneration(val value: Boolean) : AiProviderEditIntent
+    data class UpdateEditingImageEditing(val value: Boolean) : AiProviderEditIntent
     data object SaveEditingModel : AiProviderEditIntent
     data object TestConnection : AiProviderEditIntent
     data object SaveProvider : AiProviderEditIntent

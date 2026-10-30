@@ -159,7 +159,7 @@ fun AiCastDialogSheet(
                     CastModelGroup(
                         providerId = provider.id,
                         providerName = provider.name,
-                        models = models.filter { it.providerId == provider.id }
+                        models = models.filter { it.providerId == provider.id && io.legado.app.domain.model.AiImageModels.isTextModel(provider.protocol, it.modelId, it.capabilities) }
                             .map {
                                 CastModelChoice(
                                     profileId = it.id,

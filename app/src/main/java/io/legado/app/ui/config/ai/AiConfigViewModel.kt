@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiTaskType
+import io.legado.app.domain.model.AiImageModels
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,7 +38,8 @@ class AiConfigViewModel(
                     it.taskType == AiTaskType.TRANSLATE_CHAPTER && it.isDefault
                 }
                 val currentModelProfileId = defaultTranslatePreset?.modelProfileId
-                    ?: models.firstOrNull()?.id
+                    ?.takeIf { id -> models.any { model -> model.id == id && providerMap[model.providerId]?.let { AiImageModels.isTextModel(it.protocol, model.modelId, model.capabilities) } == true } }
+                    ?: models.firstOrNull { model -> providerMap[model.providerId]?.let { AiImageModels.isTextModel(it.protocol, model.modelId, model.capabilities) } == true }?.id
                 val modelItems = models.mapNotNull { model ->
                     val provider = providerMap[model.providerId] ?: return@mapNotNull null
                     AiModelListItemUi(
@@ -51,7 +53,8 @@ class AiConfigViewModel(
                         contextWindow = model.contextWindow,
                         maxOutputTokens = model.maxOutputTokens,
                         enabled = provider.enabled && model.enabled,
-                        isCurrent = model.id == currentModelProfileId
+                        isCurrent = model.id == currentModelProfileId,
+                        text = AiImageModels.isTextModel(provider.protocol, model.modelId, model.capabilities),
                     )
                 }
                 val modelItemsByProvider = modelItems.groupBy { it.providerId }

@@ -301,6 +301,13 @@ class MangaReaderViewModel(
                 MangaPageLoadState.Ready,
             )
 
+            is MangaReaderIntent.PageSourceLoaded -> _uiState.update { state ->
+                val pages = state.pages.map { page ->
+                    if (page is MangaReaderItemUi.Page) page.reduceSourceLoaded(intent.requestId) else page
+                }.toImmutableList()
+                if (pages == state.pages) state else state.copy(pages = pages)
+            }
+
             is MangaReaderIntent.PageLoadFailed -> updatePageLoadState(
                 intent.requestId,
                 MangaPageLoadState.Failed(intent.message),
@@ -342,6 +349,7 @@ class MangaReaderViewModel(
                 }
             }
 
+            is MangaReaderIntent.SaveTranslatedImage -> saveImage(intent.url)
             is MangaReaderIntent.ExecutePageAction -> executePageAction(intent.action)
             is MangaReaderIntent.MessageShown -> _uiState.update { state ->
                 state.copy(
@@ -497,6 +505,7 @@ class MangaReaderViewModel(
                         chapterSubject = chapter.chapterSubject,
                         loadState = existing?.loadState ?: MangaPageLoadState.Queued,
                         retryRevision = existing?.retryRevision ?: 0,
+                        sourceReady = existing?.sourceReady ?: false,
                     )
                 }
             }
@@ -1384,6 +1393,7 @@ class MangaReaderViewModel(
                 pages = state.pages.mapIndexed { itemIndex, item ->
                     if (itemIndex == index) page.copy(
                         loadState = MangaPageLoadState.Queued,
+                        sourceReady = false,
                         retryRevision = page.retryRevision + 1,
                     ) else item
                 }.toImmutableList(),
@@ -1401,6 +1411,7 @@ class MangaReaderViewModel(
                     item.loadState is MangaPageLoadState.Failed
                 ) item.copy(
                     loadState = MangaPageLoadState.Queued,
+                    sourceReady = false,
                     retryRevision = item.retryRevision + 1
                 )
                 else item
