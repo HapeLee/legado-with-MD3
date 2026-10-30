@@ -280,6 +280,34 @@ class MangaReaderInteractionTest {
     }
 
     @Test
+    fun `pager reconcile stays on the displayed page instead of the stale current index`() {
+        // 相邻章 Ready 前插后，用户已经滑到 p10，而 ViewModel 的 currentItemIndex 还停在 0
+        val pages = listOf(page(0), page(10), page(11))
+        assertEquals(1, mangaPagerReconcilePageIndex(pages, "p10", currentItemIndex = 0))
+        // 显示页还在原位时不应做任何移动
+        assertEquals(0, mangaPagerReconcilePageIndex(pages, "p0", currentItemIndex = 0))
+        // 身份真正失效（页已不在集合里）才回退到 currentItemIndex
+        assertEquals(2, mangaPagerReconcilePageIndex(pages, "gone", currentItemIndex = 2))
+        assertEquals(0, mangaPagerReconcilePageIndex(pages, null, currentItemIndex = 0))
+    }
+
+    @Test
+    fun `spread reconcile follows the displayed spread when a chapter is prepended`() {
+        val before = listOf(page(5), page(6))
+        val displayed = before[1]
+        val after = listOf(page(0), page(1)) + before
+        val spreads = buildMangaSpreads(after, doublePage = false)
+        assertEquals(
+            after.indexOfFirst { it.key == displayed.key },
+            mangaSpreadReconcileTarget(
+                spreads,
+                itemIndex = 0,
+                previousKey = "spread:${displayed.key}",
+            ),
+        )
+    }
+
+    @Test
     fun `page step returns next real page target`() {
         val items = listOf(page(0), page(1), page(2))
         assertEquals(1, nextPageItemIndex(items, 0, 1))

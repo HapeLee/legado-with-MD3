@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.manga
 
-import io.legado.app.ui.widget.components.text.AppText
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
@@ -123,6 +122,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -1188,12 +1188,25 @@ private fun HorizontalMangaPager(
     }
     var spreadLayoutReady by remember(state.bookUrl) { mutableStateOf(false) }
     var reconciledSpreads by remember(state.bookUrl) { mutableStateOf(emptyList<MangaPageSpread>()) }
+    // 最近一次实际测量的 spread key。相邻章 Ready 会前插/后插条目、改变下标，但 Pager 自身按 key
+    // 保位；重建后以这个 key 为准，避免用可能还没收到滚动结束上报的 state.currentItemIndex
+    // 把用户刚翻到的页拽回去（进入阅读后第一次滑动必然撞上相邻章替换）。
+    var displayedSpreadKey by remember(state.bookUrl) { mutableStateOf<String?>(null) }
+    LaunchedEffect(pagerState, state.bookUrl) {
+        snapshotFlow {
+            pagerState.layoutInfo.visiblePagesInfo
+                .firstOrNull { it.index == pagerState.currentPage }?.key?.toString()
+        }.collect { displayedSpreadKey = it }
+    }
     LaunchedEffect(spreads, state.currentItemIndex, state.scrollRequest?.id) {
         snapshotFlow { pagerState.isScrollInProgress }.first { !it }
         spreadLayoutReady = false
+        val request = state.scrollRequest
         val target = mangaSpreadReconcileTarget(
-            spreads, state.scrollRequest?.itemIndex ?: state.currentItemIndex,
-            pendingSpreadKey.takeIf { state.scrollRequest == null })
+            spreads,
+            request?.itemIndex ?: state.currentItemIndex,
+            if (request == null) pendingSpreadKey ?: displayedSpreadKey else null,
+        )
         pendingSpreadKey = null
         if (target >= 0 && target != pagerState.currentPage) pagerState.scrollToPage(target)
         reconciledSpreads = spreads
@@ -1491,15 +1504,27 @@ private fun VerticalMangaPager(
         snapshotFlow { pagerState.isScrollInProgress }.first { !it }
         val reader = latestReaderState
         if (reader.navigationId != state.navigationId) return@LaunchedEffect
-        if (reader.scrollRequest == null) pagerState.scrollToPage(reader.currentItemIndex)
-        // 大幅前插/移除超出 Pager 的 key 查找窗口时，先校正位置再允许上报页码。
+        if (reader.scrollRequest == null) {
+            val target = mangaPagerReconcilePageIndex(
+                pages = reader.pages,
+                displayedKey = pagerState.layoutInfo.visiblePagesInfo
+                    .firstOrNull { it.index == pagerState.currentPage }?.key?.toString(),
+                currentItemIndex = reader.currentItemIndex,
+            )
+            if (target in reader.pages.indices && target != pagerState.currentPage) {
+                pagerState.scrollToPage(target)
+            }
+        }
+        // 位置校正到「实测 key 与集合里的页身份一致」后才允许上报页码：显式跳页要求停在
+        // 请求页，内容重建则要求当前页身份未被替换。这里不能拿 currentItemIndex 当判据——
+        // 它正是等这次上报才会更新，用它等待会和「上报被 reconciledNavigationId 挡住」互锁。
         snapshotFlow {
             val current = latestReaderState
-            val target = current.scrollRequest?.itemIndex ?: current.currentItemIndex
-            pagerState.currentPage == target &&
-                    pagerState.layoutInfo.visiblePagesInfo.any {
-                        it.index == target && it.key == current.pages.getOrNull(target)?.key
-                    }
+            val settledKey = pagerState.layoutInfo.visiblePagesInfo
+                .firstOrNull { it.index == pagerState.currentPage }?.key?.toString()
+            val expectedKey = current.pages.getOrNull(pagerState.currentPage)?.key
+            settledKey != null && settledKey == expectedKey &&
+                    (current.scrollRequest?.let { pagerState.currentPage == it.itemIndex } ?: true)
         }.first { it }
         reconciledNavigationId = state.navigationId
     }
