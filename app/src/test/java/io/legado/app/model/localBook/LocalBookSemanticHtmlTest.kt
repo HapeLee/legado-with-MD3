@@ -1,5 +1,6 @@
 package io.legado.app.model.localBook
 
+import io.legado.app.data.entities.BookChapter
 import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -185,5 +186,31 @@ class LocalBookSemanticHtmlTest {
     fun emptyBodyEmitsBlankChannelForTitlePageFallback() {
         val body = Jsoup.parseBodyFragment("").body()
         assertEquals("", LocalBookSemanticHtml.emitMixedChannel(body, "Book the First"))
+    }
+
+    @Test
+    fun resolvesRelativeEpubHrefsAndMatchesTargetChapters() {
+        assertEquals(
+            "OEBPS/Text/ch02.xhtml#sec1",
+            LocalBookSemanticHtml.resolveRelativeHref("OEBPS/Text/toc.xhtml", "ch02.xhtml#sec1")
+        )
+        assertEquals(
+            "OEBPS/Text/ch01.xhtml#fn1",
+            LocalBookSemanticHtml.resolveRelativeHref("OEBPS/Text/ch01.xhtml", "#fn1")
+        )
+        assertEquals(
+            "https://example.com",
+            LocalBookSemanticHtml.resolveRelativeHref("OEBPS/Text/ch01.xhtml", "https://example.com")
+        )
+
+        val chapters = listOf(
+            BookChapter(url = "OEBPS/Text/toc.xhtml", title = "TOC", index = 0),
+            BookChapter(url = "OEBPS/Text/part01.xhtml#ch1", title = "Chapter 1", index = 1, startFragmentId = "ch1"),
+            BookChapter(url = "OEBPS/Text/part01.xhtml#ch2", title = "Chapter 2", index = 2, startFragmentId = "ch2"),
+            BookChapter(url = "3:filepos:0000001000", title = "Mobi Ch", index = 3)
+        )
+        assertEquals(2, LocalBookSemanticHtml.resolveInternalLinkTarget("OEBPS/Text/part01.xhtml#ch2", chapters, 0))
+        assertEquals(2, LocalBookSemanticHtml.resolveInternalLinkTarget("part01.xhtml#ch2", chapters, 0))
+        assertEquals(3, LocalBookSemanticHtml.resolveInternalLinkTarget("filepos:0000001000", chapters, 0))
     }
 }

@@ -1,11 +1,15 @@
 package io.legado.app.model.localBook
 
+import io.legado.app.data.entities.BookChapter
 import io.legado.app.utils.HtmlFormatter
+import io.legado.app.utils.encodeURI
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 import org.jsoup.select.Elements
+import java.net.URI
+import java.net.URLDecoder
 
 /**
  * Shared DOM helpers for the local-book rich-text channel.
@@ -453,4 +457,55 @@ object LocalBookSemanticHtml {
 
     private fun normalizeTitleText(text: String): String =
         text.replace("[\\s\\u00a0\\u3000]+".toRegex(), " ").trim()
+
+    private val externalSchemeRegex = Regex("^(https?|mailto|tel|javascript|data):", RegexOption.IGNORE_CASE)
+    private val mobiChapterPrefixRegex = Regex("^(?:skip:)?\\d+:")
+
+    fun isExternalLink(href: String): Boolean =
+        href.trim().matches(Regex("^(https?|mailto|tel):.*", RegexOption.IGNORE_CASE))
+
+    fun resolveRelativeHref(baseResourceHref: String, rawHref: String): String? {
+        val trimmed = rawHref.trim()
+        if (trimmed.isEmpty() || externalSchemeRegex.containsMatchIn(trimmed)) return trimmed.ifEmpty { null }
+        val basePath = baseResourceHref.substringBefore("#").trim()
+        if (trimmed.startsWith("#")) return if (basePath.isEmpty()) trimmed else "$basePath$trimmed"
+        val pathPart = trimmed.substringBefore("#")
+        val fragment = trimmed.substringAfter("#", "")
+        val resolvedPath = runCatching {
+            URLDecoder.decode(URI(basePath.encodeURI()).resolve(pathPart.encodeURI()).toString(), "UTF-8")
+        }.getOrDefault(pathPart).removePrefix("/")
+        return if (fragment.isNotEmpty()) "$resolvedPath#$fragment" else resolvedPath
+    }
+
+    fun resolveInternalLinkTarget(
+        rawLink: String,
+        chapters: List<BookChapter>,
+        currentChapterIndex: Int = -1
+    ): Int? {
+        val link = runCatching { URLDecoder.decode(rawLink.trim(), "UTF-8") }
+            .getOrDefault(rawLink.trim()).removePrefix("/").removePrefix("./")
+        if (link.isEmpty() || chapters.isEmpty() || isExternalLink(link)) return null
+        val resolvedLink = if (link.startsWith("#")) {
+            val curBase = chapters.getOrNull(currentChapterIndex)?.url?.substringBefore("#").orEmpty()
+            "$curBase$link".removePrefix("/")
+        } else link
+        val linkBase = resolvedLink.substringBefore("#")
+
+        fun canonicalUrl(ch: BookChapter): String =
+            ch.url.replace(mobiChapterPrefixRegex, "").removePrefix("/")
+
+        fun matches(candidate: String, target: String): Boolean =
+            candidate.equals(target, ignoreCase = true) ||
+                candidate.endsWith("/$target", ignoreCase = true)
+
+        // 1. Exact URL match (including #fragment or mobi filepos/kindle:pos)
+        val exact = chapters.filter { matches(canonicalUrl(it), resolvedLink) }
+        exact.firstOrNull { !it.isVolume }?.let { return it.index }
+        exact.firstOrNull()?.let { return it.index }
+
+        // 2. Same resource file match when #fragment is an in-chapter anchor
+        val byPath = chapters.filter { matches(canonicalUrl(it).substringBefore("#"), linkBase) }
+        if (byPath.any { it.index == currentChapterIndex }) return currentChapterIndex
+        return (byPath.firstOrNull { !it.isVolume } ?: byPath.firstOrNull())?.index
+    }
 }

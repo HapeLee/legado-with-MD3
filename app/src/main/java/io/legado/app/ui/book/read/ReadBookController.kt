@@ -74,6 +74,7 @@ import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
+import io.legado.app.model.localBook.LocalBookSemanticHtml
 import io.legado.app.model.reader.ReaderChapterInput
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.receiver.TimeBatteryReceiver
@@ -593,7 +594,7 @@ class ReadBookController(
         is ReaderElement.Text -> when {
             element.markingId != null -> { onMarkingClick(element.markingId); true }
             element.link != null -> {
-                activity.startActivity(Intent(activity, OpenUrlConfirmActivity::class.java).putExtra("uri", element.link))
+                handleComposeLinkClick(element.link)
                 true
             }
             else -> false
@@ -616,6 +617,23 @@ class ReadBookController(
         is ReaderElement.Spacer -> false
         is ReaderElement.ParagraphMarker -> false
         is ReaderElement.Rule -> false
+    }
+
+    private fun handleComposeLinkClick(rawLink: String) {
+        val link = rawLink.trim()
+        if (link.isEmpty()) return
+        val book = ReadBook.book
+        if (LocalBookSemanticHtml.isExternalLink(link)) {
+            activity.startActivity(
+                Intent(activity, OpenUrlConfirmActivity::class.java)
+                    .putExtra("uri", link)
+                    .putExtra("sourceOrigin", book?.bookUrl)
+                    .putExtra("sourceName", book?.name)
+                    .putExtra("sourceType", BookType.local)
+            )
+            return
+        }
+        viewModel.openInternalBookLink(link)
     }
 
     fun onComposeReaderElementLongPress(element: ReaderElement, x: Float, y: Float): Boolean {

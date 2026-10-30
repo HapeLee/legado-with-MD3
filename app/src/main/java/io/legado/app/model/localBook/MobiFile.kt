@@ -212,6 +212,13 @@ class MobiFile(var book: Book) {
             it.removeAttr("recindex")
             it.attr("src", "recindex:$recindex")
         }
+        soup.select("a[filepos]").forEach {
+            val filepos = it.attr("filepos").trim().toIntOrNull()
+            if (filepos != null && it.attr("href").isBlank()) {
+                it.attr("href", "filepos:${filepos.toString().padStart(10, '0')}")
+            }
+            it.removeAttr("filepos")
+        }
 
         return format(soup, chapter.title)
     }

@@ -58,6 +58,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isLocal
+import io.legado.app.model.localBook.LocalBookSemanticHtml
 import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.removeType
@@ -2223,6 +2224,19 @@ class ReadBookViewModel(
 
     fun openChapter(index: Int, durChapterPos: Int = 0, success: (() -> Unit)? = null) {
         ReadBook.openChapter(index, durChapterPos, success = success)
+    }
+
+    fun openInternalBookLink(link: String) {
+        val book = ReadBook.book ?: return
+        val currentIndex = ReadBook.durChapterIndex
+        execute {
+            val chapters = bookRepository.getChapters(book.bookUrl)
+            LocalBookSemanticHtml.resolveInternalLinkTarget(link, chapters, currentIndex)
+        }.onSuccess { targetIndex ->
+            if (targetIndex != null && targetIndex != currentIndex) {
+                openChapter(targetIndex, 0)
+            }
+        }
     }
 
     fun removeFromBookshelf(success: (() -> Unit)? = null) {

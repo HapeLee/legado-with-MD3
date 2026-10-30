@@ -254,6 +254,12 @@ class EpubFile(var book: Book) {
             val resolvedHref = URLDecoder.decode(URI(href).resolve(src).toString(), "UTF-8")
             it.attr("src", resolvedHref)
         }
+        bodyElement.select("a[href]").forEach {
+            val resolvedHref = LocalBookSemanticHtml.resolveRelativeHref(res.href, it.attr("href"))
+            if (resolvedHref != null) {
+                it.attr("href", resolvedHref)
+            }
+        }
         return bodyElement
     }
 
