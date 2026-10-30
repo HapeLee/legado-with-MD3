@@ -88,6 +88,22 @@ internal class MangaTranslationStore(private val root: File) {
     }
 
     @Synchronized
+    fun bookUrls(): List<String> = File(root, "books").listFiles().orEmpty().mapNotNull { directory ->
+        val checkpoint = AtomicFile(File(directory, "queue.json"))
+        if (!checkpoint.baseFile.exists() && !File(checkpoint.baseFile.path + ".bak").exists()) null
+        else checkpoint.openRead().bufferedReader().use { JSONObject(it.readText()).getString("book") }
+    }
+
+    @Synchronized
+    fun retireAllImages() {
+        File(root, "books").listFiles().orEmpty().forEach { book ->
+            book.listFiles().orEmpty().filter { it.isDirectory && it.name.startsWith("generation-") }
+                .forEach(MangaTranslationFiles::retire)
+        }
+        MangaTranslationFiles.retire(File(root, "pages"))
+    }
+
+    @Synchronized
     fun clear(record: Record): Record {
         val next = Record(record.bookUrl, record.generation + 1, allowLegacy = false, showTranslation = false)
         save(next)

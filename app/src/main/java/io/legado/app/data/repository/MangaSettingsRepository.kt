@@ -32,6 +32,7 @@ class MangaSettingsRepository : MangaSettingsGateway {
 
 internal fun MangaSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.mangaTranslationEnabled to translationEnabled,
+    PreferKey.mangaTranslationBubbleVisible to translationBubbleVisible,
     PreferKey.mangaTranslationBubbleRight to translationBubbleRight,
     PreferKey.mangaTranslationBubbleHeight to translationBubbleHeight,
     PreferKey.showMangaUi to showMangaUi,
@@ -83,6 +84,7 @@ internal fun MangaSettings.toPrefMap(): Map<String, Any?> = mapOf(
 )
 
 internal fun Preferences.toMangaSettings(): MangaSettings = MangaSettings(
+    translationBubbleVisible = compatDsBoolean(PreferKey.mangaTranslationBubbleVisible) ?: true,
     translationEnabled = compatDsBoolean(PreferKey.mangaTranslationEnabled) ?: false,
     translationBubbleRight = compatDsBoolean(PreferKey.mangaTranslationBubbleRight) ?: false,
     translationBubbleHeight = (compatDsInt(PreferKey.mangaTranslationBubbleHeight) ?: 500).coerceIn(0, 1000),

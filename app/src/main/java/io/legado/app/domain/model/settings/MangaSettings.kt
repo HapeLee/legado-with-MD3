@@ -2,6 +2,7 @@ package io.legado.app.domain.model.settings
 
 data class MangaSettings(
     val translationEnabled: Boolean = false,
+    val translationBubbleVisible: Boolean = true,
     val translationBubbleRight: Boolean = false,
     val translationBubbleHeight: Int = 500,
     val showMangaUi: Boolean = true,

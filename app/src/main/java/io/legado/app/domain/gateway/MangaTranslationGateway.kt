@@ -36,6 +36,8 @@ interface MangaTranslationGateway {
     suspend fun pause(bookUrl: String)
     suspend fun prioritize(bookUrl: String, pageKey: String)
     suspend fun setShowTranslation(bookUrl: String, show: Boolean)
+    suspend fun clearAll()
+    suspend fun withModelsPaused(action: suspend () -> Unit)
     suspend fun clearBook(bookUrl: String)
     suspend fun validateLoadedPages(bookUrl: String, pages: List<MangaTranslationPage>)
     /** Synchronous lifetime handoff; implementations finish the current native page in their own scope. */

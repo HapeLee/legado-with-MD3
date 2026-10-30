@@ -60,6 +60,8 @@ class MangaTranslationRepository internal constructor(
     private val lifetimeLock = Any()
     private var activeBook: String? = null
     private var worker: Job? = null
+    private var modelMaintenance = false
+    private val maintenanceMutex = Mutex()
 
     private fun book(url: String) = books.getOrPut(url) { Book(store.load(url)) }
     private fun publish(book: Book, message: String? = book.state.value.message) {
@@ -101,6 +103,7 @@ class MangaTranslationRepository internal constructor(
         val epoch = synchronized(lifetimeLock) { readerEpochs[bookUrl] ?: 0L }
         withContext(Dispatchers.IO) {
             mutex.withLock {
+                check(!modelMaintenance) { "模型正在维护，请稍后开启翻译" }
                 val book = book(bookUrl)
                 val attached = synchronized(lifetimeLock) {
                     if ((readerEpochs[bookUrl] ?: 0L) != epoch) false
@@ -132,6 +135,36 @@ class MangaTranslationRepository internal constructor(
     override suspend fun setShowTranslation(bookUrl: String, show: Boolean) = withContext(Dispatchers.IO) {
         mutex.withLock { book(bookUrl).also { it.record = it.record.copy(showTranslation = show); save(it) } }
         Unit
+    }
+
+    override suspend fun withModelsPaused(action: suspend () -> Unit) = maintenanceMutex.withLock {
+        val running = mutex.withLock {
+            modelMaintenance = true
+            books.values.forEach { it.active = false; publish(it, null) }
+            worker
+        }
+        try {
+            running?.join()
+            action()
+        } finally {
+            withContext(kotlinx.coroutines.NonCancellable) { mutex.withLock { modelMaintenance = false } }
+        }
+    }
+
+    override suspend fun clearAll() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            (store.bookUrls() + books.keys).distinct().forEach { url ->
+                val book = book(url)
+                val oldDirectory = store.pages(book.record)
+                book.active = false
+                book.record = store.clear(book.record)
+                book.validated.clear()
+                book.failureMessage = null
+                publish(book, null)
+                MangaTranslationFiles.retire(oldDirectory)
+            }
+            store.retireAllImages()
+        }
     }
 
     override suspend fun clearBook(bookUrl: String) = withContext(Dispatchers.IO) {
@@ -188,7 +221,7 @@ class MangaTranslationRepository internal constructor(
     }
 
     private fun startWorker() {
-        if (worker?.isActive == true) return
+        if (modelMaintenance || worker?.isActive == true) return
         worker = scope.launch {
             try {
                 while (true) {

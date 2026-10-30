@@ -265,6 +265,20 @@ class MangaReaderViewModelNavigationTest {
         )
     }
 
+    @Test fun `translation subpages return to global without leaving reader`() = runTest(dispatcher) {
+        val reader = createReader()
+        runCurrent()
+        reader.onIntent(MangaReaderIntent.OpenSettings(MangaReaderSettingsCategory.READER))
+        reader.onIntent(MangaReaderIntent.OpenTranslationSettings)
+        reader.onIntent(MangaReaderIntent.OpenTranslationModels)
+        assertEquals(io.legado.app.feature.manga.MangaTranslationSettingsPage.MODELS, reader.uiState.value.translationPage)
+        reader.onIntent(MangaReaderIntent.BackPressed)
+        assertEquals(io.legado.app.feature.manga.MangaTranslationSettingsPage.SETTINGS, reader.uiState.value.translationPage)
+        reader.onIntent(MangaReaderIntent.BackPressed)
+        assertEquals(null, reader.uiState.value.translationPage)
+        assertEquals(MangaReaderSettingsCategory.READER, reader.uiState.value.settingsCategory)
+    }
+
     private fun createReader(): MangaReaderViewModel {
         val manga = object : MangaSettingsGateway {
             override val settings = MutableStateFlow(MangaSettings(hideTitle = true))
@@ -310,6 +324,16 @@ class MangaReaderViewModelNavigationTest {
                 read
             ),
             CacheBookChaptersUseCase(downloads), MangaReaderSessionFactory { session },
+            object : io.legado.app.domain.gateway.MangaModelGateway {
+                override val models = MutableStateFlow(emptyList<io.legado.app.domain.gateway.MangaModelItem>())
+                override val busy = MutableStateFlow(false)
+                override val importErrors = MutableStateFlow(emptyList<String>())
+                override fun refresh() = Unit
+                override fun download(name: String?) = Unit
+                override fun importModels(sources: List<io.legado.app.domain.gateway.MangaModelSource>) = Unit
+                override fun delete(name: String) = Unit
+                override fun cancel() = Unit
+            },
             object : io.legado.app.domain.gateway.MangaTranslationGateway {
                 override fun observeBook(bookUrl: String) = emptyFlow<io.legado.app.domain.gateway.MangaTranslationBookState>()
                 override suspend fun enqueueChapter(bookUrl: String, pages: List<io.legado.app.domain.gateway.MangaTranslationPage>, preferredKey: String?) = Unit
@@ -317,6 +341,8 @@ class MangaReaderViewModelNavigationTest {
                 override suspend fun pause(bookUrl: String) = Unit
                 override suspend fun prioritize(bookUrl: String, pageKey: String) = Unit
                 override suspend fun setShowTranslation(bookUrl: String, show: Boolean) = Unit
+                override suspend fun clearAll() = Unit
+                override suspend fun withModelsPaused(action: suspend () -> Unit) = action()
                 override suspend fun clearBook(bookUrl: String) = Unit
                 override suspend fun validateLoadedPages(bookUrl: String, pages: List<io.legado.app.domain.gateway.MangaTranslationPage>) = Unit
                 override fun detach(bookUrl: String) = Unit

@@ -1143,6 +1143,7 @@ fun MainActivity.mainEntryProvider(
                     fromRoute = route,
                 )
             },
+            onOpenTranslationAi = { onNavigateToRoute(MainRouteSettingsAi) },
             onOpenBookInfo = { name, author, bookUrl ->
                 onNavigateToRoute(
                     MainRouteBookInfo(

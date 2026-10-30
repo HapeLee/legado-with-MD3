@@ -1,0 +1,80 @@
+{
+  "version": "models-v5",
+  "models": [
+    {
+      "role": "detector",
+      "backend": "ncnn",
+      "name": "dbnet_detect.ncnn.param",
+      "url": "https://github.com/joyeli/yakuyomi-engine/releases/download/models-v3/dbnet_detect.ncnn.param",
+      "size": 13392,
+      "sha256": "9e6db2f8c6b0662ab00eb2100b3373d3c984a235eaac0e61c0b2a484ee1ff7b5",
+      "license": "GPL-3.0",
+      "source": "https://github.com/zyddnys/manga-image-translator",
+      "note": "DBNet (m-i-t default detector). resize_aspect to 1024 (pad to 256 multiples); rectangular input avoids ncnn's 832-992 square crash band. fp16 storage (153MB); int8 quant drops all boxes so not used."
+    },
+    {
+      "role": "detector",
+      "backend": "ncnn",
+      "name": "dbnet_detect.ncnn.bin",
+      "url": "https://github.com/joyeli/yakuyomi-engine/releases/download/models-v3/dbnet_detect.ncnn.bin",
+      "size": 153010556,
+      "sha256": "f57bdbede7764a534c56e88be0269602259a7fcd47e54e8b7d954fd0fcc55c3d",
+      "license": "GPL-3.0",
+      "source": "https://github.com/zyddnys/manga-image-translator"
+    },
+    {
+      "role": "ocr",
+      "backend": "ncnn",
+      "name": "ocr_48px_ctc.ncnn.param",
+      "url": "https://github.com/joyeli/yakuyomi-engine/releases/download/models-v4/ocr_48px_ctc.ncnn.param",
+      "size": 18133,
+      "sha256": "e701cfc5df9d3c55c9fd0a36725499d01d45c18e32946271fc26e580cd9901bd",
+      "license": "GPL-3.0",
+      "source": "https://github.com/zyddnys/manga-image-translator",
+      "note": "48px CTC OCR on NCNN (parity/export_ocr_ncnn.py). Plain param: every layer at the net's global precision \u2014 the engine loads this one whenever the _mixed param can't be used (CPU without arm82 fp16, or fp16 storage turned off). Positional encoding is the second input (in1, T = floor(W/4) - 1), so any strip width works. Shares ocr_48px_ctc.ncnn.bin with the _mixed param."
+    },
+    {
+      "role": "ocr",
+      "backend": "ncnn",
+      "name": "ocr_48px_ctc_mixed.ncnn.param",
+      "url": "https://github.com/joyeli/yakuyomi-engine/releases/download/models-v4/ocr_48px_ctc_mixed.ncnn.param",
+      "size": 18438,
+      "sha256": "32e298deca3acb8ba95897ca8cccbd028582ae42a697c3c05b4eaefe198309e3",
+      "license": "GPL-3.0",
+      "source": "https://github.com/zyddnys/manga-image-translator",
+      "note": "Mixed-precision param, the default on arm82 (asimdhp) CPUs: backbone convs fp16, transformer + char_pred forced to fp32 via per-layer featmask 31=7, with an explicit Cast (fp16 -> fp32) between them. Only valid with fp16 storage on the CPU \u2014 elsewhere the Cast would read fp32 as fp16, so the engine falls back to the plain param. Same .bin as the plain param (weight order unchanged)."
+    },
+    {
+      "role": "ocr",
+      "backend": "ncnn",
+      "name": "ocr_48px_ctc.ncnn.bin",
+      "url": "https://github.com/joyeli/yakuyomi-engine/releases/download/models-v4/ocr_48px_ctc.ncnn.bin",
+      "size": 83037664,
+      "sha256": "3e0a809441f5284871d18a3d757a7ec098c4b9ee64bdfd7ac776a84aa057c7a9",
+      "license": "GPL-3.0",
+      "source": "https://github.com/zyddnys/manga-image-translator",
+      "note": "Weights (fp16 storage, ~83 MB; the retired int8 ONNX was 44 MB). Shared by both OCR params \u2014 always ship it from the same conversion as the params."
+    },
+    {
+      "role": "inpainter",
+      "backend": "ncnn",
+      "name": "mit_aot_fixed512.ncnn.param",
+      "url": "https://github.com/joyeli/yakuyomi-engine/releases/download/models-v2/mit_aot_fixed512.ncnn.param",
+      "size": 33810,
+      "sha256": "f21ef860d21a6cdf60dfb1742c08d1c0d98837bceeb2ee3fe9c2dbbeee7d32b5",
+      "license": "GPL-3.0",
+      "source": "https://github.com/zyddnys/manga-image-translator",
+      "note": "AOT-GAN manga inpaint (m-i-t). Fully-convolutional; run at whole-page tile 768 by default."
+    },
+    {
+      "role": "inpainter",
+      "backend": "ncnn",
+      "name": "mit_aot_fixed512.ncnn.bin",
+      "url": "https://github.com/joyeli/yakuyomi-engine/releases/download/models-v2/mit_aot_fixed512.ncnn.bin",
+      "size": 11366088,
+      "sha256": "a52db45eafc1dd2aa4ce9a339c711917fa98fefb31ce4506d4c95e8b5e3560b6",
+      "license": "GPL-3.0",
+      "source": "https://github.com/zyddnys/manga-image-translator"
+    }
+  ]
+}

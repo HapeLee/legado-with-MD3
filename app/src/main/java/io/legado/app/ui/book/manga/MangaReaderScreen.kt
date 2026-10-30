@@ -348,7 +348,7 @@ fun MangaReaderScreen(
                 },
             )
             ReaderStatusOverlay(state, onIntent)
-            if (state.settings.translationEnabled && state.bookUrl.isNotEmpty() &&
+            if (state.settings.translationEnabled && state.settings.translationBubbleVisible && state.bookUrl.isNotEmpty() &&
                 !state.menuVisible && state.settingsCategory == null &&
                 state.activeSheet == null && state.activeDialog == null) {
                 io.legado.app.feature.manga.MangaTranslationBubble(
@@ -413,6 +413,26 @@ fun MangaReaderScreen(
         title = stringResource(R.string.feature_manga_translation_clear_confirm),
         confirmText = stringResource(R.string.ok),
         onConfirm = { onIntent(MangaReaderIntent.ConfirmClearTranslation) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(MangaReaderIntent.DismissDialog) },
+    )
+    AppAlertDialog(
+        show = state.activeDialog == MangaReaderDialog.ClearAllTranslations,
+        onDismissRequest = { onIntent(MangaReaderIntent.DismissDialog) },
+        title = stringResource(R.string.feature_manga_translation_clear_all_confirm),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onIntent(MangaReaderIntent.ConfirmClearAllTranslations) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(MangaReaderIntent.DismissDialog) },
+    )
+    val deleteModel = state.activeDialog as? MangaReaderDialog.DeleteTranslationModel
+    AppAlertDialog(
+        show = deleteModel != null,
+        onDismissRequest = { onIntent(MangaReaderIntent.DismissDialog) },
+        title = stringResource(R.string.feature_manga_translation_delete_confirm),
+        text = deleteModel?.name,
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { deleteModel?.let { onIntent(MangaReaderIntent.ConfirmDeleteTranslationModel(it.name)) } },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(MangaReaderIntent.DismissDialog) },
     )

@@ -28,7 +28,6 @@ import li.joye.yakuyomi.engine.EngineConfig
 import li.joye.yakuyomi.engine.Inpainter
 import li.joye.yakuyomi.engine.InpainterConfig
 import li.joye.yakuyomi.engine.ModelDownloader
-import li.joye.yakuyomi.engine.ModelProgress
 import li.joye.yakuyomi.engine.ModelSet
 import li.joye.yakuyomi.engine.Ocr
 import li.joye.yakuyomi.engine.PageResult
@@ -57,6 +56,7 @@ internal class MangaPageTranslator(
     private val settings: TranslationSettingsGateway,
     private val store: MangaTranslationStore,
 ) : MangaPageProcessor {
+    private val modelFiles = MangaModelFiles(application)
     private val inference = Mutex()
     private var pipeline: Pipeline? = null
     private var pipelineConfiguration: String? = null
@@ -79,6 +79,7 @@ internal class MangaPageTranslator(
     private suspend fun process(record: MangaTranslationStore.Record, page: MangaTranslationPage,
                                 cacheOnly: Boolean, onProgress: (String) -> Unit): String? = withContext(Dispatchers.IO) {
         inference.withLock {
+            modelFiles.lock.withLock models@{
             if (!Process.is64Bit() || !Build.SUPPORTED_ABIS.contains("arm64-v8a"))
                 throw MangaTranslationPreparationException(application.getString(R.string.feature_manga_translation_arm64))
             val preset = profiles.getTaskPreset(AiTaskType.TRANSLATE_CHAPTER)
@@ -115,23 +116,23 @@ internal class MangaPageTranslator(
                 val key = MangaTranslationStore.digest(signature)
                 val cache = store.pages(record).apply { mkdirs() }
                 val output = File(cache, "$key.png")
-                if (output.isFile && output.length() > 0) return@withLock output.toURI().toString()
-                if (File(cache, "$key.skip").isFile) return@withLock null
+                if (output.isFile && output.length() > 0) return@models output.toURI().toString()
+                if (File(cache, "$key.skip").isFile) return@models null
                 val legacy = store.legacy(key)
                 if (record.allowLegacy && legacy.isFile && legacy.length() > 0) {
                     val temporary = File(cache, "$key.adopt")
                     try {
                         legacy.copyTo(temporary, overwrite = true)
                         check(store.commit(record, temporary, output)) { "翻译缓存已清除" }
-                        return@withLock output.toURI().toString()
+                        return@models output.toURI().toString()
                     } finally { temporary.delete() }
                 }
-                if (cacheOnly) return@withLock null
+                if (cacheOnly) return@models null
                 val configuration = "$language|${GSON.toJson(preset)}"
                 if (pipelineConfiguration != configuration) {
                     try {
                         close()
-                        ensureModels(onProgress)
+                        ensureModels()
                         pipeline = createPipeline(LegadoMangaTranslator(ai, preset, language), language)
                         pipelineConfiguration = configuration
                     } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
@@ -181,10 +182,11 @@ internal class MangaPageTranslator(
                     }
                 } finally { bitmap.recycle() }
             }
+            }
         }
     }
 
-    private val modelDirectory get() = File(application.filesDir, "manga_translation/models")
+    private val modelDirectory get() = modelFiles.directory
 
     private fun decodeOriginal(file: File): Bitmap {
         val decoded = requireNotNull(BitmapFactory.decodeFile(file.path,
@@ -204,17 +206,9 @@ internal class MangaPageTranslator(
         } catch (error: Throwable) { decoded.recycle(); throw error }
     }
 
-    private suspend fun ensureModels(onProgress: (String) -> Unit) {
-        val models = ModelDownloader.fetchManifest(
-            "https://raw.githubusercontent.com/joyeli/yakuyomi-engine/883737078aecb92ed796efac571bf066e217b1ab/models.json"
-        ).filter { it.role in setOf("detector", "ocr", "inpainter") }
-        require(models.size == 7) { "翻译模型清单不完整" }
-        val context = currentCoroutineContext()
-        ModelDownloader.ensure(models, modelDirectory) { progress ->
-            context.ensureActive()
-            val percent = if (progress is ModelProgress.Downloading && progress.total > 0)
-                " ${progress.bytes * 100 / progress.total}%" else ""
-            onProgress(application.getString(R.string.feature_manga_translation_model, progress.name) + percent)
+    private suspend fun ensureModels() {
+        check(modelFiles.missing().isEmpty()) {
+            application.getString(R.string.feature_manga_translation_missing_models)
         }
     }
 

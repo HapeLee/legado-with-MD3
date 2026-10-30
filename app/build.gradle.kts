@@ -30,6 +30,9 @@ val projectVersionName = "$versionMajor.$versionMinor.$versionPatch"
 val enableAbiSplits = providers.gradleProperty("enableAbiSplits")
     .map(String::toBoolean)
     .getOrElse(true)
+val coexistRelease = providers.gradleProperty("coexistRelease")
+    .map(String::toBoolean)
+    .getOrElse(false)
 
 android {
     ndkVersion = "28.2.13676358"
@@ -87,10 +90,16 @@ android {
 
     buildTypes {
         getByName("release") {
-            if (project.hasProperty("RELEASE_STORE_FILE")) {
+            if (coexistRelease) {
+                // Reuse the registered local Firebase client and the existing local signing key.
+                // The build remains non-debuggable with R8 and resource shrinking enabled.
+                applicationIdSuffix = ".debug"
+                versionNameSuffix = "-local"
+                signingConfig = signingConfigs.getByName("debug")
+            } else if (project.hasProperty("RELEASE_STORE_FILE")) {
                 signingConfig = signingConfigs.getByName("myConfig")
             }
-            manifestPlaceholders["app_name"] = "@string/app_name"
+            manifestPlaceholders["app_name"] = if (coexistRelease) "@string/app_name_local" else "@string/app_name"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -127,7 +136,7 @@ android {
             isEnable = enableAbiSplits
             reset()
             include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = true
+            isUniversalApk = false
         }
     }
 

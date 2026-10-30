@@ -49,6 +49,7 @@ fun MangaReaderRouteScreen(
     sharedCoverKey: String? = null,
     isTopRoute: Boolean = true,
     onFinish: (bookshelfChanged: Boolean) -> Boolean,
+    onOpenTranslationAi: () -> Unit,
     onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
     onOpenToc: (bookUrl: String, initialPage: Int) -> Unit,
     onOpenSourceLogin: (sourceUrl: String) -> Unit,
@@ -66,6 +67,14 @@ fun MangaReaderRouteScreen(
     val platformCapabilities = remember(activity) { AndroidPlatformCapabilities(activity) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val modelPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        val sources = uris.map { uri ->
+            io.legado.app.data.repository.manga.AndroidMangaModelSource(activity.application, uri)
+        }
+        if (sources.isNotEmpty()) viewModel.onIntent(MangaReaderIntent.TranslationModelsSelected(sources))
+    }
     val currentIsTopRoute by rememberUpdatedState(isTopRoute)
     LaunchedEffect(isTopRoute, viewModel) {
         if (!isTopRoute) viewModel.onIntent(MangaReaderIntent.TranslationReaderExited)
@@ -96,6 +105,8 @@ fun MangaReaderRouteScreen(
         viewModel.effects.collectLatest { effect ->
             val currentState = viewModel.uiState.value
             when (effect) {
+                MangaReaderEffect.OpenTranslationAi -> onOpenTranslationAi()
+                MangaReaderEffect.ImportTranslationModels -> modelPicker.launch(arrayOf("*/*"))
                 is MangaReaderEffect.Finish -> {
                     bookshelfChangedResult = effect.bookshelfChanged
                     dismissManga()
