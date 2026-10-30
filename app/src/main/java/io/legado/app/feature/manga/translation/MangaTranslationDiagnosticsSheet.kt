@@ -40,7 +40,8 @@ internal fun MangaTranslationDiagnosticsSheet(
         show = show,
         title = stringResource(R.string.feature_manga_translation_diagnostics),
         onDismissRequest = onDismiss,
-        startAction = { MediumTonalButton(onClick = onDismiss, icon = AppIcons.Back) },
+        startAction = { MediumTonalButton(onClick = onDismiss, icon = AppIcons.Back,
+            contentDescription = stringResource(R.string.back)) },
     ) {
         Column(
             modifier = Modifier

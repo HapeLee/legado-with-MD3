@@ -169,6 +169,15 @@ class MangaTranslationViewModel(
                     if (book == bookUrl) { _state.update { it.copy(images = persistentMapOf(), ai = null, error = null, diagnosticPath = null) }; failedAutomatic.clear(); checkedPages.clear() }
                 } }
             }
+            MangaTranslationIntent.ClearAll -> {
+                automaticPaused = true
+                stop()
+                val book = bookUrl
+                viewModelScope.launch { attempt {
+                    gateway.clearAll()
+                    if (book == bookUrl) { _state.update { it.copy(images = persistentMapOf(), ai = null, error = null, diagnosticPath = null) }; failedAutomatic.clear(); checkedPages.clear() }
+                } }
+            }
             is MangaTranslationIntent.DownloadOcr -> if (intent.engine.downloadable && modelDownload?.isCompleted != false) {
                 _state.update { it.copy(error = null, ocrOperation = intent.engine) }
                 modelDownload = viewModelScope.launch {

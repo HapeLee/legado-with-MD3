@@ -13,6 +13,7 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.domain.gateway.*
 import io.legado.app.domain.model.*
 import io.legado.app.domain.model.manga.*
+import io.legado.app.domain.model.settings.TranslationSettings
 import io.legado.app.domain.reader.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -61,6 +62,9 @@ class MangaTranslationRepositoryTest {
     private var cloudFailure = false
     private var cloudVersion = "endpoint-v1"
     private var cloudProvider: MangaCloudOcrProvider? = null
+    private val googleRequests = mutableListOf<String>()
+    private var googleFailure = false
+    private var globalProvider = TranslationConstants.PROVIDER_APP_AI
     private var paddleCalls = 0
     private var paddleMissing = false
     private var paddleNativeFailure = false
@@ -108,7 +112,14 @@ class MangaTranslationRepositoryTest {
         }
         // Real BitmapRegionDecoder JNI is not safe in Windows Robolectric. This exercises the
         // same decoder contract while leaving actual native integration to device tests.
-        reopen = { MangaTranslationRepository(app, db, profiles, ai, imageEditor = { input, _, _, _ ->
+        val translationSettings = Proxy.newProxyInstance(TranslationSettingsGateway::class.java.classLoader,
+            arrayOf(TranslationSettingsGateway::class.java)) { _, method, _ ->
+            when (method.name) { "getCurrentSettings" -> TranslationSettings(provider = globalProvider); else -> null }
+        } as TranslationSettingsGateway
+        reopen = { MangaTranslationRepository(app, db, profiles, ai, translationSettings, googleTranslate = { text, target ->
+            googleRequests += "$target:$text"
+            if (googleFailure) Result.failure(IllegalStateException("HTTP 503")) else Result.success("译:$text")
+        }, imageEditor = { input, _, _, _ ->
             edits++
             input.copy(Bitmap.Config.ARGB_8888, true)
         }, textDetector = { input, _ -> textInputSize = input.width to input.height; detectedRegions }, bubbleDetector = {
@@ -667,6 +678,35 @@ class MangaTranslationRepositoryTest {
         assertEquals("艾莉丝", repository.glossary(page.bookUrl)["Alice"])
     }
 
+    @Test fun `changing the target font size re-renders locally without another analysis request`() = runBlocking {
+        val first = repository.translate(page, progress = {})
+        assertEquals(1, calls)
+        repository.update(page.bookUrl) { it.copy(fontScale = 1.5f) }
+        val larger = repository.translate(page, progress = {})
+        assertEquals(1, calls)
+        assertNotEquals(first.imagePath, larger.imagePath)
+        assertEquals(larger, repository.cached(page))
+        repository.update(page.bookUrl) { it.copy(fontScale = 1f) }
+        assertEquals(first.imagePath, repository.translate(page, progress = {}).imagePath)
+        assertEquals(1, calls)
+    }
+
+    @Test fun `clearing every manga cache drops translated images but keeps per-book settings and glossary`() = runBlocking {
+        val other = page.copy(key = "other", bookUrl = UUID.randomUUID().toString())
+        val first = repository.translate(page, progress = {})
+        val second = repository.translate(other, progress = {})
+        repository.setGlossary(other.bookUrl, mapOf("Bob" to "鲍勃"))
+        repository.update(other.bookUrl) { it.copy(targetLanguage = "fr") }
+        repository.clearAll()
+        assertNull(repository.cached(page))
+        assertNull(repository.cached(other))
+        assertFalse(File(first.imagePath).exists())
+        assertFalse(File(second.imagePath).exists())
+        assertEquals("爱丽丝", repository.glossary(page.bookUrl)["Alice"])
+        assertEquals("鲍勃", repository.glossary(other.bookUrl)["Bob"])
+        assertEquals("fr", repository.settings(other.bookUrl).first().targetLanguage)
+    }
+
     @Test fun `local recompose restores saved anchors after restart and ignores changed AI configuration`() = runBlocking {
         val first = repository.translate(page, progress = {})
         assertTrue(first.canRecompose)
@@ -874,6 +914,69 @@ class MangaTranslationRepositoryTest {
         val recomposed = repository.recompose(page, progress = {})
         val rendered = BitmapFactory.decodeFile(recomposed.imagePath)
         try { assertEquals(Color.WHITE, rendered.getPixel(215, 65)) } finally { rendered.recycle() }
+        assertEquals(1, calls)
+    }
+
+    @Test fun `google engine needs no ai model and sends identical lettering once`() = runBlocking {
+        detectedRegions = listOf(
+            MangaTranslatedRegion("r0", "こんにちは", "こんにちは", MangaTextBox(100f, 100f, 900f, 700f)),
+            MangaTranslatedRegion("r1", "こんにちは", "こんにちは", MangaTextBox(100f, 800f, 900f, 1220f)))
+        repository.update(page.bookUrl) {
+            it.copy(locator = MangaLocator.LOCAL, textEngine = MangaTranslateEngine.GOOGLE, modelId = "")
+        }
+        assertNotNull(repository.translate(page, progress = {}))
+        assertEquals(0, calls)
+        assertEquals(listOf("zh-CN:こんにちは"), googleRequests)
+        // Text cache survives page cache invalidation, so redoing the page costs no request.
+        repository.clearPage(page)
+        assertNotNull(repository.translate(page, progress = {}))
+        assertEquals(0, calls)
+        assertEquals(listOf("zh-CN:こんにちは"), googleRequests)
+    }
+
+    @Test fun `google failure aborts instead of falling back to ai`() = runBlocking {
+        detectedRegions = listOf(MangaTranslatedRegion("r0", "さようなら", "さようなら", MangaTextBox(100f, 100f, 900f, 700f)))
+        repository.update(page.bookUrl) {
+            it.copy(locator = MangaLocator.LOCAL, textEngine = MangaTranslateEngine.GOOGLE, modelId = "")
+        }
+        googleFailure = true
+        val failure = runCatching { repository.translate(page, progress = {}) }
+        assertTrue(failure.exceptionOrNull() is IllegalStateException)
+        assertNull(repository.cached(page))
+        assertEquals(0, calls)
+        assertEquals(listOf("zh-CN:さようなら"), googleRequests)
+    }
+
+    @Test fun `google engine splits ai recognition from translation`() = runBlocking {
+        repository.update(page.bookUrl) {
+            it.copy(locator = MangaLocator.AI, ocrModelId = "ocr", textEngine = MangaTranslateEngine.GOOGLE)
+        }
+        respond = { request ->
+            // Layout must echo the Google translation exactly; the fixture prefixes every result.
+            if (request.messages.first().content.contains("COMPLETE translation and typesetting plan"))
+                authoredResponse("\"译:原文\"", "原文")
+            else """{"regions":[{"id":"r0","original":"原文","textBox":{"left":100,"top":100,"right":900,"bottom":700}}]}"""
+        }
+        assertNotNull(repository.translate(page, progress = {}))
+        // Recognition and layout use the vision model; the text stage never reaches the AI service.
+        assertEquals(listOf("ocr", "ocr"), requests.map { it.model.id })
+        assertEquals(2, calls)
+        assertEquals(listOf("zh-CN:原文"), googleRequests)
+    }
+
+    @Test fun `follow settings uses the globally selected translation engine`() = runBlocking {
+        detectedRegions = listOf(MangaTranslatedRegion("r0", "hello", "hello", MangaTextBox(100f, 100f, 900f, 700f)))
+        responseText = """{"translations":[{"id":"r0","translation":"Hi"}]}"""
+        repository.update(page.bookUrl) {
+            it.copy(locator = MangaLocator.LOCAL, textEngine = MangaTranslateEngine.FOLLOW_SETTINGS)
+        }
+        globalProvider = TranslationConstants.PROVIDER_GOOGLE
+        assertNotNull(repository.translate(page, progress = {}))
+        assertEquals(0, calls)
+        assertEquals(listOf("zh-CN:hello"), googleRequests)
+        // A different global engine invalidates the page identity instead of reusing the raster.
+        globalProvider = TranslationConstants.PROVIDER_APP_AI
+        assertNotNull(repository.translate(page, progress = {}))
         assertEquals(1, calls)
     }
 

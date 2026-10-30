@@ -428,7 +428,7 @@ val appModule = module {
     single { io.legado.app.data.repository.manga.translation.MangaPaddleOcr(get()) }
     single<io.legado.app.domain.gateway.MangaCloudOcrGateway> { io.legado.app.data.repository.manga.translation.MangaCloudOcrConfigRepository(get()) }
     single { io.legado.app.data.repository.manga.translation.MangaCloudOcr(get(), get()) }
-    single<MangaTranslationGateway> { MangaTranslationRepository(get(), get(), get(), get(), imageEditor = MangaImageEditor(get())::edit,
+    single<MangaTranslationGateway> { MangaTranslationRepository(get(), get(), get(), get(), translationSettings = get(), imageEditor = MangaImageEditor(get())::edit,
         paddleDetector = get<io.legado.app.data.repository.manga.translation.MangaPaddleOcr>()::detect,
         cloudDetector = get<io.legado.app.data.repository.manga.translation.MangaCloudOcr>()::detect,
         inpaintReady = get<io.legado.app.data.repository.manga.translation.MangaLocalInpainter>()::requireReady,
@@ -439,6 +439,7 @@ val appModule = module {
     single<ChangeSourceSettingsGateway> { ChangeSourceSettingsRepository() }
     single<ImportBookSettingsGateway> { ImportBookSettingsRepository() }
     single<TranslationSettingsGateway> { TranslationSettingsRepository() }
+    single { io.legado.app.data.repository.translation.GoogleTranslateClient() }
     single<BookshelfSettingsGateway> { BookshelfSettingsRepository() }
     single { ReadSettingsRepository(settingsRepository = get()) }
     single<ReadSettingsGateway> { get<ReadSettingsRepository>() }

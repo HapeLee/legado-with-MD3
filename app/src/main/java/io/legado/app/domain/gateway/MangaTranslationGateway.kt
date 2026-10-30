@@ -22,4 +22,6 @@ interface MangaTranslationGateway {
     suspend fun recompose(page: MangaTranslationPage, progress: (MangaTranslationProgress) -> Unit): MangaTranslationResult
     suspend fun clearPage(page: MangaTranslationPage)
     suspend fun clear(bookUrl: String)
+    /** Removes every book's translated rasters and intermediates; settings and glossaries are kept. */
+    suspend fun clearAll()
 }

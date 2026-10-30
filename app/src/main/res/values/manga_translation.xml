@@ -27,18 +27,21 @@
     <string name="manga_translation_automatic_global">Auto-translate by default</string>
     <string name="manga_translation_automatic_book">Auto-translate this comic</string>
     <string name="manga_translation_automatic_hint">Translate loaded images unless this book has its own choice.</string>
-    <string name="manga_translation_locator">OCR engine</string>
-    <string name="manga_translation_locator_ai">AI image recognition</string>
+    <string name="manga_translation_locator">Recognition</string>
+    <string name="manga_translation_locator_ai">AI vision</string>
     <string name="manga_translation_locator_local">On-device OCR</string>
-    <string name="manga_translation_composition">Image processing</string>
+    <string name="manga_translation_composition">Composition method</string>
     <string name="manga_translation_smart">Local cleanup and typesetting</string>
     <string name="manga_translation_patch">Cover and typeset</string>
     <string name="manga_translation_ai_repair">AI cleanup, local typesetting</string>
     <string name="manga_translation_ai_region">AI redraw text regions</string>
     <string name="manga_translation_ai_page">AI redraw whole page</string>
     <string name="manga_translation_model">Translation model</string>
-    <string name="manga_translation_default_model">Use the text translation model</string>
-    <string name="manga_translation_model_hint">Select a translation model from AI settings. On-device OCR and a separately selected AI OCR model send source text only to this model. Font size, wrapping and layout are calculated locally.</string>
+    <string name="manga_translation_default_model">Follow AI settings (chapter translation preset)</string>
+    <string name="manga_model_size">%1$.1f MiB</string>
+    <string name="manga_translation_model_relation">How recognition, translation and composition relate</string>
+    <string name="manga_translation_model_relation_roles">The OCR model reads the source lettering and bubble positions, the translation model translates it, and the composition stage produces the translated page locally or with an image model.</string>
+    <string name="manga_translation_model_relation_merge">Setting the OCR model to \"Recognize with the translation model\", or selecting the same model for both, merges the three steps into one cheaper request. Different models run recognition, text-only translation and visual layout in sequence.</string>
     <string name="manga_translation_image_model">Image editing model</string>
     <string name="manga_translation_choose_model">Choose a model</string>
     <string name="manga_translation_image_model_hint">Add an image provider in AI settings and enable image editing output on its model. Native OpenAI, Gemini, Seedream, Qwen, xAI and SiliconFlow image protocols are supported. Each page segment can incur a paid request; providers are never switched automatically.</string>
@@ -74,11 +77,13 @@
     <string name="manga_ai_layout_planning">AI positioning and typesetting</string>
     <string name="manga_ai_layout_invalid">The AI did not return a complete usable typesetting plan. Retry translation or select on-device or cloud OCR.</string>
     <string name="manga_translation_basic">Translation</string>
-    <string name="manga_translation_recognition">Recognition and positioning</string>
-    <string name="manga_translation_processing">Erasing and layout</string>
+    <string name="manga_translation_recognition">Recognition</string>
+    <string name="manga_translation_processing">Composition</string>
     <string name="manga_translation_advanced">Advanced</string>
     <string name="manga_translation_connection">Connection</string>
     <string name="manga_translation_clear_confirm">Delete saved translations for this book. Settings and glossary are kept.</string>
+    <string name="manga_translation_clear_all">Clear all translated images</string>
+    <string name="manga_translation_clear_all_hint">Delete saved translations and intermediate results for every comic. Translation settings and glossaries are kept.</string>
     <string name="manga_translation_language_auto">Detect automatically</string>
     <string name="manga_translation_language_simplified">Simplified Chinese</string>
     <string name="manga_translation_language_traditional">Traditional Chinese</string>
@@ -96,4 +101,22 @@
     <string name="feature_manga_retranslate_short">Retranslate</string>
     <string name="feature_manga_recompose_short">Recompose</string>
     <string name="feature_manga_save_translation">Save translation</string>
+
+    <string name="manga_translation_pipeline_summary">Pipeline: %1$s</string>
+    <string name="manga_translation_pipeline_ai_vision">AI vision recognition</string>
+    <string name="manga_translation_pipeline_fused">recognition and translation combined</string>
+    <string name="manga_translation_pipeline_ai">AI translation</string>
+    <string name="manga_translation_pipeline_ai_preset">AI translation · chapter translation preset</string>
+    <string name="manga_translation_pipeline_local_fast">local typesetting</string>
+    <string name="manga_translation_pipeline_local_erase">local erase and typesetting</string>
+    <string name="manga_translation_pipeline_unknown_model">unknown model</string>
+
+    <string name="manga_translation_engine">Translation engine</string>
+    <string name="manga_translation_engine_ai">AI text model</string>
+    <string name="manga_translation_engine_google">Google Translate</string>
+    <string name="manga_translation_engine_google_hint">Sends each text region separately: no glossary, no cross-balloon context, and a failure never falls back to AI.</string>
+    <string name="manga_translation_engine_follow">Follow translation settings</string>
+    <string name="manga_translation_engine_follow_hint">Runs whichever engine Translation settings selects (Google or AI) and still requires a separate recognition stage.</string>
+    <string name="manga_translation_engine_unavailable">A non-AI engine needs a separate recognition stage: use on-device or cloud OCR, or pick a vision model for AI recognition. Whole-page edits cannot use it.</string>
+    <string name="manga_translation_google_failed">Google Translate failed, translated image not updated: %1$s</string>
 </resources>

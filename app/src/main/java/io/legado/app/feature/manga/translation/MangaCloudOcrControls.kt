@@ -23,12 +23,20 @@ import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 
+/** Shared with the pipeline summary so a provider is never named two different ways. */
+@Composable
+internal fun mangaCloudOcrProviderName(provider: MangaCloudOcrProvider): String = when (provider) {
+    MangaCloudOcrProvider.BAIDU -> stringResource(R.string.manga_cloud_ocr_baidu)
+    MangaCloudOcrProvider.TENCENT -> stringResource(R.string.manga_cloud_ocr_tencent)
+    MangaCloudOcrProvider.PADDLE -> stringResource(R.string.manga_cloud_ocr_paddle)
+    MangaCloudOcrProvider.PADDLE_SERVER -> stringResource(R.string.manga_cloud_ocr_server)
+}
+
 @Composable
 internal fun MangaCloudOcrControls(state: MangaTranslationUiState, onIntent: (MangaTranslationIntent) -> Unit) {
     val provider = state.settings.cloudOcrProvider
     DropdownListSettingItem(stringResource(R.string.manga_cloud_ocr_provider), provider.name,
-        displayEntries = arrayOf(stringResource(R.string.manga_cloud_ocr_baidu), stringResource(R.string.manga_cloud_ocr_tencent),
-            stringResource(R.string.manga_cloud_ocr_paddle), stringResource(R.string.manga_cloud_ocr_server)),
+        displayEntries = MangaCloudOcrProvider.entries.map { mangaCloudOcrProviderName(it) }.toTypedArray(),
         entryValues = MangaCloudOcrProvider.entries.map { it.name }.toTypedArray()) { value ->
         onIntent(MangaTranslationIntent.ChangeSettings { it.copy(cloudOcrProvider = MangaCloudOcrProvider.valueOf(value)) })
     }

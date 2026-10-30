@@ -29,9 +29,10 @@ internal fun MangaTextBox.layoutPixels(width: Int, height: Int): Rect = Rect(
 
 /** Local pixel operations. Ink cleanup stays near source lettering, independent of layout space. */
 internal object MangaPageComposer {
-    const val GEOMETRY_VERSION = 9
+    const val GEOMETRY_VERSION = 10
 
-    fun prepare(bitmap: Bitmap, input: MangaTranslationPlan, containers: List<MangaBubbleDetection> = emptyList()): MangaTranslationPlan {
+    fun prepare(bitmap: Bitmap, input: MangaTranslationPlan, containers: List<MangaBubbleDetection> = emptyList(),
+        fontScale: Float = 1f): MangaTranslationPlan {
         val plan = input.copy(regions = input.regions.map { region ->
             if (!region.vertical || region.sourceColumnCount != null) region else
                 region.copy(sourceColumnCount = mangaSourceColumnCount(region) ?: measureMangaSourceColumns(bitmap, region))
@@ -42,7 +43,7 @@ internal object MangaPageComposer {
         // Re-estimate old baselines from the original pixels, including caches inflated in previews.
         val unmeasured = plan.copy(regions = plan.regions.map { it.copy(sourceFontSize = it.fontMeasurement?.glyphHeight, bubbleShape = null) })
         val refined = MangaContainerGeometry.attach(bitmap, refineMangaLettering(bitmap, recoverMangaBubbles(bitmap, unmeasured)), containers)
-        return constrainMangaAiSafety(bitmap, planLayout(bitmap, anchor(bitmap, refined)))
+        return constrainMangaAiSafety(bitmap, planLayout(bitmap, anchor(bitmap, refined), fontScale))
             .copy(localGeometryVersion = GEOMETRY_VERSION).validate()
     }
 
@@ -51,8 +52,12 @@ internal object MangaPageComposer {
         if (it.sourceFontSize != null) it else it.copy(sourceFontSize = (sourceSize(bitmap, it) * 1000 / bitmap.height).coerceIn(0.01f, 1000f))
     })
 
-    /** Grow tight source anchors into nearby flat background; stop at artwork or other blocks. */
-    fun planLayout(bitmap: Bitmap, plan: MangaTranslationPlan): MangaTranslationPlan {
+    /**
+     * Grow tight source anchors into nearby flat background; stop at artwork or other blocks.
+     * [fontScale] is the user's target text size multiplier: the writable area must grow with it,
+     * otherwise a 150%+ request can only shrink back to the source size or fail outright.
+     */
+    fun planLayout(bitmap: Bitmap, plan: MangaTranslationPlan, fontScale: Float = 1f): MangaTranslationPlan {
         val stripPixels = IntArray(max(bitmap.width, bitmap.height))
         val reserved = plan.regions.map { region ->
             region.layoutBox.layoutPixels(bitmap.width, bitmap.height).apply { union(region.textBox.pixels(bitmap.width, bitmap.height)) }
@@ -62,7 +67,7 @@ internal object MangaPageComposer {
             val source = Rect(masks.first()).apply { masks.drop(1).forEach(::union) }
             val area = region.layoutBox.layoutPixels(bitmap.width, bitmap.height)
             val vertical = MangaTextTypesetter.vertical(region.translation, region.vertical)
-            val font = region.sourceFontSize?.let { it * bitmap.height / 1000 } ?: sourceSize(bitmap, region)
+            val font = (region.sourceFontSize?.let { it * bitmap.height / 1000 } ?: sourceSize(bitmap, region)) * fontScale
             fun fits() = MangaOverlayTypesetter.fitsAtSize(region.translation, vertical, area.width(), area.height(), font)
             // A short translation does not need extra blank space. Keep relocated legacy anchors.
             if (region.bubbleShape != null || fits() || region.layoutBox != region.textBox && !area.contains(source)) return@mapIndexed region

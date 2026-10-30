@@ -6,9 +6,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,13 +25,16 @@ import io.legado.app.domain.model.manga.MangaLocalOcrEngine
 import io.legado.app.domain.model.manga.MangaLocator
 import io.legado.app.domain.model.manga.MangaOcrModelPhase
 import io.legado.app.domain.model.manga.MangaOcrModelState
+import io.legado.app.domain.model.manga.MangaTranslateEngine
 import io.legado.app.domain.model.manga.MangaTranslationStage
 import io.legado.app.ui.ai.AiReasoningModeButton
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -74,7 +77,8 @@ fun MangaTranslationSheet(
                 contentDescription = stringResource(R.string.feature_manga_translation_diagnostics))
         },
         endAction = {
-            if (state.settings.composition != MangaComposition.AI_PAGE) AiReasoningModeButton(
+            if (state.settings.composition != MangaComposition.AI_PAGE &&
+                state.settings.textEngine == MangaTranslateEngine.AI) AiReasoningModeButton(
                 level = AiReasoningLevel.fromStorage(state.settings.reasoningLevel),
                 enabled = state.loaded && !state.busy,
                 onLevelChange = { level ->
@@ -105,6 +109,11 @@ fun MangaTranslationSheet(
                     onIntent(MangaTranslationIntent.ChangeSettings { it.copy(automatic = enabled) })
                 }
             }
+            if (state.loaded) AppText(
+                mangaPipelineSummary(state),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = LegadoTheme.typography.bodySmall,
+            )
             if (state.busy) {
                 AppLinearProgressIndicator(
                     Modifier
@@ -247,74 +256,55 @@ internal fun MangaOcrModelControls(
     onIntent: (MangaTranslationIntent) -> Unit
 ) {
     val model = state.ocrModels[engine] ?: MangaOcrModelState()
-    Column(
-        Modifier
-            .fillMaxWidth()
-    ) {
-        AppText(mangaOcrEngineName(engine), style = LegadoTheme.typography.titleSmall)
-        AppText(
-            stringResource(
-                when (engine) {
-                    MangaLocalOcrEngine.PADDLE_V5_KOREAN -> R.string.manga_ocr_v5_korean_hint
-                    MangaLocalOcrEngine.PADDLE_V5_ESLAV -> R.string.manga_ocr_v5_eslav_hint
-                    MangaLocalOcrEngine.PADDLE_V6_TINY -> R.string.manga_ocr_v6_tiny_hint
-                    MangaLocalOcrEngine.PADDLE_V6_SMALL -> R.string.manga_ocr_v6_small_hint
-                    MangaLocalOcrEngine.PADDLE_V6_MEDIUM -> R.string.manga_ocr_v6_medium_hint
-                    MangaLocalOcrEngine.PADDLE_V6_MANGA -> R.string.manga_ocr_v6_manga_hint
-                    else -> R.string.manga_ocr_paddle_hint
-                }
-            ), style = LegadoTheme.typography.bodySmall
-        )
-        AppText(
-            stringResource(
-                when (model.phase) {
-                    MangaOcrModelPhase.CHECKING -> R.string.manga_ocr_checking
-                    MangaOcrModelPhase.MISSING -> R.string.manga_ocr_missing
-                    MangaOcrModelPhase.DOWNLOADING -> R.string.manga_ocr_downloading
-                    MangaOcrModelPhase.READY -> R.string.manga_ocr_ready
-                    MangaOcrModelPhase.FAILED -> R.string.manga_ocr_failed
-                }
-            ), style = LegadoTheme.typography.bodyMedium
-        )
-        if (model.totalBytes > 0) AppText(
-            stringResource(
-                R.string.manga_ocr_download_size,
-                model.downloadedBytes / 1048576f,
-                model.totalBytes / 1048576f
-            ), style = LegadoTheme.typography.bodySmall
-        )
-        if (model.phase == MangaOcrModelPhase.DOWNLOADING) {
-            LinearProgressIndicator(
-                progress = {
-                    if (model.totalBytes > 0) (model.downloadedBytes.toFloat() / model.totalBytes).coerceIn(
-                        0f, 1f
-                    ) else 0f
-                }, modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-            )
-            SmallPlainButton(
-                onClick = { onIntent(MangaTranslationIntent.CancelOcrDownload(engine)) },
-                text = stringResource(R.string.cancel)
-            )
-        } else {
-            model.error?.let {
-                AppText(
-                    it,
-                    color = LegadoTheme.colorScheme.error,
-                    style = LegadoTheme.typography.bodyMedium
-                )
+    val downloading = model.phase == MangaOcrModelPhase.DOWNLOADING
+    MangaModelSection(
+        title = mangaOcrEngineName(engine),
+        hint = stringResource(
+            when (engine) {
+                MangaLocalOcrEngine.PADDLE_V5_KOREAN -> R.string.manga_ocr_v5_korean_hint
+                MangaLocalOcrEngine.PADDLE_V5_ESLAV -> R.string.manga_ocr_v5_eslav_hint
+                MangaLocalOcrEngine.PADDLE_V6_TINY -> R.string.manga_ocr_v6_tiny_hint
+                MangaLocalOcrEngine.PADDLE_V6_SMALL -> R.string.manga_ocr_v6_small_hint
+                MangaLocalOcrEngine.PADDLE_V6_MEDIUM -> R.string.manga_ocr_v6_medium_hint
+                MangaLocalOcrEngine.PADDLE_V6_MANGA -> R.string.manga_ocr_v6_manga_hint
+                else -> R.string.manga_ocr_paddle_hint
             }
-            if (model.phase != MangaOcrModelPhase.READY) SmallPlainButton(
+        ),
+        status = stringResource(
+            when (model.phase) {
+                MangaOcrModelPhase.CHECKING -> R.string.manga_ocr_checking
+                MangaOcrModelPhase.MISSING -> R.string.manga_ocr_missing
+                MangaOcrModelPhase.DOWNLOADING -> R.string.manga_ocr_downloading
+                MangaOcrModelPhase.READY -> R.string.manga_ocr_ready
+                MangaOcrModelPhase.FAILED -> R.string.manga_ocr_failed
+            }
+        ),
+        statusColor = mangaModelStatusColor(ready = model.phase == MangaOcrModelPhase.READY,
+            failed = model.phase == MangaOcrModelPhase.FAILED, running = downloading),
+        progress = if (downloading) (model.downloadedBytes.toFloat() / model.totalBytes.coerceAtLeast(1)).coerceIn(0f, 1f) else null,
+        sizeText = when {
+            downloading -> stringResource(R.string.manga_ocr_download_size,
+                model.downloadedBytes / 1048576f, model.totalBytes / 1048576f)
+            model.phase == MangaOcrModelPhase.READY && model.totalBytes > 0 ->
+                stringResource(R.string.manga_model_size, model.totalBytes / 1048576f)
+            else -> null
+        },
+        error = model.error,
+    ) {
+        if (downloading) SmallOutlinedButton(
+            onClick = { onIntent(MangaTranslationIntent.CancelOcrDownload(engine)) },
+            text = stringResource(R.string.cancel))
+        else {
+            if (model.phase != MangaOcrModelPhase.READY) SmallTonalButton(
                 enabled = model.phase != MangaOcrModelPhase.CHECKING && state.ocrOperation == null,
+                icon = Icons.Default.Download,
                 onClick = { onIntent(MangaTranslationIntent.DownloadOcr(engine)) },
-                text = stringResource(R.string.manga_ocr_download)
-            )
-            if (model.phase != MangaOcrModelPhase.CHECKING) SmallPlainButton(
+                text = stringResource(R.string.manga_ocr_download))
+            if (model.phase != MangaOcrModelPhase.CHECKING) SmallOutlinedButton(
                 enabled = state.ocrOperation == null,
+                icon = Icons.Default.Delete,
                 onClick = { onIntent(MangaTranslationIntent.DeleteOcr(engine)) },
-                text = stringResource(R.string.manga_ocr_delete)
-            )
+                text = stringResource(R.string.manga_ocr_delete))
         }
     }
 }

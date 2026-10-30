@@ -27,18 +27,21 @@
     <string name="manga_translation_automatic_global">默认自动翻译</string>
     <string name="manga_translation_automatic_book">自动翻译本漫画</string>
     <string name="manga_translation_automatic_hint">加载完成后自动翻译，单本漫画可单独开关。</string>
-    <string name="manga_translation_locator">OCR 引擎</string>
-    <string name="manga_translation_locator_ai">AI 识图定位</string>
+    <string name="manga_translation_locator">识别方式</string>
+    <string name="manga_translation_locator_ai">AI 视觉识别</string>
     <string name="manga_translation_locator_local">端侧 OCR</string>
-    <string name="manga_translation_composition">图片处理</string>
+    <string name="manga_translation_composition">合成方式</string>
     <string name="manga_translation_smart">本地擦字与排版</string>
     <string name="manga_translation_patch">覆盖原文与排版</string>
     <string name="manga_translation_ai_repair">AI 擦字，本地排版</string>
     <string name="manga_translation_ai_region">AI 重绘文字区域</string>
     <string name="manga_translation_ai_page">AI 重绘整页</string>
     <string name="manga_translation_model">翻译模型</string>
-    <string name="manga_translation_default_model">使用文字翻译模型</string>
-    <string name="manga_translation_model_hint">选择 AI 设置中的翻译模型。端侧 OCR 或独立 AI 识图模型先识别原文，再向此模型发送纯文字。字号、换行和排版由程序计算。</string>
+    <string name="manga_translation_default_model">跟随 AI 设置（章节翻译预设）</string>
+    <string name="manga_model_size">%1$.1f MiB</string>
+    <string name="manga_translation_model_relation">识别、翻译与合成的关系</string>
+    <string name="manga_translation_model_relation_roles">识图模型负责读出原文和气泡位置，翻译模型负责译文，合成阶段由本地排版或图片模型生成译图。</string>
+    <string name="manga_translation_model_relation_merge">识图选「识别跟随翻译模型」，或识图与翻译选中同一模型时，三步合并为一次请求，费用更低；不同模型则依次执行识别、纯文字翻译和视觉排版。</string>
     <string name="manga_translation_image_model">图片编辑模型</string>
     <string name="manga_translation_choose_model">选择模型</string>
     <string name="manga_translation_image_model_hint">在 AI 设置中添加图片供应商，并为模型启用“编辑图片输出”。支持 OpenAI、Gemini、Seedream、通义、xAI 与硅基流动原生图像协议。每个页面分段都可能发起付费编辑请求，不会自动切换服务。</string>
@@ -73,12 +76,14 @@
     <string name="manga_ai_layout_hint">本地检测器提供编号位置候选，AI 结合原图和放大裁剪图识字、翻译并决定换行和方向。已编号区域保留原图位置，字号以原文测量值为基准，溢出时缩小。无候选时由 AI 直接定位。跟随翻译模型时一次完成；不同识图与翻译模型按识别、翻译、视觉排版执行。选择 AI 识图定位时自动使用此流程。</string>
     <string name="manga_ai_layout_planning">AI 定位与排版</string>
     <string name="manga_ai_layout_invalid">AI 未返回完整可用的排版计划。请重新翻译，或改用端侧／云端 OCR。</string>
-    <string name="manga_translation_basic">翻译设置</string>
-    <string name="manga_translation_recognition">识别与定位</string>
-    <string name="manga_translation_processing">擦字与排版</string>
+    <string name="manga_translation_basic">翻译</string>
+    <string name="manga_translation_recognition">识别</string>
+    <string name="manga_translation_processing">合成</string>
     <string name="manga_translation_advanced">高级设置</string>
     <string name="manga_translation_connection">连接设置</string>
     <string name="manga_translation_clear_confirm">删除本书已保存的译图，保留设置和术语表。</string>
+    <string name="manga_translation_clear_all">清除全部漫画译图</string>
+    <string name="manga_translation_clear_all_hint">删除所有漫画已保存的译图与中间结果，保留翻译设置和人名术语表。</string>
     <string name="manga_translation_language_auto">自动识别</string>
     <string name="manga_translation_language_simplified">简体中文</string>
     <string name="manga_translation_language_traditional">繁體中文</string>
@@ -96,4 +101,22 @@
     <string name="feature_manga_retranslate_short">重新翻译</string>
     <string name="feature_manga_recompose_short">重新排版</string>
     <string name="feature_manga_save_translation">保存译图</string>
+
+    <string name="manga_translation_pipeline_summary">当前管线：%1$s</string>
+    <string name="manga_translation_pipeline_ai_vision">AI 视觉识别</string>
+    <string name="manga_translation_pipeline_fused">识别与翻译合并</string>
+    <string name="manga_translation_pipeline_ai">AI 翻译</string>
+    <string name="manga_translation_pipeline_ai_preset">AI 翻译 · 章节翻译预设</string>
+    <string name="manga_translation_pipeline_local_fast">本地排版</string>
+    <string name="manga_translation_pipeline_local_erase">本地擦字排版</string>
+    <string name="manga_translation_pipeline_unknown_model">未知模型</string>
+
+    <string name="manga_translation_engine">翻译引擎</string>
+    <string name="manga_translation_engine_ai">AI 文本模型</string>
+    <string name="manga_translation_engine_google">Google 翻译</string>
+    <string name="manga_translation_engine_google_hint">逐条发送文字区域：不使用术语表与跨气泡上下文，失败时不会自动改用 AI。</string>
+    <string name="manga_translation_engine_follow">跟随翻译设置</string>
+    <string name="manga_translation_engine_follow_hint">按「翻译设置」中选择的引擎执行（Google 或 AI），同样要求识别与翻译分开。</string>
+    <string name="manga_translation_engine_unavailable">非 AI 翻译需要独立的识别阶段：请使用端侧／云端 OCR，或为 AI 识图指定视觉模型；整页重绘不能使用。</string>
+    <string name="manga_translation_google_failed">Google 翻译失败，未更新译图：%1$s</string>
 </resources>

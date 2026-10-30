@@ -1,9 +1,9 @@
 package io.legado.app.domain.usecase
 
-import androidx.annotation.Keep
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.TranslationCache
+import io.legado.app.data.repository.translation.GoogleTranslateClient
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.gateway.AiTextGateway
@@ -27,14 +27,10 @@ import io.legado.app.domain.model.TranslationConstants.OUTPUT_FORMAT
 import io.legado.app.domain.model.TranslationDictionaryPolicy
 import io.legado.app.domain.model.TranslationResultPreviewParser
 import io.legado.app.help.book.BookHelp
-import io.legado.app.help.http.newCallStrResponse
-import io.legado.app.help.http.okHttpClient
-import io.legado.app.utils.GSON
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
-import java.net.URLEncoder
 
 class TranslateChapterUseCase(
     private val aiTextGateway: AiTextGateway,
@@ -42,6 +38,7 @@ class TranslateChapterUseCase(
     private val dictionaryGateway: DictionaryGateway,
     private val aiProfileGateway: AiProfileGateway,
     private val translationSettingsGateway: TranslationSettingsGateway,
+    private val googleTranslate: GoogleTranslateClient = GoogleTranslateClient(),
 ) {
 
     data class TranslationProgress(
@@ -314,31 +311,8 @@ class TranslateChapterUseCase(
         return aiProfileGateway.getTaskPreset(AiTaskType.TRANSLATE_CHAPTER)
     }
 
-    private suspend fun translateWithGoogle(text: String, targetLanguage: String): Result<String> {
-        val encodedText = URLEncoder.encode(text, Charsets.UTF_8.name())
-        val url =
-            "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLanguage&dj=1&dt=t&ie=UTF-8&q=$encodedText"
-        val response = okHttpClient.newCallStrResponse {
-            url(url)
-        }
-        return if (response.isSuccessful()) {
-            runCatching {
-                val json = GSON.fromJson(response.body, GoogleTranslateResponse::class.java)
-                json?.sentences?.mapNotNull { it.trans }?.joinToString("").orEmpty()
-            }.fold(
-                onSuccess = { translatedText ->
-                    if (translatedText.isNotEmpty()) {
-                        Result.success(translatedText)
-                    } else {
-                        Result.failure(Exception("Empty translation result"))
-                    }
-                },
-                onFailure = { Result.failure(it) }
-            )
-        } else {
-            Result.failure(Exception("HTTP ${response.code()}: ${response.message()}"))
-        }
-    }
+    private suspend fun translateWithGoogle(text: String, targetLanguage: String): Result<String> =
+        googleTranslate.translate(text, targetLanguage)
 
     private suspend fun translateWithAiGateway(
         text: String,
@@ -600,13 +574,3 @@ $terms
         }
     }
 }
-
-@Keep
-private data class GoogleTranslateResponse(
-    val sentences: List<GoogleSentence>?
-)
-
-@Keep
-private data class GoogleSentence(
-    val trans: String?
-)

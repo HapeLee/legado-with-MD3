@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="manga_ocr_ai_model">AI 识图模型</string>
-    <string name="manga_ocr_follow_translation">跟随翻译模型</string>
+    <string name="manga_ocr_follow_translation">识别跟随翻译模型</string>
     <string name="manga_ocr_ai_hint">需支持图片输入。</string>
     <string name="manga_ocr_local_engine">端侧 OCR 引擎</string>
     <string name="manga_ocr_mlkit">ML Kit（已内置）</string>

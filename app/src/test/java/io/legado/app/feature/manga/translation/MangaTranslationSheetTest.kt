@@ -49,7 +49,10 @@ class MangaTranslationSheetTest {
         compose.onNodeWithText(app.getString(R.string.manga_translation_source)).performScrollTo().assertIsDisplayed()
     }
 
-    @Test fun `glossary list supports adding editing deleting and saving entries`() {
+    // Robolectric never idles a Material dialog that hosts a text field at w400dp-h800dp (bare MaterialTheme
+    // reproduces it), so this case keeps the compact phone size where the dialog does settle.
+    @Test @Config(qualifiers = "w320dp-h470dp")
+    fun `glossary list supports adding editing deleting and saving entries`() {
         val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
         val draft = mutableStateOf("")
         var saved = ""
@@ -134,7 +137,7 @@ class MangaTranslationSheetTest {
         compose.onNodeWithText("Provider thought fixture").assertDoesNotExist()
         compose.onNodeWithText("思考").performScrollTo().performClick()
         compose.onNodeWithText("Provider thought fixture").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText(app.getString(R.string.back)).performClick()
+        compose.onNodeWithContentDescription(app.getString(R.string.back)).performClick()
         compose.onNodeWithText(app.getString(R.string.manga_translation_current)).assertDoesNotExist()
         compose.onNodeWithText(app.getString(R.string.manga_translation_retry_current)).assertDoesNotExist()
         compose.onNodeWithText(app.getString(R.string.manga_translation_recompose)).assertDoesNotExist()
@@ -316,6 +319,8 @@ class MangaTranslationSheetTest {
         compose.onNodeWithText(app.getString(R.string.manga_translation_advanced)).performScrollTo().performClick()
         compose.onNodeWithText(app.getString(R.string.manga_ai_geometry_diagnostics)).performScrollTo().performClick()
         assertTrue(state.value.settings.geometryDiagnostics)
+        // The preview moved into the diagnostics sheet, which the sheet's top bar opens.
+        compose.onNodeWithContentDescription(app.getString(R.string.feature_manga_translation_diagnostics)).performClick()
         compose.onNodeWithText(app.getString(R.string.manga_ai_geometry_preview)).performScrollTo().performClick()
         compose.onNodeWithText(app.getString(R.string.manga_ai_geometry_legend)).performScrollTo().assertIsDisplayed()
     }

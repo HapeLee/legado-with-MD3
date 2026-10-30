@@ -2,6 +2,7 @@ package io.legado.app.domain.model.manga
 
 import androidx.compose.runtime.Stable
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.domain.model.TranslationConstants
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -10,6 +11,23 @@ enum class MangaLocator { AI, LOCAL, CLOUD }
 
 @Serializable
 enum class MangaComposition { SMART, PATCH, AI_REPAIR, AI_REGION, AI_PAGE }
+
+/** Text-only translation engine. Only meaningful when recognition and translation are separate. */
+@Serializable
+enum class MangaTranslateEngine {
+    AI,
+    GOOGLE,
+
+    /** Uses whichever engine the global chapter translation settings select. */
+    FOLLOW_SETTINGS,
+}
+
+/** Resolves [MangaTranslateEngine.FOLLOW_SETTINGS] against the global translation provider. */
+fun MangaTranslationSettings.resolvedEngine(globalProvider: String): MangaTranslateEngine = when (textEngine) {
+    MangaTranslateEngine.FOLLOW_SETTINGS ->
+        if (globalProvider == TranslationConstants.PROVIDER_GOOGLE) MangaTranslateEngine.GOOGLE else MangaTranslateEngine.AI
+    else -> textEngine
+}
 
 enum class MangaTranslationStage { PREPARING, ANALYZING, PLANNING, EDITING, COMPOSING }
 
@@ -56,6 +74,7 @@ data class MangaTranslationSettings(
     val targetLanguage: String = "zh-CN",
     val locator: MangaLocator = MangaLocator.AI,
     val composition: MangaComposition = MangaComposition.SMART,
+    val textEngine: MangaTranslateEngine = MangaTranslateEngine.AI,
     val modelId: String = "",
     val imageModelId: String = "",
     val imageEditPath: String = "/images/edits",

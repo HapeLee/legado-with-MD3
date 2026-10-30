@@ -95,7 +95,7 @@ class MangaConfigScreenTest {
             else ConfigNavScreen(onBackClick = {}, onNavigateToOther = {}, onNavigateToRead = {},
                 onNavigateToManga = { manga = true }, onNavigateToReadAloud = {}, onNavigateToCover = {},
                 onNavigateToTheme = {}, onNavigateToBackup = {}, onNavigateToAi = {}, onNavigateToDownloadCache = {},
-                onNavigateToTranslation = {}, onNavigateToLab = {}, onNavigateToPrivate = {})
+                onNavigateToTranslation = {}, onNavigateToLab = {}, onNavigateToPrivate = {}, onNavigateToBubble = {})
         } } }
         row(R.string.read_config).assertIsDisplayed()
         row(R.string.manga_config).performClick()

@@ -39,6 +39,7 @@ class MangaTranslationViewModelTest {
         val failedKeys = mutableSetOf<String>()
         val failedCacheKeys = mutableSetOf<String>()
         var recompositions = 0
+        var clearedAll = 0
         var trace: MangaTranslationAiProgress? = null
         var progressCallback: ((MangaTranslationProgress) -> Unit)? = null
         val saved = mutableMapOf<String, MangaTranslationResult>()
@@ -77,6 +78,7 @@ class MangaTranslationViewModelTest {
         }
         override suspend fun clearPage(page: MangaTranslationPage) { saved.remove(page.key) }
         override suspend fun clear(bookUrl: String) { saved.clear() }
+        override suspend fun clearAll() { clearedAll++; saved.clear() }
     }
 
     @Test fun `clearing one translated page preserves other pages and chapter completion updates`() = runTest(dispatcher) {
@@ -98,6 +100,21 @@ class MangaTranslationViewModelTest {
         advanceUntilIdle()
         assertTrue(vm.uiState.value.chapterTranslated)
         assertTrue(gateway.translated.all { it.second })
+    }
+
+    @Test fun `clearing all manga caches drops translated images without a book context`() = runTest(dispatcher) {
+        val gateway = Gateway()
+        gateway.saved[page.key] = MangaTranslationResult("/one.png", "one", true)
+        val vm = model(gateway)
+        vm.onIntent(MangaTranslationIntent.Bind("book", listOf(page), page.key, true))
+        advanceUntilIdle()
+        assertTrue(page.key in vm.uiState.value.images)
+        vm.onIntent(MangaTranslationIntent.ClearAll)
+        advanceUntilIdle()
+        assertEquals(1, gateway.clearedAll)
+        assertTrue(gateway.saved.isEmpty())
+        assertFalse(page.key in vm.uiState.value.images)
+        assertNull(vm.uiState.value.error)
     }
 
     private class CloudConfigs : MangaCloudOcrGateway {

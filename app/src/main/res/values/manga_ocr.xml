@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="manga_ocr_ai_model">AI OCR model</string>
-    <string name="manga_ocr_follow_translation">Follow translation model</string>
+    <string name="manga_ocr_follow_translation">Recognize with the translation model</string>
     <string name="manga_ocr_ai_hint">Image input required.</string>
     <string name="manga_ocr_local_engine">On-device OCR engine</string>
     <string name="manga_ocr_mlkit">ML Kit (included)</string>

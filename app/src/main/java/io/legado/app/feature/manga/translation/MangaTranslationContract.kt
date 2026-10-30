@@ -78,6 +78,7 @@ sealed interface MangaTranslationIntent {
     data object Deactivate : MangaTranslationIntent
     data class ClearPage(val page: MangaTranslationPage) : MangaTranslationIntent
     data object Clear : MangaTranslationIntent
+    data object ClearAll : MangaTranslationIntent
     data class DownloadOcr(val engine: MangaLocalOcrEngine) : MangaTranslationIntent
     data class CancelOcrDownload(val engine: MangaLocalOcrEngine) : MangaTranslationIntent
     data class DeleteOcr(val engine: MangaLocalOcrEngine) : MangaTranslationIntent

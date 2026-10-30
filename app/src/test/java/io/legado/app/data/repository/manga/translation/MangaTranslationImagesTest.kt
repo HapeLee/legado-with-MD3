@@ -107,6 +107,19 @@ class MangaTranslationImagesTest {
         assertFalse(first.owns(firstView)); assertTrue(second.owns(secondView))
     }
 
+    @Test fun `a larger target font grows the writable area instead of only shrinking the text`() {
+        val bitmap = Bitmap.createBitmap(1200, 1200, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
+        try {
+            val box = MangaTextBox(300f, 300f, 700f, 400f)
+            val plan = MangaTranslationPlan(listOf(MangaTranslatedRegion("r", "原文",
+                "这是足够长的译文用来占满整个区域并需要换行", box, sourceFontSize = 30f)))
+            val base = MangaPageComposer.planLayout(bitmap, plan, 1f).regions.single().layoutBox.layoutPixels(1200, 1200)
+            val large = MangaPageComposer.planLayout(bitmap, plan, 1.5f).regions.single().layoutBox.layoutPixels(1200, 1200)
+            assertTrue("150% must widen the writable area: base=$base large=$large",
+                large.width().toLong() * large.height() > base.width().toLong() * base.height())
+        } finally { bitmap.recycle() }
+    }
+
     @Test fun `ROI projection preserves original pixel-aligned coordinates`() {
         val band = MangaTranslationBand(300, 2300, 400, 2000)
         val region = MangaTranslatedRegion("r", "source", "translation", MangaTextBox(103.7f, 201.2f, 880.3f, 701.8f), sourceFontSize = 17.5f)
