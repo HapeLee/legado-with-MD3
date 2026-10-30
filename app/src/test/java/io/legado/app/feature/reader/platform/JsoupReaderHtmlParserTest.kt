@@ -9,6 +9,20 @@ import org.junit.Test
 class JsoupReaderHtmlParserTest {
 
     @Test
+    fun blockStylesReachTextAndStayScopedToTheirBlock() {
+        val parsed = JsoupReaderHtmlParser.parse(
+            "<blockquote style='font-style:italic'><p style='font-weight:bold'>styled</p></blockquote><p>plain</p>",
+            0, 20f, 2f,
+        )
+        val text = parsed.paragraphs.flatMap { it.items }.filterIsInstance<ReaderChapterInlineSource.Text>()
+        assertEquals("styled\nplain\n", parsed.semantic)
+        assertEquals(700, text[0].style.fontWeight)
+        assertEquals(true, text[0].style.italic)
+        assertEquals(null, text[1].style.fontWeight)
+        assertEquals(null, text[1].style.italic)
+    }
+
+    @Test
     fun semanticAndParagraphsShareOneCursor() {
         val html = "<h2>甲&amp;&#x4E59;</h2><p><a href=\"https://example\">链接</a><img src=\"pic\"></p><blockquote>末</blockquote>"
         val semantic = JsoupReaderHtmlParser.semanticText(html)

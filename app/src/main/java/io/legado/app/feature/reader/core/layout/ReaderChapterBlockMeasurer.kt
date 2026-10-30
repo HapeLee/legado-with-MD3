@@ -405,7 +405,7 @@ class ReaderChapterBlockMeasurer(
                             offset += cluster.length
                             if (castActive) {
                                 var anchorHere = false
-                                for (ch in cluster) if (castTracker!!.feed(ch)) anchorHere = true
+                                for (ch in cluster) if (castTracker.feed(ch)) anchorHere = true
                                 // 锚点恰在段尾且后面是标记 → 交给标记的已分配胶囊
                                 if (anchorHere && !(offset == pieceEnd && pieceMarker != null)) {
                                     inline += ReaderMeasuredInlineItem.RoleCast(

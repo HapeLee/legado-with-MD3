@@ -4,6 +4,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.encodeURI
 import org.apache.commons.text.StringEscapeUtils
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
@@ -236,6 +237,22 @@ object LocalBookSemanticHtml {
         return parseDeclarations(style)
     }
 
+    /** Apply only this content document's stylesheets, in document order. */
+    fun inlineDocumentCssSemantics(document: Document, loadStylesheet: (String) -> String?) {
+        val rules = mutableListOf<CssRule>()
+        for (element in document.select("link, style")) {
+            val css = when {
+                element.normalName() == "style" -> element.data()
+                element.attr("rel").split(Regex("\\s+")).any { it.equals("stylesheet", true) } ->
+                    element.attr("href").takeIf { it.isNotBlank() }?.let(loadStylesheet)
+                else -> null
+            } ?: continue
+            rules += parseCssRules(css, rules.size)
+            if (rules.size > 2000) break
+        }
+        inlineCssSemantics(document.body(), rules)
+    }
+
     /**
      * Merge matching CSS rules into each element's inline style (whitelisted props only).
      * Inline style wins over CSS; later rules win on equal specificity.
@@ -366,7 +383,8 @@ object LocalBookSemanticHtml {
                 continue
             }
             if (hasSemanticSignal(el)) {
-                val singleLine = el.outerHtml().replace("\n", " ").replace("\r", " ").trim()
+                // Keep the transport on one line without flattening author whitespace in pre.
+                val singleLine = el.outerHtml().replace("\r", "&#13;").replace("\n", "&#10;").trim()
                 if (singleLine.isNotEmpty()) {
                     lines += "<usehtml>$singleLine</usehtml>"
                 }

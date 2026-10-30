@@ -14,6 +14,51 @@ import org.junit.Test
 class LocalBookSemanticHtmlTest {
 
     @Test
+    fun documentCssUsesOnlyReferencedSheetsInDocumentOrder() {
+        val styles = mapOf(
+            "z.css" to "p { font-weight: bold; }",
+            "a.css" to "p { font-weight: normal; }",
+            "other-chapter.css" to "p { display: none; }",
+        )
+        val document = Jsoup.parse(
+            "<head><link rel='stylesheet' href='z.css'><link rel='stylesheet' href='a.css'></head><body><p>Body</p></body>"
+        )
+        val loaded = mutableListOf<String>()
+        LocalBookSemanticHtml.inlineDocumentCssSemantics(document) { href ->
+            loaded += href
+            styles[href]
+        }
+        assertEquals(listOf("z.css", "a.css"), loaded)
+        assertEquals("Body", document.body().text())
+        assertEquals("font-weight: normal", document.selectFirst("p")!!.attr("style"))
+    }
+
+    @Test
+    fun embeddedCssAndLinkedCssShareDocumentOrderWithoutOverridingInlineStyle() {
+        val document = Jsoup.parse(
+            "<head><style>p {font-style: italic}</style><link rel='stylesheet' href='book.css'>" +
+                "<style>p {font-weight: bold}</style></head>" +
+                "<body><p style='font-weight: normal'>Body</p></body>"
+        )
+        LocalBookSemanticHtml.inlineDocumentCssSemantics(document) {
+            "p {font-style: normal; font-weight: normal}"
+        }
+        val style = document.selectFirst("p")!!.attr("style")
+        assertTrue(style.contains("font-style: normal"))
+        assertTrue(style.contains("font-weight: normal"))
+    }
+
+    @Test
+    fun mixedChannelPreservesPreformattedLineBreaksOnOneTransportLine() {
+        val body = Jsoup.parseBodyFragment("<pre>first\n  second\r\nthird</pre>").body()
+        val channel = LocalBookSemanticHtml.emitMixedChannel(body)
+        assertEquals(1, channel.lines().size)
+        assertEquals("first\n  second\nthird\n", JsoupReaderHtmlParser.semanticText(
+            channel.removePrefix("<usehtml>").removeSuffix("</usehtml>")
+        ))
+    }
+
+    @Test
     fun cutFragmentHandlesSingleLineCompressedHtml() {
         val body = Jsoup.parse("<body><p>one</p><p id=\"c2\">two</p><p>three</p></body>").body()
         LocalBookSemanticHtml.cutFragment(body, "c2", null)

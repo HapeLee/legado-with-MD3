@@ -163,7 +163,6 @@ class EpubFile(var book: Book) {
         }
         //title标签中的内容不需要显示在正文中，去除
         elements.select("title").remove()
-        LocalBookSemanticHtml.removeHiddenElements(elements)
         elements.select("img[src=\"cover.jpeg\"]").forEachIndexed { i, it ->
             if (i > 0) it.remove()
         }
@@ -171,11 +170,6 @@ class EpubFile(var book: Book) {
         val tag = Book.rubyTag
         if (book.getDelTag(tag)) {
             elements.select("rp, rt").remove()
-        }
-        // Inline high-frequency CSS rules (tag/#id/.class) into whitelisted style attributes.
-        val cssRules = collectCssRules()
-        elements.forEach { body ->
-            LocalBookSemanticHtml.inlineCssSemantics(body, cssRules)
         }
         // Mixed channel: plain text/image lines stay replace-friendly,
         // semantic blocks go through single-line <usehtml> wrappers.
@@ -187,32 +181,6 @@ class EpubFile(var book: Book) {
         }.filter { it.isNotBlank() || it.contains("<usehtml>") }
             .joinToString("\n")
         return channel
-    }
-
-    private fun collectCssRules(): List<LocalBookSemanticHtml.CssRule> {
-        val book = epubBook ?: return emptyList()
-        val cssTexts = mutableListOf<Pair<String, String>>()
-        runCatching {
-            for (res in book.resources.all) {
-                val href = res.href ?: continue
-                if (!href.endsWith(".css", ignoreCase = true)) continue
-                val text = runCatching { String(res.data, Charsets.UTF_8) }.getOrNull()
-                if (!text.isNullOrBlank()) cssTexts += href to text
-            }
-        }
-        if (cssTexts.isEmpty()) return emptyList()
-        // Deterministic cascade: sort by href so repeated parses agree.
-        cssTexts.sortBy { it.first }
-        val rules = mutableListOf<LocalBookSemanticHtml.CssRule>()
-        var order = 0
-        for ((_, css) in cssTexts) {
-            val parsed = LocalBookSemanticHtml.parseCssRules(css, order)
-            rules += parsed
-            order += parsed.size
-            // Temporary： high-frequency rules only.
-            if (rules.size > 2000) break
-        }
-        return rules
     }
 
     private fun getBody(res: Resource, startFragmentId: String?, endFragmentId: String?): Element {
@@ -228,13 +196,18 @@ class EpubFile(var book: Book) {
         }
 
         // Jsoup可能会修复不规范的xhtml文件 解析处理后再获取
-        val bodyElement = Jsoup.parse(String(res.data, mCharset)).body()
-        bodyElement.children().run {
-            select("script").remove()
-            select("style").remove()
+        val document = Jsoup.parse(String(res.data, mCharset))
+        val bodyElement = document.body()
+        LocalBookSemanticHtml.inlineDocumentCssSemantics(document) { href ->
+            val resolved = LocalBookSemanticHtml.resolveRelativeHref(res.href, href)
+            resolved?.let { path ->
+                runCatching {
+                    epubBook?.resources?.getByHref(path)?.data?.let { String(it, Charsets.UTF_8) }
+                }.getOrNull()
+            }
         }
-        // DOM-order fragment cut
-        // 基于DOM边界的截取，去除不robust的‘\n’换行
+        bodyElement.select("script, style").remove()
+        // Resolve styles before cutting, including style elements preceding the chapter.
         LocalBookSemanticHtml.cutFragment(bodyElement, startFragmentId, endFragmentId)
         /*选择去除正文中的H标签，部分书籍标题与阅读标题重复待优化*/
         val tag = Book.hTag

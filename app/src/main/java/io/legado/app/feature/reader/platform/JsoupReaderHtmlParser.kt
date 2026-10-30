@@ -211,10 +211,11 @@ object JsoupReaderHtmlParser {
                         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
                         checkAnchor(node, cursor)
                         val childBlock = descendBlock(node, tag, block, baseTextSizePx, density)
+                        val childInline = descendInline(node, tag, inline)
                         // Establish geometry for the upcoming paragraph run.
                         cursor.apply(blockGeometry(childBlock, baseTextSizePx, density))
                         for (child in node.childNodes().toList()) {
-                            walk(child, inline, childBlock, cursor, baseTextSizePx, density)
+                            walk(child, childInline, childBlock, cursor, baseTextSizePx, density)
                         }
                         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
                         // Reset to parent geometry for following siblings.
