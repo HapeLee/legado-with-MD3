@@ -126,31 +126,7 @@ data class ReaderCastOptions(
     }
 }
 
-data class ReaderMeasuredParagraph(
-    val text: String,
-    val clusters: List<String>,
-    val clusterWidthsPx: FloatArray,
-    val style: ReaderTextStyle,
-    val chapterPosition: Int,
-    val indentCharacters: Int = 0,
-    val alignment: ReaderTextAlignment = ReaderTextAlignment.START,
-    val isTitle: Boolean = false,
-    val link: String? = null,
-    val lineHeightPx: Float? = null,
-    val baselineOffsetPx: Float? = null,
-    val lineSpacingMultiplier: Float? = null,
-    val letterSpacingPx: Float? = null,
-    val indentWidthPx: Float? = null,
-) {
-    init {
-        require(clusters.size == clusterWidthsPx.size)
-        require(clusters.joinToString("") == text)
-    }
-}
-
 sealed interface ReaderMeasuredBlock {
-    data class Paragraph(val value: ReaderMeasuredParagraph) : ReaderMeasuredBlock
-
     data class Image(
         val source: String,
         val intrinsicWidthPx: Float,
@@ -268,11 +244,6 @@ private fun ReaderMeasuredInlineItem.tallItemHeightPx(): Float = when (this) {
 
 /** Platform-free page assembler. It never creates or mutates legacy TextPage/TextLine objects. */
 object ReaderPaginator {
-    fun paginate(
-        paragraphs: List<ReaderMeasuredParagraph>,
-        config: ReaderPaginationConfig,
-    ): List<ReaderPage> = paginateBlocks(paragraphs.map { ReaderMeasuredBlock.Paragraph(it) }, config)
-
     /**
      * 整章批次入口：一次拿回全部页。逐页流出走 [ReaderPaginationSession]——旧 View
      * `TextChapterLayout.onPageCompleted()` 是每完成一页就 `channel.trySend`，批次只是它的收尾。
@@ -403,7 +374,6 @@ internal class ReaderPaginationSession(
         val isTitle = block.isTitle()
         if (isTitle && index == 0) y += config.titleTopSpacingPx
         when (block) {
-            is ReaderMeasuredBlock.Paragraph -> addParagraph(block.value, index, hasFollowingBlock)
             is ReaderMeasuredBlock.Image -> addImage(block)
             is ReaderMeasuredBlock.InlineParagraph -> addInlineParagraph(
                 block,
@@ -530,84 +500,6 @@ internal class ReaderPaginationSession(
             columnRows.clear()
             y = config.paddingTopPx
         } else finishPage()
-    }
-
-    private fun addParagraph(
-        paragraph: ReaderMeasuredParagraph,
-        paragraphIndex: Int,
-        appendSeparator: Boolean,
-    ) {
-        val lineHeight = paragraph.lineHeightPx ?: config.lineHeightPx
-        val letterSpacing = paragraph.letterSpacingPx ?: config.letterSpacingPx
-        val indentWidth = paragraph.indentWidthPx
-            ?: (paragraph.style.fontSizePx + letterSpacing) * paragraph.indentCharacters
-        val baselineOffset = paragraph.baselineOffsetPx ?: config.baselineOffsetPx
-        val ideographWidth = paragraph.clusterWidthsPx.firstOrNull { it > 0f }
-            ?: paragraph.style.fontSizePx
-        // The shared breaker expects advances including spacing; its width limit
-        // compensates for the final, undrawn trailing gap (also used by legacy ZhLayout).
-        val breakerWidthsPx = FloatArray(paragraph.clusterWidthsPx.size) { index ->
-            paragraph.clusterWidthsPx[index] + letterSpacing
-        }
-        val breaker = ChineseLineBreaker(
-            clusters = paragraph.clusters,
-            widthsPx = breakerWidthsPx,
-            indentCharacters = 0,
-            widthPx = config.contentWidthPx.toInt(),
-            ideographWidthPx = ideographWidth + letterSpacing,
-            letterSpacingPx = letterSpacing,
-            firstLineWidthPx = (config.contentWidthPx - indentWidth)
-                .coerceAtLeast(0f).toInt(),
-        )
-        val starts = breaker.lineClusterStarts
-        for (lineIndex in 0 until breaker.lineCount) {
-            if (y + lineHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
-            val from = starts[lineIndex]
-            val until = starts[lineIndex + 1]
-            val widths = paragraph.clusterWidthsPx.copyOfRange(from, until)
-            val naturalWidth = widths.sum() + letterSpacing * (widths.size - 1).coerceAtLeast(0)
-            val indent = if (lineIndex == 0) indentWidth else 0f
-            val available = (config.contentWidthPx - indent).coerceAtLeast(0f)
-            val justifyGap = if (
-                paragraph.alignment == ReaderTextAlignment.JUSTIFY &&
-                lineIndex < breaker.lineCount - 1 && widths.size > 1
-            ) ((available - naturalWidth) / (widths.size - 1)).coerceAtLeast(0f) else 0f
-            var x = columnLeft() + indent + when (paragraph.alignment) {
-                ReaderTextAlignment.CENTER -> (available - naturalWidth).coerceAtLeast(0f) / 2f
-                ReaderTextAlignment.END -> (available - naturalWidth).coerceAtLeast(0f)
-                else -> 0f
-            }
-            val rowElementStart = elements.size
-            var characterOffset = paragraph.clusters.take(from).sumOf(String::length)
-            for (clusterIndex in from until until) {
-                val value = paragraph.clusters[clusterIndex]
-                val width = max(paragraph.clusterWidthsPx[clusterIndex], 0f)
-                elements += ReaderElement.Text(
-                    bounds = ReaderRect(x, y, x + width, y + lineHeight),
-                    baselinePx = y + baselineOffset,
-                    value = value,
-                    style = paragraph.style,
-                    selected = false,
-                    emphasized = paragraph.isTitle,
-                    link = paragraph.link,
-                    chapterPosition = paragraph.chapterPosition + characterOffset,
-                    paragraphIndex = paragraphIndex,
-                    // 整段共用一个 style：同行内第二字起若带背景图，即与前一字同 run
-                    continuesBackgroundRun = paragraph.style.backgroundImage != null && clusterIndex > from,
-                )
-                pageText.append(value)
-                characterOffset += value.length
-                x += width + letterSpacing + justifyGap
-            }
-            addPageUnderline(rowElementStart, y + lineHeight)
-            columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + lineHeight)
-            y += lineHeight * (paragraph.lineSpacingMultiplier ?: config.lineSpacingMultiplier)
-        }
-        if (appendSeparator) {
-            pageText.append('\n')
-            y += if (paragraph.isTitle) config.titleParagraphSpacingPx ?: config.paragraphSpacingPx
-            else config.paragraphSpacingPx
-        }
     }
 
     private fun addImage(image: ReaderMeasuredBlock.Image) {
@@ -1097,7 +989,6 @@ internal class ReaderPaginationSession(
     }
 
     private fun ReaderMeasuredBlock.isTitle() = when (this) {
-        is ReaderMeasuredBlock.Paragraph -> value.isTitle
         is ReaderMeasuredBlock.InlineParagraph -> emphasized
         else -> false
     }

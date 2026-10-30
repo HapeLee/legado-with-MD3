@@ -10,15 +10,15 @@ import org.junit.Test
 class ReaderPageUnderlineTest {
     private val style = ReaderTextStyle(0xff111111.toInt(), 10f)
 
-    private fun paragraph(text: String, indent: Int = 0) = ReaderMeasuredBlock.Paragraph(
-        ReaderMeasuredParagraph(
-            text,
-            text.map(Char::toString),
-            FloatArray(text.length) { 10f },
-            style,
-            0,
-            indentCharacters = indent,
-        ),
+    private fun paragraph(text: String, indent: Int = 0) = ReaderMeasuredBlock.InlineParagraph(
+        items = text.mapIndexed { index, char ->
+            ReaderMeasuredInlineItem.Text(char.toString(), 10f, style, index)
+        },
+        indentCharacters = indent,
+        alignment = ReaderTextAlignment.START,
+        lineHeightPx = 10f,
+        baselineOffsetPx = 8f,
+        baseTextSizePx = 10f,
     )
 
     @Test fun pageUnderlineUsesRenderedLineBoundsAndConfiguredDashPattern() {

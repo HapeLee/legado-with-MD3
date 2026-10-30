@@ -15,17 +15,6 @@ class ReaderLineSpacingTest {
         }, 0, ReaderTextAlignment.START, 20f, 16f, 20f,
             emphasized = title, lineSpacingMultiplier = multiplier)
 
-    @Test fun paragraphUsesGlyphHeightForFitAndLineSpacingForAdvance() {
-        val text = "甲乙丙"
-        val paragraph = ReaderMeasuredParagraph(text, text.map(Char::toString), FloatArray(3) { 20f }, style, 0)
-        val pages = ReaderPaginator.paginate(listOf(paragraph), config)
-        assertEquals(listOf("甲乙", "丙"), pages.map { it.text })
-        val glyphs = pages.first().elements.filterIsInstance<ReaderElement.Text>()
-        assertEquals(listOf(0f, 30f), glyphs.map { it.bounds.top })
-        assertEquals(listOf(20f, 50f), glyphs.map { it.bounds.bottom })
-        assertEquals(listOf(16f, 46f), glyphs.map { it.baselinePx })
-    }
-
     @Test fun inlineParagraphAndTitleUseIndependentLineSpacing() {
         val pages = ReaderPaginator.paginateBlocks(listOf(inline("甲乙丙")), config)
         assertEquals(listOf("甲乙", "丙"), pages.map { it.text })
