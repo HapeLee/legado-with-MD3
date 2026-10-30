@@ -1,49 +1,49 @@
 {
   "tag_name": "3.26.19",
   "name": "Release 3.26.19",
-  "body": "### 更新内容\n\n* feat(explore): 发现顶栏改为单书源搜索入口，书源选择改为可筛选底部 sheet\n* fix(manga): 整章拼接超长条漫图拆段渲染，修复 Constraints 尺寸溢出崩溃 (#2475)\n* fix(book-info): 简介纯文本分支二次转义，& < > 显示为 HTML 实体 (#2466)\n* fix(reader): 开标点连同 Latin 单词整体换行，不再拆词\n* fix(book-info): useweb 简介经 FrameLayout 容器承载，规避 Vulkan drawVk 原生崩溃 (#2468)\n* feat(highlight): 高亮规则新增边框样式，预览渲染修复与示例句加长\n* feat(book-info): 关联书籍移至简介下方，支持无规则时按作者搜索兜底\n* fix(reader): 关联书籍位置\n* fix: 关联书籍调试之\n* opt: memory usage (#2478)\n* perf(reader): 排版宽度链路去装箱，字形级宽度改 FloatArray\n* feat(cast): AI 分配角色带上「过了几章没开口」与下一章开头 (#2476)\n* fix(cast): 人物档案读取被夹到 80 个，配音页与人物列表少列人 (#2474)\n* feat(ui): 搜索/发现/详情页封面按原图宽高比自适应（默认固定 5:7，设置可关） (#2473)\n* reader: cut pagination peak memory (streaming, merge, buffer release)\n* feat(reader): 可配置 AI 对话入口携带阅读上下文 & 修复换图标入口 IME 双重避让 (#2472)\n* feat(reader): add configurable AI chat entry with reading context\n* fix(ui): prevent double IME avoidance on alternate launcher activities\n* feat(reader): 阅读主题列表弹窗（网格/流式/管理/导入导出） (#2465)\n* feat(reader): 分页失败原因带上异常 message 与栈顶\n* fix(reader): 引号跨段时角色气泡不再把整章排版打挂\n* feat: 内置词典规则更新为汉典并清理失效的百度汉语规则 (#2450)\n* 咕噜噜\n* feat: 阅读界面优化\n* feat: 添加阻止书源打开选项 在搞基里\n* feat:优化听书界面\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻 (#2447)\n* fix(test): 移除ReadBookViewModel多余空行以满足2748行架构测试上限\n* fix(readaloud): 修复HTTP朗读在当前章未完成时抢占预合成导致的断流卡顿\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻\n\n## What's Changed\n* fix(about): 优化检测更新弹窗，将更新按钮移至底部常驻 by @ISuuuu in https://github.com/HapeLee/legado-with-MD3/pull/2447\n* fix(readaloud): 修复HTTP朗读在当前章未完成时抢占预合成导致的断流卡顿 by @ISuuuu in https://github.com/HapeLee/legado-with-MD3/pull/2448\n* feat: 内置词典规则更新为汉典并清理失效的百度汉语规则 by @xuezhi123go in https://github.com/HapeLee/legado-with-MD3/pull/2450\n* fix(reader): 引号跨段时角色气泡不再把整章排版打挂 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2461\n* feat(reader): 阅读主题列表弹窗（网格/流式/管理/导入导出） by @qmzd111 in https://github.com/HapeLee/legado-with-MD3/pull/2465\n* fix&feat: add configurable AI chat entry with reading context & fix IME double avoidance by @izumisagirii in https://github.com/HapeLee/legado-with-MD3/pull/2472\n* feat(ui): 搜索/发现/详情页封面按原图宽高比自适应（默认固定 5:7，设置可关） by @shaoyangz1 in https://github.com/HapeLee/legado-with-MD3/pull/2473\n* fix(cast): 人物档案读取被夹到 80 个，配音页与人物列表少列人 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2474\n* feat(cast): AI 分配角色带上「过了几章没开口」与下一章开头 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2476\n* opt: memory usage by @izumisagirii in https://github.com/HapeLee/legado-with-MD3/pull/2478\n\n## New Contributors\n* @xuezhi123go made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2450\n* @qmzd111 made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2465\n* @izumisagirii made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2472\n* @shaoyangz1 made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2473\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.17...3.26.19",
+  "body": "### 更新内容\n\n* feat(manga): 引擎抽取、全局清理与字号自适应排版\n* feat(manga): 漫画一些问题\n* feat(manga): 设置面板分类 tab 移到底部，点击区域改为整屏配置\n* fix(reader): 点击区域改为格子内下拉，修复与更多面板的层级冲突\n* test(tts): isolate endpoint smoke test from playback settings\n* fix(explore): retain layout flows across recompositions\n* feat(manga): add configurable translation, OCR, inpainting and reader tools\n* 视频播放: 播放页信息区重构、画中画与进度保存串行化\n* 视频播放: 播放页菜单按书源能力门控并收进 UiState\n* 视频播放: 补齐书源登录、自定义按钮与编辑书源菜单\n* 视频播放收尾: 目录事务化、Insets 适配与残留清理\n* 视频播放对齐上游(5/5): RSS 文章视频\n* 视频播放对齐上游(4/4): 加入书架后预取详情与目录\n* 视频播放对齐上游(3/4): 测试适配新架构并修复进度覆盖\n* 视频播放对齐上游(2/4): 悬浮小窗 + 后台保活\n* 视频播放对齐上游(1/4): 播放会话下沉到 VideoPlay + 前台服务托管\n* fix: 修复版本升级时默认数据迁移被跳过 (#2498)\n* feat(cache): 新增缓存维护，支持清理孤立章节缓存与重算字数 (#2509)\n* fix(reader): Google/视差翻页的就绪等待加上限、保留帧自愈、重捕获不闪烁\n* fix(reader): iOS 仿真翻页的就绪等待加上限，重捕获时保持卷曲\n* feat(reader): 段评气泡包（书源 dp: 约定 / 气泡管理 / 阅读内快速切换）(#2513)\n* fix(reader): retain committed page state during rapid turns\n* feat(reader): add Google curl and parallax page turns\n* fix(reader): apply page turn speed to iOS curl\n* feat(reader): add iOS-style simulated page turning\n* fix(video): 修复分页规则兼容、解析线程与后台进度保存\n* fix(video): 评审修复——效果重放、失败重试与控制层联动\n* fix(book-info): kind 标签按链接格式校验后再拆分跳转\n* fix(explore): 翻页参数兜底只对标签跳转的运行时地址生效\n* feat(explore): 发现页网格改瀑布流布局，网格封面接入比例自适应\n* fix(import): 批量导入预览列表改用 entryId 作 item key，重复条目不再崩溃\n* fix(cast): 胶囊只剩两个（英文撇号钉死引号栈）+ 分配窗口加复制按钮 (#2479)\n* feat(book-info): 作者名拆分为多个可点击标签\n* feat(explore): 书源级翻页参数 pageParam\n* chore: 忽略本地 resource 目录\n* fix(video): 支持 HLS 播放并隐藏单章上下章按钮\n* feat(book-info): 分类标签可点击跳转发现页\n* fix(video): 视频路由补私密闸门并同步 Fragment 入口\n* fix(video): 修复整分支评审的 Critical/Important 问题\n* feat(bookshelf): 视频类型标签\n* fix(video): 补视频路由导航与全屏判定\n* feat(video): 视频播放路由与入口\n* fix(video): 缓冲中切后台也暂停播放\n* fix(video): 配置变化不暂停，后台加载不自动开播\n* fix(video): 后台暂停并保证播放器初始化幂等\n* feat(video): 视频播放界面\n* fix(video): 修复播放进度覆盖与保存可靠性\n* feat(video): 视频播放器 ViewModel 与契约\n* fix(bookshelf): 修正视频分组预览与网络未分组查询\n* feat(bookshelf): 新增视频分组\n* fix(source): 补齐视频类型的本地化与类型转换\n* feat(source): 新增视频类型书源\n* docs: 视频书源实现计划\n* docs: 视频类型书源支持设计文档\n* feat(explore): 发现顶栏改为单书源搜索入口，书源选择改为可筛选底部 sheet\n* fix(manga): 整章拼接超长条漫图拆段渲染，修复 Constraints 尺寸溢出崩溃 (#2475)\n* fix(book-info): 简介纯文本分支二次转义，& < > 显示为 HTML 实体 (#2466)\n* fix(reader): 开标点连同 Latin 单词整体换行，不再拆词\n* fix(book-info): useweb 简介经 FrameLayout 容器承载，规避 Vulkan drawVk 原生崩溃 (#2468)\n* feat(highlight): 高亮规则新增边框样式，预览渲染修复与示例句加长\n* feat(book-info): 关联书籍移至简介下方，支持无规则时按作者搜索兜底\n* fix(reader): 关联书籍位置\n* fix: 关联书籍调试之\n* opt: memory usage (#2478)\n* perf(reader): 排版宽度链路去装箱，字形级宽度改 FloatArray\n* feat(cast): AI 分配角色带上「过了几章没开口」与下一章开头 (#2476)\n* fix(cast): 人物档案读取被夹到 80 个，配音页与人物列表少列人 (#2474)\n* feat(ui): 搜索/发现/详情页封面按原图宽高比自适应（默认固定 5:7，设置可关） (#2473)\n* reader: cut pagination peak memory (streaming, merge, buffer release)\n* feat(reader): 可配置 AI 对话入口携带阅读上下文 & 修复换图标入口 IME 双重避让 (#2472)\n* feat(reader): add configurable AI chat entry with reading context\n* fix(ui): prevent double IME avoidance on alternate launcher activities\n* feat(reader): 阅读主题列表弹窗（网格/流式/管理/导入导出） (#2465)\n* feat(reader): 分页失败原因带上异常 message 与栈顶\n* fix(reader): 引号跨段时角色气泡不再把整章排版打挂\n* feat: 内置词典规则更新为汉典并清理失效的百度汉语规则 (#2450)\n\n## What's Changed\n* feat: 内置词典规则更新为汉典并清理失效的百度汉语规则 by @xuezhi123go in https://github.com/HapeLee/legado-with-MD3/pull/2450\n* fix(reader): 引号跨段时角色气泡不再把整章排版打挂 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2461\n* feat(reader): 阅读主题列表弹窗（网格/流式/管理/导入导出） by @qmzd111 in https://github.com/HapeLee/legado-with-MD3/pull/2465\n* fix&feat: add configurable AI chat entry with reading context & fix IME double avoidance by @izumisagirii in https://github.com/HapeLee/legado-with-MD3/pull/2472\n* feat(ui): 搜索/发现/详情页封面按原图宽高比自适应（默认固定 5:7，设置可关） by @shaoyangz1 in https://github.com/HapeLee/legado-with-MD3/pull/2473\n* fix(cast): 人物档案读取被夹到 80 个，配音页与人物列表少列人 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2474\n* feat(cast): AI 分配角色带上「过了几章没开口」与下一章开头 by @2408893730 in https://github.com/HapeLee/legado-with-MD3/pull/2476\n* opt: memory usage by @izumisagirii in https://github.com/HapeLee/legado-with-MD3/pull/2478\n\n## New Contributors\n* @qmzd111 made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2465\n* @izumisagirii made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2472\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.18...3.26.19",
   "prerelease": false,
   "created_at": "2026-10-25T05:40:58Z",
   "assets": [
     {
       "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.19/legado-3.26.19-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-25T05:56:45Z",
+      "created_at": "2026-10-30T21:49:27Z",
       "download_count": 0,
-      "id": 674236717,
+      "id": 693519578,
       "name": "legado-3.26.19-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/674236717"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/693519578"
     },
     {
       "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.19/legado-3.26.19-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-25T05:56:45Z",
+      "created_at": "2026-10-30T21:49:27Z",
       "download_count": 0,
-      "id": 674236716,
+      "id": 693519570,
       "name": "legado-3.26.19-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/674236716"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/693519570"
     },
     {
       "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.19/legado-3.26.19.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-10-25T05:56:45Z",
+      "created_at": "2026-10-30T21:49:27Z",
       "download_count": 0,
-      "id": 674236718,
+      "id": 693519571,
       "name": "legado-3.26.19.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/674236718"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/693519571"
     },
     {
       "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.19/mapping.txt",
       "content_type": "text/plain",
-      "created_at": "2026-10-25T05:56:45Z",
+      "created_at": "2026-10-30T21:49:27Z",
       "download_count": 0,
-      "id": 674236719,
+      "id": 693519577,
       "name": "mapping.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/674236719"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/693519577"
     }
   ]
 }
