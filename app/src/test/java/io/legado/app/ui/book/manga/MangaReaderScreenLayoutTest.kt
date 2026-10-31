@@ -2,8 +2,6 @@ package io.legado.app.ui.book.manga
 
 import android.app.Application
 import android.graphics.Bitmap
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.domain.model.settings.AppUiConfiguration
@@ -121,9 +119,8 @@ class MangaReaderScreenLayoutTest {
         }.build()
         compose.setContent {
             val savedState = rememberSaveableStateHolder()
-            MaterialTheme {
+            AppTheme(AppUiConfiguration()) {
                 if (visible.value) savedState.SaveableStateProvider("reader") {
-                    val content: @Composable () -> Unit = {
                     MangaReaderScreen(
                         reader.value,
                         ::onIntent,
@@ -134,10 +131,6 @@ class MangaReaderScreenLayoutTest {
                         canRecomposePage = { it == "page:2:0" },
                         hasTranslatedPage = { it == "page:2:0" && hasTranslation.value },
                     )
-                    }
-                    if (reader.value.activeSheet is MangaReaderSheet.PageActions) AppTheme(AppUiConfiguration()) { content() }
-                    else content()
-
                 }
             }
         }
