@@ -3,6 +3,7 @@ package io.legado.app.data.repository
 import io.legado.app.data.dao.BookContentProcessDao
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.domain.gateway.BookContentProcessGateway
+import io.legado.app.help.book.ContentProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -32,13 +33,16 @@ class BookContentProcessRepository(
 
     override suspend fun upsert(process: BookContentProcess) = withContext(Dispatchers.IO) {
         dao.upsert(process)
+        ContentProcessor.invalidateSemanticContent()
     }
 
     override suspend fun setEnabled(id: String, enabled: Boolean) = withContext(Dispatchers.IO) {
         dao.setEnabled(id, enabled)
+        ContentProcessor.invalidateSemanticContent()
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
         dao.markDeleted(id)
+        ContentProcessor.invalidateSemanticContent()
     }
 }
