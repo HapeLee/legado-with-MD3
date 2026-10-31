@@ -239,7 +239,11 @@ object LocalBookSemanticHtml {
     }
 
     /** Apply only this content document's stylesheets, in document order. */
-    fun inlineDocumentCssSemantics(document: Document, loadStylesheet: (String) -> String?) {
+    fun inlineDocumentCssSemantics(
+        document: Document,
+        maxRules: Int = 2000,
+        loadStylesheet: (String) -> String?,
+    ) {
         val rules = mutableListOf<CssRule>()
         for (element in document.select("link, style")) {
             val css = when {
@@ -249,7 +253,7 @@ object LocalBookSemanticHtml {
                 else -> null
             } ?: continue
             rules += parseCssRules(css, rules.size)
-            if (rules.size > 2000) break
+            if (rules.size > maxRules) break
         }
         inlineCssSemantics(document.body(), rules)
     }

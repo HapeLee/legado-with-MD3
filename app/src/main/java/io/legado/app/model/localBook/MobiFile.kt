@@ -27,6 +27,24 @@ class MobiFile(var book: Book) {
         private val xmlDeclarationRegex = "<\\?xml[^>]*>".toRegex()
         private val doctypeDeclarationRegex = "<!DOCTYPE[^>]*>".toRegex()
 
+        internal fun format(
+            soup: org.jsoup.nodes.Document,
+            chapterTitle: String? = null,
+            loadStylesheet: (String) -> String? = { null },
+        ): String {
+            val body = soup.body() ?: return ""
+            // Preserve MOBI's existing uncapped rule set while sharing document-order cascading.
+            LocalBookSemanticHtml.inlineDocumentCssSemantics(soup, maxRules = Int.MAX_VALUE, loadStylesheet = loadStylesheet)
+            body.select("script, style").remove()
+            LocalBookSemanticHtml.sanitizeImages(body.select("img"))
+            val channel = LocalBookSemanticHtml.emitMixedChannel(body, chapterTitle)
+            return channel
+                .replace(xmlDeclarationRegex, "")
+                .replace(doctypeDeclarationRegex, "")
+                .takeIf { it.isNotBlank() }
+                ?: ""
+        }
+
         @Synchronized
         private fun getMFile(book: Book): MobiFile {
             if (mFile == null || mFile?.book?.bookUrl != book.bookUrl) {
@@ -258,36 +276,9 @@ class MobiFile(var book: Book) {
             it.removeAttr("recindex")
             it.attr("src", "recindex:$recindex")
         }
-        val linkedCss = soup.select("link[href]").mapNotNull { link ->
-            val href = link.attr("href")
+        return format(soup, chapter.title) { href ->
             if (href.startsWith("kindle:flow:")) kf8Book.getFlowText(href) else null
         }
-
-        return format(soup, chapter.title, linkedCss)
-    }
-
-    private fun format(
-        soup: org.jsoup.nodes.Document,
-        chapterTitle: String? = null,
-        extraCssTexts: List<String> = emptyList()
-    ): String {
-        val body = soup.body() ?: return ""
-        // Collect linked and inline <style> blocks before stripping them.
-        val cssTexts = extraCssTexts + soup.select("style").mapNotNull { it.html().takeIf(String::isNotBlank) }
-        body.select("script, style").remove()
-        LocalBookSemanticHtml.removeHiddenElements(body)
-        LocalBookSemanticHtml.sanitizeImages(body.select("img"))
-        var order = 0
-        val rules = cssTexts.flatMap { css ->
-            LocalBookSemanticHtml.parseCssRules(css, order).also { order += it.size }
-        }
-        LocalBookSemanticHtml.inlineCssSemantics(body, rules)
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, chapterTitle)
-        return channel
-            .replace(xmlDeclarationRegex, "")
-            .replace(doctypeDeclarationRegex, "")
-            .takeIf { it.isNotBlank() }
-            ?: ""
     }
 
     private fun getImage(href: String): InputStream? {
