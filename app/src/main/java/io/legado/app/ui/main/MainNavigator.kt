@@ -148,6 +148,7 @@ object MainNavigator {
 
             MainRouteSettingsOther,
             MainRouteSettingsRead,
+            is MainRouteSettingsManga,
             MainRouteSettingsCover,
             MainRouteSettingsTheme,
             MainRouteSettingsBackup,
@@ -549,6 +550,7 @@ object MainNavigator {
             MainRouteConst.ROUTE_SETTINGS -> MainRouteSettings
             MainRouteConst.ROUTE_SETTINGS_OTHER -> MainRouteSettingsOther
             MainRouteConst.ROUTE_SETTINGS_READ -> MainRouteSettingsRead
+            MainRouteConst.ROUTE_SETTINGS_MANGA -> MainRouteSettingsManga()
             MainRouteConst.ROUTE_SETTINGS_COVER -> MainRouteSettingsCover
             MainRouteConst.ROUTE_SETTINGS_THEME -> MainRouteSettingsTheme
             MainRouteConst.ROUTE_SETTINGS_BACKUP -> MainRouteSettingsBackup

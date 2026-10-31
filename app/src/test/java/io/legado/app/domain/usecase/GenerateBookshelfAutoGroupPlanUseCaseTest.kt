@@ -433,6 +433,7 @@ class GenerateBookshelfAutoGroupPlanUseCaseTest {
         override fun observePresets(): Flow<List<AiTaskPreset>> = emptyFlow()
         override suspend fun getProvider(id: String): AiProviderProfile? = null
         override suspend fun getModel(id: String): AiModelProfile? = null
+        override suspend fun getModelConfig(id: String) = preset.model
         override suspend fun getTaskPreset(taskType: String) = preset
         override suspend fun getProviderApiKey(providerId: String) = ""
         override suspend fun saveProvider(draft: AiProviderDraft): AiProviderProfile = error("unused")

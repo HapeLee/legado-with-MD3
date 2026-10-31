@@ -22,7 +22,6 @@ data class OtherConfigUiState(
     val ignoreAudioFocus: Boolean = false,
     val autoClearExpired: Boolean = true,
     val showAddToShelfAlert: Boolean = true,
-    val showMangaUi: Boolean = true,
     val webServiceWakeLock: Boolean = false,
     val blockSourceBrowser: Boolean = false,
     val sourceEditMaxLine: Int = Int.MAX_VALUE,
@@ -94,7 +93,6 @@ sealed interface OtherConfigIntent {
     data class IgnoreAudioFocusChanged(val value: Boolean) : OtherConfigIntent
     data class AutoClearExpiredChanged(val value: Boolean) : OtherConfigIntent
     data class ShowAddToShelfAlertChanged(val value: Boolean) : OtherConfigIntent
-    data class ShowMangaUiChanged(val value: Boolean) : OtherConfigIntent
     data class WebServiceWakeLockChanged(val value: Boolean) : OtherConfigIntent
     data class BlockSourceBrowserChanged(val value: Boolean) : OtherConfigIntent
     data class SourceEditMaxLineChanged(val value: Int) : OtherConfigIntent

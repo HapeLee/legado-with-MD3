@@ -3701,7 +3701,7 @@
     <string name="manga_reader_menu">菜单</string>
     <string name="manga_reader_next_page">下一页</string>
     <string name="manga_reader_previous_page">上一页</string>
-    <string name="manga_reader_click_cycle_hint">点击每个区域可循环切换动作</string>
+    <string name="manga_reader_click_area_hint">点击每个区域选择动作</string>
     <string name="manga_reader_loading_prev">上一章加载中…</string>
     <string name="manga_reader_loading_next">下一章加载中…</string>
     <string name="manga_reader_loading_selected_chapter">正在加载“%1$s”…</string>

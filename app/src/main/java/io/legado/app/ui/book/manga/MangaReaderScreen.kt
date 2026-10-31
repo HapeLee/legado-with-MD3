@@ -36,7 +36,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -123,6 +122,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -191,6 +191,13 @@ fun MangaReaderScreen(
     imageLoader: ImageLoader = koinInject(),
     hazeState: HazeState? = null,
     canHandleBack: Boolean = true,
+    onOpenTranslation: () -> Unit = {},
+    onTranslatePage: ((String, Boolean) -> Unit)? = null,
+    onClearTranslatedPage: ((String) -> Unit)? = null,
+    onRecomposePage: ((String) -> Unit)? = null,
+    canRecomposePage: (String) -> Boolean = { false },
+    hasTranslatedPage: (String) -> Boolean = { false },
+    footerStatus: @Composable () -> Unit = {},
 ) {
     val canMorphBack = state.inBookshelf &&
             state.activeDialog == null &&
@@ -287,7 +294,7 @@ fun MangaReaderScreen(
             onIntent(MangaReaderIntent.MessageShown(message.id))
         }
     }
-    MangaChapterImagePrefetch(state, imageLoader, updateAspectRatio)
+    MangaChapterImagePrefetch(state, imageLoader, updateAspectRatio, onIntent)
     CompositionLocalProvider(
         LocalReaderViewportSize provides viewportSize,
         LocalReaderViewportOrigin provides viewportOrigin,
@@ -334,10 +341,11 @@ fun MangaReaderScreen(
                 }
             }
 
-            MangaFooter(state)
+            MangaFooter(state) { if (!state.menuVisible) footerStatus() }
             MangaReaderMenu(
                 state = state,
                 onIntent = onIntent,
+                onOpenTranslation = onOpenTranslation,
                 backdrop = menuBackdrop,
                 hazeState = hazeState,
                 menuSeedColor = when (state.settings.menuColorSource) {
@@ -356,8 +364,29 @@ fun MangaReaderScreen(
     if (state.activeSheet == MangaReaderSheet.CacheActions) {
         MangaReaderCacheActionsSheet(state, onIntent)
     }
+    if (state.activeSheet == MangaReaderSheet.ClickActions) {
+        MangaReaderClickActionsSheet(state, onIntent)
+    }
     (state.activeSheet as? MangaReaderSheet.PageActions)?.let { sheet ->
-        MangaReaderPageActionsSheet(sheet.companionPageKey != null, onIntent)
+        MangaReaderPageActionsSheet(sheet.companionPageKey != null, onIntent,
+            hasTranslation = hasTranslatedPage(sheet.pageKey),
+            onSaveTranslation = (state.pages.firstOrNull { it.key == sheet.pageKey } as? MangaReaderItemUi.Page)
+                ?.translatedImageUrl?.let { url -> {
+                    onIntent(MangaReaderIntent.DismissSheet)
+                    onIntent(MangaReaderIntent.SaveTranslatedImage(url))
+                } },
+            onClearTranslation = onClearTranslatedPage?.takeIf { hasTranslatedPage(sheet.pageKey) }?.let { action -> {
+                onIntent(MangaReaderIntent.DismissSheet)
+                action(sheet.pageKey)
+            } },
+            onTranslate = onTranslatePage?.let { action -> { force ->
+                onIntent(MangaReaderIntent.DismissSheet)
+                action(sheet.pageKey, force)
+            } },
+            onRecompose = onRecomposePage?.takeIf { canRecomposePage(sheet.pageKey) }?.let { action -> {
+                onIntent(MangaReaderIntent.DismissSheet)
+                action(sheet.pageKey)
+            } })
     }
     if (state.activeSheet == MangaReaderSheet.ChangeSource) {
         val oldBook = remember(state.changeSourceBook) {
@@ -428,7 +457,9 @@ private fun MangaChapterImagePrefetch(
     state: MangaReaderUiState,
     imageLoader: ImageLoader,
     updateAspectRatio: (String, Float) -> Unit,
+    onIntent: (MangaReaderIntent) -> Unit,
 ) {
+    val latestOnIntent by rememberUpdatedState(onIntent)
     val context = LocalContext.current
     val pageDecodeSize = mangaPageDecodeSize(
         paged = state.settings.scrollMode != MangaScrollMode.WEBTOON &&
@@ -478,6 +509,7 @@ private fun MangaChapterImagePrefetch(
                     ).asMangaPrefetch()
                 )
                 if (result is coil3.request.ErrorResult) throw result.throwable
+                latestOnIntent(MangaReaderIntent.PageSourceLoaded(page.requestId))
             } finally {
                 // 完成后不持有整章租约或位图；原图受阅读缓存预算管理。
                 owner.close()
@@ -1156,12 +1188,25 @@ private fun HorizontalMangaPager(
     }
     var spreadLayoutReady by remember(state.bookUrl) { mutableStateOf(false) }
     var reconciledSpreads by remember(state.bookUrl) { mutableStateOf(emptyList<MangaPageSpread>()) }
+    // 最近一次实际测量的 spread key。相邻章 Ready 会前插/后插条目、改变下标，但 Pager 自身按 key
+    // 保位；重建后以这个 key 为准，避免用可能还没收到滚动结束上报的 state.currentItemIndex
+    // 把用户刚翻到的页拽回去（进入阅读后第一次滑动必然撞上相邻章替换）。
+    var displayedSpreadKey by remember(state.bookUrl) { mutableStateOf<String?>(null) }
+    LaunchedEffect(pagerState, state.bookUrl) {
+        snapshotFlow {
+            pagerState.layoutInfo.visiblePagesInfo
+                .firstOrNull { it.index == pagerState.currentPage }?.key?.toString()
+        }.collect { displayedSpreadKey = it }
+    }
     LaunchedEffect(spreads, state.currentItemIndex, state.scrollRequest?.id) {
         snapshotFlow { pagerState.isScrollInProgress }.first { !it }
         spreadLayoutReady = false
+        val request = state.scrollRequest
         val target = mangaSpreadReconcileTarget(
-            spreads, state.scrollRequest?.itemIndex ?: state.currentItemIndex,
-            pendingSpreadKey.takeIf { state.scrollRequest == null })
+            spreads,
+            request?.itemIndex ?: state.currentItemIndex,
+            if (request == null) pendingSpreadKey ?: displayedSpreadKey else null,
+        )
         pendingSpreadKey = null
         if (target >= 0 && target != pagerState.currentPage) pagerState.scrollToPage(target)
         reconciledSpreads = spreads
@@ -1459,15 +1504,27 @@ private fun VerticalMangaPager(
         snapshotFlow { pagerState.isScrollInProgress }.first { !it }
         val reader = latestReaderState
         if (reader.navigationId != state.navigationId) return@LaunchedEffect
-        if (reader.scrollRequest == null) pagerState.scrollToPage(reader.currentItemIndex)
-        // 大幅前插/移除超出 Pager 的 key 查找窗口时，先校正位置再允许上报页码。
+        if (reader.scrollRequest == null) {
+            val target = mangaPagerReconcilePageIndex(
+                pages = reader.pages,
+                displayedKey = pagerState.layoutInfo.visiblePagesInfo
+                    .firstOrNull { it.index == pagerState.currentPage }?.key?.toString(),
+                currentItemIndex = reader.currentItemIndex,
+            )
+            if (target in reader.pages.indices && target != pagerState.currentPage) {
+                pagerState.scrollToPage(target)
+            }
+        }
+        // 位置校正到「实测 key 与集合里的页身份一致」后才允许上报页码：显式跳页要求停在
+        // 请求页，内容重建则要求当前页身份未被替换。这里不能拿 currentItemIndex 当判据——
+        // 它正是等这次上报才会更新，用它等待会和「上报被 reconciledNavigationId 挡住」互锁。
         snapshotFlow {
             val current = latestReaderState
-            val target = current.scrollRequest?.itemIndex ?: current.currentItemIndex
-            pagerState.currentPage == target &&
-                    pagerState.layoutInfo.visiblePagesInfo.any {
-                        it.index == target && it.key == current.pages.getOrNull(target)?.key
-                    }
+            val settledKey = pagerState.layoutInfo.visiblePagesInfo
+                .firstOrNull { it.index == pagerState.currentPage }?.key?.toString()
+            val expectedKey = current.pages.getOrNull(pagerState.currentPage)?.key
+            settledKey != null && settledKey == expectedKey &&
+                    (current.scrollRequest?.let { pagerState.currentPage == it.itemIndex } ?: true)
         }.first { it }
         reconciledNavigationId = state.navigationId
     }
@@ -1571,7 +1628,7 @@ private fun MangaReaderItem(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (item.loading) CircularProgressIndicator()
-                Text(item.message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText(item.message, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 item.retryChapterIndex?.let { chapterIndex ->
                     MediumOutlinedButton(
                         onClick = { onIntent(MangaReaderIntent.RetryChapter(chapterIndex)) },
@@ -1613,12 +1670,12 @@ private fun MangaReaderItem(
                 } else {
                     item.targetChapterName
                 }
-                Text(
+                AppText(
                     "$topLabel：",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(
+                AppText(
                     topChapter ?: stringResource(
                         if (item.direction == MangaChapterTransitionDirection.PREVIOUS) {
                             R.string.manga_reader_no_previous_chapter
@@ -1631,13 +1688,13 @@ private fun MangaReaderItem(
                     maxLines = 5,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
+                AppText(
                     "$bottomLabel：",
                     modifier = Modifier.padding(top = 18.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(
+                AppText(
                     bottomChapter ?: stringResource(
                         if (item.direction == MangaChapterTransitionDirection.PREVIOUS) {
                             R.string.manga_reader_no_previous_chapter
@@ -1654,7 +1711,7 @@ private fun MangaReaderItem(
                     CircularProgressIndicator()
                 }
                 item.statusMessage?.let { message ->
-                    Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppText(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 item.retryChapterIndex?.let { chapterIndex ->
                     MediumOutlinedButton(
@@ -1742,6 +1799,7 @@ private fun MangaPageImage(
     val imagePipelineKey = remember(
         page.key,
         page.bookUrl,
+        page.translatedImageUrl,
         paged,
         settings.sourceOrigin,
         settings.enableEInk,
@@ -1754,6 +1812,7 @@ private fun MangaPageImage(
         listOf(
             page.key,
             page.bookUrl,
+            page.translatedImageUrl,
             paged,
             settings.sourceOrigin,
             settings.enableEInk,
@@ -2070,7 +2129,7 @@ private fun MangaImageLoadOverlay(
             ) {
                 AppCircularProgressIndicator(progress = progress?.let { it / 100f })
                 if (progress != null) {
-                    Text(
+                    AppText(
                         text = "$progress%",
                         color = Color.White,
                         style = MaterialTheme.typography.labelLarge,
@@ -2157,10 +2216,11 @@ internal fun MangaReaderItemUi.Page.imageRequest(
     onSuccess: () -> Unit = {},
     onError: (String?) -> Unit = {},
 ): ImageRequest {
-    val memoryCacheKey = "manga-page-v2:$bookUrl:$imageUrl:${settings.sourceOrigin}:" +
+    val displayIdentity = translatedImageUrl?.let { "$imageUrl:translated:$it" } ?: imageUrl
+    val memoryCacheKey = "manga-page-v2:$bookUrl:$displayIdentity:${settings.sourceOrigin}:" +
         "${settings.enableEInk}:${settings.eInkThreshold}:${settings.enableGray}:${fileOwner != null}:$retryRevision"
     return ImageRequest.Builder(context)
-        .data(imageUrl)
+        .data(translatedImageUrl?.let { java.io.File(requireNotNull(android.net.Uri.parse(it).path)) } ?: imageUrl)
         .allowHardware(true)
         // 稳定解码目标避免条漫首次占位高度参与降采样。
         // Coil 检查缓存预览是否满足目标尺寸；分页放大清晰度由原图区域解码补足。
@@ -2208,7 +2268,7 @@ private fun MangaReaderItemUi.Page.backgroundColorRequest(
     fileOwner: MangaImageFileOwner? = null,
     onColors: (MangaPageEdgeColors) -> Unit,
 ): ImageRequest = ImageRequest.Builder(context)
-    .data(imageUrl)
+    .data(translatedImageUrl?.let { java.io.File(requireNotNull(android.net.Uri.parse(it).path)) } ?: imageUrl)
     .let { builder ->
         backgroundDecodeSize(aspectRatio).let { size ->
             builder.size(size.width, size.height)

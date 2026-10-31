@@ -98,7 +98,7 @@ fun AiConfigScreen(
         ) {
             item {
                 SplicedColumnGroup(title = stringResource(R.string.ai_provider_database)) {
-                    state.providers.forEach { provider ->
+            state.providers.forEach { provider ->
                         ClickableSettingItem(
                             title = provider.providerName,
                             description = provider.baseUrl,
@@ -119,7 +119,7 @@ fun AiConfigScreen(
                         title = stringResource(R.string.ai_current_model),
                         description = state.currentModelName.ifBlank { stringResource(R.string.ai_model_not_configured) },
                         onClick = {
-                            if (state.models.isEmpty()) {
+                            if (state.models.none { it.text && it.enabled }) {
                                 onNavigateToProviderEdit(null)
                             } else {
                                 showModelSheet = true
@@ -164,7 +164,7 @@ fun AiConfigScreen(
         title = stringResource(R.string.ai_select_model)
     ) {
         LazyColumn {
-            state.providers.forEach { provider ->
+            state.providers.filter { it.models.any { model -> model.text && model.enabled } }.forEach { provider ->
                 item {
                     SplicedColumnGroup(title = provider.providerName) {
                         if (provider.models.isEmpty()) {
@@ -177,7 +177,7 @@ fun AiConfigScreen(
                                 }
                             )
                         } else {
-                            provider.models.forEach { model ->
+                            provider.models.filter { it.text && it.enabled }.forEach { model ->
                                 ClickableSettingItem(
                                     title = model.modelName,
                                     description = model.modelId,

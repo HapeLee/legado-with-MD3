@@ -1,13 +1,26 @@
 package io.legado.app.ui.book.manga
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.CloudDownload
@@ -28,17 +41,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.sheet.ReaderBookHeader
 import io.legado.app.ui.book.read.sheet.ReaderBookHeaderState
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.reader.ReaderMenuActionSquare
+import io.legado.app.ui.widget.components.text.AppText
 
 private data class MangaMoreAction(
     val label: String,
@@ -179,6 +197,11 @@ private fun MangaSourceActionSquare(
 internal fun MangaReaderPageActionsSheet(
     hasSpread: Boolean,
     onIntent: (MangaReaderIntent) -> Unit,
+    onTranslate: ((Boolean) -> Unit)? = null,
+    onSaveTranslation: (() -> Unit)? = null,
+    onClearTranslation: (() -> Unit)? = null,
+    onRecompose: (() -> Unit)? = null,
+    hasTranslation: Boolean = false,
 ) {
     AppModalBottomSheet(
         show = true,
@@ -234,8 +257,9 @@ internal fun MangaReaderPageActionsSheet(
         }
         Column(Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)) {
-            actions.chunked(4).forEach { rowActions ->
+            actions.chunked(4).forEachIndexed { rowIndex, rowActions ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     rowActions.forEach { action ->
                         ReaderMenuActionSquare(
@@ -248,6 +272,39 @@ internal fun MangaReaderPageActionsSheet(
                     repeat(4 - rowActions.size) { Spacer(Modifier.weight(1f)) }
                 }
                 Spacer(Modifier.height(8.dp))
+                if (rowIndex == 0) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ReaderMenuActionSquare(
+                            icon = Icons.Default.Translate,
+                            text = stringResource(if (hasTranslation) R.string.feature_manga_retranslate_short else R.string.feature_manga_translate_short),
+                            modifier = Modifier.weight(1f),
+                            enabled = onTranslate != null,
+                            onClick = { onTranslate?.invoke(hasTranslation) },
+                        )
+                        ReaderMenuActionSquare(
+                            icon = Icons.Default.Layers,
+                            text = stringResource(R.string.feature_manga_recompose_short),
+                            modifier = Modifier.weight(1f),
+                            enabled = onRecompose != null,
+                            onClick = { onRecompose?.invoke() },
+                        )
+                        ReaderMenuActionSquare(
+                            icon = Icons.Default.Save,
+                            text = stringResource(R.string.feature_manga_save_translation),
+                            modifier = Modifier.weight(1f),
+                            enabled = onSaveTranslation != null,
+                            onClick = { onSaveTranslation?.invoke() },
+                        )
+                        ReaderMenuActionSquare(
+                            icon = Icons.Default.Delete,
+                            text = stringResource(R.string.feature_manga_translation_clear_page),
+                            modifier = Modifier.weight(1f),
+                            enabled = onClearTranslation != null,
+                            onClick = { onClearTranslation?.invoke() },
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
             }
         }
     }
@@ -314,5 +371,113 @@ internal fun MangaReaderCacheActionsSheet(
             Spacer(Modifier.weight(1f))
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+/** 九宫格可配置动作，顺序即下拉菜单顺序；与 [resolveMangaClickAction] 的取值一一对应。 */
+private val MangaClickActionEntries = listOf(
+    -1 to R.string.non_action,
+    0 to R.string.manga_reader_menu,
+    1 to R.string.manga_reader_next_page,
+    2 to R.string.manga_reader_previous_page,
+    3 to R.string.next_chapter,
+    4 to R.string.previous_chapter,
+)
+
+private fun mangaClickActionLabelRes(action: Int): Int =
+    MangaClickActionEntries.firstOrNull { it.first == action }?.second ?: R.string.non_action
+
+/**
+ * 九宫格点击区域配置：入口在设置面板「全局」页，整屏覆盖、格子与屏幕三宫格一一对应，
+ * 点击格子弹出动作下拉（对齐阅读正文的点击区域配置）；关闭后回到原设置分类。
+ */
+@Composable
+internal fun MangaReaderClickActionsSheet(
+    state: MangaReaderUiState,
+    onIntent: (MangaReaderIntent) -> Unit,
+) {
+    val dismiss = { onIntent(MangaReaderIntent.DismissSheet) }
+    BackHandler(onBack = dismiss)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(LegadoTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.4f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = dismiss,
+            ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(12.dp),
+        ) {
+            repeat(3) { row ->
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                ) {
+                    repeat(3) { column ->
+                        val index = row * 3 + column
+                        MangaClickAreaCell(
+                            action = state.settings.clickActions.getOrElse(index) { 0 },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxSize()
+                                .padding(3.dp),
+                            onPick = { action ->
+                                onIntent(MangaReaderIntent.UpdateClickAction(index, action))
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MangaClickAreaCell(
+    action: Int,
+    onPick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        NormalCard(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxSize(),
+            cornerRadius = 16.dp,
+            containerColor = LegadoTheme.colorScheme.surfaceContainer.copy(alpha = 0.9f),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                AppText(
+                    text = stringResource(mangaClickActionLabelRes(action)),
+                    style = LegadoTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        RoundDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) { dismiss ->
+            MangaClickActionEntries.forEach { (value, labelRes) ->
+                RoundDropdownMenuItem(
+                    text = stringResource(labelRes),
+                    isSelected = value == action,
+                    onClick = {
+                        onPick(value)
+                        dismiss()
+                    },
+                )
+            }
+        }
     }
 }

@@ -272,7 +272,21 @@ fun SearchBookGridItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
     qualityMasked: Boolean = false,
+    adaptCoverAspectRatio: Boolean = false,
 ) {
+    // 语义与 SearchBookListItem 一致；网格列宽随屏宽变化，不套用列表的
+    // 80~140dp 高度 clamp，瀑布流里条目宽高比直接取原图比例
+    val allowCoverRatioAdapt = adaptCoverAspectRatio &&
+        !LocalAppUiConfiguration.current.cover.restrictCoverRatio
+    val coverAspectRatioState = remember(allowCoverRatioAdapt, book.coverUrl) {
+        mutableFloatStateOf(
+            if (allowCoverRatioAdapt) {
+                cachedCoverAspectRatio(book.coverUrl) ?: DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+            } else {
+                DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+            }
+        )
+    }
     Column(
         modifier = modifier
             .width(IntrinsicSize.Min)
@@ -285,7 +299,10 @@ fun SearchBookGridItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(5f / 7f)
+                .aspectRatio(
+                    if (allowCoverRatioAdapt) coverAspectRatioState.floatValue
+                    else DEFAULT_SEARCH_BOOK_COVER_ASPECT_RATIO
+                )
         ) {
             CoilBookCover(
                 name = book.name,
@@ -298,7 +315,11 @@ fun SearchBookGridItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null
+                showLoadingPlaceholder = sharedCoverKey == null,
+                onImageAspectRatio = if (allowCoverRatioAdapt) {
+                    // 比例合法性已在 BookCoverImage 上报前校验，这里直接写入
+                    { imageAspectRatio -> coverAspectRatioState.floatValue = imageAspectRatio }
+                } else null
             )
 
             if (qualityMasked) {

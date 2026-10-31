@@ -3,6 +3,7 @@ package io.legado.app.data.repository.ai
 import io.legado.app.help.http.okHttpClient
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
+import io.legado.app.domain.model.AiGenerateRequest
 
 /**
  * AI generation can legitimately spend several minutes before the next token arrives.
@@ -16,3 +17,9 @@ internal val aiOkHttpClient: OkHttpClient by lazy {
         .callTimeout(0, TimeUnit.MILLISECONDS)
         .build()
 }
+
+internal fun AiGenerateRequest.httpClient(): OkHttpClient = timeoutMillis?.let { timeout ->
+    require(timeout in 1000L..600_000L)
+    aiOkHttpClient.newBuilder().callTimeout(timeout, TimeUnit.MILLISECONDS)
+        .readTimeout(timeout, TimeUnit.MILLISECONDS).build()
+} ?: aiOkHttpClient

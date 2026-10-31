@@ -12,6 +12,10 @@ import io.legado.app.domain.model.AiProviderConfig
 import io.legado.app.domain.model.AiProviderDraft
 import io.legado.app.domain.model.AiProviderPresets
 import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.domain.model.AiProtocol
+import io.legado.app.domain.model.AiCapability
+import io.legado.app.domain.model.AiImageModels
+import io.legado.app.domain.model.AiModelRegistry
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.help.LocalNetworkAccess
 import io.legado.app.help.targetsLocalNetwork
@@ -84,7 +88,8 @@ class AiProviderEditViewModel(
                                 contextWindow = model.contextWindow,
                                 maxOutputTokens = model.maxOutputTokens,
                                 temperature = params.temperature ?: TranslationConstants.DEFAULT_TEMPERATURE,
-                                reasoningLevel = params.reasoningLevel.toModelConfigLevel()
+                                reasoningLevel = params.reasoningLevel.toModelConfigLevel(),
+                                capabilities = model.capabilities
                             )
                         }
                         .toImmutableList()
@@ -120,16 +125,28 @@ class AiProviderEditViewModel(
             is AiProviderEditIntent.UpdateApiKey -> _uiState.update { it.copy(apiKey = intent.value) }
             is AiProviderEditIntent.UpdateCustomHeaders -> _uiState.update { it.copy(customHeaders = intent.headers) }
             AiProviderEditIntent.AddModel -> _uiState.update {
-                it.copy(editingModel = AiProviderModelEditorUi(temperature = TranslationConstants.DEFAULT_TEMPERATURE.toString()))
+                val preset = AiProviderPresets.items.firstOrNull { preset -> preset.id == it.selectedProviderPresetId && preset.protocol in AiProtocol.imageProtocols }
+                val capabilities = defaultCapabilities(preset?.modelId.orEmpty())
+                it.copy(editingModel = AiProviderModelEditorUi(modelId = preset?.modelId.orEmpty(), modelName = preset?.modelName.orEmpty(),
+                    temperature = TranslationConstants.DEFAULT_TEMPERATURE.toString(),
+                    vision = AiCapability.VISION in capabilities, imageGeneration = AiCapability.IMAGE_GENERATION in capabilities,
+                    imageEditing = AiCapability.IMAGE_EDITING in capabilities))
             }
             is AiProviderEditIntent.EditModel -> editModel(intent.modelProfileId)
             AiProviderEditIntent.DismissModelEditor -> _uiState.update { it.copy(editingModel = null) }
             is AiProviderEditIntent.UpdateEditingModelName -> updateEditingModel { copy(modelName = intent.value) }
-            is AiProviderEditIntent.UpdateEditingModelId -> updateEditingModel { copy(modelId = intent.value) }
+            is AiProviderEditIntent.UpdateEditingModelId -> updateEditingModel {
+                val capabilities = defaultCapabilities(intent.value)
+                copy(modelId = intent.value, vision = AiCapability.VISION in capabilities,
+                    imageGeneration = AiCapability.IMAGE_GENERATION in capabilities, imageEditing = AiCapability.IMAGE_EDITING in capabilities)
+            }
             is AiProviderEditIntent.UpdateEditingContextWindow -> updateEditingModel { copy(contextWindow = intent.value) }
             is AiProviderEditIntent.UpdateEditingMaxOutputTokens -> updateEditingModel { copy(maxOutputTokens = intent.value) }
             is AiProviderEditIntent.UpdateEditingTemperature -> updateEditingModel { copy(temperature = intent.value) }
             is AiProviderEditIntent.UpdateEditingReasoningLevel -> updateEditingModel { copy(reasoningLevel = intent.value) }
+            is AiProviderEditIntent.UpdateEditingVision -> updateEditingModel { copy(vision = intent.value) }
+            is AiProviderEditIntent.UpdateEditingImageGeneration -> updateEditingModel { copy(imageGeneration = intent.value) }
+            is AiProviderEditIntent.UpdateEditingImageEditing -> updateEditingModel { copy(imageEditing = intent.value) }
             AiProviderEditIntent.SaveEditingModel -> saveEditingModel()
             AiProviderEditIntent.TestConnection -> testConnection()
             AiProviderEditIntent.SaveProvider -> saveProvider()
@@ -166,6 +183,7 @@ class AiProviderEditViewModel(
 
     private fun editModel(modelProfileId: String) {
         val model = _uiState.value.providerModels.firstOrNull { it.modelProfileId == modelProfileId } ?: return
+        val capabilities = AiImageModels.capabilities(model.modelId, model.capabilities)
         _uiState.update {
             it.copy(
                 editingModel = AiProviderModelEditorUi(
@@ -175,7 +193,11 @@ class AiProviderEditViewModel(
                     contextWindow = model.contextWindow.takeIf { value -> value > 0 }?.toString().orEmpty(),
                     maxOutputTokens = model.maxOutputTokens.takeIf { value -> value > 0 }?.toString().orEmpty(),
                     temperature = model.temperature.toString(),
-                    reasoningLevel = model.reasoningLevel
+                    reasoningLevel = model.reasoningLevel,
+                    capabilities = model.capabilities,
+                    vision = AiCapability.VISION in capabilities,
+                    imageGeneration = AiCapability.IMAGE_GENERATION in capabilities,
+                    imageEditing = AiCapability.IMAGE_EDITING in capabilities,
                 )
             )
         }
@@ -204,7 +226,14 @@ class AiProviderEditViewModel(
                         maxOutputTokens = editor.maxOutputTokens.toIntOrNull() ?: 0,
                         temperature = editor.temperature.toFloatOrNull()
                             ?: TranslationConstants.DEFAULT_TEMPERATURE,
-                        reasoningLevel = editor.reasoningLevel
+                        reasoningLevel = editor.reasoningLevel,
+                        capabilities = buildSet {
+                            if (!editor.imageGeneration && !editor.imageEditing) addAll((editor.capabilities.split(',') + AiModelRegistry.inferCapabilities(editor.modelId))
+                                .filter { it.isNotBlank() && it != AiImageModels.EXPLICIT_CAPABILITIES && it != AiCapability.VISION && it !in AiImageModels.outputCapabilities })
+                            if (editor.vision) add(AiCapability.VISION)
+                            if (editor.imageGeneration) add(AiCapability.IMAGE_GENERATION)
+                            if (editor.imageEditing) add(AiCapability.IMAGE_EDITING)
+                        }
                     )
                 )
             }.onSuccess { model ->
@@ -235,6 +264,7 @@ class AiProviderEditViewModel(
 
     private fun testConnection() {
         if (_uiState.value.isTesting || _uiState.value.isSaving || _uiState.value.isFetchingModels) return
+        if (!supportsModelListing()) return
         val providerConfig = _uiState.value.toProviderConfig()
         if (requestLocalNetworkPermissionIfNeeded(providerConfig, AiProviderEditIntent.TestConnection)) return
         viewModelScope.launch {
@@ -261,6 +291,7 @@ class AiProviderEditViewModel(
     }
 
     private fun syncModels() {
+        if (!supportsModelListing()) return
         val providerConfig = _uiState.value.toProviderConfig()
         if (requestLocalNetworkPermissionIfNeeded(providerConfig, AiProviderEditIntent.SyncModels)) return
         viewModelScope.launch {
@@ -373,12 +404,22 @@ class AiProviderEditViewModel(
         return AiProviderConfig(
             id = id,
             name = providerName,
-            protocol = protocol,
+            protocol = if (protocol == AiProtocol.OPENAI_IMAGES) AiProtocol.OPENAI_CHAT_COMPLETIONS else protocol,
             baseUrl = baseUrl,
             apiKey = apiKey,
             modelsUrl = modelsUrl.ifBlank { null },
             customHeaders = customHeaders.toCustomHeaderMap()
         )
+    }
+
+    private fun defaultCapabilities(modelId: String): Set<String> = AiImageModels.inferCapabilities(modelId)
+        ?: if (_uiState.value.protocol in AiProtocol.imageProtocols) AiImageModels.outputCapabilities + AiCapability.VISION
+        else AiModelRegistry.inferCapabilities(modelId)
+
+    private fun supportsModelListing(): Boolean {
+        if (_uiState.value.protocol !in AiProtocol.imageProtocols || _uiState.value.protocol == AiProtocol.OPENAI_IMAGES) return true
+        _effects.tryEmit(AiProviderEditEffect.ShowMessage(appCtx.getString(R.string.ai_image_manual_models)))
+        return false
     }
 
     private fun List<AiProviderHeaderUi>.toCustomHeaderMap(): Map<String, String> =

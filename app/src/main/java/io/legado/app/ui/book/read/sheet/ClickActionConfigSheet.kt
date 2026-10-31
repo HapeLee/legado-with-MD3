@@ -27,8 +27,9 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -62,8 +63,21 @@ fun ClickActionConfigSheet(
         12 to stringResource(R.string.sync_book_progress_t),
         13 to stringResource(R.string.read_aloud_pause_resume),
     )
+    val actionKeys = actions.keys.toList()
+    val actionValues = actions.values.toList()
 
-    var selectingPrefKey by remember { mutableStateOf<String?>(null) }
+    // 顺序即九宫格顺序：左上 → 右下
+    val cells = listOf(
+        PreferKey.clickActionTL to preferences.clickActionTL,
+        PreferKey.clickActionTC to preferences.clickActionTC,
+        PreferKey.clickActionTR to preferences.clickActionTR,
+        PreferKey.clickActionML to preferences.clickActionML,
+        PreferKey.clickActionMC to preferences.clickActionMC,
+        PreferKey.clickActionMR to preferences.clickActionMR,
+        PreferKey.clickActionBL to preferences.clickActionBL,
+        PreferKey.clickActionBC to preferences.clickActionBC,
+        PreferKey.clickActionBR to preferences.clickActionBR,
+    )
 
     Box(
         modifier = Modifier
@@ -79,152 +93,78 @@ fun ClickActionConfigSheet(
             Spacer(
                 modifier = Modifier.padding(top = 36.dp)
             )
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            ) {
-                ClickAreaCell(
-                    label = actions[preferences.clickActionTL] ?: "",
+            cells.chunked(3).forEach { rowCells ->
+                Row(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionTL },
-                )
-                ClickAreaCell(
-                    label = actions[preferences.clickActionTC] ?: "",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionTC },
-                )
-                ClickAreaCell(
-                    label = actions[preferences.clickActionTR] ?: "",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionTR },
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            ) {
-                ClickAreaCell(
-                    label = actions[preferences.clickActionML] ?: "",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionML },
-                )
-                ClickAreaCell(
-                    label = actions[preferences.clickActionMC] ?: "",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionMC },
-                )
-                ClickAreaCell(
-                    label = actions[preferences.clickActionMR] ?: "",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionMR },
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            ) {
-                ClickAreaCell(
-                    label = actions[preferences.clickActionBL] ?: "",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionBL },
-                )
-                ClickAreaCell(
-                    label = actions[preferences.clickActionBC] ?: "",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionBC },
-                )
-                ClickAreaCell(
-                    label = actions[preferences.clickActionBR] ?: "",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .padding(3.dp),
-                    onClick = { selectingPrefKey = PreferKey.clickActionBR },
-                )
+                        .fillMaxWidth(),
+                ) {
+                    rowCells.forEach { (prefKey, action) ->
+                        ClickAreaCell(
+                            label = actions[action] ?: "",
+                            actionKeys = actionKeys,
+                            actionValues = actionValues,
+                            selectedAction = action,
+                            onPick = { picked ->
+                                scope.launch {
+                                    readSettingsRepository.setClickAction(prefKey, picked)
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxSize()
+                                .padding(3.dp),
+                        )
+                    }
+                }
             }
         }
     }
-
-    // Action selector dialog
-    val actionKeys = actions.keys.toList()
-    val actionValues = actions.values.toList()
-    AppAlertDialog(
-        show = selectingPrefKey != null,
-        onDismissRequest = { selectingPrefKey = null },
-        title = stringResource(R.string.select_action),
-        content = {
-            Column {
-                actionValues.forEachIndexed { index, label ->
-                    AppText(
-                        text = label,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                val selectedAction = actionKeys[index]
-                                selectingPrefKey?.let { key ->
-                                    scope.launch {
-                                        readSettingsRepository.setClickAction(key, selectedAction)
-                                        selectingPrefKey = null
-                                    }
-                                }
-                            }
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                        style = LegadoTheme.typography.bodyLarge,
-                    )
-                }
-            }
-        },
-    )
 }
 
+/** 单个点击区域：显示当前动作，点击弹出动作下拉菜单。 */
 @Composable
 private fun ClickAreaCell(
     label: String,
+    actionKeys: List<Int>,
+    actionValues: List<String>,
+    selectedAction: Int,
+    onPick: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit,
 ) {
-    GlassCard(
-        modifier = modifier,
-        onClick = onClick,
-        containerColor = LegadoTheme.colorScheme.surfaceContainer
-            .copy(alpha = 0.9f),
-    ) {
-        Box(
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        GlassCard(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
+            onClick = { expanded = true },
+            containerColor = LegadoTheme.colorScheme.surfaceContainer
+                .copy(alpha = 0.9f),
         ) {
-            AppText(
-                text = label,
-                style = LegadoTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                AppText(
+                    text = label,
+                    style = LegadoTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        RoundDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) { dismiss ->
+            actionKeys.forEachIndexed { index, action ->
+                RoundDropdownMenuItem(
+                    text = actionValues[index],
+                    isSelected = action == selectedAction,
+                    onClick = {
+                        onPick(action)
+                        dismiss()
+                    },
+                )
+            }
         }
     }
 }

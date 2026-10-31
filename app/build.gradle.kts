@@ -295,6 +295,12 @@ dependencies {
     implementation(libs.telephoto.zoomable.image.coil3)
     implementation(libs.accompanist.webview)
     implementation(libs.kotlinx.coroutines.android)
+    // Bundled recognizers work without Google Play Services or first-use downloads.
+    implementation(libs.onnxruntime.android)
+    implementation("com.google.mlkit:text-recognition:${libs.versions.mlkitText.get()}")
+    implementation("com.google.mlkit:text-recognition-japanese:${libs.versions.mlkitText.get()}")
+    implementation("com.google.mlkit:text-recognition-chinese:${libs.versions.mlkitText.get()}")
+    implementation("com.google.mlkit:text-recognition-korean:${libs.versions.mlkitText.get()}")
     implementation(libs.kotlinx.datetime)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)

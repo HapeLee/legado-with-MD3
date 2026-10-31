@@ -72,6 +72,14 @@ class CoverInterceptor(
         val data = request.data
 
         val fileOwner = request.extras[CoverExtras.MangaFileOwner]
+        // Derived comic rasters are local File inputs. Keep their exact EXIF-corrected ratio;
+        // a heavily sampled webtoon preview can round its width and move the scroll anchor.
+        if (fileOwner != null && data is File) {
+            val ratio = withContext(Dispatchers.IO) { MangaImageDimensions.read(data) }
+            fileOwner.setAspectRatio(ratio)
+            ratio?.let { request.extras[CoverExtras.MangaAspectRatio]?.invoke(it) }
+            return boundedChain.proceed()
+        }
         // 分页与条漫在线页复用同一原图；本地漫画与 content/file URI 保持平台加载器。
         if (fileOwner != null && data is String &&
             (data.isAbsUrl() || data.startsWith("data:", true)) &&

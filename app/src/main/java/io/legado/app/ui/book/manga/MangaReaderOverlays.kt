@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.manga
 
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
@@ -45,11 +46,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
@@ -111,46 +111,56 @@ private val MangaFooterTextShadow = Shadow(
 )
 
 @Composable
-internal fun BoxScope.MangaFooter(state: MangaReaderUiState) {
+internal fun BoxScope.MangaFooter(
+    state: MangaReaderUiState,
+    status: @Composable () -> Unit = {},
+) {
     val settings = state.settings
-    if (settings.hideFooter) return
-    val alignment = when (settings.footerAlignment) {
-        1 -> Alignment.BottomCenter
-        2 -> Alignment.BottomEnd
-        else -> Alignment.BottomStart
-    }
     val page = state.pages.getOrNull(state.footerItemIndex ?: state.currentItemIndex)
-            as? MangaReaderItemUi.Page ?: return
-    val progress = if (page.chapterCount <= 0 || page.pageCount <= 0) 0.0 else {
-        (page.chapterIndex.toDouble() + (page.pageIndex + 1.0) / page.pageCount) / page.chapterCount
+            as? MangaReaderItemUi.Page
+    val alignment = when (settings.footerAlignment) {
+        1 -> Alignment.CenterHorizontally
+        2 -> Alignment.End
+        else -> Alignment.Start
     }
-    val pageLabel = stringResource(R.string.manga_reader_page_label)
-    val chapterLabel = stringResource(R.string.manga_reader_chapter_label)
-    val progressLabel = stringResource(R.string.manga_reader_progress_label)
-    val text = buildString {
-        if (!settings.hideChapterName) append(page.chapterName).append(' ')
-        if (!settings.hidePageNumber) {
-            if (!settings.hidePageNumberLabel) append(pageLabel).append(' ')
-            append("${page.pageIndex + 1}/${page.pageCount} ")
-        }
-        if (!settings.hideChapter) {
-            if (!settings.hideChapterLabel) append(chapterLabel).append(' ')
-            append("${page.chapterIndex + 1}/${page.chapterCount} ")
-        }
-        if (!settings.hideProgress) {
-            if (!settings.hideProgressLabel) append(progressLabel).append(' ')
-            append("%.1f%%".format((progress * 100).coerceAtMost(100.0)))
-        }
-    }.trim()
-    AnimatedText(
-        text = text,
-        color = MangaFooterContentColor,
-        style = LegadoTheme.typography.labelSmall.copy(shadow = MangaFooterTextShadow),
+    Column(
         modifier = Modifier
-            .align(alignment)
+            .align(Alignment.BottomEnd)
+            .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(all = 16.dp),
-    )
+            .padding(16.dp),
+        horizontalAlignment = if (settings.hideFooter || page == null) Alignment.Start else alignment,
+    ) {
+        status()
+        if (settings.hideFooter || page == null) return@Column
+        val progress = if (page.chapterCount <= 0 || page.pageCount <= 0) 0.0 else {
+            (page.chapterIndex.toDouble() + (page.pageIndex + 1.0) / page.pageCount) / page.chapterCount
+        }
+        val pageLabel = stringResource(R.string.manga_reader_page_label)
+        val chapterLabel = stringResource(R.string.manga_reader_chapter_label)
+        val progressLabel = stringResource(R.string.manga_reader_progress_label)
+        val text = buildString {
+            if (!settings.hideChapterName) append(page.chapterName).append(' ')
+            if (!settings.hidePageNumber) {
+                if (!settings.hidePageNumberLabel) append(pageLabel).append(' ')
+                append("${page.pageIndex + 1}/${page.pageCount} ")
+            }
+            if (!settings.hideChapter) {
+                if (!settings.hideChapterLabel) append(chapterLabel).append(' ')
+                append("${page.chapterIndex + 1}/${page.chapterCount} ")
+            }
+            if (!settings.hideProgress) {
+                if (!settings.hideProgressLabel) append(progressLabel).append(' ')
+                append("%.1f%%".format((progress * 100).coerceAtMost(100.0)))
+            }
+        }.trim()
+        AnimatedText(
+            text = text,
+            color = MangaFooterContentColor,
+            style = LegadoTheme.typography.labelSmall.copy(shadow = MangaFooterTextShadow),
+            modifier = Modifier.align(alignment),
+        )
+    }
 }
 
 @Composable
@@ -160,6 +170,7 @@ internal fun BoxScope.MangaReaderMenu(
     backdrop: Backdrop? = null,
     hazeState: HazeState? = null,
     menuSeedColor: Color? = null,
+    onOpenTranslation: () -> Unit = {},
 ) {
     val readingPageDescription = stringResource(R.string.manga_reader_page_semantics)
     val isDark = LegadoTheme.isDark
@@ -175,7 +186,7 @@ internal fun BoxScope.MangaReaderMenu(
         }
     }
     ProvideThemeOverride(menuTheme) {
-        MangaReaderMenuContent(state, onIntent, backdrop, hazeState, readingPageDescription)
+        MangaReaderMenuContent(state, onIntent, backdrop, hazeState, readingPageDescription, onOpenTranslation)
     }
 }
 
@@ -186,6 +197,7 @@ private fun BoxScope.MangaReaderMenuContent(
     backdrop: Backdrop?,
     hazeState: HazeState?,
     readingPageDescription: String,
+    onOpenTranslation: () -> Unit,
 ) {
     ReaderMenuDismissLayer(
         visible = state.menuVisible,
@@ -199,7 +211,7 @@ private fun BoxScope.MangaReaderMenuContent(
     ReaderMenuAnimatedBottom(
         visible = state.menuVisible,
     ) {
-        MangaMenuBottomBar(state, onIntent, backdrop, readingPageDescription, hazeState)
+        MangaMenuBottomBar(state, onIntent, backdrop, readingPageDescription, hazeState, onOpenTranslation)
     }
 }
 
@@ -301,7 +313,7 @@ private fun RowScope.MangaTitleCapsule(
         contentAlignment = Alignment.CenterStart,
     ) {
         Column {
-            Text(
+            AppText(
                 state.bookName,
                 style = LegadoTheme.typography.labelMediumEmphasized,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -309,7 +321,7 @@ private fun RowScope.MangaTitleCapsule(
                 overflow = TextOverflow.Ellipsis,
             )
             if (state.chapterName.isNotBlank()) {
-                Text(
+                AppText(
                     state.chapterName,
                     style = LegadoTheme.typography.labelSmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
@@ -427,6 +439,7 @@ private fun MangaMenuBottomBar(
     backdrop: Backdrop?,
     readingPageDescription: String,
     hazeState: HazeState? = null,
+    onOpenTranslation: () -> Unit = {},
 ) {
     // 悬浮底栏玻璃化表面；贴边底栏只玻璃化操作控件，和文章阅读菜单保持一致。
     val glass = state.settings.menuBottomBarLiquidGlass && readerMenuLiquidGlassAvailable(backdrop)
@@ -626,6 +639,11 @@ private fun MangaMenuBottomBar(
                                     },
                                 )
                                 )
+                                add(ReaderMenuAction(
+                                    Icons.Filled.Translate,
+                                    stringResource(R.string.manga_translation_title),
+                                    onClick = onOpenTranslation,
+                                ))
                                 add(
                                 ReaderMenuAction(
                                     Icons.Filled.Tune,
@@ -768,7 +786,7 @@ internal fun ReaderStatusOverlay(
                 verticalArrangement = Arrangement.Center,
             ) {
                 AppText(errorText, modifier = Modifier.padding(24.dp))
-                Button(onClick = { onIntent(MangaReaderIntent.Retry) }) { Text(stringResource(R.string.retry)) }
+                MediumTonalButton(onClick = { onIntent(MangaReaderIntent.Retry) }, text = stringResource(R.string.retry))
             }
         }
     }

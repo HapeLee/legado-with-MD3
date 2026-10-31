@@ -333,6 +333,10 @@ fun ReadBookScreen(
         }
         activeLayerIds = nextIds.toMap()
     }
+    // 只有栈顶弹层可见：下层保持挂载（退场动画和原生窗口创建顺序仍按栈序），但不再显示。
+    // 否则下层的 ModalBottomSheet 窗口会压在上层的整屏配置页（如点击区域、按键设置）之上——
+    // 那个整屏页既看不见、也点不到，关闭手势和返回键又全被下层窗口吞掉，表现为「退不出去」。
+    val topLayerId = topReaderSheetLayerId(layers, state.sheetStack)
     layers.forEach { layer ->
         androidx.compose.runtime.key(layer.id) {
             val alive = io.legado.app.ui.book.read.sheet.rememberSheetAlive(
@@ -340,7 +344,7 @@ fun ReadBookScreen(
                 exitMillis = 600L
             )
             if (alive) {
-                val visible = layer.present && sheetsVisible
+                val visible = layer.present && sheetsVisible && layer.id == topLayerId
                 val layerIntent: (ReadBookIntent) -> Unit = { intent ->
                     if (layer.present) {
                         onIntent(
@@ -379,8 +383,23 @@ fun ReadBookScreen(
     }
 }
 
+/**
+ * 栈顶弹层对应的挂载层 id，其余层只挂载不显示。
+ *
+ * 弹层可以有父子关系（例如「更多」里再打开点击区域、按键设置）。下层若是
+ * ModalBottomSheet，它独占一个原生窗口，会一直压在栈顶的整屏配置页之上：配置页既不可见、
+ * 也点不到，而那个窗口的关闭手势和返回键又只会发给栈顶（此时不是自己），于是谁也退不出去。
+ */
+internal fun topReaderSheetLayerId(
+    layers: List<ReaderSheetLayer>,
+    sheetStack: List<ReadBookSheet>,
+): Long? {
+    val topSheetClass = sheetStack.lastOrNull()?.let { it::class } ?: return null
+    return layers.lastOrNull { it.present && it.sheet::class == topSheetClass }?.id
+}
+
 @androidx.compose.runtime.Stable
-private data class ReaderSheetLayer(
+internal data class ReaderSheetLayer(
     val id: Long,
     val sheet: ReadBookSheet,
     val present: Boolean,
