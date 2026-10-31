@@ -1,5 +1,6 @@
 package io.legado.app.feature.reader.platform
 
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticContract
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import org.junit.Assert.assertEquals
@@ -16,6 +17,9 @@ class JsoupReaderHtmlParserContractTest {
             "<p>A</p><p>B</p>" to "A\nB\n",
             "<strong>A</strong>B" to "AB\n",
             "A<img src='x'>B" to "A\uFFFCB\n",
+            "A<img>B" to "AB\n",
+            "<p></p>" to "",
+            "<hr>" to "\n",
             "<ruby>漢<rt>かん</rt><rp>(</rp></ruby>" to "漢\n",
             "<a id='n'></a>正文" to "正文\n",
             "<pre>A  B</pre>" to "A  B\n",
@@ -25,6 +29,8 @@ class JsoupReaderHtmlParserContractTest {
             for ((size, density) in listOf(16f to 1f, 24f to 3f)) {
                 val parsed = JsoupReaderHtmlParser.parse(html, 7, size, density)
                 assertEquals(html, expected, parsed.semantic)
+                assertEquals(emptyList<ReaderSemanticContract.Violation>(),
+                    ReaderSemanticContract.validateInlines(parsed.semantic, parsed.paragraphs.flatMap { it.items }, 7))
                 parsed.paragraphs.flatMap { it.items }.forEach { item ->
                     val pos = item.chapterPosition - 7
                     when (item) {
@@ -38,6 +44,7 @@ class JsoupReaderHtmlParserContractTest {
             val source = ReaderChapterSourceParser.parse(0, "title", listOf("<usehtml>$html</usehtml>"), true, true, AndroidReaderHtmlSemanticTextResolver)
             assertEquals(expected + "\n", source.semanticContent)
             assertEquals(source.semanticContent.length, source.characterCount)
+            assertEquals(emptyList<ReaderSemanticContract.Violation>(), ReaderSemanticContract.validate(source))
         }
     }
 

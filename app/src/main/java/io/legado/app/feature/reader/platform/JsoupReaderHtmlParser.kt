@@ -4,6 +4,7 @@ import io.legado.app.feature.reader.core.layout.ReaderHtmlParagraph
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecoration
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticContract
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
 import org.jsoup.Jsoup
@@ -24,6 +25,9 @@ object JsoupReaderHtmlParser {
         val paragraphs: List<ReaderHtmlParagraph>,
         val anchorPosition: Int? = null
     )
+
+    /** Collected only for an explicit edit; never retained by a reader chapter. */
+    internal data class TextSpan(val node: TextNode, val start: Int, val value: String)
 
     private data class InlineCtx(
         val bold: Boolean = false,
@@ -54,6 +58,7 @@ object JsoupReaderHtmlParser {
 
     private class Cursor(
         var pos: Int,
+        val textSpans: MutableList<TextSpan>? = null,
         val targetAnchorId: String? = null,
         var anchorPosition: Int? = null,
         val semantic: StringBuilder = StringBuilder(),
@@ -82,8 +87,18 @@ object JsoupReaderHtmlParser {
         targetAnchorId: String? = null
     ): ParsedHtml {
         val doc = Jsoup.parseBodyFragment(html)
-        val body = doc.body()
-        val cursor = Cursor(startPosition, targetAnchorId?.takeIf(String::isNotEmpty))
+        return project(doc.body(), startPosition, baseTextSizePx, density, targetAnchorId)
+    }
+
+    internal fun project(
+        body: Element,
+        startPosition: Int = 0,
+        baseTextSizePx: Float = 10f,
+        density: Float = 1f,
+        targetAnchorId: String? = null,
+        textSpans: MutableList<TextSpan>? = null,
+    ): ParsedHtml {
+        val cursor = Cursor(startPosition, textSpans, targetAnchorId?.takeIf(String::isNotEmpty))
         // Seed block context from body-level alignment if present.
         val bodyCtx = BlockCtx(alignment = parseAlignment(body))
         for (child in body.childNodes().toList()) {
@@ -166,6 +181,7 @@ object JsoupReaderHtmlParser {
                         subscript = inline.subscript
                     )
                 )
+                cursor.textSpans?.add(TextSpan(node, cursor.pos, normalized))
                 cursor.semantic.append(normalized)
                 cursor.pos += normalized.length
             }
@@ -185,7 +201,7 @@ object JsoupReaderHtmlParser {
                             listOf(ReaderChapterInlineSource.BlankLine(cursor.pos)),
                             0f, 0f, null, emptyList()
                         )
-                        cursor.semantic.append('\n')
+                        cursor.semantic.append(ReaderSemanticContract.PARAGRAPH_BREAK)
                         cursor.pos += 1
                     }
                     "img", "image" -> {
@@ -203,7 +219,7 @@ object JsoupReaderHtmlParser {
                             action = node.attr("data-legado-pclick").takeIf { it.isNotBlank() }
                                 ?: node.attr("data-legado-click").takeIf { it.isNotBlank() }
                         )
-                        cursor.semantic.append('\uFFFC')
+                        cursor.semantic.append(ReaderSemanticContract.IMAGE_CHAR)
                         cursor.pos += 1
                     }
                     "p", "div", "section", "article", "header", "footer",
@@ -418,7 +434,7 @@ object JsoupReaderHtmlParser {
                 cursor.currentDecorations,
                 cursor.currentPreserveBodyIndent
             )
-            cursor.semantic.append('\n')
+            cursor.semantic.append(ReaderSemanticContract.PARAGRAPH_BREAK)
             cursor.pos += 1
         } else if (preserveEmpty) {
             // Preserve leading and consecutive empty paragraphs; the trailing
@@ -431,7 +447,7 @@ object JsoupReaderHtmlParser {
                 cursor.currentDecorations,
                 cursor.currentPreserveBodyIndent
             )
-            cursor.semantic.append('\n')
+            cursor.semantic.append(ReaderSemanticContract.PARAGRAPH_BREAK)
             cursor.pos += 1
         }
         cursor.current = mutableListOf()

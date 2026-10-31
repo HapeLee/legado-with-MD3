@@ -1,6 +1,7 @@
 package io.legado.app.feature.reader.core.source
 
 import io.legado.app.feature.reader.core.cast.CastMarkers
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticContract
 
 sealed interface ReaderChapterSourceBlock {
     val chapterPosition: Int
@@ -49,7 +50,7 @@ sealed interface ReaderChapterInlineSource {
     data class BlankLine(override val chapterPosition: Int) : ReaderChapterInlineSource
 
     /**
-     * 段首背景音乐胶囊：只占行内宽度，不占任何语义字符（[semanticContent] 逐字节不变），
+     * 段首背景音乐胶囊：只占行内宽度，不占任何语义字符（[semanticContent] UTF-16 内容不变），
      * 所以朗读链路读不到它，正文文字也与不开时完全一致。锚点是段落序号，
      * 与 BgmSceneStore.ordinals 同一套计数。
      */
@@ -80,7 +81,7 @@ data class ReaderChapterSource(
     val title: String,
     val blocks: List<ReaderChapterSourceBlock>,
     val characterCount: Int,
-    /** Body text in the exact character-position space used by Canvas selection/navigation. */
+    /** Body text in UTF-16 code units; titles and visual capsules are outside this space. */
     val semanticContent: String = "",
 ) {
     /** Rebuild presentation-only titles without changing body anchors or reloading content. */
@@ -146,7 +147,7 @@ object ReaderChapterSourceParser {
                 val semanticText = htmlSemanticTextResolver.resolve(html)
                 val semanticLength = semanticText.length
                 result += ReaderChapterSourceBlock.Html(html, position, semanticLength)
-                semanticContent.append(semanticText).append('\n')
+                semanticContent.append(semanticText).append(ReaderSemanticContract.PARAGRAPH_BREAK)
                 position += semanticLength + 1
                 return@forEachIndexed
             }
@@ -169,7 +170,7 @@ object ReaderChapterSourceParser {
                     }
                 }
                 inlineItems += ReaderChapterInlineSource.Image(match.groupValues[1], position)
-                semanticContent.append('\uFFFC')
+                semanticContent.append(ReaderSemanticContract.IMAGE_CHAR)
                 position += 1
                 cursor = match.range.last + 1
             }
@@ -200,7 +201,7 @@ object ReaderChapterSourceParser {
             if (inlineItems.isNotEmpty()) {
                 result += ReaderChapterSourceBlock.Paragraph(inlineItems, paragraphPosition)
             }
-            semanticContent.append('\n')
+            semanticContent.append(ReaderSemanticContract.PARAGRAPH_BREAK)
             position += 1 // Paragraph separator uses the same chapter-position unit as legacy layout.
         }
         return ReaderChapterSource(chapterIndex, title, result, position, semanticContent.toString())
@@ -230,6 +231,7 @@ object ReaderChapterSourceParser {
             }
         }
 
+    /** Legacy compatibility fallback for non-Android callers; production injects the Jsoup resolver. */
     private fun htmlSemanticText(html: String): String = html
         .replace(imagePattern, "\uFFFC")
         .replace(Regex("<(br|/p|/div|/li)\\b[^>]*>", RegexOption.IGNORE_CASE), "\n")

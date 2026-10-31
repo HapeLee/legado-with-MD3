@@ -6,6 +6,7 @@ import io.legado.app.domain.model.BookContentProcessEngine
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.feature.reader.core.cast.CastMarkers
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticLocation
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderUnderline
 import io.legado.app.feature.reader.core.model.withBitmapSize
@@ -68,6 +69,8 @@ object LegacyReaderStyleRangeMapper {
                 val markingStyle = GSON.fromJsonObject<TextProcessStyle>(process.styleJson).getOrNull()
                     ?: return@forEachIndexed
                 val range = BookContentProcessEngine.resolveRange(bodyText, anchor) ?: return@forEachIndexed
+                if (!ReaderSemanticLocation.isValidOffset(bodyText, range.first) ||
+                    !ReaderSemanticLocation.isValidOffset(bodyText, range.last + 1)) return@forEachIndexed
                 result += ReaderStyleRange(
                     start = range.first,
                     endExclusive = range.last + 1,
