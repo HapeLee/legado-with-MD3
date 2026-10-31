@@ -479,15 +479,35 @@ object LocalBookSemanticHtml {
     private fun normalizeTitleText(text: String): String =
         text.replace("[\\s\\u00a0\\u3000]+".toRegex(), " ").trim()
 
-    private val externalSchemeRegex = Regex("^(https?|mailto|tel|javascript|data):", RegexOption.IGNORE_CASE)
+    private val schemeRegex = Regex("^[a-z][a-z0-9+.-]*:", RegexOption.IGNORE_CASE)
+    private val mobiLinkRegex = Regex("^(filepos:[0-9]+|kindle:pos:fid:[0-9a-v]+:off:[0-9a-v]+)$", RegexOption.IGNORE_CASE)
     private val mobiChapterPrefixRegex = Regex("^(?:skip:)?\\d+:")
 
-    fun isExternalLink(href: String): Boolean =
-        href.trim().matches(Regex("^(https?|mailto|tel):.*", RegexOption.IGNORE_CASE))
+    enum class LinkKind { INTERNAL, EXTERNAL, UNSUPPORTED }
+
+    fun classifyLink(href: String): LinkKind {
+        val link = href.trim()
+        if (link.isEmpty() || link.any { it.code < 0x20 }) return LinkKind.UNSUPPORTED
+        if (link.startsWith("//")) return LinkKind.EXTERNAL
+        val scheme = schemeRegex.find(link)?.value?.dropLast(1)?.lowercase()
+            ?: return LinkKind.INTERNAL
+        return when {
+            scheme in setOf("http", "https", "mailto", "tel") -> LinkKind.EXTERNAL
+            // Existing MOBI/KF8 chapter identities must remain navigable.
+            mobiLinkRegex.matches(link) -> LinkKind.INTERNAL
+            else -> LinkKind.UNSUPPORTED
+        }
+    }
+
+    fun isExternalLink(href: String): Boolean = classifyLink(href) == LinkKind.EXTERNAL
 
     fun resolveRelativeHref(baseResourceHref: String, rawHref: String): String? {
         val trimmed = rawHref.trim()
-        if (trimmed.isEmpty() || externalSchemeRegex.containsMatchIn(trimmed)) return trimmed.ifEmpty { null }
+        when (classifyLink(trimmed)) {
+            LinkKind.UNSUPPORTED -> return null
+            LinkKind.EXTERNAL -> return trimmed
+            LinkKind.INTERNAL -> if (schemeRegex.containsMatchIn(trimmed)) return trimmed
+        }
         val basePath = baseResourceHref.substringBefore("#").trim()
         if (trimmed.startsWith("#")) return if (basePath.isEmpty()) trimmed else "$basePath$trimmed"
         val pathPart = trimmed.substringBefore("#")
@@ -503,9 +523,10 @@ object LocalBookSemanticHtml {
         chapters: List<BookChapter>,
         currentChapterIndex: Int = -1
     ): Int? {
-        val link = runCatching { URLDecoder.decode(rawLink.trim(), "UTF-8") }
-            .getOrDefault(rawLink.trim()).removePrefix("/").removePrefix("./")
-        if (link.isEmpty() || chapters.isEmpty() || isExternalLink(link)) return null
+        val decoded = runCatching { URLDecoder.decode(rawLink.trim(), "UTF-8") }
+            .getOrDefault(rawLink.trim())
+        if (classifyLink(decoded) != LinkKind.INTERNAL || chapters.isEmpty()) return null
+        val link = decoded.removePrefix("/").removePrefix("./")
         fun canonicalUrl(ch: BookChapter): String =
             ch.url.replace(mobiChapterPrefixRegex, "").removePrefix("/")
 

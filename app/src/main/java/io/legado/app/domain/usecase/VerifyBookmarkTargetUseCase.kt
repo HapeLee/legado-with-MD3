@@ -7,6 +7,9 @@ sealed interface BookmarkTargetVerdict {
     /** 一切正常，直接跳。 */
     data object Match : BookmarkTargetVerdict
 
+    /** Source identity is stable but current semantic text no longer validates the anchor. */
+    data object ContentMismatch : BookmarkTargetVerdict
+
     /** 创建于其他书源（源指纹 != 当前源），章节定位很可能偏移。 */
     data class SourceChanged(val storedBookUrl: String) : BookmarkTargetVerdict
 

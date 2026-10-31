@@ -17,6 +17,7 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.feature.reader.core.navigation.ReaderChapterPaginationSnapshot
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticLocation
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginationResult
 import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginator
 import io.legado.app.feature.reader.legacy.LegacyReaderPageDecorationFactory
@@ -789,7 +790,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (book?.bookUrl != input.book.bookUrl) return false
         readerChapterInputWindow = when (input.chapter.index - durChapterIndex) {
             -1 -> readerChapterInputWindow.copy(previous = input)
-            0 -> readerChapterInputWindow.copy(current = input)
+            0 -> {
+                durChapterPos = ReaderSemanticLocation.clampOffset(input.source.semanticContent, durChapterPos)
+                readerChapterInputWindow.copy(current = input)
+            }
             1 -> readerChapterInputWindow.copy(next = input)
             else -> return false
         }

@@ -262,6 +262,7 @@ class ReadBookViewModel(
         bookRepository = bookRepository,
         verifyUseCase = verifyBookmarkTargetUseCase,
         relocateMarkingTargetUseCase = relocateMarkingTargetUseCase,
+        readAloudSettingsGateway = readAloudSettingsRepository,
         host = object : ReadBookmarkNavigateDelegate.Host {
             override val pendingTarget: PendingBookmarkTarget?
                 get() = _uiState.value.pendingBookmarkTarget

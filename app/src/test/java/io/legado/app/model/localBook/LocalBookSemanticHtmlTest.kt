@@ -14,6 +14,24 @@ import org.junit.Test
 class LocalBookSemanticHtmlTest {
 
     @Test
+    fun classifiesLinksBeforeResolvingBookResources() {
+        for (link in listOf("chapter.xhtml#n", "#n", "filepos:000123", "kindle:pos:fid:1:off:0")) {
+            assertEquals(link, LocalBookSemanticHtml.LinkKind.INTERNAL, LocalBookSemanticHtml.classifyLink(link))
+        }
+        for (link in listOf("https://example.com", "//example.com/a", "mailto:a@b", "tel:123")) {
+            assertTrue(link, LocalBookSemanticHtml.isExternalLink(link))
+            assertEquals(link, LocalBookSemanticHtml.resolveRelativeHref("Text/book.xhtml", link))
+        }
+        for (link in listOf("javascript:alert(1)", "data:text/html,x", "unknown:thing", "filepos:", "kindle:pos:fid:1", "", "java\nscript:alert(1)")) {
+            assertEquals(link, LocalBookSemanticHtml.LinkKind.UNSUPPORTED, LocalBookSemanticHtml.classifyLink(link))
+            assertEquals(null, LocalBookSemanticHtml.resolveRelativeHref("Text/book.xhtml", link))
+        }
+        val chapters = listOf(BookChapter(index = 0, url = "example.com/a", bookUrl = "b", title = "A"))
+        assertEquals(null, LocalBookSemanticHtml.resolveInternalLinkTarget("//example.com/a", chapters, 0))
+        assertEquals(null, LocalBookSemanticHtml.resolveInternalLinkTarget("javascript:alert(1)", chapters, 0))
+    }
+
+    @Test
     fun documentCssUsesOnlyReferencedSheetsInDocumentOrder() {
         val styles = mapOf(
             "z.css" to "p { font-weight: bold; }",

@@ -623,11 +623,13 @@ class ReadBookController(
         if (link.isEmpty()) return
         if (LocalBookSemanticHtml.isExternalLink(link)) {
             viewModel.onIntent(
-                ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmOpenExternalUrl(link))
+                ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmOpenExternalUrl(if (link.startsWith("//")) "https:$link" else link))
             )
             return
         }
-        viewModel.openInternalBookLink(link)
+        if (LocalBookSemanticHtml.classifyLink(link) == LocalBookSemanticHtml.LinkKind.INTERNAL) {
+            viewModel.openInternalBookLink(link)
+        }
     }
 
     fun onComposeReaderElementLongPress(element: ReaderElement, x: Float, y: Float): Boolean {

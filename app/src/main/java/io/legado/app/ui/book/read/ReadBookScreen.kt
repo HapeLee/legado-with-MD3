@@ -296,6 +296,7 @@ fun ReadBookScreen(
                 is BookmarkTargetVerdict.SourceChanged ->
                     R.string.bookmark_target_source_changed
 
+                BookmarkTargetVerdict.ContentMismatch -> R.string.bookmark_target_content_mismatch
                 BookmarkTargetVerdict.TitleMismatch ->
                     R.string.bookmark_target_title_mismatch
 

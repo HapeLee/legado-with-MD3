@@ -5,7 +5,9 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.repository.BookRepository
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.TextProcessAnchor
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticLocation
 import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.domain.usecase.RelocateMarkingTargetUseCase
 import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
@@ -16,6 +18,7 @@ import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolv
 import io.legado.app.feature.reader.platform.JsoupReaderHtmlParser
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.readaloud.cast.CastAssignmentStore
 import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBookSemanticHtml
 import io.legado.app.utils.GSON
@@ -40,6 +43,10 @@ class ReadBookmarkNavigateDelegate(
     private val verifyUseCase: VerifyBookmarkTargetUseCase,
     private val relocateMarkingTargetUseCase: RelocateMarkingTargetUseCase,
     private val host: Host,
+    private val readAloudSettingsGateway: ReadAloudSettingsGateway,
+    private val castLabelsProvider: suspend (Book, BookChapter) -> Map<Int, String> = { book, chapter ->
+        CastAssignmentStore.labelsForChapter(book.bookUrl, chapter.index)
+    },
 ) {
 
     interface Host {
@@ -60,28 +67,19 @@ class ReadBookmarkNavigateDelegate(
                 storedBookUrl = bookmark.bookUrl,
                 storedChapterName = bookmark.chapterName,
             )
-            if (verdict is BookmarkTargetVerdict.Match) {
-                host.jumpToChapter(bookmark.chapterIndex, bookmark.chapterPos)
+            val anchor = bookmark.bookText.takeIf { it.isNotBlank() }?.let { text ->
+                TextProcessAnchor(bookmark.chapterIndex, bookmark.chapterPos, text, normalizedTextHash = "")
+            }
+            val current = if (verdict is BookmarkTargetVerdict.Match) {
+                validatedPosition(book, bookmark.chapterIndex, bookmark.chapterPos, anchor, pageText = true)
+            } else null
+            if (current != null) {
+                host.jumpToChapter(bookmark.chapterIndex, current)
             } else {
-                val relocated = bookmark.bookText.takeIf { it.isNotBlank() }?.let { text ->
-                    relocateMarking(
-                        book = book,
-                        chapterName = bookmark.chapterName,
-                        anchor = TextProcessAnchor(
-                            chapterIndex = bookmark.chapterIndex,
-                            chapterPosition = bookmark.chapterPos,
-                            selectedText = text,
-                            normalizedTextHash = "",
-                        ),
-                    )
-                }
-                if (relocated != null) {
-                    host.jumpToChapter(relocated.chapterIndex, relocated.chapterPosition)
-                } else {
-                    host.setPendingTarget(
-                        PendingBookmarkTarget(bookmark.chapterIndex, bookmark.chapterPos, verdict)
-                    )
-                }
+                val relocated = anchor?.let { relocateMarking(book, bookmark.chapterName, it) }
+                if (relocated != null) host.jumpToChapter(relocated.chapterIndex, relocated.chapterPosition)
+                else host.setPendingTarget(PendingBookmarkTarget(bookmark.chapterIndex, bookmark.chapterPos,
+                    if (verdict is BookmarkTargetVerdict.Match) BookmarkTargetVerdict.ContentMismatch else verdict))
             }
         }
     }
@@ -101,18 +99,15 @@ class ReadBookmarkNavigateDelegate(
                 storedBookUrl = marking.bookUrl,
                 storedChapterName = marking.chapterName,
             )
-            if (verdict is BookmarkTargetVerdict.Match) {
-                host.jumpToChapter(chapterIndex, chapterPos)
-            } else {
+            val current = if (verdict is BookmarkTargetVerdict.Match) {
+                validatedPosition(book, chapterIndex, chapterPos, anchor)
+            } else null
+            if (current != null) host.jumpToChapter(chapterIndex, current)
+            else {
                 relocateMarking(book, marking.chapterName, anchor)
                     ?.let { host.jumpToChapter(it.chapterIndex, it.chapterPosition) }
-                    ?: host.setPendingTarget(
-                        PendingBookmarkTarget(
-                            chapterIndex,
-                            chapterPos,
-                            verdict
-                        )
-                    )
+                    ?: host.setPendingTarget(PendingBookmarkTarget(chapterIndex, chapterPos,
+                        if (verdict is BookmarkTargetVerdict.Match) BookmarkTargetVerdict.ContentMismatch else verdict))
             }
         }
     }
@@ -128,6 +123,7 @@ class ReadBookmarkNavigateDelegate(
     }
 
     fun navigateToInternalLink(link: String) {
+        if (LocalBookSemanticHtml.classifyLink(link) != LocalBookSemanticHtml.LinkKind.INTERNAL) return
         val book = ReadBook.book ?: return
         val currentIndex = ReadBook.durChapterIndex
         val fragment = link.substringAfter("#", "").trim()
@@ -136,7 +132,7 @@ class ReadBookmarkNavigateDelegate(
                 val chapters = bookRepository.getChapters(book.bookUrl)
                 val resolvedIndex = LocalBookSemanticHtml.resolveInternalLinkTarget(link, chapters, currentIndex)
                     ?: return@withContext null to null
-                val targetChapter = chapters.getOrNull(resolvedIndex)
+                val targetChapter = chapters.firstOrNull { it.index == resolvedIndex }
                 val pos = if (fragment.isNotEmpty() && targetChapter != null) {
                     if (targetChapter.startFragmentId.equals(fragment, ignoreCase = true)) {
                         0
@@ -171,7 +167,6 @@ class ReadBookmarkNavigateDelegate(
         anchor: TextProcessAnchor,
     ): RelocateMarkingTargetUseCase.Target? = withContext(Dispatchers.IO) {
         val candidates = bookRepository.getChapters(book.bookUrl)
-            .asSequence()
             .filter {
                 it.index == anchor.chapterIndex ||
                         (chapterName.isNotBlank() && it.title == chapterName)
@@ -188,17 +183,37 @@ class ReadBookmarkNavigateDelegate(
         relocateMarkingTargetUseCase.locate(anchor, candidates)
     }
 
-    private fun parseChapterSource(book: Book, chapter: BookChapter): ReaderChapterSource? {
+    private suspend fun validatedPosition(
+        book: Book, chapterIndex: Int, position: Int, anchor: TextProcessAnchor?, pageText: Boolean = false,
+    ): Int? = withContext(Dispatchers.IO) {
+        val chapter = bookRepository.getChapters(book.bookUrl).firstOrNull { it.index == chapterIndex }
+            ?: return@withContext null
+        val content = parseChapterSource(book, chapter)?.semanticContent ?: return@withContext null
+        val text = anchor?.selectedText
+        if (text.isNullOrBlank()) return@withContext ReaderSemanticLocation.clampOffset(content, position)
+        if (ReaderSemanticLocation.matchesAt(content, position, text, anchor?.contextBefore.orEmpty(), anchor?.contextAfter.orEmpty())) return@withContext position
+        // Page bookmarks store the visible page, which need not begin at the saved reading
+        // position. Treat a unique containing page as evidence, not as an exact-start anchor.
+        if (pageText && ReaderSemanticLocation.matchesContainingText(content, position, text)) return@withContext position
+        null
+    }
+
+    private suspend fun parseChapterSource(book: Book, chapter: BookChapter): ReaderChapterSource? {
         val rawContent = BookHelp.getContent(book, chapter) ?: return null
-        val processed = ContentProcessor.get(book)
-            .getContent(book, chapter, rawContent, includeTitle = false)
+        val processor = ContentProcessor.get(book)
+        val settings = processor.captureSettings()
+        val processed = processor.getContent(book, chapter, rawContent, includeTitle = false,
+            paragraphIndent = null, settings = settings)
         return ReaderChapterSourceParser.parse(
             chapterIndex = chapter.index,
             title = "",
             paragraphs = processed.textList,
             includeTitle = false,
-            adaptSpecialStyle = true,
+            adaptSpecialStyle = settings.adaptSpecialStyle,
             htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+            castLabels = if (readAloudSettingsGateway.currentSettings.multiRoleCast) {
+                castLabelsProvider(book, chapter)
+            } else emptyMap(),
         )
     }
 
