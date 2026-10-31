@@ -186,7 +186,7 @@ class AndroidReaderHtmlSourceResolverTest {
         assertTrue(list.decorations.single().sizePx > 0f)
     }
 
-    @Test fun nestedListMarkersCarryIncreasingLeadingOffsets() {
+    @Test fun nestedListItemKeepsSingleMarkerAtItsDepth() {
         val paragraphs = AndroidReaderHtmlSourceResolver(20f, 2f).resolve(
             "<ul><li>外层<ul><li>内层</li></ul></li></ul>",
             0,
@@ -197,7 +197,7 @@ class AndroidReaderHtmlSourceResolverTest {
         }
         val bullets = inner.decorations.filter { it.kind == ReaderParagraphDecorationKind.BULLET }
 
-        assertTrue(bullets.size >= 2)
-        assertTrue(bullets.zipWithNext().all { (outer, nested) -> nested.leadingOffsetPx > outer.leadingOffsetPx })
+        assertEquals(1, bullets.size)
+        assertEquals(24f, bullets.single().leadingOffsetPx, 0.01f)
     }
 }

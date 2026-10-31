@@ -80,7 +80,7 @@ class JsoupReaderHtmlParserTest {
     }
 
     @Test
-    fun nestedListMarkersCarryIncreasingOffsets() {
+    fun nestedListItemKeepsSingleMarkerAtItsDepth() {
         val parsed = JsoupReaderHtmlParser.parse(
             "<ul><li>外层<ul><li>内层</li></ul></li></ul>", 0, 20f, 2f
         )
@@ -88,8 +88,8 @@ class JsoupReaderHtmlParserTest {
             it.items.filterIsInstance<ReaderChapterInlineSource.Text>().any { t -> t.value.contains("内层") }
         }
         val bullets = inner.decorations.filter { it.kind == ReaderParagraphDecorationKind.BULLET }
-        assertTrue(bullets.size >= 2)
-        assertTrue(bullets.zipWithNext().all { (outer, nested) -> nested.leadingOffsetPx > outer.leadingOffsetPx })
+        assertEquals(1, bullets.size)
+        assertEquals(24f, bullets.single().leadingOffsetPx, 0.01f)
     }
 
     @Test

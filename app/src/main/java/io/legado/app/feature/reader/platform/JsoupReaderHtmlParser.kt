@@ -42,6 +42,8 @@ object JsoupReaderHtmlParser {
     private data class BlockCtx(
         val alignment: ReaderTextAlignment? = null,
         val quoteDepth: Int = 0,
+        // TODO: 有序列表尚未实现。当前 Boolean 只表示 ordered，但没有保存 item ordinal；
+        //  实现 <ol>/<li value>/CSS list-style-type 时需要计数器与数字 marker。
         val listStack: List<Boolean> = emptyList(), // true = ordered
         val inPre: Boolean = false,
         val headingScale: Float = 1f,
@@ -273,12 +275,15 @@ object JsoupReaderHtmlParser {
                 )
             }
         }
-        block.listStack.forEachIndexed { index, _ ->
+        val listDepth = block.listStack.size
+        if (listDepth > 0) {
+            // 只画当前条目所在层级的 marker；祖先层级的 marker 已在各自 li 的首行绘制。
+            // TODO: 一个 <li> 内含多个块级段落时，目前每段都会生成 marker；后续应只让列表项第一段带 marker。
             decorations += ReaderParagraphDecoration(
                 ReaderParagraphDecorationKind.BULLET,
                 null,
                 4f * density.coerceAtLeast(1f),
-                (block.quoteDepth + index) * step
+                (block.quoteDepth + listDepth - 1) * step
             )
         }
         val totalLevels = block.quoteDepth + block.listStack.size

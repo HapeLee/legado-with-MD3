@@ -47,6 +47,7 @@ object LocalBookSemanticHtml {
     private const val blockSemanticSelector =
         "blockquote, ul, ol, h1, h2, h3, h4, h5, h6, pre, hr, table, figure, figcaption, aside, dl"
 
+    // TODO: list-style / list-style-type 尚未加入白名单；有序或自定义 marker 的 CSS 会被忽略。
     private val allowedCssProps = setOf(
         "text-align", "text-indent",
         "margin", "margin-top", "margin-bottom", "margin-left", "margin-right",
