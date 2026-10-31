@@ -8,6 +8,60 @@ import org.junit.Test
 
 class SearchContentRepositoryTest {
 
+    private class ReadGateway : io.legado.app.domain.gateway.ReadSettingsGateway {
+        override var currentSettings = io.legado.app.domain.model.settings.ReadSettings()
+        override val settings get() = kotlinx.coroutines.flow.flowOf(currentSettings)
+        override suspend fun update(transform: (io.legado.app.domain.model.settings.ReadSettings) -> io.legado.app.domain.model.settings.ReadSettings) {
+            currentSettings = transform(currentSettings)
+        }
+    }
+
+    @Test
+    fun semanticStyleChangesInvalidateCacheAndRestorableSession() {
+        val gateway = ReadGateway()
+        val repository = SearchContentRepository(readSettingsGateway = gateway)
+        val book = book()
+        repository.beginSearch(book, "A", false, false)
+        gateway.currentSettings = gateway.currentSettings.copy(adaptSpecialStyle = false)
+        assertNull(repository.getCache(book, "A", false, false))
+        assertNull(repository.getLastSession(book.bookUrl))
+        repository.beginSearch(book, "A", false, false)
+        gateway.currentSettings = gateway.currentSettings.copy(chineseConverterType = 1)
+        assertNull(repository.getLastSession(book.bookUrl))
+    }
+
+    @Test
+    fun ruleOrContentRevisionInvalidatesBothCachePaths() {
+        var revision = 0L
+        val repository = SearchContentRepository(contentRevisionProvider = { revision })
+        val book = book()
+        repository.beginSearch(book, "A", false, false)
+        revision++
+        assertNull(repository.getCache(book, "A", false, false))
+        assertNull(repository.getLastSession(book.bookUrl))
+    }
+
+    @Test
+    fun injectedLegacyIndentationIsPartOfSemanticIdentity() {
+        var indent = "　　"
+        val repository = SearchContentRepository(paragraphIndentProvider = { indent })
+        val book = book()
+        repository.beginSearch(book, "A", false, false)
+        indent = ""
+        assertNull(repository.getCache(book, "A", false, false))
+        assertNull(repository.getLastSession(book.bookUrl))
+    }
+
+    @Test
+    fun presentationOnlyChangesKeepSemanticCache() {
+        val gateway = ReadGateway()
+        val repository = SearchContentRepository(readSettingsGateway = gateway)
+        val book = book()
+        repository.beginSearch(book, "A", false, false)
+        gateway.currentSettings = gateway.currentSettings.copy(readMenuTextColor = 123, textFullJustify = false)
+        assertEquals(emptyList<SearchResult>(), repository.getCache(book, "A", false, false))
+    }
+
     private fun book(url: String = "book-1") = Book(name = "测试书", author = "作者", bookUrl = url)
 
     @Test
