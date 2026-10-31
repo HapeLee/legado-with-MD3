@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
@@ -58,6 +59,7 @@ import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.utils.openUrl
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
@@ -159,6 +161,8 @@ fun ReadBookScreen(
     val payDialog = state.activeDialog as? ReadBookDialog.ConfirmChapterPay
     val addToBookshelfDialog = state.activeDialog as? ReadBookDialog.ConfirmAddToBookshelf
     val readRecordAliasDialog = state.activeDialog as? ReadBookDialog.ReadRecordAliasConflict
+    val externalUrlDialog = state.activeDialog as? ReadBookDialog.ConfirmOpenExternalUrl
+    val context = LocalContext.current
     var rememberAliasChoice by remember(readRecordAliasDialog) { mutableStateOf(false) }
 
     AppAlertDialog(
@@ -264,6 +268,22 @@ fun ReadBookScreen(
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf) },
     )
+    AppAlertDialog(
+        show = externalUrlDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = stringResource(R.string.use_browser_open),
+        text = externalUrlDialog?.url.orEmpty(),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            val url = externalUrlDialog?.url
+            onIntent(ReadBookIntent.DismissDialog)
+            if (!url.isNullOrBlank()) {
+                context.openUrl(url)
+            }
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
 
     // 书签/笔记跳转前校验未通过的确认框
     val pendingTarget = state.pendingBookmarkTarget
@@ -276,6 +296,7 @@ fun ReadBookScreen(
                 is BookmarkTargetVerdict.SourceChanged ->
                     R.string.bookmark_target_source_changed
 
+                BookmarkTargetVerdict.ContentMismatch -> R.string.bookmark_target_content_mismatch
                 BookmarkTargetVerdict.TitleMismatch ->
                     R.string.bookmark_target_title_mismatch
 

@@ -7,6 +7,8 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
@@ -25,6 +27,8 @@ class SearchContentRepository(
     private val historyDao: SearchContentHistoryDao? = null,
     private val readSettingsGateway: ReadSettingsGateway? = null,
     private val otherSettingsGateway: OtherSettingsGateway? = null,
+    private val contentRevisionProvider: () -> Long = { ContentProcessor.semanticRevision },
+    private val paragraphIndentProvider: () -> String = { "" },
 ) {
 
     private val effectiveHistoryDao: SearchContentHistoryDao
@@ -55,7 +59,8 @@ class SearchContentRepository(
     }
 
     private var lastSearchResults: List<SearchResult>? = null
-    private var lastQueryKey: String? = null
+    private var lastQueryKey: SearchKey? = null
+    private var sessionBook: Book? = null
     private var lastSearchSession: SearchSession? = null
 
     /**
@@ -75,7 +80,10 @@ class SearchContentRepository(
     )
 
     fun getLastSession(bookUrl: String): SearchSession? {
-        return lastSearchSession?.takeIf { it.bookUrl == bookUrl }
+        val session = lastSearchSession?.takeIf { it.bookUrl == bookUrl } ?: return null
+        return session.takeIf {
+            lastQueryKey == searchKey(sessionBook, it.query, it.replaceEnabled, it.regexReplace)
+        }
     }
 
     fun beginSearch(
@@ -112,23 +120,25 @@ class SearchContentRepository(
     fun search(book: Book, query: String, replaceEnabled: Boolean, regexReplace: Boolean): Flow<List<SearchResult>> = flow {
         // 冷流在收集时才拿到当前代次：收集前若已被新的 beginSearch 取代，本代次结果不再落缓存。
         val generation = searchGeneration
+        val contentProcessor = ContentProcessor.get(book.name, book.origin)
+        val key = searchKey(book, query, replaceEnabled, regexReplace)
+        val processingSettings = key.settings
         val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
         val totalChapters = chapters.size
-        val contentProcessor = ContentProcessor.get(book.name, book.origin)
-        val chineseConverterType = readSettingsGateway?.currentSettings?.chineseConverterType ?: 0
-        val defaultReplaceEnabled = otherSettingsGateway?.currentSettings?.replaceEnableDefault ?: true
         val cacheChapterNames = BookHelp.getChapterFiles(book).toHashSet()
 
         val allResults = mutableListOf<SearchResult>()
         fun publishCache(results: List<SearchResult>) {
-            if (generation == searchGeneration) {
-                cacheResults(book, query, replaceEnabled, regexReplace, results)
+            if (generation == searchGeneration && key == searchKey(book, query, replaceEnabled, regexReplace)) {
+                cacheResults(book, query, replaceEnabled, regexReplace, results, key)
             }
         }
 
         for (bookChapter in chapters) {
 
             currentCoroutineContext().ensureActive()
+            // Never mix results produced with different rules/settings in one session.
+            if (key != searchKey(book, query, replaceEnabled, regexReplace)) return@flow
 
             if (book.isLocal || cacheChapterNames.contains(bookChapter.getFileName())) {
                 val chapterResults = searchChapter(
@@ -138,8 +148,9 @@ class SearchContentRepository(
                     contentProcessor,
                     replaceEnabled,
                     regexReplace,
-                    chineseConverterType,
-                    defaultReplaceEnabled,
+                    processingSettings,
+                    key.titleMode,
+                    key.paragraphIndent,
                 ).map {
                     if (totalChapters > 0) {
                         it.copy(progressPercent = (bookChapter.index + 1).toFloat() / totalChapters * 100f)
@@ -148,6 +159,7 @@ class SearchContentRepository(
                     }
                 }
 
+                if (key != searchKey(book, query, replaceEnabled, regexReplace)) return@flow
                 if (chapterResults.isNotEmpty()) {
                     allResults.addAll(chapterResults)
                     publishCache(allResults)
@@ -165,10 +177,12 @@ class SearchContentRepository(
         replaceEnabled: Boolean,
         regexReplace: Boolean,
         results: List<SearchResult>,
+        key: SearchKey = searchKey(book, query, replaceEnabled, regexReplace),
     ) {
         val cachedResults = ArrayList(results)
         lastSearchResults = cachedResults
-        lastQueryKey = searchKey(book, query, replaceEnabled, regexReplace)
+        lastQueryKey = key
+        sessionBook = book
         lastSearchSession = SearchSession(
             bookUrl = book?.bookUrl.orEmpty(),
             query = query,
@@ -178,29 +192,26 @@ class SearchContentRepository(
         )
     }
 
-    /**
-     * 缓存键必须覆盖所有会改变正文文本的输入：标题模式、简繁转换、净化开关。
-     * 否则切换这些设置后重新进入搜索会复用旧结果，连带复用旧偏移。
-     */
-    private fun searchKey(
-        book: Book?,
-        query: String,
-        replaceEnabled: Boolean,
-        regexReplace: Boolean
-    ): String {
-        val chineseConverterType = readSettingsGateway?.currentSettings?.chineseConverterType ?: 0
-        val defaultReplaceEnabled =
-            otherSettingsGateway?.currentSettings?.replaceEnableDefault ?: true
-        val useReplaceRule = book?.getUseReplaceRule(defaultReplaceEnabled) ?: defaultReplaceEnabled
-        return buildString {
-            append(book?.bookUrl).append('|')
-            append(query).append('|')
-            append(replaceEnabled).append('|')
-            append(regexReplace).append('|')
-            append(titleModeProvider()).append('|')
-            append(chineseConverterType).append('|')
-            append(useReplaceRule)
-        }
+    private data class SearchKey(
+        val bookUrl: String?,
+        val query: String,
+        val replaceEnabled: Boolean,
+        val regexReplace: Boolean,
+        val titleMode: Int,
+        val settings: ContentProcessor.SettingsSnapshot,
+        val useReplaceRule: Boolean,
+        val reSegment: Boolean,
+        val revision: Long,
+        val paragraphIndent: String,
+    )
+
+    private fun searchKey(book: Book?, query: String, replaceEnabled: Boolean, regexReplace: Boolean): SearchKey {
+        val read = readSettingsGateway?.currentSettings
+        val defaults = otherSettingsGateway?.currentSettings?.replaceEnableDefault ?: true
+        return SearchKey(book?.bookUrl, query, replaceEnabled, regexReplace, titleModeProvider(),
+            ContentProcessor.SettingsSnapshot(read?.chineseConverterType ?: 0, read?.adaptSpecialStyle ?: true, defaults),
+            book?.getUseReplaceRule(defaults) ?: defaults, book?.getReSegment() ?: false,
+            contentRevisionProvider(), paragraphIndentProvider())
     }
 
     private suspend fun searchChapter(
@@ -210,9 +221,12 @@ class SearchContentRepository(
         contentProcessor: ContentProcessor,
         replaceEnabled: Boolean,
         regexReplace: Boolean,
-        chineseConverterType: Int,
-        defaultReplaceEnabled: Boolean,
+        settings: ContentProcessor.SettingsSnapshot,
+        titleMode: Int,
+        paragraphIndent: String,
     ): List<SearchResult> {
+        val chineseConverterType = settings.chineseConverterType
+        val defaultReplaceEnabled = settings.replaceEnableDefault
         val searchResultsWithinChapter: MutableList<SearchResult> = mutableListOf()
         val chapterContent = BookHelp.getContent(book, chapter) ?: return searchResultsWithinChapter
 
@@ -228,11 +242,22 @@ class SearchContentRepository(
             chapter,
             chapterContent,
             includeTitle = false,
-            useReplace = replaceEnabled
+            useReplace = replaceEnabled,
+            paragraphIndent = paragraphIndent,
+            settings = settings,
         )
-        val includeTitle = titleModeProvider() != 2 ||
+        val includeTitle = titleMode != 2 ||
                 chapter.isVolume ||
                 bodyContent.textList.isEmpty()
+        val adaptSpecialStyle = settings.adaptSpecialStyle
+        val semanticBody = ReaderChapterSourceParser.parse(
+            chapterIndex = chapter.index,
+            title = "",
+            paragraphs = bodyContent.textList,
+            includeTitle = false,
+            adaptSpecialStyle = adaptSpecialStyle,
+            htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+        ).semanticContent.trimEnd('\n')
         val mContent = if (includeTitle) {
             // 标题净化必须与阅读页一致（阅读页不看"搜索替换"开关）。若这里受开关影响，
             // 标题长度不同会让本章所有正文命中整体位移，直达下标就会落到另一个同词上。
@@ -241,9 +266,9 @@ class SearchContentRepository(
                 useReplace = book.getUseReplaceRule(defaultReplaceEnabled),
                 chineseConverterType = chineseConverterType,
             )
-            listOf(title).plus(bodyContent.textList).joinToString("\n")
+            if (semanticBody.isEmpty()) title else "$title\n$semanticBody"
         } else {
-            bodyContent.toString()
+            semanticBody
         }
 
         val matches = searchPosition(mContent, query, regexReplace)

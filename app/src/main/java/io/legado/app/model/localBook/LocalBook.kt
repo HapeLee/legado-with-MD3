@@ -210,13 +210,18 @@ object LocalBook {
         if (book.isEpub) {
             content ?: return null
             if (content.indexOf('&') > -1) {
-                content = content.replace("&lt;img", "&lt; img", true)
-                return StringEscapeUtils.unescapeHtml4(content)
+                content = content.lineSequence().joinToString("\n") { line ->
+                    val trimmed = line.trim()
+                    if (trimmed.startsWith("<usehtml>") && trimmed.endsWith("</usehtml>")) {
+                        line
+                    } else {
+                        StringEscapeUtils.unescapeHtml4(line.replace("&lt;img", "&lt; img", true))
+                    }
+                }
             }
         }
-        if (content.isNullOrEmpty() && !chapter.isVolume) {
-            return null
-        }
+        // An empty chapter body ("") is a valid blank page and renders through the
+        // title pipeline; only null means the content is genuinely unavailable.
         return content
     }
 

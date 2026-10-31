@@ -165,7 +165,7 @@ private suspend fun loadReviewPage(
     webView.loadDataWithBaseURL(analyzeUrl.url, body, "text/html", "utf-8", analyzeUrl.url)
 }
 
-@SuppressLint("SetJavaScriptEnabled", "WebViewClientOnReceivedSslError")
+@SuppressLint("SetJavaScriptEnabled", "WebViewClientOnReceivedSslError", "JavascriptInterface")
 private fun buildReviewWebView(
     context: Context,
     isDark: Boolean,

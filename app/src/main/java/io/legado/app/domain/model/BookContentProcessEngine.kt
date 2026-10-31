@@ -10,17 +10,29 @@ object BookContentProcessEngine {
     data class ApplyResult(
         val text: String,
         val effectiveProcesses: List<BookContentProcess>,
+        val unsupportedEdits: List<String> = emptyList(),
     )
+
+    sealed interface EditResult {
+        data class Applied(val content: String) : EditResult
+        data class Unsupported(val reason: String) : EditResult
+    }
+
+    fun interface RichTextEditor {
+        fun edit(content: String, anchor: TextProcessAnchor, action: TextProcessAction): EditResult
+    }
 
     fun apply(
         content: String,
         processes: List<BookContentProcess>,
+        richTextEditor: RichTextEditor? = null,
     ): ApplyResult {
         if (content.isEmpty() || processes.isEmpty()) {
             return ApplyResult(content, emptyList())
         }
         var output = content
         val effectiveProcesses = arrayListOf<BookContentProcess>()
+        val unsupportedEdits = arrayListOf<String>()
         processes
             .filter {
                 it.enabled &&
@@ -31,12 +43,11 @@ object BookContentProcessEngine {
                 if (process.kind == BookContentProcess.KIND_USER_UNDERLINE ||
                     process.kind == BookContentProcess.KIND_USER_HIGHLIGHT
                 ) {
-                    // 用户划线/高亮标记：不改文本。锚点能在正文里解析到说明标记仍有效，
-                    // 计入 effectiveProcesses 供渲染层把样式应用到区间。
+                    // Resolve against the final semantic body in the style mapper, after all edits.
                     val anchor = GSON.fromJsonObject<TextProcessAnchor>(process.anchorJson)
-                        .getOrNull()
-                        ?: return@forEach
-                    if (findTargetRange(output, anchor) != null) {
+                        .getOrNull() ?: return@forEach
+                    if (anchor.selectedText.isNotBlank() &&
+                        (output.contains("<usehtml>") || findTargetRange(output, anchor) != null)) {
                         effectiveProcesses.add(process)
                     }
                     return@forEach
@@ -47,6 +58,17 @@ object BookContentProcessEngine {
                 val action = GSON.fromJsonObject<TextProcessAction>(process.actionJson)
                     .getOrNull()
                     ?: return@forEach
+                if (output.contains("<usehtml>")) {
+                    when (val edit = richTextEditor?.edit(output, anchor, action)
+                        ?: EditResult.Unsupported("Rich text editor unavailable")) {
+                        is EditResult.Applied -> if (edit.content != output) {
+                            output = edit.content
+                            effectiveProcesses.add(process)
+                        }
+                        is EditResult.Unsupported -> unsupportedEdits.add("${process.id}: ${edit.reason}")
+                    }
+                    return@forEach
+                }
                 val range = findTargetRange(output, anchor) ?: return@forEach
                 val next = when (action.type) {
                     TextProcessAction.TYPE_REPLACE -> {
@@ -80,7 +102,7 @@ object BookContentProcessEngine {
                     effectiveProcesses.add(process)
                 }
             }
-        return ApplyResult(output, effectiveProcesses)
+        return ApplyResult(output, effectiveProcesses, unsupportedEdits)
     }
 
     /**

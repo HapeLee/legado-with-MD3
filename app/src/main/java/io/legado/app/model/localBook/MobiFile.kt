@@ -27,6 +27,24 @@ class MobiFile(var book: Book) {
         private val xmlDeclarationRegex = "<\\?xml[^>]*>".toRegex()
         private val doctypeDeclarationRegex = "<!DOCTYPE[^>]*>".toRegex()
 
+        internal fun format(
+            soup: org.jsoup.nodes.Document,
+            chapterTitle: String? = null,
+            loadStylesheet: (String) -> String? = { null },
+        ): String {
+            val body = soup.body() ?: return ""
+            // Preserve MOBI's existing uncapped rule set while sharing document-order cascading.
+            LocalBookSemanticHtml.inlineDocumentCssSemantics(soup, maxRules = Int.MAX_VALUE, loadStylesheet = loadStylesheet)
+            body.select("script, style").remove()
+            LocalBookSemanticHtml.sanitizeImages(body.select("img"))
+            val channel = LocalBookSemanticHtml.emitMixedChannel(body, chapterTitle)
+            return channel
+                .replace(xmlDeclarationRegex, "")
+                .replace(doctypeDeclarationRegex, "")
+                .takeIf { it.isNotBlank() }
+                ?: ""
+        }
+
         @Synchronized
         private fun getMFile(book: Book): MobiFile {
             if (mFile == null || mFile?.book?.bookUrl != book.bookUrl) {
@@ -206,14 +224,21 @@ class MobiFile(var book: Book) {
         val soup = Jsoup.parse(sb.toString())
 
         soup.select("title").remove()
-        soup.select("[style*=display:none]").remove()
+        LocalBookSemanticHtml.removeHiddenElements(soup)
         soup.select("img[recindex]").forEach {
             val recindex = it.attr("recindex")
-            it.clearAttributes()
+            it.removeAttr("recindex")
             it.attr("src", "recindex:$recindex")
         }
+        soup.select("a[filepos]").forEach {
+            val filepos = it.attr("filepos").trim().toIntOrNull()
+            if (filepos != null && it.attr("href").isBlank()) {
+                it.attr("href", "filepos:${filepos.toString().padStart(10, '0')}")
+            }
+            it.removeAttr("filepos")
+        }
 
-        return format(soup.outerHtml())
+        return format(soup, chapter.title)
     }
 
     private fun getContentKF8(kf8Book: KF8Book, chapter: BookChapter): String? {
@@ -244,15 +269,16 @@ class MobiFile(var book: Book) {
         val soup = Jsoup.parse(sb.toString())
 
         soup.select("title").remove()
-        soup.select("[style*=display:none]").remove()
-
-        return format(soup.outerHtml())
-    }
-
-    private fun format(html: String): String {
-        return HtmlFormatter.formatKeepImg(html)
-            .replace(xmlDeclarationRegex, "")
-            .replace(doctypeDeclarationRegex, "")
+        LocalBookSemanticHtml.removeHiddenElements(soup)
+        // Parity with KF6: convert recindex images while keeping semantic attributes.
+        soup.select("img[recindex]").forEach {
+            val recindex = it.attr("recindex")
+            it.removeAttr("recindex")
+            it.attr("src", "recindex:$recindex")
+        }
+        return format(soup, chapter.title) { href ->
+            if (href.startsWith("kindle:flow:")) kf8Book.getFlowText(href) else null
+        }
     }
 
     private fun getImage(href: String): InputStream? {

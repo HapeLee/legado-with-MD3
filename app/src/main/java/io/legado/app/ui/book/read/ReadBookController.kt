@@ -74,11 +74,11 @@ import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
+import io.legado.app.model.localBook.LocalBookSemanticHtml
 import io.legado.app.model.reader.ReaderChapterInput
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.receiver.TimeBatteryReceiver
 import io.legado.app.service.BaseReadAloudService
-import io.legado.app.ui.association.OpenUrlConfirmActivity
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.PopupAction
@@ -593,7 +593,7 @@ class ReadBookController(
         is ReaderElement.Text -> when {
             element.markingId != null -> { onMarkingClick(element.markingId); true }
             element.link != null -> {
-                activity.startActivity(Intent(activity, OpenUrlConfirmActivity::class.java).putExtra("uri", element.link))
+                handleComposeLinkClick(element.link)
                 true
             }
             else -> false
@@ -616,6 +616,20 @@ class ReadBookController(
         is ReaderElement.Spacer -> false
         is ReaderElement.ParagraphMarker -> false
         is ReaderElement.Rule -> false
+    }
+
+    private fun handleComposeLinkClick(rawLink: String) {
+        val link = rawLink.trim()
+        if (link.isEmpty()) return
+        if (LocalBookSemanticHtml.isExternalLink(link)) {
+            viewModel.onIntent(
+                ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmOpenExternalUrl(if (link.startsWith("//")) "https:$link" else link))
+            )
+            return
+        }
+        if (LocalBookSemanticHtml.classifyLink(link) == LocalBookSemanticHtml.LinkKind.INTERNAL) {
+            viewModel.openInternalBookLink(link)
+        }
     }
 
     fun onComposeReaderElementLongPress(element: ReaderElement, x: Float, y: Float): Boolean {

@@ -15,17 +15,6 @@ class ReaderLineSpacingTest {
         }, 0, ReaderTextAlignment.START, 20f, 16f, 20f,
             emphasized = title, lineSpacingMultiplier = multiplier)
 
-    @Test fun paragraphUsesGlyphHeightForFitAndLineSpacingForAdvance() {
-        val text = "甲乙丙"
-        val paragraph = ReaderMeasuredParagraph(text, text.map(Char::toString), FloatArray(3) { 20f }, style, 0)
-        val pages = ReaderPaginator.paginate(listOf(paragraph), config)
-        assertEquals(listOf("甲乙", "丙"), pages.map { it.text })
-        val glyphs = pages.first().elements.filterIsInstance<ReaderElement.Text>()
-        assertEquals(listOf(0f, 30f), glyphs.map { it.bounds.top })
-        assertEquals(listOf(20f, 50f), glyphs.map { it.bounds.bottom })
-        assertEquals(listOf(16f, 46f), glyphs.map { it.baselinePx })
-    }
-
     @Test fun inlineParagraphAndTitleUseIndependentLineSpacing() {
         val pages = ReaderPaginator.paginateBlocks(listOf(inline("甲乙丙")), config)
         assertEquals(listOf("甲乙", "丙"), pages.map { it.text })
@@ -39,6 +28,31 @@ class ReaderLineSpacingTest {
         val page = ReaderPaginator.paginateBlocks(listOf(inline("甲"), inline("乙")),
             config.copy(viewportHeightPx = 60, paragraphSpacingPx = 5f)).single()
         assertEquals(listOf(0f, 35f), page.elements.map { it.bounds.top })
+    }
+
+    /**
+     * HTML 段落只应比普通段落多出“按词间空格两端对齐”的行为，行推进必须完全一致。
+     * 旧 View 的 `setTypeHtml` 把行距倍率算了两次并额外加 paragraphSpacing，
+     * 会让同一页里的 HTML 段落和普通段落行距不同（微信读书主题更明显）。
+     */
+    @Test fun htmlParagraphUsesSameLineAdvanceAsPlainText() {
+        // 同一页里的普通段落 → HTML 段落：起点 = 行盒 20 × 1.5 + 段距 5。
+        val mixed = ReaderPaginator.paginateBlocks(
+            listOf(inline("甲"), inline("乙").copy(justifyAtWordBoundaries = true)),
+            config.copy(viewportHeightPx = 120, paragraphSpacingPx = 5f),
+        ).single()
+        assertEquals(listOf(0f, 35f), mixed.elements.map { it.bounds.top })
+
+        // 多行 HTML 段落每行的推进同样只乘一次行距倍率（20 × 1.5 = 30），
+        // 与同内容的普通段落逐行一致。
+        fun tops(block: ReaderMeasuredBlock.InlineParagraph): List<Float> =
+            ReaderPaginator.paginateBlocks(
+                listOf(block),
+                config.copy(viewportWidthPx = 50, viewportHeightPx = 120),
+            ).single().elements.map { it.bounds.top }
+
+        assertEquals(listOf(0f, 0f, 30f), tops(inline("甲乙丙")))
+        assertEquals(tops(inline("甲乙丙")), tops(inline("甲乙丙").copy(justifyAtWordBoundaries = true)))
     }
 
     @Test

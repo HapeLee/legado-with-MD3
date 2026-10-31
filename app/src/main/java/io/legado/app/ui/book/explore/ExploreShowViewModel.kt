@@ -24,9 +24,12 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
@@ -103,6 +106,22 @@ class ExploreShowViewModel(
         )
     )
     val uiState = _uiState.asStateFlow()
+
+    val layoutState = uiState
+        .map { it.layoutState }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = uiState.value.layoutState,
+        )
+
+    val gridCount = uiState
+        .map { it.gridCount }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = uiState.value.gridCount,
+        )
 
     private val _effects = MutableSharedFlow<ExploreShowEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()

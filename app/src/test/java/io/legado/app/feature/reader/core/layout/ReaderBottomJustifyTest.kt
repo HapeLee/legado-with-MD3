@@ -9,14 +9,19 @@ import org.junit.Test
 class ReaderBottomJustifyTest {
     private val style = ReaderTextStyle(0, 10f)
 
-    private fun paragraph(text: String) = ReaderMeasuredBlock.Paragraph(
-        ReaderMeasuredParagraph(
-            text = text,
-            clusters = text.map(Char::toString),
-            clusterWidthsPx = FloatArray(text.length) { 10f },
-            style = style,
-            chapterPosition = 0,
-        ),
+    private fun paragraph(
+        text: String,
+        lineHeightPx: Float = 10f,
+        baselineOffsetPx: Float = 8f,
+    ) = ReaderMeasuredBlock.InlineParagraph(
+        items = text.mapIndexed { index, char ->
+            ReaderMeasuredInlineItem.Text(char.toString(), 10f, style, index)
+        },
+        indentCharacters = 0,
+        alignment = ReaderTextAlignment.START,
+        lineHeightPx = lineHeightPx,
+        baselineOffsetPx = baselineOffsetPx,
+        baseTextSizePx = 10f,
     )
 
     @Test fun enabledSettingDistributesNearBottomSurplusAcrossTextRows() {
@@ -83,9 +88,9 @@ class ReaderBottomJustifyTest {
         )
         // 40px 宽、每字 10px：每行 4 字。7 行正文在 110px 内容区里断成 5 行 + 2 行两页。
         val text = "字".repeat(28)
-        val ordinary = ReaderPaginator.paginateBlocks(listOf(paragraph(text)), base)
+        val ordinary = ReaderPaginator.paginateBlocks(listOf(paragraph(text, 20f, 15f)), base)
         val justified = ReaderPaginator.paginateBlocks(
-            listOf(paragraph(text)),
+            listOf(paragraph(text, 20f, 15f)),
             base.copy(textBottomJustify = true),
         )
 

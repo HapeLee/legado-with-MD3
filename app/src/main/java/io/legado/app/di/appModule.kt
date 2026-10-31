@@ -386,6 +386,7 @@ val appModule = module {
     single {
         SearchContentRepository(
             titleModeProvider = { io.legado.app.help.config.ReadBookConfig.titleMode },
+            paragraphIndentProvider = { io.legado.app.help.config.ReadBookConfig.paragraphIndent },
             historyDao = get(),
             readSettingsGateway = get(),
             otherSettingsGateway = get(),

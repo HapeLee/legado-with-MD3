@@ -3960,4 +3960,5 @@
     <string name="page_anim_ios_curl">iOS Curl</string>
     <string name="page_anim_google_curl">Google Curl</string>
     <string name="page_anim_parallax">Parallax</string>
+    <string name="bookmark_target_content_mismatch">正文已变化或无法验证原位置，仍要跳转吗？</string>
 </resources>

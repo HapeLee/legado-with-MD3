@@ -20,32 +20,3 @@ fun interface ReaderTextShaper {
     val fontBounds: ReaderFontBounds? get() = null
     val fontLineMetrics: ReaderFontLineMetrics? get() = null
 }
-
-class ReaderParagraphFactory(private val shaper: ReaderTextShaper) {
-    fun create(
-        text: String,
-        style: io.legado.app.feature.reader.core.model.ReaderTextStyle,
-        chapterPosition: Int,
-        indentCharacters: Int = 0,
-        alignment: ReaderTextAlignment = ReaderTextAlignment.START,
-        isTitle: Boolean = false,
-        link: String? = null,
-        lineHeightPx: Float? = null,
-        baselineOffsetPx: Float? = null,
-    ): ReaderMeasuredParagraph {
-        val shaped = shaper.shape(text)
-        return ReaderMeasuredParagraph(
-            text = text,
-            clusters = shaped.text,
-            clusterWidthsPx = shaped.widthsPx,
-            style = style,
-            chapterPosition = chapterPosition,
-            indentCharacters = indentCharacters,
-            alignment = alignment,
-            isTitle = isTitle,
-            link = link,
-            lineHeightPx = lineHeightPx,
-            baselineOffsetPx = baselineOffsetPx,
-        )
-    }
-}

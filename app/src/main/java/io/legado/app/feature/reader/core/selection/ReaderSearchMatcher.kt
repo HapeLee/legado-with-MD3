@@ -1,6 +1,7 @@
 package io.legado.app.feature.reader.core.selection
 
 import io.legado.app.utils.RegexDeadlineSequence
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticLocation
 
 private const val REGEX_MATCH_TIMEOUT_MILLIS = 500L
 
@@ -34,6 +35,8 @@ object ReaderSearchMatcher {
         // 序号仍然稳定，所以不能用 queryIndexInChapter 直接猜位置。
         val byOccurrence = resolveByOccurrence(searchContent, query, request.isRegex, occurrence)
         if (byOccurrence != null) {
+            if (!ReaderSemanticLocation.isValidOffset(searchContent, byOccurrence.first) ||
+                !ReaderSemanticLocation.isValidOffset(searchContent, byOccurrence.first + byOccurrence.second)) return null
             return matchAt(byOccurrence.first, byOccurrence.second, titlePrefix.length)
         }
         // 序号越界说明章节在搜索后被改短了，退回"文本已核对"的直达下标。
@@ -75,7 +78,9 @@ object ReaderSearchMatcher {
         val directLength = request.directLength.takeIf { it > 0 } ?: query.length
         val directIndex = request.directIndex.takeIf { it in 0..searchContent.length }
             ?: return null
-        if (directIndex + directLength > searchContent.length) return null
+        if (directLength > searchContent.length - directIndex ||
+            !ReaderSemanticLocation.isValidOffset(searchContent, directIndex) ||
+            !ReaderSemanticLocation.isValidOffset(searchContent, directIndex + directLength)) return null
         val sameText = if (request.isRegex) {
             val matchedText = searchContent.substring(directIndex, directIndex + directLength)
             runCatching {

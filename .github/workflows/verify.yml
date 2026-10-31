@@ -41,7 +41,9 @@ jobs:
         run: |
           sed -i '/maven.aliyun.com/d' settings.gradle
 
-      - name: Run tests, lint, architecture check, and debug build
+      # Reader semantic golden/contract/consumer/file tests are discovered by the
+      # same unfiltered JVM task, preserving per-class Robolectric isolation.
+      - name: Run semantic compatibility, unit tests, lint, architecture check, and debug build
         run: |
           chmod +x gradlew
           ./gradlew \
