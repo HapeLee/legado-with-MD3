@@ -57,8 +57,10 @@ class EpubFile(var book: Book) {
         }
 
         @Synchronized
-        fun getPresentation(book: Book, chapter: BookChapter): String? =
-            getEFile(book).getContent(chapter, presentation = true)
+        fun getPresentation(book: Book, chapter: BookChapter): io.legado.app.feature.reader.core.source.ReaderLocalPresentation? =
+            getEFile(book).getContent(chapter, presentation = true)?.let {
+                io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(it)
+            }
 
         @Synchronized
         override fun getImage(
@@ -170,7 +172,7 @@ class EpubFile(var book: Book) {
         elements.select("img[src=\"cover.jpeg\"]").forEachIndexed { i, it ->
             if (i > 0) it.remove()
         }
-        LocalBookSemanticHtml.sanitizeImages(elements, preserveAppearance = presentation)
+        LocalBookSemanticHtml.sanitizeImages(elements, preserveAppearance = false)
         val tag = Book.rubyTag
         if (book.getDelTag(tag)) {
             elements.select("rp, rt").remove()

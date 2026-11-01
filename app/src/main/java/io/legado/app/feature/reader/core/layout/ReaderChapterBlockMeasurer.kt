@@ -259,6 +259,7 @@ class ReaderChapterBlockMeasurer(
              */
             fromHtmlBlock: Boolean = false,
             castFeed: Boolean = true,
+            hideBodyIndent: Boolean = false,
         ) {
             // 旧 `TextChapterLayout` 在每段排版前 `currentCoroutineContext().ensureActive()`。
             // 排版是不可中断的长循环：取消 / 重启时必须在段落边界停下，否则旧任务会把整章算完
@@ -288,7 +289,7 @@ class ReaderChapterBlockMeasurer(
             }
             val firstText = items.firstOrNull() as? ReaderChapterInlineSource.Text
             val prefixEnd = firstText?.takeIf {
-                applyBodyIndent && !isTitle && bodyIndentText.isNotEmpty() &&
+                (applyBodyIndent || hideBodyIndent) && !isTitle && bodyIndentText.isNotEmpty() &&
                     it.value.startsWith(bodyIndentText)
             }?.let { it.chapterPosition + bodyIndentText.length }
             var emittedContent = false
@@ -318,7 +319,13 @@ class ReaderChapterBlockMeasurer(
                     decorations = decorations,
                     // 旧 HTML 块才有整行补空格、按词间空格两端对齐的行为。
                     justifyAtWordBoundaries = fromHtmlBlock,
-                    alignment = alignmentOverride ?: if (isTitle) style.titleAlignment else style.bodyAlignment,
+                    // 普通正文的左对齐/两端对齐跟随阅读配置；居中、右对齐和结构块保留书籍排版。
+                    // 本地呈现与旧 HTML 都在此决定优先级，不在各自解析器中改写来源属性。
+                    alignment = when {
+                        !isTitle && applyBodyIndent && (alignmentOverride == ReaderTextAlignment.START ||
+                            alignmentOverride == ReaderTextAlignment.JUSTIFY) -> style.bodyAlignment
+                        else -> alignmentOverride ?: if (isTitle) style.titleAlignment else style.bodyAlignment
+                    },
                     lineHeightPx = lineHeight ?: baseStyle.fontSizePx,
                     baselineOffsetPx = baselineOffset ?: baseStyle.fontSizePx,
                     baseTextSizePx = baseStyle.fontSizePx,
@@ -370,7 +377,9 @@ class ReaderChapterBlockMeasurer(
                             // The paragraph was already shaped with htmlStyle to obtain its
                             // grapheme clusters. For the overwhelmingly common unstyled glyph,
                             // reuse that width instead of shaping the same glyph a second time.
-                            val width = if (cachedTextStyleIsPlain) {
+                            val width = if (hideBodyIndent && prefixEnd != null && position < prefixEnd) {
+                                0f // Keep legacy coordinates while structural blocks omit the injected indent visually.
+                            } else if (cachedTextStyleIsPlain) {
                                 initiallyShaped.widthsPx.getOrElse(clusterIndex) { 0f }
                             } else {
                                 (metrics?.shape(textShaper, cluster) ?: textShaper.shape(cluster))
@@ -588,11 +597,19 @@ class ReaderChapterBlockMeasurer(
                     val hint = block.presentation
                     if (hint?.rule == true) {
                         blocks += ReaderMeasuredBlock.Rule(style.bodyStyle.colorArgb,
-                            (style.bodyStyle.fontSizePx / 16f).coerceAtLeast(1f), style.bodyStyle.fontSizePx / 2f)
+                            (style.bodyStyle.fontSizePx / 16f).coerceAtLeast(1f), style.bodyStyle.fontSizePx / 2f,
+                            chapterPosition = block.chapterPosition, semantic = false)
+                    } else if (hint?.blankLine == true) {
+                        blocks += ReaderMeasuredBlock.BlankLine(block.chapterPosition,
+                            style.bodyLineHeightPx ?: style.bodyStyle.fontSizePx, style.bodyLineSpacingMultiplier,
+                            semantic = false)
                     } else {
                         val scale = style.bodyStyle.fontSizePx / 10f
                         addStyledParagraph(block.items, false,
-                            applyBodyIndent = hint?.preserveBodyIndent ?: true,
+                            applyBodyIndent = (hint?.preserveBodyIndent ?: true) &&
+                                hint?.alignment != ReaderTextAlignment.CENTER && hint?.alignment != ReaderTextAlignment.END,
+                            hideBodyIndent = hint != null && (!hint.preserveBodyIndent ||
+                                hint.alignment == ReaderTextAlignment.CENTER || hint.alignment == ReaderTextAlignment.END),
                             firstLineMarginPx = (hint?.firstMargin ?: 0f) * scale,
                             restLineMarginPx = (hint?.restMargin ?: 0f) * scale,
                             alignmentOverride = hint?.alignment,

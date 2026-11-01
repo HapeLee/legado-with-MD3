@@ -162,6 +162,7 @@ sealed interface ReaderMeasuredBlock {
         val chapterPosition: Int,
         val lineHeightPx: Float,
         val lineSpacingMultiplier: Float,
+        val semantic: Boolean = true,
     ) : ReaderMeasuredBlock
 
     data class Rule(
@@ -171,6 +172,7 @@ sealed interface ReaderMeasuredBlock {
         val dashed: Boolean = false,
         /** Non-null for an HTML hr, which retains its existing semantic newline. */
         val chapterPosition: Int? = null,
+        val semantic: Boolean = true,
     ) : ReaderMeasuredBlock
 
     data object PageBreak : ReaderMeasuredBlock
@@ -949,7 +951,7 @@ internal class ReaderPaginationSession(
         rule.chapterPosition?.let { position ->
             elements += ReaderElement.Spacer(
                 ReaderRect(columnLeft(), lineY, columnLeft() + config.contentWidthPx, lineY + rule.widthPx),
-                position, paragraphIndex,
+                position, paragraphIndex, semanticLength = if (rule.semantic) 1 else 0,
             )
         }
         elements += ReaderElement.Rule(
@@ -965,7 +967,7 @@ internal class ReaderPaginationSession(
         )
         columnRows += ReaderLayoutRow(rowElementStart, elements.size, lineY, lineY + rule.widthPx)
         y += requiredHeight
-        if (rule.chapterPosition != null && appendSeparator) {
+        if (rule.semantic && rule.chapterPosition != null && appendSeparator) {
             pageText.append('\n')
             y += config.paragraphSpacingPx
         }
@@ -983,10 +985,11 @@ internal class ReaderPaginationSession(
             bounds = ReaderRect(columnLeft(), y, columnLeft() + config.contentWidthPx, y + height),
             chapterPosition = blank.chapterPosition,
             paragraphIndex = paragraphIndex,
+            semanticLength = if (blank.semantic) 1 else 0,
         )
         columnRows += ReaderLayoutRow(rowElementStart, elements.size, y, y + height)
         y += height * blank.lineSpacingMultiplier
-        if (appendSeparator) {
+        if (appendSeparator && blank.semantic) {
             pageText.append('\n')
             y += config.paragraphSpacingPx
         }

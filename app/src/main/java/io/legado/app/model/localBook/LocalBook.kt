@@ -214,7 +214,7 @@ object LocalBook {
     }
 
     /** Optional original markup. Failure must never replace the authoritative chapter text. */
-    fun getPresentation(book: Book, chapter: BookChapter): String? = try {
+    fun getPresentation(book: Book, chapter: BookChapter): io.legado.app.feature.reader.core.source.ReaderLocalPresentation? = try {
         when {
             book.isEpub -> EpubFile.getPresentation(book, chapter)
             book.isMobi -> MobiFile.getPresentation(book, chapter)
@@ -222,7 +222,8 @@ object LocalBook {
         }
     } catch (cancelled: kotlinx.coroutines.CancellationException) {
         throw cancelled
-    } catch (_: Exception) {
+    } catch (error: Exception) {
+        AppLog.put("本地呈现读取失败: chapter=${chapter.index}, ${error.javaClass.simpleName}")
         null
     }
 

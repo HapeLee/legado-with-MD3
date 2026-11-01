@@ -26,7 +26,17 @@ fun CharSequence.replace(
     replacement: String,
     timeout: Long,
     chapter: BookChapter? = null,
-    book: SearchBook? = null
+    book: SearchBook? = null,
+): String = replace(regex, replacement, timeout, chapter, book, onReplace = null)
+
+
+internal fun CharSequence.replace(
+    regex: Regex,
+    replacement: String,
+    timeout: Long,
+    chapter: BookChapter? = null,
+    book: SearchBook? = null,
+    onReplace: ((Int, Int, Int) -> Unit)?,
 ): String {
     val charSequence = this@replace
     val isJs = replacement.startsWith("@js:")
@@ -45,7 +55,9 @@ fun CharSequence.replace(
                     val pattern = regex.toPattern()
                     val matcher = pattern.matcher(charSequence)
                     val stringBuffer = StringBuffer()
+                    var previousEnd = 0
                     while (matcher.find()) {
+                        val previousLength = stringBuffer.length
                         if (isJs) {
                             val jsResult = RhinoScriptEngine.run {
                                 val bindings = ScriptBindings()
@@ -59,6 +71,19 @@ fun CharSequence.replace(
                         } else {
                             matcher.appendReplacement(stringBuffer, replacement1)
                         }
+                        if (onReplace != null) {
+                            val replacementStart = previousLength + matcher.start() - previousEnd
+                            val count = stringBuffer.length - replacementStart
+                            var unchanged = count == matcher.end() - matcher.start()
+                            if (unchanged) for (index in 0 until count) {
+                                if (charSequence[matcher.start() + index] != stringBuffer[replacementStart + index]) {
+                                    unchanged = false
+                                    break
+                                }
+                            }
+                            if (!unchanged) onReplace(matcher.start(), matcher.end(), count)
+                        }
+                        previousEnd = matcher.end()
                     }
                     matcher.appendTail(stringBuffer)
                     block.resume(stringBuffer.toString())

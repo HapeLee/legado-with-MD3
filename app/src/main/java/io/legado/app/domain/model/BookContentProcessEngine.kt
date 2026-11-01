@@ -15,6 +15,13 @@ object BookContentProcessEngine {
     fun apply(
         content: String,
         processes: List<BookContentProcess>,
+    ): ApplyResult = apply(content, processes, onReplace = null)
+
+
+    internal fun apply(
+        content: String,
+        processes: List<BookContentProcess>,
+        onReplace: ((Int, Int, String) -> Unit)?,
     ): ApplyResult {
         if (content.isEmpty() || processes.isEmpty()) {
             return ApplyResult(content, emptyList())
@@ -75,6 +82,13 @@ object BookContentProcessEngine {
                     else -> output
                 }
                 if (next != output) {
+                    if (onReplace != null) {
+                        val start = if (action.type == TextProcessAction.TYPE_INSERT_AFTER) range.last + 1 else range.first
+                        val end = if (action.type == TextProcessAction.TYPE_INSERT_BEFORE ||
+                            action.type == TextProcessAction.TYPE_INSERT_AFTER) start else range.last + 1
+                        val count = next.length - output.length + end - start
+                        onReplace(start, end, next.substring(start, start + count))
+                    }
                     output = next
                     effectiveProcesses.add(process)
                 }

@@ -1,11 +1,11 @@
 package io.legado.app.help.book
 
+import io.legado.app.domain.model.TextProjection
 import io.legado.app.constant.AppPattern
 import org.jsoup.Jsoup
 import org.jsoup.nodes.TextNode
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSourceResolver
-import io.legado.app.model.localBook.LocalBookSemanticHtml
 
 /** Only the existing <usehtml> channel envelope; not an HTML parser or a document model. */
 internal object MixedContentSegments {
@@ -55,17 +55,25 @@ internal object MixedContentSegments {
         }
     }
 
-    /** Normalize generated local envelopes at the input boundary, not based on a display setting. */
-    fun toLocalPlainText(content: String, decodeEntities: Boolean): String {
-        val segments = split(content)
-        if (segments.none { it is Segment.Rich }) return content
-        return segments.joinToString("\n") { segment ->
-            when (segment) {
-                is Segment.Plain -> segment.text.trim('\n')
-                is Segment.Rich -> LocalBookSemanticHtml.plainText(
-                    Jsoup.parseBodyFragment(segment.html).body().outerHtml(), decodeEntities).trim()
+    fun transformPlainTextMapped(text: String, projection: TextProjection?, transform: (String, TextProjection?) -> String): String {
+        if (projection == null) return transformPlainText(text) { transform(it, null) }
+        val parts = mutableListOf<TextProjection>()
+        var cursor = 0
+        val result = buildString {
+            legacyTag.findAll(text).forEach { tag ->
+                val before = projection.slice(cursor, tag.range.first)
+                append(transform(text.substring(cursor, tag.range.first), before))
+                parts += before
+                append(tag.value)
+                parts += projection.slice(tag.range.first, tag.range.last + 1)
+                cursor = tag.range.last + 1
             }
+            val tail = projection.slice(cursor, text.length)
+            append(transform(text.substring(cursor), tail))
+            parts += tail
         }
+        projection.join(parts)
+        return result
     }
 
     private val legacyTag = Regex("""<(?:(?:"[^"]*")|(?:'[^']*')|[^'">])*>""")

@@ -1,9 +1,11 @@
 package io.legado.app.model.localBook
 
+import io.legado.app.domain.model.TextProjection
+import io.legado.app.utils.replaceMapped
+import io.legado.app.utils.unescapeHtml4Mapped
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.encodeURI
-import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
@@ -20,9 +22,15 @@ object LocalBookSemanticHtml {
 
     /** The pre-rich-channel local-book transport. Decoding happens once at this boundary. */
     fun plainText(html: String, decodeEntities: Boolean = true): String {
-        val text = HtmlFormatter.formatKeepImg(html)
-        return if (decodeEntities) StringEscapeUtils.unescapeHtml4(
-            text.replace("&lt;img", "&lt; img", ignoreCase = true)) else text
+        return plainTextMapped(html, decodeEntities, null)
+    }
+
+    internal fun plainTextMapped(html: String, decodeEntities: Boolean, projection: TextProjection?): String {
+        val text = HtmlFormatter.formatKeepImgMapped(html, projection = projection)
+        return if (decodeEntities) text.replaceMapped("&lt;img", "&lt; img", projection, ignoreCase = true)
+            .unescapeHtml4Mapped(projection) else text
+                .replaceMapped(Regex("<\\?xml[^>]*>"), "", projection)
+                .replaceMapped(Regex("<!DOCTYPE[^>]*>"), "", projection)
     }
 
     private val allowedImgAttrs = setOf("src", "alt", "width", "height", "class", "style")

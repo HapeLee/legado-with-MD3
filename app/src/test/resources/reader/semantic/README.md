@@ -19,3 +19,9 @@ then normal paragraph trimming) produces those goldens; tests must not derive ex
 from the current presentation parser. Table cells deliberately remain separate old paragraphs.
 CSS `display:none` on `.reader-visible` must not remove the canonical final paragraph.
 These shared resources are used by projection, measurement and Room-backed consumer tests.
+
+The same fixture includes a body link and consecutive visual breaks without changing the frozen
+main-branch text or BGM ordinals. Processing integration tests enable presentation through the
+production entry and replace only file loading; layout tests also check link hit testing, list
+markers and zero-character blank lines. A passing text/coordinate assertion alone is not evidence
+that rich appearance reached pagination.

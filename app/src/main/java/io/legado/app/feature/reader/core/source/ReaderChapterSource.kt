@@ -1,5 +1,6 @@
 package io.legado.app.feature.reader.core.source
 
+import io.legado.app.domain.model.TextProjection
 import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.feature.reader.core.semantic.ReaderSemanticContract
 
@@ -135,6 +136,10 @@ object ReaderChapterSourceParser {
         bgmScenes: Map<Int, Pair<String, String>> = emptyMap(),
         localPresentation: ReaderLocalPresentation? = null,
     ): ReaderChapterSource {
+        val appearance = localPresentation?.bind(if (paragraphs.isEmpty()) "" else paragraphs.joinToString("\n", postfix = "\n"))
+        val projection = appearance?.let { TextProjection(it.content.length) }
+        val edits = mutableListOf<TextProjection.Edit>()
+        var inputPosition = 0
         val result = mutableListOf<ReaderChapterSourceBlock>()
         val semanticContent = StringBuilder()
         val sourceParagraphs = mutableListOf<ReaderSourceParagraph>()
@@ -159,6 +164,8 @@ object ReaderChapterSourceParser {
                 }
             }
             if (adaptSpecialStyle && trimmed == "[newpage]") {
+                if (projection != null) edits += TextProjection.Edit(inputPosition, inputPosition + rawParagraph.length + 1, 0)
+                inputPosition += rawParagraph.length + 1
                 result += ReaderChapterSourceBlock.PageBreak(position)
                 recordParagraph()
                 return@forEach
@@ -167,6 +174,9 @@ object ReaderChapterSourceParser {
                 val html = trimmed.removePrefix("<usehtml>").removeSuffix("</usehtml>")
                 val semanticText = requireNotNull(htmlSemanticTextResolver) { "Explicit HTML requires the platform resolver" }.resolve(html)
                 val semanticLength = semanticText.length
+                if (projection != null) edits += TextProjection.Edit(inputPosition,
+                    inputPosition + rawParagraph.length, semanticLength)
+                inputPosition += rawParagraph.length + 1
                 addBgmScene()
                 result += ReaderChapterSourceBlock.Html(html, position, semanticLength)
                 semanticContent.append(semanticText).append(ReaderSemanticContract.PARAGRAPH_BREAK)
@@ -178,20 +188,26 @@ object ReaderChapterSourceParser {
             val paragraphPosition = position
             var cursor = 0
             // 多角色分配：在 Text 片段内把标记插到对应开引号后，并推进全局引号计数
-            fun injectCast(text: String): String {
+            fun injectCast(text: String, start: Int): String {
                 val labels = castLabels ?: return text
-                return CastMarkers.injectParagraph(text, castTracker, labels)
+                return CastMarkers.injectParagraph(text, castTracker, labels,
+                    onInsert = if (projection == null) null else { offset, count ->
+                        edits += TextProjection.Edit(inputPosition + start + offset,
+                            inputPosition + start + offset, count, inheritPrevious = true)
+                    })
             }
             imagePattern.findAll(rawParagraph).forEach { match ->
                 if (cursor < match.range.first) {
                     val text = rawParagraph.substring(cursor, match.range.first)
                     if (text.isNotEmpty()) {
-                        val castText = injectCast(text)
+                        val castText = injectCast(text, cursor)
                         inlineItems += ReaderChapterInlineSource.Text(castText, position)
                         semanticContent.append(castText)
                         position += castText.length
                     }
                 }
+                if (projection != null) edits += TextProjection.Edit(inputPosition + match.range.first,
+                    inputPosition + match.range.last + 1, 1)
                 inlineItems += ReaderChapterInlineSource.Image(match.groupValues[1], position)
                 semanticContent.append(ReaderSemanticContract.IMAGE_CHAR)
                 position += 1
@@ -200,7 +216,7 @@ object ReaderChapterSourceParser {
             if (cursor < rawParagraph.length) {
                 val text = rawParagraph.substring(cursor)
                 if (text.isNotEmpty()) {
-                    val castText = injectCast(text)
+                    val castText = injectCast(text, cursor)
                     inlineItems += ReaderChapterInlineSource.Text(castText, position)
                     semanticContent.append(castText)
                     position += castText.length
@@ -213,9 +229,12 @@ object ReaderChapterSourceParser {
             semanticContent.append(ReaderSemanticContract.PARAGRAPH_BREAK)
             position += 1 // Paragraph separator uses the same chapter-position unit as legacy layout.
             recordParagraph()
+            inputPosition += rawParagraph.length + 1
         }
         val source = ReaderChapterSource(chapterIndex, title, result, position, semanticContent.toString(), sourceParagraphs)
-        return localPresentation?.applyTo(source) ?: source
+        if (projection == null) return source
+        projection.replace(edits)
+        return checkNotNull(appearance).remap(projection, source.semanticContent).applyTo(source)
     }
 
     /** Existing assignment eligibility: images and explicit legacy HTML are not quote anchors.

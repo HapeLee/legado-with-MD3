@@ -235,6 +235,14 @@ object CastMarkers {
         paragraph: String,
         tracker: CastQuoteTracker,
         assignmentLabels: Map<Int, String>,
+    ): String = injectParagraph(paragraph, tracker, assignmentLabels, onInsert = null)
+
+
+    internal fun injectParagraph(
+        paragraph: String,
+        tracker: CastQuoteTracker,
+        assignmentLabels: Map<Int, String>,
+        onInsert: ((Int, Int) -> Unit)?,
     ): String {
         if (paragraph.isEmpty() || assignmentLabels.isEmpty()) {
             // 即使没有分配也要推进 tracker，保持与测量侧序号一致
@@ -244,11 +252,14 @@ object CastMarkers {
             return paragraph
         }
         val sb = StringBuilder(paragraph.length + 16)
-        for (ch in paragraph) {
+        for ((index, ch) in paragraph.withIndex()) {
             sb.append(ch)
             if (tracker.feed(ch)) {
                 val label = assignmentLabels[tracker.lastCastOrdinal]
-                if (label != null) sb.append(label)
+                if (label != null) {
+                    sb.append(label)
+                    onInsert?.invoke(index + 1, label.length)
+                }
             }
         }
         return sb.toString()

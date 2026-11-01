@@ -17,6 +17,13 @@ import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.domain.usecase.RelocateMarkingTargetUseCase
 import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
+import io.legado.app.feature.reader.core.layout.*
+import io.legado.app.feature.reader.core.model.ReaderTextStyle
+import io.legado.app.feature.reader.core.model.ReaderElement
+import io.legado.app.feature.reader.core.source.ReaderChapterSource
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
+import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
+import io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.config.AppConfigStore
@@ -107,6 +114,9 @@ class ContentProcessorSemanticIntegrationTest {
     private fun source(content: BookContent) = ReaderChapterSourceParser.parse(0, "", content.textList, false,
         read.currentSettings.adaptSpecialStyle, AndroidReaderHtmlSemanticTextResolver, localPresentation = content.presentation)
 
+    private fun textItems(source: ReaderChapterSource) = source.blocks.filterIsInstance<ReaderChapterSourceBlock.Paragraph>()
+        .flatMap { it.items }.filterIsInstance<ReaderChapterInlineSource.Text>()
+
     @Test fun oldBgmRecordsKeepTheirTargetAcrossStyleSwitchesAndAllConsumers() = runBlocking {
         val sample = io.legado.app.support.ReaderSemanticFixtures
         val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(sample.html).body().outerHtml())
@@ -121,12 +131,20 @@ class ContentProcessorSemanticIntegrationTest {
         BookHelp.saveText(book, chapter, raw)
         for (enabled in listOf(true, false, true)) {
             read.update { it.copy(adaptSpecialStyle = enabled) }
-            val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = "")
-            val decoration = if (enabled) io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver
-                .resolve(sample.html, raw, "", enabled) else null
+            val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false,
+                paragraphIndent = "", includePresentation = true,
+                localPresentationProvider = {
+                    val document = Jsoup.parse(sample.html)
+                    io.legado.app.model.localBook.LocalBookSemanticHtml.inlineDocumentCssSemantics(document) { sample.css }
+                    ReaderLocalPresentationResolver.resolve(document.body().outerHtml())
+                })
             val current = ReaderChapterSourceParser.parse(0, "", processed.textList, false, enabled,
                 AndroidReaderHtmlSemanticTextResolver, bgmScenes = io.legado.app.help.readaloud.cast.BgmSceneStore
-                    .labelsForChapter(book.bookUrl, 0), localPresentation = decoration)
+                    .labelsForChapter(book.bookUrl, 0), localPresentation = processed.presentation)
+            if (enabled) {
+                assertTrue(textItems(current).any { it.style.link == "#chapter" })
+                assertTrue(textItems(current).any { it.style.fontWeight == 700 })
+            }
             assertEquals(sample.body, current.semanticContent)
             val ranges = io.legado.app.help.readaloud.cast.BgmSceneStore.positionsToOrdinals(current)
             val target = current.paragraphs.single { it.ordinal == saved.paragraphOrdinal }
@@ -155,7 +173,7 @@ class ContentProcessorSemanticIntegrationTest {
         assertEquals(listOf(saved), fixture.database.bgmSceneDao.getChapter(book.bookUrl, 0))
     }
 
-    @Test fun localCrossNodeRulesAndJsExecuteOnceAndCanDropOnlyPresentation() {
+    @Test fun localCrossNodeRulesAndJsExecuteOnceAndOnlyDropAmbiguousStyles() {
         book.origin = io.legado.app.constant.BookType.localTag
         book.originName = "fixture.epub"
         book.type = 0
@@ -164,17 +182,17 @@ class ContentProcessorSemanticIntegrationTest {
         fixture.database.replaceRuleDao.insert(ReplaceRule(id = 102, pattern = "昨天", replacement =
             "@js:chapter.putVariable('runs', String(parseInt(chapter.getVariable('runs') || '0') + 1)); '昨天';", isRegex = true, order = 1))
         chapter.putVariable("runs", "0")
-        val html = "<p>今天<strong>天气</strong><img src='Images/x.png'></p>"
+        val html = "<p>今天<strong>天气</strong><img src='Images/x.png'></p><p><a id='note' href='#note'>after</a></p>"
         val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(html).body().outerHtml())
-        val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = "")
-        val appearance = checkNotNull(io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(html, raw, "", true))
-        val current = source(processed.copy(presentation = appearance))
-        assertEquals("昨天\uFFFC\n", current.semanticContent)
+        val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false,
+            paragraphIndent = "", includePresentation = true, localPresentationProvider = { ReaderLocalPresentationResolver.resolve(html) })
+        val current = source(processed)
+        assertEquals("昨天\uFFFC\nafter\n", current.semanticContent)
         assertEquals("1", chapter.getVariable("runs"))
-        assertTrue(current.anchorPositions.isEmpty())
-        assertTrue(current.blocks.filterIsInstance<io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock.Paragraph>()
-            .all { it.presentation == null })
-        assertTrue(processed.textList.single().contains("Images/x.png"))
+        assertEquals(current.semanticContent.indexOf("after"), current.anchorPositions["note"])
+        assertEquals("#note", textItems(current).single { it.value == "after" }.style.link)
+        assertTrue(textItems(current).filter { it.value.contains("昨天") }.all { it.style.fontWeight == null })
+        assertTrue(processed.textList.first().contains("Images/x.png"))
     }
 
     @Test fun localSegmentationConversionAndIndentKeepTheirOldMeaningWithEitherAppearanceSetting() = runBlocking {
@@ -189,11 +207,12 @@ class ContentProcessorSemanticIntegrationTest {
                 else if (converter == 1) listOf("繁体 内容", "接续内容。") else listOf("繁體 內容", "接續內容。")
             for (enabled in listOf(true, false)) {
                 read.update { it.copy(adaptSpecialStyle = enabled, chineseConverterType = converter) }
-                val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = indent)
+                val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false,
+                    paragraphIndent = indent, includePresentation = true,
+                    localPresentationProvider = { ReaderLocalPresentationResolver.resolve(html) })
                 assertEquals(expected.map { indent + it }, processed.textList)
-                val appearance = io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(html, raw, indent, enabled)
-                val current = ReaderChapterSourceParser.parse(0, "", processed.textList, false, enabled,
-                    localPresentation = appearance.takeIf { enabled })
+                val current = source(processed)
+                if (enabled) assertTrue(textItems(current).any { it.style.fontWeight == 700 && it.value.contains(if (converter == 1) "内容" else "內容") })
                 assertEquals(expected.joinToString("\n", postfix = "\n") { indent + it }, current.semanticContent)
                 assertEquals(expected.indices.toList(), current.paragraphs.map { it.ordinal })
             }
@@ -242,17 +261,24 @@ class ContentProcessorSemanticIntegrationTest {
             anchorJson = GSON.toJson(TextProcessAnchor(0, 0, "after", normalizedTextHash = "")),
             actionJson = GSON.toJson(io.legado.app.domain.model.TextProcessAction(
                 io.legado.app.domain.model.TextProcessAction.TYPE_REPLACE, replacement = "edited"))))
+        val html = "<p><b>天气</b>&amp;<img src='Images/x.png'></p><p><a id='note' href='#note'>after</a></p>"
+        val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(html).body().outerHtml())
         for (enabled in listOf(false, true)) {
             read.update { it.copy(adaptSpecialStyle = enabled) }
             val result = ContentProcessor.get(book).getContent(book, chapter,
-                "<usehtml><p><b>天气</b>&amp;<img src='Images/x.png'></p><p>after</p></usehtml>",
-                includeTitle = false, paragraphIndent = "")
+                raw, includeTitle = false, paragraphIndent = "", includePresentation = true,
+                localPresentationProvider = { ReaderLocalPresentationResolver.resolve(html) })
             assertEquals(listOf("气候&<img src=\"Images/x.png\">", "edited"), result.textList)
             assertEquals("气候&\uFFFC\nedited\n", source(result).semanticContent)
+            if (enabled) {
+                val items = textItems(source(result))
+                assertEquals(700, items.single { it.value == "气候" }.style.fontWeight)
+                assertEquals("#note", items.single { it.value == "edited" }.style.link)
+            }
         }
     }
 
-    @Test fun plainTitleAndIndentationKeepLegacyLineSemantics() {
+    @Test fun plainTitleAndIndentationKeepLegacyLineSemantics() = runBlocking {
         val processor = ContentProcessor.get(book)
         for (title in listOf("  title　", "", "A\nB")) {
             chapter.title = title
@@ -263,6 +289,47 @@ class ContentProcessorSemanticIntegrationTest {
                 .mapIndexed { index, line -> if (index == 0) line else "　　$line" }
             assertEquals(legacy, processor.getContent(book, chapter, body, includeTitle = true,
                 useReplace = false, chineseConvert = false, reSegment = false, paragraphIndent = "　　").textList)
+        }
+        book.origin = io.legado.app.constant.BookType.localTag
+        book.originName = "fixture.epub"
+        book.type = 0
+        chapter.title = "chapter"
+        val html = "<h2 id='heading'>chapter</h2><p>正文“<a href='#note'>链接</a>”尾</p><p id='note'>注释</p>"
+        val canonical = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(html).body().outerHtml())
+        val shaper = ReaderTextShaper { GlyphClusters(it.map(Char::toString), FloatArray(it.length) { 10f }) }
+        val measureStyle = ReaderChapterMeasureStyle(ReaderTextStyle(1, 10f), ReaderTextStyle(2, 20f), 0,
+            ReaderTextAlignment.START, ReaderTextAlignment.START)
+        for (raw in listOf(canonical.trim(), canonical)) {
+            for (useReplace in listOf(false, true)) for (indent in listOf("", "　　")) {
+                book.setUseReplaceRule(useReplace)
+                val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false,
+                    paragraphIndent = indent, includePresentation = true,
+                    localPresentationProvider = { ReaderLocalPresentationResolver.resolve(html) })
+                assertEquals(raw == canonical.trim(), processed.sameTitleRemoved)
+                for (labels in listOf<Map<Int, String>?>(null, mapOf(0 to "<<甲（池）>>"))) {
+                    val current = ReaderChapterSourceParser.parse(0, "", processed.textList, false, true,
+                        castLabels = labels, localPresentation = processed.presentation)
+                    val label = if (labels == null) "" else "<<甲（池）>>"
+                    val heading = if (processed.sameTitleRemoved) "" else "${indent}chapter\n"
+                    assertEquals("${heading}${indent}正文“${label}链接”尾\n${indent}注释\n", current.semanticContent)
+                    assertEquals(if (processed.sameTitleRemoved) 0 else current.semanticContent.indexOf("chapter"),
+                        current.anchorPositions["heading"])
+                    assertEquals(current.semanticContent.indexOf("注释"), current.anchorPositions["note"])
+                    val measured = ReaderChapterBlockMeasurer(shaper, shaper, { null },
+                        castTracker = if (labels == null) null else io.legado.app.feature.reader.core.cast.CastMarkers.CastQuoteTracker(),
+                        castCapsuleWidthPx = { _, _, _, _ -> 10f }, castCapsuleHeightPx = 10f)
+                        .measure(current, measureStyle.copy(bodyIndentText = indent))
+                        as ReaderChapterMeasureResult.Success
+                    val page = ReaderPaginator.paginateBlocks(measured.blocks,
+                        ReaderPaginationConfig(0, "", 500, 1000, 0f, 0f, 0f, 0f, 10f, 8f)).single()
+                    if (labels != null) assertEquals(1, page.elements.filterIsInstance<ReaderElement.RoleCast>().size)
+                    val linked = page.elements.filterIsInstance<ReaderElement.Text>().filter { it.link == "#note" }
+                    assertEquals("链接", linked.joinToString("") { it.value })
+                    assertTrue(linked.all { it.drawsLinkUnderline && it.resolvedColorArgb(99) == 99 })
+                    assertEquals(linked.first(), page.elementAt((linked.first().bounds.left + linked.first().bounds.right) / 2f,
+                        (linked.first().bounds.top + linked.first().bounds.bottom) / 2f))
+                }
+            }
         }
     }
 
@@ -321,6 +388,21 @@ class ContentProcessorSemanticIntegrationTest {
                 *MixedContentSegments.paragraphs(ContentHelp.reSegment("\n" + after, chapter.title), "", true).toTypedArray(),
             ) else MixedContentSegments.paragraphs(ContentHelp.reSegment(raw, chapter.title), "", false)
             assertEquals(expected, output.textList)
+        }
+        book.origin = io.legado.app.constant.BookType.localTag
+        book.originName = "fixture.epub"
+        book.type = 0
+        read.update { it.copy(adaptSpecialStyle = true) }
+        for (body in listOf("甲说：\"<b>你好</b>。\"", "“<b>第一句</b>”“第二句”", "甲说。“<b>回答</b>”乙又说。“结尾”")) {
+            val html = "<p>$body</p><p><a id='n' href='#n'>引用</a></p>"
+            val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(html).body().outerHtml())
+            val processed = ContentProcessor.get(book).getContent(book, chapter, raw,
+                includeTitle = false, useReplace = false, chineseConvert = false, paragraphIndent = "", includePresentation = true,
+                localPresentationProvider = { ReaderLocalPresentationResolver.resolve(html) })
+            val current = source(processed)
+            assertEquals("#n", textItems(current).single { it.value == "引用" }.style.link)
+            assertEquals(current.semanticContent.indexOf("引用"), current.anchorPositions["n"])
+            assertTrue(textItems(current).any { it.style.fontWeight == 700 })
         }
     }
 

@@ -1,30 +1,16 @@
 package io.legado.app.feature.reader.platform
 
-import io.legado.app.feature.reader.core.layout.ReaderHtmlParagraph
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecoration
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
-import io.legado.app.feature.reader.core.semantic.ReaderSemanticContract
-import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
+import io.legado.app.feature.reader.core.source.ReaderLocalPresentation
 import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
-/**
- * Optional local HTML appearance parser. Its text is only a projection witness, never the chapter body.
- *
- * [parse] builds both in one pass with a shared cursor, so every inline item's
- * positions belong to this appearance witness; the resolver must map them to canonical body ranges.
- */
+/** Reads appearance and source ranges only. Canonical text is emitted by the legacy formatter. */
 internal object JsoupReaderPresentationParser {
-
-    data class ParsedHtml(
-        val text: String,
-        val paragraphs: List<ReaderHtmlParagraph>,
-    )
-
     private data class InlineCtx(
         val bold: Boolean? = null,
         val italic: Boolean? = null,
@@ -54,208 +40,96 @@ internal object JsoupReaderPresentationParser {
     private class ListLevel(val ordered: Boolean, var next: Int, val step: Int)
     private class ListItem(val label: String?, var emitted: Boolean = false)
 
-    private class Cursor(
-        var pos: Int,
-        val text: StringBuilder = StringBuilder(),
-        val paragraphs: MutableList<ReaderHtmlParagraph> = mutableListOf(),
-        var current: MutableList<ReaderChapterInlineSource> = mutableListOf(),
-        var currentAlignment: ReaderTextAlignment? = null,
-        var currentDecorations: List<ReaderParagraphDecoration> = emptyList(),
-        var currentFirstMargin: Float = 0f,
-        var currentRestMargin: Float = 0f,
-        var currentPreserveBodyIndent: Boolean = true,
-        var currentListItem: ListItem? = null,
-        var pendingPreLine: Boolean = false,
-        val elementPositions: MutableMap<Element, Int>? = null,
-    ) {
-        fun apply(geo: BlockGeo) {
-            currentAlignment = geo.alignment
-            currentDecorations = geo.decorations
-            currentFirstMargin = geo.firstMargin
-            currentRestMargin = geo.restMargin
-            currentPreserveBodyIndent = geo.preserveBodyIndent
-            currentListItem = geo.listItem
+    fun project(body: Element, html: String): ReaderLocalPresentation {
+        val spans = mutableListOf<ReaderLocalPresentation.Span>()
+        val paragraphs = mutableListOf<ReaderLocalPresentation.Paragraph>()
+        val rules = mutableListOf<Int>()
+        val anchors = linkedMapOf<String, Int>()
+        var first = -1
+        var last = -1
+        var current = blockGeometry(BlockCtx(), 10f, 1f)
+        fun flush() {
+            if (first >= 0 && last > first) {
+                paragraphs += ReaderLocalPresentation.Paragraph(first, last, current.firstMargin,
+                    current.restMargin, current.alignment,
+                    current.decorations.filterNot { it.kind == ReaderParagraphDecorationKind.BULLET && current.listItem?.emitted == true },
+                    current.preserveBodyIndent)
+                current.listItem?.emitted = true
+            }
+            first = -1
+            last = -1
         }
-    }
-
-    fun parse(
-        html: String,
-        startPosition: Int,
-        baseTextSizePx: Float,
-        density: Float,
-    ): ParsedHtml {
-        val doc = Jsoup.parseBodyFragment(html)
-        return project(doc.body(), startPosition, baseTextSizePx, density)
-    }
-
-    internal fun project(
-        body: Element,
-        startPosition: Int = 0,
-        baseTextSizePx: Float = 10f,
-        density: Float = 1f,
-        elementPositions: MutableMap<Element, Int>? = null,
-    ): ParsedHtml {
-        val cursor = Cursor(startPosition, elementPositions = elementPositions)
-        // Seed block context from body-level alignment if present.
-        val bodyCtx = BlockCtx(alignment = parseAlignment(body))
-        for (child in body.childNodes().toList()) {
-            walk(child, InlineCtx(), bodyCtx, cursor, baseTextSizePx, density)
+        fun include(start: Int, end: Int) {
+            if (first < 0) first = start
+            last = maxOf(last, end)
         }
-        flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
-        return ParsedHtml(cursor.text.toString(), cursor.paragraphs)
-    }
-
-    private fun recordPosition(node: Element, cursor: Cursor) {
-        cursor.elementPositions?.put(node, cursor.pos)
-    }
-
-    private fun walk(
-        node: Node,
-        inline: InlineCtx,
-        block: BlockCtx,
-        cursor: Cursor,
-        baseTextSizePx: Float,
-        density: Float
-    ) {
-        when (node) {
-            is TextNode -> {
-                // Skip ruby annotations from the semantic stream
-                val parent = node.parent()
-                if (parent is Element) {
-                    val tag = parent.tagName().lowercase()
-                    if (tag == "rt" || tag == "rp") return
+        fun blank(position: Int) {
+            paragraphs += ReaderLocalPresentation.Paragraph(position, position, current.firstMargin,
+                current.restMargin, current.alignment, emptyList(), false, blankLine = true)
+        }
+        fun walk(node: Node, inline: InlineCtx, block: BlockCtx) {
+            val range = node.sourceRange()
+            if (node is TextNode) {
+                if (!range.isTracked) return
+                val start = range.start().pos()
+                val end = range.end().pos()
+                if (node.wholeText.isBlank() && !block.inPre) return
+                spans += ReaderLocalPresentation.Span(start, end, ReaderInlineSourceStyle(
+                    colorArgb = inline.colorArgb, backgroundArgb = inline.backgroundArgb,
+                    fontWeight = when (inline.bold) { true -> 700; false -> null; null -> if (block.headingBold) 700 else null },
+                    italic = inline.italic.takeIf { it == true }, underline = inline.underline,
+                    strikeThrough = inline.strike, link = inline.link,
+                    fontSizeScale = inline.fontSizeScale * block.headingScale, fontFamily = inline.fontFamily,
+                    superscript = inline.superscript, subscript = inline.subscript))
+                include(start, end)
+                if (block.inPre) {
+                    val raw = html.substring(start, end)
+                    Regex("(?:^|\\n)[ \\t]*\\n").findAll(raw).forEach { blank(start + it.range.last) }
                 }
-                val raw = if (block.inPre) node.wholeText else node.text()
-                if (raw.isEmpty()) return
-                var normalized = if (block.inPre) {
-                    raw.replace("\r\n", "\n").replace("\r", "\n")
-                } else {
-                    // Collapse whitespace like COMPACT mode, but keep single spaces.
-                    raw.replace("[\\s\\u00a0]+".toRegex(), " ")
-                }
-                if (!block.inPre) {
-                    if (cursor.current.isEmpty()) {
-                        normalized = normalized.trimStart(' ')
-                    } else {
-                        val prevText = (cursor.current.lastOrNull() as? ReaderChapterInlineSource.Text)?.value
-                        if (prevText != null && prevText.endsWith(" ") && normalized.startsWith(" ")) {
-                            normalized = normalized.trimStart(' ')
-                        }
-                    }
-                }
-                if (normalized.isEmpty()) return
-                val lines = if (block.inPre) normalized.split('\n') else listOf(normalized)
-                lines.forEachIndexed { index, value ->
-                    if (value.isNotEmpty()) {
-                        cursor.pendingPreLine = false
-                        cursor.current += ReaderChapterInlineSource.Text(
-                            value = value,
-                            chapterPosition = cursor.pos,
-                            style = ReaderInlineSourceStyle(
-                                colorArgb = inline.colorArgb,
-                                backgroundArgb = inline.backgroundArgb,
-                                fontWeight = when (inline.bold) {
-                                    true -> 700
-                                    false -> 400
-                                    null -> if (block.headingBold) 700 else null
-                                },
-                                italic = inline.italic,
-                                underline = inline.underline,
-                                strikeThrough = inline.strike,
-                                link = inline.link,
-                                fontSizeScale = inline.fontSizeScale * block.headingScale,
-                                fontFamily = inline.fontFamily,
-                                superscript = inline.superscript,
-                                subscript = inline.subscript,
-                            ),
-                        )
-                        cursor.text.append(value)
-                        cursor.pos += value.length
-                    }
-                    if (index < lines.lastIndex) {
-                        flushParagraph(cursor, preserveEmpty = true, baseTextSizePx, density)
-                        cursor.pendingPreLine = true
-                    }
+                return
+            }
+            if (node !is Element) return
+            val tag = node.normalName()
+            if (range.isTracked) {
+                for (id in listOf(node.id(), node.attr("name")).filter { it.isNotBlank() }) {
+                    anchors.putIfAbsent(id, range.start().pos())
                 }
             }
-            is Element -> {
-                when (val tag = node.tagName().lowercase()) {
-                    "script", "style", "noscript", "template" -> return
-                    "rt", "rp" -> return // handled via parent check; skip subtree
-                    "br" -> {
-                        recordPosition(node, cursor)
-                        flushParagraph(cursor, preserveEmpty = true, baseTextSizePx, density)
-                    }
-                    "hr" -> {
-                        flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
-                        recordPosition(node, cursor)
-                        cursor.paragraphs += ReaderHtmlParagraph(
-                            listOf(ReaderChapterInlineSource.BlankLine(cursor.pos)),
-                            0f, 0f, null, emptyList(), rule = true,
-                        )
-                        cursor.text.append(ReaderSemanticContract.PARAGRAPH_BREAK)
-                        cursor.pos += 1
-                    }
-                    "img", "image" -> {
-                        recordPosition(node, cursor)
-                        val src = if (tag == "image") {
-                            node.attr("xlink:href").takeIf { it.isNotEmpty() }
-                                ?: node.attr("src")
-                        } else {
-                            node.attr("src")
-                        }
-                        if (src.isEmpty()) return
-                        cursor.current += ReaderChapterInlineSource.Image(
-                            source = src,
-                            chapterPosition = cursor.pos,
-                            action = node.attr("data-legado-pclick").takeIf { it.isNotBlank() }
-                                ?: node.attr("data-legado-click").takeIf { it.isNotBlank() }
-                        )
-                        cursor.text.append(ReaderSemanticContract.IMAGE_CHAR)
-                        cursor.pos += 1
-                    }
-                    "p", "div", "section", "article", "header", "footer",
-                    "h1", "h2", "h3", "h4", "h5", "h6",
-                    "blockquote", "ul", "ol", "li", "pre", "figure",
-                    "figcaption", "aside", "dl", "dt", "dd", "tr", "center" -> {
-                        flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
-                        recordPosition(node, cursor)
-                        val childBlock = descendBlock(node, tag, block, baseTextSizePx, density)
-                        val childInline = descendInline(node, tag, inline)
-                        // Establish geometry for the upcoming paragraph run.
-                        cursor.apply(blockGeometry(childBlock, baseTextSizePx, density))
-                        for (child in node.childNodes().toList()) {
-                            walk(child, childInline, childBlock, cursor, baseTextSizePx, density)
-                        }
-                        flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
-                        // Reset to parent geometry for following siblings.
-                        cursor.apply(blockGeometry(block, baseTextSizePx, density))
-                    }
-                    "td", "th" -> {
-                        recordPosition(node, cursor)
-                        if (cursor.current.isNotEmpty()) {
-                            val prev = (cursor.current.lastOrNull() as? ReaderChapterInlineSource.Text)?.value
-                            if (prev == null || !prev.endsWith(" ")) {
-                                cursor.current += ReaderChapterInlineSource.Text(" ", cursor.pos)
-                                cursor.text.append(' ')
-                                cursor.pos += 1
-                            }
-                        }
-                        val childInline = descendInline(node, tag, inline)
-                        for (child in node.childNodes().toList()) {
-                            walk(child, childInline, block, cursor, baseTextSizePx, density)
-                        }
-                    }
-                    else -> {
-                        recordPosition(node, cursor)
-                        val childInline = descendInline(node, tag, inline)
-                        for (child in node.childNodes().toList()) {
-                            walk(child, childInline, block, cursor, baseTextSizePx, density)
-                        }
-                    }
+            when (tag) {
+                "script", "style", "noscript", "template" -> return
+                "br" -> {
+                    val empty = first < 0
+                    flush()
+                    if (empty && range.isTracked) blank(range.start().pos())
+                    return
+                }
+                "hr" -> {
+                    flush()
+                    if (range.isTracked) rules += range.start().pos()
+                    return
+                }
+                "img", "image" -> {
+                    if (range.isTracked) include(range.start().pos(), range.end().pos())
+                    return
                 }
             }
+            val isBlock = tag in setOf("p", "div", "section", "article", "header", "footer", "h1", "h2", "h3", "h4", "h5", "h6",
+                "blockquote", "ul", "ol", "li", "pre", "figure", "figcaption", "aside", "dl", "dt", "dd", "tr", "center")
+            if (isBlock) flush()
+            val childBlock = if (isBlock) descendBlock(node, tag, block, 10f, 1f) else block
+            if (isBlock) current = blockGeometry(childBlock, 10f, 1f)
+            val childInline = descendInline(node, tag, inline)
+            node.childNodes().forEach { walk(it, childInline, childBlock) }
+            if (isBlock) {
+                flush()
+                current = blockGeometry(block, 10f, 1f)
+            }
         }
+        val context = BlockCtx(alignment = parseAlignment(body))
+        current = blockGeometry(context, 10f, 1f)
+        body.childNodes().forEach { walk(it, InlineCtx(), context) }
+        flush()
+        return ReaderLocalPresentation(html, spans, paragraphs, rules, anchors)
     }
 
     private data class BlockGeo(
@@ -428,39 +302,4 @@ internal object JsoupReaderPresentationParser {
         return null
     }
 
-    private fun flushParagraph(
-        cursor: Cursor,
-        preserveEmpty: Boolean,
-        baseTextSizePx: Float,
-        density: Float
-    ) {
-        if (cursor.current.isNotEmpty()) {
-            cursor.paragraphs += ReaderHtmlParagraph(
-                cursor.current.toList(),
-                cursor.currentFirstMargin,
-                cursor.currentRestMargin,
-                cursor.currentAlignment,
-                cursor.currentDecorations.filterNot { it.kind == ReaderParagraphDecorationKind.BULLET && cursor.currentListItem?.emitted == true },
-                cursor.currentPreserveBodyIndent
-            )
-            cursor.text.append(ReaderSemanticContract.PARAGRAPH_BREAK)
-            cursor.pos += 1
-            cursor.currentListItem?.emitted = true
-        } else if (preserveEmpty || cursor.pendingPreLine) {
-            // Preserve leading and consecutive empty paragraphs; the trailing
-            // start == end line is still omitted by the final non-preserving flush.
-            cursor.paragraphs += ReaderHtmlParagraph(
-                listOf(ReaderChapterInlineSource.BlankLine(cursor.pos)),
-                cursor.currentFirstMargin,
-                cursor.currentRestMargin,
-                cursor.currentAlignment,
-                cursor.currentDecorations,
-                cursor.currentPreserveBodyIndent
-            )
-            cursor.text.append(ReaderSemanticContract.PARAGRAPH_BREAK)
-            cursor.pos += 1
-        }
-        cursor.current = mutableListOf()
-        cursor.pendingPreLine = false
-    }
 }

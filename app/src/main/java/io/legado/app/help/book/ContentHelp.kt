@@ -1,5 +1,7 @@
 package io.legado.app.help.book
 
+import io.legado.app.domain.model.TextProjection
+import io.legado.app.utils.replaceMapped
 import kotlin.math.max
 import kotlin.math.min
 
@@ -13,20 +15,24 @@ object ContentHelp {
      * @param chapterName 标题
      * @return
      */
-    fun reSegment(content: String, chapterName: String): String {
+    fun reSegment(content: String, chapterName: String): String = reSegmentMapped(content, chapterName, null)
+
+    internal fun reSegmentMapped(content: String, chapterName: String, projection: TextProjection?): String {
         var content1 = content
         val dict = makeDict(content1)
-        var p = content1
-            .replace("&quot;".toRegex(), "“")
-            .replace("[:：]['\"‘”“]+".toRegex(), "：“")
-            .replace("[\"”“]+\\s*[\"”“][\\s\"”“]*".toRegex(), "”\n“")
-            .split("\n(\\s*)".toRegex()).toTypedArray()
+        val prepared = content1
+            .replaceMapped("&quot;".toRegex(), "“", projection)
+            .replaceMapped("[:：]['\"‘”“]+".toRegex(), "：“", projection)
+            .replaceMapped("[\"”“]+\\s*[\"”“][\\s\"”“]*".toRegex(), "”\n“", projection)
+
+        var p = prepared.split("\n(\\s*)".toRegex()).toTypedArray()
 
         //初始化StringBuilder的长度,在原content的长度基础上做冗余
         var buffer = StringBuilder((content1.length * 1.15).toInt())
         //          章节的文本格式为章节标题-空行-首段，所以处理段落时需要略过第一行文本。
         buffer.append("  ")
-        if (chapterName.trim { it <= ' ' } != p[0].trim { it <= ' ' }) {
+        val dropTitle = chapterName.trim { it <= ' ' } == p[0].trim { it <= ' ' }
+        if (!dropTitle) {
             // 去除段落内空格。unicode 3000 象形字间隔（中日韩符号和标点），不包含在\s内
             buffer.append(p[0].replace("[\u3000\\s]+".toRegex(), ""))
         }
@@ -43,31 +49,46 @@ object ContentHelp {
             // 去除段落内空格。unicode 3000 象形字间隔（中日韩符号和标点），不包含在\s内
             buffer.append(p[i].replace("[\u3000\\s]".toRegex(), ""))
         }
+        if (projection != null) {
+            val before = if (dropTitle) {
+                projection.replace(0, p[0].length, 0)
+                prepared.substring(p[0].length)
+            } else prepared
+            check(projection.bindWhitespace(before, buffer.toString()))
+        }
         //     预分段预处理
         //         ”“处理为”\n“。
         //         ”。“处理为”。\n“。不考虑“？”  “！”的情况。
         // ”。xxx处理为 ”。\n xxx
-        p = buffer.toString()
-            .replace("[\"”“]+\\s*[\"”“]+".toRegex(), "”\n“")
-            .replace("[\"”“]+(？。！?!~)[\"”“]+".toRegex(), "”$1\n“")
-            .replace("[\"”“]+(？。！?!~)([^\"”“])".toRegex(), "”$1\n$2")
-            .replace(
+        val segmented = buffer.toString()
+            .replaceMapped("[\"”“]+\\s*[\"”“]+".toRegex(), "”\n“", projection)
+            .replaceMapped("[\"”“]+(？。！?!~)[\"”“]+".toRegex(), "”$1\n“", projection)
+            .replaceMapped("[\"”“]+(？。！?!~)([^\"”“])".toRegex(), "”$1\n$2", projection)
+            .replaceMapped(
                 "([问说喊唱叫骂道着答])[\\.。]".toRegex(),
-                "$1。\n"
+                "$1。\n", projection
             )
-            .split("\n".toRegex()).toTypedArray()
+        p = segmented.split("\n".toRegex()).toTypedArray()
         buffer = StringBuilder((content1.length * 1.15).toInt())
+        val projectedParts = mutableListOf<TextProjection>()
+        var partStart = 0
         for (s in p) {
             buffer.append("\n")
-            buffer.append(findNewLines(s, dict))
+            val part = projection?.slice(partStart, partStart + s.length)
+            buffer.append(findNewLines(s, dict, part))
+            if (part != null) projectedParts += part
+            partStart += s.length + 1
         }
+        projection?.join(projectedParts, prefixLength = 1, separatorLength = 1)
+        val beforeReduce = if (projection != null) buffer.toString() else null
         buffer = reduceLength(buffer)
+        if (projection != null) check(projection.bindWhitespace(checkNotNull(beforeReduce), buffer.toString()))
         content1 = (buffer.toString() //         处理章节头部空格和换行
-            .replaceFirst("^\\s+".toRegex(), "")
-            .replace("\\s*[\"”“]+\\s*[\"”“][\\s\"”“]*".toRegex(), "”\n“")
-            .replace("[:：][”“\"\\s]+".toRegex(), "：“")
-            .replace("\n[\"“”]([^\n\"“”]+)([,:，：][\"”“])([^\n\"“”]+)".toRegex(), "\n$1：“$3")
-            .replace("\n(\\s*)".toRegex(), "\n"))
+            .replaceMapped("^\\s+".toRegex(), "", projection)
+            .replaceMapped("\\s*[\"”“]+\\s*[\"”“][\\s\"”“]*".toRegex(), "”\n“", projection)
+            .replaceMapped("[:：][”“\"\\s]+".toRegex(), "：“", projection)
+            .replaceMapped("\n[\"“”]([^\n\"“”]+)([,:，：][\"”“])([^\n\"“”]+)".toRegex(), "\n$1：“$3", projection)
+            .replaceMapped("\n(\\s*)".toRegex(), "\n", projection))
         return content1
     }
 
@@ -167,7 +188,7 @@ object ContentHelp {
     }
 
     // 对内容重新划分段落.输入参数str已经使用换行符预分割
-    private fun findNewLines(str: String, dict: List<String>): String {
+    private fun findNewLines(str: String, dict: List<String>, projection: TextProjection? = null): String {
         val string = StringBuilder(str)
         // 标记string中每个引号的位置.特别的，用引号进行列举时视为只有一对引号。 如：“锅”、“碗”视为“锅、碗”，从而避免误断句。
         val arrayQuote: MutableList<Int> = ArrayList()
@@ -426,6 +447,7 @@ object ContentHelp {
 //     ins_quote 在引号前插入一个引号。   ins_quote[i]!=0,则array_quote.get(i)的引号前需要前插入'”'
 //     ins_n 插入换行。数组的值表示插入换行符的位置
         val buffer = StringBuilder((str.length * 1.15).toInt())
+        val pieces = mutableListOf<TextProjection.Piece>()
         var j = 0
         var progress = 0
         var nextLine = -1
@@ -439,34 +461,49 @@ object ContentHelp {
 //                如果下一个换行符在当前引号前，那么需要此次处理.如果紧挨当前引号，需要考虑插入引号的情况
                 if (nextLine >= quote) break
                 nextLine = insN[j]
+                if (projection != null) pieces += TextProjection.Piece(progress, nextLine + 1)
                 buffer.append(string, progress, nextLine + 1)
+                if (projection != null) pieces += TextProjection.Piece(nextLine + 1, nextLine + 1, 1)
                 buffer.append('\n')
                 progress = nextLine + 1
                 j++
             }
             if (progress < quote) {
+                if (projection != null) pieces += TextProjection.Piece(progress, quote + 1)
                 buffer.append(string, progress, quote + 1)
                 progress = quote + 1
             }
             if (insQuote[i] && buffer.length > 2) {
-                if (buffer[buffer.length - 1] == '\n') buffer.append('“') else buffer.insert(
-                    buffer.length - 1,
-                    "”\n"
-                )
+                if (buffer[buffer.length - 1] == '\n') {
+                    if (projection != null) pieces += TextProjection.Piece(progress, progress, 1)
+                    buffer.append('“')
+                } else {
+                    if (projection != null) {
+                        val previous = pieces.removeAt(pieces.lastIndex)
+                        pieces += previous.copy(endExclusive = previous.endExclusive - 1)
+                        pieces += TextProjection.Piece(previous.endExclusive - 1, previous.endExclusive - 1, 2)
+                        pieces += TextProjection.Piece(previous.endExclusive - 1, previous.endExclusive)
+                    }
+                    buffer.insert(buffer.length - 1, "”\n")
+                }
             }
         }
         while (j < insN.size) {
             nextLine = insN[j]
             if (progress <= nextLine) {
+                if (projection != null) pieces += TextProjection.Piece(progress, nextLine + 1)
                 buffer.append(string, progress, nextLine + 1)
+                if (projection != null) pieces += TextProjection.Piece(nextLine + 1, nextLine + 1, 1)
                 buffer.append('\n')
                 progress = nextLine + 1
             }
             j++
         }
         if (progress < string.length) {
+            if (projection != null) pieces += TextProjection.Piece(progress, string.length)
             buffer.append(string, progress, string.length)
         }
+        projection?.rebuild(pieces)
         return buffer.toString()
     }
 

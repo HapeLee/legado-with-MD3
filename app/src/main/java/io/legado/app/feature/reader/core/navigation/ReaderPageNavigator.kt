@@ -285,7 +285,7 @@ object ReaderPageNavigator {
         is ReaderElement.Text -> if (element.emphasized) null else element.chapterPosition until
             (element.chapterPosition + element.value.length.coerceAtLeast(1))
         is ReaderElement.Image -> element.chapterPosition..element.chapterPosition
-        is ReaderElement.Spacer -> element.chapterPosition..element.chapterPosition
+        is ReaderElement.Spacer -> element.chapterPosition until element.chapterPosition + element.semanticLength
         else -> null
     }
 }

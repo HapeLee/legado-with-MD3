@@ -11,9 +11,11 @@ class MobiFileCssTest {
         val doc = Jsoup.parse("<head><style>p { font-style: italic }</style></head><body><p>Body</p></body>")
         val canonical = MobiFile.format(doc)
         assertEquals(listOf("p { font-style: italic }", "Body"), canonical.lines().map { it.trim() }.filter { it.isNotEmpty() })
-        // If an old document has non-body text, appearance is optional; its text is not discarded.
-        assertEquals(null, io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(
-            doc.body().outerHtml(), canonical, "", true))
+        val html = MobiFile.presentationHtml(doc)
+        val appearance = io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(html, decodeEntities = false)
+        assertEquals(canonical, appearance.content)
+        assertTrue(appearance.spans.any { it.style.italic == true &&
+            appearance.content.substring(it.start, it.endExclusive).contains("Body") })
     }
     @Test
     fun linkedAndEmbeddedRulesFollowDocumentOrder() {

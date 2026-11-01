@@ -31,11 +31,15 @@ class ReaderEpubFileContractTest {
             }
             LocalBookSemanticHtml.cutChapterBody(document.body(), "one", "two")
             val channel = LocalBookSemanticHtml.plainText(document.body().outerHtml())
-            val source = ReaderChapterSourceParser.parse(0, "第一章", channel.lines().filter { it.isNotBlank() }, true, true, AndroidReaderHtmlSemanticTextResolver)
+            val source = ReaderChapterSourceParser.parse(0, "第一章", channel.lines().filter { it.isNotBlank() }, true, true, AndroidReaderHtmlSemanticTextResolver,
+                localPresentation = io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(document.body().outerHtml()))
             assertTrue(source.semanticContent.contains("A&😀B\uFFFC"))
             assertTrue(source.semanticContent.contains("脚注"))
             assertTrue(source.semanticContent.contains("Hidden"))
             assertFalse(source.semanticContent.contains("Tail"))
+            assertTrue(source.blocks.filterIsInstance<io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock.Paragraph>()
+                .flatMap { it.items }.filterIsInstance<io.legado.app.feature.reader.core.source.ReaderChapterInlineSource.Text>()
+                .any { it.style.link == "#two" })
             assertTrue(ReaderSemanticContract.validate(source).isEmpty())
         }
     }

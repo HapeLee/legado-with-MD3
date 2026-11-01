@@ -1,205 +1,160 @@
 package io.legado.app.feature.reader.platform
 
+import io.legado.app.domain.model.TextProjection
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticContract
+import io.legado.app.feature.reader.core.source.ReaderChapterSource
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import io.legado.app.feature.reader.core.semantic.ReaderSemanticContract
+import io.legado.app.help.book.MixedContentSegments
+import org.junit.Assert.*
 import org.junit.Test
 
 class JsoupReaderPresentationParserTest {
+    private fun source(html: String, labels: Map<Int, String>? = null): ReaderChapterSource {
+        val appearance = ReaderLocalPresentationResolver.resolve(org.jsoup.Jsoup.parse(html).body().outerHtml())
+        return ReaderChapterSourceParser.parse(0, "", MixedContentSegments.paragraphs(appearance.content, "", false),
+            false, true, castLabels = labels, localPresentation = appearance)
+    }
+    private fun texts(source: ReaderChapterSource) = source.blocks.filterIsInstance<ReaderChapterSourceBlock.Paragraph>()
+        .flatMap { it.items }.filterIsInstance<ReaderChapterInlineSource.Text>()
+    private fun paragraph(source: ReaderChapterSource, text: String) = source.blocks.filterIsInstance<ReaderChapterSourceBlock.Paragraph>()
+        .first { it.items.filterIsInstance<ReaderChapterInlineSource.Text>().joinToString("") { item -> item.value }.contains(text) }
 
-    @Test
-    fun blockStylesReachTextAndStayScopedToTheirBlock() {
-        val parsed = JsoupReaderPresentationParser.parse(
-            "<blockquote style='font-style:italic'><p style='font-weight:bold'>styled</p></blockquote><p>plain</p>",
-            0, 20f, 2f,
-        )
-        val text = parsed.paragraphs.flatMap { it.items }.filterIsInstance<ReaderChapterInlineSource.Text>()
-        assertEquals("styled\nplain\n", parsed.text)
-        assertEquals(700, text[0].style.fontWeight)
-        assertEquals(true, text[0].style.italic)
-        assertEquals(null, text[1].style.fontWeight)
-        assertEquals(null, text[1].style.italic)
+    @Test fun blockStylesReachTextAndStayScopedToTheirBlock() {
+        val current = source("<blockquote style='font-style:italic'><p style='font-weight:bold'>styled</p></blockquote><p>plain</p>")
+        assertEquals("styled\nplain\n", current.semanticContent)
+        val items = texts(current)
+        assertEquals(700, items[0].style.fontWeight)
+        assertEquals(true, items[0].style.italic)
+        assertEquals(null, items[1].style.fontWeight)
+        assertEquals(null, items[1].style.italic)
     }
 
-    @Test
-    fun consecutiveBreaksPreserveBlankLineWithoutTrailingPhantom() {
-        val parsed = JsoupReaderPresentationParser.parse("甲<br><br>乙<br>", 10, 20f, 2f)
-        assertEquals("甲\n\n乙\n", parsed.text)
-        assertEquals(3, parsed.paragraphs.size)
-        assertEquals("甲", (parsed.paragraphs[0].items.single() as ReaderChapterInlineSource.Text).value)
-        assertEquals(12, (parsed.paragraphs[1].items.single() as ReaderChapterInlineSource.BlankLine).chapterPosition)
-        assertEquals("乙", (parsed.paragraphs[2].items.single() as ReaderChapterInlineSource.Text).value)
+    @Test fun consecutiveBreaksPreserveBlankLineWithoutAddingCanonicalCharacters() {
+        val current = source("甲<br><br>乙<br>")
+        assertEquals("甲\n乙\n", current.semanticContent)
+        val blocks = current.blocks.filterIsInstance<ReaderChapterSourceBlock.Paragraph>()
+        assertEquals(1, blocks.count { it.presentation?.blankLine == true })
+        assertEquals(listOf(0, 1), current.paragraphs.map { it.ordinal })
     }
 
-    @Test
-    fun quoteAndListProduceDecorationsWithMargins() {
-        val parsed = JsoupReaderPresentationParser.parse(
-            "<blockquote>引文内容</blockquote><ul><li>列表项</li></ul>", 0, 20f, 2f
-        )
-        val quote = parsed.paragraphs.first {
-            it.items.filterIsInstance<ReaderChapterInlineSource.Text>().any { t -> t.value.contains("引文") }
-        }
-        val list = parsed.paragraphs.first {
-            it.items.filterIsInstance<ReaderChapterInlineSource.Text>().any { t -> t.value.contains("列表") }
-        }
-        assertTrue(quote.firstLineMarginPx > 0f)
-        assertTrue(list.firstLineMarginPx > 0f)
+    @Test fun quoteAndListProduceDecorationsWithMargins() {
+        val current = source("<blockquote>引文内容</blockquote><ul><li>列表项</li></ul>")
+        val quote = checkNotNull(paragraph(current, "引文").presentation)
+        val list = checkNotNull(paragraph(current, "列表").presentation)
+        assertTrue(quote.firstMargin > 0f)
+        assertTrue(list.firstMargin > 0f)
         assertEquals(ReaderParagraphDecorationKind.QUOTE, quote.decorations.single().kind)
         assertEquals(ReaderParagraphDecorationKind.BULLET, list.decorations.single().kind)
     }
 
-    @Test
-    fun nestedListItemKeepsSingleMarkerAtItsDepth() {
-        val parsed = JsoupReaderPresentationParser.parse(
-            "<ul><li>外层<ul><li>内层</li></ul></li></ul>", 0, 20f, 2f
-        )
-        val inner = parsed.paragraphs.first {
-            it.items.filterIsInstance<ReaderChapterInlineSource.Text>().any { t -> t.value.contains("内层") }
+    @Test fun nestedListItemKeepsSingleMarkerAtItsDepth() {
+        for (inner in listOf("内层", "<pre>内层\n续行</pre>")) {
+            val current = source("<ul><li>外层<ul><li>$inner</li></ul></li></ul>")
+            val bullets = checkNotNull(paragraph(current, "内层").presentation).decorations.filter { it.kind == ReaderParagraphDecorationKind.BULLET }
+            assertEquals(1, bullets.size)
+            assertEquals(12f, bullets.single().leadingOffsetPx, 0.01f)
+            if (inner.startsWith("<pre>")) assertTrue(paragraph(current, "续行").presentation?.decorations.orEmpty()
+                .none { it.kind == ReaderParagraphDecorationKind.BULLET })
         }
-        val bullets = inner.decorations.filter { it.kind == ReaderParagraphDecorationKind.BULLET }
-        assertEquals(1, bullets.size)
-        assertEquals(24f, bullets.single().leadingOffsetPx, 0.01f)
+
     }
 
-    @Test
-    fun rubyAnnotationsStayOutOfSemanticStream() {
-        val parsed = JsoupReaderPresentationParser.parse("<p><ruby>漢<rt>かん</rt></ruby>字</p>", 0, 20f, 2f)
-        assertEquals("漢字\n", parsed.text)
-    }
-
-    @Test
-    fun trimsLeadingParagraphIndentationAndPreservesNestedHeadingScale() {
-        val parsed = JsoupReaderPresentationParser.parse("<h2>\n  <center>标题</center>\n</h2>", 0, 20f, 2f)
-        assertEquals("标题\n", parsed.text)
-        val textItem = parsed.paragraphs.single().items.single() as ReaderChapterInlineSource.Text
-        assertEquals("标题", textItem.value)
-        assertEquals(1.25f, textItem.style.fontSizeScale, 0.001f)
-        assertEquals(700, textItem.style.fontWeight)
-    }
-
-    @Test
-    fun onlyNormalBodyBlocksKeepReaderIndent() {
-        val parsed = JsoupReaderPresentationParser.parse(
-            "<p>正文</p><h2>标题</h2><pre>代码</pre><blockquote>引文</blockquote>" +
-                "<ul><li>列表</li></ul><table><tr><td>表格</td></tr></table><figure><figcaption>图注</figcaption></figure>",
-            0, 20f, 2f,
-        )
-
-        fun preserveOf(text: String) = parsed.paragraphs.first { paragraph ->
-            paragraph.items.filterIsInstance<ReaderChapterInlineSource.Text>()
-                .any { it.value.contains(text) }
-        }.preserveBodyIndent
-
-        assertTrue(preserveOf("正文"))
-        assertEquals(false, preserveOf("标题"))
-        assertEquals(false, preserveOf("代码"))
-        assertEquals(false, preserveOf("引文"))
-        assertEquals(false, preserveOf("列表"))
-        assertEquals(false, preserveOf("表格"))
-        assertEquals(false, preserveOf("图注"))
-    }
-
-    @Test
-    fun footnotesAndEmptyAnchorsReferToCanonicalPositions() {
-        val html = "<p>Sentence <a id='ref_1' href='#note_1'>1</a> end.</p><a id='page_13'></a><p id='note_1'>Footnote</p>"
-        val canonical = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(org.jsoup.Jsoup.parse(html).body().outerHtml())
-        val appearance = checkNotNull(ReaderLocalPresentationResolver.resolve(html, canonical, "", true))
-        val values = io.legado.app.help.book.MixedContentSegments.paragraphs(canonical, "", false)
-        val source = ReaderChapterSourceParser.parse(0, "", values, false, true, localPresentation = appearance)
-        assertEquals(source.semanticContent.indexOf("1"), source.anchorPositions["ref_1"])
-        assertEquals(source.semanticContent.indexOf("Footnote"), source.anchorPositions["page_13"])
-        assertEquals(source.semanticContent.indexOf("Footnote"), source.anchorPositions["note_1"])
-    }
-    @Test
-    fun goldenProjectionAndInlineOffsets() {
-        val fixtures = listOf(
-            "甲乙" to "甲乙\n",
-            "甲😀乙" to "甲😀乙\n",
-            "A&amp;B" to "A&B\n",
-            "<p>A</p><p>B</p>" to "A\nB\n",
-            "<strong>A</strong>B" to "AB\n",
-            "A<img src='x'>B" to "A\uFFFCB\n",
-            "A<img>B" to "AB\n",
-            "<p></p>" to "",
-            "<hr>" to "\n",
-            "<ruby>漢<rt>かん</rt><rp>(</rp></ruby>" to "漢\n",
-            "<a id='n'></a>正文" to "正文\n",
-            "<pre>A  B</pre>" to "A  B\n",
-            "A<br><br>B" to "A\n\nB\n",
-        )
-        fixtures.forEach { (html, expected) ->
-            for ((size, density) in listOf(16f to 1f, 24f to 3f)) {
-                val parsed = JsoupReaderPresentationParser.parse(html, 7, size, density)
-                assertEquals(html, expected, parsed.text)
-                assertEquals(emptyList<ReaderSemanticContract.Violation>(),
-                    ReaderSemanticContract.validateInlines(parsed.text, parsed.paragraphs.flatMap { it.items }, 7))
-                parsed.paragraphs.flatMap { it.items }.forEach { item ->
-                    val pos = item.chapterPosition - 7
-                    when (item) {
-                        is ReaderChapterInlineSource.Text -> assertEquals(item.value, expected.substring(pos, pos + item.value.length))
-                        is ReaderChapterInlineSource.Image -> assertEquals('\uFFFC', expected[pos])
-                        is ReaderChapterInlineSource.BlankLine -> assertEquals('\n', expected[pos])
-                        else -> Unit
-                    }
-                }
-            }
-
+    @Test fun rubyRetainsLegacyCharactersWithoutSuppressingOtherStyles() {
+        for (annotation in listOf("<rt>かん</rt>", "")) {
+            val current = source("<p><ruby>漢$annotation</ruby><b>字</b></p>")
+            assertEquals(if (annotation.isEmpty()) "漢字\n" else "漢かん字\n", current.semanticContent)
+            assertEquals(700, texts(current).single { it.value == "字" }.style.fontWeight)
         }
     }
 
-    @Test
-    fun visualWrappersAndAttributesPreserveSemanticAndAnchors() {
-        val fragments = listOf(
-            "<p>A&amp;<a id='n'>😀B</a></p>",
-            "<p style='text-align:center;color:red'><span><strong>A&amp;</strong><a class='x' id='n'><em>😀B</em></a></span></p>",
-        )
-        fragments.forEach { html ->
-            assertEquals("A&😀B\n", JsoupReaderPresentationParser.parse(html, 0, 10f, 1f).text)
+    @Test fun trimsLeadingParagraphIndentationAndPreservesNestedHeadingScale() {
+        val current = source("<h2>\n  <center>标题</center>\n</h2>")
+        assertEquals("标题\n", current.semanticContent)
+        val text = texts(current).single()
+        assertEquals(1.25f, text.style.fontSizeScale, 0.001f)
+        assertEquals(700, text.style.fontWeight)
+    }
 
+    @Test fun onlyNormalBodyBlocksKeepReaderIndent() {
+        val current = source("<p>正文</p><h2>标题</h2><pre>代码</pre><blockquote>引文</blockquote>" +
+            "<ul><li>列表</li></ul><table><tr><td>表格</td></tr></table><figure><figcaption>图注</figcaption></figure>")
+        assertEquals(true, paragraph(current, "正文").presentation?.preserveBodyIndent)
+        for (text in listOf("标题", "代码", "引文", "列表", "表格", "图注")) {
+            assertEquals(text, false, paragraph(current, text).presentation?.preserveBodyIndent)
         }
     }
 
+    @Test fun footnotesAndEmptyAnchorsReferToCanonicalPositions() {
+        val current = source("<p>Sentence <a id='ref_1' href='#note_1'>1</a> end.</p><a id='page_13'></a><p id='note_1'>Footnote</p>")
+        assertEquals(current.semanticContent.indexOf("1"), current.anchorPositions["ref_1"])
+        assertEquals(current.semanticContent.indexOf("Footnote"), current.anchorPositions["page_13"])
+        assertEquals(current.semanticContent.indexOf("Footnote"), current.anchorPositions["note_1"])
+        assertEquals("#note_1", texts(current).single { it.value == "1" }.style.link)
+    }
 
+    @Test fun goldenProjectionAndInlineOffsets() {
+        for ((html, expected) in listOf(
+            "甲乙" to "甲乙\n", "甲😀乙" to "甲😀乙\n", "A&amp;B" to "A&B\n",
+            "<p>A</p><p>B</p>" to "A\nB\n", "<strong>A</strong>B" to "AB\n",
+            "A<img src='x'>B" to "A\uFFFCB\n", "A<img>B" to "A<img>B\n", "<p></p>" to "", "<hr>" to "",
+            "<ruby>漢<rt>かん</rt><rp>(</rp></ruby>" to "漢かん(\n",
+            "<a id='n'></a>正文" to "正文\n", "<pre>A  B</pre>" to "A  B\n", "A<br><br>B" to "A\nB\n",
+        )) {
+            val current = source(html)
+            assertEquals(html, expected, current.semanticContent)
+            assertTrue(html, ReaderSemanticContract.validate(current).isEmpty())
+        }
+    }
 
-    @Test
-    fun appearanceAndCssCannotChangeCanonicalTextParagraphsOrAnchors() {
+    @Test fun visualWrappersAndAttributesPreserveSemanticAndAnchors() {
+        for (html in listOf("<p>A&amp;<a id='n'>😀B</a></p>",
+            "<p style='text-align:center;color:red'><span><strong>A&amp;</strong><a class='x' id='n'><em>😀B</em></a></span></p>")) {
+            val current = source(html)
+            assertEquals("A&😀B\n", current.semanticContent)
+            assertEquals(2, current.anchorPositions["n"])
+        }
+    }
+
+    @Test fun appearanceAndCssCannotChangeCanonicalTextParagraphsOrAnchors() {
         val fixture = io.legado.app.support.ReaderSemanticFixtures
         val doc = org.jsoup.Jsoup.parse(fixture.html)
-        val canonical = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(doc.body().outerHtml())
-        val values = io.legado.app.help.book.MixedContentSegments.paragraphs(canonical, "", false)
-        assertEquals(fixture.paragraphs, values)
         io.legado.app.model.localBook.LocalBookSemanticHtml.inlineDocumentCssSemantics(doc) { fixture.css }
-        val presentation = checkNotNull(ReaderLocalPresentationResolver.resolve(doc.body().outerHtml(), canonical, "", true))
-        for (enabled in listOf(false, true)) {
-            val source = ReaderChapterSourceParser.parse(0, "", values, false, enabled,
-                localPresentation = presentation.takeIf { enabled })
-            assertEquals(fixture.body, source.semanticContent)
-            assertEquals(fixture.paragraphs.indices.toList(), source.paragraphs.map { it.ordinal })
-            if (enabled) assertEquals(fixture.body.indexOf("乙"), source.anchorPositions["note"])
-            assertTrue(ReaderSemanticContract.validate(source).isEmpty())
-        }
-        assertTrue(presentation.spans.any { it.style.italic == true })
-        assertTrue(presentation.spans.any { it.style.fontWeight == 700 })
+        val current = source(doc.body().outerHtml())
+        assertEquals(fixture.body, current.semanticContent)
+        assertEquals(fixture.paragraphs.indices.toList(), current.paragraphs.map { it.ordinal })
+        assertEquals(fixture.body.indexOf("乙"), current.anchorPositions["note"])
+        assertTrue(texts(current).any { it.style.italic == true })
+        assertTrue(texts(current).any { it.style.fontWeight == 700 })
+        assertTrue(ReaderSemanticContract.validate(current).isEmpty())
     }
 
-    @Test
-    fun changedBodyAndRoleLabelsDropOnlyAppearanceWithoutGuessingOffsets() {
-        val html = "<p id='n'><b>“甲”</b></p><p>乙</p>"
-        val canonical = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(org.jsoup.Jsoup.parse(html).body().outerHtml())
-        val values = io.legado.app.help.book.MixedContentSegments.paragraphs(canonical, "", false)
-        val presentation = checkNotNull(ReaderLocalPresentationResolver.resolve(html, canonical, "", true))
-        val edited = ReaderChapterSourceParser.parse(0, "", listOf("changed"), false, true, localPresentation = presentation)
-        assertEquals("changed\n", edited.semanticContent)
-        assertTrue(edited.anchorPositions.isEmpty())
-        val labels = mapOf(0 to "<<甲（池）>>")
-        val plain = ReaderChapterSourceParser.parse(0, "", values, false, true, castLabels = labels)
-        val styled = ReaderChapterSourceParser.parse(0, "", values, false, true, castLabels = labels, localPresentation = presentation)
-        assertEquals(plain, styled)
-        assertEquals("“<<甲（池）>>甲”\n乙\n", styled.semanticContent)
-        assertEquals(listOf("“甲”", "乙"), ReaderChapterSourceParser.castAnchorText(values, true))
-        assertEquals(null, ReaderLocalPresentationResolver.resolve("<p>other</p>", canonical, "", true))
+    @Test fun knownEditsAndRoleLabelsPreserveUnaffectedAppearance() {
+        val html = "<p id='n'><b>“甲”</b></p><p><a href='#n'>乙</a></p>"
+        val appearance = ReaderLocalPresentationResolver.resolve(html)
+        val offset = appearance.content.indexOf("甲")
+        val map = TextProjection(appearance.content.length)
+        map.replace(offset, offset + 1, 2)
+        val changed = appearance.content.replaceRange(offset, offset + 1, "替换")
+        val mapped = appearance.remap(map, changed)
+        val edited = ReaderChapterSourceParser.parse(0, "", MixedContentSegments.paragraphs(changed, "", false), false, true, localPresentation = mapped)
+        assertEquals(700, texts(edited).first { it.value.contains("替换") }.style.fontWeight)
+        val current = source(html, mapOf(0 to "<<甲（池）>>"))
+        assertEquals("“<<甲（池）>>甲”\n乙\n", current.semanticContent)
+        assertEquals(700, texts(current).first { it.value.contains("甲”") }.style.fontWeight)
+        assertEquals("#n", texts(current).single { it.value == "乙" }.style.link)
+        assertEquals(0, current.anchorPositions["n"])
+        assertNull(appearance.bind("unrelated text"))
+        // A copied group followed by an ambiguous replacement must not acquire its neighbour's link.
+        val mixed = ReaderLocalPresentationResolver.resolve("<b>甲</b><a href='#n'>乙丙</a>")
+        assertEquals("甲乙丙", mixed.content)
+        val composed = TextProjection(mixed.content.length)
+        composed.rebuild(listOf(TextProjection.Piece(1, 2), TextProjection.Piece(0, 3, 1), TextProjection.Piece(2, 3)))
+        composed.replace(0, 2, 1)
+        val result = mixed.remap(composed, "替丙")
+        assertTrue(result.spans.none { it.start == 0 })
+        assertEquals("#n", result.spans.single().style.link)
     }
 }

@@ -24,8 +24,6 @@ class MobiFile(var book: Book) {
 
     companion object : BaseLocalBookParse {
         private var mFile: MobiFile? = null
-        private val xmlDeclarationRegex = "<\\?xml[^>]*>".toRegex()
-        private val doctypeDeclarationRegex = "<!DOCTYPE[^>]*>".toRegex()
 
         internal fun format(
             soup: org.jsoup.nodes.Document,
@@ -35,8 +33,6 @@ class MobiFile(var book: Book) {
             soup.select("[style*=display:none]").remove()
             val channel = LocalBookSemanticHtml.plainText(soup.outerHtml(), decodeEntities = false)
             return channel
-                .replace(xmlDeclarationRegex, "")
-                .replace(doctypeDeclarationRegex, "")
                 .takeIf { it.isNotBlank() }
                 ?: ""
         }
@@ -62,14 +58,15 @@ class MobiFile(var book: Book) {
         }
 
         @Synchronized
-        fun getPresentation(book: Book, chapter: BookChapter): String? =
-            getMFile(book).getContent(chapter, presentation = true)
+        fun getPresentation(book: Book, chapter: BookChapter): io.legado.app.feature.reader.core.source.ReaderLocalPresentation? =
+            getMFile(book).getContent(chapter, presentation = true)?.let {
+                io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(it, decodeEntities = false)
+            }
 
         internal fun presentationHtml(soup: org.jsoup.nodes.Document, loadStylesheet: (String) -> String? = { null }): String {
             soup.select("[style*=display:none]").remove()
             LocalBookSemanticHtml.inlineDocumentCssSemantics(soup, maxRules = Int.MAX_VALUE, loadStylesheet = loadStylesheet)
-            soup.select("script, style").remove()
-            return soup.body().outerHtml()
+            return soup.outerHtml()
         }
 
         @Synchronized
@@ -234,7 +231,7 @@ class MobiFile(var book: Book) {
         soup.select("[style*=display:none]").remove()
         soup.select("img[recindex]").forEach {
             val recindex = it.attr("recindex")
-            if (presentation) it.removeAttr("recindex") else it.clearAttributes()
+            it.clearAttributes()
             it.attr("src", "recindex:$recindex")
         }
         soup.select("a[filepos]").forEach {
@@ -280,7 +277,7 @@ class MobiFile(var book: Book) {
         // Parity with KF6: convert recindex images while keeping semantic attributes.
         soup.select("img[recindex]").forEach {
             val recindex = it.attr("recindex")
-            if (presentation) it.removeAttr("recindex") else it.clearAttributes()
+            it.clearAttributes()
             it.attr("src", "recindex:$recindex")
         }
         return if (!presentation) format(soup) else presentationHtml(soup) { href ->
