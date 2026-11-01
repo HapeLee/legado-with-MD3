@@ -4,22 +4,23 @@
     v-for="(para, index) in contents"
     :key="index"
     ref="paragraphRef"
-    :data-chapterpos="chapterPos[index]"
+    :data-chapterpos="para.start"
   >
     <img
       class="full"
-      v-if="/^\s*<img[^>]*src[^>]+>$/.test(String(para))"
-      :src="getImageSrc(para)"
+      v-if="/^\s*<img[^>]*src[^>]+>$/.test(para.html)"
+      :src="getImageSrc(para.html)"
       @error.once="proxyImage"
       loading="lazy"
     />
-    <p v-else :style="{ fontFamily, fontSize }" v-html="para" />
+    <div v-else class="paragraph-text" :style="{ fontFamily, fontSize }" v-html="para.html" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { isLegadoUrl } from '@/utils/utils'
-import API from '@api'
+import API, { type ReaderWebParagraph } from '@api'
+import { paragraphAtPosition } from '@/utils/chapterProgress'
 import jump from '@/plugins/jump'
 import type { webReadConfig } from '@/web'
 
@@ -29,7 +30,7 @@ const bookUrl = computed(() => store.readingBook.bookUrl)
 
 const props = defineProps<{
   chapterIndex: number
-  contents: Array<string>
+  contents: ReaderWebParagraph[]
   title: string
   spacing: webReadConfig['spacing']
   fontFamily: string
@@ -37,13 +38,13 @@ const props = defineProps<{
 }>()
 
 const getImageSrc = (content: string) => {
-  const imgPattern = /<img[^>]*src="([^"]*(?:"[^>]+\})?)"[^>]*>/
-  const src = content.match(imgPattern)![1] //reg tested in template
+  const src = new DOMParser().parseFromString(content, 'text/html')
+    .querySelector('img')?.getAttribute('src') ?? ''
   if (isLegadoUrl(src))
     return API.getProxyImageUrl(
       bookUrl.value,
       src,
-      useBookStore().config.readWidth,
+      readWidth.value,
     )
   return src
 }
@@ -55,27 +56,11 @@ const proxyImage = (event: Event) => {
   )
 }
 
-const calculateWordCount = (paragraph: string) => {
-  const imgPattern = /<img[^>]*src="[^"]*(?:"[^>]+\})?"[^>]*>/g
-  //内嵌图片文字为1
-  const imagePlaceHolder = ' '
-  return paragraph.replaceAll(imgPattern, imagePlaceHolder).length
-}
-const chapterPos = computed(() => {
-  let pos = -1
-  return Array.from(props.contents, content => {
-    pos += calculateWordCount(content) + 1 //计算上一段的换行符
-    return pos
-  })
-})
-
 const titleRef = ref<HTMLElement>()
-const paragraphRef = ref<HTMLParagraphElement[]>()
+const paragraphRef = ref<HTMLElement[]>([])
 const scrollToReadedLength = (length: number) => {
   if (length === 0) return
-  const paragraphIndex = chapterPos.value.findIndex(
-    wordCount => wordCount >= length,
-  )
+  const paragraphIndex = paragraphAtPosition(props.contents, length)
   if (paragraphIndex === -1) return
   nextTick(() => {
     jump(paragraphRef.value![paragraphIndex], {
@@ -128,7 +113,7 @@ onUnmounted(() => {
     sans-serif;
 }
 
-p {
+.paragraph-text {
   display: block;
   word-wrap: break-word;
   /*   word-break: break-all; */

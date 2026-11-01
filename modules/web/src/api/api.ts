@@ -76,12 +76,15 @@ const getChapterList = (/** @type {string} */ bookUrl: string) =>
     'getChapterList?url=' + encodeURIComponent(bookUrl),
   )
 
+export type ReaderWebParagraph = { html: string; start: number; endExclusive: number }
+export type ReaderWebChapter = { title: string; characterCount: number; paragraphs: ReaderWebParagraph[] }
+
 const getBookContent = (
   /** @type {string} */ bookUrl: string,
   /** @type {number} */ chapterIndex: number,
 ) =>
-  ajax.get<LeagdoApiResponse<string>>(
-    'getBookContent?url=' +
+  ajax.get<LeagdoApiResponse<ReaderWebChapter>>(
+    'getBookContent?format=semantic&url=' +
       encodeURIComponent(bookUrl) +
       '&index=' +
       chapterIndex,
