@@ -158,6 +158,7 @@ fun ReadBookScreen(
     val skipDialog = state.activeDialog as? ReadBookDialog.ConfirmSkipToChapter
     val payDialog = state.activeDialog as? ReadBookDialog.ConfirmChapterPay
     val addToBookshelfDialog = state.activeDialog as? ReadBookDialog.ConfirmAddToBookshelf
+    val retranslateDialog = state.activeDialog as? ReadBookDialog.ConfirmRetranslate
     val readRecordAliasDialog = state.activeDialog as? ReadBookDialog.ReadRecordAliasConflict
     var rememberAliasChoice by remember(readRecordAliasDialog) { mutableStateOf(false) }
 
@@ -263,6 +264,19 @@ fun ReadBookScreen(
         onConfirm = { onIntent(ReadBookIntent.ConfirmAddCurrentBookToBookshelf) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf) },
+    )
+    AppAlertDialog(
+        show = retranslateDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = stringResource(R.string.retranslate_chapter),
+        text = stringResource(R.string.retranslate_confirm),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            onIntent(ReadBookIntent.DismissDialog)
+            onIntent(ReadBookIntent.RetranslateCurrentChapter)
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
     )
 
     // 书签/笔记跳转前校验未通过的确认框

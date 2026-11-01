@@ -459,7 +459,11 @@ internal fun buildReadMenuActionDefs(
                 onIntent(ReadBookIntent.HideMenu)
             }
         },
-        def("translate", isActive = state.translationMode) {
+        def(
+            "translate",
+            isActive = state.translationMode,
+            onLongClick = { onIntent(ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmRetranslate)) },
+        ) {
             onIntent(ReadBookIntent.ToggleTranslation)
         },
         def("refresh_current") {
