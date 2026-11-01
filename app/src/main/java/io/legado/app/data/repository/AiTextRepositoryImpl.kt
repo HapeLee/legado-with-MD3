@@ -2,6 +2,7 @@ package io.legado.app.data.repository
 
 import io.legado.app.data.repository.ai.AiProviderRegistry
 import io.legado.app.data.repository.ai.AnthropicHandler
+import io.legado.app.data.repository.ai.BedrockConverseHandler
 import io.legado.app.data.repository.ai.OpenAiChatHandler
 import io.legado.app.data.repository.ai.OpenAiResponsesHandler
 import io.legado.app.domain.gateway.AiStreamEvent
@@ -24,7 +25,8 @@ class AiTextRepositoryImpl : AiTextGateway {
         handlers = listOf(
             OpenAiChatHandler(),
             OpenAiResponsesHandler(),
-            AnthropicHandler()
+            AnthropicHandler(),
+            BedrockConverseHandler()
         )
     )
 

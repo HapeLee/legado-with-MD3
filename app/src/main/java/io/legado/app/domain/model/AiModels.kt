@@ -15,6 +15,7 @@ object AiProtocol {
     const val OPENAI_CHAT_COMPLETIONS = "openai_chat_completions"
     const val OPENAI_RESPONSES = "openai_responses"
     const val ANTHROPIC_MESSAGES = "anthropic_messages"
+    const val AWS_BEDROCK_CONVERSE = "aws_bedrock_converse"
     const val GOOGLE_TRANSLATE = "google_translate"
     const val OPENAI_IMAGES = "openai_images"
     const val GEMINI_IMAGES = "gemini_images"
@@ -139,6 +140,16 @@ object AiProviderPresets {
             modelsUrl = "https://api.anthropic.com/v1/models",
             modelName = "Claude Sonnet",
             modelId = "claude-sonnet-4-20250514"
+        ),
+        // Bedrock runs inference and model listing on different hosts; change the region in both.
+        AiProviderPreset(
+            id = "aws_bedrock",
+            name = "AWS Bedrock",
+            protocol = AiProtocol.AWS_BEDROCK_CONVERSE,
+            baseUrl = "https://bedrock-runtime.us-east-1.amazonaws.com",
+            modelsUrl = "https://bedrock.us-east-1.amazonaws.com/inference-profiles?maxResults=1000",
+            modelName = "Claude Sonnet",
+            modelId = "us.anthropic.claude-sonnet-4-20250514-v1:0"
         ),
         AiProviderPreset(
             id = "opencode_go",

@@ -178,12 +178,13 @@ fun AiProviderEditScreen(
                         title = stringResource(R.string.ai_protocol),
                         selectedValue = state.protocol,
                         displayEntries = if (imageProvider) arrayOf("OpenAI Images", "Gemini Interactions", "Gemini generateContent", "Doubao Seedream", "DashScope Qwen Images", "xAI Images (JSON)", "SiliconFlow Images")
-                            else arrayOf("OpenAI Chat Completions", "OpenAI Responses", "Anthropic Messages"),
+                            else arrayOf("OpenAI Chat Completions", "OpenAI Responses", "Anthropic Messages", "AWS Bedrock Converse"),
                         entryValues = if (imageProvider) arrayOf(AiProtocol.OPENAI_IMAGES, AiProtocol.GEMINI_IMAGES, AiProtocol.GEMINI_IMAGES_LEGACY,
                             AiProtocol.SEEDREAM_IMAGES, AiProtocol.DASHSCOPE_IMAGES, AiProtocol.XAI_IMAGES, AiProtocol.SILICONFLOW_IMAGES) else arrayOf(
                             AiProtocol.OPENAI_CHAT_COMPLETIONS,
                             AiProtocol.OPENAI_RESPONSES,
-                            AiProtocol.ANTHROPIC_MESSAGES
+                            AiProtocol.ANTHROPIC_MESSAGES,
+                            AiProtocol.AWS_BEDROCK_CONVERSE
                         ),
                         onValueChange = { onIntent(AiProviderEditIntent.UpdateProtocol(it)) }
                     )
