@@ -2201,6 +2201,7 @@
     <string name="show_original">Show Original</string>
     <string name="retranslate_chapter">Retranslate Chapter</string>
     <string name="retranslate_confirm">This will delete the existing translation and re-translate. Continue?</string>
+    <string name="retranslate_in_progress">This chapter is still translating, try again in a moment</string>
     <string name="translation_in_progress">Translating: %1$d%%</string>
     <string name="translation_failed">Translation failed: %1$s</string>
     <string name="no_translation_cache">No translation cache</string>

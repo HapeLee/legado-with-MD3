@@ -77,6 +77,7 @@ import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.reader.isPayable
 import io.legado.app.model.translation.TranslationChapterStatus
+import io.legado.app.model.translation.TranslationManager
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.sheet.ReaderBookSheetTab
 import io.legado.app.ui.book.searchContent.SearchResult
@@ -2482,13 +2483,25 @@ class ReadBookViewModel(
         ReadBook.loadContent(false)
     }
 
+    /**
+     * 重新翻译本章：清掉译文与分块缓存后重新加载，由 [ReadBook.loadContent] 重新发起翻译。
+     *
+     * 本章正在翻译时直接拦掉。`TranslationManager` 没有取消能力，删缓存不会停掉旧任务：
+     * 旧任务仍会往同一个分块文件追加旧版本译文（`contentHash` 只认原文），
+     * 新任务读到后会把旧块当成本次结果复用，最终产出新旧混排的译文。
+     */
     private fun retranslateCurrentChapter() {
         val book = ReadBook.book ?: return
         viewModelScope.launch {
             val chapter = currentChapter() ?: return@launch
-            io.legado.app.model.translation.TranslationManager.deleteTranslationCache(book, chapter)
+            if (TranslationManager.getChapterTaskStateFlow(book.bookUrl, chapter.index) != null) {
+                _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.retranslate_in_progress)))
+                return@launch
+            }
+            TranslationManager.deleteTranslationCache(book, chapter)
             book.setTranslationMode(true)
             book.save()
+            _uiState.update { it.copy(translationMode = true) }
             ReadBook.loadContent(false)
         }
     }

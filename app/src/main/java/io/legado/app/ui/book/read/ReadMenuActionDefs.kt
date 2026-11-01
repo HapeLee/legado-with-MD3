@@ -462,7 +462,13 @@ internal fun buildReadMenuActionDefs(
         def(
             "translate",
             isActive = state.translationMode,
-            onLongClick = { onIntent(ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmRetranslate)) },
+            // 只在已经开着翻译时给重翻入口：翻译关着时既没有"现有翻译"可删，
+            // 又会被 RetranslateCurrentChapter 隐式打开翻译模式。
+            onLongClick = if (state.translationMode) {
+                { onIntent(ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmRetranslate)) }
+            } else {
+                null
+            },
         ) {
             onIntent(ReadBookIntent.ToggleTranslation)
         },

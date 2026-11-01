@@ -179,15 +179,12 @@ object TranslationManager : KoinComponent {
 
     /**
      * Delete translation cache and state for a chapter.
+     *
+     * 分块缓存由 [TranslationCacheGateway.deleteTranslation] 一并清掉，这里不重复删。
      */
     suspend fun deleteTranslationCache(book: Book, bookChapter: BookChapter) {
         val targetLanguage = currentTargetLanguage()
         translationCacheGateway.deleteTranslation(
-            book,
-            bookChapter,
-            targetLanguage
-        )
-        translationCacheGateway.clearChunkCacheForChapter(
             book,
             bookChapter,
             targetLanguage

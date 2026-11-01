@@ -2157,6 +2157,7 @@
     <string name="show_original">顯示原文</string>
     <string name="retranslate_chapter">重新翻譯章節</string>
     <string name="retranslate_confirm">這將刪除現有翻譯並重新翻譯。是否繼續？</string>
+    <string name="retranslate_in_progress">本章還在翻譯中，請稍後再試</string>
     <string name="translation_in_progress">翻譯中：%1$d%%</string>
     <string name="translation_failed">翻譯失敗：%1$s</string>
     <string name="no_translation_cache">無翻譯快取</string>

@@ -2233,6 +2233,7 @@
     <string name="restore_progress">恢復進度</string>
     <string name="retranslate_chapter">重新翻譯章節</string>
     <string name="retranslate_confirm">這將刪除現有翻譯並重新翻譯。是否繼續？</string>
+    <string name="retranslate_in_progress">本章仍在翻譯中，請稍後再試</string>
     <string name="return_to_original">返回原文</string>
     <string name="reverse_volume_key_page">反轉音量鍵翻頁方向</string>
     <string name="rule_call_back">回呼 JS（callBackJs）</string>
