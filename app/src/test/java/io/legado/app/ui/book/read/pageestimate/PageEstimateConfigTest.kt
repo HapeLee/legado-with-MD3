@@ -47,11 +47,15 @@ class PageEstimateConfigTest {
     }
 
     @Test
-    fun `layout dimensions affect signature and calibration bucket`() {
-        val changed = config.copy(contentWidthPx = 900)
-
-        assertNotEquals(config.layoutSignature, changed.layoutSignature)
-        assertNotEquals(config.calibrationBucket, changed.calibrationBucket)
+    fun `layout geometry and engine affect signature and calibration bucket`() {
+        for (changed in listOf(
+            config.copy(contentWidthPx = 900),
+            config.copy(textEngineVersion = config.textEngineVersion + 1),
+            config.copy(adaptSpecialStyle = !config.adaptSpecialStyle),
+        )) {
+            assertNotEquals(config.layoutSignature, changed.layoutSignature)
+            assertNotEquals(config.calibrationBucket, changed.calibrationBucket)
+        }
     }
 
     @Test

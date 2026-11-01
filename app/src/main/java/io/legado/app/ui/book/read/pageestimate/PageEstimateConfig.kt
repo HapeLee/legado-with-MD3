@@ -26,6 +26,7 @@ data class PageEstimateConfig(
     val contentKey: String = "",
     val textEngineVersion: Int = TEXT_ENGINE_VERSION,
     val titleLayoutKey: String = "",
+    val adaptSpecialStyle: Boolean = true,
 ) {
     init {
         require(contentWidthPx > 0)
@@ -63,11 +64,13 @@ data class PageEstimateConfig(
         add(imageLayoutKey)
         add(textEngineVersion)
         add(titleLayoutKey)
+        add(adaptSpecialStyle)
         if (includeContentKey) add(contentKey)
     }.value
 
     private companion object {
-        const val TEXT_ENGINE_VERSION = 1
+        // 富文本范围、结构块与正文对齐改变测量结果，旧精确页数及校准桶均不可复用。
+        const val TEXT_ENGINE_VERSION = 15
     }
 }
 

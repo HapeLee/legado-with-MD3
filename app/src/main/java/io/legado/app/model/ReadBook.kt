@@ -399,8 +399,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         val processor = contentProcessor ?: ContentProcessor.get(book)
 
         val config = PageEstimateConfig(
-            // Canvas uses different line/page boundaries; never reuse View-engine exact counts.
-            textEngineVersion = 14,
             titleLayoutKey = "${style.titleSegmentation}|${style.titleLineSpacingSub}",
             readerType = pageAnim(),
             textSizePx = style.bodyPaint.textSize,
@@ -424,6 +422,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             doublePage = columns == 2,
             useZhLayout = ReadBookConfig.useZhLayout,
             textFullJustify = ReadBookConfig.textFullJustify,
+            adaptSpecialStyle = readSettingsGateway.currentSettings.adaptSpecialStyle,
             imageLayoutKey = book.getImageStyle().orEmpty(),
             contentKey = buildString {
                 append(book.config.useReplaceRule)
