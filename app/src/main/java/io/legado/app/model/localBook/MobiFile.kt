@@ -29,15 +29,11 @@ class MobiFile(var book: Book) {
 
         internal fun format(
             soup: org.jsoup.nodes.Document,
-            chapterTitle: String? = null,
-            loadStylesheet: (String) -> String? = { null },
         ): String {
-            val body = soup.body() ?: return ""
-            // Preserve MOBI's existing uncapped rule set while sharing document-order cascading.
-            LocalBookSemanticHtml.inlineDocumentCssSemantics(soup, maxRules = Int.MAX_VALUE, loadStylesheet = loadStylesheet)
-            body.select("script, style").remove()
-            LocalBookSemanticHtml.sanitizeImages(body.select("img"))
-            val channel = LocalBookSemanticHtml.emitMixedChannel(body, chapterTitle)
+            // Keep the old whole-document projection, including its paragraph boundaries.
+            // Optional CSS interpretation must not change the meaning of old stored ordinals.
+            soup.select("[style*=display:none]").remove()
+            val channel = LocalBookSemanticHtml.plainText(soup.outerHtml(), decodeEntities = false)
             return channel
                 .replace(xmlDeclarationRegex, "")
                 .replace(doctypeDeclarationRegex, "")
@@ -63,6 +59,17 @@ class MobiFile(var book: Book) {
         @Synchronized
         override fun getContent(book: Book, chapter: BookChapter): String? {
             return getMFile(book).getContent(chapter)
+        }
+
+        @Synchronized
+        fun getPresentation(book: Book, chapter: BookChapter): String? =
+            getMFile(book).getContent(chapter, presentation = true)
+
+        internal fun presentationHtml(soup: org.jsoup.nodes.Document, loadStylesheet: (String) -> String? = { null }): String {
+            soup.select("[style*=display:none]").remove()
+            LocalBookSemanticHtml.inlineDocumentCssSemantics(soup, maxRules = Int.MAX_VALUE, loadStylesheet = loadStylesheet)
+            soup.select("script, style").remove()
+            return soup.body().outerHtml()
         }
 
         @Synchronized
@@ -195,15 +202,15 @@ class MobiFile(var book: Book) {
         return chapterList
     }
 
-    private fun getContent(chapter: BookChapter): String? {
+    private fun getContent(chapter: BookChapter, presentation: Boolean = false): String? {
         return when (val book = mobiBook) {
-            is KF8Book -> getContentKF8(book, chapter)
-            is KF6Book -> getContentKF6(book, chapter)
+            is KF8Book -> getContentKF8(book, chapter, presentation)
+            is KF6Book -> getContentKF6(book, chapter, presentation)
             else -> error("impossible condition")
         }
     }
 
-    private fun getContentKF6(kf6Book: KF6Book, chapter: BookChapter): String? {
+    private fun getContentKF6(kf6Book: KF6Book, chapter: BookChapter, presentation: Boolean): String? {
         if (chapter.isVolume && chapter.url.startsWith("skip:")) return ""
         var section = kf6Book.getSectionByHref(chapter.url) ?: return null
         val nextSectionHref = chapter.getVariable("nextUrl")
@@ -224,10 +231,10 @@ class MobiFile(var book: Book) {
         val soup = Jsoup.parse(sb.toString())
 
         soup.select("title").remove()
-        LocalBookSemanticHtml.removeHiddenElements(soup)
+        soup.select("[style*=display:none]").remove()
         soup.select("img[recindex]").forEach {
             val recindex = it.attr("recindex")
-            it.removeAttr("recindex")
+            if (presentation) it.removeAttr("recindex") else it.clearAttributes()
             it.attr("src", "recindex:$recindex")
         }
         soup.select("a[filepos]").forEach {
@@ -238,10 +245,10 @@ class MobiFile(var book: Book) {
             it.removeAttr("filepos")
         }
 
-        return format(soup, chapter.title)
+        return if (presentation) presentationHtml(soup) else format(soup)
     }
 
-    private fun getContentKF8(kf8Book: KF8Book, chapter: BookChapter): String? {
+    private fun getContentKF8(kf8Book: KF8Book, chapter: BookChapter, presentation: Boolean): String? {
         if (chapter.isVolume && chapter.url.startsWith("skip:")) return ""
         var section = kf8Book.getSectionByHref(chapter.url) ?: return null
         val nextSectionHref = chapter.getVariable("nextUrl")
@@ -269,14 +276,14 @@ class MobiFile(var book: Book) {
         val soup = Jsoup.parse(sb.toString())
 
         soup.select("title").remove()
-        LocalBookSemanticHtml.removeHiddenElements(soup)
+        soup.select("[style*=display:none]").remove()
         // Parity with KF6: convert recindex images while keeping semantic attributes.
         soup.select("img[recindex]").forEach {
             val recindex = it.attr("recindex")
-            it.removeAttr("recindex")
+            if (presentation) it.removeAttr("recindex") else it.clearAttributes()
             it.attr("src", "recindex:$recindex")
         }
-        return format(soup, chapter.title) { href ->
+        return if (!presentation) format(soup) else presentationHtml(soup) { href ->
             if (href.startsWith("kindle:flow:")) kf8Book.getFlowText(href) else null
         }
     }

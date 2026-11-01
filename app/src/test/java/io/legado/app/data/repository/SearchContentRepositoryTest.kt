@@ -33,7 +33,7 @@ class SearchContentRepositoryTest {
     @Test
     fun ruleOrContentRevisionInvalidatesBothCachePaths() {
         var revision = 0L
-        val repository = SearchContentRepository(contentRevisionProvider = { revision })
+        val repository = SearchContentRepository(rulesRevisionProvider = { revision })
         val book = book()
         repository.beginSearch(book, "A", false, false)
         revision++

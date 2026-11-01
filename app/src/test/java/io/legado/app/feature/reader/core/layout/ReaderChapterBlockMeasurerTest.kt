@@ -20,6 +20,31 @@ import kotlin.coroutines.cancellation.CancellationException
 
 class ReaderChapterBlockMeasurerTest {
     @Test
+    fun localPresentationKeepsCanonicalBodyAndBgmOrdinalsWhileDrawingRulesAndNumbers() = runBlocking {
+        val fixture = io.legado.app.support.ReaderSemanticFixtures
+        val canonical = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(
+            org.jsoup.Jsoup.parse(fixture.html).body().outerHtml())
+        val values = io.legado.app.help.book.MixedContentSegments.paragraphs(canonical, "", false)
+        val presentation = checkNotNull(io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver
+            .resolve(fixture.html, canonical, "", true))
+        val source = ReaderChapterSourceParser.parse(0, "", values, false, true,
+            localPresentation = presentation, bgmScenes = mapOf(1 to ("rain" to "wind")))
+        val result = ReaderChapterBlockMeasurer(shaper, shaper, { null })
+            .measure(source, style.copy(bodyIndentCharacters = 0)) as ReaderChapterMeasureResult.Success
+        val page = ReaderPaginator.paginateBlocks(result.blocks, ReaderPaginationConfig(
+            0, "", 500, 1000, 0f, 0f, 0f, 0f, 10f, 8f)).single()
+        assertEquals(fixture.body, source.semanticContent)
+        assertEquals((0..8).toList(), source.paragraphs.map { it.ordinal })
+        assertEquals(listOf("3.", "8."), page.elements
+            .filterIsInstance<io.legado.app.feature.reader.core.model.ReaderElement.ParagraphMarker>().mapNotNull { it.label })
+        assertEquals(1, result.blocks.filterIsInstance<ReaderMeasuredBlock.Rule>().size)
+        val capsules = result.blocks.filterIsInstance<ReaderMeasuredBlock.InlineParagraph>()
+            .flatMap { it.items }.filterIsInstance<ReaderMeasuredInlineItem.BgmScene>()
+        assertEquals(listOf(1), capsules.map { it.paragraphIndex })
+        assertTrue(io.legado.app.feature.reader.core.semantic.ReaderSemanticContract.validate(source).isEmpty())
+    }
+
+    @Test
     fun profilingKeepsMeasuredBlocksIdenticalWhenMostCharactersHaveNoStyle() = runBlocking {
         val source = ReaderChapterSourceParser.parse(0, "", listOf("甲乙丙丁"), false, false)
         val measuredStyle = style.copy(

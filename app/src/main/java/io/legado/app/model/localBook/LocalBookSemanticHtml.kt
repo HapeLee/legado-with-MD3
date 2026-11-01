@@ -6,8 +6,6 @@ import io.legado.app.utils.encodeURI
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import org.jsoup.nodes.Node
-import org.jsoup.nodes.TextNode
 import org.jsoup.select.Elements
 import java.net.URI
 import java.net.URLDecoder
@@ -20,43 +18,16 @@ import java.net.URLDecoder
  */
 object LocalBookSemanticHtml {
 
+    /** The pre-rich-channel local-book transport. Decoding happens once at this boundary. */
+    fun plainText(html: String, decodeEntities: Boolean = true): String {
+        val text = HtmlFormatter.formatKeepImg(html)
+        return if (decodeEntities) StringEscapeUtils.unescapeHtml4(
+            text.replace("&lt;img", "&lt; img", ignoreCase = true)) else text
+    }
+
     private val allowedImgAttrs = setOf("src", "alt", "width", "height", "class", "style")
 
-    private val complexTags = setOf(
-        "blockquote", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6",
-        "pre", "hr", "table", "thead", "tbody", "tr", "td", "th", "figure",
-        "figcaption", "aside", "dl", "dt", "dd"
-    )
-
-    private val blockTags = setOf(
-        "p", "div", "section", "article", "main", "header", "footer",
-        "h1", "h2", "h3", "h4", "h5", "h6", "li", "ul", "ol", "pre",
-        "blockquote", "table", "tr", "td", "th", "figure", "figcaption",
-        "center", "aside", "dl", "dt", "dd", "hr"
-    )
-
-    private val containerTags = setOf(
-        "div", "section", "article", "main", "header", "footer"
-    )
-
-    private const val inlineSemanticSelector =
-        "a[href], [id], a[name], ruby, b, strong, i, em, cite, dfn, u, ins, s, del, strike, " +
-            "code, kbd, samp, tt, sup, sub, big, small, br, " +
-            "[style*=font-weight], [style*=font-style], [style*=text-decoration]"
-
-    private const val blockSemanticSelector =
-        "blockquote, ul, ol, h1, h2, h3, h4, h5, h6, pre, hr, table, figure, figcaption, aside, dl"
-
-    // TODO: list-style / list-style-type 尚未加入白名单；有序或自定义 marker 的 CSS 会被忽略。
-    private val allowedCssProps = setOf(
-        "text-align", "text-indent",
-        "margin", "margin-top", "margin-bottom", "margin-left", "margin-right",
-        "border", "border-left", "border-right", "border-top", "border-bottom",
-        "font-weight", "font-style", "font-size", "display"
-    )
-
-    private val displayNoneRegex = Regex("(^|;)\\s*display\\s*:\\s*none\\b", RegexOption.IGNORE_CASE)
-    private val textAlignRegex = Regex("text-align\\s*:\\s*([a-z]+)", RegexOption.IGNORE_CASE)
+    private val allowedCssProps = setOf("text-align", "font-weight", "font-style", "text-decoration")
 
     data class CssRule(
         val tag: String?,
@@ -69,25 +40,27 @@ object LocalBookSemanticHtml {
 
     /**
      * Cut body content to [startFragmentId, endFragmentId) using DOM order.
-     * Handles single-line compressed HTML and empty anchors without string surgery.
+     * Uses hidden anchors before applying the legacy inline-hidden filter.
      */
-    fun cutFragment(body: Element, startFragmentId: String?, endFragmentId: String?) {
-        if (startFragmentId.isNullOrBlank() && endFragmentId.isNullOrBlank()) return
-        val startEl = if (!startFragmentId.isNullOrBlank()) {
-            findByIdOrName(body, startFragmentId)
+    fun cutChapterBody(body: Element, startFragmentId: String?, endFragmentId: String?) {
+        val startId = startFragmentId?.let(::decodeFragment)
+        val endId = endFragmentId?.let(::decodeFragment)
+        val startEl = if (!startId.isNullOrBlank()) {
+            findByIdOrName(body, startId)
         } else null
-        val endEl = if (!endFragmentId.isNullOrBlank() && endFragmentId != startFragmentId) {
-            findByIdOrName(body, endFragmentId)
+        val endEl = if (!endId.isNullOrBlank() && endId != startId) {
+            findByIdOrName(body, endId)
         } else null
         if (startEl != null) {
             trimBefore(startEl, body)
         }
         if (endEl != null) {
-            val attached = if (endEl.parent() == null) findByIdOrName(body, endFragmentId!!) else endEl
+            val attached = if (endEl.parent() == null) findByIdOrName(body, endId!!) else endEl
             if (attached != null) {
                 trimAfter(attached, body)
             }
         }
+        body.select("[style*=display:none]").remove()
     }
 
     private fun findByIdOrName(body: Element, fragmentId: String): Element? {
@@ -133,8 +106,16 @@ object LocalBookSemanticHtml {
     }
 
     /** Keep only semantic image attributes; drop event handlers and layout hacks. */
-    fun sanitizeImages(elements: Elements) {
+    fun sanitizeImages(elements: Elements, preserveAppearance: Boolean = true) {
         elements.select("img").forEach { img ->
+            if (!preserveAppearance) {
+                if (img.attributesSize() > 1) {
+                    val src = img.attr("src")
+                    img.clearAttributes()
+                    img.attr("src", src)
+                }
+                return@forEach
+            }
             val kept = allowedImgAttrs.associateWith { img.attr(it) }
                 .filterValues { it.isNotEmpty() }
             val src = img.attr("src")
@@ -144,19 +125,6 @@ object LocalBookSemanticHtml {
                 if (k != "src") img.attr(k, v)
             }
         }
-    }
-
-    /** Remove elements hidden via inline or CSS-inlined `display: none` (with or without spaces). */
-    fun removeHiddenElements(root: Element) {
-        root.select("[style]").forEach { el ->
-            if (displayNoneRegex.containsMatchIn(el.attr("style"))) {
-                el.remove()
-            }
-        }
-    }
-
-    fun removeHiddenElements(elements: Elements) {
-        elements.forEach(::removeHiddenElements)
     }
 
     /** Parse simple selectors (tag, #id, .class, tag.class) with whitelisted props. */
@@ -234,10 +202,6 @@ object LocalBookSemanticHtml {
         return out
     }
 
-    private fun parseStyleAttr(style: String): Map<String, String> {
-        return parseDeclarations(style)
-    }
-
     /** Apply only this content document's stylesheets, in document order. */
     fun inlineDocumentCssSemantics(
         document: Document,
@@ -265,11 +229,12 @@ object LocalBookSemanticHtml {
     fun inlineCssSemantics(docBody: Element, cssRules: List<CssRule>) {
         if (cssRules.isEmpty()) {
             normalizeLegacyAlignment(docBody)
-            removeHiddenElements(docBody)
             return
         }
         val all = docBody.allElements
         for (el in all) {
+            // Preserve the legacy inline-hidden flag until chapter boundaries have been used.
+            if (el.attr("style").contains("display:none", ignoreCase = true)) continue
             val tag = el.tagName().lowercase()
             val id = el.id().lowercase().takeIf { it.isNotEmpty() }
             val classes = el.classNames().map { it.lowercase() }.toSet()
@@ -283,13 +248,12 @@ object LocalBookSemanticHtml {
             for ((_, _, _, declarations) in matched) {
                 for ((k, v) in declarations) merged[k] = v
             }
-            val inline = parseStyleAttr(el.attr("style"))
+            val inline = parseDeclarations(el.attr("style"))
             for ((k, v) in inline) merged[k] = v
             if (merged.isEmpty()) continue
             el.attr("style", merged.entries.joinToString("; ") { "${it.key}: ${it.value}" })
         }
         normalizeLegacyAlignment(docBody)
-        removeHiddenElements(docBody)
     }
 
     private fun normalizeLegacyAlignment(body: Element) {
@@ -319,175 +283,37 @@ object LocalBookSemanticHtml {
         }
     }
 
-    private fun hasSemanticSignal(el: Element): Boolean {
-        val tag = el.tagName().lowercase()
-        if (tag in complexTags) return true
-        if (el.id().isNotEmpty() || el.attr("name").isNotEmpty()) return true
-        val style = el.attr("style").lowercase()
-        if (style.contains("text-align") || style.contains("text-indent") ||
-            style.contains("font-weight") || style.contains("font-style") ||
-            style.contains("text-decoration")
-        ) {
-            return true
-        }
-        if (el.select(blockSemanticSelector).isNotEmpty()) {
-            return true
-        }
-        if (el.select(inlineSemanticSelector).isNotEmpty()) {
-            return true
-        }
-        return false
-    }
-
-    private fun isUnwrappableContainer(el: Element): Boolean {
-        val tag = el.tagName().lowercase()
-        if (tag !in containerTags) return false
-        if (el.id().isNotEmpty() || el.attr("name").isNotEmpty()) return false
-        return el.children().any { it.tagName().lowercase() in blockTags }
-    }
-
-    private fun propagateContainerAlignment(container: Element, child: Element) {
-        val alignMatch = textAlignRegex.find(container.attr("style")) ?: return
-        val existing = child.attr("style")
-        if (!existing.contains("text-align", ignoreCase = true)) {
-            val alignDecl = "text-align: ${alignMatch.groupValues[1].lowercase()}"
-            child.attr("style", (existing.trimEnd(';') + "; $alignDecl").trimStart(';', ' '))
-        }
-    }
-
-    /**
-     * Emit mixed channel: simple text/image paragraphs stay plain (replace-friendly),
-     * semantic blocks go through single-line <usehtml> wrappers.
-     */
-    fun emitMixedChannel(body: Element, chapterTitle: String? = null): String {
-        dropLeadingTitle(body, chapterTitle)
-        val lines = mutableListOf<String>()
-        emitNodes(body, lines)
-        return lines.joinToString("\n")
-    }
-
-    private fun emitNodes(container: Element, lines: MutableList<String>) {
-        for (node in container.childNodes().toList()) {
-            if (node is TextNode) {
-                val text = node.text().trim()
-                if (text.isNotEmpty()) {
-                    lines += text
-                }
-                continue
-            }
-            if (node !is Element) continue
-            val el = node
-            val tag = el.tagName().lowercase()
-            if (tag == "script" || tag == "style") continue
-            if (el.text().isBlank() && el.select("img").isEmpty() && tag != "hr") {
-                continue
-            }
-            if (isUnwrappableContainer(el)) {
-                el.children().forEach { child -> propagateContainerAlignment(el, child) }
-                emitNodes(el, lines)
-                continue
-            }
-            if (hasSemanticSignal(el)) {
-                // Keep the transport on one line without flattening author whitespace in pre.
-                val singleLine = el.outerHtml().replace("\r", "&#13;").replace("\n", "&#10;").trim()
-                if (singleLine.isNotEmpty()) {
-                    lines += "<usehtml>$singleLine</usehtml>"
-                }
-            } else {
-                val rawPlain = HtmlFormatter.formatKeepImg(el.outerHtml())
-                    .replace("&lt;img", "&lt; img", ignoreCase = true)
-                val plain = if (rawPlain.indexOf('&') > -1) {
-                    StringEscapeUtils.unescapeHtml4(rawPlain).trim()
-                } else {
-                    rawPlain.trim()
-                }
-                if (plain.isEmpty()) continue
-                for (part in plain.split("\n")) {
-                    val t = part.trim()
-                    if (t.isNotEmpty()) lines += t
-                }
-            }
-        }
-    }
-
-    /**
-     * Drop leading leaf blocks whose normalized text repeats [chapterTitle].
-     *
-     * Unwraps structural containers (`div`/`section`/...) to inspect up to 3 leading leaf
-     * blocks. Jsoup's `Element.text()` already normalizes `<br/>` and inline tags into spaces,
-     * so multi-line headings (`<h2>CHAPTER I.<br/>The Period</h2>`), split headings across
-     * consecutive blocks (`<h1>CHAPTER I.</h1><h2>The Period</h2>`), and headings sharing a
-     * wrapper `<div class="chapter">` with story paragraphs are matched without touching
-     * inline words inside normal paragraphs.
-     */
-    fun dropLeadingTitle(body: Element, chapterTitle: String?): Boolean {
-        if (chapterTitle.isNullOrBlank()) return false
-        val normTitle = normalizeTitleText(chapterTitle)
-        if (normTitle.isEmpty()) return false
-        val candidates = mutableListOf<Element>()
-        collectLeadingLeafBlocks(body, candidates, limit = 3)
-        if (candidates.isEmpty()) return false
-
-        var spaced = ""
-        var flat = ""
-        for (i in candidates.indices) {
-            val part = normalizeTitleText(candidates[i].text())
-            if (part.isEmpty()) continue
-            spaced = if (spaced.isEmpty()) part else "$spaced $part"
-            flat = normalizeTitleText(flat + part)
-            if (spaced == normTitle || flat == normTitle) {
-                for (j in 0..i) {
-                    var parent: Element? = candidates[j].parent()
-                    candidates[j].remove()
-                    while (parent != null && parent != body &&
-                        parent.text().isBlank() && parent.select("img, image, hr").isEmpty()
-                    ) {
-                        val up = parent.parent()
-                        parent.remove()
-                        parent = up
-                    }
-                }
-                return true
-            }
-            if (!normTitle.startsWith(spaced) && !normTitle.startsWith(flat)) break
-        }
-        return false
-    }
-
-    private fun collectLeadingLeafBlocks(
-        root: Element,
-        out: MutableList<Element>,
-        limit: Int
-    ): Boolean {
-        for (node in root.childNodes()) {
-            if (node is TextNode) {
-                if (node.text().isNotBlank()) return false
-                continue
-            }
-            if (node !is Element) continue
-            val tag = node.tagName().lowercase()
-            if (tag == "script" || tag == "style") continue
-            if (tag == "img" || tag == "image" || node.select("img, image").isNotEmpty()) {
-                return false
-            }
-            if (isUnwrappableContainer(node) && node.ownText().isBlank()) {
-                if (!collectLeadingLeafBlocks(node, out, limit)) return false
-            } else if (node.text().isNotBlank()) {
-                out += node
-            }
-            if (out.size >= limit) return false
-        }
-        return true
-    }
-
-    private fun normalizeTitleText(text: String): String =
-        text.replace("[\\s\\u00a0\\u3000]+".toRegex(), " ").trim()
-
     private val schemeRegex = Regex("^[a-z][a-z0-9+.-]*:", RegexOption.IGNORE_CASE)
     private val mobiLinkRegex = Regex("^(filepos:[0-9]+|kindle:pos:fid:[0-9a-v]+:off:[0-9a-v]+)$", RegexOption.IGNORE_CASE)
     private val mobiChapterPrefixRegex = Regex("^(?:skip:)?\\d+:")
 
     enum class LinkKind { INTERNAL, EXTERNAL, UNSUPPORTED }
+
+    /** URI fragments use percent encoding; a literal '+' is not a form-encoded space. */
+    fun decodeFragment(fragment: String): String = runCatching {
+        URLDecoder.decode(fragment.replace("+", "%2B"), "UTF-8")
+    }.getOrDefault(fragment)
+
+    fun resolveReaderLink(href: String, localBook: Boolean, chapterUrl: String): String? {
+        val link = href.trim()
+        return when (classifyLink(link)) {
+            LinkKind.UNSUPPORTED -> null
+            LinkKind.EXTERNAL -> if (link.startsWith("//")) "https:$link" else link
+            LinkKind.INTERNAL -> if (localBook) link else runCatching {
+                // Chapter identities may carry Legado's trailing URL-options JSON.
+                val baseUrl = chapterUrl.split(Regex("\\s*,\\s*(?=\\{)"), limit = 2).first()
+                val base = baseUrl.replace(" ", "%20")
+                val relative = link.replace(" ", "%20")
+                // URI.resolve treats a query-only reference as a directory URL.
+                // A browser reference instead keeps the current resource's path.
+                val resolved = if (relative.startsWith("?")) {
+                    URI(base.substringBefore('#').substringBefore('?') + relative)
+                } else URI(base).resolve(URI(relative))
+                resolved.toString()
+                    .takeIf { classifyLink(it) == LinkKind.EXTERNAL }
+            }.getOrNull()
+        }
+    }
 
     fun classifyLink(href: String): LinkKind {
         val link = href.trim()
@@ -522,20 +348,20 @@ object LocalBookSemanticHtml {
         return if (fragment.isNotEmpty()) "$resolvedPath#$fragment" else resolvedPath
     }
 
-    fun resolveInternalLinkTarget(
+    suspend fun resolveInternalLinkTarget(
         rawLink: String,
         chapters: List<BookChapter>,
-        currentChapterIndex: Int = -1
-    ): Int? {
-        val decoded = runCatching { URLDecoder.decode(rawLink.trim(), "UTF-8") }
-            .getOrDefault(rawLink.trim())
+        currentChapterIndex: Int = -1,
+        anchorPositions: suspend (BookChapter) -> Map<String, Int> = { emptyMap() },
+    ): Pair<Int, Int>? {
+        val decoded = decodeFragment(rawLink.trim())
         if (classifyLink(decoded) != LinkKind.INTERNAL || chapters.isEmpty()) return null
         val link = decoded.removePrefix("/").removePrefix("./")
         fun canonicalUrl(ch: BookChapter): String =
-            ch.url.replace(mobiChapterPrefixRegex, "").removePrefix("/")
+            decodeFragment(ch.url.replace(mobiChapterPrefixRegex, "")).removePrefix("/")
 
         val resolvedLink = if (link.startsWith("#")) {
-            val curBase = chapters.getOrNull(currentChapterIndex)
+            val curBase = chapters.firstOrNull { it.index == currentChapterIndex }
                 ?.let { canonicalUrl(it).substringBefore("#") }
                 .orEmpty()
             "$curBase$link".removePrefix("/")
@@ -546,14 +372,24 @@ object LocalBookSemanticHtml {
             candidate.equals(target, ignoreCase = true) ||
                 candidate.endsWith("/$target", ignoreCase = true)
 
-        // 1. Exact URL match (including #fragment or mobi filepos/kindle:pos)
+        // Directory entries already identify a chapter boundary, including MOBI identities.
         val exact = chapters.filter { matches(canonicalUrl(it), resolvedLink) }
-        exact.firstOrNull { !it.isVolume }?.let { return it.index }
-        exact.firstOrNull()?.let { return it.index }
+        val exactTargets = exact.filterNot { it.isVolume }.ifEmpty { exact }
+        if (exactTargets.isNotEmpty()) return exactTargets.singleOrNull()?.let { it.index to 0 }
 
-        // 2. Same resource file match when #fragment is an in-chapter anchor
-        val byPath = chapters.filter { matches(canonicalUrl(it).substringBefore("#"), linkBase) }
-        if (byPath.any { it.index == currentChapterIndex }) return currentChapterIndex
-        return (byPath.firstOrNull { !it.isVolume } ?: byPath.firstOrNull())?.index
+        val candidates = chapters.filterNot { it.isVolume }
+            .filter { matches(canonicalUrl(it).substringBefore("#"), linkBase) }
+        val fragment = resolvedLink.substringAfter('#', "")
+        if (fragment.isEmpty()) {
+            return (candidates.firstOrNull { it.index == currentChapterIndex } ?: candidates.firstOrNull())
+                ?.let { it.index to 0 }
+        }
+        var target: Pair<Int, Int>? = null
+        for (chapter in candidates) {
+            val position = anchorPositions(chapter)[fragment] ?: continue
+            if (target != null) return null // Duplicate anchors across slices are ambiguous.
+            target = chapter.index to position
+        }
+        return target
     }
 }

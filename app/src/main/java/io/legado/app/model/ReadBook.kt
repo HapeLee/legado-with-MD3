@@ -510,7 +510,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 useReplaceRule,
                 chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
             )
-            val processed = processor.getContent(book, chapter, content, includeTitle = false)
+            val processed = processor.getContent(book, chapter, content, includeTitle = false, paragraphIndent = null, includePresentation = true)
             wholeBookPageCoordinator.updateChapterContent(
                 chapterIndex = chapter.index,
                 actualLength = processed.textList
@@ -528,6 +528,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chapterIndex = chapter.index,
                 title = displayTitle,
                 paragraphs = processed.textList,
+                localPresentation = processed.presentation,
                 includeTitle = ReadBookConfig.titleMode != 2 || chapter.isVolume || processed.textList.isEmpty(),
                 adaptSpecialStyle = readSettingsGateway.currentSettings.adaptSpecialStyle,
                 htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
@@ -1720,7 +1721,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
         )
         val contents = ReaderPerfTrace.section("content.process") {
-            contentProcessor.getContent(book, chapter, content, includeTitle = false)
+            contentProcessor.getContent(book, chapter, content, includeTitle = false, paragraphIndent = null, includePresentation = true)
         }
         ensureActive()
         wholeBookPageCoordinator.updateChapterContent(
@@ -1749,6 +1750,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chapterIndex = chapter.index,
                 title = displayTitle,
                 paragraphs = contents.textList,
+                localPresentation = contents.presentation,
                 includeTitle = ReadBookConfig.titleMode != 2 || chapter.isVolume || contents.textList.isEmpty(),
                 adaptSpecialStyle = readSettingsGateway.currentSettings.adaptSpecialStyle,
                 htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,

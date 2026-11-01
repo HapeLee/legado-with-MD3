@@ -2208,7 +2208,9 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
         is ReaderElement.Action -> Unit
         is ReaderElement.Spacer -> Unit
         is ReaderElement.ParagraphMarker -> {
-            if (e.circular) {
+            if (e.label != null) {
+                drawNumberedParagraphMarker(native, e)
+            } else if (e.circular) {
                 drawCircle(Color(e.colorArgb), e.strokeWidthPx / 2f, Offset(e.bounds.left, e.bounds.top))
             } else {
                 drawLine(
@@ -2965,7 +2967,9 @@ private fun ReaderPageCanvas(
             is ReaderElement.Action -> Unit
             is ReaderElement.Spacer -> Unit
             is ReaderElement.ParagraphMarker -> {
-                if (e.circular) {
+                if (e.label != null) {
+                    drawNumberedParagraphMarker(native, e)
+                } else if (e.circular) {
                     drawCircle(Color(e.colorArgb), e.strokeWidthPx / 2f, Offset(e.bounds.left, e.bounds.top))
                 } else {
                     drawLine(
@@ -3880,4 +3884,18 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryGlyph(
             numberPaint,
         )
     }
+}
+
+// Marker numbers are decorations, so they never enter text selection or semantic offsets.
+private val paragraphMarkerPaint = ThreadLocal.withInitial {
+    android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = android.graphics.Paint.Align.RIGHT
+    }
+}
+
+private fun drawNumberedParagraphMarker(canvas: android.graphics.Canvas, marker: ReaderElement.ParagraphMarker) {
+    val paint = paragraphMarkerPaint.get()!!
+    paint.color = marker.colorArgb
+    paint.textSize = marker.textSizePx
+    canvas.drawText(marker.label.orEmpty(), marker.bounds.right, marker.bounds.bottom, paint)
 }

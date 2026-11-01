@@ -163,7 +163,7 @@ class AiCastAssignUseCase(
         val chapter = toc[chapterIndex]
         val chapterContent = BookHelp.getContent(book, chapter)
             ?: error("无法读取本章内容")
-        // 锚点必须与渲染侧数出来的引号逐一对上：含图 / HTML / 分页标记的段落渲染器不喂跟踪器，
+        // 锚点必须与渲染侧数出来的引号逐一对上：显式 HTML 和分页标记不参与，图片标签也不喂入，
         // 这里如果按原始段落数，整章序号会从第一个图片段开始错位，名字全挂到别的句子上。
         val paragraphs = ReaderChapterSourceParser.castAnchorText(
             paragraphs = ContentProcessor.get(book)

@@ -10,6 +10,8 @@ import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.*
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
+import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.domain.usecase.BookmarkTargetVerdict
@@ -56,6 +58,11 @@ class ContentProcessorSemanticIntegrationTest {
         override val currentSettings get() = settings.value
         override suspend fun update(transform: (OtherSettings) -> OtherSettings) { settings.value = transform(settings.value) }
     }
+    private class AloudGateway : ReadAloudSettingsGateway {
+        override val settings = MutableStateFlow(ReadAloudSettings())
+        override val currentSettings get() = settings.value
+        override suspend fun update(transform: (ReadAloudSettings) -> ReadAloudSettings) { settings.value = transform(settings.value) }
+    }
     private lateinit var fixture: InMemoryAppDatabaseFixture
     private val read = ReadGateway()
     private val other = OtherGateway()
@@ -69,7 +76,11 @@ class ContentProcessorSemanticIntegrationTest {
         val context = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
         AppConfigStore.init(context)
         stopKoin()
-        startKoin { modules(module { single<ReadSettingsGateway> { read }; single<OtherSettingsGateway> { other } }) }
+        startKoin { modules(module {
+            single<ReadSettingsGateway> { read }
+            single<OtherSettingsGateway> { other }
+            single<ReadAloudSettingsGateway> { AloudGateway() }
+        }) }
         fixture = InMemoryAppDatabaseFixture(context)
         val db = fixture.database
         val styleRepository = ReadStyleRepository(HighlightRuleRepository(db.highlightRuleDao, context))
@@ -94,7 +105,152 @@ class ContentProcessorSemanticIntegrationTest {
     }
 
     private fun source(content: BookContent) = ReaderChapterSourceParser.parse(0, "", content.textList, false,
-        read.currentSettings.adaptSpecialStyle, AndroidReaderHtmlSemanticTextResolver)
+        read.currentSettings.adaptSpecialStyle, AndroidReaderHtmlSemanticTextResolver, localPresentation = content.presentation)
+
+    @Test fun oldBgmRecordsKeepTheirTargetAcrossStyleSwitchesAndAllConsumers() = runBlocking {
+        val sample = io.legado.app.support.ReaderSemanticFixtures
+        val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(sample.html).body().outerHtml())
+        book.origin = io.legado.app.constant.BookType.localTag
+        book.originName = "fixture.epub"
+        book.type = 0
+        val old = sample.expected.getAsJsonObject("bgm")
+        val saved = io.legado.app.data.entities.BgmSceneMark(book.bookUrl, 0,
+            old.get("paragraphOrdinal").asInt, old.get("poolName").asString, old.get("trackName").asString,
+            old.get("enabled").asBoolean, old.get("volume").asFloat, createdAt = 1000, updatedAt = 2000)
+        fixture.database.bgmSceneDao.put(saved)
+        BookHelp.saveText(book, chapter, raw)
+        for (enabled in listOf(true, false, true)) {
+            read.update { it.copy(adaptSpecialStyle = enabled) }
+            val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = "")
+            val decoration = if (enabled) io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver
+                .resolve(sample.html, raw, "", enabled) else null
+            val current = ReaderChapterSourceParser.parse(0, "", processed.textList, false, enabled,
+                AndroidReaderHtmlSemanticTextResolver, bgmScenes = io.legado.app.help.readaloud.cast.BgmSceneStore
+                    .labelsForChapter(book.bookUrl, 0), localPresentation = decoration)
+            assertEquals(sample.body, current.semanticContent)
+            val ranges = io.legado.app.help.readaloud.cast.BgmSceneStore.positionsToOrdinals(current)
+            val target = current.paragraphs.single { it.ordinal == saved.paragraphOrdinal }
+            assertEquals(old.get("text").asString + "\n", current.semanticContent.substring(target.start, target.endExclusive))
+            assertEquals(saved.paragraphOrdinal, ranges.last { it.first <= target.start }.second)
+            assertEquals(saved, io.legado.app.help.readaloud.cast.BgmSceneStore.activeMark(book.bookUrl, 0, saved.paragraphOrdinal))
+            assertEquals(old.get("text").asString, io.legado.app.help.readaloud.cast.BgmSceneStore.overview(book, 0).single().preview.trim())
+            val web = io.legado.app.api.ReaderWebChapter.fromSource(current)
+            assertEquals(target.start, web.paragraphs[saved.paragraphOrdinal].start)
+            val speech = io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter.create(0, "", current.semanticContent, listOf(0))
+            assertTrue(speech.paragraphs.any { it.chapterPosition == target.start && it.text == old.get("text").asString })
+            val found = SearchContentRepository(readSettingsGateway = read, otherSettingsGateway = other)
+                .search(book, old.get("text").asString, false, false).toList().last().single()
+            assertEquals("chapter\n".length + target.start, found.queryIndexInChapter)
+            assertEquals(listOf(saved), fixture.database.bgmSceneDao.getChapter(book.bookUrl, 0))
+        }
+        // Legacy online HTML is one stored paragraph even when it contains several visual lines.
+        book.origin = "source"
+        book.originName = ""
+        val html = "plain\n<usehtml><p>乙&amp;😀<br>尾</p></usehtml>\nafter"
+        BookHelp.saveText(book, chapter, html)
+        val processed = ContentProcessor.get(book).getContent(book, chapter, html, includeTitle = false, paragraphIndent = "")
+        val rows = io.legado.app.help.readaloud.cast.BgmSceneStore.paragraphTexts(processed.textList, true)
+        assertEquals(mapOf(0 to "plain", 1 to "乙&😀\n尾", 2 to "after"), rows)
+        assertEquals(rows[1], io.legado.app.help.readaloud.cast.BgmSceneStore.overview(book, 0).single().preview)
+        assertEquals(listOf(saved), fixture.database.bgmSceneDao.getChapter(book.bookUrl, 0))
+    }
+
+    @Test fun localCrossNodeRulesAndJsExecuteOnceAndCanDropOnlyPresentation() {
+        book.origin = io.legado.app.constant.BookType.localTag
+        book.originName = "fixture.epub"
+        book.type = 0
+        book.setUseReplaceRule(true)
+        fixture.database.replaceRuleDao.insert(ReplaceRule(id = 101, pattern = "今天天气", replacement = "昨天", isRegex = false, order = 0))
+        fixture.database.replaceRuleDao.insert(ReplaceRule(id = 102, pattern = "昨天", replacement =
+            "@js:chapter.putVariable('runs', String(parseInt(chapter.getVariable('runs') || '0') + 1)); '昨天';", isRegex = true, order = 1))
+        chapter.putVariable("runs", "0")
+        val html = "<p>今天<strong>天气</strong><img src='Images/x.png'></p>"
+        val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(html).body().outerHtml())
+        val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = "")
+        val appearance = checkNotNull(io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(html, raw, "", true))
+        val current = source(processed.copy(presentation = appearance))
+        assertEquals("昨天\uFFFC\n", current.semanticContent)
+        assertEquals("1", chapter.getVariable("runs"))
+        assertTrue(current.anchorPositions.isEmpty())
+        assertTrue(current.blocks.filterIsInstance<io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock.Paragraph>()
+            .all { it.presentation == null })
+        assertTrue(processed.textList.single().contains("Images/x.png"))
+    }
+
+    @Test fun localSegmentationConversionAndIndentKeepTheirOldMeaningWithEitherAppearanceSetting() = runBlocking {
+        book.origin = io.legado.app.constant.BookType.localTag
+        book.originName = "fixture.epub"
+        book.type = 0
+        val html = "<p>繁體 <strong>內容</strong></p><p>接續內容。</p>"
+        val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(html).body().outerHtml())
+        for (segmented in listOf(false, true)) for (converter in listOf(0, 1)) for (indent in listOf("", "　　")) {
+            book.setReSegment(segmented)
+            val expected = if (segmented) listOf(if (converter == 1) "繁体内容接续内容。" else "繁體內容接續內容。")
+                else if (converter == 1) listOf("繁体 内容", "接续内容。") else listOf("繁體 內容", "接續內容。")
+            for (enabled in listOf(true, false)) {
+                read.update { it.copy(adaptSpecialStyle = enabled, chineseConverterType = converter) }
+                val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = indent)
+                assertEquals(expected.map { indent + it }, processed.textList)
+                val appearance = io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(html, raw, indent, enabled)
+                val current = ReaderChapterSourceParser.parse(0, "", processed.textList, false, enabled,
+                    localPresentation = appearance.takeIf { enabled })
+                assertEquals(expected.joinToString("\n", postfix = "\n") { indent + it }, current.semanticContent)
+                assertEquals(expected.indices.toList(), current.paragraphs.map { it.ordinal })
+            }
+        }
+    }
+
+    @Test fun anUnmatchedLegacyHtmlEditDoesNotChangeTheBodyOrItsAttributes() = runBlocking {
+        val original = "<usehtml><p><a href='target'>body</a><img src='x.png'></p></usehtml>"
+        fixture.database.bookContentProcessDao.upsert(io.legado.app.data.entities.BookContentProcess(
+            id = "no-match", bookUrl = book.bookUrl, chapterIndex = chapter.index,
+            kind = io.legado.app.data.entities.BookContentProcess.KIND_AI_REWRITE,
+            anchorJson = GSON.toJson(TextProcessAnchor(0, 0, "target", normalizedTextHash = "")),
+            actionJson = GSON.toJson(io.legado.app.domain.model.TextProcessAction.replace("broken"))))
+        val result = ContentProcessor.get(book).getContent(book, chapter, original, includeTitle = false, paragraphIndent = "")
+        assertEquals(listOf(original), result.textList)
+        assertTrue(result.effectiveContentProcesses.isEmpty())
+    }
+
+    @Test fun semanticWebResponseRoundTripsToReaderWhileLegacyResponseStaysAString() = runBlocking {
+        BookHelp.saveText(book, chapter, "<usehtml><p>A&amp;<b>😀B</b></p></usehtml>\ntail")
+        val parameters = mapOf("url" to listOf(book.bookUrl), "index" to listOf("0"))
+        val legacy = io.legado.app.api.controller.BookController.getBookContent(parameters)
+        assertTrue(legacy.data is String)
+        assertTrue((legacy.data as String).contains("<usehtml>"))
+        val response = io.legado.app.api.controller.BookController.getBookContent(parameters + ("format" to listOf("semantic")))
+        assertTrue(response.errorMsg, response.isSuccess)
+        val web = response.data as io.legado.app.api.ReaderWebChapter
+        val storedPosition = web.paragraphs.last().start
+        val host = Host()
+        delegate(host).navigateToBookmark(bookmark("tail", storedPosition))
+        withTimeout(5_000) { host.done.await() }
+        assertEquals(0 to storedPosition, host.jumped)
+        assertNull(host.pendingTarget)
+    }
+
+    @Test fun localRulesAndEditsUseTheSameOldPlainBodyWithStylesOnOrOff() = runBlocking {
+        read.update { it.copy(adaptSpecialStyle = false) }
+        book.origin = io.legado.app.constant.BookType.localTag
+        book.originName = "fixture.epub"
+        book.type = 0
+        book.setUseReplaceRule(true)
+        fixture.database.replaceRuleDao.insert(ReplaceRule(pattern = "天气", replacement = "气候", isRegex = false))
+        fixture.database.bookContentProcessDao.upsert(io.legado.app.data.entities.BookContentProcess(
+            id = "disabled-style-edit", bookUrl = book.bookUrl, chapterIndex = chapter.index,
+            kind = io.legado.app.data.entities.BookContentProcess.KIND_AI_REWRITE,
+            anchorJson = GSON.toJson(TextProcessAnchor(0, 0, "after", normalizedTextHash = "")),
+            actionJson = GSON.toJson(io.legado.app.domain.model.TextProcessAction(
+                io.legado.app.domain.model.TextProcessAction.TYPE_REPLACE, replacement = "edited"))))
+        for (enabled in listOf(false, true)) {
+            read.update { it.copy(adaptSpecialStyle = enabled) }
+            val result = ContentProcessor.get(book).getContent(book, chapter,
+                "<usehtml><p><b>天气</b>&amp;<img src='Images/x.png'></p><p>after</p></usehtml>",
+                includeTitle = false, paragraphIndent = "")
+            assertEquals(listOf("气候&<img src=\"Images/x.png\">", "edited"), result.textList)
+            assertEquals("气候&\uFFFC\nedited\n", source(result).semanticContent)
+        }
+    }
 
     @Test fun plainTitleAndIndentationKeepLegacyLineSemantics() {
         val processor = ContentProcessor.get(book)
@@ -110,17 +266,22 @@ class ContentProcessorSemanticIntegrationTest {
         }
     }
 
-    @Test fun replacementRulesReachDecodedRichNodesWithoutChangingAttributes() {
-        fixture.database.replaceRuleDao.insert(ReplaceRule(pattern = "天气", replacement = "气候", isRegex = false))
+    @Test fun existingOnlineHtmlUsesTheLegacyReplacementBoundaryForEitherStyleSetting() = runBlocking {
+        fixture.database.replaceRuleDao.insert(ReplaceRule(id = 201, pattern = "天气", replacement = "气候", isRegex = false, order = 0))
+        fixture.database.replaceRuleDao.insert(ReplaceRule(id = 202, pattern = "气候", replacement =
+            "@js:chapter.putVariable('runs', String(parseInt(chapter.getVariable('runs') || '0') + 1)); '气候';", order = 1))
         val processor = ContentProcessor.get(book)
-        val result = processor.getContent(book, chapter,
-            "plain天气\n<usehtml><p><a href='天气.xhtml'>今天<strong>天气很好</strong></a></p></usehtml>",
-            includeTitle = false, paragraphIndent = "")
-        assertTrue(source(result).semanticContent.contains("plain气候"))
-        assertTrue(source(result).semanticContent.contains("今天气候很好"))
-        val html = result.textList.first { it.startsWith("<usehtml>") }.removePrefix("<usehtml>").removeSuffix("</usehtml>")
-        assertEquals("天气.xhtml", Jsoup.parseBodyFragment(html).selectFirst("a")!!.attr("href"))
-        assertEquals(1, result.effectiveReplaceRules!!.size)
+        for (enabled in listOf(true, false)) {
+            read.update { it.copy(adaptSpecialStyle = enabled) }
+            chapter.putVariable("runs", "0")
+            val result = processor.getContent(book, chapter,
+                "plain天气\n<usehtml><p><a href='target.xhtml'>今天天气很好</a></p></usehtml>",
+                includeTitle = false, paragraphIndent = "")
+            assertTrue(source(result).semanticContent.contains("plain气候"))
+            assertEquals(if (enabled) "1" else "2", chapter.getVariable("runs"))
+            assertTrue(result.toString().contains(if (enabled) "今天天气很好" else "今天气候很好"))
+            assertTrue(result.toString().contains("target.xhtml"))
+        }
     }
 
     @Test fun chineseConversionChangesBodyButPreservesBothChannelResourcePaths() = runBlocking {
@@ -145,19 +306,22 @@ class ContentProcessorSemanticIntegrationTest {
         assertTrue(result.effectiveReplaceRules!!.isEmpty())
     }
 
-    @Test fun resegmentationKeepsPlainSegmentsActiveAroundRichContent() {
+    @Test fun resegmentationUsesTheLegacyStyleBoundary() = runBlocking {
         book.setReSegment(true)
         val before = "甲 乙\n丙 丁"
         val after = "戊 己\n庚 辛"
-        val processor = ContentProcessor.get(book)
-        val output = processor.getContent(book, chapter, "$before\n<usehtml><pre>A  B\n C</pre></usehtml>\n$after",
-            includeTitle = false, useReplace = false, chineseConvert = false, paragraphIndent = "")
-        val expected = listOf(
-            *MixedContentSegments.paragraphs(ContentHelp.reSegment(before + "\n", chapter.title), "", true).toTypedArray(),
-            "<usehtml><pre>A  B\n C</pre></usehtml>",
-            *MixedContentSegments.paragraphs(ContentHelp.reSegment("\n" + after, chapter.title), "", true).toTypedArray(),
-        )
-        assertEquals(expected, output.textList)
+        val raw = "$before\n<usehtml><pre>A  B\n C</pre></usehtml>\n$after"
+        for (enabled in listOf(true, false)) {
+            read.update { it.copy(adaptSpecialStyle = enabled) }
+            val output = ContentProcessor.get(book).getContent(book, chapter, raw,
+                includeTitle = false, useReplace = false, chineseConvert = false, paragraphIndent = "")
+            val expected = if (enabled) listOf(
+                *MixedContentSegments.paragraphs(ContentHelp.reSegment(before + "\n", chapter.title), "", true).toTypedArray(),
+                "<usehtml><pre>A  B\n C</pre></usehtml>",
+                *MixedContentSegments.paragraphs(ContentHelp.reSegment("\n" + after, chapter.title), "", true).toTypedArray(),
+            ) else MixedContentSegments.paragraphs(ContentHelp.reSegment(raw, chapter.title), "", false)
+            assertEquals(expected, output.textList)
+        }
     }
 
     @Test fun searchUsesCurrentSemanticStyleAndInvalidatesRuleRevision() = runBlocking {
@@ -204,7 +368,7 @@ class ContentProcessorSemanticIntegrationTest {
             me.ag2s.epublib.epub.EpubReader().readEpub(it)
         }
         val document = Jsoup.parse(String(epub.spine.spineReferences.single().resource.data, Charsets.UTF_8))
-        val channel = io.legado.app.model.localBook.LocalBookSemanticHtml.emitMixedChannel(document.body())
+        val channel = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(document.body().outerHtml())
         ContentProcessor.get(book)
         val repository = SearchContentRepository(readSettingsGateway = read, otherSettingsGateway = other)
         repository.beginSearch(book, "A&😀B", false, false)
@@ -217,21 +381,39 @@ class ContentProcessorSemanticIntegrationTest {
         assertNull(repository.getLastSession(book.bookUrl))
     }
 
-    @Test fun settingsChangeDuringSearchStopsTheOldSession() = runBlocking {
+    @Test fun searchOnlyInvalidatesWhenItsInputsChange() = runBlocking {
         val second = chapter.copy(index = 1, url = "chapter-1")
+        val background = chapter.copy(index = 99, url = "background")
         fixture.database.bookChapterDao.insert(second)
-        BookHelp.saveText(book, chapter, "<usehtml><p>A&amp;B</p></usehtml>")
-        BookHelp.saveText(book, second, "<usehtml><p>A&amp;B</p></usehtml>")
         try {
-            val repository = SearchContentRepository(readSettingsGateway = read, otherSettingsGateway = other)
-            var emissions = 0
-            repository.search(book, "A&B", false, false).collect {
-                emissions++
-                read.update { it.copy(adaptSpecialStyle = false) }
+            for (change in listOf("cache", "processor", "body", "rules", "settings")) {
+                read.update { it.copy(adaptSpecialStyle = true) }
+                BookHelp.saveText(book, chapter, "needle")
+                BookHelp.saveText(book, second, "needle")
+                var checks = 0
+                val repository = SearchContentRepository(readSettingsGateway = read, otherSettingsGateway = other,
+                    rulesRevisionProvider = {
+                        // The fifth identity read is between chapters, after publishing the first hit.
+                        if (++checks == 5) when (change) {
+                            "cache" -> BookHelp.saveText(book, background, "downloaded")
+                            "processor" -> ContentProcessor.get("other-${book.name}", book.origin)
+                            "body" -> BookHelp.saveText(book, chapter, "changed")
+                            "rules" -> ContentProcessor.get(book).upReplaceRules()
+                            "settings" -> read.settings.value = read.currentSettings.copy(adaptSpecialStyle = false)
+                        }
+                        ContentProcessor.rulesRevision
+                    })
+                val result = runCatching { repository.search(book, "needle", false, false).toList().last() }
+                if (change in listOf("cache", "processor")) assertEquals(change, 2, result.getOrThrow().size)
+                else {
+                    assertTrue(change, result.exceptionOrNull() is SearchContentChangedException)
+                    assertNull(repository.getLastSession(book.bookUrl))
+                }
             }
-            assertEquals(1, emissions)
-            assertNull(repository.getLastSession(book.bookUrl))
-        } finally { BookHelp.delContent(book, second) }
+        } finally {
+            BookHelp.delContent(book, second)
+            BookHelp.delContent(book, background)
+        }
     }
 
     @Test fun matchingMarkingTextStillValidatesStoredContext() = runBlocking {

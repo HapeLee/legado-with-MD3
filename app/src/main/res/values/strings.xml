@@ -3960,5 +3960,6 @@
     <string name="page_anim_ios_curl">iOS Curl</string>
     <string name="page_anim_google_curl">Google Curl</string>
     <string name="page_anim_parallax">Parallax</string>
-    <string name="bookmark_target_content_mismatch">正文已变化或无法验证原位置，仍要跳转吗？</string>
+    <string name="bookmark_target_content_mismatch">The content has changed or its original location can no longer be verified, redirect anyway?</string>
+    <string name="search_content_changed">The content or processing settings changed. Please search again.</string>
 </resources>

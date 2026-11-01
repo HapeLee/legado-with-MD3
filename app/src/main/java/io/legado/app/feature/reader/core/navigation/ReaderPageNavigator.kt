@@ -4,6 +4,7 @@ import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageId
 import io.legado.app.feature.reader.core.model.ReaderPageWindow
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticLocation
 
 data class ReaderNavigationResult(
     val pageIndex: Int,
@@ -206,7 +207,7 @@ object ReaderPageNavigator {
         return chapterPages[chapterPageIndex.coerceIn(chapterPages.indices)].index
     }
 
-    fun pageContext(pages: List<ReaderPage>, pageIndex: Int): ReaderPageContext? {
+    fun pageContext(pages: List<ReaderPage>, pageIndex: Int, canonicalBody: String? = null): ReaderPageContext? {
         val page = pages.getOrNull(pageIndex) ?: return null
         // Allocation-free scan: same min/max semantics as the previous mapNotNull version.
         var hasPosition = false
@@ -244,12 +245,18 @@ object ReaderPageNavigator {
             .minByOrNull { paragraph ->
                 paragraph.minOf { it.chapterPosition }
             }
+        // Geometry locates the range; persisted text comes from the body, never title/decorative rows.
+        val bodyText = canonicalBody?.let { body ->
+            val from = ReaderSemanticLocation.clampOffset(body, start)
+            val until = ReaderSemanticLocation.clampOffset(body, nextPageStart ?: contentEnd).coerceAtLeast(from)
+            body.substring(from, until)
+        }
         return ReaderPageContext(
             chapterIndex = page.id.chapterIndex,
             chapterTitle = page.chapterTitle,
             startPosition = start,
             endPosition = nextPageStart ?: contentEnd.coerceAtLeast(start + 1),
-            text = page.text,
+            text = bodyText ?: page.text,
             contentStartPosition = firstBodyParagraph?.minOf { it.chapterPosition },
             anchorText = firstBodyParagraph
                 ?.joinToString(separator = "") { it.value }

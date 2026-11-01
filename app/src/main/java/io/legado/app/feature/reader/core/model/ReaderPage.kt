@@ -338,6 +338,8 @@ sealed interface ReaderElement {
         val colorArgb: Int,
         val strokeWidthPx: Float,
         val circular: Boolean,
+        val label: String? = null,
+        val textSizePx: Float = 0f,
     ) : ReaderElement
 
     data class Rule(

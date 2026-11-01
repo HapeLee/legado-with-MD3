@@ -3,6 +3,9 @@ package io.legado.app.help.book
 import io.legado.app.constant.AppPattern
 import org.jsoup.Jsoup
 import org.jsoup.nodes.TextNode
+import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
+import io.legado.app.feature.reader.platform.AndroidReaderHtmlSourceResolver
+import io.legado.app.model.localBook.LocalBookSemanticHtml
 
 /** Only the existing <usehtml> channel envelope; not an HTML parser or a document model. */
 internal object MixedContentSegments {
@@ -28,6 +31,42 @@ internal object MixedContentSegments {
                 is Segment.Rich -> "<usehtml>${rich(segment.html)}</usehtml>"
             }
         }
+
+    /** Readable fallback/export, retaining the legacy image channel and resource identities. */
+    fun toPlainText(content: String): String {
+        val segments = split(content)
+        if (segments.none { it is Segment.Rich }) return content
+        return segments.joinToString("\n") { segment ->
+            when (segment) {
+                is Segment.Plain -> segment.text.trim('\n')
+                is Segment.Rich -> AndroidReaderHtmlSourceResolver(10f, 1f).resolve(segment.html, 0)
+                    .joinToString("\n", postfix = "\n") { paragraph ->
+                        paragraph.items.joinToString("") { item ->
+                            when (item) {
+                                is ReaderChapterInlineSource.Text -> item.value
+                                // The legacy plain parser reads the raw src attribute without HTML
+                                // entity decoding. Keep '&' and source-option JSON byte-for-byte.
+                                is ReaderChapterInlineSource.Image -> "<img src=\"${item.source}\">"
+                                else -> ""
+                            }
+                        }
+                    }.trimEnd('\n')
+            }
+        }
+    }
+
+    /** Normalize generated local envelopes at the input boundary, not based on a display setting. */
+    fun toLocalPlainText(content: String, decodeEntities: Boolean): String {
+        val segments = split(content)
+        if (segments.none { it is Segment.Rich }) return content
+        return segments.joinToString("\n") { segment ->
+            when (segment) {
+                is Segment.Plain -> segment.text.trim('\n')
+                is Segment.Rich -> LocalBookSemanticHtml.plainText(
+                    Jsoup.parseBodyFragment(segment.html).body().outerHtml(), decodeEntities).trim()
+            }
+        }
+    }
 
     private val legacyTag = Regex("""<(?:(?:"[^"]*")|(?:'[^']*')|[^'">])*>""")
 

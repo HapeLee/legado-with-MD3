@@ -12,10 +12,8 @@ import io.legado.app.domain.usecase.BookmarkTargetVerdict
 import io.legado.app.domain.usecase.RelocateMarkingTargetUseCase
 import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
-import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
-import io.legado.app.feature.reader.platform.JsoupReaderHtmlParser
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.readaloud.cast.CastAssignmentStore
@@ -126,33 +124,15 @@ class ReadBookmarkNavigateDelegate(
         if (LocalBookSemanticHtml.classifyLink(link) != LocalBookSemanticHtml.LinkKind.INTERNAL) return
         val book = ReadBook.book ?: return
         val currentIndex = ReadBook.durChapterIndex
-        val fragment = link.substringAfter("#", "").trim()
         scope.launch {
-            val (targetIndex, targetPos) = withContext(Dispatchers.IO) {
-                val chapters = bookRepository.getChapters(book.bookUrl)
-                val resolvedIndex = LocalBookSemanticHtml.resolveInternalLinkTarget(link, chapters, currentIndex)
-                    ?: return@withContext null to null
-                val targetChapter = chapters.firstOrNull { it.index == resolvedIndex }
-                val pos = if (fragment.isNotEmpty() && targetChapter != null) {
-                    if (targetChapter.startFragmentId.equals(fragment, ignoreCase = true)) {
-                        0
-                    } else {
-                        parseChapterSource(book, targetChapter)
-                            ?.blocks
-                            ?.filterIsInstance<ReaderChapterSourceBlock.Html>()
-                            ?.firstNotNullOfOrNull { block ->
-                                JsoupReaderHtmlParser.findAnchorPosition(
-                                    block.value,
-                                    fragment,
-                                    block.chapterPosition,
-                                )
-                            }
-                    }
-                } else null
-                resolvedIndex to pos
+            val target = withContext(Dispatchers.IO) {
+                LocalBookSemanticHtml.resolveInternalLinkTarget(link,
+                    bookRepository.getChapters(book.bookUrl), currentIndex) { chapter ->
+                    parseChapterSource(book, chapter)?.anchorPositions.orEmpty()
+                }
             }
-            if (targetIndex != null && (targetIndex != currentIndex || targetPos != null)) {
-                host.jumpToChapter(targetIndex, targetPos ?: 0)
+            if (target != null && ReadBook.book?.bookUrl == book.bookUrl) {
+                host.jumpToChapter(target.first, target.second)
             }
         }
     }
@@ -203,11 +183,12 @@ class ReadBookmarkNavigateDelegate(
         val processor = ContentProcessor.get(book)
         val settings = processor.captureSettings()
         val processed = processor.getContent(book, chapter, rawContent, includeTitle = false,
-            paragraphIndent = null, settings = settings)
+            paragraphIndent = null, settings = settings, includePresentation = true)
         return ReaderChapterSourceParser.parse(
             chapterIndex = chapter.index,
             title = "",
             paragraphs = processed.textList,
+            localPresentation = processed.presentation,
             includeTitle = false,
             adaptSpecialStyle = settings.adaptSpecialStyle,
             htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,

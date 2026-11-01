@@ -1,6 +1,5 @@
 package io.legado.app.help.book
 
-import io.legado.app.feature.reader.platform.JsoupReaderHtmlParser
 import org.jsoup.Jsoup
 import org.junit.Assert.*
 import org.junit.Test
@@ -20,7 +19,7 @@ class MixedContentSegmentsTest {
         val input = "<p id='繁體' style='font-family:繁體' title='x>繁體'><a href='繁體.xhtml'>繁體&amp;<b>內容</b></a><img src='繁體.png'></p><style>.繁體{}</style>"
         val output = MixedContentSegments.transformHtmlText(input) { it.replace("繁體", "简体").replace("內容", "内容") }
         val doc = Jsoup.parseBodyFragment(output)
-        assertEquals("简体&内容\uFFFC\n", JsoupReaderHtmlParser.semanticText(output))
+        assertEquals("简体&内容", doc.body().text())
         assertEquals("繁體.xhtml", doc.selectFirst("a")!!.attr("href"))
         assertEquals("x>繁體", doc.selectFirst("p")!!.attr("title"))
         assertEquals("font-family:繁體", doc.selectFirst("p")!!.attr("style"))
@@ -38,8 +37,8 @@ class MixedContentSegmentsTest {
     @Test
     fun identitySerializationPreservesSemanticIncludingPreformattedNewlines() {
         val html = "<pre>A  B\n C</pre><p>A&amp;<b>B</b></p>"
-        assertEquals(JsoupReaderHtmlParser.semanticText(html),
-            JsoupReaderHtmlParser.semanticText(MixedContentSegments.transformHtmlText(html) { it }))
+        assertEquals(Jsoup.parseBodyFragment(html).body().wholeText(),
+            Jsoup.parseBodyFragment(MixedContentSegments.transformHtmlText(html) { it }).body().wholeText())
         val paragraphs = MixedContentSegments.paragraphs("plain\n<usehtml>$html</usehtml>\ntail", "　　", true)
         assertEquals(listOf("　　plain", "<usehtml>$html</usehtml>", "　　tail"), paragraphs)
     }

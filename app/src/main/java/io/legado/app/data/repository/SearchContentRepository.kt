@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import io.legado.app.R
 import io.legado.app.data.appDb
 import io.legado.app.data.dao.SearchContentHistoryDao
 import io.legado.app.data.entities.Book
@@ -16,18 +17,22 @@ import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.RegexDeadlineSequence
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import splitties.init.appCtx
+
+internal class SearchContentChangedException : IllegalStateException(appCtx.getString(R.string.search_content_changed))
 
 class SearchContentRepository(
     private val titleModeProvider: () -> Int = { 0 },
     private val historyDao: SearchContentHistoryDao? = null,
     private val readSettingsGateway: ReadSettingsGateway? = null,
     private val otherSettingsGateway: OtherSettingsGateway? = null,
-    private val contentRevisionProvider: () -> Long = { ContentProcessor.semanticRevision },
+    private val rulesRevisionProvider: () -> Long = { ContentProcessor.rulesRevision },
     private val paragraphIndentProvider: () -> String = { "" },
 ) {
 
@@ -126,6 +131,23 @@ class SearchContentRepository(
         val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
         val totalChapters = chapters.size
         val cacheChapterNames = BookHelp.getChapterFiles(book).toHashSet()
+        val visited = linkedMapOf<Int, Long>()
+        var observedBookRevision = key.bookRevision
+
+        suspend fun ensureConsistent() {
+            currentCoroutineContext().ensureActive()
+            if (generation != searchGeneration) throw CancellationException("Search replaced")
+            val current = searchKey(book, query, replaceEnabled, regexReplace)
+            val processingChanged = current.copy(bookRevision = key.bookRevision) != key
+            val bodyChanged = current.bookRevision != observedBookRevision && visited.any { (index, revision) ->
+                revision != ContentProcessor.chapterRevision(book.bookUrl, index)
+            }
+            if (processingChanged || bodyChanged) {
+                clearSession(book.bookUrl)
+                throw SearchContentChangedException()
+            }
+            observedBookRevision = current.bookRevision
+        }
 
         val allResults = mutableListOf<SearchResult>()
         fun publishCache(results: List<SearchResult>) {
@@ -136,11 +158,10 @@ class SearchContentRepository(
 
         for (bookChapter in chapters) {
 
-            currentCoroutineContext().ensureActive()
-            // Never mix results produced with different rules/settings in one session.
-            if (key != searchKey(book, query, replaceEnabled, regexReplace)) return@flow
+            ensureConsistent()
 
             if (book.isLocal || cacheChapterNames.contains(bookChapter.getFileName())) {
+                visited[bookChapter.index] = ContentProcessor.chapterRevision(book.bookUrl, bookChapter.index)
                 val chapterResults = searchChapter(
                     query,
                     book,
@@ -159,7 +180,7 @@ class SearchContentRepository(
                     }
                 }
 
-                if (key != searchKey(book, query, replaceEnabled, regexReplace)) return@flow
+                ensureConsistent()
                 if (chapterResults.isNotEmpty()) {
                     allResults.addAll(chapterResults)
                     publishCache(allResults)
@@ -167,8 +188,10 @@ class SearchContentRepository(
                 }
             }
         }
+        ensureConsistent()
         publishCache(allResults)
         emit(ArrayList(allResults))
+        ensureConsistent()
     }.flowOn(Dispatchers.Default)
 
     private fun cacheResults(
@@ -201,7 +224,8 @@ class SearchContentRepository(
         val settings: ContentProcessor.SettingsSnapshot,
         val useReplaceRule: Boolean,
         val reSegment: Boolean,
-        val revision: Long,
+        val rulesRevision: Long,
+        val bookRevision: Long,
         val paragraphIndent: String,
     )
 
@@ -211,7 +235,8 @@ class SearchContentRepository(
         return SearchKey(book?.bookUrl, query, replaceEnabled, regexReplace, titleModeProvider(),
             ContentProcessor.SettingsSnapshot(read?.chineseConverterType ?: 0, read?.adaptSpecialStyle ?: true, defaults),
             book?.getUseReplaceRule(defaults) ?: defaults, book?.getReSegment() ?: false,
-            contentRevisionProvider(), paragraphIndentProvider())
+            rulesRevisionProvider(), book?.let { ContentProcessor.semanticRevision(it.bookUrl) } ?: 0,
+            paragraphIndentProvider())
     }
 
     private suspend fun searchChapter(

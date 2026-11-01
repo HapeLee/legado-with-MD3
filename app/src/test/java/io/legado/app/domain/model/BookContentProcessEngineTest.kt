@@ -19,15 +19,6 @@ class BookContentProcessEngineTest {
     }
 
     @Test
-    fun `rich edits never fall back to modifying attributes`() {
-        val html = "<usehtml><a href='target'>body</a></usehtml>"
-        val result = BookContentProcessEngine.apply(html, listOf(process("target", "broken")))
-        assertEquals(html, result.text)
-        assertTrue(result.effectiveProcesses.isEmpty())
-        assertTrue(result.unsupportedEdits.isNotEmpty())
-    }
-
-    @Test
     fun `matches reader selection with layout whitespace`() {
         val selectedText = "　　他走进\n房间，看见桌上的信。"
         val process = process(

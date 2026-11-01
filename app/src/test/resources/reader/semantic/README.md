@@ -8,3 +8,14 @@ a valid generated 1×1 black PNG, entity/emoji text and bidirectional chapter li
 ZIP timestamps are fixed. Inspect or edit their contents with a ZIP tool; keep `mimetype` first and
 uncompressed. The tests exercise the repository's EPUB reader and semantic pipeline, not full
 EPUB conformance. No external downloads or epubcheck installation are needed to run them.
+
+## Shared compatibility fixture
+
+`compatibility.html` and `compatibility.css` exercise inline emphasis, ordered-list markers,
+a separator, table cells, preformatted lines, images/anchors in focused tests and CSS visibility.
+`compatibility.expected.json` freezes the old local plain-text paragraphs and one old BGM record.
+The former local extraction (`HtmlFormatter.formatKeepImg` plus the single EPUB entity decode,
+then normal paragraph trimming) produces those goldens; tests must not derive expected values
+from the current presentation parser. Table cells deliberately remain separate old paragraphs.
+CSS `display:none` on `.reader-visible` must not remove the canonical final paragraph.
+These shared resources are used by projection, measurement and Room-backed consumer tests.

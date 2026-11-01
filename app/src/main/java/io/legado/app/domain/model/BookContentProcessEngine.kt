@@ -10,29 +10,17 @@ object BookContentProcessEngine {
     data class ApplyResult(
         val text: String,
         val effectiveProcesses: List<BookContentProcess>,
-        val unsupportedEdits: List<String> = emptyList(),
     )
-
-    sealed interface EditResult {
-        data class Applied(val content: String) : EditResult
-        data class Unsupported(val reason: String) : EditResult
-    }
-
-    fun interface RichTextEditor {
-        fun edit(content: String, anchor: TextProcessAnchor, action: TextProcessAction): EditResult
-    }
 
     fun apply(
         content: String,
         processes: List<BookContentProcess>,
-        richTextEditor: RichTextEditor? = null,
     ): ApplyResult {
         if (content.isEmpty() || processes.isEmpty()) {
             return ApplyResult(content, emptyList())
         }
         var output = content
         val effectiveProcesses = arrayListOf<BookContentProcess>()
-        val unsupportedEdits = arrayListOf<String>()
         processes
             .filter {
                 it.enabled &&
@@ -58,17 +46,6 @@ object BookContentProcessEngine {
                 val action = GSON.fromJsonObject<TextProcessAction>(process.actionJson)
                     .getOrNull()
                     ?: return@forEach
-                if (output.contains("<usehtml>")) {
-                    when (val edit = richTextEditor?.edit(output, anchor, action)
-                        ?: EditResult.Unsupported("Rich text editor unavailable")) {
-                        is EditResult.Applied -> if (edit.content != output) {
-                            output = edit.content
-                            effectiveProcesses.add(process)
-                        }
-                        is EditResult.Unsupported -> unsupportedEdits.add("${process.id}: ${edit.reason}")
-                    }
-                    return@forEach
-                }
                 val range = findTargetRange(output, anchor) ?: return@forEach
                 val next = when (action.type) {
                     TextProcessAction.TYPE_REPLACE -> {
@@ -102,7 +79,7 @@ object BookContentProcessEngine {
                     effectiveProcesses.add(process)
                 }
             }
-        return ApplyResult(output, effectiveProcesses, unsupportedEdits)
+        return ApplyResult(output, effectiveProcesses)
     }
 
     /**

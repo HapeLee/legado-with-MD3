@@ -13,10 +13,8 @@ import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
-import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
-import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +24,7 @@ import kotlinx.coroutines.withContext
  * AI 分配背景音乐场景：从指定章起，按正文情绪/场景转折在若干段落上换背景音乐池。
  *
  * 与 AI 分配角色同一套走法（逐章请求、流式回显、锚点用段落序号），差别有两点：
- * 1. 锚点是**段落序号**（[BgmSceneStore.ordinals]），不是开引号序号——换音乐看的是段落，
+ * 1. 锚点是**段落序号**（[BgmSceneStore.paragraphTexts]），不是开引号序号——换音乐看的是段落，
  *    一句话换一次音乐没有意义；
  * 2. 池名**只认用户已有的背景音乐池**，认不出来就丢弃这条。角色池可以让本地兜底补一个，
  *    音乐池补错了会播出一段用户根本没打算用的曲子。
@@ -90,12 +88,14 @@ class AiSceneAssignUseCase(
     ) = withContext(Dispatchers.IO) {
         val chapter = toc[chapterIndex]
         val content = BookHelp.getContent(book, chapter) ?: error("无法读取本章内容")
-        val paragraphs = ContentProcessor.get(book)
-            .getContent(book, chapter, content, includeTitle = false)
+        val processor = ContentProcessor.get(book)
+        val settings = processor.captureSettings()
+        val paragraphs = processor
+            .getContent(book, chapter, content, includeTitle = false, paragraphIndent = null, settings = settings)
             .textList
-        val ordinals = BgmSceneStore.ordinals(paragraphs)
-        val rows = paragraphs.mapIndexed { index, text -> ordinals[index] to text.trim() }
-            .filter { it.first >= 0 }
+        val rows = BgmSceneStore.paragraphTexts(paragraphs, settings.adaptSpecialStyle)
+            .map { (ordinal, text) -> ordinal to text.trim() }
+            .filter { it.second.isNotBlank() }
         if (rows.isEmpty()) return@withContext
 
         val preset = aiProfileGateway.getTaskPreset(AiTaskType.IDENTIFY_CHARACTERS)
@@ -209,11 +209,11 @@ class AiSceneAssignUseCase(
         if (index < 0 || index > toc.lastIndex) return ""
         return runCatching {
             val content = BookHelp.getContent(book, toc[index]) ?: return ""
-            // 段落里的 <img> 换成一个占位符：否则几百字 base64 把真正的情绪线索挤出 600 字窗口
-            val text = ReaderChapterSourceParser.castAnchorText(
-                paragraphs = content.split('\n'),
-                adaptSpecialStyle = AppConfig.adaptSpecialStyle,
-            ).joinToString("\n")
+            val processor = ContentProcessor.get(book)
+            val settings = processor.captureSettings()
+            val paragraphs = processor.getContent(book, toc[index], content, includeTitle = false,
+                paragraphIndent = null, settings = settings).textList
+            val text = BgmSceneStore.paragraphTexts(paragraphs, settings.adaptSpecialStyle).values.joinToString("\n")
             if (tail) text.takeLast(600) else text.take(600)
         }.getOrDefault("")
     }

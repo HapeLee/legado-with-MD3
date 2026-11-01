@@ -4,7 +4,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
-import io.legado.app.feature.reader.platform.JsoupReaderHtmlParser
+import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -12,9 +12,49 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LocalBookSemanticHtmlTest {
+    @Test
+    fun canonicalImagesKeepLegacySrcWithoutLeakingAppearanceAttributesIntoText() {
+        val doc = Jsoup.parseBodyFragment("<p>A<img alt='x > y' src='pic.jpg' width='20'>B</p>")
+        LocalBookSemanticHtml.sanitizeImages(doc.select("img"), preserveAppearance = false)
+        val plain = LocalBookSemanticHtml.plainText(doc.body().outerHtml())
+        assertEquals("A<img src=\"pic.jpg\">B", plain.trim { it.isWhitespace() || it == '　' })
+        val source = ReaderChapterSourceParser.parse(0, "", listOf(plain.trim()), false, false)
+        assertEquals(1, source.blocks.filterIsInstance<ReaderChapterSourceBlock.Paragraph>()
+            .flatMap { it.items }.filterIsInstance<io.legado.app.feature.reader.core.source.ReaderChapterInlineSource.Image>().size)
+        assertTrue(!source.semanticContent.contains("x > y"))
+    }
+    @Test
+    fun encodedTocFragmentsSelectAndCutTheCorrectChapter() = runBlocking {
+        val chapters = listOf(
+            BookChapter(index = 0, bookUrl = "b", title = "first", url = "Text/book.xhtml#first"),
+            BookChapter(index = 1, bookUrl = "b", title = "next", url = "Text/book.xhtml#page%2013"),
+        )
+        assertEquals(1 to 0, LocalBookSemanticHtml.resolveInternalLinkTarget("#page%2013", chapters, 0))
+        val body = Jsoup.parseBodyFragment("<p id='first'>one</p><p id='page 13'>two</p><p id='last'>three</p>").body()
+        LocalBookSemanticHtml.cutChapterBody(body, "page%2013", "last")
+        assertEquals("two", body.text())
+    }
 
     @Test
-    fun classifiesLinksBeforeResolvingBookResources() {
+    fun readerLinkRoutingUsesTheBooksOriginAndChapterBase() {
+        assertEquals("https://example.test/book/next.html", LocalBookSemanticHtml.resolveReaderLink(
+            "next.html", false, "https://example.test/book/current.html"))
+        assertEquals("https://example.test/next", LocalBookSemanticHtml.resolveReaderLink(
+            "/next", false, "https://example.test/book/current.html"))
+        assertEquals("https://example.test/book/next%20chapter.html", LocalBookSemanticHtml.resolveReaderLink(
+            "next chapter.html", false, "https://example.test/book/current.html, {\"method\":\"POST\"}"))
+        assertEquals("https://example.test/book/current.php?next=2", LocalBookSemanticHtml.resolveReaderLink(
+            "?next=2", false, "https://example.test/book/current.php?id=1#old"))
+        assertEquals("https://example.test/book/current.php?next=2", LocalBookSemanticHtml.resolveReaderLink(
+            "?next=2", false, "https://example.test/book/current.php  , {\"method\":\"POST\"}"))
+        assertEquals("https://example.test/book/current.html#note", LocalBookSemanticHtml.resolveReaderLink(
+            "#note", false, "https://example.test/book/current.html"))
+        assertEquals("next.html", LocalBookSemanticHtml.resolveReaderLink("next.html", true, "Text/current.html"))
+        assertEquals(null, LocalBookSemanticHtml.resolveReaderLink("javascript:evil()", false, "https://example.test"))
+    }
+
+    @Test
+    fun classifiesLinksBeforeResolvingBookResources() = runBlocking {
         for (link in listOf("chapter.xhtml#n", "#n", "filepos:000123", "kindle:pos:fid:1:off:0")) {
             assertEquals(link, LocalBookSemanticHtml.LinkKind.INTERNAL, LocalBookSemanticHtml.classifyLink(link))
         }
@@ -67,26 +107,24 @@ class LocalBookSemanticHtmlTest {
     }
 
     @Test
-    fun mixedChannelPreservesPreformattedLineBreaksOnOneTransportLine() {
-        val body = Jsoup.parseBodyFragment("<pre>first\n  second\r\nthird</pre>").body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body)
-        assertEquals(1, channel.lines().size)
-        assertEquals("first\n  second\nthird\n", JsoupReaderHtmlParser.semanticText(
-            channel.removePrefix("<usehtml>").removeSuffix("</usehtml>")
-        ))
-    }
-
-    @Test
-    fun cutFragmentHandlesSingleLineCompressedHtml() {
-        val body = Jsoup.parse("<body><p>one</p><p id=\"c2\">two</p><p>three</p></body>").body()
-        LocalBookSemanticHtml.cutFragment(body, "c2", null)
-        assertEquals("two three", body.text().trim().replace("\\s+".toRegex(), " "))
+    fun chapterCuttingUsesHiddenBoundariesBeforeFiltering() {
+        for (anchor in listOf("<h2 id='two'>Second heading</h2>",
+            "<h2 id='two' style='display:none'>Second heading</h2>",
+            "<a id='two' style='display:none'></a>")) {
+            val body = Jsoup.parseBodyFragment("<p>First</p>$anchor<p>Second</p><p id='last'>Third</p>").body()
+            LocalBookSemanticHtml.inlineCssSemantics(body,
+                LocalBookSemanticHtml.parseCssRules("h2, a {font-weight:bold}"))
+            LocalBookSemanticHtml.cutChapterBody(body, "two", "last")
+            assertTrue(body.text().contains("Second"))
+            assertTrue(!body.text().contains("First") && !body.text().contains("Third"))
+            assertTrue(body.select("[style*=display:none]").isEmpty())
+        }
     }
 
     @Test
     fun cutFragmentHandlesEmptyAnchor() {
         val body = Jsoup.parse("<body><p>one<a id=\"next\"></a>two</p><p>three</p></body>").body()
-        LocalBookSemanticHtml.cutFragment(body, null, "next")
+        LocalBookSemanticHtml.cutChapterBody(body, null, "next")
         // Text before the empty anchor stays in the previous chapter; trailing siblings are dropped.
         assertEquals("one", body.text().trim())
     }
@@ -96,7 +134,7 @@ class LocalBookSemanticHtmlTest {
         val body = Jsoup.parse(
             "<body><p>one</p><div class=\"ch\"><h2><a id=\"next\"></a>Chapter 2</h2><p>two</p></div></body>"
         ).body()
-        LocalBookSemanticHtml.cutFragment(body, null, "next")
+        LocalBookSemanticHtml.cutChapterBody(body, null, "next")
         assertEquals("one", body.text().trim())
         assertTrue(body.select("div, h2").isEmpty())
     }
@@ -117,147 +155,21 @@ class LocalBookSemanticHtmlTest {
     @Test
     fun parseCssRulesSupportsTagClassAndId() {
         val rules = LocalBookSemanticHtml.parseCssRules(
-            "p { text-align: center; color: red; } .note { font-weight: bold; } #t { display: none; }"
+            "p { text-align: center; color: red; } .note { font-weight: bold; } #t { font-style: italic; display: none; margin: 30px; }"
         )
         assertEquals(3, rules.size)
         val body = Jsoup.parseBodyFragment("<p class=\"note\">hi</p><p id=\"t\">gone</p>").body()
         LocalBookSemanticHtml.inlineCssSemantics(body, rules)
         val paragraphs = body.select("p")
-        assertEquals(1, paragraphs.size)
+        assertEquals(2, paragraphs.size)
         val first = paragraphs.first()!!
         assertTrue(first.attr("style").contains("text-align: center"))
         assertTrue(first.attr("style").contains("font-weight: bold"))
+        assertEquals("text-align: center; font-style: italic", paragraphs.last()!!.attr("style"))
     }
 
     @Test
-    fun emitMixedChannelUnwrapsContainerDivAndPreservesInlineSemantics() {
-        val body = Jsoup.parseBodyFragment(
-            "<div class=\"chapter\"><p>plain paragraph</p><p><ruby>漢<rt>かん</rt></ruby>字</p><blockquote>quote</blockquote></div>"
-        ).body()
-        val lines = LocalBookSemanticHtml.emitMixedChannel(body, null).split("\n")
-        assertEquals("plain paragraph", lines[0])
-        assertTrue(lines[1].startsWith("<usehtml>") && lines[1].contains("<ruby>"))
-        assertTrue(lines[2].startsWith("<usehtml>") && lines[2].contains("<blockquote>"))
-    }
-
-    @Test
-    fun emitMixedChannelSeparatesPlainAndSemanticBlocks() {
-        val body = Jsoup.parseBodyFragment("<p>plain</p><blockquote>quote</blockquote>").body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, null)
-        assertTrue(channel.contains("plain"))
-        assertTrue(channel.contains("<usehtml>"))
-        assertTrue(channel.contains("quote"))
-    }
-
-    @Test
-    fun dropsSingleBlockTitleRepeatingChapterTitle() {
-        val body = Jsoup.parseBodyFragment("<h1>Chapter One</h1><p>Story begins.</p>").body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "Chapter One")
-        assertTrue(channel.contains("Story begins."))
-        assertTrue(!channel.contains("Chapter One"))
-    }
-
-    @Test
-    fun dropsTwoBlockTitleSplitAcrossHeadingLines() {
-        val body = Jsoup.parseBodyFragment(
-            "<h1>CHAPTER I.</h1><h2>The Period</h2><p>It was the best of times.</p>"
-        ).body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "CHAPTER I. The Period")
-        assertTrue(channel.contains("best of times"))
-        assertTrue(!channel.contains("CHAPTER I."))
-        assertTrue(!channel.contains("The Period"))
-    }
-
-    @Test
-    fun dropsHeadingWithLineBreakInsideSingleBlock() {
-        // Exact markup shape from the Dickens sample: one h2, title split by <br/>.
-        val body = Jsoup.parseBodyFragment(
-            "<div class=\"chapter\"><h2><a id=\"link2H_4_0002\"/>CHAPTER I.<br/>The Period</h2></div>" +
-                "<p>It was the best of times.</p>"
-        ).body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "CHAPTER I. The Period")
-        assertTrue(channel.contains("best of times"))
-        assertTrue(!channel.contains("CHAPTER I."))
-        assertTrue(!channel.contains("The Period"))
-    }
-
-    @Test
-    fun dropsHeadingSharingDivWithStoryText() {
-        // Exact Dickens shape: one h2 with a line break, sharing its section
-        // div with the story paragraph that follows it.
-        val body = Jsoup.parseBodyFragment(
-            "<div class=\"chapter\"><h2><a id=\"link2H_4_0002\"/>CHAPTER I.<br/>The Period</h2>" +
-                "<p>It was the best of times.</p></div>"
-        ).body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "CHAPTER I. The Period")
-        assertTrue(channel.contains("best of times"))
-        assertTrue(!channel.contains("CHAPTER I."))
-        assertTrue(!channel.contains("The Period"))
-    }
-
-    @Test
-    fun keepsInlineWordSplitAcrossElements() {
-        val body = Jsoup.parseBodyFragment(
-            "<p>The <span>Period</span>icals go on</p>"
-        ).body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "The Period")
-        assertTrue(channel.contains("Period"))
-        assertTrue(channel.contains("icals"))
-    }
-
-    @Test
-    fun keepsTitleAfterLeadingImage() {
-        val body = Jsoup.parseBodyFragment(
-            "<div><img src=\"x.png\"/><h1>Title</h1></div><p>Body</p>"
-        ).body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "Title")
-        assertTrue(channel.contains("Title"))
-        assertTrue(channel.contains("Body"))
-    }
-
-    @Test
-    fun dropsTitleSplitAcrossThreeHeadingLines() {
-        val body = Jsoup.parseBodyFragment(
-            "<h1>Book</h1><h2>the</h2><h3>First</h3><p>Once upon a time.</p>"
-        ).body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "Book the First")
-        assertTrue(channel.contains("Once upon a time."))
-        assertTrue(!channel.contains(">Book<"))
-        assertTrue(!channel.contains(">First<"))
-    }
-
-    @Test
-    fun dropsTitleOnlyBody() {
-        val body = Jsoup.parseBodyFragment("<h1>Lone Title</h1>").body()
-        assertEquals("", LocalBookSemanticHtml.emitMixedChannel(body, "Lone Title"))
-    }
-
-    @Test
-    fun keepsBlocksDivergingFromTitlePrefix() {
-        val body = Jsoup.parseBodyFragment(
-            "<h1>CHAPTER I.</h1><p>Something else entirely.</p>"
-        ).body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "CHAPTER I. The Period")
-        assertTrue(channel.contains("CHAPTER I."))
-        assertTrue(channel.contains("Something else entirely."))
-    }
-
-    @Test
-    fun keepsGenuinelyDifferentSubheading() {
-        val body = Jsoup.parseBodyFragment("<h1>Prologue</h1><p>Story begins.</p>").body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, "Chapter One")
-        assertTrue(channel.contains("Prologue"))
-        assertTrue(channel.contains("Story begins."))
-    }
-
-    @Test
-    fun emptyBodyEmitsBlankChannelForTitlePageFallback() {
-        val body = Jsoup.parseBodyFragment("").body()
-        assertEquals("", LocalBookSemanticHtml.emitMixedChannel(body, "Book the First"))
-    }
-
-    @Test
-    fun resolvesRelativeEpubHrefsAndMatchesTargetChapters() {
+    fun resolvesRelativeEpubHrefsAndMatchesTargetChapters() = runBlocking {
         assertEquals(
             "OEBPS/Text/ch02.xhtml#sec1",
             LocalBookSemanticHtml.resolveRelativeHref("OEBPS/Text/toc.xhtml", "ch02.xhtml#sec1")
@@ -277,45 +189,17 @@ class LocalBookSemanticHtmlTest {
             BookChapter(url = "OEBPS/Text/part01.xhtml#ch2", title = "Chapter 2", index = 2, startFragmentId = "ch2"),
             BookChapter(url = "3:filepos:0000001000", title = "Mobi Ch", index = 3)
         )
-        assertEquals(2, LocalBookSemanticHtml.resolveInternalLinkTarget("OEBPS/Text/part01.xhtml#ch2", chapters, 0))
-        assertEquals(2, LocalBookSemanticHtml.resolveInternalLinkTarget("part01.xhtml#ch2", chapters, 0))
-        assertEquals(3, LocalBookSemanticHtml.resolveInternalLinkTarget("filepos:0000001000", chapters, 0))
+        assertEquals(2 to 0, LocalBookSemanticHtml.resolveInternalLinkTarget("OEBPS/Text/part01.xhtml#ch2", chapters, 0))
+        assertEquals(2 to 0, LocalBookSemanticHtml.resolveInternalLinkTarget("part01.xhtml#ch2", chapters, 0))
+        assertEquals(3 to 0, LocalBookSemanticHtml.resolveInternalLinkTarget("filepos:0000001000", chapters, 0))
+        for ((positions, expected) in listOf(
+            mapOf(2 to mapOf("note" to 17)) to (2 to 17),
+            emptyMap<Int, Map<String, Int>>() to null,
+            mapOf(1 to mapOf("note" to 3), 2 to mapOf("note" to 17)) to null,
+        )) {
+            assertEquals(expected, LocalBookSemanticHtml.resolveInternalLinkTarget(
+                "part01.xhtml#note", chapters, 1) { positions[it.index].orEmpty() })
+        }
     }
 
-    @Test
-    fun resolvesBidirectionalFootnoteAndEmptyPageAnchorsThroughMixedChannel() {
-        val rawHtml = """
-            <body>
-              <p><span>First paragraph with a footnote call.</span><sup><a href="#note_6" id="ref_6">6</a></sup><span> Following sentence with an inline <a id="page_13"/>page marker.</span></p>
-              <p>Plain middle paragraph.</p>
-              <p><span><strong><a href="#ref_6" id="note_6">6</a></strong></span><span> Endnote explanation text at the end of the chapter.</span></p>
-            </body>
-        """.trimIndent()
-        val body = Jsoup.parse(rawHtml).body()
-        val channel = LocalBookSemanticHtml.emitMixedChannel(body, null)
-        val source = ReaderChapterSourceParser.parse(
-            chapterIndex = 0,
-            title = "",
-            paragraphs = channel.split("\n").filter { it.isNotBlank() },
-            includeTitle = false,
-            adaptSpecialStyle = true,
-            htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
-        )
-        fun anchorPos(id: String): Int? =
-            source.blocks.filterIsInstance<ReaderChapterSourceBlock.Html>()
-                .firstNotNullOfOrNull { block ->
-                    JsoupReaderHtmlParser.findAnchorPosition(block.value, id, block.chapterPosition)
-                }
-
-        val refPos = anchorPos("ref_6")
-        val notePos = anchorPos("note_6")
-        val pagePos = anchorPos("page_13")
-        assertNotNull(refPos)
-        assertNotNull(notePos)
-        assertNotNull(pagePos)
-        assertTrue(notePos!! > refPos!!)
-        assertTrue(source.semanticContent.substring(refPos).startsWith("6 Following"))
-        assertTrue(source.semanticContent.substring(notePos).startsWith("6 Endnote"))
-        assertTrue(source.semanticContent.substring(pagePos!!).startsWith("page marker."))
-    }
 }

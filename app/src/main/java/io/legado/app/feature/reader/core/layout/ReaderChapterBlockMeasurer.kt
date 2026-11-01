@@ -36,6 +36,7 @@ data class ReaderHtmlParagraph(
      * 作者显式写在正文里的缩进字符仍优先（测量时会识别并跳过虚拟缩进）。
      */
     val preserveBodyIndent: Boolean = true,
+    val rule: Boolean = false,
 )
 
 enum class ReaderParagraphDecorationKind { QUOTE, BULLET }
@@ -45,6 +46,7 @@ data class ReaderParagraphDecoration(
     val colorArgb: Int?,
     val sizePx: Float,
     val leadingOffsetPx: Float = 0f,
+    val label: String? = null,
 )
 
 data class ReaderImageDimensions(val widthPx: Float, val heightPx: Float)
@@ -256,7 +258,6 @@ class ReaderChapterBlockMeasurer(
              * 的图片规则（见 [resolveImageLayout]）。
              */
             fromHtmlBlock: Boolean = false,
-            /** HTML 段测量文本与注入侧不一致（标签剥离），不参与锚点计数。 */
             castFeed: Boolean = true,
         ) {
             // 旧 `TextChapterLayout` 在每段排版前 `currentCoroutineContext().ensureActive()`。
@@ -584,7 +585,21 @@ class ReaderChapterBlockMeasurer(
                     )
                 }
                 is ReaderChapterSourceBlock.Paragraph -> {
-                    addStyledParagraph(block.items, false)
+                    val hint = block.presentation
+                    if (hint?.rule == true) {
+                        blocks += ReaderMeasuredBlock.Rule(style.bodyStyle.colorArgb,
+                            (style.bodyStyle.fontSizePx / 16f).coerceAtLeast(1f), style.bodyStyle.fontSizePx / 2f)
+                    } else {
+                        val scale = style.bodyStyle.fontSizePx / 10f
+                        addStyledParagraph(block.items, false,
+                            applyBodyIndent = hint?.preserveBodyIndent ?: true,
+                            firstLineMarginPx = (hint?.firstMargin ?: 0f) * scale,
+                            restLineMarginPx = (hint?.restMargin ?: 0f) * scale,
+                            alignmentOverride = hint?.alignment,
+                            decorations = hint?.decorations.orEmpty().map {
+                                it.copy(sizePx = it.sizePx * scale, leadingOffsetPx = it.leadingOffsetPx * scale)
+                            })
+                    }
                 }
                 is ReaderChapterSourceBlock.Html -> {
                     val paragraphs = try {
@@ -596,6 +611,12 @@ class ReaderChapterBlockMeasurer(
                     }
                         ?: fallbackHtmlParagraphs(source, block)
                     paragraphs.forEach { paragraph ->
+                        if (paragraph.rule) {
+                            blocks += ReaderMeasuredBlock.Rule(style.bodyStyle.colorArgb,
+                                (style.bodyStyle.fontSizePx / 16f).coerceAtLeast(1f), style.bodyStyle.fontSizePx / 2f,
+                                chapterPosition = paragraph.items.firstOrNull()?.chapterPosition)
+                            return@forEach
+                        }
                         // 普通 HTML 正文段与纯文本段落共用阅读器段首缩进；标题、pre、引用、
                         // 列表、表格等已由 parser 标记 preserveBodyIndent = false，
                         // 居中/右对齐段也保持自己的对齐。

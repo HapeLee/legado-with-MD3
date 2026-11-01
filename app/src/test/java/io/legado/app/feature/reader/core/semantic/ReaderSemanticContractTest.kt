@@ -72,11 +72,8 @@ class ReaderSemanticContractTest {
         assertTrue(ReaderSemanticContract.validate(source).size >= 2)
     }
 
-    @Test
-    fun legacyFallbackIsExplicitlyDifferentForRuby() {
-        val paragraphs = listOf("<usehtml><ruby>漢<rt>かん</rt></ruby></usehtml>")
-        val legacy = ReaderChapterSourceParser.parse(0, "", paragraphs, false, true)
-        assertEquals("漢かん\n", legacy.semanticContent)
-        // Android production callers inject the shared Jsoup resolver instead of this fallback.
+    @Test(expected = IllegalArgumentException::class)
+    fun htmlCannotSilentlyUseAnAlternativeTextDefinition() {
+        ReaderChapterSourceParser.parse(0, "", listOf("<usehtml>body</usehtml>"), false, true)
     }
 }

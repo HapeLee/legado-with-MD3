@@ -29,12 +29,12 @@ class ReaderEpubFileContractTest {
             LocalBookSemanticHtml.inlineDocumentCssSemantics(document) { href ->
                 book.resources.getByHref(LocalBookSemanticHtml.resolveRelativeHref(resource.href, href))?.let { String(it.data, Charsets.UTF_8) }
             }
-            LocalBookSemanticHtml.cutFragment(document.body(), "one", "two")
-            val channel = LocalBookSemanticHtml.emitMixedChannel(document.body(), "第一章")
+            LocalBookSemanticHtml.cutChapterBody(document.body(), "one", "two")
+            val channel = LocalBookSemanticHtml.plainText(document.body().outerHtml())
             val source = ReaderChapterSourceParser.parse(0, "第一章", channel.lines().filter { it.isNotBlank() }, true, true, AndroidReaderHtmlSemanticTextResolver)
             assertTrue(source.semanticContent.contains("A&😀B\uFFFC"))
             assertTrue(source.semanticContent.contains("脚注"))
-            assertFalse(source.semanticContent.contains("Hidden"))
+            assertTrue(source.semanticContent.contains("Hidden"))
             assertFalse(source.semanticContent.contains("Tail"))
             assertTrue(ReaderSemanticContract.validate(source).isEmpty())
         }

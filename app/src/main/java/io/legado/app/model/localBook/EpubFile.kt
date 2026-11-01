@@ -57,6 +57,10 @@ class EpubFile(var book: Book) {
         }
 
         @Synchronized
+        fun getPresentation(book: Book, chapter: BookChapter): String? =
+            getEFile(book).getContent(chapter, presentation = true)
+
+        @Synchronized
         override fun getImage(
             book: Book,
             href: String
@@ -119,7 +123,7 @@ class EpubFile(var book: Book) {
         }.getOrThrow()
     }
 
-    private fun getContent(chapter: BookChapter): String? {
+    private fun getContent(chapter: BookChapter, presentation: Boolean = false): String? {
         /*获取当前章节文本*/
         val contents = epubBookContents ?: return null
         val nextChapterFirstResourceHref = chapter.getVariable("nextUrl").substringBeforeLast("#")
@@ -138,7 +142,7 @@ class EpubFile(var book: Book) {
                 findChapterFirstSource = true
                 // 第一个xhtml文件
                 elements.add(
-                    getBody(res, startFragmentId, endFragmentId)
+                    getBody(res, startFragmentId, endFragmentId, presentation)
                 )
                 // 不是最后章节 且 已经遍历到下一章节的内容时停止
                 if (!isLastChapter && res.href == nextChapterFirstResourceHref) break
@@ -146,12 +150,12 @@ class EpubFile(var book: Book) {
             }
             if (nextChapterFirstResourceHref != res.href) {
                 // 其余部分
-                elements.add(getBody(res, null, null))
+                elements.add(getBody(res, null, null, presentation))
             } else {
                 // 下一章节的第一个xhtml
                 if (includeNextChapterResource) {
                     //有Fragment 则添加到上一章节
-                    elements.add(getBody(res, null, endFragmentId))
+                    elements.add(getBody(res, null, endFragmentId, presentation))
                 }
                 break
             }
@@ -166,24 +170,16 @@ class EpubFile(var book: Book) {
         elements.select("img[src=\"cover.jpeg\"]").forEachIndexed { i, it ->
             if (i > 0) it.remove()
         }
-        LocalBookSemanticHtml.sanitizeImages(elements)
+        LocalBookSemanticHtml.sanitizeImages(elements, preserveAppearance = presentation)
         val tag = Book.rubyTag
         if (book.getDelTag(tag)) {
             elements.select("rp, rt").remove()
         }
-        // Mixed channel: plain text/image lines stay replace-friendly,
-        // semantic blocks go through single-line <usehtml> wrappers.
-        // Title dedup happens at DOM level because ContentProcessor regex cannot see inside <usehtml>.
-        // Preserve the old contract: empty volume chapters return "" (not null).
-        val channel = elements.flatMap { body ->
-            LocalBookSemanticHtml.emitMixedChannel(body, chapter.title)
-                .split("\n")
-        }.filter { it.isNotBlank() || it.contains("<usehtml>") }
-            .joinToString("\n")
-        return channel
+        val html = elements.outerHtml()
+        return if (presentation) html else LocalBookSemanticHtml.plainText(html)
     }
 
-    private fun getBody(res: Resource, startFragmentId: String?, endFragmentId: String?): Element {
+    private fun getBody(res: Resource, startFragmentId: String?, endFragmentId: String?, presentation: Boolean): Element {
         /**
          * <image width="1038" height="670" xlink:href="..."/>
          * ...titlepage.xhtml
@@ -198,7 +194,7 @@ class EpubFile(var book: Book) {
         // Jsoup可能会修复不规范的xhtml文件 解析处理后再获取
         val document = Jsoup.parse(String(res.data, mCharset))
         val bodyElement = document.body()
-        LocalBookSemanticHtml.inlineDocumentCssSemantics(document) { href ->
+        if (presentation) LocalBookSemanticHtml.inlineDocumentCssSemantics(document) { href ->
             val resolved = LocalBookSemanticHtml.resolveRelativeHref(res.href, href)
             resolved?.let { path ->
                 runCatching {
@@ -208,7 +204,7 @@ class EpubFile(var book: Book) {
         }
         bodyElement.select("script, style").remove()
         // Resolve styles before cutting, including style elements preceding the chapter.
-        LocalBookSemanticHtml.cutFragment(bodyElement, startFragmentId, endFragmentId)
+        LocalBookSemanticHtml.cutChapterBody(bodyElement, startFragmentId, endFragmentId)
         /*选择去除正文中的H标签，部分书籍标题与阅读标题重复待优化*/
         val tag = Book.hTag
         if (book.getDelTag(tag)) {

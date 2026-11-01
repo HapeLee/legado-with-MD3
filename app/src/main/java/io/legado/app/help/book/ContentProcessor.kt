@@ -9,8 +9,8 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookContentProcess
 import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.domain.model.BookContentProcessEngine
 import io.legado.app.domain.model.TextProcessAction
+import io.legado.app.domain.model.BookContentProcessEngine
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.exception.RegexTimeoutException
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -28,6 +28,7 @@ import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 class ContentProcessor private constructor(
@@ -39,11 +40,29 @@ class ContentProcessor private constructor(
         private val processors = hashMapOf<String, WeakReference<ContentProcessor>>()
         private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
         private val revision = AtomicLong()
-        val semanticRevision: Long get() = revision.get()
-        fun invalidateSemanticContent() { revision.incrementAndGet() }
+        private val ruleRevision = AtomicLong()
+        private val bookRevisions = ConcurrentHashMap<String, Long>()
+        private val wholeBookRevisions = ConcurrentHashMap<String, Long>()
+        private val chapterRevisions = ConcurrentHashMap<Pair<String, Int>, Long>()
+        val rulesRevision: Long get() = ruleRevision.get()
+
+        fun semanticRevision(bookUrl: String): Long = bookRevisions[bookUrl] ?: 0
+
+        fun chapterRevision(bookUrl: String, chapterIndex: Int): Long = maxOf(
+            wholeBookRevisions[bookUrl] ?: 0,
+            chapterRevisions[bookUrl to chapterIndex] ?: 0,
+        )
+
+        fun invalidateSemanticContent(bookUrl: String, chapterIndex: Int? = null) {
+            val next = revision.incrementAndGet()
+            if (chapterIndex == null) wholeBookRevisions.merge(bookUrl, next) { a, b -> maxOf(a, b) }
+            else chapterRevisions.merge(bookUrl to chapterIndex, next) { a, b -> maxOf(a, b) }
+            bookRevisions.merge(bookUrl, next) { a, b -> maxOf(a, b) }
+        }
 
         fun get(book: Book) = get(book.name, book.origin)
 
+        @Synchronized
         fun get(bookName: String, bookOrigin: String): ContentProcessor {
             val processorWr = processors[bookName + bookOrigin]
             var processor: ContentProcessor? = processorWr?.get()
@@ -54,11 +73,12 @@ class ContentProcessor private constructor(
             return processor
         }
 
+        @Synchronized
         fun upReplaceRules() {
-            revision.incrementAndGet()
             processors.forEach {
-                it.value.get()?.upReplaceRules()
+                it.value.get()?.loadReplaceRules()
             }
+            ruleRevision.incrementAndGet()
         }
 
     }
@@ -71,11 +91,16 @@ class ContentProcessor private constructor(
     private val readGateway by lazy { GlobalContext.get().get<ReadSettingsGateway>() }
 
     init {
-        upReplaceRules()
+        loadReplaceRules()
         upRemoveSameTitle()
     }
 
     fun upReplaceRules() {
+        loadReplaceRules()
+        ruleRevision.incrementAndGet()
+    }
+
+    private fun loadReplaceRules() {
         titleReplaceRules.run {
             clear()
             addAll(appDb.replaceRuleDao.findEnabledByTitleScope(bookName, bookOrigin))
@@ -84,7 +109,6 @@ class ContentProcessor private constructor(
             clear()
             addAll(appDb.replaceRuleDao.findEnabledByContentScope(bookName, bookOrigin))
         }
-        revision.incrementAndGet()
     }
 
     private fun upRemoveSameTitle() {
@@ -138,9 +162,13 @@ class ContentProcessor private constructor(
         reSegment: Boolean = true,
         paragraphIndent: String?,
         settings: SettingsSnapshot = captureSettings(),
+        includePresentation: Boolean = false,
     ): BookContent {
         val indent = paragraphIndent ?: ReadBookConfig.paragraphIndent
-        var mContent = content
+        val canonicalInput = if (book.isEpub || book.isMobi) {
+            MixedContentSegments.toLocalPlainText(content, decodeEntities = book.isEpub)
+        } else content
+        var mContent = canonicalInput
         var sameTitleRemoved = false
         var effectiveReplaceRules: ArrayList<ReplaceRule>? = null
         var effectiveContentProcesses: List<BookContentProcess> = emptyList()
@@ -174,8 +202,9 @@ class ContentProcessor private constructor(
                 AppLog.put("去除重复标题出错\n${e.localizedMessage}", e)
             }
             if (reSegment && book.getReSegment()) {
-                mContent = MixedContentSegments.transform(mContent,
+                mContent = if (settings.adaptSpecialStyle) MixedContentSegments.transform(mContent,
                     plain = { ContentHelp.reSegment(it, chapter.title) }, rich = { it })
+                else ContentHelp.reSegment(mContent, chapter.title)
             }
             if (chineseConvert) {
                 try {
@@ -194,8 +223,9 @@ class ContentProcessor private constructor(
                 val replaceBook = book.toSearchBook()
                 //替换
                 effectiveReplaceRules = arrayListOf()
-                mContent = MixedContentSegments.transform(mContent,
-                    plain = { it.lines().joinToString("\n") { line -> line.trim() } }, rich = { it })
+                fun trimLines(text: String) = text.lines().joinToString("\n") { it.trim() }
+                mContent = if (settings.adaptSpecialStyle) MixedContentSegments.transform(mContent,
+                    plain = ::trimLines, rich = { it }) else trimLines(mContent)
                 getContentReplaceRules().forEach { item ->
                     if (item.pattern.isEmpty()) {
                         return@forEach
@@ -208,11 +238,9 @@ class ContentProcessor private constructor(
                             if (remaining <= 0) throw RegexTimeoutException("替换规则超时: ${item.name}")
                             text.replace(item.regex, item.replacement, remaining, chapter, replaceBook)
                         } else text.replace(item.pattern, item.replacement)
-                        // Preserve rule order and the existing timeout/error handling. Rich nodes
-                        // are decoded by Jsoup; regexes never see attributes or serialized markup.
-                        val tmp = MixedContentSegments.transform(mContent,
+                        val tmp = if (settings.adaptSpecialStyle) MixedContentSegments.transform(mContent,
                             plain = ::replaceText,
-                            rich = { MixedContentSegments.transformHtmlText(it, ::replaceText) })
+                            rich = { it }) else replaceText(mContent)
                         if (mContent != tmp) {
                             effectiveReplaceRules.add(item)
                             mContent = tmp
@@ -239,12 +267,19 @@ class ContentProcessor private constructor(
                 chapterIndex = chapter.index,
             ).map { it.toRenderProcess() }
             if (contentProcesses.isNotEmpty() || markings.isNotEmpty()) {
+                // Editing text must not depend on whether its presentation can be written to a DOM.
+                val original = mContent
+                val editInput = if (contentProcesses.any { it.enabled && it.status == BookContentProcess.STATUS_ACTIVE &&
+                        it.stage == BookContentProcess.STAGE_CONTENT && it.kind != BookContentProcess.KIND_USER_HIGHLIGHT &&
+                        it.kind != BookContentProcess.KIND_USER_UNDERLINE }) {
+                    MixedContentSegments.toPlainText(mContent)
+                } else mContent
                 val applyResult =
-                    BookContentProcessEngine.apply(mContent, contentProcesses + markings,
-                        if (settings.adaptSpecialStyle) ProcessedContentEditor(indent) else null)
-                mContent = applyResult.text
+                    BookContentProcessEngine.apply(editInput, contentProcesses + markings)
+                val edited = applyResult.effectiveProcesses.any {
+                    it.kind != BookContentProcess.KIND_USER_HIGHLIGHT && it.kind != BookContentProcess.KIND_USER_UNDERLINE }
+                mContent = if (editInput != original && !edited) original else applyResult.text
                 effectiveContentProcesses = applyResult.effectiveProcesses
-                applyResult.unsupportedEdits.forEach { AppLog.put("正文编辑未应用: $it") }
             }
         }
         if (includeTitle) {
@@ -257,7 +292,22 @@ class ContentProcessor private constructor(
         if (isAndroid8) mContent = mContent.replace('\u00A0', ' ')
         val contents = MixedContentSegments.paragraphs(mContent, indent, settings.adaptSpecialStyle,
             firstUnindented = includeTitle)
-        return BookContent(sameTitleRemoved, contents, effectiveReplaceRules, effectiveContentProcesses)
+        val presentation = if (
+            includePresentation && !includeTitle && mContent == canonicalInput &&
+            settings.adaptSpecialStyle && (book.isEpub || book.isMobi)
+        ) {
+            try {
+                io.legado.app.model.localBook.LocalBook.getPresentation(book, chapter)?.let { html ->
+                    io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(
+                        html, canonicalInput, indent, settings.adaptSpecialStyle)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null // Optional appearance cannot make an otherwise readable chapter fail.
+            }
+        } else null
+        return BookContent(sameTitleRemoved, contents, effectiveReplaceRules, effectiveContentProcesses, presentation)
     }
 
     /**

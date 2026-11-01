@@ -29,6 +29,7 @@ class ReaderChapterSourceParserTest {
             paragraphs = listOf("甲<img src=\"a.jpg\">乙", "[newpage]", "<usehtml><b>丙</b></usehtml>"),
             includeTitle = true,
             adaptSpecialStyle = true,
+            htmlSemanticTextResolver = ReaderHtmlSemanticTextResolver { "丙" },
         )
         assertTrue((source.blocks.first() as ReaderChapterSourceBlock.Text).isTitle)
         val body = source.blocks.drop(1)
@@ -51,6 +52,7 @@ class ReaderChapterSourceParserTest {
     fun htmlUsesRenderedCharacterLengthForFollowingPositions() {
         val source = ReaderChapterSourceParser.parse(
             0, "", listOf("<usehtml><b>甲</b>&amp;乙<img src=\"x\"></usehtml>", "后"), false, true,
+            htmlSemanticTextResolver = ReaderHtmlSemanticTextResolver { "甲&乙\uFFFC" },
         )
         val html = source.blocks[0] as ReaderChapterSourceBlock.Html
         val following = source.blocks[1] as ReaderChapterSourceBlock.Paragraph

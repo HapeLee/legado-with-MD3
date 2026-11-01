@@ -169,6 +169,8 @@ sealed interface ReaderMeasuredBlock {
         val widthPx: Float,
         val verticalPaddingPx: Float,
         val dashed: Boolean = false,
+        /** Non-null for an HTML hr, which retains its existing semantic newline. */
+        val chapterPosition: Int? = null,
     ) : ReaderMeasuredBlock
 
     data object PageBreak : ReaderMeasuredBlock
@@ -376,7 +378,7 @@ internal class ReaderPaginationSession(
             )
 
             is ReaderMeasuredBlock.BlankLine -> addBlankLine(block, index, hasFollowingBlock)
-            is ReaderMeasuredBlock.Rule -> addRule(block)
+            is ReaderMeasuredBlock.Rule -> addRule(block, index, hasFollowingBlock)
             ReaderMeasuredBlock.PageBreak -> advanceColumn()
         }
         if (isTitle) {
@@ -771,13 +773,16 @@ internal class ReaderPaginationSession(
                         elements += ReaderElement.ParagraphMarker(
                             bounds = ReaderRect(
                                 columnLeft() + decoration.leadingOffsetPx + decoration.sizePx,
-                                y + actualLineHeight / 2f,
-                                columnLeft() + decoration.leadingOffsetPx + decoration.sizePx,
-                                y + actualLineHeight / 2f,
+                                if (decoration.label == null) y + actualLineHeight / 2f else y,
+                                if (decoration.label == null) columnLeft() + decoration.leadingOffsetPx + decoration.sizePx
+                                    else columnLeft() + indent - paragraph.baseTextSizePx * .2f,
+                                if (decoration.label == null) y + actualLineHeight / 2f else y + lineBaselineOffset,
                             ),
                             colorArgb = decoration.colorArgb ?: markerColor,
                             strokeWidthPx = decoration.sizePx * 2f,
                             circular = true,
+                            label = decoration.label,
+                            textSizePx = paragraph.baseTextSizePx,
                         )
                     }
                 }
@@ -936,11 +941,17 @@ internal class ReaderPaginationSession(
         }
     }
 
-    private fun addRule(rule: ReaderMeasuredBlock.Rule) {
+    private fun addRule(rule: ReaderMeasuredBlock.Rule, paragraphIndex: Int, appendSeparator: Boolean) {
         val requiredHeight = rule.verticalPaddingPx * 2f + rule.widthPx
         if (y + requiredHeight > config.contentBottomPx && columnHasContent()) advanceColumn()
         val lineY = y + rule.verticalPaddingPx
         val rowElementStart = elements.size
+        rule.chapterPosition?.let { position ->
+            elements += ReaderElement.Spacer(
+                ReaderRect(columnLeft(), lineY, columnLeft() + config.contentWidthPx, lineY + rule.widthPx),
+                position, paragraphIndex,
+            )
+        }
         elements += ReaderElement.Rule(
             bounds = ReaderRect(
                 columnLeft(),
@@ -954,6 +965,10 @@ internal class ReaderPaginationSession(
         )
         columnRows += ReaderLayoutRow(rowElementStart, elements.size, lineY, lineY + rule.widthPx)
         y += requiredHeight
+        if (rule.chapterPosition != null && appendSeparator) {
+            pageText.append('\n')
+            y += config.paragraphSpacingPx
+        }
     }
 
     private fun addBlankLine(

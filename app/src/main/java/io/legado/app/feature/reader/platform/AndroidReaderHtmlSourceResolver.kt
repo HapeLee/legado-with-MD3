@@ -1,20 +1,39 @@
 package io.legado.app.feature.reader.platform
 
+import android.graphics.Typeface
+import android.os.Build
+import android.text.Layout
+import android.text.Spanned
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.AlignmentSpan
+import android.text.style.BulletSpan
+import android.text.style.ImageSpan
+import android.text.style.LeadingMarginSpan
+import android.text.style.QuoteSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StrikethroughSpan
+import android.text.style.StyleSpan
+import android.text.style.SubscriptSpan
+import android.text.style.SuperscriptSpan
+import android.text.style.TypefaceSpan
+import android.text.style.URLSpan
+import android.text.style.UnderlineSpan
+import androidx.core.text.HtmlCompat
+import androidx.core.text.parseAsHtml
 import io.legado.app.feature.reader.core.layout.ReaderHtmlParagraph
 import io.legado.app.feature.reader.core.layout.ReaderHtmlSourceResolver
+import io.legado.app.feature.reader.core.layout.ReaderParagraphDecoration
+import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
+import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
+import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderHtmlSemanticTextResolver
+import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
+import org.jsoup.Jsoup
 
-/**
- * semantic resolver backed by the shared Jsoup cursor.
- */
 object AndroidReaderHtmlSemanticTextResolver : ReaderHtmlSemanticTextResolver {
-    override fun resolve(html: String): String = JsoupReaderHtmlParser.semanticText(html)
+    override fun resolve(html: String): String = parseReaderHtml(html).toString()
 }
 
-/**
- * HTML source resolver backed by the shared Jsoup cursor: measured paragraphs
- * and semantic text come from the same traversal.
- */
 class AndroidReaderHtmlSourceResolver(
     private val baseTextSizePx: Float,
     private val density: Float,
@@ -23,6 +42,161 @@ class AndroidReaderHtmlSourceResolver(
         html: String,
         chapterPosition: Int,
     ): List<ReaderHtmlParagraph> {
-        return JsoupReaderHtmlParser.parse(html, chapterPosition, baseTextSizePx, density).paragraphs
+        val spanned = parseReaderHtml(html)
+        // 不重写 HTML，以免改变正文空白和字符偏移。按出现顺序配对，重复 src 也有独立动作。
+        val imageActions = if (html.contains("data-legado-", ignoreCase = true)) {
+            Jsoup.parseBodyFragment(html).select("img").map { image ->
+                image.attr("data-legado-pclick").takeIf(String::isNotBlank)
+                    ?: image.attr("data-legado-click").takeIf(String::isNotBlank)
+            }
+        } else emptyList()
+        return splitParagraphs(spanned, chapterPosition, imageActions)
+    }
+
+    private fun splitParagraphs(
+        text: Spanned,
+        chapterPosition: Int,
+        imageActions: List<String?>,
+    ): List<ReaderHtmlParagraph> {
+        val paragraphs = mutableListOf<ReaderHtmlParagraph>()
+        var paragraph = mutableListOf<ReaderChapterInlineSource>()
+        var paragraphStart = 0
+        var index = 0
+        var position = chapterPosition
+        var imageIndex = 0
+        fun finishParagraph(end: Int, preserveEmpty: Boolean = false) {
+            val probeEnd = (end + 1).coerceAtMost(text.length).coerceAtLeast(paragraphStart)
+            val margins = text.getSpans(paragraphStart, probeEnd, LeadingMarginSpan::class.java)
+            val firstMargin = margins.sumOf { it.getLeadingMargin(true) }.toFloat()
+            val restMargin = margins.sumOf { it.getLeadingMargin(false) }.toFloat()
+            val alignment = text.getSpans(paragraphStart, probeEnd, AlignmentSpan::class.java)
+                .lastOrNull()?.alignment?.toReaderAlignment()
+            var leadingOffset = 0f
+            val decorations = buildList {
+                margins.forEach { span ->
+                    when (span) {
+                        is QuoteSpan -> add(ReaderParagraphDecoration(
+                            ReaderParagraphDecorationKind.QUOTE,
+                            // QuoteSpan/BulletSpan 的 getColor() 是 API 28 才加入的方法：
+                            // minSdk 26/27 上读 span.color 会在运行期抛 NoSuchMethodError，
+                            // 带 <blockquote>/<ul><li> 的章节会整章崩掉，颜色回落 null。
+                            if (Build.VERSION.SDK_INT >= 28) span.color else null,
+                            if (Build.VERSION.SDK_INT >= 28) span.stripeWidth.toFloat() else 2f,
+                            leadingOffset,
+                        ))
+                        is BulletSpan -> add(ReaderParagraphDecoration(
+                            ReaderParagraphDecorationKind.BULLET,
+                            if (Build.VERSION.SDK_INT >= 28) span.color.takeUnless { it == 0 } else null,
+                            if (Build.VERSION.SDK_INT >= 28) span.bulletRadius.toFloat() else 4f,
+                            leadingOffset,
+                        ))
+                    }
+                    leadingOffset += span.getLeadingMargin(true)
+                }
+            }
+            val lastBullet = decorations.indexOfLast { it.kind == ReaderParagraphDecorationKind.BULLET }
+            val listDepth = decorations.count { it.kind == ReaderParagraphDecorationKind.BULLET }
+            val quoteDepth = decorations.count { it.kind == ReaderParagraphDecorationKind.QUOTE }
+            val visibleDecorations = decorations.filterIndexed { i, value ->
+                value.kind != ReaderParagraphDecorationKind.BULLET || i == lastBullet
+            }.map { value ->
+                if (value.kind == ReaderParagraphDecorationKind.BULLET) value.copy(
+                    leadingOffsetPx = (listDepth + quoteDepth - 1) * baseTextSizePx * 1.2f) else value
+            }
+            val listMargin = (listDepth + quoteDepth) * baseTextSizePx * 1.2f
+            if (paragraph.isNotEmpty()) {
+                paragraphs += ReaderHtmlParagraph(paragraph,
+                    if (listDepth > 0) maxOf(firstMargin, listMargin) else firstMargin,
+                    if (listDepth > 0) maxOf(restMargin, listMargin) else restMargin, alignment, visibleDecorations)
+            } else if (preserveEmpty) {
+                paragraphs += ReaderHtmlParagraph(
+                    listOf(ReaderChapterInlineSource.BlankLine(position)),
+                    firstMargin,
+                    restMargin,
+                    alignment,
+                    decorations,
+                )
+            }
+            paragraph = mutableListOf()
+            paragraphStart = (end + 1).coerceAtMost(text.length)
+        }
+        while (index < text.length) {
+            if (text[index] == '\n') {
+                // StaticLayout gives a newline-only line real height. Preserve only leading or
+                // consecutive empty paragraphs; its trailing start == end line is still omitted.
+                finishParagraph(index, preserveEmpty = paragraph.isEmpty())
+                index++
+                position++
+                continue
+            }
+            val image = text.getSpans(index, index + 1, ImageSpan::class.java).firstOrNull()
+            if (image != null) {
+                val action = imageActions.getOrNull(imageIndex++)
+                image.source?.let {
+                    paragraph += ReaderChapterInlineSource.Image(
+                        source = it,
+                        chapterPosition = position,
+                        action = action,
+                    )
+                }
+                index++
+                position++
+                continue
+            }
+            val end = minOf(text.nextSpanTransition(index, text.length, Any::class.java), nextControl(text, index))
+                .coerceAtLeast(index + 1)
+            val value = text.subSequence(index, end).toString()
+            paragraph += ReaderChapterInlineSource.Text(value, position, styleAt(text, index))
+            position += value.length
+            index = end
+        }
+        finishParagraph(text.length)
+        return paragraphs
+    }
+
+    private fun nextControl(text: CharSequence, start: Int): Int {
+        for (index in start until text.length) {
+            if (text[index] == '\n' || text[index] == '\uFFFC') return index
+        }
+        return text.length
+    }
+
+    private fun styleAt(text: Spanned, index: Int): ReaderInlineSourceStyle {
+        val spans = text.getSpans(index, index + 1, Any::class.java)
+        val styleSpans = spans.filterIsInstance<StyleSpan>()
+        val bold = styleSpans.any { it.style == Typeface.BOLD || it.style == Typeface.BOLD_ITALIC }
+        val italic = styleSpans.any { it.style == Typeface.ITALIC || it.style == Typeface.BOLD_ITALIC }
+        val relative = spans.filterIsInstance<RelativeSizeSpan>().fold(1f) { scale, span -> scale * span.sizeChange }
+        val absolute = spans.filterIsInstance<AbsoluteSizeSpan>().lastOrNull()?.let {
+            val px = if (it.dip) it.size * density else it.size.toFloat()
+            px / baseTextSizePx.coerceAtLeast(1f)
+        }
+        return ReaderInlineSourceStyle(
+            colorArgb = null, // Keep the reader's theme; appearance never changes the text projection.
+            backgroundArgb = null,
+            fontWeight = if (bold) 700 else null,
+            italic = if (italic) true else null,
+            underline = spans.any { it is UnderlineSpan },
+            strikeThrough = spans.any { it is StrikethroughSpan },
+            link = spans.filterIsInstance<URLSpan>().lastOrNull()?.url,
+            fontSizeScale = absolute ?: relative,
+            fontFamily = spans.filterIsInstance<TypefaceSpan>().lastOrNull()?.family,
+            superscript = spans.any { it is SuperscriptSpan },
+            subscript = spans.any { it is SubscriptSpan },
+        )
     }
 }
+
+private fun Layout.Alignment.toReaderAlignment(): ReaderTextAlignment = when (this) {
+    Layout.Alignment.ALIGN_CENTER -> ReaderTextAlignment.CENTER
+    Layout.Alignment.ALIGN_OPPOSITE -> ReaderTextAlignment.END
+    else -> ReaderTextAlignment.START
+}
+
+private fun parseReaderHtml(html: String): Spanned = html.parseAsHtml(
+    HtmlCompat.FROM_HTML_MODE_COMPACT,
+    // 与旧 `setTypeHtml` 的 `parseAsHtml(FROM_HTML_MODE_COMPACT)` 完全一致：不给 ImageGetter，
+    // 让框架用系统 fallback 图标的固有尺寸生成 ImageSpan——旧版行内图的占位宽/行盒高就取自它。
+    null,
+    null,
+)

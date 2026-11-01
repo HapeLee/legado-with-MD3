@@ -13,25 +13,21 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
 /**
- * Jsoup-based HTML parser shared by measurement and semantic text projection.
+ * Optional local HTML appearance parser. Its text is only a projection witness, never the chapter body.
  *
  * [parse] builds both in one pass with a shared cursor, so every inline item's
- * chapterPosition stays aligned with the semantic string by construction.
+ * positions belong to this appearance witness; the resolver must map them to canonical body ranges.
  */
-object JsoupReaderHtmlParser {
+internal object JsoupReaderPresentationParser {
 
     data class ParsedHtml(
-        val semantic: String,
+        val text: String,
         val paragraphs: List<ReaderHtmlParagraph>,
-        val anchorPosition: Int? = null
     )
 
-    /** Collected only for an explicit edit; never retained by a reader chapter. */
-    internal data class TextSpan(val node: TextNode, val start: Int, val value: String)
-
     private data class InlineCtx(
-        val bold: Boolean = false,
-        val italic: Boolean = false,
+        val bold: Boolean? = null,
+        val italic: Boolean? = null,
         val underline: Boolean = false,
         val strike: Boolean = false,
         val link: String? = null,
@@ -46,29 +42,31 @@ object JsoupReaderHtmlParser {
     private data class BlockCtx(
         val alignment: ReaderTextAlignment? = null,
         val quoteDepth: Int = 0,
-        // TODO: 有序列表尚未实现。当前 Boolean 只表示 ordered，但没有保存 item ordinal；
-        //  实现 <ol>/<li value>/CSS list-style-type 时需要计数器与数字 marker。
-        val listStack: List<Boolean> = emptyList(), // true = ordered
+        val listStack: List<ListLevel> = emptyList(),
         val inPre: Boolean = false,
         val headingScale: Float = 1f,
         val headingBold: Boolean = false,
         /** 表格、图注、定义列表等结构化块：排版由 HTML 语义决定，不套阅读器正文缩进。 */
-        val structural: Boolean = false
+        val structural: Boolean = false,
+        val listItem: ListItem? = null,
     )
+
+    private class ListLevel(val ordered: Boolean, var next: Int, val step: Int)
+    private class ListItem(val label: String?, var emitted: Boolean = false)
 
     private class Cursor(
         var pos: Int,
-        val textSpans: MutableList<TextSpan>? = null,
-        val targetAnchorId: String? = null,
-        var anchorPosition: Int? = null,
-        val semantic: StringBuilder = StringBuilder(),
+        val text: StringBuilder = StringBuilder(),
         val paragraphs: MutableList<ReaderHtmlParagraph> = mutableListOf(),
         var current: MutableList<ReaderChapterInlineSource> = mutableListOf(),
         var currentAlignment: ReaderTextAlignment? = null,
         var currentDecorations: List<ReaderParagraphDecoration> = emptyList(),
         var currentFirstMargin: Float = 0f,
         var currentRestMargin: Float = 0f,
-        var currentPreserveBodyIndent: Boolean = true
+        var currentPreserveBodyIndent: Boolean = true,
+        var currentListItem: ListItem? = null,
+        var pendingPreLine: Boolean = false,
+        val elementPositions: MutableMap<Element, Int>? = null,
     ) {
         fun apply(geo: BlockGeo) {
             currentAlignment = geo.alignment
@@ -76,6 +74,7 @@ object JsoupReaderHtmlParser {
             currentFirstMargin = geo.firstMargin
             currentRestMargin = geo.restMargin
             currentPreserveBodyIndent = geo.preserveBodyIndent
+            currentListItem = geo.listItem
         }
     }
 
@@ -84,10 +83,9 @@ object JsoupReaderHtmlParser {
         startPosition: Int,
         baseTextSizePx: Float,
         density: Float,
-        targetAnchorId: String? = null
     ): ParsedHtml {
         val doc = Jsoup.parseBodyFragment(html)
-        return project(doc.body(), startPosition, baseTextSizePx, density, targetAnchorId)
+        return project(doc.body(), startPosition, baseTextSizePx, density)
     }
 
     internal fun project(
@@ -95,38 +93,20 @@ object JsoupReaderHtmlParser {
         startPosition: Int = 0,
         baseTextSizePx: Float = 10f,
         density: Float = 1f,
-        targetAnchorId: String? = null,
-        textSpans: MutableList<TextSpan>? = null,
+        elementPositions: MutableMap<Element, Int>? = null,
     ): ParsedHtml {
-        val cursor = Cursor(startPosition, textSpans, targetAnchorId?.takeIf(String::isNotEmpty))
+        val cursor = Cursor(startPosition, elementPositions = elementPositions)
         // Seed block context from body-level alignment if present.
         val bodyCtx = BlockCtx(alignment = parseAlignment(body))
         for (child in body.childNodes().toList()) {
             walk(child, InlineCtx(), bodyCtx, cursor, baseTextSizePx, density)
         }
         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
-        return ParsedHtml(cursor.semantic.toString(), cursor.paragraphs, cursor.anchorPosition)
+        return ParsedHtml(cursor.text.toString(), cursor.paragraphs)
     }
 
-    fun semanticText(html: String): String {
-        // Geometry does not affect offsets; use neutral metrics for the fast path.
-        return parse(html, 0, 10f, 1f).semantic
-    }
-
-    fun findAnchorPosition(html: String, anchorId: String, startPosition: Int = 0): Int? {
-        val target = anchorId.trim().removePrefix("#")
-        if (target.isEmpty() || !html.contains(target, ignoreCase = true)) return null
-        return parse(html, startPosition, 10f, 1f, target).anchorPosition
-    }
-
-    private fun checkAnchor(node: Element, cursor: Cursor) {
-        val target = cursor.targetAnchorId ?: return
-        if (cursor.anchorPosition != null) return
-        if (node.id().equals(target, ignoreCase = true) ||
-            node.attr("name").equals(target, ignoreCase = true)
-        ) {
-            cursor.anchorPosition = cursor.pos
-        }
+    private fun recordPosition(node: Element, cursor: Cursor) {
+        cursor.elementPositions?.put(node, cursor.pos)
     }
 
     private fun walk(
@@ -164,48 +144,60 @@ object JsoupReaderHtmlParser {
                     }
                 }
                 if (normalized.isEmpty()) return
-                cursor.current += ReaderChapterInlineSource.Text(
-                    value = normalized,
-                    chapterPosition = cursor.pos,
-                    style = ReaderInlineSourceStyle(
-                        colorArgb = inline.colorArgb,
-                        backgroundArgb = inline.backgroundArgb,
-                        fontWeight = if (inline.bold || block.headingBold) 700 else null,
-                        italic = if (inline.italic) true else null,
-                        underline = inline.underline,
-                        strikeThrough = inline.strike,
-                        link = inline.link,
-                        fontSizeScale = inline.fontSizeScale * block.headingScale,
-                        fontFamily = inline.fontFamily,
-                        superscript = inline.superscript,
-                        subscript = inline.subscript
-                    )
-                )
-                cursor.textSpans?.add(TextSpan(node, cursor.pos, normalized))
-                cursor.semantic.append(normalized)
-                cursor.pos += normalized.length
+                val lines = if (block.inPre) normalized.split('\n') else listOf(normalized)
+                lines.forEachIndexed { index, value ->
+                    if (value.isNotEmpty()) {
+                        cursor.pendingPreLine = false
+                        cursor.current += ReaderChapterInlineSource.Text(
+                            value = value,
+                            chapterPosition = cursor.pos,
+                            style = ReaderInlineSourceStyle(
+                                colorArgb = inline.colorArgb,
+                                backgroundArgb = inline.backgroundArgb,
+                                fontWeight = when (inline.bold) {
+                                    true -> 700
+                                    false -> 400
+                                    null -> if (block.headingBold) 700 else null
+                                },
+                                italic = inline.italic,
+                                underline = inline.underline,
+                                strikeThrough = inline.strike,
+                                link = inline.link,
+                                fontSizeScale = inline.fontSizeScale * block.headingScale,
+                                fontFamily = inline.fontFamily,
+                                superscript = inline.superscript,
+                                subscript = inline.subscript,
+                            ),
+                        )
+                        cursor.text.append(value)
+                        cursor.pos += value.length
+                    }
+                    if (index < lines.lastIndex) {
+                        flushParagraph(cursor, preserveEmpty = true, baseTextSizePx, density)
+                        cursor.pendingPreLine = true
+                    }
+                }
             }
             is Element -> {
                 when (val tag = node.tagName().lowercase()) {
                     "script", "style", "noscript", "template" -> return
                     "rt", "rp" -> return // handled via parent check; skip subtree
                     "br" -> {
-                        checkAnchor(node, cursor)
+                        recordPosition(node, cursor)
                         flushParagraph(cursor, preserveEmpty = true, baseTextSizePx, density)
                     }
                     "hr" -> {
-                        // preserve as a blank separator; TODO：upgrades to Rule.
                         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
-                        checkAnchor(node, cursor)
+                        recordPosition(node, cursor)
                         cursor.paragraphs += ReaderHtmlParagraph(
                             listOf(ReaderChapterInlineSource.BlankLine(cursor.pos)),
-                            0f, 0f, null, emptyList()
+                            0f, 0f, null, emptyList(), rule = true,
                         )
-                        cursor.semantic.append(ReaderSemanticContract.PARAGRAPH_BREAK)
+                        cursor.text.append(ReaderSemanticContract.PARAGRAPH_BREAK)
                         cursor.pos += 1
                     }
                     "img", "image" -> {
-                        checkAnchor(node, cursor)
+                        recordPosition(node, cursor)
                         val src = if (tag == "image") {
                             node.attr("xlink:href").takeIf { it.isNotEmpty() }
                                 ?: node.attr("src")
@@ -219,7 +211,7 @@ object JsoupReaderHtmlParser {
                             action = node.attr("data-legado-pclick").takeIf { it.isNotBlank() }
                                 ?: node.attr("data-legado-click").takeIf { it.isNotBlank() }
                         )
-                        cursor.semantic.append(ReaderSemanticContract.IMAGE_CHAR)
+                        cursor.text.append(ReaderSemanticContract.IMAGE_CHAR)
                         cursor.pos += 1
                     }
                     "p", "div", "section", "article", "header", "footer",
@@ -227,7 +219,7 @@ object JsoupReaderHtmlParser {
                     "blockquote", "ul", "ol", "li", "pre", "figure",
                     "figcaption", "aside", "dl", "dt", "dd", "tr", "center" -> {
                         flushParagraph(cursor, preserveEmpty = false, baseTextSizePx, density)
-                        checkAnchor(node, cursor)
+                        recordPosition(node, cursor)
                         val childBlock = descendBlock(node, tag, block, baseTextSizePx, density)
                         val childInline = descendInline(node, tag, inline)
                         // Establish geometry for the upcoming paragraph run.
@@ -240,12 +232,12 @@ object JsoupReaderHtmlParser {
                         cursor.apply(blockGeometry(block, baseTextSizePx, density))
                     }
                     "td", "th" -> {
-                        checkAnchor(node, cursor)
+                        recordPosition(node, cursor)
                         if (cursor.current.isNotEmpty()) {
                             val prev = (cursor.current.lastOrNull() as? ReaderChapterInlineSource.Text)?.value
                             if (prev == null || !prev.endsWith(" ")) {
                                 cursor.current += ReaderChapterInlineSource.Text(" ", cursor.pos)
-                                cursor.semantic.append(' ')
+                                cursor.text.append(' ')
                                 cursor.pos += 1
                             }
                         }
@@ -255,7 +247,7 @@ object JsoupReaderHtmlParser {
                         }
                     }
                     else -> {
-                        checkAnchor(node, cursor)
+                        recordPosition(node, cursor)
                         val childInline = descendInline(node, tag, inline)
                         for (child in node.childNodes().toList()) {
                             walk(child, childInline, block, cursor, baseTextSizePx, density)
@@ -271,7 +263,8 @@ object JsoupReaderHtmlParser {
         val decorations: List<ReaderParagraphDecoration>,
         val firstMargin: Float,
         val restMargin: Float,
-        val preserveBodyIndent: Boolean
+        val preserveBodyIndent: Boolean,
+        val listItem: ListItem?,
     )
 
     private fun blockGeometry(
@@ -292,18 +285,18 @@ object JsoupReaderHtmlParser {
             }
         }
         val listDepth = block.listStack.size
-        if (listDepth > 0) {
-            // 只画当前条目所在层级的 marker；祖先层级的 marker 已在各自 li 的首行绘制。
-            // TODO: 一个 <li> 内含多个块级段落时，目前每段都会生成 marker；后续应只让列表项第一段带 marker。
+        val item = block.listItem
+        if (listDepth > 0 && item != null && !item.emitted) {
             decorations += ReaderParagraphDecoration(
                 ReaderParagraphDecorationKind.BULLET,
                 null,
                 4f * density.coerceAtLeast(1f),
-                (block.quoteDepth + listDepth - 1) * step
+                (block.quoteDepth + listDepth - 1) * step,
+                label = item.label,
             )
         }
         val totalLevels = block.quoteDepth + block.listStack.size
-        val margin = totalLevels * step
+        val margin = totalLevels * step + ((item?.label?.length ?: 0) - 2).coerceAtLeast(0) * baseTextSizePx * .6f
         return BlockGeo(
             alignment = block.alignment,
             decorations = decorations,
@@ -316,6 +309,7 @@ object JsoupReaderHtmlParser {
                 !block.structural &&
                 block.headingScale <= 1f &&
                 !block.headingBold,
+            listItem = item,
         )
     }
 
@@ -333,10 +327,21 @@ object JsoupReaderHtmlParser {
         var headingScale = parent.headingScale
         var headingBold = parent.headingBold
         var structural = parent.structural
+        var listItem = parent.listItem
         when (tag) {
             "blockquote" -> quoteDepth += 1
-            "ul" -> listStack = listStack + false
-            "ol" -> listStack = listStack + true
+            "ul", "ol" -> {
+                val reversed = el.hasAttr("reversed")
+                val start = el.attr("start").toIntOrNull() ?: if (reversed) el.children().count { it.normalName() == "li" } else 1
+                listStack = listStack + ListLevel(tag == "ol", start, if (reversed) -1 else 1)
+                listItem = null
+            }
+            "li" -> {
+                val level = listStack.lastOrNull()
+                val value = el.attr("value").toIntOrNull() ?: level?.next ?: 1
+                if (level != null) level.next = value + level.step
+                listItem = ListItem(if (level?.ordered == true) "$value." else null)
+            }
             "pre" -> inPre = true
             "center" -> alignment = ReaderTextAlignment.CENTER
             "h1" -> { headingScale = 1.35f; headingBold = true }
@@ -348,7 +353,7 @@ object JsoupReaderHtmlParser {
             "aside", "dl", "dt", "dd" -> structural = true
         }
         // li does not push a new level; its parent ul/ol already did.
-        return BlockCtx(alignment, quoteDepth, listStack, inPre, headingScale, headingBold, structural)
+        return BlockCtx(alignment, quoteDepth, listStack, inPre, headingScale, headingBold, structural, listItem)
     }
 
     private fun descendInline(el: Element, tag: String, parent: InlineCtx): InlineCtx {
@@ -388,11 +393,15 @@ object JsoupReaderHtmlParser {
             declarations["font-weight"]?.let { v ->
                 if (v.equals("bold", ignoreCase = true) || (v.toIntOrNull() ?: 400) >= 600) {
                     out = out.copy(bold = true)
+                } else if (v.equals("normal", true) || v.equals("initial", true) || v.toIntOrNull() != null) {
+                    out = out.copy(bold = false)
                 }
             }
             declarations["font-style"]?.let { v ->
                 if (v.equals("italic", ignoreCase = true) || v.equals("oblique", ignoreCase = true)) {
                     out = out.copy(italic = true)
+                } else if (v.equals("normal", true) || v.equals("initial", true)) {
+                    out = out.copy(italic = false)
                 }
             }
             declarations["text-decoration"]?.let { v ->
@@ -414,7 +423,7 @@ object JsoupReaderHtmlParser {
             "center" -> return ReaderTextAlignment.CENTER
             "right", "end" -> return ReaderTextAlignment.END
             "left", "start" -> return ReaderTextAlignment.START
-            "justify" -> return ReaderTextAlignment.START
+            "justify" -> return ReaderTextAlignment.JUSTIFY
         }
         return null
     }
@@ -431,12 +440,13 @@ object JsoupReaderHtmlParser {
                 cursor.currentFirstMargin,
                 cursor.currentRestMargin,
                 cursor.currentAlignment,
-                cursor.currentDecorations,
+                cursor.currentDecorations.filterNot { it.kind == ReaderParagraphDecorationKind.BULLET && cursor.currentListItem?.emitted == true },
                 cursor.currentPreserveBodyIndent
             )
-            cursor.semantic.append(ReaderSemanticContract.PARAGRAPH_BREAK)
+            cursor.text.append(ReaderSemanticContract.PARAGRAPH_BREAK)
             cursor.pos += 1
-        } else if (preserveEmpty) {
+            cursor.currentListItem?.emitted = true
+        } else if (preserveEmpty || cursor.pendingPreLine) {
             // Preserve leading and consecutive empty paragraphs; the trailing
             // start == end line is still omitted by the final non-preserving flush.
             cursor.paragraphs += ReaderHtmlParagraph(
@@ -447,9 +457,10 @@ object JsoupReaderHtmlParser {
                 cursor.currentDecorations,
                 cursor.currentPreserveBodyIndent
             )
-            cursor.semantic.append(ReaderSemanticContract.PARAGRAPH_BREAK)
+            cursor.text.append(ReaderSemanticContract.PARAGRAPH_BREAK)
             cursor.pos += 1
         }
         cursor.current = mutableListOf()
+        cursor.pendingPreLine = false
     }
 }

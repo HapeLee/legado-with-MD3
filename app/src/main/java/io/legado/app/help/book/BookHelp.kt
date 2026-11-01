@@ -261,7 +261,7 @@ object BookHelp {
         }
         // 保存阅读缓存文本(.nb)
         getChapterContentFile(book, bookChapter).apply { parentFile?.mkdirs() }.writeText(content)
-        if (notifyContentChange) ContentProcessor.invalidateSemanticContent()
+        if (notifyContentChange) ContentProcessor.invalidateSemanticContent(book.bookUrl, bookChapter.index)
         if (book.isOnLineTxt && readGateway.currentSettings.tocCountWords) {
             // 正文里携带的 <img src="data:base64">、内联 SVG 等富文本源码会把章节字数虚抬
             // 几倍（3 页正文显示 3000+ 字）。这里剔除标签/Base64 后按可读纯文本计数，
@@ -281,7 +281,7 @@ object BookHelp {
     fun saveChapterTitle(bookChapter: BookChapter, title: String) {
         bookChapter.title = title
         appDb.bookChapterDao.update(bookChapter)
-        ContentProcessor.invalidateSemanticContent()
+        ContentProcessor.invalidateSemanticContent(bookChapter.bookUrl, bookChapter.index)
     }
 
     private fun saveToLocalTxt(book: Book, bookChapter: BookChapter, content: String) {
@@ -960,7 +960,7 @@ object BookHelp {
         legacyChapterContentFile(book, bookChapter).delete()
         // 章节目录里可能还有图片，非空时 delete 会失败，不会误删。
         file.parentFile?.delete()
-        ContentProcessor.invalidateSemanticContent()
+        ContentProcessor.invalidateSemanticContent(book.bookUrl, bookChapter.index)
     }
 
     /**
@@ -977,7 +977,7 @@ object BookHelp {
             FileUtils.createFileIfNotExist(getChapterContentFile(book, bookChapter, "nr").absolutePath)
             contentProcessor.removeSameTitleCache.add(fileName)
         }
-        ContentProcessor.invalidateSemanticContent()
+        ContentProcessor.invalidateSemanticContent(book.bookUrl, bookChapter.index)
     }
 
     /**

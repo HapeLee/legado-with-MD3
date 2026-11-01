@@ -33,16 +33,18 @@ class BookContentProcessRepository(
 
     override suspend fun upsert(process: BookContentProcess) = withContext(Dispatchers.IO) {
         dao.upsert(process)
-        ContentProcessor.invalidateSemanticContent()
+        ContentProcessor.invalidateSemanticContent(process.bookUrl, process.chapterIndex)
     }
 
     override suspend fun setEnabled(id: String, enabled: Boolean) = withContext(Dispatchers.IO) {
+        val process = dao.getById(id)
         dao.setEnabled(id, enabled)
-        ContentProcessor.invalidateSemanticContent()
+        if (process != null) ContentProcessor.invalidateSemanticContent(process.bookUrl, process.chapterIndex)
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
+        val process = dao.getById(id)
         dao.markDeleted(id)
-        ContentProcessor.invalidateSemanticContent()
+        if (process != null) ContentProcessor.invalidateSemanticContent(process.bookUrl, process.chapterIndex)
     }
 }

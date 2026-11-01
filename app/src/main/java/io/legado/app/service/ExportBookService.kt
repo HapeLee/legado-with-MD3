@@ -26,6 +26,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.book.MixedContentSegments
 import io.legado.app.help.book.getExportFileName
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.model.ReadBook
@@ -412,7 +413,7 @@ class ExportBookService : BaseService(), KoinComponent {
             ContentSource.Original -> BookHelp.getContent(book, chapter)
             ContentSource.Translation -> translationCacheRepository.readTranslation(book, chapter, targetLanguage)
         }
-        val processedContent = contentProcessor
+        val processedContent = MixedContentSegments.toPlainText(contentProcessor
             .getContent(
                 book,
                 // 不导出vip标识
@@ -422,11 +423,11 @@ class ExportBookService : BaseService(), KoinComponent {
                 useReplace = useReplace,
                 chineseConvert = false,
                 reSegment = false
-            ).toString()
+            ).toString())
         if (currentExportSettings.exportPictureFile && source == ContentSource.Original) {
             //txt导出图片文件 - only for original source
             val srcList = arrayListOf<SrcData>()
-            content?.split("\n")?.forEachIndexed { index, text ->
+            MixedContentSegments.toPlainText(content.orEmpty()).split("\n").forEachIndexed { index, text ->
                 for (m in AppPattern.imgPattern.findAll(text)) {
                     m.groupValues[1].takeIf { it.isNotEmpty() }?.let {
                         val src = NetworkUtils.getAbsoluteURL(chapter.url, it)
