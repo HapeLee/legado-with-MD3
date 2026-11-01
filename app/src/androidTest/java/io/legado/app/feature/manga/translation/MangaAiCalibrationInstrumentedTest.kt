@@ -13,6 +13,7 @@ import io.legado.app.data.repository.manga.translation.*
 import io.legado.app.data.AppDatabase
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiTextGateway
+import io.legado.app.domain.gateway.TranslationSettingsGateway
 import io.legado.app.domain.gateway.MangaTranslationGateway
 import io.legado.app.domain.gateway.AiStreamEvent
 import io.legado.app.domain.model.*
@@ -164,6 +165,7 @@ class MangaAiCalibrationInstrumentedTest {
             val replay = mode == "replay"
             val engine = args.getString("mangaAiCalibrationInpaint")?.let(MangaInpaintEngine::valueOf) ?: MangaInpaintEngine.LOCAL
             val inpaintRuntime = MangaLocalInpainter(app, MangaInpaintModelRepository(app, File(folder, "models")))
+            val translationSettings = GlobalContext.get().get<TranslationSettingsGateway>()
             val gateway: MangaTranslationGateway = if (!replay) {
                 val live = GlobalContext.get().get<AiTextGateway>()
                 var responseIndex = 0
@@ -180,6 +182,7 @@ class MangaAiCalibrationInstrumentedTest {
                     }
                 }
                 MangaTranslationRepository(app, GlobalContext.get().get<AppDatabase>(), profiles, captured,
+                    translationSettings = translationSettings,
                     inpaintReady = inpaintRuntime::requireReady, inpaint = inpaintRuntime::erase)
             } else {
                 val response = File(folder, "replay-plan.json").readText().trim().let {
@@ -205,7 +208,8 @@ class MangaAiCalibrationInstrumentedTest {
                         emit(AiStreamEvent.Content(JsonObject(saved + ("regions" to JsonArray(regions))).toString()))
                     }
                     override suspend fun fetchModels(provider: AiProviderConfig): Result<List<AiAvailableModel>> = error("Replay does not fetch models")
-                }, inpaintReady = inpaintRuntime::requireReady, inpaint = inpaintRuntime::erase)
+                }, translationSettings = translationSettings,
+                    inpaintReady = inpaintRuntime::requireReady, inpaint = inpaintRuntime::erase)
             }
             val bookUrl = "manga-ai-calibration:${UUID.randomUUID()}"
             val hash = MessageDigest.getInstance("SHA-256").digest(bookUrl.toByteArray()).joinToString("") { "%02x".format(it) }
