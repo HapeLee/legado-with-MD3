@@ -323,8 +323,22 @@ fun LazyItemScope.ReorderableSelectionItem(
             onMove = onMoveItem,
         )
     } else Modifier
+    val canDrag = canReorder && !inSelectionMode
 
     ReorderableItem(state, key = key) { isDragging ->
+        // 句柄捕获 ReorderableItem scope，排序状态或条目标识变化时必须随之更新。
+        val dragHandleModifier = remember(state, key, canDrag, hapticFeedback) {
+            if (canDrag) {
+                Modifier.longPressDraggableHandle(
+                    onDragStarted = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                    },
+                    onDragStopped = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                    }
+                )
+            } else Modifier
+        }
         val elevation by animateDpAsState(
             targetValue = if (isDragging) 8.dp else 0.dp,
             label = "DragElevation"
@@ -353,19 +367,7 @@ fun LazyItemScope.ReorderableSelectionItem(
             modifier = modifier
                 .then(reorderAccessibilityModifier)
                 .zIndex(if (isDragging) 1f else 0f)
-                .then(
-                    if (canReorder && !inSelectionMode) {
-                        Modifier.longPressDraggableHandle(
-                            onDragStarted = {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                            },
-                            onDragStopped = {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                            }
-                        )
-                    } else Modifier
-                )
-                .animateItem()
+                .then(dragHandleModifier)
         )
     }
 }

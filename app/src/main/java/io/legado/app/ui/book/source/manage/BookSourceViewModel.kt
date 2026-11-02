@@ -433,16 +433,20 @@ class BookSourceViewModel(
         }
     }
 
+    /**
+     * 提交拖动后的顺序。
+     *
+     * 被拖动的这一批书源放回它们原本占的位次（所以带分组/搜索过滤时不会把可见项挤到最前面），
+     * 然后把全表的 customOrder 归一化成唯一值：`customOrder` 会因为导入、合并出现重复，
+     * 重复的序号无法表达交换后的顺序，不能直接沿用它们分配槽位。
+     *
+     * 升序列表里越靠前 customOrder 越小，降序列表里越靠前 customOrder 越大，否则保存后
+     * 重新排序会把列表整体反转。
+     */
     private fun commitSortOrder(ids: List<String>, ascending: Boolean) = launch {
-        val sourcesById = repository.getAllPart().associateBy { it.bookSourceUrl }
-        val orderSlots = ids.mapNotNull { sourcesById[it]?.customOrder }
-            .let { if (ascending) it.sorted() else it.sortedDescending() }
-        val ordered = ids.mapIndexedNotNull { index, id ->
-            sourcesById[id]?.copy(
-                customOrder = orderSlots.getOrNull(index) ?: return@mapIndexedNotNull null
-            )
-        }
-        repository.updateOrder(ordered)
+        if (ids.isEmpty()) return@launch
+        val ordered = reorderBookSources(repository.getAllPart(), ids, ascending)
+        if (ordered.isNotEmpty()) repository.updateOrder(ordered)
     }
 
     private fun checkInterval(ids: Set<String>) {
@@ -652,6 +656,30 @@ class BookSourceViewModel(
         }
     }
 
+}
+
+internal fun reorderBookSources(
+    stored: List<BookSourcePart>,
+    ids: List<String>,
+    ascending: Boolean,
+): List<BookSourcePart> {
+    if (ids.isEmpty() || stored.isEmpty()) return emptyList()
+    // 与界面的手动排序保持一致，重复序号的条目也保留原相对顺序。
+    val uiOrder = stored.sortFor(BookSourceSort.Default, ascending, byDomain = false)
+    val byId = uiOrder.associateBy { it.bookSourceUrl }
+    val dragged = ids.mapNotNull { byId[it] }
+    if (dragged.isEmpty()) return emptyList()
+    val draggedIds = dragged.map { it.bookSourceUrl }.toSet()
+    val positions = uiOrder.withIndex()
+        .filter { it.value.bookSourceUrl in draggedIds }
+        .map { it.index }
+    val reordered = uiOrder.toMutableList()
+    positions.forEachIndexed { index, position ->
+        reordered[position] = dragged[index]
+    }
+    return reordered.mapIndexed { index, part ->
+        part.copy(customOrder = if (ascending) index + 1 else reordered.size - index)
+    }
 }
 
 private fun BookSourceCheckOptionsUi.toSettings() = CheckSourceSettings(
