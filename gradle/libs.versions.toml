@@ -38,7 +38,7 @@ fragment = "1.9.0"
 libarchive = "1.1.6"
 lifecycle = "2.11.0"
 glide = "5.0.9"
-gson = "2.14.0"
+gson = "2.15.0"
 jsonPath = "3.0.0"
 ktor = "3.6.0"
 # issue #3811，不要更新版本，新版引入了一个破坏性变更（详见https://github.com/jhy/jsoup/pull/2017）
