@@ -641,11 +641,7 @@ internal class ReaderPaginationSession(
             }
             while (until - from > 1 && occupiedWidth(until) > available) {
                 val candidate = until - 1
-                if (ChineseLineBreaker.isForbiddenBreak(
-                        clusters[candidate - 1],
-                        clusters[candidate]
-                    )
-                ) break
+                if (breaker.isForbiddenBreakAt(candidate)) break
                 // 收窄行尾同样不能把词间空格推到行首：把空格留在上一行末尾，
                 // 与段内的主断行（[ChineseLineBreaker]）保持同一口径。
                 if (ChineseLineBreaker.isWordSpace(clusters[candidate])) break
@@ -738,6 +734,25 @@ internal class ReaderPaginationSession(
                     !isCapsule(paragraph.items[from + itemIndex + 1])
 
             val stretchableGaps = (0 until itemCount - 1).count(::gapStretches)
+            // The breaker may hang closing punctuation to preserve a forbidden break. Restore the
+            // old TextChapterLayout.exceed correction at placement, including the paragraph's last
+            // row and non-justified text. Invisible trailing spaces must not tighten visible letters.
+            var visibleItemCount = itemCount
+            var visibleWidth = naturalWidth
+            while (visibleItemCount > 0 &&
+                ChineseLineBreaker.isWordSpace(clusters[from + visibleItemCount - 1])
+            ) {
+                visibleItemCount--
+                visibleWidth -= lineItems[visibleItemCount].widthPx + matchSpacingPx[from + visibleItemCount] +
+                        if (visibleItemCount > 0) letterSpacing else 0f
+            }
+            val compressibleGaps = if (visibleWidth > available) {
+                if (visibleItemCount == itemCount) stretchableGaps
+                else (0 until visibleItemCount - 1).count(::gapStretches)
+            } else 0
+            val compressionGap = if (compressibleGaps > 0) {
+                (available - visibleWidth).coerceAtMost(0f) / compressibleGaps
+            } else 0f
             val shouldJustify =
                 paragraph.alignment == ReaderTextAlignment.JUSTIFY &&
                         lineIndex < starts.lastIndex - 1
@@ -908,7 +923,10 @@ internal class ReaderPaginationSession(
                 x += item.widthPx + letterSpacing +
                         (matchStyle?.matchSpacingAfterPx ?: 0f) +
                         if (item is ReaderMeasuredInlineItem.Text && item.value == " ") wordSpaceExtra else 0f
-                x += if (gapStretches(itemIndex)) justifyGap else 0f
+                if (gapStretches(itemIndex)) {
+                    x += justifyGap
+                    if (itemIndex < visibleItemCount - 1) x += compressionGap
+                }
                 // 胶囊是我们自己插进去的按钮，原文里没有它，所以它对背景 run 完全透明：
                 // 不把它的 null 覆盖上去，run 才会跨过胶囊连成同一个气泡。不带背景的正文
                 // 与行内图照旧打断 run。
