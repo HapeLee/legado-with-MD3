@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +56,7 @@ import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import top.yukonga.miuix.kmp.squircle.LocalSquircleEnabled
 
 @Composable
 fun SourceLoginSheetHost(
@@ -273,30 +275,35 @@ private fun SourceLoginWebSheet(
     onIntent: (SourceLoginIntent) -> Unit,
     onOpenExternalUrl: (String) -> Unit,
 ) {
-    AppModalBottomSheet(
-        show = state.mode == SourceLoginMode.Web && !state.loading,
-        onDismissRequest = { onIntent(SourceLoginIntent.Back) },
-        title = state.title,
-        endAction = {
-            MediumTonalButton(
-                icon = AppIcons.Check,
-                contentDescription = stringResource(R.string.ok),
-                onClick = { onIntent(SourceLoginIntent.Confirm) },
-            )
-        },
-        contentPaddingEnabled = false,
-        sheetGesturesEnabled = false,
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 520.dp)
+    // Miuix 的超椭圆遮罩会把 WebView 包进离屏图层，部分 Android 13 设备可能在
+    // HWUI GLFunctorDrawable 绘制时原生崩溃（#2546）。在整个弹层外回退普通圆角，
+    // 避免仅包住 WebView 内容而遗漏 WindowBottomSheet 自身的遮罩。
+    CompositionLocalProvider(LocalSquircleEnabled provides false) {
+        AppModalBottomSheet(
+            show = state.mode == SourceLoginMode.Web && !state.loading,
+            onDismissRequest = { onIntent(SourceLoginIntent.Back) },
+            title = state.title,
+            endAction = {
+                MediumTonalButton(
+                    icon = AppIcons.Check,
+                    contentDescription = stringResource(R.string.ok),
+                    onClick = { onIntent(SourceLoginIntent.Confirm) },
+                )
+            },
+            contentPaddingEnabled = false,
+            sheetGesturesEnabled = false,
         ) {
-            SourceLoginWebView(
-                state = state,
-                onIntent = onIntent,
-                onOpenExternalUrl = onOpenExternalUrl,
-            )
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 520.dp)
+            ) {
+                SourceLoginWebView(
+                    state = state,
+                    onIntent = onIntent,
+                    onOpenExternalUrl = onOpenExternalUrl,
+                )
+            }
         }
     }
 }
