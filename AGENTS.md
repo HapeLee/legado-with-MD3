@@ -93,6 +93,8 @@ platform implementations (Android/JVM/iOS/...)
   3 图组装。
 - 使用项目的 `AppScaffold`、主题、top bar、dialog/sheet、列表和设置组件。正确处理 edge-to-edge 与
   predictive back。
+- 所有交互控件必须具有稳定、可本地化的无障碍名称和可执行语义；动画文字隐藏时仍须保留名称，菜单关闭区域须说明用途，
+  排序须暴露当前位置。修复无障碍问题时验证语义树与动作，并记录尚未完成的屏幕阅读器实测。
 - Activity 仅在遗留 `Intent`/result 兼容确有需要时作为薄宿主保留。
 
 具体文件形态和审查清单由 Compose migration/review skill 维护，本文件不复制完整模板。

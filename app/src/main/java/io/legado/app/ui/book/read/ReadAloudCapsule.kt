@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -351,7 +352,11 @@ private fun CapsuleContent(
     onCoverClick: () -> Unit,
 ) {
     val coverSize = (48f - 8f * expansion).dp
-    val expandDescription = stringResource(R.string.expand)
+    val coverDescription = when {
+        expansion < 1f -> stringResource(R.string.home_capsule_expand_controls)
+        bookName.isNullOrBlank() -> stringResource(R.string.a11y_open_playback)
+        else -> stringResource(R.string.a11y_open_playback_named, bookName)
+    }
     Row(
         modifier = Modifier.padding(all = (4f * expansion).dp),
         horizontalArrangement = Arrangement.spacedBy((4f * expansion).dp),
@@ -392,10 +397,8 @@ private fun CapsuleContent(
                     alpha = computeCapsuleCoverAlpha(coverMorph?.progress?.value ?: 0f)
                 }
                 .clip(CircleShape)
-                .then(if (expansion < 1f) Modifier.semantics {
-                    contentDescription = expandDescription
-                } else Modifier)
-                .clickable(onClick = onCoverClick),
+                .semantics { contentDescription = coverDescription }
+                .clickable(role = Role.Button, onClick = onCoverClick),
         )
         // 按钮始终以完整尺寸测量，仅连续揭示宽度；不切换两套封面或压缩按钮。
         Box(

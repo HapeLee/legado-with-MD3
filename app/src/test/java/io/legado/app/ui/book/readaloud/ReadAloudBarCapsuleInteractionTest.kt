@@ -6,6 +6,7 @@ import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,11 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.ViewRootForTest
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.repository.CoverAlbumRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
@@ -33,6 +39,7 @@ import io.legado.app.ui.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.core.context.startKoin
@@ -122,6 +129,24 @@ class ReadAloudBarCapsuleInteractionTest {
                 decor.layout(0, 0, 1080, 1920)
             }
             assertFalse(bounds.isEmpty)
+            fun assertPlayerAction() {
+                val nodes = semantics(decor)
+                val player = nodes.singleOrNull {
+                    it.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null } ==
+                        listOf("Open player for Book")
+                }
+                checkNotNull(player) { "The cover must expose a named player action" }
+                assertTrue(player.config.contains(SemanticsActions.OnClick))
+                assertTrue(player.config.contains(SemanticsActions.OnLongClick))
+            }
+            assertPlayerAction()
+            val expandedNodes = semantics(decor)
+            for (label in listOf("Resume", "Exit")) {
+                assertTrue("Expanded capsule must keep $label accessible", expandedNodes.any {
+                    it.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null }
+                        ?.contains(label) == true && it.config.contains(SemanticsActions.OnClick)
+                })
+            }
             val downTime = SystemClock.uptimeMillis()
             // 64dp 封面区的中心，远离右侧两个控制按钮。
             val x = bounds.left + bounds.height / 2f
@@ -144,9 +169,19 @@ class ReadAloudBarCapsuleInteractionTest {
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(32))
             assertFalse("bounds=$bounds opens=$opens", expanded)
             assertEquals(0, opens)
+            assertPlayerAction()
         } finally {
             controller.pause().stop().destroy()
             stopKoin()
         }
+    }
+
+    private fun semantics(view: View): List<SemanticsNode> {
+        if (view is ViewRootForTest) {
+            return view.semanticsOwner.getAllSemanticsNodes(mergingEnabled = true)
+        }
+        return if (view is ViewGroup) {
+            (0 until view.childCount).flatMap { semantics(view.getChildAt(it)) }
+        } else emptyList()
     }
 }

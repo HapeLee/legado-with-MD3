@@ -311,6 +311,7 @@ private fun BookInfoScreenContent(
     // 语言/字体缩放切换后可能拿到过期值（LocalContextGetResourceValueCall）。
     val jumpToAnotherAppMessage = stringResource(R.string.jump_to_another_app)
     val confirmLabel = stringResource(R.string.confirm)
+    val readingLabel = stringResource(R.string.reading)
     val jumpToAnotherApp: (Uri) -> Unit = { uri ->
         scope.launch {
             val result = snackbarHostState.showSnackbar(
@@ -341,6 +342,9 @@ private fun BookInfoScreenContent(
             if (!state.privateLocked) {
                 ExtendedFloatingActionButton(
                     onClick = { onIntent(BookInfoIntent.ReadClick) },
+                    modifier = Modifier.semantics {
+                        contentDescription = readingLabel
+                    },
                     containerColor = LegadoTheme.colorScheme.primaryContainer,
                     contentColor = LegadoTheme.colorScheme.onPrimaryContainer,
                     icon = { AppIcon(Icons.Default.Book, null) },

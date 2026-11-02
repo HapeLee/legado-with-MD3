@@ -3086,4 +3086,8 @@
     <string name="page_anim_parallax">視差</string>
     <string name="bookmark_target_content_mismatch">正文已變動或無法驗證原位置，仍要跳轉嗎？</string>
     <string name="search_content_changed">正文或處理設定已變更，請重新搜尋。</string>
+    <string name="a11y_close_read_menu">關閉閱讀選單</string>
+    <string name="a11y_open_playback">開啟播放介面</string>
+    <string name="a11y_open_playback_named">開啟《%1$s》的播放介面</string>
+    <string name="a11y_reorder_position">第 %1$d 項，共 %2$d 項</string>
 </resources>

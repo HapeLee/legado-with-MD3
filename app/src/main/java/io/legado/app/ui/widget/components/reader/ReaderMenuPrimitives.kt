@@ -21,7 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
 
@@ -31,11 +36,15 @@ fun ReaderMenuDismissLayer(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val dismissLabel = stringResource(R.string.a11y_close_read_menu)
     AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut()) {
         Box(
             modifier
                 .fillMaxSize()
+                .semantics { contentDescription = dismissLabel }
                 .clickable(
+                    role = Role.Button,
+                    onClickLabel = dismissLabel,
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = onDismiss,

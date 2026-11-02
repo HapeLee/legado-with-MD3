@@ -51,7 +51,7 @@ fun MediumAnimatedButton(
         SeriesAnimatedButtonContent(
             icon = currentIcon,
             text = text,
-            contentDescription = if (text == null) contentDescription else null,
+            contentDescription = contentDescription,
             showText = showText,
             iconSize = MediumSeriesIconSize,
             textStyle = LegadoTheme.typography.labelMedium,

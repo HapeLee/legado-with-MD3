@@ -3966,4 +3966,8 @@
     <string name="page_anim_parallax">Parallax</string>
     <string name="bookmark_target_content_mismatch">The content has changed or its original location can no longer be verified, redirect anyway?</string>
     <string name="search_content_changed">The content or processing settings changed. Please search again.</string>
+    <string name="a11y_close_read_menu">Close reading menu</string>
+    <string name="a11y_open_playback">Open player</string>
+    <string name="a11y_open_playback_named">Open player for %1$s</string>
+    <string name="a11y_reorder_position">Position %1$d of %2$d</string>
 </resources>
