@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
@@ -516,7 +517,11 @@ fun MainScreen(
                 }
             },
             // The row owns side cutouts, child pages own top bars, and this scaffold owns the bottom.
-            contentWindowInsets = mainAdaptiveInsets.only(WindowInsetsSides.Bottom)
+            // 悬浮底栏是覆盖层，页面自己按 useRaisedBottomInset 留出它的高度；这里再让出一次底部 inset，
+            // 小白条下面就会露出一条窗口底色（不沉浸）。标准底栏由 bottomBar 承载，inset 仍要让给它。
+            contentWindowInsets =
+                if (useFloatingBottomBar) WindowInsets(0)
+                else mainAdaptiveInsets.only(WindowInsetsSides.Bottom)
         ) { padding ->
             Box(
                 modifier = Modifier
