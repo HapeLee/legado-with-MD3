@@ -1345,17 +1345,6 @@ sealed interface ReadBookSheet {
     /** 段评气泡快速切换。 */
     data object BubbleStyle : ReadBookSheet
 
-    /**
-     * 段评弹层。
-     *
-     * 书源在图片 click 里调 `java.showBrowser(url, html)` 时打开：
-     * html 为空表示还要按 url 再请求一次段评内容。
-     */
-    data class ParagraphReview(
-        val url: String,
-        val html: String? = null,
-        val preloadJs: String? = null,
-    ) : ReadBookSheet
     data object TextSelectMenuConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
