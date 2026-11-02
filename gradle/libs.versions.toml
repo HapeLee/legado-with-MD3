@@ -73,7 +73,7 @@ hutool = "5.8.22"
 room = "2.8.5"
 robolectric = "4.17"
 splitties = "3.0.0"
-rhino = "1.8.1"
+rhino = "1.9.2"
 desugar = "2.1.5"
 
 activity = "1.13.0"
