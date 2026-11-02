@@ -53,6 +53,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.divider.PillDivider
@@ -201,7 +202,7 @@ fun RssScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = adaptiveContentPadding(
                     top = paddingValues.calculateTopPadding(),
-                    bottom = 120.dp
+                    bottom = 120.dp.coerceAtLeast(LocalBottomOverlayPadding.current)
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)

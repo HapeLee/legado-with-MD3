@@ -46,6 +46,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookCoverSharedElementKey
+import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AppPullToRefresh
@@ -305,7 +306,8 @@ fun ExploreShowScreen(
                         columns = StaggeredGridCells.Fixed(state.gridCount),
                         contentPadding = PaddingValues(
                             top = paddingValues.calculateTopPadding() + 12.dp,
-                            bottom = paddingValues.calculateBottomPadding() + if (embeddedInMain) 108.dp else 12.dp,
+                            bottom = paddingValues.calculateBottomPadding() +
+                                if (embeddedInMain) 108.dp.coerceAtLeast(LocalBottomOverlayPadding.current) else 12.dp,
                             start = 12.dp,
                             end = 12.dp
                         ),
@@ -364,7 +366,8 @@ fun ExploreShowScreen(
                         state = listState,
                         contentPadding = PaddingValues(
                             top = paddingValues.calculateTopPadding(),
-                            bottom = paddingValues.calculateBottomPadding() + if (embeddedInMain) 108.dp else 16.dp
+                            bottom = paddingValues.calculateBottomPadding() +
+                                if (embeddedInMain) 108.dp.coerceAtLeast(LocalBottomOverlayPadding.current) else 16.dp
                         )
                     ) {
                         itemsIndexed(
