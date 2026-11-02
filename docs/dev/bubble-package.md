@@ -32,7 +32,9 @@ scheme 形式：
 
 识别条件（`ParagraphBubbleSource.isForcedCandidate`）：`style=TEXT`、`type ∈ {qd,fqpl,fanqie,cmt,comment,review,paragraph,…}`、
 `click`/`pclick` 里含 `showCmt(` / `showComment(` / `paragraph`。`click` 里的 `java.showBrowser(url, html)`
-会打开阅读页的原生段评弹层，复用 `source/cache/java` JS 桥，点赞回复等交互书源无需改动。
+打开半屏 WebView 弹窗 `BottomWebViewDialog`：`preloadJs` 与 `basicJs` 拼进 `<head>`（早于页面自己的脚本执行），
+首次请求使用书源请求头与 Cookie，后续主文档可经 OkHttp 拦截并重新注入脚本，
+`config` 控制高度/拖拽/圆角等。点赞回复等交互书源无需改动。
 
 `paragraphRule:` / `rule:` 类段落规则动作目前不支持，点击会提示。
 

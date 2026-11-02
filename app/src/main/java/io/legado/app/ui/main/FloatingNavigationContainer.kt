@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** A floating footer uses only the system inset that its parent has not already handled. */
@@ -18,10 +21,13 @@ import androidx.compose.ui.unit.dp
 internal fun FloatingNavigationContainer(
     modifier: Modifier = Modifier,
     navigationBarInsets: WindowInsets = WindowInsets.navigationBars,
+    onHeightChanged: (Dp) -> Unit = {},
     content: @Composable BoxWithConstraintsScope.() -> Unit,
 ) {
+    val density = LocalDensity.current
     BoxWithConstraints(
         modifier
+            .onSizeChanged { onHeightChanged(with(density) { it.height.toDp() }) }
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .windowInsetsPadding(navigationBarInsets.only(WindowInsetsSides.Bottom))

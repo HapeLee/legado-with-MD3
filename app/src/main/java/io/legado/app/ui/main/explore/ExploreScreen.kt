@@ -63,6 +63,7 @@ import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -193,7 +194,7 @@ fun ExploreScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = adaptiveContentPadding(
                     top = paddingValues.calculateTopPadding(),
-                    bottom = 120.dp
+                    bottom = 120.dp.coerceAtLeast(LocalBottomOverlayPadding.current)
                 )
             ) {
                 items(

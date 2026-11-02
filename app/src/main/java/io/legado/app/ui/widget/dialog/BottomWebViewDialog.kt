@@ -433,6 +433,13 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
                         setLongClickSaveImg()
                     }
                 }
+                // Resolve the source before parsing the URL or making the first request: both
+                // fetched and inline pages need its headers, login state and user agent.
+                source = appDb.bookSourceDao.getBookSource(sourceKey) ?: run {
+                    activity?.toastOnUi("no find bookSource")
+                    dismiss()
+                    return@launch
+                }
                 val analyzeUrl =
                     AnalyzeUrl(url, source = source, coroutineContext = coroutineContext)
                 val html = args.getString("html") ?: analyzeUrl.getStrResponseAwait().body
@@ -441,11 +448,6 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
                 }
                 preloadJs = args.getString("preloadJs")
                 val spliceHtml = buildSpliceHtml(html)
-                source = appDb.bookSourceDao.getBookSource(sourceKey) ?: run {
-                    activity?.toastOnUi("no find bookSource")
-                    dismiss()
-                    return@launch
-                }
                 val bookType = args.getInt("bookType", 0)
                 activity?.runOnUiThread {
                     initWebView(analyzeUrl.url, spliceHtml, analyzeUrl.headerMap, bookType)

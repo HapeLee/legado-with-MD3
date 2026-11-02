@@ -115,6 +115,7 @@ import io.legado.app.ui.book.group.GroupEditSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
@@ -975,7 +976,7 @@ fun BookshelfScreen(
                                 .fillMaxSize()
                                 .padding(
                                     top = paddingValues.calculateTopPadding(),
-                                    bottom = 120.dp
+                                    bottom = 120.dp.coerceAtLeast(LocalBottomOverlayPadding.current)
                                 ),
                             messageResId = R.string.bookshelf_empty
                         )
@@ -996,7 +997,8 @@ fun BookshelfScreen(
                             ),
                         contentPadding = adaptiveContentPaddingBookshelf(
                             top = paddingValues.calculateTopPadding(),
-                            bottom = if (uiState.useRaisedBottomInset) 120.dp else 8.dp,
+                            bottom = (if (uiState.useRaisedBottomInset) 120.dp else 8.dp)
+                                .coerceAtLeast(LocalBottomOverlayPadding.current),
                             horizontal = 4.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
@@ -1675,7 +1677,7 @@ fun BookshelfPage(
                     .fillMaxSize()
                     .padding(
                         top = paddingValues.calculateTopPadding(),
-                        bottom = 120.dp
+                        bottom = 120.dp.coerceAtLeast(LocalBottomOverlayPadding.current)
                     ),
                 message = stringResource(R.string.bookshelf_empty_global_search),
                 buttonText = stringResource(R.string.global_search),
@@ -1687,7 +1689,7 @@ fun BookshelfPage(
                     .fillMaxSize()
                     .padding(
                         top = paddingValues.calculateTopPadding(),
-                        bottom = 120.dp
+                        bottom = 120.dp.coerceAtLeast(LocalBottomOverlayPadding.current)
                     ),
                 messageResId = R.string.bookshelf_empty
             )
@@ -1766,7 +1768,8 @@ fun BookshelfPage(
                 ),
             contentPadding = adaptiveContentPaddingBookshelf(
                 top = paddingValues.calculateTopPadding(),
-                bottom = if (uiState.useRaisedBottomInset) 120.dp else 8.dp,
+                bottom = (if (uiState.useRaisedBottomInset) 120.dp else 8.dp)
+                    .coerceAtLeast(LocalBottomOverlayPadding.current),
                 horizontal = 8.dp
             ),
             verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),

@@ -2010,20 +2010,6 @@ class ReadBookController(
         return false
     }
 
-    /**
-     * 段评弹层：书源 click 里 `java.showBrowser(url, html)` 的落点。
-     *
-     * url 为空说明书源既没给内容也没给地址，退回旧的通用弹窗（返回 false）。
-     */
-    private fun showParagraphReview(url: String, html: String?, preloadJs: String?): Boolean {
-        if (url.isBlank() && html.isNullOrBlank()) return false
-        val sheet = ReadBookSheet.ParagraphReview(url, html, preloadJs)
-        activity.runOnUiThread {
-            viewModel.onIntent(ReadBookIntent.ShowSheet(sheet))
-        }
-        return true
-    }
-
     fun clickImg(click: String, src: String) {
         if (LegacyReaderImageOptionsResolver.isParagraphRuleAction(click)) {
             activity.toastOnUi(R.string.reader_paragraph_image_action_unsupported)
@@ -2032,12 +2018,7 @@ class ReadBookController(
         activity.lifecycleScope.launch(IO) {
             try {
                 val source = ReadBook.bookSource ?: return@launch
-                val java = SourceLoginJsExtensions(activity, source, BookType.text).apply {
-                    // 段评：书源 click 里的 java.showBrowser(url, html) 走阅读页自己的弹层
-                    browserPresenter = { url, html, preloadJs ->
-                        showParagraphReview(url, html, preloadJs)
-                    }
-                }
+                val java = SourceLoginJsExtensions(activity, source, BookType.text)
                 val book = ReadBook.book ?: return@launch
                 val chapter =
                     appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)

@@ -52,6 +52,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.ui.theme.LocalAppUiConfiguration
+import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.main.homepage.modules.ButtonGroupModule
@@ -121,14 +122,14 @@ fun HomepageModuleFeed(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
-                bottom = if (
+                bottom = (if (
                     LocalAppUiConfiguration.current.appShell.useFloatingBottomBar ||
                     LocalAppUiConfiguration.current.theme.enableBlur
                 ) {
                     120.dp
                 } else {
                     8.dp
-                },
+                }).coerceAtLeast(LocalBottomOverlayPadding.current),
             ),
         ) {
             processedModules.forEach { moduleUi ->

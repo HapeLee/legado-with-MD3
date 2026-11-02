@@ -3,10 +3,14 @@ package io.legado.app.ui.theme
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
+
+/** Space occupied by a host's bottom overlay, including its remaining system inset. */
+internal val LocalBottomOverlayPadding = compositionLocalOf { 0.dp }
 
 @Composable
 fun Modifier.adaptiveHorizontalPadding(): Modifier {

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
@@ -96,6 +97,7 @@ import io.legado.app.ui.main.my.MyRouteScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssRouteScreen
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
@@ -276,6 +278,7 @@ fun MainScreen(
     val useLiquidGlass = useFloatingBottomBar &&
             mainUiState.useFloatingBottomBarLiquidGlass &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    var floatingFooterHeight by remember { mutableStateOf(0.dp) }
     val alwaysShowLabel = labelVisibilityMode == "labeled"
     val showLabel = !isUnlabeled
 
@@ -515,8 +518,11 @@ fun MainScreen(
                     }
                 }
             },
-            // The row owns side cutouts, child pages own top bars, and this scaffold owns the bottom.
-            contentWindowInsets = mainAdaptiveInsets.only(WindowInsetsSides.Bottom)
+            // Floating content draws to the window edge; only scrollable content's end padding
+            // reserves the measured overlay (including the system inset it actually handles).
+            contentWindowInsets =
+                if (useFloatingBottomBar) WindowInsets(0)
+                else mainAdaptiveInsets.only(WindowInsetsSides.Bottom)
         ) { padding ->
             Box(
                 modifier = Modifier
@@ -552,7 +558,11 @@ fun MainScreen(
                         val pageLifecycleOwner = rememberMainPageLifecycleOwner(
                             isActive = page == pagerState.currentPage
                         )
-                        CompositionLocalProvider(LocalLifecycleOwner provides pageLifecycleOwner) {
+                        CompositionLocalProvider(
+                            LocalLifecycleOwner provides pageLifecycleOwner,
+                            LocalBottomOverlayPadding provides
+                                if (useFloatingBottomBar) floatingFooterHeight + 12.dp else 0.dp,
+                        ) {
                             when (destination) {
                             MainDestination.Home -> HomeRouteScreen(
                                 onOpenBook = { book ->
@@ -677,7 +687,10 @@ fun MainScreen(
                         ),
                         label = "homePlaybackControls",
                     )
-                    FloatingNavigationContainer(modifier = Modifier.align(Alignment.BottomCenter)) {
+                    FloatingNavigationContainer(
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        onHeightChanged = { floatingFooterHeight = it },
+                    ) {
                         val gap = ReadAloudBarCapsuleEndPadding
                         val capsuleReserve by animateDpAsState(
                             targetValue = if (readAloudCapsuleShown) ReadAloudBarCapsuleSize + gap else 0.dp,
