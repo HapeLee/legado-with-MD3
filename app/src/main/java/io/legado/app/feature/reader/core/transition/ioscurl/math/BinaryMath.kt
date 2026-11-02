@@ -1,12 +1,8 @@
 package io.legado.app.feature.reader.core.transition.ioscurl.math
 
-/**
- * Software fused operations: no JNI, Android API level or host libm rounding dependency. Curl
- * inputs stay far from overflow/underflow. The exact product residual and sum residual are retained
- * until the final rounding, instead of replacing FMA by a*b+c.
- */
+/** Binary operations without a Kotlin standard-library equivalent on Android API 21. */
 internal object BinaryMath {
-    // Dekker's split factor, 2^27 + 1, separates a binary64 significand.
+
     private const val DOUBLE_SPLITTER = 134_217_729.0
     private const val HALF_EXPONENT_BIAS = 15
     private const val FLOAT_EXPONENT_BIAS = 127
@@ -19,10 +15,20 @@ internal object BinaryMath {
     private const val HALF_IMPLICIT_BIT = 1 shl HALF_MANTISSA_BITS
     private const val MANTISSA_SHIFT = FLOAT_MANTISSA_BITS - HALF_MANTISSA_BITS
 
+    // Math.fma requires Android API 33. Keep the compensated fallback for API 21+.
+    // This is not a fully IEEE 754 fused operation: intermediate overflow and
+    // underflow can differ from Math.fma. Do not replace it with plain a * b + c,
+    // which also discards compensation for ordinary finite inputs.
+    /**
+     * Compensated Double multiply-add fallback for Android API 21+.
+     * Uses a split product and a compensated sum to reduce rounding error for ordinary
+     * finite inputs. Intermediate overflow and underflow can differ from IEEE fused FMA.
+     */
     fun fma(a: Double, b: Double, c: Double): Double {
         val p = a * b
         val sum = p + c
         if (!p.isFinite() || !sum.isFinite()) return sum
+        // Split each multiplicand into high and low parts, then reconstruct the product residual.
         val aa = a * DOUBLE_SPLITTER
         val ah = aa - (aa - a)
         val al = a - ah
@@ -36,10 +42,14 @@ internal object BinaryMath {
         return sum + tail
     }
 
+    /**
+     * Float multiply-add using a Double product and a low-order correction before final Float rounding.
+     * The correction avoids double-rounding errors at Float midpoints.
+     */
     fun fma(a: Float, b: Float, c: Float): Float {
         val product = a.toDouble() * b.toDouble()
         val sum = product + c.toDouble()
-        // Round to odd before conversion, preventing double rounding at a float midpoint.
+
         val virtual = sum - product
         val error = (product - (sum - virtual)) + (c.toDouble() - virtual)
         if (error == 0.0 || !sum.isFinite()) return sum.toFloat()
@@ -50,16 +60,10 @@ internal object BinaryMath {
         return Double.fromBits(bits).toFloat()
     }
 
-    fun copySign(value: Double, sign: Double): Double =
-        Double.fromBits(
-            (value.toRawBits() and Long.MAX_VALUE) or (sign.toRawBits() and Long.MIN_VALUE)
-        )
-
-    fun copySign(value: Float, sign: Float): Float =
-        Float.fromBits(
-            (value.toRawBits() and Int.MAX_VALUE) or (sign.toRawBits() and Int.MIN_VALUE)
-        )
-
+    // android.util.Half requires API 26; preserve round-to-nearest-even conversion.
+    /**
+     * Decodes the low 16 bits of h as IEEE 754 binary16, including subnormals, signed zero, infinities and NaNs.
+     */
     fun halfToFloat(h: Int): Float {
         val sign = (h and HALF_SIGN_MASK) shl 16
         val exponent = h ushr HALF_MANTISSA_BITS and HALF_EXPONENT_MASK
@@ -82,6 +86,10 @@ internal object BinaryMath {
         return Float.fromBits(bits)
     }
 
+    /**
+     * Encodes Float as binary16 bits in an Int using round-to-nearest-even.
+     * Overflow becomes infinity; NaNs become a signed canonical quiet half-NaN.
+     */
     fun floatToHalf(value: Float): Int {
         val bits = value.toRawBits()
         val sign = bits ushr 16 and HALF_SIGN_MASK
@@ -93,6 +101,7 @@ internal object BinaryMath {
             return sign or
                 0x7c00 or
                 (if (mantissa != 0 && bits ushr 23 and 255 == 255) 0x200 else 0)
+        // Subnormal half values require restoring the implicit leading bit before rounding.
         if (exponent <= 0) {
             if (exponent < -10) return sign
             mantissa = mantissa or 0x800000

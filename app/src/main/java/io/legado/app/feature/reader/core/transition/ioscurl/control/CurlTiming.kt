@@ -5,8 +5,7 @@ import io.legado.app.feature.reader.core.transition.ioscurl.math.BinaryMath.fma
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlValues
 
 /**
- * CA cubic solver and independent time/radius/angle tracks. Input is elapsed time, never eased
- * twice.
+ * Cubic Bezier timing for the progress, radius and angle animation tracks.
  */
 object CurlTiming {
     private const val ANGLE_TRACK_INDEX = 2
@@ -15,6 +14,11 @@ object CurlTiming {
     private const val MIN_NEWTON_DERIVATIVE = 1e-6
     private const val TIME_TOLERANCE_SECONDS = 0.001
 
+    /**
+     * Returns Bezier control points [x1, y1, x2, y2].
+     * property 0 is progress, 1 radius and 2 angle; type uses CurlKind codes.
+     * ending selects the angle curve used while settling a released gesture.
+     */
     fun points(type: Int, ending: Boolean, property: Int): DoubleArray =
         when {
                 property < ANGLE_TRACK_INDEX -> floatArrayOf(0.44f, 0f, 0.56f, 1f)
@@ -25,6 +29,15 @@ object CurlTiming {
             .map { it.toDouble() }
             .toDoubleArray()
 
+    /**
+     * Inverts the Bezier x coordinate, then evaluates its y coordinate.
+     * Uses Newton iteration with a bounded bisection fallback for a flat derivative.
+     *
+     * @param x Normalized elapsed fraction, normally 0..1.
+     * @param p Four control-point values in [x1, y1, x2, y2] order.
+     * @param duration Animation duration in seconds; callers must supply a positive value.
+     * The tolerance corresponds to approximately one millisecond of animation time.
+     */
     fun solve(x: Double, p: DoubleArray, duration: Double): Double {
         val eps = TIME_TOLERANCE_SECONDS / duration
         val cx = p[0] * 3
@@ -57,6 +70,12 @@ object CurlTiming {
         return value(t)
     }
 
+    /**
+     * Interpolates each curl component with its own timing curve.
+     *
+     * @param elapsed Normalized elapsed fraction, not seconds; clamped to 0..1.
+     * @param duration Positive animation duration in seconds, used to choose solver tolerance.
+     */
     fun interpolate(
         from: CurlValues,
         to: CurlValues,

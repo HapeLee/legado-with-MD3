@@ -5,8 +5,17 @@ import kotlin.math.min
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlAxis
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlPoint
 
+/**
+ * Release decision: direction 0 is forward, 1 reverse.
+ * suggestedVelocity is the signed primary-axis fling speed, or zero for a position-based decision.
+ */
 data class CurlRelease(val direction: Int, val suggestedVelocity: Double)
 
+/**
+ * Stateless direction and edge-hit policies shared by gesture recognizers.
+ * Coordinates use logical page units and velocities use those units per second.
+ * Direction codes are 0 forward, 1 reverse and -1 undecided or outside an active area.
+ */
 object CurlNavigation {
     private const val FLING_SPEED_POINTS_PER_SECOND = 300.0
     private const val PHONE_EDGE_POINTS = 80.0
@@ -14,8 +23,14 @@ object CurlNavigation {
     private const val TABLET_EDGE_POINTS = 110.0
     private const val TABLET_MIDDLE_EDGE_POINTS = 82.0
 
+    /**
+     * Extracts the scalar component along the navigation axis.
+     */
     private fun axis(p: CurlPoint, axis: CurlAxis) = if (axis == CurlAxis.Vertical) p.y else p.x
 
+    /**
+     * Prefers a fast fling direction; otherwise requires primary-axis movement to dominate cross-axis movement.
+     */
     fun begin(axis: CurlAxis, translation: CurlPoint, velocity: CurlPoint): Int {
         val v = axis(velocity, axis)
         val primary = axis(translation, axis)
@@ -25,6 +40,9 @@ object CurlNavigation {
         return if (primary >= 0) 1 else 0
     }
 
+    /**
+     * Uses fling speed when decisive; otherwise selects direction from the released page half.
+     */
     fun end(
         axis: CurlAxis,
         width: Double,
@@ -47,6 +65,10 @@ object CurlNavigation {
         )
     }
 
+    /**
+     * Maps taps in the leading/trailing edge zones to reverse/forward navigation.
+     * The center area and out-of-page points return -1; tablet and center-fold modes use different margins.
+     */
     fun tap(
         axis: CurlAxis,
         width: Double,
