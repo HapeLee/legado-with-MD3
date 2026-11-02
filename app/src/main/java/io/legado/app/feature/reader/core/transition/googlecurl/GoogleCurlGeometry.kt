@@ -4,6 +4,11 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.roundToInt
 
+// Wave/perspective model adapted from karankalsi/PlayLikeCurl (915a5a3),
+// karackencurllib/src/main/java/karacken/curl/PageFront.java and PageRenderer.java.
+// Source: https://github.com/karankalsi/PlayLikeCurl
+// MIT license: LICENSE.txt (in this directory), reproduced unchanged from upstream.
+
 /** Front-face wave, with its visible travel fitted to the control-point interval.
  * All coordinates here are normalized material/display coordinates, before RTL reflection.
  */
