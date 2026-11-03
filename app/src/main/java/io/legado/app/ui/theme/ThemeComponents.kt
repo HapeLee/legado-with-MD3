@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.font.FontFamily
 import io.legado.app.domain.model.settings.customColors
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +43,13 @@ fun rememberCustomFont(fontPath: String?): FontFamily? {
     LaunchedEffect(path, context) {
         if (path == null || cachedFont != null) return@LaunchedEffect
         loadedFont = withContext(Dispatchers.IO) {
-            loadCustomFont(context, path)?.also {
-                synchronized(customFontCache) { customFontCache.put(path, it) }
+            loadCustomFont(context, path)?.also { family ->
+                // Font(File) 是 Blocking 加载策略：首次 resolve 同步读盘，且发生在
+                // 文本布局线程。加载期在 IO 线程预热（Font 实例内部缓存构建好的
+                // Typeface），冷启动/切换字体的首帧布局不再读盘；失败不抛出，
+                // 届时组合内解析回落默认字体（与缺失字体同一兜底）
+                runCatching { createFontFamilyResolver(context).preload(family) }
+                synchronized(customFontCache) { customFontCache.put(path, family) }
             }
         }
     }
@@ -72,7 +78,9 @@ internal fun loadCustomFont(context: Context, fontPath: String): FontFamily? =
             } ?: return@runCatching null
             target
         } else {
-            uri.path?.let(::File) ?: return@runCatching null
+            // 缺失文件回退 null（走系统默认字体）：Font(File) 构造不读盘，
+            // 不在此拦截会把失败推迟到布局期
+            uri.path?.let(::File)?.takeIf { it.isFile } ?: return@runCatching null
         }
         FontFamily(Font(fontFile))
     }.getOrNull()
