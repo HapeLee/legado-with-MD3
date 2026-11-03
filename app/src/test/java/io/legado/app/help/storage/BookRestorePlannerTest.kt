@@ -93,8 +93,8 @@ class BookRestorePlannerTest {
 
     @Test
     fun `online book follows single-row cloud source migration`() {
-        val existing = onlineBook("https://source-a/book")
-        val restored = onlineBook("https://source-b/book")
+        val existing = onlineBook("https://source-a/book", durChapterIndex = 9, durChapterTime = 1_000)
+        val restored = onlineBook("https://source-b/book", durChapterIndex = 12, durChapterTime = 2_000)
 
         val plan = planBookRestore(
             restoredBooks = listOf(restored),
@@ -145,9 +145,9 @@ class BookRestorePlannerTest {
 
     @Test
     fun `polluted local group collapses to single migrated cloud row`() {
-        val staleA = onlineBook("https://source-a/book")
-        val staleB = onlineBook("https://source-b/book")
-        val migrated = onlineBook("https://source-c/book")
+        val staleA = onlineBook("https://source-a/book", durChapterTime = 1_000)
+        val staleB = onlineBook("https://source-b/book", durChapterTime = 1_000)
+        val migrated = onlineBook("https://source-c/book", durChapterIndex = 9, durChapterTime = 2_000)
 
         val plan = planBookRestore(
             restoredBooks = listOf(migrated),
@@ -250,6 +250,67 @@ class BookRestorePlannerTest {
     }
 
     @Test
+    fun `unused backup row never deletes locally newer progress`() {
+        // P1 回归：设备 B 独立入架未读（与换源迁移同形）——本机读到 100 章的进度
+        // 不能被删，备份行按重复跳过
+        val existing = onlineBook("https://source-a/book", durChapterIndex = 100, durChapterTime = 2_000)
+        val restored = onlineBook("https://source-b/book", durChapterTime = 1_000)
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertTrue(plan.booksToInsert.isEmpty())
+        assertTrue(plan.booksToUpdate.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `used but older backup row does not delete locally newer progress`() {
+        // 备份行有进度但最后阅读时间早于本机：本机较新，不跟随
+        val existing = onlineBook("https://source-a/book", durChapterIndex = 100, durChapterTime = 9_000)
+        val restored = onlineBook("https://source-b/book", durChapterIndex = 30, durChapterTime = 2_000)
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertTrue(plan.booksToInsert.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `backup temp row intersection no longer masks shelved row`() {
+        // P2 回归：本地只有临时记录 X，备份含临时 X 与在架 Y——在架行必须上位，
+        // 不能被临时行的交集挡成"重复跳过"后书架仍缺书
+        val existing = onlineBook(
+            "https://source-a/book",
+            type = BookType.text or BookType.notShelf,
+        )
+        val tempAgain = onlineBook(
+            "https://source-a/book",
+            type = BookType.text or BookType.notShelf,
+        )
+        val shelved = onlineBook("https://source-b/book", durChapterIndex = 3, durChapterTime = 2_000)
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(tempAgain, shelved),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertEquals(listOf(shelved.bookUrl), plan.booksToInsert.map { it.bookUrl })
+        assertEquals(listOf(existing.bookUrl), plan.booksToDelete.map { it.bookUrl })
+    }
+
+    @Test
     fun `ignored local books do not overwrite existing records`() {
         val existing = localBook("/current/Books/book.txt", progress = 1)
         val restored = localBook("/old-device/Books/book.txt", progress = 8)
@@ -328,11 +389,13 @@ class BookRestorePlannerTest {
         author: String = "天蚕土豆",
         type: Int = BookType.text,
         durChapterIndex: Int = 0,
+        durChapterTime: Long = 0L,
     ) = Book(
         bookUrl = bookUrl,
         name = name,
         author = author,
         type = type,
         durChapterIndex = durChapterIndex,
+        durChapterTime = durChapterTime,
     )
 }
