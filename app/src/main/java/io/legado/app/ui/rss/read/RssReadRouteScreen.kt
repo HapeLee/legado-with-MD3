@@ -3,12 +3,25 @@
 package io.legado.app.ui.rss.read
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Process
+import android.provider.DocumentsContract
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.MimeTypeMap
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebChromeClient.FileChooserParams
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -112,6 +125,25 @@ fun RssReadRouteScreen(
     var customViewCallback by remember {
         mutableStateOf<WebChromeClient.CustomViewCallback?>(null)
     }
+    var fileChooserCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    var filePickerInFlight by remember { mutableStateOf(false) }
+
+    fun finishFileChooser(uris: Array<Uri>? = null) {
+        val callback = fileChooserCallback
+        fileChooserCallback = null
+        callback?.onReceiveValue(uris)
+    }
+
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        filePickerInFlight = false
+        if (fileChooserCallback != null) {
+            val uris = result.data?.takeIf { result.resultCode == Activity.RESULT_OK }
+                ?.selectedDocuments(context)
+            finishFileChooser(uris)
+        }
+    }
 
     var redirectPolicy by remember { mutableStateOf(RedirectPolicy.ALLOW_ALL) }
     val refreshNameList = remember { mutableStateListOf<String>() }
@@ -157,6 +189,27 @@ fun RssReadRouteScreen(
                 }
             },
             onHideCustomView = { hideCustomView() },
+            onShowFileChooser = { callback, params ->
+                if (filePickerInFlight ||
+                    (params.mode != FileChooserParams.MODE_OPEN &&
+                        params.mode != FileChooserParams.MODE_OPEN_MULTIPLE)
+                ) {
+                    false
+                } else {
+                    fileChooserCallback = callback
+                    filePickerInFlight = true
+                    try {
+                        filePicker.launch(params.openDocumentIntent())
+                        true
+                    } catch (_: ActivityNotFoundException) {
+                        fileChooserCallback = null
+                        filePickerInFlight = false
+                        context.toastOnUi(R.string.can_not_open)
+                        false
+                    }
+                }
+            },
+            onPageStarted = { finishFileChooser() },
             navigateToArticles = { sortUrl, targetOrigin ->
                 onOpenArticles(sortUrl, targetOrigin)
             },
@@ -468,7 +521,11 @@ fun RssReadRouteScreen(
                                 redirectPolicyProvider = { redirectPolicy },
                                 callbacks = controllerCallbacks,
                             )
-                        }
+                        },
+                        onDestroyed = {
+                            finishFileChooser()
+                            webView = null
+                        },
                     )
                 }
                 if (webProgress in 0..99) {
@@ -546,6 +603,43 @@ private data class RedirectRequest(
     val toUrl: String,
     val onResult: (Boolean) -> Unit,
 )
+
+private fun FileChooserParams.openDocumentIntent(): Intent {
+    val mimeTypes = acceptTypes.filter { it.isNotBlank() }.map { acceptType ->
+        val type = acceptType.trim().lowercase()
+        if (type.startsWith('.')) {
+            MimeTypeMap.getSingleton().getMimeTypeFromExtension(type.drop(1)) ?: "*/*"
+        } else {
+            type
+        }
+    }.distinct()
+    return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        addCategory(Intent.CATEGORY_OPENABLE)
+        type = mimeTypes.singleOrNull() ?: "*/*"
+        if (mimeTypes.size > 1 && "*/*" !in mimeTypes) {
+            putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes.toTypedArray())
+        }
+        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, mode == FileChooserParams.MODE_OPEN_MULTIPLE)
+    }
+}
+
+private fun Intent.selectedDocuments(context: Context): Array<Uri>? {
+    val files = buildList {
+        data?.let(::add)
+        clipData?.let { clip ->
+            repeat(clip.itemCount) { index -> clip.getItemAt(index).uri?.let(::add) }
+        }
+    }.distinct()
+    // Only pass documents for which the picker granted this app read access.
+    return files.takeIf { selected ->
+        selected.isNotEmpty() && selected.all { uri ->
+            DocumentsContract.isDocumentUri(context, uri) &&
+                context.checkUriPermission(
+                    uri, Process.myPid(), Process.myUid(), Intent.FLAG_GRANT_READ_URI_PERMISSION
+                ) == PackageManager.PERMISSION_GRANTED
+        }
+    }?.toTypedArray()
+}
 
 @Composable
 private fun FavoriteEditSheet(

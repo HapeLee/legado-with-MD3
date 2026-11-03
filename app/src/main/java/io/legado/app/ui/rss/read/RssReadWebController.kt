@@ -16,6 +16,7 @@ import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
 import android.webkit.URLUtil
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -62,6 +63,8 @@ internal data class RssReadWebControllerCallbacks(
     val onPageTitleResolved: (String) -> Unit,
     val onShowCustomView: (View?, WebChromeClient.CustomViewCallback?) -> Unit,
     val onHideCustomView: () -> Unit,
+    val onShowFileChooser: (ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean,
+    val onPageStarted: () -> Unit,
     val navigateToArticles: (sortUrl: String?, origin: String?) -> Unit,
     val onAskRedirect: (String?, String, (Boolean) -> Unit) -> Unit,
     val onCloseRequested: () -> Unit,
@@ -103,6 +106,12 @@ internal fun configureRssReadWebView(
         override fun onHideCustomView() {
             callbacks.onHideCustomView()
         }
+
+        override fun onShowFileChooser(
+            webView: WebView,
+            filePathCallback: ValueCallback<Array<Uri>>,
+            fileChooserParams: FileChooserParams
+        ): Boolean = callbacks.onShowFileChooser(filePathCallback, fileChooserParams)
 
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
             val source = viewModel.rssSource
@@ -366,6 +375,7 @@ internal fun configureRssReadWebView(
         }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            callbacks.onPageStarted()
             view?.evaluateJavascript(WebJsExtensions.basicJs, null)
         }
 
