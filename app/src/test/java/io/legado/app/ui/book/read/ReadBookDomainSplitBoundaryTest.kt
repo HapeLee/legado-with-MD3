@@ -117,7 +117,11 @@ class ReadBookDomainSplitBoundaryTest {
      * 行数只作粗棘轮：散落在 VM 的域内状态比总行数更能说明边界是否干净，各域另受
      * `域状态不回流进 ReadBookViewModel` 守卫约束。
      *
-     * 当前上限 2763：由 2750 放宽 13 行，两条新增都属本注释已列出的合法接线，
+     * 当前上限 2772：由 2763 放宽 9 行，全部是新增「离线缓存」域的接线，实现已摘进
+     * `ReadBookCacheDelegate`（章节筛选、范围预览的 IO 与文案都在里面），VM 只剩：
+     * 两个意图分支转发（相对上一档净增 0）、`cacheDelegate` 的 lazy 装配（+7）与
+     * 预览投影进 `_uiState`（+1，`_uiState` 只有 VM 能碰）、一条域注释与空行（+2）。
+     * 回溯（上一档 2763）：由 2750 放宽 13 行，两条新增都属本注释已列出的合法接线，
      * 没有新的域回流，因此只抬数字、不摘 delegate：
      * - 本地富文本链接导航（#2521）：`openInternalBookLink` 一行转发
      *   （+1，Screen 的意图入口只能在 VM；目标解析与跳转本体在
@@ -172,14 +176,14 @@ class ReadBookDomainSplitBoundaryTest {
      * （TocViewModel 自持 flow）。
      */
     @Test
-    fun `ReadBookViewModel 不超过 2763 行`() {
+    fun `ReadBookViewModel 不超过 2772 行`() {
         val lineCount = mainSourceFile("io/legado/app/ui/book/read/ReadBookViewModel.kt")
             .readLines().size
         assertTrue(
-            "ReadBookViewModel 涨到了 $lineCount 行，超过上限 2763。\n" +
+            "ReadBookViewModel 涨到了 $lineCount 行，超过上限 2772。\n" +
                 "新功能请摘成 io/legado/app/ui/book/read/ 下的 XxxDelegate，" +
                 "并在本测试的 DOMAINS 里加一条边界。",
-            lineCount <= 2763,
+            lineCount <= 2772,
         )
     }
 
@@ -502,6 +506,18 @@ class ReadBookDomainSplitBoundaryTest {
             // 云端进度同步域无自持状态：投影目标 isReadingProgressSyncConfigured 是菜单
             // 可见性输入，仍在 UiState；靠 stateTypes 守「订阅云端可用性流 + 开菜单补
             // 初始化不回流 VM」——这两件事一回流，入口就会重新变成「读一次快照」。
+            // 离线缓存域无自持状态：范围预览是弹窗瞬态（同 pendingBookmarkTarget），留 UiState；
+            // 靠 stateTypes 守「章节筛选、范围统计与派发文案不回流 VM」
+            DomainSplit(
+                name = "离线缓存",
+                delegateFile = "io/legado/app/ui/book/read/ReadBookCacheDelegate.kt",
+                stateFields = emptySet(),
+                stateTypes = listOf(
+                    "hasExplicitImageContent",
+                    "all_chapters_cached",
+                    "CacheRangePreview(",
+                ),
+            ),
             DomainSplit(
                 name = "云端进度同步",
                 delegateFile = "io/legado/app/ui/book/read/ReadingProgressSyncDelegate.kt",

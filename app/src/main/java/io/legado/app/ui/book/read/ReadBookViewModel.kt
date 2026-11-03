@@ -650,6 +650,15 @@ class ReadBookViewModel(
         }
     }
 
+    /** 离线缓存域；范围预览是弹窗瞬态，仍留在 UiState（同 pendingBookmarkTarget）。 */
+    private val cacheDelegate by lazy {
+        ReadBookCacheDelegate(
+            context, viewModelScope, bookRepository,
+            emit = { _effects.tryEmit(it) },
+            onPreview = { preview -> _uiState.update { it.copy(cacheRangePreview = preview) } },
+        )
+    }
+
     init {
         // 订阅必须早于 attach()：会话事件用 tryEmit 投递，没有订阅者会被丢弃。
         // viewModelScope 是 Main.immediate，VM 在主线程构造，故 launch 会同步跑到
@@ -1608,9 +1617,9 @@ class ReadBookViewModel(
                 _effects.tryEmit(ReadBookEffect.PageAnimChanged)
             }
 
-            is ReadBookIntent.DownloadChapters -> cacheChapters(intent.start, intent.end)
+            is ReadBookIntent.DownloadChapters -> cacheDelegate.downloadRange(intent.start, intent.end)
 
-            is ReadBookIntent.ScanCacheRange -> previewCacheRange(intent.start, intent.end)
+            is ReadBookIntent.ScanCacheRange -> cacheDelegate.previewRange(intent.start, intent.end)
 
             is ReadBookIntent.SaveChapterContent -> {
                 ReadBook.book?.let {
@@ -2192,81 +2201,6 @@ class ReadBookViewModel(
     private suspend fun currentChapter(): BookChapter? {
         val book = ReadBook.book ?: return null
         return bookRepository.getChapter(book.bookUrl, ReadBook.durChapterIndex)
-    }
-
-    /**
-     * 离线缓存弹窗的范围预览：一次遍历同时得到全书已缓存章数与范围内仍缺正文的章数。
-     * 只用宽松的「正文存在」判定，图片完整性留给派发时的逐章严格判定。
-     */
-    private fun previewCacheRange(startIndex: Int, endIndex: Int) {
-        val book = ReadBook.book ?: return
-        execute {
-            val chapters = bookRepository.getChapters(book.bookUrl)
-            var cached = 0
-            var pending = 0
-            for (chapter in chapters) {
-                val hasContent = chapter.isVolume || BookHelp.hasContent(book, chapter)
-                if (hasContent) {
-                    cached++
-                } else if (chapter.index in startIndex..endIndex) {
-                    pending++
-                }
-            }
-            CacheRangePreview(
-                bookUrl = book.bookUrl,
-                start = startIndex,
-                end = endIndex,
-                totalChapters = book.totalChapterNum,
-                cachedChapters = cached,
-                pendingChapters = pending,
-            )
-        }.onSuccess { preview ->
-            _uiState.update { state ->
-                if (state.cacheRangePreview == preview) state
-                else state.copy(cacheRangePreview = preview)
-            }
-        }.onError {
-            AppLog.put("统计离线缓存范围失败", it)
-        }
-    }
-
-    /**
-     * 阅读页「离线缓存」：只把真正需要下载的章节交给队列。
-     *
-     * 判定与 CacheBookModel 出队时的跳过条件一致（卷、无正文、显式下载所需图片已完整），
-     * 所以行为不变，只是不再为已缓存章节排队。章节正文/图片校验较重，必须留在 IO 上。
-     */
-    private fun cacheChapters(startIndex: Int, endIndex: Int) {
-        val book = ReadBook.book ?: return
-        if (endIndex < startIndex) return
-        execute {
-            bookRepository.getChapters(book.bookUrl, startIndex, endIndex)
-                .asSequence()
-                .filterNot { it.isVolume }
-                .filterNot { BookHelp.hasExplicitImageContent(book, it) }
-                .map { it.index }
-                .toList()
-        }.onSuccess { indices ->
-            if (indices.isEmpty()) {
-                _effects.tryEmit(
-                    ReadBookEffect.ShowToast(context.getString(R.string.all_chapters_cached))
-                )
-                return@onSuccess
-            }
-            _effects.tryEmit(ReadBookEffect.DownloadChapters(indices))
-            _effects.tryEmit(
-                ReadBookEffect.ShowToast(
-                    context.getString(R.string.start_downloading_chapters, indices.size)
-                )
-            )
-        }.onError {
-            AppLog.put("筛选待缓存章节失败", it)
-            _effects.tryEmit(
-                ReadBookEffect.ShowToast(
-                    context.getString(R.string.error_load_msg, it.localizedMessage)
-                )
-            )
-        }
     }
 
     // 开书 / 目录 / 换源 / 进度同步归 [ReadBookLoadDelegate]，这里只留外部入口的转发。
