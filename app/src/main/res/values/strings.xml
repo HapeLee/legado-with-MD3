@@ -1676,6 +1676,7 @@
     <string name="create_heap_dump">Create Heap Dump</string>
     <string name="about_privacy_policy_title">Privacy Policy</string>
     <string name="about_license_title">License</string>
+    <string name="about_third_party_licenses">Third-party licenses</string>
     <string name="about_disclaimer_title">Disclaimer</string>
     <string name="about_installed_version_title">Installed Version</string>
     <string name="about_current_version">Installed Version</string>

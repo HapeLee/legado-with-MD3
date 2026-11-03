@@ -377,6 +377,8 @@ object MainNavigator {
             MainRouteMultiRoleRecognition,
             MainRouteSettingsBubble -> backStack.add(route)
 
+            MainRouteThirdPartyLicenses -> backStack.add(route)
+
             MainRouteAbout -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)

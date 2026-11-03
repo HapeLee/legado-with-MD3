@@ -1598,6 +1598,7 @@
     <string name="about_heap_dump_recording_disabled">堆轉儲記錄已關閉。請先在其它設定中開啟。</string>
     <string name="about_installed_version_title">已安裝版本</string>
     <string name="about_license_title">開源許可</string>
+    <string name="about_third_party_licenses">第三方開源許可</string>
     <string name="about_log_recording_disabled">日誌記錄已關閉。請先在其它設定中開啟。</string>
     <string name="about_new_version">最新版本</string>
     <string name="about_no_data">暫無更新日誌</string>

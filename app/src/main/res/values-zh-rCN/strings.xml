@@ -1617,6 +1617,7 @@
     <string name="create_heap_dump">创建堆转储</string>
     <string name="about_privacy_policy_title">隐私政策</string>
     <string name="about_license_title">许可证</string>
+    <string name="about_third_party_licenses">第三方开源许可</string>
     <string name="about_disclaimer_title">免责声明</string>
     <string name="about_installed_version_title">当前版本</string>
     <string name="about_current_version">当前版本</string>
