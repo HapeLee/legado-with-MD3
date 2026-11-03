@@ -2051,20 +2051,36 @@ private fun ScrollPageStack(
     // 角色胶囊只跟主题（深浅模式切换），绝不跟正文/高亮样式取色
     val castColorArgb = LegadoTheme.colorScheme.onSurface.toArgb()
     val castVariantArgb = LegadoTheme.colorScheme.onSurfaceVariant.toArgb()
+    /**
+     * 窗口内正文图片。
+     *
+     * 滚动模式一次绘制记录就会画完窗口内四页，而滚动本身只平移图层、不重新记录：图片若在
+     * 记录期没命中，绘制结果里留下的 18% 灰占位会一直挂在屏幕上（#2547 的「滚动时闪烁 /
+     * 偶发变灰」）。所以位图必须像分页模式那样进组合状态——加载完成即换掉占位；
+     * 换窗时丢弃窗口外条目，Bitmap 随组合态释放，不额外留一份长期强引用。
+     */
+    var pageImages by remember { mutableStateOf<Map<ReaderElement.Image, Bitmap>>(emptyMap()) }
     // 窗口变化（含跨页同步换窗）：effect 期为三页构建绘制数据并加载位图，正常情况下
     // 跨页时新进入窗口的页在此处预热；draw 期 miss 时同步兜底，保正确性不缺字
     // （对照 shutiao 的组合期 ensureTextLayoutCache + 绘制期兜底）。
     LaunchedEffect(windowProvider()) {
         val pageWindow = windowProvider()
-        // 预热含下下页：跨页后新进入窗口的 next 页就是上一窗口的 nextPlus，绘制数据
-        // 早已就绪。数据构建放 Default 线程——跨页帧主线程对页数据零构建，只有重绘
-        // （对照 shutiao 的四页流预热；miss 时的 draw 期同步构建仍是兜底）。
-        listOfNotNull(
+        val windowPages = listOfNotNull(
             pageWindow.previous,
             pageWindow.current,
             pageWindow.next,
             pageWindow.nextPlus,
-        ).forEach { page ->
+        )
+        val windowImages = windowPages.asSequence()
+            .flatMap { page -> page.elements.asSequence().filterIsInstance<ReaderElement.Image>() }
+            .toSet()
+        if (pageImages.keys.any { it !in windowImages }) {
+            pageImages = pageImages.filterKeys { it in windowImages }
+        }
+        // 预热含下下页：跨页后新进入窗口的 next 页就是上一窗口的 nextPlus，绘制数据
+        // 早已就绪。数据构建放 Default 线程——跨页帧主线程对页数据零构建，只有重绘
+        // （对照 shutiao 的四页流预热；miss 时的 draw 期同步构建仍是兜底）。
+        windowPages.forEach { page ->
             val data = cache.peek(page)
                 ?: withContext(Dispatchers.Default) { ScrollPageDrawData(page) }
                     .also { cache.put(page, it) }
@@ -2079,10 +2095,21 @@ private fun ScrollPageStack(
                 }.toMap()
             }
             if (loadedSources.isNotEmpty()) data.textBackgroundRevision.value++
+        }
+        windowPages.forEach { page ->
             page.elements.filterIsInstance<ReaderElement.Image>().forEach { element ->
-                // The controller owns inline bitmaps in a byte-bounded LRU. Do not retain
-                // another strong reference for every cached draw page.
-                if (cachedImage(element) == null) loadImage(element)
+                val cached = cachedImage(element)?.takeUnless(Bitmap::isRecycled)
+                val known = pageImages[element]?.takeUnless(Bitmap::isRecycled)
+                val bitmap = when {
+                    // 缓存里换成了新 generation（图片刷新）就以它为准
+                    cached != null && cached !== known -> cached
+                    // 已被字节 LRU 淘汰但组合态还握着：直接复用，不重新解码
+                    known != null -> known
+                    else -> loadImage(element)?.takeUnless(Bitmap::isRecycled)
+                }
+                if (bitmap != null && pageImages[element] !== bitmap) {
+                    pageImages = pageImages + (element to bitmap)
+                }
             }
         }
     }
@@ -2096,6 +2123,8 @@ private fun ScrollPageStack(
         // graphicsLayer 变换，draw 块不执行。相邻页的 y 是栈坐标，整画布随层平移偏移。
         val window = windowProvider()
         val current = window.current ?: return@Canvas
+        // 位图加载完成只让这一块重新记录（不重组），灰占位随下一次记录换成真图。
+        val imagesForDraw = pageImages
         val activeSelection = selectionProvider()
         fun drawOne(page: ReaderPage, stackOffsetY: Float) {
             val data = cache.ensure(page)
@@ -2117,7 +2146,7 @@ private fun ScrollPageStack(
                     activeSelection,
                     selectedBounds,
                     selectionPreviewStyle,
-                    cachedImage,
+                    imageProvider = { element -> imagesForDraw[element] ?: cachedImage(element) },
                     castColorArgb,
                     castVariantArgb,
                 )
@@ -2142,7 +2171,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     activeSelection: ReaderSelection?,
     selectedBounds: List<ReaderRect>,
     selectionPreviewStyle: TextProcessStyle?,
-    cachedImage: (ReaderElement.Image) -> Bitmap?,
+    imageProvider: (ReaderElement.Image) -> Bitmap?,
     castColorArgb: Int,
     castVariantArgb: Int,
 ) {
@@ -2185,7 +2214,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
             native.drawText(e.value, e.bounds.left, e.baselinePx, paint)
         }
 
-        is ReaderElement.Image -> cachedImage(e)?.let { bitmap ->
+        is ReaderElement.Image -> imageProvider(e)?.let { bitmap ->
             ReaderImageDrawLayout.forElement(e, bitmap.width, bitmap.height)?.let { layout ->
                 drawImage(
                     image = bitmap.asImageBitmap(),
