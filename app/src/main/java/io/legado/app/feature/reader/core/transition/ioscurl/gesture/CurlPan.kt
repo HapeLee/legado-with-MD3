@@ -6,6 +6,9 @@ import kotlin.math.min
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlAxis
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlPoint
 
+/**
+ * Platform-independent touch phases supplied by the host input adapter.
+ */
 enum class CurlTouchKind {
     Down,
     Move,
@@ -13,6 +16,9 @@ enum class CurlTouchKind {
     Cancel,
 }
 
+/**
+ * Recognizer lifecycle. Codes 3 and above are terminal; create a new recognizer for the next gesture.
+ */
 enum class CurlRecognition(val nativeValue: Int) {
     Possible(0),
     Began(1),
@@ -22,6 +28,13 @@ enum class CurlRecognition(val nativeValue: Int) {
     Failed(5),
 }
 
+/**
+ * One touch event in page coordinates.
+ *
+ * @property pointer Stable pointer identifier during a contact.
+ * @property point Location in the same logical units as the recognizer dimensions.
+ * @property seconds Timestamp from a monotonic clock, in seconds; send events in chronological order.
+ */
 data class CurlTouch(
     val kind: CurlTouchKind,
     val pointer: Int,
@@ -29,6 +42,17 @@ data class CurlTouch(
     val seconds: Double,
 )
 
+/**
+ * Snapshot of drag recognition and navigation policy.
+ *
+ * @property location Last tracked location in page coordinates.
+ * @property translation Displacement after removing the initial movement threshold.
+ * @property velocity Smoothed vector speed in logical units per second.
+ * @property beginDirection Navigation code 0/1, or -1 while undecided.
+ * @property end Current release recommendation, useful when a gesture terminates.
+ * @property commandBegin Whether the host should consider starting a manual turn;
+ * this can remain true across updates, so the host must track whether it already began.
+ */
 data class CurlPanResult(
     val state: CurlRecognition,
     val location: CurlPoint,
@@ -40,9 +64,12 @@ data class CurlPanResult(
 )
 
 /**
- * One tracked pointer, axis-OR 10pt hysteresis and the original two-sample 25/75 velocity filter.
- * Additional pointers fail a Possible recognizer; an active recognizer ignores their positions. The
- * adapter must still deliver their events so callback/sampling order stays explicit.
+ * Stateful single-gesture drag recognizer with hysteresis and velocity smoothing.
+ * Supply logical page dimensions and one navigation axis; serialize calls to event.
+ * Terminal states are retained, so use a new instance for each gesture.
+ *
+ * Public policy flags let the host reject unavailable pages before recognition begins.
+ * manualUncommitted suppresses a new begin command while a manual turn is already outstanding.
  */
 class CurlPan(val width: Double, val height: Double, val axis: CurlAxis) {
     private companion object {
@@ -53,16 +80,25 @@ class CurlPan(val width: Double, val height: Double, val axis: CurlAxis) {
         val FLOAT_EPSILON = Float.fromBits(0x3400_0000).toDouble()
     }
 
+    /** Multiplier applied to the initial movement threshold, normally 1.0. */
     var sloppiness = 1.0
+    /** Host capability gate, checked when the drag first crosses the recognition threshold. */
     var canHandle = true
+    /** Whether current content is available for a manual turn. */
     var currentValid = true
+    /** Whether a destination page is available for direction code 0. */
     var incomingForward = true
+    /** Whether a destination page is available for direction code 1. */
     var incomingReverse = true
+    /** Whether recognition may begin while direction is still undecided (-1). */
     var incomingUnknown = true
+    /** Suppresses a begin command while the host has an uncommitted manual turn. */
     var manualUncommitted = false
+    /** Current lifecycle state; terminal states persist until this instance is discarded. */
     var state = CurlRecognition.Possible
         private set
 
+    /** Identifier of the contact driving this gesture, or null before a contact is accepted. */
     var trackedPointer: Int? = null
         private set
 
@@ -74,6 +110,9 @@ class CurlPan(val width: Double, val height: Double, val axis: CurlAxis) {
 
     private var lastTime = 0.0
 
+    /**
+     * A motion interval used for velocity estimation; dt is measured in seconds.
+     */
     private data class Sample(
         val start: CurlPoint = CurlPoint(0.0, 0.0),
         val end: CurlPoint = start,
@@ -84,8 +123,14 @@ class CurlPan(val width: Double, val height: Double, val axis: CurlAxis) {
 
     private var previous = Sample()
 
+    /**
+     * Subtracts points without changing coordinate systems.
+     */
     private fun delta(a: CurlPoint, b: CurlPoint) = CurlPoint(a.x - b.x, a.y - b.y)
 
+    /**
+     * Computes interval speed, discarding sub-millisecond intervals to avoid unstable division.
+     */
     private fun speed(s: Sample): CurlPoint {
         if (s.dt < MIN_SAMPLE_DURATION_SECONDS) return CurlPoint(0.0, 0.0)
 
@@ -93,6 +138,9 @@ class CurlPan(val width: Double, val height: Double, val axis: CurlAxis) {
         return CurlPoint(d.x / s.dt, d.y / s.dt)
     }
 
+    /**
+     * Blends current and previous interval speeds with weights 0.25 and 0.75.
+     */
     private fun velocity(): CurlPoint {
         val a = speed(sample)
         if (previous.dt > FLOAT_EPSILON) {
@@ -105,6 +153,9 @@ class CurlPan(val width: Double, val height: Double, val axis: CurlAxis) {
         return a
     }
 
+    /**
+     * Returns the current recognition state and derived direction without consuming an event.
+     */
     fun snapshot(): CurlPanResult {
         val translation = delta(last, first)
         val velocity = velocity()
@@ -122,6 +173,10 @@ class CurlPan(val width: Double, val height: Double, val axis: CurlAxis) {
         )
     }
 
+    /**
+     * Consumes one ordered touch event and returns a snapshot.
+     * A second pointer before recognition fails the gesture; only the tracked pointer can end it.
+     */
     fun event(event: CurlTouch): CurlPanResult {
         if (state.nativeValue >= 3) return snapshot()
         val point = event.point
@@ -149,6 +204,7 @@ class CurlPan(val width: Double, val height: Double, val axis: CurlAxis) {
                         val t = delta(last, first)
                         val h = HYSTERESIS_POINTS * sloppiness
                         if (abs(t.x) >= h || abs(t.y) >= h) {
+                            // Remove the initial hysteresis distance so geometry does not jump when recognition begins.
                             val reduced =
                                 CurlPoint(
                                     if (t.x >= 0) max(t.x - h, 0.0) else min(t.x + h, 0.0),

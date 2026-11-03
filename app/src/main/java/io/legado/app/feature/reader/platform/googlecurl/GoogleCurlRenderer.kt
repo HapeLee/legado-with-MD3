@@ -58,7 +58,8 @@ internal class GoogleCurlRenderer : AutoCloseable {
         }
         canvas.drawBitmap(background, null, pageRect, texture)
         val shadowWidth = (22f * density).coerceAtLeast(.001f)
-        val alpha = (255 * .25f * (edge / shadowWidth).coerceIn(0f, 1f)).toInt()
+        // Fade with the visible sheet width, independently of the fixed-width shadow strip.
+        val alpha = (255 * .25f * (edge / width).coerceIn(0f, 1f)).toInt()
         shadow.shader = LinearGradient(edge, 0f, edge + shadowWidth, 0f,
             Color.argb(alpha, 0, 0, 0), Color.TRANSPARENT, Shader.TileMode.CLAMP)
         canvas.drawRect(edge, 0f, edge + shadowWidth, height, shadow)

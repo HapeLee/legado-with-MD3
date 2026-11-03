@@ -1,16 +1,15 @@
 package io.legado.app.feature.reader.core.transition.ioscurl.control
 
-import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.PI
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.tan
-import io.legado.app.feature.reader.core.transition.ioscurl.math.AppleMath
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlAxis
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlBegin
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlBinding
@@ -22,14 +21,19 @@ import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlPoint
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlRect
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlValues
 
-/** UIKit 16H81 scalar control algorithm. Does not know page bitmaps or platform events. */
+/**
+ * Maps page configuration and drag positions to geometric curl values.
+ * All lengths use the caller's logical page units, angles are radians, durations are
+ * seconds and velocities are logical units per second. This object holds no gesture state.
+ */
 object CurlControl {
     private const val HALF_PI = PI / 2
-    // Legacy combined left/top binding mask retained by the reference equations.
+
     private val MINIMUM_CORNER_BINDING = CurlBinding.Left.nativeValue or CurlBinding.Top.nativeValue
     private const val INITIAL_TILT_RADIANS = PI / 18
-    // Recovered dimensionless ratios. These fractions round to the same binary64
-    // values as the original coefficients; short decimal approximations do not.
+
+    // Visual calibration ratios determine the initial and final curl silhouette.
+    // Retain the Float conversions in the calculations below when preserving render output.
     private const val MIDDLE_START_RADIUS_RATIO = 5.0 / 246.0
     private const val EDGE_MANUAL_START_RADIUS_RATIO = 5.0 / 123.0
     private const val EDGE_AUTOMATIC_START_RADIUS_RATIO = 25.0 / 164.0
@@ -42,6 +46,9 @@ object CurlControl {
     private const val MIN_SETTLE_SPEED_POINTS_PER_SECOND = 2048.0
     private const val MAX_SETTLE_SPEED_POINTS_PER_SECOND = 4096.0
 
+    /**
+     * Resolves the effective manual/automatic and reverse control code from binding and direction.
+     */
     fun type(c: CurlConfig): Int {
         val controlType = c.kind.nativeValue
         val bindingCode = c.binding.nativeValue
@@ -59,13 +66,22 @@ object CurlControl {
         else controlType
     }
 
+    /**
+     * Selects the primary page-travel axis from the binding.
+     */
     private fun vertical(c: CurlConfig) = c.binding.axis == CurlAxis.Vertical
 
+    /**
+     * Returns the reference travel length: one container span for a center fold, two for an edge fold.
+     */
     private fun travel(c: CurlConfig): Double {
         val size = if (vertical(c)) c.height else c.width
         return if (c.binding.middle) size else size + size
     }
 
+    /**
+     * Returns the normal angle of an untilted curl for the selected binding and direction.
+     */
     private fun base(c: CurlConfig): Double {
         val bindingCode = c.binding.nativeValue
         val directionCode = c.direction.nativeValue
@@ -84,6 +100,9 @@ object CurlControl {
         }
     }
 
+    /**
+     * Returns the turning face's logical rectangle; center bindings select the appropriate half.
+     */
     fun frame(c: CurlConfig): CurlRect {
         var w = c.width
         var h = c.height
@@ -100,6 +119,10 @@ object CurlControl {
         return CurlRect(x, y, w, h)
     }
 
+    /**
+     * Returns the fixed reference point used to interpret drag displacement.
+     * Automatic turns retain the configured initial point; manual turns anchor the moving edge.
+     */
     fun reference(c: CurlConfig): CurlPoint {
         val controlType = type(c)
         if (CurlKind.isAutomatic(controlType)) return c.initial
@@ -123,6 +146,9 @@ object CurlControl {
         }
     }
 
+    /**
+     * Computes start and completion values, including the small initial tilt and mode-specific radii.
+     */
     fun endpoints(c: CurlConfig): CurlEndpoints {
         val controlType = type(c)
         val auto = CurlKind.isAutomatic(controlType)
@@ -147,6 +173,10 @@ object CurlControl {
         )
     }
 
+    /**
+     * Creates the initial animation instruction. Manual turns initially target the current touch;
+     * automatic turns use their completion endpoint.
+     */
     fun begin(c: CurlConfig): CurlBegin {
         val e = endpoints(c)
         val controlType = type(c)
@@ -160,6 +190,13 @@ object CurlControl {
         )
     }
 
+    /**
+     * Estimates settle time from remaining geometric progress and release speed.
+     *
+     * @param velocity Primary-axis speed in logical units per second; its magnitude is clamped.
+     * @param complete Whether the settle animation commits the turn rather than returning it.
+     * @param time Current normalized geometric progress, not elapsed seconds.
+     */
     fun duration(c: CurlConfig, velocity: Double, complete: Boolean, time: Double): Double {
         if (velocity == 0.0) return BEGIN_DURATION_SECONDS
         var p = time.toFloat().toDouble()
@@ -170,6 +207,10 @@ object CurlControl {
                 .coerceIn(MIN_SETTLE_SPEED_POINTS_PER_SECOND, MAX_SETTLE_SPEED_POINTS_PER_SECOND)
     }
 
+    /**
+     * Tests whether a new turn can overlap an automatic or released turn with the same orientation.
+     * oldState uses the transition state codes; 5 means a released manual turn.
+     */
     fun compatible(
         oldType: Int,
         oldDirection: Int,
@@ -181,6 +222,10 @@ object CurlControl {
             (!CurlKind.isReverse(oldType)) == (!CurlKind.isReverse(newType)) &&
             oldDirection == newDirection
 
+    /**
+     * Converts a container-space drag point to progress, radius and angle.
+     * The point is clamped to the container before the angle and radius constraints are applied.
+     */
     fun update(c: CurlConfig, point: CurlPoint): CurlValues {
         val bindingCode = c.binding.nativeValue
         val directionCode = c.direction.nativeValue
@@ -200,6 +245,7 @@ object CurlControl {
         else if (bindingCode == CurlBinding.MiddleVertical.nativeValue)
             oy = if (directionCode == CurlDirection.Reverse.nativeValue) c.height else 0.0
         else if (bindingCode and CurlBinding.Bottom.nativeValue != 0) oy = c.height + c.height
+        // Normalize travel before deriving orientation; each binding chooses its own virtual origin.
         val dist = travel(c)
         val p = (abs(if (vertical(c)) y - oy else x - ox) / dist).coerceIn(0.0, 1.0)
         val progress = 1 - p
@@ -244,6 +290,7 @@ object CurlControl {
             if (bindingCode == CurlBinding.MiddleHorizontal.nativeValue) c.width * 0.5 else c.width
         val h =
             if (bindingCode == CurlBinding.MiddleVertical.nativeValue) c.height * 0.5 else c.height
+        // Limit tilt using page aspect ratio so the fold stays within the usable page extent.
         val maxda =
             if (vertical(c))
                 atan2(
@@ -256,6 +303,7 @@ object CurlControl {
         val da = (rawAngle - b).coerceIn(-maxda, maxda)
         val angle = b + da
         val e = endpoints(c)
+        // Interpolate a two-stage radius envelope, then apply the manual or automatic lower bound.
         val peak = dist * EDGE_AUTOMATIC_START_RADIUS_RATIO
         val k = if (mid) 0.5 else 0.25
         var radius =
@@ -284,6 +332,10 @@ object CurlControl {
         return CurlValues(result.first.coerceIn(margin, ceiling), result.second, angle)
     }
 
+    /**
+     * A 2D affine transform used only to reduce bindings to one canonical drag geometry.
+     * point uses x' = x + px*a + py*c and y' = y + px*b + py*d.
+     */
     private data class Transform(
         val a: Double = 1.0,
         val b: Double = 0.0,
@@ -292,6 +344,9 @@ object CurlControl {
         val x: Double = 0.0,
         val y: Double = 0.0,
     ) {
+        /**
+         * Composes this transform with the next transform, including its translation.
+         */
         fun concat(o: Transform) =
             Transform(
                 a * o.a + b * o.c,
@@ -302,8 +357,14 @@ object CurlControl {
                 (x * o.b + y * o.d) + o.y,
             )
 
+        /**
+         * Transforms one point into the canonical drag coordinate system.
+         */
         fun point(px: Double, py: Double) = CurlPoint(x + (px * a + py * c), y + (px * b + py * d))
 
+        /**
+         * Transforms all four corners and returns their axis-aligned bounds.
+         */
         fun rect(r: CurlRect): CurlRect {
             val p =
                 listOf(
@@ -323,6 +384,12 @@ object CurlControl {
         }
     }
 
+    /**
+     * Solves normalized curl progress and the adjusted radius in canonical coordinates.
+     * The tilted branch uses trigonometric constraints; the untilted branch avoids their
+     * singular divisions. If the curl extends past the page, its radius is recomputed
+     * before progress is normalized by the page projection.
+     */
     private fun inputTime(
         c: CurlConfig,
         progress: Double,
@@ -339,6 +406,7 @@ object CurlControl {
         val type = type(c)
         val s = c.binding.nativeValue
         val d = c.direction.nativeValue
+        // Rotate and mirror all bindings into a common orientation before solving the curl.
         var quarterTurns = if (!CurlKind.isReverse(type)) 0 else -2
         if (s and 1 != 0 && d == 0 || s and 1 == 0 && d == 0 && (s == 4 || s and 16 != 0))
             quarterTurns = if (!CurlKind.isReverse(type)) -2 else 0
@@ -378,17 +446,18 @@ object CurlControl {
         var twop = 0.0
         var curl: Double
         if (da != 0.0) {
-            val (sn, cs) = AppleMath.sincos(th.toFloat())
+            val sn = sin(th.toFloat())
+            val cs = cos(th.toFloat())
             val invcs = 1f / cs
             val invcs2 = (invcs * invcs).toDouble()
             val invsn = 1f / sn
             var term = radius * (2 * PI)
-            val hsin = AppleMath.sin((th * 0.5).toFloat()).pow(6f).toDouble()
+            val hsin = sin((th * 0.5).toFloat()).pow(6f).toDouble()
             val z = (invsn * invsn).toDouble() * 2
             term *= ((cs.toDouble() + 1) + z * hsin)
             term += (py * 8) * (cs * cs).toDouble() * sn.toDouble()
             term -= (radius * 8) * (sn * sn).toDouble()
-            val angular = (px / sn.toDouble()) * AppleMath.sin((th * 4).toFloat()).toDouble()
+            val angular = (px / sn.toDouble()) * sin((th * 4).toFloat()).toDouble()
             curl = ((angular + term) * invcs2) * 0.125
         } else {
             val p0 = progress * dist
@@ -400,28 +469,31 @@ object CurlControl {
             twop = p0 + p0
         }
         val absolute = abs(th)
-        val (ss, cc) = AppleMath.sincos(absolute.toFloat())
+        val ss = sin(absolute.toFloat())
+        val cc = cos(absolute.toFloat())
         val pagew = if (c.binding.middle) r.width * 0.5 else r.width
         val projected =
             curl * cc.toDouble() +
-                (curl * ss.toDouble()) * AppleMath.tan(absolute.toFloat()).toDouble()
+                (curl * ss.toDouble()) * tan(absolute.toFloat()).toDouble()
+        // Keep the projected fold inside the page by solving for a smaller admissible radius.
         if (projected > pagew) {
             curl = pagew * cc.toDouble()
             val nr =
                 if (da != 0.0) {
-                    val trig = px * AppleMath.sin((th * 4).toFloat()).toDouble()
-                    val (sn, cs) = AppleMath.sincos(th.toFloat())
+                    val trig = px * sin((th * 4).toFloat()).toDouble()
+                    val sn = sin(th.toFloat())
+                    val cs = cos(th.toFloat())
                     val invcs = 1 / cs.toDouble()
                     val invcsf = invcs.toFloat()
                     val invcs2 = (invcsf * invcsf).toDouble()
                     val numerator =
                         (curl * 8 - (1 / sn.toDouble()) * trig * invcs2) - (py * 8) * sn.toDouble()
-                    val tan = AppleMath.tan(th.toFloat())
+                    val tan = tan(th.toFloat())
                     val isn = 1f / sn
                     val ics = 1f / cs
                     var den = invcs * PI + (invcs2 * PI - (tan * tan).toDouble() * 4)
                     val add =
-                        ((AppleMath.sin((th * 0.5).toFloat()).pow(6f).toDouble() * (2 * PI)) *
+                        ((sin((th * 0.5).toFloat()).pow(6f).toDouble() * (2 * PI)) *
                             (isn * isn).toDouble()) * (ics * ics).toDouble()
                     den += add
                     numerator / (den + den)
@@ -439,7 +511,7 @@ object CurlControl {
         val diag = hypot(page.width, page.height)
         val diagAngle =
             if (vertical(c)) atan2(page.width, page.height) else atan2(page.height, page.width)
-        val projection = diag * AppleMath.cos((absolute - diagAngle).toFloat()).toDouble()
+        val projection = diag * cos((absolute - diagAngle).toFloat()).toDouble()
         return curl / (radius + abs(projection)) to radius
     }
 }
