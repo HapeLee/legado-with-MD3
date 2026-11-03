@@ -1610,6 +1610,14 @@ class ReadBookViewModel(
 
             is ReadBookIntent.DownloadChapters -> {
                 _effects.tryEmit(ReadBookEffect.DownloadChapters(intent.start, intent.end))
+                val count = intent.end - intent.start + 1
+                if (count > 0) {
+                    _effects.tryEmit(
+                        ReadBookEffect.ShowToast(
+                            context.getString(R.string.start_downloading_chapters, count)
+                        )
+                    )
+                }
             }
 
             is ReadBookIntent.SaveChapterContent -> {
