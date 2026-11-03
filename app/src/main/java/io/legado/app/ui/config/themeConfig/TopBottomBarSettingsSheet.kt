@@ -84,7 +84,9 @@ fun TopBottomBarSettingsSheet(
                 onCheckedChange = { onIntent(ThemeConfigIntent.SetUseFloatingBottomBar(it)) },
             )
             AnimatedVisibility(visible = appShell.useFloatingBottomBar) {
-                Column {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     CompactSwitchSettingItem(
                         title = stringResource(R.string.floating_bottom_bar_liquid_glass),
                         description = stringResource(R.string.floating_bottom_bar_liquid_glass_summary),
