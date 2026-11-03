@@ -19,10 +19,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,6 +43,7 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.ActionChip
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -85,9 +86,9 @@ fun SourceInputDialog(
                     AppText(stringResource(R.string.history_label), style = LegadoTheme.typography.labelSmall)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(historyValues) { history ->
-                            AssistChip(
+                            ActionChip(
+                                label = history,
                                 onClick = { text = history },
-                                label = { AppText(history, maxLines = 1) }
                             )
                         }
                     }
@@ -117,6 +118,7 @@ fun <T> BatchImportDialog(
     onToggleAll: (isSelected: Boolean) -> Unit,
     onItemInfoClick: (index: Int) -> Unit = {},
     onUpdateItem: (index: Int, data: T) -> Unit = { _, _ -> },
+    onEditItem: ((index: Int) -> Unit)? = null,
     topBarActions: @Composable RowScope.() -> Unit = {},
     itemTitle: (data: T) -> String,
     itemSubtitle: (data: T) -> String? = { null }
@@ -247,8 +249,9 @@ fun <T> BatchImportDialog(
                             onClick = { onToggleItem(index) },
                             onInfoClick = {
                                 onItemInfoClick(index)
-                                editingIndex = index
-                            }
+                                if (onEditItem == null) editingIndex = index else onEditItem(index)
+                            },
+                            editAction = onEditItem != null,
                         )
                     }
                 }
@@ -347,7 +350,8 @@ fun ImportItemRow(
     isSelected: Boolean,
     status: ImportStatus,
     onClick: () -> Unit,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    editAction: Boolean = false,
 ) {
     SelectionItemCard(
         title = title,
@@ -376,8 +380,8 @@ fun ImportItemRow(
 
             SmallPlainButton(
                 onClick = onInfoClick,
-                icon = Icons.Default.Info,
-                contentDescription = stringResource(R.string.details)
+                icon = if (editAction) Icons.Default.Edit else Icons.Default.Info,
+                contentDescription = stringResource(if (editAction) R.string.edit else R.string.details)
             )
         }
     )

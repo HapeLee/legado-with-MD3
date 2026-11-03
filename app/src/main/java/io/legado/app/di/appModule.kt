@@ -92,6 +92,7 @@ import io.legado.app.data.repository.RssArticleRepository
 import io.legado.app.data.repository.RssFavoriteRepository
 import io.legado.app.data.repository.RssReadRecordRepository
 import io.legado.app.data.repository.RssRepository
+import io.legado.app.data.repository.RssSourceImporter
 import io.legado.app.data.repository.RssSourceEditRepository
 import io.legado.app.data.repository.RuleSubscriptionRepository
 import io.legado.app.data.repository.SearchContentRepository
@@ -245,7 +246,7 @@ import io.legado.app.ui.ai.chat.AiChatViewModel
 import io.legado.app.ui.association.ImportDictRuleViewModel
 import io.legado.app.ui.association.ImportHttpTtsViewModel
 import io.legado.app.ui.association.ImportReplaceRuleViewModel
-import io.legado.app.ui.association.ImportRssSourceViewModel
+import io.legado.app.feature.rss.source.RssSourceImportViewModel
 import io.legado.app.ui.association.ImportTxtTocRuleViewModel
 import io.legado.app.ui.book.audio.AudioPlayCoordinator
 import io.legado.app.ui.book.audio.AudioPlayViewModel
@@ -551,6 +552,7 @@ val appModule = module {
     single<ExploreRepository> { get<ExploreRepositoryImpl>() }
     single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
     singleOf(::RssRepository)
+    singleOf(::RssSourceImporter)
     singleOf(::RssFavoriteRepository)
     singleOf(::RssArticleRepository)
     singleOf(::RssReadRecordRepository)
@@ -604,7 +606,7 @@ val appModule = module {
     viewModelOf(::ImportDictRuleViewModel)
     viewModelOf(::ImportHttpTtsViewModel)
     viewModelOf(::ImportReplaceRuleViewModel)
-    viewModelOf(::ImportRssSourceViewModel)
+    viewModelOf(::RssSourceImportViewModel)
     viewModelOf(::ImportTxtTocRuleViewModel)
     viewModelOf(::HighlightTagRuleViewModel)
     viewModelOf(::MultiRoleRuleViewModel)

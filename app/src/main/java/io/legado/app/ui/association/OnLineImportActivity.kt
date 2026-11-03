@@ -2,33 +2,39 @@ package io.legado.app.ui.association
 
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.base.VMBaseActivity
-import io.legado.app.databinding.ActivityTranslucenceBinding
+import io.legado.app.base.BaseComposeActivity
+import io.legado.app.feature.rss.source.RssSourceImportDialog
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.viewbindingdelegate.viewBinding
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.Locale
 
 /**
  * 网络一键导入
  * 格式: legado://import/{path}?src={url}
  */
-class OnLineImportActivity :
-    VMBaseActivity<ActivityTranslucenceBinding, OnLineImportViewModel>() {
+class OnLineImportActivity : BaseComposeActivity(transparent = true, imageBg = false) {
 
-    override val binding by viewBinding(ActivityTranslucenceBinding::inflate)
-    override val viewModel by viewModels<OnLineImportViewModel>()
+    private val viewModel by viewModels<OnLineImportViewModel>()
+    private val rssImportSource = MutableStateFlow<String?>(null)
+
+    @Composable
+    override fun Content() {
+        val source by rssImportSource.collectAsStateWithLifecycle()
+        source?.let { RssSourceImportDialog(it, onClose = ::finish) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewModel.successLive.observe(this) {
             when (it.first) {
                 "bookSource" -> openComposeBookSourceImport(it.second)
-                "rssSource" -> showDialogFragment(
-                    ImportRssSourceDialog(it.second, true)
-                )
+                "rssSource" -> rssImportSource.value = it.second
                 "replaceRule" -> showDialogFragment(
                     ImportReplaceRuleDialog(it.second, true)
                 )
@@ -64,9 +70,7 @@ class OnLineImportActivity :
             when (it.path) {
                 "/bookSource" -> openComposeBookSourceImport(url)
 
-                "/rssSource" -> showDialogFragment(
-                    ImportRssSourceDialog(url, true)
-                )
+                "/rssSource" -> rssImportSource.value = url
 
                 "/replaceRule" -> showDialogFragment(
                     ImportReplaceRuleDialog(url, true)
@@ -92,9 +96,7 @@ class OnLineImportActivity :
                 )
                 "/importonline" -> when (it.host) {
                     "booksource" -> openComposeBookSourceImport(url)
-                    "rsssource" -> showDialogFragment(
-                        ImportRssSourceDialog(url, true)
-                    )
+                    "rsssource" -> rssImportSource.value = url
                     "replace" -> showDialogFragment(
                         ImportReplaceRuleDialog(url, true)
                     )
