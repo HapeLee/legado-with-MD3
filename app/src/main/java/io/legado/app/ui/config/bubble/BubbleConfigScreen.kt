@@ -12,14 +12,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,10 +46,11 @@ import io.legado.app.help.config.BubblePackageManager
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.AppTextFieldSurface
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AppIconButton
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -52,9 +58,11 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
-import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -168,7 +176,7 @@ fun BubbleConfigScreen(
     }
 
     state.editor?.let { editor ->
-        BubbleEditDialog(
+        BubbleEditSheet(
             state = editor,
             previewCache = previewCache,
             onConfigChange = { onIntent(BubbleConfigIntent.UpdateDraft(it)) },
@@ -373,7 +381,7 @@ private fun BubbleHelpGroup() {
 }
 
 @Composable
-private fun BubbleEditDialog(
+private fun BubbleEditSheet(
     state: BubbleEditorState,
     previewCache: BubblePreviewCache,
     onConfigChange: (BubblePackageManager.Config) -> Unit,
@@ -383,87 +391,107 @@ private fun BubbleEditDialog(
     val config = state.config
     var pickerSlot by remember { mutableStateOf<BubbleColorSlot?>(null) }
 
-    AppAlertDialog(
+    AppModalBottomSheet(
         show = true,
+        onDismissRequest = onDismiss,
         title = if (state.original == null) {
             stringResource(R.string.bubble_add_manual)
         } else {
             stringResource(R.string.bubble_edit)
         },
-        onDismissRequest = onDismiss,
-        content = {
-            Column {
-                AppTextField(
-                    value = config.name,
-                    onValueChange = { onConfigChange(config.copy(name = it)) },
-                    label = stringResource(R.string.bubble_name),
-                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-                SliderSettingItem(
-                    title = stringResource(R.string.bubble_size_scale),
-                    value = config.sizeScale.coerceIn(
-                        BubblePackageManager.MIN_SIZE_SCALE,
-                        BubblePackageManager.MAX_SIZE_SCALE,
-                    ),
-                    defaultValue = 1f,
-                    valueRange =
-                        BubblePackageManager.MIN_SIZE_SCALE..BubblePackageManager.MAX_SIZE_SCALE,
-                    valueLabel = { "%.1f×".format(it) },
-                    decimal = true,
-                    onValueChange = { onConfigChange(config.copy(sizeScale = it)) },
-                )
-
-                BubbleColorRow(
-                    title = stringResource(R.string.bubble_color_day_normal),
-                    color = config.dayNormalColor,
-                    onClick = { pickerSlot = BubbleColorSlot.DayNormal },
-                )
-                BubbleColorRow(
-                    title = stringResource(R.string.bubble_color_day_emphasis),
-                    color = config.dayEmphasisColor,
-                    onClick = { pickerSlot = BubbleColorSlot.DayEmphasis },
-                )
-                BubbleColorRow(
-                    title = stringResource(R.string.bubble_color_night_normal),
-                    color = config.nightNormalColor,
-                    onClick = { pickerSlot = BubbleColorSlot.NightNormal },
-                )
-                BubbleColorRow(
-                    title = stringResource(R.string.bubble_color_night_emphasis),
-                    color = config.nightEmphasisColor,
-                    onClick = { pickerSlot = BubbleColorSlot.NightEmphasis },
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-                AppTextField(
-                    value = config.svgTemplate,
-                    onValueChange = { onConfigChange(config.copy(svgTemplate = it)) },
-                    label = stringResource(R.string.bubble_svg_template),
-                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
-                    minLines = 4,
-                    maxLines = 8,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BubbleEditPreview(state = state, previewCache = previewCache)
-                }
-            }
+        startAction = {
+            MediumTonalButton(
+                onClick = onDismiss,
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(R.string.close),
+            )
         },
-        confirmText = stringResource(R.string.bubble_save),
-        confirmEnabled = !state.saving && config.name.isNotBlank(),
-        onConfirm = onConfirm,
-        onDismiss = onDismiss,
-    )
+        endAction = {
+            MediumTonalButton(
+                onClick = onConfirm,
+                enabled = !state.saving && config.name.isNotBlank(),
+                icon = Icons.Default.Check,
+                contentDescription = stringResource(R.string.action_save),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            AppTextFieldSurface(
+                value = config.name,
+                onValueChange = { onConfigChange(config.copy(name = it)) },
+                label = stringResource(R.string.bubble_name),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            TinySliderSettingItem(
+                title = stringResource(R.string.bubble_size_scale),
+                value = config.sizeScale.coerceIn(
+                    BubblePackageManager.MIN_SIZE_SCALE,
+                    BubblePackageManager.MAX_SIZE_SCALE,
+                ),
+                valueRange =
+                    BubblePackageManager.MIN_SIZE_SCALE..BubblePackageManager.MAX_SIZE_SCALE,
+                stepSize = 0.1f,
+                showDecimal = true,
+                valueFormat = { "%.1f×".format(it) },
+                onValueChange = { onConfigChange(config.copy(sizeScale = it)) },
+            )
+
+            TinyColorSettingItem(
+                title = stringResource(R.string.bubble_color_day_normal),
+                colorValue = config.dayNormalColor.toColorIntOrZero(),
+                description = config.dayNormalColor
+                    ?: stringResource(R.string.bubble_color_follow_theme),
+                onClick = { pickerSlot = BubbleColorSlot.DayNormal },
+            )
+            TinyColorSettingItem(
+                title = stringResource(R.string.bubble_color_day_emphasis),
+                colorValue = config.dayEmphasisColor.toColorIntOrZero(),
+                description = config.dayEmphasisColor
+                    ?: stringResource(R.string.bubble_color_follow_theme),
+                onClick = { pickerSlot = BubbleColorSlot.DayEmphasis },
+            )
+            TinyColorSettingItem(
+                title = stringResource(R.string.bubble_color_night_normal),
+                colorValue = config.nightNormalColor.toColorIntOrZero(),
+                description = config.nightNormalColor
+                    ?: stringResource(R.string.bubble_color_follow_theme),
+                onClick = { pickerSlot = BubbleColorSlot.NightNormal },
+            )
+            TinyColorSettingItem(
+                title = stringResource(R.string.bubble_color_night_emphasis),
+                colorValue = config.nightEmphasisColor.toColorIntOrZero(),
+                description = config.nightEmphasisColor
+                    ?: stringResource(R.string.bubble_color_follow_theme),
+                onClick = { pickerSlot = BubbleColorSlot.NightEmphasis },
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            AppTextFieldSurface(
+                value = config.svgTemplate,
+                onValueChange = { onConfigChange(config.copy(svgTemplate = it)) },
+                label = stringResource(R.string.bubble_svg_template),
+                minLines = 4,
+                maxLines = 8,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                BubbleEditPreview(state = state, previewCache = previewCache)
+            }
+        }
+    }
 
     pickerSlot?.let { slot ->
         ColorPickerSheet(
@@ -513,41 +541,10 @@ private fun BubbleEditPreview(
     }
 }
 
-@Composable
-private fun BubbleColorRow(
-    title: String,
-    color: String?,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AppText(
-            text = title,
-            modifier = Modifier.weight(1f),
-            style = LegadoTheme.typography.labelLarge,
-        )
-        AppText(
-            text = color ?: stringResource(R.string.bubble_color_follow_theme),
-            color = LegadoTheme.colorScheme.onSurfaceVariant,
-            style = LegadoTheme.typography.labelMedium,
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        val swatch = color?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
-            ?: LegadoTheme.colorScheme.surfaceVariant
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(swatch),
-        )
-    }
-}
+/** 配色未设置（null）时给色块按钮一个透明值，由 `AccentColorButton` 画成空圈。 */
+private fun String?.toColorIntOrZero(): Int = this?.takeIf { it.isNotBlank() }
+    ?.let { runCatching { android.graphics.Color.parseColor(it) }.getOrNull() }
+    ?: 0
 
 private enum class BubbleColorSlot {
     DayNormal,

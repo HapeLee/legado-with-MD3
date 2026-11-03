@@ -9,6 +9,7 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import java.util.Locale
 
 /**
  * 网络一键导入
@@ -54,6 +55,12 @@ class OnLineImportActivity :
                 finish()
                 return
             }
+            // 气泡包单独前置：兼容 ARC 的 `legado://import/bubblePackage` 与遗留 `legado:///bubble`，
+            // 两者 path 大小写不固定，直接进气泡包导入，不能落到 determineType 的 readConfig 分支
+            if (isBubbleImportPath(it.path)) {
+                importBubblePack(url)
+                return
+            }
             when (it.path) {
                 "/bookSource" -> openComposeBookSourceImport(url)
 
@@ -76,9 +83,6 @@ class OnLineImportActivity :
                 "/theme" -> showDialogFragment(
                     ImportThemeDialog(url, true)
                 )
-                "/bubblePack" -> viewModel.getBytes(url) { bytes ->
-                    viewModel.importBubblePack(bytes, this::finallyDialog)
-                }
 
                 "/readConfig" -> viewModel.getBytes(url) { bytes ->
                     viewModel.importReadConfig(bytes, this::finallyDialog)
@@ -94,15 +98,25 @@ class OnLineImportActivity :
                     "replace" -> showDialogFragment(
                         ImportReplaceRuleDialog(url, true)
                     )
-                    "bubble", "bubblepack" -> viewModel.getBytes(url) { bytes ->
-                        viewModel.importBubblePack(bytes, this::finallyDialog)
-                    }
+                    "bubble", "bubblepack" -> importBubblePack(url)
                     else -> {
                         viewModel.determineType(url, this::finallyDialog)
                     }
                 }
                 else -> viewModel.determineType(url, this::finallyDialog)
             }
+        }
+    }
+
+    /** ARC 的 `legado://import/bubblePackage` 与遗留 `legado:///bubble` 都导向气泡包导入。 */
+    private fun isBubbleImportPath(path: String?): Boolean = when (path?.lowercase(Locale.ROOT)) {
+        "/bubblepack", "/bubblepackage", "/bubble" -> true
+        else -> false
+    }
+
+    private fun importBubblePack(url: String) {
+        viewModel.getBytes(url) { bytes ->
+            viewModel.importBubblePack(bytes, this::finallyDialog)
         }
     }
 

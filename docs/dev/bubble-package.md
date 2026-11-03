@@ -36,7 +36,8 @@ scheme 形式：
 首次请求使用书源请求头与 Cookie，后续主文档可经 OkHttp 拦截并重新注入脚本，
 `config` 控制高度/拖拽/圆角等。点赞回复等交互书源无需改动。
 
-`paragraphRule:` / `rule:` 类段落规则动作目前不支持，点击会提示。
+`paragraphRule:` / `rule:` 类段落规则动作**未移植**，点击只给出明确提示，不会静默失败或降级成书源 JS。
+原因见下方「已知缺口」：ARC 的段落规则是独立子系统，不属于气泡包兼容范围。
 
 ## 气泡包目录契约
 
@@ -91,6 +92,34 @@ bubblePackages/<dirName>/
   旧树 → backup、staging → root、装前装后逐包验清单，失败回滚旧树
 - 旧版备份里的 `bubblePackages.zip` 仍按逐包原子安装（合并式）恢复，保证跨版本可用
 
+## 与 Legado-Arc 的互通
+
+气泡包是跨版本可搬运的资产，导入/导出与 ARC 双向兼容，依据是同一份契约而不是"对齐过"的近似：
+
+| 环节 | 口径 |
+|---|---|
+| `bubble.json` | 字段集合与 ARC 的 `BubblePackageManager.Config` 完全相同；`formatVersion` 只允许 1–2 |
+| 校验 | `PackageResourcePolicy`、`BubbleSvgPolicy`、`BubbleDirectoryTransaction` 与 ARC 逐行一致，拒绝与回滚条件相同 |
+| 导出 zip | `ZipUtils.zipFile(dir, zip)`，条目形如 `<dirName>/bubble.json`、`<dirName>/assets/...` |
+| 导入 zip | 按条目名定位 `bubble.json`（`BubblePackageArchive`），根目录或单层包裹目录都能识别，因此 ARC 导出的包可直接导入，反之亦然 |
+| 模板占位 | `${num}` / `$num` / `{{num}}` / `displayText` / `color` / `displayColor` 的替换正则与 ARC 相同 |
+| 备份 | 整棵 `bubblePackages/` 目录随备份 zip 走，排除 `temp`、`remote_cache`、`builtin_default` |
+| 设置 | `paragraphBubblePackage` / `forceSoftwareParagraphBubble` 键名与 ARC 一致，随 `config.xml` 迁移，跨版本恢复后当前包与强制开关仍生效 |
+
+网络导入与深链（`legado` / `yuedu` 两个 scheme 都已在 `OnLineImportActivity` 注册，无 path 前缀限制，路径比较不区分大小写）：
+
+```text
+legado://import/bubblePackage?src=<encoded-url>   # ARC 现行链接
+legado://import/bubblePack?src=<encoded-url>      # 本仓库历史链接
+legado:///bubble?src=<encoded-url>                # ARC 遗留链接
+legado://importonline/bubble|bubblepack           # 历史 host 形式
+```
+
+同名目录不覆盖：手工导入走 `uniqueDirName`（`x` → `x_2`），只有 ARC 的云端下载带覆盖语义。
+
+深链分派没有自动化覆盖：`OnLineImportActivity` 没有测试宿主，改动需手工把上面四种链接各走一次
+（含一个大小写变体与一个 `yuedu` scheme）。
+
 ## 决策记录
 
 **为什么不用排版级 `ReaderElement.Review`？**
@@ -115,6 +144,9 @@ Legado-Arc 的 `TextChapterLayout` 里排版级 `ReviewColumn` 分支是整段�
 ## 已知缺口
 
 - 云同步（上传/下载/远端过期合并）未做：仓库没有对应云存储基建
+- 段落规则动作（`paragraphRule:` / `rule:`）属于待移植能力，不是气泡包缺口：ARC 侧是独立子系统
+  （`ParagraphRule` / `ParagraphRuleVar` / `BookParagraphRule` 三张表、`ParagraphRuleProcessor` 执行引擎、
+  管理与编辑页、导入冲突策略，约 3000 行），需要单独切片，且要先接进内容处理链路
 - 服务端段评计数未做：只有图标没有数字的书源仍显示原图
 - 管理页没有 ARC 的全屏 SVG 编辑器、文件分享、云端容器选择
 - EPUB/纯文本直读没有等价的气泡预生成链路（架构与 ARC 的 HTML 阅读器不同）
