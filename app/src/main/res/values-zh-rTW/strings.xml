@@ -1789,6 +1789,7 @@
     <string name="web_service_local_network_permission_denied">Web 服務需要區域網路權限，否則其他裝置無法存取</string>
     <string name="about_privacy_policy_title">隱私政策</string>
     <string name="about_license_title">開源許可</string>
+    <string name="about_third_party_licenses">第三方開源授權</string>
     <string name="about_disclaimer_title">免責聲明</string>
     <string name="about_installed_version_title">已安裝版本</string>
     <string name="about_current_version">已安裝版本</string>
