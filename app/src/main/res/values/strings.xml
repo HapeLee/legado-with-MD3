@@ -2644,6 +2644,10 @@
     <string name="folder_list_style">Folder List Style</string>
     <string name="horizontal_cover_count">Horizontal Cover Count</string>
     <string name="grid_cover_width">Grid Cover Width</string>
+    <string name="bookshelf_grid_fixed_columns">Fixed Column Count</string>
+    <string name="bookshelf_grid_fixed_columns_summary">When off, columns follow the cover width</string>
+    <string name="bookshelf_grid_fixed_cover_width">Fixed Cover Width</string>
+    <string name="bookshelf_grid_fixed_cover_width_summary">When off, covers fill the column width and scale with the column count</string>
     <string name="day_card_bg_color">Day Card Background Color</string>
     <string name="night_card_bg_color">Night Card Background Color</string>
     <string name="compact_details">Compact Details</string>

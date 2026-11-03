@@ -2621,6 +2621,10 @@
     <string name="folder_list_style">文件夹列表样式</string>
     <string name="horizontal_cover_count">横排封面数量</string>
     <string name="grid_cover_width">网格封面宽度</string>
+    <string name="bookshelf_grid_fixed_columns">固定列数</string>
+    <string name="bookshelf_grid_fixed_columns_summary">关闭后按封面宽度自动计算列数</string>
+    <string name="bookshelf_grid_fixed_cover_width">固定封面宽度</string>
+    <string name="bookshelf_grid_fixed_cover_width_summary">关闭后封面铺满列宽，随列数自动缩放</string>
     <string name="day_card_bg_color">日间卡片背景颜色</string>
     <string name="night_card_bg_color">夜间卡片背景颜色</string>
     <string name="compact_details">精简详情</string>

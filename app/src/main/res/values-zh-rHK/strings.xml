@@ -1959,6 +1959,10 @@
     <string name="global_setting">全局設定</string>
     <string name="grid">網格</string>
     <string name="grid_cover_width">網格封面寬度</string>
+    <string name="bookshelf_grid_fixed_columns">固定列數</string>
+    <string name="bookshelf_grid_fixed_columns_summary">關閉後按封面寬度自動計算列數</string>
+    <string name="bookshelf_grid_fixed_cover_width">固定封面寬度</string>
+    <string name="bookshelf_grid_fixed_cover_width_summary">關閉後封面鋪滿列寬，隨列數自動縮放</string>
     <string name="group_add">新建分組</string>
     <string name="group_management">分組管理</string>
     <string name="group_name_empty">分組名稱不能為空</string>

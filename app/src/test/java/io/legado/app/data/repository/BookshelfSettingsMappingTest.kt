@@ -23,8 +23,8 @@ class BookshelfSettingsMappingTest {
     }
 
     @Test
-    fun `Bookshelf 51 键写读映射逐字段对应`() {
-        assertEquals(51, BookshelfSettings().toPrefMap().size)
+    fun `Bookshelf 53 键写读映射逐字段对应`() {
+        assertEquals(53, BookshelfSettings().toPrefMap().size)
         bookshelfMappingSamples().forEach { expected ->
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
             assertEquals(
@@ -129,6 +129,8 @@ private fun bookshelfMappingSamples(): List<BookshelfSettings> {
         bookshelfGroupCoverCount = 123,
         bookshelfListCoverWidth = 124,
         bookshelfGridCoverWidth = 125,
+        bookshelfGridFixedColumns = false,
+        bookshelfGridFixedCoverWidth = false,
         bookshelfSearchActionDirectToSearch = false,
         autoRefreshBook = false,
         saveTabPosition = 987654321L,
@@ -158,6 +160,8 @@ private fun bookshelfMappingSamples(): List<BookshelfSettings> {
         base.copy(bookshelfTitleSmallFont = true),
         base.copy(bookshelfTitleCenter = true),
         base.copy(bookshelfCoverShadow = true),
+        base.copy(bookshelfGridFixedColumns = true),
+        base.copy(bookshelfGridFixedCoverWidth = true),
         base.copy(bookshelfSearchActionDirectToSearch = true),
         base.copy(autoRefreshBook = true),
     )
@@ -212,6 +216,8 @@ private fun BookshelfSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bookshelfGroupCoverCount to bookshelfGroupCoverCount,
     PreferKey.bookshelfListCoverWidth to bookshelfListCoverWidth,
     PreferKey.bookshelfGridCoverWidth to bookshelfGridCoverWidth,
+    PreferKey.bookshelfGridFixedColumns to bookshelfGridFixedColumns,
+    PreferKey.bookshelfGridFixedCoverWidth to bookshelfGridFixedCoverWidth,
     PreferKey.bookshelfSearchActionDirectToSearch to bookshelfSearchActionDirectToSearch,
     PreferKey.autoRefresh to autoRefreshBook,
     PreferKey.bookshelfSelectedGroupId to saveTabPosition,

@@ -88,7 +88,8 @@ fun BookshelfGridItem(
     titleMaxLines: Int = 2,
     coverShadow: Boolean = false,
     accessibilityLabel: String? = null,
-    coverWidth: Int = 84,
+    /** null = 铺满列宽（封面尺寸随列数变化）；非 null = 固定宽度，列宽不足时被压缩。 */
+    coverWidth: Int? = null,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
@@ -104,7 +105,10 @@ fun BookshelfGridItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .align(Alignment.Center)
-                .width(coverWidth.dp)
+                .then(
+                    if (coverWidth != null) Modifier.width(coverWidth.dp)
+                    else Modifier.fillMaxWidth()
+                )
         ) {
             BookshelfItemCover(coverShadow = coverShadow, cover = cover) {
                 if (gridStyle == 1) {
@@ -147,6 +151,15 @@ fun BookshelfGridItem(
         }
     }
 }
+
+/**
+ * 网格封面宽度：固定封面时取设置值，否则返回 null（铺满列宽，随列数缩放）。
+ *
+ * 书籍网格与分组网格共用这一份口径：列数由封面宽度推出时，单元格宽度必然不小于
+ * 封面宽度 + 左右内边距，铺满不会把分组缩略图压成一格。
+ */
+private val BookshelfSettings.gridCoverWidthOrNull: Int?
+    get() = bookshelfGridCoverWidth.takeIf { bookshelfGridFixedCoverWidth }
 
 @Composable
 fun BookshelfListItem(
@@ -481,7 +494,7 @@ fun BookGroupItemGrid(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
-        coverWidth = settings.bookshelfGridCoverWidth,
+        coverWidth = settings.gridCoverWidthOrNull,
         onClick = onClick,
         onLongClick = onLongClick
     )
@@ -837,7 +850,7 @@ fun BookItem(
             titleMaxLines = titleMaxLines,
             coverShadow = coverShadow,
             accessibilityLabel = if (locked) lockedHiddenLabel else accessibilityLabel,
-            coverWidth = settings.bookshelfGridCoverWidth,
+            coverWidth = settings.gridCoverWidthOrNull,
             onClick = onClick,
             onLongClick = onLongClick,
         )
@@ -1023,7 +1036,7 @@ private fun PrivateLockedBookItem(
             titleMaxLines = titleMaxLines,
             coverShadow = coverShadow,
             accessibilityLabel = hiddenLabel,
-            coverWidth = settings.bookshelfGridCoverWidth,
+            coverWidth = settings.gridCoverWidthOrNull,
             onClick = onClick,
             onLongClick = onLongClick,
         )

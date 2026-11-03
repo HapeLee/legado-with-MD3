@@ -51,6 +51,10 @@ data class BookshelfSettings(
     val bookshelfGroupCoverCount: Int = 4,
     val bookshelfListCoverWidth: Int = 84,
     val bookshelfGridCoverWidth: Int = 120,
+    /** 网格固定列数；关闭后列数由 [bookshelfGridCoverWidth] 推出（两者至少开一个）。 */
+    val bookshelfGridFixedColumns: Boolean = true,
+    /** 网格固定封面宽度；关闭后封面铺满列宽（两者至少开一个）。 */
+    val bookshelfGridFixedCoverWidth: Boolean = true,
     val bookshelfSearchActionDirectToSearch: Boolean = true,
     val autoRefreshBook: Boolean = false,
     val saveTabPosition: Long = BookGroup.IdAll,

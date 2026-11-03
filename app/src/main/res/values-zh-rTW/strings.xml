@@ -2438,6 +2438,10 @@
     <string name="folder_list_style">資料夾列表樣式</string>
     <string name="horizontal_cover_count">水平封面數量</string>
     <string name="grid_cover_width">網格封面寬度</string>
+    <string name="bookshelf_grid_fixed_columns">固定列數</string>
+    <string name="bookshelf_grid_fixed_columns_summary">關閉後按封面寬度自動計算列數</string>
+    <string name="bookshelf_grid_fixed_cover_width">固定封面寬度</string>
+    <string name="bookshelf_grid_fixed_cover_width_summary">關閉後封面鋪滿列寬，隨列數自動縮放</string>
     <string name="day_card_bg_color">日間卡片背景色</string>
     <string name="night_card_bg_color">夜間卡片背景色</string>
     <string name="compact_details">精簡詳情</string>
