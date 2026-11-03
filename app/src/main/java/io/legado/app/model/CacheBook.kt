@@ -186,10 +186,31 @@ object CacheBook {
     private var lastSummaryUpdateTime = 0L
     private const val SUMMARY_UPDATE_THROTTLE_MS = 100L
 
+    // 完成的下载单元：每次成功都 +1，即使同一章被重复缓存。进度分母靠它与 waiting/running/failure
+    // 相加得出，必须保持「每出队一章就有一个归宿」，否则重复成功会让进度永远差一章。
     private val successDownloadCount = AtomicInteger(0)
+    // 会话内「已缓存」按 (书, 章节) 去重：重复派发、换源补缓存同一章只算一章，
+    // 只用于通知文案，不参与进度计算。按书分组，会话结束时整体清空。
+    private val uniqueCachedCount = AtomicInteger(0)
+    private val successChapterIndices = ConcurrentHashMap<String, MutableSet<Int>>()
 
     val cacheBookMap: ConcurrentHashMap<String, CacheBookModel>
         get() = coordinator.taskMap
+
+    /** 记录一章真正缓存成功；返回值是本次会话的完成单元数。 */
+    private fun markChapterCached(bookUrl: String, chapterIndex: Int): Int {
+        val indices = successChapterIndices.computeIfAbsent(bookUrl) { ConcurrentHashMap.newKeySet() }
+        if (indices.add(chapterIndex)) {
+            uniqueCachedCount.incrementAndGet()
+        }
+        return successDownloadCount.incrementAndGet()
+    }
+
+    private fun clearSuccessCount() {
+        successChapterIndices.clear()
+        uniqueCachedCount.set(0)
+        successDownloadCount.set(0)
+    }
 
     fun errorIndices(bookUrl: String): Set<Int> {
         return stateStore.bookState(bookUrl)?.failedIndices.orEmpty()
@@ -602,7 +623,7 @@ object CacheBook {
         cacheBookMap.forEach { (_, model) -> model.stop() }
         cacheBookMap.clear()
         synchronized(explicitFifo) { explicitFifo.clear() }
-        successDownloadCount.set(0)
+        clearSuccessCount()
         pendingRemoveRequests.values.forEach { it.complete(false) }
         pendingRemoveRequests.clear()
         clearPendingAdmissions()
@@ -629,7 +650,7 @@ object CacheBook {
             cacheBookMap.remove(it)
             synchronized(explicitFifo) { explicitFifo.remove(it) }
         }
-        successDownloadCount.set(0)
+        clearSuccessCount()
         pendingRemoveRequests.values.forEach { it.complete(false) }
         pendingRemoveRequests.clear()
         clearPendingAdmissions()
@@ -693,7 +714,7 @@ object CacheBook {
         } else {
             0
         }
-        return "下载中:$downloadingCount | 等待:$waitingCount | 暂停:$pausedCount | 失败:${stateStore.state.totalFailure} | 已缓存:${successDownloadCount.get()}"
+        return "下载中:$downloadingCount | 等待:$waitingCount | 暂停:$pausedCount | 失败:${stateStore.state.totalFailure} | 已缓存:${uniqueCachedCount.get()}"
     }
 
     private fun CacheDownloadRequest.hasValidSelection(): Boolean {
@@ -808,7 +829,8 @@ object CacheBook {
         override val cacheBookMap: ConcurrentHashMap<String, CacheBookModel>
             get() = CacheBook.cacheBookMap
 
-        override fun incrementSuccessCount(): Int = CacheBook.successDownloadCount.incrementAndGet()
+        override fun incrementSuccessCount(bookUrl: String, chapterIndex: Int): Int =
+            CacheBook.markChapterCached(bookUrl, chapterIndex)
         override fun onTaskQueuesChanged(bookUrl: String) {
             CacheBook.notifyTaskQueuesChanged(bookUrl)
         }

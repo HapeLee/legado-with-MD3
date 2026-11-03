@@ -191,7 +191,7 @@ class CacheBookModelResumeTest {
     private class FakeHost : CacheBookModel.Host {
         override val stateStore = CacheDownloadStateStore()
         override val cacheBookMap = ConcurrentHashMap<String, CacheBookModel>()
-        override fun incrementSuccessCount(): Int = 0
+        override fun incrementSuccessCount(bookUrl: String, chapterIndex: Int): Int = 0
         override fun onTaskQueuesChanged(bookUrl: String) = Unit
         override fun onTaskRemoved(bookUrl: String, clearState: Boolean) = Unit
         override fun onExplicitBookQueued(bookUrl: String) = Unit

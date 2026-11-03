@@ -40,7 +40,7 @@ class CacheBookModel(
     interface Host {
         val stateStore: CacheDownloadStateStore
         val cacheBookMap: ConcurrentHashMap<String, CacheBookModel>
-        fun incrementSuccessCount(): Int
+        fun incrementSuccessCount(bookUrl: String, chapterIndex: Int): Int
         fun onTaskQueuesChanged(bookUrl: String)
         fun onTaskRemoved(bookUrl: String, clearState: Boolean = false)
         fun onExplicitBookQueued(bookUrl: String)
@@ -342,7 +342,7 @@ class CacheBookModel(
         synchronized(this) {
             onDownloadSet.remove(chapter.index)
             chapterTasks.remove(chapter.index)
-            host.incrementSuccessCount()
+            host.incrementSuccessCount(book.bookUrl, chapter.index)
             retryCountMap.remove(chapter.index)
             host.stateStore.markSuccess(book.bookUrl, chapter.index)
         }

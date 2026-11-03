@@ -1276,8 +1276,8 @@ sealed interface ReadBookEffect {
     data class InvalidateReaderImage(val source: String) : ReadBookEffect
     data class InvalidateReaderImages(val sources: Set<String>) : ReadBookEffect
 
-    // Download chapters — Activity calls CacheBook.start()
-    data class DownloadChapters(val start: Int, val end: Int) : ReadBookEffect
+    // Download chapters — Activity calls CacheBook.start()；只带真正需要下载的章节（已剔除卷与已缓存）
+    data class DownloadChapters(val indices: List<Int>) : ReadBookEffect
 
     // Other route-level Activity operations
     data object SetOrientation : ReadBookEffect

@@ -1608,17 +1608,7 @@ class ReadBookViewModel(
                 _effects.tryEmit(ReadBookEffect.PageAnimChanged)
             }
 
-            is ReadBookIntent.DownloadChapters -> {
-                _effects.tryEmit(ReadBookEffect.DownloadChapters(intent.start, intent.end))
-                val count = intent.end - intent.start + 1
-                if (count > 0) {
-                    _effects.tryEmit(
-                        ReadBookEffect.ShowToast(
-                            context.getString(R.string.start_downloading_chapters, count)
-                        )
-                    )
-                }
-            }
+            is ReadBookIntent.DownloadChapters -> cacheChapters(intent.start, intent.end)
 
             is ReadBookIntent.SaveChapterContent -> {
                 ReadBook.book?.let {
@@ -2200,6 +2190,45 @@ class ReadBookViewModel(
     private suspend fun currentChapter(): BookChapter? {
         val book = ReadBook.book ?: return null
         return bookRepository.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+    }
+
+    /**
+     * 阅读页「离线缓存」：只把真正需要下载的章节交给队列。
+     *
+     * 判定与 CacheBookModel 出队时的跳过条件一致（卷、无正文、显式下载所需图片已完整），
+     * 所以行为不变，只是不再为已缓存章节排队。章节正文/图片校验较重，必须留在 IO 上。
+     */
+    private fun cacheChapters(startIndex: Int, endIndex: Int) {
+        val book = ReadBook.book ?: return
+        if (endIndex < startIndex) return
+        execute {
+            bookRepository.getChapters(book.bookUrl, startIndex, endIndex)
+                .asSequence()
+                .filterNot { it.isVolume }
+                .filterNot { BookHelp.hasExplicitImageContent(book, it) }
+                .map { it.index }
+                .toList()
+        }.onSuccess { indices ->
+            if (indices.isEmpty()) {
+                _effects.tryEmit(
+                    ReadBookEffect.ShowToast(context.getString(R.string.all_chapters_cached))
+                )
+                return@onSuccess
+            }
+            _effects.tryEmit(ReadBookEffect.DownloadChapters(indices))
+            _effects.tryEmit(
+                ReadBookEffect.ShowToast(
+                    context.getString(R.string.start_downloading_chapters, indices.size)
+                )
+            )
+        }.onError {
+            AppLog.put("筛选待缓存章节失败", it)
+            _effects.tryEmit(
+                ReadBookEffect.ShowToast(
+                    context.getString(R.string.error_load_msg, it.localizedMessage)
+                )
+            )
+        }
     }
 
     // 开书 / 目录 / 换源 / 进度同步归 [ReadBookLoadDelegate]，这里只留外部入口的转发。
