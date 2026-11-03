@@ -47,6 +47,7 @@ import io.legado.app.model.ReadBook.callBack
 import io.legado.app.model.ReadBook.publishSnapshot
 import io.legado.app.model.ReadBook.renderCallBack
 import io.legado.app.model.ReadBook.snapshot
+import io.legado.app.model.cache.CACHE_DOWNLOAD_RETRY_LIMIT
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.localBook.TextFile
 import io.legado.app.model.reader.ReaderChapterInput
@@ -228,6 +229,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private const val AUTO_SAVE_INTERVAL = 120 * 1000L
 
     private const val MIN_READ_DURATION = 10 * 1000L
+
+    /**
+     * 翻页后等待这么久再真正入队相邻章预下载。连续翻页会取消并重排 [preDownloadTask]，
+     * 所以这段等待天然起到防抖作用；它只在预下载任务开头出现一次，不能逐章等待。
+     */
+    private const val PRE_DOWNLOAD_SETTLE_DELAY_MS = 1_000L
 
     // region 会话所有权：外部只能通过下列语义化命令改写会话字段（book/durChapterIndex/durChapterPos
     // 已 private set）。判定用意图化谓词替代裸实体比较，避免调用方直接持有可变 Book。
@@ -1558,7 +1565,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (BookHelp.hasContent(book, chapter)) {
             downloadedChapters.add(chapter.index)
         } else {
-            delay(1000)
             if (addLoading(index)) {
                 download(
                     scope = downloadScope,
@@ -1946,12 +1952,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             }
             preDownloadTask?.cancel()
             preDownloadTask = launch(IO) {
+                // 翻页安定期：只在本任务开头等一次，逐章再等会让 N 章预下载拖成 N 秒。
+                delay(PRE_DOWNLOAD_SETTLE_DELAY_MS)
                 //向后预下载（当前章之后的章节）
                 if (backward > 0) launch {
                     val maxChapterIndex = min(durChapterIndex + backward, chapterSize)
                     for (i in durChapterIndex + 1..maxChapterIndex) {
                         if (downloadedChapters.contains(i)) continue
-                        if ((downloadFailChapters[i] ?: 0) >= 3) continue
+                        if ((downloadFailChapters[i] ?: 0) >= CACHE_DOWNLOAD_RETRY_LIMIT) continue
                         downloadIndex(i)
                     }
                 }
@@ -1960,7 +1968,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     val minChapterIndex = maxOf(durChapterIndex - forward, 0)
                     for (i in durChapterIndex - 1 downTo minChapterIndex) {
                         if (downloadedChapters.contains(i)) continue
-                        if ((downloadFailChapters[i] ?: 0) >= 3) continue
+                        if ((downloadFailChapters[i] ?: 0) >= CACHE_DOWNLOAD_RETRY_LIMIT) continue
                         downloadIndex(i)
                     }
                 }

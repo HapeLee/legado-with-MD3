@@ -8,6 +8,7 @@ import io.legado.app.exception.ConcurrentException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.coroutine.CompositeCoroutine
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.model.cache.CACHE_DOWNLOAD_RETRY_LIMIT
 import io.legado.app.model.cache.CacheChapterProgress
 import io.legado.app.model.cache.CacheChapterProgressPhase
 import io.legado.app.model.cache.CacheDownloadCandidate
@@ -17,6 +18,7 @@ import io.legado.app.model.cache.CacheDownloadRequest
 import io.legado.app.model.cache.CacheDownloadSource
 import io.legado.app.model.cache.CacheDownloadStateStore
 import io.legado.app.model.cache.ChapterSelection
+import io.legado.app.model.cache.cacheRetryBackoffMs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -366,13 +368,20 @@ class CacheBookModel(
     private fun onPostError(chapter: BookChapter, error: Throwable) {
         synchronized(this) {
             val retryCount = retryCountMap[chapter.index] ?: 0
-            if (retryCount < 3 && !isStopped) {
+            if (retryCount < CACHE_DOWNLOAD_RETRY_LIMIT && !isStopped) {
                 queue.enqueue(ChapterSelection.Single(chapter.index))
             } else {
                 AppLog.put("下载${book.name}-${chapter.title}失败\n${error.localizedMessage}", error)
             }
             waitingRetry = false
         }
+    }
+
+    /** 本次失败后还会重试则返回重试序号（1 起），否则返回 0（不必再等退避）。 */
+    @Synchronized
+    private fun retryAttemptAfterFailure(index: Int): Int {
+        val attempt = retryCountMap[index] ?: 0
+        return if (attempt in 1 until CACHE_DOWNLOAD_RETRY_LIMIT && !isStopped) attempt else 0
     }
 
     private fun onError(chapter: BookChapter, error: Throwable) {
@@ -635,8 +644,10 @@ class CacheBookModel(
             }
         }.onError(IO) {
             onPreError(chapter, it)
+            // 按失败次数退避；用满次数的最后一次不再空等，避免整书在队首挂住。
+            val attempt = retryAttemptAfterFailure(chapter.index)
             try {
-                delay(1000)
+                if (attempt > 0) delay(cacheRetryBackoffMs(attempt))
             } finally {
                 onPostError(chapter, it)
             }
