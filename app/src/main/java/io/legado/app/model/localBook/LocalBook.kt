@@ -74,6 +74,9 @@ import java.io.InputStream
  */
 object LocalBook {
 
+    /** 批量导入的单块提交规模；同时约束块事务持锁时长与书表失效次数 */
+    private const val IMPORT_COMMIT_CHUNK = 200
+
     private val otherSettingsGateway get() = GlobalContext.get().get<OtherSettingsGateway>()
     private val readSettingsGateway get() = GlobalContext.get().get<ReadSettingsGateway>()
     private val importBookSettingsGateway get() = GlobalContext.get().get<ImportBookSettingsGateway>()
@@ -431,18 +434,43 @@ object LocalBook {
         return books
     }
 
+    /**
+     * 批量导入按块提交：逐本 insert 每本都会广播一次书表失效，书架各 Flow 收到后
+     * 对整架全量重查重排，数千本规模形成 O(n²) 分配风暴。
+     * 分块事务把失效次数压到块数，块内有界持锁。单本失败仍按本隔离；
+     * 整块事务失败时整块回滚并计入错误数，不阻断后续块。
+     */
     fun importFiles(uris: List<Uri>) {
         var errorCount = 0
-        uris.forEach { uri ->
-            val fileDoc = FileDoc.fromUri(uri, false)
-            kotlin.runCatching {
-                importFiles(uri)
-            }.onFailure {
-                AppLog.put("ImportFile Error:\nFile $fileDoc\n${it.localizedMessage}", it)
-                errorCount += 1
+        uris.chunked(IMPORT_COMMIT_CHUNK).forEach { chunk ->
+            var chunkErrorCount = 0
+            val chunkError = kotlin.runCatching {
+                appDb.runInTransaction {
+                    chunk.forEach { uri ->
+                        val fileDoc = FileDoc.fromUri(uri, false)
+                        kotlin.runCatching {
+                            importFiles(uri)
+                        }.onFailure {
+                            AppLog.put(
+                                "ImportFile Error:\nFile $fileDoc\n${it.localizedMessage}",
+                                it
+                            )
+                            chunkErrorCount += 1
+                        }
+                    }
+                }
+            }.exceptionOrNull()
+            errorCount += chunkErrorCount
+            if (chunkError != null) {
+                // 整块回滚，块内"成功"的书一并计为失败；单本失败已计，不重复加
+                errorCount += chunk.size - chunkErrorCount
+                AppLog.put(
+                    "ImportFiles Error:\nChunk rollback\n${chunkError.localizedMessage}",
+                    chunkError
+                )
             }
         }
-        if (errorCount == uris.size) {
+        if (uris.isNotEmpty() && errorCount >= uris.size) {
             throw NoStackTraceException("ImportFiles Error:\nAll input files occur error")
         }
     }

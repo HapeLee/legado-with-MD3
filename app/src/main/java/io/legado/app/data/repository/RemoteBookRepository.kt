@@ -18,7 +18,9 @@ import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.remote.RemoteBook
 import io.legado.app.model.remote.RemoteBookWebDav
 import io.legado.app.utils.isContentScheme
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
 
 class RemoteBookRepository(
     private val appDb: AppDatabase
@@ -123,8 +125,9 @@ class RemoteBookRepository(
         return book
     }
 
+    @OptIn(FlowPreview::class)
     fun flowLocalBooks(): Flow<List<Book>> {
-        return appDb.bookDao.flowLocal()
+        return appDb.bookDao.flowLocal().debounce(SHELF_INVALIDATE_DEBOUNCE_MS)
     }
 
     fun flowServers(): Flow<List<Server>> {

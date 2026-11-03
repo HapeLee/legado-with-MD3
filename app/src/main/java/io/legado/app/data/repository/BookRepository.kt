@@ -10,8 +10,17 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.ShelfBookSummary
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.withContext
+
+/**
+ * 书架/导入页列表 Flow 的失效防抖窗口：批量写入（整目录导入、恢复）期间每次书表
+ * 失效都会触发订阅方对整架全量重查重排，数千本规模下分配速率可压垮 GC；
+ * 200ms 合并突发失效，单本更新的刷新延迟无感。
+ */
+internal const val SHELF_INVALIDATE_DEBOUNCE_MS = 200L
 
 class BookRepository(
     private val bookDao: BookDao,
@@ -83,8 +92,10 @@ class BookRepository(
         }
     }
 
+    @OptIn(FlowPreview::class)
     fun flowBookShelfByGroup(groupId: Long): Flow<List<BookShelfItem>> {
         return bookDao.flowBookShelfByGroup(groupId)
+            .debounce(SHELF_INVALIDATE_DEBOUNCE_MS)
     }
 
     fun flowSystemGroupCounts(): Flow<List<GroupBookCount>> {

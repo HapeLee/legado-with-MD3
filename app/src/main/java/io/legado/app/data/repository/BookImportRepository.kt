@@ -5,7 +5,9 @@ import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.canSafelyRebindTo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
@@ -13,7 +15,10 @@ class BookImportRepository(
     private val appDb: AppDatabase,
 ) {
 
-    fun flowLocalBooks(): Flow<List<Book>> = appDb.bookDao.flowLocal().flowOn(Dispatchers.IO)
+    @OptIn(FlowPreview::class)
+    fun flowLocalBooks(): Flow<List<Book>> = appDb.bookDao.flowLocal()
+        .debounce(SHELF_INVALIDATE_DEBOUNCE_MS)
+        .flowOn(Dispatchers.IO)
 
     suspend fun findByFileName(fileName: String): Book? = withContext(Dispatchers.IO) {
         appDb.bookDao.getBookByFileName(fileName)
