@@ -1,7 +1,10 @@
 package io.legado.app.help.storage
 
+import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
+import io.legado.app.domain.model.BookMatchKey
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isType
 import java.io.File
 import java.net.URI
 
@@ -37,11 +40,20 @@ internal fun planBookRestore(
     val booksToDelete = linkedMapOf<String, Book>()
     val locationStatusCache = hashMapOf<String, LocalBookLocationStatus>()
 
+    val onlineGroupPlan = planOnlineBookGroups(restoredBooks, existingBooks)
+    onlineGroupPlan.followDeleteBookUrls.forEach { bookUrl ->
+        val existingBook = activeBooks.remove(bookUrl) ?: return@forEach
+        booksToDelete[bookUrl] = existingBook
+    }
+
     fun cachedLocationStatus(bookUrl: String): LocalBookLocationStatus =
         locationStatusCache.getOrPut(bookUrl) { locationStatus(bookUrl) }
 
     restoredBooks.forEach { restoredBook ->
         if (ignoreLocalBook && restoredBook.isLocal) return@forEach
+        if (!restoredBook.isLocal && restoredBook.bookUrl in onlineGroupPlan.skipRestoredBookUrls) {
+            return@forEach
+        }
 
         val resolution = if (restoredBook.isLocal) {
             resolveLocalBookTarget(
@@ -75,6 +87,80 @@ internal fun planBookRestore(
         booksToUpdate = booksToUpdate,
         booksToInsert = booksToInsert,
         booksToDelete = booksToDelete.values.toList(),
+    )
+}
+
+internal data class OnlineBookGroupPlan(
+    val skipRestoredBookUrls: Set<String>,
+    val followDeleteBookUrls: Set<String>,
+)
+
+/**
+ * 在线书「同一部作品」分组的恢复决策。
+ *
+ * bookshelf.json 是全量快照，换源在源设备上表现为「删旧行、插新行」，因此快照里旧源行
+ * 的存留是区分两种同名形状的信号：
+ * - 备份组仍含本地在用的 bookUrl（交集）：多出的行是跨设备恢复累积出的重复，跳过不引入；
+ * - 备份组与本地组完全不相交且备份组单行：作品整体换了源（换源结果传播），跟随云端——
+ *   删本地组、采备份行。备份行自带的进度在源设备换源时已按新目录重定位，原样可用；
+ * - 不相交但备份组多行：脏快照，无法仲裁哪行是新源，全部跳过、本地不动。
+ *
+ * 分组键取 [BookMatchKey] 规范化后的书名与作者（与手动入架查重同一标准），并要求两侧
+ * 作者非空——跟随会删除本地行，匹配必须从严，作者缺失不放宽。文本/音频等内容类别位
+ * 不同视为不同作品，避免同名跨媒介误删。备份行带 notShelf 标志时同样不跟随：那会把
+ * 在架书替换成未上架的临时记录。
+ */
+internal fun planOnlineBookGroups(
+    restoredBooks: List<Book>,
+    existingBooks: List<Book>,
+): OnlineBookGroupPlan {
+    val existingGroups = existingBooks
+        .mapNotNull { book -> onlineWorkKeyOf(book)?.let { it to book } }
+        .groupBy({ it.first }, { it.second })
+    val skipRestoredBookUrls = mutableSetOf<String>()
+    val followDeleteBookUrls = mutableSetOf<String>()
+
+    restoredBooks
+        .mapNotNull { book -> onlineWorkKeyOf(book)?.let { it to book } }
+        .groupBy({ it.first }, { it.second })
+        .forEach { (key, restoredGroup) ->
+            val existingGroup = existingGroups[key] ?: return@forEach
+            val existingUrls = existingGroup.mapTo(hashSetOf()) { it.bookUrl }
+            val distinctRestored = restoredGroup.distinctBy { it.bookUrl }
+            if (distinctRestored.any { it.bookUrl in existingUrls }) {
+                distinctRestored.forEach {
+                    if (it.bookUrl !in existingUrls) skipRestoredBookUrls.add(it.bookUrl)
+                }
+                return@forEach
+            }
+            val winner = distinctRestored.singleOrNull() ?: run {
+                distinctRestored.forEach { skipRestoredBookUrls.add(it.bookUrl) }
+                return@forEach
+            }
+            if (winner.isType(BookType.notShelf)) {
+                skipRestoredBookUrls.add(winner.bookUrl)
+                return@forEach
+            }
+            existingGroup.forEach { followDeleteBookUrls.add(it.bookUrl) }
+        }
+    return OnlineBookGroupPlan(skipRestoredBookUrls, followDeleteBookUrls)
+}
+
+private data class OnlineWorkKey(
+    val nameKey: String,
+    val authorKey: String,
+    val categoryBits: Int,
+)
+
+private fun onlineWorkKeyOf(book: Book): OnlineWorkKey? {
+    if (book.isLocal) return null
+    val nameKey = BookMatchKey.of(book.name)
+    val authorKey = BookMatchKey.of(book.author)
+    if (nameKey.isBlank() || authorKey.isBlank()) return null
+    return OnlineWorkKey(
+        nameKey = nameKey,
+        authorKey = authorKey,
+        categoryBits = book.type and (BookType.allBookType or BookType.video),
     )
 }
 

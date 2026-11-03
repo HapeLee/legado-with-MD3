@@ -92,9 +92,9 @@ class BookRestorePlannerTest {
     }
 
     @Test
-    fun `online books are still matched only by book url`() {
-        val existing = Book(bookUrl = "https://source-a/book", name = "斗破苍穹", author = "天蚕土豆")
-        val restored = Book(bookUrl = "https://source-b/book", name = "斗破苍穹", author = "天蚕土豆")
+    fun `online book follows single-row cloud source migration`() {
+        val existing = onlineBook("https://source-a/book")
+        val restored = onlineBook("https://source-b/book")
 
         val plan = planBookRestore(
             restoredBooks = listOf(restored),
@@ -104,7 +104,149 @@ class BookRestorePlannerTest {
         )
 
         assertEquals(listOf(restored.bookUrl), plan.booksToUpsert.map { it.bookUrl })
+        assertEquals(listOf(existing.bookUrl), plan.booksToDelete.map { it.bookUrl })
+    }
+
+    @Test
+    fun `cloud snapshot still carrying local source skips backup-only sibling`() {
+        val existing = onlineBook("https://source-a/book")
+        val sameAgain = onlineBook("https://source-a/book", durChapterIndex = 9)
+        val sibling = onlineBook("https://source-b/book")
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(sameAgain, sibling),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertEquals(listOf(existing.bookUrl), plan.booksToUpdate.map { it.bookUrl })
+        assertEquals(9, plan.booksToUpdate.single().durChapterIndex)
+        assertTrue(plan.booksToInsert.isEmpty())
         assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `multi-row cloud group without local overlap is not imported`() {
+        val existing = onlineBook("https://source-a/book")
+        val first = onlineBook("https://source-b/book")
+        val second = onlineBook("https://source-c/book")
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(first, second),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertTrue(plan.booksToUpsert.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `polluted local group collapses to single migrated cloud row`() {
+        val staleA = onlineBook("https://source-a/book")
+        val staleB = onlineBook("https://source-b/book")
+        val migrated = onlineBook("https://source-c/book")
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(migrated),
+            existingBooks = listOf(staleA, staleB),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertEquals(listOf(migrated.bookUrl), plan.booksToInsert.map { it.bookUrl })
+        assertEquals(
+            setOf(staleA.bookUrl, staleB.bookUrl),
+            plan.booksToDelete.map { it.bookUrl }.toSet(),
+        )
+    }
+
+    @Test
+    fun `blank author disables online grouping`() {
+        val existing = onlineBook("https://source-a/book", author = "天蚕土豆")
+        val restored = onlineBook("https://source-b/book", author = "")
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertEquals(listOf(restored.bookUrl), plan.booksToInsert.map { it.bookUrl })
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `different work authors are not grouped`() {
+        val existing = onlineBook("https://source-a/book", author = "甲")
+        val restored = onlineBook("https://source-b/book", author = "乙")
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertEquals(listOf(restored.bookUrl), plan.booksToInsert.map { it.bookUrl })
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `text and audio editions of same work are not grouped`() {
+        val existing = onlineBook("https://source-a/book", type = BookType.text)
+        val restored = onlineBook("https://source-b/book", type = BookType.audio)
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertEquals(listOf(restored.bookUrl), plan.booksToInsert.map { it.bookUrl })
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `notShelf cloud row does not replace shelved local book`() {
+        val existing = onlineBook("https://source-a/book")
+        val restored = onlineBook(
+            "https://source-b/book",
+            type = BookType.text or BookType.notShelf,
+        )
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertTrue(plan.booksToUpsert.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `cloud shelved row replaces local notShelf record`() {
+        val existing = onlineBook(
+            "https://source-a/book",
+            type = BookType.text or BookType.notShelf,
+        )
+        val restored = onlineBook("https://source-b/book")
+
+        val plan = planBookRestore(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existing),
+            ignoreLocalBook = false,
+            locationStatus = { LocalBookLocationStatus.Missing },
+        )
+
+        assertEquals(listOf(restored.bookUrl), plan.booksToInsert.map { it.bookUrl })
+        assertEquals(listOf(existing.bookUrl), plan.booksToDelete.map { it.bookUrl })
     }
 
     @Test
@@ -178,5 +320,19 @@ class BookRestorePlannerTest {
         author = "天蚕土豆",
         type = BookType.text or BookType.local,
         durChapterIndex = progress,
+    )
+
+    private fun onlineBook(
+        bookUrl: String,
+        name: String = "斗破苍穹",
+        author: String = "天蚕土豆",
+        type: Int = BookType.text,
+        durChapterIndex: Int = 0,
+    ) = Book(
+        bookUrl = bookUrl,
+        name = name,
+        author = author,
+        type = type,
+        durChapterIndex = durChapterIndex,
     )
 }
