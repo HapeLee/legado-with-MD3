@@ -210,6 +210,10 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE type & ${BookType.local} > 0")
     fun flowLocal(): Flow<List<Book>>
 
+    /** [flowLocal] 的一次性查询（失效信号防抖后由 mapLatest 调用）。 */
+    @Query("SELECT * FROM books WHERE type & ${BookType.local} > 0")
+    suspend fun getLocal(): List<Book>
+
     @Query(
         """
         SELECT 

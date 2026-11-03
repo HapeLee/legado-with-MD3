@@ -436,40 +436,27 @@ object LocalBook {
 
     /**
      * 批量导入按块提交：逐本 insert 每本都会广播一次书表失效，书架各 Flow 收到后
-     * 对整架全量重查重排，数千本规模形成 O(n²) 分配风暴。
-     * 分块事务把失效次数压到块数，块内有界持锁。单本失败仍按本隔离；
-     * 整块事务失败时整块回滚并计入错误数，不阻断后续块。
+     * 对整架全量重查重排，数千本规模形成 O(n²) 分配风暴。分块事务把失效次数压到
+     * 块数，块内有界持锁。
+     *
+     * 失败语义（骨架见 [importInChunks]）：块事务内不吞异常——Android SQLite 的
+     * 嵌套事务失败会静默毒化外层事务，块内 runCatching 吞掉异常后外层可能已整体
+     * 回滚，而错误计数只记了个别本，计数与落库不一致。任一本抛错即让异常越过块
+     * 事务边界（整块回滚有保证），该块退回逐本无事务重放，单本失败按本隔离计数。
      */
     fun importFiles(uris: List<Uri>) {
         var errorCount = 0
-        uris.chunked(IMPORT_COMMIT_CHUNK).forEach { chunk ->
-            var chunkErrorCount = 0
-            val chunkError = kotlin.runCatching {
-                appDb.runInTransaction {
-                    chunk.forEach { uri ->
-                        val fileDoc = FileDoc.fromUri(uri, false)
-                        kotlin.runCatching {
-                            importFiles(uri)
-                        }.onFailure {
-                            AppLog.put(
-                                "ImportFile Error:\nFile $fileDoc\n${it.localizedMessage}",
-                                it
-                            )
-                            chunkErrorCount += 1
-                        }
-                    }
-                }
-            }.exceptionOrNull()
-            errorCount += chunkErrorCount
-            if (chunkError != null) {
-                // 整块回滚，块内"成功"的书一并计为失败；单本失败已计，不重复加
-                errorCount += chunk.size - chunkErrorCount
-                AppLog.put(
-                    "ImportFiles Error:\nChunk rollback\n${chunkError.localizedMessage}",
-                    chunkError
-                )
-            }
-        }
+        importInChunks(
+            items = uris,
+            chunkSize = IMPORT_COMMIT_CHUNK,
+            importOne = { uri -> importFiles(uri) },
+            runChunkInTransaction = { block -> appDb.runInTransaction { block() } },
+            onImportError = { uri, error ->
+                val fileDoc = FileDoc.fromUri(uri, false)
+                AppLog.put("ImportFile Error:\nFile $fileDoc\n${error.localizedMessage}", error)
+                errorCount += 1
+            },
+        )
         if (uris.isNotEmpty() && errorCount >= uris.size) {
             throw NoStackTraceException("ImportFiles Error:\nAll input files occur error")
         }
