@@ -205,6 +205,22 @@ data class ReadSheetConfigUiState(
     val configNames: ImmutableList<String> = persistentListOf(),
 )
 
+/**
+ * 离线缓存弹窗的范围预览。
+ *
+ * [pendingChapters] 只按「正文是否已存在」统计（与目录的已缓存判定一致），
+ * 严格的图片完整性判定留到派发时逐章进行，避免打开弹窗就扫全书的图片索引。
+ */
+@Stable
+data class CacheRangePreview(
+    val bookUrl: String,
+    val start: Int,
+    val end: Int,
+    val totalChapters: Int,
+    val cachedChapters: Int,
+    val pendingChapters: Int,
+)
+
 /** 书签/笔记跳转前校验未通过的目标，弹「仍跳转」确认框。 */
 @Stable
 data class PendingBookmarkTarget(
@@ -285,6 +301,8 @@ data class ReadBookUiState(
     val activeDialog: ReadBookDialog? = null,
     /** 书签/笔记跳转前校验不通过时的待确认目标（弹确认框）。 */
     val pendingBookmarkTarget: PendingBookmarkTarget? = null,
+    /** 离线缓存弹窗的范围预览，由输入防抖后回填。 */
+    val cacheRangePreview: CacheRangePreview? = null,
     // Menu state (for overflow menu)
     val isLocalTxt: Boolean = false,
     val isEpub: Boolean = false,
@@ -1132,6 +1150,9 @@ sealed interface ReadBookIntent {
 
     // Download chapters
     data class DownloadChapters(val start: Int, val end: Int) : ReadBookIntent
+
+    // 预览离线缓存范围：弹窗输入防抖后触发，只回填计数
+    data class ScanCacheRange(val start: Int, val end: Int) : ReadBookIntent
 
     // Save chapter content (from chapter source change)
     data class SaveChapterContent(val content: String, val chapterIndex: Int) : ReadBookIntent

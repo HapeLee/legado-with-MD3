@@ -1962,6 +1962,7 @@
     <string name="cache_progress_summary">%1$d / %2$d chapters cached</string>
     <string name="cache_progress_loading">Counting cached chapters…</string>
     <string name="cache_range_summary">%1$d chapters selected, cached ones are skipped</string>
+    <string name="cache_range_summary_pending">%1$d chapters selected, %2$d without cached text</string>
     <string name="cache_range_out_of_range">Enter a chapter number between 1 and %1$d</string>
     <string name="cache_range_order_error">Start chapter must not be after end chapter</string>
     <string name="cache_range_empty_toc">The chapter list is empty</string>

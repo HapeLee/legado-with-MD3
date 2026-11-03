@@ -1610,6 +1610,8 @@ class ReadBookViewModel(
 
             is ReadBookIntent.DownloadChapters -> cacheChapters(intent.start, intent.end)
 
+            is ReadBookIntent.ScanCacheRange -> previewCacheRange(intent.start, intent.end)
+
             is ReadBookIntent.SaveChapterContent -> {
                 ReadBook.book?.let {
                     saveContent(it, intent.content, intent.chapterIndex)
@@ -2190,6 +2192,42 @@ class ReadBookViewModel(
     private suspend fun currentChapter(): BookChapter? {
         val book = ReadBook.book ?: return null
         return bookRepository.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+    }
+
+    /**
+     * 离线缓存弹窗的范围预览：一次遍历同时得到全书已缓存章数与范围内仍缺正文的章数。
+     * 只用宽松的「正文存在」判定，图片完整性留给派发时的逐章严格判定。
+     */
+    private fun previewCacheRange(startIndex: Int, endIndex: Int) {
+        val book = ReadBook.book ?: return
+        execute {
+            val chapters = bookRepository.getChapters(book.bookUrl)
+            var cached = 0
+            var pending = 0
+            for (chapter in chapters) {
+                val hasContent = chapter.isVolume || BookHelp.hasContent(book, chapter)
+                if (hasContent) {
+                    cached++
+                } else if (chapter.index in startIndex..endIndex) {
+                    pending++
+                }
+            }
+            CacheRangePreview(
+                bookUrl = book.bookUrl,
+                start = startIndex,
+                end = endIndex,
+                totalChapters = book.totalChapterNum,
+                cachedChapters = cached,
+                pendingChapters = pending,
+            )
+        }.onSuccess { preview ->
+            _uiState.update { state ->
+                if (state.cacheRangePreview == preview) state
+                else state.copy(cacheRangePreview = preview)
+            }
+        }.onError {
+            AppLog.put("统计离线缓存范围失败", it)
+        }
     }
 
     /**

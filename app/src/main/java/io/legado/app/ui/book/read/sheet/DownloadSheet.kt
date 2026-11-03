@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -23,18 +23,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.help.book.BookHelp
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
 import io.legado.app.model.cache.CacheBookDownloadState
+import io.legado.app.ui.book.read.CacheRangePreview
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ToggleChip
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import kotlin.math.max
 
 /**
@@ -42,10 +41,15 @@ import kotlin.math.max
  *
  * 用户看到的是与目录一致的 1 基章号，下载队列使用 0 基章节 index，提交时统一换算。
  * 历史实现直接把输入当 index 用，且默认结束章填 `totalChapterNum`（越界一章），这里一并修正。
+ *
+ * @param preview 由 ViewModel 统计的范围预览；[onScanRange] 在输入防抖后触发统计，
+ * 弹窗自身不做任何盘面扫描。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DownloadSheet(
+    preview: CacheRangePreview?,
+    onScanRange: (start: Int, end: Int) -> Unit,
     onDismissRequest: () -> Unit,
     onDownload: (start: Int, end: Int) -> Unit,
 ) {
@@ -65,15 +69,8 @@ fun DownloadSheet(
 
     val startChapter = startText.toIntOrNull()
     val endChapter = endText.toIntOrNull()
-
-    // 逐章判断正文文件是否已存在，必须离开主线程；弹窗只展示概要，不阻塞确认。
-    val cachedCount by produceState<Int?>(initialValue = null, book.bookUrl) {
-        value = withContext(Dispatchers.IO) {
-            runCatching { BookHelp.countCachedChapters(book) }.getOrNull()
-        }
-    }
-    val downloadState by CacheBook.downloadStateFlow.collectAsState()
-    val bookTaskState = downloadState.books[book.bookUrl]
+    val startIndex = startChapter?.minus(1)
+    val endIndex = endChapter?.minus(1)
 
     // 输入框清空时保持安静（只是不能确认），越界或倒序才报错。
     val startInvalid = startChapter != null && startChapter !in 1..totalChapters
@@ -91,6 +88,22 @@ fun DownloadSheet(
         null
     }
 
+    LaunchedEffect(book.bookUrl, startIndex, endIndex, totalChapters) {
+        if (startIndex == null || endIndex == null) return@LaunchedEffect
+        if (startIndex < 0 || endIndex < startIndex || endIndex > totalChapters - 1) {
+            return@LaunchedEffect
+        }
+        // 连续输入时只统计最后一次。
+        delay(250)
+        onScanRange(startIndex, endIndex)
+    }
+
+    val rangePreview = preview?.takeIf {
+        it.bookUrl == book.bookUrl && it.start == startIndex && it.end == endIndex
+    }
+    val downloadState by CacheBook.downloadStateFlow.collectAsState()
+    val bookTaskState = downloadState.books[book.bookUrl]
+
     AppAlertDialog(
         show = true,
         onDismissRequest = onDismissRequest,
@@ -98,7 +111,7 @@ fun DownloadSheet(
         content = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 CachedSummary(
-                    cachedCount = cachedCount,
+                    cachedCount = rangePreview?.cachedChapters,
                     totalChapters = totalChapters,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -165,9 +178,16 @@ fun DownloadSheet(
                 }
                 // Miuix 引擎不展示 isError/supportingText，提示统一画在外面。
                 AppText(
-                    text = rangeError
-                        ?: rangeSize?.let { stringResource(R.string.cache_range_summary, it) }
-                        ?: "",
+                    text = when {
+                        rangeError != null -> rangeError
+                        rangePreview != null -> stringResource(
+                            R.string.cache_range_summary_pending,
+                            rangeSize ?: 0,
+                            rangePreview.pendingChapters,
+                        )
+                        rangeSize != null -> stringResource(R.string.cache_range_summary, rangeSize)
+                        else -> ""
+                    },
                     modifier = Modifier.padding(top = 8.dp),
                     style = LegadoTheme.typography.bodySmall,
                     color = if (rangeError != null) {
@@ -195,10 +215,10 @@ fun DownloadSheet(
         confirmText = stringResource(R.string.start_cache),
         confirmEnabled = rangeError == null && startChapter != null && endChapter != null,
         onConfirm = {
-            val start = startChapter
-            val end = endChapter
+            val start = startIndex
+            val end = endIndex
             if (start != null && end != null) {
-                onDownload(start - 1, end - 1)
+                onDownload(start, end)
             }
         },
         dismissText = stringResource(R.string.cancel),

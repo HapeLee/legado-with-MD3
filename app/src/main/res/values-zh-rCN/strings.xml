@@ -1907,6 +1907,7 @@
     <string name="cache_progress_summary">已缓存 %1$d / %2$d 章</string>
     <string name="cache_progress_loading">正在统计已缓存章节…</string>
     <string name="cache_range_summary">本次 %1$d 章，已缓存的章节会自动跳过</string>
+    <string name="cache_range_summary_pending">本次 %1$d 章，其中 %2$d 章还没有正文</string>
     <string name="cache_range_out_of_range">请输入 1 - %1$d 之间的章号</string>
     <string name="cache_range_order_error">起始章不能大于结束章</string>
     <string name="cache_range_empty_toc">目录为空，暂无可缓存的章节</string>
