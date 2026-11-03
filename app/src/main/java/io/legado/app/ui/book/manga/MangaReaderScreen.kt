@@ -1882,7 +1882,7 @@ private fun MangaPageImage(
     }
 
     val isWidePage = imageRatio != null && imageRatio > 1f
-    val contentScale = when {
+    val pageContentScale = when {
         isWidePage && settings.widePageMode == MangaWidePageMode.FIT_WIDTH -> ContentScale.FillWidth
         settings.pageScaleType == MangaPageScaleType.STRETCH -> ContentScale.FillBounds
         settings.pageScaleType == MangaPageScaleType.FIT_WIDTH -> ContentScale.FillWidth
@@ -1890,6 +1890,9 @@ private fun MangaPageImage(
         settings.pageScaleType == MangaPageScaleType.ORIGINAL -> ContentScale.None
         settings.pageScaleType == MangaPageScaleType.SMART_FIT && isWidePage -> ContentScale.FillWidth
         else -> ContentScale.Fit
+    }
+    val contentScale = remember(pageContentScale, imageRatio) {
+        mangaPageContentScale(pageContentScale, imageRatio)
     }
     val rotateWidePage = paged && isWidePage &&
         settings.widePageMode == MangaWidePageMode.ROTATE_TO_FIT
@@ -1984,14 +1987,14 @@ private fun MangaPageImage(
     val segmentedRatio = imageRatio?.takeIf {
         webtoonSegment != null && it.isFinite() && it > 0f
     }
-    val previewContentScale = remember(segmentedRatio) {
-        if (segmentedRatio == null) ContentScale.FillWidth else object : ContentScale {
+    val previewContentScale = remember(imageRatio) {
+        if (imageRatio == null) ContentScale.FillWidth else object : ContentScale {
             override fun computeScaleFactor(
                 srcSize: ComposeSize,
                 dstSize: ComposeSize
             ): ScaleFactor {
                 // 预览的整数采样尺寸可能改变宽高比，始终按原图比例恢复虚拟整页尺寸。
-                val totalHeight = floor(dstSize.width / segmentedRatio).coerceAtLeast(1f)
+                val totalHeight = floor(dstSize.width / imageRatio).coerceAtLeast(1f)
                 return ScaleFactor(dstSize.width / srcSize.width, totalHeight / srcSize.height)
             }
         }
@@ -2072,6 +2075,21 @@ private fun MangaPageImage(
             { onIntent(MangaReaderIntent.RetryPage(page.key)) },
             { onIntent(MangaReaderIntent.RetryFailedPagesInChapter(page.chapterIndex)) },
         )
+    }
+}
+
+internal fun mangaPageContentScale(scale: ContentScale, originalRatio: Float?): ContentScale {
+    if (originalRatio == null || !originalRatio.isFinite() || originalRatio <= 0f ||
+        scale == ContentScale.None || scale == ContentScale.FillBounds
+    ) return scale
+    return object : ContentScale {
+        override fun computeScaleFactor(srcSize: ComposeSize, dstSize: ComposeSize): ScaleFactor {
+            // Telephoto first uses the sampled preview size, then switches to the region decoder's
+            // size. Fit both to the same displayed aspect ratio, including rounded preview sizes.
+            val originalShape = ComposeSize(srcSize.width, srcSize.width / originalRatio)
+            val fit = scale.computeScaleFactor(originalShape, dstSize)
+            return ScaleFactor(fit.scaleX, fit.scaleY * (originalShape.height / srcSize.height))
+        }
     }
 }
 

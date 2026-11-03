@@ -33,13 +33,14 @@ object ReaderPageNavigator {
     fun rebasePageIndex(pages: List<ReaderPage>, previousPageId: ReaderPageId?): Int? =
         previousPageId?.let { id -> pages.indexOfFirst { it.id == id }.takeIf { it >= 0 } }
 
-    /** Retain adjacent chapter layouts and the displayed chapter during a loading handoff. */
+    /** Retain prefetched chapter layouts and the displayed chapter during a loading handoff. */
     fun retainChapterWindow(
         pages: List<ReaderPage>,
         chapterIndex: Int,
         displayedChapterIndex: Int?,
+        forwardChapterCount: Int = 1,
     ): List<ReaderPage> = pages.filter {
-        it.id.chapterIndex in chapterIndex - 1..chapterIndex + 1 ||
+        it.id.chapterIndex in chapterIndex - 1..chapterIndex + forwardChapterCount ||
                 it.id.chapterIndex == displayedChapterIndex
     }
 

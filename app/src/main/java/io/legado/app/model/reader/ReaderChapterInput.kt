@@ -47,4 +47,5 @@ data class ReaderChapterInputWindow(
     val previous: ReaderChapterInput? = null,
     val current: ReaderChapterInput? = null,
     val next: ReaderChapterInput? = null,
+    val nextPlus: ReaderChapterInput? = null,
 )

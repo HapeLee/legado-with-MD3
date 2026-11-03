@@ -91,6 +91,19 @@ class ReaderPageNavigatorTest {
     }
 
     @Test
+    fun scrollLookaheadKeepsTheChapterAfterAShortPageAcrossReversal() {
+        val pages = (0..5).map { page(0, 0, it) }
+        val forward = ReaderPageNavigator.retainChapterWindow(pages, 2, 2, forwardChapterCount = 2)
+        val back = ReaderPageNavigator.retainChapterWindow(forward, 1, 1, forwardChapterCount = 2)
+        val current = ReaderPageNavigator.rebasePageIndex(back, ReaderPageId(1, 0))!!
+        val window = ReaderPageNavigator.window(back, current)
+
+        assertEquals(ReaderPageId(2, 0), window.next?.id)
+        assertEquals(ReaderPageId(3, 0), window.nextPlus?.id)
+        assertEquals(listOf(1, 2, 3), back.map { it.id.chapterIndex })
+    }
+
+    @Test
     fun loadingHandoffRetainsDisplayedChapterUntilTargetBecomesVisible() {
         val pages = (0..10).map { page(0, 0, it) }
         val retained = ReaderPageNavigator.retainChapterWindow(pages, 8, 4)

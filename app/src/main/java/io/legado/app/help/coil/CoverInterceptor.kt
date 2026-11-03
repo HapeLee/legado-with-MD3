@@ -1,5 +1,6 @@
 package io.legado.app.help.coil
 
+import androidx.core.net.toUri
 import coil3.BitmapImage
 import coil3.decode.DataSource
 import coil3.intercept.Interceptor
@@ -22,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.Closeable
 import java.io.File
+import java.io.IOException
 
 class CoverInterceptor(
     private val acquireMangaFile: suspend (ImageRequest, String) -> Pair<File, Closeable> = { request, data ->
@@ -72,10 +74,27 @@ class CoverInterceptor(
         val data = request.data
 
         val fileOwner = request.extras[CoverExtras.MangaFileOwner]
-        // Derived comic rasters are local File inputs. Keep their exact EXIF-corrected ratio;
-        // a heavily sampled webtoon preview can round its width and move the scroll anchor.
-        if (fileOwner != null && data is File) {
-            val ratio = withContext(Dispatchers.IO) { MangaImageDimensions.read(data) }
+        val localUri = (data as? String)
+            ?.takeIf { it.startsWith("file:", true) || it.startsWith("content:", true) }
+            ?.toUri()
+        // Read local and translated pages' original proportions before Coil publishes a preview.
+        if (fileOwner != null && (data is File || localUri != null)) {
+            val ratio = withContext(Dispatchers.IO) {
+                try {
+                    when {
+                        data is File -> MangaImageDimensions.read(data)
+                        localUri?.scheme == "file" ->
+                            localUri.path?.let { MangaImageDimensions.read(File(it)) }
+                        localUri != null ->
+                            MangaImageDimensions.read(request.context.contentResolver, localUri)
+                        else -> null
+                    }
+                } catch (_: IOException) {
+                    null
+                } catch (_: SecurityException) {
+                    null
+                }
+            }
             fileOwner.setAspectRatio(ratio)
             ratio?.let { request.extras[CoverExtras.MangaAspectRatio]?.invoke(it) }
             return boundedChain.proceed()
