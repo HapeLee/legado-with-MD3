@@ -31,7 +31,7 @@ fun DropdownListSettingItem(
     enabled: Boolean = true,
     /**
      * 本产物不提供的档位：仍然列出，让用户看到"这个版本还没有什么"，但不可选中。
-     * 调用方负责在显示名里标出来源（例如"（完整版）"）。
+     * 调用方负责在显示名里标出来源（例如"（漫画增强版）"）。
      */
     unavailableValues: Set<String> = emptySet(),
     /** 点到本产物不提供的档位时的反馈；不提供则静默忽略。 */

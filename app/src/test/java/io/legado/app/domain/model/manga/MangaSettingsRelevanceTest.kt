@@ -126,7 +126,7 @@ class MangaSettingsRelevanceTest {
         assertEquals(MangaSettingReason.PRODUCT_WITHOUT_LOCAL_ENGINE, relevance.degraded[MangaSettingField.BUBBLE_SOURCE])
     }
 
-    @Test fun `the full build never reports the same stored choices as degraded`() {
+    @Test fun `the comic build never reports the same stored choices as degraded`() {
         val stored = MangaTranslationSettings(locator = MangaLocator.LOCAL, inpaintEngine = MangaInpaintEngine.MI_GAN,
             bubbleSource = MangaBubbleSource.DEVICE)
         val relevance = MangaSettingsRelevance.of(stored, full, stored)

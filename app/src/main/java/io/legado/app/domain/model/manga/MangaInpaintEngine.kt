@@ -9,7 +9,7 @@ import kotlinx.serialization.json.JsonNames
  * - [BUILTIN]：内置的纯像素绘制（`MangaPageComposer`），不加载任何推理运行时，`core`／`full` 都有；
  * - [MI_GAN]／[LAMA]：ONNX 模型擦字，权重按需下载，只有带运行时的 `full` 可用。
  *
- * 组成 SMART 的其余步骤可能另有依赖（完整版的气泡检测、Paddle OCR、长图分段的 ML Kit），
+ * 组成 SMART 的其余步骤可能另有依赖（漫画增强版的气泡检测、Paddle OCR、长图分段的 ML Kit），
  * 那些属于各自能力，不归这个枚举表达。
  */
 @Serializable

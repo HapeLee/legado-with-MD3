@@ -76,7 +76,7 @@
     <string name="manga_ocr_otsu_hint">适合黑白文字。</string>
     <string name="manga_ocr_options_hint">重新翻译后生效。</string>
     <string name="manga_ocr_reset_options">恢复 OCR 默认设置</string>
-    <string name="manga_local_engine_requires_full">本地 OCR 与擦字需要完整版。此版本请改用云端 OCR 或 AI 识图翻译，已生成的译图不受影响。</string>
+    <string name="manga_local_engine_requires_comic">本地 OCR 与擦字需要漫画增强版。此版本请改用云端 OCR 或 AI 识图翻译，已生成的译图不受影响。</string>
 
     <string name="manga_bubble_source">气泡检测</string>
     <string name="manga_bubble_source_device">端侧检测</string>
@@ -86,8 +86,8 @@
     <string name="manga_settings_inactive_group">%1$s：%2$s，当前组合下不生效。</string>
     <string name="manga_settings_degraded_local">本版本不含端侧运行时：%1$s 已保存的端侧选择不可用，当前按可用方案执行。</string>
     <string name="manga_settings_field_separator">、</string>
-    <string name="manga_full_only">%1$s · 仅完整版</string>
-    <string name="manga_full_only_hint">这一档需要安装完整版</string>
+    <string name="manga_comic_only">%1$s · 仅漫画增强版</string>
+    <string name="manga_comic_only_hint">这一档需要安装漫画增强版</string>
     <string name="manga_settings_reason_page_edit">整页由图片模型重绘</string>
     <string name="manga_settings_reason_source_kept">「覆盖原文」保留原文字</string>
     <string name="manga_settings_reason_ai_composition">合成由图片模型完成</string>

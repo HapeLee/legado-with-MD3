@@ -2,22 +2,25 @@
 
 状态：待实施。2026-10-31 基于源码 HEAD `b21025d37` 制定；本文不代表变体、模块、协议或 CI task 已存在。
 
-用户目标：主安装包恢复到原来约 20 MB；保留完整版，并允许轻量版用户通过可选扩展获得漫画本地翻译能力。
-实施顺序：行为基线与引擎边界 → `core/full` 变体 → 独立引擎扩展 APK → 发布与回归收口。
+术语：产品维度 2026-11-05 起为 `core` / `comic`（中文名「漫画增强版」），此前该产品标记为 `full`；
+历史 Release 的资产名与 mapping 仍沿用旧标记，迁移口径见 §5.1。
+
+用户目标：主安装包恢复到原来约 20 MB；保留漫画增强版，并允许 core 用户通过可选扩展获得漫画本地翻译能力。
+实施顺序：行为基线与引擎边界 → `core/comic` 变体 → 独立引擎扩展 APK → 发布与回归收口。
 本次交付仅新增计划文档，不修改构建、业务或安装行为。
 
 ## 1. 目标、口径与范围
 
 ### 1.1 成功条件
 
-- 默认面向普通用户发布轻量主包；完整本地能力可通过完整版或独立扩展获得。
+- 默认面向普通用户发布轻量主包；完整本地能力可通过漫画增强版或独立扩展获得。
 - 主包体积目标按十进制 **20,000,000 字节（20 MB）** 跟踪，主比较对象是 R8／资源压缩开启、
   单 `arm64-v8a` 的最终 Release APK；同时记录 MiB，避免把 20 MiB 当作 20 MB。
 - 该数值是待实测的目标，不是已经实现的承诺。第一轮只隔离漫画引擎；若仍超标，记录差额和包内容，
   再选择有证据的最小优化，不降低门槛或借机重构其他业务。
 - `core` 的依赖图与 APK 中均不存在 ONNX Runtime、ML Kit OCR 原生库、OCR 模型和气泡模型。
-- `full` 的识别、检测、擦字、排版、缓存、取消与旧数据行为保持原有语义。
-- 最终 `core + 扩展` 使用与 `full` 相同的引擎实现；安装、缺失、升级、卸载和服务断开均有明确状态。
+- `comic` 的识别、检测、擦字、排版、缓存、取消与旧数据行为保持原有语义。
+- 最终 `core + 扩展` 使用与 `comic` 相同的引擎实现；安装、缺失、升级、卸载和服务断开均有明确状态。
 - 未安装扩展不影响普通阅读、漫画阅读和已有译图展示；需本地引擎的操作明确提示缺少能力，
   不伪装成功、不默默更改用户设置，也不自动改用付费云端服务。
 
@@ -77,11 +80,11 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 
 [本地视觉模型](manga-local-vision-models.md)和[AI 翻译](manga-ai-translation.md)描述的“内置气泡模型／ML Kit”是当前事实。
 [擦字引擎](manga-inpaint-engines.md)描述的权重按需下载也仍成立，但它不意味着 ORT 已移出主包。
-本计划描述未来交付差异；对应阶段合并时按 `core/full/扩展` 更新原文，不能提前把目标写成现状。
+本计划描述未来交付差异；对应阶段合并时按 `core/comic/扩展` 更新原文，不能提前把目标写成现状。
 
 ## 3. 产品形态和行为矩阵
 
-| 能力 | `core` 未安装扩展 | `core + 扩展` | `full` |
+| 能力 | `core` 未安装扩展 | `core + 扩展` | `comic` |
 | --- | --- | --- | --- |
 | 阅读、漫画阅读、原图展示 | 保留 | 保留 | 保留 |
 | 已发布译图、设置、词典、缓存读取 | 保留 | 保留 | 保留 |
@@ -99,13 +102,13 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 安装完成后重新检查能力和协议，不要求重装主应用；扩展卸载后不删除主应用的译图和设置。
 
 `core` 的设置界面不提供“端侧 OCR”选项：识别方式下拉按 `MangaLocalEngine.available` 过滤，
-`full` 遗留的本地选择在读取设置时回落 AI（写入时一并规范化），分组内仅保留一条“需要完整版”说明。
+`comic` 遗留的本地选择在读取设置时回落 AI（写入时一并规范化），分组内仅保留一条“需要漫画增强版”说明。
 这样用户不会停在一个必然抛 `MangaLocalEngineUnavailableException` 的分支上，也不需要为失败之后的报错
 再解释一次产品差异。
 
 模型擦字（MI-GAN／LaMa）同理：它们依赖 ONNX，core 读取设置时回落到内置擦字
 （`MangaPageComposer` 的纯绘制实现，位于 `main`，core 可用），因此 SMART 排版保留可用，
-处理分组只注明“模型擦字需要完整版”。不要因为缺擦字模型就禁用 SMART——内置擦字不需要任何权重。
+处理分组只注明“模型擦字需要漫画增强版”。不要因为缺擦字模型就禁用 SMART——内置擦字不需要任何权重。
 
 ## 4. 职责与依赖边界
 
@@ -122,20 +125,20 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 - 气泡检测、ML Kit／Paddle OCR、MI-GAN／LaMa 修复及其 ORT 会话、线程与内存资源。
 - 引擎权重的清单、下载、校验、取消、删除、租约和 NOTICE。
 - 返回可验证的识别／几何数据或修复图像，不直接写主应用数据库、发布译图或调用付费服务。
-- `full` 在本进程使用引擎，扩展在独立应用进程使用同一实现，避免维护两套算法。
+- `comic` 在本进程使用引擎，扩展在独立应用进程使用同一实现，避免维护两套算法。
 
 ### 4.3 分阶段形成真实 Gradle 边界
 
-阶段 1 在 `:app` 内形成能力契约和调用适配；阶段 2 先用 `src/core`／`src/full` 做编译隔离。
+阶段 1 在 `:app` 内形成能力契约和调用适配；阶段 2 先用 `src/core`／`src/comic` 做编译隔离。
 需要复用到第二宿主时才建立下列模块；名称为计划，尚未创建：
 
 | 计划模块 | 类型／真实消费者 | 内容与禁止依赖 |
 | --- | --- | --- |
-| `:modules:manga-engine` | Android library；`app` 的 full 与扩展宿主 | 本地引擎、必要的小型输入输出值及模型管理；不依赖 `:app`、Room、Feature UI 或供应商仓库 |
+| `:modules:manga-engine` | Android library；`app` 的 comic 与扩展宿主 | 本地引擎、必要的小型输入输出值及模型管理；不依赖 `:app`、Room、Feature UI 或供应商仓库 |
 | `:modules:manga-engine-ipc` | Android library；主应用客户端与扩展服务 | AIDL、传输 DTO、协议版本；不传递依赖 ORT／ML Kit／运行时实现 |
 | `:extensions:manga-engine` | Android application；独立安装产物 | Service、权限、签名策略、引擎装配及最小模型管理入口；不依赖 `:app` |
 
-最终依赖：`app(full) → manga-engine`；`app(core) → manga-engine-ipc`；
+最终依赖：`app(comic) → manga-engine`；`app(core) → manga-engine-ipc`；
 `extension → manga-engine + manga-engine-ipc`。主应用领域契约通过适配器映射运行时结果或 IPC DTO。
 模块不可反向依赖 `:app` 以复用其 domain 类型；只移动真实需要的值，避免抽出整个 app domain。
 模型仓库不得再依赖主应用的资源 ID；错误以稳定代码／值返回，由主应用或扩展 UI 映射文案。
@@ -146,31 +149,34 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 
 ## 5. 变体、签名和数据兼容
 
-- 保留 `mode=app`，新增 `engine=core/full` 维度，按固定维度顺序形成组合；具体任务名以 AGP 实际输出为准。
-- ORT／ML Kit 改为 full 专用依赖；模型和引擎专用 NOTICE 放入 full／运行时对应 source set。
+- 保留 `mode=app`，新增 `engine=core/comic` 维度，按固定维度顺序形成组合；具体任务名以 AGP 实际输出为准。
+- ORT／ML Kit 改为 comic 专用依赖；模型和引擎专用 NOTICE 放入 comic／运行时对应 source set。
   共用合法声明仍保留，不能通过简单排除 `.so` 造成 Java 入口存在却加载失败。
-- 移走全部默认参数、辅助方法和测试对具体引擎的引用；main 源集不能静态依赖 full 实现。
-  引擎测试进入 full／运行时测试源集，公共编排和无引擎状态测试仍覆盖 core。
-- `core/full` Release 使用现有 `io.legato.kazusa` 和同一签名；它们是可替换的产品配置，不要求并装。
+- 移走全部默认参数、辅助方法和测试对具体引擎的引用；main 源集不能静态依赖 comic 实现。
+  引擎测试进入 comic／运行时测试源集，公共编排和无引擎状态测试仍覆盖 core。
+- `core/comic` Release 使用现有 `io.legato.kazusa` 和同一签名；它们是可替换的产品配置，不要求并装。
   不引入 flavor 专用数据库名或清空设置；验证同签名、同或更高 versionCode 的覆盖安装与应用商店更新。
-- 从 full 切到 core 后保留已下载模型和缓存，禁止启动时清理；切回后可重新校验使用。
+- 从 comic 切到 core 后保留已下载模型和缓存，禁止启动时清理；切回后可重新校验使用。
 - 扩展使用独立 applicationId（计划 `io.legato.kazusa.mangaengine`），namespace 继续使用 `io.legado.app` 前缀。
   release 与 debug 的客户端／服务包配对和签名策略分开，release 不信任 debug 扩展。
-- full 默认使用内置引擎，即使同时安装扩展也不隐式切换或重复执行任务。
+- comic 默认使用内置引擎，即使同时安装扩展也不隐式切换或重复执行任务。
 - 主包和扩展均发布 ARM64，按实际需求保留 ARM32；明确 ABI filters 与模拟器配置，检查 Universal 内容，
   不依赖 splits 自动剔除其他架构。不得为了体积误删实际支持的运行架构。
 
-### 5.1 发布形态（2026-10-31 定案）
+### 5.1 发布形态（2026-10-31 定案，2026-11-05 产品标记由 `full` 改为 `comic`）
 
-- **长期双包发布**：`core` 与 `full` 同版本、同签名、同 versionCode，各自 3 个 ABI 产物，挂在同一个
+- **双产品命名**：`core` 是基础包，`comic` 是带本地漫画引擎的漫画增强版。`comic` 在 2026-11-05 前叫 `full`：
+  旧 Release 的资产名与 mapping 仍是 `-full-`／`mapping-full.txt`，应用内更新不会跨产品匹配，
+  停在旧 `full` 版的用户需要手动下载一次 `comic` 包，之后恢复正常更新。历史日志还原仍回落读取 `mapping-full.txt`。
+- **长期双包发布**：`core` 与 `comic` 同版本、同签名、同 versionCode，各自 3 个 ABI 产物，挂在同一个
   GitHub Release。体积报告里的路线 B（换推理栈）不实施，检测模型外置（路线 A）暂缓。
-- 附件命名固定为 `legado-<version>-<core|full>-<arm64-v8a|armeabi-v7a|universal>.apk`。
+- 附件命名固定为 `legado-<version>-<core|comic>-<arm64-v8a|armeabi-v7a|universal>.apk`。
   应用内更新按命名中的产品标记过滤（`AppProduct`），只挑本产品那一份；任何一侧缺包按"暂无更新"处理，
-  绝不跨产品升级（core→full 会突然变大，full→core 会丢本地引擎）。
-- R8 mapping 按产品分别上传为 `mapping-core.txt`／`mapping-full.txt`，崩溃还原时不能拿错。
-- Telegram 单文件上限 50 MB：core 三个产物正常推送附件，full 三个均超限，只发 GitHub Release 链接。
-- 体积基线（arm64-v8a Release）：core 20.61 MiB、full 68.90 MiB。变化需要记录条目与原因。
-- 扩展包路线（下文的 P3、§6）**暂不启动**；`core` 的用户只得到"需要完整版"的明确提示，不提供安装扩展的入口。
+  绝不跨产品升级（core→comic 会突然变大，comic→core 会丢本地引擎）。
+- R8 mapping 按产品分别上传为 `mapping-core.txt`／`mapping-comic.txt`，崩溃还原时不能拿错。
+- Telegram 单文件上限 50 MB：core 三个产物正常推送附件，comic 三个均超限，只发 GitHub Release 链接。
+- 体积基线（arm64-v8a Release）：core 20.61 MiB、comic 68.90 MiB。变化需要记录条目与原因。
+- 扩展包路线（下文的 P3、§6）**暂不启动**；`core` 的用户只得到"需要漫画增强版"的明确提示，不提供安装扩展的入口。
 
 ## 6. 扩展协议与运行生命周期
 
@@ -198,21 +204,21 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 
 ## 7. 模型存储、迁移和缓存
 
-- `full` 保持内置气泡模型及其开箱离线能力，已由 `MangaVisionModelRepository` 承接：assets 存在时首次
+- `comic` 保持内置气泡模型及其开箱离线能力，已由 `MangaVisionModelRepository` 承接：assets 存在时首次
   复制到私有目录，缺失则显式下载，两条路径统一走字节数 + SHA-256 + 原子替换；`core` 没有该资源，
   直接返回能力缺失。扩展首版也可内置气泡与 ML Kit；扩展大小单列，不压到主包里（当前暂不启动）。
 - 擦字引擎分两类（`MangaInpaintEngine.usesModel`）：`BUILTIN`＝内置，`MI_GAN`／`LAMA`＝ONNX 模型。
   「是否需要下载」与「是否使用模型」在这三档上是同一件事，`downloadable` 由 `usesModel` 派生。
-- `full` 的 SMART 依赖 ONNX／ML Kit 是**正常且预期**的，但依赖属于不同步骤，不能合并表述：
+- `comic` 的 SMART 依赖 ONNX／ML Kit 是**正常且预期**的，但依赖属于不同步骤，不能合并表述：
 
-  | SMART 步骤 | 完整版默认路径 | 运行时依赖 | 轻量版 |
+  | SMART 步骤 | 漫画增强版默认路径 | 运行时依赖 | core |
   | --- | --- | --- | --- |
   | 长图分段 | `localEngine.locate`（仅超长条；整页直接单段） | ML Kit | 沟槽检测（`locate` 返回 `null`） |
   | 识别 | `LOCAL`＝ML Kit／Paddle，`AI`＝远程，`CLOUD`＝远程 | ML Kit 或 ONNX（Paddle） | 无本地识别 |
   | 气泡几何 | `DEVICE` 调端侧检测；`AI`／`OUTLINE`／`OFF` 不调 | ONNX 气泡模型 | `DEVICE` 保留选择但不产几何（键加 `-off`） |
   | 擦字 | `BUILTIN`＝`MangaPageComposer` 纯像素绘制；`MI_GAN`／`LAMA`＝`MangaLocalInpainter` | **`BUILTIN` 不加载 ORT**；模型档位用 `ai.onnxruntime`（512×512） | 只有 `BUILTIN` |
 
-  因此 `full` 选 `BUILTIN` 时，`requireInpaint` 预检与 `erase` 都不会触到 ORT（`MangaTranslationRepository`
+  因此 `comic` 选 `BUILTIN` 时，`requireInpaint` 预检与 `erase` 都不会触到 ORT（`MangaTranslationRepository`
   只在 `SMART && inpaintEngine.downloadable` 时预检），但同一次 SMART 仍可能因为气泡检测、Paddle OCR
   或长图分段而加载 ONNX／ML Kit。两条陈述不冲突，文档不得只保留其中一条。
 - 设置项是否生效只有一个判定入口：`MangaSettingsRelevance.of(settings, capabilities)`。
@@ -234,25 +240,25 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
   - `AI`：不调端侧检测，在布局 prompt 末尾追加 `MANGA_AI_BALLOON_PROMPT`，要求模型返回 `aiGeometry.containerBox`；
     客户端复核「必须包住 textBox、面积不超过 textBox 的 20 倍、必须有 containerId」，不合格直接丢弃；
   - `OUTLINE`：「本地轮廓推断」。复用 `recoverMangaBubbles` 的洪泛结果写成 `bubbleShape`，不看模型容器框、
-    不调端侧模型，`core` 与 `full` 行为一致；背景延伸到裁剪边缘（没有闭合容器）时放弃，
+    不调端侧模型，`core` 与 `comic` 行为一致；背景延伸到裁剪边缘（没有闭合容器）时放弃，
     结果与既有矩形行为完全相同；
   - `OFF`：不做气泡增强，端侧检测一次也不调用；
   - `AUTO`：已停用，仅为读旧存档保留。它当年的实际行为是「端侧检测 + 有机会就用识别框」，与 `DEVICE` 等价
     ——`AUTO` 从不追加 `MANGA_AI_BALLOON_PROMPT`，有本地锚点时 `resolveMangaAiAnchors` 还会剥掉
     `aiGeometry`。因此它退出可选列表，读取时迁移为 `DEVICE`。
 
-  产物差异只体现在选项集上：`full` 提供「端侧检测／AI 识别框／画面轮廓／关闭」四项，`core` 只提供
+  产物差异只体现在选项集上：`comic` 提供「端侧检测／AI 识别框／画面轮廓／关闭」四项，`core` 只提供
   「AI 识别框／画面轮廓／关闭」三项。`core` 读不到 `DEVICE`，`usable()` 把它归一化为 `OFF`
-  （两者在 core 上的请求与输出完全相同，因此不做别的改写）——代价是从 `full` 带过来的选择会变成「关闭」，
-  切回 `full` 需要重新选端侧。
+  （两者在 core 上的请求与输出完全相同，因此不做别的改写）——代价是从 `comic` 带过来的选择会变成「关闭」，
+  切回 `comic` 需要重新选端侧。
   `AI`／`OUTLINE`／`OFF` 的请求与产物能力无关；`DEVICE` 在分析缓存键里沿用停用 `AUTO` 的 token，
-  改名不该让 full 用户重付一次分析。气泡来源控件下方不再附说明行，选项名本身承担语义。
+  改名不该让 comic 用户重付一次分析。气泡来源控件下方不再附说明行，选项名本身承担语义。
   来源参与分析缓存键（请求内容会变），因此切换后需要重新分析，不会误用旧结果。
   几何诊断图除 AI 容器框（黄色）外还画出最终 `bubbleShape` 的轮廓（青色），
   用于区分「模型没给框」和「给了但被客户端复核丢弃」。
 - Paddle／MI-GAN／LaMa 继续显式下载，不因选择、绑定、安装或翻译动作偷偷下载。
   运行时统一维持固定来源版本、大小、SHA-256、临时文件校验后原子替换、取消清理和使用租约。
-- full 使用主应用已有模型路径；扩展使用其私有路径，由宿主注入存储根，不能借模块化更换 full 的目录身份。
+- comic 使用主应用已有模型路径；扩展使用其私有路径，由宿主注入存储根，不能借模块化更换 comic 的目录身份。
 - 不依赖跨 UID 访问主应用私有目录。已有模型由用户选择复用时，通过受控文件流交给扩展，
   在扩展侧重新校验后落盘；复制成功前不删除原件，提示短期双份占用，不自动重下大型模型。
 - 扩展卸载会失去其私有模型；主应用中的译图、原文、词典和可复用背景缓存仍保留。
@@ -267,7 +273,7 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 
 1. 同一 checkout、JDK 21、依赖、签名配置下重新生成 ARM64 Release，记录 commit、文件大小、SHA-256 和 ZIP 分项。
 2. 审计 ORT／ML Kit 的直接及传递依赖、静态入口、assets、NOTICE、R8 规则及全部测试引用。
-3. 为 full 建立固定输入的 OCR／检测／修复证据，并固定翻译编排、长图、取消、失败保留旧译图与缓存重排行为。
+3. 为 comic 建立固定输入的 OCR／检测／修复证据，并固定翻译编排、长图、取消、失败保留旧译图与缓存重排行为。
    复用现有测试，缺少的边界才补测试；不把历史测试结果写成本次执行结果。
 4. 产出定位／合成组合的能力清单，确认哪些云端操作无需本地引擎；为每种缺失状态定义 UI 与自动队列行为。
 
@@ -281,65 +287,65 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 3. Koin 仍装配现有完整实现，模型状态刷新通过适配入口；领域缺失状态由真实的不可用实现表达，拒绝成功空操作。
 4. 在请求前检查整条执行链所需能力与模型；真实推理错误不得被误认为“没有文字”。
 
-验收：原 full 行为基线通过，调用方不再依赖具体运行库类；不改识别算法、云端协议或数据格式。
+验收：原 comic 行为基线通过，调用方不再依赖具体运行库类；不改识别算法、云端协议或数据格式。
 回滚：恢复原装配；无持久化迁移。
 
 **状态（2026-10-31）：已完成。** `MangaTranslationRepository` 的五个引擎参数（含两个捕获 `Application`
 的默认实现）合并为必需 `internal` 构造参数 `MangaLocalEngine`；`mangaAnalysisBands` 的 ML Kit 直连改为
 显式 `locate` 注入；新增 `MangaLocalEngineUnavailableException`、`UnavailableMangaLocalEngine` 与
-不可用模型网关。`data.repository.manga.*` 单测通过（full 285 项）。
+不可用模型网关。`data.repository.manga.*` 单测通过（comic 285 项）。
 
-### P2：交付 `core/full` 两种变体
+### P2：交付 `core/comic` 两种变体
 
-1. 创建 flavor 和 source-set 隔离，把引擎实现、依赖、模型、专用资源／规则及测试移到 full 对应源集。
-2. core 装配能力不可用实现和主应用既有云端能力；UI 明确尚未支持安装扩展，先提供切换完整版的真实路径。
+1. 创建 flavor 和 source-set 隔离，把引擎实现、依赖、模型、专用资源／规则及测试移到 comic 对应源集。
+2. core 装配能力不可用实现和主应用既有云端能力；UI 明确尚未支持安装扩展，先提供切换漫画增强版的真实路径。
    不能显示一个尚无可安装产物的“扩展已支持”入口。
 3. 运行 core 的编译／打包、依赖图与 ZIP 禁入检查；确保无 JNI 初始化错误，修复 DI 和生成绑定引用。
 4. 同步调整 CI、Release 上传路径、文件命名、手动用户构建、baseline profile 和测试矩阵。
 5. 重测 ARM64 Release 字节数；若未达 20 MB，给出残余项及差额，只在实证后追加小范围瘦身切片。
 
-验收：core 不带引擎负载且能阅读；full 行为保持；两种产品覆盖安装保留数据；两种 Release/R8 产物可安装。
-首个轻量版可以先交付，但不宣称独立扩展已完成。20 MB 未达则体积目标仍待完成。
-回滚：恢复 full 为默认发布，保留用户数据，不要求卸载主应用。
+验收：core 不带引擎负载且能阅读；comic 行为保持；两种产品覆盖安装保留数据；两种 Release/R8 产物可安装。
+首个 core 可以先交付，但不宣称独立扩展已完成。20 MB 未达则体积目标仍待完成。
+回滚：恢复 comic 为默认发布，保留用户数据，不要求卸载主应用。
 
 **状态（2026-10-31）：变体与隔离已完成，体积目标未达标。**
 
-- 变体：`appCoreDebug/Release`、`appFullDebug/Release`；源集 `src/core`、`src/full`、`src/testFull`、
-  `src/androidTestFull`。`proguard-manga-engine.pro` 只挂 `full` flavor，ORT 的 `keep` 规则已从公共规则移出。
+- 变体：`appCoreDebug/Release`、`appComicDebug/Release`；源集 `src/core`、`src/comic`、`src/testComic`、
+  `src/androidTestComic`。`proguard-manga-engine.pro` 只挂 `comic` flavor，ORT 的 `keep` 规则已从公共规则移出。
 - core 的依赖图与 APK 条目中都没有 `mlkit`／`onnxruntime`／`manga-vision`；本地引擎绑定换为
   `UnavailableMangaLocalEngine`，模型网关换为不可用实现，`refresh()` 静默以免普通阅读报错。
-- UI：core 隐藏 OCR／擦字模型下载入口，并在本地引擎选项处给出“需要完整版”说明；不提供任何无产物的
+- UI：core 隐藏 OCR／擦字模型下载入口，并在本地引擎选项处给出“需要漫画增强版”说明；不提供任何无产物的
   “安装扩展”入口。
-- 实测 arm64 Release：core **21,605,953 B（21.61 MB）**，full **72,248,654 B（72.25 MB）**，拆分前单一
+- 实测 arm64 Release：core **21,605,953 B（21.61 MB）**，comic **72,248,654 B（72.25 MB）**，拆分前单一
   变体为 71,754,462 B。
 - **差额 +1,605,953 B**。残余项全部是应用既有负载：dex 11.84 MiB、`resources.arsc` + `tc/s2t.txt` 4.47 MiB、
   `libarchive-jni` 1.99 MiB、assets 1.71 MiB、res 0.39 MiB。未为达标删除用户可见功能，20 MB 目标仍待完成。
 - 任务名变更：`compileAppCoreDebugKotlin`、`testAppCoreDebugUnitTest`、`lintAppCoreDebug`、
   `assembleAppCoreRelease` 等；`AppDebug`／`AppRelease` 系列名称不再存在，CI 与 `AGENTS.md` 已同步。
-- 体积归因：逐条目对比显示 core 与 full 的 `resources.arsc` 几乎相同（3,696.3 / 3,700.7 KB），
-  full 相对拆分前多出的 494 KB 来自 10/31 引入的漫画翻译 UI 资源与 dex 重排，不是 flavor 开销。
+- 体积归因：逐条目对比显示 core 与 comic 的 `resources.arsc` 几乎相同（3,696.3 / 3,700.7 KB），
+  comic 相对拆分前多出的 494 KB 来自 10/31 引入的漫画翻译 UI 资源与 dex 重排，不是 flavor 开销。
 
 **复盘修复（同日）**
 
 1. **能力缺失与运行时故障必须分开。** 原 P1 把全部原生异常合并成一种异常，导致 core 的云端 OCR
    在 `geometry()` → `detectContainers` 链路上直接失败（该调用点没有兜底，且气泡分组只是可选排版
    增强）。新增 `MangaLocalEngineFailureException` 表示"运行时存在但失败"，只有
-   `MangaLocalEngineUnavailableException` 才降级为空容器；故障仍快速失败以保持 full 基线。
+   `MangaLocalEngineUnavailableException` 才降级为空容器；故障仍快速失败以保持 comic 基线。
    回归测试：`cloud OCR still composes when the local engine is absent`。
 2. core 不再渲染本地引擎下拉与擦字引擎下拉，只保留说明文案，避免用户选中必然失败的项。
 3. `detectContainers` 恢复对普通 `Exception` 的兜底（P1 曾收窄为只兜 `LinkageError`）。
-4. 已知行为：band 缓存键不含"是否具备本地检测能力"。full→core 覆盖安装后命中的是带检测的旧分段，
+4. 已知行为：band 缓存键不含"是否具备本地检测能力"。comic→core 覆盖安装后命中的是带检测的旧分段，
    反向则可能命中无检测分段（质量降级但合法）；改键会导致全量重算与重新付费，暂不调整。
 
 ### P3：运行时模块与扩展的首条真实调用（暂不启动，见 §5.1）
 
-1. 创建实际被 full 与扩展消费的 `:modules:manga-engine`，迁入有界运行时闭包，移除对 app 类型／资源的反向依赖。
+1. 创建实际被 comic 与扩展消费的 `:modules:manga-engine`，迁入有界运行时闭包，移除对 app 类型／资源的反向依赖。
 2. 在同一可运行切片创建 IPC 合同与扩展宿主，从握手、可信绑定、一个真实 OCR 操作到取消／结果校验走通。
-3. core 新增远程适配，替换 P2 的不可用装配；full 继续走本地适配，对同一输入比较两条路径结果。
+3. core 新增远程适配，替换 P2 的不可用装配；comic 继续走本地适配，对同一输入比较两条路径结果。
 4. 先证明单页、受限图像的通信与生命周期，再开放其他本地操作；只广告已实现的 capabilities。
 
 验收：真机可安装扩展后完成首个本地操作，缺失／不兼容／不可信服务在执行前失败；新增模块均有消费者及 CI 编译。
-回滚：core 回到明确不可用状态，full 不依赖扩展；主应用数据库和缓存不受影响。
+回滚：core 回到明确不可用状态，comic 不依赖扩展；主应用数据库和缓存不受影响。
 
 ### P4：完成能力、模型管理和更新生命周期
 
@@ -350,16 +356,16 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 5. 对新旧主应用／扩展版本做双向兼容测试；大版本不兼容给出可恢复提示。
 
 验收：功能矩阵闭环，取消／失败不覆盖译图；UI/VM 不新增 DAO、偏好或网络直连。
-回滚：按 capability 禁用有问题的操作，提供 full；不删旧译图，不偷偷切云端。
+回滚：按 capability 禁用有问题的操作，提供 comic；不删旧译图，不偷偷切云端。
 
 ### P5：发布和体积收口
 
-1. 交付 `core` 与 `full` 的 ARM64／ARM32／Universal 六个产物（`auto-release.yml` 的 matrix 已双发）。
-2. 附件名带产品标记；应用内更新按 `AppProduct` 过滤；Telegram 对超 50 MB 的 full 产物只发链接。
+1. 交付 `core` 与 `comic` 的 ARM64／ARM32／Universal 六个产物（`auto-release.yml` 的 matrix 已双发）。
+2. 附件名带产品标记；应用内更新按 `AppProduct` 过滤；Telegram 对超 50 MB 的 comic 产物只发链接。
 3. 记录同环境两包的大小、模型下载后总占用、冷启动／推理耗时与峰值内存（见体积报告 §3.1）。
 4. 更新现有漫画开发文档及用户说明，描述 `core` 真实可用的能力，不提前宣称纯云端全部可用。
 
-验收：两包都用实物结算；同签名覆盖安装、core↔full 互切后已下载模型与缓存保留；无关业务无回退。
+验收：两包都用实物结算；同签名覆盖安装、core↔comic 互切后已下载模型与缓存保留；无关业务无回退。
 若体积劣化，列出条目与原因，不以估算或放宽门槛结项。不实施路线 B，不启动扩展包路线。
 
 ## 9. 验证命令、CI 与门禁
@@ -367,9 +373,9 @@ arm64 静态扣除约为 `68.43 - 27.42 - 13.46 - 7.07 = 20.48 MiB`，约 21.5 M
 ### 9.1 当前真实任务（已含 flavor）
 
 ```powershell
-.\gradlew.bat :app:compileAppCoreDebugKotlin :app:compileAppFullDebugKotlin
-.\gradlew.bat testAppCoreDebugUnitTest testAppFullDebugUnitTest lintAppCoreDebug lintAppFullDebug verifyConfigArchitecture assembleAppCoreDebug assembleAppFullDebug --continue --no-configuration-cache
-.\gradlew.bat assembleAppCoreRelease assembleAppFullRelease
+.\gradlew.bat :app:compileAppCoreDebugKotlin :app:compileAppComicDebugKotlin
+.\gradlew.bat testAppCoreDebugUnitTest testAppComicDebugUnitTest lintAppCoreDebug lintAppComicDebug verifyConfigArchitecture assembleAppCoreDebug assembleAppComicDebug --continue --no-configuration-cache
+.\gradlew.bat assembleAppCoreRelease assembleAppComicRelease
 git diff --check
 ```
 
@@ -379,18 +385,18 @@ P1 跑受影响的编排与模型测试，并运行编译／架构门禁；P0 �
 ### 9.2 flavor 已落地，后续模块才需要扩展
 
 `compileAppCoreDebugKotlin`、`testAppCoreDebugUnitTest`、`lintAppCoreDebug`、`assembleAppCoreDebug`、
-`assembleAppCoreRelease` 及 full 对应任务**均已创建并运行**；旧 `AppDebug` 名称不再存在，CI 必须显式选择产品。
+`assembleAppCoreRelease` 及 comic 对应任务**均已创建并运行**；旧 `AppDebug` 名称不再存在，CI 必须显式选择产品。
 新增模块（运行时模块、扩展宿主）后，用 `tasks --all` 记录真实任务名再入 CI。
 
 已同步的配置：
 
-- `.github/workflows/verify.yml`：core/full 单测、lint、架构、debug build 与各自产物路径。
+- `.github/workflows/verify.yml`：core/comic 单测、lint、架构、debug build 与各自产物路径。
 - `.github/workflows/auto-release.yml`：matrix 双发；artifact 名带产品；APK 改名为
   `legado-<version>-<product>-<abi>.apk`；mapping 分别上传为 `mapping-<product>.txt`。
-- `.github/workflows/build-apk-for-user.yml`：`product` 输入选择 `appCore`／`appFull`。
+- `.github/workflows/build-apk-for-user.yml`：`product` 输入选择 `appCore`／`appComic`。
 - `.github/workflows/retrace-log.yml`：`product` 输入，按产品下载对应 mapping。
 - `baselineProfile/build.gradle.kts`：维度已对齐，profile 只生成 core 变体。
-- `app` 的测试源集及 ProGuard 配置：full 引擎测试不污染 core；ORT keep 规则只挂在 full flavor。
+- `app` 的测试源集及 ProGuard 配置：comic 引擎测试不污染 core；ORT keep 规则只挂在 comic flavor。
 
 ### 9.3 必须能证明的检查
 
@@ -399,12 +405,12 @@ P1 跑受影响的编排与模型测试，并运行编译／架构门禁；P0 �
 | core 无大依赖 | 对 core Release runtimeClasspath 查传递依赖；ZIP 检查 ORT、ML Kit OCR 模型／原生库和气泡权重均不存在 |
 | 体积 | 最终签名／对齐后 ARM64 Release 的实际字节数；同时存储环境、commit、哈希、ZIP 分组与差额 |
 | 同行为 | `MangaTranslationRepositoryTest`、`MangaTranslationImagesTest`、模型仓库、几何／排版及 ViewModel／Sheet 既有回归集 |
-| 实机推理 | 复用 `MangaVisionInstrumentedTest`、`MangaOcrInstrumentedTest`、`MangaInpaintInstrumentedTest` 等夹具，在 full 与扩展路径执行 |
+| 实机推理 | 复用 `MangaVisionInstrumentedTest`、`MangaOcrInstrumentedTest`、`MangaInpaintInstrumentedTest` 等夹具，在 comic 与扩展路径执行 |
 | IPC 合同 | 成功／空结果／错误、非法输入、取消、重复终态、旧任务迟到、超大负载、服务死亡、协议与签名不匹配 |
-| 发布运行 | R8 下反序列化／AIDL／JNI 可用；core 干净安装无扩展、安装后使用、更新／卸载、full/core 覆盖安装 |
-| 存量数据 | 设置／词典／译图／原文／修复缓存保留；模型从 full 到扩展复制后再校验，不破坏原文件 |
+| 发布运行 | R8 下反序列化／AIDL／JNI 可用；core 干净安装无扩展、安装后使用、更新／卸载、comic/core 覆盖安装 |
+| 存量数据 | 设置／词典／译图／原文／修复缓存保留；模型从 comic 到扩展复制后再校验，不破坏原文件 |
 | 架构 | `verifyConfigArchitecture` 等既有门禁通过，不提高 baseline；若减少历史违规，同步下调对应基线 |
-| 性能 | 同样本记录 full 与扩展的冷启动、传输、推理、峰值内存和长图耗时；P0 固定设备与可接受预算后再判断回退 |
+| 性能 | 同样本记录 comic 与扩展的冷启动、传输、推理、峰值内存和长图耗时；P0 固定设备与可接受预算后再判断回退 |
 
 不能以模拟 Binder 或 JVM 单测通过替代跨 UID 真机验证；不能以 debug 包通过替代 Release/R8 安装和运行。
 真实云端付费服务、手机直连模型下载源、不同厂商后台限制、ARM32 与旧 Android 版本单独列出实际验证范围。

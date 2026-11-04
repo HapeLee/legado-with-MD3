@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  # 按变体分组：core / full 各跑一个 runner，避免同一 runner 上两个变体的 Kotlin 编译
+  # 按变体分组：core / comic 各跑一个 runner，避免同一 runner 上两个变体的 Kotlin 编译
   # 互相争内存（OutOfMemoryError: Java heap space）。
   verify:
     strategy:
@@ -25,8 +25,8 @@ jobs:
         include:
           - product: Core
             label: core
-          - product: Full
-            label: full
+          - product: Comic
+            label: comic
     name: Verify (${{ matrix.label }})
     runs-on: ubuntu-latest
     # concurrency 放在 job 层：workflow 层的 concurrency 不保证能解析 matrix 上下文。
@@ -70,7 +70,7 @@ jobs:
             --no-configuration-cache
 
       - name: Run unit tests, lint and debug build
-        if: ${{ matrix.product == 'Full' }}
+        if: ${{ matrix.product == 'Comic' }}
         run: |
           chmod +x gradlew
           ./gradlew \

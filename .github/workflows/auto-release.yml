@@ -132,9 +132,9 @@ jobs:
     needs: prepare
     strategy:
       matrix:
-        # 两个产品同时发布：core 轻量版（无本地推理）与 full 完整版（内置 OCR/擦除/气泡检测）。
+        # 两个产品同时发布：core 基础版（无本地推理）与 comic 漫画增强版（内置 OCR/擦除/气泡检测）。
         # 两者的 APK 名与 artifact 名都必须带 product 前缀，否则同一 Release 内会互相覆盖。
-        product: [ appCore, appFull ]
+        product: [ appCore, appComic ]
         type: [ release ]
       fail-fast: false
     runs-on: ubuntu-latest
@@ -315,7 +315,7 @@ jobs:
             [[ -d "$dir" && -f "$dir/mapping.txt" ]] || continue
             case "$dir" in
               *appCore*) cp "$dir/mapping.txt" "mapping-core.txt" ;;
-              *appFull*) cp "$dir/mapping.txt" "mapping-full.txt" ;;
+              *appComic*) cp "$dir/mapping.txt" "mapping-comic.txt" ;;
             esac
           done
 
@@ -325,8 +325,8 @@ jobs:
             product=""
             if [[ "$f" == *-core-* ]]; then
               product="core"
-            elif [[ "$f" == *-full-* ]]; then
-              product="full"
+            elif [[ "$f" == *-comic-* ]]; then
+              product="comic"
             fi
             if [[ -z "$product" ]]; then
               echo "::error::无法从文件名识别产品变体: $f"
@@ -350,6 +350,7 @@ jobs:
       - name: 获取 Commit 记录
         id: get_commits
         run: |
+          VERSIONL="${{ needs.prepare.outputs.versionL }}"
           LAST_TAG="${{ needs.prepare.outputs.latest_tag }}"
           IS_RELEASE="${{ needs.prepare.outputs.is_release }}"
           
@@ -373,6 +374,12 @@ jobs:
                 echo "### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)"
                 echo ""
             fi
+            echo "### 下载哪个包"
+            echo ""
+            echo "- legado-${VERSIONL}-core-*.apk：基础包，不含本地推理运行时；云端 OCR、AI 识图/翻译可用。"
+            echo "- legado-${VERSIONL}-comic-*.apk：漫画增强版，内置本地 OCR、擦字与气泡检测，体积明显更大。"
+            echo "- 原 full 版用户：产品标记已从 full 改为 comic，应用内更新不会跨包升级，请手动下载一次 comic 包，之后恢复正常更新。"
+            echo ""
             echo "### 更新内容"
             echo ""
             echo "$CONTENT"

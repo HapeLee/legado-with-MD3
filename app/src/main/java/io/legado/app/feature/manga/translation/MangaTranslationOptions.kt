@@ -50,14 +50,14 @@ internal fun MangaTranslationOptions(
     else PaddingValues(horizontal = 16.dp, vertical = 8.dp)
     // 可选作识别模型的视觉模型：文本类且带视觉能力，顺序与识别模型下拉一致。
     val visionModels = remember(state.models) { state.models.filter { it.text && it.vision } }
-    // 产物不提供的档位仍然列出并标注"仅完整版"：让用户看到能力差异，但不允许选中。
+    // 产物不提供的档位仍然列出并标注"仅漫画增强版"：让用户看到能力差异，但不允许选中。
     val unavailableLocators = if (capabilities.localEngine) emptySet() else setOf(MangaLocator.LOCAL)
     val locators = MangaLocator.entries
-    // miuix 引擎的 spinner 无法把单项压灰，至少要点出"这一档需要完整版"。
+    // miuix 引擎的 spinner 无法把单项压灰，至少要点出"这一档需要漫画增强版"。
     val context = LocalContext.current
-    val fullOnlyHint = stringResource(R.string.manga_full_only_hint)
-    val notifyFullOnly: (String) -> Unit = remember(context, fullOnlyHint) {
-        { Toast.makeText(context, fullOnlyHint, Toast.LENGTH_SHORT).show() }
+    val comicOnlyHint = stringResource(R.string.manga_comic_only_hint)
+    val notifyComicOnly: (String) -> Unit = remember(context, comicOnlyHint) {
+        { Toast.makeText(context, comicOnlyHint, Toast.LENGTH_SHORT).show() }
     }
     MarkdownDialog(
         show = relationHelp,
@@ -91,13 +91,13 @@ internal fun MangaTranslationOptions(
                 title = stringResource(R.string.manga_translation_locator),
                 selectedValue = settings.locator.name,
                 displayEntries = locators.map { locator ->
-                    if (locator in unavailableLocators) stringResource(R.string.manga_full_only, mangaLocatorName(locator))
+                    if (locator in unavailableLocators) stringResource(R.string.manga_comic_only, mangaLocatorName(locator))
                     else mangaLocatorName(locator)
                 }.toTypedArray(),
                 entryValues = locators.map { it.name }.toTypedArray(),
                 enabled = relevance.isActive(MangaSettingField.LOCATOR),
                 unavailableValues = unavailableLocators.map { it.name }.toSet(),
-                onUnavailableSelected = notifyFullOnly
+                onUnavailableSelected = notifyComicOnly
             ) { value ->
                 onIntent(MangaTranslationIntent.ChangeSettings { current ->
                     val locator = MangaLocator.valueOf(value)
@@ -321,7 +321,7 @@ internal fun MangaTranslationOptions(
                     )
                 })
             }
-            // 模型擦字只有完整版能跑：轻量产物里列出但置灰，权重下载也不出现。
+            // 模型擦字只有漫画增强版能跑：core 里列出但置灰，权重下载也不出现。
             val unavailableInpaint = if (capabilities.localEngine) emptySet()
             else MangaInpaintEngine.entries.filter { it.usesModel }.toSet()
             val inpaintEngines = MangaInpaintEngine.entries
@@ -329,13 +329,13 @@ internal fun MangaTranslationOptions(
                 stringResource(R.string.manga_inpaint_engine),
                 settings.inpaintEngine.name,
                 displayEntries = inpaintEngines.map { engine ->
-                    if (engine in unavailableInpaint) stringResource(R.string.manga_full_only, mangaInpaintEngineName(engine))
+                    if (engine in unavailableInpaint) stringResource(R.string.manga_comic_only, mangaInpaintEngineName(engine))
                     else mangaInpaintEngineName(engine)
                 }.toTypedArray(),
                 entryValues = inpaintEngines.map { it.name }.toTypedArray(),
                 enabled = relevance.isActive(MangaSettingField.INPAINT_ENGINE),
                 unavailableValues = unavailableInpaint.map { it.name }.toSet(),
-                onUnavailableSelected = notifyFullOnly
+                onUnavailableSelected = notifyComicOnly
             ) { value ->
                 onIntent(MangaTranslationIntent.ChangeSettings {
                     it.copy(inpaintEngine = MangaInpaintEngine.valueOf(value))
@@ -347,20 +347,20 @@ internal fun MangaTranslationOptions(
                     MangaInpaintModelControls(settings.inpaintEngine, state, onIntent)
                 }
             }
-            // 气泡几何影响擦除遮罩与排版约束。停用的 AUTO 不再出现；端侧检测只在完整版能跑。
+            // 气泡几何影响擦除遮罩与排版约束。停用的 AUTO 不再出现；端侧检测只在漫画增强版能跑。
             val unavailableBubbles = if (capabilities.onDeviceBubble) emptySet() else setOf(MangaBubbleSource.DEVICE)
             val bubbleSources = MangaBubbleSource.entries.filter { it != MangaBubbleSource.AUTO }
             MangaOptionDropdown(
                 stringResource(R.string.manga_bubble_source),
                 settings.bubbleSource.name,
                 displayEntries = bubbleSources.map { source ->
-                    if (source in unavailableBubbles) stringResource(R.string.manga_full_only, mangaBubbleSourceName(source))
+                    if (source in unavailableBubbles) stringResource(R.string.manga_comic_only, mangaBubbleSourceName(source))
                     else mangaBubbleSourceName(source)
                 }.toTypedArray(),
                 entryValues = bubbleSources.map { it.name }.toTypedArray(),
                 enabled = relevance.isActive(MangaSettingField.BUBBLE_SOURCE),
                 unavailableValues = unavailableBubbles.map { it.name }.toSet(),
-                onUnavailableSelected = notifyFullOnly
+                onUnavailableSelected = notifyComicOnly
             ) { value ->
                 onIntent(MangaTranslationIntent.ChangeSettings {
                     it.copy(bubbleSource = MangaBubbleSource.valueOf(value))

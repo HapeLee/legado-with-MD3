@@ -80,8 +80,8 @@ class AppReleaseInfoTest {
         val assets = listOf(
             asset("legado-1.0.0-core-arm64-v8a.apk"),
             asset("legado-1.0.0-core-universal.apk"),
-            asset("legado-1.0.0-full-arm64-v8a.apk"),
-            asset("legado-1.0.0-full-universal.apk")
+            asset("legado-1.0.0-comic-arm64-v8a.apk"),
+            asset("legado-1.0.0-comic-universal.apk")
         )
 
         assertEquals(
@@ -89,12 +89,12 @@ class AppReleaseInfoTest {
             selectCompatibleAssets(assets, listOf("arm64-v8a"), AppProduct.CORE).map { it.name }
         )
         assertEquals(
-            listOf("legado-1.0.0-full-arm64-v8a.apk"),
-            selectCompatibleAssets(assets, listOf("arm64-v8a"), AppProduct.FULL).map { it.name }
+            listOf("legado-1.0.0-comic-arm64-v8a.apk"),
+            selectCompatibleAssets(assets, listOf("arm64-v8a"), AppProduct.COMIC).map { it.name }
         )
         assertEquals(
-            listOf("legado-1.0.0-full-universal.apk"),
-            selectCompatibleAssets(listOf(asset("legado-1.0.0-full-universal.apk")), listOf("arm64-v8a"), AppProduct.FULL)
+            listOf("legado-1.0.0-comic-universal.apk"),
+            selectCompatibleAssets(listOf(asset("legado-1.0.0-comic-universal.apk")), listOf("arm64-v8a"), AppProduct.COMIC)
                 .map { it.name }
         )
     }
@@ -109,7 +109,7 @@ class AppReleaseInfoTest {
         )
         assertEquals(
             listOf("legado-1.0.0-arm64-v8a.apk"),
-            selectCompatibleAssets(assets, listOf("arm64-v8a"), AppProduct.FULL).map { it.name }
+            selectCompatibleAssets(assets, listOf("arm64-v8a"), AppProduct.COMIC).map { it.name }
         )
     }
 
@@ -119,7 +119,21 @@ class AppReleaseInfoTest {
 
         assertEquals(
             emptyList<Asset>(),
-            selectCompatibleAssets(assets, listOf("arm64-v8a"), AppProduct.FULL)
+            selectCompatibleAssets(assets, listOf("arm64-v8a"), AppProduct.COMIC)
+        )
+    }
+
+    /** comic 改名前的资产标记是 full，不能被当成 comic 的更新，否则会跨产品升级。 */
+    @Test
+    fun `legacy full assets are not offered to the comic product`() {
+        val assets = listOf(
+            asset("legado-1.0.0-core-arm64-v8a.apk"),
+            asset("legado-1.0.0-full-arm64-v8a.apk")
+        )
+
+        assertEquals(
+            emptyList<Asset>(),
+            selectCompatibleAssets(assets, listOf("arm64-v8a"), AppProduct.COMIC)
         )
     }
 

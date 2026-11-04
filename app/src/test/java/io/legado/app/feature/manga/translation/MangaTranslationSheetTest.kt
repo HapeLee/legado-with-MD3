@@ -54,8 +54,8 @@ class MangaTranslationSheetTest {
     }
 
     /** 轻量产品不内置运行时，权重下载入口必须缺席，否则用户会下载后用不了。 */
-    @Test fun `lightweight build offers no local model download`() {
-        assumeTrue("Only the lightweight product omits the local engine", !BuildConfig.MANGA_LOCAL_ENGINE)
+    @Test fun `core build offers no local model download`() {
+        assumeTrue("Only the core product omits the local engine", !BuildConfig.MANGA_LOCAL_ENGINE)
         val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
         val state = mutableStateOf(MangaTranslationUiState(open = true, loaded = true,
             settings = MangaTranslationSettings(locator = MangaLocator.LOCAL, localOcrEngine = MangaLocalOcrEngine.PADDLE_V5),
@@ -64,10 +64,10 @@ class MangaTranslationSheetTest {
             MangaTranslationSheet(state.value) {}
         } } }
         compose.onAllNodesWithText("Download OCR model").assertCountEquals(0)
-        // 识别方式里不再提供端侧选项，引擎下拉也缺席，且控件下方不再有"需要完整版"说明。
+        // 识别方式里不再提供端侧选项，引擎下拉也缺席，且控件下方不再有"需要漫画增强版"说明。
         compose.onAllNodesWithText(app.getString(R.string.manga_translation_locator_local)).assertCountEquals(0)
         compose.onAllNodesWithText(app.getString(R.string.manga_ocr_local_engine)).assertCountEquals(0)
-        compose.onAllNodesWithText(app.getString(R.string.manga_local_engine_requires_full)).assertCountEquals(0)
+        compose.onAllNodesWithText(app.getString(R.string.manga_local_engine_requires_comic)).assertCountEquals(0)
         // 模型擦字同样不提供：擦字下拉保留在原位并置灰，档位只剩内置。
         compose.onAllNodesWithText(app.getString(R.string.manga_inpaint_engine)).assertCountEquals(1)
         compose.onAllNodesWithText(app.getString(R.string.manga_inpaint_local)).assertCountEquals(1)
@@ -208,8 +208,8 @@ class MangaTranslationSheetTest {
     fun `expanded languages use dropdowns and cleanup requires confirmation`() = languageAndCleanupControls()
 
     private fun ocrControls() {
-        // Weight download only exists in the full product; the lightweight build hides it.
-        assumeTrue("Local recognizers are only bundled in the full product", BuildConfig.MANGA_LOCAL_ENGINE)
+        // Weight download only exists in the comic product; the core build hides it.
+        assumeTrue("Local recognizers are only bundled in the comic product", BuildConfig.MANGA_LOCAL_ENGINE)
         val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
         val state = mutableStateOf(MangaTranslationUiState(open = true, loaded = true,
             settings = MangaTranslationSettings(locator = MangaLocator.LOCAL, localOcrEngine = MangaLocalOcrEngine.PADDLE_V5),
@@ -375,7 +375,7 @@ class MangaTranslationSheetTest {
     fun `expanded AI typesetting mode hides crop refinement and keeps the published image`() = aiTypesettingControls()
 
     private fun inpaintControls() {
-        assumeTrue("Text removal is only bundled in the full product", BuildConfig.MANGA_LOCAL_ENGINE)
+        assumeTrue("Text removal is only bundled in the comic product", BuildConfig.MANGA_LOCAL_ENGINE)
         val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
         val state = mutableStateOf(MangaTranslationUiState(open = true, loaded = true,
             settings = MangaTranslationSettings(inpaintEngine = MangaInpaintEngine.MI_GAN),

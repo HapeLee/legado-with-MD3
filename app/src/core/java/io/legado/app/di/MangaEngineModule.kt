@@ -13,20 +13,20 @@ import io.legado.app.domain.gateway.MangaVisionModelGateway
 import org.koin.dsl.module
 
 /**
- * 轻量产品：本地能力以真实"不可用"实现装配，缺能力时明确失败而不是伪造成空结果。
+ * core 基础产品：本地能力以真实"不可用"实现装配，缺能力时明确失败而不是伪造成空结果。
  * 云端 OCR、AI 识图/翻译、阅读与已发布译图展示都不依赖这里的绑定。
  */
 val mangaEngineModule = module {
     single<MangaLocalEngine> {
-        UnavailableMangaLocalEngine(get<Context>().getString(R.string.manga_local_engine_requires_full))
+        UnavailableMangaLocalEngine(get<Context>().getString(R.string.manga_local_engine_requires_comic))
     }
     single<MangaOcrModelGateway> {
-        UnavailableMangaOcrModelGateway(get<Context>().getString(R.string.manga_local_engine_requires_full))
+        UnavailableMangaOcrModelGateway(get<Context>().getString(R.string.manga_local_engine_requires_comic))
     }
     single<MangaInpaintModelGateway> {
-        UnavailableMangaInpaintModelGateway(get<Context>().getString(R.string.manga_local_engine_requires_full))
+        UnavailableMangaInpaintModelGateway(get<Context>().getString(R.string.manga_local_engine_requires_comic))
     }
     single<MangaVisionModelGateway> {
-        UnavailableMangaVisionModelGateway(get<Context>().getString(R.string.manga_local_engine_requires_full))
+        UnavailableMangaVisionModelGateway(get<Context>().getString(R.string.manga_local_engine_requires_comic))
     }
 }

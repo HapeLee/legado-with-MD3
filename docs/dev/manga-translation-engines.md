@@ -169,7 +169,7 @@
   通过 CompositionLocal 继承，不用逐层传参。全局设置页保持完整密度。
 - Tiny 密度不套 `SplicedColumnGroup`：Tiny 条目本身就是卡片，再包一层会变成卡片套卡片。
 - `TinyDropdownSettingItem` 补了 `enabled` / `unavailableValues` / `onUnavailableSelected`，与
-  `DropdownListSettingItem` 对齐，sheet 里的"仅完整版"档位仍然压灰、点了给 Toast。
+  `DropdownListSettingItem` 对齐，sheet 里的"仅漫画增强版"档位仍然压灰、点了给 Toast。
 - 「漫画翻译设置」入口只在 `useGlobalSettings` 为真时出现：本漫单独设置时它改不动眼前这些选项。
 - 术语表 sheet：去掉自带的 16dp 边距（`AppModalBottomSheet` 已有内边距），条目改成 `TinyClickableSettingItem`；
   「添加词条」移到 `endAction`，是仅图标的 `MediumTonalButton`（`AppIcons.Add`）；取消保存按钮，

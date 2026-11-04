@@ -176,8 +176,8 @@ options-removed-native.log 和 options-removed-recomposed/。未跑全量 Lint�
 - core（无本地运行时）降级把本地识别换成云端 AI 时，一并把 `automatic` 置为暂停：识别从免费端侧
   变成付费云端上传，不能沿用用户当初的选择静默开跑。
 - 产物差异只允许出现在"选项可见性"上，不允许出现在"同一个选项的行为"上。本地识别、模型擦字、
-  端侧气泡检测这三个档位在 core 里**仍然列出但置灰**，显示名带"仅完整版"，且不可选中
-  （`DropdownListSettingItem.unavailableValues`）；点到置灰项会弹一句"需要完整版"的提示
+  端侧气泡检测这三个档位在 core 里**仍然列出但置灰**，显示名带"仅漫画增强版"，且不可选中
+  （`DropdownListSettingItem.unavailableValues`）；点到置灰项会弹一句"需要漫画增强版"的提示
   （miuix 引擎的 spinner 无法压灰，只靠这条提示补偿）。`SMART` 等组合方式在两包语义一致，
   擦字方式由独立的「擦字引擎」表达（full 同时保留「内置」）。
 - 被静默改写的选择要能解释：`MangaTranslationGateway.storedSettings()` 返回未降级的存储值，

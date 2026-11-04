@@ -25,17 +25,20 @@ enum class AppVariant {
 }
 
 /**
- * 同一 Release 现在并存轻量与完整两个包，它们的 ABI、versionCode 完全相同。
- * 更新只能挑自己这一份，否则 core 会被"升级"成 60+ MB 的 full，full 会被降级丢失本地引擎。
+ * 同一 Release 并存 core 基础包与 comic 漫画增强版，它们的 ABI、versionCode 完全相同。
+ * 更新只能挑自己这一份，否则 core 会被"升级"成 60+ MB 的 comic，comic 会被降级丢失本地引擎。
+ *
+ * [tag] 必须与发布资产名一致。comic 之前的产品标记是 `full`，改名后旧标记不再匹配：
+ * 停在旧 full 版的用户需要手动下载一次 comic 包，之后应用内更新恢复。
  */
 enum class AppProduct(val tag: String) {
     CORE("core"),
-    FULL("full");
+    COMIC("comic");
 
     companion object {
         /** 资产名里的产品标记形如 `legado-<version>-core-arm64-v8a.apk`。 */
         val current: AppProduct
-            get() = if (io.legado.app.BuildConfig.MANGA_LOCAL_ENGINE) FULL else CORE
+            get() = if (io.legado.app.BuildConfig.MANGA_LOCAL_ENGINE) COMIC else CORE
     }
 }
 

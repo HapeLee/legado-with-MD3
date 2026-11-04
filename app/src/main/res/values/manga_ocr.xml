@@ -76,7 +76,7 @@
     <string name="manga_ocr_otsu_hint">For monochrome text.</string>
     <string name="manga_ocr_options_hint">Retranslate to apply.</string>
     <string name="manga_ocr_reset_options">Restore OCR defaults</string>
-    <string name="manga_local_engine_requires_full">On-device OCR and text removal need the full build. Use Cloud OCR or AI in this build; existing translated pages stay available.</string>
+    <string name="manga_local_engine_requires_comic">On-device OCR and text removal need the comic build. Use Cloud OCR or AI in this build; existing translated pages stay available.</string>
 
     <string name="manga_bubble_source">Bubble detection</string>
     <string name="manga_bubble_source_device">On-device</string>
@@ -86,8 +86,8 @@
     <string name="manga_settings_inactive_group">%1$s: %2$s, so these settings have no effect here.</string>
     <string name="manga_settings_degraded_local">No on-device runtime in this build: the on-device option saved for %1$s is unavailable, so the closest supported option is used.</string>
     <string name="manga_settings_field_separator">, </string>
-    <string name="manga_full_only">%1$s · full build only</string>
-    <string name="manga_full_only_hint">This option needs the full build</string>
+    <string name="manga_comic_only">%1$s · comic build only</string>
+    <string name="manga_comic_only_hint">This option needs the comic build</string>
     <string name="manga_settings_reason_page_edit">The image model redraws the whole page</string>
     <string name="manga_settings_reason_source_kept">Patched output keeps the original lettering</string>
     <string name="manga_settings_reason_ai_composition">The image model produces the composite</string>

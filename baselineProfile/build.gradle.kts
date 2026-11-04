@@ -31,7 +31,7 @@ android {
     productFlavors {
         create("app") { dimension = "mode" }
         create("core") { dimension = "engine" }
-        create("full") { dimension = "engine" }
+        create("comic") { dimension = "engine" }
     }
 }
 
@@ -51,8 +51,9 @@ dependencies {
 
 androidComponents {
     beforeVariants { v ->
-        val full = v.productFlavors.any { it.second == "full" }
-        if (v.buildType == "noR8" || v.buildType == "debug" || full) {
+        // baseline profile 只针对 core 采集；comic 的本地引擎体积与启动路径另算。
+        val comic = v.productFlavors.any { it.second == "comic" }
+        if (v.buildType == "noR8" || v.buildType == "debug" || comic) {
             v.enable = false
         }
     }

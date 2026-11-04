@@ -78,7 +78,7 @@ class MangaTranslationRepository internal constructor(
      * 端侧气泡检测。OFF／AI／OUTLINE 都不调用本地模型：OFF 不需要气泡，AI 只用识别结果里的容器框，
      * OUTLINE 只用原图像素推断轮廓（`MangaBubbleGeometry`，两种产物一致）。
      * 其余取值（[MangaBubbleSource.DEVICE]，以及旧存档残留的 `AUTO`）走端侧模型；缺少本地能力时退化为空列表
-     * ——用户的选择保留，只是这一档在轻量版上产不出几何。
+     * ——用户的选择保留，只是这一档在 core 上产不出几何。
      */
     private suspend fun detectContainers(
         bitmap: Bitmap,
@@ -191,7 +191,7 @@ class MangaTranslationRepository internal constructor(
      *   [MangaLocalEngineUnavailableException] 的分支上；
      * - MI-GAN／LaMa 走 ONNX，回落内置擦字（MangaPageComposer 的纯绘制实现，core 仍然可用）；
      * - `MangaBubbleSource.DEVICE` 回落到 `OFF`：core 上它本来就产不出几何、请求也与 `OFF` 完全相同；
-     *   下拉里这一档会标注"仅完整版"并置灰。`AI`／`OUTLINE`／`OFF` 不依赖运行库，两种产物都可用。
+     *   下拉里这一档会标注"仅漫画增强版"并置灰。`AI`／`OUTLINE`／`OFF` 不依赖运行库，两种产物都可用。
      * - 已停用的 `AUTO` 先迁移到 `DEVICE`（旧存档行为不变），core 上再落到 `OFF`。
      * 读取与写入都走这里，因此在 core 改动任一设置会把遗留的本地选择规范化掉。
      */
