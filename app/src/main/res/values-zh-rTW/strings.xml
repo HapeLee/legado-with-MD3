@@ -1392,6 +1392,11 @@
     <string name="update_to_variant_summary">检查更新时查找其他签名版本</string>
     <string name="auto_check_update_on_start_title">啟動時自動檢查更新</string>
     <string name="auto_check_update_on_start_summary">僅在應用程式程序完全重新啟動時檢查，從背景返回不會觸發</string>
+    <string name="update_endpoint_title">更新來源</string>
+    <string name="update_endpoint_summary">自動先直連 GitHub，失敗後改用鏡像；亦可固定只走其中一條</string>
+    <string name="update_endpoint_auto">自動（GitHub 優先，失敗改用鏡像）</string>
+    <string name="update_endpoint_github">僅 GitHub</string>
+    <string name="update_endpoint_mirror">僅鏡像</string>
     <string name="default_version">当前</string>
     <string name="official_version">正式版</string>
     <string name="beta_release_version">测试版</string>

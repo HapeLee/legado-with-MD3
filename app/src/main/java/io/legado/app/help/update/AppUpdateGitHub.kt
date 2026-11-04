@@ -11,6 +11,8 @@ import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Headers
 import okhttp3.Request
@@ -24,9 +26,8 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
 
     private const val repoPath = "HapeLee/legado-with-MD3"
     private const val githubApiBaseUrl = "https://api.github.com/repos/$repoPath/releases"
-    private const val updateManifestBaseUrl =
-        "https://raw.githubusercontent.com/$repoPath/update-manifests"
     private const val manifestTimeoutMillis = 2500L
+    private const val checkTimeoutMillis = 15000L
 
     private val checkVariant: AppVariant
         get() = when (otherSettingsGateway.currentSettings.updateToVariant) {
@@ -36,45 +37,87 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
             else -> AppConst.appInfo.appVariant
         }
 
-    private suspend fun getLatestRelease(variant: AppVariant): List<AppReleaseInfo> {
-        val releases = getManifestReleases(variant) ?: getApiReleases(variant)
-        return releases
-            .flatMap { it.gitReleaseToAppReleaseInfo() }
-            .sortedByDescending { it.createdAt }
-    }
+    private val endpoint: AppUpdateEndpoint
+        get() = AppUpdateEndpoint.of(otherSettingsGateway.currentSettings.updateEndpoint)
 
-    private suspend fun getManifestReleases(variant: AppVariant): List<GithubRelease>? {
-        val releases = when (variant) {
-            AppVariant.OFFICIAL -> listOfNotNull(getManifestRelease(AppVariant.OFFICIAL))
-            AppVariant.BETA_RELEASE -> listOfNotNull(getManifestRelease(AppVariant.BETA_RELEASE))
-            AppVariant.ALL -> listOfNotNull(
-                getManifestRelease(AppVariant.OFFICIAL),
-                getManifestRelease(AppVariant.BETA_RELEASE)
+    private data class ManifestFeed(
+        val releases: List<GithubRelease>,
+        val viaMirror: Boolean
+    )
+
+    private data class ManifestRelease(
+        val release: GithubRelease,
+        val viaMirror: Boolean
+    )
+
+    private data class ReleaseFeed(
+        val releases: List<AppReleaseInfo>,
+        val viaMirror: Boolean
+    )
+
+    private suspend fun getLatestRelease(variant: AppVariant): ReleaseFeed {
+        val manifest = getManifestReleases(variant)
+        if (manifest != null) {
+            return ReleaseFeed(
+                releases = manifest.releases
+                    .flatMap { it.gitReleaseToAppReleaseInfo() }
+                    .sortedByDescending { it.createdAt },
+                viaMirror = manifest.viaMirror
             )
-            else -> emptyList()
         }
-        val expectedCount = if (variant == AppVariant.ALL) 2 else 1
-        return releases.takeIf { it.size == expectedCount }
+        // 镜像模式只信任镜像清单：连不上时明确报错，不能静默当成“已是最新版本”。
+        if (!endpoint.usesGitHubApi) {
+            throw NoStackTraceException("无法获取更新信息，请检查网络或更换更新源")
+        }
+        return ReleaseFeed(
+            releases = getApiReleases(variant)
+                .flatMap { it.gitReleaseToAppReleaseInfo() }
+                .sortedByDescending { it.createdAt },
+            viaMirror = false
+        )
     }
 
-    private suspend fun getManifestRelease(variant: AppVariant): GithubRelease? {
-        val channel = when (variant) {
-            AppVariant.OFFICIAL -> "official"
-            AppVariant.BETA_RELEASE -> "beta"
+    private suspend fun getManifestReleases(variant: AppVariant): ManifestFeed? {
+        val channels = when (variant) {
+            AppVariant.OFFICIAL -> listOf("official" to false)
+            AppVariant.BETA_RELEASE -> listOf("beta" to true)
+            AppVariant.ALL -> listOf("official" to false, "beta" to true)
             else -> return null
         }
+        val releases = mutableListOf<GithubRelease>()
+        var viaMirror = false
+        for ((channel, expectsPreRelease) in channels) {
+            val release = getManifestRelease(channel, expectsPreRelease) ?: return null
+            releases += release.release
+            // 只要有一份清单来自镜像，安装包也走镜像，避免清单与下载落在两条链路上。
+            viaMirror = viaMirror || release.viaMirror
+        }
+        return ManifestFeed(releases, viaMirror)
+    }
+
+    private suspend fun getManifestRelease(
+        channel: String,
+        expectsPreRelease: Boolean
+    ): ManifestRelease? {
+        for (address in endpoint.manifestUrls(repoPath, channel)) {
+            val release = fetchManifest(address, expectsPreRelease) ?: continue
+            return ManifestRelease(release, address.startsWith(UPDATE_MIRROR_PREFIX))
+        }
+        return null
+    }
+
+    private suspend fun fetchManifest(address: String, expectsPreRelease: Boolean): GithubRelease? {
         return try {
             withTimeoutOrNull(manifestTimeoutMillis) {
                 val response = okHttpClient.newCallResponse {
-                    url("$updateManifestBaseUrl/$channel.json")
+                    url(address)
                 }
                 response.use {
                     if (!it.isSuccessful) return@withTimeoutOrNull null
                     val release = GSON.fromJsonObject<GithubRelease>(it.body.text()).getOrNull()
                         ?: return@withTimeoutOrNull null
-                    val expectedPreRelease = variant == AppVariant.BETA_RELEASE
                     release.takeIf {
-                        it.isPreRelease == expectedPreRelease &&
+                        it.isPreRelease == expectsPreRelease &&
                             it.assets.orEmpty().any { asset -> asset.isValid }
                     }
                 }
@@ -125,27 +168,29 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
 
     suspend fun getReleaseByTag(tag: String): AppUpdate.UpdateInfo? {
         val manifestRelease = findManifestRelease(tag)
-        val release = manifestRelease ?: getApiReleaseByTag(tag) ?: return null
+        val release = manifestRelease?.release
+            ?: (if (endpoint.usesGitHubApi) getApiReleaseByTag(tag) else null)
+            ?: return null
         val info = release.gitReleaseToAppReleaseInfo().firstOrNull() ?: return null
+        val viaMirror = manifestRelease?.viaMirror == true
 
         return AppUpdate.UpdateInfo(
             tagName = info.versionName,
             updateLog = info.note,
-            downloadUrl = info.downloadUrl,
+            downloadUrl = if (viaMirror) mirrorUrl(info.downloadUrl) else info.downloadUrl,
             fileName = info.name
         )
     }
 
-    private suspend fun findManifestRelease(tag: String): GithubRelease? {
-        val variants = if (tag.contains("beta", ignoreCase = true)) {
-            listOf(AppVariant.BETA_RELEASE, AppVariant.OFFICIAL)
+    private suspend fun findManifestRelease(tag: String): ManifestRelease? {
+        val channels = if (tag.contains("beta", ignoreCase = true)) {
+            listOf("beta" to true, "official" to false)
         } else {
-            listOf(AppVariant.OFFICIAL, AppVariant.BETA_RELEASE)
+            listOf("official" to false, "beta" to true)
         }
-        variants.forEach { variant ->
-            getManifestRelease(variant)?.let { release ->
-                if (release.tagName == tag) return release
-            }
+        for ((channel, expectsPreRelease) in channels) {
+            val release = getManifestRelease(channel, expectsPreRelease) ?: continue
+            if (release.release.tagName == tag) return release
         }
         return null
     }
@@ -182,36 +227,47 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
     }
 
     override fun check(scope: CoroutineScope): Coroutine<AppUpdate.UpdateInfo> {
-        return Coroutine.async(scope) {
-            val currentVersion = AppConst.appInfo.versionName
-            val variant = checkVariant
-            val releases = getLatestRelease(variant)
+        return Coroutine.async(scope) { checkNow() }
+    }
 
-            val filtered = if (variant == AppVariant.ALL) {
-                releases
-            } else {
-                releases.filter { it.appVariant == variant }
+    /**
+     * 可直接 await 的版本检查：启动自动检查这类需要"检查完再决定下一步"的调用方用它，
+     * 避免 [Coroutine] 回调在协程过快完成时被跳过的老问题。
+     */
+    suspend fun checkNow(): AppUpdate.UpdateInfo = try {
+        withTimeout(checkTimeoutMillis) { resolveLatest() }
+    } catch (_: TimeoutCancellationException) {
+        // 超时本身也是 CancellationException，直接外抛会连带取消调用方的启动协程。
+        throw NoStackTraceException("检查更新超时")
+    }
+
+    private suspend fun resolveLatest(): AppUpdate.UpdateInfo {
+        val currentVersion = AppConst.appInfo.versionName
+        val variant = checkVariant
+        val feed = getLatestRelease(variant)
+        val releases = feed.releases
+
+        val filtered = if (variant == AppVariant.ALL) {
+            releases
+        } else {
+            releases.filter { it.appVariant == variant }
+        }
+
+        val latest = filtered.firstOrNull { r ->
+            try {
+                r.versionName.versionCompare(currentVersion) > 0
+            } catch (_: Exception) {
+                false
             }
+        } ?: throw NoStackTraceException("已是最新版本")
 
-            val latest = filtered.firstOrNull { r ->
-                try {
-                    r.versionName.versionCompare(currentVersion) > 0
-                } catch (_: Exception) {
-                    false
-                }
-            }
-
-            if (latest != null) {
-                return@async AppUpdate.UpdateInfo(
-                    latest.versionName,
-                    latest.note,
-                    latest.downloadUrl,
-                    latest.name
-                )
-            }
-
-            throw NoStackTraceException("已是最新版本")
-        }.timeout(10000)
+        return AppUpdate.UpdateInfo(
+            latest.versionName,
+            latest.note,
+            // 清单来自镜像时安装包也走镜像，否则国内用户仍会卡在 GitHub 下载。
+            if (feed.viaMirror) mirrorUrl(latest.downloadUrl) else latest.downloadUrl,
+            latest.name
+        )
     }
 
     private data class SemVer(

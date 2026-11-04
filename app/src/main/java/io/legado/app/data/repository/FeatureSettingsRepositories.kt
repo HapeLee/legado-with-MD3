@@ -513,7 +513,8 @@ internal fun Preferences.toOtherSettings(): OtherSettings {
     val rawSourceEditMaxLine = compatDsInt(PreferKey.sourceEditMaxLine) ?: Int.MAX_VALUE
     return OtherSettings(
         updateToVariant = compatDsString(PreferKey.updateToVariant) ?: "official_version",
-        autoCheckUpdateOnStart = compatDsBoolean(PreferKey.autoCheckUpdateOnStart) ?: false,
+        updateEndpoint = compatDsString(PreferKey.updateEndpoint) ?: "auto",
+        autoCheckUpdateOnStart = compatDsBoolean(PreferKey.autoCheckUpdateOnStart) ?: true,
         webServiceAutoStart = compatDsBoolean(PreferKey.webServiceAutoStart) ?: false,
         autoRefresh = compatDsBoolean(PreferKey.autoRefresh) ?: false,
         defaultToRead = compatDsBoolean(PreferKey.defaultToRead) ?: false,
@@ -543,6 +544,7 @@ internal fun Preferences.toOtherSettings(): OtherSettings {
 
 internal fun OtherSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.updateToVariant to updateToVariant,
+    PreferKey.updateEndpoint to updateEndpoint,
     PreferKey.autoCheckUpdateOnStart to autoCheckUpdateOnStart,
     PreferKey.webServiceAutoStart to webServiceAutoStart,
     PreferKey.autoRefresh to autoRefresh,

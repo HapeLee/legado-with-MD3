@@ -2,7 +2,9 @@ package io.legado.app.domain.model.settings
 
 data class OtherSettings(
     val updateToVariant: String = "official_version",
-    val autoCheckUpdateOnStart: Boolean = false,
+    // 更新清单与安装包来源，取值见 AppUpdateEndpoint：auto / github / mirror
+    val updateEndpoint: String = "auto",
+    val autoCheckUpdateOnStart: Boolean = true,
     val webServiceAutoStart: Boolean = false,
     val autoRefresh: Boolean = false,
     val defaultToRead: Boolean = false,

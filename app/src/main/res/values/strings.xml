@@ -1713,6 +1713,11 @@
     <string name="update_to_variant_summary">Look for other signature variants when checking for updates</string>
     <string name="auto_check_update_on_start_title">Check for updates on startup</string>
     <string name="auto_check_update_on_start_summary">Only checks after the app process fully restarts; returning from the background will not trigger a check</string>
+    <string name="update_endpoint_title">Update Source</string>
+    <string name="update_endpoint_summary">Try GitHub first and fall back to a mirror; you can also pin a single source</string>
+    <string name="update_endpoint_auto">Auto (GitHub first, mirror on failure)</string>
+    <string name="update_endpoint_github">GitHub only</string>
+    <string name="update_endpoint_mirror">Mirror only</string>
     <string name="default_version">Current</string>
     <string name="official_version">Official</string>
     <string name="beta_release_version">Beta</string>

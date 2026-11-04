@@ -68,6 +68,15 @@ fun OtherConfigScreen(
                     onValueChange = { onIntent(OtherConfigIntent.UpdateToVariantChanged(it)) }
                 )
 
+                DropdownListSettingItem(
+                    title = stringResource(R.string.update_endpoint_title),
+                    description = stringResource(R.string.update_endpoint_summary),
+                    selectedValue = state.updateEndpoint,
+                    displayEntries = stringArrayResource(R.array.update_endpoint),
+                    entryValues = stringArrayResource(R.array.update_endpoint_value),
+                    onValueChange = { onIntent(OtherConfigIntent.UpdateEndpointChanged(it)) }
+                )
+
                 SwitchSettingItem(
                     title = stringResource(R.string.auto_check_update_on_start_title),
                     description = stringResource(R.string.auto_check_update_on_start_summary),

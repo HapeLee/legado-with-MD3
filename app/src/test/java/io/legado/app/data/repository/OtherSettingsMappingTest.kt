@@ -3,16 +3,25 @@ package io.legado.app.data.repository
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.settings.OtherSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OtherSettingsMappingTest {
 
     @Test
-    fun `其他设置 26 键写读映射逐字段对应`() {
+    fun `其他设置 27 键写读映射逐字段对应`() {
         otherMappingSamples().forEach { expected ->
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
             assertEquals(expected, expected.expectedPrefMap().toTestPreferences().toOtherSettings())
         }
+    }
+
+    @Test
+    fun `空偏好默认启动检查更新并走自动更新源`() {
+        val settings = emptyMap<String, Any?>().toTestPreferences().toOtherSettings()
+
+        assertTrue(settings.autoCheckUpdateOnStart)
+        assertEquals("auto", settings.updateEndpoint)
     }
 
     @Test
@@ -38,7 +47,8 @@ private fun otherMappingSamples(): List<OtherSettings> {
     )
     return listOf(
         base,
-        base.copy(autoCheckUpdateOnStart = true),
+        base.copy(updateEndpoint = "mirror"),
+        base.copy(autoCheckUpdateOnStart = false),
         base.copy(webServiceAutoStart = true),
         base.copy(autoRefresh = true),
         base.copy(defaultToRead = true),
@@ -64,6 +74,7 @@ private fun otherMappingSamples(): List<OtherSettings> {
 
 private fun OtherSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.updateToVariant to updateToVariant,
+    PreferKey.updateEndpoint to updateEndpoint,
     PreferKey.autoCheckUpdateOnStart to autoCheckUpdateOnStart,
     PreferKey.webServiceAutoStart to webServiceAutoStart,
     PreferKey.autoRefresh to autoRefresh,
