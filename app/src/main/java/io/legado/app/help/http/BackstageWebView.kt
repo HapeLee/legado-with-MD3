@@ -178,6 +178,9 @@ class BackstageWebView(
         }
     }
 
+    // 该规则按 Java PSI 检查 WebViewClient 的构造调用，看不到 Kotlin 里的实现；
+    // 本类已实现 onRenderProcessGone（见下方 override）。
+    @SuppressLint("MissingOnRenderProcessGone")
     private inner class HtmlWebViewClient : WebViewClient() {
 
         private var runnable: EvalJsRunnable? = null
@@ -295,6 +298,8 @@ class BackstageWebView(
 
     }
 
+    // 同上：本类已实现 onRenderProcessGone，规则看不到 Kotlin 实现。
+    @SuppressLint("MissingOnRenderProcessGone")
     private inner class SnifferWebClient : WebViewClient() {
 
         override fun shouldOverrideUrlLoading(

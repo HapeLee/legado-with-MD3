@@ -56,7 +56,8 @@ import io.legado.app.utils.sendToClip
 import java.net.URLDecoder
 import android.webkit.CookieManager as AndroidCookieManager
 
-@SuppressLint("SetJavaScriptEnabled", "WebViewClientOnReceivedSslError")
+// MissingOnRenderProcessGone：该规则按 Java PSI 查构造调用，看不到 Kotlin 匿名对象里的 override。
+@SuppressLint("SetJavaScriptEnabled", "WebViewClientOnReceivedSslError", "MissingOnRenderProcessGone")
 @Composable
 fun WebViewRouteScreen(
     intent: Intent,

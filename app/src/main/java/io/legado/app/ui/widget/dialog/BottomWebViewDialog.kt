@@ -761,6 +761,9 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
         }
     }
 
+    // 该规则按 Java PSI 检查 WebViewClient 的构造调用，看不到 Kotlin 里的实现；
+    // 本类已实现 onRenderProcessGone（见下方 override）。
+    @SuppressLint("MissingOnRenderProcessGone")
     inner class CustomWebViewClient : WebViewClient() {
 
         override fun shouldOverrideUrlLoading(

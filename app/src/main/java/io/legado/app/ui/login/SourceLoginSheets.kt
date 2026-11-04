@@ -310,7 +310,8 @@ private fun SourceLoginWebSheet(
     }
 }
 
-@SuppressLint("SetJavaScriptEnabled", "WebViewClientOnReceivedSslError")
+// MissingOnRenderProcessGone：该规则按 Java PSI 查构造调用，看不到 Kotlin 匿名对象里的 override。
+@SuppressLint("SetJavaScriptEnabled", "WebViewClientOnReceivedSslError", "MissingOnRenderProcessGone")
 @Composable
 private fun SourceLoginWebView(
     state: SourceLoginUiState,

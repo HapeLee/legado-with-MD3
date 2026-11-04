@@ -132,7 +132,8 @@ private data class DictWebPage(
     val url: String,
 )
 
-@SuppressLint("SetJavaScriptEnabled")
+// MissingOnRenderProcessGone：该规则按 Java PSI 查构造调用，看不到 Kotlin 匿名对象里的 override。
+@SuppressLint("SetJavaScriptEnabled", "MissingOnRenderProcessGone")
 @Composable
 private fun DictWebSheet(
     page: DictWebPage?,

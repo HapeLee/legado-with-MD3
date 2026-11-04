@@ -81,7 +81,8 @@ internal data class RssReadWebControllerCallbacks(
 
 private val webCookieManager: CookieManager by lazy { CookieManager.getInstance() }
 
-@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
+// MissingOnRenderProcessGone：该规则按 Java PSI 查构造调用，看不到 Kotlin 匿名对象里的 override。
+@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface", "MissingOnRenderProcessGone")
 internal fun configureRssReadWebView(
     webView: VisibleWebView,
     context: Context,
