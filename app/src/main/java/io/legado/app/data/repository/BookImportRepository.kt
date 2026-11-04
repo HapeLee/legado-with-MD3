@@ -3,9 +3,15 @@ package io.legado.app.data.repository
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
+import androidx.room.invalidationTrackerFlow
 import io.legado.app.help.book.canSafelyRebindTo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
@@ -13,7 +19,15 @@ class BookImportRepository(
     private val appDb: AppDatabase,
 ) {
 
-    fun flowLocalBooks(): Flow<List<Book>> = appDb.bookDao.flowLocal().flowOn(Dispatchers.IO)
+    // 查询前防抖：debounce 挂在 books 表失效信号上（而非 DAO 查询结果之后），
+    // 批量导入期间不再执行中间查询、不产生中间结果分配；首个信号立即放行，
+    // 首屏加载无延迟
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    fun flowLocalBooks(): Flow<List<Book>> = appDb.invalidationTrackerFlow("books")
+        .onStart { emit(emptySet()) }
+        .debounceSkippingFirst(SHELF_INVALIDATE_DEBOUNCE_MS)
+        .mapLatest { appDb.bookDao.getLocal() }
+        .flowOn(Dispatchers.IO)
 
     suspend fun findByFileName(fileName: String): Book? = withContext(Dispatchers.IO) {
         appDb.bookDao.getBookByFileName(fileName)

@@ -17,8 +17,14 @@ import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.remote.RemoteBook
 import io.legado.app.model.remote.RemoteBookWebDav
+import androidx.room.invalidationTrackerFlow
 import io.legado.app.utils.isContentScheme
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.debounce
 
 class RemoteBookRepository(
     private val appDb: AppDatabase
@@ -123,8 +129,13 @@ class RemoteBookRepository(
         return book
     }
 
+    // 查询前防抖（同 BookImportRepository.flowLocalBooks 的说明）
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     fun flowLocalBooks(): Flow<List<Book>> {
-        return appDb.bookDao.flowLocal()
+        return appDb.invalidationTrackerFlow("books")
+            .onStart { emit(emptySet()) }
+            .debounceSkippingFirst(SHELF_INVALIDATE_DEBOUNCE_MS)
+            .mapLatest { appDb.bookDao.getLocal() }
     }
 
     fun flowServers(): Flow<List<Server>> {
