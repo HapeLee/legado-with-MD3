@@ -1785,9 +1785,9 @@ fun BookshelfPage(
                 horizontal = 8.dp
             ),
             // 列表模式同样支持每行多本：卡片宽度被切分后，相邻卡片的边框会贴成一条线，
-            // 所以水平方向也要留间距（垂直方向由卡片自身 4dp 内边距提供）。
+            // 所以水平方向也要留间距，取与网格一致的 8dp（垂直方向由卡片自身 4dp 内边距提供）。
             verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             showFastScroll = showFastScroll
         ) {
             itemsIndexed(displayBooks, key = { _, item -> item.book.bookUrl }) { index, bookUi ->
