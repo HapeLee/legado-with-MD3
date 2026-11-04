@@ -54,7 +54,9 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
-import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -463,16 +465,26 @@ internal fun AiProviderModelFields(
             label = stringResource(R.string.ai_model_id)
         )
         Spacer(modifier = Modifier.height(8.dp))
-        SwitchSettingItem(stringResource(R.string.ai_capability_vision), checked = model.vision) {
+        TinySwitchSettingItem(
+            title = stringResource(R.string.ai_capability_vision),
+            checked = model.vision,
+        ) {
             onIntent(AiProviderEditIntent.UpdateEditingVision(it))
         }
-        SwitchSettingItem(stringResource(R.string.ai_capability_image_generation), checked = model.imageGeneration) {
+        TinySwitchSettingItem(
+            title = stringResource(R.string.ai_capability_image_generation),
+            checked = model.imageGeneration,
+        ) {
             onIntent(AiProviderEditIntent.UpdateEditingImageGeneration(it))
         }
-        SwitchSettingItem(stringResource(R.string.ai_capability_image_editing), checked = model.imageEditing) {
+        TinySwitchSettingItem(
+            title = stringResource(R.string.ai_capability_image_editing),
+            checked = model.imageEditing,
+        ) {
             onIntent(AiProviderEditIntent.UpdateEditingImageEditing(it))
         }
         if (!model.imageGeneration && !model.imageEditing) {
+            Spacer(modifier = Modifier.height(4.dp))
             AppTextField(
                 value = model.contextWindow,
                 onValueChange = { onIntent(AiProviderEditIntent.UpdateEditingContextWindow(it)) },
@@ -499,8 +511,8 @@ internal fun AiProviderModelFields(
                 label = stringResource(R.string.ai_temperature),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            DropdownListSettingItem(
+            Spacer(modifier = Modifier.height(4.dp))
+            TinyDropdownSettingItem(
                 title = stringResource(R.string.ai_thinking_strength),
                 selectedValue = model.reasoningLevel.effort,
                 displayEntries = arrayOf(
@@ -519,8 +531,8 @@ internal fun AiProviderModelFields(
             )
         }
         if (model.modelProfileId != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            ClickableSettingItem(
+            Spacer(modifier = Modifier.height(8.dp))
+            TinyClickableSettingItem(
                 title = stringResource(R.string.ai_delete_model),
                 onClick = {
                     onDeleteModel(model.modelProfileId)
