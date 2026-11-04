@@ -2,6 +2,7 @@ package io.legado.app.ui.dict
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -42,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.help.http.handleRenderProcessGone
 import io.legado.app.ui.rss.read.VisibleWebViewCompose
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
@@ -177,6 +179,12 @@ private fun DictWebSheet(
                                 url: String
                             ): Boolean =
                                 handleUrl(Uri.parse(url))
+
+                            // 渲染进程被系统回收时默认会连带杀掉宿主进程
+                            override fun onRenderProcessGone(
+                                view: WebView,
+                                detail: RenderProcessGoneDetail,
+                            ): Boolean = view.handleRenderProcessGone()
 
                             private fun handleUrl(uri: Uri): Boolean {
                                 if (uri.scheme == "http" || uri.scheme == "https") return false

@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -116,6 +117,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -349,6 +351,12 @@ fun HighlightRuleEditSheet(
         val scrollState = rememberScrollState()
         // 键盘顶着屏幕时不浮出预览：悬浮卡钉在弹层底边，输入框一拿到焦点就收回。
         var typingFocused by remember(show) { mutableStateOf(false) }
+        // 滚动位置每帧都变，直接在组合里读会让悬浮预览卡逐帧重组；用 derivedStateOf
+        // 收敛成「还有内容在下方」的布尔，只在真正翻越边界时重组。typingFocused 变化
+        // 频率很低，留在组合里读没有性能问题，也不受 remember(show) 重建影响。
+        val hasMoreBelow by remember {
+            derivedStateOf { scrollState.value < scrollState.maxValue }
+        }
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier
@@ -509,7 +517,7 @@ fun HighlightRuleEditSheet(
                             title = stringResource(R.string.underline_width),
                             value = underlineWidth,
                             valueRange = 0.1f..10f,
-                            description = String.format("%.1f dp", underlineWidth),
+                            description = String.format(Locale.ROOT, "%.1f dp", underlineWidth),
                             onValueChange = { underlineWidth = (it * 10).toInt() / 10f },
                         )
 
@@ -517,7 +525,7 @@ fun HighlightRuleEditSheet(
                             title = stringResource(R.string.underline_offset),
                             value = underlineOffset,
                             valueRange = 0f..20f,
-                            description = String.format("%.1f dp", underlineOffset),
+                            description = String.format(Locale.ROOT, "%.1f dp", underlineOffset),
                             onValueChange = { underlineOffset = (it * 10).toInt() / 10f },
                         )
 
@@ -591,8 +599,8 @@ fun HighlightRuleEditSheet(
                             steps = 48,
                             stepSize = 0.1f,
                             showDecimal = true,
-                            valueFormat = { String.format("%.1f", it) },
-                            description = String.format("%.1fx", bgImageScale),
+                            valueFormat = { String.format(Locale.ROOT, "%.1f", it) },
+                            description = String.format(Locale.ROOT, "%.1fx", bgImageScale),
                             onValueChange = { bgImageScale = (it * 10).roundToInt() / 10f },
                         )
                         // 只有九宫格才吃这两个偏移（其它 fit 的绘制根本不读它们），
@@ -606,8 +614,8 @@ fun HighlightRuleEditSheet(
                                     steps = 159,
                                     stepSize = 0.5f,
                                     showDecimal = true,
-                                    valueFormat = { String.format("%.1f", it) },
-                                    description = String.format("%.1f dp", bgLengthOffsetLeft),
+                                    valueFormat = { String.format(Locale.ROOT, "%.1f", it) },
+                                    description = String.format(Locale.ROOT, "%.1f dp", bgLengthOffsetLeft),
                                     onValueChange = { bgLengthOffsetLeft = (it * 2).roundToInt() / 2f },
                                 )
                                 TinySliderSettingItem(
@@ -617,8 +625,8 @@ fun HighlightRuleEditSheet(
                                     steps = 159,
                                     stepSize = 0.5f,
                                     showDecimal = true,
-                                    valueFormat = { String.format("%.1f", it) },
-                                    description = String.format("%.1f dp", bgLengthOffsetRight),
+                                    valueFormat = { String.format(Locale.ROOT, "%.1f", it) },
+                                    description = String.format(Locale.ROOT, "%.1f dp", bgLengthOffsetRight),
                                     onValueChange = { bgLengthOffsetRight = (it * 2).roundToInt() / 2f },
                                 )
                             }
@@ -659,14 +667,14 @@ fun HighlightRuleEditSheet(
                             title = stringResource(R.string.highlight_border_width),
                             value = borderWidth,
                             valueRange = 0.5f..10f,
-                            description = String.format("%.1f dp", borderWidth),
+                            description = String.format(Locale.ROOT, "%.1f dp", borderWidth),
                             onValueChange = { borderWidth = (it * 10).toInt() / 10f },
                         )
                         TinySliderSettingItem(
                             title = stringResource(R.string.highlight_border_radius),
                             value = borderRadius,
                             valueRange = 0f..24f,
-                            description = String.format("%.1f dp", borderRadius),
+                            description = String.format(Locale.ROOT, "%.1f dp", borderRadius),
                             onValueChange = { borderRadius = it },
                         )
                     }
@@ -687,8 +695,8 @@ fun HighlightRuleEditSheet(
                     steps = 79,
                     stepSize = 0.5f,
                     showDecimal = true,
-                    valueFormat = { String.format("%.1f", it) },
-                    description = String.format("%.1f dp", matchSpacingBefore),
+                    valueFormat = { String.format(Locale.ROOT, "%.1f", it) },
+                    description = String.format(Locale.ROOT, "%.1f dp", matchSpacingBefore),
                     onValueChange = { matchSpacingBefore = (it * 2).roundToInt() / 2f },
                 )
                 TinySliderSettingItem(
@@ -698,8 +706,8 @@ fun HighlightRuleEditSheet(
                     steps = 79,
                     stepSize = 0.5f,
                     showDecimal = true,
-                    valueFormat = { String.format("%.1f", it) },
-                    description = String.format("%.1f dp", matchSpacingAfter),
+                    valueFormat = { String.format(Locale.ROOT, "%.1f", it) },
+                    description = String.format(Locale.ROOT, "%.1f dp", matchSpacingAfter),
                     onValueChange = { matchSpacingAfter = (it * 2).roundToInt() / 2f },
                 )
                 TinySliderSettingItem(
@@ -709,8 +717,8 @@ fun HighlightRuleEditSheet(
                     steps = 79,
                     stepSize = 0.5f,
                     showDecimal = true,
-                    valueFormat = { String.format("%.1f", it) },
-                    description = String.format("%.1f dp", hitLineSpacingTop),
+                    valueFormat = { String.format(Locale.ROOT, "%.1f", it) },
+                    description = String.format(Locale.ROOT, "%.1f dp", hitLineSpacingTop),
                     onValueChange = { hitLineSpacingTop = (it * 2).roundToInt() / 2f },
                 )
                 TinySliderSettingItem(
@@ -720,8 +728,8 @@ fun HighlightRuleEditSheet(
                     steps = 79,
                     stepSize = 0.5f,
                     showDecimal = true,
-                    valueFormat = { String.format("%.1f", it) },
-                    description = String.format("%.1f dp", hitLineSpacingBottom),
+                    valueFormat = { String.format(Locale.ROOT, "%.1f", it) },
+                    description = String.format(Locale.ROOT, "%.1f dp", hitLineSpacingBottom),
                     onValueChange = { hitLineSpacingBottom = (it * 2).roundToInt() / 2f },
                 )
 
@@ -815,7 +823,7 @@ fun HighlightRuleEditSheet(
             // 预览悬浮窗：钉在弹层底边，不跟着内容滚走。还有内容在下面看不着、且焦点不在
             // 输入框上（键盘顶着屏幕）的时候才浮出来。画的是正文同一份函数，不会两套口径。
             androidx.compose.animation.AnimatedVisibility(
-                visible = scrollState.value < scrollState.maxValue && !typingFocused,
+                visible = hasMoreBelow && !typingFocused,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
                 exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -1424,8 +1432,8 @@ private fun NineSliceSlider(
         steps = 99,
         stepSize = 0.01f,
         showDecimal = true,
-        valueFormat = { String.format("%.2f", it) },
-        description = String.format("%.0f%%", value * 100f),
+        valueFormat = { String.format(Locale.ROOT, "%.2f", it) },
+        description = String.format(Locale.ROOT, "%.0f%%", value * 100f),
         onValueChange = { onValueChange((it * 100).roundToInt() / 100f) },
     )
 }

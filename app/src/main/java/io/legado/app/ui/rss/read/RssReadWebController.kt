@@ -14,6 +14,7 @@ import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.URLUtil
 import android.webkit.ValueCallback
@@ -35,6 +36,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
+import io.legado.app.help.http.handleRenderProcessGone
 import io.legado.app.help.http.newCallResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
@@ -223,6 +225,10 @@ internal fun configureRssReadWebView(
             }
             return super.shouldInterceptRequest(view, request)
         }
+
+        // 渲染进程被系统回收时默认会连带杀掉宿主进程
+        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean =
+            view.handleRenderProcessGone()
 
         private suspend fun getModifiedContentWithJs(
             url: String,

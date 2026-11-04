@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Message
 import android.view.MotionEvent
 import android.view.View
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -89,8 +90,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -111,6 +113,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.coil.CoverExtras
+import io.legado.app.help.http.handleRenderProcessGone
 import io.legado.app.help.webView.WebJsExtensions
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.main.homepage.modules.BannerModule
@@ -1789,7 +1792,6 @@ private fun parseBookInfoIntro(intro: String?): BookInfoIntroContent? {
  * 在 Android 16 HWUI Vulkan 后端上引发 drawVk SIGTRAP 原生崩溃（issue #2468）。
  */
 @Composable
-@SuppressLint("SetJavaScriptEnabled")
 private fun BookInfoWebIntro(
     html: String,
     baseUrl: String?,
@@ -1798,7 +1800,10 @@ private fun BookInfoWebIntro(
 ) {
     val context = LocalContext.current
     // 初始高度先给一屏，否则 WebView 在 0 高度下不会被布局，也就无法测量内容高度
-    val pageHeight = LocalConfiguration.current.screenHeightDp.dp.coerceAtLeast(320.dp)
+    // 分屏/折叠屏下物理屏高不等于容器高，初始占位高度按窗口容器算
+    val pageHeight = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.height.toDp()
+    }.coerceAtLeast(320.dp)
     val textColor = LegadoTheme.colorScheme.onSurface
     val textColorHex = remember(textColor) {
         ColorUtils.intToString(textColor.toArgb())
@@ -1877,6 +1882,7 @@ private fun BookInfoWebIntro(
  * 详情页 `<useweb>` 简介的 WebView：实例级配置（settings、JS 桥接、ChromeClient），
  * 随 [WebViewContainerCompose] 的 factory 创建。
  */
+@SuppressLint("SetJavaScriptEnabled")
 private fun createBookInfoWebIntroWebView(context: Context, bookSource: BookSource?): WebView =
     WebView(context).apply {
         setBackgroundColor(android.graphics.Color.TRANSPARENT)
@@ -1971,6 +1977,10 @@ private fun buildBookInfoWebIntroClient(
         }
     }
 
+    // 渲染进程被系统回收时默认会连带杀掉宿主进程
+    override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean =
+        view.handleRenderProcessGone()
+
     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         super.onPageStarted(view, url, favicon)
         view?.let { runCatching { it.evaluateJavascript(injectionString, null) } }
@@ -2003,6 +2013,11 @@ private fun buildBookInfoWebChromeClient(): WebChromeClient = object : WebChrome
         val popup = WebView(host.context).apply {
             settings.javaScriptEnabled = true
             webViewClient = object : WebViewClient() {
+                override fun onRenderProcessGone(
+                    view: WebView,
+                    detail: RenderProcessGoneDetail,
+                ): Boolean = view.handleRenderProcessGone()
+
                 override fun shouldOverrideUrlLoading(
                     popupView: WebView?,
                     request: WebResourceRequest?,

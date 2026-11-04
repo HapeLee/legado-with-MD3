@@ -44,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -176,7 +177,7 @@ fun MarkingSelectionMenu(
         mutableStateOf(MarkingEffect.fromStyle(storedStyle))
     }
     var selectedColor by remember(state.selection, state.editing?.id, storedStyle) {
-        mutableStateOf(MarkingEffect.colorOf(storedStyle))
+        mutableIntStateOf(MarkingEffect.colorOf(storedStyle))
     }
     var useRules by remember(state.selection, state.editing?.id) { mutableStateOf(false) }
     var selectedRuleId by remember(state.selection, state.editing?.id) {
@@ -193,7 +194,7 @@ fun MarkingSelectionMenu(
     var showColorPicker by remember(state.selection, state.editing?.id) { mutableStateOf(false) }
     // 打开取色器的起始色：点尾部按钮用当前色，长按预设色则用被长按的色做基准微调
     var colorPickerSeed by remember(state.selection, state.editing?.id) {
-        mutableStateOf(selectedColor)
+        mutableIntStateOf(selectedColor)
     }
     var menuVisible by remember(menuState) { mutableStateOf(false) }
     var closing by remember(menuState) { mutableStateOf(false) }

@@ -279,7 +279,6 @@ class VideoPlayerViewModel : ViewModel() {
     override fun onCleared() {
         // 离开播放页不等于停止播放：只把进度落库，播放交给服务继续
         VideoPlay.saveRead()
-        super.onCleared()
     }
 
     private companion object {

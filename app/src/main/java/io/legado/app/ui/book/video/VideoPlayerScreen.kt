@@ -72,10 +72,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -331,9 +331,10 @@ fun VideoPlayerScreen(
     // 「贴合视频比例」——到那个高度画面正好填满宽度，竖屏片源的左右黑边就收完了；
     // 再往上拉只会重新长出上下黑边，所以它就是上限。信息区保底高度是另一条上限，
     // 极端的细长片源（9:21）不会把下方内容压没。
-    val configuration = LocalConfiguration.current
-    val screenWidthDp = configuration.screenWidthDp.toFloat()
-    val screenHeightDp = configuration.screenHeightDp.toFloat()
+    // 窗口容器尺寸：分屏/折叠屏/桌面窗口下物理屏尺寸会大于实际可用区域
+    val windowSize = LocalWindowInfo.current.containerSize
+    val screenWidthDp = with(LocalDensity.current) { windowSize.width.toDp().value }
+    val screenHeightDp = with(LocalDensity.current) { windowSize.height.toDp().value }
     val playerDefaultHeight = minOf(
         screenWidthDp * 9f / 16f,
         screenHeightDp * PLAYER_DEFAULT_MAX_RATIO,

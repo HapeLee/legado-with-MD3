@@ -69,6 +69,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
@@ -718,7 +719,12 @@ fun MainScreen(
                         FloatingBottomBar(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
-                                .offset(x = navigationStartInset * (1f - expansion))
+                                .offset {
+                                    IntOffset(
+                                        x = (navigationStartInset * (1f - expansion)).roundToPx(),
+                                        y = 0,
+                                    )
+                                }
                                 .width(navigationWidth),
                             compactProgress = expansion,
                             expandedWidth = normalNavigationWidth,

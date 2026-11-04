@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -162,7 +163,7 @@ fun ThemeListContent(
     /** 删除二次确认：非 null = 待确认的选中项（点确认才真删、才清空选中）。 */
     var pendingDeleteIndices by remember { mutableStateOf<List<Int>?>(null) }
     /** 管理底栏实测高度（px）：给右下角悬浮箭头做抬升用，0 = 还没量到（用兜底值）。 */
-    var manageBarHeightPx by remember { mutableStateOf(0) }
+    var manageBarHeightPx by remember { mutableIntStateOf(0) }
 
     val themes = styleConfig.styleItems
     val selectedIndices = themes.indices.filter { themes[it].id in selectedIds }
@@ -198,7 +199,7 @@ fun ThemeListContent(
 
     // 导入/新建都会让列表长一份（单份 +1、批量 +N）：先清掉搜索词保证新条目可见，再滚到最后。
     // 网格按下标定位（现成）；流式只有像素目标，而 maxValue 要等新 chip 完成布局才是新值 ⇒ 等一帧。
-    var previousThemeCount by remember { mutableStateOf(themes.size) }
+    var previousThemeCount by remember { mutableIntStateOf(themes.size) }
     LaunchedEffect(themes.size) {
         if (themes.size > previousThemeCount) {
             searchQuery = ""

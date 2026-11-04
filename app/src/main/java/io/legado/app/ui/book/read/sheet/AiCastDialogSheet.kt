@@ -115,9 +115,9 @@ fun AiCastDialogSheet(
     // 那一章，切章后「删除分配」和发给 AI 的 currentChapter 都会打到错的章。
     val chapterIndex = ReadBook.durChapterIndex
     val chapterTitle = book?.durChapterTitle.orEmpty()
-    var assignedCount by remember(chapterIndex) { mutableStateOf(-1) }
-    var dialogueCount by remember(chapterIndex) { mutableStateOf(-1) }
-    var sceneCount by remember(chapterIndex) { mutableStateOf(-1) }
+    var assignedCount by remember(chapterIndex) { mutableIntStateOf(-1) }
+    var dialogueCount by remember(chapterIndex) { mutableIntStateOf(-1) }
+    var sceneCount by remember(chapterIndex) { mutableIntStateOf(-1) }
     var reassign by remember { mutableStateOf(false) }
     // 思考过程永远回显，只是默认收起（见 thinkingOpen）；这一行才是真的决定模型想多久
     var reasoningLevel by remember { mutableStateOf(AiReasoningLevel.AUTO) }
@@ -206,7 +206,7 @@ fun AiCastDialogSheet(
     )
 
     // 子页：0=主面板 1=预设管理
-    var page by remember { mutableStateOf(0) }
+    var page by remember { mutableIntStateOf(0) }
     var presetsVersion by remember { mutableIntStateOf(0) }
     val presets by produceState<ImmutableList<AiCastPresetUi>>(
         initialValue = persistentListOf(),

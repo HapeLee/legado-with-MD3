@@ -158,7 +158,6 @@ class ExploreMainViewModel(
 
     override fun onCleared() {
         viewModelStore.clear()
-        super.onCleared()
     }
 
     private fun loadKinds(sourceUrl: String?, force: Boolean = false) {

@@ -32,6 +32,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -503,7 +504,7 @@ private fun TrackVolumeDialog(
     var cached by remember { mutableStateOf(track) }
     if (track != null) cached = track
     val current = cached ?: return
-    var value by remember(current.id) { mutableStateOf(current.volume) }
+    var value by remember(current.id) { mutableFloatStateOf(current.volume) }
     AppAlertDialog(
         show = show,
         onDismissRequest = onDismiss,

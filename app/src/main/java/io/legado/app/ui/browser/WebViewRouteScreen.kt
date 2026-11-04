@@ -3,6 +3,7 @@ package io.legado.app.ui.browser
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
@@ -38,6 +39,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.help.http.CookieManager
 import io.legado.app.help.http.CookieStore
+import io.legado.app.help.http.handleRenderProcessGone
 import io.legado.app.help.source.SourceVerificationHelp
 import io.legado.app.model.Download
 import io.legado.app.ui.association.OnLineImportActivity
@@ -200,6 +202,12 @@ fun WebViewRouteScreen(
                                     view: WebView,
                                     url: String,
                                 ): Boolean = handleUrl(Uri.parse(url))
+
+                                // 渲染进程被系统回收时默认会连带杀掉宿主进程
+                                override fun onRenderProcessGone(
+                                    view: WebView,
+                                    detail: RenderProcessGoneDetail,
+                                ): Boolean = view.handleRenderProcessGone()
 
                                 private fun handleUrl(uri: Uri): Boolean {
                                     return when (uri.scheme) {

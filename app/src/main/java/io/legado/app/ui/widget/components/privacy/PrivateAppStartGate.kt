@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -88,23 +89,23 @@ fun PrivateAppStartGate(
     // 宽限期为 0 就是"离开即失效"，不必等回来再判断。
     val lifecycleOwner = LocalLifecycleOwner.current
     val graceSeconds = settings.backgroundGraceSeconds
-    val leftAt = remember { mutableStateOf(0L) }
+    val leftAt = remember { mutableLongStateOf(0L) }
     DisposableEffect(lifecycleOwner, gateway, graceSeconds) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
-                    leftAt.value = System.currentTimeMillis()
+                    leftAt.longValue = System.currentTimeMillis()
                     if (graceSeconds == 0) gateway.onAppBackground()
                 }
 
                 Lifecycle.Event.ON_START -> {
-                    val since = leftAt.value
+                    val since = leftAt.longValue
                     if (since != 0L &&
                         System.currentTimeMillis() - since > graceSeconds * 1000L
                     ) {
                         gateway.onAppBackground()
                     }
-                    leftAt.value = 0L
+                    leftAt.longValue = 0L
                 }
 
                 else -> Unit
