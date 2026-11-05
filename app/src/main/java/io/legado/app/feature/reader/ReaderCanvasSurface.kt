@@ -1637,7 +1637,7 @@ fun ReaderCanvasSurface(
                     loadImage = loadImage,
                 )
             }
-        } else if (transitionMode == ReaderTransitionMode.IOS_CURL && composedTurnDirection != null) {
+        } else if (transitionMode == ReaderTransitionMode.IOS_CURL) {
             IosCurlPageStack(
                 pages = pages,
                 direction = composedTurnDirection,

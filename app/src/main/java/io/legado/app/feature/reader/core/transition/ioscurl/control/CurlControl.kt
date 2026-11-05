@@ -79,6 +79,18 @@ object CurlControl {
         return if (c.binding.middle) size else size + size
     }
 
+    private fun initialRadius(size: Double, middle: Boolean, automatic: Boolean): Double =
+        if (middle) {
+            if (automatic) AUTOMATIC_MIDDLE_RADIUS_POINTS else size * MIDDLE_START_RADIUS_RATIO
+        } else {
+            size * if (automatic) EDGE_AUTOMATIC_START_RADIUS_RATIO else EDGE_MANUAL_START_RADIUS_RATIO
+        }
+
+    private fun finalRadius(size: Double, middle: Boolean, automatic: Boolean): Double =
+        if (middle) {
+            if (automatic) 1.0 else size * MIDDLE_END_RADIUS_RATIO
+        } else size * EDGE_END_RADIUS_RATIO
+
     /**
      * Returns the normal angle of an untilted curl for the selected binding and direction.
      */
@@ -154,15 +166,8 @@ object CurlControl {
         val auto = CurlKind.isAutomatic(controlType)
         val size = if (vertical(c)) c.height else c.width
         val b = base(c)
-        val fromRadius =
-            if (c.binding.middle)
-                if (auto) AUTOMATIC_MIDDLE_RADIUS_POINTS else size * MIDDLE_START_RADIUS_RATIO
-            else
-                size *
-                    if (auto) EDGE_AUTOMATIC_START_RADIUS_RATIO else EDGE_MANUAL_START_RADIUS_RATIO
-        val toRadius =
-            if (c.binding.middle) if (auto) 1.0 else size * MIDDLE_END_RADIUS_RATIO
-            else size * EDGE_END_RADIUS_RATIO
+        val fromRadius = initialRadius(size, c.binding.middle, auto)
+        val toRadius = finalRadius(size, c.binding.middle, auto)
         val delta =
             if (auto) if (b > HALF_PI) INITIAL_TILT_RADIANS else -INITIAL_TILT_RADIANS
             else -INITIAL_TILT_RADIANS
@@ -250,7 +255,6 @@ object CurlControl {
         val p = (abs(if (vertical(c)) y - oy else x - ox) / dist).coerceIn(0.0, 1.0)
         val progress = 1 - p
         val margin = if (auto) 0.0 else 0.1
-        val ceiling = if (auto || mid) 1.0 else 0.9
         val rawAngle =
             when {
                 bindingCode == CurlBinding.Left.nativeValue ||
@@ -302,12 +306,15 @@ object CurlControl {
         val b = base(c)
         val da = (rawAngle - b).coerceIn(-maxda, maxda)
         val angle = b + da
-        val e = endpoints(c)
+        // Only the radius tracks are needed here; keep the public endpoint objects for callers.
+        val size = if (vertical(c)) c.height else c.width
+        val fromRadius = initialRadius(size, mid, auto)
+        val toRadius = finalRadius(size, mid, auto)
         // Interpolate a two-stage radius envelope, then apply the manual or automatic lower bound.
         val peak = dist * EDGE_AUTOMATIC_START_RADIUS_RATIO
         val k = if (mid) 0.5 else 0.25
         var radius =
-            if (progress < k) e.from.radius + (peak - e.from.radius) * (progress / k)
+            if (progress < k) fromRadius + (peak - fromRadius) * (progress / k)
             else
                 peak +
                     ((progress - k) / (1 - k)) *
@@ -316,8 +323,8 @@ object CurlControl {
         var bound =
             if (auto)
                 min(
-                    e.from.radius,
-                    e.to.radius,
+                    fromRadius,
+                    toRadius,
                 )
             else
                 (if (vertical(c)) c.height else c.width) *
@@ -327,9 +334,8 @@ object CurlControl {
             val actual = hypot(x - ox, y - oy) / dist
             if (actual <= 0.25) bound *= 1 + (0.25 - actual) * -4
         }
-        radius = min(dist * 0.2, max(min(min(e.from.radius, e.to.radius), bound), radius))
-        val result = inputTime(c, progress, dist, radius, bound, angle, da, x, y, ref.x, ref.y)
-        return CurlValues(result.first.coerceIn(margin, ceiling), result.second, angle)
+        radius = min(dist * 0.2, max(min(min(fromRadius, toRadius), bound), radius))
+        return inputTime(c, progress, dist, radius, bound, angle, da, x, y, ref.x, ref.y)
     }
 
     /**
@@ -360,26 +366,30 @@ object CurlControl {
         /**
          * Transforms one point into the canonical drag coordinate system.
          */
-        fun point(px: Double, py: Double) = CurlPoint(x + (px * a + py * c), y + (px * b + py * d))
+        fun pointX(px: Double, py: Double) = x + (px * a + py * c)
+
+        fun pointY(px: Double, py: Double) = y + (px * b + py * d)
 
         /**
          * Transforms all four corners and returns their axis-aligned bounds.
          */
         fun rect(r: CurlRect): CurlRect {
-            val p =
-                listOf(
-                    point(r.x, r.y),
-                    point(r.x + r.width, r.y),
-                    point(r.x, r.y + r.height),
-                    point(r.x + r.width, r.y + r.height),
-                )
-            val l = p.minOf { it.x }
-            val t = p.minOf { it.y }
+            // Keep the original corner/rounding order, without temporary points or a list.
+            val x0 = pointX(r.x, r.y)
+            val y0 = pointY(r.x, r.y)
+            val x1 = pointX(r.x + r.width, r.y)
+            val y1 = pointY(r.x + r.width, r.y)
+            val x2 = pointX(r.x, r.y + r.height)
+            val y2 = pointY(r.x, r.y + r.height)
+            val x3 = pointX(r.x + r.width, r.y + r.height)
+            val y3 = pointY(r.x + r.width, r.y + r.height)
+            val l = minOf(minOf(minOf(x0, x1), x2), x3)
+            val t = minOf(minOf(minOf(y0, y1), y2), y3)
             return CurlRect(
                 l,
                 t,
-                p.maxOf { it.x } - l,
-                p.maxOf { it.y } - t,
+                maxOf(maxOf(maxOf(x0, x1), x2), x3) - l,
+                maxOf(maxOf(maxOf(y0, y1), y2), y3) - t,
             )
         }
     }
@@ -402,7 +412,7 @@ object CurlControl {
         ty: Double,
         rx: Double,
         ry: Double,
-    ): Pair<Double, Double> {
+    ): CurlValues {
         val type = type(c)
         val s = c.binding.nativeValue
         val d = c.direction.nativeValue
@@ -433,13 +443,12 @@ object CurlControl {
         }
         if (quarterTurns <= -2) a = a.concat(Transform(x = -r.width)).concat(Transform(a = -1.0))
         val th = if (da == 0.0) 0.0 else abs(quarterTurns.toDouble() * HALF_PI + angle)
-        val p = a.point(tx, ty)
-        val ref = a.point(rx, ry)
+        val px = a.pointX(tx, ty)
+        var py = a.pointY(tx, ty)
+        val referenceY = a.pointY(rx, ry)
         r = a.rect(bounds)
 
-        val px = p.x
-        var py = p.y
-        if (py < ref.y) py = r.y + ((r.y + r.height) - py)
+        if (py < referenceY) py = r.y + ((r.y + r.height) - py)
         var radius = initialRadius
         var center = 0.0
         var half = 0.0
@@ -512,6 +521,13 @@ object CurlControl {
         val diagAngle =
             if (vertical(c)) atan2(page.width, page.height) else atan2(page.height, page.width)
         val projection = diag * cos((absolute - diagAngle).toFloat()).toDouble()
-        return curl / (radius + abs(projection)) to radius
+        val automatic = CurlKind.isAutomatic(type)
+        val minimumTime = if (automatic) 0.0 else 0.1
+        val maximumTime = if (automatic || c.binding.middle) 1.0 else 0.9
+        return CurlValues(
+            (curl / (radius + abs(projection))).coerceIn(minimumTime, maximumTime),
+            radius,
+            angle,
+        )
     }
 }

@@ -25,7 +25,7 @@ internal class MeshGenerator {
      * Builds one output frame from a validated context.
      * Stage order matters: front strips require shadow bounds even when back rendering is disabled.
      */
-    fun generateMesh(frame: MeshBuildContext): CurlMeshFrame {
+    fun generateMesh(frame: MeshBuildContext, coalesceTriangleStrips: Boolean): CurlMeshFrame {
         val projection = projectionBuilder.build(frame)
         val samples = projectionBuilder.samples
         surface.clear()
@@ -33,7 +33,7 @@ internal class MeshGenerator {
         surface.copyBackStrips(projection, samples)
         shadow.build(projection)
         surface.buildFrontStrips(projection, shadow.bounds)
-        val batches = output.assemble(projection, samples, surface, shadow)
+        val batches = output.assemble(projection, samples, surface, shadow, coalesceTriangleStrips)
         return CurlMeshFrame(frame.source.width.toInt(), frame.source.height.toInt(), batches)
     }
 }

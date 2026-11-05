@@ -1,21 +1,36 @@
 package io.legado.app.feature.reader.platform.ioscurl
 
 import android.graphics.Bitmap
+import android.view.Surface
 import android.opengl.*
 import java.nio.*
+import java.lang.ref.WeakReference
+import java.util.concurrent.Executors
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Callable
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import io.legado.app.feature.reader.core.transition.ioscurl.mesh.*
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlRect
 
 /** GLES2 raster adapter only: consumes Kotlin mesh packets with the recovered 0/3/12 programs.
- * One owner/thread, no SurfaceView, JNI, independent clock or navigation state.
+ * One GL worker owns its resources; the host supplies poses without a separate animation clock.
  */
 internal class IosCurlRenderer : AutoCloseable {
     private val display = sharedDisplay
     private var context = EGL14.EGL_NO_CONTEXT
     private var surface = EGL14.EGL_NO_SURFACE
+    private val bitmapFramebuffer = IntArray(1)
+    private val bitmapColorTexture = IntArray(1)
+    private var bitmapTargetWidth = 0
+    private var bitmapTargetHeight = 0
+    @Volatile private var windowSurface = EGL14.EGL_NO_SURFACE
+    val hasWindow: Boolean get() = windowSurface != EGL14.EGL_NO_SURFACE
     private var config: EGLConfig? = null
     private val programs = IntArray(3)
     private val textures = IntArray(2)
+    private val textureSources = arrayOfNulls<WeakReference<Bitmap>>(2)
+    private val textureGenerations = IntArray(2)
     private val matrices = IntArray(3)
     private val texSizes = IntArray(3)
     private var vertexBuffer =
@@ -25,16 +40,36 @@ internal class IosCurlRenderer : AutoCloseable {
     private var readback: ByteBuffer? = null
     private var output: Bitmap? = null
     private val matrix = FloatArray(16)
+    private val queueLock = Any()
+    @Volatile private var workerThread: Thread? = null
+    private val worker = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "IosCurl").apply { isDaemon = true }.also { workerThread = it }
+    }
+    private var pending: PendingFrame? = null
+    private var draining = false
+    private val generation = AtomicLong()
+    private val closed = AtomicBoolean()
 
-    init {
+    private data class PendingFrame(
+        val generation: Long,
+        val frame: CurlMeshFrame,
+        val width: Float,
+        val height: Float,
+        val turningTexture: Int,
+        val underTexture: Int,
+        val underlays: List<Pair<Int, CurlRect>>,
+        val complete: (Throwable?) -> Unit,
+    )
+
+    init { onWorker(::initialize) }
+
+    private fun initialize() {
         try {
             val configs = arrayOfNulls<EGLConfig>(1);
             val count = IntArray(1)
-            check(
-                EGL14.eglChooseConfig(
-                    display, intArrayOf(
+            val attributes = intArrayOf(
                         EGL14.EGL_SURFACE_TYPE,
-                        EGL14.EGL_PBUFFER_BIT,
+                        EGL14.EGL_PBUFFER_BIT or EGL14.EGL_WINDOW_BIT,
                         EGL14.EGL_RENDERABLE_TYPE,
                         EGL14.EGL_OPENGL_ES2_BIT,
                         EGL14.EGL_RED_SIZE,
@@ -46,9 +81,12 @@ internal class IosCurlRenderer : AutoCloseable {
                         EGL14.EGL_ALPHA_SIZE,
                         8,
                         EGL14.EGL_NONE
-                    ), 0, configs, 0, 1, count, 0
-                ) && count[0] > 0
-            )
+                    )
+            if (!EGL14.eglChooseConfig(display, attributes, 0, configs, 0, 1, count, 0) || count[0] == 0) {
+                // Window output is optional; retain the bitmap path on pbuffer-only drivers.
+                attributes[1] = EGL14.EGL_PBUFFER_BIT
+                check(EGL14.eglChooseConfig(display, attributes, 0, configs, 0, 1, count, 0) && count[0] > 0)
+            }
             config = requireNotNull(configs[0])
             context = EGL14.eglCreateContext(
                 display,
@@ -115,55 +153,156 @@ internal class IosCurlRenderer : AutoCloseable {
         }
     }
 
-    fun upload(current: Bitmap, target: Bitmap) = withCurrent {
-        GLES20.glGenTextures(2, textures, 0)
-        for ((index, bitmap) in arrayOf(current, target).withIndex()) {
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0); GLES20.glBindTexture(
-                GLES20.GL_TEXTURE_2D,
-                textures[index]
-            )
-            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_MIN_FILTER,
-                GLES20.GL_LINEAR
-            )
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_MAG_FILTER,
-                GLES20.GL_LINEAR
-            )
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_WRAP_S,
-                GLES20.GL_CLAMP_TO_EDGE
-            )
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_WRAP_T,
-                GLES20.GL_CLAMP_TO_EDGE
-            )
+    fun upload(current: Bitmap, target: Bitmap) {
+        invalidateQueuedFrames()
+        onWorker {
+            withCurrent {
+                // Adjacent turns share a sheet. Keep only the existing two GPU textures, without
+                // retaining snapshot pixels or reusing a mutable bitmap's outdated contents.
+                fun matches(index: Int, bitmap: Bitmap) =
+                    textureSources[index]?.get() === bitmap &&
+                        textureGenerations[index] == bitmap.generationId
+                if ((matches(1, current) && !matches(0, current)) ||
+                    (matches(0, target) && !matches(1, target) && !matches(0, current))) {
+                    val texture = textures[0]; textures[0] = textures[1]; textures[1] = texture
+                    val source = textureSources[0]
+                    textureSources[0] = textureSources[1]; textureSources[1] = source
+                    val version = textureGenerations[0]
+                    textureGenerations[0] = textureGenerations[1]; textureGenerations[1] = version
+                }
+                for ((index, bitmap) in arrayOf(current, target).withIndex()) {
+                    check(!bitmap.isRecycled) { "Curl page bitmap was recycled" }
+                    if (matches(index, bitmap)) continue
+                    textureSources[index] = null
+                    if (textures[index] == 0) GLES20.glGenTextures(1, textures, index)
+                    GLES20.glActiveTexture(GLES20.GL_TEXTURE0); GLES20.glBindTexture(
+                        GLES20.GL_TEXTURE_2D,
+                        textures[index]
+                    )
+                    // Hardware snapshots need CPU-readable pixels only when their contents change.
+                    val pixels = if (bitmap.config == Bitmap.Config.HARDWARE)
+                        requireNotNull(bitmap.copy(Bitmap.Config.ARGB_8888, false)) else bitmap
+                    try {
+                        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, pixels, 0)
+                    } finally {
+                        if (pixels !== bitmap) pixels.recycle()
+                    }
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_MIN_FILTER,
+                        GLES20.GL_LINEAR
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_MAG_FILTER,
+                        GLES20.GL_LINEAR
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_S,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
+                    GLES20.glTexParameteri(
+                        GLES20.GL_TEXTURE_2D,
+                        GLES20.GL_TEXTURE_WRAP_T,
+                        GLES20.GL_CLAMP_TO_EDGE
+                    )
+                    checkGl("texture upload")
+                    textureGenerations[index] = bitmap.generationId
+                    textureSources[index] = WeakReference(bitmap)
+                }
+                checkGl("texture upload")
+            }
         }
-        checkGl("texture upload")
     }
 
     fun bindOutput(bitmap: Bitmap) {
-        val next = EGL14.eglCreatePbufferSurface(
-            display,
-            config,
-            intArrayOf(
-                EGL14.EGL_WIDTH,
-                bitmap.width,
-                EGL14.EGL_HEIGHT,
-                bitmap.height,
-                EGL14.EGL_NONE
-            ),
-            0
-        )
-        check(next != EGL14.EGL_NO_SURFACE)
-        EGL14.eglDestroySurface(display, surface); surface = next; output = bitmap
-        readback = ByteBuffer.allocateDirect(bitmap.width * bitmap.height * 4)
-            .order(ByteOrder.nativeOrder())
+        invalidateQueuedFrames()
+        onWorker {
+            readback = ByteBuffer.allocateDirect(bitmap.width * bitmap.height * 4)
+                .order(ByteOrder.nativeOrder())
+            output = bitmap
+        }
+    }
+
+    /** Borrows the host surface; detach before the host releases it. */
+    fun bindWindow(window: Surface?): Boolean {
+        invalidateQueuedFrames()
+        return onWorker {
+            if (windowSurface != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(display, windowSurface)
+            windowSurface = EGL14.EGL_NO_SURFACE
+            if (window != null && !window.isValid) return@onWorker false
+            if (window != null) {
+                windowSurface = EGL14.eglCreateWindowSurface(display, config, window,
+                    intArrayOf(EGL14.EGL_NONE), 0)
+            }
+            hasWindow
+        }
+    }
+
+    /**
+     * Queues window output without waiting for the GL worker on the caller thread. At most one frame
+     * waits behind the current draw; later poses replace it. Replaced/invalidated frames do not
+     * invoke completion. Completion runs on the worker, after restoring its previous EGL context.
+     */
+    fun renderAsync(
+        frame: CurlMeshFrame,
+        logicalWidth: Float,
+        logicalHeight: Float,
+        turningTexture: Int,
+        underTexture: Int,
+        underlays: List<Pair<Int, CurlRect>>,
+        complete: (Throwable?) -> Unit,
+    ) {
+        val request = PendingFrame(generation.get(), frame, logicalWidth, logicalHeight,
+            turningTexture, underTexture, underlays.toList(), complete)
+        synchronized(queueLock) {
+            if (closed.get()) return
+            pending = request
+            if (!draining) {
+                draining = true
+                worker.execute(::drainFrames)
+            }
+        }
+    }
+
+    private fun drainFrames() {
+        try {
+            while (true) {
+                val request = synchronized(queueLock) { pending.also { pending = null } } ?: return
+                renderPending(request)
+            }
+        } finally {
+            synchronized(queueLock) {
+                draining = false
+                if (!closed.get() && pending != null) {
+                    draining = true
+                    worker.execute(::drainFrames)
+                }
+            }
+        }
+    }
+
+    private fun renderPending(request: PendingFrame) {
+        val failure = run {
+            if (closed.get() || request.generation != generation.get() || !hasWindow) return
+            try {
+                render(request.frame, request.width, request.height, request.turningTexture,
+                    request.underTexture, request.underlays)
+                null
+            } catch (error: RuntimeException) {
+                error
+            } catch (error: OutOfMemoryError) {
+                error
+            }
+        }
+        if (!closed.get() && request.generation == generation.get()) request.complete(failure)
+    }
+
+    /** Invalidates waiting frames before scheduling a change to textures or surface ownership. */
+    private fun invalidateQueuedFrames() {
+        generation.incrementAndGet()
+        synchronized(queueLock) { pending = null }
     }
 
     fun render(
@@ -173,45 +312,80 @@ internal class IosCurlRenderer : AutoCloseable {
         turningTexture: Int,
         underTexture: Int,
         underlays: List<Pair<Int, CurlRect>>
-    ) = withCurrent {
-        val bitmap = requireNotNull(output)
-        GLES20.glViewport(0, 0, bitmap.width, bitmap.height); GLES20.glClearColor(
-        0f,
-        0f,
-        0f,
-        0f
-    ); GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-        matrix.fill(0f); matrix[0] = 2f / logicalWidth; matrix[5] =
-        -2f / logicalHeight; matrix[10] = 1f; matrix[12] = -1f; matrix[13] = 1f; matrix[15] = 1f
-        if (underlays.isEmpty()) flat(
-            underTexture,
-            CurlRect(0.0, 0.0, logicalWidth.toDouble(), logicalHeight.toDouble()),
-            frame.width.toFloat(),
-            frame.height.toFloat()
-        )
-        else for ((texture, rect) in underlays) flat(
-            texture,
-            rect,
-            frame.width.toFloat(),
-            frame.height.toFloat()
-        )
-        for (batch in frame.batches) draw(
-            batch,
-            turningTexture,
-            frame.width.toFloat(),
-            frame.height.toFloat()
-        )
-        val buffer = requireNotNull(readback); buffer.clear()
-        GLES20.glReadPixels(
-            0,
-            0,
-            bitmap.width,
-            bitmap.height,
-            GLES20.GL_RGBA,
-            GLES20.GL_UNSIGNED_BYTE,
-            buffer
-        )
-        checkGl("page rasterization"); buffer.position(0); bitmap.copyPixelsFromBuffer(buffer)
+    ) = onWorker {
+        val window = windowSurface
+        val drawToWindow = window != EGL14.EGL_NO_SURFACE
+        withCurrent(if (drawToWindow) window else surface) {
+            val bitmap = requireNotNull(output)
+            if (drawToWindow) GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
+            else bindBitmapFramebuffer(bitmap)
+            GLES20.glViewport(0, 0, bitmap.width, bitmap.height); GLES20.glClearColor(
+            0f,
+            0f,
+            0f,
+            0f
+        ); GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            matrix.fill(0f); matrix[0] = 2f / logicalWidth; matrix[5] =
+            -2f / logicalHeight; matrix[10] = 1f; matrix[12] = -1f; matrix[13] = 1f; matrix[15] = 1f
+            if (underlays.isEmpty()) flat(
+                underTexture,
+                CurlRect(0.0, 0.0, logicalWidth.toDouble(), logicalHeight.toDouble()),
+                frame.width.toFloat(),
+                frame.height.toFloat()
+            )
+            else for ((texture, rect) in underlays) flat(
+                texture,
+                rect,
+                frame.width.toFloat(),
+                frame.height.toFloat()
+            )
+            for (batch in frame.batches) draw(
+                batch,
+                turningTexture,
+                frame.width.toFloat(),
+                frame.height.toFloat()
+            )
+            if (drawToWindow) {
+                checkGl("window rasterization")
+                check(EGL14.eglSwapBuffers(display, window)) { "Curl window presentation failed" }
+                return@withCurrent
+            }
+            val buffer = requireNotNull(readback); buffer.clear()
+            GLES20.glReadPixels(
+                0,
+                0,
+                bitmap.width,
+                bitmap.height,
+                GLES20.GL_RGBA,
+                GLES20.GL_UNSIGNED_BYTE,
+                buffer
+            )
+            checkGl("page rasterization"); buffer.position(0); bitmap.copyPixelsFromBuffer(buffer)
+        }
+    }
+
+    private fun bindBitmapFramebuffer(bitmap: Bitmap) {
+        // Bitmap readback needs its own color attachment across window surface transitions.
+        // The small pbuffer only provides an EGL surface on which to make the context current.
+        if (bitmapFramebuffer[0] == 0) GLES20.glGenFramebuffers(1, bitmapFramebuffer, 0)
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, bitmapFramebuffer[0])
+        if (bitmap.width == bitmapTargetWidth && bitmap.height == bitmapTargetHeight) return
+
+        if (bitmapColorTexture[0] == 0) GLES20.glGenTextures(1, bitmapColorTexture, 0)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, bitmapColorTexture[0])
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, bitmap.width, bitmap.height,
+            0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, null)
+        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0,
+            GLES20.GL_TEXTURE_2D, bitmapColorTexture[0], 0)
+        checkGl("bitmap framebuffer allocation")
+        val status = GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER)
+        check(status == GLES20.GL_FRAMEBUFFER_COMPLETE) { "Curl bitmap framebuffer incomplete: $status" }
+        bitmapTargetWidth = bitmap.width
+        bitmapTargetHeight = bitmap.height
     }
 
     private fun flat(texture: Int, r: CurlRect, tw: Float, th: Float) {
@@ -340,12 +514,12 @@ internal class IosCurlRenderer : AutoCloseable {
             GLES20.glGetError(); check(code == GLES20.GL_NO_ERROR) { "Curl $operation GL error $code" }
     }
 
-    private fun <T> withCurrent(block: () -> T): T {
+    private fun <T> withCurrent(target: EGLSurface = surface, block: () -> T): T {
         val previousDisplay = EGL14.eglGetCurrentDisplay();
         val previousContext = EGL14.eglGetCurrentContext();
         val draw = EGL14.eglGetCurrentSurface(EGL14.EGL_DRAW);
         val read = EGL14.eglGetCurrentSurface(EGL14.EGL_READ)
-        check(EGL14.eglMakeCurrent(display, surface, surface, context))
+        check(EGL14.eglMakeCurrent(display, target, target, context))
         try {
             return block()
         } finally {
@@ -365,19 +539,52 @@ internal class IosCurlRenderer : AutoCloseable {
     }
 
     override fun close() {
-        if (context != EGL14.EGL_NO_CONTEXT && surface != EGL14.EGL_NO_SURFACE) runCatching {
-            withCurrent {
-                if (textures.any { it != 0 }) GLES20.glDeleteTextures(
-                    2,
-                    textures,
-                    0
-                ); for (program in programs) if (program != 0) GLES20.glDeleteProgram(program)
+        if (!closed.compareAndSet(false, true)) return
+        invalidateQueuedFrames()
+        try {
+            onWorker {
+                bindWindow(null)
+                if (context != EGL14.EGL_NO_CONTEXT && surface != EGL14.EGL_NO_SURFACE) runCatching {
+                    withCurrent {
+                        GLES20.glDeleteFramebuffers(1, bitmapFramebuffer, 0)
+                        GLES20.glDeleteTextures(1, bitmapColorTexture, 0)
+                        if (textures.any { it != 0 }) GLES20.glDeleteTextures(
+                            2,
+                            textures,
+                            0
+                        ); for (program in programs) if (program != 0) GLES20.glDeleteProgram(program)
+                    }
+                }
+                if (surface != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(display, surface)
+                if (context != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(display, context)
+                EGL14.eglReleaseThread()
+                context = EGL14.EGL_NO_CONTEXT; surface = EGL14.EGL_NO_SURFACE; output = null; readback =
+                    null; programs.fill(0); textures.fill(0); textureSources.fill(null)
             }
+        } finally {
+            worker.shutdown()
         }
-        if (surface != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(display, surface)
-        if (context != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(display, context)
-        context = EGL14.EGL_NO_CONTEXT; surface = EGL14.EGL_NO_SURFACE; output = null; readback =
-            null; programs.fill(0); textures.fill(0)
+    }
+
+    /** All EGL/GLES objects stay on one thread, including initialization and synchronous fallback. */
+    private fun <T> onWorker(block: () -> T): T {
+        if (Thread.currentThread() === workerThread) return block()
+        val task = worker.submit(Callable { block() })
+        var interrupted = false
+        try {
+            while (true) {
+                try {
+                    return task.get()
+                } catch (_: InterruptedException) {
+                    // Borrowed bitmaps and surfaces must remain valid until the GL task finishes.
+                    interrupted = true
+                }
+            }
+        } catch (error: ExecutionException) {
+            throw error.cause ?: error
+        } finally {
+            if (interrupted) Thread.currentThread().interrupt()
+        }
     }
 
     private companion object {
