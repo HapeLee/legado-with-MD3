@@ -74,6 +74,30 @@ class ReadBookSheetStackTest {
     }
 
     @Test
+    fun `only the top sheet layer is shown above its parent`() {
+        val parent = ReaderSheetLayer(1L, ReadBookSheet.MoreConfig, present = true)
+        val child = ReaderSheetLayer(2L, ReadBookSheet.ClickActionConfig, present = true)
+        val exiting = ReaderSheetLayer(3L, ReadBookSheet.PageAnim, present = false)
+
+        // 「更多」里打开点击区域：点击区域独占屏幕，下层的「更多」窗口必须收起
+        assertEquals(
+            2L,
+            topReaderSheetLayerId(
+                listOf(parent, child, exiting),
+                listOf(ReadBookSheet.MoreConfig, ReadBookSheet.ClickActionConfig),
+            ),
+        )
+        // 关掉点击区域后「更多」重新成为栈顶
+        assertEquals(
+            1L,
+            topReaderSheetLayerId(listOf(parent, child), listOf(ReadBookSheet.MoreConfig)),
+        )
+        // 正在退场的层不算栈顶；栈空了就没有可见层
+        assertEquals(1L, topReaderSheetLayerId(listOf(parent, exiting), listOf(ReadBookSheet.MoreConfig)))
+        assertNull(topReaderSheetLayerId(listOf(parent), emptyList()))
+    }
+
+    @Test
     fun `editing a marking retains the book navigation layer`() {
         val parent = ReadBookSheet.BookNavigation(ReaderBookSheetTab.Information)
         val state = ReadBookUiState().withSheet(parent).withSheet(ReadBookSheet.Marking)

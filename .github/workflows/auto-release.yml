@@ -132,7 +132,9 @@ jobs:
     needs: prepare
     strategy:
       matrix:
-        product: [ app ]
+        # 两个产品同时发布：core 基础版（无本地推理）与 comic 漫画增强版（内置 OCR/擦除/气泡检测）。
+        # 两者的 APK 名与 artifact 名都必须带 product 前缀，否则同一 Release 内会互相覆盖。
+        product: [ appCore, appComic ]
         type: [ release ]
       fail-fast: false
     runs-on: ubuntu-latest
@@ -187,9 +189,10 @@ jobs:
           echo "VersionName: $APP_VERSION_NAME"
           echo "VersionCode (Commit Number): $COMMIT_NUMBER"
           chmod +x gradlew
-          # 将 type 首字母大写以匹配 Gradle Task
+          # 变体与 type 都转成驼峰，匹配 Gradle Task：appCore + Release -> assembleAppCoreRelease
+          PRODUCT_CAP=$(echo ${{ env.product }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           TYPE_CAP=$(echo ${{ env.type }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')
-          ./gradlew assemble${{ env.product }}${TYPE_CAP} --no-configuration-cache
+          ./gradlew assemble${PRODUCT_CAP}${TYPE_CAP} --no-configuration-cache
         env:
           COMMIT_NUMBER: ${{ env.COMMIT_NUMBER_VAL }}
           APP_VERSION_NAME: ${{ env.VERSIONL }}
@@ -225,21 +228,21 @@ jobs:
       - name: Upload universal APK
         uses: actions/upload-artifact@v4
         with:
-          name: universal-apk-${{ env.type }}
+          name: universal-apk-${{ env.product }}-${{ env.type }}
           if-no-files-found: error
           path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*universal*.apk
 
       - name: Upload arm64-v8a APK
         uses: actions/upload-artifact@v4
         with:
-          name: arm64-v8a-apk-${{ env.type }}
+          name: arm64-v8a-apk-${{ env.product }}-${{ env.type }}
           if-no-files-found: error
           path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*arm64-v8a*.apk
 
       - name: Upload armeabi-v7a APK
         uses: actions/upload-artifact@v4
         with:
-          name: armeabi-v7a-apk-${{ env.type }}
+          name: armeabi-v7a-apk-${{ env.product }}-${{ env.type }}
           if-no-files-found: error
           path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*armeabi-v7a*.apk
 
@@ -283,17 +286,17 @@ jobs:
       - name: 下载所有 APK Artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: '*-apk-release'
+          pattern: '*-apk-app*-release'
           path: artifacts
           merge-multiple: true
 
-      # 2. 下载 mapping 文件
+      # 2. 下载 mapping 文件；两个产品的 mapping.txt 同名，保留 artifact 目录以免互相覆盖
       - name: 下载 Mapping Artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: 'legado.app.release.mapping*'
-          path: artifacts
-          merge-multiple: true
+          pattern: 'legado.app*.release.mapping'
+          path: mapping-artifacts
+          merge-multiple: false
 
       # 3. 重命名逻辑
       - name: 整理并重命名 APK 文件
@@ -307,17 +310,36 @@ jobs:
           fi
           cd artifacts
 
+          # 3.1 每个产品各归一份 R8 mapping，供崩溃堆栈还原
+          for dir in ../mapping-artifacts/*/; do
+            [[ -d "$dir" && -f "$dir/mapping.txt" ]] || continue
+            case "$dir" in
+              *appCore*) cp "$dir/mapping.txt" "mapping-core.txt" ;;
+              *appComic*) cp "$dir/mapping.txt" "mapping-comic.txt" ;;
+            esac
+          done
+
+          # 3.2 APK 名必须带上产品标记，应用内更新据此只挑自己那一份
           shopt -s nullglob
           for f in *.apk; do
-            out="legado-${VERSIONL}"
+            product=""
+            if [[ "$f" == *-core-* ]]; then
+              product="core"
+            elif [[ "$f" == *-comic-* ]]; then
+              product="comic"
+            fi
+            if [[ -z "$product" ]]; then
+              echo "::error::无法从文件名识别产品变体: $f"
+              exit 1
+            fi
+            abi="universal"
             if [[ "$f" == *arm64-v8a* ]]; then
-              out="${out}-arm64-v8a"
+              abi="arm64-v8a"
             elif [[ "$f" == *armeabi-v7a* ]]; then
-              out="${out}-armeabi-v7a"
+              abi="armeabi-v7a"
             fi
 
-            out="${out}.apk"
-            mv "$f" "$out"
+            mv "$f" "legado-${VERSIONL}-${product}-${abi}.apk"
           done
 
           ls -l
@@ -328,6 +350,7 @@ jobs:
       - name: 获取 Commit 记录
         id: get_commits
         run: |
+          VERSIONL="${{ needs.prepare.outputs.versionL }}"
           LAST_TAG="${{ needs.prepare.outputs.latest_tag }}"
           IS_RELEASE="${{ needs.prepare.outputs.is_release }}"
           
@@ -351,6 +374,12 @@ jobs:
                 echo "### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)"
                 echo ""
             fi
+            echo "### 下载哪个包"
+            echo ""
+            echo "- legado-${VERSIONL}-core-*.apk：基础包，不含本地推理运行时；云端 OCR、AI 识图/翻译可用。"
+            echo "- legado-${VERSIONL}-comic-*.apk：漫画增强版，内置本地 OCR、擦字与气泡检测，体积明显更大。"
+            echo "- 原 full 版用户：产品标记已从 full 改为 comic，应用内更新不会跨包升级，请手动下载一次 comic 包，之后恢复正常更新。"
+            echo ""
             echo "### 更新内容"
             echo ""
             echo "$CONTENT"
@@ -388,7 +417,7 @@ jobs:
           prerelease: ${{ needs.prepare.outputs.is_release != 'true' }}
           files: |
             artifacts/legado-${{ needs.prepare.outputs.versionL }}*.apk
-            artifacts/mapping.txt
+            artifacts/mapping-*.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

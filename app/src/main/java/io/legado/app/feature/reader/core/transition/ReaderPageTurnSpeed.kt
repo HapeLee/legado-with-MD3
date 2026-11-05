@@ -10,6 +10,7 @@ import io.legado.app.feature.reader.core.transition.ReaderPageTurnSpeed.Companio
  * 覆盖 / 滑动 / 渐变 / 仿真折页 / 滚动翻屏共用同一套「按位移折算」规则，挡位只决定
  * 折算的**基准时长**，也就是一整页 / 一整屏翻页从第 0 帧走完所需的时间；三条路径的
  * policy 都以 [BASE_DURATION_MILLIS] 为默认参数。
+ * iOS 仿真将原生完整自动翻页的 400ms 归一到此基准，并同比缩放起卷和松手收尾时长。
  *
  * 挡位给的是绝对时长而不是倍率：倍率乘完再取整会在 300 / 360 这类比例上被截断
  * （`360 * 0.8333f = 299.99…`），绝对时长没有这个问题。

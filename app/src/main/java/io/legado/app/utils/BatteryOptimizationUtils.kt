@@ -17,7 +17,6 @@ object BatteryOptimizationUtils {
      * 判断当前应用是否已列入原生电池优化白名单 (Unrestricted / Ignoring Battery Optimizations)
      */
     fun isIgnoringBatteryOptimizations(context: Context = appCtx): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
         return runCatching {
             val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
             pm?.isIgnoringBatteryOptimizations(context.packageName) ?: false
@@ -95,10 +94,7 @@ object BatteryOptimizationUtils {
         val packageName = context.packageName
 
         // Level 1: 如果尚未加入 AOSP 白名单，优先尝试拉起原生白名单申请对话框
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !isIgnoringBatteryOptimizations(
-                context
-            )
-        ) {
+        if (!isIgnoringBatteryOptimizations(context)) {
             val directIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                 data = Uri.parse("package:$packageName")
             }
@@ -116,11 +112,9 @@ object BatteryOptimizationUtils {
         }
 
         // Level 3: 尝试拉起 AOSP 原生电池优化列表
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val aospSettingsIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-            if (launchIntent(context, aospSettingsIntent, launcher)) {
-                return
-            }
+        val aospSettingsIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        if (launchIntent(context, aospSettingsIntent, launcher)) {
+            return
         }
 
         // Level 4: 终极保底 —— 应用详情页（所有 Android 12~15 手机均有，且内含耗电管理/电池子页）

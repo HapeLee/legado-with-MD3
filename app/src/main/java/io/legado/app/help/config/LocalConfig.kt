@@ -22,6 +22,12 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
 
     private const val versionCodeKey = "appVersionCode"
 
+    // 内置默认数据的当前版本号，随 assets/defaultData 内容变更而递增
+    private const val HTTP_TTS_VERSION = 6
+    private const val TXT_TOC_RULE_VERSION = 4
+    private const val RSS_SOURCE_VERSION = 6
+    private const val DICT_RULE_VERSION = 3
+
     private val localPreferencesRepository: SettingsRepository
         by lazy { get(SettingsRepository::class.java) }
 
@@ -95,17 +101,34 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
     val ruleHelpVersionIsLast: Boolean
         get() = isLastVersion(1, "ruleHelpVersion")
 
+    // 内置默认数据的导入标记：与下面的 isLastVersion 不同，这里读取不写值。
+    // 标记只在 DefaultData 对应导入成功之后由 mark*UpToDate() 提交，
+    // 导入失败时不落标记，下次冷启动会重试，避免「读一次就永久消费」。
     val needUpHttpTTS: Boolean
-        get() = !isLastVersion(6, "httpTtsVersion")
+        get() = getInt("httpTtsVersion", 0) < HTTP_TTS_VERSION
 
     val needUpTxtTocRule: Boolean
-        get() = !isLastVersion(4, "txtTocRuleVersion")
+        get() = getInt("txtTocRuleVersion", 0) < TXT_TOC_RULE_VERSION
 
     val needUpRssSources: Boolean
-        get() = !isLastVersion(6, "rssSourceVersion")
+        get() = getInt("rssSourceVersion", 0) < RSS_SOURCE_VERSION
 
     val needUpDictRule: Boolean
-        get() = !isLastVersion(3, "needUpDictRule")
+        get() = getInt("needUpDictRule", 0) < DICT_RULE_VERSION
+
+    fun markHttpTTSUpToDate() = markDefaultDataVersion("httpTtsVersion", HTTP_TTS_VERSION)
+
+    fun markTxtTocRuleUpToDate() = markDefaultDataVersion("txtTocRuleVersion", TXT_TOC_RULE_VERSION)
+
+    fun markRssSourcesUpToDate() = markDefaultDataVersion("rssSourceVersion", RSS_SOURCE_VERSION)
+
+    fun markDictRuleUpToDate() = markDefaultDataVersion("needUpDictRule", DICT_RULE_VERSION)
+
+    private fun markDefaultDataVersion(versionKey: String, version: Int) {
+        if (getInt(versionKey, 0) < version) {
+            edit { putInt(versionKey, version) }
+        }
+    }
 
     var versionCode
         get() = getLong(versionCodeKey, 0)

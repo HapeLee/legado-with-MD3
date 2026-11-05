@@ -1,6 +1,5 @@
 package io.legado.app.help
 
-import io.legado.app.constant.AppConst
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.HttpTTS
@@ -21,24 +20,40 @@ import splitties.init.appCtx
 object DefaultData {
 
     fun upVersion() {
-        if (LocalConfig.versionCode < AppConst.appInfo.versionCode) {
-            Coroutine.async {
-                if (LocalConfig.needUpHttpTTS) {
-                    importDefaultHttpTTS()
-                }
-                if (LocalConfig.needUpTxtTocRule) {
-                    importDefaultTocRules()
-                }
-                if (LocalConfig.needUpRssSources) {
-                    importDefaultRssSources()
-                }
-                if (LocalConfig.needUpDictRule) {
-                    importDefaultDictRules()
-                }
-            }.onError {
-                it.printOnDebug()
-            }
+        // 只读判断，无副作用：是否有待迁移项不依赖 MainActivity 写入
+        // LocalConfig.versionCode 的时机，因此不受 Activity 启动顺序影响。
+        if (!hasPendingMigration) {
+            return
         }
+        Coroutine.async {
+            // 每项独立执行：单项失败不影响其余项；
+            // 只有导入成功才提交标记，失败的项下次冷启动会重试。
+            migrate(LocalConfig.needUpHttpTTS, ::importDefaultHttpTTS, LocalConfig::markHttpTTSUpToDate)
+            migrate(
+                LocalConfig.needUpTxtTocRule,
+                ::importDefaultTocRules,
+                LocalConfig::markTxtTocRuleUpToDate
+            )
+            migrate(
+                LocalConfig.needUpRssSources,
+                ::importDefaultRssSources,
+                LocalConfig::markRssSourcesUpToDate
+            )
+            migrate(LocalConfig.needUpDictRule, ::importDefaultDictRules, LocalConfig::markDictRuleUpToDate)
+        }.onError {
+            it.printOnDebug()
+        }
+    }
+
+    private val hasPendingMigration: Boolean
+        get() = LocalConfig.needUpHttpTTS || LocalConfig.needUpTxtTocRule ||
+                LocalConfig.needUpRssSources || LocalConfig.needUpDictRule
+
+    private fun migrate(needed: Boolean, import: () -> Unit, mark: () -> Unit) {
+        if (!needed) return
+        runCatching(import)
+            .onSuccess { mark() }
+            .onFailure { it.printOnDebug() }
     }
 
     val httpTTS: List<HttpTTS> by lazy {

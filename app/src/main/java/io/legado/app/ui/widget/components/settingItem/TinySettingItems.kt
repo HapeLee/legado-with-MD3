@@ -230,6 +230,10 @@ fun TinyDropdownSettingItem(
     imageVector: ImageVector? = null,
     modifier: Modifier = Modifier,
     color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
+    enabled: Boolean = true,
+    /** 本产物跑不了的档位：仍然列出并压灰，点了由 [onUnavailableSelected] 说明原因。 */
+    unavailableValues: Set<String> = emptySet(),
+    onUnavailableSelected: ((String) -> Unit)? = null,
     onValueChange: (String) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -244,6 +248,7 @@ fun TinyDropdownSettingItem(
             imageVector = imageVector,
             modifier = modifier,
             color = color,
+            enabled = enabled,
             trailingContent = {
                 TextCard(
                     cornerRadius = 8.dp,
@@ -262,13 +267,20 @@ fun TinyDropdownSettingItem(
             onDismissRequest = { showMenu = false },
         ) { dismiss ->
             displayEntries.forEachIndexed { index, display ->
+                val value = entryValues[index]
+                val unavailable = value in unavailableValues
                 RoundDropdownMenuItem(
                     text = display,
+                    // 压灰但仍可点：点了给出"为什么用不了"，比无声无息更好（与完整设置项一致）。
+                    color = if (unavailable) {
+                        LegadoTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    } else Color.Unspecified,
                     onClick = {
-                        onValueChange(entryValues[index])
+                        if (unavailable) onUnavailableSelected?.invoke(value)
+                        else onValueChange(value)
                         dismiss()
                     },
-                    trailingIcon = if (selectedValue == entryValues[index]) {
+                    trailingIcon = if (selectedValue == value) {
                         {
                             AppIcon(
                                 Icons.Default.Check,

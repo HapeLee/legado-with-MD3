@@ -5,12 +5,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
@@ -28,6 +30,7 @@ import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
+import io.legado.app.ui.book.read.sheet.BubbleStyleSheet
 import io.legado.app.ui.book.read.sheet.EyeProtectionConfigSheet
 import io.legado.app.ui.book.read.sheet.FloatingBarIconConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
@@ -56,6 +59,7 @@ import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.utils.openUrl
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
@@ -71,6 +75,7 @@ fun ReadBookOverlayRoute(
     onOpenTextSelectMenuConfig: () -> Unit,
     onPickBookmarkBadgeImage: () -> Unit,
     onResetBookmarkBadge: () -> Unit,
+    onOpenBubbleManage: () -> Unit = {},
     sheetsVisible: Boolean = true,
     additionalSheetContent: @Composable (ReadBookSheet, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
 ) {
@@ -118,6 +123,7 @@ fun ReadBookOverlayRoute(
         onOpenTextSelectMenuConfig = onOpenTextSelectMenuConfig,
         onPickBookmarkBadgeImage = onPickBookmarkBadgeImage,
         onResetBookmarkBadge = onResetBookmarkBadge,
+        onOpenBubbleManage = onOpenBubbleManage,
     )
 }
 
@@ -145,6 +151,7 @@ fun ReadBookScreen(
     onOpenTextSelectMenuConfig: () -> Unit,
     onPickBookmarkBadgeImage: () -> Unit,
     onResetBookmarkBadge: () -> Unit,
+    onOpenBubbleManage: () -> Unit = {},
 ) {
     // Dialogs driven by activeDialog state
     val restoreDialog = state.activeDialog as? ReadBookDialog.ConfirmRestoreProgress
@@ -153,7 +160,10 @@ fun ReadBookScreen(
     val skipDialog = state.activeDialog as? ReadBookDialog.ConfirmSkipToChapter
     val payDialog = state.activeDialog as? ReadBookDialog.ConfirmChapterPay
     val addToBookshelfDialog = state.activeDialog as? ReadBookDialog.ConfirmAddToBookshelf
+    val retranslateDialog = state.activeDialog as? ReadBookDialog.ConfirmRetranslate
     val readRecordAliasDialog = state.activeDialog as? ReadBookDialog.ReadRecordAliasConflict
+    val externalUrlDialog = state.activeDialog as? ReadBookDialog.ConfirmOpenExternalUrl
+    val context = LocalContext.current
     var rememberAliasChoice by remember(readRecordAliasDialog) { mutableStateOf(false) }
 
     AppAlertDialog(
@@ -259,6 +269,35 @@ fun ReadBookScreen(
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf) },
     )
+    AppAlertDialog(
+        show = externalUrlDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = stringResource(R.string.use_browser_open),
+        text = externalUrlDialog?.url.orEmpty(),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            val url = externalUrlDialog?.url
+            onIntent(ReadBookIntent.DismissDialog)
+            if (!url.isNullOrBlank()) {
+                context.openUrl(url)
+            }
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
+    AppAlertDialog(
+        show = retranslateDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = stringResource(R.string.retranslate_chapter),
+        text = stringResource(R.string.retranslate_confirm),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            onIntent(ReadBookIntent.DismissDialog)
+            onIntent(ReadBookIntent.RetranslateCurrentChapter)
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
 
     // 书签/笔记跳转前校验未通过的确认框
     val pendingTarget = state.pendingBookmarkTarget
@@ -271,6 +310,7 @@ fun ReadBookScreen(
                 is BookmarkTargetVerdict.SourceChanged ->
                     R.string.bookmark_target_source_changed
 
+                BookmarkTargetVerdict.ContentMismatch -> R.string.bookmark_target_content_mismatch
                 BookmarkTargetVerdict.TitleMismatch ->
                     R.string.bookmark_target_title_mismatch
 
@@ -287,7 +327,7 @@ fun ReadBookScreen(
     // Keep each layer keyed and mounted until its own sheet exit animation has finished.
     // Native modal windows must be created in stack order, including after recreation.
     val layers = remember { androidx.compose.runtime.mutableStateListOf<ReaderSheetLayer>() }
-    var nextLayerId by rememberSaveable { mutableStateOf(0L) }
+    var nextLayerId by rememberSaveable { mutableLongStateOf(0L) }
     var activeLayerIds by rememberSaveable { mutableStateOf<Map<String, Long>>(emptyMap()) }
     LaunchedEffect(state.sheetStack) {
         val previous = layers.filter { it.present }
@@ -308,6 +348,10 @@ fun ReadBookScreen(
         }
         activeLayerIds = nextIds.toMap()
     }
+    // 只有栈顶弹层可见：下层保持挂载（退场动画和原生窗口创建顺序仍按栈序），但不再显示。
+    // 否则下层的 ModalBottomSheet 窗口会压在上层的整屏配置页（如点击区域、按键设置）之上——
+    // 那个整屏页既看不见、也点不到，关闭手势和返回键又全被下层窗口吞掉，表现为「退不出去」。
+    val topLayerId = topReaderSheetLayerId(layers, state.sheetStack)
     layers.forEach { layer ->
         androidx.compose.runtime.key(layer.id) {
             val alive = io.legado.app.ui.book.read.sheet.rememberSheetAlive(
@@ -315,7 +359,7 @@ fun ReadBookScreen(
                 exitMillis = 600L
             )
             if (alive) {
-                val visible = layer.present && sheetsVisible
+                val visible = layer.present && sheetsVisible && layer.id == topLayerId
                 val layerIntent: (ReadBookIntent) -> Unit = { intent ->
                     if (layer.present) {
                         onIntent(
@@ -332,6 +376,7 @@ fun ReadBookScreen(
                         )
                     ),
                     sheetsVisible = visible,
+                    onOpenBubbleManage = onOpenBubbleManage,
                     aiState = aiState,
                     highlightRuleState = highlightRuleState,
                     markingState = markingState,
@@ -353,8 +398,23 @@ fun ReadBookScreen(
     }
 }
 
+/**
+ * 栈顶弹层对应的挂载层 id，其余层只挂载不显示。
+ *
+ * 弹层可以有父子关系（例如「更多」里再打开点击区域、按键设置）。下层若是
+ * ModalBottomSheet，它独占一个原生窗口，会一直压在栈顶的整屏配置页之上：配置页既不可见、
+ * 也点不到，而那个窗口的关闭手势和返回键又只会发给栈顶（此时不是自己），于是谁也退不出去。
+ */
+internal fun topReaderSheetLayerId(
+    layers: List<ReaderSheetLayer>,
+    sheetStack: List<ReadBookSheet>,
+): Long? {
+    val topSheetClass = sheetStack.lastOrNull()?.let { it::class } ?: return null
+    return layers.lastOrNull { it.present && it.sheet::class == topSheetClass }?.id
+}
+
 @androidx.compose.runtime.Stable
-private data class ReaderSheetLayer(
+internal data class ReaderSheetLayer(
     val id: Long,
     val sheet: ReadBookSheet,
     val present: Boolean,
@@ -374,6 +434,7 @@ private fun ReadBookSheetContent(
     onOpenTextSelectMenuConfig: () -> Unit,
     onPickBookmarkBadgeImage: () -> Unit,
     onResetBookmarkBadge: () -> Unit,
+    onOpenBubbleManage: () -> Unit = {},
 ) {
     val visibleState =
         if (sheetsVisible) state else state.copy(sheetStack = kotlinx.collections.immutable.persistentListOf())
@@ -504,6 +565,16 @@ private fun ReadBookSheetContent(
             customIcons = state.menuConfig.readMenuCustomIcons,
             onDismissRequest = dismissSheet(visibleState.findSheet<ReadBookSheet.ToolButtonConfig>()),
             onIntent = onIntent,
+        )
+    }
+    if (state.activeSheet is ReadBookSheet.BubbleStyle) {
+        BubbleStyleSheet(
+            show = visibleState.findSheet<ReadBookSheet.BubbleStyle>() != null,
+            onDismissRequest = dismissSheet(visibleState.findSheet<ReadBookSheet.BubbleStyle>()),
+            onOpenManage = {
+                onIntent(ReadBookIntent.HideMenu)
+                onOpenBubbleManage()
+            },
         )
     }
     if (state.activeSheet is ReadBookSheet.EyeProtection) {
@@ -795,6 +866,10 @@ private fun ReadBookSheetContent(
 
                 is ReadBookSheet.Download -> {
                     DownloadSheet(
+                        preview = state.cacheRangePreview,
+                        onScanRange = { start, end ->
+                            onIntent(ReadBookIntent.ScanCacheRange(start, end))
+                        },
                         onDismissRequest = dismissSheet,
                         onDownload = { start, end ->
                             onIntent(ReadBookIntent.DismissSheet)

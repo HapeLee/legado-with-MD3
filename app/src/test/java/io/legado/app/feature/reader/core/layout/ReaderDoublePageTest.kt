@@ -17,13 +17,20 @@ class ReaderDoublePageTest {
         lineHeightPx = 20f, baselineOffsetPx = 15f, columnCount = 2,
     )
     private val text = "甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉"
-    private fun paragraph(value: String, position: Int = 0) = ReaderMeasuredParagraph(
-        value, value.map(Char::toString), FloatArray(value.length) { 10f }, style, position,
+    private fun paragraph(value: String, position: Int = 0) = ReaderMeasuredBlock.InlineParagraph(
+        items = value.mapIndexed { index, char ->
+            ReaderMeasuredInlineItem.Text(char.toString(), 10f, style, position + index)
+        },
+        indentCharacters = 0,
+        alignment = ReaderTextAlignment.START,
+        lineHeightPx = 20f,
+        baselineOffsetPx = 15f,
+        baseTextSizePx = 10f,
     )
 
     @Test
     fun fillsLeftThenRightBeforeTurningAndPreservesEveryPosition() {
-        val pages = ReaderPaginator.paginate(listOf(paragraph(text)), config)
+        val pages = ReaderPaginator.paginateBlocks(listOf(paragraph(text)), config)
         assertEquals(2, pages.size)
         assertEquals(text, pages.joinToString("") { it.text })
         val glyphs = pages.flatMap { it.elements }.filterIsInstance<ReaderElement.Text>()
@@ -69,21 +76,21 @@ class ReaderDoublePageTest {
     @Test
     fun explicitBreakAdvancesColumnAndShortChapterLeavesRightColumnEmpty() {
         val pages = ReaderPaginator.paginateBlocks(listOf(
-            ReaderMeasuredBlock.Paragraph(paragraph("甲")),
+            paragraph("甲"),
             ReaderMeasuredBlock.PageBreak,
-            ReaderMeasuredBlock.Paragraph(paragraph("乙", 2)),
+            paragraph("乙", 2),
         ), config)
         assertEquals(1, pages.size)
         assertEquals(listOf(5f, 55f), pages.single().elements.map { it.bounds.left })
-        val short = ReaderPaginator.paginate(listOf(paragraph("甲")), config).single()
+        val short = ReaderPaginator.paginateBlocks(listOf(paragraph("甲")), config).single()
         assertEquals(1, short.elements.size)
         assertEquals(5f, short.elements.single().bounds.left, 0f)
     }
 
     @Test
     fun reflowLocatesSameCharacterAndBookmarkRangeIncludesBothColumns() {
-        val double = ReaderPaginator.paginate(listOf(paragraph(text)), config)
-        val single = ReaderPaginator.paginate(listOf(paragraph(text)), config.copy(viewportWidthPx = 50, columnCount = 1))
+        val double = ReaderPaginator.paginateBlocks(listOf(paragraph(text)), config)
+        val single = ReaderPaginator.paginateBlocks(listOf(paragraph(text)), config.copy(viewportWidthPx = 50, columnCount = 1))
         assertEquals(0, ReaderPageNavigator.locate(double, 2, 12))
         assertEquals(1, ReaderPageNavigator.locate(single, 2, 12))
         val context = ReaderPageNavigator.pageContext(double, 0)!!

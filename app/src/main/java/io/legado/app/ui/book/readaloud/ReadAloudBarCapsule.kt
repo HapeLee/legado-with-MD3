@@ -64,6 +64,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
@@ -128,6 +131,11 @@ fun ReadAloudBarCapsule(
 ) {
     val morph = LocalReadAloudMorph.current
     val currentMorph by rememberUpdatedState(morph)
+    val playerDescription = if (bookName.isNullOrBlank()) {
+        stringResource(R.string.a11y_open_playback)
+    } else {
+        stringResource(R.string.a11y_open_playback_named, bookName)
+    }
     val showCapsuleShadow by remember(morph) {
         derivedStateOf { (morph?.progress?.value ?: 0f) <= 0f }
     }
@@ -212,6 +220,7 @@ fun ReadAloudBarCapsule(
                 )
             }
             .combinedClickable(
+                role = Role.Button,
                 enabled = idle,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -221,7 +230,8 @@ fun ReadAloudBarCapsule(
                     if (controlsExpanded) R.string.home_capsule_restore_navigation
                     else R.string.home_capsule_expand_controls
                 ),
-            ),
+            )
+            .semantics { contentDescription = playerDescription },
         contentAlignment = Alignment.CenterStart,
     ) {
         Box(

@@ -30,6 +30,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -100,21 +102,21 @@ fun MarkingSheet(
         mutableStateOf(MarkingEffect.fromStyle(editingStyle))
     }
     var markColor by remember(show, editing) {
-        mutableStateOf(MarkingEffect.colorOf(editingStyle))
+        mutableIntStateOf(MarkingEffect.colorOf(editingStyle))
     }
     // 隐藏透传：编辑下划线类标记时保留已有宽度/偏移/SVG（自定义模式没有这些控件）
     var underlineWidth by remember(show, editing) {
-        mutableStateOf(editingStyle?.underlineWidth ?: 1f)
+        mutableFloatStateOf(editingStyle?.underlineWidth ?: 1f)
     }
     var underlineOffset by remember(show, editing) {
-        mutableStateOf(editingStyle?.underlineOffset ?: 2f)
+        mutableFloatStateOf(editingStyle?.underlineOffset ?: 2f)
     }
     var underlineSvgPath by remember(show, editing) {
         mutableStateOf(editingStyle?.underlineSvgPath)
     }
     var showColorPicker by remember(show, editing) { mutableStateOf(false) }
     // 打开取色器的起始色：点尾部按钮用当前色，长按预设色则用被长按的色做基准微调
-    var colorPickerSeed by remember(show, editing) { mutableStateOf(markColor) }
+    var colorPickerSeed by remember(show, editing) { mutableIntStateOf(markColor) }
     val noteState = key(show, editing) {
         rememberTextFieldState(initialText = editing?.note ?: "")
     }

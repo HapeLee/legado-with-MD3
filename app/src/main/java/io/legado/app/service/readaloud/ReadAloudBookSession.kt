@@ -138,9 +138,10 @@ class ReadAloudBookSession : KoinComponent {
             chineseConverterType = readSettings.currentSettings.chineseConverterType,
         )
         val processed = processor.getContent(book, chapter, content, includeTitle = false,
-            paragraphIndent = request.paragraphIndent)
+            paragraphIndent = request.paragraphIndent, includePresentation = true)
         val source = ReaderChapterSourceParser.parse(
             chapterIndex = chapter.index, title = displayTitle, paragraphs = processed.textList,
+            localPresentation = processed.presentation,
             includeTitle = false, adaptSpecialStyle = readSettings.currentSettings.adaptSpecialStyle,
             htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
             castLabels = if (readAloudSettings.currentSettings.multiRoleCast) {

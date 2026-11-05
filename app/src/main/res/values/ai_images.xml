@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_service_type">Service type</string>
+    <string name="ai_service_text">Text and image understanding</string>
+    <string name="ai_service_image">Image generation and editing</string>
+    <string name="ai_capability_vision">Image input / understanding</string>
+    <string name="ai_capability_image_generation">Generate image output</string>
+    <string name="ai_capability_image_editing">Edit image output</string>
+    <string name="ai_image_provider_hint">Image models use their native image protocol and are selected separately from the default text model. Add the model you have access to; suggested IDs are editable. Qwen regions use separate keys and endpoints. Connection tests only fetch metadata and never generate a paid image.</string>
+    <string name="ai_image_manual_models">This image protocol has no model-list test configured. Add a model manually; no image request has been sent.</string>
+</resources>

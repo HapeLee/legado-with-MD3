@@ -15,13 +15,24 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: verify-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
+  # 按变体分组：core / comic 各跑一个 runner，避免同一 runner 上两个变体的 Kotlin 编译
+  # 互相争内存（OutOfMemoryError: Java heap space）。
   verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product: Core
+            label: core
+          - product: Comic
+            label: comic
+    name: Verify (${{ matrix.label }})
     runs-on: ubuntu-latest
+    # concurrency 放在 job 层：workflow 层的 concurrency 不保证能解析 matrix 上下文。
+    concurrency:
+      group: verify-${{ github.workflow }}-${{ github.ref }}-${{ matrix.product }}
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -41,14 +52,32 @@ jobs:
         run: |
           sed -i '/maven.aliyun.com/d' settings.gradle
 
-      - name: Run tests, lint, architecture check, and debug build
+      # Reader semantic golden/contract/consumer/file tests are discovered by the
+      # same unfiltered JVM task, preserving per-class Robolectric isolation.
+      # 架构检查只跑一次，挂在 core job 上。
+      - name: Run semantic compatibility, unit tests, lint, architecture check, and debug build
+        if: ${{ matrix.product == 'Core' }}
         run: |
           chmod +x gradlew
           ./gradlew \
-            testAppDebugUnitTest \
-            lintAppDebug \
+            testApp${{ matrix.product }}DebugUnitTest \
+            lintApp${{ matrix.product }}Debug \
             verifyConfigArchitecture \
-            assembleAppDebug \
+            assembleApp${{ matrix.product }}Debug \
+            compileApp${{ matrix.product }}DebugAndroidTestKotlin \
+            --continue \
+            --no-daemon \
+            --no-configuration-cache
+
+      - name: Run unit tests, lint and debug build
+        if: ${{ matrix.product == 'Comic' }}
+        run: |
+          chmod +x gradlew
+          ./gradlew \
+            testApp${{ matrix.product }}DebugUnitTest \
+            lintApp${{ matrix.product }}Debug \
+            assembleApp${{ matrix.product }}Debug \
+            compileApp${{ matrix.product }}DebugAndroidTestKotlin \
             --continue \
             --no-daemon \
             --no-configuration-cache
@@ -57,20 +86,20 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: verify-unit-test-reports
+          name: verify-unit-test-reports-${{ matrix.label }}
           if-no-files-found: warn
           path: |
-            app/build/test-results/testAppDebugUnitTest/**
-            app/build/reports/tests/testAppDebugUnitTest/**
+            app/build/test-results/testApp${{ matrix.product }}DebugUnitTest/**
+            app/build/reports/tests/testApp${{ matrix.product }}DebugUnitTest/**
 
       - name: Upload lint reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: verify-lint-reports
+          name: verify-lint-reports-${{ matrix.label }}
           if-no-files-found: warn
           path: |
-            app/build/reports/lint-results-appDebug.html
-            app/build/reports/lint-results-appDebug.xml
-            app/build/reports/lint-results-appDebug.txt
-            app/build/reports/lint-results-appDebug.sarif
+            app/build/reports/lint-results-app${{ matrix.product }}Debug.html
+            app/build/reports/lint-results-app${{ matrix.product }}Debug.xml
+            app/build/reports/lint-results-app${{ matrix.product }}Debug.txt
+            app/build/reports/lint-results-app${{ matrix.product }}Debug.sarif

@@ -40,11 +40,16 @@ class ReaderLongImageScrollTest {
     }
 
     @Test fun contentFollowingAFullLongImageStartsANewScrollPage() {
-        val paragraph = ReaderMeasuredParagraph(
-            "甲", listOf("甲"), floatArrayOf(10f), ReaderTextStyle(0, 10f), 1,
+        val paragraph = ReaderMeasuredBlock.InlineParagraph(
+            items = listOf(ReaderMeasuredInlineItem.Text("甲", 10f, ReaderTextStyle(0, 10f), 1)),
+            indentCharacters = 0,
+            alignment = ReaderTextAlignment.START,
+            lineHeightPx = 10f,
+            baselineOffsetPx = 8f,
+            baseTextSizePx = 10f,
         )
         val pages = ReaderPaginator.paginateBlocks(
-            listOf(fullImage, ReaderMeasuredBlock.Paragraph(paragraph)),
+            listOf(fullImage, paragraph),
             paged.copy(continuousScroll = true),
         )
 
@@ -57,11 +62,16 @@ class ReaderLongImageScrollTest {
     }
 
     @Test fun continuousPagesExcludeFixedViewportChromeFromTheirStackingExtent() {
-        val paragraph = ReaderMeasuredParagraph(
-            "甲", listOf("甲"), floatArrayOf(10f), ReaderTextStyle(0, 10f), 1,
+        val paragraph = ReaderMeasuredBlock.InlineParagraph(
+            items = listOf(ReaderMeasuredInlineItem.Text("甲", 10f, ReaderTextStyle(0, 10f), 1)),
+            indentCharacters = 0,
+            alignment = ReaderTextAlignment.START,
+            lineHeightPx = 10f,
+            baselineOffsetPx = 8f,
+            baseTextSizePx = 10f,
         )
         val page = ReaderPaginator.paginateBlocks(
-            listOf(ReaderMeasuredBlock.Paragraph(paragraph)),
+            listOf(paragraph),
             paged.copy(
                 paddingTopPx = 10f,
                 paddingBottomPx = 20f,

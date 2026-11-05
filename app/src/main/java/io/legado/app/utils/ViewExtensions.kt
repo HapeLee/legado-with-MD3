@@ -5,7 +5,6 @@ package io.legado.app.utils
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
-import android.text.Html
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.GONE
@@ -34,7 +33,6 @@ import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
 import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.help.GlideImageGetter
 import io.legado.app.lib.theme.TintHelper
 import org.koin.core.context.GlobalContext
 import splitties.systemservices.inputMethodManager
@@ -184,26 +182,6 @@ fun RadioGroup.getCheckedIndex(): Int {
 
 fun RadioGroup.checkByIndex(index: Int) {
     check(get(index).id)
-}
-
-@SuppressLint("ObsoleteSdkInt")
-fun TextView.setHtml(html: String) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        text = Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT)
-    } else {
-        @Suppress("DEPRECATION")
-        text = Html.fromHtml(html)
-    }
-}
-
-@SuppressLint("ObsoleteSdkInt")
-fun TextView.setHtml(html: String, imageGetter: GlideImageGetter?) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        text = Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT, imageGetter, null)
-    } else {
-        @Suppress("DEPRECATION")
-        text = Html.fromHtml(html, imageGetter, null)
-    }
 }
 
 fun TextView.setTextIfNotEqual(charSequence: CharSequence?) {

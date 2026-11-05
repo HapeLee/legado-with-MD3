@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -66,7 +68,7 @@ fun BgmSceneTableSheet(
     val book = ReadBook.book
     val bookUrl = book?.bookUrl
     val chapterIndex = ReadBook.durChapterIndex
-    var refreshKey by remember { mutableStateOf(0) }
+    var refreshKey by remember { mutableIntStateOf(0) }
     val rows by produceState(
         initialValue = emptyList<BgmSceneStore.OverviewRow>(),
         key1 = bookUrl,
@@ -155,7 +157,7 @@ private fun BgmSceneTableRow(
     onChanged: () -> Unit,
 ) {
     // 记住用户拖到的位置：行数据只在提交后（refreshKey++）才会带回新音量
-    var volumeDraft by remember(row.ordinal, row.volume) { mutableStateOf(row.volume) }
+    var volumeDraft by remember(row.ordinal, row.volume) { mutableFloatStateOf(row.volume) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -283,7 +285,7 @@ private fun BgmSceneRowEditor(
     val sheet = data ?: return
     var pool by remember(row.ordinal) { mutableStateOf(row.poolName) }
     var track by remember(row.ordinal) { mutableStateOf(row.trackName) }
-    var volume by remember(row.ordinal) { mutableStateOf(row.volume) }
+    var volume by remember(row.ordinal) { mutableFloatStateOf(row.volume) }
     var expandedRow by remember(row.ordinal) { mutableStateOf<String?>(null) }
     Column(
         modifier = Modifier

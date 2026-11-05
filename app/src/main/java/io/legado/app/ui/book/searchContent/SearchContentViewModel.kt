@@ -245,7 +245,7 @@ class SearchContentViewModel(
                 }
                 .catch { error ->
                     if (generation == searchGeneration) {
-                        _uiState.update { it.copy(isSearching = false, error = error) }
+                        _uiState.update { it.copy(isSearching = false, error = error, searchResults = persistentListOf()) }
                     }
                 }
                 .collect { results ->

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -95,7 +96,7 @@ fun BgmSceneSheet(
 
     var pool by remember(loadKey) { mutableStateOf(sheet.pool) }
     var track by remember(loadKey) { mutableStateOf(sheet.track) }
-    var volume by remember(loadKey) { mutableStateOf(sheet.volume) }
+    var volume by remember(loadKey) { mutableFloatStateOf(sheet.volume) }
     var expandedRow by remember(loadKey) { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = show) {

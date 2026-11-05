@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -244,13 +246,20 @@ internal fun SeriesAnimatedButtonContent(
     spacing: Dp
 ) {
     val hasText = text != null
+    val label = contentDescription?.takeIf { it.isNotBlank() } ?: text
     Row(
-        modifier = Modifier.padding(if (hasText) padding else PaddingValues(0.dp)),
+        // The visual label only appears briefly after a click. Keep one stable accessible
+        // name while suppressing duplicate icon/text announcements during the animation.
+        modifier = Modifier
+            .padding(if (hasText) padding else PaddingValues(0.dp))
+            .clearAndSetSemantics {
+                label?.let { this.contentDescription = it }
+            },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppIcon(
             imageVector = icon,
-            contentDescription = contentDescription,
+            contentDescription = null,
             tint = contentColor,
             modifier = Modifier.size(iconSize)
         )

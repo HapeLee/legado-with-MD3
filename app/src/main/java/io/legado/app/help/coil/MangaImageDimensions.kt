@@ -1,10 +1,13 @@
 package io.legado.app.help.coil
 
+import android.content.ContentResolver
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import io.legado.app.utils.SvgUtils
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -27,25 +30,7 @@ internal object MangaImageDimensions {
         } catch (_: IOException) { /* 未建立索引或缓存已被清理。 */
         } catch (_: IllegalArgumentException) { /* 损坏索引重新建立。 */
         }
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        file.inputStream().use { BitmapFactory.decodeStream(it, null, bounds) }
-        var ratio = if (bounds.outWidth > 0 && bounds.outHeight > 0) {
-            bounds.outWidth.toFloat() / bounds.outHeight
-        } else file.inputStream().use { input ->
-            SvgUtils.getSize(input)?.takeIf { it.width > 0 && it.height > 0 }
-                ?.let { (it.width / it.height).toFloat() }
-        } ?: return null
-        try {
-            val orientation =
-                ExifInterface(file.path).getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)
-            if (orientation in listOf(
-                    ExifInterface.ORIENTATION_TRANSPOSE, ExifInterface.ORIENTATION_ROTATE_90,
-                    ExifInterface.ORIENTATION_TRANSVERSE, ExifInterface.ORIENTATION_ROTATE_270
-                )
-            ) ratio = 1f / ratio
-        } catch (_: IOException) { /* 非 EXIF 格式按头部尺寸。 */
-        }
-        if (!ratio.isFinite() || ratio <= 0) return null
+        val ratio = readRatio(file::inputStream) { ExifInterface(file.path) } ?: return null
         try {
             index.parentFile!!.mkdirs()
             val temp = File.createTempFile("dimensions", ".tmp", index.parentFile)
@@ -65,5 +50,32 @@ internal object MangaImageDimensions {
         } catch (_: IOException) { /* 尺寸缓存写入失败仍可正常显示原图。 */
         }
         return ratio
+    }
+
+    fun read(resolver: ContentResolver, uri: Uri): Float? =
+        readRatio({ resolver.openInputStream(uri) }) {
+            resolver.openInputStream(uri)?.use(::ExifInterface)
+        }
+
+    private fun readRatio(open: () -> InputStream?, readExif: () -> ExifInterface?): Float? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        open()?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        val ratio = if (bounds.outWidth > 0 && bounds.outHeight > 0) {
+            bounds.outWidth.toFloat() / bounds.outHeight
+        } else open()?.use { input ->
+            SvgUtils.getSize(input)?.takeIf { it.width > 0 && it.height > 0 }
+                ?.let { (it.width / it.height).toFloat() }
+        } ?: return null
+        val orientation = try {
+            readExif()?.getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)
+        } catch (_: IOException) {
+            null
+        }
+        val corrected = when (orientation) {
+            ExifInterface.ORIENTATION_TRANSPOSE, ExifInterface.ORIENTATION_ROTATE_90,
+            ExifInterface.ORIENTATION_TRANSVERSE, ExifInterface.ORIENTATION_ROTATE_270 -> 1f / ratio
+            else -> ratio
+        }
+        return corrected.takeIf { it.isFinite() && it > 0 }
     }
 }

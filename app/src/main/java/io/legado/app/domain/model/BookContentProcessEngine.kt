@@ -15,6 +15,13 @@ object BookContentProcessEngine {
     fun apply(
         content: String,
         processes: List<BookContentProcess>,
+    ): ApplyResult = apply(content, processes, onReplace = null)
+
+
+    internal fun apply(
+        content: String,
+        processes: List<BookContentProcess>,
+        onReplace: ((Int, Int, String) -> Unit)?,
     ): ApplyResult {
         if (content.isEmpty() || processes.isEmpty()) {
             return ApplyResult(content, emptyList())
@@ -31,12 +38,11 @@ object BookContentProcessEngine {
                 if (process.kind == BookContentProcess.KIND_USER_UNDERLINE ||
                     process.kind == BookContentProcess.KIND_USER_HIGHLIGHT
                 ) {
-                    // 用户划线/高亮标记：不改文本。锚点能在正文里解析到说明标记仍有效，
-                    // 计入 effectiveProcesses 供渲染层把样式应用到区间。
+                    // Resolve against the final semantic body in the style mapper, after all edits.
                     val anchor = GSON.fromJsonObject<TextProcessAnchor>(process.anchorJson)
-                        .getOrNull()
-                        ?: return@forEach
-                    if (findTargetRange(output, anchor) != null) {
+                        .getOrNull() ?: return@forEach
+                    if (anchor.selectedText.isNotBlank() &&
+                        (output.contains("<usehtml>") || findTargetRange(output, anchor) != null)) {
                         effectiveProcesses.add(process)
                     }
                     return@forEach
@@ -76,6 +82,13 @@ object BookContentProcessEngine {
                     else -> output
                 }
                 if (next != output) {
+                    if (onReplace != null) {
+                        val start = if (action.type == TextProcessAction.TYPE_INSERT_AFTER) range.last + 1 else range.first
+                        val end = if (action.type == TextProcessAction.TYPE_INSERT_BEFORE ||
+                            action.type == TextProcessAction.TYPE_INSERT_AFTER) start else range.last + 1
+                        val count = next.length - output.length + end - start
+                        onReplace(start, end, next.substring(start, start + count))
+                    }
                     output = next
                     effectiveProcesses.add(process)
                 }

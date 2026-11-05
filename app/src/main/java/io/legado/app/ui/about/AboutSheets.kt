@@ -30,37 +30,6 @@ import io.legado.app.ui.widget.components.text.MarkdownBlock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MarkdownSheet(
-    show: Boolean,
-    title: String,
-    content: String,
-    onDismissRequest: () -> Unit,
-    endAction: @Composable (() -> Unit)? = null,
-) {
-    AppModalBottomSheet(
-        show = show,
-        onDismissRequest = onDismissRequest,
-        title = title,
-        endAction = endAction,
-    ) {
-        SelectionContainer {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                MarkdownBlock(
-                    content = content,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(modifier = Modifier.heightIn(min = 16.dp))
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun UpdateSheet(
     show: Boolean,
     updateInfo: AppUpdate.UpdateInfo,

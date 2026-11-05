@@ -109,7 +109,7 @@
 <script setup lang="ts">
 import jump from '@/plugins/jump'
 import settings from '@/config/themeConfig'
-import API from '@api'
+import API, { type ReaderWebParagraph } from '@api'
 import { useLoading } from '@/hooks/loading'
 import { useThrottleFn } from '@vueuse/shared'
 import { isNullOrBlank } from '@/utils/utils'
@@ -381,7 +381,7 @@ const toShelf = () => {
 }
 
 // 获取章节内容
-const chapterData = ref<{ index: number; content: string[]; title: string }[]>(
+const chapterData = ref<{ index: number; content: ReaderWebParagraph[]; title: string }[]>(
   [],
 )
 const noPoint = ref(true)
@@ -403,18 +403,23 @@ const getContent = (index: number, reloadChapter = true, chapterPos = 0) => {
       res => {
         if (res.data.isSuccess) {
           const data = res.data.data
-          const content = data.split(/\n+/)
-          const urlEncodedBookUrl = encodeURIComponent(bookUrl)
-          for (let i = 0; i < content.length; i++) {
-            if (!/^\s*<img[^>]*src[^>]+>$/.test(content[i])) {
-              content[i] = content[i].replace(new RegExp('img src="', 'g'), `img src="/image?url=${urlEncodedBookUrl}&path=`);
+          const content = data.paragraphs.map(paragraph => ({ ...paragraph }))
+          for (const paragraph of content) {
+            if (/<img\b/.test(paragraph.html) && !/^\s*<img[^>]*src[^>]+>$/.test(paragraph.html)) {
+              const document = new DOMParser().parseFromString(paragraph.html, 'text/html')
+              for (const image of document.querySelectorAll('img[src]')) {
+                image.setAttribute('src', API.getProxyImageUrl(
+                  bookUrl, image.getAttribute('src')!, store.config.readWidth,
+                ))
+              }
+              paragraph.html = document.body.innerHTML
             }
           }
-          chapterData.value.push({ index, content, title })
+          chapterData.value.push({ index, content, title: data.title })
           if (reloadChapter) toChapterPos(chapterPos)
         } else {
           ElMessage({ message: res.data.errorMsg, type: 'error' })
-          const content = [res.data.errorMsg]
+          const content = [{ html: res.data.errorMsg, start: 0, endExclusive: 0 }]
           chapterData.value.push({ index, content, title })
         }
         store.setContentLoading(true)
@@ -425,7 +430,7 @@ const getContent = (index: number, reloadChapter = true, chapterPos = 0) => {
         }
       },
       err => {
-        const content = ['获取章节内容失败！']
+        const content = [{ html: '获取章节内容失败！', start: 0, endExclusive: 0 }]
         chapterData.value.push({ index, content, title })
         store.setShowContent(true)
         throw err

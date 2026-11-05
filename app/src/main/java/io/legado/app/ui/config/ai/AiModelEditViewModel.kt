@@ -9,6 +9,7 @@ import io.legado.app.domain.model.AiGenerationParams
 import io.legado.app.domain.model.AiMessage
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiModelDraft
+import io.legado.app.domain.model.AiProtocol
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.help.LocalNetworkAccess
 import io.legado.app.help.targetsLocalNetwork
@@ -49,7 +50,7 @@ class AiModelEditViewModel(
             ) { providers, models ->
                 providers to models
             }.collect { (providers, models) ->
-                val providerOptions = providers.map {
+                val providerOptions = providers.filter { it.protocol !in AiProtocol.imageProtocols }.map {
                     AiModelProviderOptionUi(
                         id = it.id,
                         name = it.name,
@@ -63,7 +64,7 @@ class AiModelEditViewModel(
                     val selectedProviderId = current.providerId
                         ?: model?.providerId
                         ?: initialProviderId
-                        ?: providers.firstOrNull()?.id
+                        ?: providerOptions.firstOrNull()?.id
                     if (current.initialized) {
                         current.copy(providers = providerOptions)
                     } else {

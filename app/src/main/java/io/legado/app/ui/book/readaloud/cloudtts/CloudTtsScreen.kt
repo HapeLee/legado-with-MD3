@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -665,7 +666,7 @@ private fun HttpTtsEditorSheet(
     var loginUi by remember(source) { mutableStateOf(source.loginUi.orEmpty()) }
     var loginCheckJs by remember(source) { mutableStateOf(source.loginCheckJs.orEmpty()) }
     var jsLib by remember(source) { mutableStateOf(source.jsLib.orEmpty()) }
-    var speed by remember(source) { mutableStateOf((source.speed ?: 5).toFloat()) }
+    var speed by remember(source) { mutableFloatStateOf((source.speed ?: 5).toFloat()) }
 
     fun current() = source.copy(
         name = name,

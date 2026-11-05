@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface BookContentProcessDao {
 
+    @Query("select * from book_content_processes where id = :id")
+    suspend fun getById(id: String): BookContentProcess?
+
     @Query(
         """
         select * from book_content_processes

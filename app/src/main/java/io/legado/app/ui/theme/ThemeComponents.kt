@@ -1,7 +1,6 @@
 package io.legado.app.ui.theme
 
 import android.content.Context
-import android.graphics.Typeface
 import android.net.Uri
 import android.util.LruCache
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -19,6 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.font.FontFamily
 import io.legado.app.domain.model.settings.customColors
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,7 @@ import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
 import top.yukonga.miuix.kmp.theme.defaultTextStyles
+import java.io.File
 
 @Composable
 fun rememberCustomFont(fontPath: String?): FontFamily? {
@@ -41,8 +43,13 @@ fun rememberCustomFont(fontPath: String?): FontFamily? {
     LaunchedEffect(path, context) {
         if (path == null || cachedFont != null) return@LaunchedEffect
         loadedFont = withContext(Dispatchers.IO) {
-            loadCustomFont(context, path)?.also {
-                synchronized(customFontCache) { customFontCache.put(path, it) }
+            loadCustomFont(context, path)?.also { family ->
+                // Font(File) 是 Blocking 加载策略：首次 resolve 同步读盘，且发生在
+                // 文本布局线程。加载期在 IO 线程预热（Font 实例内部缓存构建好的
+                // Typeface），冷启动/切换字体的首帧布局不再读盘；失败不抛出，
+                // 届时组合内解析回落默认字体（与缺失字体同一兜底）
+                runCatching { createFontFamilyResolver(context).preload(family) }
+                synchronized(customFontCache) { customFontCache.put(path, family) }
             }
         }
     }
@@ -52,17 +59,30 @@ fun rememberCustomFont(fontPath: String?): FontFamily? {
 
 private val customFontCache = LruCache<String, FontFamily>(4)
 
-private fun loadCustomFont(context: Context, fontPath: String): FontFamily? =
+// FontFamily(typeface) 对所有字重请求原样返回该 Typeface（LoadedFontFamily
+// 不进 FontList 的 synthesizeTypeface 合成路径），Bold 样式会静默降为
+// Regular；包成单 Normal 声明的 FontList 后，Bold 请求经 Typeface.create
+// 合成假粗——与平台默认字体（FontFamily.Default）的加粗渲染同机制。
+// internal 供单测锚定 FontList 构造形态
+internal fun loadCustomFont(context: Context, fontPath: String): FontFamily? =
     runCatching {
         val uri = Uri.parse(fontPath)
-        val typeface = if (uri.scheme == "content") {
-            context.contentResolver.openFileDescriptor(uri, "r")?.use {
-                Typeface.Builder(it.fileDescriptor).build()
-            }
+        val fontFile = if (uri.scheme == "content") {
+            // Font(fileDescriptor) 的实际读取在 Compose 解析期（懒加载），use
+            // 关闭后的 PFD 会加载失败；历史 content:// 值复制到缓存文件走稳定
+            // 的懒加载路径（现行选择流程 appFontPath 恒为 AppFontStore 拷贝
+            // 的纯路径，不进本分支）
+            val target = File(context.cacheDir, "appfont-${uri.hashCode()}.ttf")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                target.outputStream().use { input.copyTo(it) }
+            } ?: return@runCatching null
+            target
         } else {
-            Typeface.createFromFile(uri.path)
+            // 缺失文件回退 null（走系统默认字体）：Font(File) 构造不读盘，
+            // 不在此拦截会把失败推迟到布局期
+            uri.path?.let(::File)?.takeIf { it.isFile } ?: return@runCatching null
         }
-        typeface?.let(::FontFamily)
+        FontFamily(Font(fontFile))
     }.getOrNull()
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

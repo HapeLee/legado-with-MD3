@@ -30,6 +30,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import io.legado.app.base.BaseService
 import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.gateway.PlaybackCapsuleGateway
+import io.legado.app.service.OverlayViewOwner
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.feature.readaloud.overlay.capsulePresentationOffsetX
@@ -290,26 +291,4 @@ internal fun shouldShowExternalCapsule(
 ): Boolean =
     enabled && !appVisible && permissionGranted && ownerSource == selectedSource
 
-private class OverlayViewOwner : LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner,
-    AutoCloseable {
-    private val registry = LifecycleRegistry(this)
-    private val savedState = SavedStateRegistryController.create(this)
-    override val lifecycle: Lifecycle get() = registry
-    override val savedStateRegistry: SavedStateRegistry get() = savedState.savedStateRegistry
-    override val viewModelStore = ViewModelStore()
 
-    init {
-        savedState.performAttach()
-        savedState.performRestore(null)
-        registry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-        registry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        registry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
-    }
-
-    override fun close() {
-        registry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-        registry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        registry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        viewModelStore.clear()
-    }
-}

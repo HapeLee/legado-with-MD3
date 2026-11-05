@@ -1,0 +1,5 @@
+{
+  "paragraphs": ["甲“第一句”", "乙&😀", "丙", "丁", "戊", "己", "庚", "辛", "壬"],
+  "semanticContent": "甲“第一句”\n乙&😀\n丙\n丁\n戊\n己\n庚\n辛\n壬\n",
+  "bgm": {"paragraphOrdinal": 1, "text": "乙&😀", "poolName": "rain", "trackName": "wind", "volume": 0.6, "enabled": true}
+}

@@ -26,9 +26,12 @@ android {
 
     targetProjectPath = ":app"
 
-    flavorDimensions += listOf("mode")
+    // 必须与 :app 的 flavor 维度对齐，否则 baseline profile 任务找不到目标变体。
+    flavorDimensions += listOf("mode", "engine")
     productFlavors {
         create("app") { dimension = "mode" }
+        create("core") { dimension = "engine" }
+        create("comic") { dimension = "engine" }
     }
 }
 
@@ -48,7 +51,9 @@ dependencies {
 
 androidComponents {
     beforeVariants { v ->
-        if (v.buildType == "noR8" || v.buildType == "debug") {
+        // baseline profile 只针对 core 采集；comic 的本地引擎体积与启动路径另算。
+        val comic = v.productFlavors.any { it.second == "comic" }
+        if (v.buildType == "noR8" || v.buildType == "debug" || comic) {
             v.enable = false
         }
     }

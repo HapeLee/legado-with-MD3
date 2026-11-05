@@ -7,6 +7,8 @@ object AiCapability {
     const val REASONING = "reasoning"
     const val VISION = "vision"
     const val STREAMING = "streaming"
+    const val IMAGE_GENERATION = "image_generation"
+    const val IMAGE_EDITING = "image_editing"
 }
 
 object AiProtocol {
@@ -14,6 +16,16 @@ object AiProtocol {
     const val OPENAI_RESPONSES = "openai_responses"
     const val ANTHROPIC_MESSAGES = "anthropic_messages"
     const val GOOGLE_TRANSLATE = "google_translate"
+    const val OPENAI_IMAGES = "openai_images"
+    const val GEMINI_IMAGES = "gemini_images"
+    const val GEMINI_IMAGES_LEGACY = "gemini_images_legacy"
+    const val SEEDREAM_IMAGES = "seedream_images"
+    const val DASHSCOPE_IMAGES = "dashscope_images"
+    const val XAI_IMAGES = "xai_images"
+    const val SILICONFLOW_IMAGES = "siliconflow_images"
+
+    val imageProtocols = setOf(OPENAI_IMAGES, GEMINI_IMAGES, GEMINI_IMAGES_LEGACY,
+        SEEDREAM_IMAGES, DASHSCOPE_IMAGES, XAI_IMAGES, SILICONFLOW_IMAGES)
 }
 
 object AiTaskType {
@@ -51,6 +63,20 @@ object AiMessageRole {
 
 object AiProviderPresets {
     val items = listOf(
+        AiProviderPreset("openai_images", "OpenAI Images", AiProtocol.OPENAI_IMAGES,
+            "https://api.openai.com/v1", "https://api.openai.com/v1/models", "GPT Image", "gpt-image-2.5-sunburst"),
+        AiProviderPreset("gemini_images", "Google Gemini Images", AiProtocol.GEMINI_IMAGES,
+            "https://generativelanguage.googleapis.com/v1beta", "", "Nano Banana 2.1", "gemini-nano-banana-2.1"),
+        AiProviderPreset("gemini_images_legacy", "Google Gemini Images (generateContent)", AiProtocol.GEMINI_IMAGES_LEGACY,
+            "https://generativelanguage.googleapis.com/v1beta", "", "Gemini Flash Image", "gemini-3.1-flash-image"),
+        AiProviderPreset("seedream_images", "Doubao Seedream", AiProtocol.SEEDREAM_IMAGES,
+            "https://ark.cn-beijing.volces.com/api/v3", "", "Seedream 4.5", "doubao-seedream-4-5-251128"),
+        AiProviderPreset("qwen_images", "Qwen Images (Beijing)", AiProtocol.DASHSCOPE_IMAGES,
+            "https://dashscope.aliyuncs.com/api/v1", "", "Qwen Image 2.0 Pro", "qwen-image-2.0-pro"),
+        AiProviderPreset("xai_images", "xAI Images", AiProtocol.XAI_IMAGES,
+            "https://api.x.ai/v1", "", "Grok Imagine Image", "grok-imagine-image-2.0"),
+        AiProviderPreset("siliconflow_images", "SiliconFlow Images", AiProtocol.SILICONFLOW_IMAGES,
+            "https://api.siliconflow.cn/v1", "", "Qwen Image Edit", "Qwen/Qwen-Image-Edit-2509"),
         AiProviderPreset(
             id = "openai_chat",
             name = "OpenAI",
@@ -219,7 +245,9 @@ data class AiModelDraft(
     val contextWindow: Int = 0,
     val maxOutputTokens: Int = 0,
     val temperature: Float = TranslationConstants.DEFAULT_TEMPERATURE,
-    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.MEDIUM
+    val reasoningLevel: AiReasoningLevel = AiReasoningLevel.MEDIUM,
+    /** Null preserves/infer capabilities; an explicit set is a user override. */
+    val capabilities: Set<String>? = null,
 )
 
 /**
@@ -365,8 +393,20 @@ data class AiMessage(
     val content: String,
     val toolCalls: List<AiToolCall> = emptyList(),
     val toolCallId: String? = null,
-    val name: String? = null
+    val name: String? = null,
+    val images: List<AiImageInput> = emptyList(),
 )
+
+/** Inline image input. Never put image payloads in persisted chat text or diagnostic logs. */
+@Keep
+data class AiImageInput(val mimeType: String, val base64Data: String) {
+    init {
+        require(mimeType in setOf("image/png", "image/jpeg", "image/webp"))
+        require(base64Data.isNotBlank())
+    }
+    val dataUrl: String get() = "data:$mimeType;base64,$base64Data"
+    override fun toString(): String = "AiImageInput($mimeType, ${base64Data.length} encoded characters)"
+}
 
 @Keep
 data class AiGenerateRequest(
@@ -381,6 +421,8 @@ data class AiGenerateRequest(
      * background tasks.
      */
     val sessionId: String? = null,
+    /** Optional wall-clock transport bound for page/background jobs; chat keeps its existing policy. */
+    val timeoutMillis: Long? = null,
 )
 
 @Keep

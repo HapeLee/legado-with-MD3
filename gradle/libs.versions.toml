@@ -1,4 +1,6 @@
 [versions]
+mlkitText = "16.0.1"
+onnxruntime = "1.28.0"
 
 accompanistWebview = "0.36.0"
 adaptive = "1.3.0"
@@ -23,6 +25,7 @@ kotlinxSerializationJson = "1.11.0"
 kotlinxCollectionsImmutable = "0.5.2"
 ksp = "2.3.12"
 agp = "9.4.1"
+aboutlibraries = "15.3.0"
 appcompat = "1.8.0"
 colorpicker = "1.1.0"
 colorpicker-compose = "1.3.0"
@@ -104,6 +107,8 @@ benchmarkMacroJunit4 = "1.4.1"
 baselineprofile = "1.5.0"
 profileinstaller = "1.4.1"
 [libraries]
+aboutlibraries-core = { module = "com.mikepenz:aboutlibraries-core", version.ref = "aboutlibraries" }
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 
 accompanist-webview = { module = "com.google.accompanist:accompanist-webview", version.ref = "accompanistWebview" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
@@ -186,6 +191,9 @@ material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "m
 media-media = { module = "androidx.media:media", version.ref = "media" }
 media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
+media3-exoplayer-dash = { module = "androidx.media3:media3-exoplayer-dash", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 
 markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }
 markwon-image-glide = { module = "io.noties.markwon:image-glide", version.ref = "markwon" }
@@ -276,6 +284,7 @@ coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]
 androidTest = ["androidx-espresso-core", "androidx-junit", "androidx-runner"]
 
 [plugins]
+aboutlibraries-android = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlibraries" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }

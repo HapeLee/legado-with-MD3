@@ -6,6 +6,7 @@ import io.legado.app.domain.model.BookContentProcessEngine
 import io.legado.app.domain.model.TextProcessAnchor
 import io.legado.app.domain.model.TextProcessStyle
 import io.legado.app.feature.reader.core.cast.CastMarkers
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticLocation
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderUnderline
 import io.legado.app.feature.reader.core.model.withBitmapSize
@@ -41,7 +42,7 @@ object LegacyReaderStyleRangeMapper {
         castBubbles: Map<String, ReaderCharacterStyle> = emptyMap(),
     ): List<ReaderStyleRange> {
         val result = mutableListOf<ReaderStyleRange>()
-        val bodyText = semanticBodyText(source)
+        val bodyText = source.semanticContent
         val titleText = source.semanticTitle
         rules.filter(HighlightRule::enabled).forEachIndexed { index, rule ->
             val regex = runCatching { Regex(rule.pattern) }.getOrNull() ?: return@forEachIndexed
@@ -68,6 +69,8 @@ object LegacyReaderStyleRangeMapper {
                 val markingStyle = GSON.fromJsonObject<TextProcessStyle>(process.styleJson).getOrNull()
                     ?: return@forEachIndexed
                 val range = BookContentProcessEngine.resolveRange(bodyText, anchor) ?: return@forEachIndexed
+                if (!ReaderSemanticLocation.isValidOffset(bodyText, range.first) ||
+                    !ReaderSemanticLocation.isValidOffset(bodyText, range.last + 1)) return@forEachIndexed
                 result += ReaderStyleRange(
                     start = range.first,
                     endExclusive = range.last + 1,
@@ -233,39 +236,6 @@ object LegacyReaderStyleRangeMapper {
     ): List<ReaderStyleRange> =
         if (start < endExclusive) rule.matchRanges(start, endExclusive, target, priority)
         else emptyList()
-
-    private fun semanticBodyText(source: ReaderChapterSource): String {
-        val chars = CharArray(source.characterCount) { '\n' }
-        source.blocks.forEach { block ->
-            when (block) {
-                is ReaderChapterSourceBlock.Text -> if (!block.isTitle) {
-                    chars.writeText(block.chapterPosition, block.value)
-                }
-                is ReaderChapterSourceBlock.Image -> chars.setOrNull(block.chapterPosition, '\uFFFC')
-                is ReaderChapterSourceBlock.Paragraph -> block.items.forEach { item ->
-                    when (item) {
-                        is ReaderChapterInlineSource.Text -> chars.writeText(item.chapterPosition, item.value)
-                        is ReaderChapterInlineSource.Image -> chars.setOrNull(item.chapterPosition, '\uFFFC')
-                        is ReaderChapterInlineSource.BlankLine -> Unit
-                        // 配乐胶囊零字符，不写语义坐标
-                        is ReaderChapterInlineSource.BgmScene -> Unit
-                    }
-                }
-                is ReaderChapterSourceBlock.Html, is ReaderChapterSourceBlock.PageBreak -> Unit
-            }
-        }
-        return chars.concatToString()
-    }
-
-    private fun CharArray.setOrNull(index: Int, value: Char) {
-        if (index in indices) this[index] = value
-    }
-
-    private fun CharArray.writeText(start: Int, text: String) {
-        if (start !in indices || text.isEmpty()) return
-        val count = minOf(text.length, size - start)
-        for (offset in 0 until count) this[start + offset] = text[offset]
-    }
 
     /**
      * 一次命中拆成「首字 / 段内 / 末字」三段互不重叠的区间。

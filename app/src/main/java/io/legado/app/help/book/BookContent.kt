@@ -9,6 +9,7 @@ data class BookContent(
     //起效的替换规则
     val effectiveReplaceRules: List<ReplaceRule>?,
     val effectiveContentProcesses: List<BookContentProcess> = emptyList(),
+    val presentation: io.legado.app.feature.reader.core.source.ReaderLocalPresentation? = null,
 ) {
 
     override fun toString(): String {

@@ -118,7 +118,7 @@ private fun BookCacheManageScreen(
         allBooks.filter { book ->
             val matchesGroup = when (selectedGroupId) {
                 BookGroup.IdAll -> true
-                BookGroup.IdNetNone -> !book.isNotShelf && book.group == 0L
+                BookGroup.IdNetNone -> !book.isNotShelf && !book.isVideo && book.group == 0L
                 else -> !book.isNotShelf && (book.group and selectedGroupId) > 0L
             }
             val matchesSearch = !isSearchMode || searchKey.isBlank() ||

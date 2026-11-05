@@ -199,7 +199,7 @@ sealed interface BookInfoIntent {
     data class UpdateVariable(val value: String) : BookInfoIntent
     data object SaveVariable : BookInfoIntent
     data class MenuAction(val action: BookInfoMenuAction) : BookInfoIntent
-    data class AuthorClick(val longClick: Boolean) : BookInfoIntent
+    data class AuthorClick(val longClick: Boolean, val author: String? = null) : BookInfoIntent
     data class BookNameClick(val longClick: Boolean) : BookInfoIntent
     data object OriginClick : BookInfoIntent
     data object ReadClick : BookInfoIntent

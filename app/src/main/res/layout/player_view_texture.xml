@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  播放页的播放器视图。
+
+  用 XML 而不是代码 new 出来，是为了指定 app:surface_type="texture_view"：
+  SurfaceView 是独立窗口，Compose 的淡入淡出 / 位移 / 缩放都落不到它身上，进出场时画面
+  会「卡在上一页」；TextureView 是普通 View，跟着 View 树的变换一起动，播放器才跟得上
+  Nav3 的转场。该属性只能在 inflate 时读取，代码里没有等价的 setter。
+-->
+<androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:surface_type="texture_view"
+    app:use_controller="false" />

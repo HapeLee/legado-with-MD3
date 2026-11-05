@@ -7,6 +7,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MainPaneNavigationTest {
+    @Test fun mangaSettingsUseTheSettingsPaneAndKeepTheirParentForBack() {
+        val stack = mutableListOf<NavKey>(MainRouteHome, MainRouteSettings)
+        val tracker = MainNavRouteTracker()
+        val navigation = MainEntryNavigation(MainRouteSettings, stack, true, tracker) { error("Pane navigation should handle settings") }
+        navigation.pushRoute(MainRouteSettingsManga())
+        assertEquals(listOf(MainRouteHome, MainRouteSettings, MainRouteSettingsManga()), stack)
+        assertTrue(supportsMainPanes(MainRouteSettingsManga::class))
+        stack.removeAt(stack.lastIndex)
+        assertEquals(MainRouteSettings, stack.last())
+    }
     @Test
     fun changingHomeTabClearsPreviousRightPane() {
         val stack = mutableListOf<NavKey>(MainRouteHome, MainRouteSettings)

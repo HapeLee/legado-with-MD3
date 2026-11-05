@@ -2,6 +2,8 @@ package io.legado.app.utils
 
 import com.github.liuyueyi.quick.transfer.ChineseUtils
 import com.github.liuyueyi.quick.transfer.constants.TransType
+import com.github.liuyueyi.quick.transfer.dictionary.DictionaryContainer
+import io.legado.app.domain.model.TextProjection
 
 object ChineseUtils {
 
@@ -16,6 +18,29 @@ object ChineseUtils {
             fixT2sDict()
         }
         return ChineseUtils.t2s(content)
+    }
+
+    internal fun convertMapped(content: String, type: Int, projection: TextProjection?): String {
+        if (projection == null) return if (type == 1) t2s(content) else s2t(content)
+        if (type == 1 && !fixed) fixT2sDict()
+        val dictionary = DictionaryContainer.getInstance().getDictionary(
+            if (type == 1) TransType.TRADITIONAL_TO_SIMPLE else TransType.SIMPLE_TO_TRADITIONAL)
+        val chars = content.toCharArray()
+        val result = StringBuilder(content.length)
+        val edits = mutableListOf<TextProjection.Edit>()
+        var cursor = 0
+        while (cursor < chars.size) {
+            val match = dictionary.dict.bestMatch(chars, cursor, minOf(chars.size, cursor + dictionary.maxLen))
+            val count = match?.level ?: 1
+            val value = match?.value ?: dictionary.convert(chars[cursor]).toString()
+            result.append(value)
+            if (!content.regionMatches(cursor, value, 0, value.length) || value.length != count) {
+                edits += TextProjection.Edit(cursor, cursor + count, value.length)
+            }
+            cursor += count
+        }
+        projection.replace(edits)
+        return result.toString()
     }
 
     fun preLoad(async: Boolean, vararg transType: TransType) {

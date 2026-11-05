@@ -26,7 +26,7 @@ class ChineseLineBreakerTest {
 
     /**
      * 旧 ZhLayout CPS_1：连续两个后置标点且标点不可压缩时，标点留在本行、行宽允许超出
-     * （`offset = 0f`）。取「行宽不超出」会把 `。”` 整体推到下一行行首。
+     * （`offset = 0f`）。这是自然宽度，最终落位必须收紧到内容区内，见 ReaderPunctuationLayoutTest。
      */
     @Test
     fun fullWidthClosingPunctuationHangsAtTheLineEnd() {
@@ -196,6 +196,52 @@ class ChineseLineBreakerTest {
 
         assertArrayEquals(intArrayOf(0, 3, 9), result.lineStarts)
         assertArrayEquals(floatArrayOf(30f, 60f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun symmetricOpeningMarksMoveWithTheFollowingWord() {
+        for (mark in listOf("\"", "'", "|", "`")) {
+            val result = breakText("aa ${mark}word$mark".map(Char::toString), 60)
+
+            assertArrayEquals("mark=$mark", intArrayOf(0, 3, 9), result.lineStarts)
+        }
+    }
+
+    /** #2483: neither the straight quote nor the closing pipe may get its own line. */
+    @Test
+    fun symmetricClosingMarksStayWithTheSentence() {
+        for (mark in listOf("\"", "'", "|", "`")) {
+            val text = "${mark}Long Night.$mark"
+            val result = breakText(text.map(Char::toString), 120)
+
+            assertArrayEquals("mark=$mark", intArrayOf(0, text.length), result.lineStarts)
+        }
+    }
+
+    @Test
+    fun apostrophesInsideQuotedWordsDoNotCloseTheQuote() {
+        val result = breakText("aa 'can't.'".map(Char::toString), 80)
+
+        assertArrayEquals(intArrayOf(0, 3, 11), result.lineStarts)
+    }
+
+    @Test
+    fun unquotedApostrophesAndSpacedPipesKeepTheirWordBoundaries() {
+        val contraction = breakText("aa can't".map(Char::toString), 70)
+        assertArrayEquals(intArrayOf(0, 3, 8), contraction.lineStarts)
+
+        val separator = breakText("aa | bb".map(Char::toString), 50)
+        assertArrayEquals(intArrayOf(0, 5, 7), separator.lineStarts)
+    }
+
+    @Test
+    fun closingMarkOnAnOverlongQuotedWordKeepsCharacterFallback() {
+        for (mark in listOf("\"", "|")) {
+            val result = breakText("${mark}word$mark".map(Char::toString), 50)
+
+            assertArrayEquals(intArrayOf(0, 4, 6), result.lineStarts)
+            assertArrayEquals(floatArrayOf(40f, 20f), result.lineWidthsPx, 0f)
+        }
     }
 
     /** 连续开标点（`“(`）整串连同单词回退，不把前一个开标点留在行尾。 */

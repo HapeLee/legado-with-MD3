@@ -10,6 +10,17 @@ import org.junit.Test
 class LocalNetworkBlockedNotifierTest {
 
     @Test
+    fun `preflight requests only missing permission for local network hosts`() {
+        listOf("192.168.50.7", "nas.local", "fd00::1", "100.64.0.1").forEach { host ->
+            assertTrue(LocalNetworkBlockedNotifier.shouldRequestPermission(host, permissionGranted = false))
+            assertFalse(LocalNetworkBlockedNotifier.shouldRequestPermission(host, permissionGranted = true))
+        }
+        listOf("api.deepseek.com", "127.0.0.1", "localhost", "::1").forEach { host ->
+            assertFalse(LocalNetworkBlockedNotifier.shouldRequestPermission(host, permissionGranted = false))
+        }
+    }
+
+    @Test
     fun `reports connection failures to a private host without permission`() {
         assertTrue(
             LocalNetworkBlockedNotifier.shouldReport(

@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import io.legado.app.R
 
 @Composable
@@ -21,8 +22,11 @@ fun Modifier.reorderAccessibility(
 
     val moveUpLabel = stringResource(R.string.a11y_move_up)
     val moveDownLabel = stringResource(R.string.a11y_move_down)
+    val positionLabel = stringResource(R.string.a11y_reorder_position, index + 1, itemCount)
     return semantics {
         description?.let { contentDescription = it }
+        // Follow the applied order rather than announcing a requested move before it commits.
+        stateDescription = positionLabel
         customActions = buildList {
             if (index > 0) {
                 add(CustomAccessibilityAction(moveUpLabel) {

@@ -575,7 +575,7 @@ abstract class BaseReadAloudService : BaseService(),
                 bookUrl = prepared.book?.bookUrl.orEmpty(),
                 chapterIndex = preparedChapter.chapterIndex,
                 positions = io.legado.app.help.readaloud.cast.BgmSceneStore.positionsToOrdinals(
-                    input.source.semanticContent,
+                    input.source,
                 ),
             )
             contentList = preparedContentList

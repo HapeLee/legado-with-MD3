@@ -1,0 +1,9 @@
+{
+  "uniqueId": "Peyilo:PageCurl-Core",
+  "name": "PageCurl-Core",
+  "artifactVersion": "c23fd9d",
+  "website": "https://github.com/Peyilo/PageCurl-Core",
+  "licenses": [
+    "pagecurl-core-mit"
+  ]
+}

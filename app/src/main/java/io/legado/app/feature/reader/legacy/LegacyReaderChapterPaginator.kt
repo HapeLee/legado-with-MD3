@@ -277,8 +277,6 @@ object LegacyReaderChapterPaginator {
             chapterEndPaddingPx = CHAPTER_END_PADDING_DP.dpToPx(),
             inlineImagesPreserveScrollLine = imageLayoutMode == ReaderImageLayoutMode.INLINE,
             textBottomJustify = paginationStyle.textBottomJustify,
-            // 旧 `setTypeHtml` 的 `setLineSpacing(paragraphSpacing.toFloat(), ...)`：用原始设置值。
-            htmlLineSpacingAddPx = paginationStyle.paragraphSpacing.toFloat(),
             pageUnderline = paginationStyle.pageUnderline,
             emphasisUnderlineStyle = paginationStyle.emphasisUnderlineStyle,
             castOptions = castOptions,

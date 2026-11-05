@@ -356,6 +356,28 @@ class ReaderTextBackgroundRunTest {
         assertEquals(ReaderRect(0f, 0f, 100f, 100f), page.contentClipRect(emptyList()))
     }
 
+    /** 双下划线从行盒底边继续向下画，裁剪下边界必须跟着最后一条线走。 */
+    @Test
+    fun `content clip grows below the line box for a double underline`() {
+        val underlined = plainStyle.copy(
+            underline = ReaderUnderline(
+                mode = 4,
+                colorArgb = 0xFF000000.toInt(),
+                widthPx = 2f,
+                offsetPx = 3f,
+                doubleLineGapPx = 4f,
+            ),
+        )
+        val page = page(text(90f, 80f, 100f, 100f, underlined))
+
+        val clip = page.contentClipRect(emptyList())
+
+        assertEquals(100f + 3f + 4f + 2f + 1f, clip.bottom, 0.001f)
+        assertEquals(0f, clip.left, 0.001f)
+        assertEquals(0f, clip.top, 0.001f)
+        assertEquals(100f, clip.right, 0.001f)
+    }
+
     @Test
     fun `scroll window allows bubble sides without expanding the vertical viewport`() {
         val current = page(text(0f, 0f, 10f, 20f, plainStyle))

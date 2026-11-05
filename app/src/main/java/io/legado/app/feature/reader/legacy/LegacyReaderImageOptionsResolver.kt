@@ -5,6 +5,8 @@ import io.legado.app.feature.reader.core.layout.ReaderImageOptions
 import io.legado.app.feature.reader.core.layout.ReaderImageOptionsResolver
 import io.legado.app.feature.reader.core.layout.ReaderInlineImagePlaceholder
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
+import io.legado.app.model.ParagraphBubbleRenderer
+import io.legado.app.model.ParagraphBubbleSource
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -16,7 +18,21 @@ object LegacyReaderImageOptionsResolver : ReaderImageOptionsResolver {
     private const val imgStyleTextLowercase = "text"
 
     override fun resolve(source: String, htmlParagraph: Boolean): ReaderImageOptions? {
-        val values = sourceOptions(source) ?: return null
+        val values = sourceOptions(source)
+        // 段评气泡：尺寸由渲染器给（正方形），一律按「文字嵌入」排版，等宽于一个占位字。
+        // 不能沿用书源里的 style，否则会被当成整图铺满一页。
+        if (ParagraphBubbleSource.parse(source) != null) {
+            return ReaderImageOptions(
+                layoutMode = ReaderImageLayoutMode.INLINE,
+                horizontalAlignment = ReaderTextAlignment.CENTER,
+                action = values?.valueIgnoreCase("pclick")?.takeIf(String::isNotBlank)
+                    ?: values?.valueIgnoreCase("click")?.takeIf(String::isNotBlank),
+                inlinePlaceholder = ReaderInlineImagePlaceholder.REVIEW,
+                // 包内缩放要影响排版，否则气泡永远等于一个占位字宽（旧 `inlineWidth`）。
+                inlineWidthScale = ParagraphBubbleRenderer.inlineWidthScale(),
+            )
+        }
+        if (values == null) return null
         val rawStyle = values.valueIgnoreCase("style")
         val style = rawStyle?.uppercase()
         val width = values.valueIgnoreCase("width")

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -180,7 +181,7 @@ fun CastCapsuleStyleRouteScreen(onBackClick: () -> Unit) {
      * 钉底预览条的真实高度（px）：列表要按它留底，不然最后一行「恢复默认」会被压在预览下面。
      * Scaffold 传进来的 bottom 内边距并不含我们这条自绘的 bottomBar，所以只能自己量。
      */
-    var previewBarPx by remember { mutableStateOf(0) }
+    var previewBarPx by remember { mutableIntStateOf(0) }
     val barDensity = LocalDensity.current
 
     AppScaffold(

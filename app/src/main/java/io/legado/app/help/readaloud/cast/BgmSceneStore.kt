@@ -5,6 +5,8 @@ import io.legado.app.data.entities.BgmSceneMark
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
+import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -21,36 +23,18 @@ private const val PREVIEW_CHARS = 48
  */
 object BgmSceneStore {
 
-    /**
-     * 正文段落序号 = 非空段落的编号，从 0 开始（-1 = 空白行，不算一段）。
-     *
-     * 胶囊渲染、AI 分配场景、朗读取乐三处必须用同一个编号，否则点开的段和实际播的不是
-     * 同一段。标题段由 `getContent(includeTitle = false)` 事先排除。
-     */
-    fun ordinals(paragraphs: List<String>): List<Int> {
-        var count = 0
-        return paragraphs.map { if (it.isBlank()) -1 else count++ }
+    /** One row per input paragraph; visual HTML lines never create new stored ordinals. */
+    internal fun paragraphTexts(paragraphs: List<String>, adaptSpecialStyle: Boolean): Map<Int, String> {
+        val source = ReaderChapterSourceParser.parse(0, "", paragraphs, false, adaptSpecialStyle,
+            AndroidReaderHtmlSemanticTextResolver)
+        return source.paragraphs.associate {
+            it.ordinal to source.semanticContent.substring(it.start, it.endExclusive).trimEnd('\n')
+        }
     }
 
-    /**
-     * 语义文本 → 每个正文段的 (起始位置, 段序号)。
-     *
-     * 朗读服务手里只有章节字符坐标，胶囊与 AI 手里只有段落序号，两边靠这张表对上；
-     * 空白段不编号，规则与 [ordinals] 一致。
-     */
-    fun positionsToOrdinals(semanticContent: String): List<Pair<Int, Int>> {
-        var position = 0
-        var count = 0
-        val result = ArrayList<Pair<Int, Int>>()
-        for (line in semanticContent.split('\n')) {
-            if (line.isNotBlank()) {
-                result += position to count
-                count++
-            }
-            position += line.length + 1
-        }
-        return result
-    }
+    /** Use the source's input-paragraph identities; HTML line breaks never renumber saved marks. */
+    fun positionsToOrdinals(source: io.legado.app.feature.reader.core.source.ReaderChapterSource): List<Pair<Int, Int>> =
+        source.paragraphs.filter { it.endExclusive > it.start }.map { it.start to it.ordinal }
 
     /** 本章全部标记（按段落序号升序）。 */
     suspend fun marks(bookUrl: String, chapterIndex: Int): List<BgmSceneMark> =
@@ -113,17 +97,16 @@ object BgmSceneStore {
             get() = trackName.ifBlank { poolName }
     }
 
-    /** 段落序号 → 正文（空白段不编号，与 [ordinals] 同一套计数）。 */
+    /** 段落序号 → 正文（沿用 Source 的输入段落编号）。 */
     private fun paragraphPreviews(book: Book, chapterIndex: Int): Map<Int, String> {
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex) ?: return emptyMap()
         val content = BookHelp.getContent(book, chapter) ?: return emptyMap()
-        val paragraphs = ContentProcessor.get(book)
-            .getContent(book, chapter, content, includeTitle = false)
+        val processor = ContentProcessor.get(book)
+        val settings = processor.captureSettings()
+        val paragraphs = processor
+            .getContent(book, chapter, content, includeTitle = false, paragraphIndent = null, settings = settings)
             .textList
-        val ordinals = ordinals(paragraphs)
-        return paragraphs.mapIndexed { index, text -> ordinals[index] to text }
-            .filter { it.first >= 0 }
-            .associate { it.first to it.second }
+        return paragraphTexts(paragraphs, settings.adaptSpecialStyle)
     }
 
     /** 分配表版本号：每次写入自增。朗读中的配乐轨靠它发现「用户刚改过这一段」。 */

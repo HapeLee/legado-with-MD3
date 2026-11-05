@@ -1,5 +1,19 @@
 package io.legado.app.model.cache
 
+/** 单章缓存失败的最大重试次数：缓存队列与阅读页预下载共用同一口径。 */
+const val CACHE_DOWNLOAD_RETRY_LIMIT = 3
+
+/**
+ * 第 [attempt] 次失败后的退避时长（attempt 从 1 开始）。
+ *
+ * 上限压在 4 秒：独占 FIFO 下重试中的书仍占着队首，退避过长会让后面的书干等。
+ */
+internal fun cacheRetryBackoffMs(attempt: Int): Long = when (attempt) {
+    1 -> 1_000L
+    2 -> 2_000L
+    else -> 4_000L
+}
+
 data class CacheDownloadRequest(
     val bookUrl: String,
     val selection: ChapterSelection,

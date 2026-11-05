@@ -6,9 +6,7 @@ import android.text.Layout
 import android.text.Spanned
 import android.text.style.AbsoluteSizeSpan
 import android.text.style.AlignmentSpan
-import android.text.style.BackgroundColorSpan
 import android.text.style.BulletSpan
-import android.text.style.ForegroundColorSpan
 import android.text.style.ImageSpan
 import android.text.style.LeadingMarginSpan
 import android.text.style.QuoteSpan
@@ -21,13 +19,13 @@ import android.text.style.TypefaceSpan
 import android.text.style.URLSpan
 import android.text.style.UnderlineSpan
 import androidx.core.text.HtmlCompat
+import androidx.core.text.parseAsHtml
 import io.legado.app.feature.reader.core.layout.ReaderHtmlParagraph
 import io.legado.app.feature.reader.core.layout.ReaderHtmlSourceResolver
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecoration
 import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
-import io.legado.app.feature.reader.core.source.ReaderHtmlImageSpanExtent
 import io.legado.app.feature.reader.core.source.ReaderHtmlSemanticTextResolver
 import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
 import org.jsoup.Jsoup
@@ -96,8 +94,20 @@ class AndroidReaderHtmlSourceResolver(
                     leadingOffset += span.getLeadingMargin(true)
                 }
             }
+            val lastBullet = decorations.indexOfLast { it.kind == ReaderParagraphDecorationKind.BULLET }
+            val listDepth = decorations.count { it.kind == ReaderParagraphDecorationKind.BULLET }
+            val quoteDepth = decorations.count { it.kind == ReaderParagraphDecorationKind.QUOTE }
+            val visibleDecorations = decorations.filterIndexed { i, value ->
+                value.kind != ReaderParagraphDecorationKind.BULLET || i == lastBullet
+            }.map { value ->
+                if (value.kind == ReaderParagraphDecorationKind.BULLET) value.copy(
+                    leadingOffsetPx = (listDepth + quoteDepth - 1) * baseTextSizePx * 1.2f) else value
+            }
+            val listMargin = (listDepth + quoteDepth) * baseTextSizePx * 1.2f
             if (paragraph.isNotEmpty()) {
-                paragraphs += ReaderHtmlParagraph(paragraph, firstMargin, restMargin, alignment, decorations)
+                paragraphs += ReaderHtmlParagraph(paragraph,
+                    if (listDepth > 0) maxOf(firstMargin, listMargin) else firstMargin,
+                    if (listDepth > 0) maxOf(restMargin, listMargin) else restMargin, alignment, visibleDecorations)
             } else if (preserveEmpty) {
                 paragraphs += ReaderHtmlParagraph(
                     listOf(ReaderChapterInlineSource.BlankLine(position)),
@@ -126,7 +136,6 @@ class AndroidReaderHtmlSourceResolver(
                     paragraph += ReaderChapterInlineSource.Image(
                         source = it,
                         chapterPosition = position,
-                        htmlSpanExtent = image.htmlSpanExtent(),
                         action = action,
                     )
                 }
@@ -163,8 +172,8 @@ class AndroidReaderHtmlSourceResolver(
             px / baseTextSizePx.coerceAtLeast(1f)
         }
         return ReaderInlineSourceStyle(
-            colorArgb = spans.filterIsInstance<ForegroundColorSpan>().lastOrNull()?.foregroundColor,
-            backgroundArgb = spans.filterIsInstance<BackgroundColorSpan>().lastOrNull()?.backgroundColor,
+            colorArgb = null, // Keep the reader's theme; appearance never changes the text projection.
+            backgroundArgb = null,
             fontWeight = if (bold) 700 else null,
             italic = if (italic) true else null,
             underline = spans.any { it is UnderlineSpan },
@@ -184,25 +193,10 @@ private fun Layout.Alignment.toReaderAlignment(): ReaderTextAlignment = when (th
     else -> ReaderTextAlignment.START
 }
 
-private fun parseReaderHtml(html: String): Spanned = HtmlCompat.fromHtml(
-    html,
+private fun parseReaderHtml(html: String): Spanned = html.parseAsHtml(
     HtmlCompat.FROM_HTML_MODE_COMPACT,
     // 与旧 `setTypeHtml` 的 `parseAsHtml(FROM_HTML_MODE_COMPACT)` 完全一致：不给 ImageGetter，
     // 让框架用系统 fallback 图标的固有尺寸生成 ImageSpan——旧版行内图的占位宽/行盒高就取自它。
     null,
     null,
 )
-
-/**
- * 旧 `setTypeHtml` 的图片占位尺寸：span 的宽（advance）与它给静态布局行盒带来的高。
- * 框架给 fallback drawable 设的就是固有边界，因此这里读 bounds 与旧版 StaticLayout 量到的一致。
- * 资源解析失败（如宿主无系统 drawable）时返回 null，回落占位字规则。
- */
-private fun ImageSpan.htmlSpanExtent(): ReaderHtmlImageSpanExtent? {
-    val bounds = runCatching { drawable.bounds }.getOrNull() ?: return null
-    if (bounds.width() <= 0 || bounds.height() <= 0) return null
-    return ReaderHtmlImageSpanExtent(
-        widthPx = bounds.width().toFloat(),
-        heightPx = bounds.height().toFloat(),
-    )
-}

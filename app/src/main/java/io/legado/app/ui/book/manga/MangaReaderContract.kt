@@ -68,6 +68,10 @@ sealed interface MangaReaderItemUi {
         val chapterSubject: String,
         val loadState: MangaPageLoadState = MangaPageLoadState.Queued,
         val retryRevision: Int = 0,
+        /** Derived raster, leaving source identity and load callbacks unchanged. */
+        val translatedImageUrl: String? = null,
+        /** Original data is available, including data-only prefetch before display. */
+        val sourceReady: Boolean = false,
     ) : MangaReaderItemUi
 
     @Stable
@@ -234,6 +238,10 @@ sealed interface MangaReaderIntent {
     data object CloseSettings : MangaReaderIntent
     data object OpenSourceActions : MangaReaderIntent
     data object OpenCacheActions : MangaReaderIntent
+
+    /** 从设置面板「全局」页打开九宫格点击区域 sheet，不关闭设置面板。 */
+    data object OpenClickActions : MangaReaderIntent
+
     data class CacheChapters(val selection: MangaCacheSelection) : MangaReaderIntent
     data object ToggleAutoRead : MangaReaderIntent
     data object DismissSheet : MangaReaderIntent
@@ -249,6 +257,7 @@ sealed interface MangaReaderIntent {
         MangaReaderIntent
 
     data class PageLoadSucceeded(val requestId: MangaPageRequestId) : MangaReaderIntent
+    data class PageSourceLoaded(val requestId: MangaPageRequestId) : MangaReaderIntent
     data class PageLoadFailed(val requestId: MangaPageRequestId, val message: String?) :
         MangaReaderIntent
     data class RetryPage(val key: String) : MangaReaderIntent
@@ -275,6 +284,7 @@ sealed interface MangaReaderIntent {
         val companionBeforePage: Boolean = false,
     ) : MangaReaderIntent
 
+    data class SaveTranslatedImage(val url: String) : MangaReaderIntent
     data class ExecutePageAction(val action: MangaPageAction) : MangaReaderIntent
     data class MessageShown(val id: Long) : MangaReaderIntent
 }
@@ -284,6 +294,10 @@ sealed interface MangaReaderSheet {
     data object ChangeSource : MangaReaderSheet
     data object SourceActions : MangaReaderSheet
     data object CacheActions : MangaReaderSheet
+
+    /** 九宫格点击区域：入口在设置面板「全局」页，不再占用设置分类 tab。 */
+    data object ClickActions : MangaReaderSheet
+
     data class PageActions(
         val pageKey: String,
         val companionPageKey: String? = null,
@@ -295,7 +309,7 @@ enum class MangaPageAction { SAVE, SAVE_SPREAD, SHARE, SHARE_SPREAD, COPY, COPY_
 
 enum class MangaCacheSelection { CURRENT, FOLLOWING, ALL }
 
-enum class MangaReaderSettingsCategory { READER, FOOTER, MENU, FILTER, CLICK_ACTIONS, AUTO_READ }
+enum class MangaReaderSettingsCategory { READER, FOOTER, MENU, FILTER, AUTO_READ }
 
 sealed interface MangaReaderDialog {
     data object AddToShelf : MangaReaderDialog
@@ -398,5 +412,9 @@ internal fun MangaReaderItemUi.Page.reduceImageLoad(
     val reduced = if (next is MangaPageLoadState.Loading) {
         next.copy(progress = (loadState as? MangaPageLoadState.Loading)?.progress ?: next.progress)
     } else next
-    return if (loadState == reduced) this else copy(loadState = reduced)
+    val ready = sourceReady || next == MangaPageLoadState.Ready
+    return if (loadState == reduced && ready == sourceReady) this else copy(loadState = reduced, sourceReady = ready)
 }
+
+internal fun MangaReaderItemUi.Page.reduceSourceLoaded(requestId: MangaPageRequestId): MangaReaderItemUi.Page =
+    if (this.requestId == requestId && !sourceReady) copy(sourceReady = true) else this

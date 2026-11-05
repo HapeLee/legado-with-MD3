@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.AndroidRuntimeException
 import android.webkit.CookieManager
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -177,6 +178,9 @@ class BackstageWebView(
         }
     }
 
+    // 该规则按 Java PSI 检查 WebViewClient 的构造调用，看不到 Kotlin 里的实现；
+    // 本类已实现 onRenderProcessGone（见下方 override）。
+    @SuppressLint("MissingOnRenderProcessGone")
     private inner class HtmlWebViewClient : WebViewClient() {
 
         private var runnable: EvalJsRunnable? = null
@@ -216,6 +220,14 @@ class BackstageWebView(
             error: SslError?
         ) {
             handler?.proceed()
+        }
+
+        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            // 渲染进程没了就不会再有任何 JS 结果，直接失败，别让调用方等满重试次数。
+            mHandler.removeCallbacksAndMessages(null)
+            callback?.onError(NoStackTraceException("webView渲染进程已结束"))
+            destroy()
+            return true
         }
 
         private inner class EvalJsRunnable(
@@ -286,6 +298,8 @@ class BackstageWebView(
 
     }
 
+    // 同上：本类已实现 onRenderProcessGone，规则看不到 Kotlin 实现。
+    @SuppressLint("MissingOnRenderProcessGone")
     private inner class SnifferWebClient : WebViewClient() {
 
         override fun shouldOverrideUrlLoading(
@@ -351,6 +365,13 @@ class BackstageWebView(
             error: SslError?
         ) {
             handler?.proceed()
+        }
+
+        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            mHandler.removeCallbacksAndMessages(null)
+            callback?.onError(NoStackTraceException("webView渲染进程已结束"))
+            destroy()
+            return true
         }
 
         private inner class LoadJsRunnable(

@@ -27,7 +27,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.model.Debug
-import io.legado.app.ui.about.MarkdownSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.MarkdownSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppFloatingActionButton

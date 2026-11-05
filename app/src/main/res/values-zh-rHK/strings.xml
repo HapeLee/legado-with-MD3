@@ -667,6 +667,23 @@
     <string name="skip_next">下一個</string>
     <string name="music">音樂</string>
     <string name="audio">音頻</string>
+    <string name="video">影片</string>
+    <string name="open_other_video_player">用其他播放器打開</string>
+    <string name="select_episode">選集</string>
+    <string name="config_settings">播放設定</string>
+    <string name="play_speed">播放倍速</string>
+    <string name="press_speed">長按倍速</string>
+    <string name="video_auto_play">自動播放</string>
+    <string name="video_start_full">進入後全屏</string>
+    <string name="video_danmaku">彈幕</string>
+    <string name="video_floating">懸浮小窗</string>
+    <string name="video_picture_in_picture">畫中畫</string>
+    <string name="play_video">播放影片</string>
+    <string name="source_no_custom_button">該書源沒有設定自訂按鈕</string>
+    <string name="source_not_found">書源不存在</string>
+    <string name="chapter_not_found">章節不存在</string>
+    <string name="video_link_not_found">未取得影片連結</string>
+    <string name="video_play_failed">播放失敗</string>
     <string name="is_enable">啟用</string>
     <string name="enable_js">啟用 JS</string>
     <string name="load_with_base_url">加載 BaseUrl</string>
@@ -1371,6 +1388,11 @@
     <string name="update_to_variant_summary">检查更新时查找其他签名版本</string>
     <string name="auto_check_update_on_start_title">啟動時自動檢查更新</string>
     <string name="auto_check_update_on_start_summary">僅在應用程式程序完全重新啟動時檢查，從背景返回不會觸發</string>
+    <string name="update_endpoint_title">更新來源</string>
+    <string name="update_endpoint_summary">自動先直連 GitHub，失敗後改用鏡像；亦可固定只走其中一條</string>
+    <string name="update_endpoint_auto">自動（GitHub 優先，失敗改用鏡像）</string>
+    <string name="update_endpoint_github">僅 GitHub</string>
+    <string name="update_endpoint_mirror">僅鏡像</string>
     <string name="default_version">当前</string>
     <string name="official_version">正式版</string>
     <string name="beta_release_version">测试版</string>
@@ -1581,6 +1603,7 @@
     <string name="about_heap_dump_recording_disabled">堆轉儲記錄已關閉。請先在其它設定中開啟。</string>
     <string name="about_installed_version_title">已安裝版本</string>
     <string name="about_license_title">開源許可</string>
+    <string name="about_third_party_licenses">第三方開源許可</string>
     <string name="about_log_recording_disabled">日誌記錄已關閉。請先在其它設定中開啟。</string>
     <string name="about_new_version">最新版本</string>
     <string name="about_no_data">暫無更新日誌</string>
@@ -1941,6 +1964,10 @@
     <string name="global_setting">全局設定</string>
     <string name="grid">網格</string>
     <string name="grid_cover_width">網格封面寬度</string>
+    <string name="bookshelf_grid_fixed_columns">固定列數</string>
+    <string name="bookshelf_grid_fixed_columns_summary">關閉後按封面寬度自動計算列數</string>
+    <string name="bookshelf_grid_fixed_cover_width">固定封面寬度</string>
+    <string name="bookshelf_grid_fixed_cover_width_summary">關閉後封面鋪滿列寬，隨列數自動縮放</string>
     <string name="group_add">新建分組</string>
     <string name="group_management">分組管理</string>
     <string name="group_name_empty">分組名稱不能為空</string>
@@ -2216,6 +2243,7 @@
     <string name="restore_progress">恢復進度</string>
     <string name="retranslate_chapter">重新翻譯章節</string>
     <string name="retranslate_confirm">這將刪除現有翻譯並重新翻譯。是否繼續？</string>
+    <string name="retranslate_in_progress">本章仍在翻譯中，請稍後再試</string>
     <string name="return_to_original">返回原文</string>
     <string name="reverse_volume_key_page">反轉音量鍵翻頁方向</string>
     <string name="rule_call_back">回呼 JS（callBackJs）</string>
@@ -3062,4 +3090,13 @@
     <string name="battery_optimization_dialog_title">背景保活與省電策略設定指引</string>
     <string name="battery_optimization_status_ignored">已開啟無限制（點擊可檢查廠商背景策略）</string>
     <string name="battery_optimization_status_not_ignored">未開啟無限制，背景可能被系統終止</string>
+    <string name="page_anim_ios_curl">iOS仿真</string>
+    <string name="page_anim_google_curl">Google仿真</string>
+    <string name="page_anim_parallax">視差</string>
+    <string name="bookmark_target_content_mismatch">正文已變動或無法驗證原位置，仍要跳轉嗎？</string>
+    <string name="search_content_changed">正文或處理設定已變更，請重新搜尋。</string>
+    <string name="a11y_close_read_menu">關閉閱讀選單</string>
+    <string name="a11y_open_playback">開啟播放介面</string>
+    <string name="a11y_open_playback_named">開啟《%1$s》的播放介面</string>
+    <string name="a11y_reorder_position">第 %1$d 項，共 %2$d 項</string>
 </resources>

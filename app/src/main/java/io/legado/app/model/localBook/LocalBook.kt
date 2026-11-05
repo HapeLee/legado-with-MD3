@@ -59,7 +59,6 @@ import io.legado.app.utils.parseToUri
 import io.legado.app.utils.printOnDebug
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
-import org.apache.commons.text.StringEscapeUtils
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.io.ByteArrayInputStream
@@ -74,6 +73,9 @@ import java.io.InputStream
  * 支持在线文件(txt epub umd 压缩文件 本地文件
  */
 object LocalBook {
+
+    /** 批量导入的单块提交规模；同时约束块事务持锁时长与书表失效次数 */
+    private const val IMPORT_COMMIT_CHUNK = 200
 
     private val otherSettingsGateway get() = GlobalContext.get().get<OtherSettingsGateway>()
     private val readSettingsGateway get() = GlobalContext.get().get<ReadSettingsGateway>()
@@ -180,7 +182,7 @@ object LocalBook {
     }
 
     fun getContent(book: Book, chapter: BookChapter): String? {
-        var content = try {
+        val content = try {
             when {
                 book.isEpub -> {
                     EpubFile.getContent(book, chapter)
@@ -207,17 +209,25 @@ object LocalBook {
             AppLog.put("获取本地书籍内容失败\n${e.localizedMessage}", e)
             "获取本地书籍内容失败\n${e.localizedMessage}"
         }
-        if (book.isEpub) {
-            content ?: return null
-            if (content.indexOf('&') > -1) {
-                content = content.replace("&lt;img", "&lt; img", true)
-                return StringEscapeUtils.unescapeHtml4(content)
-            }
-        }
-        if (content.isNullOrEmpty() && !chapter.isVolume) {
-            return null
-        }
+        // EPUB's mixed-channel emitter already decodes plain text once. Rich text is
+        // decoded by the reader parser; decoding here would corrupt literal entities.
+        // An empty chapter body ("") is a valid blank page and renders through the
+        // title pipeline; only null means the content is genuinely unavailable.
         return content
+    }
+
+    /** Optional original markup. Failure must never replace the authoritative chapter text. */
+    fun getPresentation(book: Book, chapter: BookChapter): io.legado.app.feature.reader.core.source.ReaderLocalPresentation? = try {
+        when {
+            book.isEpub -> EpubFile.getPresentation(book, chapter)
+            book.isMobi -> MobiFile.getPresentation(book, chapter)
+            else -> null
+        }
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        AppLog.put("本地呈现读取失败: chapter=${chapter.index}, ${error.javaClass.simpleName}")
+        null
     }
 
     fun getCoverPath(book: Book): String {
@@ -424,18 +434,30 @@ object LocalBook {
         return books
     }
 
+    /**
+     * 批量导入按块提交：逐本 insert 每本都会广播一次书表失效，书架各 Flow 收到后
+     * 对整架全量重查重排，数千本规模形成 O(n²) 分配风暴。分块事务把失效次数压到
+     * 块数，块内有界持锁。
+     *
+     * 失败语义（骨架见 [importInChunks]）：块事务内不吞异常——Android SQLite 的
+     * 嵌套事务失败会静默毒化外层事务，块内 runCatching 吞掉异常后外层可能已整体
+     * 回滚，而错误计数只记了个别本，计数与落库不一致。任一本抛错即让异常越过块
+     * 事务边界（整块回滚有保证），该块退回逐本无事务重放，单本失败按本隔离计数。
+     */
     fun importFiles(uris: List<Uri>) {
         var errorCount = 0
-        uris.forEach { uri ->
-            val fileDoc = FileDoc.fromUri(uri, false)
-            kotlin.runCatching {
-                importFiles(uri)
-            }.onFailure {
-                AppLog.put("ImportFile Error:\nFile $fileDoc\n${it.localizedMessage}", it)
+        importInChunks(
+            items = uris,
+            chunkSize = IMPORT_COMMIT_CHUNK,
+            importOne = { uri -> importFiles(uri) },
+            runChunkInTransaction = { block -> appDb.runInTransaction { block() } },
+            onImportError = { uri, error ->
+                val fileDoc = FileDoc.fromUri(uri, false)
+                AppLog.put("ImportFile Error:\nFile $fileDoc\n${error.localizedMessage}", error)
                 errorCount += 1
-            }
-        }
-        if (errorCount == uris.size) {
+            },
+        )
+        if (uris.isNotEmpty() && errorCount >= uris.size) {
             throw NoStackTraceException("ImportFiles Error:\nAll input files occur error")
         }
     }

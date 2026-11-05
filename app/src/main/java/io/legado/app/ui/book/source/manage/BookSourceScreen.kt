@@ -182,6 +182,8 @@ fun BookSourceScreen(
     var showImportOptions by remember { mutableStateOf(false) }
     var showCustomGroup by remember { mutableStateOf(false) }
     val importSuccess = state.importState as? BaseImportUiState.Success
+    // 拖动回调先更新本地顺序，让布局与后续命中计算使用同一顺序。
+    // 松手后提交一次，等数据源追上再撤掉副本，避免列表闪回旧顺序。
     var dragOrder by remember { mutableStateOf<List<BookSourceItemUi>?>(null) }
     val displayedRules = dragOrder ?: rules
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
@@ -191,16 +193,19 @@ fun BookSourceScreen(
             dragOrder = moved
         }
     }
-    LaunchedEffect(reorderState.isAnyItemDragging, rules) {
-        if (!reorderState.isAnyItemDragging) {
-            dragOrder?.let { pending ->
-                val pendingIds = pending.map { it.id }
-                if (rules.map { it.id } == pendingIds) {
-                    dragOrder = null
-                } else {
-                    onIntent(BookSourceIntent.CommitSortOrder(pendingIds, state.sortAscending))
-                }
-            }
+    val isDragging = reorderState.isAnyItemDragging
+    LaunchedEffect(isDragging) {
+        if (isDragging) return@LaunchedEffect
+        val pending = dragOrder ?: return@LaunchedEffect
+        onIntent(BookSourceIntent.CommitSortOrder(pending.map { it.id }, state.sortAscending))
+    }
+    LaunchedEffect(rules, dragOrder, isDragging) {
+        val pending = dragOrder ?: return@LaunchedEffect
+        val pendingIds = pending.map { it.id }
+        val ruleIds = rules.map { it.id }
+        // 数据源追上顺序，或者条目集合已经变了（删源/过滤）就以数据源为准，避免本地副本卡死
+        if (!isDragging && (ruleIds == pendingIds || ruleIds.toSet() != pendingIds.toSet())) {
+            dragOrder = null
         }
     }
     val cancelLabel = stringResource(R.string.cancel)

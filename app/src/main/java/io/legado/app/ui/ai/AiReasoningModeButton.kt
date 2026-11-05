@@ -23,6 +23,7 @@ import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import kotlin.math.roundToInt
 
 @Composable
 fun AiReasoningModeButton(
@@ -43,35 +44,44 @@ fun AiReasoningModeButton(
         onDismissRequest = { showSheet = false },
         title = stringResource(R.string.ai_thinking_mode)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(Modifier.height(32.dp))
-            TextCard(
-                text = level.label(),
-                textStyle = LegadoTheme.typography.titleLargeEmphasized,
-                backgroundColor = LegadoTheme.colorScheme.onSheetContent
-            )
-            Spacer(Modifier.height(32.dp))
-            AppSlider(
-                value = level.ordinal.toFloat(),
-                onValueChange = { value ->
-                    AiReasoningLevel.entries[value.toInt().coerceIn(
-                        0,
-                        AiReasoningLevel.entries.lastIndex,
-                    )].let(onLevelChange)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                valueRange = 0f..AiReasoningLevel.entries.lastIndex.toFloat(),
-                steps = AiReasoningLevel.entries.size - 2,
-                accessibilityLabel = stringResource(R.string.ai_thinking_mode),
-                accessibilityValue = level.label(),
-            )
-            Spacer(Modifier.height(32.dp))
-        }
+        AiReasoningLevelControl(level, onLevelChange)
+    }
+}
+
+@Composable
+internal fun AiReasoningLevelControl(
+    level: AiReasoningLevel,
+    onLevelChange: (AiReasoningLevel) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(32.dp))
+        TextCard(
+            text = level.label(),
+            textStyle = LegadoTheme.typography.titleLargeEmphasized,
+            backgroundColor = LegadoTheme.colorScheme.onSheetContent
+        )
+        Spacer(Modifier.height(32.dp))
+        AppSlider(
+            value = level.ordinal.toFloat(),
+            onValueChange = { value ->
+                // Pixel-to-step conversion can yield 1.9999999 for the LOW tick.
+                AiReasoningLevel.entries[value.roundToInt().coerceIn(
+                    0,
+                    AiReasoningLevel.entries.lastIndex,
+                )].let(onLevelChange)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            valueRange = 0f..AiReasoningLevel.entries.lastIndex.toFloat(),
+            steps = AiReasoningLevel.entries.size - 2,
+            accessibilityLabel = stringResource(R.string.ai_thinking_mode),
+            accessibilityValue = level.label(),
+        )
+        Spacer(Modifier.height(32.dp))
     }
 }
 

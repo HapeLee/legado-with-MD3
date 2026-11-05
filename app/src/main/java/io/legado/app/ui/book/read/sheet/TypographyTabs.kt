@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.Segment
 import androidx.compose.material.icons.filled.AlignHorizontalCenter
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.CleanHands
+import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material.icons.filled.FormatAlignJustify
@@ -67,6 +68,7 @@ import io.legado.app.constant.ReadTipType
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
@@ -425,6 +427,16 @@ internal fun TypographyBodyTab(
             },
         )
 
+        // 段评组：打开阅读页自己的气泡切换面板（样式、强制开关、管理入口都在里面）
+        SectionTitle(title = stringResource(R.string.bubble_config))
+        TinyClickableSettingItem(
+            title = stringResource(R.string.bubble_config),
+            description = stringResource(R.string.bubble_config_entry_summary),
+            imageVector = Icons.Default.Comment,
+            onClick = {
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BubbleStyle))
+            },
+        )
     }
 }
 

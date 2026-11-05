@@ -26,3 +26,7 @@ __pycache__/
 hs_err_pid*.log
 replay_pid*.log
 *.hprof
+.gstack/
+
+# 本地测试书源，不入库
+/resource/

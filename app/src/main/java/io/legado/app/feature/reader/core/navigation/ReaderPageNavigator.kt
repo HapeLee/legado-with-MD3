@@ -4,6 +4,7 @@ import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageId
 import io.legado.app.feature.reader.core.model.ReaderPageWindow
+import io.legado.app.feature.reader.core.semantic.ReaderSemanticLocation
 
 data class ReaderNavigationResult(
     val pageIndex: Int,
@@ -32,13 +33,14 @@ object ReaderPageNavigator {
     fun rebasePageIndex(pages: List<ReaderPage>, previousPageId: ReaderPageId?): Int? =
         previousPageId?.let { id -> pages.indexOfFirst { it.id == id }.takeIf { it >= 0 } }
 
-    /** Retain adjacent chapter layouts and the displayed chapter during a loading handoff. */
+    /** Retain prefetched chapter layouts and the displayed chapter during a loading handoff. */
     fun retainChapterWindow(
         pages: List<ReaderPage>,
         chapterIndex: Int,
         displayedChapterIndex: Int?,
+        forwardChapterCount: Int = 1,
     ): List<ReaderPage> = pages.filter {
-        it.id.chapterIndex in chapterIndex - 1..chapterIndex + 1 ||
+        it.id.chapterIndex in chapterIndex - 1..chapterIndex + forwardChapterCount ||
                 it.id.chapterIndex == displayedChapterIndex
     }
 
@@ -206,7 +208,7 @@ object ReaderPageNavigator {
         return chapterPages[chapterPageIndex.coerceIn(chapterPages.indices)].index
     }
 
-    fun pageContext(pages: List<ReaderPage>, pageIndex: Int): ReaderPageContext? {
+    fun pageContext(pages: List<ReaderPage>, pageIndex: Int, canonicalBody: String? = null): ReaderPageContext? {
         val page = pages.getOrNull(pageIndex) ?: return null
         // Allocation-free scan: same min/max semantics as the previous mapNotNull version.
         var hasPosition = false
@@ -244,12 +246,18 @@ object ReaderPageNavigator {
             .minByOrNull { paragraph ->
                 paragraph.minOf { it.chapterPosition }
             }
+        // Geometry locates the range; persisted text comes from the body, never title/decorative rows.
+        val bodyText = canonicalBody?.let { body ->
+            val from = ReaderSemanticLocation.clampOffset(body, start)
+            val until = ReaderSemanticLocation.clampOffset(body, nextPageStart ?: contentEnd).coerceAtLeast(from)
+            body.substring(from, until)
+        }
         return ReaderPageContext(
             chapterIndex = page.id.chapterIndex,
             chapterTitle = page.chapterTitle,
             startPosition = start,
             endPosition = nextPageStart ?: contentEnd.coerceAtLeast(start + 1),
-            text = page.text,
+            text = bodyText ?: page.text,
             contentStartPosition = firstBodyParagraph?.minOf { it.chapterPosition },
             anchorText = firstBodyParagraph
                 ?.joinToString(separator = "") { it.value }
@@ -278,7 +286,7 @@ object ReaderPageNavigator {
         is ReaderElement.Text -> if (element.emphasized) null else element.chapterPosition until
             (element.chapterPosition + element.value.length.coerceAtLeast(1))
         is ReaderElement.Image -> element.chapterPosition..element.chapterPosition
-        is ReaderElement.Spacer -> element.chapterPosition..element.chapterPosition
+        is ReaderElement.Spacer -> element.chapterPosition until element.chapterPosition + element.semanticLength
         else -> null
     }
 }

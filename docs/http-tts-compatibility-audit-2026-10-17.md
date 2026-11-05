@@ -77,10 +77,10 @@ CloudTtsViewModel.kt:981
 
 相关文件：
 
-- [ReadAloudVoiceDao.kt](../app/src/main/java/io/legado/app/data/dao/ReadAloudVoiceDao.kt)
-- [SyncReadAloudVoicesUseCase.kt](../app/src/main/java/io/legado/app/domain/usecase/SyncReadAloudVoicesUseCase.kt)
-- [SyncHttpTtsCatalogUseCase.kt](../app/src/main/java/io/legado/app/domain/usecase/SyncHttpTtsCatalogUseCase.kt)
-- [CloudTtsViewModel.kt](../app/src/main/java/io/legado/app/ui/book/readaloud/cloudtts/CloudTtsViewModel.kt)
+- [ReadAloudVoiceDao.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/data/dao/ReadAloudVoiceDao.kt)
+- [SyncReadAloudVoicesUseCase.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/domain/usecase/SyncReadAloudVoicesUseCase.kt)
+- [SyncHttpTtsCatalogUseCase.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/domain/usecase/SyncHttpTtsCatalogUseCase.kt)
+- [CloudTtsViewModel.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/ui/book/readaloud/cloudtts/CloudTtsViewModel.kt)
 
 ## 2. [P1] 管理页试听将 HTTP 音色错误地送入云 TTS 分支
 
@@ -123,9 +123,9 @@ if (editor.engineType == ReadAloudVoice.ENGINE_SYSTEM) {
 
 相关文件：
 
-- [Backup.kt](../app/src/main/java/io/legado/app/help/storage/Backup.kt)
-- [Restore.kt](../app/src/main/java/io/legado/app/help/storage/Restore.kt)
-- [HttpTTS.kt](../app/src/main/java/io/legado/app/data/entities/HttpTTS.kt)
+- [Backup.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/help/storage/Backup.kt)
+- [Restore.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/help/storage/Restore.kt)
+- [HttpTTS.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/data/entities/HttpTTS.kt)
 
 ## 4. [P1] 删除中断留下可用的孤儿音色，合成时可能用错源
 
@@ -150,7 +150,7 @@ val itemHttpTts = routedVoice.engineId.toLongOrNull()
 
 ## 5. [P2] 共用试听组件也没有 HTTP 合成能力
 
-[VoiceAudition.kt](../app/src/main/java/io/legado/app/help/readaloud/cast/VoiceAudition.kt) 的 `when (voice.engineType)` 只支持云和系统，HTTP 走 `else -> false`。
+[VoiceAudition.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/help/readaloud/cast/VoiceAudition.kt) 的 `when (voice.engineType)` 只支持云和系统，HTTP 走 `else -> false`。
 
 该实现由 `VoiceAuditionButton` 等共用组件调用，影响角色编辑、正文配音弹层、变声器和规则页等入口。即使管理页的“云 TTS 引擎不存在”修好了，这些位置仍然无法试听外部音色。
 
@@ -179,10 +179,10 @@ calm     -> neutral
 
 相关文件：
 
-- [HttpTtsCatalogDraft.kt](../app/src/main/java/io/legado/app/domain/model/readaloud/HttpTtsCatalogDraft.kt)
-- [SpeechEmotion.kt](../app/src/main/java/io/legado/app/domain/model/readaloud/SpeechEmotion.kt)
-- [AnalyzeUrl.kt](../app/src/main/java/io/legado/app/model/analyzeRule/AnalyzeUrl.kt)
-- [HttpReadAloudService.kt](../app/src/main/java/io/legado/app/service/HttpReadAloudService.kt)
+- [HttpTtsCatalogDraft.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/domain/model/readaloud/HttpTtsCatalogDraft.kt)
+- [SpeechEmotion.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/domain/model/readaloud/SpeechEmotion.kt)
+- [AnalyzeUrl.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/model/analyzeRule/AnalyzeUrl.kt)
+- [HttpReadAloudService.kt](https://github.com/HapeLee/legado-with-MD3/blob/main/app/src/main/java/io/legado/app/service/HttpReadAloudService.kt)
 
 ## 7. [P2] 多源混播没有按实际引擎执行并发上限
 

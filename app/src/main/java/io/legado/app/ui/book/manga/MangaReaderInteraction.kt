@@ -111,15 +111,6 @@ internal fun mangaClickActionAt(
     height: Int,
 ): Int = clickActions.getOrNull(mangaClickRegionIndex(x, y, width, height)) ?: 0
 
-internal fun nextMangaClickAction(action: Int): Int = when (action) {
-    -1 -> 0
-    0 -> 1
-    1 -> 2
-    2 -> 3
-    3 -> 4
-    else -> -1
-}
-
 /**
  * 找 [direction] 方向上的下一个「真实页」：跳过 ChapterTransition/ChapterEdge 等非页项。
  *
@@ -251,6 +242,23 @@ internal fun mangaNeedsPositionScroll(
     anchorFound: Boolean,
     keyPreserved: Boolean,
 ): Boolean = forcePosition || !anchorFound || !keyPreserved
+
+/**
+ * 内容重建后 Pager 应该停在哪一页。
+ *
+ * 条目前插/后插只改变下标，Pager 自身按 key 保位，所以要优先停在当前实际显示的那一页；
+ * 只有这一页已经不在新集合里（身份真正失效）才回退到 [currentItemIndex]。不能直接用
+ * [currentItemIndex]：它要等滚动结束的 VisibleItemChanged 被 ViewModel 接受后才更新，
+ * 而相邻章 Ready 的替换恰好在那一步发生，读数会比 UI 慢一拍，把用户刚翻到的页拽回去。
+ */
+internal fun mangaPagerReconcilePageIndex(
+    pages: List<MangaReaderItemUi>,
+    displayedKey: String?,
+    currentItemIndex: Int,
+): Int {
+    val displayed = displayedKey?.let { key -> pages.indexOfFirst { it.key == key } } ?: -1
+    return if (displayed >= 0) displayed else currentItemIndex
+}
 
 /** 用户在隐藏提示的列表/Pager 边界继续拖动时，按阅读方向请求下一或上一章。 */
 internal fun mangaBoundaryChapterDirection(scrollMode: Int, x: Float, y: Float): Int = when (scrollMode) {

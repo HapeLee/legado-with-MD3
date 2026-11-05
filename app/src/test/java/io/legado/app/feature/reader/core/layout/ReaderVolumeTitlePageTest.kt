@@ -10,10 +10,18 @@ import org.junit.Test
 class ReaderVolumeTitlePageTest {
     private val style = ReaderTextStyle(0, 10f)
 
-    private fun titleParagraph(value: String, position: Int = 0) = ReaderMeasuredParagraph(
-        value, value.map(Char::toString), FloatArray(value.length) { 10f }, style, position,
-        isTitle = true,
-    )
+    private fun titleParagraph(value: String, position: Int = 0) =
+        ReaderMeasuredBlock.InlineParagraph(
+            items = value.mapIndexed { index, char ->
+                ReaderMeasuredInlineItem.Text(char.toString(), 10f, style, position + index)
+            },
+            indentCharacters = 0,
+            alignment = ReaderTextAlignment.START,
+            lineHeightPx = 20f,
+            baselineOffsetPx = 15f,
+            baseTextSizePx = 10f,
+            emphasized = true,
+        )
 
     private fun config(centerVertical: Boolean, continuousScroll: Boolean = false) =
         ReaderPaginationConfig(
@@ -27,7 +35,7 @@ class ReaderVolumeTitlePageTest {
 
     @Test
     fun titleOnlyPageIsVerticallyCenteredInContentArea() {
-        val page = ReaderPaginator.paginate(
+        val page = ReaderPaginator.paginateBlocks(
             listOf(titleParagraph("第一卷 风起")), config(centerVertical = true),
         ).single()
         val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
@@ -41,7 +49,7 @@ class ReaderVolumeTitlePageTest {
 
     @Test
     fun defaultLayoutKeepsTitleTopAnchored() {
-        val page = ReaderPaginator.paginate(
+        val page = ReaderPaginator.paginateBlocks(
             listOf(titleParagraph("第一卷 风起")), config(centerVertical = false),
         ).single()
         val top = page.elements.minOf { it.bounds.top }
@@ -50,7 +58,7 @@ class ReaderVolumeTitlePageTest {
 
     @Test
     fun baselineShiftsTogetherWithBounds() {
-        val page = ReaderPaginator.paginate(
+        val page = ReaderPaginator.paginateBlocks(
             listOf(titleParagraph("第一卷")), config(centerVertical = true),
         ).single()
         val glyphs = page.elements.filterIsInstance<ReaderElement.Text>()
@@ -70,11 +78,11 @@ class ReaderVolumeTitlePageTest {
      */
     @Test
     fun scrollModeVerticallyCenteredTitleStaysInsidePageExtent() {
-        val centered = ReaderPaginator.paginate(
+        val centered = ReaderPaginator.paginateBlocks(
             listOf(titleParagraph("第一卷 风起")),
             config(centerVertical = true, continuousScroll = true),
         ).single()
-        val topAnchored = ReaderPaginator.paginate(
+        val topAnchored = ReaderPaginator.paginateBlocks(
             listOf(titleParagraph("第一卷 风起")),
             config(centerVertical = false, continuousScroll = true),
         ).single()

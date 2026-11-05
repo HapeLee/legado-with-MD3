@@ -10,6 +10,15 @@ import org.junit.Test
 class BookContentProcessEngineTest {
 
     @Test
+    fun `rich markings are passed to the final semantic mapper without stripping tags`() {
+        val mark = markProcess("A&B", BookContentProcess.KIND_USER_HIGHLIGHT)
+        val html = "<usehtml><p>A&amp;<strong>B</strong></p></usehtml>"
+        val result = BookContentProcessEngine.apply(html, listOf(mark))
+        assertEquals(html, result.text)
+        assertEquals(listOf(mark), result.effectiveProcesses)
+    }
+
+    @Test
     fun `matches reader selection with layout whitespace`() {
         val selectedText = "　　他走进\n房间，看见桌上的信。"
         val process = process(

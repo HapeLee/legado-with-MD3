@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
@@ -68,7 +70,8 @@ fun JsonRawEditor(
             onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 150.dp, max = 400.dp),
+                .heightIn(min = 150.dp, max = 400.dp)
+                .semantics { contentDescription = label },
             backgroundColor = LegadoTheme.colorScheme.onSheetContent,
             maxLines = 1000
         )

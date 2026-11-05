@@ -13,6 +13,15 @@ on:
         required: true
         type: string
 
+      product:
+        description: "日志来自哪个产品：core 基础版 / comic 漫画增强版，两者的 mapping 不同"
+        required: true
+        type: choice
+        options:
+          - core
+          - comic
+        default: core
+
 permissions:
   contents: read
 
@@ -64,28 +73,46 @@ jobs:
       - name: Download Mapping File
         env:
           VERSION: ${{ inputs.version }}
+          PRODUCT: ${{ inputs.product }}
         run: |
           mkdir -p logs
           echo "获取版本:"
           echo "$VERSION"
-          
+          echo "产品: $PRODUCT"
+
+          # 双包发布后每个产品各有一份 mapping，不能像以前那样随便取第一个
           gh release download "$VERSION" \
             --repo "HapeLee/legado-with-MD3" \
-            --pattern "*mapping*.txt" \
-            --dir logs
-            
-          if [ ! -f logs/mapping.txt ]; then
-            FILE=$(find logs -name "*.txt" | head -n 1)
-            if [ -n "$FILE" ]; then
-              mv "$FILE" logs/mapping.txt
+            --pattern "mapping-${PRODUCT}.txt" \
+            --dir logs || true
+
+          # comic 改名前的 Release 把增强版 mapping 叫 mapping-full.txt，历史日志仍要能还原。
+          if [ ! -f "logs/mapping-${PRODUCT}.txt" ] && [ "$PRODUCT" = "comic" ]; then
+            echo "未找到 mapping-comic.txt，尝试改名前的 mapping-full.txt"
+            gh release download "$VERSION" \
+              --repo "HapeLee/legado-with-MD3" \
+              --pattern "mapping-full.txt" \
+              --dir logs || true
+            if [ -f "logs/mapping-full.txt" ]; then
+              mv "logs/mapping-full.txt" "logs/mapping-${PRODUCT}.txt"
             fi
           fi
-          
+
+          if [ -f "logs/mapping-${PRODUCT}.txt" ]; then
+            mv "logs/mapping-${PRODUCT}.txt" logs/mapping.txt
+          else
+            # 双包之前的 Release 只有一个 mapping.txt
+            gh release download "$VERSION" \
+              --repo "HapeLee/legado-with-MD3" \
+              --pattern "mapping.txt" \
+              --dir logs || true
+          fi
+
           if [ ! -f logs/mapping.txt ]; then
-            echo "未找到 mapping 文件"
+            echo "未找到 mapping 文件（产品: ${PRODUCT}）"
             exit 1
           fi
-          
+
           echo "Mapping:"
           ls -lh logs/mapping.txt
 

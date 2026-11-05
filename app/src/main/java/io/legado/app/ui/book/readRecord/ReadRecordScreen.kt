@@ -641,7 +641,10 @@ fun ReadRecordScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                FastScrollLazyColumn(modifier = Modifier.height(320.dp)) {
+                FastScrollLazyColumn(
+                    modifier = Modifier.height(320.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     val filteredCandidates = candidates.filter { candidate ->
                         mergeCandidateQuery.isBlank() ||
                             candidate.bookName.contains(mergeCandidateQuery, ignoreCase = true) ||

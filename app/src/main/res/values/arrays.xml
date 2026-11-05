@@ -10,6 +10,7 @@
 		<item>Audio</item>
 		<item>Image</item>
 		<item>File</item>
+		<item>Video</item>
 	</string-array>
 
 	<string-array name="layout_type">
@@ -305,6 +306,18 @@
 		<item>beta_release_version</item>
 		<item>all_version</item>
 		<item>beta_releaseA_version</item>
+	</string-array>
+
+	<string-array name="update_endpoint">
+		<item>@string/update_endpoint_auto</item>
+		<item>@string/update_endpoint_github</item>
+		<item>@string/update_endpoint_mirror</item>
+	</string-array>
+
+	<string-array name="update_endpoint_value">
+		<item>auto</item>
+		<item>github</item>
+		<item>mirror</item>
 	</string-array>
 
 	<string-array name="tip_color">

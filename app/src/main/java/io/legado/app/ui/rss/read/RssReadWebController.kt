@@ -14,8 +14,10 @@ import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.URLUtil
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -34,6 +36,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
+import io.legado.app.help.http.handleRenderProcessGone
 import io.legado.app.help.http.newCallResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
@@ -62,6 +65,8 @@ internal data class RssReadWebControllerCallbacks(
     val onPageTitleResolved: (String) -> Unit,
     val onShowCustomView: (View?, WebChromeClient.CustomViewCallback?) -> Unit,
     val onHideCustomView: () -> Unit,
+    val onShowFileChooser: (ValueCallback<Array<Uri>>, WebChromeClient.FileChooserParams) -> Boolean,
+    val onPageStarted: () -> Unit,
     val navigateToArticles: (sortUrl: String?, origin: String?) -> Unit,
     val onAskRedirect: (String?, String, (Boolean) -> Unit) -> Unit,
     val onCloseRequested: () -> Unit,
@@ -76,7 +81,8 @@ internal data class RssReadWebControllerCallbacks(
 
 private val webCookieManager: CookieManager by lazy { CookieManager.getInstance() }
 
-@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
+// MissingOnRenderProcessGone：该规则按 Java PSI 查构造调用，看不到 Kotlin 匿名对象里的 override。
+@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface", "MissingOnRenderProcessGone")
 internal fun configureRssReadWebView(
     webView: VisibleWebView,
     context: Context,
@@ -103,6 +109,12 @@ internal fun configureRssReadWebView(
         override fun onHideCustomView() {
             callbacks.onHideCustomView()
         }
+
+        override fun onShowFileChooser(
+            webView: WebView,
+            filePathCallback: ValueCallback<Array<Uri>>,
+            fileChooserParams: FileChooserParams
+        ): Boolean = callbacks.onShowFileChooser(filePathCallback, fileChooserParams)
 
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
             val source = viewModel.rssSource
@@ -214,6 +226,10 @@ internal fun configureRssReadWebView(
             }
             return super.shouldInterceptRequest(view, request)
         }
+
+        // 渲染进程被系统回收时默认会连带杀掉宿主进程
+        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean =
+            view.handleRenderProcessGone()
 
         private suspend fun getModifiedContentWithJs(
             url: String,
@@ -366,6 +382,7 @@ internal fun configureRssReadWebView(
         }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            callbacks.onPageStarted()
             view?.evaluateJavascript(WebJsExtensions.basicJs, null)
         }
 

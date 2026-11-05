@@ -13,6 +13,23 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderPageNavigatorTest {
+    @Test
+    fun persistedPageTextUsesCanonicalRangesAndExcludesTitlesAndDecorativeBlankLines() {
+        val first = textPage(0, 0, "甲")
+        val title = (first.elements.single() as ReaderElement.Text).copy(value = "标题", emphasized = true)
+        val pages = listOf(first.copy(text = "标题\n甲\n\n", elements = listOf(title) + first.elements),
+            textPage(1, 2, "乙").copy(text = "乙\n\n"))
+        assertEquals("甲\n", ReaderPageNavigator.pageContext(pages, 0, "甲\n乙\n")?.text)
+        assertEquals("乙", ReaderPageNavigator.pageContext(pages, 1, "甲\n乙\n")?.text)
+        assertEquals(2, ReaderPageNavigator.pageContext(pages, 0, "甲\n乙\n")?.endPosition)
+    }
+
+    @Test
+    fun canonicalPageTextKeepsUtf16BoundariesAndHandlesEmptyBodies() {
+        val pages = listOf(textPage(0, 1, "😀"), textPage(1, 3, "B"))
+        assertEquals("😀", ReaderPageNavigator.pageContext(pages, 0, "A😀B\n")?.text)
+        assertEquals("", ReaderPageNavigator.pageContext(pages, 0, "")?.text)
+    }
     private fun page(index: Int, start: Int, chapterIndex: Int = 4) = ReaderPage(
         id = ReaderPageId(chapterIndex, index), chapterTitle = "", text = "字",
         widthPx = 100, heightPx = 100, contentTopPx = 0f, contentBottomPx = 100f,
@@ -71,6 +88,19 @@ class ReaderPageNavigatorTest {
         assertEquals(setOf(79, 80, 81), retained.map { it.id.chapterIndex }.toSet())
         assertEquals(6, retained.size)
         assertEquals(3, ReaderPageNavigator.rebasePageIndex(retained, ReaderPageId(80, 1)))
+    }
+
+    @Test
+    fun scrollLookaheadKeepsTheChapterAfterAShortPageAcrossReversal() {
+        val pages = (0..5).map { page(0, 0, it) }
+        val forward = ReaderPageNavigator.retainChapterWindow(pages, 2, 2, forwardChapterCount = 2)
+        val back = ReaderPageNavigator.retainChapterWindow(forward, 1, 1, forwardChapterCount = 2)
+        val current = ReaderPageNavigator.rebasePageIndex(back, ReaderPageId(1, 0))!!
+        val window = ReaderPageNavigator.window(back, current)
+
+        assertEquals(ReaderPageId(2, 0), window.next?.id)
+        assertEquals(ReaderPageId(3, 0), window.nextPlus?.id)
+        assertEquals(listOf(1, 2, 3), back.map { it.id.chapterIndex })
     }
 
     @Test

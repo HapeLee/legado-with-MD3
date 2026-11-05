@@ -103,6 +103,7 @@ object AiModelRegistry {
      * Falls back to STREAMING only if nothing matches.
      */
     fun inferCapabilities(modelId: String): Set<String> {
+        AiImageModels.inferCapabilities(modelId)?.let { return it }
         val lower = modelId.lowercase()
         val scored = patterns.mapNotNull { pattern ->
             if (pattern.exactIds.isNotEmpty() && modelId in pattern.exactIds) {

@@ -1,5 +1,6 @@
 package io.legado.app.help.coil
 
+import androidx.core.net.toUri
 import coil3.BitmapImage
 import coil3.decode.DataSource
 import coil3.intercept.Interceptor
@@ -22,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.Closeable
 import java.io.File
+import java.io.IOException
 
 class CoverInterceptor(
     private val acquireMangaFile: suspend (ImageRequest, String) -> Pair<File, Closeable> = { request, data ->
@@ -72,6 +74,31 @@ class CoverInterceptor(
         val data = request.data
 
         val fileOwner = request.extras[CoverExtras.MangaFileOwner]
+        val localUri = (data as? String)
+            ?.takeIf { it.startsWith("file:", true) || it.startsWith("content:", true) }
+            ?.toUri()
+        // Read local and translated pages' original proportions before Coil publishes a preview.
+        if (fileOwner != null && (data is File || localUri != null)) {
+            val ratio = withContext(Dispatchers.IO) {
+                try {
+                    when {
+                        data is File -> MangaImageDimensions.read(data)
+                        localUri?.scheme == "file" ->
+                            localUri.path?.let { MangaImageDimensions.read(File(it)) }
+                        localUri != null ->
+                            MangaImageDimensions.read(request.context.contentResolver, localUri)
+                        else -> null
+                    }
+                } catch (_: IOException) {
+                    null
+                } catch (_: SecurityException) {
+                    null
+                }
+            }
+            fileOwner.setAspectRatio(ratio)
+            ratio?.let { request.extras[CoverExtras.MangaAspectRatio]?.invoke(it) }
+            return boundedChain.proceed()
+        }
         // 分页与条漫在线页复用同一原图；本地漫画与 content/file URI 保持平台加载器。
         if (fileOwner != null && data is String &&
             (data.isAbsUrl() || data.startsWith("data:", true)) &&

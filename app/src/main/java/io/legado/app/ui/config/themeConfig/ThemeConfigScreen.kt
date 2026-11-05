@@ -72,11 +72,9 @@ import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
-import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.InfoCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.dialog.TimePickerDialog
-import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
@@ -157,28 +155,12 @@ fun ThemeConfigScreen(
                 }
 
                 AnimatedVisibility(visible = theme.showRefactorTip) {
-                    GlassCard(
-                        cornerRadius = 16.dp,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            AppText(
-                                text = "仍有部分界面未用Compose重构，这些界面会与大部分界面有较大差异。",
-                                style = LegadoTheme.typography.labelLargeEmphasized,
-                                modifier = Modifier.weight(1f)
-                            )
-                            SmallPlainButton(
-                                icon = AppIcons.Close,
-                                contentDescription = stringResource(R.string.close),
-                                onClick = {
-                                    onIntent(ThemeConfigIntent.DismissRefactorTip)
-                                }
-                            )
-                        }
-                    }
+                    InfoCard(
+                        text = stringResource(R.string.theme_refactor_tip),
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        actionDescription = stringResource(R.string.close),
+                        onAction = { onIntent(ThemeConfigIntent.DismissRefactorTip) }
+                    )
                 }
 
 
@@ -452,7 +434,9 @@ fun ThemeConfigScreen(
                     )
 
                     AnimatedVisibility(visible = theme.isEyeProtectionConfigured) {
-                        Column {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
                             SliderSettingItem(
                                 title = stringResource(R.string.color_temperature),
                                 description = stringResource(
@@ -477,7 +461,9 @@ fun ThemeConfigScreen(
                             )
 
                             AnimatedVisibility(visible = theme.eyeProtectionSchedule) {
-                                Column {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
                                     ClickableSettingItem(
                                         title = stringResource(R.string.eye_protection_start_time),
                                         option = theme.eyeProtectionStartTime,
@@ -636,7 +622,9 @@ fun ThemeConfigScreen(
                         }
                     )
                     AnimatedVisibility(visible = theme.overrideBaseCardBorder) {
-                        Column {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
                             SliderSettingItem(
                                 title = stringResource(R.string.border_width),
                                 description = "${theme.baseCardBorderWidth}dp",

@@ -348,6 +348,8 @@ object BackupConfig {
         PreferKey.bookshelfGroupCoverCount,
         PreferKey.bookshelfListCoverWidth,
         PreferKey.bookshelfGridCoverWidth,
+        PreferKey.bookshelfGridFixedColumns,
+        PreferKey.bookshelfGridFixedCoverWidth,
         PreferKey.bookshelfRefreshingLimit,
         PreferKey.bookshelfShowIntro,
         PreferKey.bookshelfShowTag,

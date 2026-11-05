@@ -331,6 +331,8 @@ sealed interface ReaderElement {
         override val bounds: ReaderRect,
         val chapterPosition: Int,
         val paragraphIndex: Int,
+        /** Visual-only rows keep a navigation anchor without consuming a body character. */
+        val semanticLength: Int = 1,
     ) : ReaderElement
 
     data class ParagraphMarker(
@@ -338,6 +340,8 @@ sealed interface ReaderElement {
         val colorArgb: Int,
         val strokeWidthPx: Float,
         val circular: Boolean,
+        val label: String? = null,
+        val textSizePx: Float = 0f,
     ) : ReaderElement
 
     data class Rule(

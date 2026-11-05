@@ -223,6 +223,7 @@ class ReaderPageTransitionTest {
         assertEquals(ReaderTransitionMode.COVER, ReaderTransitionMode.fromPageAnim(PageAnim.coverPageAnim))
         assertEquals(ReaderTransitionMode.SLIDE, ReaderTransitionMode.fromPageAnim(PageAnim.slidePageAnim))
         assertEquals(ReaderTransitionMode.SIMULATION, ReaderTransitionMode.fromPageAnim(PageAnim.simulationPageAnim))
+        assertEquals(ReaderTransitionMode.IOS_CURL, ReaderTransitionMode.fromPageAnim(PageAnim.iosCurlPageAnim))
         assertEquals(ReaderTransitionMode.SCROLL, ReaderTransitionMode.fromPageAnim(PageAnim.scrollPageAnim))
         assertEquals(ReaderTransitionMode.FADE, ReaderTransitionMode.fromPageAnim(PageAnim.fadePageAnim))
         assertEquals(ReaderTransitionMode.NONE, ReaderTransitionMode.fromPageAnim(PageAnim.noAnim))

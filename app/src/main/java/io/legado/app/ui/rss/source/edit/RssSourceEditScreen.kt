@@ -29,7 +29,7 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.about.MarkdownSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.MarkdownSheet
 import io.legado.app.ui.book.source.edit.SourceEditFieldCard
 import io.legado.app.ui.book.source.edit.SourceEditFieldSheet
 import io.legado.app.ui.book.source.edit.SourceEditOptionCard

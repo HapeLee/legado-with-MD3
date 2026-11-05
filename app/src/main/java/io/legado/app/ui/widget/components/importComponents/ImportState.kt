@@ -1,11 +1,16 @@
 package io.legado.app.ui.widget.components.importComponents
 
+import java.util.UUID
+
 // 单个条目的状态包装
 data class ImportItemWrapper<T>(
     val data: T,// 具体的数据对象 (ReplaceRule, BookSource, etc.)
     val oldData: T? = null,
     val isSelected: Boolean = true,
-    val status: ImportStatus = ImportStatus.New // 用于UI显示颜色
+    val status: ImportStatus = ImportStatus.New, // 用于UI显示颜色
+    // 每次导入生成的条目唯一 id；批量导入可能出现完全相同的条目，
+    // Lazy item key 不能用 data.hashCode()，否则重复条目会崩溃
+    val entryId: String = UUID.randomUUID().toString()
 )
 
 // 导入状态枚举

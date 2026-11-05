@@ -4,6 +4,8 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.domain.model.BookshelfConflict
+import io.legado.app.help.book.VideoBookPreloader
+import io.legado.app.help.book.isVideo
 import io.legado.app.help.book.removeType
 
 sealed interface AddToBookshelfResult {
@@ -30,6 +32,10 @@ class AddToBookshelfUseCase(
             b.order = bookRepository.getMinOrder() - 1
         }
         bookRepository.insert(b)
+        if (b.isVideo) {
+            // 视频书加入书架后先把详情/目录补齐，播放页打开时就不必再等
+            VideoBookPreloader.preload(b.bookUrl)
+        }
         return AddToBookshelfResult.Added
     }
 }

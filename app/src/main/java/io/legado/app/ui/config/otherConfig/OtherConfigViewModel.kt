@@ -84,6 +84,8 @@ class OtherConfigViewModel(
             is OtherConfigIntent.LanguageChanged -> appLocaleGateway.setLanguage(intent.value)
             is OtherConfigIntent.UpdateToVariantChanged ->
                 updateOtherSetting { it.copy(updateToVariant = intent.value) }
+            is OtherConfigIntent.UpdateEndpointChanged ->
+                updateOtherSetting { it.copy(updateEndpoint = intent.value) }
             is OtherConfigIntent.AutoCheckUpdateOnStartChanged ->
                 updateOtherSetting { it.copy(autoCheckUpdateOnStart = intent.value) }
             is OtherConfigIntent.WebServiceAutoStartChanged ->
@@ -108,8 +110,6 @@ class OtherConfigViewModel(
                 updateOtherSetting { it.copy(autoClearExpired = intent.value) }
             is OtherConfigIntent.ShowAddToShelfAlertChanged ->
                 updateOtherSetting { it.copy(showAddToShelfAlert = intent.value) }
-            is OtherConfigIntent.ShowMangaUiChanged ->
-                updateOtherSetting { it.copy(showMangaUi = intent.value) }
             is OtherConfigIntent.WebServiceWakeLockChanged ->
                 updateOtherSetting { it.copy(webServiceWakeLock = intent.value) }
             is OtherConfigIntent.BlockSourceBrowserChanged ->
@@ -344,6 +344,7 @@ private fun DirectLinkRule.toUi() = DirectLinkRuleUi(
 private fun OtherSettings.toUiState(current: OtherConfigUiState): OtherConfigUiState =
     current.copy(
         updateToVariant = updateToVariant,
+        updateEndpoint = updateEndpoint,
         autoCheckUpdateOnStart = autoCheckUpdateOnStart,
         webServiceAutoStart = webServiceAutoStart,
         autoRefresh = autoRefresh,
@@ -354,7 +355,6 @@ private fun OtherSettings.toUiState(current: OtherConfigUiState): OtherConfigUiS
         replaceEnableDefault = replaceEnableDefault,
         autoClearExpired = autoClearExpired,
         showAddToShelfAlert = showAddToShelfAlert,
-        showMangaUi = showMangaUi,
         webServiceWakeLock = webServiceWakeLock,
         blockSourceBrowser = blockSourceBrowser,
         sourceEditMaxLine = sourceEditMaxLine,

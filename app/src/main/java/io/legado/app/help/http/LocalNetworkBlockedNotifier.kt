@@ -33,9 +33,20 @@ object LocalNetworkBlockedNotifier {
      */
     fun consumePermissionRequest(): Boolean = permissionRequested.getAndSet(false)
 
+    /** Fail fast before a known local request; the existing foreground host owns the dialog. */
+    fun requestPermissionIfNeeded(host: String): Boolean {
+        if (!LocalNetworkAccess.isRequired() || !shouldRequestPermission(host, LocalNetworkAccess.isGranted(appCtx))) return false
+        notifyPermissionRequired()
+        return true
+    }
+
     /** 请求因缺少本地网络权限失败时的兜底处理，由网络层在抛出 IOException 前调用。 */
     fun onRequestFailed(host: String, error: IOException) {
         if (!shouldReport(host, error, LocalNetworkAccess.isGranted(appCtx))) return
+        notifyPermissionRequired()
+    }
+
+    private fun notifyPermissionRequired() {
         permissionRequested.set(true)
         // 宿主在前台时立刻补授权；不在前台则由 onResume 再消费一次标记。
         FlowEventBus.post(EventBus.LOCAL_NETWORK_PERMISSION_REQUIRED, Unit)
@@ -53,7 +64,9 @@ object LocalNetworkBlockedNotifier {
      * 系统丢包与"服务本身没开"在网络层无法区分，所以提示文案不把话说死。
      */
     internal fun shouldReport(host: String, error: IOException, permissionGranted: Boolean): Boolean =
-        !permissionGranted &&
-            host.isLocalNetworkHost() &&
+        shouldRequestPermission(host, permissionGranted) &&
             (error is SocketTimeoutException || error is ConnectException)
+
+    internal fun shouldRequestPermission(host: String, permissionGranted: Boolean): Boolean =
+        !permissionGranted && host.isLocalNetworkHost()
 }

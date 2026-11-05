@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -66,7 +67,7 @@ fun ReadAloudPlayerMorphHost(
      * 压进整屏页会拆掉弹层那层 composition，`rememberPagerState` 的初值回到 0，
      * 回来就落在常规 tab。
      */
-    var configTab by rememberSaveable { mutableStateOf(0) }
+    var configTab by rememberSaveable { mutableIntStateOf(0) }
     /**
      * 从朗读设置跳去子页（引擎与音色 / 朗读缓存 / 人物配音）时置位：
      * 播放器是 Activity 级浮层，压在新页面上面，所以只能先收；这里只留一个"弹层在等

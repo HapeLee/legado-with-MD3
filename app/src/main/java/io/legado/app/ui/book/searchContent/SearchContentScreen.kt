@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.repository.SearchContentChangedException
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.ui.main.LocalSearchOverlayAnimation
 import io.legado.app.ui.theme.LegadoTheme
@@ -293,8 +294,13 @@ fun SearchContentScreen(
             ) { state ->
                 when (state) {
                     is SearchContentState.Error -> {
+                        val message = if (state.throwable is SearchContentChangedException) {
+                            stringResource(R.string.search_content_changed)
+                        } else {
+                            state.throwable.localizedMessage ?: "发生未知错误"
+                        }
                         EmptyMessage(
-                            message = state.throwable.localizedMessage ?: "发生未知错误",
+                            message = message,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .wrapContentSize()

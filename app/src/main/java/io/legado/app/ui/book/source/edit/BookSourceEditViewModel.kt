@@ -362,6 +362,7 @@ class BookSourceEditViewModel(
                 f("ruleExplore.intro", R.string.rule_book_intro),
                 f("ruleExplore.coverUrl", R.string.rule_cover_url),
                 f("ruleExplore.bookUrl", R.string.r_book_url),
+                f("ruleExplore.pageParam", R.string.rule_explore_page_param),
                 f("homepageModules", R.string.homepage_modules),
             ),
             BookSourceEditTab.Info to listOf(

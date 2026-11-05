@@ -212,6 +212,7 @@ fun BookInfoEditContent(
                     bookTypes = listOf(
                         BookInfoEditType.TEXT to stringResource(R.string.book_type_text),
                         BookInfoEditType.AUDIO to stringResource(R.string.book_type_audio),
+                        BookInfoEditType.VIDEO to stringResource(R.string.video),
                         BookInfoEditType.IMAGE to stringResource(R.string.book_type_image)
                     ),
                     selectedType = uiState.selectedType,

@@ -16,6 +16,7 @@ interface AiProfileGateway {
     fun observePresets(): Flow<List<AiTaskPreset>>
     suspend fun getProvider(id: String): AiProviderProfile?
     suspend fun getModel(id: String): AiModelProfile?
+    suspend fun getModelConfig(id: String): io.legado.app.domain.model.AiModelConfig?
     suspend fun getTaskPreset(taskType: String): AiTaskPresetConfig?
     suspend fun getProviderApiKey(providerId: String): String
     suspend fun saveProvider(draft: AiProviderDraft): AiProviderProfile

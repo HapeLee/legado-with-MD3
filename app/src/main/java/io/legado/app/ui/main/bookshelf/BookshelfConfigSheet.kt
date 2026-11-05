@@ -157,7 +157,10 @@ fun BookshelfConfigSheet(
                         }
                     )
 
-                    AnimatedVisibility(visible = folderLayoutMode == 1) {
+                    // 分组网格与书籍网格共用「固定列数」开关：关闭时列数由封面宽度推出，此滑杆不生效
+                    AnimatedVisibility(
+                        visible = folderLayoutMode == 1 && settings.bookshelfGridFixedColumns
+                    ) {
                         val folderGridCount =
                             if (isLandscape) settings.bookshelfFolderLayoutGridLandscape
                             else settings.bookshelfFolderLayoutGridPortrait
@@ -282,21 +285,70 @@ fun BookshelfConfigSheet(
 
                     val gridCount =
                         if (isLandscape) settings.bookshelfLayoutGridLandscape else settings.bookshelfLayoutGridPortrait
-                    CompactSliderSettingItem(
-                        title = stringResource(R.string.number_rows_columns),
-                        value = gridCount.toFloat(),
-                        valueRange = 1f..15f,
-                        steps = 14,
-                        onValueChange = { value ->
-                            onUpdate {
-                                if (isLandscape) {
-                                    it.copy(bookshelfLayoutGridLandscape = value.toInt())
+                    CompactSwitchSettingItem(
+                        title = stringResource(R.string.bookshelf_grid_fixed_columns),
+                        description = stringResource(R.string.bookshelf_grid_fixed_columns_summary),
+                        checked = settings.bookshelfGridFixedColumns,
+                        color = LegadoTheme.colorScheme.surface,
+                        onCheckedChange = { checked ->
+                            onUpdate { current ->
+                                // 两个开关至少要开一个：都关掉就没有决定尺寸的基准
+                                val next = current.copy(bookshelfGridFixedColumns = checked)
+                                if (!next.bookshelfGridFixedColumns && !next.bookshelfGridFixedCoverWidth) {
+                                    next.copy(bookshelfGridFixedCoverWidth = true)
                                 } else {
-                                    it.copy(bookshelfLayoutGridPortrait = value.toInt())
+                                    next
                                 }
                             }
                         }
                     )
+
+                    AnimatedVisibility(visible = settings.bookshelfGridFixedColumns) {
+                        CompactSliderSettingItem(
+                            title = stringResource(R.string.number_rows_columns),
+                            value = gridCount.toFloat(),
+                            valueRange = 1f..15f,
+                            steps = 14,
+                            onValueChange = { value ->
+                                onUpdate {
+                                    if (isLandscape) {
+                                        it.copy(bookshelfLayoutGridLandscape = value.toInt())
+                                    } else {
+                                        it.copy(bookshelfLayoutGridPortrait = value.toInt())
+                                    }
+                                }
+                            }
+                        )
+                    }
+
+                    CompactSwitchSettingItem(
+                        title = stringResource(R.string.bookshelf_grid_fixed_cover_width),
+                        description = stringResource(R.string.bookshelf_grid_fixed_cover_width_summary),
+                        checked = settings.bookshelfGridFixedCoverWidth,
+                        color = LegadoTheme.colorScheme.surface,
+                        onCheckedChange = { checked ->
+                            onUpdate { current ->
+                                val next = current.copy(bookshelfGridFixedCoverWidth = checked)
+                                if (!next.bookshelfGridFixedColumns && !next.bookshelfGridFixedCoverWidth) {
+                                    next.copy(bookshelfGridFixedColumns = true)
+                                } else {
+                                    next
+                                }
+                            }
+                        }
+                    )
+
+                    AnimatedVisibility(visible = settings.bookshelfGridFixedCoverWidth) {
+                        CompactSliderSettingItem(
+                            title = stringResource(R.string.grid_cover_width),
+                            value = settings.bookshelfGridCoverWidth.toFloat(),
+                            valueRange = 40f..150f,
+                            steps = 110,
+                            onValueChange = { value ->
+                                onUpdate { it.copy(bookshelfGridCoverWidth = value.toInt()) }
+                            }
+                        )
+                    }
 
                     CompactSwitchSettingItem(
                         title = stringResource(R.string.compact_title_font),
@@ -313,16 +365,6 @@ fun BookshelfConfigSheet(
                         color = LegadoTheme.colorScheme.surface,
                         onCheckedChange = { value ->
                             onUpdate { it.copy(bookshelfTitleCenter = value) }
-                        }
-                    )
-
-                    CompactSliderSettingItem(
-                        title = stringResource(R.string.grid_cover_width),
-                        value = settings.bookshelfGridCoverWidth.toFloat(),
-                        valueRange = 40f..150f,
-                        steps = 110,
-                        onValueChange = { value ->
-                            onUpdate { it.copy(bookshelfGridCoverWidth = value.toInt()) }
                         }
                     )
                 }

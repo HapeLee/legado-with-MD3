@@ -1,0 +1,52 @@
+Legado manga shape layout and local vision
+========================================
+
+The shape-aware text layout, fixed-area glyph sizing, bounded bubble interior
+estimation, background statistics, seed ordering, square dilation, and related
+geometry/inference contracts, optional bitmap preprocessing order, and Otsu
+threshold strategy are adapted from:
+https://github.com/ciddwd/overlay-translator
+Reference commit: 64a7aa2c9605c88dd35bdeea42ab5c0f1c18ce5e
+Copyright the overlay-translator contributors.
+Licensed under Apache License 2.0; see LICENSE-Apache-2.0.txt.
+Legado modifications include package changes, bounded persistent masks, reader
+ROI transformations, idle session release, bounded OCR working copies,
+cancellation-safe bitmap ownership, source-calibrated typography instead of automatic
+fixed-area enlargement, source-center anchoring, and integration with existing caches.
+
+Optional PP-OCRv5 mobile pipeline
+The DB postprocessor, bicubic perspective sampler, and normalization/CTC contracts are adapted from the same
+overlay-translator reference under Apache-2.0. Model weights are NOT bundled.
+They are downloaded only on request from PaddlePaddle's official repositories:
+https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det_onnx
+https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_rec_onnx
+License: Apache-2.0 (declared by both model repositories).
+Exact revisions, sizes and SHA-256 values are pinned in MangaPaddleModelCatalog.
+
+Optional PP-OCRv6 model sets (weights NOT bundled)
+Official Small detector, Small/Medium recognizers and matching dictionaries:
+https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx
+https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx
+https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_rec_onnx
+Japanese manga recognizer fine-tune by fumetodev:
+https://huggingface.co/fumetodev/PP-OCRv6_small_rec_manga_ONNX
+All declare Apache-2.0. Each set uses pinned revisions, byte sizes and SHA-256.
+Official YAML preprocessing is BGR; the manga fine-tune declares RGB input.
+
+Additional optional official PaddlePaddle model sets (Apache-2.0, not bundled):
+https://huggingface.co/PaddlePaddle/korean_PP-OCRv5_mobile_rec_onnx
+https://huggingface.co/PaddlePaddle/eslav_PP-OCRv5_mobile_rec_onnx
+https://huggingface.co/PaddlePaddle/PP-OCRv6_tiny_det_onnx
+https://huggingface.co/PaddlePaddle/PP-OCRv6_tiny_rec_onnx
+
+Bundled model: detector-v4-s_int8.onnx
+Source: https://huggingface.co/ogkalu/comic-text-and-bubble-detector
+Author: ogkalu
+License: Apache-2.0 (as declared by the model repository)
+Bytes: 11120765
+SHA-256: 5FE9E4F576E49D4E7E8B0E029D6D3CDC252ABD4694113E1CAE120E62C931EA79
+
+ONNX Runtime Android 1.28.0
+Copyright (c) Microsoft Corporation. All rights reserved.
+https://github.com/microsoft/onnxruntime/tree/v1.28.0
+Licensed under MIT; its license and third-party notices are distributed here.

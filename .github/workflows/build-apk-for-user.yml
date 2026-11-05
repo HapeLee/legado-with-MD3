@@ -7,6 +7,14 @@ on:
         description: '要构建的分支'
         required: true
         default: 'trae/solo-agent-vhkVM3'
+      product:
+        description: '产品变体：appCore 基础版无本地引擎，appComic 漫画增强版内置本地 OCR/擦除/气泡检测'
+        required: true
+        type: choice
+        options:
+          - appCore
+          - appComic
+        default: appCore
 
 permissions:
   contents: write
@@ -14,6 +22,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PRODUCT: ${{ github.event.inputs.product }}
+      PRODUCT_TAG: "${{ github.event.inputs.product == 'appComic' && 'comic' || 'core' }}"
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -42,14 +53,16 @@ jobs:
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleAppDebug -PenableAbiSplits=false --no-daemon --no-configuration-cache
+          # appCore -> AppCore：Gradle 变体任务名是驼峰形式
+          PRODUCT_CAP=$(echo "$PRODUCT" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
+          ./gradlew assemble${PRODUCT_CAP}Debug -PenableAbiSplits=false --no-daemon --no-configuration-cache
         env:
           COMMIT_NUMBER: ${{ github.run_number }}
           APP_VERSION_NAME: debug-${{ github.run_number }}
 
       - name: Check Build Output
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/debug"
           echo "检查 APK 输出目录: $APK_PATH"
           ls -la "$APK_PATH" || true
           APK_COUNT=$(find "$APK_PATH" -maxdepth 1 -name "*.apk" | wc -l | tr -d ' ')
@@ -60,15 +73,15 @@ jobs:
 
       - name: Rename APK Files
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/debug"
           cd "$APK_PATH"
-          mv -- *.apk "legado-debug-${GITHUB_RUN_NUMBER}-universal.apk"
+          mv -- *.apk "legado-debug-${GITHUB_RUN_NUMBER}-${PRODUCT_TAG}-universal.apk"
           ls -la
 
       - name: Create ZIP Archive
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
-          ZIP_NAME="legado-debug-apks-${GITHUB_RUN_NUMBER}.zip"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/debug"
+          ZIP_NAME="legado-debug-apks-${GITHUB_RUN_NUMBER}-${PRODUCT_TAG}.zip"
           cd "$APK_PATH"
           zip "$GITHUB_WORKSPACE/$ZIP_NAME" *.apk
           echo "ZIP 文件已创建: $ZIP_NAME"
@@ -77,11 +90,11 @@ jobs:
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: legado-apks-${{ github.run_number }}
-          path: app/build/outputs/apk/app/debug/*.apk
+          name: legado-apks-${{ env.PRODUCT_TAG }}-${{ github.run_number }}
+          path: app/build/outputs/apk/${{ env.PRODUCT }}/debug/*.apk
 
       - name: Upload ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: legado-apks-zip-${{ github.run_number }}
+          name: legado-apks-zip-${{ env.PRODUCT_TAG }}-${{ github.run_number }}
           path: legado-debug-apks-*.zip

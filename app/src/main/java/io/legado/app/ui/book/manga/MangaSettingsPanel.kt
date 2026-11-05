@@ -1,7 +1,12 @@
 package io.legado.app.ui.book.manga
 
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.text.AppText
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,13 +18,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -31,9 +33,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +51,7 @@ import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
+import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
@@ -58,13 +63,21 @@ import kotlin.math.roundToInt
 
 private val MangaSettingsPanelContentMaxHeight = 380.dp
 
-/** 底部栏设置面板顶部的分类 tab（自动阅读不在此列，长按菜单按钮进入）。 */
+/** 顶部悬浮返回按钮区高度：16dp 内边距 + 40dp 按钮 + 8dp 间隔，内容首行从这里开始。 */
+private val MangaSettingsPanelTopInset = 64.dp
+
+/** 底部悬浮 tab 行除自身高度外的留白：与内容间距 12dp + 面板底部内边距 16dp。 */
+private val MangaSettingsPanelTabRowSpacing = 28.dp
+
+/** 首帧 tab 行尚未测量时的估计高度，避免内容区先短一截再弹回。 */
+private val MangaSettingsPanelTabRowHeightEstimate = 36.dp
+
+/** 底部栏设置面板底部的分类 tab（自动阅读不在此列，长按菜单按钮进入；点击区域入口在「全局」页）。 */
 private val MangaSettingsTabs = listOf(
     MangaReaderSettingsCategory.READER,
     MangaReaderSettingsCategory.FOOTER,
     MangaReaderSettingsCategory.MENU,
     MangaReaderSettingsCategory.FILTER,
-    MangaReaderSettingsCategory.CLICK_ACTIONS,
 )
 
 private val MangaReaderSettingsCategory.titleRes: Int
@@ -73,15 +86,15 @@ private val MangaReaderSettingsCategory.titleRes: Int
         MangaReaderSettingsCategory.FOOTER -> R.string.footer
         MangaReaderSettingsCategory.MENU -> R.string.manga_reader_menu_layout
         MangaReaderSettingsCategory.FILTER -> R.string.manga_reader_filter_short
-        MangaReaderSettingsCategory.CLICK_ACTIONS -> R.string.manga_reader_click_area_short
         MangaReaderSettingsCategory.AUTO_READ -> R.string.manga_reader_auto_read
     }
 
 private enum class MangaColorPickerTarget { BACKGROUND, FILTER, MENU_SEED }
 
 /**
- * 漫画阅读设置的底部栏面板：顶部分类 tab（[CardTabRow]），内容区用
- * [HorizontalPager] 左右滑动切换；自动阅读分类不在 tab 里，由长按菜单按钮进入。
+ * 漫画阅读设置的底部栏面板：内容区用 [HorizontalPager] 左右滑动切换，返回按钮与分类 tab
+ * （[CardTabRow]）分别悬浮在面板顶部和底部，内容滚动时各压一层渐变；自动阅读分类不在 tab 里，
+ * 由长按菜单按钮进入；点击区域改为从「全局」页进入的 sheet（[MangaReaderSheet.ClickActions]）。
  */
 @Composable
 internal fun MangaSettingsPanel(
@@ -104,6 +117,37 @@ internal fun MangaSettingsPanel(
     var colorPickerTarget by remember { mutableStateOf<MangaColorPickerTarget?>(null) }
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
     val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
+    // 每页各自持有滚动状态：切页后位置不丢，同时用于判断是否已经上划/滚到底、需要压一层渐变
+    val scrollStates = remember { List(MangaSettingsTabs.size) { ScrollState(0) } }
+    val pageScroll = scrollStates.getOrNull(pagerState.currentPage)
+    val topScrolled by remember(pageScroll) {
+        derivedStateOf { (pageScroll?.value ?: 0) > 0 }
+    }
+    val bottomScrolled by remember(pageScroll) {
+        derivedStateOf {
+            val max = pageScroll?.maxValue ?: 0
+            max > 0 && (pageScroll?.value ?: 0) < max
+        }
+    }
+    val topScrimAlpha by animateFloatAsState(
+        targetValue = if (topScrolled) 1f else 0f,
+        animationSpec = tween(durationMillis = 160),
+        label = "mangaSettingsTopScrim",
+    )
+    val bottomScrimAlpha by animateFloatAsState(
+        targetValue = if (bottomScrolled) 1f else 0f,
+        animationSpec = tween(durationMillis = 160),
+        label = "mangaSettingsBottomScrim",
+    )
+    val scrimColor = LegadoTheme.colorScheme.surfaceContainerHigh
+    // tab 行高度随字号变化，实测后作为内容底部留白，避免最后一行被悬浮 tab 挡住
+    val density = LocalDensity.current
+    var tabRowHeightPx by remember { mutableIntStateOf(0) }
+    val bottomInset = if (tabRowHeightPx > 0) {
+        with(density) { tabRowHeightPx.toDp() } + MangaSettingsPanelTabRowSpacing
+    } else {
+        MangaSettingsPanelTabRowSpacing + MangaSettingsPanelTabRowHeightEstimate
+    }
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }
@@ -118,54 +162,19 @@ internal fun MangaSettingsPanel(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            MediumTonalButton(
-                onClick = { onIntent(MangaReaderIntent.CloseSettings) },
-                icon = AppIcons.Back,
-                contentDescription = stringResource(R.string.back),
-            )
-            CardTabRow(
-                tabTitles = MangaSettingsTabs.map { stringResource(it.titleRes) },
-                selectedTabIndex = selectedTab,
-                onTabSelected = { index ->
-                    selectedTab = index
-                    clickScrollCount++
-                    scope.launch {
-                        try {
-                            pagerState.animateScrollToPage(
-                                page = index,
-                                animationSpec = tween(
-                                    durationMillis = 300,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                            )
-                        } finally {
-                            clickScrollCount = (clickScrollCount - 1).coerceAtLeast(0)
-                        }
-                    }
-                },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(8.dp))
+    Box(modifier = Modifier.fillMaxWidth()) {
         HorizontalPager(
             state = pagerState,
             // 顶部对齐 + 裁剪，对齐阅读正文 SystemMenuPage：切换不同高度页面时内容顶部不动、只收放底部
             verticalAlignment = Alignment.Top,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = MangaSettingsPanelContentMaxHeight)
+                // 上限含顶部按钮与底部 tab 的留白，滚动视口高度与原先布局的可见内容一致
+                .heightIn(
+                    max = MangaSettingsPanelContentMaxHeight +
+                            MangaSettingsPanelTopInset +
+                            bottomInset
+                )
                 .clipToBounds()
                 .pagerHeight(animatedHeight),
         ) { page ->
@@ -178,8 +187,10 @@ internal fun MangaSettingsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(scrollStates[page]),
                 ) {
+                    // 顶部留出悬浮返回按钮的高度：未滚动时首行不被压住，上划时内容从这里滚到按钮下方
+                    Spacer(Modifier.height(MangaSettingsPanelTopInset))
                     when (MangaSettingsTabs[page]) {
                         MangaReaderSettingsCategory.READER -> ReaderSettingsContent(
                             state.settings,
@@ -206,16 +217,77 @@ internal fun MangaSettingsPanel(
                             onIntent = onIntent,
                         )
 
-                        MangaReaderSettingsCategory.CLICK_ACTIONS -> ClickActionsSettingsContent(
-                            state.settings,
-                            onIntent
-                        )
-
                         // 自动阅读不走 pager，已在 MangaSettingsPanel 入口单独处理
                         MangaReaderSettingsCategory.AUTO_READ -> Unit
                     }
+                    // 底部留出悬浮 tab 行的高度，滚到底时最后一行不被 tab 挡住
+                    Spacer(Modifier.height(bottomInset))
                 }
             }
+        }
+        // 悬浮返回按钮：内容上划时叠一层自上而下的渐变，让按钮看起来浮在内容之上
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(MangaSettingsPanelTopInset)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            scrimColor.copy(alpha = 0.96f * topScrimAlpha),
+                            scrimColor.copy(alpha = 0.86f * topScrimAlpha),
+                            scrimColor.copy(alpha = 0f),
+                        )
+                    )
+                )
+                .padding(start = 16.dp, top = 16.dp),
+            contentAlignment = Alignment.TopStart,
+        ) {
+            MediumTonalButton(
+                onClick = { onIntent(MangaReaderIntent.CloseSettings) },
+                icon = AppIcons.Back,
+                contentDescription = stringResource(R.string.back),
+            )
+        }
+        // 悬浮分类 tab：同一套做法，内容滚到底之前压一层自下而上的渐变
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            scrimColor.copy(alpha = 0f),
+                            scrimColor.copy(alpha = 0.86f * bottomScrimAlpha),
+                            scrimColor.copy(alpha = 0.96f * bottomScrimAlpha),
+                        )
+                    )
+                )
+                .padding(top = 12.dp, bottom = 16.dp),
+        ) {
+            CardTabRow(
+                tabTitles = MangaSettingsTabs.map { stringResource(it.titleRes) },
+                selectedTabIndex = selectedTab,
+                onTabSelected = { index ->
+                    selectedTab = index
+                    clickScrollCount++
+                    scope.launch {
+                        try {
+                            pagerState.animateScrollToPage(
+                                page = index,
+                                animationSpec = tween(
+                                    durationMillis = 300,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
+                        } finally {
+                            clickScrollCount = (clickScrollCount - 1).coerceAtLeast(0)
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .onSizeChanged { tabRowHeightPx = it.height },
+            )
         }
     }
 
@@ -314,7 +386,7 @@ private fun AutoReadSettingsPage(
                 icon = AppIcons.Back,
                 contentDescription = stringResource(R.string.back),
             )
-            Text(
+            AppText(
                 text = stringResource(MangaReaderSettingsCategory.AUTO_READ.titleRes),
                 style = LegadoTheme.typography.titleMedium,
                 maxLines = 1,
@@ -565,6 +637,12 @@ private fun ReaderSettingsContent(
             )
         )
     }
+    // 点击区域从 tab 改为入口 + sheet，避免九宫格在窄面板里挤压其它分类
+    TinyClickableSettingItem(
+        title = stringResource(R.string.manga_reader_click_area_short),
+        description = stringResource(R.string.manga_reader_click_area_hint),
+        onClick = { onIntent(MangaReaderIntent.OpenClickActions) },
+    )
 }
 
 @Composable
@@ -773,37 +851,6 @@ private fun AutoReadSettingsContent(
     ) {
         onIntent(MangaReaderIntent.UpdateSetting(MangaReaderSettingKey.AUTO_READ_SPEED, it))
     }
-}
-
-@Composable
-private fun ClickActionsSettingsContent(
-    settings: MangaReaderSettings,
-    onIntent: (MangaReaderIntent) -> Unit,
-) {
-    val labels = mapOf(
-        -1 to stringResource(R.string.non_action),
-        0 to stringResource(R.string.manga_reader_menu),
-        1 to stringResource(R.string.manga_reader_next_page),
-        2 to stringResource(R.string.manga_reader_previous_page),
-        3 to stringResource(R.string.next_chapter),
-        4 to stringResource(R.string.previous_chapter),
-    )
-    repeat(3) { row ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            repeat(3) { column ->
-                val index = row * 3 + column
-                val action = settings.clickActions.getOrElse(index) { 0 }
-                TextButton(onClick = {
-                    val next = nextMangaClickAction(action)
-                    onIntent(MangaReaderIntent.UpdateClickAction(index, next))
-                }) { Text(labels[action].orEmpty()) }
-            }
-        }
-    }
-    Text(
-        stringResource(R.string.manga_reader_click_cycle_hint),
-        style = MaterialTheme.typography.bodySmall
-    )
 }
 
 private val Boolean.intValue: Int get() = if (this) 1 else 0

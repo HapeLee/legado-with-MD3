@@ -41,6 +41,12 @@ private const val PRELOAD_CONCURRENCY = 4
 /** 卡片封面四周的内边距（[io.legado.app.ui.main.bookshelf.BookItem] 里的 `padding(4.dp)`）。 */
 private const val COVER_ITEM_PADDING_DP = 4
 
+/** 网格间距（[BookshelfScreen] 的 `Arrangement.spacedBy(8.dp)`）。 */
+private const val GRID_SPACING_DP = 8
+
+/** 网格内容左右内边距合计（M3 引擎 12dp×2，Miuix 14dp×2；取 M3 值误差只影响解码尺寸）。 */
+private const val GRID_CONTENT_HORIZONTAL_PADDING_DP = 24
+
 /**
  * 待预热的书：只保留书卡那种“确实有真实封面地址”的书。
  */
@@ -108,6 +114,45 @@ internal fun buildCoverPreloadTargets(
             heightPx = heightPx,
         )
     }
+}
+
+/** 网格模式实际生效的列数与封面宽度。 */
+internal data class BookshelfGridMetrics(
+    val columns: Int,
+    val coverWidthDp: Int,
+)
+
+/**
+ * 推算网格模式的列数与封面宽度（纯函数，便于单测）。
+ *
+ * 口径必须和 Compose 侧一致：列数跟着 [GridCells.Adaptive] 的算式走，
+ * 封面宽度要减掉卡片左右各 4dp 内边距；固定列数时封面会被列宽钳制，
+ * 否则铺满列宽。尺寸差 1dp 只会多解一次码，不影响封面出现时间。
+ */
+internal fun resolveBookshelfGridMetrics(
+    availableWidthDp: Float,
+    configuredColumns: Int,
+    configuredCoverWidthDp: Int,
+    fixedColumns: Boolean,
+    fixedCoverWidth: Boolean,
+): BookshelfGridMetrics {
+    val spacing = GRID_SPACING_DP.toFloat()
+    val minCellWidth = configuredCoverWidthDp + 2 * COVER_ITEM_PADDING_DP
+    val columns = if (fixedColumns) {
+        configuredColumns.coerceAtLeast(1)
+    } else {
+        ((availableWidthDp + spacing) / (minCellWidth + spacing)).toInt().coerceAtLeast(1)
+    }
+    val cellWidth = (availableWidthDp - (columns - 1) * spacing) / columns
+    val filledCoverWidth = (cellWidth - 2 * COVER_ITEM_PADDING_DP).roundToInt().coerceAtLeast(1)
+    return BookshelfGridMetrics(
+        columns = columns,
+        coverWidthDp = if (fixedCoverWidth) {
+            minOf(filledCoverWidth, configuredCoverWidthDp)
+        } else {
+            filledCoverWidth
+        },
+    )
 }
 
 /**
@@ -267,21 +312,30 @@ class BookshelfCoverPreloader(
             settings.bookshelfLayoutModePortrait
         }
         val grid = layoutMode != 0
-        val columns = if (!grid) {
+        val configuredColumns = if (!grid) {
             1
         } else if (landscape) {
             settings.bookshelfLayoutGridLandscape
         } else {
             settings.bookshelfLayoutGridPortrait
         }
+        val displayMetrics = application.resources.displayMetrics
+        val gridMetrics = resolveBookshelfGridMetrics(
+            availableWidthDp = displayMetrics.widthPixels / displayMetrics.density -
+                    GRID_CONTENT_HORIZONTAL_PADDING_DP,
+            configuredColumns = configuredColumns,
+            configuredCoverWidthDp = settings.bookshelfGridCoverWidth,
+            fixedColumns = settings.bookshelfGridFixedColumns,
+            fixedCoverWidth = settings.bookshelfGridFixedCoverWidth,
+        )
         val limit = if (grid) {
-            (columns.coerceAtLeast(1) * ESTIMATED_VISIBLE_ROWS).coerceIn(1, MAX_PRELOAD_BOOKS)
+            (gridMetrics.columns * ESTIMATED_VISIBLE_ROWS).coerceIn(1, MAX_PRELOAD_BOOKS)
         } else {
             LIST_PRELOAD_BOOKS
         }
         return FirstScreenLayout(
             grid = grid,
-            coverWidthDp = if (grid) settings.bookshelfGridCoverWidth else settings.bookshelfListCoverWidth,
+            coverWidthDp = if (grid) gridMetrics.coverWidthDp else settings.bookshelfListCoverWidth,
             limit = limit,
         )
     }

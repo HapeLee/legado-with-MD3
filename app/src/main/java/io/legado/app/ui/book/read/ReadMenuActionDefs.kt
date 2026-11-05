@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
@@ -245,6 +246,11 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
         context.getString(R.string.menu_refresh_dur),
     ),
     ReadMenuButtonInfo(
+        "bubble_style",
+        Icons.Default.Comment,
+        context.getString(R.string.bubble_config),
+    ),
+    ReadMenuButtonInfo(
         "ai_chat",
         Icons.AutoMirrored.Filled.Chat,
         context.getString(R.string.ai_chat),
@@ -453,11 +459,24 @@ internal fun buildReadMenuActionDefs(
                 onIntent(ReadBookIntent.HideMenu)
             }
         },
-        def("translate", isActive = state.translationMode) {
+        def(
+            "translate",
+            isActive = state.translationMode,
+            // 只在已经开着翻译时给重翻入口：翻译关着时既没有"现有翻译"可删，
+            // 又会被 RetranslateCurrentChapter 隐式打开翻译模式。
+            onLongClick = if (state.translationMode) {
+                { onIntent(ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmRetranslate)) }
+            } else {
+                null
+            },
+        ) {
             onIntent(ReadBookIntent.ToggleTranslation)
         },
         def("refresh_current") {
             onIntent(ReadBookIntent.RefreshCurrentChapter)
+        },
+        def("bubble_style") {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BubbleStyle))
         },
         def("ai_chat") {
             onIntent(ReadBookIntent.OpenAiChat)

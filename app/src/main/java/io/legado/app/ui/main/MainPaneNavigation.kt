@@ -12,6 +12,7 @@ private val standaloneMainRoutes = setOf(
     MainRouteReadBook::class,
     MainRouteReadManga::class,
     MainRouteAudioPlay::class,
+    MainRouteVideoPlay::class,
     MainRouteReadAloudPlayer::class,
     MainRouteSearchContent::class,
     MainRouteSourceLogin::class,

@@ -38,7 +38,8 @@ data class AiModelListItemUi(
     val contextWindow: Int,
     val maxOutputTokens: Int,
     val enabled: Boolean,
-    val isCurrent: Boolean
+    val isCurrent: Boolean,
+    val text: Boolean = true,
 )
 
 sealed interface AiConfigIntent
