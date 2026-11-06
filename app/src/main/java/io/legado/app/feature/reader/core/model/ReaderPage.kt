@@ -41,6 +41,8 @@ data class ReaderTextStyle(
     val linePadTopPx: Float = 0f,
     /** 命中行行距（px）：这一行之后多留的空白。 */
     val linePadBottomPx: Float = 0f,
+    /** Semantic HTML mark; its background color is resolved at draw time. */
+    val marked: Boolean = false,
 )
 
 data class ReaderTextBackgroundImage(

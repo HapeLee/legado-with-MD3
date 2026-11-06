@@ -2193,7 +2193,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     } else data.textBackgroundBands
     // 对照旧 `TextLine.drawStyledBackgrounds`：先背景色、再背景图，与翻页模式同一顺序。
     visibleTextBackgroundBands.forEach { band ->
-        drawBackgroundBand(band)
+        drawBackgroundBand(band, selection.toArgb())
     }
     data.textBackgrounds.forEach { run ->
         ReaderTextBackgroundLoader.cached(run.image.source)?.let { bitmap ->
@@ -2950,7 +2950,7 @@ private fun ReaderPageCanvas(
         // 对照旧 `TextLine.drawStyledBackgrounds`：先背景色、再背景图。色块是按行盒画的直边
         // 矩形，画在九宫格上面就会把气泡切出一截直边（旧版还直接不给带图的列铺色）。
         textBackgroundBands.forEach { band ->
-            drawBackgroundBand(band)
+            drawBackgroundBand(band, selection.toArgb())
         }
         // 快照读放在绘制期：异步补解完成后只重绘，不重组整页正文。
         textBackgroundRevision

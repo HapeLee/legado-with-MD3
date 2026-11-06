@@ -76,6 +76,8 @@ data class ReaderInlineSourceStyle(
     val fontFamily: String? = null,
     val superscript: Boolean = false,
     val subscript: Boolean = false,
+    /** Semantic HTML mark; its background color is resolved at draw time. */
+    val marked: Boolean = false,
 )
 
 data class ReaderChapterSource(
