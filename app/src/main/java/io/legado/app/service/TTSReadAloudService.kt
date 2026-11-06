@@ -63,6 +63,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
 
     private var textToSpeech: TextToSpeech? = null
     private var ttsInitFinish = false
+    private var playAfterTtsInit = false
     private val ttsCallbackHandler = Handler(Looper.getMainLooper())
     private val ttsUtteranceListener = TTSUtteranceListener()
     private var speakJob: Coroutine<*>? = null
@@ -164,6 +165,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         }
         textToSpeech = null
         ttsInitFinish = false
+        playAfterTtsInit = false
         activeVoiceName = ""
         voiceIsDefault = true
         voiceCatalogCache = null
@@ -202,15 +204,18 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 upSpeechRate(reset = false)
                 // 先把音色表取回来：否则第一处「旁白→角色」的边界要现场等一次全量枚举
                 execute { voiceCatalog() }
-                play()
+                if (playAfterTtsInit) play()
             }
         } else {
             toastOnUi(R.string.tts_init_failed)
+            if (playAfterTtsInit) pauseReadAloud()
+            clearTTS()
         }
     }
 
     @Synchronized
     override fun play() {
+        if (!canStartPreparedPlayback) return
         // 上一句自然播完、这里接下一句 —— 只有这一种情况可以让引擎自己接力
         val continuesCurrentSpeech = advancedFromUtteranceDone
         advancedFromUtteranceDone = false
@@ -220,6 +225,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             val requiredEngine = route.engineId
             if (requiredEngine != activeEngine || textToSpeech == null) {
                 clearTTS()
+                playAfterTtsInit = true
                 initTts(requiredEngine)
                 return
             }
@@ -227,7 +233,12 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             // 否则这两次调用打在还在播的那一句上，听着就是突然加速然后跳下一句
             nextRoute = route
         }
-        if (!ttsInitFinish) return
+        if (!ttsInitFinish) {
+            playAfterTtsInit = true
+            if (textToSpeech == null) initTts()
+            return
+        }
+        playAfterTtsInit = false
         val tts = textToSpeech ?: return
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
@@ -301,7 +312,9 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             AppLog.putDebug("TTS段落全标点跳过: nowSpeak=$nowSpeak")
             pendingUtterances.remove(utteranceId)
             speechProgress.remove(utteranceId)
-            skipCurrentCue()
+            postTtsCallback {
+                if (session == speakSession && !pause) skipCurrentCue()
+            }
             return
         }
         // 第三条音轨：这一单元身上挂了音效（正则角色「命中不念改放音频」）就一起响
@@ -332,6 +345,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         if (result == TextToSpeech.ERROR) {
             AppLog.put("tts出错 尝试重新初始化")
             clearTTS()
+            playAfterTtsInit = true
             initTts()
             return
         }
@@ -372,6 +386,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                     if (!isAddedText) {
                         AppLog.put("tts出错 尝试重新初始化")
                         clearTTS()
+                        playAfterTtsInit = true
                         initTts()
                         return
                     }
@@ -388,7 +403,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
             tts.runCatching { stop() }
         }
         delay(1000)
-        synchronized(this) {
+        postTtsCallback {
             if (session == speakSession && !pause) completeCurrentChapter()
         }
     }
@@ -687,6 +702,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         speakSession++
         speakJob?.cancel()
         needParagraphInterval = false
+        playAfterTtsInit = false
         resetSpeechTracking()
         textToSpeech?.runCatching {
             stop()
@@ -700,7 +716,9 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
     override fun upSpeechRate(reset: Boolean) {
         if (ReadConfig.ttsFollowSys) {
             if (reset) {
+                val shouldPlay = !pause && canStartPreparedPlayback
                 clearTTS()
+                playAfterTtsInit = shouldPlay
                 initTts()
             }
         } else {
@@ -728,6 +746,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
      */
     @Synchronized
     override fun resumeReadAloud() {
+        if (resumeAfterPreparation()) return
         super.resumeReadAloud()
         play()
     }

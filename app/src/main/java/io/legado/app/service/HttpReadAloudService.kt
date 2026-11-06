@@ -1912,6 +1912,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun resumeReadAloud() {
+        if (resumeAfterPreparation()) return
         super.resumeReadAloud()
         kotlin.runCatching {
             if (pageChanged) {
