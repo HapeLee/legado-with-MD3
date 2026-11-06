@@ -3,6 +3,7 @@ package io.legado.app.service
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -361,6 +362,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private var downloadTask: Coroutine<*>? = null
     private var preDownloadJob: Job? = null
     private var playIndexJob: Job? = null
+    private var playbackGeneration = 0L
     private var paragraphIntervalJob: Coroutine<*>? = null
     private var paragraphResumeJob: Coroutine<*>? = null
     private var downloadErrorNo: Int = 0
@@ -412,6 +414,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun play() {
+        playbackGeneration++
         pageChanged = false
         exoPlayer.stop()
         resetPitchSchedule()
@@ -459,17 +462,23 @@ class HttpReadAloudService : BaseReadAloudService(),
         // 在本线程（这里是主线程）算这一格的输入：contentList / nowSpeak / playbackQueue 都归主线程，
         // 挪进 IO 协程里读就是跨线程读一份会变的列表。
         val synthesis = cueSynthesisFor(index, httpTts, stream) ?: return
+        val bookUrl = bookSession.book?.bookUrl
+        val generation = playbackGeneration
         paragraphResumeJob = execute(executeContext = IO) {
-            if (!stream && !awaitSpeakFile(synthesis.fileName)) {
+            val downloaded = downloadedSpeechItem(bookUrl, synthesis)
+            if (downloaded == null && !stream && !awaitSpeakFile(synthesis.fileName)) {
                 // 合成任务已经不在这句话上了（本章循环跑完或出错）：退回完整重播，不能让朗读停死
                 launch(Main) { if (index == nowSpeak && !pause) play() }
                 return@execute
             }
             launch(Main) {
                 if (index != nowSpeak || pause || exoPlayer.mediaItemCount != 0) return@launch
-                if (stream) {
+                if (downloaded != null) {
+                    exoPlayer.setMediaItem(downloaded)
+                } else if (stream) {
                     val factory = createDataSourceFactory(
-                        synthesis.httpTts, synthesis.speakText, synthesis.voice, synthesis.emotion
+                        synthesis.httpTts, synthesis.speakText, synthesis.voice, synthesis.emotion,
+                        generation,
                     )
                     exoPlayer.setMediaSource(createMediaSource(factory, synthesis.fileName))
                 } else {
@@ -513,6 +522,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         get() = paragraphIntervalJob?.isActive == true || paragraphResumeJob?.isActive == true
 
     override fun playStop() {
+        playbackGeneration++
         downloadTask?.cancel()
         playIndexJob?.cancel()
         preDownloadJob?.cancel()
@@ -889,6 +899,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         exoPlayer.clearMediaItems()
         downloadTask?.cancel()
         preDownloadJob?.cancel()
+        val bookUrl = bookSession.book?.bookUrl
+        val generation = playbackGeneration
         downloadTask = execute {
             downloadTaskActiveLock.withLock {
                 ensureActive()
@@ -899,6 +911,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     if (index < nowSpeak) return@forEachIndexed
                     val synthesis = cueSynthesisFor(index, httpTts, stream = false)
                         ?: return@forEachIndexed
+                    val downloaded = downloadedSpeechItem(bookUrl, synthesis)
                     val routedVoice = synthesis.voice
                     val cue = synthesis.cue
                     val cueEmotion = synthesis.emotion
@@ -907,10 +920,10 @@ class HttpReadAloudService : BaseReadAloudService(),
                     val itemHttpTts = synthesis.httpTts
                     val fileName = synthesis.fileName
                     val speakText = synthesis.speakText
-                    if (speakText.isEmpty()) {
+                    if (downloaded == null && speakText.isEmpty()) {
                         AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：${synthesis.text}")
                         createSilentSound(fileName)
-                    } else if (!hasSpeakFile(fileName)) {
+                    } else if (downloaded == null && !hasSpeakFile(fileName)) {
                         withSpeakFileLock(fileName) {
                         // 等锁期间另一条路径可能已经把这句合成好了
                         if (!hasSpeakFile(fileName)) {
@@ -980,20 +993,16 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 }
                             }
                         }.onFailure {
-                            when (it) {
-                                is CancellationException -> Unit
-                                else -> pauseReadAloud()
-                            }
+                            if (it !is CancellationException) pauseAfterSynthesisError(generation)
                             return@execute
                         }
                         }
                         }
                     }
-                    if (speakText.isNotEmpty() && hasSpeakFile(fileName)) {
+                    if (downloaded == null && speakText.isNotEmpty() && hasSpeakFile(fileName)) {
                         writeTextIndexEntry(fileName, speakText)
                     }
-                    val file = speakFileForPlay(fileName)
-                    val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
+                    val mediaItem = downloaded ?: MediaItem.fromUri(Uri.fromFile(speakFileForPlay(fileName)))
                     launch(Main) {
                         if (readAloudSettings.ttsParagraphInterval > 0) {
                             if (index == nowSpeak && exoPlayer.mediaItemCount == 0 && !paragraphGapPending) {
@@ -1304,6 +1313,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         exoPlayer.clearMediaItems()
         downloadTask?.cancel()
         preDownloadJob?.cancel()
+        val bookUrl = bookSession.book?.bookUrl
+        val generation = playbackGeneration
         downloadTask = execute {
             downloadTaskActiveLock.withLock {
                 ensureActive()
@@ -1319,17 +1330,21 @@ class HttpReadAloudService : BaseReadAloudService(),
                     if (index < nowSpeak) return@forEachIndexed
                     val synthesis = cueSynthesisFor(index, httpTts, stream = true)
                         ?: return@forEachIndexed
-                    val speakText = synthesis.speakText
-                    if (speakText.isEmpty()) {
-                        AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：${synthesis.text}")
+                    val downloaded = downloadedSpeechItem(bookUrl, synthesis)
+                    val mediaSource = if (downloaded != null) {
+                        DefaultMediaSourceFactory(this@HttpReadAloudService).createMediaSource(downloaded)
+                    } else {
+                        val speakText = synthesis.speakText
+                        if (speakText.isEmpty()) {
+                            AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：${synthesis.text}")
+                        }
+                        val fileName = synthesis.fileName
+                        val dataSourceFactory = createDataSourceFactory(
+                            synthesis.httpTts, speakText, synthesis.voice, synthesis.emotion, generation,
+                        )
+                        downloaderChannel.send(createDownloader(dataSourceFactory, fileName))
+                        createMediaSource(dataSourceFactory, fileName)
                     }
-                    val fileName = synthesis.fileName
-                    val dataSourceFactory = createDataSourceFactory(
-                        synthesis.httpTts, speakText, synthesis.voice, synthesis.emotion
-                    )
-                    val downloader = createDownloader(dataSourceFactory, fileName)
-                    downloaderChannel.send(downloader)
-                    val mediaSource = createMediaSource(dataSourceFactory, fileName)
                     launch(Main) {
                         if (readAloudSettings.ttsParagraphInterval > 0) {
                             if (index == nowSpeak && exoPlayer.mediaItemCount == 0 && !paragraphGapPending) {
@@ -1464,7 +1479,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         httpTts: HttpTTS,
         speakText: String,
         voice: ReadAloudVoice? = null,
-        emotionTag: String = ""
+        emotionTag: String = "",
+        generation: Long? = null,
     ): CacheDataSource.Factory {
         val upstreamFactory = DataSource.Factory {
             InputStreamDataSource {
@@ -1480,7 +1496,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                             is InterruptedException,
                             is CancellationException -> Unit
 
-                            else -> pauseReadAloud()
+                            else -> generation?.let(::pauseAfterSynthesisError)
                         }
                     }.getOrThrow()
                 } ?: resources.openRawResource(R.raw.silent_sound)
@@ -1491,6 +1507,13 @@ class HttpReadAloudService : BaseReadAloudService(),
             .setUpstreamDataSourceFactory(upstreamFactory)
             .setCacheWriteDataSinkFactory(cacheDataSinkFactory)
         return factory
+    }
+
+    private fun pauseAfterSynthesisError(generation: Long) {
+        // 合成在后台执行，状态和播放器必须一起在主线程暂停。旧队列迟到的错误不能暂停新队列。
+        lifecycleScope.launch {
+            if (generation == playbackGeneration && isRun && !pause) pauseReadAloud()
+        }
     }
 
     private fun createDownloader(factory: CacheDataSource.Factory, fileName: String): Downloader {
@@ -1599,6 +1622,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         val text: String,
         val speakText: String,
         val fileName: String,
+        val downloadedFileName: String,
+        val startFraction: Double,
         val httpTts: HttpTTS,
         val voice: ReadAloudVoice,
         val emotion: String,
@@ -1607,28 +1632,52 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     private fun cueSynthesisFor(index: Int, default: HttpTTS, stream: Boolean): CueSynthesis? {
         val content = contentList.getOrNull(index) ?: return null
-        var text = content
-        if (paragraphStartPos > 0 && index == nowSpeak) {
-            text = text.substring(paragraphStartPos)
-        }
+        val startOffset = if (index == nowSpeak) paragraphStartPos.coerceIn(0, content.length) else 0
         // 偏移用完才去掉标记，合成与文件名都用这一份干净文本
-        text = speechText(text)
+        val text = speechText(content.substring(startOffset))
+        val fullText = if (startOffset == 0) text else speechText(content)
         val cue = playbackQueue.cues.getOrNull(index)
-        val voice =
-            if (stream) httpVoiceForCue(index, default) else voiceForCue(playbackQueue, index, default)
+        val downloadVoice = voiceForCue(playbackQueue, index, default)
+        val voice = if (stream) httpVoiceForCue(index, default) else downloadVoice
         val itemHttpTts = httpSourceForVoice(voice, default)
         val emotion = cue?.emotion.orEmpty()
-        val sourceKey =
-            if (stream) httpSourceKey(voice, emotion, default) else sourceKeyForCue(voice, cue, default)
+        val downloadSourceKey = sourceKeyForCue(downloadVoice, cue, default)
+        val sourceKey = if (stream) httpSourceKey(voice, emotion, default) else downloadSourceKey
         return CueSynthesis(
             text = text,
             speakText = text.readAloudSpeechText(),
             fileName = md5SpeakFileName(text, httpTts = itemHttpTts, sourceKey = sourceKey),
+            downloadedFileName = md5SpeakFileName(fullText, sourceKey = downloadSourceKey),
+            startFraction = (fullText.length - text.length).coerceAtLeast(0).toDouble() /
+                fullText.length.coerceAtLeast(1),
             httpTts = itemHttpTts,
             voice = voice,
             emotion = emotion,
             cue = cue,
         )
+    }
+
+    private fun downloadedSpeechItem(bookUrl: String?, synthesis: CueSynthesis): MediaItem? {
+        val file = ReadAloudAudioStore.downloadedFile(bookUrl, synthesis.downloadedFileName) ?: return null
+        val item = MediaItem.Builder().setUri(Uri.fromFile(file))
+        if (synthesis.startFraction > 0.0) {
+            // 下载区保存整段。句中续听按正文比例裁去已读部分，进度仍以剩余音频为准。
+            val duration = runCatching {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(file.absolutePath)
+                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                } finally {
+                    retriever.release()
+                }
+            }.getOrNull()?.takeIf { it > 0 } ?: return null
+            item.setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder()
+                    .setStartPositionMs((duration * synthesis.startFraction).toLong().coerceAtMost(duration - 1))
+                    .build()
+            )
+        }
+        return item.build()
     }
 
     /**
