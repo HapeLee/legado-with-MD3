@@ -5,6 +5,7 @@ import io.legado.app.data.repository.manga.translation.MangaTranslationRepositor
 import io.legado.app.domain.gateway.MangaTranslationGateway
 import io.legado.app.feature.manga.translation.MangaTranslationViewModel
 import io.legado.app.feature.settings.manga.MangaConfigViewModel
+import io.legado.app.feature.settings.search.SettingsSearchViewModel
 import io.legado.app.domain.gateway.AiImageGateway
 import io.legado.app.data.repository.ai.AiImageRepository
 import io.legado.app.data.repository.manga.translation.MangaImageEditor
@@ -434,6 +435,7 @@ val appModule = module {
         cloudIdentity = get<io.legado.app.data.repository.manga.translation.MangaCloudOcr>()::identity) }
     viewModelOf(::MangaTranslationViewModel)
     viewModelOf(::MangaConfigViewModel)
+    viewModelOf(::SettingsSearchViewModel)
     single<ChangeSourceSettingsGateway> { ChangeSourceSettingsRepository() }
     single<ImportBookSettingsGateway> { ImportBookSettingsRepository() }
     single<TranslationSettingsGateway> { TranslationSettingsRepository() }

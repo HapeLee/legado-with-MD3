@@ -89,15 +89,19 @@ class MangaConfigScreenTest {
 
     @Test fun `settings hub opens manga next to reading and back returns to the hub`() {
         val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
+        var searched = false
         compose.setContent { CompositionLocalProvider(LocalInspectionMode provides true) { AppTheme(AppUiConfiguration()) {
             var manga by rememberSaveable { mutableStateOf(false) }
             if (manga) MangaConfigScreen(MangaConfigUiState(), {}, { manga = false }, {}, {})
             else ConfigNavScreen(onBackClick = {}, onNavigateToOther = {}, onNavigateToRead = {},
                 onNavigateToManga = { manga = true }, onNavigateToReadAloud = {}, onNavigateToCover = {},
                 onNavigateToTheme = {}, onNavigateToBackup = {}, onNavigateToAi = {}, onNavigateToDownloadCache = {},
-                onNavigateToTranslation = {}, onNavigateToLab = {}, onNavigateToPrivate = {}, onNavigateToBubble = {})
+                onNavigateToTranslation = {}, onNavigateToLab = {}, onNavigateToPrivate = {}, onNavigateToBubble = {},
+                onSearchSettings = { searched = true })
         } } }
         row(R.string.read_config).assertIsDisplayed()
+        compose.onNodeWithContentDescription(app.getString(R.string.settings_search_title)).performClick()
+        assertTrue(searched)
         row(R.string.manga_config).performClick()
         row(R.string.show_manga_ui).assertIsDisplayed()
         compose.onNodeWithContentDescription(app.getString(R.string.back)).performClick()

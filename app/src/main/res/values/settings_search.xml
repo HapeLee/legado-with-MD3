@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_title">Search settings</string>
+    <string name="settings_search_scope">Search all settings</string>
+    <string name="settings_search_prompt">Find a setting by name or keyword</string>
+    <string name="settings_search_empty">No matching settings</string>
+    <string name="settings_search_count">%1$d results</string>
+    <string name="settings_search_clear">Clear search</string>
+    <string name="settings_search_path">%1$s › %2$s</string>
+    <string name="settings_search_located">Search target</string>
+    <string name="settings_search_brightness_condition">Available when the brightness bar mode is %1$s</string>
+    <string name="settings_search_brightness_guidance">To change the brightness bar position, set the brightness bar mode to %1$s first.</string>
+    <string name="settings_search_eye_keywords">blue light warm color temperature night protection</string>
+    <string name="settings_search_brightness_keywords">brightness bar light adjustment</string>
+    <string name="settings_search_volume_keywords">volume button physical keys page turning</string>
+    <string name="settings_search_touch_keywords">tap touch zones page turning gestures</string>
+    <string name="settings_search_key_keywords">keyboard physical buttons shortcuts page turning</string>
+    <string name="settings_search_container_background">Container background images</string>
+    <string name="settings_search_large_background">Large container background image</string>
+    <string name="settings_search_item_background">Item background image</string>
+    <string name="settings_search_condition">Visibility depends on %1$s</string>
+    <string name="settings_search_prerequisite">To find %1$s, check %2$s first. It is hidden in the current configuration.</string>
+    <string name="settings_search_unavailable">%1$s is unavailable in the current mode or configuration.</string>
+    <string name="settings_search_theme_keywords">appearance theme skin display personalization</string>
+    <string name="settings_search_advanced_keywords">advanced other general language updates web service</string>
+</resources>

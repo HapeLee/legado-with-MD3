@@ -24,6 +24,7 @@
 | `ui/book/read`                           | `platform/android/reader`   | platform island               | 当前不作为普通 Feature 搬迁；共享状态/模型另行立项                                               |
 | `ui/book/manga`                          | `feature/manga`             | Feature + renderer capability | 图片渲染、缓存和手势需专项边界审计                                                            |
 | `ui/config/*`                            | `feature/settings`          | Feature domain                | 先保留 settings 下的 `appearance`、`reading`、`backup`、`advanced` 等 section，不为每页建模块 |
+| 设置项搜索与条目目录                    | `feature/settings/search`、`feature/settings/reading` | Settings section | 17 类设置入口的目录、匹配与定位 owner；各页业务继续由现有 Screen/ViewModel 承接，详见 `settings-search.md` |
 | 漫画全局设置入口                              | `feature/settings/manga`    | Settings section              | `:app` 内的 Compose 页面；复用 MangaSettings／ReadSettings／MangaTranslation Gateway，宿主将漫画翻译 Feature 的全局选项内联到翻译分组 |
 | `ui/theme`                               | `core/designsystem`         | core candidate                | theme engine、token 与基础主题；Feature 专属样式不进入 core                                |
 | `ui/widget/components`                   | owner audit                 | core/ui candidate             | 有至少两个 Feature 调用且职责稳定的组件才进入 `core/ui` 或 `core/designsystem`                  |

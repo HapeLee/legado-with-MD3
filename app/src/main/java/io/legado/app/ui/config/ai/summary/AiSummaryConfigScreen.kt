@@ -1,10 +1,11 @@
 package io.legado.app.ui.config.ai.summary
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -95,7 +96,7 @@ fun AiSummaryConfigScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -104,44 +105,52 @@ fun AiSummaryConfigScreen(
         ) {
             item {
                 SplicedColumnGroup(title = stringResource(R.string.ai_prompt_setting)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.ai_custom_prompt),
-                        description = stringResource(R.string.ai_custom_prompt_desc),
-                        onClick = {
-                            onIntent(AiSummaryConfigIntent.OpenPromptDialog(state.promptTemplate))
-                        }
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.ai_reset_prompt),
-                        description = stringResource(R.string.ai_prompt_template),
-                        onClick = {
-                            onIntent(AiSummaryConfigIntent.ResetPrompt)
-                        }
-                    )
+                    SearchableSetting("summary.ai_custom_prompt") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.ai_custom_prompt),
+                            description = stringResource(R.string.ai_custom_prompt_desc),
+                            onClick = {
+                                onIntent(AiSummaryConfigIntent.OpenPromptDialog(state.promptTemplate))
+                            }
+                        )
+                    }
+                    SearchableSetting("summary.ai_reset_prompt") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.ai_reset_prompt),
+                            description = stringResource(R.string.ai_prompt_template),
+                            onClick = {
+                                onIntent(AiSummaryConfigIntent.ResetPrompt)
+                            }
+                        )
+                    }
                 }
             }
             item {
                 SplicedColumnGroup(title = stringResource(R.string.ai_param_setting)) {
-                    SliderSettingItem(
-                        title = stringResource(R.string.ai_temperature),
-                        value = state.temperature,
-                        defaultValue = TranslationConstants.DEFAULT_TEMPERATURE,
-                        valueRange = TranslationConstants.MIN_TEMPERATURE..TranslationConstants.MAX_TEMPERATURE,
-                        steps = 19,
-                        description = state.temperature.toString(),
-                        decimal = true,
-                        onValueChange = { onIntent(AiSummaryConfigIntent.UpdateTemperature(it)) }
-                    )
-                    InputSettingItem(
-                        title = stringResource(R.string.ai_max_output_tokens),
-                        value = if (state.maxOutputTokens > 0) state.maxOutputTokens.toString() else "",
-                        defaultValue = "0",
-                        description = if (state.maxOutputTokens > 0) stringResource(R.string.ai_current_value, formatTokenLimit(state.maxOutputTokens)) else stringResource(R.string.ai_not_set),
-                        onConfirm = { input ->
-                            val tokens = input.trim().toIntOrNull() ?: 0
-                            onIntent(AiSummaryConfigIntent.UpdateMaxOutputTokens(tokens))
-                        }
-                    )
+                    SearchableSetting("summary.ai_temperature") {
+                        SliderSettingItem(
+                            title = stringResource(R.string.ai_temperature),
+                            value = state.temperature,
+                            defaultValue = TranslationConstants.DEFAULT_TEMPERATURE,
+                            valueRange = TranslationConstants.MIN_TEMPERATURE..TranslationConstants.MAX_TEMPERATURE,
+                            steps = 19,
+                            description = state.temperature.toString(),
+                            decimal = true,
+                            onValueChange = { onIntent(AiSummaryConfigIntent.UpdateTemperature(it)) }
+                        )
+                    }
+                    SearchableSetting("summary.ai_max_output_tokens") {
+                        InputSettingItem(
+                            title = stringResource(R.string.ai_max_output_tokens),
+                            value = if (state.maxOutputTokens > 0) state.maxOutputTokens.toString() else "",
+                            defaultValue = "0",
+                            description = if (state.maxOutputTokens > 0) stringResource(R.string.ai_current_value, formatTokenLimit(state.maxOutputTokens)) else stringResource(R.string.ai_not_set),
+                            onConfirm = { input ->
+                                val tokens = input.trim().toIntOrNull() ?: 0
+                                onIntent(AiSummaryConfigIntent.UpdateMaxOutputTokens(tokens))
+                            }
+                        )
+                    }
                 }
             }
         }

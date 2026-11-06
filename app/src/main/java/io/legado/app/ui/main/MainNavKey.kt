@@ -71,6 +71,16 @@ data class MainRouteRssSourceDebug(val sourceUrl: String? = null) : MainRoute
 data object MainRouteSettings : MainRoute
 
 @Serializable
+data object MainRouteSettingsSearch : MainRoute
+
+@Serializable
+data class MainRouteSettingsTarget(val settingId: String) : MainRoute
+
+/** A separate key keeps saved stacks and legacy reading-settings entries compatible. */
+@Serializable
+data class MainRouteSettingsReadTarget(val settingId: String) : MainRoute
+
+@Serializable
 data object MainRouteSettingsOther : MainRoute
 
 @Serializable

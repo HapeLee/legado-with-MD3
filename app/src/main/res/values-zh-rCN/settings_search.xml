@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_title">搜索设置项</string>
+    <string name="settings_search_scope">搜索全部设置</string>
+    <string name="settings_search_prompt">输入名称或关键词，查找设置项</string>
+    <string name="settings_search_empty">没有找到匹配的设置项</string>
+    <string name="settings_search_count">%1$d 项结果</string>
+    <string name="settings_search_clear">清空搜索</string>
+    <string name="settings_search_path">%1$s › %2$s</string>
+    <string name="settings_search_located">搜索定位项</string>
+    <string name="settings_search_brightness_condition">亮度条设为“%1$s”时可用</string>
+    <string name="settings_search_brightness_guidance">要调整亮度条位置，请先将亮度条模式设为“%1$s”。</string>
+    <string name="settings_search_eye_keywords">蓝光 暖色 色温 夜间 护眼</string>
+    <string name="settings_search_brightness_keywords">亮度条 屏幕亮度 调节</string>
+    <string name="settings_search_volume_keywords">音量按钮 音量按键 实体键 翻页</string>
+    <string name="settings_search_touch_keywords">点击区域 触摸 手势 翻页</string>
+    <string name="settings_search_key_keywords">键盘 实体按键 快捷键 翻页</string>
+    <string name="settings_search_container_background">容器背景图</string>
+    <string name="settings_search_large_background">大容器背景图片</string>
+    <string name="settings_search_item_background">项目背景图片</string>
+    <string name="settings_search_condition">显示条件与“%1$s”相关</string>
+    <string name="settings_search_prerequisite">“%1$s”在当前配置下未显示，请先检查“%2$s”。</string>
+    <string name="settings_search_unavailable">“%1$s”在当前模式或配置下不可用。</string>
+    <string name="settings_search_theme_keywords">外观 主题 皮肤 界面 个性化</string>
+    <string name="settings_search_advanced_keywords">高级 其他 通用 语言 更新 网页服务</string>
+</resources>
