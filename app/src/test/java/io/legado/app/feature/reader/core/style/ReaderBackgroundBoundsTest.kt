@@ -40,6 +40,24 @@ class ReaderBackgroundBoundsTest {
 
     private val bubble = ReaderTextBackgroundImage(source = "bubble.png", fit = 3, scale = 1f)
 
+    @Test fun markedBandsStaySemanticAndSeparateAcrossUnmarkedText() {
+        fun text(left: Float, marked: Boolean, color: Int? = null) =
+            textElement(left, left + 1f, 0f, 50f, color).let { it.copy(style = it.style.copy(marked = marked)) }
+        val bands = listOf(text(0f, true), text(1f, true), text(2f, false), text(3f, true))
+            .mergeBackgroundBounds()
+        assertEquals(2, bands.size)
+        assertEquals(ReaderRect(0f, 0f, 2f, 50f), bands[0].bounds)
+        assertEquals(ReaderRect(3f, 0f, 4f, 50f), bands[1].bounds)
+        assertNull(bands[0].fillColorArgb)
+        assertEquals(0x47112233, bands[0].resolvedFillColorArgb(0x47112233))
+        assertEquals(0x47445566, bands[0].resolvedFillColorArgb(0x47445566))
+        val explicit = listOf(text(0f, true, 123)).mergeBackgroundBounds().single()
+        assertEquals(123, explicit.resolvedFillColorArgb(456))
+        assertEquals(false, explicit.marked)
+        val image = text(0f, true).let { it.copy(style = it.style.copy(backgroundImage = bubble)) }
+        assertEquals(emptyList<ReaderBackgroundBand>(), listOf(image).mergeBackgroundBounds())
+    }
+
     @Test fun mergesAdjacentSameColorBoxesOnTheSameLine() {
         val red = 0xFFAA0000.toInt()
         val bands = listOf(

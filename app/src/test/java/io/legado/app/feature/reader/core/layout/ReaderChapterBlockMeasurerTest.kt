@@ -57,6 +57,36 @@ class ReaderChapterBlockMeasurerTest {
     }
 
     @Test
+    fun localMarkColorAndSizeReachPagedGlyphsWithoutChangingPositions() = runBlocking {
+        val html = "<p id='n'><mark style='color:red;font-size:150%'>甲乙</mark>" +
+            "<small><a href='#n'>丙丁</a></small>戊己庚辛壬癸</p>"
+        val appearance = checkNotNull(io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(html))
+        val source = ReaderChapterSourceParser.parse(0, "",
+            io.legado.app.help.book.MixedContentSegments.paragraphs(appearance.content, "", false),
+            false, true, localPresentation = appearance)
+        val measured = ReaderChapterBlockMeasurer(shaper, shaper, { null })
+            .measure(source, style.copy(bodyIndentCharacters = 0)) as ReaderChapterMeasureResult.Success
+        val pages = ReaderPaginator.paginateBlocks(measured.blocks, ReaderPaginationConfig(
+            0, "", 30, 30, 0f, 0f, 0f, 0f, 10f, 8f))
+        val glyphs = pages.flatMap { it.elements }.filterIsInstance<io.legado.app.feature.reader.core.model.ReaderElement.Text>()
+        assertTrue(pages.size > 1)
+        assertEquals("甲乙丙丁戊己庚辛壬癸", glyphs.joinToString("") { it.value })
+        assertEquals((0..9).toList(), glyphs.map { it.chapterPosition })
+        assertEquals(listOf(true, true) + List(8) { false }, glyphs.map { it.style.marked })
+        assertEquals(0xFFFF0000.toInt(), glyphs.first().style.colorArgb)
+        assertEquals(15f, glyphs.first().style.fontSizePx, 0.001f)
+        assertEquals(8f, glyphs[2].style.fontSizePx, 0.001f)
+        assertEquals("#n", glyphs[2].link)
+        pages.forEach { page ->
+            val rows = page.elements.filterIsInstance<io.legado.app.feature.reader.core.model.ReaderElement.Text>()
+                .groupBy { it.baselinePx }.values.toList()
+            rows.zipWithNext().forEach { (previous, next) ->
+                assertTrue(previous.maxOf { it.bounds.bottom } <= next.minOf { it.bounds.top } + 0.001f)
+            }
+        }
+    }
+
+    @Test
     fun profilingKeepsMeasuredBlocksIdenticalWhenMostCharactersHaveNoStyle() = runBlocking {
         val source = ReaderChapterSourceParser.parse(0, "", listOf("甲乙丙丁"), false, false)
         val measuredStyle = style.copy(

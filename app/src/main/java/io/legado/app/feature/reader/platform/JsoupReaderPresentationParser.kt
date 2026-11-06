@@ -22,7 +22,8 @@ internal object JsoupReaderPresentationParser {
         val fontFamily: String? = null,
         val fontSizeScale: Float = 1f,
         val superscript: Boolean = false,
-        val subscript: Boolean = false
+        val subscript: Boolean = false,
+        val marked: Boolean = false,
     )
 
     private data class BlockCtx(
@@ -30,7 +31,6 @@ internal object JsoupReaderPresentationParser {
         val quoteDepth: Int = 0,
         val listStack: List<ListLevel> = emptyList(),
         val inPre: Boolean = false,
-        val headingScale: Float = 1f,
         val headingBold: Boolean = false,
         /** 表格、图注、定义列表等结构化块：排版由 HTML 语义决定，不套阅读器正文缩进。 */
         val structural: Boolean = false,
@@ -79,8 +79,8 @@ internal object JsoupReaderPresentationParser {
                     fontWeight = when (inline.bold) { true -> 700; false -> null; null -> if (block.headingBold) 700 else null },
                     italic = inline.italic.takeIf { it == true }, underline = inline.underline,
                     strikeThrough = inline.strike, link = inline.link,
-                    fontSizeScale = inline.fontSizeScale * block.headingScale, fontFamily = inline.fontFamily,
-                    superscript = inline.superscript, subscript = inline.subscript))
+                    fontSizeScale = inline.fontSizeScale.coerceIn(0.5f, 2f), fontFamily = inline.fontFamily,
+                    superscript = inline.superscript, subscript = inline.subscript, marked = inline.marked))
                 include(start, end)
                 if (block.inPre) {
                     val raw = html.substring(start, end)
@@ -127,7 +127,8 @@ internal object JsoupReaderPresentationParser {
         }
         val context = BlockCtx(alignment = parseAlignment(body))
         current = blockGeometry(context, 10f, 1f)
-        body.childNodes().forEach { walk(it, InlineCtx(), context) }
+        val bodyInline = descendInline(body, "body", InlineCtx())
+        body.childNodes().forEach { walk(it, bodyInline, context) }
         flush()
         return ReaderLocalPresentation(html, spans, paragraphs, rules, anchors)
     }
@@ -181,7 +182,6 @@ internal object JsoupReaderPresentationParser {
                 block.listStack.isEmpty() &&
                 !block.inPre &&
                 !block.structural &&
-                block.headingScale <= 1f &&
                 !block.headingBold,
             listItem = item,
         )
@@ -198,7 +198,6 @@ internal object JsoupReaderPresentationParser {
         var quoteDepth = parent.quoteDepth
         var listStack = parent.listStack
         var inPre = parent.inPre
-        var headingScale = parent.headingScale
         var headingBold = parent.headingBold
         var structural = parent.structural
         var listItem = parent.listItem
@@ -218,16 +217,12 @@ internal object JsoupReaderPresentationParser {
             }
             "pre" -> inPre = true
             "center" -> alignment = ReaderTextAlignment.CENTER
-            "h1" -> { headingScale = 1.35f; headingBold = true }
-            "h2" -> { headingScale = 1.25f; headingBold = true }
-            "h3" -> { headingScale = 1.15f; headingBold = true }
-            "h4" -> { headingScale = 1.05f; headingBold = true }
-            "h5", "h6" -> { headingScale = 1f; headingBold = true }
+            "h1", "h2", "h3", "h4", "h5", "h6" -> headingBold = true
             "tr", "td", "th", "figure", "figcaption",
             "aside", "dl", "dt", "dd" -> structural = true
         }
         // li does not push a new level; its parent ul/ol already did.
-        return BlockCtx(alignment, quoteDepth, listStack, inPre, headingScale, headingBold, structural, listItem)
+        return BlockCtx(alignment, quoteDepth, listStack, inPre, headingBold, structural, listItem)
     }
 
     private fun descendInline(el: Element, tag: String, parent: InlineCtx): InlineCtx {
@@ -240,6 +235,12 @@ internal object JsoupReaderPresentationParser {
             "code", "kbd", "samp", "tt" -> out = out.copy(
                 fontFamily = out.fontFamily ?: "monospace"
             )
+            "mark" -> out = out.copy(marked = true)
+            "h1" -> out = out.copy(fontSizeScale = parent.fontSizeScale * 1.35f)
+            "h2" -> out = out.copy(fontSizeScale = parent.fontSizeScale * 1.25f)
+            "h3" -> out = out.copy(fontSizeScale = parent.fontSizeScale * 1.15f)
+            "h4" -> out = out.copy(fontSizeScale = parent.fontSizeScale * 1.05f)
+            "h5", "h6" -> out = out.copy(fontSizeScale = parent.fontSizeScale)
             "sup" -> out = out.copy(superscript = true)
             "sub" -> out = out.copy(subscript = true)
             "big" -> out = out.copy(fontSizeScale = out.fontSizeScale * 1.25f)
@@ -252,11 +253,8 @@ internal object JsoupReaderPresentationParser {
             // default (reader unified style): ignore original <font color/face> structure only.
             // TODO: Add Colors/fonts with the AN original-typography switch.
             }
-            // Keeps <mark> semantics only (no theme-coupled background);
-            // TODO: Adds theme-adaptive emphasis styling.
         }
-        // Inline style hints (structure only）
-        // TODO: color/background/font-size (not promoted).
+        // Consume only the supported appearance subset; canonical text is unchanged.
         val style = el.attr("style")
         if (style.isNotEmpty()) {
             val declarations = style.split(";").mapNotNull { decl ->
@@ -283,10 +281,64 @@ internal object JsoupReaderPresentationParser {
                 if ("underline" in lower) out = out.copy(underline = true)
                 if ("line-through" in lower) out = out.copy(strike = true)
             }
-            // Ignores original color/background/font-size
-        // TODO: kept in DOM.
+            declarations["color"]?.let { value ->
+                when (value.lowercase()) {
+                    "initial" -> out = out.copy(colorArgb = null)
+                    "inherit", "currentcolor" -> out = out.copy(colorArgb = parent.colorArgb)
+                    else -> parseColor(value)?.let { out = out.copy(colorArgb = it) }
+                }
+            }
+            declarations["font-size"]?.let { value ->
+                parseFontSize(value, parent.fontSizeScale)?.let { out = out.copy(fontSizeScale = it) }
+            }
         }
         return out
+    }
+
+    private val basicColors = mapOf(
+        "black" to 0x000000, "silver" to 0xC0C0C0, "gray" to 0x808080, "white" to 0xFFFFFF,
+        "maroon" to 0x800000, "red" to 0xFF0000, "purple" to 0x800080, "fuchsia" to 0xFF00FF,
+        "green" to 0x008000, "lime" to 0x00FF00, "olive" to 0x808000, "yellow" to 0xFFFF00,
+        "navy" to 0x000080, "blue" to 0x0000FF, "teal" to 0x008080, "aqua" to 0x00FFFF,
+    )
+    private val hexColor = Regex("#[0-9a-f]{3}([0-9a-f]{3})?")
+    private val rgbColor = Regex("rgb\\(\\s*([0-9]{1,3})\\s*,\\s*([0-9]{1,3})\\s*,\\s*([0-9]{1,3})\\s*\\)")
+    private val relativeSize = Regex("([0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(%|em)")
+
+    private fun parseColor(value: String): Int? {
+        val normalized = value.trim().lowercase()
+        val rgb = basicColors[normalized] ?: when {
+            hexColor.matches(normalized) -> {
+                val digits = normalized.drop(1)
+                (if (digits.length == 3) digits.flatMap { listOf(it, it) }.joinToString("") else digits).toInt(16)
+            }
+            else -> {
+                val channels = rgbColor.matchEntire(normalized)?.groupValues?.drop(1)
+                    ?.map { it.toInt() } ?: return null
+                if (channels.any { it !in 0..255 }) return null
+                (channels[0] shl 16) or (channels[1] shl 8) or channels[2]
+            }
+        }
+        return 0xFF000000.toInt() or rgb
+    }
+
+    private fun parseFontSize(value: String, parent: Float): Float? {
+        val normalized = value.trim().lowercase()
+        val scale = when (normalized) {
+            "small" -> 0.8f
+            "medium", "initial" -> 1f
+            "large" -> 1.25f
+            "smaller" -> parent * 0.8f
+            "larger" -> parent * 1.25f
+            "inherit" -> parent
+            else -> {
+                val match = relativeSize.matchEntire(normalized) ?: return null
+                val amount = match.groupValues[1].toFloatOrNull()?.takeIf { it.isFinite() && it > 0f }
+                    ?: return null
+                parent * (if (match.groupValues[2] == "%") amount / 100f else amount)
+            }
+        }
+        return scale.takeIf { it.isFinite() && it > 0f }
     }
 
     private fun parseAlignment(el: Element): ReaderTextAlignment? {

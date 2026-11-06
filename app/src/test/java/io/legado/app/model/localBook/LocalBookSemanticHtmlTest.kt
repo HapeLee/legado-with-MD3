@@ -165,7 +165,7 @@ class LocalBookSemanticHtmlTest {
         val first = paragraphs.first()!!
         assertTrue(first.attr("style").contains("text-align: center"))
         assertTrue(first.attr("style").contains("font-weight: bold"))
-        assertEquals("text-align: center; font-style: italic", paragraphs.last()!!.attr("style"))
+        assertEquals("text-align: center; color: red; font-style: italic", paragraphs.last()!!.attr("style"))
     }
 
     @Test

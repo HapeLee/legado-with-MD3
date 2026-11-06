@@ -117,6 +117,38 @@ class ContentProcessorSemanticIntegrationTest {
     private fun textItems(source: ReaderChapterSource) = source.blocks.filterIsInstance<ReaderChapterSourceBlock.Paragraph>()
         .flatMap { it.items }.filterIsInstance<ReaderChapterInlineSource.Text>()
 
+    @Test fun localCssPresentationSurvivesTheRealProcessingEntryWithoutChangingBody() = runBlocking {
+        val document = Jsoup.parse("<head><style>.note {color:#123456;font-size:80%}</style></head>" +
+            "<body><p id='n'>甲<mark class='note'>乙<a href='#n'>丙</a></mark>丁</p></body>")
+        val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(document.body().outerHtml())
+        book.origin = io.legado.app.constant.BookType.localTag
+        book.originName = "fixture.epub"
+        book.type = 0
+        BookHelp.saveText(book, chapter, raw)
+        for (enabled in listOf(true, false)) {
+            read.update { it.copy(adaptSpecialStyle = enabled) }
+            val processed = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false,
+                paragraphIndent = "", includePresentation = true, localPresentationProvider = {
+                    val copy = document.clone()
+                    io.legado.app.model.localBook.LocalBookSemanticHtml.inlineDocumentCssSemantics(copy) { null }
+                    ReaderLocalPresentationResolver.resolve(copy.body().outerHtml())
+                })
+            val current = source(processed)
+            assertEquals("甲乙丙丁\n", current.semanticContent)
+            assertEquals(listOf(0), current.paragraphs.map { it.ordinal })
+            if (enabled) {
+                val marked = textItems(current).filter { it.style.marked }
+                assertEquals("乙丙", marked.joinToString("") { it.value })
+                assertTrue(marked.all { it.style.colorArgb == 0xFF123456.toInt() })
+                assertTrue(marked.all { kotlin.math.abs(it.style.fontSizeScale - 0.8f) < 0.001f })
+                assertEquals("#n", marked.last().style.link)
+                assertEquals(0, current.anchorPositions["n"])
+            } else {
+                assertTrue(textItems(current).none { it.style.marked || it.style.colorArgb != null })
+            }
+        }
+    }
+
     @Test fun oldBgmRecordsKeepTheirTargetAcrossStyleSwitchesAndAllConsumers() = runBlocking {
         val sample = io.legado.app.support.ReaderSemanticFixtures
         val raw = io.legado.app.model.localBook.LocalBookSemanticHtml.plainText(Jsoup.parse(sample.html).body().outerHtml())

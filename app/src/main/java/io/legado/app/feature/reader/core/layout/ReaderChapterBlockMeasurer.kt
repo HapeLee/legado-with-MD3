@@ -782,6 +782,7 @@ private fun ReaderImageLayoutMode.toScaleMode(): ReaderImageScaleMode = when (th
 private fun ReaderTextStyle.merge(override: ReaderInlineSourceStyle): ReaderTextStyle = copy(
     colorArgb = override.colorArgb ?: colorArgb,
     backgroundArgb = override.backgroundArgb ?: backgroundArgb,
+    marked = override.marked || marked,
     fontWeight = override.fontWeight ?: fontWeight,
     italic = override.italic ?: italic,
     fontSizePx = fontSizePx * override.fontSizeScale,
