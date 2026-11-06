@@ -100,6 +100,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -1982,31 +1983,30 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     private fun upPlayPos() {
         playIndexJob?.cancel()
-        if (readerReadAloudChapter == null) return
+        val index = nowSpeak
+        if (readerReadAloudChapter == null || isChapterTitleAt(index)) return
+        val paragraphLength = contentList.getOrNull(index)?.length ?: return
+        val startOffset = paragraphStartPos
+        if (paragraphLength <= startOffset) return
+        val chapterStart = readAloudNumber
+        val mediaIndex = exoPlayer.currentMediaItemIndex
         playIndexJob = lifecycleScope.launch {
-            if (isChapterTitleAt(nowSpeak)) return@launch
-            if (exoPlayer.duration <= 0) {
-                upTtsProgress(readAloudNumber + paragraphStartPos + 1)
-                return@launch
-            }
-            val startOffset = paragraphStartPos
-            val speakTextLength = contentList[nowSpeak].length - startOffset
-            if (speakTextLength <= 0) {
-                return@launch
-            }
-            val sleep = exoPlayer.duration / speakTextLength
-            val start = httpReadAloudParagraphOffset(
-                contentList[nowSpeak].length, startOffset,
-                exoPlayer.currentPosition, exoPlayer.duration,
-            )
-            upTtsProgress(readAloudNumber + start)
-            for (i in start until contentList[nowSpeak].length) {
-                val chapterPosition = readAloudNumber + i
-                updateReadAloudProgressSnapshot(chapterPosition)
-                if (moveToReadAloudPage(chapterPosition)) {
-                    upTtsProgress(chapterPosition)
+            var lastOffset = -1
+            while (isActive && !pause && nowSpeak == index && exoPlayer.currentMediaItemIndex == mediaIndex) {
+                // 媒体时间会随语速变化，缓冲时则停住。按实际播放头更新进度。
+                if (exoPlayer.isPlaying) {
+                    val offset = httpReadAloudParagraphOffset(
+                        paragraphLength, startOffset, exoPlayer.currentPosition, exoPlayer.duration,
+                    ).coerceAtMost(paragraphLength - 1)
+                    if (offset > lastOffset) {
+                        val chapterPosition = chapterStart + offset
+                        updateReadAloudProgressSnapshot(chapterPosition)
+                        val pageChanged = moveToReadAloudPage(chapterPosition)
+                        if (lastOffset < 0 || pageChanged) upTtsProgress(chapterPosition)
+                        lastOffset = offset
+                    }
                 }
-                delay(sleep)
+                delay(40)
             }
         }
     }

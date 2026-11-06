@@ -180,7 +180,7 @@ class ReadAloudDelegate(
     // --- 播放控制 ---
 
     fun updateProgress(chapterStart: Int) {
-        if (ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay() && chapterStart > 0) {
+        if (ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay() && chapterStart >= 0) {
             host.publishReadAloudProgress(chapterStart)
         }
     }

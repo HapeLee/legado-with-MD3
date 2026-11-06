@@ -54,6 +54,7 @@ import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.reader.core.navigation.ReaderChapterPagePosition
 import io.legado.app.feature.reader.core.navigation.ReaderPageContext
+import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPosition
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isEpub
@@ -183,9 +184,15 @@ class ReadBookViewModel(
         activeReadAloudProgress(
             isPlaying = ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay(),
             currentProgress = BaseReadAloudService.currentProgress,
-        )
+        )?.let(::readAloudPositionAt)
     )
     val readAloudProgress = _readAloudProgress.asStateFlow()
+
+    private fun readAloudPositionAt(chapterPosition: Int): ReaderVisibleTextPosition? =
+        BaseReadAloudService.currentChapterIndex.takeIf { it >= 0 }?.let { chapterIndex ->
+            ReaderVisibleTextPosition(chapterIndex, chapterPosition)
+        }
+
     private suspend fun emitEffectWhenSubscribed(effect: ReadBookEffect) {
         _effects.subscriptionCount.first { it > 0 }
         _effects.emit(effect)
@@ -564,7 +571,7 @@ class ReadBookViewModel(
             }
 
             override fun publishReadAloudProgress(chapterStart: Int) {
-                _readAloudProgress.value = chapterStart
+                _readAloudProgress.value = readAloudPositionAt(chapterStart)
             }
         },
         readSettingsRepository = readSettingsRepository,

@@ -259,8 +259,8 @@ fun ReadBookRouteScreen(
 
     LaunchedEffect(viewModel, controller, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.readAloudProgress.collect { chapterStart ->
-                chapterStart?.let(controller::updateReadAloudProgress)
+            viewModel.readAloudProgress.collect { position ->
+                position?.let(controller::updateReadAloudProgress)
             }
         }
     }
