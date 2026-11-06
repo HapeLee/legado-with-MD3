@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_manga_export_format">漫画导出格式</string>
+    <string name="feature_manga_export_folder">图片文件夹</string>
+    <string name="feature_manga_export_cbz">CBZ 压缩包</string>
+    <string name="feature_manga_export_cached_only">按章节和页码顺序导出原图。请先下载全部待导出章节；缺页或图片无效时停止导出。同名自动编号，保留已有导出。</string>
+    <string name="feature_manga_export_empty">没有可导出的漫画页面，请先下载漫画。</string>
+    <string name="feature_manga_export_unsupported">暂不支持导出这种本地漫画格式。</string>
+    <string name="feature_manga_export_chapter_missing">“%1$s”没有已缓存的漫画页面，请先下载该章节。</string>
+    <string name="feature_manga_export_page_missing">无法导出“%1$s”第 %2$d 页：图片缺失、无效、格式不支持或复制失败。</string>
+    <string name="feature_manga_export_progress">正在导出漫画页面：%1$d/%2$d</string>
+    <string name="feature_manga_export_checking">正在检查漫画页面缓存…</string>
+    <string name="feature_manga_export_create_failed">无法创建漫画导出，请选择其他可写文件夹。</string>
+</resources>

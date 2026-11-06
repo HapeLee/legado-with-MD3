@@ -93,6 +93,7 @@ object PreferKey {
     const val exportToWebDav = "webDavCacheBackup"
     const val exportNoChapterName = "exportNoChapterName"
     const val exportType = "exportType"
+    const val mangaExportFormat = "mangaExportFormat"
     const val exportPictureFile = "exportPictureFile"
     const val chineseConverterType = "chineseConverterType"
     const val launcherIcon = "launcherIcon"

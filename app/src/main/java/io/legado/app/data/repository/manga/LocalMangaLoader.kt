@@ -52,7 +52,7 @@ internal class LocalMangaLoader(private val cacheRoot: File) : AutoCloseable {
         val grouped = sorted.groupBy { image ->
             image.path.substringBeforeLast('/', "").takeIf { it.isNotBlank() } ?: book.name
         }
-        return if (grouped.size == sorted.size) mapOf(book.name to sorted) else grouped
+        return grouped
     }
 
     private fun archiveImages(book: Book): List<ImageEntry> {

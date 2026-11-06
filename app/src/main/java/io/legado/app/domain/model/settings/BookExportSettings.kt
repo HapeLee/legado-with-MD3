@@ -1,5 +1,7 @@
 package io.legado.app.domain.model.settings
 
+import io.legado.app.domain.model.manga.MangaExportFormat
+
 data class BookExportSettings(
     val bookExportFileName: String? = null,
     val episodeExportFileName: String = "",
@@ -11,4 +13,5 @@ data class BookExportSettings(
     val exportType: Int = 0,
     val exportPictureFile: Boolean = false,
     val parallelExportBook: Boolean = false,
+    val mangaExportFormat: MangaExportFormat = MangaExportFormat.Cbz,
 )
