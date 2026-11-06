@@ -513,15 +513,8 @@ abstract class BaseReadAloudService : BaseService(),
                 splitByPage = preparedReadAloudByPage,
                 policy = splitPolicy,
             )
-            if (!usePreparedPlaybackQueue && preparedNowSpeak !in preparedContentList.indices) {
-                AppLog.put(
-                    "启动朗读失败：无法定位朗读段落 position=$preparedReadAloudNumber " +
-                        "pageIndex=$pageIndex startPos=$startPos"
-                )
-                return@execute
-            }
             val moveToLast = toLast
-            if (moveToLast) {
+            if (moveToLast && preparedParagraphs.isNotEmpty()) {
                 preparedReadAloudNumber = preparedParagraphs.last().chapterPosition
                 preparedNowSpeak = preparedContentList.lastIndex
                 pos = 0
@@ -545,7 +538,9 @@ abstract class BaseReadAloudService : BaseService(),
                     preparedReadAloudNumber = preparedPlaybackQueue.cues[cursor.cueIndex].chapterStart
                 }
             }
-            val shouldReadChapterTitle = !moveToLast && startsAtChapterBeginning &&
+            // 只有卷名的章节没有正文坐标，从历史进度恢复时也从卷名开始读。
+            val shouldReadChapterTitle =
+                (preparedParagraphs.isEmpty() || (startsAtChapterBeginning && !moveToLast)) &&
                     preparedChapter.title.isNotBlank()
             if (shouldReadChapterTitle) {
                 if (usePreparedPlaybackQueue) {
@@ -565,6 +560,13 @@ abstract class BaseReadAloudService : BaseService(),
                 preparedReadAloudNumber = 0
             } else if (usePreparedPlaybackQueue) {
                 preparedContentChapterPositions = preparedPlaybackQueue.cues.map { it.chapterStart }
+            }
+            if (preparedNowSpeak !in preparedContentList.indices) {
+                AppLog.put(
+                    "启动朗读失败：无法定位朗读段落 position=$preparedReadAloudNumber " +
+                        "pageIndex=$pageIndex startPos=$startPos"
+                )
+                return@execute
             }
             if (generation != prepareReadAloudGeneration) return@execute
             this@BaseReadAloudService.pageIndex = pageIndex
