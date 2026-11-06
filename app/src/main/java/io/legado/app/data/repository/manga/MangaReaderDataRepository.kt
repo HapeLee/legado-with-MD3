@@ -262,7 +262,11 @@ class MangaReaderDataRepository(
         durChapterTitle = durChapterTitle,
     )
 
-    private fun localBookExists(book: Book): Boolean = runCatching {
-        LocalBook.getBookInputStream(book)
-    }.isSuccess
+    private fun localBookExists(book: Book): Boolean {
+        // 目录型本地漫画用元数据判断，不能开 InputStream 读整个目录
+        if (LocalMangaLoader.directoryExists(book)) return true
+        return runCatching {
+            LocalBook.getBookInputStream(book)
+        }.isSuccess
+    }
 }

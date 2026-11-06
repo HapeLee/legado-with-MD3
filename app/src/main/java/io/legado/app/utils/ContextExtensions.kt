@@ -40,8 +40,8 @@ import io.legado.app.constant.AppConst
 import io.legado.app.data.entities.Book
 import io.legado.app.help.IntentHelp
 import io.legado.app.help.book.isAudio
-import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isVideo
+import io.legado.app.help.book.shouldOpenMangaReader
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.SettingsWriter
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
@@ -77,13 +77,13 @@ fun Context.startActivityForBook(
     val intent = when {
         book.isVideo -> MainActivity.createVideoPlayIntent(this, book.bookUrl)
         book.isAudio -> MainActivity.createAudioPlayIntent(this, book.bookUrl)
-        book.isImage && mangaSettingsGateway.currentSettings.showMangaUi ->
+        book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi) ->
             MainActivity.createReadMangaIntent(this, book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || (book.isImage && mangaSettingsGateway.currentSettings.showMangaUi)) {
+    if (book.isAudio || book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi)) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)
@@ -97,13 +97,13 @@ fun Context.startActivityForBook(
     val intent = when {
         book.isVideo -> MainActivity.createVideoPlayIntent(this, book.bookUrl)
         book.isAudio -> MainActivity.createAudioPlayIntent(this, book.bookUrl)
-        book.isImage && mangaSettingsGateway.currentSettings.showMangaUi ->
+        book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi) ->
             MainActivity.createReadMangaIntent(this, book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || (book.isImage && mangaSettingsGateway.currentSettings.showMangaUi)) {
+    if (book.isAudio || book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi)) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)

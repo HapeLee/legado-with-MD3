@@ -14,6 +14,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.repository.manga.LocalMangaLoader
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
@@ -33,6 +34,7 @@ import io.legado.app.help.book.getLocalUri
 import io.legado.app.help.book.getRemoteUrl
 import io.legado.app.help.book.isArchive
 import io.legado.app.help.book.isEpub
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isUmd
@@ -132,6 +134,13 @@ object LocalBook {
     @Throws(TocEmptyException::class)
     fun getChapterList(book: Book): ArrayList<BookChapter> {
         val chapters = when {
+            book.isLocalManga -> {
+                // 与阅读器的常驻缓存隔离，扫描结束时只清理本次解压结果。
+                LocalMangaLoader(File(appCtx.cacheDir, "local-manga-toc")).use {
+                    ArrayList(it.chapters(book))
+                }
+            }
+
             book.isEpub -> {
                 EpubFile.getChapterList(book)
             }
@@ -184,6 +193,14 @@ object LocalBook {
     fun getContent(book: Book, chapter: BookChapter): String? {
         val content = try {
             when {
+                // 本地漫画是图片目录或 cbz/zip：文本解析会去读目录流，必抛 EISDIR。
+                // 在打开任何流之前拦截，日志与页面都给出明确提示。
+                book.isLocalManga -> {
+                    val message = "获取本地书籍内容失败\n本地漫画请使用漫画阅读器"
+                    AppLog.put(message)
+                    message
+                }
+
                 book.isEpub -> {
                     EpubFile.getContent(book, chapter)
                 }

@@ -71,6 +71,18 @@ val Book.isLocal: Boolean
         return isType(BookType.local)
     }
 
+/** 本地漫画（图片目录或 CBZ/ZIP 压缩包）：旧文本阅读器会按电子书解析，读目录流必抛 EISDIR。 */
+val Book.isLocalManga: Boolean
+    get() = isLocal && (isImage || originName.endsWith(".cbz", true) || originName.endsWith(".zip", true))
+
+/**
+ * 阅读器统一分流（书架 / 详情页 / 各入口共用，勿再手写条件）：
+ * - 本地漫画恒进漫画阅读器——旧阅读器无法读取图片目录，不受 showMangaUi 开关影响；
+ * - 在线图片书跟随 showMangaUi 设置。
+ */
+fun Book.shouldOpenMangaReader(showMangaUi: Boolean): Boolean =
+    isLocalManga || (isImage && showMangaUi)
+
 val Book.isLocalTxt: Boolean
     get() = isLocal && originName.endsWith(".txt", true)
 
