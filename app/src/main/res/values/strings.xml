@@ -3874,6 +3874,8 @@
     <string name="read_aloud_audio_download_chapter_bar">Chapters</string>
     <string name="read_aloud_audio_download_chapter_hint">This chapter is downloaded (%1$d sentences); reading aloud plays the local audio</string>
     <string name="read_aloud_audio_download_chapter_none">This chapter is not downloaded yet</string>
+    <string name="read_aloud_audio_download_partial">%1$d/%2$d sentences downloaded</string>
+    <string name="read_aloud_audio_download_unverified">%1$d sentences saved. Run the download again to verify the chapter.</string>
     <string name="read_aloud_audio_download_sentence_bar">Sentences</string>
     <string name="read_aloud_audio_download_downloaded">Downloaded chapters</string>
     <string name="read_aloud_audio_download_empty">Nothing downloaded yet</string>

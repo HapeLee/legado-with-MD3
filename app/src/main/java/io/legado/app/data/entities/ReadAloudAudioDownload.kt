@@ -22,8 +22,11 @@ data class ReadAloudAudioDownload(
     /** 这一章下载到的音频文件名，逗号分隔。 */
     var files: String = "",
     var createTime: Long = 0,
+    /** 旧版本未记录应下载的句数，保留文件供播放和续下。 */
+    var expectedSentenceCount: Int? = null,
 ) {
     val sentenceCount: Int get() = if (files.isBlank()) 0 else files.split(',').size
+    val isComplete: Boolean get() = sentenceCount > 0 && sentenceCount == expectedSentenceCount
 
     /** 这一章下载到的音频文件名（不含扩展名）。 */
     val fileNames: List<String> get() = files.split(',').filter { it.isNotBlank() }

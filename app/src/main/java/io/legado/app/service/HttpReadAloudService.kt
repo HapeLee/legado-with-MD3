@@ -640,7 +640,10 @@ class HttpReadAloudService : BaseReadAloudService(),
         val bookUrl = book.bookUrl
         val concurrency = synthesisConcurrency()
         val semaphore = kotlinx.coroutines.sync.Semaphore(concurrency)
-        val total = prepared.contentList.size
+        val speakableIndices = prepared.contentList.indices.filter { index ->
+            speechText(prepared.contentList[index]).readAloudSpeechText().isNotEmpty()
+        }
+        val total = speakableIndices.size
         audioDownloadSentences.set(0)
         ReadAloudAudioStore.updateProgress {
             it.copy(
@@ -659,7 +662,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         while (base < total) {
             ensureActive()
             val end = minOf(base + batchSize, total)
-            (base until end).map { index ->
+            (base until end).map { position ->
+                val index = speakableIndices[position]
                 val raw = prepared.contentList[index]
                 async {
                     semaphore.acquire()
@@ -685,7 +689,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             }.awaitAll().filterNotNull().let(files::addAll)
             base = end
         }
-        ReadAloudAudioStore.record(bookUrl, chapterIndex, prepared.chapterTitle, files)
+        ReadAloudAudioStore.record(bookUrl, chapterIndex, prepared.chapterTitle, files, total)
         ReadAloudAudioStore.updateProgress {
             it.copy(chapterDone = chapterDone, failed = audioDownloadFailed.get())
         }
@@ -708,13 +712,13 @@ class HttpReadAloudService : BaseReadAloudService(),
             sourceKey = sourceKeyForCue(routedVoice, cue, httpTts),
         )
         if (ReadAloudAudioStore.downloadedFile(bookUrl, fileName) != null) {
-            return finishAudioDownloadSentence(bookUrl, fileName, prepared)
+            return finishAudioDownloadSentence(bookUrl, fileName)
         }
         if (synthesizeCueWithSystemFile(
                 routedVoice, cue, content, prepared.chapterTitle, httpTts, fileName
             )
         ) {
-            return finishAudioDownloadSentence(bookUrl, fileName, prepared)
+            return finishAudioDownloadSentence(bookUrl, fileName)
         }
         // 合成失败就什么都不写。落一份无声占位当「下载成功」，这一句以后永远
         // 播空白：朗读侧在缓存里认到同名文件就不再重新合成，下载区那份又优先
@@ -727,9 +731,8 @@ class HttpReadAloudService : BaseReadAloudService(),
     private suspend fun finishAudioDownloadSentence(
         bookUrl: String,
         fileName: String,
-        prepared: PreDownloadChapter,
     ): String? {
-        val saved = ReadAloudAudioStore.saveFrom(
+        ReadAloudAudioStore.saveFrom(
             bookUrl, fileName, getSpeakFileAsMd5(fileName)
         ) ?: run {
             // 合成说成功、缓存里却没有可复制的完整文件（被清/被并发删掉）：
@@ -744,7 +747,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
         val done = audioDownloadSentences.incrementAndGet()
         ReadAloudAudioStore.updateProgress {
-            it.copy(sentenceDone = done, sentenceTotal = prepared.contentList.size)
+            it.copy(sentenceDone = maxOf(it.sentenceDone, done))
         }
         if (done % 8 == 0) upAudioDownloadNotification()
         return fileName

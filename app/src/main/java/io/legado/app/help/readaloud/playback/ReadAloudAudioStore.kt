@@ -2,7 +2,6 @@ package io.legado.app.help.readaloud.playback
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReadAloudAudioDownload
-import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,17 +96,19 @@ object ReadAloudAudioStore {
         val dir = dirOf(bookUrl)
         dir.mkdirs()
         val target = File(dir, "$fileName.mp3")
-        if (isSilentPlaceholder(target)) {
-            // 下载失败留下的空壳：让新合成出来的那份覆盖它
-            FileUtils.delete(target.absolutePath)
-        } else if (target.isFile && target.length() > 0L) {
-            // 合成缓存已清、下载区仍留有完整文件：视为命中，不重复合成
+        if (target.isFile && target.length() > 0L && !isSilentPlaceholder(target)) {
             return target
         }
-        if (!source.isFile || source.length() <= 0L) return null
+        if (!source.isFile || source.length() <= 0L || isSilentPlaceholder(source)) return null
         return runCatching {
-            source.copyTo(target, overwrite = true)
-            target
+            // 复制完成后才发布正式文件名，实时播放不会命中半截音频。
+            val part = File.createTempFile("audio-", ".part", dir)
+            try {
+                source.copyTo(part, overwrite = true)
+                target.takeIf { part.renameTo(it) }
+            } finally {
+                part.delete()
+            }
         }.getOrNull()
     }
 
@@ -121,7 +122,9 @@ object ReadAloudAudioStore {
     fun flowDownloadedChapters(bookUrl: String): Flow<Set<Int>> =
         appDb.readAloudAudioDownloadDao.flowDownloadedChapters(bookUrl).map { it.toSet() }
 
-    suspend fun record(bookUrl: String, chapterIndex: Int, title: String, files: List<String>) {
+    suspend fun record(
+        bookUrl: String, chapterIndex: Int, title: String, files: List<String>, totalSentences: Int,
+    ) {
         appDb.readAloudAudioDownloadDao.upsert(
             ReadAloudAudioDownload(
                 bookUrl = bookUrl,
@@ -129,6 +132,7 @@ object ReadAloudAudioStore {
                 title = title,
                 files = files.joinToString(","),
                 createTime = System.currentTimeMillis(),
+                expectedSentenceCount = totalSentences,
             )
         )
     }
