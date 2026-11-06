@@ -9,6 +9,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.manga.LocalMangaLoader
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.ChangeSourceSettingsGateway
@@ -214,6 +215,7 @@ class ReadBookLoadDelegate(
     }
 
     private fun checkLocalBookFileExist(book: Book): Boolean {
+        if (LocalMangaLoader.directoryExists(book)) return true
         try {
             LocalBook.getBookInputStream(book)
             return true
