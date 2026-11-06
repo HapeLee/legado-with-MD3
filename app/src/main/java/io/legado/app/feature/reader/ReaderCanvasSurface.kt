@@ -2460,13 +2460,14 @@ private fun SimulationPageStack(
 
 /**
  * 一页位图快照的身份。任何会改变该页像素的输入都必须进来，否则会命中过期位图：
- * 页 id/revision/layoutRevision（图片刷新会改 revision）、背景色/背景图及其透明度、
+ * 页 id/revision/layoutRevision（图片刷新会改 revision）、排版元素、背景色/背景图及其透明度、
  * 选区与朗读高亮色、活动选区、选区预览样式、视口尺寸。
  */
 internal data class PageSnapshotKey(
     val pageId: ReaderPageId,
     val revision: Long,
     val layoutRevision: Long,
+    val elementsKey: ReaderPageElementsKey,
     val backgroundArgb: Int,
     val backgroundImageIdentity: Int,
     val backgroundImageAlpha: Float,
@@ -2493,6 +2494,7 @@ private fun pageSnapshotKey(
     pageId = page.id,
     revision = page.revision,
     layoutRevision = page.layoutRevision,
+    elementsKey = ReaderPageElementsKey(page.elements),
     backgroundArgb = background.toArgb(),
     backgroundImageIdentity = System.identityHashCode(backgroundImage),
     backgroundImageAlpha = backgroundImageAlpha,
