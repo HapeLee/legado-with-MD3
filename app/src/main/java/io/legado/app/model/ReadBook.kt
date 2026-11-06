@@ -1876,64 +1876,91 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private const val PROGRESS_SAVE_DEBOUNCE_MS = 300L
 
     private var lastProgressSaveAt = 0L
-    private var pendingProgressSave = false
+    private var lastProgressSaveBookUrl: String? = null
+    private var pendingProgressSave: PendingProgressSave? = null
     private val progressSaveHandler by lazy { buildMainHandler() }
 
-    private val pendingProgressSaveRunnable = Runnable {
-        executor.execute {
-            if (!pendingProgressSave) return@execute
-            pendingProgressSave = false
-            val book = book ?: return@execute
-            // 期间已发生全量保存(切章等)或进度再次变化，交由后续 saveRead 落库
-            if (book.durChapterIndex != durChapterIndex) return@execute
-            appDb.bookDao.upReadProgress(
-                bookUrl = book.bookUrl,
-                durChapterIndex = book.durChapterIndex,
-                durChapterPos = book.durChapterPos,
-                durChapterTime = book.durChapterTime,
-            )
-            lastProgressSaveAt = book.durChapterTime
+    private data class PageProgress(
+        val bookUrl: String,
+        val chapterIndex: Int,
+        val chapterPos: Int,
+        val time: Long,
+    )
+
+    // 只在保存线程合并快照。回调到达时阅读器可能已打开另一本书。
+    private class PendingProgressSave(var progress: PageProgress) : Runnable {
+        override fun run() {
+            executor.execute {
+                if (pendingProgressSave !== this) return@execute
+                pendingProgressSave = null
+                persistPageProgress(progress)
+            }
         }
     }
 
+    private fun clearPendingProgressSave() {
+        pendingProgressSave?.let(progressSaveHandler::removeCallbacks)
+        pendingProgressSave = null
+    }
+
+    private fun persistPageProgress(progress: PageProgress) {
+        appDb.bookDao.upReadProgress(
+            bookUrl = progress.bookUrl,
+            durChapterIndex = progress.chapterIndex,
+            durChapterPos = progress.chapterPos,
+            durChapterTime = progress.time,
+        )
+        lastProgressSaveAt = progress.time
+        lastProgressSaveBookUrl = progress.bookUrl
+    }
+
     fun saveRead(pageChanged: Boolean = false) {
+        // 与本次请求的书一起捕获位置，避免队列里旧书的任务读到新书的会话状态。
         val book = book ?: return
+        val chapterIndex = durChapterIndex
+        val chapterPos = durChapterPos
+        val source = bookSource?.takeIf { it.bookSourceUrl == book.origin }
         executor.execute {
             kotlin.runCatching {
+                pendingProgressSave?.progress?.takeIf { it.bookUrl != book.bookUrl }?.let {
+                    clearPendingProgressSave()
+                    persistPageProgress(it)
+                }
                 book.lastCheckCount = 0
                 book.durChapterTime = System.currentTimeMillis()
-                val chapterChanged = book.durChapterIndex != durChapterIndex
-                book.durChapterIndex = durChapterIndex
-                book.durChapterPos = durChapterPos
+                val chapterChanged = book.durChapterIndex != chapterIndex
+                book.durChapterIndex = chapterIndex
+                book.durChapterPos = chapterPos
                 if (!pageChanged || chapterChanged) {
-                    pendingProgressSave = false
-                    progressSaveHandler.removeCallbacks(pendingProgressSaveRunnable)
-                    appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)?.let {
+                    clearPendingProgressSave()
+                    appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex)?.let {
                         book.durChapterTitle = it.getDisplayTitle(
                             ContentProcessor.get(book.name, book.origin).getTitleReplaceRules(),
                             book.getUseReplaceRule(otherSettingsGateway.currentSettings.replaceEnableDefault),
                             chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
                         )
-                        SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, bookSource, book, it)
+                        SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, source, book, it)
                     }
                     book.update()
                     lastProgressSaveAt = book.durChapterTime
-                } else if (book.durChapterTime - lastProgressSaveAt < PROGRESS_SAVE_DEBOUNCE_MS) {
-                    // 快速翻页：窗口内合并窄更新，尾随任务写入最终位置
-                    if (!pendingProgressSave) {
-                        pendingProgressSave = true
-                        progressSaveHandler.postDelayed(
-                            pendingProgressSaveRunnable, PROGRESS_SAVE_DEBOUNCE_MS
-                        )
-                    }
+                    lastProgressSaveBookUrl = book.bookUrl
                 } else {
-                    appDb.bookDao.upReadProgress(
-                        bookUrl = book.bookUrl,
-                        durChapterIndex = book.durChapterIndex,
-                        durChapterPos = book.durChapterPos,
-                        durChapterTime = book.durChapterTime,
-                    )
-                    lastProgressSaveAt = book.durChapterTime
+                    val progress = PageProgress(book.bookUrl, chapterIndex, chapterPos, book.durChapterTime)
+                    if (lastProgressSaveBookUrl == book.bookUrl &&
+                        book.durChapterTime - lastProgressSaveAt < PROGRESS_SAVE_DEBOUNCE_MS
+                    ) {
+                        val pending = pendingProgressSave
+                        if (pending == null) {
+                            val save = PendingProgressSave(progress)
+                            pendingProgressSave = save
+                            progressSaveHandler.postDelayed(save, PROGRESS_SAVE_DEBOUNCE_MS)
+                        } else {
+                            pending.progress = progress
+                        }
+                    } else {
+                        clearPendingProgressSave()
+                        persistPageProgress(progress)
+                    }
                 }
             }.onFailure {
                 AppLog.put("保存书籍阅读进度信息出错\n$it", it)
