@@ -22,8 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
@@ -48,7 +48,7 @@ fun ButtonGroupModule(
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
     val useCase: ExploreKindUiUseCase = koinInject()
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
 
     // 解析图标映射表和默认图标
     val (iconMap, defaultIcon) = remember(layoutConfig) {

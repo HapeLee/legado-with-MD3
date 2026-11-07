@@ -19,9 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.divider.SettingItemDivider
 import io.legado.app.ui.widget.components.title.AdaptiveTitle
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
@@ -87,14 +87,34 @@ fun SplicedColumnGroup(
         }
 
         CompositionLocalProvider(LocalSplicedColumnGroupState provides groupState) {
-            if (ThemeResolver.isMiuixEngine(composeEngine)) {
-                MiuixCard(
-                    modifier = Modifier.then(
-                        border?.let { Modifier.border(it, RoundedCornerShape(cornerRadius)) }
-                            ?: Modifier
-                    ),
-                    cornerRadius = cornerRadius,
-                ) {
+            when (composeEngine) {
+                ComposeEngine.Miuix -> {
+                    MiuixCard(
+                        modifier = Modifier.then(
+                            border?.let { Modifier.border(it, RoundedCornerShape(cornerRadius)) }
+                                ?: Modifier
+                        ),
+                        cornerRadius = cornerRadius,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateContentSize()
+                                .clip(RoundedCornerShape(cornerRadius))
+                        ) {
+                            Spacer(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .appContainerBackground(AppContainerBackgroundType.Large)
+                            )
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                currentIndex[0] = 0
+                                items()
+                            }
+                        }
+                    }
+                }
+                ComposeEngine.Material, ComposeEngine.Mochi -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -106,30 +126,13 @@ fun SplicedColumnGroup(
                                 .matchParentSize()
                                 .appContainerBackground(AppContainerBackgroundType.Large)
                         )
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
                             currentIndex[0] = 0
                             items()
                         }
-                    }
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .animateContentSize()
-                        .clip(RoundedCornerShape(cornerRadius))
-                ) {
-                    Spacer(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .appContainerBackground(AppContainerBackgroundType.Large)
-                    )
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        currentIndex[0] = 0
-                        items()
                     }
                 }
             }

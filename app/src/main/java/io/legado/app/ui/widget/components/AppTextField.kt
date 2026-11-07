@@ -24,8 +24,8 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.InputField as MiuixSearchBarInputField
@@ -60,81 +60,83 @@ fun AppTextField(
     contentPadding: PaddingValues? = null,
     interactionSource: MutableInteractionSource? = null,
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
-    if (isMiuix) {
-        MiuixTextField(
-            state = state,
-            modifier = modifier,
-            enabled = enabled,
-            readOnly = readOnly,
-            colors = MiuixTextFieldDefaults.textFieldColors(
-                backgroundColor = if (backgroundColor != Color.Unspecified) {
-                    backgroundColor
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixTextField(
+                state = state,
+                modifier = modifier,
+                enabled = enabled,
+                readOnly = readOnly,
+                colors = MiuixTextFieldDefaults.textFieldColors(
+                    backgroundColor = if (backgroundColor != Color.Unspecified) {
+                        backgroundColor
+                    } else {
+                        MiuixTheme.colorScheme.surfaceContainerHigh
+                    },
+                ),
+                label = label ?: "",
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                inputTransformation = inputTransformation,
+                outputTransformation = outputTransformation,
+                keyboardOptions = keyboardOptions,
+                onKeyboardAction = onKeyboardAction,
+                lineLimits = lineLimits,
+                onTextLayout = onTextLayout,
+                scrollState = scrollState,
+                interactionSource = interactionSource
+            )
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            val resolvedContentPadding =
+                contentPadding ?: if (label == null || labelPosition is TextFieldLabelPosition.Above) {
+                    TextFieldDefaults.contentPaddingWithoutLabel()
                 } else {
-                    MiuixTheme.colorScheme.surfaceContainerHigh
-                },
-            ),
-            label = label ?: "",
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            inputTransformation = inputTransformation,
-            outputTransformation = outputTransformation,
-            keyboardOptions = keyboardOptions,
-            onKeyboardAction = onKeyboardAction,
-            lineLimits = lineLimits,
-            onTextLayout = onTextLayout,
-            scrollState = scrollState,
-            interactionSource = interactionSource
-        )
-    } else {
-        val resolvedContentPadding =
-            contentPadding ?: if (label == null || labelPosition is TextFieldLabelPosition.Above) {
-                TextFieldDefaults.contentPaddingWithoutLabel()
+                    TextFieldDefaults.contentPaddingWithLabel()
+                }
+
+            val resolvedColors = if (backgroundColor != Color.Unspecified) {
+                TextFieldDefaults.colors(
+                    focusedContainerColor = backgroundColor,
+                    unfocusedContainerColor = backgroundColor,
+                    disabledContainerColor = backgroundColor,
+                    errorContainerColor = backgroundColor,
+                    focusedIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().focusedIndicatorColor,
+                    unfocusedIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().unfocusedIndicatorColor,
+                    disabledIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().disabledIndicatorColor,
+                )
             } else {
-                TextFieldDefaults.contentPaddingWithLabel()
+                TextFieldDefaults.colors()
             }
 
-        val resolvedColors = if (backgroundColor != Color.Unspecified) {
-            TextFieldDefaults.colors(
-                focusedContainerColor = backgroundColor,
-                unfocusedContainerColor = backgroundColor,
-                disabledContainerColor = backgroundColor,
-                errorContainerColor = backgroundColor,
-                focusedIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().focusedIndicatorColor,
-                unfocusedIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().unfocusedIndicatorColor,
-                disabledIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().disabledIndicatorColor,
+            TextField(
+                state = state,
+                modifier = modifier,
+                enabled = enabled,
+                readOnly = readOnly,
+                labelPosition = labelPosition,
+                label = label?.let { { AppText(it) } },
+                placeholder = placeholder,
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                prefix = prefix,
+                suffix = suffix,
+                supportingText = supportingText,
+                isError = isError,
+                inputTransformation = inputTransformation,
+                outputTransformation = outputTransformation,
+                keyboardOptions = keyboardOptions,
+                onKeyboardAction = onKeyboardAction,
+                lineLimits = lineLimits,
+                onTextLayout = onTextLayout,
+                scrollState = scrollState,
+                shape = shape,
+                colors = resolvedColors,
+                contentPadding = resolvedContentPadding,
+                interactionSource = interactionSource
             )
-        } else {
-            TextFieldDefaults.colors()
         }
-
-        TextField(
-            state = state,
-            modifier = modifier,
-            enabled = enabled,
-            readOnly = readOnly,
-            labelPosition = labelPosition,
-            label = label?.let { { AppText(it) } },
-            placeholder = placeholder,
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            prefix = prefix,
-            suffix = suffix,
-            supportingText = supportingText,
-            isError = isError,
-            inputTransformation = inputTransformation,
-            outputTransformation = outputTransformation,
-            keyboardOptions = keyboardOptions,
-            onKeyboardAction = onKeyboardAction,
-            lineLimits = lineLimits,
-            onTextLayout = onTextLayout,
-            scrollState = scrollState,
-            shape = shape,
-            colors = resolvedColors,
-            contentPadding = resolvedContentPadding,
-            interactionSource = interactionSource
-        )
     }
 }
 
@@ -164,72 +166,74 @@ fun AppTextField(
     shape: Shape = TextFieldDefaults.shape,
     interactionSource: MutableInteractionSource? = null,
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
-    if (isMiuix) {
-        MiuixTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = modifier,
-            enabled = enabled,
-            readOnly = readOnly,
-            colors = MiuixTextFieldDefaults.textFieldColors(
-                backgroundColor = if (backgroundColor != Color.Unspecified) {
-                    backgroundColor
-                } else {
-                    MiuixTheme.colorScheme.surfaceContainerHigh
-                },
-            ),
-            label = label ?: "",
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            visualTransformation = visualTransformation,
-            keyboardOptions = keyboardOptions,
-            keyboardActions = keyboardActions,
-            singleLine = singleLine,
-            maxLines = maxLines,
-            minLines = minLines,
-            interactionSource = interactionSource
-        )
-    } else {
-        val resolvedColors = if (backgroundColor != Color.Unspecified) {
-            TextFieldDefaults.colors(
-                focusedContainerColor = backgroundColor,
-                unfocusedContainerColor = backgroundColor,
-                disabledContainerColor = backgroundColor,
-                errorContainerColor = backgroundColor,
-                focusedIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().focusedIndicatorColor,
-                unfocusedIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().unfocusedIndicatorColor,
-                disabledIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().disabledIndicatorColor,
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = modifier,
+                enabled = enabled,
+                readOnly = readOnly,
+                colors = MiuixTextFieldDefaults.textFieldColors(
+                    backgroundColor = if (backgroundColor != Color.Unspecified) {
+                        backgroundColor
+                    } else {
+                        MiuixTheme.colorScheme.surfaceContainerHigh
+                    },
+                ),
+                label = label ?: "",
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                visualTransformation = visualTransformation,
+                keyboardOptions = keyboardOptions,
+                keyboardActions = keyboardActions,
+                singleLine = singleLine,
+                maxLines = maxLines,
+                minLines = minLines,
+                interactionSource = interactionSource
             )
-        } else {
-            TextFieldDefaults.colors()
         }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            val resolvedColors = if (backgroundColor != Color.Unspecified) {
+                TextFieldDefaults.colors(
+                    focusedContainerColor = backgroundColor,
+                    unfocusedContainerColor = backgroundColor,
+                    disabledContainerColor = backgroundColor,
+                    errorContainerColor = backgroundColor,
+                    focusedIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().focusedIndicatorColor,
+                    unfocusedIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().unfocusedIndicatorColor,
+                    disabledIndicatorColor = if (backgroundColor == Color.Transparent) Color.Transparent else TextFieldDefaults.colors().disabledIndicatorColor,
+                )
+            } else {
+                TextFieldDefaults.colors()
+            }
 
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = modifier,
-            enabled = enabled,
-            readOnly = readOnly,
-            label = label?.let { { AppText(it) } },
-            placeholder = placeholder,
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            prefix = prefix,
-            suffix = suffix,
-            supportingText = supportingText,
-            isError = isError,
-            visualTransformation = visualTransformation,
-            keyboardOptions = keyboardOptions,
-            keyboardActions = keyboardActions,
-            singleLine = singleLine,
-            maxLines = maxLines,
-            minLines = minLines,
-            shape = shape,
-            colors = resolvedColors,
-            interactionSource = interactionSource
-        )
+            TextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = modifier,
+                enabled = enabled,
+                readOnly = readOnly,
+                label = label?.let { { AppText(it) } },
+                placeholder = placeholder,
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                prefix = prefix,
+                suffix = suffix,
+                supportingText = supportingText,
+                isError = isError,
+                visualTransformation = visualTransformation,
+                keyboardOptions = keyboardOptions,
+                keyboardActions = keyboardActions,
+                singleLine = singleLine,
+                maxLines = maxLines,
+                minLines = minLines,
+                shape = shape,
+                colors = resolvedColors,
+                interactionSource = interactionSource
+            )
+        }
     }
 }
 
@@ -318,7 +322,7 @@ fun AppDenseTextField(
     miuixSearchBarLabel: String = label ?: "",
     miuixOnSearch: (String) -> Unit = {},
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
     if (isMiuix && miuixUseSearchBarInputField) {
         MiuixSearchBarInputField(
             query = state.text.toString(),

@@ -63,8 +63,8 @@ import io.legado.app.domain.model.ContentQualityStage
 import io.legado.app.domain.model.MatchMode
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.bookshelf.BookShelfItem
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
@@ -162,10 +162,13 @@ fun SearchScreen(
     var keepResultsPinnedToTop by rememberSaveable { mutableStateOf(true) }
     val showSuggestionPanel = state.showSuggestions
     val latestQuery by rememberUpdatedState(state.query)
-    val scrollBehavior = if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-        GlassTopAppBarDefaults.defaultScrollBehavior()
-    } else {
-        M3GlassScrollBehavior(TopAppBarDefaults.enterAlwaysScrollBehavior())
+    val scrollBehavior = when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            GlassTopAppBarDefaults.defaultScrollBehavior()
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            M3GlassScrollBehavior(TopAppBarDefaults.enterAlwaysScrollBehavior())
+        }
     }
     val shouldLoadMore by remember {
         derivedStateOf {

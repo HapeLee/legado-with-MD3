@@ -112,7 +112,7 @@ fun ProvideColorSchemeOverride(
             isDark = resolvedIsDark,
         )
     }
-    val isMiuixEngine = ThemeResolver.isMiuixEngine(overrideThemeMode.composeEngine)
+    val composeEngine = overrideThemeMode.composeEngine
     val miuixColorSchemeMode = remember(overrideThemeMode.themeMode) {
         overrideThemeMode.themeMode.toMiuixMonetMode()
     }
@@ -126,17 +126,16 @@ fun ProvideColorSchemeOverride(
         )
     }
     val miuixController = remember(
-        isMiuixEngine,
+        composeEngine,
         miuixColorSchemeMode,
         overrideThemeMode.isDark,
         seedColor,
         miuixPaletteStyle,
         miuixColorSpec
     ) {
-        if (!isMiuixEngine) {
-            null
-        } else {
-            ThemeController(
+        when (composeEngine) {
+            ComposeEngine.Material, ComposeEngine.Mochi -> null
+            ComposeEngine.Miuix -> ThemeController(
                 colorSchemeMode = miuixColorSchemeMode,
                 keyColor = seedColor,
                 paletteStyle = miuixPaletteStyle,
@@ -150,17 +149,29 @@ fun ProvideColorSchemeOverride(
         LocalLegadoThemeColors provides overrideThemeMode,
         LocalLegadoColorScheme provides legadoColorScheme
     ) {
-        if (miuixController != null) {
-            MiuixTheme(controller = miuixController) {
-                content()
+        when (composeEngine) {
+            ComposeEngine.Miuix -> {
+                MiuixTheme(controller = requireNotNull(miuixController)) {
+                    content()
+                }
             }
-        } else {
-            MaterialTheme(
-                colorScheme = colorScheme,
-                typography = MaterialTheme.typography,
-                shapes = MaterialTheme.shapes
-            ) {
-                content()
+            ComposeEngine.Mochi -> {
+                MaterialTheme(
+                    colorScheme = colorScheme,
+                    typography = MaterialTheme.typography,
+                    shapes = MaterialTheme.shapes
+                ) {
+                    ProvideMochiTheme(colorScheme, resolvedIsDark, content = content)
+                }
+            }
+            ComposeEngine.Material -> {
+                MaterialTheme(
+                    colorScheme = colorScheme,
+                    typography = MaterialTheme.typography,
+                    shapes = MaterialTheme.shapes
+                ) {
+                    content()
+                }
             }
         }
     }

@@ -35,11 +35,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.theme.ProvideAppDensity
-import io.legado.app.ui.theme.ThemeResolver
+import ui.feice.mochi.shape.MochiRoundedRectangle
 import io.legado.app.ui.widget.components.menuItem.LocalUseMiuixWindowPopup
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
@@ -63,164 +64,169 @@ fun AppModalBottomSheet(
     val sheetContentColor = LegadoTheme.colorScheme.onSurface
     val sheetDragHandleColor = LegadoTheme.colorScheme.onSurfaceVariant
 
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-        WindowBottomSheet(
-            show = show,
-            modifier = modifier,
-            title = title,
-            startAction = startAction?.let { action ->
-                {
-                    ProvideAppDensity {
-                        ProvideAppContentColor(sheetContentColor) {
-                            CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
-                                Box(
-                                    modifier = if (contentPaddingEnabled) Modifier
-                                    else Modifier.padding(start = 16.dp),
-                                ) { action() }
-                            }
-                        }
-                    }
-                }
-            },
-            endAction = endAction?.let { action ->
-                {
-                    ProvideAppDensity {
-                        ProvideAppContentColor(sheetContentColor) {
-                            CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
-                                Box(
-                                    modifier = if (contentPaddingEnabled) Modifier
-                                    else Modifier.padding(end = 16.dp),
-                                ) { action() }
-                            }
-                        }
-                    }
-                }
-            },
-            insideMargin = if (contentPaddingEnabled) DpSize(16.dp, 0.dp) else DpSize(0.dp, 0.dp),
-            backgroundColor = sheetContainerColor,
-            dragHandleColor = sheetDragHandleColor,
-            onDismissRequest = onDismissRequest,
-            enableWindowDim = true,
-        ) {
-            ProvideAppDensity {
-                ProvideAppContentColor(sheetContentColor) {
-                    CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .let {
-                                    if (contentPaddingEnabled) {
-                                        it.padding(bottom = 24.dp)
-                                    } else {
-                                        it.navigationBarsPadding()
-                                    }
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            WindowBottomSheet(
+                show = show,
+                modifier = modifier,
+                title = title,
+                startAction = startAction?.let { action ->
+                    {
+                        ProvideAppDensity {
+                            ProvideAppContentColor(sheetContentColor) {
+                                CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
+                                    Box(
+                                        modifier = if (contentPaddingEnabled) Modifier
+                                        else Modifier.padding(start = 16.dp),
+                                    ) { action() }
                                 }
-                                .let { contentModifier ->
-                                    if (animateContentSize) contentModifier.animateContentSize() else contentModifier
-                                },
-                            content = content
-                        )
+                            }
+                        }
+                    }
+                },
+                endAction = endAction?.let { action ->
+                    {
+                        ProvideAppDensity {
+                            ProvideAppContentColor(sheetContentColor) {
+                                CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
+                                    Box(
+                                        modifier = if (contentPaddingEnabled) Modifier
+                                        else Modifier.padding(end = 16.dp),
+                                    ) { action() }
+                                }
+                            }
+                        }
+                    }
+                },
+                insideMargin = if (contentPaddingEnabled) DpSize(16.dp, 0.dp) else DpSize(0.dp, 0.dp),
+                backgroundColor = sheetContainerColor,
+                dragHandleColor = sheetDragHandleColor,
+                onDismissRequest = onDismissRequest,
+                enableWindowDim = true,
+            ) {
+                ProvideAppDensity {
+                    ProvideAppContentColor(sheetContentColor) {
+                        CompositionLocalProvider(LocalUseMiuixWindowPopup provides true) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .let {
+                                        if (contentPaddingEnabled) {
+                                            it.padding(bottom = 24.dp)
+                                        } else {
+                                            it.navigationBarsPadding()
+                                        }
+                                    }
+                                    .let { contentModifier ->
+                                        if (animateContentSize) contentModifier.animateContentSize() else contentModifier
+                                    },
+                                content = content
+                            )
+                        }
                     }
                 }
             }
         }
-    } else {
-        if (show) {
-            val sheetState = rememberBottomSheetState(
-                initialValue = Hidden,
-                enabledValues = setOf(Hidden, Expanded)
-            )
-            val density = LocalDensity.current
-            val maxHeight = with(density) {
-                val containerHeight = LocalWindowInfo.current.containerSize.height.toDp()
-                containerHeight * 0.8f
-            }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            if (show) {
+                val sheetState = rememberBottomSheetState(
+                    initialValue = Hidden,
+                    enabledValues = setOf(Hidden, Expanded)
+                )
+                val density = LocalDensity.current
+                val maxHeight = with(density) {
+                    val containerHeight = LocalWindowInfo.current.containerSize.height.toDp()
+                    containerHeight * 0.8f
+                }
 
-            MaterialExpressiveTheme(
-                colorScheme = colorScheme,
-                typography = Typography(),
-                motionScheme = MotionScheme.expressive(),
-                shapes = Shapes()
-            ) {
-                ModalBottomSheet(
-                    onDismissRequest = onDismissRequest,
-                    sheetState = sheetState,
-                    containerColor = sheetContainerColor,
-                    contentColor = sheetContentColor,
-                    dragHandle = { BottomSheetDefaults.DragHandle(color = sheetDragHandleColor) },
-                    contentWindowInsets = contentWindowInsets,
-                    sheetGesturesEnabled = sheetGesturesEnabled,
+                MaterialExpressiveTheme(
+                    colorScheme = colorScheme,
+                    typography = Typography(),
+                    motionScheme = MotionScheme.expressive(),
+                    shapes = Shapes()
                 ) {
-                    ProvideAppDensity {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .let {
-                                    if (contentPaddingEnabled) {
-                                        it.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                                    } else {
-                                        it
-                                    }
-                                }
-                                .heightIn(max = maxHeight)
-                                .let { contentModifier ->
-                                    if (animateContentSize) contentModifier.animateContentSize() else contentModifier
-                                }
-                                .then(modifier)
-                        ) {
-                            val hasHeader =
-                                !title.isNullOrEmpty() || startAction != null || endAction != null
-
-                            if (hasHeader) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (startAction != null) {
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.CenterStart)
-                                                .let {
-                                                    if (contentPaddingEnabled) it else it.padding(
-                                                        start = 16.dp
-                                                    )
-                                                }
-                                        ) {
-                                            startAction()
+                    ModalBottomSheet(
+                        onDismissRequest = onDismissRequest,
+                        sheetState = sheetState,
+                        shape = if (LegadoTheme.composeEngine == ComposeEngine.Mochi) MochiRoundedRectangle(28.dp)
+                            else BottomSheetDefaults.ExpandedShape,
+                        containerColor = sheetContainerColor,
+                        contentColor = sheetContentColor,
+                        dragHandle = { BottomSheetDefaults.DragHandle(color = sheetDragHandleColor) },
+                        contentWindowInsets = contentWindowInsets,
+                        sheetGesturesEnabled = sheetGesturesEnabled,
+                    ) {
+                        ProvideAppDensity {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .let {
+                                        if (contentPaddingEnabled) {
+                                            it.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                                        } else {
+                                            it
                                         }
                                     }
-
-                                    if (!title.isNullOrEmpty()) {
-                                        Text(
-                                            text = title,
-                                            style = LegadoTheme.typography.titleMediumEmphasized,
-                                            color = sheetContentColor,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.padding(horizontal = 56.dp)
-                                        )
+                                    .heightIn(max = maxHeight)
+                                    .let { contentModifier ->
+                                        if (animateContentSize) contentModifier.animateContentSize() else contentModifier
                                     }
+                                    .then(modifier)
+                            ) {
+                                val hasHeader =
+                                    !title.isNullOrEmpty() || startAction != null || endAction != null
 
-                                    if (endAction != null) {
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.CenterEnd)
-                                                .let {
-                                                    if (contentPaddingEnabled) it else it.padding(
-                                                        end = 16.dp
-                                                    )
-                                                }
-                                        ) {
-                                            endAction()
+                                if (hasHeader) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (startAction != null) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.CenterStart)
+                                                    .let {
+                                                        if (contentPaddingEnabled) it else it.padding(
+                                                            start = 16.dp
+                                                        )
+                                                    }
+                                            ) {
+                                                startAction()
+                                            }
+                                        }
+
+                                        if (!title.isNullOrEmpty()) {
+                                            Text(
+                                                text = title,
+                                                style = LegadoTheme.typography.titleMediumEmphasized,
+                                                color = sheetContentColor,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.padding(horizontal = 56.dp)
+                                            )
+                                        }
+
+                                        if (endAction != null) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.CenterEnd)
+                                                    .let {
+                                                        if (contentPaddingEnabled) it else it.padding(
+                                                            end = 16.dp
+                                                        )
+                                                    }
+                                            ) {
+                                                endAction()
+                                            }
                                         }
                                     }
                                 }
+
+                                content()
                             }
-
-                            content()
                         }
                     }
                 }

@@ -8,6 +8,20 @@ import org.junit.Test
 class AppShellSettingsMappingTest {
 
     @Test
+    fun `主题风格保留原始字符串以兼容旧配置和后续版本`() {
+        listOf("material", "miuix", "MIUIX", "mochi", "unknown").forEach { engine ->
+            val values = captureAtomicUpdateValues(
+                current = AppShellSettings(composeEngine = "previous"),
+                read = { it.toAppShellSettings() },
+                toPrefMap = AppShellSettings::toPrefMap,
+                transform = { it.copy(composeEngine = engine) },
+            )
+            assertEquals(mapOf(PreferKey.composeEngine to engine), values)
+            assertEquals(engine, values.toTestPreferences().toAppShellSettings().composeEngine)
+        }
+    }
+
+    @Test
     fun `阅读共享元素旧配置默认开启且开关可独立持久化`() {
         assertEquals(
             true,

@@ -63,6 +63,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.isEyeProtectionConfigured
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -124,9 +125,9 @@ fun ThemeConfigScreen(
             )
         ) {
             item {
-                val composeEngine = appShell.composeEngine
+                val composeEngine = ThemeResolver.resolveComposeEngine(appShell.composeEngine)
                 val isMiuixEngine = remember(composeEngine) {
-                    ThemeResolver.isMiuixEngine(composeEngine)
+                    composeEngine == ComposeEngine.Miuix
                 }
                 val isDarkTheme = LegadoTheme.isDark
 
@@ -988,7 +989,7 @@ fun ThemeConfigScreen(
         show = state.activeSheet == ThemeConfigSheet.TopBottomBar,
         appShell = appShell,
         theme = theme,
-        isMiuixEngine = ThemeResolver.isMiuixEngine(appShell.composeEngine),
+        isMiuixEngine = ThemeResolver.resolveComposeEngine(appShell.composeEngine) == ComposeEngine.Miuix,
         onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
         onIntent = onIntent,
     )

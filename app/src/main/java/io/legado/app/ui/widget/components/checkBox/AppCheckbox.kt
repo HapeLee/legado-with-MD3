@@ -7,8 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.Checkbox as MiuixCheckbox
 
 @Composable
@@ -28,20 +28,23 @@ fun AppCheckbox(
         modifier
     }
 
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixCheckbox(
-            state = state,
-            onClick = onCheckedChange?.let { { it(!checked) } },
-            modifier = semanticModifier,
-            enabled = enabled
-        )
-    } else {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = semanticModifier,
-            enabled = enabled
-        )
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixCheckbox(
+                state = state,
+                onClick = onCheckedChange?.let { { it(!checked) } },
+                modifier = semanticModifier,
+                enabled = enabled
+            )
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = semanticModifier,
+                enabled = enabled
+            )
+        }
     }
 }
 
@@ -52,19 +55,22 @@ fun AppTriStateCheckbox(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixCheckbox(
-            state = state,
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled
-        )
-    } else {
-        TriStateCheckbox(
-            state = state,
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled
-        )
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixCheckbox(
+                state = state,
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled
+            )
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            TriStateCheckbox(
+                state = state,
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled
+            )
+        }
     }
 }

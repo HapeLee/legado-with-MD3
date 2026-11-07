@@ -85,9 +85,9 @@ import io.legado.app.service.ExportBookService
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.book.info.ChangeSourceSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppTextField
@@ -551,7 +551,7 @@ private fun BookshelfManageScreen(
                     stringResource(R.string.cache_download_failed, it)
                 }
                 val isSelected = selectedBookUrls.contains(book.bookUrl)
-                val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
+                val isMiuix = composeEngine == ComposeEngine.Miuix
                 val animatedContainerColor by animateColorAsState(
                     targetValue = if (isSelected)
                         LegadoTheme.colorScheme.secondaryContainer

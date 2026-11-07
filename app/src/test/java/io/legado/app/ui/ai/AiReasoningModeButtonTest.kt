@@ -16,6 +16,7 @@ import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.ui.theme.AppTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.MiuixThemeWrapper
 import org.junit.Assert.assertEquals
@@ -44,7 +45,7 @@ class AiReasoningModeButtonTest {
             CompositionLocalProvider(LocalInspectionMode provides true) {
                 Box(Modifier.width(controlWidth.value.dp)) {
                     AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = engine))) {
-                        val colors = LocalLegadoThemeColors.current.copy(composeEngine = engine)
+                        val colors = LocalLegadoThemeColors.current.copy(composeEngine = ThemeResolver.resolveComposeEngine(engine))
                         // Inspection previews always choose Material; explicitly exercise Miuix.
                         CompositionLocalProvider(LocalLegadoThemeColors provides colors) {
                             if (engine == "miuix") MiuixThemeWrapper(colors, null, applyBackground = false) {

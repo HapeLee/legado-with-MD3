@@ -46,8 +46,8 @@ import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.help.http.handleRenderProcessGone
 import io.legado.app.ui.widget.components.modalBottomSheet.MarkdownSheet
 import io.legado.app.ui.rss.read.VisibleWebViewCompose
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
@@ -235,7 +235,7 @@ private fun SourceLoginRow(
                 modifier = modifier,
                 backgroundColor = LegadoTheme.colorScheme.surface,
                 minHeight = 44.dp,
-                isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine),
+                isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix,
                 displayNameOverride = row.title,
                 valueOverride = value,
                 onValueChange = onValueChange,

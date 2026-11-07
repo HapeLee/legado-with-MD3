@@ -38,9 +38,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -85,7 +85,6 @@ fun SelectionBottomBar(
     leadingAction: ActionItem? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val selectAllDescription = stringResource(R.string.select_all)
     val invertSelectionDescription = stringResource(R.string.invert_selection)
     val moreActionsDescription = stringResource(R.string.more_menu)
@@ -97,152 +96,155 @@ fun SelectionBottomBar(
         )
         .scale(if (compact) 0.85f else 1f)
 
-    if (isMiuix) {
-        MiuixFloatingToolbar(
-            modifier = safeModifier
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(8.dp)
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixFloatingToolbar(
+                modifier = safeModifier
             ) {
-                MiuixIconButton(onClick = onSelectAll) {
-                    MiuixIcon(
-                        imageVector = Icons.Default.SelectAll,
-                        contentDescription = selectAllDescription
-                    )
-                }
-                MiuixIconButton(onClick = onSelectInvert) {
-                    MiuixIcon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = invertSelectionDescription
-                    )
-                }
-
-                // 前导动作（可选）：反选之后、主操作之前
-                leadingAction?.let { action ->
-                    MiuixIconButton(onClick = action.onClick) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    MiuixIconButton(onClick = onSelectAll) {
                         MiuixIcon(
-                            imageVector = action.icon,
-                            contentDescription = action.text
+                            imageVector = Icons.Default.SelectAll,
+                            contentDescription = selectAllDescription
                         )
                     }
-                }
+                    MiuixIconButton(onClick = onSelectInvert) {
+                        MiuixIcon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = invertSelectionDescription
+                        )
+                    }
 
-                MiuixIconButton(
-                    onClick = primaryAction.onClick,
-                    backgroundColor = MiuixTheme.colorScheme.secondaryContainer,
-                    minWidth = 64.dp
-                ) {
-                    MiuixIcon(
-                        imageVector = primaryAction.icon,
-                        contentDescription = primaryAction.text,
-                        tint = MiuixTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-
-                if (secondaryActions.isNotEmpty()) {
-                    Box {
-                        MiuixIconButton(onClick = { showMenu = true }) {
+                    // 前导动作（可选）：反选之后、主操作之前
+                    leadingAction?.let { action ->
+                        MiuixIconButton(onClick = action.onClick) {
                             MiuixIcon(
-                                imageVector = AppIcons.MoreVert,
-                                contentDescription = moreActionsDescription
+                                imageVector = action.icon,
+                                contentDescription = action.text
                             )
                         }
-                        RoundDropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            secondaryActions.forEach { action ->
-                                RoundDropdownMenuItem(
-                                    text = action.text,
-                                    onClick = {
-                                        action.onClick()
-                                        showMenu = false
-                                    }
+                    }
+
+                    MiuixIconButton(
+                        onClick = primaryAction.onClick,
+                        backgroundColor = MiuixTheme.colorScheme.secondaryContainer,
+                        minWidth = 64.dp
+                    ) {
+                        MiuixIcon(
+                            imageVector = primaryAction.icon,
+                            contentDescription = primaryAction.text,
+                            tint = MiuixTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+
+                    if (secondaryActions.isNotEmpty()) {
+                        Box {
+                            MiuixIconButton(onClick = { showMenu = true }) {
+                                MiuixIcon(
+                                    imageVector = AppIcons.MoreVert,
+                                    contentDescription = moreActionsDescription
                                 )
+                            }
+                            RoundDropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                secondaryActions.forEach { action ->
+                                    RoundDropdownMenuItem(
+                                        text = action.text,
+                                        onClick = {
+                                            action.onClick()
+                                            showMenu = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    } else {
-        HorizontalFloatingToolbar(
-            modifier = safeModifier,
-            expanded = true,
-            leadingContent = {
-                IconButton(onClick = onSelectAll) {
-                    AppIcon(
-                        imageVector = Icons.Default.SelectAll,
-                        contentDescription = selectAllDescription
-                    )
-                }
-                IconButton(onClick = onSelectInvert) {
-                    AppIcon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = invertSelectionDescription
-                    )
-                }
-                // 前导动作（可选）：反选之后、主操作之前
-                leadingAction?.let { action ->
-                    IconButton(onClick = action.onClick) {
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            HorizontalFloatingToolbar(
+                modifier = safeModifier,
+                expanded = true,
+                leadingContent = {
+                    IconButton(onClick = onSelectAll) {
                         AppIcon(
-                            imageVector = action.icon,
-                            contentDescription = action.text
+                            imageVector = Icons.Default.SelectAll,
+                            contentDescription = selectAllDescription
                         )
                     }
-                }
-            },
-            trailingContent = {
-                if (secondaryActions.isNotEmpty()) {
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
+                    IconButton(onClick = onSelectInvert) {
+                        AppIcon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = invertSelectionDescription
+                        )
+                    }
+                    // 前导动作（可选）：反选之后、主操作之前
+                    leadingAction?.let { action ->
+                        IconButton(onClick = action.onClick) {
                             AppIcon(
-                                imageVector = AppIcons.MoreVert,
-                                contentDescription = moreActionsDescription
+                                imageVector = action.icon,
+                                contentDescription = action.text
                             )
                         }
-                        RoundDropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            secondaryActions.forEach { action ->
-                                RoundDropdownMenuItem(
-                                    text = action.text,
-                                    onClick = {
-                                        action.onClick()
-                                        showMenu = false
-                                    }
+                    }
+                },
+                trailingContent = {
+                    if (secondaryActions.isNotEmpty()) {
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                AppIcon(
+                                    imageVector = AppIcons.MoreVert,
+                                    contentDescription = moreActionsDescription
                                 )
+                            }
+                            RoundDropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                secondaryActions.forEach { action ->
+                                    RoundDropdownMenuItem(
+                                        text = action.text,
+                                        onClick = {
+                                            action.onClick()
+                                            showMenu = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            },
-            content = {
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        TooltipAnchorPosition.Above
-                    ),
-                    tooltip = { ProvideAppDensity { PlainTooltip { AppText(primaryAction.text) } } },
-                    state = rememberTooltipState(),
-                ) {
-                    FilledIconButton(
-                        modifier = Modifier.width(64.dp),
-                        onClick = primaryAction.onClick,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = LegadoTheme.colorScheme.secondaryContainer,
-                            contentColor = LegadoTheme.colorScheme.onSecondaryContainer,
+                },
+                content = {
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Above
                         ),
+                        tooltip = { ProvideAppDensity { PlainTooltip { AppText(primaryAction.text) } } },
+                        state = rememberTooltipState(),
                     ) {
-                        AppIcon(
-                            imageVector = primaryAction.icon,
-                            contentDescription = primaryAction.text
-                        )
+                        FilledIconButton(
+                            modifier = Modifier.width(64.dp),
+                            onClick = primaryAction.onClick,
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = LegadoTheme.colorScheme.secondaryContainer,
+                                contentColor = LegadoTheme.colorScheme.onSecondaryContainer,
+                            ),
+                        ) {
+                            AppIcon(
+                                imageVector = primaryAction.icon,
+                                contentDescription = primaryAction.text
+                            )
+                        }
                     }
                 }
-            }
-        )
+            )
+        }
     }
 }

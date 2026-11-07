@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components
 
+import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -13,6 +14,7 @@ import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -26,11 +28,15 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.domain.model.settings.hasBackgroundImage
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.LocalTopBarBackdrop
-import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.LocalMochiBackdropRegistry
+import ui.feice.mochi.effect.glass.LocalMochiBackdrop
+import ui.feice.mochi.effect.glass.rememberMochiBackdrop
+import ui.feice.mochi.effect.glass.mochiBackdropSource
 import io.legado.app.ui.theme.responsiveHazeSource
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.FabPosition as MiuixFabPosition
@@ -67,8 +73,21 @@ fun AppScaffold(
     val hazeState = remember { HazeState() }
     val liquidGlassEnabled = configuration.theme.topBarButtonStyle == "liquid"
     val composeEngine = LegadoTheme.composeEngine
+    val mochiBackdrop = if (composeEngine == ComposeEngine.Mochi && Build.VERSION.SDK_INT >= 31 && !disableContentSampling &&
+        (liquidGlassEnabled || configuration.appShell.useFloatingBottomBarLiquidGlass ||
+            themeSettings.enableProgressiveBlur)) {
+        rememberMochiBackdrop(LegadoTheme.colorScheme.background)
+    } else null
+    val mochiRegistry = LocalMochiBackdropRegistry.current
+    val mochiOwner = remember { Any() }
+    if (composeEngine == ComposeEngine.Mochi) {
+        DisposableEffect(mochiRegistry, mochiBackdrop) {
+            mochiRegistry?.register(mochiOwner, mochiBackdrop)
+            onDispose { mochiRegistry?.unregister(mochiOwner) }
+        }
+    }
     val contentDrawsBehindBars =
-        alwaysDrawBehindBars || themeSettings.enableBlur || themeSettings.enableProgressiveBlur
+        alwaysDrawBehindBars || themeSettings.enableBlur || themeSettings.enableProgressiveBlur || mochiBackdrop != null
 
     val containerColor = if (hasImageBg) {
         Color.Transparent
@@ -95,9 +114,10 @@ fun AppScaffold(
     CompositionLocalProvider(
         LocalHazeState provides if (themeSettings.enableBlur) hazeState else null,
         LocalTopBarBackdrop provides if (liquidGlassEnabled) topBarBackdrop else null,
+        LocalMochiBackdrop provides mochiBackdrop,
     ) {
-        when {
-            ThemeResolver.isMiuixEngine(composeEngine) -> {
+        when (composeEngine) {
+            ComposeEngine.Miuix -> {
                 val miuixFabPosition = when (floatingActionButtonPosition) {
                     FabPosition.End -> MiuixFabPosition.End
                     FabPosition.Center -> MiuixFabPosition.Center
@@ -163,20 +183,22 @@ fun AppScaffold(
                 }
             }
 
-            else -> {
+            ComposeEngine.Material, ComposeEngine.Mochi -> {
                 Box(modifier = modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(
-                                if (liquidGlassEnabled) {
-                                    Modifier.layerBackdrop(topBarBackgroundBackdrop)
-                                } else {
-                                    Modifier
-                                }
-                            )
-                    ) {
-                        BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    if (mochiBackdrop == null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (liquidGlassEnabled) {
+                                        Modifier.layerBackdrop(topBarBackgroundBackdrop)
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        ) {
+                            BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                        }
                     }
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
@@ -195,6 +217,7 @@ fun AppScaffold(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .mochiBackdropSource(mochiBackdrop)
                                 .then(
                                     if (liquidGlassEnabled && !disableContentSampling) {
                                         Modifier.layerBackdrop(topBarContentBackdrop)
@@ -215,6 +238,9 @@ fun AppScaffold(
                                         .consumeWindowInsets(scaffoldPadding)
                                 )
                         ) {
+                            if (mochiBackdrop != null) {
+                                BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                            }
                             content(
                                 if (contentDrawsBehindBars) scaffoldPadding
                                 else PaddingValues(0.dp)
