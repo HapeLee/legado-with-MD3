@@ -132,6 +132,59 @@ object BookHelp {
         }
     }
 
+    /**
+     * 章节目录下的图片是否「不能安全删除」。
+     *
+     * 判据与 clearChapterImageCache 对齐，另加 locatedChapterImages：A 章可能把图片
+     * 定位到 B 章目录下，删 B 的整棵 images/ 会连 A 正在用的图片一起删掉。
+     */
+    private fun hasProtectedChapterImages(imageDir: File): Boolean {
+        // 一次快照 + 路径集合：逐文件线性扫 256 项在 20 万条目规模下是几千万次比较。
+        val referenced = locatedChapterImages.snapshot().values
+            .mapTo(HashSet<String>()) { it.absolutePath }
+        return imageDir.listFiles()?.any { file ->
+            file.name.endsWith(".tmp") ||
+                file.name == BookImageFileStore.ONLINE_MARKER_DIRECTORY ||
+                file.name == BookImageFileStore.DOWNLOAD_INDEX_DIRECTORY ||
+                imageFiles.isOnline(file) ||
+                imageFiles.isExplicitDownload(file) ||
+                file.absolutePath in referenced
+        } ?: false
+    }
+
+    /** 只清章节目录下的正文文件，整棵 images/ 保持不动；返回真正删掉的正文文件数。 */
+    private fun deleteChapterTextOnly(dir: File, imageDir: File): Int {
+        var deleted = 0
+        dir.listFiles()?.forEach { child ->
+            if (child == imageDir) return@forEach
+            if (child.isFile && child.name.endsWith(".nb") &&
+                FileUtils.delete(child.absolutePath)
+            ) {
+                deleted++
+            }
+        }
+        return deleted
+    }
+
+    /**
+     * 缓存维护删除孤立章节缓存条目时使用：与整书清缓存共用同一套图片文件租约判定。
+     *
+     * 若章节目录里的 images/ 含受保护图片，只删正文、保留整棵 images/，
+     * 避免误删被其它章节共享的图片或在线/显式下载的资源。
+     * @return 是否已处理（正文已删）；false 表示有活跃租约，整条没动。
+     */
+    fun deleteChapterCacheEntryIfIdle(entry: File): Boolean =
+        imageFiles.deleteIfIdle(entry) {
+            val imageDir = File(it, cacheImageFolderName)
+            if (it.isDirectory && imageDir.isDirectory && hasProtectedChapterImages(imageDir)) {
+                // 没有正文可删（或删除失败）时不能算成功，否则会虚报「已删除」并把书从列表移除。
+                deleteChapterTextOnly(it, imageDir) > 0
+            } else {
+                FileUtils.delete(it.absolutePath)
+                !it.exists()
+            }
+        }
+
     fun updateCacheFolder(oldBook: Book, newBook: Book) {
         val oldFolderName = oldBook.getFolderNameNoCache()
         val newFolderName = newBook.getFolderNameNoCache()

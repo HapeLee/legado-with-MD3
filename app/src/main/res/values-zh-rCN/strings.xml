@@ -3521,7 +3521,7 @@
     <string name="cache_maintenance_tab_wordcount">字数重算</string>
     <string name="cache_maintenance_action_scan">立即扫描</string>
     <string name="cache_maintenance_action_scanning">正在扫描 %1$d / %2$d，点击取消</string>
-    <string name="cache_maintenance_action_deleting">正在删除，点击取消</string>
+    <string name="cache_maintenance_action_deleting">正在删除 %1$d / %2$d，点击取消</string>
     <string name="cache_maintenance_action_recounting">正在重算 %1$d / %2$d，点击取消</string>
     <string name="cache_maintenance_action_select_all">全选 / 全不选</string>
     <string name="cache_maintenance_action_delete">删除选中</string>
@@ -3536,6 +3536,15 @@
     <string name="cache_maintenance_result_recount">已更新 %1$d 章、%2$d 本书字数</string>
     <string name="cache_maintenance_confirm_delete_title">删除孤立章节缓存</string>
     <string name="cache_maintenance_confirm_delete_text">仅删除在书籍章节列表中查不到对应章节的缓存条目，删除后无法恢复。</string>
+    <string name="cache_maintenance_status_idle">尚未扫描</string>
+    <string name="cache_maintenance_status_running">任务执行中</string>
+    <string name="cache_maintenance_status_done">扫描完成</string>
+    <string name="cache_maintenance_intro_orphan">检查章节列表里已不存在、但磁盘上仍留着的正文缓存。进入本页不会自动执行任务，需点击下方「立即扫描」；扫描只读，不会删除任何文件。</string>
+    <string name="cache_maintenance_intro_wordcount">检查在线书籍的章节列表：章节有缓存却没记录字数时重算并写回；整本重算完成、且整书字数原本为空时，才汇总补回整书字数。进入本页不会自动执行，需点击下方「立即扫描」。</string>
+    <string name="cache_maintenance_scan_hint">只读扫描全部书籍；点击开始，执行中点进度行可取消。</string>
+    <string name="cache_maintenance_leave_confirm_title">任务进行中要离开？</string>
+    <string name="cache_maintenance_leave_confirm_text">正在执行的任务会被取消。已经完成的删除和字数写入无法回滚。</string>
+    <string name="cache_maintenance_result_cancelled">任务已取消，部分结果已提交，建议重新扫描确认当前状态。</string>
     <string name="tts_cache_total">缓存总量</string>
     <string name="tts_cache_file_count">%d 个文件</string>
     <string name="tts_cache_empty">暂无缓存音频</string>
