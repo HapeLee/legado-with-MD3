@@ -52,6 +52,8 @@ object SettingsSearchCatalog {
         SettingsSearchItem("theme.custom_theme_colors", SettingsSearchPage.Theme, R.string.custom_theme_colors, groupIndex = 0, parentId = "theme.theme"),
         SettingsSearchItem("theme.compose_engine", SettingsSearchPage.Theme, R.string.compose_engine, groupIndex = 0),
         SettingsSearchItem("theme.change_icon", SettingsSearchPage.Theme, R.string.change_icon, groupIndex = 0, descriptionRes = R.string.change_icon_summary),
+        SettingsSearchItem("theme.navigation_animation", SettingsSearchPage.Theme, R.string.navigation_animation, groupIndex = 0),
+        SettingsSearchItem("theme.text_animation_level", SettingsSearchPage.Theme, R.string.text_animation_level, groupIndex = 0),
         SettingsSearchItem("theme.predictive_back", SettingsSearchPage.Theme, R.string.predictive_back, groupIndex = 0, descriptionRes = R.string.predictive_back_summary),
         SettingsSearchItem("theme.reader_shared_element", SettingsSearchPage.Theme, R.string.reader_shared_element, groupIndex = 0, descriptionRes = R.string.reader_shared_element_summary),
         SettingsSearchItem("theme.font_scale", SettingsSearchPage.Theme, R.string.font_scale, groupIndex = 0),

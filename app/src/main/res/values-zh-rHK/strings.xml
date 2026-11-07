@@ -2129,6 +2129,17 @@
     <string name="position_top_end">右上角</string>
     <string name="position_top_start">左上角</string>
     <string name="predictive_back">預測性返回手勢</string>
+    <string name="navigation_animation">導覽動畫</string>
+    <string name="navigation_animation_scale">縮放</string>
+    <string name="text_animation_level">文字動畫等級</string>
+    <string name="text_animation_slide">滑動（預設）</string>
+    <string name="text_animation_subtle">輕柔</string>
+    <string name="text_animation_standard">標準</string>
+    <string name="text_animation_strong">明顯</string>
+    <string name="text_animation_preview">文字動畫示例</string>
+    <string name="text_animation_preview_summary">點按切換示例文字</string>
+    <string name="text_animation_example_reading">正在閱讀</string>
+    <string name="text_animation_example_finished">已讀完</string>
     <string name="predictive_back_summary">啟用系統預測性返回手勢</string>
     <string name="preferred_contrast">偏好對比度</string>
     <string name="preview_effect">預覽效果</string>

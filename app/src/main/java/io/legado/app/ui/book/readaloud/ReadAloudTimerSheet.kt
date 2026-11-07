@@ -16,6 +16,7 @@ import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.MochiSheetLayout
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
@@ -60,6 +61,7 @@ fun ReadAloudTimerSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.set_timer),
+        mochiLayout = MochiSheetLayout.Compact,
     ) {
         // 两种定时互斥，切页签立即写入，不留「选了模式但没设值」的中间态
         CardTabRow(

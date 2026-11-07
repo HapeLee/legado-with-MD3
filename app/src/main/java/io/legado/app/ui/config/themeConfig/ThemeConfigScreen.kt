@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -45,7 +46,10 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +65,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import io.legado.app.R
+import io.legado.app.domain.model.settings.NavigationAnimationStyle
+import io.legado.app.domain.model.settings.TextAnimationLevel
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.isEyeProtectionConfigured
 import io.legado.app.ui.theme.ComposeEngine
@@ -72,6 +78,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
+import io.legado.app.ui.widget.components.SplicedColumnDivider
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.InfoCard
@@ -79,9 +86,11 @@ import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.dialog.TimePickerDialog
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
+import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -291,6 +300,29 @@ fun ThemeConfigScreen(
                                 onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.LauncherIcon))
                             }
                         )
+                    }
+                    SearchableSetting("theme.navigation_animation") {
+                        val styles = NavigationAnimationStyle.entries
+                        DropdownListSettingItem(
+                            title = stringResource(R.string.navigation_animation),
+                            selectedValue = appShell.navigationAnimationStyle.storedValue,
+                            displayEntries = styles.map { style ->
+                                when (style) {
+                                    NavigationAnimationStyle.Default -> stringResource(R.string.text_default)
+                                    NavigationAnimationStyle.Miuix -> "Miuix"
+                                    NavigationAnimationStyle.Scale -> stringResource(R.string.navigation_animation_scale)
+                                }
+                            }.toTypedArray(),
+                            entryValues = styles.map { it.storedValue }.toTypedArray(),
+                            onValueChange = {
+                                onIntent(ThemeConfigIntent.SetNavigationAnimationStyle(
+                                    NavigationAnimationStyle.fromStoredValue(it)
+                                ))
+                            }
+                        )
+                    }
+                    TextAnimationSettings(appShell.textAnimationLevel) { level ->
+                        onIntent(ThemeConfigIntent.SetTextAnimationLevel(level))
                     }
                     SearchableSetting("theme.predictive_back") {
                         SwitchSettingItem(
@@ -1056,6 +1088,54 @@ fun ThemeConfigScreen(
         emptyText = stringResource(R.string.theme_config_no_font_files),
     )
 
+}
+
+@Composable
+private fun TextAnimationSettings(
+    level: TextAnimationLevel,
+    onLevelChange: (TextAnimationLevel) -> Unit,
+) {
+    SearchableSetting("theme.text_animation_level") {
+        DropdownListSettingItem(
+            title = stringResource(R.string.text_animation_level),
+            selectedValue = level.storedValue,
+            displayEntries = TextAnimationLevel.entries.map {
+                stringResource(
+                    when (it) {
+                        TextAnimationLevel.Slide -> R.string.text_animation_slide
+                        TextAnimationLevel.Off -> R.string.close
+                        TextAnimationLevel.Subtle -> R.string.text_animation_subtle
+                        TextAnimationLevel.Standard -> R.string.text_animation_standard
+                        TextAnimationLevel.Strong -> R.string.text_animation_strong
+                    }
+                )
+            }.toTypedArray(),
+            entryValues = TextAnimationLevel.entries.map { it.storedValue }.toTypedArray(),
+            onValueChange = { onLevelChange(TextAnimationLevel.fromStoredValue(it)) },
+        )
+    }
+
+    var finished by rememberSaveable { mutableStateOf(false) }
+    SplicedColumnDivider()
+    SettingItem(
+        title = stringResource(R.string.text_animation_preview),
+        description = stringResource(R.string.text_animation_preview_summary),
+        trailingContent = {
+            AnimatedTextLine(
+                text = stringResource(
+                    if (finished) R.string.text_animation_example_finished
+                    else R.string.text_animation_example_reading
+                ),
+                modifier = Modifier.widthIn(max = 128.dp),
+                color = LegadoTheme.colorScheme.primary,
+                style = LegadoTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        semanticRole = Role.Button,
+        onClick = { finished = !finished },
+    )
 }
 
 @Composable

@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -102,8 +103,8 @@ fun CompactDropdownSettingItem(
                         RoundDropdownMenuItem(
                             text = display,
                             onClick = {
-                                onValueChange(entryValues[index])
                                 onDismiss()
+                                onValueChange(entryValues[index])
                             },
                             trailingIcon = if (selectedValue == entryValues[index]) {
                                 {
@@ -269,14 +270,23 @@ fun CompactSwitchSettingItem(
                 semanticToggleState = checked,
                 onClick = { if (enabled) onCheckedChange(!checked) },
                 trailingContent = {
-                    Switch(
-                        modifier = Modifier
-                            .scale(0.8f)
-                            .clearAndSetSemantics { },
-                        checked = checked,
-                        onCheckedChange = onCheckedChange,
-                        enabled = enabled
-                    )
+                    if (composeEngine == ComposeEngine.Mochi) {
+                        TinySwitch(
+                            checked = checked,
+                            onCheckedChange = onCheckedChange,
+                            enabled = enabled,
+                            includeStateSemantics = false,
+                        )
+                    } else {
+                        Switch(
+                            modifier = Modifier
+                                .scale(0.8f)
+                                .clearAndSetSemantics { },
+                            checked = checked,
+                            onCheckedChange = onCheckedChange,
+                            enabled = enabled,
+                        )
+                    }
                 }
             )
         }

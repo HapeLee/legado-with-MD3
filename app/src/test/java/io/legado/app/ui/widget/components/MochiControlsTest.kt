@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -18,12 +19,22 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.AppUiConfiguration
+import io.legado.app.domain.model.settings.TextAnimationLevel
 import io.legado.app.ui.theme.AppTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.button.SecondaryButton
+import io.legado.app.ui.widget.components.checkBox.AppCheckbox
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
+import io.legado.app.ui.widget.components.text.AnimatedText
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -43,16 +54,132 @@ import splitties.init.injectAsAppCtx
 class MochiControlsTest {
     @get:Rule val compose = createComposeRule()
 
-    private fun show(content: @Composable () -> Unit) {
+    private fun show(engine: String = "mochi", content: @Composable () -> Unit) {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
         compose.setContent {
             AppTheme(
-                AppUiConfiguration(appShell = AppShellSettings(composeEngine = "mochi")),
+                AppUiConfiguration(appShell = AppShellSettings(composeEngine = engine)),
                 applyBackground = false,
             ) {
                 Column(Modifier.width(360.dp)) { content() }
             }
         }
+    }
+
+    @Test
+    @Config(sdk = [26, 35])
+    fun animatedTextExposesOnlyTheCurrentTextAndCanDisableTheTransition() {
+        val label = mutableStateOf("Reading")
+        val count = mutableStateOf("12")
+        val level = mutableStateOf(TextAnimationLevel.Standard)
+        show(engine = "material") {
+            val configuration = LocalAppUiConfiguration.current
+            CompositionLocalProvider(
+                LocalAppUiConfiguration provides configuration.copy(
+                    appShell = configuration.appShell.copy(textAnimationLevel = level.value)
+                )
+            ) {
+                AnimatedTextLine(label.value)
+                AnimatedText(count.value)
+            }
+        }
+        compose.onNodeWithText("Reading").assertIsDisplayed()
+        compose.onNodeWithText("12").assertIsDisplayed()
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle {
+            label.value = "Finished"
+            count.value = "13"
+        }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.onAllNodesWithText("Finished").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Reading").assertDoesNotExist()
+        compose.onNodeWithText("13").assertExists()
+
+        compose.runOnIdle {
+            level.value = TextAnimationLevel.Off
+            label.value = "Stopped"
+        }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.onAllNodesWithText("Stopped").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Stopped").assertIsDisplayed()
+        compose.onNodeWithText("Finished").assertDoesNotExist()
+    }
+
+    @Test
+    fun sheetSettingsKeepDecimalStepsAndOpenTheDropdown() {
+        val value = mutableFloatStateOf(0.5f)
+        val selection = mutableStateOf("manual")
+        val checked = mutableStateOf(false)
+        var finishes = 0
+        var toggles = 0
+        show {
+            AppModalBottomSheet(show = true, onDismissRequest = {}) {
+                TinySliderSettingItem(
+                    title = "Playback speed",
+                    value = value.floatValue,
+                    valueRange = 0.25f..2f,
+                    stepSize = 0.25f,
+                    showDecimal = true,
+                    onValueChange = { value.floatValue = it },
+                    onValueChangeFinished = { finishes++ },
+                )
+                TinyDropdownSettingItem(
+                    title = "Playback mode",
+                    selectedValue = selection.value,
+                    displayEntries = arrayOf("Manual", "Automatic"),
+                    entryValues = arrayOf("manual", "automatic"),
+                    onValueChange = { selection.value = it },
+                )
+                CompactSwitchSettingItem("Resume playback", checked = checked.value) {
+                    checked.value = it
+                    toggles++
+                }
+            }
+        }
+        val increase = RuntimeEnvironment.getApplication().getString(R.string.a11y_increase)
+        val slider = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.SetProgress))
+        compose.onNodeWithContentDescription(increase)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .performTouchInput { click() }
+        slider.assertDoesNotExist()
+        compose.onNodeWithText("Playback speed").performClick()
+        slider.assertIsDisplayed()
+        val switch = compose.onNodeWithText("Resume playback").assertIsOff()
+        switch.performTouchInput { click(Offset(width * 0.9f, centerY)) }
+        switch.assertIsOn()
+        compose.onNodeWithText("Playback mode").performTouchInput { click() }
+        compose.onNodeWithText("Automatic").assertIsDisplayed().performClick()
+        compose.runOnIdle {
+            assertEquals(0.75f, value.floatValue)
+            assertEquals(1, finishes)
+            assertEquals(1, toggles)
+            assertEquals("automatic", selection.value)
+        }
+    }
+
+    @Test
+    fun checkboxesKeepInteractiveAndDisplayOnlyModes() {
+        val checked = mutableStateOf(false)
+        show {
+            AppCheckbox(
+                checked = checked.value,
+                onCheckedChange = { checked.value = it },
+                modifier = Modifier.testTag("active"),
+            )
+            AppCheckbox(
+                checked = true,
+                onCheckedChange = null,
+                modifier = Modifier.testTag("display"),
+            )
+        }
+        val active = compose.onNodeWithTag("active").assertIsOff()
+        active.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
+        active.performTouchInput { click() }.assertIsOn()
+        compose.onNodeWithTag("display").assertIsOn().assertHasNoClickAction()
     }
 
     @Test

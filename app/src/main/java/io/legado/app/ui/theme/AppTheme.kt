@@ -1,5 +1,6 @@
 package io.legado.app.ui.theme
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -9,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -18,6 +20,7 @@ import com.materialkolor.PaletteStyle
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.customColors
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
+import ui.feice.mochi.basic.mochiSheetBackdrop
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -186,8 +189,20 @@ private fun AppThemeActual(
                 )
             }
             ComposeEngine.Mochi -> {
-                MaterialThemeWrapper(themeColors, customFontFamily, applyBackground) {
-                    ProvideMochiTheme(themeColors.colorScheme, themeColors.isDark, content = content)
+                val parentRegistry = LocalMochiBackdropRegistry.current
+                val registry = parentRegistry ?: remember { MochiBackdropRegistry() }
+                CompositionLocalProvider(LocalMochiBackdropRegistry provides registry) {
+                    val themedContent: @Composable () -> Unit = {
+                        MaterialThemeWrapper(themeColors, customFontFamily, applyBackground) {
+                            ProvideMochiTheme(themeColors.colorScheme, themeColors.isDark, content = content)
+                        }
+                    }
+                    if (parentRegistry == null) {
+                        val backdrop = registry.currentSheet?.let { Modifier.mochiSheetBackdrop(it) }
+                        Box(backdrop ?: Modifier, propagateMinConstraints = true) { themedContent() }
+                    } else {
+                        themedContent()
+                    }
                 }
             }
             ComposeEngine.Material -> {

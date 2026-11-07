@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import ui.feice.mochi.basic.MochiSheetState
 import ui.feice.mochi.effect.glass.LocalMochiBackdrop
 import ui.feice.mochi.effect.glass.MochiBackdrop
 
@@ -12,7 +13,17 @@ import ui.feice.mochi.effect.glass.MochiBackdrop
 @Stable
 internal class MochiBackdropRegistry {
     private val sources = mutableStateListOf<Pair<Any, MochiBackdrop?>>()
+    private val sheets = mutableStateListOf<MochiSheetState>()
     val current: MochiBackdrop? get() = sources.lastOrNull()?.second
+    val currentSheet: MochiSheetState? get() = sheets.lastOrNull()
+
+    fun addSheet(state: MochiSheetState) {
+        sheets.add(state)
+    }
+
+    fun removeSheet(state: MochiSheetState) {
+        sheets.remove(state)
+    }
 
     fun register(owner: Any, backdrop: MochiBackdrop?) {
         sources.removeAll { it.first === owner }

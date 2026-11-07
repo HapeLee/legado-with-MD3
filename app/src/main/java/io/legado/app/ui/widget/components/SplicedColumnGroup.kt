@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -25,6 +27,12 @@ import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.divider.SettingItemDivider
 import io.legado.app.ui.widget.components.title.AdaptiveTitle
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import ui.feice.mochi.list.MochiListCard
+import ui.feice.mochi.list.MochiListDefaults
+import ui.feice.mochi.list.MochiListSectionHeader
+import ui.feice.mochi.shape.MochiRoundedRectangle
+
+internal val LocalMochiSettingsGroup = staticCompositionLocalOf { false }
 
 val LocalSplicedColumnGroupState = compositionLocalOf { SplicedColumnGroupState(
     enableItemDivider = false,
@@ -50,6 +58,7 @@ fun SplicedColumnGroup(
     val cornerRadius = when {
         themeSettings.disableSplicedColumnGroupCornerRadius -> 0.dp
         themeSettings.overrideBaseCardCornerRadius -> themeSettings.baseCardCornerRadius.dp
+        composeEngine == ComposeEngine.Mochi -> MochiListDefaults.SectionCorner
         else -> 16.dp
     }
     val border = if (themeSettings.overrideBaseCardBorder) {
@@ -79,6 +88,32 @@ fun SplicedColumnGroup(
     }
 
     Column(modifier = modifier.padding(top = 8.dp, bottom = 8.dp)) {
+        if (composeEngine == ComposeEngine.Mochi) {
+            if (title.isNotEmpty()) MochiListSectionHeader(title)
+            val shape = MochiRoundedRectangle(cornerRadius)
+            val colors = MochiListDefaults.colors()
+            MochiListCard(
+                modifier = Modifier
+                    .clip(shape)
+                    .then(border?.let { Modifier.border(it, shape) } ?: Modifier)
+                    .background(colors.container)
+                    .appContainerBackground(AppContainerBackgroundType.Large),
+                colors = MochiListDefaults.colors(
+                    container = Color.Transparent,
+                    divider = if (enableItemDivider && themeSettings.itemDividerColor != 0) {
+                        Color(themeSettings.itemDividerColor)
+                    } else {
+                        colors.divider
+                    },
+                ),
+            ) {
+                CompositionLocalProvider(LocalMochiSettingsGroup provides true) {
+                    items()
+                }
+            }
+            return@Column
+        }
+
         if (title.isNotEmpty()) {
             AdaptiveTitle(
                 text = title,
@@ -142,6 +177,7 @@ fun SplicedColumnGroup(
 
 @Composable
 fun SplicedColumnDivider() {
+    if (LocalMochiSettingsGroup.current) return
     val groupState = LocalSplicedColumnGroupState.current
     if (groupState.enableItemDivider && groupState.currentIndex() > 0) {
         SettingItemDivider()
@@ -155,11 +191,12 @@ fun SettingItemWithDivider(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val groupState = LocalSplicedColumnGroupState.current
-    if (groupState.enableItemDivider && groupState.currentIndex() > 0) {
+    val useLegacyDivider = !LocalMochiSettingsGroup.current
+    if (useLegacyDivider && groupState.enableItemDivider && groupState.currentIndex() > 0) {
         SettingItemDivider()
     }
     Column(modifier = modifier.fillMaxWidth()) {
-        groupState.incrementIndex()
+        if (useLegacyDivider) groupState.incrementIndex()
         content()
     }
 }

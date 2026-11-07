@@ -10,8 +10,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
+import ui.feice.mochi.effect.elastic.mochiPressDeform
+import ui.feice.mochi.shape.MochiRoundedRectangle
 
 /**
  * A button that displays a color swatch. Clicking opens a color picker.
@@ -28,18 +36,21 @@ fun AccentColorButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val useMochi = LegadoTheme.composeEngine == ComposeEngine.Mochi
+    val shape = if (useMochi) MochiRoundedRectangle(12.dp) else RoundedCornerShape(32.dp)
+    val label = stringResource(R.string.select_color)
     Box(
         modifier = modifier
             .size(width = 36.dp, height = 36.dp)
-            .clip(RoundedCornerShape(32.dp))
+            .then(if (useMochi && enabled) Modifier.mochiPressDeform() else Modifier)
+            .clip(shape)
             .background(Color(color))
             .border(
                 width = 1.dp,
                 color = LegadoTheme.colorScheme.outlineVariant,
-                shape = RoundedCornerShape(32.dp)
+                shape = shape
             )
-            .then(
-                if (enabled) Modifier.clickable(onClick = onClick) else Modifier
-            )
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label }
     )
 }

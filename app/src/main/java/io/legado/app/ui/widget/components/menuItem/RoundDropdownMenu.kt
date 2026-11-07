@@ -57,6 +57,7 @@ fun RoundDropdownMenu(
     shape: Shape = MaterialTheme.shapes.medium,
     shadowElevation: Dp = 4.dp,
     verticalSpacing: Dp = 8.dp,
+    mochiAnchorMaxWidth: Dp = Dp.Unspecified,
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit
 ) {
     val popupContainerColor = LegadoTheme.colorScheme.surfaceContainer
@@ -82,7 +83,9 @@ fun RoundDropdownMenu(
                 }
             }
         }
-        ComposeEngine.Mochi -> AppMochiPopover(expanded, onDismissRequest, modifier) {
+        ComposeEngine.Mochi -> AppMochiPopover(
+            expanded, onDismissRequest, modifier, maxAnchorWidth = mochiAnchorMaxWidth,
+        ) {
             Column(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
                 content(onDismissRequest)
             }

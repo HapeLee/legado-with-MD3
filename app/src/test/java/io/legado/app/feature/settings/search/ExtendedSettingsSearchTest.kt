@@ -13,6 +13,8 @@ import androidx.lifecycle.SavedStateHandle
 import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.AppUiConfiguration
+import io.legado.app.domain.model.settings.NavigationAnimationStyle
+import io.legado.app.domain.model.settings.TextAnimationLevel
 import io.legado.app.feature.settings.reading.ReadSetting
 import io.legado.app.ui.config.labConfig.LabConfigScreen
 import io.legado.app.ui.config.labConfig.LabConfigUiState
@@ -71,6 +73,90 @@ class ExtendedSettingsSearchTest {
     @Test fun `Chinese search covers every category and fixed item`() = checkCatalog()
     @Test @Config(qualifiers = "en-w400dp-h800dp")
     fun `English search covers every category and fixed item`() = checkCatalog()
+
+    @Test
+    fun `text animation level can be selected and previewed in Material`() =
+        selectTextAnimation("material")
+
+    @Test
+    fun `text animation level can be selected and previewed in Mochi`() =
+        selectTextAnimation("mochi")
+
+    private fun selectTextAnimation(engine: String) {
+        val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
+        val target = requireNotNull(SettingsSearchCatalog.find("theme.text_animation_level"))
+        var shell by mutableStateOf(AppShellSettings(composeEngine = engine))
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = shell)) {
+                SettingsSearchTargetScope(target) {
+                    ThemeConfigScreen(
+                        ThemeConfigUiState(appShell = shell),
+                        { intent ->
+                            if (intent is ThemeConfigIntent.SetTextAnimationLevel) {
+                                shell = shell.copy(textAnimationLevel = intent.level)
+                            }
+                        },
+                        {}, {}, {},
+                    )
+                }
+            }
+        }
+        val row = hasAnyAncestor(hasTestTag("setting:theme.text_animation_level"))
+        compose.onNode(hasText(app.getString(R.string.text_animation_level)) and hasClickAction() and row)
+            .performTouchInput { click() }
+        compose.onNodeWithText(app.getString(R.string.text_animation_strong)).assertIsDisplayed().performClick()
+        compose.runOnIdle {
+            assertEquals(TextAnimationLevel.Strong, shell.textAnimationLevel)
+            assertEquals(engine, shell.composeEngine)
+        }
+        compose.onNodeWithText(app.getString(R.string.text_animation_preview))
+            .performScrollTo()
+            .performClick()
+        compose.onNodeWithText(app.getString(R.string.text_animation_example_finished)).assertIsDisplayed()
+        compose.onNodeWithText(app.getString(R.string.text_animation_example_reading)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `navigation animation dropdown selects Miuix in the Material theme`() =
+        selectNavigationAnimation("material")
+
+    @Test
+    fun `navigation animation dropdown opens and selects in the Mochi theme`() =
+        selectNavigationAnimation("mochi")
+
+    private fun selectNavigationAnimation(engine: String) {
+        val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
+        val target = requireNotNull(SettingsSearchCatalog.find("theme.navigation_animation"))
+        var shell by mutableStateOf(AppShellSettings(composeEngine = engine))
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = shell)) {
+                SettingsSearchTargetScope(target) {
+                    ThemeConfigScreen(
+                        ThemeConfigUiState(appShell = shell),
+                        { intent ->
+                            if (intent is ThemeConfigIntent.SetNavigationAnimationStyle) {
+                                shell = shell.copy(navigationAnimationStyle = intent.style)
+                            }
+                        },
+                        {}, {}, {},
+                    )
+                }
+            }
+        }
+        val row = hasAnyAncestor(hasTestTag("setting:theme.navigation_animation"))
+        compose.onNode(hasText(app.getString(R.string.navigation_animation)) and hasClickAction() and row)
+            .performTouchInput { click() }
+        val themeStyleRow = hasAnyAncestor(hasTestTag("setting:theme.compose_engine"))
+        compose.onNodeWithText("AOSP").assertDoesNotExist()
+        compose.onNodeWithText(app.getString(R.string.navigation_animation_scale)).assertIsDisplayed()
+        compose.onNode(hasText("Miuix") and hasClickAction() and !themeStyleRow)
+            .assertIsDisplayed()
+            .performTouchInput { click() }
+        compose.runOnIdle {
+            assertEquals(NavigationAnimationStyle.Miuix, shell.navigationAnimationStyle)
+            assertEquals(engine, shell.composeEngine)
+        }
+    }
 
     private fun assertThemeUnchanged(events: List<ThemeConfigIntent>, shell: AppShellSettings = AppShellSettings()) {
         for (event in events) when (event) {

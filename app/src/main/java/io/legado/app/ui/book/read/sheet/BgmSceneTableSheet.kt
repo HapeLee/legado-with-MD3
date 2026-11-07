@@ -85,14 +85,13 @@ fun BgmSceneTableSheet(
     }
     var editingOrdinal by remember { mutableStateOf<Int?>(null) }
 
-    // 正在展开某一段的编辑器时，返回键先收起编辑器而不是关掉整个弹层
-    BackHandler(enabled = show && editingOrdinal != null) { editingOrdinal = null }
-
     AppModalBottomSheet(
         show = show && book != null,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.cast_bgm_scene_table),
     ) {
+        // 返回先收起当前段的编辑器。
+        BackHandler(enabled = show && editingOrdinal != null) { editingOrdinal = null }
         CastImeScope {
             Column(
                 modifier = Modifier

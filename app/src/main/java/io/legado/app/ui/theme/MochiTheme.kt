@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextMotion
+import ui.feice.mochi.effect.overscroll.ProvideMochiOverscroll
 import ui.feice.mochi.theme.MochiColorScheme
 import ui.feice.mochi.theme.MochiTextStyles
 import ui.feice.mochi.theme.MochiTheme
@@ -40,7 +41,9 @@ internal fun ProvideMochiTheme(
             themeAccent = true,
         ),
         content = {
-            CompositionLocalProvider(LocalMochiBackdropRegistry provides registry, content = content)
+            CompositionLocalProvider(LocalMochiBackdropRegistry provides registry) {
+                ProvideMochiOverscroll(content = content)
+            }
         },
     )
 }

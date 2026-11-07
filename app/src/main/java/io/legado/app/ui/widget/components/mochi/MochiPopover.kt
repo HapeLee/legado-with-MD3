@@ -13,11 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.rememberMochiOverlayBackdrop
 import ui.feice.mochi.basic.MochiPopoverBox
@@ -31,37 +36,56 @@ internal fun AppMochiPopover(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     width: Dp = 280.dp,
+    maxAnchorWidth: Dp = Dp.Unspecified,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    MochiOverlayAccessibility(expanded)
-    val backdrop = rememberMochiOverlayBackdrop(expanded)
-    var anchorSize by remember { mutableStateOf(IntSize.Zero) }
-    var anchorOffset by remember { mutableStateOf(IntOffset.Zero) }
+    var anchor by remember { mutableStateOf<IntRect?>(null) }
+    val maxAnchorWidthPx = if (maxAnchorWidth.isSpecified) {
+        with(LocalDensity.current) { maxAnchorWidth.roundToPx().coerceAtLeast(1) }
+    } else {
+        Int.MAX_VALUE
+    }
+    val showPopover = expanded && anchor != null
+    MochiOverlayAccessibility(showPopover)
+    val backdrop = rememberMochiOverlayBackdrop(showPopover)
     CompositionLocalProvider(LocalMochiBackdrop provides backdrop) {
         // Like DropdownMenu, take no space in the caller's Box. Give Mochi the bounds of
         // that Box, including when the zero-sized child is aligned to its bottom/end.
         Layout(
             modifier = Modifier.onGloballyPositioned {
-                anchorSize = it.parentLayoutCoordinates?.size ?: IntSize.Zero
+                // A measured empty anchor is valid (e.g. a settings row with no trailing
+                // icon). Give Mochi a point-sized rect while keeping zero as the unmeasured state.
                 val p = it.positionInParent()
-                anchorOffset = IntOffset(p.x.roundToInt(), p.y.roundToInt())
+                anchor = it.parentLayoutCoordinates?.size?.let { size ->
+                    val width = size.width.coerceIn(1, maxAnchorWidthPx)
+                    val left = (size.width - width).coerceAtLeast(0) / 2 - p.x.roundToInt()
+                    IntRect(IntOffset(left, -p.y.roundToInt()), IntSize(width, size.height.coerceAtLeast(1)))
+                }
             },
             content = {
                 MochiPopoverBox(
-                    expanded = expanded && anchorSize != IntSize.Zero,
+                    expanded = showPopover,
                     onExpandedChange = { if (!it) onDismissRequest() },
                     width = width,
                     contentPadding = PaddingValues(vertical = 8.dp),
-                    popover = { ProvideAppDensity {
-                        Column(mochiOverlayContentModifier(onDismissRequest).then(modifier), content = content)
-                    } },
+                    popover = {
+                        ProvideAppDensity {
+                            val popupModifier = if (showPopover) {
+                                mochiOverlayContentModifier(onDismissRequest).then(modifier)
+                            } else {
+                                modifier.clearAndSetSemantics { hideFromAccessibility() }
+                            }
+                            Column(popupModifier, content = content)
+                        }
+                    },
                     anchor = {},
                 )
             },
         ) { measurables, constraints ->
-            val child = measurables.single().measure(Constraints.fixed(anchorSize.width, anchorSize.height))
+            val bounds = anchor ?: IntRect.Zero
+            val child = measurables.single().measure(Constraints.fixed(bounds.width, bounds.height))
             layout(constraints.minWidth, constraints.minHeight) {
-                child.place(-anchorOffset.x, -anchorOffset.y)
+                child.place(bounds.left, bounds.top)
             }
         }
     }

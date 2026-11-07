@@ -384,6 +384,8 @@ object PreferKey {
     const val readAloudAndroidMediaControl = "readAloudAndroidMediaControl"
     const val finishCurrentChapterAfterTimer = "finishCurrentChapterAfterTimer"
     const val isPredictiveBackEnabled = "isPredictiveBackEnabled"
+    const val navigationAnimationStyle = "navigationAnimationStyle"
+    const val textAnimationLevel = "textAnimationLevel"
     const val readerSharedElementEnabled = "readerSharedElementEnabled"
     const val readRecordDisplayMode = "readRecordDisplayMode"
     const val replaceSortMode = "desc"

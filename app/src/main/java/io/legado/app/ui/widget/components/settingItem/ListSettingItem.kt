@@ -102,8 +102,8 @@ fun DropdownListSettingItem(
                                 LegadoTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             } else Color.Unspecified,
                             onClick = {
-                                if (unavailable) onUnavailableSelected?.invoke(value) else onValueChange(value)
                                 onDismiss()
+                                if (unavailable) onUnavailableSelected?.invoke(value) else onValueChange(value)
                             },
                             trailingIcon = if (selectedValue == value) {
                                 {

@@ -21,6 +21,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.MochiSheetLayout
 import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +46,8 @@ fun PageKeySheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.custom_page_key)
+        title = stringResource(R.string.custom_page_key),
+        mochiLayout = MochiSheetLayout.Compact,
     ) {
         Column(
             modifier = Modifier
