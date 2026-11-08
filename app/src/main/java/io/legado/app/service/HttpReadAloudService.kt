@@ -355,6 +355,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private var preDownloadJob: Job? = null
     private var playIndexJob: Job? = null
     private var playbackGeneration = 0L
+    private var synthesisNeedsRestart = false
     private var paragraphIntervalJob: Coroutine<*>? = null
     private var paragraphResumeJob: Coroutine<*>? = null
     private var downloadErrorNo: Int = 0
@@ -411,6 +412,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             AppLog.putDebug("朗读列表为空")
             preparePlayback()
         } else {
+            synthesisNeedsRestart = false
             super.play()
             if (useStreamPlayback()) {
                 downloadAndPlayAudiosStream()
@@ -474,6 +476,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                 }
                 exoPlayer.prepare()
             }
+        }.onError {
+            if (it !is CancellationException) failSynthesis(generation, it)
         }
     }
 
@@ -509,6 +513,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun playStop() {
         playbackGeneration++
+        synthesisNeedsRestart = false
         downloadTask?.cancel()
         playIndexJob?.cancel()
         preDownloadJob?.cancel()
@@ -588,6 +593,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         }.onError {
             if (it !is CancellationException) {
                 AppLog.put("听书音频下载失败\n${it.localizedMessage}", it)
+                toastOnUi("听书音频下载失败：${it.localizedMessage}")
             }
         }
         audioDownloadTask = task
@@ -934,12 +940,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                                         )
                                     }
                                     if (!synthesized) {
-                                        AppLog.put(
-                                            "朗读：系统引擎 ${routedVoice.engineId} 没把这句合成成文件" +
-                                                "（音色 ${routedVoice.speakerId}），这一句跳过" +
-                                                "\n句子：${speakText.take(30)}",
-                                        )
-                                        createSilentSound(fileName)
+                                        throw NoStackTraceException("系统引擎未返回当前句的音频")
                                     }
                                 }
 
@@ -955,11 +956,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                                         )
                                     }
                                     if (!synthesized) {
-                                        AppLog.put(
-                                            "朗读：云端音色 ${routedVoice.speakerId} 没合成出文件，" +
-                                                "这一句跳过\n句子：${speakText.take(30)}",
-                                        )
-                                        createSilentSound(fileName)
+                                        throw NoStackTraceException("云端引擎未返回当前句的音频")
                                     }
                                 }
 
@@ -967,19 +964,14 @@ class HttpReadAloudService : BaseReadAloudService(),
                                     val inputStream = getSpeakStream(
                                         itemHttpTts, speakText, routedVoice, cueEmotion
                                     )
-                                    if (inputStream != null) {
-                                        createSpeakFile(fileName, inputStream)
-                                    } else {
-                                        AppLog.put(
-                                            "朗读：HTTP 引擎 ${itemHttpTts.name} 没回音频，这一句跳过" +
-                                                "\n句子：${speakText.take(30)}",
-                                        )
-                                        createSilentSound(fileName)
-                                    }
+                                    createSpeakFile(
+                                        fileName, inputStream ?: throw NoStackTraceException("HTTP 引擎未返回当前句的音频")
+                                    )
                                 }
                             }
                         }.onFailure {
-                            if (it !is CancellationException) pauseAfterSynthesisError(generation)
+                            if (it is CancellationException) throw it
+                            withContext(Main) { failSynthesis(generation, it) }
                             return@execute
                         }
                         }
@@ -990,6 +982,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     }
                     val mediaItem = downloaded ?: MediaItem.fromUri(Uri.fromFile(speakFileForPlay(fileName)))
                     launch(Main) {
+                        if (generation != playbackGeneration) return@launch
                         if (readAloudSettings.ttsParagraphInterval > 0) {
                             if (index == nowSpeak && exoPlayer.mediaItemCount == 0 && !paragraphGapPending) {
                                 exoPlayer.setMediaItem(mediaItem)
@@ -1016,7 +1009,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 }
             }
         }.onError {
-            AppLog.put("朗读下载出错\n${it.localizedMessage}", it, true)
+            if (it !is CancellationException) failSynthesis(generation, it)
         }
     }
 
@@ -1309,7 +1302,13 @@ class HttpReadAloudService : BaseReadAloudService(),
                 val downloaderChannel = Channel<Downloader>()
                 launch {
                     for (downloader in downloaderChannel) {
-                        runCatching { downloader.download(null) }
+                        try {
+                            downloader.download(null)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            AppLog.put("流式朗读音频下载失败", error)
+                        }
                     }
                 }
                 contentList.forEachIndexed { index, _ ->
@@ -1333,6 +1332,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                         createMediaSource(dataSourceFactory, fileName)
                     }
                     launch(Main) {
+                        if (generation != playbackGeneration) return@launch
                         if (readAloudSettings.ttsParagraphInterval > 0) {
                             if (index == nowSpeak && exoPlayer.mediaItemCount == 0 && !paragraphGapPending) {
                                 exoPlayer.setMediaSource(mediaSource)
@@ -1359,7 +1359,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 }
             }
         }.onError {
-            AppLog.put("朗读下载出错\n${it.localizedMessage}", it, true)
+            if (it !is CancellationException) failSynthesis(generation, it)
         }
     }
 
@@ -1472,21 +1472,24 @@ class HttpReadAloudService : BaseReadAloudService(),
         val upstreamFactory = DataSource.Factory {
             InputStreamDataSource {
                 if (speakText.isEmpty()) {
-                    null
+                    resources.openRawResource(R.raw.silent_sound)
                 } else {
-                    kotlin.runCatching {
-                        runBlocking(lifecycleScope.coroutineContext[Job]!!) {
+                    runBlocking(lifecycleScope.coroutineContext[Job]!!) {
+                        try {
                             getSpeakStream(httpTts, speakText, voice, emotionTag, lifecycleScope.coroutineContext[Job])
+                                ?: throw NoStackTraceException("HTTP 引擎未返回当前句的音频")
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            if (generation != null) {
+                                withContext(Main) { failSynthesis(generation, error) }
+                            } else {
+                                AppLog.put("流式预合成失败", error)
+                            }
+                            throw error
                         }
-                    }.onFailure {
-                        when (it) {
-                            is InterruptedException,
-                            is CancellationException -> Unit
-
-                            else -> generation?.let(::pauseAfterSynthesisError)
-                        }
-                    }.getOrThrow()
-                } ?: resources.openRawResource(R.raw.silent_sound)
+                    }
+                }
             }
         }
         val factory = CacheDataSource.Factory()
@@ -1496,11 +1499,17 @@ class HttpReadAloudService : BaseReadAloudService(),
         return factory
     }
 
-    private fun pauseAfterSynthesisError(generation: Long) {
-        // 合成在后台执行，状态和播放器必须一起在主线程暂停。旧队列迟到的错误不能暂停新队列。
-        lifecycleScope.launch {
-            if (generation == playbackGeneration && isRun && !pause) pauseReadAloud()
+    private fun failSynthesis(generation: Long, error: Throwable) {
+        if (generation != playbackGeneration || !isRun) return
+        // 调用方在主线程同步提交失败，再清掉已排队的音频。继续时从保留位置重建整章剩余队列。
+        AppLog.put("朗读音频失败，已暂停；继续朗读将重试当前句", error, true)
+        pauseReadAloud()
+        if (!isChapterTitleAt(nowSpeak)) {
+            paragraphStartPos = (currentProgress - readAloudNumber)
+                .coerceIn(0, contentList.getOrNull(nowSpeak)?.length ?: 0)
         }
+        playStop()
+        synthesisNeedsRestart = true
     }
 
     private fun createDownloader(factory: CacheDataSource.Factory, fileName: String): Downloader {
@@ -1561,7 +1570,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                             AppLog.put(msg1, e, true)
                             throw e
                         } else {
-                            AppLog.put("TTS下载音频出错，使用无声音频代替。\n朗读文本：$speakText")
+                            AppLog.put("TTS下载音频出错，本次合成失败。\n朗读文本：$speakText")
                             break
                         }
                     }
@@ -1952,6 +1961,10 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun resumeReadAloud() {
         if (resumeAfterPreparation()) return
+        if (synthesisNeedsRestart) {
+            play()
+            return
+        }
         super.resumeReadAloud()
         kotlin.runCatching {
             if (pageChanged) {
@@ -2094,30 +2107,22 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
-        AppLog.put("朗读错误\n${contentList[nowSpeak]}", error)
+        if (synthesisNeedsRestart || exoPlayer.currentMediaItem == null) return
+        AppLog.put("朗读错误\n${contentList.getOrNull(nowSpeak).orEmpty()}", error)
         deleteCurrentSpeakFile()
         playErrorNo++
         if (playErrorNo >= 5) {
             toastOnUi("朗读连续5次错误, 最后一次错误代码(${error.localizedMessage})")
             AppLog.put("朗读连续5次错误, 最后一次错误代码(${error.localizedMessage})", error)
-            pauseReadAloud()
-        } else {
-            if (exoPlayer.hasNextMediaItem()) {
-                exoPlayer.seekToNextMediaItem()
-                exoPlayer.prepare()
-            } else {
-                exoPlayer.clearMediaItems()
-                updateNextPos(naturalCompletion = true)
-            }
         }
+        failSynthesis(playbackGeneration, error)
     }
 
     private fun deleteCurrentSpeakFile() {
-        if (readAloudSettings.streamReadAloudAudio) {
-            return
-        }
         val mediaItem = exoPlayer.currentMediaItem ?: return
-        val filePath = mediaItem.localConfiguration!!.uri.path!!
+        val uri = mediaItem.localConfiguration?.uri ?: return
+        if (uri.scheme != "file") return
+        val filePath = uri.path ?: return
         File(filePath).delete()
     }
 
