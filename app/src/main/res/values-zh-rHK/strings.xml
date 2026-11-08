@@ -3068,6 +3068,8 @@
     <string name="read_aloud_audio_download_deleted_chapters">已刪除 %1$d 章的聽書音頻</string>
     <string name="read_aloud_audio_download_invalid_range">章範圍填得不對</string>
     <string name="read_aloud_audio_download_state">已下載聽書音頻</string>
+    <string name="read_aloud_audio_download_partial_state">聽書音頻已部分下載</string>
+    <string name="read_aloud_audio_download_unverified_state">已儲存聽書音頻，整章完整性未核驗</string>
     <string name="cast_assignment_state">本章已分配角色</string>
     <string name="cast_assignment_delete">刪除分配</string>
     <string name="cast_assignment_deleted">已刪除 %1$d 條分配</string>

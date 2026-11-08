@@ -1,5 +1,6 @@
 package io.legado.app.help.readaloud.playback
 
+import io.legado.app.R
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReadAloudAudioDownload
 import io.legado.app.utils.MD5Utils
@@ -10,6 +11,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import splitties.init.appCtx
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 /**
  * 听书音频的下载区。
@@ -24,17 +29,21 @@ import java.io.File
  */
 object ReadAloudAudioStore {
 
-    /**
-     * 无声占位音频的大小：合成失败时落的那份 `R.raw.silent_sound`，字节数和资源完全一致。
-     *
-     * 认不出它就会被它骗：一句合成失败留下 2160 字节的空壳，之后朗读在缓存或下载区
-     * 认到同名文件，当成「已经有音频了」不再重新合成，这一句永远只有 0.1 秒空白。
-     */
-    private const val SILENT_SOUND_BYTES = 2160L
+    /** 占位必须与资源内容一致，真实短音频可能恰好具有相同字节数。 */
+    private val silentSoundBytes by lazy {
+        appCtx.resources.openRawResource(R.raw.silent_sound).use { it.readBytes() }
+    }
+
+    /** 同一目标串行提交；固定数量的锁避免为每个句子永久保留一份锁对象。 */
+    private val fileLocks = Array(32) { Any() }
 
     /** 这份文件是不是无声占位（不是真音频）。 */
-    fun isSilentPlaceholder(file: File?): Boolean =
-        file != null && file.length() == SILENT_SOUND_BYTES
+    fun isSilentPlaceholder(file: File?): Boolean {
+        if (file == null || !file.isFile) return false
+        val placeholder = silentSoundBytes
+        if (file.length() != placeholder.size.toLong()) return false
+        return runCatching { file.readBytes().contentEquals(placeholder) }.getOrDefault(false)
+    }
 
     /** 下载进度：章节和句子两条，界面要同时显示。 */
     data class Progress(
@@ -94,22 +103,35 @@ object ReadAloudAudioStore {
     /** 把合成在缓存目录里的那份复制进下载区（缓存会被清，下载区不会）。 */
     fun saveFrom(bookUrl: String, fileName: String, source: File): File? {
         val dir = dirOf(bookUrl)
-        dir.mkdirs()
         val target = File(dir, "$fileName.mp3")
-        if (target.isFile && target.length() > 0L && !isSilentPlaceholder(target)) {
-            return target
+        val lock = fileLocks[(target.absolutePath.hashCode() and Int.MAX_VALUE) % fileLocks.size]
+        return synchronized(lock) {
+            runCatching {
+                if (target.isFile && target.length() > 0L && !isSilentPlaceholder(target)) {
+                    return@runCatching target
+                }
+                val sourceSize = source.length()
+                if (!source.isFile || sourceSize <= 0L || isSilentPlaceholder(source)) {
+                    return@runCatching null
+                }
+                if (!dir.isDirectory && !dir.mkdirs()) return@runCatching null
+                val part = File.createTempFile("audio-", ".part", dir)
+                try {
+                    source.inputStream().use { input ->
+                        FileOutputStream(part).use { output ->
+                            input.copyTo(output)
+                            output.fd.sync()
+                        }
+                    }
+                    if (part.length() != sourceSize || isSilentPlaceholder(part)) return@runCatching null
+                    // 与图片文件提交保持一致：同目录原子替换，失败保留原文件，不暴露复制中的半文件。
+                    Files.move(part.toPath(), target.toPath(), ATOMIC_MOVE, REPLACE_EXISTING)
+                    target
+                } finally {
+                    part.delete()
+                }
+            }.getOrNull()
         }
-        if (!source.isFile || source.length() <= 0L || isSilentPlaceholder(source)) return null
-        return runCatching {
-            // 复制完成后才发布正式文件名，实时播放不会命中半截音频。
-            val part = File.createTempFile("audio-", ".part", dir)
-            try {
-                source.copyTo(part, overwrite = true)
-                target.takeIf { part.renameTo(it) }
-            } finally {
-                part.delete()
-            }
-        }.getOrNull()
     }
 
     suspend fun list(bookUrl: String): List<ReadAloudAudioDownload> =
@@ -121,6 +143,9 @@ object ReadAloudAudioStore {
     /** 订阅：目录页的听书下载图标要跟着下载进度亮起来。 */
     fun flowDownloadedChapters(bookUrl: String): Flow<Set<Int>> =
         appDb.readAloudAudioDownloadDao.flowDownloadedChapters(bookUrl).map { it.toSet() }
+
+    fun flowDownloadRecords(bookUrl: String): Flow<List<ReadAloudAudioDownload>> =
+        appDb.readAloudAudioDownloadDao.flowForBook(bookUrl)
 
     suspend fun record(
         bookUrl: String, chapterIndex: Int, title: String, files: List<String>, totalSentences: Int,

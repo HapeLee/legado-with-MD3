@@ -26,6 +26,9 @@ interface ReadAloudAudioDownloadDao {
     )
     suspend fun getForBook(bookUrl: String): List<ReadAloudAudioDownload>
 
+    @Query("SELECT * FROM read_aloud_audio_downloads WHERE bookUrl = :bookUrl ORDER BY chapterIndex")
+    fun flowForBook(bookUrl: String): Flow<List<ReadAloudAudioDownload>>
+
     @Query(COMPLETE_DOWNLOADS)
     suspend fun getDownloadedChapters(bookUrl: String): List<Int>
 

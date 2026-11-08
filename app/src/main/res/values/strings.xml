@@ -3885,6 +3885,8 @@
     <string name="read_aloud_audio_download_deleted_chapters">Deleted downloaded audio of %1$d chapters</string>
     <string name="read_aloud_audio_download_invalid_range">Check the chapter range</string>
     <string name="read_aloud_audio_download_state">Audiobook downloaded</string>
+    <string name="read_aloud_audio_download_partial_state">Audiobook partially downloaded</string>
+    <string name="read_aloud_audio_download_unverified_state">Audiobook audio saved. Chapter completeness unverified</string>
     <string name="read_aloud_audio_download_section_range">Range</string>
     <string name="read_aloud_audio_download_range_count">%1$d chapters</string>
     <string name="read_aloud_audio_download_section_progress">Progress</string>

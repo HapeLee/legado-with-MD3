@@ -3881,6 +3881,8 @@
     <string name="read_aloud_audio_download_deleted_chapters">已删除 %1$d 章的听书音频</string>
     <string name="read_aloud_audio_download_invalid_range">章范围填得不对</string>
     <string name="read_aloud_audio_download_state">已下载听书音频</string>
+    <string name="read_aloud_audio_download_partial_state">听书音频已部分下载</string>
+    <string name="read_aloud_audio_download_unverified_state">已保存听书音频，整章完整性未核验</string>
     <string name="read_aloud_audio_download_section_range">下载范围</string>
     <string name="read_aloud_audio_download_range_count">共 %1$d 章</string>
     <string name="read_aloud_audio_download_section_progress">下载进度</string>
