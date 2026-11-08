@@ -903,7 +903,7 @@ fun MainActivity.mainEntryProvider(
         LaunchedEffect(route, isTopRoute) {
             if (!isTopRoute || routeChecked) return@LaunchedEffect
             val book = if (route.bookUrl.isNullOrEmpty()) {
-                bookRepository.getLastReadBook()
+                bookRepository.getLastReadBookForReader()
             } else {
                 bookRepository.getBook(route.bookUrl)
             }
