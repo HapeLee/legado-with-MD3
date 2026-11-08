@@ -28,6 +28,10 @@ internal fun isLocalMangaImage(path: String): Boolean =
 
 private val localMangaImageExtensions = setOf("jpg", "jpeg", "png", "webp", "gif", "avif", "bmp")
 
+/** Coil needs an explicit file authority separator to keep the path absolute. */
+internal fun File.toLocalMangaImageUrl(): String =
+    URI("file", "", absolutePath, null).toASCIIString()
+
 // A directory import has the image bit without the archive bit. Older CBZ records may have
 // neither bit, so keep the explicit comic extension as a fallback.
 internal val Book.isLocalMangaArchive: Boolean
@@ -118,7 +122,7 @@ internal object LocalMangaFiles {
             if (child.isDirectory && !Files.isSymbolicLink(child.toPath())) {
                 visitFiles(listDirectory(child), "$path/", visit)
             } else if (isLocalMangaImage(child.name) && child.isFile) {
-                visit(path) { child.toURI().toString() }
+                visit(path) { child.toLocalMangaImageUrl() }
             }
         }
     }

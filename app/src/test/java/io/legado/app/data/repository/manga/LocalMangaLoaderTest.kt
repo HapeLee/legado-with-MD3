@@ -14,9 +14,30 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.URI
 import java.nio.file.Files
 
 class LocalMangaLoaderTest {
+
+    @Test
+    fun `local manga page URLs retain absolute paths with spaces and non-ASCII characters`() {
+        val root = Files.createTempDirectory("local-manga-test").toFile()
+        val cache = Files.createTempDirectory("local-manga-cache").toFile()
+        try {
+            val image = root.resolve("第 1 章/001.webp")
+            image.parentFile!!.mkdirs()
+            image.writeBytes(byteArrayOf(1))
+            val book = Book(type = BookType.local or BookType.image, bookUrl = root.absolutePath)
+            val chapter = LocalMangaFiles.chapters(book).single()
+            val url = LocalMangaLoader(cache).use { it.load(book, chapter).pages.single().imageUrl }
+
+            assertTrue(url.startsWith("file:///"))
+            assertEquals(image.absolutePath, URI(url).path)
+        } finally {
+            root.deleteRecursively()
+            cache.deleteRecursively()
+        }
+    }
 
     @Test
     fun `only explicitly classified zip files open as manga`() {
