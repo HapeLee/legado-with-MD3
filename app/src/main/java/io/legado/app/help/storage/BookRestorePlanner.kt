@@ -40,20 +40,11 @@ internal fun planBookRestore(
     val booksToDelete = linkedMapOf<String, Book>()
     val locationStatusCache = hashMapOf<String, LocalBookLocationStatus>()
 
-    val onlineGroupPlan = planOnlineBookGroups(restoredBooks, existingBooks)
-    onlineGroupPlan.followDeleteBookUrls.forEach { bookUrl ->
-        val existingBook = activeBooks.remove(bookUrl) ?: return@forEach
-        booksToDelete[bookUrl] = existingBook
-    }
-
     fun cachedLocationStatus(bookUrl: String): LocalBookLocationStatus =
         locationStatusCache.getOrPut(bookUrl) { locationStatus(bookUrl) }
 
-    restoredBooks.forEach { restoredBook ->
+    filterConflictingOnlineBooks(restoredBooks, existingBooks).forEach { restoredBook ->
         if (ignoreLocalBook && restoredBook.isLocal) return@forEach
-        if (!restoredBook.isLocal && restoredBook.bookUrl in onlineGroupPlan.skipRestoredBookUrls) {
-            return@forEach
-        }
 
         val resolution = if (restoredBook.isLocal) {
             resolveLocalBookTarget(
@@ -90,102 +81,40 @@ internal fun planBookRestore(
     )
 }
 
-internal data class OnlineBookGroupPlan(
-    val skipRestoredBookUrls: Set<String>,
-    val followDeleteBookUrls: Set<String>,
-)
-
 /**
- * 在线书「同一部作品」分组的恢复决策。
- *
- * bookshelf.json 是全量快照，换源在源设备上表现为「删旧行、插新行」，因此快照里旧源行
- * 的存留是区分两种同名形状的信号：
- * - 备份组仍含本地在用的 bookUrl（交集）：多出的行是跨设备恢复累积出的重复，跳过不引入；
- * - 备份组与本地组完全不相交且备份组单行：可能是作品整体换了源（换源结果传播）——
- *   跟随云端，删本地组、采备份行；也可能是另一台设备独立入架的同一作品，与换源迁移
- *   快照同形。仅凭快照无法区分，跟随必须过双门槛（见下），不达标时宁可少跟随：
- *   ① 备份行有使用痕迹（durChapterIndex/durChapterPos > 0）——换源迁移会把进度带到
- *      新行，从未打开过的行不该成为删除本机的依据；② 备份行 durChapterTime 不早于
- *      本地组最近阅读时间——本机更近的阅读状态优先，避免删掉本机较新的进度。
- *   （durChapterTime 建行即有默认值，只作新近度比较，不作使用痕迹判定。）
- * - 不相交但备份组多行在架行：脏快照，无法仲裁哪行是新源，全部跳过、本地不动。
- *
- * 在架行优先（notShelf 处理）：备份组里的临时记录不参与交集判定、不能单独成为跟随
- * 对象——否则「本地只有临时记录 X，备份含临时 X 与在架 Y」时 X 的交集会把 Y 挡在
- * 外面，恢复后书架仍然缺这部作品。临时行的归宿只有两种：被在架行覆盖（本地组随之
- * 清理），或作为重复跳过。本地组全是临时记录时，任何备份在架行都直接上位。
- *
- * 分组键取 [BookMatchKey] 规范化后的书名与作者（与手动入架查重同一标准），并要求两侧
- * 作者非空——跟随会删除本地行，匹配必须从严，作者缺失不放宽。文本/音频等内容类别位
- * 不同视为不同作品，避免同名跨媒介误删。
+ * 快照无法区分换源和另一设备独立入架。同作品已有在架副本时，只恢复已在架的 URL。
+ * 本机只有临时副本时，可以恢复备份里唯一的在架副本，并保留其他 URL 的临时进度。
  */
-internal fun planOnlineBookGroups(
+private fun filterConflictingOnlineBooks(
     restoredBooks: List<Book>,
     existingBooks: List<Book>,
-): OnlineBookGroupPlan {
-    val existingGroups = existingBooks
+): List<Book> {
+    val existingOnlineByUrl = existingBooks.filterNot { it.isLocal }.associateBy { it.bookUrl }
+    val existingGroups = existingOnlineByUrl.values
         .mapNotNull { book -> onlineWorkKeyOf(book)?.let { it to book } }
         .groupBy({ it.first }, { it.second })
-    val skipRestoredBookUrls = mutableSetOf<String>()
-    val followDeleteBookUrls = mutableSetOf<String>()
-
-    restoredBooks
-        .mapNotNull { book -> onlineWorkKeyOf(book)?.let { it to book } }
+    val shelvedBackupUrls = restoredBooks
+        .filterNot { it.isType(BookType.notShelf) }
+        .mapNotNull { book -> onlineWorkKeyOf(book)?.let { it to book.bookUrl } }
         .groupBy({ it.first }, { it.second })
-        .forEach { (key, restoredGroup) ->
-            val existingGroup = existingGroups[key] ?: return@forEach
-            val existingUrls = existingGroup.mapTo(hashSetOf()) { it.bookUrl }
-            val distinctRestored = restoredGroup.distinctBy { it.bookUrl }
-            val shelvedRestored = distinctRestored.filterNot { it.isType(BookType.notShelf) }
+        .mapValues { (_, urls) -> urls.toSet() }
 
-            fun skipRestOfGroup() {
-                distinctRestored.forEach {
-                    if (it.bookUrl !in existingUrls) skipRestoredBookUrls.add(it.bookUrl)
-                }
-            }
+    return restoredBooks.filter { restoredBook ->
+        if (restoredBook.isLocal) return@filter true
+        val isTemporary = restoredBook.isType(BookType.notShelf)
+        val existingIsTemporary = existingOnlineByUrl[restoredBook.bookUrl]?.isType(BookType.notShelf)
+        // URL 一致时沿用恢复，备份临时行不把本机在架书移出书架。
+        if (existingIsTemporary == false) return@filter !isTemporary
 
-            if (shelvedRestored.isEmpty()) {
-                // 全临时备份组：本地已有该作品的任何行（在架或临时），备份临时行
-                // 都只会引入重复，一律跳过；本地完全没有该作品时不进本分支
-                // （existingGroups 缺键早已返回），临时记录按常规导入
-                skipRestOfGroup()
-                return@forEach
-            }
-            val shelvedUrls = shelvedRestored.mapTo(hashSetOf()) { it.bookUrl }
-            if (shelvedUrls.any { it in existingUrls }) {
-                // 在架行命中本地在用行：本组其余行（含临时行）按累积重复跳过
-                skipRestOfGroup()
-                return@forEach
-            }
-            val winner = shelvedRestored.singleOrNull() ?: run {
-                // 多条在架行且均不在本地：脏快照，全组跳过（含临时行）
-                distinctRestored.forEach { skipRestoredBookUrls.add(it.bookUrl) }
-                return@forEach
-            }
-            if (existingGroup.all { it.isType(BookType.notShelf) }) {
-                // 本地只有临时记录：在架行整体上位，清掉临时组（进度无损失）。
-                // 组内其余备份行（临时行）必须跳过：正常导入路径的 upsert 会把
-                // 同 bookUrl 的行写回，等于撤销刚做的跟随删除
-                existingGroup.forEach { followDeleteBookUrls.add(it.bookUrl) }
-                distinctRestored.forEach {
-                    if (it.bookUrl != winner.bookUrl) skipRestoredBookUrls.add(it.bookUrl)
-                }
-                return@forEach
-            }
-            val winnerUsed = winner.durChapterIndex > 0 || winner.durChapterPos > 0
-            val localLatestReadTime = existingGroup.maxOf { it.durChapterTime }
-            if (winnerUsed && winner.durChapterTime >= localLatestReadTime) {
-                existingGroup.forEach { followDeleteBookUrls.add(it.bookUrl) }
-                // 同上：跟随时组内其余备份行一并跳过，防止 upsert 撤销删除
-                distinctRestored.forEach {
-                    if (it.bookUrl != winner.bookUrl) skipRestoredBookUrls.add(it.bookUrl)
-                }
-            } else {
-                // 备份行未使用或本地更新：不删本机、也不引入，避免同名重复与进度损失
-                distinctRestored.forEach { skipRestoredBookUrls.add(it.bookUrl) }
-            }
+        val key = onlineWorkKeyOf(restoredBook) ?: return@filter true
+        val existingGroup = existingGroups[key] ?: return@filter true
+        val backupUrls = shelvedBackupUrls[key].orEmpty()
+        if (isTemporary) {
+            return@filter existingIsTemporary == true && backupUrls.isEmpty()
         }
-    return OnlineBookGroupPlan(skipRestoredBookUrls, followDeleteBookUrls)
+        backupUrls.singleOrNull() == restoredBook.bookUrl &&
+            existingGroup.all { it.isType(BookType.notShelf) }
+    }
 }
 
 private data class OnlineWorkKey(

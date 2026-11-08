@@ -92,9 +92,9 @@ class BookRestorePlannerTest {
     }
 
     @Test
-    fun `online book follows single-row cloud source migration`() {
-        val existing = onlineBook("https://source-a/book", durChapterIndex = 9, durChapterTime = 1_000)
-        val restored = onlineBook("https://source-b/book", durChapterIndex = 12, durChapterTime = 2_000)
+    fun `newer backup at a different url preserves existing shelf progress`() {
+        val existing = onlineBook("https://source-a/book", durChapterIndex = 120, durChapterTime = 1_000)
+        val restored = onlineBook("https://source-b/book", durChapterIndex = 3, durChapterTime = 2_000)
 
         val plan = planBookRestore(
             restoredBooks = listOf(restored),
@@ -103,8 +103,8 @@ class BookRestorePlannerTest {
             locationStatus = { LocalBookLocationStatus.Missing },
         )
 
-        assertEquals(listOf(restored.bookUrl), plan.booksToUpsert.map { it.bookUrl })
-        assertEquals(listOf(existing.bookUrl), plan.booksToDelete.map { it.bookUrl })
+        assertTrue(plan.booksToUpsert.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
     }
 
     @Test
@@ -144,23 +144,20 @@ class BookRestorePlannerTest {
     }
 
     @Test
-    fun `polluted local group collapses to single migrated cloud row`() {
-        val staleA = onlineBook("https://source-a/book", durChapterTime = 1_000)
-        val staleB = onlineBook("https://source-b/book", durChapterTime = 1_000)
-        val migrated = onlineBook("https://source-c/book", durChapterIndex = 9, durChapterTime = 2_000)
+    fun `multiple existing shelf copies are kept when backup offers a third`() {
+        val existingA = onlineBook("https://source-a/book", durChapterTime = 1_000)
+        val existingB = onlineBook("https://source-b/book", durChapterTime = 1_000)
+        val restored = onlineBook("https://source-c/book", durChapterIndex = 9, durChapterTime = 2_000)
 
         val plan = planBookRestore(
-            restoredBooks = listOf(migrated),
-            existingBooks = listOf(staleA, staleB),
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existingA, existingB),
             ignoreLocalBook = false,
             locationStatus = { LocalBookLocationStatus.Missing },
         )
 
-        assertEquals(listOf(migrated.bookUrl), plan.booksToInsert.map { it.bookUrl })
-        assertEquals(
-            setOf(staleA.bookUrl, staleB.bookUrl),
-            plan.booksToDelete.map { it.bookUrl }.toSet(),
-        )
+        assertTrue(plan.booksToUpsert.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
     }
 
     @Test
@@ -212,15 +209,19 @@ class BookRestorePlannerTest {
     }
 
     @Test
-    fun `notShelf cloud row does not replace shelved local book`() {
+    fun `temporary backup rows do not remove an existing shelf entry`() {
         val existing = onlineBook("https://source-a/book")
-        val restored = onlineBook(
+        val sameUrl = onlineBook(
+            existing.bookUrl,
+            type = BookType.text or BookType.notShelf,
+        )
+        val otherUrl = onlineBook(
             "https://source-b/book",
             type = BookType.text or BookType.notShelf,
         )
 
         val plan = planBookRestore(
-            restoredBooks = listOf(restored),
+            restoredBooks = listOf(sameUrl, otherUrl),
             existingBooks = listOf(existing),
             ignoreLocalBook = false,
             locationStatus = { LocalBookLocationStatus.Missing },
@@ -231,10 +232,11 @@ class BookRestorePlannerTest {
     }
 
     @Test
-    fun `cloud shelved row replaces local notShelf record`() {
+    fun `sole backup shelf copy is imported without deleting other temporary records`() {
         val existing = onlineBook(
             "https://source-a/book",
             type = BookType.text or BookType.notShelf,
+            durChapterIndex = 9,
         )
         val restored = onlineBook("https://source-b/book")
 
@@ -246,13 +248,49 @@ class BookRestorePlannerTest {
         )
 
         assertEquals(listOf(restored.bookUrl), plan.booksToInsert.map { it.bookUrl })
-        assertEquals(listOf(existing.bookUrl), plan.booksToDelete.map { it.bookUrl })
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `local temporary url does not authorize restoring a second shelf copy`() {
+        val existing = onlineBook("https://source-a/book", durChapterTime = 1_000)
+        val temporary = onlineBook(
+            "https://source-b/book",
+            type = BookType.text or BookType.notShelf,
+        )
+        val restored = onlineBook(temporary.bookUrl, durChapterIndex = 3, durChapterTime = 2_000)
+
+        val plan = plan(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(existing, temporary),
+            existingLocations = emptySet(),
+        )
+
+        assertTrue(plan.booksToUpsert.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
+    }
+
+    @Test
+    fun `sole backup shelf copy can promote the matching temporary url`() {
+        val temporary = onlineBook(
+            "https://source-a/book",
+            type = BookType.text or BookType.notShelf,
+        )
+        val restored = onlineBook(temporary.bookUrl)
+
+        val plan = plan(
+            restoredBooks = listOf(restored),
+            existingBooks = listOf(temporary),
+            existingLocations = emptySet(),
+        )
+
+        assertEquals(restored, plan.booksToUpdate.single())
+        assertTrue(plan.booksToInsert.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
     }
 
     @Test
     fun `unused backup row never deletes locally newer progress`() {
-        // P1 回归：设备 B 独立入架未读（与换源迁移同形）——本机读到 100 章的进度
-        // 不能被删，备份行按重复跳过
         val existing = onlineBook("https://source-a/book", durChapterIndex = 100, durChapterTime = 2_000)
         val restored = onlineBook("https://source-b/book", durChapterTime = 1_000)
 
@@ -270,7 +308,6 @@ class BookRestorePlannerTest {
 
     @Test
     fun `used but older backup row does not delete locally newer progress`() {
-        // 备份行有进度但最后阅读时间早于本机：本机较新，不跟随
         val existing = onlineBook("https://source-a/book", durChapterIndex = 100, durChapterTime = 9_000)
         val restored = onlineBook("https://source-b/book", durChapterIndex = 30, durChapterTime = 2_000)
 
@@ -287,11 +324,10 @@ class BookRestorePlannerTest {
 
     @Test
     fun `backup temp row intersection no longer masks shelved row`() {
-        // P2 回归：本地只有临时记录 X，备份含临时 X 与在架 Y——在架行必须上位，
-        // 不能被临时行的交集挡成"重复跳过"后书架仍缺书
         val existing = onlineBook(
             "https://source-a/book",
             type = BookType.text or BookType.notShelf,
+            durChapterIndex = 9,
         )
         val tempAgain = onlineBook(
             "https://source-a/book",
@@ -307,7 +343,8 @@ class BookRestorePlannerTest {
         )
 
         assertEquals(listOf(shelved.bookUrl), plan.booksToInsert.map { it.bookUrl })
-        assertEquals(listOf(existing.bookUrl), plan.booksToDelete.map { it.bookUrl })
+        assertTrue(plan.booksToUpdate.isEmpty())
+        assertTrue(plan.booksToDelete.isEmpty())
     }
 
     @Test
