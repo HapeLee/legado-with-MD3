@@ -44,9 +44,7 @@ import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.VoiceEffectPreset
 import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.domain.gateway.CloudTtsEngineGateway
-import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
-import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
@@ -54,21 +52,16 @@ import io.legado.app.domain.model.readaloud.SpeechEngineRoute
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.readaloud.SpeechVoiceRouter
 import io.legado.app.domain.model.readaloud.SystemTtsVoiceConfig
-import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.model.settings.ReadAloudSettings
-import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.reader.core.readaloud.ReaderReadAloudChapter
 import io.legado.app.feature.reader.core.readaloud.readAloudSpeechText
-import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
-import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.book.BookHelp
-import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.exoplayer.InputStreamDataSource
 import io.legado.app.help.http.okHttpClient
-import io.legado.app.help.readaloud.cast.CastAssignmentStore
 import io.legado.app.help.readaloud.effect.VoiceEffectAudio
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.help.readaloud.playback.CharacterPerformanceInstructionBuilder
@@ -82,6 +75,7 @@ import io.legado.app.help.readaloud.playback.SystemTtsFileSynthesizer
 import io.legado.app.help.readaloud.playback.httpTtsAudioCacheSourceKey
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
+import io.legado.app.service.readaloud.ReadAloudBookSession
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
@@ -106,6 +100,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import org.koin.java.KoinJavaComponent.get
 import org.mozilla.javascript.WrappedException
@@ -130,11 +125,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     private val httpAudioSynthesizer = HttpTtsAudioSynthesizer(GlobalContext.get().get<HttpTtsRepository>())
     private val readAloudSettingsGateway = GlobalContext.get().get<ReadAloudSettingsGateway>()
-    private val readSettingsGateway = GlobalContext.get().get<ReadSettingsGateway>()
-    private val otherSettingsGateway = GlobalContext.get().get<OtherSettingsGateway>()
     private var readAloudSettings: ReadAloudSettings = readAloudSettingsGateway.currentSettings
-    private var readSettings: ReadSettings = readSettingsGateway.currentSettings
-    private var otherSettings: OtherSettings = otherSettingsGateway.currentSettings
 
     private val speechRatePlay: Int
         get() = if (readAloudSettings.ttsFollowSys) 5 else readAloudSettings.ttsSpeechRate
@@ -386,12 +377,6 @@ class HttpReadAloudService : BaseReadAloudService(),
                 // 全局语速为播放端变速, 设置变化即时生效, 无需重新合成
                 applyCueVoiceEffect(nowSpeak)
             }
-        }
-        lifecycleScope.launch {
-            readSettingsGateway.settings.collectLatest { readSettings = it }
-        }
-        lifecycleScope.launch {
-            otherSettingsGateway.settings.collectLatest { otherSettings = it }
         }
     }
 
@@ -1050,47 +1035,48 @@ class HttpReadAloudService : BaseReadAloudService(),
         book: Book,
         chapter: BookChapter,
     ): PreDownloadChapter? {
-        val content = BookHelp.getContent(book, chapter) ?: return null
-        val contentProcessor = ContentProcessor.get(book.name, book.origin)
-        val displayTitle = chapter.getDisplayTitle(
-            contentProcessor.getTitleReplaceRules(),
-            book.getUseReplaceRule(otherSettings.replaceEnableDefault),
-            chineseConverterType = readSettings.chineseConverterType,
-        )
-        val processedContent = contentProcessor.getContent(
-            book,
-            chapter,
-            content,
-            includeTitle = false,
-        )
-        val source = ReaderChapterSourceParser.parse(
-            chapterIndex = chapter.index,
-            title = displayTitle,
-            paragraphs = processedContent.textList,
-            includeTitle = false,
-            adaptSpecialStyle = readSettings.adaptSpecialStyle,
-            htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
-            castLabels = if (io.legado.app.ui.config.readConfig.ReadConfig.multiRoleCast) {
-                CastAssignmentStore.labelsForChapter(book.bookUrl, chapter.index)
-            } else {
-                null
-            },
-        )
         // 预合成必须与实时朗读用同一种划分方式解析，否则预合成好的音频与实际朗读单元对不上
         val contentSplitMode = resolveContentSplitMode(
             ReadAloudContentSplitMode.fromStorage(readAloudSettings.contentSplitMode)
         )
+        val splitByPage = contentSplitMode == ReadAloudContentSplitMode.Page
+        val request = withContext(Main) {
+            val playback = bookSession.state.value.takeIf { it.book?.bookUrl == book.bookUrl }
+            val captured = playback?.takeIf {
+                it.environment != null || (it.input != null && it.pagination != null)
+            } ?: ReadAloudBookSession.captureReader()?.takeIf { it.book?.bookUrl == book.bookUrl }
+                ?: playback
+            // 下载专用服务仍支持普通段落模式，按页模式必须拿到这本书真实的分页环境。
+            val base = captured ?: ReadAloudBookSession.Snapshot(
+                book = book.copy(),
+                titleMode = ReadBookConfig.titleMode,
+                paragraphIndent = ReadBookConfig.paragraphIndent,
+                textFullJustify = ReadBookConfig.textFullJustify,
+                styleName = ReadBookConfig.durConfig.name,
+            )
+            base.copy(
+                chapterIndex = chapter.index,
+                chapterPosition = 0,
+                input = base.input?.takeIf { it.chapter.index == chapter.index },
+                pagination = base.pagination?.takeIf { it.chapterIndex == chapter.index },
+                environment = base.environment.takeIf { splitByPage },
+            )
+        }
+        if (splitByPage && request.pagination == null && request.environment == null) {
+            throw NoStackTraceException("按页下载需要这本书的分页信息，请先打开这本书再下载听书音频")
+        }
+        val content = if (request.input == null) BookHelp.getContent(requireNotNull(request.book), chapter) ?: return null else null
+        val prepared = bookSession.prepareChapter(request, content)
+        val input = requireNotNull(prepared.input)
+        val displayTitle = input.displayTitle
         val readAloudChapter = ReaderReadAloudChapter.create(
             chapterIndex = chapter.index,
             title = displayTitle,
-            semanticContent = source.semanticContent,
-            pageStarts = bookSession.pagination?.takeIf {
-                bookSession.owns(book.bookUrl) && it.chapterIndex == chapter.index
-            }?.pageStarts.orEmpty(),
+            semanticContent = input.source.semanticContent,
+            pageStarts = prepared.pagination?.pageStarts.orEmpty(),
             contentSplitMode = contentSplitMode,
         )
         val splitPolicy = contentSplitPolicy(contentSplitMode)
-        val splitByPage = contentSplitMode == ReadAloudContentSplitMode.Page
         val plan = buildSpeechPlan(
             bookUrl = book.bookUrl,
             chapterIndex = chapter.index,
