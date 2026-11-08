@@ -41,6 +41,7 @@ import io.legado.app.feature.reader.core.navigation.ReaderPageContext
 import io.legado.app.feature.reader.core.navigation.ReaderPageNavigator
 import io.legado.app.feature.reader.core.navigation.ReaderPartialPagePolicy
 import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPosition
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.feature.reader.core.selection.ReaderSearchMatcher
 import io.legado.app.feature.reader.core.selection.ReaderSearchRequest
 import io.legado.app.feature.reader.core.selection.ReaderSelection
@@ -2715,8 +2716,12 @@ class ReadBookController(
         }
     }
 
-    fun updateReadAloudProgress(anchor: ReaderVisibleTextPosition) {
-        if (!ReadBook.isCurrentBookReadAloud || !BaseReadAloudService.isPlay()) return
+    fun updateReadAloudProgress(progress: ReadAloudProgress) {
+        val current = ReadAloud.bookSession.state.value
+        if (ReadBook.book?.bookUrl != progress.bookUrl || !BaseReadAloudService.isPlay() ||
+            !progress.matches(current.book?.bookUrl, current.chapterIndex, current.generation)
+        ) return
+        val anchor = ReaderVisibleTextPosition(progress.chapterIndex, progress.chapterPosition)
         // 只更新朗读高亮锚点。可见页的移动由朗读服务驱动（moveToReadAloudPage →
         // moveToNextPage → upContent）与用户导航负责；这里若再按朗读位置 locate
         // 回迁可见页，进入阅读器时会把页面先拉回朗读所在的上一段（跨页段落的

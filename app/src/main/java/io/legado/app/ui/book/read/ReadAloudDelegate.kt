@@ -13,6 +13,7 @@ import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ReadAloudContentSplitSetting
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.ReadAloudSplitSymbol
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
@@ -83,8 +84,8 @@ class ReadAloudDelegate(
 
         fun openReadMenuRoute(route: ReadBookMenuRoute)
 
-        /** 朗读进度（TTS 回调上报的章内偏移），VM 用独立 flow 暴露给胶囊。 */
-        fun publishReadAloudProgress(chapterStart: Int)
+        /** 已绑定书籍、章节和会话版本的进度，VM 用独立 flow 暴露。 */
+        fun publishReadAloudProgress(progress: ReadAloudProgress)
     }
 
     /** 订阅朗读设置，投影进 UiState。VM 构造时调一次。 */
@@ -179,9 +180,12 @@ class ReadAloudDelegate(
 
     // --- 播放控制 ---
 
-    fun updateProgress(chapterStart: Int) {
-        if (ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay() && chapterStart >= 0) {
-            host.publishReadAloudProgress(chapterStart)
+    fun updateProgress(progress: ReadAloudProgress) {
+        val current = ReadAloud.bookSession.state.value
+        if (ReadBook.book?.bookUrl == progress.bookUrl && BaseReadAloudService.isPlay() &&
+            progress.matches(current.book?.bookUrl, current.chapterIndex, current.generation)
+        ) {
+            host.publishReadAloudProgress(progress)
         }
     }
 

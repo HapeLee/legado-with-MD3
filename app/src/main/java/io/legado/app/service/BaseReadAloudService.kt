@@ -49,6 +49,7 @@ import io.legado.app.domain.model.readaloud.ContentSplitPolicy
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackInfo
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
@@ -823,6 +824,19 @@ abstract class BaseReadAloudService : BaseService(),
     abstract fun upSpeechRate(reset: Boolean = false)
 
     fun upTtsProgress(progress: Int) {
+        val chapter = readerReadAloudChapter
+        val current = bookSession.state.value
+        val event = current.book?.let { book ->
+            ReadAloudProgress(
+                bookUrl = book.bookUrl,
+                chapterIndex = chapter?.chapterIndex ?: -1,
+                chapterPosition = progress.coerceAtLeast(0),
+                sessionGeneration = preparedBookGeneration,
+            )
+        }
+        if (event != null &&
+            !event.matches(current.book.bookUrl, current.chapterIndex, current.generation)
+        ) return
         bookSession.upReadTime()
         val chapterPosition = progress.coerceAtLeast(0)
         if (hasSpeechPlaybackQueue) {
@@ -841,7 +855,8 @@ abstract class BaseReadAloudService : BaseService(),
             refreshMediaSessionPlaybackState()
         }
         updateReadAloudProgressSnapshot(progress)
-        postEvent(EventBus.TTS_PROGRESS, progress)
+        // 未绑定书籍时保留本地媒体状态更新，只有归属完整的进度才能进入阅读器。
+        if (event != null) postEvent(EventBus.TTS_PROGRESS, event)
     }
 
     /**

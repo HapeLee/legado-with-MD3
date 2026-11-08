@@ -39,6 +39,7 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.domain.usecase.AiTextFactoryUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
@@ -54,7 +55,6 @@ import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.reader.core.navigation.ReaderChapterPagePosition
 import io.legado.app.feature.reader.core.navigation.ReaderPageContext
-import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPosition
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isEpub
@@ -181,17 +181,18 @@ class ReadBookViewModel(
     private var composeProgressJob: Job? = null
     private var readBookSyncJob: Job? = null
     private val _readAloudProgress = MutableStateFlow(
-        activeReadAloudProgress(
-            isPlaying = ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay(),
-            currentProgress = BaseReadAloudService.currentProgress,
-        )?.let(::readAloudPositionAt)
+        ReadAloud.bookSession.state.value.let { playing ->
+            activeReadAloudProgress(
+                isPlaying = ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay(),
+                currentProgress = playing.chapterPosition,
+            )?.let { position ->
+                playing.book?.bookUrl?.let { bookUrl ->
+                    ReadAloudProgress(bookUrl, playing.chapterIndex, position, playing.generation)
+                }
+            }
+        }
     )
     val readAloudProgress = _readAloudProgress.asStateFlow()
-
-    private fun readAloudPositionAt(chapterPosition: Int): ReaderVisibleTextPosition? =
-        BaseReadAloudService.currentChapterIndex.takeIf { it >= 0 }?.let { chapterIndex ->
-            ReaderVisibleTextPosition(chapterIndex, chapterPosition)
-        }
 
     private suspend fun emitEffectWhenSubscribed(effect: ReadBookEffect) {
         _effects.subscriptionCount.first { it > 0 }
@@ -570,8 +571,8 @@ class ReadBookViewModel(
                 this@ReadBookViewModel.openReadMenuRoute(route)
             }
 
-            override fun publishReadAloudProgress(chapterStart: Int) {
-                _readAloudProgress.value = readAloudPositionAt(chapterStart)
+            override fun publishReadAloudProgress(progress: ReadAloudProgress) {
+                _readAloudProgress.value = progress
             }
         },
         readSettingsRepository = readSettingsRepository,
@@ -1347,7 +1348,7 @@ class ReadBookViewModel(
                 }
             }
 
-            is ReadBookIntent.TtsProgress -> readAloudDelegate.updateProgress(intent.chapterStart)
+            is ReadBookIntent.TtsProgress -> readAloudDelegate.updateProgress(intent.progress)
             is ReadBookIntent.ReadAloudAction -> readAloudDelegate.openDefaultInterface()
             is ReadBookIntent.ConfirmAddCurrentBookToBookshelf -> addCurrentBookToBookshelfAndFinish()
             is ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf -> removeCurrentNotShelfBookAndFinish()
@@ -1902,8 +1903,8 @@ class ReadBookViewModel(
             }
         }
         viewModelScope.launch {
-            eventFlowSticky<Int>(EventBus.TTS_PROGRESS).collect { chapterStart ->
-                readAloudDelegate.updateProgress(chapterStart)
+            eventFlowSticky<ReadAloudProgress>(EventBus.TTS_PROGRESS).collect { progress ->
+                readAloudDelegate.updateProgress(progress)
             }
         }
     }
