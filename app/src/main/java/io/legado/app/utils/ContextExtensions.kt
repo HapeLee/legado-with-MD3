@@ -74,16 +74,17 @@ fun Context.startActivityForBook(
     book: Book,
     configIntent: Intent.() -> Unit = {},
 ) {
+    val openMangaReader = book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi)
     val intent = when {
         book.isVideo -> MainActivity.createVideoPlayIntent(this, book.bookUrl)
         book.isAudio -> MainActivity.createAudioPlayIntent(this, book.bookUrl)
-        book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi) ->
+        openMangaReader ->
             MainActivity.createReadMangaIntent(this, book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi)) {
+    if (book.isAudio || openMangaReader) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)
@@ -94,16 +95,17 @@ fun Context.startActivityForBook(
     book: BookShelfItem,
     configIntent: Intent.() -> Unit = {},
 ) {
+    val openMangaReader = book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi)
     val intent = when {
         book.isVideo -> MainActivity.createVideoPlayIntent(this, book.bookUrl)
         book.isAudio -> MainActivity.createAudioPlayIntent(this, book.bookUrl)
-        book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi) ->
+        openMangaReader ->
             MainActivity.createReadMangaIntent(this, book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi)) {
+    if (book.isAudio || openMangaReader) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)

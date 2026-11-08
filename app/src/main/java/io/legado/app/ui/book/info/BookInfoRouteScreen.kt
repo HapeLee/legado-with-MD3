@@ -157,13 +157,12 @@ fun BookInfoRouteScreen(
                                 effect.chapterChanged,
                             )
                         }
-                        else -> {
-                        onOpenReader(
+
+                        else -> onOpenReader(
                             effect.book.bookUrl,
                             effect.inBookshelf,
                             effect.chapterChanged,
                         )
-                        }
                     }
                 }
 

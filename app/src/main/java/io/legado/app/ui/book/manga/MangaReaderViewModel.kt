@@ -240,10 +240,17 @@ class MangaReaderViewModel(
             MangaReaderIntent.CloseReader -> closeReader()
             MangaReaderIntent.ToggleMenu -> setMenuVisible(!_uiState.value.menuVisible)
             MangaReaderIntent.HideMenu -> setMenuVisible(false)
-            MangaReaderIntent.Retry -> launchAction {
-                showLoading()
-                invalidateCurrentChapter()
-                executeSession(MangaSessionCommand.RetryChapter(readerSession.state.value.chapterIndex))
+            MangaReaderIntent.Retry -> {
+                val session = readerSession.state.value
+                if (session.openError != null) {
+                    initializationRequest?.let(::openSession)
+                } else {
+                    launchAction {
+                        showLoading()
+                        invalidateCurrentChapter()
+                        executeSession(MangaSessionCommand.RetryChapter(session.chapterIndex))
+                    }
+                }
             }
             MangaReaderIntent.PreviousChapter -> openRelativeChapter(-1)
             MangaReaderIntent.NextChapter -> openRelativeChapter(1)
@@ -371,6 +378,10 @@ class MangaReaderViewModel(
         // already owns the session, including a pending chapter result or open command.
         if (initializationRequest == intent) return
         initializationRequest = intent
+        openSession(intent)
+    }
+
+    private fun openSession(intent: MangaReaderIntent.Initialize) {
         showLoading()
         viewModelScope.launch {
             readerSession.execute(
@@ -456,6 +467,9 @@ class MangaReaderViewModel(
         if (book == null) {
             session.openError?.let {
                 showError(it, fallbackRes = R.string.manga_reader_init_failed)
+                _uiState.update { state ->
+                    state.copy(canReselectBookDirectory = session.canReselectBookDirectory)
+                }
             }
             return
         }
@@ -732,6 +746,7 @@ class MangaReaderViewModel(
             it.copy(
                 isLoading = true,
                 errorMessage = null,
+                canReselectBookDirectory = false,
                 pages = persistentListOf(),
                 currentItemIndex = 0,
                 scrollRequest = null,

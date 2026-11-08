@@ -1,6 +1,7 @@
 package io.legado.app.data.repository.manga
 
 import io.legado.app.R
+import io.legado.app.constant.AppLog
 import io.legado.app.domain.gateway.MangaReaderDataGateway
 import io.legado.app.domain.gateway.MangaReaderSession
 import io.legado.app.domain.model.manga.MangaChapterState
@@ -8,6 +9,7 @@ import io.legado.app.domain.model.manga.MangaSessionCommand
 import io.legado.app.domain.model.manga.MangaSessionEvent
 import io.legado.app.domain.model.manga.MangaSessionId
 import io.legado.app.domain.model.manga.MangaSessionState
+import io.legado.app.exception.LocalMangaDirectoryUnavailableException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -195,8 +197,14 @@ class DefaultMangaReaderSession(
             }
             loadWindow(opened.chapterIndex)
         }.onFailure { error ->
+            if (error is CancellationException) throw error
+            val canReselectBookDirectory = error is LocalMangaDirectoryUnavailableException
+            if (canReselectBookDirectory) AppLog.put("本地漫画目录不可读", error)
             val message = error.localizedMessage.orEmpty()
-            _state.value = _state.value.copy(openError = message)
+            _state.value = _state.value.copy(
+                openError = message,
+                canReselectBookDirectory = canReselectBookDirectory,
+            )
             _events.tryEmit(MangaSessionEvent.Message(message))
         }
     }

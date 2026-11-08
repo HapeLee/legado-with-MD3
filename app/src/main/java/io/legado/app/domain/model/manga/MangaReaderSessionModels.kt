@@ -72,6 +72,7 @@ data class MangaSessionState(
     val nextChapter: MangaChapterState = MangaChapterState.Empty,
     val resumed: Boolean = false,
     val openError: String? = null,
+    val canReselectBookDirectory: Boolean = false,
 ) {
     fun accepts(token: MangaLoadToken): Boolean =
         token.sessionId == sessionId &&

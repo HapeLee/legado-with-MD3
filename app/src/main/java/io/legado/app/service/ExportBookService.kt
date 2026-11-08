@@ -28,6 +28,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.MixedContentSegments
 import io.legado.app.help.book.getExportFileName
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
@@ -229,6 +230,9 @@ class ExportBookService : BaseService(), KoinComponent {
                 val book = appDb.bookDao.getBook(bookUrl)
                 try {
                     book ?: throw NoStackTraceException("获取${bookUrl}书籍出错")
+                    if (book.isLocalManga) {
+                        throw NoStackTraceException(getString(R.string.local_manga_requires_reader))
+                    }
                     refreshChapterList(book)
                     notificationContentText = getString(
                         R.string.export_book_notification_content,

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.domain.model.PrivateAccessState
+import io.legado.app.help.book.shouldOpenMangaReader
 import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -43,13 +44,8 @@ data class BookShelfItem(
 
     val isImage: Boolean get() = (type and BookType.image) > 0
 
-    /** 与 [io.legado.app.help.book.isLocalManga] 同判据（书架投影是独立类型，无法复用 Book 扩展）。 */
-    val isLocalManga: Boolean
-        get() = isLocal && (isImage || originName.endsWith(".cbz", true) || originName.endsWith(".zip", true))
-
-    /** 与 [io.legado.app.help.book.shouldOpenMangaReader] 同语义，保证书架与详情页分流一致。 */
     fun shouldOpenMangaReader(showMangaUi: Boolean): Boolean =
-        isLocalManga || (isImage && showMangaUi)
+        toLightBook().shouldOpenMangaReader(showMangaUi)
 
     val isVideo: Boolean get() = (type and BookType.video) > 0
 

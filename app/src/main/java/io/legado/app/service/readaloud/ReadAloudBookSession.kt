@@ -1,5 +1,6 @@
 package io.legado.app.service.readaloud
 
+import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -19,8 +20,10 @@ import io.legado.app.feature.reader.legacy.LegacyReaderChapterPaginator
 import io.legado.app.feature.reader.legacy.LegacyReaderPageDecorationFactory
 import io.legado.app.feature.reader.platform.AndroidReaderHtmlSemanticTextResolver
 import io.legado.app.help.AppWebDav
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.globalExecutor
 import io.legado.app.help.readaloud.cast.BgmSceneStore
 import io.legado.app.help.readaloud.cast.CastAssignmentStore
@@ -43,6 +46,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import splitties.init.appCtx
 
 /** Android playback owns its book and chapter even while the reader displays another book. */
 class ReadAloudBookSession : KoinComponent {
@@ -119,6 +123,9 @@ class ReadAloudBookSession : KoinComponent {
         val request = _state.value
         if (request.input != null && request.pagination != null) return@withContext request
         val book = requireNotNull(request.book) { "没有朗读书籍" }
+        if (book.isLocalManga) {
+            throw NoStackTraceException(appCtx.getString(R.string.local_manga_requires_reader))
+        }
         val chapter = requireNotNull(appDb.bookChapterDao.getChapter(book.bookUrl, request.chapterIndex)) {
             "朗读章节不存在"
         }
