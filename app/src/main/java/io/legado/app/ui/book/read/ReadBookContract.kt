@@ -733,6 +733,7 @@ sealed interface ReadBookIntent {
     data object OpenChapterUrl : ReadBookIntent
     data class SourceCustomButton(val longClick: Boolean) : ReadBookIntent
     data object ToggleReadUrlInBrowser : ReadBookIntent
+    data class SetParagraphCommentHeight(val percent: Int) : ReadBookIntent
 
     // Content edit
     data object OpenContentEdit : ReadBookIntent

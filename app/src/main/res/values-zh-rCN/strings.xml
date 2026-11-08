@@ -3959,6 +3959,8 @@
 
     <string name="bubble_config">段评气泡</string>
     <string name="bubble_config_entry_summary">段评入口使用的气泡样式</string>
+    <string name="paragraph_comment_height">段评弹窗高度</string>
+    <string name="paragraph_comment_height_follow_source">跟随书源</string>
     <string name="bubble_config_summary">段评气泡把书源里的段评数字转成原生 SVG 气泡。点一下某个样式即可应用。</string>
     <string name="bubble_force_software">强制使用软件气泡</string>
     <string name="bubble_force_software_desc">识别正文图片形式的段评入口，并使用当前气泡样式渲染</string>

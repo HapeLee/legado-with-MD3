@@ -2,9 +2,12 @@ package io.legado.app.ui.widget.dialog
 
 import android.app.Application
 import android.os.Looper
+import android.view.View
+import android.view.WindowInsets
 import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.BookSource
@@ -38,6 +41,7 @@ import splitties.init.injectAsAppCtx
 import java.net.ServerSocket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [35])
@@ -141,6 +145,61 @@ class BottomWebViewDialogTest {
         }
     }
 
+    @Test
+    fun selectedHeightOverridesInitialAndUpdatedSourceHeight() {
+        val source = source("https://source.test")
+        fixture.database.bookSourceDao.insert(source)
+        val dialog = BottomWebViewDialog(
+            source.getKey(),
+            BookType.text,
+            source.bookSourceUrl,
+            html = "<html>comments</html>",
+            config = """{"dialogHeight":400,"peekHeight":200,"maxHeight":450,"setFitToContents":false}""",
+            heightPercent = 30,
+        )
+        showDialog(dialog) { webView ->
+            await { shadowOf(webView).lastLoadDataWithBaseURL != null }
+            val metrics = dialog.requireActivity().windowManager.currentWindowMetrics
+            val insets = metrics.windowInsets.getInsetsIgnoringVisibility(
+                WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout(),
+            )
+            val expectedHeight = ((metrics.bounds.height() - insets.top - insets.bottom) * 0.3f).roundToInt()
+            val behavior = sheetBehavior(dialog)
+            assertEquals(expectedHeight, behavior.maxHeight)
+            assertEquals(expectedHeight, behavior.peekHeight)
+            assertTrue(behavior.isFitToContents)
+
+            dialog.upConfig("""{"heightPercentage":0.9,"peekHeight":700,"maxHeight":800,"maxWidth":320}""")
+            await { behavior.maxWidth == 320 }
+            assertEquals(expectedHeight, behavior.maxHeight)
+            assertEquals(expectedHeight, behavior.peekHeight)
+        }
+    }
+
+    @Test
+    fun defaultHeightFollowsSource() {
+        val source = source("https://source.test")
+        fixture.database.bookSourceDao.insert(source)
+        val dialog = BottomWebViewDialog(
+            source.getKey(),
+            BookType.text,
+            source.bookSourceUrl,
+            html = "<html>comments</html>",
+            config = """{"dialogHeight":400,"peekHeight":240,"maxHeight":400}""",
+        )
+        showDialog(dialog) { webView ->
+            await { shadowOf(webView).lastLoadDataWithBaseURL != null }
+            val behavior = sheetBehavior(dialog)
+            assertEquals(400, behavior.maxHeight)
+            assertEquals(240, behavior.peekHeight)
+        }
+    }
+
+    private fun sheetBehavior(dialog: BottomWebViewDialog): BottomSheetBehavior<View> {
+        val sheet = dialog.requireDialog().findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        return BottomSheetBehavior.from(sheet)
+    }
+
     private fun source(url: String) = BookSource(
         bookSourceUrl = url,
         header = """{"User-Agent":"source-UA","Referer":"https://source.test/"}""",
@@ -148,10 +207,16 @@ class BottomWebViewDialogTest {
     )
 
     private fun withDialog(source: BookSource, url: String, html: String?, verify: (WebView) -> Unit) {
+        showDialog(
+            BottomWebViewDialog(source.getKey(), BookType.text, url, html, "window.preloadedMarker = true;"),
+            verify,
+        )
+    }
+
+    private fun showDialog(dialog: BottomWebViewDialog, verify: (WebView) -> Unit) {
         val controller = Robolectric.buildActivity(AppCompatActivity::class.java)
         controller.get().setTheme(R.style.Base_AppTheme)
         val activity = controller.setup().visible().get()
-        val dialog = BottomWebViewDialog(source.getKey(), BookType.text, url, html, "window.preloadedMarker = true;")
         try {
             dialog.showNow(activity.supportFragmentManager, "review")
             val webView = dialog.requireView().findViewById<FrameLayout>(R.id.web_view_container)

@@ -3962,6 +3962,9 @@
 
     <string name="bubble_config">Paragraph bubbles</string>
     <string name="bubble_config_entry_summary">Bubble styles used by paragraph comments</string>
+    <string name="paragraph_comment_height">Paragraph comment popup height</string>
+    <string name="paragraph_comment_height_follow_source">Follow book source</string>
+    <string name="paragraph_comment_height_percent">%1$d%%</string>
     <string name="bubble_config_summary">Paragraph bubbles turn the comment counters in a book source into native SVG bubbles. Tap a style to apply it.</string>
     <string name="bubble_force_software">Always draw software bubbles</string>
     <string name="bubble_force_software_desc">Detect comment entries that a book source draws as images and render them with the current bubble style</string>
