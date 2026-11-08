@@ -468,10 +468,11 @@ class HttpReadAloudService : BaseReadAloudService(),
                         synthesis.httpTts, synthesis.speakText, synthesis.voice, synthesis.emotion,
                         generation,
                     )
-                    exoPlayer.setMediaSource(createMediaSource(factory, synthesis.fileName))
+                    exoPlayer.setMediaSource(createMediaSource(factory, synthesis.fileName, synthesis.position))
                 } else {
                     exoPlayer.setMediaItem(
-                        MediaItem.fromUri(Uri.fromFile(speakFileForPlay(synthesis.fileName)))
+                        MediaItem.Builder().setUri(Uri.fromFile(speakFileForPlay(synthesis.fileName)))
+                            .setTag(synthesis.position).build()
                     )
                 }
                 exoPlayer.prepare()
@@ -980,7 +981,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                     if (downloaded == null && speakText.isNotEmpty() && hasSpeakFile(fileName)) {
                         writeTextIndexEntry(fileName, speakText)
                     }
-                    val mediaItem = downloaded ?: MediaItem.fromUri(Uri.fromFile(speakFileForPlay(fileName)))
+                    val mediaItem = downloaded ?: MediaItem.Builder()
+                        .setUri(Uri.fromFile(speakFileForPlay(fileName))).setTag(synthesis.position).build()
                     launch(Main) {
                         if (generation != playbackGeneration) return@launch
                         if (readAloudSettings.ttsParagraphInterval > 0) {
@@ -1329,7 +1331,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                             synthesis.httpTts, speakText, synthesis.voice, synthesis.emotion, generation,
                         )
                         downloaderChannel.send(createDownloader(dataSourceFactory, fileName))
-                        createMediaSource(dataSourceFactory, fileName)
+                        createMediaSource(dataSourceFactory, fileName, synthesis.position)
                     }
                     launch(Main) {
                         if (generation != playbackGeneration) return@launch
@@ -1520,11 +1522,15 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
-    private fun createMediaSource(factory: DataSource.Factory, fileName: String): MediaSource {
+    private fun createMediaSource(
+        factory: DataSource.Factory,
+        fileName: String,
+        position: HttpReadAloudSpeechPosition,
+    ): MediaSource {
         return DefaultMediaSourceFactory(this)
             .setDataSourceFactory(factory)
             .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-            .createMediaSource(MediaItem.fromUri(fileName))
+            .createMediaSource(MediaItem.Builder().setUri(fileName).setTag(position).build())
     }
 
     private suspend fun getSpeakStream(
@@ -1619,7 +1625,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         val speakText: String,
         val fileName: String,
         val downloadedFileName: String,
-        val startFraction: Double,
+        val position: HttpReadAloudSpeechPosition,
         val httpTts: HttpTTS,
         val voice: ReadAloudVoice,
         val emotion: String,
@@ -1629,23 +1635,25 @@ class HttpReadAloudService : BaseReadAloudService(),
     private fun cueSynthesisFor(index: Int, default: HttpTTS, stream: Boolean): CueSynthesis? {
         val content = contentList.getOrNull(index) ?: return null
         val startOffset = if (index == nowSpeak) paragraphStartPos.coerceIn(0, content.length) else 0
-        // 偏移用完才去掉标记，合成与文件名都用这一份干净文本
-        val text = speechText(content.substring(startOffset))
-        val fullText = if (startOffset == 0) text else speechText(content)
+        val position = HttpReadAloudSpeechPosition(spokenFor(content), startOffset)
+        val text = position.remainingText
+        val fullText = position.spoken.text
         val cue = playbackQueue.cues.getOrNull(index)
         val downloadVoice = voiceForCue(playbackQueue, index, default)
-        val voice = if (stream) httpVoiceForCue(index, default) else downloadVoice
+        // 流式通常已经是 HTTP 路由，复用本次结果，避免在主线程重复查询音色和源表。
+        val voice = if (stream && downloadVoice.engineType != ReadAloudVoice.ENGINE_HTTP) {
+            httpVoiceForCue(index, default)
+        } else downloadVoice
         val itemHttpTts = httpSourceForVoice(voice, default)
         val emotion = cue?.emotion.orEmpty()
         val downloadSourceKey = sourceKeyForCue(downloadVoice, cue, default)
-        val sourceKey = if (stream) httpSourceKey(voice, emotion, default) else downloadSourceKey
+        val sourceKey = if (voice === downloadVoice) downloadSourceKey else httpSourceKey(voice, emotion, default)
         return CueSynthesis(
             text = text,
             speakText = text.readAloudSpeechText(),
             fileName = md5SpeakFileName(text, httpTts = itemHttpTts, sourceKey = sourceKey),
             downloadedFileName = md5SpeakFileName(fullText, sourceKey = downloadSourceKey),
-            startFraction = (fullText.length - text.length).coerceAtLeast(0).toDouble() /
-                fullText.length.coerceAtLeast(1),
+            position = position,
             httpTts = itemHttpTts,
             voice = voice,
             emotion = emotion,
@@ -1655,8 +1663,8 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     private fun downloadedSpeechItem(bookUrl: String?, synthesis: CueSynthesis): MediaItem? {
         val file = ReadAloudAudioStore.downloadedFile(bookUrl, synthesis.downloadedFileName) ?: return null
-        val item = MediaItem.Builder().setUri(Uri.fromFile(file))
-        if (synthesis.startFraction > 0.0) {
+        val item = MediaItem.Builder().setUri(Uri.fromFile(file)).setTag(synthesis.position)
+        if (synthesis.position.startFraction > 0.0) {
             // 下载区保存整段。句中续听按正文比例裁去已读部分，进度仍以剩余音频为准。
             val duration = runCatching {
                 val retriever = MediaMetadataRetriever()
@@ -1669,7 +1677,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             }.getOrNull()?.takeIf { it > 0 } ?: return null
             item.setClippingConfiguration(
                 MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs((duration * synthesis.startFraction).toLong().coerceAtMost(duration - 1))
+                    .setStartPositionMs((duration * synthesis.position.startFraction).toLong().coerceAtMost(duration - 1))
                     .build()
             )
         }
@@ -1987,6 +1995,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         val paragraphLength = contentList.getOrNull(index)?.length ?: return
         val startOffset = paragraphStartPos
         if (paragraphLength <= startOffset) return
+        val position = exoPlayer.currentMediaItem?.localConfiguration?.tag as? HttpReadAloudSpeechPosition
+            ?: HttpReadAloudSpeechPosition(spokenFor(contentList[index]), startOffset)
         val chapterStart = readAloudNumber
         val mediaIndex = exoPlayer.currentMediaItemIndex
         playIndexJob = lifecycleScope.launch {
@@ -1994,9 +2004,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             while (isActive && !pause && nowSpeak == index && exoPlayer.currentMediaItemIndex == mediaIndex) {
                 // 媒体时间会随语速变化，缓冲时则停住。按实际播放头更新进度。
                 if (exoPlayer.isPlaying) {
-                    val offset = httpReadAloudParagraphOffset(
-                        paragraphLength, startOffset, exoPlayer.currentPosition, exoPlayer.duration,
-                    ).coerceAtMost(paragraphLength - 1)
+                    val offset = position.storedOffset(exoPlayer.currentPosition, exoPlayer.duration)
                     if (offset > lastOffset) {
                         val chapterPosition = chapterStart + offset
                         updateReadAloudProgressSnapshot(chapterPosition)

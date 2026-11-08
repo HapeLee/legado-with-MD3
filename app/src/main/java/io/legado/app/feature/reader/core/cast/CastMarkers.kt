@@ -193,6 +193,19 @@ object CastMarkers {
 
         /** 引擎回传的下标 → 正文（含标记）的绝对下标。 */
         fun storedOf(spokenIndex: Int): Int = map(spokenIndex).coerceIn(0, storedEnd)
+
+        /** 正文下标 → 发声下标。落在标记内时定位到标记后的正文，不截断标记或代理对。 */
+        fun spokenOf(storedIndex: Int): Int {
+            var start = 0
+            var end = text.length
+            while (start < end) {
+                val middle = (start + end) ushr 1
+                if (storedOf(middle) < storedIndex) start = middle + 1 else end = middle
+            }
+            return if (start in 1 until text.length &&
+                text[start].isLowSurrogate() && text[start - 1].isHighSurrogate()
+            ) start - 1 else start
+        }
     }
 
 
