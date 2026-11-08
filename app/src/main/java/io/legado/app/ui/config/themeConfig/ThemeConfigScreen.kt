@@ -4,6 +4,7 @@ import io.legado.app.feature.settings.search.SearchableSetting
 import io.legado.app.feature.settings.search.SearchableSettingsList
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
@@ -593,14 +594,22 @@ fun ThemeConfigScreen(
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.blur_effects)) {
+                    val isMochi = composeEngine == ComposeEngine.Mochi
+                    val blurSupported = composeEngine == ComposeEngine.Material ||
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    val blurEnabled = if (isMochi) theme.mochiScrollEdgeBlurEnabled else theme.enableBlur
                     SearchableSetting("theme.is_blur_enable") {
                         SwitchSettingItem(
                             title = stringResource(R.string.is_blur_enable),
-                            checked = theme.enableBlur,
-                            onCheckedChange = { onIntent(ThemeConfigIntent.SetBlurEnabled(it)) }
+                            checked = blurSupported && blurEnabled,
+                            enabled = blurSupported,
+                            onCheckedChange = { enabled ->
+                                if (isMochi) updateTheme { it.copy(mochiScrollEdgeBlurEnabled = enabled) }
+                                else onIntent(ThemeConfigIntent.SetBlurEnabled(enabled))
+                            }
                         )
                     }
-                    AnimatedVisibility(visible = theme.enableBlur) {
+                    AnimatedVisibility(visible = !isMochi && blurSupported && theme.enableBlur) {
                         SearchableSetting("theme.is_blur_progressive_enable") {
                             SwitchSettingItem(
                                 title = stringResource(R.string.is_blur_progressive_enable),

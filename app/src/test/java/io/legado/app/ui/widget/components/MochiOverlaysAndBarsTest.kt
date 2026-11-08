@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,10 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
 import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.semantics.SemanticsActions
@@ -42,8 +45,13 @@ import io.legado.app.feature.settings.search.SettingsSearchTargetScope
 import io.legado.app.ui.config.themeConfig.ThemeConfigIntent
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigUiState
+import io.legado.app.ui.config.themeConfig.TopBottomBarSettingsSheet
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LocalMochiBackdropRegistry
+import io.legado.app.ui.theme.LocalMochiScrollBlurProgress
+import io.legado.app.ui.theme.LocalHazeState
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
+import io.legado.app.ui.theme.LocalTopBarBackdrop
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -78,6 +86,7 @@ import splitties.init.injectAsAppCtx
 import ui.feice.mochi.basic.MochiTabItem
 import ui.feice.mochi.basic.Text
 import ui.feice.mochi.effect.glass.LocalMochiBackdrop
+import ui.feice.mochi.theme.MochiTheme
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [35], qualifiers = "w398dp-h800dp")
@@ -549,7 +558,7 @@ class MochiOverlaysAndBarsTest {
         val disabled = mutableStateOf(false)
         var localSource = false
         var registeredSource = false
-        show(glass = true) {
+        show {
             val registry = LocalMochiBackdropRegistry.current
             AppScaffold(disableContentSampling = disabled.value, topBar = {
                 GlassTopAppBar("Title", actions = { TopBarActionButton({}, AppIcons.Search, "Search") })
@@ -562,6 +571,142 @@ class MochiOverlaysAndBarsTest {
         }
         compose.runOnIdle { assertTrue(localSource); assertTrue(registeredSource); disabled.value = true }
         compose.runOnIdle { assertFalse(localSource); assertFalse(registeredSource) }
+    }
+
+    @Test
+    fun mochiTopBarGlassCanTurnOffWhileTheBottomBarStillUsesGlass() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        val theme = mutableStateOf(ThemeSettings())
+        var topBarGlass = false
+        var bottomBarGlass = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "mochi", useFloatingBottomBarLiquidGlass = true),
+                theme = theme.value,
+            )) {
+                AppScaffold(
+                    topBar = {
+                        val glass = MochiTheme.materials.controlGlass != null && LocalMochiBackdrop.current != null
+                        SideEffect { topBarGlass = glass }
+                        GlassTopAppBar("Title", actions = { TopBarActionButton({}, AppIcons.Search, "Search") })
+                    },
+                    bottomBar = {
+                        val glass = MochiTheme.materials.bar != null && LocalMochiBackdrop.current != null
+                        SideEffect { bottomBarGlass = glass }
+                    },
+                ) {}
+            }
+        }
+        compose.runOnIdle {
+            assertTrue(topBarGlass)
+            assertTrue(bottomBarGlass)
+            theme.value = theme.value.copy(mochiTopBarLiquidGlass = false)
+        }
+        compose.runOnIdle {
+            assertFalse(topBarGlass)
+            assertTrue(bottomBarGlass)
+        }
+    }
+
+    @Test
+    fun miuixTopBarGlassUsesItsOwnPreferenceAndRespectsSamplingDisabled() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        val theme = mutableStateOf(ThemeSettings(topBarButtonStyle = "liquid"))
+        val samplingDisabled = mutableStateOf(false)
+        var topBarGlass = false
+        var materialSampling = false
+        var clicks = 0
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = theme.value,
+            )) {
+                AppScaffold(disableContentSampling = samplingDisabled.value, topBar = {
+                    val hasBackdrop = LocalMiuixBarBackdrop.current != null
+                    val material = LocalTopBarBackdrop.current != null || LocalHazeState.current != null
+                    SideEffect {
+                        topBarGlass = hasBackdrop
+                        materialSampling = material
+                    }
+                    GlassTopAppBar("Title", actions = { TopBarActionButton({ clicks++ }, AppIcons.Search, "Search") })
+                }) {}
+            }
+        }
+        compose.runOnIdle {
+            assertFalse(topBarGlass)
+            theme.value = theme.value.copy(miuixTopBarLiquidGlass = true)
+        }
+        compose.onNodeWithContentDescription("Search").performTouchInput { click() }
+        compose.runOnIdle {
+            assertTrue(topBarGlass)
+            assertFalse(materialSampling)
+            assertEquals(1, clicks)
+            theme.value = theme.value.copy(miuixTopBarLiquidGlass = false, enableBlur = true, enableProgressiveBlur = true)
+        }
+        compose.runOnIdle {
+            assertTrue(topBarGlass)
+            assertFalse(materialSampling)
+            samplingDisabled.value = true
+        }
+        compose.runOnIdle { assertFalse(topBarGlass) }
+    }
+
+    @Test
+    fun mochiEnablesScrollEdgeBlurByDefaultWithoutRecordingAnotherBackdrop() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        val theme = mutableStateOf(ThemeSettings(mochiTopBarLiquidGlass = false))
+        var edgeBlur = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "mochi"),
+                theme = theme.value,
+            )) {
+                AppScaffold(topBar = {
+                    check(LocalHazeState.current == null)
+                    check(LocalTopBarBackdrop.current == null)
+                    check(LocalMiuixBarBackdrop.current == null)
+                    check(LocalMochiBackdrop.current == null)
+                    val active = LocalMochiScrollBlurProgress.current != null && MochiTheme.materials.scrollEdge != null
+                    SideEffect { edgeBlur = active }
+                    GlassTopAppBar("Native edge blur")
+                }) { padding ->
+                    Box(Modifier.fillMaxSize().padding(padding))
+                }
+            }
+        }
+        compose.runOnIdle {
+            assertTrue(edgeBlur)
+            theme.value = theme.value.copy(
+                mochiScrollEdgeBlurEnabled = false,
+                enableBlur = true,
+                enableProgressiveBlur = true,
+            )
+        }
+        compose.runOnIdle { assertFalse(edgeBlur) }
+    }
+
+    @Test
+    fun materialScaffoldOnlyProvidesMaterialBlurSources() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(theme = ThemeSettings(
+                enableBlur = true,
+                enableProgressiveBlur = true,
+                topBarButtonStyle = "liquid",
+                mochiTopBarLiquidGlass = true,
+                miuixTopBarLiquidGlass = true,
+            ))) {
+                AppScaffold(topBar = {
+                    check(LocalHazeState.current != null)
+                    check(LocalTopBarBackdrop.current != null)
+                    check(LocalMiuixBarBackdrop.current == null)
+                    check(LocalMochiBackdrop.current == null)
+                    check(LocalMochiScrollBlurProgress.current == null)
+                    GlassTopAppBar("Material blur")
+                }) {}
+            }
+        }
+        compose.onNodeWithText("Material blur").assertIsDisplayed()
     }
 
     @Test
@@ -620,7 +765,58 @@ class MochiOverlaysAndBarsTest {
     }
 
     @Test fun standaloneBarButtonLongPressDoesNotAlsoClick() = verifyLongPress(false)
-    @Test fun mergedBarButtonLongPressDoesNotAlsoClick() = verifyLongPress(true)
+    @Test fun savedMergePreferenceDoesNotChangeLongPress() = verifyLongPress(true)
+
+    @Test
+    fun mochiBarSettingsHideMaterialButtonStyleAndMerge() {
+        val app = RuntimeEnvironment.getApplication()
+        val theme = mutableStateOf(ThemeSettings(topBarButtonStyle = "liquid", mergeTopBarActions = true))
+        show(glass = true, merged = true) {
+            TopBottomBarSettingsSheet(
+                show = true,
+                appShell = AppShellSettings(composeEngine = "mochi"),
+                theme = theme.value,
+                isMiuixEngine = false,
+                onDismissRequest = {},
+                onIntent = { if (it is ThemeConfigIntent.UpdateTheme) theme.value = it.transform(theme.value) },
+            )
+        }
+        compose.onNodeWithText(app.getString(R.string.show_bottom_nav)).assertIsDisplayed()
+        compose.onNodeWithText(app.getString(R.string.top_bar_button_style)).assertDoesNotExist()
+        compose.onNodeWithText(app.getString(R.string.merge_top_bar_actions)).assertDoesNotExist()
+        compose.onNodeWithText(app.getString(R.string.top_bar_button_liquid_glass)).assertIsOn().performClick()
+        compose.runOnIdle { assertFalse(theme.value.mochiTopBarLiquidGlass) }
+    }
+
+    @Test
+    fun mochiActionSlotIgnoresTheMaterialMergePreference() {
+        val showActions = mutableStateOf(false)
+        var slotSize = IntSize.Zero
+        show(glass = true, merged = true) {
+            TopBarActionsRow(Modifier.onSizeChanged { slotSize = it }) {
+                if (showActions.value) {
+                    TopBarActionButton({}, AppIcons.Search, "Search")
+                    TopBarActionButton({}, AppIcons.Search, "More", onLongClick = {})
+                }
+            }
+        }
+        compose.runOnIdle {
+            assertEquals(IntSize.Zero, slotSize)
+            showActions.value = true
+        }
+        val search = compose.onNodeWithContentDescription("Search").fetchSemanticsNode().boundsInRoot
+        val more = compose.onNodeWithContentDescription("More").fetchSemanticsNode().boundsInRoot
+        val moreIcon = compose.onNodeWithContentDescription("More", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        with(compose.density) {
+            assertEquals(44.dp.toPx(), search.width, 0.5f)
+            assertEquals(search.width, more.width, 0.5f)
+            assertEquals(8.dp.toPx(), more.left - search.right, 0.5f)
+            assertEquals(search.center.y, more.center.y, 0.5f)
+            assertEquals(more.center.x, moreIcon.center.x, 0.5f)
+            assertEquals(more.center.y, moreIcon.center.y, 0.5f)
+        }
+    }
 
     private fun verifyLongPress(merged: Boolean) {
         var clicks = 0

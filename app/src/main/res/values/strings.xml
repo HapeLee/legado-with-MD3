@@ -1999,6 +1999,8 @@
     <string name="show_bottom_nav">Show Navigation Bar</string>
     <string name="floating_bottom_bar">Floating Bottom Bar</string>
     <string name="floating_bottom_bar_summary">Use a detached capsule style for the bottom navigation bar</string>
+    <string name="top_bar_button_liquid_glass">Liquid Glass Top Bar Buttons</string>
+    <string name="top_bar_button_liquid_glass_summary">Enable backdrop blur and refraction on top bar buttons. Requires Android 13 or later.</string>
     <string name="floating_bottom_bar_liquid_glass">Liquid Glass Effect</string>
     <string name="floating_bottom_bar_liquid_glass_summary">Enable the liquid glass highlight for the floating bar. Requires blur and Android 13+</string>
     <string name="nav_label_mode">Navigation Bar Label Mode</string>

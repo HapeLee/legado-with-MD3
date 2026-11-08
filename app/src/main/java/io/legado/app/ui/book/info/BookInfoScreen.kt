@@ -129,6 +129,7 @@ import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.ui.theme.responsiveHazeEffectFixedStyle
+import io.legado.app.ui.theme.miuixBarBlur
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -164,10 +165,9 @@ import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
+import io.legado.app.ui.widget.components.mochi.ProvideMochiScrollBlurProgress
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import ui.feice.mochi.basic.MochiButtonDefaults
-import io.legado.app.ui.widget.components.topbar.miuixTopBarActionsEndPadding
-import io.legado.app.ui.widget.components.topbar.miuixTopBarSlotPadding
 import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.HtmlFormatter
@@ -775,30 +775,20 @@ private fun BookInfoTransparentTopAppBar(
 
     if (isMiuix) {
         MiuixTopAppBar(
-            modifier = hazeState?.let { Modifier.responsiveHazeEffectFixedStyle(it) } ?: Modifier,
+            modifier = Modifier.miuixBarBlur(fixedStyle = true),
             title = "",
             subtitle = "",
             navigationIcon = {
                 TopBarNavigationButton(onClick = onBackPressed)
             },
             actions = {
-                TopBarActionsRow(
-                    modifier = Modifier.padding(
-                        end = miuixTopBarActionsEndPadding()
-                    )
-                ) {
-                    BookInfoTopBarActions(
-                        state = state,
-                        onMenuAction = onMenuAction,
-                    )
-                }
+                BookInfoTopBarActions(state = state, onMenuAction = onMenuAction)
             },
             color = resolvedColor,
-            navigationIconPadding = miuixTopBarSlotPadding(),
-            actionIconPadding = miuixTopBarSlotPadding(),
             scrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior,
         )
     } else {
+        if (isMochi) ProvideMochiScrollBlurProgress { scrollBehavior.collapsedFraction }
         MediumFlexibleTopAppBar(
             modifier = hazeState?.let { Modifier.responsiveHazeEffectFixedStyle(it) } ?: Modifier,
             title = { AppText(text = "", maxLines = 1) },

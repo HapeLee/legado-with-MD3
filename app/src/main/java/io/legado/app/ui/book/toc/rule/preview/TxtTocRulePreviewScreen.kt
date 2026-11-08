@@ -181,7 +181,7 @@ fun TxtTocRulePreviewScreen(
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { _ ->
+        topBar = {
             GlassMediumFlexibleTopAppBar(
                 title = stringResource(R.string.select_toc_rule),
                 subtitle = stringResource(R.string.select_rule_to_preview_chapters),

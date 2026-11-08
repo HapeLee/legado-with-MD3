@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
+import io.legado.app.ui.theme.miuixBarBlur
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.widget.components.mochi.AppMochiTitleBar
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
@@ -48,12 +49,11 @@ fun GlassTopAppBar(
         }
     }
 
-    val finalModifier = if (hazeState != null) {
-        modifier
-            .background(color = containerColor)
-            .responsiveHazeEffect(state = hazeState)
-    } else {
-        modifier.background(color = containerColor)
+    val background = modifier.background(color = containerColor)
+    val finalModifier = when {
+        composeEngine == ComposeEngine.Miuix -> background.miuixBarBlur()
+        hazeState != null -> background.responsiveHazeEffect(state = hazeState)
+        else -> background
     }
 
     Column(modifier = finalModifier) {
@@ -64,15 +64,9 @@ fun GlassTopAppBar(
                     modifier = Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets),
                     title = title,
                     navigationIcon = navigationIcon,
-                    actions = {
-                        TopBarActionsRow(
-                            modifier = Modifier.padding(end = miuixTopBarActionsEndPadding())
-                        ) { actions() }
-                    },
+                    actions = actions,
                     color = Color.Transparent,
                     defaultWindowInsetsPadding = false,
-                    navigationIconPadding = miuixTopBarSlotPadding(),
-                    actionIconPadding = miuixTopBarSlotPadding(),
                 )
             }
             ComposeEngine.Material, ComposeEngine.Mochi -> {
