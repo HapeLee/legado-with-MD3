@@ -33,9 +33,15 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.feature.settings.search.SettingsSearchCatalog
+import io.legado.app.feature.settings.search.SettingsSearchTargetScope
+import io.legado.app.ui.config.themeConfig.ThemeConfigIntent
+import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
+import io.legado.app.ui.config.themeConfig.ThemeConfigUiState
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LocalMochiBackdropRegistry
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
@@ -321,6 +327,37 @@ class MochiOverlaysAndBarsTest {
         header.assertDoesNotExist()
         assertEquals(originalBounds, background.fetchSemanticsNode().boundsInRoot)
         compose.runOnIdle { assertEquals(1, dismissals) }
+    }
+
+    @Test
+    fun switchingFromMochiToMaterialUsesASeparatePopupWindow() {
+        val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
+        val target = requireNotNull(SettingsSearchCatalog.find("theme.compose_engine"))
+        val material = app.resources.getStringArray(R.array.composeEngine).first()
+        val shell = mutableStateOf(AppShellSettings(composeEngine = "mochi"))
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = shell.value)) {
+                SettingsSearchTargetScope(target) {
+                    ThemeConfigScreen(
+                        ThemeConfigUiState(appShell = shell.value),
+                        { intent ->
+                            if (intent is ThemeConfigIntent.SetComposeEngine) {
+                                shell.value = shell.value.copy(composeEngine = intent.value)
+                            }
+                        },
+                        {}, {}, {},
+                    )
+                }
+            }
+        }
+
+        val row = hasAnyAncestor(hasTestTag("setting:theme.compose_engine"))
+        val picker = compose.onNode(hasText(app.getString(R.string.compose_engine)) and hasClickAction() and row)
+        picker.performTouchInput { click() }
+        compose.onNode(hasText(material) and hasAnyAncestor(isPopup())).assertIsDisplayed().performTouchInput { click() }
+        compose.onNode(isPopup()).assertDoesNotExist()
+        picker.assertIsDisplayed().assertTextContains(material)
+        compose.runOnIdle { assertEquals("material", shell.value.composeEngine) }
     }
 
     @Test
