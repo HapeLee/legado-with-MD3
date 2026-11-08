@@ -11,8 +11,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.NormalCard
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -23,29 +23,32 @@ fun ActionChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-        NormalCard(
-            modifier = modifier
-                .minimumInteractiveComponentSize()
-                .semantics { role = Role.Button },
-            cornerRadius = 12.dp,
-            onClick = onClick,
-            containerColor = MiuixTheme.colorScheme.surfaceContainer,
-        ) {
-            MiuixText(
-                text = label,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                style = LegadoTheme.typography.labelMediumEmphasized,
-                color = MiuixTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            NormalCard(
+                modifier = modifier
+                    .minimumInteractiveComponentSize()
+                    .semantics { role = Role.Button },
+                cornerRadius = 12.dp,
+                onClick = onClick,
+                containerColor = MiuixTheme.colorScheme.surfaceContainer,
+            ) {
+                MiuixText(
+                    text = label,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    style = LegadoTheme.typography.labelMediumEmphasized,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            AssistChip(
+                onClick = onClick,
+                modifier = modifier,
+                label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             )
         }
-    } else {
-        AssistChip(
-            onClick = onClick,
-            modifier = modifier,
-            label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        )
     }
 }

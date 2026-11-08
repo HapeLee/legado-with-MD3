@@ -10,8 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.IconButtonDefaults as MiuixIconButtonDefaults
 
@@ -33,29 +33,31 @@ fun AppIconButton(
     miuixMinWidth: Dp? = null,
     content: @Composable () -> Unit
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
-    if (isMiuix) {
-        MiuixIconButton(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-            holdDownState = holdDownState,
-            backgroundColor = miuixBackgroundColor,
-            cornerRadius = miuixCornerRadius ?: MiuixIconButtonDefaults.CornerRadius,
-            minHeight = miuixMinHeight ?: MiuixIconButtonDefaults.MinHeight,
-            minWidth = miuixMinWidth ?: MiuixIconButtonDefaults.MinWidth,
-            content = content
-        )
-    } else {
-        IconButton(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-            colors = colors,
-            interactionSource = interactionSource,
-            shape = shape,
-            content = content
-        )
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixIconButton(
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled,
+                holdDownState = holdDownState,
+                backgroundColor = miuixBackgroundColor,
+                cornerRadius = miuixCornerRadius ?: MiuixIconButtonDefaults.CornerRadius,
+                minHeight = miuixMinHeight ?: MiuixIconButtonDefaults.MinHeight,
+                minWidth = miuixMinWidth ?: MiuixIconButtonDefaults.MinWidth,
+                content = content
+            )
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            IconButton(
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled,
+                colors = colors,
+                interactionSource = interactionSource,
+                shape = shape,
+                content = content
+            )
+        }
     }
 }

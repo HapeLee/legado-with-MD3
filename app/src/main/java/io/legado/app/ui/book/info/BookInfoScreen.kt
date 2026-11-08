@@ -117,13 +117,13 @@ import io.legado.app.help.http.handleRenderProcessGone
 import io.legado.app.help.webView.WebJsExtensions
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.main.homepage.modules.BannerModule
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideColorSchemeOverride
 import io.legado.app.ui.theme.ThemeOverrideState
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.animateColorSchemeAsState
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.theme.rememberImageSeedColor
@@ -165,6 +165,7 @@ import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import ui.feice.mochi.basic.MochiButtonDefaults
 import io.legado.app.ui.widget.components.topbar.miuixTopBarActionsEndPadding
 import io.legado.app.ui.widget.components.topbar.miuixTopBarSlotPadding
 import io.legado.app.ui.widget.components.variable.VariableEditorSheet
@@ -300,7 +301,7 @@ private fun BookInfoScreenContent(
     onNetworkCoverLoadError: (String?) -> Unit,
     onOpenExplore: (title: String, url: String) -> Unit,
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
     val scrollBehavior = if (isMiuix) {
         MiuixGlassScrollBehavior(MiuixScrollBehavior())
     } else {
@@ -756,7 +757,10 @@ private fun BookInfoTransparentTopAppBar(
     scrollBehavior: GlassTopAppBarScrollBehavior,
 ) {
     val hazeState = LocalHazeState.current
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
+    val isMochi = LegadoTheme.composeEngine == ComposeEngine.Mochi
+    // The M3 host supplies 4dp inside each slot. Complete the engine's outer margin.
+    val slotEdgePadding = if (isMochi) MochiButtonDefaults.BarHorizontalPadding - 4.dp else 12.dp
     val collapsedColor = if (isMiuix) {
         GlassTopAppBarDefaults.getMiuixAppBarColor()
     } else {
@@ -799,10 +803,16 @@ private fun BookInfoTransparentTopAppBar(
             modifier = hazeState?.let { Modifier.responsiveHazeEffectFixedStyle(it) } ?: Modifier,
             title = { AppText(text = "", maxLines = 1) },
             navigationIcon = {
-                TopBarNavigationButton(onClick = onBackPressed)
+                // This M3 slot contributes 4dp itself. Complete Mochi's 16dp edge margin.
+                TopBarNavigationButton(
+                    onClick = onBackPressed,
+                    modifier = if (isMochi) {
+                        Modifier.padding(start = slotEdgePadding)
+                    } else Modifier,
+                )
             },
             actions = {
-                Box(modifier = Modifier.padding(end = 12.dp)) {
+                Box(modifier = Modifier.padding(end = slotEdgePadding)) {
                     TopBarActionsRow {
                         BookInfoTopBarActions(
                             state = state,

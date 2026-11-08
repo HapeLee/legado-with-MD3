@@ -31,7 +31,8 @@ fun OptionSheet(
     AppModalBottomSheet(
         show = show,
         title = title,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        mochiLayout = MochiSheetLayout.Compact,
     ) {
         Column(
             modifier = Modifier

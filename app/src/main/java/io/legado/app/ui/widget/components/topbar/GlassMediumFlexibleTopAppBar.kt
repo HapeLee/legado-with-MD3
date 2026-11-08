@@ -22,12 +22,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.ComposeEngine
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.widget.components.GlassDefaults
+import io.legado.app.ui.widget.components.mochi.AppMochiTitleBar
 import io.legado.app.ui.widget.components.text.AdaptiveAnimatedText
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -54,25 +56,44 @@ fun GlassMediumFlexibleTopAppBar(
     val hazeState = LocalHazeState.current
     val themeSettings = LocalAppUiConfiguration.current.theme
     val composeEngine = LegadoTheme.composeEngine
-    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
+    if (composeEngine == ComposeEngine.Mochi) {
+        Column(modifier) {
+            AppMochiTitleBar(
+                title, subtitle = subtitle, navigationIcon = navigationIcon, actions = actions,
+                scrollBehavior = scrollBehavior, expandable = true,
+            )
+            bottomContent?.invoke(this)
+        }
+        return
+    }
+    val isMiuix = composeEngine == ComposeEngine.Miuix
 
-    val containerColor = if (!isMiuix) {
-        GlassDefaults.secondaryColorOr { GlassTopAppBarDefaults.containerColor() }
-    } else {
-        GlassDefaults.secondaryColorOr { GlassTopAppBarDefaults.getMiuixAppBarColor() }
+    val containerColor = when (LegadoTheme.composeEngine) {
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            GlassDefaults.secondaryColorOr { GlassTopAppBarDefaults.containerColor() }
+        }
+        ComposeEngine.Miuix -> {
+            GlassDefaults.secondaryColorOr { GlassTopAppBarDefaults.getMiuixAppBarColor() }
+        }
     }
 
-    val scrolledColor = if (!isMiuix) {
-        GlassDefaults.secondaryColorOr { GlassTopAppBarDefaults.scrolledContainerColor() }
-    } else {
-        GlassDefaults.secondaryColorOr { GlassTopAppBarDefaults.getMiuixAppBarColor() }
+    val scrolledColor = when (LegadoTheme.composeEngine) {
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            GlassDefaults.secondaryColorOr { GlassTopAppBarDefaults.scrolledContainerColor() }
+        }
+        ComposeEngine.Miuix -> {
+            GlassDefaults.secondaryColorOr { GlassTopAppBarDefaults.getMiuixAppBarColor() }
+        }
     }
 
-    val animatedColor = if (!isMiuix) {
-        val fraction = scrollBehavior?.collapsedFraction ?: 0f
-        lerp(containerColor, scrolledColor, fraction)
-    } else {
-        containerColor
+    val animatedColor = when (LegadoTheme.composeEngine) {
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            val fraction = scrollBehavior?.collapsedFraction ?: 0f
+            lerp(containerColor, scrolledColor, fraction)
+        }
+        ComposeEngine.Miuix -> {
+            containerColor
+        }
     }
 
     val finalModifier = if (hazeState != null) {
@@ -193,9 +214,9 @@ object GlassTopAppBarDefaults {
     @Composable
     fun defaultScrollBehavior(): GlassTopAppBarScrollBehavior {
         val configuration = LocalAppUiConfiguration.current
-        val composeEngine = configuration.appShell.composeEngine
+        val composeEngine = ThemeResolver.resolveComposeEngine(configuration.appShell.composeEngine)
 
-        return if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        return if (composeEngine == ComposeEngine.Miuix) {
             val miuixBehavior = MiuixScrollBehavior()
             remember(miuixBehavior) { MiuixGlassScrollBehavior(miuixBehavior) }
         } else if (configuration.theme.useFlexibleTopAppBar) {

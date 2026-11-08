@@ -1,11 +1,12 @@
 package io.legado.app.ui.config.labConfig
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -76,7 +77,7 @@ fun LabConfigScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -85,40 +86,46 @@ fun LabConfigScreen(
         ) {
             item {
                 SplicedColumnGroup {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.lab_enabled_title),
-                        description = stringResource(R.string.lab_enabled_summary),
-                        checked = settings.enabled,
-                        onCheckedChange = { onIntent(LabConfigIntent.SetEnabled(it)) },
-                    )
+                    SearchableSetting("lab.lab_enabled_title") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.lab_enabled_title),
+                            description = stringResource(R.string.lab_enabled_summary),
+                            checked = settings.enabled,
+                            onCheckedChange = { onIntent(LabConfigIntent.SetEnabled(it)) },
+                        )
+                    }
                 }
                 AnimatedVisibility(visible = settings.enabled) {
                     SplicedColumnGroup(title = stringResource(R.string.lab_display)) {
-                        SwitchSettingItem(
-                            title = stringResource(R.string.lab_eink_display_title),
-                            description = stringResource(R.string.lab_eink_display_summary),
-                            checked = settings.eInkDisplay,
-                            onCheckedChange = { onIntent(LabConfigIntent.SetEInkDisplay(it)) },
-                        )
+                        SearchableSetting("lab.lab_eink_display_title") {
+                            SwitchSettingItem(
+                                title = stringResource(R.string.lab_eink_display_title),
+                                description = stringResource(R.string.lab_eink_display_summary),
+                                checked = settings.eInkDisplay,
+                                onCheckedChange = { onIntent(LabConfigIntent.SetEInkDisplay(it)) },
+                            )
+                        }
                         if (settings.eInkDisplay) {
                             HintText(R.string.lab_eink_display_hint)
                         }
                     }
                 }
                 SplicedColumnGroup(title = stringResource(R.string.lab_diagnostics)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.lab_page_estimate_diagnostics_title),
-                        description = stringResource(
-                            R.string.lab_page_estimate_diagnostics_summary
-                        ),
-                        option = stringResource(
-                            R.string.lab_page_estimate_diagnostics_count,
-                            state.pageEstimateDiagnosticCount,
-                        ),
-                        onClick = {
-                            onIntent(LabConfigIntent.ExportPageEstimateDiagnostics)
-                        },
-                    )
+                    SearchableSetting("lab.lab_page_estimate_diagnostics_title") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.lab_page_estimate_diagnostics_title),
+                            description = stringResource(
+                                R.string.lab_page_estimate_diagnostics_summary
+                            ),
+                            option = stringResource(
+                                R.string.lab_page_estimate_diagnostics_count,
+                                state.pageEstimateDiagnosticCount,
+                            ),
+                            onClick = {
+                                onIntent(LabConfigIntent.ExportPageEstimateDiagnostics)
+                            },
+                        )
+                    }
                 }
             }
         }

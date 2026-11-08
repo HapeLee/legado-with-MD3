@@ -274,6 +274,8 @@ object BackupConfig {
         PreferKey.paletteStyle,
         PreferKey.materialVersion,
         PreferKey.composeEngine,
+        PreferKey.navigationAnimationStyle,
+        PreferKey.textAnimationLevel,
         PreferKey.customContrast,
         PreferKey.customMode,
         PreferKey.useMiuixMonet,

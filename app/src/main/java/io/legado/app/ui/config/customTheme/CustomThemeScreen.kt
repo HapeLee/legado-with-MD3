@@ -1,11 +1,12 @@
 package io.legado.app.ui.config.customTheme
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +51,7 @@ fun CustomThemeScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -60,13 +61,15 @@ fun CustomThemeScreen(
             // Master switch: ON = deep color overrides, OFF = seed color mode
             item {
                 SplicedColumnGroup {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.theme_manage_use_palette_colors),
-                        checked = !state.enableDeepPersonalization,
-                        onCheckedChange = {
-                            onIntent(CustomThemeIntent.DeepPersonalizationChanged(!it))
-                        }
-                    )
+                    SearchableSetting("custom.theme_manage_use_palette_colors") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.theme_manage_use_palette_colors),
+                            checked = !state.enableDeepPersonalization,
+                            onCheckedChange = {
+                                onIntent(CustomThemeIntent.DeepPersonalizationChanged(!it))
+                            }
+                        )
+                    }
                 }
             }
 
@@ -101,43 +104,53 @@ fun CustomThemeScreen(
             } else {
                 item {
                     SplicedColumnGroup(title = stringResource(R.string.custom_theme_colors)) {
-                        ClickableSettingItem(
-                            title = stringResource(R.string.seed_color),
-                            description = stringResource(R.string.day),
-                            option = formatColorOption(state.primarySeedColor)
-                                ?: stringResource(R.string.click_to_select),
-                            onClick = { onIntent(CustomThemeIntent.OpenPicker(CustomThemePicker.DaySeed)) },
-                            trailingContent = { ColorSwatch(colorValue = state.primarySeedColor) }
-                        )
-                        ClickableSettingItem(
-                            title = stringResource(R.string.seed_color),
-                            description = stringResource(R.string.night),
-                            option = formatColorOption(state.nightPrimarySeedColor)
-                                ?: stringResource(R.string.click_to_select),
-                            onClick = { onIntent(CustomThemeIntent.OpenPicker(CustomThemePicker.NightSeed)) },
-                            trailingContent = { ColorSwatch(colorValue = state.nightPrimarySeedColor) }
-                        )
-                        DropdownListSettingItem(
-                            title = stringResource(R.string.palette_style),
-                            selectedValue = state.paletteStyle,
-                            displayEntries = stringArrayResource(R.array.paletteStyle),
-                            entryValues = stringArrayResource(R.array.paletteStyle_value),
-                            onValueChange = { onIntent(CustomThemeIntent.PaletteStyleChanged(it)) }
-                        )
-                        DropdownListSettingItem(
-                            title = stringResource(R.string.preferred_contrast),
-                            selectedValue = state.customContrast,
-                            displayEntries = stringArrayResource(R.array.customContrast),
-                            entryValues = stringArrayResource(R.array.customContrast_value),
-                            onValueChange = { onIntent(CustomThemeIntent.CustomContrastChanged(it)) }
-                        )
-                        DropdownListSettingItem(
-                            title = stringResource(R.string.material_version),
-                            selectedValue = state.materialVersion,
-                            displayEntries = stringArrayResource(R.array.materialVersion),
-                            entryValues = stringArrayResource(R.array.materialVersion_value),
-                            onValueChange = { onIntent(CustomThemeIntent.MaterialVersionChanged(it)) }
-                        )
+                        SearchableSetting("custom.seed_color.day") {
+                            ClickableSettingItem(
+                                title = stringResource(R.string.seed_color),
+                                description = stringResource(R.string.day),
+                                option = formatColorOption(state.primarySeedColor)
+                                    ?: stringResource(R.string.click_to_select),
+                                onClick = { onIntent(CustomThemeIntent.OpenPicker(CustomThemePicker.DaySeed)) },
+                                trailingContent = { ColorSwatch(colorValue = state.primarySeedColor) }
+                            )
+                        }
+                        SearchableSetting("custom.seed_color.night") {
+                            ClickableSettingItem(
+                                title = stringResource(R.string.seed_color),
+                                description = stringResource(R.string.night),
+                                option = formatColorOption(state.nightPrimarySeedColor)
+                                    ?: stringResource(R.string.click_to_select),
+                                onClick = { onIntent(CustomThemeIntent.OpenPicker(CustomThemePicker.NightSeed)) },
+                                trailingContent = { ColorSwatch(colorValue = state.nightPrimarySeedColor) }
+                            )
+                        }
+                        SearchableSetting("custom.palette_style") {
+                            DropdownListSettingItem(
+                                title = stringResource(R.string.palette_style),
+                                selectedValue = state.paletteStyle,
+                                displayEntries = stringArrayResource(R.array.paletteStyle),
+                                entryValues = stringArrayResource(R.array.paletteStyle_value),
+                                onValueChange = { onIntent(CustomThemeIntent.PaletteStyleChanged(it)) }
+                            )
+                        }
+                        SearchableSetting("custom.preferred_contrast") {
+                            DropdownListSettingItem(
+                                title = stringResource(R.string.preferred_contrast),
+                                selectedValue = state.customContrast,
+                                displayEntries = stringArrayResource(R.array.customContrast),
+                                entryValues = stringArrayResource(R.array.customContrast_value),
+                                onValueChange = { onIntent(CustomThemeIntent.CustomContrastChanged(it)) }
+                            )
+                        }
+                        SearchableSetting("custom.material_version") {
+                            DropdownListSettingItem(
+                                title = stringResource(R.string.material_version),
+                                selectedValue = state.materialVersion,
+                                displayEntries = stringArrayResource(R.array.materialVersion),
+                                entryValues = stringArrayResource(R.array.materialVersion_value),
+                                onValueChange = { onIntent(CustomThemeIntent.MaterialVersionChanged(it)) }
+                            )
+                        }
                     }
                 }
             }

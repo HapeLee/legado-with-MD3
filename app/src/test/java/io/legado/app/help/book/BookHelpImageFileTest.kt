@@ -82,6 +82,32 @@ class BookHelpImageFileTest {
     }
 
     @Test
+    fun `cached export stream keeps its original alive until close`() {
+        val chapter = BookChapter(bookUrl = book.bookUrl, title = "Export", index = 9)
+        val src = "https://example.invalid/export-original"
+        val bytes = png()
+        BookHelp.writeImage(book, chapter, src, bytes)
+        val file = BookHelp.getImage(book, chapter, src)
+        try {
+            BookHelp.openCachedImage(book, chapter, src).use { input ->
+                BookHelp.clearCache(book)
+                assertTrue(file.exists())
+                assertArrayEquals(bytes, input.readBytes())
+            }
+            BookHelp.clearCache(book)
+            assertFalse(file.exists())
+            try {
+                BookHelp.openCachedImage(book, chapter, src).close()
+                error("A missing cached original must fail without downloading")
+            } catch (_: IOException) {
+                assertFalse(file.exists())
+            }
+        } finally {
+            BookHelp.clearCache(book)
+        }
+    }
+
+    @Test
     fun `forced refresh updates duplicate chapter images and preserves explicit download references`() = runBlocking {
         val fresh = png(Color.BLUE)
         val src = "data:image/png;base64,${Base64.encodeToString(fresh, Base64.NO_WRAP)}"

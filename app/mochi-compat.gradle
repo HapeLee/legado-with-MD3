@@ -1,0 +1,105 @@
+import org.gradle.api.artifacts.transform.CacheableTransform
+import org.gradle.api.artifacts.transform.InputArtifact
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.artifacts.transform.TransformOutputs
+import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.tree.AbstractInsnNode
+import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.MethodInsnNode
+import org.objectweb.asm.tree.MethodNode
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+
+buildscript {
+    repositories { mavenCentral() }
+    dependencies { classpath 'org.ow2.asm:asm-tree:9.9.1' }
+}
+
+// Keep this applied script in Groovy: current Lint/FIR crashes on the Kotlin script's
+// generated script class. Lint remains enabled, including analysis of this build logic.
+// Redirect the one Backdrop 1.x call before AGP extracts classes, for tests, D8 and R8.
+@CacheableTransform
+abstract class MochiBackdrop2Transform implements TransformAction<TransformParameters.None> {
+    @InputArtifact
+    @PathSensitive(PathSensitivity.NONE)
+    abstract Provider<FileSystemLocation> getInputArtifact()
+
+    @Override
+    void transform(TransformOutputs outputs) {
+        File input = inputArtifact.get().asFile
+        if (input.name != 'mochi-compose-0.2.0.aar') {
+            outputs.file(input)
+            return
+        }
+        int[] replacements = [0] as int[]
+        byte[] patched = rewriteArchive(input.bytes, false, replacements)
+        if (replacements[0] != 1) {
+            throw new IllegalStateException("Mochi 0.2.0 Backdrop patch expected one call; found ${replacements[0]}. Review the published artifact.")
+        }
+        outputs.file('mochi-compose-0.2.0.aar').bytes = patched
+    }
+
+    private static byte[] rewriteArchive(byte[] bytes, boolean jar, int[] replacements) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream()
+        try (ZipOutputStream sink = new ZipOutputStream(output);
+             ZipInputStream source = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+            ZipEntry entry
+            while ((entry = source.nextEntry) != null) {
+                byte[] data = source.readAllBytes()
+                if (!jar && entry.name == 'classes.jar') {
+                    data = rewriteArchive(data, true, replacements)
+                } else if (jar && entry.name == 'ui/feice/mochi/effect/glass/engine/GlassPipelineKt.class') {
+                    ClassReader reader = new ClassReader(data)
+                    ClassNode node = new ClassNode(Opcodes.ASM9)
+                    reader.accept(node, 0)
+                    for (MethodNode method : node.methods) {
+                        for (AbstractInsnNode instruction : method.instructions) {
+                            if (instruction instanceof MethodInsnNode) {
+                                MethodInsnNode invocation = (MethodInsnNode) instruction
+                                if (invocation.opcode == Opcodes.INVOKESTATIC &&
+                                    invocation.owner == 'com/kyant/backdrop/effects/RenderEffectKt' && invocation.name == 'effect' &&
+                                    invocation.desc == '(Lcom/kyant/backdrop/BackdropEffectScope;Landroid/graphics/RenderEffect;)V') {
+                                    invocation.owner = 'io/legado/app/ui/widget/components/mochi/MochiBackdropCompat'
+                                    replacements[0]++
+                                }
+                            }
+                        }
+                    }
+                    ClassWriter writer = new ClassWriter(reader, 0)
+                    node.accept(writer)
+                    data = writer.toByteArray()
+                }
+                ZipEntry copy = new ZipEntry(entry.name)
+                copy.time = 0L
+                sink.putNextEntry(copy)
+                sink.write(data)
+                sink.closeEntry()
+            }
+        }
+        return output.toByteArray()
+    }
+}
+
+def mochiBackdrop2 = Attribute.of('io.legado.mochi-backdrop2', Boolean)
+dependencies {
+    artifactTypes.maybeCreate('aar').attributes.attribute(mochiBackdrop2, false)
+    registerTransform(MochiBackdrop2Transform) {
+        from.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, 'aar').attribute(mochiBackdrop2, false)
+        to.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, 'aar').attribute(mochiBackdrop2, true)
+    }
+}
+configurations.configureEach {
+    if (canBeResolved && (name.endsWith('CompileClasspath') || name.endsWith('RuntimeClasspath'))) {
+        attributes.attribute(mochiBackdrop2, true)
+    }
+}

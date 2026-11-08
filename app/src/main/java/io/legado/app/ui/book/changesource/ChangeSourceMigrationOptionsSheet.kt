@@ -20,6 +20,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.MochiSheetLayout
 import io.legado.app.ui.widget.components.text.AppText
 
 @Composable
@@ -62,6 +63,7 @@ fun ChangeSourceMigrationOptionsSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
+        mochiLayout = MochiSheetLayout.Compact,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

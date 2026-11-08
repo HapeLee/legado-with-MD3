@@ -2,8 +2,8 @@ package io.legado.app.ui.widget.components.progressIndicator
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator as MiuixInfiniteProgressIndicator
@@ -13,13 +13,16 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator as MiuixInfinitePro
 fun AppContainedLoadingIndicator(
     modifier: Modifier = Modifier,
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixInfiniteProgressIndicator(
-            modifier = modifier,
-        )
-    } else {
-        ContainedLoadingIndicator(
-            modifier = modifier
-        )
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixInfiniteProgressIndicator(
+                modifier = modifier,
+            )
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            ContainedLoadingIndicator(
+                modifier = modifier
+            )
+        }
     }
 }

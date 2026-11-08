@@ -34,6 +34,17 @@
     <string name="manual_contrast_value_label">手动值 [-1, 1]</string>
     <string name="manual_contrast_invalid">请输入 -1 到 1 之间的有效数字</string>
     <string name="predictive_back">预见性返回手势</string>
+    <string name="navigation_animation">导航动画</string>
+    <string name="navigation_animation_scale">缩放</string>
+    <string name="text_animation_level">文字动画等级</string>
+    <string name="text_animation_slide">滑动（默认）</string>
+    <string name="text_animation_subtle">轻柔</string>
+    <string name="text_animation_standard">标准</string>
+    <string name="text_animation_strong">明显</string>
+    <string name="text_animation_preview">文字动画示例</string>
+    <string name="text_animation_preview_summary">点按切换示例文字</string>
+    <string name="text_animation_example_reading">正在阅读</string>
+    <string name="text_animation_example_finished">已读完</string>
     <string name="reader_shared_element">阅读界面共享元素动画</string>
     <string name="reader_shared_element_summary">进入阅读界面时从封面展开，关闭后使用渐变过渡</string>
     <string name="predictive_back_summary">启用系统预见性返回手势</string>

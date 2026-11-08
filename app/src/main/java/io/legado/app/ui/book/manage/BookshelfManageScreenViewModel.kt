@@ -17,6 +17,8 @@ import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.model.settings.BookExportSettings
+import io.legado.app.domain.model.manga.MangaExportFormat
+import io.legado.app.feature.bookexport.BookExportOptions
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.BatchChangeSourceCandidate
 import io.legado.app.domain.usecase.BatchChangeSourcePreviewItem
@@ -78,22 +80,6 @@ internal fun selectionOfInvertVisible(
     visibleBookUrls: Set<String>
 ): Set<String> = (selected - visibleBookUrls) + (visibleBookUrls - selected)
 
-data class BookshelfManageScreenExportConfig(
-    val exportUseReplace: Boolean = true,
-    val enableCustomExport: Boolean = false,
-    val exportNoChapterName: Boolean = false,
-    val exportToWebDav: Boolean = false,
-    val exportPictureFile: Boolean = false,
-    val parallelExportBook: Boolean = false,
-    val exportType: Int = 0,
-    val exportCharset: String = "UTF-8",
-    val bookExportFileName: String? = null,
-    val episodeExportFileName: String = ""
-) {
-    val isCustomEpubExportEnabled: Boolean
-        get() = enableCustomExport && exportType == 1
-}
-
 data class BookshelfManageScreenUiState(
     val groupId: Long = -1,
     val groupName: String? = null,
@@ -121,7 +107,7 @@ data class BookshelfManageScreenUiState(
     val batchChangeOptions: ChangeSourceMigrationOptions = ChangeSourceMigrationOptions(),
     val cacheVersion: Long = 0,
     val deleteBookOriginal: Boolean = LocalConfig.deleteBookOriginal,
-    val exportConfig: BookshelfManageScreenExportConfig = BookshelfManageScreenExportConfig(),
+    val exportConfig: BookExportOptions = BookExportOptions(),
     val bookSources: ImmutableList<BookSourcePart> = persistentListOf(),
 )
 
@@ -179,6 +165,7 @@ sealed interface BookshelfManageScreenIntent {
     data class SetExportPictureFile(val enabled: Boolean) : BookshelfManageScreenIntent
     data class SetParallelExportBook(val enabled: Boolean) : BookshelfManageScreenIntent
     data class SetExportType(val type: Int) : BookshelfManageScreenIntent
+    data class SetMangaExportFormat(val format: MangaExportFormat) : BookshelfManageScreenIntent
     data class SetExportCharset(val charset: String) : BookshelfManageScreenIntent
     data class SetBookExportFileName(val fileName: String?) : BookshelfManageScreenIntent
     data class SetEpisodeExportFileName(val fileName: String) : BookshelfManageScreenIntent
@@ -349,6 +336,10 @@ class BookshelfManageScreenViewModel(
 
             is BookshelfManageScreenIntent.SetExportType -> {
                 updateExportSetting { it.copy(exportType = intent.type) }
+            }
+
+            is BookshelfManageScreenIntent.SetMangaExportFormat -> {
+                updateExportSetting { it.copy(mangaExportFormat = intent.format) }
             }
 
             is BookshelfManageScreenIntent.SetExportCharset -> {
@@ -554,7 +545,7 @@ class BookshelfManageScreenViewModel(
     private fun syncExportConfig(settings: BookExportSettings) {
         _uiState.update {
             it.copy(
-                exportConfig = BookshelfManageScreenExportConfig(
+                exportConfig = BookExportOptions(
                     exportUseReplace = settings.exportUseReplace,
                     enableCustomExport = settings.enableCustomExport,
                     exportNoChapterName = settings.exportNoChapterName,
@@ -562,6 +553,7 @@ class BookshelfManageScreenViewModel(
                     exportPictureFile = settings.exportPictureFile,
                     parallelExportBook = settings.parallelExportBook,
                     exportType = settings.exportType,
+                    mangaExportFormat = settings.mangaExportFormat,
                     exportCharset = settings.exportCharset,
                     bookExportFileName = settings.bookExportFileName,
                     episodeExportFileName = settings.episodeExportFileName,

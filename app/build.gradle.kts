@@ -14,6 +14,7 @@ plugins {
 }
 
 apply(from = "download.gradle")
+apply(from = "mochi-compat.gradle")
 
 aboutLibraries {
     collect {
@@ -357,6 +358,8 @@ dependencies {
     implementation(libs.miuix.core)
     implementation(libs.capsule)
     implementation(libs.backdrop)
+    implementation(libs.mochi.compose)
+    implementation(libs.mochi.ios)
     implementation(libs.lyricViewx)
     implementation(libs.timber)
 }

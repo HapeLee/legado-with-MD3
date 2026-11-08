@@ -5,9 +5,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.mochi.AppMochiButton
+import ui.feice.mochi.basic.MochiButtonStyle
 import top.yukonga.miuix.kmp.basic.Button as MiuixButton
 import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
@@ -19,22 +21,28 @@ fun PrimaryButton(
     enabled: Boolean = true,
     text: String
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixButton(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-            colors = MiuixButtonDefaults.buttonColorsPrimary()
-        ) {
-            MiuixText(text = text, style = LegadoTheme.typography.labelLarge)
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixButton(
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled,
+                colors = MiuixButtonDefaults.buttonColorsPrimary()
+            ) {
+                MiuixText(text = text, style = LegadoTheme.typography.labelLarge)
+            }
         }
-    } else {
-        Button(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-        ) {
-            Text(text = text, style = LegadoTheme.typography.labelLarge)
+        ComposeEngine.Mochi -> {
+            AppMochiButton(onClick, modifier, enabled, text, MochiButtonStyle.Filled)
+        }
+        ComposeEngine.Material -> {
+            Button(
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled,
+            ) {
+                Text(text = text, style = LegadoTheme.typography.labelLarge)
+            }
         }
     }
 }
@@ -46,22 +54,28 @@ fun SecondaryButton(
     enabled: Boolean = true,
     text: String
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixButton(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-            colors = MiuixButtonDefaults.buttonColors()
-        ) {
-            MiuixText(text = text,style = LegadoTheme.typography.labelLarge)
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixButton(
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled,
+                colors = MiuixButtonDefaults.buttonColors()
+            ) {
+                MiuixText(text = text,style = LegadoTheme.typography.labelLarge)
+            }
         }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-        ) {
-            Text(text = text, style = LegadoTheme.typography.labelLarge)
+        ComposeEngine.Mochi -> {
+            AppMochiButton(onClick, modifier, enabled, text, MochiButtonStyle.Outlined)
+        }
+        ComposeEngine.Material -> {
+            OutlinedButton(
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled,
+            ) {
+                Text(text = text, style = LegadoTheme.typography.labelLarge)
+            }
         }
     }
 }

@@ -2,6 +2,8 @@ package io.legado.app.ui.config.themeConfig
 
 import androidx.compose.runtime.Stable
 import io.legado.app.domain.model.settings.AppShellSettings
+import io.legado.app.domain.model.settings.NavigationAnimationStyle
+import io.legado.app.domain.model.settings.TextAnimationLevel
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.utils.FileDoc
 
@@ -55,6 +57,8 @@ sealed interface ThemeConfigIntent {
     data class SelectTheme(val value: String) : ThemeConfigIntent
     data class SetThemeMode(val value: String) : ThemeConfigIntent
     data class SetComposeEngine(val value: String) : ThemeConfigIntent
+    data class SetNavigationAnimationStyle(val style: NavigationAnimationStyle) : ThemeConfigIntent
+    data class SetTextAnimationLevel(val level: TextAnimationLevel) : ThemeConfigIntent
     data class SetPredictiveBackEnabled(val enabled: Boolean) : ThemeConfigIntent
     data class SetReaderSharedElementEnabled(val enabled: Boolean) : ThemeConfigIntent
     data class SetFontScale(val value: Int) : ThemeConfigIntent

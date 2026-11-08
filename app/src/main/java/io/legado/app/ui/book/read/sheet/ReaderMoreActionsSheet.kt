@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Login
@@ -59,6 +61,8 @@ import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.book.read.isReadMenuActionApplicable
 import io.legado.app.ui.book.read.readMenuActionScopeLabelRes
+import io.legado.app.ui.theme.ComposeEngine
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ConfigListEntry
 import io.legado.app.ui.widget.components.ReorderableConfigList
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -148,7 +152,12 @@ private fun MoreActionsPager(
 ) {
     val pages = actions.chunked(8).ifEmpty { listOf(emptyList()) }
     val pagerState = rememberPagerState { pages.size }
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+    val scrollModifier = if (LegadoTheme.composeEngine == ComposeEngine.Mochi) {
+        Modifier.verticalScroll(rememberScrollState())
+    } else {
+        Modifier
+    }
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth().then(scrollModifier)) {
         val itemSize = (maxWidth - 56.dp) / 4
         val rowCount = if (actions.size > 4) 2 else 1
         HorizontalPager(

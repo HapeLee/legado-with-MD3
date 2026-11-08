@@ -1,7 +1,8 @@
 package io.legado.app.ui.book.readaloud.cast
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -48,7 +49,7 @@ fun MultiRoleRuleRouteScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -57,41 +58,55 @@ fun MultiRoleRuleRouteScreen(
         ) {
             item {
                 SplicedColumnGroup {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.cast_voice_pool),
-                        description = stringResource(R.string.cast_voice_pool_summary),
-                        onClick = onNavigateToVoicePool,
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.cast_bgm_pool),
-                        description = stringResource(R.string.cast_bgm_pool_summary),
-                        onClick = onNavigateToBgmPool,
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.voice_effect),
-                        description = stringResource(R.string.voice_effect_hub_summary),
-                        onClick = onNavigateToVoiceEffect,
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.capsule_style_title),
-                        description = stringResource(R.string.capsule_style_hub_summary),
-                        onClick = onNavigateToCapsuleStyle,
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.read_aloud_engines_and_voices),
-                        description = stringResource(R.string.cast_tts_engines_summary),
-                        onClick = onNavigateToEngines,
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.multi_role_recognition),
-                        description = stringResource(R.string.multi_role_recognition_summary),
-                        onClick = onNavigateToRecognition,
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.regex_cast_rule),
-                        description = stringResource(R.string.regex_cast_rule_summary),
-                        onClick = onNavigateToRegexCast,
-                    )
+                    SearchableSetting("aloud.cast_voice_pool") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.cast_voice_pool),
+                            description = stringResource(R.string.cast_voice_pool_summary),
+                            onClick = onNavigateToVoicePool,
+                        )
+                    }
+                    SearchableSetting("aloud.cast_bgm_pool") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.cast_bgm_pool),
+                            description = stringResource(R.string.cast_bgm_pool_summary),
+                            onClick = onNavigateToBgmPool,
+                        )
+                    }
+                    SearchableSetting("aloud.voice_effect") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.voice_effect),
+                            description = stringResource(R.string.voice_effect_hub_summary),
+                            onClick = onNavigateToVoiceEffect,
+                        )
+                    }
+                    SearchableSetting("aloud.capsule_style_title") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.capsule_style_title),
+                            description = stringResource(R.string.capsule_style_hub_summary),
+                            onClick = onNavigateToCapsuleStyle,
+                        )
+                    }
+                    SearchableSetting("aloud.read_aloud_engines_and_voices") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.read_aloud_engines_and_voices),
+                            description = stringResource(R.string.cast_tts_engines_summary),
+                            onClick = onNavigateToEngines,
+                        )
+                    }
+                    SearchableSetting("aloud.multi_role_recognition") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.multi_role_recognition),
+                            description = stringResource(R.string.multi_role_recognition_summary),
+                            onClick = onNavigateToRecognition,
+                        )
+                    }
+                    SearchableSetting("aloud.regex_cast_rule") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.regex_cast_rule),
+                            description = stringResource(R.string.regex_cast_rule_summary),
+                            onClick = onNavigateToRegexCast,
+                        )
+                    }
                 }
             }
         }

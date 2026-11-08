@@ -1,7 +1,8 @@
 package io.legado.app.ui.config.downloadCacheConfig
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -61,7 +62,7 @@ fun DownloadCacheConfigScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -70,128 +71,146 @@ fun DownloadCacheConfigScreen(
         ) {
             item {
                 SplicedColumnGroup(title = stringResource(R.string.http_cache)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.cover_cache),
-                        description = stringResource(
-                            R.string.cache_size_mb,
-                            state.coverCacheSizeMb
-                        ),
-                        onClick = {
-                            onIntent(
-                                DownloadCacheConfigIntent.ShowDialog(
-                                    DownloadCacheConfigDialog.ClearCoverCache
+                    SearchableSetting("download.cover_cache") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.cover_cache),
+                            description = stringResource(
+                                R.string.cache_size_mb,
+                                state.coverCacheSizeMb
+                            ),
+                            onClick = {
+                                onIntent(
+                                    DownloadCacheConfigIntent.ShowDialog(
+                                        DownloadCacheConfigDialog.ClearCoverCache
+                                    )
                                 )
-                            )
-                        }
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.manga_cache),
-                        description = stringResource(
-                            R.string.cache_size_mb,
-                            state.mangaCacheSizeMb
-                        ),
-                        onClick = {
-                            onIntent(
-                                DownloadCacheConfigIntent.ShowDialog(
-                                    DownloadCacheConfigDialog.ClearMangaCache
+                            }
+                        )
+                    }
+                    SearchableSetting("download.manga_cache") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.manga_cache),
+                            description = stringResource(
+                                R.string.cache_size_mb,
+                                state.mangaCacheSizeMb
+                            ),
+                            onClick = {
+                                onIntent(
+                                    DownloadCacheConfigIntent.ShowDialog(
+                                        DownloadCacheConfigDialog.ClearMangaCache
+                                    )
                                 )
-                            )
-                        }
-                    )
+                            }
+                        )
+                    }
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.download_setting)) {
-                    SliderSettingItem(
-                        title = stringResource(R.string.threads_num_title),
-                        description = stringResource(R.string.threads_num_summary),
-                        value = settings.threadCount.toFloat(),
-                        defaultValue = 8f,
-                        valueRange = 1f..256f,
-                        onValueChange = {
-                            onIntent(DownloadCacheConfigIntent.SetThreadCount(it.toInt()))
-                        }
-                    )
+                    SearchableSetting("download.threads_num_title") {
+                        SliderSettingItem(
+                            title = stringResource(R.string.threads_num_title),
+                            description = stringResource(R.string.threads_num_summary),
+                            value = settings.threadCount.toFloat(),
+                            defaultValue = 8f,
+                            valueRange = 1f..256f,
+                            onValueChange = {
+                                onIntent(DownloadCacheConfigIntent.SetThreadCount(it.toInt()))
+                            }
+                        )
+                    }
 
-                    SliderSettingItem(
-                        title = stringResource(R.string.cache_book_threads_num_title),
-                        description = stringResource(R.string.cache_book_threads_num_summary),
-                        value = settings.cacheBookThreadCount
-                            .coerceIn(1, CacheBook.maxDownloadConcurrency)
-                            .toFloat(),
-                        defaultValue = CacheBook.maxDownloadConcurrency.toFloat(),
-                        valueRange = 1f..CacheBook.maxDownloadConcurrency.toFloat(),
-                        onValueChange = {
-                            onIntent(
-                                DownloadCacheConfigIntent.SetCacheBookThreadCount(it.toInt())
-                            )
-                        }
-                    )
+                    SearchableSetting("download.cache_book_threads_num_title") {
+                        SliderSettingItem(
+                            title = stringResource(R.string.cache_book_threads_num_title),
+                            description = stringResource(R.string.cache_book_threads_num_summary),
+                            value = settings.cacheBookThreadCount
+                                .coerceIn(1, CacheBook.maxDownloadConcurrency)
+                                .toFloat(),
+                            defaultValue = CacheBook.maxDownloadConcurrency.toFloat(),
+                            valueRange = 1f..CacheBook.maxDownloadConcurrency.toFloat(),
+                            onValueChange = {
+                                onIntent(
+                                    DownloadCacheConfigIntent.SetCacheBookThreadCount(it.toInt())
+                                )
+                            }
+                        )
+                    }
 
-                    SliderSettingItem(
-                        title = stringResource(R.string.pre_download),
-                        description = stringResource(
-                            R.string.pre_download_s,
-                            settings.preDownloadNum
-                        ),
-                        value = settings.preDownloadNum.toFloat(),
-                        defaultValue = 10f,
-                        valueRange = 0f..100f,
-                        onValueChange = {
-                            onIntent(DownloadCacheConfigIntent.SetPreDownloadNum(it.toInt()))
-                        }
-                    )
+                    SearchableSetting("download.pre_download") {
+                        SliderSettingItem(
+                            title = stringResource(R.string.pre_download),
+                            description = stringResource(
+                                R.string.pre_download_s,
+                                settings.preDownloadNum
+                            ),
+                            value = settings.preDownloadNum.toFloat(),
+                            defaultValue = 10f,
+                            valueRange = 0f..100f,
+                            onValueChange = {
+                                onIntent(DownloadCacheConfigIntent.SetPreDownloadNum(it.toInt()))
+                            }
+                        )
+                    }
 
-                    SliderSettingItem(
-                        title = stringResource(R.string.pre_download_prev),
-                        description = stringResource(
-                            R.string.pre_download_prev_s,
-                            settings.preDownloadNumPrev
-                        ),
-                        value = settings.preDownloadNumPrev.toFloat(),
-                        defaultValue = 0f,
-                        valueRange = 0f..100f,
-                        onValueChange = {
-                            onIntent(DownloadCacheConfigIntent.SetPreDownloadNumPrev(it.toInt()))
-                        }
-                    )
+                    SearchableSetting("download.pre_download_prev") {
+                        SliderSettingItem(
+                            title = stringResource(R.string.pre_download_prev),
+                            description = stringResource(
+                                R.string.pre_download_prev_s,
+                                settings.preDownloadNumPrev
+                            ),
+                            value = settings.preDownloadNumPrev.toFloat(),
+                            defaultValue = 0f,
+                            valueRange = 0f..100f,
+                            onValueChange = {
+                                onIntent(DownloadCacheConfigIntent.SetPreDownloadNumPrev(it.toInt()))
+                            }
+                        )
+                    }
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.image_cache)) {
-                    SliderSettingItem(
-                        title = stringResource(R.string.bitmap_cache_size),
-                        description = stringResource(
-                            R.string.bitmap_cache_size_summary,
-                            settings.bitmapCacheSize
-                        ),
-                        value = settings.bitmapCacheSize.toFloat(),
-                        defaultValue = 32f,
-                        valueRange = 1f..2047f,
-                        onValueChange = {
-                            onIntent(DownloadCacheConfigIntent.SetBitmapCacheSize(it.toInt()))
-                        }
-                    )
+                    SearchableSetting("download.bitmap_cache_size") {
+                        SliderSettingItem(
+                            title = stringResource(R.string.bitmap_cache_size),
+                            description = stringResource(
+                                R.string.bitmap_cache_size_summary,
+                                settings.bitmapCacheSize
+                            ),
+                            value = settings.bitmapCacheSize.toFloat(),
+                            defaultValue = 32f,
+                            valueRange = 1f..2047f,
+                            onValueChange = {
+                                onIntent(DownloadCacheConfigIntent.SetBitmapCacheSize(it.toInt()))
+                            }
+                        )
+                    }
 
-                    SliderSettingItem(
-                        title = stringResource(R.string.image_retain_number),
-                        description = stringResource(
-                            R.string.image_retain_number_summary,
-                            settings.imageRetainNum
-                        ),
-                        value = settings.imageRetainNum.toFloat(),
-                        defaultValue = 10f,
-                        valueRange = 0f..100f,
-                        onValueChange = {
-                            onIntent(DownloadCacheConfigIntent.SetImageRetainNum(it.toInt()))
-                        }
-                    )
+                    SearchableSetting("download.image_retain_number") {
+                        SliderSettingItem(
+                            title = stringResource(R.string.image_retain_number),
+                            description = stringResource(
+                                R.string.image_retain_number_summary,
+                                settings.imageRetainNum
+                            ),
+                            value = settings.imageRetainNum.toFloat(),
+                            defaultValue = 10f,
+                            valueRange = 0f..100f,
+                            onValueChange = {
+                                onIntent(DownloadCacheConfigIntent.SetImageRetainNum(it.toInt()))
+                            }
+                        )
+                    }
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.network)) {
-                    InputSettingItem(
-                        title = stringResource(R.string.user_agent),
-                        value = settings.userAgent,
-                        onConfirm = { onIntent(DownloadCacheConfigIntent.SetUserAgent(it)) }
-                    )
+                    SearchableSetting("download.user_agent") {
+                        InputSettingItem(
+                            title = stringResource(R.string.user_agent),
+                            value = settings.userAgent,
+                            onConfirm = { onIntent(DownloadCacheConfigIntent.SetUserAgent(it)) }
+                        )
+                    }
 
                     SwitchSettingItem(
                         title = "Cronet",
@@ -204,34 +223,40 @@ fun DownloadCacheConfigScreen(
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.other_setting)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.clear_cache),
-                        description = stringResource(R.string.clear_cache_summary),
-                        onClick = {
-                            onIntent(
-                                DownloadCacheConfigIntent.ShowDialog(
-                                    DownloadCacheConfigDialog.ClearBookCache
+                    SearchableSetting("download.clear_cache") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.clear_cache),
+                            description = stringResource(R.string.clear_cache_summary),
+                            onClick = {
+                                onIntent(
+                                    DownloadCacheConfigIntent.ShowDialog(
+                                        DownloadCacheConfigDialog.ClearBookCache
+                                    )
                                 )
-                            )
-                        }
-                    )
+                            }
+                        )
+                    }
 
-                    ClickableSettingItem(
-                        title = stringResource(R.string.shrink_database),
-                        description = stringResource(R.string.shrink_database_summary),
-                        onClick = {
-                            onIntent(
-                                DownloadCacheConfigIntent.ShowDialog(
-                                    DownloadCacheConfigDialog.ShrinkDatabase
+                    SearchableSetting("download.shrink_database") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.shrink_database),
+                            description = stringResource(R.string.shrink_database_summary),
+                            onClick = {
+                                onIntent(
+                                    DownloadCacheConfigIntent.ShowDialog(
+                                        DownloadCacheConfigDialog.ShrinkDatabase
+                                    )
                                 )
-                            )
-                        }
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.cache_maintenance_title),
-                        description = stringResource(R.string.cache_maintenance_summary),
-                        onClick = onNavigateToMaintenance,
-                    )
+                            }
+                        )
+                    }
+                    SearchableSetting("download.cache_maintenance_title") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.cache_maintenance_title),
+                            description = stringResource(R.string.cache_maintenance_summary),
+                            onClick = onNavigateToMaintenance,
+                        )
+                    }
                 }
             }
         }

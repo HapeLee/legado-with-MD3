@@ -5,6 +5,7 @@ import io.legado.app.data.repository.manga.translation.MangaTranslationRepositor
 import io.legado.app.domain.gateway.MangaTranslationGateway
 import io.legado.app.feature.manga.translation.MangaTranslationViewModel
 import io.legado.app.feature.settings.manga.MangaConfigViewModel
+import io.legado.app.feature.settings.search.SettingsSearchViewModel
 import io.legado.app.domain.gateway.AiImageGateway
 import io.legado.app.data.repository.ai.AiImageRepository
 import io.legado.app.data.repository.manga.translation.MangaImageEditor
@@ -110,6 +111,7 @@ import io.legado.app.data.repository.WebDavBackupRepository
 import io.legado.app.data.repository.WebDavReadingProgressRepository
 import io.legado.app.data.repository.manga.DefaultMangaReaderSession
 import io.legado.app.data.repository.manga.MangaReaderActionRepository
+import io.legado.app.data.repository.manga.MangaExportRepository
 import io.legado.app.data.repository.manga.MangaReaderDataRepository
 import io.legado.app.data.security.CloudTtsCredentialCipher
 import io.legado.app.domain.gateway.AiArtifactGateway
@@ -159,6 +161,7 @@ import io.legado.app.domain.gateway.LabSettingsGateway
 import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.LocalPasswordGateway
 import io.legado.app.domain.gateway.MangaReaderDataGateway
+import io.legado.app.domain.gateway.MangaExportGateway
 import io.legado.app.domain.gateway.MangaReaderSessionFactory
 import io.legado.app.domain.gateway.MangaSettingsGateway
 import io.legado.app.domain.gateway.OtherConfigSystemGateway
@@ -432,6 +435,7 @@ val appModule = module {
         cloudIdentity = get<io.legado.app.data.repository.manga.translation.MangaCloudOcr>()::identity) }
     viewModelOf(::MangaTranslationViewModel)
     viewModelOf(::MangaConfigViewModel)
+    viewModelOf(::SettingsSearchViewModel)
     single<ChangeSourceSettingsGateway> { ChangeSourceSettingsRepository() }
     single<ImportBookSettingsGateway> { ImportBookSettingsRepository() }
     single<TranslationSettingsGateway> { TranslationSettingsRepository() }
@@ -459,6 +463,7 @@ val appModule = module {
     single<ReadStyleGateway> { get<ReadBookStyleConfigRepository>() }
     factoryOf(::MangaReaderDataRepository)
     factoryOf(::MangaReaderActionRepository)
+    factory<MangaExportGateway> { MangaExportRepository(get(), get()) }
     factory<MangaReaderDataGateway> { get<MangaReaderDataRepository>() }
     factory<MangaReaderSessionFactory> {
         MangaReaderSessionFactory {

@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.Preferences
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.TranslationConstants
 import io.legado.app.domain.model.settings.BookExportSettings
+import io.legado.app.domain.model.manga.MangaExportFormat
 import io.legado.app.domain.model.settings.ChangeSourceSettings
 import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.domain.model.settings.DownloadCacheSettings
@@ -13,6 +14,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class Phase2SettingsMappingTest {
+
+    @Test
+    fun `unknown comic export format falls back without changing text export preferences`() {
+        val preferences = mapOf(
+            PreferKey.mangaExportFormat to "unknown-future-format",
+            PreferKey.exportType to 1,
+            PreferKey.enableCustomExport to true,
+        ).toTestPreferences()
+        val settings = preferences.toBookExportSettings()
+        assertEquals(MangaExportFormat.Cbz, settings.mangaExportFormat)
+        assertEquals(1, settings.exportType)
+        assertEquals(true, settings.enableCustomExport)
+    }
 
     @Test
     fun `翻译设置写读映射往返恒等`() {
@@ -117,6 +131,7 @@ class Phase2SettingsMappingTest {
                 base.copy(enableCustomExport = true),
                 base.copy(exportPictureFile = true),
                 base.copy(parallelExportBook = true),
+                base.copy(mangaExportFormat = MangaExportFormat.Folder),
             ),
             toPrefMap = BookExportSettings::toPrefMap,
             fromPreferences = Preferences::toBookExportSettings,

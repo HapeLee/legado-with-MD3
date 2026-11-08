@@ -45,9 +45,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -66,7 +66,7 @@ fun AppFloatingActionButton(
     contentColor: Color = LegadoTheme.colorScheme.primary,
     content: (@Composable () -> Unit)? = null
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
     val fabContent: @Composable () -> Unit = {
         if (icon != null) {
             if (isMiuix){
@@ -87,46 +87,49 @@ fun AppFloatingActionButton(
         }
     }
 
-    if (isMiuix) {
-        MiuixFloatingActionButton(
-            onClick = onClick,
-            modifier = modifier,
-            content = fabContent,
-            containerColor = LegadoTheme.colorScheme.surfaceContainer
-        )
-    } else {
-        if (tooltipText != null) {
-            Box(modifier = modifier) {
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        TooltipAnchorPosition.Above
-                    ),
-                    tooltip = {
-                        ProvideAppDensity {
-                            PlainTooltip(
-                                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                                contentColor = LegadoTheme.colorScheme.onSurface,
-                            ) { AppText(tooltipText) }
-                        }
-                    },
-                    state = rememberTooltipState(),
-                ) {
-                    FloatingActionButton(
-                        onClick = onClick,
-                        containerColor = containerColor,
-                        contentColor = contentColor,
-                        content = fabContent
-                    )
-                }
-            }
-        } else {
-            FloatingActionButton(
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixFloatingActionButton(
                 onClick = onClick,
                 modifier = modifier,
-                containerColor = containerColor,
-                contentColor = contentColor,
-                content = fabContent
+                content = fabContent,
+                containerColor = LegadoTheme.colorScheme.surfaceContainer
             )
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            if (tooltipText != null) {
+                Box(modifier = modifier) {
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Above
+                        ),
+                        tooltip = {
+                            ProvideAppDensity {
+                                PlainTooltip(
+                                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                                    contentColor = LegadoTheme.colorScheme.onSurface,
+                                ) { AppText(tooltipText) }
+                            }
+                        },
+                        state = rememberTooltipState(),
+                    ) {
+                        FloatingActionButton(
+                            onClick = onClick,
+                            containerColor = containerColor,
+                            contentColor = contentColor,
+                            content = fabContent
+                        )
+                    }
+                }
+            } else {
+                FloatingActionButton(
+                    onClick = onClick,
+                    modifier = modifier,
+                    containerColor = containerColor,
+                    contentColor = contentColor,
+                    content = fabContent
+                )
+            }
         }
     }
 }
@@ -147,108 +150,110 @@ fun AppFloatingActionButtonMenu(
     visible: Boolean = true,
     focusRequester: FocusRequester = remember { FocusRequester() }
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
-    if (isMiuix) {
-        Column(
-            modifier = modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items.forEachIndexed { index, (icon, label, action) ->
-                AnimatedVisibility(
-                    visible = expanded,
-                    enter = fadeIn(tween(delayMillis = index * 40)) +
-                            scaleIn(tween(delayMillis = index * 40), initialScale = 0.8f),
-                    exit = fadeOut(tween(80)) + scaleOut(tween(80), targetScale = 0.8f)
-                ) {
-                    Button(
-                        onClick = {
-                            action()
-                            onExpandedChange(false)
-                        }
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            Column(
+                modifier = modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items.forEachIndexed { index, (icon, label, action) ->
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = fadeIn(tween(delayMillis = index * 40)) +
+                                scaleIn(tween(delayMillis = index * 40), initialScale = 0.8f),
+                        exit = fadeOut(tween(80)) + scaleOut(tween(80), targetScale = 0.8f)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
+                        Button(
+                            onClick = {
+                                action()
+                                onExpandedChange(false)
+                            }
                         ) {
-                            MiuixIcon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            MiuixText(
-                                text = label,
-                                style = MiuixTheme.textStyles.subtitle
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                MiuixIcon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                MiuixText(
+                                    text = label,
+                                    style = MiuixTheme.textStyles.subtitle
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            AnimatedVisibility(
-                visible = visible,
-                enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                exit = fadeOut() + scaleOut(targetScale = 0.8f)
-            ) {
-                MiuixFloatingActionButton(
-                    onClick = { onExpandedChange(!expanded) }
+                AnimatedVisibility(
+                    visible = visible,
+                    enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                    exit = fadeOut() + scaleOut(targetScale = 0.8f)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                    MiuixFloatingActionButton(
+                        onClick = { onExpandedChange(!expanded) }
                     ) {
-                        MiuixIcon(
-                            imageVector = if (expanded) Icons.Filled.Close
-                            else Icons.AutoMirrored.Filled.MenuOpen,
-                            contentDescription = stringResource(R.string.menu),
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.menu), color = Color.White)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        ) {
+                            MiuixIcon(
+                                imageVector = if (expanded) Icons.Filled.Close
+                                else Icons.AutoMirrored.Filled.MenuOpen,
+                                contentDescription = stringResource(R.string.menu),
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.menu), color = Color.White)
+                        }
                     }
                 }
             }
         }
-    } else {
-        FloatingActionButtonMenu(
-            modifier = modifier,
-            expanded = expanded,
-            button = {
-                ToggleFloatingActionButton(
-                    modifier = Modifier
-                        .animateFloatingActionButton(
-                            visible = visible,
-                            alignment = Alignment.BottomEnd,
-                        )
-                        .focusRequester(focusRequester),
-                    checked = expanded,
-                    onCheckedChange = { onExpandedChange(!expanded) },
-                ) {
-                    val imageVector by remember {
-                        derivedStateOf {
-                            if (checkedProgress > 0.5f) Icons.Filled.Close
-                            else Icons.AutoMirrored.Filled.MenuOpen
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            FloatingActionButtonMenu(
+                modifier = modifier,
+                expanded = expanded,
+                button = {
+                    ToggleFloatingActionButton(
+                        modifier = Modifier
+                            .animateFloatingActionButton(
+                                visible = visible,
+                                alignment = Alignment.BottomEnd,
+                            )
+                            .focusRequester(focusRequester),
+                        checked = expanded,
+                        onCheckedChange = { onExpandedChange(!expanded) },
+                    ) {
+                        val imageVector by remember {
+                            derivedStateOf {
+                                if (checkedProgress > 0.5f) Icons.Filled.Close
+                                else Icons.AutoMirrored.Filled.MenuOpen
+                            }
                         }
+                        Icon(
+                            imageVector = imageVector,
+                            contentDescription = stringResource(R.string.menu),
+                            modifier = Modifier.animateIcon({ checkedProgress }),
+                        )
                     }
-                    Icon(
-                        imageVector = imageVector,
-                        contentDescription = stringResource(R.string.menu),
-                        modifier = Modifier.animateIcon({ checkedProgress }),
+                }
+            ) {
+                items.forEach { (icon, label, action) ->
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            action()
+                            onExpandedChange(false)
+                        },
+                        icon = { Icon(icon, contentDescription = null) },
+                        text = { Text(text = label) }
                     )
                 }
-            }
-        ) {
-            items.forEach { (icon, label, action) ->
-                FloatingActionButtonMenuItem(
-                    onClick = {
-                        action()
-                        onExpandedChange(false)
-                    },
-                    icon = { Icon(icon, contentDescription = null) },
-                    text = { Text(text = label) }
-                )
             }
         }
     }

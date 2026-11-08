@@ -32,9 +32,9 @@ import io.legado.app.domain.model.settings.diffFrom
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.ui.book.read.eyeProtectionColorFilter
 import io.legado.app.ui.book.read.rememberEyeProtectionActive
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.disableAutoFill
 import io.legado.app.utils.isNightMode
@@ -178,10 +178,13 @@ abstract class BaseComposeActivity(
     @Composable
     private fun SyncWindowBackground() {
         if (transparent) return
-        val backgroundColor = if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-            MiuixTheme.colorScheme.surface
-        } else {
-            LegadoTheme.colorScheme.background
+        val backgroundColor = when (LegadoTheme.composeEngine) {
+            ComposeEngine.Miuix -> {
+                MiuixTheme.colorScheme.surface
+            }
+            ComposeEngine.Material, ComposeEngine.Mochi -> {
+                LegadoTheme.colorScheme.background
+            }
         }
         SideEffect {
             if (!hasWindowBgImage) {

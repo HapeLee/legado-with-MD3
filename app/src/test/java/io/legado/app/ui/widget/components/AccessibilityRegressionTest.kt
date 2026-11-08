@@ -31,6 +31,7 @@ import io.legado.app.ui.book.info.BookInfoScreen
 import io.legado.app.ui.book.info.BookInfoUiState
 import io.legado.app.ui.book.read.ReadAloudCapsule
 import io.legado.app.ui.theme.AppTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.widget.components.button.series.MediumAnimatedButton
 import io.legado.app.ui.widget.components.button.series.SmallAnimatedButton
@@ -213,7 +214,7 @@ class AccessibilityRegressionTest {
             CompositionLocalProvider(LocalInspectionMode provides true) {
                 AppTheme(AppUiConfiguration(), applyBackground = false) {
                     CompositionLocalProvider(LocalLegadoThemeColors provides
-                        LocalLegadoThemeColors.current.copy(composeEngine = engine())) {
+                        LocalLegadoThemeColors.current.copy(composeEngine = ThemeResolver.resolveComposeEngine(engine()))) {
                         content()
                     }
                 }
