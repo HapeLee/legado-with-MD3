@@ -13,8 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -46,45 +46,45 @@ fun SettingsSearchRouteScreen(
     onOpenSetting: (String) -> Unit,
     viewModel: SettingsSearchViewModel = koinViewModel(),
 ) {
-    val context = LocalContext.current
+    val resources = LocalResources.current
     val configuration = LocalConfiguration.current
-    // Resolve at the Android presentation boundary, and rebuild on app-language changes.
-    val index = remember(context, configuration) {
+    // 文案在 Android 展示边界解析；资源实例未变时也按配置变化重建索引。
+    val index = remember(resources, configuration) {
         val reading = ReadSetting.entries.map { setting ->
             SettingsSearchEntry(
                 id = setting.id,
-                title = context.getString(setting.titleRes),
-                path = context.getString(R.string.settings_search_path,
-                    context.getString(R.string.read_config), context.getString(setting.section.titleRes)),
+                title = resources.getString(setting.titleRes),
+                path = resources.getString(R.string.settings_search_path,
+                    resources.getString(R.string.read_config), resources.getString(setting.section.titleRes)),
                 description = setting.descriptionRes?.let { res ->
                     if (setting == ReadSetting.BrightnessPosition) {
-                        context.getString(res, context.getString(R.string.brightness_bar_vertical))
-                    } else context.getString(res)
+                        resources.getString(res, resources.getString(R.string.brightness_bar_vertical))
+                    } else resources.getString(res)
                 }.orEmpty(),
-                keywords = setting.keywordsRes?.let(context::getString).orEmpty(),
+                keywords = setting.keywordsRes?.let(resources::getString).orEmpty(),
             )
         }
         val fixed = (SettingsSearchCatalog.categories + SettingsSearchCatalog.items).map { item ->
-            val pageTitle = context.getString(item.page.titleRes)
+            val pageTitle = resources.getString(item.page.titleRes)
             val parent = item.parentId?.let(SettingsSearchCatalog::find)
             val description = listOfNotNull(
-                item.descriptionRes?.let(context::getString),
-                parent?.let { context.getString(R.string.settings_search_condition, context.getString(it.titleRes)) },
+                item.descriptionRes?.let(resources::getString),
+                parent?.let { resources.getString(R.string.settings_search_condition, resources.getString(it.titleRes)) },
             ).joinToString("\n")
             SettingsSearchEntry(
                 id = item.id,
-                title = context.getString(item.titleRes),
+                title = resources.getString(item.titleRes),
                 path = when {
-                    item.isCategory -> context.getString(R.string.setting)
-                    item.groupTitleRes != null -> context.getString(R.string.settings_search_path,
-                        pageTitle, context.getString(item.groupTitleRes))
+                    item.isCategory -> resources.getString(R.string.setting)
+                    item.groupTitleRes != null -> resources.getString(R.string.settings_search_path,
+                        pageTitle, resources.getString(item.groupTitleRes))
                     else -> pageTitle
                 },
                 description = description,
                 keywords = when (item.page) {
                     SettingsSearchPage.Theme, SettingsSearchPage.CustomTheme, SettingsSearchPage.ThemeManage ->
-                        context.getString(R.string.settings_search_theme_keywords)
-                    SettingsSearchPage.Other -> context.getString(R.string.settings_search_advanced_keywords)
+                        resources.getString(R.string.settings_search_theme_keywords)
+                    SettingsSearchPage.Other -> resources.getString(R.string.settings_search_advanced_keywords)
                     else -> ""
                 },
             )
