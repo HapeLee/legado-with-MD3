@@ -9,12 +9,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.serialization.NavKeySerializer
 import io.legado.app.R
 import io.legado.app.core.ui.player.PlayerMorphAppearance
 import io.legado.app.core.ui.player.PlayerMorphHost
@@ -36,6 +38,8 @@ import io.legado.app.ui.main.MainNavRouteTracker
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import org.koin.compose.koinInject
 
 internal data class ReadAloudConfigReturn(
@@ -44,6 +48,21 @@ internal data class ReadAloudConfigReturn(
 ) {
     fun isInSubRoute(backStack: List<NavKey>): Boolean =
         backStack.getOrNull(origin.size) == subRoute && backStack.take(origin.size) == origin
+
+    companion object {
+        private val keysSerializer = ListSerializer(NavKeySerializer<NavKey>())
+        val Saver = Saver<ReadAloudConfigReturn?, String>(
+            save = { pending ->
+                pending?.let { Json.encodeToString(keysSerializer, it.origin + it.subRoute) }
+            },
+            restore = { saved ->
+                runCatching {
+                    val keys = Json.decodeFromString(keysSerializer, saved)
+                    ReadAloudConfigReturn(keys.dropLast(1), keys.last())
+                }.getOrNull()
+            },
+        )
+    }
 }
 
 /** 朗读特有的设置与经典控制；几何、封面和返回手势由共用宿主处理。 */
@@ -76,8 +95,10 @@ fun ReadAloudPlayerMorphHost(
      */
     var configTab by rememberSaveable { mutableIntStateOf(0) }
     // 播放器重新展开后再显示设置，展开期间系统返回仍由播放器接管。
-    var configWaitsForPlayer by remember { mutableStateOf(false) }
-    var pendingConfigReturn by remember { mutableStateOf<ReadAloudConfigReturn?>(null) }
+    var configWaitsForPlayer by rememberSaveable { mutableStateOf(false) }
+    var pendingConfigReturn by rememberSaveable(stateSaver = ReadAloudConfigReturn.Saver) {
+        mutableStateOf<ReadAloudConfigReturn?>(null)
+    }
     var activeNumberConfig by rememberSaveable {
         mutableStateOf<ReadAloudPlayerConfigHostAction?>(null)
     }
@@ -107,7 +128,12 @@ fun ReadAloudPlayerMorphHost(
             pendingConfigReturn = if (configVisible && destination.dropLast(1) == origin) {
                 ReadAloudConfigReturn(origin, destination.last())
             } else null
-            collapsePlayer()
+            if (pendingConfigReturn == null) {
+                collapsePlayer()
+            } else {
+                configVisible = false
+                activeNumberConfig = null
+            }
         }
     }
 
@@ -152,8 +178,12 @@ fun ReadAloudPlayerMorphHost(
         }
     }
 
-    LaunchedEffect(expanded) {
-        if (expanded) {
+    LaunchedEffect(expanded, visible) {
+        if (!visible) {
+            configWaitsForPlayer = false
+            configVisible = false
+            activeNumberConfig = null
+        } else if (expanded) {
             if (configWaitsForPlayer) {
                 configWaitsForPlayer = false
                 configVisible = true
@@ -165,17 +195,24 @@ fun ReadAloudPlayerMorphHost(
     }
     LaunchedEffect(navBackStack, visible, pendingConfigReturn) {
         val pending = pendingConfigReturn ?: return@LaunchedEffect
+        if (navBackStack.isEmpty()) return@LaunchedEffect
         when {
             navBackStack == pending.origin -> {
                 // 快速返回时收起动画可能还在运行，等播放器关闭后再展开。
-                if (!visible) {
+                if (visible) {
+                    collapsePlayer()
+                } else {
                     pendingConfigReturn = null
                     configWaitsForPlayer = true
                     currentRestore()
                 }
             }
+            pending.isInSubRoute(navBackStack) -> {
+                // 重建可能发生在退场动画中途，恢复后仍须先让出子页。
+                if (visible) collapsePlayer()
+            }
             // 登录页和人物详情等嵌套页仍在此次设置流程中。
-            !pending.isInSubRoute(navBackStack) -> pendingConfigReturn = null
+            else -> pendingConfigReturn = null
         }
     }
     LaunchedEffect(playerViewModel) {
