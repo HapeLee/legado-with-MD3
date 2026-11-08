@@ -72,7 +72,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.ReaderSession
 import io.legado.app.model.ReaderSessionEvent
 import io.legado.app.model.SourceCallBack
-import io.legado.app.model.activeReadAloudProgress
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
@@ -180,18 +179,7 @@ class ReadBookViewModel(
     @Volatile private var composePageContext: ReaderPageContext? = null
     private var composeProgressJob: Job? = null
     private var readBookSyncJob: Job? = null
-    private val _readAloudProgress = MutableStateFlow(
-        ReadAloud.bookSession.state.value.let { playing ->
-            activeReadAloudProgress(
-                isPlaying = ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay(),
-                currentProgress = playing.chapterPosition,
-            )?.let { position ->
-                playing.book?.bookUrl?.let { bookUrl ->
-                    ReadAloudProgress(bookUrl, playing.chapterIndex, position, playing.generation)
-                }
-            }
-        }
-    )
+    private val _readAloudProgress = MutableStateFlow(currentReadAloudProgress())
     val readAloudProgress = _readAloudProgress.asStateFlow()
 
     private suspend fun emitEffectWhenSubscribed(effect: ReadBookEffect) {

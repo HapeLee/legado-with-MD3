@@ -24,6 +24,7 @@ import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
+import io.legado.app.model.activeReadAloudProgress
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.readaloud.ReadAloudPlayerOverlayBus
 import io.legado.app.utils.TTSCacheUtils
@@ -37,6 +38,19 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+
+/** 从同一份朗读会话快照恢复阅读页进度，避免把旧偏移与新章身份拼接。 */
+internal fun currentReadAloudProgress(): ReadAloudProgress? {
+    val playing = ReadAloud.bookSession.state.value
+    return activeReadAloudProgress(
+        isPlaying = ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay(),
+        currentProgress = playing.chapterPosition,
+    )?.let { position ->
+        playing.book?.bookUrl?.let { bookUrl ->
+            ReadAloudProgress(bookUrl, playing.chapterIndex, position, playing.generation)
+        }
+    }
+}
 
 /**
  * 朗读域。
