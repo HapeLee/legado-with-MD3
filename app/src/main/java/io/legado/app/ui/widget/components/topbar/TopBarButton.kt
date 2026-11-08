@@ -39,13 +39,14 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.series.AnimatedActionButtonCore
 import io.legado.app.ui.widget.components.button.series.AnimatedIcon
 import io.legado.app.ui.widget.components.button.series.MediumSeriesIconButtonSize
@@ -56,6 +57,15 @@ import io.legado.app.ui.widget.components.button.series.TopBarSeriesIconButtonSi
 import io.legado.app.ui.widget.components.button.series.TopBarSeriesIconSize
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.mochi.keyboardClick
+import ui.feice.mochi.basic.MochiBarIconButton
+import ui.feice.mochi.basic.MochiBarButton
+import ui.feice.mochi.basic.MochiBarGroup
+import ui.feice.mochi.basic.MochiButtonDefaults
+import ui.feice.mochi.basic.MochiButtonStyle
+import ui.feice.mochi.effect.elastic.mochiPressDeform
+import ui.feice.mochi.effect.glass.MochiGlassSurface
+import ui.feice.mochi.shape.MochiCapsule
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
@@ -162,6 +172,12 @@ internal fun TopBarActionsRow(
 ) {
     val style = currentTopBarButtonStyle()
     val mergeEnabled = LocalAppUiConfiguration.current.theme.mergeTopBarActions
+    if (LegadoTheme.composeEngine == ComposeEngine.Mochi && mergeEnabled && style != TopBarButtonStyle.Plain) {
+        MochiBarGroup(modifier, colors = mochiTopBarColors(style)) {
+            CompositionLocalProvider(LocalTopBarMergeState provides true) { content() }
+        }
+        return
+    }
     val liquidGlassEnabled = style == TopBarButtonStyle.LiquidGlass &&
             topBarLiquidGlassEnabled()
     if (!mergeEnabled || style == TopBarButtonStyle.Plain) {
@@ -222,6 +238,40 @@ private fun TopBarButton(
     style: TopBarButtonStyle = currentTopBarButtonStyle()
 ) {
     val isMerged = LocalTopBarMergeState.current
+    if (LegadoTheme.composeEngine == ComposeEngine.Mochi && !isMerged) {
+        val colors = mochiTopBarColors(style)
+        if (onLongClick == null) {
+            // Match Catalog's 44dp bar surface. Pointer input still has Compose's
+            // expanded touch target, without adding 2dp inside each 16dp edge margin.
+            val buttonModifier = modifier.keyboardClick(true, onClick)
+                .semantics(mergeDescendants = true) {}
+            if (text != null) MochiBarButton(text, onClick, buttonModifier, colors = colors)
+            else MochiBarIconButton(
+                onClick, buttonModifier, colors = colors, contentKey = imageVector.name,
+            ) { AppIcon(imageVector, contentDescription, Modifier.size(24.dp)) }
+        } else {
+            // The library's bar button has no long-press API. Keep the accessible combined
+            // action while using its real glass surface and elastic deformation.
+            val interaction = remember { MutableInteractionSource() }
+            val buttonModifier = modifier.mochiPressDeform().size(48.dp).combinedClickable(
+                    interactionSource = interaction, indication = null, role = Role.Button,
+                    onLongClick = onLongClick, onLongClickLabel = onLongClickLabel, onClick = onClick,
+                )
+            val buttonContent: @Composable () -> Unit = {
+                if (text != null) Text(text, style = LegadoTheme.typography.labelLarge)
+                else AppIcon(imageVector, contentDescription, Modifier.size(24.dp))
+            }
+            if (style == TopBarButtonStyle.LiquidGlass) {
+                MochiGlassSurface(buttonModifier, interactionSource = interaction) { buttonContent() }
+            } else {
+                Box(buttonModifier.clip(MochiCapsule).background(colors.container)
+                    .border(1.dp, colors.outline, MochiCapsule), contentAlignment = Alignment.Center) {
+                    buttonContent()
+                }
+            }
+        }
+        return
+    }
     val liquidGlassEnabled = style == TopBarButtonStyle.LiquidGlass &&
             topBarLiquidGlassEnabled()
     if (isMerged) {
@@ -301,13 +351,23 @@ private fun TopBarButton(
 }
 
 @Composable
+private fun mochiTopBarColors(style: TopBarButtonStyle) = when (style) {
+    TopBarButtonStyle.Plain -> MochiButtonDefaults.colors(MochiButtonStyle.Text)
+    TopBarButtonStyle.Outlined -> MochiButtonDefaults.colors(MochiButtonStyle.Outlined)
+    TopBarButtonStyle.SemiTransparent -> MochiButtonDefaults.barColors().let {
+        it.copy(container = GlassTopAppBarDefaults.controlContainerColor())
+    }
+    else -> MochiButtonDefaults.barColors()
+}
+
+@Composable
 fun TopBarNavigationButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     imageVector: ImageVector = AppIcons.Back,
     contentDescription: String? = stringResource(id = R.string.back)
 ) {
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine) &&
+    if ((LegadoTheme.composeEngine == ComposeEngine.Miuix) &&
         currentTopBarButtonStyle() == TopBarButtonStyle.Plain
     ) {
         MiuixIconButton(
@@ -324,7 +384,8 @@ fun TopBarNavigationButton(
             onClick = onClick,
             imageVector = imageVector,
             contentDescription = contentDescription,
-            modifier = modifier.padding(horizontal = 12.dp)
+            modifier = if (LegadoTheme.composeEngine == ComposeEngine.Mochi) modifier
+                else modifier.padding(horizontal = 12.dp)
         )
     }
 }
@@ -339,7 +400,7 @@ fun TopBarActionButton(
     onLongClickLabel: String? = null,
 ) {
     // Miuix 的原生 IconButton 只有点击入口；长按动作使用同尺寸的统一按钮实现。
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine) &&
+    if ((LegadoTheme.composeEngine == ComposeEngine.Miuix) &&
         currentTopBarButtonStyle() == TopBarButtonStyle.Plain && onLongClick == null
     ) {
         MiuixIconButton(
@@ -388,7 +449,7 @@ fun TopBarAnimatedActionButton(
     inactiveText: String,
     modifier: Modifier = Modifier
 ) {
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine) &&
+    if ((LegadoTheme.composeEngine == ComposeEngine.Miuix) &&
         currentTopBarButtonStyle() == TopBarButtonStyle.Plain
     ) {
         val contentColor by animateColorAsState(

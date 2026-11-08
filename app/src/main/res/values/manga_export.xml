@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_manga_export_format">Comic export format</string>
+    <string name="feature_manga_export_folder">Image folder</string>
+    <string name="feature_manga_export_cbz">CBZ archive</string>
+    <string name="feature_manga_export_cached_only">Exports original images in chapter and page order. Download all requested chapters first; missing or invalid pages stop the export. Existing exports are kept with numbered names.</string>
+    <string name="feature_manga_export_empty">No comic pages to export. Download the comic first.</string>
+    <string name="feature_manga_export_unsupported">This local comic format cannot be exported.</string>
+    <string name="feature_manga_export_chapter_missing">Chapter “%1$s” has no cached pages. Download it before exporting.</string>
+    <string name="feature_manga_export_page_missing">Cannot export “%1$s”, page %2$d: the image is missing, invalid, unsupported, or could not be copied.</string>
+    <string name="feature_manga_export_progress">Exporting comic pages: %1$d/%2$d</string>
+    <string name="feature_manga_export_checking">Checking cached comic pages…</string>
+    <string name="feature_manga_export_create_failed">Cannot create the comic export. Choose another writable folder.</string>
+</resources>

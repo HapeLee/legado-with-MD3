@@ -101,6 +101,26 @@ class MangaReaderViewModelNavigationTest {
         assertFalse(reader.uiState.value.canReselectBookDirectory)
     }
 
+    @Test
+    fun `directory permission failure during a chapter shows the folder picker action`() = runTest(dispatcher) {
+        val reader = createReader()
+        runCurrent()
+        val state = session.state.value
+        session.state.value = state.copy(
+            currentChapter = MangaChapterState.Failed(
+                token = requireNotNull(state.tokenFor(state.chapterIndex)),
+                message = "Directory is inaccessible",
+                canReselectBookDirectory = true,
+            )
+        )
+        runCurrent()
+
+        assertTrue(reader.uiState.value.canReselectBookDirectory)
+        reader.onIntent(MangaReaderIntent.Retry)
+        runCurrent()
+        assertTrue(session.commands.contains(MangaSessionCommand.RetryChapter(state.chapterIndex)))
+    }
+
     @Test fun `prefetch readiness survives session updates and retry rejects its old callback`() = runTest(dispatcher) {
         val reader = createReader()
         runCurrent()

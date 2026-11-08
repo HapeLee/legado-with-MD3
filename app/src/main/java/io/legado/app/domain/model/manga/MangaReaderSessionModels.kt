@@ -57,6 +57,7 @@ sealed interface MangaChapterState {
         val token: MangaLoadToken,
         val message: String,
         val retryable: Boolean = true,
+        val canReselectBookDirectory: Boolean = false,
     ) : MangaChapterState
 }
 

@@ -121,6 +121,10 @@ object MainNavigator {
         }
 
         when (route) {
+            MainRouteSettingsSearch,
+            is MainRouteSettingsReadTarget,
+            is MainRouteSettingsTarget -> backStack.add(route)
+
             is MainRouteToc,
             is MainRouteBookInfoEdit,
             is MainRouteReplaceRules,

@@ -5,6 +5,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import org.junit.Assert.assertEquals
 import io.legado.app.help.book.isLocalManga
+import io.legado.app.model.localBook.LEGACY_FLAT_MANGA_CHAPTER_URL
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.localBook.LocalMangaFiles
 import io.legado.app.model.localBook.groupLocalMangaPages
@@ -46,6 +47,29 @@ class LocalMangaLoaderTest {
         assertEquals(listOf("page.jpg", "Bonus/extra.jpg"), relativeMangaArchivePaths(
             listOf("Comic/page.jpg", "Comic/Bonus/extra.jpg"),
         ))
+    }
+
+    @Test
+    fun `single page chapters retain their directory boundaries`() {
+        val root = Files.createTempDirectory("local-manga-single-page").toFile()
+        val cache = Files.createTempDirectory("local-manga-cache").toFile()
+        try {
+            root.resolve("0001_First/0001.png").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(1)) }
+            root.resolve("0002_Second/0001.png").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(2)) }
+            val book = Book(type = BookType.local or BookType.image, bookUrl = root.path, name = "Comic", originName = root.name)
+            LocalMangaLoader(cache).use { loader ->
+                val chapters = LocalMangaFiles.chapters(book)
+                assertEquals(listOf("0001_First", "0002_Second"), chapters.map { it.title })
+                assertEquals(listOf(1, 1), chapters.map { loader.load(book, it).pages.size })
+                val oldBook = book.copy(totalChapterNum = 1)
+                val oldChapter = chapters.first().copy(url = LEGACY_FLAT_MANGA_CHAPTER_URL, title = book.name)
+                assertEquals(2, loader.load(oldBook, oldChapter).pages.size)
+                assertEquals(1, loader.load(oldBook, chapters.first()).pages.size)
+            }
+        } finally {
+            root.deleteRecursively()
+            cache.deleteRecursively()
+        }
     }
 
     @Test

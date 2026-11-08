@@ -35,6 +35,17 @@
     <string name="manual_contrast_value_label">Manual value [-1, 1]</string>
     <string name="manual_contrast_invalid">Enter a valid number between -1 and 1</string>
     <string name="predictive_back">Predictive Back Gestures</string>
+    <string name="navigation_animation">Navigation Animation</string>
+    <string name="navigation_animation_scale">Scale</string>
+    <string name="text_animation_level">Text animation level</string>
+    <string name="text_animation_slide">Slide (default)</string>
+    <string name="text_animation_subtle">Subtle</string>
+    <string name="text_animation_standard">Standard</string>
+    <string name="text_animation_strong">Pronounced</string>
+    <string name="text_animation_preview">Text animation preview</string>
+    <string name="text_animation_preview_summary">Tap to change the sample text</string>
+    <string name="text_animation_example_reading">Reading</string>
+    <string name="text_animation_example_finished">Finished</string>
     <string name="reader_shared_element">Reader shared element transition</string>
     <string name="reader_shared_element_summary">Expand the cover when opening the reader. Use a fade transition when disabled.</string>
     <string name="predictive_back_summary">Enable system predictive back gestures</string>

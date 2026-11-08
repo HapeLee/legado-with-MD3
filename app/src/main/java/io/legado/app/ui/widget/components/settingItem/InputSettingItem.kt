@@ -18,8 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.SplicedColumnDivider
 import io.legado.app.ui.widget.components.text.AppText
@@ -49,24 +49,67 @@ fun InputSettingItem(
     val composeEngine = LegadoTheme.composeEngine
     SplicedColumnDivider()
 
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            BasicComponent(
-                title = title,
-                summary = value,
-                onClick = { expanded = !expanded }
-            )
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                BasicComponent(
+                    title = title,
+                    summary = value,
+                    onClick = { expanded = !expanded }
+                )
 
-            AnimatedVisibility(visible = expanded) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                ) {
-                    MiuixTextField(
+                AnimatedVisibility(visible = expanded) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        MiuixTextField(
+                            state = state,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = stringResource(R.string.edit),
+                            onKeyboardAction = {
+                                onConfirm(state.text.toString())
+                                expanded = false
+                            }
+                        )
+
+                        ConfirmDismissButtonsRow(
+                            modifier = Modifier.padding(top = 16.dp),
+                            onDismiss = {
+                                state.edit { replace(0, length, defaultValue.toString()) }
+                            },
+                            onConfirm = {
+                                onConfirm(state.text.toString())
+                                expanded = false
+                            },
+                            dismissText = stringResource(R.string.text_default),
+                            confirmText = stringResource(R.string.confirm)
+                        )
+                    }
+                }
+            }
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            SettingItem(
+                title = title,
+                description = description,
+                option = value,
+                expanded = expanded,
+                onExpandChange = { expanded = it },
+                expandContent = {
+                    TextField(
                         state = state,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = stringResource(R.string.edit),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                        label = { AppText(stringResource(R.string.edit)) },
+                        contentPadding = PaddingValues(
+                            top = 4.dp,
+                            bottom = 4.dp,
+                            start = 12.dp,
+                            end = 12.dp
+                        ),
                         onKeyboardAction = {
                             onConfirm(state.text.toString())
                             expanded = false
@@ -86,47 +129,7 @@ fun InputSettingItem(
                         confirmText = stringResource(R.string.confirm)
                     )
                 }
-            }
+            )
         }
-    } else {
-        SettingItem(
-            title = title,
-            description = description,
-            option = value,
-            expanded = expanded,
-            onExpandChange = { expanded = it },
-            expandContent = {
-                TextField(
-                    state = state,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                    label = { AppText(stringResource(R.string.edit)) },
-                    contentPadding = PaddingValues(
-                        top = 4.dp,
-                        bottom = 4.dp,
-                        start = 12.dp,
-                        end = 12.dp
-                    ),
-                    onKeyboardAction = {
-                        onConfirm(state.text.toString())
-                        expanded = false
-                    }
-                )
-
-                ConfirmDismissButtonsRow(
-                    modifier = Modifier.padding(top = 16.dp),
-                    onDismiss = {
-                        state.edit { replace(0, length, defaultValue.toString()) }
-                    },
-                    onConfirm = {
-                        onConfirm(state.text.toString())
-                        expanded = false
-                    },
-                    dismissText = stringResource(R.string.text_default),
-                    confirmText = stringResource(R.string.confirm)
-                )
-            }
-        )
     }
 }

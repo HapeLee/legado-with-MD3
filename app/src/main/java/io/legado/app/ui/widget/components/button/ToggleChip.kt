@@ -20,9 +20,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.NormalCard
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
@@ -38,83 +38,86 @@ fun ToggleChip(
     checkedContentDescription: String = "已选择",
     uncheckedContentDescription: String = "未选择"
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        val contentColor = MiuixTheme.colorScheme.onSurface
-            .copy(alpha = if (enabled) 1f else DISABLED_ALPHA)
-        NormalCard (
-            modifier = modifier
-                .padding(vertical = 2.dp)
-                .semantics {
-                    toggleableState = if (selected) {
-                        ToggleableState.On
-                    } else {
-                        ToggleableState.Off
-                    }
-                    stateDescription = if (selected) {
-                        checkedContentDescription
-                    } else {
-                        uncheckedContentDescription
-                    }
-                    if (!enabled) disabled()
-                },
-            cornerRadius = 12.dp,
-            // 不给 onClick 就是不可点：BaseCard 不再挂 combinedClickable，禁用态也不会有水波纹
-            onClick = if (enabled) onToggle else null,
-            containerColor = if (selected) {
-                MiuixTheme.colorScheme.secondaryContainer
-            } else {
-                MiuixTheme.colorScheme.surfaceContainer
-            }
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            val contentColor = MiuixTheme.colorScheme.onSurface
+                .copy(alpha = if (enabled) 1f else DISABLED_ALPHA)
+            NormalCard (
+                modifier = modifier
+                    .padding(vertical = 2.dp)
+                    .semantics {
+                        toggleableState = if (selected) {
+                            ToggleableState.On
+                        } else {
+                            ToggleableState.Off
+                        }
+                        stateDescription = if (selected) {
+                            checkedContentDescription
+                        } else {
+                            uncheckedContentDescription
+                        }
+                        if (!enabled) disabled()
+                    },
+                cornerRadius = 12.dp,
+                // 不给 onClick 就是不可点：BaseCard 不再挂 combinedClickable，禁用态也不会有水波纹
+                onClick = if (enabled) onToggle else null,
+                containerColor = if (selected) {
+                    MiuixTheme.colorScheme.secondaryContainer
+                } else {
+                    MiuixTheme.colorScheme.surfaceContainer
+                }
             ) {
-                AnimatedVisibility(
-                    visible = selected
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                 ) {
-                    MiuixIcon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = checkedContentDescription,
+                    AnimatedVisibility(
+                        visible = selected
+                    ) {
+                        MiuixIcon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = checkedContentDescription,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(16.dp),
+                            tint = (if (selected) MiuixTheme.colorScheme.primary
+                            else MiuixTheme.colorScheme.onSurface)
+                                .copy(alpha = if (enabled) 1f else DISABLED_ALPHA)
+                        )
+                    }
+
+                    MiuixText(
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(16.dp),
-                        tint = (if (selected) MiuixTheme.colorScheme.primary
-                        else MiuixTheme.colorScheme.onSurface)
-                            .copy(alpha = if (enabled) 1f else DISABLED_ALPHA)
+                            .padding(vertical = 8.dp),
+                        text = label,
+                        style = LegadoTheme.typography.labelMediumEmphasized,
+                        maxLines = 1,
+                        softWrap = false,
+                        color = contentColor
                     )
                 }
-
-                MiuixText(
-                    modifier = Modifier
-                        .padding(vertical = 8.dp),
-                    text = label,
-                    style = LegadoTheme.typography.labelMediumEmphasized,
-                    maxLines = 1,
-                    softWrap = false,
-                    color = contentColor
-                )
             }
         }
-    } else {
-        FilterChip(
-            selected = selected,
-            onClick = onToggle,
-            modifier = modifier,
-            enabled = enabled,
-            label = { Text(label) },
-            leadingIcon = if (selected) {
-                {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = checkedContentDescription,
-                        Modifier.size(FilterChipDefaults.IconSize)
-                    )
-                }
-            } else null
-        )
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            FilterChip(
+                selected = selected,
+                onClick = onToggle,
+                modifier = modifier,
+                enabled = enabled,
+                label = { Text(label) },
+                leadingIcon = if (selected) {
+                    {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = checkedContentDescription,
+                            Modifier.size(FilterChipDefaults.IconSize)
+                        )
+                    }
+                } else null
+            )
+        }
     }
 }
 

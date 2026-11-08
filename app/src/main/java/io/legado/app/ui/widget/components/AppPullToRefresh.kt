@@ -20,8 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
@@ -40,77 +40,80 @@ fun AppPullToRefresh(
     scrollBehavior: GlassTopAppBarScrollBehavior? = null,
     content: @Composable () -> Unit,
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        // Miuix 的 PullToRefresh 没有 enabled 参数，无法内部关闭手势，
-        // 因此只能在 enabled=false 时整体退化成普通容器。
-        if (enabled) {
-            // Let the miuix library handle gesture/animation, but skip the persistent
-            // Refreshing state that blocks all scroll events.
-            // localIsRefreshing is true only briefly so the indicator shows then hides,
-            // while the actual refresh runs independently.
-            var localIsRefreshing by remember { mutableStateOf(false) }
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            // Miuix 的 PullToRefresh 没有 enabled 参数，无法内部关闭手势，
+            // 因此只能在 enabled=false 时整体退化成普通容器。
+            if (enabled) {
+                // Let the miuix library handle gesture/animation, but skip the persistent
+                // Refreshing state that blocks all scroll events.
+                // localIsRefreshing is true only briefly so the indicator shows then hides,
+                // while the actual refresh runs independently.
+                var localIsRefreshing by remember { mutableStateOf(false) }
 
-            LaunchedEffect(localIsRefreshing) {
-                if (localIsRefreshing) {
-                    delay(300)
-                    localIsRefreshing = false
+                LaunchedEffect(localIsRefreshing) {
+                    if (localIsRefreshing) {
+                        delay(300)
+                        localIsRefreshing = false
+                    }
+                }
+
+                MiuixPullToRefresh(
+                    isRefreshing = localIsRefreshing,
+                    onRefresh = {
+                        localIsRefreshing = true
+                        onRefresh()
+                    },
+                    modifier = modifier,
+                    contentPadding = PaddingValues(top = topPadding + 16.dp),
+                    pullToRefreshState = miuixRememberPullToRefreshState(),
+                    topAppBarScrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior,
+                    refreshTexts = listOf(
+                        stringResource(R.string.pull_to_refresh),
+                        stringResource(R.string.release_to_refresh),
+                        stringResource(R.string.refreshing),
+                        stringResource(R.string.refreshing)
+                    )
+                ) {
+                    content()
+                }
+            } else {
+                Box(modifier) {
+                    content()
                 }
             }
-
-            MiuixPullToRefresh(
-                isRefreshing = localIsRefreshing,
-                onRefresh = {
-                    localIsRefreshing = true
-                    onRefresh()
-                },
-                modifier = modifier,
-                contentPadding = PaddingValues(top = topPadding + 16.dp),
-                pullToRefreshState = miuixRememberPullToRefreshState(),
-                topAppBarScrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior,
-                refreshTexts = listOf(
-                    stringResource(R.string.pull_to_refresh),
-                    stringResource(R.string.release_to_refresh),
-                    stringResource(R.string.refreshing),
-                    stringResource(R.string.refreshing)
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            val state = rememberPullToRefreshState()
+            val actualEnabled = enabled && (
+                    isRefreshing ||
+                    state.distanceFraction > 0f ||
+                    scrollBehavior == null ||
+                    if (scrollBehavior is M3GlassScrollBehavior) {
+                        val appbarState = scrollBehavior.m3Behavior.state
+                        (appbarState.heightOffsetLimit == 0f || appbarState.heightOffset >= 0f) && appbarState.contentOffset >= 0f
+                    } else {
+                        scrollBehavior.collapsedFraction <= 0f
+                    }
                 )
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = modifier,
+                state = state,
+                enabled = actualEnabled,
+                indicator = {
+                    PullToRefreshDefaults.LoadingIndicator(
+                        state = state,
+                        isRefreshing = isRefreshing,
+                        modifier = Modifier
+                            .padding(top = topPadding)
+                            .align(Alignment.TopCenter),
+                    )
+                }
             ) {
                 content()
             }
-        } else {
-            Box(modifier) {
-                content()
-            }
-        }
-    } else {
-        val state = rememberPullToRefreshState()
-        val actualEnabled = enabled && (
-                isRefreshing ||
-                state.distanceFraction > 0f ||
-                scrollBehavior == null ||
-                if (scrollBehavior is M3GlassScrollBehavior) {
-                    val appbarState = scrollBehavior.m3Behavior.state
-                    (appbarState.heightOffsetLimit == 0f || appbarState.heightOffset >= 0f) && appbarState.contentOffset >= 0f
-                } else {
-                    scrollBehavior.collapsedFraction <= 0f
-                }
-            )
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = onRefresh,
-            modifier = modifier,
-            state = state,
-            enabled = actualEnabled,
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = state,
-                    isRefreshing = isRefreshing,
-                    modifier = Modifier
-                        .padding(top = topPadding)
-                        .align(Alignment.TopCenter),
-                )
-            }
-        ) {
-            content()
         }
     }
 }

@@ -49,6 +49,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AccentColorButton
 import io.legado.app.ui.widget.components.AppSlider
@@ -71,6 +73,9 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
+import ui.feice.mochi.effect.elastic.mochiPressDeform
+import ui.feice.mochi.shape.MochiCapsule
+import ui.feice.mochi.shape.MochiRoundedRectangle
 
 /**
  * 滑块拖拽状态：宿主（如阅读菜单）可在任意滑块拖动时据此降低自身透明度。
@@ -114,19 +119,26 @@ fun TinySettingItem(
 ) {
     val isExpandable = expandContent != null && onExpandChange != null
     val alpha = if (enabled) 1f else 0.5f
+    val rowClick = when {
+        !enabled -> null
+        isExpandable -> ({ onExpandChange.invoke(!expanded) })
+        else -> onClick
+    }
+    val rowLongClick = onLongClick.takeIf { enabled }
+    val pressModifier = if (
+        LegadoTheme.composeEngine == ComposeEngine.Mochi && (rowClick != null || rowLongClick != null)
+    ) {
+        Modifier.mochiPressDeform(scale = 0.98f, follow = 0.dp)
+    } else {
+        Modifier
+    }
 
     NormalCard(
-        onClick = if (enabled) {
-            {
-                when {
-                    isExpandable -> onExpandChange.invoke(!expanded)
-                    else -> onClick?.invoke()
-                }
-            }
-        } else null,
-        onLongClick = if (enabled) onLongClick else null,
+        onClick = rowClick,
+        onLongClick = rowLongClick,
         modifier = modifier
             .padding(bottom = 4.dp)
+            .then(pressModifier)
             .heightIn(min = 56.dp)
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
@@ -240,45 +252,26 @@ fun TinyDropdownSettingItem(
     val currentEntry =
         selectedDisplay ?: displayEntries.getOrNull(entryValues.indexOf(selectedValue))
         ?: selectedValue
-
-    Box(modifier = Modifier.fillMaxWidth()) {
-        TinySettingItem(
-            title = title,
-            description = description,
-            imageVector = imageVector,
-            modifier = modifier,
-            color = color,
-            enabled = enabled,
-            trailingContent = {
-                TextCard(
-                    cornerRadius = 8.dp,
-                    horizontalPadding = 8.dp,
-                    verticalPadding = 4.dp,
-                    text = currentEntry,
-                    backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = LegadoTheme.colorScheme.onSurface,
-                )
-            },
-            onClick = { showMenu = true },
-        )
-
+    val useValueAnchor = LegadoTheme.composeEngine == ComposeEngine.Mochi
+    val menu: @Composable () -> Unit = {
         RoundDropdownMenu(
             expanded = showMenu,
             onDismissRequest = { showMenu = false },
+            mochiAnchorMaxWidth = 48.dp,
         ) { dismiss ->
             displayEntries.forEachIndexed { index, display ->
                 val value = entryValues[index]
                 val unavailable = value in unavailableValues
                 RoundDropdownMenuItem(
                     text = display,
-                    // 压灰但仍可点：点了给出"为什么用不了"，比无声无息更好（与完整设置项一致）。
+                    // 压灰但仍可点：由调用方说明该档位不可用的原因。
                     color = if (unavailable) {
                         LegadoTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     } else Color.Unspecified,
                     onClick = {
+                        dismiss()
                         if (unavailable) onUnavailableSelected?.invoke(value)
                         else onValueChange(value)
-                        dismiss()
                     },
                     trailingIcon = if (selectedValue == value) {
                         {
@@ -292,6 +285,33 @@ fun TinyDropdownSettingItem(
                 )
             }
         }
+    }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        TinySettingItem(
+            title = title,
+            description = description,
+            imageVector = imageVector,
+            modifier = modifier,
+            color = color,
+            enabled = enabled,
+            trailingContent = {
+                Box {
+                    TextCard(
+                        cornerRadius = 8.dp,
+                        horizontalPadding = 8.dp,
+                        verticalPadding = 4.dp,
+                        text = currentEntry,
+                        backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = LegadoTheme.colorScheme.onSurface,
+                    )
+                    if (useValueAnchor) menu()
+                }
+            },
+            onClick = { showMenu = true },
+        )
+
+        if (!useValueAnchor) menu()
     }
 }
 
@@ -540,17 +560,30 @@ private fun ColorModePill(
     )
 
     val currentColor = if (isNightMode) nightColor else dayColor
+    val modeLabel = stringResource(R.string.day_night_switch)
+    val mode = stringResource(if (isNightMode) R.string.night else R.string.day)
+    val colorLabel = stringResource(R.string.select_color)
+    val pillShape = if (LegadoTheme.composeEngine == ComposeEngine.Mochi) {
+        MochiCapsule
+    } else {
+        RoundedCornerShape(pillHeight)
+    }
 
     Box(
         modifier = Modifier
             .width(pillWidth)
             .height(pillHeight)
-            .clip(RoundedCornerShape(pillHeight))
+            .clip(pillShape)
             .background(LegadoTheme.colorScheme.surfaceContainerHigh)
             .clickable(
                 enabled = enabled,
+                role = Role.Button,
                 onClick = onToggleMode,
-            ),
+            )
+            .semantics {
+                contentDescription = modeLabel
+                stateDescription = mode
+            },
         contentAlignment = Alignment.CenterStart,
     ) {
         // Icons
@@ -594,8 +627,10 @@ private fun ColorModePill(
                 )
                 .clickable(
                     enabled = enabled,
+                    role = Role.Button,
                     onClick = onClickColor,
-                ),
+                )
+                .semantics { contentDescription = colorLabel },
             contentAlignment = Alignment.Center,
         ) {
             if (currentColor == 0) {
@@ -674,7 +709,7 @@ private fun ClearColorModePill(
                 modifier = Modifier
                     .size(knobSize)
                     .clip(CircleShape)
-                    .clickable(enabled = enabled, onClick = onReset)
+                    .clickable(enabled = enabled, role = Role.Button, onClick = onReset)
                     .border(
                         width = 1.dp,
                         color = LegadoTheme.colorScheme.surfaceContainerHigh,
@@ -684,7 +719,7 @@ private fun ClearColorModePill(
             ) {
                 AppIcon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.reset_color),
                     modifier = Modifier.size(16.dp),
                     tint = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
@@ -768,13 +803,18 @@ private fun BgImageCard(
     modifier: Modifier = Modifier,
 ) {
     val hasImage = !bgImage.isNullOrBlank()
+    val shape = if (LegadoTheme.composeEngine == ComposeEngine.Mochi) {
+        MochiRoundedRectangle(8.dp)
+    } else {
+        RoundedCornerShape(8.dp)
+    }
 
     Box(
         modifier = modifier
             .height(56.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(shape)
             .background(LegadoTheme.colorScheme.surfaceContainerHigh)
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
     ) {
         if (hasImage) {
             AsyncImage(
@@ -816,12 +856,12 @@ private fun BgImageCard(
                         .size(24.dp)
                         .clip(CircleShape)
                         .background(LegadoTheme.colorScheme.surface.copy(alpha = 0.7f))
-                        .clickable(enabled = enabled, onClick = onReset),
+                        .clickable(enabled = enabled, role = Role.Button, onClick = onReset),
                     contentAlignment = Alignment.Center,
                 ) {
                     AppIcon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.reset),
                         modifier = Modifier.size(14.dp),
                         tint = LegadoTheme.colorScheme.onSurface,
                     )

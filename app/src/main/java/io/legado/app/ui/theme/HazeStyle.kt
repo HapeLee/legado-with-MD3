@@ -32,7 +32,7 @@ fun Modifier.responsiveHazeEffect(
     val enableProgressiveBlur = themeSettings.enableProgressiveBlur
     val composeEngine = LegadoTheme.composeEngine
     val containerColor = GlassDefaults.secondaryColorOr {
-        if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface
+        if (composeEngine == ComposeEngine.Miuix) MiuixTheme.colorScheme.surface
         else MaterialTheme.colorScheme.surface
     }
 
@@ -68,7 +68,7 @@ fun Modifier.responsiveHazeEffectFixedStyle(
     val enableBlur = LocalAppUiConfiguration.current.theme.enableBlur
     val composeEngine = LegadoTheme.composeEngine
     val containerColor = GlassDefaults.secondaryColorOr {
-        if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface
+        if (composeEngine == ComposeEngine.Miuix) MiuixTheme.colorScheme.surface
         else MaterialTheme.colorScheme.surface
     }
 
@@ -97,7 +97,7 @@ fun Modifier.regularHazeEffect(state: HazeState): Modifier {
     val enableBlur = LocalAppUiConfiguration.current.theme.enableBlur
     val composeEngine = LegadoTheme.composeEngine
     val containerColor = GlassDefaults.secondaryColorOr {
-        if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface
+        if (composeEngine == ComposeEngine.Miuix) MiuixTheme.colorScheme.surface
         else MaterialTheme.colorScheme.surface
     }
 

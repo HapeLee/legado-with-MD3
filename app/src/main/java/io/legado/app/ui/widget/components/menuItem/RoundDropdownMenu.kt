@@ -37,11 +37,12 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.theme.ProvideAppDensity
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.rememberOpaqueColorScheme
+import io.legado.app.ui.widget.components.mochi.AppMochiPopover
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.window.WindowListPopup
 
@@ -56,53 +57,63 @@ fun RoundDropdownMenu(
     shape: Shape = MaterialTheme.shapes.medium,
     shadowElevation: Dp = 4.dp,
     verticalSpacing: Dp = 8.dp,
+    mochiAnchorMaxWidth: Dp = Dp.Unspecified,
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val popupContainerColor = LegadoTheme.colorScheme.surfaceContainer
 
-    if (isMiuix) {
-        val popupContentColor = LegadoTheme.colorScheme.onSurface
-        WindowListPopup(
-            show = expanded,
-            onDismissRequest = onDismissRequest,
-            popupModifier = modifier
-        ) {
-            ProvideAppDensity {
-                ProvideAppContentColor(popupContentColor) {
-                    ListPopupColumn {
-                        Column(modifier = Modifier.background(popupContainerColor)) {
-                            Spacer(Modifier.height(12.dp))
-                            content(onDismissRequest)
-                            Spacer(Modifier.height(12.dp))
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            val popupContentColor = LegadoTheme.colorScheme.onSurface
+            WindowListPopup(
+                show = expanded,
+                onDismissRequest = onDismissRequest,
+                popupModifier = modifier
+            ) {
+                ProvideAppDensity {
+                    ProvideAppContentColor(popupContentColor) {
+                        ListPopupColumn {
+                            Column(modifier = Modifier.background(popupContainerColor)) {
+                                Spacer(Modifier.height(12.dp))
+                                content(onDismissRequest)
+                                Spacer(Modifier.height(12.dp))
+                            }
                         }
                     }
                 }
             }
         }
-    } else {
-        val colorScheme = rememberOpaqueColorScheme()
-        val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = onDismissRequest,
-            modifier = modifier,
-            shape = shape,
-            shadowElevation = shadowElevation,
-            containerColor = popupContainerColor
+        ComposeEngine.Mochi -> AppMochiPopover(
+            expanded, onDismissRequest, modifier, maxAnchorWidth = mochiAnchorMaxWidth,
         ) {
-            ProvideAppDensity {
-                MaterialExpressiveTheme(
-                    colorScheme = colorScheme,
-                    typography = Typography(),
-                    motionScheme = MotionScheme.expressive(),
-                    shapes = Shapes()
-                ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(verticalSpacing)
+            Column(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
+                content(onDismissRequest)
+            }
+        }
+        ComposeEngine.Material -> {
+            val colorScheme = rememberOpaqueColorScheme()
+            val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = onDismissRequest,
+                modifier = modifier,
+                shape = shape,
+                shadowElevation = shadowElevation,
+                containerColor = popupContainerColor
+            ) {
+                ProvideAppDensity {
+                    MaterialExpressiveTheme(
+                        colorScheme = colorScheme,
+                        typography = Typography(),
+                        motionScheme = MotionScheme.expressive(),
+                        shapes = Shapes()
                     ) {
-                        content(onDismissRequest)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(verticalSpacing)
+                        ) {
+                            content(onDismissRequest)
+                        }
                     }
                 }
             }
@@ -132,55 +143,64 @@ fun RoundDropdownMenuLazy(
         (windowHeight - safeInsets.getTop(this) - safeInsets.getBottom(this))
             .coerceAtLeast(0).toDp().minus(48.dp).coerceAtLeast(48.dp)
     }
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val popupContainerColor = LegadoTheme.colorScheme.surfaceContainer
 
-    if (isMiuix) {
-        val popupContentColor = LegadoTheme.colorScheme.onSurface
-        WindowListPopup(
-            show = expanded,
-            onDismissRequest = onDismissRequest,
-            popupModifier = modifier
-        ) {
-            ProvideAppDensity {
-                ProvideAppContentColor(popupContentColor) {
-                    ListPopupColumn {
-                        LazyMenuViewport(menuWidth, viewportHeight) {
-                            LazyColumn(
-                                modifier = Modifier.background(popupContainerColor),
-                                verticalArrangement = Arrangement.spacedBy(verticalSpacing)
-                            ) {
-                                item { Spacer(Modifier.height(12.dp)) }
-                                content(onDismissRequest)
-                                item { Spacer(Modifier.height(12.dp)) }
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
+            val popupContentColor = LegadoTheme.colorScheme.onSurface
+            WindowListPopup(
+                show = expanded,
+                onDismissRequest = onDismissRequest,
+                popupModifier = modifier
+            ) {
+                ProvideAppDensity {
+                    ProvideAppContentColor(popupContentColor) {
+                        ListPopupColumn {
+                            LazyMenuViewport(menuWidth, viewportHeight) {
+                                LazyColumn(
+                                    modifier = Modifier.background(popupContainerColor),
+                                    verticalArrangement = Arrangement.spacedBy(verticalSpacing)
+                                ) {
+                                    item { Spacer(Modifier.height(12.dp)) }
+                                    content(onDismissRequest)
+                                    item { Spacer(Modifier.height(12.dp)) }
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    } else {
-        val colorScheme = rememberOpaqueColorScheme()
-        val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
+        ComposeEngine.Mochi -> AppMochiPopover(expanded, onDismissRequest, modifier, menuWidth) {
+            LazyMenuViewport(menuWidth, viewportHeight) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
+                    content(onDismissRequest)
+                }
+            }
+        }
+        ComposeEngine.Material -> {
+            val colorScheme = rememberOpaqueColorScheme()
+            val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = onDismissRequest,
-            modifier = modifier,
-            shape = shape,
-            shadowElevation = shadowElevation,
-            containerColor = popupContainerColor
-        ) {
-            ProvideAppDensity {
-                MaterialExpressiveTheme(
-                    colorScheme = colorScheme,
-                    typography = Typography(),
-                    motionScheme = MotionScheme.expressive(),
-                    shapes = Shapes()
-                ) {
-                    LazyMenuViewport(menuWidth, viewportHeight) {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
-                            content(onDismissRequest)
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = onDismissRequest,
+                modifier = modifier,
+                shape = shape,
+                shadowElevation = shadowElevation,
+                containerColor = popupContainerColor
+            ) {
+                ProvideAppDensity {
+                    MaterialExpressiveTheme(
+                        colorScheme = colorScheme,
+                        typography = Typography(),
+                        motionScheme = MotionScheme.expressive(),
+                        shapes = Shapes()
+                    ) {
+                        LazyMenuViewport(menuWidth, viewportHeight) {
+                            LazyColumn(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
+                                content(onDismissRequest)
+                            }
                         }
                     }
                 }

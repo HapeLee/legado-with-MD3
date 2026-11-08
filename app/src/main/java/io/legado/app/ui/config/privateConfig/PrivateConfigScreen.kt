@@ -1,10 +1,11 @@
 package io.legado.app.ui.config.privateConfig
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -55,7 +56,7 @@ fun PrivateConfigScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -64,114 +65,47 @@ fun PrivateConfigScreen(
         ) {
             item {
                 SplicedColumnGroup(title = stringResource(R.string.private_credential_title)) {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.private_feature_enabled),
-                        description = stringResource(R.string.private_feature_enabled_summary),
-                        checked = state.settings.enabled,
-                        onCheckedChange = {
-                            onIntent(PrivateConfigIntent.SetPrivateEnabled(it))
-                        }
-                    )
-
-                    ClickableSettingItem(
-                        title = stringResource(R.string.set_local_password),
-                        description = stringResource(
-                            if (state.hasLocalPassword) {
-                                R.string.private_content_summary
-                            } else {
-                                R.string.private_content_no_password
+                    SearchableSetting("private.private_feature_enabled") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.private_feature_enabled),
+                            description = stringResource(R.string.private_feature_enabled_summary),
+                            checked = state.settings.enabled,
+                            onCheckedChange = {
+                                onIntent(PrivateConfigIntent.SetPrivateEnabled(it))
                             }
-                        ),
-                        onClick = { onIntent(PrivateConfigIntent.ShowPasswordDialog) }
-                    )
+                        )
+                    }
 
-                    SwitchSettingItem(
-                        title = stringResource(R.string.private_content_biometric),
-                        description = stringResource(
-                            when {
-                                !state.hasLocalPassword -> R.string.private_content_no_password
-                                !state.biometricSupported ->
-                                    biometricStatusHint(state.biometricStatus)
-
-                                else -> R.string.private_content_biometric_summary
-                            }
-                        ),
-                        checked = state.biometricEnabled,
-                        enabled = state.hasLocalPassword && state.biometricSupported,
-                        onCheckedChange = {
-                            onIntent(PrivateConfigIntent.SetBiometricShortcutEnabled(it))
-                        }
-                    )
-                }
-            }
-
-            item {
-                SplicedColumnGroup(title = stringResource(R.string.private_verify_timing_title)) {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.private_verify_on_enter_group),
-                        description = stringResource(R.string.private_verify_on_enter_group_summary),
-                        checked = state.settings.verifyOnEnterGroup,
-                        enabled = state.hasLocalPassword,
-                        onCheckedChange = {
-                            onIntent(PrivateConfigIntent.SetVerifyOnEnterGroup(it))
-                        }
-                    )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.private_verify_on_open_book),
-                        description = stringResource(R.string.private_verify_on_open_book_summary),
-                        checked = state.settings.verifyOnOpenBook,
-                        enabled = state.hasLocalPassword,
-                        onCheckedChange = {
-                            onIntent(PrivateConfigIntent.SetVerifyOnOpenBook(it))
-                        }
-                    )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.private_verify_on_app_start),
-                        description = stringResource(R.string.private_verify_on_app_start_summary),
-                        checked = state.settings.verifyOnAppStart,
-                        enabled = state.hasLocalPassword,
-                        onCheckedChange = {
-                            onIntent(PrivateConfigIntent.SetVerifyOnAppStart(it))
-                        }
-                    )
-                    DropdownListSettingItem(
-                        title = stringResource(R.string.private_unlock_scope_title),
-                        description = stringResource(R.string.private_unlock_scope_summary),
-                        selectedValue = state.settings.unlockScope.name,
-                        displayEntries = arrayOf(
-                            stringResource(R.string.private_unlock_scope_every_time),
-                            stringResource(R.string.private_unlock_scope_app_session),
-                            stringResource(R.string.private_unlock_scope_until_background)
-                        ),
-                        entryValues = arrayOf(
-                            PrivateUnlockScope.EveryTime.name,
-                            PrivateUnlockScope.AppSession.name,
-                            PrivateUnlockScope.UntilBackground.name
-                        ),
-                        onValueChange = { value ->
-                            PrivateUnlockScope.entries.firstOrNull { it.name == value }
-                                ?.let { onIntent(PrivateConfigIntent.SetUnlockScope(it)) }
-                        }
-                    )
-                    // 只在"离开应用前有效"下才出现：其它频率下这个值没有意义
-                    if (state.settings.unlockScope == PrivateUnlockScope.UntilBackground) {
-                        DropdownListSettingItem(
-                            title = stringResource(R.string.private_background_grace_title),
-                            description = stringResource(R.string.private_background_grace_summary),
-                            selectedValue = state.settings.backgroundGraceSeconds.toString(),
-                            displayEntries = arrayOf(
-                                stringResource(R.string.private_background_grace_immediately),
-                                stringResource(R.string.private_background_grace_seconds, 30),
-                                stringResource(R.string.private_background_grace_minutes, 2),
-                                stringResource(R.string.private_background_grace_minutes, 3),
-                                stringResource(R.string.private_background_grace_minutes, 5),
-                            ),
-                            // 值统一按秒存；秒/分钟只是给人看的
-                            entryValues = arrayOf("0", "30", "120", "180", "300"),
-                            onValueChange = { value ->
-                                value.toIntOrNull()?.let {
-                                    onIntent(PrivateConfigIntent.SetBackgroundGraceSeconds(it))
+                    SearchableSetting("private.set_local_password") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.set_local_password),
+                            description = stringResource(
+                                if (state.hasLocalPassword) {
+                                    R.string.private_content_summary
+                                } else {
+                                    R.string.private_content_no_password
                                 }
+                            ),
+                            onClick = { onIntent(PrivateConfigIntent.ShowPasswordDialog) }
+                        )
+                    }
+
+                    SearchableSetting("private.private_content_biometric") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.private_content_biometric),
+                            description = stringResource(
+                                when {
+                                    !state.hasLocalPassword -> R.string.private_content_no_password
+                                    !state.biometricSupported ->
+                                        biometricStatusHint(state.biometricStatus)
+
+                                    else -> R.string.private_content_biometric_summary
+                                }
+                            ),
+                            checked = state.biometricEnabled,
+                            enabled = state.hasLocalPassword && state.biometricSupported,
+                            onCheckedChange = {
+                                onIntent(PrivateConfigIntent.SetBiometricShortcutEnabled(it))
                             }
                         )
                     }
@@ -179,28 +113,117 @@ fun PrivateConfigScreen(
             }
 
             item {
-                SplicedColumnGroup(title = stringResource(R.string.private_permission_title)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.notification_permission),
-                        description = stringResource(R.string.notification_permission_rationale),
-                        onClick = { onIntent(PrivateConfigIntent.RequestNotificationPermission) }
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.background_permission),
-                        description = stringResource(
-                            if (state.isBatteryIgnored) R.string.battery_optimization_status_ignored
-                            else R.string.ignore_battery_permission_rationale
-                        ),
-                        onClick = { onIntent(PrivateConfigIntent.RequestBatteryPermission) }
-                    )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.firebase_enable_title),
-                        description = stringResource(R.string.firebase_enable_summary),
-                        checked = state.firebaseEnable,
-                        onCheckedChange = {
-                            onIntent(PrivateConfigIntent.SetFirebaseEnabled(it))
+                SplicedColumnGroup(title = stringResource(R.string.private_verify_timing_title)) {
+                    SearchableSetting("private.private_verify_on_enter_group") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.private_verify_on_enter_group),
+                            description = stringResource(R.string.private_verify_on_enter_group_summary),
+                            checked = state.settings.verifyOnEnterGroup,
+                            enabled = state.hasLocalPassword,
+                            onCheckedChange = {
+                                onIntent(PrivateConfigIntent.SetVerifyOnEnterGroup(it))
+                            }
+                        )
+                    }
+                    SearchableSetting("private.private_verify_on_open_book") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.private_verify_on_open_book),
+                            description = stringResource(R.string.private_verify_on_open_book_summary),
+                            checked = state.settings.verifyOnOpenBook,
+                            enabled = state.hasLocalPassword,
+                            onCheckedChange = {
+                                onIntent(PrivateConfigIntent.SetVerifyOnOpenBook(it))
+                            }
+                        )
+                    }
+                    SearchableSetting("private.private_verify_on_app_start") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.private_verify_on_app_start),
+                            description = stringResource(R.string.private_verify_on_app_start_summary),
+                            checked = state.settings.verifyOnAppStart,
+                            enabled = state.hasLocalPassword,
+                            onCheckedChange = {
+                                onIntent(PrivateConfigIntent.SetVerifyOnAppStart(it))
+                            }
+                        )
+                    }
+                    SearchableSetting("private.private_unlock_scope_title") {
+                        DropdownListSettingItem(
+                            title = stringResource(R.string.private_unlock_scope_title),
+                            description = stringResource(R.string.private_unlock_scope_summary),
+                            selectedValue = state.settings.unlockScope.name,
+                            displayEntries = arrayOf(
+                                stringResource(R.string.private_unlock_scope_every_time),
+                                stringResource(R.string.private_unlock_scope_app_session),
+                                stringResource(R.string.private_unlock_scope_until_background)
+                            ),
+                            entryValues = arrayOf(
+                                PrivateUnlockScope.EveryTime.name,
+                                PrivateUnlockScope.AppSession.name,
+                                PrivateUnlockScope.UntilBackground.name
+                            ),
+                            onValueChange = { value ->
+                                PrivateUnlockScope.entries.firstOrNull { it.name == value }
+                                    ?.let { onIntent(PrivateConfigIntent.SetUnlockScope(it)) }
+                            }
+                        )
+                    }
+                    // 只在"离开应用前有效"下才出现：其它频率下这个值没有意义
+                    if (state.settings.unlockScope == PrivateUnlockScope.UntilBackground) {
+                        SearchableSetting("private.private_background_grace_title") {
+                            DropdownListSettingItem(
+                                title = stringResource(R.string.private_background_grace_title),
+                                description = stringResource(R.string.private_background_grace_summary),
+                                selectedValue = state.settings.backgroundGraceSeconds.toString(),
+                                displayEntries = arrayOf(
+                                    stringResource(R.string.private_background_grace_immediately),
+                                    stringResource(R.string.private_background_grace_seconds, 30),
+                                    stringResource(R.string.private_background_grace_minutes, 2),
+                                    stringResource(R.string.private_background_grace_minutes, 3),
+                                    stringResource(R.string.private_background_grace_minutes, 5),
+                                ),
+                                // 值统一按秒存；秒/分钟只是给人看的
+                                entryValues = arrayOf("0", "30", "120", "180", "300"),
+                                onValueChange = { value ->
+                                    value.toIntOrNull()?.let {
+                                        onIntent(PrivateConfigIntent.SetBackgroundGraceSeconds(it))
+                                    }
+                                }
+                            )
                         }
-                    )
+                    }
+                }
+            }
+
+            item {
+                SplicedColumnGroup(title = stringResource(R.string.private_permission_title)) {
+                    SearchableSetting("private.notification_permission") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.notification_permission),
+                            description = stringResource(R.string.notification_permission_rationale),
+                            onClick = { onIntent(PrivateConfigIntent.RequestNotificationPermission) }
+                        )
+                    }
+                    SearchableSetting("private.background_permission") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.background_permission),
+                            description = stringResource(
+                                if (state.isBatteryIgnored) R.string.battery_optimization_status_ignored
+                                else R.string.ignore_battery_permission_rationale
+                            ),
+                            onClick = { onIntent(PrivateConfigIntent.RequestBatteryPermission) }
+                        )
+                    }
+                    SearchableSetting("private.firebase_enable_title") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.firebase_enable_title),
+                            description = stringResource(R.string.firebase_enable_summary),
+                            checked = state.firebaseEnable,
+                            onCheckedChange = {
+                                onIntent(PrivateConfigIntent.SetFirebaseEnabled(it))
+                            }
+                        )
+                    }
                 }
             }
         }

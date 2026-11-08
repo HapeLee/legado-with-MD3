@@ -1,5 +1,7 @@
 package io.legado.app.ui.config.backupConfig
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -158,7 +160,7 @@ fun BackupConfigScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -167,111 +169,143 @@ fun BackupConfigScreen(
         ) {
             item {
                 SplicedColumnGroup(title = stringResource(R.string.web_dav_set)) {
-                    InputSettingItem(
-                        title = stringResource(R.string.web_dav_url),
-                        description = stringResource(R.string.web_dav_url_s),
-                        value = settings.webDavUrl,
-                        defaultValue = "",
-                        onConfirm = { onIntent(BackupConfigIntent.SetWebDavUrl(it)) },
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.web_dav_account),
-                        description = stringResource(R.string.web_dav_account_d),
-                        onClick = { onIntent(BackupConfigIntent.OpenWebDavAuth) },
-                    )
-                    InputSettingItem(
-                        title = stringResource(R.string.sub_dir),
-                        value = settings.webDavDir,
-                        defaultValue = "legado",
-                        onConfirm = { onIntent(BackupConfigIntent.SetWebDavDir(it)) },
-                    )
-                    InputSettingItem(
-                        title = stringResource(R.string.webdav_device_name),
-                        value = settings.webDavDeviceName,
-                        defaultValue = "",
-                        onConfirm = { onIntent(BackupConfigIntent.SetWebDavDeviceName(it)) },
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.test_sync_t),
-                        description = stringResource(R.string.test_sync_d),
-                        onClick = { onIntent(BackupConfigIntent.TestWebDav) },
-                    )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.sync_book_progress_t),
-                        description = stringResource(R.string.sync_book_progress_s),
-                        checked = settings.syncBookProgress,
-                        onCheckedChange = { onIntent(BackupConfigIntent.SetSyncBookProgress(it)) },
-                    )
-                    if (settings.syncBookProgress) {
+                    SearchableSetting("backup.web_dav_url") {
+                        InputSettingItem(
+                            title = stringResource(R.string.web_dav_url),
+                            description = stringResource(R.string.web_dav_url_s),
+                            value = settings.webDavUrl,
+                            defaultValue = "",
+                            onConfirm = { onIntent(BackupConfigIntent.SetWebDavUrl(it)) },
+                        )
+                    }
+                    SearchableSetting("backup.web_dav_account") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.web_dav_account),
+                            description = stringResource(R.string.web_dav_account_d),
+                            onClick = { onIntent(BackupConfigIntent.OpenWebDavAuth) },
+                        )
+                    }
+                    SearchableSetting("backup.sub_dir") {
+                        InputSettingItem(
+                            title = stringResource(R.string.sub_dir),
+                            value = settings.webDavDir,
+                            defaultValue = "legado",
+                            onConfirm = { onIntent(BackupConfigIntent.SetWebDavDir(it)) },
+                        )
+                    }
+                    SearchableSetting("backup.webdav_device_name") {
+                        InputSettingItem(
+                            title = stringResource(R.string.webdav_device_name),
+                            value = settings.webDavDeviceName,
+                            defaultValue = "",
+                            onConfirm = { onIntent(BackupConfigIntent.SetWebDavDeviceName(it)) },
+                        )
+                    }
+                    SearchableSetting("backup.test_sync_t") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.test_sync_t),
+                            description = stringResource(R.string.test_sync_d),
+                            onClick = { onIntent(BackupConfigIntent.TestWebDav) },
+                        )
+                    }
+                    SearchableSetting("backup.sync_book_progress_t") {
                         SwitchSettingItem(
-                            title = stringResource(R.string.sync_book_progress_plus_t),
-                            description = stringResource(R.string.sync_book_progress_plus_s),
-                            checked = settings.syncBookProgressPlus,
+                            title = stringResource(R.string.sync_book_progress_t),
+                            description = stringResource(R.string.sync_book_progress_s),
+                            checked = settings.syncBookProgress,
+                            onCheckedChange = { onIntent(BackupConfigIntent.SetSyncBookProgress(it)) },
+                        )
+                    }
+                    if (settings.syncBookProgress) {
+                        SearchableSetting("backup.sync_book_progress_plus_t") {
+                            SwitchSettingItem(
+                                title = stringResource(R.string.sync_book_progress_plus_t),
+                                description = stringResource(R.string.sync_book_progress_plus_s),
+                                checked = settings.syncBookProgressPlus,
+                                onCheckedChange = {
+                                    onIntent(BackupConfigIntent.SetSyncBookProgressPlus(it))
+                                },
+                            )
+                        }
+                    }
+                    SearchableSetting("backup.auto_check_new_backup_t") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.auto_check_new_backup_t),
+                            description = stringResource(R.string.auto_check_new_backup_s),
+                            checked = settings.autoCheckNewBackup,
                             onCheckedChange = {
-                                onIntent(BackupConfigIntent.SetSyncBookProgressPlus(it))
+                                onIntent(BackupConfigIntent.SetAutoCheckNewBackup(it))
                             },
                         )
                     }
-                    SwitchSettingItem(
-                        title = stringResource(R.string.auto_check_new_backup_t),
-                        description = stringResource(R.string.auto_check_new_backup_s),
-                        checked = settings.autoCheckNewBackup,
-                        onCheckedChange = {
-                            onIntent(BackupConfigIntent.SetAutoCheckNewBackup(it))
-                        },
-                    )
-                    DropdownListSettingItem(
-                        title = stringResource(R.string.backup_sync_mode),
-                        description = stringResource(R.string.backup_sync_mode_summary),
-                        selectedValue = settings.backupSyncMode,
-                        displayEntries = stringArrayResource(R.array.backup_sync_mode),
-                        entryValues = stringArrayResource(R.array.backup_sync_mode_value),
-                        onValueChange = { onIntent(BackupConfigIntent.SetBackupSyncMode(it)) },
-                    )
+                    SearchableSetting("backup.backup_sync_mode") {
+                        DropdownListSettingItem(
+                            title = stringResource(R.string.backup_sync_mode),
+                            description = stringResource(R.string.backup_sync_mode_summary),
+                            selectedValue = settings.backupSyncMode,
+                            displayEntries = stringArrayResource(R.array.backup_sync_mode),
+                            entryValues = stringArrayResource(R.array.backup_sync_mode_value),
+                            onValueChange = { onIntent(BackupConfigIntent.SetBackupSyncMode(it)) },
+                        )
+                    }
                 }
                 SplicedColumnGroup(title = stringResource(R.string.backup_restore)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.backup_path),
-                        description = settings.backupPath ?: stringResource(R.string.select_backup_path),
-                        onClick = {
-                            onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.ChooseBackupPath))
-                        },
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.backup),
-                        description = stringResource(R.string.backup_summary),
-                        onClick = {
-                            onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.BackupOptions))
-                        },
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.restore),
-                        description = stringResource(R.string.restore_summary),
-                        onClick = {
-                            onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.RestoreOptions))
-                        },
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.restore_ignore),
-                        description = stringResource(R.string.restore_ignore_summary),
-                        onClick = { onIntent(BackupConfigIntent.OpenIgnoreDialog) },
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.backup_ignore),
-                        description = stringResource(R.string.backup_ignore_summary),
-                        onClick = { onIntent(BackupConfigIntent.OpenBackupIgnoreDialog) },
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.menu_import_old_version),
-                        description = stringResource(R.string.import_old_summary),
-                        onClick = { onIntent(BackupConfigIntent.RequestImportOldData) },
-                    )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.only_latest_backup_t),
-                        description = stringResource(R.string.only_latest_backup_s),
-                        checked = settings.onlyLatestBackup,
-                        onCheckedChange = { onIntent(BackupConfigIntent.SetOnlyLatestBackup(it)) },
-                    )
+                    SearchableSetting("backup.backup_path") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.backup_path),
+                            description = settings.backupPath ?: stringResource(R.string.select_backup_path),
+                            onClick = {
+                                onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.ChooseBackupPath))
+                            },
+                        )
+                    }
+                    SearchableSetting("backup.backup") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.backup),
+                            description = stringResource(R.string.backup_summary),
+                            onClick = {
+                                onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.BackupOptions))
+                            },
+                        )
+                    }
+                    SearchableSetting("backup.restore") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.restore),
+                            description = stringResource(R.string.restore_summary),
+                            onClick = {
+                                onIntent(BackupConfigIntent.OpenSheet(BackupConfigSheet.RestoreOptions))
+                            },
+                        )
+                    }
+                    SearchableSetting("backup.restore_ignore") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.restore_ignore),
+                            description = stringResource(R.string.restore_ignore_summary),
+                            onClick = { onIntent(BackupConfigIntent.OpenIgnoreDialog) },
+                        )
+                    }
+                    SearchableSetting("backup.backup_ignore") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.backup_ignore),
+                            description = stringResource(R.string.backup_ignore_summary),
+                            onClick = { onIntent(BackupConfigIntent.OpenBackupIgnoreDialog) },
+                        )
+                    }
+                    SearchableSetting("backup.menu_import_old_version") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.menu_import_old_version),
+                            description = stringResource(R.string.import_old_summary),
+                            onClick = { onIntent(BackupConfigIntent.RequestImportOldData) },
+                        )
+                    }
+                    SearchableSetting("backup.only_latest_backup_t") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.only_latest_backup_t),
+                            description = stringResource(R.string.only_latest_backup_s),
+                            checked = settings.onlyLatestBackup,
+                            onCheckedChange = { onIntent(BackupConfigIntent.SetOnlyLatestBackup(it)) },
+                        )
+                    }
                 }
             }
         }

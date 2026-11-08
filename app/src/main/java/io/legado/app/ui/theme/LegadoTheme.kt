@@ -20,7 +20,7 @@ data class LegadoThemeMode(
     val paletteStyle: PaletteStyle,
     val themeMode: ColorSchemeMode,
     val useDynamicColor: Boolean,
-    val composeEngine: String,
+    val composeEngine: ComposeEngine,
 )
 
 data class LegadoColorScheme(
@@ -130,7 +130,7 @@ val LocalLegadoThemeColors = staticCompositionLocalOf {
         paletteStyle = PaletteStyle.TonalSpot,
         themeMode = ColorSchemeMode.System,
         useDynamicColor = true,
-        composeEngine = "material"
+        composeEngine = ComposeEngine.Material
     )
 }
 
@@ -166,7 +166,7 @@ object LegadoTheme {
         @ReadOnlyComposable
         get() = LocalLegadoThemeColors.current.themeMode
 
-    val composeEngine: String
+    val composeEngine: ComposeEngine
         @Composable
         @ReadOnlyComposable
         get() = LocalLegadoThemeColors.current.composeEngine

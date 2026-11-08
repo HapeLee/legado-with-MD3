@@ -247,7 +247,12 @@ class MangaReaderViewModel(
                 } else {
                     launchAction {
                         showLoading()
-                        invalidateCurrentChapter()
+                        // Reauthorizing a local folder only needs to retry listing it.
+                        if ((session.currentChapter as? MangaChapterState.Failed)
+                                ?.canReselectBookDirectory != true
+                        ) {
+                            invalidateCurrentChapter()
+                        }
                         executeSession(MangaSessionCommand.RetryChapter(session.chapterIndex))
                     }
                 }
@@ -475,7 +480,10 @@ class MangaReaderViewModel(
         }
         val current = session.currentChapter
         if (current !is MangaChapterState.Ready) {
-            if (pendingExplicitChapterIndex == session.chapterIndex) {
+            if (current is MangaChapterState.Failed && current.canReselectBookDirectory) {
+                pendingExplicitChapterIndex = null
+                showError(current.message, canReselectBookDirectory = true)
+            } else if (pendingExplicitChapterIndex == session.chapterIndex) {
                 // 显式跳章失败后立即放开门闩：否则目标页一直不可见时，
                 // 之后对该章的目录/上一章点击会被 openChapter 静默吞掉。
                 if (current is MangaChapterState.Failed) pendingExplicitChapterIndex = null
@@ -754,9 +762,13 @@ class MangaReaderViewModel(
         }
     }
 
-    fun showError(message: String) {
+    fun showError(message: String, canReselectBookDirectory: Boolean = false) {
         _uiState.update {
-            it.copy(isLoading = false, errorMessage = MangaReaderText.Dynamic(message))
+            it.copy(
+                isLoading = false,
+                errorMessage = MangaReaderText.Dynamic(message),
+                canReselectBookDirectory = canReselectBookDirectory,
+            )
         }
     }
 

@@ -249,10 +249,6 @@ private fun ReaderBookSheet(
     LaunchedEffect(show, initialPage) {
         if (show) pagerState.scrollToPage(initialPage)
     }
-    BackHandler(enabled = show && state.action.selectedIds.isNotEmpty()) {
-        onIntent(TocIntent.ClearSelection)
-    }
-
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
@@ -261,6 +257,9 @@ private fun ReaderBookSheet(
         modifier = Modifier
             .heightIn(max = maxHeight),
     ) {
+        BackHandler(enabled = show && state.action.selectedIds.isNotEmpty()) {
+            onIntent(TocIntent.ClearSelection)
+        }
         Box(modifier = Modifier.padding(horizontal = 16.dp)) {
             ReaderBookHeader(
                 book = state.book,

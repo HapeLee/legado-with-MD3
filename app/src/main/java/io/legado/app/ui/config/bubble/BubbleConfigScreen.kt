@@ -1,5 +1,7 @@
 package io.legado.app.ui.config.bubble
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,7 +18,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -105,7 +106,7 @@ fun BubbleConfigScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -124,14 +125,16 @@ fun BubbleConfigScreen(
 
             item(key = "forceSoftware") {
                 SplicedColumnGroup {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.bubble_force_software),
-                        description = stringResource(R.string.bubble_force_software_desc),
-                        checked = state.forceSoftwareParagraphBubble,
-                        onCheckedChange = {
-                            onIntent(BubbleConfigIntent.ForceSoftwareChanged(it))
-                        },
-                    )
+                    SearchableSetting("bubble.bubble_force_software") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.bubble_force_software),
+                            description = stringResource(R.string.bubble_force_software_desc),
+                            checked = state.forceSoftwareParagraphBubble,
+                            onCheckedChange = {
+                                onIntent(BubbleConfigIntent.ForceSoftwareChanged(it))
+                            },
+                        )
+                    }
                 }
             }
 
@@ -161,11 +164,13 @@ fun BubbleConfigScreen(
 
             item(key = "create") {
                 SplicedColumnGroup {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.bubble_add_manual),
-                        description = stringResource(R.string.bubble_add_manual_desc),
-                        onClick = { onIntent(BubbleConfigIntent.StartCreate) },
-                    )
+                    SearchableSetting("bubble.bubble_add_manual") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.bubble_add_manual),
+                            description = stringResource(R.string.bubble_add_manual_desc),
+                            onClick = { onIntent(BubbleConfigIntent.StartCreate) },
+                        )
+                    }
                 }
             }
 

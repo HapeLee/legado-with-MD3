@@ -30,8 +30,8 @@ import io.legado.app.R
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -57,7 +57,7 @@ fun ExploreKindSelectSheet(
     var query by remember { mutableStateOf("") }
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
     var refreshRequest by remember(sourceUrl) { mutableIntStateOf(0) }
     var handledRefreshRequest by remember(sourceUrl) { mutableIntStateOf(0) }
     var kindsRevision by remember(sourceUrl) { mutableIntStateOf(0) }

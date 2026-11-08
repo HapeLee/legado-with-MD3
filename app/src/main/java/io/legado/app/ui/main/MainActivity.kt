@@ -36,6 +36,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,6 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -535,6 +539,10 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     @Composable
     override fun Content() {
         val configuration = LocalAppUiConfiguration.current
+        val navigationAnimationStyle = configuration.appShell.navigationAnimationStyle
+        val navigationLayoutDirection = LocalLayoutDirection.current
+        val navigationDisplayLeft = remember { mutableFloatStateOf(0f) }
+        val navigationSceneDecorators = remember { listOf(NavigationPageSceneDecorator(navigationDisplayLeft)) }
         val predictiveBackEnabled by rememberUpdatedState(configuration.appShell.predictiveBackEnabled)
         val tabletInterface = configuration.appShell.tabletInterface
         val defaultToReadFlow = remember(otherSettingsGateway) {
@@ -833,7 +841,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                             .playerUnderlaySemantics(playerVisible || morphPresent)
                     ) {
                         NavDisplay(
-                            modifier = adaptiveDisplayModifier,
+                            modifier = adaptiveDisplayModifier.onGloballyPositioned {
+                                navigationDisplayLeft.floatValue = it.positionInRoot().x
+                            },
                             backStack = backStack,
                             // 交给 nav3 装上 SharedEntryInSceneNavEntryDecorator：这是跨 scene 保持
                             // 共享元素登记的官方机制。少了它，书架 scene 一被销毁封面的登记就没了——
@@ -866,8 +876,11 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 },
                                 SinglePaneSceneStrategy(),
                             ),
+                            sceneDecoratorStrategies = navigationSceneDecorators,
                             transitionSpec = {
-                                if (targetState is ListDetailScene) {
+                                navigationPreset(
+                                    navigationAnimationStyle, true, navigationLayoutDirection
+                                ) ?: if (targetState is ListDetailScene) {
                                     // 双栏自己演形变：左栏从占满窗口收到窗格宽度、右栏从右侧滑进来。
                                     // 场景级再滑一次会让左栏里的首页跟着从头滑入，看起来像换了页面。
                                     EnterTransition.None togetherWith ExitTransition.None
@@ -900,7 +913,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 }
                             },
                             popTransitionSpec = {
-                                if (initialState is ListDetailScene) {
+                                navigationPreset(
+                                    navigationAnimationStyle, false, navigationLayoutDirection
+                                ) ?: if (initialState is ListDetailScene) {
                                     // 返回时双栏要做「右栏滑出、左栏回满」的收拢动画，所以离场场景
                                     // 必须活到动画结束；淡出叠加在收拢之上，下方已经恢复成单栏的同一页面。
                                     EnterTransition.None togetherWith
@@ -932,15 +947,17 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                     ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MILLIS)))
                                 }
                             },
-                            predictivePopTransitionSpec = { _ ->
-                                (slideIntoContainer(
+                            predictivePopTransitionSpec = { swipeEdge ->
+                                navigationPreset(
+                                    navigationAnimationStyle, false, navigationLayoutDirection, swipeEdge
+                                ) ?: ((slideIntoContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                                     animationSpec = tween(easing = FastOutSlowInEasing),
                                     initialOffset = { fullWidth -> -fullWidth / 4 }
                                 ) + fadeIn(animationSpec = tween(easing = LinearOutSlowInEasing))) togetherWith (scaleOut(
                                     targetScale = 0.8f,
                                     animationSpec = tween(easing = FastOutSlowInEasing)
-                                ) + fadeOut(animationSpec = tween()))
+                                ) + fadeOut(animationSpec = tween())))
                             },
                             onBack = { MainNavigator.navigateBack(this@MainActivity, backStack) },
                             entryProvider = mainEntryProvider(

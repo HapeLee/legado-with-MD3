@@ -1,11 +1,12 @@
 package io.legado.app.ui.config.coverConfig
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -84,7 +85,7 @@ fun CoverConfigScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -93,234 +94,270 @@ fun CoverConfigScreen(
         ) {
             item {
                 SplicedColumnGroup {
-                SwitchSettingItem(
-                    title = stringResource(R.string.only_wifi),
-                    description = stringResource(R.string.only_wifi_summary),
-                    checked = settings.loadOnlyOnWifi,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetLoadOnlyOnWifi(value))
-                    }
-                )
+                SearchableSetting("cover.only_wifi") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.only_wifi),
+                        description = stringResource(R.string.only_wifi_summary),
+                        checked = settings.loadOnlyOnWifi,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetLoadOnlyOnWifi(value))
+                        }
+                    )
+                }
 
-                ClickableSettingItem(
-                    title = stringResource(R.string.cover_rule),
-                    description = stringResource(R.string.cover_rule_summary),
-                    onClick = { onIntent(CoverConfigIntent.ShowSheet(CoverConfigSheet.Rule)) }
-                )
+                SearchableSetting("cover.cover_rule") {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.cover_rule),
+                        description = stringResource(R.string.cover_rule_summary),
+                        onClick = { onIntent(CoverConfigIntent.ShowSheet(CoverConfigSheet.Rule)) }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.use_default_cover),
-                    description = stringResource(R.string.use_default_cover_s),
-                    checked = settings.useDefaultCover,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetUseDefaultCover(value))
-                    }
-                )
+                SearchableSetting("cover.use_default_cover") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.use_default_cover),
+                        description = stringResource(R.string.use_default_cover_s),
+                        checked = settings.useDefaultCover,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetUseDefaultCover(value))
+                        }
+                    )
+                }
 
-                ClickableSettingItem(
-                    title = stringResource(R.string.default_cover),
-                    description = selectedAlbum?.let {
-                        "${it.name} · ${
-                            stringResource(
-                                R.string.cover_album_day_night_count,
-                                it.lightImages.size,
-                                it.darkImages.size,
-                            )
-                        }"
-                    } ?: stringResource(R.string.cover_album_none),
-                    onClick = { onIntent(CoverConfigIntent.ShowSheet(CoverConfigSheet.Album)) }
-                )
+                SearchableSetting("cover.default_cover") {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.default_cover),
+                        description = selectedAlbum?.let {
+                            "${it.name} · ${
+                                stringResource(
+                                    R.string.cover_album_day_night_count,
+                                    it.lightImages.size,
+                                    it.darkImages.size,
+                                )
+                            }"
+                        } ?: stringResource(R.string.cover_album_none),
+                        onClick = { onIntent(CoverConfigIntent.ShowSheet(CoverConfigSheet.Album)) }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_shadow),
-                    checked = settings.showShadow,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetShowShadow(value))
-                    }
-                )
+                SearchableSetting("cover.cover_show_shadow") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.cover_show_shadow),
+                        checked = settings.showShadow,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetShowShadow(value))
+                        }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_stroke),
-                    checked = settings.showStroke,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetShowStroke(value))
-                    }
-                )
+                SearchableSetting("cover.cover_show_stroke") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.cover_show_stroke),
+                        checked = settings.showStroke,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetShowStroke(value))
+                        }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.default_color),
-                    checked = settings.useDefaultColor,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetUseDefaultColor(value))
-                    }
-                )
+                SearchableSetting("cover.default_color") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.default_color),
+                        checked = settings.useDefaultColor,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetUseDefaultColor(value))
+                        }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.cover_restrict_ratio),
-                    description = stringResource(R.string.cover_restrict_ratio_summary),
-                    checked = settings.restrictCoverRatio,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetRestrictCoverRatio(value))
-                    }
-                )
+                SearchableSetting("cover.cover_restrict_ratio") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.cover_restrict_ratio),
+                        description = stringResource(R.string.cover_restrict_ratio_summary),
+                        checked = settings.restrictCoverRatio,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetRestrictCoverRatio(value))
+                        }
+                    )
+                }
             }
 
             SplicedColumnGroup {
-                DropdownListSettingItem(
-                    title = stringResource(R.string.cover_info_orientation),
-                    selectedValue = settings.infoOrientation,
-                    displayEntries = arrayOf(
-                        stringResource(R.string.screen_portrait),
-                        stringResource(R.string.screen_landscape)
-                    ),
-                    entryValues = arrayOf("0", "1"),
-                    onValueChange = { value ->
-                        onIntent(CoverConfigIntent.SetInfoOrientation(value))
-                    }
-                )
+                SearchableSetting("cover.cover_info_orientation") {
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.cover_info_orientation),
+                        selectedValue = settings.infoOrientation,
+                        displayEntries = arrayOf(
+                            stringResource(R.string.screen_portrait),
+                            stringResource(R.string.screen_landscape)
+                        ),
+                        entryValues = arrayOf("0", "1"),
+                        onValueChange = { value ->
+                            onIntent(CoverConfigIntent.SetInfoOrientation(value))
+                        }
+                    )
+                }
             }
 
             SplicedColumnGroup(title = stringResource(R.string.network_book_badge_setting)) {
-                DropdownListSettingItem(
-                    title = stringResource(R.string.network_book_badge_setting),
-                    selectedValue = settings.exploreFilterState.toString(),
-                    displayEntries = arrayOf(
-                        stringResource(R.string.filter_show_all),
-                        stringResource(R.string.filter_hide_in_shelf),
-                        stringResource(R.string.filter_hide_same_name_author),
-                        stringResource(R.string.filter_show_not_in_shelf_only)
-                    ),
-                    entryValues = arrayOf("0", "1", "2", "3"),
-                    onValueChange = { value ->
-                        onIntent(CoverConfigIntent.SetExploreFilterState(value.toInt()))
-                    }
-                )
+                SearchableSetting("cover.network_book_badge_setting") {
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.network_book_badge_setting),
+                        selectedValue = settings.exploreFilterState.toString(),
+                        displayEntries = arrayOf(
+                            stringResource(R.string.filter_show_all),
+                            stringResource(R.string.filter_hide_in_shelf),
+                            stringResource(R.string.filter_hide_same_name_author),
+                            stringResource(R.string.filter_show_not_in_shelf_only)
+                        ),
+                        entryValues = arrayOf("0", "1", "2", "3"),
+                        onValueChange = { value ->
+                            onIntent(CoverConfigIntent.SetExploreFilterState(value.toInt()))
+                        }
+                    )
+                }
             }
 
             SplicedColumnGroup(title = stringResource(R.string.day)) {
-                ClickableSettingItem(
-                    title = stringResource(R.string.text_color),
-                    option = "#${Integer.toHexString(settings.textColor).uppercase()}",
-                    onClick = {
-                        onIntent(
-                            CoverConfigIntent.ShowSheet(
-                                CoverConfigSheet.Color(CoverColorField.Text)
+                SearchableSetting("cover.text_color.day") {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.text_color),
+                        option = "#${Integer.toHexString(settings.textColor).uppercase()}",
+                        onClick = {
+                            onIntent(
+                                CoverConfigIntent.ShowSheet(
+                                    CoverConfigSheet.Color(CoverColorField.Text)
+                                )
                             )
-                        )
-                    },
-                    trailingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color(settings.textColor))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        )
-                    }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.text_shadow_color),
-                    option = "#${Integer.toHexString(settings.shadowColor).uppercase()}",
-                    onClick = {
-                        onIntent(
-                            CoverConfigIntent.ShowSheet(
-                                CoverConfigSheet.Color(CoverColorField.Shadow)
+                        },
+                        trailingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(settings.textColor))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                             )
-                        )
-                    },
-                    trailingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color(settings.shadowColor))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        )
-                    }
-                )
+                        }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_name),
-                    description = stringResource(R.string.cover_show_name_summary),
-                    checked = settings.showName,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetShowName(value))
-                    }
-                )
+                SearchableSetting("cover.text_shadow_color.day") {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.text_shadow_color),
+                        option = "#${Integer.toHexString(settings.shadowColor).uppercase()}",
+                        onClick = {
+                            onIntent(
+                                CoverConfigIntent.ShowSheet(
+                                    CoverConfigSheet.Color(CoverColorField.Shadow)
+                                )
+                            )
+                        },
+                        trailingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(settings.shadowColor))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                            )
+                        }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_author),
-                    description = stringResource(R.string.cover_show_author_summary),
-                    checked = settings.showAuthor,
-                    enabled = settings.showName,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetShowAuthor(value))
-                    }
-                )
+                SearchableSetting("cover.cover_show_name.day") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.cover_show_name),
+                        description = stringResource(R.string.cover_show_name_summary),
+                        checked = settings.showName,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetShowName(value))
+                        }
+                    )
+                }
+
+                SearchableSetting("cover.cover_show_author.day") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.cover_show_author),
+                        description = stringResource(R.string.cover_show_author_summary),
+                        checked = settings.showAuthor,
+                        enabled = settings.showName,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetShowAuthor(value))
+                        }
+                    )
+                }
             }
 
             SplicedColumnGroup(title = stringResource(R.string.night)) {
-                ClickableSettingItem(
-                    title = stringResource(R.string.text_color),
-                    option = "#${Integer.toHexString(settings.textColorDark).uppercase()}",
-                    onClick = {
-                        onIntent(
-                            CoverConfigIntent.ShowSheet(
-                                CoverConfigSheet.Color(CoverColorField.TextDark)
+                SearchableSetting("cover.text_color.night") {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.text_color),
+                        option = "#${Integer.toHexString(settings.textColorDark).uppercase()}",
+                        onClick = {
+                            onIntent(
+                                CoverConfigIntent.ShowSheet(
+                                    CoverConfigSheet.Color(CoverColorField.TextDark)
+                                )
                             )
-                        )
-                    },
-                    trailingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color(settings.textColorDark))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        )
-                    }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.text_shadow_color),
-                    option = "#${Integer.toHexString(settings.shadowColorDark).uppercase()}",
-                    onClick = {
-                        onIntent(
-                            CoverConfigIntent.ShowSheet(
-                                CoverConfigSheet.Color(CoverColorField.ShadowDark)
+                        },
+                        trailingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(settings.textColorDark))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                             )
-                        )
-                    },
-                    trailingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color(settings.shadowColorDark))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        )
-                    }
-                )
+                        }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_name),
-                    description = stringResource(R.string.cover_show_name_summary),
-                    checked = settings.showNameDark,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetShowNameDark(value))
-                    }
-                )
+                SearchableSetting("cover.text_shadow_color.night") {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.text_shadow_color),
+                        option = "#${Integer.toHexString(settings.shadowColorDark).uppercase()}",
+                        onClick = {
+                            onIntent(
+                                CoverConfigIntent.ShowSheet(
+                                    CoverConfigSheet.Color(CoverColorField.ShadowDark)
+                                )
+                            )
+                        },
+                        trailingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(settings.shadowColorDark))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                            )
+                        }
+                    )
+                }
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.cover_show_author),
-                    description = stringResource(R.string.cover_show_author_summary),
-                    checked = settings.showAuthorDark,
-                    enabled = settings.showNameDark,
-                    onCheckedChange = { value ->
-                        onIntent(CoverConfigIntent.SetShowAuthorDark(value))
-                    }
-                )
+                SearchableSetting("cover.cover_show_name.night") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.cover_show_name),
+                        description = stringResource(R.string.cover_show_name_summary),
+                        checked = settings.showNameDark,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetShowNameDark(value))
+                        }
+                    )
+                }
+
+                SearchableSetting("cover.cover_show_author.night") {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.cover_show_author),
+                        description = stringResource(R.string.cover_show_author_summary),
+                        checked = settings.showAuthorDark,
+                        enabled = settings.showNameDark,
+                        onCheckedChange = { value ->
+                            onIntent(CoverConfigIntent.SetShowAuthorDark(value))
+                        }
+                    )
+                }
                 }
             }
         }

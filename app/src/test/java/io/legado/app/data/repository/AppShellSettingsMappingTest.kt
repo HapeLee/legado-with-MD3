@@ -2,10 +2,26 @@ package io.legado.app.data.repository
 
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.model.settings.AppShellSettings
+import io.legado.app.domain.model.settings.NavigationAnimationStyle
+import io.legado.app.domain.model.settings.TextAnimationLevel
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AppShellSettingsMappingTest {
+
+    @Test
+    fun `主题风格保留原始字符串以兼容旧配置和后续版本`() {
+        listOf("material", "miuix", "MIUIX", "mochi", "unknown").forEach { engine ->
+            val values = captureAtomicUpdateValues(
+                current = AppShellSettings(composeEngine = "previous"),
+                read = { it.toAppShellSettings() },
+                toPrefMap = AppShellSettings::toPrefMap,
+                transform = { it.copy(composeEngine = engine) },
+            )
+            assertEquals(mapOf(PreferKey.composeEngine to engine), values)
+            assertEquals(engine, values.toTestPreferences().toAppShellSettings().composeEngine)
+        }
+    }
 
     @Test
     fun `阅读共享元素旧配置默认开启且开关可独立持久化`() {
@@ -27,6 +43,55 @@ class AppShellSettingsMappingTest {
                 values.toTestPreferences().toAppShellSettings().readerSharedElementEnabled,
             )
         }
+    }
+
+    @Test
+    fun `导航动画与主题风格独立保存且未知值回退到默认`() {
+        val values = captureAtomicUpdateValues(
+            current = AppShellSettings(composeEngine = "miuix"),
+            read = { it.toAppShellSettings() },
+            toPrefMap = AppShellSettings::toPrefMap,
+            transform = { it.copy(navigationAnimationStyle = NavigationAnimationStyle.Miuix) },
+        )
+        assertEquals(mapOf(PreferKey.navigationAnimationStyle to "miuix"), values)
+        assertEquals(
+            NavigationAnimationStyle.Miuix,
+            mapOf(PreferKey.navigationAnimationStyle to "mochi")
+                .toTestPreferences().toAppShellSettings().navigationAnimationStyle,
+        )
+        NavigationAnimationStyle.entries.forEach { style ->
+            assertEquals(
+                style,
+                AppShellSettings(navigationAnimationStyle = style).toPrefMap()
+                    .toTestPreferences().toAppShellSettings().navigationAnimationStyle,
+            )
+        }
+        assertEquals(
+            NavigationAnimationStyle.Scale,
+            mapOf(PreferKey.navigationAnimationStyle to "aosp")
+                .toTestPreferences().toAppShellSettings().navigationAnimationStyle,
+        )
+        for (storedValue in listOf("classic", "unknown")) {
+            assertEquals(
+                NavigationAnimationStyle.Default,
+                mapOf(PreferKey.navigationAnimationStyle to storedValue)
+                    .toTestPreferences().toAppShellSettings().navigationAnimationStyle,
+            )
+        }
+    }
+
+    @Test
+    fun `文字动画等级独立保存且旧配置默认滑动`() {
+        val values = captureAtomicUpdateValues(
+            current = AppShellSettings(composeEngine = "mochi"),
+            read = { it.toAppShellSettings() },
+            toPrefMap = AppShellSettings::toPrefMap,
+            transform = { it.copy(textAnimationLevel = TextAnimationLevel.Strong) },
+        )
+        assertEquals(mapOf(PreferKey.textAnimationLevel to "strong"), values)
+        assertEquals(TextAnimationLevel.Strong, values.toTestPreferences().toAppShellSettings().textAnimationLevel)
+        assertEquals(TextAnimationLevel.Slide, emptyMap<String, Any?>().toTestPreferences().toAppShellSettings().textAnimationLevel)
+        assertEquals(TextAnimationLevel.Slide, TextAnimationLevel.fromStoredValue("unknown"))
     }
 
     @Test
@@ -134,6 +199,8 @@ private fun AppShellSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.showStatusBar to showStatusBar,
     PreferKey.swipeAnimation to swipeAnimation,
     PreferKey.isPredictiveBackEnabled to predictiveBackEnabled,
+    PreferKey.navigationAnimationStyle to navigationAnimationStyle.storedValue,
+    PreferKey.textAnimationLevel to textAnimationLevel.storedValue,
     PreferKey.readerSharedElementEnabled to readerSharedElementEnabled,
     PreferKey.showBottomView to showBottomView,
     PreferKey.useFloatingBottomBar to useFloatingBottomBar,

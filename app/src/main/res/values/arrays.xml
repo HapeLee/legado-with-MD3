@@ -263,6 +263,7 @@
 	<string-array name="composeEngine">
         <item>Material Design</item>
         <item>Miuix</item>
+        <item>Mochi</item>
     </string-array>
 
     <string-array name="customMode">

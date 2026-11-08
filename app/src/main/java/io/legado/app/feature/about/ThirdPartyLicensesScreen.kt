@@ -34,8 +34,8 @@ import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.entity.License
 import com.mikepenz.aboutlibraries.util.withJson
 import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
@@ -123,7 +123,7 @@ private fun LibrariesContainer(
     padding: PaddingValues,
     onSelect: (String) -> Unit,
 ) {
-    val useMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val useMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
     LazyColumn(
         modifier = Modifier.fillMaxSize()
             .consumeWindowInsets(padding)

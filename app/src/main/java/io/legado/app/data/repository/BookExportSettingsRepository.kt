@@ -3,6 +3,7 @@ package io.legado.app.data.repository
 import androidx.datastore.preferences.core.Preferences
 import io.legado.app.constant.PreferKey
 import io.legado.app.domain.gateway.BookExportSettingsGateway
+import io.legado.app.domain.model.manga.MangaExportFormat
 import io.legado.app.domain.model.settings.BookExportSettings
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsBoolean
@@ -40,6 +41,7 @@ internal fun Preferences.toBookExportSettings() = BookExportSettings(
     exportType = compatDsInt(PreferKey.exportType) ?: 0,
     exportPictureFile = compatDsBoolean(PreferKey.exportPictureFile) ?: false,
     parallelExportBook = compatDsBoolean(PreferKey.parallelExportBook) ?: false,
+    mangaExportFormat = MangaExportFormat.fromValue(compatDsString(PreferKey.mangaExportFormat)),
 )
 
 internal fun BookExportSettings.toPrefMap(): Map<String, Any?> = mapOf(
@@ -53,4 +55,5 @@ internal fun BookExportSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.exportType to exportType,
     PreferKey.exportPictureFile to exportPictureFile,
     PreferKey.parallelExportBook to parallelExportBook,
+    PreferKey.mangaExportFormat to mangaExportFormat.value,
 )

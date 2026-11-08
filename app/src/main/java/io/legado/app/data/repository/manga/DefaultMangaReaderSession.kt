@@ -308,9 +308,12 @@ class DefaultMangaReaderSession(
         val chapterState = command.result.fold(
             onSuccess = { MangaChapterState.Ready(command.token, it) },
             onFailure = {
+                val canReselectBookDirectory = it is LocalMangaDirectoryUnavailableException
+                if (canReselectBookDirectory) AppLog.put("本地漫画目录不可读", it)
                 MangaChapterState.Failed(
                     token = command.token,
                     message = it.localizedMessage.orEmpty(),
+                    canReselectBookDirectory = canReselectBookDirectory,
                 )
             },
         )

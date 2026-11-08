@@ -7,6 +7,7 @@ import io.legado.app.domain.model.manga.MangaChapterContent
 import io.legado.app.domain.model.manga.MangaPageContent
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.getLocalUri
+import io.legado.app.model.localBook.LEGACY_FLAT_MANGA_CHAPTER_URL
 import io.legado.app.model.localBook.LocalMangaFiles
 import io.legado.app.model.localBook.groupLocalMangaPages
 import io.legado.app.model.localBook.isLocalMangaArchive
@@ -27,10 +28,19 @@ internal class LocalMangaLoader(private val cacheRoot: File) : AutoCloseable {
         } else buildList {
             LocalMangaFiles.visitDirectory(book) { path, url -> add(ImageEntry(path, url())) }
         }
-        val entry = groupLocalMangaPages(book.name, images, ImageEntry::path)
-            .entries.elementAtOrNull(chapter.index)
-            ?: throw NoStackTraceException("Local comic chapter is missing")
-        val urls = entry.value.map(ImageEntry::url)
+        val groups = groupLocalMangaPages(book.name, images, ImageEntry::path)
+        // Older catalogs collapsed folders that each contained a single page. Honor a saved
+        // flat chapter's page offsets until its catalog is refreshed.
+        val pages = if (book.totalChapterNum == 1 &&
+            chapter.url == LEGACY_FLAT_MANGA_CHAPTER_URL && chapter.title == book.name &&
+            groups.values.all { it.size == 1 }
+        ) {
+            groups.values.flatten()
+        } else {
+            groups.values.elementAtOrNull(chapter.index)
+                ?: throw NoStackTraceException("Local comic chapter is missing")
+        }
+        val urls = pages.map(ImageEntry::url)
         return MangaChapterContent(
             chapter.index,
             chapter.title,

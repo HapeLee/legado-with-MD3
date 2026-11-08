@@ -29,8 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.text.AppText
@@ -100,7 +100,7 @@ fun SearchBar(
             }
     }
 
-    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
     val resolvedBackgroundColor = if (backgroundColor != Color.Unspecified) {
         backgroundColor
     } else {
@@ -108,38 +108,13 @@ fun SearchBar(
     }
     val resolvedPlaceholder = placeholder ?: stringResource(R.string.search_placeholder)
 
-    if (isMiuix) {
-        AppDenseTextField(
-            state = textFieldState,
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-                .focusRequester(focusRequester),
-            placeholder = { AppText(resolvedPlaceholder) },
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            onKeyboardAction = {
-                submitSearch(textFieldState.text.toString())
-            },
-            lineLimits = TextFieldLineLimits.SingleLine,
-            backgroundColor = resolvedBackgroundColor,
-            miuixUseSearchBarInputField = true,
-            miuixSearchBarLabel = resolvedPlaceholder,
-            miuixOnSearch = submitSearch,
-        )
-    } else {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp),
-            shape = RoundedCornerShape(32.dp),
-            color = resolvedBackgroundColor
-        ) {
+    when (LegadoTheme.composeEngine) {
+        ComposeEngine.Miuix -> {
             AppDenseTextField(
                 state = textFieldState,
                 modifier = modifier
                     .fillMaxWidth()
+                    .padding(vertical = 4.dp)
                     .focusRequester(focusRequester),
                 placeholder = { AppText(resolvedPlaceholder) },
                 leadingIcon = leadingIcon,
@@ -149,8 +124,36 @@ fun SearchBar(
                     submitSearch(textFieldState.text.toString())
                 },
                 lineLimits = TextFieldLineLimits.SingleLine,
-                backgroundColor = Color.Transparent
+                backgroundColor = resolvedBackgroundColor,
+                miuixUseSearchBarInputField = true,
+                miuixSearchBarLabel = resolvedPlaceholder,
+                miuixOnSearch = submitSearch,
             )
+        }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                shape = RoundedCornerShape(32.dp),
+                color = resolvedBackgroundColor
+            ) {
+                AppDenseTextField(
+                    state = textFieldState,
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    placeholder = { AppText(resolvedPlaceholder) },
+                    leadingIcon = leadingIcon,
+                    trailingIcon = trailingIcon,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    onKeyboardAction = {
+                        submitSearch(textFieldState.text.toString())
+                    },
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    backgroundColor = Color.Transparent
+                )
+            }
         }
     }
 }

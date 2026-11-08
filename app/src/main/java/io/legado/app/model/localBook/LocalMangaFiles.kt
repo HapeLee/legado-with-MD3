@@ -33,17 +33,17 @@ private val localMangaImageExtensions = setOf("jpg", "jpeg", "png", "webp", "gif
 internal val Book.isLocalMangaArchive: Boolean
     get() = isArchive || (!isImage && originName.endsWith(".cbz", ignoreCase = true))
 
+internal const val LEGACY_FLAT_MANGA_CHAPTER_URL = "local-manga://chapter/0"
+
 internal object LocalMangaFiles {
     fun chapters(book: Book): List<BookChapter> {
         val firstPages = mutableMapOf<String, String>()
-        var pageCount = 0
         fun visit(path: String) {
             val title = localMangaChapterTitle(book.name, path)
             val firstPage = firstPages[title]
             if (firstPage == null || AlphanumComparator.compare(path, firstPage) < 0) {
                 firstPages[title] = path
             }
-            pageCount++
         }
         if (book.isLocalMangaArchive) {
             val archive = FileDoc.fromUri(book.getLocalUri(), false)
@@ -51,13 +51,11 @@ internal object LocalMangaFiles {
         } else {
             visitDirectory(book) { path, _ -> visit(path) }
         }
-        if (pageCount == 0) throw emptyMangaToc()
-        val titles = if (firstPages.size == pageCount) listOf(book.name) else {
-            firstPages.entries.sortedWith(compareBy(AlphanumComparator) { it.value }).map { it.key }
-        }
+        if (firstPages.isEmpty()) throw emptyMangaToc()
+        val titles = firstPages.entries.sortedWith(compareBy(AlphanumComparator) { it.value }).map { it.key }
         return titles.mapIndexed { index, title ->
             BookChapter(
-                url = "local-manga://chapter/$index",
+                url = "local-manga://chapter/v2/$index",
                 title = title,
                 bookUrl = book.bookUrl,
                 index = index,
@@ -234,8 +232,7 @@ internal fun <T> groupLocalMangaPages(
 ): Map<String, List<T>> {
     if (pages.isEmpty()) throw emptyMangaToc()
     val sorted = pages.sortedWith(compareBy(AlphanumComparator, path))
-    val grouped = sorted.groupBy { localMangaChapterTitle(bookName, path(it)) }
-    return if (grouped.size == sorted.size) mapOf(bookName to sorted) else grouped
+    return sorted.groupBy { localMangaChapterTitle(bookName, path(it)) }
 }
 
 private fun localMangaChapterTitle(bookName: String, pagePath: String): String =

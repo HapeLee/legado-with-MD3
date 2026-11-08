@@ -16,11 +16,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.AppContainerBackgroundType
 import io.legado.app.ui.widget.components.appContainerBackground
 import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+import ui.feice.mochi.shape.MochiRoundedRectangle
 
 @Composable
 private fun BaseCardContent(
@@ -96,7 +98,11 @@ private fun BaseCard(
     } else {
         border
     }
-    val resolvedShape = RoundedCornerShape(resolvedCornerRadius)
+    val resolvedShape = if (LegadoTheme.composeEngine == ComposeEngine.Mochi) {
+        MochiRoundedRectangle(resolvedCornerRadius)
+    } else {
+        RoundedCornerShape(resolvedCornerRadius)
+    }
     val clickableModifier = if (onClick != null || onLongClick != null) {
         modifier
             .clip(resolvedShape)

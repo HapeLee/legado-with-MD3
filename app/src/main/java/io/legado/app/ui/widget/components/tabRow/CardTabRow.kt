@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -22,15 +24,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.toImmutableList
+import ui.feice.mochi.basic.MochiSegmentedControl
+import ui.feice.mochi.effect.elastic.mochiPressDeform
 
 @Composable
 fun CardTabRow(
@@ -42,6 +59,40 @@ fun CardTabRow(
     tabEndContent: (@Composable (Int) -> Unit)? = null,
     scrollable: Boolean = false,
 ) {
+    val useMochi = LegadoTheme.composeEngine == ComposeEngine.Mochi
+    if (useMochi && !scrollable && onTabLongClick == null && tabEndContent == null) {
+        if (tabTitles.isEmpty()) return
+        val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        val lastIndex = tabTitles.lastIndex
+        val visualIndex = if (rtl) lastIndex - selectedTabIndex else selectedTabIndex
+        val titles = remember(tabTitles, rtl) {
+            (if (rtl) tabTitles.asReversed() else tabTitles).toImmutableList()
+        }
+        MochiSegmentedControl(
+            selectedIndex = visualIndex,
+            onSelect = { onTabSelected(if (rtl) lastIndex - it else it) },
+            items = titles,
+            modifier = modifier
+                .fillMaxWidth()
+                .selectableGroup()
+                .onKeyEvent { event ->
+                    val next = when (event.key) {
+                        Key.DirectionLeft -> visualIndex - 1
+                        Key.DirectionRight -> visualIndex + 1
+                        Key.MoveHome -> if (rtl) lastIndex else 0
+                        Key.MoveEnd -> if (rtl) 0 else lastIndex
+                        else -> return@onKeyEvent false
+                    }.coerceIn(0, lastIndex)
+                    if (event.type == KeyEventType.KeyDown && next != visualIndex) {
+                        onTabSelected(if (rtl) lastIndex - next else next)
+                    }
+                    true
+                }
+                .focusable(),
+        )
+        return
+    }
+
     val scrollState = rememberScrollState()
     val tabWidths = remember(tabTitles) { mutableStateMapOf<Int, Int>() }
     val gap = with(LocalDensity.current) { 8.dp.roundToPx() }
@@ -72,6 +123,7 @@ fun CardTabRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .selectableGroup()
             .then(
                 if (scrollable) Modifier.horizontalScroll(scrollState) else Modifier
             ),
@@ -101,16 +153,24 @@ fun CardTabRow(
             NormalCard(
                 onClick = { onTabSelected(index) },
                 onLongClick = onTabLongClick?.let { { it(index) } },
-                modifier = if (scrollable) {
+                modifier = (if (scrollable) {
                     Modifier
                         .widthIn(min = 48.dp, max = 180.dp)
                         .onSizeChanged {
                             tabWidths[index] = it.width
                         }
-                } else Modifier.weight(1f),
+                } else Modifier.weight(1f))
+                    .then(
+                        if (useMochi) Modifier.mochiPressDeform(scale = 0.98f, follow = 0.dp)
+                        else Modifier
+                    )
+                    .semantics {
+                        role = Role.Tab
+                        this.selected = selected
+                    },
                 containerColor = containerColor,
                 contentColor = contentColor,
-                cornerRadius = 12.dp
+                cornerRadius = if (useMochi) 50.dp else 12.dp
             ) {
                 Box(
                     modifier = Modifier
