@@ -68,6 +68,7 @@ import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ParagraphBubbleRenderer
+import io.legado.app.model.ParagraphBubbleSource
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadSessionState
@@ -2079,7 +2080,15 @@ class ReadBookController(
         activity.lifecycleScope.launch(IO) {
             try {
                 val source = ReadBook.bookSource ?: return@launch
-                val java = SourceLoginJsExtensions(activity, source, BookType.text)
+                val heightPercent = readSettingsGateway.currentSettings.paragraphCommentHeightPercent
+                val java = SourceLoginJsExtensions(
+                    activity, source, BookType.text,
+                    browserHeightPercent = if (heightPercent != 0 && ParagraphBubbleSource.isParagraphComment(src)) {
+                        heightPercent
+                    } else {
+                        0
+                    },
+                )
                 val book = ReadBook.book ?: return@launch
                 val chapter =
                     appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)

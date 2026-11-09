@@ -1944,6 +1944,8 @@
     <string name="show_bottom_nav">显示导航栏</string>
     <string name="floating_bottom_bar">悬浮底栏</string>
     <string name="floating_bottom_bar_summary">底部导航栏使用悬浮胶囊样式</string>
+    <string name="top_bar_button_liquid_glass">顶栏按钮液态玻璃</string>
+    <string name="top_bar_button_liquid_glass_summary">为顶栏按钮启用背景模糊和折射，需要 Android 13 或更高版本</string>
     <string name="floating_bottom_bar_liquid_glass">液态玻璃效果</string>
     <string name="floating_bottom_bar_liquid_glass_summary">为悬浮底栏启用液态玻璃高光效果，需要 Android 13 及以上系统</string>
     <string name="nav_label_mode">导航栏标签显示方式</string>
@@ -3961,6 +3963,8 @@
 
     <string name="bubble_config">段评气泡</string>
     <string name="bubble_config_entry_summary">段评入口使用的气泡样式</string>
+    <string name="paragraph_comment_height">段评弹窗高度</string>
+    <string name="paragraph_comment_height_follow_source">跟随书源</string>
     <string name="bubble_config_summary">段评气泡把书源里的段评数字转成原生 SVG 气泡。点一下某个样式即可应用。</string>
     <string name="bubble_force_software">强制使用软件气泡</string>
     <string name="bubble_force_software_desc">识别正文图片形式的段评入口，并使用当前气泡样式渲染</string>

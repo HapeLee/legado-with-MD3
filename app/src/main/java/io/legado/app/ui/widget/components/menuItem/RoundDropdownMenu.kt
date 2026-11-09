@@ -47,6 +47,7 @@ import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.window.WindowListPopup
 
 val LocalUseMiuixWindowPopup = staticCompositionLocalOf { false }
+internal val LocalUseWindowPopupForMochiMenu = staticCompositionLocalOf { false }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -61,9 +62,10 @@ fun RoundDropdownMenu(
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit
 ) {
     val popupContainerColor = LegadoTheme.colorScheme.surfaceContainer
+    val engine = LegadoTheme.composeEngine
 
-    when (LegadoTheme.composeEngine) {
-        ComposeEngine.Miuix -> {
+    when {
+        engine == ComposeEngine.Miuix -> {
             val popupContentColor = LegadoTheme.colorScheme.onSurface
             WindowListPopup(
                 show = expanded,
@@ -83,14 +85,14 @@ fun RoundDropdownMenu(
                 }
             }
         }
-        ComposeEngine.Mochi -> AppMochiPopover(
+        engine == ComposeEngine.Mochi && !LocalUseWindowPopupForMochiMenu.current -> AppMochiPopover(
             expanded, onDismissRequest, modifier, maxAnchorWidth = mochiAnchorMaxWidth,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
                 content(onDismissRequest)
             }
         }
-        ComposeEngine.Material -> {
+        else -> {
             val colorScheme = rememberOpaqueColorScheme()
             val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
 

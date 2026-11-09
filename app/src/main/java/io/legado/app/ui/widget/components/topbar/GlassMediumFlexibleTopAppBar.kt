@@ -27,6 +27,7 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
+import io.legado.app.ui.theme.miuixBarBlur
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.ui.widget.components.mochi.AppMochiTitleBar
@@ -96,12 +97,11 @@ fun GlassMediumFlexibleTopAppBar(
         }
     }
 
-    val finalModifier = if (hazeState != null) {
-        modifier
-            .background(color = animatedColor)
-            .responsiveHazeEffect(state = hazeState)
-    } else {
-        modifier.background(color = animatedColor)
+    val background = modifier.background(color = animatedColor)
+    val finalModifier = when {
+        isMiuix -> background.miuixBarBlur()
+        hazeState != null -> background.responsiveHazeEffect(state = hazeState)
+        else -> background
     }
 
     val transparentColors = TopAppBarDefaults.topAppBarColors(
@@ -121,15 +121,9 @@ fun GlassMediumFlexibleTopAppBar(
                     title = title,
                     subtitle = subtitleText.orEmpty(),
                     navigationIcon = navigationIcon,
-                    actions = {
-                        TopBarActionsRow(
-                            modifier = Modifier.padding(end = miuixTopBarActionsEndPadding())
-                        ) { actions() }
-                    },
+                    actions = actions,
                     color = Color.Transparent,
                     defaultWindowInsetsPadding = false,
-                    navigationIconPadding = miuixTopBarSlotPadding(),
-                    actionIconPadding = miuixTopBarSlotPadding(),
                     scrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior
                 )
             }

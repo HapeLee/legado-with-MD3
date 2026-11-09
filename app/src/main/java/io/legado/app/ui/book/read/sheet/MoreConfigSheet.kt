@@ -6,15 +6,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
@@ -24,13 +22,13 @@ import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
-import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
 @Composable
 fun MoreConfigSheet(
     show: Boolean,
     onDismissRequest: () -> Unit,
+    preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
     onOpenClickRegionalConfig: () -> Unit,
     onOpenPageKeyConfig: () -> Unit,
@@ -38,11 +36,6 @@ fun MoreConfigSheet(
     onPickBookmarkBadgeImage: () -> Unit,
     onResetBookmarkBadge: () -> Unit,
 ) {
-    val readSettingsRepository: ReadSettingsRepository = koinInject()
-    val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
-        initialValue = ReadPreferences()
-    )
-
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
@@ -123,6 +116,9 @@ fun MoreConfigSheet(
             SectionTitle(stringResource(R.string.other))
             OtherSettings(
                 preferences = preferences,
+                onCommentHeightChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ParagraphCommentHeight(it)))
+                },
                 onSliderVibratorChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.SliderVibrator(it)))
                 },
@@ -332,6 +328,7 @@ private fun PageControlSettings(
 @Composable
 private fun OtherSettings(
     preferences: ReadPreferences,
+    onCommentHeightChange: (Int) -> Unit,
     onSliderVibratorChange: (Boolean) -> Unit,
     onUseNewTocSheetChange: (Boolean) -> Unit,
     onMaxLengthWithNoTocChange: (Int) -> Unit,
@@ -354,7 +351,21 @@ private fun OtherSettings(
 ) {
     val clickImageWayEntries = stringArrayResource(R.array.click_image_way_title)
     val clickImageWayValues = stringArrayResource(R.array.click_image_way_value)
+    val heightOptions = ReadSettings.paragraphCommentHeightOptions
 
+    TinyDropdownSettingItem(
+        title = stringResource(R.string.paragraph_comment_height),
+        selectedValue = preferences.paragraphCommentHeightPercent.toString(),
+        displayEntries = heightOptions.map { percent ->
+            if (percent == 0) {
+                stringResource(R.string.paragraph_comment_height_follow_source)
+            } else {
+                stringResource(R.string.paragraph_comment_height_percent, percent)
+            }
+        }.toTypedArray(),
+        entryValues = heightOptions.map(Int::toString).toTypedArray(),
+        onValueChange = { onCommentHeightChange(it.toInt()) },
+    )
     TinySwitchSettingItem(
         title = stringResource(R.string.enable_slider_vibrator),
         checked = preferences.sliderVibrator,

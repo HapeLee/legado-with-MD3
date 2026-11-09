@@ -75,6 +75,23 @@ class ExtendedSettingsSearchTest {
     fun `English search covers every category and fixed item`() = checkCatalog()
 
     @Test
+    fun `Mochi search omits the separate progressive blur setting`() {
+        val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
+        val vm = SettingsSearchViewModel(SavedStateHandle())
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = "mochi"))) {
+                SettingsSearchRouteScreen({}, {}, vm)
+            }
+        }
+        compose.runOnIdle {
+            vm.onIntent(SettingsSearchIntent.QueryChanged(app.getString(R.string.is_blur_progressive_enable)))
+            assertFalse(vm.uiState.value.results.any { it.id == "theme.is_blur_progressive_enable" })
+            vm.onIntent(SettingsSearchIntent.QueryChanged(app.getString(R.string.is_blur_enable)))
+            assertTrue(vm.uiState.value.results.any { it.id == "theme.is_blur_enable" })
+        }
+    }
+
+    @Test
     fun `text animation level can be selected and previewed in Material`() =
         selectTextAnimation("material")
 

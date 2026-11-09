@@ -1993,6 +1993,8 @@
     <string name="show_bottom_nav">顯示導航欄</string>
     <string name="floating_bottom_bar">懸浮底欄</string>
     <string name="floating_bottom_bar_summary">底部導航欄使用獨立膠囊樣式</string>
+    <string name="top_bar_button_liquid_glass">頂欄按鈕液態玻璃</string>
+    <string name="top_bar_button_liquid_glass_summary">為頂欄按鈕啟用背景模糊與折射，需要 Android 13 或更新版本</string>
     <string name="floating_bottom_bar_liquid_glass">液態玻璃效果</string>
     <string name="floating_bottom_bar_liquid_glass_summary">為懸浮底欄啟用液態玻璃高亮效果。需要模糊和 Android 13+</string>
     <string name="nav_label_mode">導航欄標籤模式</string>

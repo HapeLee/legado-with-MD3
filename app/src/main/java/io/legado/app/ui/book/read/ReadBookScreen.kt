@@ -678,6 +678,7 @@ private fun ReadBookSheetContent(
         MoreConfigSheet(
             show = visibleState.findSheet<ReadBookSheet.MoreConfig>() != null,
             onDismissRequest = dismissSheet(visibleState.findSheet<ReadBookSheet.MoreConfig>()),
+            preferences = preferences,
             onIntent = onIntent,
             onOpenClickRegionalConfig = {
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ClickActionConfig))

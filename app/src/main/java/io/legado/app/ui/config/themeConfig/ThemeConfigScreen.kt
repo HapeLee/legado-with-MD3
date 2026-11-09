@@ -4,6 +4,7 @@ import io.legado.app.feature.settings.search.SearchableSetting
 import io.legado.app.feature.settings.search.SearchableSettingsList
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
@@ -45,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,6 +86,7 @@ import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.InfoCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.dialog.TimePickerDialog
+import io.legado.app.ui.widget.components.menuItem.LocalUseWindowPopupForMochiMenu
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SettingItem
@@ -280,17 +283,17 @@ fun ThemeConfigScreen(
                         }
                     }
                     SearchableSetting("theme.compose_engine") {
-                        DropdownListSettingItem(
-                            title = stringResource(R.string.compose_engine),
-                            selectedValue = appShell.composeEngine,
-                            displayEntries = stringArrayResource(R.array.composeEngine),
-                            entryValues = stringArrayResource(R.array.composeEngine_value),
-                            onValueChange = {
-                                onIntent(
-                                    ThemeConfigIntent.SetComposeEngine(it)
-                                )
-                            }
-                        )
+                        // Switching the root theme disposes the menu. Keep it in a separate
+                        // window so disposal cannot remove a DecorView child during measurement.
+                        CompositionLocalProvider(LocalUseWindowPopupForMochiMenu provides true) {
+                            DropdownListSettingItem(
+                                title = stringResource(R.string.compose_engine),
+                                selectedValue = appShell.composeEngine,
+                                displayEntries = stringArrayResource(R.array.composeEngine),
+                                entryValues = stringArrayResource(R.array.composeEngine_value),
+                                onValueChange = { onIntent(ThemeConfigIntent.SetComposeEngine(it)) },
+                            )
+                        }
                     }
                     SearchableSetting("theme.change_icon") {
                         ClickableSettingItem(
@@ -591,14 +594,22 @@ fun ThemeConfigScreen(
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.blur_effects)) {
+                    val isMochi = composeEngine == ComposeEngine.Mochi
+                    val blurSupported = composeEngine == ComposeEngine.Material ||
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    val blurEnabled = if (isMochi) theme.mochiScrollEdgeBlurEnabled else theme.enableBlur
                     SearchableSetting("theme.is_blur_enable") {
                         SwitchSettingItem(
                             title = stringResource(R.string.is_blur_enable),
-                            checked = theme.enableBlur,
-                            onCheckedChange = { onIntent(ThemeConfigIntent.SetBlurEnabled(it)) }
+                            checked = blurSupported && blurEnabled,
+                            enabled = blurSupported,
+                            onCheckedChange = { enabled ->
+                                if (isMochi) updateTheme { it.copy(mochiScrollEdgeBlurEnabled = enabled) }
+                                else onIntent(ThemeConfigIntent.SetBlurEnabled(enabled))
+                            }
                         )
                     }
-                    AnimatedVisibility(visible = theme.enableBlur) {
+                    AnimatedVisibility(visible = !isMochi && blurSupported && theme.enableBlur) {
                         SearchableSetting("theme.is_blur_progressive_enable") {
                             SwitchSettingItem(
                                 title = stringResource(R.string.is_blur_progressive_enable),
