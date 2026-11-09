@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.MoreVert
@@ -117,7 +118,18 @@ fun TextActionSelectionMenu(
             showMoreMenu = false
         }
     }
-    val draftItems = displayedMenuState.items
+    val draftItems = if (displayedMenuState.canExtendSelection) {
+        val title = stringResource(R.string.extend_selection_to_next_page)
+        remember(displayedMenuState.items, title) {
+            displayedMenuState.items + ActionMenuItem(
+                id = R.id.menu_extend_selection,
+                title = title,
+                showState = 1,
+            )
+        }
+    } else {
+        displayedMenuState.items
+    }
 
     val primaryItems = remember(draftItems) { draftItems.filter { it.showState == 0 } }
     val collapsedItems = remember(draftItems) { draftItems.filter { it.showState == 1 } }
@@ -126,6 +138,7 @@ fun TextActionSelectionMenu(
         if (item.id == R.id.menu_mark && onOpenQuickMarking()) {
             showMoreMenu = false
         } else if (item.id != R.id.menu_mark) {
+            if (item.id == R.id.menu_extend_selection) showMoreMenu = false
             onItemClick(item)
         }
     }
@@ -589,6 +602,7 @@ private fun ActionMenuItem.builtInIcon(): ImageVector? = when (id) {
     R.id.menu_aloud -> Icons.AutoMirrored.Outlined.VolumeUp
     R.id.menu_bookmark -> Icons.Outlined.Bookmark
     R.id.menu_mark -> Icons.Outlined.BorderColor
+    R.id.menu_extend_selection -> Icons.AutoMirrored.Outlined.ArrowForward
     R.id.menu_dict -> Icons.AutoMirrored.Outlined.MenuBook
     R.id.menu_replace -> Icons.Outlined.FindReplace
     R.id.menu_edit -> Icons.Outlined.Edit

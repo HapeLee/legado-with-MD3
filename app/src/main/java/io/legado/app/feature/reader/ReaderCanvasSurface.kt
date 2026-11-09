@@ -234,8 +234,9 @@ fun ReaderCanvasSurface(
     autoReadSpeedSeconds: Int,
     isEInkMode: Boolean,
     onAutoPageStop: () -> Unit,
-    onShowSelectionMenu: (ReaderSelection, String, ReaderSelectionMenuAnchor) -> Unit,
+    onShowSelectionMenu: (ReaderSelection, String, ReaderSelectionMenuAnchor, Boolean) -> Unit,
     onDismissSelectionMenu: () -> Unit,
+    onTurnToSelectionPage: (ReaderPageId) -> ReaderPageWindow?,
     onElementClick: (ReaderElement) -> Boolean,
     onElementLongPress: (ReaderElement, Float, Float) -> Boolean,
     selectionEnabled: Boolean,
@@ -247,6 +248,7 @@ fun ReaderCanvasSurface(
     noAnimationScrollPage: Boolean,
     externalPageTurns: Flow<ReaderTurnDirection>,
     externalSelectionCancels: Flow<Unit>,
+    externalSelectionExtensions: Flow<ReaderSelection>,
     /** 宿主要求建立选区（全文搜索命中）：旧 View 的命中就是一次真选区，带手柄与菜单。 */
     externalSelections: Flow<ReaderSelection>,
     onVisibleBodyTextPositionProvider: ((() -> ReaderVisibleTextPosition?)?) -> Unit,
@@ -331,6 +333,7 @@ fun ReaderCanvasSurface(
     val latestAutoPagePaused by rememberUpdatedState(autoPagePaused)
     val latestAutoPageActive by rememberUpdatedState(autoPageActive)
     val latestShowSelectionMenu by rememberUpdatedState(onShowSelectionMenu)
+    val latestTurnToSelectionPage by rememberUpdatedState(onTurnToSelectionPage)
     val latestDismissSelectionMenu by rememberUpdatedState(onDismissSelectionMenu)
     val latestSelectionHapticsEnabled by rememberUpdatedState(selectionHapticsEnabled)
     val latestSelectionEnabled by rememberUpdatedState(selectionEnabled)
@@ -462,14 +465,16 @@ fun ReaderCanvasSurface(
         } else {
             ReaderPageViewportLayout.paged(window)
         }
-    fun selectionEndpointBound(
+    fun selectionHandleBounds(
         selection: ReaderSelection,
-        endpoint: ReaderSelectionEndpoint,
         window: ReaderPageWindow = currentPageWindow(),
-    ) = run {
+    ): Pair<ReaderRect?, ReaderRect?> {
         val bounds = pageViewportLayout(window).selectionBounds(selection).map { it.bounds }
-        val visualStart = endpoint == selection.visualStartEndpoint()
-        if (visualStart) bounds.firstOrNull() else bounds.lastOrNull()
+        fun isVisible(endpoint: ReaderSelectionEndpoint): Boolean =
+            transitionMode == ReaderTransitionMode.SCROLL ||
+                window.current?.let { selection.hasEndpointOn(it, endpoint) } == true
+        return bounds.firstOrNull()?.takeIf { isVisible(selection.visualStartEndpoint()) } to
+            bounds.lastOrNull()?.takeIf { isVisible(selection.visualEndEndpoint()) }
     }
 
     fun selectionCursorCenter(
@@ -478,8 +483,9 @@ fun ReaderCanvasSurface(
         window: ReaderPageWindow = currentPageWindow(),
         draggedHandleCenter: Offset? = null,
     ): Offset? {
-        val bound = selectionEndpointBound(selection, endpoint, window) ?: return null
         val visualStart = endpoint == selection.visualStartEndpoint()
+        val (start, end) = selectionHandleBounds(selection, window)
+        val bound = (if (visualStart) start else end) ?: return null
         val logicalLineCenter = Offset(
             x = if (visualStart) bound.left else bound.right,
             y = (bound.top + bound.bottom) / 2f,
@@ -502,7 +508,9 @@ fun ReaderCanvasSurface(
         val anchor = ReaderSelectionMenuAnchor.from(bounds) ?: return false
         if (text.isEmpty()) return false
         selectionMenuVisible = true
-        latestShowSelectionMenu(selection, text, anchor)
+        val canExtend = transitionMode != ReaderTransitionMode.SCROLL &&
+            selection.extendToNextPage(window) != null
+        latestShowSelectionMenu(selection, text, anchor, canExtend)
         return true
     }
     fun clearSelectionForPageChange(origin: ReaderPageChangeOrigin) {
@@ -838,6 +846,23 @@ fun ReaderCanvasSurface(
             selectionMenuVisible = false
         }
     }
+    LaunchedEffect(externalSelectionExtensions, transitionMode) {
+        externalSelectionExtensions.collect { selection ->
+            if (transitionMode == ReaderTransitionMode.SCROLL ||
+                !selectionMenuVisible || textSelection != selection ||
+                !latestSelectionEnabled || latestAutoPageActive || pageMotionJob?.isActive == true
+            ) return@collect
+            val window = currentPageWindow()
+            val extended = selection.extendToNextPage(window) ?: return@collect
+            val nextId = window.next?.id ?: return@collect
+            val nextWindow = latestTurnToSelectionPage(nextId) ?: return@collect
+            pendingPageBase = latestHostPages
+            pendingPageWindow = nextWindow
+            dismissSelectionMenu()
+            textSelection = extended
+            showSelectionMenu(extended, nextWindow)
+        }
+    }
     LaunchedEffect(externalSelections) {
         externalSelections.collect { selection ->
             // 旧 View 的搜索结果即真选区：建选区、带手柄，并按当前窗口弹一次选区菜单。
@@ -1086,12 +1111,10 @@ fun ReaderCanvasSurface(
                 val downPage = downPlacement?.page ?: downWindow.current
                 val downPageY = downPlacement?.localY(down.position.y) ?: down.position.y
                 textSelection?.let { selection ->
-                    val bounds = downSelectionLayout.selectionBounds(selection).map { it.bounds }
+                    val (start, end) = selectionHandleBounds(selection, downWindow)
                     // 命中点必须是实际绘制出来的圆心，不能仍以文字行底为中心。保留较大的
                     // 28dp 热区，让圆下方的正文也能作为把手的触控区域，但坐标仍以圆心换算。
                     val handleHitRadius = 28f * density
-                    val start = bounds.firstOrNull()
-                    val end = bounds.lastOrNull()
                     val startCenter = start?.let {
                         Offset(
                             it.left,
@@ -1891,7 +1914,7 @@ fun ReaderCanvasSurface(
             label = "readerSelectionFocusHandleAlpha",
         )
         textSelection?.let { selection ->
-            val bounds = pageViewportLayout(pages).selectionBounds(selection).map { it.bounds }
+            val (start, end) = selectionHandleBounds(selection, pages)
             val handleColor = selectionColor.copy(alpha = 1f)
             val screenDensity = LocalDensity.current.density
             val handleShadowPaint = remember(screenDensity) {
@@ -1955,7 +1978,7 @@ fun ReaderCanvasSurface(
                             style = Stroke(SelectionHandleStrokeWidth.toPx()),
                         )
                     }
-                    bounds.firstOrNull()?.let { rect ->
+                    start?.let { rect ->
                         drawPinHandle(
                             rect.left,
                             rect.top,
@@ -1963,7 +1986,7 @@ fun ReaderCanvasSurface(
                             selection.visualStartEndpoint(),
                         )
                     }
-                    bounds.lastOrNull()?.let { rect ->
+                    end?.let { rect ->
                         drawPinHandle(
                             rect.right,
                             rect.top,

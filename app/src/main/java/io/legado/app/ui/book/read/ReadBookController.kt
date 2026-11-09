@@ -404,6 +404,8 @@ class ReadBookController(
     val composePageTurns = _composePageTurns.asSharedFlow()
     private val _composeSelectionCancels = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     val composeSelectionCancels = _composeSelectionCancels.asSharedFlow()
+    private val _composeSelectionExtensions = MutableSharedFlow<ReaderSelection>(extraBufferCapacity = 1)
+    val composeSelectionExtensions = _composeSelectionExtensions.asSharedFlow()
 
     /** 宿主要求画布建立选区（全文搜索命中），对照旧 View 的"搜索结果即真选区"。 */
     private val _composeSelections = MutableSharedFlow<ReaderSelection>(extraBufferCapacity = 4)
@@ -621,6 +623,7 @@ class ReadBookController(
         selection: ReaderSelection,
         text: String,
         anchor: ReaderSelectionMenuAnchor,
+        canExtendSelection: Boolean,
     ) {
         val resolvedText = selection.selectedText(directReaderPages).ifEmpty { text }
         composeSelection = selection
@@ -641,6 +644,7 @@ class ReadBookController(
                 endX = anchor.endX.toInt(),
                 endBottomY = anchor.endBottomY.toInt(),
                 items = items,
+                canExtendSelection = canExtendSelection,
             )
         }
     }
@@ -2354,6 +2358,12 @@ class ReadBookController(
     }
 
     fun onTextMenuItemClick(item: ActionMenuItem) {
+        if (item.id == R.id.menu_extend_selection) {
+            if (_textMenuState.value?.canExtendSelection == true) {
+                composeSelection?.let(_composeSelectionExtensions::tryEmit)
+            }
+            return
+        }
         if (item.intent != null) {
             runCatching {
                 item.intent.putExtra(Intent.EXTRA_PROCESS_TEXT, selectedText)
@@ -2923,7 +2933,10 @@ class ReadBookController(
      * 返回翻页后发布的页窗口（同步）；null 表示翻页被拒绝（边界/无内容）。
      * 滚动模式依赖这个同步返回在跨页帧内完成窗口替换与偏移折算，不走 StateFlow 往返。
      */
-    fun completeComposePageTurn(direction: PageDirection): ReaderPageWindow? {
+    fun completeComposePageTurn(
+        direction: PageDirection,
+        selectionTarget: ReaderPageId? = null,
+    ): ReaderPageWindow? {
         if (directReaderPages.isEmpty()) return null
         val currentIndex = directReaderPageIndex ?: 0
         val delta = when (direction) {
@@ -2934,6 +2947,12 @@ class ReadBookController(
         val navigation = ReaderPageNavigator.move(directReaderPages, currentIndex, delta)
         if (delta == 0) return null
         val fromChapterIndex = directReaderPages[currentIndex].id.chapterIndex
+        if (selectionTarget != null) {
+            val target = navigation.window.current
+            if (navigation.hitBoundary || target?.id != selectionTarget ||
+                target.isPlaceholder || selectionTarget.chapterIndex != fromChapterIndex
+            ) return null
+        }
         // 部分排版章节的护栏：本章还有没成型的页，窗口里的"下一页"其实已经是下一章，
         // 翻过去会跳过本章剩余内容（旧 `isLastIndexCurrent` 拒绝）；倒退进还没排完的
         // 上一章同理（旧 `moveToPrev` 的 `prevChapter.isCompleted == false`）。
@@ -3411,7 +3430,8 @@ data class TextMenuState(
     val startBottomY: Int,
     val endX: Int,
     val endBottomY: Int,
-    val items: List<ActionMenuItem>
+    val items: List<ActionMenuItem>,
+    val canExtendSelection: Boolean = false,
 )
 
 data class ActionMenuItem(
@@ -3441,6 +3461,7 @@ data class ActionMenuItem(
                 R.id.menu_edit -> "menu_edit"
                 R.id.menu_ai_clean -> "menu_ai_clean"
                 R.id.menu_ai_rewrite -> "menu_ai_rewrite"
+                R.id.menu_extend_selection -> "menu_extend_selection"
                 R.id.menu_search_content -> "menu_search_content"
                 R.id.menu_insert_bgm_before -> "menu_insert_bgm_before"
                 R.id.menu_insert_bgm_after -> "menu_insert_bgm_after"

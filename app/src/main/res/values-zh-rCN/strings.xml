@@ -2363,6 +2363,7 @@
     <string name="ai_text_clean_rule_group">AI 净化</string>
     <string name="ai_text_clean_rule_created">已保存 AI 正文处理。</string>
     <string name="ai_text_rewrite">AI 改写</string>
+    <string name="extend_selection_to_next_page">向后扩展一页</string>
     <string name="ai_text_rewrite_saved">已保存 AI 改写。</string>
     <string name="ai_generate">生成</string>
     <string name="ai_rewrite_requirements">改写要求</string>
