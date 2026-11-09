@@ -192,12 +192,13 @@ fun ReaderAudioDownloadSheet(
                             currentChapterRow == null ->
                                 stringResource(R.string.read_aloud_audio_download_chapter_none)
 
-                            else -> stringResource(
+                            currentChapterRow.isComplete -> stringResource(
                                 R.string.read_aloud_audio_download_chapter_hint,
                                 currentChapterRow.sentenceCount,
                             )
+                            else -> downloadedSentenceLabel(currentChapterRow)
                         },
-                        color = if (currentChapterRow != null) {
+                        color = if (currentChapterRow?.isComplete == true) {
                             LegadoTheme.colorScheme.primaryContainer
                         } else {
                             LegadoTheme.colorScheme.surfaceContainerLow
@@ -404,10 +405,7 @@ private fun DownloadedRow(
     TinySettingItem(
         title = row.title,
         description = resources.getString(R.string.chapter_index_format, row.chapterIndex + 1) +
-                " · " + resources.getString(
-            R.string.read_aloud_audio_download_sentences_count,
-            row.sentenceCount,
-        ),
+            " · " + downloadedSentenceLabel(row),
         color = if (isCurrent) {
             LegadoTheme.colorScheme.primaryContainer
         } else {
@@ -421,4 +419,15 @@ private fun DownloadedRow(
             )
         },
     )
+}
+
+@Composable
+private fun downloadedSentenceLabel(row: ReadAloudAudioDownload): String {
+    val total = row.expectedSentenceCount
+    return when {
+        row.isComplete -> stringResource(R.string.read_aloud_audio_download_sentences_count, row.sentenceCount)
+        total == null -> stringResource(R.string.read_aloud_audio_download_unverified, row.sentenceCount)
+        total == 0 -> stringResource(R.string.read_aloud_audio_download_chapter_none)
+        else -> stringResource(R.string.read_aloud_audio_download_partial, row.sentenceCount, total)
+    }
 }

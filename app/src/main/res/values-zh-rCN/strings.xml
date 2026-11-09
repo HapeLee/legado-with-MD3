@@ -3883,6 +3883,8 @@
     <string name="read_aloud_audio_download_chapter_bar">章节进度</string>
     <string name="read_aloud_audio_download_chapter_hint">本章已下载 %1$d 句，点朗读直接播本地音频</string>
     <string name="read_aloud_audio_download_chapter_none">本章还没有下载</string>
+    <string name="read_aloud_audio_download_partial">已下载 %1$d/%2$d 句</string>
+    <string name="read_aloud_audio_download_unverified">已保存 %1$d 句，再次下载可核对整章</string>
     <string name="read_aloud_audio_download_sentence_bar">句子进度</string>
     <string name="read_aloud_audio_download_downloaded">已下载章节</string>
     <string name="read_aloud_audio_download_empty">还没有下载过章节</string>
@@ -3892,10 +3894,12 @@
     <string name="read_aloud_audio_download_deleted_chapters">已删除 %1$d 章的听书音频</string>
     <string name="read_aloud_audio_download_invalid_range">章范围填得不对</string>
     <string name="read_aloud_audio_download_state">已下载听书音频</string>
+    <string name="read_aloud_audio_download_partial_state">听书音频已部分下载</string>
+    <string name="read_aloud_audio_download_unverified_state">已保存听书音频，整章完整性未核验</string>
     <string name="read_aloud_audio_download_section_range">下载范围</string>
     <string name="read_aloud_audio_download_range_count">共 %1$d 章</string>
     <string name="read_aloud_audio_download_section_progress">下载进度</string>
-    <string name="read_aloud_audio_download_downloaded_count">已下载 %1$d 章 · %2$d 句</string>
+    <string name="read_aloud_audio_download_downloaded_count">音频记录 %1$d 章 · %2$d 句</string>
     <string name="read_aloud_audio_download_cancel_hint">已取消，正在合成的这句完成后停止</string>
     <string name="read_aloud_audio_download_failed_count">%1$d 句合成失败，未下载</string>
     <string name="cast_assignment_state">本章已分配角色</string>
@@ -3961,6 +3965,7 @@
     <string name="bubble_config_entry_summary">段评入口使用的气泡样式</string>
     <string name="paragraph_comment_height">段评弹窗高度</string>
     <string name="paragraph_comment_height_follow_source">跟随书源</string>
+    <string name="paragraph_comment_height_percent">%1$d%%</string>
     <string name="bubble_config_summary">段评气泡把书源里的段评数字转成原生 SVG 气泡。点一下某个样式即可应用。</string>
     <string name="bubble_force_software">强制使用软件气泡</string>
     <string name="bubble_force_software_desc">识别正文图片形式的段评入口，并使用当前气泡样式渲染</string>

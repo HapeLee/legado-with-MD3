@@ -4,7 +4,7 @@ package io.legado.app.ui.book.read
  * 正文/页眉/页脚对系统栏的避让策略，对照原版 PageView 占位 View 语义（配置驱动）：
  *
  * - 状态栏占位 = vwStatusBar：高度恒为状态栏高，`isGone = hideStatusBar || 多窗口`；
- *   导航栏占位 = vwNavigationBar：`isGone = hideNavigationBar`。两者都不跟随系统栏
+ *   导航栏按所在边避让，隐藏时移除避让。两者都不跟随系统栏
  *   瞬时可见性——菜单打开时系统栏只是 overlay，正文不重排（原版 LAYOUT_HIDE_NAVIGATION
  *   的布局稳定语义）。
  * - 刘海避让 = paddingDisplayCutouts（填充刘海区域）：开启时按 displayCutout insets
@@ -25,6 +25,8 @@ object ReaderContentAvoidancePolicy {
         val cutoutTopPx: Int = 0,
         val cutoutRightPx: Int = 0,
         val cutoutBottomPx: Int = 0,
+        val navigationBarLeftPx: Int = 0,
+        val navigationBarRightPx: Int = 0,
     )
 
     fun padding(
@@ -38,10 +40,10 @@ object ReaderContentAvoidancePolicy {
         val navPlaceholderGone = hideNavigationBar || inMultiWindow
         val cutout = if (paddingDisplayCutouts) insets else SystemBarInsets()
         return ReaderPadding(
-            left = cutout.cutoutLeftPx,
+            left = maxOf(cutout.cutoutLeftPx, if (navPlaceholderGone) 0 else insets.navigationBarLeftPx),
             top = (if (statusPlaceholderGone) 0 else insets.statusBarTopPx) +
                 (if (statusPlaceholderGone) cutout.cutoutTopPx else 0),
-            right = cutout.cutoutRightPx,
+            right = maxOf(cutout.cutoutRightPx, if (navPlaceholderGone) 0 else insets.navigationBarRightPx),
             bottom = (if (navPlaceholderGone) 0 else insets.navigationBarBottomPx) +
                 cutout.cutoutBottomPx,
         )

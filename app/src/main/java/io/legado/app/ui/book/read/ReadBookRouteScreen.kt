@@ -259,8 +259,8 @@ fun ReadBookRouteScreen(
 
     LaunchedEffect(viewModel, controller, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.readAloudProgress.collect { chapterStart ->
-                chapterStart?.let(controller::updateReadAloudProgress)
+            viewModel.readAloudProgress.collect { position ->
+                position?.let(controller::updateReadAloudProgress)
             }
         }
     }
@@ -1033,15 +1033,17 @@ private fun sampleReaderSystemBarInsets(
 ): ReaderContentAvoidancePolicy.SystemBarInsets {
     val rootInsets = ViewCompat.getRootWindowInsets(view)
     val cutout = rootInsets?.getInsets(WindowInsetsCompat.Type.displayCutout())
+    val navigationBar = rootInsets?.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars())
     return ReaderContentAvoidancePolicy.SystemBarInsets(
         statusBarTopPx = rootInsets
             ?.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars())?.top ?: 0,
-        navigationBarBottomPx = rootInsets
-            ?.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0,
+        navigationBarBottomPx = navigationBar?.bottom ?: 0,
         cutoutLeftPx = cutout?.left ?: 0,
         cutoutTopPx = cutout?.top ?: 0,
         cutoutRightPx = cutout?.right ?: 0,
         cutoutBottomPx = cutout?.bottom ?: 0,
+        navigationBarLeftPx = navigationBar?.left ?: 0,
+        navigationBarRightPx = navigationBar?.right ?: 0,
     )
 }
 

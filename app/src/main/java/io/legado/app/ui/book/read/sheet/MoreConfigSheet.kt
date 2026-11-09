@@ -116,7 +116,9 @@ fun MoreConfigSheet(
             SectionTitle(stringResource(R.string.other))
             OtherSettings(
                 preferences = preferences,
-                onCommentHeightChange = { onIntent(ReadBookIntent.SetParagraphCommentHeight(it)) },
+                onCommentHeightChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ParagraphCommentHeight(it)))
+                },
                 onSliderVibratorChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.SliderVibrator(it)))
                 },
