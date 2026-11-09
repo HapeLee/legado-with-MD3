@@ -392,6 +392,21 @@ class ReaderPaginatorTest {
     }
 
     @Test
+    fun smallFinalRowKeepsTheFollowingParagraphGap() {
+        fun secondParagraphTop(size: Float): Float {
+            val pages = ReaderPaginator.paginateBlocks(listOf(
+                inline(listOf("甲", "乙", "丙"), floatArrayOf(20f, 20f, 20f))
+                    .let { paragraph -> paragraph.copy(items = paragraph.items.mapIndexed { index, item ->
+                        if (index == 2 && item is ReaderMeasuredInlineItem.Text) item.copy(style = style.copy(fontSizePx = size)) else item
+                    }) },
+                inline(listOf("丁"), floatArrayOf(20f), position = 3),
+            ), config.copy(viewportHeightPx = 200, paragraphSpacingPx = 4f))
+            return pages.single().elements.filterIsInstance<ReaderElement.Text>().single { it.value == "丁" }.bounds.top
+        }
+        assertEquals(secondParagraphTop(10f), secondParagraphTop(5f), 0.001f)
+    }
+
+    @Test
     fun largerInlineFontExpandsLineAndBaseline() {
         val large = style.copy(fontSizePx = 20f)
         val page = ReaderPaginator.paginateBlocks(
