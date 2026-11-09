@@ -623,18 +623,13 @@ class ReadBookController(
         selection: ReaderSelection,
         text: String,
         anchor: ReaderSelectionMenuAnchor,
-        canExtendSelection: Boolean,
     ) {
         val resolvedText = selection.selectedText(directReaderPages).ifEmpty { text }
         composeSelection = selection
         composeSelectedText = resolvedText
         val requestVersion = ++textMenuRequestVersion
         activity.lifecycleScope.launch {
-            val items = getActionMenuItems().filterNot {
-                selection.includesTitle && it.id in setOf(
-                    R.id.menu_mark, R.id.menu_ai_clean, R.id.menu_ai_rewrite,
-                )
-            }
+            val items = getActionMenuItems().forSelection(selection.includesTitle)
             if (textMenuRequestVersion != requestVersion) return@launch
             _textMenuState.value = TextMenuState(
                 selectedText = resolvedText,
@@ -644,7 +639,6 @@ class ReadBookController(
                 endX = anchor.endX.toInt(),
                 endBottomY = anchor.endBottomY.toInt(),
                 items = items,
-                canExtendSelection = canExtendSelection,
             )
         }
     }
@@ -2268,6 +2262,13 @@ class ReadBookController(
             items.add(ActionMenuItem(R.id.menu_edit, activity.getString(R.string.edit)))
             items.add(ActionMenuItem(R.id.menu_ai_clean, activity.getString(R.string.ai_text_clean)))
             items.add(ActionMenuItem(R.id.menu_ai_rewrite, activity.getString(R.string.ai_text_rewrite)))
+            items.add(
+                ActionMenuItem(
+                    R.id.menu_extend_selection,
+                    activity.getString(R.string.extend_selection_to_next_page),
+                    showState = 1,
+                )
+            )
             items.add(ActionMenuItem(R.id.menu_search_content, activity.getString(R.string.search_content)))
             items.add(
                 ActionMenuItem(
@@ -2333,6 +2334,13 @@ class ReadBookController(
         }
     }
 
+    private fun List<ActionMenuItem>.forSelection(includesTitle: Boolean): List<ActionMenuItem> =
+        if (includesTitle) {
+            filterNot { it.id in setOf(R.id.menu_mark, R.id.menu_ai_clean, R.id.menu_ai_rewrite) }
+        } else {
+            this
+        }
+
     fun refreshActionMenuItems() {
         activity.lifecycleScope.launch {
             menuMutex.withLock {
@@ -2340,7 +2348,9 @@ class ReadBookController(
             }
             val menuItems = getActionMenuItems()
             _textMenuState.value?.let { currentState ->
-                _textMenuState.value = currentState.copy(items = menuItems)
+                _textMenuState.value = currentState.copy(
+                    items = menuItems.forSelection(composeSelection?.includesTitle == true)
+                )
             }
         }
     }
@@ -2353,13 +2363,16 @@ class ReadBookController(
                 showState = item.showState
             )
         }
-        viewModel.setTextSelectMenuConfig(GSON.toJson(configs))
-        refreshActionMenuItems()
+        val saveJob = viewModel.setTextSelectMenuConfig(GSON.toJson(configs))
+        activity.lifecycleScope.launch {
+            saveJob.join()
+            refreshActionMenuItems()
+        }
     }
 
     fun onTextMenuItemClick(item: ActionMenuItem) {
         if (item.id == R.id.menu_extend_selection) {
-            if (_textMenuState.value?.canExtendSelection == true) {
+            if (_textMenuState.value != null) {
                 composeSelection?.let(_composeSelectionExtensions::tryEmit)
             }
             return
@@ -3431,7 +3444,6 @@ data class TextMenuState(
     val endX: Int,
     val endBottomY: Int,
     val items: List<ActionMenuItem>,
-    val canExtendSelection: Boolean = false,
 )
 
 data class ActionMenuItem(

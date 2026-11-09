@@ -118,18 +118,7 @@ fun TextActionSelectionMenu(
             showMoreMenu = false
         }
     }
-    val draftItems = if (displayedMenuState.canExtendSelection) {
-        val title = stringResource(R.string.extend_selection_to_next_page)
-        remember(displayedMenuState.items, title) {
-            displayedMenuState.items + ActionMenuItem(
-                id = R.id.menu_extend_selection,
-                title = title,
-                showState = 1,
-            )
-        }
-    } else {
-        displayedMenuState.items
-    }
+    val draftItems = displayedMenuState.items
 
     val primaryItems = remember(draftItems) { draftItems.filter { it.showState == 0 } }
     val collapsedItems = remember(draftItems) { draftItems.filter { it.showState == 1 } }
@@ -138,7 +127,6 @@ fun TextActionSelectionMenu(
         if (item.id == R.id.menu_mark && onOpenQuickMarking()) {
             showMoreMenu = false
         } else if (item.id != R.id.menu_mark) {
-            if (item.id == R.id.menu_extend_selection) showMoreMenu = false
             onItemClick(item)
         }
     }

@@ -234,7 +234,7 @@ fun ReaderCanvasSurface(
     autoReadSpeedSeconds: Int,
     isEInkMode: Boolean,
     onAutoPageStop: () -> Unit,
-    onShowSelectionMenu: (ReaderSelection, String, ReaderSelectionMenuAnchor, Boolean) -> Unit,
+    onShowSelectionMenu: (ReaderSelection, String, ReaderSelectionMenuAnchor) -> Unit,
     onDismissSelectionMenu: () -> Unit,
     onTurnToSelectionPage: (ReaderPageId) -> ReaderPageWindow?,
     onElementClick: (ReaderElement) -> Boolean,
@@ -508,9 +508,7 @@ fun ReaderCanvasSurface(
         val anchor = ReaderSelectionMenuAnchor.from(bounds) ?: return false
         if (text.isEmpty()) return false
         selectionMenuVisible = true
-        val canExtend = transitionMode != ReaderTransitionMode.SCROLL &&
-            selection.extendToNextPage(window) != null
-        latestShowSelectionMenu(selection, text, anchor, canExtend)
+        latestShowSelectionMenu(selection, text, anchor)
         return true
     }
     fun clearSelectionForPageChange(origin: ReaderPageChangeOrigin) {
