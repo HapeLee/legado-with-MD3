@@ -17,7 +17,7 @@ data class ReaderBookmarkBadge(
             hasBookmark: Boolean,
             isScroll: Boolean,
             pageWidthPx: Int,
-            contentTopPx: Float,
+            headerBottomPx: Float,
             contentRightPaddingPx: Int,
             density: Float,
             sizeDp: Int,
@@ -29,8 +29,9 @@ data class ReaderBookmarkBadge(
             val width = (sizeDp * density).toInt().coerceAtLeast(1)
             return ReaderBookmarkBadge(
                 leftPx = pageWidthPx - contentRightPaddingPx - 6 * density - width,
-                // Keep the page header clear: the badge starts at the body viewport's top edge.
-                topPx = contentTopPx,
+                // Pre-beta.23 placement: the badge's top edge sits on the header's bottom edge,
+                // which is exactly where the old PageView anchored it.
+                topPx = headerBottomPx,
                 widthPx = width,
                 heightPx = width * 2,
                 imageSource = imageSource,
