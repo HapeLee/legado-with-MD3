@@ -107,6 +107,7 @@ import org.mozilla.javascript.WrappedException
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -460,13 +461,14 @@ class HttpReadAloudService : BaseReadAloudService(),
                 return@execute
             }
             launch(Main) {
-                if (index != nowSpeak || pause || exoPlayer.mediaItemCount != 0) return@launch
+                if (generation != playbackGeneration || index != nowSpeak || pause ||
+                    exoPlayer.mediaItemCount != 0
+                ) return@launch
                 if (downloaded != null) {
                     exoPlayer.setMediaItem(downloaded)
                 } else if (stream) {
                     val factory = createDataSourceFactory(
                         synthesis.httpTts, synthesis.speakText, synthesis.voice, synthesis.emotion,
-                        generation,
                     )
                     exoPlayer.setMediaSource(createMediaSource(factory, synthesis.fileName, synthesis.position))
                 } else {
@@ -1328,7 +1330,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                         }
                         val fileName = synthesis.fileName
                         val dataSourceFactory = createDataSourceFactory(
-                            synthesis.httpTts, speakText, synthesis.voice, synthesis.emotion, generation,
+                            synthesis.httpTts, speakText, synthesis.voice, synthesis.emotion,
                         )
                         downloaderChannel.send(createDownloader(dataSourceFactory, fileName))
                         createMediaSource(dataSourceFactory, fileName, synthesis.position)
@@ -1469,27 +1471,17 @@ class HttpReadAloudService : BaseReadAloudService(),
         speakText: String,
         voice: ReadAloudVoice? = null,
         emotionTag: String = "",
-        generation: Long? = null,
     ): CacheDataSource.Factory {
         val upstreamFactory = DataSource.Factory {
             InputStreamDataSource {
                 if (speakText.isEmpty()) {
                     resources.openRawResource(R.raw.silent_sound)
                 } else {
-                    runBlocking(lifecycleScope.coroutineContext[Job]!!) {
-                        try {
-                            getSpeakStream(httpTts, speakText, voice, emotionTag, lifecycleScope.coroutineContext[Job])
-                                ?: throw NoStackTraceException("HTTP 引擎未返回当前句的音频")
-                        } catch (error: CancellationException) {
-                            throw error
-                        } catch (error: Exception) {
-                            if (generation != null) {
-                                withContext(Main) { failSynthesis(generation, error) }
-                            } else {
-                                AppLog.put("流式预合成失败", error)
-                            }
-                            throw error
-                        }
+                    val streamOwner = lifecycleScope.coroutineContext[Job]!!
+                    runBlocking(streamOwner) {
+                        // 预取和播放器共用缓存。只有播放器推进到失败的媒体时才处理停播。
+                        getSpeakStream(httpTts, speakText, voice, emotionTag, streamOwner, reportErrors = false)
+                            ?: throw IOException("HTTP 引擎未返回当前句的音频")
                     }
                 }
             }
@@ -1501,13 +1493,13 @@ class HttpReadAloudService : BaseReadAloudService(),
         return factory
     }
 
-    private fun failSynthesis(generation: Long, error: Throwable) {
+    private fun failSynthesis(generation: Long, error: Throwable, retryOffset: Int? = null) {
         if (generation != playbackGeneration || !isRun) return
         // 调用方在主线程同步提交失败，再清掉已排队的音频。继续时从保留位置重建整章剩余队列。
         AppLog.put("朗读音频失败，已暂停；继续朗读将重试当前句", error, true)
         pauseReadAloud()
         if (!isChapterTitleAt(nowSpeak)) {
-            paragraphStartPos = (currentProgress - readAloudNumber)
+            paragraphStartPos = (retryOffset ?: (currentProgress - readAloudNumber))
                 .coerceIn(0, contentList.getOrNull(nowSpeak)?.length ?: 0)
         }
         playStop()
@@ -1538,19 +1530,29 @@ class HttpReadAloudService : BaseReadAloudService(),
         speakText: String,
         voice: ReadAloudVoice? = null,
         emotionTag: String = "",
-        streamOwner: Job? = null
+        streamOwner: Job? = null,
+        reportErrors: Boolean = true,
     ): InputStream? {
+        var streamRetries = 0
         while (true) {
             try {
                 return httpAudioSynthesizer.openStream(
                     httpTts, speakText, voice, emotionTag, streamOwner ?: currentCoroutineContext()[Job]
                 ).also {
-                    downloadErrorNo = 0
+                    if (reportErrors) downloadErrorNo = 0
                 }
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
+                if (e is CancellationException) throw e
+                if (!reportErrors) {
+                    val retryable = e is SocketTimeoutException || e is ConnectException
+                    if (retryable && streamRetries < 5) {
+                        streamRetries++
+                        continue
+                    }
+                    throw if (e is IOException) e else IOException(e.localizedMessage, e)
+                }
                 when (e) {
-                    is CancellationException -> throw e
                     is ScriptException, is WrappedException -> {
                         AppLog.put("js错误\n${e.localizedMessage}", e, true)
                         e.printOnDebug()
@@ -2115,7 +2117,8 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
-        if (synthesisNeedsRestart || exoPlayer.currentMediaItem == null) return
+        if (synthesisNeedsRestart) return
+        val mediaItem = exoPlayer.currentMediaItem ?: return
         AppLog.put("朗读错误\n${contentList.getOrNull(nowSpeak).orEmpty()}", error)
         deleteCurrentSpeakFile()
         playErrorNo++
@@ -2123,7 +2126,16 @@ class HttpReadAloudService : BaseReadAloudService(),
             toastOnUi("朗读连续5次错误, 最后一次错误代码(${error.localizedMessage})")
             AppLog.put("朗读连续5次错误, 最后一次错误代码(${error.localizedMessage})", error)
         }
-        failSynthesis(playbackGeneration, error)
+        val position = mediaItem.localConfiguration?.tag as? HttpReadAloudSpeechPosition
+        // 转场会先发布段首加一的进度；未出声的媒体应从本次合成的起点重试。
+        val retryOffset = position?.let {
+            val positionMs = exoPlayer.currentPosition
+            val durationMs = exoPlayer.duration
+            if (positionMs == 0L || durationMs > 0) {
+                it.storedOffset(positionMs, durationMs)
+            } else null
+        }
+        failSynthesis(playbackGeneration, error, retryOffset)
     }
 
     private fun deleteCurrentSpeakFile() {
