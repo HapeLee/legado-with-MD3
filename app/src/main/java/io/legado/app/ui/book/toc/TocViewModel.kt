@@ -13,6 +13,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.entities.ReadAloudAudioDownload
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
@@ -75,6 +76,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+enum class TocAudioDownloadState { None, Complete, Partial, Unverified }
+
+internal fun ReadAloudAudioDownload.toTocAudioDownloadState(): TocAudioDownloadState = when {
+    sentenceCount <= 0 -> TocAudioDownloadState.None
+    isComplete -> TocAudioDownloadState.Complete
+    expectedSentenceCount == null -> TocAudioDownloadState.Unverified
+    else -> TocAudioDownloadState.Partial
+}
+
 @Immutable
 data class TocItemUi(
     override val id: Int,
@@ -89,7 +99,7 @@ data class TocItemUi(
     val downloadState: DownloadState,
     val wordCount: String?,
     val hasCastAssignment: Boolean,
-    val hasAudioDownload: Boolean
+    val audioDownloadState: TocAudioDownloadState = TocAudioDownloadState.None,
 ) : SelectableItem<Int>
 
 @Immutable
@@ -180,7 +190,7 @@ data class TocDomainItem(
     val displayTitle: String,
     val downloadState: DownloadState,
     val hasCastAssignment: Boolean = false,
-    val hasAudioDownload: Boolean = false
+    val audioDownloadState: TocAudioDownloadState = TocAudioDownloadState.None,
 )
 
 private data class DownloadContext(
@@ -490,7 +500,7 @@ class TocViewModel(
     /** 目录行右侧那两枚状态图标的数据源：本章分配过角色 / 本章下载过听书音频。 */
     private data class TocStatusFlags(
         val assigned: Set<Int> = emptySet(),
-        val downloaded: Set<Int> = emptySet(),
+        val audioDownloads: Map<Int, TocAudioDownloadState> = emptyMap(),
     )
 
     private val statusFlagsFlow: Flow<TocStatusFlags> = bookUrlFlow
@@ -498,9 +508,12 @@ class TocViewModel(
         .flatMapLatest { url ->
             combine(
                 CastAssignmentStore.flowAssignedChapters(url),
-                ReadAloudAudioStore.flowDownloadedChapters(url),
+                ReadAloudAudioStore.flowDownloadRecords(url),
             ) { assigned, downloaded ->
-                TocStatusFlags(assigned.toSet(), downloaded)
+                TocStatusFlags(
+                    assigned = assigned.toSet(),
+                    audioDownloads = downloaded.associate { it.chapterIndex to it.toTocAudioDownloadState() },
+                )
             }
         }
         .flowOn(Dispatchers.IO)
@@ -547,7 +560,7 @@ class TocViewModel(
                     displayTitle = titleState.titles[chapter.index] ?: baseTitle,
                     downloadState = DownloadState.LOCAL,
                     hasCastAssignment = chapter.index in statusFlags.assigned,
-                    hasAudioDownload = chapter.index in statusFlags.downloaded,
+                    audioDownloadState = statusFlags.audioDownloads[chapter.index] ?: TocAudioDownloadState.None,
                 )
             }
         }
@@ -573,7 +586,7 @@ class TocViewModel(
                 titleState.titles[chapter.index] ?: baseTitle,
                 downloadState,
                 statusFlags.assigned.contains(chapter.index),
-                statusFlags.downloaded.contains(chapter.index),
+                statusFlags.audioDownloads[chapter.index] ?: TocAudioDownloadState.None,
             )
         }
 
@@ -645,7 +658,7 @@ class TocViewModel(
             downloadState = downloadState,
             wordCount = wordCountText,
             hasCastAssignment = hasCastAssignment,
-            hasAudioDownload = hasAudioDownload,
+            audioDownloadState = audioDownloadState,
         )
     }
 

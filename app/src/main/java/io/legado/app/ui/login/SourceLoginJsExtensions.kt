@@ -24,7 +24,8 @@ import java.lang.ref.WeakReference
 class SourceLoginJsExtensions(
     activity: AppCompatActivity?, source: BaseSource?,
     private val bookType: Int = 0,
-    callback: Callback? = null
+    callback: Callback? = null,
+    private val browserHeightPercent: Int = 0,
 ) : RssJsExtensions(activity, source) {
     private val callbackRef: WeakReference<Callback> = WeakReference(callback)
     interface Callback {
@@ -103,7 +104,8 @@ class SourceLoginJsExtensions(
                 url,
                 html,
                 preloadJs,
-                config
+                config,
+                browserHeightPercent,
             )
         )
     }

@@ -6,6 +6,8 @@ import androidx.compose.material3.Typography
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -16,6 +18,8 @@ import ui.feice.mochi.theme.MochiTextStyles
 import ui.feice.mochi.theme.MochiTheme
 import ui.feice.mochi.theme.defaultTextStyles
 import ui.feice.mochi.ios.iosMaterials
+
+internal val LocalMochiScrollBlurProgress = compositionLocalOf<MutableState<() -> Float>?> { null }
 
 /** Uses the app's resolved palette and fonts; the app host retains ownership of system bars. */
 @Composable
@@ -35,9 +39,8 @@ internal fun ProvideMochiTheme(
         systemBarAppearance = false,
         materials = iosMaterials(
             isDark = isDark,
-            glass = Build.VERSION.SDK_INT >= 33 && (settings.theme.topBarButtonStyle == "liquid" ||
-                settings.appShell.useFloatingBottomBarLiquidGlass),
-            blur = Build.VERSION.SDK_INT >= 31 && settings.theme.enableProgressiveBlur,
+            glass = Build.VERSION.SDK_INT >= 33 && settings.appShell.useFloatingBottomBarLiquidGlass,
+            blur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && settings.theme.mochiScrollEdgeBlurEnabled,
             themeAccent = true,
         ),
         content = {

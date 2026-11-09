@@ -1,5 +1,6 @@
 package io.legado.app.ui.config.themeConfig
 
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.ThemeSettings
+import io.legado.app.ui.theme.ComposeEngine
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
@@ -55,19 +58,36 @@ fun TopBottomBarSettingsSheet(
                     },
                 )
             }
-            CompactDropdownSettingItem(
-                title = stringResource(R.string.top_bar_button_style),
-                selectedValue = theme.topBarButtonStyle,
-                displayEntries = stringArrayResource(R.array.top_bar_button_style),
-                entryValues = stringArrayResource(R.array.top_bar_button_style_value),
-                onValueChange = { value -> updateTheme { it.copy(topBarButtonStyle = value) } },
-            )
-            AnimatedVisibility(visible = theme.topBarButtonStyle != "plain") {
+            val engine = LegadoTheme.composeEngine
+            if (engine == ComposeEngine.Material) {
+                CompactDropdownSettingItem(
+                    title = stringResource(R.string.top_bar_button_style),
+                    selectedValue = theme.topBarButtonStyle,
+                    displayEntries = stringArrayResource(R.array.top_bar_button_style),
+                    entryValues = stringArrayResource(R.array.top_bar_button_style_value),
+                    onValueChange = { value -> updateTheme { it.copy(topBarButtonStyle = value) } },
+                )
+                AnimatedVisibility(visible = theme.topBarButtonStyle != "plain") {
+                    CompactSwitchSettingItem(
+                        title = stringResource(R.string.merge_top_bar_actions),
+                        checked = theme.mergeTopBarActions,
+                        onCheckedChange = { checked ->
+                            updateTheme { current -> current.copy(mergeTopBarActions = checked) }
+                        },
+                    )
+                }
+            } else {
+                val isMochi = engine == ComposeEngine.Mochi
                 CompactSwitchSettingItem(
-                    title = stringResource(R.string.merge_top_bar_actions),
-                    checked = theme.mergeTopBarActions,
+                    title = stringResource(R.string.top_bar_button_liquid_glass),
+                    description = stringResource(R.string.top_bar_button_liquid_glass_summary),
+                    checked = if (isMochi) theme.mochiTopBarLiquidGlass else theme.miuixTopBarLiquidGlass,
+                    enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
                     onCheckedChange = { checked ->
-                        updateTheme { current -> current.copy(mergeTopBarActions = checked) }
+                        updateTheme { current ->
+                            if (isMochi) current.copy(mochiTopBarLiquidGlass = checked)
+                            else current.copy(miuixTopBarLiquidGlass = checked)
+                        }
                     },
                 )
             }
@@ -95,19 +115,23 @@ fun TopBottomBarSettingsSheet(
                             onIntent(ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass(it))
                         },
                     )
-                    SliderSettingItem(
-                        title = stringResource(R.string.theme_config_bottom_bar_lens_radius),
-                        description = stringResource(R.string.theme_config_bottom_bar_lens_radius_summary),
-                        value = theme.bottomBarLensRadius,
-                        defaultValue = 24f,
-                        valueRange = 0f..50f,
-                        onValueChange = { value ->
-                            updateTheme { current -> current.copy(bottomBarLensRadius = value) }
-                        },
-                    )
+                    if (engine != ComposeEngine.Mochi) {
+                        SliderSettingItem(
+                            title = stringResource(R.string.theme_config_bottom_bar_lens_radius),
+                            description = stringResource(R.string.theme_config_bottom_bar_lens_radius_summary),
+                            value = theme.bottomBarLensRadius,
+                            defaultValue = 24f,
+                            valueRange = 0f..50f,
+                            onValueChange = { value ->
+                                updateTheme { current -> current.copy(bottomBarLensRadius = value) }
+                            },
+                        )
+                    }
                 }
             }
-            if (theme.enableBlur) {
+            val blurSupported = engine == ComposeEngine.Material || Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            val blurEnabled = if (engine == ComposeEngine.Mochi) theme.mochiScrollEdgeBlurEnabled else theme.enableBlur
+            if (theme.enableBlur && blurSupported && engine != ComposeEngine.Mochi) {
                 SliderSettingItem(
                     title = stringResource(R.string.theme_manage_top_bar_blur_radius),
                     description = stringResource(R.string.theme_config_blur_radius_performance_summary),
@@ -146,7 +170,7 @@ fun TopBottomBarSettingsSheet(
                         updateTheme { current -> current.copy(bottomBarBlurAlpha = value.toInt()) }
                     },
                 )
-            } else if (!isMiuixEngine) {
+            } else if (!isMiuixEngine && (!blurEnabled || !blurSupported)) {
                 SliderSettingItem(
                     title = stringResource(R.string.top_bar_opacity),
                     description = stringResource(

@@ -121,52 +121,66 @@ class ReadAloudBookSession : KoinComponent {
 
     suspend fun prepareChapter(): Snapshot = withContext(Dispatchers.IO) {
         val request = _state.value
+        val prepared = prepareChapter(request)
+        requireNotNull(prepared.pagination) { "朗读分页环境未就绪" }
+        currentCoroutineContext().ensureActive()
+        synchronized(this@ReadAloudBookSession) {
+            if (_state.value.generation != request.generation) throw CancellationException("朗读请求已替换")
+            _state.value = _state.value.copy(input = prepared.input, pagination = prepared.pagination)
+            _state.value
+        }
+    }
+
+    /** 按捕获的输入独立准备章节，离线下载其他章节时不改变正在播放的会话。 */
+    suspend fun prepareChapter(request: Snapshot, cachedContent: String? = null): Snapshot = withContext(Dispatchers.IO) {
         if (request.input != null && request.pagination != null) return@withContext request
         val book = requireNotNull(request.book) { "没有朗读书籍" }
         if (book.isLocalManga) {
             throw NoStackTraceException(appCtx.getString(R.string.local_manga_requires_reader))
         }
-        val chapter = requireNotNull(appDb.bookChapterDao.getChapter(book.bookUrl, request.chapterIndex)) {
+        val chapter = request.input?.chapter ?: requireNotNull(appDb.bookChapterDao.getChapter(book.bookUrl, request.chapterIndex)) {
             "朗读章节不存在"
         }
-        val translated = if (book.getTranslationMode()) {
-            TranslationManager.getCachedTranslation(book, chapter).also {
-                if (it == null) TranslationManager.startTranslation(book, chapter)
-            }
-        } else null
-        val content = translated ?: BookHelp.getContent(book, chapter)
-            ?: CacheDownloadRepository().downloadContentAwait(
-                requireNotNull(request.bookSource) { "没有书源" }, book, chapter,
+        val input = request.input ?: run {
+            val translated = if (book.getTranslationMode()) {
+                TranslationManager.getCachedTranslation(book, chapter).also {
+                    if (it == null) TranslationManager.startTranslation(book, chapter)
+                }
+            } else null
+            val content = translated ?: cachedContent ?: BookHelp.getContent(book, chapter)
+                ?: CacheDownloadRepository().downloadContentAwait(
+                    requireNotNull(request.bookSource) { "没有书源" }, book, chapter,
+                )
+            val processor = ContentProcessor.get(book.name, book.origin)
+            val displayTitle = chapter.getDisplayTitle(
+                processor.getTitleReplaceRules(),
+                book.getUseReplaceRule(otherSettings.currentSettings.replaceEnableDefault),
+                chineseConverterType = readSettings.currentSettings.chineseConverterType,
             )
-        val processor = ContentProcessor.get(book.name, book.origin)
-        val displayTitle = chapter.getDisplayTitle(
-            processor.getTitleReplaceRules(),
-            book.getUseReplaceRule(otherSettings.currentSettings.replaceEnableDefault),
-            chineseConverterType = readSettings.currentSettings.chineseConverterType,
-        )
-        val processed = processor.getContent(book, chapter, content, includeTitle = false,
-            paragraphIndent = request.paragraphIndent, includePresentation = true)
-        val source = ReaderChapterSourceParser.parse(
-            chapterIndex = chapter.index, title = displayTitle, paragraphs = processed.textList,
-            localPresentation = processed.presentation,
-            includeTitle = false, adaptSpecialStyle = readSettings.currentSettings.adaptSpecialStyle,
-            htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
-            castLabels = if (readAloudSettings.currentSettings.multiRoleCast) {
-                CastAssignmentStore.labelsForChapter(book.bookUrl, chapter.index)
-            } else emptyMap(),
-            bgmScenes = if (readAloudSettings.currentSettings.bgmAssign) {
-                BgmSceneStore.labelsForChapter(book.bookUrl, chapter.index)
-            } else emptyMap(),
-        )
-        val input = ReaderChapterInput(
-            book, request.bookSource, chapter, displayTitle, processed, source,
-            processed.hashCode(), processed.effectiveContentProcesses.hashCode(), source.hashCode(),
-            request.bookSource.hashCode(), 0,
-        )
-        val environment = requireNotNull(request.environment) { "朗读分页环境未就绪" }
+            val processed = processor.getContent(book, chapter, content, includeTitle = false,
+                paragraphIndent = request.paragraphIndent, includePresentation = true)
+            val source = ReaderChapterSourceParser.parse(
+                chapterIndex = chapter.index, title = displayTitle, paragraphs = processed.textList,
+                localPresentation = processed.presentation,
+                includeTitle = false, adaptSpecialStyle = readSettings.currentSettings.adaptSpecialStyle,
+                htmlSemanticTextResolver = AndroidReaderHtmlSemanticTextResolver,
+                castLabels = if (readAloudSettings.currentSettings.multiRoleCast) {
+                    CastAssignmentStore.labelsForChapter(book.bookUrl, chapter.index)
+                } else emptyMap(),
+                bgmScenes = if (readAloudSettings.currentSettings.bgmAssign) {
+                    BgmSceneStore.labelsForChapter(book.bookUrl, chapter.index)
+                } else emptyMap(),
+            )
+            ReaderChapterInput(
+                book, request.bookSource, chapter, displayTitle, processed, source,
+                processed.hashCode(), processed.effectiveContentProcesses.hashCode(), source.hashCode(),
+                request.bookSource.hashCode(), 0,
+            )
+        }
+        val environment = request.environment ?: return@withContext request.copy(input = input)
         val result = LegacyReaderChapterPaginator.paginate(
-            book = book, bookSource = request.bookSource, chapter = chapter, displayTitle = displayTitle,
-            content = processed, source = source, revision = request.generation,
+            book = book, bookSource = request.bookSource, chapter = chapter, displayTitle = input.displayTitle,
+            content = input.content, source = input.source, revision = request.generation,
             viewportWidthPx = environment.widthPx, viewportHeightPx = environment.heightPx,
             contentPaddingLeftPx = environment.contentPaddingLeftPx,
             contentPaddingTopPx = environment.contentPaddingTopPx,
@@ -185,15 +199,11 @@ class ReadAloudBookSession : KoinComponent {
         }
         check(pages.isNotEmpty()) { "朗读分页为空" }
         val pagination = ReaderChapterPaginationSnapshot(
-            chapter.index, pages.map(ReaderPageNavigator::pageStart), source.semanticContent.length,
+            chapter.index, pages.map(ReaderPageNavigator::pageStart), input.source.semanticContent.length,
             request.generation,
         )
         currentCoroutineContext().ensureActive()
-        synchronized(this@ReadAloudBookSession) {
-            if (_state.value.generation != request.generation) throw CancellationException("朗读请求已替换")
-            _state.value = _state.value.copy(input = input, pagination = pagination)
-            _state.value
-        }
+        request.copy(input = input, pagination = pagination)
     }
 
     @Synchronized

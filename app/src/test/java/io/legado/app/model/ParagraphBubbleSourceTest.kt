@@ -1,7 +1,9 @@
 package io.legado.app.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -58,5 +60,19 @@ class ParagraphBubbleSourceTest {
         // 未开启「强制软件气泡」时，普通图片一律不动（含书源 click 选项的段评图标）。
         assertNull(ParagraphBubbleSource.parse("""https://example.com/comment.png,{"click":"showCmt(1)"}"""))
         assertNull(ParagraphBubbleSource.parse("https://example.com/plain.png"))
+    }
+
+    @Test
+    fun identifiesCommentEntriesIndependentlyOfSoftwareBubbleRendering() {
+        val comment = """https://example.com/comment.png,{"style":"TEXT","type":"cmt","click":"java.showBrowser(url)"}"""
+        assertNull(ParagraphBubbleSource.parse(comment))
+        assertTrue(ParagraphBubbleSource.isParagraphComment(comment))
+        assertTrue(ParagraphBubbleSource.isParagraphComment("""dp:8,{"click":"java.showBrowser(url)"}"""))
+        assertTrue(ParagraphBubbleSource.isParagraphComment("""https://example.com/count.png,{"pclick":"showCmt(1)"}"""))
+        assertFalse(
+            ParagraphBubbleSource.isParagraphComment(
+                """data:image/svg+xml;base64,icon,{"style":"TEXT","click":"java.showBrowser(url)"}""",
+            ),
+        )
     }
 }

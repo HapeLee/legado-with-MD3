@@ -67,10 +67,11 @@ class MangaTranslationFooterTest {
             }
         }
         val initial = app.getString(R.string.feature_manga_translation_page_progress, 0, 8)
+        val pageLabel = "1/57"
         compose.onNodeWithText(initial).assertIsDisplayed().performClick()
         assertEquals(1, opened)
         val statusBounds = compose.onNodeWithText(initial, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        val pageBounds = compose.onNodeWithText("/").getUnclippedBoundsInRoot()
+        val pageBounds = compose.onNodeWithText(pageLabel).getUnclippedBoundsInRoot()
         val root = compose.onRoot().getUnclippedBoundsInRoot()
         assertTrue(statusBounds.bottom <= pageBounds.top)
         assertTrue(statusBounds.left > (root.right - root.left) / 2)
@@ -80,7 +81,7 @@ class MangaTranslationFooterTest {
                 reader.value = reader.value.copy(settings = reader.value.settings.copy(footerAlignment = alignment))
             }
             val bounds = compose.onNodeWithText(initial, useUnmergedTree = true).getUnclippedBoundsInRoot()
-            val footer = compose.onNodeWithText("/").getUnclippedBoundsInRoot()
+            val footer = compose.onNodeWithText(pageLabel).getUnclippedBoundsInRoot()
             assertTrue(bounds.bottom <= footer.top)
             when (alignment) {
                 0 -> assertEquals((root.left + 16.dp).value, bounds.left.value, 1f)
@@ -97,7 +98,7 @@ class MangaTranslationFooterTest {
             reader.value = reader.value.copy(settings = reader.value.settings.copy(hideFooter = true))
             translation.value = translation.value.copy(busy = false, error = "failed")
         }
-        compose.onNodeWithText("/").assertDoesNotExist()
+        compose.onNodeWithText(pageLabel).assertDoesNotExist()
         val failed = app.getString(R.string.feature_manga_translation_footer_failed) + " · " + progress
         compose.onNodeWithText(failed).assertIsDisplayed().performClick()
         assertEquals(2, opened)

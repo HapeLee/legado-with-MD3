@@ -255,6 +255,9 @@ object PreferKey {
     const val useFlexibleTopAppBar = "useFlexibleTopAppBar"
     const val topBarButtonStyle = "topBarButtonStyle"
     const val mergeTopBarActions = "mergeTopBarActions"
+    const val mochiTopBarLiquidGlass = "mochiTopBarLiquidGlass"
+    const val mochiScrollEdgeBlurEnabled = "mochiScrollEdgeBlurEnabled"
+    const val miuixTopBarLiquidGlass = "miuixTopBarLiquidGlass"
     const val bookInfoFollowCoverColor = "bookInfoFollowCoverColor"
     const val bookInfoBackgroundBlur = "bookInfoBackgroundBlur"
     const val bookInfoNetworkCoverBackground = "bookInfoNetworkCoverBackground"
@@ -437,6 +440,7 @@ object PreferKey {
     const val paragraphBubblePackage = "paragraphBubblePackage"
     /** 正文里图片形式的段评入口是否强制用软件气泡渲染。 */
     const val forceSoftwareParagraphBubble = "forceSoftwareParagraphBubble"
+    const val paragraphCommentHeightPercent = "paragraphCommentHeightPercent"
     //我在干什么
 
     const val disableMangaScrollAnimation = "disableMangaScrollAnimation"

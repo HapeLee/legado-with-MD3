@@ -13,6 +13,7 @@ import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ReadAloudContentSplitSetting
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.ReadAloudSplitSymbol
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
@@ -23,6 +24,7 @@ import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadAloudSessionStore
 import io.legado.app.model.ReadBook
+import io.legado.app.model.activeReadAloudProgress
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.readaloud.ReadAloudPlayerOverlayBus
 import io.legado.app.utils.TTSCacheUtils
@@ -36,6 +38,19 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+
+/** 从同一份朗读会话快照恢复阅读页进度，避免把旧偏移与新章身份拼接。 */
+internal fun currentReadAloudProgress(): ReadAloudProgress? {
+    val playing = ReadAloud.bookSession.state.value
+    return activeReadAloudProgress(
+        isPlaying = ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay(),
+        currentProgress = playing.chapterPosition,
+    )?.let { position ->
+        playing.book?.bookUrl?.let { bookUrl ->
+            ReadAloudProgress(bookUrl, playing.chapterIndex, position, playing.generation)
+        }
+    }
+}
 
 /**
  * 朗读域。
@@ -83,8 +98,8 @@ class ReadAloudDelegate(
 
         fun openReadMenuRoute(route: ReadBookMenuRoute)
 
-        /** 朗读进度（TTS 回调上报的章内偏移），VM 用独立 flow 暴露给胶囊。 */
-        fun publishReadAloudProgress(chapterStart: Int)
+        /** 已绑定书籍、章节和会话版本的进度，VM 用独立 flow 暴露。 */
+        fun publishReadAloudProgress(progress: ReadAloudProgress)
     }
 
     /** 订阅朗读设置，投影进 UiState。VM 构造时调一次。 */
@@ -179,9 +194,12 @@ class ReadAloudDelegate(
 
     // --- 播放控制 ---
 
-    fun updateProgress(chapterStart: Int) {
-        if (ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay() && chapterStart > 0) {
-            host.publishReadAloudProgress(chapterStart)
+    fun updateProgress(progress: ReadAloudProgress) {
+        val current = ReadAloud.bookSession.state.value
+        if (ReadBook.book?.bookUrl == progress.bookUrl && BaseReadAloudService.isPlay() &&
+            progress.matches(current.book?.bookUrl, current.chapterIndex, current.generation)
+        ) {
+            host.publishReadAloudProgress(progress)
         }
     }
 

@@ -3,6 +3,7 @@ package io.legado.app.ui.book.read
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.entities.Book
@@ -948,7 +949,7 @@ sealed interface ReadBookIntent {
 
     // Media / TTS
     data class MediaButtonPressed(val play: Boolean) : ReadBookIntent
-    data class TtsProgress(val chapterStart: Int) : ReadBookIntent
+    data class TtsProgress(val progress: ReadAloudProgress) : ReadBookIntent
 
     // Dialog callback bridge
     data object ReadAloudAction : ReadBookIntent
@@ -2044,6 +2045,9 @@ sealed interface ConfigUpdate {
     }
 
     data class BookmarkBadgeSize(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class ParagraphCommentHeight(val percent: Int) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class SliderVibrator(val value: Boolean) : ConfigUpdate {

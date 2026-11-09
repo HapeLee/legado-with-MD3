@@ -1954,6 +1954,8 @@
     <string name="fixed_book_type">鎖定書籍類型</string>
     <string name="fixed_book_type_summary">書籍更新時不覆蓋書籍類型</string>
     <string name="floating_bottom_bar">懸浮底部導航欄</string>
+    <string name="top_bar_button_liquid_glass">頂欄按鈕液態玻璃</string>
+    <string name="top_bar_button_liquid_glass_summary">為頂欄按鈕啟用背景模糊和折射，需要 Android 13 或更新版本</string>
     <string name="floating_bottom_bar_liquid_glass">液態玻璃效果</string>
     <string name="floating_bottom_bar_liquid_glass_summary">為懸浮導航欄啟用液態玻璃高亮效果。需要模糊和 Android 13+</string>
     <string name="floating_bottom_bar_summary">使用分離的膠囊樣式作為底部導航欄</string>
@@ -3081,6 +3083,8 @@
     <string name="read_aloud_audio_download_deleted_chapters">已刪除 %1$d 章的聽書音頻</string>
     <string name="read_aloud_audio_download_invalid_range">章範圍填得不對</string>
     <string name="read_aloud_audio_download_state">已下載聽書音頻</string>
+    <string name="read_aloud_audio_download_partial_state">聽書音頻已部分下載</string>
+    <string name="read_aloud_audio_download_unverified_state">已儲存聽書音頻，整章完整性未核驗</string>
     <string name="cast_assignment_state">本章已分配角色</string>
     <string name="cast_assignment_delete">刪除分配</string>
     <string name="cast_assignment_deleted">已刪除 %1$d 條分配</string>
@@ -3112,4 +3116,5 @@
     <string name="a11y_open_playback">開啟播放介面</string>
     <string name="a11y_open_playback_named">開啟《%1$s》的播放介面</string>
     <string name="a11y_reorder_position">第 %1$d 項，共 %2$d 項</string>
+    <string name="paragraph_comment_height_percent">%1$d%%</string>
 </resources>

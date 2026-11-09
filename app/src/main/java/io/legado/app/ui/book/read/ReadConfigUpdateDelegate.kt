@@ -656,6 +656,13 @@ class ReadConfigUpdateDelegate(
                     )
                 }
             }
+            is ConfigUpdate.ParagraphCommentHeight -> {
+                scope.launch {
+                    readSettingsRepository.update { it.copy(paragraphCommentHeightPercent = update.percent) }
+                }
+                // 高度由段评弹窗打开时读取，不需要重建阅读配置快照。
+                return
+            }
             is ConfigUpdate.SliderVibrator -> {
                 scope.launch {
                     readSettingsRepository.setSliderVibrator(update.value)

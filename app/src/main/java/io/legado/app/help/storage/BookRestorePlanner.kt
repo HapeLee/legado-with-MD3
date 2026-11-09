@@ -1,7 +1,10 @@
 package io.legado.app.help.storage
 
+import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
+import io.legado.app.domain.model.BookMatchKey
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isType
 import java.io.File
 import java.net.URI
 
@@ -40,7 +43,7 @@ internal fun planBookRestore(
     fun cachedLocationStatus(bookUrl: String): LocalBookLocationStatus =
         locationStatusCache.getOrPut(bookUrl) { locationStatus(bookUrl) }
 
-    restoredBooks.forEach { restoredBook ->
+    filterConflictingOnlineBooks(restoredBooks, existingBooks).forEach { restoredBook ->
         if (ignoreLocalBook && restoredBook.isLocal) return@forEach
 
         val resolution = if (restoredBook.isLocal) {
@@ -75,6 +78,60 @@ internal fun planBookRestore(
         booksToUpdate = booksToUpdate,
         booksToInsert = booksToInsert,
         booksToDelete = booksToDelete.values.toList(),
+    )
+}
+
+/**
+ * 快照无法区分换源和另一设备独立入架。同作品已有在架副本时，只恢复已在架的 URL。
+ * 本机只有临时副本时，可以恢复备份里唯一的在架副本，并保留其他 URL 的临时进度。
+ */
+private fun filterConflictingOnlineBooks(
+    restoredBooks: List<Book>,
+    existingBooks: List<Book>,
+): List<Book> {
+    val existingOnlineByUrl = existingBooks.filterNot { it.isLocal }.associateBy { it.bookUrl }
+    val existingGroups = existingOnlineByUrl.values
+        .mapNotNull { book -> onlineWorkKeyOf(book)?.let { it to book } }
+        .groupBy({ it.first }, { it.second })
+    val shelvedBackupUrls = restoredBooks
+        .filterNot { it.isType(BookType.notShelf) }
+        .mapNotNull { book -> onlineWorkKeyOf(book)?.let { it to book.bookUrl } }
+        .groupBy({ it.first }, { it.second })
+        .mapValues { (_, urls) -> urls.toSet() }
+
+    return restoredBooks.filter { restoredBook ->
+        if (restoredBook.isLocal) return@filter true
+        val isTemporary = restoredBook.isType(BookType.notShelf)
+        val existingIsTemporary = existingOnlineByUrl[restoredBook.bookUrl]?.isType(BookType.notShelf)
+        // URL 一致时沿用恢复，备份临时行不把本机在架书移出书架。
+        if (existingIsTemporary == false) return@filter !isTemporary
+
+        val key = onlineWorkKeyOf(restoredBook) ?: return@filter true
+        val existingGroup = existingGroups[key] ?: return@filter true
+        val backupUrls = shelvedBackupUrls[key].orEmpty()
+        if (isTemporary) {
+            return@filter existingIsTemporary == true && backupUrls.isEmpty()
+        }
+        backupUrls.singleOrNull() == restoredBook.bookUrl &&
+            existingGroup.all { it.isType(BookType.notShelf) }
+    }
+}
+
+private data class OnlineWorkKey(
+    val nameKey: String,
+    val authorKey: String,
+    val categoryBits: Int,
+)
+
+private fun onlineWorkKeyOf(book: Book): OnlineWorkKey? {
+    if (book.isLocal) return null
+    val nameKey = BookMatchKey.of(book.name)
+    val authorKey = BookMatchKey.of(book.author)
+    if (nameKey.isBlank() || authorKey.isBlank()) return null
+    return OnlineWorkKey(
+        nameKey = nameKey,
+        authorKey = authorKey,
+        categoryBits = book.type and (BookType.allBookType or BookType.video),
     )
 }
 

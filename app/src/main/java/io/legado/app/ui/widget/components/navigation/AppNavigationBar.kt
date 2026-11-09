@@ -35,6 +35,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.regularHazeEffect
+import io.legado.app.ui.theme.miuixBarBlur
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.ui.widget.components.text.AnimatedText
 import top.yukonga.miuix.kmp.basic.NavigationBarDisplayMode
@@ -81,7 +82,7 @@ fun AppNavigationBar(
             val finalColor = baseColor.copy(alpha = (baseColor.alpha * opacity).coerceIn(0f, 1f))
 
             MiuixNavigationBar(
-                modifier = modifier.then(hazeModifier),
+                modifier = modifier.miuixBarBlur(bottom = true),
                 color = finalColor,
                 mode = miuixMode,
                 content = content

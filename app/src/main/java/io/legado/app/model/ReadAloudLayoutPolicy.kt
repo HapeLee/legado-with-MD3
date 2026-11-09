@@ -9,4 +9,4 @@ internal fun shouldRestartReadAloudAfterContentLoad(
 internal fun activeReadAloudProgress(
     isPlaying: Boolean,
     currentProgress: Int,
-): Int? = currentProgress.takeIf { isPlaying && it > 0 }
+): Int? = currentProgress.takeIf { isPlaying && it >= 0 }
