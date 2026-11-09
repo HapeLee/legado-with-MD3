@@ -29,9 +29,9 @@ data class ReaderBookmarkBadge(
             val width = (sizeDp * density).toInt().coerceAtLeast(1)
             return ReaderBookmarkBadge(
                 leftPx = pageWidthPx - contentRightPaddingPx - 6 * density - width,
-                // Restore pre-beta.23 placement: the badge hugs the header's bottom edge;
-                // body text is pushed down by the top padding, so it stays unobstructed.
-                topPx = headerBottomPx + 2 * density,
+                // Pre-beta.23 placement: the badge's top edge sits on the header's bottom edge,
+                // which is exactly where the old PageView anchored it.
+                topPx = headerBottomPx,
                 widthPx = width,
                 heightPx = width * 2,
                 imageSource = imageSource,
