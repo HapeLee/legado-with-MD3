@@ -116,6 +116,14 @@ class MarkdownFile(private var book: Book) {
 
     private var charset: Charset = book.fileCharset()
 
+    /**
+     * charset 只是 "UTF-16" 时字节序由 BOM 决定，且只对文件开头那次解码有效；
+     * 扫描时解析一次，之后按行/按章解码都复用同一字节序，否则切片会按大端误解码。
+     */
+    private var utf16ByteOrder: Charset? = null
+
+    private fun decodeCharset(): Charset = utf16ByteOrder ?: charset
+
     private var cachedChapterUrl: String? = null
     private var cachedCharset: Charset? = null
     private var cachedHtml: String? = null
@@ -230,7 +238,7 @@ class MarkdownFile(private var book: Book) {
                 if (n <= 0) break
                 read += n
             }
-            return String(bytes, 0, read, charset)
+            return String(bytes, 0, read, decodeCharset())
         }
     }
 
@@ -249,12 +257,8 @@ class MarkdownFile(private var book: Book) {
         }
     }
 
-    /** "UTF-16" 的字节序由 BOM 决定；无 BOM 时 Java 按大端解码。 */
-    private fun utf16LineBreak(head: ByteArray, headLength: Int): ByteArray {
-        val littleEndian = headLength >= 2 &&
-                head[0] == 0xFF.toByte() && head[1] == 0xFE.toByte()
-        return if (littleEndian) utf16LeLineBreak else utf16BeLineBreak
-    }
+    private fun utf16LineBreak(littleEndian: Boolean): ByteArray =
+        if (littleEndian) utf16LeLineBreak else utf16BeLineBreak
 
     private fun isLineBreakAt(buffer: ByteArray, index: Int, lineBreak: ByteArray): Boolean {
         for (offset in lineBreak.indices) {
@@ -303,7 +307,7 @@ class MarkdownFile(private var book: Book) {
 
         fun processLine(buf: ByteArray, from: Int, toExclusive: Int, lineStart: Long) {
             val lineEnd = lineStart + (toExclusive - from)
-            val line = String(buf, from, toExclusive - from, charset)
+            val line = String(buf, from, toExclusive - from, decodeCharset())
                 .removePrefix("\uFEFF")
                 .trimEnd('\r', '\n')
 
@@ -397,12 +401,13 @@ class MarkdownFile(private var book: Book) {
         var lineStart = 0L
         var carry = ByteArray(0)
         var carryLen = 0
+        utf16ByteOrder = null
         openStream().use { bis ->
             val chunk = ByteArray(readChunkSize)
             val declaredBreak = lineBreakBytes()
             var breakBytes = singleByteLineBreak
             if (declaredBreak == null) {
-                //"UTF-16" 未指明字节序：先读两个字节看 BOM，再决定换行与扫描步长
+                //"UTF-16" 未指明字节序：先读两个字节看 BOM，再决定换行、扫描步长与解码编码
                 val head = ByteArray(2)
                 var headLen = 0
                 while (headLen < 2) {
@@ -410,7 +415,10 @@ class MarkdownFile(private var book: Book) {
                     if (n <= 0) break
                     headLen += n
                 }
-                breakBytes = utf16LineBreak(head, headLen)
+                val littleEndian = headLen >= 2 &&
+                        head[0] == 0xFF.toByte() && head[1] == 0xFE.toByte()
+                breakBytes = utf16LineBreak(littleEndian)
+                utf16ByteOrder = if (littleEndian) Charsets.UTF_16LE else Charsets.UTF_16BE
                 carry = head.copyOf(headLen)
                 carryLen = headLen
             } else {

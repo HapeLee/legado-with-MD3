@@ -38,7 +38,14 @@ sealed class MarkdownImageSource {
             if (!trimmed.startsWith("http://", true) && !trimmed.startsWith("https://", true)) {
                 return Unsupported
             }
-            //HttpUrl 解析会拒绝空白与 `<`、`>`、`{`、`}` 等规则语法字符；
+            //规则语法字符在普通 URL 里必须百分号转义，出现即说明地址不是普通资源：
+            //HttpUrl 会把它们编码掉，所以在解析前显式拒绝，避免"看起来能下载其实带脚本"。
+            if (trimmed.any { it == '<' || it == '>' || it == '{' || it == '}' } ||
+                trimmed.contains("@js:", true)
+            ) {
+                return Unsupported
+            }
+            //HttpUrl 解析会拒绝空白等非法字符；
             //先补空格再解析，只是容忍未编码的文件名空格，不改变地址语义。
             val parsed = trimmed.toHttpUrlOrNull()
                 ?: trimmed.replace(" ", "%20").toHttpUrlOrNull()
