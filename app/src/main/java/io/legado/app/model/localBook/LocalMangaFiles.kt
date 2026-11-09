@@ -3,8 +3,10 @@ package io.legado.app.model.localBook
 import android.net.Uri
 import android.provider.DocumentsContract
 import io.legado.app.R
+import io.legado.app.constant.AppPattern.bookFileRegex
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.exception.LocalMangaDirectoryEmptyException
 import io.legado.app.exception.LocalMangaDirectoryUnavailableException
 import io.legado.app.exception.TocEmptyException
 import io.legado.app.help.book.getLocalUri
@@ -67,7 +69,17 @@ internal object LocalMangaFiles {
         }
     }
 
-    fun archiveImageEntries(archive: FileDoc): List<String> =
+    fun isMangaArchive(archive: FileDoc): Boolean {
+        val entries = archive.openReadPfd().getOrThrow().use {
+            LibArchiveUtils.getFilesName(it) { name ->
+                name.matches(bookFileRegex) || isLocalMangaImage(name)
+            }
+        }
+        // A supported ebook takes precedence over standalone cover art.
+        return entries.isNotEmpty() && entries.none { it.matches(bookFileRegex) }
+    }
+
+    private fun archiveImageEntries(archive: FileDoc): List<String> =
         archive.openReadPfd().getOrThrow().use {
             LibArchiveUtils.getFilesName(it, ::isLocalMangaImage)
         }
@@ -81,16 +93,24 @@ internal object LocalMangaFiles {
     // A chapter exists only if its directory contains images. Walk names and MIME types to keep
     // nested/flat chapter rules, and use one provider query per SAF directory.
     fun visitDirectory(book: Book, visit: (String, () -> String) -> Unit) {
+        var foundImage = false
+        val visitImage: (String, () -> String) -> Unit = { path, url ->
+            foundImage = true
+            visit(path, url)
+        }
         withDirectoryAccess {
             val url = book.bookUrl
             val children = if (url.startsWith("content://")) null else {
                 localFile(url).listFiles()
             }
             if (children == null) {
-                visitResolvedDirectory(book.getLocalUri(directory = true), visit)
+                visitResolvedDirectory(book.getLocalUri(directory = true), visitImage)
             } else {
-                visitFiles(children, "", visit)
+                visitFiles(children, "", visitImage)
             }
+        }
+        if (!foundImage) {
+            throw LocalMangaDirectoryEmptyException(appCtx.getString(R.string.chapter_list_empty))
         }
     }
 

@@ -432,8 +432,7 @@ object LocalBook {
     fun importFiles(uri: Uri): List<Book> {
         val fileDoc = FileDoc.fromUri(uri, false)
         if (!ArchiveUtils.isArchive(fileDoc.name)) return listOf(importSingleFile(fileDoc))
-        val images = LocalMangaFiles.archiveImageEntries(fileDoc)
-        return if (images.isNotEmpty()) {
+        return if (LocalMangaFiles.isMangaArchive(fileDoc)) {
             listOf(importSingleFile(fileDoc, comicArchive = true))
         } else {
             importArchiveFile(uri) { it.matches(AppPattern.bookFileRegex) }

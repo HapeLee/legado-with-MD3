@@ -34,7 +34,7 @@ class FileAssociationViewModel(application: Application) : BaseAssociationViewMo
                         successLive.postValue("bubblePack" to fileDoc.uri.toString())
                         return@execute
                     }
-                    if (LocalMangaFiles.archiveImageEntries(fileDoc).isNotEmpty()) {
+                    if (LocalMangaFiles.isMangaArchive(fileDoc)) {
                         importBookLiveData.postValue(fileDoc.uri)
                         return@execute
                     }
