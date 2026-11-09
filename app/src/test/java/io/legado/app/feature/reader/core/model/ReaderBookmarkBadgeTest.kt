@@ -11,9 +11,9 @@ class ReaderBookmarkBadgeTest {
 
     @Test
     fun topEdgeAnchorsToHeaderBottomAndPreservesRibbonRatio() {
-        // headerBottom = 100f, density = 2f -> topPx = 100 + 2 * 2 = 104
-        assertEquals(ReaderBookmarkBadge(538f, 104f, 20, 40), badge())
-        assertEquals(ReaderBookmarkBadge(518f, 104f, 40, 80), badge(size = 20))
+        // headerBottom = 100f -> topPx = 100
+        assertEquals(ReaderBookmarkBadge(538f, 100f, 20, 40), badge())
+        assertEquals(ReaderBookmarkBadge(518f, 100f, 40, 80), badge(size = 20))
     }
 
     @Test
