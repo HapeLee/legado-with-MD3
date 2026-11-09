@@ -293,6 +293,9 @@ object BackupConfig {
         PreferKey.topBarBlurAlpha,
         PreferKey.bottomBarBlurAlpha,
         PreferKey.bottomBarLensRadius,
+        // 浮动底栏与液态玻璃（主题设置的顶栏/底栏面板可改）
+        PreferKey.useFloatingBottomBar,
+        PreferKey.useFloatingBottomBarLiquidGlass,
         PreferKey.useFlexibleTopAppBar,
         PreferKey.topBarButtonStyle,
         PreferKey.mergeTopBarActions,
