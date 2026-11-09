@@ -148,11 +148,15 @@ private const val INTRO_COLLAPSED_LINES = 3
 private const val INTRO_EXPAND_ANIM_MILLIS = 220
 
 /**
- * 画面是竖的（短剧常见）：按像素宽高比换算后的显示宽小于高。
- * 片源还没解析出尺寸（[VideoSize.UNKNOWN]）时不算竖屏，保持横屏窗口。
+ * 只在片源尺寸有效时请求全屏方向。切集会短暂报告 [VideoSize.UNKNOWN]，
+ * 此时不请求新方向，保留当前窗口，避免竖屏短剧先横屏再竖屏。
  */
-private val VideoSize.isPortrait: Boolean
-    get() = width > 0 && height > 0 && width.toFloat() * pixelWidthHeightRatio < height
+internal fun VideoSize.fullscreenOrientationOrNull(): Int? {
+    val displayWidth = width.toFloat() * pixelWidthHeightRatio
+    if (width <= 0 || height <= 0 || !displayWidth.isFinite() || displayWidth <= 0f) return null
+    return if (displayWidth < height) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+    else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+}
 
 /**
  * 让画面正好填满 [widthDp] 所需的高度（dp），即「贴合视频比例」的高度：
@@ -248,7 +252,7 @@ fun VideoPlayerScreen(
     }
 
     // 画面方向：书源里既有横屏番剧也有竖屏短剧，一律按横屏窗口开全屏，竖屏片源就会
-    // 挂在两条大黑边中间。全屏时按画面自身的比例选窗口方向，片源没解析出尺寸时维持横屏。
+    // 挂在两条大黑边中间。全屏时按有效画面比例选方向，尺寸未知时保留当前窗口方向。
     val videoSize by produceState(
         initialValue = runCatching { VideoPlay.player.videoSize }.getOrDefault(VideoSize.UNKNOWN),
     ) {
@@ -270,9 +274,11 @@ fun VideoPlayerScreen(
             controller.hide(WindowInsetsCompat.Type.systemBars())
             controller.systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            activity.requestedOrientation =
-                if (videoSize.isPortrait) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-                else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            videoSize.fullscreenOrientationOrNull()?.let { orientation ->
+                if (activity.requestedOrientation != orientation) {
+                    activity.requestedOrientation = orientation
+                }
+            }
         } else {
             controller.show(WindowInsetsCompat.Type.systemBars())
             activity.requestedOrientation = restoreOrientation
