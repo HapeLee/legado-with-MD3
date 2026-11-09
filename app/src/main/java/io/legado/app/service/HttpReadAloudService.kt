@@ -2120,7 +2120,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         if (synthesisNeedsRestart) return
         val mediaItem = exoPlayer.currentMediaItem ?: return
         AppLog.put("朗读错误\n${contentList.getOrNull(nowSpeak).orEmpty()}", error)
-        deleteCurrentSpeakFile()
+        deleteCachedSpeakFile(mediaItem)
         playErrorNo++
         if (playErrorNo >= 5) {
             toastOnUi("朗读连续5次错误, 最后一次错误代码(${error.localizedMessage})")
@@ -2138,12 +2138,17 @@ class HttpReadAloudService : BaseReadAloudService(),
         failSynthesis(playbackGeneration, error, retryOffset)
     }
 
-    private fun deleteCurrentSpeakFile() {
-        val mediaItem = exoPlayer.currentMediaItem ?: return
+    private fun deleteCachedSpeakFile(mediaItem: MediaItem) {
         val uri = mediaItem.localConfiguration?.uri ?: return
         if (uri.scheme != "file") return
         val filePath = uri.path ?: return
-        File(filePath).delete()
+        runCatching {
+            val file = File(filePath).canonicalFile
+            // 通用播放错误只淘汰临时合成缓存，下载区文件继续按下载记录管理。
+            if (file.parentFile == File(ttsFolderPath).canonicalFile && file.isFile) {
+                file.delete()
+            }
+        }
     }
 
     override fun aloudServicePendingIntent(actionStr: String): PendingIntent? {
