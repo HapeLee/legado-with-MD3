@@ -29,7 +29,11 @@ import java.nio.charset.Charset
 class MarkdownFile(private var book: Book) {
 
     companion object {
-        private const val blank: Byte = 0x0a
+        //换行单元随编码变化：UTF-16 的换行是双字节，单字节 0x0A 切分会把尾字节留给下一行
+        private val singleByteLineBreak = byteArrayOf(0x0a)
+        private val utf16LeLineBreak = byteArrayOf(0x0a, 0x00)
+        private val utf16BeLineBreak = byteArrayOf(0x00, 0x0a)
+
         private const val scanBufferSize = 512000
         private const val readChunkSize = 512 * 1024
 
@@ -231,6 +235,35 @@ class MarkdownFile(private var book: Book) {
     }
 
     /**
+     * 当前编码的换行字节序列。UTF-16 的换行占两个字节（LE `0A 00` / BE `00 0A`），
+     * 只按单字节 `0A` 切行会把尾字节留给下一行，后续每行都解码错位、标题随之漏识别。
+     * 返回 null 表示 charset 只是 "UTF-16"，字节序还得看 BOM。
+     */
+    private fun lineBreakBytes(): ByteArray? {
+        val name = charset.name().uppercase()
+        if (!name.startsWith("UTF-16")) return singleByteLineBreak
+        return when {
+            name.endsWith("LE") -> utf16LeLineBreak
+            name.endsWith("BE") -> utf16BeLineBreak
+            else -> null
+        }
+    }
+
+    /** "UTF-16" 的字节序由 BOM 决定；无 BOM 时 Java 按大端解码。 */
+    private fun utf16LineBreak(head: ByteArray, headLength: Int): ByteArray {
+        val littleEndian = headLength >= 2 &&
+                head[0] == 0xFF.toByte() && head[1] == 0xFE.toByte()
+        return if (littleEndian) utf16LeLineBreak else utf16BeLineBreak
+    }
+
+    private fun isLineBreakAt(buffer: ByteArray, index: Int, lineBreak: ByteArray): Boolean {
+        for (offset in lineBreak.indices) {
+            if (buffer[index + offset] != lineBreak[offset]) return false
+        }
+        return true
+    }
+
+    /**
      * 流式扫描：按行记录 `#`/`##` 章节边界的字节偏移，围栏代码块内不识别标题；
      * 超长章节在空行处切块（兜底按行切）。任何文件都至少产出一章。
      */
@@ -332,7 +365,8 @@ class MarkdownFile(private var book: Book) {
                     active.charCount += line.length + 1
                     active.end = lineEnd
                     val used = lineEnd - active.start
-                    if (used > maxLengthWithToc &&
+                    //围栏代码块内不切章：切片会被独立解析，切在代码块中间会让后半段代码变成正文。
+                    if (!inFence && used > maxLengthWithToc &&
                         (line.isBlank() || used > maxLengthWithToc * 2)
                     ) {
                         val nextSub = if (active.subNumber == 0) 2 else active.subNumber + 1
@@ -347,7 +381,8 @@ class MarkdownFile(private var book: Book) {
                 current.charCount += line.length + 1
                 current.end = lineEnd
                 val used = lineEnd - current.start
-                if (splitLong && used > maxLengthWithToc &&
+                //围栏代码块内不切章（同上）：闭合围栏行本身已把 inFence 复位，仍是干净的块边界。
+                if (splitLong && !inFence && used > maxLengthWithToc &&
                     (line.isBlank() || used > maxLengthWithToc * 2)
                 ) {
                     val nextSub = if (current.subNumber == 0) 2 else current.subNumber + 1
@@ -364,6 +399,25 @@ class MarkdownFile(private var book: Book) {
         var carryLen = 0
         openStream().use { bis ->
             val chunk = ByteArray(readChunkSize)
+            val declaredBreak = lineBreakBytes()
+            var breakBytes = singleByteLineBreak
+            if (declaredBreak == null) {
+                //"UTF-16" 未指明字节序：先读两个字节看 BOM，再决定换行与扫描步长
+                val head = ByteArray(2)
+                var headLen = 0
+                while (headLen < 2) {
+                    val n = bis.read(head, headLen, 2 - headLen)
+                    if (n <= 0) break
+                    headLen += n
+                }
+                breakBytes = utf16LineBreak(head, headLen)
+                carry = head.copyOf(headLen)
+                carryLen = headLen
+            } else {
+                breakBytes = declaredBreak
+            }
+            //按换行单元步进，保证 UTF-16 下每个切点都落在字符边界上
+            val step = breakBytes.size
             while (true) {
                 val n = bis.read(chunk)
                 if (n <= 0) break
@@ -373,12 +427,14 @@ class MarkdownFile(private var book: Book) {
                 chunk.copyInto(carry, carryLen, 0, n)
                 carryLen += n
                 var lineBegin = 0
-                for (i in 0 until carryLen) {
-                    if (carry[i] == blank) {
-                        processLine(carry, lineBegin, i + 1, lineStart)
-                        lineStart += (i + 1 - lineBegin)
-                        lineBegin = i + 1
+                var i = 0
+                while (i + step <= carryLen) {
+                    if (isLineBreakAt(carry, i, breakBytes)) {
+                        processLine(carry, lineBegin, i + step, lineStart)
+                        lineStart += (i + step - lineBegin)
+                        lineBegin = i + step
                     }
+                    i += step
                 }
                 if (lineBegin > 0) {
                     System.arraycopy(carry, lineBegin, carry, 0, carryLen - lineBegin)

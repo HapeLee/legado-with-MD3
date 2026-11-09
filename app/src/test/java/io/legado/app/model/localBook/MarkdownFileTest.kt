@@ -18,19 +18,23 @@ class MarkdownFileTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private fun newBook(file: File): Book = Book(
+    private fun newBook(file: File, charsetName: String = "UTF-8"): Book = Book(
         type = BookType.text or BookType.local,
         bookUrl = file.absolutePath,
         name = "测试书",
         author = "",
         originName = file.name,
-        charset = "UTF-8",
+        charset = charsetName,
     ).apply { latestChapterTime = file.lastModified() }
 
-    private fun scan(file: File) = MarkdownFile(newBook(file)).scan { FileInputStream(file) }
+    private fun scan(file: File, charsetName: String = "UTF-8") =
+        MarkdownFile(newBook(file, charsetName)).scan { FileInputStream(file) }
 
     private fun bodyOf(file: File, start: Long, end: Long, stripHeading: Boolean) =
         MarkdownFile(newBook(file)).readChapterBody({ FileInputStream(file) }, start, end, stripHeading)
+
+    private fun bodyOf(file: File, charsetName: String, start: Long, end: Long, stripHeading: Boolean) =
+        MarkdownFile(newBook(file, charsetName)).readChapterBody({ FileInputStream(file) }, start, end, stripHeading)
 
     private fun write(content: String): File =
         tmp.newFile("book.md").apply { writeText(content) }
@@ -228,5 +232,69 @@ class MarkdownFileTest {
         assertNotNull(opened)
         opened!!.use { assertEquals(7, it.read()) }
         assertTrue(image.isFile)
+    }
+
+    //UTF-16 的换行是双字节，按单字节 0x0A 切行会让后续行解码错位、标题漏识别
+    private var utf16FileSeq = 0
+
+    private fun assertUtf16ChaptersAreAligned(bytes: ByteArray, charsetName: String) {
+        val file = tmp.newFile("utf16-${utf16FileSeq++}.md").apply { writeBytes(bytes) }
+        val chapters = scan(file, charsetName)
+        assertEquals(listOf("第一章", "第一节"), chapters.map { it.title })
+        assertEquals(0L, chapters.first().start)
+        assertEquals(bytes.size.toLong(), chapters.last().end)
+        val body = bodyOf(file, charsetName, chapters[0].start, chapters[0].end, true)
+        assertTrue("首章正文不得错位: $body", body.contains("第一段正文。"))
+    }
+
+    @Test
+    fun utf16LeChaptersStayAligned() {
+        val content = "# 第一章\n\n第一段正文。\n\n## 第一节\n\n第二段正文。\n"
+        assertUtf16ChaptersAreAligned(content.toByteArray(Charsets.UTF_16LE), "UTF-16LE")
+    }
+
+    @Test
+    fun utf16BeChaptersStayAligned() {
+        val content = "# 第一章\n\n第一段正文。\n\n## 第一节\n\n第二段正文。\n"
+        assertUtf16ChaptersAreAligned(content.toByteArray(Charsets.UTF_16BE), "UTF-16BE")
+    }
+
+    @Test
+    fun utf16WithBomResolvesByteOrder() {
+        val content = "# 第一章\n\n第一段正文。\n\n## 第一节\n\n第二段正文。\n"
+        //UTF-16 名称本身不带字节序，字节序只能靠 BOM 判断
+        val be = content.toByteArray(Charsets.UTF_16)
+        assertTrue(be[0] == 0xFE.toByte() && be[1] == 0xFF.toByte())
+        assertUtf16ChaptersAreAligned(be, "UTF-16")
+        val le = byteArrayOf(0xFF.toByte(), 0xFE.toByte()) + content.toByteArray(Charsets.UTF_16LE)
+        assertUtf16ChaptersAreAligned(le, "UTF-16")
+    }
+
+    @Test
+    fun oversizeChapterDoesNotSplitInsideFencedCode() {
+        val codeLine = "代码行内容。".repeat(10) + "\n"
+        val content = buildString {
+            append("# 代码章\n\n")
+            append("```kotlin\n")
+            repeat(1500) { append(codeLine) }
+            append("```\n\n")
+            append("代码块之后的正文。\n")
+        }
+        assertTrue(content.toByteArray(Charsets.UTF_8).size > 102400 * 2)
+        val file = write(content)
+        val chapters = scan(file)
+        //围栏整块只能落在一个章节里：切开的一半会被独立解析成正文
+        chapters.forEach { chapter ->
+            val body = bodyOf(file, chapter.start, chapter.end, chapter.startsWithHeading)
+            val fences = body.lines().count { it.trimStart().startsWith("```") }
+            assertEquals("章节 ${chapter.title} 的围栏不成对:\n$body", 0, fences % 2)
+        }
+        assertEquals(1, chapters.count { chapter ->
+            bodyOf(file, chapter.start, chapter.end, chapter.startsWithHeading).contains("```")
+        })
+        val first = bodyOf(file, chapters.first().start, chapters.first().end, true)
+        assertTrue(first.contains("代码行内容。"))
+        assertTrue(bodyOf(file, chapters.last().start, chapters.last().end, chapters.last().startsWithHeading)
+            .contains("代码块之后的正文。"))
     }
 }

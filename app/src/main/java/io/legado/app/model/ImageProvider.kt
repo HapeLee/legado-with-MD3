@@ -145,7 +145,7 @@ object ImageProvider {
                 val inputStream = when {
                     book.isMarkdown -> {
                         if (src.isAbsUrl() || src.isDataUrl()) {
-                            //网络图/data URI 走通用下载路径
+                            //网络图/data URI 走 BookHelp 的普通资源下载（不按书源规则解析地址）
                             BookHelp.saveImage(bookSource, book, src)
                             null
                         } else {
