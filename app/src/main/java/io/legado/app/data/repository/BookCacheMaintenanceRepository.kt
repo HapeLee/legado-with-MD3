@@ -51,7 +51,7 @@ class BookCacheMaintenanceRepository(
         val books = bookDao.all.filterNot { it.isLocalTxt }
         val busyUrls = busyBookUrls()
         // 一次批量把全部书的章节主体读出来，替代逐本 5000 次 SQL。
-        val subjectsByBook = loadChapterSubjects(books.map { it.bookUrl })
+        val subjects = loadChapterSubjects(books.map { it.bookUrl })
         val groups = mutableListOf<OrphanedChapterGroup>()
         val total = books.size
         books.forEachIndexed { index, book ->
@@ -59,9 +59,11 @@ class BookCacheMaintenanceRepository(
             if (index % YIELD_BATCH == 0) yield()
             onProgress(index + 1, total)
             if (book.bookUrl in busyUrls) return@forEachIndexed
+            // 章节表读取失败的书不能当成「没有孤儿」，跳过让下次重扫再处理。
+            if (book.bookUrl in subjects.failedBookUrls) return@forEachIndexed
             val orphans = collectOrphanEntries(
                 book.getFolderName(),
-                subjectsByBook[book.bookUrl].orEmpty(),
+                subjects.byBook[book.bookUrl].orEmpty(),
             ) ?: return@forEachIndexed
             if (orphans.isEmpty()) return@forEachIndexed
             groups += OrphanedChapterGroup(
@@ -79,66 +81,79 @@ class BookCacheMaintenanceRepository(
         requests: List<OrphanDeleteRequest>,
         onProgress: (DeletionProgress) -> Unit,
     ): DeletedChapterCache = withContext(Dispatchers.IO) {
-        val busyUrls = busyBookUrls()
         val books = bookDao.all.associateBy { it.bookUrl }
-        // 二次判定必须按「此刻」的章节列表，但只需要查一次；逐本查会重复 5000 次 SQL。
-        val subjectsByBook = loadChapterSubjects(requests.map { it.bookUrl })
         var deleted = 0
         var freed = 0L
         var skippedBooks = 0
         var skippedEntries = 0
         val total = requests.size
+        var handled = 0
 
-        requests.forEachIndexed { index, request ->
+        // 分批刷新忙碌状态与章节表。批次开始时的一次性快照会让「排在不前几本」
+        // 的书在目录刷新 / 开始下载之后仍按旧数据被删；缩短窗口即可避免，
+        // 又不必与目录更新、正文写入做跨组件协调。
+        requests.chunked(YIELD_BATCH).forEach { chunk ->
             coroutineContext.ensureActive()
-            if (index % YIELD_BATCH == 0) yield()
-            val book = books[request.bookUrl]
-            val removedUrl = when {
-                book == null || request.bookUrl in busyUrls -> {
-                    skippedBooks++
-                    null
-                }
-
-                else -> {
-                    val folder = book.getFolderName()
-                    val currentOrphans = collectOrphanEntries(
-                        folder,
-                        subjectsByBook[request.bookUrl].orEmpty(),
-                    )
-                    if (currentOrphans == null) {
+            yield()
+            val busyUrls = busyBookUrls()
+            val subjects = loadChapterSubjects(chunk.map { it.bookUrl })
+            chunk.forEach { request ->
+                coroutineContext.ensureActive()
+                handled++
+                val book = books[request.bookUrl]
+                val removedUrl = when {
+                    book == null || request.bookUrl in busyUrls -> {
                         skippedBooks++
                         null
-                    } else {
-                        val safeNames = request.entryNames.intersect(
-                            currentOrphans.mapTo(hashSetOf()) { it.name }
+                    }
+
+                    // 章节表读取失败 ≠ 孤儿已消失，留在列表供重试。
+                    request.bookUrl in subjects.failedBookUrls -> {
+                        skippedBooks++
+                        null
+                    }
+
+                    else -> {
+                        val folder = book.getFolderName()
+                        val currentOrphans = collectOrphanEntries(
+                            folder,
+                            subjects.byBook[request.bookUrl].orEmpty(),
                         )
-                        if (safeNames.isEmpty()) {
-                            // 扫描之后孤儿已消失或章节恢复有效：这本书没有孤儿了，从列表移除。
-                            request.bookUrl
+                        if (currentOrphans == null) {
+                            skippedBooks++
+                            null
                         } else {
-                            val stats = deleteEntries(
-                                File(BookHelp.cachePath, folder),
-                                safeNames,
+                            val safeNames = request.entryNames.intersect(
+                                currentOrphans.mapTo(hashSetOf()) { it.name }
                             )
-                            deleted += stats.deleted
-                            freed += stats.freed
-                            skippedEntries += stats.skipped
-                            if (stats.skipped == 0 && stats.deleted > 0) request.bookUrl else null
+                            if (safeNames.isEmpty()) {
+                                // 扫描之后孤儿已消失或章节恢复有效：这本书没有孤儿了，从列表移除。
+                                request.bookUrl
+                            } else {
+                                val stats = deleteEntries(
+                                    File(BookHelp.cachePath, folder),
+                                    safeNames,
+                                )
+                                deleted += stats.deleted
+                                freed += stats.freed
+                                skippedEntries += stats.skipped
+                                if (stats.skipped == 0 && stats.deleted > 0) request.bookUrl else null
+                            }
                         }
                     }
                 }
-            }
-            // 每本都把累计结果回传：任务被取消时 ViewModel 仍能写回已提交的部分。
-            onProgress(
-                DeletionProgress(
-                    handled = index + 1,
-                    total = total,
-                    accumulated = DeletedChapterCache(
-                        deleted, freed, skippedBooks, skippedEntries,
-                    ),
-                    removedBookUrl = removedUrl,
+                // 每本都把累计结果回传：任务被取消时 ViewModel 仍能写回已提交的部分。
+                onProgress(
+                    DeletionProgress(
+                        handled = handled,
+                        total = total,
+                        accumulated = DeletedChapterCache(
+                            deleted, freed, skippedBooks, skippedEntries,
+                        ),
+                        removedBookUrl = removedUrl,
+                    )
                 )
-            )
+            }
         }
         DeletedChapterCache(deleted, freed, skippedBooks, skippedEntries)
     }
@@ -153,15 +168,17 @@ class BookCacheMaintenanceRepository(
         val total = books.size
         var handled = 0
         books.chunked(SQL_BATCH).forEach { batch ->
-            val chaptersByBook = loadChaptersGrouped(batch.map { it.bookUrl })
+            val chapterBatch = loadChaptersGrouped(batch.map { it.bookUrl })
             batch.forEach { book ->
                 coroutineContext.ensureActive()
                 handled++
                 if (handled % YIELD_BATCH == 0) yield()
                 onProgress(handled, total)
+                // 查询失败 ≠ 没有章节，这本不进候选，留待下次重扫。
+                if (chapterBatch.failed) return@forEach
                 val stats = surveyWordCounts(
                     book,
-                    chaptersByBook[book.bookUrl].orEmpty(),
+                    chapterBatch.byBook[book.bookUrl].orEmpty(),
                 )
                 // 只在确实有章节需要重算时才列入；整书字数是本次重算的收尾产物，
                 // 不是独立的触发场景。
@@ -186,7 +203,7 @@ class BookCacheMaintenanceRepository(
         var updatedBooks = 0
         // saveText 是 writeText 非原子写入；下载中的章节缓存可能只写了一半，
         // 拿它算出的字数会被写进数据库且此后不再重算，所以整本跳过。
-        val busyUrls = busyBookUrls()
+        // busyUrls 改为按批刷新，不用批次开始时的旧快照。
         val books = bookDao.all.associateBy { it.bookUrl }
         val pendingUpdates = ArrayList<ChapterWordCountUpdate>(WORD_COUNT_BATCH)
         val handledUrls = HashSet<String>(bookUrls.size)
@@ -194,19 +211,23 @@ class BookCacheMaintenanceRepository(
         var handled = 0
 
         bookUrls.chunked(SQL_BATCH).forEach { batch ->
-            val chaptersByBook = loadChaptersGrouped(batch)
+            coroutineContext.ensureActive()
+            yield()
+            val busyUrls = busyBookUrls()
+            val chapterBatch = loadChaptersGrouped(batch)
             batch.forEach { bookUrl ->
                 coroutineContext.ensureActive()
                 handled++
-                if (handled % YIELD_BATCH == 0) yield()
                 onProgress(handled, total)
+                // 查询失败的书不进 handledUrls，留在列表且保持勾选供重试。
+                if (chapterBatch.failed) return@forEach
                 if (bookUrl in busyUrls) return@forEach
                 val book = books[bookUrl] ?: return@forEach
                 if (!book.isOnLineTxt) return@forEach
                 handledUrls += bookUrl
                 val result = recountBook(
                     book,
-                    chaptersByBook[bookUrl].orEmpty(),
+                    chapterBatch.byBook[bookUrl].orEmpty(),
                     pendingUpdates,
                     { flushWordCounts(pendingUpdates) },
                     // 整书字数已有值（多半来自书源详情，含未缓存章节）时绝不覆盖，
@@ -218,8 +239,11 @@ class BookCacheMaintenanceRepository(
                     // 整书字数是章节字数的汇总，必须先让 chapters 表落库再写 books 表，
                     // 避免其它组件在两次写入之间读到「整书有值、章节仍为空」的中间状态。
                     flushWordCounts(pendingUpdates)
-                    bookDao.upWordCount(book.bookUrl, bookWordCount)
-                    updatedBooks++
+                    // SQL 自带「当前为空」条件；返回 0 说明期间书源已写入整书字数，
+                    // 此时不计入「已更新」，也不覆盖那个新值。
+                    if (bookDao.upWordCount(book.bookUrl, bookWordCount) > 0) {
+                        updatedBooks++
+                    }
                 }
             }
         }
@@ -295,26 +319,47 @@ class BookCacheMaintenanceRepository(
         return RecountStats(recountable, unsolved)
     }
 
-    /** 一次 IN 查询读一批书的章节，按 bookUrl 分组；每批处理完即可释放。 */
-    private fun loadChaptersGrouped(bookUrls: List<String>): Map<String, List<BookChapter>> =
+    /**
+     * 一次 IN 查询读一批书的章节，按 bookUrl 分组；每批处理完即可释放。
+     *
+     * [failed] 必须单独标记：「查询失败」与「成功但确实没有章节」都是空 Map，
+     * 但前者不能当成处理完成，否则这些书会被从结果里移除、再也无从重试。
+     */
+    private data class ChapterBatch(
+        val byBook: Map<String, List<BookChapter>>,
+        val failed: Boolean,
+    )
+
+    private fun loadChaptersGrouped(bookUrls: List<String>): ChapterBatch =
         try {
-            bookChapterDao.getChapterList(bookUrls).groupBy { it.bookUrl }
+            ChapterBatch(bookChapterDao.getChapterList(bookUrls).groupBy { it.bookUrl }, false)
         } catch (error: Exception) {
             AppLog.put("缓存维护读取章节列表失败，跳过该批", error)
-            emptyMap()
+            ChapterBatch(emptyMap(), true)
         }
 
     /** 批量算出每本书的合法章节主体名，替代逐本 5000 次 SQL。 */
-    private fun loadChapterSubjects(bookUrls: List<String>): Map<String, Set<String>> {
+    private fun loadChapterSubjects(bookUrls: List<String>): ChapterSubjects {
         val result = HashMap<String, MutableSet<String>>()
+        val failed = HashSet<String>()
         bookUrls.chunked(SQL_BATCH).forEach { batch ->
-            loadChaptersGrouped(batch).values.flatten().forEach { chapter ->
-                val set = result.getOrPut(chapter.bookUrl) { HashSet() }
-                set += chapter.getFileName().substringBeforeLast('.')
+            val chapterBatch = loadChaptersGrouped(batch)
+            if (chapterBatch.failed) {
+                failed += batch
+            } else {
+                chapterBatch.byBook.values.flatten().forEach { chapter ->
+                    val set = result.getOrPut(chapter.bookUrl) { HashSet() }
+                    set += chapter.getFileName().substringBeforeLast('.')
+                }
             }
         }
-        return result
+        return ChapterSubjects(result, failed)
     }
+
+    private data class ChapterSubjects(
+        val byBook: Map<String, Set<String>>,
+        val failedBookUrls: Set<String>,
+    )
 
     /**
      * 取出该书缓存目录下查无对应章节的条目。

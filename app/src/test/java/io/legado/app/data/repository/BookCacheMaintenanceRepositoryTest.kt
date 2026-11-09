@@ -3,8 +3,10 @@ package io.legado.app.data.repository
 import android.app.Application
 import io.legado.app.constant.BookType
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.domain.model.OrphanDeleteRequest
 import io.legado.app.help.book.BookHelp
 import io.legado.app.support.InMemoryAppDatabaseFixture
 import kotlinx.coroutines.CancellationException
@@ -21,6 +23,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import splitties.init.injectAsAppCtx
 import java.io.File
+import java.lang.reflect.Proxy
 
 /**
  * Repository 层集成回归：用真实 Room（内存库）+ 真实缓存目录，覆盖 FakeGateway 绕过的部分。
@@ -181,6 +184,52 @@ class BookCacheMaintenanceRepositoryTest {
         }
     }
 
+    /** 整书字数的 UPDATE 自带「当前为空」条件：书源期间写入的值不能被覆盖。 */
+    @Test
+    fun `book total update only writes when the field is still empty`() {
+        withRepository { _, db ->
+            val empty = onlineBook("empty-total")
+            val filled = onlineBook("filled-total").apply { wordCount = "100万字" }
+            db.bookDao.insert(empty, filled)
+
+            assertEquals(1, db.bookDao.upWordCount(empty.bookUrl, "6字"))
+            assertEquals("6字", db.bookDao.getBook(empty.bookUrl)!!.wordCount)
+            assertEquals(0, db.bookDao.upWordCount(filled.bookUrl, "999字"))
+            assertEquals("100万字", db.bookDao.getBook(filled.bookUrl)!!.wordCount)
+        }
+    }
+
+    /** 章节查询失败时，删除侧和重算侧都必须把书留下供重试。 */
+    @Test
+    fun `chapter query failure keeps books for retry on both paths`() {
+        withRepository(chapterDaoFactory = { throwingChapterDao() }) { repository, db ->
+            val book = onlineBook("query-failed")
+            db.bookDao.insert(book)
+            db.bookChapterDao.insert(chapterOf(book, 0, "Chapter One"))
+            File(bookDir(book).apply { mkdirs() }, ORPHAN_DIR).mkdirs()
+
+            val deleted = runBlocking {
+                repository.deleteOrphanedChapters(
+                    listOf(OrphanDeleteRequest(book.bookUrl, setOf(ORPHAN_DIR)))
+                ) { }
+            }
+            assertEquals(0, deleted.deletedEntries)
+            assertEquals(1, deleted.skippedBooks)
+            assertEquals(0L, deleted.freedBytes)
+
+            val recount = runBlocking {
+                repository.recountWordCounts(setOf(book.bookUrl)) { _, _ -> }
+            }
+            assertTrue("重算侧不应把书算作已处理", recount.handledBookUrls.isEmpty())
+            assertNull("查询失败不应写整书字数", db.bookDao.getBook(book.bookUrl)!!.wordCount)
+        }
+    }
+
+    private fun throwingChapterDao(): BookChapterDao = Proxy.newProxyInstance(
+        BookChapterDao::class.java.classLoader,
+        arrayOf(BookChapterDao::class.java),
+    ) { _, _, _ -> throw IllegalStateException("simulated chapter query failure") } as BookChapterDao
+
     private fun onlineBook(suffix: String) = Book(
         bookUrl = "https://cache.example/$suffix",
         name = "Book $suffix",
@@ -197,6 +246,7 @@ class BookCacheMaintenanceRepositoryTest {
     private fun bookDir(book: Book) = File(BookHelp.cachePath, book.getFolderName())
 
     private fun withRepository(
+        chapterDaoFactory: (AppDatabase) -> BookChapterDao = { it.bookChapterDao },
         block: (BookCacheMaintenanceRepository, AppDatabase) -> Unit,
     ) {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
@@ -206,7 +256,7 @@ class BookCacheMaintenanceRepositoryTest {
                 block(
                     BookCacheMaintenanceRepository(
                         fixture.database.bookDao,
-                        fixture.database.bookChapterDao,
+                        chapterDaoFactory(fixture.database),
                     ),
                     fixture.database,
                 )

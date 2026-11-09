@@ -1,0 +1,90 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preAppComicDebugBuild UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsAppComicDebug UP-TO-DATE
+> Task :app:generateAppComicDebugResources UP-TO-DATE
+> Task :verifyConfigArchitecture
+> Task :app:processAppComicDebugGoogleServices UP-TO-DATE
+> Task :modules:book:preBuild UP-TO-DATE
+> Task :modules:book:preDebugBuild UP-TO-DATE
+> Task :modules:book:generateDebugResources UP-TO-DATE
+> Task :modules:book:packageDebugResources UP-TO-DATE
+> Task :modules:rhino:preBuild UP-TO-DATE
+> Task :modules:rhino:preDebugBuild UP-TO-DATE
+> Task :modules:rhino:generateDebugResources UP-TO-DATE
+> Task :app:prepareLibraryDefinitionsAppComicDebug UP-TO-DATE
+> Task :modules:rhino:packageDebugResources UP-TO-DATE
+> Task :app:packageAppComicDebugResources UP-TO-DATE
+> Task :modules:book:processDebugNavigationResources UP-TO-DATE
+> Task :modules:rhino:processDebugNavigationResources UP-TO-DATE
+> Task :app:mergeAppComicDebugResources UP-TO-DATE
+> Task :modules:book:parseDebugLocalResources UP-TO-DATE
+> Task :modules:book:generateDebugRFile UP-TO-DATE
+> Task :modules:rhino:parseDebugLocalResources UP-TO-DATE
+> Task :modules:rhino:generateDebugRFile UP-TO-DATE
+> Task :app:generateAppComicDebugBuildConfig UP-TO-DATE
+> Task :modules:book:compileDebugKotlin NO-SOURCE
+> Task :modules:book:javaPreCompileDebug UP-TO-DATE
+> Task :app:processAppComicDebugNavigationResources UP-TO-DATE
+> Task :app:parseAppComicDebugLocalResources UP-TO-DATE
+> Task :modules:book:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:generateAppComicDebugRFile UP-TO-DATE
+> Task :modules:book:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :modules:rhino:compileDebugKotlin UP-TO-DATE
+> Task :modules:rhino:javaPreCompileDebug UP-TO-DATE
+> Task :modules:rhino:compileDebugJavaWithJavac NO-SOURCE
+> Task :modules:rhino:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:javaPreCompileAppComicDebug UP-TO-DATE
+> Task :modules:book:writeDebugAarMetadata UP-TO-DATE
+> Task :modules:rhino:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkAppComicDebugAarMetadata UP-TO-DATE
+> Task :app:mapAppComicDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileAppComicDebugNavigationResources UP-TO-DATE
+> Task :app:createAppComicDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksAppComicDebug UP-TO-DATE
+> Task :modules:book:extractDeepLinksDebug UP-TO-DATE
+> Task :modules:book:processDebugManifest UP-TO-DATE
+> Task :modules:rhino:extractDeepLinksDebug UP-TO-DATE
+> Task :modules:rhino:processDebugManifest UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesAppComicDebug UP-TO-DATE
+> Task :app:processAppComicDebugMainManifest UP-TO-DATE
+> Task :app:processAppComicDebugManifest UP-TO-DATE
+> Task :app:processAppComicDebugManifestForPackage UP-TO-DATE
+> Task :modules:book:mapDebugSourceSetPaths UP-TO-DATE
+> Task :modules:book:compileDebugLibraryResources UP-TO-DATE
+> Task :modules:rhino:mapDebugSourceSetPaths UP-TO-DATE
+> Task :modules:rhino:compileDebugLibraryResources UP-TO-DATE
+> Task :app:processAppComicDebugResources UP-TO-DATE
+> Task :app:preAppComicDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileAppComicDebugUnitTest UP-TO-DATE
+> Task :app:generateAppComicDebugAssets UP-TO-DATE
+> Task :modules:book:generateDebugAssets UP-TO-DATE
+> Task :modules:book:mergeDebugAssets UP-TO-DATE
+> Task :modules:rhino:generateDebugAssets UP-TO-DATE
+> Task :modules:rhino:mergeDebugAssets UP-TO-DATE
+> Task :app:mergeAppComicDebugAssets UP-TO-DATE
+> Task :app:packageAppComicDebugUnitTestForUnitTest UP-TO-DATE
+> Task :app:mergeAppComicDebugUnitTestManifest UP-TO-DATE
+> Task :app:processAppComicDebugUnitTestManifest UP-TO-DATE
+> Task :app:generateAppComicDebugUnitTestConfig UP-TO-DATE
+> Task :modules:book:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :modules:book:processDebugJavaRes UP-TO-DATE
+> Task :modules:rhino:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :modules:rhino:processDebugJavaRes UP-TO-DATE
+> Task :app:kspAppComicDebugKotlin
+> Task :app:compileAppComicDebugKotlin
+> Task :app:processAppComicDebugJavaRes UP-TO-DATE
+> Task :app:compileAppComicDebugJavaWithJavac
+> Task :app:bundleAppComicDebugClassesToCompileJar
+> Task :app:bundleAppComicDebugClassesToRuntimeJar
+> Task :app:kspAppComicDebugUnitTestKotlin
+> Task :app:compileAppComicDebugUnitTestKotlin
+> Task :app:compileAppComicDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processAppComicDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:copyRoomSchemas NO-SOURCE
+> Task :app:testAppComicDebugUnitTest
+
+BUILD SUCCESSFUL in 8m 30s
+70 actionable tasks: 9 executed, 61 up-to-date
+Configuration cache entry reused.
