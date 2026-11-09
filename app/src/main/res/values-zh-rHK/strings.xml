@@ -3114,4 +3114,5 @@
     <string name="a11y_open_playback">開啟播放介面</string>
     <string name="a11y_open_playback_named">開啟《%1$s》的播放介面</string>
     <string name="a11y_reorder_position">第 %1$d 項，共 %2$d 項</string>
+    <string name="paragraph_comment_height_percent">%1$d%%</string>
 </resources>
