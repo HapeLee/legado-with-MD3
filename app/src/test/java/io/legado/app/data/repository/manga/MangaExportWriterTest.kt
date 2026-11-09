@@ -2,6 +2,7 @@ package io.legado.app.data.repository.manga
 
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
+import io.legado.app.model.localBook.LocalMangaFiles
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -56,7 +57,7 @@ class MangaExportWriterTest {
             }
             val book = Book(type = BookType.local or BookType.image, bookUrl = root.path, name = "Comic", originName = root.name)
             LocalMangaLoader(cache).use { loader ->
-                val chapters = loader.chapters(book)
+                val chapters = LocalMangaFiles.chapters(book)
                 assertEquals(listOf("0001_Chapter 10", "0002_Chapter 2"), chapters.map { it.title })
                 assertEquals(listOf(2, 1), chapters.map { loader.load(book, it).pages.size })
             }

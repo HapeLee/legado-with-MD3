@@ -240,10 +240,22 @@ class MangaReaderViewModel(
             MangaReaderIntent.CloseReader -> closeReader()
             MangaReaderIntent.ToggleMenu -> setMenuVisible(!_uiState.value.menuVisible)
             MangaReaderIntent.HideMenu -> setMenuVisible(false)
-            MangaReaderIntent.Retry -> launchAction {
-                showLoading()
-                invalidateCurrentChapter()
-                executeSession(MangaSessionCommand.RetryChapter(readerSession.state.value.chapterIndex))
+            MangaReaderIntent.Retry -> {
+                val session = readerSession.state.value
+                if (session.openError != null) {
+                    initializationRequest?.let(::openSession)
+                } else {
+                    launchAction {
+                        showLoading()
+                        // Reauthorizing a local folder only needs to retry listing it.
+                        if ((session.currentChapter as? MangaChapterState.Failed)
+                                ?.canReselectBookDirectory != true
+                        ) {
+                            invalidateCurrentChapter()
+                        }
+                        executeSession(MangaSessionCommand.RetryChapter(session.chapterIndex))
+                    }
+                }
             }
             MangaReaderIntent.PreviousChapter -> openRelativeChapter(-1)
             MangaReaderIntent.NextChapter -> openRelativeChapter(1)
@@ -371,6 +383,10 @@ class MangaReaderViewModel(
         // already owns the session, including a pending chapter result or open command.
         if (initializationRequest == intent) return
         initializationRequest = intent
+        openSession(intent)
+    }
+
+    private fun openSession(intent: MangaReaderIntent.Initialize) {
         showLoading()
         viewModelScope.launch {
             readerSession.execute(
@@ -456,12 +472,18 @@ class MangaReaderViewModel(
         if (book == null) {
             session.openError?.let {
                 showError(it, fallbackRes = R.string.manga_reader_init_failed)
+                _uiState.update { state ->
+                    state.copy(canReselectBookDirectory = session.canReselectBookDirectory)
+                }
             }
             return
         }
         val current = session.currentChapter
         if (current !is MangaChapterState.Ready) {
-            if (pendingExplicitChapterIndex == session.chapterIndex) {
+            if (current is MangaChapterState.Failed && current.canReselectBookDirectory) {
+                pendingExplicitChapterIndex = null
+                showError(current.message, canReselectBookDirectory = true)
+            } else if (pendingExplicitChapterIndex == session.chapterIndex) {
                 // 显式跳章失败后立即放开门闩：否则目标页一直不可见时，
                 // 之后对该章的目录/上一章点击会被 openChapter 静默吞掉。
                 if (current is MangaChapterState.Failed) pendingExplicitChapterIndex = null
@@ -732,6 +754,7 @@ class MangaReaderViewModel(
             it.copy(
                 isLoading = true,
                 errorMessage = null,
+                canReselectBookDirectory = false,
                 pages = persistentListOf(),
                 currentItemIndex = 0,
                 scrollRequest = null,
@@ -739,9 +762,13 @@ class MangaReaderViewModel(
         }
     }
 
-    fun showError(message: String) {
+    fun showError(message: String, canReselectBookDirectory: Boolean = false) {
         _uiState.update {
-            it.copy(isLoading = false, errorMessage = MangaReaderText.Dynamic(message))
+            it.copy(
+                isLoading = false,
+                errorMessage = MangaReaderText.Dynamic(message),
+                canReselectBookDirectory = canReselectBookDirectory,
+            )
         }
     }
 

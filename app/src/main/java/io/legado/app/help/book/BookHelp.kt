@@ -902,6 +902,7 @@ object BookHelp {
      * 读取章节内容
      */
     fun getContent(book: Book, bookChapter: BookChapter): String? {
+        if (book.isLocalManga) return null
         val file = cachedChapterContentFile(book, bookChapter)
         if (file.exists()) {
             val string = file.readText()

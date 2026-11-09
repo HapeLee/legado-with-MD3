@@ -20,6 +20,7 @@ import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.readSimulating
 import io.legado.app.help.book.simulatedTotalChapterNum
@@ -29,6 +30,8 @@ import io.legado.app.model.cache.CacheDownloadRequest
 import io.legado.app.model.cache.CacheDownloadSource
 import io.legado.app.model.cache.ChapterSelection
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.localBook.LocalMangaFiles
+import io.legado.app.model.localBook.isLocalMangaArchive
 import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -63,11 +66,17 @@ class MangaReaderDataRepository(
         inBookshelf: Boolean,
         chapterChanged: Boolean,
     ): OpenedMangaBook {
-        val book = bookUrl?.takeIf(String::isNotEmpty)?.let(database.bookDao::getBook)
-            ?: database.bookDao.lastReadBook
-            ?: throw NoStackTraceException(application.getString(R.string.no_book))
-        if (book.isLocal && !localBookExists(book)) {
-            throw NoStackTraceException(application.getString(R.string.no_book))
+        val book = (if (bookUrl.isNullOrEmpty()) {
+            database.bookDao.lastReadBook
+        } else {
+            database.bookDao.getBook(bookUrl)
+        }) ?: throw NoStackTraceException(application.getString(R.string.no_book))
+        if (book.isLocal) {
+            if (book.isLocalManga && !book.isLocalMangaArchive) {
+                LocalMangaFiles.checkDirectory(book)
+            } else {
+                LocalBook.getBookInputStream(book).use { }
+            }
         }
         val source = database.bookSourceDao.getBookSource(book.origin)
         if (!book.isLocal && book.tocUrl.isEmpty()) {
@@ -85,15 +94,12 @@ class MangaReaderDataRepository(
         var chapterCount = database.bookChapterDao.getChapterCount(book.bookUrl)
         if (chapterCount == 0 || book.isLocalModified()) {
             if (book.isLocal) {
-                val chapters = if (localMangaLoader.supports(book)) {
-                    localMangaLoader.chapters(book).also {
-                        book.totalChapterNum = it.size
-                        book.latestChapterTitle = it.lastOrNull()?.title.orEmpty()
-                    }
-                } else LocalBook.getChapterList(book)
-                database.bookChapterDao.delByBook(book.bookUrl)
-                database.bookChapterDao.insert(*chapters.toTypedArray())
-                database.bookDao.update(book)
+                val chapters = LocalBook.getChapterList(book)
+                database.runInTransaction {
+                    database.bookChapterDao.delByBook(book.bookUrl)
+                    database.bookChapterDao.insert(*chapters.toTypedArray())
+                    database.bookDao.update(book)
+                }
                 chapterCount = chapters.size
             } else {
                 val activeSource = source ?: throw NoStackTraceException(
@@ -146,7 +152,7 @@ class MangaReaderDataRepository(
             ?: throw NoStackTraceException(application.getString(R.string.no_book))
         val chapter = database.bookChapterDao.getChapter(bookUrl, chapterIndex)
             ?: throw NoStackTraceException(application.getString(R.string.error_load_toc))
-        return if (book.isLocal && localMangaLoader.supports(book)) {
+        return if (book.isLocalManga) {
             localMangaLoader.load(book, chapter)
         } else chapterPageLoader.load(book, chapter)
     }
@@ -261,8 +267,4 @@ class MangaReaderDataRepository(
         durChapterTime = durChapterTime,
         durChapterTitle = durChapterTitle,
     )
-
-    private fun localBookExists(book: Book): Boolean = runCatching {
-        LocalBook.getBookInputStream(book)
-    }.isSuccess
 }

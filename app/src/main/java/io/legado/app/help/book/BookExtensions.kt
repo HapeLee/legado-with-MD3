@@ -26,6 +26,7 @@ import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.localBook.readableMangaDirectoryUri
 import io.legado.app.ui.book.info.HighlightedTag
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
@@ -44,6 +45,7 @@ import kotlinx.datetime.todayIn
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.io.File
+import java.io.FileNotFoundException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
@@ -70,6 +72,18 @@ val Book.isLocal: Boolean
         }
         return isType(BookType.local)
     }
+
+/** 本地漫画（图片目录或 CBZ/ZIP 压缩包）：旧文本阅读器会按电子书解析，读目录流必抛 EISDIR。 */
+val Book.isLocalManga: Boolean
+    get() = isLocal && (isImage || originName.endsWith(".cbz", ignoreCase = true))
+
+/**
+ * 阅读器统一分流（书架 / 详情页 / 各入口共用，勿再手写条件）：
+ * - 本地漫画恒进漫画阅读器——旧阅读器无法读取图片目录，不受 showMangaUi 开关影响；
+ * - 在线图片书跟随 showMangaUi 设置。
+ */
+fun Book.shouldOpenMangaReader(showMangaUi: Boolean): Boolean =
+    isLocalManga || (isImage && showMangaUi)
 
 val Book.isLocalTxt: Boolean
     get() = isLocal && originName.endsWith(".txt", true)
@@ -176,24 +190,34 @@ private val localUriCache by lazy {
     ConcurrentHashMap<String, Uri>()
 }
 
-fun Book.getLocalUri(): Uri {
+fun Book.getLocalUri(directory: Boolean = false): Uri {
     if (!isLocal) {
         throw NoStackTraceException("不是本地书籍")
     }
-    var uri = localUriCache[bookUrl]
-    if (uri != null) {
-        return uri
-    }
-    uri = if (bookUrl.isUri()) {
+    val cachedUri = localUriCache[bookUrl]
+    if (!directory && cachedUri != null) return cachedUri
+    val uri = if (bookUrl.isUri()) {
         bookUrl.toUri()
     } else {
         Uri.fromFile(File(bookUrl))
     }
-    //先检测uri是否有效,这个比较快
-    uri.inputStream(appCtx).getOrNull()?.use {
-        localUriCache[bookUrl] = uri
-    }?.let {
-        return uri
+    // 目录通过元数据验证。文件继续走现有的流探测与重定位流程。
+    val directoryError = if (directory) {
+        try {
+            val readable = readableMangaDirectoryUri(cachedUri ?: uri)
+            localUriCache[bookUrl] = readable
+            return readable
+        } catch (error: SecurityException) {
+            error
+        } catch (error: FileNotFoundException) {
+            error
+        }
+    } else {
+        uri.inputStream(appCtx).getOrNull()?.use {
+            localUriCache[bookUrl] = uri
+            return uri
+        }
+        null
     }
     //不同的设备书籍保存路径可能不一样, uri无效时尝试寻找当前保存路径下的文件
     val defaultBookDir = otherGateway.currentSettings.defaultBookTreeUri
@@ -207,12 +231,14 @@ fun Book.getLocalUri(): Uri {
         if (!treeFileDoc.exists()) {
             appCtx.toastOnUi("书籍保存目录失效，请重新设置！")
         } else {
-            val fileDoc = treeFileDoc.find(originName, 5, 100)
+            val fileDoc = treeFileDoc.takeIf { directory && it.name == originName }
+                ?: treeFileDoc.find(originName, 5, 100, if (directory) true else null)
             if (fileDoc != null) {
-                val newBookUrl = fileDoc.toString()
+                val readableUri = if (directory) readableMangaDirectoryUri(fileDoc.uri) else fileDoc.uri
+                val newBookUrl = if (directory && fileDoc.isContentScheme) readableUri.toString() else fileDoc.toString()
                 val oldBook = copy()
                 if (!oldBook.canSafelyRebindTo(newBookUrl)) {
-                    return fileDoc.uri
+                    return readableUri
                 }
                 appDb.runInTransaction {
                     if (oldBook.bookUrl == newBookUrl) {
@@ -229,8 +255,8 @@ fun Book.getLocalUri(): Uri {
                         this.latestChapterTime = 0
                     }
                 }
-                localUriCache[newBookUrl] = fileDoc.uri
-                return fileDoc.uri
+                localUriCache[newBookUrl] = readableUri
+                return readableUri
             }
         }
     }
@@ -243,12 +269,14 @@ fun Book.getLocalUri(): Uri {
             Uri.fromFile(File(importBookDir))
         }
         val treeFileDoc = FileDoc.fromUri(treeUri, true)
-        val fileDoc = treeFileDoc.find(originName, 5, 100)
+        val fileDoc = treeFileDoc.takeIf { directory && it.name == originName }
+            ?: treeFileDoc.find(originName, 5, 100, if (directory) true else null)
         if (fileDoc != null) {
-            val newBookUrl = fileDoc.toString()
+            val readableUri = if (directory) readableMangaDirectoryUri(fileDoc.uri) else fileDoc.uri
+            val newBookUrl = if (directory && fileDoc.isContentScheme) readableUri.toString() else fileDoc.toString()
             val oldBook = copy()
             if (!oldBook.canSafelyRebindTo(newBookUrl)) {
-                return fileDoc.uri
+                return readableUri
             }
 
             appDb.runInTransaction {
@@ -264,11 +292,12 @@ fun Book.getLocalUri(): Uri {
                     this.latestChapterTime = 0
                 }
             }
-            localUriCache[newBookUrl] = fileDoc.uri
-            return fileDoc.uri
+            localUriCache[newBookUrl] = readableUri
+            return readableUri
         }
     }
 
+    if (directoryError != null) throw directoryError
     localUriCache[bookUrl] = uri
     return uri
 }

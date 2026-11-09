@@ -34,6 +34,7 @@ import io.legado.app.help.readaloud.cast.CastRenderOptions
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.book.isPdf
@@ -1367,6 +1368,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             val book = ReaderPerfTrace.suspendSection("prefetch.book-lookup") {
                 appDb.bookDao.getBook(bookUrl)
             } ?: return@launch
+            if (book.isLocalManga) return@launch
             // 需要联网补目录、本地文件缺失或已改动的, 都交给阅读页的完整初始化流程
             if (!book.isLocal && book.tocUrl.isEmpty()) return@launch
             if (book.isLocal) {

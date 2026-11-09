@@ -641,6 +641,8 @@
     <string name="black">黑色</string>
     <string name="content_empty">文章內容為空</string>
     <string name="on_change_source">正在換源請等待…</string>
+    <string name="local_manga_requires_reader">請使用漫畫閱讀器開啟本機漫畫。</string>
+    <string name="local_manga_directory_unavailable">無法存取本機漫畫，請重新選擇漫畫所在文件夾以授予讀取權限。</string>
     <string name="chapter_list_empty">目錄列表為空</string>
     <string name="text_letter_spacing">字距</string>
 

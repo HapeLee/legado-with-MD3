@@ -72,6 +72,7 @@ import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.constant.EventBus
 import io.legado.app.core.ui.player.playerUnderlaySemantics
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsGateway
@@ -374,6 +375,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     private val backupSettingsGateway by inject<BackupSettingsGateway>()
     private val readAloudSettingsRepository by inject<ReadAloudSettingsRepository>()
     internal val navRouteTracker by inject<MainNavRouteTracker>()
+    internal val bookRepository by inject<BookRepository>()
     private val routeEvents = MutableSharedFlow<RouteEvent>(extraBufferCapacity = 1)
     /**
      * Web 服务与「局域网请求」各自持有独立的 launcher：授权结果互不影响，也不需要用一个可变字段

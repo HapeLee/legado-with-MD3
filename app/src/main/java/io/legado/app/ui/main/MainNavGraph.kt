@@ -279,6 +279,15 @@ private fun ConsumeBookPageResult(
     }
 }
 
+private fun MainActivity.exitReaderGate(backStack: MutableList<NavKey>, route: NavKey) {
+    if (backStack.size > 1) {
+        MainNavigator.navigateBack(this, backStack, navRouteTracker, fromRoute = route)
+    } else {
+        backStack.clear()
+        backStack.add(MainRouteHome)
+    }
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun MainActivity.mainEntryProvider(
     backStack: MutableList<NavKey>,
@@ -569,7 +578,7 @@ fun MainActivity.mainEntryProvider(
                             sharedCoverKey = sharedCoverKey
                         )
                     )
-                } else if (!book.isLocal && book.isImage && showMangaUi) {
+                } else if (book.shouldOpenMangaReader(showMangaUi)) {
                     onNavigateToRoute(
                         MainRouteReadManga(
                             bookUrl = book.bookUrl,
@@ -887,28 +896,27 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteReadBook>(
         metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
     ) { route ->
-        // 私密闸门：阅读记录 / 通知栏 / 深链等直开阅读器的路径全都在这里被拦一次，
-        // 未授权时阅读器根本不会被组合（也就没有加载正文的机会）
+        // A legacy reading intent can carry a book URL or request the last-read book.
+        // Resolve it before composing the text reader so it never starts a manga as text.
+        var routeChecked by remember(route) { mutableStateOf(false) }
+        val isTopRoute = backStack.lastOrNull() == route
+        LaunchedEffect(route, isTopRoute) {
+            if (!isTopRoute || routeChecked) return@LaunchedEffect
+            val book = if (route.bookUrl.isNullOrEmpty()) {
+                bookRepository.getLastReadBookForReader()
+            } else {
+                bookRepository.getBook(route.bookUrl)
+            }
+            if (!MainNavigator.redirectLocalManga(backStack, route, book, navRouteTracker)) {
+                routeChecked = true
+            }
+        }
+        if (!routeChecked) return@entry
+
         PrivateReadGate(
             bookUrl = route.bookUrl,
-            onExit = {
-                if (backStack.size > 1) {
-                    MainNavigator.navigateBack(
-                        this@mainEntryProvider,
-                        backStack,
-                        navRouteTracker,
-                        fromRoute = route,
-                    )
-                } else {
-                    // 通知 / 深链可能让阅读器成为栈里唯一一项：没有"当前页"可退，
-                    // 按约定落到书架，而不是把应用关掉
-                    backStack.clear()
-                    backStack.add(MainRouteHome)
-                }
-            },
-            onOpenLocalPasswordSettings = {
-                onNavigateToRoute(MainRouteSettingsPrivate)
-            },
+            onExit = { exitReaderGate(backStack, route) },
+            onOpenLocalPasswordSettings = { onNavigateToRoute(MainRouteSettingsPrivate) },
         ) {
             ReaderPerfTrace.marker("nav.entry.begin")
             val readBookViewModel = koinViewModel<ReadBookViewModel>(
@@ -1142,69 +1150,75 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteReadManga>(
         metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
     ) { route ->
-        val mangaViewModel = koinViewModel<MangaReaderViewModel>(
-            key = "ReadManga:${route.bookUrl ?: "last-read"}",
-        )
-        ConsumeBookPageResult(route, backStack.lastOrNull() == route, navRouteTracker) { result ->
-            when (result) {
-                is BookPageResult.ChapterSelected ->
-                    mangaViewModel.onIntent(
-                        MangaReaderIntent.OpenChapter(
-                            result.index,
-                            result.position
+        PrivateReadGate(
+            bookUrl = route.bookUrl,
+            onExit = { exitReaderGate(backStack, route) },
+            onOpenLocalPasswordSettings = { onNavigateToRoute(MainRouteSettingsPrivate) },
+        ) {
+            val mangaViewModel = koinViewModel<MangaReaderViewModel>(
+                key = "ReadManga:${route.bookUrl ?: "last-read"}",
+            )
+            ConsumeBookPageResult(route, backStack.lastOrNull() == route, navRouteTracker) { result ->
+                when (result) {
+                    is BookPageResult.ChapterSelected ->
+                        mangaViewModel.onIntent(
+                            MangaReaderIntent.OpenChapter(
+                                result.index,
+                                result.position
+                            )
+                        )
+
+                    BookPageResult.BookDeleted -> MainNavigator.navigateBack(
+                        this@mainEntryProvider, backStack, navRouteTracker, fromRoute = route,
+                    )
+
+                    else -> Unit
+                }
+            }
+            MangaReaderRouteScreen(
+                bookUrl = route.bookUrl,
+                inBookshelf = route.inBookshelf,
+                chapterChanged = route.chapterChanged,
+                openRequestId = route.openRequestId,
+                viewModel = mangaViewModel,
+                onOpenMangaTranslationSettings = { pushRoute(MainRouteSettingsManga(openTranslation = true)) },
+                onOpenToc = { bookUrl, page -> onNavigateToRoute(MainRouteToc(bookUrl, page)) },
+                restoreSystemBarsVisible = configuration.appShell.showStatusBar,
+                sharedTransitionScope = sharedTransitionScope.takeIf {
+                    configuration.appShell.readerSharedElementEnabled
+                },
+                animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+                sharedCoverKey = route.sharedCoverKey,
+                isTopRoute = backStack.lastOrNull() == route,
+                onFinish = {
+                    MainNavigator.navigateBack(
+                        this@mainEntryProvider,
+                        backStack,
+                        navRouteTracker,
+                        fromRoute = route,
+                    )
+                },
+                onOpenBookInfo = { name, author, bookUrl ->
+                    onNavigateToRoute(
+                        MainRouteBookInfo(
+                            name, author, bookUrl,
+                            openRequestId = System.nanoTime(),
                         )
                     )
-
-                BookPageResult.BookDeleted -> MainNavigator.navigateBack(
-                    this@mainEntryProvider, backStack, navRouteTracker, fromRoute = route,
-                )
-
-                else -> Unit
-            }
-        }
-        MangaReaderRouteScreen(
-            bookUrl = route.bookUrl,
-            inBookshelf = route.inBookshelf,
-            chapterChanged = route.chapterChanged,
-            openRequestId = route.openRequestId,
-            viewModel = mangaViewModel,
-            onOpenMangaTranslationSettings = { pushRoute(MainRouteSettingsManga(openTranslation = true)) },
-            onOpenToc = { bookUrl, page -> onNavigateToRoute(MainRouteToc(bookUrl, page)) },
-            restoreSystemBarsVisible = configuration.appShell.showStatusBar,
-            sharedTransitionScope = sharedTransitionScope.takeIf {
-                configuration.appShell.readerSharedElementEnabled
-            },
-            animatedVisibilityScope = LocalNavAnimatedContentScope.current,
-            sharedCoverKey = route.sharedCoverKey,
-            isTopRoute = backStack.lastOrNull() == route,
-            onFinish = {
-                MainNavigator.navigateBack(
-                    this@mainEntryProvider,
-                    backStack,
-                    navRouteTracker,
-                    fromRoute = route,
-                )
-            },
-            onOpenBookInfo = { name, author, bookUrl ->
-                onNavigateToRoute(
-                    MainRouteBookInfo(
-                        name, author, bookUrl,
-                        openRequestId = System.nanoTime(),
+                },
+                onOpenSourceLogin = { sourceUrl ->
+                    onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, sourceUrl))
+                },
+                onOpenSourceEdit = { sourceUrl ->
+                    onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
+                },
+                onOpenWebView = { title, url, sourceOrigin, sourceName, sourceType ->
+                    onNavigateToRoute(
+                        MainRouteWebView(title, url, sourceOrigin, sourceName, sourceType)
                     )
-                )
-            },
-            onOpenSourceLogin = { sourceUrl ->
-                onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, sourceUrl))
-            },
-            onOpenSourceEdit = { sourceUrl ->
-                onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
-            },
-            onOpenWebView = { title, url, sourceOrigin, sourceName, sourceType ->
-                onNavigateToRoute(
-                    MainRouteWebView(title, url, sourceOrigin, sourceName, sourceType)
-                )
-            },
-        )
+                },
+            )
+        }
     }
 
     entry<MainRouteVideoPlay> { route ->

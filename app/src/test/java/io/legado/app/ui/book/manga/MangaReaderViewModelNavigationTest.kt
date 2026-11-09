@@ -76,6 +76,51 @@ class MangaReaderViewModelNavigationTest {
         Dispatchers.resetMain()
     }
 
+    @Test
+    fun `retry after a directory permission error reopens the original book`() = runTest(dispatcher) {
+        val reader = createReader()
+        val initialize = MangaReaderIntent.Initialize("comic", inBookshelf = false, chapterChanged = true)
+        reader.onIntent(initialize)
+        runCurrent()
+        session.state.value = MangaSessionState(
+            sessionId = MangaSessionId("test"),
+            openError = "Missing directory permission",
+            canReselectBookDirectory = true,
+        )
+        runCurrent()
+        assertTrue(reader.uiState.value.canReselectBookDirectory)
+
+        reader.onIntent(MangaReaderIntent.Retry)
+        runCurrent()
+
+        val opens = session.commands.filterIsInstance<MangaSessionCommand.Open>()
+        assertEquals(listOf(
+            MangaSessionCommand.Open("comic", inBookshelf = false, chapterChanged = true),
+            MangaSessionCommand.Open("comic", inBookshelf = false, chapterChanged = true),
+        ), opens)
+        assertFalse(reader.uiState.value.canReselectBookDirectory)
+    }
+
+    @Test
+    fun `directory permission failure during a chapter shows the folder picker action`() = runTest(dispatcher) {
+        val reader = createReader()
+        runCurrent()
+        val state = session.state.value
+        session.state.value = state.copy(
+            currentChapter = MangaChapterState.Failed(
+                token = requireNotNull(state.tokenFor(state.chapterIndex)),
+                message = "Directory is inaccessible",
+                canReselectBookDirectory = true,
+            )
+        )
+        runCurrent()
+
+        assertTrue(reader.uiState.value.canReselectBookDirectory)
+        reader.onIntent(MangaReaderIntent.Retry)
+        runCurrent()
+        assertTrue(session.commands.contains(MangaSessionCommand.RetryChapter(state.chapterIndex)))
+    }
+
     @Test fun `prefetch readiness survives session updates and retry rejects its old callback`() = runTest(dispatcher) {
         val reader = createReader()
         runCurrent()

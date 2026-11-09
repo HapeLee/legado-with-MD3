@@ -10,6 +10,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.getExportFileName
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
+import io.legado.app.model.localBook.LocalMangaFiles
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.createFileIfNotExist
 import io.legado.app.utils.createFolderIfNotExist
@@ -43,8 +44,7 @@ class MangaExportRepository(
         try {
             LocalMangaLoader(localCache).use { local ->
                 val chapters = if (book.isLocal) {
-                    if (!local.supports(book)) throw IOException(application.getString(R.string.feature_manga_export_unsupported))
-                    local.chapters(book)
+                    LocalMangaFiles.chapters(book)
                 } else database.bookChapterDao.getChapterList(bookUrl).sortedBy { it.index }
                 if (chapters.isEmpty()) throw IOException(application.getString(R.string.feature_manga_export_empty))
 

@@ -760,6 +760,8 @@
     <string name="black">Black</string>
     <string name="content_empty">No content</string>
     <string name="on_change_source">Changing source, wait please</string>
+    <string name="local_manga_requires_reader">Open local comics in the manga reader.</string>
+    <string name="local_manga_directory_unavailable">Cannot access this local comic. Reselect its folder to grant access.</string>
     <string name="chapter_list_empty">Chapters is empty</string>
     <string name="text_letter_spacing">Word spacing</string>
 

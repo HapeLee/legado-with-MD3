@@ -9,6 +9,7 @@ import io.legado.app.constant.AppPattern.bookFileRegex
 import io.legado.app.data.entities.Book
 import io.legado.app.help.config.BubblePackageManager
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.localBook.LocalMangaFiles
 import io.legado.app.utils.*
 
 class FileAssociationViewModel(application: Application) : BaseAssociationViewModel(application) {
@@ -31,6 +32,10 @@ class FileAssociationViewModel(application: Application) : BaseAssociationViewMo
                     } == true
                     if (isBubblePack) {
                         successLive.postValue("bubblePack" to fileDoc.uri.toString())
+                        return@execute
+                    }
+                    if (LocalMangaFiles.isMangaArchive(fileDoc)) {
+                        importBookLiveData.postValue(fileDoc.uri)
                         return@execute
                     }
                     ArchiveUtils.deCompress(fileDoc, ArchiveUtils.TEMP_PATH) {
