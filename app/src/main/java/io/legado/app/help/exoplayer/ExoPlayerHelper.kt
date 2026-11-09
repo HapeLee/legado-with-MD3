@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.FileDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.Cache
@@ -66,8 +67,10 @@ object ExoPlayerHelper {
 
 
 
-    private val resolvingDataSource: ResolvingDataSource.Factory by lazy {
-        ResolvingDataSource.Factory(cacheDataSourceFactory) {
+    internal val resolvingDataSource: ResolvingDataSource.Factory by lazy {
+        // Route local file/content/asset URIs before the HTTP cache. Cache reads
+        // have their own FileDataSource; that does not handle file:// inputs.
+        ResolvingDataSource.Factory(DefaultDataSource.Factory(appCtx, cacheDataSourceFactory)) {
             var res = it
 
             if (it.uri.toString().contains(SPLIT_TAG)) {
