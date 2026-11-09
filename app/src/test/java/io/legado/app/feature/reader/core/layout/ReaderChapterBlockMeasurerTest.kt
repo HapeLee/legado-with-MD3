@@ -1,5 +1,8 @@
 package io.legado.app.feature.reader.core.layout
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import io.legado.app.feature.reader.bookForegroundOverrides
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
@@ -54,6 +57,57 @@ class ReaderChapterBlockMeasurerTest {
         assertTrue(positions.all { it in 0..source.characterCount })
         assertTrue(smallPages.flatMap { it.elements }.filterIsInstance<io.legado.app.feature.reader.core.model.ReaderElement.Spacer>()
             .any { it.semanticLength == 0 })
+    }
+
+    @Test
+    fun localMarkColorAndSizeReachPagedGlyphsWithoutChangingPositions() = runBlocking {
+        val html = "<p id='n' style='color:black'><mark style='color:red;font-size:150%'>甲乙</mark>" +
+            "<small><a href='#n'>丙丁</a></small>戊己<span style='color:navy'>庚</span>" +
+            "<span style='color:teal'>辛</span>壬癸</p>"
+        val appearance = checkNotNull(io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(html))
+        val source = ReaderChapterSourceParser.parse(0, "",
+            io.legado.app.help.book.MixedContentSegments.paragraphs(appearance.content, "", false),
+            false, true, localPresentation = appearance)
+        val readerColor = 0xFFADADAD.toInt()
+        val black = 0xFF000000.toInt()
+        val measured = ReaderChapterBlockMeasurer(shaper, shaper, { null })
+            .measure(source, style.copy(
+                bodyIndentCharacters = 0,
+                bodyStyle = style.bodyStyle.copy(colorArgb = readerColor),
+                styleRanges = listOf(ReaderStyleRange(5, 6, ReaderStyleTarget.BODY, ReaderCharacterStyle(colorArgb = black))),
+            )) as ReaderChapterMeasureResult.Success
+        val pages = ReaderPaginator.paginateBlocks(measured.blocks, ReaderPaginationConfig(
+            0, "", 30, 30, 0f, 0f, 0f, 0f, 10f, 8f))
+        val glyphs = pages.flatMap { it.elements }.filterIsInstance<io.legado.app.feature.reader.core.model.ReaderElement.Text>()
+        assertTrue(pages.size > 1)
+        assertEquals("甲乙丙丁戊己庚辛壬癸", glyphs.joinToString("") { it.value })
+        assertEquals((0..9).toList(), glyphs.map { it.chapterPosition })
+        assertEquals(listOf(true, true) + List(8) { false }, glyphs.map { it.style.marked })
+        assertEquals(0xFFFF0000.toInt(), glyphs.first().style.colorArgb)
+        assertEquals(15f, glyphs.first().style.fontSizePx, 0.001f)
+        assertEquals(8f, glyphs[2].style.fontSizePx, 0.001f)
+        assertEquals("#n", glyphs[2].link)
+        val styles = glyphs.map { it.style }.toSet()
+        val nightOverrides = bookForegroundOverrides(styles, Color.Black)
+        assertEquals(readerColor, nightOverrides[glyphs[4].style])
+        assertEquals(black, glyphs[5].style.colorArgb)
+        assertTrue(glyphs[5].style !in nightOverrides)
+        val adjustedNavy = Color(nightOverrides.getValue(glyphs[6].style))
+        assertTrue(adjustedNavy.blue > adjustedNavy.red && adjustedNavy.red == adjustedNavy.green)
+        assertTrue(adjustedNavy.luminance() >= 0.1f)
+        assertTrue(glyphs[7].style !in nightOverrides)
+        assertTrue(bookForegroundOverrides(styles, Color.White).isEmpty())
+        val paleRed = glyphs[6].style.copy(colorArgb = 0xFFFFCCCC.toInt())
+        val adjustedRed = Color(bookForegroundOverrides(setOf(paleRed), Color.White).getValue(paleRed))
+        assertTrue(adjustedRed.red > adjustedRed.green && adjustedRed.green == adjustedRed.blue)
+        assertTrue(adjustedRed.luminance() <= 0.3f)
+        pages.forEach { page ->
+            val rows = page.elements.filterIsInstance<io.legado.app.feature.reader.core.model.ReaderElement.Text>()
+                .groupBy { it.baselinePx }.values.toList()
+            rows.zipWithNext().forEach { (previous, next) ->
+                assertTrue(previous.maxOf { it.bounds.bottom } <= next.minOf { it.bounds.top } + 0.001f)
+            }
+        }
     }
 
     @Test

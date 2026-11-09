@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Paint
 import android.graphics.Shader
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.AnimatedVisibility
@@ -58,6 +59,7 @@ import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -66,6 +68,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -114,6 +117,7 @@ import io.legado.app.feature.reader.core.model.ReaderPageId
 import io.legado.app.feature.reader.core.model.ReaderPageTip
 import io.legado.app.feature.reader.core.model.ReaderPageWindow
 import io.legado.app.feature.reader.core.model.ReaderRect
+import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.model.ReaderTextBackgroundImage
 import io.legado.app.feature.reader.core.model.ReaderTipAlignment
 import io.legado.app.feature.reader.core.model.ReaderTipRow
@@ -1631,6 +1635,7 @@ fun ReaderCanvasSurface(
                     offsetYState = scrollOffsetState,
                     selection = selectionColor,
                     readAloud = textAccentColor,
+                    solidBackground = solidPageBackground(backgroundColor, pageBackgroundImage, backgroundImageAlpha),
                     selectionProvider = { textSelection },
                     selectionPreviewStyle = selectionPreviewStyle,
                     cachedImage = cachedImage,
@@ -2043,6 +2048,7 @@ private fun ScrollPageStack(
     offsetYState: androidx.compose.runtime.MutableFloatState,
     selection: Color,
     readAloud: Color,
+    solidBackground: Color?,
     selectionProvider: () -> ReaderSelection?,
     selectionPreviewStyle: TextProcessStyle?,
     cachedImage: (ReaderElement.Image) -> Bitmap?,
@@ -2147,6 +2153,7 @@ private fun ScrollPageStack(
                     activeSelection,
                     selectedBounds,
                     selectionPreviewStyle,
+                    solidBackground,
                     imageProvider = { element -> imagesForDraw[element] ?: cachedImage(element) },
                     castColorArgb,
                     castVariantArgb,
@@ -2172,6 +2179,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     activeSelection: ReaderSelection?,
     selectedBounds: List<ReaderRect>,
     selectionPreviewStyle: TextProcessStyle?,
+    solidBackground: Color?,
     imageProvider: (ReaderElement.Image) -> Bitmap?,
     castColorArgb: Int,
     castVariantArgb: Int,
@@ -2193,7 +2201,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     } else data.textBackgroundBands
     // 对照旧 `TextLine.drawStyledBackgrounds`：先背景色、再背景图，与翻页模式同一顺序。
     visibleTextBackgroundBands.forEach { band ->
-        drawBackgroundBand(band)
+        drawBackgroundBand(band, selection.toArgb())
     }
     data.textBackgrounds.forEach { run ->
         ReaderTextBackgroundLoader.cached(run.image.source)?.let { bitmap ->
@@ -2202,12 +2210,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
     }
     drawSelectionStylePreview(selectionPreviewStyle, previewBounds, beforeText = true)
     visibleDecorationCache.halfHighlights.forEach { it.draw(native) }
+    val foregroundOverrides = bookForegroundOverrides(data.paints.keys, solidBackground)
     page.elements.forEach { e -> when (e) {
         is ReaderElement.Text -> {
             val paint = data.paints.getValue(e.style)
             paint.color = if (previewing && activeSelection.contains(e, page.id.chapterIndex)) {
                 selectionPreviewStyle.textColor ?: page.previewBaseTextColor(e)
-            } else page.resolvedColorArgb(e, readAloud.toArgb())
+            } else page.resolvedColorArgb(e, readAloud.toArgb(), foregroundOverrides[e.style])
             // 与分页绘制和旧 TextHtmlColumn 一致：规则自定义线替代 HTML 原生线，
             // 链接下划线仍由原生 Paint 绘制。
             paint.isUnderlineText = (e.style.nativeUnderline && e.style.underline == null) ||
@@ -2837,6 +2846,11 @@ private fun ReaderPageCanvas(
         textElements.map { it.style }.distinct()
             .associateWith(ReaderAndroidPaintFactory::create)
     }
+    val solidBackground = solidPageBackground(background, backgroundImage, backgroundImageAlpha)
+        .takeIf { drawBackground }
+    val foregroundOverrides = remember(paints, solidBackground) {
+        bookForegroundOverrides(paints.keys, solidBackground)
+    }
     val badge = page.decoration.bookmarkBadge.takeIf { drawDecoration }
     val cachedBadgeImage = badge?.let(ReaderBookmarkBadgeRenderer::cachedResult)
     val badgeImage by produceState(cachedBadgeImage, badge) {
@@ -2950,7 +2964,7 @@ private fun ReaderPageCanvas(
         // 对照旧 `TextLine.drawStyledBackgrounds`：先背景色、再背景图。色块是按行盒画的直边
         // 矩形，画在九宫格上面就会把气泡切出一截直边（旧版还直接不给带图的列铺色）。
         textBackgroundBands.forEach { band ->
-            drawBackgroundBand(band)
+            drawBackgroundBand(band, selection.toArgb())
         }
         // 快照读放在绘制期：异步补解完成后只重绘，不重组整页正文。
         textBackgroundRevision
@@ -2966,7 +2980,7 @@ private fun ReaderPageCanvas(
                 val paint = paints.getValue(e.style)
                 paint.color = if (previewing && activeSelection.contains(e, page.id.chapterIndex)) {
                     selectionPreviewStyle.textColor ?: page.previewBaseTextColor(e)
-                } else page.resolvedColorArgb(e, readAloud.toArgb())
+                } else page.resolvedColorArgb(e, readAloud.toArgb(), foregroundOverrides[e.style])
                 // HTML 原生下划线（<u>）在与规则自定义下划线同时存在时只画自定义那条：
                 // 旧版从不画 HTML 原生下划线，两条线叠在一起会多出旧版没有的观感。
                 // 链接下划线仍按旧版优先（`TextHtmlColumn.draw` 的 isUnderlineText）。
@@ -3163,8 +3177,58 @@ private fun ReaderPage.isSearchResult(text: ReaderElement.Text): Boolean {
 private fun ReaderPage.isReadAloud(text: ReaderElement.Text): Boolean =
     readAloudParagraphIndex != null && text.paragraphIndex == readAloudParagraphIndex
 
-private fun ReaderPage.resolvedColorArgb(text: ReaderElement.Text, accentColorArgb: Int): Int =
-    if (text.link != null || isSearchResult(text) || isReadAloud(text)) accentColorArgb else text.style.colorArgb
+private fun ReaderPage.resolvedColorArgb(text: ReaderElement.Text, accentColorArgb: Int, bookOverrideArgb: Int?): Int =
+    if (text.link != null || isSearchResult(text) || isReadAloud(text)) accentColorArgb
+    else bookOverrideArgb ?: text.style.colorArgb
+
+private fun solidPageBackground(base: Color, overlay: Drawable?, overlayAlpha: Float): Color? {
+    if (overlay == null || overlayAlpha <= 0f) return base
+    val color = Color((overlay as? ColorDrawable)?.color ?: return null)
+    return color.copy(alpha = color.alpha * overlayAlpha.coerceIn(0f, 1f)).compositeOver(base)
+}
+
+internal fun bookForegroundOverrides(styles: Set<ReaderTextStyle>, solidBackground: Color?): Map<ReaderTextStyle, Int> {
+    val background = solidBackground?.takeIf { it.alpha == 1f } ?: return emptyMap()
+    val backgroundLuminance = background.luminance()
+    val minimumContrast = 3f
+    fun contrast(argb: Int): Float {
+        val foreground = Color(argb).compositeOver(background).luminance()
+        return (maxOf(foreground, backgroundLuminance) + 0.05f) /
+            (minOf(foreground, backgroundLuminance) + 0.05f)
+    }
+    val canLighten = contrast(Color.White.toArgb()) >= minimumContrast
+    val canDarken = contrast(Color.Black.toArgb()) >= minimumContrast
+    return buildMap {
+        for (style in styles) {
+            val fallback = style.bookColorFallbackArgb ?: continue
+            if (style.marked || style.backgroundArgb != null || style.backgroundImage != null) continue
+            val bookContrast = contrast(style.colorArgb)
+            if (bookContrast >= minimumContrast) continue
+            val bookColor = Color(style.colorArgb)
+            if (bookColor.red == bookColor.green && bookColor.green == bookColor.blue) {
+                if (contrast(fallback) > bookContrast) put(style, fallback)
+                continue
+            }
+
+            // Move the sRGB channels together to preserve hue. Prefer the original side of
+            // the background luminance when that side can reach the contrast floor.
+            val lighten = canLighten && (!canDarken || bookColor.luminance() >= backgroundLuminance)
+            val neutral = if (lighten) 1f else 0f
+            fun adjustedColor(amount: Float): Int = Color(
+                red = bookColor.red + (neutral - bookColor.red) * amount,
+                green = bookColor.green + (neutral - bookColor.green) * amount,
+                blue = bookColor.blue + (neutral - bookColor.blue) * amount,
+            ).toArgb()
+            var low = 0f
+            var high = 1f
+            repeat(8) {
+                val middle = (low + high) / 2f
+                if (contrast(adjustedColor(middle)) >= minimumContrast) high = middle else low = middle
+            }
+            put(style, adjustedColor(high))
+        }
+    }
+}
 
 private fun ReaderPage.dynamicEmphasisUnderlineRuns(): List<ReaderEmphasisUnderlineRun> {
     val style = emphasisUnderlineStyle ?: return emptyList()

@@ -20,6 +20,7 @@ class ReaderPageColorTransformTest {
             elements = listOf(
                 text("body", oldColor, 0f),
                 text("custom", customColor, 50f),
+                text("book", oldColor, 100f).let { it.copy(style = it.style.copy(bookColorFallbackArgb = oldColor)) },
             ),
             revision = 7L,
         )
@@ -31,6 +32,9 @@ class ReaderPageColorTransformTest {
 
         assertEquals(newColor, (result.elements[0] as ReaderElement.Text).style.colorArgb)
         assertEquals(customColor, (result.elements[1] as ReaderElement.Text).style.colorArgb)
+        val bookStyle = (result.elements[2] as ReaderElement.Text).style
+        assertEquals(oldColor, bookStyle.colorArgb)
+        assertEquals(newColor, bookStyle.bookColorFallbackArgb)
         assertEquals(page.elements.map { it.bounds }, result.elements.map { it.bounds })
         assertEquals(7L xor 3L, result.revision)
     }

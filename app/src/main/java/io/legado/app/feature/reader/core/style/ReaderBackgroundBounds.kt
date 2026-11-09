@@ -13,7 +13,11 @@ data class ReaderBackgroundBand(
     val borderColorArgb: Int? = null,
     val borderWidthPx: Float = 0f,
     val borderRadiusPx: Float = 0f,
-)
+    val marked: Boolean = false,
+) {
+    fun resolvedFillColorArgb(markColorArgb: Int?): Int? =
+        fillColorArgb ?: markColorArgb.takeIf { marked }
+}
 
 /**
  * Joins sequential same-color background boxes on the same visual line into one continuous
@@ -33,19 +37,24 @@ fun List<ReaderElement.Text>.mergeBackgroundBounds(
 ): List<ReaderBackgroundBand> {
     if (isEmpty()) return emptyList()
     val bands = ArrayList<ReaderBackgroundBand>(size)
-    var brokenByImage = false
+    var broken = false
     forEach { element ->
         if (element.style.backgroundImage != null) {
-            brokenByImage = true
+            broken = true
             return@forEach
         }
         val colorArgb = element.style.backgroundArgb
+        val marked = element.style.marked && colorArgb == null
         val border = element.style.takeIf { it.borderWidthPx > 0f }
             ?.let { it.borderColorArgb?.let { color -> Triple(color, it.borderWidthPx, it.borderRadiusPx) } }
-        if (colorArgb == null && border == null) return@forEach
+        if (colorArgb == null && border == null && !marked) {
+            // Marked runs must not bridge unmarked text; keep legacy explicit-color merging.
+            broken = broken || bands.lastOrNull()?.marked == true
+            return@forEach
+        }
         val rect = element.bounds
-        val previous = bands.lastOrNull()?.takeUnless { brokenByImage }
-        brokenByImage = false
+        val previous = bands.lastOrNull()?.takeUnless { broken }
+        broken = false
         val verticalOverlap = previous?.let {
             (minOf(it.bounds.bottom, rect.bottom) - maxOf(it.bounds.top, rect.top)).coerceAtLeast(0f)
         } ?: 0f
@@ -58,6 +67,7 @@ fun List<ReaderElement.Text>.mergeBackgroundBounds(
         if (
             sameLine &&
             previous.fillColorArgb == colorArgb &&
+            previous.marked == marked &&
             previous.border == border &&
             horizontalGap <= joinGapPx
         ) {
@@ -72,6 +82,7 @@ fun List<ReaderElement.Text>.mergeBackgroundBounds(
         } else {
             bands += ReaderBackgroundBand(
                 fillColorArgb = colorArgb,
+                marked = marked,
                 bounds = rect,
                 borderColorArgb = border?.first,
                 borderWidthPx = border?.second ?: 0f,
