@@ -66,6 +66,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
@@ -132,6 +133,7 @@ fun AllBookmarkScreen(
 ) {
     val selectedBook = state.selectedBook
     var showSearch by remember(selectedBook?.key) { mutableStateOf(false) }
+    val alwaysShowSearch = isMiuixHyperOs4Enabled()
     var showMenu by remember { mutableStateOf(false) }
     val overviewListState = rememberLazyListState()
     val bookmarkListState = rememberLazyListState()
@@ -194,14 +196,16 @@ fun AllBookmarkScreen(
                         )
                     },
                     actions = {
-                        TopBarActionButton(
-                            onClick = {
-                                showSearch = !showSearch
-                                if (!showSearch) onIntent(AllBookmarkIntent.SetSearchQuery(""))
-                            },
-                            imageVector = Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search),
-                        )
+                        if (!alwaysShowSearch) {
+                            TopBarActionButton(
+                                onClick = {
+                                    showSearch = !showSearch
+                                    if (!showSearch) onIntent(AllBookmarkIntent.SetSearchQuery(""))
+                                },
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(R.string.search),
+                            )
+                        }
                         if (selectedBook != null) {
                             TopBarActionButton(
                                 onClick = { showMenu = true },
@@ -231,7 +235,7 @@ fun AllBookmarkScreen(
                 )
                 AnimatedVisibility(
                     modifier = Modifier.adaptiveHorizontalPadding(),
-                    visible = showSearch,
+                    visible = alwaysShowSearch || showSearch,
                     enter = expandVertically() + fadeIn(),
                     exit = shrinkVertically() + fadeOut(),
                 ) {
@@ -248,6 +252,7 @@ fun AllBookmarkScreen(
                         },
                         scrollState = activeListState,
                         scope = scope,
+                        autoFocus = !alwaysShowSearch,
                     )
                 }
                 if (selectedBook != null) {

@@ -29,6 +29,7 @@ class ThemePackageSettingsMappingTest {
             mochiTopBarLiquidGlass = false,
             mochiScrollEdgeBlurEnabled = false,
             miuixTopBarLiquidGlass = true,
+            useHyperOs4Components = true,
             mainNavigationOrder = "bookshelf,home,my",
             bgImageLight = "/light.jpg",
             largeContainerBackgroundImageLight = "/large-light.9.png",
@@ -56,6 +57,7 @@ class ThemePackageSettingsMappingTest {
         assertEquals(false, values[PreferKey.mochiTopBarLiquidGlass])
         assertEquals(false, values[PreferKey.mochiScrollEdgeBlurEnabled])
         assertEquals(true, values[PreferKey.miuixTopBarLiquidGlass])
+        assertEquals(true, values[PreferKey.useHyperOs4Components])
         assertEquals("bookshelf,home,my", values[PreferKey.mainNavigationOrder])
         assertEquals("/light.jpg", values[PreferKey.bgImage])
         assertEquals(

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -149,6 +150,7 @@ fun SearchContentScreen(
 
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val listState = rememberLazyListState()
+    val historyListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -199,6 +201,11 @@ fun SearchContentScreen(
                     title = if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
                         "共 ${searchResults.size} 条结果"
                     } else "搜索内容",
+                    isContentScrolled = when (contentState) {
+                        SearchContentState.History -> searchHistory.isNotEmpty() && historyListState.canScrollBackward
+                        null -> listState.canScrollBackward
+                        else -> false
+                    },
                     navigationIcon = { TopBarNavigationButton(onClick = onBack) },
                     actions = {
                         TopBarAnimatedActionButton(
@@ -310,6 +317,7 @@ fun SearchContentScreen(
                     SearchContentState.History -> {
                         SearchHistoryList(
                             history = searchHistory,
+                            listState = historyListState,
                             onlyThisBook = historyOnlyThisBook,
                             onHistoryClick = {
                                 hideSearchKeyboard()
@@ -365,7 +373,8 @@ fun SearchHistoryList(
     onHistoryClick: (SearchContentHistory) -> Unit,
     onDeleteHistory: (SearchContentHistory) -> Unit,
     onClearHistory: () -> Unit,
-    onToggleScope: () -> Unit
+    onToggleScope: () -> Unit,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -399,7 +408,7 @@ fun SearchHistoryList(
                     .wrapContentSize()
             )
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
                 items(history, key = { it.id }) { item ->
                     ListItem(
                         modifier = Modifier

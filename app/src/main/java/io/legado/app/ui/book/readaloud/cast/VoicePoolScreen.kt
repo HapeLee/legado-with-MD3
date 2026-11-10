@@ -53,6 +53,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
@@ -95,6 +96,7 @@ fun VoicePoolScreen(
     val context = LocalContext.current
     val auditionText = remember(context) { VoiceAudition.defaultPreviewText(context) }
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val alwaysShowSearch = isMiuixHyperOs4Enabled()
     val haptics = LocalHapticFeedback.current
     val listState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
@@ -169,11 +171,13 @@ fun VoicePoolScreen(
                         imageVector = Icons.Default.ImportExport,
                         contentDescription = stringResource(R.string.cast_pool_io),
                     )
-                    TopBarActionButton(
-                        onClick = { onIntent(MultiRoleRuleIntent.SetSearch(!state.searchActive)) },
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(R.string.search),
-                    )
+                    if (!alwaysShowSearch) {
+                        TopBarActionButton(
+                            onClick = { onIntent(MultiRoleRuleIntent.SetSearch(!state.searchActive)) },
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.search),
+                        )
+                    }
                     TopBarActionButton(
                         onClick = { onIntent(MultiRoleRuleIntent.ShowCreateGroup("")) },
                         imageVector = Icons.Default.CreateNewFolder,
@@ -198,6 +202,7 @@ fun VoicePoolScreen(
                 actions = voicePoolActions(onIntent),
                 listState = listState,
                 reorderableState = reorderableState,
+                alwaysShowSearch = alwaysShowSearch,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),

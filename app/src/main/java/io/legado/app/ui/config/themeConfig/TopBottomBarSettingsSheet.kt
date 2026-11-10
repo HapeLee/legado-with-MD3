@@ -59,6 +59,9 @@ fun TopBottomBarSettingsSheet(
                 )
             }
             val engine = LegadoTheme.composeEngine
+            val nativeEffectsSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            val miuixGlassStyle = engine == ComposeEngine.Miuix &&
+                nativeEffectsSupported && theme.useHyperOs4Components
             if (engine == ComposeEngine.Material) {
                 CompactDropdownSettingItem(
                     title = stringResource(R.string.top_bar_button_style),
@@ -76,18 +79,14 @@ fun TopBottomBarSettingsSheet(
                         },
                     )
                 }
-            } else {
-                val isMochi = engine == ComposeEngine.Mochi
+            } else if (engine == ComposeEngine.Mochi) {
                 CompactSwitchSettingItem(
                     title = stringResource(R.string.top_bar_button_liquid_glass),
                     description = stringResource(R.string.top_bar_button_liquid_glass_summary),
-                    checked = if (isMochi) theme.mochiTopBarLiquidGlass else theme.miuixTopBarLiquidGlass,
-                    enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+                    checked = theme.mochiTopBarLiquidGlass,
+                    enabled = nativeEffectsSupported,
                     onCheckedChange = { checked ->
-                        updateTheme { current ->
-                            if (isMochi) current.copy(mochiTopBarLiquidGlass = checked)
-                            else current.copy(miuixTopBarLiquidGlass = checked)
-                        }
+                        updateTheme { it.copy(mochiTopBarLiquidGlass = checked) }
                     },
                 )
             }
@@ -129,19 +128,21 @@ fun TopBottomBarSettingsSheet(
                     }
                 }
             }
-            val blurSupported = engine == ComposeEngine.Material || Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            val blurSupported = engine == ComposeEngine.Material || nativeEffectsSupported
             val blurEnabled = if (engine == ComposeEngine.Mochi) theme.mochiScrollEdgeBlurEnabled else theme.enableBlur
             if (theme.enableBlur && blurSupported && engine != ComposeEngine.Mochi) {
-                SliderSettingItem(
-                    title = stringResource(R.string.theme_manage_top_bar_blur_radius),
-                    description = stringResource(R.string.theme_config_blur_radius_performance_summary),
-                    value = theme.topBarBlurRadius.toFloat(),
-                    defaultValue = 24f,
-                    valueRange = 0f..30f,
-                    onValueChange = { value ->
-                        updateTheme { current -> current.copy(topBarBlurRadius = value.toInt()) }
-                    },
-                )
+                if (!miuixGlassStyle) {
+                    SliderSettingItem(
+                        title = stringResource(R.string.theme_manage_top_bar_blur_radius),
+                        description = stringResource(R.string.theme_config_blur_radius_performance_summary),
+                        value = theme.topBarBlurRadius.toFloat(),
+                        defaultValue = 24f,
+                        valueRange = 0f..30f,
+                        onValueChange = { value ->
+                            updateTheme { current -> current.copy(topBarBlurRadius = value.toInt()) }
+                        },
+                    )
+                }
                 SliderSettingItem(
                     title = stringResource(R.string.theme_manage_bottom_bar_blur_radius),
                     description = stringResource(R.string.theme_config_blur_radius_performance_summary),
@@ -152,15 +153,17 @@ fun TopBottomBarSettingsSheet(
                         updateTheme { current -> current.copy(bottomBarBlurRadius = value.toInt()) }
                     },
                 )
-                SliderSettingItem(
-                    title = stringResource(R.string.theme_manage_top_bar_blur_opacity),
-                    value = theme.topBarBlurAlpha.toFloat(),
-                    defaultValue = 73f,
-                    valueRange = 0f..100f,
-                    onValueChange = { value ->
-                        updateTheme { current -> current.copy(topBarBlurAlpha = value.toInt()) }
-                    },
-                )
+                if (!miuixGlassStyle) {
+                    SliderSettingItem(
+                        title = stringResource(R.string.theme_manage_top_bar_blur_opacity),
+                        value = theme.topBarBlurAlpha.toFloat(),
+                        defaultValue = 73f,
+                        valueRange = 0f..100f,
+                        onValueChange = { value ->
+                            updateTheme { current -> current.copy(topBarBlurAlpha = value.toInt()) }
+                        },
+                    )
+                }
                 SliderSettingItem(
                     title = stringResource(R.string.theme_manage_bottom_bar_blur_opacity),
                     value = theme.bottomBarBlurAlpha.toFloat(),

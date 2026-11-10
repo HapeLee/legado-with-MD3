@@ -210,6 +210,7 @@ fun PoolTreeList(
     listState: LazyListState,
     reorderableState: ReorderableLazyListState,
     modifier: Modifier = Modifier,
+    alwaysShowSearch: Boolean = false,
     /** 成员行尾部的业务按钮（背景音乐那边放播放/停止）。 */
     memberTrailing: (@Composable (CastMemberUi) -> Unit)? = null,
 ) {
@@ -231,7 +232,7 @@ fun PoolTreeList(
         // 显隐走高度+淡入淡出（与书签/阅读记录等界面同一套）：搜索框是「临时加一层筛选」，
         // 直接 if 进出会让整列表瞬间跳一屏，手指还悬在刚才那条上。
         AnimatedVisibility(
-            visible = view.searchActive,
+            visible = alwaysShowSearch || view.searchActive,
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut(),
         ) {

@@ -1,9 +1,12 @@
 package io.legado.app.ui.widget.components
 
+import android.os.Build
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,12 +20,20 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
@@ -47,6 +58,7 @@ import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigUiState
 import io.legado.app.ui.config.themeConfig.TopBottomBarSettingsSheet
 import io.legado.app.ui.theme.AppTheme
+import io.legado.app.ui.theme.LocalHasMiuixPopupHost
 import io.legado.app.ui.theme.LocalMochiBackdropRegistry
 import io.legado.app.ui.theme.LocalMochiScrollBlurProgress
 import io.legado.app.ui.theme.LocalHazeState
@@ -54,22 +66,34 @@ import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.LocalTopBarBackdrop
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.menuItem.GlassMenuAnchor
+import io.legado.app.ui.widget.components.menuItem.LocalGlassPopupContent
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuLazy
 import io.legado.app.ui.widget.components.mochi.AppMochiNavigationBar
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.MochiSheetLayout
+import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassSmallTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
+import io.legado.app.ui.widget.components.card.SelectionItemCard
+import io.legado.app.ui.widget.components.topbar.LocalMiuixGlassTopBar
+import io.legado.app.ui.widget.components.topbar.LocalMiuixGlassTopBarActionProgress
 import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.ui.widget.components.topbar.TopBarOverflowMenu
 import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
 import io.legado.app.ui.widget.components.icon.AppIcons
 import kotlinx.collections.immutable.persistentListOf
@@ -87,6 +111,11 @@ import ui.feice.mochi.basic.MochiTabItem
 import ui.feice.mochi.basic.Text
 import ui.feice.mochi.effect.glass.LocalMochiBackdrop
 import ui.feice.mochi.theme.MochiTheme
+import top.yukonga.miuix.kmp.glass.glassPopupAnchor
+import top.yukonga.miuix.kmp.glass.GlassSegmentedTabRowDefaults
+import top.yukonga.miuix.kmp.glass.rememberGlassPopupAnchor
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [35], qualifiers = "w398dp-h800dp")
@@ -609,11 +638,16 @@ class MochiOverlaysAndBarsTest {
     }
 
     @Test
-    fun miuixTopBarGlassUsesItsOwnPreferenceAndRespectsSamplingDisabled() {
+    @Config(sdk = [26, 35])
+    fun hyperOs4TopBarStaysGlassWhenBackgroundSamplingChanges() {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
-        val theme = mutableStateOf(ThemeSettings(topBarButtonStyle = "liquid"))
+        val theme = mutableStateOf(
+            ThemeSettings(useHyperOs4Components = true, miuixTopBarLiquidGlass = false)
+        )
         val samplingDisabled = mutableStateOf(false)
-        var topBarGlass = false
+        val nativeEffectsSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        var miuixSampling = false
+        var glassStyle = false
         var materialSampling = false
         var clicks = 0
         compose.setContent {
@@ -625,30 +659,815 @@ class MochiOverlaysAndBarsTest {
                     val hasBackdrop = LocalMiuixBarBackdrop.current != null
                     val material = LocalTopBarBackdrop.current != null || LocalHazeState.current != null
                     SideEffect {
-                        topBarGlass = hasBackdrop
+                        miuixSampling = hasBackdrop
                         materialSampling = material
                     }
-                    GlassTopAppBar("Title", actions = { TopBarActionButton({ clicks++ }, AppIcons.Search, "Search") })
+                    GlassTopAppBar("Title", actions = {
+                        val glass = LocalMiuixGlassTopBar.current
+                        SideEffect { glassStyle = glass }
+                        TopBarActionButton({ clicks++ }, AppIcons.Search, "Search")
+                    })
                 }) {}
             }
         }
         compose.runOnIdle {
-            assertFalse(topBarGlass)
-            theme.value = theme.value.copy(miuixTopBarLiquidGlass = true)
+            assertEquals(nativeEffectsSupported, glassStyle)
+            assertEquals(nativeEffectsSupported, miuixSampling)
         }
         compose.onNodeWithContentDescription("Search").performTouchInput { click() }
         compose.runOnIdle {
-            assertTrue(topBarGlass)
+            assertEquals(nativeEffectsSupported, glassStyle)
+            assertEquals(nativeEffectsSupported, miuixSampling)
             assertFalse(materialSampling)
             assertEquals(1, clicks)
-            theme.value = theme.value.copy(miuixTopBarLiquidGlass = false, enableBlur = true, enableProgressiveBlur = true)
+            theme.value = theme.value.copy(enableBlur = true, enableProgressiveBlur = true)
         }
         compose.runOnIdle {
-            assertTrue(topBarGlass)
+            assertEquals(nativeEffectsSupported, glassStyle)
+            assertEquals(nativeEffectsSupported, miuixSampling)
             assertFalse(materialSampling)
             samplingDisabled.value = true
         }
-        compose.runOnIdle { assertFalse(topBarGlass) }
+        compose.onNodeWithContentDescription("Search").performTouchInput { click() }
+        compose.runOnIdle {
+            assertEquals(nativeEffectsSupported, glassStyle)
+            assertFalse(miuixSampling)
+            assertEquals(2, clicks)
+            samplingDisabled.value = false
+            theme.value = theme.value.copy(useHyperOs4Components = false, miuixTopBarLiquidGlass = true)
+        }
+        compose.runOnIdle {
+            assertFalse(glassStyle)
+            assertEquals(nativeEffectsSupported, miuixSampling)
+        }
+    }
+
+    @Test
+    fun hyperOs4SwitchAloneControlsGlassTopBarWithLegacySettings() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        val theme = mutableStateOf(
+            ThemeSettings(miuixTopBarLiquidGlass = true, useHyperOs4Components = false)
+        )
+        var glassStyle = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = theme.value,
+            )) {
+                AppScaffold(topBar = {
+                    GlassTopAppBar("Title", actions = {
+                        val glass = LocalMiuixGlassTopBar.current
+                        SideEffect { glassStyle = glass }
+                        TopBarActionButton({}, AppIcons.Search, "Search")
+                    })
+                }) {}
+            }
+        }
+        compose.runOnIdle {
+            assertFalse(glassStyle)
+            theme.value = theme.value.copy(useHyperOs4Components = true)
+        }
+        compose.onNodeWithContentDescription("Search").performTouchInput { click() }
+        compose.runOnIdle {
+            assertTrue(glassStyle)
+            theme.value = theme.value.copy(useHyperOs4Components = false)
+        }
+        compose.onNodeWithContentDescription("Search").performTouchInput { click() }
+        compose.runOnIdle { assertFalse(glassStyle) }
+    }
+
+    @Test
+    fun hyperOs4SwitchIsSearchableInThemeSettings() {
+        val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
+        val target = requireNotNull(SettingsSearchCatalog.find("theme.hyper_os4_components"))
+        val shell = AppShellSettings(composeEngine = "miuix")
+        var theme by mutableStateOf(ThemeSettings())
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = shell, theme = theme)) {
+                SettingsSearchTargetScope(target) {
+                    ThemeConfigScreen(
+                        ThemeConfigUiState(appShell = shell, theme = theme),
+                        { intent -> if (intent is ThemeConfigIntent.UpdateTheme) theme = intent.transform(theme) },
+                        {}, {}, {},
+                    )
+                }
+            }
+        }
+        val inSetting = hasAnyAncestor(hasTestTag("setting:theme.hyper_os4_components"))
+        compose.onNode(hasText(app.getString(R.string.hyper_os4_components)) and inSetting).assertIsDisplayed()
+        val switch = compose.onNode(isToggleable() and inSetting)
+        switch.assertIsOff().performClick()
+        switch.assertIsOn()
+        compose.runOnIdle { assertTrue(theme.useHyperOs4Components) }
+    }
+
+    @Test
+    @Config(sdk = [26, 35])
+    fun hyperOs4CardTabsSelectAndPreserveTrailingActions() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var selected by mutableStateOf(0)
+        var trailingClicks = 0
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                AppScaffold {
+                    Column {
+                        CardTabRow(
+                            tabTitles = listOf("First view", "Second view"),
+                            selectedTabIndex = selected,
+                            onTabSelected = { selected = it },
+                            modifier = Modifier.testTag("card-tabs"),
+                        )
+                        CardTabRow(
+                            tabTitles = listOf("With action"),
+                            selectedTabIndex = 0,
+                            onTabSelected = {},
+                            tabEndContent = {
+                                TopBarActionButton(
+                                    { trailingClicks++ },
+                                    AppIcons.MoreVert,
+                                    "Tab options",
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            compose.onNodeWithTag("card-tabs").assertHeightIsEqualTo(GlassSegmentedTabRowDefaults.Height)
+        }
+        compose.onNodeWithText("First view").assertIsSelected()
+        compose.onNodeWithText("Second view").performTouchInput { click() }.assertIsSelected()
+        compose.onNodeWithContentDescription("Tab options").performTouchInput { click() }
+        compose.runOnIdle { assertEquals(1, trailingClicks) }
+    }
+
+    @Test
+    fun hyperOs4RendersGlassTabsAndFallsBackForDropdownWithoutHost() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                // 主题根现在提供 root host；显式关掉才能覆盖 window 级弹层的回落分支。
+                CompositionLocalProvider(LocalHasMiuixPopupHost provides false) {
+                    Column {
+                        AppTabRow(listOf("标签一", "标签二"), 0, {})
+                        CompactDropdownSettingItem(
+                            title = "顶栏样式",
+                            selectedValue = "glass",
+                            displayEntries = arrayOf("默认", "玻璃"),
+                            entryValues = arrayOf("default", "glass"),
+                            onValueChange = {},
+                        )
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText("标签一").assertExists()
+        compose.onNodeWithText("顶栏样式").assertExists()
+    }
+
+    @Test
+    fun hyperOs4KeepsOverflowingTabsScrollable() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var selected by mutableStateOf(0)
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                AppTabRow(
+                    tabTitles = List(8) { "Group ${it + 1}" },
+                    selectedTabIndex = selected,
+                    onTabSelected = { selected = it },
+                    modifier = Modifier.width(240.dp).testTag("overflow-tabs"),
+                )
+            }
+        }
+        compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("overflow-tabs")))
+            .performScrollToIndex(7)
+        compose.onNodeWithText("Group 8").performTouchInput { click() }
+        compose.runOnIdle { assertEquals(7, selected) }
+    }
+
+    @Test
+    fun miuixScaffoldDeclaresPopupHostCapability() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var outsideHost = true
+        var insideHost = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+            )) {
+                val outside = LocalHasMiuixPopupHost.current
+                SideEffect { outsideHost = outside }
+                AppScaffold(topBar = {}) {
+                    val inside = LocalHasMiuixPopupHost.current
+                    SideEffect { insideHost = inside }
+                }
+            }
+        }
+        compose.runOnIdle {
+            assertFalse(outsideHost)
+            assertTrue(insideHost)
+        }
+    }
+
+    @Test
+    fun hyperOs4GlassDropdownRendersInsideMiuixScaffold() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                AppScaffold(topBar = {}) {
+                    DropdownListSettingItem(
+                        title = "主题引擎",
+                        selectedValue = "miuix",
+                        displayEntries = arrayOf("Material", "Miuix"),
+                        entryValues = arrayOf("material", "miuix"),
+                        onValueChange = {},
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText("主题引擎").assertExists()
+    }
+
+    @Test
+    fun miuixDropdownWithoutHostOpensTinyWindowPopup() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                // 主题根现在提供 root host；显式关掉才能覆盖 window 级弹层的 tiny 回落。
+                CompositionLocalProvider(LocalHasMiuixPopupHost provides false) {
+                    DropdownListSettingItem(
+                        title = "翻译引擎",
+                        selectedValue = "a",
+                        displayEntries = arrayOf("引擎一", "引擎二"),
+                        entryValues = arrayOf("a", "b"),
+                        onValueChange = {},
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText("引擎二").assertDoesNotExist()
+        compose.onNodeWithText("翻译引擎").performClick()
+        compose.onNodeWithText("引擎二").assertExists()
+    }
+
+    @Test
+    fun hyperOs4SheetUsesHostBackedGlassContainer() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var hostBackedComposed = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                AppScaffold(topBar = {}) {
+                    AppModalBottomSheet(show = true, onDismissRequest = {}, title = "布局设置") {
+                        val hasHost = LocalHasMiuixPopupHost.current
+                        SideEffect { if (hasHost) hostBackedComposed = true }
+                    }
+                }
+            }
+        }
+        compose.waitUntil(timeoutMillis = 5_000) { hostBackedComposed }
+    }
+
+    @Test
+    fun hyperOs4OffKeepsWindowLevelSheetContainer() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var windowLevelComposed = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = false),
+            )) {
+                AppScaffold(topBar = {}) {
+                    AppModalBottomSheet(show = true, onDismissRequest = {}, title = "布局设置") {
+                        val hasHost = LocalHasMiuixPopupHost.current
+                        SideEffect { if (!hasHost) windowLevelComposed = true }
+                    }
+                }
+            }
+        }
+        compose.waitUntil(timeoutMillis = 5_000) { windowLevelComposed }
+    }
+
+    @Test
+    fun hyperOs4DialogUsesHostBackedGlassContainer() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var hostBackedComposed = false
+        var confirmEnabled by mutableStateOf(false)
+        var confirmations = 0
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                AppScaffold(topBar = {}) {
+                    AppAlertDialog(
+                        show = true,
+                        onDismissRequest = {},
+                        title = "确认",
+                        confirmText = "Save changes",
+                        confirmEnabled = confirmEnabled,
+                        onConfirm = { confirmations++ },
+                        content = {
+                            val hasHost = LocalHasMiuixPopupHost.current
+                            SideEffect { if (hasHost) hostBackedComposed = true }
+                        },
+                    )
+                }
+            }
+        }
+        compose.waitUntil(timeoutMillis = 5_000) { hostBackedComposed }
+        val confirm = compose.onNodeWithText("Save changes")
+        confirm.assertIsNotEnabled()
+        compose.runOnIdle { confirmEnabled = true }
+        confirm.assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(1, confirmations) }
+        confirm.assertExists()
+    }
+
+    @Test
+    fun hyperOs4CompactBarActionKeepsItsNativeSizeAfterToggling() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var checked by mutableStateOf(false)
+        var glass = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true, miuixTopBarLiquidGlass = true),
+            )) {
+                AppScaffold(topBar = {
+                    GlassSmallTopAppBar(title = "Search", actions = {
+                        val glassEnabled = LocalMiuixGlassTopBar.current
+                        SideEffect { glass = glassEnabled }
+                        TopBarAnimatedActionButton(
+                            checked = checked,
+                            onCheckedChange = { checked = it },
+                            iconChecked = AppIcons.Search,
+                            iconUnchecked = AppIcons.Search,
+                            activeText = "Search filter enabled",
+                            inactiveText = "Search filter disabled",
+                            modifier = Modifier.testTag("animated-action"),
+                        )
+                    })
+                }) {}
+            }
+        }
+        val action = compose.onNodeWithTag("animated-action")
+        val nativeWidth = with(compose.density) { 44.dp.roundToPx() }.toFloat()
+        assertEquals(nativeWidth, action.fetchSemanticsNode().boundsInRoot.width, 1f)
+        assertTrue(glass)
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithContentDescription("Search filter disabled").performClick()
+        compose.mainClock.advanceTimeBy(450)
+        compose.onNodeWithContentDescription("Search filter enabled").assertExists()
+        assertEquals(nativeWidth, action.fetchSemanticsNode().boundsInRoot.width, 1f)
+        compose.onNodeWithText("Search filter enabled").assertDoesNotExist()
+    }
+
+    @Test
+    fun hyperOs4ListSearchStartsVisibleAndUnfocused() {
+        val app = RuntimeEnvironment.getApplication()
+        app.injectAsAppCtx()
+        var searchMode by mutableStateOf(false)
+        var query by mutableStateOf("")
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true, miuixTopBarLiquidGlass = true),
+            )) {
+                AppScaffold(topBar = {
+                    DynamicTopAppBar(
+                        title = "Sources",
+                        state = object : ListUiState<String> {
+                            override val items = emptyList<String>()
+                            override val selectedIds = emptySet<Any>()
+                            override val searchKey = query
+                            override val isSearch = searchMode
+                            override val isLoading = false
+                        },
+                        scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior(),
+                        onSearchToggle = { searchMode = it },
+                        onSearchQueryChange = { query = it },
+                        searchPlaceholder = "Filter sources",
+                        onClearSelection = {},
+                    )
+                }) {}
+            }
+        }
+        val field = compose.onNode(hasSetTextAction())
+        field.assertIsNotFocused()
+        compose.onNodeWithContentDescription(app.getString(R.string.search)).assertDoesNotExist()
+        field.performTextInput("abc")
+        compose.runOnIdle {
+            assertTrue(searchMode)
+            assertEquals("abc", query)
+        }
+        field.performTextClearance()
+        compose.runOnIdle {
+            assertFalse(searchMode)
+            assertEquals("", query)
+        }
+        field.assertExists()
+    }
+
+    @Test
+    fun hyperOs4TopBarSpacesActionsAndBlursWithoutAnOpaqueBand() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var scrolled by mutableStateOf(false)
+        var enableBlur by mutableStateOf(false)
+        var captureBackdrop by mutableStateOf(false)
+        var compact by mutableStateOf(false)
+        var progress: State<Float>? = null
+        var longClicks = 0
+        compose.setContent {
+            AppTheme(
+                AppUiConfiguration(
+                    appShell = AppShellSettings(composeEngine = "miuix"),
+                    theme = ThemeSettings(
+                        useHyperOs4Components = true,
+                        miuixTopBarLiquidGlass = true,
+                        enableBlur = enableBlur,
+                    ),
+                ),
+                applyBackground = false,
+            ) {
+                val backdrop = rememberLayerBackdrop { drawRect(Color.Cyan) }
+                Box(Modifier.fillMaxSize().background(Color.Magenta)) {
+                    Box(Modifier.matchParentSize().layerBackdrop(backdrop))
+                    CompositionLocalProvider(LocalMiuixBarBackdrop provides backdrop.takeIf { captureBackdrop }) {
+                        GlassMediumFlexibleTopAppBar(
+                            title = "Bookshelf",
+                            modifier = Modifier.testTag("os4-bar"),
+                            isContentScrolled = scrolled,
+                            compactMiuixActions = compact,
+                            actions = {
+                                val actionProgress = LocalMiuixGlassTopBarActionProgress.current
+                                SideEffect { progress = actionProgress }
+                                TopBarActionButton(
+                                    {}, AppIcons.Search, "Search",
+                                    onLongClick = { longClicks++ },
+                                )
+                                TopBarAnimatedActionButton(
+                                    checked = false,
+                                    onCheckedChange = {},
+                                    iconChecked = AppIcons.Search,
+                                    iconUnchecked = AppIcons.Search,
+                                    activeText = "Filter",
+                                    inactiveText = "Filter",
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+        }
+        val search = compose.onNodeWithContentDescription("Search")
+        val filter = compose.onNodeWithContentDescription("Filter")
+        fun actionGap() = filter.fetchSemanticsNode().boundsInRoot.left - search.fetchSemanticsNode().boundsInRoot.right
+        assertEquals(with(compose.density) { 8.dp.roundToPx() }.toFloat(), actionGap(), 1f)
+        fun bandPixel(): Color {
+            val pixels = compose.onNodeWithTag("os4-bar").captureToImage().toPixelMap()
+            return pixels[1, pixels.height / 2]
+        }
+        val unmasked = bandPixel()
+        assertEquals(0f, progress!!.value, 0.001f)
+        search.performTouchInput { longClick() }
+        compose.runOnIdle {
+            assertEquals(1, longClicks)
+            scrolled = true
+        }
+        assertEquals(unmasked, bandPixel())
+        assertEquals(1f, progress!!.value, 0.001f)
+        compose.runOnIdle { enableBlur = true }
+        assertEquals(unmasked, bandPixel())
+        compose.runOnIdle { captureBackdrop = true }
+        val sampled = bandPixel()
+        assertEquals(Color.Cyan.red, sampled.red, 0.05f)
+        assertEquals(Color.Cyan.green, sampled.green, 0.05f)
+        assertEquals(Color.Cyan.blue, sampled.blue, 0.05f)
+        compose.runOnIdle {
+            scrolled = false
+            compact = true
+        }
+        assertEquals(unmasked, bandPixel())
+        assertEquals(0f, progress!!.value, 0.001f)
+        assertEquals(0f, actionGap(), 1f)
+    }
+
+    @Test
+    fun hyperOs4TopBarBlurMatchesTheScaffoldOnAnEmptyPage() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var darkTheme by mutableStateOf(false)
+        var scrolled by mutableStateOf(false)
+        var progressiveBlur by mutableStateOf(false)
+        compose.setContent {
+            AppTheme(
+                AppUiConfiguration(
+                    appShell = AppShellSettings(composeEngine = "miuix"),
+                    theme = ThemeSettings(
+                        useHyperOs4Components = true,
+                        miuixTopBarLiquidGlass = true,
+                        enableBlur = true,
+                        enableProgressiveBlur = progressiveBlur,
+                    ),
+                ),
+                darkTheme = darkTheme,
+            ) {
+                AppScaffold(
+                    modifier = Modifier.testTag("miuix-scaffold"),
+                    topBar = {
+                        GlassMediumFlexibleTopAppBar(title = "", isContentScrolled = scrolled)
+                    },
+                ) {}
+            }
+        }
+        fun assertBarMatchesPage(mode: String) {
+            val pixels = compose.onNodeWithTag("miuix-scaffold").captureToImage().toPixelMap()
+            val bar = pixels[pixels.width / 2, with(compose.density) { 32.dp.roundToPx() }]
+            val page = pixels[pixels.width / 2, pixels.height / 2]
+            assertEquals(mode, page.red, bar.red, 2f / 255f)
+            assertEquals(mode, page.green, bar.green, 2f / 255f)
+            assertEquals(mode, page.blue, bar.blue, 2f / 255f)
+        }
+        assertBarMatchesPage("Before scrolling")
+        compose.runOnIdle { scrolled = true }
+        assertBarMatchesPage("Regular blur after scrolling")
+        compose.runOnIdle { progressiveBlur = true }
+        assertBarMatchesPage("Progressive blur after scrolling")
+        compose.runOnIdle { darkTheme = true }
+        assertBarMatchesPage("Dark progressive blur after scrolling")
+        compose.runOnIdle { progressiveBlur = false }
+        assertBarMatchesPage("Dark regular blur after scrolling")
+    }
+
+    @Test
+    fun hyperOs4OffKeepsWindowLevelDialogContainer() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var windowLevelComposed = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = false),
+            )) {
+                AppScaffold(topBar = {}) {
+                    AppAlertDialog(
+                        show = true,
+                        onDismissRequest = {},
+                        title = "确认",
+                        content = {
+                            val hasHost = LocalHasMiuixPopupHost.current
+                            SideEffect { if (!hasHost) windowLevelComposed = true }
+                        },
+                    )
+                }
+            }
+        }
+        compose.waitUntil(timeoutMillis = 5_000) { windowLevelComposed }
+    }
+
+    @Test
+    fun hyperOs4ThemeRootServesGlassContainersOutsideAppScaffold() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var pageBackdrop: Any? = null
+        var rootBackdrop: Any? = null
+        var hostInsideSheet = false
+        var hostInsideDialog = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true, enableBlur = true),
+            )) {
+                val backdrop = LocalMiuixBarBackdrop.current
+                SideEffect { rootBackdrop = backdrop }
+                AppScaffold(topBar = {}) {
+                    val source = LocalMiuixBarBackdrop.current
+                    SideEffect { pageBackdrop = source }
+                }
+                // 书架、设置页把 sheet/dialog 调用放在 AppScaffold 之外。
+                AppModalBottomSheet(show = true, onDismissRequest = {}) {
+                    val hasHost = LocalHasMiuixPopupHost.current
+                    SideEffect { if (hasHost) hostInsideSheet = true }
+                }
+                AppAlertDialog(
+                    show = true,
+                    onDismissRequest = {},
+                    content = {
+                        val hasHost = LocalHasMiuixPopupHost.current
+                        SideEffect { if (hasHost) hostInsideDialog = true }
+                    },
+                )
+            }
+        }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            pageBackdrop != null && rootBackdrop === pageBackdrop && hostInsideSheet && hostInsideDialog
+        }
+    }
+
+    @Test
+    fun hyperOs4OffDoesNotCreateRootBackdrop() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var backdropAtRoot = true
+        var hostAtRoot = true
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = false),
+            )) {
+                val hasBackdrop = LocalMiuixBarBackdrop.current != null
+                val hasHost = LocalHasMiuixPopupHost.current
+                SideEffect {
+                    backdropAtRoot = hasBackdrop
+                    hostAtRoot = hasHost
+                }
+            }
+        }
+        compose.runOnIdle {
+            assertFalse(backdropAtRoot)
+            assertFalse(hostAtRoot)
+        }
+    }
+
+    @Test
+    fun hyperOs4GlassSheetDropdownUsesSameHostAndCanSelect() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var selected = "grid"
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                AppScaffold(topBar = {}) {
+                    AppModalBottomSheet(show = true, onDismissRequest = {}) {
+                        CompactDropdownSettingItem(
+                            title = "书架布局",
+                            selectedValue = selected,
+                            displayEntries = arrayOf("列表", "网格"),
+                            entryValues = arrayOf("list", "grid"),
+                            onValueChange = { selected = it },
+                        )
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText("书架布局").performClick()
+        compose.onNodeWithText("列表").assertExists().performClick()
+        compose.runOnIdle { assertEquals("list", selected) }
+    }
+
+    @Test
+    fun hyperOs4RuleItemMenuUsesButtonParentAsGlassAnchor() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var renderedInGlass = false
+        var selections = 0
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                AppScaffold {
+                    SelectionItemCard(
+                        title = "替换规则",
+                        moreContentDescription = "规则更多操作",
+                        dropdownContent = { dismiss ->
+                            val inGlass = LocalGlassPopupContent.current
+                            SideEffect { renderedInGlass = inGlass }
+                            RoundDropdownMenuItem(
+                                text = "规则置顶",
+                                onClick = { selections++; dismiss() },
+                            )
+                        },
+                    )
+                }
+            }
+        }
+        compose.onNodeWithContentDescription("规则更多操作").performClick()
+        compose.waitUntil(timeoutMillis = 5_000) { renderedInGlass }
+        compose.onNodeWithText("规则置顶").performClick()
+        compose.runOnIdle { assertEquals(1, selections) }
+        compose.onNodeWithText("规则置顶").assertDoesNotExist()
+        compose.onNodeWithContentDescription("规则更多操作").performClick()
+        compose.onNodeWithText("规则置顶").assertExists()
+    }
+
+    @Test
+    fun hyperOs4DialogCanOpenAndCloseAnOrdinaryDropdown() {
+        val app = RuntimeEnvironment.getApplication()
+        app.injectAsAppCtx()
+        var expanded by mutableStateOf(false)
+        var dialogDismissals = 0
+        var renderedInGlass = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true),
+            )) {
+                AppScaffold {}
+                AppAlertDialog(
+                    show = true,
+                    title = "编码设置",
+                    onDismissRequest = { dialogDismissals++ },
+                    content = {
+                        Box {
+                            TopBarActionButton({ expanded = true }, AppIcons.MoreVert, "选择编码")
+                            RoundDropdownMenu(expanded, onDismissRequest = { expanded = false }) { dismiss ->
+                                val inGlass = LocalGlassPopupContent.current
+                                SideEffect { renderedInGlass = inGlass }
+                                RoundDropdownMenuItem(text = "UTF-8", onClick = dismiss)
+                            }
+                        }
+                    },
+                )
+            }
+        }
+        compose.onNodeWithContentDescription("选择编码").performClick()
+        compose.waitUntil(timeoutMillis = 5_000) { renderedInGlass }
+        compose.onNodeWithText("UTF-8").performTouchInput { click() }
+        compose.onNodeWithText("UTF-8").assertDoesNotExist()
+        compose.onNodeWithText("编码设置").assertExists()
+        compose.runOnIdle { assertEquals(0, dialogDismissals) }
+    }
+
+    @Test
+    fun hyperOs4TopBarMenuRendersInPageGlassOverlay() {
+        val app = RuntimeEnvironment.getApplication()
+        app.injectAsAppCtx()
+        var expanded by mutableStateOf(false)
+        var renderedInGlass = false
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = true, miuixTopBarLiquidGlass = true),
+            )) {
+                AppScaffold(topBar = {
+                    GlassTopAppBar("Glass", actions = {
+                        TopBarOverflowMenu(expanded, onExpandedChange = { expanded = it }) { dismiss ->
+                            val inGlass = LocalGlassPopupContent.current
+                            SideEffect { renderedInGlass = inGlass }
+                            RoundDropdownMenuItem(text = "菜单项", onClick = { dismiss() })
+                        }
+                    })
+                }) {}
+            }
+        }
+        compose.onNodeWithContentDescription(app.getString(R.string.more_menu)).performClick()
+        compose.waitUntil(timeoutMillis = 5_000) { renderedInGlass }
+        compose.onNodeWithText("菜单项").assertExists()
+    }
+
+    @Test
+    fun hyperOs4OffKeepsTopBarMenuOutOfGlassOverlay() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        var expanded by mutableStateOf(false)
+        var renderedInGlass = true
+        compose.setContent {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "miuix"),
+                theme = ThemeSettings(useHyperOs4Components = false),
+            )) {
+                AppScaffold(topBar = {}) {
+                    val anchor = rememberGlassPopupAnchor()
+                    var bounds by remember { mutableStateOf(Rect.Zero) }
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .testTag("menu-anchor")
+                                .glassPopupAnchor(anchor, cornerRadius = 20.dp)
+                                .onGloballyPositioned { bounds = it.boundsInRoot() }
+                                .clickable { expanded = true },
+                        )
+                        RoundDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            glassAnchor = GlassMenuAnchor(anchor, bounds),
+                        ) { dismiss ->
+                            val inGlass = LocalGlassPopupContent.current
+                            SideEffect { renderedInGlass = inGlass }
+                            RoundDropdownMenuItem(text = "菜单项", onClick = { dismiss() })
+                        }
+                    }
+                }
+            }
+        }
+        compose.onNodeWithTag("menu-anchor").performClick()
+        compose.onNodeWithText("菜单项").assertExists()
+        compose.runOnIdle { assertFalse(renderedInGlass) }
     }
 
     @Test

@@ -113,6 +113,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.StringUtils.formatFriendlyDate
 import io.legado.app.utils.formatReadDuration
@@ -182,6 +183,7 @@ fun ReadRecordScreen(
     val displayMode = state.displayMode
     val readRecordEnabled = state.readRecordEnabled
     var showSearch by remember { mutableStateOf(false) }
+    val alwaysShowSearch = isMiuixHyperOs4Enabled()
     var showCalendar by remember { mutableStateOf(false) }
     var showActionsSheet by remember { mutableStateOf(false) }
     var heatmapMode by remember { mutableStateOf(HeatmapMode.COUNT) }
@@ -325,11 +327,13 @@ fun ReadRecordScreen(
                                 imageVector = icon,
                                 contentDescription = description
                             )
-                            TopBarActionButton(
-                                onClick = { showSearch = !showSearch },
-                                imageVector = Icons.Default.Search,
-                                contentDescription = stringResource(R.string.search)
-                            )
+                            if (!alwaysShowSearch) {
+                                TopBarActionButton(
+                                    onClick = { showSearch = !showSearch },
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = stringResource(R.string.search),
+                                )
+                            }
                             TopBarActionButton(
                                 onClick = { showActionsSheet = true },
                                 imageVector = Icons.Default.MoreVert,
@@ -342,11 +346,12 @@ fun ReadRecordScreen(
 
                 AnimatedVisibility(
                     modifier = Modifier.adaptiveHorizontalPadding(),
-                    visible = showSearch
+                    visible = alwaysShowSearch || showSearch
                 ) {
                     SearchBar(
                         query = state.searchKey ?: "",
-                        onQueryChange = { onIntent(ReadRecordIntent.Search(it)) }
+                        onQueryChange = { onIntent(ReadRecordIntent.Search(it)) },
+                        autoFocus = !alwaysShowSearch,
                     )
                 }
             }

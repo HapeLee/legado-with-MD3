@@ -5,7 +5,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,10 +21,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.ListUiState
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +64,7 @@ fun <T> DynamicTopAppBar(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val isSelecting = state.selectedIds.isNotEmpty()
+    val alwaysShowSearch = showSearchAction && isMiuixHyperOs4Enabled()
 
 
     GlassMediumFlexibleTopAppBar(
@@ -95,7 +95,7 @@ fun <T> DynamicTopAppBar(
         actions = {
             // 选择态默认收起整个 actions 区，只有显式声明的调用方才继续显示
             if (!isSelecting || keepActionsInSelection) {
-                if (showSearchAction) {
+                if (showSearchAction && !alwaysShowSearch) {
                     TopBarActionButton(
                         onClick = { onSearchToggle(!state.isSearch) },
                         imageVector = AppIcons.Search,
@@ -106,19 +106,11 @@ fun <T> DynamicTopAppBar(
                 topBarActions()
 
                 dropDownMenuContent?.let { content ->
-                    Box {
-                        TopBarActionButton(
-                            onClick = { showMenu = true },
-                            imageVector = AppIcons.MoreVert,
-                            contentDescription = stringResource(R.string.more_menu)
-                        )
-                        RoundDropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) { dismiss ->
-                            content(dismiss)
-                        }
-                    }
+                    TopBarOverflowMenu(
+                        expanded = showMenu,
+                        onExpandedChange = { showMenu = it },
+                        content = content,
+                    )
                 }
             }
         },
@@ -128,17 +120,24 @@ fun <T> DynamicTopAppBar(
                 modifier = Modifier
                     .adaptiveHorizontalPadding(),
                 // 保留 actions 时必须同步保留输入框，否则选择态点搜索按钮会没有任何反馈
-                visible = state.isSearch && (!isSelecting || keepActionsInSelection),
+                visible = (alwaysShowSearch || state.isSearch) && (!isSelecting || keepActionsInSelection),
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
                 SearchBar(
                     query = state.searchKey,
-                    onQueryChange = onSearchQueryChange,
+                    onQueryChange = { query ->
+                        val searching = query.isNotEmpty()
+                        if (alwaysShowSearch && searching != state.isSearch) {
+                            onSearchToggle(searching)
+                        }
+                        onSearchQueryChange(query)
+                    },
                     onSearch = onSearchSubmit,
                     placeholder = searchPlaceholder,
                     trailingIcon = searchTrailingIcon,
-                    dropdownMenu = searchDropdownMenu
+                    dropdownMenu = searchDropdownMenu,
+                    autoFocus = !alwaysShowSearch,
                 )
             }
 

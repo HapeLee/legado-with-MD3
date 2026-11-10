@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur" />
+    <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur,top.yukonga.miuix.kmp.glass" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 自 Android 17 (API 37) 起本地网络保护强制生效：接受局域网入站连接需要该运行时权限，

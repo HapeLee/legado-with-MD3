@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.settingItem
 
+import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -15,9 +16,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
+import io.legado.app.ui.theme.LocalHasMiuixPopupHost
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.widget.components.SplicedColumnDivider
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.glass.GlassDropdownPreference
 import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
 
 @Composable
@@ -39,14 +44,48 @@ fun DropdownListSettingItem(
     onValueChange: (String) -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
+
+    // window 级 Miuix 弹层没有 popup host，host-based preference 弹不出；tiny 系列自带
+    // Miuix 的 WindowListPopup，与宿主弹层同属 window 级，不退回 M3。
+    if (composeEngine == ComposeEngine.Miuix && !LocalHasMiuixPopupHost.current) {
+        TinyDropdownSettingItem(
+            title = title,
+            selectedValue = selectedValue,
+            displayEntries = displayEntries,
+            entryValues = entryValues,
+            description = description,
+            imageVector = imageVector,
+            enabled = enabled,
+            unavailableValues = unavailableValues,
+            onUnavailableSelected = onUnavailableSelected,
+            onValueChange = onValueChange,
+        )
+        return
+    }
     SplicedColumnDivider()
 
     when (composeEngine) {
         ComposeEngine.Miuix -> {
             val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
-            val spinnerItems = displayEntries.map { display ->
+            val spinnerItems = displayEntries.toList()
+            val dropdownItems = displayEntries.map { display ->
                 DropdownItem(title = display)
             }
+            val startAction: (@Composable () -> Unit)? = if (imageVector != null) {
+                { Icon(imageVector = imageVector, contentDescription = null) }
+            } else null
+            val onSelectedIndexChange: (Int) -> Unit = { index ->
+                // miuix 的 spinner 没有单项禁用态：靠提示说明这一档本产物跑不了。
+                val value = entryValues[index]
+                when {
+                    !enabled -> Unit
+                    value in unavailableValues -> onUnavailableSelected?.invoke(value)
+                    else -> onValueChange(value)
+                }
+            }
+            // 能走到这里说明已在 Scaffold 内，具备 MiuixPopupHost。
+            val useGlass = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                LocalAppUiConfiguration.current.theme.useHyperOs4Components
 
             // miuix 的 spinner 没有独立的禁用态：置灰并吞掉选择，不再触发设置变更。
             Box(
@@ -54,29 +93,27 @@ fun DropdownListSettingItem(
                     .alpha(if (enabled) 1f else 0.45f)
                     .semantics { if (!enabled) disabled() }
             ) {
-                OverlaySpinnerPreference(
-                    title = title,
-                    summary = description,
-                    items = spinnerItems,
-                    selectedIndex = selectedIndex,
-                    startAction = imageVector?.let { icon ->
-                        {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null
-                            )
-                        }
-                    },
-                    onSelectedIndexChange = { index ->
-                        // miuix 的 spinner 没有单项禁用态：靠提示说明这一档本产物跑不了。
-                        val value = entryValues[index]
-                        when {
-                            !enabled -> Unit
-                            value in unavailableValues -> onUnavailableSelected?.invoke(value)
-                            else -> onValueChange(value)
-                        }
-                    }
-                )
+                if (useGlass) {
+                    GlassDropdownPreference(
+                        title = title,
+                        summary = description,
+                        items = spinnerItems,
+                        selectedIndex = selectedIndex,
+                        backdrop = LocalMiuixBarBackdrop.current,
+                        enabled = enabled,
+                        startAction = startAction,
+                        onSelectedIndexChange = onSelectedIndexChange,
+                    )
+                } else {
+                    OverlaySpinnerPreference(
+                        title = title,
+                        summary = description,
+                        items = dropdownItems,
+                        selectedIndex = selectedIndex,
+                        startAction = startAction,
+                        onSelectedIndexChange = onSelectedIndexChange,
+                    )
+                }
             }
         }
         ComposeEngine.Material, ComposeEngine.Mochi -> {

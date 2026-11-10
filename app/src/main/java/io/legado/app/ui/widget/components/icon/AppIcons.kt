@@ -46,7 +46,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Album
-import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.ContactsBook
 import top.yukonga.miuix.kmp.icon.extended.Delete
@@ -92,7 +92,7 @@ object AppIcons {
 
     val Back: ImageVector
         @Composable
-        get() = if (isMiuix) MiuixIcons.Back else Icons.AutoMirrored.Filled.ArrowBack
+        get() = if (isMiuix) MiuixIcons.ChevronBackward else Icons.AutoMirrored.Filled.ArrowBack
 
     val Filter: ImageVector
         @Composable

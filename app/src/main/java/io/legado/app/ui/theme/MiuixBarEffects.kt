@@ -1,47 +1,113 @@
 package io.legado.app.ui.theme
 
+import android.os.Build
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.GlassDefaults
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
+import top.yukonga.miuix.kmp.blur.BlendColorEntry
+import top.yukonga.miuix.kmp.blur.BlurDefaults
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.ProgressiveBlur
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
 import top.yukonga.miuix.kmp.blur.highlight.Highlight
 import top.yukonga.miuix.kmp.blur.progressiveBlur
+import top.yukonga.miuix.kmp.blur.progressiveTextureBlur
 import top.yukonga.miuix.kmp.blur.runtimeShaderEffect
+import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+@Composable
+internal fun isMiuixHyperOs4Enabled(): Boolean =
+    LegadoTheme.composeEngine == ComposeEngine.Miuix &&
+        LocalAppUiConfiguration.current.theme.useHyperOs4Components &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
 internal val LocalMiuixBarBackdrop = compositionLocalOf<LayerBackdrop?> { null }
 
+/**
+ * Whether this composition can render into a Miuix Scaffold's popup host.
+ *
+ * `AppScaffold` provides it for the Miuix tree; window-level sheets/dialogs must override it to
+ * `false` because their child composition otherwise inherits `true` without a host in that window.
+ * Host-based glass overlays keep the inherited `true`.
+ */
+internal val LocalHasMiuixPopupHost = compositionLocalOf { false }
+
 @Composable
-internal fun Modifier.miuixBarBlur(bottom: Boolean = false, fixedStyle: Boolean = false): Modifier {
+internal fun MiuixBlurredTopBar(
+    modifier: Modifier = Modifier,
+    scrollBehavior: ScrollBehavior? = null,
+    fixedStyle: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    val backdrop = LocalMiuixBarBackdrop.current
+    val theme = LocalAppUiConfiguration.current.theme
+    Box(modifier) {
+        if (backdrop != null && theme.enableBlur) {
+            val progressive = theme.enableProgressiveBlur
+            val radius = if (fixedStyle) 24f else theme.topBarBlurRadius.toFloat()
+            val colors = BlurDefaults.blurColors(
+                blendColors = if (fixedStyle) emptyList() else listOf(
+                    BlendColorEntry(
+                        GlassDefaults.secondaryColorOr { MiuixTheme.colorScheme.surface }
+                            .copy(alpha = theme.topBarBlurAlpha.coerceIn(0, 100) / 100f),
+                    ),
+                ),
+            )
+            val background = Modifier.matchParentSize()
+            Box(
+                if (progressive) {
+                    background
+                        // Fade the sampled background while leaving title and actions fully opaque.
+                        .graphicsLayer {
+                            alpha = scrollBehavior?.state?.let {
+                                (-it.contentOffset / 48.dp.toPx()).coerceIn(0f, 1f)
+                            } ?: 1f
+                        }
+                        .progressiveTextureBlur(
+                            backdrop = backdrop,
+                            shape = RectangleShape,
+                            blurRadius = radius,
+                            gradient = ProgressiveBlur.Top.copy(curve = 2.2f),
+                            colors = colors,
+                        )
+                } else {
+                    background.textureBlur(
+                        backdrop = backdrop,
+                        shape = RectangleShape,
+                        blurRadius = radius,
+                        colors = colors,
+                    )
+                },
+            )
+        }
+        content()
+    }
+}
+
+@Composable
+internal fun Modifier.miuixBottomBarBlur(): Modifier {
     val backdrop = LocalMiuixBarBackdrop.current ?: return this
     val theme = LocalAppUiConfiguration.current.theme
     if (!theme.enableBlur) return this
-    val progressive = theme.enableProgressiveBlur
-    val radius = when {
-        fixedStyle -> 24.dp
-        bottom -> theme.bottomBarBlurRadius.dp
-        else -> theme.topBarBlurRadius.dp
-    }
-    val alpha = when {
-        fixedStyle -> 0f
-        bottom -> theme.bottomBarBlurAlpha / 100f
-        else -> theme.topBarBlurAlpha / 100f
-    }
+    val radius = theme.bottomBarBlurRadius.dp
+    val alpha = theme.bottomBarBlurAlpha / 100f
     val tint = GlassDefaults.secondaryColorOr { MiuixTheme.colorScheme.surface }.copy(alpha = alpha)
     return drawBackdrop(
         backdrop = backdrop,
         shape = { RectangleShape },
         effects = {
-            if (progressive) progressiveBlur(radius.toPx(), gradient = if (bottom) ProgressiveBlur.Bottom else ProgressiveBlur.Top)
+            if (theme.enableProgressiveBlur) progressiveBlur(radius.toPx(), gradient = ProgressiveBlur.Bottom)
             else blur(radius.toPx())
         },
         onDrawSurface = { drawRect(tint) },

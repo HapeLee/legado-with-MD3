@@ -27,18 +27,18 @@ class ThemeSettingsMappingTest {
     }
 
     @Test
-    fun `Theme gateway 持久化边界固定为 73 键`() {
+    fun `Theme gateway 持久化边界固定为 74 键`() {
         val actualKeys = ThemeSettings().toGatewayPrefMap().keys
         val expectedKeys = ThemeSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(73, actualKeys.size)
+        assertEquals(74, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
         assertFalse(PreferKey.customMode in actualKeys)
         assertFalse(PreferKey.bookInfoInputColor in actualKeys)
     }
 
     @Test
-    fun `Theme gateway 73 键写读映射逐字段对应`() {
+    fun `Theme gateway 74 键写读映射逐字段对应`() {
         themeMappingSamples().forEach { expected ->
             assertEquals(expected.expectedGatewayPrefMap(), expected.toGatewayPrefMap())
             assertEquals(
@@ -191,6 +191,7 @@ private fun themeMappingSamples(): List<ThemeSettings> {
         mochiTopBarLiquidGlass = false,
         mochiScrollEdgeBlurEnabled = false,
         miuixTopBarLiquidGlass = true,
+        useHyperOs4Components = true,
         bookInfoFollowCoverColor = false,
         bookInfoNetworkCoverBackground = "network-background",
         bookInfoDefaultCoverBackground = "default-background",
@@ -231,6 +232,7 @@ private fun themeMappingSamples(): List<ThemeSettings> {
         base.copy(disableSplicedColumnGroupCornerRadius = true),
         base.copy(enableBlur = true),
         base.copy(enableProgressiveBlur = true),
+        base.copy(useHyperOs4Components = false),
         base.copy(useFlexibleTopAppBar = true),
         base.copy(bookInfoFollowCoverColor = true),
         base.copy(enableItemDivider = true),
@@ -288,6 +290,7 @@ private fun ThemeSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.mochiTopBarLiquidGlass to mochiTopBarLiquidGlass,
     PreferKey.mochiScrollEdgeBlurEnabled to mochiScrollEdgeBlurEnabled,
     PreferKey.miuixTopBarLiquidGlass to miuixTopBarLiquidGlass,
+    PreferKey.useHyperOs4Components to useHyperOs4Components,
     PreferKey.bookInfoFollowCoverColor to bookInfoFollowCoverColor,
     PreferKey.bookInfoNetworkCoverBackground to bookInfoNetworkCoverBackground,
     PreferKey.bookInfoDefaultCoverBackground to bookInfoDefaultCoverBackground,

@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.settingItem
 
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +31,9 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.LocalAppUiConfiguration
+import io.legado.app.ui.theme.LocalHasMiuixPopupHost
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.TextCard
@@ -37,7 +41,9 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.sliderAccessibility
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.glass.GlassDropdownPreference
 import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
@@ -59,24 +65,44 @@ fun CompactDropdownSettingItem(
         ComposeEngine.Miuix -> {
             val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
             val spinnerItems = displayEntries.toList()
-
-            WindowDropdownPreference(
-                title = title,
-                summary = description,
-                items = spinnerItems,
-                selectedIndex = selectedIndex,
-                startAction = imageVector?.let { icon ->
-                    {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null
-                        )
-                    }
-                },
-                onSelectedIndexChange = { index ->
-                    onValueChange(entryValues[index])
-                }
-            )
+            val startAction: (@Composable () -> Unit)? = if (imageVector != null) {
+                { Icon(imageVector = imageVector, contentDescription = null) }
+            } else null
+            val onSelectedIndexChange: (Int) -> Unit = { index ->
+                onValueChange(entryValues[index])
+            }
+            val hasPopupHost = LocalHasMiuixPopupHost.current
+            val useGlass = hasPopupHost && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                LocalAppUiConfiguration.current.theme.useHyperOs4Components
+            when {
+                useGlass -> GlassDropdownPreference(
+                    title = title,
+                    summary = description,
+                    items = spinnerItems,
+                    selectedIndex = selectedIndex,
+                    backdrop = LocalMiuixBarBackdrop.current,
+                    startAction = startAction,
+                    onSelectedIndexChange = onSelectedIndexChange,
+                )
+                // Scaffold 页面用同 host 的 Miuix 普通 dropdown；window 级弹层没有 host，
+                // 只能用 window 级 dropdown。两条回落都保留 Miuix 视觉，不退回 M3。
+                hasPopupHost -> OverlayDropdownPreference(
+                    title = title,
+                    summary = description,
+                    items = spinnerItems,
+                    selectedIndex = selectedIndex,
+                    startAction = startAction,
+                    onSelectedIndexChange = onSelectedIndexChange,
+                )
+                else -> WindowDropdownPreference(
+                    title = title,
+                    summary = description,
+                    items = spinnerItems,
+                    selectedIndex = selectedIndex,
+                    startAction = startAction,
+                    onSelectedIndexChange = onSelectedIndexChange,
+                )
+            }
         }
         ComposeEngine.Material, ComposeEngine.Mochi -> {
             val currentEntry =

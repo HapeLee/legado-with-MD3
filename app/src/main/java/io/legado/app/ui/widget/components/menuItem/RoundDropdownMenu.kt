@@ -1,7 +1,9 @@
 package io.legado.app.ui.widget.components.menuItem
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
@@ -18,9 +20,20 @@ import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.currentCompositionLocalContext
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
@@ -29,6 +42,8 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Constraints
@@ -39,15 +54,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
+import io.legado.app.ui.theme.LocalHasMiuixPopupHost
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.rememberOpaqueColorScheme
+import io.legado.app.ui.widget.components.LocalAppGlassOverlay
 import io.legado.app.ui.widget.components.mochi.AppMochiPopover
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.glass.GlassDropdownPopup
+import top.yukonga.miuix.kmp.glass.GlassPopupAnchor
+import top.yukonga.miuix.kmp.glass.GlassTransformPopup
 import top.yukonga.miuix.kmp.window.WindowListPopup
 
-val LocalUseMiuixWindowPopup = staticCompositionLocalOf { false }
 internal val LocalUseWindowPopupForMochiMenu = staticCompositionLocalOf { false }
+
+/** True while menu rows sit inside a glass panel, so they must not paint their own fill. */
+internal val LocalGlassPopupContent = compositionLocalOf { false }
+
+/**
+ * Anchor for an OS4 glass menu: the popup anchor plus the anchor control's root bounds.
+ * [bounds] is only used for placement; [anchor] carries the shared morph/progress state.
+ */
+@Stable
+class GlassMenuAnchor(
+    val anchor: GlassPopupAnchor,
+    val bounds: Rect,
+    val icon: (@Composable () -> Unit)? = null,
+)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -59,10 +94,72 @@ fun RoundDropdownMenu(
     shadowElevation: Dp = 4.dp,
     verticalSpacing: Dp = 8.dp,
     mochiAnchorMaxWidth: Dp = Dp.Unspecified,
+    glassAnchor: GlassMenuAnchor? = null,
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit
 ) {
     val popupContainerColor = LegadoTheme.colorScheme.surfaceContainer
     val engine = LegadoTheme.composeEngine
+    val glassOverlay = LocalAppGlassOverlay.current
+
+    if (engine == ComposeEngine.Miuix && glassOverlay != null && LocalHasMiuixPopupHost.current &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        LocalAppUiConfiguration.current.theme.useHyperOs4Components
+    ) {
+        val key = remember { Any() }
+        val backdrop = LocalMiuixBarBackdrop.current
+        val localContext = currentCompositionLocalContext
+        var parentBounds by remember { mutableStateOf(Rect.Zero) }
+        if (glassAnchor == null) {
+            // Match WindowListPopup's anchor contract without adding layout space.
+            Layout(
+                content = {},
+                modifier = Modifier.onGloballyPositioned {
+                    parentBounds = it.parentLayoutCoordinates?.boundsInRoot() ?: Rect.Zero
+                },
+            ) { _, _ -> layout(0, 0) {} }
+        }
+        val anchorBounds = glassAnchor?.bounds ?: parentBounds
+        val rows: @Composable ColumnScope.() -> Unit = {
+            CompositionLocalProvider(LocalGlassPopupContent provides true) {
+                content(onDismissRequest)
+            }
+        }
+        val popupContent = remember(glassOverlay) { mutableStateOf<@Composable BoxScope.() -> Unit>({}) }
+        SideEffect {
+            popupContent.value = popup@{
+                val origin = glassOverlay.origin ?: return@popup
+                if (anchorBounds.isEmpty) return@popup
+                CompositionLocalProvider(localContext) {
+                    if (glassAnchor?.icon != null && origin == Offset.Zero) {
+                        GlassTransformPopup(
+                            show = expanded,
+                            onDismissRequest = onDismissRequest,
+                            anchor = glassAnchor.anchor,
+                            anchorContent = glassAnchor.icon,
+                            backdrop = backdrop,
+                            modifier = modifier,
+                            content = rows,
+                        )
+                    } else {
+                        GlassDropdownPopup(
+                            show = expanded,
+                            onDismissRequest = onDismissRequest,
+                            anchorBounds = anchorBounds.translate(-origin),
+                            anchor = glassAnchor?.anchor,
+                            backdrop = backdrop,
+                            modifier = modifier,
+                            content = rows,
+                        )
+                    }
+                }
+            }
+        }
+        DisposableEffect(glassOverlay, key) {
+            glassOverlay.register(key) { popupContent.value(this) }
+            onDispose { glassOverlay.remove(key) }
+        }
+        return
+    }
 
     when {
         engine == ComposeEngine.Miuix -> {

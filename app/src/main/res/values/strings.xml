@@ -4008,4 +4008,6 @@
     <string name="a11y_open_playback">Open player</string>
     <string name="a11y_open_playback_named">Open player for %1$s</string>
     <string name="a11y_reorder_position">Position %1$d of %2$d</string>
+    <string name="hyper_os4_components">HyperOS 4 components</string>
+    <string name="hyper_os4_components_summary">Use the new glass top app bar, tabs and dropdowns in the Miuix theme.</string>
 </resources>

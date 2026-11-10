@@ -24,7 +24,8 @@ kotlinxCoroutinesAndroid = "1.11.0"
 kotlinxSerializationJson = "1.11.0"
 kotlinxCollectionsImmutable = "0.5.2"
 ksp = "2.3.12"
-agp = "9.4.1"
+# Android composite builds must use the same AGP as the pinned Miuix source.
+agp = "9.5.1"
 aboutlibraries = "15.3.0"
 appcompat = "1.8.0"
 colorpicker = "1.1.0"
@@ -59,7 +60,7 @@ markwon = "4.6.2"
 material = "1.14.0"
 material3 = "1.5.0-beta01"
 material3IconsExtended = "1.7.8"
-materialKolor = "5.0.1"
+materialKolor = "6.0.0"
 media = "1.8.0"
 media3 = "1.11.0"
 navigationCompose = "2.10.0"
@@ -98,7 +99,7 @@ reorderable = "3.1.0"
 haze = "2.0.1"
 timber = "5.0.1"
 telephoto = "0.19.0"
-miuix = "0.9.4"
+miuix = "0.9.4-ea1b935d-SNAPSHOT"
 mochi = "0.2.0"
 backdrop = "2.0.1"
 capsule = "2.1.3"
@@ -188,7 +189,7 @@ libarchive = { module = "me.zhanghai.android.libarchive:library", version.ref = 
 lifecycle-common-java8 = { module = "androidx.lifecycle:lifecycle-common-java8", version.ref = "lifecycle" }
 lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
 
-material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }
+material-kolor = { module = "com.materialkolor:material-kolor-material3", version.ref = "materialKolor" }
 media-media = { module = "androidx.media:media", version.ref = "media" }
 media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
@@ -268,10 +269,11 @@ timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "tim
 
 # miuix
 miuix-core = { module = "top.yukonga.miuix.kmp:miuix-core", version.ref = "miuix" }
-miuix-blur-android = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
-miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
-miuix-preference-android = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }
-miuix-ui-android = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
+miuix-blur = { module = "top.yukonga.miuix.kmp:miuix-blur", version.ref = "miuix" }
+miuix-glass = { module = "top.yukonga.miuix.kmp:miuix-glass", version.ref = "miuix" }
+miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
+miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference", version.ref = "miuix" }
+miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }
 
 capsule = { module = "io.github.kyant0:capsule", version.ref = "capsule" }
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }

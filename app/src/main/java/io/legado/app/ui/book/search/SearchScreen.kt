@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -154,6 +155,7 @@ fun SearchScreen(
     var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
     val groupedListState = rememberLazyListState()
+    val suggestionsListState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -318,6 +320,12 @@ fun SearchScreen(
             Column {
                 GlassMediumFlexibleTopAppBar(
                     title = stringResource(R.string.search),
+                    isContentScrolled = when {
+                        showSuggestionPanel -> suggestionsListState.canScrollBackward
+                        state.results.isEmpty() -> false
+                        isSourceGroupedMode -> groupedListState.canScrollBackward
+                        else -> listState.canScrollBackward
+                    },
                     navigationIcon = {
                         TopBarNavigationButton(
                             onClick = onBack,
@@ -422,6 +430,7 @@ fun SearchScreen(
                 if (isSuggestionVisible) {
                     SearchSuggestionPanel(
                         state = state,
+                        listState = suggestionsListState,
                         onUseHistory = { keyword ->
                             queryInput = keyword
                             onIntent(SearchIntent.UseHistoryKeyword(keyword))
@@ -960,6 +969,7 @@ private data class SearchFloatingSummary(
 @Composable
 private fun SearchSuggestionPanel(
     state: SearchUiState,
+    listState: LazyListState,
     onUseHistory: (String) -> Unit,
     onDeleteHistory: (SearchKeyword) -> Unit,
     onOpenBook: (BookShelfItem) -> Unit,
@@ -972,6 +982,7 @@ private fun SearchSuggestionPanel(
     val visibleHints = state.bookshelfHints.filterNot { it.bookUrl in lockedUrls }
     LazyColumn(
         modifier = modifier,
+        state = listState,
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = adaptiveContentPadding(
             top = 8.dp,

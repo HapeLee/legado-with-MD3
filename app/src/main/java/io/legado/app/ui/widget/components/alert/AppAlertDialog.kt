@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.alert
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.LocalAppUiConfiguration
+import io.legado.app.ui.theme.LocalHasMiuixPopupHost
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.rememberMochiOverlayBackdrop
 import kotlinx.collections.immutable.persistentListOf
@@ -31,8 +35,14 @@ import ui.feice.mochi.basic.MochiDialog
 import ui.feice.mochi.effect.glass.LocalMochiBackdrop
 import io.legado.app.ui.widget.components.mochi.MochiOverlayAccessibility
 import io.legado.app.ui.widget.components.mochi.mochiOverlayContentModifier
+import io.legado.app.ui.widget.components.LocalAppGlassOverlay
 import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.button.SecondaryButton
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import top.yukonga.miuix.kmp.glass.GlassDialog
+import top.yukonga.miuix.kmp.glass.GlassDialogButton
+import top.yukonga.miuix.kmp.glass.GlassDialogButtonRole
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -53,13 +63,20 @@ fun AppAlertDialog(
 ) {
     when (composeEngine) {
         ComposeEngine.Miuix -> {
-            WindowDialog(
-                show = show,
-                modifier = modifier,
-                title = title,
-                summary = text,
-                onDismissRequest = onDismissRequest,
-                content = {
+            val themeSettings = LocalAppUiConfiguration.current.theme
+            val useGlassContainer = themeSettings.useHyperOs4Components &&
+                LocalHasMiuixPopupHost.current &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            val backdrop = LocalMiuixBarBackdrop.current
+            val glassOverlay = LocalAppGlassOverlay.current
+            val dialogBody: @Composable () -> Unit = {
+                // WindowDialog has no popup host; its content must not inherit the Scaffold's
+                // host signal. A glass dialog shares the root host with its dropdowns.
+                CompositionLocalProvider(
+                    LocalHasMiuixPopupHost provides useGlassContainer,
+                    LocalAppGlassOverlay provides glassOverlay.takeIf { useGlassContainer },
+                    LocalMiuixBarBackdrop provides backdrop.takeIf { useGlassContainer },
+                ) {
                     ProvideAppDensity {
                         if (content != null) {
                             Column(
@@ -72,37 +89,72 @@ fun AppAlertDialog(
                             }
                         }
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 24.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (onDismiss != null) {
-                                SecondaryButton(
-                                    text = dismissText,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = {
-                                        onDismiss()
+                        if (onDismiss != null || onConfirm != null) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 24.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (onDismiss != null) {
+                                    if (useGlassContainer) {
+                                        GlassDialogButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                                            MiuixText(dismissText, style = MiuixTheme.textStyles.button)
+                                        }
+                                    } else {
+                                        SecondaryButton(
+                                            text = dismissText,
+                                            modifier = Modifier.weight(1f),
+                                            onClick = onDismiss,
+                                        )
                                     }
-                                )
-                            }
+                                }
 
-                            if (onConfirm != null) {
-                                PrimaryButton(
-                                    text = confirmText,
-                                    modifier = Modifier.weight(1f),
-                                    enabled = confirmEnabled,
-                                    onClick = {
-                                        onConfirm()
+                                if (onConfirm != null) {
+                                    if (useGlassContainer) {
+                                        GlassDialogButton(
+                                            onClick = onConfirm,
+                                            modifier = Modifier.weight(1f),
+                                            enabled = confirmEnabled,
+                                            role = GlassDialogButtonRole.Primary,
+                                        ) {
+                                            MiuixText(confirmText, style = MiuixTheme.textStyles.button)
+                                        }
+                                    } else {
+                                        PrimaryButton(
+                                            text = confirmText,
+                                            modifier = Modifier.weight(1f),
+                                            enabled = confirmEnabled,
+                                            onClick = onConfirm,
+                                        )
                                     }
-                                )
+                                }
                             }
                         }
                     }
                 }
-            )
+            }
+            if (useGlassContainer) {
+                GlassDialog(
+                    onDismissRequest = onDismissRequest,
+                    show = show,
+                    backdrop = backdrop,
+                    modifier = modifier,
+                    title = title,
+                    summary = text,
+                    content = dialogBody,
+                )
+            } else {
+                WindowDialog(
+                    show = show,
+                    modifier = modifier,
+                    title = title,
+                    summary = text,
+                    onDismissRequest = onDismissRequest,
+                    content = dialogBody,
+                )
+            }
         }
         ComposeEngine.Mochi -> {
             MochiOverlayAccessibility(show)
@@ -124,17 +176,19 @@ fun AppAlertDialog(
                                 Text(text, Modifier.padding(bottom = if (content != null) 16.dp else 0.dp))
                             }
                             content?.invoke()
-                            Row(
-                                Modifier.fillMaxWidth().padding(top = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                if (onDismiss != null) SecondaryButton(
-                                    text = dismissText, modifier = Modifier.weight(1f), onClick = onDismiss,
-                                )
-                                if (onConfirm != null) PrimaryButton(
-                                    text = confirmText, modifier = Modifier.weight(1f),
-                                    enabled = confirmEnabled, onClick = onConfirm,
-                                )
+                            if (onDismiss != null || onConfirm != null) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(top = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    if (onDismiss != null) SecondaryButton(
+                                        text = dismissText, modifier = Modifier.weight(1f), onClick = onDismiss,
+                                    )
+                                    if (onConfirm != null) PrimaryButton(
+                                        text = confirmText, modifier = Modifier.weight(1f),
+                                        enabled = confirmEnabled, onClick = onConfirm,
+                                    )
+                                }
                             }
                         }
                     }

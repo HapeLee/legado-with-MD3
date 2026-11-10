@@ -4004,4 +4004,6 @@
     <string name="a11y_open_playback">打开播放界面</string>
     <string name="a11y_open_playback_named">打开《%1$s》的播放界面</string>
     <string name="a11y_reorder_position">第 %1$d 项，共 %2$d 项</string>
+    <string name="hyper_os4_components">HyperOS 4 风格组件</string>
+    <string name="hyper_os4_components_summary">在 Miuix 主题下使用新的玻璃顶栏、标签页与下拉菜单。</string>
 </resources>

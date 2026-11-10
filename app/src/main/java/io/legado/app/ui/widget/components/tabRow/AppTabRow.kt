@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.tabRow
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.PrimaryTabRow
@@ -11,9 +12,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
+import top.yukonga.miuix.kmp.glass.GlassTabRow
+import top.yukonga.miuix.kmp.glass.GlassTabRowDefaults
 
 @Composable
 fun AppTabRow(
@@ -27,16 +32,39 @@ fun AppTabRow(
 
     when (composeEngine) {
         ComposeEngine.Miuix -> {
-            TabRowWithContour(
-                tabs = tabTitles,
-                selectedTabIndex = selectedTabIndex,
-                onTabSelected = onTabSelected,
-                modifier = modifier
-                    .padding(vertical = 4.dp),
-                colors = TabRowDefaults.tabRowColors(
-                    backgroundColor = Color.Transparent
+            if (tabTitles.isEmpty()) return
+            val selectedIndex = selectedTabIndex.coerceIn(tabTitles.indices)
+            val tabModifier = modifier.padding(vertical = 4.dp)
+            val scrollableTabs: @Composable (Modifier) -> Unit = { rowModifier ->
+                TabRowWithContour(
+                    tabs = tabTitles,
+                    selectedTabIndex = selectedIndex,
+                    onTabSelected = onTabSelected,
+                    modifier = rowModifier,
+                    colors = TabRowDefaults.tabRowColors(
+                        backgroundColor = Color.Transparent
+                    )
                 )
-            )
+            }
+            if (isMiuixHyperOs4Enabled() && tabTitles.distinct().size == tabTitles.size) {
+                BoxWithConstraints(tabModifier) {
+                    val requiredWidth = TabRowDefaults.TabRowWithContourMinWidth * tabTitles.size +
+                        GlassTabRowDefaults.TabGap * (tabTitles.size - 1)
+                    if (isScrollable && maxWidth < requiredWidth) {
+                        // The native glass row divides a fixed width across all tabs.
+                        scrollableTabs(Modifier)
+                    } else {
+                        GlassTabRow(
+                            tabs = tabTitles,
+                            selectedIndex = selectedIndex,
+                            onSelect = onTabSelected,
+                            backdrop = LocalMiuixBarBackdrop.current,
+                        )
+                    }
+                }
+            } else {
+                scrollableTabs(tabModifier)
+            }
         }
         ComposeEngine.Material, ComposeEngine.Mochi -> {
             if (isScrollable) {

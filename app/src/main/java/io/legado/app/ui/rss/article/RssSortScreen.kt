@@ -45,6 +45,7 @@ import io.legado.app.ui.rss.read.RedirectPolicy
 import io.legado.app.ui.rss.read.title
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
@@ -62,6 +63,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 import io.legado.app.ui.widget.components.variable.VariableEditorUiState
@@ -113,6 +115,7 @@ fun RssSortScreen(
     val tabTitles = sortList.map { it.first }
 
     var showMainMenu by remember { mutableStateOf(false) }
+    val alwaysShowSearch = isMiuixHyperOs4Enabled()
     var showSearchSheet by remember { mutableStateOf(false) }
     var searchQuery by remember(searchKey) { mutableStateOf(searchKey.orEmpty()) }
     var showRedirectMenu by remember { mutableStateOf(false) }
@@ -150,7 +153,7 @@ fun RssSortScreen(
                     TopBarNavigationButton(onClick = onBackClick, imageVector = AppIcons.Back)
                 },
                 actions = {
-                    if (hasSearch) {
+                    if (hasSearch && !alwaysShowSearch) {
                         TopBarActionButton(
                             onClick = { showSearchSheet = true },
                             imageVector = AppIcons.Search,
@@ -249,6 +252,15 @@ fun RssSortScreen(
                     }
                 },
                 bottomContent = {
+                    if (hasSearch && alwaysShowSearch) {
+                        SearchBar(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            onSearch = ::submitSearch,
+                            modifier = Modifier.adaptiveHorizontalPadding(),
+                            autoFocus = false,
+                        )
+                    }
                     if (sortList.size > 1) {
                         Row(
                             modifier = Modifier
@@ -341,7 +353,7 @@ fun RssSortScreen(
     )
 
     RssSearchSheet(
-        show = showSearchSheet,
+        show = showSearchSheet && !alwaysShowSearch,
         query = searchQuery,
         onQueryChange = { searchQuery = it },
         onSearch = ::submitSearch,

@@ -39,6 +39,12 @@ dependencyResolutionManagement {
 }
 rootProject.name = 'legado'
 
+// Build the pinned Miuix snapshot without GitHub Packages credentials.
+if (!file('modules/miuix/settings.gradle.kts').isFile()) {
+    throw new GradleException('Initialize Miuix with git submodule update --init modules/miuix')
+}
+includeBuild('modules/miuix')
+
 include ':app'
 include ':modules:book'
 include ':modules:rhino'

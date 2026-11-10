@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,12 +36,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.ActionItem
@@ -216,9 +215,11 @@ fun ReplaceRuleScreen(
         }
     )
 
-    if (importState is BaseImportUiState.Loading) {
-        Dialog(onDismissRequest = { onIntent(ReplaceRuleIntent.CancelImport) }) { ProvideAppDensity { LoadingIndicator() } }
-    }
+    AppAlertDialog(
+        show = importState is BaseImportUiState.Loading,
+        onDismissRequest = { onIntent(ReplaceRuleIntent.CancelImport) },
+        content = { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() } },
+    )
 
     LaunchedEffect(importState) {
         (importState as? BaseImportUiState.Error)?.let {
@@ -294,7 +295,7 @@ fun ReplaceRuleScreen(
         title = stringResource(R.string.replace_purify),
         state = state,
         onBackClick = { onBackClick() },
-        onSearchToggle = { onIntent(ReplaceRuleIntent.SetSearchMode(!state.isSearch)) },
+        onSearchToggle = { onIntent(ReplaceRuleIntent.SetSearchMode(it)) },
         onSearchQueryChange = { onIntent(ReplaceRuleIntent.UpdateSearchQuery(it)) },
         searchPlaceholder = stringResource(R.string.replace_purify_search),
         onClearSelection = { onIntent(ReplaceRuleIntent.ClearSelection) },

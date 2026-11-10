@@ -90,6 +90,7 @@ data class ThemeExportData(
     val mochiTopBarLiquidGlass: Boolean = true,
     val mochiScrollEdgeBlurEnabled: Boolean = true,
     val miuixTopBarLiquidGlass: Boolean = false,
+    val useHyperOs4Components: Boolean = false,
     val bgImageLight: String? = null,
     val bgImageDark: String? = null,
     val bgImageBlurring: Int = 0,

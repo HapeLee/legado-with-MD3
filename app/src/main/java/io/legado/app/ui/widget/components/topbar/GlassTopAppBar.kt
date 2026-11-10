@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
-import io.legado.app.ui.theme.miuixBarBlur
+import io.legado.app.ui.theme.MiuixBlurredTopBar
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.widget.components.mochi.AppMochiTitleBar
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
@@ -39,29 +39,18 @@ fun GlassTopAppBar(
         AppMochiTitleBar(title, modifier, navigationIcon = navigationIcon, actions = actions)
         return
     }
-
-    val containerColor = when (LegadoTheme.composeEngine) {
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
-            GlassTopAppBarDefaults.containerColor()
-        }
-        ComposeEngine.Miuix -> {
-            GlassTopAppBarDefaults.getMiuixAppBarColor()
-        }
-    }
-
-    val background = modifier.background(color = containerColor)
-    val finalModifier = when {
-        composeEngine == ComposeEngine.Miuix -> background.miuixBarBlur()
-        hazeState != null -> background.responsiveHazeEffect(state = hazeState)
-        else -> background
-    }
-
-    Column(modifier = finalModifier) {
-        when (LegadoTheme.composeEngine) {
-            ComposeEngine.Miuix -> {
-                // Match M3's visible system bars and cutout insets, including parent consumption.
+    if (composeEngine == ComposeEngine.Miuix) {
+        val contentModifier = Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets)
+        MiuixNativeTopBar(
+            title = title,
+            modifier = modifier,
+            contentModifier = contentModifier,
+            navigationIcon = navigationIcon,
+            actions = actions,
+        ) {
+            MiuixBlurredTopBar(modifier.background(GlassTopAppBarDefaults.getMiuixAppBarColor())) {
                 MiuixTopAppBar(
-                    modifier = Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets),
+                    modifier = contentModifier,
                     title = title,
                     navigationIcon = navigationIcon,
                     actions = actions,
@@ -69,28 +58,33 @@ fun GlassTopAppBar(
                     defaultWindowInsetsPadding = false,
                 )
             }
-            ComposeEngine.Material, ComposeEngine.Mochi -> {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = title,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    },
-                    navigationIcon = navigationIcon,
-                    actions = {
-                        Box(modifier = Modifier.padding(end = 12.dp)) {
-                            TopBarActionsRow { actions() }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent
-                    )
-                )
-            }
         }
+        return
+    }
+
+    val background = modifier.background(color = GlassTopAppBarDefaults.containerColor())
+    val finalModifier = hazeState?.let { background.responsiveHazeEffect(state = it) } ?: background
+
+    Column(modifier = finalModifier) {
+        TopAppBar(
+            title = {
+                Text(
+                    text = title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            navigationIcon = navigationIcon,
+            actions = {
+                Box(modifier = Modifier.padding(end = 12.dp)) {
+                    TopBarActionsRow { actions() }
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            )
+        )
     }
 }

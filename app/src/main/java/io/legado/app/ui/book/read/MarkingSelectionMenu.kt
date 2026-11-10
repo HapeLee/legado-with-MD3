@@ -79,7 +79,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
@@ -271,9 +270,8 @@ fun MarkingSelectionMenu(
                     enter = SelectionMenuMotion.enter(transformOrigin),
                     exit = SelectionMenuMotion.exit(transformOrigin),
                 ) {
-                    NormalCard(
+                    ReaderSelectionMenuSurface(
                         modifier = Modifier.width(width),
-                        containerColor = LegadoTheme.colorScheme.surfaceBright,
                         elevation = 10.dp,
                         cornerRadius = 16.dp,
                     ) {

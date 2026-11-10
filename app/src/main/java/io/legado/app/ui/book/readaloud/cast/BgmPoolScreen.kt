@@ -69,6 +69,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
@@ -108,6 +109,7 @@ fun BgmPoolScreen(
 ) {
     val context = LocalContext.current
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val alwaysShowSearch = isMiuixHyperOs4Enabled()
     val haptics = LocalHapticFeedback.current
     val listState = rememberLazyListState()
     // tab 是唯一事实源（在 VM 里）：点 tab / 滑页都回到同一个 SelectTab，见 rememberTabPagerState
@@ -215,11 +217,13 @@ fun BgmPoolScreen(
                     )
                     // 搜索与新建分组只服务音乐池那一页：配乐库没有分组，也不按池筛选
                     if (state.selectedTab == BgmPoolTab.Pools) {
-                        TopBarActionButton(
-                            onClick = { onIntent(BgmPoolIntent.SetSearch(!state.searchActive)) },
-                            imageVector = Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search),
-                        )
+                        if (!alwaysShowSearch) {
+                            TopBarActionButton(
+                                onClick = { onIntent(BgmPoolIntent.SetSearch(!state.searchActive)) },
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(R.string.search),
+                            )
+                        }
                         TopBarActionButton(
                             onClick = { onIntent(BgmPoolIntent.ShowCreateGroup("")) },
                             imageVector = Icons.Default.CreateNewFolder,
@@ -270,6 +274,7 @@ fun BgmPoolScreen(
                 when (BgmPoolTab.entries[page]) {
                     BgmPoolTab.Pools -> PoolTreeList(
                         view = state,
+                        alwaysShowSearch = alwaysShowSearch,
                         wording = BgmPoolWording,
                         actions = bgmPoolActions(onIntent),
                         listState = listState,

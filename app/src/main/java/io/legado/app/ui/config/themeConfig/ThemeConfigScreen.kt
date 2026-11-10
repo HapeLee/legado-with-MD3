@@ -295,6 +295,24 @@ fun ThemeConfigScreen(
                             )
                         }
                     }
+                    if (isMiuixEngine) {
+                        SearchableSetting("theme.hyper_os4_components") {
+                            SwitchSettingItem(
+                                title = stringResource(R.string.hyper_os4_components),
+                                description = stringResource(R.string.hyper_os4_components_summary),
+                                checked = theme.useHyperOs4Components,
+                                enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+                                onCheckedChange = { enabled ->
+                                    updateTheme {
+                                        it.copy(
+                                            useHyperOs4Components = enabled,
+                                            miuixTopBarLiquidGlass = enabled,
+                                        )
+                                    }
+                                },
+                            )
+                        }
+                    }
                     SearchableSetting("theme.change_icon") {
                         ClickableSettingItem(
                             title = stringResource(R.string.change_icon),

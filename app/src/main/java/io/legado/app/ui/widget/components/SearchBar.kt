@@ -77,7 +77,7 @@ fun SearchBar(
             // 某些情况下需要手动调用 show() 确保键盘弹出
             keyboardController?.show()
             hasFocused = true
-        } else if (!autoFocus) {
+        } else if (!autoFocus && hasFocused) {
             focusManager.clearFocus(force = true)
             keyboardController?.hide()
         }

@@ -406,6 +406,7 @@ internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(
     mochiTopBarLiquidGlass = compatDsBoolean(PreferKey.mochiTopBarLiquidGlass) ?: true,
     mochiScrollEdgeBlurEnabled = compatDsBoolean(PreferKey.mochiScrollEdgeBlurEnabled) ?: true,
     miuixTopBarLiquidGlass = compatDsBoolean(PreferKey.miuixTopBarLiquidGlass) ?: false,
+    useHyperOs4Components = compatDsBoolean(PreferKey.useHyperOs4Components) ?: false,
     bookInfoFollowCoverColor = compatDsBoolean(PreferKey.bookInfoFollowCoverColor) ?: true,
     bookInfoNetworkCoverBackground =
         compatDsString(PreferKey.bookInfoNetworkCoverBackground) ?: "on",
@@ -492,6 +493,7 @@ internal fun ThemeSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.mochiTopBarLiquidGlass to mochiTopBarLiquidGlass,
     PreferKey.mochiScrollEdgeBlurEnabled to mochiScrollEdgeBlurEnabled,
     PreferKey.miuixTopBarLiquidGlass to miuixTopBarLiquidGlass,
+    PreferKey.useHyperOs4Components to useHyperOs4Components,
     PreferKey.bookInfoFollowCoverColor to bookInfoFollowCoverColor,
     PreferKey.bookInfoNetworkCoverBackground to bookInfoNetworkCoverBackground,
     PreferKey.bookInfoDefaultCoverBackground to bookInfoDefaultCoverBackground,

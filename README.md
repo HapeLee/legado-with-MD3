@@ -46,6 +46,10 @@ Design 3 风格重构版本。
 
 ---
 
+## 从源码构建
+
+首次检出后运行 `git submodule update --init modules/miuix`。设置 `ANDROID_HOME` 指向 Android SDK，再使用 JDK 21 运行 Gradle。Miuix 的源码提交由子模块固定。
+
 ## 💬 交流
 
 * **Telegram 群组：** [Legado with MD3](https://t.me/materado)

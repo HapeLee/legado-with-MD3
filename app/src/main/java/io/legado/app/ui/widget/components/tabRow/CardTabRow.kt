@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.tabRow
 
+import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -43,9 +44,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.toImmutableList
+import top.yukonga.miuix.kmp.glass.GlassSegmentedTabRow
+import top.yukonga.miuix.kmp.glass.GlassTabRow
+import top.yukonga.miuix.kmp.glass.GlassTabRowDefaults
 import ui.feice.mochi.basic.MochiSegmentedControl
 import ui.feice.mochi.effect.elastic.mochiPressDeform
 
@@ -59,8 +65,37 @@ fun CardTabRow(
     tabEndContent: (@Composable (Int) -> Unit)? = null,
     scrollable: Boolean = false,
 ) {
+    val simpleTabs = !scrollable && onTabLongClick == null && tabEndContent == null
+    if (simpleTabs && LegadoTheme.composeEngine == ComposeEngine.Miuix &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        LocalAppUiConfiguration.current.theme.useHyperOs4Components &&
+        tabTitles.distinct().size == tabTitles.size
+    ) {
+        val backdrop = LocalMiuixBarBackdrop.current
+        if (backdrop != null) {
+            GlassSegmentedTabRow(
+                tabs = tabTitles,
+                selectedIndex = selectedTabIndex,
+                onSelect = onTabSelected,
+                backdrop = backdrop,
+                modifier = modifier.fillMaxWidth(),
+            )
+        } else {
+            GlassTabRow(
+                tabs = tabTitles,
+                selectedIndex = selectedTabIndex,
+                onSelect = onTabSelected,
+                backdrop = null,
+                modifier = modifier.fillMaxWidth(),
+                height = GlassTabRowDefaults.NeutralHeight,
+                colors = GlassTabRowDefaults.neutralColors(),
+            )
+        }
+        return
+    }
+
     val useMochi = LegadoTheme.composeEngine == ComposeEngine.Mochi
-    if (useMochi && !scrollable && onTabLongClick == null && tabEndContent == null) {
+    if (useMochi && simpleTabs) {
         if (tabTitles.isEmpty()) return
         val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
         val lastIndex = tabTitles.lastIndex

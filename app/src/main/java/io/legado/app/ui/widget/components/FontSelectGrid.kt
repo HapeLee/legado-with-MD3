@@ -23,8 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,7 +50,8 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.help.FontFolderRead
 import io.legado.app.help.scanFontFiles
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ProvideAppDensity
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.cnCompare
 import kotlinx.coroutines.CancellationException
@@ -169,31 +168,21 @@ fun FontSelectGrid(
                             tint = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    DropdownMenu(
+                    RoundDropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
-                    ) {
-                        ProvideAppDensity {
-                            FontSort.entries.forEach { sort ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(sort.labelRes)) },
-                                    onClick = {
-                                        scope.launch {
-                                            otherSettings.update { it.copy(fontSort = sort.ordinal) }
-                                        }
-                                        expanded = false
-                                    },
-                                    trailingIcon = if (fontSort == sort.ordinal) {
-                                        {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = LegadoTheme.colorScheme.primary
-                                            )
-                                        }
-                                    } else null
-                                )
-                            }
+                    ) { dismiss ->
+                        FontSort.entries.forEach { sort ->
+                            RoundDropdownMenuItem(
+                                text = stringResource(sort.labelRes),
+                                isSelected = fontSort == sort.ordinal,
+                                onClick = {
+                                    scope.launch {
+                                        otherSettings.update { it.copy(fontSort = sort.ordinal) }
+                                    }
+                                    dismiss()
+                                },
+                            )
                         }
                     }
                 }

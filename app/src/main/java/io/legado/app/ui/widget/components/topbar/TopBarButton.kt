@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,12 +38,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -50,7 +54,8 @@ import io.legado.app.R
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
-import io.legado.app.ui.theme.miuixCapsuleGlass
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.button.series.AnimatedActionButtonCore
 import io.legado.app.ui.widget.components.button.series.AnimatedIcon
 import io.legado.app.ui.widget.components.button.series.MediumSeriesIconButtonSize
@@ -69,11 +74,16 @@ import ui.feice.mochi.effect.elastic.mochiPressDeform
 import ui.feice.mochi.effect.glass.MochiGlassSurface
 import ui.feice.mochi.theme.LocalContentColor as MochiContentColor
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.LocalContentColor as MiuixContentColor
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.IconButtonDefaults as MiuixIconButtonDefaults
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
 import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
+import top.yukonga.miuix.kmp.glass.GlassIconButton as MiuixGlassIconButton
+import top.yukonga.miuix.kmp.glass.GlassShape as MiuixGlassShape
+import top.yukonga.miuix.kmp.glass.GlassTopAppBarDefaults as MiuixGlassTopAppBarDefaults
+import top.yukonga.miuix.kmp.glass.glassPanel
 
 /** 顶栏按钮样式配置。 */
 enum class TopBarButtonStyle(val storageValue: String) {
@@ -233,6 +243,7 @@ private fun TopBarButton(
     text: String? = null,
     onLongClick: (() -> Unit)? = null,
     onLongClickLabel: String? = null,
+    iconTint: Color = Color.Unspecified,
 ) {
     val engine = LegadoTheme.composeEngine
     if (engine == ComposeEngine.Mochi) {
@@ -255,29 +266,48 @@ private fun TopBarButton(
         return
     }
     if (engine == ComposeEngine.Miuix) {
-        val buttonModifier = modifier.miuixTopBarGlass()
+        val glass = LocalMiuixGlassTopBar.current
+        val tint = if (iconTint == Color.Unspecified) MiuixContentColor.current else iconTint
         when {
+            text != null && glass -> MiuixTopBarActionSurface(modifier) { actionModifier ->
+                MiuixIconButton(onClick = onClick, modifier = actionModifier) {
+                    MiuixText(
+                        text = text,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        style = MiuixTheme.textStyles.button,
+                    )
+                }
+            }
             text != null -> MiuixTextButton(
                 text = text,
                 onClick = onClick,
-                modifier = buttonModifier,
+                modifier = modifier,
                 minWidth = MiuixIconButtonDefaults.MinWidth,
                 minHeight = MiuixIconButtonDefaults.MinHeight,
                 insideMargin = PaddingValues(horizontal = 8.dp),
             )
-            onLongClick == null -> MiuixIconButton(onClick, buttonModifier) {
-                MiuixIcon(imageVector, contentDescription)
+            onLongClick == null && glass -> MiuixGlassIconButton(
+                onClick = onClick,
+                modifier = modifier.semantics { role = Role.Button },
+                backdrop = LocalMiuixBarBackdrop.current,
+            ) {
+                MiuixIcon(imageVector, contentDescription, tint = tint)
             }
-            else -> Box(
-                modifier = buttonModifier.defaultMinSize(
-                    minWidth = MiuixIconButtonDefaults.MinWidth,
-                    minHeight = MiuixIconButtonDefaults.MinHeight,
-                ).combinedClickable(
-                    role = Role.Button, onClick = onClick, onLongClick = onLongClick,
-                    onLongClickLabel = onLongClickLabel,
-                ),
-                contentAlignment = Alignment.Center,
-            ) { MiuixIcon(imageVector, contentDescription) }
+            onLongClick == null -> MiuixIconButton(onClick, modifier) {
+                MiuixIcon(imageVector, contentDescription, tint = tint)
+            }
+            else -> MiuixTopBarActionSurface(modifier) { actionModifier ->
+                Box(
+                    modifier = actionModifier.defaultMinSize(
+                        minWidth = MiuixIconButtonDefaults.MinWidth,
+                        minHeight = MiuixIconButtonDefaults.MinHeight,
+                    ).combinedClickable(
+                        role = Role.Button, onClick = onClick, onLongClick = onLongClick,
+                        onLongClickLabel = onLongClickLabel,
+                    ),
+                    contentAlignment = Alignment.Center,
+                ) { MiuixIcon(imageVector, contentDescription) }
+            }
         }
         return
     }
@@ -383,12 +413,6 @@ private fun MochiTopBarPressable(
 }
 
 @Composable
-private fun Modifier.miuixTopBarGlass(): Modifier =
-    if (LocalAppUiConfiguration.current.theme.miuixTopBarLiquidGlass) {
-        miuixCapsuleGlass(MiuixTheme.colorScheme.surface.copy(alpha = 0.5f))
-    } else this
-
-@Composable
 fun TopBarNavigationButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -439,6 +463,43 @@ fun TopBarTextActionButton(
     )
 }
 
+// Only the background follows the floating transition. The action and its label stay opaque.
+@Composable
+private fun MiuixTopBarActionSurface(
+    modifier: Modifier,
+    content: @Composable (Modifier) -> Unit,
+) {
+    if (!LocalMiuixGlassTopBar.current) {
+        content(modifier)
+        return
+    }
+    val progress = LocalMiuixGlassTopBarActionProgress.current
+    val showMaterial by remember(progress) { derivedStateOf { (progress?.value ?: 1f) > 0f } }
+    val size = MiuixGlassTopAppBarDefaults.ButtonSize
+    Box(
+        modifier.defaultMinSize(minWidth = size, minHeight = size),
+        propagateMinConstraints = true,
+    ) {
+        if (showMaterial) {
+            val corner = CornerSize(50)
+            val shape = MiuixGlassShape(corner, corner, corner, corner)
+            Box(
+                Modifier.matchParentSize()
+                    .graphicsLayer { alpha = progress?.value ?: 1f }
+                    .glassPanel(
+                        backdrop = LocalMiuixBarBackdrop.current,
+                        shape = shape,
+                        material = MiuixGlassTopAppBarDefaults.buttonMaterial(),
+                        stroke = MiuixGlassTopAppBarDefaults.buttonStroke(),
+                        shading = false,
+                        fallback = Modifier.clip(shape).background(MiuixGlassTopAppBarDefaults.buttonFill()),
+                    ),
+            )
+        }
+        content(Modifier)
+    }
+}
+
 @Composable
 fun TopBarAnimatedActionButton(
     checked: Boolean,
@@ -450,6 +511,16 @@ fun TopBarAnimatedActionButton(
     modifier: Modifier = Modifier
 ) {
     val engine = LegadoTheme.composeEngine
+    if (isMiuixHyperOs4Enabled()) {
+        TopBarButton(
+            onClick = { onCheckedChange(!checked) },
+            modifier = modifier,
+            imageVector = if (checked) iconChecked else iconUnchecked,
+            contentDescription = if (checked) activeText else inactiveText,
+            iconTint = if (checked) MiuixTheme.colorScheme.primary else Color.Unspecified,
+        )
+        return
+    }
     if (engine == ComposeEngine.Miuix) {
         val contentColor by animateColorAsState(
             targetValue = if (checked) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
@@ -472,13 +543,15 @@ fun TopBarAnimatedActionButton(
             button = { buttonModifier, onToggle, content ->
                 MiuixIconButton(
                     onClick = { onToggle(!checked) },
-                    modifier = buttonModifier.miuixTopBarGlass(),
+                    modifier = buttonModifier.semantics {
+                        contentDescription = if (checked) activeText else inactiveText
+                    },
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.padding(horizontal = 8.dp),
-                        content = content
+                        content = content,
                     )
                 }
             },

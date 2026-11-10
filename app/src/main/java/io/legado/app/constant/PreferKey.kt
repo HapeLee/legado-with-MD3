@@ -258,6 +258,7 @@ object PreferKey {
     const val mochiTopBarLiquidGlass = "mochiTopBarLiquidGlass"
     const val mochiScrollEdgeBlurEnabled = "mochiScrollEdgeBlurEnabled"
     const val miuixTopBarLiquidGlass = "miuixTopBarLiquidGlass"
+    const val useHyperOs4Components = "useHyperOs4Components"
     const val bookInfoFollowCoverColor = "bookInfoFollowCoverColor"
     const val bookInfoBackgroundBlur = "bookInfoBackgroundBlur"
     const val bookInfoNetworkCoverBackground = "bookInfoNetworkCoverBackground"

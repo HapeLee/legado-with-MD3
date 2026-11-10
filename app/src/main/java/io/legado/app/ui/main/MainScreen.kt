@@ -97,6 +97,7 @@ import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssRouteScreen
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.ProvideAppContentColor
@@ -108,6 +109,9 @@ import ui.feice.mochi.effect.glass.rememberMochiBackdrop
 import ui.feice.mochi.effect.glass.mochiBackdropSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
+import top.yukonga.miuix.kmp.glass.GlassNavigationBar
+import top.yukonga.miuix.kmp.glass.GlassNavigationBarDefaults
+import top.yukonga.miuix.kmp.glass.GlassNavigationItem
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
@@ -287,6 +291,9 @@ fun MainScreen(
     val showLabel = !isUnlabeled
     val engine = LegadoTheme.composeEngine
     val isMochi = engine == ComposeEngine.Mochi
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    val useMiuixGlassNavigation = engine == ComposeEngine.Miuix && useLiquidGlass &&
+        themeSettings.useHyperOs4Components
     val mochiPageBackdrop = if (isMochi && useLiquidGlass) rememberMochiBackdrop(LegadoTheme.colorScheme.background) else null
     val miuixPageBackdrop = if (engine == ComposeEngine.Miuix && useLiquidGlass) {
         rememberMiuixLayerBackdrop {
@@ -758,6 +765,10 @@ fun MainScreen(
                                     (expandedCapsuleWidth - ReadAloudBarCapsuleSize) * expansion
                             val navigationWidth = normalNavigationWidth +
                                     (ReadAloudBarCapsuleSize.coerceAtMost(maxWidth) - normalNavigationWidth) * expansion
+                            val hasCustomIcons = destinations.any { destination ->
+                                mainUiState.customIconPath(destination).isNotEmpty() ||
+                                    mainUiState.selectedCustomIconPath(destination).isNotEmpty()
+                            }
                             if (isMochi && !playbackControlsExpanded && expansion <= 0f) {
                                 AppMochiNavigationBar(
                                     mochiTabs, pagerState.targetPage, onMochiTabSelect,
@@ -765,6 +776,35 @@ fun MainScreen(
                                         .offset(x = navigationStartInset).width(navigationWidth),
                                     showLabel = showLabel, alwaysShowLabel = alwaysShowLabel,
                                     floating = true, glass = useLiquidGlass,
+                                )
+                            } else if (useMiuixGlassNavigation && !hasCustomIcons &&
+                                !playbackControlsExpanded && expansion <= 0f
+                            ) {
+                                val selectedIndex = pagerState.targetPage
+                                GlassNavigationBar(
+                                    items = destinations.mapIndexed { index, destination ->
+                                        val label = stringResource(destination.labelId)
+                                        val selected = selectedIndex == index
+                                        GlassNavigationItem(
+                                            icon = AppIcons.mainDestination(destination, selected),
+                                            label = label.takeIf { showLabel && (alwaysShowLabel || selected) },
+                                            contentDescription = label,
+                                        )
+                                    },
+                                    selectedIndex = selectedIndex,
+                                    onSelect = { index ->
+                                        destinations.getOrNull(index)?.let { handleMainDestinationClick(index, it) }
+                                    },
+                                    backdrop = miuixPageBackdrop,
+                                    modifier = Modifier.align(Alignment.BottomStart)
+                                        .offset(x = navigationStartInset).width(navigationWidth),
+                                    defaultWindowInsetsPadding = false,
+                                    height = 64.dp,
+                                    alpha = themeSettings.bottomBarBlurAlpha.coerceIn(0, 100) / 100f,
+                                    material = GlassNavigationBarDefaults.material().copy(
+                                        blurRadius = themeSettings.bottomBarBlurRadius.coerceAtLeast(0).dp,
+                                    ),
+                                    selectedColor = LegadoTheme.colorScheme.primary,
                                 )
                             } else FloatingBottomBar(
                                 modifier = Modifier
@@ -793,10 +833,7 @@ fun MainScreen(
                                 backdrop = floatingBarBackdrop,
                                 tabsCount = destinations.size,
                                 isBlurEnabled = useLiquidGlass,
-                                hasCustomIcons = destinations.any { dest ->
-                                    mainUiState.customIconPath(dest).isNotEmpty() ||
-                                            mainUiState.selectedCustomIconPath(dest).isNotEmpty()
-                                }
+                                hasCustomIcons = hasCustomIcons,
                             ) {
                                 destinations.forEachIndexed { index, destination ->
                                     val selected = pagerState.targetPage == index

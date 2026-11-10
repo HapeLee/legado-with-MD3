@@ -77,7 +77,6 @@ import coil3.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
 import kotlin.math.roundToInt
@@ -170,9 +169,8 @@ fun TextActionSelectionMenu(
                                 .widthIn(max = menuCardWidth)
                                 .wrapContentWidth(Alignment.Start)
                         ) {
-                            NormalCard(
+                            ReaderSelectionMenuSurface(
                                 modifier = Modifier.wrapContentWidth(Alignment.Start),
-                                containerColor = LegadoTheme.colorScheme.surfaceBright,
                                 elevation = 12.dp,
                                 cornerRadius = 12.dp,
                             ) {
@@ -215,9 +213,8 @@ fun TextActionSelectionMenu(
                                 .widthIn(max = menuCardWidth)
                                 .wrapContentWidth(Alignment.Start)
                         ) {
-                            NormalCard(
+                            ReaderSelectionMenuSurface(
                                 modifier = Modifier.wrapContentWidth(Alignment.Start),
-                                containerColor = LegadoTheme.colorScheme.surfaceBright,
                                 elevation = 6.dp,
                                 cornerRadius = 12.dp,
                             ) {
@@ -283,9 +280,8 @@ fun TextActionSelectionMenu(
                     Box(
                         modifier = Modifier.padding(menuShadowPadding),
                     ) {
-                        NormalCard(
+                        ReaderSelectionMenuSurface(
                             modifier = Modifier.widthIn(max = menuCardWidth),
-                            containerColor = LegadoTheme.colorScheme.surfaceBright,
                             elevation = 6.dp,
                             cornerRadius = 12.dp,
                         ) {

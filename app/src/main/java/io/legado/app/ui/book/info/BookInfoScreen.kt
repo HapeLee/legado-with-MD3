@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -129,7 +130,7 @@ import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.ui.theme.responsiveHazeEffectFixedStyle
-import io.legado.app.ui.theme.miuixBarBlur
+import io.legado.app.ui.theme.MiuixBlurredTopBar
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -163,6 +164,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
+import io.legado.app.ui.widget.components.topbar.MiuixNativeTopBar
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarActionsRow
 import io.legado.app.ui.widget.components.mochi.ProvideMochiScrollBlurProgress
@@ -774,19 +776,28 @@ private fun BookInfoTransparentTopAppBar(
     )
 
     if (isMiuix) {
-        MiuixTopAppBar(
-            modifier = Modifier.miuixBarBlur(fixedStyle = true),
+        val miuixBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior
+        val navigationIcon: @Composable () -> Unit = { TopBarNavigationButton(onClick = onBackPressed) }
+        val actions: @Composable RowScope.() -> Unit = {
+            BookInfoTopBarActions(state = state, onMenuAction = onMenuAction)
+        }
+        MiuixNativeTopBar(
             title = "",
-            subtitle = "",
-            navigationIcon = {
-                TopBarNavigationButton(onClick = onBackPressed)
-            },
-            actions = {
-                BookInfoTopBarActions(state = state, onMenuAction = onMenuAction)
-            },
-            color = resolvedColor,
-            scrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior,
-        )
+            scrollBehavior = miuixBehavior,
+            defaultWindowInsetsPadding = true,
+            navigationIcon = navigationIcon,
+            actions = actions,
+        ) {
+            MiuixBlurredTopBar(scrollBehavior = miuixBehavior, fixedStyle = true) {
+                MiuixTopAppBar(
+                    title = "",
+                    navigationIcon = navigationIcon,
+                    actions = actions,
+                    color = resolvedColor,
+                    scrollBehavior = miuixBehavior,
+                )
+            }
+        }
     } else {
         if (isMochi) ProvideMochiScrollBlurProgress { scrollBehavior.collapsedFraction }
         MediumFlexibleTopAppBar(

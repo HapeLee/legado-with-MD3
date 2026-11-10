@@ -51,6 +51,11 @@ object SettingsSearchCatalog {
         SettingsSearchItem("theme.font_setting", SettingsSearchPage.Theme, R.string.font_setting, groupIndex = 0),
         SettingsSearchItem("theme.custom_theme_colors", SettingsSearchPage.Theme, R.string.custom_theme_colors, groupIndex = 0, parentId = "theme.theme"),
         SettingsSearchItem("theme.compose_engine", SettingsSearchPage.Theme, R.string.compose_engine, groupIndex = 0),
+        SettingsSearchItem(
+            "theme.hyper_os4_components", SettingsSearchPage.Theme, R.string.hyper_os4_components,
+            groupIndex = 0, descriptionRes = R.string.hyper_os4_components_summary,
+            parentId = "theme.compose_engine",
+        ),
         SettingsSearchItem("theme.change_icon", SettingsSearchPage.Theme, R.string.change_icon, groupIndex = 0, descriptionRes = R.string.change_icon_summary),
         SettingsSearchItem("theme.navigation_animation", SettingsSearchPage.Theme, R.string.navigation_animation, groupIndex = 0),
         SettingsSearchItem("theme.text_animation_level", SettingsSearchPage.Theme, R.string.text_animation_level, groupIndex = 0),
