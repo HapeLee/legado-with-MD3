@@ -1873,7 +1873,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 clearTextChapter()
             } else if (it.isMarkdown) {
                 BookHelp.clearCache(it)
-                MarkdownFile.clear()
                 clearTextChapter()
             }
             callBack?.loadChapterList(it)

@@ -1103,16 +1103,12 @@ class ReadBookViewModel(
             // Menu actions
             is ReadBookIntent.MenuUpdateToc -> {
                 ReadBook.book?.let { book ->
-                    if (book.isEpub) {
+                    if (book.isEpub || book.isMarkdown) {
                         io.legado.app.help.book.BookHelp.clearCache(book)
-                        io.legado.app.model.localBook.EpubFile.clear()
+                        if (book.isEpub) io.legado.app.model.localBook.EpubFile.clear()
                     }
                     if (book.isMobi) {
                         io.legado.app.model.localBook.MobiFile.clear()
-                    }
-                    if (book.isMarkdown) {
-                        BookHelp.clearCache(book)
-                        io.legado.app.model.localBook.MarkdownFile.clear()
                     }
                     loadChapterList(book)
                 }

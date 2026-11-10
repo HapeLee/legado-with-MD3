@@ -38,7 +38,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.cache.CacheBookDownloadState
 import io.legado.app.model.localBook.EpubFile
 import io.legado.app.model.localBook.LocalBook
-import io.legado.app.model.localBook.MarkdownFile
 import io.legado.app.model.localBook.MobiFile
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -733,7 +732,6 @@ class TocViewModel(
             }
             if (book.isMarkdown) {
                 BookHelp.clearCache(book)
-                MarkdownFile.clear()
             }
             kotlin.runCatching {
                 LocalBook.getChapterList(book).let {
