@@ -66,15 +66,16 @@ data class ReaderImageDrawLayout(
             )
         }
 
-        /** 行内图走旧 `ImageColumn` 的字符格几何；整图保持按比例内接居中。 */
         fun forElement(
             element: ReaderElement.Image,
             imageWidthPx: Int,
             imageHeightPx: Int,
-        ): ReaderImageDrawLayout? = if (element.inline) {
-            inlineCell(element.bounds, imageWidthPx, imageHeightPx)
-        } else {
-            fitCenter(element.bounds, imageWidthPx, imageHeightPx)
+        ): ReaderImageDrawLayout? = when {
+            element.useMeasuredBounds -> with(element.bounds) {
+                ReaderImageDrawLayout(left, top, width, height)
+            }
+            element.inline -> inlineCell(element.bounds, imageWidthPx, imageHeightPx)
+            else -> fitCenter(element.bounds, imageWidthPx, imageHeightPx)
         }
     }
 }

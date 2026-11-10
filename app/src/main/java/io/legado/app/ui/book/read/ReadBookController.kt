@@ -665,7 +665,13 @@ class ReadBookController(
             viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.BgmScene(element.paragraphIndex)))
             true
         }
-        is ReaderElement.Image -> handleComposeImageClick(element)
+        is ReaderElement.Image -> {
+            val link = element.link?.takeIf {
+                LocalBookSemanticHtml.resolveReaderLink(it, ReadBook.book?.isLocal == true,
+                    ReadBook.readerChapterInputWindow.current?.chapter?.url.orEmpty()) != null
+            }
+            if (link != null) { handleComposeLinkClick(link); true } else handleComposeImageClick(element)
+        }
         is ReaderElement.Review -> { activity.toastOnUi("Button Pressed!"); true }
         is ReaderElement.Action -> { activity.toastOnUi("Button Pressed!"); true }
         is ReaderElement.Spacer -> false

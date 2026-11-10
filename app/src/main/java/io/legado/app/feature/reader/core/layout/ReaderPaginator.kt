@@ -137,6 +137,7 @@ sealed interface ReaderMeasuredBlock {
         val scaleMode: ReaderImageScaleMode = ReaderImageScaleMode.CONTAIN_NO_UPSCALE,
         val pageBreakBefore: Boolean = false,
         val pageBreakAfter: Boolean = false,
+        val link: String? = null,
     ) : ReaderMeasuredBlock
 
     data class InlineParagraph(
@@ -201,6 +202,8 @@ sealed interface ReaderMeasuredInlineItem {
         val heightPx: Float,
         override val chapterPosition: Int,
         val action: String? = null,
+        val link: String? = null,
+        val useMeasuredBounds: Boolean = false,
     ) : ReaderMeasuredInlineItem
 
     /**
@@ -541,6 +544,7 @@ internal class ReaderPaginationSession(
             bounds = ReaderRect(x, y, x + width, y + height),
             source = image.source,
             action = image.action,
+            link = image.link,
             chapterPosition = image.chapterPosition,
         )
         columnRows += ReaderLayoutRow(
@@ -856,19 +860,17 @@ internal class ReaderPaginationSession(
 
                     is ReaderMeasuredInlineItem.Image -> {
                         val imageTop = y + (actualLineHeight - item.heightPx) / 2f
+                        val bounds = ReaderRect(x, imageTop, x + item.widthPx, imageTop + item.heightPx)
                         elements += ReaderElement.Image(
-                            bounds = ReaderRect(
-                                x,
-                                imageTop,
-                                x + item.widthPx,
-                                imageTop + item.heightPx
-                            ),
+                            bounds = bounds,
                             source = item.source,
                             action = item.action,
+                            link = item.link,
                             chapterPosition = item.chapterPosition,
-                            // 行内图必须带标记：绘制期按位图长宽比重新算几何（旧 ImageColumn）。
                             inline = true,
-                            touchBounds = ReaderRect(x, y, x + item.widthPx, y + actualLineHeight),
+                            touchBounds = if (item.useMeasuredBounds) bounds else
+                                ReaderRect(x, y, x + item.widthPx, y + actualLineHeight),
+                            useMeasuredBounds = item.useMeasuredBounds,
                         )
                     }
 

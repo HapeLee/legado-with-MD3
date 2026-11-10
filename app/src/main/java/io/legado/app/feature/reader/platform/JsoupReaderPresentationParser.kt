@@ -5,6 +5,7 @@ import io.legado.app.feature.reader.core.layout.ReaderParagraphDecorationKind
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
 import io.legado.app.feature.reader.core.source.ReaderLocalPresentation
 import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
+import io.legado.app.feature.reader.core.source.ReaderLocalImagePresentation
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
@@ -45,6 +46,7 @@ internal object JsoupReaderPresentationParser {
         val paragraphs = mutableListOf<ReaderLocalPresentation.Paragraph>()
         val rules = mutableListOf<Int>()
         val anchors = linkedMapOf<String, Int>()
+        val images = mutableListOf<ReaderLocalPresentation.Image>()
         var first = -1
         var last = -1
         var current = blockGeometry(BlockCtx(), 10f, 1f)
@@ -109,7 +111,17 @@ internal object JsoupReaderPresentationParser {
                     return
                 }
                 "img", "image" -> {
-                    if (range.isTracked) include(range.start().pos(), range.end().pos())
+                    if (range.isTracked) {
+                        include(range.start().pos(), range.end().pos())
+                        val declarations = node.attr("style").split(';').mapNotNull {
+                            val split = it.indexOf(':')
+                            if (split < 0) null else it.substring(0, split).trim().lowercase() to it.substring(split + 1).trim()
+                        }.toMap()
+                        images += ReaderLocalPresentation.Image(range.start().pos(), range.end().pos(),
+                            ReaderLocalImagePresentation(inline.link, declarations["width"] ?: node.attr("width").takeIf { it.isNotBlank() },
+                                declarations["height"] ?: node.attr("height").takeIf { it.isNotBlank() },
+                                descendInline(node, tag, inline).fontSizeScale.coerceIn(0.5f, 2f)))
+                    }
                     return
                 }
             }
@@ -130,7 +142,7 @@ internal object JsoupReaderPresentationParser {
         val bodyInline = descendInline(body, "body", InlineCtx())
         body.childNodes().forEach { walk(it, bodyInline, context) }
         flush()
-        return ReaderLocalPresentation(html, spans, paragraphs, rules, anchors)
+        return ReaderLocalPresentation(html, spans, paragraphs, rules, anchors, images = images)
     }
 
     private data class BlockGeo(
