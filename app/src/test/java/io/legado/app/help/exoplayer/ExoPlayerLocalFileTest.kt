@@ -3,6 +3,7 @@ package io.legado.app.help.exoplayer
 import android.app.Application
 import android.net.Uri
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
 import androidx.media3.datasource.DataSpec
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.model.settings.DownloadCacheSettings
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.flowOf
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -52,6 +54,37 @@ class ExoPlayerLocalFileTest {
 
     @After
     fun tearDown() = stopKoin()
+
+    @Test
+    fun `manifest media items keep their content type after headers are encoded`() {
+        assertEquals(
+            MimeTypes.APPLICATION_MPD,
+            ExoPlayerHelper.createMediaItem(
+                "file:///cache/video.mpd",
+                mapOf("User-Agent" to "local-video-test"),
+            ).localConfiguration!!.mimeType,
+        )
+        assertEquals(
+            MimeTypes.APPLICATION_MPD,
+            ExoPlayerHelper.createMediaItem(
+                "https://example.com/video.mpd?token=1",
+                emptyMap(),
+            ).localConfiguration!!.mimeType,
+        )
+        assertEquals(
+            MimeTypes.APPLICATION_M3U8,
+            ExoPlayerHelper.createMediaItem(
+                "https://example.com/video.m3u8",
+                emptyMap(),
+            ).localConfiguration!!.mimeType,
+        )
+        assertNull(
+            ExoPlayerHelper.createMediaItem(
+                "file:///cache/video.mp4",
+                emptyMap(),
+            ).localConfiguration!!.mimeType,
+        )
+    }
 
     @Test
     fun `HTTP media still reads through the upstream with its request headers`() {

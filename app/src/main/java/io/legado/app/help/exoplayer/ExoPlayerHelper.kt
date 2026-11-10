@@ -42,7 +42,10 @@ object ExoPlayerHelper {
         val formatUrl = url + SPLIT_TAG + GSON.toJson(headers, mapType)
         val builder = MediaItem.Builder().setUri(formatUrl)
         // SPLIT_TAG 破坏了 URI 后缀，DefaultMediaSourceFactory 无法据扩展名推断类型
-        if (url.contains(".m3u8", ignoreCase = true)) {
+        val lastPathSegment = Uri.parse(url).lastPathSegment.orEmpty()
+        if (lastPathSegment.endsWith(".mpd", ignoreCase = true)) {
+            builder.setMimeType(MimeTypes.APPLICATION_MPD)
+        } else if (url.contains(".m3u8", ignoreCase = true)) {
             builder.setMimeType(MimeTypes.APPLICATION_M3U8)
         }
         return builder.build()
