@@ -3552,7 +3552,8 @@
     <string name="cache_maintenance_recount_desc">%1$d chapters pending recount</string>
     <string name="cache_maintenance_recount_blocked">%1$d chapters have neither cache nor word count, book total stays empty</string>
     <string name="cache_maintenance_result_delete">Deleted %1$d entries, freed %2$s</string>
-    <string name="cache_maintenance_result_delete_skipped">%1$d books skipped: downloading or reading</string>
+    <string name="cache_maintenance_result_delete_skipped">%1$d books not processed: downloading, reading, or chapter list unavailable</string>
+    <string name="cache_maintenance_result_delete_skipped_entries">Orphan entries kept because images are still in use: %1$d</string>
     <string name="cache_maintenance_result_recount">Updated %1$d chapters, %2$d books</string>
     <string name="cache_maintenance_confirm_delete_title">Delete orphaned chapter cache</string>
     <string name="cache_maintenance_confirm_delete_text">Only entries that match no chapter in the book table of contents are deleted. This cannot be undone.</string>

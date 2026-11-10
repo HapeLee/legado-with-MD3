@@ -329,6 +329,26 @@ private fun ResultRow(state: CacheMaintenanceUiState) {
             ),
             onClick = null,
         )
+        // 删除是逐本提交且可能部分跳过：不显示跳过原因，用户会以为「已删除」却看到书还在列表里。
+        // 这两个计数与 ViewModel 的 removedBookUrl 判定同源，取消时显示的是最后一次进度回报的累计值。
+        if (deleted.skippedBooks > 0) {
+            SettingItem(
+                title = stringResource(
+                    R.string.cache_maintenance_result_delete_skipped,
+                    deleted.skippedBooks,
+                ),
+                onClick = null,
+            )
+        }
+        if (deleted.skippedEntries > 0) {
+            SettingItem(
+                title = stringResource(
+                    R.string.cache_maintenance_result_delete_skipped_entries,
+                    deleted.skippedEntries,
+                ),
+                onClick = null,
+            )
+        }
     }
     state.lastRecount?.let { recount ->
         SettingItem(

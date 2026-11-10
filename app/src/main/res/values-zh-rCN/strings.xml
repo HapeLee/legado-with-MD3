@@ -3548,7 +3548,8 @@
     <string name="cache_maintenance_recount_desc">%1$d 章待重算</string>
     <string name="cache_maintenance_recount_blocked">%1$d 章既无缓存也无字数，整书字数保持为空</string>
     <string name="cache_maintenance_result_delete">已删除 %1$d 项，释放 %2$s</string>
-    <string name="cache_maintenance_result_delete_skipped">%1$d 本因正在下载或阅读被跳过</string>
+    <string name="cache_maintenance_result_delete_skipped">%1$d 本书未处理：正在下载或阅读、或章节列表读取失败</string>
+    <string name="cache_maintenance_result_delete_skipped_entries">%1$d 项因图片文件仍在使用而保留</string>
     <string name="cache_maintenance_result_recount">已更新 %1$d 章、%2$d 本书字数</string>
     <string name="cache_maintenance_confirm_delete_title">删除孤立章节缓存</string>
     <string name="cache_maintenance_confirm_delete_text">仅删除在书籍章节列表中查不到对应章节的缓存条目，删除后无法恢复。</string>

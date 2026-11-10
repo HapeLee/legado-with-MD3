@@ -262,7 +262,7 @@ class BookCacheMaintenanceRepository(
      * 必须本书确实重算过章节、每章都拿到字数、且整书字数字段原本为空。
      * 前两条避免逐章重写整书字数与合计偏小，最后一条避免覆盖书源给的全书字数。
      */
-    private fun recountBook(
+    private suspend fun recountBook(
         book: Book,
         chapters: List<BookChapter>,
         pendingUpdates: MutableList<ChapterWordCountUpdate>,
@@ -272,7 +272,11 @@ class BookCacheMaintenanceRepository(
         val resolved = HashMap<String, Int>(chapters.size)
         var recounted = 0
         var unsolved = 0
-        for (chapter in chapters) {
+        for ((index, chapter) in chapters.withIndex()) {
+            // 只在书与书之间检查取消的话，一本几千章的书点「取消」后仍会读完全书；
+            // 章级检查同时让出 IO 线程，避免下载/预取一直排队。
+            coroutineContext.ensureActive()
+            if (index % YIELD_BATCH == 0) yield()
             if (chapter.isVolume) continue
             val stored = CacheMaintenanceRules.parseStoredWordCount(chapter.wordCount)
             if (stored != null && stored > 0) {
@@ -306,10 +310,11 @@ class BookCacheMaintenanceRepository(
     }
 
     /** [recountable] 待重算的章节数，[unsolved] 拿不到字数的章节数。 */
-    private fun surveyWordCounts(book: Book, chapters: List<BookChapter>): RecountStats {
+    private suspend fun surveyWordCounts(book: Book, chapters: List<BookChapter>): RecountStats {
         var recountable = 0
         var unsolved = 0
         for (chapter in chapters) {
+            coroutineContext.ensureActive()
             // 与 recountBook 保持一致：卷章节不参与统计，否则扫描显示的待重算数会多算。
             if (chapter.isVolume) continue
             val stored = CacheMaintenanceRules.parseStoredWordCount(chapter.wordCount)
