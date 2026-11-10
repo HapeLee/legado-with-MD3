@@ -82,17 +82,19 @@ class PhotoDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_photo_view) 
     private fun saveCurrentImage() {
         val drawable = binding.photoView.drawable ?: return
         val bitmap = (drawable as? BitmapDrawable)?.bitmap ?: return
-
-        val byteArray = ByteArrayOutputStream().use { stream ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-            stream.toByteArray()
+        val context = requireContext().applicationContext
+        // JPEG 压缩与 MediaStore 写入都不能留在主线程（Bitmap.compress 是 @WorkerThread，
+        // lint ThreadConstraint 也会拦）；toastOnUi 内部会切回主线程提示。
+        execute {
+            val byteArray = ByteArrayOutputStream().use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                stream.toByteArray()
+            }
+            val success = saveImageToGallery(context, byteArray)
+            context.toastOnUi(
+                if (success) "已保存到相册" else "保存失败"
+            )
         }
-
-        val success = saveImageToGallery(requireContext(), byteArray)
-
-        toastOnUi(
-            if (success) "已保存到相册" else "保存失败"
-        )
     }
 
 }

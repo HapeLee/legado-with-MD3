@@ -5,6 +5,7 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -24,6 +25,8 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.image.PhotoView
 import io.legado.app.utils.ImageSaveUtils.saveImageToGallery
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 
 @Composable
@@ -34,6 +37,22 @@ fun PhotoSheet(
     onDismissRequest: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // JPEG 压缩与 MediaStore 写入都不能留在主线程（Bitmap.compress 是 @WorkerThread）；
+    // toastOnUi 内部会切回主线程提示。
+    val saveImage: (Bitmap) -> Unit = { bitmap ->
+        scope.launch(Dispatchers.IO) {
+            val byteArray = ByteArrayOutputStream().use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                stream.toByteArray()
+            }
+            val success = saveImageToGallery(context, byteArray)
+            context.toastOnUi(
+                if (success) context.getString(R.string.save_success)
+                else context.getString(R.string.save_failed)
+            )
+        }
+    }
 
     AppModalBottomSheet(
         show = show,
@@ -80,19 +99,7 @@ fun PhotoSheet(
 
                     // Long press to save
                     setOnLongClickListener {
-                        val drawable = drawable
-                        val bmp = (drawable as? BitmapDrawable)?.bitmap
-                        if (bmp != null) {
-                            val byteArray = ByteArrayOutputStream().use { stream ->
-                                bmp.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                stream.toByteArray()
-                            }
-                            val success = saveImageToGallery(context, byteArray)
-                            context.toastOnUi(
-                                if (success) context.getString(R.string.save_success)
-                                else "保存失败"
-                            )
-                        }
+                        (drawable as? BitmapDrawable)?.bitmap?.let(saveImage)
                         true
                     }
                 }
