@@ -53,8 +53,7 @@ internal class VertexBuffer(capacity: Int = 128) {
     /**
      * Grows all component arrays together so their vertex indices stay aligned.
      */
-    private fun reserve(vertices: Int) {
-        if (vertices <= colors.size) return
+    private fun grow(vertices: Int) {
         val capacity = maxOf(vertices, colors.size * 2)
         positions = positions.copyOf(capacity * 2)
         textureCoordinates = textureCoordinates.copyOf(capacity * 2)
@@ -73,7 +72,7 @@ internal class VertexBuffer(capacity: Int = 128) {
         v: Float = 0f,
         color: PackedHalfColor,
     ) {
-        reserve(vertex + 1)
+        if (vertex >= colors.size) grow(vertex + 1)
         positions[vertex * 2] = x
         positions[vertex * 2 + 1] = y
         textureCoordinates[vertex * 2] = u
@@ -87,7 +86,7 @@ internal class VertexBuffer(capacity: Int = 128) {
      * The range is not rebased to zero; draw ranges retain their original sample offsets.
      */
     fun copyFrom(source: VertexBuffer, first: Int, count: Int) {
-        reserve(first + count)
+        if (first + count > colors.size) grow(first + count)
         source.positions.copyInto(positions, first * 2, first * 2, (first + count) * 2)
         source.textureCoordinates.copyInto(
             textureCoordinates,
@@ -106,27 +105,36 @@ internal class VertexBuffer(capacity: Int = 128) {
      */
     fun bytes(first: Int, count: Int): ByteArray {
         val output = ByteArray(count * 64)
+        writeBytes(output, 0, first, count)
+        return output
+    }
+
+    /** Packs into a fresh zero-filled destination; ranges must not overlap other output. */
+    fun writeBytes(output: ByteArray, destination: Int, first: Int, count: Int) {
         for (index in 0 until count) {
             val vertex = first + index
-            val offset = index * 64
+            val offset = destination + index * 64
             output.word(offset, x(vertex).toRawBits())
             output.word(offset + 4, y(vertex).toRawBits())
-            output.word(offset + 8, 0f.toRawBits())
+            // ByteArray is zero-filled, including z and the reserved attributes.
             output.word(offset + 12, 1f.toRawBits())
             output.word(offset + 16, u(vertex).toRawBits())
             output.word(offset + 20, v(vertex).toRawBits())
             output.word(offset + 40, colors[vertex].toInt())
             output.word(offset + 44, (colors[vertex] ushr 32).toInt())
         }
-        return output
     }
 }
 
 /**
  * Writes one 32-bit word in little-endian order, independent of host endianness.
  */
-private fun ByteArray.word(offset: Int, bits: Int) {
-    for (byte in 0..3) this[offset + byte] = (bits ushr (byte * 8)).toByte()
+@Suppress("NOTHING_TO_INLINE") // Keep the byte stores at their hot packing-loop call sites.
+private inline fun ByteArray.word(offset: Int, bits: Int) {
+    this[offset] = bits.toByte()
+    this[offset + 1] = (bits ushr 8).toByte()
+    this[offset + 2] = (bits ushr 16).toByte()
+    this[offset + 3] = (bits ushr 24).toByte()
 }
 
 /**

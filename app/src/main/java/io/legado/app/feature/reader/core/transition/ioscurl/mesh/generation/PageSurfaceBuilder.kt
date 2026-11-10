@@ -79,8 +79,6 @@ internal fun PageSurfaceBuilder.buildSurfaceStrips(
                 sine = it
             }
         val curledDistance = distance + displacement.toDouble()
-        val shade = surfaceLighting(sine)
-        val color = blendHalfColors(p.palette.back, p.palette.backShade, shade)
         // Collapse offscreen opaque sections while retaining their outer fringe endpoints for strip continuity.
         if (index < firstVisible || index > lastVisible) {
             val collapsed = fma(collapseWeight, outer.upper - outer.lower, outer.lower)
@@ -91,7 +89,9 @@ internal fun PageSurfaceBuilder.buildSurfaceStrips(
         val endpoint = index == 0 || index == lastSample
         val sectionColor =
             if (endpoint) PackedHalfColor.TRANSPARENT
-            else if (index < backStart) p.palette.front else color
+            else if (index < backStart) p.palette.front
+            // Front-facing and transparent terminal sections never use back-face lighting.
+            else blendHalfColors(p.palette.back, p.palette.backShade, surfaceLighting(sine))
 
         curve.appendSection(
             index,
@@ -276,6 +276,8 @@ private fun frontNormalOffset(radius: Double, angle: Float): Double {
  * Evaluates the exponential fade profile from a normalized distance, retaining Float exp precision.
  */
 private fun frontFade(normalized: Double): Double {
+    // A clamped distance has exp(0) == 1, so the result is exactly 2.
+    if (normalized <= 0.0) return 2.0
     val distance = max(normalized, 0.0) * 3.0
     val exponential = exp(-((distance * distance).toFloat())).toDouble()
     val squared = exponential * exponential

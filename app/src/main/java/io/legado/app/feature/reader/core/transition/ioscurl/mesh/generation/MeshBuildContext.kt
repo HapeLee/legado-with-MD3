@@ -58,7 +58,10 @@ internal data class MeshBuildContext(
  * Validates public inputs, intersects clipping bounds and stabilizes nearly axis-aligned bases.
  * The final build context is passed to the stage coordinator.
  */
-internal fun MeshGenerator.build(input: CurlMeshInput): CurlMeshFrame {
+internal fun MeshGenerator.build(
+    input: CurlMeshInput,
+    coalesceTriangleStrips: Boolean = false,
+): CurlMeshFrame {
     require(
         input.width.isFinite() &&
             input.height.isFinite() &&
@@ -155,7 +158,8 @@ internal fun MeshGenerator.build(input: CurlMeshInput): CurlMeshFrame {
             CurlBasis(normalX, normalY, tangentX, textureTangentY),
             pageToLogical,
             clip,
-        )
+        ),
+        coalesceTriangleStrips,
     )
 }
 

@@ -14,20 +14,27 @@ object CurlTiming {
     private const val MIN_NEWTON_DERIVATIVE = 1e-6
     private const val TIME_TOLERANCE_SECONDS = 0.001
 
+    // Preserve the original Float-rounded control points without rebuilding/boxing them per frame.
+    private val progressPoints = doubleArrayOf(0.44f.toDouble(), 0.0, 0.56f.toDouble(), 1.0)
+    private val endingPoints = doubleArrayOf(0.25, 0.1f.toDouble(), 0.25, 1.0)
+    private val forwardPoints = doubleArrayOf(0.0, 0.0, 0.44f.toDouble(), 1.0)
+    private val reversePoints = doubleArrayOf(0.56f.toDouble(), 0.0, 1.0, 1.0)
+
+    private fun anglePoints(type: Int, ending: Boolean): DoubleArray =
+        when {
+            ending -> endingPoints
+            type < 3 -> forwardPoints
+            else -> reversePoints
+        }
+
     /**
      * Returns Bezier control points [x1, y1, x2, y2].
      * property 0 is progress, 1 radius and 2 angle; type uses CurlKind codes.
      * ending selects the angle curve used while settling a released gesture.
      */
     fun points(type: Int, ending: Boolean, property: Int): DoubleArray =
-        when {
-                property < ANGLE_TRACK_INDEX -> floatArrayOf(0.44f, 0f, 0.56f, 1f)
-                ending -> floatArrayOf(0.25f, 0.1f, 0.25f, 1f)
-                type < 3 -> floatArrayOf(0f, 0f, 0.44f, 1f)
-                else -> floatArrayOf(0.56f, 0f, 1f, 1f)
-            }
-            .map { it.toDouble() }
-            .toDoubleArray()
+        // Callers may mutate this public result; never expose the cached presets.
+        (if (property < ANGLE_TRACK_INDEX) progressPoints else anglePoints(type, ending)).copyOf()
 
     /**
      * Inverts the Bezier x coordinate, then evaluates its y coordinate.
@@ -84,16 +91,14 @@ object CurlTiming {
         elapsed: Double,
         duration: Double,
     ): CurlValues {
-        val a = doubleArrayOf(from.time, from.radius, from.angle)
-        val b = doubleArrayOf(to.time, to.radius, to.angle)
-        val out =
-            DoubleArray(3) { k ->
-                fma(
-                    b[k] - a[k],
-                    solve(elapsed.coerceIn(0.0, 1.0), points(type, ending, k), duration),
-                    a[k],
-                )
-            }
-        return CurlValues(out[0], out[1], out[2])
+        val x = elapsed.coerceIn(0.0, 1.0)
+        // Progress and radius use exactly the same curve and solver inputs.
+        val progress = solve(x, progressPoints, duration)
+        val angle = solve(x, anglePoints(type, ending), duration)
+        return CurlValues(
+            fma(to.time - from.time, progress, from.time),
+            fma(to.radius - from.radius, progress, from.radius),
+            fma(to.angle - from.angle, angle, from.angle),
+        )
     }
 }

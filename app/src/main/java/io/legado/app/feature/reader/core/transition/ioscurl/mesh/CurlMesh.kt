@@ -1,8 +1,5 @@
 package io.legado.app.feature.reader.core.transition.ioscurl.mesh
 
-// Source: Peyilo/PageCurl-Core c23fd9d; Copyright (c) 2026 Peyilo.
-// MIT license: ../LICENSE.txt (in the ioscurl source directory).
-
 import io.legado.app.feature.reader.core.transition.ioscurl.mesh.generation.MeshGenerator
 import io.legado.app.feature.reader.core.transition.ioscurl.mesh.generation.build
 import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlRect
@@ -122,4 +119,12 @@ class CurlMesh {
      * throw IllegalArgumentException; geometry output limits are checked separately.
      */
     fun build(input: CurlMeshInput): CurlMeshFrame = generator.build(input)
+
+    /**
+     * Optionally joins adjacent compatible strips with degenerate vertices to reduce draw calls.
+     * Triangle order, winding and attributes are preserved; packet boundaries and counts may change.
+     * The single-argument overload retains the original packet layout.
+     */
+    fun build(input: CurlMeshInput, coalesceTriangleStrips: Boolean): CurlMeshFrame =
+        generator.build(input, coalesceTriangleStrips)
 }
