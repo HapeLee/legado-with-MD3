@@ -35,6 +35,33 @@ class MainNavigatorBackStackTest {
         assertEquals(listOf(MainRouteHome, parent, reader, detail), backStack)
     }
 
+    /**
+     * 缓存维护是「设置 → 下载缓存设置」的子页。
+     *
+     * navigateToRouteInternal 的 when(route) 是白名单且没有 else：漏注册时不会报错、不会崩，
+     * 只是 backStack 原封不动，用户点入口「什么都没发生」。这条用例把该静默失效钉死。
+     */
+    @Test
+    fun `cache maintenance is pushed on top of download cache settings`() {
+        val backStack = mutableListOf<NavKey>(
+            MainRouteHome,
+            MainRouteSettings,
+            MainRouteSettingsDownloadCache,
+        )
+
+        MainNavigator.navigateToRoute(backStack, MainRouteCacheMaintenance)
+
+        assertEquals(
+            listOf(
+                MainRouteHome,
+                MainRouteSettings,
+                MainRouteSettingsDownloadCache,
+                MainRouteCacheMaintenance,
+            ),
+            backStack,
+        )
+    }
+
     @Test
     fun `read action from detail returns to existing text reader`() {
         val reader = MainRouteReadBook(bookUrl = "book-url", sharedCoverKey = "shelf-cover")

@@ -11,13 +11,15 @@ object CacheMaintenanceRules {
     /**
      * 从该书缓存目录下的一级条目里找出孤立项。
      *
-     * 由调用方保证传入的 [cachedEntryNames] 只含两类：章节目录（`%05d-<titleMD5>`）
-     * 和章节正文文件（`%05d-<titleMD5>.nb`）。其它条目不要传进来。
+     * 由调用方保证传入的是书缓存目录下的一级候选条目（目录或 `.nb` 文件）。
+     * **不按命名格式过滤**：早期版本/异 Locale 写入的历史命名残留同样查无此章，也是孤儿。
+     * 能被当前版本读到的合法缓存，其名字必然等于某章 `getFileName()` 推导出的主体名，
+     * 因而必然落在 [legalSubjects] 里受到保护。
      *
      * @param legalSubjects 该书章节列表里现存的、由 `getFileName().substringBeforeLast('.')` 得到主体名
      * @param bookImageFolderName 书级图片目录名（`BookHelp` 里的 `cacheImageFolderName`），它不是章节，永远不算孤儿
      *
-     * 注意：当 [legalSubjects] 为空时不产出任何孤儿。书刚入库还没拉到目录时，
+     * 注意：当 [legalSubjects] 为空时不产出任何孤儿。章节表读取失败或书刚入库还没拉到目录时，
      * 磁盘上已有的缓存不能因为"查无此章"而被判定要删。
      */
     fun findOrphanSubjects(
@@ -39,7 +41,8 @@ object CacheMaintenanceRules {
      * 只识别我们自己写过的格式（`StringUtils.wordCountFormat` 产出的 `N字` / `N万字`）
      * 以及纯数字；书源可能给任意文案，解析不了就返回 null，让调用方放弃而不是猜一个数。
      *
-     * `N万字` 只保留两位小数，反解得出的值最多偏差不到万字档的一半，用作展示级近似是安全的。
+     * `StringUtils.wordCountFormatter` 是 DecimalFormat("#.#")，万字档只保留 1 位小数，
+     * 反解的单章误差最多 500 字；整书求和会累积，但结果本身也只是展示用的近似值。
      */
     fun parseStoredWordCount(raw: String?): Int? {
         val value = raw?.trim().orEmpty()

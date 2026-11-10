@@ -409,6 +409,10 @@ object MainNavigator {
 
             MainRouteThirdPartyLicenses -> backStack.add(route)
 
+            // 「设置 → 下载缓存设置」的子页。只压栈不清栈，返回时要回到下载缓存设置页。
+            // navigateToRouteInternal 的 when 没有 else，漏注册会表现为点击入口完全无响应。
+            MainRouteCacheMaintenance -> backStack.add(route)
+
             MainRouteAbout -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)

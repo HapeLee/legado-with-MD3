@@ -26,6 +26,43 @@ class MainNavRouteRegistryTest {
         )
     }
 
+    /**
+     * 路由分发不变式：每个目的地要么由 [MainNavigator] 的 when(route) 处理，
+     * 要么在 NavGraph 里通过 pushRoute 直接压栈。
+     *
+     * when 没有 else，两条路都漏掉的 key 不会报错、不会崩，只是让入口点击完全无响应
+     * （缓存维护页曾因此失效）。有 entry<> 不代表能导航到，所以上一条测试拦不住它。
+     */
+    @Test
+    fun `every declared MainRoute has a navigation dispatch path`() {
+        val declared = collectDeclaredRoutes()
+        val covered = navigatorDispatchRoutes() + pushedRoutes()
+        assertTrue(
+            "以下目的地既不在 MainNavigator 的 when(route) 里、也没有 pushRoute 入口，点击会无响应：\n" +
+                (declared - covered).toSortedSet().joinToString("\n") { "  $it" },
+            covered.containsAll(declared)
+        )
+    }
+
+    /** 只取 when(route) 之后的部分：前面的去重闸门也提路由名，混进来会造成假阴性。 */
+    private fun navigatorDispatchRoutes(): Set<String> {
+        val text = File(sourceRoot(), "io/legado/app/ui/main/MainNavigator.kt").readText()
+        val start = text.indexOf("private fun navigateToRouteInternal")
+        val end = text.indexOf("fun navigateBack", start)
+        assertTrue("MainNavigator 结构变了，解析口径要重新对", start >= 0 && end > start)
+        val body = text.substring(start, end)
+        val whenStart = body.indexOf("when (route) {")
+        assertTrue("MainNavigator 里找不到 when (route) 分支", whenStart >= 0)
+        return Regex("""\b(MainRoute\w+)\b""").findAll(body.substring(whenStart))
+            .map { it.groupValues[1] }
+            .toSet()
+    }
+
+    private fun pushedRoutes(): Set<String> =
+        Regex("""pushRoute\(\s*(MainRoute\w+)""").findAll(navGraphSource())
+            .map { it.groupValues[1] }
+            .toSet()
+
     private fun collectDeclaredRoutes(): Set<String> {
         val declaration = Regex(
             """(?:^|\s)(?:data\s+)?(?:class|object)\s+(MainRoute\w*)\b"""

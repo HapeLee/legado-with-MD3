@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.cache.manage
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -58,6 +59,17 @@ private fun CacheMaintenanceScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
+    // 顶栏返回和预测式返回手势都要走同一道闸门：破坏性任务是逐本落盘的，
+    // 一次误触返回会让它静默腰斩，且已提交的部分结果无处可查。
+    val requestBack = {
+        if (state.isBusy) onIntent(CacheMaintenanceIntent.RequestLeave)
+        else onBackClick()
+    }
+    // 确认弹窗已经显示时把返回键让给弹窗自己的 onDismissRequest，避免重复弹。
+    BackHandler(enabled = state.isBusy && !state.showLeaveConfirm) {
+        onIntent(CacheMaintenanceIntent.RequestLeave)
+    }
+
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -65,7 +77,7 @@ private fun CacheMaintenanceScreen(
                 title = stringResource(R.string.cache_maintenance_title),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    TopBarNavigationButton(onClick = onBackClick)
+                    TopBarNavigationButton(onClick = requestBack)
                 },
                 bottomContent = {
                     AppTabRow(
@@ -90,6 +102,9 @@ private fun CacheMaintenanceScreen(
                 bottom = paddingValues.calculateBottomPadding() + 32.dp,
             ),
         ) {
+            item {
+                MaintenanceStatusRow(state = state)
+            }
             item {
                 ActionRow(
                     state = state,
@@ -183,6 +198,46 @@ private fun CacheMaintenanceScreen(
         onConfirm = { onIntent(CacheMaintenanceIntent.ConfirmDelete) },
         onDismiss = { onIntent(CacheMaintenanceIntent.DismissDeleteConfirm) },
     )
+
+    AppAlertDialog(
+        show = state.showLeaveConfirm,
+        onDismissRequest = { onIntent(CacheMaintenanceIntent.DismissLeaveConfirm) },
+        title = stringResource(R.string.cache_maintenance_leave_confirm_title),
+        text = stringResource(R.string.cache_maintenance_leave_confirm_text),
+        onConfirm = {
+            onIntent(CacheMaintenanceIntent.ConfirmLeave)
+            onBackClick()
+        },
+        onDismiss = { onIntent(CacheMaintenanceIntent.DismissLeaveConfirm) },
+    )
+}
+
+/**
+ * 常驻状态行。
+ *
+ * 初进页面时 hasScanned=false、列表为空，而空态与结果都要求 hasScanned=true；
+ * 若没有这一行，内容区只剩一个没有任何说明的「立即扫描」，
+ * 用户看不出这里会做什么、当前有没有任务、以及任务是否需要手动触发。
+ */
+@Composable
+private fun MaintenanceStatusRow(state: CacheMaintenanceUiState) {
+    val status = when {
+        state.busyKind != null -> stringResource(R.string.cache_maintenance_status_running)
+        !state.hasScanned -> stringResource(R.string.cache_maintenance_status_idle)
+        else -> stringResource(R.string.cache_maintenance_status_done)
+    }
+    val intro = when (state.tab) {
+        CacheMaintenanceTab.OrphanChapters ->
+            stringResource(R.string.cache_maintenance_intro_orphan)
+
+        CacheMaintenanceTab.WordCount ->
+            stringResource(R.string.cache_maintenance_intro_wordcount)
+    }
+    SettingItem(
+        title = status,
+        description = intro,
+        onClick = null,
+    )
 }
 
 @Composable
@@ -202,6 +257,8 @@ private fun ActionRow(
 
                 CacheMaintenanceBusyKind.Delete -> stringResource(
                     R.string.cache_maintenance_action_deleting,
+                    state.scannedBooks,
+                    state.totalBooks,
                 )
 
                 CacheMaintenanceBusyKind.Recount -> stringResource(
@@ -216,6 +273,7 @@ private fun ActionRow(
         state.tab == CacheMaintenanceTab.OrphanChapters -> {
             SettingItem(
                 title = stringResource(R.string.cache_maintenance_action_scan),
+                description = stringResource(R.string.cache_maintenance_scan_hint),
                 onClick = { onIntent(CacheMaintenanceIntent.Scan) },
             )
             if (state.orphanGroups.isNotEmpty()) {
@@ -235,6 +293,7 @@ private fun ActionRow(
         else -> {
             SettingItem(
                 title = stringResource(R.string.cache_maintenance_action_scan),
+                description = stringResource(R.string.cache_maintenance_scan_hint),
                 onClick = { onIntent(CacheMaintenanceIntent.Scan) },
             )
             if (state.recountTargets.isNotEmpty()) {
@@ -255,6 +314,12 @@ private fun ActionRow(
 
 @Composable
 private fun ResultRow(state: CacheMaintenanceUiState) {
+    if (state.wasCancelled) {
+        SettingItem(
+            title = stringResource(R.string.cache_maintenance_result_cancelled),
+            onClick = null,
+        )
+    }
     state.lastDeletion?.let { deleted ->
         SettingItem(
             title = stringResource(
@@ -264,15 +329,6 @@ private fun ResultRow(state: CacheMaintenanceUiState) {
             ),
             onClick = null,
         )
-        if (deleted.skippedBooks > 0) {
-            SettingItem(
-                title = stringResource(
-                    R.string.cache_maintenance_result_delete_skipped,
-                    deleted.skippedBooks,
-                ),
-                onClick = null,
-            )
-        }
     }
     state.lastRecount?.let { recount ->
         SettingItem(
