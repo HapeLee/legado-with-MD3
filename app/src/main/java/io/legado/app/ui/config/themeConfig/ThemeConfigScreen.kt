@@ -58,6 +58,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -111,6 +112,7 @@ fun ThemeConfigScreen(
     val theme = state.theme
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
+    val resources = LocalResources.current
     fun updateTheme(transform: (ThemeSettings) -> ThemeSettings) =
         onIntent(ThemeConfigIntent.UpdateTheme(transform))
     val fontFolderState = remember(state.fontFolder) {
@@ -179,7 +181,10 @@ fun ThemeConfigScreen(
 
 
                 SplicedColumnGroup(title = stringResource(R.string.theme)) {
-                    if (isMiuixEngine) {
+                    // 非 M3 主题风格（Miuix/Mochi/Coui）统一使用下拉组件，与 Miuix 开启时一致。
+                    val useDropdownItems = composeEngine != ComposeEngine.Material
+
+                    if (useDropdownItems) {
                         SearchableSetting("theme.theme_mode") {
                             DropdownListSettingItem(
                                 title = stringResource(R.string.theme_mode),
@@ -194,26 +199,37 @@ fun ThemeConfigScreen(
                             )
                         }
 
-                        SearchableSetting("theme.miuix_monet") {
-                            SwitchSettingItem(
-                                title = stringResource(R.string.miuix_monet),
-                                description = stringResource(R.string.miuix_monet_summary),
-                                checked = theme.useMiuixMonet,
-                                onCheckedChange = {
-                                    onIntent(ThemeConfigIntent.SetMiuixMonet(it))
-                                }
-                            )
+                        if (isMiuixEngine) {
+                            SearchableSetting("theme.miuix_monet") {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.miuix_monet),
+                                    description = stringResource(R.string.miuix_monet_summary),
+                                    checked = theme.useMiuixMonet,
+                                    onCheckedChange = {
+                                        onIntent(ThemeConfigIntent.SetMiuixMonet(it))
+                                    }
+                                )
+                            }
                         }
 
-                        if (theme.useMiuixMonet) {
+                        // Miuix 未启用 Monet 时配色由 Miuix 内置方案决定，不提供主题选择。
+                        if (!isMiuixEngine || theme.useMiuixMonet) {
                             val visibleThemes = themes.filter { (_, value) ->
                                 value != "4" || state.showEInkTheme
                             }
+                            val isCouiEngine = composeEngine == ComposeEngine.Coui
+                            val couiDefaultPalette = stringResource(R.string.coui_default_palette)
                             SearchableSetting("theme.theme") {
                                 DropdownListSettingItem(
                                     title = stringResource(R.string.theme),
                                     selectedValue = theme.appTheme,
-                                    displayEntries = visibleThemes.map { it.first }.toTypedArray(),
+                                    displayEntries = visibleThemes.map { (label, value) ->
+                                        if (isCouiEngine && value == "0") {
+                                            couiDefaultPalette
+                                        } else {
+                                            label
+                                        }
+                                    }.toTypedArray(),
                                     entryValues = visibleThemes.map { it.second }.toTypedArray(),
                                     onValueChange = { value ->
                                         onIntent(ThemeConfigIntent.SelectTheme(value))
@@ -230,9 +246,7 @@ fun ThemeConfigScreen(
                                 }
                             )
                         }
-                    }
 
-                    if (!isMiuixEngine) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         val visibleThemes = themes.filter { (_, value) ->
@@ -380,7 +394,7 @@ fun ThemeConfigScreen(
                         SliderSettingItem(
                             title = stringResource(R.string.font_scale),
                             valueLabel = {
-                                context.getString(R.string.font_scale_summary, it / 10f)
+                                resources.getString(R.string.font_scale_summary, it / 10f)
                             },
                             value = appShell.fontScale.toFloat(),
                             defaultValue = 10f,
