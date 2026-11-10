@@ -34,6 +34,7 @@ import io.legado.app.help.book.getRemoteUrl
 import io.legado.app.help.book.isArchive
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isLocalManga
+import io.legado.app.help.book.isMarkdown
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isUmd
@@ -156,6 +157,10 @@ object LocalBook {
                 MobiFile.getChapterList(book)
             }
 
+            book.isMarkdown -> {
+                MarkdownFile.getChapterList(book)
+            }
+
             else -> {
                 TextFile.getChapterList(book)
             }
@@ -209,6 +214,10 @@ object LocalBook {
                     MobiFile.getContent(book, chapter)
                 }
 
+                book.isMarkdown -> {
+                    MarkdownFile.getContent(book, chapter)
+                }
+
                 else -> {
                     TextFile.getContent(book, chapter)
                 }
@@ -230,6 +239,7 @@ object LocalBook {
         when {
             book.isEpub -> EpubFile.getPresentation(book, chapter)
             book.isMobi -> MobiFile.getPresentation(book, chapter)
+            book.isMarkdown -> MarkdownFile.getPresentation(book, chapter)
             else -> null
         }
     } catch (cancelled: kotlinx.coroutines.CancellationException) {

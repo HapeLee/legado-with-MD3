@@ -19,8 +19,12 @@ import io.legado.app.help.book.BookHelp.saveText
 import io.legado.app.help.book.BookHelp.saveToLocalTxt
 import io.legado.app.help.glide.progress.ProgressManager
 import io.legado.app.help.glide.progress.ProgressResponseBody
+import io.legado.app.help.http.await
+import io.legado.app.help.http.okHttpClient
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.localBook.MarkdownFile
+import io.legado.app.model.localBook.MarkdownImageSource
 import io.legado.app.model.localBook.TextFile
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileUtils
@@ -54,13 +58,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okhttp3.Request
 import org.apache.commons.text.similarity.JaccardSimilarity
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
+import java.io.ByteArrayInputStream
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
@@ -123,6 +130,7 @@ object BookHelp {
     fun clearCache(book: Book) {
         val filePath = FileUtils.getPath(downloadDir, cacheFolderName, book.getFolderName())
         deleteImageCacheDirectory(File(filePath))
+        if (book.isMarkdown) MarkdownFile.clear()
     }
 
     private fun deleteImageCacheDirectory(directory: File) {
@@ -457,21 +465,43 @@ object BookHelp {
                 }
                 onDownload()
                 val context = currentCoroutineContext()
-                val analyzeUrl = AnalyzeUrl(src, source = bookSource, coroutineContext = context)
-                if (onlineOnly && loadOnlyWifi && !appCtx.isWifiConnect &&
-                    !analyzeUrl.urlNoQuery.startsWith("data:", true)
+                // 本地 Markdown 的图片地址来自书籍内容，是外部数据而不是书源规则：
+                // 只按普通资源下载，不能构造 AnalyzeUrl（其 initUrl 会执行地址里的 <js>/@js:/{{}}）。
+                val plainSource = if (book.isMarkdown) MarkdownImageSource.parse(src) else null
+                val analyzeUrl = if (plainSource == null) {
+                    AnalyzeUrl(src, source = bookSource, coroutineContext = context)
+                } else null
+                val isDataUri = plainSource is MarkdownImageSource.DataUri ||
+                        (analyzeUrl?.urlNoQuery?.startsWith("data:", true) == true)
+                if (onlineOnly && loadOnlyWifi && !appCtx.isWifiConnect && !isDataUri
                 ) throw IOException("WiFi not available, loadOnlyWifi enabled")
                 // 同文件获取互斥，跨图片并发只遵循书源自身的限流配置。
                 if (!onlineOnly) imageFiles.setOnline(image, false)
                 else if (!image.exists()) imageFiles.setOnline(image, true)
+                val openImageStream: suspend () -> InputStream = when (plainSource) {
+                    is MarkdownImageSource.DataUri -> {
+                        { ByteArrayInputStream(plainSource.bytes) }
+                    }
+
+                    is MarkdownImageSource.Http -> {
+                        { plainHttpImageInputStream(plainSource.url, src, onlineOnly) }
+                    }
+
+                    MarkdownImageSource.Unsupported ->
+                        throw IOException("图片地址不受支持: ${src.take(120)}")
+
+                    null -> {
+                        val url = analyzeUrl!!
+                        { imageInputStream(url, src, onlineOnly) }
+                    }
+                }
                 if (ImageUtils.skipDecode(bookSource, isCover = false)) {
-                    imageInputStream(analyzeUrl, src, onlineOnly).use { input ->
+                    openImageStream().use { input ->
                         imageFiles.write(image, input) { context.ensureActive() }
                     }
                     true
                 } else {
-                    val bytes =
-                        imageInputStream(analyzeUrl, src, onlineOnly).use(InputStream::readBytes)
+                    val bytes = openImageStream().use(InputStream::readBytes)
                     val decoded = runScriptWithContext {
                         ImageUtils.decode(src, bytes, isCover = false, bookSource, book)
                     }
@@ -539,6 +569,59 @@ object BookHelp {
             throw IOException("HTTP ${response.code}")
         }
         return ProgressResponseBody(src, ProgressManager.LISTENER, response.body).byteStream()
+    }
+
+    /**
+     * 书籍自带图片地址的下载：只发一次普通 GET，UA/连接参数沿用 [okHttpClient]。
+     * 地址已在 [MarkdownImageSource.parse] 处校验成普通 http(s) URL，这里不解析任何规则语法。
+     * 响应体按 [MarkdownImageSource.MAX_IMAGE_BYTES] 截断，避免外部文档驱动的超大下载。
+     */
+    private suspend fun plainHttpImageInputStream(
+        url: String, src: String, reportProgress: Boolean
+    ): InputStream {
+        val response = okHttpClient.newCall(Request.Builder().url(url).build()).await()
+        if (!response.isSuccessful) {
+            response.close()
+            throw IOException("HTTP ${response.code}")
+        }
+        val body = response.body
+        if (body.contentLength() > MarkdownImageSource.MAX_IMAGE_BYTES) {
+            response.close()
+            throw IOException("Markdown image exceeds ${MarkdownImageSource.MAX_IMAGE_BYTES} bytes")
+        }
+        val stream = if (reportProgress) {
+            ProgressResponseBody(src, ProgressManager.LISTENER, body).byteStream()
+        } else {
+            body.byteStream()
+        }
+        //chunked 响应没有 contentLength，读取时按字节数兜底
+        return BoundedInputStream(stream, MarkdownImageSource.MAX_IMAGE_BYTES.toLong())
+    }
+
+    private class BoundedInputStream(
+        input: InputStream,
+        private val limit: Long,
+    ) : FilterInputStream(input) {
+        private var read = 0L
+
+        override fun read(): Int {
+            val value = super.read()
+            if (value >= 0 && ++read > limit) {
+                throw IOException("Markdown image exceeds $limit bytes")
+            }
+            return value
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            val count = super.read(b, off, len)
+            if (count > 0) {
+                read += count
+                if (read > limit) {
+                    throw IOException("Markdown image exceeds $limit bytes")
+                }
+            }
+            return count
+        }
     }
 
     /** Android 图片适配器使用：先持有租约，再获取文件，避免发布与淘汰之间存在空窗。 */

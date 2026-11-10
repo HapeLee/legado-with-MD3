@@ -332,7 +332,7 @@ fun ImportBookRouteScreen(
         onSelectBookFiles = {
             selectBookFiles.launch(
                 arrayOf(
-                    "text/plain", "application/epub+zip", "application/pdf",
+                    "text/plain", "text/markdown", "application/epub+zip", "application/pdf",
                     "application/x-mobipocket-ebook", "application/vnd.amazon.ebook",
                     "application/zip", "application/x-rar-compressed",
                     "application/x-7z-compressed", "application/octet-stream",

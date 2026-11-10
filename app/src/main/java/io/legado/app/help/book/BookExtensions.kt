@@ -102,6 +102,10 @@ val Book.isMobi: Boolean
             originName.endsWith(".azw3", true) ||
             originName.endsWith(".azw", true))
 
+val Book.isMarkdown: Boolean
+    get() = isLocal && (originName.endsWith(".md", true) ||
+            originName.endsWith(".markdown", true))
+
 val Book.isOnLineTxt: Boolean
     get() = !isLocal && isType(BookType.text)
 
@@ -132,6 +136,7 @@ fun Book.getBookTypeName(): String {
         isUmd        -> "UMD"
         isPdf        -> "PDF"
         isMobi       -> "MOBI"
+        isMarkdown   -> "MD"
         isAudio      -> "有声书"
         isImage      -> "漫画"
         isOnLineTxt  -> "小说"

@@ -37,6 +37,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.isLocalTxt
+import io.legado.app.help.book.isMarkdown
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.readSimulating
@@ -51,6 +52,7 @@ import io.legado.app.model.ReadBook.renderCallBack
 import io.legado.app.model.ReadBook.snapshot
 import io.legado.app.model.cache.CACHE_DOWNLOAD_RETRY_LIMIT
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.localBook.MarkdownFile
 import io.legado.app.model.localBook.TextFile
 import io.legado.app.model.reader.ReaderChapterInput
 import io.legado.app.model.reader.ReaderChapterInputWindow
@@ -350,6 +352,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         readingAnchorJumpCount = 0
         webBookProgress = null
         TextFile.clear()
+        MarkdownFile.clear()
         requestWholeBookPageEstimate()
         synchronized(this) {
             loadingChapters.clear()
@@ -1867,6 +1870,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             it.charset = charset
             if (it.isLocalTxt) {
                 TextFile.clear()
+                clearTextChapter()
+            } else if (it.isMarkdown) {
+                BookHelp.clearCache(it)
                 clearTextChapter()
             }
             callBack?.loadChapterList(it)
