@@ -21,6 +21,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -67,9 +68,13 @@ internal fun IosCurlPageStack(
     pageContent: @Composable (ReaderPage) -> Unit,
 ) {
     val current = pages.current ?: return
-    // Keep one mesh/EGL/output set for this viewport, including the idle time between turns.
-    // Leaving this mode, the reader, or the viewport size disposes the retained resources.
-    val graphics = remember(current.widthPx, current.heightPx) { IosCurlGraphics() }
+    // One retained mesh/EGL/output set for as long as this mode stays in composition, including
+    // the idle time between turns. prepare() and attach() already rebuild the output bitmap and
+    // window binding for a changed viewport; replacing the holder on a page-size change would
+    // only orphan the TextureView callbacks and in-flight captures. Leaving this mode or the
+    // reader disposes it.
+    val graphics = remember { IosCurlGraphics() }
+    val currentGraphics = rememberUpdatedState(graphics)
     DisposableEffect(graphics) { onDispose { graphics.close() } }
     if (direction == null) {
         pageContent(current)
@@ -93,7 +98,7 @@ internal fun IosCurlPageStack(
         val currentSettled = settled(current)
         val targetSettled = settled(target)
         var prepared by remember(currentKey, targetKey, revision) { mutableStateOf(false) }
-        LaunchedEffect(currentKey, targetKey, revision, currentSettled, targetSettled) {
+        LaunchedEffect(currentKey, targetKey, revision, currentSettled, targetSettled, graphics) {
             // 换页或图片加载完成都会重启本 effect。旧纹理必须等新的两页捕获完成后再替换：
             // 否则动画进行中会先掉回静态快照（闪烁），等重新捕获完才恢复卷曲。
             try {
@@ -134,25 +139,26 @@ internal fun IosCurlPageStack(
                     isClickable = false
                     isFocusable = false
                     importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    // factory runs once; callbacks must read the current holder, not this lambda's capture.
                     surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                         override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
-                            graphics.attach(this@apply, texture, width, height)
+                            currentGraphics.value.attach(this@apply, texture, width, height)
                         }
                         override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) {
-                            graphics.attach(this@apply, texture, width, height)
+                            currentGraphics.value.attach(this@apply, texture, width, height)
                         }
                         override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
-                            graphics.detach(this@apply)
+                            currentGraphics.value.detach(this@apply)
                             return true
                         }
                         override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {
-                            graphics.presented(this@apply)
+                            currentGraphics.value.presented(this@apply)
                         }
                     }
                 }
             },
             onRelease = {
-                graphics.detach(it)
+                currentGraphics.value.detach(it)
                 it.surfaceTextureListener = null
             },
         )
@@ -189,8 +195,10 @@ internal class IosCurlGraphics : AutoCloseable {
     private var submittedBackground: Color? = null
     private val main = Handler(Looper.getMainLooper())
     private var windowGeneration = 0L
+    private var closed = false
 
     fun attach(next: TextureView, texture: SurfaceTexture, width: Int, height: Int) {
+        if (closed) return
         if (width <= 0 || height <= 0) {
             detach(next)
             return
@@ -244,9 +252,11 @@ internal class IosCurlGraphics : AutoCloseable {
     }
 
     fun prepare(current: Bitmap, target: Bitmap, opaquePageBackground: Boolean) {
+        if (closed) return
         canvasRenderer = null
-        // Keep the GL backend for this viewport once it is needed; do not churn surface ownership.
-        if (!opaquePageBackground) canvasAvailable = false
+        // Background alpha is a per-frame content condition, not a device capability: the branch
+        // below re-checks it on every prepare(). Latching it into canvasAvailable would keep the
+        // retained holder off the Canvas fast path for the rest of the mode.
         outputRect.set(0f, 0f, current.width.toFloat(), current.height.toFloat())
         if (opaquePageBackground && canvasAvailable && Build.VERSION.SDK_INT >= 34) {
             try {
@@ -284,7 +294,7 @@ internal class IosCurlGraphics : AutoCloseable {
     }
 
     fun draw(canvas: android.graphics.Canvas, config: CurlConfig, inputValues: CurlValues, background: Color): Boolean {
-        if (failed) return false
+        if (closed || failed) return false
         var direct = windowReady && renderer?.hasWindow == true
         val values = inputValues.renderValues()
         // TextureView invalidations must not become a second animation clock.
@@ -362,18 +372,29 @@ internal class IosCurlGraphics : AutoCloseable {
     }
 
     private fun unavailableCanvas(error: Throwable? = null) {
-        if (error != null) Timber.tag("IosCurl").w(error, "Canvas mesh unavailable; using GLES")
-        canvasAvailable = false
+        if (error != null) {
+            Timber.tag("IosCurl").w(error, "Canvas mesh unavailable; using GLES")
+            // Only a real driver/construction failure disables the capability. A per-frame
+            // underlay or software-canvas condition must stay retryable on the next prepare().
+            canvasAvailable = false
+        }
         canvasRenderer = null
     }
 
     private fun fail(error: Throwable) {
         Timber.tag("IosCurl").w(error, "Curl rendering unavailable; using the page snapshot")
-        close()
+        // A failed frame stays recoverable: release resources but let the next prepare() rebuild.
+        release()
         failed = true
     }
 
     override fun close() {
+        if (closed) return
+        closed = true
+        release()
+    }
+
+    private fun release() {
         canvasRenderer = null
         detachWindow()
         view?.alpha = 0f
