@@ -18,6 +18,7 @@ import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.isPdf
 import io.legado.app.model.localBook.EpubFile
 import io.legado.app.model.localBook.MarkdownFile
+import io.legado.app.model.localBook.MarkdownImageSource
 import io.legado.app.model.localBook.MobiFile
 import io.legado.app.model.localBook.PdfFile
 import io.legado.app.utils.BitmapUtils
@@ -144,8 +145,10 @@ object ImageProvider {
             if (!BookHelp.isImageExist(book, src)) {
                 val inputStream = when {
                     book.isMarkdown -> {
-                        if (src.isAbsUrl() || src.isDataUrl()) {
-                            //网络图/data URI 走 BookHelp 的普通资源下载（不按书源规则解析地址）
+                        if (src.isAbsUrl() || src.isDataUrl() ||
+                            src.startsWith(MarkdownImageSource.INLINE_PREFIX, true)
+                        ) {
+                            //网络图/data URI/短占位内嵌图走 BookHelp 的普通资源下载（不按书源规则解析地址）
                             BookHelp.saveImage(bookSource, book, src)
                             null
                         } else {

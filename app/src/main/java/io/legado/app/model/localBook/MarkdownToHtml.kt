@@ -349,9 +349,10 @@ object MarkdownToHtml {
         if (source.isEmpty()) return
         val alt = node.findChild(MarkdownElementTypes.LINK_TEXT)
             ?.getTextInNode(text)?.trim('!', '[', ']').orEmpty()
-        // src 保持原样发出；相对路径图片由 MarkdownFile.getImage 在取图时按书籍目录解析，
-        // 保持 HTML 与纯文本通道 src 一致。
-        sb.append("<img src=\"").append(escapeAttr(source))
+        // data URI 换成稳定的短占位，避免整段 base64 进入正文、.nb 缓存、朗读与导出；
+        // HTML 与纯文本都从这一份输出派生，src 保持一致，取图时按占位 key 找回字节。
+        val shortSrc = MarkdownImageSource.inlineDataUri(source) ?: source
+        sb.append("<img src=\"").append(escapeAttr(shortSrc))
             .append("\" alt=\"").append(escapeAttr(alt)).append("\"/>")
     }
 

@@ -2,6 +2,8 @@ package io.legado.app.model.localBook
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Base64
@@ -66,6 +68,28 @@ class MarkdownImageSourceTest {
         assertEquals(
             MarkdownImageSource.Unsupported,
             MarkdownImageSource.parse("data:image/png;base64,$payload"),
+        )
+    }
+
+    @Test
+    fun inlineDataUriReturnsStableShortKey() {
+        val bytes = byteArrayOf(1, 2, 3, 4, 5)
+        val src = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes)
+        val key = MarkdownImageSource.inlineDataUri(src)
+        assertNotNull(key)
+        assertTrue(key!!.startsWith(MarkdownImageSource.INLINE_PREFIX))
+        assertFalse(key.contains("base64"))
+        assertEquals(key, MarkdownImageSource.inlineDataUri(src))
+        val parsed = MarkdownImageSource.parse(key)
+        assertTrue(parsed is MarkdownImageSource.DataUri)
+        assertArrayEquals(bytes, (parsed as MarkdownImageSource.DataUri).bytes)
+    }
+
+    @Test
+    fun unknownInlineKeyIsUnsupported() {
+        assertEquals(
+            MarkdownImageSource.Unsupported,
+            MarkdownImageSource.parse("${MarkdownImageSource.INLINE_PREFIX}unknown"),
         )
     }
 }

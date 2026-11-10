@@ -1,5 +1,7 @@
 package io.legado.app.model.localBook
 
+import android.net.Uri
+import android.provider.DocumentsContract
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.exception.EmptyFileException
@@ -10,6 +12,7 @@ import io.legado.app.help.book.upKind
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.StringUtils
+import splitties.init.appCtx
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.InputStream
@@ -44,6 +47,15 @@ class MarkdownFile(private var book: Book) {
         //CommonMark：闭合 # 序列前必须有空白，否则属于标题内容（如「使用 C#」）
         private val closingHashesRegex = Regex("[ \t]+#+[ \t]*$")
         private val fenceRegex = Regex("^(`{3,}|~{3,})")
+        //CommonMark HTML 块：行首 0~3 空格 + 块级标签/注释/声明；块内的 # 不是 ATX 标题
+        private val htmlBlockStartRegex = Regex(
+            "^ {0,3}<(?:/?(?:address|article|aside|blockquote|canvas|center|dd|details|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|h[1-6]|header|hgroup|hr|iframe|li|main|menu|nav|noscript|ol|p|pre|script|section|style|table|template|textarea|ul|video)\\b|!--|\\?|!\\[CDATA\\[|![A-Z])",
+            RegexOption.IGNORE_CASE
+        )
+        private val htmlBlockEndRegex = Regex(
+            "</(?:script|style|pre|textarea|noscript|template|iframe)\\s*>|-->|\\?>|]]>",
+            RegexOption.IGNORE_CASE
+        )
 
         private var markdownFile: MarkdownFile? = null
 
@@ -75,25 +87,60 @@ class MarkdownFile(private var book: Book) {
         }
 
         /**
-         * 相对路径图片按 markdown 文件所在目录解析；书籍无法定位到真实文件
-         * （SAF content URI 等拿不到兄弟文件）时返回 null，由调用方降级为占位图。
+         * 相对路径图片优先按 markdown 文件所在目录解析。content URI 书没有文件系统目录时，
+         * best-effort 用 DocumentsContract 找兄弟文档：目录/tree 授权下可用；
+         * 单文档 URI 通常没有兄弟读权限，返回 null 由调用方降级为占位图。
          * 网络图与 data URI 不走这里（ImageProvider 分流到下载路径）。
          */
         fun getImage(book: Book, src: String): InputStream? {
-            val base = bookFileParent(book.bookUrl) ?: return null
             val raw = src.trim()
             //URLDecoder 会把字面 '+' 当空格，先转义以保留文件名里的 '+'
             val cleaned = runCatching { URLDecoder.decode(raw.replace("+", "%2B"), "UTF-8") }
                 .getOrDefault(raw)
-            if (cleaned.isEmpty()) return null
-            //图片只能来自书籍所在目录：拒绝绝对路径，并用 canonical 路径阻断 ../ 穿越
-            if (File(cleaned).isAbsolute) return null
+            if (cleaned.isEmpty() || !isSafeRelativePath(cleaned)) return null
+            val base = bookFileParent(book.bookUrl)
+                ?: return contentImageInputStream(book.bookUrl, cleaned)
             val baseDir = File(base).canonicalFile
             val basePath = baseDir.path.removeSuffix(File.separator)
             val file = File(baseDir, cleaned).canonicalFile
+            //canonical 路径再挡一次符号链接与 ../ 穿越
             if (!file.path.startsWith(basePath + File.separator)) return null
             if (!file.isFile) return null
             return runCatching { file.inputStream() }.getOrNull()
+        }
+
+        /** 相对路径只允许向下；拒绝绝对路径、盘符与 ../ 段。 */
+        internal fun isSafeRelativePath(path: String): Boolean {
+            if (File(path).isAbsolute) return false
+            val normalized = path.replace('\\', '/')
+            if (normalized.startsWith("/") || normalized.contains(':')) return false
+            return normalized.split('/').none { it == ".." }
+        }
+
+        /** 把相对路径拼到 documentId 的父目录上；调用前已过 [isSafeRelativePath]。 */
+        internal fun siblingDocumentId(documentId: String, relative: String): String? {
+            val parentId = documentId.substringBeforeLast('/', "")
+            if (parentId.isEmpty()) return null
+            val parts = relative.replace('\\', '/').split('/')
+                .filter { it.isNotEmpty() && it != "." }
+            if (parts.isEmpty()) return null
+            return (listOf(parentId) + parts).joinToString("/")
+        }
+
+        private fun contentImageInputStream(bookUrl: String, cleaned: String): InputStream? {
+            if (!bookUrl.startsWith("content://", true)) return null
+            return runCatching {
+                val uri = Uri.parse(bookUrl)
+                val authority = uri.authority ?: return null
+                val documentId = DocumentsContract.getDocumentId(uri)
+                val siblingId = siblingDocumentId(documentId, cleaned) ?: return null
+                val siblingUri = if (DocumentsContract.isTreeUri(uri)) {
+                    DocumentsContract.buildDocumentUriUsingTree(uri, siblingId)
+                } else {
+                    DocumentsContract.buildDocumentUri(authority, siblingId)
+                }
+                appCtx.contentResolver.openInputStream(siblingUri)
+            }.getOrNull()
         }
 
         private fun bookFileParent(bookUrl: String): String? {
@@ -102,7 +149,7 @@ class MarkdownFile(private var book: Book) {
                     runCatching { URLDecoder.decode(bookUrl.removePrefix("file://"), "UTF-8") }
                         .getOrDefault(bookUrl.removePrefix("file://"))
                 File(bookUrl).isAbsolute -> bookUrl
-                //content:// 等单文档 URI 无法访问兄弟文件，显式降级
+                //content:// 交给 contentImageInputStream 走 DocumentsContract
                 else -> return null
             }
             return File(path).parent
@@ -284,6 +331,10 @@ class MarkdownFile(private var book: Book) {
         var prefixStart = -1L
         var prefixChars = 0
         val prefixSample = StringBuilder()
+        var lineNo = 0
+        var frontMatterActive = false
+        var frontMatterChecked = false
+        var inHtmlBlock = false
 
         fun closeCurrent(end: Long) {
             cur?.let {
@@ -311,6 +362,26 @@ class MarkdownFile(private var book: Book) {
                 .removePrefix("\uFEFF")
                 .trimEnd('\r', '\n')
 
+            lineNo++
+            val normalized = line.trim()
+            if (!frontMatterChecked) {
+                frontMatterChecked = true
+                //YAML frontmatter 只在文件开头；其中的 # 是配置注释，不是章节标题
+                frontMatterActive = normalized == "---"
+            }
+            val inFrontMatter = frontMatterActive
+            if (frontMatterActive && lineNo > 1 &&
+                (normalized == "---" || line.isBlank())
+            ) {
+                frontMatterActive = false
+            }
+            //HTML 块/注释里的 # 行是内容，不是 ATX 标题
+            if (inHtmlBlock) {
+                if (line.isBlank() || htmlBlockEndRegex.containsMatchIn(line)) inHtmlBlock = false
+            } else if (!inFence && htmlBlockStartRegex.containsMatchIn(line)) {
+                inHtmlBlock = true
+            }
+
             //上一行是章节标题：新章从标题行开始，本行起计入正文
             pending?.let {
                 cur = it
@@ -329,7 +400,7 @@ class MarkdownFile(private var book: Book) {
                 }
             }
 
-            if (!inFence) {
+            if (!inFence && !inHtmlBlock && !inFrontMatter) {
                 val m = headingRegex.matchEntire(line)
                 if (m != null && m.groupValues[1].length <= 2) {
                     val title = closingHashesRegex.replace(m.groupValues[2], "").trim()
@@ -355,8 +426,8 @@ class MarkdownFile(private var book: Book) {
 
             val current = cur
             if (current == null) {
-                //第一个标题前的内容
-                if (line.isNotBlank()) {
+                //第一个标题前的内容；frontmatter 不进简介、也不作为前言起点
+                if (line.isNotBlank() && !inFrontMatter) {
                     if (prefixStart < 0) prefixStart = lineStart
                     prefixChars += line.length + 1
                     if (prefixSample.length <= 500) prefixSample.append(line).append('\n')

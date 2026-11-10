@@ -158,4 +158,15 @@ class MarkdownToHtmlTest {
         val plain = LocalBookSemanticHtml.plainText(html)
         assertTrue(plain.contains("<占位符>"))
     }
+
+    @Test
+    fun inlineImagePayloadStaysOutOfBothChannels() {
+        val payload = "A".repeat(4096)
+        val html = MarkdownToHtml.convert("![图](data:image/png;base64,$payload)")
+        assertFalse(html.contains(payload))
+        assertTrue(html.contains(MarkdownImageSource.INLINE_PREFIX))
+        val plain = LocalBookSemanticHtml.plainText(html)
+        assertFalse(plain.contains(payload))
+        assertTrue(plain.contains(MarkdownImageSource.INLINE_PREFIX))
+    }
 }

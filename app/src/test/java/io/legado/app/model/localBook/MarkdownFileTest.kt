@@ -297,4 +297,60 @@ class MarkdownFileTest {
         assertTrue(bodyOf(file, chapters.last().start, chapters.last().end, chapters.last().startsWithHeading)
             .contains("代码块之后的正文。"))
     }
+
+    @Test
+    fun frontMatterHashLinesAreNotChapters() {
+        val file = write(
+            """
+            ---
+            # 这是配置注释
+            title: 示例
+            ---
+
+            # 第一章
+
+            正文。
+            """.trimIndent() + "\n"
+        )
+        val chapters = scan(file)
+        assertEquals(listOf("第一章"), chapters.map { it.title })
+        val body = bodyOf(file, chapters[0].start, chapters[0].end, true)
+        assertTrue(body.contains("正文。"))
+        assertFalse(body.contains("title:"))
+    }
+
+    @Test
+    fun htmlBlockHashLineIsNotAChapter() {
+        val file = write(
+            """
+            # A
+
+            <div>
+            # 不是标题
+            </div>
+
+            正文。
+
+            # B
+            """.trimIndent() + "\n"
+        )
+        val chapters = scan(file)
+        assertEquals(listOf("A", "B"), chapters.map { it.title })
+        val body = bodyOf(file, chapters[0].start, chapters[0].end, true)
+        assertTrue(body.contains("# 不是标题"))
+    }
+
+    @Test
+    fun relativePathSafetyAndSiblingIdArePure() {
+        assertTrue(MarkdownFile.isSafeRelativePath("images/a.png"))
+        assertTrue(MarkdownFile.isSafeRelativePath("a+b.png"))
+        assertFalse(MarkdownFile.isSafeRelativePath("../a.png"))
+        assertFalse(MarkdownFile.isSafeRelativePath("images/../a.png"))
+        assertFalse(MarkdownFile.isSafeRelativePath("C:\\a.png"))
+        assertEquals(
+            "primary:Download/images/a.png",
+            MarkdownFile.siblingDocumentId("primary:Download/book.md", "images/a.png"),
+        )
+        assertEquals(null, MarkdownFile.siblingDocumentId("book.md", "a.png"))
+    }
 }
