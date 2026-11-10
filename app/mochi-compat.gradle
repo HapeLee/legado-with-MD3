@@ -11,11 +11,23 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.ConstantDynamic
+import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.FieldNode
+import org.objectweb.asm.tree.FrameNode
+import org.objectweb.asm.tree.InnerClassNode
+import org.objectweb.asm.tree.InvokeDynamicInsnNode
+import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.LocalVariableNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.TryCatchBlockNode
+import org.objectweb.asm.tree.TypeInsnNode
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -27,9 +39,23 @@ buildscript {
 
 // Keep this applied script in Groovy: current Lint/FIR crashes on the Kotlin script's
 // generated script class. Lint remains enabled, including analysis of this build logic.
-// Redirect the one Backdrop 1.x call before AGP extracts classes, for tests, D8 and R8.
+// This transform patches the pinned Mochi 0.2.0 artifact before AGP extracts classes,
+// so unit tests, D8 and R8 all see the patched bytecode:
+//  1. Redirect the one Backdrop 1.x call to the app shim.
+//  2. Rewrite material-color-utilities' DynamicScheme owner, which moved from
+//     com.materialkolor.scheme to com.materialkolor.dynamiccolor in 6.0.0. Mochi 0.2.0
+//     was compiled against 4.1.1 and the app resolves 6.0.0 (required by material3 1.5),
+//     so without the rewrite the Mochi theme crashes with NoSuchMethodError at runtime.
+// The Scheme* constructor shapes are unchanged across that move, only the owner differs.
 @CacheableTransform
-abstract class MochiBackdrop2Transform implements TransformAction<TransformParameters.None> {
+abstract class MochiCompatTransform implements TransformAction<TransformParameters.None> {
+    private static final String MOCHI_AAR = 'mochi-compose-0.2.0.aar'
+    private static final String GLASS_PIPELINE =
+        'ui/feice/mochi/effect/glass/engine/GlassPipelineKt.class'
+    private static final String OLD_DYNAMIC_SCHEME = 'com/materialkolor/scheme/DynamicScheme'
+    private static final String NEW_DYNAMIC_SCHEME = 'com/materialkolor/dynamiccolor/DynamicScheme'
+    private static final byte[] DYNAMIC_SCHEME_MARKER = OLD_DYNAMIC_SCHEME.getBytes('ISO-8859-1')
+
     @InputArtifact
     @PathSensitive(PathSensitivity.NONE)
     abstract Provider<FileSystemLocation> getInputArtifact()
@@ -37,19 +63,23 @@ abstract class MochiBackdrop2Transform implements TransformAction<TransformParam
     @Override
     void transform(TransformOutputs outputs) {
         File input = inputArtifact.get().asFile
-        if (input.name != 'mochi-compose-0.2.0.aar') {
+        if (input.name != MOCHI_AAR) {
             outputs.file(input)
             return
         }
-        int[] replacements = [0] as int[]
-        byte[] patched = rewriteArchive(input.bytes, false, replacements)
-        if (replacements[0] != 1) {
-            throw new IllegalStateException("Mochi 0.2.0 Backdrop patch expected one call; found ${replacements[0]}. Review the published artifact.")
+        // [0] Backdrop call sites, [1] DynamicScheme references.
+        int[] patches = [0, 0] as int[]
+        byte[] patched = rewriteArchive(input.bytes, false, patches)
+        if (patches[0] != 1) {
+            throw new IllegalStateException("Mochi 0.2.0 Backdrop patch expected one call; found ${patches[0]}. Review the published artifact.")
         }
-        outputs.file('mochi-compose-0.2.0.aar').bytes = patched
+        if (patches[1] < 1) {
+            throw new IllegalStateException("Mochi 0.2.0 DynamicScheme patch expected references; found ${patches[1]}. Review the published artifact.")
+        }
+        outputs.file(MOCHI_AAR).bytes = patched
     }
 
-    private static byte[] rewriteArchive(byte[] bytes, boolean jar, int[] replacements) {
+    private static byte[] rewriteArchive(byte[] bytes, boolean jar, int[] patches) {
         ByteArrayOutputStream output = new ByteArrayOutputStream()
         try (ZipOutputStream sink = new ZipOutputStream(output);
              ZipInputStream source = new ZipInputStream(new ByteArrayInputStream(bytes))) {
@@ -57,27 +87,11 @@ abstract class MochiBackdrop2Transform implements TransformAction<TransformParam
             while ((entry = source.nextEntry) != null) {
                 byte[] data = source.readAllBytes()
                 if (!jar && entry.name == 'classes.jar') {
-                    data = rewriteArchive(data, true, replacements)
-                } else if (jar && entry.name == 'ui/feice/mochi/effect/glass/engine/GlassPipelineKt.class') {
-                    ClassReader reader = new ClassReader(data)
-                    ClassNode node = new ClassNode(Opcodes.ASM9)
-                    reader.accept(node, 0)
-                    for (MethodNode method : node.methods) {
-                        for (AbstractInsnNode instruction : method.instructions) {
-                            if (instruction instanceof MethodInsnNode) {
-                                MethodInsnNode invocation = (MethodInsnNode) instruction
-                                if (invocation.opcode == Opcodes.INVOKESTATIC &&
-                                    invocation.owner == 'com/kyant/backdrop/effects/RenderEffectKt' && invocation.name == 'effect' &&
-                                    invocation.desc == '(Lcom/kyant/backdrop/BackdropEffectScope;Landroid/graphics/RenderEffect;)V') {
-                                    invocation.owner = 'io/legado/app/ui/widget/components/mochi/MochiBackdropCompat'
-                                    replacements[0]++
-                                }
-                            }
-                        }
-                    }
-                    ClassWriter writer = new ClassWriter(reader, 0)
-                    node.accept(writer)
-                    data = writer.toByteArray()
+                    data = rewriteArchive(data, true, patches)
+                } else if (jar && entry.name == GLASS_PIPELINE) {
+                    data = patchBackdrop(data, patches)
+                } else if (jar && contains(data, DYNAMIC_SCHEME_MARKER)) {
+                    data = patchDynamicScheme(data, patches)
                 }
                 ZipEntry copy = new ZipEntry(entry.name)
                 copy.time = 0L
@@ -88,18 +102,152 @@ abstract class MochiBackdrop2Transform implements TransformAction<TransformParam
         }
         return output.toByteArray()
     }
+
+    private static byte[] patchBackdrop(byte[] data, int[] patches) {
+        ClassReader reader = new ClassReader(data)
+        ClassNode node = new ClassNode(Opcodes.ASM9)
+        reader.accept(node, 0)
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions) {
+                if (instruction instanceof MethodInsnNode) {
+                    MethodInsnNode invocation = (MethodInsnNode) instruction
+                    if (invocation.opcode == Opcodes.INVOKESTATIC &&
+                        invocation.owner == 'com/kyant/backdrop/effects/RenderEffectKt' && invocation.name == 'effect' &&
+                        invocation.desc == '(Lcom/kyant/backdrop/BackdropEffectScope;Landroid/graphics/RenderEffect;)V') {
+                        invocation.owner = 'io/legado/app/ui/widget/components/mochi/MochiBackdropCompat'
+                        patches[0]++
+                    }
+                }
+            }
+        }
+        return write(node, reader)
+    }
+
+    private static byte[] patchDynamicScheme(byte[] data, int[] patches) {
+        ClassReader reader = new ClassReader(data)
+        ClassNode node = new ClassNode(Opcodes.ASM9)
+        reader.accept(node, 0)
+        node.signature = renameDescriptor(node.signature, patches)
+        node.superName = renameType(node.superName, patches)
+        node.interfaces = node.interfaces.collect { renameType(it, patches) }
+        node.nestHostClass = renameType(node.nestHostClass, patches)
+        node.nestMembers = node.nestMembers?.collect { renameType(it, patches) }
+        node.permittedSubclasses = node.permittedSubclasses?.collect { renameType(it, patches) }
+        node.innerClasses?.each { InnerClassNode inner ->
+            inner.name = renameType(inner.name, patches)
+            inner.outerName = renameType(inner.outerName, patches)
+        }
+        node.fields.each { FieldNode field ->
+            field.desc = renameDescriptor(field.desc, patches)
+            field.signature = renameDescriptor(field.signature, patches)
+        }
+        node.methods.each { MethodNode method ->
+            method.desc = renameDescriptor(method.desc, patches)
+            method.signature = renameDescriptor(method.signature, patches)
+            method.exceptions = method.exceptions?.collect { renameType(it, patches) }
+            method.localVariables?.each { LocalVariableNode local ->
+                local.desc = renameDescriptor(local.desc, patches)
+                local.signature = renameDescriptor(local.signature, patches)
+            }
+            method.tryCatchBlocks?.each { TryCatchBlockNode block ->
+                block.type = renameType(block.type, patches)
+            }
+            method.instructions.each { AbstractInsnNode instruction ->
+                if (instruction instanceof MethodInsnNode) {
+                    instruction.owner = renameType(instruction.owner, patches)
+                    instruction.desc = renameDescriptor(instruction.desc, patches)
+                } else if (instruction instanceof FieldInsnNode) {
+                    instruction.owner = renameType(instruction.owner, patches)
+                    instruction.desc = renameDescriptor(instruction.desc, patches)
+                } else if (instruction instanceof TypeInsnNode) {
+                    instruction.desc = renameDescriptor(instruction.desc, patches)
+                } else if (instruction instanceof FrameNode) {
+                    // Stack map frames are copied verbatim and are resolved by the verifier.
+                    instruction.local = renameFrameTypes(instruction.local, patches)
+                    instruction.stack = renameFrameTypes(instruction.stack, patches)
+                } else if (instruction instanceof LdcInsnNode) {
+                    instruction.cst = renameConstant(instruction.cst, patches)
+                } else if (instruction instanceof InvokeDynamicInsnNode) {
+                    instruction.desc = renameDescriptor(instruction.desc, patches)
+                    instruction.bsmArgs =
+                        instruction.bsmArgs.collect { renameConstant(it, patches) } as Object[]
+                }
+            }
+        }
+        return write(node, reader)
+    }
+
+    private static byte[] write(ClassNode node, ClassReader reader) {
+        ClassWriter writer = new ClassWriter(reader, 0)
+        node.accept(writer)
+        return writer.toByteArray()
+    }
+
+    private static List<Object> renameFrameTypes(List<Object> types, int[] patches) {
+        return types?.collect { it instanceof String ? renameType(it, patches) : it }
+    }
+
+    private static Object renameConstant(Object value, int[] patches) {
+        if (value instanceof Type) {
+            return Type.getType(renameDescriptor(((Type) value).descriptor, patches))
+        }
+        if (value instanceof Handle) {
+            return new Handle(value.tag, renameType(value.owner, patches), value.name,
+                renameDescriptor(value.desc, patches), value.isInterface)
+        }
+        if (value instanceof ConstantDynamic) {
+            return new ConstantDynamic(value.name, renameDescriptor(value.descriptor, patches),
+                renameConstant(value.bootstrapMethod, patches),
+                value.bootstrapMethodArgumentCount > 0
+                    ? (Object[]) value.bootstrapMethodArguments.collect { renameConstant(it, patches) }
+                    : new Object[0])
+        }
+        return value
+    }
+
+    private static String renameType(String value, int[] patches) {
+        if (value != null && value.startsWith(OLD_DYNAMIC_SCHEME)) {
+            patches[1]++
+            return NEW_DYNAMIC_SCHEME + value.substring(OLD_DYNAMIC_SCHEME.length())
+        }
+        return value
+    }
+
+    private static String renameDescriptor(String value, int[] patches) {
+        if (value != null && value.contains(OLD_DYNAMIC_SCHEME)) {
+            patches[1]++
+            return value.replace(OLD_DYNAMIC_SCHEME, NEW_DYNAMIC_SCHEME)
+        }
+        return value
+    }
+
+    private static boolean contains(byte[] data, byte[] marker) {
+        for (int i = 0; i <= data.length - marker.length; i++) {
+            boolean matched = true
+            for (int j = 0; j < marker.length; j++) {
+                if (data[i + j] != marker[j]) {
+                    matched = false
+                    break
+                }
+            }
+            if (matched) {
+                return true
+            }
+        }
+        return false
+    }
 }
 
-def mochiBackdrop2 = Attribute.of('io.legado.mochi-backdrop2', Boolean)
+def mochiCompat = Attribute.of('io.legado.mochi-compat', Boolean)
 dependencies {
-    artifactTypes.maybeCreate('aar').attributes.attribute(mochiBackdrop2, false)
-    registerTransform(MochiBackdrop2Transform) {
-        from.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, 'aar').attribute(mochiBackdrop2, false)
-        to.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, 'aar').attribute(mochiBackdrop2, true)
+    artifactTypes.maybeCreate('aar').attributes.attribute(mochiCompat, false)
+    registerTransform(MochiCompatTransform) {
+        from.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, 'aar').attribute(mochiCompat, false)
+        to.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, 'aar').attribute(mochiCompat, true)
     }
 }
 configurations.configureEach {
     if (canBeResolved && (name.endsWith('CompileClasspath') || name.endsWith('RuntimeClasspath'))) {
-        attributes.attribute(mochiBackdrop2, true)
+        attributes.attribute(mochiCompat, true)
     }
 }
