@@ -53,7 +53,10 @@ class ExoPlayerLocalFileTest {
     }
 
     @After
-    fun tearDown() = stopKoin()
+    fun tearDown() {
+        ExoPlayerHelper.okhttpDataFactory.setDefaultRequestProperties(emptyMap())
+        stopKoin()
+    }
 
     @Test
     fun `manifest media items keep their content type after headers are encoded`() {
@@ -145,6 +148,7 @@ class ExoPlayerLocalFileTest {
         val file = File.createTempFile("local-video-", ".mp4", app.cacheDir)
         val bytes = byteArrayOf(1, 2, 3, 4, 5, 6)
         file.writeBytes(bytes)
+        val cacheKeysBefore = ExoPlayerHelper.cache.keys.toSet()
         try {
             val item = ExoPlayerHelper.createMediaItem(
                 Uri.fromFile(file).toString(),
@@ -168,8 +172,29 @@ class ExoPlayerLocalFileTest {
             } finally {
                 source.close()
             }
+            assertEquals(cacheKeysBefore, ExoPlayerHelper.cache.keys.toSet())
         } finally {
             file.delete()
         }
+    }
+
+    @Test
+    fun `data URI is routed locally without writing the HTTP cache`() {
+        val cacheKeysBefore = ExoPlayerHelper.cache.keys.toSet()
+        val payload = "local-data-route"
+        val item = ExoPlayerHelper.createMediaItem(
+            "data:text/plain,$payload",
+            mapOf("User-Agent" to "local-video-test"),
+        )
+        val source = ExoPlayerHelper.resolvingDataSource.createDataSource()
+        try {
+            source.open(DataSpec.Builder().setUri(item.localConfiguration!!.uri).build())
+            val actual = ByteArray(payload.length)
+            assertEquals(payload.length, source.read(actual, 0, actual.size))
+            assertEquals(payload, String(actual, Charsets.US_ASCII))
+        } finally {
+            source.close()
+        }
+        assertEquals(cacheKeysBefore, ExoPlayerHelper.cache.keys.toSet())
     }
 }

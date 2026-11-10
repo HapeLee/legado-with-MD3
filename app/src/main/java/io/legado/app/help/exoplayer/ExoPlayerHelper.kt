@@ -71,8 +71,10 @@ object ExoPlayerHelper {
 
 
     internal val resolvingDataSource: ResolvingDataSource.Factory by lazy {
-        // Route local file/content/asset URIs before the HTTP cache. Cache reads
-        // have their own FileDataSource; that does not handle file:// inputs.
+        // DefaultDataSource 按已剥离 SPLIT_TAG 的 URI scheme 分流：
+        // file/无 scheme -> FileDataSource，content/asset/rawresource/android.resource/data/udp
+        // 走各自本地数据源；其余（含 http/https，以及缺少 RTMP 扩展时的 rtmp）
+        // 回落到 CacheDataSource -> OkHttpDataSource。
         ResolvingDataSource.Factory(DefaultDataSource.Factory(appCtx, cacheDataSourceFactory)) {
             var res = it
 
@@ -112,7 +114,7 @@ object ExoPlayerHelper {
     /**
      * Okhttp DataSource.Factory
      */
-    private val okhttpDataFactory by lazy {
+    internal val okhttpDataFactory by lazy {
         val client = okHttpClient.newBuilder()
             .callTimeout(0, TimeUnit.SECONDS)
             .build()
@@ -123,7 +125,7 @@ object ExoPlayerHelper {
     /**
      * Exoplayer 内置的缓存
      */
-    private val cache: Cache by lazy {
+    internal val cache: Cache by lazy {
         val databaseProvider = StandaloneDatabaseProvider(appCtx)
         return@lazy SimpleCache(
             //Exoplayer的缓存路径
