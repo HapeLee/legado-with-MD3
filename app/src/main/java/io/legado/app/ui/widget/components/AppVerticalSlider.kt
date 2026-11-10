@@ -61,7 +61,7 @@ fun AppVerticalSlider(
                     onValueChangeFinished = onValueChangeFinished,
                 )
             }
-            ComposeEngine.Material, ComposeEngine.Mochi -> {
+            ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                 M3Slider(
                     value = value,
                     onValueChange = onValueChange,

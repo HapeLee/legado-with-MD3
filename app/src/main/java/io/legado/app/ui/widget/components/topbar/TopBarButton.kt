@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -46,15 +47,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.itos.coui.theme.LocalCouiTextStyle
+import com.itos.coui.topappbar.TopAppBarButton as CouiTopAppBarButton
 import io.legado.app.R
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.button.series.AnimatedActionButtonCore
 import io.legado.app.ui.widget.components.button.series.AnimatedIcon
@@ -64,6 +69,8 @@ import io.legado.app.ui.widget.components.button.series.SeriesButton
 import io.legado.app.ui.widget.components.button.series.SeriesIconButtonStyle
 import io.legado.app.ui.widget.components.button.series.TopBarSeriesIconButtonSize
 import io.legado.app.ui.widget.components.button.series.TopBarSeriesIconSize
+import io.legado.app.ui.widget.components.coui.LocalAppCouiNativeToolbar
+import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.mochi.keyboardClick
@@ -104,7 +111,8 @@ internal val LocalTopBarMergeState = staticCompositionLocalOf { false }
 
 @Composable
 private fun currentTopBarButtonStyle(): TopBarButtonStyle =
-    TopBarButtonStyle.fromStorage(LocalAppUiConfiguration.current.theme.topBarButtonStyle)
+    if (LegadoTheme.composeEngine == ComposeEngine.Coui) TopBarButtonStyle.Plain
+    else TopBarButtonStyle.fromStorage(LocalAppUiConfiguration.current.theme.topBarButtonStyle)
 
 private val TopBarButtonStyle.seriesStyle: SeriesIconButtonStyle
     get() = when (this) {
@@ -246,6 +254,32 @@ private fun TopBarButton(
     iconTint: Color = Color.Unspecified,
 ) {
     val engine = LegadoTheme.composeEngine
+    if (engine == ComposeEngine.Coui && ThemeResolver.isCouiSupported() &&
+        LocalAppCouiNativeToolbar.current
+    ) {
+        val renderer = rememberCouiCapsuleRenderer()
+        if (renderer != null) {
+            CouiTopAppBarButton(
+                modifier = modifier.semantics {
+                    role = Role.Button
+                    if (contentDescription != null && text != null) {
+                        this.contentDescription = contentDescription
+                    }
+                },
+                onClick = onClick,
+                text = text != null,
+                renderer = renderer,
+            ) {
+                if (text != null) {
+                    Text(text, color = LocalContentColor.current, style = LocalCouiTextStyle.current)
+                } else {
+                    val tint = if (iconTint == Color.Unspecified) LocalContentColor.current else iconTint
+                    AppIcon(imageVector, contentDescription, Modifier.size(24.dp), tint = tint)
+                }
+            }
+            return
+        }
+    }
     if (engine == ComposeEngine.Mochi) {
         if (onLongClick == null) {
             // Match Catalog's 44dp bar surface. Pointer input still has Compose's
@@ -383,7 +417,7 @@ private fun TopBarButton(
                 AppIcon(
                     imageVector = imageVector,
                     contentDescription = contentDescription,
-                    tint = resolvedContentColor,
+                    tint = if (iconTint == Color.Unspecified) resolvedContentColor else iconTint,
                     modifier = Modifier.size(style.iconSize)
                 )
             }
@@ -438,10 +472,11 @@ fun TopBarActionButton(
     onLongClick: (() -> Unit)? = null,
     onLongClickLabel: String? = null,
 ) {
+    val allowsLongClick = LegadoTheme.composeEngine != ComposeEngine.Coui
     TopBarButton(
         onClick = onClick,
-        onLongClick = onLongClick,
-        onLongClickLabel = onLongClickLabel,
+        onLongClick = onLongClick.takeIf { allowsLongClick },
+        onLongClickLabel = onLongClickLabel.takeIf { allowsLongClick },
         imageVector = imageVector,
         contentDescription = contentDescription,
         modifier = modifier,
@@ -511,13 +546,15 @@ fun TopBarAnimatedActionButton(
     modifier: Modifier = Modifier
 ) {
     val engine = LegadoTheme.composeEngine
-    if (isMiuixHyperOs4Enabled()) {
+    val isCoui = engine == ComposeEngine.Coui
+    if (isCoui || isMiuixHyperOs4Enabled()) {
+        val primary = if (isCoui) LegadoTheme.colorScheme.primary else MiuixTheme.colorScheme.primary
         TopBarButton(
             onClick = { onCheckedChange(!checked) },
-            modifier = modifier,
+            modifier = if (isCoui) modifier.semantics { selected = checked } else modifier,
             imageVector = if (checked) iconChecked else iconUnchecked,
             contentDescription = if (checked) activeText else inactiveText,
-            iconTint = if (checked) MiuixTheme.colorScheme.primary else Color.Unspecified,
+            iconTint = if (checked) primary else Color.Unspecified,
         )
         return
     }

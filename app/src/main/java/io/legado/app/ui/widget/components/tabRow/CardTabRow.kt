@@ -46,6 +46,7 @@ import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.toImmutableList
@@ -65,6 +66,13 @@ fun CardTabRow(
     tabEndContent: (@Composable (Int) -> Unit)? = null,
     scrollable: Boolean = false,
 ) {
+    if (LegadoTheme.composeEngine == ComposeEngine.Coui && ThemeResolver.isCouiSupported() &&
+        onTabLongClick == null && tabEndContent == null
+    ) {
+        AppCouiTabRow(tabTitles, selectedTabIndex, onTabSelected, modifier, scrollable)
+        return
+    }
+
     val simpleTabs = !scrollable && onTabLongClick == null && tabEndContent == null
     if (simpleTabs && LegadoTheme.composeEngine == ComposeEngine.Miuix &&
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&

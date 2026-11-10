@@ -1,10 +1,8 @@
 package io.legado.app.feature.explore
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -23,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -42,12 +39,12 @@ import io.legado.app.ui.main.explore.ExploreRouteScreen
 import io.legado.app.ui.main.explore.ExploreViewModel
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
 import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.tabRow.AppTabRowIconButton
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -156,27 +153,21 @@ fun ExploreMainRoute(
                             },
                             bottomContent = {
                                 if (kinds.isNotEmpty()) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        AppTabRow(
-                                            tabTitles = kinds.map { it.title },
-                                            selectedTabIndex = pagerState.targetPage,
-                                            onTabSelected = { index ->
-                                                scope.launch { pagerState.animateScrollToPage(index) }
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            isScrollable = true,
-                                        )
-                                        SmallOutlinedButton(
-                                            onClick = { kindSheetVisible = true },
-                                            icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                                            contentDescription = stringResource(R.string.select_or_search_category),
-                                        )
-                                    }
+                                    AppTabRow(
+                                        tabTitles = kinds.map { it.title },
+                                        selectedTabIndex = pagerState.targetPage,
+                                        onTabSelected = { index ->
+                                            scope.launch { pagerState.animateScrollToPage(index) }
+                                        },
+                                        horizontalPadding = 12.dp,
+                                        leadingAction = {
+                                            AppTabRowIconButton(
+                                                onClick = { kindSheetVisible = true },
+                                                icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
+                                                contentDescription = stringResource(R.string.select_or_search_category),
+                                            )
+                                        },
+                                    )
                                 }
                             },
                         )

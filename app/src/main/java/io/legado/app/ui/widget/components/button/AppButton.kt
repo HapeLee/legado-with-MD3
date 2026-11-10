@@ -35,7 +35,7 @@ fun PrimaryButton(
         ComposeEngine.Mochi -> {
             AppMochiButton(onClick, modifier, enabled, text, MochiButtonStyle.Filled)
         }
-        ComposeEngine.Material -> {
+        ComposeEngine.Material, ComposeEngine.Coui -> {
             Button(
                 onClick = onClick,
                 modifier = modifier,
@@ -68,7 +68,7 @@ fun SecondaryButton(
         ComposeEngine.Mochi -> {
             AppMochiButton(onClick, modifier, enabled, text, MochiButtonStyle.Outlined)
         }
-        ComposeEngine.Material -> {
+        ComposeEngine.Material, ComposeEngine.Coui -> {
             OutlinedButton(
                 onClick = onClick,
                 modifier = modifier,

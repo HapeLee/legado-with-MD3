@@ -134,7 +134,7 @@ fun ProvideColorSchemeOverride(
         miuixColorSpec
     ) {
         when (composeEngine) {
-            ComposeEngine.Material, ComposeEngine.Mochi -> null
+            ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> null
             ComposeEngine.Miuix -> ThemeController(
                 colorSchemeMode = miuixColorSchemeMode,
                 keyColor = seedColor,
@@ -164,13 +164,17 @@ fun ProvideColorSchemeOverride(
                     ProvideMochiTheme(colorScheme, resolvedIsDark, content = content)
                 }
             }
-            ComposeEngine.Material -> {
+            ComposeEngine.Material, ComposeEngine.Coui -> {
                 MaterialTheme(
                     colorScheme = colorScheme,
                     typography = MaterialTheme.typography,
                     shapes = MaterialTheme.shapes
                 ) {
-                    content()
+                    if (composeEngine == ComposeEngine.Coui && ThemeResolver.isCouiSupported()) {
+                        ProvideCouiTheme(resolvedIsDark, content = content)
+                    } else {
+                        content()
+                    }
                 }
             }
         }

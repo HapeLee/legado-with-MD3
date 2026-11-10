@@ -1,6 +1,7 @@
 package io.legado.app.ui.widget.components.menuItem
 
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +35,10 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.itos.coui.effect.couiButtonFeedback
+import com.itos.coui.menu.CouiMenuDefaults
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppContentColor
@@ -141,6 +145,58 @@ fun RoundDropdownMenuItem(
                     Text(text, Modifier.weight(1f), color = foreground, style = LegadoTheme.typography.labelLarge)
                     if (trailingIcon != null) { Spacer(Modifier.width(8.dp)); trailingIcon() }
                     else if (isSelected) AppIcon(Icons.Default.Check, null, Modifier.size(18.dp), tint = foreground)
+                }
+            }
+        }
+        ComposeEngine.Coui -> {
+            val style = CouiMenuDefaults.style()
+            val baseColor = when {
+                hasCustomContentColor -> color
+                isSelected -> style.colors.primary
+                else -> style.colors.onSurface
+            }
+            val foreground = if (enabled) baseColor else baseColor.copy(alpha = minOf(baseColor.alpha, 0.38f))
+            Row(
+                modifier = modifier
+                    .padding(horizontal = 6.dp)
+                    .fillMaxWidth()
+                    .clip(style.itemShape)
+                    .background(if (isSelected) style.colors.primary.copy(alpha = 0.10f) else Color.Transparent)
+                    .semantics { selected = isSelected }
+                    .couiButtonFeedback(interactionSource = interaction, enabled = enabled, list = true)
+                    .clickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        enabled = enabled,
+                        onClick = onClick,
+                    )
+                    .heightIn(min = 40.dp)
+                    .widthIn(min = 120.dp)
+                    .padding(contentPadding),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ProvideAppContentColor(foreground) {
+                    if (leadingIcon != null) {
+                        leadingIcon()
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                        Text(
+                            text = text,
+                            modifier = Modifier.widthIn(max = 200.dp),
+                            color = foreground,
+                            style = style.itemTextStyle,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (trailingIcon != null) {
+                        Spacer(Modifier.width(8.dp))
+                        trailingIcon()
+                    } else if (isSelected) {
+                        Spacer(Modifier.width(8.dp))
+                        AppIcon(Icons.Default.Check, null, Modifier.size(18.dp), tint = foreground)
+                    }
                 }
             }
         }

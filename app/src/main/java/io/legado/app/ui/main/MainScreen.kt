@@ -68,9 +68,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -112,11 +114,18 @@ import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBac
 import top.yukonga.miuix.kmp.glass.GlassNavigationBar
 import top.yukonga.miuix.kmp.glass.GlassNavigationBarDefaults
 import top.yukonga.miuix.kmp.glass.GlassNavigationItem
+import com.itos.coui.backdrop.couiBackdrop
+import com.itos.coui.backdrop.rememberCouiBackdrop
+import com.itos.coui.icons.CouiIcons
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.coui.CouiFloatingNavigation
+import io.legado.app.ui.widget.components.coui.LocalCouiFloatingNavigation
+import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -278,10 +287,13 @@ fun MainScreen(
     }
     val labelVisibilityMode = mainUiState.labelVisibilityMode
     val isUnlabeled = labelVisibilityMode == "unlabeled"
+    val engine = LegadoTheme.composeEngine
+    val isCoui = engine == ComposeEngine.Coui
     val useFloatingBottomBar =
         shouldUseHomePlaybackCapsule(
             onMainRoute = true, showBottomView = mainUiState.showBottomView,
-            useFloatingBottomBar = mainUiState.useFloatingBottomBar, useRail = useRail,
+            useFloatingBottomBar = ThemeResolver.useFloatingBottomBar(engine, mainUiState.useFloatingBottomBar),
+            useRail = useRail,
         )
     val useLiquidGlass = useFloatingBottomBar &&
             mainUiState.useFloatingBottomBarLiquidGlass &&
@@ -289,12 +301,24 @@ fun MainScreen(
     var floatingFooterHeight by remember { mutableStateOf(0.dp) }
     val alwaysShowLabel = labelVisibilityMode == "labeled"
     val showLabel = !isUnlabeled
-    val engine = LegadoTheme.composeEngine
     val isMochi = engine == ComposeEngine.Mochi
     val themeSettings = LocalAppUiConfiguration.current.theme
     val useMiuixGlassNavigation = engine == ComposeEngine.Miuix && useLiquidGlass &&
         themeSettings.useHyperOs4Components
     val mochiPageBackdrop = if (isMochi && useLiquidGlass) rememberMochiBackdrop(LegadoTheme.colorScheme.background) else null
+    val pageBackground = LegadoTheme.colorScheme.background
+    val couiNavigation = if (isCoui && useLiquidGlass &&
+        pageBackground.alpha == 1f && ThemeResolver.isCouiSupported()
+    ) {
+        val renderer = rememberCouiCapsuleRenderer()
+        if (renderer != null) {
+            val pageBackdrop = rememberCouiBackdrop {
+                drawRect(pageBackground)
+                drawContent()
+            }
+            remember(pageBackdrop, renderer) { CouiFloatingNavigation(pageBackdrop, renderer) }
+        } else null
+    } else null
     val miuixPageBackdrop = if (engine == ComposeEngine.Miuix && useLiquidGlass) {
         rememberMiuixLayerBackdrop {
             drawRect(floatingBarSurfaceColor)
@@ -583,6 +607,7 @@ fun MainScreen(
                         when {
                             floatingBarBackdrop != null -> Modifier.layerBackdrop(floatingBarBackdrop)
                             miuixPageBackdrop != null -> Modifier.miuixLayerBackdrop(miuixPageBackdrop)
+                            couiNavigation != null -> Modifier.couiBackdrop(couiNavigation.backdrop)
                             else -> Modifier
                         },
                     ),
@@ -736,6 +761,7 @@ fun MainScreen(
                     CompositionLocalProvider(
                         LocalMochiBackdrop provides mochiPageBackdrop,
                         LocalMiuixBarBackdrop provides miuixPageBackdrop,
+                        LocalCouiFloatingNavigation provides couiNavigation,
                     ) {
                         FloatingNavigationContainer(
                             modifier = Modifier.align(Alignment.BottomCenter),
@@ -754,9 +780,11 @@ fun MainScreen(
                             val navigationAvailableWidth =
                                 (maxWidth - capsuleReserve).coerceAtLeast(0.dp)
                             // 保留原导航项的自然宽度和居中位置，不把没有胶囊的底栏拉满。
-                            val normalNavigationWidth =
-                                (MainNavigationTabMinWidth * destinations.size + 8.dp)
-                                    .coerceAtMost(navigationAvailableWidth)
+                            val normalNavigationWidth = (if (isCoui) {
+                                78.dp * destinations.size + 16.dp
+                            } else {
+                                MainNavigationTabMinWidth * destinations.size + 8.dp
+                            }).coerceAtMost(navigationAvailableWidth)
                             val navigationStartInset =
                                 (navigationAvailableWidth - normalNavigationWidth) / 2
                             val expandedCapsuleWidth = (maxWidth - ReadAloudBarCapsuleSize - gap)
@@ -812,7 +840,9 @@ fun MainScreen(
                                     .offset {
                                         IntOffset(
                                             x = (navigationStartInset * (1f - expansion)).roundToPx(),
-                                            y = 0,
+                                            y = if (isCoui && readAloudCapsuleShown) {
+                                                (-4.dp * (1f - expansion)).roundToPx()
+                                            } else 0,
                                         )
                                     }
                                     .width(navigationWidth),
@@ -841,14 +871,19 @@ fun MainScreen(
                                     val selectedCustomIconPath =
                                         mainUiState.selectedCustomIconPath(destination)
                                     val destinationLabel = stringResource(destination.labelId)
+                                    val tint = if (isCoui) {
+                                        (if (LegadoTheme.isDark) Color.White else Color.Black)
+                                            .copy(alpha = if (selected) 230f / 255f else 184f / 255f)
+                                    } else Color.Unspecified
                                     FloatingBottomBarItem(
                                         enabled = !playbackControlsExpanded && expansion <= 0.05f,
+                                        selected = selected,
                                         onClick = {
                                             handleMainDestinationClick(index, destination)
                                         },
                                         modifier = Modifier
                                             .defaultMinSize(
-                                                minWidth = MainNavigationTabMinWidth
+                                                minWidth = if (isCoui) 48.dp else MainNavigationTabMinWidth
                                             )
                                             .semantics(mergeDescendants = true) {
                                                 contentDescription = destinationLabel
@@ -859,14 +894,21 @@ fun MainScreen(
                                             customIconPath = if (selected) {
                                                 selectedCustomIconPath.ifEmpty { customIconPath }
                                             } else customIconPath,
-                                            selected = selected
+                                            selected = selected,
+                                            tint = tint,
+                                            useCouiIcons = isCoui,
                                         )
                                         if (
                                             showLabel && (alwaysShowLabel || selected)
                                         ) {
                                             AppText(
-                                                text = stringResource(destination.labelId),
-                                                style = LegadoTheme.typography.labelSmall,
+                                                text = destinationLabel,
+                                                color = tint,
+                                                style = if (isCoui) LegadoTheme.typography.labelSmall.copy(
+                                                    fontSize = 10.sp,
+                                                    lineHeight = 12.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                ) else LegadoTheme.typography.labelSmall,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -1009,15 +1051,29 @@ private fun NavigationIcon(
     customIconPath: String,
     modifier: Modifier = Modifier,
     tint: Color = Color.Unspecified,
+    useCouiIcons: Boolean = false,
 ) {
     if (customIconPath.isNotEmpty()) {
         AsyncImage(
             model = customIconPath,
             contentDescription = null,
-            modifier = modifier.size(40.dp)
+            modifier = modifier.size(if (useCouiIcons) 24.dp else 40.dp)
         )
     } else {
-        val icon = AppIcons.mainDestination(destination, selected)
-        AppIcon(icon, contentDescription = null, modifier = modifier, tint = tint)
+        val icon = if (useCouiIcons) {
+            when (destination) {
+                MainDestination.Home -> CouiIcons.Filled.Grid
+                MainDestination.Bookshelf -> CouiIcons.Filled.BookOpen
+                MainDestination.Explore -> if (selected) CouiIcons.Filled.WandSpark else CouiIcons.Outlined.WandSpark
+                MainDestination.Rss -> if (selected) CouiIcons.Filled.CloudLink else CouiIcons.Outlined.CloudLink
+                MainDestination.My -> CouiIcons.Filled.UserCircle
+            }
+        } else AppIcons.mainDestination(destination, selected)
+        AppIcon(
+            icon,
+            contentDescription = null,
+            modifier = if (useCouiIcons) modifier.size(24.dp) else modifier,
+            tint = tint,
+        )
     }
 }

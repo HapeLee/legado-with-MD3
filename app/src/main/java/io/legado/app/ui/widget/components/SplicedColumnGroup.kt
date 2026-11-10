@@ -15,12 +15,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.itos.coui.layout.CouiPageDefaults
+import com.itos.coui.layout.Divider as CouiDivider
+import com.itos.coui.shape.CouiShape
+import com.itos.coui.text.CouiTextKind
+import com.itos.coui.text.Text as CouiText
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
@@ -33,6 +47,11 @@ import ui.feice.mochi.list.MochiListSectionHeader
 import ui.feice.mochi.shape.MochiRoundedRectangle
 
 internal val LocalMochiSettingsGroup = staticCompositionLocalOf { false }
+internal val LocalCouiSettingsGroup = staticCompositionLocalOf<CouiSettingsGroupState?> { null }
+
+internal class CouiSettingsGroupState {
+    var coordinates: LayoutCoordinates? = null
+}
 
 val LocalSplicedColumnGroupState = compositionLocalOf { SplicedColumnGroupState(
     enableItemDivider = false,
@@ -85,6 +104,44 @@ fun SplicedColumnGroup(
             currentIndex = { currentIndex[0] },
             incrementIndex = { currentIndex[0]++ }
         )
+    }
+
+    if (composeEngine == ComposeEngine.Coui) {
+        val couiGroup = remember { CouiSettingsGroupState() }
+        val groupContent: @Composable ColumnScope.() -> Unit = {
+            CompositionLocalProvider(LocalCouiSettingsGroup provides couiGroup) {
+                items()
+            }
+        }
+        val customShape = themeSettings.disableSplicedColumnGroupCornerRadius ||
+            themeSettings.overrideBaseCardCornerRadius
+        val colors = CouiPageDefaults.themeColors()
+        val shape = if (customShape) CouiShape(cornerRadius, cornerWeight = 3f) else CouiPageDefaults.shape
+        val topSpacing = if (title.isEmpty()) CouiPageDefaults.groupSpacing else CouiPageDefaults.categoryTopSpacing
+        // The surrounding list supplies the outer page margin. Keep only the row/header inset here.
+        Column(modifier.fillMaxWidth().padding(top = topSpacing)) {
+            if (title.isNotEmpty()) {
+                CouiText(
+                    text = title,
+                    kind = CouiTextKind.GroupTitle,
+                    color = colors.summary,
+                    modifier = Modifier
+                        .padding(horizontal = CouiPageDefaults.rowPadding, vertical = 8.dp)
+                        .semantics { heading() },
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onPlaced { couiGroup.coordinates = it }
+                    .clip(shape)
+                    .background(colors.card)
+                    .then(border?.let { Modifier.border(it, shape) } ?: Modifier)
+                    .appContainerBackground(AppContainerBackgroundType.Large),
+                content = groupContent,
+            )
+        }
+        return
     }
 
     Column(modifier = modifier.padding(top = 8.dp, bottom = 8.dp)) {
@@ -149,7 +206,7 @@ fun SplicedColumnGroup(
                         }
                     }
                 }
-                ComposeEngine.Material, ComposeEngine.Mochi -> {
+                ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -178,10 +235,13 @@ fun SplicedColumnGroup(
 @Composable
 fun SplicedColumnDivider() {
     if (LocalMochiSettingsGroup.current) return
-    val groupState = LocalSplicedColumnGroupState.current
-    if (groupState.enableItemDivider && groupState.currentIndex() > 0) {
-        SettingItemDivider()
+    val couiGroup = LocalCouiSettingsGroup.current
+    if (couiGroup != null) {
+        CouiGroupDivider(couiGroup)
+        return
     }
+    val groupState = LocalSplicedColumnGroupState.current
+    if (groupState.enableItemDivider && groupState.currentIndex() > 0) SettingItemDivider()
     groupState.incrementIndex()
 }
 
@@ -191,12 +251,33 @@ fun SettingItemWithDivider(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val groupState = LocalSplicedColumnGroupState.current
-    val useLegacyDivider = !LocalMochiSettingsGroup.current
-    if (useLegacyDivider && groupState.enableItemDivider && groupState.currentIndex() > 0) {
-        SettingItemDivider()
-    }
+    val couiGroup = LocalCouiSettingsGroup.current
+    val useLegacyDivider = !LocalMochiSettingsGroup.current && couiGroup == null
+    if (couiGroup != null) CouiGroupDivider(couiGroup)
+    else if (useLegacyDivider && groupState.enableItemDivider && groupState.currentIndex() > 0) SettingItemDivider()
     Column(modifier = modifier.fillMaxWidth()) {
         if (useLegacyDivider) groupState.incrementIndex()
         content()
+    }
+}
+
+@Composable
+private fun CouiGroupDivider(group: CouiSettingsGroupState) {
+    // Measure against the group body so conditionally composed rows never leave a leading divider.
+    var visible by remember(group) { mutableStateOf(false) }
+    val placement = Modifier.onGloballyPositioned { divider ->
+        val top = group.coordinates?.takeIf { it.isAttached }?.localPositionOf(divider, Offset.Zero)?.y
+        visible = top != null && top > 0.5f
+    }
+    if (visible) {
+        val theme = LocalAppUiConfiguration.current.theme
+        val color = if (theme.enableItemDivider && theme.itemDividerColor != 0) {
+            Color(theme.itemDividerColor)
+        } else {
+            CouiPageDefaults.themeColors().divider
+        }
+        CouiDivider(modifier = placement, color = color)
+    } else {
+        Box(placement)
     }
 }

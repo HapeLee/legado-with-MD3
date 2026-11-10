@@ -23,6 +23,7 @@ object GlassDefaults {
             ComposeEngine.Material -> enableBlur
             ComposeEngine.Miuix -> enableBlur && LocalMiuixBarBackdrop.current != null
             ComposeEngine.Mochi -> LocalMochiScrollBlurProgress.current != null
+            ComposeEngine.Coui -> false
         }
         return if (active) {
             noBlurColor.copy(alpha = blurAlpha)

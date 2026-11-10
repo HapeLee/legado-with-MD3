@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import io.legado.app.ui.widget.components.mochi.AppMochiSlider
+import io.legado.app.ui.widget.components.coui.AppCouiSlider
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
@@ -41,6 +42,11 @@ fun AppSlider(
         }
         ComposeEngine.Mochi -> {
             AppMochiSlider(
+                value, onValueChange, sliderModifier, enabled, valueRange, steps, onValueChangeFinished
+            )
+        }
+        ComposeEngine.Coui -> {
+            AppCouiSlider(
                 value, onValueChange, sliderModifier, enabled, valueRange, steps, onValueChangeFinished
             )
         }

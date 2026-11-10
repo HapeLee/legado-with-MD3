@@ -30,7 +30,7 @@ fun ConfirmDismissButtonsRow(
             ComposeEngine.Miuix -> {
                 Arrangement.spacedBy(12.dp)
             }
-            ComposeEngine.Material, ComposeEngine.Mochi -> {
+            ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                 Arrangement.spacedBy(12.dp, Alignment.End)
             }
         }
@@ -41,7 +41,7 @@ fun ConfirmDismissButtonsRow(
                 ComposeEngine.Miuix -> {
                     Modifier.weight(1f)
                 }
-                ComposeEngine.Material, ComposeEngine.Mochi -> {
+                ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                     Modifier.widthIn(min = 88.dp)
                 }
             },
@@ -54,7 +54,7 @@ fun ConfirmDismissButtonsRow(
                 ComposeEngine.Miuix -> {
                     Modifier.weight(1f)
                 }
-                ComposeEngine.Material, ComposeEngine.Mochi -> {
+                ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                     Modifier.widthIn(min = 88.dp)
                 }
             },

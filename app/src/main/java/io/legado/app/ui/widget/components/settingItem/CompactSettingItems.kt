@@ -37,6 +37,8 @@ import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.coui.CouiSettingMenu
+import io.legado.app.ui.widget.components.coui.canUseCouiSettingMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.sliderAccessibility
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -104,9 +106,40 @@ fun CompactDropdownSettingItem(
                 )
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val currentEntry =
                 displayEntries.getOrNull(entryValues.indexOf(selectedValue)) ?: selectedValue
+
+            val valueChip: @Composable () -> Unit = {
+                TextCard(
+                    cornerRadius = 8.dp,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 4.dp,
+                    text = currentEntry,
+                    backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            if (canUseCouiSettingMenu()) {
+                CouiSettingMenu(
+                    selectedValue = selectedValue,
+                    displayEntries = displayEntries,
+                    entryValues = entryValues,
+                    onValueChange = onValueChange,
+                ) { openMenu ->
+                    SettingItem(
+                        title = title,
+                        description = description,
+                        imageVector = imageVector,
+                        color = color,
+                        cornerRadius = cornerRadius,
+                        trailingContent = valueChip,
+                        onClick = openMenu,
+                        onLongClick = openMenu,
+                    )
+                }
+                return
+            }
 
             SettingItem(
                 title = title,
@@ -114,16 +147,7 @@ fun CompactDropdownSettingItem(
                 imageVector = imageVector,
                 color = color,
                 cornerRadius = cornerRadius,
-                trailingContent = {
-                    TextCard(
-                        cornerRadius = 8.dp,
-                        horizontalPadding = 8.dp,
-                        verticalPadding = 4.dp,
-                        text = currentEntry,
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                },
+                trailingContent = valueChip,
                 dropdownMenu = { onDismiss ->
                     displayEntries.forEachIndexed { index, display ->
                         RoundDropdownMenuItem(
@@ -213,7 +237,7 @@ fun CompactSliderSettingItem(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 description = description,
@@ -284,7 +308,7 @@ fun CompactSwitchSettingItem(
                 enabled = enabled,
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 description = description,
@@ -296,7 +320,7 @@ fun CompactSwitchSettingItem(
                 semanticToggleState = checked,
                 onClick = { if (enabled) onCheckedChange(!checked) },
                 trailingContent = {
-                    if (composeEngine == ComposeEngine.Mochi) {
+                    if (composeEngine == ComposeEngine.Mochi || composeEngine == ComposeEngine.Coui) {
                         TinySwitch(
                             checked = checked,
                             onCheckedChange = onCheckedChange,
@@ -338,7 +362,7 @@ fun CompactClickableSettingItem(
                 onClick = onClick
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 description = description,

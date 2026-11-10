@@ -100,7 +100,7 @@ fun ToggleChip(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             FilterChip(
                 selected = selected,
                 onClick = onToggle,

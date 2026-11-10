@@ -195,7 +195,7 @@ fun AppAlertDialog(
                 }
             }
         }
-        ComposeEngine.Material -> {
+        ComposeEngine.Material, ComposeEngine.Coui -> {
             if (show) {
                 AlertDialog(
                     onDismissRequest = onDismissRequest,

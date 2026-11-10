@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
+import com.itos.coui.menu.CouiMenuDefaults
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
@@ -90,9 +91,9 @@ fun RoundDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = MaterialTheme.shapes.medium,
+    shape: Shape = defaultRoundDropdownShape(),
     shadowElevation: Dp = 4.dp,
-    verticalSpacing: Dp = 8.dp,
+    verticalSpacing: Dp = defaultRoundDropdownSpacing(),
     mochiAnchorMaxWidth: Dp = Dp.Unspecified,
     glassAnchor: GlassMenuAnchor? = null,
     content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit
@@ -191,7 +192,9 @@ fun RoundDropdownMenu(
         }
         else -> {
             val colorScheme = rememberOpaqueColorScheme()
-            val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
+            val popupContainerColor = if (engine == ComposeEngine.Coui) {
+                CouiMenuDefaults.style().colors.container
+            } else LegadoTheme.colorScheme.surfaceContainerLow
 
             DropdownMenu(
                 expanded = expanded,
@@ -226,9 +229,9 @@ fun RoundDropdownMenuLazy(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = MaterialTheme.shapes.medium,
+    shape: Shape = defaultRoundDropdownShape(),
     shadowElevation: Dp = 4.dp,
-    verticalSpacing: Dp = 8.dp,
+    verticalSpacing: Dp = defaultRoundDropdownSpacing(),
     maxHeight: Dp = Dp.Unspecified,
     menuWidth: Dp = 280.dp,
     content: LazyListScope.(dismiss: () -> Unit) -> Unit
@@ -277,9 +280,11 @@ fun RoundDropdownMenuLazy(
                 }
             }
         }
-        ComposeEngine.Material -> {
+        ComposeEngine.Material, ComposeEngine.Coui -> {
             val colorScheme = rememberOpaqueColorScheme()
-            val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
+            val popupContainerColor = if (LegadoTheme.composeEngine == ComposeEngine.Coui) {
+                CouiMenuDefaults.style().colors.container
+            } else LegadoTheme.colorScheme.surfaceContainerLow
 
             DropdownMenu(
                 expanded = expanded,
@@ -307,6 +312,15 @@ fun RoundDropdownMenuLazy(
         }
     }
 }
+
+@Composable
+private fun defaultRoundDropdownShape(): Shape =
+    if (LegadoTheme.composeEngine == ComposeEngine.Coui) CouiMenuDefaults.shape
+    else MaterialTheme.shapes.medium
+
+@Composable
+private fun defaultRoundDropdownSpacing(): Dp =
+    if (LegadoTheme.composeEngine == ComposeEngine.Coui) 0.dp else 8.dp
 
 // Popup containers may query intrinsic sizes. Answer at the viewport boundary rather than
 // forwarding those queries to LazyColumn's SubcomposeLayout. Actual height can still shrink

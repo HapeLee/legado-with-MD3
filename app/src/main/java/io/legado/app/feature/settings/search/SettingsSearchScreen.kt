@@ -32,6 +32,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.coui.rememberAppVerticalOverscrollEffect
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -54,7 +55,7 @@ fun SettingsSearchRouteScreen(
     val hasProgressiveBlurSetting = when (LegadoTheme.composeEngine) {
         ComposeEngine.Material -> true
         ComposeEngine.Miuix -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        ComposeEngine.Mochi -> false
+        ComposeEngine.Mochi, ComposeEngine.Coui -> false
     }
     // Resolve at the Android presentation boundary, and rebuild on app-language changes.
     val index = remember(context, configuration, hasProgressiveBlurSetting) {
@@ -139,6 +140,7 @@ fun SettingsSearchScreen(
         )
     }) { padding ->
         LazyColumn(
+            overscrollEffect = rememberAppVerticalOverscrollEffect(),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(padding).imePadding(),
             contentPadding = adaptiveContentPadding(
                 top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding() + 24.dp,

@@ -90,6 +90,7 @@ private fun AppThemeActual(
     val materialVersion = themeSettings.materialVersion
     val customContrast = themeSettings.customContrast
     val composeEngine = ThemeResolver.resolveComposeEngine(appShellSettings.composeEngine)
+    val useCouiDefaultColors = composeEngine == ComposeEngine.Coui && appThemeMode == AppThemeMode.Dynamic
     val customPrimary = themeSettings.customPrimary
     val customNightPrimary = themeSettings.customNightPrimary
     val appFontPath = themeSettings.appFontPath
@@ -110,7 +111,7 @@ private fun AppThemeActual(
     val colorScheme = remember(
         context, appThemeMode, effectiveDarkTheme, isPureBlack, customPrimary, customNightPrimary,
         enableDeepPersonalization, customColors,
-        paletteStyleValue, materialVersion, customContrast,
+        paletteStyleValue, materialVersion, customContrast, composeEngine,
     ) {
         if (appThemeMode == AppThemeMode.Custom &&
             enableDeepPersonalization &&
@@ -136,6 +137,7 @@ private fun AppThemeActual(
                 materialVersion = materialVersion,
                 customSeedColor = customSeedColor,
                 customContrast = customContrast,
+                composeEngine = composeEngine,
             )
         }
     }
@@ -169,7 +171,7 @@ private fun AppThemeActual(
             seedColor = themeSeedColor,
             paletteStyle = paletteStyle,
             themeMode = colorSchemeMode,
-            useDynamicColor = appThemeMode == AppThemeMode.Dynamic,
+            useDynamicColor = appThemeMode == AppThemeMode.Dynamic && !useCouiDefaultColors,
             composeEngine = composeEngine
         )
     }
@@ -205,13 +207,18 @@ private fun AppThemeActual(
                     }
                 }
             }
-            ComposeEngine.Material -> {
+            ComposeEngine.Material, ComposeEngine.Coui -> {
                 MaterialThemeWrapper(
                     themeColors = themeColors,
                     customFontFamily = customFontFamily,
                     applyBackground = applyBackground,
-                    content = content
-                )
+                ) {
+                    if (themeColors.composeEngine == ComposeEngine.Coui && ThemeResolver.isCouiSupported()) {
+                        ProvideCouiTheme(themeColors.isDark, useCouiDefaultColors, content)
+                    } else {
+                        content()
+                    }
+                }
             }
         }
     }

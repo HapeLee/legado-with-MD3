@@ -1827,6 +1827,8 @@
     <string name="compact_list">緊湊列表</string>
     <string name="complete_required_information">填寫所有必填資訊</string>
     <string name="compose_engine">主題樣式</string>
+    <string name="coui_theme_requires_android_14">COUI（需要 Android 14 或更新版本）</string>
+    <string name="coui_default_palette">COUI 預設</string>
     <string name="compose_related">Compose 相關</string>
     <string name="blur_effects">模糊效果</string>
     <string name="top_bottom_bar_settings">頂欄與底欄</string>
@@ -1957,6 +1959,7 @@
     <string name="floating_bottom_bar_liquid_glass">液態玻璃效果</string>
     <string name="floating_bottom_bar_liquid_glass_summary">為懸浮導航欄啟用液態玻璃高亮效果。需要模糊和 Android 13+</string>
     <string name="floating_bottom_bar_summary">使用分離的膠囊樣式作為底部導航欄</string>
+    <string name="coui_floating_bottom_bar_summary">COUI 的底部導覽固定使用懸浮樣式</string>
     <string name="folder_layout_mode">資料夾佈局模式</string>
     <string name="folder_list_style">資料夾列表樣式</string>
     <string name="follow_read_background">跟隨背景</string>

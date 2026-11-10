@@ -36,7 +36,7 @@ fun ClickableSettingItem(
                 onClick = onClick
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 modifier = modifier,
                 title = title,

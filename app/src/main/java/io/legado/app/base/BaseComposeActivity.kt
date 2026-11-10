@@ -182,7 +182,7 @@ abstract class BaseComposeActivity(
             ComposeEngine.Miuix -> {
                 MiuixTheme.colorScheme.surface
             }
-            ComposeEngine.Material, ComposeEngine.Mochi -> {
+            ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                 LegadoTheme.colorScheme.background
             }
         }

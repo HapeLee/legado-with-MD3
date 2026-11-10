@@ -168,7 +168,7 @@ fun SelectionBottomBar(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             HorizontalFloatingToolbar(
                 modifier = safeModifier,
                 expanded = true,

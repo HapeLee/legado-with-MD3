@@ -70,6 +70,7 @@ import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
+import io.legado.app.ui.widget.components.coui.rememberAppVerticalOverscrollEffect
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.SearchBar
@@ -165,7 +166,7 @@ fun SearchScreen(
     val showSuggestionPanel = state.showSuggestions
     val latestQuery by rememberUpdatedState(state.query)
     val scrollBehavior = when (LegadoTheme.composeEngine) {
-        ComposeEngine.Miuix -> {
+        ComposeEngine.Miuix, ComposeEngine.Coui -> {
             GlassTopAppBarDefaults.defaultScrollBehavior()
         }
         ComposeEngine.Material, ComposeEngine.Mochi -> {
@@ -486,6 +487,7 @@ fun SearchScreen(
                             ) { isSourceGrouped ->
                                 if (isSourceGrouped) {
                                     LazyColumn(
+                                        overscrollEffect = rememberAppVerticalOverscrollEffect(),
                                         state = groupedListState,
                                         modifier = Modifier.fillMaxSize(),
                                         contentPadding = adaptiveContentPaddingOnlyVertical(
@@ -541,6 +543,7 @@ fun SearchScreen(
                                     }
                                 } else {
                                     LazyColumn(
+                                        overscrollEffect = rememberAppVerticalOverscrollEffect(),
                                         modifier = Modifier.fillMaxSize(),
                                         state = listState,
                                         contentPadding = adaptiveContentPaddingOnlyVertical(
@@ -981,6 +984,7 @@ private fun SearchSuggestionPanel(
     val lockedUrls = rememberPrivateLockedBookUrls(state.bookshelfHints.map { it.bookUrl })
     val visibleHints = state.bookshelfHints.filterNot { it.bookUrl in lockedUrls }
     LazyColumn(
+        overscrollEffect = rememberAppVerticalOverscrollEffect(),
         modifier = modifier,
         state = listState,
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1187,6 +1191,7 @@ private fun ExpandedSourceSheet(
         }
 
         LazyColumn(
+            overscrollEffect = rememberAppVerticalOverscrollEffect(),
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPaddingOnlyVertical(

@@ -1,18 +1,25 @@
 package io.legado.app.ui.widget.components.tabRow
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
@@ -26,13 +33,43 @@ fun AppTabRow(
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    isScrollable: Boolean = true
+    isScrollable: Boolean = true,
+    horizontalPadding: Dp = 0.dp,
+    leadingAction: (@Composable () -> Unit)? = null,
 ) {
+    val rowModifier = modifier.padding(horizontal = horizontalPadding)
+    if (leadingAction == null) {
+        AppTabRowContent(tabTitles, selectedTabIndex, onTabSelected, rowModifier, isScrollable)
+    } else {
+        Row(
+            modifier = rowModifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Keep popup content in the same layout node as the trigger.
+            Box { leadingAction() }
+            AppTabRowContent(tabTitles, selectedTabIndex, onTabSelected, Modifier.weight(1f), isScrollable)
+        }
+    }
+}
+
+@Composable
+private fun AppTabRowContent(
+    tabTitles: List<String>,
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier,
+    isScrollable: Boolean,
+) {
+    if (tabTitles.isEmpty()) return
     val composeEngine = LegadoTheme.composeEngine
+    if (composeEngine == ComposeEngine.Coui && ThemeResolver.isCouiSupported()) {
+        AppCouiTabRow(tabTitles, selectedTabIndex, onTabSelected, modifier, isScrollable)
+        return
+    }
 
     when (composeEngine) {
         ComposeEngine.Miuix -> {
-            if (tabTitles.isEmpty()) return
             val selectedIndex = selectedTabIndex.coerceIn(tabTitles.indices)
             val tabModifier = modifier.padding(vertical = 4.dp)
             val scrollableTabs: @Composable (Modifier) -> Unit = { rowModifier ->
@@ -66,7 +103,7 @@ fun AppTabRow(
                 scrollableTabs(tabModifier)
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             if (isScrollable) {
                 PrimaryScrollableTabRow(
                     selectedTabIndex = selectedTabIndex,

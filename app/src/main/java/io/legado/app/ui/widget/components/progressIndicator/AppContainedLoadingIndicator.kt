@@ -19,7 +19,7 @@ fun AppContainedLoadingIndicator(
                 modifier = modifier,
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             ContainedLoadingIndicator(
                 modifier = modifier
             )

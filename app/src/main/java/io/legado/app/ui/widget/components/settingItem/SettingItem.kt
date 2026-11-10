@@ -5,12 +5,15 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.CardDefaults
@@ -37,10 +40,17 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.itos.coui.effect.couiButtonFeedback
+import com.itos.coui.layout.CouiPageDefaults
+import com.itos.coui.layout.Item as CouiItem
+import com.itos.coui.text.CouiTextKind
+import com.itos.coui.text.rememberCouiTextStyle
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.widget.components.LocalMochiSettingsGroup
+import io.legado.app.ui.widget.components.LocalCouiSettingsGroup
 import io.legado.app.ui.widget.components.card.SettingCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.text.AppText
@@ -72,7 +82,11 @@ fun SettingItem(
 
     var showMenu by remember { mutableStateOf(false) }
     val isExpandable = expandContent != null && onExpandChange != null
-    val grouped = LocalMochiSettingsGroup.current
+    val mochiGrouped = LocalMochiSettingsGroup.current
+    val isCoui = LegadoTheme.composeEngine == ComposeEngine.Coui
+    val grouped = mochiGrouped || (isCoui && LocalCouiSettingsGroup.current != null)
+    val couiColors = if (isCoui) CouiPageDefaults.themeColors() else null
+    val trailingOption = option.takeIf { isCoui && trailingContent == null && !isExpandable }
     val useOptionAnchor = LegadoTheme.composeEngine == ComposeEngine.Mochi &&
         dropdownMenu != null && trailingContent == null && option != null
     val menu: @Composable () -> Unit = {
@@ -85,12 +99,122 @@ fun SettingItem(
             )
         }
     }
+    val hasAction = onClick != null || onLongClick != null || dropdownMenu != null || isExpandable
+    val interactionSource = if (isCoui && hasAction) remember { MutableInteractionSource() } else null
+    val rowModifier = Modifier
+        .semantics(mergeDescendants = !isCoui || hasAction) {
+            semanticRole?.let { role = it }
+            semanticStateDescription?.let { stateDescription = it }
+            semanticToggleState?.let {
+                toggleableState = if (it) ToggleableState.On else ToggleableState.Off
+            }
+            if (!enabled) disabled()
+        }
+        .then(if (interactionSource != null) {
+            Modifier.couiButtonFeedback(interactionSource = interactionSource, enabled = enabled, list = true)
+        } else Modifier)
+        .then(if (!isCoui || hasAction) {
+            Modifier.combinedClickable(
+                interactionSource = interactionSource,
+                indication = if (isCoui) null else LocalIndication.current,
+                enabled = enabled,
+                role = semanticRole,
+                onClick = {
+                    when {
+                        dropdownMenu != null -> showMenu = true
+                        isExpandable -> onExpandChange.invoke(!expanded)
+                        else -> onClick?.invoke()
+                    }
+                },
+                onLongClick = if (!isCoui || dropdownMenu != null || onLongClick != null) {
+                    {
+                        if (dropdownMenu != null) showMenu = true
+                        onLongClick?.invoke()
+                    }
+                } else null,
+            )
+        } else Modifier)
+    val leading: (@Composable () -> Unit)? = if (painter != null || imageVector != null) {
+        {
+            val tint = if (couiColors != null) {
+                if (enabled) couiColors.summary else couiColors.disabled
+            } else MaterialTheme.colorScheme.onSurfaceVariant
+            if (painter != null) {
+                Icon(painter = painter, contentDescription = null, tint = tint)
+            } else if (imageVector != null) {
+                Icon(imageVector = imageVector, contentDescription = null, tint = tint)
+            }
+        }
+    } else null
+    val supporting: (@Composable () -> Unit)? = if (description != null || option != null && trailingOption == null) {
+        {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                description?.let {
+                    AppText(
+                        it,
+                        style = if (isCoui) rememberCouiTextStyle(CouiTextKind.PreferenceSummary)
+                        else LegadoTheme.typography.bodySmallEmphasized,
+                        fontFamily = if (isCoui) LegadoTheme.typography.bodySmallEmphasized.fontFamily else null,
+                        color = if (couiColors != null) {
+                            if (enabled) couiColors.summary else couiColors.disabled
+                        } else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    )
+                }
+                if (option != null && trailingOption == null) {
+                    Box {
+                        AppText(
+                            option,
+                            style = LegadoTheme.typography.labelMediumEmphasized,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        if (useOptionAnchor) menu()
+                    }
+                }
+            }
+        }
+    } else null
+    val trailing: @Composable () -> Unit = {
+        Box(contentAlignment = Alignment.Center) {
+            if (isExpandable && trailingContent == null) {
+                val rotation by animateFloatAsState(if (expanded) 180f else 0f, label = "arrow")
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.rotate(rotation),
+                )
+            } else if (trailingOption != null && couiColors != null) {
+                AppText(
+                    text = trailingOption,
+                    modifier = Modifier.widthIn(max = 162.dp),
+                    style = rememberCouiTextStyle(CouiTextKind.PreferenceValue),
+                    fontFamily = LegadoTheme.typography.labelMediumEmphasized.fontFamily,
+                    color = if (enabled) couiColors.summary else couiColors.disabled,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                trailingContent?.invoke()
+            }
+            if (!useOptionAnchor) menu()
+        }
+    }
+    val titleContent: @Composable () -> Unit = {
+        AppText(
+            text = title,
+            style = if (isCoui) rememberCouiTextStyle(CouiTextKind.PreferenceTitle)
+            else LegadoTheme.typography.titleMedium,
+            fontFamily = if (isCoui) LegadoTheme.typography.titleMedium.fontFamily else null,
+            color = if (couiColors != null) {
+                if (enabled) couiColors.title else couiColors.disabled
+            } else Color.Unspecified,
+        )
+    }
 
     SettingCard(
         modifier = modifier
             .fillMaxWidth()
             .then(
-                if (grouped) Modifier.mochiListDivider(if (painter != null || imageVector != null) 56.dp else 16.dp)
+                if (mochiGrouped) Modifier.mochiListDivider(if (painter != null || imageVector != null) 56.dp else 16.dp)
                 else Modifier
             ),
         cornerRadius = cornerRadius,
@@ -99,95 +223,23 @@ fun SettingItem(
         ),
     ) {
         Column {
-            ListItem(
-                modifier = Modifier
-                    .semantics(mergeDescendants = true) {
-                        semanticRole?.let { role = it }
-                        semanticStateDescription?.let { stateDescription = it }
-                        semanticToggleState?.let {
-                            toggleableState = if (it) ToggleableState.On else ToggleableState.Off
-                        }
-                        if (!enabled) disabled()
-                    }
-                    .combinedClickable(
-                        enabled = enabled,
-                        role = semanticRole,
-                        onClick = {
-                            when {
-                                dropdownMenu != null -> showMenu = true
-                                isExpandable -> onExpandChange.invoke(!expanded)
-                                else -> onClick?.invoke()
-                            }
-                        },
-                        onLongClick = {
-                            if (dropdownMenu != null) showMenu = true
-                            onLongClick?.invoke()
-                        }
-                    ),
-                leadingContent = if (painter != null || imageVector != null) {
-                    {
-                        if (painter != null) {
-                            Icon(
-                                painter = painter,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else if (imageVector != null) {
-                            Icon(
-                                imageVector = imageVector,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else null,
-                supportingContent = if (description != null || option != null) {
-                    {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            description?.let {
-                                AppText(
-                                    it,
-                                    style = LegadoTheme.typography.bodySmallEmphasized,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                )
-                            }
-                            option?.let {
-                                Box {
-                                    AppText(
-                                        it,
-                                        style = LegadoTheme.typography.labelMediumEmphasized,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    if (useOptionAnchor) menu()
-                                }
-                            }
-                        }
-                    }
-                } else null,
-                trailingContent = {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (isExpandable && trailingContent == null) {
-                            val rotation by animateFloatAsState(
-                                if (expanded) 180f else 0f,
-                                label = "arrow"
-                            )
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                                modifier = Modifier.rotate(rotation)
-                            )
-                        } else {
-                            trailingContent?.invoke()
-                        }
-
-                        if (!useOptionAnchor) menu()
-                    }
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            ) {
-                AppText(
-                    text = title,
-                    style = LegadoTheme.typography.titleMedium
+            if (isCoui) {
+                CouiItem(
+                    modifier = rowModifier,
+                    icon = leading,
+                    summary = supporting,
+                    trailing = trailing,
+                    enabled = enabled,
+                    title = titleContent,
+                )
+            } else {
+                ListItem(
+                    modifier = rowModifier,
+                    leadingContent = leading,
+                    supportingContent = supporting,
+                    trailingContent = trailing,
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    content = titleContent,
                 )
             }
 

@@ -48,17 +48,25 @@ object ThemeEngine {
         forceOpaque: Boolean = false,
         customSeedColor: Int? = null,
         customContrast: String? = null,
+        composeEngine: ComposeEngine = ComposeEngine.Material,
     ): ColorScheme {
         val resolvedMode = resolveMode(mode = mode, forceOpaque = forceOpaque)
-        val baseColorScheme = resolveBaseColorScheme(
-            context = context,
-            mode = resolvedMode,
-            darkTheme = darkTheme,
-            paletteStyle = paletteStyle,
-            materialVersion = materialVersion,
-            customSeedColor = customSeedColor,
-            customContrast = customContrast,
-        )
+        val baseColorScheme = if (
+            composeEngine == ComposeEngine.Coui && resolvedMode == AppThemeMode.Dynamic &&
+            ThemeResolver.isCouiSupported()
+        ) {
+            couiDefaultColorScheme(darkTheme)
+        } else {
+            resolveBaseColorScheme(
+                context = context,
+                mode = resolvedMode,
+                darkTheme = darkTheme,
+                paletteStyle = paletteStyle,
+                materialVersion = materialVersion,
+                customSeedColor = customSeedColor,
+                customContrast = customContrast,
+            )
+        }
 
         return baseColorScheme
             .applyAmoledIfNeeded(darkTheme = darkTheme, isAmoled = isAmoled)

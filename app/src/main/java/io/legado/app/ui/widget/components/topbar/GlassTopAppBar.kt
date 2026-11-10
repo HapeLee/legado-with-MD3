@@ -22,6 +22,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.MiuixBlurredTopBar
 import io.legado.app.ui.theme.responsiveHazeEffect
+import io.legado.app.ui.widget.components.coui.AppCouiTopBar
 import io.legado.app.ui.widget.components.mochi.AppMochiTitleBar
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
@@ -35,6 +36,10 @@ fun GlassTopAppBar(
 ) {
     val hazeState = LocalHazeState.current
     val composeEngine = LegadoTheme.composeEngine
+    if (composeEngine == ComposeEngine.Coui) {
+        AppCouiTopBar(title, modifier, navigationIcon, actions)
+        return
+    }
     if (composeEngine == ComposeEngine.Mochi) {
         AppMochiTitleBar(title, modifier, navigationIcon = navigationIcon, actions = actions)
         return

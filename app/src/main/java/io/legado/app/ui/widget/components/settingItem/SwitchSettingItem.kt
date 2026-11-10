@@ -40,7 +40,7 @@ fun SwitchSettingItem(
                 enabled = enabled,
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 description = description,

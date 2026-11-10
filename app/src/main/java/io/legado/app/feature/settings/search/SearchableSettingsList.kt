@@ -1,5 +1,7 @@
 package io.legado.app.feature.settings.search
 
+import io.legado.app.ui.widget.components.coui.rememberAppVerticalOverscrollEffect
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -92,7 +94,11 @@ fun SearchableSettingsList(
         SearchFocus(it, targetId, !handled, contentPadding.calculateTopPadding(), anchors) { handled = true }
     }
     CompositionLocalProvider(LocalSearchFocus provides focus) {
-        LazyColumn(modifier, state, contentPadding, verticalArrangement = verticalArrangement) {
+        LazyColumn(
+            modifier, state, contentPadding,
+            verticalArrangement = verticalArrangement,
+            overscrollEffect = rememberAppVerticalOverscrollEffect(),
+        ) {
             if (requested != null) item("settings-search-status") {
                 if (unavailable) AppText(
                     stringResource(R.string.settings_search_unavailable, stringResource(requested.titleRes)),

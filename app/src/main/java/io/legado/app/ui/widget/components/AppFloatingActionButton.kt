@@ -96,7 +96,7 @@ fun AppFloatingActionButton(
                 containerColor = LegadoTheme.colorScheme.surfaceContainer
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             if (tooltipText != null) {
                 Box(modifier = modifier) {
                     TooltipBox(
@@ -215,7 +215,7 @@ fun AppFloatingActionButtonMenu(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             FloatingActionButtonMenu(
                 modifier = modifier,
                 expanded = expanded,

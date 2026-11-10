@@ -90,7 +90,7 @@ fun InputSettingItem(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 description = description,

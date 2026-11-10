@@ -1999,6 +1999,7 @@
     <string name="show_bottom_nav">Show Navigation Bar</string>
     <string name="floating_bottom_bar">Floating Bottom Bar</string>
     <string name="floating_bottom_bar_summary">Use a detached capsule style for the bottom navigation bar</string>
+    <string name="coui_floating_bottom_bar_summary">COUI always uses a floating bottom bar when bottom navigation is shown</string>
     <string name="top_bar_button_liquid_glass">Liquid Glass Top Bar Buttons</string>
     <string name="top_bar_button_liquid_glass_summary">Enable backdrop blur and refraction on top bar buttons. Requires Android 13 or later.</string>
     <string name="floating_bottom_bar_liquid_glass">Liquid Glass Effect</string>
@@ -2128,6 +2129,8 @@
     <string name="use_underline">Always Use Underline for Emphasized Text</string>
     <string name="adapt_special_style">Adapt Special Styles</string>
     <string name="compose_engine">Theme Style</string>
+    <string name="coui_theme_requires_android_14">COUI (requires Android 14 or later)</string>
+    <string name="coui_default_palette">COUI default</string>
     <string name="container_opacity">Container Opacity</string>
     <string name="container_opacity_summary">%d</string>
     <string name="top_bar_opacity">Top Bar Opacity</string>

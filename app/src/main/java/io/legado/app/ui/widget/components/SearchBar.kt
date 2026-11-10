@@ -130,7 +130,7 @@ fun SearchBar(
                 miuixOnSearch = submitSearch,
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()

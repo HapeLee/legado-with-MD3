@@ -23,7 +23,7 @@ fun AppCircularProgressIndicator(
                 strokeWidth = strokeWidth,
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             if (progress != null) {
                 CircularProgressIndicator(
                     progress = { progress },

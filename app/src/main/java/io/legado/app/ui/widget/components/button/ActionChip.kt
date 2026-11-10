@@ -43,7 +43,7 @@ fun ActionChip(
                 )
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             AssistChip(
                 onClick = onClick,
                 modifier = modifier,

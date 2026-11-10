@@ -206,7 +206,7 @@ fun SelectionItemCardContent(
                     }
                 }
             }
-            ComposeEngine.Material, ComposeEngine.Mochi -> {
+            ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                 ListItem(
                     modifier = Modifier.weight(1f),
                     supportingContent = when {

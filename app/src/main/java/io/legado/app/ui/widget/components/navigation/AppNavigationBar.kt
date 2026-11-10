@@ -88,7 +88,7 @@ fun AppNavigationBar(
                 content = content
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val baseColor =
                 if (hasCustomSecondary) {
                     Color(customSecondaryColor)
@@ -178,7 +178,7 @@ fun RowScope.AppNavigationBarItem(
                 modifier = modifier
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             ShortNavigationBarItem(
                 selected = selected,
                 onClick = onClick,

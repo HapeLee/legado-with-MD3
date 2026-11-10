@@ -83,7 +83,7 @@ fun AppPullToRefresh(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val state = rememberPullToRefreshState()
             val actualEnabled = enabled && (
                     isRefreshing ||

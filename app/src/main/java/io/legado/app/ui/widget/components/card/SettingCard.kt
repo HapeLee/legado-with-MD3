@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.LocalMochiSettingsGroup
+import io.legado.app.ui.widget.components.LocalCouiSettingsGroup
 import top.yukonga.miuix.kmp.basic.BasicComponent
 
 // import top.yukonga.miuix.kmp.basic.theme.LocalColors as MiuixLocalColors
@@ -33,7 +34,9 @@ fun SettingCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    if (composeEngine == ComposeEngine.Mochi && LocalMochiSettingsGroup.current) {
+    if (composeEngine == ComposeEngine.Mochi && LocalMochiSettingsGroup.current ||
+        composeEngine == ComposeEngine.Coui && LocalCouiSettingsGroup.current != null
+    ) {
         Surface(
             modifier = modifier.then(
                 onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier
@@ -54,7 +57,7 @@ fun SettingCard(
                 content = content
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val baseColors = colors ?: CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer

@@ -1944,6 +1944,7 @@
     <string name="show_bottom_nav">显示导航栏</string>
     <string name="floating_bottom_bar">悬浮底栏</string>
     <string name="floating_bottom_bar_summary">底部导航栏使用悬浮胶囊样式</string>
+    <string name="coui_floating_bottom_bar_summary">COUI 的底部导航固定使用悬浮样式</string>
     <string name="top_bar_button_liquid_glass">顶栏按钮液态玻璃</string>
     <string name="top_bar_button_liquid_glass_summary">为顶栏按钮启用背景模糊和折射，需要 Android 13 或更高版本</string>
     <string name="floating_bottom_bar_liquid_glass">液态玻璃效果</string>
@@ -2071,6 +2072,8 @@
     <string name="use_underline">总是使用下划线表示强调文本</string>
     <string name="adapt_special_style">适配特殊样式</string>
     <string name="compose_engine">主题风格</string>
+    <string name="coui_theme_requires_android_14">COUI（需要 Android 14 或更高版本）</string>
+    <string name="coui_default_palette">COUI 默认</string>
     <string name="container_opacity">容器背景不透明度</string>
     <string name="container_opacity_summary">%d</string>
     <string name="top_bar_opacity">顶栏不透明度</string>

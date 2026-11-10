@@ -19,7 +19,7 @@ fun AppLinearProgressIndicator(
                 progress = progress
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             if (progress != null) {
                 LinearProgressIndicator(
                     progress = { progress },

@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.itos.coui.topappbar.CouiTopAppBarDefaults
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LegadoTheme
@@ -30,6 +31,8 @@ import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.MiuixBlurredTopBar
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.widget.components.GlassDefaults
+import io.legado.app.ui.widget.components.coui.AppCouiTopBar
+import io.legado.app.ui.widget.components.coui.CouiGlassScrollBehavior
 import io.legado.app.ui.widget.components.mochi.AppMochiTitleBar
 import io.legado.app.ui.widget.components.text.AdaptiveAnimatedText
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
@@ -59,6 +62,20 @@ fun GlassMediumFlexibleTopAppBar(
     val hazeState = LocalHazeState.current
     val themeSettings = LocalAppUiConfiguration.current.theme
     val composeEngine = LegadoTheme.composeEngine
+    if (composeEngine == ComposeEngine.Coui) {
+        AppCouiTopBar(
+            title = title,
+            modifier = modifier,
+            navigationIcon = navigationIcon,
+            actions = actions,
+            subtitle = subtitle,
+            useCharMode = useCharMode,
+            expanded = themeSettings.useFlexibleTopAppBar,
+            scrollBehavior = scrollBehavior,
+            bottomContent = bottomContent,
+        )
+        return
+    }
     if (composeEngine == ComposeEngine.Mochi) {
         Column(modifier) {
             AppMochiTitleBar(
@@ -199,6 +216,11 @@ object GlassTopAppBarDefaults {
         return if (composeEngine == ComposeEngine.Miuix) {
             val miuixBehavior = MiuixScrollBehavior()
             remember(miuixBehavior) { MiuixGlassScrollBehavior(miuixBehavior) }
+        } else if (composeEngine == ComposeEngine.Coui && configuration.theme.useFlexibleTopAppBar &&
+            configuration.theme.enableBlur
+        ) {
+            val behavior = CouiTopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+            remember(behavior) { CouiGlassScrollBehavior(behavior) }
         } else if (configuration.theme.useFlexibleTopAppBar) {
             val m3Behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
             remember(m3Behavior) { M3GlassScrollBehavior(m3Behavior) }

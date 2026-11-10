@@ -88,7 +88,7 @@ fun AppTextField(
                 interactionSource = interactionSource
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val resolvedContentPadding =
                 contentPadding ?: if (label == null || labelPosition is TextFieldLabelPosition.Above) {
                     TextFieldDefaults.contentPaddingWithoutLabel()
@@ -194,7 +194,7 @@ fun AppTextField(
                 interactionSource = interactionSource
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val resolvedColors = if (backgroundColor != Color.Unspecified) {
                 TextFieldDefaults.colors(
                     focusedContainerColor = backgroundColor,

@@ -34,7 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
+import io.legado.app.ui.widget.components.coui.appVerticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Book
@@ -528,7 +528,7 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(dashboardScrollState),
+                        .appVerticalScroll(dashboardScrollState),
                 ) {
                     Spacer(
                         modifier = Modifier
@@ -633,7 +633,7 @@ fun HomeScreen(
                         style = LegadoTheme.typography.bodyMedium,
                         modifier = Modifier
                             .heightIn(max = 400.dp)
-                            .verticalScroll(rememberScrollState()),
+                            .appVerticalScroll(rememberScrollState()),
                     )
                 }
             },

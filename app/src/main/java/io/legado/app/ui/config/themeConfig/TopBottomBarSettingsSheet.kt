@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import io.legado.app.ui.widget.components.coui.appVerticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
@@ -19,6 +19,7 @@ import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
@@ -45,7 +46,7 @@ fun TopBottomBarSettingsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 560.dp)
-                .verticalScroll(rememberScrollState())
+                .appVerticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -59,6 +60,8 @@ fun TopBottomBarSettingsSheet(
                 )
             }
             val engine = LegadoTheme.composeEngine
+            val isCoui = engine == ComposeEngine.Coui
+            val useFloatingBottomBar = ThemeResolver.useFloatingBottomBar(engine, appShell.useFloatingBottomBar)
             val nativeEffectsSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
             val miuixGlassStyle = engine == ComposeEngine.Miuix &&
                 nativeEffectsSupported && theme.useHyperOs4Components
@@ -98,11 +101,14 @@ fun TopBottomBarSettingsSheet(
             )
             CompactSwitchSettingItem(
                 title = stringResource(R.string.floating_bottom_bar),
-                description = stringResource(R.string.floating_bottom_bar_summary),
-                checked = appShell.useFloatingBottomBar,
+                description = stringResource(
+                    if (isCoui) R.string.coui_floating_bottom_bar_summary else R.string.floating_bottom_bar_summary,
+                ),
+                checked = useFloatingBottomBar,
+                enabled = !isCoui,
                 onCheckedChange = { onIntent(ThemeConfigIntent.SetUseFloatingBottomBar(it)) },
             )
-            AnimatedVisibility(visible = appShell.useFloatingBottomBar) {
+            AnimatedVisibility(visible = useFloatingBottomBar) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -114,7 +120,7 @@ fun TopBottomBarSettingsSheet(
                             onIntent(ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass(it))
                         },
                     )
-                    if (engine != ComposeEngine.Mochi) {
+                    if (engine != ComposeEngine.Mochi && engine != ComposeEngine.Coui) {
                         SliderSettingItem(
                             title = stringResource(R.string.theme_config_bottom_bar_lens_radius),
                             description = stringResource(R.string.theme_config_bottom_bar_lens_radius_summary),
@@ -130,7 +136,7 @@ fun TopBottomBarSettingsSheet(
             }
             val blurSupported = engine == ComposeEngine.Material || nativeEffectsSupported
             val blurEnabled = if (engine == ComposeEngine.Mochi) theme.mochiScrollEdgeBlurEnabled else theme.enableBlur
-            if (theme.enableBlur && blurSupported && engine != ComposeEngine.Mochi) {
+            if (theme.enableBlur && blurSupported && engine != ComposeEngine.Mochi && engine != ComposeEngine.Coui) {
                 if (!miuixGlassStyle) {
                     SliderSettingItem(
                         title = stringResource(R.string.theme_manage_top_bar_blur_radius),
@@ -187,19 +193,21 @@ fun TopBottomBarSettingsSheet(
                         updateTheme { current -> current.copy(topBarOpacity = value.toInt()) }
                     },
                 )
-                SliderSettingItem(
-                    title = stringResource(R.string.bottom_bar_opacity),
-                    description = stringResource(
-                        R.string.bottom_bar_opacity_summary,
-                        theme.bottomBarOpacity
-                    ),
-                    value = theme.bottomBarOpacity.toFloat(),
-                    defaultValue = 100f,
-                    valueRange = 0f..100f,
-                    onValueChange = { value ->
-                        updateTheme { current -> current.copy(bottomBarOpacity = value.toInt()) }
-                    },
-                )
+                if (!isCoui) {
+                    SliderSettingItem(
+                        title = stringResource(R.string.bottom_bar_opacity),
+                        description = stringResource(
+                            R.string.bottom_bar_opacity_summary,
+                            theme.bottomBarOpacity
+                        ),
+                        value = theme.bottomBarOpacity.toFloat(),
+                        defaultValue = 100f,
+                        valueRange = 0f..100f,
+                        onValueChange = { value ->
+                            updateTheme { current -> current.copy(bottomBarOpacity = value.toInt()) }
+                        },
+                    )
+                }
             }
         }
     }

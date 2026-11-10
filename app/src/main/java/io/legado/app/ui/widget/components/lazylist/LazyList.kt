@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.coui.rememberAppVerticalOverscrollEffect
 
 /**
  * LazyColumn with scrollbar (non-controllable).
@@ -49,6 +50,7 @@ fun ScrollbarLazyColumn(
         verticalArrangement = verticalArrangement,
         horizontalAlignment = horizontalAlignment,
         userScrollEnabled = userScrollEnabled,
+        overscrollEffect = rememberAppVerticalOverscrollEffect(),
         content = content,
     )
 }
@@ -82,6 +84,7 @@ fun FastScrollLazyColumn(
             verticalArrangement = verticalArrangement,
             horizontalAlignment = horizontalAlignment,
             userScrollEnabled = userScrollEnabled,
+            overscrollEffect = rememberAppVerticalOverscrollEffect(),
             content = content,
         )
     }
@@ -117,6 +120,7 @@ fun FastScrollLazyVerticalGrid(
                 verticalArrangement = verticalArrangement,
                 horizontalArrangement = horizontalArrangement,
                 userScrollEnabled = userScrollEnabled,
+                overscrollEffect = rememberAppVerticalOverscrollEffect(),
                 content = content,
             )
         }
@@ -130,6 +134,7 @@ fun FastScrollLazyVerticalGrid(
             verticalArrangement = verticalArrangement,
             horizontalArrangement = horizontalArrangement,
             userScrollEnabled = userScrollEnabled,
+            overscrollEffect = rememberAppVerticalOverscrollEffect(),
             content = content,
         )
     }

@@ -118,7 +118,6 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
-import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -126,8 +125,6 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
-import io.legado.app.ui.widget.components.button.series.SmallToggleButton
-import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
@@ -147,6 +144,7 @@ import io.legado.app.ui.widget.components.privacy.findFragmentActivity
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.tabRow.AppTabRowIconButton
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -558,7 +556,8 @@ fun BookshelfScreen(
     }
 
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-    val useNativeSearchButton = isMiuixHyperOs4Enabled()
+    val showAlternateSearchInMenu = LegadoTheme.composeEngine == ComposeEngine.Coui ||
+            isMiuixHyperOs4Enabled()
     var showTopBarMenu by remember { mutableStateOf(false) }
     val toggleShelfFilter = {
         toggleBookshelfFilter(
@@ -610,7 +609,7 @@ fun BookshelfScreen(
                 scrollBehavior = scrollBehavior,
                 isContentScrolled = isContentScrolled,
                 onSearchClick = onSearchClick,
-                onSearchLongClick = onAlternateSearch.takeUnless { useNativeSearchButton },
+                onSearchLongClick = onAlternateSearch.takeUnless { showAlternateSearchInMenu },
                 onSearchQueryChange = { onIntent(BookshelfIntent.SetSearchKey(it)) },
                 onSearchSubmit = { rawQuery ->
                     rawQuery.trim()
@@ -698,7 +697,7 @@ fun BookshelfScreen(
                             expanded = showTopBarMenu,
                             onExpandedChange = { showTopBarMenu = it },
                         ) { dismiss ->
-                            if (useNativeSearchButton) {
+                            if (showAlternateSearchInMenu) {
                                 val searchFirst = uiState.settings.bookshelfSearchActionDirectToSearch
                                 RoundDropdownMenuItem(
                                     text = stringResource(if (searchFirst) R.string.bookshelf_filter else R.string.search),
@@ -796,42 +795,28 @@ fun BookshelfScreen(
                 },
                 bottomContent = {
                     if (bookGroupStyle == 0 && uiState.groups.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .adaptiveHorizontalPaddingTab(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val selectedTabIndex =
-                                pagerState.currentPage.coerceIn(0, uiState.groups.size - 1)
-                            val tabTitles = remember(uiState.groups) {
-                                uiState.groups.map { it.groupName }
-                            }
-
-                            AppTabRow(
-                                tabTitles = tabTitles,
-                                selectedTabIndex = selectedTabIndex,
-                                onTabSelected = { index ->
-                                    scope.launch { pagerState.animateScrollToPage(index) }
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            val showExpandButton = uiState.settings.shouldShowExpandButton
-                            if (showExpandButton) {
-                                Box(modifier = Modifier) {
-                                    SmallToggleButton(
+                        val selectedTabIndex = pagerState.currentPage.coerceIn(uiState.groups.indices)
+                        val tabTitles = remember(uiState.groups) { uiState.groups.map { it.groupName } }
+                        AppTabRow(
+                            tabTitles = tabTitles,
+                            selectedTabIndex = selectedTabIndex,
+                            onTabSelected = { index ->
+                                scope.launch { pagerState.animateScrollToPage(index) }
+                            },
+                            horizontalPadding = 12.dp,
+                            leadingAction = if (uiState.settings.shouldShowExpandButton) {
+                                {
+                                    AppTabRowIconButton(
                                         checked = showGroupMenu,
-                                        onCheckedChange = {
-                                            if (it) {
-                                                onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupMenu))
-                                            } else {
+                                        onClick = {
+                                            if (showGroupMenu) {
                                                 onIntent(BookshelfIntent.DismissOverlay)
+                                            } else {
+                                                onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupMenu))
                                             }
                                         },
-                                        style = ToggleStyle.Outlined,
                                         icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-                                        contentDescription = stringResource(R.string.group_manage)
+                                        contentDescription = stringResource(R.string.group_manage),
                                     )
                                     RoundDropdownMenu(
                                         expanded = showGroupMenu,
@@ -926,8 +911,8 @@ fun BookshelfScreen(
                                         }
                                     }
                                 }
-                            }
-                        }
+                            } else null,
+                        )
                     }
                 }
             )

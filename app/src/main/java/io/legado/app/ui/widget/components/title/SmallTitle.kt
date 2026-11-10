@@ -24,7 +24,7 @@ fun AdaptiveTitle(
                 color = MiuixTheme.colorScheme.onBackgroundVariant,
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             Text(
                 text = text,
                 style = LegadoTheme.typography.labelLarge,

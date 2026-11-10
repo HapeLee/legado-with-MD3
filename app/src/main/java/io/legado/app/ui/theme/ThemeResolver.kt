@@ -1,5 +1,7 @@
 package io.legado.app.ui.theme
 
+import android.os.Build
+import androidx.annotation.ChecksSdkIntAtLeast
 import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
@@ -10,6 +12,7 @@ import top.yukonga.miuix.kmp.theme.ThemePaletteStyle as MiuixPaletteStyle
 object ThemeResolver {
 
     private const val COMPOSE_ENGINE_MIUIX = "miuix"
+    internal const val COMPOSE_ENGINE_COUI = "coui"
     private const val MATERIAL_VERSION_EXPRESSIVE = "material3Expressive"
 
     private val appThemeModes = mapOf(
@@ -99,9 +102,16 @@ object ThemeResolver {
         return when {
             value.equals(COMPOSE_ENGINE_MIUIX, ignoreCase = true) -> ComposeEngine.Miuix
             value.equals("mochi", ignoreCase = true) -> ComposeEngine.Mochi
+            value.equals(COMPOSE_ENGINE_COUI, ignoreCase = true) && isCouiSupported() -> ComposeEngine.Coui
             else -> ComposeEngine.Material
         }
     }
+
+    internal fun useFloatingBottomBar(engine: ComposeEngine, preference: Boolean): Boolean =
+        engine == ComposeEngine.Coui || preference
+
+    @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    internal fun isCouiSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
     fun resolveColorSpecVersion(colorSpec: ThemeColorSpec): ColorSpec.SpecVersion {
         return when (colorSpec) {

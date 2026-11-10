@@ -20,6 +20,8 @@ import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHasMiuixPopupHost
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.widget.components.SplicedColumnDivider
+import io.legado.app.ui.widget.components.coui.CouiSettingMenu
+import io.legado.app.ui.widget.components.coui.canUseCouiSettingMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.glass.GlassDropdownPreference
@@ -35,7 +37,7 @@ fun DropdownListSettingItem(
     imageVector: ImageVector? = null,
     enabled: Boolean = true,
     /**
-     * 本产物不提供的档位：仍然列出，让用户看到"这个版本还没有什么"，但不可选中。
+     * 当前设备或产物不提供的档位：仍然列出，但不可选中。
      * 调用方负责在显示名里标出来源（例如"（漫画增强版）"）。
      */
     unavailableValues: Set<String> = emptySet(),
@@ -64,12 +66,39 @@ fun DropdownListSettingItem(
     }
     SplicedColumnDivider()
 
+    if (canUseCouiSettingMenu()) {
+        CouiSettingMenu(
+            selectedValue = selectedValue,
+            displayEntries = displayEntries,
+            entryValues = entryValues,
+            enabled = enabled,
+            unavailableValues = unavailableValues,
+            onUnavailableSelected = onUnavailableSelected,
+            onValueChange = onValueChange,
+        ) { openMenu ->
+            SettingItem(
+                title = title,
+                description = description,
+                option = displayEntries.getOrNull(entryValues.indexOf(selectedValue)) ?: selectedValue,
+                imageVector = imageVector,
+                enabled = enabled,
+                onClick = openMenu,
+                onLongClick = openMenu,
+            )
+        }
+        return
+    }
+
     when (composeEngine) {
         ComposeEngine.Miuix -> {
             val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
             val spinnerItems = displayEntries.toList()
-            val dropdownItems = displayEntries.map { display ->
-                DropdownItem(title = display)
+            val hasDisabledOptions = onUnavailableSelected == null && unavailableValues.isNotEmpty()
+            val dropdownItems = displayEntries.mapIndexed { index, display ->
+                DropdownItem(
+                    text = display,
+                    enabled = !hasDisabledOptions || entryValues[index] !in unavailableValues,
+                )
             }
             val startAction: (@Composable () -> Unit)? = if (imageVector != null) {
                 { Icon(imageVector = imageVector, contentDescription = null) }
@@ -93,7 +122,7 @@ fun DropdownListSettingItem(
                     .alpha(if (enabled) 1f else 0.45f)
                     .semantics { if (!enabled) disabled() }
             ) {
-                if (useGlass) {
+                if (useGlass && !hasDisabledOptions) {
                     GlassDropdownPreference(
                         title = title,
                         summary = description,
@@ -116,7 +145,7 @@ fun DropdownListSettingItem(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
 
             val currentEntry =
                 displayEntries.getOrNull(entryValues.indexOf(selectedValue)) ?: selectedValue
@@ -134,6 +163,7 @@ fun DropdownListSettingItem(
                         val unavailable = value in unavailableValues
                         RoundDropdownMenuItem(
                             text = display,
+                            enabled = !unavailable || onUnavailableSelected != null,
                             // 视觉上灰掉，但仍可点击：点了给出"为什么用不了"，比无声无息更好。
                             color = if (unavailable) {
                                 LegadoTheme.colorScheme.onSurface.copy(alpha = 0.38f)

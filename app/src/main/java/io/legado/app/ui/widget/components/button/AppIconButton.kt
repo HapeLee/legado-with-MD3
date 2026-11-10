@@ -48,7 +48,7 @@ fun AppIconButton(
                 content = content
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             IconButton(
                 onClick = onClick,
                 modifier = modifier,

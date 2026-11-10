@@ -184,7 +184,7 @@ fun SliderSettingItem(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 option = displayDescription,

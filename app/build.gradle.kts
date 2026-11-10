@@ -361,6 +361,8 @@ dependencies {
     implementation(libs.backdrop)
     implementation(libs.mochi.compose)
     implementation(libs.mochi.ios)
+    implementation(libs.coui.material3)
+    implementation(libs.coui.icons)
     implementation(libs.lyricViewx)
     implementation(libs.timber)
 }

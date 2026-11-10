@@ -1,13 +1,18 @@
 package io.legado.app.ui.widget.components.checkBox
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.unit.dp
+import com.itos.coui.checkbox.Checkbox as CouiCheckbox
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import top.yukonga.miuix.kmp.basic.Checkbox as MiuixCheckbox
@@ -51,6 +56,23 @@ fun AppCheckbox(
                 enabled = enabled,
             )
         }
+        ComposeEngine.Coui -> {
+            val interaction = if (onCheckedChange == null) Modifier else Modifier
+                .minimumInteractiveComponentSize()
+                .toggleable(
+                    value = checked,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onValueChange = onCheckedChange,
+                    interactionSource = null,
+                    indication = null,
+                )
+            CouiCheckbox(
+                modifier = semanticModifier.then(interaction).size(24.dp),
+                checked = checked,
+                enabled = enabled,
+            )
+        }
         ComposeEngine.Material -> {
             Checkbox(
                 checked = checked,
@@ -78,7 +100,7 @@ fun AppTriStateCheckbox(
                 enabled = enabled
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi -> {
+        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             TriStateCheckbox(
                 state = state,
                 onClick = onClick,
