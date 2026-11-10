@@ -66,6 +66,7 @@ import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
@@ -571,6 +572,7 @@ object BookHelp {
     /**
      * 书籍自带图片地址的下载：只发一次普通 GET，UA/连接参数沿用 [okHttpClient]。
      * 地址已在 [MarkdownImageSource.parse] 处校验成普通 http(s) URL，这里不解析任何规则语法。
+     * 响应体按 [MarkdownImageSource.MAX_IMAGE_BYTES] 截断，避免外部文档驱动的超大下载。
      */
     private suspend fun plainHttpImageInputStream(
         url: String, src: String, reportProgress: Boolean
@@ -580,10 +582,43 @@ object BookHelp {
             response.close()
             throw IOException("HTTP ${response.code}")
         }
-        return if (reportProgress) {
-            ProgressResponseBody(src, ProgressManager.LISTENER, response.body).byteStream()
+        val body = response.body
+        if (body.contentLength() > MarkdownImageSource.MAX_IMAGE_BYTES) {
+            response.close()
+            throw IOException("Markdown image exceeds ${MarkdownImageSource.MAX_IMAGE_BYTES} bytes")
+        }
+        val stream = if (reportProgress) {
+            ProgressResponseBody(src, ProgressManager.LISTENER, body).byteStream()
         } else {
-            response.body.byteStream()
+            body.byteStream()
+        }
+        //chunked 响应没有 contentLength，读取时按字节数兜底
+        return BoundedInputStream(stream, MarkdownImageSource.MAX_IMAGE_BYTES.toLong())
+    }
+
+    private class BoundedInputStream(
+        input: InputStream,
+        private val limit: Long,
+    ) : FilterInputStream(input) {
+        private var read = 0L
+
+        override fun read(): Int {
+            val value = super.read()
+            if (value >= 0 && ++read > limit) {
+                throw IOException("Markdown image exceeds $limit bytes")
+            }
+            return value
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            val count = super.read(b, off, len)
+            if (count > 0) {
+                read += count
+                if (read > limit) {
+                    throw IOException("Markdown image exceeds $limit bytes")
+                }
+            }
+            return count
         }
     }
 

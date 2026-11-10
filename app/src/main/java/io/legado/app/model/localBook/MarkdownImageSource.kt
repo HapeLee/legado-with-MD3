@@ -23,6 +23,9 @@ sealed class MarkdownImageSource {
     object Unsupported : MarkdownImageSource()
 
     companion object {
+        //单张图片上限：内嵌 base64 与网络响应体都按这个口径截断，避免撑爆正文与 .nb 缓存
+        const val MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
         //只接受 base64 载荷；data:text/html,<js>…</js> 这类可直接执行的形态一律拒绝
         private val base64DataUriRegex = Regex("^data:[^,]*;base64,([A-Za-z0-9+/=\\s]+)$")
         private val mimeDecoder = Base64.getMimeDecoder()
@@ -31,9 +34,12 @@ sealed class MarkdownImageSource {
             val trimmed = src.trim()
             if (trimmed.isEmpty()) return Unsupported
             base64DataUriRegex.matchEntire(trimmed)?.let { match ->
-                val bytes = runCatching { mimeDecoder.decode(match.groupValues[1]) }.getOrNull()
+                val payload = match.groupValues[1]
+                if (payload.length > MAX_IMAGE_BYTES) return Unsupported
+                val bytes = runCatching { mimeDecoder.decode(payload) }.getOrNull()
                     ?: return Unsupported
-                return if (bytes.isEmpty()) Unsupported else DataUri(bytes)
+                if (bytes.isEmpty() || bytes.size > MAX_IMAGE_BYTES) return Unsupported
+                return DataUri(bytes)
             }
             if (!trimmed.startsWith("http://", true) && !trimmed.startsWith("https://", true)) {
                 return Unsupported

@@ -59,4 +59,13 @@ class MarkdownImageSourceTest {
         assertEquals(MarkdownImageSource.Unsupported, MarkdownImageSource.parse("images/a.png"))
         assertEquals(MarkdownImageSource.Unsupported, MarkdownImageSource.parse("javascript:alert(1)"))
     }
+
+    @Test
+    fun rejectsOversizedDataUri() {
+        val payload = "A".repeat(MarkdownImageSource.MAX_IMAGE_BYTES + 1)
+        assertEquals(
+            MarkdownImageSource.Unsupported,
+            MarkdownImageSource.parse("data:image/png;base64,$payload"),
+        )
+    }
 }

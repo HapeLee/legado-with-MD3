@@ -140,4 +140,22 @@ class MarkdownToHtmlTest {
         assertTrue(plain.contains("文字"))
         assertTrue(plain.contains("结尾"))
     }
+
+    @Test
+    fun unclosedUnsafeHtmlContainersDoNotLeakIntoBothChannels() {
+        val html = MarkdownToHtml.convert("正文\n\n<script src=\"x\">\nvar secret = 1;\n\n结尾")
+        assertFalse(html.contains("<script", ignoreCase = true))
+        val plain = LocalBookSemanticHtml.plainText(html)
+        assertTrue(plain.contains("正文"))
+        assertFalse(plain.contains("var secret"))
+        assertFalse(plain.contains("<script", ignoreCase = true))
+    }
+
+    @Test
+    fun angleBracketTextIsNotTreatedAsHtml() {
+        val html = MarkdownToHtml.convert("文字<占位符>结尾")
+        assertTrue(html.contains("&lt;占位符&gt;"))
+        val plain = LocalBookSemanticHtml.plainText(html)
+        assertTrue(plain.contains("<占位符>"))
+    }
 }

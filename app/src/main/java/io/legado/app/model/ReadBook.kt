@@ -1870,6 +1870,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 TextFile.clear()
                 clearTextChapter()
             } else if (it.isMarkdown) {
+                BookHelp.clearCache(it)
                 MarkdownFile.clear()
                 clearTextChapter()
             }

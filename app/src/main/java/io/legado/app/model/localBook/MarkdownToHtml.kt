@@ -35,6 +35,16 @@ object MarkdownToHtml {
         "(?i)</?(?:script|style|noscript|template|iframe|object|embed|svg|math|video|audio|canvas)\\b[^>]*/?>"
     )
 
+    /** 未闭合的危险容器：连同后续内容一起删到结尾，否则脚本源码会漏进纯文本通道。 */
+    private val unclosedUnsafeHtmlContainerRegex = Regex(
+        "(?is)<(?:script|style|noscript|template|iframe|object|embed|svg|math|video|audio|canvas)\\b[^>]*>[\\s\\S]*$"
+    )
+
+    /** 行内原生 HTML 只允许阅读器可呈现的标签；形如 `<占位符>` 的普通文本按文本处理。 */
+    private val allowedInlineHtmlRegex = Regex(
+        "(?i)^</?(?:h[1-6]|p|em|strong|del|code|pre|blockquote|ul|ol|li|hr|br|a|img|span|sub|sup|b|i|s|mark)\\b[^>]*/?>$"
+    )
+
     /** CommonMark：闭合 # 序列前必须有空白，否则属于标题内容（如「使用 C#」）。 */
     private val closingHashesRegex = Regex("[ \\t]+#+[ \\t]*$")
 
@@ -44,6 +54,13 @@ object MarkdownToHtml {
     /** 首行 `---` 到闭合 `---` 的 YAML frontmatter 不进入正文。 */
     private val frontMatterRegex =
         Regex("\\A---[ \\t]*\\r?\\n[\\s\\S]*?\\r?\\n---[ \\t]*(?:\\r?\\n|\\z)")
+
+    /**
+     * 输出侧统一收口：危险标签在 [emitInline] 中保留原样，容器正则才能把标签与内容一起删掉；
+     * 代码块走 escapeText，转义后的 `&lt;script&gt;` 不会命中，示例 HTML 仍是正文。
+     */
+    private fun stripUnsafeHtmlBlocks(text: String): String =
+        unclosedUnsafeHtmlContainerRegex.replace(unsafeHtmlContainerRegex.replace(text, ""), "")
 
     fun convert(markdown: String): String {
         val body = markdown.removePrefix("\uFEFF")
@@ -60,7 +77,7 @@ object MarkdownToHtml {
         }
         //原生 HTML 直通的收口：移除两条通道都不呈现的危险容器后再交付，
         //保证 plainText 与 ReaderLocalPresentationResolver 看到同一份内容。
-        val html = unsafeHtmlContainerRegex.replace(sb.toString(), "")
+        val html = stripUnsafeHtmlBlocks(sb.toString())
         return unsafeHtmlTagRegex.replace(html, "")
     }
 
@@ -304,10 +321,13 @@ object MarkdownToHtml {
                 val children = node.children
                 if (children.isEmpty()) {
                     val raw = node.getTextInNode(text)
-                    //行内原生 HTML（如 <img width>、<br/>）原样放行，与 EPUB 的 HTML 通道一致；
-                    //危险容器在 convert 输出边界统一移除，避免两条通道内容不一致
-                    if (raw.length > 2 && raw.startsWith('<') && raw.endsWith('>')) sb.append(raw)
-                    else sb.append(escapeText(raw))
+                    //行内原生 HTML 只在白名单内直通；危险标签保留原样，交给输出侧的容器正则
+                    //连内容一起删除；形如 <占位符> 的普通文本按文本转义，避免被 jsoup 吞掉。
+                    if (raw.length > 2 && raw.startsWith('<') && raw.endsWith('>')) {
+                        val isUnsafeTag = unsafeHtmlTagRegex.containsMatchIn(raw)
+                        if (isUnsafeTag || allowedInlineHtmlRegex.matches(raw)) sb.append(raw)
+                        else sb.append(escapeText(raw))
+                    } else sb.append(escapeText(raw))
                 } else children.forEach { emitInline(it, text, sb) }
             }
         }
