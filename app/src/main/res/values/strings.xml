@@ -2309,6 +2309,7 @@
     <string name="ai_text_clean_rule_group">AI Clean</string>
     <string name="ai_text_clean_rule_created">AI content edit saved.</string>
     <string name="ai_text_rewrite">AI Rewrite</string>
+    <string name="extend_selection_to_next_page">Extend selection to next page</string>
     <string name="ai_text_rewrite_saved">AI rewrite saved.</string>
     <string name="ai_generate">Generate</string>
     <string name="ai_rewrite_requirements">Requirement</string>

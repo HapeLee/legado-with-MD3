@@ -3,6 +3,7 @@ package io.legado.app.feature.reader.core.selection
 import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageId
+import io.legado.app.feature.reader.core.model.ReaderPageWindow
 import io.legado.app.feature.reader.core.model.ReaderRect
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import org.junit.Assert.assertEquals
@@ -352,5 +353,39 @@ class ReaderSelectionTest {
 
         assertEquals(started, ReaderSelectionPolicy.extend(started, nextChapter, 5f, 10f))
         assertEquals(0, started.endChapterIndex)
+    }
+
+    @Test
+    fun menuExtensionKeepsTheStartAcrossPagesAndStopsAtChapterEnd() {
+        val glyph = page.elements.last() as ReaderElement.Text
+        val second = page.copy(
+            id = ReaderPageId(0, 1),
+            elements = listOf(glyph.copy(value = "丁", chapterPosition = 3)),
+        )
+        val third = page.copy(
+            id = ReaderPageId(0, 2),
+            elements = listOf(glyph.copy(value = "戊", chapterPosition = 4)),
+        )
+        val initial = ReaderSelection(0, anchor = 2, focus = 1)
+        val extended = checkNotNull(
+            initial.extendToNextPage(ReaderPageWindow(current = page, next = second))
+        )
+        val extendedAgain = checkNotNull(
+            extended.extendToNextPage(ReaderPageWindow(current = second, next = third))
+        )
+
+        assertEquals("乙丙丁戊", extendedAgain.selectedText(listOf(page, second, third)))
+        assertEquals(false, extendedAgain.hasEndpointOn(third, extendedAgain.visualStartEndpoint()))
+        assertEquals(true, extendedAgain.hasEndpointOn(third, extendedAgain.visualEndEndpoint()))
+        assertNull(
+            extendedAgain.extendToNextPage(
+                ReaderPageWindow(current = third, next = page.copy(id = ReaderPageId(1, 0)))
+            )
+        )
+        assertNull(
+            initial.extendToNextPage(
+                ReaderPageWindow(current = page, next = second.copy(isPlaceholder = true))
+            )
+        )
     }
 }

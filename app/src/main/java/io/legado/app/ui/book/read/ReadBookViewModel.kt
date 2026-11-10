@@ -633,10 +633,8 @@ class ReadBookViewModel(
         _uiState.update { it.copy(isAutoPage = active) }
     }
 
-    fun setTextSelectMenuConfig(value: String) {
-        viewModelScope.launch {
-            readSettingsRepository.update { it.copy(textSelectMenuConfig = value) }
-        }
+    fun setTextSelectMenuConfig(value: String) = viewModelScope.launch {
+        readSettingsRepository.update { it.copy(textSelectMenuConfig = value) }
     }
 
     /** 云端进度同步域；投影目标 isReadingProgressSyncConfigured 仍留在 UiState 供菜单读。 */
